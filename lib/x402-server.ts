@@ -45,10 +45,16 @@ function b64(s: string): string {
  * Settle an x402 payment (if present) then produce the response body.
  * Returns a 402 challenge when no payment-signature header is present.
  */
+export interface SettleInfo {
+  payer: string;
+  transaction: string;
+  amountUsdc: number;
+}
+
 export async function settleThenServe(
   req: NextRequest,
   opts: PaidOptions,
-  produce: () => Promise<unknown> | unknown,
+  produce: (settle: SettleInfo) => Promise<unknown> | unknown,
 ): Promise<NextResponse> {
   const requirements = buildRequirements(opts.priceUsdc, opts.payTo);
   const sig = req.headers.get("payment-signature");
@@ -85,7 +91,11 @@ export async function settleThenServe(
       return NextResponse.json({ error: "settlement failed", reason: settle.errorReason }, { status: 402 });
     }
     console.log(`[x402] settled ${opts.endpoint}: ${settle.transaction}`);
-    const body = await produce();
+    const body = await produce({
+      payer: settle.payer ?? verify.payer ?? "unknown",
+      transaction: settle.transaction ?? "",
+      amountUsdc: opts.priceUsdc,
+    });
     const res = NextResponse.json(body ?? { ok: true });
     res.headers.set(
       "PAYMENT-RESPONSE",

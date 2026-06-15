@@ -29,6 +29,8 @@ export const config = {
   // agent keeps a healthy reusable Gateway balance and tops up when it drops below the threshold.
   gatewayDepositUsdc: process.env.KERYX_GATEWAY_DEPOSIT ?? "1",
   gatewayMinAvailableUsdc: num(process.env.KERYX_GATEWAY_MIN_AVAILABLE, 0.1),
+  // Agent-to-agent: fee another agent pays Keryx to answer a question (x402 → treasury).
+  a2aFeeUsdc: num(process.env.KERYX_A2A_FEE, 0.02),
 
   // ── LLM ──
   // Provider priority: Anthropic > DeepSeek/OpenAI-compatible > offline heuristic.

@@ -160,19 +160,22 @@ export class SupabaseAdapter implements KeryxDB {
   async metrics(): Promise<DashboardMetrics> {
     const { data: pays } = await this.sb
       .from("payment_events")
-      .select("amount_usdc,source_id,query_id");
+      .select("amount_usdc,source_id,query_id,kind");
     const { count: qCount } = await this.sb
       .from("query_runs")
       .select("*", { count: "exact", head: true });
     const rows = pays ?? [];
     const vol = rows.reduce((s, r) => s + Number(r.amount_usdc), 0);
-    const creators = new Set(rows.map((r) => r.source_id)).size;
-    const paying = new Set(rows.map((r) => r.query_id)).size;
+    // Creator payouts exclude inbound A2A fees (platform revenue, not creator earnings).
+    const creatorRows = rows.filter((r) => r.kind !== "inbound");
+    const creatorVol = creatorRows.reduce((s, r) => s + Number(r.amount_usdc), 0);
+    const creators = new Set(creatorRows.map((r) => r.source_id)).size;
+    const paying = new Set(creatorRows.map((r) => r.query_id)).size;
     const totalQueries = qCount ?? 0;
     return {
       totalPayments: rows.length,
       totalVolumeUsdc: round(vol),
-      totalCreatorPayoutsUsdc: round(vol),
+      totalCreatorPayoutsUsdc: round(creatorVol),
       creatorsEarning: creators,
       avgPaymentUsdc: rows.length ? round(vol / rows.length) : 0,
       totalQueries,
@@ -187,6 +190,7 @@ export class SupabaseAdapter implements KeryxDB {
       .select("source_id,source_name,payee,amount_usdc,kind");
     const map = new Map<string, CreatorEarnings>();
     for (const r of data ?? []) {
+      if (r.kind === "inbound") continue;
       const e =
         map.get(r.source_id) ??
         ({

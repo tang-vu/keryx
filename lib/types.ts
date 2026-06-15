@@ -58,10 +58,10 @@ export interface Citation {
   rationale: string; // why this weight
 }
 
-/** A settled payment (fetch toll or citation reward). Mirrors the payment_events table. */
+/** A settled payment. `inbound` = another agent paid Keryx (A2A); fetch/citation = Keryx paid a creator. */
 export interface PaymentRecord {
   id?: string;
-  kind: "fetch" | "citation";
+  kind: "fetch" | "citation" | "inbound";
   queryId: string;
   sourceId: string;
   sourceName: string;

@@ -191,18 +191,21 @@ export class SqliteAdapter implements KeryxDB {
         `SELECT COUNT(*) c, COALESCE(SUM(amount_usdc),0) v, COALESCE(AVG(amount_usdc),0) a FROM payment_events`,
       )
       .get() as { c: number; v: number; a: number };
-    const creators = this.db
-      .prepare(`SELECT COUNT(DISTINCT source_id) n FROM payment_events`)
-      .get() as { n: number };
+    // Creator payouts exclude inbound A2A fees (those are revenue to the platform, not creators).
+    const cp = this.db
+      .prepare(
+        `SELECT COALESCE(SUM(amount_usdc),0) v, COUNT(DISTINCT source_id) n FROM payment_events WHERE kind != 'inbound'`,
+      )
+      .get() as { v: number; n: number };
     const q = this.db.prepare(`SELECT COUNT(*) n FROM query_runs`).get() as { n: number };
     const paying = this.db
-      .prepare(`SELECT COUNT(DISTINCT query_id) n FROM payment_events`)
+      .prepare(`SELECT COUNT(DISTINCT query_id) n FROM payment_events WHERE kind != 'inbound'`)
       .get() as { n: number };
     return {
       totalPayments: p.c,
       totalVolumeUsdc: round(p.v),
-      totalCreatorPayoutsUsdc: round(p.v),
-      creatorsEarning: creators.n,
+      totalCreatorPayoutsUsdc: round(cp.v),
+      creatorsEarning: cp.n,
       avgPaymentUsdc: round(p.a),
       totalQueries: q.n,
       payingQueries: paying.n,
@@ -216,7 +219,7 @@ export class SqliteAdapter implements KeryxDB {
         `SELECT source_id, source_name, payee,
                 COALESCE(SUM(amount_usdc),0) total, COUNT(*) cnt,
                 SUM(CASE WHEN kind='citation' THEN 1 ELSE 0 END) cites
-         FROM payment_events GROUP BY source_id ORDER BY total DESC`,
+         FROM payment_events WHERE kind != 'inbound' GROUP BY source_id ORDER BY total DESC`,
       )
       .all();
     return rows.map((r) => ({
