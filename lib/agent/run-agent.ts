@@ -108,6 +108,17 @@ export async function* runAgent(
   const gathered: GatheredContent[] = [];
   let markerN = 0;
   const buys = finalDecisions.filter((d) => d.action === "BUY" || d.action === "CACHE");
+
+  // Ensure the spend wallet holds a settle-able Gateway balance before any payment
+  // (real mode tops up from the funder once; offline is a no-op). Cached sources still earn
+  // citation rewards, so fund whenever any source will be used.
+  if (buys.length > 0) {
+    const funded = await gateway.ensureFunded(budget);
+    if (gateway.mode === "real") {
+      yield emit("fetch", `Agent spend wallet ready: ${funded.address}${funded.depositTx ? ` (topped up ${short(funded.depositTx)})` : " (balance sufficient)"}`);
+    }
+  }
+
   for (const d of buys) {
     const source = sourceById.get(d.sourceId)!;
     const marker = `S${++markerN}`;

@@ -13,6 +13,7 @@
     "ask": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/ask.mts",
     "seed": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/seed-engine.mts",
     "metrics": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/metrics.mts",
+    "preflight": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/preflight.mts",
     "arc:update": "node --import tsx --no-warnings scripts/arc-update.mts",
     "tunnel": "cloudflared tunnel --url http://localhost:3939",
     "ingest": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/ingest-source.mts"

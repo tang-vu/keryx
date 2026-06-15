@@ -28,7 +28,7 @@ function buildRequirements(priceUsdc: number, payTo: string) {
     asset: config.usdcAddress,
     amount: amount.toString(),
     payTo,
-    maxTimeoutSeconds: 345600,
+    maxTimeoutSeconds: config.maxTimeoutSeconds,
     extra: {
       name: "GatewayWalletBatched",
       version: "1",
@@ -76,12 +76,15 @@ export async function settleThenServe(
     const payload = JSON.parse(Buffer.from(sig, "base64").toString("utf-8"));
     const verify = await facilitator.verify(payload, requirements);
     if (!verify.isValid) {
+      console.error(`[x402] verify FAILED ${opts.endpoint}: ${verify.invalidReason}`, JSON.stringify(requirements));
       return NextResponse.json({ error: "verification failed", reason: verify.invalidReason }, { status: 402 });
     }
     const settle = await facilitator.settle(payload, requirements);
     if (!settle.success) {
+      console.error(`[x402] settle FAILED ${opts.endpoint}: ${settle.errorReason}`);
       return NextResponse.json({ error: "settlement failed", reason: settle.errorReason }, { status: 402 });
     }
+    console.log(`[x402] settled ${opts.endpoint}: ${settle.transaction}`);
     const body = await produce();
     const res = NextResponse.json(body ?? { ok: true });
     res.headers.set(

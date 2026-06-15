@@ -22,6 +22,13 @@ export const config = {
   // share of a query's budget reserved for weighted citation rewards (rest is fetch tolls)
   citationPoolRatio: num(process.env.KERYX_CITATION_POOL_RATIO, 0.5),
   defaultFetchPrice: num(process.env.KERYX_DEFAULT_FETCH_PRICE, 0.002),
+  // x402 authorization validity window (seconds). Circle's facilitator rejects windows it deems
+  // too short; the scaffold's 345600 (4d) fails post Arc v0.7.2, so default to 7d.
+  maxTimeoutSeconds: Math.round(num(process.env.KERYX_MAX_TIMEOUT_SECONDS, 604800)),
+  // Gateway spend-wallet top-up. Circle's facilitator won't settle against tiny balances, so the
+  // agent keeps a healthy reusable Gateway balance and tops up when it drops below the threshold.
+  gatewayDepositUsdc: process.env.KERYX_GATEWAY_DEPOSIT ?? "1",
+  gatewayMinAvailableUsdc: num(process.env.KERYX_GATEWAY_MIN_AVAILABLE, 0.1),
 
   // ── LLM ──
   // Provider priority: Anthropic > DeepSeek/OpenAI-compatible > offline heuristic.
