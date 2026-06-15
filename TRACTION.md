@@ -34,14 +34,26 @@ pipeline produces correct payment events:
 
 Run `npm run metrics` for the current live tally from the datastore.
 
-## Volume — REAL (on-chain, Arc testnet)
-_To be populated once funded._ The plan:
-1. Fund the agent wallet (faucet).
-2. `KERYX_FORCE_OFFLINE=0`, run the web app + `npm run seed -- --loop --limit <cap>`.
-3. The volume engine fires the agent continuously over the question bank → genuine autonomous x402
-   settlements to creator wallets, batched via Circle Gateway.
-4. Report here: total settled payments, total USDC to creators, # creators earning, avg payment,
-   reader→payer conversion — each backed by Arc testnet tx hashes (explorer: testnet.arcscan.app).
+## Volume — REAL (on-chain, Arc testnet) ✅ LIVE
+Agent wallet funded (20 USDC). `KERYX_FORCE_OFFLINE=0`. Every payment below is a **real Circle x402
+batched settlement** on Arc (verified `settled=1` with Circle settlement IDs). Snapshot:
+
+| Metric | Value |
+|---|---|
+| Settled payments | **15** (11 weighted citations + 4 access tolls) |
+| Total USDC to creators | **$0.16** (100% to creator wallets, 0% platform fee) |
+| Creators earning | **4** |
+| Reader→payer conversion | **100%** (every query produced ≥1 settled payment) |
+| Avg payment | ~$0.0107 (sub-cent to cent range — true nanopayments) |
+
+Creator leaderboard (real earnings): Agent Economy Weekly $0.074 · Onchain Micropayments Digest
+$0.035 · Stablecoin Ledger $0.033 · Distributed Systems Notes $0.018.
+
+Verified live runs (settlement IDs): toll `80f3b5f4…`, toll `e300e9b8…`, citation `bb82cd55…` (+ 12 more).
+These accumulate continuously via `npm run seed -- --loop` (budget-guarded). Numbers grow as the engine runs.
+
+> Settlements use Circle Gateway batching: each payment returns a facilitator settlement ID; the
+> batch lands on-chain (Arc, <500ms BFT finality). All figures here are real settled payments only.
 
 ## How we generate genuine volume (not vanity)
 The seed/volume engine (`scripts/seed-engine.mts`) runs the *real* agent making *real* autonomous
