@@ -22,9 +22,13 @@ export const config = {
   // share of a query's budget reserved for weighted citation rewards (rest is fetch tolls)
   citationPoolRatio: num(process.env.KERYX_CITATION_POOL_RATIO, 0.5),
   defaultFetchPrice: num(process.env.KERYX_DEFAULT_FETCH_PRICE, 0.002),
-  // x402 authorization validity window (seconds). Circle's facilitator rejects windows it deems
-  // too short; the scaffold's 345600 (4d) fails post Arc v0.7.2, so default to 7d.
-  maxTimeoutSeconds: Math.round(num(process.env.KERYX_MAX_TIMEOUT_SECONDS, 604800)),
+  // x402 authorization validity window (seconds). The buyer signs validBefore = now + this value;
+  // Circle's Gateway facilitator requires the REMAINING validity at verify time to be >= 7 days
+  // (604800s) or it rejects with `authorization_validity_too_short`. Signing→verify latency (several
+  // network hops), second-truncation, and host clock skew all erode that window, so a window of
+  // exactly 604800 fails intermittently. Keep ~1 day of margin above the floor (no upper bound —
+  // 30d still verifies). Empirically: <604800 always fails; 604800 is the floor with zero slack.
+  maxTimeoutSeconds: Math.round(num(process.env.KERYX_MAX_TIMEOUT_SECONDS, 691200)),
   // Gateway spend-wallet top-up. Circle's facilitator won't settle against tiny balances, so the
   // agent keeps a healthy reusable Gateway balance and tops up when it drops below the threshold.
   gatewayDepositUsdc: process.env.KERYX_GATEWAY_DEPOSIT ?? "1",

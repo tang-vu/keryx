@@ -19,6 +19,7 @@
 import { BatchFacilitatorClient } from "@circle-fin/x402-batching/server";
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { config } from "./config";
 
 // Arc Testnet contract addresses (from @circle-fin/x402-batching SDK)
 const ARC_TESTNET_NETWORK = "eip155:5042002";
@@ -52,7 +53,8 @@ function buildPaymentRequirements(price: string) {
     asset: ARC_TESTNET_USDC,
     amount: amount.toString(),
     payTo: sellerAddress,
-    maxTimeoutSeconds: 345600,
+    // Must clear Circle's 7-day (604800s) remaining-validity floor with margin; see lib/config.ts.
+    maxTimeoutSeconds: config.maxTimeoutSeconds,
     extra: {
       name: "GatewayWalletBatched",
       version: "1",
