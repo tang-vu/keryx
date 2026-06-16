@@ -19,59 +19,86 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/*
+ * Keryx · The Mint — an engraved-banknote / herald's-treasury palette.
+ * Warm ivory paper, ink, a vermillion herald's seal, and treasury green
+ * for money. shadcn semantic tokens are remapped onto this system so the
+ * ui primitives inherit it; the extended Mint scale (seal, paid, paper, ink
+ * shades, line) is exposed as utilities for the bespoke components.
+ */
 :root {
-  --background: 0 0% 100%;
-  --foreground: 255 16.47% 33.33%;
-  --card: 0 0% 100%;
-  --card-foreground: 255 16.47% 33.33%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 255 16.47% 33.33%;
-  --primary: 204.62 100% 38.24%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 210 100% 97.25%;
-  --secondary-foreground: 204.62 100% 38.24%;
-  --muted: 252 20% 95.1%;
-  --muted-foreground: 253.33 11.79% 44.9%;
-  --accent: 258 100% 96.08%;
-  --accent-foreground: 255 25.53% 18.43%;
-  --destructive: 353.92 83.15% 65.1%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 253.33 16.36% 89.22%;
-  --input: 253.33 16.36% 89.22%;
-  --ring: 204.1 100% 55.1%;
-  --chart-1: 204.1 100% 55.1%;
-  --chart-2: 259.15 100% 72.35%;
-  --chart-3: 150.98 75.41% 47.84%;
-  --chart-4: 21.9 100% 73.14%;
-  --chart-5: 294.95 88.43% 76.27%;
+  --paper: #f1ece1;
+  --paper-2: #f7f3ea;
+  --ink: #211e18;
+  --ink-2: #5a5347;
+  --ink-3: #8c8475;
+  --line: #d9d2c2;
+  --line-2: #e7e1d3;
+  --seal: #c5402a; /* vermillion herald's seal */
+  --paid: #3e6b57; /* treasury green */
+  --cream: #fbf7f0; /* text on seal / ink grounds */
+
+  /* shadcn semantic tokens → Mint */
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: #fcfaf4;
+  --card-foreground: var(--ink);
+  --popover: #fcfaf4;
+  --popover-foreground: var(--ink);
+  --primary: var(--seal);
+  --primary-foreground: var(--cream);
+  --secondary: var(--paper-2);
+  --secondary-foreground: var(--ink);
+  --muted: var(--paper-2);
+  --muted-foreground: var(--ink-2);
+  --accent: var(--paper-2);
+  --accent-foreground: var(--ink);
+  --destructive: #9e3320;
+  --destructive-foreground: var(--cream);
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--seal);
   --radius: 0.5rem;
 }
 
 @theme inline {
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
-  --color-chart-1: hsl(var(--chart-1));
-  --color-chart-2: hsl(var(--chart-2));
-  --color-chart-3: hsl(var(--chart-3));
-  --color-chart-4: hsl(var(--chart-4));
-  --color-chart-5: hsl(var(--chart-5));
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Extended Mint scale */
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-seal: var(--seal);
+  --color-paid: var(--paid);
+  --color-cream: var(--cream);
+
+  /* Type system */
+  --font-sans: var(--font-hanken), system-ui, sans-serif;
+  --font-serif: var(--font-newsreader), Georgia, serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
@@ -82,6 +109,63 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+  }
+}
+
+/* Mint-specific global texture & motion */
+::selection {
+  background: rgba(197, 64, 42, 0.18);
+}
+input[type="range"] {
+  accent-color: var(--seal);
+}
+
+@keyframes kxUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes kxBlink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+/* "PAID" wax stamp slamming down: oversize → impact → slight overshoot → rest. */
+@keyframes kxStamp {
+  0% {
+    opacity: 0;
+    transform: rotate(-12deg) scale(2.3);
+  }
+  55% {
+    opacity: 0.95;
+    transform: rotate(-12deg) scale(0.88);
+  }
+  72% {
+    opacity: 0.95;
+    transform: rotate(-12deg) scale(1.06);
+  }
+  100% {
+    opacity: 0.9;
+    transform: rotate(-12deg) scale(1);
+  }
+}
+@keyframes kxSpinCW {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes kxSpinCCW {
+  to {
+    transform: rotate(-360deg);
   }
 }

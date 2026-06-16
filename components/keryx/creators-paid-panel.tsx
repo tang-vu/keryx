@@ -1,17 +1,17 @@
 "use client";
 
 /**
- * "Creators Paid" — fills in real time as `settle` steps stream. Each row is a
- * source/author payout with amount + tx short hash (or "simulated" offline).
- * Shows a running total. The emotional payoff of the demo: money moving.
+ * §III · The settlement — fills in real time as `settle` steps stream. Each row
+ * is a creator payout with amount + tx hash (or "simulated" offline), under a
+ * running total. When the herald has paid in full, the wax "PAID" stamp slams
+ * down over the receipt — the emotional payoff: money moved, settled on Arc.
  */
 
-import { Coins, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import type { PaymentRecord } from "@/lib/types";
 import type { StreamMode } from "@/lib/hooks/use-ask-stream";
 import { fmtUsdc, shortAddr, shortHash } from "./phase-style";
-import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { PaidStamp } from "./paid-stamp";
 
 interface CreatorsPaidPanelProps {
   payments: PaymentRecord[];
@@ -28,46 +28,45 @@ export function CreatorsPaidPanel({
 }: CreatorsPaidPanelProps) {
   const total = payments.reduce((sum, p) => sum + (p.amountUsdc ?? 0), 0);
   const hasPayments = payments.length > 0;
+  const settled = hasPayments && !streaming;
 
   return (
-    <Card className="flex h-full flex-col overflow-hidden">
-      <div className="flex items-center justify-between border-b border-border bg-emerald-500/[0.06] px-4 py-3">
-        <div className="flex items-center gap-2">
-          <Coins className="h-4 w-4 text-emerald-600" />
-          <span className="text-sm font-semibold tracking-tight">
-            Creators paid
-          </span>
+    <div className="relative flex h-full flex-col overflow-hidden rounded-md border border-line bg-card">
+      <div className="flex items-center justify-between border-b border-line-2 bg-paid/[0.06] px-5 py-3.5">
+        <div className="flex items-baseline gap-2.5 font-mono text-[12px] uppercase tracking-[0.16em] text-ink-3">
+          <span className="text-seal">03</span>
+          <span>The settlement</span>
         </div>
-        <span className="font-mono text-sm font-semibold text-emerald-700 tabular-nums">
+        <span className="font-mono text-sm font-semibold tabular-nums text-paid">
           ${fmtUsdc(total)}
         </span>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-2 py-2">
+      <div className="flex-1 overflow-y-auto px-3 py-2">
         {!hasPayments && (
-          <p className="px-2 py-10 text-center text-sm text-muted-foreground">
+          <p className="px-2 py-10 text-center font-mono text-[12px] uppercase tracking-[0.08em] text-ink-3">
             {streaming
-              ? "Waiting for the agent to settle rewards…"
+              ? "Waiting on the herald to pay…"
               : "Payouts to cited creators appear here."}
           </p>
         )}
-        <ul className="space-y-1">
+        <ul>
           {payments.map((p, i) => (
             <li
               key={p.id ?? `${p.payee}-${i}`}
-              className="animate-in fade-in slide-in-from-right-2 duration-300 flex items-center justify-between gap-2 rounded-lg px-2 py-2 hover:bg-muted/50"
+              className="flex items-center justify-between gap-3 border-t border-line-2 px-2.5 py-2.5 first:border-t-0 hover:bg-paid/[0.05] animate-in fade-in slide-in-from-right-2 duration-300"
             >
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-foreground">
+                <p className="truncate font-serif text-[15px] text-ink">
                   {p.sourceName}
                 </p>
-                <p className="font-mono text-[11px] text-muted-foreground">
+                <p className="font-mono text-[11px] text-ink-3">
                   {p.settled && p.txHash ? (
                     <a
                       href={`${ARCSCAN}${p.txHash}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-emerald-700 hover:underline"
+                      className="inline-flex items-center gap-1 text-paid hover:underline"
                     >
                       {shortHash(p.txHash)}
                       <ExternalLink className="h-2.5 w-2.5" />
@@ -77,12 +76,7 @@ export function CreatorsPaidPanel({
                   )}
                 </p>
               </div>
-              <span
-                className={cn(
-                  "shrink-0 rounded-md px-2 py-1 font-mono text-xs font-semibold tabular-nums",
-                  "bg-emerald-500/10 text-emerald-700",
-                )}
-              >
+              <span className="shrink-0 rounded-md bg-paid/10 px-2 py-1 font-mono text-xs font-semibold tabular-nums text-paid">
                 +${fmtUsdc(p.amountUsdc)}
               </span>
             </li>
@@ -91,12 +85,16 @@ export function CreatorsPaidPanel({
       </div>
 
       {hasPayments && (
-        <div className="border-t border-border px-4 py-2.5 text-center text-[11px] text-muted-foreground">
+        <div className="border-t border-line-2 px-5 py-2.5 text-center font-mono text-[11px] uppercase tracking-[0.08em] text-ink-3">
           {mode === "real"
-            ? "Settled on Arc testnet"
+            ? "Settled · USDC on Arc"
             : "Offline preview — payments simulated"}
         </div>
       )}
-    </Card>
+
+      {settled && (
+        <PaidStamp className="absolute -bottom-5 -right-3 z-10 h-28 w-28" />
+      )}
+    </div>
   );
 }

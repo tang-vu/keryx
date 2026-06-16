@@ -69,16 +69,25 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-paper">
       <SiteHeader />
-      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <header className="mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Traction
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Real value flowing to creators — every payment Keryx has settled.
-          </p>
+      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-8">
+        <header className="mb-8 flex items-end justify-between gap-6 border-b-[1.5px] border-ink pb-6">
+          <div>
+            <div className="font-mono text-[12px] uppercase tracking-[0.2em] text-seal">
+              Creator dashboard
+            </div>
+            <h1 className="mt-2.5 font-serif text-[clamp(28px,3.6vw,40px)] font-normal tracking-tight text-ink">
+              Traction
+            </h1>
+            <p className="mt-1.5 text-sm text-ink-2">
+              Real value flowing to creators — every payment Keryx has settled.
+            </p>
+          </div>
+          <span className="hidden shrink-0 items-center gap-2 rounded-full border border-paid/40 bg-paid/[0.07] px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.1em] text-paid sm:inline-flex">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-paid" />
+            Settling on Arc
+          </span>
         </header>
 
         <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">

@@ -1,15 +1,13 @@
 "use client";
 
 /**
- * The live reasoning console — the hero of the demo. Auto-scrolls as trace
- * steps stream in and shows an "agent is thinking…" indicator while active.
+ * §I · The decision — the live reasoning ledger. Auto-scrolls as trace steps
+ * stream in and shows a "surveying…" pulse while the agent is still deciding.
  */
 
 import { useEffect, useRef } from "react";
-import { Terminal } from "lucide-react";
 import type { TraceStep } from "@/lib/types";
 import { TraceRow } from "./trace-row";
-import { Card } from "@/components/ui/card";
 
 interface ReasoningConsoleProps {
   steps: TraceStep[];
@@ -24,36 +22,40 @@ export function ReasoningConsole({ steps, streaming }: ReasoningConsoleProps) {
   }, [steps.length, streaming]);
 
   return (
-    <Card className="flex h-full flex-col overflow-hidden">
-      <div className="flex items-center justify-between border-b border-border bg-muted/40 px-4 py-3">
-        <div className="flex items-center gap-2">
-          <Terminal className="h-4 w-4 text-amber-600" />
-          <span className="text-sm font-semibold tracking-tight">
-            Agent reasoning
-          </span>
+    <div className="flex h-full flex-col overflow-hidden rounded-md border border-line bg-card">
+      <div className="flex items-center justify-between border-b border-line-2 px-5 py-3.5">
+        <div className="flex items-baseline gap-2.5 font-mono text-[12px] uppercase tracking-[0.16em] text-ink-3">
+          <span className="text-seal">01</span>
+          <span>The decision</span>
         </div>
-        {streaming && (
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700">
+        {streaming ? (
+          <span className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.1em] text-seal">
             <ThinkingDots />
-            thinking
+            deciding
           </span>
+        ) : (
+          steps.length > 0 && (
+            <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-ink-3">
+              {steps.length} steps
+            </span>
+          )
         )}
       </div>
 
-      <div className="max-h-[60vh] min-h-[320px] flex-1 overflow-y-auto px-4 py-2 sm:max-h-[68vh]">
+      <div className="max-h-[60vh] min-h-[320px] flex-1 overflow-y-auto px-5 py-2 sm:max-h-[68vh]">
         <div className="relative">
           {steps.map((step, i) => (
             <TraceRow key={`${step.phase}-${step.ts}-${i}`} step={step} />
           ))}
           {streaming && steps.length === 0 && (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              Contacting the agent…
+            <p className="py-8 text-center font-mono text-[12px] uppercase tracking-[0.1em] text-ink-3">
+              Contacting the herald…
             </p>
           )}
           <div ref={endRef} />
         </div>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -63,7 +65,7 @@ function ThinkingDots() {
       {[0, 1, 2].map((i) => (
         <span
           key={i}
-          className="h-1.5 w-1.5 animate-bounce rounded-full bg-amber-500"
+          className="h-1.5 w-1.5 animate-bounce rounded-full bg-seal"
           style={{ animationDelay: `${i * 150}ms` }}
         />
       ))}

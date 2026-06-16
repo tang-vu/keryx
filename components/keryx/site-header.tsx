@@ -1,7 +1,9 @@
 "use client";
 
 /**
- * Shared top navigation. Sticky, translucent, active-link aware.
+ * Shared top navigation — sticky, ivory-translucent, active-link aware. Ask and
+ * Dashboard are quiet text links with a vermillion underline when active;
+ * "Register a source" is the inked primary call to action.
  */
 
 import Link from "next/link";
@@ -9,23 +11,22 @@ import { usePathname } from "next/navigation";
 import { KeryxWordmark } from "./keryx-mark";
 import { cn } from "@/lib/utils";
 
-const LINKS = [
+const NAV = [
   { href: "/", label: "Ask" },
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/register", label: "Register" },
 ];
 
 export function SiteHeader() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-background/80 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+    <header className="sticky top-0 z-40 border-b border-line bg-paper/[0.86] backdrop-blur-md backdrop-saturate-150">
+      <div className="mx-auto flex h-[66px] max-w-6xl items-center justify-between gap-6 px-4 sm:px-8">
         <Link href="/" className="transition-opacity hover:opacity-80">
           <KeryxWordmark />
         </Link>
-        <nav className="flex items-center gap-1 text-sm">
-          {LINKS.map((link) => {
+        <nav className="flex items-center gap-1.5">
+          {NAV.map((link) => {
             const active =
               link.href === "/"
                 ? pathname === "/"
@@ -35,16 +36,22 @@ export function SiteHeader() {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "rounded-md px-3 py-1.5 font-medium transition-colors",
+                  "border-b-2 px-3 py-1.5 text-[14.5px] transition-colors",
                   active
-                    ? "bg-amber-500/10 text-amber-700"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    ? "border-seal text-ink"
+                    : "border-transparent text-ink-2 hover:text-ink",
                 )}
               >
                 {link.label}
               </Link>
             );
           })}
+          <Link
+            href="/register"
+            className="ml-2 rounded-[5px] bg-ink px-4 py-2.5 text-sm font-medium text-paper-2 transition-colors hover:bg-ink-2"
+          >
+            Register a source
+          </Link>
         </nav>
       </div>
     </header>

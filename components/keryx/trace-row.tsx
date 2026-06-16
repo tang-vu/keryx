@@ -36,7 +36,7 @@ export function TraceRow({ step }: { step: TraceStep }) {
         <div className="flex items-center gap-2">
           <span
             className={cn(
-              "rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+              "rounded border px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide",
               ps.chip,
             )}
           >
@@ -48,9 +48,7 @@ export function TraceRow({ step }: { step: TraceStep }) {
         {decision ? (
           <DecisionBody decision={decision} />
         ) : (
-          <p className="mt-1 text-sm leading-snug text-foreground/80">
-            {step.message}
-          </p>
+          <p className="mt-1 text-sm leading-snug text-ink-2">{step.message}</p>
         )}
       </div>
     </div>
@@ -63,7 +61,7 @@ function DecisionBadge({ decision }: { decision: Decision }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-bold",
+        "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 font-mono text-[11px] font-bold",
         as.badge,
       )}
     >
@@ -77,14 +75,14 @@ function DecisionBody({ decision }: { decision: Decision }) {
   return (
     <div className="mt-1">
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-        <span className="text-sm font-medium text-foreground">
+        <span className="font-serif text-[15px] text-ink">
           {decision.sourceName}
         </span>
-        <span className="font-mono text-[11px] text-muted-foreground">
+        <span className="font-mono text-[11px] text-ink-3">
           ${fmtUsdc(decision.price)} · EV {Math.round(decision.expectedValue * 100)}%
         </span>
       </div>
-      <p className="mt-0.5 text-[13px] leading-snug text-muted-foreground">
+      <p className="mt-0.5 text-[13px] leading-snug text-ink-2">
         {decision.rationale}
       </p>
     </div>

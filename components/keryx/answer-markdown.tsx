@@ -27,7 +27,7 @@ function renderInline(text: string, keyBase: string): ReactNode[] {
     const key = `${keyBase}-i${i}`;
     if (part.startsWith("**") && part.endsWith("**")) {
       return (
-        <strong key={key} className="font-semibold text-foreground">
+        <strong key={key} className="font-semibold text-ink">
           {part.slice(2, -2)}
         </strong>
       );
@@ -43,7 +43,7 @@ function renderInline(text: string, keyBase: string): ReactNode[] {
       return (
         <code
           key={key}
-          className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.85em] text-foreground"
+          className="rounded bg-paper-2 px-1.5 py-0.5 font-mono text-[0.82em] text-ink"
         >
           {part.slice(1, -1)}
         </code>
@@ -76,9 +76,9 @@ function renderWithCitations(
         type="button"
         onClick={() => onCitationClick?.(marker)}
         title={cite ? `${cite.sourceName} — ${Math.round(cite.weight * 100)}% weight` : marker}
-        className="mx-0.5 inline-flex -translate-y-1.5 items-center rounded bg-amber-500/15 px-1.5 text-[0.7em] font-semibold text-amber-700 align-baseline transition-colors hover:bg-amber-500/25"
+        className="mx-0.5 inline-flex -translate-y-1.5 items-center align-baseline font-mono text-[0.62em] font-semibold text-seal transition-opacity hover:opacity-70"
       >
-        {marker}
+        [{marker.replace(/\D/g, "") || marker}]
       </button>,
     );
     last = m.index + m[0].length;
@@ -97,7 +97,7 @@ export function AnswerMarkdown({
 }: AnswerMarkdownProps) {
   const blocks = text.split(/\n{2,}/).filter((b) => b.trim().length > 0);
   return (
-    <div className={cn("space-y-4 text-[15px] leading-relaxed text-foreground/90", className)}>
+    <div className={cn("space-y-4 font-serif text-[17px] leading-[1.65] text-ink", className)}>
       {blocks.map((block, bi) => {
         const trimmed = block.trim();
         const heading = /^(#{1,3})\s+(.*)$/.exec(trimmed);
@@ -111,10 +111,10 @@ export function AnswerMarkdown({
           );
           const cls =
             level === 1
-              ? "text-lg font-semibold tracking-tight text-foreground"
+              ? "font-serif text-xl tracking-tight text-ink"
               : level === 2
-                ? "text-base font-semibold tracking-tight text-foreground"
-                : "text-sm font-semibold uppercase tracking-wide text-muted-foreground";
+                ? "font-serif text-lg tracking-tight text-ink"
+                : "font-mono text-xs font-semibold uppercase tracking-[0.12em] text-ink-3";
           return (
             <p key={`b${bi}`} className={cls}>
               {content}

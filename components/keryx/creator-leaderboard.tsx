@@ -23,8 +23,10 @@ export function CreatorLeaderboard({ rows }: { rows: LeaderboardEntry[] }) {
   return (
     <Card>
       <CardHeader className="flex-row items-center gap-2 space-y-0 pb-4">
-        <Trophy className="h-4 w-4 text-amber-600" />
-        <CardTitle className="text-base">Creator leaderboard</CardTitle>
+        <Trophy className="h-4 w-4 text-seal" />
+        <CardTitle className="font-serif text-lg font-normal">
+          Creator leaderboard
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
         {rows.length === 0 && (
@@ -38,30 +40,28 @@ export function CreatorLeaderboard({ rows }: { rows: LeaderboardEntry[] }) {
             className={cn(
               "flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors",
               i === 0
-                ? "border-amber-500/30 bg-amber-500/[0.06]"
-                : "border-border hover:bg-muted/40",
+                ? "border-seal/30 bg-seal/[0.06]"
+                : "border-line hover:bg-paper-2",
             )}
           >
             <span
               className={cn(
-                "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold",
-                i === 0
-                  ? "bg-amber-500 text-amber-950"
-                  : "bg-muted text-muted-foreground",
+                "flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-mono text-xs font-bold",
+                i === 0 ? "bg-seal text-cream" : "bg-paper-2 text-ink-3",
               )}
             >
               {i === 0 ? <Crown className="h-3.5 w-3.5" /> : i + 1}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-foreground">
+              <p className="truncate font-serif text-[15px] text-ink">
                 {row.sourceName}
               </p>
-              <p className="font-mono text-[11px] text-muted-foreground">
+              <p className="font-mono text-[11px] text-ink-3">
                 {shortAddr(row.walletAddress)} · {row.citationCount} cites ·{" "}
                 {row.paymentCount} pmts
               </p>
             </div>
-            <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-emerald-700">
+            <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-paid">
               ${fmtUsdc(row.totalEarnedUsdc)}
             </span>
           </div>

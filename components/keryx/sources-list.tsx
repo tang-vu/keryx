@@ -24,7 +24,7 @@ export interface SourceCardData {
 export function SourcesList({ sources }: { sources: SourceCardData[] }) {
   if (sources.length === 0) {
     return (
-      <p className="rounded-lg border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
+      <p className="rounded-lg border border-dashed border-line py-10 text-center text-sm text-ink-3">
         No sources registered yet — be the first.
       </p>
     );
@@ -35,15 +35,15 @@ export function SourcesList({ sources }: { sources: SourceCardData[] }) {
       {sources.map((s) => (
         <Card key={s.id} className="flex flex-col p-5">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="font-semibold tracking-tight text-foreground">
+            <h3 className="font-serif text-[17px] leading-tight text-ink">
               {s.name}
             </h3>
-            <span className="shrink-0 rounded-md bg-amber-500/10 px-2 py-0.5 font-mono text-xs font-semibold text-amber-700">
+            <span className="shrink-0 rounded-md bg-seal/10 px-2 py-0.5 font-mono text-xs font-semibold text-seal">
               ${fmtUsdc(s.fetchPrice)}
             </span>
           </div>
 
-          <p className="mt-1.5 line-clamp-2 text-sm text-muted-foreground">
+          <p className="mt-1.5 line-clamp-2 text-sm text-ink-2">
             {s.description}
           </p>
 
@@ -58,7 +58,7 @@ export function SourcesList({ sources }: { sources: SourceCardData[] }) {
           )}
 
           <div className="mt-auto pt-4">
-            <p className="flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
+            <p className="flex items-center gap-1.5 font-mono text-[11px] text-ink-3">
               <Wallet className="h-3 w-3" />
               {shortAddr(s.walletAddress)}
             </p>
@@ -67,7 +67,7 @@ export function SourcesList({ sources }: { sources: SourceCardData[] }) {
                 {s.authors.map((a) => (
                   <span
                     key={a.name}
-                    className="rounded border border-border bg-muted/50 px-1.5 py-0.5 text-[11px] text-muted-foreground"
+                    className="rounded border border-line bg-paper-2 px-1.5 py-0.5 font-mono text-[11px] text-ink-2"
                   >
                     {a.name} · {Math.round(a.splitWeight * 100)}%
                   </span>

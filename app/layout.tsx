@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Newsreader, Hanken_Grotesk, IBM_Plex_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
 import "./globals.css";
@@ -18,13 +18,32 @@ export const metadata: Metadata = {
     "A citation-toll reading agent. It decides which paid sources are worth buying under a budget, answers with citations, and settles a weighted nanopayment to every source it used — in USDC on Arc.",
 };
 
-const geistSans = Geist({ variable: "--font-geist-sans", display: "swap", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", display: "swap", subsets: ["latin"] });
+// "The Mint" type system: Newsreader (engraved serif — headlines + reading),
+// Hanken Grotesk (UI sans), IBM Plex Mono (labels, figures, tolls).
+const newsreader = Newsreader({
+  variable: "--font-newsreader",
+  display: "swap",
+  subsets: ["latin"],
+  style: ["normal", "italic"],
+});
+const hanken = Hanken_Grotesk({
+  variable: "--font-hanken",
+  display: "swap",
+  subsets: ["latin"],
+});
+const plexMono = IBM_Plex_Mono({
+  variable: "--font-plex-mono",
+  display: "swap",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+});
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body
+        className={`${newsreader.variable} ${hanken.variable} ${plexMono.variable} antialiased`}
+      >
         <TooltipProvider>{children}</TooltipProvider>
         <Toaster richColors position="bottom-right" />
       </body>

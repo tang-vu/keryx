@@ -6,7 +6,6 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { Sparkles } from "lucide-react";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { RegisterForm } from "@/components/keryx/register-form";
 import {
@@ -36,31 +35,29 @@ export default function RegisterPage() {
   }, [loadSources]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-paper">
       <SiteHeader />
-      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-        <header className="mb-8 max-w-2xl">
-          <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/[0.07] px-3 py-1 text-xs font-medium text-amber-700">
-            <Sparkles className="h-3 w-3" />
-            For creators
+      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-8">
+        <header className="mb-9 max-w-2xl">
+          <div className="font-mono text-[12px] uppercase tracking-[0.2em] text-seal">
+            Become a source
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Register your source — get paid when an AI cites you.
+          <h1 className="mt-2.5 max-w-[18ch] font-serif text-[clamp(30px,4vw,46px)] font-normal tracking-tight text-ink">
+            Set your toll. Get paid per citation.
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground sm:text-base">
-            Add your feed once. Every time Keryx&apos;s agent reads and cites
-            your work to answer a question, a weighted USDC reward lands in your
-            wallet — automatically.
+          <p className="mt-3 max-w-[54ch] text-[18px] leading-relaxed text-ink-2">
+            List a source you control. When Keryx reads and cites it, the toll
+            settles to your wallet in USDC — instantly, with no middleman.
           </p>
         </header>
 
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,420px)_1fr]">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,440px)_1fr]">
           <div className="lg:sticky lg:top-24 lg:self-start">
             <RegisterForm onCreated={loadSources} />
           </div>
 
           <section>
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            <h2 className="mb-4 font-mono text-[12px] uppercase tracking-[0.16em] text-ink-3">
               Registered sources ({sources.length})
             </h2>
             <SourcesList sources={sources} />

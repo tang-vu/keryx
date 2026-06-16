@@ -1,8 +1,9 @@
 /**
  * Visual vocabulary for the agent's reasoning trace. Maps trace phases and
- * decision actions to a cohesive color system (amber/gold = paid/herald,
- * emerald = settled). Kept framework-agnostic (plain class strings) so any
- * component can render a consistent chip.
+ * decision actions onto "The Mint" palette — the vermillion seal marks a
+ * spending decision, treasury green marks money moving (fetch / settle), and
+ * structural phases stay quiet ink. Kept framework-agnostic (plain class
+ * strings) so any component can render a consistent chip.
  */
 
 import type { DecisionAction, TracePhase } from "@/lib/types";
@@ -29,61 +30,20 @@ export interface PhaseStyle {
   icon: LucideIcon;
 }
 
+const NEUTRAL = "bg-paper-2 text-ink-2 border-line";
+const SEAL = "bg-seal/10 text-seal border-seal/30";
+const PAID = "bg-paid/10 text-paid border-paid/30";
+
 export const PHASE_STYLES: Record<TracePhase, PhaseStyle> = {
-  decompose: {
-    label: "Decompose",
-    chip: "bg-slate-100 text-slate-700 border-slate-200",
-    dot: "bg-slate-400",
-    icon: Brain,
-  },
-  discover: {
-    label: "Discover",
-    chip: "bg-slate-100 text-slate-700 border-slate-200",
-    dot: "bg-slate-400",
-    icon: Search,
-  },
-  decide: {
-    label: "Decide",
-    chip: "bg-amber-100 text-amber-800 border-amber-200",
-    dot: "bg-amber-500",
-    icon: Scale,
-  },
-  fetch: {
-    label: "Fetch",
-    chip: "bg-emerald-100 text-emerald-800 border-emerald-200",
-    dot: "bg-emerald-500",
-    icon: Download,
-  },
-  sufficiency: {
-    label: "Sufficiency",
-    chip: "bg-violet-100 text-violet-800 border-violet-200",
-    dot: "bg-violet-500",
-    icon: BadgeCheck,
-  },
-  synthesize: {
-    label: "Synthesize",
-    chip: "bg-sky-100 text-sky-800 border-sky-200",
-    dot: "bg-sky-500",
-    icon: Activity,
-  },
-  attribute: {
-    label: "Attribute",
-    chip: "bg-violet-100 text-violet-800 border-violet-200",
-    dot: "bg-violet-500",
-    icon: Quote,
-  },
-  settle: {
-    label: "Settle",
-    chip: "bg-emerald-100 text-emerald-800 border-emerald-200",
-    dot: "bg-emerald-500",
-    icon: Coins,
-  },
-  done: {
-    label: "Done",
-    chip: "bg-emerald-100 text-emerald-800 border-emerald-200",
-    dot: "bg-emerald-500",
-    icon: CheckCircle2,
-  },
+  decompose: { label: "Decompose", chip: NEUTRAL, dot: "bg-ink-3", icon: Brain },
+  discover: { label: "Discover", chip: NEUTRAL, dot: "bg-ink-3", icon: Search },
+  decide: { label: "Decide", chip: SEAL, dot: "bg-seal", icon: Scale },
+  fetch: { label: "Fetch", chip: PAID, dot: "bg-paid", icon: Download },
+  sufficiency: { label: "Sufficiency", chip: NEUTRAL, dot: "bg-ink-3", icon: BadgeCheck },
+  synthesize: { label: "Synthesize", chip: NEUTRAL, dot: "bg-ink-3", icon: Activity },
+  attribute: { label: "Attribute", chip: SEAL, dot: "bg-seal", icon: Quote },
+  settle: { label: "Settle", chip: PAID, dot: "bg-paid", icon: Coins },
+  done: { label: "Done", chip: PAID, dot: "bg-paid", icon: CheckCircle2 },
 };
 
 export interface ActionStyle {
@@ -95,18 +55,17 @@ export interface ActionStyle {
 export const ACTION_STYLES: Record<DecisionAction, ActionStyle> = {
   BUY: {
     label: "BUY",
-    badge:
-      "bg-emerald-500/15 text-emerald-700 border-emerald-500/30 ring-1 ring-emerald-500/10",
+    badge: "bg-paid/12 text-paid border-paid/30",
     icon: Banknote,
   },
   CACHE: {
     label: "CACHE",
-    badge: "bg-blue-500/15 text-blue-700 border-blue-500/30",
+    badge: "bg-paper-2 text-ink-2 border-ink-3/40",
     icon: Download,
   },
   SKIP: {
     label: "SKIP",
-    badge: "bg-muted text-muted-foreground border-border",
+    badge: "bg-transparent text-ink-3 border-line",
     icon: Search,
   },
 };

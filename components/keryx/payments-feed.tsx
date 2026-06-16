@@ -37,9 +37,11 @@ export function PaymentsFeed({ payments }: { payments: PaymentRecord[] }) {
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle className="text-base">Live payments feed</CardTitle>
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+        <CardTitle className="font-serif text-lg font-normal">
+          Live payments feed
+        </CardTitle>
+        <span className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-paid">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-paid" />
           live
         </span>
       </CardHeader>
@@ -78,7 +80,7 @@ export function PaymentsFeed({ payments }: { payments: PaymentRecord[] }) {
                   <TableCell className="max-w-[180px] truncate text-sm font-medium">
                     {p.sourceName}
                   </TableCell>
-                  <TableCell className="text-right font-mono text-sm font-semibold tabular-nums text-emerald-700">
+                  <TableCell className="text-right font-mono text-sm font-semibold tabular-nums text-paid">
                     ${fmtUsdc(p.amountUsdc)}
                   </TableCell>
                   <TableCell className="font-mono text-[11px] text-muted-foreground">
@@ -90,7 +92,7 @@ export function PaymentsFeed({ payments }: { payments: PaymentRecord[] }) {
                         href={`${ARCSCAN}${p.txHash}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 font-mono text-[11px] text-emerald-700 hover:underline"
+                        className="inline-flex items-center gap-1 font-mono text-[11px] text-paid hover:underline"
                       >
                         {shortHash(p.txHash)}
                         <ExternalLink className="h-2.5 w-2.5" />
@@ -116,10 +118,10 @@ function KindBadge({ kind }: { kind: PaymentRecord["kind"] }) {
   return (
     <span
       className={cn(
-        "inline-flex rounded-md border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+        "inline-flex rounded-md border px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide",
         citation
-          ? "border-amber-500/30 bg-amber-500/10 text-amber-700"
-          : "border-blue-500/30 bg-blue-500/10 text-blue-700",
+          ? "border-seal/30 bg-seal/10 text-seal"
+          : "border-ink-3/40 bg-paper-2 text-ink-2",
       )}
     >
       {kind}
