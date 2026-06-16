@@ -21,6 +21,7 @@ import {
   type LeaderboardEntry,
 } from "@/components/keryx/creator-leaderboard";
 import { PaymentsFeed } from "@/components/keryx/payments-feed";
+import { EarningsChart } from "@/components/keryx/earnings-chart";
 import { fmtUsdc } from "@/components/keryx/phase-style";
 import type { DashboardMetrics, PaymentRecord } from "@/lib/types";
 
@@ -43,7 +44,7 @@ export default function DashboardPage() {
       try {
         const [mRes, pRes] = await Promise.all([
           fetch("/api/metrics", { cache: "no-store" }),
-          fetch("/api/payments?limit=25", { cache: "no-store" }),
+          fetch("/api/payments?limit=200", { cache: "no-store" }),
         ]);
         if (!alive) return;
         if (mRes.ok) {
@@ -133,9 +134,13 @@ export default function DashboardPage() {
           />
         </section>
 
+        <div className="mt-6">
+          <EarningsChart payments={payments} />
+        </div>
+
         <section className="mt-6 grid gap-5 lg:grid-cols-[1fr_1.4fr]">
           <CreatorLeaderboard rows={leaderboard} />
-          <PaymentsFeed payments={payments} />
+          <PaymentsFeed payments={payments.slice(0, 25)} />
         </section>
       </main>
     </div>
