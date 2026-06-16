@@ -22,6 +22,7 @@ import {
 } from "@/components/keryx/creator-leaderboard";
 import { PaymentsFeed } from "@/components/keryx/payments-feed";
 import { EarningsChart } from "@/components/keryx/earnings-chart";
+import { TopicsPanel, type Topic } from "@/components/keryx/topics-panel";
 import { fmtUsdc } from "@/components/keryx/phase-style";
 import type { DashboardMetrics, PaymentRecord } from "@/lib/types";
 
@@ -30,11 +31,13 @@ const POLL_MS = 2000;
 interface MetricsResponse {
   metrics: DashboardMetrics;
   leaderboard: LeaderboardEntry[];
+  topics?: Topic[];
 }
 
 export default function DashboardPage() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [topics, setTopics] = useState<Topic[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
 
   useEffect(() => {
@@ -51,6 +54,7 @@ export default function DashboardPage() {
           const data = (await mRes.json()) as MetricsResponse;
           setMetrics(data.metrics);
           setLeaderboard(data.leaderboard ?? []);
+          setTopics(data.topics ?? []);
         }
         if (pRes.ok) {
           const data = (await pRes.json()) as { payments: PaymentRecord[] };
@@ -134,9 +138,16 @@ export default function DashboardPage() {
           />
         </section>
 
-        <div className="mt-6">
-          <EarningsChart payments={payments} />
-        </div>
+        {topics.length > 0 ? (
+          <section className="mt-6 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
+            <EarningsChart payments={payments} />
+            <TopicsPanel topics={topics} />
+          </section>
+        ) : (
+          <div className="mt-6">
+            <EarningsChart payments={payments} />
+          </div>
+        )}
 
         <section className="mt-6 grid gap-5 lg:grid-cols-[1fr_1.4fr]">
           <CreatorLeaderboard rows={leaderboard} />
