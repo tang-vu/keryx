@@ -46,10 +46,10 @@ export function MetricCard({
         </span>
       </div>
       <div>
-        <p className="font-mono text-2xl tracking-tight tabular-nums text-ink sm:text-3xl">
+        <p className="letterpress font-display text-[30px] font-bold tracking-tight tabular-nums text-ink sm:text-[34px]">
           {value}
         </p>
-        {sub && <p className="mt-0.5 text-xs text-ink-3">{sub}</p>}
+        {sub && <p className="mt-0.5 font-mono text-[11px] text-ink-3">{sub}</p>}
       </div>
     </Card>
   );

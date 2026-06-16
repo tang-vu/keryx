@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { Newsreader, Hanken_Grotesk, IBM_Plex_Mono } from "next/font/google";
+import { Bodoni_Moda, Spectral, Spline_Sans_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
+import { PaperGrain } from "@/components/keryx/paper-grain";
 import "./globals.css";
 
 // Public origin for OG/canonical metadata. Explicit BASE_URL wins (set to the live
@@ -18,21 +19,24 @@ export const metadata: Metadata = {
     "A citation-toll reading agent. It decides which paid sources are worth buying under a budget, answers with citations, and settles a weighted nanopayment to every source it used — in USDC on Arc.",
 };
 
-// "The Mint" type system: Newsreader (engraved serif — headlines + reading),
-// Hanken Grotesk (UI sans), IBM Plex Mono (labels, figures, tolls).
-const newsreader = Newsreader({
-  variable: "--font-newsreader",
+// "The Mint" type system: Bodoni Moda (engraved denomination display),
+// Spectral (literary reading + UI), Spline Sans Mono (labels, figures, tolls).
+const bodoni = Bodoni_Moda({
+  variable: "--font-bodoni",
   display: "swap",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
   style: ["normal", "italic"],
 });
-const hanken = Hanken_Grotesk({
-  variable: "--font-hanken",
+const spectral = Spectral({
+  variable: "--font-spectral",
   display: "swap",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600"],
+  style: ["normal", "italic"],
 });
-const plexMono = IBM_Plex_Mono({
-  variable: "--font-plex-mono",
+const splineMono = Spline_Sans_Mono({
+  variable: "--font-spline-mono",
   display: "swap",
   subsets: ["latin"],
   weight: ["400", "500", "600"],
@@ -42,8 +46,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <body
-        className={`${newsreader.variable} ${hanken.variable} ${plexMono.variable} antialiased`}
+        className={`${bodoni.variable} ${spectral.variable} ${splineMono.variable} antialiased`}
       >
+        <PaperGrain />
         <TooltipProvider>{children}</TooltipProvider>
         <Toaster richColors position="bottom-right" />
       </body>

@@ -58,27 +58,27 @@ export function GlobeWatermark({ className }: { className?: string }) {
       projection.rotate([rot, -18]);
       ctx.beginPath();
       path({ type: "Sphere" });
-      ctx.fillStyle = "#f1ece1";
+      ctx.fillStyle = "#f1e9d7";
       ctx.fill();
       ctx.beginPath();
       path(graticule);
-      ctx.strokeStyle = "rgba(33,30,24,0.13)";
+      ctx.strokeStyle = "rgba(27,23,18,0.13)";
       ctx.lineWidth = 0.5;
       ctx.stroke();
       if (land) {
         ctx.beginPath();
         path(land);
-        ctx.fillStyle = "#221c15";
+        ctx.fillStyle = "#22190f";
         ctx.fill();
         ctx.beginPath();
         path(borders);
-        ctx.strokeStyle = "rgba(241,236,225,0.85)";
+        ctx.strokeStyle = "rgba(241,233,215,0.85)";
         ctx.lineWidth = 0.55;
         ctx.stroke();
       }
       ctx.beginPath();
       path({ type: "Sphere" });
-      ctx.strokeStyle = "#211e18";
+      ctx.strokeStyle = "#1b1712";
       ctx.lineWidth = 1.4;
       ctx.stroke();
       if (reduced) return;
@@ -134,22 +134,22 @@ export function GlobeWatermark({ className }: { className?: string }) {
         className="absolute inset-0 h-full w-full overflow-visible"
       >
         <g style={{ transformOrigin: "100px 100px", animation: "kxSpinCW 17s linear infinite" }}>
-          <circle cx="100" cy="100" r="96" fill="none" stroke="#211e18" strokeOpacity="0.16" strokeWidth="1" strokeDasharray="1.2 7.5" />
+          <circle cx="100" cy="100" r="96" fill="none" stroke="#1b1712" strokeOpacity="0.16" strokeWidth="1" strokeDasharray="1.2 7.5" />
         </g>
         <g style={{ transformOrigin: "100px 100px", animation: "kxSpinCCW 5.5s linear infinite" }}>
-          <path d="M100 11 A89 89 0 0 1 189 100" fill="none" stroke="#211e18" strokeOpacity="0.5" strokeWidth="1.7" strokeLinecap="round" />
-          <path d="M100 189 A89 89 0 0 1 11 100" fill="none" stroke="#211e18" strokeOpacity="0.24" strokeWidth="1.7" strokeLinecap="round" />
+          <path d="M100 11 A89 89 0 0 1 189 100" fill="none" stroke="#1b1712" strokeOpacity="0.5" strokeWidth="1.7" strokeLinecap="round" />
+          <path d="M100 189 A89 89 0 0 1 11 100" fill="none" stroke="#1b1712" strokeOpacity="0.24" strokeWidth="1.7" strokeLinecap="round" />
         </g>
         <g style={{ transformOrigin: "100px 100px", animation: "kxSpinCW 9s linear infinite" }}>
-          <path d="M158 33 A82 82 0 0 1 178 64" fill="none" stroke="#211e18" strokeOpacity="0.3" strokeWidth="1.2" strokeLinecap="round" />
-          <path d="M42 167 A82 82 0 0 1 22 136" fill="none" stroke="#211e18" strokeOpacity="0.3" strokeWidth="1.2" strokeLinecap="round" />
+          <path d="M158 33 A82 82 0 0 1 178 64" fill="none" stroke="#1b1712" strokeOpacity="0.3" strokeWidth="1.2" strokeLinecap="round" />
+          <path d="M42 167 A82 82 0 0 1 22 136" fill="none" stroke="#1b1712" strokeOpacity="0.3" strokeWidth="1.2" strokeLinecap="round" />
         </g>
         <g style={{ transformOrigin: "100px 100px", animation: "kxSpinCW 3.6s linear infinite" }}>
-          <circle cx="100" cy="16" r="2.1" fill="#211e18" />
-          <circle cx="184" cy="100" r="1.4" fill="#211e18" fillOpacity="0.55" />
+          <circle cx="100" cy="16" r="2.1" fill="#1b1712" />
+          <circle cx="184" cy="100" r="1.4" fill="#1b1712" fillOpacity="0.55" />
         </g>
         <g style={{ transformOrigin: "100px 100px", animation: "kxSpinCCW 6.8s linear infinite" }}>
-          <circle cx="100" cy="183" r="1.5" fill="#211e18" fillOpacity="0.5" />
+          <circle cx="100" cy="183" r="1.5" fill="#1b1712" fillOpacity="0.5" />
         </g>
       </svg>
       <canvas ref={canvasRef} className="relative z-[1] block" />

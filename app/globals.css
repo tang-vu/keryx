@@ -20,45 +20,51 @@
 @import "tw-animate-css";
 
 /*
- * Keryx · The Mint — an engraved-banknote / herald's-treasury palette.
- * Warm ivory paper, ink, a vermillion herald's seal, and treasury green
- * for money. shadcn semantic tokens are remapped onto this system so the
- * ui primitives inherit it; the extended Mint scale (seal, paid, paper, ink
- * shades, line) is exposed as utilities for the bespoke components.
+ * Keryx · The Mint — engraved-banknote / herald's-treasury system.
+ * Warm pressed-cotton paper, oak ink, a vermillion herald's seal, deep
+ * treasury green for money, and a brass accent. Surfaces are banknote panels
+ * (crisp ink frames), type is Bodoni Moda (denomination display) + Spectral
+ * (reading) + Spline Sans Mono (labels/figures). shadcn semantic tokens are
+ * remapped onto this so ui primitives inherit it; the extended Mint scale is
+ * exposed as utilities for the bespoke components.
  */
 :root {
-  --paper: #f1ece1;
-  --paper-2: #f7f3ea;
-  --ink: #211e18;
-  --ink-2: #5a5347;
-  --ink-3: #8c8475;
-  --line: #d9d2c2;
-  --line-2: #e7e1d3;
-  --seal: #c5402a; /* vermillion herald's seal */
-  --paid: #3e6b57; /* treasury green */
-  --cream: #fbf7f0; /* text on seal / ink grounds */
+  --paper: #f1e9d7;
+  --paper-2: #e8dec8;
+  --panel: #ede3cd;
+  --ink: #1b1712;
+  --ink-2: #3a342a;
+  --ink-3: #7a6f58; /* dim — labels, secondary */
+  --faint: #a99c80;
+  --seal: #c0381c; /* vermillion herald's seal */
+  --paid: #1c5d45; /* treasury green */
+  --paid-2: #2e7c5e;
+  --brass: #9a7b2e;
+  --cream: #f3ecdb; /* type on ink / seal grounds */
+  --line: rgba(27, 23, 18, 0.22);
+  --line-2: rgba(27, 23, 18, 0.12);
 
   /* shadcn semantic tokens → Mint */
   --background: var(--paper);
   --foreground: var(--ink);
-  --card: #fcfaf4;
+  --card: #f5efe0;
   --card-foreground: var(--ink);
-  --popover: #fcfaf4;
+  --popover: #f5efe0;
   --popover-foreground: var(--ink);
   --primary: var(--seal);
   --primary-foreground: var(--cream);
   --secondary: var(--paper-2);
   --secondary-foreground: var(--ink);
   --muted: var(--paper-2);
-  --muted-foreground: var(--ink-2);
+  --muted-foreground: var(--ink-3);
   --accent: var(--paper-2);
   --accent-foreground: var(--ink);
-  --destructive: #9e3320;
+  --destructive: #9e2b16;
   --destructive-foreground: var(--cream);
   --border: var(--line);
   --input: var(--line);
   --ring: var(--seal);
-  --radius: 0.5rem;
+  --radius: 0.375rem;
 }
 
 @theme inline {
@@ -85,23 +91,28 @@
   /* Extended Mint scale */
   --color-paper: var(--paper);
   --color-paper-2: var(--paper-2);
+  --color-panel: var(--panel);
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
   --color-ink-3: var(--ink-3);
-  --color-line: var(--line);
-  --color-line-2: var(--line-2);
+  --color-faint: var(--faint);
   --color-seal: var(--seal);
   --color-paid: var(--paid);
+  --color-paid-2: var(--paid-2);
+  --color-brass: var(--brass);
   --color-cream: var(--cream);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
 
   /* Type system */
-  --font-sans: var(--font-hanken), system-ui, sans-serif;
-  --font-serif: var(--font-newsreader), Georgia, serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-display: var(--font-bodoni), "Bodoni Moda", Georgia, serif;
+  --font-serif: var(--font-spectral), Georgia, serif;
+  --font-sans: var(--font-spectral), Georgia, serif;
+  --font-mono: var(--font-spline-mono), ui-monospace, monospace;
 
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  --radius-sm: calc(var(--radius) - 3px);
 }
 
 @layer base {
@@ -109,22 +120,74 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground font-serif;
+    font-variant-numeric: tabular-nums lining-nums;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
   }
 }
 
-/* Mint-specific global texture & motion */
-::selection {
-  background: rgba(197, 64, 42, 0.18);
+/* Engraved letterpress — type pressed into the paper. */
+.letterpress {
+  text-shadow: 0 1px 0 rgba(243, 236, 219, 0.55);
 }
+
+::selection {
+  background: var(--paid);
+  color: var(--cream);
+}
+
+/* Banknote slider — thin ink rail, vermillion struck thumb. */
 input[type="range"] {
-  accent-color: var(--seal);
+  -webkit-appearance: none;
+  appearance: none;
+  height: 2px;
+  background: var(--ink);
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--seal);
+  border: 2px solid var(--paper);
+  box-shadow: 0 0 0 1px var(--ink);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--seal);
+  border: 2px solid var(--paper);
+  box-shadow: 0 0 0 1px var(--ink);
+}
+input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 1px var(--ink), 0 0 0 4px rgba(192, 56, 28, 0.3);
+}
+
+/* Treasury-green scrollbar on the paper. */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: var(--paper-2);
+}
+::-webkit-scrollbar-thumb {
+  background: #cdbfa2;
+  border: 3px solid var(--paper-2);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--paid);
 }
 
 @keyframes kxUp {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(14px);
   }
   to {
     opacity: 1;
@@ -137,10 +200,10 @@ input[type="range"] {
     opacity: 1;
   }
   50% {
-    opacity: 0;
+    opacity: 0.25;
   }
 }
-/* "PAID" wax stamp slamming down: oversize → impact → slight overshoot → rest. */
+/* "PAID" wax stamp: oversize → impact → slight overshoot → rest. */
 @keyframes kxStamp {
   0% {
     opacity: 0;
@@ -155,7 +218,7 @@ input[type="range"] {
     transform: rotate(-12deg) scale(1.06);
   }
   100% {
-    opacity: 0.9;
+    opacity: 0.92;
     transform: rotate(-12deg) scale(1);
   }
 }
@@ -167,5 +230,22 @@ input[type="range"] {
 @keyframes kxSpinCCW {
   to {
     transform: rotate(-360deg);
+  }
+}
+/* Running ticker tape. */
+@keyframes kxTape {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kx-spin,
+  [style*="kxSpin"],
+  [style*="kxTape"] {
+    animation: none !important;
   }
 }

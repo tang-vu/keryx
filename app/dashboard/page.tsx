@@ -77,7 +77,7 @@ export default function DashboardPage() {
             <div className="font-mono text-[12px] uppercase tracking-[0.2em] text-seal">
               Creator dashboard
             </div>
-            <h1 className="mt-2.5 font-serif text-[clamp(28px,3.6vw,40px)] font-normal tracking-tight text-ink">
+            <h1 className="letterpress mt-2.5 font-display text-[clamp(28px,3.6vw,40px)] font-medium tracking-tight text-ink">
               Traction
             </h1>
             <p className="mt-1.5 text-sm text-ink-2">

@@ -36,10 +36,10 @@ export function SiteHeader() {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "border-b-2 px-3 py-1.5 text-[14.5px] transition-colors",
+                  "border-b-2 px-3 py-1.5 font-mono text-[12px] uppercase tracking-[0.08em] transition-colors",
                   active
                     ? "border-seal text-ink"
-                    : "border-transparent text-ink-2 hover:text-ink",
+                    : "border-transparent text-ink-3 hover:text-ink",
                 )}
               >
                 {link.label}
@@ -48,7 +48,7 @@ export function SiteHeader() {
           })}
           <Link
             href="/register"
-            className="ml-2 rounded-[5px] bg-ink px-4 py-2.5 text-sm font-medium text-paper-2 transition-colors hover:bg-ink-2"
+            className="ml-2 border border-ink bg-ink px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-cream transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--seal)]"
           >
             Register a source
           </Link>

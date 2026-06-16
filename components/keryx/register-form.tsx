@@ -76,7 +76,7 @@ export function RegisterForm({ onCreated }: { onCreated?: () => void }) {
   const price = parseFloat(fetchPrice) || 0;
 
   return (
-    <div className="rounded-lg border border-line bg-card p-7">
+    <div className="border border-ink bg-paper p-7">
       <div className="space-y-6">
         <div className="space-y-2">
           <Label htmlFor="rss" className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">
@@ -134,7 +134,7 @@ export function RegisterForm({ onCreated }: { onCreated?: () => void }) {
                 <Label htmlFor="price" className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">
                   Price per read
                 </Label>
-                <span className="font-mono text-[18px] tabular-nums text-seal">
+                <span className="font-display text-[22px] font-bold tabular-nums text-seal">
                   ${fmtUsdc(price)}
                 </span>
               </div>
@@ -160,14 +160,14 @@ export function RegisterForm({ onCreated }: { onCreated?: () => void }) {
           type="button"
           onClick={submit}
           disabled={loading}
-          className="flex w-full items-center justify-center gap-2 rounded-md bg-seal px-4 py-3.5 text-[15px] font-semibold text-cream shadow-[0_10px_22px_-12px_rgba(197,64,42,0.7)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-2 border border-ink bg-seal px-4 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-cream transition-all hover:-translate-y-0.5 hover:shadow-[0_5px_0_var(--ink)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
         >
           {loading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <Wallet className="h-4 w-4" />
           )}
-          {loading ? "Registering…" : "Publish source →"}
+          {loading ? "Registering…" : "Publish source ▸"}
         </button>
       </div>
     </div>
@@ -182,10 +182,10 @@ function SuccessCard({
   onAgain: () => void;
 }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-line bg-card animate-in fade-in zoom-in-95 duration-300">
-      <div className="flex items-center gap-2 border-b border-line-2 bg-paid/[0.08] px-6 py-4">
+    <div className="overflow-hidden border border-ink bg-paper animate-in fade-in zoom-in-95 duration-300">
+      <div className="flex items-center gap-2 border-b border-ink bg-paid/[0.08] px-6 py-4">
         <PartyPopper className="h-5 w-5 text-paid" />
-        <span className="font-serif text-lg text-ink">
+        <span className="font-display text-lg font-medium text-ink">
           You&apos;re live, {source.name}
         </span>
       </div>

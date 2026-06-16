@@ -42,7 +42,7 @@ export default function RegisterPage() {
           <div className="font-mono text-[12px] uppercase tracking-[0.2em] text-seal">
             Become a source
           </div>
-          <h1 className="mt-2.5 max-w-[18ch] font-serif text-[clamp(30px,4vw,46px)] font-normal tracking-tight text-ink">
+          <h1 className="letterpress mt-2.5 max-w-[18ch] font-display text-[clamp(30px,4vw,46px)] font-medium tracking-tight text-ink">
             Set your toll. Get paid per citation.
           </h1>
           <p className="mt-3 max-w-[54ch] text-[18px] leading-relaxed text-ink-2">

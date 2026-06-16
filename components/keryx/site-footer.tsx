@@ -5,6 +5,7 @@
 
 import Link from "next/link";
 import { KeryxGlyph } from "./keryx-mark";
+import { Microprint } from "./banknote";
 
 const PRODUCT = [
   { label: "Ask", href: "/" },
@@ -22,8 +23,8 @@ export function SiteFooter() {
         <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr]">
           <div>
             <div className="flex items-center gap-2.5">
-              <KeryxGlyph className="text-[#E08B6F]" />
-              <span className="font-serif text-[22px] leading-none text-[#F4EFE4]">
+              <KeryxGlyph className="text-[#E08B6F]" size={32} />
+              <span className="font-display text-[23px] font-medium leading-none text-[#F4EFE4]">
                 Keryx
               </span>
             </div>
@@ -58,7 +59,11 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div className="mt-10 flex flex-wrap justify-between gap-3 border-t border-[#3A352C] pt-5 font-mono text-[11px] tracking-wide text-ink-3">
+        <Microprint
+          text="KERYX · THE CITATION TOLL · ΚΗΡΥΞ · USDC ON ARC"
+          className="mt-10 text-[#6f6451]/70"
+        />
+        <div className="mt-4 flex flex-wrap justify-between gap-3 border-t border-[#3A352C] pt-5 font-mono text-[11px] tracking-wide text-ink-3">
           <span>© 2026 Keryx</span>
           <span>Creators paid every time an AI cites them.</span>
         </div>
