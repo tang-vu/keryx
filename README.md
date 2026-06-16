@@ -2,6 +2,8 @@
 
 **Every time an AI uses a creator's work as a source, the creator gets paid — instantly.**
 
+🔗 Live: **[keryx.cc](https://keryx.cc)**
+
 Keryx is a **citation-toll reading agent**. Ask it a question with a budget. It autonomously decides
 which paid content sources are worth buying, pays for them per-request over [x402](https://github.com/circlefin/arc-nanopayments),
 reads enough to answer, writes a grounded answer with citations, and then settles a **weighted
@@ -126,9 +128,9 @@ npm run metrics
 Flip to live: add an LLM key, fund the wallet, set `KERYX_FORCE_OFFLINE=0`.
 
 ## Deploy
-Primary: run locally + expose with **Cloudflare Tunnel** (`npm run tunnel`) — keeps SQLite, gives a
-public URL, runs the volume engine for real traction. Always-on alternative: Supabase + Vercel
-(adapters included; set the Supabase env vars).
+Primary: run locally + expose at **[keryx.cc](https://keryx.cc)** with **Cloudflare Tunnel**
+(`npm run tunnel`) — keeps SQLite, gives a public URL, runs the volume engine for real traction.
+Always-on alternative: Supabase + Vercel (adapters included; set the Supabase env vars).
 
 ## Project docs
 - [`PLAN.md`](./PLAN.md) — phased build plan & status

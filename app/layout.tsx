@@ -4,9 +4,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
 import "./globals.css";
 
-const defaultUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : "http://localhost:3000";
+// Public origin for OG/canonical metadata. Explicit BASE_URL wins (set to the live
+// Cloudflare Tunnel domain); fall back to Vercel preview URL, then the prod domain, then localhost.
+const defaultUrl =
+  process.env.BASE_URL ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+  (process.env.NODE_ENV === "production" ? "https://keryx.cc" : "http://localhost:3000");
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
