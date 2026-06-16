@@ -1,22 +1,16 @@
 "use client";
 
 /**
- * Hero traction strip — pulls the real settled metrics from /api/metrics and
- * tallies them up (Bodoni, letterpress) so the landing leads with proof, not
- * a claim. Hidden until there is something real to show.
+ * Hero denomination box — the real settled metrics from /api/metrics, struck in
+ * Bodoni and tallied up. Two cells: paid to creators (green) and citations
+ * today (ink). Hidden until there is something real to show.
  */
 
 import { useEffect, useState } from "react";
 import { useCountUp } from "@/lib/hooks/use-count-up";
 
-interface Metrics {
-  paid: number;
-  payments: number;
-  creators: number;
-}
-
 export function HeroStats() {
-  const [m, setM] = useState<Metrics | null>(null);
+  const [m, setM] = useState<{ paid: number; cites: number } | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -26,8 +20,7 @@ export function HeroStats() {
         if (!alive || !d?.metrics) return;
         setM({
           paid: d.metrics.totalCreatorPayoutsUsdc ?? 0,
-          payments: d.metrics.totalPayments ?? 0,
-          creators: d.metrics.creatorsEarning ?? 0,
+          cites: d.metrics.totalPayments ?? 0,
         });
       })
       .catch(() => {});
@@ -36,33 +29,47 @@ export function HeroStats() {
     };
   }, []);
 
-  if (!m || (m.paid <= 0 && m.payments <= 0)) return null;
+  if (!m || (m.paid <= 0 && m.cites <= 0)) return null;
 
   return (
-    <div className="mt-7 flex flex-wrap gap-x-10 gap-y-4 border-t border-line pt-6">
-      <Figure target={m.paid} fmt={(n) => `$${n.toFixed(2)}`} label="settled to creators" />
-      <Figure target={m.payments} fmt={(n) => Math.round(n).toLocaleString()} label="payments cleared" />
-      <Figure target={m.creators} fmt={(n) => Math.round(n).toLocaleString()} label="creators earning" />
+    <div className="flex w-full border border-ink">
+      <Cell
+        target={m.paid}
+        fmt={(n) => `$${n.toFixed(2)}`}
+        label="Paid to creators"
+        money
+      />
+      <Cell
+        target={m.cites}
+        fmt={(n) => Math.round(n).toLocaleString()}
+        label="Citations today"
+      />
     </div>
   );
 }
 
-function Figure({
+function Cell({
   target,
   fmt,
   label,
+  money,
 }: {
   target: number;
   fmt: (n: number) => string;
   label: string;
+  money?: boolean;
 }) {
   const v = useCountUp(target);
   return (
-    <div>
-      <div className="letterpress font-display text-[34px] font-bold leading-none tabular-nums text-ink">
+    <div className="flex-1 border-r border-ink px-4 py-3.5 last:border-r-0">
+      <div
+        className={`font-display text-[clamp(24px,2.4vw,32px)] font-bold leading-none tracking-tight tabular-nums ${
+          money ? "text-paid" : "text-ink"
+        }`}
+      >
         {fmt(v)}
       </div>
-      <div className="mt-1.5 font-mono text-[10.5px] uppercase tracking-[0.12em] text-ink-3">
+      <div className="mt-1.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-ink-3">
         {label}
       </div>
     </div>

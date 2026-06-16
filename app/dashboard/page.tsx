@@ -75,7 +75,7 @@ export default function DashboardPage() {
         <header className="mb-8 flex items-end justify-between gap-6 border-b-[1.5px] border-ink pb-6">
           <div>
             <div className="font-mono text-[12px] uppercase tracking-[0.2em] text-seal">
-              Creator dashboard
+              The ledger
             </div>
             <h1 className="letterpress mt-2.5 font-display text-[clamp(28px,3.6vw,40px)] font-medium tracking-tight text-ink">
               Traction

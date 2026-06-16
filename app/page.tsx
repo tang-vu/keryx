@@ -1,9 +1,10 @@
 "use client";
 
 /**
- * Ask / Landing — the hero. A Bodoni dispatch order + budget opens an SSE
- * stream and renders the live dispatch: §I the decision, §II the reading, §III
- * the settlement. Idle, it shows the herald seal, traction, and the landing.
+ * Ask / Landing — the banknote masthead ("Citations are currency.") with the
+ * herald seal, real-traction denomination box, and a guilloché divider. The
+ * dispatch order opens an SSE stream and renders the live dispatch: §I the
+ * decision, §II the reading, §III the settlement.
  */
 
 import { useMemo } from "react";
@@ -13,16 +14,12 @@ import { AskForm } from "@/components/keryx/ask-form";
 import { GlobeWatermark } from "@/components/keryx/globe-watermark";
 import { HeraldSeal } from "@/components/keryx/herald-seal";
 import { HeroStats } from "@/components/keryx/hero-stats";
-import { Microprint } from "@/components/keryx/banknote";
 import { ReasoningConsole } from "@/components/keryx/reasoning-console";
 import { CreatorsPaidPanel } from "@/components/keryx/creators-paid-panel";
 import { AnswerCard } from "@/components/keryx/answer-card";
 import { HowItWorks, ForCreators } from "@/components/keryx/landing-sections";
 import { useAskStream } from "@/lib/hooks/use-ask-stream";
 import type { PaymentRecord } from "@/lib/types";
-
-const MICROPRINT =
-  "THE HERALD IS PAID · ΚΗΡΥΞ · A CITATION IS A PAYMENT EVENT · USDC ON ARC · WEIGHTED BY CONTRIBUTION";
 
 export default function AskPage() {
   const { state, ask } = useAskStream();
@@ -53,76 +50,106 @@ export default function AskPage() {
   }, [state.payments, state.run]);
 
   return (
-    <div className="min-h-screen bg-paper">
+    <div className="min-h-screen bg-paper-2">
       <SiteHeader />
       <main>
-        {/* HERO */}
-        <section className="relative overflow-hidden border-b border-line">
-          <div
-            className={
-              started
-                ? "mx-auto max-w-6xl px-4 pb-6 pt-9 sm:px-8"
-                : "mx-auto max-w-6xl px-4 pb-9 pt-14 sm:px-8"
-            }
-          >
-            <div className="grid items-center gap-10 lg:grid-cols-[1.12fr_0.88fr]">
-              <div className="relative z-10">
-                <div className="flex flex-wrap items-center gap-3.5 font-mono text-[12px] uppercase tracking-[0.22em] text-ink-3">
-                  <span className="text-seal">Citation-toll reading agent</span>
-                  <Dot />
-                  <span>x402</span>
-                  <Dot />
-                  <span>USDC on Arc</span>
-                </div>
+        {!started ? (
+          <>
+            {/* HERO NOTE */}
+            <section className="mx-auto max-w-[1180px] px-4 pb-2 pt-12 sm:px-[30px]">
+              <div className="border-2 border-ink bg-paper p-1.5">
+                <div className="relative overflow-hidden border border-ink p-[clamp(28px,4.5vw,56px)]">
+                  <div className="pointer-events-none absolute right-[-90px] top-1/2 hidden h-[560px] w-[560px] -translate-y-1/2 opacity-50 lg:block">
+                    <GlobeWatermark className="h-full w-full" />
+                  </div>
 
-                <h1 className="letterpress mt-6 max-w-[20ch] text-balance font-display text-[clamp(36px,5.4vw,68px)] font-medium leading-[1.02] tracking-[-0.015em] text-ink">
-                  Every time an AI <em className="font-semibold italic">cites</em> a
-                  creator, the creator gets{" "}
-                  <em className="font-semibold italic text-seal">paid</em> —
-                  instantly.
-                </h1>
+                  <div className="relative flex items-center justify-between gap-4 font-mono text-[11px] uppercase tracking-[0.18em] text-ink-3">
+                    <span>x402 &nbsp;·&nbsp; USDC &nbsp;·&nbsp; settled on Arc</span>
+                    <span className="text-ink">Series 2026 — No. 00481</span>
+                  </div>
 
-                {!started && (
-                  <>
-                    <p className="mt-6 max-w-[54ch] font-serif text-[19px] leading-[1.55] text-ink-2">
-                      Ask a question with a budget. Keryx autonomously decides
-                      which paid sources are worth buying, reads enough to
-                      answer, and settles a weighted nanopayment to every source
-                      it cites.
-                    </p>
-                    <HeroStats />
-                  </>
-                )}
+                  <h1 className="letterpress relative mt-6 font-display text-[clamp(46px,8.2vw,116px)] font-medium leading-[0.92] tracking-[-0.01em]">
+                    Citations are
+                    <br />
+                    <span className="font-semibold italic text-paid">currency.</span>
+                  </h1>
 
-                <div className="mt-8 max-w-[760px]">
-                  <AskForm disabled={streaming} onAsk={ask} />
+                  <div className="relative mt-9 grid items-end gap-[clamp(28px,4vw,56px)] md:grid-cols-[1.45fr_0.9fr]">
+                    <div>
+                      <p className="max-w-[46ch] font-serif text-[clamp(17px,1.5vw,20px)] leading-[1.55] text-ink-2">
+                        Keryx is a reading agent with a purse. Give it a question
+                        and a budget — it buys the sources worth reading, answers
+                        with citations, and pays every author it quotes, in the
+                        same breath.
+                      </p>
+                      <div className="mt-7 flex flex-wrap gap-3">
+                        <a
+                          href="#dispatch"
+                          className="border border-ink bg-ink px-6 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-paper transition-all hover:-translate-y-0.5 hover:shadow-[0_5px_0_var(--seal)] active:translate-y-0 active:shadow-none"
+                        >
+                          Ask the herald ▸
+                        </a>
+                        <a
+                          href="/register"
+                          className="border border-ink px-6 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-ink transition-colors hover:bg-ink hover:text-paper"
+                        >
+                          Issue a toll
+                        </a>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-6">
+                      <HeraldSeal className="h-32 w-32" />
+                      <HeroStats />
+                    </div>
+                  </div>
+
+                  {/* guilloché divider + microprint */}
+                  <div className="relative mt-9">
+                    <svg
+                      viewBox="0 0 1200 40"
+                      preserveAspectRatio="none"
+                      className="block h-3.5 w-full"
+                    >
+                      <use href="#eng-waveA" fill="none" stroke="var(--ink)" strokeWidth="1" vectorEffect="non-scaling-stroke" opacity="0.55" />
+                      <use href="#eng-waveB" fill="none" stroke="var(--paid)" strokeWidth="1" vectorEffect="non-scaling-stroke" opacity="0.55" />
+                    </svg>
+                    <div className="mt-2 overflow-hidden whitespace-nowrap font-mono text-[8.5px] uppercase tracking-[0.42em] text-faint">
+                      {"keryx · the one sent to carry a message and paid for the carrying · ".repeat(
+                        6,
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
+            </section>
 
-              {!started && (
-                <div className="relative hidden min-h-[360px] items-center justify-center lg:flex">
-                  <GlobeWatermark className="absolute inset-0 m-auto w-[400px] opacity-[0.16]" />
-                  <HeraldSeal className="relative z-10 w-[240px] opacity-90" />
-                </div>
-              )}
+            {/* DISPATCH ORDER */}
+            <section id="dispatch" className="mx-auto max-w-[1180px] px-4 pt-9 sm:px-[30px]">
+              <AskForm disabled={streaming} onAsk={ask} />
+            </section>
+
+            <HowItWorks />
+            <ForCreators />
+            <SiteFooter />
+          </>
+        ) : (
+          /* THE READING ROOM — live dispatch */
+          <section className="mx-auto max-w-[1180px] px-4 pb-20 pt-10 sm:px-[30px]">
+            <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.2em] text-seal">
+              The reading room
+            </div>
+            <div id="dispatch" className="max-w-[860px]">
+              <AskForm disabled={streaming} onAsk={ask} />
             </div>
 
-            <Microprint text={MICROPRINT} className="mt-10" />
-          </div>
-        </section>
+            {state.status === "error" && (
+              <div className="mt-5 border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {state.error ?? "Something went wrong."}
+              </div>
+            )}
 
-        {state.status === "error" && (
-          <div className="mx-auto mt-4 max-w-6xl px-4 sm:px-8">
-            <div className="border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {state.error ?? "Something went wrong."}
-            </div>
-          </div>
-        )}
-
-        {/* LIVE DISPATCH */}
-        {started && (
-          <section className="mx-auto max-w-6xl px-4 pb-16 pt-9 sm:px-8">
-            <h2 className="mb-7 border-b border-ink pb-3.5 font-display text-[clamp(24px,3.2vw,34px)] font-medium tracking-tight text-ink">
+            <h2 className="mb-7 mt-10 border-b border-ink pb-3.5 font-display text-[clamp(24px,3.2vw,34px)] font-medium tracking-tight text-ink">
               The dispatch, <em className="italic text-paid">itemised.</em>
             </h2>
             <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
@@ -140,20 +167,7 @@ export default function AskPage() {
             )}
           </section>
         )}
-
-        {/* LANDING */}
-        {!started && (
-          <>
-            <HowItWorks />
-            <ForCreators />
-            <SiteFooter />
-          </>
-        )}
       </main>
     </div>
   );
-}
-
-function Dot() {
-  return <span className="h-[5px] w-[5px] rounded-full bg-line" aria-hidden />;
 }

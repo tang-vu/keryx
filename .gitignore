@@ -39,3 +39,6 @@ CLAUDE.md
 .claude/
 plans/
 .keryx-shots/
+
+# Local copy of the Claude Design handoff bundle (share links expire)
+.design-handoff/

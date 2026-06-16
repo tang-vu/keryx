@@ -1,51 +1,49 @@
 /**
- * Keryx wordmark + coin glyph. The mark is a *minted coin* — a Bodoni "K"
- * struck inside a double ring with a reeded (milled) edge, exactly like the
- * ridges on a real coin: citations are currency. Color is `currentColor`, so
- * the same glyph reads on ivory (seal) or on the dark footer (a lighter coral).
+ * Keryx wordmark + the minted coin. A Bodoni "K" struck inside a double ring
+ * with a reeded (milled) edge — a citation as a unit of currency. The favicon
+ * variant drops the reeding for clarity at small sizes. `currentColor`-driven.
  */
 
 import { cn } from "@/lib/utils";
 
-const REEDS = Array.from({ length: 90 }, (_, i) => (i / 90) * Math.PI * 2);
+const BODONI = "var(--font-bodoni), 'Bodoni Moda', Georgia, serif";
 
 export function KeryxGlyph({
   className,
   size = 30,
+  reeded = true,
 }: {
   className?: string;
   size?: number;
+  reeded?: boolean;
 }) {
   return (
     <svg
-      viewBox="0 0 100 100"
+      viewBox="0 0 160 160"
       width={size}
       height={size}
-      className={cn("shrink-0 text-seal", className)}
+      className={cn("block shrink-0 text-seal", className)}
       aria-hidden
     >
-      <g stroke="currentColor">
-        {REEDS.map((a, i) => (
-          <line
-            key={i}
-            x1={50 + Math.cos(a) * 46}
-            y1={50 + Math.sin(a) * 46}
-            x2={50 + Math.cos(a) * 49.3}
-            y2={50 + Math.sin(a) * 49.3}
-            strokeWidth={1.5}
-          />
-        ))}
-        <circle cx="50" cy="50" r="44" fill="none" strokeWidth="2" />
-        <circle cx="50" cy="50" r="37.5" fill="none" strokeWidth="0.9" />
-      </g>
+      <circle cx="80" cy="80" r="76" fill="none" stroke="currentColor" strokeWidth="2.5" />
+      <circle cx="80" cy="80" r={reeded ? 60 : 64} fill="none" stroke="currentColor" strokeWidth="1" />
+      {reeded && (
+        <circle
+          cx="80"
+          cy="80"
+          r="68"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="7"
+          strokeDasharray="2.2 7.1"
+        />
+      )}
       <text
-        x="50"
-        y="50"
+        x="80"
+        y="110"
         textAnchor="middle"
-        dominantBaseline="central"
         fill="currentColor"
-        className="font-display"
-        style={{ fontSize: 46, fontStyle: "italic", fontWeight: 600 }}
+        style={{ fontFamily: BODONI, fontWeight: 700, fontSize: 86 }}
       >
         K
       </text>
@@ -53,12 +51,25 @@ export function KeryxGlyph({
   );
 }
 
-export function KeryxWordmark({ className }: { className?: string }) {
+export function KeryxWordmark({
+  className,
+  tagline,
+}: {
+  className?: string;
+  tagline?: boolean;
+}) {
   return (
-    <span className={cn("inline-flex items-center gap-2.5", className)}>
-      <KeryxGlyph className="text-seal" size={32} />
-      <span className="font-display text-[23px] font-medium leading-none tracking-tight text-foreground">
-        Keryx
+    <span className={cn("inline-flex items-center gap-3", className)}>
+      <KeryxGlyph size={30} />
+      <span className="flex flex-col">
+        <span className="font-display text-[23px] font-bold leading-none tracking-[0.01em] text-ink">
+          Keryx
+        </span>
+        {tagline && (
+          <span className="mt-1 font-mono text-[8.5px] uppercase tracking-[0.36em] text-ink-3">
+            The citation toll
+          </span>
+        )}
       </span>
     </span>
   );
