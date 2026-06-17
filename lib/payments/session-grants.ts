@@ -38,7 +38,15 @@ interface PendingSignature {
 // Process-scoped grant store. Survives across requests in the same Node process;
 // lost on server restart (user must re-grant — acceptable for testnet demo).
 const grants = new Map<string, SessionGrant>();
+
+// Pending map keyed by `sessionId:reqId` so a caller cannot resolve another
+// session's pending promise even if they guess the UUID reqId.
 const pending = new Map<string, PendingSignature>();
+
+/** Composite key for the pending map — scopes each reqId to its session. */
+function pendingKey(sessionId: string, reqId: string): string {
+  return `${sessionId}:${reqId}`;
+}
 
 // How long the browser has to respond to a sign-request before we give up.
 const SIGN_TIMEOUT_MS = 30_000;
@@ -89,39 +97,47 @@ export function canSpend(sessionId: string, amount: number): boolean {
  * Create a pending-signature slot and return a promise that resolves with the
  * signed payment header when the browser calls back, or rejects after SIGN_TIMEOUT_MS.
  * The resolved header is the raw base64 `{signature, authorization}` string.
+ *
+ * The slot is keyed by `sessionId:reqId` so a caller from a different session
+ * cannot resolve this promise even if they guess the reqId UUID.
  */
-export function awaitSignature(reqId: string): Promise<string> {
+export function awaitSignature(sessionId: string, reqId: string): Promise<string> {
   // Clean up any stale entry (shouldn't happen, but be safe).
-  cancelPending(reqId);
+  cancelPending(sessionId, reqId);
+  const key = pendingKey(sessionId, reqId);
 
   return new Promise<string>((resolve, reject) => {
     const timer = setTimeout(() => {
-      pending.delete(reqId);
+      pending.delete(key);
       reject(new Error(`sign-request timed out after ${SIGN_TIMEOUT_MS / 1000}s`));
     }, SIGN_TIMEOUT_MS);
 
-    pending.set(reqId, { resolve, reject, timer });
+    pending.set(key, { resolve, reject, timer });
   });
 }
 
 /**
  * Called by POST /api/ask/sign when the browser sends its signed header.
- * Returns true on success, false when the reqId is not pending.
+ * The sessionId is verified before resolution so a caller cannot resolve
+ * another session's pending promise.
+ * Returns true on success, false when the reqId is not pending for this session.
  */
-export function resolveSignature(reqId: string, header: string): boolean {
-  const slot = pending.get(reqId);
+export function resolveSignature(sessionId: string, reqId: string, header: string): boolean {
+  const key = pendingKey(sessionId, reqId);
+  const slot = pending.get(key);
   if (!slot) return false;
   clearTimeout(slot.timer);
-  pending.delete(reqId);
+  pending.delete(key);
   slot.resolve(header);
   return true;
 }
 
-export function cancelPending(reqId: string): void {
-  const slot = pending.get(reqId);
+export function cancelPending(sessionId: string, reqId: string): void {
+  const key = pendingKey(sessionId, reqId);
+  const slot = pending.get(key);
   if (!slot) return;
   clearTimeout(slot.timer);
-  pending.delete(reqId);
+  pending.delete(key);
   slot.reject(new Error("cancelled"));
 }
 

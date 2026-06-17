@@ -5,6 +5,12 @@
  *
  * Deploy command (human-run after funding deployer wallet from Circle faucet):
  *   npx hardhat run scripts/deploy-source-registry.ts --network arcTestnet
+ *
+ * Testing: npx hardhat --tsconfig tsconfig.hardhat.json test
+ *   Uses tsconfig.hardhat.json (module:commonjs, moduleResolution:node) because the
+ *   project's main tsconfig.json uses module:esnext + moduleResolution:bundler (Next.js),
+ *   which prevents ts-node from resolving hardhat's named exports (e.g. `ethers`).
+ *   The --tsconfig flag sets TS_NODE_PROJECT before ts-node initialises.
  */
 
 import { readFileSync } from "fs";

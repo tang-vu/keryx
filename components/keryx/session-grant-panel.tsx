@@ -20,6 +20,12 @@ export interface SessionGrantBinding {
   sessionId: string | null;
   /** Returns the session WalletClient for auto-signing, or null. */
   getSessionWalletClient: () => WalletClient | null;
+  /**
+   * H1: The funded grant cap in USDC, or undefined when no grant is active.
+   * Passed into useAskStream so the browser enforces its own spend ceiling
+   * independently of any server-side guard.
+   */
+  grantCap?: number;
 }
 
 interface Props {
@@ -43,15 +49,18 @@ export function SessionGrantPanel({ onBindingChange }: Props) {
   }, []);
 
   // Propagate binding changes to the parent whenever grant state changes.
+  // H1: include the cap so useAskStream can enforce it client-side.
   useEffect(() => {
-    const activeSessionId = state.status === "active" ? state.sessionId : null;
+    const isActive = state.status === "active";
+    const activeSessionId = isActive ? state.sessionId : null;
     const binding: SessionGrantBinding = {
       sessionId: activeSessionId,
       getSessionWalletClient,
+      grantCap: isActive ? state.cap : undefined,
     };
     bindingRef.current = binding;
     onBindingChange(binding);
-  }, [state.status, state.sessionId, getSessionWalletClient, onBindingChange]);
+  }, [state.status, state.sessionId, state.cap, getSessionWalletClient, onBindingChange]);
 
   if (!authed) return null;
 

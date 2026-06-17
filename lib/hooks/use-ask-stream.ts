@@ -74,11 +74,27 @@ interface AskStreamOpts {
   getSessionWalletClient?: () => WalletClient | null;
   /** Session id to include in the /api/ask POST body (= lowercased SIWE address). */
   sessionId?: string | null;
+  /**
+   * H1: The funded grant cap in USDC. When set, the browser refuses to sign
+   * once its own running total for this ask() run would exceed the cap.
+   * This is the browser's independent authority — it does NOT rely on the server.
+   */
+  grantCap?: number;
+  /**
+   * H1: Set of known source payout wallet addresses (lowercased), fetched once
+   * from /api/sources. When populated, fetch-toll payTo values are validated
+   * against this set before signing. Citation payTo cannot be fully enumerated
+   * (author wallets are not exposed) — cap enforcement is the containment there.
+   */
+  knownSourceWallets?: Set<string>;
 }
 
 export function useAskStream(opts?: AskStreamOpts) {
   const [state, setState] = useState<AskStreamState>(INITIAL);
   const abortRef = useRef<AbortController | null>(null);
+  // H1: tracks the cumulative USDC the browser has signed in the current ask() run.
+  // Reset to 0 at the start of each ask(). Never persisted. Independent of the server.
+  const signedTotalRef = useRef<number>(0);
 
   const reset = useCallback(() => {
     abortRef.current?.abort();
@@ -140,8 +156,44 @@ export function useAskStream(opts?: AskStreamOpts) {
           console.warn("[keryx] sign-request: session WalletClient not available");
           return;
         }
+
+        // H1: Browser-side independent cap enforcement.
+        // Compute the payment amount in USDC (6-decimal atomic → float).
+        const amountUsdc = Number(requirements.amount) / 1e6;
+
+        // H1: If a cap is configured, refuse to sign once the cumulative signed
+        // total for this run would exceed it. Small epsilon (1e-9) for float rounding.
+        const cap = opts?.grantCap;
+        if (cap !== undefined) {
+          if (signedTotalRef.current + amountUsdc > cap + 1e-9) {
+            console.warn(
+              `[keryx] sign-request refused: cumulative signed total ` +
+              `${signedTotalRef.current.toFixed(6)} + ${amountUsdc.toFixed(6)} would exceed cap ${cap.toFixed(6)}`,
+            );
+            // Do NOT post to /api/ask/sign — server timeout fires and skips source gracefully.
+            return;
+          }
+        }
+
+        // H1: payTo validation against known source wallets (fetch-tolls only).
+        // Citation author wallets are not exposed by /api/sources, so we enforce
+        // only the cumulative cap for those. See threat model for residual.
+        const knownWallets = opts?.knownSourceWallets;
+        if (knownWallets && knownWallets.size > 0) {
+          if (!knownWallets.has(requirements.payTo.toLowerCase())) {
+            console.warn(
+              `[keryx] sign-request refused: payTo ${requirements.payTo} is not a known source wallet`,
+            );
+            return;
+          }
+        }
+
         try {
           const { header } = await signPaymentAuthorization(walletClient, requirements);
+          // H1: Commit the signed amount BEFORE posting so that a re-entrant sign-request
+          // (concurrent sources) sees an accurate total. If the post fails we keep the
+          // tracked amount as a conservative over-count (safe — errs toward refusal).
+          signedTotalRef.current += amountUsdc;
           await fetch("/api/ask/sign", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -173,11 +225,16 @@ export function useAskStream(opts?: AskStreamOpts) {
       const { message } = data as { message: string };
       setState((s) => ({ ...s, status: "error", error: message }));
     }
-  }, [opts?.sessionId, opts?.getSessionWalletClient]); // eslint-disable-line react-hooks/exhaustive-deps
+  // opts is an object reference — destructure the primitive/stable values into the dep array
+  // so the hook re-creates handleEvent when the grant activates or the cap changes.
+  // knownSourceWallets is a Set: stable after the one-time /api/sources fetch in app/page.tsx.
+  }, [opts?.sessionId, opts?.getSessionWalletClient, opts?.grantCap, opts?.knownSourceWallets]);
 
   const ask = useCallback(
     async (question: string, budget: number) => {
       reset();
+      // H1: Reset per-run signed total — each ask() is an independent budget run.
+      signedTotalRef.current = 0;
       const controller = new AbortController();
       abortRef.current = controller;
       setState({ ...INITIAL, status: "streaming" });
@@ -240,7 +297,7 @@ export function useAskStream(opts?: AskStreamOpts) {
         }));
       }
     },
-    [handleEvent, reset],
+    [handleEvent, reset, opts?.sessionId],
   );
 
   return { state, ask, reset };

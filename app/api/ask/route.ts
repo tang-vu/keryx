@@ -67,9 +67,12 @@ export async function POST(req: NextRequest) {
         if (useBrowserCoSign && sessionId) {
           // Build the requestSignature callback that the BrowserCoSignGateway calls for each BUY.
           // It emits an SSE sign-request event and suspends until /api/ask/sign resolves it.
+          // sessionId is narrowed (non-null) by the useBrowserCoSign guard above.
+          const capturedSessionId = sessionId;
           const requestSignature = (reqId: string, requirements: PaymentRequirements): Promise<string> => {
             send("sign-request", { reqId, requirements });
-            return awaitSignature(reqId);
+            // Scope the pending slot to this session — M2 fix.
+            return awaitSignature(capturedSessionId, reqId);
           };
 
           deps = await getAgentDeps({

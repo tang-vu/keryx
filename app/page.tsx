@@ -12,7 +12,7 @@
  * Unauthenticated / offline asks fall through to the server-side gateway unchanged.
  */
 
-import { useMemo, useCallback, useState } from "react";
+import { useMemo, useCallback, useState, useEffect } from "react";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { AskForm } from "@/components/keryx/ask-form";
@@ -36,6 +36,26 @@ export default function AskPage() {
     getSessionWalletClient: () => null,
   });
 
+  // H1: Fetch known source wallets once from /api/sources (public endpoint).
+  // Used by useAskStream to validate fetch-toll payTo addresses client-side.
+  // Stored in state (not a ref) so React can track the value properly during render.
+  const [knownSourceWallets, setKnownSourceWallets] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    fetch("/api/sources")
+      .then((r) => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
+      .then((data: { sources?: Array<{ walletAddress?: string }> }) => {
+        const wallets = new Set<string>();
+        for (const s of data.sources ?? []) {
+          if (s.walletAddress) wallets.add(s.walletAddress.toLowerCase());
+        }
+        setKnownSourceWallets(wallets);
+      })
+      .catch((err) => {
+        // Non-fatal: without a wallet list, only cap enforcement applies (documented residual).
+        console.warn("[keryx] could not fetch source wallets for payTo validation:", err);
+      });
+  }, []);
+
   const handleBindingChange = useCallback((b: SessionGrantBinding) => {
     setGrantBinding(b);
   }, []);
@@ -43,6 +63,9 @@ export default function AskPage() {
   const { state, ask } = useAskStream({
     sessionId: grantBinding.sessionId,
     getSessionWalletClient: grantBinding.getSessionWalletClient,
+    // H1: pass the cap and known wallets so the browser enforces them independently.
+    grantCap: grantBinding.grantCap,
+    knownSourceWallets,
   });
   const streaming = state.status === "streaming";
   const started = state.status !== "idle";

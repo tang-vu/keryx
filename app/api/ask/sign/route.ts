@@ -56,7 +56,8 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "no active grant for sessionId" }, { status: 404 });
   }
 
-  const resolved = resolveSignature(reqId, paymentHeader);
+  // Resolve scoped to this sessionId — prevents cross-session promise resolution.
+  const resolved = resolveSignature(sessionId, reqId, paymentHeader);
   if (!resolved) {
     // reqId not found — either already resolved, timed out, or bad id.
     return Response.json({ error: "reqId not found or already resolved" }, { status: 404 });
