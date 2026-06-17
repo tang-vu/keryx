@@ -20,8 +20,15 @@ export function GlobeWatermark({ className }: { className?: string }) {
   useEffect(() => {
     let raf = 0;
     let mounted = true;
-    let rot = 0;
     let G = 0;
+    // Rotation has two layers: a slow ever-advancing idle spin (baseRot) and a
+    // cursor-driven nudge the globe eases toward, so it "looks at" the pointer
+    // as the mouse moves across the hero, then keeps its majestic drift at rest.
+    let baseRot = 0; // idle longitude, always advancing
+    let curYaw = 0; // eased longitude actually rendered
+    let curPitch = -18; // eased latitude actually rendered
+    let targetYawOffset = 0; // cursor-driven longitude lean (deg)
+    let targetPitch = -18; // cursor-driven latitude (deg)
     let ctx: CanvasRenderingContext2D | null = null;
     // d3-geo types are loose here; the geo objects are intentionally untyped.
     let projection: any = null;
@@ -54,8 +61,14 @@ export function GlobeWatermark({ className }: { className?: string }) {
 
     const draw = () => {
       if (!mounted || !ctx || !path) return;
+      if (!reduced) {
+        baseRot += 0.22;
+        // ease the rendered rotation toward (idle spin + cursor lean)
+        curYaw += (baseRot + targetYawOffset - curYaw) * 0.06;
+        curPitch += (targetPitch - curPitch) * 0.06;
+      }
       ctx.clearRect(0, 0, G, G);
-      projection.rotate([rot, -18]);
+      projection.rotate([curYaw, curPitch]);
       ctx.beginPath();
       path({ type: "Sphere" });
       ctx.fillStyle = "#f1e9d7";
@@ -82,7 +95,6 @@ export function GlobeWatermark({ className }: { className?: string }) {
       ctx.lineWidth = 1.4;
       ctx.stroke();
       if (reduced) return;
-      rot += 0.3;
       raf = requestAnimationFrame(draw);
     };
 
@@ -112,11 +124,31 @@ export function GlobeWatermark({ className }: { className?: string }) {
       sizeNow();
       if (reduced) draw();
     };
+
+    // Steer the globe toward the cursor: map pointer position (viewport-relative,
+    // [-1,1]) onto a longitude lean and latitude tilt. The draw loop eases into it.
+    const onPointerMove = (e: PointerEvent) => {
+      if (reduced) return;
+      const nx = (e.clientX / window.innerWidth) * 2 - 1;
+      const ny = (e.clientY / window.innerHeight) * 2 - 1;
+      targetYawOffset = Math.max(-1, Math.min(1, nx)) * 34;
+      targetPitch = -18 + Math.max(-1, Math.min(1, ny)) * 22;
+    };
+    // Cursor left the window — drift back to the neutral idle pose.
+    const onMouseLeave = () => {
+      targetYawOffset = 0;
+      targetPitch = -18;
+    };
+
     window.addEventListener("resize", onResize);
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
+    document.addEventListener("mouseleave", onMouseLeave);
     return () => {
       mounted = false;
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", onResize);
+      window.removeEventListener("pointermove", onPointerMove);
+      document.removeEventListener("mouseleave", onMouseLeave);
     };
   }, []);
 
