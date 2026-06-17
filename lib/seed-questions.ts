@@ -20,6 +20,19 @@ export const SEED_QUESTIONS: string[] = [
   "What are the trade-offs between caching content and re-fetching it under a budget?",
   "How do stablecoins like USDC reduce settlement risk for an autonomous buyer?",
   "Why is weighted contribution a fairer model than flat per-fetch payment?",
+  // Broader real-world topics so the agent must discover & buy the real creator
+  // feeds in the registry (AI tooling, Ethereum, stablecoins/payments news) —
+  // this is what makes newly onboarded creators actually earn citations.
+  "What are the latest techniques for building autonomous LLM agents?",
+  "How are open-source language models changing how developers build AI?",
+  "What tools help developers build, evaluate, and ship AI agents?",
+  "How do retrieval and tool use improve the reliability of LLM agents?",
+  "What scaling approaches is Ethereum pursuing to lower transaction costs?",
+  "How does account abstraction improve wallet UX for onchain payments?",
+  "What is driving stablecoin adoption for real-world payments?",
+  "How are major exchanges and fintechs integrating USDC for settlement?",
+  "What are the latest developments in onchain payment infrastructure?",
+  "How is crypto being used for cross-border payments and remittances?",
 ];
 
 /** Deterministic pick by index (avoids Math.random for reproducibility). */
