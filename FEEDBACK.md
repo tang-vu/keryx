@@ -5,6 +5,9 @@ stack and Arc testnet. Targets the dev-feedback prize. Can be submitted via `cir
 (the condensed, ≤2000-char version we actually submitted lives in
 `plans/reports/circle-feedback-submission-260617-1150.md`).
 
+> **Submitted to Circle** on 2026-06-17 via `circle feedback submit` — reference
+> `39137f41-6ffe-5ffc-9525-1b0b42dd9cb6` (category FEEDBACK).
+
 ## High-impact
 
 1. **The facilitator's 7-day authorization-validity floor has zero slack — and is undocumented.**
