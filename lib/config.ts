@@ -56,11 +56,40 @@ export const config = {
   // ── App ──
   baseUrl: process.env.BASE_URL ?? "http://localhost:3000",
 
+  // ── Auth ──
+  // JWT_SECRET must be ≥ 32 bytes (256 bits) for HS256 security. When unset,
+  // getSession() returns null (auth degrades gracefully — build passes, but
+  // session routes won't issue real JWTs).
+  jwtSecret: process.env.JWT_SECRET ?? "",
+  // Comma-separated wallet addresses that receive the 'dev' role at sign-in time.
+  // Lowercased at load time so comparisons are case-insensitive.
+  devWallets: (process.env.KERYX_DEV_WALLETS ?? "")
+    .split(",")
+    .map((w) => w.trim().toLowerCase())
+    .filter(Boolean),
+  // Reown Cloud project ID for WalletConnect mobile wallet support.
+  // Optional: when unset, only injected wallets (MetaMask, Rabby) are available.
+  wcProjectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID ?? "",
+
   // ── Wallets ──
   sellerAddress: (process.env.SELLER_ADDRESS ?? "") as `0x${string}` | "",
   funderKey: (process.env.AGENT_FUNDER_PRIVATE_KEY ??
     process.env.BUYER_PRIVATE_KEY ??
     "") as `0x${string}` | "",
+
+  // ── On-chain SourceRegistry ──
+  // Set after deploying contracts/source-registry.sol to Arc testnet.
+  // When unset: indexer is a no-op, register form falls back to DB-direct write.
+  // NEXT_PUBLIC_ variant is also read so the browser can call useWriteContract.
+  registryAddress: (process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS ??
+    process.env.KERYX_REGISTRY_ADDRESS ??
+    "") as `0x${string}` | "",
+  // The block number at which SourceRegistry was deployed. The indexer uses this
+  // as the cold-start backfill origin so it doesn't scan blocks before the contract exists.
+  registryDeployBlock: process.env.KERYX_REGISTRY_DEPLOY_BLOCK ?? "0",
+  // One-time deployer key — used ONLY for `npx hardhat run scripts/deploy-source-registry.ts`.
+  // Never used for per-source writes (those are creator-signed from the browser).
+  deployerKey: (process.env.DEPLOYER_PRIVATE_KEY ?? "") as `0x${string}` | "",
 } as const;
 
 export type LlmProvider = "anthropic" | "deepseek" | "heuristic";
@@ -88,4 +117,15 @@ export function hasSupabase(): boolean {
 function num(v: string | undefined, fallback: number): number {
   const n = v ? parseFloat(v) : NaN;
   return Number.isFinite(n) ? n : fallback;
+}
+
+// Startup warning: JWT_SECRET set but too short. Don't crash — offline dev (empty
+// secret) is intentional and already handled by getSession() returning null.
+// Only warn when a secret IS provided but is dangerously short (< 32 bytes).
+if (config.jwtSecret.length > 0 && config.jwtSecret.length < 32) {
+  console.warn(
+    `[keryx config] JWT_SECRET is only ${config.jwtSecret.length} bytes — ` +
+    "HS256 requires ≥ 32 bytes. Tokens are brute-forceable. " +
+    "Run: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\" to generate one.",
+  );
 }

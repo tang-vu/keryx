@@ -228,6 +228,9 @@ export async function* runAgent(
     if (c.reward <= 0) continue;
     const authors = source.authors.length ? source.authors : [{ name: source.name, walletAddress: source.walletAddress, splitWeight: 1 }];
     for (const author of authors) {
+      // TODO(phase-03): settle from on-chain bp, not float splitWeight, to eliminate
+      // rounding drift. Read contract.get(source.id).authors[i].basisPoints and compute
+      // amount = round(c.reward * basisPoints / 10_000) directly from the integer.
       const amount = round(c.reward * author.splitWeight);
       if (amount <= 0) continue;
       const rationale = `Citation reward (${(c.weight * 100).toFixed(0)}% contribution${authors.length > 1 ? `, ${(author.splitWeight * 100).toFixed(0)}% author split` : ""}).`;

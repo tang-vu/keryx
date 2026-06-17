@@ -30,6 +30,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async upsertSource(s: Source): Promise<void> {
+    // active defaults to true for offline/DB-direct rows that predate the flag.
     await this.sb.from("sources").upsert({
       id: s.id,
       name: s.name,
@@ -41,12 +42,43 @@ export class SupabaseAdapter implements KeryxDB {
       tags: s.tags,
       authors: s.authors,
       created_at: s.createdAt,
+      ipfs_cid: s.ipfsCid ?? null,
+      active: s.active !== false, // treat undefined as true
     });
   }
 
   async listSources(): Promise<Source[]> {
-    const { data } = await this.sb.from("sources").select("*").order("created_at");
+    // Filter to active=true only — deactivated on-chain sources must not be discovered/cited (H1 fix).
+    const { data } = await this.sb
+      .from("sources")
+      .select("*")
+      .eq("active", true)
+      .order("created_at");
     return (data ?? []).map(rowToSource);
+  }
+
+  async setSourceMeta(id: string, meta: import("./keryx-db").SourceMeta): Promise<void> {
+    await this.sb.from("source_meta").upsert({
+      id,
+      name: meta.name,
+      description: meta.description,
+      url: meta.url,
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  async getSourceMeta(id: string): Promise<import("./keryx-db").SourceMeta | null> {
+    const { data } = await this.sb
+      .from("source_meta")
+      .select("name,description,url")
+      .eq("id", id)
+      .maybeSingle();
+    if (!data) return null;
+    return {
+      name: (data.name as string) ?? "",
+      description: (data.description as string) ?? "",
+      url: (data.url as string) ?? "",
+    };
   }
 
   async getSource(id: string): Promise<Source | null> {
@@ -84,6 +116,18 @@ export class SupabaseAdapter implements KeryxDB {
       link: r.link,
       publishedAt: r.published_at ?? undefined,
     }));
+  }
+
+  async isCreatorWallet(addr: string): Promise<boolean> {
+    // ilike performs case-insensitive comparison in Postgres — avoids LOWER() on
+    // the indexed wallet_address column, which would prevent index use.
+    const { data } = await this.sb
+      .from("sources")
+      .select("id")
+      .ilike("wallet_address", addr)
+      .limit(1)
+      .maybeSingle();
+    return data !== null;
   }
 
   async getCached(sourceId: string): Promise<string | null> {
@@ -184,6 +228,21 @@ export class SupabaseAdapter implements KeryxDB {
     };
   }
 
+  async getSyncState(key: string): Promise<string | null> {
+    const { data } = await this.sb
+      .from("sync_state")
+      .select("value")
+      .eq("key", key)
+      .maybeSingle();
+    return data?.value ?? null;
+  }
+
+  async setSyncState(key: string, value: string): Promise<void> {
+    await this.sb
+      .from("sync_state")
+      .upsert({ key, value, updated_at: new Date().toISOString() });
+  }
+
   async creatorLeaderboard(): Promise<CreatorEarnings[]> {
     const { data } = await this.sb
       .from("payment_events")
@@ -222,6 +281,9 @@ function rowToSource(r: Record<string, unknown>): Source {
     tags: (r.tags as string[]) ?? [],
     authors: (r.authors as Source["authors"]) ?? [],
     createdAt: r.created_at as string,
+    ipfsCid: (r.ipfs_cid as string) ?? undefined,
+    // active=null means old row before the column existed — treat as active.
+    active: r.active === undefined || r.active === null ? true : Boolean(r.active),
   };
 }
 

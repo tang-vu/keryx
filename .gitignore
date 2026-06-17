@@ -16,6 +16,11 @@ out/
 build/
 dist/
 
+# hardhat (generated contract artifacts/cache/typings)
+artifacts/
+cache/
+typechain-types/
+
 # local dev database (SQLite adapter)
 *.sqlite
 *.sqlite3

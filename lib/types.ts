@@ -14,6 +14,14 @@ export interface Source {
   tags: string[];
   authors: Author[]; // for multi-author splits (defaults to one = the source)
   createdAt: string;
+  /** false when the creator has called deactivate() on-chain. listSources() filters these out
+   *  so deactivated sources are never discovered, fetched, or cited. Defaults to true for
+   *  offline/DB-direct rows that predate the active flag. */
+  active?: boolean;
+  /** IPFS CID for gated content. Set by the registry indexer from on-chain contentCid.
+   *  Content fetch stays lazy — pulled on first agent demand, cached in cache_items.
+   *  Phase 04 will use this to fetch + decrypt encrypted content. */
+  ipfsCid?: string;
 }
 
 /** A payable author within a source (enables multi-author citation splits). */

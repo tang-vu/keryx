@@ -18,7 +18,19 @@ import type { CreatorEarnings, KeryxDB } from "./keryx-db";
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS sources (
   id TEXT PRIMARY KEY, name TEXT, url TEXT, description TEXT, rss_url TEXT,
-  wallet_address TEXT, fetch_price REAL, tags TEXT, authors TEXT, created_at TEXT
+  wallet_address TEXT, fetch_price REAL, tags TEXT, authors TEXT, created_at TEXT,
+  ipfs_cid TEXT,
+  active INTEGER NOT NULL DEFAULT 1
+);
+CREATE TABLE IF NOT EXISTS source_meta (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL DEFAULT '',
+  description TEXT NOT NULL DEFAULT '',
+  url TEXT NOT NULL DEFAULT '',
+  updated_at TEXT
+);
+CREATE TABLE IF NOT EXISTS sync_state (
+  key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT
 );
 CREATE TABLE IF NOT EXISTS source_items (
   id TEXT PRIMARY KEY, source_id TEXT, title TEXT, summary TEXT, content TEXT,
@@ -51,16 +63,37 @@ export class SqliteAdapter implements KeryxDB {
     // WAL + busy timeout so the dev server, volume engine, and CLI can share the file safely.
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");
     this.db.exec(SCHEMA);
+    this.ensureColumns();
+  }
+
+  /**
+   * Add columns introduced after a database was first created. `CREATE TABLE IF NOT EXISTS`
+   * never alters an existing table, so databases that predate the `ipfs_cid` / `active`
+   * columns (the local dev DB and the live VPS DB carrying real traction) would otherwise
+   * throw "no such column" on listSources/upsert. These ALTERs are idempotent — guarded by
+   * the current column set so a fresh DB (where SCHEMA already created them) is untouched.
+   */
+  private ensureColumns(): void {
+    const cols = new Set(
+      (this.db.prepare(`PRAGMA table_info(sources)`).all() as { name: string }[]).map(
+        (c) => c.name,
+      ),
+    );
+    if (!cols.has("ipfs_cid")) this.db.exec(`ALTER TABLE sources ADD COLUMN ipfs_cid TEXT`);
+    if (!cols.has("active"))
+      this.db.exec(`ALTER TABLE sources ADD COLUMN active INTEGER NOT NULL DEFAULT 1`);
   }
 
   async upsertSource(s: Source): Promise<void> {
+    // active defaults to 1 (true) for offline/DB-direct rows that predate the flag.
+    const activeInt = s.active === false ? 0 : 1;
     this.db
       .prepare(
-        `INSERT INTO sources (id,name,url,description,rss_url,wallet_address,fetch_price,tags,authors,created_at)
-         VALUES (?,?,?,?,?,?,?,?,?,?)
+        `INSERT INTO sources (id,name,url,description,rss_url,wallet_address,fetch_price,tags,authors,created_at,ipfs_cid,active)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
          ON CONFLICT(id) DO UPDATE SET name=excluded.name,url=excluded.url,description=excluded.description,
            rss_url=excluded.rss_url,wallet_address=excluded.wallet_address,fetch_price=excluded.fetch_price,
-           tags=excluded.tags,authors=excluded.authors`,
+           tags=excluded.tags,authors=excluded.authors,ipfs_cid=excluded.ipfs_cid,active=excluded.active`,
       )
       .run(
         s.id,
@@ -73,12 +106,33 @@ export class SqliteAdapter implements KeryxDB {
         JSON.stringify(s.tags),
         JSON.stringify(s.authors),
         s.createdAt,
+        s.ipfsCid ?? null,
+        activeInt,
       );
   }
 
   async listSources(): Promise<Source[]> {
-    const rows = this.db.prepare(`SELECT * FROM sources ORDER BY created_at`).all();
+    // Filter to active=1 only — deactivated on-chain sources must not be discovered/cited (H1 fix).
+    const rows = this.db.prepare(`SELECT * FROM sources WHERE active = 1 ORDER BY created_at`).all();
     return rows.map(rowToSource);
+  }
+
+  async setSourceMeta(id: string, meta: import("./keryx-db").SourceMeta): Promise<void> {
+    this.db
+      .prepare(
+        `INSERT OR REPLACE INTO source_meta (id,name,description,url,updated_at) VALUES (?,?,?,?,?)`,
+      )
+      .run(id, meta.name, meta.description, meta.url, new Date().toISOString());
+  }
+
+  async getSourceMeta(id: string): Promise<import("./keryx-db").SourceMeta | null> {
+    const row = this.db.prepare(`SELECT name,description,url FROM source_meta WHERE id=?`).get(id);
+    if (!row) return null;
+    return {
+      name: (row.name as string) ?? "",
+      description: (row.description as string) ?? "",
+      url: (row.url as string) ?? "",
+    };
   }
 
   async getSource(id: string): Promise<Source | null> {
@@ -110,6 +164,15 @@ export class SqliteAdapter implements KeryxDB {
     }));
   }
 
+  async isCreatorWallet(addr: string): Promise<boolean> {
+    // Case-insensitive match via LOWER() — wallet addresses from SIWE are checksummed
+    // but stored addresses in older rows may vary in case.
+    const row = this.db
+      .prepare(`SELECT 1 FROM sources WHERE LOWER(wallet_address) = LOWER(?) LIMIT 1`)
+      .get(addr);
+    return row !== undefined;
+  }
+
   async getCached(sourceId: string): Promise<string | null> {
     const row = this.db.prepare(`SELECT text FROM cache_items WHERE source_id=?`).get(sourceId);
     return row ? (row.text as string) : null;
@@ -121,6 +184,19 @@ export class SqliteAdapter implements KeryxDB {
         `INSERT OR REPLACE INTO cache_items (source_id,text,updated_at) VALUES (?,?,?)`,
       )
       .run(sourceId, text, new Date().toISOString());
+  }
+
+  async getSyncState(key: string): Promise<string | null> {
+    const row = this.db.prepare(`SELECT value FROM sync_state WHERE key=?`).get(key);
+    return row ? (row.value as string) : null;
+  }
+
+  async setSyncState(key: string, value: string): Promise<void> {
+    this.db
+      .prepare(
+        `INSERT OR REPLACE INTO sync_state (key,value,updated_at) VALUES (?,?,?)`,
+      )
+      .run(key, value, new Date().toISOString());
   }
 
   async saveQueryRun(run: QueryRun): Promise<void> {
@@ -245,6 +321,9 @@ function rowToSource(r: Record<string, unknown>): Source {
     tags: safeParse(r.tags as string, []),
     authors: safeParse(r.authors as string, []),
     createdAt: r.created_at as string,
+    ipfsCid: (r.ipfs_cid as string) ?? undefined,
+    // active=null means old row before the column existed — treat as active.
+    active: r.active === undefined || r.active === null ? true : Boolean(r.active),
   };
 }
 
