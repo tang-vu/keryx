@@ -36,6 +36,15 @@ export const config = {
   // Agent-to-agent: fee another agent pays Keryx to answer a question (x402 → treasury).
   a2aFeeUsdc: num(process.env.KERYX_A2A_FEE, 0.02),
 
+  // ── Open x402 marketplace discovery ──
+  // When on, the agent probes the live Circle x402 service bazaar (`circle services search`) during
+  // discovery and reasons over real external endpoints alongside its registered creators. These
+  // settle on other chains (Base/ETH/… mainnet), not Keryx's Arc rail, so they are DISCOVERY-ONLY:
+  // evaluated and logged, never purchased (the orchestrator enforces this, mirroring the budget cap).
+  externalDiscovery: (process.env.KERYX_EXTERNAL_DISCOVERY ?? "1") !== "0",
+  // Max external endpoints surfaced per query (top by topical relevance).
+  externalDiscoveryLimit: Math.round(num(process.env.KERYX_EXTERNAL_DISCOVERY_LIMIT, 5)),
+
   // ── LLM ──
   // Provider priority: Anthropic > DeepSeek/OpenAI-compatible > offline heuristic.
   anthropicKey: process.env.ANTHROPIC_API_KEY ?? "",

@@ -46,6 +46,7 @@ export interface Decision {
   confidence: number; // 0..1
   rationale: string; // human-readable WHY (buy/skip/cache)
   targets: number[]; // indexes of sub-claims this source is expected to address
+  external?: boolean; // true = an endpoint from the live x402 marketplace (discovery-only, off Arc)
 }
 
 /** One contributing source in the final answer, with its weighted reward. */

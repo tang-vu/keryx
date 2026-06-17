@@ -20,6 +20,7 @@ import type {
 } from "../types";
 import type { GatheredContent, SourceCandidate } from "../llm";
 import type { AgentDeps } from "./deps";
+import { discoverExternalCandidates } from "./external-discovery";
 
 export interface RunInput {
   question: string;
@@ -73,17 +74,40 @@ export async function* runAgent(
       preview,
     });
   }
-  yield emit("discover", `Discovered ${candidates.length} candidate source(s)`, candidates.map((c) => c.name));
+  yield emit("discover", `Discovered ${candidates.length} registered source(s)`, candidates.map((c) => c.name));
+
+  // Probe the live open x402 marketplace (Circle services) — real third-party endpoints the agent
+  // can reason over alongside its creators. They settle off Keryx's Arc rail, so they're
+  // discovery-only: evaluated and logged, never purchased.
+  const external = await discoverExternalCandidates(input.question, subClaims);
+  if (external.length > 0) {
+    candidates.push(...external);
+    const chains = [...new Set(external.flatMap((c) => c.external!.chains))].join(", ");
+    yield emit(
+      "discover",
+      `Probed the live x402 marketplace — surfaced ${external.length} external endpoint(s)${chains ? ` (settle on ${chains})` : ""}. Off Keryx's Arc rail, so evaluated for discovery only.`,
+      external.map((c) => c.name),
+    );
+  }
+
   if (candidates.length === 0) {
     return finish("No sources are registered yet — nothing to read.");
   }
 
-  // 3) DECIDE (engine proposes value; code enforces budget)
+  // 3) DECIDE (engine proposes value; code enforces budget AND the Arc-rail constraint)
   const proposed = await engine.decide({ question: input.question, subClaims, candidates, budget, spentSoFar: 0 });
   const sourceById = new Map(sources.map((s) => [s.id, s]));
+  const isExternal = (id: string) => id.startsWith("ext:");
+  const externalById = new Map(external.map((c) => [c.id, c]));
 
-  // rank BUY proposals by value-per-dollar; flip to SKIP when the fetch budget can't cover them
-  const ranked = [...proposed].sort(
+  // External marketplace endpoints are discovery-only: the engine judges their value, but the
+  // orchestrator never settles to them (off Keryx's Arc rail) — enforced here like the budget cap,
+  // so a model BUY can never leak into a real off-rail purchase.
+  const internalProposed = proposed.filter((d) => !isExternal(d.sourceId));
+  const externalProposed = proposed.filter((d) => isExternal(d.sourceId));
+
+  // rank internal BUY proposals by value-per-dollar; flip to SKIP when the fetch budget can't cover them
+  const ranked = [...internalProposed].sort(
     (a, b) => b.expectedValue / (b.price || 1e-9) - a.expectedValue / (a.price || 1e-9),
   );
   for (const d of ranked) {
@@ -100,6 +124,20 @@ export async function* runAgent(
     }
     finalDecisions.push(d);
   }
+
+  // record external evaluations — always SKIP (discovery only), keeping the engine's value reasoning
+  for (const d of externalProposed) {
+    const ext = externalById.get(d.sourceId);
+    const chain = ext?.external?.chains.join("/") || "another chain";
+    const base = d.rationale?.trim() || "Topically considered.";
+    finalDecisions.push({
+      ...d,
+      action: "SKIP",
+      external: true,
+      rationale: `${base} External x402 endpoint on ${chain} (~$${d.price.toFixed(4)}/call) — off Keryx's Arc rail, so discovered & evaluated but not purchased this run.`,
+    });
+  }
+
   for (const d of finalDecisions) {
     yield emit("decide", `${d.action} ${d.sourceName} — ${d.rationale}`, d);
   }
@@ -107,7 +145,9 @@ export async function* runAgent(
   // 4) FETCH (+ stop-early sufficiency)
   const gathered: GatheredContent[] = [];
   let markerN = 0;
-  const buys = finalDecisions.filter((d) => d.action === "BUY" || d.action === "CACHE");
+  const buys = finalDecisions.filter(
+    (d) => (d.action === "BUY" || d.action === "CACHE") && !isExternal(d.sourceId),
+  );
 
   // Ensure the spend wallet holds a settle-able Gateway balance before any payment
   // (real mode tops up from the funder once; offline is a no-op). Cached sources still earn

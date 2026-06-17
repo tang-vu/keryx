@@ -6,6 +6,7 @@
  * source name + rationale. Fades/slides in on mount.
  */
 
+import { Globe } from "lucide-react";
 import type { Decision, TraceStep } from "@/lib/types";
 import { ACTION_STYLES, PHASE_STYLES, fmtUsdc } from "./phase-style";
 import { cn } from "@/lib/utils";
@@ -78,6 +79,11 @@ function DecisionBody({ decision }: { decision: Decision }) {
         <span className="font-serif text-[15px] text-ink">
           {decision.sourceName}
         </span>
+        {decision.external && (
+          <span className="inline-flex items-center gap-1 rounded border border-line bg-paper-2 px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-ink-3">
+            <Globe className="h-3 w-3" /> x402 market
+          </span>
+        )}
         <span className="font-mono text-[11px] text-ink-3">
           ${fmtUsdc(decision.price)} · EV {Math.round(decision.expectedValue * 100)}%
         </span>
