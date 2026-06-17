@@ -82,6 +82,11 @@ Example trace (real output):
 - **Circle CLI** (`circle`) — `gateway`, `services`, and `feedback` commands; `arc-canteen` for traction.
 
 ### Innovation (the 20%)
+- **Open-marketplace discovery** — beyond its own creators, the agent probes the *live* Circle x402
+  service bazaar (`circle services search`) every query and reasons BUY/SKIP over real third-party
+  endpoints. They settle on other chains (Base/ETH/… mainnet), not Keryx's Arc rail, so the
+  orchestrator evaluates and logs them but never purchases — an in-code rail constraint, like the
+  budget cap. Keryx sees the whole open x402 economy, then spends only where it safely can.
 - **Per-citation settlement weighted by contribution** — not flat per-fetch; the answer's grounding
   determines the split.
 - **Multi-author splits** — one reward fans out across author wallets by configured weights.

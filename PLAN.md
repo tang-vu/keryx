@@ -100,7 +100,7 @@ The scaffold's "agent" is a dumb 1-tx/sec loop over 4 hardcoded URLs. **Zero rea
 - [x] Supabase adapter built (deploy-ready); Cloudflare Tunnel chosen as primary deploy
 - [ ] `npm run tunnel` → live URL (needs cloudflared installed)
 - [x] `README.md`, `DEMO.md`, `TRACTION.md`, `FEEDBACK.md`, `EASTER_EGGS.md` drafted
-- [ ] Enhancements: A2A mode, external x402 discovery, onchain splitter, ERC-8004
+- [~] Enhancements: A2A mode ✅ · external x402 discovery ✅ (live marketplace probe + reasoned BUY/SKIP; off-Arc endpoints evaluated, not purchased) · onchain splitter · ERC-8004
 - [ ] Final commit + push
 
 ---
