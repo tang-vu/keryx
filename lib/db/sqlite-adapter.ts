@@ -6,6 +6,7 @@
 import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import type {
   DashboardMetrics,
   PaymentRecord,
@@ -13,7 +14,7 @@ import type {
   Source,
   SourceItem,
 } from "../types";
-import type { CreatorEarnings, KeryxDB } from "./keryx-db";
+import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, KeryxDB } from "./keryx-db";
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS sources (
@@ -48,6 +49,24 @@ CREATE TABLE IF NOT EXISTS payment_events (
 CREATE TABLE IF NOT EXISTS query_runs (
   id TEXT PRIMARY KEY, created_at TEXT, question TEXT, budget REAL, engine TEXT,
   total_spent REAL, total_to_creators REAL, answer TEXT, data TEXT
+);
+CREATE TABLE IF NOT EXISTS api_keys (
+  id          TEXT PRIMARY KEY,
+  prefix      TEXT NOT NULL UNIQUE,
+  key_hash    TEXT NOT NULL,
+  wallet      TEXT NOT NULL,
+  label       TEXT,
+  created_at  TEXT NOT NULL,
+  last_used_at TEXT,
+  revoked_at  TEXT
+);
+CREATE INDEX IF NOT EXISTS api_keys_prefix ON api_keys(prefix);
+CREATE INDEX IF NOT EXISTS api_keys_wallet ON api_keys(wallet);
+CREATE TABLE IF NOT EXISTS api_key_usage (
+  key_id     TEXT NOT NULL,
+  day        TEXT NOT NULL,
+  call_count INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (key_id, day)
 );
 `;
 
@@ -311,6 +330,83 @@ export class SqliteAdapter implements KeryxDB {
     };
   }
 
+  // ── api keys ──
+
+  async mintApiKey(
+    wallet: string,
+    prefix: string,
+    keyHash: string,
+    label?: string,
+  ): Promise<{ rawKey: string; prefix: string; id: string }> {
+    const id = crypto.randomUUID();
+    this.db
+      .prepare(
+        `INSERT INTO api_keys (id,prefix,key_hash,wallet,label,created_at) VALUES (?,?,?,?,?,?)`,
+      )
+      .run(id, prefix, keyHash, wallet, label ?? null, new Date().toISOString());
+    // rawKey is NOT stored; caller reconstructs it from the prefix + suffix they generated.
+    // We echo prefix so the caller can display it; rawKey is assembled by the route handler.
+    return { rawKey: "", prefix, id };
+  }
+
+  async verifyApiKey(
+    prefix: string,
+    incomingHash: string,
+  ): Promise<{ walletAddress: string; keyId: string } | null> {
+    const row = this.db
+      .prepare(`SELECT id,key_hash,wallet FROM api_keys WHERE prefix=? AND revoked_at IS NULL`)
+      .get(prefix) as { id: string; key_hash: string; wallet: string } | undefined;
+    if (!row) return null;
+
+    // Timing-safe compare on fixed-length SHA-256 hex (always 64 chars).
+    if (row.key_hash.length !== incomingHash.length) return null;
+    const match = crypto.timingSafeEqual(
+      Buffer.from(row.key_hash, "hex"),
+      Buffer.from(incomingHash, "hex"),
+    );
+    if (!match) return null;
+
+    // Update last_used_at asynchronously — don't await so it's fire-and-forget.
+    this.db
+      .prepare(`UPDATE api_keys SET last_used_at=? WHERE id=?`)
+      .run(new Date().toISOString(), row.id);
+
+    return { walletAddress: row.wallet, keyId: row.id };
+  }
+
+  async listApiKeys(wallet: string): Promise<ApiKeyRow[]> {
+    const rows = this.db
+      .prepare(`SELECT id,prefix,wallet,label,created_at,last_used_at,revoked_at FROM api_keys WHERE wallet=? ORDER BY created_at DESC`)
+      .all(wallet) as Record<string, unknown>[];
+    return rows.map(rowToApiKey);
+  }
+
+  async revokeApiKey(id: string, wallet: string): Promise<void> {
+    // Only revoke if the key belongs to this wallet (ownership check).
+    this.db
+      .prepare(`UPDATE api_keys SET revoked_at=? WHERE id=? AND wallet=? AND revoked_at IS NULL`)
+      .run(new Date().toISOString(), id, wallet);
+  }
+
+  async incrementUsage(keyId: string): Promise<void> {
+    const day = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+    this.db
+      .prepare(
+        `INSERT INTO api_key_usage (key_id,day,call_count) VALUES (?,?,1)
+         ON CONFLICT(key_id,day) DO UPDATE SET call_count=call_count+1`,
+      )
+      .run(keyId, day);
+  }
+
+  async getUsage(keyId: string, days = 30): Promise<ApiKeyUsage[]> {
+    const rows = this.db
+      .prepare(
+        `SELECT day, call_count FROM api_key_usage WHERE key_id=? ORDER BY day DESC LIMIT ?`,
+      )
+      .all(keyId, days) as { day: string; call_count: number }[];
+    return rows.map((r) => ({ day: r.day, count: r.call_count }));
+  }
+
   async creatorLeaderboard(): Promise<CreatorEarnings[]> {
     const rows = this.db
       .prepare(
@@ -329,6 +425,18 @@ export class SqliteAdapter implements KeryxDB {
       citationCount: r.cites as number,
     }));
   }
+}
+
+function rowToApiKey(r: Record<string, unknown>): ApiKeyRow {
+  return {
+    id: r.id as string,
+    prefix: r.prefix as string,
+    wallet: r.wallet as string,
+    label: (r.label as string) ?? null,
+    createdAt: r.created_at as string,
+    lastUsedAt: (r.last_used_at as string) ?? null,
+    revokedAt: (r.revoked_at as string) ?? null,
+  };
 }
 
 function rowToSource(r: Record<string, unknown>): Source {

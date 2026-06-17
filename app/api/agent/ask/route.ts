@@ -12,12 +12,33 @@ import { config } from "@/lib/config";
 import { getDb } from "@/lib/db";
 import { makePayment } from "@/lib/payments/payment-gateway";
 import { settleThenServe } from "@/lib/x402-server";
+import { verifyApiKey } from "@/lib/api-keys";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
+  // ── API key pre-check (additive; x402 settleThenServe below is unchanged) ──
+  // If an Authorization: Bearer kx_live_… header is present, the caller has identified
+  // themselves via a wallet-issued key. Rate-limit and meter by key id.
+  // The key does NOT bypass x402 — payment-signature is still required below.
+  const authHeader = req.headers.get("authorization");
+  const rawKey = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
+  if (rawKey) {
+    const limited = await checkRateLimit(rawKey, "ask");
+    if (limited) return limited;
+
+    const keyCtx = await verifyApiKey(rawKey);
+    if (!keyCtx) return Response.json({ error: "invalid or revoked api key" }, { status: 401 });
+
+    // Fire-and-forget daily usage counter — does not block the response.
+    const db = await getDb();
+    void db.incrementUsage(keyCtx.keyId);
+  }
+  // ── End key pre-check ──
+
   const body = (await req.json().catch(() => ({}))) as { question?: string; budget?: number };
   const question = (body.question ?? "").trim();
   if (!question) return Response.json({ error: "question is required" }, { status: 400 });

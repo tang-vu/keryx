@@ -5,6 +5,7 @@
  */
 
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import crypto from "node:crypto";
 import type {
   DashboardMetrics,
   PaymentRecord,
@@ -12,7 +13,7 @@ import type {
   Source,
   SourceItem,
 } from "../types";
-import type { CreatorEarnings, KeryxDB } from "./keryx-db";
+import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, KeryxDB } from "./keryx-db";
 
 export class SupabaseAdapter implements KeryxDB {
   private sb: SupabaseClient;
@@ -249,6 +250,96 @@ export class SupabaseAdapter implements KeryxDB {
     await this.sb
       .from("sync_state")
       .upsert({ key, value, updated_at: new Date().toISOString() });
+  }
+
+  // ── api keys ──
+
+  async mintApiKey(
+    wallet: string,
+    prefix: string,
+    keyHash: string,
+    label?: string,
+  ): Promise<{ rawKey: string; prefix: string; id: string }> {
+    const id = crypto.randomUUID();
+    await this.sb.from("api_keys").insert({
+      id,
+      prefix,
+      key_hash: keyHash,
+      wallet,
+      label: label ?? null,
+      created_at: new Date().toISOString(),
+    });
+    return { rawKey: "", prefix, id };
+  }
+
+  async verifyApiKey(
+    prefix: string,
+    incomingHash: string,
+  ): Promise<{ walletAddress: string; keyId: string } | null> {
+    const { data } = await this.sb
+      .from("api_keys")
+      .select("id,key_hash,wallet")
+      .eq("prefix", prefix)
+      .is("revoked_at", null)
+      .maybeSingle();
+    if (!data) return null;
+
+    const storedHash = data.key_hash as string;
+    if (storedHash.length !== incomingHash.length) return null;
+    const match = crypto.timingSafeEqual(
+      Buffer.from(storedHash, "hex"),
+      Buffer.from(incomingHash, "hex"),
+    );
+    if (!match) return null;
+
+    // Fire-and-forget last_used_at update.
+    void this.sb
+      .from("api_keys")
+      .update({ last_used_at: new Date().toISOString() })
+      .eq("id", data.id as string);
+
+    return { walletAddress: data.wallet as string, keyId: data.id as string };
+  }
+
+  async listApiKeys(wallet: string): Promise<ApiKeyRow[]> {
+    const { data } = await this.sb
+      .from("api_keys")
+      .select("id,prefix,wallet,label,created_at,last_used_at,revoked_at")
+      .eq("wallet", wallet)
+      .order("created_at", { ascending: false });
+    return (data ?? []).map((r) => ({
+      id: r.id as string,
+      prefix: r.prefix as string,
+      wallet: r.wallet as string,
+      label: (r.label as string) ?? null,
+      createdAt: r.created_at as string,
+      lastUsedAt: (r.last_used_at as string) ?? null,
+      revokedAt: (r.revoked_at as string) ?? null,
+    }));
+  }
+
+  async revokeApiKey(id: string, wallet: string): Promise<void> {
+    await this.sb
+      .from("api_keys")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("wallet", wallet)
+      .is("revoked_at", null);
+  }
+
+  async incrementUsage(keyId: string): Promise<void> {
+    const day = new Date().toISOString().slice(0, 10);
+    await this.sb.rpc("upsert_api_key_usage", { p_key_id: keyId, p_day: day });
+  }
+
+  async getUsage(keyId: string, days = 30): Promise<ApiKeyUsage[]> {
+    const { data } = await this.sb
+      .from("api_key_usage")
+      .select("day,call_count")
+      .eq("key_id", keyId)
+      .order("day", { ascending: false })
+      .limit(days);
+    return (data ?? []).map((r) => ({ day: r.day as string, count: r.call_count as number }));
   }
 
   async creatorLeaderboard(): Promise<CreatorEarnings[]> {

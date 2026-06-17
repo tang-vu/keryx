@@ -29,6 +29,23 @@ export interface SourceMeta {
   url: string;
 }
 
+/** A row from api_keys (safe to return to the owner — no hash, no raw key). */
+export interface ApiKeyRow {
+  id: string;
+  prefix: string;
+  wallet: string;
+  label: string | null;
+  createdAt: string;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+}
+
+/** Daily usage aggregate for a single key. */
+export interface ApiKeyUsage {
+  day: string;   // ISO date "YYYY-MM-DD"
+  count: number;
+}
+
 export interface KeryxDB {
   init(): Promise<void>;
 
@@ -63,6 +80,28 @@ export interface KeryxDB {
   // ── auth helpers ──
   /** True when any source in the registry has this wallet address (case-insensitive). */
   isCreatorWallet(addr: string): Promise<boolean>;
+
+  // ── api keys (identity + rate-limit; no fund custody) ──
+  /** Insert a new key row. Returns { rawKey (echoed once), prefix, id }. */
+  mintApiKey(
+    wallet: string,
+    prefix: string,
+    keyHash: string,
+    label?: string,
+  ): Promise<{ rawKey: string; prefix: string; id: string }>;
+  /** Prefix-lookup + timing-safe hash compare. Returns identity context or null. */
+  verifyApiKey(
+    prefix: string,
+    incomingHash: string,
+  ): Promise<{ walletAddress: string; keyId: string } | null>;
+  /** List all non-revoked (and revoked) keys for a wallet. */
+  listApiKeys(wallet: string): Promise<ApiKeyRow[]>;
+  /** Soft-delete: set revoked_at. No-op if key already revoked or not owned by wallet. */
+  revokeApiKey(id: string, wallet: string): Promise<void>;
+  /** Increment daily call counter for a key (fire-and-forget). */
+  incrementUsage(keyId: string): Promise<void>;
+  /** Return per-day call counts for a key over the last N days (default 30). */
+  getUsage(keyId: string, days?: number): Promise<ApiKeyUsage[]>;
 
   // ── payments ──
   recordPayment(p: PaymentRecord): Promise<void>;
