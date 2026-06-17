@@ -1,9 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import { Bodoni_Moda, Spectral, Spline_Sans_Mono } from "next/font/google";
+import { headers } from "next/headers";
+import { cookieToInitialState } from "wagmi";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
 import { PaperGrain } from "@/components/keryx/paper-grain";
 import { MintEngravings } from "@/components/keryx/mint-engravings";
+import { Providers } from "./providers";
+import { makeConfig } from "@/lib/wagmi-config";
 import "./globals.css";
 
 // Public origin for OG/canonical metadata. Explicit BASE_URL wins (set to the live
@@ -119,7 +123,12 @@ const JSON_LD = {
   ],
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // Read the incoming cookie header so wagmi can rehydrate wallet connection
+  // state on the server, avoiding a flash of "disconnected" on first paint.
+  const cookieHeader = (await headers()).get("cookie") ?? undefined;
+  const initialState = cookieToInitialState(makeConfig(), cookieHeader);
+
   return (
     <html lang="en">
       <body
@@ -131,7 +140,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         />
         <MintEngravings />
         <PaperGrain />
-        <TooltipProvider>{children}</TooltipProvider>
+        <Providers initialState={initialState}>
+          <TooltipProvider>{children}</TooltipProvider>
+        </Providers>
         <Toaster richColors position="bottom-right" />
       </body>
     </html>
