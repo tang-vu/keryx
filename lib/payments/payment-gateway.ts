@@ -1,16 +1,21 @@
 /**
  * PaymentGateway — the agent's money interface.
  *
- * `real`   → settles on Arc testnet via Circle x402 (GatewayClient.pay). The demo path.
- * `offline`→ reads content from the DB and records simulated payments (settled:false) so the
- *            full reasoning + settlement FLOW runs with no funded wallet. Never the demo path.
+ * `real`    → settles on Arc testnet via Circle x402. Two sub-modes:
+ *             BrowserCoSignGateway: user funds their own session EOA; browser co-signs each
+ *               authorization (non-custodial). Selected when a session grant is active.
+ *             RealGateway: Keryx treasury wallet (GatewayClient.pay). Used by the volume
+ *               engine / A2A / collectRun when no browser session is present.
+ * `offline` → reads content from the DB and records simulated payments (settled:false) so the
+ *             full reasoning + settlement FLOW runs with no funded wallet. Never the demo path.
  *
- * Selection: real when a funder key is configured and KERYX_FORCE_OFFLINE !== "1".
+ * Selection priority: BrowserCoSign (active grant) → Real (funder key) → Offline.
  */
 
 import { config } from "../config";
 import type { Author, PaymentRecord, Source } from "../types";
 import type { KeryxDB } from "../db";
+import type { RequestSignatureFn } from "./browser-cosign-gateway";
 
 export interface FetchResult {
   content: string;
@@ -35,13 +40,36 @@ export interface PaymentGateway {
   agentAddress(): string;
 }
 
-export async function getPaymentGateway(db: KeryxDB): Promise<PaymentGateway> {
-  const useReal =
-    config.funderKey.length > 0 && process.env.KERYX_FORCE_OFFLINE !== "1";
-  if (useReal) {
+export interface GatewayOpts {
+  /** Present when the /api/ask route has an active browser co-sign grant. */
+  sessionId?: string;
+  /** Injected by the SSE route to emit sign-request events and await browser responses. */
+  requestSignature?: RequestSignatureFn;
+  /** AbortSignal tied to the SSE client connection — used to cancel pending signs. */
+  abortSignal?: AbortSignal;
+}
+
+export async function getPaymentGateway(db: KeryxDB, opts?: GatewayOpts): Promise<PaymentGateway> {
+  if (process.env.KERYX_FORCE_OFFLINE === "1") {
+    const { OfflineGateway } = await import("./offline-gateway");
+    return new OfflineGateway(db);
+  }
+
+  // Browser co-sign path: active session grant + sign callback injected by the SSE route.
+  if (opts?.sessionId && opts?.requestSignature) {
+    const { isGrantValid } = await import("./session-grants");
+    if (isGrantValid(opts.sessionId)) {
+      const { BrowserCoSignGateway } = await import("./browser-cosign-gateway");
+      return new BrowserCoSignGateway(opts.sessionId, opts.requestSignature, opts.abortSignal);
+    }
+  }
+
+  // Treasury path: Keryx's own funder key (volume engine / A2A / collectRun).
+  if (config.funderKey.length > 0) {
     const { RealGateway } = await import("./real-gateway");
     return new RealGateway();
   }
+
   const { OfflineGateway } = await import("./offline-gateway");
   return new OfflineGateway(db);
 }

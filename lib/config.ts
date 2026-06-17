@@ -83,10 +83,19 @@ export const config = {
   ipfsGatewayUrl: process.env.KERYX_IPFS_GATEWAY ?? "https://gateway.pinata.cloud",
 
   // ── Wallets ──
+  // funderKey is Keryx's own TREASURY wallet — used by the volume engine, A2A, and collectRun.
+  // It is NEVER used for user sessions (those are funded by the user's own browser-held EOA).
   sellerAddress: (process.env.SELLER_ADDRESS ?? "") as `0x${string}` | "",
   funderKey: (process.env.AGENT_FUNDER_PRIVATE_KEY ??
     process.env.BUYER_PRIVATE_KEY ??
     "") as `0x${string}` | "",
+
+  // ── Session grants (browser co-sign, Phase 03) ──
+  // TTL for a user's session grant. After this window the server stops honoring sign-requests
+  // for that session, limiting the XSS exposure window to the funded session amount only.
+  // Default: 3600s (1 hour). Expired grants prompt the user to re-grant or revoke residual.
+  // NO server secret is stored for user sessions — the private key lives only in the browser tab.
+  sessionGrantTtlSeconds: Math.round(num(process.env.KERYX_SESSION_GRANT_TTL, 3600)),
 
   // ── On-chain SourceRegistry ──
   // Set after deploying contracts/source-registry.sol to Arc testnet.

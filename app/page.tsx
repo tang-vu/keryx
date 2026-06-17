@@ -5,9 +5,14 @@
  * herald seal, real-traction denomination box, and a guilloché divider. The
  * dispatch order opens an SSE stream and renders the live dispatch: §I the
  * decision, §II the reading, §III the settlement.
+ *
+ * Browser co-sign: SessionGrantPanel detects SIWE auth and renders the grant
+ * dialog. When a grant is active, sessionId + getSessionWalletClient are passed
+ * into useAskStream so sign-requests are auto-signed without MetaMask prompts.
+ * Unauthenticated / offline asks fall through to the server-side gateway unchanged.
  */
 
-import { useMemo } from "react";
+import { useMemo, useCallback, useState } from "react";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { AskForm } from "@/components/keryx/ask-form";
@@ -18,11 +23,27 @@ import { ReasoningConsole } from "@/components/keryx/reasoning-console";
 import { CreatorsPaidPanel } from "@/components/keryx/creators-paid-panel";
 import { AnswerCard } from "@/components/keryx/answer-card";
 import { HowItWorks, ForCreators } from "@/components/keryx/landing-sections";
+import { SessionGrantPanel } from "@/components/keryx/session-grant-panel";
+import type { SessionGrantBinding } from "@/components/keryx/session-grant-panel";
 import { useAskStream } from "@/lib/hooks/use-ask-stream";
 import type { PaymentRecord } from "@/lib/types";
 
 export default function AskPage() {
-  const { state, ask } = useAskStream();
+  // grantBinding drives re-render when the grant activates/revokes so
+  // useAskStream's handleEvent picks up the new sessionId via its dep array.
+  const [grantBinding, setGrantBinding] = useState<SessionGrantBinding>({
+    sessionId: null,
+    getSessionWalletClient: () => null,
+  });
+
+  const handleBindingChange = useCallback((b: SessionGrantBinding) => {
+    setGrantBinding(b);
+  }, []);
+
+  const { state, ask } = useAskStream({
+    sessionId: grantBinding.sessionId,
+    getSessionWalletClient: grantBinding.getSessionWalletClient,
+  });
   const streaming = state.status === "streaming";
   const started = state.status !== "idle";
 
@@ -126,6 +147,8 @@ export default function AskPage() {
 
             {/* DISPATCH ORDER */}
             <section id="dispatch" className="mx-auto max-w-[1180px] px-4 pt-9 sm:px-[30px]">
+              {/* Non-custodial session grant — shown only when SIWE-authed */}
+              <SessionGrantPanel onBindingChange={handleBindingChange} />
               <AskForm disabled={streaming} onAsk={ask} />
             </section>
 
@@ -140,6 +163,8 @@ export default function AskPage() {
               The reading room
             </div>
             <div id="dispatch" className="max-w-[860px]">
+              {/* Session grant panel persists across queries — grant stays active */}
+              <SessionGrantPanel onBindingChange={handleBindingChange} />
               <AskForm disabled={streaming} onAsk={ask} />
             </div>
 

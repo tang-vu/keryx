@@ -1,0 +1,188 @@
+"use client";
+
+/**
+ * GrantSpendDialog — the non-custodial spend gate for the browser co-sign flow.
+ *
+ * Shown above the AskForm when the user is SIWE-authenticated. States:
+ *   idle/revoked → "Activate session" button → generateAndFund flow
+ *   generating/funding/depositing/registering → progress indicator
+ *   active → remaining-cap progress bar + revoke button
+ *   error → error message + retry
+ *
+ * The private session key lives in useSessionGrant's ref — never rendered,
+ * never sent to any server endpoint. This component only shows derived state.
+ *
+ * The revoke flow:
+ *   1. Calls revoke() to drop the server grant.
+ *   2. Offers to withdraw residual USDC from the Gateway back to the user's
+ *      wallet — the user must sign a Gateway withdraw tx in MetaMask.
+ *      (We don't auto-withdraw because the session key is gone after revoke;
+ *       the user would use a separate Gateway UI to pull remaining funds.)
+ */
+
+import { useEffect, useState } from "react";
+import type { GrantState } from "@/lib/hooks/use-session-grant";
+
+interface Props {
+  grantState: GrantState;
+  onActivate: (budgetUsdc: number) => void;
+  onRevoke: () => void;
+  onTryRecover: () => void;
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  generating: "Generating session key…",
+  funding:    "Waiting for USDC transfer…",
+  depositing: "Depositing to Gateway…",
+  registering: "Registering grant…",
+};
+
+export function GrantSpendDialog({ grantState, onActivate, onRevoke, onTryRecover }: Props) {
+  const [budgetInput, setBudgetInput] = useState(0.05);
+  const [showRevoke, setShowRevoke] = useState(false);
+
+  // On mount, offer to recover from sessionStorage (handles page refreshes).
+  useEffect(() => {
+    onTryRecover();
+  }, [onTryRecover]);
+
+  const isWorking = ["generating", "funding", "depositing", "registering"].includes(grantState.status);
+
+  if (grantState.status === "active") {
+    const spentPct = grantState.cap > 0 ? Math.min(100, (grantState.spent / grantState.cap) * 100) : 0;
+    const remaining = Math.max(0, grantState.cap - grantState.spent);
+
+    return (
+      <div className="mb-4 border border-seal/40 bg-paper px-4 py-3">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            {/* green dot = active session */}
+            <span className="h-2 w-2 rounded-full bg-paid" />
+            <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-2">
+              Session active — ${remaining.toFixed(4)} remaining
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowRevoke(true)}
+            className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3 underline underline-offset-2 hover:text-seal"
+          >
+            Revoke
+          </button>
+        </div>
+
+        {/* spend progress bar */}
+        <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-line">
+          <div
+            className="h-full rounded-full bg-seal transition-all"
+            style={{ width: `${spentPct}%` }}
+          />
+        </div>
+        <div className="mt-1 flex justify-between font-mono text-[9px] tracking-widest text-faint">
+          <span>${grantState.spent.toFixed(4)} spent</span>
+          <span>${grantState.cap.toFixed(4)} cap</span>
+        </div>
+
+        {grantState.expiresAt && (
+          <div className="mt-1.5 font-mono text-[9px] text-faint">
+            Expires {new Date(grantState.expiresAt).toLocaleTimeString()}
+          </div>
+        )}
+
+        {showRevoke && (
+          <div className="mt-3 border-t border-line pt-3">
+            <p className="mb-2.5 font-serif text-[13px] leading-snug text-ink-2">
+              Revoking drops the server grant. Any unspent USDC stays in the
+              Gateway until you withdraw it from your session address{" "}
+              {grantState.sessAddr ? (
+                <span className="font-mono text-[11px]">{grantState.sessAddr.slice(0, 10)}…</span>
+              ) : null}
+              . The session key is erased from this tab on revoke.
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => { setShowRevoke(false); onRevoke(); }}
+                className="border border-destructive/60 bg-destructive/10 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.1em] text-destructive hover:bg-destructive/20"
+              >
+                Revoke grant
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowRevoke(false)}
+                className="px-4 py-2 font-mono text-[11px] uppercase tracking-[0.1em] text-ink-3 hover:text-ink"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (isWorking) {
+    return (
+      <div className="mb-4 border border-line bg-paper px-4 py-3">
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-seal" />
+          <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-2">
+            {STATUS_LABEL[grantState.status] ?? "Working…"}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // idle / revoked / error → show activation form
+  return (
+    <div className="mb-4 border border-ink/20 bg-paper-2 px-4 py-3">
+      <div className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
+        Non-custodial session
+      </div>
+
+      {grantState.status === "error" && grantState.error && (
+        <div className="mb-2 border border-destructive/40 bg-destructive/10 px-3 py-2 font-mono text-[11px] text-destructive">
+          {grantState.error}
+        </div>
+      )}
+
+      <p className="mb-3 max-w-[52ch] font-serif text-[13px] leading-snug text-ink-2">
+        Fund a browser-held session key with USDC. The agent buys sources
+        automatically — no wallet prompt per source. Your key never leaves
+        this tab.
+      </p>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3">
+            Budget
+          </label>
+          <input
+            type="number"
+            min={0.01}
+            max={1}
+            step={0.01}
+            value={budgetInput}
+            onChange={(e) => setBudgetInput(parseFloat(e.target.value) || 0.05)}
+            className="w-20 border border-ink/30 bg-paper px-2 py-1 font-mono text-[12px] text-ink focus:border-seal focus:outline-none"
+          />
+          <span className="font-mono text-[10px] text-ink-3">USDC</span>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onActivate(budgetInput)}
+          disabled={budgetInput <= 0}
+          className="border border-ink bg-ink px-5 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-cream transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--seal)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Activate session ▸
+        </button>
+      </div>
+
+      <p className="mt-2 font-mono text-[9px] leading-relaxed tracking-wide text-faint">
+        One MetaMask tx to fund · auto-signs per source · revoke anytime to recover residual
+      </p>
+    </div>
+  );
+}

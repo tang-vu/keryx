@@ -5,9 +5,17 @@
  * ReadableStream reader and parse the text/event-stream frames by hand
  * (`event: <name>\ndata: <json>\n\n`). Exposes the live trace, derived
  * decisions/citations/payments as they stream, and the final QueryRun.
+ *
+ * Browser co-sign extension:
+ *   When the server emits a `sign-request` event (sessionId present + active grant),
+ *   the hook builds the EIP-712 authorization with the session WalletClient and
+ *   POSTs the signed header to /api/ask/sign — all without a MetaMask prompt.
+ *   A getSessionWalletClient() accessor must be injected by the caller so the hook
+ *   has no direct dependency on the grant state tree.
  */
 
 import { useCallback, useRef, useState } from "react";
+import type { WalletClient } from "viem";
 import type {
   Citation,
   Decision,
@@ -15,6 +23,7 @@ import type {
   QueryRun,
   TraceStep,
 } from "@/lib/types";
+import type { PaymentRequirementsInput } from "@/lib/x402-client-sign";
 
 export type StreamMode = "real" | "offline";
 
@@ -57,7 +66,17 @@ function parseFrame(block: string): { event: string; data: string } | null {
   return { event, data: dataLines.join("\n") };
 }
 
-export function useAskStream() {
+interface AskStreamOpts {
+  /**
+   * Returns the viem WalletClient backed by the session private key, or null
+   * when no session is active. Injected to avoid coupling to useSessionGrant.
+   */
+  getSessionWalletClient?: () => WalletClient | null;
+  /** Session id to include in the /api/ask POST body (= lowercased SIWE address). */
+  sessionId?: string | null;
+}
+
+export function useAskStream(opts?: AskStreamOpts) {
   const [state, setState] = useState<AskStreamState>(INITIAL);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -98,6 +117,45 @@ export function useAskStream() {
       return;
     }
 
+    if (event === "sign-request") {
+      // Browser co-sign: the server asks us to sign an EIP-712 payment authorization.
+      // We do this in the background — no await in the event loop, fire-and-forget promise.
+      const { reqId, requirements } = data as {
+        reqId: string;
+        requirements: PaymentRequirementsInput;
+      };
+      const sessionId = opts?.sessionId;
+      const getWallet = opts?.getSessionWalletClient;
+
+      if (!sessionId || !getWallet) {
+        // No session configured — server shouldn't be sending sign-requests, but handle gracefully.
+        console.warn("[keryx] received sign-request but no session wallet configured");
+        return;
+      }
+
+      // Import the signer lazily — only loaded when co-sign is active (tree-shakes for no-session path).
+      import("@/lib/x402-client-sign").then(async ({ signPaymentAuthorization }) => {
+        const walletClient = getWallet();
+        if (!walletClient) {
+          console.warn("[keryx] sign-request: session WalletClient not available");
+          return;
+        }
+        try {
+          const { header } = await signPaymentAuthorization(walletClient, requirements);
+          await fetch("/api/ask/sign", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionId, reqId, paymentHeader: header }),
+          });
+        } catch (err) {
+          // Signing failed — log but don't crash the UI. The server's awaitSignature
+          // timeout will reject and the gateway will skip this source gracefully.
+          console.error("[keryx] sign-request failed:", err);
+        }
+      }).catch((err) => console.error("[keryx] failed to load x402-client-sign:", err));
+      return;
+    }
+
     if (event === "done") {
       const run = data as QueryRun;
       setState((s) => ({
@@ -115,7 +173,7 @@ export function useAskStream() {
       const { message } = data as { message: string };
       setState((s) => ({ ...s, status: "error", error: message }));
     }
-  }, []);
+  }, [opts?.sessionId, opts?.getSessionWalletClient]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const ask = useCallback(
     async (question: string, budget: number) => {
@@ -128,7 +186,12 @@ export function useAskStream() {
         const res = await fetch("/api/ask", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question, budget }),
+          body: JSON.stringify({
+            question,
+            budget,
+            // Include session id when a browser co-sign grant is active.
+            ...(opts?.sessionId ? { sessionId: opts.sessionId } : {}),
+          }),
           signal: controller.signal,
         });
 
