@@ -29,7 +29,12 @@ function loadEnvLocal(): void {
 }
 loadEnvLocal();
 
-const deployerKey = process.env.DEPLOYER_PRIVATE_KEY;
+// The deployer has no special on-chain role (the registry has no owner/admin), so the
+// one-time deploy can reuse the existing funder key when no dedicated deployer key is set.
+const deployerKey =
+  process.env.DEPLOYER_PRIVATE_KEY ??
+  process.env.AGENT_FUNDER_PRIVATE_KEY ??
+  process.env.BUYER_PRIVATE_KEY;
 
 const config: HardhatUserConfig = {
   solidity: {

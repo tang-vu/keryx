@@ -13,7 +13,10 @@
  * Per-source writes (register/update/deactivate) are creator-signed from the browser.
  */
 
-import { ethers } from "hardhat";
+// hardhat is a CommonJS module; default-import then destructure so this runs whether the
+// script is loaded as CJS or as a native ES module (Node strips TS types and treats it as ESM).
+import hre from "hardhat";
+const { ethers } = hre;
 
 async function main() {
   const [deployer] = await ethers.getSigners();
