@@ -37,9 +37,15 @@ export interface SourceItem {
   sourceId: string;
   title: string;
   summary: string; // free preview shown during discovery
-  content: string; // full text unlocked after the x402 toll
+  content: string; // full text unlocked after the x402 toll (plaintext in DB when IPFS disabled)
   link: string;
   publishedAt?: string;
+  // Phase 04: IPFS encrypted content. When set, `content` is empty and the real text lives
+  // on IPFS as AES-256-GCM ciphertext. Decryption happens only inside produce() post-settle.
+  ipfsCid?: string;       // CID of the encrypted blob on Pinata IPFS
+  itemKeyEnc?: string;    // base64: per-item AES key wrapped with CONTENT_MASTER_KEY (+ 16-byte GCM tag)
+  itemIv?: string;        // base64: 12-byte GCM nonce used to encrypt the content
+  itemAuthTag?: string;   // base64: 16-byte GCM auth tag for the content ciphertext
 }
 
 export type DecisionAction = "BUY" | "SKIP" | "CACHE";

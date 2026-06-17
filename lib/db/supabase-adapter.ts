@@ -97,6 +97,10 @@ export class SupabaseAdapter implements KeryxDB {
         content: i.content,
         link: i.link,
         published_at: i.publishedAt ?? null,
+        ipfs_cid: i.ipfsCid ?? null,
+        item_key_enc: i.itemKeyEnc ?? null,
+        item_iv: i.itemIv ?? null,
+        item_auth_tag: i.itemAuthTag ?? null,
       })),
     );
   }
@@ -115,6 +119,10 @@ export class SupabaseAdapter implements KeryxDB {
       content: r.content,
       link: r.link,
       publishedAt: r.published_at ?? undefined,
+      ipfsCid: r.ipfs_cid ?? undefined,
+      itemKeyEnc: r.item_key_enc ?? undefined,
+      itemIv: r.item_iv ?? undefined,
+      itemAuthTag: r.item_auth_tag ?? undefined,
     }));
   }
 

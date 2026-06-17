@@ -71,6 +71,17 @@ export const config = {
   // Optional: when unset, only injected wallets (MetaMask, Rabby) are available.
   wcProjectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID ?? "",
 
+  // ── IPFS / content encryption ──
+  // When set, content is encrypted with AES-256-GCM and pinned to Pinata on ingest.
+  // Plaintext is released only inside settleThenServe's produce() after x402 settles.
+  // When unset (offline dev), content is served directly from the DB — no behavior change.
+  pinataJwt: process.env.PINATA_JWT ?? "",
+  // 32-byte hex master key used to wrap per-item AES keys. Never logged or transmitted.
+  // Generate: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+  contentMasterKey: process.env.CONTENT_MASTER_KEY ?? "",
+  // Public IPFS gateway for fetching encrypted blobs. Defaults to Pinata's public gateway.
+  ipfsGatewayUrl: process.env.KERYX_IPFS_GATEWAY ?? "https://gateway.pinata.cloud",
+
   // ── Wallets ──
   sellerAddress: (process.env.SELLER_ADDRESS ?? "") as `0x${string}` | "",
   funderKey: (process.env.AGENT_FUNDER_PRIVATE_KEY ??

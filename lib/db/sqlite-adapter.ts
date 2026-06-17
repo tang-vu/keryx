@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS sync_state (
 );
 CREATE TABLE IF NOT EXISTS source_items (
   id TEXT PRIMARY KEY, source_id TEXT, title TEXT, summary TEXT, content TEXT,
-  link TEXT, published_at TEXT
+  link TEXT, published_at TEXT,
+  ipfs_cid TEXT, item_key_enc TEXT, item_iv TEXT, item_auth_tag TEXT
 );
 CREATE TABLE IF NOT EXISTS cache_items (
   source_id TEXT PRIMARY KEY, text TEXT, updated_at TEXT
@@ -74,14 +75,27 @@ export class SqliteAdapter implements KeryxDB {
    * the current column set so a fresh DB (where SCHEMA already created them) is untouched.
    */
   private ensureColumns(): void {
-    const cols = new Set(
+    // sources table backfill
+    const srcCols = new Set(
       (this.db.prepare(`PRAGMA table_info(sources)`).all() as { name: string }[]).map(
         (c) => c.name,
       ),
     );
-    if (!cols.has("ipfs_cid")) this.db.exec(`ALTER TABLE sources ADD COLUMN ipfs_cid TEXT`);
-    if (!cols.has("active"))
+    if (!srcCols.has("ipfs_cid")) this.db.exec(`ALTER TABLE sources ADD COLUMN ipfs_cid TEXT`);
+    if (!srcCols.has("active"))
       this.db.exec(`ALTER TABLE sources ADD COLUMN active INTEGER NOT NULL DEFAULT 1`);
+
+    // source_items table: encrypted-content columns added in Phase 04.
+    // Existing rows have NULL for these; produce() falls back to DB plaintext content.
+    const itemCols = new Set(
+      (this.db.prepare(`PRAGMA table_info(source_items)`).all() as { name: string }[]).map(
+        (c) => c.name,
+      ),
+    );
+    if (!itemCols.has("ipfs_cid")) this.db.exec(`ALTER TABLE source_items ADD COLUMN ipfs_cid TEXT`);
+    if (!itemCols.has("item_key_enc")) this.db.exec(`ALTER TABLE source_items ADD COLUMN item_key_enc TEXT`);
+    if (!itemCols.has("item_iv")) this.db.exec(`ALTER TABLE source_items ADD COLUMN item_iv TEXT`);
+    if (!itemCols.has("item_auth_tag")) this.db.exec(`ALTER TABLE source_items ADD COLUMN item_auth_tag TEXT`);
   }
 
   async upsertSource(s: Source): Promise<void> {
@@ -142,11 +156,15 @@ export class SqliteAdapter implements KeryxDB {
 
   async addItems(items: SourceItem[]): Promise<void> {
     const stmt = this.db.prepare(
-      `INSERT OR REPLACE INTO source_items (id,source_id,title,summary,content,link,published_at)
-       VALUES (?,?,?,?,?,?,?)`,
+      `INSERT OR REPLACE INTO source_items
+         (id,source_id,title,summary,content,link,published_at,ipfs_cid,item_key_enc,item_iv,item_auth_tag)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
     );
     for (const i of items)
-      stmt.run(i.id, i.sourceId, i.title, i.summary, i.content, i.link, i.publishedAt ?? null);
+      stmt.run(
+        i.id, i.sourceId, i.title, i.summary, i.content, i.link, i.publishedAt ?? null,
+        i.ipfsCid ?? null, i.itemKeyEnc ?? null, i.itemIv ?? null, i.itemAuthTag ?? null,
+      );
   }
 
   async getItems(sourceId: string): Promise<SourceItem[]> {
@@ -161,6 +179,10 @@ export class SqliteAdapter implements KeryxDB {
       content: r.content as string,
       link: r.link as string,
       publishedAt: (r.published_at as string) ?? undefined,
+      ipfsCid: (r.ipfs_cid as string) ?? undefined,
+      itemKeyEnc: (r.item_key_enc as string) ?? undefined,
+      itemIv: (r.item_iv as string) ?? undefined,
+      itemAuthTag: (r.item_auth_tag as string) ?? undefined,
     }));
   }
 
