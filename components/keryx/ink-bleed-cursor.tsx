@@ -83,25 +83,25 @@ export function InkBleedCursor() {
 
       const speed = Math.min(dist, 60);
       const ink = INKS[(Math.random() * INKS.length) | 0];
-      // Main blot.
+      // Main blot — kept small/delicate.
       blots.push({
         x, y, r: 0,
-        maxR: 16 + speed * 0.6 + Math.random() * 12,
+        maxR: 7 + speed * 0.3 + Math.random() * 6,
         growth: 0,
-        ink: `rgba(${ink}, ${0.22 + Math.random() * 0.12})`,
+        ink: `rgba(${ink}, ${0.20 + Math.random() * 0.10})`,
       });
-      // A couple of feather satellites for splatter — lighter, offset.
-      const sat = 1 + ((Math.random() * 2) | 0);
+      // A feather satellite or two for splatter — lighter, offset, tiny.
+      const sat = (Math.random() * 2) | 0;
       for (let i = 0; i < sat; i++) {
         const a = Math.random() * Math.PI * 2;
-        const d = 6 + Math.random() * (speed * 0.5 + 8);
+        const d = 4 + Math.random() * (speed * 0.35 + 6);
         blots.push({
           x: x + Math.cos(a) * d,
           y: y + Math.sin(a) * d,
           r: 0,
-          maxR: 5 + Math.random() * 10,
+          maxR: 2.5 + Math.random() * 5,
           growth: 0,
-          ink: `rgba(${ink}, ${0.12 + Math.random() * 0.08})`,
+          ink: `rgba(${ink}, ${0.10 + Math.random() * 0.06})`,
         });
       }
       if (blots.length > 240) blots.splice(0, blots.length - 240);
@@ -114,8 +114,10 @@ export function InkBleedCursor() {
 
       // Dry the existing ink slightly each frame (erase a hair of alpha everywhere)
       // so strokes linger ~1.5s then fade — the lingering trail, not a hard clear.
+      // Exponential decay of alpha everywhere → ink dries fully within ~2s of the
+      // cursor stopping, so the paper never keeps a permanent stain. ("dần dần hết ố")
       ctx.globalCompositeOperation = "destination-out";
-      ctx.fillStyle = "rgba(0,0,0,0.022)";
+      ctx.fillStyle = "rgba(0,0,0,0.04)";
       ctx.fillRect(0, 0, w, h);
 
       // Lay fresh ink.
@@ -178,7 +180,7 @@ export function InkBleedCursor() {
           <feDisplacementMap
             in="SourceGraphic"
             in2="noise"
-            scale="7"
+            scale="5"
             xChannelSelector="R"
             yChannelSelector="G"
           />
