@@ -37,6 +37,7 @@ const STATUS_LABEL: Record<string, string> = {
   generating: "Generating session key…",
   funding:    "Waiting for USDC transfer…",
   depositing: "Depositing to Gateway…",
+  confirming: "Confirming Gateway credit (can take up to ~90s)…",
   registering: "Registering grant…",
   recovering: "Recovering session — sign in your wallet…",
 };
@@ -61,7 +62,7 @@ export function GrantSpendDialog({
     onTryRecover();
   }, [onTryRecover]);
 
-  const isWorking = ["generating", "funding", "depositing", "registering", "recovering"].includes(grantState.status);
+  const isWorking = ["generating", "funding", "depositing", "confirming", "registering", "recovering"].includes(grantState.status);
 
   if (grantState.status === "active") {
     const spentPct = grantState.cap > 0 ? Math.min(100, (grantState.spent / grantState.cap) * 100) : 0;

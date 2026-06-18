@@ -61,7 +61,8 @@ export type GrantStatus =
   | "idle"
   | "generating"
   | "funding"          // waiting for MetaMask fund tx
-  | "depositing"       // calling gateway.deposit() from browser
+  | "depositing"       // session EOA approve + Gateway deposit txs
+  | "confirming"       // waiting for Circle Gateway to reflect the credit (off-chain lag)
   | "registering"      // POSTing to /api/session/grant
   | "recovering"       // re-deriving key from a signature to resume a funded session
   | "active"
@@ -235,7 +236,10 @@ export function useSessionGrant() {
         // We replicate what RealGateway.ensureFunded does, but from the browser.
         const depositTxHash = await depositToGateway(sessionWalletClient, pc, budgetUsdc);
 
-        // 4. Poll until the Gateway credit is visible (off-chain, lags ~10-90s).
+        // 4. Poll until the Gateway credit is visible. This is Circle's off-chain
+        //    confirmation and legitimately lags ~10-90s after the deposit tx mines —
+        //    surfaced as its own "confirming" phase so it doesn't look like a hang.
+        setState((s) => ({ ...s, status: "confirming" }));
         await pollGatewayCredit(sessAddr, budgetUsdc);
 
         setState((s) => ({ ...s, status: "registering" }));
@@ -439,7 +443,10 @@ async function depositToGateway(
     chain: arcTestnet,
     account: sessionWallet.account!,
   });
-  await publicClient.waitForTransactionReceipt({ hash: approveTx });
+  const approveRcpt = await publicClient.waitForTransactionReceipt({ hash: approveTx, timeout: 90_000 });
+  if (approveRcpt.status !== "success") {
+    throw new Error("USDC approval reverted — could not authorise the Gateway deposit.");
+  }
 
   // 2. Call the Gateway deposit function.
   //    Verified against @circle-fin/x402-batching/dist/client/index.js:236-246:
@@ -455,7 +462,10 @@ async function depositToGateway(
     chain: arcTestnet,
     account: sessionWallet.account!,
   });
-  await publicClient.waitForTransactionReceipt({ hash: depositTx });
+  const depositRcpt = await publicClient.waitForTransactionReceipt({ hash: depositTx, timeout: 90_000 });
+  if (depositRcpt.status !== "success") {
+    throw new Error("Gateway deposit reverted — funds stayed in the session address.");
+  }
   return depositTx;
 }
 
