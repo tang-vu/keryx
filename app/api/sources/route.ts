@@ -22,8 +22,10 @@
  * The wallet address is always taken from the session — the client-supplied
  * walletAddress field is ignored for authenticated requests to prevent wallet spoofing.
  *
- * Role eligibility is re-derived from the DB at this call rather than trusting the
- * possibly-stale JWT role field (Phase 01 review L3).
+ * Permissionless first-listing: any authenticated wallet may register a source.
+ * Registering is what MAKES a wallet a creator (resolveRole then sees it owns a
+ * source), so there is no creator precondition — requiring one is an impossible
+ * bootstrap and stricter than the on-chain register(), which is itself permissionless.
  */
 
 import { NextRequest } from "next/server";
@@ -64,18 +66,6 @@ export async function POST(req: NextRequest) {
 
   const db = await getDb();
   const sessionWallet = session.address;
-
-  // Re-derive eligibility from DB rather than trusting the possibly-stale JWT role (L3 fix).
-  // Dev wallets are trusted from config (never stale). Creator status is live from the DB.
-  const isDevWallet = config.devWallets.includes(sessionWallet.toLowerCase());
-  const isCreator = isDevWallet || (await db.isCreatorWallet(sessionWallet));
-
-  if (!isCreator) {
-    return Response.json(
-      { error: "forbidden", detail: "only creators and devs may register sources" },
-      { status: 403 },
-    );
-  }
 
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
 

@@ -8,8 +8,11 @@
  * Auth states:
  *   - not connected → prompt to connect (link to /connect)
  *   - connected, not signed in → prompt to sign in
- *   - signed in as asker → prompt to sign in as creator
- *   - signed in as creator or dev → show the register form
+ *   - signed in (any role) → show the register form
+ *
+ * Listing is permissionless: any signed-in wallet may register a source, and
+ * doing so makes it a creator (role re-derives from source ownership). There is
+ * no creator precondition — that would be an impossible bootstrap.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -56,7 +59,9 @@ export default function RegisterPage() {
     })();
   }, [loadSources]);
 
-  const canRegister = session && (session.role === "creator" || session.role === "dev");
+  // Permissionless: any signed-in wallet may list its first source (which then
+  // makes it a creator). No creator-role precondition.
+  const canRegister = !!session;
 
   return (
     <div className="min-h-screen bg-paper">
@@ -96,15 +101,6 @@ export default function RegisterPage() {
                 heading="Sign in to continue"
                 body="Connect your wallet to Keryx to register a source. Your wallet address becomes your payout address."
                 cta="Sign in ▸"
-                href="/connect"
-              />
-            )}
-
-            {session && !canRegister && (
-              <AuthGate
-                heading="Creator sign-in required"
-                body={`You're signed in as ${session.address.slice(0, 6)}…${session.address.slice(-4)} with role "${session.role}". Register a source first to get creator access.`}
-                cta="Switch wallet ▸"
                 href="/connect"
               />
             )}
