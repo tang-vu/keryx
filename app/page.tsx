@@ -173,6 +173,7 @@ export default function AskPage() {
               {/* Non-custodial session grant — shown only when SIWE-authed */}
               <SessionGrantPanel onBindingChange={handleBindingChange} />
               <AskForm disabled={streaming} onAsk={ask} />
+              <PayerNote active={!!grantBinding.sessionId} />
             </section>
 
             <HowItWorks />
@@ -189,6 +190,7 @@ export default function AskPage() {
               {/* Session grant panel persists across queries — grant stays active */}
               <SessionGrantPanel onBindingChange={handleBindingChange} />
               <AskForm disabled={streaming} onAsk={ask} />
+              <PayerNote active={!!grantBinding.sessionId} />
             </div>
 
             {state.status === "error" && (
@@ -217,5 +219,22 @@ export default function AskPage() {
         )}
       </main>
     </div>
+  );
+}
+
+/**
+ * Who pays for this run. Without an active session grant the agent settles from
+ * Keryx's own treasury wallet (so asks work with no wallet — handy for demos);
+ * with a grant it settles from the user's funded session. Surfaced so it's never
+ * a mystery whose USDC is being spent.
+ */
+function PayerNote({ active }: { active: boolean }) {
+  return (
+    <p className="mt-2.5 flex items-center gap-2 font-mono text-[10px] leading-relaxed tracking-wide text-ink-3">
+      <span className={`h-[6px] w-[6px] rounded-full ${active ? "bg-paid" : "bg-seal"}`} />
+      {active
+        ? "Settling from your funded session — your wallet pays, capped at the funded amount."
+        : "This run is settled by Keryx's treasury. Activate a session above to pay from your own wallet."}
+    </p>
   );
 }

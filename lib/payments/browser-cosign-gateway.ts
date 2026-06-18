@@ -131,9 +131,12 @@ export class BrowserCoSignGateway implements PaymentGateway {
       throw new Error(`session cap would be exceeded (amount=${amount})`);
     }
 
-    // Step 1: GET the URL without a payment header to obtain the 402 challenge.
+    // Step 1: hit the URL without a payment header to obtain the 402 challenge.
+    // The challenge MUST be requested with the same method the paid retry will use:
+    // /api/source is GET, but /api/cite is POST-only (a GET there returns 405, not 402).
     const reqId = crypto.randomUUID();
-    const requirements = await this.fetchRequirements(url);
+    const method = kind === "fetch" ? "GET" : "POST";
+    const requirements = await this.fetchRequirements(url, method);
 
     // Step 2: Ask the browser to sign. The browser validates payTo/amount against
     // the grant cap before signing — defence against a compromised server sending
@@ -152,7 +155,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
     const payer = grant?.sessAddr ?? "0xSESSION";
 
     const retryRes = await fetch(url, {
-      method: kind === "fetch" ? "GET" : "POST",
+      method,
       headers: {
         "payment-signature": paymentHeader,
         Accept: "application/json",
@@ -202,8 +205,9 @@ export class BrowserCoSignGateway implements PaymentGateway {
    * GET the URL without payment to obtain the 402 challenge.
    * Returns the first matching payment requirements object (Arc / exact scheme).
    */
-  private async fetchRequirements(url: string): Promise<PaymentRequirements> {
+  private async fetchRequirements(url: string, method: "GET" | "POST"): Promise<PaymentRequirements> {
     const res = await fetch(url, {
+      method,
       headers: { Accept: "application/json" },
       signal: this.abortSignal,
     });
