@@ -29,7 +29,7 @@ import { useArcChainGuard } from "@/lib/hooks/use-arc-chain-guard";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 
 export default function ConnectPage() {
-  const { disconnect } = useDisconnect();
+  const { disconnect, disconnectAsync } = useDisconnect();
   const chainGuard = useArcChainGuard();
   const { address, isConnected, session, authState, signIn, signOut } = useSiweAuth();
 
@@ -51,9 +51,16 @@ export default function ConnectPage() {
   }, [signIn]);
 
   const handleSignOut = useCallback(async () => {
+    // Fully disconnect so the flow returns to step 1 (connect), not a re-sign of
+    // the same wallet still showing as connected.
+    try {
+      await disconnectAsync();
+    } catch {
+      /* already disconnected — ignore */
+    }
     await signOut();
     toast("Signed out");
-  }, [signOut]);
+  }, [disconnectAsync, signOut]);
 
   return (
     <div className="min-h-screen bg-paper">

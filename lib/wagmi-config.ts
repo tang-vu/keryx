@@ -24,7 +24,9 @@ export function makeConfig() {
   const connectors = [
     injected(),
     metaMask({ dappMetadata: { name: "Keryx", url: "https://keryx.cc" } }),
-    ...(projectId ? [walletConnect({ projectId })] : []),
+    // showQrModal: true makes the WalletConnect connector open its own QR / mobile
+    // wallet-list modal on connect — without it, clicking does nothing visible.
+    ...(projectId ? [walletConnect({ projectId, showQrModal: true })] : []),
   ];
 
   return createConfig({

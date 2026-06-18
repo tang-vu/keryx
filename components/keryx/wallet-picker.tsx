@@ -21,6 +21,7 @@
 
 import { Loader2, Wallet, QrCode, Smartphone } from "lucide-react";
 import { useConnect, type Connector } from "wagmi";
+import { toast } from "sonner";
 import Image from "next/image";
 
 // Connector ids/types that get their own dedicated button, so they are excluded
@@ -67,7 +68,17 @@ export function WalletPicker({ isBusy, onConnected: _onConnected, onSelect }: Pr
 
   const choose = (connector: Connector) => {
     onSelect?.();
-    connect({ connector });
+    // Surface connect failures — a missing provider / closed modal would otherwise
+    // fail silently and look like "nothing happens". User-cancelled is not an error.
+    connect(
+      { connector },
+      {
+        onError: (err) => {
+          const msg = err instanceof Error ? err.message : "Could not connect";
+          if (!/reject|denied|cancel|closed/i.test(msg)) toast.error(msg);
+        },
+      },
+    );
   };
 
   // Nothing usable: no injected wallet, no MetaMask SDK, no WalletConnect.

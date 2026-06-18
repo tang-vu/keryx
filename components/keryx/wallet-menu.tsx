@@ -35,8 +35,21 @@ const CHIP =
 
 export function WalletMenu() {
   const { address, isConnected, session, authState, signIn, signOut } = useSiweAuth();
-  const { disconnect } = useDisconnect();
+  const { disconnectAsync } = useDisconnect();
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  // Sign out = clear the session AND disconnect the wallet, so the menu returns to
+  // "Connect Wallet" (not "Sign in" for the same wallet). Disconnect first so the
+  // connected-but-signed-out state never flashes.
+  const handleSignOut = useCallback(async () => {
+    try {
+      await disconnectAsync();
+    } catch {
+      /* already disconnected — ignore */
+    }
+    await signOut();
+    toast("Signed out");
+  }, [disconnectAsync, signOut]);
   // Set true only when the user picks a wallet here — gates auto-sign-in so a
   // rehydrated connection on page load never pops an unsolicited signature.
   const intentRef = useRef(false);
@@ -108,11 +121,7 @@ export function WalletMenu() {
           <DropdownMenuSeparator className="bg-line" />
           <DropdownMenuItem
             className="cursor-pointer rounded-none text-seal focus:bg-seal/10 focus:text-seal"
-            onClick={async () => {
-              await signOut();
-              disconnect();
-              toast("Signed out");
-            }}
+            onClick={handleSignOut}
           >
             <LogOut className="h-3.5 w-3.5" /> Sign out
           </DropdownMenuItem>
