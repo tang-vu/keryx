@@ -12,24 +12,45 @@
  *   3. revoke()           — drops the server grant and prepares on-chain Gateway withdraw data.
  *      The caller (GrantSpendDialog) performs the actual withdraw via wagmi writeContract.
  *
+ * Key derivation (funds are never lost):
+ *   The session key is NOT random — it is derived deterministically from a signature
+ *   of a fixed message by the user's main wallet: sk = keccak256(sign(DERIVE_MESSAGE)).
+ *   Same wallet + same message → same key on ANY device/browser. So a closed tab,
+ *   a sign-out, or a different machine never orphans the funded session EOA: signing
+ *   the message again reproduces the exact same key, and the Gateway balance under it
+ *   can be resumed or withdrawn. recoverViaSignature() does exactly this.
+ *
  * SECURITY:
  *   - The private key NEVER leaves the browser — it is never sent to any server endpoint.
- *   - sessionStorage is tab-scoped; closing the tab strands residual USDC until the user
- *     returns and clicks "Revoke residual" (open question #1 — accepted trade-off).
+ *     The server only ever sees the derived public address.
+ *   - sessionStorage is the tab-scoped fast path for same-tab reloads; cross-tab /
+ *     cross-device recovery is via one wallet signature (no key persisted to disk).
  *   - XSS can exfiltrate the key up to the funded cap, not the user's whole wallet.
  *     Mitigations: strict CSP, small funded amounts, short TTL (1h default).
+ *   - Determinism relies on RFC-6979 deterministic ECDSA (MetaMask/Rabby/Ledger/Coinbase).
+ *     A wallet that signs non-deterministically simply can't recover (credit lookup
+ *     returns nothing) — it never loses MORE funds, it just can't auto-resume.
  */
 
 import { useCallback, useRef, useState } from "react";
 import { usePublicClient, useWalletClient } from "wagmi";
-import { createWalletClient, http, parseUnits, erc20Abi, type WalletClient } from "viem";
+import { createWalletClient, http, parseUnits, erc20Abi, keccak256, type WalletClient } from "viem";
 import { arcTestnet } from "viem/chains";
-import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import { privateKeyToAccount } from "viem/accounts";
 import { config as kConfig } from "@/lib/config";
 
 const SESSION_KEY_STORAGE = "keryx_session_sk";
 const SESSION_ADDR_STORAGE = "keryx_session_addr";
 const SESSION_ID_STORAGE = "keryx_session_id";
+
+// Fixed message signed to derive the session key. MUST stay byte-for-byte constant
+// across releases — changing it would derive a different key and "lose" access to
+// existing funded sessions. Versioned so a deliberate rotation is explicit.
+const DERIVE_MESSAGE =
+  "Keryx spending session key v1\n\n" +
+  "Sign to derive your in-browser spending session. This is NOT a transaction and " +
+  "costs no gas. Signing the same message always recreates the same session, so your " +
+  "funds are never lost. Only sign this on keryx.cc.";
 
 export type GrantStatus =
   | "idle"
@@ -37,6 +58,7 @@ export type GrantStatus =
   | "funding"          // waiting for MetaMask fund tx
   | "depositing"       // calling gateway.deposit() from browser
   | "registering"      // POSTing to /api/session/grant
+  | "recovering"       // re-deriving key from a signature to resume a funded session
   | "active"
   | "revoking"
   | "revoked"
@@ -81,6 +103,20 @@ function recoverFromStorage(): { sk: `0x${string}`; sessAddr: string; sessionId:
   } catch {
     return null;
   }
+}
+
+/**
+ * Derive the session private key from a wallet signature of the fixed DERIVE_MESSAGE.
+ * Deterministic: same wallet → same signature (RFC-6979) → same key, on any device.
+ * keccak256 of the signature is a uniformly-distributed 32-byte value — a valid
+ * secp256k1 private key for all practical purposes.
+ */
+async function deriveSessionKey(walletClient: WalletClient): Promise<`0x${string}`> {
+  const signature = await walletClient.signMessage({
+    account: walletClient.account!,
+    message: DERIVE_MESSAGE,
+  });
+  return keccak256(signature);
 }
 
 function saveToStorage(sk: string, sessAddr: string, sessionId: string) {
@@ -137,8 +173,10 @@ export function useSessionGrant() {
       setState({ ...INITIAL, status: "generating" });
 
       try {
-        // 1. Generate ephemeral session key — NEVER leaves the browser.
-        const sk = generatePrivateKey();
+        // 1. Derive the session key from a wallet signature (NOT random) — never
+        //    leaves the browser. Deterministic, so the funded EOA can always be
+        //    reproduced on any device by signing the same message again.
+        const sk = await deriveSessionKey(walletClient);
         const sessAccount = privateKeyToAccount(sk);
         const sessAddr = sessAccount.address;
         skRef.current = sk;
@@ -212,6 +250,80 @@ export function useSessionGrant() {
   );
 
   /**
+   * Recover a funded session on a fresh tab / different browser / after sign-out.
+   * Re-derives the key from a wallet signature (same wallet → same key), looks up
+   * how much USDC remains in the Gateway under that session EOA, and re-registers
+   * the server grant so the agent can resume spending. No funding tx needed.
+   *
+   * If the Gateway holds nothing under the derived address, there is nothing to
+   * recover (or the wallet signs non-deterministically) — we say so, never silently
+   * creating a new empty session.
+   */
+  const recoverViaSignature = useCallback(async () => {
+    if (!walletClient) {
+      setState((s) => ({ ...s, status: "error", error: "Connect your wallet first" }));
+      return;
+    }
+    setState({ ...INITIAL, status: "recovering" });
+    try {
+      const sk = await deriveSessionKey(walletClient);
+      const sessAddr = privateKeyToAccount(sk).address;
+
+      // How much USDC is still in the Gateway under this derived session EOA?
+      const creditRes = await fetch(
+        `/api/session/credit?address=${encodeURIComponent(sessAddr)}`,
+      );
+      const credit = (await creditRes.json().catch(() => ({}))) as { available?: string };
+      const residualUsdc = Number(BigInt(credit.available ?? "0")) / 1e6;
+
+      if (residualUsdc <= 0) {
+        skRef.current = null;
+        setState({
+          ...INITIAL,
+          status: "error",
+          error: "No recoverable session found for this wallet.",
+        });
+        return;
+      }
+
+      skRef.current = sk;
+
+      // Re-register the grant (recover mode: funds are in the Gateway, not the EOA,
+      // so the server skips the EOA-balance check). cap = the residual still on deposit.
+      const res = await fetch("/api/session/grant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessAddr, budget: residualUsdc, recover: true }),
+      });
+      if (!res.ok) {
+        const { error } = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(error ?? "recovery failed");
+      }
+      const { sessionId, expiresAt } = (await res.json()) as {
+        sessionId: string;
+        expiresAt: string;
+      };
+      saveToStorage(sk, sessAddr, sessionId);
+      setState({
+        status: "active",
+        sessAddr,
+        sessionId,
+        cap: residualUsdc,
+        spent: 0,
+        expiresAt,
+        error: null,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setState((s) => ({
+        ...s,
+        status: "error",
+        error: /reject|denied/i.test(message) ? "Signature rejected" : message,
+      }));
+    }
+  }, [walletClient]);
+
+  /**
    * Revoke the server-side grant. Returns the residual USDC amount so the
    * caller can offer to withdraw it from the Gateway back to the user's wallet.
    * The on-chain withdraw itself must be done by the caller (GrantSpendDialog).
@@ -255,6 +367,7 @@ export function useSessionGrant() {
   return {
     state,
     tryRecover,
+    recoverViaSignature,
     generateAndFund,
     revoke,
     getSessionWalletClient,

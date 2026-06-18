@@ -36,7 +36,8 @@ interface Props {
 
 export function SessionGrantPanel({ onBindingChange }: Props) {
   const [authed, setAuthed] = useState(false);
-  const { state, tryRecover, generateAndFund, revoke, getSessionWalletClient } = useSessionGrant();
+  const { state, tryRecover, recoverViaSignature, generateAndFund, revoke, getSessionWalletClient } =
+    useSessionGrant();
   // Stable ref so onBindingChange closures always read the latest binding.
   const bindingRef = useRef<SessionGrantBinding>({ sessionId: null, getSessionWalletClient });
 
@@ -76,6 +77,7 @@ export function SessionGrantPanel({ onBindingChange }: Props) {
         onActivate={generateAndFund}
         onRevoke={revoke}
         onTryRecover={tryRecover}
+        onRecoverViaSignature={recoverViaSignature}
       />
     </div>
   );

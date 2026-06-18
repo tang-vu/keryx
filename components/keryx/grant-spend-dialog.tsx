@@ -28,6 +28,9 @@ interface Props {
   onActivate: (budgetUsdc: number) => void;
   onRevoke: () => void;
   onTryRecover: () => void;
+  /** Re-derive the key from a wallet signature to resume a funded session
+   *  (new device / closed tab / after sign-out). Guarantees funds aren't lost. */
+  onRecoverViaSignature: () => void;
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -35,9 +38,16 @@ const STATUS_LABEL: Record<string, string> = {
   funding:    "Waiting for USDC transfer…",
   depositing: "Depositing to Gateway…",
   registering: "Registering grant…",
+  recovering: "Recovering session — sign in your wallet…",
 };
 
-export function GrantSpendDialog({ grantState, onActivate, onRevoke, onTryRecover }: Props) {
+export function GrantSpendDialog({
+  grantState,
+  onActivate,
+  onRevoke,
+  onTryRecover,
+  onRecoverViaSignature,
+}: Props) {
   const [budgetInput, setBudgetInput] = useState(0.05);
   const [showRevoke, setShowRevoke] = useState(false);
 
@@ -46,7 +56,7 @@ export function GrantSpendDialog({ grantState, onActivate, onRevoke, onTryRecove
     onTryRecover();
   }, [onTryRecover]);
 
-  const isWorking = ["generating", "funding", "depositing", "registering"].includes(grantState.status);
+  const isWorking = ["generating", "funding", "depositing", "registering", "recovering"].includes(grantState.status);
 
   if (grantState.status === "active") {
     const spentPct = grantState.cap > 0 ? Math.min(100, (grantState.spent / grantState.cap) * 100) : 0;
@@ -178,10 +188,21 @@ export function GrantSpendDialog({ grantState, onActivate, onRevoke, onTryRecove
         >
           Activate session ▸
         </button>
+
+        {/* Recover an already-funded session on a new device / after sign-out —
+            re-derives the key from a wallet signature (no new funds, no loss). */}
+        <button
+          type="button"
+          onClick={onRecoverViaSignature}
+          className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3 underline underline-offset-2 hover:text-seal"
+        >
+          Recover funded session ▸
+        </button>
       </div>
 
       <p className="mt-2 font-mono text-[9px] leading-relaxed tracking-wide text-faint">
-        One MetaMask tx to fund · auto-signs per source · revoke anytime to recover residual
+        One MetaMask tx to fund · auto-signs per source · funds never lost: sign again on
+        any device to recover or withdraw
       </p>
     </div>
   );

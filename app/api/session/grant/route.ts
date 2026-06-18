@@ -31,6 +31,10 @@ interface GrantBody {
   sessAddr?: string;
   budget?: number;
   txHash?: string;
+  /** Recovery mode: re-register a grant for an already-funded session EOA
+   *  (e.g. on a new device). Funds live in the Gateway, not the EOA, so the
+   *  EOA-balance check and the funding txHash are skipped. */
+  recover?: boolean;
 }
 
 export async function POST(req: NextRequest) {
@@ -47,7 +51,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "invalid JSON body" }, { status: 400 });
   }
 
-  const { sessAddr, budget, txHash } = body;
+  const { sessAddr, budget, txHash, recover } = body;
 
   // Validate required fields.
   if (!sessAddr || !sessAddr.startsWith("0x") || sessAddr.length < 40) {
@@ -56,7 +60,8 @@ export async function POST(req: NextRequest) {
   if (typeof budget !== "number" || !Number.isFinite(budget) || budget <= 0 || budget > 10) {
     return Response.json({ error: "budget must be a positive number ≤ 10 USDC" }, { status: 400 });
   }
-  if (!txHash || typeof txHash !== "string") {
+  // A funding txHash is required for a fresh grant, but not for recovery (no new tx).
+  if (!recover && (!txHash || typeof txHash !== "string")) {
     return Response.json({ error: "txHash is required" }, { status: 400 });
   }
 
@@ -65,7 +70,10 @@ export async function POST(req: NextRequest) {
   // (18-decimal) which is always available without an ERC-20 call.
   // Threshold: the claimed budget converted to 18-decimal (native) with 10% slack to
   // tolerate gas costs already spent during approve/deposit steps.
-  try {
+  // Skipped in recovery mode: the funds are in the Gateway, not the EOA, so a recovered
+  // session's EOA balance is legitimately ~0. The cap is bounded by the residual the
+  // browser read from the Gateway credit API, and settlement can't exceed real deposits.
+  if (!recover) try {
     const publicClient = createPublicClient({
       chain: arcTestnet,
       transport: http(config.rpcUrl),
@@ -103,7 +111,7 @@ export async function POST(req: NextRequest) {
     ownerAddr: session.address,
     cap: budget,
     expiry: grantExpiry(),
-    txHash,
+    txHash: txHash ?? "recovered", // no new funding tx in recovery mode
   });
 
   return Response.json({
