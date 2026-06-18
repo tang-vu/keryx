@@ -3,22 +3,29 @@
  * called in both the Server Component layout (for SSR cookie hydration) and the
  * client Providers component (which memoises the instance with useState).
  *
- * WalletConnect is included only when NEXT_PUBLIC_WC_PROJECT_ID is set; offline
- * dev works with injected wallets only (MetaMask, Rabby, etc.).
+ * Connector strategy:
+ *   - injected()     — desktop extensions + in-wallet dApp browsers (EIP-6963).
+ *   - metaMask()     — MetaMask SDK: deep-links/QR to the MetaMask mobile app from
+ *                      a plain mobile browser. NO WalletConnect project ID needed.
+ *   - walletConnect()— universal mobile support for ALL wallets, but only when a
+ *                      Reown Cloud project ID (NEXT_PUBLIC_WC_PROJECT_ID) is set.
  */
 
 import { createConfig, http, cookieStorage, createStorage } from "wagmi";
-import { injected, walletConnect } from "wagmi/connectors";
+import { injected, metaMask, walletConnect } from "wagmi/connectors";
 import { arcTestnet } from "./chains";
 
 export function makeConfig() {
   const projectId = process.env.NEXT_PUBLIC_WC_PROJECT_ID ?? "";
 
-  // Build connector list: always include injected; add WalletConnect only when
-  // a Reown Cloud project ID is available to avoid a runtime error on init.
-  const connectors = projectId
-    ? [injected(), walletConnect({ projectId })]
-    : [injected()];
+  // injected + MetaMask SDK are always available (MetaMask SDK gives mobile-browser
+  // support with zero registration). WalletConnect is added only when a project ID
+  // is configured — initialising it without one throws at runtime.
+  const connectors = [
+    injected(),
+    metaMask({ dappMetadata: { name: "Keryx", url: "https://keryx.cc" } }),
+    ...(projectId ? [walletConnect({ projectId })] : []),
+  ];
 
   return createConfig({
     chains: [arcTestnet],

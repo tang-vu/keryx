@@ -1,19 +1,31 @@
 "use client";
 
 /**
- * WalletPicker — lists EIP-6963 discovered wallets for user selection.
+ * WalletPicker — lists connect options for the user.
  *
- * wagmi v2 announces all injected providers via EIP-6963 window events when
- * multiInjectedProviderDiscovery is enabled (default true). useConnect().connectors
- * reflects all discovered + configured connectors (injected, walletConnect, etc.).
+ * Option groups:
+ *   1. Injected wallets — EIP-6963 discovered providers (MetaMask, Rabby, …),
+ *      present on desktop with an extension or inside a wallet's in-app browser.
+ *   2. MetaMask (SDK) — deep-links/QR to the MetaMask mobile app from a plain
+ *      mobile browser, no registration. Hidden when MetaMask is already present
+ *      as an injected wallet (desktop extension) to avoid a duplicate row.
+ *   3. WalletConnect — QR / mobile deep-link for ALL wallets. Shown only when
+ *      NEXT_PUBLIC_WC_PROJECT_ID is set (wagmi-config adds the connector).
  *
- * Falls back to a single "Connect wallet" button when no connectors are ready.
+ * The bare injected() fallback connector is never rendered as its own button: it
+ * fails to connect when no provider exists (the dead-button-on-mobile problem).
+ * When nothing is available we show actionable guidance.
+ *
  * Styled as The Mint: Bodoni headers, banknote borders, vermillion accent.
  */
 
-import { Loader2, Wallet } from "lucide-react";
-import { useConnect } from "wagmi";
+import { Loader2, Wallet, QrCode, Smartphone } from "lucide-react";
+import { useConnect, type Connector } from "wagmi";
 import Image from "next/image";
+
+// Connector ids/types that get their own dedicated button, so they are excluded
+// from the EIP-6963 injected-wallet list.
+const SPECIAL_IDS = new Set(["injected", "walletConnect", "metaMaskSDK", "metaMask", "coinbaseWalletSDK"]);
 
 interface Props {
   isBusy: boolean;
@@ -23,35 +35,55 @@ interface Props {
   onSelect?: () => void;
 }
 
+const ROW =
+  "flex w-full items-center gap-3 border border-ink bg-paper px-4 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] text-ink transition-all hover:-translate-y-0.5 hover:bg-seal hover:text-cream hover:shadow-[0_5px_0_var(--ink)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none";
+
 export function WalletPicker({ isBusy, onConnected: _onConnected, onSelect }: Props) {
   const { connect, connectors, isPending } = useConnect();
-
   const busy = isBusy || isPending;
 
-  // Filter out duplicate connector names (wagmi may list both the EIP-6963
-  // discovered connector and the legacy injected() fallback for the same wallet).
+  // EIP-6963 discovered wallets: type "injected" with a real, unique id (the
+  // provider rdns). The bare injected() fallback (id "injected") and the special
+  // SDK connectors are excluded — they get their own buttons / never render.
   const seen = new Set<string>();
-  const unique = connectors.filter((c) => {
-    const key = c.id ?? c.name;
-    if (seen.has(key)) return false;
-    seen.add(key);
+  const injectedWallets = connectors.filter((c) => {
+    if (c.type !== "injected" || SPECIAL_IDS.has(c.id)) return false;
+    if (seen.has(c.id)) return false;
+    seen.add(c.id);
     return true;
   });
 
-  if (unique.length === 0) {
-    // No injected wallets detected — show a hint instead of a broken button.
+  // MetaMask SDK connector — only surface it when MetaMask isn't already an
+  // injected wallet (avoids a duplicate "MetaMask" row on desktop with the extension).
+  const metaMaskConn = connectors.find(
+    (c) => c.id === "metaMaskSDK" || c.id === "metaMask" || c.type === "metaMask",
+  );
+  const hasInjectedMetaMask = injectedWallets.some(
+    (c) => /metamask/i.test(c.id) || /metamask/i.test(c.name),
+  );
+  const showMetaMask = metaMaskConn && !hasInjectedMetaMask;
+
+  const walletConnectConn = connectors.find((c) => c.id === "walletConnect");
+
+  const choose = (connector: Connector) => {
+    onSelect?.();
+    connect({ connector });
+  };
+
+  // Nothing usable: no injected wallet, no MetaMask SDK, no WalletConnect.
+  // Guide the user to a path that works.
+  if (injectedWallets.length === 0 && !showMetaMask && !walletConnectConn) {
     return (
       <div className="space-y-3">
-        <button
-          type="button"
-          disabled
-          className="flex w-full items-center justify-center gap-2 border border-ink/40 bg-paper-2 px-4 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-ink-3 cursor-not-allowed"
-        >
-          <Wallet className="h-4 w-4" />
-          No wallet detected
-        </button>
+        <div className="flex items-start gap-3 border border-ink/40 bg-paper-2 px-4 py-3.5">
+          <Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-ink-3" />
+          <p className="font-mono text-[11px] leading-relaxed text-ink-2">
+            No browser wallet detected.
+          </p>
+        </div>
         <p className="font-mono text-[10px] leading-relaxed text-faint">
-          Install MetaMask or Rabby, then refresh this page.
+          On mobile: open keryx.cc inside your wallet app&apos;s browser
+          (MetaMask, Rabby…). On desktop: install MetaMask or Rabby, then refresh.
         </p>
       </div>
     );
@@ -59,39 +91,83 @@ export function WalletPicker({ isBusy, onConnected: _onConnected, onSelect }: Pr
 
   return (
     <div className="space-y-2">
-      {unique.map((connector) => {
-        const icon = connector.icon; // data-uri from EIP-6963 rdns discovery
-        const name = connector.name;
-        return (
-          <button
-            key={connector.id}
-            type="button"
-            onClick={() => {
-              onSelect?.();
-              connect({ connector });
-            }}
-            disabled={busy}
-            className="flex w-full items-center gap-3 border border-ink bg-paper px-4 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] text-ink transition-all hover:-translate-y-0.5 hover:bg-seal hover:text-cream hover:shadow-[0_5px_0_var(--ink)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
-          >
-            {busy ? (
-              <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-            ) : icon ? (
-              // EIP-6963 icon is always a data-URI or https URL — safe to render.
-              <Image
-                src={icon}
-                alt=""
-                width={16}
-                height={16}
-                className="h-4 w-4 shrink-0 rounded-sm object-contain"
-                unoptimized
-              />
-            ) : (
-              <Wallet className="h-4 w-4 shrink-0" />
-            )}
-            <span className="flex-1 text-left">{name}</span>
-          </button>
-        );
-      })}
+      {injectedWallets.map((connector) => (
+        <button
+          key={connector.id}
+          type="button"
+          onClick={() => choose(connector)}
+          disabled={busy}
+          className={ROW}
+        >
+          {busy ? (
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+          ) : connector.icon ? (
+            // EIP-6963 icon is always a data-URI or https URL — safe to render.
+            <Image
+              src={connector.icon}
+              alt=""
+              width={16}
+              height={16}
+              className="h-4 w-4 shrink-0 rounded-sm object-contain"
+              unoptimized
+            />
+          ) : (
+            <Wallet className="h-4 w-4 shrink-0" />
+          )}
+          <span className="flex-1 text-left">{connector.name}</span>
+        </button>
+      ))}
+
+      {showMetaMask && metaMaskConn && (
+        <button
+          type="button"
+          onClick={() => choose(metaMaskConn)}
+          disabled={busy}
+          className={ROW}
+        >
+          {busy ? (
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+          ) : metaMaskConn.icon ? (
+            <Image
+              src={metaMaskConn.icon}
+              alt=""
+              width={16}
+              height={16}
+              className="h-4 w-4 shrink-0 rounded-sm object-contain"
+              unoptimized
+            />
+          ) : (
+            <Wallet className="h-4 w-4 shrink-0" />
+          )}
+          <span className="flex-1 text-left">
+            MetaMask
+            <span className="ml-2 normal-case tracking-normal text-current/70">
+              mobile · QR
+            </span>
+          </span>
+        </button>
+      )}
+
+      {walletConnectConn && (
+        <button
+          type="button"
+          onClick={() => choose(walletConnectConn)}
+          disabled={busy}
+          className={ROW}
+        >
+          {busy ? (
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+          ) : (
+            <QrCode className="h-4 w-4 shrink-0" />
+          )}
+          <span className="flex-1 text-left">
+            WalletConnect
+            <span className="ml-2 normal-case tracking-normal text-current/70">
+              QR · mobile
+            </span>
+          </span>
+        </button>
+      )}
     </div>
   );
 }
