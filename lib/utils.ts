@@ -27,3 +27,10 @@ export function shortenHash(hash: string, chars = 4): string {
   if (hash.length <= chars * 2 + 2) return hash;
   return `${hash.slice(0, chars + 2)}...${hash.slice(-chars)}`;
 }
+
+/** Compact wallet display, e.g. "0x3844…97cd". Returns the input unchanged if it
+ *  isn't a long-enough 0x address. Used for account chips and stored user handles. */
+export function shortAddress(addr: string): string {
+  if (!addr || !addr.startsWith("0x") || addr.length < 10) return addr;
+  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
+}

@@ -46,6 +46,19 @@ export interface ApiKeyUsage {
   count: number;
 }
 
+/** A user account, keyed by wallet address (lowercased). Created on first SIWE
+ *  sign-in. Non-custodial: an identity/profile index only — no funds, no keys,
+ *  no credentials. Access control still re-derives the role live (see resolveRole). */
+export interface UserRecord {
+  walletAddress: string;
+  /** Role snapshot at last sign-in (asker|creator|dev). For display only. */
+  role: string;
+  /** Compact display handle, e.g. "0x3844…97cd". */
+  displayHandle: string;
+  firstSeenAt: string;
+  lastSeenAt: string;
+}
+
 export interface KeryxDB {
   init(): Promise<void>;
 
@@ -80,6 +93,13 @@ export interface KeryxDB {
   // ── auth helpers ──
   /** True when any source in the registry has this wallet address (case-insensitive). */
   isCreatorWallet(addr: string): Promise<boolean>;
+
+  // ── users (account index; non-custodial identity, no funds) ──
+  /** Create the account on first sign-in, else refresh role + last_seen. Returns
+   *  the stored record and whether it was newly created (true on first sign-in). */
+  upsertUser(addr: string, role: string): Promise<{ user: UserRecord; created: boolean }>;
+  /** Fetch a user by wallet (case-insensitive). Null if the wallet never signed in. */
+  getUser(addr: string): Promise<UserRecord | null>;
 
   // ── api keys (identity + rate-limit; no fund custody) ──
   /** Insert a new key row. Returns { rawKey (echoed once), prefix, id }. */

@@ -18,9 +18,12 @@ import Image from "next/image";
 interface Props {
   isBusy: boolean;
   onConnected: () => void;
+  /** Fired the instant a wallet is chosen, before connect() runs. Lets callers
+   *  flag user intent (e.g. to auto-trigger sign-in once connected). */
+  onSelect?: () => void;
 }
 
-export function WalletPicker({ isBusy, onConnected: _onConnected }: Props) {
+export function WalletPicker({ isBusy, onConnected: _onConnected, onSelect }: Props) {
   const { connect, connectors, isPending } = useConnect();
 
   const busy = isBusy || isPending;
@@ -63,7 +66,10 @@ export function WalletPicker({ isBusy, onConnected: _onConnected }: Props) {
           <button
             key={connector.id}
             type="button"
-            onClick={() => connect({ connector })}
+            onClick={() => {
+              onSelect?.();
+              connect({ connector });
+            }}
             disabled={busy}
             className="flex w-full items-center gap-3 border border-ink bg-paper px-4 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] text-ink transition-all hover:-translate-y-0.5 hover:bg-seal hover:text-cream hover:shadow-[0_5px_0_var(--ink)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
           >

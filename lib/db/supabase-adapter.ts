@@ -13,7 +13,8 @@ import type {
   Source,
   SourceItem,
 } from "../types";
-import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, KeryxDB } from "./keryx-db";
+import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, KeryxDB, UserRecord } from "./keryx-db";
+import { shortAddress } from "../utils";
 
 export class SupabaseAdapter implements KeryxDB {
   private sb: SupabaseClient;
@@ -137,6 +138,44 @@ export class SupabaseAdapter implements KeryxDB {
       .limit(1)
       .maybeSingle();
     return data !== null;
+  }
+
+  async upsertUser(addr: string, role: string): Promise<{ user: UserRecord; created: boolean }> {
+    const wallet = addr.toLowerCase();
+    const now = new Date().toISOString();
+    const existing = await this.getUser(wallet);
+    // Preserve first_seen_at across sign-ins: set it only when the row is new.
+    await this.sb.from("users").upsert({
+      wallet_address: wallet,
+      role,
+      display_handle: shortAddress(addr),
+      first_seen_at: existing?.firstSeenAt ?? now,
+      last_seen_at: now,
+    });
+    const user = (await this.getUser(wallet)) ?? {
+      walletAddress: wallet,
+      role,
+      displayHandle: shortAddress(addr),
+      firstSeenAt: now,
+      lastSeenAt: now,
+    };
+    return { user, created: existing === null };
+  }
+
+  async getUser(addr: string): Promise<UserRecord | null> {
+    const { data } = await this.sb
+      .from("users")
+      .select("*")
+      .ilike("wallet_address", addr)
+      .maybeSingle();
+    if (!data) return null;
+    return {
+      walletAddress: data.wallet_address as string,
+      role: data.role as string,
+      displayHandle: data.display_handle as string,
+      firstSeenAt: data.first_seen_at as string,
+      lastSeenAt: data.last_seen_at as string,
+    };
   }
 
   async getCached(sourceId: string): Promise<string | null> {

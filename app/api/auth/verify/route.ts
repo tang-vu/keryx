@@ -9,6 +9,10 @@
  *   2. creator — address owns at least one registered source in the DB
  *   3. asker — everyone else
  *
+ * On a successful verify the wallet's account is upserted (created on first
+ * sign-in, role + last_seen refreshed thereafter). Account persistence is
+ * best-effort: a DB failure never blocks sign-in.
+ *
  * The nonce cookie is deleted immediately after the first verify attempt
  * (whether it succeeds or fails) to prevent replay attacks.
  */
@@ -98,6 +102,16 @@ export async function POST(req: Request) {
     if (isCreator) role = "creator";
   }
 
+  // Create (or refresh) the user account. Best-effort — a DB hiccup here must
+  // not block an otherwise-valid sign-in, so failures degrade to created:false.
+  let created = false;
+  try {
+    const db = await getDb();
+    ({ created } = await db.upsertUser(address, role));
+  } catch {
+    // account index unavailable — sign-in still proceeds (stateless JWT).
+  }
+
   const secret = new TextEncoder().encode(config.jwtSecret);
   const jwt = await new SignJWT({ address, role })
     .setProtectedHeader({ alg: "HS256" })
@@ -113,5 +127,6 @@ export async function POST(req: Request) {
     path: "/",
   });
 
-  return Response.json({ ok: true, address, role });
+  // `created` lets the client distinguish "account created" from "welcome back".
+  return Response.json({ ok: true, address, role, created });
 }

@@ -10,6 +10,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { KeryxWordmark } from "./keryx-mark";
 import { DispatchWire } from "./dispatch-wire";
+import { WalletMenu } from "./wallet-menu";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -50,10 +51,13 @@ export function SiteHeader() {
             })}
             <Link
               href="/register"
-              className="ml-3 border border-ink bg-seal px-[18px] py-2.5 font-mono text-[11.5px] font-semibold uppercase tracking-[0.12em] text-paper transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)] active:translate-y-0 active:shadow-none"
+              className="ml-3 hidden border border-ink bg-seal px-[18px] py-2.5 font-mono text-[11.5px] font-semibold uppercase tracking-[0.12em] text-paper transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)] active:translate-y-0 active:shadow-none sm:inline-block"
             >
               Issue a toll ▸
             </Link>
+            <div className="ml-2">
+              <WalletMenu />
+            </div>
           </nav>
         </div>
       </header>

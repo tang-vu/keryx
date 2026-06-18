@@ -14,7 +14,8 @@ import type {
   Source,
   SourceItem,
 } from "../types";
-import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, KeryxDB } from "./keryx-db";
+import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, KeryxDB, UserRecord } from "./keryx-db";
+import { shortAddress } from "../utils";
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS sources (
@@ -67,6 +68,13 @@ CREATE TABLE IF NOT EXISTS api_key_usage (
   day        TEXT NOT NULL,
   call_count INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (key_id, day)
+);
+CREATE TABLE IF NOT EXISTS users (
+  wallet_address TEXT PRIMARY KEY,   -- lowercased; identity = wallet
+  role           TEXT NOT NULL,      -- role snapshot at last sign-in (display only)
+  display_handle TEXT NOT NULL,      -- compact "0x….." handle
+  first_seen_at  TEXT NOT NULL,
+  last_seen_at   TEXT NOT NULL
 );
 `;
 
@@ -212,6 +220,29 @@ export class SqliteAdapter implements KeryxDB {
       .prepare(`SELECT 1 FROM sources WHERE LOWER(wallet_address) = LOWER(?) LIMIT 1`)
       .get(addr);
     return row !== undefined;
+  }
+
+  async upsertUser(addr: string, role: string): Promise<{ user: UserRecord; created: boolean }> {
+    const wallet = addr.toLowerCase();
+    const now = new Date().toISOString();
+    const existing = (await this.getUser(wallet)) !== null;
+    // first_seen_at is preserved on conflict; only role + last_seen_at refresh.
+    this.db
+      .prepare(
+        `INSERT INTO users (wallet_address,role,display_handle,first_seen_at,last_seen_at)
+         VALUES (?,?,?,?,?)
+         ON CONFLICT(wallet_address) DO UPDATE SET role=excluded.role, last_seen_at=excluded.last_seen_at`,
+      )
+      .run(wallet, role, shortAddress(addr), now, now);
+    const user = (await this.getUser(wallet))!;
+    return { user, created: !existing };
+  }
+
+  async getUser(addr: string): Promise<UserRecord | null> {
+    const row = this.db
+      .prepare(`SELECT * FROM users WHERE wallet_address = LOWER(?)`)
+      .get(addr) as Record<string, unknown> | undefined;
+    return row ? rowToUser(row) : null;
   }
 
   async getCached(sourceId: string): Promise<string | null> {
@@ -425,6 +456,16 @@ export class SqliteAdapter implements KeryxDB {
       citationCount: r.cites as number,
     }));
   }
+}
+
+function rowToUser(r: Record<string, unknown>): UserRecord {
+  return {
+    walletAddress: r.wallet_address as string,
+    role: r.role as string,
+    displayHandle: r.display_handle as string,
+    firstSeenAt: r.first_seen_at as string,
+    lastSeenAt: r.last_seen_at as string,
+  };
 }
 
 function rowToApiKey(r: Record<string, unknown>): ApiKeyRow {
