@@ -9,12 +9,15 @@
  *
  * Also displays the wallet's current Arc ERC-20 USDC balance so the user knows
  * whether they need to claim before activating a session grant.
+ *
+ * "Add USDC to wallet" button calls wallet_watchAsset (EIP-747) so the user
+ * can see their Arc USDC balance without manually importing the token address.
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { useAccount, useReadContract } from "wagmi";
+import { useAccount, useReadContract, useConnectorClient } from "wagmi";
 import { erc20Abi } from "viem";
-import { Loader2, Droplets, ExternalLink } from "lucide-react";
+import { Loader2, Droplets, ExternalLink, PlusCircle } from "lucide-react";
 import { config as kConfig } from "@/lib/config";
 import { arcTestnet } from "@/lib/chains";
 
@@ -34,6 +37,8 @@ export function FaucetPanel() {
   const { address, isConnected } = useAccount();
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [result, setResult] = useState<FaucetResult | null>(null);
+  const [watchStatus, setWatchStatus] = useState<"idle" | "ok" | "unsupported">("idle");
+  const { data: connectorClient } = useConnectorClient();
 
   // Read the wallet's ERC-20 USDC balance on Arc (6 decimals).
   const { data: rawBalance, refetch: refetchBalance } = useReadContract({
@@ -66,6 +71,34 @@ export function FaucetPanel() {
       setStatus("error");
     }
   }, []);
+
+  /**
+   * EIP-747 wallet_watchAsset — prompts the wallet to import Arc USDC so the
+   * user sees the balance without manually pasting the token address.
+   * Graceful no-op + visual feedback if the wallet does not support the method.
+   */
+  const handleWatchAsset = useCallback(async () => {
+    if (!connectorClient) return;
+    try {
+      // connectorClient.request is the raw EIP-1193 provider interface.
+      await connectorClient.request({
+        method: "wallet_watchAsset",
+        params: {
+          type: "ERC20",
+          options: {
+            address: kConfig.usdcAddress,
+            symbol: "USDC",
+            decimals: 6,
+          },
+        },
+      });
+      setWatchStatus("ok");
+    } catch (err) {
+      // 4200 = Method not supported; any rejection is treated as unsupported.
+      console.warn("[faucet] wallet_watchAsset:", err instanceof Error ? err.message : String(err));
+      setWatchStatus("unsupported");
+    }
+  }, [connectorClient]);
 
   if (!isConnected) return null;
 
@@ -139,6 +172,23 @@ export function FaucetPanel() {
             )}
             {status === "loading" ? "Claiming…" : "Claim testnet USDC"}
           </button>
+        )}
+
+        {/* EIP-747: import Arc USDC token into the wallet so balance shows without manual setup */}
+        {watchStatus !== "unsupported" && (
+          <button
+            type="button"
+            onClick={handleWatchAsset}
+            className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-3 underline underline-offset-2 hover:text-seal"
+          >
+            <PlusCircle className="h-2.5 w-2.5" />
+            {watchStatus === "ok" ? "USDC added" : "Add USDC to wallet"}
+          </button>
+        )}
+        {watchStatus === "unsupported" && (
+          <span className="font-mono text-[10px] text-faint">
+            (import USDC manually: {kConfig.usdcAddress.slice(0, 10)}…)
+          </span>
         )}
 
         {/* Always show the Circle faucet link as a fallback */}

@@ -15,7 +15,9 @@
  *
  * Drain protections:
  *   1. SIWE gate (authenticated wallets only).
- *   2. Per-address claim tracking (in-memory; resets on deploy — acceptable testnet).
+ *   2. Per-address claim tracking — in-memory fast-path + DB persistence so one
+ *      claim per address survives server restarts and redeploys (sync_state rows
+ *      keyed by "faucet:<address>").
  *   3. Global rate limit (RateLimiterMemory).
  *   4. Funder balance check before the drip; clear error + Circle faucet link on low funds.
  *
@@ -30,17 +32,24 @@ import { privateKeyToAccount } from "viem/accounts";
 import { RateLimiterMemory, RateLimiterRes } from "rate-limiter-flexible";
 import { getSession } from "@/lib/auth";
 import { config } from "@/lib/config";
+import { getDb } from "@/lib/db";
 
 export const runtime = "nodejs";
 
-const DRIP = parseEther(process.env.KERYX_FAUCET_USDC ?? "2"); // native USDC (18dp) = the one USDC
+const DRIP = parseEther(process.env.KERYX_FAUCET_USDC ?? "2"); // native USDC (18dp)
 const FUNDER_BUFFER = parseEther("0.05"); // keep enough for the funder's own gas
 const CIRCLE_FAUCET = "https://faucet.circle.com/";
 
-// One claim per address per process lifetime (resets on deploy — fine for testnet).
+// In-memory fast-path cache — avoids a DB round-trip for the common case.
+// DB is the source of truth; this cache is populated lazily on first claim check.
 const claimed = new Map<string, number>();
 // Shared bucket: max 5 drips/min across all callers.
 const limiter = new RateLimiterMemory({ points: 5, duration: 60, keyPrefix: "faucet" });
+
+/** DB key for a faucet claim. */
+function faucetKey(address: string): string {
+  return `faucet:${address}`;
+}
 
 function disabled(reason: string) {
   return NextResponse.json({ error: reason, faucet: CIRCLE_FAUCET }, { status: 503 });
@@ -66,6 +75,7 @@ export async function POST() {
     // Fail open on unexpected limiter error.
   }
 
+  // In-memory fast-path — eliminates DB read on subsequent requests within the same process.
   if (claimed.has(address)) {
     return NextResponse.json(
       {
@@ -76,6 +86,29 @@ export async function POST() {
       },
       { status: 409 },
     );
+  }
+
+  // DB persistence check — survives redeploys and process restarts.
+  try {
+    const db = await getDb();
+    const persisted = await db.getSyncState(faucetKey(address));
+    if (persisted) {
+      const claimedAt = parseInt(persisted, 10) || Date.now();
+      // Populate in-memory cache so subsequent requests skip the DB.
+      claimed.set(address, claimedAt);
+      return NextResponse.json(
+        {
+          error: "already claimed",
+          claimedAt: new Date(claimedAt).toISOString(),
+          message: "Each address may claim once. Use the Circle faucet for more.",
+          faucet: CIRCLE_FAUCET,
+        },
+        { status: 409 },
+      );
+    }
+  } catch (err) {
+    // Fail open — a DB read error should not block legitimate first-time claimers.
+    console.warn("[faucet] DB claim-check failed (fail-open):", err instanceof Error ? err.message : String(err));
   }
 
   if (!config.funderKey) return disabled("Faucet not configured (no funder wallet)");
@@ -90,8 +123,9 @@ export async function POST() {
     return disabled("Funder balance too low — use Circle faucet");
   }
 
-  // Mark claimed BEFORE sending so concurrent requests can't double-claim.
-  claimed.set(address, Date.now());
+  // Mark claimed in-memory BEFORE sending so concurrent requests can't double-claim.
+  const claimedAt = Date.now();
+  claimed.set(address, claimedAt);
 
   try {
     const tx = await wallet.sendTransaction({ to: recipient, value: DRIP });
@@ -99,6 +133,19 @@ export async function POST() {
     if (receipt.status !== "success") {
       throw new Error(`drip tx reverted (${tx})`);
     }
+
+    // Persist the claim so it survives redeploys. Fire-and-forget — a write failure
+    // does not roll back the on-chain transfer (money already sent). The in-memory
+    // cache prevents a second drip within the same process lifetime.
+    getDb()
+      .then((db) => db.setSyncState(faucetKey(address), String(claimedAt)))
+      .catch((err) =>
+        console.error(
+          "[faucet] failed to persist claim to DB (claim still valid in-memory):",
+          err instanceof Error ? err.message : String(err),
+        ),
+      );
+
     return NextResponse.json({
       ok: true,
       tx,
@@ -107,7 +154,8 @@ export async function POST() {
       faucet: CIRCLE_FAUCET,
     });
   } catch (err) {
-    // Roll back so the user can retry after a transient failure.
+    // Roll back in-memory flag so the user can retry after a transient failure.
+    // DB row was not written yet (write is post-success), so no DB rollback needed.
     claimed.delete(address);
     console.error("[faucet] drip failed:", err instanceof Error ? err.message : String(err));
     return NextResponse.json(
