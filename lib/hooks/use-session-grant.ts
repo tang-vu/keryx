@@ -34,7 +34,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { usePublicClient, useWalletClient } from "wagmi";
-import { createWalletClient, http, parseUnits, erc20Abi, keccak256, type WalletClient } from "viem";
+import { createWalletClient, http, parseUnits, parseEther, erc20Abi, keccak256, type WalletClient } from "viem";
 import { arcTestnet } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 import { config as kConfig } from "@/lib/config";
@@ -42,6 +42,11 @@ import { config as kConfig } from "@/lib/config";
 const SESSION_KEY_STORAGE = "keryx_session_sk";
 const SESSION_ADDR_STORAGE = "keryx_session_addr";
 const SESSION_ID_STORAGE = "keryx_session_id";
+
+// Extra native USDC sent to the session EOA on top of the funded budget so it can
+// pay gas for its own approve + Gateway-deposit txs (Arc gas is tiny). Leftover stays
+// in the session EOA and is recoverable via the derived key.
+const SESSION_GAS_BUFFER_USDC = 0.01;
 
 // Fixed message signed to derive the session key. MUST stay byte-for-byte constant
 // across releases — changing it would derive a different key and "lose" access to
@@ -143,8 +148,10 @@ export function useSessionGrant() {
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
 
-  /** Try to restore a session key from sessionStorage (called on mount by the dialog). */
-  const tryRecover = useCallback(() => {
+  /** Restore a session key from sessionStorage on reload (called on mount by the dialog).
+   *  Restores instantly, then backfills the live remaining balance from the Gateway so a
+   *  reloaded session shows the correct cap instead of $0. */
+  const tryRecover = useCallback(async () => {
     const saved = recoverFromStorage();
     if (!saved) return false;
     skRef.current = saved.sk;
@@ -154,6 +161,16 @@ export function useSessionGrant() {
       sessAddr: saved.sessAddr,
       sessionId: saved.sessionId,
     }));
+    try {
+      const r = await fetch(
+        `/api/session/credit?address=${encodeURIComponent(saved.sessAddr)}`,
+      );
+      const c = (await r.json()) as { available?: string };
+      const cap = Number(BigInt(c.available ?? "0")) / 1e6;
+      setState((s) => (s.status === "active" ? { ...s, cap } : s));
+    } catch {
+      /* credit lookup failed — keep the restored session; cap stays as-is */
+    }
     return true;
   }, []);
 
@@ -183,16 +200,26 @@ export function useSessionGrant() {
 
         setState((s) => ({ ...s, status: "funding", sessAddr }));
 
-        // 2. One MetaMask tx: transfer USDC to the session EOA.
-        //    The user signs this with their own wallet (MetaMask shows the amount clearly).
-        const amountAtomic = parseUnits(budgetUsdc.toFixed(6), 6);
-        const usdcTx = await walletClient.writeContract({
-          address: kConfig.usdcAddress,
-          abi: erc20Abi,
-          functionName: "transfer",
-          args: [sessAddr, amountAtomic],
+        // 2. One MetaMask tx: move USDC to the session EOA. On Arc, USDC IS the
+        //    native gas token — an ERC-20 transfer() between EOAs on the 0x3600
+        //    interface reverts (and MetaMask's failed gas-estimate can hang), so we
+        //    send a NATIVE value transfer (18-decimal) instead — the same fix the
+        //    faucet uses. We send budget + a small buffer so the session EOA can pay
+        //    the gas for its own approve+deposit; the leftover is recoverable.
+        const usdcTx = await walletClient.sendTransaction({
+          account: walletClient.account!,
+          chain: arcTestnet,
+          to: sessAddr,
+          value: parseEther((budgetUsdc + SESSION_GAS_BUFFER_USDC).toFixed(18)),
         });
-        await publicClient.waitForTransactionReceipt({ hash: usdcTx });
+        // Bound the wait so a stuck/dropped tx surfaces an error instead of spinning forever.
+        const fundReceipt = await publicClient.waitForTransactionReceipt({
+          hash: usdcTx,
+          timeout: 90_000,
+        });
+        if (fundReceipt.status !== "success") {
+          throw new Error("Funding transfer reverted on-chain — please try again.");
+        }
 
         setState((s) => ({ ...s, status: "depositing" }));
 
