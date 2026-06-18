@@ -14,6 +14,7 @@ import { useEffect, useState, useRef } from "react";
 import type { WalletClient } from "viem";
 import { useSessionGrant } from "@/lib/hooks/use-session-grant";
 import { GrantSpendDialog } from "@/components/keryx/grant-spend-dialog";
+import { FaucetPanel } from "@/components/keryx/faucet-panel";
 
 export interface SessionGrantBinding {
   /** sessionId to include in ask POST body; null when no active grant. */
@@ -65,11 +66,17 @@ export function SessionGrantPanel({ onBindingChange }: Props) {
   if (!authed) return null;
 
   return (
-    <GrantSpendDialog
-      grantState={state}
-      onActivate={generateAndFund}
-      onRevoke={revoke}
-      onTryRecover={tryRecover}
-    />
+    <div className="space-y-2">
+      {/* Faucet drip panel — shown when session grant is idle/revoked (user may need USDC first) */}
+      {(state.status === "idle" || state.status === "revoked" || state.status === "error") && (
+        <FaucetPanel />
+      )}
+      <GrantSpendDialog
+        grantState={state}
+        onActivate={generateAndFund}
+        onRevoke={revoke}
+        onTryRecover={tryRecover}
+      />
+    </div>
   );
 }

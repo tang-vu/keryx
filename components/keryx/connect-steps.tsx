@@ -7,8 +7,10 @@
  * Styled as The Mint (Bodoni display, banknote borders, vermillion seal accent).
  */
 
-import { Loader2, Wallet, ShieldCheck, LogOut } from "lucide-react";
+import { Loader2, ShieldCheck, LogOut, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import { WalletPicker } from "@/components/keryx/wallet-picker";
+import type { ArcChainGuard } from "@/lib/hooks/use-arc-chain-guard";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -33,28 +35,48 @@ export function StepDot({ active, done, label }: { active: boolean; done: boolea
   );
 }
 
+// ── ChainBanner — shown whenever connected wallet is on the wrong chain ────────
+
+export function ChainBanner({ guard }: { guard: ArcChainGuard }) {
+  if (guard.isOnArc) return null;
+  return (
+    <div className="flex items-start gap-3 border border-amber-500/40 bg-amber-500/[0.08] px-3 py-2.5">
+      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+      <div className="flex-1">
+        <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-amber-700">
+          Wrong network
+        </p>
+        <p className="mt-0.5 text-[12px] leading-snug text-ink-2">
+          Keryx runs on Arc Testnet (chainId 5042002). Switch to continue.
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={guard.switchToArc}
+        disabled={guard.isSwitching}
+        className="shrink-0 border border-amber-600 bg-amber-600 px-3 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-white transition-all hover:bg-amber-700 disabled:cursor-wait disabled:opacity-60"
+      >
+        {guard.isSwitching ? <Loader2 className="h-3 w-3 animate-spin" /> : "Switch ▸"}
+      </button>
+    </div>
+  );
+}
+
 // ── ConnectStep ───────────────────────────────────────────────────────────────
 
-export function ConnectStep({ onConnect, isBusy }: { onConnect: () => void; isBusy: boolean }) {
+export function ConnectStep({ isBusy }: { isBusy: boolean }) {
   return (
     <div className="space-y-5">
       <div>
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">Step 1</p>
         <p className="mt-1 font-display text-xl font-medium text-ink">Connect wallet</p>
         <p className="mt-1.5 text-sm leading-relaxed text-ink-2">
-          MetaMask, Rabby, or any injected browser wallet. The Arc Testnet chain
-          will be added automatically if not already configured.
+          Choose your browser wallet. Arc Testnet will be added automatically
+          if not already configured.
         </p>
       </div>
-      <button
-        type="button"
-        onClick={onConnect}
-        disabled={isBusy}
-        className="flex w-full items-center justify-center gap-2 border border-ink bg-seal px-4 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-cream transition-all hover:-translate-y-0.5 hover:shadow-[0_5px_0_var(--ink)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
-      >
-        {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wallet className="h-4 w-4" />}
-        {isBusy ? "Connecting…" : "Connect wallet ▸"}
-      </button>
+      {/* EIP-6963 multi-wallet picker — lists all discovered injected wallets */}
+      <WalletPicker isBusy={isBusy} onConnected={() => {}} />
     </div>
   );
 }
@@ -66,11 +88,13 @@ export function SignInStep({
   onSignIn,
   onDisconnect,
   authState,
+  chainGuard,
 }: {
   address: string;
   onSignIn: () => void;
   onDisconnect: () => void;
   authState: AuthState;
+  chainGuard: ArcChainGuard;
 }) {
   const label =
     authState === "signing"
@@ -79,8 +103,13 @@ export function SignInStep({
       ? "Verifying…"
       : "Sign in with Ethereum ▸";
 
+  // Block sign-in when on the wrong chain — the SIWE message embeds chainId 5042002
+  // and the server rejects messages with a mismatched chainId.
+  const wrongChain = !chainGuard.isOnArc;
+
   return (
     <div className="space-y-5">
+      <ChainBanner guard={chainGuard} />
       <div>
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">Step 2</p>
         <p className="mt-1 font-display text-xl font-medium text-ink">Sign in</p>
@@ -93,7 +122,8 @@ export function SignInStep({
       <button
         type="button"
         onClick={onSignIn}
-        disabled={authState !== "idle"}
+        disabled={authState !== "idle" || wrongChain}
+        title={wrongChain ? "Switch to Arc Testnet first" : undefined}
         className="flex w-full items-center justify-center gap-2 border border-ink bg-seal px-4 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-cream transition-all hover:-translate-y-0.5 hover:shadow-[0_5px_0_var(--ink)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
       >
         {authState !== "idle" ? (

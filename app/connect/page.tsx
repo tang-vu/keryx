@@ -6,16 +6,16 @@
  * custom flow built on wagmi primitives to preserve the design system.
  *
  * Flow:
- *   1. Not connected → show "Connect Wallet" button
- *   2. Connected, not signed in → show "Sign In" button (SIWE)
- *   3. Signed in → show address + role badge + "Sign out" / link to register
+ *   1. Not connected → show EIP-6963 wallet picker (all discovered wallets)
+ *   2. Connected on wrong chain → show "Switch to Arc Testnet" banner
+ *   3. Connected on Arc Testnet, not signed in → show "Sign In" button (SIWE)
+ *   4. Signed in → show address + role badge + "Sign out" / link to register
  *
  * Step sub-components live in components/keryx/connect-steps.tsx.
  */
 
 import { useState, useCallback } from "react";
-import { useAccount, useConnect, useDisconnect, useSignMessage } from "wagmi";
-import { injected } from "wagmi/connectors";
+import { useAccount, useDisconnect, useSignMessage } from "wagmi";
 import { SiweMessage } from "siwe";
 import { toast } from "sonner";
 import { SiteHeader } from "@/components/keryx/site-header";
@@ -26,19 +26,20 @@ import {
   SignedInStep,
   type AuthState,
 } from "@/components/keryx/connect-steps";
+import { useArcChainGuard } from "@/lib/hooks/use-arc-chain-guard";
 
 export default function ConnectPage() {
   const { address, isConnected } = useAccount();
-  const { connect, isPending: isConnecting } = useConnect();
   const { disconnect } = useDisconnect();
   const { signMessageAsync } = useSignMessage();
+  const chainGuard = useArcChainGuard();
 
   const [authState, setAuthState] = useState<AuthState>("idle");
   const [session, setSession] = useState<{ address: string; role: string } | null>(null);
 
-  const handleConnect = useCallback(() => {
-    connect({ connector: injected() });
-  }, [connect]);
+  // isBusy covers the connecting state from the WalletPicker's own useConnect
+  // plus any local auth state — passed down so the picker can disable itself.
+  const isBusy = authState !== "idle";
 
   const handleSignIn = useCallback(async () => {
     if (!address) return;
@@ -100,8 +101,6 @@ export default function ConnectPage() {
     toast("Signed out");
   }, []);
 
-  const isBusy = isConnecting || authState !== "idle";
-
   return (
     <div className="min-h-screen bg-paper">
       <SiteHeader />
@@ -131,7 +130,7 @@ export default function ConnectPage() {
             </div>
 
             {!isConnected && (
-              <ConnectStep onConnect={handleConnect} isBusy={isBusy} />
+              <ConnectStep isBusy={isBusy} />
             )}
 
             {isConnected && !session && (
@@ -140,6 +139,7 @@ export default function ConnectPage() {
                 onSignIn={handleSignIn}
                 onDisconnect={() => disconnect()}
                 authState={authState}
+                chainGuard={chainGuard}
               />
             )}
 
