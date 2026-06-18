@@ -1,0 +1,40 @@
+name: CI
+
+# Build the Next.js app and run the SourceRegistry contract tests on every push
+# to main and on PRs. No secrets needed: the build degrades gracefully without
+# env (offline mode) and the contract tests run on Hardhat's in-process network.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Compile contracts
+        run: npx hardhat compile
+
+      - name: Contract tests (SourceRegistry)
+        # ts-node needs the CommonJS tsconfig; the app tsconfig uses bundler/esnext.
+        run: npx hardhat --tsconfig tsconfig.hardhat.json test
+
+      - name: Build (Next.js)
+        run: npm run build
+
+      - name: Lint (informational)
+        # Non-blocking: surfaces issues without failing CI on pre-existing debt.
+        run: npm run lint
+        continue-on-error: true
