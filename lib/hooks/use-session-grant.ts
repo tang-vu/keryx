@@ -32,7 +32,7 @@
  *     returns nothing) — it never loses MORE funds, it just can't auto-resume.
  */
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePublicClient, useWalletClient, useSwitchChain } from "wagmi";
 import { createWalletClient, http, parseUnits, parseEther, erc20Abi, keccak256, type WalletClient } from "viem";
 import { arcTestnet } from "viem/chains";
@@ -42,6 +42,10 @@ import { config as kConfig } from "@/lib/config";
 const SESSION_KEY_STORAGE = "keryx_session_sk";
 const SESSION_ADDR_STORAGE = "keryx_session_addr";
 const SESSION_ID_STORAGE = "keryx_session_id";
+// Timestamp marker: "a deposit was made and is waiting for Circle Gateway to credit".
+// Lets a reload during confirmation auto-resume polling instead of dead-ending.
+const SESSION_PENDING_STORAGE = "keryx_session_pending";
+const PENDING_TTL_MS = 15 * 60 * 1000; // a pending deposit older than this is stale
 
 // Extra native USDC sent to the session EOA on top of the funded budget so it can
 // pay gas for its own approve + Gateway-deposit txs (Arc gas is tiny). Leftover stays
@@ -139,7 +143,24 @@ function clearStorage() {
     sessionStorage.removeItem(SESSION_KEY_STORAGE);
     sessionStorage.removeItem(SESSION_ADDR_STORAGE);
     sessionStorage.removeItem(SESSION_ID_STORAGE);
+    sessionStorage.removeItem(SESSION_PENDING_STORAGE);
   } catch { /* ignore */ }
+}
+
+function markPending() {
+  try { sessionStorage.setItem(SESSION_PENDING_STORAGE, String(Date.now())); } catch { /* ignore */ }
+}
+function clearPending() {
+  try { sessionStorage.removeItem(SESSION_PENDING_STORAGE); } catch { /* ignore */ }
+}
+/** True when a deposit is pending credit confirmation and not yet stale. */
+function isPendingFresh(): boolean {
+  try {
+    const t = Number(sessionStorage.getItem(SESSION_PENDING_STORAGE) ?? "0");
+    return t > 0 && Date.now() - t < PENDING_TTL_MS;
+  } catch {
+    return false;
+  }
 }
 
 export function useSessionGrant() {
@@ -196,22 +217,67 @@ export function useSessionGrant() {
     }
     const { sessionId, expiresAt } = (await res.json()) as { sessionId: string; expiresAt: string };
     saveToStorage(sk, sessAddr, sessionId);
+    clearPending(); // credit confirmed → no longer waiting
     setState({ status: "active", sessAddr, sessionId, cap: residualUsdc, spent: 0, expiresAt, error: null });
     return true;
   }, []);
 
   /** Auto-restore on reload (called on mount by the dialog). Uses the key cached in
-   *  sessionStorage — no signature — and only activates when the Gateway balance is real. */
+   *  sessionStorage — no signature. Activates when the Gateway balance is real; if a
+   *  deposit is still pending (credit not yet reflected), enters the "confirming" state
+   *  so the background poller below auto-activates it without any user action. */
   const tryRecover = useCallback(async () => {
     const saved = recoverFromStorage();
     if (!saved) return false;
     try {
-      return await resumeFromKey(saved.sk);
+      if (await resumeFromKey(saved.sk)) return true;
     } catch {
-      // Re-register failed (transient) — keep the cached key so a later attempt works.
-      return false;
+      // Re-register failed (transient) — fall through to the pending path.
     }
+    if (isPendingFresh()) {
+      skRef.current = saved.sk;
+      setState((s) => ({ ...s, status: "confirming", sessAddr: saved.sessAddr }));
+      return true;
+    }
+    return false;
   }, [resumeFromKey]);
+
+  // Background auto-resume: while a deposit is confirming, poll the Gateway every few
+  // seconds and flip to "active" the moment the credit lands — no button, no timeout
+  // dead-end. Gives up only after ~8 min with a calm (non-scary) note; the funds stay
+  // safe on-chain and a later visit auto-resumes via tryRecover + the pending marker.
+  useEffect(() => {
+    if (state.status !== "confirming") return;
+    let cancelled = false;
+    let tries = 0;
+    const id = setInterval(async () => {
+      if (cancelled) return;
+      tries++;
+      const sk = skRef.current;
+      if (sk) {
+        try {
+          if (await resumeFromKey(sk)) return; // success → status flips → effect cleans up
+        } catch { /* transient — keep trying */ }
+      }
+      if (tries >= 96) {
+        clearInterval(id);
+        setState((s) =>
+          s.status === "confirming"
+            ? {
+                ...s,
+                status: "error",
+                error:
+                  "Deposit is still confirming on Circle Gateway. Your funds are safe — reopen this page in a few minutes and it resumes automatically.",
+              }
+            : s,
+        );
+      }
+    }, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [state.status, resumeFromKey]);
 
   /**
    * Full grant flow: generate key → fund EOA → deposit to Gateway → register grant.
@@ -287,52 +353,16 @@ export function useSessionGrant() {
 
         // The Gateway contract requires an ERC20 approve + a deposit call.
         // We replicate what RealGateway.ensureFunded does, but from the browser.
-        const depositTxHash = await depositToGateway(sessionWalletClient, pc, budgetUsdc);
+        await depositToGateway(sessionWalletClient, pc, budgetUsdc);
 
-        // 4. Wait for the Gateway to actually credit the deposit. This is Circle's
-        //    off-chain confirmation (lags ~10-90s) — its own "confirming" phase.
-        //    CRITICAL: we must NOT activate until the credit is real, or the first ask
-        //    would sign against a balance that isn't there yet and fail Circle's verify.
-        setState((s) => ({ ...s, status: "confirming" }));
-        const confirmedUsdc = await pollGatewayCredit(sessAddr, budgetUsdc);
-        if (confirmedUsdc === null) {
-          // Funds are safe on-chain in the Gateway under sessAddr (deterministic key);
-          // the credit just hasn't reflected. Tell the user to resume shortly.
-          throw new Error(
-            "Deposit is taking longer than usual to confirm on the Gateway. Your funds are safe — click \"Recover funded session\" in a minute to resume.",
-          );
-        }
-
-        setState((s) => ({ ...s, status: "registering" }));
-
-        // 5. Register the grant server-side. cap = the CONFIRMED credited amount so the
-        //    server never authorises more than the Gateway can actually settle.
-        const res = await fetch("/api/session/grant", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessAddr, budget: confirmedUsdc, txHash: depositTxHash }),
-        });
-
-        if (!res.ok) {
-          const { error } = await res.json().catch(() => ({ error: "grant registration failed" })) as { error?: string };
-          throw new Error(error ?? "grant registration failed");
-        }
-
-        const grantData = await res.json() as { sessionId: string; expiresAt: string };
-        const { sessionId, expiresAt } = grantData;
-
-        // 6. Save to sessionStorage so a page refresh can recover the key.
-        saveToStorage(sk, sessAddr, sessionId);
-
-        setState({
-          status: "active",
-          sessAddr,
-          sessionId,
-          cap: confirmedUsdc,
-          spent: 0,
-          expiresAt,
-          error: null,
-        });
+        // 4. Hand off to background confirmation. Circle's off-chain credit lags
+        //    ~10-90s; rather than block the user (and dead-end on a timeout), mark the
+        //    deposit pending and enter "confirming". The background poller above flips
+        //    to "active" automatically the moment the credit lands — and a reload during
+        //    this window auto-resumes via tryRecover. We must NOT activate before the
+        //    credit is real, or the first ask would fail Circle's verify.
+        markPending();
+        setState((s) => ({ ...s, status: "confirming", sessAddr }));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         setState((s) => ({ ...s, status: "error", error: /reject|denied/i.test(message) ? "Network switch or signature was rejected." : message }));
@@ -393,7 +423,6 @@ export function useSessionGrant() {
       }
       const pc = publicClient as SessionPublicClient;
       const sessAddr = state.sessAddr as `0x${string}`;
-      const prevRemaining = Math.max(0, state.cap - state.spent);
       try {
         setState((s) => ({ ...s, status: "switching" }));
         await ensureArc();
@@ -416,19 +445,17 @@ export function useSessionGrant() {
         });
         await depositToGateway(sessionWalletClient, pc, addUsdc);
 
+        // Hand off to the background poller (same as the initial fund): it re-reads the
+        // new total balance once Circle credits it and updates the active cap — no block,
+        // no dead-end. cap stays at the old value until the top-up confirms.
+        markPending();
         setState((s) => ({ ...s, status: "confirming" }));
-        const confirmed = await pollGatewayCredit(sessAddr, prevRemaining + addUsdc);
-        if (confirmed === null) {
-          throw new Error("Top-up is still confirming on the Gateway — your funds are safe; reload to see the updated balance.");
-        }
-        setState((s) => ({ ...s, status: "registering" }));
-        await resumeFromKey(sk); // re-reads the new balance → updates cap + re-registers
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         setState((s) => ({ ...s, status: "error", error: message }));
       }
     },
-    [walletClient, publicClient, state.sessAddr, state.cap, state.spent, state.status, resumeFromKey, ensureArc],
+    [walletClient, publicClient, state.sessAddr, state.status, ensureArc],
   );
 
   /**
@@ -545,38 +572,4 @@ async function depositToGateway(
     throw new Error("Gateway deposit reverted — funds stayed in the session address.");
   }
   return depositTx;
-}
-
-/**
- * Poll the Gateway credit balance via the server-side proxy (/api/session/credit).
- *
- * Direct browser calls to Circle's balance API (gateway-api-testnet.circle.com)
- * fail with CORS errors. The proxy makes the request server-side — same pattern
- * as RealGateway.ensureFunded()'s polling loop — and returns { available: string }.
- *
- * Returns the confirmed available USDC (number) once it reaches ~expected, or null
- * if the credit never reflected within the timeout (120s). The caller must NOT
- * activate a session on null — spending against an uncredited deposit fails Circle's
- * verify. The funds are safe on-chain and recoverable once the credit lands.
- */
-async function pollGatewayCredit(sessAddr: string, expectedUsdc: number): Promise<number | null> {
-  const deadline = Date.now() + 120_000;
-  const minAtomic = parseUnits(expectedUsdc.toFixed(6), 6) - parseUnits("0.01", 6);
-
-  while (Date.now() < deadline) {
-    try {
-      const res = await fetch(
-        `/api/session/credit?address=${encodeURIComponent(sessAddr)}`,
-      );
-      if (res.ok) {
-        const data = await res.json() as { available?: string };
-        const availableAtomic = BigInt(data.available ?? "0");
-        if (availableAtomic >= minAtomic) {
-          return Number(availableAtomic) / 1e6;
-        }
-      }
-    } catch { /* ignore transient errors */ }
-    await new Promise((r) => setTimeout(r, 3000));
-  }
-  return null; // credit never confirmed within the window
 }

@@ -40,7 +40,7 @@ const STATUS_LABEL: Record<string, string> = {
   generating: "Generating session key…",
   funding:    "Waiting for USDC transfer…",
   depositing: "Depositing to Gateway…",
-  confirming: "Confirming Gateway credit (can take up to ~90s)…",
+  confirming: "Deposit confirming on Circle Gateway — activates automatically…",
   registering: "Registering grant…",
   recovering: "Recovering session — sign in your wallet…",
 };
@@ -193,6 +193,15 @@ export function GrantSpendDialog({
             {STATUS_LABEL[grantState.status] ?? "Working…"}
           </span>
         </div>
+        {grantState.status === "confirming" && (
+          // Reassure: the deposit is on-chain and safe; activation is hands-off and
+          // survives a reload, so the user can relax or keep browsing.
+          <p className="mt-2 font-serif text-[12.5px] leading-snug text-ink-2">
+            Your deposit is settling through Circle Gateway (usually under a minute).
+            The session activates on its own — you can keep this page open or even
+            reload; it picks up automatically. Your funds are safe on-chain.
+          </p>
+        )}
       </div>
     );
   }
