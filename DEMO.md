@@ -27,7 +27,10 @@ different buy/skip choices.
 - Show the **"Creators Paid"** panel: each cited source's weighted reward; for the multi-author
   source, the **60/40 split** to two wallets. "Heavily-cited sources earn more. Multi-author works
   split automatically. 100% goes to creators."
-- Click a tx hash → Arc testnet explorer showing the real settlement.
+- Each payout shows its **Circle Gateway settlement ID** (batched on-chain on Arc). Click
+  **"Settled · USDC on Arc ↗"** → the settlement wallet on ArcScan, where the batched on-chain
+  settlements land. (Nanopayments batch: many citations settle in a few on-chain txs — that's the
+  $0.000001-floor rail working, not a missing tx.)
 
 **[2:05–2:35] Traction + onboarding.**
 - Open **/dashboard**: total payments, USDC to creators, creators earning, reader→payer conversion,

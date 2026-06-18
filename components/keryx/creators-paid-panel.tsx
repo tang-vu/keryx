@@ -2,12 +2,13 @@
 
 /**
  * §III · The settlement — fills in real time as `settle` steps stream. A
- * weighted split bar, a ledger of creator payouts (amount + tx hash / simulated),
+ * weighted split bar, a ledger of creator payouts (amount + Circle settlement ID / simulated),
  * a Bodoni green total. When the herald has paid in full, the wax "PAID" stamp
- * slams down over the receipt.
+ * slams down over the receipt. Settlement IDs are Circle Gateway UUIDs (batched on-chain on Arc),
+ * not per-tx EVM hashes — the verifiable on-chain link is the settlement wallet, in the footer.
  */
 
-import { ExternalLink } from "lucide-react";
+import { Check } from "lucide-react";
 import type { PaymentRecord } from "@/lib/types";
 import type { StreamMode } from "@/lib/hooks/use-ask-stream";
 import { fmtUsdc, shortAddr, shortHash } from "./phase-style";
@@ -20,7 +21,14 @@ interface CreatorsPaidPanelProps {
   streaming: boolean;
 }
 
-const ARCSCAN = "https://testnet.arcscan.app/tx/";
+const EXPLORER = "https://testnet.arcscan.app";
+// Per-payment Circle settlement IDs are UUIDs (they do NOT resolve as /tx/); on-chain proof is the
+// batched settlement wallet. Override with the real treasury wallet via
+// NEXT_PUBLIC_KERYX_SETTLEMENT_WALLET; defaults to Circle's Gateway settlement contract.
+const SETTLEMENT_WALLET =
+  process.env.NEXT_PUBLIC_KERYX_SETTLEMENT_WALLET ||
+  "0x0077777d7EBA4688BDeF3E311b846F25870A19B9";
+const SETTLEMENT_PROOF = `${EXPLORER}/address/${SETTLEMENT_WALLET}`;
 
 export function CreatorsPaidPanel({
   payments,
@@ -80,15 +88,13 @@ export function CreatorsPaidPanel({
                 </p>
                 <p className="font-mono text-[11px] text-ink-3">
                   {p.settled && p.txHash ? (
-                    <a
-                      href={`${ARCSCAN}${p.txHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-paid hover:underline"
+                    <span
+                      className="inline-flex items-center gap-1 text-paid"
+                      title={`Circle Gateway settlement ID ${p.txHash} — batched on-chain on Arc (not a per-tx EVM hash)`}
                     >
+                      <Check className="h-2.5 w-2.5" />
                       {shortHash(p.txHash)}
-                      <ExternalLink className="h-2.5 w-2.5" />
-                    </a>
+                    </span>
                   ) : (
                     <span>{shortAddr(p.payee)} · simulated</span>
                   )}
@@ -107,7 +113,19 @@ export function CreatorsPaidPanel({
         {hasPayments && (
           <div className="flex items-center justify-between gap-4 border-t border-ink px-5 py-3.5">
             <span className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-ink-3">
-              {mode === "real" ? "Settled · USDC on Arc" : "Offline — simulated"}
+              {mode === "real" ? (
+                <a
+                  href={SETTLEMENT_PROOF}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-paid hover:underline"
+                  title="Settled via Circle Gateway batching — view the on-chain settlement wallet on ArcScan"
+                >
+                  Settled · USDC on Arc ↗
+                </a>
+              ) : (
+                "Offline — simulated"
+              )}
             </span>
             <span className="letterpress font-display text-[30px] font-bold leading-none tracking-tight tabular-nums text-paid">
               ${fmtUsdc(total)}

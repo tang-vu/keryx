@@ -2,10 +2,12 @@
 
 /**
  * Live payments feed table: time, kind (fetch/citation badge), source, amount,
- * settled? (tx short hash → arcscan), payer → payee (mono short addresses).
+ * settled? (Circle Gateway settlement ID — batched on-chain on Arc), payer → payee.
+ * Settlement IDs are Circle UUIDs (not EVM tx hashes), so they are NOT linked to a
+ * per-tx explorer page; on-chain proof is the batched settlement wallet, linked in the header.
  */
 
-import { ExternalLink } from "lucide-react";
+import { Check } from "lucide-react";
 import type { PaymentRecord } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -19,7 +21,16 @@ import {
 import { fmtUsdc, shortAddr, shortHash } from "./phase-style";
 import { cn } from "@/lib/utils";
 
-const ARCSCAN = "https://testnet.arcscan.app/tx/";
+const EXPLORER = "https://testnet.arcscan.app";
+// Gateway settlements are batched: many nanopayments → a few on-chain submitBatch txs from the
+// settlement wallet. Per-payment Circle settlement IDs are UUIDs (they do NOT resolve as /tx/),
+// so the verifiable on-chain link points at the settlement wallet's address page. Override with
+// the real treasury wallet via NEXT_PUBLIC_KERYX_SETTLEMENT_WALLET; defaults to Circle's Gateway
+// settlement contract (always has on-chain batch activity).
+const SETTLEMENT_WALLET =
+  process.env.NEXT_PUBLIC_KERYX_SETTLEMENT_WALLET ||
+  "0x0077777d7EBA4688BDeF3E311b846F25870A19B9";
+const SETTLEMENT_PROOF = `${EXPLORER}/address/${SETTLEMENT_WALLET}`;
 
 function timeAgo(iso: string): string {
   const d = new Date(iso).getTime();
@@ -40,10 +51,21 @@ export function PaymentsFeed({ payments }: { payments: PaymentRecord[] }) {
         <CardTitle className="font-serif text-lg font-normal">
           Live payments feed
         </CardTitle>
-        <span className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-paid">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-paid" />
-          live
-        </span>
+        <div className="flex items-center gap-3">
+          <a
+            href={SETTLEMENT_PROOF}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground hover:text-paid hover:underline"
+            title="Settled via Circle Gateway batching — view the on-chain settlement wallet on ArcScan"
+          >
+            on-chain ↗
+          </a>
+          <span className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-paid">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-paid" />
+            live
+          </span>
+        </div>
       </CardHeader>
       <CardContent className="px-0">
         <div className="overflow-x-auto">
@@ -88,15 +110,13 @@ export function PaymentsFeed({ payments }: { payments: PaymentRecord[] }) {
                   </TableCell>
                   <TableCell className="pr-6">
                     {p.settled && p.txHash ? (
-                      <a
-                        href={`${ARCSCAN}${p.txHash}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 font-mono text-[11px] text-paid hover:underline"
+                      <span
+                        className="inline-flex items-center gap-1.5 font-mono text-[11px] text-paid"
+                        title={`Circle Gateway settlement ID ${p.txHash} — batched on-chain on Arc (not a per-tx EVM hash)`}
                       >
+                        <Check className="h-3 w-3" />
                         {shortHash(p.txHash)}
-                        <ExternalLink className="h-2.5 w-2.5" />
-                      </a>
+                      </span>
                     ) : (
                       <span className="text-[11px] text-muted-foreground">
                         simulated
