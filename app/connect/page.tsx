@@ -53,7 +53,9 @@ export default function ConnectPage() {
       const message = new SiweMessage({
         domain: window.location.host,
         address,
-        statement: "Sign in to Keryx — citations are currency.",
+        // ASCII only — EIP-4361's ABNF statement grammar rejects non-ASCII (e.g. an
+        // em-dash), which makes the siwe parser throw "invalid message". Keep it plain.
+        statement: "Sign in to Keryx. Citations are currency.",
         uri: window.location.origin,
         version: "1",
         chainId: 5042002,
