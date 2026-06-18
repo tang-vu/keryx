@@ -9,6 +9,13 @@
 
 **Hackathon:** Lepton Agents (Canteen × Circle, on Arc). **Rubric:** 30% Agentic sophistication · 30% Traction · 20% Circle tooling · 20% Innovation.
 
+> **STATUS (2026-06-19) — LIVE.** Deployed at **[keryx.cc](https://keryx.cc)** (VPS + Cloudflare Tunnel),
+> funded, settling **real** x402 nanopayments on Arc testnet (`KERYX_FORCE_OFFLINE=0`): 520+ settled
+> payments, ~$4.5 USDC to 15 creators, 189 autonomous queries. The phase log below is the build history;
+> the project has since evolved into a **non-custodial dApp** (SIWE auth, browser co-signed x402, on-chain
+> SourceRegistry, encrypted IPFS, public API keys). See `README.md` + `docs/` for current architecture.
+> Remaining push is **external traction + submission artifacts** (video, form), not core build.
+
 ---
 
 ## North Star
@@ -84,32 +91,33 @@ The scaffold's "agent" is a dumb 1-tx/sec loop over 4 hardcoded URLs. **Zero rea
 - [x] Per-query economic model (budget → tolls + citation pool by weight)
 - [x] Settlement recorded with rationale + weights (real tx hash in live mode)
 
-### Phase 5 — Web app  ◀ frontend agent in progress
-- [~] `/` ask screen — live reasoning stream → answer+citations → "creators paid" (building)
-- [~] `/dashboard` — metrics, leaderboard, live feed (building)
-- [~] `/register` UI (building)
+### Phase 5 — Web app ✅ DONE (live at keryx.cc)
+- [x] `/` ask screen — live reasoning stream → answer+citations → "creators paid"
+- [x] `/dashboard` — metrics, leaderboard, live feed
+- [x] `/register` UI + one-click creator onboarding
 - [x] All backing API routes built & verified (SSE, metrics, payments, sources)
 
 ### Phase 6 — Seed / volume engine + traction wiring ✅ (mostly)
 - [x] `scripts/seed-engine.mts` — fires agent over a question bank (budget-guarded) — verified
 - [x] `arc-canteen push` hook (`--push` flag) for traction events
-- [ ] `circle feedback submit` — FEEDBACK.md ready to submit
+- [x] `circle feedback submit` — submitted 2026-06-17 (ref `39137f41…`)
 
 ### Phase 7 — Real testnet E2E + deploy + submission
-- [ ] Fund funder wallet (faucet) → verify real settlement E2E   ◀ needs human
-- [x] Supabase adapter built (deploy-ready); Cloudflare Tunnel chosen as primary deploy
-- [ ] `npm run tunnel` → live URL (needs cloudflared installed)
-- [x] `README.md`, `DEMO.md`, `TRACTION.md`, `FEEDBACK.md`, `EASTER_EGGS.md` drafted
-- [~] Enhancements: A2A mode ✅ · external x402 discovery ✅ (live marketplace probe + reasoned BUY/SKIP; off-Arc endpoints evaluated, not purchased) · onchain splitter · ERC-8004
-- [ ] Final commit + push
+- [x] Funded wallet → real settlement E2E verified (520+ settled payments on Arc)
+- [x] Deployed live at keryx.cc (VPS + Cloudflare Tunnel); Supabase adapter kept behind config
+- [x] `README.md`, `DEMO.md`, `TRACTION.md`, `FEEDBACK.md`, `EASTER_EGGS.md` written
+- [x] Enhancements: A2A mode ✅ · external x402 marketplace discovery ✅ · on-chain SourceRegistry ✅
+- [ ] **<3-min demo video** (REQUIRED — not yet recorded)
+- [ ] **Submit to forms.gle/SMqLaw2pMGDe58LFA** (submit v1 now, resubmit as improved)
+- [ ] External / real-user traction push (A2A callers, agents.circle.com listing)
 
 ---
 
-## Blockers needing the human (batched at first check-in)
-1. **LLM API key** — `ANTHROPIC_API_KEY` (preferred). Dev runs on heuristic fallback; demo needs real reasoning.
-2. **Supabase project** — URL + anon + service_role keys (hosted; no Docker locally). Or authorize Supabase MCP to provision.
-3. **Fund the funder wallet** — `0x384462d9D8e2645A017e4ef34A0cdFd91B4B97cd` at https://faucet.circle.com/ (Arc Testnet, 20 USDC / 2h). Start early — rate-limited.
-4. **Deploy login** — Vercel account (for `vercel deploy`).
+## Blockers needing the human — ALL RESOLVED ✅
+1. **LLM API key** — ✅ done (Anthropic + DeepSeek fallback).
+2. **DB** — ✅ local SQLite on the VPS is the source of truth; Supabase adapter kept behind config.
+3. **Fund the funder wallet** — ✅ funded; real settlement live (`KERYX_FORCE_OFFLINE=0`).
+4. **Deploy** — ✅ VPS at keryx.cc via Cloudflare Tunnel (not Vercel).
 
 ## Status
 Phases 0–4 ✅ · Phase 6 ✅ (volume engine) · Phase 5 (web UI) in progress (frontend agent) ·

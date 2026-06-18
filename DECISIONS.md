@@ -58,8 +58,8 @@ Each query the agent probes the live Circle x402 bazaar (`circle services search
 
 ---
 
-## Open questions (for the human)
-- Which LLM key to use (Anthropic preferred)?
-- Provide hosted Supabase creds, or authorize Supabase MCP to provision?
-- OK to fund funder wallet `0x384462d9D8e2645A017e4ef34A0cdFd91B4B97cd` via faucet now?
-- Deploy target confirm: Vercel?
+## Open questions (for the human) — RESOLVED
+- LLM key: ✅ Anthropic primary + DeepSeek fallback (D-09, D-14).
+- DB: ✅ local SQLite on the VPS is the source of truth; Supabase adapter kept behind config (D-08, D-13).
+- Funder wallet: ✅ funded; real settlement is live (`KERYX_FORCE_OFFLINE=0`), 500+ settled payments.
+- Deploy target: ✅ VPS at keryx.cc via Cloudflare Tunnel, not Vercel (D-13).
