@@ -48,8 +48,13 @@ export function GrantSpendDialog({
   onTryRecover,
   onRecoverViaSignature,
 }: Props) {
-  const [budgetInput, setBudgetInput] = useState(0.05);
+  // Keep the raw text so intermediate states ("", "0.") are typeable; coerce to a
+  // number only when activating. (A number state with parseFloat()||0.05 onChange
+  // snapped "0."/"" back to 0.05, making the field effectively un-typeable.)
+  const [budgetInput, setBudgetInput] = useState("0.05");
   const [showRevoke, setShowRevoke] = useState(false);
+  const budgetNum = parseFloat(budgetInput);
+  const budgetValid = Number.isFinite(budgetNum) && budgetNum > 0;
 
   // On mount, offer to recover from sessionStorage (handles page refreshes).
   useEffect(() => {
@@ -170,11 +175,12 @@ export function GrantSpendDialog({
           </label>
           <input
             type="number"
+            inputMode="decimal"
             min={0.01}
             max={1}
             step={0.01}
             value={budgetInput}
-            onChange={(e) => setBudgetInput(parseFloat(e.target.value) || 0.05)}
+            onChange={(e) => setBudgetInput(e.target.value)}
             className="w-20 border border-ink/30 bg-paper px-2 py-1 font-mono text-[12px] text-ink focus:border-seal focus:outline-none"
           />
           <span className="font-mono text-[10px] text-ink-3">USDC</span>
@@ -182,8 +188,8 @@ export function GrantSpendDialog({
 
         <button
           type="button"
-          onClick={() => onActivate(budgetInput)}
-          disabled={budgetInput <= 0}
+          onClick={() => budgetValid && onActivate(budgetNum)}
+          disabled={!budgetValid}
           className="border border-ink bg-ink px-5 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-cream transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--seal)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50"
         >
           Activate session ▸
