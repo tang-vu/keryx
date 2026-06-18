@@ -149,31 +149,55 @@ export function useSessionGrant() {
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
 
-  /** Restore a session key from sessionStorage on reload (called on mount by the dialog).
-   *  Restores instantly, then backfills the live remaining balance from the Gateway so a
-   *  reloaded session shows the correct cap instead of $0. */
+  /**
+   * Shared resume core: given the session key, read the live Gateway balance under its
+   * (deterministic) address, re-register the grant in recover mode with cap = that real
+   * balance, and mark the session active. Returns false when the Gateway shows nothing
+   * yet (deposit still confirming, or empty) — callers decide the messaging, and the
+   * session is NEVER shown active against a zero balance (which would fail Circle's verify).
+   * Re-registering also restores a grant the server lost on restart, so a deploy never
+   * strands an active session.
+   */
+  const resumeFromKey = useCallback(async (sk: `0x${string}`): Promise<boolean> => {
+    const sessAddr = privateKeyToAccount(sk).address;
+    let residualUsdc = 0;
+    try {
+      const r = await fetch(`/api/session/credit?address=${encodeURIComponent(sessAddr)}`);
+      const c = (await r.json().catch(() => ({}))) as { available?: string };
+      residualUsdc = Number(BigInt(c.available ?? "0")) / 1e6;
+    } catch {
+      return false;
+    }
+    if (residualUsdc <= 0) return false;
+
+    skRef.current = sk;
+    const res = await fetch("/api/session/grant", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessAddr, budget: residualUsdc, recover: true }),
+    });
+    if (!res.ok) {
+      const { error } = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new Error(error ?? "grant registration failed");
+    }
+    const { sessionId, expiresAt } = (await res.json()) as { sessionId: string; expiresAt: string };
+    saveToStorage(sk, sessAddr, sessionId);
+    setState({ status: "active", sessAddr, sessionId, cap: residualUsdc, spent: 0, expiresAt, error: null });
+    return true;
+  }, []);
+
+  /** Auto-restore on reload (called on mount by the dialog). Uses the key cached in
+   *  sessionStorage — no signature — and only activates when the Gateway balance is real. */
   const tryRecover = useCallback(async () => {
     const saved = recoverFromStorage();
     if (!saved) return false;
-    skRef.current = saved.sk;
-    setState((s) => ({
-      ...s,
-      status: "active",
-      sessAddr: saved.sessAddr,
-      sessionId: saved.sessionId,
-    }));
     try {
-      const r = await fetch(
-        `/api/session/credit?address=${encodeURIComponent(saved.sessAddr)}`,
-      );
-      const c = (await r.json()) as { available?: string };
-      const cap = Number(BigInt(c.available ?? "0")) / 1e6;
-      setState((s) => (s.status === "active" ? { ...s, cap } : s));
+      return await resumeFromKey(saved.sk);
     } catch {
-      /* credit lookup failed — keep the restored session; cap stays as-is */
+      // Re-register failed (transient) — keep the cached key so a later attempt works.
+      return false;
     }
-    return true;
-  }, []);
+  }, [resumeFromKey]);
 
   /**
    * Full grant flow: generate key → fund EOA → deposit to Gateway → register grant.
@@ -198,6 +222,11 @@ export function useSessionGrant() {
         const sessAccount = privateKeyToAccount(sk);
         const sessAddr = sessAccount.address;
         skRef.current = sk;
+        // Persist the key BEFORE funding so a reload mid-flow can recover via the
+        // Gateway balance instead of losing the in-progress session. sessionId here is
+        // the connected address (what the server uses); the authoritative value from
+        // the grant response overwrites it at the end.
+        saveToStorage(sk, sessAddr, walletClient.account!.address.toLowerCase());
 
         setState((s) => ({ ...s, status: "funding", sessAddr }));
 
@@ -236,20 +265,28 @@ export function useSessionGrant() {
         // We replicate what RealGateway.ensureFunded does, but from the browser.
         const depositTxHash = await depositToGateway(sessionWalletClient, pc, budgetUsdc);
 
-        // 4. Poll until the Gateway credit is visible. This is Circle's off-chain
-        //    confirmation and legitimately lags ~10-90s after the deposit tx mines —
-        //    surfaced as its own "confirming" phase so it doesn't look like a hang.
+        // 4. Wait for the Gateway to actually credit the deposit. This is Circle's
+        //    off-chain confirmation (lags ~10-90s) — its own "confirming" phase.
+        //    CRITICAL: we must NOT activate until the credit is real, or the first ask
+        //    would sign against a balance that isn't there yet and fail Circle's verify.
         setState((s) => ({ ...s, status: "confirming" }));
-        await pollGatewayCredit(sessAddr, budgetUsdc);
+        const confirmedUsdc = await pollGatewayCredit(sessAddr, budgetUsdc);
+        if (confirmedUsdc === null) {
+          // Funds are safe on-chain in the Gateway under sessAddr (deterministic key);
+          // the credit just hasn't reflected. Tell the user to resume shortly.
+          throw new Error(
+            "Deposit is taking longer than usual to confirm on the Gateway. Your funds are safe — click \"Recover funded session\" in a minute to resume.",
+          );
+        }
 
         setState((s) => ({ ...s, status: "registering" }));
 
-        // 5. Register the grant server-side. The server records sessAddr + cap
-        //    but NEVER receives the private key.
+        // 5. Register the grant server-side. cap = the CONFIRMED credited amount so the
+        //    server never authorises more than the Gateway can actually settle.
         const res = await fetch("/api/session/grant", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessAddr, budget: budgetUsdc, txHash: depositTxHash }),
+          body: JSON.stringify({ sessAddr, budget: confirmedUsdc, txHash: depositTxHash }),
         });
 
         if (!res.ok) {
@@ -267,7 +304,7 @@ export function useSessionGrant() {
           status: "active",
           sessAddr,
           sessionId,
-          cap: budgetUsdc,
+          cap: confirmedUsdc,
           spent: 0,
           expiresAt,
           error: null,
@@ -298,52 +335,15 @@ export function useSessionGrant() {
     setState({ ...INITIAL, status: "recovering" });
     try {
       const sk = await deriveSessionKey(walletClient);
-      const sessAddr = privateKeyToAccount(sk).address;
-
-      // How much USDC is still in the Gateway under this derived session EOA?
-      const creditRes = await fetch(
-        `/api/session/credit?address=${encodeURIComponent(sessAddr)}`,
-      );
-      const credit = (await creditRes.json().catch(() => ({}))) as { available?: string };
-      const residualUsdc = Number(BigInt(credit.available ?? "0")) / 1e6;
-
-      if (residualUsdc <= 0) {
+      const ok = await resumeFromKey(sk);
+      if (!ok) {
         skRef.current = null;
         setState({
           ...INITIAL,
           status: "error",
-          error: "No recoverable session found for this wallet.",
+          error: "No recoverable session found for this wallet (the deposit may still be confirming — try again shortly).",
         });
-        return;
       }
-
-      skRef.current = sk;
-
-      // Re-register the grant (recover mode: funds are in the Gateway, not the EOA,
-      // so the server skips the EOA-balance check). cap = the residual still on deposit.
-      const res = await fetch("/api/session/grant", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessAddr, budget: residualUsdc, recover: true }),
-      });
-      if (!res.ok) {
-        const { error } = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(error ?? "recovery failed");
-      }
-      const { sessionId, expiresAt } = (await res.json()) as {
-        sessionId: string;
-        expiresAt: string;
-      };
-      saveToStorage(sk, sessAddr, sessionId);
-      setState({
-        status: "active",
-        sessAddr,
-        sessionId,
-        cap: residualUsdc,
-        spent: 0,
-        expiresAt,
-        error: null,
-      });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setState((s) => ({
@@ -352,7 +352,57 @@ export function useSessionGrant() {
         error: /reject|denied/i.test(message) ? "Signature rejected" : message,
       }));
     }
-  }, [walletClient]);
+  }, [walletClient, resumeFromKey]);
+
+  /**
+   * Add more USDC to the ACTIVE session: fund the existing session EOA with more
+   * native USDC, deposit it into the Gateway, then re-register the grant with the new
+   * (confirmed) total balance. No new key — reuses the deterministic session key.
+   */
+  const topUp = useCallback(
+    async (addUsdc: number) => {
+      const sk = skRef.current;
+      if (!sk || !state.sessAddr || state.status !== "active") return;
+      if (!walletClient || !publicClient) {
+        setState((s) => ({ ...s, status: "error", error: "Wallet not connected" }));
+        return;
+      }
+      const pc = publicClient as SessionPublicClient;
+      const sessAddr = state.sessAddr as `0x${string}`;
+      const prevRemaining = Math.max(0, state.cap - state.spent);
+      try {
+        setState((s) => ({ ...s, status: "funding" }));
+        const tx = await walletClient.sendTransaction({
+          account: walletClient.account!,
+          chain: arcTestnet,
+          to: sessAddr,
+          value: parseEther((addUsdc + SESSION_GAS_BUFFER_USDC).toFixed(18)),
+        });
+        const rc = await publicClient.waitForTransactionReceipt({ hash: tx, timeout: 90_000 });
+        if (rc.status !== "success") throw new Error("Top-up transfer reverted — please try again.");
+
+        setState((s) => ({ ...s, status: "depositing" }));
+        const sessionWalletClient = createWalletClient({
+          account: privateKeyToAccount(sk),
+          chain: arcTestnet,
+          transport: http(kConfig.rpcUrl),
+        });
+        await depositToGateway(sessionWalletClient, pc, addUsdc);
+
+        setState((s) => ({ ...s, status: "confirming" }));
+        const confirmed = await pollGatewayCredit(sessAddr, prevRemaining + addUsdc);
+        if (confirmed === null) {
+          throw new Error("Top-up is still confirming on the Gateway — your funds are safe; reload to see the updated balance.");
+        }
+        setState((s) => ({ ...s, status: "registering" }));
+        await resumeFromKey(sk); // re-reads the new balance → updates cap + re-registers
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        setState((s) => ({ ...s, status: "error", error: message }));
+      }
+    },
+    [walletClient, publicClient, state.sessAddr, state.cap, state.spent, state.status, resumeFromKey],
+  );
 
   /**
    * Revoke the server-side grant. Returns the residual USDC amount so the
@@ -400,6 +450,7 @@ export function useSessionGrant() {
     tryRecover,
     recoverViaSignature,
     generateAndFund,
+    topUp,
     revoke,
     getSessionWalletClient,
   };
@@ -476,11 +527,14 @@ async function depositToGateway(
  * fail with CORS errors. The proxy makes the request server-side — same pattern
  * as RealGateway.ensureFunded()'s polling loop — and returns { available: string }.
  *
- * Times out after 90 seconds; caller continues even if credit hasn't confirmed yet.
+ * Returns the confirmed available USDC (number) once it reaches ~expected, or null
+ * if the credit never reflected within the timeout (120s). The caller must NOT
+ * activate a session on null — spending against an uncredited deposit fails Circle's
+ * verify. The funds are safe on-chain and recoverable once the credit lands.
  */
-async function pollGatewayCredit(sessAddr: string, expectedUsdc: number): Promise<void> {
-  const deadline = Date.now() + 90_000;
-  const minAtomic = parseUnits(expectedUsdc.toFixed(6), 6);
+async function pollGatewayCredit(sessAddr: string, expectedUsdc: number): Promise<number | null> {
+  const deadline = Date.now() + 120_000;
+  const minAtomic = parseUnits(expectedUsdc.toFixed(6), 6) - parseUnits("0.01", 6);
 
   while (Date.now() < deadline) {
     try {
@@ -489,11 +543,13 @@ async function pollGatewayCredit(sessAddr: string, expectedUsdc: number): Promis
       );
       if (res.ok) {
         const data = await res.json() as { available?: string };
-        const available = BigInt(data.available ?? "0");
-        if (available >= minAtomic - parseUnits("0.01", 6)) return;
+        const availableAtomic = BigInt(data.available ?? "0");
+        if (availableAtomic >= minAtomic) {
+          return Number(availableAtomic) / 1e6;
+        }
       }
     } catch { /* ignore transient errors */ }
     await new Promise((r) => setTimeout(r, 3000));
   }
-  // Timeout — continue; Gateway may still credit before the first payment attempt.
+  return null; // credit never confirmed within the window
 }

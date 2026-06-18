@@ -26,6 +26,8 @@ import type { GrantState } from "@/lib/hooks/use-session-grant";
 interface Props {
   grantState: GrantState;
   onActivate: (budgetUsdc: number) => void;
+  /** Add more USDC to the currently-active session. */
+  onTopUp: (addUsdc: number) => void;
   onRevoke: () => void;
   onTryRecover: () => void;
   /** Re-derive the key from a wallet signature to resume a funded session
@@ -45,6 +47,7 @@ const STATUS_LABEL: Record<string, string> = {
 export function GrantSpendDialog({
   grantState,
   onActivate,
+  onTopUp,
   onRevoke,
   onTryRecover,
   onRecoverViaSignature,
@@ -54,8 +57,12 @@ export function GrantSpendDialog({
   // snapped "0."/"" back to 0.05, making the field effectively un-typeable.)
   const [budgetInput, setBudgetInput] = useState("0.05");
   const [showRevoke, setShowRevoke] = useState(false);
+  const [showTopUp, setShowTopUp] = useState(false);
+  const [topUpInput, setTopUpInput] = useState("0.05");
   const budgetNum = parseFloat(budgetInput);
   const budgetValid = Number.isFinite(budgetNum) && budgetNum > 0;
+  const topUpNum = parseFloat(topUpInput);
+  const topUpValid = Number.isFinite(topUpNum) && topUpNum > 0;
 
   // On mount, offer to recover from sessionStorage (handles page refreshes).
   useEffect(() => {
@@ -78,13 +85,22 @@ export function GrantSpendDialog({
               Session active — ${remaining.toFixed(4)} remaining
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowRevoke(true)}
-            className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3 underline underline-offset-2 hover:text-seal"
-          >
-            Revoke
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => { setShowTopUp((v) => !v); setShowRevoke(false); }}
+              className="font-mono text-[10px] uppercase tracking-[0.12em] text-paid underline underline-offset-2 hover:opacity-80"
+            >
+              Add funds
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowRevoke(true); setShowTopUp(false); }}
+              className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3 underline underline-offset-2 hover:text-seal"
+            >
+              Revoke
+            </button>
+          </div>
         </div>
 
         {/* spend progress bar */}
@@ -105,15 +121,45 @@ export function GrantSpendDialog({
           </div>
         )}
 
+        {showTopUp && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
+            <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
+              Add
+            </span>
+            <input
+              type="number"
+              inputMode="decimal"
+              min={0.01}
+              step={0.01}
+              value={topUpInput}
+              onChange={(e) => setTopUpInput(e.target.value)}
+              className="w-20 border border-ink/30 bg-paper px-2 py-1 font-mono text-[12px] text-ink focus:border-seal focus:outline-none"
+            />
+            <span className="font-mono text-[10px] text-ink-3">USDC</span>
+            <button
+              type="button"
+              onClick={() => { if (topUpValid) { setShowTopUp(false); onTopUp(topUpNum); } }}
+              disabled={!topUpValid}
+              className="border border-ink bg-ink px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-cream transition-all hover:-translate-y-0.5 hover:shadow-[0_3px_0_var(--seal)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Add funds ▸
+            </button>
+            <span className="w-full font-mono text-[9px] leading-relaxed text-faint">
+              One MetaMask tx · deposits into the same session · cap rises after confirm
+            </span>
+          </div>
+        )}
+
         {showRevoke && (
           <div className="mt-3 border-t border-line pt-3">
             <p className="mb-2.5 font-serif text-[13px] leading-snug text-ink-2">
-              Revoking drops the server grant. Any unspent USDC stays in the
-              Gateway until you withdraw it from your session address{" "}
+              Revoking stops the agent from spending. Any unspent USDC stays safe
+              in the Gateway under your session address{" "}
               {grantState.sessAddr ? (
                 <span className="font-mono text-[11px]">{grantState.sessAddr.slice(0, 10)}…</span>
               ) : null}
-              . The session key is erased from this tab on revoke.
+              {" "}— derived from your wallet, so you can resume it anytime with
+              “Recover funded session”. (It is not auto-returned to your wallet.)
             </p>
             <div className="flex gap-2">
               <button

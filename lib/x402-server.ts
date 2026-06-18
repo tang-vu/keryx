@@ -78,14 +78,28 @@ export async function settleThenServe(
     });
   }
 
+  // payload is the decoded { signature, authorization } blob passed to the facilitator.
+  // Typed as any to match the SDK's PaymentPayload (same as the prior JSON.parse result).
+  let payload: any;
   try {
-    const payload = JSON.parse(Buffer.from(sig, "base64").toString("utf-8"));
-    const verify = await facilitator.verify(payload, requirements);
+    payload = JSON.parse(Buffer.from(sig, "base64").toString("utf-8"));
+  } catch {
+    return NextResponse.json({ error: "invalid payment header" }, { status: 400 });
+  }
+
+  try {
+    // Circle's facilitator occasionally throws a transient 4xx ("Circle Gateway verify
+    // failed (400)…") on otherwise-valid payments (~5% on testnet). Retry the throwing
+    // call a couple of times with a short backoff before giving up.
+    // verify() is read-only — always safe to retry. settle() is retried only when it
+    // THROWS (no confirmation received): the EIP-3009 nonce is consumed only by a
+    // successful on-chain settle, so a transient throw leaves the nonce reusable.
+    const verify = await withRetry(() => facilitator.verify(payload, requirements), "verify", opts.endpoint);
     if (!verify.isValid) {
       console.error(`[x402] verify FAILED ${opts.endpoint}: ${verify.invalidReason}`, JSON.stringify(requirements));
       return NextResponse.json({ error: "verification failed", reason: verify.invalidReason }, { status: 402 });
     }
-    const settle = await facilitator.settle(payload, requirements);
+    const settle = await withRetry(() => facilitator.settle(payload, requirements), "settle", opts.endpoint);
     if (!settle.success) {
       console.error(`[x402] settle FAILED ${opts.endpoint}: ${settle.errorReason}`);
       return NextResponse.json({ error: "settlement failed", reason: settle.errorReason }, { status: 402 });
@@ -106,4 +120,21 @@ export async function settleThenServe(
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: "payment processing error", message }, { status: 500 });
   }
+}
+
+/** Retry an async facilitator call up to 2 attempts on a thrown transient error. */
+async function withRetry<T>(fn: () => Promise<T>, label: string, endpoint: string): Promise<T> {
+  const MAX_ATTEMPTS = 2;
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[x402] ${label} threw (attempt ${attempt}/${MAX_ATTEMPTS}) ${endpoint}: ${msg}`);
+      if (attempt < MAX_ATTEMPTS) await new Promise((r) => setTimeout(r, 1500));
+    }
+  }
+  throw lastErr;
 }

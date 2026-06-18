@@ -36,7 +36,7 @@ interface Props {
 
 export function SessionGrantPanel({ onBindingChange }: Props) {
   const [authed, setAuthed] = useState(false);
-  const { state, tryRecover, recoverViaSignature, generateAndFund, revoke, getSessionWalletClient } =
+  const { state, tryRecover, recoverViaSignature, generateAndFund, topUp, revoke, getSessionWalletClient } =
     useSessionGrant();
   // Stable ref so onBindingChange closures always read the latest binding.
   const bindingRef = useRef<SessionGrantBinding>({ sessionId: null, getSessionWalletClient });
@@ -75,6 +75,7 @@ export function SessionGrantPanel({ onBindingChange }: Props) {
       <GrantSpendDialog
         grantState={state}
         onActivate={generateAndFund}
+        onTopUp={topUp}
         onRevoke={revoke}
         onTryRecover={tryRecover}
         onRecoverViaSignature={recoverViaSignature}
