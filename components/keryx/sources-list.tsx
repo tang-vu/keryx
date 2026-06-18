@@ -5,7 +5,7 @@
  * (mono short), and author splits when there is more than one author.
  */
 
-import { Wallet } from "lucide-react";
+import { Wallet, ShieldCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { fmtUsdc, shortAddr } from "./phase-style";
@@ -19,6 +19,10 @@ export interface SourceCardData {
   fetchPrice: number;
   walletAddress: string;
   authors: { name: string; splitWeight: number }[];
+  /** Set once the source is registered on the on-chain SourceRegistry. */
+  onchainId?: string;
+  /** EVM tx hash of the register() call — links to the block explorer as verifiable proof. */
+  registerTx?: string;
 }
 
 export function SourcesList({ sources }: { sources: SourceCardData[] }) {
@@ -58,10 +62,24 @@ export function SourcesList({ sources }: { sources: SourceCardData[] }) {
           )}
 
           <div className="mt-auto pt-4">
-            <p className="flex items-center gap-1.5 font-mono text-[11px] text-ink-3">
-              <Wallet className="h-3 w-3" />
-              {shortAddr(s.walletAddress)}
-            </p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="flex items-center gap-1.5 font-mono text-[11px] text-ink-3">
+                <Wallet className="h-3 w-3" />
+                {shortAddr(s.walletAddress)}
+              </p>
+              {s.registerTx && (
+                <a
+                  href={`https://testnet.arcscan.app/tx/${s.registerTx}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Registered on-chain — view the register() transaction on ArcScan"
+                  className="flex items-center gap-1 font-mono text-[10.5px] text-paid hover:underline"
+                >
+                  <ShieldCheck className="h-3 w-3" />
+                  On-chain
+                </a>
+              )}
+            </div>
             {s.authors.length > 1 && (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {s.authors.map((a) => (

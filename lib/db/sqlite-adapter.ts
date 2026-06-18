@@ -22,7 +22,9 @@ CREATE TABLE IF NOT EXISTS sources (
   id TEXT PRIMARY KEY, name TEXT, url TEXT, description TEXT, rss_url TEXT,
   wallet_address TEXT, fetch_price REAL, tags TEXT, authors TEXT, created_at TEXT,
   ipfs_cid TEXT,
-  active INTEGER NOT NULL DEFAULT 1
+  active INTEGER NOT NULL DEFAULT 1,
+  onchain_id TEXT,
+  register_tx TEXT
 );
 CREATE TABLE IF NOT EXISTS source_meta (
   id TEXT PRIMARY KEY,
@@ -111,6 +113,9 @@ export class SqliteAdapter implements KeryxDB {
     if (!srcCols.has("ipfs_cid")) this.db.exec(`ALTER TABLE sources ADD COLUMN ipfs_cid TEXT`);
     if (!srcCols.has("active"))
       this.db.exec(`ALTER TABLE sources ADD COLUMN active INTEGER NOT NULL DEFAULT 1`);
+    // On-chain provenance columns: filled when a curated source is registered on SourceRegistry.
+    if (!srcCols.has("onchain_id")) this.db.exec(`ALTER TABLE sources ADD COLUMN onchain_id TEXT`);
+    if (!srcCols.has("register_tx")) this.db.exec(`ALTER TABLE sources ADD COLUMN register_tx TEXT`);
 
     // source_items table: encrypted-content columns added in Phase 04.
     // Existing rows have NULL for these; produce() falls back to DB plaintext content.
@@ -130,11 +135,13 @@ export class SqliteAdapter implements KeryxDB {
     const activeInt = s.active === false ? 0 : 1;
     this.db
       .prepare(
-        `INSERT INTO sources (id,name,url,description,rss_url,wallet_address,fetch_price,tags,authors,created_at,ipfs_cid,active)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+        `INSERT INTO sources (id,name,url,description,rss_url,wallet_address,fetch_price,tags,authors,created_at,ipfs_cid,active,onchain_id,register_tx)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
          ON CONFLICT(id) DO UPDATE SET name=excluded.name,url=excluded.url,description=excluded.description,
            rss_url=excluded.rss_url,wallet_address=excluded.wallet_address,fetch_price=excluded.fetch_price,
-           tags=excluded.tags,authors=excluded.authors,ipfs_cid=excluded.ipfs_cid,active=excluded.active`,
+           tags=excluded.tags,authors=excluded.authors,ipfs_cid=excluded.ipfs_cid,active=excluded.active,
+           onchain_id=COALESCE(excluded.onchain_id,sources.onchain_id),
+           register_tx=COALESCE(excluded.register_tx,sources.register_tx)`,
       )
       .run(
         s.id,
@@ -149,6 +156,8 @@ export class SqliteAdapter implements KeryxDB {
         s.createdAt,
         s.ipfsCid ?? null,
         activeInt,
+        s.onchainId ?? null,
+        s.registerTx ?? null,
       );
   }
 
@@ -495,6 +504,8 @@ function rowToSource(r: Record<string, unknown>): Source {
     ipfsCid: (r.ipfs_cid as string) ?? undefined,
     // active=null means old row before the column existed — treat as active.
     active: r.active === undefined || r.active === null ? true : Boolean(r.active),
+    onchainId: (r.onchain_id as string) ?? undefined,
+    registerTx: (r.register_tx as string) ?? undefined,
   };
 }
 

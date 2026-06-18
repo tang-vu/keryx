@@ -53,6 +53,8 @@ export async function GET() {
       fetchPrice: s.fetchPrice,
       walletAddress: s.walletAddress,
       authors: s.authors.map((a) => ({ name: a.name, splitWeight: a.splitWeight })),
+      onchainId: s.onchainId,
+      registerTx: s.registerTx,
     })),
   });
 }

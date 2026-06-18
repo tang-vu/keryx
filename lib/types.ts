@@ -22,6 +22,12 @@ export interface Source {
    *  Content fetch stays lazy — pulled on first agent demand, cached in cache_items.
    *  Phase 04 will use this to fetch + decrypt encrypted content. */
   ipfsCid?: string;
+  /** The source's id in the on-chain SourceRegistry = keccak256(abi.encode(registrant, urlHash)).
+   *  Present once the curated source has been registered on Arc. Lets the UI prove provenance. */
+  onchainId?: string;
+  /** EVM tx hash of the SourceRegistry register() call. Unlike Gateway settlement IDs (UUIDs),
+   *  this resolves on the block explorer, so the UI can link it as verifiable on-chain proof. */
+  registerTx?: string;
 }
 
 /** A payable author within a source (enables multi-author citation splits). */

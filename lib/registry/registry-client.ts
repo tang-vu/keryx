@@ -113,6 +113,13 @@ export const REGISTRY_ABI = [
     ],
   },
   {
+    name: "sourceCount",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
     name: "SourceRegistered",
     type: "event",
     inputs: [
