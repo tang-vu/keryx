@@ -24,10 +24,8 @@ const EXPLORER = "https://testnet.arcscan.app";
 interface FaucetResult {
   ok?: boolean;
   error?: string;
-  nativeTx?: string;
-  erc20Tx?: string;
-  nativeAmount?: string;
-  erc20Amount?: string;
+  tx?: string;
+  amount?: string;
   claimedAt?: string;
   faucet?: string;
 }
@@ -96,11 +94,11 @@ export function FaucetPanel() {
       {status === "done" && result?.ok && (
         <div className="mb-2 space-y-1">
           <p className="font-mono text-[11px] text-paid">
-            Dripped {result.nativeAmount} native + {result.erc20Amount} ERC-20 USDC
+            Dripped {result.amount} USDC
           </p>
-          {result.erc20Tx && (
+          {result.tx && (
             <a
-              href={`${EXPLORER}/tx/${result.erc20Tx}`}
+              href={`${EXPLORER}/tx/${result.tx}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 font-mono text-[10px] text-seal underline underline-offset-2 hover:text-ink"
@@ -139,7 +137,7 @@ export function FaucetPanel() {
             ) : (
               <Droplets className="h-3 w-3" />
             )}
-            {status === "loading" ? "Claiming…" : "Claim 1 USDC"}
+            {status === "loading" ? "Claiming…" : "Claim testnet USDC"}
           </button>
         )}
 
@@ -155,7 +153,7 @@ export function FaucetPanel() {
       </div>
 
       <p className="mt-1.5 font-mono text-[9px] leading-relaxed tracking-wide text-faint">
-        One claim per address · Arc Testnet only · for session grants only
+        One claim per address · Arc Testnet only · covers gas + a session grant
       </p>
     </div>
   );

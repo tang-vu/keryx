@@ -5,34 +5,26 @@
  * Requires a valid SIWE session (keryx_session JWT cookie) so anonymous callers
  * can't drain the funder wallet.
  *
+ * ONE USDC, one transfer. On Arc, USDC IS the native gas token — the ERC-20 at
+ * config.usdcAddress (0x3600…, 6 decimals) is just a 6-decimal interface over the
+ * SAME native balance (verified: a wallet's getBalance/1e18 == balanceOf/1e6). So a
+ * single native transfer credits USDC that is spendable BOTH as gas and via the
+ * ERC-20 interface (x402 / Gateway). The previous two-transfer design was wrong: the
+ * ERC-20 EOA→EOA transfer via the precompile reverted, and the receipt status went
+ * unchecked, so the route reported a false "Dripped".
+ *
  * Drain protections:
- *   1. Per-address claim tracking (in-memory Map). Resets on process restart —
- *      acceptable for testnet: the faucet is rate-limited and low-value, and the
- *      funder wallet is purpose-funded with a small testnet balance.
- *   2. Global rate limit via RateLimiterMemory (reuses lib/rate-limit pattern but
- *      a dedicated limiter so faucet traffic doesn't consume ask-tier quota).
- *   3. Funder balance check before each drip — returns a clear error + Circle
- *      faucet link if funds are insufficient.
+ *   1. SIWE gate (authenticated wallets only).
+ *   2. Per-address claim tracking (in-memory; resets on deploy — acceptable testnet).
+ *   3. Global rate limit (RateLimiterMemory).
+ *   4. Funder balance check before the drip; clear error + Circle faucet link on low funds.
  *
- * Drip amounts (configurable via env, sensible defaults):
- *   KERYX_FAUCET_NATIVE  — native USDC for gas (18-decimal Arc native token). Default 0.1
- *   KERYX_FAUCET_DRIP_USDC — ERC-20 USDC for payments (6-decimal). Default 1
- *
- * Amounts must cover the grant/fund flow in use-session-grant.ts:
- *   - USDC ERC-20 transfer to session EOA         (~0.001 USDC gas at Arc prices)
- *   - ERC-20 approve + Gateway deposit from EOA   (~0.002 USDC gas)
- *   0.1 native USDC covers ~5 grant cycles at current Arc testnet gas prices.
+ * Amount: KERYX_FAUCET_USDC (default 2) — covers gas for register/grant/deposit txs plus
+ * a small session budget. Receipt status is verified; a revert rolls back the claim.
  */
 
 import { NextResponse } from "next/server";
-import {
-  createPublicClient,
-  createWalletClient,
-  erc20Abi,
-  http,
-  parseEther,
-  parseUnits,
-} from "viem";
+import { createPublicClient, createWalletClient, http, parseEther, formatEther } from "viem";
 import { arcTestnet } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 import { RateLimiterMemory, RateLimiterRes } from "rate-limiter-flexible";
@@ -41,62 +33,44 @@ import { config } from "@/lib/config";
 
 export const runtime = "nodejs";
 
-// ── Config ────────────────────────────────────────────────────────────────────
-
-const NATIVE_DRIP = parseEther(process.env.KERYX_FAUCET_NATIVE ?? "0.1");
-const ERC20_DRIP = parseUnits(process.env.KERYX_FAUCET_DRIP_USDC ?? "1", 6);
+const DRIP = parseEther(process.env.KERYX_FAUCET_USDC ?? "2"); // native USDC (18dp) = the one USDC
+const FUNDER_BUFFER = parseEther("0.05"); // keep enough for the funder's own gas
 const CIRCLE_FAUCET = "https://faucet.circle.com/";
 
-// ── Drain protection ─────────────────────────────────────────────────────────
+// One claim per address per process lifetime (resets on deploy — fine for testnet).
+const claimed = new Map<string, number>();
+// Shared bucket: max 5 drips/min across all callers.
+const limiter = new RateLimiterMemory({ points: 5, duration: 60, keyPrefix: "faucet" });
 
-// Tracks addresses that have already claimed. In-memory is sufficient for testnet:
-// single-process VPS, low-value drips, resets on deploy (acceptable for testnet faucet).
-const claimed = new Map<string, number>(); // address → timestamp ms
-
-// Global rate limit: max 5 drip requests per minute across all callers.
-// Keyed by the constant "global" so all requests share the same bucket.
-const globalLimiter = new RateLimiterMemory({ points: 5, duration: 60, keyPrefix: "faucet" });
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function faucetDisabledResponse(reason: string) {
-  return NextResponse.json(
-    { error: reason, faucet: CIRCLE_FAUCET },
-    { status: 503 },
-  );
+function disabled(reason: string) {
+  return NextResponse.json({ error: reason, faucet: CIRCLE_FAUCET }, { status: 503 });
 }
 
-// ── Route handler ─────────────────────────────────────────────────────────────
-
 export async function POST() {
-  // 1. SIWE gate — must be authenticated to prevent anonymous drain.
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   }
-
   const address = session.address.toLowerCase();
 
-  // 2. Global rate limit — all drip requests share this bucket.
   try {
-    await globalLimiter.consume("global");
+    await limiter.consume("global");
   } catch (err) {
     if (err instanceof RateLimiterRes) {
+      const retryAfter = Math.ceil(err.msBeforeNext / 1000);
       return NextResponse.json(
-        { error: "faucet busy — try again shortly", retryAfter: Math.ceil(err.msBeforeNext / 1000), faucet: CIRCLE_FAUCET },
-        { status: 429, headers: { "Retry-After": String(Math.ceil(err.msBeforeNext / 1000)) } },
+        { error: "faucet busy — try again shortly", retryAfter, faucet: CIRCLE_FAUCET },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } },
       );
     }
     // Fail open on unexpected limiter error.
   }
 
-  // 3. Per-address claim guard — one drip per wallet per process lifetime.
   if (claimed.has(address)) {
-    const claimedAt = new Date(claimed.get(address)!).toISOString();
     return NextResponse.json(
       {
         error: "already claimed",
-        claimedAt,
+        claimedAt: new Date(claimed.get(address)!).toISOString(),
         message: "Each address may claim once. Use the Circle faucet for more.",
         faucet: CIRCLE_FAUCET,
       },
@@ -104,74 +78,38 @@ export async function POST() {
     );
   }
 
-  // 4. Funder wallet must be configured.
-  if (!config.funderKey) {
-    return faucetDisabledResponse("Faucet not configured (no funder wallet)");
-  }
+  if (!config.funderKey) return disabled("Faucet not configured (no funder wallet)");
 
   const funder = privateKeyToAccount(config.funderKey as `0x${string}`);
   const publicClient = createPublicClient({ chain: arcTestnet, transport: http(config.rpcUrl) });
-  const funderWallet = createWalletClient({
-    account: funder,
-    chain: arcTestnet,
-    transport: http(config.rpcUrl),
-  });
-
+  const wallet = createWalletClient({ account: funder, chain: arcTestnet, transport: http(config.rpcUrl) });
   const recipient = session.address as `0x${string}`;
 
-  // 5. Check funder has enough native balance for gas drip + its own tx fees.
-  const nativeBalance = await publicClient.getBalance({ address: funder.address });
-  // Require at least NATIVE_DRIP + 0.05 native USDC buffer for the funder's own gas.
-  const nativeBuffer = parseEther("0.05");
-  if (nativeBalance < NATIVE_DRIP + nativeBuffer) {
-    return faucetDisabledResponse("Funder native balance too low — use Circle faucet");
+  const funderBalance = await publicClient.getBalance({ address: funder.address });
+  if (funderBalance < DRIP + FUNDER_BUFFER) {
+    return disabled("Funder balance too low — use Circle faucet");
   }
 
-  // 6. Check funder has enough ERC-20 USDC.
-  const erc20Balance = await publicClient.readContract({
-    address: config.usdcAddress,
-    abi: erc20Abi,
-    functionName: "balanceOf",
-    args: [funder.address],
-  });
-  if (erc20Balance < ERC20_DRIP) {
-    return faucetDisabledResponse("Funder ERC-20 USDC balance too low — use Circle faucet");
-  }
-
-  // 7. Mark as claimed BEFORE sending to prevent double-claim from concurrent requests.
+  // Mark claimed BEFORE sending so concurrent requests can't double-claim.
   claimed.set(address, Date.now());
 
   try {
-    // 8a. Send native USDC (Arc gas token, 18 decimals) to recipient.
-    const nativeTx = await funderWallet.sendTransaction({
-      to: recipient,
-      value: NATIVE_DRIP,
-    });
-    await publicClient.waitForTransactionReceipt({ hash: nativeTx });
-
-    // 8b. Transfer ERC-20 USDC (6 decimals) to recipient.
-    const erc20Tx = await funderWallet.writeContract({
-      address: config.usdcAddress,
-      abi: erc20Abi,
-      functionName: "transfer",
-      args: [recipient, ERC20_DRIP],
-    });
-    await publicClient.waitForTransactionReceipt({ hash: erc20Tx });
-
+    const tx = await wallet.sendTransaction({ to: recipient, value: DRIP });
+    const receipt = await publicClient.waitForTransactionReceipt({ hash: tx });
+    if (receipt.status !== "success") {
+      throw new Error(`drip tx reverted (${tx})`);
+    }
     return NextResponse.json({
       ok: true,
-      nativeTx,
-      erc20Tx,
-      nativeAmount: (Number(NATIVE_DRIP) / 1e18).toFixed(2),
-      erc20Amount: (Number(ERC20_DRIP) / 1e6).toFixed(2),
+      tx,
+      amount: formatEther(DRIP), // USDC (same value via native or ERC-20 view)
       explorer: config.explorerUrl,
       faucet: CIRCLE_FAUCET,
     });
   } catch (err) {
-    // Rollback the claimed marker so the user can retry after a transient error.
+    // Roll back so the user can retry after a transient failure.
     claimed.delete(address);
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("[faucet] drip failed:", message);
+    console.error("[faucet] drip failed:", err instanceof Error ? err.message : String(err));
     return NextResponse.json(
       { error: "drip failed — try again or use Circle faucet", faucet: CIRCLE_FAUCET },
       { status: 500 },
