@@ -78,7 +78,7 @@ export function InkBleedCursor() {
       const dx = x - lastX;
       const dy = y - lastY;
       const dist = Math.hypot(dx, dy);
-      if (dist < 10) return;
+      if (dist < 7) return;
       lastX = x; lastY = y;
 
       const speed = Math.min(dist, 60);
@@ -86,9 +86,9 @@ export function InkBleedCursor() {
       // Main blot.
       blots.push({
         x, y, r: 0,
-        maxR: 14 + speed * 0.55 + Math.random() * 10,
+        maxR: 16 + speed * 0.6 + Math.random() * 12,
         growth: 0,
-        ink: `rgba(${ink}, ${0.05 + Math.random() * 0.05})`,
+        ink: `rgba(${ink}, ${0.22 + Math.random() * 0.12})`,
       });
       // A couple of feather satellites for splatter — lighter, offset.
       const sat = 1 + ((Math.random() * 2) | 0);
@@ -99,9 +99,9 @@ export function InkBleedCursor() {
           x: x + Math.cos(a) * d,
           y: y + Math.sin(a) * d,
           r: 0,
-          maxR: 4 + Math.random() * 9,
+          maxR: 5 + Math.random() * 10,
           growth: 0,
-          ink: `rgba(${ink}, ${0.03 + Math.random() * 0.035})`,
+          ink: `rgba(${ink}, ${0.12 + Math.random() * 0.08})`,
         });
       }
       if (blots.length > 240) blots.splice(0, blots.length - 240);
@@ -113,23 +113,24 @@ export function InkBleedCursor() {
       const h = window.innerHeight;
 
       // Dry the existing ink slightly each frame (erase a hair of alpha everywhere)
-      // so strokes linger then fade — the lingering trail, not a hard clear.
+      // so strokes linger ~1.5s then fade — the lingering trail, not a hard clear.
       ctx.globalCompositeOperation = "destination-out";
-      ctx.fillStyle = "rgba(0,0,0,0.045)";
+      ctx.fillStyle = "rgba(0,0,0,0.022)";
       ctx.fillRect(0, 0, w, h);
 
       // Lay fresh ink.
       ctx.globalCompositeOperation = "source-over";
       for (const b of blots) {
         if (b.growth < 1) {
-          b.growth = Math.min(1, b.growth + 0.16);
+          b.growth = Math.min(1, b.growth + 0.13);
           // easeOutCubic so it blooms fast then settles.
           const e = 1 - Math.pow(1 - b.growth, 3);
           b.r = b.maxR * e;
         }
+        const a = inkAlpha(b.ink);
         const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, Math.max(0.5, b.r));
         g.addColorStop(0, b.ink);
-        g.addColorStop(0.6, b.ink.replace(/, [\d.]+\)$/, `, ${0.4 * inkAlpha(b.ink)})`));
+        g.addColorStop(0.45, b.ink.replace(/, [\d.]+\)$/, `, ${(0.6 * a).toFixed(3)})`));
         g.addColorStop(1, b.ink.replace(/, [\d.]+\)$/, ", 0)"));
         ctx.fillStyle = g;
         ctx.beginPath();
@@ -187,7 +188,7 @@ export function InkBleedCursor() {
         ref={canvasRef}
         aria-hidden
         className="pointer-events-none fixed inset-0 z-[2] mix-blend-multiply"
-        style={{ filter: "url(#kxInkFeather) blur(0.4px)", opacity: 0.85 }}
+        style={{ filter: "url(#kxInkFeather) blur(0.5px)", opacity: 1 }}
       />
     </>
   );
