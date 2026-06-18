@@ -21,7 +21,7 @@
  *   3. Global rate limit (RateLimiterMemory).
  *   4. Funder balance check before the drip; clear error + Circle faucet link on low funds.
  *
- * Amount: KERYX_FAUCET_USDC (default 2) — covers gas for register/grant/deposit txs plus
+ * Amount: KERYX_FAUCET_USDC (default 1) — covers gas for register/grant/deposit txs plus
  * a small session budget. Receipt status is verified; a revert rolls back the claim.
  */
 
@@ -36,7 +36,7 @@ import { getDb } from "@/lib/db";
 
 export const runtime = "nodejs";
 
-const DRIP = parseEther(process.env.KERYX_FAUCET_USDC ?? "2"); // native USDC (18dp)
+const DRIP = parseEther(process.env.KERYX_FAUCET_USDC ?? "1"); // native USDC (18dp)
 const FUNDER_BUFFER = parseEther("0.05"); // keep enough for the funder's own gas
 const CIRCLE_FAUCET = "https://faucet.circle.com/";
 
