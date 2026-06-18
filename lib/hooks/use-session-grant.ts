@@ -254,11 +254,17 @@ export function useSessionGrant() {
         //    send a NATIVE value transfer (18-decimal) instead — the same fix the
         //    faucet uses. We send budget + a small buffer so the session EOA can pay
         //    the gas for its own approve+deposit; the leftover is recoverable.
+        // NOTE: do NOT pass `chain` here. ensureArc() already guaranteed the wallet is
+        // on Arc; passing `chain` makes viem assert chainId against the (possibly stale)
+        // injected client before sending, which can hang BEFORE MetaMask ever shows the
+        // tx prompt — the "Waiting for USDC transfer…" no-popup hang. signMessage works
+        // precisely because it takes no chain param. Send a plain native value transfer
+        // (gas is exactly 21000 for an EOA→EOA value send).
         const usdcTx = await walletClient.sendTransaction({
           account: walletClient.account!,
-          chain: arcTestnet,
           to: sessAddr,
           value: parseEther((budgetUsdc + SESSION_GAS_BUFFER_USDC).toFixed(18)),
+          gas: BigInt(21000),
         });
         // Bound the wait so a stuck/dropped tx surfaces an error instead of spinning forever.
         const fundReceipt = await publicClient.waitForTransactionReceipt({
@@ -392,11 +398,12 @@ export function useSessionGrant() {
         setState((s) => ({ ...s, status: "switching" }));
         await ensureArc();
         setState((s) => ({ ...s, status: "funding" }));
+        // No `chain` param — see the note in generateAndFund (avoids the no-popup hang).
         const tx = await walletClient.sendTransaction({
           account: walletClient.account!,
-          chain: arcTestnet,
           to: sessAddr,
           value: parseEther((addUsdc + SESSION_GAS_BUFFER_USDC).toFixed(18)),
+          gas: BigInt(21000),
         });
         const rc = await publicClient.waitForTransactionReceipt({ hash: tx, timeout: 90_000 });
         if (rc.status !== "success") throw new Error("Top-up transfer reverted — please try again.");
