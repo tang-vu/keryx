@@ -37,11 +37,17 @@ export function WalletMenu() {
   const { address, isConnected, session, authState, signIn, signOut } = useSiweAuth();
   const { disconnectAsync } = useDisconnect();
   const [pickerOpen, setPickerOpen] = useState(false);
+  // Sticky "user signed out" flag. The MetaMask SDK / injected connectors can
+  // auto-reconnect right after disconnect(), flipping isConnected back to true and
+  // making the menu show "Sign in" for the just-removed wallet. While this is set we
+  // force the "Connect Wallet" view regardless of the reconnect, until the user
+  // explicitly picks a wallet again. Cleared on connect (onSelect) or a real session.
+  const [signedOut, setSignedOut] = useState(false);
 
   // Sign out = clear the session AND disconnect the wallet, so the menu returns to
-  // "Connect Wallet" (not "Sign in" for the same wallet). Disconnect first so the
-  // connected-but-signed-out state never flashes.
+  // "Connect Wallet" (not "Sign in" for the same wallet).
   const handleSignOut = useCallback(async () => {
+    setSignedOut(true);
     try {
       await disconnectAsync();
     } catch {
@@ -81,6 +87,10 @@ export function WalletMenu() {
     intentRef.current = false;
     if (session === null) void doSignIn(); // null = signed out → sign in
   }, [isConnected, address, session, busy, doSignIn]);
+
+  // A real session always wins over the sticky signed-out flag (derived, not stored,
+  // to avoid a setState-in-effect cascade).
+  const showSignedOut = signedOut && !session;
 
   // ── Signed in: account chip + menu ──
   if (session) {
@@ -131,7 +141,9 @@ export function WalletMenu() {
   }
 
   // ── Connected but not signed in: sign-in chip (fallback if auto-flow stalled) ──
-  if (isConnected && address) {
+  // Suppressed right after a user sign-out so an auto-reconnected wallet doesn't
+  // show "Sign in" — the user sees "Connect Wallet" until they choose to reconnect.
+  if (isConnected && address && !showSignedOut) {
     // session === undefined → the mount session check is still resolving; show a
     // neutral loading chip so already-signed-in users don't flash "Sign in".
     const loading = session === undefined;
@@ -167,8 +179,10 @@ export function WalletMenu() {
           isBusy={busy}
           onConnected={() => {}}
           onSelect={() => {
-            // Flag user intent (auto-sign-in) and close the picker; the connected
-            // render branch replaces the picker once the connection lands.
+            // User chose to (re)connect: lift the signed-out suppression, flag intent
+            // for auto-sign-in, and close the picker. The connected render branch
+            // replaces the picker once the connection lands.
+            setSignedOut(false);
             intentRef.current = true;
             setPickerOpen(false);
           }}
