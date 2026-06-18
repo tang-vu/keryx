@@ -57,39 +57,75 @@ Example trace (real output):
 ## Architecture
 
 ```
-                    ┌──────────────── Keryx web app (Next.js 16) ────────────────┐
-  Ask page ──q+budget──▶  /api/ask (SSE)  ──▶  AGENT BRAIN  (lib/agent)
-  (live reasoning UI)                            decompose→discover→decide→fetch
-                                                 →sufficiency→synthesize→attribute→settle
-                                                        │              │
-                            reasoning engine ───────────┤              ├──── payment gateway
-                            (Anthropic / DeepSeek /                     │     (Circle x402 + Gateway)
-                             offline heuristic)                         ▼
-  Creator side:  /register ──RSS──▶ registry (sources + wallets)   x402 fetch toll  ─▶ creator wallet
-                 /api/source/[id]  (x402-protected content)        x402 citation reward ─▶ author wallet(s)
-  Dashboard:     /api/metrics, /api/payments  ──▶  live traction          │
-                                                          USDC on Arc testnet (chain 5042002)
+BROWSER (Web App)                    IPFS + Arc Smart Contracts              Circle Gateway + Arc Testnet
+─────────────────                    ─────────────────────────               ──────────────────────────────
+┌──────────────────┐                 [SourceRegistry]                         
+│ /ask page        │ (SIWE           on Arc 0x2e12Fa...                       USDC on Arc
+│ + wallet connect │  auth)           • sources[]                             (ERC-20, 6 decimals)
+│                  │                   • emit Registry events                  
+└────────┬─────────┘                   • indexed by off-chain DB               
+         │ session-grant                                                       
+         │ (user funds session EOA)     [IPFS Content]                         
+         │ MetaMask tx → session       • AES-256-GCM encrypted                [Circle Gateway]
+         │ deposits in Gateway          • plaintext released only post-settle  • batch settlement
+         │                                                                      • x402 EIP-712 verify
+         │                             [Keryx API]                             
+         │ co-sign loop (fetch+POST):  • auth: SIWE JWT (browser + API key)   [Arc RPC]
+    /api/ask (SSE) ──────────────────▶ /api/session/*   (grant, credit)       rpc.testnet.arc.network
+    browser streams                     /api/ask         (agent asks, gets
+    sign-requests                       /api/ask/sign    sign-requests back)
+    ◀────────────────────────────────  /api/source/[id] (fetch toll + IPFS key)
+    client-side session key             /api/cite        (citation reward)
+    signs EIP-712                       /api/keys        (API key mint/verify)
+    auto-signs (NO prompt)              /api/docs        (OpenAPI)
+                                        /api/faucet      (testnet drip)
+    
+    Agent brain (lib/agent/run-agent.ts):
+    decompose→discover→decide→fetch→sufficiency→synthesize→attribute→settle
+    (same as v0.1, reads via stable KeryxDB interface)
 ```
 
-### Circle / Arc primitives used (the 20%)
+**Key Innovation:** Non-custodial spend. The user funds a session EOA from their MetaMask (once), deposits it into Circle Gateway, 
+and the browser auto-signs each x402 authorization with the in-tab session key. The funded amount is the hard cap; Keryx never 
+touches the user's key or funds.
+
+### Circle / Arc / Web3 primitives used (the 30%)
 - **x402 pay-per-request** — `@circle-fin/x402-batching`. Sellers wrap content with a 402 challenge
-  (`lib/x402-server.ts`); the agent pays inline via `GatewayClient.pay()` (`lib/payments/real-gateway.ts`).
+  (`lib/x402-server.ts`); the agent pays inline via `GatewayClient.pay()` (server path) or browser 
+  co-signs via `BrowserCoSignGateway` (user interactive path).
 - **Circle Gateway / Nanopayments** — sub-cent batched settlement (the $0.000001 floor) for both the
-  fetch toll and the weighted citation reward.
-- **Circle Wallets** — an ephemeral agent spend wallet funded from a funder wallet; one wallet per
-  registered creator as the `payTo` target.
-- **USDC on Arc** — native settlement currency; Arc uses USDC as its gas token too.
+  fetch toll and the weighted citation reward. User-funded session EOA deposits into Gateway; server 
+  verifies EIP-712 authorization signatures from the browser.
+- **SIWE (Sign-In-With-Ethereum)** — `siwe@3.0` + `wagmi@3` for wallet connect + nonce/message/verify flow.
+  Role = creator (on-chain SourceRegistry) / dev (env allowlist) / asker (default). Stateless JWT session.
+- **Smart Contracts** — `SourceRegistry.sol` deployed on Arc testnet (`0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536`).
+  Tracks sources by URL hash, creator, splits, and IPFS CID; on-chain events drive the indexer cache.
+- **IPFS + Pinata** — content encrypted server-side (AES-256-GCM), plaintext released client-side only after 
+  x402 settle (via `produce()` callback). Decryption key held by server (Lit Protocol upgrade path post-hackathon).
+- **USDC on Arc** — native settlement currency (ERC-20, 6 decimals); Arc uses USDC as its gas token too.
+  Native USDC (18 decimals) = gas. Public testnet faucet.
 - **Circle CLI** (`circle`) — `gateway`, `services`, and `feedback` commands; `arc-canteen` for traction.
 
-### Innovation (the 20%)
-- **Open-marketplace discovery** — beyond its own creators, the agent probes the *live* Circle x402
-  service bazaar (`circle services search`) every query and reasons BUY/SKIP over real third-party
-  endpoints. They settle on other chains (Base/ETH/… mainnet), not Keryx's Arc rail, so the
-  orchestrator evaluates and logs them but never purchases — an in-code rail constraint, like the
-  budget cap. Keryx sees the whole open x402 economy, then spends only where it safely can.
+### Innovation & Design Choices (Phases 01–06)
+- **Non-custodial browser co-sign** — user funds a session EOA (one MetaMask tx), deposits into Gateway,
+  browser holds session key in tab memory and auto-signs each x402 authorization (EIP-712). Keryx 
+  never holds the key or funds. Funded cap is the enforced spend ceiling (Phase 03, commits 661452e, 15fcff2).
+- **On-chain SourceRegistry** — deployed on Arc (`0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536`). 
+  Creator writes source metadata + IPFS CID; indexer polls events + caches in DB. URL squatting 
+  resistance via creator-scoped source IDs; multi-author splits on-chain (Phase 02, commit 46df551).
+- **Encrypted IPFS content, payment-gated decryption** — content encrypted server-side (AES-256-GCM), 
+  ciphertext pinned to IPFS, plaintext released ONLY inside the x402 `produce()` callback after 
+  settlement verify (Phase 04, commit d2b8eb1). Free preview available plaintext.
+- **Public API + wallet-issued keys** — both x402 pay-per-call AND stateless API keys (SHA-256 hashed, 
+  mint-once-show-once). Rate limited per key. OpenAPI docs at `/api/docs` (Phase 05, commit 3a3a4a1).
+- **SIWE 3-role auth** — wallet-based identity, role resolved live from on-chain/DB state + env allowlist. 
+  Stateless JWT. No server accounts (Phase 01, commit 7c834a0).
+- **Testnet faucet** — native USDC drip for session setup gas (Phase 06 connect UX, commit ca2b6f7).
+- **Open-marketplace discovery** — agent probes Circle's live x402 service bazaar per query; evaluates
+  but never purchases from other chains (Arc is the rail). Real third-party endpoints visible in reasoning.
 - **Per-citation settlement weighted by contribution** — not flat per-fetch; the answer's grounding
   determines the split.
-- **Multi-author splits** — one reward fans out across author wallets by configured weights.
+- **Multi-author splits** — one reward fans out across author wallets by configured weights (on-chain).
 - **Emergent budget behavior** — the agent stops early, caches, and skips, producing genuine frugality.
 - **Two-tier economy** — a small access toll + a weighted citation pool, so fetched-but-uncited
   sources earn only the toll while cited sources earn proportionally more.
@@ -100,50 +136,90 @@ Example trace (real output):
 # 1. Install (Node v20.18.2+)
 npm install
 
-# 2. Configure (optional — runs offline with zero keys)
+# 2. Configure (optional — runs offline heuristic with zero keys)
 cp .env.example .env.local
-#   add ANTHROPIC_API_KEY or DEEPSEEK_API_KEY for real reasoning
-#   fund AGENT_FUNDER_ADDRESS at https://faucet.circle.com/ (Arc Testnet) + set KERYX_FORCE_OFFLINE=0 for real settlement
+#   Minimal for offline dev: none (heuristic reasoning, simulated payments, local SQLite)
+#   For real Arc testnet: add ANTHROPIC_API_KEY + NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS
+#   For user session support: add JWT_SECRET, CONTENT_MASTER_KEY, PINATA_JWT
+#   For on-chain registry indexing: add KERYX_REGISTRY_ADDRESS, KERYX_REGISTRY_DEPLOY_BLOCK
 
-# 3. Generate wallets (or use the ones in .env.local)
+# 3. Generate wallets (optional, for server-side treasury)
 npm run generate-wallets
 
-# 4. Seed demo sources
+# 4. Seed demo sources (populates local DB)
 npm run seed-sources
 
 # 5a. Run the agent on one question (prints the full reasoning trace)
 npm run ask -- "How do x402 and stablecoins enable autonomous AI agent commerce?" --budget 0.05
 
-# 5b. Or run the web app
+# 5b. Or run the web app (with SIWE auth, session grants, browser co-sign)
 npm run dev          # http://localhost:3939
 
-# 6. Generate autonomous payment volume
+# 6. Generate autonomous payment volume (server-side, uses treasury)
 npm run seed -- --count 20
 
-# 7. See live metrics
+# 7. See live metrics / traction
 npm run metrics
+
+# 8. Deploy to VPS (requires SSH key, pulls latest main)
+npm run deploy
 ```
 
-### Modes
-| | Reasoning | Payments | DB |
-|---|---|---|---|
-| **Offline dev** (default) | heuristic (no key) | simulated (`settled:false`) | local SQLite |
-| **Demo / live** | Claude or DeepSeek | real x402 on Arc testnet | SQLite or Supabase |
+**First-time user flow:**
+1. Open http://localhost:3939 (or keryx.cc)
+2. Click "Connect Wallet" → MetaMask on Arc testnet
+3. If low on USDC, hit `/faucet` → drip 20 USDC (2h cooldown)
+4. Fund a session (or use in-app faucet integration)
+5. Ask a question + set budget
+6. Watch the agent decide, fetch, synthesize, settle — live in the UI
 
-Flip to live: add an LLM key, fund the wallet, set `KERYX_FORCE_OFFLINE=0`.
+### Operation Modes
+| Mode | Reasoning | Auth | Payment Path | Payment Status | DB | Use Case |
+|------|-----------|------|--------------|----------------|----|----|
+| **Offline dev** | heuristic (no LLM key) | none | offline mock | simulated (`settled:false`) | SQLite | laptop, no wallet |
+| **Server treasury** | Claude/DeepSeek | optional | `RealGateway` (funder wallet) | real Arc testnet | SQLite or Supabase | volume engine, A2A |
+| **User interactive** | Claude/DeepSeek | SIWE JWT + API key | `BrowserCoSignGateway` (session EOA) | real Arc testnet | SQLite or Supabase | web app `/ask` |
+
+**Offline (default):** `KERYX_FORCE_OFFLINE=1` or missing LLM key / no registry address. Agent uses heuristic reasoning, 
+sources from local SQLite, no wallet needed.
+
+**Live testnet:** Add `ANTHROPIC_API_KEY` + `NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS`. User connects MetaMask, 
+funds a session, browser co-signs. Server can also run volume engine with `AGENT_FUNDER_PRIVATE_KEY` (treasury).
+
+**To activate on-chain registry indexing:** Set `KERYX_REGISTRY_ADDRESS` + `KERYX_REGISTRY_DEPLOY_BLOCK`. 
+Indexer will poll Arc RPC and cache events in DB.
 
 ## Deploy
-Primary: run locally + expose at **[keryx.cc](https://keryx.cc)** with **Cloudflare Tunnel**
-(`npm run tunnel`) — keeps SQLite, gives a public URL, runs the volume engine for real traction.
-Always-on alternative: Supabase + Vercel (adapters included; set the Supabase env vars).
+**Production:** VPS at keryx.cc. `npm run deploy` pulls latest main, restarts the app, runs migrations on 
+SQLite (kept on-disk for real traction data). Indexer backfills SourceRegistry events from deploy block 
+on startup. Traction metrics update live.
+
+**Local tunnel:** `npm run tunnel` (Cloudflare Tunnel) — exposes localhost:3939 at a public URL, useful for 
+testing the full flow locally without a VPS.
+
+**Always-on serverless:** Supabase + Vercel adapters included; set `NEXT_PUBLIC_SUPABASE_URL` + 
+`SUPABASE_SERVICE_ROLE_KEY` to use Postgres instead of SQLite. But local VPS/tunnel is preferred to keep 
+traction data on the team's own infra.
+
+## Transparency & Honest Trade-offs
+The dApp is non-custodial but makes **4 documented trade-offs** (required for testnet, flagged for post-hackathon):
+1. **Circle facilitator** — x402 settlement goes through Circle's `BatchFacilitatorClient` (no on-chain alternative on Arc testnet)
+2. **Server holds IPFS key** — content is encrypted on IPFS but server holds the decryption key (Lit Protocol upgrade once Arc is on Lit)
+3. **Session key XSS surface** — browser session key lives in `sessionStorage` (cap-bounded; Web Crypto non-exportable keys are post-hackathon)
+4. **Treasury gas wallet** — server funder wallet can be drained if compromised (holds gas only, no USDC; rotated regularly)
+
+See `docs/security-threat-model.md` for full verification matrix, residuals, and mitigations.
 
 ## Project docs
-- [`PLAN.md`](./PLAN.md) — phased build plan & status
-- [`DECISIONS.md`](./DECISIONS.md) — architecture decision log
-- [`DEMO.md`](./DEMO.md) — sub-3-minute demo script
-- [`TRACTION.md`](./TRACTION.md) — sources onboarded + real payment volume
-- [`FEEDBACK.md`](./FEEDBACK.md) — Circle/Arc dev-tool feedback
-- [`CLAUDE.md`](./CLAUDE.md) — orientation for contributors
+- [`PLAN.md`](./PLAN.md) — phased build plan & dApp evolution status
+- [`DECISIONS.md`](./DECISIONS.md) — architecture decision log (link to Phase 01–06 decision log)
+- [`DEMO.md`](./DEMO.md) — sub-3-minute demo script (updated for dApp flow: connect → fund → ask → settle)
+- [`TRACTION.md`](./TRACTION.md) — real payment volume + sources (updated weekly)
+- [`FEEDBACK.md`](./FEEDBACK.md) — Circle/Arc dev-tool feedback + tickets
+- [`CLAUDE.md`](./CLAUDE.md) — orientation for contributors (rules, file ownership, dev setup)
+- [`docs/system-architecture.md`](./docs/system-architecture.md) — dApp data/money flow diagrams + on-chain component details
+- [`docs/security-threat-model.md`](./docs/security-threat-model.md) — threat matrix, audit results, residual risks
+- [`docs/codebase-summary.md`](./docs/codebase-summary.md) — module map + file purposes
 
 ## Stack
 Next.js 16 · React 19 · Tailwind 4 · shadcn/ui · `@circle-fin/x402-batching` · viem · Node `node:sqlite` / Supabase · Anthropic / DeepSeek.

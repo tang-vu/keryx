@@ -1,0 +1,273 @@
+# Keryx Project Changelog
+
+**Last Updated:** 2026-06-18  
+**Current Version:** 0.2.0
+
+All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
+
+---
+
+## v0.2.0 — Decentralized dApp Transformation (2026-06-18)
+
+### Overview
+Completed 6-phase evolution from custodial agent to non-custodial dApp. Users now fund their own sessions, 
+sign transactions themselves, and Keryx never touches their keys or funds. All on Arc testnet with real USDC settlement.
+
+### Phases Completed
+
+#### Phase 01 — SIWE Wallet Auth (2026-06-18)
+**Commit:** `7c834a0`  
+**Description:** Added Sign-In-With-Ethereum for wallet-based identity. No server accounts. Role = creator / dev / asker, 
+resolved live from on-chain registry or env allowlist.
+
+**Key Changes:**
+- Added `wagmi@3`, `siwe@3`, `jose@6` for wallet connect + SIWE sign-in + stateless JWT
+- New `lib/auth.ts`: `getSession()`, `requireRole()`, nonce management
+- New `app/api/auth/` routes: `/nonce`, `/verify`, `/signout`
+- New `lib/wagmi-config.ts`: chain config (Arc testnet), SSR hydration
+- New `app/providers.tsx`: WagmiProvider + QueryClientProvider wrapper
+- Modified `app/layout.tsx`: wrap children in Providers
+- Modified `app/register/page.tsx`: gate form behind SIWE, prefill wallet
+- New `app/connect/page.tsx`: custom wallet connect button
+- New `lib/db` interface method: `isCreatorWallet(addr): Promise<boolean>`
+- New env vars: `JWT_SECRET`, `NEXT_PUBLIC_WC_PROJECT_ID`, `KERYX_DEV_WALLETS`
+- Build passes; no RSC violations (wagmi hooks only in `'use client'` components)
+
+#### Phase 02 — On-Chain SourceRegistry + Indexer (2026-06-18)
+**Commit:** `46df551`  
+**Description:** Smart contract on Arc testnet tracks sources as on-chain state. Creator wallet registers source metadata; 
+off-chain indexer caches in DB.
+
+**Key Changes:**
+- New `contracts/SourceRegistry.sol`: `registerSource()`, `updateSource()`, `deactivateSource()`, multi-author splits
+- Creator-scoped source IDs via `keccak256(msg.sender, urlHash)` (prevents URL squatting)
+- Split validation on-chain: sum = 10,000 bp, ≤ 20 authors, no zero-bp, no zero-address
+- New `lib/registry/registry-client.ts`: viem contract client
+- New `lib/registry/indexer.ts`: polls Arc RPC for events, caches in DB
+- Deployed to Arc testnet: `0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536` (block 47474631)
+- New env vars: `KERYX_REGISTRY_ADDRESS`, `NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS`, `KERYX_REGISTRY_DEPLOY_BLOCK`
+- DB schema: added `sources.on_chain_source_id`, `sources.splits` (JSON)
+- Hardhat tests: 16/16 pass (security threats, creator gating, split validation, URL squat resistance)
+
+#### Phase 03 — Non-Custodial Browser Co-Sign (2026-06-18)
+**Commit:** `661452e`  
+**Description:** Ephemeral session key held in browser tab. User funds session EOA from MetaMask (one tx). Browser auto-signs 
+each x402 authorization with session key. Keryx never holds key or funds.
+
+**Key Changes:**
+- New `lib/payments/browser-cosign-gateway.ts`: implements PaymentGateway interface, suspends on sign-requests
+- New `lib/payments/session-grants.ts`: track user-funded session EOA, cap, spent
+- New `lib/hooks/use-session-grant.ts`: React hook for key generation, funding tx, grant creation
+- New `app/api/session/grant`, `/session/credit`, `/session/revoke` routes
+- Modified `app/api/ask/route.ts`: emit SSE sign-request events, await browser signature
+- New `app/api/ask/sign/route.ts`: browser posts signed EIP-712 header
+- New `lib/x402-client-sign.ts`: EIP-712 msg builder from x402 requirements
+- Payment gateway selection: session grant → BrowserCoSignGateway; funder key → RealGateway; else OfflineGateway
+- Session key never transmitted; server sees only `sessAddr` (public)
+- User funds own gas + USDC (no Keryx relayer for user sessions)
+- Dropped custom SessionEscrow contract (YAGNI; cap = funded balance)
+- SSE co-sign loop: no WebSocket, reuses existing fetch+ReadableStream path
+
+#### Phase 04 — IPFS Encrypted Content + Payment-Gated Decryption (2026-06-18)
+**Commit:** `d2b8eb1`  
+**Description:** Content uploaded encrypted to Pinata IPFS. Plaintext released server-side ONLY after x402 settlement verify, 
+inside the `produce()` callback.
+
+**Key Changes:**
+- New `lib/ipfs/content-crypto.ts`: AES-256-GCM encrypt (server, on upload) + decrypt (server, post-payment)
+- New `lib/ipfs/pinata-client.ts`: Pinata SDK wrapper (upload + fetch)
+- Modified `app/api/source/[id]/route.ts`: x402 GET flow → decrypt → plaintext
+- New `app/api/source/[id]/preview`: free plaintext preview (10% excerpt, no x402)
+- New env var: `CONTENT_MASTER_KEY` (AES-256-GCM key, server-held)
+- New env var: `PINATA_JWT` (Pinata API key)
+- DB schema: added `sources.content_cid` (IPFS CID for encrypted plaintext)
+- Offline mode: plaintext stored in DB directly, no IPFS/encryption
+- Trade-off documented: server is trusted key-holder. Lit Protocol upgrade path (post-hackathon, once Arc on Lit)
+- Security grep audit: `CONTENT_MASTER_KEY` never logged or serialized
+
+#### Phase 05 — Public API + Wallet-Issued Keys (2026-06-18)
+**Commit:** `3a3a4a1`  
+**Description:** Productized API with both x402 pay-per-call AND stateless API keys. Rate limiting per key. OpenAPI spec.
+
+**Key Changes:**
+- New `app/api/agent/ask/route.ts`: alternative to /api/ask, uses API key auth (Bearer header)
+- New `app/api/keys/route.ts`: creator can mint / revoke API keys
+- New `lib/api-keys.ts`: key minting (SHA-256 hash storage), timing-safe verification
+- Rate limiting via `rate-limiter-flexible@11`: 429 + Retry-After header on breach
+- New `app/api/docs/route.ts`: OpenAPI spec (Scalar UI at /api/docs)
+- DB schema: added `api_keys` table (hash, creator_wallet, usage_count, created_at)
+- Key mint returns raw key once (show-once pattern); subsequent verify uses hash
+- Timing-safe comparison prevents length-extension oracle
+- New env var: `RATE_LIMIT_REQUESTS_PER_MINUTE` (default: 60)
+
+#### Phase 06 — Security Hardening + Integration (2026-06-18)
+**Commit:** `15fcff2`  
+**Description:** Full threat model verification, browser-enforced spend cap, testnet faucet, role-fix. All phases integrated + tested.
+
+**Key Changes:**
+- Comprehensive threat model: 23-point verification matrix + 4 documented trade-offs + 4 residuals
+- Browser-enforced spend cap (`signedTotal` per ask run) + server-side second layer
+- Hardhat contract security tests: 16/16 pass (NotCreator, split validation, boundary tests)
+- New `/api/faucet` endpoint: testnet native USDC drip (20 USDC per address, 2h cooldown)
+- Fixed SIWE statement: ASCII-only (em-dash broke EIP-4361 parser)
+- Fixed auth: resolve creator role live from DB + registry, not baked into JWT
+- New connect UX: EIP-6963 wallet picker, Arc testnet chain guard, faucet integration
+- Session key lifecycle: generate (tab), fund (MetaMask), grant (POST /api/session/grant), spend (co-sign), revoke (withdraw)
+- Grep audit: no `sk`, `CONTENT_MASTER_KEY`, `JWT_SECRET`, `ANTHROPIC_API_KEY` in logs/responses (CLEAN)
+- SQLite idempotent ALTER migration pattern verified
+- Offline dev mode invariant preserved (KERYX_FORCE_OFFLINE=1 end-to-end works)
+- All 6 phases integrated: auth → registry → spend → IPFS → API → security
+- Deploy + indexer + metrics: ready for VPS production
+
+---
+
+## v0.1.0 — Citation-Toll Agent (Previous Release)
+
+**Status:** Superseded by v0.2.0  
+**Key features retained:** Agent brain (decompose→discover→decide→fetch→sufficiency→synthesize→attribute→settle), 
+x402 pay-per-request, weighted citation reward, multi-author splits, offline heuristic mode.
+
+**What changed in v0.2:**
+- Custody model: custodial (v0.1) → non-custodial (v0.2)
+- Auth: none (v0.1) → SIWE wallet (v0.2)
+- Registry: heuristic in-memory (v0.1) → on-chain SourceRegistry + indexer (v0.2)
+- Source wallet generation: server-side hardcoded (v0.1) → user-provided wallet (v0.2)
+- Spend flow: server-signed x402 (v0.1) → browser co-signed (v0.2)
+- Content storage: plaintext in DB (v0.1) → encrypted IPFS + gated decryption (v0.2)
+- API: internal scripts (v0.1) → public x402 + API key endpoints (v0.2)
+
+---
+
+## Breaking Changes
+
+### User-Facing
+- **Wallet required:** users must connect MetaMask on Arc testnet to use `/ask` interactively
+- **Session funding:** users fund their own session EOA (one MetaMask tx) before asking
+- **API key auth:** programmatic access now requires API key (Bearer header) or x402 payment
+- **Preview URL:** `/api/source/[id]/preview` replaced free public fetch; now 10% excerpt only
+
+### Developer-Facing
+- **Registry address required:** set `KERYX_REGISTRY_ADDRESS` + `KERYX_REGISTRY_DEPLOY_BLOCK` to enable on-chain sources
+- **SIWE JWT cookie:** requests must extract session via `getSession()`, not anonymous access
+- **Source wallet:** source.walletAddress now user-controlled (SIWE auth), not server-generated
+- **IPFS key:** new `CONTENT_MASTER_KEY` env var required for content decryption
+- **SQLite schema:** new tables (api_keys, session_grants) + columns (sources.content_cid, sources.on_chain_source_id)
+
+---
+
+## Migration Guide (v0.1 → v0.2)
+
+### For Local Dev
+1. `npm install` (adds wagmi, siwe, jose, pinata, rate-limiter-flexible, hardhat)
+2. `npm run generate-wallets` (create funder + spend wallets)
+3. Create `.env.local` with new vars: `JWT_SECRET`, `CONTENT_MASTER_KEY`, `PINATA_JWT`, `KERYX_REGISTRY_ADDRESS`, `KERYX_REGISTRY_DEPLOY_BLOCK`
+4. `npm run dev` (starts indexer, populates sources from on-chain)
+5. `npm run seed-sources` (seed demo sources if DB empty)
+6. Visit `/connect` to sign in before `/ask`
+
+### For Existing Sources (Mainnet or Old Setup)
+1. If you registered sources in v0.1 without on-chain record, use `npm run ingest-source` to migrate to DB
+2. Call `SourceRegistry.registerSource()` on Arc testnet to get on-chain source ID
+3. Update `sources.on_chain_source_id` in DB
+4. Indexer will cache subsequent updates
+
+### For Offline Dev (Heuristic Mode)
+No changes required. `KERYX_FORCE_OFFLINE=1` still works end-to-end:
+- Auth: none (open endpoints)
+- Sources: from DB (no on-chain read)
+- Payments: simulated (no real settlement)
+- Content: plaintext (no IPFS encryption)
+
+---
+
+## Known Limitations (Testnet MVP)
+
+### Security
+- **Server holds IPFS key** — Lit Protocol upgrade blocked on Arc testnet support (documented C2 trade-off)
+- **Session key in sessionStorage** — XSS risk cap-bounded by funded amount; Web Crypto non-exportable keys post-hackathon (R3 residual)
+- **Grant funding not on-chain verified** — manual retry fallback; balance API check post-hackathon (R2 residual)
+- **Citation payTo redirect under compromise** — cap-bounded; author manifest fix post-hackathon (R1 residual)
+
+### Scalability
+- **Rate limit in-process** — `rate-limiter-flexible` single-instance only; Redis post-hackathon
+- **Indexer polling** — 30s interval; event subscription post-hackathon
+- **Source enumeration** — O(n) call, not paginated; cursor-based post-hackathon
+
+### User Experience
+- **Manual session funding** — future: MetaMask preset amounts / shortcuts
+- **No session refresh** — session TTL 12h; manual re-fund on expiry
+- **Free preview limited** — 10% excerpt only; full free preview requires source creator choice
+
+---
+
+## Metrics (Real Data, 2026-06-18)
+
+| Metric | Value | Notes |
+|--------|-------|-------|
+| Smart contract deployed | ✓ | Arc 0x2e12Fa… (block 47474631) |
+| Hardhat tests | 16/16 pass | Security threats verified |
+| Threat matrix verified | 23/23 pass | All surfaces covered |
+| Phases shipped | 6/6 complete | 01–06 ready for hackathon demo |
+| Offline dev mode | ✓ working | KERYX_FORCE_OFFLINE=1 end-to-end |
+| Volume engine | ready | npm run seed (server-side) |
+| VPS deployment | ready | npm run deploy (keryx.cc) |
+
+---
+
+## Post-Hackathon Roadmap
+
+### Security Upgrades (Priority: High)
+- [ ] Web Crypto non-exportable session keys (eliminate XSS export)
+- [ ] Lit Protocol IPFS key release (eliminate server key-holder trust)
+- [ ] On-chain grant deposit verification (close R2)
+- [ ] Signed author-wallet manifest (close R1)
+
+### Scalability (Priority: Medium)
+- [ ] Redis rate-limit (replace in-process)
+- [ ] Event-only indexer (subscribe to finality, no polling)
+- [ ] Cursor-based source pagination
+- [ ] Multi-instance deployment support
+
+### User Experience (Priority: Medium)
+- [ ] Preset session funding amounts (UI shortcuts)
+- [ ] Session token refresh before expiry
+- [ ] Creator control over preview depth
+- [ ] Bulk source import from RSS feed
+
+### Enterprise (Priority: Low)
+- [ ] Multi-tenant API key scoping
+- [ ] Custom SourceRegistry deployments
+- [ ] Audit-trail export
+- [ ] Fiat on-ramp integration
+
+---
+
+## Testing & QA Status
+
+| Area | Status | Notes |
+|------|--------|-------|
+| Smart contracts | ✓ tested | 16/16 Hardhat tests pass |
+| Security audit | ✓ verified | Full threat matrix in security-threat-model.md |
+| Integration | ✓ manual | E2E: connect → fund → ask → settle |
+| Offline dev | ✓ tested | Heuristic mode end-to-end works |
+| Volume engine | ✓ tested | npm run seed generates real settlement |
+| Deployment | ✓ ready | VPS + indexer + metrics operational |
+| API coverage | ✓ complete | 13 endpoints + OpenAPI docs |
+
+---
+
+## Deploy History
+
+| Date | Version | Change | Status |
+|------|---------|--------|--------|
+| 2026-06-18 | 0.2.0 | Decentralized dApp (Phases 01–06) | ✓ Live |
+| 2026-06-15 | 0.1.0 | Citation-toll agent MVP | Superseded |
+
+---
+
+## References
+
+- **Plan:** `plans/260618-0025-decentralized-dapp-registry-ipfs-spend-permission/plan.md`
+- **Security:** `docs/security-threat-model.md`
+- **Architecture:** `docs/system-architecture.md`
+- **Codebase:** `docs/codebase-summary.md`
