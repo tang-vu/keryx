@@ -67,6 +67,26 @@ const config: HardhatUserConfig = {
       accounts: deployerKey ? [deployerKey] : [],
     },
   },
+  // Contract source verification on ArcScan (Blockscout). A verified SourceRegistry shows readable
+  // source so anyone can confirm the on-chain catalog logic (creator-scoped IDs, basis-point splits).
+  // Blockscout exposes an Etherscan-compatible API at /api and ignores the API key (any non-empty
+  // string works). Verify with:
+  //   npx hardhat verify --network arcTestnet 0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536
+  etherscan: {
+    apiKey: { arcTestnet: "arcscan-no-key-needed" },
+    customChains: [
+      {
+        network: "arcTestnet",
+        chainId: 5042002,
+        urls: {
+          apiURL: "https://testnet.arcscan.app/api",
+          browserURL: "https://testnet.arcscan.app",
+        },
+      },
+    ],
+  },
+  // Sourcify as a fallback verification route if the Blockscout API path differs.
+  sourcify: { enabled: true },
 };
 
 export default config;
