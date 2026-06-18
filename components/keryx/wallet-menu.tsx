@@ -140,23 +140,50 @@ export function WalletMenu() {
     );
   }
 
-  // ── Connected but not signed in: sign-in chip (fallback if auto-flow stalled) ──
+  // ── Connected but not signed in: sign-in dropdown (fallback if auto-flow stalled) ──
   // Suppressed right after a user sign-out so an auto-reconnected wallet doesn't
   // show "Sign in" — the user sees "Connect Wallet" until they choose to reconnect.
   if (isConnected && address && !showSignedOut) {
     // session === undefined → the mount session check is still resolving; show a
     // neutral loading chip so already-signed-in users don't flash "Sign in".
     const loading = session === undefined;
+    // A dropdown (not a bare button) so the user can escape a wrong auto-reconnected
+    // wallet — with multiple injected wallets (OKX, Trust…) wagmi may reconnect one
+    // the user didn't pick. "Use a different wallet" disconnects and reopens the picker.
     return (
-      <button type="button" onClick={doSignIn} disabled={busy || loading} className={CHIP}>
-        {busy || loading ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        ) : (
-          <ShieldCheck className="h-3.5 w-3.5" />
-        )}
-        {loading ? "…" : authState === "verifying" ? "Verifying…" : busy ? "Sign…" : "Sign in"}
-        <span className="text-ink-3">{shortAddress(address)}</span>
-      </button>
+      <DropdownMenu>
+        <DropdownMenuTrigger className={CHIP} disabled={busy || loading}>
+          {busy || loading ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <ShieldCheck className="h-3.5 w-3.5" />
+          )}
+          {loading ? "…" : authState === "verifying" ? "Verifying…" : busy ? "Sign…" : "Sign in"}
+          <span className="text-ink-3">{shortAddress(address)}</span>
+          {!busy && !loading && <ChevronDown className="h-3.5 w-3.5 text-ink-3" />}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="end"
+          className="min-w-[200px] rounded-none border-ink bg-paper p-1 font-mono text-[11px] uppercase tracking-[0.1em]"
+        >
+          <DropdownMenuItem
+            className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink"
+            onClick={doSignIn}
+          >
+            <ShieldCheck className="h-3.5 w-3.5" /> Sign in with this wallet
+          </DropdownMenuItem>
+          <DropdownMenuSeparator className="bg-line" />
+          <DropdownMenuItem
+            className="cursor-pointer rounded-none text-seal focus:bg-seal/10 focus:text-seal"
+            onClick={async () => {
+              try { await disconnectAsync(); } catch { /* already disconnected */ }
+              setSignedOut(true); // force the Connect Wallet picker
+            }}
+          >
+            <Wallet className="h-3.5 w-3.5" /> Use a different wallet
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     );
   }
 
