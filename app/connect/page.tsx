@@ -74,16 +74,27 @@ export default function ConnectPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: prepared, signature }),
       });
-      const data = (await verifyRes.json()) as {
+      const verifyData = (await verifyRes.json()) as {
         ok?: boolean;
         address?: string;
         role?: string;
         error?: string;
       };
-      if (!verifyRes.ok) throw new Error(data.error ?? "Verification failed");
+      if (!verifyRes.ok) throw new Error(verifyData.error ?? "Verification failed");
 
-      setSession({ address: data.address!, role: data.role! });
-      toast.success("Signed in to Keryx", { description: `Role: ${data.role}` });
+      // Fetch the session with a FRESH role so the badge always reflects the
+      // current env/DB state rather than the role baked at JWT-mint time.
+      const sessionRes = await fetch("/api/auth/session");
+      const sessionData = (await sessionRes.json()) as {
+        session?: { address: string; role: string } | null;
+      };
+      const freshSession = sessionData.session ?? {
+        address: verifyData.address!,
+        role: verifyData.role!,
+      };
+
+      setSession({ address: freshSession.address, role: freshSession.role });
+      toast.success("Signed in to Keryx", { description: `Role: ${freshSession.role}` });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Sign-in failed";
       // User rejected the signature request — don't show an error toast for that.

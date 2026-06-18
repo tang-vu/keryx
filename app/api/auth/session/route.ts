@@ -1,18 +1,19 @@
 /**
  * GET /api/auth/session
  *
- * Returns the current session payload from the keryx_session JWT cookie.
- * Used by client components that need to know the current role without a
- * full page reload (e.g. register page gate check).
- * Returns 401 when no valid session exists.
+ * Returns the current session with a FRESH role derived from live env + DB.
+ * The role returned here is always current — it does NOT rely on the baked
+ * role in the JWT, so wallets added to KERYX_DEV_WALLETS or that just
+ * registered a source reflect the correct role without re-login.
+ * Returns 401 when no valid session cookie exists.
  */
 
-import { getSession } from "@/lib/auth";
+import { getSessionFresh } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
 export async function GET() {
-  const session = await getSession();
+  const session = await getSessionFresh();
   if (!session) {
     return Response.json({ session: null }, { status: 401 });
   }
