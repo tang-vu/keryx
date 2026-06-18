@@ -41,13 +41,22 @@ export function SessionGrantPanel({ onBindingChange }: Props) {
   // Stable ref so onBindingChange closures always read the latest binding.
   const bindingRef = useRef<SessionGrantBinding>({ sessionId: null, getSessionWalletClient });
 
-  // Detect SIWE session once on mount — GET /api/auth/session returns 401 if unauthed.
+  // Detect SIWE session on mount AND whenever auth changes elsewhere (the header
+  // wallet menu signs in/out via a separate hook instance). Listening to the
+  // "keryx:auth" window event makes the panel appear right after sign-in — no reload.
   useEffect(() => {
-    fetch("/api/auth/session")
-      .then((r) => {
-        if (r.ok) setAuthed(true);
-      })
-      .catch(() => { /* network error — not authed */ });
+    let active = true;
+    const check = () => {
+      fetch("/api/auth/session")
+        .then((r) => { if (active) setAuthed(r.ok); })
+        .catch(() => { /* network error — leave current state */ });
+    };
+    check();
+    window.addEventListener("keryx:auth", check);
+    return () => {
+      active = false;
+      window.removeEventListener("keryx:auth", check);
+    };
   }, []);
 
   // Propagate binding changes to the parent whenever grant state changes.

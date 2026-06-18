@@ -33,7 +33,7 @@
  */
 
 import { useCallback, useRef, useState } from "react";
-import { usePublicClient, useWalletClient } from "wagmi";
+import { usePublicClient, useWalletClient, useSwitchChain } from "wagmi";
 import { createWalletClient, http, parseUnits, parseEther, erc20Abi, keccak256, type WalletClient } from "viem";
 import { arcTestnet } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
@@ -59,6 +59,7 @@ const DERIVE_MESSAGE =
 
 export type GrantStatus =
   | "idle"
+  | "switching"        // prompting the wallet to switch to Arc Testnet
   | "generating"
   | "funding"          // waiting for MetaMask fund tx
   | "depositing"       // session EOA approve + Gateway deposit txs
@@ -148,6 +149,19 @@ export function useSessionGrant() {
 
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
+  const { switchChainAsync } = useSwitchChain();
+
+  /**
+   * Ensure the connected wallet is on Arc Testnet before any tx. If it isn't,
+   * sendTransaction({chain: arcTestnet}) would silently wait for a network switch
+   * the user never sees prompted — the "Waiting for USDC transfer…" hang. Prompting
+   * the switch explicitly surfaces it (and adds Arc via EIP-3085 if unknown).
+   */
+  const ensureArc = useCallback(async () => {
+    if (walletClient && walletClient.chain?.id !== arcTestnet.id) {
+      await switchChainAsync({ chainId: arcTestnet.id });
+    }
+  }, [walletClient, switchChainAsync]);
 
   /**
    * Shared resume core: given the session key, read the live Gateway balance under its
@@ -212,9 +226,13 @@ export function useSessionGrant() {
       // Narrow publicClient type for use in depositToGateway (usePublicClient can return undefined).
       const pc = publicClient as SessionPublicClient;
 
-      setState({ ...INITIAL, status: "generating" });
-
       try {
+        // 0. Make sure the wallet is on Arc before any tx — otherwise the funding
+        //    sendTransaction silently waits on a network switch and looks hung.
+        setState({ ...INITIAL, status: "switching" });
+        await ensureArc();
+
+        setState((s) => ({ ...s, status: "generating" }));
         // 1. Derive the session key from a wallet signature (NOT random) — never
         //    leaves the browser. Deterministic, so the funded EOA can always be
         //    reproduced on any device by signing the same message again.
@@ -311,10 +329,10 @@ export function useSessionGrant() {
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        setState((s) => ({ ...s, status: "error", error: message }));
+        setState((s) => ({ ...s, status: "error", error: /reject|denied/i.test(message) ? "Network switch or signature was rejected." : message }));
       }
     },
-    [walletClient, publicClient],
+    [walletClient, publicClient, ensureArc],
   );
 
   /**
@@ -371,6 +389,8 @@ export function useSessionGrant() {
       const sessAddr = state.sessAddr as `0x${string}`;
       const prevRemaining = Math.max(0, state.cap - state.spent);
       try {
+        setState((s) => ({ ...s, status: "switching" }));
+        await ensureArc();
         setState((s) => ({ ...s, status: "funding" }));
         const tx = await walletClient.sendTransaction({
           account: walletClient.account!,
@@ -401,7 +421,7 @@ export function useSessionGrant() {
         setState((s) => ({ ...s, status: "error", error: message }));
       }
     },
-    [walletClient, publicClient, state.sessAddr, state.cap, state.spent, state.status, resumeFromKey],
+    [walletClient, publicClient, state.sessAddr, state.cap, state.spent, state.status, resumeFromKey, ensureArc],
   );
 
   /**

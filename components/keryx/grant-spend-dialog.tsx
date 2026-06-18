@@ -36,6 +36,7 @@ interface Props {
 }
 
 const STATUS_LABEL: Record<string, string> = {
+  switching:  "Switch to Arc Testnet in your wallet…",
   generating: "Generating session key…",
   funding:    "Waiting for USDC transfer…",
   depositing: "Depositing to Gateway…",
@@ -69,7 +70,7 @@ export function GrantSpendDialog({
     onTryRecover();
   }, [onTryRecover]);
 
-  const isWorking = ["generating", "funding", "depositing", "confirming", "registering", "recovering"].includes(grantState.status);
+  const isWorking = ["switching", "generating", "funding", "depositing", "confirming", "registering", "recovering"].includes(grantState.status);
 
   if (grantState.status === "active") {
     const spentPct = grantState.cap > 0 ? Math.min(100, (grantState.spent / grantState.cap) * 100) : 0;

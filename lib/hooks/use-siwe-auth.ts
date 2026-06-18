@@ -112,6 +112,9 @@ export function useSiweAuth() {
       if (!fresh && verifyData.address && verifyData.role) {
         setSession({ address: verifyData.address, role: verifyData.role });
       }
+      // Notify other hook instances (e.g. the session/faucet panel mounted
+      // separately) that auth state changed, so they re-check without a reload.
+      if (typeof window !== "undefined") window.dispatchEvent(new Event("keryx:auth"));
       return { ok: true, created: verifyData.created, role };
     } finally {
       setAuthState("idle");
@@ -121,6 +124,7 @@ export function useSiweAuth() {
   const signOut = useCallback(async () => {
     await fetch("/api/auth/signout", { method: "POST" });
     setSession(null);
+    if (typeof window !== "undefined") window.dispatchEvent(new Event("keryx:auth"));
   }, []);
 
   return { address, isConnected, session, authState, signIn, signOut, refresh };
