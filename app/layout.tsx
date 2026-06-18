@@ -5,6 +5,7 @@ import { cookieToInitialState } from "wagmi";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
 import { PaperGrain } from "@/components/keryx/paper-grain";
+import { InkBleedCursor } from "@/components/keryx/ink-bleed-cursor";
 import { MintEngravings } from "@/components/keryx/mint-engravings";
 import { Providers } from "./providers";
 import { makeConfig } from "@/lib/wagmi-config";
@@ -140,6 +141,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         />
         <MintEngravings />
         <PaperGrain />
+        <InkBleedCursor />
         <Providers initialState={initialState}>
           <TooltipProvider>{children}</TooltipProvider>
         </Providers>
