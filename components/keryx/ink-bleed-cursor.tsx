@@ -41,8 +41,13 @@ const INKS = [
   "120, 40, 26",   // seal soaking toward ink
 ];
 
-// How fast a blot dries once spawned. ~0.013/frame ≈ 1.3s of visible life at 60fps.
-const LIFE_DECAY = 0.013;
+// Drying is time-based (per second), not per-frame, so the wash always fades over the
+// same ~1.3s of wall-clock time even when a fast stroke floods the canvas and the
+// frame-rate drops. A per-frame decay stalls under that load and leaves the ink sitting
+// on the paper forever — the bug this replaces.
+const BLOOM_PER_SEC = 8;   // radius bloom speed → ~0.12s to full size
+const DRY_PER_SEC = 0.75;  // life lost per second → ~1.3s of visible life
+const MAX_DT = 0.25;       // clamp delta so one janky frame can't jump the animation
 
 export function InkBleedCursor() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -76,6 +81,7 @@ export function InkBleedCursor() {
     let primed = false;
     let raf = 0;
     let running = true;
+    let last = 0; // timestamp of the previous frame, for delta-time fading
 
     // Spawn ink when the pointer has travelled far enough — denser, smaller blots
     // when moving slowly; bigger sparser ones on fast strokes (like a loaded nib).
@@ -121,10 +127,15 @@ export function InkBleedCursor() {
       if (blots.length > 240) blots.splice(0, blots.length - 240);
     };
 
-    const draw = () => {
+    const draw = (now: number) => {
       if (!running) return;
       const w = window.innerWidth;
       const h = window.innerHeight;
+      // Elapsed seconds since the last frame (clamped) drives the fade, so it is
+      // frame-rate independent — a stall can't keep ink alive past its lifetime.
+      if (last === 0) last = now;
+      const dt = Math.min((now - last) / 1000, MAX_DT);
+      last = now;
 
       // Wipe last frame entirely; the trail is reconstructed from live blots below,
       // so when the cursor stops and every blot's life hits 0 the paper goes blank —
@@ -135,12 +146,12 @@ export function InkBleedCursor() {
       for (let i = blots.length - 1; i >= 0; i--) {
         const b = blots[i];
         if (b.growth < 1) {
-          b.growth = Math.min(1, b.growth + 0.13);
+          b.growth = Math.min(1, b.growth + dt * BLOOM_PER_SEC);
           // easeOutCubic so it blooms fast then settles.
           b.r = b.maxR * (1 - Math.pow(1 - b.growth, 3));
         } else {
           // Fully bloomed → start drying out.
-          b.life -= LIFE_DECAY;
+          b.life -= dt * DRY_PER_SEC;
           if (b.life <= 0) {
             blots.splice(i, 1);
             continue;
@@ -162,8 +173,12 @@ export function InkBleedCursor() {
 
     const onVisibility = () => {
       running = !document.hidden;
-      if (running) raf = requestAnimationFrame(draw);
-      else cancelAnimationFrame(raf);
+      if (running) {
+        last = 0; // restart the clock so the hidden gap isn't counted as one huge frame
+        raf = requestAnimationFrame(draw);
+      } else {
+        cancelAnimationFrame(raf);
+      }
     };
 
     window.addEventListener("pointermove", onMove, { passive: true });
