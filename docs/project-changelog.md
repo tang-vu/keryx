@@ -1,9 +1,49 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-06-18  
+**Last Updated:** 2026-06-19  
 **Current Version:** 0.2.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
+
+---
+
+## Post-Launch Fixes (v0.2.x)
+
+### 2026-06-19 — Non-custodial session payment path
+
+Two bugs blocked the end-to-end user (web) flow: deposit → session active → pay/settle. Both
+only affected the browser co-sign path; the server-side volume engine (SDK `gateway.pay()`) was
+unaffected, which is why they surfaced only on real keryx.cc usage.
+
+#### fix: Gateway balance unit mismatch stranded funded sessions in "confirming"
+**Commit:** `53a23e4`  
+**Symptom:** After a real deposit, the session never flipped to "active" — UI showed
+"Deposit confirming on Circle Gateway… activates automatically" indefinitely, across reloads
+and signature recovery.  
+**Root cause:** `/api/session/credit` forwarded Circle's balance as a decimal USDC string
+(e.g. `"0.05"`), but its sole consumer (`use-session-grant.ts`) parsed it as atomic units via
+`BigInt()`. `BigInt("0.05")` throws; the throw was swallowed → the poller returned `false` on
+every tick → status pinned at `confirming` forever.  
+**Fix:** Endpoint now converts decimal → atomic (`parseUnits(decimal, 6)`), honoring its
+documented "atomic units" contract. Consumer unchanged (already correct for atomic).  
+**Verification:** Live — endpoint returns atomic integers; session reaches "active" after
+Circle credits the deposit (user-confirmed: "Session active — $1.15 remaining").
+
+#### fix: browser co-sign payload missing x402 envelope → Circle verify 400
+**Commit:** `1266b1d`  
+**Symptom:** Session-funded queries failed paid fetch / citation reward with 500
+"payment processing error" — §III creator payouts stayed empty.  
+**Root cause:** Browser co-sign sent only the inner `{ signature, authorization }` blob.
+Circle's facilitator requires the full x402 PaymentPayload and rejected with 400:
+`"x402Version/resource/accepted/payload: Required"`. (Full message recovered from VPS pm2
+logs; the UI truncated it at `"Inva…"`.)  
+**Fix:** `settleThenServe` now normalizes both buyer shapes — the SDK's full payload passes
+through; the inner-only browser blob is wrapped into `{ x402Version, resource, accepted,
+payload }` before verify + settle. `accepted` reuses `buildRequirements()`, so it always
+matches what the browser signed. The EIP-712 signature itself was already correct.  
+**Verification:** Deployed + structurally verified (commit live on VPS, 402 challenge emits
+correct requirements, `accepted` matches signed payload, tsc + eslint clean). End-to-end
+Circle verify + settle pending confirmation from a real wallet query.
 
 ---
 
@@ -260,6 +300,8 @@ No changes required. `KERYX_FORCE_OFFLINE=1` still works end-to-end:
 
 | Date | Version | Change | Status |
 |------|---------|--------|--------|
+| 2026-06-19 | 0.2.0 | Fix: co-sign x402 envelope for Circle verify (`1266b1d`) | ✓ Live |
+| 2026-06-19 | 0.2.0 | Fix: session activation — Gateway balance units (`53a23e4`) | ✓ Live |
 | 2026-06-18 | 0.2.0 | Decentralized dApp (Phases 01–06) | ✓ Live |
 | 2026-06-15 | 0.1.0 | Citation-toll agent MVP | Superseded |
 
