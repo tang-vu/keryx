@@ -78,14 +78,36 @@ export async function settleThenServe(
     });
   }
 
-  // payload is the decoded { signature, authorization } blob passed to the facilitator.
+  // Decode the base64 payment-signature header. Two buyer shapes reach here:
+  //   • SDK buyer (volume engine, GatewayClient.pay) sends the FULL x402 PaymentPayload:
+  //     { x402Version, resource, accepted, payload: { authorization, signature } }.
+  //   • Browser co-sign sends only the INNER blob: { signature, authorization }.
   // Typed as any to match the SDK's PaymentPayload (same as the prior JSON.parse result).
-  let payload: any;
+  let decoded: any;
   try {
-    payload = JSON.parse(Buffer.from(sig, "base64").toString("utf-8"));
+    decoded = JSON.parse(Buffer.from(sig, "base64").toString("utf-8"));
   } catch {
     return NextResponse.json({ error: "invalid payment header" }, { status: 400 });
   }
+
+  // Circle's facilitator requires the full PaymentPayload — it rejects the inner-only blob
+  // with 400 "x402Version/resource/accepted/payload: Required". The SDK shape already has
+  // `.payload`; the browser shape doesn't, so wrap it. `accepted` must equal the very
+  // requirements the browser signed against — which is exactly what buildRequirements()
+  // produced for this route's 402 challenge, so it always matches. `resource` is unsigned
+  // metadata, so reconstructing it server-side is safe.
+  const payload = decoded?.payload
+    ? decoded
+    : {
+        x402Version: 2,
+        resource: {
+          url: opts.endpoint,
+          description: opts.description ?? `Paid resource (${opts.priceUsdc} USDC)`,
+          mimeType: "application/json",
+        },
+        accepted: requirements,
+        payload: { authorization: decoded?.authorization, signature: decoded?.signature },
+      };
 
   try {
     // Circle's facilitator occasionally throws a transient 4xx ("Circle Gateway verify

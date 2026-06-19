@@ -3,8 +3,9 @@
 /**
  * Browser-side EIP-712 payment header builder for x402 co-sign flow.
  *
- * Produces the same base64 `{signature, authorization}` blob that
- * lib/x402-server.ts:82-83 decodes and passes to BatchFacilitatorClient.
+ * Produces the base64 `{signature, authorization}` inner blob that
+ * lib/x402-server.ts decodes, wraps into the full x402 PaymentPayload
+ * ({ x402Version, resource, accepted, payload }), and passes to BatchFacilitatorClient.
  *
  * Domain and types mirror what the SDK builds in GatewayClient.pay():
  *   - name "GatewayWalletBatched", version "1"
