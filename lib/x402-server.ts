@@ -42,6 +42,33 @@ function b64(s: string): string {
 }
 
 /**
+ * Build the x402 "402 Payment Required" challenge response for a paid endpoint.
+ * The machine-readable challenge (x402 v2) rides in the PAYMENT-REQUIRED header; `body` is an
+ * optional human-readable JSON payload (defaults to `{}` — the scaffold's empty-body convention).
+ * Exposed so a discovery probe (e.g. the GET that `circle services inspect` issues) can advertise
+ * the same price + schema as the paid POST, without running the handler or taking any payment.
+ */
+export function challengeResponse(opts: PaidOptions, body: unknown = {}): NextResponse {
+  const requirements = buildRequirements(opts.priceUsdc, opts.payTo);
+  const challenge = {
+    x402Version: 2,
+    resource: {
+      url: opts.endpoint,
+      description: opts.description ?? `Paid resource (${opts.priceUsdc} USDC)`,
+      mimeType: "application/json",
+    },
+    accepts: [requirements],
+  };
+  return new NextResponse(JSON.stringify(body), {
+    status: 402,
+    headers: {
+      "Content-Type": "application/json",
+      "PAYMENT-REQUIRED": b64(JSON.stringify(challenge)),
+    },
+  });
+}
+
+/**
  * Settle an x402 payment (if present) then produce the response body.
  * Returns a 402 challenge when no payment-signature header is present.
  */
@@ -60,22 +87,7 @@ export async function settleThenServe(
   const sig = req.headers.get("payment-signature");
 
   if (!sig) {
-    const challenge = {
-      x402Version: 2,
-      resource: {
-        url: opts.endpoint,
-        description: opts.description ?? `Paid resource (${opts.priceUsdc} USDC)`,
-        mimeType: "application/json",
-      },
-      accepts: [requirements],
-    };
-    return new NextResponse(JSON.stringify({}), {
-      status: 402,
-      headers: {
-        "Content-Type": "application/json",
-        "PAYMENT-REQUIRED": b64(JSON.stringify(challenge)),
-      },
-    });
+    return challengeResponse(opts);
   }
 
   // Decode the base64 payment-signature header. Two buyer shapes reach here:

@@ -11,13 +11,43 @@ import { collectRun } from "@/lib/agent";
 import { config } from "@/lib/config";
 import { getDb } from "@/lib/db";
 import { makePayment } from "@/lib/payments/payment-gateway";
-import { settleThenServe } from "@/lib/x402-server";
+import { settleThenServe, challengeResponse } from "@/lib/x402-server";
 import { verifyApiKey } from "@/lib/api-keys";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
+
+const A2A_REQUIREMENTS = {
+  priceUsdc: config.a2aFeeUsdc,
+  payTo: config.sellerAddress ?? "",
+  endpoint: "/api/agent/ask",
+  description: "Keryx autonomous research — answer with citations; creators paid downstream",
+};
+
+/**
+ * Discovery probe. x402 tooling (e.g. `circle services inspect`) GETs the URL to read pricing +
+ * schema before paying; without a GET handler Next.js answers 405 and the tool reports the
+ * endpoint "unavailable". Return the same x402 402 challenge the paid POST emits — no agent run,
+ * no payment, no side effects — plus a human-readable body explaining how to call it.
+ */
+export async function GET() {
+  if (!config.sellerAddress) {
+    return Response.json({ error: "treasury wallet not configured" }, { status: 500 });
+  }
+  return challengeResponse(A2A_REQUIREMENTS, {
+    service: "Keryx — agent-to-agent research endpoint",
+    method: "POST",
+    priceUsdc: config.a2aFeeUsdc,
+    network: config.networkId,
+    payTo: config.sellerAddress,
+    request: { question: "string (required)", budget: "number, USDC (optional)" },
+    response: "cited answer + the creators Keryx paid downstream",
+    docs: "/api/docs",
+    note: "x402-protected. Payment requirements are in the PAYMENT-REQUIRED header (x402 v2). Pay via @circle-fin/x402-batching GatewayClient.pay or `circle services pay <url> -X POST`.",
+  });
+}
 
 export async function POST(req: NextRequest) {
   // ── API key pre-check (additive; x402 settleThenServe below is unchanged) ──
