@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-06-19  
+**Last Updated:** 2026-06-20  
 **Current Version:** 0.2.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
@@ -8,6 +8,22 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 ---
 
 ## Post-Launch Fixes (v0.2.x)
+
+### 2026-06-20 — A2A endpoint discoverable by x402 tooling
+
+#### feat: serve the x402 challenge on GET so discovery tools see the endpoint
+**Commit:** `0fb0db0`  
+**Why:** External agents are the 30% traction lever, and they probe a paid endpoint before paying.
+`circle services inspect <url>` issues a GET; the POST-only `/api/agent/ask` answered `405`, so the
+canonical Circle discovery tool reported the endpoint **"unavailable"** — friction that kills A2A
+recruiting before a single payment is attempted.  
+**Change:** Added a side-effect-free `GET /api/agent/ask` that returns the same x402 v2 challenge the
+paid POST emits (in the `PAYMENT-REQUIRED` header), plus a human-readable body (price, method, payTo,
+request schema, docs link). Extracted `challengeResponse()` in `lib/x402-server.ts` so GET and the
+unpaid POST emit byte-identical requirements (DRY). The paying path (POST + payment) is unchanged.  
+**Verification:** Live on keryx.cc — `circle services inspect` now reports `Status: payable` ($0.02
+USDC, `eip155:5042002`, seller `0xC596…D586`); GET returns `402` + challenge + descriptive body; POST
+without payment still returns `402` + `{}` + the same header.
 
 ### 2026-06-19 — Non-custodial session payment path
 
