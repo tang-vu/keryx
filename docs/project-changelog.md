@@ -11,9 +11,10 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ### 2026-06-19 — Non-custodial session payment path
 
-Two bugs blocked the end-to-end user (web) flow: deposit → session active → pay/settle. Both
+Three bugs blocked the end-to-end user (web) flow: deposit → session active → pay/settle. All
 only affected the browser co-sign path; the server-side volume engine (SDK `gateway.pay()`) was
-unaffected, which is why they surfaced only on real keryx.cc usage.
+unaffected, which is why they surfaced only on real keryx.cc usage. Each sat one step further
+down the pipeline than the last.
 
 #### fix: Gateway balance unit mismatch stranded funded sessions in "confirming"
 **Commit:** `53a23e4`  
@@ -41,9 +42,25 @@ logs; the UI truncated it at `"Inva…"`.)
 through; the inner-only browser blob is wrapped into `{ x402Version, resource, accepted,
 payload }` before verify + settle. `accepted` reuses `buildRequirements()`, so it always
 matches what the browser signed. The EIP-712 signature itself was already correct.  
-**Verification:** Deployed + structurally verified (commit live on VPS, 402 challenge emits
-correct requirements, `accepted` matches signed payload, tsc + eslint clean). End-to-end
-Circle verify + settle pending confirmation from a real wallet query.
+**Verification:** Live — a real web query settled a $0.005 fetch toll on Arc (settlement
+`794928e9…`), confirming verify + settle end-to-end on the fetch path.
+
+#### fix: citation payouts dead-ended on a 30s sign-request timeout
+**Commit:** `02345df`  
+**Symptom:** Fetch tolls settled, but the §III citation reward to cited creators never
+completed — UI showed "sign-request timed out after 30s — skipping <source>" and §III
+stayed empty.  
+**Root cause:** The browser's payTo allow-list (`knownSourceWallets`, built from
+`/api/sources`) holds only SOURCE payout wallets. A citation's payTo is an AUTHOR wallet
+(`getOrCreateWallet("${id}:author-${i}")`), distinct from the source wallet and never exposed
+by the API — so it was never in the set. The allow-list, intended for fetch tolls only,
+silently refused every citation signature; the server's `awaitSignature` then timed out after
+30s and skipped the payout.  
+**Fix:** Thread a `kind` ("fetch" | "citation") flag through the sign-request. The browser
+applies the source-wallet allow-list to fetch tolls only; the funded cap remains the
+containment for citation payTo (the documented design — not a weakening).  
+**Verification:** Deployed (commit live on VPS, tsc + eslint clean). End-to-end citation
+settlement pending confirmation from a real wallet query.
 
 ---
 
@@ -300,6 +317,7 @@ No changes required. `KERYX_FORCE_OFFLINE=1` still works end-to-end:
 
 | Date | Version | Change | Status |
 |------|---------|--------|--------|
+| 2026-06-19 | 0.2.0 | Fix: citation payout sign-request scope (`02345df`) | ✓ Live |
 | 2026-06-19 | 0.2.0 | Fix: co-sign x402 envelope for Circle verify (`1266b1d`) | ✓ Live |
 | 2026-06-19 | 0.2.0 | Fix: session activation — Gateway balance units (`53a23e4`) | ✓ Live |
 | 2026-06-18 | 0.2.0 | Decentralized dApp (Phases 01–06) | ✓ Live |
