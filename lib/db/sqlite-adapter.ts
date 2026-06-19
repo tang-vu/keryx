@@ -128,6 +128,20 @@ export class SqliteAdapter implements KeryxDB {
     if (!itemCols.has("item_key_enc")) this.db.exec(`ALTER TABLE source_items ADD COLUMN item_key_enc TEXT`);
     if (!itemCols.has("item_iv")) this.db.exec(`ALTER TABLE source_items ADD COLUMN item_iv TEXT`);
     if (!itemCols.has("item_auth_tag")) this.db.exec(`ALTER TABLE source_items ADD COLUMN item_auth_tag TEXT`);
+
+    // payment_events.origin: tags each payment as engine | web | a2a so the dashboard can separate
+    // genuine external usage from autonomous engine volume. Pre-existing rows (all engine-generated
+    // to date) get NULL, which metrics() treats as engine — backfill them explicitly so the data is
+    // unambiguous and the column never overstates external usage.
+    const payCols = new Set(
+      (this.db.prepare(`PRAGMA table_info(payment_events)`).all() as { name: string }[]).map(
+        (c) => c.name,
+      ),
+    );
+    if (!payCols.has("origin")) {
+      this.db.exec(`ALTER TABLE payment_events ADD COLUMN origin TEXT`);
+      this.db.exec(`UPDATE payment_events SET origin='engine' WHERE origin IS NULL`);
+    }
   }
 
   async upsertSource(s: Source): Promise<void> {
@@ -314,8 +328,8 @@ export class SqliteAdapter implements KeryxDB {
   async recordPayment(p: PaymentRecord): Promise<void> {
     this.db
       .prepare(
-        `INSERT INTO payment_events (id,created_at,kind,query_id,source_id,source_name,payer,payee,amount_usdc,weight,rationale,tx_hash,network,settled)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        `INSERT INTO payment_events (id,created_at,kind,query_id,source_id,source_name,payer,payee,amount_usdc,weight,rationale,tx_hash,network,settled,origin)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       )
       .run(
         p.id ?? crypto.randomUUID(),
@@ -332,6 +346,7 @@ export class SqliteAdapter implements KeryxDB {
         p.txHash ?? null,
         p.network,
         p.settled ? 1 : 0,
+        p.origin ?? "engine",
       );
   }
 
@@ -358,6 +373,13 @@ export class SqliteAdapter implements KeryxDB {
     const paying = this.db
       .prepare(`SELECT COUNT(DISTINCT query_id) n FROM payment_events WHERE kind != 'inbound'`)
       .get() as { n: number };
+    // External usage = web askers + A2A callers. NULL origin (legacy rows) counts as engine, so
+    // the external figures never overstate real outside traffic.
+    const ext = this.db
+      .prepare(
+        `SELECT COUNT(*) c, COALESCE(SUM(amount_usdc),0) v FROM payment_events WHERE origin IN ('web','a2a')`,
+      )
+      .get() as { c: number; v: number };
     return {
       totalPayments: p.c,
       totalVolumeUsdc: round(p.v),
@@ -367,6 +389,10 @@ export class SqliteAdapter implements KeryxDB {
       totalQueries: q.n,
       payingQueries: paying.n,
       readerToPayerConversion: q.n ? round(paying.n / q.n) : 0,
+      externalPayments: ext.c,
+      externalVolumeUsdc: round(ext.v),
+      enginePayments: p.c - ext.c,
+      engineVolumeUsdc: round(p.v - ext.v),
     };
   }
 
@@ -524,6 +550,7 @@ function rowToPayment(r: Record<string, unknown>): PaymentRecord {
     txHash: (r.tx_hash as string) ?? null,
     network: r.network as string,
     settled: Boolean(r.settled),
+    origin: (r.origin as PaymentRecord["origin"]) ?? undefined,
     createdAt: r.created_at as string,
   };
 }

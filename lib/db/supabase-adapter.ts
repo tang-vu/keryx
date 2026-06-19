@@ -237,6 +237,7 @@ export class SupabaseAdapter implements KeryxDB {
       tx_hash: p.txHash ?? null,
       network: p.network,
       settled: p.settled,
+      origin: p.origin ?? "engine",
     });
   }
 
@@ -252,7 +253,7 @@ export class SupabaseAdapter implements KeryxDB {
   async metrics(): Promise<DashboardMetrics> {
     const { data: pays } = await this.sb
       .from("payment_events")
-      .select("amount_usdc,source_id,query_id,kind");
+      .select("amount_usdc,source_id,query_id,kind,origin");
     const { count: qCount } = await this.sb
       .from("query_runs")
       .select("*", { count: "exact", head: true });
@@ -264,6 +265,9 @@ export class SupabaseAdapter implements KeryxDB {
     const creators = new Set(creatorRows.map((r) => r.source_id)).size;
     const paying = new Set(creatorRows.map((r) => r.query_id)).size;
     const totalQueries = qCount ?? 0;
+    // External usage = web askers + A2A callers. NULL origin (legacy rows) counts as engine.
+    const extRows = rows.filter((r) => r.origin === "web" || r.origin === "a2a");
+    const extVol = extRows.reduce((s, r) => s + Number(r.amount_usdc), 0);
     return {
       totalPayments: rows.length,
       totalVolumeUsdc: round(vol),
@@ -273,6 +277,10 @@ export class SupabaseAdapter implements KeryxDB {
       totalQueries,
       payingQueries: paying,
       readerToPayerConversion: totalQueries ? round(paying / totalQueries) : 0,
+      externalPayments: extRows.length,
+      externalVolumeUsdc: round(extVol),
+      enginePayments: rows.length - extRows.length,
+      engineVolumeUsdc: round(vol - extVol),
     };
   }
 
@@ -440,6 +448,7 @@ function rowToPayment(r: Record<string, unknown>): PaymentRecord {
     txHash: (r.tx_hash as string) ?? null,
     network: r.network as string,
     settled: Boolean(r.settled),
+    origin: (r.origin as PaymentRecord["origin"]) ?? undefined,
     createdAt: r.created_at as string,
   };
 }

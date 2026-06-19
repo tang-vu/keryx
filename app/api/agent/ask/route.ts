@@ -69,11 +69,13 @@ export async function POST(req: NextRequest) {
           amountUsdc: settle.amountUsdc,
           txHash: settle.transaction,
           settled: true,
+          origin: "a2a",
           rationale: "Inbound agent-to-agent research fee.",
         }),
       );
-      // Run the full agent — it autonomously pays the creators it cites.
-      const run = await collectRun({ question, budget: body.budget, queryId });
+      // Run the full agent — it autonomously pays the creators it cites. origin "a2a" marks the
+      // downstream citation payouts as external (driven by a real outside agent, not the engine).
+      const run = await collectRun({ question, budget: body.budget, queryId, origin: "a2a" });
       return {
         queryId: run.id,
         answer: run.answer,

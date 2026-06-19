@@ -87,7 +87,9 @@ export async function POST(req: NextRequest) {
         }
 
         send("meta", { engine: deps.engine.name, mode: deps.gateway.mode });
-        const gen = runAgent({ question, budget: body.budget }, deps);
+        // A request through /api/ask is a genuine human on the site → tag as external "web" usage
+        // (the volume engine never goes through this route; it calls collectRun directly).
+        const gen = runAgent({ question, budget: body.budget, origin: "web" }, deps);
         let res = await gen.next();
         while (!res.done) {
           send("step", res.value);

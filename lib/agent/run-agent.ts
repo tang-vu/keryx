@@ -13,6 +13,7 @@ import { config } from "../config";
 import type {
   Citation,
   Decision,
+  PaymentOrigin,
   PaymentRecord,
   QueryRun,
   TracePhase,
@@ -26,6 +27,9 @@ export interface RunInput {
   question: string;
   budget?: number;
   queryId?: string;
+  /** Who triggered this run — stamped on every payment so traction can separate genuine external
+   *  usage (web askers, A2A callers) from the autonomous volume engine. Defaults to "engine". */
+  origin?: PaymentOrigin;
 }
 
 export async function* runAgent(
@@ -35,6 +39,8 @@ export async function* runAgent(
   const { engine, db, gateway } = deps;
   const budget = input.budget ?? config.defaultBudget;
   const queryId = input.queryId ?? crypto.randomUUID();
+  // Stamp every payment from this run with its origin (engine | web | a2a) for honest traction split.
+  const origin: PaymentOrigin = input.origin ?? "engine";
   const trace: TraceStep[] = [];
   const payments: PaymentRecord[] = [];
   let finalDecisions: Decision[] = [];
@@ -169,6 +175,7 @@ export async function* runAgent(
     } else {
       yield emit("fetch", `Paying $${source.fetchPrice} toll to ${source.name}…`);
       const { content, payment } = await gateway.payFetch({ source, queryId });
+      payment.origin = origin;
       await db.setCached(source.id, content);
       await db.recordPayment(payment);
       payments.push(payment);
@@ -235,6 +242,7 @@ export async function* runAgent(
       if (amount <= 0) continue;
       const rationale = `Citation reward (${(c.weight * 100).toFixed(0)}% contribution${authors.length > 1 ? `, ${(author.splitWeight * 100).toFixed(0)}% author split` : ""}).`;
       const payment = await gateway.payCitation({ source, author, amount, weight: c.weight, queryId, rationale });
+      payment.origin = origin;
       await db.recordPayment(payment);
       payments.push(payment);
       yield emit(

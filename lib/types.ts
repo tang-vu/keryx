@@ -79,6 +79,12 @@ export interface Citation {
   rationale: string; // why this weight
 }
 
+/** Where a payment originated. `engine` = Keryx's own autonomous volume engine; `web` = a human
+ *  asking on the site; `a2a` = an external agent calling the paid A2A endpoint. web + a2a = genuine
+ *  EXTERNAL usage (real people / third-party agents), kept distinct from engine-generated volume so
+ *  traction is reported honestly. Legacy rows (pre-tagging) are NULL and counted as engine. */
+export type PaymentOrigin = "engine" | "web" | "a2a";
+
 /** A settled payment. `inbound` = another agent paid Keryx (A2A); fetch/citation = Keryx paid a creator. */
 export interface PaymentRecord {
   id?: string;
@@ -94,6 +100,7 @@ export interface PaymentRecord {
   txHash?: string | null;
   network: string;
   settled: boolean; // true only when really settled on-chain (false = offline dev)
+  origin?: PaymentOrigin; // engine | web | a2a — see PaymentOrigin
   createdAt: string;
 }
 
@@ -142,4 +149,10 @@ export interface DashboardMetrics {
   totalQueries: number;
   payingQueries: number; // queries that produced >= 1 payment
   readerToPayerConversion: number; // payingQueries / totalQueries
+  // Honest traction split: external = web askers + A2A callers (real outside usage); the rest is
+  // the autonomous volume engine. engine = totalPayments - externalPayments.
+  externalPayments: number;
+  externalVolumeUsdc: number;
+  enginePayments: number;
+  engineVolumeUsdc: number;
 }

@@ -65,7 +65,7 @@ while ((loop || i < count) && totalSpent < limit) {
   const question = pickQuestion(i);
   const start = Date.now();
   try {
-    const run = await collectRun({ question, budget }, { deps });
+    const run = await collectRun({ question, budget, origin: "engine" }, { deps });
     totalSpent += run.totalSpent;
     totalPayments += run.citations.length + run.decisions.filter((d) => d.action === "BUY").length;
     const ms = Date.now() - start;

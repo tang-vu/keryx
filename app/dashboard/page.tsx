@@ -95,6 +95,8 @@ export default function DashboardPage() {
           </span>
         </header>
 
+        <ProvenanceStrip metrics={metrics} />
+
         <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
           <MetricCard
             label="Total payments"
@@ -154,6 +156,34 @@ export default function DashboardPage() {
           <PaymentsFeed payments={payments.slice(0, 25)} />
         </section>
       </main>
+    </div>
+  );
+}
+
+/**
+ * Honest provenance of the volume: how much is genuine EXTERNAL usage (humans asking on the site +
+ * external agents calling the paid A2A endpoint) vs Keryx's own autonomous volume engine. Both are
+ * real settled USDC on Arc; the split is shown so traction is never overstated.
+ */
+function ProvenanceStrip({ metrics }: { metrics: DashboardMetrics | null }) {
+  const ext = metrics?.externalPayments ?? 0;
+  const extVol = metrics?.externalVolumeUsdc ?? 0;
+  const eng = metrics?.enginePayments ?? 0;
+  const engVol = metrics?.engineVolumeUsdc ?? 0;
+  return (
+    <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 border border-line bg-paper-2/40 px-4 py-3 font-mono text-[11px] text-ink-2">
+      <span className="uppercase tracking-[0.12em] text-ink-3">Volume provenance</span>
+      <span className="inline-flex items-center gap-1.5">
+        <span className="h-1.5 w-1.5 rounded-full bg-paid" />
+        External (web + A2A): <span className="font-semibold text-ink">{ext}</span> payments · $
+        {fmtUsdc(extVol)}
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <span className="h-1.5 w-1.5 rounded-full bg-ink-3" />
+        Autonomous engine: <span className="font-semibold text-ink">{eng}</span> payments · $
+        {fmtUsdc(engVol)}
+      </span>
+      <span className="text-ink-3">Both real, settled on Arc.</span>
     </div>
   );
 }
