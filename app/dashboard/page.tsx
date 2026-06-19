@@ -184,6 +184,15 @@ function ProvenanceStrip({ metrics }: { metrics: DashboardMetrics | null }) {
         {fmtUsdc(engVol)}
       </span>
       <span className="text-ink-3">Both real, settled on Arc.</span>
+      <a
+        href="/api/docs"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="ml-auto font-semibold text-seal transition-colors hover:underline"
+        title="Keryx is a paid x402 endpoint — point your agent at it"
+      >
+        Your agent can call this ↗
+      </a>
     </div>
   );
 }
