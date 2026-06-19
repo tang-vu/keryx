@@ -62,6 +62,27 @@ containment for citation payTo (the documented design — not a weakening).
 **Verification:** Deployed (commit live on VPS, tsc + eslint clean). End-to-end citation
 settlement pending confirmation from a real wallet query.
 
+### 2026-06-19 — Session expiry UX + treasury-fallback guard
+
+Follow-up hardening (not a blocking bug): when a grant's 1h TTL lapsed, the client kept
+showing "active" while the server had already dropped the grant, and the next ask silently
+fell back to the treasury gateway — spending Keryx's own USDC for a user who meant to spend
+their own.
+
+#### fix: surface grant expiry and block silent treasury fallback
+**Commit:** `38be98a`  
+**Change:**
+- Client: a timer at `expiresAt` flips the grant to a new `"expired"` state showing the
+  recover prompt (session key + Gateway balance untouched; a reload auto-recovers via
+  `tryRecover`, or one signature via `recoverViaSignature`).
+- Server: `/api/ask` returns 401 `session_expired` when a `sessionId` is presented but its
+  grant is invalid, instead of falling back to treasury. Anonymous (no `sessionId`) asks
+  are unchanged.
+- `useAskStream` flips the UI to expired on a 401 `session_expired`, covering the race where
+  the client still thinks it's active or the server was restarted.  
+**Verification:** Deployed (commit live on VPS, tsc clean, eslint 0 errors). Time-based
+expiry is verifiable by setting `KERYX_SESSION_GRANT_TTL=60` for a 60s session.
+
 ---
 
 ## v0.2.0 — Decentralized dApp Transformation (2026-06-18)
@@ -317,6 +338,7 @@ No changes required. `KERYX_FORCE_OFFLINE=1` still works end-to-end:
 
 | Date | Version | Change | Status |
 |------|---------|--------|--------|
+| 2026-06-19 | 0.2.0 | Fix: session-expiry UX + treasury-fallback guard (`38be98a`) | ✓ Live |
 | 2026-06-19 | 0.2.0 | Fix: citation payout sign-request scope (`02345df`) | ✓ Live |
 | 2026-06-19 | 0.2.0 | Fix: co-sign x402 envelope for Circle verify (`1266b1d`) | ✓ Live |
 | 2026-06-19 | 0.2.0 | Fix: session activation — Gateway balance units (`53a23e4`) | ✓ Live |
