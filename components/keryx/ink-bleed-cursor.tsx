@@ -8,9 +8,14 @@
  * the cotton grain rather than sitting as a clean circle.
  *
  * Implementation: one fixed full-viewport canvas, pointer-transparent. A rAF loop
- * fades the whole canvas a touch each frame (the ink "drying" trail) and draws new
- * blots spawned along the pointer path. An SVG turbulence displacement filter on
- * the canvas element gives the organic bleeding edge.
+ * clears the canvas and redraws every live blot each frame; each blot blooms to its
+ * radius then its `life` fades from 1 to 0, so strokes linger ~1.5s and then leave
+ * the paper completely. An SVG turbulence displacement filter gives the organic edge.
+ *
+ * Fade is managed per-blot in JS (not via canvas alpha accumulation): an iterative
+ * `destination-out` multiply can never reach zero on an 8-bit alpha channel — once a
+ * pixel's alpha rounds to a small value it sticks, leaving a permanent stain. Driving
+ * each blot's life to 0 and redrawing guarantees the ink dries away with no residue.
  *
  * Disabled for touch / coarse pointers and prefers-reduced-motion, and paused when
  * the tab is hidden — it's a desktop flourish, never a cost on mobile or a11y.
@@ -23,8 +28,10 @@ interface Blot {
   y: number;
   r: number;       // current radius (eases up to maxR)
   maxR: number;
-  growth: number;  // ease factor 0..1
-  ink: string;     // rgba colour
+  growth: number;  // bloom ease factor 0..1
+  rgb: string;     // "r, g, b"
+  alpha: number;   // peak alpha at full life
+  life: number;    // 1 → 0; the ink drying out
 }
 
 // Seal vermillion + a few deeper ink-soak variants, so the wash has tonal depth.
@@ -33,6 +40,9 @@ const INKS = [
   "158, 43, 22",   // deeper seal
   "120, 40, 26",   // seal soaking toward ink
 ];
+
+// How fast a blot dries once spawned. ~0.013/frame ≈ 1.3s of visible life at 60fps.
+const LIFE_DECAY = 0.013;
 
 export function InkBleedCursor() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -82,13 +92,15 @@ export function InkBleedCursor() {
       lastX = x; lastY = y;
 
       const speed = Math.min(dist, 60);
-      const ink = INKS[(Math.random() * INKS.length) | 0];
+      const rgb = INKS[(Math.random() * INKS.length) | 0];
       // Main blot — kept small/delicate.
       blots.push({
         x, y, r: 0,
         maxR: 7 + speed * 0.3 + Math.random() * 6,
         growth: 0,
-        ink: `rgba(${ink}, ${0.20 + Math.random() * 0.10})`,
+        rgb,
+        alpha: 0.20 + Math.random() * 0.10,
+        life: 1,
       });
       // A feather satellite or two for splatter — lighter, offset, tiny.
       const sat = (Math.random() * 2) | 0;
@@ -101,7 +113,9 @@ export function InkBleedCursor() {
           r: 0,
           maxR: 2.5 + Math.random() * 5,
           growth: 0,
-          ink: `rgba(${ink}, ${0.10 + Math.random() * 0.06})`,
+          rgb,
+          alpha: 0.10 + Math.random() * 0.06,
+          life: 1,
         });
       }
       if (blots.length > 240) blots.splice(0, blots.length - 240);
@@ -112,36 +126,35 @@ export function InkBleedCursor() {
       const w = window.innerWidth;
       const h = window.innerHeight;
 
-      // Dry the existing ink slightly each frame (erase a hair of alpha everywhere)
-      // so strokes linger ~1.5s then fade — the lingering trail, not a hard clear.
-      // Exponential decay of alpha everywhere → ink dries fully within ~2s of the
-      // cursor stopping, so the paper never keeps a permanent stain. ("dần dần hết ố")
-      ctx.globalCompositeOperation = "destination-out";
-      ctx.fillStyle = "rgba(0,0,0,0.04)";
-      ctx.fillRect(0, 0, w, h);
+      // Wipe last frame entirely; the trail is reconstructed from live blots below,
+      // so when the cursor stops and every blot's life hits 0 the paper goes blank —
+      // no lingering stain from alpha-rounding residue.
+      ctx.clearRect(0, 0, w, h);
 
-      // Lay fresh ink.
       ctx.globalCompositeOperation = "source-over";
-      for (const b of blots) {
+      for (let i = blots.length - 1; i >= 0; i--) {
+        const b = blots[i];
         if (b.growth < 1) {
           b.growth = Math.min(1, b.growth + 0.13);
           // easeOutCubic so it blooms fast then settles.
-          const e = 1 - Math.pow(1 - b.growth, 3);
-          b.r = b.maxR * e;
+          b.r = b.maxR * (1 - Math.pow(1 - b.growth, 3));
+        } else {
+          // Fully bloomed → start drying out.
+          b.life -= LIFE_DECAY;
+          if (b.life <= 0) {
+            blots.splice(i, 1);
+            continue;
+          }
         }
-        const a = inkAlpha(b.ink);
+        const a = b.alpha * b.life; // fade the whole blot as it dries
         const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, Math.max(0.5, b.r));
-        g.addColorStop(0, b.ink);
-        g.addColorStop(0.45, b.ink.replace(/, [\d.]+\)$/, `, ${(0.6 * a).toFixed(3)})`));
-        g.addColorStop(1, b.ink.replace(/, [\d.]+\)$/, ", 0)"));
+        g.addColorStop(0, `rgba(${b.rgb}, ${a.toFixed(3)})`);
+        g.addColorStop(0.45, `rgba(${b.rgb}, ${(a * 0.6).toFixed(3)})`);
+        g.addColorStop(1, `rgba(${b.rgb}, 0)`);
         ctx.fillStyle = g;
         ctx.beginPath();
         ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
         ctx.fill();
-      }
-      // Drop fully-grown blots from the active list (canvas already holds their ink).
-      for (let i = blots.length - 1; i >= 0; i--) {
-        if (blots[i].growth >= 1) blots.splice(i, 1);
       }
 
       raf = requestAnimationFrame(draw);
@@ -194,10 +207,4 @@ export function InkBleedCursor() {
       />
     </>
   );
-}
-
-/** Pull the alpha out of an `rgba(r, g, b, a)` string. */
-function inkAlpha(rgba: string): number {
-  const m = rgba.match(/,\s*([\d.]+)\)$/);
-  return m ? parseFloat(m[1]) : 0.1;
 }
