@@ -2,7 +2,7 @@
  * Streaming agent endpoint. POST { question, budget, sessionId? } → Server-Sent Events:
  *   event: meta         → { engine, mode } once at start
  *   event: step         → each TraceStep as the agent reasons/pays
- *   event: sign-request → { reqId, requirements } when browser co-sign is active
+ *   event: sign-request → { reqId, requirements, kind } when browser co-sign is active
  *   event: done         → the final QueryRun
  *   event: error        → failure
  *
@@ -69,8 +69,12 @@ export async function POST(req: NextRequest) {
           // It emits an SSE sign-request event and suspends until /api/ask/sign resolves it.
           // sessionId is narrowed (non-null) by the useBrowserCoSign guard above.
           const capturedSessionId = sessionId;
-          const requestSignature = (reqId: string, requirements: PaymentRequirements): Promise<string> => {
-            send("sign-request", { reqId, requirements });
+          const requestSignature = (
+            reqId: string,
+            requirements: PaymentRequirements,
+            kind: "fetch" | "citation",
+          ): Promise<string> => {
+            send("sign-request", { reqId, requirements, kind });
             // Scope the pending slot to this session — M2 fix.
             return awaitSignature(capturedSessionId, reqId);
           };

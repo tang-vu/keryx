@@ -53,6 +53,9 @@ interface ChallengeBody {
 export type RequestSignatureFn = (
   reqId: string,
   requirements: PaymentRequirements,
+  /** Distinguishes a fetch toll (payTo = source wallet) from a citation reward
+   *  (payTo = author wallet). The browser uses this to scope its payTo allow-list. */
+  kind: "fetch" | "citation",
 ) => Promise<string>;
 
 export class BrowserCoSignGateway implements PaymentGateway {
@@ -143,7 +146,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
     // inflated amounts. The server enforces the pre-spend guard above as a second layer.
     let paymentHeader: string;
     try {
-      paymentHeader = await this.requestSignature(reqId, requirements);
+      paymentHeader = await this.requestSignature(reqId, requirements, kind);
     } catch (err) {
       // Timeout or revoke — record a skipped payment rather than crashing the run.
       const message = err instanceof Error ? err.message : String(err);

@@ -136,9 +136,10 @@ export function useAskStream(opts?: AskStreamOpts) {
     if (event === "sign-request") {
       // Browser co-sign: the server asks us to sign an EIP-712 payment authorization.
       // We do this in the background — no await in the event loop, fire-and-forget promise.
-      const { reqId, requirements } = data as {
+      const { reqId, requirements, kind } = data as {
         reqId: string;
         requirements: PaymentRequirementsInput;
+        kind?: "fetch" | "citation";
       };
       const sessionId = opts?.sessionId;
       const getWallet = opts?.getSessionWalletClient;
@@ -175,11 +176,14 @@ export function useAskStream(opts?: AskStreamOpts) {
           }
         }
 
-        // H1: payTo validation against known source wallets (fetch-tolls only).
-        // Citation author wallets are not exposed by /api/sources, so we enforce
-        // only the cumulative cap for those. See threat model for residual.
+        // H1: payTo validation against known source wallets — FETCH TOLLS ONLY.
+        // A fetch toll's payTo is a source payout wallet, exposed via /api/sources.
+        // A citation reward's payTo is an AUTHOR wallet, which is deliberately NOT
+        // exposed (author wallets can't be enumerated client-side); the cumulative cap
+        // above is the containment for those. Applying this allow-list to citations
+        // would refuse every payout and dead-end §III with a 30s sign-request timeout.
         const knownWallets = opts?.knownSourceWallets;
-        if (knownWallets && knownWallets.size > 0) {
+        if (kind !== "citation" && knownWallets && knownWallets.size > 0) {
           if (!knownWallets.has(requirements.payTo.toLowerCase())) {
             console.warn(
               `[keryx] sign-request refused: payTo ${requirements.payTo} is not a known source wallet`,
