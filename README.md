@@ -210,6 +210,12 @@ The dApp is non-custodial but makes **4 documented trade-offs** (required for te
 
 See `docs/security-threat-model.md` for full verification matrix, residuals, and mitigations.
 
+## Forkable primitives (Arc OSS)
+The reusable, standalone building blocks live in the [`arc-primitives/`](./arc-primitives) submodule
+([`keryx-arc-primitives`](https://github.com/tang-vu/keryx-arc-primitives), MIT) — two-toll x402
+settlement, the on-chain SourceRegistry + indexer, and non-custodial browser co-sign spend caps,
+packaged to fork and import. Clone with `git clone --recurse-submodules`, or `git submodule update --init`.
+
 ## Project docs
 - [`PLAN.md`](./PLAN.md) — phased build plan & dApp evolution status
 - [`DECISIONS.md`](./DECISIONS.md) — architecture decision log (link to Phase 01–06 decision log)

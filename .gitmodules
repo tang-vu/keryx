@@ -1,0 +1,3 @@
+[submodule "arc-primitives"]
+	path = arc-primitives
+	url = https://github.com/tang-vu/keryx-arc-primitives.git
