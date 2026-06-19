@@ -10,7 +10,9 @@ reads enough to answer, writes a grounded answer with citations, and then settle
 nanopayment to every source it actually cited** — in USDC on [Arc](https://docs.arc.network). Sources
 that contributed more earn more; multi-author works split the reward automatically.
 
-> Built for the **Lepton Agents Hackathon** (Canteen × Circle, on Arc).
+> Built for the **Lepton Agents Hackathon** (Canteen × Circle, on Arc) — the **primary RFB 6: Creator
+> & Publisher Monetization** track. The org's own **Prior Art #1 is the "Herald model (kēryx/praeco):
+> content cited, paid per citation"** — Keryx (κῆρυξ = *herald*) is the canonical build for it.
 > The differentiator: **visible agency** — every buy / skip / cache / stop decision is model-reasoned
 > with a human-readable rationale, streamed live to the UI.
 

@@ -1,7 +1,8 @@
 # Easter Eggs & Side-Prize Leads
 
-Opportunities spotted for the separate side-prize pools (code-golf / Discord puzzles / content
-challenges). Leads to investigate — not yet solved. Honest status noted per item.
+The live site confirms a **$2k Easter-egg pool**, officially three categories: **code challenges ·
+Discord puzzles · side quests** (no separately-named "code-golf" track). Leads below — honest status
+per item; none confirmed-won yet.
 
 ## Leads
 
@@ -12,13 +13,14 @@ challenges). Leads to investigate — not yet solved. Honest status noted per it
 
 2. **Code-golf: smallest x402 paying agent.**
    The minimal real paying loop is tiny — `new GatewayClient({chain,privateKey}).pay(url)` after a
-   deposit. A code-golf entry for "fewest bytes to autonomously pay an x402 resource on Arc" is
-   plausible. **TODO:** confirm a code-golf track exists in the Lepton rules.
+   deposit. Fits the official **"code challenges"** category (the site lists no separate "code-golf"
+   track). **TODO:** watch Discord/announcements for a posted code challenge to enter this in.
 
 3. **Discord puzzles (Lepton + Agora roles).**
-   The kickoff mentions rejoining Discord via a specific invite to get BOTH Lepton + Agora roles, and
-   a returning-builder Luma passcode (`AGORA_RETURNx1313`). Server-side puzzles / role-gated channels
-   often hide bonus challenges. **TODO (human):** join, read pinned/announcement channels for puzzles.
+   Site-confirmed invites: **Canteen Discord** https://discord.gg/rsVfYutFZg and **Arc builder Discord**
+   https://discord.com/invite/buildonarc (mention "Canteen + Lepton"). Returning-builder Luma passcode
+   noted at kickoff (`AGORA_RETURNx1313`). Role-gated channels often hide bonus challenges.
+   **TODO (human):** join both, read pinned/announcement channels for puzzles.
 
 4. **`circle feedback submit` as a prize channel.**
    The dev-feedback prize ($500) is literally a CLI command — `FEEDBACK.md` is ready to submit. Low

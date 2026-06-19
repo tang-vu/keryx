@@ -1,8 +1,8 @@
 # Keryx — Lepton Hackathon Winning Playbook
 
 > Source of truth for how to WIN. Read this every session before deciding what to build next.
-> Captured from the Lepton kickoff (2026-06-15), the Canteen "Distribution Bootstrap" article, and
-> the org's RFB / Prior-Art list. **Keryx is dead-center in the winning lane — sharpen, don't rebuild.**
+> Verified against the live site (lepton.thecanteenapp.com) + the Canteen "Distribution Bootstrap"
+> article on **2026-06-20**. **Keryx is dead-center in the winning lane — sharpen, don't rebuild.**
 
 ## The contest
 - **Event:** Lepton Agents Hackathon (Canteen × Circle, settled on Arc in USDC). Online.
@@ -24,14 +24,32 @@
 1. **<3-min video demo** (Loom / YouTube / Vimeo) — REQUIRED. Hook → live agent reasoning → creators paid (real tx) → dashboard volume.
 2. **Public GitHub repo** — REQUIRED. Excellent README (have it).
 3. **Live product link** — encouraged (Cloudflare Tunnel URL).
-4. **Form:** https://forms.gle/SMqLaw2pMGDe58LFA — "submit as many times as you like." Submit a v1 EARLY, then resubmit as we improve.
+4. **Form:** https://forms.gle/SMqLaw2pMGDe58LFA — "submit as many times as you like." Submit a v1 EARLY, then resubmit as we improve. Form asks **user count + problem statement** — have real numbers ready (settled tx on testnet.arcscan.app).
 5. **CLI traction:** `arc-canteen push` product/traction updates each phase ("daily tasks") — feeds visibility/traction. Login via `arc-canteen login` (GitHub OAuth, interactive — user runs it).
 
 ## Why Keryx wins — alignment proof
-- **RFB 6: Creator & Publisher Monetization is THE focus round** ("this round leans toward RFB 6"). Its traction metrics are *creators earning · total payouts · average payment per piece · reader-to-payer conversion* — **exactly Keryx's dashboard metrics.**
-- **Prior Art #1 (org's own list): "Content citation tolls — payments settle to source authors when an LLM or aggregator cites them."** ⇒ Keryx is the canonical build for this prompt.
-- **Prior Art #4: "Recursive royalty splits following lineage graphs"** ⇒ our multi-author splits; can extend to lineage.
-- Also touches **RFB 1** (autonomous paying agents under budget) and **RFB 3** (agent-to-agent) via the A2A enhancement.
+**The name is the thesis.** The org's **Prior Art #1 is literally the "Herald model (kēryx / praeco)" — "content cited, paid per citation."** Keryx (κῆρυξ = *herald*) is named after the sponsor's own canonical entry for this exact prompt. The codebase already wears it (the hero `HeraldSeal`: "★ KERYX ★ THE HERALD IS PAID ★ ΚΗΡΥΞ").
+
+- **RFB 6: Creator & Publisher Monetization is THE focus round** ("monetize a single article, photo, or song without forcing readers into a monthly commitment"). Its traction metrics — *creators earning · total payouts · avg payment/piece · reader→payer conversion* — **are exactly Keryx's dashboard.**
+- The Distribution Bootstrap article lists **"LLM citation-toll layer"** as one of its 8 ship-order projects ("when an LLM crawler grounds an answer in the item's URL, the crawler sends an x402 microsettlement to the address in the token") — **Keryx IS that project**, built crawler-side so no upstream repo needs modifying.
+
+### The org's 8 Prior-Art models (Keryx hits #1 head-on; #4/#5 are adjacent)
+1. **Herald (kēryx/praeco)** — content cited, paid per citation ← **Keryx core**
+2. Maecenas — transferable patronage claims (resellable backer positions)
+3. Quadratic funding — breadth over depth ("widow's two mites")
+4. **Workshop** — recursive royalties, splits follow lineage graphs ← *our multi-author splits; extend to lineage*
+5. **Rhapsode** — user-centric royalties: pay the artists you actually consumed ← *our contribution-weighted per-use split echoes this*
+6. Quinaria — per-second streaming rates (continuous authorization)
+7. City Dionysia — retroactive funding (post-fact reward pools)
+8. Trapezitai/argentarii — reputation as collateral (bonded brokers)
+
+### The 6 RFB tracks (Keryx spans 1, 3, 6)
+1. **Autonomous Paying Agents** — discover/evaluate/pay paywalled APIs on a budget ← *Keryx's fetch loop*
+2. Selling Agent Services via Nanopayments — pay-per-call, no subscription
+3. **Agent-to-Agent Nanopayment Networks** — agents paying agents in real time ← *Keryx A2A mode*
+4. Streaming & Continuous Payments — pay-per-second; start/pause/stop value
+5. Nanopayment Infrastructure & Tooling — SDKs, dashboards, simulators
+6. **Creator & Publisher Monetization** — *primary focus this round* ← **Keryx core**
 
 ## TRACTION strategy (the 30% that's still open — top priority after going live)
 The Distribution Bootstrap thesis: **attach permissionlessly to open-source creator communities that already emit clean, settlement-grade event streams; the moat is the creator→wallet registry, not the code.**
@@ -42,7 +60,22 @@ For Keryx the play is:
 3. **Report only real settled numbers** (tx hashes on testnet.arcscan.app) in TRACTION.md + the video + `arc-canteen push`.
 4. Target RFB6 metrics explicitly on the dashboard: creators earning, total payouts, avg payment/piece, reader→payer conversion.
 
-> Other attachable platforms if we want more surface (all org-listed): Ghost (paid memberships), Jellyfin (pay-per-view), Mastodon (donation campaigns API merged 2026), Navidrome (per-listen), Owncast (per-second), Immich (per-resolve), PeerTube (per-view, issue #1586 = 7yr open demand), Discourse. RSSHub is the best fit for citation tolls.
+> **The org's 10 listed OSS distribution targets** — attach permissionlessly (plugin / sidecar / reverse-proxy / federation peer / client fork), never modify upstream. Stars per the live site:
+>
+> | Project | ⭐ | Payment unlock | Keryx fit |
+> |---|---|---|---|
+> | **RSSHub** | 44k | **paid feeds, citation tolls** | ★ best fit — ingest feeds → registered sources |
+> | Ghost | 54k | memberships, subscriptions, newsletters | strong (written content) |
+> | Immich | 103k | photo licensing & tips to photographer | later (media sources) |
+> | Jellyfin | 53k | pay-per-view, rentals | — |
+> | Mastodon | 50k | patronage, quadratic funding (donation API merged 2026) | adjacent |
+> | Discourse | 47k | paid groups, gated categories | adjacent (forum cites) |
+> | Navidrome | 21k | royalties by actual play history | — |
+> | PeerTube | 15k | per-view/per-second (issue #1586 = 7yr open demand) | — |
+> | Owncast | 11k | live tips, pay-to-watch streams | — |
+> | Kavita | 11k | pay-per-book, rentals | adjacent (book cites) |
+>
+> RSSHub is THE fit for citation tolls; the rest are surface for later. ("Dozens more across music, video, photos, writing, and the fediverse.")
 
 ## Next actions (priority order)
 1. **Go live for real settlement** — fund wallet (faucet) + LLM key (DeepSeek) + `KERYX_FORCE_OFFLINE=0`. (needs user creds)
@@ -57,3 +90,16 @@ For Keryx the play is:
 - Commit per phase (conventional commits). Push to public GitHub once stable. (git was held until kickoff; kickoff started 2026-06-15.)
 - Report ONLY real, settled transactions as traction. Label simulated clearly.
 - Don't rebuild — Keryx is on-thesis. Sharpen agency visibility + real traction.
+
+## Facts to cite (video / form / README)
+- Arc = Circle's L1: **<500ms** finality, **USDC-native gas** (not a volatile token), **$0.000001** Gateway floor, gasless batched txns. Testnet is Canteen-hosted (bundled with ARC CLI).
+- Circle tooling in play: **Wallets · Gateway/Nanopayments · x402 · Contracts · USDC** (App Kit available, unused so far).
+
+## Post-event (why continuing past Jun 29 matters to judges)
+The site says **"the building is the easy part"** and rewards genuine usage + long-run sustainability over polished demos. **Long-term commitment is expected.** Teams that continue get **funding for prototype scaling, grant support during early traction, and partnership intros** (Canteen / Circle / Arc). **Agora-carryover projects are eligible** if they show real progress (traction + product delta judged equally). Keryx is built to keep running — VPS + real registry, not a demo throwaway.
+
+## Source links (verified 2026-06-20)
+- Hackathon site: https://lepton.thecanteenapp.com/ · Submission form: https://forms.gle/SMqLaw2pMGDe58LFA · Luma: https://luma.com/5xcrazms
+- Distribution Bootstrap thesis: https://thecanteenapp.com/analysis/2026/05/28/distribution-bootstrap-payments-founders.html
+- Arc docs: https://docs.arc.network · Circle Agent Stack (x402): https://developers.circle.com/agent-stack · Nanopayments / Gateway: https://developers.circle.com/gateway/nanopayments
+- Starter repo: https://github.com/circlefin/arc-nanopayments · Canteen Discord: https://discord.gg/rsVfYutFZg · Arc builder Discord: https://discord.com/invite/buildonarc
