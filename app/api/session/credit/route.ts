@@ -11,6 +11,7 @@
  */
 
 import { NextRequest } from "next/server";
+import { parseUnits } from "viem";
 import { config } from "@/lib/config";
 
 export const runtime = "nodejs";
@@ -45,7 +46,13 @@ export async function GET(req: NextRequest) {
     const data = await upstream.json() as {
       balances?: Array<{ balance?: string }>;
     };
-    const available = data.balances?.[0]?.balance ?? "0";
+    // Circle returns `balance` as a human-decimal USDC string (e.g. "0.05") — the same
+    // value its SDK feeds to parseUnits(balance, 6). Convert to atomic 6-decimal units so
+    // this route honors its documented contract (atomic string). The sole caller parses
+    // the result with BigInt(), which THROWS on a decimal string like "0.05"; that throw
+    // was being swallowed and left funded sessions stuck "confirming" forever.
+    const decimal = data.balances?.[0]?.balance ?? "0";
+    const available = parseUnits(decimal, 6).toString();
     return Response.json({ available });
   } catch {
     // Network error — non-fatal.
