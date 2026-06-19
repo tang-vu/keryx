@@ -27,6 +27,10 @@ export interface SessionGrantBinding {
    * independently of any server-side guard.
    */
   grantCap?: number;
+  /** True when a known session has lapsed (TTL) — UI should prompt recovery. */
+  expired?: boolean;
+  /** Flip the grant to "expired"; called by the ask stream on a 401 session_expired. */
+  markExpired?: () => void;
 }
 
 interface Props {
@@ -36,7 +40,7 @@ interface Props {
 
 export function SessionGrantPanel({ onBindingChange }: Props) {
   const [authed, setAuthed] = useState(false);
-  const { state, tryRecover, recoverViaSignature, generateAndFund, topUp, revoke, getSessionWalletClient } =
+  const { state, tryRecover, recoverViaSignature, generateAndFund, topUp, revoke, getSessionWalletClient, markExpired } =
     useSessionGrant();
   // Stable ref so onBindingChange closures always read the latest binding.
   const bindingRef = useRef<SessionGrantBinding>({ sessionId: null, getSessionWalletClient });
@@ -63,15 +67,20 @@ export function SessionGrantPanel({ onBindingChange }: Props) {
   // H1: include the cap so useAskStream can enforce it client-side.
   useEffect(() => {
     const isActive = state.status === "active";
-    const activeSessionId = isActive ? state.sessionId : null;
+    const isExpired = state.status === "expired";
+    // Keep sessionId flowing while expired so an ask still reaches the server and gets
+    // a clean 401 session_expired (rather than silently using the treasury). The cap is
+    // only meaningful while active — it gates client-side signing.
     const binding: SessionGrantBinding = {
-      sessionId: activeSessionId,
+      sessionId: isActive || isExpired ? state.sessionId : null,
       getSessionWalletClient,
       grantCap: isActive ? state.cap : undefined,
+      expired: isExpired,
+      markExpired,
     };
     bindingRef.current = binding;
     onBindingChange(binding);
-  }, [state.status, state.sessionId, state.cap, getSessionWalletClient, onBindingChange]);
+  }, [state.status, state.sessionId, state.cap, getSessionWalletClient, markExpired, onBindingChange]);
 
   if (!authed) return null;
 

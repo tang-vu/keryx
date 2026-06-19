@@ -40,7 +40,23 @@ export async function POST(req: NextRequest) {
 
   // Optional browser co-sign session. Normalise to lowercase to match grant keys.
   const sessionId = body.sessionId ? body.sessionId.toLowerCase() : undefined;
-  const useBrowserCoSign = Boolean(sessionId && isGrantValid(sessionId));
+
+  // If the client presents a session but the server grant is gone (TTL lapsed or a
+  // server restart dropped it), do NOT silently fall back to the treasury gateway —
+  // that would spend Keryx's own USDC for a user who meant to spend their own. Tell
+  // the client to recover (re-derive the key + re-register the grant against the live
+  // Gateway balance). A request with NO sessionId is the legitimate anonymous/treasury
+  // path and is left untouched.
+  if (sessionId && !isGrantValid(sessionId)) {
+    return Response.json(
+      {
+        error: "session_expired",
+        message: "Your spending session expired — recover it to continue.",
+      },
+      { status: 401 },
+    );
+  }
+  const useBrowserCoSign = Boolean(sessionId);
 
   const encoder = new TextEncoder();
 

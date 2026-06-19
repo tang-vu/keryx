@@ -87,6 +87,12 @@ interface AskStreamOpts {
    * (author wallets are not exposed) — cap enforcement is the containment there.
    */
   knownSourceWallets?: Set<string>;
+  /**
+   * Called when the server rejects an ask with 401 `session_expired` (the grant TTL
+   * lapsed or was dropped on restart). Lets the caller flip the grant UI to its
+   * "expired" state so the user is prompted to recover instead of seeing a raw error.
+   */
+  onSessionExpired?: () => void;
 }
 
 export function useAskStream(opts?: AskStreamOpts) {
@@ -257,8 +263,29 @@ export function useAskStream(opts?: AskStreamOpts) {
         });
 
         if (!res.ok || !res.body) {
-          const msg = await res.text().catch(() => "Request failed");
-          setState((s) => ({ ...s, status: "error", error: msg || `HTTP ${res.status}` }));
+          // Read the error body once (as text), then try JSON — so we can react to a
+          // structured session_expired without consuming the stream body twice.
+          const bodyText = await res.text().catch(() => "");
+          let errCode: string | undefined;
+          let errMsg = bodyText;
+          try {
+            const j = JSON.parse(bodyText) as { error?: string; message?: string };
+            errCode = j.error;
+            errMsg = j.message ?? j.error ?? bodyText;
+          } catch { /* not JSON — keep the raw text */ }
+
+          if (res.status === 401 && errCode === "session_expired") {
+            // Flip the grant UI to "expired" so the user gets the recover prompt.
+            opts?.onSessionExpired?.();
+            setState((s) => ({
+              ...s,
+              status: "error",
+              error: errMsg || "Your spending session expired — recover it to continue.",
+            }));
+            return;
+          }
+
+          setState((s) => ({ ...s, status: "error", error: errMsg || `HTTP ${res.status}` }));
           return;
         }
 
@@ -301,7 +328,7 @@ export function useAskStream(opts?: AskStreamOpts) {
         }));
       }
     },
-    [handleEvent, reset, opts?.sessionId],
+    [handleEvent, reset, opts?.sessionId, opts?.onSessionExpired],
   );
 
   return { state, ask, reset };

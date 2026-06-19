@@ -66,6 +66,9 @@ export default function AskPage() {
     // H1: pass the cap and known wallets so the browser enforces them independently.
     grantCap: grantBinding.grantCap,
     knownSourceWallets,
+    // Flip the grant UI to "expired" if the server rejects an ask with 401 session_expired
+    // (covers the race where the client still thinks it's active, or a server restart).
+    onSessionExpired: grantBinding.markExpired,
   });
   const streaming = state.status === "streaming";
   const started = state.status !== "idle";
@@ -173,7 +176,7 @@ export default function AskPage() {
               {/* Non-custodial session grant — shown only when SIWE-authed */}
               <SessionGrantPanel onBindingChange={handleBindingChange} />
               <AskForm disabled={streaming} onAsk={ask} />
-              <PayerNote active={!!grantBinding.sessionId} />
+              <PayerNote active={!!grantBinding.sessionId && !grantBinding.expired} expired={!!grantBinding.expired} />
             </section>
 
             <HowItWorks />
@@ -190,7 +193,7 @@ export default function AskPage() {
               {/* Session grant panel persists across queries — grant stays active */}
               <SessionGrantPanel onBindingChange={handleBindingChange} />
               <AskForm disabled={streaming} onAsk={ask} />
-              <PayerNote active={!!grantBinding.sessionId} />
+              <PayerNote active={!!grantBinding.sessionId && !grantBinding.expired} expired={!!grantBinding.expired} />
             </div>
 
             {state.status === "error" && (
@@ -228,13 +231,16 @@ export default function AskPage() {
  * with a grant it settles from the user's funded session. Surfaced so it's never
  * a mystery whose USDC is being spent.
  */
-function PayerNote({ active }: { active: boolean }) {
+function PayerNote({ active, expired }: { active: boolean; expired?: boolean }) {
+  const dot = active ? "bg-paid" : expired ? "bg-destructive" : "bg-seal";
   return (
     <p className="mt-2.5 flex items-center gap-2 font-mono text-[10px] leading-relaxed tracking-wide text-ink-3">
-      <span className={`h-[6px] w-[6px] rounded-full ${active ? "bg-paid" : "bg-seal"}`} />
+      <span className={`h-[6px] w-[6px] rounded-full ${dot}`} />
       {active
         ? "Settling from your funded session — your wallet pays, capped at the funded amount."
-        : "This run is settled by Keryx's treasury. Activate a session above to pay from your own wallet."}
+        : expired
+          ? "Session expired — recover it above to pay from your wallet (this run won't proceed until you do)."
+          : "This run is settled by Keryx's treasury. Activate a session above to pay from your own wallet."}
     </p>
   );
 }

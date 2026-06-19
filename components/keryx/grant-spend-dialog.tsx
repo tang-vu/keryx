@@ -219,6 +219,13 @@ export function GrantSpendDialog({
         </div>
       )}
 
+      {grantState.status === "expired" && (
+        <div className="mb-2 border border-seal/40 bg-paper px-3 py-2 font-mono text-[11px] leading-relaxed text-ink-2">
+          Session expired — your USDC is safe in the Gateway under your session address.
+          Recover to resume (one signature, no gas), or just reload the page.
+        </div>
+      )}
+
       <p className="mb-3 max-w-[52ch] font-serif text-[13px] leading-snug text-ink-2">
         Fund a browser-held session key with USDC. The agent buys sources
         automatically — no wallet prompt per source. Your key never leaves

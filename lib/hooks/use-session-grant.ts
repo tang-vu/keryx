@@ -71,6 +71,7 @@ export type GrantStatus =
   | "registering"      // POSTing to /api/session/grant
   | "recovering"       // re-deriving key from a signature to resume a funded session
   | "active"
+  | "expired"          // grant TTL lapsed — funds safe in the Gateway; recover to resume
   | "revoking"
   | "revoked"
   | "error";
@@ -278,6 +279,30 @@ export function useSessionGrant() {
       clearInterval(id);
     };
   }, [state.status, resumeFromKey]);
+
+  /**
+   * Flip an active session to "expired" when its server-side grant TTL lapses.
+   * The session key and the Gateway balance are untouched — recovery (a reload
+   * auto-recovers via tryRecover, or one signature via recoverViaSignature)
+   * re-registers a fresh grant. Idempotent: only acts on an active session.
+   */
+  const markExpired = useCallback(() => {
+    setState((s) => (s.status === "active" ? { ...s, status: "expired" } : s));
+  }, []);
+
+  // Client-side expiry timer. The server drops the grant at its TTL, but nothing
+  // client-side notices until the next request — which would then silently fall back
+  // to the treasury gateway. Arm a timer for expiresAt so the UI flips to "expired"
+  // (surfacing the recover prompt) the moment the grant lapses, instead of looking
+  // active while the server has already forgotten it.
+  useEffect(() => {
+    if (state.status !== "active" || !state.expiresAt) return;
+    // Always schedule via a timer (clamped to >= 0) so an already-past expiry flips on
+    // the next tick rather than calling setState synchronously inside the effect body.
+    const ms = Math.max(0, new Date(state.expiresAt).getTime() - Date.now());
+    const id = setTimeout(markExpired, ms);
+    return () => clearTimeout(id);
+  }, [state.status, state.expiresAt, markExpired]);
 
   /**
    * Full grant flow: generate key → fund EOA → deposit to Gateway → register grant.
@@ -507,6 +532,7 @@ export function useSessionGrant() {
     topUp,
     revoke,
     getSessionWalletClient,
+    markExpired,
   };
 }
 
