@@ -10,7 +10,7 @@
  *     The server does NOT write the source row to DB — it arrives via the indexer
  *     within ≤4s after the tx is mined. The server DOES:
  *       1. Store off-chain metadata (name/url/description) in source_meta keyed by
- *          the derived sourceId so the indexer can merge them on SourceRegistered (H2).
+ *          the derived sourceId so the indexer can merge them on SourceRegistered.
  *       2. Ingest RSS items to DB keyed by sourceId so the agent cache is ready.
  *     Returns { mode: "onchain", sourceId, registryAddress, registerParams } where
  *     registerParams contains urlHash (not id) — the contract derives id on-chain.
@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
     const sid = sourceId(sessionWallet as `0x${string}`, canonicalUrl);
 
     // Store off-chain metadata (name/description/url) so the indexer can merge them
-    // when it processes the SourceRegistered event (H2 fix — prevents hex-placeholder display).
+    // when it processes the SourceRegistered event (prevents hex-placeholder display).
     await db.setSourceMeta(sid, {
       name: input.name,
       description: input.description,
@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
     );
 
     // Build author splits — collect integer basis points directly to avoid float
-    // rounding issues (M2 fix: form-side; here we pass through bp as-is).
+    // rounding issues (form-side; here we pass through bp as-is).
     // Default: single author at 10_000 bp (100%) to session wallet.
     const authors = input.authors?.length
       ? input.authors.map((a) => ({

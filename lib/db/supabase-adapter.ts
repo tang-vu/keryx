@@ -50,7 +50,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async listSources(): Promise<Source[]> {
-    // Filter to active=true only — deactivated on-chain sources must not be discovered/cited (H1 fix).
+    // Filter to active=true only — deactivated on-chain sources must not be discovered/cited.
     const { data } = await this.sb
       .from("sources")
       .select("*")

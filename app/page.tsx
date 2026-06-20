@@ -36,7 +36,7 @@ export default function AskPage() {
     getSessionWalletClient: () => null,
   });
 
-  // H1: Fetch known source wallets once from /api/sources (public endpoint).
+  // Fetch known source wallets once from /api/sources (public endpoint).
   // Used by useAskStream to validate fetch-toll payTo addresses client-side.
   // Stored in state (not a ref) so React can track the value properly during render.
   const [knownSourceWallets, setKnownSourceWallets] = useState<Set<string>>(new Set());
@@ -63,7 +63,7 @@ export default function AskPage() {
   const { state, ask } = useAskStream({
     sessionId: grantBinding.sessionId,
     getSessionWalletClient: grantBinding.getSessionWalletClient,
-    // H1: pass the cap and known wallets so the browser enforces them independently.
+    // pass the cap and known wallets so the browser enforces them independently.
     grantCap: grantBinding.grantCap,
     knownSourceWallets,
     // Flip the grant UI to "expired" if the server rejects an ask with 401 session_expired

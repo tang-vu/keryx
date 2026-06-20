@@ -22,7 +22,7 @@ export interface CreatorEarnings {
 
 /** Human-readable off-chain metadata for a source (name, description, url).
  *  Stored separately from the on-chain record so the indexer can merge them
- *  without clobbering payment-critical chain data (H2 fix). */
+ *  without clobbering payment-critical chain data. */
 export interface SourceMeta {
   name: string;
   description: string;

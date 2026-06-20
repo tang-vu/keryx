@@ -10,17 +10,17 @@
  *
  * Offline dev: `config.registryAddress` unset → syncOnce() returns immediately, no-op.
  *
- * Checkpoint safety (M3 fix): getRegistrySource() now throws on RPC error instead of
+ * Checkpoint safety: getRegistrySource() now throws on RPC error instead of
  * returning null. applyLogs() propagates the throw, syncOnce() does NOT advance the
  * checkpoint past the failed chunk, and the next tick retries from the same fromBlock.
  * Idempotent upsert makes retry safe.
  *
- * Off-chain metadata merge (H2 fix): on SourceRegistered, the indexer reads source_meta
+ * Off-chain metadata merge: on SourceRegistered, the indexer reads source_meta
  * (written by POST /api/sources at register time) and fills name/description/url from
  * there. Payment-critical fields (payoutWallet, authors, fetchPrice) always come from
  * chain. If metadata is missing, short placeholders are used (not hex id slice).
  *
- * Active flag (H1 fix): SourceDeactivated sets active=false via a real Source field.
+ * Active flag: SourceDeactivated sets active=false via a real Source field.
  * listSources() filters active=true, so deactivated sources are never surfaced to the agent.
  */
 
@@ -47,7 +47,7 @@ function getPublicClient() {
  * Run one sync pass: fetch all new registry events from lastSyncedBlock+1 → head,
  * apply them to the cache, and checkpoint after each SUCCESSFULLY processed chunk.
  * If applyLogs throws (RPC error mid-chunk), setSyncState is NOT called — the next
- * tick retries from the same fromBlock (M3 fix).
+ * tick retries from the same fromBlock.
  * No-op when registryAddress is not configured (offline dev mode).
  */
 export async function syncOnce(db: KeryxDB): Promise<void> {
@@ -74,7 +74,7 @@ export async function syncOnce(db: KeryxDB): Promise<void> {
       toBlock: hi,
     });
 
-    // applyLogs throws if any RPC call fails — do NOT advance checkpoint on error (M3 fix).
+    // applyLogs throws if any RPC call fails — do NOT advance checkpoint on error.
     await applyLogs(logs, db);
     await db.setSyncState(SYNC_KEY, hi.toString());
   }
@@ -85,11 +85,11 @@ export async function syncOnce(db: KeryxDB): Promise<void> {
  *
  * SourceRegistered / SourceUpdated:
  *   - Payment fields (payoutWallet, authors, fetchPrice, contentCid, active) from chain.
- *   - Human-readable fields (name, description, url) merged from source_meta table (H2 fix).
+ *   - Human-readable fields (name, description, url) merged from source_meta table.
  *   - getRegistrySource() throws on RPC error — propagates up so checkpoint does not advance.
  *
  * SourceDeactivated:
- *   - Sets active=false on the cached row via a targeted upsert (H1 fix).
+ *   - Sets active=false on the cached row via a targeted upsert.
  *   - Uses a partial update that preserves existing human-readable fields.
  */
 export async function applyLogs(logs: Log[], db: KeryxDB): Promise<void> {
@@ -101,7 +101,7 @@ export async function applyLogs(logs: Log[], db: KeryxDB): Promise<void> {
       const id = args["id"] as `0x${string}` | undefined;
       if (!id) continue;
 
-      // getRegistrySource now throws on RPC error — propagates to syncOnce (M3 fix).
+      // getRegistrySource now throws on RPC error — propagates to syncOnce.
       const record = await getRegistrySource(id);
       // Record not found (zero-address creator) means the event is stale or mismatched.
       // Skip inactive records on initial index — SourceDeactivated will handle them.
@@ -112,7 +112,7 @@ export async function applyLogs(logs: Log[], db: KeryxDB): Promise<void> {
 
       // Map on-chain basis-point splits → Author.splitWeight = basisPoints / 10_000.
       // Stored as float in the cache (Source interface).
-      // TODO(phase-03): settle from on-chain bp directly (contract.get(id).authors[i].basisPoints),
+      // TODO: settle from on-chain bp directly (contract.get(id).authors[i].basisPoints),
       // not from the float splitWeight in the cache, to avoid any rounding drift.
       const authors: Author[] = record.authors.map((a) => ({
         name: a.wallet, // overridden below if source_meta has author names
@@ -125,7 +125,7 @@ export async function applyLogs(logs: Log[], db: KeryxDB): Promise<void> {
         ? record.tags.split(",").map((t) => t.trim()).filter(Boolean)
         : [];
 
-      // H2 merge: read off-chain metadata written by POST /api/sources at register time.
+      // Read off-chain metadata written by POST /api/sources at register time.
       // Payment fields always come from chain; name/description/url come from source_meta.
       // Falls back to short non-hex placeholders if metadata is not yet available.
       const meta = await db.getSourceMeta(id);
@@ -150,7 +150,7 @@ export async function applyLogs(logs: Log[], db: KeryxDB): Promise<void> {
       const id = args["id"] as string | undefined;
       if (!id) continue;
 
-      // H1 fix: read existing row and re-upsert with active=false.
+      // Read existing row and re-upsert with active=false.
       // Preserves all human-readable fields; only flips the active flag.
       // If the row doesn't exist yet (e.g. indexer missed the Register event due to
       // a prior RPC failure and the chunk was retried), skip — the Register retry

@@ -176,7 +176,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async listSources(): Promise<Source[]> {
-    // Filter to active=1 only — deactivated on-chain sources must not be discovered/cited (H1 fix).
+    // Filter to active=1 only — deactivated on-chain sources must not be discovered/cited.
     const rows = this.db.prepare(`SELECT * FROM sources WHERE active = 1 ORDER BY created_at`).all();
     return rows.map(rowToSource);
   }
