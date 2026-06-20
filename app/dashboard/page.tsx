@@ -96,6 +96,12 @@ export default function DashboardPage() {
         </header>
 
         <ProvenanceStrip metrics={metrics} />
+        <p className="mt-2 max-w-3xl font-mono text-[10px] leading-relaxed text-ink-3">
+          Sub-cent rewards are netted off-chain in the Circle Gateway ledger and finalized on Arc in
+          batches, so the per-payment IDs in the feed are Gateway settlement references, not per-tx
+          EVM hashes (they do not open at <span className="text-ink-2">/tx/</span>). The verifiable
+          on-chain anchor is the batched settlement wallet, linked from the live feed.
+        </p>
 
         <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
           <MetricCard

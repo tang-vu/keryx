@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { fmtUsdc, shortAddr, shortHash } from "./phase-style";
+import { fmtUsdc, shortAddr } from "./phase-style";
 import { cn } from "@/lib/utils";
 
 const EXPLORER = "https://testnet.arcscan.app";
@@ -68,6 +68,10 @@ export function PaymentsFeed({ payments }: { payments: PaymentRecord[] }) {
         </div>
       </CardHeader>
       <CardContent className="px-0">
+        <p className="px-6 pb-3 font-mono text-[10px] leading-relaxed text-muted-foreground">
+          Settlement IDs are Circle Gateway references (batched on-chain on Arc), not per-tx EVM
+          hashes — verify via the settlement wallet linked above.
+        </p>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -115,7 +119,7 @@ export function PaymentsFeed({ payments }: { payments: PaymentRecord[] }) {
                         title={`Circle Gateway settlement ID ${p.txHash} — batched on-chain on Arc (not a per-tx EVM hash)`}
                       >
                         <Check className="h-3 w-3" />
-                        {shortHash(p.txHash)}
+                        batched
                       </span>
                     ) : (
                       <span className="text-[11px] text-muted-foreground">

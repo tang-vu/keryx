@@ -11,7 +11,7 @@
 import { Check } from "lucide-react";
 import type { PaymentRecord } from "@/lib/types";
 import type { StreamMode } from "@/lib/hooks/use-ask-stream";
-import { fmtUsdc, shortAddr, shortHash } from "./phase-style";
+import { fmtUsdc, shortAddr } from "./phase-style";
 import { SectionHeading } from "./banknote";
 import { PaidStamp } from "./paid-stamp";
 
@@ -93,7 +93,7 @@ export function CreatorsPaidPanel({
                       title={`Circle Gateway settlement ID ${p.txHash} — batched on-chain on Arc (not a per-tx EVM hash)`}
                     >
                       <Check className="h-2.5 w-2.5" />
-                      {shortHash(p.txHash)}
+                      batched
                     </span>
                   ) : (
                     <span>{shortAddr(p.payee)} · simulated</span>
