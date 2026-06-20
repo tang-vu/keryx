@@ -151,6 +151,7 @@ export async function* runAgent(
   // 4) FETCH (+ stop-early sufficiency)
   const gathered: GatheredContent[] = [];
   let markerN = 0;
+  let fetchFailures = 0;
   const buys = finalDecisions.filter(
     (d) => (d.action === "BUY" || d.action === "CACHE") && !isExternal(d.sourceId),
   );
@@ -174,17 +175,26 @@ export async function* runAgent(
       yield emit("fetch", `Reused cached ${source.name} (free) — ${marker}`);
     } else {
       yield emit("fetch", `Paying $${source.fetchPrice} toll to ${source.name}…`);
-      const { content, payment } = await gateway.payFetch({ source, queryId });
-      payment.origin = origin;
-      await db.setCached(source.id, content);
-      await db.recordPayment(payment);
-      payments.push(payment);
-      gathered.push({ sourceId: source.id, sourceName: source.name, marker, text: content });
-      yield emit(
-        "fetch",
-        `Paid $${payment.amountUsdc} to ${source.name} ${payment.settled ? `(settled ${short(payment.txHash)})` : "(simulated)"} — ${marker}`,
-        payment,
-      );
+      try {
+        const { content, payment } = await gateway.payFetch({ source, queryId });
+        payment.origin = origin;
+        await db.setCached(source.id, content);
+        await db.recordPayment(payment);
+        payments.push(payment);
+        gathered.push({ sourceId: source.id, sourceName: source.name, marker, text: content });
+        yield emit(
+          "fetch",
+          `Paid $${payment.amountUsdc} to ${source.name} ${payment.settled ? `(settled ${short(payment.txHash)})` : "(simulated)"} — ${marker}`,
+          payment,
+        );
+      } catch (err) {
+        // One toll failing (transient settlement error, exhausted grant, sign timeout) must not
+        // kill the whole run — skip this source and answer from whatever was already read.
+        fetchFailures++;
+        const reason = err instanceof Error ? err.message : String(err);
+        yield emit("fetch", `Couldn't buy ${source.name} (${reason}) — skipping it, continuing with what's read.`);
+        continue;
+      }
 
       // stop-early check after each paid read
       const suf = await engine.sufficiency({ question: input.question, subClaims, gathered });
@@ -200,12 +210,22 @@ export async function* runAgent(
   }
 
   if (gathered.length === 0) {
-    return finish("The agent decided no source was worth paying for this question.");
+    return finish(
+      fetchFailures > 0
+        ? "The agent tried to buy sources but every purchase failed — likely an exhausted budget or a temporary settlement error. Nothing was charged for the failed attempts; please try again."
+        : "The agent decided no source was worth paying for this question.",
+    );
   }
 
   // 5) SYNTHESIZE
   yield emit("synthesize", `Synthesizing a grounded answer from ${gathered.length} source(s)…`);
-  const { answer, citedMarkers } = await engine.synthesize({ question: input.question, subClaims, gathered });
+  const synthesized = await engine.synthesize({ question: input.question, subClaims, gathered });
+  const citedMarkers = synthesized.citedMarkers;
+  // Guard against an empty body (e.g. the model returned unparseable JSON) so the run never
+  // completes "done" showing a blank answer after real money was spent.
+  const answer = synthesized.answer?.trim()
+    ? synthesized.answer
+    : `Read and paid for ${gathered.length} source(s) (${gathered.map((g) => g.sourceName).join(", ")}), but couldn't compose a written summary this run. Please try again.`;
   const citedSet = new Set(citedMarkers.length ? citedMarkers : gathered.map((g) => g.marker));
   const used = gathered.filter((g) => citedSet.has(g.marker));
   yield emit("synthesize", `Drafted answer citing ${used.length} source(s)`, { answer });
@@ -235,21 +255,27 @@ export async function* runAgent(
     if (c.reward <= 0) continue;
     const authors = source.authors.length ? source.authors : [{ name: source.name, walletAddress: source.walletAddress, splitWeight: 1 }];
     for (const author of authors) {
-      // TODO(phase-03): settle from on-chain bp, not float splitWeight, to eliminate
+      // TODO: settle from on-chain bp, not float splitWeight, to eliminate
       // rounding drift. Read contract.get(source.id).authors[i].basisPoints and compute
       // amount = round(c.reward * basisPoints / 10_000) directly from the integer.
       const amount = round(c.reward * author.splitWeight);
       if (amount <= 0) continue;
       const rationale = `Citation reward (${(c.weight * 100).toFixed(0)}% contribution${authors.length > 1 ? `, ${(author.splitWeight * 100).toFixed(0)}% author split` : ""}).`;
-      const payment = await gateway.payCitation({ source, author, amount, weight: c.weight, queryId, rationale });
-      payment.origin = origin;
-      await db.recordPayment(payment);
-      payments.push(payment);
-      yield emit(
-        "settle",
-        `Settled $${payment.amountUsdc} citation reward → ${author.name} ${payment.settled ? `(${short(payment.txHash)})` : "(simulated)"}`,
-        payment,
-      );
+      try {
+        const payment = await gateway.payCitation({ source, author, amount, weight: c.weight, queryId, rationale });
+        payment.origin = origin;
+        await db.recordPayment(payment);
+        payments.push(payment);
+        yield emit(
+          "settle",
+          `Settled $${payment.amountUsdc} citation reward → ${author.name} ${payment.settled ? `(${short(payment.txHash)})` : "(simulated)"}`,
+          payment,
+        );
+      } catch (err) {
+        // The answer is already written — a citation-settlement hiccup must not discard it.
+        const reason = err instanceof Error ? err.message : String(err);
+        yield emit("settle", `Couldn't settle the reward to ${author.name} (${reason}) — the answer stands.`, { error: reason });
+      }
     }
   }
 

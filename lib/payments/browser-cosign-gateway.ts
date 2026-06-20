@@ -171,8 +171,15 @@ export class BrowserCoSignGateway implements PaymentGateway {
       throw new Error(`source fetch failed after payment: ${retryRes.status} ${body.slice(0, 120)}`);
     }
 
-    // Step 4: Record the spend in the server grant tracker.
-    recordSpend(this.sessionId, amount);
+    // Step 4: Record the spend in the server grant tracker. The payment already settled
+    // on-chain above; if the grant vanished between canSpend and here (a revoke racing an
+    // in-flight settle), the on-chain Gateway balance is still the true ceiling — log the
+    // drift rather than discarding a payment that really happened.
+    if (!recordSpend(this.sessionId, amount)) {
+      console.warn(
+        `[keryx] recordSpend skipped for ${this.sessionId} — grant changed mid-settle; on-chain balance remains the cap`,
+      );
+    }
 
     // Step 5: Extract the settled tx from the response header, if present.
     const paymentResponse = retryRes.headers.get("PAYMENT-RESPONSE");

@@ -19,6 +19,7 @@
 import { NextRequest } from "next/server";
 import { getAgentDeps } from "@/lib/agent";
 import { runAgent } from "@/lib/agent/run-agent";
+import { config } from "@/lib/config";
 import { awaitSignature, isGrantValid } from "@/lib/payments/session-grants";
 import type { PaymentRequirements } from "@/lib/payments/browser-cosign-gateway";
 import type { QueryRun } from "@/lib/types";
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest) {
             kind: "fetch" | "citation",
           ): Promise<string> => {
             send("sign-request", { reqId, requirements, kind });
-            // Scope the pending slot to this session — M2 fix.
+            // Scope the pending slot to this session so a caller can't resolve another session's sign-request.
             return awaitSignature(capturedSessionId, reqId);
           };
 
@@ -109,7 +110,13 @@ export async function POST(req: NextRequest) {
         send("meta", { engine: deps.engine.name, mode: deps.gateway.mode });
         // A request through /api/ask is a genuine human on the site → tag as external "web" usage
         // (the volume engine never goes through this route; it calls collectRun directly).
-        const gen = runAgent({ question, budget: body.budget, origin: "web" }, deps);
+        // Coerce the caller-supplied budget — a missing / NaN / ≤0 value must never reach the
+        // agent (it would print "$NaN" across the trace or no-op the run). Invalid → default.
+        const askBudget =
+          typeof body.budget === "number" && Number.isFinite(body.budget) && body.budget > 0
+            ? body.budget
+            : config.defaultBudget;
+        const gen = runAgent({ question, budget: askBudget, origin: "web" }, deps);
         let res = await gen.next();
         while (!res.done) {
           send("step", res.value);

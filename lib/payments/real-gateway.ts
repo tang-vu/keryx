@@ -67,7 +67,7 @@ export class RealGateway implements PaymentGateway {
     const native = await this.publicClient.getBalance({ address: this.spend.address });
     if (native < GAS_MIN) {
       const gasTx = await this.funderWallet.sendTransaction({ to: this.spend.address, value: GAS_TOPUP });
-      await this.publicClient.waitForTransactionReceipt({ hash: gasTx });
+      await this.publicClient.waitForTransactionReceipt({ hash: gasTx, timeout: 90_000 });
     }
 
     // 2) Gateway balance: top up only when below threshold (reuse the balance across queries).
@@ -95,7 +95,7 @@ export class RealGateway implements PaymentGateway {
         functionName: "transfer",
         args: [this.spend.address, depositAtomic],
       });
-      await this.publicClient.waitForTransactionReceipt({ hash: usdcTx });
+      await this.publicClient.waitForTransactionReceipt({ hash: usdcTx, timeout: 90_000 });
     }
 
     const dep = await this.gateway.deposit(depositStr);

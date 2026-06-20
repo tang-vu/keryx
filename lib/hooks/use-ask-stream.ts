@@ -75,13 +75,13 @@ interface AskStreamOpts {
   /** Session id to include in the /api/ask POST body (= lowercased SIWE address). */
   sessionId?: string | null;
   /**
-   * H1: The funded grant cap in USDC. When set, the browser refuses to sign
+   * The funded grant cap in USDC. When set, the browser refuses to sign
    * once its own running total for this ask() run would exceed the cap.
    * This is the browser's independent authority — it does NOT rely on the server.
    */
   grantCap?: number;
   /**
-   * H1: Set of known source payout wallet addresses (lowercased), fetched once
+   * Set of known source payout wallet addresses (lowercased), fetched once
    * from /api/sources. When populated, fetch-toll payTo values are validated
    * against this set before signing. Citation payTo cannot be fully enumerated
    * (author wallets are not exposed) — cap enforcement is the containment there.
@@ -98,7 +98,7 @@ interface AskStreamOpts {
 export function useAskStream(opts?: AskStreamOpts) {
   const [state, setState] = useState<AskStreamState>(INITIAL);
   const abortRef = useRef<AbortController | null>(null);
-  // H1: tracks the cumulative USDC the browser has signed in the current ask() run.
+  // Tracks the cumulative USDC the browser has signed in the current ask() run.
   // Reset to 0 at the start of each ask(). Never persisted. Independent of the server.
   const signedTotalRef = useRef<number>(0);
 
@@ -164,11 +164,11 @@ export function useAskStream(opts?: AskStreamOpts) {
           return;
         }
 
-        // H1: Browser-side independent cap enforcement.
+        // Browser-side independent cap enforcement.
         // Compute the payment amount in USDC (6-decimal atomic → float).
         const amountUsdc = Number(requirements.amount) / 1e6;
 
-        // H1: If a cap is configured, refuse to sign once the cumulative signed
+        // If a cap is configured, refuse to sign once the cumulative signed
         // total for this run would exceed it. Small epsilon (1e-9) for float rounding.
         const cap = opts?.grantCap;
         if (cap !== undefined) {
@@ -182,7 +182,7 @@ export function useAskStream(opts?: AskStreamOpts) {
           }
         }
 
-        // H1: payTo validation against known source wallets — FETCH TOLLS ONLY.
+        // payTo validation against known source wallets — FETCH TOLLS ONLY.
         // A fetch toll's payTo is a source payout wallet, exposed via /api/sources.
         // A citation reward's payTo is an AUTHOR wallet, which is deliberately NOT
         // exposed (author wallets can't be enumerated client-side); the cumulative cap
@@ -200,7 +200,7 @@ export function useAskStream(opts?: AskStreamOpts) {
 
         try {
           const { header } = await signPaymentAuthorization(walletClient, requirements);
-          // H1: Commit the signed amount BEFORE posting so that a re-entrant sign-request
+          // Commit the signed amount BEFORE posting so that a re-entrant sign-request
           // (concurrent sources) sees an accurate total. If the post fails we keep the
           // tracked amount as a conservative over-count (safe — errs toward refusal).
           signedTotalRef.current += amountUsdc;
@@ -243,7 +243,7 @@ export function useAskStream(opts?: AskStreamOpts) {
   const ask = useCallback(
     async (question: string, budget: number) => {
       reset();
-      // H1: Reset per-run signed total — each ask() is an independent budget run.
+      // Reset per-run signed total — each ask() is an independent budget run.
       signedTotalRef.current = 0;
       const controller = new AbortController();
       abortRef.current = controller;
@@ -316,9 +316,19 @@ export function useAskStream(opts?: AskStreamOpts) {
         const tail = parseFrame(buffer);
         if (tail) handleEvent(tail.event, tail.data);
 
-        setState((s) =>
-          s.status === "streaming" ? { ...s, status: "done" } : s,
-        );
+        setState((s) => {
+          // A `done` or `error` event already moved us out of "streaming" — keep that.
+          if (s.status !== "streaming") return s;
+          // Otherwise the stream ended with no terminal event (server restart, dropped
+          // connection): don't freeze on a "done" with no answer — surface a retryable error.
+          return s.run
+            ? { ...s, status: "done" }
+            : {
+                ...s,
+                status: "error",
+                error: "The connection dropped before the dispatch finished — please try again.",
+              };
+        });
       } catch (err) {
         if ((err as Error)?.name === "AbortError") return;
         setState((s) => ({
