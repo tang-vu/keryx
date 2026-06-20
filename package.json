@@ -17,6 +17,7 @@
     "preflight": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/preflight.mts",
     "arc:update": "node --import tsx --no-warnings scripts/arc-update.mts",
     "a2a": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/a2a-client.mts",
+    "web": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/web-client.mts",
     "deploy": "bash scripts/deploy-vps.sh",
     "tunnel": "cloudflared tunnel --url http://localhost:3939",
     "ingest": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/ingest-source.mts",
