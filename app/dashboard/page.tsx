@@ -23,6 +23,7 @@ import {
 import { PaymentsFeed } from "@/components/keryx/payments-feed";
 import { EarningsChart } from "@/components/keryx/earnings-chart";
 import { TopicsPanel, type Topic } from "@/components/keryx/topics-panel";
+import { A2aCallCard } from "@/components/keryx/a2a-call-card";
 import { fmtUsdc } from "@/components/keryx/phase-style";
 import type { DashboardMetrics, PaymentRecord } from "@/lib/types";
 
@@ -161,6 +162,8 @@ export default function DashboardPage() {
           <CreatorLeaderboard rows={leaderboard} />
           <PaymentsFeed payments={payments.slice(0, 25)} />
         </section>
+
+        <A2aCallCard />
       </main>
     </div>
   );

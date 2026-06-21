@@ -9,6 +9,21 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Post-Launch Fixes (v0.2.x)
 
+### 2026-06-22 — "Call Keryx from your own agent" card on the dashboard
+
+#### feat: copy-paste A2A integration card so external agents can wire up in one glance
+**Why:** External agents calling the paid A2A endpoint (`/api/agent/ask`) are the top traction
+lever, but the dashboard only exposed the contract as a link to `/api/docs` — a reader had to
+reconstruct the call by hand. Friction kills A2A recruiting before the first payment.
+**Change:** A dashboard card surfacing the exact two-step x402 call: `curl -s …/api/agent/ask` to
+inspect the toll (free), then `circle services pay …/api/agent/ask -X POST` with the
+`{question, budget}` body — copy button included. States the price ($0.02 USDC), network
+(Arc `eip155:5042002`), and that inbound fees count as external traction. The facts mirror
+`GET /api/agent/ask`, which stays the live source of truth; full schema + SDK path link to
+`/api/docs`. Reuses the existing clipboard idiom; no endpoint change.
+**Files:** `components/keryx/a2a-call-card.tsx` (new), `app/dashboard/page.tsx`. `tsc --noEmit` +
+`eslint` + `next build` clean.
+
 ### 2026-06-22 — Live budget meter in the reasoning console
 
 #### feat: show the agent spending against its authorized budget in real time
