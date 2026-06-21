@@ -35,6 +35,8 @@ export interface AskMeta {
 export interface AskStreamState {
   status: "idle" | "streaming" | "done" | "error";
   meta: AskMeta | null;
+  /** Authorized budget (USDC) for the in-flight run; drives the live budget meter. */
+  budget: number;
   steps: TraceStep[];
   decisions: Decision[];
   citations: Citation[];
@@ -46,6 +48,7 @@ export interface AskStreamState {
 const INITIAL: AskStreamState = {
   status: "idle",
   meta: null,
+  budget: 0,
   steps: [],
   decisions: [],
   citations: [],
@@ -247,7 +250,7 @@ export function useAskStream(opts?: AskStreamOpts) {
       signedTotalRef.current = 0;
       const controller = new AbortController();
       abortRef.current = controller;
-      setState({ ...INITIAL, status: "streaming" });
+      setState({ ...INITIAL, status: "streaming", budget });
 
       try {
         const res = await fetch("/api/ask", {

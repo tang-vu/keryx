@@ -206,7 +206,7 @@ export default function AskPage() {
               The dispatch, <em className="italic text-paid">itemised.</em>
             </h2>
             <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
-              <ReasoningConsole steps={state.steps} streaming={streaming} />
+              <ReasoningConsole steps={state.steps} streaming={streaming} budget={state.budget} />
               <CreatorsPaidPanel
                 payments={payouts}
                 mode={state.meta?.mode ?? null}

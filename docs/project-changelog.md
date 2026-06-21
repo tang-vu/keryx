@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-06-21  
+**Last Updated:** 2026-06-22  
 **Current Version:** 0.2.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
@@ -8,6 +8,24 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 ---
 
 ## Post-Launch Fixes (v0.2.x)
+
+### 2026-06-22 — Live budget meter in the reasoning console
+
+#### feat: show the agent spending against its authorized budget in real time
+**Why:** Keryx's headline claim is that money safety is enforced in code, not by the model — the
+orchestrator caps spend so a hallucinated number can never overspend, and the agent stops early to
+save budget. That discipline was only visible *after* a run (the answer card's "Spent" stat); while
+the trace streamed, the viewer couldn't see the budget filling. The single most on-message "visible
+agency" gap.
+**Change:** A live budget meter in §I · The decision. The console derives spend from the trace it
+already receives — `fetch` and `settle` steps each carry a `PaymentRecord` (`amountUsdc`), so
+`spentFromSteps()` sums them as they stream (CACHE reuse, skipped buys, and settle errors carry no
+amount and are excluded). The §I heading now reads `$spent / $budget` live, and a thin treasury-green
+bar fills under it with a vermillion hairline marking the hard cap. When the agent stops early, the
+bar visibly halts below 100% and labels the unspent remainder `$X under cap`.
+**Files:** `components/keryx/budget-meter.tsx` (new), `components/keryx/reasoning-console.tsx`,
+`lib/hooks/use-ask-stream.ts` (carry `budget` in stream state), `app/page.tsx`. No server/agent/API
+change — purely a read of the existing trace. `tsc --noEmit` + `eslint` clean.
 
 ### 2026-06-21 — Harden public spend endpoints against treasury abuse
 
