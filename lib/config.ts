@@ -45,6 +45,10 @@ export const config = {
   // (the caller self-pays via x402 to a source-owned wallet), but bounds a fat-finger / absurd
   // `amount` that would skew the leaderboard. ~100×+ above any realistic weighted reward.
   maxCitationUsdc: num(process.env.KERYX_MAX_CITATION_USDC, 5),
+  // Ceiling on the budget the A2A path (/api/agent/ask) will honor before driving treasury-funded
+  // creator payouts. Same drain class as anonMaxBudget but behind the x402 fee, so more generous.
+  // The traction a2a-client uses 0.03, well under this.
+  a2aMaxBudget: num(process.env.KERYX_A2A_MAX_BUDGET, 0.5),
 
   // ── Open x402 marketplace discovery ──
   // When on, the agent probes the live Circle x402 service bazaar (`circle services search`) during

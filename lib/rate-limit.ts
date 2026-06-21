@@ -21,6 +21,10 @@ const limiters: Record<string, RateLimiterMemory> = {
   // LLM tokens and real USDC. Keyed by client IP. 5/60s is generous for a human demoing the site
   // but blocks scripted treasury-drain / fake-volume loops. Session co-sign calls bypass this tier.
   treasuryAsk: new RateLimiterMemory({ points: 5, duration: 60, keyPrefix: "tre" }),
+  // Unkeyed A2A callers (/api/agent/ask without a Bearer key). The x402 fee gates the run, but an
+  // unauthenticated caller could still loop large-budget treasury payouts — IP-key it. More
+  // generous than treasuryAsk because A2A is a paid path; keyed callers use the `ask` tier instead.
+  a2aPublic: new RateLimiterMemory({ points: 10, duration: 60, keyPrefix: "a2a" }),
 };
 
 export type RateLimitTier = keyof typeof limiters;

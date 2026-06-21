@@ -25,10 +25,13 @@ the app being public makes it a real, not theoretical, exposure.
   the Cloudflare Tunnel, then `x-forwarded-for`). Co-sign sessions are exempt. Reuses `lib/rate-limit.ts`.
 - **Citation ceiling:** `/api/cite/[id]` rejects `amount > config.maxCitationUsdc` (default 5). Not a
   drain (caller self-pays via x402 to a source-validated wallet) — a fat-finger / leaderboard-skew bound.
+- **A2A budget clamp + IP limit:** `/api/agent/ask` clamps `budget` to `config.a2aMaxBudget`
+  (env `KERYX_A2A_MAX_BUDGET`, default 0.5 — more generous than anon since A2A is x402-paid) and
+  rate-limits unkeyed callers by IP via a new `a2aPublic` tier (10/60s). Keyed callers keep the `ask`
+  tier. The traction `a2a-client` (budget 0.03) is unaffected. Closes the same drain class on the paid path.
 **Verification:** `tsc --noEmit` + `eslint` clean. Logic harness confirmed: anon budget 1000 → 0.1,
 demo 0.08 → 0.08 untouched, co-sign budget preserved; `clientIp` precedence (cf > xff > x-real-ip);
-`treasuryAsk` limiter blocks on the 6th call. Threat-model rows S24/S25 added; A2A budget logged as
-residual R5 (paid path — user decision).
+`treasuryAsk` limiter blocks on the 6th call. Threat-model rows S24/S25/S26 added.
 **Files:** `lib/config.ts`, `lib/rate-limit.ts`, `app/api/ask/route.ts`, `app/api/cite/[id]/route.ts`,
 `docs/security-threat-model.md`.
 

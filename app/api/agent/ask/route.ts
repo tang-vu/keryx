@@ -13,7 +13,7 @@ import { getDb } from "@/lib/db";
 import { makePayment } from "@/lib/payments/payment-gateway";
 import { settleThenServe, challengeResponse } from "@/lib/x402-server";
 import { verifyApiKey } from "@/lib/api-keys";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,12 +66,23 @@ export async function POST(req: NextRequest) {
     // Fire-and-forget daily usage counter — does not block the response.
     const db = await getDb();
     void db.incrementUsage(keyCtx.keyId);
+  } else {
+    // Unkeyed A2A caller — the x402 fee gates the run, but rate-limit by IP so the paid path
+    // still can't be looped into large-budget treasury payouts by an anonymous caller.
+    const limited = await checkRateLimit(clientIp(req), "a2aPublic");
+    if (limited) return limited;
   }
   // ── End key pre-check ──
 
   const body = (await req.json().catch(() => ({}))) as { question?: string; budget?: number };
   const question = (body.question ?? "").trim();
   if (!question) return Response.json({ error: "question is required" }, { status: 400 });
+  // Clamp a caller-supplied budget to the A2A ceiling so it can't drive arbitrary treasury-funded
+  // creator payouts. A missing / invalid value is left undefined → runAgent applies its default.
+  const a2aBudget =
+    typeof body.budget === "number" && Number.isFinite(body.budget) && body.budget > 0
+      ? Math.min(body.budget, config.a2aMaxBudget)
+      : undefined;
   const treasury = config.sellerAddress;
   if (!treasury) return Response.json({ error: "treasury wallet not configured" }, { status: 500 });
 
@@ -105,7 +116,7 @@ export async function POST(req: NextRequest) {
       );
       // Run the full agent — it autonomously pays the creators it cites. origin "a2a" marks the
       // downstream citation payouts as external (driven by a real outside agent, not the engine).
-      const run = await collectRun({ question, budget: body.budget, queryId, origin: "a2a" });
+      const run = await collectRun({ question, budget: a2aBudget, queryId, origin: "a2a" });
       return {
         queryId: run.id,
         answer: run.answer,
