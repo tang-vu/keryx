@@ -1,9 +1,19 @@
 # Keryx Project Changelog
 
 **Last Updated:** 2026-06-22  
-**Current Version:** 0.2.0
+**Current Version:** 0.3.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
+
+---
+
+## v0.3.0 — 2026-06-22 — Visible agency + external-agent onboarding
+
+Release wave gathering the work since v0.2.0 (64 commits): the non-custodial session-payment path
+made reliable end-to-end, the on-chain SourceRegistry catalog published with verifiable provenance,
+the A2A endpoint made discoverable (GET x402 challenge), a 24/7 traction daemon, a full demo-path
+hardening pass, every public spend endpoint capped + rate-limited, and two new visible features —
+the **live budget meter** and the **"call Keryx from your own agent"** card. Detailed entries below.
 
 ---
 
