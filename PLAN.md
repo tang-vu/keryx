@@ -107,9 +107,10 @@ The scaffold's "agent" is a dumb 1-tx/sec loop over 4 hardcoded URLs. **Zero rea
 - [x] Deployed live at keryx.cc (VPS + Cloudflare Tunnel); Supabase adapter kept behind config
 - [x] `README.md`, `DEMO.md`, `TRACTION.md`, `FEEDBACK.md`, `EASTER_EGGS.md` written
 - [x] Enhancements: A2A mode ✅ · external x402 marketplace discovery ✅ · on-chain SourceRegistry ✅
-- [ ] **<3-min demo video** (REQUIRED — not yet recorded)
-- [ ] **Submit to forms.gle/SMqLaw2pMGDe58LFA** (submit v1 now, resubmit as improved)
+- [x] **<3-min demo video** — recorded & submitted
+- [x] **Submit to forms.gle/SMqLaw2pMGDe58LFA** — v1 submitted; iterating + resubmit as improved
 - [ ] External / real-user traction push (A2A callers, agents.circle.com listing)
+- [ ] **Build-in-public phase** — ship visible improvements + announce each (sync all surfaces)
 
 ---
 

@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-06-20  
+**Last Updated:** 2026-06-21  
 **Current Version:** 0.2.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
@@ -8,6 +8,29 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 ---
 
 ## Post-Launch Fixes (v0.2.x)
+
+### 2026-06-21 — Harden public spend endpoints against treasury abuse
+
+#### fix: cap + rate-limit the anonymous treasury `/api/ask` path; ceiling on `/api/cite`
+**Why:** keryx.cc is live and public. The no-session `/api/ask` path runs on the treasury gateway
+(`RealGateway`), yet `budget` was caller-controlled (coerced only to finite > 0) and the route had
+**no rate limit** — a script could POST a large budget in a loop and drain treasury USDC or
+fabricate volume. This was a deliberately-deferred item from the 2026-06-21 demo-path hardening pass;
+the app being public makes it a real, not theoretical, exposure.
+**Change:**
+- **Budget clamp (treasury path only):** no-session requests clamp `budget` to `config.anonMaxBudget`
+  (env `KERYX_ANON_MAX_BUDGET`, default 0.1 — just above the UI dial's 0.08 max, so the demo is
+  unchanged). The browser co-sign path spends the user's own grant-capped session and is left as-signed.
+- **IP rate limit:** new `treasuryAsk` tier (5 / 60s) keyed by client IP (`cf-connecting-ip` behind
+  the Cloudflare Tunnel, then `x-forwarded-for`). Co-sign sessions are exempt. Reuses `lib/rate-limit.ts`.
+- **Citation ceiling:** `/api/cite/[id]` rejects `amount > config.maxCitationUsdc` (default 5). Not a
+  drain (caller self-pays via x402 to a source-validated wallet) — a fat-finger / leaderboard-skew bound.
+**Verification:** `tsc --noEmit` + `eslint` clean. Logic harness confirmed: anon budget 1000 → 0.1,
+demo 0.08 → 0.08 untouched, co-sign budget preserved; `clientIp` precedence (cf > xff > x-real-ip);
+`treasuryAsk` limiter blocks on the 6th call. Threat-model rows S24/S25 added; A2A budget logged as
+residual R5 (paid path — user decision).
+**Files:** `lib/config.ts`, `lib/rate-limit.ts`, `app/api/ask/route.ts`, `app/api/cite/[id]/route.ts`,
+`docs/security-threat-model.md`.
 
 ### 2026-06-20 — A2A endpoint discoverable by x402 tooling
 

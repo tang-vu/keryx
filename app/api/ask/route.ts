@@ -20,6 +20,7 @@ import { NextRequest } from "next/server";
 import { getAgentDeps } from "@/lib/agent";
 import { runAgent } from "@/lib/agent/run-agent";
 import { config } from "@/lib/config";
+import { checkRateLimit, clientIp } from "@/lib/rate-limit";
 import { awaitSignature, isGrantValid } from "@/lib/payments/session-grants";
 import type { PaymentRequirements } from "@/lib/payments/browser-cosign-gateway";
 import type { QueryRun } from "@/lib/types";
@@ -58,6 +59,15 @@ export async function POST(req: NextRequest) {
     );
   }
   const useBrowserCoSign = Boolean(sessionId);
+
+  // Anonymous (no-session) requests run on the treasury gateway (RealGateway) and are
+  // unauthenticated — rate-limit by client IP so the endpoint can't be scripted into a
+  // treasury drain or fake-volume loop. The co-sign path spends the user's own funded
+  // session (grant-cap bounded), so it is intentionally exempt from this IP tier.
+  if (!useBrowserCoSign) {
+    const limited = await checkRateLimit(clientIp(req), "treasuryAsk");
+    if (limited) return limited;
+  }
 
   const encoder = new TextEncoder();
 
@@ -112,10 +122,16 @@ export async function POST(req: NextRequest) {
         // (the volume engine never goes through this route; it calls collectRun directly).
         // Coerce the caller-supplied budget — a missing / NaN / ≤0 value must never reach the
         // agent (it would print "$NaN" across the trace or no-op the run). Invalid → default.
-        const askBudget =
+        const coercedBudget =
           typeof body.budget === "number" && Number.isFinite(body.budget) && body.budget > 0
             ? body.budget
             : config.defaultBudget;
+        // Treasury (no-session) path is unauthenticated and spends Keryx's own funds, so hard-cap
+        // the budget a caller can authorize. The co-sign path spends the user's own session and is
+        // left as signed. The UI dial maxes at 0.08 (< cap), so the legitimate demo is unaffected.
+        const askBudget = useBrowserCoSign
+          ? coercedBudget
+          : Math.min(coercedBudget, config.anonMaxBudget);
         const gen = runAgent({ question, budget: askBudget, origin: "web" }, deps);
         let res = await gen.next();
         while (!res.done) {

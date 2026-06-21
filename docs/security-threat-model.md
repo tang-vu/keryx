@@ -1,6 +1,6 @@
 # Keryx Security Threat Model
 
-**Version:** Phase 06 (2026-06-18)
+**Version:** 2026-06-21 (public-endpoint hardening)
 **Scope:** Non-custodial dApp — SIWE auth, browser co-sign session, SourceRegistry, IPFS gated content, API keys, offline dev path.
 
 ---
@@ -32,6 +32,8 @@
 | S21 | JWT secret | In logs or responses | **PASS** | `JWT_SECRET` only accessed via `process.env.JWT_SECRET` inside `lib/auth.ts`. Never logged. On missing value, endpoint returns `503 "JWT_SECRET not configured"` — the value itself is not revealed. |
 | S22 | data/spend-wallet.json | Accidental commit of server wallet key | **PASS** | `data/` is not excluded by `.gitignore` but `spend-wallet.json` content is a viem-generated key written at runtime; `.env.local` holds the funding private key. The `spend-wallet.json` stores the derived spend EOA only. Pre-commit hook and `CLAUDE.md` prohibit committing secrets. |
 | S23 | Offline dev path | Regression from hardening | **PASS** | `KERYX_FORCE_OFFLINE=1` / no `REGISTRY_ADDRESS` / no `PINATA_JWT` / no SIWE grant: agent uses `OfflineGateway`, sources served from SQLite direct, content is plaintext, no sign-requests emitted. No CONTENT_MASTER_KEY decrypt path executed. No breaking change introduced. |
+| S24 | `/api/ask` (no-session treasury path) | Anonymous caller drives unbounded treasury spend — `budget` was caller-controlled (coerced finite>0 only) and the route had **no rate limit**, so a script could POST a huge budget in a loop and drain `RealGateway` (treasury) USDC / fabricate volume. | **PASS (2026-06-21 fix)** | No-session budget clamped to `config.anonMaxBudget` (default 0.1, just above the UI dial's 0.08 max). IP-keyed rate limit `treasuryAsk` (5 / 60s) via `cf-connecting-ip`. Browser co-sign path (user funds their own grant-capped session) is intentionally exempt from both. `app/api/ask/route.ts`, `lib/rate-limit.ts`. |
+| S25 | `/api/cite/[id]` | Absurd `amount` skews the leaderboard | **PASS (2026-06-21 fix)** | `amount > config.maxCitationUsdc` (default 5) → 400. NOT a drain vector — the caller self-pays via x402 to a source-validated wallet — so this is a fat-finger / metric-skew bound, not a spend control. `app/api/cite/[id]/route.ts`. |
 
 ---
 
@@ -56,6 +58,7 @@ These are intentional design choices for the testnet demo. They are not hidden r
 | R2 | **Grant funding not on-chain verified** | `POST /api/session/grant` accepts the client's claimed `txHash` without verifying the deposit hit Circle's Gateway balance. Lying only fails the liar's own settlement (Gateway balance is the real ceiling). A user who lies about funding gets 402-rejected at the first settlement attempt. | TODO: query Gateway balance API before marking grant `active`; reject if `available < claimed cap`. |
 | R3 | **Session key in sessionStorage** | `sessionStorage` is readable by any JavaScript on the same origin (XSS). Key is tab-scoped and erased on tab close. Cap-bounded. | Mitigations in place: CSP, small cap, short TTL. Full fix: Web Crypto non-exportable key (post-hackathon). |
 | R4 | **Server-side grant state lost on restart** | Session grants are in-process memory. A server restart drops all active grants (browser tabs show as expired). Users must re-fund. | Acceptable for testnet demo. Production fix: persist grant metadata in DB (not the key — there is none server-side). |
+| R5 | **A2A `/api/agent/ask` budget unbounded** | The x402-paid A2A path passes `budget` straight to `collectRun` with no ceiling. Same drain class as S24 but gated behind the $0.02 fee; an unkeyed caller also skips the per-key rate limiter. A caller who registers their own source could set a large budget, pay $0.02, and net the downstream citation reward. Bounded in practice (traction client uses 0.03). | TODO (user decision — paid path, may want larger budgets intentionally): clamp A2A budget to a dedicated ceiling and/or rate-limit unkeyed A2A callers by IP. |
 
 ---
 

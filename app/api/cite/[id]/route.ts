@@ -35,6 +35,15 @@ export async function POST(
   if (!Number.isFinite(amount) || amount <= 0) {
     return Response.json({ error: "amount must be > 0" }, { status: 400 });
   }
+  // Sanity ceiling: a single citation reward far above any realistic weighted split is a
+  // fat-finger or an attempt to skew the leaderboard. The caller self-pays via x402, so this
+  // is a bound, not a drain control. Override with KERYX_MAX_CITATION_USDC if a deployment needs it.
+  if (amount > config.maxCitationUsdc) {
+    return Response.json(
+      { error: `amount exceeds ceiling of ${config.maxCitationUsdc} USDC` },
+      { status: 400 },
+    );
+  }
 
   return settleThenServe(
     req,

@@ -35,6 +35,16 @@ export const config = {
   gatewayMinAvailableUsdc: num(process.env.KERYX_GATEWAY_MIN_AVAILABLE, 0.1),
   // Agent-to-agent: fee another agent pays Keryx to answer a question (x402 → treasury).
   a2aFeeUsdc: num(process.env.KERYX_A2A_FEE, 0.02),
+  // Hard ceiling on the budget the anonymous (no-session) treasury path will honor. That path is
+  // unauthenticated and spends Keryx's OWN funds (RealGateway), with `budget` caller-controlled —
+  // without a cap a caller could POST an arbitrarily large budget and drive treasury spend. The
+  // browser co-sign path spends the user's own funded session (grant-cap bounded) and is NOT
+  // clamped. Default 0.1 sits just above the UI budget dial's 0.08 max, so the demo is unaffected.
+  anonMaxBudget: num(process.env.KERYX_ANON_MAX_BUDGET, 0.1),
+  // Sanity ceiling (USDC) on a single citation settlement reaching /api/cite. Not a drain vector
+  // (the caller self-pays via x402 to a source-owned wallet), but bounds a fat-finger / absurd
+  // `amount` that would skew the leaderboard. ~100×+ above any realistic weighted reward.
+  maxCitationUsdc: num(process.env.KERYX_MAX_CITATION_USDC, 5),
 
   // ── Open x402 marketplace discovery ──
   // When on, the agent probes the live Circle x402 service bazaar (`circle services search`) during

@@ -17,6 +17,10 @@ const limiters: Record<string, RateLimiterMemory> = {
   ask: new RateLimiterMemory({ points: 10, duration: 60, keyPrefix: "ask" }),
   // Unauthenticated (IP-based) callers hitting public read endpoints.
   public: new RateLimiterMemory({ points: 60, duration: 60, keyPrefix: "pub" }),
+  // Anonymous (no-session) /api/ask calls drive a real treasury-funded agent run — expensive in
+  // LLM tokens and real USDC. Keyed by client IP. 5/60s is generous for a human demoing the site
+  // but blocks scripted treasury-drain / fake-volume loops. Session co-sign calls bypass this tier.
+  treasuryAsk: new RateLimiterMemory({ points: 5, duration: 60, keyPrefix: "tre" }),
 };
 
 export type RateLimitTier = keyof typeof limiters;
@@ -51,4 +55,18 @@ export async function checkRateLimit(
     console.error("[rate-limit] unexpected error:", err);
     return null;
   }
+}
+
+/**
+ * Best-effort client IP for IP-keyed rate limiting. keryx.cc sits behind a Cloudflare Tunnel, so
+ * the real client IP arrives in `cf-connecting-ip`; fall back to the first `x-forwarded-for` hop,
+ * then `x-real-ip`. Unknowns share one bucket (conservative — they rate-limit together).
+ */
+export function clientIp(req: { headers: Headers }): string {
+  const h = req.headers;
+  const cf = h.get("cf-connecting-ip");
+  if (cf) return cf.trim();
+  const xff = h.get("x-forwarded-for");
+  if (xff) return xff.split(",")[0]!.trim();
+  return h.get("x-real-ip")?.trim() ?? "unknown";
 }
