@@ -12,6 +12,7 @@ import type {
   QueryRun,
   Source,
   SourceItem,
+  WithdrawalRecord,
 } from "../types";
 import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, KeryxDB, UserRecord } from "./keryx-db";
 import { shortAddress } from "../utils";
@@ -251,6 +252,29 @@ export class SupabaseAdapter implements KeryxDB {
     return (data ?? []).map(rowToPayment);
   }
 
+  async recordWithdrawal(w: WithdrawalRecord): Promise<void> {
+    // tx_hash is the primary key — upsert makes re-recording the same withdraw an idempotent no-op.
+    await this.sb.from("withdrawals").upsert({
+      tx_hash: w.txHash,
+      created_at: w.createdAt,
+      label: w.label,
+      source_name: w.sourceName ?? null,
+      wallet: w.wallet,
+      recipient: w.recipient,
+      amount_usdc: w.amountUsdc,
+      network: w.network,
+    });
+  }
+
+  async listWithdrawals(limit: number): Promise<WithdrawalRecord[]> {
+    const { data } = await this.sb
+      .from("withdrawals")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    return (data ?? []).map(rowToWithdrawal);
+  }
+
   async metrics(): Promise<DashboardMetrics> {
     const { data: pays } = await this.sb
       .from("payment_events")
@@ -433,6 +457,19 @@ function rowToSource(r: Record<string, unknown>): Source {
     active: r.active === undefined || r.active === null ? true : Boolean(r.active),
     // verified=null means old row before the column existed — grandfather as verified.
     verified: r.verified === undefined || r.verified === null ? true : Boolean(r.verified),
+  };
+}
+
+function rowToWithdrawal(r: Record<string, unknown>): WithdrawalRecord {
+  return {
+    txHash: r.tx_hash as string,
+    label: r.label as string,
+    sourceName: (r.source_name as string) ?? undefined,
+    wallet: r.wallet as string,
+    recipient: r.recipient as string,
+    amountUsdc: Number(r.amount_usdc),
+    network: r.network as string,
+    createdAt: r.created_at as string,
   };
 }
 

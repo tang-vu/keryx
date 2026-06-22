@@ -21,11 +21,12 @@ import {
   type LeaderboardEntry,
 } from "@/components/keryx/creator-leaderboard";
 import { PaymentsFeed } from "@/components/keryx/payments-feed";
+import { CreatorCashoutsPanel } from "@/components/keryx/creator-cashouts-panel";
 import { EarningsChart } from "@/components/keryx/earnings-chart";
 import { TopicsPanel, type Topic } from "@/components/keryx/topics-panel";
 import { A2aCallCard } from "@/components/keryx/a2a-call-card";
 import { fmtUsdc } from "@/components/keryx/phase-style";
-import type { DashboardMetrics, PaymentRecord } from "@/lib/types";
+import type { DashboardMetrics, PaymentRecord, WithdrawalRecord } from "@/lib/types";
 
 const POLL_MS = 2000;
 
@@ -40,15 +41,17 @@ export default function DashboardPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [withdrawals, setWithdrawals] = useState<WithdrawalRecord[]>([]);
 
   useEffect(() => {
     let alive = true;
 
     const poll = async () => {
       try {
-        const [mRes, pRes] = await Promise.all([
+        const [mRes, pRes, wRes] = await Promise.all([
           fetch("/api/metrics", { cache: "no-store" }),
           fetch("/api/payments?limit=200", { cache: "no-store" }),
+          fetch("/api/withdrawals?limit=25", { cache: "no-store" }),
         ]);
         if (!alive) return;
         if (mRes.ok) {
@@ -60,6 +63,10 @@ export default function DashboardPage() {
         if (pRes.ok) {
           const data = (await pRes.json()) as { payments: PaymentRecord[] };
           setPayments(data.payments ?? []);
+        }
+        if (wRes.ok) {
+          const data = (await wRes.json()) as { withdrawals: WithdrawalRecord[] };
+          setWithdrawals(data.withdrawals ?? []);
         }
       } catch {
         /* keep last good state on transient error */
@@ -162,6 +169,12 @@ export default function DashboardPage() {
           <CreatorLeaderboard rows={leaderboard} />
           <PaymentsFeed payments={payments.slice(0, 25)} />
         </section>
+
+        {withdrawals.length > 0 ? (
+          <div className="mt-6">
+            <CreatorCashoutsPanel withdrawals={withdrawals} />
+          </div>
+        ) : null}
 
         <A2aCallCard />
       </main>

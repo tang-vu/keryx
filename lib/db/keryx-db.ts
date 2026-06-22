@@ -9,6 +9,7 @@ import type {
   QueryRun,
   Source,
   SourceItem,
+  WithdrawalRecord,
 } from "../types";
 
 export interface CreatorEarnings {
@@ -128,4 +129,10 @@ export interface KeryxDB {
   listPayments(limit: number): Promise<PaymentRecord[]>;
   metrics(): Promise<DashboardMetrics>;
   creatorLeaderboard(): Promise<CreatorEarnings[]>;
+
+  // ── creator cash-outs (on-chain Gateway withdraws) ──
+  /** Persist a settled withdraw. Keyed by EVM tx hash, so re-recording the same tx is a no-op. */
+  recordWithdrawal(w: WithdrawalRecord): Promise<void>;
+  /** Recent cash-outs, newest first — each carries a real /tx/-resolvable EVM hash. */
+  listWithdrawals(limit: number): Promise<WithdrawalRecord[]>;
 }

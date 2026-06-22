@@ -32,6 +32,7 @@ import { createPublicClient, createWalletClient, http, parseEther } from "viem";
 import { arcTestnet } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 import { config } from "../lib/config.ts";
+import { getDb } from "../lib/db/index.ts";
 
 // Instant withdraw mints USDC by having the creator EOA submit a gatewayMint() tx,
 // which costs native-USDC gas. Fresh creator wallets only ever RECEIVED Gateway
@@ -111,6 +112,38 @@ async function ensureGas(
   return true;
 }
 
+// Lazily-loaded DB handle + wallet→source-name map. A dry-run never opens the DB; on a live
+// withdraw we persist the real mint tx so the dashboard can surface it as on-chain proof.
+let dbHandle: Awaited<ReturnType<typeof getDb>> | null = null;
+let sourceNameByWallet: Map<string, string> | null = null;
+
+async function recordWithdraw(
+  label: string,
+  wallet: string,
+  res: { formattedAmount: string; recipient: string; mintTxHash: string },
+): Promise<void> {
+  try {
+    if (!dbHandle) dbHandle = await getDb();
+    if (!sourceNameByWallet) {
+      const sources = await dbHandle.listSources();
+      sourceNameByWallet = new Map(sources.map((s) => [s.walletAddress.toLowerCase(), s.name]));
+    }
+    await dbHandle.recordWithdrawal({
+      txHash: res.mintTxHash,
+      label,
+      sourceName: sourceNameByWallet.get(wallet.toLowerCase()) ?? label,
+      wallet,
+      recipient: res.recipient,
+      amountUsdc: parseFloat(res.formattedAmount),
+      network: config.network,
+      createdAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    // Best-effort: the on-chain withdraw already settled. A DB hiccup must not fail the run.
+    console.log(`  ↳ (warn) could not record withdraw to DB: ${msg(err)}`);
+  }
+}
+
 async function main() {
   const o = parseArgs(process.argv.slice(2));
   const store = loadKeystore();
@@ -178,6 +211,8 @@ async function main() {
         `  ↳ withdrew $${res.formattedAmount} → ${res.recipient}\n` +
           `     tx: ${config.explorerUrl}/tx/${res.mintTxHash}`,
       );
+      // Surface this real, /tx/-resolvable cash-out on the dashboard (creator-cashouts panel).
+      await recordWithdraw(label, w.address, res);
     } catch (err) {
       console.log(`  ↳ withdraw FAILED: ${msg(err)}`);
     }

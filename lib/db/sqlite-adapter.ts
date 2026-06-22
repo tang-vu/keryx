@@ -13,6 +13,7 @@ import type {
   QueryRun,
   Source,
   SourceItem,
+  WithdrawalRecord,
 } from "../types";
 import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, KeryxDB, UserRecord } from "./keryx-db";
 import { shortAddress } from "../utils";
@@ -53,6 +54,10 @@ CREATE TABLE IF NOT EXISTS payment_events (
 CREATE TABLE IF NOT EXISTS query_runs (
   id TEXT PRIMARY KEY, created_at TEXT, question TEXT, budget REAL, engine TEXT,
   total_spent REAL, total_to_creators REAL, answer TEXT, data TEXT
+);
+CREATE TABLE IF NOT EXISTS withdrawals (
+  tx_hash TEXT PRIMARY KEY, created_at TEXT, label TEXT, source_name TEXT,
+  wallet TEXT, recipient TEXT, amount_usdc REAL, network TEXT
 );
 CREATE TABLE IF NOT EXISTS api_keys (
   id          TEXT PRIMARY KEY,
@@ -366,6 +371,32 @@ export class SqliteAdapter implements KeryxDB {
     return rows.map(rowToPayment);
   }
 
+  async recordWithdrawal(w: WithdrawalRecord): Promise<void> {
+    // tx_hash is the primary key, so re-recording the same withdraw is an idempotent no-op.
+    this.db
+      .prepare(
+        `INSERT OR IGNORE INTO withdrawals (tx_hash,created_at,label,source_name,wallet,recipient,amount_usdc,network)
+         VALUES (?,?,?,?,?,?,?,?)`,
+      )
+      .run(
+        w.txHash,
+        w.createdAt,
+        w.label,
+        w.sourceName ?? null,
+        w.wallet,
+        w.recipient,
+        w.amountUsdc,
+        w.network,
+      );
+  }
+
+  async listWithdrawals(limit: number): Promise<WithdrawalRecord[]> {
+    const rows = this.db
+      .prepare(`SELECT * FROM withdrawals ORDER BY created_at DESC LIMIT ?`)
+      .all(limit);
+    return rows.map(rowToWithdrawal);
+  }
+
   async metrics(): Promise<DashboardMetrics> {
     const p = this.db
       .prepare(
@@ -562,6 +593,19 @@ function rowToPayment(r: Record<string, unknown>): PaymentRecord {
     network: r.network as string,
     settled: Boolean(r.settled),
     origin: (r.origin as PaymentRecord["origin"]) ?? undefined,
+    createdAt: r.created_at as string,
+  };
+}
+
+function rowToWithdrawal(r: Record<string, unknown>): WithdrawalRecord {
+  return {
+    txHash: r.tx_hash as string,
+    label: r.label as string,
+    sourceName: (r.source_name as string) ?? undefined,
+    wallet: r.wallet as string,
+    recipient: r.recipient as string,
+    amountUsdc: r.amount_usdc as number,
+    network: r.network as string,
     createdAt: r.created_at as string,
   };
 }

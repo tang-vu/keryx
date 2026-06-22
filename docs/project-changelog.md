@@ -19,6 +19,26 @@ the **live budget meter** and the **"call Keryx from your own agent"** card. Det
 
 ## Post-Launch Fixes (v0.2.x)
 
+### 2026-06-22 — Creator cash-outs panel (real per-tx on-chain proof)
+
+#### feat: surface creator Gateway withdraws on the dashboard with /tx/-resolvable EVM hashes
+**Why:** The payments feed's "on-chain ↗" link points at the batched settlement wallet because the
+per-payment Circle settlement IDs are UUIDs that do NOT open at `/tx/`. The `withdraw` tool already
+mints accrued Gateway earnings on-chain via Gateway withdraw — and that mint returns a REAL EVM tx
+hash that does resolve on ArcScan. Nothing surfaced it, so the strongest per-tx on-chain proof Keryx
+has was invisible to judges.
+**Change:** New `withdrawals` table (kept separate from `payment_events` so cash-outs never inflate
+payment/volume/creator metrics — see D-18). `scripts/withdraw.mts` persists each live mint
+(idempotent on `tx_hash`, resolves the creator's source name from the wallet). New
+`GET /api/withdrawals` + a "Creator cash-outs" dashboard panel that links every row to
+`testnet.arcscan.app/tx/<hash>` — the per-tx proof the batched settlement IDs can't give. Panel is
+hidden until at least one cash-out exists.
+**Files:** `lib/types.ts`, `lib/db/keryx-db.ts`, `lib/db/sqlite-adapter.ts`,
+`lib/db/supabase-adapter.ts`, `supabase/migrations/0009_creator_withdrawals.sql`,
+`scripts/withdraw.mts`, `app/api/withdrawals/route.ts` (new),
+`components/keryx/creator-cashouts-panel.tsx` (new), `app/dashboard/page.tsx`. `tsc --noEmit` +
+`eslint` + `next build` clean.
+
 ### 2026-06-22 — "Call Keryx from your own agent" card on the dashboard
 
 #### feat: copy-paste A2A integration card so external agents can wire up in one glance

@@ -110,6 +110,21 @@ export interface PaymentRecord {
   createdAt: string;
 }
 
+/** A creator cash-out: accrued Gateway earnings minted on-chain to a wallet via Gateway withdraw.
+ *  Unlike the per-payment Circle settlement UUIDs (which do NOT open at /tx/), `txHash` is a real
+ *  EVM mint hash that resolves on the block explorer — so the dashboard can link it as verifiable
+ *  proof that the rewards are real, withdrawable USDC, not just a Gateway ledger number. */
+export interface WithdrawalRecord {
+  txHash: string; // EVM mint tx hash (primary key) — resolves at explorer /tx/
+  label: string; // keystore label of the creator wallet (e.g. "latent-space-ae8bf6")
+  sourceName?: string; // human-readable source name when resolvable, else the label
+  wallet: string; // creator EOA whose Gateway balance was drawn from
+  recipient: string; // address the minted USDC landed in (defaults to the creator's own wallet)
+  amountUsdc: number;
+  network: string;
+  createdAt: string;
+}
+
 export type TracePhase =
   | "decompose"
   | "discover"
