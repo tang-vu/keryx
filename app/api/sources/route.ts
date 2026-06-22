@@ -35,7 +35,20 @@ import { createSource, type CreateSourceInput } from "@/lib/sources/create-sourc
 import { ingestRss } from "@/lib/ingest/rss";
 import { config } from "@/lib/config";
 import { urlHash, sourceId } from "@/lib/registry/registry-client";
+import { feedContainsToken, verificationToken } from "@/lib/sources/feed-verification";
 import type { SourceItem } from "@/lib/types";
+
+/** Instructions returned to a not-yet-verified registrant: drop this line in the feed, then
+ *  POST /api/sources/verify. Until verified, the source is listed but never read/cited/paid. */
+function verificationInfo(wallet: string, feedUrl: string | undefined) {
+  return {
+    token: verificationToken(wallet),
+    canVerify: Boolean(feedUrl?.trim()),
+    instructions: feedUrl?.trim()
+      ? "Add this exact line anywhere in your feed (e.g. the channel <description> or a post), then verify. Until then your source is listed but earns nothing."
+      : "Manual sources have no feed to prove ownership, so they stay unverified and off the agent's money path. List via an RSS feed you control to earn.",
+  };
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,6 +68,7 @@ export async function GET() {
       authors: s.authors.map((a) => ({ name: a.name, splitWeight: a.splitWeight })),
       onchainId: s.onchainId,
       registerTx: s.registerTx,
+      verified: s.verified !== false, // undefined → true (grandfathered)
     })),
   });
 }
@@ -167,6 +181,8 @@ export async function POST(req: NextRequest) {
       mode: "onchain",
       sourceId: sid,
       registryAddress: config.registryAddress,
+      // The indexer writes the row UNVERIFIED — earning needs feed-ownership proof first.
+      verification: verificationInfo(sessionWallet, input.rssUrl || canonicalUrl),
       registerParams: {
         // urlHash is passed to register(); contract derives the sourceId on-chain.
         urlHash: uh,
@@ -182,7 +198,13 @@ export async function POST(req: NextRequest) {
   // ── Offline / DB-direct path (registry not configured) ───────────────────
   // Maintains full backward compatibility: seed scripts, offline dev, and the
   // CLI `npm run ask` all continue to work without a deployed contract.
-  const source = await createSource(db, input);
+  //
+  // Public web submissions start UNVERIFIED so a wallet can't earn off a feed it doesn't own.
+  // Convenience: if the feed ALREADY carries `keryx-verify:<wallet>` at register time, mark it
+  // verified immediately (the owner pre-placed the token), skipping the second round-trip.
+  const verifiedAtRegister =
+    Boolean(input.rssUrl) && (await feedContainsToken(input.rssUrl!, sessionWallet));
+  const source = await createSource(db, { ...input, verified: verifiedAtRegister });
   return Response.json({
     mode: "offline",
     source: {
@@ -190,7 +212,9 @@ export async function POST(req: NextRequest) {
       name: source.name,
       walletAddress: source.walletAddress,
       fetchPrice: source.fetchPrice,
+      verified: source.verified,
       authors: source.authors.map((a) => ({ name: a.name, splitWeight: a.splitWeight })),
     },
+    verification: verifiedAtRegister ? null : verificationInfo(sessionWallet, input.rssUrl),
   });
 }

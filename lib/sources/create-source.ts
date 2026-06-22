@@ -29,6 +29,9 @@ export interface CreateSourceInput {
   walletAddress?: string; // creator-supplied; generated if omitted
   authors?: { name: string; walletAddress?: string; splitWeight: number }[];
   items?: Omit<SourceItem, "id" | "sourceId">[];
+  /** Feed-ownership gate. Omitted → true (operator-curated seed + offline dev are trusted).
+   *  Public web submissions pass false until they prove control of the feed. */
+  verified?: boolean;
 }
 
 export function slugify(name: string): string {
@@ -69,6 +72,8 @@ export async function createSource(
     fetchPrice: input.fetchPrice ?? config.defaultFetchPrice,
     tags: input.tags ?? [],
     authors,
+    // Trusted by default (seed/offline); the public register route passes false until proven.
+    verified: input.verified ?? true,
     createdAt: new Date().toISOString(),
   };
 

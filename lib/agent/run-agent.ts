@@ -62,7 +62,13 @@ export async function* runAgent(
   yield emit("decompose", `Identified ${subClaims.length} sub-claim(s) to support`, subClaims);
 
   // 2) DISCOVER
-  const sources = await db.listSources();
+  // Earning gate: only feed-ownership-verified sources are discoverable to the agent, so a wallet
+  // that lists a feed it doesn't own (and can't put `keryx-verify:<wallet>` in) is never read,
+  // cited, or paid. Listing stays permissionless — unverified rows show in the directory, just
+  // off the money path. Undefined verified = grandfathered true (curated seed + pre-flag rows).
+  const allSources = await db.listSources();
+  const sources = allSources.filter((s) => s.verified !== false);
+  const unverifiedCount = allSources.length - sources.length;
   const candidates: SourceCandidate[] = [];
   for (const s of sources) {
     const items = await db.getItems(s.id);
@@ -80,7 +86,11 @@ export async function* runAgent(
       preview,
     });
   }
-  yield emit("discover", `Discovered ${candidates.length} registered source(s)`, candidates.map((c) => c.name));
+  yield emit(
+    "discover",
+    `Discovered ${candidates.length} verified source(s)${unverifiedCount > 0 ? ` — skipped ${unverifiedCount} unverified (feed ownership unproven, off the money path)` : ""}`,
+    candidates.map((c) => c.name),
+  );
 
   // Probe the live open x402 marketplace (Circle services) — real third-party endpoints the agent
   // can reason over alongside its creators. They settle off Keryx's Arc rail, so they're

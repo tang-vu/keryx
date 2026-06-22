@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS sources (
   ipfs_cid TEXT,
   active INTEGER NOT NULL DEFAULT 1,
   onchain_id TEXT,
-  register_tx TEXT
+  register_tx TEXT,
+  verified INTEGER NOT NULL DEFAULT 1
 );
 CREATE TABLE IF NOT EXISTS source_meta (
   id TEXT PRIMARY KEY,
@@ -116,6 +117,11 @@ export class SqliteAdapter implements KeryxDB {
     // On-chain provenance columns: filled when a curated source is registered on SourceRegistry.
     if (!srcCols.has("onchain_id")) this.db.exec(`ALTER TABLE sources ADD COLUMN onchain_id TEXT`);
     if (!srcCols.has("register_tx")) this.db.exec(`ALTER TABLE sources ADD COLUMN register_tx TEXT`);
+    // Feed-ownership gate. DEFAULT 1 grandfathers every pre-existing row (operator-curated seed +
+    // the live VPS traction rows) as verified so the volume engine keeps earning. Only public web
+    // submissions registered after this column exists start unverified (set explicitly to 0).
+    if (!srcCols.has("verified"))
+      this.db.exec(`ALTER TABLE sources ADD COLUMN verified INTEGER NOT NULL DEFAULT 1`);
 
     // source_items table: encrypted-content columns added in Phase 04.
     // Existing rows have NULL for these; produce() falls back to DB plaintext content.
@@ -145,17 +151,19 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async upsertSource(s: Source): Promise<void> {
-    // active defaults to 1 (true) for offline/DB-direct rows that predate the flag.
+    // active/verified default to 1 (true) for offline/DB-direct rows that predate the flags.
     const activeInt = s.active === false ? 0 : 1;
+    const verifiedInt = s.verified === false ? 0 : 1;
     this.db
       .prepare(
-        `INSERT INTO sources (id,name,url,description,rss_url,wallet_address,fetch_price,tags,authors,created_at,ipfs_cid,active,onchain_id,register_tx)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        `INSERT INTO sources (id,name,url,description,rss_url,wallet_address,fetch_price,tags,authors,created_at,ipfs_cid,active,onchain_id,register_tx,verified)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
          ON CONFLICT(id) DO UPDATE SET name=excluded.name,url=excluded.url,description=excluded.description,
            rss_url=excluded.rss_url,wallet_address=excluded.wallet_address,fetch_price=excluded.fetch_price,
            tags=excluded.tags,authors=excluded.authors,ipfs_cid=excluded.ipfs_cid,active=excluded.active,
            onchain_id=COALESCE(excluded.onchain_id,sources.onchain_id),
-           register_tx=COALESCE(excluded.register_tx,sources.register_tx)`,
+           register_tx=COALESCE(excluded.register_tx,sources.register_tx),
+           verified=excluded.verified`,
       )
       .run(
         s.id,
@@ -172,6 +180,7 @@ export class SqliteAdapter implements KeryxDB {
         activeInt,
         s.onchainId ?? null,
         s.registerTx ?? null,
+        verifiedInt,
       );
   }
 
@@ -532,6 +541,8 @@ function rowToSource(r: Record<string, unknown>): Source {
     active: r.active === undefined || r.active === null ? true : Boolean(r.active),
     onchainId: (r.onchain_id as string) ?? undefined,
     registerTx: (r.register_tx as string) ?? undefined,
+    // verified=null means old row before the column existed — grandfather as verified.
+    verified: r.verified === undefined || r.verified === null ? true : Boolean(r.verified),
   };
 }
 

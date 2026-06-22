@@ -5,7 +5,7 @@
  * (mono short), and author splits when there is more than one author.
  */
 
-import { Wallet, ShieldCheck } from "lucide-react";
+import { Wallet, ShieldCheck, ShieldAlert } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { fmtUsdc, shortAddr } from "./phase-style";
@@ -23,6 +23,8 @@ export interface SourceCardData {
   onchainId?: string;
   /** EVM tx hash of the register() call — links to the block explorer as verifiable proof. */
   registerTx?: string;
+  /** Feed-ownership proven. false = listed but off the agent's money path until verified. */
+  verified?: boolean;
 }
 
 export function SourcesList({ sources }: { sources: SourceCardData[] }) {
@@ -46,6 +48,16 @@ export function SourcesList({ sources }: { sources: SourceCardData[] }) {
               ${fmtUsdc(s.fetchPrice)}
             </span>
           </div>
+
+          {s.verified === false && (
+            <p
+              title="Feed ownership not yet proven — listed but the agent won't read, cite, or pay it until verified."
+              className="mt-2 inline-flex items-center gap-1 self-start rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-amber-700"
+            >
+              <ShieldAlert className="h-3 w-3" />
+              Unverified
+            </p>
+          )}
 
           <p className="mt-1.5 line-clamp-2 text-sm text-ink-2">
             {s.description}

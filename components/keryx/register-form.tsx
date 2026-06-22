@@ -16,7 +16,7 @@
  */
 
 import { useState } from "react";
-import { Loader2, Rss, Wallet, PartyPopper, ExternalLink } from "lucide-react";
+import { Loader2, Rss, Wallet, PartyPopper, ExternalLink, ShieldCheck, ShieldAlert, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,15 @@ interface CreatedSource {
   walletAddress: string;
   fetchPrice: number;
   authors: { name: string; splitWeight: number }[];
+  /** false until feed ownership is proven — the source is listed but earns nothing yet. */
+  verified?: boolean;
+}
+
+/** Returned by POST /api/sources when the new source isn't verified yet. */
+interface Verification {
+  token: string;
+  canVerify: boolean;
+  instructions: string;
 }
 
 interface OnchainRegisterParams {
@@ -57,6 +66,7 @@ export function RegisterForm({
   const [showManual, setShowManual] = useState(false);
   const [loading, setLoading] = useState(false);
   const [created, setCreated] = useState<CreatedSource | null>(null);
+  const [verification, setVerification] = useState<Verification | null>(null);
 
   // wagmi hooks for the on-chain register call (only used when registry is configured).
   const { writeContractAsync } = useWriteContract();
@@ -97,6 +107,9 @@ export function RegisterForm({
         const params = data.registerParams as OnchainRegisterParams;
         const registryAddress = data.registryAddress as `0x${string}`;
         const returnedSourceId = data.sourceId as string;
+
+        // On-chain rows are indexed unverified — surface the feed-ownership proof step.
+        setVerification((data.verification as Verification) ?? null);
 
         toast.loading("Waiting for wallet signature…", { id: "register-tx" });
 
@@ -145,9 +158,13 @@ export function RegisterForm({
         // Offline / DB-direct path — source written immediately.
         const source = data.source as CreatedSource;
         setCreated(source);
-        toast.success(`${source.name} is registered — ready to earn.`, {
-          description: "Your source is live in the registry.",
-        });
+        setVerification((data.verification as Verification) ?? null);
+        toast.success(
+          source.verified
+            ? `${source.name} is verified — ready to earn.`
+            : `${source.name} is registered — verify feed ownership to start earning.`,
+          { description: "Your source is live in the registry." },
+        );
         setRssUrl("");
         setName("");
         setDescription("");
@@ -165,9 +182,12 @@ export function RegisterForm({
     return (
       <SuccessCard
         source={created}
+        verification={verification}
         pendingTxHash={pendingTxHash}
+        onVerified={() => setCreated((c) => (c ? { ...c, verified: true } : c))}
         onAgain={() => {
           setCreated(null);
+          setVerification(null);
           setPendingTxHash(undefined);
         }}
       />
@@ -293,13 +313,19 @@ export function RegisterForm({
 
 function SuccessCard({
   source,
+  verification,
   pendingTxHash,
+  onVerified,
   onAgain,
 }: {
   source: CreatedSource;
+  verification: Verification | null;
   pendingTxHash?: `0x${string}`;
+  onVerified: () => void;
   onAgain: () => void;
 }) {
+  // Show the proof step only when the source isn't verified yet AND we have a token to show.
+  const needsVerify = source.verified === false && verification !== null;
   return (
     <div className="overflow-hidden border border-ink bg-paper animate-in fade-in zoom-in-95 duration-300">
       <div className="flex items-center gap-2 border-b border-ink bg-paid/[0.08] px-6 py-4">
@@ -309,6 +335,9 @@ function SuccessCard({
         </span>
       </div>
       <div className="space-y-4 p-6">
+        {needsVerify && (
+          <VerifyPanel source={source} verification={verification} onVerified={onVerified} />
+        )}
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">
             Tolls settle to your connected wallet
@@ -353,6 +382,103 @@ function SuccessCard({
           Register another source
         </button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Feed-ownership proof step. The agent won't read, cite, or pay a source until its owner proves
+ * they control the feed — by placing the shown token (which carries this source's payout wallet)
+ * anywhere in the feed, then clicking Verify. Stops anyone earning off a feed they don't own.
+ */
+function VerifyPanel({
+  source,
+  verification,
+  onVerified,
+}: {
+  source: CreatedSource;
+  verification: Verification;
+  onVerified: () => void;
+}) {
+  const [checking, setChecking] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(verification.token);
+      toast.success("Token copied — paste it into your feed.");
+    } catch {
+      toast.error("Couldn't copy — select and copy the token manually.");
+    }
+  };
+
+  const verify = async () => {
+    if (checking) return;
+    setChecking(true);
+    try {
+      const res = await fetch("/api/sources/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceId: source.id }),
+      });
+      const data = (await res.json()) as { verified?: boolean; message?: string; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Verification failed");
+      if (data.verified) {
+        setDone(true);
+        toast.success("Feed ownership verified — your source can now earn.");
+        onVerified();
+      } else {
+        toast.error(data.message ?? "Token not found in the feed yet.");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Verification failed");
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  if (done) {
+    return (
+      <div className="flex items-center gap-2 rounded-md border border-paid/40 bg-paid/[0.08] px-3 py-2.5 text-sm text-ink">
+        <ShieldCheck className="h-4 w-4 text-paid" />
+        Feed ownership verified — your source is on the money path.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 rounded-md border border-amber-500/40 bg-amber-500/[0.07] p-4">
+      <div className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-amber-700">
+        <ShieldAlert className="h-3.5 w-3.5" />
+        Verify feed ownership to earn
+      </div>
+      <p className="text-xs text-ink-2">{verification.instructions}</p>
+      {verification.canVerify && (
+        <>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 break-all rounded border border-line bg-paper px-2.5 py-1.5 font-mono text-xs text-ink">
+              {verification.token}
+            </code>
+            <button
+              type="button"
+              onClick={copy}
+              title="Copy token"
+              className="shrink-0 rounded-md border border-line px-2 py-1.5 text-ink transition-colors hover:bg-paper-2"
+            >
+              <Copy className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={verify}
+            disabled={checking}
+            className="flex w-full items-center justify-center gap-2 border border-ink bg-paper-2 px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-ink transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+          >
+            {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+            {checking ? "Checking feed…" : "Verify ownership ▸"}
+          </button>
+        </>
+      )}
     </div>
   );
 }

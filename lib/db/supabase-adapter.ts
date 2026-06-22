@@ -46,6 +46,7 @@ export class SupabaseAdapter implements KeryxDB {
       created_at: s.createdAt,
       ipfs_cid: s.ipfsCid ?? null,
       active: s.active !== false, // treat undefined as true
+      verified: s.verified !== false, // treat undefined as true (grandfather curated/seed rows)
     });
   }
 
@@ -430,6 +431,8 @@ function rowToSource(r: Record<string, unknown>): Source {
     ipfsCid: (r.ipfs_cid as string) ?? undefined,
     // active=null means old row before the column existed — treat as active.
     active: r.active === undefined || r.active === null ? true : Boolean(r.active),
+    // verified=null means old row before the column existed — grandfather as verified.
+    verified: r.verified === undefined || r.verified === null ? true : Boolean(r.verified),
   };
 }
 

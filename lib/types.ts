@@ -28,6 +28,12 @@ export interface Source {
   /** EVM tx hash of the SourceRegistry register() call. Unlike Gateway settlement IDs (UUIDs),
    *  this resolves on the block explorer, so the UI can link it as verifiable on-chain proof. */
   registerTx?: string;
+  /** Feed-ownership proof gate. Listing a source is permissionless, but EARNING is not: the agent
+   *  only discovers/reads/cites/pays sources whose owner has proven control of the feed (by placing
+   *  `keryx-verify:<payoutWallet>` in it — see lib/sources/feed-verification.ts). An impostor who
+   *  lists a feed they don't own can never make it carry their wallet, so can never verify or earn.
+   *  Undefined/null is treated as true so operator-curated + pre-existing rows are grandfathered. */
+  verified?: boolean;
 }
 
 /** A payable author within a source (enables multi-author citation splits). */

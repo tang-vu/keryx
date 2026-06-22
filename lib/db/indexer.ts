@@ -130,6 +130,13 @@ export async function applyLogs(logs: Log[], db: KeryxDB): Promise<void> {
       // Falls back to short non-hex placeholders if metadata is not yet available.
       const meta = await db.getSourceMeta(id);
 
+      // On-chain register() is the same permissionless squatting vector as the web form, so a
+      // freshly-indexed source starts UNVERIFIED (off the agent's money path until its owner
+      // proves feed control via POST /api/sources/verify). Re-indexing (SourceUpdated) must
+      // never downgrade an already-verified row, so preserve the existing flag when present.
+      const existing = await db.getSource(id);
+      const verified = existing?.verified ?? false;
+
       const source: Source = {
         id,
         name: meta?.name || `source-${id.slice(2, 8)}`,  // short non-hex fallback
@@ -140,6 +147,7 @@ export async function applyLogs(logs: Log[], db: KeryxDB): Promise<void> {
         tags,
         authors,
         active: true,
+        verified,
         createdAt: new Date().toISOString(),
         ipfsCid: record.contentCid || undefined,
       };
