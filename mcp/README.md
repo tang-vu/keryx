@@ -15,29 +15,22 @@ Arc-testnet wallet — so every call is a real on-chain payment, visible live on
 
 ## Setup (≈3 minutes)
 
-```bash
-git clone https://github.com/tang-vu/keryx && cd keryx
-npm install
-```
+Published to npm as [`keryx-mcp`](https://www.npmjs.com/package/keryx-mcp) — no clone, no build.
 
-### Add it to Claude Code
+### Add it to Claude Code (one line)
 
 ```bash
-claude mcp add keryx -- node --import tsx --no-warnings \
-  "$(pwd)/mcp/keryx-mcp-server.mts"
+claude mcp add keryx -- npx -y keryx-mcp@latest
 ```
 
-### Or add it to any MCP client (Claude Desktop, Cursor, …)
+### Or add it to any MCP client (Claude Desktop, Cursor, Windsurf, …)
 
 ```json
 {
   "mcpServers": {
     "keryx": {
-      "command": "node",
-      "args": [
-        "--import", "tsx", "--no-warnings",
-        "/absolute/path/to/keryx/mcp/keryx-mcp-server.mts"
-      ]
+      "command": "npx",
+      "args": ["-y", "keryx-mcp@latest"]
     }
   }
 }
@@ -69,3 +62,13 @@ All optional — sane Arc-testnet defaults are built in.
 > **Real money, testnet.** Calls settle real USDC on Arc testnet. The generated wallet holds only
 > what you faucet into it; Keryx never touches your keys. To go mainnet, point `KERYX_BASE_URL` at a
 > mainnet deployment and fund with real USDC — only with eyes open.
+
+## From source (development)
+
+```bash
+git clone https://github.com/tang-vu/keryx && cd keryx && npm install
+claude mcp add keryx -- node --import tsx --no-warnings "$(pwd)/mcp/keryx-mcp-server.mts"
+```
+
+`npm run build` (in `mcp/`) bundles `keryx-mcp-server.mts` → `dist/keryx-mcp.mjs` with esbuild; that
+single file is what ships to npm and runs under plain `node`.

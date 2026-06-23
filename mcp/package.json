@@ -1,0 +1,45 @@
+{
+  "name": "keryx-mcp",
+  "version": "0.1.0",
+  "description": "Add Keryx to any MCP agent — ask a research question, pay the x402 toll from your own Arc wallet, and Keryx answers with citations and pays every creator it cites in USDC on Arc.",
+  "type": "module",
+  "bin": {
+    "keryx-mcp": "dist/keryx-mcp.mjs"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "esbuild keryx-mcp-server.mts --bundle --platform=node --format=esm --target=node20 --packages=external --outfile=dist/keryx-mcp.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "x402",
+    "circle",
+    "arc",
+    "usdc",
+    "ai-agent",
+    "citations",
+    "micropayments",
+    "keryx"
+  ],
+  "license": "MIT",
+  "homepage": "https://keryx.cc",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tang-vu/keryx.git",
+    "directory": "mcp"
+  },
+  "dependencies": {
+    "@circle-fin/x402-batching": "^2.1.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "viem": "^2.52.2",
+    "zod": "^3.25.76"
+  }
+}
