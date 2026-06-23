@@ -65,14 +65,14 @@ export function A2aCallCard() {
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-line px-5 py-3 font-mono text-[11px] text-ink-3">
         <Terminal size={13} className="text-seal" />
         <span className="text-ink-2">Or add Keryx to your agent (MCP):</span>
-        <code className="text-ink">claude mcp add keryx -- node --import tsx …/mcp/keryx-mcp-server.mts</code>
+        <code className="text-ink">claude mcp add keryx -- npx -y keryx-mcp</code>
         <a
-          href="https://github.com/tang-vu/keryx/tree/main/mcp"
+          href="https://www.npmjs.com/package/keryx-mcp"
           target="_blank"
           rel="noopener noreferrer"
           className="font-semibold text-seal hover:underline"
         >
-          mcp/README ↗
+          keryx-mcp ↗
         </a>
       </div>
 

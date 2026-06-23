@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-06-23  
+**Last Updated:** 2026-06-24  
 **Current Version:** 0.3.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
@@ -18,6 +18,21 @@ the **live budget meter** and the **"call Keryx from your own agent"** card. Det
 ---
 
 ## Post-Launch Fixes (v0.2.x)
+
+### 2026-06-24 — Published keryx-mcp to npm (npx one-liner)
+
+#### build: ship the MCP server as an installable npm package so any agent wires up with one command
+**Why:** The MCP server was only runnable from a cloned repo via `node --import tsx`, which gated the
+external-traction on-ramp behind a clone + dev toolchain. A judge or agent should be able to add
+Keryx without touching the repo.
+**Change:** Packaged `mcp/` as [`keryx-mcp`](https://www.npmjs.com/package/keryx-mcp) on npm. An
+esbuild step bundles `keryx-mcp-server.mts` + `keryx-buyer.mts` into a single self-contained ESM bin
+(`dist/keryx-mcp.mjs`) that runs under plain `node` with its four runtime deps declared, so
+`claude mcp add keryx -- npx -y keryx-mcp` works from any MCP client (Claude Code/Desktop, Cursor,
+Windsurf) with no clone. Verified end-to-end: a fresh `npx -y keryx-mcp@latest` download boots and
+lists both tools. The dashboard card now shows the npx one-liner.
+**Files:** `mcp/package.json` (new), `mcp/README.md`, `components/keryx/a2a-call-card.tsx`,
+`package.json` (esbuild build dep). Bundle handshake + npx download verified.
 
 ### 2026-06-23 — Keryx MCP server (add Keryx to any agent)
 
