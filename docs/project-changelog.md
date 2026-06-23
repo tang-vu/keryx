@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-06-22  
+**Last Updated:** 2026-06-23  
 **Current Version:** 0.3.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
@@ -18,6 +18,27 @@ the **live budget meter** and the **"call Keryx from your own agent"** card. Det
 ---
 
 ## Post-Launch Fixes (v0.2.x)
+
+### 2026-06-23 — Keryx MCP server (add Keryx to any agent)
+
+#### feat: expose Keryx's paid research endpoint as MCP tools so any agent can call it in one line
+**Why:** External agents calling the paid A2A endpoint are the top traction lever, but the only
+on-ramp was a hand-built `circle services pay` call. Most agent runtimes (Claude Code/Desktop,
+Cursor, …) speak MCP, not raw x402. Without an MCP surface, a judge running an agent couldn't become
+a real external caller in a glance — and external, on-chain volume during the judging window is
+exactly what the traction rubric rewards.
+**Change:** A stdio MCP server (`mcp/`) wrapping the buyer side of `/api/agent/ask`. Two tools:
+`ask_keryx` (pays the 0.02 USDC toll from the caller's OWN Arc-testnet wallet via
+`GatewayClient.pay`, returns the cited answer + the creators Keryx paid downstream) and
+`keryx_wallet_status` (prints the pay-from wallet, balances, and exact faucet steps). Self-contained
+— reads only its own `KERYX_*` env, never Keryx's treasury keys, so it runs unchanged on any
+machine; generates + persists a wallet to `~/.keryx`, auto-deposits to Gateway on first call. Every
+call is a real on-chain USDC payment, visible live on the dashboard as external traction. The
+dashboard "Call Keryx from your own agent" card now also shows the one-line MCP install.
+**Files:** `mcp/keryx-buyer.mts` (new), `mcp/keryx-mcp-server.mts` (new), `mcp/README.md` (new),
+`components/keryx/a2a-call-card.tsx`, `package.json` (`@modelcontextprotocol/sdk` dep + `mcp`
+script). `eslint` clean; MCP `initialize`/`tools/list` handshake + buyer balance reads verified
+against live Arc testnet.
 
 ### 2026-06-22 — Creator cash-outs panel (real per-tx on-chain proof)
 
