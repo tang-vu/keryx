@@ -41,12 +41,14 @@ server.registerTool(
       const cites = r.citations?.length
         ? r.citations.map((c) => `  • ${c.source} — $${c.reward}`).join("\n")
         : "  (none)";
-      const proof = r.txHash ? ` (tx ${r.txHash.slice(0, 12)}… ${meta.explorer}/tx/${r.txHash})` : "";
+      // The settlement id is a batched Circle Gateway UUID, not an EVM hash — label it honestly and
+      // point at the dashboard for the on-chain proof rather than a /tx/ link that won't resolve.
+      const proof = r.settlementId ? ` (Circle Gateway settlement ${r.settlementId.slice(0, 12)}…, batched on Arc)` : "";
       const text =
         `${r.answer}\n\n` +
         `— Paid Keryx ${r.amountPaid ?? meta.feeUsdc} USDC${proof}\n` +
         `Keryx paid ${r.creatorsPaid} creator(s) $${r.totalToCreators} downstream:\n${cites}\n` +
-        `Live dashboard: ${meta.baseUrl}/dashboard`;
+        `On-chain proof + live feed: ${meta.baseUrl}/dashboard`;
       return { content: [{ type: "text" as const, text }] };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

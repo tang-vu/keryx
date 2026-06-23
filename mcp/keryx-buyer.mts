@@ -155,7 +155,10 @@ export type KeryxAnswer = {
   creatorsPaid: number;
   totalToCreators: number;
   feePaid: number;
-  txHash?: string;
+  // Circle Gateway settlement id (a batched-settlement UUID, NOT an EVM tx hash — it does not
+  // resolve at an explorer /tx/ route). The on-chain proof is the batched settlement on the
+  // treasury wallet, surfaced on the dashboard; per-tx EVM hashes come only from creator cash-outs.
+  settlementId?: string;
   amountPaid?: string;
 };
 
@@ -172,5 +175,5 @@ export async function askKeryx(question: string, budget?: number): Promise<Keryx
     method: "POST",
     body: { question, ...(budget ? { budget } : {}) },
   });
-  return { ...r.data, txHash: String(r.transaction), amountPaid: r.formattedAmount };
+  return { ...r.data, settlementId: String(r.transaction), amountPaid: r.formattedAmount };
 }
