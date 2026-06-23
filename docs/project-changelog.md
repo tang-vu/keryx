@@ -19,6 +19,23 @@ the **live budget meter** and the **"call Keryx from your own agent"** card. Det
 
 ## Post-Launch Fixes (v0.2.x)
 
+### 2026-06-24 — Fix the 14-day settled chart undercounting older days
+
+#### fix: chart settled volume from a full-table daily aggregation, not the capped feed
+**Why:** The dashboard "Settled · 14 days" chart bucketed the live payments feed, which the dashboard
+fetches capped at the 200 most recent rows. The volume engine settles many payments per day, so those
+200 all fell in the last day or two — every older day collapsed to a ~zero stub and the chart total
+read $1.47 against $7.97 of real settled volume. Looked broken; undercounted real traction.
+**Change:** New `db.dailySettled(days)` — a GROUP-BY-day aggregation over the entire `payment_events`
+table (settled rows only), zero-filled to the window oldest→today via a shared `fillDailySeries`
+helper. `/api/metrics` returns the series; the chart renders it directly instead of re-bucketing the
+capped feed. Implemented for both adapters (SQLite uses `substr(created_at,1,10)`; Supabase filters
+to the window and tallies in JS). Verified live: the series now spans every active day since launch
+and sums to the headline total.
+**Files:** `lib/types.ts`, `lib/db/daily-series.ts` (new), `lib/db/keryx-db.ts`,
+`lib/db/sqlite-adapter.ts`, `lib/db/supabase-adapter.ts`, `app/api/metrics/route.ts`,
+`app/dashboard/page.tsx`, `components/keryx/earnings-chart.tsx`. `tsc --noEmit` + `eslint` clean.
+
 ### 2026-06-24 — Published keryx-mcp to npm (npx one-liner)
 
 #### build: ship the MCP server as an installable npm package so any agent wires up with one command
