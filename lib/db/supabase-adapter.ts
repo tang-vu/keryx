@@ -7,6 +7,7 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import crypto from "node:crypto";
 import type {
+  DailyVolume,
   DashboardMetrics,
   PaymentRecord,
   QueryRun,
@@ -15,6 +16,7 @@ import type {
   WithdrawalRecord,
 } from "../types";
 import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, KeryxDB, UserRecord } from "./keryx-db";
+import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 
 export class SupabaseAdapter implements KeryxDB {
@@ -250,6 +252,22 @@ export class SupabaseAdapter implements KeryxDB {
       .order("created_at", { ascending: false })
       .limit(limit);
     return (data ?? []).map(rowToPayment);
+  }
+
+  async dailySettled(days: number): Promise<DailyVolume[]> {
+    // Bound the scan to the window: only settled rows on/after the oldest day shown.
+    const cutoff = new Date(Date.now() - (days - 1) * 86400000).toISOString().slice(0, 10);
+    const { data } = await this.sb
+      .from("payment_events")
+      .select("created_at, amount_usdc")
+      .eq("settled", true)
+      .gte("created_at", cutoff);
+    const tally = new Map<string, number>();
+    for (const r of data ?? []) {
+      const day = String(r.created_at).slice(0, 10);
+      tally.set(day, (tally.get(day) ?? 0) + Number(r.amount_usdc ?? 0));
+    }
+    return fillDailySeries([...tally].map(([day, usdc]) => ({ day, usdc })), days);
   }
 
   async recordWithdrawal(w: WithdrawalRecord): Promise<void> {

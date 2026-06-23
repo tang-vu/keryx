@@ -4,6 +4,7 @@
  */
 
 import type {
+  DailyVolume,
   DashboardMetrics,
   PaymentRecord,
   QueryRun,
@@ -128,6 +129,9 @@ export interface KeryxDB {
   recordPayment(p: PaymentRecord): Promise<void>;
   listPayments(limit: number): Promise<PaymentRecord[]>;
   metrics(): Promise<DashboardMetrics>;
+  /** Settled USDC per UTC day over the last `days` days, zero-filled, oldest→today. Full-table
+   *  aggregation — independent of the capped live feed, so older days aren't undercounted. */
+  dailySettled(days: number): Promise<DailyVolume[]>;
   creatorLeaderboard(): Promise<CreatorEarnings[]>;
 
   // ── creator cash-outs (on-chain Gateway withdraws) ──

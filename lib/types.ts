@@ -177,3 +177,9 @@ export interface DashboardMetrics {
   enginePayments: number;
   engineVolumeUsdc: number;
 }
+
+/** One day's settled USDC volume. `day` is a UTC `YYYY-MM-DD` key. */
+export interface DailyVolume {
+  day: string;
+  usdc: number;
+}

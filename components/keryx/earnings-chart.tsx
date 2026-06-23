@@ -1,27 +1,27 @@
 "use client";
 
 /**
- * Earnings over the last 14 days — a banknote column chart bucketed by day from
- * real settled payments (no mock data). Today is struck in vermillion; the rest
- * in treasury green. Bars sit on an ink baseline.
+ * Settled USDC over the last 14 days — a banknote column chart, one bar per UTC day, from a
+ * full-table server aggregation (`/api/metrics` → `dailySettled`). Today is struck in vermillion;
+ * the rest in treasury green. Bars sit on an ink baseline.
+ *
+ * Bucketing the capped live feed here would undercount older days (the feed only holds the most
+ * recent rows), so the chart consumes the pre-aggregated daily series instead.
  */
 
-import type { PaymentRecord } from "@/lib/types";
+import type { DailyVolume } from "@/lib/types";
 
 const DAYS = 14;
-const DAY_MS = 24 * 60 * 60 * 1000;
 
-export function EarningsChart({ payments }: { payments: PaymentRecord[] }) {
-  const now = Date.now();
-  const buckets = new Array(DAYS).fill(0) as number[];
-  for (const p of payments) {
-    const t = new Date(p.createdAt).getTime();
-    if (Number.isNaN(t)) continue;
-    const idx = DAYS - 1 - Math.floor((now - t) / DAY_MS);
-    if (idx >= 0 && idx < DAYS) buckets[idx] += p.amountUsdc ?? 0;
-  }
-  const max = Math.max(...buckets, 1e-9);
-  const total = buckets.reduce((a, b) => a + b, 0);
+export function EarningsChart({ daily }: { daily: DailyVolume[] }) {
+  // Right-align to exactly DAYS cells (today last); the server already returns a zero-filled window.
+  const pad = Math.max(0, DAYS - daily.length);
+  const cells: (DailyVolume | null)[] = [
+    ...new Array(pad).fill(null),
+    ...daily.slice(-DAYS),
+  ];
+  const max = Math.max(...cells.map((c) => c?.usdc ?? 0), 1e-9);
+  const total = cells.reduce((a, c) => a + (c?.usdc ?? 0), 0);
 
   return (
     <div className="border border-ink bg-paper">
@@ -35,17 +35,20 @@ export function EarningsChart({ payments }: { payments: PaymentRecord[] }) {
       </div>
       <div className="px-6 py-6">
         <div className="flex h-[120px] items-end gap-1.5">
-          {buckets.map((v, i) => (
-            <div
-              key={i}
-              className="flex-1 border-t border-ink"
-              style={{
-                height: `${Math.max(2, (v / max) * 100)}%`,
-                background: i === DAYS - 1 ? "var(--seal)" : "var(--paid)",
-              }}
-              title={`$${v.toFixed(3)}`}
-            />
-          ))}
+          {cells.map((c, i) => {
+            const v = c?.usdc ?? 0;
+            return (
+              <div
+                key={c?.day ?? `pad-${i}`}
+                className="flex-1 border-t border-ink"
+                style={{
+                  height: `${Math.max(2, (v / max) * 100)}%`,
+                  background: i === DAYS - 1 ? "var(--seal)" : "var(--paid)",
+                }}
+                title={c ? `${c.day}: $${v.toFixed(3)}` : "no data"}
+              />
+            );
+          })}
         </div>
         <div className="mt-2.5 flex justify-between font-mono text-[10px] uppercase tracking-[0.04em] text-ink-3">
           <span>14 days ago</span>

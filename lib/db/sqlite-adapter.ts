@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import type {
+  DailyVolume,
   DashboardMetrics,
   PaymentRecord,
   QueryRun,
@@ -16,6 +17,7 @@ import type {
   WithdrawalRecord,
 } from "../types";
 import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, KeryxDB, UserRecord } from "./keryx-db";
+import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 
 const SCHEMA = `
@@ -369,6 +371,17 @@ export class SqliteAdapter implements KeryxDB {
       .prepare(`SELECT * FROM payment_events ORDER BY created_at DESC LIMIT ?`)
       .all(limit);
     return rows.map(rowToPayment);
+  }
+
+  async dailySettled(days: number): Promise<DailyVolume[]> {
+    // created_at is an ISO-UTC string; its first 10 chars are the UTC YYYY-MM-DD day.
+    const rows = this.db
+      .prepare(
+        `SELECT substr(created_at, 1, 10) day, COALESCE(SUM(amount_usdc), 0) usdc
+         FROM payment_events WHERE settled = 1 GROUP BY day`,
+      )
+      .all() as { day: string; usdc: number }[];
+    return fillDailySeries(rows, days);
   }
 
   async recordWithdrawal(w: WithdrawalRecord): Promise<void> {

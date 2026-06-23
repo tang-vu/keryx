@@ -26,7 +26,7 @@ import { EarningsChart } from "@/components/keryx/earnings-chart";
 import { TopicsPanel, type Topic } from "@/components/keryx/topics-panel";
 import { A2aCallCard } from "@/components/keryx/a2a-call-card";
 import { fmtUsdc } from "@/components/keryx/phase-style";
-import type { DashboardMetrics, PaymentRecord, WithdrawalRecord } from "@/lib/types";
+import type { DailyVolume, DashboardMetrics, PaymentRecord, WithdrawalRecord } from "@/lib/types";
 
 const POLL_MS = 2000;
 
@@ -34,6 +34,7 @@ interface MetricsResponse {
   metrics: DashboardMetrics;
   leaderboard: LeaderboardEntry[];
   topics?: Topic[];
+  dailySettled?: DailyVolume[];
 }
 
 export default function DashboardPage() {
@@ -41,6 +42,7 @@ export default function DashboardPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [daily, setDaily] = useState<DailyVolume[]>([]);
   const [withdrawals, setWithdrawals] = useState<WithdrawalRecord[]>([]);
 
   useEffect(() => {
@@ -59,6 +61,7 @@ export default function DashboardPage() {
           setMetrics(data.metrics);
           setLeaderboard(data.leaderboard ?? []);
           setTopics(data.topics ?? []);
+          setDaily(data.dailySettled ?? []);
         }
         if (pRes.ok) {
           const data = (await pRes.json()) as { payments: PaymentRecord[] };
@@ -156,12 +159,12 @@ export default function DashboardPage() {
 
         {topics.length > 0 ? (
           <section className="mt-6 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
-            <EarningsChart payments={payments} />
+            <EarningsChart daily={daily} />
             <TopicsPanel topics={topics} />
           </section>
         ) : (
           <div className="mt-6">
-            <EarningsChart payments={payments} />
+            <EarningsChart daily={daily} />
           </div>
         )}
 
