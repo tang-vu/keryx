@@ -97,9 +97,11 @@ export function ForCreators() {
             <em className="font-semibold italic">Be paid like it.</em>
           </h2>
           <p className="relative mt-6 max-w-[54ch] font-serif text-[clamp(16px,1.5vw,19px)] leading-[1.55] text-paper/85">
-            Register a source, set a price per read, connect a wallet. Every
-            citation settles to you directly — no platform cut, no payout
-            schedule, no minimum. The herald always pays.
+            AI agents already read posts like yours to answer questions for other
+            readers — and you never see a cent. Keryx changes the split: list your
+            blog, and every time it reads and cites you, the toll settles to you
+            directly. No platform cut, no payout schedule, no minimum. The herald
+            always pays.
           </p>
           <div className="relative mt-8 flex flex-wrap gap-3">
             <Link

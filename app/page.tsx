@@ -111,7 +111,7 @@ export default function AskPage() {
                   </div>
 
                   <div className="relative flex items-center justify-between gap-4 font-mono text-[11px] uppercase tracking-[0.18em] text-ink-3">
-                    <span>x402 &nbsp;·&nbsp; USDC &nbsp;·&nbsp; settled on Arc</span>
+                    <span>For the writers AI reads &nbsp;·&nbsp; paid per citation</span>
                     <span className="text-ink">Series 2026 — No. 00481</span>
                   </div>
 

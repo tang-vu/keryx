@@ -20,7 +20,7 @@ const defaultUrl =
 
 const TITLE = "Keryx — citations are currency";
 const DESCRIPTION =
-  "Keryx is a citation-toll reading agent. Give it a question and a budget — it buys the paid sources worth reading, answers with citations, and settles a weighted nanopayment to every source it cites, in USDC on Arc. Creators are paid every time an AI cites them.";
+  "AI agents read your writing to answer other people's questions — and you're never paid for it. Keryx is a reading agent that cites its sources and pays the writers it quotes. List your blog and earn every time an AI cites you — settled instantly, no platform cut, no payout minimum.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),

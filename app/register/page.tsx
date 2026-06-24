@@ -75,8 +75,9 @@ export default function RegisterPage() {
             Set your <em className="italic text-paid">toll.</em>
           </h1>
           <p className="mt-3 max-w-[54ch] text-[18px] leading-relaxed text-ink-2">
-            List a source you control. When Keryx reads and cites it, the toll
-            settles to your wallet in USDC — instantly, with no middleman.
+            AI agents already read blogs like yours to answer questions — for
+            free. List a site you control, and every time Keryx cites it the toll
+            settles to you directly. Instant, no middleman, no minimum.
           </p>
         </header>
 
