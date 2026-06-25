@@ -198,7 +198,14 @@ async function main() {
       continue;
     }
 
-    const amount = Math.min(o.amount ?? available, available);
+    // Circle charges a fee ON TOP of the burn value (it requires available >= value + fee), so a
+    // full-balance withdraw fails by exactly the fee. Reserve it from the withdraw amount.
+    const reserve = config.withdrawFeeReserveUsdc;
+    const amount = Math.min(o.amount ?? available - reserve, available - reserve);
+    if (amount <= 0) {
+      console.log(`  ↳ skip (balance below withdraw fee reserve $${reserve})`);
+      continue;
+    }
     try {
       await ensureGas(funder, w.address as `0x${string}`);
       const res = await gw.withdraw(amount.toFixed(6), {
