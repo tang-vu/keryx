@@ -13,6 +13,11 @@ export const config = {
     "0x3600000000000000000000000000000000000000") as `0x${string}`,
   gatewayWallet: (process.env.KERYX_GATEWAY_WALLET ??
     "0x0077777d7EBA4688BDeF3E311b846F25870A19B9") as `0x${string}`,
+  // GatewayMinter contract — mints USDC on the destination chain from a Circle transfer
+  // attestation. Used by the creator-withdraw relay to submit gatewayMint(). Testnet value
+  // from @circle-fin/x402-batching CHAIN_CONFIGS.arcTestnet.gatewayMinter.
+  gatewayMinter: (process.env.KERYX_GATEWAY_MINTER ??
+    "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B") as `0x${string}`,
   explorerUrl: "https://testnet.arcscan.app",
   gatewayBalanceApi: "https://gateway-api-testnet.circle.com/v1/balances",
   cctpDomain: 26,
@@ -45,6 +50,10 @@ export const config = {
   // (the caller self-pays via x402 to a source-owned wallet), but bounds a fat-finger / absurd
   // `amount` that would skew the leaderboard. ~100×+ above any realistic weighted reward.
   maxCitationUsdc: num(process.env.KERYX_MAX_CITATION_USDC, 5),
+  // Ceiling (USDC) on the fee a creator's instant Gateway withdraw will tolerate. The actual
+  // same-chain fee on testnet is ~0; this is only an upper bound passed in the burn intent
+  // (mirrors the SDK/operator default of 2.01 so the proven withdraw path isn't fee-rejected).
+  withdrawMaxFeeUsdc: num(process.env.KERYX_WITHDRAW_MAX_FEE, 2.01),
   // Ceiling on the budget the A2A path (/api/agent/ask) will honor before driving treasury-funded
   // creator payouts. Same drain class as anonMaxBudget but behind the x402 fee, so more generous.
   // The traction a2a-client uses 0.03, well under this.

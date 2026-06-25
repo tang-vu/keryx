@@ -21,6 +21,7 @@ import Link from "next/link";
 import { ShieldCheck, Wallet } from "lucide-react";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { RegisterForm } from "@/components/keryx/register-form";
+import { WithdrawEarningsPanel } from "@/components/keryx/withdraw-earnings-panel";
 import {
   SourcesList,
   type SourceCardData,
@@ -120,6 +121,8 @@ export default function RegisterPage() {
                     </p>
                   </div>
                 </div>
+                {/* Returning creators: pull accrued citation earnings on-chain (gasless). */}
+                {address && <WithdrawEarningsPanel address={address} />}
                 <RegisterForm
                   onCreated={loadSources}
                   prefillWalletAddress={address}
