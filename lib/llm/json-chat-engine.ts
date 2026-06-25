@@ -8,9 +8,13 @@ import { config } from "../config";
 import type { Decision } from "../types";
 import type {
   AttributeInput,
+  ClaimSufficiency,
   DecideInput,
+  ReevaluateInput,
+  ReevaluateOutput,
   ReasoningEngine,
   SufficiencyInput,
+  SufficiencyResult,
   SynthInput,
 } from "./reasoning-engine";
 
@@ -85,12 +89,11 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       .filter((d): d is Decision => d !== null);
   }
 
-  async sufficiency(
-    input: SufficiencyInput,
-  ): Promise<{ sufficient: boolean; rationale: string }> {
+  async sufficiency(input: SufficiencyInput): Promise<SufficiencyResult> {
     const out = await this.chatJson(
       config.llmModel,
-      "You decide if enough has been read to answer confidently. Stopping early saves budget; only continue if a sub-claim is genuinely unsupported. Output strict JSON.",
+      "You decide if enough has been read to answer confidently. For EACH sub-claim, estimate its coverage (0.0 = not covered, 1.0 = fully supported) " +
+        "and list which source markers cover it. Stopping early saves budget; only continue if a sub-claim has coverage below 0.4. Output strict JSON.",
       JSON.stringify({
         question: input.question,
         subClaims: input.subClaims,
@@ -99,10 +102,64 @@ export abstract class JsonChatEngine implements ReasoningEngine {
           source: g.sourceName,
           text: g.text.slice(0, 800),
         })),
-        schema: '{"sufficient":boolean,"rationale":string}',
+        schema:
+          '{"sufficient":boolean,"rationale":string,"perClaim":[{"claim":string,"coverage":number(0..1),"coveredBy":string[]}]}',
       }),
     );
-    return { sufficient: Boolean(out.sufficient), rationale: (out.rationale as string) ?? "" };
+    const rawClaims = (out.perClaim as Record<string, unknown>[]) ?? [];
+    const perClaim: ClaimSufficiency[] = rawClaims.map((c) => ({
+      claim: (c.claim as string) ?? "",
+      coverage: clamp01(c.coverage as number),
+      coveredBy: Array.isArray(c.coveredBy) ? (c.coveredBy as string[]) : [],
+    }));
+    return {
+      sufficient: Boolean(out.sufficient),
+      rationale: (out.rationale as string) ?? "",
+      perClaim: perClaim.length > 0 ? perClaim : undefined,
+    };
+  }
+
+  async reevaluate(input: ReevaluateInput): Promise<ReevaluateOutput> {
+    const out = await this.chatJson(
+      config.llmModel,
+      "You are a research agent that has already read some sources. Now assess coverage per sub-claim. " +
+        "For each claim, estimate how well the gathered content supports it (0.0 = not covered, 1.0 = fully covered). " +
+        "If any claim has coverage below 0.5 AND there are affordable skipped sources that could fill the gap, " +
+        "recommend buying them (in priority order). Only recommend sources whose price fits the remaining budget. " +
+        "Be frugal — don't buy more if coverage is already adequate. Output strict JSON.",
+      JSON.stringify({
+        question: input.question,
+        subClaims: input.subClaims,
+        gathered: input.gathered.map((g) => ({
+          marker: g.marker,
+          source: g.sourceName,
+          text: g.text.slice(0, 800),
+        })),
+        skippedSources: input.skippedSources.map((s) => ({
+          id: s.id,
+          name: s.name,
+          price: s.price,
+          preview: s.preview.slice(0, 300),
+        })),
+        remainingBudget: input.remainingBudget,
+        schema:
+          '{"claims":[{"claim":string,"coverage":number(0..1),"coveredBy":string[],"rationale":string}],"shouldBuyMore":boolean,"recommendedIds":string[],"rationale":string}',
+      }),
+    );
+    const claims = (out.claims as ReevaluateOutput["claims"]) ?? [];
+    return {
+      claims: claims.map((c) => ({
+        claim: c.claim ?? "",
+        coverage: clamp01(c.coverage),
+        coveredBy: Array.isArray(c.coveredBy) ? c.coveredBy : [],
+        rationale: c.rationale ?? "",
+      })),
+      shouldBuyMore: Boolean(out.shouldBuyMore),
+      recommendedIds: Array.isArray(out.recommendedIds)
+        ? (out.recommendedIds as string[])
+        : [],
+      rationale: (out.rationale as string) ?? "",
+    };
   }
 
   async synthesize(

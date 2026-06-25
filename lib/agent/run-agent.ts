@@ -176,6 +176,9 @@ export async function* runAgent(
     }
   }
 
+  let lastSufficient = false;
+  let lastGaps = 0; // sub-claims with coverage < 0.4 from the most recent sufficiency check
+
   for (const d of buys) {
     const source = sourceById.get(d.sourceId)!;
     const marker = `S${++markerN}`;
@@ -206,15 +209,114 @@ export async function* runAgent(
         continue;
       }
 
-      // stop-early check after each paid read
+      // stop-early check after each paid read — now with per-claim coverage
       const suf = await engine.sufficiency({ question: input.question, subClaims, gathered });
-      yield emit("sufficiency", suf.rationale, { sufficient: suf.sufficient });
+      if (suf.perClaim && suf.perClaim.length > 0) {
+        for (const c of suf.perClaim) {
+          const pct = Math.round(c.coverage * 100);
+          const by = c.coveredBy.length ? ` by ${c.coveredBy.join(", ")}` : "";
+          yield emit("sufficiency", `Sub-claim "${c.claim.slice(0, 60)}${c.claim.length > 60 ? "…" : ""}": ${pct}% covered${by}`);
+        }
+      }
+      yield emit("sufficiency", suf.rationale, { sufficient: suf.sufficient, perClaim: suf.perClaim });
+      lastSufficient = suf.sufficient;
+      lastGaps = suf.perClaim ? suf.perClaim.filter((c) => c.coverage < 0.4).length : 0;
       if (suf.sufficient) {
         const remaining = buys.slice(buys.indexOf(d) + 1).filter((x) => x.action === "BUY");
         if (remaining.length) {
           yield emit("sufficiency", `Stopping early — skipping ${remaining.length} further paid fetch(es) to save budget.`);
         }
         break;
+      }
+    }
+  }
+
+  // 4b) RE-EVALUATE — after the initial fetch pass, assess per-claim coverage and
+  // potentially buy additional previously-skipped sources to fill gaps. Multi-pass
+  // reasoning: the agent "thinks twice" about whether its initial buy/skip choices
+  // left any sub-claim unsupported, and spends remaining budget to close the gap.
+  const gatheredIds = new Set(gathered.map((g) => g.sourceId));
+  let remainingBudget = fetchBudget - spentTolls;
+
+  // Skip re-evaluation when the last sufficiency check already confirmed full coverage —
+  // no point burning an LLM call to discover there are no gaps.
+  if (lastSufficient && lastGaps === 0 && config.reevaluateRounds > 0) {
+    yield emit("reevaluate", `All sub-claims already well-covered (sufficiency passed with 0 gaps) — skipping re-evaluation to save latency.`);
+  } else if (gathered.length > 0 && config.reevaluateRounds > 0) {
+    for (let round = 0; round < config.reevaluateRounds; round++) {
+      const skipped = finalDecisions
+        .filter(
+          (d) =>
+            d.action === "SKIP" &&
+            !d.external &&
+            !isExternal(d.sourceId) &&
+            !gatheredIds.has(d.sourceId),
+        )
+        .map((d) => {
+          const s = sourceById.get(d.sourceId);
+          return {
+            id: d.sourceId,
+            name: d.sourceName,
+            price: s?.fetchPrice ?? 0,
+            preview: s?.description ?? "",
+          };
+        });
+
+      if (skipped.length === 0 || remainingBudget <= 0) break;
+
+      const reeval = await engine.reevaluate({
+        question: input.question,
+        subClaims,
+        gathered,
+        skippedSources: skipped,
+        remainingBudget,
+      });
+
+      // Emit per-claim coverage assessment — visible multi-pass reasoning
+      for (const c of reeval.claims) {
+        const pct = Math.round(c.coverage * 100);
+        yield emit(
+          "reevaluate",
+          `Sub-claim "${c.claim.slice(0, 60)}${c.claim.length > 60 ? "…" : ""}": ${pct}% covered${c.coveredBy.length ? ` by ${c.coveredBy.join(", ")}` : ""} — ${c.rationale}`,
+          c,
+        );
+      }
+
+      yield emit("reevaluate", reeval.rationale, {
+        shouldBuyMore: reeval.shouldBuyMore,
+        recommended: reeval.recommendedIds,
+      });
+
+      if (!reeval.shouldBuyMore || reeval.recommendedIds.length === 0) break;
+
+      // Buy additional sources the engine recommended to fill coverage gaps
+      for (const recId of reeval.recommendedIds) {
+        const source = sourceById.get(recId) ?? sources.find((s) => s.id === recId);
+        if (!source || source.fetchPrice > remainingBudget + 1e-9) continue;
+
+        const marker = `S${++markerN}`;
+        yield emit("reevaluate", `Filling gap — buying ${source.name} ($${source.fetchPrice})…`);
+
+        try {
+          const { content, payment } = await gateway.payFetch({ source, queryId });
+          payment.origin = origin;
+          await db.setCached(source.id, content);
+          await db.recordPayment(payment);
+          payments.push(payment);
+          gathered.push({ sourceId: source.id, sourceName: source.name, marker, text: content });
+          gatheredIds.add(source.id);
+          remainingBudget -= source.fetchPrice;
+          spentTolls += source.fetchPrice;
+
+          yield emit(
+            "reevaluate",
+            `Paid $${payment.amountUsdc} to ${source.name} ${payment.settled ? `(settled ${short(payment.txHash)})` : "(simulated)"} — ${marker}`,
+            payment,
+          );
+        } catch (err) {
+          const reason = err instanceof Error ? err.message : String(err);
+          yield emit("reevaluate", `Couldn't buy ${source.name} to fill gap (${reason}) — continuing.`);
+        }
       }
     }
   }

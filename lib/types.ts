@@ -131,6 +131,7 @@ export type TracePhase =
   | "decide"
   | "fetch"
   | "sufficiency"
+  | "reevaluate"
   | "synthesize"
   | "attribute"
   | "settle"

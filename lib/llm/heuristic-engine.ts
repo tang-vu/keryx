@@ -10,8 +10,11 @@ import type { Decision } from "../types";
 import type {
   AttributeInput,
   DecideInput,
+  ReevaluateInput,
+  ReevaluateOutput,
   ReasoningEngine,
   SufficiencyInput,
+  SufficiencyResult,
   SynthInput,
 } from "./reasoning-engine";
 
@@ -102,19 +105,94 @@ export class HeuristicEngine implements ReasoningEngine {
     });
   }
 
-  async sufficiency(
-    input: SufficiencyInput,
-  ): Promise<{ sufficient: boolean; rationale: string }> {
-    const claimTokens = input.subClaims.map((c) => tokenize(c));
+  async sufficiency(input: SufficiencyInput): Promise<SufficiencyResult> {
     const allText = tokenize(input.gathered.map((g) => g.text).join(" "));
-    const covered = claimTokens.filter((ct) => overlap(ct, allText) > 0.3).length;
+    const perClaim = input.subClaims.map((claim) => {
+      const ct = tokenize(claim);
+      const cov = overlap(ct, allText);
+      const coveredBy = input.gathered
+        .filter((g) => overlap(ct, tokenize(g.text)) > 0.15)
+        .map((g) => g.marker);
+      return { claim, coverage: round(cov), coveredBy };
+    });
+    const covered = perClaim.filter((c) => c.coverage > 0.3).length;
     const sufficient =
-      input.gathered.length >= 2 && covered >= claimTokens.length;
+      input.gathered.length >= 2 && covered >= perClaim.length;
     return {
       sufficient,
       rationale: sufficient
-        ? `Read ${input.gathered.length} sources covering all ${claimTokens.length} sub-claim(s); stopping to save budget.`
-        : `Covered ${covered}/${claimTokens.length} sub-claim(s) from ${input.gathered.length} source(s); keep reading.`,
+        ? `Read ${input.gathered.length} sources covering all ${perClaim.length} sub-claim(s); stopping to save budget.`
+        : `Covered ${covered}/${perClaim.length} sub-claim(s) from ${input.gathered.length} source(s); keep reading.`,
+      perClaim,
+    };
+  }
+
+  async reevaluate(input: ReevaluateInput): Promise<ReevaluateOutput> {
+    const allText = tokenize(input.gathered.map((g) => g.text).join(" "));
+    const claims = input.subClaims.map((claim) => {
+      const ct = tokenize(claim);
+      const cov = overlap(ct, allText);
+      const coveredBy = input.gathered
+        .filter((g) => overlap(ct, tokenize(g.text)) > 0.15)
+        .map((g) => g.marker);
+      return {
+        claim,
+        coverage: round(cov),
+        coveredBy,
+        rationale:
+          cov >= 0.5
+            ? `Well-supported by ${coveredBy.join(", ") || "gathered content"} (${Math.round(cov * 100)}% keyword overlap).`
+            : cov > 0
+              ? `Partially supported (${Math.round(cov * 100)}% overlap) — gap on: ${[...ct].filter((t) => !allText.has(t)).slice(0, 4).join(", ") || "nuance"}.`
+              : `Not covered by any gathered source.`,
+      };
+    });
+
+    const gaps = claims.filter((c) => c.coverage < 0.4);
+    if (gaps.length === 0 || input.skippedSources.length === 0 || input.remainingBudget <= 0) {
+      return {
+        claims,
+        shouldBuyMore: false,
+        recommendedIds: [],
+        rationale:
+          gaps.length === 0
+            ? `All ${claims.length} sub-claim(s) have adequate coverage (≥40%).`
+            : input.remainingBudget <= 0
+              ? `${gaps.length} gap(s) detected but no budget remains ($${input.remainingBudget.toFixed(4)}).`
+              : `${gaps.length} gap(s) detected but no skipped sources available to fill them.`,
+      };
+    }
+
+    // Rank skipped sources by how well they cover the gaps, within budget
+    const gapTokens = tokenize(gaps.map((g) => g.claim).join(" "));
+    const ranked = input.skippedSources
+      .map((s) => ({
+        id: s.id,
+        name: s.name,
+        price: s.price,
+        score: overlap(gapTokens, tokenize(`${s.name} ${s.preview}`)),
+      }))
+      .filter((s) => s.score > 0.05 && s.price <= input.remainingBudget)
+      .sort((a, b) => b.score / b.price - a.score / a.price);
+
+    // Pick affordable sources greedily
+    let budget = input.remainingBudget;
+    const picked: string[] = [];
+    for (const s of ranked) {
+      if (s.price > budget) continue;
+      picked.push(s.id);
+      budget -= s.price;
+      if (picked.length >= 2) break; // cap at 2 additional buys per re-evaluation round
+    }
+
+    return {
+      claims,
+      shouldBuyMore: picked.length > 0,
+      recommendedIds: picked,
+      rationale:
+        picked.length > 0
+          ? `${gaps.length} gap(s) detected — recommending ${picked.length} additional source(s) from ${ranked.length} candidate(s) within $${input.remainingBudget.toFixed(4)} budget.`
+          : `${gaps.length} gap(s) detected but no affordable skipped source covers them.`,
     };
   }
 

@@ -13,8 +13,11 @@ import { HeuristicEngine } from "./heuristic-engine";
 import type {
   AttributeInput,
   DecideInput,
+  ReevaluateInput,
+  ReevaluateOutput,
   ReasoningEngine,
   SufficiencyInput,
+  SufficiencyResult,
   SynthInput,
 } from "./reasoning-engine";
 import type { Decision } from "../types";
@@ -64,8 +67,12 @@ export class ResilientEngine implements ReasoningEngine {
     return withFallback("decide", () => this.primary.decide(input), () => this.fallback.decide(input));
   }
 
-  sufficiency(input: SufficiencyInput): Promise<{ sufficient: boolean; rationale: string }> {
+  sufficiency(input: SufficiencyInput): Promise<SufficiencyResult> {
     return withFallback("sufficiency", () => this.primary.sufficiency(input), () => this.fallback.sufficiency(input));
+  }
+
+  reevaluate(input: ReevaluateInput): Promise<ReevaluateOutput> {
+    return withFallback("reevaluate", () => this.primary.reevaluate(input), () => this.fallback.reevaluate(input));
   }
 
   synthesize(input: SynthInput): Promise<{ answer: string; citedMarkers: string[] }> {

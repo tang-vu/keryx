@@ -55,6 +55,20 @@ export interface SufficiencyInput {
   gathered: GatheredContent[];
 }
 
+/** Per-sub-claim coverage assessment from the sufficiency check. */
+export interface ClaimSufficiency {
+  claim: string;
+  coverage: number; // 0..1
+  coveredBy: string[]; // source markers (S1, S2, …)
+}
+
+export interface SufficiencyResult {
+  sufficient: boolean;
+  rationale: string;
+  /** Per-claim coverage breakdown — present when the engine supports granular assessment. */
+  perClaim?: ClaimSufficiency[];
+}
+
 export interface SynthInput {
   question: string;
   subClaims: string[];
@@ -67,6 +81,36 @@ export interface AttributeInput {
   used: GatheredContent[];
 }
 
+/** Coverage assessment for a single sub-claim after reading sources. */
+export interface ClaimCoverage {
+  claim: string;
+  coverage: number; // 0..1
+  coveredBy: string[]; // source markers
+  rationale: string;
+}
+
+/** Input for the re-evaluation step: what's been read, what's been skipped, what budget remains. */
+export interface ReevaluateInput {
+  question: string;
+  subClaims: string[];
+  gathered: GatheredContent[];
+  skippedSources: {
+    id: string;
+    name: string;
+    price: number;
+    preview: string;
+  }[];
+  remainingBudget: number;
+}
+
+/** Output of re-evaluation: per-claim coverage + whether to buy more sources and which. */
+export interface ReevaluateOutput {
+  claims: ClaimCoverage[];
+  shouldBuyMore: boolean;
+  recommendedIds: string[]; // sourceIds to buy, in priority order
+  rationale: string;
+}
+
 export interface ReasoningEngine {
   /** identifier recorded on each query run, e.g. "llm:claude-haiku-4-5" or "heuristic" */
   readonly name: string;
@@ -77,10 +121,13 @@ export interface ReasoningEngine {
   /** Propose BUY/SKIP/CACHE per candidate with a human-readable rationale. */
   decide(input: DecideInput): Promise<Decision[]>;
 
-  /** Decide whether enough has been read to answer confidently (enables early stop). */
-  sufficiency(
-    input: SufficiencyInput,
-  ): Promise<{ sufficient: boolean; rationale: string }>;
+  /** Decide whether enough has been read to answer confidently (enables early stop).
+   *  Returns per-claim coverage when the engine supports granular assessment. */
+  sufficiency(input: SufficiencyInput): Promise<SufficiencyResult>;
+
+  /** After reading sources, assess per-claim coverage and identify gaps worth
+   *  filling with additional purchases from previously-skipped candidates. */
+  reevaluate(input: ReevaluateInput): Promise<ReevaluateOutput>;
 
   /** Write a grounded answer with inline [S#] citation markers. */
   synthesize(

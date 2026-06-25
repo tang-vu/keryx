@@ -50,6 +50,12 @@ export const config = {
   // The traction a2a-client uses 0.03, well under this.
   a2aMaxBudget: num(process.env.KERYX_A2A_MAX_BUDGET, 0.5),
 
+  // ── Agent reasoning ──
+  // Max re-evaluation rounds after the initial fetch pass. Each round assesses per-claim coverage
+  // and may buy additional previously-skipped sources to fill gaps. 0 disables re-evaluation
+  // (single-pass behavior, pre-v0.4). Default 1 keeps latency low while still showing multi-pass.
+  reevaluateRounds: Math.round(num(process.env.KERYX_REEVALUATE_ROUNDS, 1)),
+
   // ── Open x402 marketplace discovery ──
   // When on, the agent probes the live Circle x402 service bazaar (`circle services search`) during
   // discovery and reasons over real external endpoints alongside its registered creators. These
