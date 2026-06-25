@@ -40,7 +40,7 @@ export function AskForm({ disabled, onAsk }: AskFormProps) {
   };
 
   return (
-    <div>
+    <div data-tour="ask-form">
       <div className="border-2 border-ink bg-paper p-[5px]">
         <div className="border border-ink">
           {/* engraved header band */}
@@ -70,6 +70,7 @@ export function AskForm({ disabled, onAsk }: AskFormProps) {
                   onChange={(e) => setBudget(parseFloat(e.target.value))}
                   className="w-36 sm:w-44"
                   aria-label="Authorized budget in USDC"
+                  data-tour="budget"
                 />
                 <span className="min-w-[92px] text-right font-display text-[30px] font-bold leading-none tracking-tight tabular-nums text-seal">
                   ${budget.toFixed(3)}
@@ -103,6 +104,7 @@ export function AskForm({ disabled, onAsk }: AskFormProps) {
                 onClick={submit}
                 disabled={disabled || question.trim().length === 0}
                 className="kx-press border border-ink bg-ink px-7 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-cream transition-all hover:-translate-y-0.5 hover:shadow-[0_5px_0_var(--seal)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                data-tour="dispatch-btn"
               >
                 Dispatch ▸
               </button>

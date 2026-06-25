@@ -25,6 +25,7 @@ import { AnswerCard } from "@/components/keryx/answer-card";
 import { HowItWorks, ForCreators } from "@/components/keryx/landing-sections";
 import { SessionGrantPanel } from "@/components/keryx/session-grant-panel";
 import type { SessionGrantBinding } from "@/components/keryx/session-grant-panel";
+import { OnboardingTour } from "@/components/keryx/onboarding-tour";
 import { useAskStream } from "@/lib/hooks/use-ask-stream";
 import type { PaymentRecord } from "@/lib/types";
 
@@ -99,11 +100,12 @@ export default function AskPage() {
   return (
     <div className="min-h-screen bg-paper-2">
       <SiteHeader />
+      <OnboardingTour />
       <main>
         {!started ? (
           <>
             {/* HERO NOTE */}
-            <section className="mx-auto max-w-[1180px] px-4 pb-2 pt-12 sm:px-[30px]">
+            <section className="mx-auto max-w-[1180px] px-4 pb-2 pt-12 sm:px-[30px]" data-tour="hero">
               <div className="border-2 border-ink bg-paper p-1.5">
                 <div className="relative overflow-hidden border border-ink p-[clamp(28px,4.5vw,56px)]">
                   <div className="pointer-events-none absolute right-[-90px] top-1/2 hidden h-[560px] w-[560px] -translate-y-1/2 opacity-50 lg:block">
