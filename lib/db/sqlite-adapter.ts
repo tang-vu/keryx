@@ -16,7 +16,7 @@ import type {
   SourceItem,
   WithdrawalRecord,
 } from "../types";
-import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, KeryxDB, UserRecord } from "./keryx-db";
+import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, FeedbackStats, KeryxDB, UserRecord } from "./keryx-db";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 
@@ -86,6 +86,14 @@ CREATE TABLE IF NOT EXISTS users (
   first_seen_at  TEXT NOT NULL,
   last_seen_at   TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS answer_feedback (
+  id         TEXT PRIMARY KEY,
+  query_id   TEXT NOT NULL,
+  rating     TEXT NOT NULL,          -- 'up' or 'down'
+  comment    TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS answer_feedback_query ON answer_feedback(query_id);
 `;
 
 export class SqliteAdapter implements KeryxDB {
@@ -524,6 +532,32 @@ export class SqliteAdapter implements KeryxDB {
       )
       .all(keyId, days) as { day: string; call_count: number }[];
     return rows.map((r) => ({ day: r.day, count: r.call_count }));
+  }
+
+  async recordFeedback(queryId: string, rating: "up" | "down", comment?: string): Promise<void> {
+    this.db
+      .prepare(
+        `INSERT INTO answer_feedback (id,query_id,rating,comment,created_at) VALUES (?,?,?,?,?)`,
+      )
+      .run(crypto.randomUUID(), queryId, rating, comment ?? null, new Date().toISOString());
+  }
+
+  async getFeedbackStats(queryId?: string): Promise<FeedbackStats> {
+    const row = queryId
+      ? (this.db
+          .prepare(
+            `SELECT COUNT(*) total, SUM(CASE WHEN rating='up' THEN 1 ELSE 0 END) up, SUM(CASE WHEN rating='down' THEN 1 ELSE 0 END) down FROM answer_feedback WHERE query_id=?`,
+          )
+          .get(queryId) as { total: number; up: number; down: number })
+      : (this.db
+          .prepare(
+            `SELECT COUNT(*) total, SUM(CASE WHEN rating='up' THEN 1 ELSE 0 END) up, SUM(CASE WHEN rating='down' THEN 1 ELSE 0 END) down FROM answer_feedback`,
+          )
+          .get() as { total: number; up: number; down: number });
+    const total = row?.total ?? 0;
+    const up = row?.up ?? 0;
+    const down = row?.down ?? 0;
+    return { total, up, down, rate: total > 0 ? round(up / total) : 0 };
   }
 
   async creatorLeaderboard(): Promise<CreatorEarnings[]> {

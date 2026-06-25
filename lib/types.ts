@@ -177,6 +177,10 @@ export interface DashboardMetrics {
   externalVolumeUsdc: number;
   enginePayments: number;
   engineVolumeUsdc: number;
+  /** Global answer satisfaction rate (up / total feedback). Added by /api/metrics. */
+  satisfactionRate?: number;
+  /** Total feedback votes received. Added by /api/metrics. */
+  feedbackTotal?: number;
 }
 
 /** One day's settled USDC volume. `day` is a UTC `YYYY-MM-DD` key. */

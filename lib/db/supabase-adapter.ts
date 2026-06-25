@@ -15,7 +15,7 @@ import type {
   SourceItem,
   WithdrawalRecord,
 } from "../types";
-import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, KeryxDB, UserRecord } from "./keryx-db";
+import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, FeedbackStats, KeryxDB, UserRecord } from "./keryx-db";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 
@@ -430,6 +430,27 @@ export class SupabaseAdapter implements KeryxDB {
       .order("day", { ascending: false })
       .limit(days);
     return (data ?? []).map((r) => ({ day: r.day as string, count: r.call_count as number }));
+  }
+
+  async recordFeedback(queryId: string, rating: "up" | "down", comment?: string): Promise<void> {
+    await this.sb.from("answer_feedback").insert({
+      id: crypto.randomUUID(),
+      query_id: queryId,
+      rating,
+      comment: comment ?? null,
+      created_at: new Date().toISOString(),
+    });
+  }
+
+  async getFeedbackStats(queryId?: string): Promise<FeedbackStats> {
+    let query = this.sb.from("answer_feedback").select("rating");
+    if (queryId) query = query.eq("query_id", queryId);
+    const { data } = await query;
+    const rows = data ?? [];
+    const up = rows.filter((r) => r.rating === "up").length;
+    const down = rows.filter((r) => r.rating === "down").length;
+    const total = rows.length;
+    return { total, up, down, rate: total > 0 ? round(up / total) : 0 };
   }
 
   async creatorLeaderboard(): Promise<CreatorEarnings[]> {

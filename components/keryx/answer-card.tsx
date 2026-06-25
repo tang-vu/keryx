@@ -7,7 +7,7 @@
  * When a permalink URL is available, a Share button copies it to the clipboard.
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { QueryRun } from "@/lib/types";
 import type { AskMeta } from "@/lib/hooks/use-ask-stream";
 import { AnswerMarkdown } from "./answer-markdown";
@@ -68,6 +68,7 @@ export function AnswerCard({ run, meta, permalink }: { run: QueryRun; meta: AskM
           )}
         </div>
 
+        <FeedbackBar queryId={run.id} />
         <SummaryStrip
           spent={run.totalSpent}
           toCreators={run.totalToCreators}
@@ -79,6 +80,92 @@ export function AnswerCard({ run, meta, permalink }: { run: QueryRun; meta: AskM
           permalink={permalink}
         />
       </div>
+    </div>
+  );
+}
+
+/** Thumbs up/down bar between footnotes and summary strip.
+ *  Fetches existing stats on mount, POSTs on click, updates optimistically. */
+function FeedbackBar({ queryId }: { queryId: string }) {
+  const [up, setUp] = useState(0);
+  const [down, setDown] = useState(0);
+  const [voted, setVoted] = useState<"up" | "down" | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/feedback?queryId=${queryId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((s) => {
+        if (s) { setUp(s.up ?? 0); setDown(s.down ?? 0); }
+      })
+      .catch(() => {});
+  }, [queryId]);
+
+  const vote = useCallback(
+    async (rating: "up" | "down") => {
+      if (busy || voted === rating) return;
+      setBusy(true);
+      // Optimistic update
+      if (rating === "up") setUp((n) => n + 1);
+      else setDown((n) => n + 1);
+      setVoted(rating);
+      try {
+        const res = await fetch("/api/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ queryId, rating }),
+        });
+        if (res.ok) {
+          const s = await res.json();
+          setUp(s.up ?? 0);
+          setDown(s.down ?? 0);
+        }
+      } catch {
+        /* revert on error — counts stay optimistic */
+      } finally {
+        setBusy(false);
+      }
+    },
+    [queryId, busy, voted],
+  );
+
+  const total = up + down;
+  return (
+    <div className="flex items-center gap-3 border-t border-line px-6 py-2.5 sm:px-9">
+      <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
+        Helpful?
+      </span>
+      <button
+        type="button"
+        onClick={() => vote("up")}
+        disabled={busy}
+        className={cn(
+          "flex items-center gap-1 border px-2 py-0.5 font-mono text-[12px] transition-colors",
+          voted === "up"
+            ? "border-paid bg-paid/10 text-paid"
+            : "border-line text-ink-3 hover:border-ink hover:text-ink",
+        )}
+      >
+        👍 {up}
+      </button>
+      <button
+        type="button"
+        onClick={() => vote("down")}
+        disabled={busy}
+        className={cn(
+          "flex items-center gap-1 border px-2 py-0.5 font-mono text-[12px] transition-colors",
+          voted === "down"
+            ? "border-destructive bg-destructive/10 text-destructive"
+            : "border-line text-ink-3 hover:border-ink hover:text-ink",
+        )}
+      >
+        👎 {down}
+      </button>
+      {total > 0 && (
+        <span className="font-mono text-[10px] text-ink-3">
+          {total} vote{total !== 1 ? "s" : ""} · {Math.round((up / total) * 100)}% positive
+        </span>
+      )}
     </div>
   );
 }

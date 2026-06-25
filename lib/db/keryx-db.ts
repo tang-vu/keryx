@@ -61,6 +61,14 @@ export interface UserRecord {
   lastSeenAt: string;
 }
 
+/** Aggregated feedback for a query (or all queries). */
+export interface FeedbackStats {
+  total: number;
+  up: number;
+  down: number;
+  rate: number; // up / total, 0 when no feedback
+}
+
 export interface KeryxDB {
   init(): Promise<void>;
 
@@ -133,6 +141,12 @@ export interface KeryxDB {
    *  aggregation — independent of the capped live feed, so older days aren't undercounted. */
   dailySettled(days: number): Promise<DailyVolume[]>;
   creatorLeaderboard(): Promise<CreatorEarnings[]>;
+
+  // ── answer feedback (thumbs up/down on completed dispatches) ──
+  /** Record a thumbs-up or thumbs-down vote for a dispatch. Optional free-text comment. */
+  recordFeedback(queryId: string, rating: "up" | "down", comment?: string): Promise<void>;
+  /** Aggregate feedback counts. Pass queryId for per-dispatch stats; omit for global. */
+  getFeedbackStats(queryId?: string): Promise<FeedbackStats>;
 
   // ── creator cash-outs (on-chain Gateway withdraws) ──
   /** Persist a settled withdraw. Keyed by EVM tx hash, so re-recording the same tx is a no-op. */

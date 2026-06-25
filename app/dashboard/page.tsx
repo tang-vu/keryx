@@ -11,6 +11,7 @@ import {
   Banknote,
   Coins,
   Receipt,
+  ThumbsUp,
   TrendingUp,
   Users,
 } from "lucide-react";
@@ -155,6 +156,15 @@ export default function DashboardPage() {
             icon={TrendingUp}
             accent="emerald"
           />
+          {(metrics?.satisfactionRate != null) && (
+            <MetricCard
+              label="Satisfaction"
+              value={`${Math.round(metrics.satisfactionRate * 100)}%`}
+              sub={`${metrics.feedbackTotal ?? 0} votes`}
+              icon={ThumbsUp}
+              accent="emerald"
+            />
+          )}
         </section>
 
         {topics.length > 0 ? (
