@@ -215,7 +215,11 @@ export default function AskPage() {
             </div>
             {state.run && (
               <div className="mt-6">
-                <AnswerCard run={state.run} meta={state.meta} />
+                <AnswerCard
+                  run={state.run}
+                  meta={state.meta}
+                  permalink={`${window.location.origin}/dispatch/${state.run.id}`}
+                />
               </div>
             )}
           </section>

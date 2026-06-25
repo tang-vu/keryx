@@ -4,9 +4,10 @@
  * §II · The reading — the grounded answer set as a printed page: Spectral body
  * with footnote citation markers, a footnotes apparatus where each one pays its
  * author, and a settlement strip (spent / % to creators / decisions / engine).
+ * When a permalink URL is available, a Share button copies it to the clipboard.
  */
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import type { QueryRun } from "@/lib/types";
 import type { AskMeta } from "@/lib/hooks/use-ask-stream";
 import { AnswerMarkdown } from "./answer-markdown";
@@ -15,7 +16,7 @@ import { SectionHeading } from "./banknote";
 import { fmtUsdc } from "./phase-style";
 import { cn } from "@/lib/utils";
 
-export function AnswerCard({ run, meta }: { run: QueryRun; meta: AskMeta | null }) {
+export function AnswerCard({ run, meta, permalink }: { run: QueryRun; meta: AskMeta | null; permalink?: string }) {
   const [highlight, setHighlight] = useState<string | null>(null);
   const bought = run.decisions.filter((d) => d.action === "BUY").length;
   const skipped = run.decisions.filter((d) => d.action === "SKIP").length;
@@ -75,6 +76,7 @@ export function AnswerCard({ run, meta }: { run: QueryRun; meta: AskMeta | null 
           cached={cached}
           engine={run.engine}
           meta={meta}
+          permalink={permalink}
         />
       </div>
     </div>
@@ -89,6 +91,7 @@ interface SummaryStripProps {
   cached: number;
   engine: string;
   meta: AskMeta | null;
+  permalink?: string;
 }
 
 function SummaryStrip({
@@ -99,8 +102,19 @@ function SummaryStrip({
   cached,
   engine,
   meta,
+  permalink,
 }: SummaryStripProps) {
+  const [copied, setCopied] = useState(false);
   const pct = spent > 0 ? Math.round((toCreators / spent) * 100) : 100;
+
+  const copyPermalink = useCallback(() => {
+    if (!permalink) return;
+    navigator.clipboard.writeText(permalink).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [permalink]);
+
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-ink bg-paper-2 px-6 py-3.5 text-sm sm:px-9">
       <Stat label="Spent" value={`$${fmtUsdc(spent)}`} mono />
@@ -110,6 +124,15 @@ function SummaryStrip({
         value={`${bought} bought · ${cached} cached · ${skipped} skipped`}
       />
       <div className="ml-auto flex items-center gap-2">
+        {permalink && (
+          <button
+            type="button"
+            onClick={copyPermalink}
+            className="border border-line bg-card px-2 py-0.5 font-mono text-[11px] text-ink-3 transition-colors hover:border-ink hover:text-ink"
+          >
+            {copied ? "✓ Copied" : "Share"}
+          </button>
+        )}
         <span className="border border-line bg-card px-2 py-0.5 font-mono text-[11px] text-ink-3">
           {engine}
         </span>
