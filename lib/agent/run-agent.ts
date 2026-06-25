@@ -292,7 +292,9 @@ export async function* runAgent(
       // Buy additional sources the engine recommended to fill coverage gaps
       for (const recId of reeval.recommendedIds) {
         const source = sourceById.get(recId) ?? sources.find((s) => s.id === recId);
-        if (!source || source.fetchPrice > remainingBudget + 1e-9) continue;
+        // Guard against an engine recommending a source we already read (duplicate marker +
+        // double payment) or that no longer fits the remaining budget.
+        if (!source || gatheredIds.has(recId) || source.fetchPrice > remainingBudget + 1e-9) continue;
 
         const marker = `S${++markerN}`;
         yield emit("reevaluate", `Filling gap — buying ${source.name} ($${source.fetchPrice})…`);
