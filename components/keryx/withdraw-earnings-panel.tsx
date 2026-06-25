@@ -42,10 +42,20 @@ export function WithdrawEarningsPanel({ address }: { address: string }) {
   }, [loadBalance]);
 
   const available = availableAtomic === null ? null : Number(availableAtomic) / 1e6;
-  const hasFunds = availableAtomic !== null && availableAtomic > BigInt(0);
+  // Circle charges a fee on top of the burn value (requires available >= value + fee), so reserve
+  // it before signing — a full-balance withdraw always fails by exactly the fee.
+  const reserveAtomic = BigInt(Math.round(config.withdrawFeeReserveUsdc * 1e6));
+  const netAtomic =
+    availableAtomic !== null && availableAtomic > reserveAtomic
+      ? availableAtomic - reserveAtomic
+      : BigInt(0);
+  const net = Number(netAtomic) / 1e6;
+  const hasFunds = netAtomic > BigInt(0);
+  // available > 0 but below the fee floor → distinct, non-zero "too small" state.
+  const belowFeeFloor = available !== null && available > 0 && netAtomic <= BigInt(0);
 
   const withdraw = async () => {
-    if (busy || !availableAtomic || availableAtomic <= BigInt(0)) return;
+    if (busy || netAtomic <= BigInt(0)) return;
     if (!walletClient) {
       toast.error("Connect your wallet to withdraw.");
       return;
@@ -56,7 +66,7 @@ export function WithdrawEarningsPanel({ address }: { address: string }) {
       toast.loading("Sign the withdrawal in your wallet…", { id: "withdraw" });
       const { burnIntent, signature } = await buildAndSignWithdrawIntent(
         walletClient,
-        availableAtomic,
+        netAtomic,
         address,
       );
 
@@ -77,7 +87,7 @@ export function WithdrawEarningsPanel({ address }: { address: string }) {
       }
 
       setLastTx(data.mintTxHash);
-      toast.success(`Withdrew $${fmtUsdc(data.amountUsdc ?? available ?? 0)} to your wallet`, {
+      toast.success(`Withdrew $${fmtUsdc(data.amountUsdc ?? net)} to your wallet`, {
         id: "withdraw",
         description: "Minted on-chain — view the tx on ArcScan.",
       });
@@ -107,7 +117,7 @@ export function WithdrawEarningsPanel({ address }: { address: string }) {
 
       <p className="mt-2 max-w-[46ch] font-serif text-[12.5px] leading-snug text-ink-2">
         Citation tolls accrue to your wallet&apos;s Circle Gateway balance. Pull them on-chain into
-        your own wallet — one signature, no gas, no minimum.
+        your own wallet — one signature, no gas. A small network fee is reserved from the balance.
       </p>
 
       <button
@@ -120,7 +130,9 @@ export function WithdrawEarningsPanel({ address }: { address: string }) {
         {busy
           ? "Withdrawing…"
           : hasFunds
-          ? `Withdraw $${fmtUsdc(available ?? 0)} to my wallet ▸`
+          ? `Withdraw $${fmtUsdc(net)} to my wallet ▸`
+          : belowFeeFloor
+          ? "Balance below the withdraw fee"
           : "Nothing to withdraw yet"}
       </button>
 

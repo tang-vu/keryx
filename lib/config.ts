@@ -51,9 +51,14 @@ export const config = {
   // `amount` that would skew the leaderboard. ~100×+ above any realistic weighted reward.
   maxCitationUsdc: num(process.env.KERYX_MAX_CITATION_USDC, 5),
   // Ceiling (USDC) on the fee a creator's instant Gateway withdraw will tolerate. The actual
-  // same-chain fee on testnet is ~0; this is only an upper bound passed in the burn intent
+  // same-chain fee on testnet is small; this is only an upper bound passed in the burn intent
   // (mirrors the SDK/operator default of 2.01 so the proven withdraw path isn't fee-rejected).
   withdrawMaxFeeUsdc: num(process.env.KERYX_WITHDRAW_MAX_FEE, 2.01),
+  // Circle charges a fee ON TOP of the burn value (it requires available >= value + fee), so a
+  // withdraw of the FULL available balance always fails by exactly the fee. The burn value is
+  // signed in the browser, so the fee must be reserved BEFORE signing: value = available - reserve.
+  // Observed same-chain Arc testnet fee ≈ 0.0035; reserve a small margin above it.
+  withdrawFeeReserveUsdc: num(process.env.KERYX_WITHDRAW_FEE_RESERVE, 0.005),
   // Ceiling on the budget the A2A path (/api/agent/ask) will honor before driving treasury-funded
   // creator payouts. Same drain class as anonMaxBudget but behind the x402 fee, so more generous.
   // The traction a2a-client uses 0.03, well under this.
