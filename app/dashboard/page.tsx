@@ -156,11 +156,11 @@ export default function DashboardPage() {
             icon={TrendingUp}
             accent="emerald"
           />
-          {(metrics?.satisfactionRate != null) && (
+          {(metrics?.feedbackTotal ?? 0) > 0 && (
             <MetricCard
               label="Satisfaction"
-              value={`${Math.round(metrics.satisfactionRate * 100)}%`}
-              sub={`${metrics.feedbackTotal ?? 0} votes`}
+              value={`${Math.round((metrics?.satisfactionRate ?? 0) * 100)}%`}
+              sub={`${metrics?.feedbackTotal ?? 0} votes`}
               icon={ThumbsUp}
               accent="emerald"
             />
