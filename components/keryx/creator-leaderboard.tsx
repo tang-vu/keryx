@@ -2,9 +2,11 @@
 
 /**
  * Creator leaderboard. Rank, source name, total earned, citations, payments.
- * Top earner highlighted with a gold crown.
+ * Top earner highlighted with a gold crown. Rows link to /creator/[id] for
+ * per-creator earnings detail.
  */
 
+import Link from "next/link";
 import { Crown, Trophy } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fmtUsdc, shortAddr } from "./phase-style";
@@ -35,12 +37,13 @@ export function CreatorLeaderboard({ rows }: { rows: LeaderboardEntry[] }) {
           </p>
         )}
         {rows.map((row, i) => (
-          <div
+          <Link
             key={row.sourceId}
+            href={`/creator/${row.sourceId}`}
             className={cn(
               "flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors",
               i === 0
-                ? "border-seal/30 bg-seal/[0.06]"
+                ? "border-seal/30 bg-seal/[0.06] hover:bg-seal/[0.1]"
                 : "border-line hover:bg-paper-2",
             )}
           >
@@ -64,7 +67,7 @@ export function CreatorLeaderboard({ rows }: { rows: LeaderboardEntry[] }) {
             <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-paid">
               ${fmtUsdc(row.totalEarnedUsdc)}
             </span>
-          </div>
+          </Link>
         ))}
       </CardContent>
     </Card>

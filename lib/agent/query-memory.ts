@@ -140,3 +140,54 @@ export async function buildMemoryContext(
 
   return `Historical source performance from ${memories.length} past queries${topicNote}:\n${lines.join("\n")}\nUse this data to inform your BUY/SKIP decisions — sources with high hit rates and weights are consistently valuable.`;
 }
+
+/**
+ * Build an ERC-8004-style reputation context string from query memories.
+ * Reputation score = (citationRate × avgWeight), combining reliability + quality.
+ * This is separate from buildMemoryContext and focuses on a single composite score
+ * per source, displayed as a reputation badge.
+ */
+export async function buildReputationContext(
+  db: KeryxDB,
+  candidateIds: string[],
+): Promise<string> {
+  const memories = await db.loadQueryMemories(50);
+  if (memories.length === 0) return "";
+
+  const scores = new Map<string, { name: string; score: number; citations: number }>();
+
+  for (const mem of memories) {
+    for (const [sid, data] of Object.entries(mem.sourceScores)) {
+      const existing = scores.get(sid);
+      if (existing) {
+        existing.citations++;
+        existing.score += data.weight;
+      } else {
+        scores.set(sid, { name: data.name, score: data.weight, citations: 1 });
+      }
+    }
+  }
+
+  // Compute composite reputation: citationRate × avgWeight
+  const ranked = candidateIds
+    .map((id) => {
+      const s = scores.get(id);
+      if (!s) return null;
+      const citationRate = s.citations / memories.length;
+      const avgWeight = s.score / s.citations;
+      const reputation = Math.round(citationRate * avgWeight * 100);
+      return { id, name: s.name, reputation, citations: s.citations };
+    })
+    .filter(Boolean) as { id: string; name: string; reputation: number; citations: number }[];
+
+  if (ranked.length === 0) return "";
+
+  ranked.sort((a, b) => b.reputation - a.reputation);
+
+  const lines = ranked.slice(0, 8).map((r) => {
+    const tier = r.reputation >= 50 ? "★★★" : r.reputation >= 25 ? "★★" : r.reputation >= 10 ? "★" : "·";
+    return `${tier} ${r.name}: reputation ${r.reputation}/100 (${r.citations} citations across ${memories.length} runs)`;
+  });
+
+  return `ERC-8004 Creator Reputation (composite: citationRate × avgWeight):\n${lines.join("\n")}\nHigher reputation = more trustworthy source. Prefer high-reputation sources when value is similar.`;
+}

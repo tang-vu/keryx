@@ -22,7 +22,7 @@ import type {
 import type { GatheredContent, SourceCandidate } from "../llm";
 import type { AgentDeps } from "./deps";
 import { discoverExternalCandidates } from "./external-discovery";
-import { buildMemoryContext, saveMemory } from "./query-memory";
+import { buildMemoryContext, buildReputationContext, saveMemory } from "./query-memory";
 
 export interface RunInput {
   question: string;
@@ -123,7 +123,19 @@ export async function* runAgent(
   } catch {
     // Memory is best-effort — never block a run on memory load failure
   }
-  const proposed = await engine.decide({ question: input.question, subClaims, candidates, budget, spentSoFar: 0, memoryContext });
+  // Load ERC-8004 reputation — composite score per source from past queries
+  let reputationContext: string | undefined;
+  try {
+    reputationContext = await buildReputationContext(db, candidateIds) || undefined;
+    if (reputationContext) {
+      yield emit("discover", "ERC-8004 reputation loaded — composite scores from past queries.", { reputation: true });
+    }
+  } catch {
+    // Reputation is best-effort
+  }
+  // Combine memory + reputation into a single context string for the decide prompt
+  const fullContext = [memoryContext, reputationContext].filter(Boolean).join("\n\n") || undefined;
+  const proposed = await engine.decide({ question: input.question, subClaims, candidates, budget, spentSoFar: 0, memoryContext: fullContext });
   const sourceById = new Map(sources.map((s) => [s.id, s]));
   const isExternal = (id: string) => id.startsWith("ext:");
   const externalById = new Map(external.map((c) => [c.id, c]));
