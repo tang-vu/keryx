@@ -6,9 +6,18 @@ import { ReasoningConsole } from "@/components/keryx/reasoning-console";
 import { CreatorsPaidPanel } from "@/components/keryx/creators-paid-panel";
 import { AnswerCard } from "@/components/keryx/answer-card";
 
-export function DispatchView({ run }: { run: QueryRun }) {
-  // Reconstruct payouts from citations (permalink has no live stream)
+export function DispatchView({
+  run,
+  payments,
+}: {
+  run: QueryRun;
+  payments: PaymentRecord[];
+}) {
+  // Prefer the real settlement rows (carry settled / tx) so the permalink shows
+  // on-chain truth. Fall back to a citation reconstruction only for older runs
+  // that predate per-query payment rows.
   const payouts = useMemo<PaymentRecord[]>(() => {
+    if (payments.length) return payments;
     if (!run.citations?.length) return [];
     return run.citations.map((c) => ({
       kind: "citation" as const,
@@ -24,7 +33,10 @@ export function DispatchView({ run }: { run: QueryRun }) {
       settled: false,
       createdAt: run.createdAt,
     }));
-  }, [run]);
+  }, [run, payments]);
+
+  // "real" lights up the on-chain settlement link; offline stays honest as simulated.
+  const mode = payouts.some((p) => p.settled) ? "real" : "offline";
 
   return (
     <>
@@ -46,7 +58,7 @@ export function DispatchView({ run }: { run: QueryRun }) {
 
       <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         <ReasoningConsole steps={run.trace} streaming={false} budget={run.budget} />
-        <CreatorsPaidPanel payments={payouts} mode={null} streaming={false} />
+        <CreatorsPaidPanel payments={payouts} mode={mode} streaming={false} />
       </div>
 
       <div className="mt-6">

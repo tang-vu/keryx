@@ -136,6 +136,9 @@ export interface KeryxDB {
   // ── payments ──
   recordPayment(p: PaymentRecord): Promise<void>;
   listPayments(limit: number): Promise<PaymentRecord[]>;
+  /** Citation payouts for one dispatch, oldest→newest. Carries real settlement
+   *  state (settled / tx) so permalinks reflect on-chain truth, not a reconstruction. */
+  listPaymentsByQuery(queryId: string): Promise<PaymentRecord[]>;
   metrics(): Promise<DashboardMetrics>;
   /** Settled USDC per UTC day over the last `days` days, zero-filled, oldest→today. Full-table
    *  aggregation — independent of the capped live feed, so older days aren't undercounted. */

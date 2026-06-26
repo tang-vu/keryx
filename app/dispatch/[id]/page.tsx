@@ -34,6 +34,9 @@ export default async function DispatchPage({ params }: PageProps) {
   const db = await getDb();
   const run = await db.getQueryRun(id);
   if (!run) notFound();
+  // Load the real citation payouts so the permalink reflects on-chain settlement
+  // truth (settled / batched) instead of reconstructing a "simulated" view.
+  const payments = await db.listPaymentsByQuery(id);
 
   return (
     <div className="min-h-screen bg-paper-2">
@@ -56,7 +59,7 @@ export default async function DispatchPage({ params }: PageProps) {
       </header>
 
       <main className="mx-auto max-w-[1180px] px-4 pb-20 pt-10 sm:px-[30px]">
-        <DispatchView run={run} />
+        <DispatchView run={run} payments={payments} />
       </main>
     </div>
   );
