@@ -126,8 +126,67 @@ function tokens(text: string): Set<string> {
   );
 }
 
-/** fraction of query terms found in the endpoint's text (0..1) */
-function score(q: Set<string>, e: ExternalEndpoint): number {
+// ── Embedding-based semantic scoring ──
+
+type Vec = number[];
+
+/** Embedding cache: text-hash → vector. Avoids repeated API calls across queries. */
+const embedCache = new Map<string, Vec>();
+
+function cacheKey(text: string): string {
+  // Simple DJB2 hash — fast, no crypto import needed, sufficient for cache keys
+  let h = 5381;
+  for (let i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) | 0;
+  return String(h);
+}
+
+/** Call an OpenAI-compatible /embeddings endpoint. Returns the vector or null on failure. */
+async function embed(texts: string[]): Promise<Vec[] | null> {
+  if (!config.embeddingApiKey) return null;
+  try {
+    const res = await fetch(`${config.embeddingBaseUrl}/embeddings`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${config.embeddingApiKey}`,
+      },
+      body: JSON.stringify({ model: config.embeddingModel, input: texts }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { data: { embedding: Vec }[] };
+    return json.data?.map((d) => d.embedding) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Embed a single text with caching. Returns null on failure. */
+async function embedOne(text: string): Promise<Vec | null> {
+  const key = cacheKey(text);
+  const cached = embedCache.get(key);
+  if (cached) return cached;
+  const vecs = await embed([text]);
+  if (!vecs || vecs.length === 0) return null;
+  embedCache.set(key, vecs[0]);
+  return vecs[0];
+}
+
+/** Cosine similarity between two vectors (0..1). Returns 0 on dimension mismatch. */
+function cosine(a: Vec, b: Vec): number {
+  if (a.length !== b.length) return 0;
+  let dot = 0, magA = 0, magB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    magA += a[i] * a[i];
+    magB += b[i] * b[i];
+  }
+  const denom = Math.sqrt(magA) * Math.sqrt(magB);
+  return denom > 0 ? dot / denom : 0;
+}
+
+/** Keyword-overlap score (fallback when embeddings unavailable). */
+function keywordScore(q: Set<string>, e: ExternalEndpoint): number {
   if (q.size === 0) return 0;
   const doc = tokens(`${e.name} ${e.description} ${e.category} ${e.resource}`);
   let hits = 0;
@@ -135,10 +194,42 @@ function score(q: Set<string>, e: ExternalEndpoint): number {
   return hits / q.size;
 }
 
+/** Text representation of an endpoint for embedding. */
+function endpointText(e: ExternalEndpoint): string {
+  return `${e.name}. ${e.description} ${e.category} ${e.resource}`;
+}
+
+/**
+ * Score all endpoints against a question. Uses embedding cosine similarity when an embedding
+ * API is configured and reachable; falls back to keyword-overlap otherwise.
+ */
+async function scoreEndpoints(
+  question: string,
+  endpoints: ExternalEndpoint[],
+): Promise<{ e: ExternalEndpoint; s: number; method: "semantic" | "keyword" }[]> {
+  // Try semantic scoring first
+  const qVec = await embedOne(question);
+  if (qVec) {
+    const texts = endpoints.map(endpointText);
+    const vecs = await embed(texts);
+    if (vecs && vecs.length === endpoints.length) {
+      return endpoints.map((e, i) => ({
+        e,
+        s: cosine(qVec, vecs[i]),
+        method: "semantic" as const,
+      }));
+    }
+  }
+  // Fallback to keyword-overlap
+  const q = tokens(question);
+  return endpoints.map((e) => ({ e, s: keywordScore(q, e), method: "keyword" as const }));
+}
+
 /**
  * Probe the live marketplace for endpoints relevant to a question and return them as candidates
  * (id prefixed `ext:`). Discovery-only — these are never purchased. Returns [] when disabled,
- * unavailable, or nothing is relevant.
+ * unavailable, or nothing is relevant. Uses semantic (embedding) scoring when available,
+ * keyword-overlap otherwise.
  */
 export async function discoverExternalCandidates(
   question: string,
@@ -149,20 +240,23 @@ export async function discoverExternalCandidates(
   const all = await loadMarketplace();
   if (all.length === 0) return [];
 
-  const q = tokens(`${question} ${subClaims.join(" ")}`);
-  const ranked = all
-    .map((e) => ({ e, s: score(q, e) }))
+  const queryText = `${question} ${subClaims.join(" ")}`;
+  const scored = await scoreEndpoints(queryText, all);
+  const method = scored[0]?.method ?? "keyword";
+
+  const ranked = scored
     .sort((a, b) => b.s - a.s)
-    .filter((r) => r.s > 0)
+    .filter((r) => r.s > (method === "semantic" ? 0.1 : 0)) // semantic uses lower threshold (cosine)
     .slice(0, limit);
 
-  return ranked.map(({ e }) => {
+  return ranked.map(({ e, s }) => {
     const chainStr = e.chains.join(", ") || "another chain";
     return {
       id: `ext:${e.resource}`,
       name: e.name,
       description:
-        `[Live x402 marketplace] ${e.description || e.category || "External paid API"}. ` +
+        `[Live x402 marketplace · ${method === "semantic" ? `semantic match ${Math.round(s * 100)}%` : `keyword match`}] ` +
+        `${e.description || e.category || "External paid API"}. ` +
         `Settles on ${chainStr} — ${e.onArc ? "Arc-compatible" : "NOT on Keryx's Arc testnet rail"}. ` +
         `~$${e.price.toFixed(4)}/call. Discovery-only: evaluated but not purchased on Arc.`,
       tags: ["external", "x402-marketplace", ...(e.category ? [e.category.toLowerCase()] : [])],

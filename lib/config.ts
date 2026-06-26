@@ -78,6 +78,12 @@ export const config = {
   externalDiscovery: (process.env.KERYX_EXTERNAL_DISCOVERY ?? "1") !== "0",
   // Max external endpoints surfaced per query (top by topical relevance).
   externalDiscoveryLimit: Math.round(num(process.env.KERYX_EXTERNAL_DISCOVERY_LIMIT, 5)),
+  // Semantic discovery: use embedding cosine similarity instead of keyword-overlap for
+  // marketplace relevance scoring. Requires an OpenAI-compatible embedding endpoint.
+  // Falls back to keyword-overlap when unconfigured or on API failure.
+  embeddingApiKey: process.env.KERYX_EMBEDDING_API_KEY ?? process.env.OPENAI_API_KEY ?? "",
+  embeddingBaseUrl: process.env.KERYX_EMBEDDING_BASE_URL ?? "https://api.openai.com/v1",
+  embeddingModel: process.env.KERYX_EMBEDDING_MODEL ?? "text-embedding-3-small",
 
   // ── LLM ──
   // Provider priority: Anthropic > DeepSeek/OpenAI-compatible > offline heuristic.
