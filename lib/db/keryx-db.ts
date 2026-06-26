@@ -61,6 +61,16 @@ export interface UserRecord {
   lastSeenAt: string;
 }
 
+/** A single query memory: which sources were cited and how well for a past query. */
+export interface QueryMemoryEntry {
+  id: string;
+  /** Per-source citation data from a past run */
+  sourceScores: Record<string, { name: string; weight: number; reward: number }>;
+  /** Topic keywords extracted from the question */
+  topics: string[];
+  createdAt: string;
+}
+
 /** Aggregated feedback for a query (or all queries). */
 export interface FeedbackStats {
   total: number;
@@ -144,6 +154,12 @@ export interface KeryxDB {
    *  aggregation — independent of the capped live feed, so older days aren't undercounted. */
   dailySettled(days: number): Promise<DailyVolume[]>;
   creatorLeaderboard(): Promise<CreatorEarnings[]>;
+
+  // ── query memory (cross-query learning — agent remembers which sources work) ──
+  /** Save a query memory entry after a successful run. */
+  saveQueryMemory(entry: QueryMemoryEntry): Promise<void>;
+  /** Load recent query memories (newest first). The agent uses these to learn source quality. */
+  loadQueryMemories(limit: number): Promise<QueryMemoryEntry[]>;
 
   // ── answer feedback (thumbs up/down on completed dispatches) ──
   /** Record a thumbs-up or thumbs-down vote for a dispatch. Optional free-text comment. */

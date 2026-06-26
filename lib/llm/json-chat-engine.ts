@@ -51,6 +51,9 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         ? { external: true, settlesOn: c.external.chains, settlesOnArc: c.external.onArc }
         : {}),
     }));
+    const memoryBlock = input.memoryContext
+      ? `\n\n${input.memoryContext}\n\n`
+      : "";
     const out = await this.chatJson(
       config.llmModel,
       "You are a frugal research agent deciding which paid sources to buy under a budget. " +
@@ -58,6 +61,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         "Weigh expected value against price; prefer cheaper sufficient sources; avoid redundancy. " +
         "Some candidates have external:true — these are live endpoints from the open x402 marketplace that settle on OTHER chains, not Keryx's Arc rail. " +
         "You cannot settle to them this run, so mark them SKIP, but still judge their real topical value and say WHY in the rationale (note the off-rail chain). " +
+        memoryBlock +
         "Give a short, specific, human-readable rationale citing WHY. Output strict JSON only.",
       JSON.stringify({
         question: input.question,

@@ -15,7 +15,7 @@ import type {
   SourceItem,
   WithdrawalRecord,
 } from "../types";
-import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, FeedbackStats, KeryxDB, UserRecord } from "./keryx-db";
+import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, FeedbackStats, KeryxDB, QueryMemoryEntry, UserRecord } from "./keryx-db";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 
@@ -440,6 +440,29 @@ export class SupabaseAdapter implements KeryxDB {
       .order("day", { ascending: false })
       .limit(days);
     return (data ?? []).map((r) => ({ day: r.day as string, count: r.call_count as number }));
+  }
+
+  async saveQueryMemory(entry: QueryMemoryEntry): Promise<void> {
+    await this.sb.from("query_memories").insert({
+      id: entry.id,
+      source_scores: entry.sourceScores, // JSONB column auto-serializes
+      topics: entry.topics,
+      created_at: entry.createdAt,
+    });
+  }
+
+  async loadQueryMemories(limit: number): Promise<QueryMemoryEntry[]> {
+    const { data } = await this.sb
+      .from("query_memories")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    return (data ?? []).map((r) => ({
+      id: r.id,
+      sourceScores: r.source_scores, // JSONB auto-deserializes
+      topics: r.topics,
+      createdAt: r.created_at,
+    }));
   }
 
   async recordFeedback(queryId: string, rating: "up" | "down", comment?: string): Promise<void> {

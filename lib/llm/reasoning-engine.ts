@@ -39,6 +39,8 @@ export interface DecideInput {
   candidates: SourceCandidate[];
   budget: number;
   spentSoFar: number;
+  /** Optional memory context from past queries — aggregated source performance stats. */
+  memoryContext?: string;
 }
 
 /** Content the agent has unlocked, ready to read. */

@@ -22,6 +22,7 @@ import type {
 import type { GatheredContent, SourceCandidate } from "../llm";
 import type { AgentDeps } from "./deps";
 import { discoverExternalCandidates } from "./external-discovery";
+import { buildMemoryContext, saveMemory } from "./query-memory";
 
 export interface RunInput {
   question: string;
@@ -111,7 +112,18 @@ export async function* runAgent(
   }
 
   // 3) DECIDE (engine proposes value; code enforces budget AND the Arc-rail constraint)
-  const proposed = await engine.decide({ question: input.question, subClaims, candidates, budget, spentSoFar: 0 });
+  // Load query memory — aggregated source performance from past runs
+  const candidateIds = sources.map((s) => s.id);
+  let memoryContext: string | undefined;
+  try {
+    memoryContext = await buildMemoryContext(db, input.question, candidateIds) || undefined;
+    if (memoryContext) {
+      yield emit("discover", `Loaded query memory: ${candidateIds.length} known sources from past runs.`, { memory: true });
+    }
+  } catch {
+    // Memory is best-effort — never block a run on memory load failure
+  }
+  const proposed = await engine.decide({ question: input.question, subClaims, candidates, budget, spentSoFar: 0, memoryContext });
   const sourceById = new Map(sources.map((s) => [s.id, s]));
   const isExternal = (id: string) => id.startsWith("ext:");
   const externalById = new Map(external.map((c) => [c.id, c]));
@@ -391,6 +403,13 @@ export async function* runAgent(
         yield emit("settle", `Couldn't settle the reward to ${author.name} (${reason}) — the answer stands.`, { error: reason });
       }
     }
+  }
+
+  // Save query memory for cross-query learning (best-effort, fire-and-forget)
+  try {
+    await saveMemory(db, queryId, input.question, citations);
+  } catch {
+    // Never fail a run on memory save
   }
 
   return finish(answer);

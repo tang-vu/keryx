@@ -16,7 +16,7 @@ import type {
   SourceItem,
   WithdrawalRecord,
 } from "../types";
-import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, FeedbackStats, KeryxDB, UserRecord } from "./keryx-db";
+import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, FeedbackStats, KeryxDB, QueryMemoryEntry, UserRecord } from "./keryx-db";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 
@@ -94,6 +94,12 @@ CREATE TABLE IF NOT EXISTS answer_feedback (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS answer_feedback_query ON answer_feedback(query_id);
+CREATE TABLE IF NOT EXISTS query_memories (
+  id            TEXT PRIMARY KEY,
+  source_scores TEXT NOT NULL,          -- JSON: { sourceId: { name, weight, reward } }
+  topics        TEXT NOT NULL,          -- JSON: string[]
+  created_at    TEXT NOT NULL
+);
 `;
 
 export class SqliteAdapter implements KeryxDB {
@@ -541,6 +547,36 @@ export class SqliteAdapter implements KeryxDB {
       )
       .all(keyId, days) as { day: string; call_count: number }[];
     return rows.map((r) => ({ day: r.day, count: r.call_count }));
+  }
+
+  async saveQueryMemory(entry: QueryMemoryEntry): Promise<void> {
+    this.db
+      .prepare(
+        `INSERT INTO query_memories (id,source_scores,topics,created_at) VALUES (?,?,?,?)`,
+      )
+      .run(
+        entry.id,
+        JSON.stringify(entry.sourceScores),
+        JSON.stringify(entry.topics),
+        entry.createdAt,
+      );
+  }
+
+  async loadQueryMemories(limit: number): Promise<QueryMemoryEntry[]> {
+    const rows = this.db
+      .prepare(`SELECT * FROM query_memories ORDER BY created_at DESC LIMIT ?`)
+      .all(limit) as {
+      id: string;
+      source_scores: string;
+      topics: string;
+      created_at: string;
+    }[];
+    return rows.map((r) => ({
+      id: r.id,
+      sourceScores: JSON.parse(r.source_scores),
+      topics: JSON.parse(r.topics),
+      createdAt: r.created_at,
+    }));
   }
 
   async recordFeedback(queryId: string, rating: "up" | "down", comment?: string): Promise<void> {
