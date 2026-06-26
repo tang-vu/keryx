@@ -3,9 +3,11 @@
 /**
  * Shared top navigation + dispatch wire. Sticky ivory nav with a hairline ink
  * rule; Ask / Ledger are quiet mono links (vermillion underline when active),
- * "Issue a toll" is the inked vermillion call to action.
+ * "Issue a toll" is the inked vermillion call to action. On mobile (< md),
+ * the nav collapses into a hamburger menu with a slide-down panel.
  */
 
+import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { KeryxWordmark } from "./keryx-mark";
@@ -16,10 +18,31 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { href: "/", label: "Ask" },
   { href: "/dashboard", label: "Ledger" },
+  { href: "/register", label: "Issue a toll" },
+  { href: "/dev", label: "Dev portal" },
 ];
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu on route change
+  useEffect(() => setMenuOpen(false), [pathname]);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menuOpen]);
+
+  const toggle = useCallback(() => setMenuOpen((v) => !v), []);
 
   return (
     <>
@@ -28,8 +51,10 @@ export function SiteHeader() {
           <Link href="/" className="transition-opacity hover:opacity-80">
             <KeryxWordmark />
           </Link>
-          <nav className="flex items-center gap-1.5">
-            {NAV.map((link) => {
+
+          {/* Desktop nav */}
+          <nav className="hidden items-center gap-1.5 md:flex">
+            {NAV.slice(0, 2).map((link) => {
               const active =
                 link.href === "/"
                   ? pathname === "/"
@@ -59,6 +84,57 @@ export function SiteHeader() {
               <WalletMenu />
             </div>
           </nav>
+
+          {/* Mobile hamburger */}
+          <div className="flex items-center md:hidden" ref={menuRef}>
+            <button
+              type="button"
+              onClick={toggle}
+              className="flex h-9 w-9 items-center justify-center border border-line text-ink-3 transition-colors hover:border-ink hover:text-ink"
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
+            >
+              {menuOpen ? (
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M4 4l10 10M14 4L4 14" />
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M2 4h14M2 9h14M2 14h14" />
+                </svg>
+              )}
+            </button>
+
+            {/* Slide-down menu */}
+            {menuOpen && (
+              <div className="absolute left-0 right-0 top-[66px] z-50 border-b border-ink bg-paper shadow-lg">
+                <nav className="mx-auto flex max-w-[1180px] flex-col px-4 py-3">
+                  {NAV.map((link) => {
+                    const active =
+                      link.href === "/"
+                        ? pathname === "/"
+                        : pathname.startsWith(link.href);
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        className={cn(
+                          "border-l-2 px-4 py-3 font-mono text-[12px] uppercase tracking-[0.12em] transition-colors",
+                          active
+                            ? "border-seal text-ink"
+                            : "border-transparent text-ink-3 hover:text-ink",
+                        )}
+                      >
+                        {link.label}
+                      </Link>
+                    );
+                  })}
+                  <div className="mt-3 border-t border-line px-4 pt-3">
+                    <WalletMenu />
+                  </div>
+                </nav>
+              </div>
+            )}
+          </div>
         </div>
       </header>
       <DispatchWire />
