@@ -26,6 +26,7 @@ import { CreatorCashoutsPanel } from "@/components/keryx/creator-cashouts-panel"
 import { EarningsChart } from "@/components/keryx/earnings-chart";
 import { TopicsPanel, type Topic } from "@/components/keryx/topics-panel";
 import { A2aCallCard } from "@/components/keryx/a2a-call-card";
+import { DispatchHistory } from "@/components/keryx/dispatch-history";
 import { fmtUsdc } from "@/components/keryx/phase-style";
 import type { DailyVolume, DashboardMetrics, PaymentRecord, WithdrawalRecord } from "@/lib/types";
 
@@ -45,16 +46,18 @@ export default function DashboardPage() {
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [daily, setDaily] = useState<DailyVolume[]>([]);
   const [withdrawals, setWithdrawals] = useState<WithdrawalRecord[]>([]);
+  const [runs, setRuns] = useState<{ id: string; question: string; createdAt: string; totalSpent: number; totalToCreators: number; citationCount: number }[]>([]);
 
   useEffect(() => {
     let alive = true;
 
     const poll = async () => {
       try {
-        const [mRes, pRes, wRes] = await Promise.all([
+        const [mRes, pRes, wRes, rRes] = await Promise.all([
           fetch("/api/metrics", { cache: "no-store" }),
           fetch("/api/payments?limit=200", { cache: "no-store" }),
           fetch("/api/withdrawals?limit=25", { cache: "no-store" }),
+          fetch("/api/runs", { cache: "no-store" }),
         ]);
         if (!alive) return;
         if (mRes.ok) {
@@ -71,6 +74,10 @@ export default function DashboardPage() {
         if (wRes.ok) {
           const data = (await wRes.json()) as { withdrawals: WithdrawalRecord[] };
           setWithdrawals(data.withdrawals ?? []);
+        }
+        if (rRes.ok) {
+          const data = await rRes.json();
+          setRuns(Array.isArray(data) ? data : []);
         }
       } catch {
         /* keep last good state on transient error */
@@ -188,6 +195,12 @@ export default function DashboardPage() {
             <CreatorCashoutsPanel withdrawals={withdrawals} />
           </div>
         ) : null}
+
+        {runs.length > 0 && (
+          <div className="mt-6">
+            <DispatchHistory runs={runs.slice(0, 15)} />
+          </div>
+        )}
 
         <A2aCallCard />
       </main>
