@@ -14,7 +14,8 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { collectRun, getAgentDeps } from "../lib/agent/index.ts";
-import { pickQuestion, SEED_QUESTIONS } from "../lib/seed-questions.ts";
+import { SEED_QUESTIONS } from "../lib/seed-questions.ts";
+import { generateQuestion } from "../lib/seed-question-generator.ts";
 import { getReasoningEngine } from "../lib/llm/index.ts";
 
 // ── args ──
@@ -72,6 +73,10 @@ if (deps.gateway.mode === "real") {
   console.log(`   agent wallet: ${address}\n`);
 }
 
+// Snapshot the live source registry once — its tags seed the LLM question generator so every
+// query stays on-topic to whatever creators are actually registered.
+const sources = await deps.db.listSources().catch(() => []);
+
 let totalSpent = 0;
 let totalPayments = 0;
 let i = 0;
@@ -90,7 +95,9 @@ async function maybePush(question: string, spent: number, payments: number) {
 }
 
 while ((loop || i < count) && totalSpent < limit) {
-  const question = pickQuestion(startOffset + i);
+  // LLM-generated, on-topic & effectively non-repeating; the cursor index is the deterministic
+  // fallback seed used when no Anthropic key is set or generation fails.
+  const question = await generateQuestion(sources, startOffset + i);
   const start = Date.now();
   try {
     const run = await collectRun({ question, budget, origin: "engine" }, { deps });
