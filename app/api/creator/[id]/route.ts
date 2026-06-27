@@ -25,31 +25,25 @@ export async function GET(
       return NextResponse.json({ error: "creator not found" }, { status: 404 });
     }
 
-    const [payments, leaderboard, dailySettled] = await Promise.all([
-      db.listPayments(500),
+    // All-time payouts for this creator (full-table, not the capped live feed) so every
+    // headline number matches the leaderboard rather than a recent slice.
+    const [creatorPayments, leaderboard] = await Promise.all([
+      db.listPaymentsBySource(id),
       db.creatorLeaderboard(),
-      db.dailySettled(14),
     ]);
 
-    // Filter payments to this creator only
-    const creatorPayments = payments.filter((p) => p.sourceId === id);
-    const totalEarned = creatorPayments.reduce((sum, p) => sum + p.amountUsdc, 0);
-    const settledPayments = creatorPayments.filter((p) => p.settled);
-    const settledTotal = settledPayments.reduce((sum, p) => sum + p.amountUsdc, 0);
-
-    // Count citations from query runs that cited this source
-    const recentQueries = await db.listRecentQueries(200);
-    let citationCount = 0;
-    for (const run of recentQueries) {
-      for (const c of run.citations ?? []) {
-        if (c.sourceId === id) citationCount++;
-      }
-    }
-
-    // Leaderboard rank
+    // Leaderboard carries the authoritative all-time aggregates + rank. Fall back to
+    // payment-derived totals only when the source hasn't earned yet (absent from leaderboard).
+    const entry = leaderboard.find((e) => e.sourceId === id);
     const rank = leaderboard.findIndex((e) => e.sourceId === id) + 1;
 
-    // Earnings per day (from dailySettled, filtered to this source's payments)
+    const settledPayments = creatorPayments.filter((p) => p.settled);
+    const settledTotal = settledPayments.reduce((sum, p) => sum + p.amountUsdc, 0);
+    const totalEarned = entry?.totalEarnedUsdc ?? creatorPayments.reduce((s, p) => s + p.amountUsdc, 0);
+    const paymentCount = entry?.paymentCount ?? creatorPayments.length;
+    const citationCount = entry?.citationCount ?? creatorPayments.filter((p) => p.kind === "citation").length;
+
+    // Earnings per day from all-time settled payouts.
     const dailyMap = new Map<string, number>();
     for (const p of settledPayments) {
       const day = p.createdAt.slice(0, 10);
@@ -71,7 +65,7 @@ export async function GET(
       stats: {
         totalEarned,
         settledTotal,
-        paymentCount: creatorPayments.length,
+        paymentCount,
         citationCount,
         rank,
       },

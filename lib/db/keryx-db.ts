@@ -149,6 +149,10 @@ export interface KeryxDB {
   /** Citation payouts for one dispatch, oldest→newest. Carries real settlement
    *  state (settled / tx) so permalinks reflect on-chain truth, not a reconstruction. */
   listPaymentsByQuery(queryId: string): Promise<PaymentRecord[]>;
+  /** All earning payouts for one source (newest first), excluding inbound funding.
+   *  Full-table — the creator page derives its totals from this so they match the
+   *  all-time leaderboard instead of a capped recent-feed slice. */
+  listPaymentsBySource(sourceId: string): Promise<PaymentRecord[]>;
   metrics(): Promise<DashboardMetrics>;
   /** Settled USDC per UTC day over the last `days` days, zero-filled, oldest→today. Full-table
    *  aggregation — independent of the capped live feed, so older days aren't undercounted. */

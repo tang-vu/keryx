@@ -264,6 +264,16 @@ export class SupabaseAdapter implements KeryxDB {
     return (data ?? []).map(rowToPayment);
   }
 
+  async listPaymentsBySource(sourceId: string): Promise<PaymentRecord[]> {
+    const { data } = await this.sb
+      .from("payment_events")
+      .select("*")
+      .eq("source_id", sourceId)
+      .neq("kind", "inbound")
+      .order("created_at", { ascending: false });
+    return (data ?? []).map(rowToPayment);
+  }
+
   async dailySettled(days: number): Promise<DailyVolume[]> {
     // Bound the scan to the window: only settled rows on/after the oldest day shown.
     const cutoff = new Date(Date.now() - (days - 1) * 86400000).toISOString().slice(0, 10);

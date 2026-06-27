@@ -396,6 +396,15 @@ export class SqliteAdapter implements KeryxDB {
     return rows.map(rowToPayment);
   }
 
+  async listPaymentsBySource(sourceId: string): Promise<PaymentRecord[]> {
+    const rows = this.db
+      .prepare(
+        `SELECT * FROM payment_events WHERE source_id=? AND kind != 'inbound' ORDER BY created_at DESC`,
+      )
+      .all(sourceId);
+    return rows.map(rowToPayment);
+  }
+
   async dailySettled(days: number): Promise<DailyVolume[]> {
     // created_at is an ISO-UTC string; its first 10 chars are the UTC YYYY-MM-DD day.
     const rows = this.db
