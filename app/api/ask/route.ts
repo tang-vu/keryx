@@ -120,6 +120,11 @@ export async function POST(req: NextRequest) {
         send("meta", { engine: deps.engine.name, mode: deps.gateway.mode });
         // A request through /api/ask is a genuine human on the site → tag as external "web" usage
         // (the volume engine never goes through this route; it calls collectRun directly).
+        // Exception: Keryx's own headless web-client drives this same route 24/7 and passes the
+        // shared bot key, so its self-generated volume is tagged `engine` — the external bucket
+        // then counts only genuine third-party askers.
+        const isBot =
+          !!config.botKey && req.nextUrl.searchParams.get("bot") === config.botKey;
         // Coerce the caller-supplied budget — a missing / NaN / ≤0 value must never reach the
         // agent (it would print "$NaN" across the trace or no-op the run). Invalid → default.
         const coercedBudget =
@@ -132,7 +137,7 @@ export async function POST(req: NextRequest) {
         const askBudget = useBrowserCoSign
           ? coercedBudget
           : Math.min(coercedBudget, config.anonMaxBudget);
-        const gen = runAgent({ question, budget: askBudget, origin: "web" }, deps);
+        const gen = runAgent({ question, budget: askBudget, origin: isBot ? "engine" : "web" }, deps);
         let res = await gen.next();
         while (!res.done) {
           send("step", res.value);

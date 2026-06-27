@@ -52,8 +52,13 @@ if (bal.gateway.available < parseUnits("0.1", 6)) {
 }
 
 console.log(`   client Gateway balance: ${bal.gateway.formattedAvailable} USDC\n`);
+// Identify as Keryx's own headless driver so the route tags this self-generated call `engine`,
+// not `a2a` — the dashboard's external bucket then reflects only genuine outside agents.
+const askUrl = config.botKey
+  ? `${config.baseUrl}/api/agent/ask?bot=${encodeURIComponent(config.botKey)}`
+  : `${config.baseUrl}/api/agent/ask`;
 const r = await gateway.pay<{ answer: string; creatorsPaid: number; totalToCreators: number; citations: { source: string; reward: number }[]; feePaid: number }>(
-  `${config.baseUrl}/api/agent/ask`,
+  askUrl,
   { method: "POST", body: { question, budget } },
 );
 

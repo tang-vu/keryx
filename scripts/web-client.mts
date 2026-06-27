@@ -186,7 +186,10 @@ async function ensureFundedSession(): Promise<{ sessionId: string; sessAddr: str
 /** Stream POST /api/ask and co-sign each toll with the session key. */
 async function askAndCoSign(sessionId: string, sessKey: `0x${string}`) {
   const sessWallet = createWalletClient({ account: privateKeyToAccount(sessKey), chain: arcTestnet, transport: http(config.rpcUrl) });
-  const res = await fetch(`${base}/api/ask`, {
+  // Identify as Keryx's own headless driver so the route tags this self-generated run `engine`,
+  // not `web` — the dashboard's external bucket then reflects only genuine third-party askers.
+  const askUrl = config.botKey ? `${base}/api/ask?bot=${encodeURIComponent(config.botKey)}` : `${base}/api/ask`;
+  const res = await fetch(askUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json", Cookie: cookieHeader() },
     body: JSON.stringify({ question, budget, sessionId }),

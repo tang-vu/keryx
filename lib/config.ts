@@ -95,6 +95,11 @@ export const config = {
 
   // ── App ──
   baseUrl: process.env.BASE_URL ?? "http://localhost:3000",
+  // Shared secret Keryx's own headless drivers (web-client, a2a-client) pass as `?bot=` so the
+  // public /api/ask and /api/agent/ask routes tag their self-generated traffic as `engine`
+  // (self-volume) instead of `web`/`a2a`. This keeps the dashboard's external bucket honestly
+  // limited to genuine third-party callers. Unset → no tagging (all entry-path traffic stays web/a2a).
+  botKey: process.env.KERYX_BOT_KEY ?? "",
 
   // ── Auth ──
   // JWT_SECRET must be ≥ 32 bytes (256 bits) for HS256 security. When unset,

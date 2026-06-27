@@ -87,6 +87,9 @@ export async function POST(req: NextRequest) {
   if (!treasury) return Response.json({ error: "treasury wallet not configured" }, { status: 500 });
 
   const queryId = crypto.randomUUID();
+  // Keryx's own headless a2a-client passes the shared bot key so its self-generated calls are
+  // tagged `engine` (self-volume), leaving the external bucket to genuine outside agents only.
+  const isBot = !!config.botKey && req.nextUrl.searchParams.get("bot") === config.botKey;
 
   return settleThenServe(
     req,
@@ -110,13 +113,13 @@ export async function POST(req: NextRequest) {
           amountUsdc: settle.amountUsdc,
           txHash: settle.transaction,
           settled: true,
-          origin: "a2a",
+          origin: isBot ? "engine" : "a2a",
           rationale: "Inbound agent-to-agent research fee.",
         }),
       );
       // Run the full agent — it autonomously pays the creators it cites. origin "a2a" marks the
       // downstream citation payouts as external (driven by a real outside agent, not the engine).
-      const run = await collectRun({ question, budget: a2aBudget, queryId, origin: "a2a" });
+      const run = await collectRun({ question, budget: a2aBudget, queryId, origin: isBot ? "engine" : "a2a" });
       return {
         queryId: run.id,
         answer: run.answer,
