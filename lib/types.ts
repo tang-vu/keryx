@@ -134,6 +134,7 @@ export type TracePhase =
   | "reevaluate"
   | "synthesize"
   | "adjudicate"
+  | "verdict"
   | "attribute"
   | "settle"
   | "done";

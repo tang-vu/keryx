@@ -373,12 +373,35 @@ export async function* runAgent(
   const citedMarkers = synthesized.citedMarkers;
   // Guard against an empty body (e.g. the model returned unparseable JSON) so the run never
   // completes "done" showing a blank answer after real money was spent.
-  const answer = synthesized.answer?.trim()
+  let answer = synthesized.answer?.trim()
     ? synthesized.answer
     : `Read and paid for ${gathered.length} source(s) (${gathered.map((g) => g.sourceName).join(", ")}), but couldn't compose a written summary this run. Please try again.`;
   const citedSet = new Set(citedMarkers.length ? citedMarkers : gathered.map((g) => g.marker));
   const used = gathered.filter((g) => citedSet.has(g.marker));
+
+  // 5c) VERDICT — derive how confident the agent is from its own coverage signals (sources
+  // corroborating the answer, sub-claims left thin, disagreements adjudicated). When the evidence
+  // is thin, hedge the answer honestly instead of stating it with false certainty.
+  const conflictsResolved = synthesized.conflicts?.length ?? 0;
+  const adjudicatedNote = conflictsResolved
+    ? `, ${conflictsResolved} disagreement${conflictsResolved === 1 ? "" : "s"} adjudicated`
+    : "";
+  const gapsNote = (n: number) => `${n} sub-claim${n === 1 ? "" : "s"}`;
+  const verdict =
+    used.length === 0
+      ? { level: "Low", reason: "no source grounded the answer" }
+      : used.length >= 2 && lastGaps === 0
+        ? { level: "High", reason: `${used.length} sources corroborate it with every sub-claim covered${adjudicatedNote}` }
+        : used.length <= 1 && lastGaps > 0
+          ? { level: "Low", reason: `only ${used.length} source and ${gapsNote(lastGaps)} left thinly covered` }
+          : { level: "Moderate", reason: `${used.length} source${used.length === 1 ? "" : "s"} cited${lastGaps > 0 ? `, ${gapsNote(lastGaps)} thinly covered` : ""}${adjudicatedNote}` };
+
+  if (verdict.level === "Low" && used.length > 0) {
+    answer = `> ⚠ Low confidence — ${verdict.reason} within budget. Treat this as provisional.\n\n${answer}`;
+  }
+
   yield emit("synthesize", `Drafted answer citing ${used.length} source(s)`, { answer });
+  yield emit("verdict", `Confidence: ${verdict.level} — ${verdict.reason}.`, verdict);
 
   // 6) ATTRIBUTE contribution weights
   const attributions = await engine.attribute({ question: input.question, answer, used });
