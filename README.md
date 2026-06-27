@@ -2,7 +2,13 @@
 
 **Every time an AI uses a creator's work as a source, the creator gets paid — instantly.**
 
-🔗 Live: **[keryx.cc](https://keryx.cc)**
+🔗 Live: **[keryx.cc](https://keryx.cc)** &nbsp;·&nbsp; ▶️ `npm run demo` — the whole loop in ~90s &nbsp;·&nbsp; 🧩 [Fork the Arc primitives](./arc-primitives)
+
+**Fork-and-run.** Keryx is a live app *and* a set of MIT-licensed, standalone [Arc primitives](./arc-primitives)
+you can import: **two-toll x402 settlement** (fixed + dynamic), a **squat-proof on-chain creator/attribution
+registry** (multi-author splits + indexer), and a **server-enforced spend cap** for non-custodial agent spend.
+One command — `npm run demo` — runs the full cycle end-to-end in ~90s with real Arc-testnet settlement and
+prints on-chain proof.
 
 Keryx is a **citation-toll reading agent**. Ask it a question with a budget. It autonomously decides
 which paid content sources are worth buying, pays for them per-request over [x402](https://github.com/circlefin/arc-nanopayments),
