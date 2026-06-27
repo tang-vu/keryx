@@ -11,6 +11,8 @@
  */
 
 import { spawn } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
 import { collectRun, getAgentDeps } from "../lib/agent/index.ts";
 import { pickQuestion, SEED_QUESTIONS } from "../lib/seed-questions.ts";
 import { getReasoningEngine } from "../lib/llm/index.ts";
@@ -29,8 +31,34 @@ const delayMs = parseInt(flag("delay", "800")!, 10);
 const limit = flag("limit") ? parseFloat(flag("limit")!) : Infinity;
 const loop = has("loop");
 const push = has("push");
+const offsetArg = flag("offset");
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Persistent question cursor. The 24/7 daemon fires a fresh `--count 1` process every tick,
+// so a per-process index would always restart at question 0 — making the whole engine repeat
+// the same first question forever. Reading/advancing a stored cursor rotates the full bank
+// (incl. the broader real-world topics) across ticks. An explicit --offset overrides it.
+const CURSOR_FILE = path.resolve(process.cwd(), "data", "seed-cursor.json");
+function readCursor(): number {
+  try {
+    const n = JSON.parse(fs.readFileSync(CURSOR_FILE, "utf8")).cursor;
+    return Number.isFinite(n) ? ((n % SEED_QUESTIONS.length) + SEED_QUESTIONS.length) % SEED_QUESTIONS.length : 0;
+  } catch {
+    return 0;
+  }
+}
+function writeCursor(next: number) {
+  try {
+    fs.mkdirSync(path.dirname(CURSOR_FILE), { recursive: true });
+    fs.writeFileSync(CURSOR_FILE, JSON.stringify({ cursor: ((next % SEED_QUESTIONS.length) + SEED_QUESTIONS.length) % SEED_QUESTIONS.length }, null, 2));
+  } catch {
+    /* best-effort — never fail a traction run on cursor I/O */
+  }
+}
+
+const useCursor = offsetArg === undefined;
+const startOffset = useCursor ? readCursor() : parseInt(offsetArg!, 10) || 0;
 
 const deps = await getAgentDeps();
 console.log(`\n⚙  Keryx volume engine`);
@@ -62,7 +90,7 @@ async function maybePush(question: string, spent: number, payments: number) {
 }
 
 while ((loop || i < count) && totalSpent < limit) {
-  const question = pickQuestion(i);
+  const question = pickQuestion(startOffset + i);
   const start = Date.now();
   try {
     const run = await collectRun({ question, budget, origin: "engine" }, { deps });
@@ -77,9 +105,13 @@ while ((loop || i < count) && totalSpent < limit) {
     console.error(`#${i + 1} FAILED: ${err instanceof Error ? err.message : String(err)}`);
   }
   i++;
-  if (i % SEED_QUESTIONS.length === 0 && loop) console.log("   …cycled question bank");
+  if ((startOffset + i) % SEED_QUESTIONS.length === 0 && loop) console.log("   …cycled question bank");
   await sleep(delayMs);
 }
+
+// Advance the shared cursor so the next process continues where this one stopped (skip when an
+// explicit --offset was given, to keep such runs reproducible and not disturb the daemon's rotation).
+if (useCursor) writeCursor(startOffset + i);
 
 const m = await deps.db.metrics();
 console.log(`\n✓ Engine stopped. ${i} queries this run.`);
