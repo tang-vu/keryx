@@ -134,6 +134,17 @@ touches the user's key or funds.
 
 ## Run it
 
+**One command — the full cycle (~90s).** Decide → pay x402 toll → read → synthesize → settle
+weighted citation rewards, then print the Arc-testnet wallet addresses whose USDC actually moved:
+
+```bash
+npm run demo -- "How do x402 and stablecoins enable AI agent commerce?" --budget 0.05
+```
+
+With `ANTHROPIC_API_KEY` + `AGENT_FUNDER_PRIVATE_KEY` + `NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS` it
+settles for real and prints on-chain proof links; without them the same flow runs offline, clearly
+labeled `SIMULATED` (a mock is never presented as settled). Full setup below.
+
 ```bash
 # 1. Install (Node v20.18.2+)
 npm install

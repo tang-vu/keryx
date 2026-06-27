@@ -7,7 +7,7 @@
 
 import { collectRun } from "../lib/agent/index.ts";
 import { getReasoningEngine } from "../lib/llm/index.ts";
-import type { TraceStep } from "../lib/types.ts";
+import { c, printStep } from "./trace-console.mts";
 
 // ── parse args ──
 const argv = process.argv.slice(2);
@@ -23,34 +23,6 @@ for (let i = 0; i < argv.length; i++) {
 const question =
   qParts.join(" ").trim() ||
   "How do x402 and stablecoin micropayments enable autonomous AI agent commerce?";
-
-// ── colors ──
-const c = {
-  dim: (s: string) => `\x1b[2m${s}\x1b[22m`,
-  bold: (s: string) => `\x1b[1m${s}\x1b[22m`,
-  cyan: (s: string) => `\x1b[36m${s}\x1b[39m`,
-  green: (s: string) => `\x1b[32m${s}\x1b[39m`,
-  yellow: (s: string) => `\x1b[33m${s}\x1b[39m`,
-  red: (s: string) => `\x1b[31m${s}\x1b[39m`,
-  magenta: (s: string) => `\x1b[35m${s}\x1b[39m`,
-};
-
-const phaseColor: Record<string, (s: string) => string> = {
-  decompose: c.cyan,
-  discover: c.cyan,
-  decide: c.yellow,
-  fetch: c.green,
-  sufficiency: c.magenta,
-  synthesize: c.cyan,
-  attribute: c.magenta,
-  settle: c.green,
-  done: c.bold,
-};
-
-function printStep(s: TraceStep) {
-  const tag = (phaseColor[s.phase] ?? c.dim)(`[${s.phase}]`.padEnd(14));
-  console.log(`${tag} ${s.message}`);
-}
 
 console.log(c.bold(`\n🏛  Keryx — citation-toll reading agent`));
 console.log(`${c.dim("engine:")} ${getReasoningEngine().name}`);
