@@ -10,9 +10,11 @@
  *   6. Register a session grant (recover mode — same path the browser uses).
  *   7. Ask Keryx a question and CO-SIGN each x402 toll with the session key.
  *
- * Every citation payout it triggers is stamped origin=web (genuine site usage), settles
- * on Arc testnet, and shows in the dashboard's external provenance bucket. The private
- * session key never leaves this process — identical trust model to the real browser tab.
+ * Every citation payout it triggers settles for real on Arc testnet. Because this is Keryx's
+ * own headless driver (not a real visitor), it passes the bot key so the run is tagged
+ * origin=engine (self-volume) — keeping the dashboard's external bucket for genuine third
+ * parties. The private session key never leaves this process — identical trust model to the
+ * real browser tab.
  *
  * One faucet-funded wallet is REUSED across runs (its grant is recovered from the live
  * Gateway balance each time) and only ROTATED to a fresh faucet-funded wallet once its
@@ -217,7 +219,7 @@ async function askAndCoSign(sessionId: string, sessKey: `0x${string}`) {
       }
     } else if (event === "done") {
       const run = data as { citations?: { sourceName: string; reward: number }[]; totalToCreators?: number; answer?: string };
-      console.log(`\n✅ Answered. Paid ${run.citations?.length ?? 0} creator(s) $${run.totalToCreators ?? 0} (origin=web):`);
+      console.log(`\n✅ Answered. Paid ${run.citations?.length ?? 0} creator(s) $${run.totalToCreators ?? 0} (origin=engine, self-driven):`);
       for (const c of run.citations ?? []) console.log(`   • ${c.sourceName}: $${c.reward}`);
     } else if (event === "error") {
       console.error(`\n   stream error: ${(data as { message?: string }).message}`);
