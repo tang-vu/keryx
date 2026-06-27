@@ -65,7 +65,11 @@ export async function POST(req: NextRequest) {
   // treasury drain or fake-volume loop. The co-sign path spends the user's own funded
   // session (grant-cap bounded), so it is intentionally exempt from this IP tier.
   if (!useBrowserCoSign) {
-    const limited = await checkRateLimit(clientIp(req), "treasuryAsk");
+    const limited = await checkRateLimit(clientIp(req), "treasuryAsk", {
+      code: "free_trial_limit",
+      message:
+        "You've used your free dispatches for the moment. Connect a wallet to keep going on your own budget — or try again shortly.",
+    });
     if (limited) return limited;
   }
 

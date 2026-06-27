@@ -32,6 +32,14 @@ export interface AskMeta {
   mode: StreamMode;
 }
 
+/**
+ * Distinguishes an expected throttle from a real failure so the UI can respond
+ * differently: `rate-limit` (anonymous free-trial used up → invite to connect a
+ * wallet), `session-expired` (grant lapsed → recover prompt), `generic` (any
+ * other failure → plain error box).
+ */
+export type AskErrorKind = "generic" | "rate-limit" | "session-expired";
+
 export interface AskStreamState {
   status: "idle" | "streaming" | "done" | "error";
   meta: AskMeta | null;
@@ -43,6 +51,10 @@ export interface AskStreamState {
   payments: PaymentRecord[];
   run: QueryRun | null;
   error: string | null;
+  /** What kind of error this is, when status === "error". null otherwise. */
+  errorKind: AskErrorKind | null;
+  /** Seconds until the free-trial throttle resets, when errorKind === "rate-limit". */
+  retryAfter: number | null;
 }
 
 const INITIAL: AskStreamState = {
@@ -55,6 +67,8 @@ const INITIAL: AskStreamState = {
   payments: [],
   run: null,
   error: null,
+  errorKind: null,
+  retryAfter: null,
 };
 
 /** Parse a single SSE frame block into [event, data]. */
@@ -236,7 +250,7 @@ export function useAskStream(opts?: AskStreamOpts) {
 
     if (event === "error") {
       const { message } = data as { message: string };
-      setState((s) => ({ ...s, status: "error", error: message }));
+      setState((s) => ({ ...s, status: "error", errorKind: "generic", error: message }));
     }
   // opts is an object reference — destructure the primitive/stable values into the dep array
   // so the hook re-creates handleEvent when the grant activates or the cap changes.
@@ -271,10 +285,12 @@ export function useAskStream(opts?: AskStreamOpts) {
           const bodyText = await res.text().catch(() => "");
           let errCode: string | undefined;
           let errMsg = bodyText;
+          let retryAfter: number | null = null;
           try {
-            const j = JSON.parse(bodyText) as { error?: string; message?: string };
+            const j = JSON.parse(bodyText) as { error?: string; message?: string; retryAfter?: number };
             errCode = j.error;
             errMsg = j.message ?? j.error ?? bodyText;
+            if (typeof j.retryAfter === "number") retryAfter = j.retryAfter;
           } catch { /* not JSON — keep the raw text */ }
 
           if (res.status === 401 && errCode === "session_expired") {
@@ -283,12 +299,28 @@ export function useAskStream(opts?: AskStreamOpts) {
             setState((s) => ({
               ...s,
               status: "error",
+              errorKind: "session-expired",
               error: errMsg || "Your spending session expired — recover it to continue.",
             }));
             return;
           }
 
-          setState((s) => ({ ...s, status: "error", error: errMsg || `HTTP ${res.status}` }));
+          if (res.status === 429) {
+            // Free-trial throttle on the anonymous treasury path — an expected limit, not a
+            // failure. Surface it as an invitation to connect a wallet (handled by the page).
+            setState((s) => ({
+              ...s,
+              status: "error",
+              errorKind: "rate-limit",
+              retryAfter,
+              error:
+                errMsg ||
+                "You've used your free dispatches for the moment. Connect a wallet to keep going.",
+            }));
+            return;
+          }
+
+          setState((s) => ({ ...s, status: "error", errorKind: "generic", error: errMsg || `HTTP ${res.status}` }));
           return;
         }
 
@@ -329,6 +361,7 @@ export function useAskStream(opts?: AskStreamOpts) {
             : {
                 ...s,
                 status: "error",
+                errorKind: "generic",
                 error: "The connection dropped before the dispatch finished — please try again.",
               };
         });
@@ -337,6 +370,7 @@ export function useAskStream(opts?: AskStreamOpts) {
         setState((s) => ({
           ...s,
           status: "error",
+          errorKind: "generic",
           error: err instanceof Error ? err.message : String(err),
         }));
       }

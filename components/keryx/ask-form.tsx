@@ -48,8 +48,9 @@ export function AskForm({ disabled, onAsk }: AskFormProps) {
             <span className="font-mono text-[10.5px] uppercase tracking-[0.18em]">
               Dispatch order № 0481
             </span>
-            <span className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-cream/70">
-              Payable in USDC on Arc
+            <span className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.12em] text-cream/70">
+              <span className="h-[6px] w-[6px] rounded-full bg-paid" />
+              Free to try · paid in USDC on Arc
             </span>
           </div>
 

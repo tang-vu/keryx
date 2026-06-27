@@ -145,6 +145,10 @@ export default function AskPage() {
                           Issue a toll
                         </a>
                       </div>
+                      <p className="mt-3.5 flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-3">
+                        <span className="h-[6px] w-[6px] rounded-full bg-paid" />
+                        Free to try — no wallet, no sign-up
+                      </p>
                     </div>
 
                     <div className="flex flex-col items-end gap-6">
@@ -198,11 +202,14 @@ export default function AskPage() {
               <PayerNote active={!!grantBinding.sessionId && !grantBinding.expired} expired={!!grantBinding.expired} />
             </div>
 
-            {state.status === "error" && (
-              <div className="mt-5 border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                {state.error ?? "Something went wrong."}
-              </div>
-            )}
+            {state.status === "error" &&
+              (state.errorKind === "rate-limit" ? (
+                <FreeTrialLimitCard message={state.error} retryAfter={state.retryAfter} />
+              ) : (
+                <div className="mt-5 border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                  {state.error ?? "Something went wrong."}
+                </div>
+              ))}
 
             <h2 className="mb-7 mt-10 border-b border-ink pb-3.5 font-display text-[clamp(24px,3.2vw,34px)] font-medium tracking-tight text-ink">
               The dispatch, <em className="italic text-paid">itemised.</em>
@@ -246,7 +253,40 @@ function PayerNote({ active, expired }: { active: boolean; expired?: boolean }) 
         ? "Settling from your funded session — your wallet pays, capped at the funded amount."
         : expired
           ? "Session expired — recover it above to pay from your wallet (this run won't proceed until you do)."
-          : "This run is settled by Keryx's treasury. Activate a session above to pay from your own wallet."}
+          : "Free to try — no wallet needed. This run is settled by Keryx's treasury; activate a session above to pay from your own wallet."}
     </p>
+  );
+}
+
+/**
+ * Shown when an anonymous visitor exhausts the free-trial dispatches (treasury path → 429).
+ * Not a failure — a warm invitation to either wait out the short reset or connect a wallet
+ * and run on their own budget. Styled as a banknote draft to match the dispatch aesthetic.
+ */
+function FreeTrialLimitCard({
+  message,
+  retryAfter,
+}: {
+  message: string | null;
+  retryAfter: number | null;
+}) {
+  return (
+    <div className="mt-5 border-2 border-ink bg-paper p-1.5">
+      <div className="border border-ink px-5 py-4">
+        <div className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.16em] text-seal">
+          <span className="h-[6px] w-[6px] rounded-full bg-seal" />
+          Free trial · limit reached
+        </div>
+        <p className="mt-2.5 max-w-[60ch] font-serif text-[15px] leading-[1.55] text-ink-2">
+          {message ??
+            "You've used your free dispatches for the moment. Connect a wallet to keep going on your own budget."}
+        </p>
+        <p className="mt-3 font-mono text-[11px] leading-relaxed tracking-wide text-ink-3">
+          {retryAfter && retryAfter > 0
+            ? `Connect your wallet (top right) to pay from your own session — or try again in ${retryAfter}s.`
+            : "Connect your wallet (top right) to pay from your own session — or try again shortly."}
+        </p>
+      </div>
+    </div>
   );
 }

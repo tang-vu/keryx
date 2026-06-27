@@ -39,6 +39,7 @@ export type RateLimitTier = keyof typeof limiters;
 export async function checkRateLimit(
   key: string,
   tier: RateLimitTier,
+  opts?: { code?: string; message?: string },
 ): Promise<NextResponse | null> {
   const limiter = limiters[tier];
   try {
@@ -47,8 +48,15 @@ export async function checkRateLimit(
   } catch (err) {
     if (err instanceof RateLimiterRes) {
       const retryAfter = Math.ceil(err.msBeforeNext / 1000);
+      // The caller can supply a friendlier error `code` + `message` so the client can
+      // tell an expected throttle (e.g. free-trial limit hit → invite to connect a wallet)
+      // apart from a generic abuse block. Defaults preserve the original contract.
       return NextResponse.json(
-        { error: "rate limit exceeded", retryAfter },
+        {
+          error: opts?.code ?? "rate limit exceeded",
+          ...(opts?.message ? { message: opts.message } : {}),
+          retryAfter,
+        },
         {
           status: 429,
           headers: { "Retry-After": String(retryAfter) },
