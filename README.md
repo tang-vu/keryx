@@ -209,9 +209,15 @@ funds a session, browser co-signs. Server can also run volume engine with `AGENT
 Indexer will poll Arc RPC and cache events in DB.
 
 ## Deploy
-**Production:** VPS at keryx.cc. `npm run deploy` pulls latest main, restarts the app, runs migrations on 
-SQLite (kept on-disk for real traction data). Indexer backfills SourceRegistry events from deploy block 
-on startup. Traction metrics update live.
+**Production:** VPS at keryx.cc. SQLite is kept on-disk for real traction data; the indexer backfills 
+SourceRegistry events from the deploy block on startup; traction metrics update live.
+- **`npm run redeploy`** — low-downtime code deploy (default for code changes). Compiles the new release 
+  into a temp dir while the live build keeps serving, atomically swaps it in, `pm2 reload`s (~2s), then 
+  health-gates [`/api/health`](https://keryx.cc/api/health) and auto-rolls-back if the new build doesn't 
+  come up. A failed/OOM compile never touches the live build, so keryx.cc stays up.
+- **`npm run deploy`** — full provision + in-place build (first-time setup or dependency changes).
+- **Health & uptime:** [`/api/health`](https://keryx.cc/api/health) (liveness + readiness JSON) and a public 
+  [`/status`](https://keryx.cc/status) page (uptime, deployed commit, settlement mode, live traction).
 
 **Local tunnel:** `npm run tunnel` (Cloudflare Tunnel) — exposes localhost:3939 at a public URL, useful for 
 testing the full flow locally without a VPS.
