@@ -2,9 +2,9 @@
 
 **Every time an AI uses a creator's work as a source, the creator gets paid — instantly.**
 
-🔗 Live: **[keryx.cc](https://keryx.cc)** &nbsp;·&nbsp; ▶️ `npm run demo` — the whole loop in ~90s &nbsp;·&nbsp; 🧩 [Fork the Arc primitives](./arc-primitives)
+🔗 Live: **[keryx.cc](https://keryx.cc)** &nbsp;·&nbsp; ▶️ `npm run demo` — the whole loop in ~90s &nbsp;·&nbsp; 🧩 [Fork the Arc primitives](https://github.com/tang-vu/keryx-arc-primitives)
 
-**Fork-and-run.** Keryx is a live app *and* a set of MIT-licensed, standalone [Arc primitives](./arc-primitives)
+**Fork-and-run.** Keryx is a live app *and* a set of MIT-licensed, standalone [Arc primitives](https://github.com/tang-vu/keryx-arc-primitives)
 you can import: **two-toll x402 settlement** (fixed + dynamic), a **squat-proof on-chain creator/attribution
 registry** (multi-author splits + indexer), and a **server-enforced spend cap** for non-custodial agent spend.
 One command — `npm run demo` — runs the full cycle end-to-end in ~90s with real Arc-testnet settlement and
@@ -230,7 +230,7 @@ The dApp is non-custodial but makes **4 documented trade-offs** (required for te
 See `docs/security-threat-model.md` for full verification matrix, residuals, and mitigations.
 
 ## Forkable primitives (Arc OSS)
-The reusable, standalone building blocks live in the [`arc-primitives/`](./arc-primitives) submodule
+The reusable, standalone building blocks live in the [`arc-primitives/`](https://github.com/tang-vu/keryx-arc-primitives) submodule
 ([`keryx-arc-primitives`](https://github.com/tang-vu/keryx-arc-primitives), MIT) — two-toll x402
 settlement, the on-chain SourceRegistry + indexer, and non-custodial browser co-sign spend caps,
 packaged to fork and import. Clone with `git clone --recurse-submodules`, or `git submodule update --init`.
