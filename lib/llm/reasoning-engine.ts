@@ -77,6 +77,23 @@ export interface SynthInput {
   gathered: GatheredContent[];
 }
 
+/** A factual disagreement the agent found between sources while writing the answer,
+ *  and which source it decided to trust (and why) instead of averaging them. */
+export interface Conflict {
+  point: string; // the factual point the sources disagree on
+  positions: { marker: string; stance: string }[]; // what each conflicting source claims
+  trusted: string; // the source marker the agent chose to trust
+  reason: string; // why it trusted that one (specificity, internal consistency, recency)
+}
+
+/** Result of synthesis: the grounded answer, which markers it cited, and any source
+ *  conflicts the agent adjudicated on the way to writing it. */
+export interface SynthResult {
+  answer: string;
+  citedMarkers: string[];
+  conflicts: Conflict[];
+}
+
 export interface AttributeInput {
   question: string;
   answer: string;
@@ -131,10 +148,9 @@ export interface ReasoningEngine {
    *  filling with additional purchases from previously-skipped candidates. */
   reevaluate(input: ReevaluateInput): Promise<ReevaluateOutput>;
 
-  /** Write a grounded answer with inline [S#] citation markers. */
-  synthesize(
-    input: SynthInput,
-  ): Promise<{ answer: string; citedMarkers: string[] }>;
+  /** Write a grounded answer with inline [S#] citation markers, adjudicating any
+   *  source disagreements (trusting one over another rather than averaging). */
+  synthesize(input: SynthInput): Promise<SynthResult>;
 
   /** Assign each cited source a 0..1 contribution weight (cited weights sum to 1). */
   attribute(

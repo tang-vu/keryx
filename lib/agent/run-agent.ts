@@ -358,6 +358,18 @@ export async function* runAgent(
   // 5) SYNTHESIZE
   yield emit("synthesize", `Synthesizing a grounded answer from ${gathered.length} source(s)…`);
   const synthesized = await engine.synthesize({ question: input.question, subClaims, gathered });
+
+  // 5b) ADJUDICATE — when the sources disagreed, the synthesizer trusted one over another rather
+  // than averaging them. Surface each resolution so the reasoning behind the answer stays visible.
+  for (const cf of synthesized.conflicts ?? []) {
+    const positions = cf.positions.map((p) => `${p.marker} ${p.stance}`).join("  vs  ");
+    yield emit(
+      "adjudicate",
+      `⚖️ Sources disagreed on ${cf.point} — ${positions} → trusted ${cf.trusted} (${cf.reason})`,
+      cf,
+    );
+  }
+
   const citedMarkers = synthesized.citedMarkers;
   // Guard against an empty body (e.g. the model returned unparseable JSON) so the run never
   // completes "done" showing a blank answer after real money was spent.

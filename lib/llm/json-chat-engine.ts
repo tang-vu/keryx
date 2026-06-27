@@ -16,6 +16,8 @@ import type {
   SufficiencyInput,
   SufficiencyResult,
   SynthInput,
+  SynthResult,
+  Conflict,
 } from "./reasoning-engine";
 
 export abstract class JsonChatEngine implements ReasoningEngine {
@@ -166,13 +168,15 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     };
   }
 
-  async synthesize(
-    input: SynthInput,
-  ): Promise<{ answer: string; citedMarkers: string[] }> {
+  async synthesize(input: SynthInput): Promise<SynthResult> {
     const out = await this.chatJson(
       config.synthesisModel,
       "You write a grounded, accurate answer using ONLY the provided sources. " +
-        "Cite inline with the source markers like [S1]. Cite every claim. Do not invent facts. Output strict JSON.",
+        "Cite inline with the source markers like [S1]. Cite every claim. Do not invent facts. " +
+        "When two or more sources disagree on a factual point, do NOT average or blur them: decide " +
+        "which to trust based on specificity, internal consistency, and recency; write the answer " +
+        "reflecting the trusted source; and record each disagreement in `conflicts` (use an empty " +
+        "array when the sources are consistent). Output strict JSON.",
       JSON.stringify({
         question: input.question,
         subClaims: input.subClaims,
@@ -181,12 +185,15 @@ export abstract class JsonChatEngine implements ReasoningEngine {
           name: g.sourceName,
           text: g.text.slice(0, 2000),
         })),
-        schema: '{"answer":string (markdown with [S#] citations),"citedMarkers":string[]}',
+        schema:
+          '{"answer":string (markdown with [S#] citations),"citedMarkers":string[],' +
+          '"conflicts":[{"point":string,"positions":[{"marker":string,"stance":string}],"trusted":string,"reason":string}]}',
       }),
     );
     return {
       answer: (out.answer as string) ?? "",
       citedMarkers: Array.isArray(out.citedMarkers) ? (out.citedMarkers as string[]) : [],
+      conflicts: parseConflicts(out.conflicts),
     };
   }
 
@@ -240,4 +247,32 @@ function normalizeAction(a: string): Decision["action"] {
 function clamp01(n: number): number {
   if (!Number.isFinite(n)) return 0;
   return Math.max(0, Math.min(1, n));
+}
+
+/** Defensively validate the model's `conflicts` array — drop malformed entries and cap the
+ *  count so a hallucinated list can never spam the trace. Only well-formed disagreements with
+ *  at least two stances and a trusted marker survive. */
+function parseConflicts(raw: unknown): Conflict[] {
+  if (!Array.isArray(raw)) return [];
+  const out: Conflict[] = [];
+  for (const c of raw) {
+    if (!c || typeof c !== "object") continue;
+    const o = c as Record<string, unknown>;
+    const point = typeof o.point === "string" ? o.point.trim() : "";
+    const trusted = typeof o.trusted === "string" ? o.trusted.trim() : "";
+    const reason = typeof o.reason === "string" ? o.reason.trim() : "";
+    const positions = Array.isArray(o.positions)
+      ? o.positions
+          .filter((p): p is Record<string, unknown> => !!p && typeof p === "object")
+          .map((p) => ({
+            marker: typeof p.marker === "string" ? p.marker.trim() : "",
+            stance: typeof p.stance === "string" ? p.stance.trim() : "",
+          }))
+          .filter((p) => p.marker && p.stance)
+      : [];
+    if (!point || !trusted || positions.length < 2) continue;
+    out.push({ point, positions, trusted, reason });
+    if (out.length >= 5) break;
+  }
+  return out;
 }

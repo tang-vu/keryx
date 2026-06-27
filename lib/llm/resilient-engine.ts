@@ -19,6 +19,7 @@ import type {
   SufficiencyInput,
   SufficiencyResult,
   SynthInput,
+  SynthResult,
 } from "./reasoning-engine";
 import type { Decision } from "../types";
 
@@ -75,7 +76,7 @@ export class ResilientEngine implements ReasoningEngine {
     return withFallback("reevaluate", () => this.primary.reevaluate(input), () => this.fallback.reevaluate(input));
   }
 
-  synthesize(input: SynthInput): Promise<{ answer: string; citedMarkers: string[] }> {
+  synthesize(input: SynthInput): Promise<SynthResult> {
     return withFallback("synthesize", () => this.primary.synthesize(input), () => this.fallback.synthesize(input));
   }
 

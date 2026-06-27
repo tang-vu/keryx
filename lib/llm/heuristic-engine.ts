@@ -16,6 +16,7 @@ import type {
   SufficiencyInput,
   SufficiencyResult,
   SynthInput,
+  SynthResult,
 } from "./reasoning-engine";
 
 const STOP = new Set(
@@ -196,11 +197,9 @@ export class HeuristicEngine implements ReasoningEngine {
     };
   }
 
-  async synthesize(
-    input: SynthInput,
-  ): Promise<{ answer: string; citedMarkers: string[] }> {
+  async synthesize(input: SynthInput): Promise<SynthResult> {
     if (input.gathered.length === 0) {
-      return { answer: "No sources were worth purchasing for this question.", citedMarkers: [] };
+      return { answer: "No sources were worth purchasing for this question.", citedMarkers: [], conflicts: [] };
     }
     const cited = new Set<string>();
     const lines: string[] = [];
@@ -224,7 +223,8 @@ export class HeuristicEngine implements ReasoningEngine {
       ? lines.join(" ")
       : `${input.gathered[0].text.slice(0, 240)}… [${input.gathered[0].marker}]`;
     if (lines.length === 0) cited.add(input.gathered[0].marker);
-    return { answer, citedMarkers: [...cited] };
+    // The heuristic engine does not detect cross-source conflicts — that requires an LLM.
+    return { answer, citedMarkers: [...cited], conflicts: [] };
   }
 
   async attribute(
