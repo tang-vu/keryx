@@ -7,7 +7,7 @@
 > answer with citations, and settles a weighted nanopayment to every source it actually used.
 > **Every citation pays the creator, instantly, in USDC on Arc.**
 
-**Hackathon:** Lepton Agents (Canteen × Circle, on Arc) · **primary track RFB 6 (Creator & Publisher Monetization)** · window **Jun 15 → 29, 2026**, async judging (no live demo day). **Rubric:** 30% Agentic sophistication · 30% Traction · 20% Circle tooling · 20% Innovation.
+**Hackathon:** Lepton Agents (Canteen × Circle, on Arc) · **primary track RFB 6 (Creator & Publisher Monetization)** · window **Jun 15 → Jul 6, 2026** (extended +1 wk from Jun 29), async judging (no live demo day). **Rubric:** 30% Agentic sophistication · 30% Traction · 20% Circle tooling · 20% Innovation.
 
 > **STATUS (2026-06-27) — LIVE.** Deployed at **[keryx.cc](https://keryx.cc)** (VPS + Cloudflare Tunnel),
 > funded, settling **real** x402 nanopayments on Arc testnet (`KERYX_FORCE_OFFLINE=0`): 1,480+ settled
