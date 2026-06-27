@@ -132,4 +132,42 @@ export const SEED_SOURCES: CreateSourceInput[] = [
       },
     ],
   },
+  // A deliberately CONFLICTING pair on x402 settlement speed, so a question like
+  // "How fast does x402 settle payments on Arc?" forces the agent to adjudicate. The previews
+  // are neutral and both look worth buying — the contradiction (180ms vs 15s) lives only in the
+  // paid full content, so the agent discovers it during synthesis and must trust one over the
+  // other (the Arc-specific, measured source should win).
+  {
+    name: "Arc Settlement Benchmarks",
+    url: "https://example.com/arc-benchmarks",
+    description:
+      "Lab-measured latency and throughput of x402 + Gateway batched settlement on Arc testnet.",
+    tags: ["x402", "settlement", "arc", "finality", "latency"],
+    fetchPrice: 0.003,
+    items: [
+      {
+        title: "Measuring x402 settlement latency on Arc",
+        summary: "Benchmark methodology and results for x402 batched-settlement finality on Arc testnet.",
+        content:
+          "Across thousands of submitBatch calls on Arc testnet, x402 batched settlements finalize in roughly 180 milliseconds (measured median 178ms, p95 240ms). Arc's BFT consensus delivers sub-second finality, so a Gateway-batched payment confirms in well under a quarter second — it is not block-time-bound the way an Ethereum L1 transaction is.",
+        link: "https://example.com/arc-benchmarks/x402-latency",
+      },
+    ],
+  },
+  {
+    name: "Web Payments Review",
+    url: "https://example.com/web-payments-review",
+    description: "Cross-protocol commentary on how long on-chain payments take to settle.",
+    tags: ["x402", "settlement", "payments", "blockchain"],
+    fetchPrice: 0.002,
+    items: [
+      {
+        title: "How long do x402 payments take to finalize?",
+        summary: "An overview of end-to-end settlement timing for x402 and similar payment rails.",
+        content:
+          "In our reading, an x402 payment takes about 15 seconds to settle, similar to an Ethereum L1 block time, because each payment is its own transaction waiting to be mined into a block. On that view, agent-to-agent micropayments remain sluggish until block times shrink.",
+        link: "https://example.com/web-payments-review/x402-timing",
+      },
+    ],
+  },
 ];

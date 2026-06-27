@@ -1,5 +1,6 @@
 /**
- * Seed the datastore with demo sources. Idempotent-ish: re-running adds fresh source ids.
+ * Seed the datastore with demo sources. Idempotent by name: re-running adds only the seed
+ * sources that aren't present yet (existing creators, their wallets, and earnings are untouched).
  * Usage: npm run seed-sources
  */
 
@@ -9,15 +10,16 @@ import { SEED_SOURCES } from "../lib/sources/seed-data.ts";
 
 const db = await getDb();
 const existing = await db.listSources();
-if (existing.length > 0) {
-  console.log(`Already have ${existing.length} source(s):`);
-  for (const s of existing) console.log(`  • ${s.name} → ${s.walletAddress}`);
-  console.log("\nDelete data/keryx.sqlite to reseed from scratch.");
+const existingNames = new Set(existing.map((s) => s.name.toLowerCase()));
+const toSeed = SEED_SOURCES.filter((s) => !existingNames.has(s.name.toLowerCase()));
+
+if (toSeed.length === 0) {
+  console.log(`All ${SEED_SOURCES.length} seed sources already present (${existing.length} total). Nothing to add.`);
   process.exit(0);
 }
 
-console.log("Seeding sources…\n");
-for (const input of SEED_SOURCES) {
+console.log(`Seeding ${toSeed.length} new source(s) (${existing.length} already present)…\n`);
+for (const input of toSeed) {
   const s = await createSource(db, input);
   const authors =
     s.authors.length > 1
@@ -25,4 +27,4 @@ for (const input of SEED_SOURCES) {
       : "";
   console.log(`  ✓ ${s.name}  $${s.fetchPrice}/fetch  → ${s.walletAddress}${authors}`);
 }
-console.log(`\nSeeded ${SEED_SOURCES.length} sources. Run: npm run ask -- "your question"`);
+console.log(`\nSeeded ${toSeed.length} new source(s). Run: npm run ask -- "your question"`);
