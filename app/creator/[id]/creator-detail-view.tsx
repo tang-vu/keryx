@@ -25,10 +25,13 @@ interface CreatorData {
   recentPayments: {
     id: string;
     queryId: string;
+    kind: string;
     amountUsdc: number;
     settled: boolean;
     txHash: string | null;
     createdAt: string;
+    /** The question that triggered this payout — what work of theirs was used. */
+    question: string | null;
   }[];
   dailyEarnings: { date: string; amount: number }[];
 }
@@ -48,7 +51,7 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
     return <p className="py-20 text-center font-mono text-sm text-destructive">{error}</p>;
   }
   if (!data) {
-    return <p className="py-20 text-center font-mono text-sm text-ink-3">Loading…</p>;
+    return <CreatorSkeleton />;
   }
 
   const { source, stats, recentPayments, dailyEarnings } = data;
@@ -153,20 +156,29 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
             {recentPayments.map((p) => (
               <div
                 key={p.id}
-                className="flex items-center justify-between border-b border-line pb-2 last:border-0"
+                className="flex items-center justify-between gap-3 border-b border-line pb-2 last:border-0"
               >
-                <div>
+                <div className="min-w-0 flex-1">
                   <Link
                     href={`/dispatch/${p.queryId}`}
-                    className="font-mono text-[11px] text-seal transition-colors hover:underline"
+                    className="block truncate font-serif text-[13px] leading-snug text-ink transition-colors hover:text-seal"
+                    title={p.question ?? p.queryId}
                   >
-                    {p.queryId.slice(0, 8)}…
+                    {p.question ?? `Dispatch ${p.queryId.slice(0, 8)}…`}
                   </Link>
-                  <p className="font-mono text-[10px] text-ink-3">
+                  <p className="mt-1 flex items-center gap-2 font-mono text-[10px] text-ink-3">
+                    <span
+                      className={cn(
+                        "rounded px-1 py-px uppercase tracking-wide",
+                        p.kind === "citation" ? "bg-paid/10 text-paid" : "bg-paper-2 text-ink-3",
+                      )}
+                    >
+                      {p.kind === "citation" ? "cited" : "read"}
+                    </span>
                     {new Date(p.createdAt).toLocaleString()}
                   </p>
                 </div>
-                <div className="text-right">
+                <div className="shrink-0 text-right">
                   <span className="font-mono text-sm font-semibold text-paid">
                     ${fmtUsdc(p.amountUsdc)}
                   </span>
@@ -215,6 +227,29 @@ function StatTile({
         {value}
       </p>
       {sub && <p className="mt-0.5 font-mono text-[10px] text-ink-3">{sub}</p>}
+    </div>
+  );
+}
+
+/** Shimmer placeholder shown while the creator profile loads — mirrors the real
+ *  layout (identity, four stat tiles, a chart block) so the page doesn't jump. */
+function CreatorSkeleton() {
+  return (
+    <div className="animate-pulse">
+      <div className="mb-8 flex items-start gap-4">
+        <div className="h-14 w-14 shrink-0 rounded-full bg-ink/10" />
+        <div className="flex-1 space-y-2">
+          <div className="h-7 w-56 rounded bg-ink/10" />
+          <div className="h-4 w-full max-w-md rounded bg-ink/10" />
+          <div className="h-3 w-40 rounded bg-ink/10" />
+        </div>
+      </div>
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-[88px] rounded border border-line bg-paper" />
+        ))}
+      </div>
+      <div className="h-[180px] rounded border border-line bg-paper" />
     </div>
   );
 }

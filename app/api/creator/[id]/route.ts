@@ -53,6 +53,23 @@ export async function GET(
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, amount]) => ({ date, amount }));
 
+    // Attach the question that triggered each payout so the creator sees WHAT work of
+    // theirs was used, not an opaque query id — the tangible "you were cited for this".
+    // Dedupe by queryId first so a creator cited several times in one query costs one read.
+    const recent = creatorPayments.slice(0, 25);
+    const uniqueQueryIds = [...new Set(recent.map((p) => p.queryId).filter(Boolean))];
+    const questionById = new Map<string, string>();
+    await Promise.all(
+      uniqueQueryIds.map(async (qid) => {
+        const run = await db.getQueryRun(qid);
+        if (run?.question) questionById.set(qid, run.question);
+      }),
+    );
+    const recentPayments = recent.map((p) => ({
+      ...p,
+      question: questionById.get(p.queryId) ?? null,
+    }));
+
     return NextResponse.json({
       source: {
         id: source.id,
@@ -69,7 +86,7 @@ export async function GET(
         citationCount,
         rank,
       },
-      recentPayments: creatorPayments.slice(0, 25),
+      recentPayments,
       dailyEarnings,
     });
   } catch (err) {
