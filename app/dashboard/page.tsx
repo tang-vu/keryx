@@ -16,6 +16,7 @@ import {
   Users,
 } from "lucide-react";
 import { SiteHeader } from "@/components/keryx/site-header";
+import { SiteFooter } from "@/components/keryx/site-footer";
 import { MetricCard } from "@/components/keryx/metric-card";
 import {
   CreatorLeaderboard,
@@ -114,7 +115,7 @@ export default function DashboardPage() {
           </span>
         </header>
 
-        <ProvenanceStrip metrics={metrics} />
+        {metrics && <ProvenanceStrip metrics={metrics} />}
         <p className="mt-2 max-w-3xl font-mono text-[10px] leading-relaxed text-ink-3">
           Sub-cent rewards are netted off-chain in the Circle Gateway ledger and finalized on Arc in
           batches, so the per-payment IDs in the feed are Gateway settlement references, not per-tx
@@ -128,6 +129,7 @@ export default function DashboardPage() {
             value={String(metrics?.totalPayments ?? 0)}
             icon={Receipt}
             accent="neutral"
+            loading={!metrics}
           />
           <MetricCard
             label="Total volume"
@@ -135,6 +137,7 @@ export default function DashboardPage() {
             sub="USDC"
             icon={ArrowLeftRight}
             accent="amber"
+            loading={!metrics}
           />
           <MetricCard
             label="Creator payouts"
@@ -142,12 +145,14 @@ export default function DashboardPage() {
             sub="USDC to creators"
             icon={Coins}
             accent="emerald"
+            loading={!metrics}
           />
           <MetricCard
             label="Creators earning"
             value={String(metrics?.creatorsEarning ?? 0)}
             icon={Users}
             accent="amber"
+            loading={!metrics}
           />
           <MetricCard
             label="Avg payment"
@@ -155,6 +160,7 @@ export default function DashboardPage() {
             sub="USDC"
             icon={Banknote}
             accent="neutral"
+            loading={!metrics}
           />
           <MetricCard
             label="Reader → payer"
@@ -162,6 +168,7 @@ export default function DashboardPage() {
             sub={`${metrics?.payingQueries ?? 0} / ${metrics?.totalQueries ?? 0} queries`}
             icon={TrendingUp}
             accent="emerald"
+            loading={!metrics}
           />
           {(metrics?.feedbackTotal ?? 0) > 0 && (
             <MetricCard
@@ -204,6 +211,7 @@ export default function DashboardPage() {
 
         <A2aCallCard />
       </main>
+      <SiteFooter />
     </div>
   );
 }

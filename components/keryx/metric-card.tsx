@@ -15,6 +15,9 @@ interface MetricCardProps {
   sub?: string;
   icon: LucideIcon;
   accent?: "amber" | "emerald" | "neutral";
+  /** Show a shimmer skeleton instead of the value — used before the first poll
+   *  lands so the traction page never flashes a misleading "0". */
+  loading?: boolean;
 }
 
 const ACCENTS = {
@@ -29,6 +32,7 @@ export function MetricCard({
   sub,
   icon: Icon,
   accent = "neutral",
+  loading = false,
 }: MetricCardProps) {
   return (
     <Card className="flex flex-col gap-3 p-5">
@@ -46,10 +50,19 @@ export function MetricCard({
         </span>
       </div>
       <div>
-        <p className="letterpress font-display text-[30px] font-bold tracking-tight tabular-nums text-ink sm:text-[34px]">
-          {value}
-        </p>
-        {sub && <p className="mt-0.5 font-mono text-[11px] text-ink-3">{sub}</p>}
+        {loading ? (
+          <>
+            <div className="h-[30px] w-24 animate-pulse rounded bg-ink/10 sm:h-[34px]" />
+            {sub && <div className="mt-1.5 h-3 w-16 animate-pulse rounded bg-ink/10" />}
+          </>
+        ) : (
+          <>
+            <p className="letterpress font-display text-[30px] font-bold tracking-tight tabular-nums text-ink sm:text-[34px]">
+              {value}
+            </p>
+            {sub && <p className="mt-0.5 font-mono text-[11px] text-ink-3">{sub}</p>}
+          </>
+        )}
       </div>
     </Card>
   );
