@@ -5,6 +5,7 @@ import Link from "next/link";
 import { BadgeCheck, Banknote, Calendar, Hash, Wallet } from "lucide-react";
 import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
 import { cn } from "@/lib/utils";
+import { NotifyWebhookPanel } from "./notify-webhook-panel";
 
 interface CreatorData {
   source: {
@@ -118,6 +119,9 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
           accent="seal"
         />
       </section>
+
+      {/* Owner-only: citation webhook settings (renders nothing for non-owners) */}
+      <NotifyWebhookPanel creatorId={creatorId} />
 
       {/* Earnings chart */}
       {dailyEarnings.length > 0 && (

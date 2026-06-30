@@ -36,6 +36,7 @@ import { ingestRss } from "@/lib/ingest/rss";
 import { config } from "@/lib/config";
 import { urlHash, sourceId } from "@/lib/registry/registry-client";
 import { feedContainsToken, verificationToken } from "@/lib/sources/feed-verification";
+import { isDeliverableUrl, randomNotifySecret } from "@/lib/notify/citation-webhook";
 import type { SourceItem } from "@/lib/types";
 
 /** Instructions returned to a not-yet-verified registrant: drop this line in the feed, then
@@ -84,6 +85,23 @@ export async function POST(req: NextRequest) {
   const sessionWallet = session.address;
 
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+
+  // Optional notify-on-citation webhook. Validated up-front so a bad URL fails the whole register
+  // (not silently dropped). Persisted post-create keyed by source id; the secret is echoed once.
+  const notifyUrlRaw = typeof body.notifyUrl === "string" ? body.notifyUrl.trim() : "";
+  if (notifyUrlRaw && (notifyUrlRaw.length > 2048 || !isDeliverableUrl(notifyUrlRaw))) {
+    return Response.json(
+      { error: "notifyUrl must be an absolute http(s) URL under 2048 chars" },
+      { status: 400 },
+    );
+  }
+  /** Persist the webhook for the given source id and return the one-time secret echo, or null. */
+  const applyNotify = async (sid: string) => {
+    if (!notifyUrlRaw) return null;
+    const secret = randomNotifySecret();
+    await db.setSourceNotify(sid, notifyUrlRaw, secret);
+    return { url: notifyUrlRaw, secret };
+  };
 
   // Parse and ingest feed / manual fields.
   let input: CreateSourceInput;
@@ -181,6 +199,7 @@ export async function POST(req: NextRequest) {
       mode: "onchain",
       sourceId: sid,
       registryAddress: config.registryAddress,
+      notify: await applyNotify(sid),
       // The indexer writes the row UNVERIFIED — earning needs feed-ownership proof first.
       verification: verificationInfo(sessionWallet, input.rssUrl || canonicalUrl),
       registerParams: {
@@ -215,6 +234,7 @@ export async function POST(req: NextRequest) {
       verified: source.verified,
       authors: source.authors.map((a) => ({ name: a.name, splitWeight: a.splitWeight })),
     },
+    notify: await applyNotify(source.id),
     verification: verifiedAtRegister ? null : verificationInfo(sessionWallet, input.rssUrl),
   });
 }

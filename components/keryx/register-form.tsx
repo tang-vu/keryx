@@ -16,7 +16,7 @@
  */
 
 import { useState } from "react";
-import { Loader2, Rss, Wallet, PartyPopper, ExternalLink, ShieldCheck, ShieldAlert, Copy } from "lucide-react";
+import { Loader2, Rss, Wallet, PartyPopper, ExternalLink, ShieldCheck, ShieldAlert, Copy, Webhook } from "lucide-react";
 import { toast } from "sonner";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { Input } from "@/components/ui/input";
@@ -63,10 +63,13 @@ export function RegisterForm({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [fetchPrice, setFetchPrice] = useState("0.016");
+  const [notifyUrl, setNotifyUrl] = useState("");
   const [showManual, setShowManual] = useState(false);
   const [loading, setLoading] = useState(false);
   const [created, setCreated] = useState<CreatedSource | null>(null);
   const [verification, setVerification] = useState<Verification | null>(null);
+  // One-time webhook secret returned at register time — shown once, never re-fetchable.
+  const [notify, setNotify] = useState<{ url: string; secret: string } | null>(null);
 
   // wagmi hooks for the on-chain register call (only used when registry is configured).
   const { writeContractAsync } = useWriteContract();
@@ -76,7 +79,10 @@ export function RegisterForm({
   const submit = async () => {
     if (loading || isMining) return;
 
-    const baseBody = prefillWalletAddress ? { walletAddress: prefillWalletAddress } : {};
+    const baseBody = {
+      ...(prefillWalletAddress ? { walletAddress: prefillWalletAddress } : {}),
+      ...(notifyUrl.trim() ? { notifyUrl: notifyUrl.trim() } : {}),
+    };
     const body = rssUrl.trim()
       ? { ...baseBody, rssUrl: rssUrl.trim() }
       : {
@@ -100,6 +106,9 @@ export function RegisterForm({
       });
       const data = await res.json() as Record<string, unknown>;
       if (!res.ok) throw new Error((data?.error as string) ?? "Registration failed");
+
+      // Webhook secret (when a notify URL was supplied) — shown once on the success card.
+      setNotify((data.notify as { url: string; secret: string } | null) ?? null);
 
       if (data.mode === "onchain") {
         // On-chain path: call registry.register() from the creator's connected wallet.
@@ -151,6 +160,7 @@ export function RegisterForm({
         setRssUrl("");
         setName("");
         setDescription("");
+        setNotifyUrl("");
         onCreated?.();
         // Trigger a reload after indexer lag (≤4s).
         setTimeout(() => onCreated?.(), 5_000);
@@ -168,6 +178,7 @@ export function RegisterForm({
         setRssUrl("");
         setName("");
         setDescription("");
+        setNotifyUrl("");
         onCreated?.();
       }
     } catch (err) {
@@ -183,11 +194,13 @@ export function RegisterForm({
       <SuccessCard
         source={created}
         verification={verification}
+        notify={notify}
         pendingTxHash={pendingTxHash}
         onVerified={() => setCreated((c) => (c ? { ...c, verified: true } : c))}
         onAgain={() => {
           setCreated(null);
           setVerification(null);
+          setNotify(null);
           setPendingTxHash(undefined);
         }}
       />
@@ -289,6 +302,25 @@ export function RegisterForm({
           </div>
         )}
 
+        <div className="space-y-2">
+          <Label
+            htmlFor="notify"
+            className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3"
+          >
+            <Webhook className="h-3.5 w-3.5 text-seal" /> Citation webhook <span className="text-ink-3/70 normal-case tracking-normal">(optional)</span>
+          </Label>
+          <Input
+            id="notify"
+            value={notifyUrl}
+            onChange={(e) => setNotifyUrl(e.target.value)}
+            placeholder="https://your-agent.com/keryx-hook"
+            className="bg-paper-2 font-mono text-sm"
+          />
+          <p className="text-xs text-ink-2">
+            Get a signed POST the instant the agent cites you and pays — no dashboard polling.
+          </p>
+        </div>
+
         <button
           type="button"
           onClick={submit}
@@ -314,12 +346,14 @@ export function RegisterForm({
 function SuccessCard({
   source,
   verification,
+  notify,
   pendingTxHash,
   onVerified,
   onAgain,
 }: {
   source: CreatedSource;
   verification: Verification | null;
+  notify: { url: string; secret: string } | null;
   pendingTxHash?: `0x${string}`;
   onVerified: () => void;
   onAgain: () => void;
@@ -338,6 +372,7 @@ function SuccessCard({
         {needsVerify && (
           <VerifyPanel source={source} verification={verification} onVerified={onVerified} />
         )}
+        {notify && <NotifySecretPanel notify={notify} />}
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">
             Tolls settle to your connected wallet
@@ -382,6 +417,51 @@ function SuccessCard({
           Register another source
         </button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * One-time reveal of the webhook signing secret. Shown only right after registration (the server
+ * never returns it again). The creator stores it to verify the `X-Keryx-Signature` HMAC on each
+ * citation delivery. Rotatable later from the creator's own profile page.
+ */
+function NotifySecretPanel({ notify }: { notify: { url: string; secret: string } }) {
+  const copy = async (value: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`${label} copied.`);
+    } catch {
+      toast.error(`Couldn't copy — select and copy the ${label.toLowerCase()} manually.`);
+    }
+  };
+  return (
+    <div className="space-y-3 rounded-md border border-seal/40 bg-seal/[0.06] p-4">
+      <div className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-seal">
+        <Webhook className="h-3.5 w-3.5" />
+        Citation webhook armed
+      </div>
+      <p className="text-xs text-ink-2">
+        We&apos;ll POST a signed payload to <span className="break-all font-mono text-ink">{notify.url}</span>{" "}
+        each time you&apos;re cited and paid. Save this signing secret now — it is shown once and verifies the{" "}
+        <code className="font-mono text-ink">X-Keryx-Signature</code> header.
+      </p>
+      <div className="flex items-center gap-2">
+        <code className="flex-1 break-all rounded border border-line bg-paper px-2.5 py-1.5 font-mono text-xs text-ink">
+          {notify.secret}
+        </code>
+        <button
+          type="button"
+          onClick={() => copy(notify.secret, "Secret")}
+          title="Copy secret"
+          className="shrink-0 rounded-md border border-line px-2 py-1.5 text-ink transition-colors hover:bg-paper-2"
+        >
+          <Copy className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      <p className="font-mono text-[10px] text-ink-3">
+        Verify: <code>sha256=hex(hmac_sha256(secret, rawBody))</code>
+      </p>
     </div>
   );
 }

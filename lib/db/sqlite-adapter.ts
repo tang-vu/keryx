@@ -37,6 +37,12 @@ CREATE TABLE IF NOT EXISTS source_meta (
   url TEXT NOT NULL DEFAULT '',
   updated_at TEXT
 );
+CREATE TABLE IF NOT EXISTS source_notify (
+  source_id  TEXT PRIMARY KEY,
+  notify_url TEXT NOT NULL,
+  secret     TEXT NOT NULL,
+  updated_at TEXT
+);
 CREATE TABLE IF NOT EXISTS sync_state (
   key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT
 );
@@ -227,6 +233,24 @@ export class SqliteAdapter implements KeryxDB {
       description: (row.description as string) ?? "",
       url: (row.url as string) ?? "",
     };
+  }
+
+  async setSourceNotify(id: string, url: string, secret: string): Promise<void> {
+    this.db
+      .prepare(
+        `INSERT OR REPLACE INTO source_notify (source_id,notify_url,secret,updated_at) VALUES (?,?,?,?)`,
+      )
+      .run(id, url, secret, new Date().toISOString());
+  }
+
+  async getSourceNotify(id: string): Promise<import("./keryx-db").SourceNotify | null> {
+    const row = this.db.prepare(`SELECT notify_url,secret FROM source_notify WHERE source_id=?`).get(id);
+    if (!row) return null;
+    return { url: row.notify_url as string, secret: row.secret as string };
+  }
+
+  async deleteSourceNotify(id: string): Promise<void> {
+    this.db.prepare(`DELETE FROM source_notify WHERE source_id=?`).run(id);
   }
 
   async getSource(id: string): Promise<Source | null> {

@@ -87,6 +87,29 @@ export class SupabaseAdapter implements KeryxDB {
     };
   }
 
+  async setSourceNotify(id: string, url: string, secret: string): Promise<void> {
+    await this.sb.from("source_notify").upsert({
+      source_id: id,
+      notify_url: url,
+      secret,
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  async getSourceNotify(id: string): Promise<import("./keryx-db").SourceNotify | null> {
+    const { data } = await this.sb
+      .from("source_notify")
+      .select("notify_url,secret")
+      .eq("source_id", id)
+      .maybeSingle();
+    if (!data) return null;
+    return { url: (data.notify_url as string) ?? "", secret: (data.secret as string) ?? "" };
+  }
+
+  async deleteSourceNotify(id: string): Promise<void> {
+    await this.sb.from("source_notify").delete().eq("source_id", id);
+  }
+
   async getSource(id: string): Promise<Source | null> {
     const { data } = await this.sb.from("sources").select("*").eq("id", id).maybeSingle();
     return data ? rowToSource(data) : null;

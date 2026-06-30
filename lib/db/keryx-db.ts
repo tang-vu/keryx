@@ -31,6 +31,14 @@ export interface SourceMeta {
   url: string;
 }
 
+/** A source's notify-on-citation webhook: the URL Keryx POSTs when the source is cited+paid,
+ *  plus the per-source HMAC secret used to sign `X-Keryx-Signature`. Private off-chain config —
+ *  never returned in public source listings; the secret is echoed to the owner only at set time. */
+export interface SourceNotify {
+  url: string;
+  secret: string;
+}
+
 /** A row from api_keys (safe to return to the owner — no hash, no raw key). */
 export interface ApiKeyRow {
   id: string;
@@ -94,6 +102,14 @@ export interface KeryxDB {
   getSourceMeta(id: string): Promise<SourceMeta | null>;
   addItems(items: SourceItem[]): Promise<void>;
   getItems(sourceId: string): Promise<SourceItem[]>;
+
+  // ── notify-on-citation webhooks (off-chain, private to the source owner) ──
+  /** Set or rotate a source's citation webhook (url + HMAC secret). Upsert keyed by source id. */
+  setSourceNotify(id: string, url: string, secret: string): Promise<void>;
+  /** Get a source's notify config, or null if none set. Carries the secret — owner-only path. */
+  getSourceNotify(id: string): Promise<SourceNotify | null>;
+  /** Remove a source's notify config (disable notifications). No-op if none set. */
+  deleteSourceNotify(id: string): Promise<void>;
 
   // ── cache (skip-repay decisions) ──
   getCached(sourceId: string): Promise<string | null>;

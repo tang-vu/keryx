@@ -311,6 +311,14 @@ Indexer Loop (every ~30s in production):
 | created_at | DATETIME | registration timestamp |
 | on_chain_source_id | TEXT | from SourceRegistry event |
 
+**`source_notify`** — one per source with a notify-on-citation webhook (off-chain, owner-private)
+| Column | Type | Notes |
+|--------|------|-------|
+| source_id | TEXT PRIMARY KEY | links to sources |
+| notify_url | TEXT | creator endpoint Keryx POSTs on a paid citation |
+| secret | TEXT | per-source HMAC key for X-Keryx-Signature (shown to owner once) |
+| updated_at | DATETIME | last set/rotate |
+
 **`payment_events`** — one per BUY or citation
 | Column | Type | Notes |
 |--------|------|-------|
@@ -465,7 +473,8 @@ See `docs/security-threat-model.md` for full matrix.
 | POST `/api/ask` | JWT or API key | Stream agent execution (SSE) |
 | POST `/api/ask/sign` | JWT | Receive browser-signed EIP-712 |
 | GET `/api/sources` | public | List sources (paginated) |
-| POST `/api/sources` | creator JWT | Register new source |
+| POST `/api/sources` | creator JWT | Register new source (optional `notifyUrl`) |
+| GET/POST `/api/creator/[id]/notify` | owner JWT | Get / set / rotate / disable citation webhook (secret shown once) |
 | GET `/api/source/[id]` | x402 | Fetch source content (402 if unpaid) |
 | GET `/api/source/[id]/preview` | public | Free plaintext preview |
 | POST `/api/cite/[id]` | x402 | Citation reward endpoint |

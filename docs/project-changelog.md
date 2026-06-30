@@ -19,6 +19,28 @@ the **live budget meter** and the **"call Keryx from your own agent"** card. Det
 
 ## Post-Launch Fixes (v0.2.x)
 
+### 2026-06-30 — Notify-on-citation webhooks (close the creator value loop)
+
+#### feat: creators get a signed POST the instant the agent cites them and pays
+**Why:** A creator only learned they were cited + paid by opening the dashboard. The creator value
+loop had no push side — no way for their own agent/system to react to earning in real time.
+**Change:** A source can register a webhook URL (at register time or later from its own profile).
+When the agent settles a weighted citation reward for that source, Keryx fires a best-effort,
+fire-and-forget `POST` to the URL carrying the question, source, per-author settlement legs (with
+real tx state), and total reward. Each delivery is HMAC-SHA256 signed (`X-Keryx-Signature:
+sha256=<hmac>`) with a per-source secret shown to the owner exactly once (like an API key); the
+creator verifies it by recomputing over the raw body. The dispatcher no-ops when a source has no
+webhook or no leg actually settled on-chain, and its own timeout + total error-swallowing guarantee
+a slow/dead endpoint can never stall or fail an agent run (the answer + settlement already stand).
+Config is stored off-chain in its own `source_notify` table keyed by source id (private url+secret,
+never exposed in public listings; works for both the on-chain-registry and DB-direct register paths).
+**Files:** `lib/notify/citation-webhook.ts` (new), `lib/db/keryx-db.ts`,
+`lib/db/sqlite-adapter.ts`, `lib/db/supabase-adapter.ts`, `supabase/migrations/0010_source_notify.sql`
+(new), `lib/agent/run-agent.ts`, `app/api/sources/route.ts`,
+`app/api/creator/[id]/notify/route.ts` (new), `components/keryx/register-form.tsx`,
+`app/creator/[id]/notify-webhook-panel.tsx` (new), `app/creator/[id]/creator-detail-view.tsx`.
+`tsc --noEmit` + `next build` clean.
+
 ### 2026-06-24 — Fix the 14-day settled chart undercounting older days
 
 #### fix: chart settled volume from a full-table daily aggregation, not the capped feed

@@ -23,6 +23,7 @@ import type { GatheredContent, SourceCandidate } from "../llm";
 import type { AgentDeps } from "./deps";
 import { discoverExternalCandidates } from "./external-discovery";
 import { buildMemoryContext, buildReputationContext, saveMemory } from "./query-memory";
+import { dispatchCitationNotify } from "../notify/citation-webhook";
 
 export interface RunInput {
   question: string;
@@ -427,6 +428,9 @@ export async function* runAgent(
     const source = sourceById.get(c.sourceId)!;
     if (c.reward <= 0) continue;
     const authors = source.authors.length ? source.authors : [{ name: source.name, walletAddress: source.walletAddress, splitWeight: 1 }];
+    // Author legs settled for THIS citation — used to ping the source's notify webhook once per
+    // citation (not once per author leg), carrying every leg's real on-chain settlement state.
+    const citationPayments: PaymentRecord[] = [];
     for (const author of authors) {
       // TODO: settle from on-chain bp, not float splitWeight, to eliminate
       // rounding drift. Read contract.get(source.id).authors[i].basisPoints and compute
@@ -439,6 +443,7 @@ export async function* runAgent(
         payment.origin = origin;
         await db.recordPayment(payment);
         payments.push(payment);
+        citationPayments.push(payment);
         yield emit(
           "settle",
           `Settled $${payment.amountUsdc} citation reward → ${author.name} ${payment.settled ? `(${short(payment.txHash)})` : "(simulated)"}`,
@@ -449,6 +454,19 @@ export async function* runAgent(
         const reason = err instanceof Error ? err.message : String(err);
         yield emit("settle", `Couldn't settle the reward to ${author.name} (${reason}) — the answer stands.`, { error: reason });
       }
+    }
+    // Notify-on-citation: ping the creator's webhook the moment their source earns. Fire-and-forget
+    // and self-contained (never throws) so a slow/dead endpoint can't stall or fail the run. The
+    // dispatcher no-ops when the source has no webhook or no leg actually settled on-chain.
+    if (citationPayments.length > 0) {
+      void dispatchCitationNotify(db, {
+        source,
+        citation: c,
+        payments: citationPayments,
+        queryId,
+        question: input.question,
+        network: config.network,
+      });
     }
   }
 
