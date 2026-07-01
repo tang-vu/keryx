@@ -1,5 +1,11 @@
 # Keryx 🏛️
 
+[![npm: keryx-mcp](https://img.shields.io/npm/v/keryx-mcp?logo=npm&label=keryx-mcp&color=CB3837)](https://www.npmjs.com/package/keryx-mcp)
+[![MCP Registry](https://img.shields.io/badge/MCP_Registry-io.github.tang--vu%2Fkeryx-6E56CF)](https://registry.modelcontextprotocol.io/v0/servers?search=keryx)
+[![live: keryx.cc](https://img.shields.io/badge/live-keryx.cc-1aa251)](https://keryx.cc)
+[![settles on Arc testnet](https://img.shields.io/badge/settles_on-Arc_testnet-1f1f1f)](https://docs.arc.network)
+[![payments: Circle x402](https://img.shields.io/badge/payments-Circle_x402-2775CA)](https://github.com/circlefin/arc-nanopayments)
+
 **Every time an AI uses a creator's work as a source, the creator gets paid — instantly.**
 
 🔗 Live: **[keryx.cc](https://keryx.cc)** &nbsp;·&nbsp; ▶️ `npm run demo` — the whole loop in ~90s &nbsp;·&nbsp; 🧩 [Fork the Arc primitives](https://github.com/tang-vu/keryx-arc-primitives)
@@ -23,6 +29,18 @@ that contributed more earn more; multi-author works split the reward automatical
 > with a human-readable rationale, streamed live to the UI.
 
 ---
+
+## Milestones — what's live
+
+- ✅ **Live app** at [keryx.cc](https://keryx.cc) — free to try, no wallet, no sign-up · public [`/status`](https://keryx.cc/status) + [`/api/health`](https://keryx.cc/api/health)
+- ✅ **On the official [MCP registry](https://registry.modelcontextprotocol.io/v0/servers?search=keryx)** — `npx -y keryx-mcp@latest` adds Keryx to any MCP agent in one line
+- ✅ **Real on-chain settlement** on Arc testnet — weighted per-citation USDC rewards, 100% to creator wallets (0% platform fee)
+- ✅ **On-chain SourceRegistry** deployed (`0x2e12Fa…`) — squat-proof creator/attribution registry with multi-author splits
+- ✅ **Non-custodial spend** — user-funded session EOA; the funded amount is the hard cap, Keryx never holds the key or the funds
+- ✅ **Real publisher feeds onboarded** — Hugging Face, Vitalik Buterin, CoinDesk, Latent Space, Simon Willison … each earning per citation
+- ✅ **First owner-verified creator** ([conzit.com](https://conzit.com)) — set its own payout wallet, cited & paid end-to-end
+- ✅ **Notify-on-citation webhooks** — a signed POST fires the instant a source is cited & paid
+- ✅ **Forkable MIT [Arc primitives](https://github.com/tang-vu/keryx-arc-primitives)** — two-toll x402 settlement, on-chain registry + indexer, non-custodial spend cap
 
 ## Why this matters
 
