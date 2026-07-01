@@ -42,6 +42,11 @@ that contributed more earn more; multi-author works split the reward automatical
 - ✅ **Notify-on-citation webhooks** — a signed POST fires the instant a source is cited & paid
 - ✅ **Forkable MIT [Arc primitives](https://github.com/tang-vu/keryx-arc-primitives)** — two-toll x402 settlement, on-chain registry + indexer, non-custodial spend cap
 
+**By the numbers** — *Arc testnet · snapshot 2026-07-01 · live at [`/status`](https://keryx.cc/status)*:
+**2,516** on-chain nanopayments settled · **$13.13** USDC to **20** creator wallets (100%, 0% platform fee) ·
+**580** autonomous agent runs · `keryx-mcp` **136** npm installs. Most volume is agent-generated to prove
+the loop end-to-end; driving real external traffic is the active push.
+
 ## Why this matters
 
 The web's economic model breaks when the reader is an AI: agents consume creators' work without
