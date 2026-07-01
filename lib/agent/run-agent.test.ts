@@ -289,6 +289,26 @@ describe("runAgent — money-safety invariants", () => {
     expect(run.citations[0].reward).toBeCloseTo(reward, 9);
   });
 
+  it("settles an even 3-author split whose legs sum to exactly the reward (no drift)", async () => {
+    const budget = 0.02; // pool = 0.01 → reward 0.01 across 3 authors: naive rounding would drift
+    const authors: Author[] = [
+      { name: "A", walletAddress: "0xa", splitWeight: 1 / 3 },
+      { name: "B", walletAddress: "0xb", splitWeight: 1 / 3 },
+      { name: "C", walletAddress: "0xc", splitWeight: 1 / 3 },
+    ];
+    const sources = [makeSource({ id: "s", fetchPrice: 0.004, authors })];
+    const engine = fakeEngine({ attribute: (used) => used.map((u) => ({ sourceId: u.sourceId, weight: 1, rationale: "sole" })) });
+    const gw = fakeGateway();
+    const d = deps(sources, engine, gw);
+
+    const { run } = await drive({ question: "q", budget }, d);
+
+    const reward = run.citations[0].reward;
+    const legMicros = gw.citationCalls.map((c) => Math.round(c.amount * 1e6));
+    expect(legMicros.length).toBe(3);
+    expect(legMicros.reduce((s, m) => s + m, 0)).toBe(Math.round(reward * 1e6)); // exact
+  });
+
   it("distributes the full citation pool when cited weights sum to 1", async () => {
     const budget = 0.05;
     const sources = ["a", "b"].map((id) => makeSource({ id, fetchPrice: 0.005 }));

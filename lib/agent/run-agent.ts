@@ -24,6 +24,7 @@ import type { AgentDeps } from "./deps";
 import { discoverExternalCandidates } from "./external-discovery";
 import { buildMemoryContext, buildReputationContext, saveMemory } from "./query-memory";
 import { dispatchCitationNotify } from "../notify/citation-webhook";
+import { allocateSplit } from "../payments/split-allocation";
 
 export interface RunInput {
   question: string;
@@ -428,14 +429,16 @@ export async function* runAgent(
     const source = sourceById.get(c.sourceId)!;
     if (c.reward <= 0) continue;
     const authors = source.authors.length ? source.authors : [{ name: source.name, walletAddress: source.walletAddress, splitWeight: 1 }];
+    // Allocate the reward across authors in integer micro-USDC so the settled legs sum to EXACTLY
+    // c.reward — independent rounding per author (round(reward * weight)) would let the legs drift
+    // a micro-USDC off the reward, and that drift accumulates across every settlement.
+    const legAmounts = allocateSplit(c.reward, authors.map((a) => a.splitWeight));
     // Author legs settled for THIS citation — used to ping the source's notify webhook once per
     // citation (not once per author leg), carrying every leg's real on-chain settlement state.
     const citationPayments: PaymentRecord[] = [];
-    for (const author of authors) {
-      // TODO: settle from on-chain bp, not float splitWeight, to eliminate
-      // rounding drift. Read contract.get(source.id).authors[i].basisPoints and compute
-      // amount = round(c.reward * basisPoints / 10_000) directly from the integer.
-      const amount = round(c.reward * author.splitWeight);
+    for (let i = 0; i < authors.length; i++) {
+      const author = authors[i];
+      const amount = legAmounts[i];
       if (amount <= 0) continue;
       const rationale = `Citation reward (${(c.weight * 100).toFixed(0)}% contribution${authors.length > 1 ? `, ${(author.splitWeight * 100).toFixed(0)}% author split` : ""}).`;
       try {

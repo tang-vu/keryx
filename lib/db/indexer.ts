@@ -110,10 +110,10 @@ export async function applyLogs(logs: Log[], db: KeryxDB): Promise<void> {
       // fetchPriceUsdc6 is in 6-decimal USDC units; convert to float USDC for the cache layer.
       const fetchPrice = Number(record.fetchPriceUsdc6) / 1_000_000;
 
-      // Map on-chain basis-point splits → Author.splitWeight = basisPoints / 10_000.
-      // Stored as float in the cache (Source interface).
-      // TODO: settle from on-chain bp directly (contract.get(id).authors[i].basisPoints),
-      // not from the float splitWeight in the cache, to avoid any rounding drift.
+      // Map on-chain basis-point splits → Author.splitWeight = basisPoints / 10_000, stored as a
+      // float in the cache. The float is lossless for payouts: settlement allocates the reward in
+      // integer micro-USDC (allocateSplit) so the legs sum to exactly the reward regardless of any
+      // float representation of the weights — no per-payout rounding drift downstream.
       const authors: Author[] = record.authors.map((a) => ({
         name: a.wallet, // overridden below if source_meta has author names
         walletAddress: a.wallet,
