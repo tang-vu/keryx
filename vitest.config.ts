@@ -6,7 +6,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["lib/**/*.test.ts"],
+    include: ["lib/**/*.test.ts", "scripts/**/*.test.ts"],
     env: {
       KERYX_EXTERNAL_DISCOVERY: "0",
     },

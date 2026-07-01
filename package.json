@@ -25,6 +25,7 @@
     "deploy": "bash scripts/deploy-vps.sh",
     "redeploy": "bash scripts/redeploy-vps.sh",
     "tunnel": "cloudflared tunnel --url http://localhost:3939",
+    "backup": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/backup-db.mts",
     "withdraw": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/withdraw.mts",
     "ingest": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/ingest-source.mts",
     "migrate-ipfs": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/migrate-content-to-ipfs.mts"

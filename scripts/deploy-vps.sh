@@ -21,7 +21,7 @@ PUBLIC_URL=https://keryx.cc                     # BASE_URL the app advertises in
 say() { printf '\n\033[1;36m=== %s\033[0m\n' "$*"; }
 
 # --- 0. sanity: key auth must already work -----------------------------------
-say "0/6 checking SSH key auth"
+say "0/7 checking SSH key auth"
 if ! ssh -o BatchMode=yes -o ConnectTimeout=10 "$SSH" 'true' 2>/dev/null; then
   echo "ERROR: 'ssh $SSH' needs a password. Install your public key first:" >&2
   echo "  Get-Content \$env:USERPROFILE\\.ssh\\id_ed25519.pub | ssh root@<ip> \\" >&2
@@ -31,7 +31,7 @@ fi
 [ -f .env.local ] || { echo "ERROR: .env.local not found in repo root" >&2; exit 1; }
 
 # --- 1. base packages + Node 24 + pm2 + cloudflared --------------------------
-say "1/6 provisioning packages (Node 24, pm2, cloudflared, git, build tools)"
+say "1/7 provisioning packages (Node 24, pm2, cloudflared, git, build tools)"
 ssh "$SSH" bash -se <<'REMOTE'
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
@@ -50,7 +50,7 @@ echo "node=$(node -v)  pm2=$(pm2 -v)  cloudflared=$(cloudflared --version | head
 REMOTE
 
 # --- 2. swap (only on KVM; 1GB RAM OOMs during `next build` without it) -------
-say "2/6 ensuring 2G swap"
+say "2/7 ensuring 2G swap"
 ssh "$SSH" bash -se <<'REMOTE'
 set -euo pipefail
 virt=$(systemd-detect-virt || echo unknown)
@@ -68,21 +68,34 @@ fi
 REMOTE
 
 # --- 3. clone or update the repo ---------------------------------------------
-say "3/6 syncing repo at $APP_DIR"
+say "3/7 syncing repo at $APP_DIR"
 ssh "$SSH" "if [ -d $APP_DIR/.git ]; then cd $APP_DIR && git fetch -q origin && git reset -q --hard origin/main; else git clone -q $REPO $APP_DIR; fi && cd $APP_DIR && git log -1 --oneline"
 
 # --- 4. ship secrets (.env.local) + force production BASE_URL ----------------
-say "4/6 copying .env.local and setting BASE_URL=$PUBLIC_URL"
+say "4/7 copying .env.local and setting BASE_URL=$PUBLIC_URL"
 scp -q .env.local "$SSH:$APP_DIR/.env.local"
 ssh "$SSH" "cd $APP_DIR && (grep -q '^BASE_URL=' .env.local && sed -i 's#^BASE_URL=.*#BASE_URL=$PUBLIC_URL#' .env.local || echo 'BASE_URL=$PUBLIC_URL' >> .env.local) && echo 'BASE_URL set:' && grep '^BASE_URL=' .env.local"
 
 # --- 5. install deps + build (swap-backed) -----------------------------------
-say "5/6 npm ci + build (this is the slow step on 1GB)"
+say "5/7 npm ci + build (this is the slow step on 1GB)"
 ssh "$SSH" "cd $APP_DIR && npm ci --no-audit --no-fund && NODE_OPTIONS=--max-old-space-size=1536 npm run build"
 
 # --- 6. start under pm2, persist across reboot -------------------------------
-say "6/6 (re)starting app under pm2 on :$PORT"
+say "6/7 (re)starting app under pm2 on :$PORT"
 ssh "$SSH" "cd $APP_DIR && (pm2 reload keryx 2>/dev/null || pm2 start npm --name keryx -- run start) && pm2 save && pm2 startup systemd -u root --hp /root >/dev/null 2>&1; pm2 status"
+
+# --- 7. hourly consistent DB backup via cron (off-box when KERYX_BACKUP_REMOTE set) ---
+say "7/7 installing hourly SQLite backup cron"
+ssh "$SSH" bash -se <<REMOTE
+set -euo pipefail
+NPM=\$(command -v npm)
+mkdir -p $APP_DIR/data/backups
+# Idempotent: drop any prior keryx-backup line, then (re)install. cron has a bare PATH, so the
+# npm path is absolute and the job cd's into the app dir (picks up .env.local via npm run backup).
+LINE="0 * * * * cd $APP_DIR && \$NPM run backup >> $APP_DIR/data/backups/backup.log 2>&1 # keryx-backup"
+( crontab -l 2>/dev/null | grep -v '# keryx-backup' || true ; echo "\$LINE" ) | crontab -
+echo "cron installed:"; crontab -l | grep keryx-backup
+REMOTE
 
 cat <<DONE
 

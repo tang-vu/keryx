@@ -53,6 +53,24 @@ ssh keryx-vps "cd /root/keryx && git reset --hard <good-sha> && npm ci && NODE_O
 # or do it cleanly via git: revert locally → push → npm run deploy
 ```
 
+## Backups (SQLite is the source of truth)
+All real traction lives in one SQLite file (`/root/keryx/data/keryx.sqlite`). `npm run backup` takes a
+consistent snapshot of the LIVE db (`VACUUM INTO`, safe under WAL — no downtime), gzips it, rotates the
+last `KERYX_BACKUP_KEEP` (default 48) under `data/backups/`, and — when configured — copies it off-box.
+`npm run deploy` installs an **hourly cron** that runs it automatically.
+
+```bash
+# manual snapshot (local or on the VPS)
+ssh keryx-vps "cd /root/keryx && npm run backup"
+# restore: gunzip a snapshot over the db (stop the app first so nothing writes mid-restore)
+ssh keryx-vps "cd /root/keryx && pm2 stop keryx && gunzip -c data/backups/<snap>.sqlite.gz > data/keryx.sqlite && pm2 start keryx"
+```
+
+**Off-box copy (survives a dead disk):** set `KERYX_BACKUP_REMOTE` in the VPS `.env.local` to any
+[rclone](https://rclone.org) remote path (e.g. `r2:keryx-backups` for Cloudflare R2), and run
+`rclone config` once on the box to add the credentials. Each hourly snapshot is then `rclone copy`d
+there. Without it, snapshots are kept locally only (still protects against corruption / accidental delete).
+
 ## Troubleshooting
 - **Build OOM on VPS** — ensure swap is active (`ssh keryx-vps "swapon --show"`); the script creates 2 GB on KVM. Containers can't swap → build locally and ship `.next`.
 - **App logs** — `ssh keryx-vps "pm2 logs keryx --lines 60"`; status `pm2 status`.
@@ -66,4 +84,5 @@ ssh keryx-vps "cd /root/keryx && git reset --hard <good-sha> && npm ci && NODE_O
 | Full flow | `git commit` → `git push origin main` → `npm run deploy` |
 | Verify live | `curl -s -o /dev/null -w '%{http_code}\n' https://keryx.cc` |
 | VPS app logs | `ssh keryx-vps "pm2 logs keryx --lines 60"` |
+| Manual DB backup | `ssh keryx-vps "cd /root/keryx && npm run backup"` |
 | Announce update | `npm run arc:update -- "…"` |
