@@ -1,20 +1,20 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.tang-vu/keryx",
-  "description": "Ask an autonomous research agent that buys paid sources under a budget, answers with inline citations, and pays every creator it cites in USDC on Arc (x402). Each call is a real on-chain payment from your own funded Arc-testnet wallet.",
+  "description": "Autonomous research agent that pays every source it cites in USDC on Arc via x402 micropayments.",
   "repository": {
     "url": "https://github.com/tang-vu/keryx",
     "source": "github",
     "subfolder": "mcp"
   },
   "websiteUrl": "https://keryx.cc",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "keryx-mcp",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "transport": {
         "type": "stdio"
       }

@@ -1,6 +1,7 @@
 {
   "name": "keryx-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "mcpName": "io.github.tang-vu/keryx",
   "description": "Add Keryx to any MCP agent — ask a research question, pay the x402 toll from your own Arc wallet, and Keryx answers with citations and pays every creator it cites in USDC on Arc.",
   "type": "module",
   "bin": {
