@@ -25,6 +25,7 @@ import { discoverExternalCandidates } from "./external-discovery";
 import { buildMemoryContext, buildReputationContext, saveMemory } from "./query-memory";
 import { dispatchCitationNotify } from "../notify/citation-webhook";
 import { allocateSplit } from "../payments/split-allocation";
+import { sendAlert } from "../notify/alert";
 
 export interface RunInput {
   question: string;
@@ -456,6 +457,11 @@ export async function* runAgent(
         // The answer is already written — a citation-settlement hiccup must not discard it.
         const reason = err instanceof Error ? err.message : String(err);
         yield emit("settle", `Couldn't settle the reward to ${author.name} (${reason}) — the answer stands.`, { error: reason });
+        // A real-mode failure means a creator was owed USDC that didn't land — worth an ops alert.
+        // Offline/simulated runs never settle, so they don't alert. Fire-and-forget (never throws).
+        if (gateway.mode === "real") {
+          void sendAlert(`citation settlement failed → ${author.name}`, `$${amount} for "${source.name}": ${reason}`);
+        }
       }
     }
     // Notify-on-citation: ping the creator's webhook the moment their source earns. Fire-and-forget

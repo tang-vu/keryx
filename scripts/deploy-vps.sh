@@ -84,17 +84,19 @@ ssh "$SSH" "cd $APP_DIR && npm ci --no-audit --no-fund && NODE_OPTIONS=--max-old
 say "6/7 (re)starting app under pm2 on :$PORT"
 ssh "$SSH" "cd $APP_DIR && (pm2 reload keryx 2>/dev/null || pm2 start npm --name keryx -- run start) && pm2 save && pm2 startup systemd -u root --hp /root >/dev/null 2>&1; pm2 status"
 
-# --- 7. hourly consistent DB backup via cron (off-box when KERYX_BACKUP_REMOTE set) ---
-say "7/7 installing hourly SQLite backup cron"
+# --- 7. hourly cron: consistent DB backup + treasury watchdog ----------------
+# Backup snapshots the live db (off-box when KERYX_BACKUP_REMOTE set); the watchdog alerts before
+# the funder runs dry (via KERYX_ALERT_WEBHOOK). Both cd into the app dir so npm run picks up .env.local.
+say "7/7 installing hourly backup + treasury-watchdog cron"
 ssh "$SSH" bash -se <<REMOTE
 set -euo pipefail
 NPM=\$(command -v npm)
 mkdir -p $APP_DIR/data/backups
-# Idempotent: drop any prior keryx-backup line, then (re)install. cron has a bare PATH, so the
-# npm path is absolute and the job cd's into the app dir (picks up .env.local via npm run backup).
-LINE="0 * * * * cd $APP_DIR && \$NPM run backup >> $APP_DIR/data/backups/backup.log 2>&1 # keryx-backup"
-( crontab -l 2>/dev/null | grep -v '# keryx-backup' || true ; echo "\$LINE" ) | crontab -
-echo "cron installed:"; crontab -l | grep keryx-backup
+# cron has a bare PATH, so the npm path is absolute. Idempotent: drop any prior keryx lines first.
+BACKUP="0 * * * * cd $APP_DIR && \$NPM run backup >> $APP_DIR/data/backups/backup.log 2>&1 # keryx-backup"
+TREASURY="30 * * * * cd $APP_DIR && \$NPM run check-treasury >> $APP_DIR/data/backups/treasury.log 2>&1 # keryx-treasury"
+( crontab -l 2>/dev/null | grep -vE '# keryx-(backup|treasury)' || true ; echo "\$BACKUP"; echo "\$TREASURY" ) | crontab -
+echo "cron installed:"; crontab -l | grep -E 'keryx-(backup|treasury)'
 REMOTE
 
 cat <<DONE

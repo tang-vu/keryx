@@ -71,6 +71,12 @@ ssh keryx-vps "cd /root/keryx && pm2 stop keryx && gunzip -c data/backups/<snap>
 `rclone config` once on the box to add the credentials. Each hourly snapshot is then `rclone copy`d
 there. Without it, snapshots are kept locally only (still protects against corruption / accidental delete).
 
+## Monitoring & alerts
+- **Treasury watchdog** — `npm run check-treasury` reads the funder wallet's on-chain USDC reserve + native gas and alerts before either runs dry (settlements would otherwise start failing silently). `npm run deploy` installs it as an hourly cron. Thresholds: `KERYX_TREASURY_MIN_USDC` (2) / `KERYX_TREASURY_MIN_GAS` (0.02).
+- **Failed-settlement alerts** — a real-mode citation reward that fails to settle (a creator owed USDC that didn't land) fires the same alert channel.
+- **Alert channel** — set `KERYX_ALERT_WEBHOOK` in the VPS `.env.local` to a Discord/Slack incoming webhook. Unset → alerts still print to `pm2 logs`, just not delivered out-of-band.
+- **Uptime/health** — point an external monitor (UptimeRobot, etc.) at [`/api/health`](https://keryx.cc/api/health); a same-box check can't catch the box being down.
+
 ## Troubleshooting
 - **Build OOM on VPS** — ensure swap is active (`ssh keryx-vps "swapon --show"`); the script creates 2 GB on KVM. Containers can't swap → build locally and ship `.next`.
 - **App logs** — `ssh keryx-vps "pm2 logs keryx --lines 60"`; status `pm2 status`.
