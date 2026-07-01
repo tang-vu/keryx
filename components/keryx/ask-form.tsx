@@ -7,11 +7,25 @@
  * button. Wires straight into the live agent (onAsk).
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface AskFormProps {
   disabled?: boolean;
   onAsk: (question: string, budget: number) => void;
+}
+
+// Shareable-link prefill: a URL like keryx.cc/?q=...&budget=0.05[&run=1] lands a
+// visitor with the question (and budget) already filled — and, with run=1, dispatches
+// it automatically so the shared link opens straight onto a live run. Bounds mirror the
+// form's own limits so a crafted link can't smuggle an out-of-range budget or huge prompt.
+const MAX_SHARED_Q = 500;
+function readSharedAsk(): { q: string | null; budget: number | null; run: boolean } {
+  if (typeof window === "undefined") return { q: null, budget: null, run: false };
+  const p = new URLSearchParams(window.location.search);
+  const q = p.get("q")?.trim().slice(0, MAX_SHARED_Q) || null;
+  const b = parseFloat(p.get("budget") ?? "");
+  const budget = Number.isFinite(b) && b >= 0.01 && b <= 0.08 ? b : null;
+  return { q, budget, run: p.get("run") === "1" };
 }
 
 const SUGGESTIONS = [
@@ -32,6 +46,20 @@ const SUGGESTIONS = [
 export function AskForm({ disabled, onAsk }: AskFormProps) {
   const [question, setQuestion] = useState("");
   const [budget, setBudget] = useState(0.05);
+  // Seed from a shared link after mount (not in useState initializer) so the server
+  // and first client render both start empty — no hydration mismatch on the controlled inputs.
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (prefilled.current) return;
+    prefilled.current = true;
+    const { q, budget: b, run } = readSharedAsk();
+    if (q) setQuestion(q);
+    if (b !== null) setBudget(b);
+    // Opt-in auto-dispatch: only when the link explicitly asks for it and a question is present.
+    // Treasury free-trial rate limits still apply, so this can't be turned into a spend amplifier.
+    if (q && run && !disabled) onAsk(q, b ?? 0.05);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const submit = () => {
     const q = question.trim();
