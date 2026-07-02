@@ -9,9 +9,9 @@
 
 **Hackathon:** Lepton Agents (Canteen × Circle, on Arc) · **primary track RFB 6 (Creator & Publisher Monetization)** · window **Jun 15 → Jul 6, 2026** (extended +1 wk from Jun 29), async judging (no live demo day). **Rubric:** 30% Agentic sophistication · 30% Traction · 20% Circle tooling · 20% Innovation.
 
-> **STATUS (2026-06-27) — LIVE.** Deployed at **[keryx.cc](https://keryx.cc)** (VPS + Cloudflare Tunnel),
-> funded, settling **real** x402 nanopayments on Arc testnet (`KERYX_FORCE_OFFLINE=0`): 1,480+ settled
-> payments, ~$9.8 USDC to 16 creators, 447 autonomous queries. The phase log below is the build history;
+> **STATUS (2026-07-02) — LIVE.** Deployed at **[keryx.cc](https://keryx.cc)** (VPS + Cloudflare Tunnel),
+> funded, settling **real** x402 nanopayments on Arc testnet (`KERYX_FORCE_OFFLINE=0`): 2,640+ settled
+> payments, ~$13.6 USDC to 20 creators, 603 autonomous queries. The phase log below is the build history;
 > the project has since evolved into a **non-custodial dApp** (SIWE auth, browser co-signed x402, on-chain
 > SourceRegistry, encrypted IPFS, public API keys). See `README.md` + `docs/` for current architecture.
 > Remaining push is **external traction + submission artifacts** (video, form), not core build.

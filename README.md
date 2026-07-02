@@ -42,9 +42,9 @@ that contributed more earn more; multi-author works split the reward automatical
 - ✅ **Notify-on-citation webhooks** — a signed POST fires the instant a source is cited & paid
 - ✅ **Forkable MIT [Arc primitives](https://github.com/tang-vu/keryx-arc-primitives)** — two-toll x402 settlement, on-chain registry + indexer, non-custodial spend cap
 
-**By the numbers** — *Arc testnet · snapshot 2026-07-01 · live at [`/status`](https://keryx.cc/status)*:
-**2,516** on-chain nanopayments settled · **$13.13** USDC to **20** creator wallets (100%, 0% platform fee) ·
-**580** autonomous agent runs · `keryx-mcp` **136** npm installs.
+**By the numbers** — *Arc testnet · snapshot 2026-07-02 · live at [`/status`](https://keryx.cc/status)*:
+**2,647** on-chain nanopayments settled · **$13.63** USDC to **20** creator wallets (100%, 0% platform fee) ·
+**603** autonomous agent runs · **98.5%** reader→payer conversion.
 
 ## Why this matters
 
