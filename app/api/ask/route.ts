@@ -168,6 +168,10 @@ export async function POST(req: NextRequest) {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
       Connection: "keep-alive",
+      // Disable proxy response buffering so the live reasoning trace streams token-by-token
+      // instead of arriving in one batch at the end. Honored by nginx and by the Cloudflare
+      // edge in front of keryx.cc; without it a buffering proxy makes the trace look frozen.
+      "X-Accel-Buffering": "no",
     },
   });
 }
