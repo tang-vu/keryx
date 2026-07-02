@@ -1,9 +1,25 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-06-24  
-**Current Version:** 0.3.0
+**Last Updated:** 2026-07-02  
+**Current Version:** 0.4.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
+
+---
+
+## v0.4.0 — 2026-07-02 — Agent judgment + creator value loop + ops hardening
+
+Release wave gathering the work since v0.3.0 (63 commits). The agent gained judgment: multi-pass
+reasoning with per-claim confidence, adjudication of conflicting sources (trust one side, with a
+logged rationale), a self-rated confidence verdict, cross-query memory, and semantic discovery via
+embedding similarity. The creator value loop closed: non-custodial cash-out from the app,
+feed-ownership verification gating citation earnings, earnings pages with ERC-8004 reputation,
+notify-on-citation signed webhooks, and payouts labeled with the triggering question. New on-ramps:
+`keryx-mcp` published to npm + the official MCP registry, a one-call testnet onramp, an obvious free
+no-wallet trial, shareable dispatch permalinks + social cards, and the one-command `npm run demo`
+full-cycle demo. Ops hardened: a 22-test economic-invariant vitest suite gating CI, exact micro-USDC
+multi-author split allocation, rotating SQLite backups with off-box copy, a treasury watchdog with
+failed-settlement alerts, and low-downtime redeploys with `/api/health` + `/status`.
 
 ---
 
