@@ -16,6 +16,15 @@ const nextConfig: NextConfig = {
   // checked separately with `tsc --noEmit` before every deploy, so this pass is
   // redundant here — not error-hiding. (Next 16 no longer runs ESLint in build.)
   typescript: { ignoreBuildErrors: true },
+
+  // The Unified Balance Kit pulls in Solana tooling at module top-level; bundling
+  // it would bloat the server build (and the 1GB-RAM VPS build step). Load these
+  // from node_modules at runtime instead.
+  serverExternalPackages: [
+    "@circle-fin/unified-balance-kit",
+    "@solana/web3.js",
+    "@coral-xyz/anchor",
+  ],
 };
 
 export default nextConfig;

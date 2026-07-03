@@ -15,7 +15,7 @@
 |---|---|---|---|
 | **30%** | Agentic sophistication | "How much does the AI actually DECIDE vs automate?" | ✅ visible reasoning trace: buy/skip/cache/stop, all logged |
 | **30%** | Traction | "Real users, real payments, real volume **during the window**" | ⚠️ MUST go live: real creators + real settled USDC volume |
-| **20%** | Circle tooling | Creative use of Wallets, Gateway, App Kit, Contracts, x402, USDC | ✅ x402 + Gateway nanopayments + Wallets; add Contracts (splitter) |
+| **20%** | Circle tooling | Creative use of Wallets, Gateway, App Kit, Contracts, x402, USDC | ✅ x402 + Gateway nanopayments + Wallets + App Kit (Unified Balance Kit on /status + /api/treasury); add Contracts (splitter) |
 | **20%** | Innovation | Novel approaches, emergent behavior | ✅ weighted per-citation, multi-author splits; add A2A |
 
 > "Judges have the final say, and the best projects tend to break the rules." → be bold, show emergent behavior.
@@ -93,7 +93,7 @@ For Keryx the play is:
 
 ## Facts to cite (video / form / README)
 - Arc = Circle's L1: **<500ms** finality, **USDC-native gas** (not a volatile token), **$0.000001** Gateway floor, gasless batched txns. Testnet is Canteen-hosted (bundled with ARC CLI).
-- Circle tooling in play: **Wallets · Gateway/Nanopayments · x402 · Contracts · USDC** (App Kit available, unused so far).
+- Circle tooling in play: **Wallets · Gateway/Nanopayments · x402 · Contracts · USDC · App Kit** (Unified Balance Kit reads the settlement wallet's chain-abstracted Gateway balance — live on /status and /api/treasury).
 
 ## Post-event (why continuing past Jun 29 matters to judges)
 The site says **"the building is the easy part"** and rewards genuine usage + long-run sustainability over polished demos. **Long-term commitment is expected.** Teams that continue get **funding for prototype scaling, grant support during early traction, and partnership intros** (Canteen / Circle / Arc). **Agora-carryover projects are eligible** if they show real progress (traction + product delta judged equally). Keryx is built to keep running — VPS + real registry, not a demo throwaway.

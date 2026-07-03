@@ -28,6 +28,17 @@ interface Health {
   };
 }
 
+/** Shape of /api/treasury — Gateway balance via Circle App Kit (Unified Balance Kit). */
+interface Treasury {
+  available: boolean;
+  unifiedBalance: {
+    address: string;
+    totalConfirmedUsdc: string;
+    totalPendingUsdc: string;
+    perChain: { chain: string; confirmed: string; pending: string }[];
+  } | null;
+}
+
 function fmtUptime(s: number): string {
   const d = Math.floor(s / 86400);
   const h = Math.floor((s % 86400) / 3600);
@@ -39,6 +50,7 @@ function fmtUptime(s: number): string {
 
 export default function StatusPage() {
   const [health, setHealth] = useState<Health | null>(null);
+  const [treasury, setTreasury] = useState<Treasury | null>(null);
   const [reachable, setReachable] = useState(true);
 
   useEffect(() => {
@@ -55,11 +67,23 @@ export default function StatusPage() {
         if (alive) setReachable(false);
       }
     };
+    // Gateway balance moves per-settlement, not per-second — poll it gently.
+    const pollTreasury = async () => {
+      try {
+        const r = await fetch("/api/treasury", { cache: "no-store" });
+        if (r.ok && alive) setTreasury((await r.json()) as Treasury);
+      } catch {
+        /* section simply stays hidden */
+      }
+    };
     poll();
+    pollTreasury();
     const id = setInterval(poll, 10_000);
+    const tid = setInterval(pollTreasury, 60_000);
     return () => {
       alive = false;
       clearInterval(id);
+      clearInterval(tid);
     };
   }, []);
 
@@ -106,6 +130,32 @@ export default function StatusPage() {
                   <Row k="Creators earning" v={String(health.traction.creatorsEarning)} />
                   <Row k="Queries" v={health.traction.totalQueries.toLocaleString()} />
                 </dl>
+              </>
+            )}
+
+            {treasury?.available && treasury.unifiedBalance && (
+              <>
+                <div className="mt-8 border-t border-line pt-5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
+                  Settlement treasury — unified balance · Circle App Kit
+                </div>
+                <dl className="mt-4 grid grid-cols-2 gap-x-8 gap-y-5 font-mono text-[12px]">
+                  <Row
+                    k="Confirmed (all chains)"
+                    v={`$${treasury.unifiedBalance.totalConfirmedUsdc}`}
+                  />
+                  <Row k="Pending deposits" v={`$${treasury.unifiedBalance.totalPendingUsdc}`} />
+                  {treasury.unifiedBalance.perChain
+                    .filter((c) => c.chain === "Arc_Testnet" || parseFloat(c.confirmed) > 0)
+                    .map((c) => (
+                      <Row key={c.chain} k={c.chain.replace(/_/g, " ")} v={`$${c.confirmed}`} />
+                    ))}
+                </dl>
+                <p className="mt-3 font-mono text-[10px] tracking-wide text-faint">
+                  Chain-abstracted Gateway balance of the agent&apos;s settlement wallet{" "}
+                  {treasury.unifiedBalance.address.slice(0, 6)}…
+                  {treasury.unifiedBalance.address.slice(-4)}, read via
+                  @circle-fin/unified-balance-kit.
+                </p>
               </>
             )}
 
