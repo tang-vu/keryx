@@ -25,6 +25,9 @@ stack and Arc testnet. Targets the dev-feedback prize. Can be submitted via `cir
 2. **No programmatic / CLI faucet blocks autonomous agent testing.**
    `faucet.circle.com` requires a human (captcha/login). There is no `circle faucet` command and no
    faucet API. An autonomous *payment* agent can't fund itself for CI/testing — a human must intervene.
+   The gap is real enough that a third party now sells testnet USDC over x402 for *mainnet* USDC
+   (testmint.myproceeds.xyz, 1 mainnet USDC → 1,000 testnet) — paying real money for test tokens
+   proves the demand, but it shouldn't be the only programmatic path.
    **Ask:** a rate-limited testnet faucet API or `circle faucet --address --chain arcTestnet`.
 
 3. **`@circle-fin/x402-batching` is under-documented; the SDK is only learnable from `.d.ts`.**
@@ -63,10 +66,18 @@ stack and Arc testnet. Targets the dev-feedback prize. Can be submitted via `cir
    When is a batched nanopayment "final" — at EIP-3009 signature, at batch submission, or at on-chain
    inclusion? A creator-facing product needs to know when to show "paid." Docs don't say.
 
+9. **`@circle-fin/unified-balance-kit` hard-requires Solana tooling for EVM-only use.**
+   Importing the kit crashes with `Cannot find package '@coral-xyz/anchor'` even when the caller only
+   does a read-only EVM `getBalances` by address — `@coral-xyz/anchor` isn't declared as a dependency,
+   so every EVM-only consumer must install Solana's anchor + web3.js by hand. It also pulls those into
+   any web bundle unless externalized (`serverExternalPackages` in Next.js).
+   **Ask:** lazy-load the Solana provider (or split entrypoints, e.g. `@circle-fin/unified-balance-kit/evm`)
+   and declare `@coral-xyz/anchor` properly.
+
 ## Minor
-9. `circle --version` errored with a Node module-loader stack on first global install; a clean
+10. `circle --version` errored with a Node module-loader stack on first global install; a clean
    reinstall fixed it. Worth a postinstall sanity check.
-10. Docs domain drift: links to `docs.arc.network` redirect to `docs.arc.io` — fine, but tooling that
+11. Docs domain drift: links to `docs.arc.network` redirect to `docs.arc.io` — fine, but tooling that
    pins URLs can break.
 
 ## What worked well
