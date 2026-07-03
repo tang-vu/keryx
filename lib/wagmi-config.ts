@@ -24,9 +24,16 @@ export function makeConfig() {
   const connectors = [
     injected(),
     metaMask({ dappMetadata: { name: "Keryx", url: "https://keryx.cc" } }),
+    // Browser-only: WalletConnect Core is a process-wide singleton, so building
+    // this connector during SSR re-inits it on every request and floods the server
+    // log with "already initialized" warnings. The server config is only used by
+    // cookieToInitialState, which never dials connectors — the client re-creates
+    // the config with the connector included, so hydration still finds it.
     // showQrModal: true makes the WalletConnect connector open its own QR / mobile
     // wallet-list modal on connect — without it, clicking does nothing visible.
-    ...(projectId ? [walletConnect({ projectId, showQrModal: true })] : []),
+    ...(projectId && typeof window !== "undefined"
+      ? [walletConnect({ projectId, showQrModal: true })]
+      : []),
   ];
 
   return createConfig({
