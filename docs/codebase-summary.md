@@ -1,6 +1,6 @@
 # Keryx Codebase Summary
 
-**Version:** 0.2.0 (Decentralized dApp, 2026-06-18)
+**Version:** 0.4.0 (live product, updated 2026-07-03)
 
 This document maps the codebase structure for the non-custodial Keryx dApp. Organized by domain; files < 200 LOC per kebab-case naming standard.
 
@@ -14,9 +14,13 @@ Core decompose→discover→decide→fetch→sufficiency→synthesize→attribut
 | File | Purpose |
 |------|---------|
 | `run-agent.ts` | Main agent orchestrator. Yields reasoning traces via async generator. Powers both server-side (volume engine) and interactive (SSE). |
-| `steps/` | Each step (decompose, discover, decide, etc.) as a separate generator function. |
+| `steps/` | Each step (decompose, discover, decide, etc.) as a separate generator function. Includes adjudication (conflicting sources → trust one, with reasons) and the confidence verdict (agent rates its own answer High/Moderate/Low). |
 | `decisions.ts` | Agent decision log: buy/skip/cache per source, with rationale. |
 | `prompts.ts` | LLM system/user prompts for each step. |
+
+Discovery is semantic (embedding cosine similarity), and cross-query memory feeds past source
+usefulness back into future buy/skip decisions. Economic invariants (spend ≤ budget, payouts =
+weights, splits sum exactly) are covered by a vitest suite run in CI.
 
 ---
 
@@ -98,6 +102,14 @@ Hardhat project. SourceRegistry.sol tracks sources on Arc testnet.
 - Deploy block: `47474631`
 - Deploy tx: `0x3844…97cd` (funder wallet)
 
+### `lib/gateway/`
+Circle Gateway helpers beyond the payment path.
+
+| File | Purpose |
+|------|---------|
+| `withdraw-intent.ts` | Builds + verifies the creator-signed Gateway burn intent for gasless self-serve cash-outs (Circle's fee reserved before signing). |
+| `unified-balance.ts` | Settlement wallet's chain-abstracted Gateway balance via Circle App Kit (Unified Balance Kit), read-only by address. Feeds `/api/treasury` + `/status`. |
+
 ### `lib/registry/`
 On-chain registry client + off-chain indexer cache.
 
@@ -153,6 +165,7 @@ RESTful endpoints for agent, sources, metrics, API keys.
 |-------|------|---------|
 | `/ask` | SIWE JWT or API key | Stream agent execution (SSE) + sign-requests. |
 | `/ask/sign` | SIWE JWT | Receive browser-signed EIP-712 header. |
+| `/agent/ask` | x402 challenge | A2A: other agents buy Keryx's research per-call. |
 | `/sources` | GET: public, POST: creator JWT | List sources / register new source. |
 | `/source/[id]` | x402 challenge | Fetch content (returns 402 if unpaid, plaintext after x402 settle). |
 | `/cite/[id]` | x402 challenge | Citation reward endpoint (dynamic price). |
@@ -160,8 +173,15 @@ RESTful endpoints for agent, sources, metrics, API keys.
 | `/payments` | SIWE JWT | Fetch user's payment history + earnings. |
 | `/metrics` | public | Aggregate traction: total settled, top sources, query volume. |
 | `/session/*` | SIWE JWT | Grant / credit / revoke session. |
+| `/withdraw` | creator wallet signature | Self-serve gasless cash-out: creator signs a Gateway burn intent, treasury relays. |
+| `/withdrawals` | public | Ledger of executed creator cash-outs (real tx hashes). |
+| `/treasury` | public | Settlement wallet's chain-abstracted Gateway balance via Circle App Kit (Unified Balance Kit), 60s cache. |
+| `/health` | public | Liveness + readiness JSON (uptime, commit, settlement mode, traction). |
+| `/creator/[id]` | public | Creator earnings page data + notify-webhook config. |
+| `/runs`, `/dispatch/[id]` | public | Query history + shareable per-dispatch permalinks. |
+| `/feedback` | public | Thumbs up/down answer quality votes. |
 | `/docs` | public | OpenAPI (Scalar UI). |
-| `/faucet` | public | Testnet USDC drip (Arc native token). |
+| `/faucet`, `/faucet/onramp` | public | Testnet USDC drip + one-call funding for external callers. |
 
 ### `components/ask/use-ask-stream.ts`
 React hook for SSE stream + sign-request/response loop. Handles connection, back-off, abort, session scoping.
@@ -205,13 +225,24 @@ CLI tools for admin + dev. Node --experimental-transform-types.
 | Script | Purpose |
 |--------|---------|
 | `ask.mts` | Run agent once, print reasoning trace. |
+| `demo-full-cycle.mts` | One-command full cycle (~90s) with on-chain proof (`npm run demo`). |
 | `seed-sources.mts` | Populate DB with demo sources. |
-| `seed-engine.mts` | Volume engine: run agent N times with random questions. |
+| `seed-engine.mts` | Volume engine: run agent N times over LLM-generated questions (budget-guarded). |
+| `a2a-client.mts` / `web-client.mts` | Headless external-path clients: A2A x402 caller + scripted browser-session asker. |
 | `metrics.mts` | Print aggregate traction (settled USDC, top sources, query count). |
+| `withdraw.mts` | Operator-side creator cash-out (reserves Circle's fee before signing). |
+| `check-treasury.mts` | Treasury watchdog: USDC + gas thresholds → ops alert (hourly cron). |
+| `backup-db.mts` | Rotating SQLite backups with off-box copy (hourly cron). |
+| `testmint-topup.mts` | Buy arc-testnet USDC from TestMint over x402 v2 (dry-run by default; real payment gated behind `--yes-mainnet`). |
 | `generate-wallets.mts` | Create funder + seller EOAs, write to .env.local. |
+| `deploy-vps.sh` / `redeploy-vps.sh` | Full provision / low-downtime health-gated redeploy with auto-rollback. |
 | `arc-update.mts` | Push traction snapshot to Arc Canteen (for keryx.cc product card). |
 | `ingest-source.mts` | Add source from external registry to local DB. |
 | `migrate-content-to-ipfs.mts` | Batch encrypt + pin existing content. |
+
+### `mcp/`
+`keryx-mcp` — MCP server published on npm + the official MCP registry (`npx -y keryx-mcp@latest`).
+Exposes Keryx as a paid-research tool to any MCP client; buyer-side settlement via `keryx-buyer.mts`.
 
 ---
 
@@ -233,13 +264,14 @@ Next.js 16 App Router.
 
 | Route | Purpose |
 |-------|---------|
-| `/` | Hero + CTA (ask or register). |
+| `/` | Hero + CTA (ask or register) + live ask form. |
 | `/connect` | Wallet connect + SIWE sign-in. |
-| `/register` | Creator onboarding: wallet (auto-filled), source metadata, splits. |
-| `/ask` | Ask page: question form, session grant, agent execution (live trace). |
-| `/ledger` | Creator earnings + payments (requires creator JWT). |
+| `/register` | Creator onboarding: paste RSS → wallet + x402 endpoint; verified creators set their own payout wallet. |
+| `/dashboard` | Public traction dashboard: metrics, leaderboard, recent dispatches, payments feed. |
+| `/creator/[id]` | Public creator earnings page + social card (lifetime USDC, per-question payouts). |
+| `/dispatch/[id]` | Shareable permalink for one agent run (trace, citations, settled payouts, social card). |
+| `/status` | Uptime page: health, deployed commit, settlement mode, live traction, App Kit treasury balance. |
 | `/dev` | Admin dashboard (requires dev JWT). |
-| `/faucet` | Testnet USDC drip. |
 
 ---
 
@@ -263,7 +295,7 @@ Shared TypeScript interfaces for agent, payments, registry, DB.
 | `tailwind.config.ts` | Tailwind setup + Keryx Mint colors. |
 | `hardhat.config.ts` | Hardhat: Arc testnet, viem, test timeout. |
 | `.env.example` | Template env vars. |
-| `package.json` | v0.2.0, deps (Next 16, React 19, wagmi, viem, circle-fin/x402-batching, pinata, siwe, jose, rate-limiter-flexible, tailwindcss, hardhat). |
+| `package.json` | v0.4.0, deps (Next 16, React 19, wagmi, viem, `@circle-fin/x402-batching`, `@circle-fin/unified-balance-kit`, `@x402/*` v2, pinata, siwe, jose, rate-limiter-flexible, tailwindcss, hardhat). |
 
 ---
 
@@ -328,16 +360,13 @@ Files must support `KERYX_FORCE_OFFLINE=1` (no LLM key, no REGISTRY_ADDRESS, no 
 ## Test Coverage
 
 - `contracts/test/` — Hardhat tests for SourceRegistry (security threats, splits, creator gating). Verified: 16/16 pass.
-- Integration tests via `npm run ask` and manual E2E (connect → fund → ask → settle).
-- No formal unit test suite yet (test-driven after MVP validation on hackathon judges).
+- Vitest suite (`npm test`) — economic invariants for the orchestrator (spend ≤ budget, payouts = weights, splits sum in exact micro-USDC) + treasury thresholds + backup rotation. Runs with typecheck in CI on every push.
+- Integration via `npm run demo` / `npm run ask` and E2E (connect → fund → ask → settle).
 
 ---
 
-## Post-Hackathon Roadmap
+## What's next
 
-1. **Web Crypto non-exportable keys** — Replace sessionStorage with crypto.subtle signing (no XSS export).
-2. **Lit Protocol** — Once Arc is added to Lit's supported chains, use Lit for IPFS key release (eliminate server key-holder trust).
-3. **Redis rate-limit** — Replace in-process `rate-limiter-flexible` for multi-instance deployments.
-4. **On-chain deposit verify** — Query Gateway balance API before marking grant active (closes R2 residual).
-5. **Signed author manifest** — Server returns signed author-wallet list for citation payTo validation (closes R1 residual).
-6. **Client-side keygen** — Let users self-custody creator wallets on registration (eliminate server key generation for offline-seed path).
+See [`project-roadmap.md`](./project-roadmap.md) — security upgrades (Web Crypto non-exportable
+session keys, Lit Protocol key release, on-chain deposit verify, signed author manifests),
+scalability (Redis rate-limit, event-driven indexer), and the mainnet readiness checklist.

@@ -1,10 +1,10 @@
 # Traction
 
-> **Integrity note (per hackathon rules):** only real, settled on-chain transactions are reported as
-> real volume. The system is now **live** — the agent wallet is funded and `KERYX_FORCE_OFFLINE=0`,
-> so every figure in the "Volume — REAL" section is a genuine Circle Gateway batched settlement on Arc
-> (verified `settled=true` with Circle settlement IDs). Any simulated/offline runs used during
-> development are labeled as such.
+> **Integrity note:** only real, settled on-chain transactions are ever reported as real volume —
+> that is a product policy, not a formality. The system is **live**: every figure in the
+> "Volume — REAL" section is a genuine Circle Gateway batched settlement on Arc (verified
+> `settled=true` with Circle settlement IDs). Any simulated/offline runs used during development
+> are labeled as such.
 
 ## Sources onboarded
 **6 demo sources seeded** (real content, real generated creator wallets), spanning on-topic and
@@ -48,23 +48,24 @@ Run `npm run metrics` for the current live tally from the datastore.
 Agent wallet funded. `KERYX_FORCE_OFFLINE=0`. Every payment below is a **real Circle x402
 batched settlement** on Arc (verified `settled=true` with Circle settlement IDs). Snapshot:
 
-| Metric | Value (live snapshot 2026-07-02) |
+| Metric | Value (live snapshot 2026-07-03) |
 |---|---|
-| Settled payments | **2,647** (weighted citations + access tolls) |
-| Total volume / to creators | **$15.15** / **$13.63** (100% to creator wallets, 0% platform fee) |
+| Settled payments | **2,862** (weighted citations + access tolls) |
+| Total volume / to creators | **$15.95** / **$14.33** (100% to creator wallets, 0% platform fee) |
 | Creators earning | **20** |
-| Autonomous queries | **603** |
-| Reader→payer conversion | **98.5%** (queries the agent judged worth paying for; it correctly pays nothing otherwise) |
-| Avg payment | ~$0.0057 (sub-cent to cent range — true nanopayments) |
-| By entry path | **425** payments / $2.75 via web + A2A · **2,222** / $12.40 via the volume engine |
+| Autonomous queries | **634** |
+| Reader→payer conversion | **98.6%** (queries the agent judged worth paying for; it correctly pays nothing otherwise) |
+| Avg payment | ~$0.0056 (sub-cent to cent range — true nanopayments) |
+| By entry path | **425** payments / $2.75 via web + A2A · **2,437** / $13.20 via the volume engine |
+| Creator cash-outs | **11** self-serve gasless withdrawals ($0.72 USDC) — real on-chain tx hashes, listed at [/api/withdrawals](https://keryx.cc/api/withdrawals) |
 
-Creator leaderboard (real earnings, top entries): Agent Economy Weekly $3.62 · Stablecoin Ledger $3.14 ·
-Onchain Micropayments Digest $2.86 · Arc Settlement Benchmarks $0.66 · Distributed Systems Notes $0.49 ·
-**Ethereum Foundation $0.45** · **Stripe Blog $0.37** · **Latent.Space $0.30** · Web Payments Review $0.25 ·
-**CoinDesk $0.24** · **Hugging Face $0.23** · **Decrypt $0.18** · **Cointelegraph $0.17** ·
-**Vitalik Buterin $0.17** · **Simon Willison $0.16** · **Coinbase Blog $0.14** · Garden & Soil Monthly $0.07 ·
+Creator leaderboard (real earnings, top entries): Agent Economy Weekly $3.68 · Stablecoin Ledger $3.23 ·
+Onchain Micropayments Digest $3.06 · Arc Settlement Benchmarks $0.76 · Distributed Systems Notes $0.52 ·
+**Ethereum Foundation $0.47** · **Stripe Blog $0.39** · **Latent.Space $0.31** · Web Payments Review $0.30 ·
+**CoinDesk $0.26** · **Hugging Face $0.23** · **Cointelegraph $0.20** · **Decrypt $0.19** ·
+**Vitalik Buterin $0.19** · **Simon Willison $0.17** · **Coinbase Blog $0.16** · Garden & Soil Monthly $0.08 ·
 Inner Axiom $0.05 · **Conzit Labs $0.04 (owner-verified)** · Retro Game Hardware $0.03.
-(Bold = real public publisher feeds onboarded during the hackathon, now earning.)
+(Bold = real public publisher feeds onboarded via RSS, now earning.)
 
 These accumulate via the budget-guarded volume engine (`npm run seed -- --loop --limit <cap>`) run on the
 live VPS, so every settlement lands in the same datastore the public dashboard serves. Numbers grow as

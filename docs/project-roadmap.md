@@ -1,29 +1,23 @@
 # Keryx Project Roadmap
 
-**Version:** 0.2.0 (Decentralized dApp, 2026-06-18)  
-**Status:** Phases 01–06 Complete. Preparing for Hackathon Demo.
+**Version:** 0.4.0 (live product, updated 2026-07-03)
+**Status:** In continuous operation at [keryx.cc](https://keryx.cc) — real settlement 24/7, shipping in public.
 
 ---
 
-## Current Phase: Launch & Feedback (Hackathon, June 2026)
+## Where Keryx is today (v0.4.0, July 2026)
 
-### Immediate Goals (This Week)
-- ✓ Phases 01–06 shipped (SIWE auth, on-chain registry, browser co-sign, IPFS encryption, API, security hardening)
-- ✓ SourceRegistry deployed on Arc testnet (`0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536`)
-- ✓ Security threat model verified (23/23 checks pass)
-- ✓ Hardhat tests pass (16/16)
-- ✓ VPS deployment ready (`npm run deploy`)
-- ✓ Volume engine running (real traction metrics)
-- Live demo @ keryx.cc
+Shipped and running:
+- ✓ Non-custodial dApp core (SIWE auth, on-chain SourceRegistry, browser co-sign sessions, encrypted IPFS content, public API + keys)
+- ✓ SourceRegistry live on Arc testnet (`0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536`)
+- ✓ Agent capabilities: adjudication of conflicting sources, confidence verdicts, cross-query memory, semantic discovery
+- ✓ Creator lifecycle end-to-end: RSS onboarding → owner verification → citation webhooks → public earnings pages → self-serve gasless cash-out
+- ✓ External on-ramps: MCP server (npm + official registry), A2A x402 endpoint, free no-wallet trial
+- ✓ Ops: low-downtime health-gated deploys, treasury watchdog, rotating off-box backups, CI (typecheck + economic-invariant suite)
+- ✓ Circle stack: x402 + Gateway batching + Wallets + Contracts + App Kit (Unified Balance on `/status` + `/api/treasury`)
+- ✓ Security threat model verified (23/23) · Hardhat 16/16 · vitest suite green
 
-### Success Metrics
-| Metric | Target | Current |
-|--------|--------|---------|
-| Hackathon demo | 3-min walkthrough | [DEMO.md](../DEMO.md) |
-| Judges can connect wallet | Arc testnet native USDC | ✓ faucet working |
-| Sources registered | ≥5 demo creators | TBD (seeding) |
-| Settled USDC | ≥$100 | TBD (volume engine) |
-| Judge feedback | Submission form | `FEEDBACK.md` |
+Live figures at [`/status`](https://keryx.cc/status); snapshots in [TRACTION.md](../TRACTION.md).
 
 ---
 
@@ -47,7 +41,7 @@
 
 ---
 
-## Post-Hackathon Phases (Q3 2026)
+## Next Phases (Q3 2026)
 
 ### Phase 07: Security Upgrades (Priority: High) — Est. 2 weeks
 
@@ -239,12 +233,12 @@ Mainnet ← blocked on: Phase 07–10, security audit, legal
 
 ## Communication & Feedback
 
-### Hackathon Feedback Loop
-- **Demo script:** [DEMO.md](../DEMO.md) (3-min judge walkthrough)
-- **Feedback form:** [FEEDBACK.md](../FEEDBACK.md) (judge submissions + scoring)
-- **Weekly updates:** traction snapshot via `arc-canteen` (keryx.cc product card)
+### Build-in-public loop
+- **Demo script:** [DEMO.md](../DEMO.md) (sub-3-minute walkthrough)
+- **Dev-tool feedback we file upstream:** [FEEDBACK.md](../FEEDBACK.md) (Circle/Arc DX findings)
+- **Frequent updates:** product + traction snapshots via `arc-canteen` (keryx.cc product card)
 
-### Creator Feedback Channels (Post-Hackathon)
+### Creator Feedback Channels
 - **Email:** vutang2212@gmail.com
 - **Discord:** TBD (community server)
 - **GitHub:** Issues + Discussions (this repo)
@@ -265,7 +259,7 @@ Mainnet ← blocked on: Phase 07–10, security audit, legal
 - **Database:** SQLite on-disk (VPS) + Supabase backup (free tier)
 - **RPC:** Arc public RPC (free) + Infura/Alchemy (optional, paid)
 
-### Budget (Post-Hackathon, 6-month estimate)
+### Budget (6-month estimate)
 | Item | Cost | Notes |
 |------|------|-------|
 | VPS (6 months) | $300–600 | keryx.cc infra |
@@ -278,12 +272,14 @@ Mainnet ← blocked on: Phase 07–10, security audit, legal
 
 ## Version Plan
 
-| Version | Target Date | Focus | Status |
-|---------|-------------|-------|--------|
-| **v0.2.0** | 2026-06-18 | Decentralized dApp (Phases 01–06) | ✓ Shipped |
-| **v0.3.0** | 2026-09-30 | Security + Scale (Phases 07–08) | TBD |
-| **v0.4.0** | 2026-10-31 | UX + Enterprise (Phases 09–10) | TBD |
-| **v1.0.0** | 2026-12-31 | Mainnet + Full Feature Parity | TBD |
+| Version | Date | Focus | Status |
+|---------|------|-------|--------|
+| **v0.2.0** | 2026-06-17 | Decentralized dApp core (Phases 01–06) | ✓ Shipped |
+| **v0.3.0** | 2026-06-22 | Creator lifecycle (withdrawals, webhooks, earnings pages) + MCP/A2A on-ramps | ✓ Shipped |
+| **v0.4.0** | 2026-07-02 | Agent depth (adjudication, confidence, memory) + ops hardening + App Kit | ✓ Shipped |
+| **v0.5.0** | 2026-09-30 | Security + Scale (Phases 07–08) | Planned |
+| **v0.6.0** | 2026-10-31 | UX + Enterprise (Phases 09–10) | Planned |
+| **v1.0.0** | 2026-12-31 | Mainnet + Full Feature Parity | Planned |
 | **v2.0.0** | 2027-Q2 | Stretch Goals (Agent Marketplace, Video, Derivatives) | Backlog |
 
 ---
@@ -297,7 +293,7 @@ Mainnet ← blocked on: Phase 07–10, security audit, legal
 4. **SIWE for auth** — Wallet-based identity. No email/password. Role derived live from state.
 5. **IPFS for content** — Encrypted at rest, gated decryption post-payment. Lit upgrade path noted.
 
-### Deferred Decisions (Post-Hackathon)
+### Deferred Decisions
 - Mainnet chain selection (Arc primary + others optional?)
 - Enterprise B2B pricing model (% of settled volume? flat fee?)
 - Creator insurance pool (smart contract? reinsurance partner?)
