@@ -48,23 +48,23 @@ Run `npm run metrics` for the current live tally from the datastore.
 Agent wallet funded. `KERYX_FORCE_OFFLINE=0`. Every payment below is a **real Circle x402
 batched settlement** on Arc (verified `settled=true` with Circle settlement IDs). Snapshot:
 
-| Metric | Value (live snapshot 2026-07-03) |
+| Metric | Value (live snapshot 2026-07-04) |
 |---|---|
-| Settled payments | **2,862** (weighted citations + access tolls) |
-| Total volume / to creators | **$15.95** / **$14.33** (100% to creator wallets, 0% platform fee) |
+| Settled payments | **3,070** (weighted citations + access tolls) |
+| Total volume / to creators | **$16.77** / **$15.03** (100% to creator wallets, 0% platform fee) |
 | Creators earning | **20** |
-| Autonomous queries | **634** |
+| Autonomous queries | **663** |
 | Reader→payer conversion | **98.6%** (queries the agent judged worth paying for; it correctly pays nothing otherwise) |
-| Avg payment | ~$0.0056 (sub-cent to cent range — true nanopayments) |
-| By entry path | **425** payments / $2.75 via web + A2A · **2,437** / $13.20 via the volume engine |
+| Avg payment | ~$0.0055 (sub-cent to cent range — true nanopayments) |
+| By entry path | **425** payments / $2.75 via web + A2A · **2,645** / $14.02 via the volume engine |
 | Creator cash-outs | **11** self-serve gasless withdrawals ($0.72 USDC) — real on-chain tx hashes, listed at [/api/withdrawals](https://keryx.cc/api/withdrawals) |
 
-Creator leaderboard (real earnings, top entries): Agent Economy Weekly $3.68 · Stablecoin Ledger $3.23 ·
-Onchain Micropayments Digest $3.06 · Arc Settlement Benchmarks $0.76 · Distributed Systems Notes $0.52 ·
-**Ethereum Foundation $0.47** · **Stripe Blog $0.39** · **Latent.Space $0.31** · Web Payments Review $0.30 ·
-**CoinDesk $0.26** · **Hugging Face $0.23** · **Cointelegraph $0.20** · **Decrypt $0.19** ·
-**Vitalik Buterin $0.19** · **Simon Willison $0.17** · **Coinbase Blog $0.16** · Garden & Soil Monthly $0.08 ·
-Inner Axiom $0.05 · **Conzit Labs $0.04 (owner-verified)** · Retro Game Hardware $0.03.
+Creator leaderboard (real earnings, top entries): Agent Economy Weekly $3.79 · Stablecoin Ledger $3.36 ·
+Onchain Micropayments Digest $3.21 · Arc Settlement Benchmarks $0.86 · Distributed Systems Notes $0.54 ·
+**Ethereum Foundation $0.48** · **Stripe Blog $0.40** · **Latent.Space $0.33** · Web Payments Review $0.33 ·
+**CoinDesk $0.28** · **Hugging Face $0.24** · **Cointelegraph $0.22** · **Decrypt $0.21** ·
+**Vitalik Buterin $0.20** · **Coinbase Blog $0.18** · **Simon Willison $0.18** · Garden & Soil Monthly $0.10 ·
+Inner Axiom $0.05 · **Conzit Labs $0.05 (owner-verified)** · Retro Game Hardware $0.03.
 (Bold = real public publisher feeds onboarded via RSS, now earning.)
 
 These accumulate via the budget-guarded volume engine (`npm run seed -- --loop --limit <cap>`) run on the
