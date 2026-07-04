@@ -1,0 +1,35 @@
+# Keryx
+
+> Keryx is a citation-toll research agent on Arc testnet. Ask it a question with a USDC budget; it autonomously buys and reads paid sources over x402, answers with citations, and settles a weighted USDC nanopayment to every creator it actually cited. Every buy/skip/cache/stop decision is model-reasoned and logged in a public trace.
+
+Keryx is both a product you can use in the browser (free, no wallet needed to try) and a paid
+API other agents can call. All payments are real x402 settlements through Circle Gateway on
+Arc testnet (chain eip155:5042002, USDC). Creators register content sources, get cited, and
+withdraw earnings self-serve.
+
+## For agents (paid API)
+
+- [Agent-to-agent research endpoint](https://keryx.cc/api/agent/ask): POST { question, budget? } — x402-protected (0.02 USDC fee via PAYMENT-REQUIRED header, x402 v2, GatewayWalletBatched scheme). Keryx answers with citations and pays every cited creator downstream from your budget. A GET returns the same 402 challenge plus schema for discovery tooling (e.g. `circle services inspect`).
+- [One-time testnet funding](https://keryx.cc/api/faucet/onramp): POST { address } — funds a brand-new caller's own Arc wallet once with testnet USDC, so you can pay the toll without visiting the Circle faucet.
+- [OpenAPI spec](https://keryx.cc/api/openapi.json): full schema for all public endpoints.
+- [MCP server](https://www.npmjs.com/package/keryx-mcp): `npx keryx-mcp` — adds an ask-Keryx tool to any MCP agent; auto-onramps and pays the x402 toll from your own wallet. Registry name io.github.tang-vu/keryx.
+
+## For humans
+
+- [Ask Keryx](https://keryx.cc/): free to try, no wallet — watch the live reasoning trace decide what to buy, skip, or trust.
+- [Developer docs](https://keryx.cc/dev): how to call the paid API, issue wallet-bound API keys, and integrate x402 payments.
+- [Register a source](https://keryx.cc/register): list your content behind an x402 toll; you are paid per fetch and per citation, directly to your wallet.
+- [Live traction dashboard](https://keryx.cc/dashboard): real settled payments only — queries, citations, USDC to creators.
+- [Status](https://keryx.cc/status): uptime, settlement mode, treasury Gateway balance.
+
+## Source & provenance
+
+- [GitHub repository](https://github.com/tang-vu/keryx): full source, Apache-2.0 scaffold portions.
+- [Reusable Arc primitives](https://github.com/tang-vu/keryx-arc-primitives): fork-and-run x402 two-toll, on-chain source registry + indexer, browser co-sign.
+- [Source registry contract](https://testnet.arcscan.app/address/0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536): on-chain registry on Arc testnet.
+
+## Notes
+
+- Testnet only — no real money moves. Payments settle in testnet USDC through Circle Gateway.
+- Cited-creator payouts are weighted by citation contribution; multi-author sources split in exact micro-USDC.
+- Machine-readable payment requirements always ride in the PAYMENT-REQUIRED response header (x402 v2); the A2A endpoint also declares Bazaar discovery metadata (extensions.bazaar.info).
