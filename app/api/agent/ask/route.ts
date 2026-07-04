@@ -12,6 +12,7 @@ import { config } from "@/lib/config";
 import { getDb } from "@/lib/db";
 import { makePayment } from "@/lib/payments/payment-gateway";
 import { settleThenServe, challengeResponse } from "@/lib/x402-server";
+import { a2aDiscovery } from "@/lib/x402-discovery";
 import { verifyApiKey } from "@/lib/api-keys";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
 
@@ -24,6 +25,9 @@ const A2A_REQUIREMENTS = {
   payTo: config.sellerAddress ?? "",
   endpoint: "/api/agent/ask",
   description: "Keryx autonomous research — answer with citations; creators paid downstream",
+  // Bazaar discovery declaration — lets x402 tooling (and Circle's service registry, if it
+  // catalogs from the facilitator) read this endpoint's schema without any prior knowledge.
+  discovery: a2aDiscovery as unknown as Record<string, unknown>,
 };
 
 /**
@@ -93,12 +97,7 @@ export async function POST(req: NextRequest) {
 
   return settleThenServe(
     req,
-    {
-      priceUsdc: config.a2aFeeUsdc,
-      payTo: treasury,
-      endpoint: "/api/agent/ask",
-      description: "Keryx autonomous research — answer with citations; creators paid downstream",
-    },
+    { ...A2A_REQUIREMENTS, payTo: treasury },
     async (settle) => {
       const db = await getDb();
       // Record the inbound A2A fee (revenue), kept separate from creator payouts in metrics.

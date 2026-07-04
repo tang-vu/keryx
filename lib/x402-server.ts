@@ -18,6 +18,13 @@ export interface PaidOptions {
   payTo: string;
   endpoint: string;
   description?: string;
+  /**
+   * Bazaar discovery metadata (x402 discovery extension). When set, the 402 challenge advertises
+   * `extensions.bazaar.info` and the payload forwarded to the facilitator carries it, so the
+   * facilitator can catalog the service into the x402 registry. Additive only — if the facilitator
+   * rejects the extended payload shape, settleThenServe falls back to the bare payload.
+   */
+  discovery?: Record<string, unknown>;
 }
 
 function buildRequirements(priceUsdc: number, payTo: string) {
@@ -58,6 +65,7 @@ export function challengeResponse(opts: PaidOptions, body: unknown = {}): NextRe
       mimeType: "application/json",
     },
     accepts: [requirements],
+    ...(opts.discovery ? { extensions: { bazaar: { info: opts.discovery } } } : {}),
   };
   return new NextResponse(JSON.stringify(body), {
     status: 402,
@@ -121,6 +129,14 @@ export async function settleThenServe(
         payload: { authorization: decoded?.authorization, signature: decoded?.signature },
       };
 
+  // Best-effort discovery: carry the declared bazaar metadata through verify/settle so the
+  // facilitator can catalog this service. The extension must never break the money path — every
+  // facilitator call below falls back to the bare payload if the extended shape is rejected.
+  let activePayload = payload;
+  if (opts.discovery && !payload.extensions) {
+    activePayload = { ...payload, extensions: { bazaar: { info: opts.discovery } } };
+  }
+
   try {
     // Circle's facilitator occasionally throws a transient 4xx ("Circle Gateway verify
     // failed (400)…") on otherwise-valid payments (~5% on testnet). Retry the throwing
@@ -128,12 +144,34 @@ export async function settleThenServe(
     // verify() is read-only — always safe to retry. settle() is retried only when it
     // THROWS (no confirmation received): the EIP-3009 nonce is consumed only by a
     // successful on-chain settle, so a transient throw leaves the nonce reusable.
-    const verify = await withRetry(() => facilitator.verify(payload, requirements), "verify", opts.endpoint);
+    let verify;
+    try {
+      verify = await withRetry(() => facilitator.verify(activePayload, requirements), "verify", opts.endpoint);
+    } catch (err) {
+      if (activePayload === payload) throw err;
+      console.warn(`[x402] verify rejected bazaar-extended payload ${opts.endpoint} — retrying bare`);
+      activePayload = payload;
+      verify = await withRetry(() => facilitator.verify(payload, requirements), "verify", opts.endpoint);
+    }
+    if (!verify.isValid && activePayload !== payload) {
+      // A soft rejection may also be extension-induced — try once bare before failing the call.
+      activePayload = payload;
+      verify = await withRetry(() => facilitator.verify(payload, requirements), "verify", opts.endpoint);
+    }
     if (!verify.isValid) {
       console.error(`[x402] verify FAILED ${opts.endpoint}: ${verify.invalidReason}`, JSON.stringify(requirements));
       return NextResponse.json({ error: "verification failed", reason: verify.invalidReason }, { status: 402 });
     }
-    const settle = await withRetry(() => facilitator.settle(payload, requirements), "settle", opts.endpoint);
+    let settle;
+    try {
+      settle = await withRetry(() => facilitator.settle(activePayload, requirements), "settle", opts.endpoint);
+    } catch (err) {
+      // A settle throw means no confirmation was received (nonce unconsumed) — safe to retry bare.
+      if (activePayload === payload) throw err;
+      console.warn(`[x402] settle rejected bazaar-extended payload ${opts.endpoint} — retrying bare`);
+      activePayload = payload;
+      settle = await withRetry(() => facilitator.settle(payload, requirements), "settle", opts.endpoint);
+    }
     if (!settle.success) {
       console.error(`[x402] settle FAILED ${opts.endpoint}: ${settle.errorReason}`);
       return NextResponse.json({ error: "settlement failed", reason: settle.errorReason }, { status: 402 });
