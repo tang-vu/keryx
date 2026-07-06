@@ -6,6 +6,7 @@ import { BadgeCheck, Banknote, Calendar, Hash, Wallet } from "lucide-react";
 import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
 import { cn } from "@/lib/utils";
 import { NotifyWebhookPanel } from "./notify-webhook-panel";
+import { EmbedBadgePanel } from "./embed-badge-panel";
 
 interface CreatorData {
   source: {
@@ -122,6 +123,9 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
 
       {/* Owner-only: citation webhook settings (renders nothing for non-owners) */}
       <NotifyWebhookPanel creatorId={creatorId} />
+
+      {/* Public: embeddable "Cited by Keryx" badge (Markdown + HTML snippets) */}
+      <EmbedBadgePanel creatorId={creatorId} />
 
       {/* Earnings chart */}
       {dailyEarnings.length > 0 && (
