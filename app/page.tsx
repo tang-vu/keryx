@@ -26,6 +26,7 @@ import { HowItWorks, ForCreators } from "@/components/keryx/landing-sections";
 import { SessionGrantPanel } from "@/components/keryx/session-grant-panel";
 import type { SessionGrantBinding } from "@/components/keryx/session-grant-panel";
 import { OnboardingTour } from "@/components/keryx/onboarding-tour";
+import { ActivityTicker } from "@/components/keryx/activity-ticker";
 import { useAskStream } from "@/lib/hooks/use-ask-stream";
 import type { PaymentRecord } from "@/lib/types";
 
@@ -176,6 +177,11 @@ export default function AskPage() {
                 </div>
               </div>
             </section>
+
+            {/* LIVE CITATION TICKER — proof-of-life; renders nothing until there's real activity */}
+            <div className="mx-auto max-w-[1180px] px-4 pt-3 sm:px-[30px]">
+              <ActivityTicker />
+            </div>
 
             {/* DISPATCH ORDER */}
             <section id="dispatch" className="mx-auto max-w-[1180px] px-4 pt-9 sm:px-[30px]">
