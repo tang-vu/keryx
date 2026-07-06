@@ -88,6 +88,9 @@ Example trace (real output):
   [RSSHub](https://github.com/DIYgod/RSSHub/discussions/22315).
 - **Know the moment you're cited** — signed webhooks fire the instant a citation settles, and every
   payout on your public earnings page shows the actual *question* your work helped answer.
+- **Show it off** — an embeddable **"Cited by Keryx" badge** (live SVG at `/api/creator/<id>/badge.svg`)
+  displays your real citation count + USDC earned on your own site, with copy-paste Markdown/HTML on
+  each creator page. Payouts become portable, verifiable proof.
 - **Cash out yourself, gas-free** — a self-serve, non-custodial withdraw: your wallet signs a
   Gateway burn intent in the browser, the treasury relays gas. Real creators have executed real
   on-chain cash-outs.
@@ -113,6 +116,9 @@ Example trace (real output):
 - **Transparent treasury** — [`/api/treasury`](https://keryx.cc/api/treasury) publishes the
   settlement wallet's chain-abstracted Gateway balance (via Circle App Kit), so anyone can audit
   what backs the payouts.
+- **Live activity feed** — [`/api/activity`](https://keryx.cc/api/activity) streams the most recent
+  real settled citations (source, question, reward) — a proof-of-life surface and a zero-prior-knowledge
+  way for tooling to see what Keryx is citing right now; it also drives the live ticker on the landing.
 
 ## The money rails
 
