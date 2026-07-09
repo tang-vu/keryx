@@ -15,7 +15,7 @@
     "ask": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/ask.mts",
     "demo": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/demo-full-cycle.mts",
     "seed": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/seed-engine.mts",
-    "register-onchain": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/register-catalog-onchain.mts",
+    "register-onchain": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/register-existing-source-onchain.mts",
     "metrics": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/metrics.mts",
     "preflight": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/preflight.mts",
     "arc:update": "node --import tsx --no-warnings scripts/arc-update.mts",

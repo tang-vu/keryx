@@ -25,6 +25,11 @@ function save(store: KeyStore): void {
   fs.writeFileSync(STORE, JSON.stringify(store, null, 2));
 }
 
+/** Look up a wallet without minting one. Null when this host does not hold that key. */
+export function findWallet(label: string): { address: string; privateKey: string } | null {
+  return load()[label] ?? null;
+}
+
 /** Generate (or reuse) a wallet for a logical key (e.g. sourceId or sourceId:author). */
 export function getOrCreateWallet(label: string): { address: string; privateKey: string } {
   const store = load();
