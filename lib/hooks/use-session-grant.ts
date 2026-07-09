@@ -301,30 +301,38 @@ export function useSessionGrant() {
         // address (what the server uses); the grant response overwrites it at the end.
         writeSession({ wrapped, iv }, sessAddr, walletClient.account!.address.toLowerCase());
 
-        setState((s) => ({ ...s, status: "funding", sessAddr }));
+        // 2. Move USDC into the session EOA — but only what it is actually short of. The session
+        //    address is deterministic, so an earlier attempt that funded it and then failed before
+        //    the deposit left the money sitting right here. Charging the user for it twice would be
+        //    the wrong answer; when the address already holds enough, no MetaMask prompt at all.
+        //    On Arc, USDC IS the native gas token — an ERC-20 transfer() between EOAs on the 0x3600
+        //    interface reverts (and MetaMask's failed gas-estimate can hang), so this is a NATIVE
+        //    value transfer (18-decimal). The buffer lets the EOA pay gas for its own
+        //    approve + deposit; the leftover stays recoverable under the derived key.
+        const needed = parseEther((budgetUsdc + SESSION_GAS_BUFFER_USDC).toFixed(18));
+        const held = await publicClient.getBalance({ address: sessAddr });
 
-        // 2. One MetaMask tx: move USDC to the session EOA. On Arc, USDC IS the native gas token —
-        //    an ERC-20 transfer() between EOAs on the 0x3600 interface reverts (and MetaMask's
-        //    failed gas-estimate can hang), so send a NATIVE value transfer (18-decimal) instead.
-        //    Budget + a small buffer so the session EOA can pay gas for its own approve+deposit.
-        // NOTE: do NOT pass `chain` here. ensureArc() already guaranteed the wallet is on Arc;
-        // passing `chain` makes viem assert chainId against the (possibly stale) injected client
-        // before sending, which can hang BEFORE MetaMask ever shows the prompt.
-        const usdcTx = await walletClient.sendTransaction({
-          account: walletClient.account!,
-          to: sessAddr,
-          value: parseEther((budgetUsdc + SESSION_GAS_BUFFER_USDC).toFixed(18)),
-          gas: BigInt(21000),
-        });
-        const fundReceipt = await publicClient.waitForTransactionReceipt({
-          hash: usdcTx,
-          timeout: 90_000,
-        });
-        if (fundReceipt.status !== "success") {
-          throw new Error("Funding transfer reverted on-chain — please try again.");
+        if (held < needed) {
+          setState((s) => ({ ...s, status: "funding", sessAddr }));
+          // NOTE: do NOT pass `chain` here. ensureArc() already guaranteed the wallet is on Arc;
+          // passing `chain` makes viem assert chainId against the (possibly stale) injected client
+          // before sending, which can hang BEFORE MetaMask ever shows the prompt.
+          const usdcTx = await walletClient.sendTransaction({
+            account: walletClient.account!,
+            to: sessAddr,
+            value: needed - held,
+            gas: BigInt(21000),
+          });
+          const fundReceipt = await publicClient.waitForTransactionReceipt({
+            hash: usdcTx,
+            timeout: 90_000,
+          });
+          if (fundReceipt.status !== "success") {
+            throw new Error("Funding transfer reverted on-chain — please try again.");
+          }
         }
 
-        setState((s) => ({ ...s, status: "depositing" }));
+        setState((s) => ({ ...s, status: "depositing", sessAddr }));
 
         // 3. Browser-side Gateway deposit, signed by the worker.
         const sessionWalletClient = getSessionWalletClient();

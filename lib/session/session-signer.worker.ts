@@ -86,7 +86,15 @@ async function signTransaction(transaction: Record<string, unknown>): Promise<st
     throw new Error(`the session key will not sign a transaction to ${to ?? "a new contract"}`);
   }
 
-  return signer.signTransaction(transaction as unknown as TransactionSerializable);
+  const from = transaction.from as string | undefined;
+  if (from && from.toLowerCase() !== signer.address.toLowerCase()) {
+    throw new Error(`this session key is ${signer.address}, not ${from}`);
+  }
+
+  // `from` is not part of a serialized transaction; viem's serializer ignores it, but drop it here
+  // so the shape handed to the signer is exactly the transaction and nothing else.
+  const { from: _ignored, ...serializable } = transaction;
+  return signer.signTransaction(serializable as unknown as TransactionSerializable);
 }
 
 async function clear(): Promise<null> {

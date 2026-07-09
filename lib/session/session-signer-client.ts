@@ -22,16 +22,60 @@ import type { WrappedKey } from "./session-key-vault";
 
 type Pending = { resolve: (value: unknown) => void; reject: (reason: Error) => void };
 
+/** The slice of `Worker` this class uses, so tests can drive it over an in-process channel. */
+export interface SignerPort {
+  postMessage(message: unknown): void;
+  addEventListener(type: "message", listener: (event: MessageEvent<SignerResponse>) => void): void;
+  addEventListener(type: "error", listener: (event: { message?: string }) => void): void;
+  terminate(): void;
+}
+
+/**
+ * viem hands `signTransaction` the whole prepared request, which carries the account object, the
+ * chain object, and a nonce manager — all of them full of functions. `postMessage` structured-clones
+ * its argument and throws on the first function it meets, so only the fields that actually get
+ * serialized into a transaction may cross. Everything else the worker already knows or ignores.
+ */
+const SERIALIZABLE_TRANSACTION_FIELDS = [
+  "from",
+  "to",
+  "data",
+  "value",
+  "nonce",
+  "gas",
+  "gasPrice",
+  "maxFeePerGas",
+  "maxPriorityFeePerGas",
+  "maxFeePerBlobGas",
+  "accessList",
+  "authorizationList",
+  "blobs",
+  "blobVersionedHashes",
+  "chainId",
+  "type",
+] as const;
+
+export function toCloneableTransaction(transaction: Record<string, unknown>): Record<string, unknown> {
+  const cloneable: Record<string, unknown> = {};
+  for (const field of SERIALIZABLE_TRANSACTION_FIELDS) {
+    if (transaction[field] !== undefined) cloneable[field] = transaction[field];
+  }
+  return cloneable;
+}
+
+/** Kept in its own function so the bundler can see the worker entry statically. */
+function createSignerWorker(): Worker {
+  return new Worker(new URL("./session-signer.worker.ts", import.meta.url), { type: "module" });
+}
+
 export class SessionSigner {
-  private worker: Worker;
+  private worker: SignerPort;
   private pending = new Map<number, Pending>();
   private seq = 0;
   private address: `0x${string}` | null = null;
 
-  constructor() {
-    this.worker = new Worker(new URL("./session-signer.worker.ts", import.meta.url), {
-      type: "module",
-    });
+  constructor(port?: SignerPort) {
+    this.worker = port ?? createSignerWorker();
     this.worker.addEventListener("message", (event: MessageEvent<SignerResponse>) => {
       const { id, ok } = event.data;
       const slot = this.pending.get(id);
@@ -92,7 +136,7 @@ export class SessionSigner {
       signTransaction: async (transaction) =>
         this.call<`0x${string}`>({
           type: "signTransaction",
-          transaction: transaction as unknown as Record<string, unknown>,
+          transaction: toCloneableTransaction(transaction as unknown as Record<string, unknown>),
         }),
       signTypedData: async (payload) =>
         this.call<`0x${string}`>({
