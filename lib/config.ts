@@ -149,6 +149,15 @@ export const config = {
   registryAddress: (process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS ??
     process.env.KERYX_REGISTRY_ADDRESS ??
     "") as `0x${string}` | "",
+  // Address used for READS only — the payTo guard asks the registry who may be paid for a
+  // source. Deliberately separate from registryAddress: pointing the guard at a deployed
+  // contract must not also switch creator registration into on-chain mode or wake the
+  // indexer. Defaults to registryAddress, so a deployment that sets only that keeps working.
+  registryReadAddress: (process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS ??
+    process.env.KERYX_REGISTRY_READ_ADDRESS ??
+    process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS ??
+    process.env.KERYX_REGISTRY_ADDRESS ??
+    "") as `0x${string}` | "",
   // The block number at which SourceRegistry was deployed. The indexer uses this
   // as the cold-start backfill origin so it doesn't scan blocks before the contract exists.
   registryDeployBlock: process.env.KERYX_REGISTRY_DEPLOY_BLOCK ?? "0",

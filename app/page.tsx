@@ -13,6 +13,7 @@
  */
 
 import { useMemo, useCallback, useState, useEffect } from "react";
+import { buildSourceIndex, type SourceIndex } from "@/lib/payments/client-payto-allowlist";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { AskForm } from "@/components/keryx/ask-form";
@@ -38,23 +39,19 @@ export default function AskPage() {
     getSessionWalletClient: () => null,
   });
 
-  // Fetch known source wallets once from /api/sources (public endpoint).
-  // Used by useAskStream to validate fetch-toll payTo addresses client-side.
+  // Fetch the public source index once from /api/sources. useAskStream uses it to check
+  // every payTo it signs for against that source's on-chain authorised wallets.
   // Stored in state (not a ref) so React can track the value properly during render.
-  const [knownSourceWallets, setKnownSourceWallets] = useState<Set<string>>(new Set());
+  const [sourceIndex, setSourceIndex] = useState<SourceIndex>(new Map());
   useEffect(() => {
     fetch("/api/sources")
       .then((r) => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
-      .then((data: { sources?: Array<{ walletAddress?: string }> }) => {
-        const wallets = new Set<string>();
-        for (const s of data.sources ?? []) {
-          if (s.walletAddress) wallets.add(s.walletAddress.toLowerCase());
-        }
-        setKnownSourceWallets(wallets);
+      .then((data: { sources?: Array<{ id?: string; walletAddress?: string; onchainId?: string }> }) => {
+        setSourceIndex(buildSourceIndex(data.sources ?? []));
       })
       .catch((err) => {
-        // Non-fatal: without a wallet list, only cap enforcement applies (documented residual).
-        console.warn("[keryx] could not fetch source wallets for payTo validation:", err);
+        // Non-fatal: without the index, only cap enforcement applies (documented residual).
+        console.warn("[keryx] could not fetch the source index for payTo validation:", err);
       });
   }, []);
 
@@ -65,9 +62,9 @@ export default function AskPage() {
   const { state, ask } = useAskStream({
     sessionId: grantBinding.sessionId,
     getSessionWalletClient: grantBinding.getSessionWalletClient,
-    // pass the cap and known wallets so the browser enforces them independently.
+    // pass the cap and source index so the browser enforces them independently.
     grantCap: grantBinding.grantCap,
-    knownSourceWallets,
+    sourceIndex,
     // Flip the grant UI to "expired" if the server rejects an ask with 401 session_expired
     // (covers the race where the client still thinks it's active, or a server restart).
     onSessionExpired: grantBinding.markExpired,

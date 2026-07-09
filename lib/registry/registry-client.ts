@@ -196,13 +196,13 @@ export type OnChainRecord = {
  * Throws on RPC errors so the indexer can abort the chunk and retry.
  */
 export async function getRegistrySource(id: Hex): Promise<OnChainRecord | null> {
-  if (!config.registryAddress) return null;
+  if (!config.registryReadAddress) return null;
 
   const client = getPublicClient();
   // Do NOT catch here — let RPC errors propagate so the indexer knows this chunk
   // failed and does not advance the checkpoint past unprocessed logs.
   const record = await client.readContract({
-    address: config.registryAddress as Address,
+    address: config.registryReadAddress as Address,
     abi: REGISTRY_ABI,
     functionName: "get",
     args: [id],

@@ -56,6 +56,10 @@ export type RequestSignatureFn = (
   /** Distinguishes a fetch toll (payTo = source wallet) from a citation reward
    *  (payTo = author wallet). The browser uses this to scope its payTo allow-list. */
   kind: "fetch" | "citation",
+  /** Which source this payment is for. The browser resolves the source's authorised
+   *  wallets from it — for citations that is the only way to check payTo, since author
+   *  wallets are deliberately not enumerable from any public endpoint. */
+  sourceId: string,
 ) => Promise<string>;
 
 export class BrowserCoSignGateway implements PaymentGateway {
@@ -146,7 +150,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
     // inflated amounts. The server enforces the pre-spend guard above as a second layer.
     let paymentHeader: string;
     try {
-      paymentHeader = await this.requestSignature(reqId, requirements, kind);
+      paymentHeader = await this.requestSignature(reqId, requirements, kind, source.id);
     } catch (err) {
       // Timeout or revoke — record a skipped payment rather than crashing the run.
       const message = err instanceof Error ? err.message : String(err);

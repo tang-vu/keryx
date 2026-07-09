@@ -2,7 +2,7 @@
  * Streaming agent endpoint. POST { question, budget, sessionId? } → Server-Sent Events:
  *   event: meta         → { engine, mode } once at start
  *   event: step         → each TraceStep as the agent reasons/pays
- *   event: sign-request → { reqId, requirements, kind } when browser co-sign is active
+ *   event: sign-request → { reqId, requirements, kind, sourceId } when browser co-sign is active
  *   event: done         → the final QueryRun
  *   event: error        → failure
  *
@@ -104,8 +104,9 @@ export async function POST(req: NextRequest) {
             reqId: string,
             requirements: PaymentRequirements,
             kind: "fetch" | "citation",
+            sourceId: string,
           ): Promise<string> => {
-            send("sign-request", { reqId, requirements, kind });
+            send("sign-request", { reqId, requirements, kind, sourceId });
             // Scope the pending slot to this session so a caller can't resolve another session's sign-request.
             return awaitSignature(capturedSessionId, reqId);
           };

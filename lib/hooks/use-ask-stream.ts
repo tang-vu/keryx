@@ -24,6 +24,7 @@ import type {
   TraceStep,
 } from "@/lib/types";
 import type { PaymentRequirementsInput } from "@/lib/x402-client-sign";
+import type { SourceIndex } from "@/lib/payments/client-payto-allowlist";
 
 export type StreamMode = "real" | "offline";
 
@@ -98,12 +99,11 @@ interface AskStreamOpts {
    */
   grantCap?: number;
   /**
-   * Set of known source payout wallet addresses (lowercased), fetched once
-   * from /api/sources. When populated, fetch-toll payTo values are validated
-   * against this set before signing. Citation payTo cannot be fully enumerated
-   * (author wallets are not exposed) — cap enforcement is the containment there.
+   * Public source index fetched once from /api/sources. Every payTo the browser signs
+   * for — fetch toll or citation reward — is validated against the wallets the on-chain
+   * registry authorises for that exact source. Empty index → cap enforcement only.
    */
-  knownSourceWallets?: Set<string>;
+  sourceIndex?: SourceIndex;
   /**
    * Called when the server rejects an ask with 401 `session_expired` (the grant TTL
    * lapsed or was dropped on restart). Lets the caller flip the grant UI to its
@@ -159,10 +159,12 @@ export function useAskStream(opts?: AskStreamOpts) {
     if (event === "sign-request") {
       // Browser co-sign: the server asks us to sign an EIP-712 payment authorization.
       // We do this in the background — no await in the event loop, fire-and-forget promise.
-      const { reqId, requirements, kind } = data as {
+      // `kind` also rides this event; the payTo allowlist below covers fetch tolls and
+      // citation rewards alike, so it no longer changes what the browser checks.
+      const { reqId, requirements, sourceId } = data as {
         reqId: string;
         requirements: PaymentRequirementsInput;
-        kind?: "fetch" | "citation";
+        sourceId?: string;
       };
       const sessionId = opts?.sessionId;
       const getWallet = opts?.getSessionWalletClient;
@@ -199,17 +201,28 @@ export function useAskStream(opts?: AskStreamOpts) {
           }
         }
 
-        // payTo validation against known source wallets — FETCH TOLLS ONLY.
-        // A fetch toll's payTo is a source payout wallet, exposed via /api/sources.
-        // A citation reward's payTo is an AUTHOR wallet, which is deliberately NOT
-        // exposed (author wallets can't be enumerated client-side); the cumulative cap
-        // above is the containment for those. Applying this allow-list to citations
-        // would refuse every payout and dead-end §III with a 30s sign-request timeout.
-        const knownWallets = opts?.knownSourceWallets;
-        if (kind !== "citation" && knownWallets && knownWallets.size > 0) {
-          if (!knownWallets.has(requirements.payTo.toLowerCase())) {
+        // payTo validation — the last gate before a bearer authorization exists.
+        // Both fetch tolls and citation rewards are checked against the wallets the
+        // on-chain registry authorises for this exact source. A sourceId the browser
+        // never saw in /api/sources, or a registry it cannot read, means refuse: the
+        // server's timeout skips the source, which costs a reward, not the user's USDC.
+        //
+        // sourceId is absent only when an older server build is still streaming (a
+        // rolling deploy). Fall back to cap-only enforcement rather than refusing every
+        // payment mid-swap; the cap remains the binding ceiling either way.
+        const index = opts?.sourceIndex;
+        if (sourceId && index && index.size > 0) {
+          const { resolveAllowedPayTo } = await import("@/lib/payments/client-payto-allowlist");
+          const allowed = await resolveAllowedPayTo(sourceId, index);
+          if (!allowed) {
             console.warn(
-              `[keryx] sign-request refused: payTo ${requirements.payTo} is not a known source wallet`,
+              `[keryx] sign-request refused: cannot establish the authorised payees for source ${sourceId}`,
+            );
+            return;
+          }
+          if (!allowed.has(requirements.payTo.toLowerCase())) {
+            console.warn(
+              `[keryx] sign-request refused: payTo ${requirements.payTo} is not an authorised payee of ${sourceId}`,
             );
             return;
           }
@@ -254,8 +267,8 @@ export function useAskStream(opts?: AskStreamOpts) {
     }
   // opts is an object reference — destructure the primitive/stable values into the dep array
   // so the hook re-creates handleEvent when the grant activates or the cap changes.
-  // knownSourceWallets is a Set: stable after the one-time /api/sources fetch in app/page.tsx.
-  }, [opts?.sessionId, opts?.getSessionWalletClient, opts?.grantCap, opts?.knownSourceWallets]);
+  // sourceIndex is a Map: stable after the one-time /api/sources fetch in app/page.tsx.
+  }, [opts?.sessionId, opts?.getSessionWalletClient, opts?.grantCap, opts?.sourceIndex]);
 
   const ask = useCallback(
     async (question: string, budget: number) => {
