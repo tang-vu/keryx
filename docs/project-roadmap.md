@@ -53,6 +53,7 @@ Live figures at [`/status`](https://keryx.cc/status); snapshots in [TRACTION.md]
 | Gateway-verified grant cap | Grant cap clamped to the USDC Circle's Gateway actually holds | ✓ Done 2026-07-09 | Closes R2 |
 | Persist grant state | Grants in the `session_grants` table; `spent` survives a restart, expired rows swept at boot | ✓ Done 2026-07-09 | Closes R4 |
 | Worker session key | Key derived and held in a dedicated Web Worker; tab stores only AES-GCM ciphertext under a non-extractable wrapping key; the worker refuses unauthorised payees and any transaction outside USDC/Gateway | ✓ Done 2026-07-09 | Narrows R3 |
+| On-chain registration live | Registry switched on: creators register from their own wallet, indexer projects events into the cache | ✓ Done 2026-07-10 | Ends server-generated payout keys for new sources |
 | Lit Protocol | Integrate Lit for client-side IPFS key release | Blocked | Closes C2; needs Arc on Lit's chain list |
 
 **Two plan corrections found while building:**
