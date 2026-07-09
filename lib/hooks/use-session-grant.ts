@@ -216,10 +216,16 @@ export function useSessionGrant() {
       const { error } = (await res.json().catch(() => ({}))) as { error?: string };
       throw new Error(error ?? "grant registration failed");
     }
-    const { sessionId, expiresAt } = (await res.json()) as { sessionId: string; expiresAt: string };
+    // The server re-reads the Gateway itself and clamps the cap to what is really there.
+    // Trust its number over the one we read a moment ago — a spend could have landed since.
+    const { sessionId, expiresAt, cap } = (await res.json()) as {
+      sessionId: string;
+      expiresAt: string;
+      cap?: number;
+    };
     saveToStorage(sk, sessAddr, sessionId);
     clearPending(); // credit confirmed → no longer waiting
-    setState({ status: "active", sessAddr, sessionId, cap: residualUsdc, spent: 0, expiresAt, error: null });
+    setState({ status: "active", sessAddr, sessionId, cap: cap ?? residualUsdc, spent: 0, expiresAt, error: null });
     return true;
   }, []);
 

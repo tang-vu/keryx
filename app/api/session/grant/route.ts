@@ -10,10 +10,11 @@
  * enforce the cap. It stores ONLY { sessAddr, ownerAddr, cap, expiry, txHash }
  * — never a private key (there is none server-side for user sessions).
  *
- * Best-effort on-chain check: reads the session EOA's native balance (Arc USDC ==
- * native token) before storing the grant. Rejects when the balance is verifiably
- * zero (unfunded EOA). If the RPC call fails, the grant is allowed (fail-open so
- * RPC hiccups don't hard-block legit users) but the failure is logged.
+ * The cap is never the number the client asked for: it is clamped to the USDC Circle's
+ * Gateway actually holds for the session EOA. A client that overstates its deposit gets
+ * the real balance as its ceiling instead of a rejection, so an honest client racing its
+ * own agent's spend is never dead-ended. When Circle cannot be reached we fall back to
+ * the session EOA's native balance, which at least proves the address was funded.
  *
  * SIWE session required. Only the authenticated wallet can create a grant.
  */
@@ -23,6 +24,7 @@ import { createPublicClient, http, parseUnits } from "viem";
 import { arcTestnet } from "viem/chains";
 import { getSession } from "@/lib/auth";
 import { storeGrant, grantExpiry } from "@/lib/payments/session-grants";
+import { getGatewayAvailableAtomic } from "@/lib/gateway/gateway-balance";
 import { config } from "@/lib/config";
 
 export const runtime = "nodejs";
@@ -65,39 +67,63 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "txHash is required" }, { status: 400 });
   }
 
-  // Best-effort on-chain balance check — reject grant for verifiably unfunded EOAs.
-  // On Arc, USDC == native gas token (same balance, two views). We read native balance
-  // (18-decimal) which is always available without an ERC-20 call.
-  // Threshold: the claimed budget converted to 18-decimal (native) with 10% slack to
-  // tolerate gas costs already spent during approve/deposit steps.
-  // Skipped in recovery mode: the funds are in the Gateway, not the EOA, so a recovered
-  // session's EOA balance is legitimately ~0. The cap is bounded by the residual the
-  // browser read from the Gateway credit API, and settlement can't exceed real deposits.
-  if (!recover) try {
-    const publicClient = createPublicClient({
-      chain: arcTestnet,
-      transport: http(config.rpcUrl),
-    });
-    const native = await publicClient.getBalance({ address: sessAddr as `0x${string}` });
-    // Minimum: 10% of the claimed cap to allow for gas already consumed. A truly
-    // unfunded EOA has 0 balance; we don't penalise partially-spent ones.
-    const minNative = parseUnits((budget * 0.1).toFixed(18), 18);
-    if (native < minNative) {
+  // The Gateway balance is what settlement actually draws on, so it — not the client's
+  // claim — decides the cap. A definite answer is authoritative in both directions:
+  // zero means the deposit never landed, and anything less than the claim clamps it.
+  const availableAtomic = await getGatewayAvailableAtomic(sessAddr);
+  let cap = budget;
+
+  if (availableAtomic !== null) {
+    const availableUsdc = Number(availableAtomic) / 1e6;
+    if (availableUsdc <= 0) {
       return Response.json(
         {
           error:
-            "Session EOA appears unfunded — fund the address with USDC on Arc before creating a grant.",
+            "Circle's Gateway holds no USDC for this session address — the deposit may still be confirming.",
           sessAddr,
         },
         { status: 402 },
       );
     }
-  } catch (err) {
-    // RPC hiccup — fail open so a flaky RPC node doesn't hard-block users.
-    console.warn(
-      "[grant] on-chain balance check failed (fail-open):",
-      err instanceof Error ? err.message : String(err),
-    );
+    if (availableUsdc < budget) {
+      console.warn(
+        `[grant] clamping cap for ${sessAddr}: claimed ${budget} > available ${availableUsdc}`,
+      );
+      cap = availableUsdc;
+    }
+  } else if (!recover) {
+    // Circle is unreachable. Fall back to proving the EOA was funded at all: on Arc,
+    // USDC is the native gas token, so a native balance read needs no ERC-20 call.
+    // Skipped when recovering — those funds sit in the Gateway, so the EOA is legitimately
+    // near-empty and this check would reject every valid recovery.
+    try {
+      const publicClient = createPublicClient({
+        chain: arcTestnet,
+        transport: http(config.rpcUrl),
+      });
+      const native = await publicClient.getBalance({ address: sessAddr as `0x${string}` });
+      // 10% of the claimed cap: a truly unfunded EOA holds zero, and we don't want to
+      // penalise one that already spent gas on its approve + deposit.
+      if (native < parseUnits((budget * 0.1).toFixed(18), 18)) {
+        return Response.json(
+          {
+            error:
+              "Session EOA appears unfunded — fund the address with USDC on Arc before creating a grant.",
+            sessAddr,
+          },
+          { status: 402 },
+        );
+      }
+    } catch (err) {
+      // Both Circle and the RPC are unreachable. Fail open: an inflated cap only lets the
+      // liar's own settlements 402 at Circle, which holds the real ceiling regardless.
+      console.warn(
+        "[grant] no funding check possible (fail-open):",
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  } else {
+    console.warn(`[grant] Circle unreachable — recovered grant for ${sessAddr} not balance-checked`);
   }
 
   // One active grant per SIWE address — use the address as the sessionId so
@@ -109,7 +135,7 @@ export async function POST(req: NextRequest) {
   storeGrant(sessionId, {
     sessAddr,
     ownerAddr: session.address,
-    cap: budget,
+    cap,
     expiry: grantExpiry(),
     txHash: txHash ?? "recovered", // no new funding tx in recovery mode
   });
@@ -118,7 +144,7 @@ export async function POST(req: NextRequest) {
     ok: true,
     sessionId,
     sessAddr,
-    cap: budget,
+    cap,
     // Echo expiry so the browser can show the remaining TTL.
     expiresAt: new Date(grantExpiry()).toISOString(),
   });
