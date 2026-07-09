@@ -31,9 +31,14 @@ import { REGISTRY_ABI, getRegistrySource } from "@/lib/registry/registry-client"
 import type { KeryxDB } from "./keryx-db";
 import type { Author, Source } from "@/lib/types";
 
-// BigInt() constructor used instead of `500n` literal — tsconfig targets ES2017 which
-// predates BigInt literal syntax (ES2020+), though BigInt itself is available at runtime.
-const CHUNK_SIZE = BigInt(500);
+// BigInt() constructor used instead of a `10000n` literal — tsconfig targets ES2017, which predates
+// BigInt literal syntax (ES2020+), though BigInt itself is available at runtime.
+// 10_000 is the widest span Arc's public RPC serves; 50_000 is refused. At 500 a cold start from the
+// deploy block would have cost ~7,000 getLogs calls in a single pass.
+const CHUNK_SIZE = BigInt(10_000);
+// Chunks per pass. A cold or long-stalled index catches up over several ticks instead of hammering
+// the RPC in one unbounded loop — each pass still checkpoints, so no ground is re-covered.
+const MAX_CHUNKS_PER_PASS = 20;
 const SYNC_KEY = "lastSyncedBlock";
 
 function getPublicClient() {
@@ -62,7 +67,9 @@ export async function syncOnce(db: KeryxDB): Promise<void> {
   const from = lastSynced + BigInt(1);
   if (from > head) return;
 
+  let chunks = 0;
   for (let lo = from; lo <= head; lo += CHUNK_SIZE) {
+    if (chunks++ >= MAX_CHUNKS_PER_PASS) return; // the next tick resumes from the checkpoint
     const hi = lo + CHUNK_SIZE - BigInt(1) < head ? lo + CHUNK_SIZE - BigInt(1) : head;
 
     const logs = await client.getLogs({
@@ -91,6 +98,11 @@ export async function syncOnce(db: KeryxDB): Promise<void> {
  * SourceDeactivated:
  *   - Sets active=false on the cached row via a targeted upsert.
  *   - Uses a partial update that preserves existing human-readable fields.
+ *
+ * A source is found by its on-chain id first, and only then by the row id. Sources registered on
+ * Arc before this cache existed carry human-readable slug ids with the hash in `onchain_id`; keying
+ * a row by the hash alone would mint a second row beside them on the first `SourceUpdated`, and a
+ * `SourceDeactivated` would sail past the real one.
  */
 export async function applyLogs(logs: Log[], db: KeryxDB): Promise<void> {
   for (const log of logs) {
@@ -110,12 +122,18 @@ export async function applyLogs(logs: Log[], db: KeryxDB): Promise<void> {
       // fetchPriceUsdc6 is in 6-decimal USDC units; convert to float USDC for the cache layer.
       const fetchPrice = Number(record.fetchPriceUsdc6) / 1_000_000;
 
+      const existing = await resolveSource(db, id);
+
       // Map on-chain basis-point splits → Author.splitWeight = basisPoints / 10_000, stored as a
       // float in the cache. The float is lossless for payouts: settlement allocates the reward in
       // integer micro-USDC (allocateSplit) so the legs sum to exactly the reward regardless of any
       // float representation of the weights — no per-payout rounding drift downstream.
+      // Author names are off-chain; carry over the one this row already had for that wallet.
+      const knownNames = new Map(
+        (existing?.authors ?? []).map((a) => [a.walletAddress.toLowerCase(), a.name]),
+      );
       const authors: Author[] = record.authors.map((a) => ({
-        name: a.wallet, // overridden below if source_meta has author names
+        name: knownNames.get(a.wallet.toLowerCase()) ?? a.wallet,
         walletAddress: a.wallet,
         splitWeight: a.basisPoints / 10_000,
       }));
@@ -127,29 +145,32 @@ export async function applyLogs(logs: Log[], db: KeryxDB): Promise<void> {
 
       // Read off-chain metadata written by POST /api/sources at register time.
       // Payment fields always come from chain; name/description/url come from source_meta.
-      // Falls back to short non-hex placeholders if metadata is not yet available.
       const meta = await db.getSourceMeta(id);
 
-      // On-chain register() is the same permissionless squatting vector as the web form, so a
-      // freshly-indexed source starts UNVERIFIED (off the agent's money path until its owner
-      // proves feed control via POST /api/sources/verify). Re-indexing (SourceUpdated) must
-      // never downgrade an already-verified row, so preserve the existing flag when present.
-      const existing = await db.getSource(id);
-      const verified = existing?.verified ?? false;
-
       const source: Source = {
-        id,
-        name: meta?.name || `source-${id.slice(2, 8)}`,  // short non-hex fallback
-        url: meta?.url || "",
-        description: meta?.description || "",
+        // Keep the id the row already has. Sources that predate this cache use a slug.
+        id: existing?.id ?? id,
+        name: meta?.name || existing?.name || `source-${id.slice(2, 8)}`, // short non-hex fallback
+        url: meta?.url || existing?.url || "",
+        description: meta?.description || existing?.description || "",
+        // Not on-chain, and losing it would silently stop the feed ingest for this source.
+        rssUrl: existing?.rssUrl,
         walletAddress: record.payoutWallet,
         fetchPrice,
         tags,
         authors,
         active: true,
-        verified,
-        createdAt: new Date().toISOString(),
+        // On-chain register() is the same permissionless squatting vector as the web form, so a
+        // freshly-indexed source starts UNVERIFIED (off the agent's money path until its owner
+        // proves feed control via POST /api/sources/verify). Re-indexing must never downgrade an
+        // already-verified row.
+        verified: existing?.verified ?? false,
+        createdAt: existing?.createdAt ?? new Date().toISOString(),
         ipfsCid: record.contentCid || undefined,
+        // Without this the row would carry no registry id, and the payTo guard — which only
+        // consults the chain for sources that have one — would quietly wave its payouts through.
+        onchainId: id,
+        registerTx: existing?.registerTx ?? (log as { transactionHash?: string }).transactionHash,
       };
 
       await db.upsertSource(source);
@@ -158,17 +179,24 @@ export async function applyLogs(logs: Log[], db: KeryxDB): Promise<void> {
       const id = args["id"] as string | undefined;
       if (!id) continue;
 
-      // Read existing row and re-upsert with active=false.
-      // Preserves all human-readable fields; only flips the active flag.
-      // If the row doesn't exist yet (e.g. indexer missed the Register event due to
-      // a prior RPC failure and the chunk was retried), skip — the Register retry
-      // will set active from the on-chain record which already has active=false.
-      const existing = await db.getSource(id);
+      // Re-upsert with active=false, preserving every off-chain field.
+      // If the row doesn't exist yet (e.g. the indexer missed the Register event due to an RPC
+      // failure and the chunk was retried), skip — the Register retry sets active from the
+      // on-chain record, which already reads false.
+      const existing = await resolveSource(db, id);
       if (existing) {
         await db.upsertSource({ ...existing, active: false });
       }
     }
   }
+}
+
+/**
+ * The row this on-chain id belongs to: by registry id first, then by row id for the rows the
+ * indexer minted itself (those are keyed by the hash, having never had a slug).
+ */
+async function resolveSource(db: KeryxDB, onchainId: string): Promise<Source | null> {
+  return (await db.getSourceByOnchainId(onchainId)) ?? (await db.getSource(onchainId));
 }
 
 let _started = false;

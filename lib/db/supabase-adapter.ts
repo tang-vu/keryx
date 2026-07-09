@@ -115,6 +115,15 @@ export class SupabaseAdapter implements KeryxDB {
     return data ? rowToSource(data) : null;
   }
 
+  async getSourceByOnchainId(onchainId: string): Promise<Source | null> {
+    const { data } = await this.sb
+      .from("sources")
+      .select("*")
+      .ilike("onchain_id", onchainId)
+      .maybeSingle();
+    return data ? rowToSource(data) : null;
+  }
+
   async addItems(items: SourceItem[]): Promise<void> {
     if (!items.length) return;
     await this.sb.from("source_items").upsert(

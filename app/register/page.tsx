@@ -21,6 +21,7 @@ import Link from "next/link";
 import { ShieldCheck, Wallet } from "lucide-react";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { RegisterForm } from "@/components/keryx/register-form";
+import { FaucetPanel } from "@/components/keryx/faucet-panel";
 import { WithdrawEarningsPanel } from "@/components/keryx/withdraw-earnings-panel";
 import {
   SourcesList,
@@ -123,6 +124,12 @@ export default function RegisterPage() {
                 </div>
                 {/* Returning creators: pull accrued citation earnings on-chain (gasless). */}
                 {address && <WithdrawEarningsPanel address={address} />}
+                {/* Registering writes the source to the on-chain registry from the creator's own
+                    wallet, so it costs gas. A wallet arriving here empty would dead-end at the
+                    signature prompt; the drip is one click and one claim per address. */}
+                <div className="mb-4">
+                  <FaucetPanel />
+                </div>
                 <RegisterForm
                   onCreated={loadSources}
                   prefillWalletAddress={address}

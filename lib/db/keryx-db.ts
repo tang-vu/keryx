@@ -115,6 +115,9 @@ export interface KeryxDB {
   upsertSource(source: Source): Promise<void>;
   listSources(): Promise<Source[]>;
   getSource(id: string): Promise<Source | null>;
+  /** Look up a source by its on-chain registry id (bytes32). The indexer uses this to update the
+   *  row a source already has, instead of minting a second one keyed by the hash. */
+  getSourceByOnchainId(onchainId: string): Promise<Source | null>;
   /** Store off-chain human-readable metadata keyed by source id.
    *  Called by POST /api/sources at register time so the indexer can merge
    *  name/description/url into the on-chain cache row. */

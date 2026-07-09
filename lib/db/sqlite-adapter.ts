@@ -268,6 +268,13 @@ export class SqliteAdapter implements KeryxDB {
     return row ? rowToSource(row) : null;
   }
 
+  async getSourceByOnchainId(onchainId: string): Promise<Source | null> {
+    const row = this.db
+      .prepare(`SELECT * FROM sources WHERE lower(onchain_id) = lower(?) LIMIT 1`)
+      .get(onchainId);
+    return row ? rowToSource(row) : null;
+  }
+
   async addItems(items: SourceItem[]): Promise<void> {
     const stmt = this.db.prepare(
       `INSERT OR REPLACE INTO source_items
