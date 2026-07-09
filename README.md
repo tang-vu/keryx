@@ -113,6 +113,9 @@ Example trace (real output):
 - **Non-custodial by design** — interactive spend uses a session EOA the *user* funds from their
   own wallet; the browser co-signs each x402 authorization in-tab. The funded amount is the hard
   cap. Keryx never holds your key or your funds.
+- **The chain decides who gets paid** — before anything signs or settles, every payee is checked
+  against the on-chain SourceRegistry, not against Keryx's database. Editing the database cannot
+  reroute a single citation reward, on any path — browser, volume engine, or A2A.
 - **Transparent treasury** — [`/api/treasury`](https://keryx.cc/api/treasury) publishes the
   settlement wallet's chain-abstracted Gateway balance (via Circle App Kit), so anyone can audit
   what backs the payouts.
@@ -291,8 +294,8 @@ Keryx started at the **Lepton Agents Hackathon** (Canteen × Circle, on Arc, Jun
 canonical build of the "herald" model — *content cited, paid per citation* — and never stopped
 running. It has been live at [keryx.cc](https://keryx.cc) since, settling real value every hour,
 onboarding real feeds, and shipping continuously in public. Next: hardening the non-custodial
-path (Web Crypto keys, Lit Protocol), growing external agent traffic through the MCP and A2A
-on-ramps, and a single config flag between this system and mainnet.
+path (worker-held session keys, Lit Protocol), growing external agent traffic through the MCP and
+A2A on-ramps, and a single config flag between this system and mainnet.
 
 ## Stack
 

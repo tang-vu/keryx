@@ -43,17 +43,26 @@ Live figures at [`/status`](https://keryx.cc/status); snapshots in [TRACTION.md]
 
 ## Next Phases (Q3 2026)
 
-### Phase 07: Security Upgrades (Priority: High) — Est. 2 weeks
+### Phase 07: Security Upgrades (Priority: High) — In progress
 
 **Goals:** Eliminate documented trade-offs + close residuals (R1–R4).
 
-| Task | Description | Effort | Notes |
+| Task | Description | Status | Notes |
 |------|-------------|--------|-------|
-| Web Crypto keys | Non-exportable session keypair; browser-only signing | 3d | Eliminates R3 (sessionStorage XSS) |
-| Lit Protocol | Integrate Lit for client-side IPFS key release | 2d | Closes C2 (server key-holder); needs Arc on Lit's chain list |
-| On-chain deposit verify | Query Gateway balance API before marking grant active | 1d | Closes R2 (funding trust) |
-| Author manifest | Server signs author-wallet list; client validates citation payTo | 2d | Closes R1 (payTo redirect under compromise) |
-| **Phase 07 Total** | | ~1.5w | Backpressure: Arc on Lit support, Circle API access |
+| On-chain payTo guard | Citation + fetch payTo validated against SourceRegistry, in the browser *and* on the server | ✓ Done 2026-07-09 | Supersedes the "author manifest" idea below. Narrows R1 |
+| Gateway-verified grant cap | Grant cap clamped to the USDC Circle's Gateway actually holds | ✓ Done 2026-07-09 | Closes R2 |
+| Worker session key | Key held in a dedicated Web Worker; persisted only as AES-GCM ciphertext under a non-extractable wrapping key | Next | Narrows R3 |
+| Persist grant state | Grant metadata in DB so a restart doesn't strand funded sessions | Planned | Closes R4 |
+| Lit Protocol | Integrate Lit for client-side IPFS key release | Blocked | Closes C2; needs Arc on Lit's chain list |
+
+**Two plan corrections found while building:**
+- *"Web Crypto non-exportable session key"* is not achievable as written. `SubtleCrypto` supports
+  P-256/384/521, never secp256k1, so an Ethereum key cannot be a non-exportable `CryptoKey`. The
+  worker + wrapped-ciphertext design above is the reachable version of the same goal.
+- *"Server signs an author-wallet manifest"* would have been signed by a key held on the very host
+  the manifest is meant to protect against, and would have done nothing for the volume-engine and
+  A2A paths, which have no browser. Reading the on-chain registry instead needs no new key, and
+  covers every path.
 
 ---
 
