@@ -19,7 +19,8 @@
  */
 
 import { NextRequest } from "next/server";
-import { resolveSignature, getGrant } from "@/lib/payments/session-grants";
+import { getGrant } from "@/lib/payments/session-grants";
+import { resolveSignature } from "@/lib/payments/pending-signatures";
 
 export const runtime = "nodejs";
 
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
 
   // Verify the sessionId maps to an active grant so a rogue caller can't resolve
   // arbitrary pending promises by guessing reqIds.
-  const grant = getGrant(sessionId);
+  const grant = await getGrant(sessionId);
   if (!grant) {
     return Response.json({ error: "no active grant for sessionId" }, { status: 404 });
   }

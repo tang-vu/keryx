@@ -39,6 +39,27 @@ export interface SourceNotify {
   secret: string;
 }
 
+/** A browser co-sign spending session: the user funded a session EOA and authorised Keryx to
+ *  request signatures from it up to `cap` USDC. Persisted so a deploy or crash does not strand a
+ *  funded session, and — more importantly — so `spent` survives a restart: an in-memory counter
+ *  reset the cap accounting every time the process bounced. There is no private key here; the key
+ *  lives only in the browser tab that derived it. */
+export interface SessionGrantRecord {
+  /** Lowercased SIWE address of the owner; one active grant per wallet. */
+  sessionId: string;
+  /** The session EOA whose Gateway balance backs these payments. */
+  sessAddr: string;
+  ownerAddr: string;
+  /** Total USDC the user funded — the hard spending ceiling. */
+  cap: number;
+  /** USDC spent so far under this grant (monotonically increasing). */
+  spent: number;
+  /** Unix ms at which this grant lapses. */
+  expiry: number;
+  /** On-chain tx that funded the session EOA, or "recovered". Record-keeping only. */
+  txHash: string;
+}
+
 /** A row from api_keys (safe to return to the owner — no hash, no raw key). */
 export interface ApiKeyRow {
   id: string;
@@ -120,6 +141,18 @@ export interface KeryxDB {
   getSyncState(key: string): Promise<string | null>;
   /** Upsert a named sync-state value. */
   setSyncState(key: string, value: string): Promise<void>;
+
+  // ── browser co-sign session grants (no keys, only caps + accounting) ──
+  /** Create or replace the grant for a session id. Resets `spent` — callers re-register with a
+   *  cap read from the live Gateway balance, which already nets out earlier spends. */
+  upsertSessionGrant(grant: Omit<SessionGrantRecord, "spent">): Promise<void>;
+  /** Fetch a grant. Returns null when absent; expiry is the caller's to interpret. */
+  getSessionGrant(sessionId: string): Promise<SessionGrantRecord | null>;
+  /** Atomically add to `spent`. False when no grant row exists to charge. */
+  addSessionGrantSpend(sessionId: string, amount: number): Promise<boolean>;
+  deleteSessionGrant(sessionId: string): Promise<void>;
+  /** Drop every grant that lapsed at or before `now` (unix ms). */
+  deleteExpiredSessionGrants(now: number): Promise<void>;
 
   // ── query runs ──
   saveQueryRun(run: QueryRun): Promise<void>;

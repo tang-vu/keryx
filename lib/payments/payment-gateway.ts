@@ -57,10 +57,16 @@ export async function getPaymentGateway(db: KeryxDB, opts?: GatewayOpts): Promis
 
   // Browser co-sign path: active session grant + sign callback injected by the SSE route.
   if (opts?.sessionId && opts?.requestSignature) {
-    const { isGrantValid } = await import("./session-grants");
-    if (isGrantValid(opts.sessionId)) {
+    const { getGrant } = await import("./session-grants");
+    const grant = await getGrant(opts.sessionId);
+    if (grant) {
       const { BrowserCoSignGateway } = await import("./browser-cosign-gateway");
-      return new BrowserCoSignGateway(opts.sessionId, opts.requestSignature, opts.abortSignal);
+      return new BrowserCoSignGateway(
+        opts.sessionId,
+        grant.sessAddr,
+        opts.requestSignature,
+        opts.abortSignal,
+      );
     }
   }
 

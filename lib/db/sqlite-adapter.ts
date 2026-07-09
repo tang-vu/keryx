@@ -16,7 +16,7 @@ import type {
   SourceItem,
   WithdrawalRecord,
 } from "../types";
-import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, FeedbackStats, KeryxDB, QueryMemoryEntry, UserRecord } from "./keryx-db";
+import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, FeedbackStats, KeryxDB, QueryMemoryEntry, SessionGrantRecord, UserRecord } from "./keryx-db";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 
@@ -106,6 +106,16 @@ CREATE TABLE IF NOT EXISTS query_memories (
   topics        TEXT NOT NULL,          -- JSON: string[]
   created_at    TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS session_grants (
+  session_id TEXT PRIMARY KEY,          -- lowercased SIWE address; one active grant per wallet
+  sess_addr  TEXT NOT NULL,             -- session EOA (public address only — never its key)
+  owner_addr TEXT NOT NULL,
+  cap        REAL NOT NULL,             -- USDC ceiling, clamped to the real Gateway balance
+  spent      REAL NOT NULL DEFAULT 0,
+  expiry     INTEGER NOT NULL,          -- unix ms
+  tx_hash    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS session_grants_expiry ON session_grants(expiry);
 `;
 
 export class SqliteAdapter implements KeryxDB {
@@ -346,6 +356,57 @@ export class SqliteAdapter implements KeryxDB {
         `INSERT OR REPLACE INTO sync_state (key,value,updated_at) VALUES (?,?,?)`,
       )
       .run(key, value, new Date().toISOString());
+  }
+
+  // ── session grants ──
+
+  async upsertSessionGrant(grant: Omit<SessionGrantRecord, "spent">): Promise<void> {
+    this.db
+      .prepare(
+        `INSERT OR REPLACE INTO session_grants
+           (session_id, sess_addr, owner_addr, cap, spent, expiry, tx_hash)
+         VALUES (?,?,?,?,0,?,?)`,
+      )
+      .run(
+        grant.sessionId,
+        grant.sessAddr,
+        grant.ownerAddr,
+        grant.cap,
+        grant.expiry,
+        grant.txHash,
+      );
+  }
+
+  async getSessionGrant(sessionId: string): Promise<SessionGrantRecord | null> {
+    const r = this.db
+      .prepare(`SELECT * FROM session_grants WHERE session_id = ?`)
+      .get(sessionId) as Record<string, unknown> | undefined;
+    if (!r) return null;
+    return {
+      sessionId: r.session_id as string,
+      sessAddr: r.sess_addr as string,
+      ownerAddr: r.owner_addr as string,
+      cap: r.cap as number,
+      spent: r.spent as number,
+      expiry: Number(r.expiry),
+      txHash: r.tx_hash as string,
+    };
+  }
+
+  /** Rounded to micro-USDC so repeated float additions can't drift the cap accounting. */
+  async addSessionGrantSpend(sessionId: string, amount: number): Promise<boolean> {
+    const res = this.db
+      .prepare(`UPDATE session_grants SET spent = ROUND(spent + ?, 6) WHERE session_id = ?`)
+      .run(amount, sessionId);
+    return Number(res.changes) > 0;
+  }
+
+  async deleteSessionGrant(sessionId: string): Promise<void> {
+    this.db.prepare(`DELETE FROM session_grants WHERE session_id = ?`).run(sessionId);
+  }
+
+  async deleteExpiredSessionGrants(now: number): Promise<void> {
+    this.db.prepare(`DELETE FROM session_grants WHERE expiry <= ?`).run(now);
   }
 
   async saveQueryRun(run: QueryRun): Promise<void> {

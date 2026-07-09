@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   }
 
   const sessionId = session.address.toLowerCase();
-  const grant = getGrant(sessionId);
+  const grant = await getGrant(sessionId);
 
   // Idempotent: if there's no grant, return success — already revoked.
   if (!grant) {
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "forbidden" }, { status: 403 });
   }
 
-  dropGrant(sessionId);
+  await dropGrant(sessionId);
 
   // Suppress unused-param lint — req is required by Next.js route handler signature.
   void req;

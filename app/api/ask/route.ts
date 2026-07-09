@@ -21,7 +21,8 @@ import { getAgentDeps } from "@/lib/agent";
 import { runAgent } from "@/lib/agent/run-agent";
 import { config } from "@/lib/config";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
-import { awaitSignature, isGrantValid } from "@/lib/payments/session-grants";
+import { isGrantValid } from "@/lib/payments/session-grants";
+import { awaitSignature } from "@/lib/payments/pending-signatures";
 import type { PaymentRequirements } from "@/lib/payments/browser-cosign-gateway";
 import type { QueryRun } from "@/lib/types";
 
@@ -43,13 +44,13 @@ export async function POST(req: NextRequest) {
   // Optional browser co-sign session. Normalise to lowercase to match grant keys.
   const sessionId = body.sessionId ? body.sessionId.toLowerCase() : undefined;
 
-  // If the client presents a session but the server grant is gone (TTL lapsed or a
-  // server restart dropped it), do NOT silently fall back to the treasury gateway —
-  // that would spend Keryx's own USDC for a user who meant to spend their own. Tell
-  // the client to recover (re-derive the key + re-register the grant against the live
-  // Gateway balance). A request with NO sessionId is the legitimate anonymous/treasury
-  // path and is left untouched.
-  if (sessionId && !isGrantValid(sessionId)) {
+  // If the client presents a session but the server grant is gone (TTL lapsed, or the user
+  // revoked it), do NOT silently fall back to the treasury gateway — that would spend Keryx's
+  // own USDC for a user who meant to spend their own. Tell the client to recover (re-derive the
+  // key + re-register the grant against the live Gateway balance). Grants now survive a restart,
+  // so a deploy no longer lands here. A request with NO sessionId is the legitimate
+  // anonymous/treasury path and is left untouched.
+  if (sessionId && !(await isGrantValid(sessionId))) {
     return Response.json(
       {
         error: "session_expired",

@@ -17,7 +17,7 @@
 import { config } from "../config";
 import type { Author, PaymentRecord, Source } from "../types";
 import { makePayment, type FetchResult, type PaymentGateway } from "./payment-gateway";
-import { canSpend, getGrant, isGrantValid, recordSpend } from "./session-grants";
+import { canSpend, isGrantValid, recordSpend } from "./session-grants";
 
 export interface SignRequest {
   reqId: string;
@@ -67,20 +67,22 @@ export class BrowserCoSignGateway implements PaymentGateway {
 
   constructor(
     private readonly sessionId: string,
+    /** Captured at construction: the PaymentGateway contract exposes agentAddress() synchronously,
+     *  and the grant now lives in the database. The factory has already loaded the grant to decide
+     *  this gateway applies, so it hands the address down rather than re-reading it. */
+    private readonly sessAddr: string,
     private readonly requestSignature: RequestSignatureFn,
     private readonly abortSignal?: AbortSignal,
   ) {}
 
   agentAddress(): string {
-    const grant = getGrant(this.sessionId);
-    return grant?.sessAddr ?? "0xSESSION";
+    return this.sessAddr;
   }
 
   async ensureFunded(_budget: number): Promise<{ address: string }> {
     // The user already funded the session EOA and deposited into the Gateway
-    // as part of the grant flow (grant POST verified the balance). No-op here.
-    const grant = getGrant(this.sessionId);
-    return { address: grant?.sessAddr ?? "0xSESSION" };
+    // as part of the grant flow (grant POST clamped the cap to the real balance). No-op here.
+    return { address: this.sessAddr };
   }
 
   async payFetch({ source, queryId }: { source: Source; queryId: string }): Promise<FetchResult> {
@@ -128,13 +130,13 @@ export class BrowserCoSignGateway implements PaymentGateway {
       throw new Error("client disconnected");
     }
 
-    if (!isGrantValid(this.sessionId)) {
+    if (!(await isGrantValid(this.sessionId))) {
       throw new Error("session grant expired or revoked — aborting spend");
     }
 
     // Pre-spend cap guard: enforce before requesting a signature so the browser
     // never signs an authorization the grant can't cover.
-    if (!canSpend(this.sessionId, amount)) {
+    if (!(await canSpend(this.sessionId, amount))) {
       throw new Error(`session cap would be exceeded (amount=${amount})`);
     }
 
@@ -158,8 +160,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
     }
 
     // Step 3: Retry with the signed header — triggers verify+settle server-side.
-    const grant = getGrant(this.sessionId);
-    const payer = grant?.sessAddr ?? "0xSESSION";
+    const payer = this.sessAddr;
 
     const retryRes = await fetch(url, {
       method,
@@ -179,7 +180,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
     // on-chain above; if the grant vanished between canSpend and here (a revoke racing an
     // in-flight settle), the on-chain Gateway balance is still the true ceiling — log the
     // drift rather than discarding a payment that really happened.
-    if (!recordSpend(this.sessionId, amount)) {
+    if (!(await recordSpend(this.sessionId, amount))) {
       console.warn(
         `[keryx] recordSpend skipped for ${this.sessionId} — grant changed mid-settle; on-chain balance remains the cap`,
       );

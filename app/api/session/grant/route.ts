@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
   // stable within the JWT's 7-day lifetime.
   const sessionId = session.address.toLowerCase();
 
-  storeGrant(sessionId, {
+  await storeGrant(sessionId, {
     sessAddr,
     ownerAddr: session.address,
     cap,

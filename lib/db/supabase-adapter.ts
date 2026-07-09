@@ -15,7 +15,7 @@ import type {
   SourceItem,
   WithdrawalRecord,
 } from "../types";
-import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, FeedbackStats, KeryxDB, QueryMemoryEntry, UserRecord } from "./keryx-db";
+import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, FeedbackStats, KeryxDB, QueryMemoryEntry, SessionGrantRecord, UserRecord } from "./keryx-db";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 
@@ -383,6 +383,56 @@ export class SupabaseAdapter implements KeryxDB {
     await this.sb
       .from("sync_state")
       .upsert({ key, value, updated_at: new Date().toISOString() });
+  }
+
+  // ── session grants ──
+
+  async upsertSessionGrant(grant: Omit<SessionGrantRecord, "spent">): Promise<void> {
+    await this.sb.from("session_grants").upsert({
+      session_id: grant.sessionId,
+      sess_addr: grant.sessAddr,
+      owner_addr: grant.ownerAddr,
+      cap: grant.cap,
+      spent: 0,
+      expiry: grant.expiry,
+      tx_hash: grant.txHash,
+    });
+  }
+
+  async getSessionGrant(sessionId: string): Promise<SessionGrantRecord | null> {
+    const { data } = await this.sb
+      .from("session_grants")
+      .select("*")
+      .eq("session_id", sessionId)
+      .maybeSingle();
+    if (!data) return null;
+    return {
+      sessionId: data.session_id,
+      sessAddr: data.sess_addr,
+      ownerAddr: data.owner_addr,
+      cap: Number(data.cap),
+      spent: Number(data.spent),
+      expiry: Number(data.expiry),
+      txHash: data.tx_hash,
+    };
+  }
+
+  /** Delegates to a SQL function so the increment is atomic, matching the SQLite adapter.
+   *  A read-modify-write here would lose a spend whenever two sources settle concurrently. */
+  async addSessionGrantSpend(sessionId: string, amount: number): Promise<boolean> {
+    const { data } = await this.sb.rpc("add_session_grant_spend", {
+      p_session_id: sessionId,
+      p_amount: amount,
+    });
+    return data === true;
+  }
+
+  async deleteSessionGrant(sessionId: string): Promise<void> {
+    await this.sb.from("session_grants").delete().eq("session_id", sessionId);
+  }
+
+  async deleteExpiredSessionGrants(now: number): Promise<void> {
+    await this.sb.from("session_grants").delete().lte("expiry", now);
   }
 
   // ── api keys ──
