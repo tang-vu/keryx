@@ -254,15 +254,18 @@ Keryx runs as a real service, not a demo that dies after the video:
 
 ## Security & honest trade-offs
 
-The interactive path is non-custodial, with four documented testnet trade-offs (each with an
-upgrade path in the [roadmap](./docs/project-roadmap.md)):
+The interactive path is non-custodial, with the remaining testnet trade-offs documented (each with
+an upgrade path in the [roadmap](./docs/project-roadmap.md)):
 
 1. **Circle facilitator** — x402 settlement batches through Circle's facilitator (no on-chain
    alternative on Arc testnet yet).
 2. **Server holds the IPFS decryption key** — content is encrypted at rest, but key release is
    server-side (Lit Protocol planned once Arc is supported).
-3. **Session key lives in `sessionStorage`** — cap-bounded by design; non-exportable Web Crypto
-   keys are the planned upgrade.
+3. **Session key lives in a Web Worker** — derived there, never returned; the tab holds only
+   AES-GCM ciphertext under a non-extractable key. The worker signs payment authorizations to
+   registry-authorised payees only, and transactions only to USDC/Gateway — so page-level XSS can
+   neither steal the key nor name itself as payee. Residual: the derivation signature is produced
+   on the main thread, a one-call window at setup.
 4. **Treasury gas wallet** — holds gas only, rotated; a compromise cannot touch creator funds.
 
 Full threat matrix and verification results: [`docs/security-threat-model.md`](./docs/security-threat-model.md).
@@ -293,9 +296,9 @@ The reusable building blocks are MIT-licensed and standalone in
 Keryx started at the **Lepton Agents Hackathon** (Canteen × Circle, on Arc, June 2026) as the
 canonical build of the "herald" model — *content cited, paid per citation* — and never stopped
 running. It has been live at [keryx.cc](https://keryx.cc) since, settling real value every hour,
-onboarding real feeds, and shipping continuously in public. Next: hardening the non-custodial
-path (worker-held session keys, Lit Protocol), growing external agent traffic through the MCP and
-A2A on-ramps, and a single config flag between this system and mainnet.
+onboarding real feeds, and shipping continuously in public. Next: Lit Protocol for client-side IPFS
+key release, growing external agent traffic through the MCP and A2A on-ramps, and a single config
+flag between this system and mainnet.
 
 ## Stack
 

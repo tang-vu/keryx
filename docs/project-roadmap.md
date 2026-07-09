@@ -52,7 +52,7 @@ Live figures at [`/status`](https://keryx.cc/status); snapshots in [TRACTION.md]
 | On-chain payTo guard | Citation + fetch payTo validated against SourceRegistry, in the browser *and* on the server | ✓ Done 2026-07-09 | Supersedes the "author manifest" idea below. Narrows R1 |
 | Gateway-verified grant cap | Grant cap clamped to the USDC Circle's Gateway actually holds | ✓ Done 2026-07-09 | Closes R2 |
 | Persist grant state | Grants in the `session_grants` table; `spent` survives a restart, expired rows swept at boot | ✓ Done 2026-07-09 | Closes R4 |
-| Worker session key | Key held in a dedicated Web Worker; persisted only as AES-GCM ciphertext under a non-extractable wrapping key | Next | Narrows R3 |
+| Worker session key | Key derived and held in a dedicated Web Worker; tab stores only AES-GCM ciphertext under a non-extractable wrapping key; the worker refuses unauthorised payees and any transaction outside USDC/Gateway | ✓ Done 2026-07-09 | Narrows R3 |
 | Lit Protocol | Integrate Lit for client-side IPFS key release | Blocked | Closes C2; needs Arc on Lit's chain list |
 
 **Two plan corrections found while building:**
