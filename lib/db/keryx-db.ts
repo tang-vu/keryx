@@ -29,6 +29,10 @@ export interface SourceMeta {
   name: string;
   description: string;
   url: string;
+  /** The feed the creator listed, when it differs from `url`. Not on-chain, and the only place a
+   *  freshly-indexed source can learn it: without it, feed-ownership verification would run
+   *  against the site's homepage and never find the token the creator put in the feed. */
+  rssUrl?: string;
 }
 
 /** A source's notify-on-citation webhook: the URL Keryx POSTs when the source is cited+paid,

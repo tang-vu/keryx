@@ -69,6 +69,7 @@ export class SupabaseAdapter implements KeryxDB {
       name: meta.name,
       description: meta.description,
       url: meta.url,
+      rss_url: meta.rssUrl ?? null,
       updated_at: new Date().toISOString(),
     });
   }
@@ -76,7 +77,7 @@ export class SupabaseAdapter implements KeryxDB {
   async getSourceMeta(id: string): Promise<import("./keryx-db").SourceMeta | null> {
     const { data } = await this.sb
       .from("source_meta")
-      .select("name,description,url")
+      .select("name,description,url,rss_url")
       .eq("id", id)
       .maybeSingle();
     if (!data) return null;
@@ -84,6 +85,7 @@ export class SupabaseAdapter implements KeryxDB {
       name: (data.name as string) ?? "",
       description: (data.description as string) ?? "",
       url: (data.url as string) ?? "",
+      rssUrl: (data.rss_url as string) || undefined,
     };
   }
 

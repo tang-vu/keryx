@@ -16,8 +16,8 @@
  * Idempotent upsert makes retry safe.
  *
  * Off-chain metadata merge: on SourceRegistered, the indexer reads source_meta
- * (written by POST /api/sources at register time) and fills name/description/url from
- * there. Payment-critical fields (payoutWallet, authors, fetchPrice) always come from
+ * (written by POST /api/sources at register time) and fills name/description/url/rssUrl
+ * from there. Payment-critical fields (payoutWallet, authors, fetchPrice) always come from
  * chain. If metadata is missing, short placeholders are used (not hex id slice).
  *
  * Active flag: SourceDeactivated sets active=false via a real Source field.
@@ -153,8 +153,10 @@ export async function applyLogs(logs: Log[], db: KeryxDB): Promise<void> {
         name: meta?.name || existing?.name || `source-${id.slice(2, 8)}`, // short non-hex fallback
         url: meta?.url || existing?.url || "",
         description: meta?.description || existing?.description || "",
-        // Not on-chain, and losing it would silently stop the feed ingest for this source.
-        rssUrl: existing?.rssUrl,
+        // Not on-chain. A first-time registrant's feed arrives via source_meta; an existing row
+        // already knows its own. Losing it strands the source: verification would then check the
+        // site's homepage for a token the creator placed in the feed.
+        rssUrl: meta?.rssUrl || existing?.rssUrl,
         walletAddress: record.payoutWallet,
         fetchPrice,
         tags,

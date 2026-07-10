@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS source_meta (
   name TEXT NOT NULL DEFAULT '',
   description TEXT NOT NULL DEFAULT '',
   url TEXT NOT NULL DEFAULT '',
+  rss_url TEXT,
   updated_at TEXT
 );
 CREATE TABLE IF NOT EXISTS source_notify (
@@ -160,6 +161,15 @@ export class SqliteAdapter implements KeryxDB {
     if (!srcCols.has("verified"))
       this.db.exec(`ALTER TABLE sources ADD COLUMN verified INTEGER NOT NULL DEFAULT 1`);
 
+    // source_meta.rss_url: the feed an on-chain registrant listed. The indexer has nowhere else to
+    // learn it, and /api/sources/verify needs it to check the right document for the ownership token.
+    const metaCols = new Set(
+      (this.db.prepare(`PRAGMA table_info(source_meta)`).all() as { name: string }[]).map(
+        (c) => c.name,
+      ),
+    );
+    if (!metaCols.has("rss_url")) this.db.exec(`ALTER TABLE source_meta ADD COLUMN rss_url TEXT`);
+
     // source_items table: encrypted-content columns added in Phase 04.
     // Existing rows have NULL for these; produce() falls back to DB plaintext content.
     const itemCols = new Set(
@@ -230,18 +240,21 @@ export class SqliteAdapter implements KeryxDB {
   async setSourceMeta(id: string, meta: import("./keryx-db").SourceMeta): Promise<void> {
     this.db
       .prepare(
-        `INSERT OR REPLACE INTO source_meta (id,name,description,url,updated_at) VALUES (?,?,?,?,?)`,
+        `INSERT OR REPLACE INTO source_meta (id,name,description,url,rss_url,updated_at) VALUES (?,?,?,?,?,?)`,
       )
-      .run(id, meta.name, meta.description, meta.url, new Date().toISOString());
+      .run(id, meta.name, meta.description, meta.url, meta.rssUrl ?? null, new Date().toISOString());
   }
 
   async getSourceMeta(id: string): Promise<import("./keryx-db").SourceMeta | null> {
-    const row = this.db.prepare(`SELECT name,description,url FROM source_meta WHERE id=?`).get(id);
+    const row = this.db
+      .prepare(`SELECT name,description,url,rss_url FROM source_meta WHERE id=?`)
+      .get(id);
     if (!row) return null;
     return {
       name: (row.name as string) ?? "",
       description: (row.description as string) ?? "",
       url: (row.url as string) ?? "",
+      rssUrl: (row.rss_url as string) || undefined,
     };
   }
 

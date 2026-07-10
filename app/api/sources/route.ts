@@ -7,11 +7,13 @@
  *
  *   Registry configured (KERYX_REGISTRY_ADDRESS set):
  *     The client's connected wallet signs and submits the registry.register() tx.
- *     The server does NOT write the source row to DB — it arrives via the indexer
+ *     The server does NOT write a new source row to DB — it arrives via the indexer
  *     within ≤4s after the tx is mined. The server DOES:
- *       1. Store off-chain metadata (name/url/description) in source_meta keyed by
+ *       1. Claim the derived id on this creator's pre-registry row for the same URL, if one
+ *          exists, so the indexer updates it instead of minting a duplicate beside it.
+ *       2. Store off-chain metadata (name/url/description/rssUrl) in source_meta keyed by
  *          the derived sourceId so the indexer can merge them on SourceRegistered.
- *       2. Ingest RSS items to DB keyed by sourceId so the agent cache is ready.
+ *       3. Ingest RSS items to DB keyed by the row id so the agent cache is ready.
  *     Returns { mode: "onchain", sourceId, registryAddress, registerParams } where
  *     registerParams contains urlHash (not id) — the contract derives id on-chain.
  *
@@ -35,6 +37,7 @@ import { createSource, type CreateSourceInput } from "@/lib/sources/create-sourc
 import { ingestRss } from "@/lib/ingest/rss";
 import { config } from "@/lib/config";
 import { urlHash, sourceId } from "@/lib/registry/registry-client";
+import { claimOnchainIdForExistingSource } from "@/lib/sources/pre-registry-adoption";
 import { feedContainsToken, verificationToken } from "@/lib/sources/feed-verification";
 import { isDeliverableUrl, randomNotifySecret } from "@/lib/notify/citation-webhook";
 import type { SourceItem } from "@/lib/types";
@@ -161,21 +164,29 @@ export async function POST(req: NextRequest) {
     // Pre-compute the full id so we can key source_meta and RSS items now.
     const sid = sourceId(sessionWallet as `0x${string}`, canonicalUrl);
 
-    // Store off-chain metadata (name/description/url) so the indexer can merge them
-    // when it processes the SourceRegistered event (prevents hex-placeholder display).
+    // If this creator listed this source before the registry was switched on, its row carries no
+    // registry id and the indexer would mint a second one beside it. Claim the id on that row now,
+    // before the tx: it decides which row the event lands on, and therefore which id owns the feed.
+    const claimed = await claimOnchainIdForExistingSource(db, sessionWallet, canonicalUrl, sid);
+    const rowId = claimed?.id ?? sid;
+
+    // Store off-chain metadata so the indexer can merge it when it processes SourceRegistered.
+    // Keyed by the registry id, which is what the indexer has in hand. rssUrl rides along because
+    // it is not on-chain and a freshly-indexed source has no other way to learn its own feed.
     await db.setSourceMeta(sid, {
       name: input.name,
       description: input.description,
       url: canonicalUrl,
+      rssUrl: input.rssUrl,
     });
 
-    // Ingest RSS items to DB now — keyed by the on-chain sourceId so the agent cache
+    // Ingest RSS items to DB now — keyed by the row the indexer will write, so the agent cache
     // is ready before the indexer processes the SourceRegistered event.
     if (feedItems.length > 0) {
       const items: SourceItem[] = feedItems.map((it) => ({
         ...it,
         id: crypto.randomUUID(),
-        sourceId: sid,
+        sourceId: rowId,
       }));
       await db.addItems(items);
     }
@@ -197,11 +208,16 @@ export async function POST(req: NextRequest) {
 
     return Response.json({
       mode: "onchain",
-      sourceId: sid,
+      // The row's id, which is the hash for a first listing and the original slug for a source
+      // that predates the registry. This is what /api/sources/verify expects back.
+      sourceId: rowId,
       registryAddress: config.registryAddress,
-      notify: await applyNotify(sid),
-      // The indexer writes the row UNVERIFIED — earning needs feed-ownership proof first.
-      verification: verificationInfo(sessionWallet, input.rssUrl || canonicalUrl),
+      notify: await applyNotify(rowId),
+      // The indexer writes a NEW row UNVERIFIED — earning needs feed-ownership proof first. A row
+      // claimed from before the registry already gave that proof, and must not be asked again.
+      verification: claimed?.verified
+        ? null
+        : verificationInfo(sessionWallet, input.rssUrl || canonicalUrl),
       registerParams: {
         // urlHash is passed to register(); contract derives the sourceId on-chain.
         urlHash: uh,

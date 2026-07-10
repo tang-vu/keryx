@@ -54,7 +54,9 @@ const slugRow: Source = {
   registerTx: "0xdeadbeef",
 };
 
-function fakeDb(rows: Source[] = [], meta: Record<string, { name: string; description: string; url: string }> = {}) {
+type FakeMeta = { name: string; description: string; url: string; rssUrl?: string };
+
+function fakeDb(rows: Source[] = [], meta: Record<string, FakeMeta> = {}) {
   const table = new Map(rows.map((r) => [r.id, structuredClone(r)]));
   return {
     table,
@@ -146,6 +148,23 @@ describe("a source the cache has never seen", () => {
     const db = fakeDb();
     await applyLogs([registered(ONCHAIN_ID)] as any, db as any);
     expect(db.table.get(ONCHAIN_ID)!.name).toBe("source-162cd3");
+  });
+
+  it("takes its feed from the metadata, the only place a first listing can carry one", async () => {
+    // Without this the row lands feedless and /api/sources/verify checks the site's homepage for a
+    // token the creator placed in the feed — so the source could never verify, and never earn.
+    const meta = {
+      [ONCHAIN_ID]: {
+        name: "New Source",
+        description: "d",
+        url: "https://new.example",
+        rssUrl: "https://new.example/rss.xml",
+      },
+    };
+    const db = fakeDb([], meta);
+    await applyLogs([registered(ONCHAIN_ID)] as any, db as any);
+
+    expect(db.table.get(ONCHAIN_ID)!.rssUrl).toBe("https://new.example/rss.xml");
   });
 
   it("is ignored when the chain has no record for it", async () => {
