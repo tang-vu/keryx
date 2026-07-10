@@ -13,7 +13,12 @@
  * The creator is the source's own payout wallet, so only a source whose key this host holds can be
  * backfilled here. A creator-owned source must be registered by its owner, from their own wallet.
  *
- * Usage: npm run register-onchain -- <source-id> [<source-id> …]
+ * Safe to re-run. A row whose id was written but whose transaction never landed is retried; one
+ * whose transaction did land is reconciled against the chain rather than re-sent.
+ *
+ * Usage:
+ *   npm run register-onchain -- <source-id> [<source-id> …]
+ *   npm run register-onchain -- --all        (every source that carries no registry id yet)
  */
 
 import {
@@ -28,7 +33,12 @@ import { privateKeyToAccount } from "viem/accounts";
 import { arcTestnet } from "viem/chains";
 import { getDb } from "../lib/db/index.ts";
 import { config } from "../lib/config.ts";
-import { REGISTRY_ABI, sourceId, urlHash } from "../lib/registry/registry-client.ts";
+import {
+  REGISTRY_ABI,
+  getRegistrySource,
+  sourceId,
+  urlHash,
+} from "../lib/registry/registry-client.ts";
 import { findWallet } from "../lib/sources/wallet-store.ts";
 import type { Author, Source } from "../lib/types.ts";
 
@@ -42,6 +52,7 @@ const publicClient = createPublicClient({ chain: arcTestnet, transport: http(con
  * independently can leave the sum a point short or long, so the last author absorbs the remainder.
  */
 function toBasisPoints(authors: Author[]): { wallet: Hex; basisPoints: number }[] {
+  if (authors.length === 0) throw new Error("source has no authors to split its rewards between");
   const split = authors.map((a) => ({
     wallet: a.walletAddress as Hex,
     basisPoints: Math.round(a.splitWeight * 10_000),
@@ -72,7 +83,7 @@ async function ensureGas(creator: Hex): Promise<void> {
 }
 
 async function register(source: Source): Promise<void> {
-  if (source.onchainId) {
+  if (source.onchainId && source.registerTx) {
     console.log(`  already on-chain (${source.onchainId.slice(0, 12)}…) — skipping`);
     return;
   }
@@ -89,6 +100,15 @@ async function register(source: Source): Promise<void> {
 
   const id = sourceId(creator, canonicalUrl);
   const db = await getDb();
+
+  // An earlier attempt may have written the id and then died — before its transaction, or after it.
+  // Only the chain knows which, and re-sending register() for a record that already exists would
+  // just revert. Reconcile the row instead, and let a genuinely unregistered source fall through.
+  if (await getRegistrySource(id)) {
+    await db.upsertSource({ ...source, onchainId: id });
+    console.log(`  id ${id} — already on the registry, row reconciled`);
+    return;
+  }
 
   // Written first: the indexer resolves rows by on-chain id, and a SourceRegistered event arriving
   // before this would look like a source it has never seen.
@@ -123,11 +143,17 @@ async function register(source: Source): Promise<void> {
 }
 
 async function main() {
-  const ids = process.argv.slice(2).filter((a) => !a.startsWith("-"));
-  if (ids.length === 0) throw new Error("usage: npm run register-onchain -- <source-id> …");
+  const args = process.argv.slice(2);
   if (!config.registryAddress) throw new Error("KERYX_REGISTRY_ADDRESS is not set");
 
   const db = await getDb();
+  const ids = args.includes("--all")
+    ? (await db.listSources()).filter((s) => !s.onchainId).map((s) => s.id)
+    : args.filter((a) => !a.startsWith("-"));
+  if (ids.length === 0) {
+    throw new Error("usage: npm run register-onchain -- <source-id> … | --all");
+  }
+
   for (const id of ids) {
     console.log(`\n${id}`);
     const source = await db.getSource(id);
