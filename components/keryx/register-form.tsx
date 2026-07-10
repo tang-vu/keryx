@@ -61,6 +61,7 @@ export function RegisterForm({
 }) {
   const [rssUrl, setRssUrl] = useState("");
   const [name, setName] = useState("");
+  const [url, setUrl] = useState("");
   const [description, setDescription] = useState("");
   const [fetchPrice, setFetchPrice] = useState("0.016");
   const [notifyUrl, setNotifyUrl] = useState("");
@@ -83,18 +84,29 @@ export function RegisterForm({
       ...(prefillWalletAddress ? { walletAddress: prefillWalletAddress } : {}),
       ...(notifyUrl.trim() ? { notifyUrl: notifyUrl.trim() } : {}),
     };
+    // The price the creator picked is written into the register() call, so it must reach the server
+    // on BOTH paths — a feed-listed source that omitted it fell back to the server's default and
+    // silently ignored the slider. The canonical url binds the on-chain source id; a feed carries
+    // its own, a manual source has to be told.
     const body = rssUrl.trim()
-      ? { ...baseBody, rssUrl: rssUrl.trim() }
+      ? { ...baseBody, rssUrl: rssUrl.trim(), fetchPrice: parseFloat(fetchPrice) || undefined }
       : {
           ...baseBody,
           name: name.trim(),
+          url: url.trim(),
           description: description.trim(),
           fetchPrice: parseFloat(fetchPrice) || undefined,
         };
 
-    if (!("rssUrl" in body) && !("name" in body && body.name)) {
-      toast.error("Add an RSS URL or a source name.");
-      return;
+    if (!("rssUrl" in body)) {
+      if (!body.name) {
+        toast.error("Add an RSS URL or a source name.");
+        return;
+      }
+      if (!body.url) {
+        toast.error("A manual source needs its URL — it's what binds the source to your wallet.");
+        return;
+      }
     }
 
     setLoading(true);
@@ -259,6 +271,24 @@ export function RegisterForm({
             </div>
             <div className="space-y-2">
               <Label
+                htmlFor="url"
+                className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3"
+              >
+                Source URL
+              </Label>
+              <Input
+                id="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://yourblog.com"
+                className="bg-card font-mono text-sm"
+              />
+              <p className="text-xs text-ink-2">
+                Bound into your on-chain source id, so nobody else can register this URL.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label
                 htmlFor="desc"
                 className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3"
               >
@@ -272,35 +302,38 @@ export function RegisterForm({
                 className="bg-card"
               />
             </div>
-            <div className="space-y-2">
-              <div className="flex items-baseline justify-between">
-                <Label
-                  htmlFor="price"
-                  className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3"
-                >
-                  Price per read
-                </Label>
-                <span className="font-display text-[22px] font-bold tabular-nums text-seal">
-                  ${fmtUsdc(price)}
-                </span>
-              </div>
-              <input
-                id="price"
-                type="range"
-                min={0.005}
-                max={0.04}
-                step={0.001}
-                value={fetchPrice}
-                onChange={(e) => setFetchPrice(e.target.value)}
-                className="w-full cursor-pointer"
-              />
-              <div className="flex justify-between font-mono text-[10.5px] text-ink-3">
-                <span>$0.005</span>
-                <span>$0.040</span>
-              </div>
-            </div>
           </div>
         )}
+
+        {/* Outside the manual panel: the price is written into register() on both paths, so a
+            feed-listed creator must be able to see and set it too. */}
+        <div className="space-y-2">
+          <div className="flex items-baseline justify-between">
+            <Label
+              htmlFor="price"
+              className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3"
+            >
+              Price per read
+            </Label>
+            <span className="font-display text-[22px] font-bold tabular-nums text-seal">
+              ${fmtUsdc(price)}
+            </span>
+          </div>
+          <input
+            id="price"
+            type="range"
+            min={0.005}
+            max={0.04}
+            step={0.001}
+            value={fetchPrice}
+            onChange={(e) => setFetchPrice(e.target.value)}
+            className="w-full cursor-pointer"
+          />
+          <div className="flex justify-between font-mono text-[10.5px] text-ink-3">
+            <span>$0.005</span>
+            <span>$0.040</span>
+          </div>
+        </div>
 
         <div className="space-y-2">
           <Label
