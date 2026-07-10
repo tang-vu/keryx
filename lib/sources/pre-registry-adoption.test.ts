@@ -113,6 +113,22 @@ describe("claiming the registry id for a source that predates it", () => {
     expect(db.table.get(existing.id)!.onchainId).toBe("0xabc");
   });
 
+  it("returns the same row again when the creator retries after rejecting the wallet prompt", async () => {
+    // The claim lands before the transaction, so a rejected prompt leaves the id already written.
+    // Everything downstream — feed items, the webhook, the id handed to /verify — keys off what
+    // this returns, so a retry that came back empty would key them all by the hash instead.
+    const db = fakeDb([{ ...preRegistryRow, onchainId: ONCHAIN_ID }]);
+    const again = await claimOnchainIdForExistingSource(
+      db as never,
+      WALLET,
+      "https://conzit.com",
+      ONCHAIN_ID.toUpperCase().replace("0X", "0x"),
+    );
+
+    expect(again?.id).toBe(preRegistryRow.id);
+    expect(again?.verified).toBe(true);
+  });
+
   it("claims nothing on an ordinary first listing", async () => {
     const db = fakeDb([]);
     const claimed = await claimOnchainIdForExistingSource(

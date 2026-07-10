@@ -43,8 +43,16 @@ export async function ingestRss(rssUrl: string, max = 10): Promise<IngestedFeed>
   });
   return {
     feedTitle: feed.title?.trim() || rssUrl,
-    feedDescription: stripHtml(feed.description ?? "").slice(0, 400),
+    // A creator proves feed ownership by pasting `keryx-verify:<wallet>` into the feed, and the
+    // channel description is the obvious place to put it. It is a proof, not prose — verification
+    // re-fetches the live feed, so dropping it here costs nothing and keeps it off the public page.
+    feedDescription: stripVerificationToken(stripHtml(feed.description ?? "")).slice(0, 400),
     link: feed.link ?? rssUrl,
     items,
   };
+}
+
+/** Remove any `keryx-verify:0x…` ownership token, and the whitespace it leaves behind. */
+export function stripVerificationToken(text: string): string {
+  return text.replace(/keryx-verify:0x[0-9a-f]{40}/gi, "").replace(/\s+/g, " ").trim();
 }

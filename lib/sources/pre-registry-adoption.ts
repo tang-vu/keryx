@@ -31,11 +31,15 @@ export function sameUrl(a: string | undefined, b: string | undefined): boolean {
  * Write `onchainId` onto the row this creator already holds for this URL, so the indexer updates
  * it in place rather than duplicating it.
  *
- * A row is claimed only for the wallet that already receives its payouts, and never when it
- * already carries an id: re-registering under a different URL is a genuinely different on-chain
- * source, and the old id must not be silently abandoned.
+ * A row is claimed only for the wallet that already receives its payouts. Claiming is idempotent:
+ * a creator who rejects the wallet prompt and submits the form again must get the same row back,
+ * because everything downstream — the feed items, the webhook, the id handed to /verify — is keyed
+ * by whatever this returns. A row already carrying a *different* id is left alone: it was
+ * registered under another URL, so this is a genuinely different on-chain source, and abandoning
+ * the old id would be worse than the duplicate.
  *
- * Returns the claimed row, or null on the ordinary path where the creator has no prior row.
+ * Returns the row this registration belongs to, or null on the ordinary path where the creator has
+ * no prior row for this URL.
  */
 export async function claimOnchainIdForExistingSource(
   db: KeryxDB,
@@ -46,11 +50,14 @@ export async function claimOnchainIdForExistingSource(
   const rows = await db.listSources();
   const prior = rows.find(
     (s) =>
-      !s.onchainId &&
       s.walletAddress.toLowerCase() === wallet.toLowerCase() &&
       (sameUrl(s.url, canonicalUrl) || sameUrl(s.rssUrl, canonicalUrl)),
   );
   if (!prior) return null;
+
+  if (prior.onchainId) {
+    return prior.onchainId.toLowerCase() === onchainId.toLowerCase() ? prior : null;
+  }
 
   const claimed: Source = { ...prior, onchainId };
   await db.upsertSource(claimed);

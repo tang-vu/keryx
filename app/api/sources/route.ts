@@ -181,9 +181,15 @@ export async function POST(req: NextRequest) {
     });
 
     // Ingest RSS items to DB now — keyed by the row the indexer will write, so the agent cache
-    // is ready before the indexer processes the SourceRegistered event.
-    if (feedItems.length > 0) {
-      const items: SourceItem[] = feedItems.map((it) => ({
+    // is ready before the indexer processes the SourceRegistered event. Item ids are minted fresh
+    // and source_items keys on the id alone, so a re-registration would shelve a second copy of
+    // every post beside the first. Only posts this row has never seen are new.
+    const seen = claimed
+      ? new Set((await db.getItems(rowId)).map((i) => i.link).filter(Boolean))
+      : new Set<string>();
+    const unseen = feedItems.filter((it) => !it.link || !seen.has(it.link));
+    if (unseen.length > 0) {
+      const items: SourceItem[] = unseen.map((it) => ({
         ...it,
         id: crypto.randomUUID(),
         sourceId: rowId,
