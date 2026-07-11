@@ -7,6 +7,7 @@ import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
 import { cn } from "@/lib/utils";
 import { NotifyWebhookPanel } from "./notify-webhook-panel";
 import { EmbedBadgePanel } from "./embed-badge-panel";
+import { EmbedWidgetPanel } from "./embed-widget-panel";
 
 interface CreatorData {
   source: {
@@ -126,6 +127,9 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
 
       {/* Public: embeddable "Cited by Keryx" badge (Markdown + HTML snippets) */}
       <EmbedBadgePanel creatorId={creatorId} />
+
+      {/* Public: one-line "Ask Keryx" widget for the creator's own site */}
+      <EmbedWidgetPanel creatorId={creatorId} />
 
       {/* Earnings chart */}
       {dailyEarnings.length > 0 && (
