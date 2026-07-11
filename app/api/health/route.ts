@@ -10,6 +10,7 @@
 
 import { getDb } from "@/lib/db";
 import { config, llmProvider } from "@/lib/config";
+import { PARITY_STATE_KEY, type ParitySummary } from "@/lib/registry/parity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,11 +35,34 @@ export async function GET() {
   try {
     const db = await getDb();
     const m = await db.metrics();
+
+    // Registry section: served from sync_state only — the hourly parity watchdog
+    // (scripts/check-registry.mts) does the chain reads; the probe stays chain-free.
+    let registry: {
+      address: string;
+      lastSyncedBlock: string | null;
+      parity: ParitySummary | null;
+    } | null = null;
+    if (config.registryReadAddress) {
+      const [lastSyncedBlock, parityRaw] = await Promise.all([
+        db.getSyncState("lastSyncedBlock"),
+        db.getSyncState(PARITY_STATE_KEY),
+      ]);
+      let parity: ParitySummary | null = null;
+      try {
+        parity = parityRaw ? (JSON.parse(parityRaw) as ParitySummary) : null;
+      } catch {
+        /* a malformed summary hides the parity row, never the health probe */
+      }
+      registry = { address: config.registryReadAddress, lastSyncedBlock, parity };
+    }
+
     return Response.json(
       {
         ok: true,
         db: "ok",
         ...base,
+        registry,
         traction: {
           totalPayments: m.totalPayments,
           creatorPayoutsUsdc: Number(m.totalCreatorPayoutsUsdc.toFixed(6)),

@@ -13,7 +13,7 @@ Shipped and running:
 - ✓ Agent capabilities: adjudication of conflicting sources, confidence verdicts, cross-query memory, semantic discovery
 - ✓ Creator lifecycle end-to-end: RSS onboarding → owner verification → citation webhooks → public earnings pages → self-serve gasless cash-out
 - ✓ External on-ramps: MCP server (npm + official registry), A2A x402 endpoint, free no-wallet trial
-- ✓ Ops: low-downtime health-gated deploys, treasury watchdog, rotating off-box backups, CI (typecheck + economic-invariant suite)
+- ✓ Ops: low-downtime health-gated deploys, treasury + registry-parity watchdogs, rotating off-box backups, CI (typecheck + economic-invariant suite)
 - ✓ Circle stack: x402 + Gateway batching + Wallets + Contracts + App Kit (Unified Balance on `/status` + `/api/treasury`)
 - ✓ Security threat model verified (23/23) · Hardhat 16/16 · vitest suite green
 

@@ -120,6 +120,15 @@ export const REGISTRY_ABI = [
     outputs: [{ name: "", type: "uint256" }],
   },
   {
+    // Public enumeration array — sourceIds(i) returns the i-th registered id. Lets the
+    // parity audit read the WHOLE registry back instead of only the ids the cache knows.
+    name: "sourceIds",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "", type: "uint256" }],
+    outputs: [{ name: "", type: "bytes32" }],
+  },
+  {
     name: "SourceRegistered",
     type: "event",
     inputs: [

@@ -10,6 +10,10 @@
 import { useEffect, useState } from "react";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
+import {
+  RegistryStatusSection,
+  type RegistryHealth,
+} from "@/components/keryx/registry-status-section";
 
 interface Health {
   ok: boolean;
@@ -20,6 +24,7 @@ interface Health {
   settles: string;
   network: string;
   time: string;
+  registry?: RegistryHealth | null;
   traction?: {
     totalPayments: number;
     creatorPayoutsUsdc: number;
@@ -132,6 +137,8 @@ export default function StatusPage() {
                 </dl>
               </>
             )}
+
+            {health?.registry && <RegistryStatusSection registry={health.registry} />}
 
             {treasury?.available && treasury.unifiedBalance && (
               <>
