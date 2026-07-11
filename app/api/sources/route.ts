@@ -65,6 +65,9 @@ export async function GET() {
       id: s.id,
       name: s.name,
       url: s.url,
+      // A feed address is public by construction — it's what anyone polls to read the source.
+      // The register page needs it back to pre-fill a claim for a pre-registry row.
+      rssUrl: s.rssUrl,
       description: s.description,
       tags: s.tags,
       fetchPrice: s.fetchPrice,

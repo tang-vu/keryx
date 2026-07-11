@@ -50,22 +50,39 @@ interface OnchainRegisterParams {
   tags: string;
 }
 
+/** Initial field values — used to pre-fill a claim of a pre-registry source. Applied once on
+ *  mount, so pass a fresh `key` alongside a new prefill to re-initialise the form. */
+export interface RegisterPrefill {
+  rssUrl?: string;
+  name?: string;
+  url?: string;
+  description?: string;
+  fetchPrice?: number;
+}
+
 export function RegisterForm({
   onCreated,
   prefillWalletAddress,
+  prefill,
 }: {
   onCreated?: () => void;
   /** Connected wallet address pre-filled from SIWE session — sent to the server
    *  so the POST handler can override it with the session-verified address. */
   prefillWalletAddress?: string;
+  prefill?: RegisterPrefill;
 }) {
-  const [rssUrl, setRssUrl] = useState("");
-  const [name, setName] = useState("");
-  const [url, setUrl] = useState("");
-  const [description, setDescription] = useState("");
-  const [fetchPrice, setFetchPrice] = useState("0.016");
+  const [rssUrl, setRssUrl] = useState(prefill?.rssUrl ?? "");
+  const [name, setName] = useState(prefill?.name ?? "");
+  const [url, setUrl] = useState(prefill?.url ?? "");
+  const [description, setDescription] = useState(prefill?.description ?? "");
+  const [fetchPrice, setFetchPrice] = useState(
+    prefill?.fetchPrice ? String(prefill.fetchPrice) : "0.016",
+  );
   const [notifyUrl, setNotifyUrl] = useState("");
-  const [showManual, setShowManual] = useState(false);
+  // A prefill without a feed can only go through the manual fields — open them.
+  const [showManual, setShowManual] = useState(
+    Boolean(prefill && !prefill.rssUrl && (prefill.url || prefill.name)),
+  );
   const [loading, setLoading] = useState(false);
   const [created, setCreated] = useState<CreatedSource | null>(null);
   const [verification, setVerification] = useState<Verification | null>(null);

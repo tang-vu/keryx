@@ -20,7 +20,11 @@ import { useAccount } from "wagmi";
 import Link from "next/link";
 import { ShieldCheck, Wallet } from "lucide-react";
 import { SiteHeader } from "@/components/keryx/site-header";
-import { RegisterForm } from "@/components/keryx/register-form";
+import {
+  RegisterForm,
+  type RegisterPrefill,
+} from "@/components/keryx/register-form";
+import { ClaimOnchainPanel } from "@/components/keryx/claim-onchain-panel";
 import { FaucetPanel } from "@/components/keryx/faucet-panel";
 import { WithdrawEarningsPanel } from "@/components/keryx/withdraw-earnings-panel";
 import {
@@ -33,6 +37,10 @@ export default function RegisterPage() {
   const { address, isConnected } = useAccount();
   const [sources, setSources] = useState<SourceCardData[]>([]);
   const [session, setSession] = useState<Session | null | undefined>(undefined); // undefined = loading
+  // Pre-fill for claiming a pre-registry source on-chain. The form applies initial values on
+  // mount only, so bump the key to re-initialise it with each claim.
+  const [prefill, setPrefill] = useState<RegisterPrefill | null>(null);
+  const [formKey, setFormKey] = useState(0);
 
   // Check whether we already have a valid session cookie on mount.
   useEffect(() => {
@@ -124,6 +132,23 @@ export default function RegisterPage() {
                 </div>
                 {/* Returning creators: pull accrued citation earnings on-chain (gasless). */}
                 {address && <WithdrawEarningsPanel address={address} />}
+                {/* Sources this wallet listed before the registry existed — one click pre-fills
+                    the form below with the source's own feed/URL and price to claim it on-chain. */}
+                <ClaimOnchainPanel
+                  sources={sources}
+                  address={address}
+                  onClaim={(s) => {
+                    setPrefill({
+                      rssUrl: s.rssUrl,
+                      // Without a feed the claim goes through the manual fields instead.
+                      ...(s.rssUrl
+                        ? {}
+                        : { name: s.name, url: s.url, description: s.description }),
+                      fetchPrice: s.fetchPrice,
+                    });
+                    setFormKey((k) => k + 1);
+                  }}
+                />
                 {/* Registering writes the source to the on-chain registry from the creator's own
                     wallet, so it costs gas. A wallet arriving here empty would dead-end at the
                     signature prompt; the drip is one click and one claim per address. */}
@@ -131,8 +156,10 @@ export default function RegisterPage() {
                   <FaucetPanel />
                 </div>
                 <RegisterForm
+                  key={formKey}
                   onCreated={loadSources}
                   prefillWalletAddress={address}
+                  prefill={prefill ?? undefined}
                 />
               </>
             )}

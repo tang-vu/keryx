@@ -14,6 +14,7 @@ export interface SourceCardData {
   id: string;
   name: string;
   url?: string;
+  rssUrl?: string;
   description: string;
   tags: string[];
   fetchPrice: number;
