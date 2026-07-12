@@ -24,6 +24,7 @@ import {
   RegisterForm,
   type RegisterPrefill,
 } from "@/components/keryx/register-form";
+import { BulkImportForm } from "@/components/keryx/bulk-import-form";
 import { ClaimOnchainPanel } from "@/components/keryx/claim-onchain-panel";
 import { FaucetPanel } from "@/components/keryx/faucet-panel";
 import { WithdrawEarningsPanel } from "@/components/keryx/withdraw-earnings-panel";
@@ -41,6 +42,9 @@ export default function RegisterPage() {
   // mount only, so bump the key to re-initialise it with each claim.
   const [prefill, setPrefill] = useState<RegisterPrefill | null>(null);
   const [formKey, setFormKey] = useState(0);
+  // Single source at a time, or a pasted batch of feeds. Claiming a pre-registry source pre-fills
+  // the single form, so a claim always snaps back to that tab.
+  const [mode, setMode] = useState<"single" | "bulk">("single");
 
   // Check whether we already have a valid session cookie on mount.
   useEffect(() => {
@@ -147,6 +151,7 @@ export default function RegisterPage() {
                       fetchPrice: s.fetchPrice,
                     });
                     setFormKey((k) => k + 1);
+                    setMode("single"); // a claim pre-fills the single form
                   }}
                 />
                 {/* Registering writes the source to the on-chain registry from the creator's own
@@ -155,12 +160,33 @@ export default function RegisterPage() {
                 <div className="mb-4">
                   <FaucetPanel />
                 </div>
-                <RegisterForm
-                  key={formKey}
-                  onCreated={loadSources}
-                  prefillWalletAddress={address}
-                  prefill={prefill ?? undefined}
-                />
+                {/* One source at a time, or paste a whole list of feeds at once. */}
+                <div className="mb-4 flex gap-1 border border-line bg-paper-2 p-1">
+                  {(["single", "bulk"] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setMode(m)}
+                      className={`flex-1 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] transition-colors ${
+                        mode === m
+                          ? "bg-ink text-cream"
+                          : "text-ink-3 hover:text-ink"
+                      }`}
+                    >
+                      {m === "single" ? "One source" : "Bulk import"}
+                    </button>
+                  ))}
+                </div>
+                {mode === "single" ? (
+                  <RegisterForm
+                    key={formKey}
+                    onCreated={loadSources}
+                    prefillWalletAddress={address}
+                    prefill={prefill ?? undefined}
+                  />
+                ) : (
+                  <BulkImportForm onRegistered={loadSources} />
+                )}
               </>
             )}
           </div>

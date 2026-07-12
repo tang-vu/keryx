@@ -90,8 +90,8 @@ Live figures at [`/status`](https://keryx.cc/status); snapshots in [TRACTION.md]
 | Preset funding amounts | Quick-pick chips ($0.05 / $0.25 / $1 — sized to real Keryx budgets) on activate + top-up | ✓ Done 2026-07-12 | `usdc-preset-chips.tsx` |
 | Session refresh UI | Live expiry countdown; warn at 10 min; one-click extend (no signature, no gas — worker re-registers the grant); one-click resume from "expired" | ✓ Done 2026-07-12 | `session-active-card.tsx`; TTL is 1h (`KERYX_SESSION_GRANT_TTL`), not 12h as first planned |
 | Preview depth control | Creator choice: full summary / short excerpt / titles-only, owner-gated from the profile; the agent scores on exactly what a free reader sees | ✓ Done 2026-07-12 | `lib/sources/preview-depth.ts`; incentive dial, grandfathers every existing row as "full" |
-| Bulk import | Paste RSS feed → batch register sources | 2d | Creator onboarding at scale |
-| **Phase 09 Total** | | ~1w | Incremental shipping |
+| Bulk import | Paste many feed URLs or an OPML export → one shared feed-read + dedupe, then sequential on-chain register (one signature per source; the contract has no batch register). One wallet-scoped token verifies them all in a single pass | ✓ Done 2026-07-12 | `lib/ingest/feed-list.ts`, `app/api/sources/bulk`, `bulk-import-form.tsx`; single-register core extracted to `lib/sources/prepare-registration.ts` and reused |
+| **Phase 09 Total** | | ~1w | Complete |
 
 ---
 
