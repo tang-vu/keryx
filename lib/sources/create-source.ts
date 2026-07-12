@@ -32,6 +32,8 @@ export interface CreateSourceInput {
   /** Feed-ownership gate. Omitted → true (operator-curated seed + offline dev are trusted).
    *  Public web submissions pass false until they prove control of the feed. */
   verified?: boolean;
+  /** Free-preview depth ("full" | "excerpt" | "locked"). Omitted → "full". */
+  previewDepth?: import("./preview-depth").PreviewDepth;
 }
 
 export function slugify(name: string): string {
@@ -74,6 +76,7 @@ export async function createSource(
     authors,
     // Trusted by default (seed/offline); the public register route passes false until proven.
     verified: input.verified ?? true,
+    previewDepth: input.previewDepth,
     createdAt: new Date().toISOString(),
   };
 

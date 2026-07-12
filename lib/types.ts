@@ -34,6 +34,9 @@ export interface Source {
    *  lists a feed they don't own can never make it carry their wallet, so can never verify or earn.
    *  Undefined/null is treated as true so operator-curated + pre-existing rows are grandfathered. */
   verified?: boolean;
+  /** How much of each item a FREE preview may reveal — the creator's incentive dial. Undefined/null
+   *  means "full" (grandfathers every row that predates the column). See lib/sources/preview-depth.ts. */
+  previewDepth?: import("./sources/preview-depth").PreviewDepth;
 }
 
 /** A payable author within a source (enables multi-author citation splits). */

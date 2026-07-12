@@ -19,6 +19,7 @@ import type {
 import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, FeedbackStats, KeryxDB, QueryMemoryEntry, SessionGrantRecord, UserRecord } from "./keryx-db";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
+import { normalizePreviewDepth } from "../sources/preview-depth";
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS sources (
@@ -28,7 +29,8 @@ CREATE TABLE IF NOT EXISTS sources (
   active INTEGER NOT NULL DEFAULT 1,
   onchain_id TEXT,
   register_tx TEXT,
-  verified INTEGER NOT NULL DEFAULT 1
+  verified INTEGER NOT NULL DEFAULT 1,
+  preview_depth TEXT
 );
 CREATE TABLE IF NOT EXISTS source_meta (
   id TEXT PRIMARY KEY,
@@ -160,6 +162,8 @@ export class SqliteAdapter implements KeryxDB {
     // submissions registered after this column exists start unverified (set explicitly to 0).
     if (!srcCols.has("verified"))
       this.db.exec(`ALTER TABLE sources ADD COLUMN verified INTEGER NOT NULL DEFAULT 1`);
+    // Preview depth: NULL grandfathers every existing row as "full" (rowToSource maps it).
+    if (!srcCols.has("preview_depth")) this.db.exec(`ALTER TABLE sources ADD COLUMN preview_depth TEXT`);
 
     // source_meta.rss_url: the feed an on-chain registrant listed. The indexer has nowhere else to
     // learn it, and /api/sources/verify needs it to check the right document for the ownership token.
@@ -203,14 +207,15 @@ export class SqliteAdapter implements KeryxDB {
     const verifiedInt = s.verified === false ? 0 : 1;
     this.db
       .prepare(
-        `INSERT INTO sources (id,name,url,description,rss_url,wallet_address,fetch_price,tags,authors,created_at,ipfs_cid,active,onchain_id,register_tx,verified)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        `INSERT INTO sources (id,name,url,description,rss_url,wallet_address,fetch_price,tags,authors,created_at,ipfs_cid,active,onchain_id,register_tx,verified,preview_depth)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
          ON CONFLICT(id) DO UPDATE SET name=excluded.name,url=excluded.url,description=excluded.description,
            rss_url=excluded.rss_url,wallet_address=excluded.wallet_address,fetch_price=excluded.fetch_price,
            tags=excluded.tags,authors=excluded.authors,ipfs_cid=excluded.ipfs_cid,active=excluded.active,
            onchain_id=COALESCE(excluded.onchain_id,sources.onchain_id),
            register_tx=COALESCE(excluded.register_tx,sources.register_tx),
-           verified=excluded.verified`,
+           verified=excluded.verified,
+           preview_depth=COALESCE(excluded.preview_depth,sources.preview_depth)`,
       )
       .run(
         s.id,
@@ -228,7 +233,12 @@ export class SqliteAdapter implements KeryxDB {
         s.onchainId ?? null,
         s.registerTx ?? null,
         verifiedInt,
+        s.previewDepth ?? null,
       );
+  }
+
+  async setSourcePreviewDepth(id: string, depth: string): Promise<void> {
+    this.db.prepare(`UPDATE sources SET preview_depth=? WHERE id=?`).run(depth, id);
   }
 
   async listSources(): Promise<Source[]> {
@@ -780,6 +790,8 @@ function rowToSource(r: Record<string, unknown>): Source {
     registerTx: (r.register_tx as string) ?? undefined,
     // verified=null means old row before the column existed — grandfather as verified.
     verified: r.verified === undefined || r.verified === null ? true : Boolean(r.verified),
+    // preview_depth=null grandfathers the row as "full"; normalize guards any bad value.
+    previewDepth: normalizePreviewDepth(r.preview_depth),
   };
 }
 

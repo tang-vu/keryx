@@ -26,6 +26,7 @@ import { buildMemoryContext, buildReputationContext, saveMemory } from "./query-
 import { dispatchCitationNotify } from "../notify/citation-webhook";
 import { allocateSplit } from "../payments/split-allocation";
 import { sendAlert } from "../notify/alert";
+import { normalizePreviewDepth, previewSummary } from "../sources/preview-depth";
 
 export interface RunInput {
   question: string;
@@ -76,9 +77,15 @@ export async function* runAgent(
   const candidates: SourceCandidate[] = [];
   for (const s of sources) {
     const items = await db.getItems(s.id);
+    // Honor the creator's preview-depth: the agent scores on exactly what a paying reader would see
+    // for free, so a locked source is judged on its titles + description, not its full summaries.
+    const depth = normalizePreviewDepth(s.previewDepth);
     const preview = items
       .slice(0, 4)
-      .map((i) => `- ${i.title}: ${i.summary}`)
+      .map((i) => {
+        const summary = previewSummary(i.summary, depth);
+        return summary ? `- ${i.title}: ${summary}` : `- ${i.title}`;
+      })
       .join("\n");
     candidates.push({
       id: s.id,

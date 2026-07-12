@@ -18,6 +18,7 @@ import type {
 import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, FeedbackStats, KeryxDB, QueryMemoryEntry, SessionGrantRecord, UserRecord } from "./keryx-db";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
+import { normalizePreviewDepth } from "../sources/preview-depth";
 
 export class SupabaseAdapter implements KeryxDB {
   private sb: SupabaseClient;
@@ -50,6 +51,7 @@ export class SupabaseAdapter implements KeryxDB {
       ipfs_cid: s.ipfsCid ?? null,
       active: s.active !== false, // treat undefined as true
       verified: s.verified !== false, // treat undefined as true (grandfather curated/seed rows)
+      preview_depth: s.previewDepth ?? null,
     });
   }
 
@@ -110,6 +112,10 @@ export class SupabaseAdapter implements KeryxDB {
 
   async deleteSourceNotify(id: string): Promise<void> {
     await this.sb.from("source_notify").delete().eq("source_id", id);
+  }
+
+  async setSourcePreviewDepth(id: string, depth: string): Promise<void> {
+    await this.sb.from("sources").update({ preview_depth: depth }).eq("id", id);
   }
 
   async getSource(id: string): Promise<Source | null> {
@@ -623,6 +629,8 @@ function rowToSource(r: Record<string, unknown>): Source {
     active: r.active === undefined || r.active === null ? true : Boolean(r.active),
     // verified=null means old row before the column existed — grandfather as verified.
     verified: r.verified === undefined || r.verified === null ? true : Boolean(r.verified),
+    // preview_depth=null grandfathers the row as "full".
+    previewDepth: normalizePreviewDepth(r.preview_depth),
   };
 }
 

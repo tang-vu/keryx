@@ -5,6 +5,7 @@
 
 import { NextRequest } from "next/server";
 import { getDb } from "@/lib/db";
+import { normalizePreviewDepth, previewSummary } from "@/lib/sources/preview-depth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,12 +19,19 @@ export async function GET(
   const source = await db.getSource(id);
   if (!source) return Response.json({ error: "source not found" }, { status: 404 });
   const items = await db.getItems(id);
+  // The creator's preview-depth choice decides how much of each item this free surface reveals.
+  const depth = normalizePreviewDepth(source.previewDepth);
   return Response.json({
     id: source.id,
     name: source.name,
     description: source.description,
     fetchPrice: source.fetchPrice,
     tags: source.tags,
-    preview: items.slice(0, 5).map((i) => ({ title: i.title, summary: i.summary })),
+    previewDepth: depth,
+    preview: items.slice(0, 5).map((i) => {
+      const summary = previewSummary(i.summary, depth);
+      // "locked" yields an empty summary — omit the field so the shape reads as title-only.
+      return summary ? { title: i.title, summary } : { title: i.title };
+    }),
   });
 }

@@ -139,6 +139,9 @@ export interface KeryxDB {
   /** Remove a source's notify config (disable notifications). No-op if none set. */
   deleteSourceNotify(id: string): Promise<void>;
 
+  /** Set a source's free-preview depth ("full" | "excerpt" | "locked"). Owner-gated by callers. */
+  setSourcePreviewDepth(id: string, depth: string): Promise<void>;
+
   // ── cache (skip-repay decisions) ──
   getCached(sourceId: string): Promise<string | null>;
   setCached(sourceId: string, text: string): Promise<void>;
