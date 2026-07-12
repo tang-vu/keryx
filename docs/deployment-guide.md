@@ -66,10 +66,30 @@ ssh keryx-vps "cd /root/keryx && npm run backup"
 ssh keryx-vps "cd /root/keryx && pm2 stop keryx && gunzip -c data/backups/<snap>.sqlite.gz > data/keryx.sqlite && pm2 start keryx"
 ```
 
-**Off-box copy (survives a dead disk):** set `KERYX_BACKUP_REMOTE` in the VPS `.env.local` to any
-[rclone](https://rclone.org) remote path (e.g. `r2:keryx-backups` for Cloudflare R2), and run
-`rclone config` once on the box to add the credentials. Each hourly snapshot is then `rclone copy`d
-there. Without it, snapshots are kept locally only (still protects against corruption / accidental delete).
+**Off-box copy (survives a dead disk) — one-time setup.** The local snapshots above still sit on the
+same box, so a dead disk loses them too. Copy each snapshot to Cloudflare R2 (free tier, zero egress,
+and you already run Cloudflare). Needs your R2 credentials — the only step that can't be scripted for you:
+
+1. Create an R2 bucket `keryx-backups` and an R2 API token (Cloudflare dashboard → R2 → Manage API
+   Tokens) with **Object Read & Write**. Note the Access Key ID, Secret, and your account's S3
+   endpoint `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`.
+2. Install rclone and register the remote non-interactively (no editor prompt):
+   ```bash
+   ssh keryx-vps 'curl -fsSL https://rclone.org/install.sh | sudo bash'
+   ssh keryx-vps 'rclone config create r2 s3 provider=Cloudflare \
+     access_key_id=<KEY_ID> secret_access_key=<SECRET> \
+     endpoint=https://<ACCOUNT_ID>.r2.cloudflarestorage.com acl=private'
+   ```
+3. Point the backup at it and verify the push:
+   ```bash
+   ssh keryx-vps 'echo "KERYX_BACKUP_REMOTE=r2:keryx-backups" >> /root/keryx/.env.local'
+   ssh keryx-vps 'cd /root/keryx && npm run backup'   # expect: [backup] pushed off-box → r2:keryx-backups
+   ```
+
+The hourly `keryx-backup` cron already loads `.env.local`, so no cron reinstall is needed — the next
+run pushes automatically. Any other rclone remote (S3, Backblaze B2, Google Drive) works identically.
+Without this, snapshots are kept locally only (still protects against corruption / accidental delete,
+but not a disk loss).
 
 ## Monitoring & alerts
 - **Treasury watchdog** — `npm run check-treasury` reads the funder wallet's on-chain USDC reserve + native gas and alerts before either runs dry (settlements would otherwise start failing silently). `npm run deploy` installs it as an hourly cron. Thresholds: `KERYX_TREASURY_MIN_USDC` (2) / `KERYX_TREASURY_MIN_GAS` (0.02).
