@@ -18,6 +18,7 @@ const HOUSE: FooterLink[] = [
   { label: "Ask the herald", href: "/" },
   { label: "The ledger", href: "/dashboard" },
   { label: "Issue a toll", href: "/register" },
+  { label: "Playground", href: "/playground" },
   { label: "API for agents ↗", href: "/api/docs", external: true },
 ];
 

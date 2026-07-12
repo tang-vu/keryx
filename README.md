@@ -121,7 +121,8 @@ Example trace (real output):
   LibreChat, Continue) at `https://keryx.cc/api/v1` with model `keryx`: a drop-in Chat Completions
   API. Free with no key, or pass a `kx_live_…` key as the Bearer token for higher limits. Every
   cited creator is still paid downstream in USDC on Arc; with `stream:true`, the agent's live
-  buy/skip/trust reasoning streams as `reasoning_content` deltas.
+  buy/skip/trust reasoning streams as `reasoning_content` deltas. Try it with no install in the
+  [browser playground](https://keryx.cc/playground) — it also hands you the exact curl/Python/JS call.
 - **Public API with wallet-issued keys** — SIWE-authenticated key minting (hashed, show-once,
   rate-limited) and OpenAPI docs at [`/api/docs`](https://keryx.cc/api/docs).
 - **Non-custodial by design** — interactive spend uses a session EOA the *user* funds from their

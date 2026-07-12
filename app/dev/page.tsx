@@ -316,6 +316,12 @@ export default function DevPage() {
   -H "Content-Type: application/json" \\
   -d '{"model":"keryx","messages":[{"role":"user","content":"What is Arc?"}]}'`}
           </pre>
+          <a
+            href="/playground"
+            className="mt-2 inline-block font-mono text-xs text-seal underline underline-offset-2 hover:text-ink transition-colors"
+          >
+            Try it live in the playground →
+          </a>
         </div>
 
         {/* Error banner */}
