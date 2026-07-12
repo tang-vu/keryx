@@ -297,6 +297,27 @@ export default function DevPage() {
           </div>
         </div>
 
+        {/* OpenAI-compatible endpoint — the widest-reach integration surface. Any OpenAI SDK/tool
+            can point base_url here; creators are paid downstream exactly as on the site. */}
+        <div className="mb-8 rounded border border-line bg-paper p-4">
+          <h2 className="font-serif text-lg text-ink">OpenAI-compatible endpoint</h2>
+          <p className="mt-1 font-mono text-xs text-ink-3">
+            Any OpenAI SDK or tool works — set the base URL to{" "}
+            <code className="text-seal">https://keryx.cc/api/v1</code> and model{" "}
+            <code className="text-seal">keryx</code>. Free to try with no key; pass a{" "}
+            <code className="text-seal">kx_live_…</code> key as the Bearer token for higher limits.
+            Every cited creator is paid in USDC on Arc. With{" "}
+            <code className="text-seal">stream:true</code> the agent&apos;s live buy/skip/trust
+            reasoning arrives as <code className="text-seal">reasoning_content</code>.
+          </p>
+          <pre className="mt-3 overflow-x-auto rounded border border-line bg-paper-2 p-3 font-mono text-[11px] leading-relaxed text-ink-2">
+{`curl https://keryx.cc/api/v1/chat/completions \\
+  -H "Authorization: Bearer kx_live_…" \\
+  -H "Content-Type: application/json" \\
+  -d '{"model":"keryx","messages":[{"role":"user","content":"What is Arc?"}]}'`}
+          </pre>
+        </div>
+
         {/* Error banner */}
         {error && (
           <div className="mb-6 rounded border border-red-300 bg-red-50 px-4 py-3 font-mono text-xs text-red-700">

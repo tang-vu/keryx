@@ -117,6 +117,11 @@ Example trace (real output):
   real settlement.
 - **Agent-to-agent API** — `POST /api/agent/ask` lets other agents buy Keryx's research over x402:
   an agent paying an agent that pays creators, end to end.
+- **OpenAI-compatible endpoint** — point any OpenAI SDK or tool (LangChain, LlamaIndex, OpenWebUI,
+  LibreChat, Continue) at `https://keryx.cc/api/v1` with model `keryx`: a drop-in Chat Completions
+  API. Free with no key, or pass a `kx_live_…` key as the Bearer token for higher limits. Every
+  cited creator is still paid downstream in USDC on Arc; with `stream:true`, the agent's live
+  buy/skip/trust reasoning streams as `reasoning_content` deltas.
 - **Public API with wallet-issued keys** — SIWE-authenticated key minting (hashed, show-once,
   rate-limited) and OpenAPI docs at [`/api/docs`](https://keryx.cc/api/docs).
 - **Non-custodial by design** — interactive spend uses a session EOA the *user* funds from their

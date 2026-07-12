@@ -77,6 +77,70 @@ export const openapiSpec = {
           engine: { type: "string" },
         },
       },
+      ChatCompletionRequest: {
+        type: "object",
+        required: ["messages"],
+        properties: {
+          model: { type: "string", example: "keryx" },
+          messages: {
+            type: "array",
+            description: "OpenAI messages. Keryx researches the last user message.",
+            items: {
+              type: "object",
+              properties: {
+                role: { type: "string", example: "user" },
+                content: { type: "string", example: "What is Arc?" },
+              },
+            },
+          },
+          stream: {
+            type: "boolean",
+            description: "When true, stream reasoning as `reasoning_content` deltas, then the answer.",
+            example: false,
+          },
+          budget: {
+            type: "number",
+            description:
+              "Keryx extension (extra_body): max USDC for creator payouts, clamped to the tier cap.",
+            example: 0.05,
+          },
+        },
+      },
+      ChatCompletion: {
+        type: "object",
+        properties: {
+          id: { type: "string", example: "chatcmpl-…" },
+          object: { type: "string", example: "chat.completion" },
+          model: { type: "string", example: "keryx" },
+          choices: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                index: { type: "integer" },
+                message: {
+                  type: "object",
+                  properties: {
+                    role: { type: "string" },
+                    content: { type: "string" },
+                  },
+                },
+                finish_reason: { type: "string", example: "stop" },
+              },
+            },
+          },
+          keryx: {
+            type: "object",
+            description: "Vendor extension — the creators Keryx paid for this answer.",
+            properties: {
+              queryId: { type: "string" },
+              creatorsPaid: { type: "integer" },
+              totalToCreators: { type: "number" },
+              dispatchUrl: { type: "string" },
+            },
+          },
+        },
+      },
       ApiKey: {
         type: "object",
         properties: {
@@ -159,6 +223,62 @@ export const openapiSpec = {
             },
           },
         },
+      },
+    },
+    "/api/v1/chat/completions": {
+      post: {
+        operationId: "chatCompletions",
+        summary: "OpenAI-compatible research completion",
+        description:
+          "Drop-in OpenAI Chat Completions endpoint. Set base_url to https://keryx.cc/api/v1 and " +
+          "model `keryx`. The free tier needs no key (treasury-funded, IP rate-limited); a " +
+          "`kx_live_…` Bearer key raises limits and meters usage. Keryx researches the last user " +
+          "message over paid sources and pays every cited creator downstream in USDC on Arc. With " +
+          "`stream:true`, live reasoning streams as `reasoning_content` deltas. This path is NOT " +
+          "x402 — no payment-signature required.",
+        security: [{}, { ApiKeyAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: { $ref: "#/components/schemas/ChatCompletionRequest" } },
+          },
+        },
+        responses: {
+          "200": {
+            description:
+              "ChatCompletion object, or an SSE stream of chat.completion.chunk when stream=true.",
+            content: {
+              "application/json": { schema: { $ref: "#/components/schemas/ChatCompletion" } },
+            },
+          },
+          "400": {
+            description: "No user message with content.",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
+          },
+          "401": {
+            description: "A kx_live_ key was supplied but is invalid or revoked.",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
+          },
+          "429": {
+            description: "Rate limit exceeded (free tier by IP, keyed tier by key).",
+            headers: {
+              "Retry-After": {
+                description: "Seconds until the rate limit window resets.",
+                schema: { type: "integer" },
+              },
+            },
+          },
+          "500": { description: "Treasury wallet not configured." },
+        },
+      },
+    },
+    "/api/v1/models": {
+      get: {
+        operationId: "listModels",
+        summary: "OpenAI-compatible model list",
+        description:
+          "Lists the single logical model `keryx`. Some OpenAI clients probe this on connect.",
+        responses: { "200": { description: "OpenAI model list." } },
       },
     },
     "/api/keys": {
