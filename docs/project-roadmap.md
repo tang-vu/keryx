@@ -87,8 +87,8 @@ Live figures at [`/status`](https://keryx.cc/status); snapshots in [TRACTION.md]
 
 | Task | Description | Effort | Notes |
 |------|-------------|--------|-------|
-| Preset funding amounts | UI buttons (quick-add $5, $10, $50 sessions) | 1d | Reduce friction on first ask |
-| Session refresh UI | Warn before expiry (12h default); auto-refresh option | 1d | Eliminates mid-run session expiry |
+| Preset funding amounts | Quick-pick chips ($0.05 / $0.25 / $1 — sized to real Keryx budgets) on activate + top-up | ✓ Done 2026-07-12 | `usdc-preset-chips.tsx` |
+| Session refresh UI | Live expiry countdown; warn at 10 min; one-click extend (no signature, no gas — worker re-registers the grant); one-click resume from "expired" | ✓ Done 2026-07-12 | `session-active-card.tsx`; TTL is 1h (`KERYX_SESSION_GRANT_TTL`), not 12h as first planned |
 | Preview depth control | Creator choice: full preview, excerpt, or locked | 2d | Better incentive alignment |
 | Bulk import | Paste RSS feed → batch register sources | 2d | Creator onboarding at scale |
 | **Phase 09 Total** | | ~1w | Incremental shipping |

@@ -392,6 +392,23 @@ export function useSessionGrant() {
   }, [walletClient, resumeSession, signer]);
 
   /**
+   * Extend the current session without any wallet interaction. The signer worker still holds the
+   * key, so re-registering the grant in recover mode issues a fresh TTL and re-reads the cap from
+   * the live Gateway balance — no signature, no gas, no new funds. Works from "active" (before the
+   * TTL lapses) and from "expired" in the same tab (the worker outlives the grant). Returns false
+   * when the Gateway holds nothing under the session address — nothing left to authorise.
+   */
+  const extend = useCallback(async (): Promise<boolean> => {
+    const sessAddr = signerRef.current?.sessionAddress ?? state.sessAddr;
+    if (!sessAddr) return false;
+    try {
+      return await resumeSession(sessAddr);
+    } catch {
+      return false; // transient — the caller offers signature recovery as the fallback
+    }
+  }, [state.sessAddr, resumeSession]);
+
+  /**
    * Add more USDC to the ACTIVE session: fund the existing session EOA, deposit it into the
    * Gateway, then re-register the grant with the new (confirmed) total. No new key.
    */
@@ -467,6 +484,7 @@ export function useSessionGrant() {
     recoverViaSignature,
     generateAndFund,
     topUp,
+    extend,
     revoke,
     getSessionWalletClient,
     markExpired,
