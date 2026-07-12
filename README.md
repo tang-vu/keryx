@@ -81,19 +81,20 @@ Example trace (real output):
 - **Onboard from your own wallet** — paste an RSS feed at [keryx.cc/register](https://keryx.cc/register)
   and your wallet writes the source to the on-chain registry itself. Keryx sets up the x402-priced
   endpoint and the free preview; it never holds your key, and the faucet on that page covers the gas.
-  **20 sources are listed and 19 are written to the on-chain registry**, including real public feeds —
+  **All 20 listed sources are written to the on-chain registry**, including real public feeds —
   Hugging Face, Vitalik Buterin, CoinDesk, the Ethereum Foundation, Stripe, Latent Space,
   Simon Willison — each earning per citation.
 - **Own your payout** — the payout address is the wallet you signed in with. The first owner-verified
-  creator ([conzit.com](https://conzit.com)) proved feed ownership, set its address, and was cited &
-  paid end-to-end. We've also proposed this as an opt-in convention upstream in
+  creator ([conzit.com](https://conzit.com)) proved feed ownership, set its address, was cited &
+  paid end-to-end — and has since claimed its registry record from its own wallet, so its on-chain
+  `creator` is the creator, not Keryx. We've also proposed this as an opt-in convention upstream in
   [RSSHub](https://github.com/DIYgod/RSSHub/discussions/22315).
   *Honest note:* the demo sources seeded before this switch still have operator-held payout keys —
-  they are Keryx's own sample publications, not third-party creators. Nine of the nineteen on-chain
+  they are Keryx's own sample publications, not third-party creators. Nine of the twenty on-chain
   records also name Keryx's treasury as their registry `creator`, so the treasury, not the source
-  wallet, can update or deactivate those nine. The payout address is correct on all nineteen: every
-  one was read back from the chain and matched. Only conzit.com, the one third-party creator, is not
-  on the registry yet — a creator must register from their own wallet, and that is theirs to do.
+  wallet, can update or deactivate those nine. The payout address is correct on all twenty — an
+  hourly watchdog re-reads every record from the chain and publishes the comparison on
+  [`/status`](https://keryx.cc/status).
 - **Know the moment you're cited** — signed webhooks fire the instant a citation settles, and every
   payout on your public earnings page shows the actual *question* your work helped answer.
 - **Show it off** — an embeddable **"Cited by Keryx" badge** (live SVG at `/api/creator/<id>/badge.svg`)
