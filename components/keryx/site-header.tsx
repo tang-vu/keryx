@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { href: "/", label: "Ask" },
   { href: "/dashboard", label: "Ledger" },
+  { href: "/answers", label: "Archive" },
   { href: "/register", label: "Issue a toll" },
   { href: "/playground", label: "Playground" },
   { href: "/dev", label: "Dev portal" },
@@ -55,7 +56,7 @@ export function SiteHeader() {
 
           {/* Desktop nav */}
           <nav className="hidden items-center gap-1.5 md:flex">
-            {NAV.slice(0, 2).map((link) => {
+            {NAV.slice(0, 3).map((link) => {
               const active =
                 link.href === "/"
                   ? pathname === "/"

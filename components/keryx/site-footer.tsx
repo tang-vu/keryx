@@ -16,6 +16,7 @@ type FooterLink = { label: string; href: string; external?: boolean };
 // Product surfaces. "API for agents" is the OpenAPI reference (also the A2A entry point).
 const HOUSE: FooterLink[] = [
   { label: "Ask the herald", href: "/" },
+  { label: "The archive", href: "/answers" },
   { label: "The ledger", href: "/dashboard" },
   { label: "Issue a toll", href: "/register" },
   { label: "Playground", href: "/playground" },
