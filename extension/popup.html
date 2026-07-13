@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ask Keryx</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="masthead">
+      <div class="seal">K</div>
+      <div class="masthead-text">
+        <div class="wordmark">Keryx</div>
+        <div class="tagline">Ask · cite · pay the creator</div>
+      </div>
+    </header>
+
+    <main>
+      <label class="field-label" for="question">Your question</label>
+      <textarea
+        id="question"
+        rows="3"
+        placeholder="Highlight text on a page, or type a question…"
+      ></textarea>
+
+      <div class="controls">
+        <div class="budget">
+          <label class="field-label" for="budget">Budget</label>
+          <div class="budget-input">
+            <span class="usd">$</span>
+            <input id="budget" type="number" min="0.005" max="0.10" step="0.005" value="0.03" />
+          </div>
+        </div>
+        <button id="ask" class="ask-btn">Ask Keryx ▸</button>
+      </div>
+
+      <section id="output" class="output" hidden>
+        <div class="panel trace-panel">
+          <div class="panel-label">
+            <span>Agent reasoning</span>
+            <span id="status" class="status"></span>
+          </div>
+          <pre id="trace" class="trace"></pre>
+        </div>
+
+        <div class="panel answer-panel" id="answer-panel" hidden>
+          <div class="panel-label">Answer</div>
+          <div id="answer" class="answer"></div>
+        </div>
+
+        <div class="panel paid-panel" id="paid-panel" hidden>
+          <div class="panel-label">Creators paid</div>
+          <ul id="paid-list" class="paid-list"></ul>
+          <div class="paid-total">
+            <span id="paid-total-usd" class="paid-total-usd"></span> settled in USDC on Arc ·
+            <a id="dispatch-link" href="#" target="_blank" rel="noopener">view receipt ▸</a>
+          </div>
+        </div>
+
+        <div class="panel error-panel" id="error-panel" hidden>
+          <div class="panel-label">Something went wrong</div>
+          <div id="error" class="error"></div>
+        </div>
+      </section>
+
+      <footer class="foot">
+        <button id="list-page" class="link-btn">List this page as a paid source ▸</button>
+        <a href="https://keryx.cc" target="_blank" rel="noopener" class="link-btn subtle">keryx.cc</a>
+      </footer>
+    </main>
+
+    <script src="keryx-config.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

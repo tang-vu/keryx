@@ -46,6 +46,24 @@ export default function RegisterPage() {
   // the single form, so a claim always snaps back to that tab.
   const [mode, setMode] = useState<"single" | "bulk">("single");
 
+  // Deep-link prefill (e.g. the browser extension's "list this page as a paid source"): read
+  // ?url= / ?name= / ?desc= from the address bar and seed the manual register fields. Parsed from
+  // window.location on mount (client-only) so the page needs no Suspense boundary for useSearchParams.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const url = params.get("url")?.trim();
+    const name = params.get("name")?.trim();
+    const description = params.get("desc")?.trim();
+    if (!url && !name) return;
+    setPrefill({
+      ...(url ? { url } : {}),
+      ...(name ? { name } : {}),
+      ...(description ? { description } : {}),
+    });
+    setFormKey((k) => k + 1);
+    setMode("single");
+  }, []);
+
   // Check whether we already have a valid session cookie on mount.
   useEffect(() => {
     fetch("/api/auth/session")

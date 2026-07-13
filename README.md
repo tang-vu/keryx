@@ -112,6 +112,9 @@ Example trace (real output):
 
 - **Free, no-wallet trial** — [keryx.cc](https://keryx.cc) answers without any setup, with a
   graceful upgrade path when you outgrow the free budget.
+- **Browser extension** ([`extension/`](extension/)) — highlight text on any page and ask Keryx
+  from a toolbar popup, or right-click to list a page you own as a paid source. A thin,
+  no-key client over the OpenAI-compatible endpoint; load unpacked on any Chromium browser.
 - **MCP server** — on the [official MCP registry](https://registry.modelcontextprotocol.io/v0/servers?search=keryx);
   `npx -y keryx-mcp@latest` gives Claude, Cursor, or any MCP client a paid-research tool backed by
   real settlement.

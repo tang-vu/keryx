@@ -20,6 +20,7 @@ withdraw earnings self-serve.
 - [Ask Keryx](https://keryx.cc/): free to try, no wallet — watch the live reasoning trace decide what to buy, skip, or trust.
 - [Developer docs](https://keryx.cc/dev): how to call the paid API, issue wallet-bound API keys, and integrate x402 payments.
 - [OpenAI-compatible playground](https://keryx.cc/playground): run the /api/v1 endpoint in the browser with no install — watch the agent's live reasoning stream, see the creators it pays, and copy the exact curl/Python/JS snippet.
+- [Browser extension](https://github.com/tang-vu/keryx/tree/main/extension): highlight text on any page and ask Keryx from a toolbar popup (cited answer, live reasoning, creators paid), or right-click to list a page you own as a paid source. No wallet or key to try; load unpacked on any Chromium browser.
 - [Register a source](https://keryx.cc/register): list your content behind an x402 toll; you are paid per fetch and per citation, directly to your wallet.
 - [Live traction dashboard](https://keryx.cc/dashboard): real settled payments only — queries, citations, USDC to creators.
 - [Status](https://keryx.cc/status): uptime, settlement mode, treasury Gateway balance.

@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Keryx — Ask & pay creators",
+  "version": "0.1.0",
+  "description": "Highlight text on any page and ask Keryx — get a cited answer while every source it reads gets paid in USDC. Or list a page you own as a paid source.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Ask Keryx",
+    "default_icon": { "16": "icons/icon-16.png", "32": "icons/icon-32.png" }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "background": { "service_worker": "background.js" },
+  "permissions": ["contextMenus", "activeTab", "scripting", "storage"],
+  "host_permissions": ["https://keryx.cc/*"]
+}
