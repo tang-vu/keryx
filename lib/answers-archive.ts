@@ -78,3 +78,58 @@ export function buildArchive(runs: QueryRun[]): ArchiveEntry[] {
   }
   return [...best.values()].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)).map(toEntry);
 }
+
+// Words too common in questions to signal relatedness.
+const STOPWORDS = new Set(
+  "what who how why when where which does the and for are was were will would can could should has have had between from with this that not any their there".split(
+    " ",
+  ),
+);
+
+function questionTokens(q: string): Set<string> {
+  return new Set(
+    normalizeQuestion(q)
+      .split(" ")
+      .filter((w) => w.length > 2 && !STOPWORDS.has(w)),
+  );
+}
+
+/**
+ * Pick the archive entries most related to one dispatch. Shared cited sources
+ * are the strongest signal (same creators = same beat), question-keyword
+ * overlap breaks ties. When nothing overlaps, fill with the newest entries so
+ * every answer page still links into the corpus instead of dead-ending — the
+ * archive is only crawlable if its pages point at each other.
+ */
+export function relatedAnswers(
+  current: { id: string; question: string; sourceNames: string[] },
+  archive: ArchiveEntry[],
+  limit = 4,
+): ArchiveEntry[] {
+  const curKey = normalizeQuestion(current.question);
+  const curTokens = questionTokens(current.question);
+  const curSources = new Set(current.sourceNames);
+
+  const candidates = archive.filter(
+    (e) => e.id !== current.id && normalizeQuestion(e.question) !== curKey,
+  );
+
+  const scored = candidates
+    .map((e) => {
+      const sharedSources = e.sourceNames.filter((s) => curSources.has(s)).length;
+      let sharedTokens = 0;
+      for (const t of questionTokens(e.question)) if (curTokens.has(t)) sharedTokens++;
+      return { e, score: sharedSources * 2 + sharedTokens };
+    })
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score || (a.e.createdAt < b.e.createdAt ? 1 : -1))
+    .map((x) => x.e);
+
+  const picked = scored.slice(0, limit);
+  // Candidates are already newest-first (buildArchive order), so the fill is too.
+  for (const e of candidates) {
+    if (picked.length >= limit) break;
+    if (!picked.includes(e)) picked.push(e);
+  }
+  return picked;
+}

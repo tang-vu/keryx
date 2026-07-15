@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db";
-import { cleanText } from "@/lib/answers-archive";
+import { cleanText, relatedAnswers } from "@/lib/answers-archive";
+import { getArchiveCached } from "@/lib/answers-archive-cache";
+import { RelatedDispatches } from "@/components/keryx/related-dispatches";
 import { DispatchView } from "./dispatch-view";
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
@@ -41,6 +43,16 @@ export default async function DispatchPage({ params }: PageProps) {
   // Load the real citation payouts so the permalink reflects on-chain settlement
   // truth (settled / batched) instead of reconstructing a "simulated" view.
   const payments = await db.listPaymentsByQuery(id);
+
+  // Internal link mesh: point this permalink at its archive neighbours.
+  const related = relatedAnswers(
+    {
+      id,
+      question: run.question,
+      sourceNames: run.citations.map((c) => c.sourceName).filter(Boolean),
+    },
+    await getArchiveCached(),
+  );
 
   // QAPage structured data — lets search + AI crawlers read this permalink as a
   // question with an accepted answer, and surface the sources it credited.
@@ -101,6 +113,7 @@ export default async function DispatchPage({ params }: PageProps) {
 
       <main className="mx-auto max-w-[1180px] px-4 pb-20 pt-10 sm:px-[30px]">
         <DispatchView run={run} payments={payments} />
+        <RelatedDispatches entries={related} />
       </main>
     </div>
   );
