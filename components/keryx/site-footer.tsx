@@ -30,6 +30,7 @@ const DOCS: FooterLink[] = [
   { label: "USDC on Arc ↗", href: `${EXPLORER}/address/${USDC}`, external: true },
   { label: "x402 + Gateway ↗", href: "https://github.com/circlefin/arc-nanopayments", external: true },
   { label: "Arc network ↗", href: "https://docs.arc.network", external: true },
+  { label: "Privacy", href: "/privacy" },
 ];
 
 function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {

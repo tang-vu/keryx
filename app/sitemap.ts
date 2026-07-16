@@ -16,6 +16,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/dev`, changeFrequency: "weekly", priority: 0.7 },
     { url: `${BASE}/status`, changeFrequency: "daily", priority: 0.5 },
     { url: `${BASE}/connect`, changeFrequency: "monthly", priority: 0.4 },
+    { url: `${BASE}/privacy`, changeFrequency: "monthly", priority: 0.3 },
   ];
 
   // Enumerate only the canonical dispatch per question — buildArchive already

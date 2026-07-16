@@ -31,7 +31,8 @@
     "withdraw": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/withdraw.mts",
     "testmint": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/testmint-topup.mts",
     "ingest": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/ingest-source.mts",
-    "migrate-ipfs": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/migrate-content-to-ipfs.mts"
+    "migrate-ipfs": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/migrate-content-to-ipfs.mts",
+    "pack:extension": "node --import tsx --no-warnings scripts/pack-extension.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.69.0",
