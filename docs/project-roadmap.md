@@ -75,7 +75,7 @@ Live figures at [`/status`](https://keryx.cc/status); snapshots in [TRACTION.md]
 |------|-------------|--------|-------|
 | Redis rate-limit | Replace in-process `rate-limiter-flexible` | 2d | Enables load-balanced cluster |
 | Event-only indexer | WebSocket log subscription wakes the checkpointed getLogs pass; heartbeat poll (30s) backstops WS drops | ✓ Done 2026-07-16 | Near-instant source discovery; idle RPC load cut ~85% vs the 4s poll |
-| Cursor pagination | Source list pagination (limit + offset/cursor) | 1d | Supports large creator bases |
+| Cursor pagination | Source list pagination (limit + offset/cursor) | ✓ Done 2026-07-16 | `GET /api/sources?limit=&cursor=` — opt-in (default stays the full list: the browser payTo allowlist must be exhaustive); stable (createdAt, id) cursor survives same-second bulk imports and mid-page deactivations; in OpenAPI spec |
 | Multi-instance deploy | Load balancer, session persistence | 1d | Horizontal scale + high-availability |
 | **Phase 08 Total** | | ~1w | Deploy to Kubernetes or multi-VPS |
 

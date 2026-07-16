@@ -1,5 +1,10 @@
 /**
  * GET  /api/sources           → list registered sources (public fields only, no auth)
+ *   Optional cursor pagination: ?limit=N (1..100) returns a page plus { total, nextCursor };
+ *   pass ?cursor= from the previous page to continue. WITHOUT ?limit the response stays the
+ *   complete list — the browser payTo allowlist (lib/payments/client-payto-allowlist.ts and
+ *   session-payee-policy.ts) refuses to pay any source absent from this index, so the default
+ *   must never truncate.
  * POST /api/sources           → register a source; requires a valid SIWE session.
  *   body: { rssUrl?, name?, url?, description?, fetchPrice?, tags?, authors? }
  *
@@ -34,31 +39,58 @@ import { NextRequest } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { prepareSourceRegistration } from "@/lib/sources/prepare-registration";
+import { paginateSourceList } from "@/lib/sources/paginate-source-list";
+import type { Source } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+function toPublicSource(s: Source) {
+  return {
+    id: s.id,
+    name: s.name,
+    url: s.url,
+    // A feed address is public by construction — it's what anyone polls to read the source.
+    // The register page needs it back to pre-fill a claim for a pre-registry row.
+    rssUrl: s.rssUrl,
+    description: s.description,
+    tags: s.tags,
+    fetchPrice: s.fetchPrice,
+    walletAddress: s.walletAddress,
+    authors: s.authors.map((a) => ({ name: a.name, splitWeight: a.splitWeight })),
+    onchainId: s.onchainId,
+    registerTx: s.registerTx,
+    verified: s.verified !== false, // undefined → true (grandfathered)
+  };
+}
+
+export async function GET(req: NextRequest) {
   const db = await getDb();
   const sources = await db.listSources();
-  return Response.json({
-    sources: sources.map((s) => ({
-      id: s.id,
-      name: s.name,
-      url: s.url,
-      // A feed address is public by construction — it's what anyone polls to read the source.
-      // The register page needs it back to pre-fill a claim for a pre-registry row.
-      rssUrl: s.rssUrl,
-      description: s.description,
-      tags: s.tags,
-      fetchPrice: s.fetchPrice,
-      walletAddress: s.walletAddress,
-      authors: s.authors.map((a) => ({ name: a.name, splitWeight: a.splitWeight })),
-      onchainId: s.onchainId,
-      registerTx: s.registerTx,
-      verified: s.verified !== false, // undefined → true (grandfathered)
-    })),
-  });
+
+  const limitParam = req.nextUrl.searchParams.get("limit");
+  if (limitParam === null) {
+    // Default: the complete index. In-app consumers (payTo allowlist, register pre-fill,
+    // embed) depend on exhaustiveness, so only an explicit ?limit opts into paging.
+    return Response.json({ sources: sources.map(toPublicSource) });
+  }
+
+  const limit = Number(limitParam);
+  if (!Number.isFinite(limit) || limit < 1) {
+    return Response.json({ error: "limit must be a positive integer" }, { status: 400 });
+  }
+
+  try {
+    const cursor = req.nextUrl.searchParams.get("cursor") ?? undefined;
+    const page = paginateSourceList(sources, { limit, cursor });
+    return Response.json({
+      sources: page.items.map(toPublicSource),
+      total: sources.length,
+      ...(page.nextCursor ? { nextCursor: page.nextCursor } : {}),
+    });
+  } catch {
+    return Response.json({ error: "invalid cursor" }, { status: 400 });
+  }
 }
 
 export async function POST(req: NextRequest) {

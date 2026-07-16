@@ -353,6 +353,62 @@ export const openapiSpec = {
         },
       },
     },
+    "/api/sources": {
+      get: {
+        operationId: "listSources",
+        summary: "Public source catalog (optionally cursor-paginated)",
+        description:
+          "Lists every active registered source: name, tags, fetch price, payout wallet, " +
+          "author split, on-chain registration. No auth. Without `limit` the response is the " +
+          "COMPLETE catalog (in-app payment allowlists depend on that). Pass `limit` to page: " +
+          "the response then carries `total` and, while more rows remain, `nextCursor` to feed " +
+          "back as `cursor`. Ordering is stable (registration time, then id).",
+        parameters: [
+          {
+            in: "query",
+            name: "limit",
+            required: false,
+            schema: { type: "integer", minimum: 1, maximum: 100 },
+            description: "Page size 1..100 (larger values are clamped). Omit for the full list.",
+          },
+          {
+            in: "query",
+            name: "cursor",
+            required: false,
+            schema: { type: "string" },
+            description: "Opaque `nextCursor` from the previous page.",
+          },
+        ],
+        responses: {
+          "200": {
+            description:
+              "Source list. Paginated form: { sources, total, nextCursor? }; full form: { sources }.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    sources: { type: "array", items: { type: "object" } },
+                    total: {
+                      type: "integer",
+                      description: "Total active sources (paginated form only).",
+                    },
+                    nextCursor: {
+                      type: "string",
+                      description: "Present while more pages remain (paginated form only).",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Non-positive `limit`, or a malformed `cursor`.",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
+          },
+        },
+      },
+    },
     "/api/openapi.json": {
       get: {
         operationId: "getOpenApiSpec",
