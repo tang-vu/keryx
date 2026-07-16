@@ -1,8 +1,9 @@
 /**
  * Next.js instrumentation hook — runs once on Node.js server boot.
  *
- * Starts the registry indexer background loop so on-chain SourceRegistry events
- * are projected into the KeryxDB cache within ≤4s of being mined.
+ * Starts the registry indexer so on-chain SourceRegistry events are projected
+ * into the KeryxDB cache — near-instantly via its WebSocket subscription, with
+ * a heartbeat poll as the safety net.
  *
  * Also sweeps session grants whose TTL lapsed while the process was down. Live grants
  * deliberately survive a restart — that is the point of persisting them — but a grant

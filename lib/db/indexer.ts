@@ -1,9 +1,11 @@
 /**
  * indexer.ts — projects SourceRegistry on-chain events into the KeryxDB cache.
  *
- * Strategy: getLogs polling (4s interval, 500-block chunks). Simpler than watchContractEvent
- * on HTTP transport (which falls back to per-block polling anyway) and gives explicit
- * checkpoint control so restarts resume cleanly from `lastSyncedBlock` in sync_state.
+ * Strategy: event-driven, checkpoint-backed. A WebSocket log subscription (see
+ * indexer-event-subscription.ts) wakes a checkpointed getLogs pass the moment the registry
+ * emits; a slow heartbeat poll backstops WS drops. All writes flow through the one getLogs
+ * path, so restarts resume cleanly from `lastSyncedBlock` in sync_state and a missed push
+ * can never lose an event.
  *
  * Arc testnet has deterministic BFT finality — no reorgs are possible. Events are indexed
  * immediately once visible in getLogs results, with zero confirmation-depth logic.
@@ -28,6 +30,7 @@ import { createPublicClient, http, type Address, type Log } from "viem";
 import { arcTestnet } from "@/lib/chains";
 import { config } from "@/lib/config";
 import { REGISTRY_ABI, getRegistrySource } from "@/lib/registry/registry-client";
+import { subscribeRegistryLogs } from "./indexer-event-subscription";
 import type { KeryxDB } from "./keryx-db";
 import type { Author, Source } from "@/lib/types";
 
@@ -204,29 +207,50 @@ async function resolveSource(db: KeryxDB, onchainId: string): Promise<Source | n
 let _started = false;
 
 /**
- * Start the background polling loop. Safe to call multiple times — idempotent via guard.
- * Returns a cleanup function that stops the interval (useful for tests).
+ * Start the background indexer. Event-driven with a safety net:
+ *   - a WebSocket log subscription wakes a sync pass the moment the registry
+ *     emits (see indexer-event-subscription.ts) — near-instant discovery;
+ *   - a slow heartbeat poll covers WS drops and anything the socket missed —
+ *     the checkpoint means a heartbeat that finds nothing new costs one
+ *     getBlockNumber call, and one that finds ground re-covers none of it.
+ * Safe to call multiple times — idempotent via guard.
+ * Returns a cleanup function that stops both channels (useful for tests).
  */
-export function startIndexer(db: KeryxDB, intervalMs = 4_000): () => void {
+export function startIndexer(db: KeryxDB, heartbeatMs = 30_000): () => void {
   if (_started) return () => {};
   _started = true;
 
   let running = false;
-  const timerId = setInterval(async () => {
-    if (running) return; // skip if previous pass is still in flight
+  let pending = false;
+  const sync = async () => {
+    if (running) {
+      // A push landed mid-pass: the pass in flight already fixed its head, so
+      // remember to run once more instead of waiting out the heartbeat.
+      pending = true;
+      return;
+    }
     running = true;
     try {
       await syncOnce(db);
     } catch (err) {
-      // Log errors but don't crash the server — next tick will retry from last checkpoint.
+      // Log errors but don't crash the server — the next wake retries from last checkpoint.
       console.error("[keryx indexer]", err instanceof Error ? err.message : err);
     } finally {
       running = false;
+      if (pending) {
+        pending = false;
+        void sync();
+      }
     }
-  }, intervalMs);
+  };
+
+  const unsubscribe = subscribeRegistryLogs(() => void sync());
+  const timerId = setInterval(() => void sync(), heartbeatMs);
+  void sync(); // catch up immediately on boot instead of waiting a heartbeat
 
   return () => {
     clearInterval(timerId);
+    unsubscribe();
     _started = false;
   };
 }

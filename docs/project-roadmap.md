@@ -74,7 +74,7 @@ Live figures at [`/status`](https://keryx.cc/status); snapshots in [TRACTION.md]
 | Task | Description | Effort | Notes |
 |------|-------------|--------|-------|
 | Redis rate-limit | Replace in-process `rate-limiter-flexible` | 2d | Enables load-balanced cluster |
-| Event-only indexer | Subscribe to Arc finality events instead of polling | 2d | Real-time source discovery, no RPC backpressure |
+| Event-only indexer | WebSocket log subscription wakes the checkpointed getLogs pass; heartbeat poll (30s) backstops WS drops | ✓ Done 2026-07-16 | Near-instant source discovery; idle RPC load cut ~85% vs the 4s poll |
 | Cursor pagination | Source list pagination (limit + offset/cursor) | 1d | Supports large creator bases |
 | Multi-instance deploy | Load balancer, session persistence | 1d | Horizontal scale + high-availability |
 | **Phase 08 Total** | | ~1w | Deploy to Kubernetes or multi-VPS |

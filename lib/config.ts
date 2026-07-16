@@ -9,6 +9,10 @@ export const config = {
   // x402 network identifier used in payment requirements
   networkId: "eip155:5042002",
   rpcUrl: process.env.KERYX_RPC_URL ?? "https://rpc.testnet.arc.network",
+  // WebSocket RPC for the indexer's live log subscription (read-only pushes; settlement
+  // stays on rpcUrl). Set to an empty string to disable pushes — the indexer then relies
+  // on its heartbeat poll alone.
+  rpcWsUrl: process.env.KERYX_RPC_WS_URL ?? "wss://rpc.testnet.arc.network",
   usdcAddress: (process.env.KERYX_USDC_ADDRESS ??
     "0x3600000000000000000000000000000000000000") as `0x${string}`,
   gatewayWallet: (process.env.KERYX_GATEWAY_WALLET ??
