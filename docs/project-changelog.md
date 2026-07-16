@@ -1,9 +1,30 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-07-02  
-**Current Version:** 0.4.0
+**Last Updated:** 2026-07-16  
+**Current Version:** 0.5.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
+
+---
+
+## v0.5.0 — 2026-07-16 — Security closed, registry on-chain for real, and three new front doors
+
+Release wave gathering the work since v0.4.0 (48 commits). The Phase-07 security residuals closed:
+every payTo the browser signs is now validated against the on-chain SourceRegistry (server-side
+too), the session grant cap is clamped to the USDC the Gateway actually holds, grants persist
+across restarts, and the spending key moved into a dedicated Web Worker the page cannot read.
+Registry write-mode switched ON: creators register from their own wallet, all twenty prod sources
+were backfilled on-chain (including one claimed by its real owner's wallet), an hourly parity
+watchdog proves the DB cache honest in public on `/status`, and the indexer now wakes on registry
+events over WebSocket instead of hammering a 4-second poll. Three new front doors for external
+askers: an OpenAI-compatible `/api/v1` endpoint (any OpenAI SDK works, with a no-install
+playground + client recipes), a Chromium MV3 browser extension (highlight-and-ask on any page,
+store-ready with privacy policy + listing kit), and a public `/answers` archive (~380 canonical,
+search-indexed answer pages that grow with every query). Creator side: an embeddable Ask widget +
+"Cited by Keryx" badge + live activity ticker, bulk feed/OPML import, per-source preview-depth
+control, session extend without re-signing, and USDC preset chips. The public source catalog
+gained opt-in cursor pagination (`GET /api/sources?limit=&cursor=`) that never truncates the
+payment allowlist by default. 154 vitest tests green.
 
 ---
 
