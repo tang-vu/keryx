@@ -1,5 +1,9 @@
 # Discord Bot Setup — `/ask` in any server
 
+> **The production app is live.** Install it into your server with
+> [this link](https://discord.com/oauth2/authorize?client_id=1527619548809924678) and type `/ask`.
+> The steps below are only needed to stand up your *own* Discord application (fork / self-host).
+
 Keryx ships a Discord front door: a slash command any server can install. A member types
 `/ask question: …`, Keryx runs its full paid-source reasoning loop, and the reply embed shows the
 grounded answer, **every creator paid** (weighted USDC citation rewards on Arc testnet), and a link

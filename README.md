@@ -118,6 +118,10 @@ Example trace (real output):
 - **MCP server** — on the [official MCP registry](https://registry.modelcontextprotocol.io/v0/servers?search=keryx);
   `npx -y keryx-mcp@latest` gives Claude, Cursor, or any MCP client a paid-research tool backed by
   real settlement.
+- **Discord slash command** — [install the Keryx app](https://discord.com/oauth2/authorize?client_id=1527619548809924678)
+  in any server and type `/ask`: the reply embed carries the grounded answer, every creator paid,
+  and a link to the dispatch trace. No bot process — signed interactions POST straight to the API
+  ([`docs/discord-bot-setup.md`](./docs/discord-bot-setup.md)).
 - **Agent-to-agent API** — `POST /api/agent/ask` lets other agents buy Keryx's research over x402:
   an agent paying an agent that pays creators, end to end.
 - **OpenAI-compatible endpoint** — point any OpenAI SDK or tool (LangChain, LlamaIndex, OpenWebUI,
