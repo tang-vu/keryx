@@ -104,6 +104,10 @@ export const config = {
   // (self-volume) instead of `web`/`a2a`. This keeps the dashboard's external bucket honestly
   // limited to genuine third-party callers. Unset → no tagging (all entry-path traffic stays web/a2a).
   botKey: process.env.KERYX_BOT_KEY ?? "",
+  // Discord application public key (Developer Portal → General Information). When set, the
+  // /api/discord/interactions endpoint verifies requests and serves the /ask slash command;
+  // unset → that endpoint answers 503 and the Discord front door stays dark.
+  discordPublicKey: process.env.DISCORD_PUBLIC_KEY ?? "",
 
   // ── Auth ──
   // JWT_SECRET must be ≥ 32 bytes (256 bits) for HS256 security. When unset,
