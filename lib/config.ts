@@ -108,6 +108,11 @@ export const config = {
   // /api/discord/interactions endpoint verifies requests and serves the /ask slash command;
   // unset → that endpoint answers 503 and the Discord front door stays dark.
   discordPublicKey: process.env.DISCORD_PUBLIC_KEY ?? "",
+  // Telegram bot token (BotFather) + the webhook secret Telegram echoes back on every update
+  // (X-Telegram-Bot-Api-Secret-Token). Both set → /api/telegram/webhook serves /ask; either
+  // unset → that endpoint answers 503 and the Telegram front door stays dark.
+  telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ?? "",
+  telegramWebhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET ?? "",
 
   // ── Auth ──
   // JWT_SECRET must be ≥ 32 bytes (256 bits) for HS256 security. When unset,
