@@ -1,5 +1,9 @@
 # Telegram Bot Setup — `/ask` in any chat
 
+> **The production bot is live.** DM [@keryxai_bot](https://t.me/keryxai_bot) any question, or add
+> it to a group and type `/ask …`. The steps below are only needed to stand up your *own* bot
+> (fork / self-host).
+
 Keryx ships a Telegram front door: a bot anyone can DM or add to a group. A member types
 `/ask …` (in a DM, just the question works), Keryx runs its full paid-source reasoning loop, and
 the reply shows the grounded answer, **every creator paid** (weighted USDC citation rewards on Arc
