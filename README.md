@@ -122,9 +122,10 @@ Example trace (real output):
   in any server and type `/ask`: the reply embed carries the grounded answer, every creator paid,
   and a link to the dispatch trace. No bot process — signed interactions POST straight to the API
   ([`docs/discord-bot-setup.md`](./docs/discord-bot-setup.md)).
-- **Telegram bot** — DM the bot any question (or `/ask …` in a group): same full reasoning loop,
-  same real creator payouts, answered in-chat with a dispatch-trace link. Webhook-only, no polling
-  process ([`docs/telegram-bot-setup.md`](./docs/telegram-bot-setup.md)).
+- **Telegram bot** — DM [@keryxai_bot](https://t.me/keryxai_bot) any question (or `/ask …` in a
+  group): same full reasoning loop, same real creator payouts, answered in-chat with a
+  dispatch-trace link. Webhook-only, no polling process
+  ([`docs/telegram-bot-setup.md`](./docs/telegram-bot-setup.md)).
 - **Agent-to-agent API** — `POST /api/agent/ask` lets other agents buy Keryx's research over x402:
   an agent paying an agent that pays creators, end to end.
 - **OpenAI-compatible endpoint** — point any OpenAI SDK or tool (LangChain, LlamaIndex, OpenWebUI,
