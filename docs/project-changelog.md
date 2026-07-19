@@ -7,6 +7,20 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ---
 
+## Unreleased
+
+### Creator earnings export (2026-07-19)
+`GET /api/creator/[id]/export?format=csv|json` — a creator's full payout ledger as a downloadable
+file, plus an "Export ledger (CSV)" link on the creator page. The page shows the last 25 payouts;
+reconciling a withdrawal or filing the income needs all of them, with the question that triggered
+each. Public, like the rest of `/api/creator/[id]`. `settlement_ref` is Circle's settlement id, not
+an EVM tx hash — the header says so, so nobody pastes a UUID into arcscan and concludes the payouts
+are invented. Amounts render at USDC's 6dp (never exponent form), cells are RFC-4180 escaped, and
+any question starting `=`/`+`/`-`/`@` is neutralised so a creator's own ledger can't execute a
+formula in Excel. `lib/creator/earnings-export.ts` + 11 tests.
+
+---
+
 ## v0.5.0 — 2026-07-16 — Security closed, registry on-chain for real, and three new front doors
 
 Release wave gathering the work since v0.4.0 (48 commits). The Phase-07 security residuals closed:

@@ -103,7 +103,7 @@ Live figures at [`/status`](https://keryx.cc/status); snapshots in [TRACTION.md]
 |------|-------------|--------|-------|
 | API key scoping | Keys scoped to specific sources / operations | 2d | Enteprise API isolation |
 | Custom registry | Deploy SourceRegistry per customer | 2d | White-label dApp deployments |
-| Audit export | Payment + query history in CSV / JSON | 1d | Compliance reporting |
+| Audit export | Payment + query history in CSV / JSON | ✓ Done 2026-07-19 | `GET /api/creator/[id]/export?format=csv\|json` — full per-creator payout ledger with the question behind each payout; download link on the creator page. Formula-injection-safe CSV. Cross-creator/API-key-scoped export still open |
 | Fiat on-ramp | Stripe / Ramp integration for testnet-to-mainnet USDC | 3d | Reduce friction: Circle faucet → mainnet spending |
 | **Phase 10 Total** | | ~2w | B2B expansion |
 

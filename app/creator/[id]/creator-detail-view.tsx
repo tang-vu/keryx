@@ -160,9 +160,20 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
 
       {/* Recent payments */}
       <section className="border border-line bg-paper p-5">
-        <h2 className="mb-4 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-          Recent payments ({recentPayments.length})
-        </h2>
+        <div className="mb-4 flex items-baseline justify-between gap-3">
+          <h2 className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+            Recent payments ({recentPayments.length})
+          </h2>
+          {/* The panel shows a slice; the export is the whole ledger — what a creator needs
+              to reconcile a withdrawal or file the income. */}
+          <a
+            href={`/api/creator/${creatorId}/export?format=csv`}
+            download
+            className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3 underline underline-offset-4 transition-colors hover:text-seal"
+          >
+            Export ledger (CSV)
+          </a>
+        </div>
         {recentPayments.length === 0 ? (
           <p className="py-6 text-center font-serif text-sm text-ink-3">
             No payments yet.
