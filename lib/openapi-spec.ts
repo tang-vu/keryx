@@ -30,7 +30,9 @@ export const openapiSpec = {
         scheme: "bearer",
         description:
           "Wallet-issued API key (`kx_live_…`). Mint at `/api/keys` after SIWE sign-in. " +
-          "Still requires `payment-signature` — key is identity + rate-limit only.",
+          "Still requires `payment-signature` — key is identity + rate-limit only. Keys carry " +
+          "scopes (`ask`, `export`); calling outside a key's scopes returns 403. Keys minted " +
+          "before scopes existed carry all of them.",
       },
       X402Payment: {
         type: "apiKey",
@@ -150,6 +152,17 @@ export const openapiSpec = {
           createdAt: { type: "string", format: "date-time" },
           lastUsedAt: { type: "string", format: "date-time", nullable: true },
           revokedAt: { type: "string", format: "date-time", nullable: true },
+          scopes: {
+            type: "array",
+            items: { type: "string", enum: ["ask", "export"] },
+            description: "Resolved scopes — a pre-scopes key reads back as all of them.",
+          },
+          sourceIds: {
+            type: "array",
+            items: { type: "string" },
+            nullable: true,
+            description: "Sources this key is pinned to; null means every source the wallet owns.",
+          },
         },
       },
       Error: {
@@ -312,7 +325,24 @@ export const openapiSpec = {
             "application/json": {
               schema: {
                 type: "object",
-                properties: { label: { type: "string", description: "Optional nickname." } },
+                properties: {
+                  label: { type: "string", description: "Optional nickname." },
+                  scopes: {
+                    type: "array",
+                    items: { type: "string", enum: ["ask", "export"] },
+                    description:
+                      "Operations this key may perform. `ask` runs dispatches; `export` reads " +
+                      "the wallet's earnings ledger. Omitted or empty mints a full-power key.",
+                  },
+                  sourceIds: {
+                    type: "array",
+                    items: { type: "string" },
+                    description:
+                      "Pin the key to specific sources (export only). Omitted means every " +
+                      "source the wallet owns. Always intersected with live ownership, so a " +
+                      "pin can never widen access.",
+                  },
+                },
               },
             },
           },

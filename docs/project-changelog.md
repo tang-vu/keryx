@@ -9,6 +9,22 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### API key scopes + source pinning (2026-07-20)
+A key used to do one thing — identify a caller on the ask paths. Once the earnings export
+existed, the same key also read every payout its wallet ever received, so a key handed to a
+script that only asks questions handed over the accounts too. Keys now carry scopes: `ask` (run
+dispatches) and `export` (read the ledger), plus an optional pin to specific source ids. Calling
+outside a key's scopes returns 403 on `/api/agent/ask`, `/api/v1/chat/completions` and
+`/api/creator/export`.
+
+Two invariants, both tested: a pin is **intersected with live ownership**, never unioned — a key
+naming a stranger's source id gets nothing, and a key pinned to a source its wallet later loses
+stops returning it. And a key minted before scopes existed stores NULL, which reads as *all*
+scopes: silently narrowing keys that work today would break live integrations. An empty scope
+request also mints full power, because a key that can do nothing is a support ticket, not a
+security win. Scope picker + per-key scope display on `/dev`; new columns via sqlite backfill and
+Supabase migration `0013`. 229 tests green.
+
 ### Portfolio audit export, wallet-scoped (2026-07-19)
 `GET /api/creator/export?format=csv|json` — every payout across every source one wallet owns, in
 one ledger, with a per-source breakdown in the JSON envelope. Authenticated by SIWE session (the

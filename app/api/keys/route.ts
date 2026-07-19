@@ -8,6 +8,14 @@
 import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { mintApiKey } from "@/lib/api-keys";
+import {
+  normalizeScopes,
+  normalizeSourceIds,
+  parseScopes,
+  parseSourceIds,
+  serializeScopes,
+  serializeSourceIds,
+} from "@/lib/api-key-scopes";
 import { getDb } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -19,9 +27,14 @@ export async function GET() {
 
   const db = await getDb();
   const keys = await db.listApiKeys(session.address);
-  // Strip wallet from the returned list — caller knows their own address.
+  // Strip wallet from the returned list — caller knows their own address. Scopes are parsed
+  // rather than echoed raw so a pre-scopes key reads as what it actually is: full power.
   return Response.json(
-    keys.map(({ wallet: _w, ...k }) => k),
+    keys.map(({ wallet: _w, scopes, sourceIds, ...k }) => ({
+      ...k,
+      scopes: parseScopes(scopes),
+      sourceIds: parseSourceIds(sourceIds),
+    })),
   );
 }
 
@@ -29,10 +42,24 @@ export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session) return Response.json({ error: "unauthenticated" }, { status: 401 });
 
-  const body = (await req.json().catch(() => ({}))) as { label?: string };
+  const body = (await req.json().catch(() => ({}))) as {
+    label?: string;
+    scopes?: unknown;
+    sourceIds?: unknown;
+  };
   const label = typeof body.label === "string" ? body.label.slice(0, 80) : undefined;
 
-  const { rawKey, prefix, id } = await mintApiKey(session.address, label);
+  // Least privilege is opt-in: an unspecified request still mints a full-power key, because a
+  // key that can do nothing is a support ticket. The caller narrows deliberately.
+  const scopes = normalizeScopes(body.scopes);
+  const sourceIds = normalizeSourceIds(body.sourceIds);
 
-  return Response.json({ rawKey, prefix, id });
+  const { rawKey, prefix, id } = await mintApiKey(
+    session.address,
+    label,
+    serializeScopes(scopes),
+    serializeSourceIds(sourceIds),
+  );
+
+  return Response.json({ rawKey, prefix, id, scopes, sourceIds });
 }

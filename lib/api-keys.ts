@@ -19,16 +19,19 @@ export const ApiKeySchema = z.string().regex(/^kx_live_[0-9a-f]{96}$/, "invalid 
 /** Prefix length: "kx_live_" (8) + 8 more chars = 16 chars total. Enough to be unique in the DB. */
 const PREFIX_LEN = 16;
 
-/** Generate a new API key, persist it (hashed), and return the raw key ONCE. */
+/** Generate a new API key, persist it (hashed), and return the raw key ONCE.
+ *  Scopes/source pins are normalised by the caller (see lib/api-key-scopes.ts). */
 export async function mintApiKey(
   wallet: string,
   label?: string,
+  scopes?: string,
+  sourceIds?: string | null,
 ): Promise<{ rawKey: string; prefix: string; id: string }> {
   const suffix = crypto.randomBytes(48).toString("hex"); // 96 hex chars = 384 bits
   const rawKey = `kx_live_${suffix}`;
   const prefix = rawKey.slice(0, PREFIX_LEN);
   const db = await getDb();
-  const { id } = await db.mintApiKey(wallet, prefix, sha256(rawKey), label);
+  const { id } = await db.mintApiKey(wallet, prefix, sha256(rawKey), label, scopes, sourceIds);
   // Raw key is assembled here and returned ONCE. DB only stores prefix + hash.
   return { rawKey, prefix, id };
 }
@@ -38,9 +41,12 @@ export async function mintApiKey(
  * Returns the associated wallet address and key id, or null if invalid/revoked.
  * Does not throw — callers branch on null.
  */
-export async function verifyApiKey(
-  raw: string,
-): Promise<{ walletAddress: string; keyId: string } | null> {
+export async function verifyApiKey(raw: string): Promise<{
+  walletAddress: string;
+  keyId: string;
+  scopes: string | null;
+  sourceIds: string | null;
+} | null> {
   // Validate format first (short-circuits before touching DB on garbage input).
   const parsed = ApiKeySchema.safeParse(raw);
   if (!parsed.success) return null;

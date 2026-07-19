@@ -465,6 +465,8 @@ export class SupabaseAdapter implements KeryxDB {
     prefix: string,
     keyHash: string,
     label?: string,
+    scopes?: string,
+    sourceIds?: string | null,
   ): Promise<{ rawKey: string; prefix: string; id: string }> {
     const id = crypto.randomUUID();
     await this.sb.from("api_keys").insert({
@@ -474,6 +476,8 @@ export class SupabaseAdapter implements KeryxDB {
       wallet,
       label: label ?? null,
       created_at: new Date().toISOString(),
+      scopes: scopes ?? null,
+      source_ids: sourceIds ?? null,
     });
     return { rawKey: "", prefix, id };
   }
@@ -481,10 +485,15 @@ export class SupabaseAdapter implements KeryxDB {
   async verifyApiKey(
     prefix: string,
     incomingHash: string,
-  ): Promise<{ walletAddress: string; keyId: string } | null> {
+  ): Promise<{
+    walletAddress: string;
+    keyId: string;
+    scopes: string | null;
+    sourceIds: string | null;
+  } | null> {
     const { data } = await this.sb
       .from("api_keys")
-      .select("id,key_hash,wallet")
+      .select("id,key_hash,wallet,scopes,source_ids")
       .eq("prefix", prefix)
       .is("revoked_at", null)
       .maybeSingle();
@@ -504,13 +513,18 @@ export class SupabaseAdapter implements KeryxDB {
       .update({ last_used_at: new Date().toISOString() })
       .eq("id", data.id as string);
 
-    return { walletAddress: data.wallet as string, keyId: data.id as string };
+    return {
+      walletAddress: data.wallet as string,
+      keyId: data.id as string,
+      scopes: (data.scopes as string) ?? null,
+      sourceIds: (data.source_ids as string) ?? null,
+    };
   }
 
   async listApiKeys(wallet: string): Promise<ApiKeyRow[]> {
     const { data } = await this.sb
       .from("api_keys")
-      .select("id,prefix,wallet,label,created_at,last_used_at,revoked_at")
+      .select("id,prefix,wallet,label,created_at,last_used_at,revoked_at,scopes,source_ids")
       .eq("wallet", wallet)
       .order("created_at", { ascending: false });
     return (data ?? []).map((r) => ({
@@ -521,6 +535,8 @@ export class SupabaseAdapter implements KeryxDB {
       createdAt: r.created_at as string,
       lastUsedAt: (r.last_used_at as string) ?? null,
       revokedAt: (r.revoked_at as string) ?? null,
+      scopes: (r.scopes as string) ?? null,
+      sourceIds: (r.source_ids as string) ?? null,
     }));
   }
 

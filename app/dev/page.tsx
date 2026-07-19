@@ -15,9 +15,14 @@ import { SiteHeader } from "@/components/keryx/site-header";
 import { shortAddr } from "@/components/keryx/phase-style";
 import { Copy, Key, Plus, Trash2, X } from "lucide-react";
 import type { ApiKeyRow, ApiKeyUsage } from "@/lib/db/keryx-db";
+import { API_KEY_SCOPES, type ApiKeyScope } from "@/lib/api-key-scopes";
 
-interface KeyWithUsage extends ApiKeyRow {
+/** GET /api/keys parses the stored scope columns before returning them, so a pre-scopes key
+ *  arrives as the full scope list rather than a null the UI would have to interpret. */
+interface KeyWithUsage extends Omit<ApiKeyRow, "scopes" | "sourceIds"> {
   usage?: ApiKeyUsage[];
+  scopes: ApiKeyScope[];
+  sourceIds: string[] | null;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -152,9 +157,16 @@ function KeyCard({
               </span>
             )}
           </div>
-          <div className="mt-1 flex gap-4 font-mono text-[10px] text-ink-3">
+          <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[10px] text-ink-3">
             <span>Created {fmtDate(apiKey.createdAt)}</span>
             <span>Last used {fmtDate(apiKey.lastUsedAt)}</span>
+            <span>
+              Scopes{" "}
+              <span className="text-ink-2">
+                {apiKey.scopes.join(" + ")}
+                {apiKey.sourceIds && ` · ${apiKey.sourceIds.length} pinned source(s)`}
+              </span>
+            </span>
           </div>
         </div>
 
@@ -189,6 +201,8 @@ export default function DevPage() {
   const [error, setError] = useState<string | null>(null);
   const [minting, setMinting] = useState(false);
   const [newLabel, setNewLabel] = useState("");
+  // Default to full power so the common case is one click; narrowing is deliberate.
+  const [newScopes, setNewScopes] = useState<ApiKeyScope[]>([...API_KEY_SCOPES]);
   const [showMintForm, setShowMintForm] = useState(false);
   const [rawKey, setRawKey] = useState<string | null>(null);
 
@@ -202,7 +216,8 @@ export default function DevPage() {
         return;
       }
       if (!res.ok) throw new Error(`${res.status}`);
-      const data = (await res.json()) as ApiKeyRow[];
+      // The route already parsed the scope columns into arrays — see KeyWithUsage.
+      const data = (await res.json()) as Omit<KeyWithUsage, "usage">[];
 
       // Load usage for each active key in parallel.
       const withUsage = await Promise.all(
@@ -235,7 +250,10 @@ export default function DevPage() {
       const res = await fetch("/api/keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label: newLabel.trim() || undefined }),
+        body: JSON.stringify({
+          label: newLabel.trim() || undefined,
+          scopes: newScopes,
+        }),
       });
       if (!res.ok) {
         const j = (await res.json()) as { error?: string };
@@ -244,6 +262,7 @@ export default function DevPage() {
       const { rawKey: rk } = (await res.json()) as { rawKey: string; prefix: string; id: string };
       setRawKey(rk);
       setNewLabel("");
+      setNewScopes([...API_KEY_SCOPES]);
       setShowMintForm(false);
       void loadKeys();
     } catch (e) {
@@ -367,30 +386,64 @@ export default function DevPage() {
           ) : (
             <form
               onSubmit={(e) => void handleMint(e)}
-              className="flex items-center gap-2 rounded border border-seal/40 bg-paper p-3"
+              className="rounded border border-seal/40 bg-paper p-3"
             >
-              <input
-                type="text"
-                placeholder="Label (optional)"
-                value={newLabel}
-                onChange={(e) => setNewLabel(e.target.value)}
-                maxLength={80}
-                className="flex-1 rounded border border-line bg-paper-2 px-3 py-1.5 font-mono text-xs text-ink placeholder-ink-3 focus:border-seal focus:outline-none"
-              />
-              <button
-                type="submit"
-                disabled={minting}
-                className="rounded border border-seal bg-seal/10 px-4 py-1.5 font-mono text-xs text-seal hover:bg-seal/20 disabled:opacity-50 transition-colors"
-              >
-                {minting ? "Minting…" : "Mint"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowMintForm(false)}
-                className="text-ink-3 hover:text-ink transition-colors"
-              >
-                <X size={14} />
-              </button>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="Label (optional)"
+                  value={newLabel}
+                  onChange={(e) => setNewLabel(e.target.value)}
+                  maxLength={80}
+                  className="flex-1 rounded border border-line bg-paper-2 px-3 py-1.5 font-mono text-xs text-ink placeholder-ink-3 focus:border-seal focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={minting}
+                  className="rounded border border-seal bg-seal/10 px-4 py-1.5 font-mono text-xs text-seal hover:bg-seal/20 disabled:opacity-50 transition-colors"
+                >
+                  {minting ? "Minting…" : "Mint"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowMintForm(false)}
+                  className="text-ink-3 hover:text-ink transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+
+              {/* Scope picker. A key handed to an accountant should read the ledger without
+                  being able to spend; unticking everything would mint a useless key, so the
+                  server reads an empty selection as "all". */}
+              <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-line pt-3">
+                <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3">
+                  Scopes
+                </span>
+                {API_KEY_SCOPES.map((scope) => (
+                  <label
+                    key={scope}
+                    className="flex cursor-pointer items-center gap-1.5 font-mono text-xs text-ink-2"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={newScopes.includes(scope)}
+                      onChange={(e) =>
+                        setNewScopes((prev) =>
+                          e.target.checked
+                            ? [...prev, scope]
+                            : prev.filter((s) => s !== scope),
+                        )
+                      }
+                      className="accent-seal"
+                    />
+                    {scope}
+                    <span className="text-ink-3">
+                      {scope === "ask" ? "(run dispatches)" : "(read your earnings)"}
+                    </span>
+                  </label>
+                ))}
+              </div>
             </form>
           )}
         </div>

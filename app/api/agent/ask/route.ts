@@ -14,6 +14,7 @@ import { makePayment } from "@/lib/payments/payment-gateway";
 import { settleThenServe, challengeResponse } from "@/lib/x402-server";
 import { a2aDiscovery } from "@/lib/x402-discovery";
 import { verifyApiKey } from "@/lib/api-keys";
+import { hasScope, parseScopes } from "@/lib/api-key-scopes";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -66,6 +67,10 @@ export async function POST(req: NextRequest) {
 
     const keyCtx = await verifyApiKey(rawKey);
     if (!keyCtx) return Response.json({ error: "invalid or revoked api key" }, { status: 401 });
+    // An export-only key (e.g. one handed to an accountant) must not drive agent runs.
+    if (!hasScope(parseScopes(keyCtx.scopes), "ask")) {
+      return Response.json({ error: "this api key is not scoped for ask" }, { status: 403 });
+    }
 
     // Fire-and-forget daily usage counter — does not block the response.
     const db = await getDb();

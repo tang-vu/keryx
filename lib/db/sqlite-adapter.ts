@@ -78,7 +78,9 @@ CREATE TABLE IF NOT EXISTS api_keys (
   label       TEXT,
   created_at  TEXT NOT NULL,
   last_used_at TEXT,
-  revoked_at  TEXT
+  revoked_at  TEXT,
+  scopes      TEXT,
+  source_ids  TEXT
 );
 CREATE INDEX IF NOT EXISTS api_keys_prefix ON api_keys(prefix);
 CREATE INDEX IF NOT EXISTS api_keys_wallet ON api_keys(wallet);
@@ -173,6 +175,16 @@ export class SqliteAdapter implements KeryxDB {
       ),
     );
     if (!metaCols.has("rss_url")) this.db.exec(`ALTER TABLE source_meta ADD COLUMN rss_url TEXT`);
+
+    // api_keys scope columns. NULL on every pre-existing key and read as "all scopes, all owned
+    // sources" — narrowing a key that already works in someone's integration would break it.
+    const keyCols = new Set(
+      (this.db.prepare(`PRAGMA table_info(api_keys)`).all() as { name: string }[]).map(
+        (c) => c.name,
+      ),
+    );
+    if (!keyCols.has("scopes")) this.db.exec(`ALTER TABLE api_keys ADD COLUMN scopes TEXT`);
+    if (!keyCols.has("source_ids")) this.db.exec(`ALTER TABLE api_keys ADD COLUMN source_ids TEXT`);
 
     // source_items table: encrypted-content columns added in Phase 04.
     // Existing rows have NULL for these; produce() falls back to DB plaintext content.
@@ -609,13 +621,25 @@ export class SqliteAdapter implements KeryxDB {
     prefix: string,
     keyHash: string,
     label?: string,
+    scopes?: string,
+    sourceIds?: string | null,
   ): Promise<{ rawKey: string; prefix: string; id: string }> {
     const id = crypto.randomUUID();
     this.db
       .prepare(
-        `INSERT INTO api_keys (id,prefix,key_hash,wallet,label,created_at) VALUES (?,?,?,?,?,?)`,
+        `INSERT INTO api_keys (id,prefix,key_hash,wallet,label,created_at,scopes,source_ids)
+         VALUES (?,?,?,?,?,?,?,?)`,
       )
-      .run(id, prefix, keyHash, wallet, label ?? null, new Date().toISOString());
+      .run(
+        id,
+        prefix,
+        keyHash,
+        wallet,
+        label ?? null,
+        new Date().toISOString(),
+        scopes ?? null,
+        sourceIds ?? null,
+      );
     // rawKey is NOT stored; caller reconstructs it from the prefix + suffix they generated.
     // We echo prefix so the caller can display it; rawKey is assembled by the route handler.
     return { rawKey: "", prefix, id };
@@ -624,10 +648,20 @@ export class SqliteAdapter implements KeryxDB {
   async verifyApiKey(
     prefix: string,
     incomingHash: string,
-  ): Promise<{ walletAddress: string; keyId: string } | null> {
+  ): Promise<{
+    walletAddress: string;
+    keyId: string;
+    scopes: string | null;
+    sourceIds: string | null;
+  } | null> {
     const row = this.db
-      .prepare(`SELECT id,key_hash,wallet FROM api_keys WHERE prefix=? AND revoked_at IS NULL`)
-      .get(prefix) as { id: string; key_hash: string; wallet: string } | undefined;
+      .prepare(
+        `SELECT id,key_hash,wallet,scopes,source_ids FROM api_keys
+         WHERE prefix=? AND revoked_at IS NULL`,
+      )
+      .get(prefix) as
+      | { id: string; key_hash: string; wallet: string; scopes: string | null; source_ids: string | null }
+      | undefined;
     if (!row) return null;
 
     // Timing-safe compare on fixed-length SHA-256 hex (always 64 chars).
@@ -643,12 +677,17 @@ export class SqliteAdapter implements KeryxDB {
       .prepare(`UPDATE api_keys SET last_used_at=? WHERE id=?`)
       .run(new Date().toISOString(), row.id);
 
-    return { walletAddress: row.wallet, keyId: row.id };
+    return {
+      walletAddress: row.wallet,
+      keyId: row.id,
+      scopes: row.scopes ?? null,
+      sourceIds: row.source_ids ?? null,
+    };
   }
 
   async listApiKeys(wallet: string): Promise<ApiKeyRow[]> {
     const rows = this.db
-      .prepare(`SELECT id,prefix,wallet,label,created_at,last_used_at,revoked_at FROM api_keys WHERE wallet=? ORDER BY created_at DESC`)
+      .prepare(`SELECT id,prefix,wallet,label,created_at,last_used_at,revoked_at,scopes,source_ids FROM api_keys WHERE wallet=? ORDER BY created_at DESC`)
       .all(wallet) as Record<string, unknown>[];
     return rows.map(rowToApiKey);
   }
@@ -774,6 +813,8 @@ function rowToApiKey(r: Record<string, unknown>): ApiKeyRow {
     createdAt: r.created_at as string,
     lastUsedAt: (r.last_used_at as string) ?? null,
     revokedAt: (r.revoked_at as string) ?? null,
+    scopes: (r.scopes as string) ?? null,
+    sourceIds: (r.source_ids as string) ?? null,
   };
 }
 

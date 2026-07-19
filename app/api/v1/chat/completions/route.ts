@@ -21,6 +21,7 @@ import { collectRun } from "@/lib/agent";
 import { config } from "@/lib/config";
 import { getDb } from "@/lib/db";
 import { verifyApiKey } from "@/lib/api-keys";
+import { hasScope, parseScopes } from "@/lib/api-key-scopes";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
 import {
   type ChatCompletionRequest,
@@ -71,6 +72,10 @@ export async function POST(req: NextRequest) {
     if (limited) return limited;
     const keyCtx = await verifyApiKey(rawKey);
     if (!keyCtx) return openaiError("invalid or revoked api key", 401, "invalid_api_key");
+    // An export-only key (e.g. one handed to an accountant) must not drive agent runs.
+    if (!hasScope(parseScopes(keyCtx.scopes), "ask")) {
+      return openaiError("this api key is not scoped for ask", 403, "insufficient_scope");
+    }
     const db = await getDb();
     void db.incrementUsage(keyCtx.keyId); // fire-and-forget daily counter
     origin = "a2a";

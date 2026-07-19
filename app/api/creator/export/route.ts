@@ -16,6 +16,12 @@ import { getSession } from "@/lib/auth";
 import { verifyApiKey } from "@/lib/api-keys";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { sourcesOwnedBy } from "@/lib/sources/source-ownership";
+import {
+  hasScope,
+  parseScopes,
+  parseSourceIds,
+  restrictToKeySources,
+} from "@/lib/api-key-scopes";
 import { summariseEarnings } from "@/lib/creator/earnings-export";
 import {
   PORTFOLIO_COLUMNS,
@@ -50,7 +56,12 @@ export async function GET(req: NextRequest) {
     const db = await getDb();
     // listAllSources, not listSources: a source the creator has since deactivated on-chain
     // still earned real money, and an audit file that silently drops it is wrong.
-    const owned = sourcesOwnedBy(await db.listAllSources(), wallet);
+    // Ownership decides first, the key's pin only ever narrows what is left — so a key can
+    // never name a source id into the result that its wallet does not own.
+    const owned = restrictToKeySources(
+      sourcesOwnedBy(await db.listAllSources(), wallet),
+      auth.sourceIds,
+    );
     if (owned.length === 0) {
       return NextResponse.json(
         { error: "no sources owned by this wallet", wallet },
@@ -113,10 +124,11 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/** SIWE session cookie, else a wallet-issued API key. */
+/** SIWE session cookie, else a wallet-issued API key. A session is unscoped (the owner is
+ *  present in person); a key carries whatever scope + source pin it was minted with. */
 async function resolveWallet(
   req: NextRequest,
-): Promise<{ wallet: string } | { error: NextResponse }> {
+): Promise<{ wallet: string; sourceIds: string[] | null } | { error: NextResponse }> {
   const authHeader = req.headers.get("authorization");
   const rawKey = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
   if (rawKey) {
@@ -124,9 +136,17 @@ async function resolveWallet(
     if (!keyCtx) {
       return { error: NextResponse.json({ error: "invalid or revoked api key" }, { status: 401 }) };
     }
+    if (!hasScope(parseScopes(keyCtx.scopes), "export")) {
+      return {
+        error: NextResponse.json(
+          { error: "this api key is not scoped for export" },
+          { status: 403 },
+        ),
+      };
+    }
     const db = await getDb();
     void db.incrementUsage(keyCtx.keyId);
-    return { wallet: keyCtx.walletAddress };
+    return { wallet: keyCtx.walletAddress, sourceIds: parseSourceIds(keyCtx.sourceIds) };
   }
 
   const session = await getSession();
@@ -138,7 +158,7 @@ async function resolveWallet(
       ),
     };
   }
-  return { wallet: session.address };
+  return { wallet: session.address, sourceIds: null };
 }
 
 function parseLimit(raw: string | null): number {

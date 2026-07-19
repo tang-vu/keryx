@@ -73,6 +73,11 @@ export interface ApiKeyRow {
   createdAt: string;
   lastUsedAt: string | null;
   revokedAt: string | null;
+  /** Comma-separated operations this key may perform. Null on keys minted before scopes
+   *  existed, which means every scope — see lib/api-key-scopes.ts. */
+  scopes: string | null;
+  /** Comma-separated source ids this key is pinned to. Null = every source the wallet owns. */
+  sourceIds: string | null;
 }
 
 /** Daily usage aggregate for a single key. */
@@ -185,18 +190,27 @@ export interface KeryxDB {
   getUser(addr: string): Promise<UserRecord | null>;
 
   // ── api keys (identity + rate-limit; no fund custody) ──
-  /** Insert a new key row. Returns { rawKey (echoed once), prefix, id }. */
+  /** Insert a new key row. Returns { rawKey (echoed once), prefix, id }.
+   *  `scopes` is stored comma-separated; `sourceIds` null means "every source the wallet owns". */
   mintApiKey(
     wallet: string,
     prefix: string,
     keyHash: string,
     label?: string,
+    scopes?: string,
+    sourceIds?: string | null,
   ): Promise<{ rawKey: string; prefix: string; id: string }>;
-  /** Prefix-lookup + timing-safe hash compare. Returns identity context or null. */
+  /** Prefix-lookup + timing-safe hash compare. Returns identity context or null.
+   *  `scopes`/`sourceIds` come back raw (null on pre-scopes keys) — see lib/api-key-scopes.ts. */
   verifyApiKey(
     prefix: string,
     incomingHash: string,
-  ): Promise<{ walletAddress: string; keyId: string } | null>;
+  ): Promise<{
+    walletAddress: string;
+    keyId: string;
+    scopes: string | null;
+    sourceIds: string | null;
+  } | null>;
   /** List all non-revoked (and revoked) keys for a wallet. */
   listApiKeys(wallet: string): Promise<ApiKeyRow[]>;
   /** Soft-delete: set revoked_at. No-op if key already revoked or not owned by wallet. */
