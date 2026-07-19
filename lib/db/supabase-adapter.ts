@@ -65,6 +65,12 @@ export class SupabaseAdapter implements KeryxDB {
     return (data ?? []).map(rowToSource);
   }
 
+  async listAllSources(): Promise<Source[]> {
+    // Deactivated rows included — owner history only, never discovery. See the interface note.
+    const { data } = await this.sb.from("sources").select("*").order("created_at");
+    return (data ?? []).map(rowToSource);
+  }
+
   async setSourceMeta(id: string, meta: import("./keryx-db").SourceMeta): Promise<void> {
     await this.sb.from("source_meta").upsert({
       id,

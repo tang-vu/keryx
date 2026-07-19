@@ -3,10 +3,12 @@ import type { PaymentRecord } from "../types";
 import {
   EARNINGS_COLUMNS,
   buildEarningsRows,
-  exportFilename,
   summariseEarnings,
-  toCsv,
+  type EarningsExportRow,
 } from "./earnings-export";
+import { exportFilename, toCsv as writeCsv } from "./csv";
+
+const toCsv = (rows: EarningsExportRow[]) => writeCsv(EARNINGS_COLUMNS, rows);
 
 function payment(over: Partial<PaymentRecord> = {}): PaymentRecord {
   return {

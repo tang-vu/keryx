@@ -14,19 +14,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { normalizePreviewDepth, PREVIEW_DEPTHS } from "@/lib/sources/preview-depth";
-import type { Source } from "@/lib/types";
+import { ownsSource } from "@/lib/sources/source-ownership";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-/** True when `addr` is the source's payout wallet or one of its author wallets. */
-function ownsSource(source: Source, addr: string): boolean {
-  const a = addr.toLowerCase();
-  return (
-    source.walletAddress.toLowerCase() === a ||
-    source.authors.some((au) => au.walletAddress.toLowerCase() === a)
-  );
-}
 
 async function loadOwned(id: string) {
   const session = await getSession();

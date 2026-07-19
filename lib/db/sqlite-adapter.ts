@@ -247,6 +247,12 @@ export class SqliteAdapter implements KeryxDB {
     return rows.map(rowToSource);
   }
 
+  async listAllSources(): Promise<Source[]> {
+    // Deactivated rows included — owner history only, never discovery. See the interface note.
+    const rows = this.db.prepare(`SELECT * FROM sources ORDER BY created_at`).all();
+    return rows.map(rowToSource);
+  }
+
   async setSourceMeta(id: string, meta: import("./keryx-db").SourceMeta): Promise<void> {
     this.db
       .prepare(

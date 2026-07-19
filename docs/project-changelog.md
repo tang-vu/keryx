@@ -9,6 +9,20 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### Portfolio audit export, wallet-scoped (2026-07-19)
+`GET /api/creator/export?format=csv|json` — every payout across every source one wallet owns, in
+one ledger, with a per-source breakdown in the JSON envelope. Authenticated by SIWE session (the
+"Download my ledger" link on `/dev`) **or** `Authorization: Bearer kx_live_…`, so both a creator
+in a browser and an accounting script are served. Unlike the per-source export this one is
+private: merging a portfolio reveals which sources belong to the same person.
+
+Ownership is resolved from the sources (payout wallet or listed author wallet), never from the
+payment rows — having once received a split must not grant read access to a stranger's history.
+Shared `ownsSource` extracted to `lib/sources/source-ownership.ts` and reused by the preview-depth
+and citation-webhook routes, which each carried their own copy. New `db.listAllSources()` includes
+deactivated sources: retiring a feed on-chain must not erase what it earned from an audit file.
+In OpenAPI. 214 tests green.
+
 ### Creator earnings export (2026-07-19)
 `GET /api/creator/[id]/export?format=csv|json` — a creator's full payout ledger as a downloadable
 file, plus an "Export ledger (CSV)" link on the creator page. The page shows the last 25 payouts;

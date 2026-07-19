@@ -353,6 +353,70 @@ export const openapiSpec = {
         },
       },
     },
+    "/api/creator/export": {
+      get: {
+        operationId: "exportOwnEarnings",
+        summary: "Audit export: every payout across the sources your wallet owns",
+        description:
+          "One ledger for the whole portfolio — CSV for a spreadsheet, JSON for a script. Each " +
+          "row carries the source, the question that triggered the payout, the amount in USDC, " +
+          "the citation weight, settlement state and a link back to the dispatch. Authenticate " +
+          "with a wallet-issued key (or a SIWE session in the browser); the file is private to " +
+          "that wallet. Sources deactivated on-chain are included — retiring a feed does not " +
+          "erase what it earned. `settlement_ref` is Circle's settlement id, NOT an EVM tx hash: " +
+          "it does not resolve at the block explorer.",
+        security: [{ ApiKeyAuth: [] }],
+        parameters: [
+          {
+            in: "query",
+            name: "format",
+            required: false,
+            schema: { type: "string", enum: ["csv", "json"], default: "csv" },
+          },
+          {
+            in: "query",
+            name: "limit",
+            required: false,
+            schema: { type: "integer", minimum: 1, maximum: 100000, default: 10000 },
+            description: "Max payouts, newest first. Larger values are clamped.",
+          },
+        ],
+        responses: {
+          "200": { description: "Ledger as text/csv or application/json." },
+          "401": { description: "No SIWE session and no valid API key." },
+          "404": { description: "The authenticated wallet owns no sources." },
+          "429": { description: "Rate limited (per wallet)." },
+        },
+      },
+    },
+    "/api/creator/{id}/export": {
+      get: {
+        operationId: "exportCreatorEarnings",
+        summary: "Public payout ledger for one source",
+        description:
+          "The same ledger scoped to a single source, and public — a source's payouts are " +
+          "already visible on its creator page and on-chain. No auth.",
+        parameters: [
+          { in: "path", name: "id", required: true, schema: { type: "string" } },
+          {
+            in: "query",
+            name: "format",
+            required: false,
+            schema: { type: "string", enum: ["csv", "json"], default: "csv" },
+          },
+          {
+            in: "query",
+            name: "limit",
+            required: false,
+            schema: { type: "integer", minimum: 1, maximum: 50000, default: 5000 },
+          },
+        ],
+        responses: {
+          "200": { description: "Ledger as text/csv or application/json." },
+          "404": { description: "Creator not found." },
+        },
+      },
+    },
     "/api/sources": {
       get: {
         operationId: "listSources",

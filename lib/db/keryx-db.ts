@@ -118,6 +118,10 @@ export interface KeryxDB {
   // ── sources & content ──
   upsertSource(source: Source): Promise<void>;
   listSources(): Promise<Source[]>;
+  /** Every source row, including ones deactivated on-chain. Discovery must NEVER use this —
+   *  it exists for owner-facing history (an audit export of what a wallet earned must still
+   *  account for a source the creator has since retired). */
+  listAllSources(): Promise<Source[]>;
   getSource(id: string): Promise<Source | null>;
   /** Look up a source by its on-chain registry id (bytes32). The indexer uses this to update the
    *  row a source already has, instead of minting a second one keyed by the hash. */

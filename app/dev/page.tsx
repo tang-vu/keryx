@@ -324,6 +324,30 @@ export default function DevPage() {
           </a>
         </div>
 
+        {/* Earnings audit export — the same wallet-issued key doubles as accounting credentials.
+            The browser link works off the SIWE session, so a creator never has to mint a key just
+            to download their own ledger. */}
+        <div className="mb-8 rounded border border-line bg-paper p-4">
+          <h2 className="font-serif text-lg text-ink">Earnings audit export</h2>
+          <p className="mt-1 font-mono text-xs text-ink-3">
+            Every payout across every source your wallet owns, in one ledger — CSV for a
+            spreadsheet, JSON for a script. Signed-in browsers can download it directly; scripts
+            send a <code className="text-seal">kx_live_…</code> key. Deactivated sources are
+            included: retiring a feed does not erase what it earned.
+          </p>
+          <pre className="mt-3 overflow-x-auto rounded border border-line bg-paper-2 p-3 font-mono text-[11px] leading-relaxed text-ink-2">
+{`curl https://keryx.cc/api/creator/export?format=csv \\
+  -H "Authorization: Bearer kx_live_…" -o earnings.csv`}
+          </pre>
+          <a
+            href="/api/creator/export?format=csv"
+            download
+            className="mt-2 inline-block font-mono text-xs text-seal underline underline-offset-2 hover:text-ink transition-colors"
+          >
+            Download my ledger (CSV) →
+          </a>
+        </div>
+
         {/* Error banner */}
         {error && (
           <div className="mb-6 rounded border border-red-300 bg-red-50 px-4 py-3 font-mono text-xs text-red-700">

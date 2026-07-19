@@ -8,11 +8,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import {
+  EARNINGS_COLUMNS,
   buildEarningsRows,
-  exportFilename,
   summariseEarnings,
-  toCsv,
 } from "@/lib/creator/earnings-export";
+import { exportFilename, toCsv } from "@/lib/creator/csv";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -83,7 +83,7 @@ export async function GET(
       );
     }
 
-    return new NextResponse(toCsv(rows), {
+    return new NextResponse(toCsv(EARNINGS_COLUMNS, rows), {
       headers: { ...headers, "Content-Type": "text/csv; charset=utf-8" },
     });
   } catch (err) {

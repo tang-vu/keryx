@@ -97,33 +97,6 @@ export function summariseEarnings(payments: PaymentRecord[]): EarningsSummary {
   };
 }
 
-function round6(n: number): number {
+export function round6(n: number): number {
   return Math.round(n * 1e6) / 1e6;
-}
-
-/** RFC 4180 CSV. Questions are arbitrary user text, so every cell is escaped and any cell
- *  a spreadsheet would evaluate as a formula is neutralised — a question beginning "=" must
- *  never execute when a creator opens their own ledger in Excel. */
-export function toCsv(rows: EarningsExportRow[]): string {
-  const lines = [EARNINGS_COLUMNS.join(",")];
-  for (const row of rows) {
-    lines.push(EARNINGS_COLUMNS.map((c) => escapeCell(row[c])).join(","));
-  }
-  // Trailing newline: POSIX tools (and `wc -l`) treat a file without one as short a line.
-  return lines.join("\r\n") + "\r\n";
-}
-
-function escapeCell(value: string): string {
-  const neutralised = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
-  if (/[",\r\n]/.test(neutralised) || neutralised !== neutralised.trim()) {
-    return `"${neutralised.replace(/"/g, '""')}"`;
-  }
-  return neutralised;
-}
-
-/** Download filename: creator id + UTC day, stripped to characters every OS accepts. */
-export function exportFilename(sourceId: string, format: "csv" | "json"): string {
-  const slug = sourceId.replace(/[^a-zA-Z0-9._-]/g, "-").slice(0, 60) || "creator";
-  const day = new Date().toISOString().slice(0, 10);
-  return `keryx-earnings-${slug}-${day}.${format}`;
 }
