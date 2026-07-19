@@ -126,6 +126,10 @@ Example trace (real output):
   group): same full reasoning loop, same real creator payouts, answered in-chat with a
   dispatch-trace link. Webhook-only, no polling process
   ([`docs/telegram-bot-setup.md`](./docs/telegram-bot-setup.md)).
+- **Slack slash command** — a `/keryx …` command for any workspace: signed requests POST straight
+  to `/api/slack/commands`, the same full reasoning loop and real creator payouts answered in-channel
+  with a dispatch-trace link. No bot token or scopes — replies ride the command's `response_url`.
+  Setup + app manifest in ([`docs/slack-bot-setup.md`](./docs/slack-bot-setup.md)).
 - **Agent-to-agent API** — `POST /api/agent/ask` lets other agents buy Keryx's research over x402:
   an agent paying an agent that pays creators, end to end.
 - **OpenAI-compatible endpoint** — point any OpenAI SDK or tool (LangChain, LlamaIndex, OpenWebUI,

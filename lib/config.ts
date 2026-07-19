@@ -113,6 +113,11 @@ export const config = {
   // unset → that endpoint answers 503 and the Telegram front door stays dark.
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ?? "",
   telegramWebhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET ?? "",
+  // Slack app Signing Secret (Basic Information → App Credentials). When set, the
+  // /api/slack/commands endpoint verifies every request's HMAC signature and serves the /keryx
+  // slash command; unset → that endpoint answers 503 and the Slack front door stays dark. No bot
+  // token is needed — replies ride back over the command's response_url.
+  slackSigningSecret: process.env.SLACK_SIGNING_SECRET ?? "",
 
   // ── Auth ──
   // JWT_SECRET must be ≥ 32 bytes (256 bits) for HS256 security. When unset,
