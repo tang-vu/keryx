@@ -55,7 +55,9 @@ export async function GET(
       }),
     );
 
-    const baseUrl = req.nextUrl.origin;
+    // Behind the Cloudflare Tunnel the request origin is the internal localhost:3939, which
+    // would put dead links in a file the creator keeps. Same canonical base as the sitemap.
+    const baseUrl = process.env.BASE_URL || "https://keryx.cc";
     const rows = buildEarningsRows(payments, questionById, baseUrl);
     const filename = exportFilename(id, format);
     const headers = {
