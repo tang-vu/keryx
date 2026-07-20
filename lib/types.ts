@@ -164,6 +164,9 @@ export interface QueryRun {
   totalToCreators: number; // USDC that reached creator wallets
   trace: TraceStep[];
   createdAt: string;
+  /** The dispatch this one follows up on. A follow-up is a full paid dispatch in its own right —
+   *  it buys and pays creators again; the parent only supplied the question's context. */
+  parentId?: string;
 }
 
 /** Aggregate metrics for the traction dashboard. Computed only from real, settled rows in prod. */

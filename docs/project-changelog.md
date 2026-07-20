@@ -9,6 +9,35 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### Follow-up dispatches (2026-07-21)
+Every dispatch was a dead end: a reader who wanted "how does that compare to Solana?" had to
+restate the whole question on the home page. Permalinks now carry an **Ask a follow-up** box, and
+a dispatch shows the thread it sits in — what it followed from, and what followed from it.
+
+The economics are unchanged on purpose: **a follow-up is a full paid dispatch**. It buys sources
+and pays creators again. What it inherits from the parent is the *question*, never the *answer* —
+feeding the parent's answer back in would let the next dispatch be written from text earlier
+sources were paid to produce, no buy, no citation, no payout. `buildFollowUpQuestion()` anchors
+"how does that compare?" to the parent question and passes an already-self-contained question
+through untouched. The rewrite is deterministic: an LLM round-trip here would add latency and a
+failure mode in front of the agent's own decompose step. Its reference detection is deliberately
+eager — padding a question that did not need context only re-anchors the reader's own topic, while
+missing a real reference produces a question nothing can answer; the tests pin that trade-off
+rather than hide it.
+
+The form hands off to the existing ask flow (`?q=…&parent=…&run=1`) instead of growing a second
+streaming console, so a follow-up inherits the co-sign session, budget dial and live trace. The
+parent id is UUID-validated client-side and re-read server-side; an unknown id degrades to a
+standalone ask rather than failing the dispatch. `parent_id` column + index, migration `0015`,
+NULL on every existing row — accurate, they were all asked standalone. 247 tests green.
+
+### Scaling + speculative enterprise work dropped (2026-07-21)
+Owner decision, recorded on the roadmap rather than left as perpetual "planned": multi-instance
+deploy, per-customer registries and the fiat on-ramp are cut. One small VPS is the deployment; a
+load balancer in front of it buys nothing, no B2B customer has asked for a white-label registry,
+and a fiat on-ramp is meaningless while Keryx is testnet-only. Each row says *why*, so a future
+reader can reopen one on evidence instead of guessing.
+
 ### Rate limits now survive a deploy (2026-07-20)
 The limiters lived in process memory, so every deploy handed every caller a fresh allowance — and
 Keryx deploys on every change. The throttled tiers are the treasury-funded ones (anonymous

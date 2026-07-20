@@ -5,6 +5,7 @@ import { getDb } from "@/lib/db";
 import { cleanText, relatedAnswers } from "@/lib/answers-archive";
 import { getArchiveCached } from "@/lib/answers-archive-cache";
 import { RelatedDispatches } from "@/components/keryx/related-dispatches";
+import { FollowUpForm } from "@/components/keryx/follow-up-form";
 import { DispatchView } from "./dispatch-view";
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
@@ -43,6 +44,12 @@ export default async function DispatchPage({ params }: PageProps) {
   // Load the real citation payouts so the permalink reflects on-chain settlement
   // truth (settled / batched) instead of reconstructing a "simulated" view.
   const payments = await db.listPaymentsByQuery(id);
+
+  // The thread this dispatch sits in: what it followed from, and what followed from it.
+  const [parent, followUps] = await Promise.all([
+    run.parentId ? db.getQueryRun(run.parentId) : Promise.resolve(null),
+    db.listFollowUps(id),
+  ]);
 
   // Internal link mesh: point this permalink at its archive neighbours.
   const related = relatedAnswers(
@@ -112,7 +119,43 @@ export default async function DispatchPage({ params }: PageProps) {
       </header>
 
       <main className="mx-auto max-w-[1180px] px-4 pb-20 pt-10 sm:px-[30px]">
+        {parent ? (
+          <Link
+            href={`/dispatch/${parent.id}`}
+            className="mb-6 flex max-w-[860px] items-baseline gap-2.5 border-l-2 border-line pl-4 transition-colors hover:border-ink"
+          >
+            <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-3">
+              Follows up on
+            </span>
+            <span className="font-serif text-[15px] leading-[1.5] text-ink-2">
+              {parent.question}
+            </span>
+          </Link>
+        ) : null}
+
         <DispatchView run={run} payments={payments} />
+
+        {followUps.length ? (
+          <section className="mt-8 max-w-[860px]">
+            <h2 className="mb-3.5 border-b border-line pb-2 font-mono text-[10.5px] uppercase tracking-[0.18em] text-ink-3">
+              Followed by
+            </h2>
+            <ul className="space-y-2.5">
+              {followUps.map((f) => (
+                <li key={f.id}>
+                  <Link
+                    href={`/dispatch/${f.id}`}
+                    className="font-serif text-[15px] leading-[1.5] text-ink-2 underline decoration-line underline-offset-4 transition-colors hover:text-ink hover:decoration-ink"
+                  >
+                    {f.question}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        <FollowUpForm parentId={id} />
         <RelatedDispatches entries={related} />
       </main>
     </div>

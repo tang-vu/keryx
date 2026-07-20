@@ -21,6 +21,8 @@ import { getAgentDeps } from "@/lib/agent";
 import { runAgent } from "@/lib/agent/run-agent";
 import { config } from "@/lib/config";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
+import { getDb } from "@/lib/db";
+import { buildFollowUpQuestion } from "@/lib/agent/follow-up-question";
 import { isGrantValid } from "@/lib/payments/session-grants";
 import { awaitSignature } from "@/lib/payments/pending-signatures";
 import type { PaymentRequirements } from "@/lib/payments/browser-cosign-gateway";
@@ -35,10 +37,24 @@ export async function POST(req: NextRequest) {
     question?: string;
     budget?: number;
     sessionId?: string;
+    parentId?: string;
   };
   const question = (body.question ?? "").trim();
   if (!question) {
     return Response.json({ error: "question is required" }, { status: 400 });
+  }
+
+  // Follow-up: anchor the question to its parent so "how does that compare?" is answerable. Only
+  // the parent *question* is carried — never its answer, which sources were paid to produce. An
+  // unknown parent id degrades to a standalone ask rather than failing the dispatch.
+  let parentId: string | undefined;
+  let askQuestion = question;
+  if (body.parentId) {
+    const parent = await (await getDb()).getQueryRun(body.parentId);
+    if (parent) {
+      parentId = parent.id;
+      askQuestion = buildFollowUpQuestion(parent.question, question);
+    }
   }
 
   // Optional browser co-sign session. Normalise to lowercase to match grant keys.
@@ -143,7 +159,10 @@ export async function POST(req: NextRequest) {
         const askBudget = useBrowserCoSign
           ? coercedBudget
           : Math.min(coercedBudget, config.anonMaxBudget);
-        const gen = runAgent({ question, budget: askBudget, origin: isBot ? "engine" : "web" }, deps);
+        const gen = runAgent(
+          { question: askQuestion, budget: askBudget, origin: isBot ? "engine" : "web" },
+          deps,
+        );
         let res = await gen.next();
         while (!res.done) {
           send("step", res.value);
@@ -154,6 +173,7 @@ export async function POST(req: NextRequest) {
         // If we broke early due to abort, skip saving — the run is incomplete.
         if (res.done) {
           const run = res.value as QueryRun;
+          if (parentId) run.parentId = parentId;
           await deps.db.saveQueryRun(run);
           send("done", run);
         }

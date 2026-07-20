@@ -271,7 +271,7 @@ export function useAskStream(opts?: AskStreamOpts) {
   }, [opts?.sessionId, opts?.getSessionWalletClient, opts?.grantCap, opts?.sourceIndex]);
 
   const ask = useCallback(
-    async (question: string, budget: number) => {
+    async (question: string, budget: number, parentId?: string) => {
       reset();
       // Reset per-run signed total — each ask() is an independent budget run.
       signedTotalRef.current = 0;
@@ -288,6 +288,8 @@ export function useAskStream(opts?: AskStreamOpts) {
             budget,
             // Include session id when a browser co-sign grant is active.
             ...(opts?.sessionId ? { sessionId: opts.sessionId } : {}),
+            // Follow-up: the server anchors the question to this dispatch's own question.
+            ...(parentId ? { parentId } : {}),
           }),
           signal: controller.signal,
         });

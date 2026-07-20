@@ -254,7 +254,17 @@ export class SupabaseAdapter implements KeryxDB {
       total_to_creators: run.totalToCreators,
       answer: run.answer,
       data: run,
+      parent_id: run.parentId ?? null,
     });
+  }
+
+  async listFollowUps(parentId: string): Promise<QueryRun[]> {
+    const { data } = await this.sb
+      .from("query_runs")
+      .select("data")
+      .eq("parent_id", parentId)
+      .order("created_at", { ascending: true });
+    return (data ?? []).map((r) => r.data as QueryRun);
   }
 
   async getQueryRun(id: string): Promise<QueryRun | null> {

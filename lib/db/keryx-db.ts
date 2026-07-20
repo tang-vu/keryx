@@ -199,6 +199,8 @@ export interface KeryxDB {
   saveQueryRun(run: QueryRun): Promise<void>;
   getQueryRun(id: string): Promise<QueryRun | null>;
   listRecentQueries(limit: number): Promise<QueryRun[]>;
+  /** Dispatches asked as follow-ups to `parentId`, oldest first. */
+  listFollowUps(parentId: string): Promise<QueryRun[]>;
 
   // ── auth helpers ──
   /** True when any source in the registry has this wallet address (case-insensitive). */

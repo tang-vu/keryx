@@ -76,8 +76,8 @@ Live figures at [`/status`](https://keryx.cc/status); snapshots in [TRACTION.md]
 | Durable rate-limit | Fixed-window counters in the DB, atomic single-statement consume; in-process limiter kept as the fail-degraded fallback | ✓ Done 2026-07-20 | Closes the real hole (deploys reset every counter, and the web + traction processes counted separately). `lib/rate-limit-store.ts`, migration `0014`. Redis not needed: one shared SQLite file covers every process on the box, and the Supabase path is already shared. **Multi-VPS still needs a shared store** — reopen this row with Redis (or Supabase for both boxes) when the load balancer lands |
 | Event-only indexer | WebSocket log subscription wakes the checkpointed getLogs pass; heartbeat poll (30s) backstops WS drops | ✓ Done 2026-07-16 | Near-instant source discovery; idle RPC load cut ~85% vs the 4s poll |
 | Cursor pagination | Source list pagination (limit + offset/cursor) | ✓ Done 2026-07-16 | `GET /api/sources?limit=&cursor=` — opt-in (default stays the full list: the browser payTo allowlist must be exhaustive); stable (createdAt, id) cursor survives same-second bulk imports and mid-page deactivations; in OpenAPI spec |
-| Multi-instance deploy | Load balancer, session persistence | 1d | Horizontal scale + high-availability |
-| **Phase 08 Total** | | ~1w | Deploy to Kubernetes or multi-VPS |
+| Multi-instance deploy | Load balancer, session persistence | ✗ Dropped 2026-07-21 | Owner decision: one small VPS is the deployment, and a load balancer in front of a box this size buys nothing. Reopen only if real traffic forces it |
+| **Phase 08 Total** | | Closed | Durable limits shipped; horizontal scale dropped as YAGNI |
 
 ---
 
@@ -102,10 +102,10 @@ Live figures at [`/status`](https://keryx.cc/status); snapshots in [TRACTION.md]
 | Task | Description | Effort | Notes |
 |------|-------------|--------|-------|
 | API key scoping | Keys scoped to specific sources / operations | ✓ Done 2026-07-20 | Scopes `ask` / `export` enforced on both ask paths + the export; optional pin to source ids, always intersected with live ownership. Pre-scopes keys (NULL) keep every scope. `lib/api-key-scopes.ts`, migration `0013` |
-| Custom registry | Deploy SourceRegistry per customer | 2d | White-label dApp deployments |
+| Custom registry | Deploy SourceRegistry per customer | ✗ Dropped 2026-07-21 | Owner decision: no B2B customer asking for it. Speculative infrastructure, cut |
 | Audit export | Payment + query history in CSV / JSON | ✓ Done 2026-07-19 | Two scopes: `GET /api/creator/[id]/export` (one source, public, linked from the creator page) and `GET /api/creator/export` (whole portfolio, private — SIWE session or `kx_live_` key, linked from `/dev`). Formula-injection-safe CSV; deactivated sources included |
-| Fiat on-ramp | Stripe / Ramp integration for testnet-to-mainnet USDC | 3d | Reduce friction: Circle faucet → mainnet spending |
-| **Phase 10 Total** | | ~2w | B2B expansion |
+| Fiat on-ramp | Stripe / Ramp integration for testnet-to-mainnet USDC | ✗ Dropped 2026-07-21 | Owner decision: pointless while Keryx is testnet-only. Revisit as part of mainnet migration, not before |
+| **Phase 10 Total** | | Closed | Scoping + audit export shipped; the speculative half cut |
 
 ---
 

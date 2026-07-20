@@ -64,8 +64,10 @@ CREATE TABLE IF NOT EXISTS payment_events (
 );
 CREATE TABLE IF NOT EXISTS query_runs (
   id TEXT PRIMARY KEY, created_at TEXT, question TEXT, budget REAL, engine TEXT,
-  total_spent REAL, total_to_creators REAL, answer TEXT, data TEXT
+  total_spent REAL, total_to_creators REAL, answer TEXT, data TEXT,
+  parent_id TEXT                        -- the dispatch this one follows up on
 );
+CREATE INDEX IF NOT EXISTS query_runs_parent ON query_runs(parent_id);
 CREATE TABLE IF NOT EXISTS withdrawals (
   tx_hash TEXT PRIMARY KEY, created_at TEXT, label TEXT, source_name TEXT,
   wallet TEXT, recipient TEXT, amount_usdc REAL, network TEXT
@@ -197,6 +199,18 @@ export class SqliteAdapter implements KeryxDB {
     );
     if (!keyCols.has("scopes")) this.db.exec(`ALTER TABLE api_keys ADD COLUMN scopes TEXT`);
     if (!keyCols.has("source_ids")) this.db.exec(`ALTER TABLE api_keys ADD COLUMN source_ids TEXT`);
+
+    // query_runs.parent_id: NULL on every existing dispatch, which is correct — they were all
+    // asked standalone. Indexed so a permalink can list its follow-ups without scanning the log.
+    const runCols = new Set(
+      (this.db.prepare(`PRAGMA table_info(query_runs)`).all() as { name: string }[]).map(
+        (c) => c.name,
+      ),
+    );
+    if (!runCols.has("parent_id")) {
+      this.db.exec(`ALTER TABLE query_runs ADD COLUMN parent_id TEXT`);
+      this.db.exec(`CREATE INDEX IF NOT EXISTS query_runs_parent ON query_runs(parent_id)`);
+    }
 
     // source_items table: encrypted-content columns added in Phase 04.
     // Existing rows have NULL for these; produce() falls back to DB plaintext content.
@@ -504,8 +518,8 @@ export class SqliteAdapter implements KeryxDB {
   async saveQueryRun(run: QueryRun): Promise<void> {
     this.db
       .prepare(
-        `INSERT OR REPLACE INTO query_runs (id,created_at,question,budget,engine,total_spent,total_to_creators,answer,data)
-         VALUES (?,?,?,?,?,?,?,?,?)`,
+        `INSERT OR REPLACE INTO query_runs (id,created_at,question,budget,engine,total_spent,total_to_creators,answer,data,parent_id)
+         VALUES (?,?,?,?,?,?,?,?,?,?)`,
       )
       .run(
         run.id,
@@ -517,7 +531,15 @@ export class SqliteAdapter implements KeryxDB {
         run.totalToCreators,
         run.answer,
         JSON.stringify(run),
+        run.parentId ?? null,
       );
+  }
+
+  async listFollowUps(parentId: string): Promise<QueryRun[]> {
+    const rows = this.db
+      .prepare(`SELECT data FROM query_runs WHERE parent_id=? ORDER BY created_at ASC`)
+      .all(parentId);
+    return rows.map((r) => JSON.parse(r.data as string) as QueryRun);
   }
 
   async getQueryRun(id: string): Promise<QueryRun | null> {
