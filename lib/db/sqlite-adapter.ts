@@ -67,7 +67,9 @@ CREATE TABLE IF NOT EXISTS query_runs (
   total_spent REAL, total_to_creators REAL, answer TEXT, data TEXT,
   parent_id TEXT                        -- the dispatch this one follows up on
 );
-CREATE INDEX IF NOT EXISTS query_runs_parent ON query_runs(parent_id);
+-- No index on parent_id here: CREATE TABLE IF NOT EXISTS is a no-op against a database that
+-- predates the column, so an index naming it would fail at boot on exactly the databases that
+-- carry the real traction. ensureColumns() adds the column first, then the index.
 CREATE TABLE IF NOT EXISTS withdrawals (
   tx_hash TEXT PRIMARY KEY, created_at TEXT, label TEXT, source_name TEXT,
   wallet TEXT, recipient TEXT, amount_usdc REAL, network TEXT
@@ -207,10 +209,10 @@ export class SqliteAdapter implements KeryxDB {
         (c) => c.name,
       ),
     );
-    if (!runCols.has("parent_id")) {
-      this.db.exec(`ALTER TABLE query_runs ADD COLUMN parent_id TEXT`);
-      this.db.exec(`CREATE INDEX IF NOT EXISTS query_runs_parent ON query_runs(parent_id)`);
-    }
+    if (!runCols.has("parent_id")) this.db.exec(`ALTER TABLE query_runs ADD COLUMN parent_id TEXT`);
+    // Unconditional: the column is guaranteed present by the line above (or by the CREATE TABLE
+    // on a fresh database), and both paths need the index.
+    this.db.exec(`CREATE INDEX IF NOT EXISTS query_runs_parent ON query_runs(parent_id)`);
 
     // source_items table: encrypted-content columns added in Phase 04.
     // Existing rows have NULL for these; produce() falls back to DB plaintext content.

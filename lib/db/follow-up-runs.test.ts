@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -61,6 +62,38 @@ describe("follow-up threading", () => {
   it("returns nothing for a dispatch nobody followed up on", async () => {
     await db.saveQueryRun(run("44444444-4444-4444-8444-444444444444", "Standalone?"));
     expect(await db.listFollowUps("44444444-4444-4444-8444-444444444444")).toEqual([]);
+  });
+
+  /**
+   * The live databases carry real traction and predate parent_id. `CREATE TABLE IF NOT EXISTS` is
+   * a no-op against them, so anything in the schema that names the new column — an index, say —
+   * fails at boot on precisely those databases and nowhere else. A fresh-DB test cannot see it.
+   */
+  it("upgrades a database created before parent_id existed", async () => {
+    const legacyFile = path.join(dir, "legacy.sqlite");
+    const legacy = new DatabaseSync(legacyFile);
+    legacy.exec(`CREATE TABLE query_runs (
+      id TEXT PRIMARY KEY, created_at TEXT, question TEXT, budget REAL, engine TEXT,
+      total_spent REAL, total_to_creators REAL, answer TEXT, data TEXT
+    )`);
+    legacy.exec(
+      `INSERT INTO query_runs (id, created_at, question, data)
+       VALUES ('old', '2026-01-01T00:00:00.000Z', 'Asked before threading existed', '{"id":"old","question":"Asked before threading existed"}')`,
+    );
+    legacy.close();
+
+    const upgraded = new SqliteAdapter(legacyFile);
+    await expect(upgraded.init()).resolves.not.toThrow();
+    try {
+      // The pre-existing row survives, and threading works on the upgraded file.
+      expect((await upgraded.getQueryRun("old"))!.question).toBe("Asked before threading existed");
+      await upgraded.saveQueryRun(
+        run("77777777-7777-4777-8777-777777777777", "And now?", "old"),
+      );
+      expect((await upgraded.listFollowUps("old")).map((r) => r.question)).toEqual(["And now?"]);
+    } finally {
+      upgraded.close();
+    }
   });
 
   it("a follow-up is a paid dispatch in its own right, not a child record of the parent's",
