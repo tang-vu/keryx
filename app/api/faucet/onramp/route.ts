@@ -9,7 +9,7 @@
  * The sibling /api/faucet route is SIWE-gated (per-user, larger drip). This route is anonymous, so
  * it trades the SIWE gate for tighter bounds:
  *   1. Once per address — persisted in sync_state ("onramp:<address>"), survives restarts/redeploys.
- *   2. Global rate limit (RateLimiterMemory) — caps burst.
+ *   2. Global rate limit (durable counter) — caps burst.
  *   3. Hard GLOBAL DAILY CAP (USDC) — bounds total drain regardless of address count; the funder
  *      holds only testnet USDC, so worst case is a few refillable test dollars per day.
  *   4. Funder-balance buffer check before sending.
@@ -30,7 +30,7 @@ import {
 } from "viem";
 import { arcTestnet } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
-import { RateLimiterMemory, RateLimiterRes } from "rate-limiter-flexible";
+import { consumePoint } from "@/lib/rate-limit-store";
 import { config } from "@/lib/config";
 import { getDb } from "@/lib/db";
 
@@ -42,8 +42,10 @@ const DAILY_CAP_USDC = Number(process.env.KERYX_ONRAMP_DAILY_CAP ?? "20");
 const FUNDER_BUFFER = parseEther("0.05"); // keep enough for the funder's own gas
 const CIRCLE_FAUCET = "https://faucet.circle.com/";
 
-// Shared bucket: max 5 onramp drips/min across all callers.
-const limiter = new RateLimiterMemory({ points: 5, duration: 60, keyPrefix: "onramp" });
+// Shared bucket: max 5 onramp drips/min across all callers. Durable, so the valve on the funder
+// wallet does not reopen on every deploy.
+const ONRAMP_POINTS = 5;
+const ONRAMP_WINDOW_MS = 60_000;
 
 const addrKey = (a: string) => `onramp:${a}`;
 const dayKey = () => `onramp-day:${new Date().toISOString().slice(0, 10)}`; // UTC day
@@ -64,16 +66,13 @@ export async function POST(req: Request) {
   }
   const lower = address.toLowerCase();
 
-  try {
-    await limiter.consume("global");
-  } catch (err) {
-    if (err instanceof RateLimiterRes) {
-      const retryAfter = Math.ceil(err.msBeforeNext / 1000);
-      return NextResponse.json(
-        { error: "onramp busy — try again shortly", retryAfter, faucet: CIRCLE_FAUCET },
-        { status: 429, headers: { "Retry-After": String(retryAfter) } },
-      );
-    }
+  const drip = await consumePoint("global", "onramp", ONRAMP_POINTS, ONRAMP_WINDOW_MS);
+  if (!drip.allowed) {
+    const retryAfter = Math.max(1, Math.ceil(drip.msBeforeNext / 1000));
+    return NextResponse.json(
+      { error: "onramp busy — try again shortly", retryAfter, faucet: CIRCLE_FAUCET },
+      { status: 429, headers: { "Retry-After": String(retryAfter) } },
+    );
   }
 
   if (!config.funderKey) return disabled("Onramp not configured (no funder wallet)");

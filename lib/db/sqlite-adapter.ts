@@ -16,7 +16,7 @@ import type {
   SourceItem,
   WithdrawalRecord,
 } from "../types";
-import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, FeedbackStats, KeryxDB, QueryMemoryEntry, SessionGrantRecord, UserRecord } from "./keryx-db";
+import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, FeedbackStats, KeryxDB, QueryMemoryEntry, RateLimitDecision, SessionGrantRecord, UserRecord } from "./keryx-db";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 import { normalizePreviewDepth } from "../sources/preview-depth";
@@ -121,6 +121,12 @@ CREATE TABLE IF NOT EXISTS session_grants (
   tx_hash    TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS session_grants_expiry ON session_grants(expiry);
+CREATE TABLE IF NOT EXISTS rate_limit_counters (
+  bucket   TEXT PRIMARY KEY,           -- "<tier>:<key>", e.g. "treasuryAsk:1.2.3.4"
+  count    INTEGER NOT NULL,           -- points spent in the current window
+  reset_at INTEGER NOT NULL            -- unix ms the window closes
+);
+CREATE INDEX IF NOT EXISTS rate_limit_counters_reset ON rate_limit_counters(reset_at);
 `;
 
 export class SqliteAdapter implements KeryxDB {
@@ -130,6 +136,12 @@ export class SqliteAdapter implements KeryxDB {
     const dbPath = file ?? path.resolve(process.cwd(), "data", "keryx.sqlite");
     fs.mkdirSync(path.dirname(dbPath), { recursive: true });
     this.db = new DatabaseSync(dbPath);
+  }
+
+  /** Release the file handle. The long-lived server never calls this; short-lived callers
+   *  (tests, one-shot scripts) do, so the OS is not left holding the DB open. */
+  close(): void {
+    this.db.close();
   }
 
   async init(): Promise<void> {
@@ -455,6 +467,38 @@ export class SqliteAdapter implements KeryxDB {
 
   async deleteExpiredSessionGrants(now: number): Promise<void> {
     this.db.prepare(`DELETE FROM session_grants WHERE expiry <= ?`).run(now);
+  }
+
+  /** One statement, so two concurrent requests on the same bucket can never both read the same
+   *  count and both be admitted. The CASE arms roll the window over in place: a lapsed row is
+   *  reused rather than deleted, which keeps this a single upsert. */
+  async consumeRateLimit(
+    bucket: string,
+    points: number,
+    windowMs: number,
+    now: number,
+  ): Promise<RateLimitDecision> {
+    const resetAt = now + windowMs;
+    const row = this.db
+      .prepare(
+        `INSERT INTO rate_limit_counters (bucket, count, reset_at) VALUES (?, 1, ?)
+         ON CONFLICT(bucket) DO UPDATE SET
+           count    = CASE WHEN reset_at <= ? THEN 1 ELSE count + 1 END,
+           reset_at = CASE WHEN reset_at <= ? THEN ? ELSE reset_at END
+         RETURNING count, reset_at`,
+      )
+      .get(bucket, resetAt, now, now, resetAt) as
+      | { count: number; reset_at: number }
+      | undefined;
+    if (!row) return { allowed: true, msBeforeNext: windowMs };
+    return {
+      allowed: Number(row.count) <= points,
+      msBeforeNext: Math.max(0, Number(row.reset_at) - now),
+    };
+  }
+
+  async deleteExpiredRateLimits(now: number): Promise<void> {
+    this.db.prepare(`DELETE FROM rate_limit_counters WHERE reset_at <= ?`).run(now);
   }
 
   async saveQueryRun(run: QueryRun): Promise<void> {

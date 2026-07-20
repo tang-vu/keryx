@@ -73,7 +73,7 @@ Live figures at [`/status`](https://keryx.cc/status); snapshots in [TRACTION.md]
 
 | Task | Description | Effort | Notes |
 |------|-------------|--------|-------|
-| Redis rate-limit | Replace in-process `rate-limiter-flexible` | 2d | Enables load-balanced cluster |
+| Durable rate-limit | Fixed-window counters in the DB, atomic single-statement consume; in-process limiter kept as the fail-degraded fallback | ✓ Done 2026-07-20 | Closes the real hole (deploys reset every counter, and the web + traction processes counted separately). `lib/rate-limit-store.ts`, migration `0014`. Redis not needed: one shared SQLite file covers every process on the box, and the Supabase path is already shared. **Multi-VPS still needs a shared store** — reopen this row with Redis (or Supabase for both boxes) when the load balancer lands |
 | Event-only indexer | WebSocket log subscription wakes the checkpointed getLogs pass; heartbeat poll (30s) backstops WS drops | ✓ Done 2026-07-16 | Near-instant source discovery; idle RPC load cut ~85% vs the 4s poll |
 | Cursor pagination | Source list pagination (limit + offset/cursor) | ✓ Done 2026-07-16 | `GET /api/sources?limit=&cursor=` — opt-in (default stays the full list: the browser payTo allowlist must be exhaustive); stable (createdAt, id) cursor survives same-second bulk imports and mid-page deactivations; in OpenAPI spec |
 | Multi-instance deploy | Load balancer, session persistence | 1d | Horizontal scale + high-availability |

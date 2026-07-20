@@ -29,7 +29,7 @@ import { NextResponse } from "next/server";
 import { createPublicClient, createWalletClient, http, parseEther, formatEther } from "viem";
 import { arcTestnet } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
-import { RateLimiterMemory, RateLimiterRes } from "rate-limiter-flexible";
+import { consumePoint } from "@/lib/rate-limit-store";
 import { getSession } from "@/lib/auth";
 import { config } from "@/lib/config";
 import { getDb } from "@/lib/db";
@@ -43,8 +43,10 @@ const CIRCLE_FAUCET = "https://faucet.circle.com/";
 // In-memory fast-path cache — avoids a DB round-trip for the common case.
 // DB is the source of truth; this cache is populated lazily on first claim check.
 const claimed = new Map<string, number>();
-// Shared bucket: max 5 drips/min across all callers.
-const limiter = new RateLimiterMemory({ points: 5, duration: 60, keyPrefix: "faucet" });
+// Shared bucket: max 5 drips/min across all callers. Durable, so the valve on the funder wallet
+// does not reopen on every deploy.
+const FAUCET_POINTS = 5;
+const FAUCET_WINDOW_MS = 60_000;
 
 /** DB key for a faucet claim. */
 function faucetKey(address: string): string {
@@ -62,17 +64,13 @@ export async function POST() {
   }
   const address = session.address.toLowerCase();
 
-  try {
-    await limiter.consume("global");
-  } catch (err) {
-    if (err instanceof RateLimiterRes) {
-      const retryAfter = Math.ceil(err.msBeforeNext / 1000);
-      return NextResponse.json(
-        { error: "faucet busy — try again shortly", retryAfter, faucet: CIRCLE_FAUCET },
-        { status: 429, headers: { "Retry-After": String(retryAfter) } },
-      );
-    }
-    // Fail open on unexpected limiter error.
+  const drip = await consumePoint("global", "faucet", FAUCET_POINTS, FAUCET_WINDOW_MS);
+  if (!drip.allowed) {
+    const retryAfter = Math.max(1, Math.ceil(drip.msBeforeNext / 1000));
+    return NextResponse.json(
+      { error: "faucet busy — try again shortly", retryAfter, faucet: CIRCLE_FAUCET },
+      { status: 429, headers: { "Retry-After": String(retryAfter) } },
+    );
   }
 
   // In-memory fast-path — eliminates DB read on subsequent requests within the same process.

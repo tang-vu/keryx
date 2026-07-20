@@ -86,6 +86,14 @@ export interface ApiKeyUsage {
   count: number;
 }
 
+/** Outcome of consuming one point from a fixed-window rate-limit bucket. */
+export interface RateLimitDecision {
+  /** False when the bucket is exhausted for the current window. */
+  allowed: boolean;
+  /** Milliseconds until the window resets — the Retry-After the caller should advertise. */
+  msBeforeNext: number;
+}
+
 /** A user account, keyed by wallet address (lowercased). Created on first SIWE
  *  sign-in. Non-custodial: an identity/profile index only — no funds, no keys,
  *  no credentials. Access control still re-derives the role live (see resolveRole). */
@@ -172,6 +180,20 @@ export interface KeryxDB {
   deleteSessionGrant(sessionId: string): Promise<void>;
   /** Drop every grant that lapsed at or before `now` (unix ms). */
   deleteExpiredSessionGrants(now: number): Promise<void>;
+
+  // ── rate-limit counters (durable, shared across processes) ──
+  /** Atomically consume one point from `bucket`, opening a fresh `windowMs` window when the
+   *  stored one has lapsed at `now` (unix ms). Must be a single statement: two callers hitting
+   *  the same bucket concurrently is the normal case, and a read-modify-write would let both
+   *  through. `allowed` is false once the window's `points` are spent. */
+  consumeRateLimit(
+    bucket: string,
+    points: number,
+    windowMs: number,
+    now: number,
+  ): Promise<RateLimitDecision>;
+  /** Drop every counter whose window closed at or before `now` (unix ms). */
+  deleteExpiredRateLimits(now: number): Promise<void>;
 
   // ── query runs ──
   saveQueryRun(run: QueryRun): Promise<void>;

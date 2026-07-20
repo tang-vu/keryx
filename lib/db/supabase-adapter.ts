@@ -15,7 +15,7 @@ import type {
   SourceItem,
   WithdrawalRecord,
 } from "../types";
-import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, FeedbackStats, KeryxDB, QueryMemoryEntry, SessionGrantRecord, UserRecord } from "./keryx-db";
+import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, FeedbackStats, KeryxDB, QueryMemoryEntry, RateLimitDecision, SessionGrantRecord, UserRecord } from "./keryx-db";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 import { normalizePreviewDepth } from "../sources/preview-depth";
@@ -456,6 +456,34 @@ export class SupabaseAdapter implements KeryxDB {
 
   async deleteExpiredSessionGrants(now: number): Promise<void> {
     await this.sb.from("session_grants").delete().lte("expiry", now);
+  }
+
+  /** Delegates to a SQL function for the same reason the SQLite adapter uses one statement:
+   *  a read-modify-write would admit both of two concurrent requests on an exhausted bucket. */
+  async consumeRateLimit(
+    bucket: string,
+    points: number,
+    windowMs: number,
+    now: number,
+  ): Promise<RateLimitDecision> {
+    const { data, error } = await this.sb.rpc("consume_rate_limit", {
+      p_bucket: bucket,
+      p_points: points,
+      p_window_ms: windowMs,
+      p_now: now,
+    });
+    // Surface the failure so the caller can fall back to the in-process limiter rather than
+    // silently admitting every request.
+    if (error || !data) throw error ?? new Error("consume_rate_limit returned no row");
+    const row = Array.isArray(data) ? data[0] : data;
+    return {
+      allowed: row.allowed === true,
+      msBeforeNext: Math.max(0, Number(row.ms_before_next)),
+    };
+  }
+
+  async deleteExpiredRateLimits(now: number): Promise<void> {
+    await this.sb.from("rate_limit_counters").delete().lte("reset_at", now);
   }
 
   // ── api keys ──

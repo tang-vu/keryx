@@ -9,6 +9,25 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### Rate limits now survive a deploy (2026-07-20)
+The limiters lived in process memory, so every deploy handed every caller a fresh allowance — and
+Keryx deploys on every change. The throttled tiers are the treasury-funded ones (anonymous
+`/api/ask`, the Discord/Slack/Telegram front doors, the unkeyed A2A endpoint, both faucet valves),
+where a reset window costs real USDC. The web process and the traction daemon also kept separate
+counts of the same buckets, so the effective limit was whatever the two happened to sum to.
+
+Counters now live in the DB: one row per bucket, fixed window, consumed in a **single statement**
+(SQLite upsert with `RETURNING`, Postgres via `consume_rate_limit`). A read-modify-write would
+admit both of two concurrent requests on an exhausted bucket, which is the case the limit exists
+to stop. `checkRateLimit()`'s signature is unchanged, so no call site moved.
+
+A DB failure falls back to the in-process limiter — degraded (per-process, resets on restart) but
+never open. The two faucet routes, which each carried a private `RateLimiterMemory`, now share the
+same store. Redis is not needed here: one SQLite file already covers every process on the box.
+A multi-VPS deployment would still need a shared store — noted on the roadmap row rather than
+claimed as done. `lib/rate-limit-store.ts`, migration `0014`, 5 new tests (234 green), including a
+real restart: same DB file, new adapter, counter still spent.
+
 ### API key scopes + source pinning (2026-07-20)
 A key used to do one thing — identify a caller on the ask paths. Once the earnings export
 existed, the same key also read every payout its wallet ever received, so a key handed to a
