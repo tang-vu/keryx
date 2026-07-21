@@ -1,13 +1,34 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-07-16  
-**Current Version:** 0.5.0
+**Last Updated:** 2026-07-21  
+**Current Version:** 0.6.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
 
 ---
 
-## Unreleased
+## v0.6.0 — 2026-07-21 — Ask Keryx from anywhere you already chat
+
+Release wave gathering the work since v0.5.0 (16 commits in 5 days). The theme: meet askers where
+they already are, and give creators a real ledger. Three chat front doors went live — Discord
+(`/ask`), Telegram ([@keryxai_bot](https://t.me/keryxai_bot)) and Slack (`/keryx`) — each running
+the same full reasoning loop and settling the same real USDC citation rewards. Creators gained
+per-source and whole-portfolio payout exports; API keys gained scopes and source pinning; rate
+limits moved into the DB so a deploy no longer resets them. The agent's confidence verdict now
+travels with the answer to every surface, any dispatch can take a threaded follow-up, and the
+answer archive became a subscribable Atom feed.
+
+### The answer archive is now a subscribable Atom feed (2026-07-21)
+The `/answers` archive grew to hundreds of canonical answer pages, but the only way to see a *new*
+one was to come back and look. Now `/answers/feed.xml` is an Atom feed of the newest 60 paid
+answers — question, snippet, what was paid to whom — with `<link rel="alternate">` autodiscovery
+on every page and a visible subscribe link on the archive. There's a narrative symmetry doing real
+work here: Keryx onboards creators by reading their RSS feeds, and now publishes one of its own —
+the same door, pointed the other way, so readers, aggregators and other agents can treat Keryx
+itself as a source. Selection is identical to the archive page (real cited answers only, one
+canonical dispatch per question), so the feed can never advertise a page the site would not stand
+behind. Pure builder in `lib/answers-feed.ts` (escaping + structure unit-tested, 6 tests, 259
+green); the route is a thin ISR shell on the same 600s cadence as the page.
 
 ### Confidence is now a first-class signal on every dispatch (2026-07-21)
 The agent already judged its own answer — High / Moderate / Low, derived from how many sources
@@ -117,6 +138,19 @@ an EVM tx hash — the header says so, so nobody pastes a UUID into arcscan and 
 are invented. Amounts render at USDC's 6dp (never exponent form), cells are RFC-4180 escaped, and
 any question starting `=`/`+`/`-`/`@` is neutralised so a creator's own ledger can't execute a
 formula in Excel. `lib/creator/earnings-export.ts` + 11 tests.
+
+### Three chat front doors: Discord, Telegram, Slack (2026-07-17 → 19)
+The highest-friction step for a new asker was leaving the app they were already in. Three slash
+commands remove it: `/ask` in any Discord server (public install link, signed interactions POST
+straight to the API — no bot process to babysit), a Telegram bot ([@keryxai_bot](https://t.me/keryxai_bot),
+webhook-only, answers DMs or `/ask …` in groups), and a `/keryx` command for any Slack workspace
+(replies ride the command's `response_url`, so no bot token and no OAuth scopes to grant). All
+three run the identical reasoning loop as the web app and settle identical real citation rewards;
+each reply links its dispatch trace so the payment claim is inspectable, and each platform's
+treasury-funded budget sits behind the shared rate-limit buckets. Setup guides + manifests in
+`docs/discord-bot-setup.md`, `docs/telegram-bot-setup.md`, `docs/slack-bot-setup.md`. Discord and
+Telegram are live and user-verified in production; Slack ships dark until a workspace app is
+created against it.
 
 ---
 

@@ -152,6 +152,10 @@ Example trace (real output):
 - **Live activity feed** — [`/api/activity`](https://keryx.cc/api/activity) streams the most recent
   real settled citations (source, question, reward) — a proof-of-life surface and a zero-prior-knowledge
   way for tooling to see what Keryx is citing right now; it also drives the live ticker on the landing.
+- **Answer archive as an Atom feed** — subscribe to [`/answers/feed.xml`](https://keryx.cc/answers/feed.xml)
+  and see every new paid answer as it settles. Keryx onboards creators by reading their RSS feeds;
+  this is the same door pointed the other way — Keryx itself becomes a source any reader or agent
+  can follow.
 
 ## The money rails
 

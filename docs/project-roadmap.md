@@ -1,6 +1,6 @@
 # Keryx Project Roadmap
 
-**Version:** 0.5.0 (live product, updated 2026-07-16)
+**Version:** 0.6.0 (live product, updated 2026-07-21)
 **Status:** In continuous operation at [keryx.cc](https://keryx.cc) — real settlement 24/7, shipping in public.
 
 ---
@@ -288,7 +288,7 @@ Mainnet ← blocked on: Phase 07–10, security audit, legal
 | **v0.3.0** | 2026-06-22 | Creator lifecycle (withdrawals, webhooks, earnings pages) + MCP/A2A on-ramps | ✓ Shipped |
 | **v0.4.0** | 2026-07-02 | Agent depth (adjudication, confidence, memory) + ops hardening + App Kit | ✓ Shipped |
 | **v0.5.0** | 2026-07-16 | Security residuals closed (Phase 07) + registry write-mode + OpenAI-compatible API + extension + answer archive | ✓ Shipped |
-| **v0.6.0** | 2026-10-31 | UX + Enterprise (Phases 09–10) | Planned |
+| **v0.6.0** | 2026-07-21 | Chat front doors (Discord/Telegram/Slack) + creator ledger exports + scoped keys + durable limits + Atom feed (Phases 09–10 closed) | ✓ Shipped |
 | **v1.0.0** | 2026-12-31 | Mainnet + Full Feature Parity | Planned |
 | **v2.0.0** | 2027-Q2 | Stretch Goals (Agent Marketplace, Video, Derivatives) | Backlog |
 
