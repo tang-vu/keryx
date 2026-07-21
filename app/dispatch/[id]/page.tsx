@@ -6,6 +6,8 @@ import { cleanText, relatedAnswers } from "@/lib/answers-archive";
 import { getArchiveCached } from "@/lib/answers-archive-cache";
 import { RelatedDispatches } from "@/components/keryx/related-dispatches";
 import { FollowUpForm } from "@/components/keryx/follow-up-form";
+import { ConfidenceBadge } from "@/components/keryx/confidence-badge";
+import { deriveConfidence } from "@/lib/agent/confidence";
 import { DispatchView } from "./dispatch-view";
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
@@ -22,13 +24,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     if (!run) return { title: "Dispatch not found — Keryx" };
     const snippet = run.answer.slice(0, 160).replace(/\n/g, " ");
     const cited = run.citations.length;
+    const conf = deriveConfidence(run);
+    const confTag = conf ? `${conf.level} confidence · ` : "";
     return {
       title: `${run.question} — Keryx Dispatch`,
-      description: `${cited} source${cited !== 1 ? "s" : ""} cited · $${run.totalSpent.toFixed(4)} spent · ${snippet}…`,
+      description: `${confTag}${cited} source${cited !== 1 ? "s" : ""} cited · $${run.totalSpent.toFixed(4)} spent · ${snippet}…`,
       alternates: { canonical: `/dispatch/${id}` },
       openGraph: {
         title: `${run.question} — Keryx Dispatch`,
-        description: `${cited} cited · $${run.totalSpent.toFixed(4)} spent · $${run.totalToCreators.toFixed(4)} to creators`,
+        description: `${confTag}${cited} cited · $${run.totalSpent.toFixed(4)} spent · $${run.totalToCreators.toFixed(4)} to creators`,
       },
     };
   } catch {

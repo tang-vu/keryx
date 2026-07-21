@@ -9,6 +9,27 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### Confidence is now a first-class signal on every dispatch (2026-07-21)
+The agent already judged its own answer — High / Moderate / Low, derived from how many sources
+corroborated it, how many sub-claims were left thin, and how many disagreements it adjudicated. But
+that judgement lived only inside the reasoning trace as one step, so nothing outside the trace could
+show it: the answer archive, the permalink metadata, the social card all stayed silent on how much
+to trust an answer.
+
+`confidence` is now a field on the run. It surfaces as a wax-seal badge on the dispatch permalink
+(with its reason), a chip on every row of the `/answers` archive, a line on the live answer card,
+and a `High/Moderate/Low confidence ·` prefix in the permalink's `<meta>` description and OG card —
+so a search result or a shared link says up front how sure the agent is. A citation-toll agent that
+flags "Low confidence" prominently is more trustworthy than one that states everything with equal
+certainty; the badge makes that honesty impossible to miss rather than buried a scroll down.
+
+No migration, no recompute: `deriveConfidence()` reads the field when present and falls back to the
+trace's verdict step for the ~hundreds of dispatches recorded before the field existed, so every
+archived answer shows its badge immediately. A malformed or unknown level reads as "no badge" rather
+than surfacing garbage. Early-return runs (no sources, nothing read) label honestly as Low. Shared
+`ConfidenceBadge` server component across all four surfaces; `lib/agent/confidence.ts`, 6 new tests
+(253 green).
+
 ### Follow-up dispatches (2026-07-21)
 Every dispatch was a dead end: a reader who wanted "how does that compare to Solana?" had to
 restate the whole question on the home page. Permalinks now carry an **Ask a follow-up** box, and

@@ -13,7 +13,9 @@ import type { AskMeta } from "@/lib/hooks/use-ask-stream";
 import { AnswerMarkdown } from "./answer-markdown";
 import { ModeBadge } from "./mode-badge";
 import { SectionHeading } from "./banknote";
+import { ConfidenceBadge } from "./confidence-badge";
 import { fmtUsdc } from "./phase-style";
+import { deriveConfidence } from "@/lib/agent/confidence";
 import { cn } from "@/lib/utils";
 
 export function AnswerCard({ run, meta, permalink }: { run: QueryRun; meta: AskMeta | null; permalink?: string }) {
@@ -21,10 +23,16 @@ export function AnswerCard({ run, meta, permalink }: { run: QueryRun; meta: AskM
   const bought = run.decisions.filter((d) => d.action === "BUY").length;
   const skipped = run.decisions.filter((d) => d.action === "SKIP").length;
   const cached = run.decisions.filter((d) => d.action === "CACHE").length;
+  const confidence = deriveConfidence(run);
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-3 duration-500">
       <SectionHeading numeral="II" label="The reading" right={`${run.citations.length} cited`} />
+      {confidence ? (
+        <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+          <ConfidenceBadge confidence={confidence} showReason />
+        </div>
+      ) : null}
       <div className="border border-ink bg-paper">
         <div className="px-6 py-6 sm:px-9">
           <div className="max-w-[64ch]">

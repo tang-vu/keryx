@@ -150,6 +150,15 @@ export interface TraceStep {
   ts: number;
 }
 
+/** How much the agent trusts its own answer, derived from its coverage signals (sources
+ *  corroborating, sub-claims left thin, disagreements adjudicated). Emitted as a trace step and
+ *  carried as a first-class field so every surface — permalink, archive, API — can show it without
+ *  re-reading the trace. */
+export interface Confidence {
+  level: "High" | "Moderate" | "Low";
+  reason: string;
+}
+
 /** Complete record of one agent run over a question. */
 export interface QueryRun {
   id: string;
@@ -167,6 +176,9 @@ export interface QueryRun {
   /** The dispatch this one follows up on. A follow-up is a full paid dispatch in its own right —
    *  it buys and pays creators again; the parent only supplied the question's context. */
   parentId?: string;
+  /** How confident the agent is in this answer. Absent on runs recorded before it became a field;
+   *  deriveConfidence() reconstructs it from the trace's verdict step for those. */
+  confidence?: Confidence;
 }
 
 /** Aggregate metrics for the traction dashboard. Computed only from real, settled rows in prod. */

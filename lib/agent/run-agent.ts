@@ -12,6 +12,7 @@
 import { config } from "../config";
 import type {
   Citation,
+  Confidence,
   Decision,
   PaymentOrigin,
   PaymentRecord,
@@ -50,6 +51,9 @@ export async function* runAgent(
   const payments: PaymentRecord[] = [];
   let finalDecisions: Decision[] = [];
   let citations: Citation[] = [];
+  // Set once the verdict is computed; read by finish(). A `let` (not the closure-captured const)
+  // so the early-return paths, which never reach the verdict step, still produce a valid run.
+  let runConfidence: Confidence | undefined;
 
   const fetchBudget = budget * (1 - config.citationPoolRatio);
   const citationPool = budget * config.citationPoolRatio;
@@ -397,7 +401,7 @@ export async function* runAgent(
     ? `, ${conflictsResolved} disagreement${conflictsResolved === 1 ? "" : "s"} adjudicated`
     : "";
   const gapsNote = (n: number) => `${n} sub-claim${n === 1 ? "" : "s"}`;
-  const verdict =
+  const verdict: Confidence =
     used.length === 0
       ? { level: "Low", reason: "no source grounded the answer" }
       : used.length >= 2 && lastGaps === 0
@@ -405,6 +409,7 @@ export async function* runAgent(
         : used.length <= 1 && lastGaps > 0
           ? { level: "Low", reason: `only ${used.length} source and ${gapsNote(lastGaps)} left thinly covered` }
           : { level: "Moderate", reason: `${used.length} source${used.length === 1 ? "" : "s"} cited${lastGaps > 0 ? `, ${gapsNote(lastGaps)} thinly covered` : ""}${adjudicatedNote}` };
+  runConfidence = verdict;
 
   if (verdict.level === "Low" && used.length > 0) {
     answer = `> ⚠ Low confidence — ${verdict.reason} within budget. Treat this as provisional.\n\n${answer}`;
@@ -511,6 +516,9 @@ export async function* runAgent(
       totalToCreators: totalSpent, // 100% of spend reaches creator wallets
       trace,
       createdAt: new Date().toISOString(),
+      // Early returns (no sources, no purchase) never reach the verdict step — nothing was read,
+      // so the honest label is Low rather than an absent field the surfaces would have to guess at.
+      confidence: runConfidence ?? { level: "Low", reason: "no source was read for this question" },
     };
     emit("done", `Done. Spent $${totalSpent} across ${payments.length} payment(s) to creators.`);
     return run;

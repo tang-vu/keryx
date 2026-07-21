@@ -5,6 +5,8 @@ import type { QueryRun, PaymentRecord } from "@/lib/types";
 import { ReasoningConsole } from "@/components/keryx/reasoning-console";
 import { CreatorsPaidPanel } from "@/components/keryx/creators-paid-panel";
 import { AnswerCard } from "@/components/keryx/answer-card";
+import { ConfidenceBadge } from "@/components/keryx/confidence-badge";
+import { deriveConfidence } from "@/lib/agent/confidence";
 
 export function DispatchView({
   run,
@@ -13,6 +15,7 @@ export function DispatchView({
   run: QueryRun;
   payments: PaymentRecord[];
 }) {
+  const confidence = deriveConfidence(run);
   // Prefer the real settlement rows (carry settled / tx) so the permalink shows
   // on-chain truth. Fall back to a citation reconstruction only for older runs
   // that predate per-query payment rows.
@@ -47,9 +50,12 @@ export function DispatchView({
         <p className="font-serif text-[clamp(17px,1.5vw,20px)] leading-[1.55] text-ink-2">
           {run.question}
         </p>
-        <p className="mt-2 font-mono text-[10px] text-ink-3">
-          {new Date(run.createdAt).toLocaleString()} · {run.engine}
-        </p>
+        <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
+          {confidence ? <ConfidenceBadge confidence={confidence} showReason /> : null}
+          <p className="font-mono text-[10px] text-ink-3">
+            {new Date(run.createdAt).toLocaleString()} · {run.engine}
+          </p>
+        </div>
       </div>
 
       <h2 className="mb-7 border-b border-ink pb-3.5 font-display text-[clamp(24px,3.2vw,34px)] font-medium tracking-tight text-ink">

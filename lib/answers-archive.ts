@@ -8,7 +8,8 @@
  * Pure functions so the page stays lean and the selection logic stays testable.
  */
 
-import type { QueryRun } from "./types";
+import type { Confidence, QueryRun } from "./types";
+import { deriveConfidence } from "./agent/confidence";
 
 export interface ArchiveEntry {
   id: string;
@@ -19,6 +20,8 @@ export interface ArchiveEntry {
   totalSpent: number;
   sourceNames: string[];
   createdAt: string;
+  /** The agent's own trust level for this answer, when it recorded one. */
+  confidence: Confidence | null;
 }
 
 const SNIPPET_LEN = 220;
@@ -59,6 +62,7 @@ function toEntry(r: QueryRun): ArchiveEntry {
     totalSpent: r.totalSpent,
     sourceNames: [...new Set(r.citations.map((c) => c.sourceName).filter(Boolean))],
     createdAt: r.createdAt,
+    confidence: deriveConfidence(r),
   };
 }
 

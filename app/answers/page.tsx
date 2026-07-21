@@ -12,6 +12,7 @@ import { getDb } from "@/lib/db";
 import { buildArchive, type ArchiveEntry } from "@/lib/answers-archive";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
+import { ConfidenceBadge } from "@/components/keryx/confidence-badge";
 
 // Recompute a few times an hour — the corpus grows as new dispatches settle.
 export const revalidate = 600;
@@ -55,8 +56,11 @@ function AnswerRow({ entry }: { entry: ArchiveEntry }) {
         className="group block border border-ink bg-paper p-5 transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)] sm:p-6"
       >
         <div className="flex items-baseline justify-between gap-4">
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-seal">
-            Dispatch
+          <span className="flex items-baseline gap-2.5">
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-seal">
+              Dispatch
+            </span>
+            {entry.confidence ? <ConfidenceBadge confidence={entry.confidence} /> : null}
           </span>
           <time className="font-mono text-[10px] text-ink-3" dateTime={entry.createdAt}>
             {fmtDate(entry.createdAt)}
