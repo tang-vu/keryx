@@ -25,7 +25,12 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
-  alternates: { canonical: "/answers" },
+  alternates: {
+    canonical: "/answers",
+    types: {
+      "application/atom+xml": [{ url: "/answers/feed.xml", title: "Keryx Answer Archive" }],
+    },
+  },
   openGraph: { title: TITLE, description: DESCRIPTION, url: `${BASE}/answers`, type: "website" },
   twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION },
 };
@@ -121,8 +126,16 @@ export default async function AnswersPage() {
       />
 
       <main className="mx-auto max-w-[860px] px-4 pb-20 pt-12 sm:px-[30px]">
-        <div className="mb-2 font-mono text-[11px] uppercase tracking-[0.2em] text-seal">
-          The archive
+        <div className="mb-2 flex items-baseline justify-between gap-4">
+          <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-seal">
+            The archive
+          </span>
+          <a
+            href="/answers/feed.xml"
+            className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-ink-3 underline decoration-dotted underline-offset-4 transition-colors hover:text-seal"
+          >
+            Atom feed ↗
+          </a>
         </div>
         <h1 className="font-display text-[clamp(30px,5vw,46px)] font-medium leading-[1.05] tracking-tight text-ink">
           Every answer, <em className="italic text-paid">paid for.</em>

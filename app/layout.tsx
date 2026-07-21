@@ -44,7 +44,12 @@ export const metadata: Metadata = {
   authors: [{ name: "Keryx" }],
   creator: "Keryx",
   category: "technology",
-  alternates: { canonical: "/" },
+  alternates: {
+    canonical: "/",
+    types: {
+      "application/atom+xml": [{ url: "/answers/feed.xml", title: "Keryx Answer Archive" }],
+    },
+  },
   openGraph: {
     type: "website",
     siteName: "Keryx",
