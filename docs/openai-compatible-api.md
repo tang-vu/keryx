@@ -9,6 +9,9 @@ citation reward to every creator it cites, on Arc testnet.
   `keryx:<id>` — e.g. `keryx:glm-5.2`, `keryx:deepseek-v4-pro`, `keryx:qwen3.5-397b`.
   `GET /api/v1/models` lists what's live. Unknown ids run the default, and any pick that
   errors mid-run falls back to DeepSeek (then the offline heuristic) — an ask always answers.
+  Heavy picks (DeepSeek V4 Pro, Qwen 3.5 397B) can take 2–3 minutes for the full research
+  loop: use `stream: true` with them — a non-streaming call may hit proxy timeouts even
+  though the run completes and settles server-side (the answer stays at its dispatch URL).
 - **Auth:** send any token as the API key. On the **free tier** the token is ignored
   (treasury-funded, IP rate-limited). Send a **`kx_live_…`** key (mint at
   [keryx.cc/dev](https://keryx.cc/dev)) for higher limits + usage metering.

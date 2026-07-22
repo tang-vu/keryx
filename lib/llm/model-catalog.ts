@@ -38,7 +38,7 @@ export const MODEL_CATALOG: ModelChoice[] = [
     label: "DeepSeek V4 Pro",
     provider: "ollama",
     model: "deepseek-v4-pro",
-    note: "Deepest reasoning in the stable.",
+    note: "Deepest reasoning in the stable — thorough, noticeably slower.",
   },
   {
     id: "glm-5.2",
@@ -59,7 +59,7 @@ export const MODEL_CATALOG: ModelChoice[] = [
     label: "Qwen 3.5 397B",
     provider: "ollama",
     model: "qwen3.5:397b",
-    note: "Large open-weight generalist.",
+    note: "Large open-weight generalist — thorough, noticeably slower.",
   },
   {
     id: "minimax-m3",
