@@ -17,6 +17,7 @@ type FooterLink = { label: string; href: string; external?: boolean };
 const HOUSE: FooterLink[] = [
   { label: "Ask the herald", href: "/" },
   { label: "The archive", href: "/answers" },
+  { label: "The registry", href: "/sources" },
   { label: "The ledger", href: "/dashboard" },
   { label: "Issue a toll", href: "/register" },
   { label: "Playground", href: "/playground" },
