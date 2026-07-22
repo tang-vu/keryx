@@ -271,7 +271,7 @@ export function useAskStream(opts?: AskStreamOpts) {
   }, [opts?.sessionId, opts?.getSessionWalletClient, opts?.grantCap, opts?.sourceIndex]);
 
   const ask = useCallback(
-    async (question: string, budget: number, parentId?: string) => {
+    async (question: string, budget: number, parentId?: string, model?: string) => {
       reset();
       // Reset per-run signed total — each ask() is an independent budget run.
       signedTotalRef.current = 0;
@@ -290,6 +290,9 @@ export function useAskStream(opts?: AskStreamOpts) {
             ...(opts?.sessionId ? { sessionId: opts.sessionId } : {}),
             // Follow-up: the server anchors the question to this dispatch's own question.
             ...(parentId ? { parentId } : {}),
+            // Reasoning-model pick from the form's picker. Server-validated against the
+            // catalog; unknown/unset runs the default, and every pick falls back on error.
+            ...(model ? { model } : {}),
           }),
           signal: controller.signal,
         });

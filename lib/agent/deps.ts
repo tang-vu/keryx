@@ -21,13 +21,16 @@ export interface AgentDeps {
  *   with a BrowserCoSignGateway), it is used directly and gateway opts are ignored.
  * opts.gatewayOpts — forwarded to getPaymentGateway() when no pre-built gateway
  *   is supplied (the common case for collectRun / volume engine / A2A).
+ * opts.model — catalog model id the asker picked; unknown/unset → default engine.
+ *   Whatever the pick, the engine chain always falls back (DeepSeek → heuristic).
  */
 export async function getAgentDeps(opts?: {
   gateway?: PaymentGateway;
   gatewayOpts?: GatewayOpts;
+  model?: string;
 }): Promise<AgentDeps> {
   const db = await getDb();
   const gateway = opts?.gateway ?? (await getPaymentGateway(db, opts?.gatewayOpts));
-  const engine = getReasoningEngine();
+  const engine = getReasoningEngine(opts?.model);
   return { engine, db, gateway };
 }

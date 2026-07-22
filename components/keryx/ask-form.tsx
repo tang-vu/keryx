@@ -11,7 +11,14 @@ import { useEffect, useRef, useState } from "react";
 
 interface AskFormProps {
   disabled?: boolean;
-  onAsk: (question: string, budget: number, parentId?: string) => void;
+  onAsk: (question: string, budget: number, parentId?: string, model?: string) => void;
+}
+
+/** Picker entry from GET /api/models — only models the server can actually run. */
+interface PickerModel {
+  id: string;
+  label: string;
+  note: string;
 }
 
 // Shareable-link prefill: a URL like keryx.cc/?q=...&budget=0.05[&run=1] lands a
@@ -27,8 +34,10 @@ function readSharedAsk(): {
   budget: number | null;
   run: boolean;
   parent: string | null;
+  model: string | null;
 } {
-  if (typeof window === "undefined") return { q: null, budget: null, run: false, parent: null };
+  if (typeof window === "undefined")
+    return { q: null, budget: null, run: false, parent: null, model: null };
   const p = new URLSearchParams(window.location.search);
   const q = p.get("q")?.trim().slice(0, MAX_SHARED_Q) || null;
   const b = parseFloat(p.get("budget") ?? "");
@@ -37,7 +46,10 @@ function readSharedAsk(): {
   // question to it. An unknown id degrades to a standalone ask server-side.
   const rawParent = p.get("parent")?.trim() ?? "";
   const parent = UUID_RE.test(rawParent) ? rawParent : null;
-  return { q, budget, run: p.get("run") === "1", parent };
+  // Model pick from a shared link. Server-validated against the catalog (unknown → default),
+  // so the raw value is safe to carry; cap the length to keep the wire tidy.
+  const model = p.get("model")?.trim().slice(0, 40) || null;
+  return { q, budget, run: p.get("run") === "1", parent, model };
 }
 
 const SUGGESTIONS = [
@@ -58,6 +70,18 @@ const SUGGESTIONS = [
 export function AskForm({ disabled, onAsk }: AskFormProps) {
   const [question, setQuestion] = useState("");
   const [budget, setBudget] = useState(0.05);
+  // Reasoning-model pick, chat-app style. "" = server default (DeepSeek). The picker only
+  // renders when the server offers more than one model; every pick falls back server-side.
+  const [model, setModel] = useState("");
+  const [models, setModels] = useState<PickerModel[]>([]);
+  useEffect(() => {
+    fetch("/api/models")
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((data: { models?: PickerModel[] }) => setModels(data.models ?? []))
+      .catch(() => {
+        // Non-fatal: without the list the form simply asks with the default model.
+      });
+  }, []);
   // Seed from a shared link after mount (not in useState initializer) so the server
   // and first client render both start empty — no hydration mismatch on the controlled inputs.
   const prefilled = useRef(false);
@@ -67,20 +91,21 @@ export function AskForm({ disabled, onAsk }: AskFormProps) {
   useEffect(() => {
     if (prefilled.current) return;
     prefilled.current = true;
-    const { q, budget: b, run, parent } = readSharedAsk();
+    const { q, budget: b, run, parent, model: m } = readSharedAsk();
     if (q) setQuestion(q);
     if (b !== null) setBudget(b);
+    if (m) setModel(m);
     parentRef.current = parent ?? undefined;
     // Opt-in auto-dispatch: only when the link explicitly asks for it and a question is present.
     // Treasury free-trial rate limits still apply, so this can't be turned into a spend amplifier.
-    if (q && run && !disabled) onAsk(q, b ?? 0.05, parent ?? undefined);
+    if (q && run && !disabled) onAsk(q, b ?? 0.05, parent ?? undefined, m ?? undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const submit = () => {
     const q = question.trim();
     if (!q || disabled) return;
-    onAsk(q, budget, parentRef.current);
+    onAsk(q, budget, parentRef.current, model || undefined);
   };
 
   return (
@@ -144,15 +169,39 @@ export function AskForm({ disabled, onAsk }: AskFormProps) {
                 <span className="h-[7px] w-[7px] rounded-full bg-seal" />
                 Drag the budget — watch the decisions change
               </span>
-              <button
-                type="button"
-                onClick={submit}
-                disabled={disabled || question.trim().length === 0}
-                className="kx-press border border-ink bg-ink px-7 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-cream transition-all hover:-translate-y-0.5 hover:shadow-[0_5px_0_var(--seal)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
-                data-tour="dispatch-btn"
-              >
-                Dispatch ▸
-              </button>
+              <div className="flex flex-wrap items-center gap-3">
+                {models.length > 1 && (
+                  <label className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.1em] text-ink-3">
+                    Counsel
+                    <select
+                      value={model}
+                      disabled={disabled}
+                      onChange={(e) => setModel(e.target.value)}
+                      title={models.find((m) => m.id === model)?.note ?? "Default reasoning model"}
+                      className="max-w-[180px] cursor-pointer border border-ink bg-paper-2 px-2 py-2.5 font-mono text-[11px] uppercase tracking-[0.06em] text-ink outline-none transition-colors hover:border-seal/60 focus:border-seal disabled:cursor-not-allowed disabled:opacity-50"
+                      aria-label="Reasoning model"
+                    >
+                      <option value="">Default · DeepSeek</option>
+                      {models
+                        .filter((m) => m.id !== "deepseek-chat")
+                        .map((m) => (
+                          <option key={m.id} value={m.id} title={m.note}>
+                            {m.label}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                )}
+                <button
+                  type="button"
+                  onClick={submit}
+                  disabled={disabled || question.trim().length === 0}
+                  className="kx-press border border-ink bg-ink px-7 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-cream transition-all hover:-translate-y-0.5 hover:shadow-[0_5px_0_var(--seal)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                  data-tour="dispatch-btn"
+                >
+                  Dispatch ▸
+                </button>
+              </div>
             </div>
           </div>
         </div>

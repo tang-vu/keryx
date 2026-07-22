@@ -1,11 +1,29 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-07-21  
+**Last Updated:** 2026-07-22  
 **Current Version:** 0.6.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
 
 ---
+
+## Unreleased
+
+### Pick the agent's brain — a chat-app-style model picker with a guaranteed fallback (2026-07-22)
+Askers can now choose which reasoning model drives a dispatch, the way any chat app offers GPT vs
+Claude: the ask form gained a "Counsel" picker, `/api/ask`, `/api/agent/ask` and the OpenAI-compatible
+surface accept a `model` field (`keryx:<id>`), and `GET /api/models` / `GET /api/v1/models` list what's
+live. Eight models ship in the catalog — DeepSeek V3 (the default workhorse via the DeepSeek API) plus
+seven open-weight options served by Ollama Cloud (GLM 5.2, DeepSeek V4 Pro, Kimi K2.7 Code,
+Qwen 3.5 397B, MiniMax M3, GPT-OSS 120B, Gemma 4).
+
+The invariant that makes this safe to expose: **an ask always answers.** Every pick runs inside a
+tiered `ResilientEngine` chain — the chosen model retries on transient failures, then falls back to
+DeepSeek, then to the deterministic offline heuristic. Unknown or unconfigured ids silently run the
+default rather than erroring. The engine name (e.g. `llm:ollama:glm-5.2`) is stamped on each run for
+provenance. The volume engine keeps DeepSeek as its workhorse and uses an alternate model on only a
+small env-tuned slice of runs (`KERYX_ENGINE_ALT_MODEL_RATIO`, default 10%) so the rate-limited
+Ollama account never becomes a dependency. New env: `OLLAMA_API_KEY`, `KERYX_OLLAMA_BASE_URL`.
 
 ## v0.6.0 — 2026-07-21 — Ask Keryx from anywhere you already chat
 

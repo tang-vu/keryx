@@ -96,6 +96,16 @@ export const config = {
   llmBaseUrl: process.env.KERYX_LLM_BASE_URL ?? "https://api.deepseek.com",
   llmModel: process.env.KERYX_LLM_MODEL ?? "deepseek-chat",
   synthesisModel: process.env.KERYX_SYNTHESIS_MODEL ?? "deepseek-chat",
+  // Ollama Cloud (OpenAI-compatible) — serves the model picker's open-weight options
+  // (GLM, DeepSeek V4, Kimi, Qwen, MiniMax, GPT-OSS, Gemma). Unset → picker offers
+  // only the DeepSeek default. A picked model that errors falls back to DeepSeek,
+  // then to the offline heuristic, so an ask always answers.
+  ollamaKey: process.env.OLLAMA_API_KEY ?? "",
+  ollamaBaseUrl: process.env.KERYX_OLLAMA_BASE_URL ?? "https://ollama.com/v1",
+  // Fraction (0..1) of volume-engine runs that use a non-default (Ollama) model.
+  // Kept low on purpose: the Ollama account is rate-limit-billed, so DeepSeek stays
+  // the engine's workhorse and the alternates only add provenance variety.
+  engineAltModelRatio: Math.min(1, Math.max(0, num(process.env.KERYX_ENGINE_ALT_MODEL_RATIO, 0.1))),
 
   // ── App ──
   baseUrl: process.env.BASE_URL ?? "http://localhost:3000",

@@ -36,6 +36,9 @@ export interface RunInput {
   /** Who triggered this run — stamped on every payment so traction can separate genuine external
    *  usage (web askers, A2A callers) from the autonomous volume engine. Defaults to "engine". */
   origin?: PaymentOrigin;
+  /** Catalog model id the asker picked (model-catalog.ts). Read by collectRun when it builds
+   *  deps; unknown/unset → default engine. Every pick falls back so the run always answers. */
+  model?: string;
 }
 
 export async function* runAgent(

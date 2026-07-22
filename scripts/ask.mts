@@ -3,6 +3,7 @@
  * This is the "show me the agent's reasoning logs" view.
  *
  * Usage: npm run ask -- "How do x402 and stablecoins enable AI agent commerce?" --budget 0.05
+ *        npm run ask -- "…" --model glm-5.2      (catalog id; see lib/llm/model-catalog.ts)
  */
 
 import { collectRun } from "../lib/agent/index.ts";
@@ -12,10 +13,13 @@ import { c, printStep } from "./trace-console.mts";
 // ── parse args ──
 const argv = process.argv.slice(2);
 let budget: number | undefined;
+let model: string | undefined;
 const qParts: string[] = [];
 for (let i = 0; i < argv.length; i++) {
   if (argv[i] === "--budget" && argv[i + 1]) {
     budget = parseFloat(argv[++i]);
+  } else if (argv[i] === "--model" && argv[i + 1]) {
+    model = argv[++i];
   } else {
     qParts.push(argv[i]);
   }
@@ -25,12 +29,12 @@ const question =
   "How do x402 and stablecoin micropayments enable autonomous AI agent commerce?";
 
 console.log(c.bold(`\n🏛  Keryx — citation-toll reading agent`));
-console.log(`${c.dim("engine:")} ${getReasoningEngine().name}`);
+console.log(`${c.dim("engine:")} ${getReasoningEngine(model).name}`);
 console.log(`${c.dim("budget:")} $${budget ?? 0.05}`);
 console.log(`${c.dim("question:")} ${question}\n`);
 console.log(c.dim("─".repeat(72)));
 
-const run = await collectRun({ question, budget }, { onStep: printStep });
+const run = await collectRun({ question, budget, model }, { onStep: printStep });
 
 console.log(c.dim("─".repeat(72)));
 console.log(c.bold("\n📝 Answer\n"));

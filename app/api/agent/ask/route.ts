@@ -83,7 +83,11 @@ export async function POST(req: NextRequest) {
   }
   // ── End key pre-check ──
 
-  const body = (await req.json().catch(() => ({}))) as { question?: string; budget?: number };
+  const body = (await req.json().catch(() => ({}))) as {
+    question?: string;
+    budget?: number;
+    model?: string;
+  };
   const question = (body.question ?? "").trim();
   if (!question) return Response.json({ error: "question is required" }, { status: 400 });
   // Clamp a caller-supplied budget to the A2A ceiling so it can't drive arbitrary treasury-funded
@@ -123,7 +127,15 @@ export async function POST(req: NextRequest) {
       );
       // Run the full agent — it autonomously pays the creators it cites. origin "a2a" marks the
       // downstream citation payouts as external (driven by a real outside agent, not the engine).
-      const run = await collectRun({ question, budget: a2aBudget, queryId, origin: isBot ? "engine" : "a2a" });
+      // Optional model pick (catalog id, see /api/models). Unknown → default; every pick
+      // has a DeepSeek → heuristic fallback chain, so a bad value never fails a paid call.
+      const run = await collectRun({
+        question,
+        budget: a2aBudget,
+        queryId,
+        origin: isBot ? "engine" : "a2a",
+        model: typeof body.model === "string" ? body.model : undefined,
+      });
       return {
         queryId: run.id,
         answer: run.answer,

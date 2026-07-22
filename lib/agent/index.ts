@@ -14,7 +14,7 @@ export async function collectRun(
   input: RunInput,
   opts?: { deps?: AgentDeps; onStep?: (s: TraceStep) => void },
 ): Promise<QueryRun> {
-  const deps = opts?.deps ?? (await getAgentDeps());
+  const deps = opts?.deps ?? (await getAgentDeps({ model: input.model }));
   const gen = runAgent(input, deps);
   let res = await gen.next();
   while (!res.done) {

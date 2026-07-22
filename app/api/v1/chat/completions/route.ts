@@ -18,6 +18,7 @@
 
 import { NextRequest } from "next/server";
 import { collectRun } from "@/lib/agent";
+import { resolveModelChoice } from "@/lib/llm";
 import { config } from "@/lib/config";
 import { getDb } from "@/lib/db";
 import { verifyApiKey } from "@/lib/api-keys";
@@ -94,6 +95,12 @@ export async function POST(req: NextRequest) {
   const question = lastUserQuestion(body.messages);
   if (!question) return openaiError("no user message with content", 400, "invalid_request");
 
+  // Model routing: "keryx" (default) or "keryx:<catalog-id>" (see GET /v1/models) runs the agent
+  // with that reasoning model. Unknown/unconfigured ids run the default — never a client error —
+  // and any pick that fails mid-run falls back to DeepSeek, then the offline heuristic.
+  const modelChoice = resolveModelChoice(body.model);
+  const modelName = modelChoice ? `keryx:${modelChoice.id}` : MODEL;
+
   if (!config.sellerAddress) {
     return openaiError("treasury wallet not configured", 500, "server_error");
   }
@@ -115,8 +122,8 @@ export async function POST(req: NextRequest) {
 
   // ── Non-streaming: run to completion, return one ChatCompletion object. ──
   if (!body.stream) {
-    const run = await collectRun({ question, budget, queryId, origin });
-    return Response.json(buildCompletion(run, MODEL), { headers: CORS });
+    const run = await collectRun({ question, budget, queryId, origin, model: modelChoice?.id });
+    return Response.json(buildCompletion(run, modelName), { headers: CORS });
   }
 
   // ── Streaming: emit reasoning live as `reasoning_content`, then the answer as `content`. ──
@@ -132,15 +139,15 @@ export async function POST(req: NextRequest) {
         }
       };
       try {
-        send(buildChunk(id, MODEL, { role: "assistant" }));
+        send(buildChunk(id, modelName, { role: "assistant" }));
         // Stream each trace step as an o1-style reasoning delta. Clients that don't support
         // reasoning_content ignore it and still receive the answer content below.
         const run = await collectRun(
-          { question, budget, queryId, origin },
-          { onStep: (s) => send(buildChunk(id, MODEL, { reasoning_content: traceLine(s) })) },
+          { question, budget, queryId, origin, model: modelChoice?.id },
+          { onStep: (s) => send(buildChunk(id, modelName, { reasoning_content: traceLine(s) })) },
         );
-        send(buildChunk(id, MODEL, { content: buildAnswerContent(run) }));
-        send(buildChunk(id, MODEL, {}, "stop", { keryx: keryxMeta(run) }));
+        send(buildChunk(id, modelName, { content: buildAnswerContent(run) }));
+        send(buildChunk(id, modelName, {}, "stop", { keryx: keryxMeta(run) }));
         try {
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         } catch {
@@ -148,7 +155,7 @@ export async function POST(req: NextRequest) {
         }
       } catch (err) {
         send(
-          buildChunk(id, MODEL, {
+          buildChunk(id, modelName, {
             content: `\n\n[keryx error] ${err instanceof Error ? err.message : String(err)}`,
           }),
         );

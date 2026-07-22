@@ -16,7 +16,8 @@ import path from "node:path";
 import { collectRun, getAgentDeps } from "../lib/agent/index.ts";
 import { SEED_QUESTIONS } from "../lib/seed-questions.ts";
 import { generateQuestion } from "../lib/seed-question-generator.ts";
-import { getReasoningEngine } from "../lib/llm/index.ts";
+import { availableModels, getReasoningEngine } from "../lib/llm/index.ts";
+import { config } from "../lib/config.ts";
 
 // ── args ──
 const argv = process.argv.slice(2);
@@ -28,6 +29,7 @@ const has = (name: string) => argv.includes(`--${name}`);
 
 const count = parseInt(flag("count", "10")!, 10);
 const budget = parseFloat(flag("budget", "0.05")!);
+const forcedModel = flag("model"); // pin every run to one catalog model (testing)
 const delayMs = parseInt(flag("delay", "800")!, 10);
 const limit = flag("limit") ? parseFloat(flag("limit")!) : Infinity;
 const loop = has("loop");
@@ -62,8 +64,22 @@ const useCursor = offsetArg === undefined;
 const startOffset = useCursor ? readCursor() : parseInt(offsetArg!, 10) || 0;
 
 const deps = await getAgentDeps();
+
+// Model policy: DeepSeek is the workhorse. A small, env-tuned slice of runs uses an
+// alternate open-weight model (Ollama Cloud) for engine diversity — kept rare because
+// that account is rate-limit-billed and must never become the daemon's dependency.
+const altModels = availableModels().filter((m) => m.provider === "ollama");
+function pickRunModel(): string | undefined {
+  if (forcedModel) return forcedModel;
+  if (altModels.length === 0 || Math.random() >= config.engineAltModelRatio) return undefined;
+  return altModels[Math.floor(Math.random() * altModels.length)].id;
+}
+
 console.log(`\n⚙  Keryx volume engine`);
-console.log(`   engine: ${getReasoningEngine().name}  ·  mode: ${deps.gateway.mode}`);
+console.log(`   engine: ${getReasoningEngine(forcedModel).name}  ·  mode: ${deps.gateway.mode}`);
+if (!forcedModel && altModels.length > 0) {
+  console.log(`   alt models: ${altModels.length} available @ ${(config.engineAltModelRatio * 100).toFixed(0)}% of runs`);
+}
 console.log(`   budget/query: $${budget}  ·  spend cap: ${limit === Infinity ? "none" : "$" + limit}`);
 console.log(`   ${loop ? "looping until cap" : `${count} queries`}  ·  delay ${delayMs}ms\n`);
 
@@ -100,12 +116,15 @@ while ((loop || i < count) && totalSpent < limit) {
   const question = await generateQuestion(sources, startOffset + i);
   const start = Date.now();
   try {
-    const run = await collectRun({ question, budget, origin: "engine" }, { deps });
+    // Per-run model pick — engine instances are cached, so this is a cheap map lookup.
+    const modelId = pickRunModel();
+    const runDeps = modelId ? { ...deps, engine: getReasoningEngine(modelId) } : deps;
+    const run = await collectRun({ question, budget, origin: "engine" }, { deps: runDeps });
     totalSpent += run.totalSpent;
     totalPayments += run.citations.length + run.decisions.filter((d) => d.action === "BUY").length;
     const ms = Date.now() - start;
     console.log(
-      `#${String(i + 1).padStart(3)} [$${totalSpent.toFixed(6)}] ${run.decisions.filter((d) => d.action === "BUY").length}b/${run.decisions.filter((d) => d.action === "SKIP").length}s → ${run.citations.length} cite(s) $${run.totalSpent.toFixed(6)} (${ms}ms)  «${question.slice(0, 52)}»`,
+      `#${String(i + 1).padStart(3)} [$${totalSpent.toFixed(6)}] ${run.decisions.filter((d) => d.action === "BUY").length}b/${run.decisions.filter((d) => d.action === "SKIP").length}s → ${run.citations.length} cite(s) $${run.totalSpent.toFixed(6)} (${ms}ms)${modelId ? `  · ${modelId}` : ""}  «${question.slice(0, 52)}»`,
     );
     await maybePush(question, run.totalSpent, run.citations.length);
   } catch (err) {

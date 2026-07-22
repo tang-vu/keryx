@@ -38,7 +38,12 @@ export async function POST(req: NextRequest) {
     budget?: number;
     sessionId?: string;
     parentId?: string;
+    model?: string;
   };
+  // Model pick from the UI's picker. Validated inside getAgentDeps → resolveModelChoice:
+  // unknown/unconfigured ids silently run the default engine, and every pick has a
+  // DeepSeek → heuristic fallback chain, so a crafted value can never fail an ask.
+  const model = typeof body.model === "string" ? body.model : undefined;
   const question = (body.question ?? "").trim();
   if (!question) {
     return Response.json({ error: "question is required" }, { status: 400 });
@@ -134,9 +139,10 @@ export async function POST(req: NextRequest) {
               requestSignature,
               abortSignal: abort.signal,
             },
+            model,
           });
         } else {
-          deps = await getAgentDeps();
+          deps = await getAgentDeps({ model });
         }
 
         send("meta", { engine: deps.engine.name, mode: deps.gateway.mode });

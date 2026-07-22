@@ -1,12 +1,15 @@
 /**
- * ResilientEngine — wraps a real LLM engine (Anthropic / DeepSeek) so a transient
- * provider failure never kills a live run. Each reasoning call:
+ * ResilientEngine — wraps a real LLM engine so a provider failure never kills a live run.
+ * Each reasoning call:
  *   1. retries on transient errors (HTTP 429 / 5xx / network) with short backoff, then
- *   2. falls back to the deterministic HeuristicEngine so the run always completes.
+ *   2. falls back to the given fallback engine (default: the deterministic HeuristicEngine)
+ *      so the run always completes.
  *
- * The orchestrator still enforces the hard budget cap on top — the heuristic only
- * supplies reasoning, never moves money. The happy path is unchanged: the primary
- * engine answers on the first attempt and the fallback is never touched.
+ * Fallbacks chain: an Ollama-served pick wraps with fallback = ResilientEngine(DeepSeek),
+ * which itself falls back to the heuristic — so an ask ALWAYS answers, in tiers of
+ * decreasing capability. The orchestrator still enforces the hard budget cap on top —
+ * fallback reasoning only supplies judgment, never moves money. The happy path is
+ * unchanged: the primary engine answers on the first attempt.
  */
 
 import { HeuristicEngine } from "./heuristic-engine";
@@ -34,6 +37,7 @@ function isTransient(err: unknown): boolean {
 
 async function withFallback<T>(
   label: string,
+  fallbackName: string,
   primary: () => Promise<T>,
   fallback: () => Promise<T>,
 ): Promise<T> {
@@ -48,39 +52,52 @@ async function withFallback<T>(
     }
   }
   const reason = lastErr instanceof Error ? lastErr.message : String(lastErr);
-  console.warn(`[keryx llm] ${label} fell back to heuristic after provider failure: ${reason}`);
+  console.warn(`[keryx llm] ${label} fell back to ${fallbackName} after provider failure: ${reason}`);
   return fallback();
 }
 
 export class ResilientEngine implements ReasoningEngine {
   readonly name: string;
-  private readonly fallback = new HeuristicEngine();
+  private readonly fallback: ReasoningEngine;
 
-  constructor(private readonly primary: ReasoningEngine) {
+  constructor(
+    private readonly primary: ReasoningEngine,
+    fallback?: ReasoningEngine,
+  ) {
     this.name = primary.name;
+    this.fallback = fallback ?? new HeuristicEngine();
+  }
+
+  private run<T>(label: string, call: (e: ReasoningEngine) => Promise<T>): Promise<T> {
+    return withFallback(
+      label,
+      this.fallback.name,
+      () => call(this.primary),
+      () => call(this.fallback),
+    );
   }
 
   decompose(question: string): Promise<string[]> {
-    return withFallback("decompose", () => this.primary.decompose(question), () => this.fallback.decompose(question));
+    return this.run("decompose", (e) => e.decompose(question));
   }
 
   decide(input: DecideInput): Promise<Decision[]> {
-    return withFallback("decide", () => this.primary.decide(input), () => this.fallback.decide(input));
+    return this.run("decide", (e) => e.decide(input));
   }
 
   sufficiency(input: SufficiencyInput): Promise<SufficiencyResult> {
-    return withFallback("sufficiency", () => this.primary.sufficiency(input), () => this.fallback.sufficiency(input));
+    return this.run("sufficiency", (e) => e.sufficiency(input));
   }
 
   reevaluate(input: ReevaluateInput): Promise<ReevaluateOutput> {
-    return withFallback("reevaluate", () => this.primary.reevaluate(input), () => this.fallback.reevaluate(input));
+    return this.run("reevaluate", (e) => e.reevaluate(input));
   }
 
   synthesize(input: SynthInput): Promise<SynthResult> {
-    return withFallback("synthesize", () => this.primary.synthesize(input), () => this.fallback.synthesize(input));
+    return this.run("synthesize", (e) => e.synthesize(input));
   }
 
   attribute(input: AttributeInput): Promise<{ sourceId: string; weight: number; rationale: string }[]> {
-    return withFallback("attribute", () => this.primary.attribute(input), () => this.fallback.attribute(input));
+    return this.run("attribute", (e) => e.attribute(input));
   }
 }
