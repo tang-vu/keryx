@@ -18,9 +18,17 @@ if (toSeed.length === 0) {
   process.exit(0);
 }
 
+// Seed sources have no external website — their public home is their /creator page,
+// which only exists once the row id does, so it is assigned after creation.
+const base = process.env.BASE_URL || "https://keryx.cc";
+
 console.log(`Seeding ${toSeed.length} new source(s) (${existing.length} already present)…\n`);
 for (const input of toSeed) {
   const s = await createSource(db, input);
+  if (!s.url) {
+    s.url = `${base}/creator/${s.id}`;
+    await db.upsertSource(s);
+  }
   const authors =
     s.authors.length > 1
       ? ` (${s.authors.map((a) => `${a.name} ${a.splitWeight * 100}%`).join(", ")})`

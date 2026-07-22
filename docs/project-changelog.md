@@ -9,6 +9,15 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### Seed sources now link to their real home instead of example.com (2026-07-22)
+The eight built-in seed sources have no external website — their articles live in the Keryx
+datastore — but the public registry (`/sources`) rendered their placeholder `example.com` urls as
+outbound links, which read as fake data on an otherwise fully-real page. Their `url` now points at
+their `/creator/<id>` page (the source's public earnings-and-proof home), assigned by the seed
+script once the row id exists; `scripts/relink-seed-source-urls.mts` backfills existing databases.
+On-chain records are untouched — the indexer and parity watchdog resolve rows by stored
+`onchain_id`, never by re-hashing the row's url.
+
 ### Pick the agent's brain — a chat-app-style model picker with a guaranteed fallback (2026-07-22)
 Askers can now choose which reasoning model drives a dispatch, the way any chat app offers GPT vs
 Claude: the ask form gained a "Counsel" picker, `/api/ask`, `/api/agent/ask` and the OpenAI-compatible

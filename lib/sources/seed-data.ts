@@ -2,6 +2,11 @@
  * Seed sources for offline dev & demos. A spread of topics so the agent must DISCRIMINATE:
  * it should buy the payments/agent sources for a fintech question and skip gardening/retro-gaming.
  * "Onchain Micropayments Digest" is multi-author to exercise citation splits.
+ *
+ * These sources have no external website — their content lives in the Keryx datastore and is
+ * served by /api/source/[id]. `url` is therefore empty here; the seed script assigns each row
+ * its public home (the /creator/<id> page) once the row id exists, so the registry's external
+ * link points at real content instead of a placeholder domain.
  */
 
 import type { CreateSourceInput } from "./create-source";
@@ -9,7 +14,7 @@ import type { CreateSourceInput } from "./create-source";
 export const SEED_SOURCES: CreateSourceInput[] = [
   {
     name: "Stablecoin Ledger",
-    url: "https://example.com/stablecoin-ledger",
+    url: "",
     description:
       "Deep coverage of stablecoins: USDC, EURC, issuance, reserves, and onchain settlement.",
     tags: ["stablecoins", "usdc", "payments", "settlement"],
@@ -33,7 +38,7 @@ export const SEED_SOURCES: CreateSourceInput[] = [
   },
   {
     name: "Agent Economy Weekly",
-    url: "https://example.com/agent-economy",
+    url: "",
     description:
       "The emerging machine economy: autonomous AI agents that discover, negotiate, and pay for services.",
     tags: ["ai agents", "autonomous commerce", "x402", "machine economy"],
@@ -57,7 +62,7 @@ export const SEED_SOURCES: CreateSourceInput[] = [
   },
   {
     name: "Onchain Micropayments Digest",
-    url: "https://example.com/micropayments",
+    url: "",
     description:
       "Sub-cent payments, nanopayments, batching, and gas-efficient settlement primitives.",
     tags: ["micropayments", "nanopayments", "batching", "gas"],
@@ -85,7 +90,7 @@ export const SEED_SOURCES: CreateSourceInput[] = [
   },
   {
     name: "Distributed Systems Notes",
-    url: "https://example.com/distsys",
+    url: "",
     description:
       "Consensus, replication, and database internals for builders of reliable systems.",
     tags: ["consensus", "databases", "replication"],
@@ -102,7 +107,7 @@ export const SEED_SOURCES: CreateSourceInput[] = [
   },
   {
     name: "Garden & Soil Monthly",
-    url: "https://example.com/garden",
+    url: "",
     description: "Practical organic gardening: composting, raised beds, and seasonal planting.",
     tags: ["gardening", "compost", "plants"],
     fetchPrice: 0.002,
@@ -118,7 +123,7 @@ export const SEED_SOURCES: CreateSourceInput[] = [
   },
   {
     name: "Retro Game Hardware",
-    url: "https://example.com/retro",
+    url: "",
     description: "Restoring and modding vintage consoles and arcade boards.",
     tags: ["retro", "gaming", "hardware"],
     fetchPrice: 0.002,
@@ -139,7 +144,7 @@ export const SEED_SOURCES: CreateSourceInput[] = [
   // other (the Arc-specific, measured source should win).
   {
     name: "Arc Settlement Benchmarks",
-    url: "https://example.com/arc-benchmarks",
+    url: "",
     description:
       "Lab-measured latency and throughput of x402 + Gateway batched settlement on Arc testnet.",
     tags: ["x402", "settlement", "arc", "finality", "latency"],
@@ -156,7 +161,7 @@ export const SEED_SOURCES: CreateSourceInput[] = [
   },
   {
     name: "Web Payments Review",
-    url: "https://example.com/web-payments-review",
+    url: "",
     description: "Cross-protocol commentary on how long on-chain payments take to settle.",
     tags: ["x402", "settlement", "payments", "blockchain"],
     fetchPrice: 0.002,
