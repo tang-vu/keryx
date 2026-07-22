@@ -43,6 +43,15 @@ export interface SourceNotify {
   secret: string;
 }
 
+/** A source's citation email alert: the human channel beside the webhook. `unsubToken` is the
+ *  per-row secret embedded in every mail's unsubscribe link (unauthenticated by design — the
+ *  recipient must always be able to stop delivery); `lastSentAt` rate-caps sends per source. */
+export interface SourceNotifyEmail {
+  email: string;
+  unsubToken: string;
+  lastSentAt: string | null;
+}
+
 /** A browser co-sign spending session: the user funded a session EOA and authorised Keryx to
  *  request signatures from it up to `cap` USDC. Persisted so a deploy or crash does not strand a
  *  funded session, and — more importantly — so `spent` survives a restart: an in-memory counter
@@ -155,6 +164,16 @@ export interface KeryxDB {
   getSourceNotify(id: string): Promise<SourceNotify | null>;
   /** Remove a source's notify config (disable notifications). No-op if none set. */
   deleteSourceNotify(id: string): Promise<void>;
+
+  // ── citation email alerts (off-chain, private to the source owner) ──
+  /** Set or replace a source's alert email + unsubscribe token. Upsert keyed by source id. */
+  setSourceNotifyEmail(id: string, email: string, unsubToken: string): Promise<void>;
+  /** Get a source's email-alert config, or null if none set. Owner/dispatcher-only path. */
+  getSourceNotifyEmail(id: string): Promise<SourceNotifyEmail | null>;
+  /** Remove a source's email-alert config (unsubscribe / disable). No-op if none set. */
+  deleteSourceNotifyEmail(id: string): Promise<void>;
+  /** Record a successful delivery so the per-source rate cap has a reference point. */
+  markSourceNotifyEmailSent(id: string, at: string): Promise<void>;
 
   /** Set a source's free-preview depth ("full" | "excerpt" | "locked"). Owner-gated by callers. */
   setSourcePreviewDepth(id: string, depth: string): Promise<void>;

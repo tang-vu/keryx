@@ -9,6 +9,21 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### Creators can get a plain email when they're cited and paid (2026-07-23)
+The notify-on-citation loop had one channel: a signed webhook — great for creators who run
+software, useless for the writers Keryx exists to pay. Now every source owner can opt into
+**citation email alerts** from their creator page: when the agent cites their source and the
+reward settles on-chain, they get a short email carrying the question their work answered, the
+USDC amount, and links to the dispatch trace and their earnings page. A per-source rate cap
+(default one mail/hour, `KERYX_EMAIL_MIN_INTERVAL_MIN`) keeps the 24/7 volume engine from
+flooding an inbox, every mail carries a tokened one-click unsubscribe
+(`/api/notify/unsubscribe`, constant-time compare, uniform response so ids can't be probed), and
+delivery is best-effort fire-and-forget so a mail-provider outage can never stall a run. The two
+channels are independent — saving one can't clobber the other — behind the same owner-gated
+`/api/creator/[id]/notify` route. Ships dark until `KERYX_RESEND_API_KEY` + `KERYX_EMAIL_FROM`
+are set (the panel says so honestly). New table `source_notify_email` (migration 0016),
+dispatcher `lib/notify/citation-email.ts`, 9 new tests.
+
 ### Seed sources now link to their real home instead of example.com (2026-07-22)
 The eight built-in seed sources have no external website — their articles live in the Keryx
 datastore — but the public registry (`/sources`) rendered their placeholder `example.com` urls as

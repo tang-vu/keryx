@@ -5,6 +5,16 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-19** · Notify · *Citation email alerts are a second independent channel beside the webhook, not a column on it.*
+Own table (`source_notify_email`) + own dispatcher mirroring the webhook's contract (settled-legs-only,
+fire-and-forget, never throws), so a creator can run either channel or both and existing webhook code
+stays untouched. Provider = Resend over one HTTP POST (no SDK, no SMTP dep); ships dark until
+`KERYX_RESEND_API_KEY`+`KERYX_EMAIL_FROM` are set — same proven pattern as the Slack front door.
+Per-source rate cap (default 1/h) because the 24/7 engine re-cites the same sources; unsubscribe is an
+unauthenticated tokened link (per-row random secret, constant-time compare, uniform response) because
+the recipient must always be able to stop mail even without the owner's wallet. Reversible: easy
+(drop table + panel; run path is one fire-and-forget call).
+
 **D-18** · Dashboard/Data · *Creator cash-outs (Gateway withdraws) live in their own `withdrawals` table, never in `payment_events`.* (user: surface real /tx/ proof on the dashboard)
 A withdraw moves already-earned USDC OUT on-chain; it is not a new payment. Folding it into `payment_events` would double-count — `metrics()` aggregates that table for total payments, total volume, creator payouts, and reader→payer conversion, so every cash-out would inflate traction. A dedicated table keeps those figures honest while letting the dashboard surface the withdraw's real EVM mint hash — which, unlike the batched Circle settlement UUIDs in the payments feed, resolves at the explorer `/tx/` — as the hard per-tx on-chain proof that rewards are real, withdrawable USDC. Keyed by `tx_hash`, so re-recording the same withdraw is an idempotent no-op (the `withdraw` script persists on each live mint). Reversible: easy (drop the table + panel; no coupling to the payment path).
 

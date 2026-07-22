@@ -136,7 +136,8 @@ Live figures at [`/status`](https://keryx.cc/status); snapshots in [TRACTION.md]
 
 ### Platform Extensions
 - **Agent Marketplace** — publish trained agents (vs. sources); reward top creators
-- **Integrations** — Slack bot ("@keryx ask ..."), Discord command, email digest
+- **Integrations** — ✓ all shipped: Slack `/keryx`, Discord `/ask`, Telegram bot, and citation
+  email alerts (2026-07-23 — per-source opt-in, rate-capped, dark until an email provider key is set)
 - **Reputation** — creator leaderboard, verified badge, insurance pool
 - **Derivatives** — citation futures (hedge payment volatility), author NFT (stake on quality)
 

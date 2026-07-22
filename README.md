@@ -95,8 +95,10 @@ Example trace (real output):
   wallet, can update or deactivate those nine. The payout address is correct on all twenty — an
   hourly watchdog re-reads every record from the chain and publishes the comparison on
   [`/status`](https://keryx.cc/status).
-- **Know the moment you're cited** — signed webhooks fire the instant a citation settles, and every
-  payout on your public earnings page shows the actual *question* your work helped answer.
+- **Know the moment you're cited** — opt into a plain **email alert** (no webhook server needed,
+  rate-capped, one-click unsubscribe) and/or signed webhooks that fire the instant a citation
+  settles; every payout on your public earnings page shows the actual *question* your work helped
+  answer.
 - **Show it off** — an embeddable **"Cited by Keryx" badge** (live SVG at `/api/creator/<id>/badge.svg`)
   displays your real citation count + USDC earned on your own site, with copy-paste Markdown/HTML on
   each creator page. Payouts become portable, verifiable proof.

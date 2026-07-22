@@ -25,6 +25,7 @@ import type { AgentDeps } from "./deps";
 import { discoverExternalCandidates } from "./external-discovery";
 import { buildMemoryContext, buildReputationContext, saveMemory } from "./query-memory";
 import { dispatchCitationNotify } from "../notify/citation-webhook";
+import { dispatchCitationEmail } from "../notify/citation-email";
 import { allocateSplit } from "../payments/split-allocation";
 import { sendAlert } from "../notify/alert";
 import { normalizePreviewDepth, previewSummary } from "../sources/preview-depth";
@@ -483,14 +484,17 @@ export async function* runAgent(
     // and self-contained (never throws) so a slow/dead endpoint can't stall or fail the run. The
     // dispatcher no-ops when the source has no webhook or no leg actually settled on-chain.
     if (citationPayments.length > 0) {
-      void dispatchCitationNotify(db, {
+      const notifyInput = {
         source,
         citation: c,
         payments: citationPayments,
         queryId,
         question: input.question,
         network: config.network,
-      });
+      };
+      void dispatchCitationNotify(db, notifyInput);
+      // The human channel: same settled-only guard, plus a per-source hourly rate cap inside.
+      void dispatchCitationEmail(db, notifyInput);
     }
   }
 

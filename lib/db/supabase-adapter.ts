@@ -120,6 +120,39 @@ export class SupabaseAdapter implements KeryxDB {
     await this.sb.from("source_notify").delete().eq("source_id", id);
   }
 
+  async setSourceNotifyEmail(id: string, email: string, unsubToken: string): Promise<void> {
+    // Fresh save resets last_sent_at — a new address should hear about its next citation promptly.
+    await this.sb.from("source_notify_email").upsert({
+      source_id: id,
+      email,
+      unsub_token: unsubToken,
+      last_sent_at: null,
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  async getSourceNotifyEmail(id: string): Promise<import("./keryx-db").SourceNotifyEmail | null> {
+    const { data } = await this.sb
+      .from("source_notify_email")
+      .select("email,unsub_token,last_sent_at")
+      .eq("source_id", id)
+      .maybeSingle();
+    if (!data) return null;
+    return {
+      email: (data.email as string) ?? "",
+      unsubToken: (data.unsub_token as string) ?? "",
+      lastSentAt: (data.last_sent_at as string) ?? null,
+    };
+  }
+
+  async deleteSourceNotifyEmail(id: string): Promise<void> {
+    await this.sb.from("source_notify_email").delete().eq("source_id", id);
+  }
+
+  async markSourceNotifyEmailSent(id: string, at: string): Promise<void> {
+    await this.sb.from("source_notify_email").update({ last_sent_at: at }).eq("source_id", id);
+  }
+
   async setSourcePreviewDepth(id: string, depth: string): Promise<void> {
     await this.sb.from("sources").update({ preview_depth: depth }).eq("id", id);
   }

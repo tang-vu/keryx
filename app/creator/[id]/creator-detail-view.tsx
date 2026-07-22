@@ -6,6 +6,7 @@ import { BadgeCheck, Banknote, Calendar, Hash, Wallet } from "lucide-react";
 import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
 import { cn } from "@/lib/utils";
 import { NotifyWebhookPanel } from "./notify-webhook-panel";
+import { NotifyEmailPanel } from "./notify-email-panel";
 import { PreviewDepthPanel } from "./preview-depth-panel";
 import { EmbedBadgePanel } from "./embed-badge-panel";
 import { EmbedWidgetPanel } from "./embed-widget-panel";
@@ -122,6 +123,9 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
           accent="seal"
         />
       </section>
+
+      {/* Owner-only: citation email alerts (renders nothing for non-owners) */}
+      <NotifyEmailPanel creatorId={creatorId} />
 
       {/* Owner-only: citation webhook settings (renders nothing for non-owners) */}
       <NotifyWebhookPanel creatorId={creatorId} />

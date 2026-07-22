@@ -46,6 +46,13 @@ CREATE TABLE IF NOT EXISTS source_notify (
   secret     TEXT NOT NULL,
   updated_at TEXT
 );
+CREATE TABLE IF NOT EXISTS source_notify_email (
+  source_id    TEXT PRIMARY KEY,
+  email        TEXT NOT NULL,
+  unsub_token  TEXT NOT NULL,
+  last_sent_at TEXT,
+  updated_at   TEXT
+);
 CREATE TABLE IF NOT EXISTS sync_state (
   key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT
 );
@@ -330,6 +337,35 @@ export class SqliteAdapter implements KeryxDB {
 
   async deleteSourceNotify(id: string): Promise<void> {
     this.db.prepare(`DELETE FROM source_notify WHERE source_id=?`).run(id);
+  }
+
+  async setSourceNotifyEmail(id: string, email: string, unsubToken: string): Promise<void> {
+    // Fresh save resets last_sent_at — a new address should hear about its next citation promptly.
+    this.db
+      .prepare(
+        `INSERT OR REPLACE INTO source_notify_email (source_id,email,unsub_token,last_sent_at,updated_at) VALUES (?,?,?,NULL,?)`,
+      )
+      .run(id, email, unsubToken, new Date().toISOString());
+  }
+
+  async getSourceNotifyEmail(id: string): Promise<import("./keryx-db").SourceNotifyEmail | null> {
+    const row = this.db
+      .prepare(`SELECT email,unsub_token,last_sent_at FROM source_notify_email WHERE source_id=?`)
+      .get(id);
+    if (!row) return null;
+    return {
+      email: row.email as string,
+      unsubToken: row.unsub_token as string,
+      lastSentAt: (row.last_sent_at as string) ?? null,
+    };
+  }
+
+  async deleteSourceNotifyEmail(id: string): Promise<void> {
+    this.db.prepare(`DELETE FROM source_notify_email WHERE source_id=?`).run(id);
+  }
+
+  async markSourceNotifyEmailSent(id: string, at: string): Promise<void> {
+    this.db.prepare(`UPDATE source_notify_email SET last_sent_at=? WHERE source_id=?`).run(at, id);
   }
 
   async getSource(id: string): Promise<Source | null> {
