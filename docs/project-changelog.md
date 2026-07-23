@@ -9,6 +9,16 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### One page to manage every source a wallet owns (2026-07-23)
+Per-source settings live on each source's creator page, which worked until bulk import let one
+wallet own twenty feeds with no single place to see them. `/me/sources` is that place: sign in and
+every owned source (payout or author, deactivated included) lists with earnings, citation counts,
+and notify state at a glance, each row linking into its creator page. The bulk bar applies one
+citation-alert email to the whole portfolio in a click — same address everywhere, but a fresh
+unsubscribe token per source, so stopping one source's mail never stops the rest. SIWE session
+only (`/api/me/sources` GET/POST); scripts keep using the existing portfolio export. Linked from
+the site nav.
+
 ### Creators can get a plain email when they're cited and paid (2026-07-23)
 The notify-on-citation loop had one channel: a signed webhook — great for creators who run
 software, useless for the writers Keryx exists to pay. Now every source owner can opt into
