@@ -5,6 +5,7 @@ import Link from "next/link";
 import { BadgeCheck, Banknote, Calendar, Hash, Wallet } from "lucide-react";
 import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
 import { cn } from "@/lib/utils";
+import { ListingControlsPanel } from "./listing-controls-panel";
 import { NotifyWebhookPanel } from "./notify-webhook-panel";
 import { NotifyEmailPanel } from "./notify-email-panel";
 import { PreviewDepthPanel } from "./preview-depth-panel";
@@ -123,6 +124,9 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
           accent="seal"
         />
       </section>
+
+      {/* Owner-only: price-per-read dial + permanent delist (renders nothing for non-owners) */}
+      <ListingControlsPanel creatorId={creatorId} />
 
       {/* Owner-only: citation email alerts (renders nothing for non-owners) */}
       <NotifyEmailPanel creatorId={creatorId} />
