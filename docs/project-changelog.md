@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-07-22  
+**Last Updated:** 2026-07-23  
 **Current Version:** 0.6.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
@@ -8,6 +8,19 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 ---
 
 ## Unreleased
+
+### Creators can reprice and delist their own sources (2026-07-23)
+The source lifecycle stopped at register: the registry contract always had creator-signed
+`update()` and `deactivate()` (and the indexer already projected both events), but no surface ever
+called them — a creator's price was frozen at whatever the register slider said, forever. The
+creator page now carries an owner-only **Listing controls** panel: a price-per-read dial and a
+two-step permanent delist. On-chain sources stay non-custodial — `GET /api/creator/[id]/listing`
+returns the live on-chain record (payout, author splits, tags) so the owner's wallet re-signs
+`update()` with only the price swapped, the contract's `onlyCreator` does the real gating, and the
+indexer syncs the cache within seconds; a mismatch note warns when the connected wallet isn't the
+registering one. Offline/dev sources take the DB-direct `POST` path (price band $0.0001–$0.05,
+whole micro-USDC). DB-side writes to on-chain sources are refused outright so the cache can never
+drift from the registry and trip the parity watchdog.
 
 ### One page to manage every source a wallet owns (2026-07-23)
 Per-source settings live on each source's creator page, which worked until bulk import let one
