@@ -18,7 +18,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useDisconnect } from "wagmi";
 import { toast } from "sonner";
-import { Wallet, ChevronDown, LogOut, Copy, ShieldCheck, Loader2, BookOpen, Stamp } from "lucide-react";
+import { Wallet, ChevronDown, LogOut, Copy, ShieldCheck, Loader2, BookOpen, Stamp, Library } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -119,6 +119,13 @@ export function WalletMenu() {
           <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">
             <Link href="/dashboard">
               <BookOpen className="h-3.5 w-3.5" /> Ledger
+            </Link>
+          </DropdownMenuItem>
+          {/* Unconditional (not isCreator-gated): the role snapshot can lag a wallet's first
+              registration, and the page's empty state already routes non-owners to /register. */}
+          <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">
+            <Link href="/me/sources">
+              <Library className="h-3.5 w-3.5" /> My sources
             </Link>
           </DropdownMenuItem>
           {isCreator && (

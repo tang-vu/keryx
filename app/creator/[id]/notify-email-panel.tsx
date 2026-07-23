@@ -106,6 +106,13 @@ export function NotifyEmailPanel({ creatorId }: { creatorId: string }) {
           delivery starts the moment it does.
         </p>
       )}
+
+      <p className="mt-3 font-mono text-[10px] text-ink-3">
+        Own several sources?{" "}
+        <a href="/me/sources" className="text-seal underline underline-offset-2 hover:text-ink">
+          Manage them all in one place →
+        </a>
+      </p>
     </section>
   );
 }
