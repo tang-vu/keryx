@@ -20,7 +20,8 @@ off-topic domains so the agent must discriminate:
 | Retro Game Hardware | retro gaming (off-topic) | $0.002 | 1 |
 
 **One-click creator onboarding is live** (`/register` → paste an RSS URL → wallet + x402 endpoint
-created via RSSHub-style ingest). **21 sources now registered**, including **10 real public publisher
+created via RSSHub-style ingest). **20 sources now registered — all written to the on-chain
+SourceRegistry** — including **10 real public publisher
 feeds onboarded via RSS** — Hugging Face, Vitalik Buterin, CoinDesk, Decrypt, The Coinbase Blog,
 Latent Space, Simon Willison, the Ethereum Foundation Blog, the Stripe Blog, and Cointelegraph — each
 with its own generated creator wallet, all now earning real per-citation rewards alongside the seed
@@ -48,23 +49,24 @@ Run `npm run metrics` for the current live tally from the datastore.
 Agent wallet funded. `KERYX_FORCE_OFFLINE=0`. Every payment below is a **real Circle x402
 batched settlement** on Arc (verified `settled=true` with Circle settlement IDs). Snapshot:
 
-| Metric | Value (live snapshot 2026-07-06) |
+| Metric | Value (live snapshot 2026-07-23) |
 |---|---|
-| Settled payments | **3,478** (weighted citations + access tolls) |
-| Total volume / to creators | **$18.27** / **$16.33** (100% to creator wallets, 0% platform fee) |
-| Creators earning | **20** |
-| Autonomous queries | **714** |
+| Settled payments | **7,312** (weighted citations + access tolls) |
+| Total volume / to creators | **$32.03** / **$28.31** (100% to creator wallets, 0% platform fee) |
+| Creators earning | **22** wallets across **20** sources |
+| Autonomous queries | **1,215** |
 | Reader→payer conversion | **98.6%** (queries the agent judged worth paying for; it correctly pays nothing otherwise) |
-| Avg payment | ~$0.0053 (sub-cent to cent range — true nanopayments) |
-| By entry path | **429** payments / $2.78 via web + A2A · **3,049** / $15.49 via the volume engine |
-| Creator cash-outs | **11** self-serve gasless withdrawals ($0.72 USDC) — real on-chain tx hashes, listed at [/api/withdrawals](https://keryx.cc/api/withdrawals) |
+| Avg payment | ~$0.0044 (sub-cent to cent range — true nanopayments) |
+| By entry path | **527** payments / $3.26 via web + A2A · **6,785** / $28.77 via the volume engine |
+| Creator cash-outs | **12** self-serve gasless withdrawals ($0.75 USDC) — real on-chain tx hashes, listed at [/api/withdrawals](https://keryx.cc/api/withdrawals) |
 
-Creator leaderboard (real earnings, top entries): Agent Economy Weekly $3.93 · Stablecoin Ledger $3.54 ·
-Onchain Micropayments Digest $3.53 · Arc Settlement Benchmarks $1.05 · Distributed Systems Notes $0.58 ·
-**Ethereum Foundation $0.53** · **Stripe Blog $0.44** · Web Payments Review $0.40 · **Latent.Space $0.37** ·
-**CoinDesk $0.32** · **Hugging Face $0.26** · **Cointelegraph $0.26** · **Decrypt $0.23** ·
-**Vitalik Buterin $0.22** · **Simon Willison $0.21** · **Coinbase Blog $0.20** · Garden & Soil Monthly $0.12 ·
-Retro Game Hardware $0.06 · Inner Axiom $0.05 · **Conzit Labs $0.05 (owner-verified)**.
+Creator leaderboard (real earnings, all 20 sources): Onchain Micropayments Digest $6.15 ·
+Agent Economy Weekly $5.38 · Stablecoin Ledger $5.17 · Arc Settlement Benchmarks $2.85 ·
+Web Payments Review $1.19 · Distributed Systems Notes $1.10 · **Ethereum Foundation $0.86** ·
+**Latent.Space $0.67** · **CoinDesk $0.66** · **Stripe Blog $0.66** · **Cointelegraph $0.65** ·
+**Coinbase Blog $0.54** · **Hugging Face $0.52** · **Vitalik Buterin $0.46** · **Decrypt $0.46** ·
+**Simon Willison $0.43** · Garden & Soil Monthly $0.30 · Retro Game Hardware $0.12 ·
+Inner Axiom $0.08 · **Conzit Labs $0.07 (owner-verified)**.
 (Bold = real public publisher feeds onboarded via RSS, now earning.)
 
 These accumulate via the budget-guarded volume engine (`npm run seed -- --loop --limit <cap>`) run on the
