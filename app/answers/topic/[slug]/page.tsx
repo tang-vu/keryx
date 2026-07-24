@@ -48,6 +48,24 @@ async function loadTopic(slug: string): Promise<TopicData> {
   }
 }
 
+/**
+ * Prerender the ranked hubs at build: there are only a couple of dozen and they are the crawl
+ * targets this feature exists for. Declaring it also marks the route cacheable — without it every
+ * request re-renders and `revalidate` above does nothing. A slug outside this list still renders
+ * on demand and is then cached like any other.
+ */
+export async function generateStaticParams(): Promise<{ slug: string }[]> {
+  try {
+    const db = await getDb();
+    return buildTopics(buildArchive(await db.listRecentQueries(600))).map((t) => ({
+      slug: t.slug,
+    }));
+  } catch {
+    // No database at build time — every hub is then rendered on demand.
+    return [];
+  }
+}
+
 export async function generateMetadata({
   params,
 }: {

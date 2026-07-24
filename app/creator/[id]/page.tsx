@@ -8,6 +8,12 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+// Always per-request. A creator opens this page straight after registering, and a cached miss
+// would hold the 404 for the whole revalidate window — the one page where staleness reads as
+// "my source doesn't exist" or "my earnings stopped". Its traffic is a handful of owners, not
+// crawlers, so there is nothing to save here.
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   try {

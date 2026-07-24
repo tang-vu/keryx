@@ -9,6 +9,26 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### Public pages are cacheable again — one `headers()` call was making the whole site dynamic (2026-07-25)
+`/answers` declared `revalidate = 600` and had been ignoring it for as long as it existed: every hit
+re-read 600 runs, rebuilt the archive, and re-rendered ~450 cards, at ~1.6–2.0s TTFB. So did every
+dispatch permalink, `/sources`, the landing page — even `/privacy`, which has no data at all. The
+cause was one line in the root layout: it read `headers()` to seed wagmi's wallet state from the
+request cookie, which opts *every page under that layout* into per-request rendering. It bought
+almost nothing — the header's real state is the SIWE session, which is fetched client-side anyway,
+so the server never rendered a signed-in header regardless. Wallet connection is now restored on the
+client from the same cookie storage, and the menu shows a neutral chip while wagmi reconnects
+instead of flashing "Connect Wallet" at a returning visitor. A side effect worth naming: the shared
+HTML no longer embeds *any* visitor's connection state, so a cached page can't describe the wrong
+person. Every page that reads the database was then given an explicit rendering mode rather than
+inheriting one: the archive, its topic hubs and `/sources` revalidate every 10 min, dispatch
+permalinks hourly (a settled dispatch is a finished record; only follow-ups and related links move),
+and `/creator/[id]` is pinned per-request on purpose — an owner opens it seconds after registering,
+where a cached miss would hold a 404 for the whole window. Dynamic-param routes also needed
+`generateStaticParams` before Next would honour `revalidate` at all. Verified against a production
+build: `/answers` and each topic hub serve `s-maxage=600` cache hits, permalinks `s-maxage=3600`,
+`/privacy` fully static, `/creator/[id]` still `no-store`, and no hydration mismatch on any page.
+
 ### The answer archive is browsable: instant filter + topic hubs (2026-07-25)
 The archive is the organic on-ramp — people find a Keryx answer in search, then ask their own — but
 it had grown to hundreds of answers presented as one flat list with no way in. A visitor after

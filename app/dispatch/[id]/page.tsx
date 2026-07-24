@@ -12,6 +12,24 @@ import { DispatchView } from "./dispatch-view";
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
 
+// A settled dispatch is a finished record — its answer, citations and payouts never change. Only
+// the things layered on top (follow-ups, related answers) move, and hourly is soon enough for
+// those. Explicit because the root layout no longer forces every page to render per-request:
+// without this, the permalink would be generated once and served from then on, never noticing a
+// follow-up. Refreshed in the background, so a crawler hitting hundreds of these costs one render
+// each per window rather than one per hit.
+export const revalidate = 3600;
+
+/**
+ * Empty on purpose: no permalink is worth prerendering at build (there are hundreds, and the
+ * newest ones are minted minutes later anyway). Declaring it at all is what marks the route as
+ * cacheable — without it Next renders every dynamic-param request from scratch, and `revalidate`
+ * above would be silently ignored. Unknown ids are still served on demand (dynamicParams default).
+ */
+export function generateStaticParams(): { id: string }[] {
+  return [];
+}
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }

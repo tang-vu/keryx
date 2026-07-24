@@ -14,9 +14,9 @@
  * Styled as "The Mint": mono labels, banknote borders, vermillion seal accent.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { useDisconnect } from "wagmi";
+import { useAccount, useDisconnect } from "wagmi";
 import { toast } from "sonner";
 import { Wallet, ChevronDown, LogOut, Copy, ShieldCheck, Loader2, BookOpen, Stamp, Library, Receipt } from "lucide-react";
 import {
@@ -33,9 +33,22 @@ import { shortAddress } from "@/lib/utils";
 const CHIP =
   "flex items-center gap-2 border border-ink bg-paper px-3.5 py-2.5 font-mono text-[11.5px] font-semibold uppercase tracking-[0.12em] text-ink transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)] active:translate-y-0 active:shadow-none disabled:cursor-wait disabled:opacity-70";
 
+/** False on the server and through hydration, true from the first client render after it. Lets the
+ *  menu tell "nobody is connected" apart from "we haven't looked yet" without a setState-in-effect,
+ *  and keeps the server HTML identical for every visitor so pages stay cacheable. */
+function useHydrated(): boolean {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
+
 export function WalletMenu() {
   const { address, isConnected, session, authState, signIn, signOut } = useSiweAuth();
+  const { status } = useAccount();
   const { disconnectAsync } = useDisconnect();
+  const hydrated = useHydrated();
   const [pickerOpen, setPickerOpen] = useState(false);
   // Sticky "user signed out" flag. The MetaMask SDK / injected connectors can
   // auto-reconnect right after disconnect(), flipping isConnected back to true and
@@ -91,6 +104,18 @@ export function WalletMenu() {
   // A real session always wins over the sticky signed-out flag (derived, not stored,
   // to avoid a setState-in-effect cascade).
   const showSignedOut = signedOut && !session;
+
+  // ── Still settling: server HTML, hydration, and wagmi's reconnect from cookie storage ──
+  // A returning visitor is connected but wagmi doesn't know it yet. Showing "Connect Wallet" for
+  // those few hundred milliseconds would be a lie that then flips — show a neutral chip instead.
+  if (!hydrated || ((status === "reconnecting" || status === "connecting") && !session)) {
+    return (
+      <span className={`${CHIP} cursor-default opacity-70`} aria-busy>
+        <Wallet className="h-3.5 w-3.5" />
+        Wallet
+      </span>
+    );
+  }
 
   // ── Signed in: account chip + menu ──
   if (session) {

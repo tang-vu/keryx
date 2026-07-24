@@ -1,14 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Bodoni_Moda, Spectral, Spline_Sans_Mono } from "next/font/google";
-import { headers } from "next/headers";
-import { cookieToInitialState } from "wagmi";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
 import { PaperGrain } from "@/components/keryx/paper-grain";
 import { InkBleedCursor } from "@/components/keryx/ink-bleed-cursor";
 import { MintEngravings } from "@/components/keryx/mint-engravings";
 import { Providers } from "./providers";
-import { makeConfig } from "@/lib/wagmi-config";
 import "./globals.css";
 
 // Public origin for OG/canonical metadata. Explicit BASE_URL wins (set to the live
@@ -129,12 +126,18 @@ const JSON_LD = {
   ],
 };
 
-export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  // Read the incoming cookie header so wagmi can rehydrate wallet connection
-  // state on the server, avoiding a flash of "disconnected" on first paint.
-  const cookieHeader = (await headers()).get("cookie") ?? undefined;
-  const initialState = cookieToInitialState(makeConfig(), cookieHeader);
-
+/**
+ * Deliberately reads NO request data. The layout used to call headers() to seed wagmi's wallet
+ * state from cookies, which made every page in the app render per-request — the answer archive,
+ * all ~450 dispatch permalinks, even /privacy — so each crawler hit rebuilt pages that change a
+ * few times an hour. It bought very little: the header's real state comes from the SIWE session,
+ * which is fetched client-side anyway. Wallet connection is now restored on the client (wagmi
+ * reconnects from the same cookie storage) and the header shows a settling chip meanwhile.
+ *
+ * Keep it request-independent. Anything that needs per-request data belongs in the page, which
+ * can opt into dynamic rendering for itself.
+ */
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
       <body
@@ -147,7 +150,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <MintEngravings />
         <PaperGrain />
         <InkBleedCursor />
-        <Providers initialState={initialState}>
+        <Providers>
           <TooltipProvider>{children}</TooltipProvider>
         </Providers>
         <Toaster richColors position="bottom-right" />
