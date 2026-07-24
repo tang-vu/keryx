@@ -5,6 +5,8 @@
 #   - engine (origin=engine): 1 query every tick
 #   - a2a    (origin=a2a):     1 paid call every A2A_EVERY ticks
 #   - web    (origin=web):     1 session-grant ask every WEB_EVERY ticks
+# Each tick starts with feed upkeep (npm run refresh-feeds): listed blogs get new posts
+# ingested so the tick's asks can discover and pay for fresh content.
 #
 # Ticks run SEQUENTIALLY with a randomized sleep between them. The engine and the server-side
 # a2a collectRun share one spend wallet (data/spend-wallet.json); doing one thing at a time
@@ -42,6 +44,10 @@ echo "keryx-traction daemon up $(date -u) — sleep ${MIN_SLEEP}-${MAX_SLEEP}s �
 while true; do
   tick=$((tick+1))
   q="${QUESTIONS[$(( RANDOM % N ))]}"
+
+  # Feed upkeep first, so a post published since the last tick is purchasable for this tick's ask.
+  echo "[$(date -u +%H:%M:%S)] tick #$tick — refresh feeds"
+  npm run refresh-feeds || echo "refresh tick rc=$?"
 
   echo "[$(date -u +%H:%M:%S)] tick #$tick — engine 1q"
   npm run seed -- --count 1 --budget 0.04 --delay 200 || echo "engine tick rc=$?"

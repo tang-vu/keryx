@@ -24,6 +24,9 @@ const tiers = {
   // unauthenticated caller could still loop large-budget treasury payouts — IP-key it. More
   // generous than treasuryAsk because A2A is a paid path; keyed callers use the `ask` tier instead.
   a2aPublic: 10,
+  // Owner-triggered feed refresh, keyed by SOURCE id (not caller): each call is an outbound
+  // fetch of the creator's feed host, and hammering a third-party blog is the thing to stop.
+  feedRefresh: 2,
 } as const;
 
 export type RateLimitTier = keyof typeof tiers;

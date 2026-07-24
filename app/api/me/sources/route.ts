@@ -56,6 +56,9 @@ export async function GET() {
         name: s.name,
         active: s.active !== false,
         verified: s.verified !== false,
+        // Whether the row can be feed-refreshed at all — drives the button, not security
+        // (the refresh route re-checks ownership and the feed itself).
+        hasFeed: Boolean(s.rssUrl?.trim()),
         earnedUsdc: earned?.totalEarnedUsdc ?? 0,
         citationCount: earned?.citationCount ?? 0,
         email: emailNotify?.email ?? null,

@@ -9,7 +9,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BellRing, Loader2, Mail, Webhook } from "lucide-react";
+import { BellRing, Loader2, Mail, RefreshCw, Webhook } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { fmtUsdc } from "@/components/keryx/phase-style";
@@ -19,6 +19,7 @@ interface OwnedSource {
   name: string;
   active: boolean;
   verified: boolean;
+  hasFeed: boolean;
   earnedUsdc: number;
   citationCount: number;
   email: string | null;
@@ -32,6 +33,7 @@ export function MySourcesView() {
   const [deliveryOn, setDeliveryOn] = useState(true);
   const [bulkEmail, setBulkEmail] = useState("");
   const [applying, setApplying] = useState(false);
+  const [refreshingId, setRefreshingId] = useState<string | null>(null);
 
   async function load() {
     try {
@@ -79,6 +81,28 @@ export function MySourcesView() {
       toast.error(e instanceof Error ? e.message : "Failed to apply");
     } finally {
       setApplying(false);
+    }
+  };
+
+  /** Pull in posts published since the last ingest — new items become purchasable immediately. */
+  const refreshFeed = async (s: OwnedSource) => {
+    if (refreshingId) return;
+    setRefreshingId(s.id);
+    try {
+      const res = await fetch(`/api/me/sources/${encodeURIComponent(s.id)}/refresh`, {
+        method: "POST",
+      });
+      const d = (await res.json()) as { added?: number; error?: string; message?: string };
+      if (!res.ok) throw new Error(d.message ?? d.error ?? "Refresh failed");
+      toast.success(
+        d.added
+          ? `${s.name}: ${d.added} new post(s) now purchasable.`
+          : `${s.name}: feed checked — already up to date.`,
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Refresh failed");
+    } finally {
+      setRefreshingId(null);
     }
   };
 
@@ -189,6 +213,20 @@ export function MySourcesView() {
             >
               <Webhook className="h-3 w-3" /> {s.webhookConfigured ? "on" : "—"}
             </span>
+            {s.hasFeed && s.active && (
+              <button
+                type="button"
+                onClick={() => void refreshFeed(s)}
+                disabled={refreshingId !== null}
+                title="Re-read the feed and pull in new posts"
+                className="flex items-center gap-1 border border-line px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3 transition-colors hover:bg-paper-2 hover:text-seal disabled:opacity-60"
+              >
+                <RefreshCw
+                  className={`h-3 w-3 ${refreshingId === s.id ? "animate-spin" : ""}`}
+                />
+                Refresh feed
+              </button>
+            )}
             <Link
               href={`/creator/${s.id}`}
               className="font-mono text-[11px] text-seal underline underline-offset-2 hover:text-ink"
