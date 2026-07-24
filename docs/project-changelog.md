@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-07-23  
+**Last Updated:** 2026-07-24  
 **Current Version:** 0.6.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
@@ -8,6 +8,22 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 ---
 
 ## Unreleased
+
+### Listed feeds no longer freeze at their register-day snapshot (2026-07-24)
+Registration ingested a feed exactly once — a creator's blog could publish daily forever and
+Keryx would never see a post past register day, so "creators get paid per citation" quietly decayed
+into "creators get paid for what they'd written by the day they signed up." Two refresh paths fix
+it: the traction daemon now starts every tick with a feed sweep (`npm run refresh-feeds`) over
+active + verified sources that list a feed, and `/me/sources` grows a per-row **Refresh feed**
+button (`POST /api/me/sources/[id]/refresh`, SIWE owner-gated) for the "I just published — make it
+purchasable now" moment. Both paths dedupe by item link against what the DB already holds (the same
+rule the registry claim path uses), link-less items are skipped so they can't duplicate on the next
+pass, and an unreachable feed writes nothing. The refresh limiter is keyed by source, not caller —
+the cost is the outbound fetch of the creator's blog host, so one hot button must not hammer it.
+Unverified rows are never crawled: nobody proved they own that feed. First local sweep pulled 17
+real posts across 3 feeds that had been frozen since registration. Core in
+`lib/ingest/refresh-feed.ts` (6 tests); also retired the `npm run ingest` alias, which pointed at a
+script that never existed.
 
 ### Creators can reprice and delist their own sources (2026-07-23)
 The source lifecycle stopped at register: the registry contract always had creator-signed
