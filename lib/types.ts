@@ -179,6 +179,14 @@ export interface QueryRun {
   /** How confident the agent is in this answer. Absent on runs recorded before it became a field;
    *  deriveConfidence() reconstructs it from the trace's verdict step for those. */
   confidence?: Confidence;
+  /** Lowercased wallet that dispatched this run, taken from the server-verified SIWE session —
+   *  never from a client-supplied field. Absent on anonymous asks and on every engine/A2A run,
+   *  which have no signed-in wallet to attribute to. */
+  asker?: string;
+  /** True when that wallet's own session key paid for the run; false/absent means the dispatch
+   *  ran on Keryx's treasury (the free trial). Kept apart so a receipts page can never present
+   *  Keryx's spend as the user's. */
+  askerFunded?: boolean;
 }
 
 /** Aggregate metrics for the traction dashboard. Computed only from real, settled rows in prod. */

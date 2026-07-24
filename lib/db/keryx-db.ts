@@ -220,6 +220,9 @@ export interface KeryxDB {
   listRecentQueries(limit: number): Promise<QueryRun[]>;
   /** Dispatches asked as follow-ups to `parentId`, oldest first. */
   listFollowUps(parentId: string): Promise<QueryRun[]>;
+  /** Dispatches a wallet ran while signed in, newest first. Address match is case-insensitive:
+   *  runs are stamped lowercased, but callers hand over whatever casing the session carries. */
+  listQueryRunsByAsker(wallet: string, limit: number): Promise<QueryRun[]>;
 
   // ── auth helpers ──
   /** True when any source in the registry has this wallet address (case-insensitive). */

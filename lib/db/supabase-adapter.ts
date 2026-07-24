@@ -288,6 +288,7 @@ export class SupabaseAdapter implements KeryxDB {
       answer: run.answer,
       data: run,
       parent_id: run.parentId ?? null,
+      asker: run.asker?.toLowerCase() ?? null,
     });
   }
 
@@ -297,6 +298,16 @@ export class SupabaseAdapter implements KeryxDB {
       .select("data")
       .eq("parent_id", parentId)
       .order("created_at", { ascending: true });
+    return (data ?? []).map((r) => r.data as QueryRun);
+  }
+
+  async listQueryRunsByAsker(wallet: string, limit: number): Promise<QueryRun[]> {
+    const { data } = await this.sb
+      .from("query_runs")
+      .select("data")
+      .eq("asker", wallet.toLowerCase())
+      .order("created_at", { ascending: false })
+      .limit(limit);
     return (data ?? []).map((r) => r.data as QueryRun);
   }
 

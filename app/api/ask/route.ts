@@ -17,6 +17,7 @@
  */
 
 import { NextRequest } from "next/server";
+import { getSession } from "@/lib/auth";
 import { getAgentDeps } from "@/lib/agent";
 import { runAgent } from "@/lib/agent/run-agent";
 import { config } from "@/lib/config";
@@ -64,6 +65,12 @@ export async function POST(req: NextRequest) {
 
   // Optional browser co-sign session. Normalise to lowercase to match grant keys.
   const sessionId = body.sessionId ? body.sessionId.toLowerCase() : undefined;
+
+  // Who gets this dispatch in their ledger. Read from the SIWE cookie — the one wallet claim the
+  // server has actually verified — and read HERE, in request scope: the stream body below runs
+  // after the handler returns, where cookies() is no longer available. A signed-out ask stays
+  // unattributed rather than borrowing `sessionId`, which is client-supplied.
+  const asker = (await getSession())?.address?.toLowerCase();
 
   // If the client presents a session but the server grant is gone (TTL lapsed, or the user
   // revoked it), do NOT silently fall back to the treasury gateway — that would spend Keryx's
@@ -180,6 +187,13 @@ export async function POST(req: NextRequest) {
         if (res.done) {
           const run = res.value as QueryRun;
           if (parentId) run.parentId = parentId;
+          if (asker) {
+            run.asker = asker;
+            // Only the co-sign path spends the asker's own funded session. A free-trial dispatch
+            // by a signed-in wallet is still theirs to look back at, but the USDC was Keryx's —
+            // never let it total up as the user's spend.
+            run.askerFunded = useBrowserCoSign;
+          }
           await deps.db.saveQueryRun(run);
           send("done", run);
         }

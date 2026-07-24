@@ -18,7 +18,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useDisconnect } from "wagmi";
 import { toast } from "sonner";
-import { Wallet, ChevronDown, LogOut, Copy, ShieldCheck, Loader2, BookOpen, Stamp, Library } from "lucide-react";
+import { Wallet, ChevronDown, LogOut, Copy, ShieldCheck, Loader2, BookOpen, Stamp, Library, Receipt } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -126,6 +126,12 @@ export function WalletMenu() {
           <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">
             <Link href="/me/sources">
               <Library className="h-3.5 w-3.5" /> My sources
+            </Link>
+          </DropdownMenuItem>
+          {/* The paying side of the same wallet: what it dispatched and what those tolls cost. */}
+          <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">
+            <Link href="/me/asks">
+              <Receipt className="h-3.5 w-3.5" /> My dispatches
             </Link>
           </DropdownMenuItem>
           {isCreator && (

@@ -72,7 +72,8 @@ CREATE TABLE IF NOT EXISTS payment_events (
 CREATE TABLE IF NOT EXISTS query_runs (
   id TEXT PRIMARY KEY, created_at TEXT, question TEXT, budget REAL, engine TEXT,
   total_spent REAL, total_to_creators REAL, answer TEXT, data TEXT,
-  parent_id TEXT                        -- the dispatch this one follows up on
+  parent_id TEXT,                       -- the dispatch this one follows up on
+  asker TEXT                            -- lowercased wallet that dispatched it (SIWE-verified)
 );
 -- No index on parent_id here: CREATE TABLE IF NOT EXISTS is a no-op against a database that
 -- predates the column, so an index naming it would fail at boot on exactly the databases that
@@ -217,9 +218,13 @@ export class SqliteAdapter implements KeryxDB {
       ),
     );
     if (!runCols.has("parent_id")) this.db.exec(`ALTER TABLE query_runs ADD COLUMN parent_id TEXT`);
-    // Unconditional: the column is guaranteed present by the line above (or by the CREATE TABLE
-    // on a fresh database), and both paths need the index.
+    // query_runs.asker: NULL on every dispatch that predates attribution, and on every anonymous,
+    // engine, or A2A run — none of those has a signed-in wallet, so they belong to no one's ledger.
+    if (!runCols.has("asker")) this.db.exec(`ALTER TABLE query_runs ADD COLUMN asker TEXT`);
+    // Unconditional: the columns are guaranteed present by the lines above (or by the CREATE TABLE
+    // on a fresh database), and both paths need the indexes.
     this.db.exec(`CREATE INDEX IF NOT EXISTS query_runs_parent ON query_runs(parent_id)`);
+    this.db.exec(`CREATE INDEX IF NOT EXISTS query_runs_asker ON query_runs(asker, created_at)`);
 
     // source_items table: encrypted-content columns added in Phase 04.
     // Existing rows have NULL for these; produce() falls back to DB plaintext content.
@@ -556,8 +561,8 @@ export class SqliteAdapter implements KeryxDB {
   async saveQueryRun(run: QueryRun): Promise<void> {
     this.db
       .prepare(
-        `INSERT OR REPLACE INTO query_runs (id,created_at,question,budget,engine,total_spent,total_to_creators,answer,data,parent_id)
-         VALUES (?,?,?,?,?,?,?,?,?,?)`,
+        `INSERT OR REPLACE INTO query_runs (id,created_at,question,budget,engine,total_spent,total_to_creators,answer,data,parent_id,asker)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
       )
       .run(
         run.id,
@@ -570,6 +575,7 @@ export class SqliteAdapter implements KeryxDB {
         run.answer,
         JSON.stringify(run),
         run.parentId ?? null,
+        run.asker?.toLowerCase() ?? null,
       );
   }
 
@@ -577,6 +583,13 @@ export class SqliteAdapter implements KeryxDB {
     const rows = this.db
       .prepare(`SELECT data FROM query_runs WHERE parent_id=? ORDER BY created_at ASC`)
       .all(parentId);
+    return rows.map((r) => JSON.parse(r.data as string) as QueryRun);
+  }
+
+  async listQueryRunsByAsker(wallet: string, limit: number): Promise<QueryRun[]> {
+    const rows = this.db
+      .prepare(`SELECT data FROM query_runs WHERE asker=? ORDER BY created_at DESC LIMIT ?`)
+      .all(wallet.toLowerCase(), limit);
     return rows.map((r) => JSON.parse(r.data as string) as QueryRun);
   }
 
