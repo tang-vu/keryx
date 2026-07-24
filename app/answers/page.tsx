@@ -9,10 +9,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getDb } from "@/lib/db";
-import { buildArchive, type ArchiveEntry } from "@/lib/answers-archive";
+import { buildArchive, searchTerm, type ArchiveEntry } from "@/lib/answers-archive";
+import { buildTopics } from "@/lib/answers-topics";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
-import { ConfidenceBadge } from "@/components/keryx/confidence-badge";
+import { ArchiveAnswerRow } from "@/components/keryx/archive-answer-row";
+import { ArchiveSearch } from "@/components/keryx/archive-search";
+import { ArchiveTopicChips } from "@/components/keryx/archive-topic-chips";
 
 // Recompute a few times an hour — the corpus grows as new dispatches settle.
 export const revalidate = 600;
@@ -45,59 +48,10 @@ async function loadArchive(): Promise<ArchiveEntry[]> {
   }
 }
 
-function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function AnswerRow({ entry }: { entry: ArchiveEntry }) {
-  return (
-    <article>
-      <Link
-        href={`/dispatch/${entry.id}`}
-        className="group block border border-ink bg-paper p-5 transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)] sm:p-6"
-      >
-        <div className="flex items-baseline justify-between gap-4">
-          <span className="flex items-baseline gap-2.5">
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-seal">
-              Dispatch
-            </span>
-            {entry.confidence ? <ConfidenceBadge confidence={entry.confidence} /> : null}
-          </span>
-          <time className="font-mono text-[10px] text-ink-3" dateTime={entry.createdAt}>
-            {fmtDate(entry.createdAt)}
-          </time>
-        </div>
-        <h2 className="mt-2 font-display text-[19px] font-medium leading-snug text-ink transition-colors group-hover:text-seal">
-          {entry.question}
-        </h2>
-        {entry.answerSnippet && (
-          <p className="mt-2 font-serif text-[15px] leading-[1.5] text-ink-2">
-            {entry.answerSnippet}
-          </p>
-        )}
-        <div className="mt-3.5 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[10.5px] uppercase tracking-[0.06em] text-ink-3">
-          <span>
-            {entry.citationCount} source{entry.citationCount !== 1 ? "s" : ""} cited
-          </span>
-          <span className="text-paid">${entry.toCreators.toFixed(4)} to creators</span>
-          {entry.sourceNames.length > 0 && (
-            <span className="normal-case tracking-normal text-ink-3">
-              {entry.sourceNames.slice(0, 4).join(" · ")}
-            </span>
-          )}
-        </div>
-      </Link>
-    </article>
-  );
-}
-
 export default async function AnswersPage() {
   const entries = await loadArchive();
   const totalToCreators = entries.reduce((s, e) => s + e.toCreators, 0);
+  const topics = buildTopics(entries);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -153,12 +107,14 @@ export default async function AnswersPage() {
           )}
         </p>
 
+        <ArchiveTopicChips topics={topics} />
+
         {entries.length > 0 && (
-          <div className="mt-10 flex flex-col gap-4">
+          <ArchiveSearch terms={entries.map(searchTerm)}>
             {entries.map((e) => (
-              <AnswerRow key={e.id} entry={e} />
+              <ArchiveAnswerRow key={e.id} entry={e} />
             ))}
-          </div>
+          </ArchiveSearch>
         )}
 
         <div className="mt-12 border-t border-ink pt-6">

@@ -9,6 +9,27 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### The answer archive is browsable: instant filter + topic hubs (2026-07-25)
+The archive is the organic on-ramp — people find a Keryx answer in search, then ask their own — but
+it had grown to hundreds of answers presented as one flat list with no way in. A visitor after
+"settlement" had to scroll past everything about compost. Two additions fix it without giving up the
+thing that makes the page work (every card server-rendered, crawlable, no JS required to read it).
+**A filter box** narrows the list as you type, matching question text and cited source names; the
+cards stay server-rendered and the match strings are built on the server, so filtering is a pure
+render with nothing to keep in sync and no second copy of the corpus shipped to the browser. With
+JS off the box does nothing and the full list still reads exactly as before. **Topic hubs** at
+`/answers/topic/[slug]` are real pages, not client-side filters: a crawler and a reader without JS
+can both follow them. Topics are derived from the questions themselves — a token that appears across
+enough distinct questions *is* a beat this corpus covers — so the set grows with the archive instead
+of rotting like a hand-maintained category list, and the extraction is deterministic so a topic's URL
+never drifts between rebuilds. Tokens that would return most of the corpus are dropped (a facet that
+narrows nothing is not a facet), plurals fold onto their singular, and topic pages join the sitemap.
+`lib/answers-topics.ts` (11 tests); the shared answer card moved to
+`components/keryx/archive-answer-row.tsx` so the archive and every topic page can't drift apart.
+Verified in a real browser: 19→12 cards on "stablecoin" with the counter agreeing, empty state on a
+no-match query, full list restored on clear, and a chip navigating to a hub that renders its 8
+answers.
+
 ### A wallet can finally see what it dispatched — and what those tolls paid for (2026-07-25)
 Keryx had a management desk for the wallet that *earns* (`/me/sources`) and nothing at all for the
 wallet that *pays*: a dispatch existed only at its permalink, so losing the link lost the receipt,

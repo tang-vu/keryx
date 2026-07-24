@@ -83,6 +83,12 @@ export function buildArchive(runs: QueryRun[]): ArchiveEntry[] {
   return [...best.values()].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)).map(toEntry);
 }
 
+/** The text an archive card is searchable by: its question and the sources it cited. Built on the
+ *  server and handed to the filter, so the client never re-derives what a card "says". */
+export function searchTerm(entry: Pick<ArchiveEntry, "question" | "sourceNames">): string {
+  return `${entry.question} ${entry.sourceNames.join(" ")}`.toLowerCase();
+}
+
 // Words too common in questions to signal relatedness.
 const STOPWORDS = new Set(
   "what who how why when where which does the and for are was were will would can could should has have had between from with this that not any their there".split(
