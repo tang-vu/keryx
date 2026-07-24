@@ -9,6 +9,22 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### A wallet can finally see what it dispatched — and what those tolls paid for (2026-07-25)
+Keryx had a management desk for the wallet that *earns* (`/me/sources`) and nothing at all for the
+wallet that *pays*: a dispatch existed only at its permalink, so losing the link lost the receipt,
+and there was no way to answer "what have I spent, and who got it?". Dispatches are now attributed
+to the wallet that ran them — read from the server-verified SIWE cookie, never from a client-supplied
+field, so nobody can write into another wallet's ledger — and `/me/asks` presents them: every
+question, its toll, its confidence, and the creators the money actually reached, each one a link to
+that creator's page. The summary strip keeps **own spend apart from free-trial dispatches**: a
+signed-in ask on Keryx's treasury still belongs in your history, but its USDC was never yours, and
+totalling the two together would tell a user they spent money they didn't. Anonymous, volume-engine
+and A2A runs stay attributed to nobody — none of them has a wallet that proved anything. New column
+`query_runs.asker` (+ `(asker, created_at)` index), added by the same `ensureColumns` upgrade path
+the live database already relies on, and Supabase migration `0017`. 5 tests, including the
+legacy-database upgrade; verified end-to-end against a local offline server (signed-in ask lands in
+the ledger, anonymous ask lands nowhere, another wallet's rows never appear, signed-out request 401s).
+
 ### Listed feeds no longer freeze at their register-day snapshot (2026-07-24)
 Registration ingested a feed exactly once — a creator's blog could publish daily forever and
 Keryx would never see a post past register day, so "creators get paid per citation" quietly decayed
