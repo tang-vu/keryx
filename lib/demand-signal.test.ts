@@ -96,6 +96,27 @@ describe("buildDemand", () => {
     });
   });
 
+  it("merges the same hole phrased twice, keeping the worst occurrence whole", () => {
+    const a = run("r1", [suf([["CCTP moves USDC between domains by burn and mint.", 0.3]])]);
+    const b = run("r2", [suf([["CCTP moves USDC across domains by burn and mint.", 0.1]])]);
+    const merged = buildDemand([a, b]);
+    expect(merged).toHaveLength(1);
+    // Wording, coverage and receipt all come from the worst hit, so the sentence on the board is
+    // the one the linked dispatch assessed.
+    expect(merged[0]).toMatchObject({
+      seen: 2,
+      coverage: 0.1,
+      claim: "CCTP moves USDC across domains by burn and mint.",
+      queryId: "r2",
+    });
+  });
+
+  it("never folds a claim into its own negation", () => {
+    const a = run("r1", [suf([["Batching reduces settlement fees.", 0.2]])]);
+    const b = run("r2", [suf([["Batching increases settlement fees.", 0.2]])]);
+    expect(buildDemand([a, b])).toHaveLength(2);
+  });
+
   it("ranks a recurring hole above a worse one-off", () => {
     const recurring = [
       run("r1", [suf([["recurring", 0.3]])]),

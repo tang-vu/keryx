@@ -24,6 +24,7 @@
  *    can open the trace and check the claim really was left uncovered rather than take our word.
  */
 
+import { topicTokens } from "./answers-topics";
 import type { QueryRun } from "./types";
 
 /** A claim one dispatch finished under-covered. */
@@ -90,10 +91,27 @@ export function claimGaps(run: QueryRun, threshold = DEFAULTS.threshold): ClaimG
 }
 
 /**
- * Aggregate a run window into the published board. Identical claim text across dispatches collapses
- * to one line carrying the worst coverage and the count — the volume engine phrases questions
- * freshly each time, so a claim recurring verbatim is a genuinely recurring hole, worth ranking
- * above a one-off.
+ * Merge key for "the same hole, phrased twice".
+ *
+ * The engine re-decomposes every question from scratch, so one recurring gap arrives as a family of
+ * near-identical sentences — production surfaced "CCTP uses a burn-and-mint mechanism to transfer
+ * USDC *between* domains" and "…*across* domains" as two separate rows of the same hole. Keying on
+ * the claim's significant vocabulary (`topicTokens` — stemmed, stop-worded) collapses those, because
+ * the words that differ are exactly the ones that carry no subject.
+ *
+ * Deliberately equality on the token set, NOT a similarity threshold. "X reduces fees" and
+ * "X increases fees" overlap on nearly every token and mean opposite things; a fuzzy merge would
+ * fold a claim into its own negation and publish the result as one demand signal.
+ */
+function claimKey(claim: string): string {
+  const tokens = [...topicTokens(claim)].sort();
+  return tokens.length > 0 ? tokens.join(" ") : claim.trim().toLowerCase();
+}
+
+/**
+ * Aggregate a run window into the published board. Claims that say the same thing collapse to one
+ * line carrying the worst occurrence and the count — a hole hit by several dispatches is a
+ * genuinely recurring one, worth ranking above a one-off.
  *
  * Order: recurrence first, then how badly it was missed, then recency. `runs` may arrive in any
  * order.
@@ -104,15 +122,19 @@ export function buildDemand(runs: QueryRun[], options: DemandOptions = {}): Dema
 
   for (const run of runs) {
     for (const gap of claimGaps(run, threshold)) {
-      const existing = byClaim.get(gap.claim);
+      const key = claimKey(gap.claim);
+      const existing = byClaim.get(key);
       if (!existing) {
-        byClaim.set(gap.claim, { ...gap, seen: 1 });
+        byClaim.set(key, { ...gap, seen: 1 });
         continue;
       }
       existing.seen += 1;
-      // Keep the worst occurrence as the headline, but always show the freshest date: a creator
-      // needs to know the hole is still open, not when it first appeared.
+      // Keep the worst occurrence whole — its wording, its coverage and its dispatch travel
+      // together, so the sentence on the board is the one the linked trace actually assessed.
+      // The date is the exception: it always shows the freshest hit, because a creator needs to
+      // know the hole is still open, not when it first appeared.
       if (gap.coverage < existing.coverage) {
+        existing.claim = gap.claim;
         existing.coverage = gap.coverage;
         existing.queryId = gap.queryId;
         existing.question = gap.question;
