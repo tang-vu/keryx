@@ -9,6 +9,31 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### Something now watches what the agent did, not just whether the models answer (2026-07-25)
+The watchdog written this morning asks every provider a question and alerts when one cannot answer.
+It would have caught the first half of the outage and slept straight through the second: once the
+models were restored, the agent still bought nothing for hours, because the decide reply had
+outgrown its token ceiling. A probe proves a provider *can* answer. It cannot prove a run *used* the
+answer — and the run is what creators get paid for. So the second watchdog reads the agent's own
+recent dispatches instead, where nothing can be claimed that did not happen: **five failure shapes,
+each one something that has or could have gone silently wrong.** Nothing dispatched at all in the
+window (that is the daemon, not the agent). Runs answered outright by the deterministic fallback —
+the label each run now earns makes this countable. Most runs losing at least one step to it, which
+is a provider answering unreliably rather than cleanly down. Every run recording no decision, the
+signature of decide being handed nothing to reason about. And a window in which no creator earned
+anything at all. That last one is the load-bearing check, and it works because citation rewards
+settle even when the content came from cache: a window that pays nobody cited nobody, which is the
+shape of a broken decide step, not of an agent shopping frugally. The restraint matters as much as
+the alarms — a window under three runs proves nothing and stays quiet, a box with no model
+credentials is *supposed* to answer from the heuristic and is never accused of an outage, and a run
+with no engine label is counted as neither model-reasoned nor heuristic, because laundering the
+unvouchable ones into the good column is exactly the failure this replaces. The verdict lands in
+`sync_state` and renders on [`/status`](https://keryx.cc/status): the last six hours as they really
+were, sitting directly beneath the `reasoning: deepseek` row that stayed green throughout the
+outage. `lib/ops/dispatch-health.ts` + `scripts/check-dispatches.mts`, hourly at :50; 12 tests, two
+of them replaying the exact windows of 2026-07-25. First production run: 5 dispatches, 5
+model-reasoned, 5 paying, $0.107 to creators — no alarms.
+
 ### The agent had stopped reasoning, and everything said it was fine (2026-07-25)
 Found while pulling live figures for a traction post: **every reasoning step in production had been
 failing and falling back to the deterministic heuristic.** DeepSeek retired the `deepseek-chat` wire
