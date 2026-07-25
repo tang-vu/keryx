@@ -13,10 +13,13 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 Found by the panel built the same day, on its first look at real production data: one source had been
 weighed in **396 dispatches, read 383 times, and bought zero times.** `cache_items` holds one blob per
 source with no expiry, so "never charge a creator twice for the same text" had quietly become "never
-pay that source again". The fetch-toll rail died at each source's first purchase, and — worse —
-answers were being synthesized from copies taken before every post those feeds have published since,
-while the freshness note on the archive was telling readers those same sources had moved on. Feed
-refresh (2026-07-24, +79 posts) had widened the gap without anything noticing. The rule now is the
+pay that source again" — and, worse, answers were being synthesized from copies taken before every
+post those feeds have published since, while the freshness note on the archive was telling readers
+those same sources had moved on. Feed refresh (2026-07-24, +79 posts) had widened the gap without
+anything noticing. Measured precisely on the live corpus: of 20 sources, the 8 that never went stale
+are **static seed sources with one or two fixed items** — they publish nothing, so a permanent cache
+there is correct and no toll is owed. All 12 real feed sources carry dated posts, and those are the
+ones that were being read stale and for free. The rule now is the
 narrowest one that fixes both halves: **a cached copy is a free read until the source publishes
 something newer than the copy.** Nothing expires on a timer — a quiet feed's cache stays valid
 forever, because nothing about it has changed — so the cost is self-limiting at one fresh toll per
@@ -27,7 +30,10 @@ it later would have settled a toll the budget never accounted for. Date handling
 same as the archive's freshness note (shared `clampedNewest`): publication dates only, future dates
 ignored so one bad timezone can't force a re-buy every run, undated items never counted.
 `lib/agent/cache-freshness.ts` + `getCachedAt` on both DB adapters; 13 tests, three of them driving
-the real orchestrator to prove the money invariant still holds.
+the real orchestrator to prove the money invariant still holds. Verified in production on the first
+dispatch after deploy: Simon Willison's Weblog (copy 2026-07-24 06:46, posted 07-25 00:42) and
+Latent.Space (copy 07-24 15:45, posted 07-25 07:25) each earned a fresh toll, while Hugging Face and
+the Ethereum Foundation Blog — neither of which had published since their copies — stayed free.
 
 ### A source can now read why the agent passed on it (2026-07-26)
 A creator page could say what a source earned; it could never say why. The answer was already
