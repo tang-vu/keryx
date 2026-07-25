@@ -30,6 +30,7 @@ import { dispatchCitationEmail } from "../notify/citation-email";
 import { allocateSplit } from "../payments/split-allocation";
 import { sendAlert } from "../notify/alert";
 import { normalizePreviewDepth, previewSummary } from "../sources/preview-depth";
+import { isCacheFresh, newestPublishedAt } from "./cache-freshness";
 
 export interface RunInput {
   question: string;
@@ -84,8 +85,16 @@ export async function* runAgent(
   const sources = allSources.filter((s) => s.verified !== false);
   const unverifiedCount = allSources.length - sources.length;
   const candidates: SourceCandidate[] = [];
+  // Sources whose cached copy still matches what they publish. A copy the source has published
+  // past is not a free read of it any more, so it is offered as a paid fetch instead — otherwise
+  // the first purchase of a source would be the last toll it ever earned, and every later answer
+  // would be built from text the source has moved on from. See ./cache-freshness.ts.
+  const freshCache = new Set<string>();
   for (const s of sources) {
     const items = await db.getItems(s.id);
+    if (isCacheFresh(await db.getCachedAt(s.id), newestPublishedAt(items), Date.now())) {
+      freshCache.add(s.id);
+    }
     // Honor the creator's preview-depth: the agent scores on exactly what a paying reader would see
     // for free, so a locked source is judged on its titles + description, not its full summaries.
     const depth = normalizePreviewDepth(s.previewDepth);
@@ -102,7 +111,7 @@ export async function* runAgent(
       description: s.description,
       tags: s.tags,
       fetchPrice: s.fetchPrice,
-      cached: (await db.getCached(s.id)) !== null,
+      cached: freshCache.has(s.id),
       preview,
     });
   }
@@ -169,7 +178,19 @@ export async function* runAgent(
   const ranked = [...internalProposed].sort(
     (a, b) => b.expectedValue / (b.price || 1e-9) - a.expectedValue / (a.price || 1e-9),
   );
-  for (const d of ranked) {
+  for (const r of ranked) {
+    // A CACHE proposal against a copy the source has published past is not a free read of that
+    // source. Charge for it — here, before the budget guard, so the re-read is reserved like any
+    // other purchase: converting it later at fetch time would settle a toll the fetch budget never
+    // accounted for. If the budget can't cover it, the guard below turns it into a SKIP.
+    const d =
+      r.action === "CACHE" && !freshCache.has(r.sourceId)
+        ? {
+            ...r,
+            action: "BUY" as const,
+            rationale: `${r.rationale} — cached copy predates this source's newest post, so buying a fresh read.`,
+          }
+        : r;
     if (d.action === "BUY") {
       if (spentTolls + d.price > fetchBudget + 1e-9) {
         finalDecisions.push({

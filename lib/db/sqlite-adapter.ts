@@ -500,6 +500,13 @@ export class SqliteAdapter implements KeryxDB {
     return row ? (row.text as string) : null;
   }
 
+  async getCachedAt(sourceId: string): Promise<string | null> {
+    const row = this.db
+      .prepare(`SELECT updated_at FROM cache_items WHERE source_id=?`)
+      .get(sourceId);
+    return row ? ((row.updated_at as string) ?? null) : null;
+  }
+
   async setCached(sourceId: string, text: string): Promise<void> {
     this.db
       .prepare(

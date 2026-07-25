@@ -193,6 +193,10 @@ export interface KeryxDB {
 
   // ── cache (skip-repay decisions) ──
   getCached(sourceId: string): Promise<string | null>;
+  /** When the cached copy was taken, or null if nothing is cached. The agent compares this against
+   *  the source's newest post: a copy the source has published past is not a free read of it any
+   *  more, it is a stale one (see lib/agent/cache-freshness.ts). */
+  getCachedAt(sourceId: string): Promise<string | null>;
   setCached(sourceId: string, text: string): Promise<void>;
 
   // ── sync state (registry indexer checkpoint) ──

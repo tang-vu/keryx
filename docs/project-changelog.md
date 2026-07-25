@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-07-25  
+**Last Updated:** 2026-07-26  
 **Current Version:** 0.6.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
@@ -8,6 +8,43 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 ---
 
 ## Unreleased
+
+### A cached copy stops being free once the source has moved past it (2026-07-26)
+Found by the panel built the same day, on its first look at real production data: one source had been
+weighed in **396 dispatches, read 383 times, and bought zero times.** `cache_items` holds one blob per
+source with no expiry, so "never charge a creator twice for the same text" had quietly become "never
+pay that source again". The fetch-toll rail died at each source's first purchase, and — worse —
+answers were being synthesized from copies taken before every post those feeds have published since,
+while the freshness note on the archive was telling readers those same sources had moved on. Feed
+refresh (2026-07-24, +79 posts) had widened the gap without anything noticing. The rule now is the
+narrowest one that fixes both halves: **a cached copy is a free read until the source publishes
+something newer than the copy.** Nothing expires on a timer — a quiet feed's cache stays valid
+forever, because nothing about it has changed — so the cost is self-limiting at one fresh toll per
+source per batch of new posts, not one per dispatch. Staleness is resolved at the *decide* step, not
+at fetch time: a stale CACHE becomes a BUY before the fetch-budget reservation, so a forced re-read
+is capped like any other purchase and turns into a SKIP when the budget can't cover it — converting
+it later would have settled a toll the budget never accounted for. Date handling is deliberately the
+same as the archive's freshness note (shared `clampedNewest`): publication dates only, future dates
+ignored so one bad timezone can't force a re-buy every run, undated items never counted.
+`lib/agent/cache-freshness.ts` + `getCachedAt` on both DB adapters; 13 tests, three of them driving
+the real orchestrator to prove the money invariant still holds.
+
+### A source can now read why the agent passed on it (2026-07-26)
+A creator page could say what a source earned; it could never say why. The answer was already
+written down — every dispatch records a reasoned buy/cache/skip for each candidate with a rationale
+in plain words ("weak match (no key terms); not worth 0.004 USDC") — but scattered across hundreds of
+permalinks nobody was going to read hunting for their own name. The new panel does that reading per
+source: how often it was weighed, chosen, cited and passed across the recent dispatch window, the
+median expected value on each side of the choice, and the last four skip rationales **verbatim**,
+each linking to the dispatch it came from. One comparison line carries the weight: the median listed
+price of the sources the agent *did* choose in the very runs that passed on this one — same question,
+same budget, same minute. No advice is rendered anywhere. Price and preview depth are the creator's
+dials; the honest input to using them is the comparison, not our coaching. Cache hits count as
+choices, since on a warm corpus most reads are cache hits and a BUY-only bar went null on the
+majority of runs — the wording therefore says "chose", never "paid". A source the window never
+weighed renders nothing rather than a row of zeros. Public, like the traces it aggregates:
+`GET /api/creator/{id}/performance` (in the OpenAPI spec), `lib/creator/source-performance.ts`,
+12 tests.
 
 ### Something now watches what the agent did, not just whether the models answer (2026-07-25)
 The watchdog written this morning asks every provider a question and alerts when one cannot answer.

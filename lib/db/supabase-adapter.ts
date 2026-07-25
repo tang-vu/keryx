@@ -308,6 +308,15 @@ export class SupabaseAdapter implements KeryxDB {
     return data?.text ?? null;
   }
 
+  async getCachedAt(sourceId: string): Promise<string | null> {
+    const { data } = await this.sb
+      .from("cache_items")
+      .select("updated_at")
+      .eq("source_id", sourceId)
+      .maybeSingle();
+    return (data?.updated_at as string | undefined) ?? null;
+  }
+
   async setCached(sourceId: string, text: string): Promise<void> {
     await this.sb
       .from("cache_items")

@@ -163,20 +163,43 @@ function fakeGateway(opts: { failOn?: string } = {}): FakeGateway {
   return gw;
 }
 
+/** What a source's cache and feed look like to the orchestrator, per source id. */
+interface DbState {
+  /** ISO timestamp the cached copy was taken; absent = nothing cached. */
+  cachedAt?: Record<string, string>;
+  /** ISO publication date of the source's newest post. */
+  newestItem?: Record<string, string>;
+}
+
 /** A KeryxDB that serves the given sources and records payments. Only the methods the
  *  orchestrator (and its best-effort memory/notify helpers) touch are implemented. */
-function fakeDb(sources: Source[]): KeryxDB & { payments: PaymentRecord[] } {
+function fakeDb(sources: Source[], state: DbState = {}): KeryxDB & { payments: PaymentRecord[] } {
   const payments: PaymentRecord[] = [];
   const db = {
     payments,
     async listSources() {
       return sources;
     },
-    async getItems() {
-      return [];
+    async getItems(sourceId: string) {
+      const publishedAt = state.newestItem?.[sourceId];
+      if (!publishedAt) return [];
+      return [
+        {
+          id: `${sourceId}-i1`,
+          sourceId,
+          title: "post",
+          summary: "summary",
+          content: "content",
+          link: "https://example.test/post",
+          publishedAt,
+        },
+      ];
     },
-    async getCached() {
-      return null;
+    async getCached(sourceId: string) {
+      return state.cachedAt?.[sourceId] ? `cached:${sourceId}` : null;
+    },
+    async getCachedAt(sourceId: string) {
+      return state.cachedAt?.[sourceId] ?? null;
     },
     async setCached() {},
     async recordPayment(p: PaymentRecord) {
@@ -193,10 +216,15 @@ function fakeDb(sources: Source[]): KeryxDB & { payments: PaymentRecord[] } {
   return db as unknown as KeryxDB & { payments: PaymentRecord[] };
 }
 
-function deps(sources: Source[], engine: ReasoningEngine, gateway: PaymentGateway): AgentDeps & {
+function deps(
+  sources: Source[],
+  engine: ReasoningEngine,
+  gateway: PaymentGateway,
+  state: DbState = {},
+): AgentDeps & {
   db: KeryxDB & { payments: PaymentRecord[] };
 } {
-  const db = fakeDb(sources);
+  const db = fakeDb(sources, state);
   return { engine, gateway, db };
 }
 
@@ -403,6 +431,80 @@ describe("runAgent — money-safety invariants", () => {
     const { run } = await drive({ question: "q" }, d); // no budget
 
     expect(run.budget).toBe(config.defaultBudget);
+  });
+});
+
+/** A cached copy is a free read of the source only while it still IS the source. Once the feed has
+ *  moved past it, reusing it both starves the creator of the toll and answers from text they have
+ *  superseded — so it becomes a purchase, budgeted like any other. */
+describe("runAgent — cache freshness", () => {
+  const cache = (id: string) => ({ [id]: "2026-07-20T00:00:00.000Z" });
+  const cacheDecision = (id: string, name = id.toUpperCase()): Decision => ({
+    sourceId: id,
+    sourceName: name,
+    action: "CACHE",
+    expectedValue: 0.9,
+    price: 0.004,
+    confidence: 0.9,
+    rationale: "already read this one",
+    targets: [0],
+  });
+
+  it("buys a fresh read when the source published after the cached copy was taken", async () => {
+    const sources = [makeSource({ id: "a", fetchPrice: 0.004 })];
+    const engine = fakeEngine({ decide: () => [cacheDecision("a")] });
+    const gw = fakeGateway();
+    const d = deps(sources, engine, gw, {
+      cachedAt: cache("a"),
+      newestItem: { a: "2026-07-24T00:00:00.000Z" }, // published since
+    });
+
+    const { run } = await drive({ question: "q", budget: 0.05 }, d);
+
+    expect(engine.decideInput?.candidates[0].cached).toBe(false); // offered as a paid read
+    expect(run.decisions[0].action).toBe("BUY");
+    expect(run.decisions[0].rationale).toContain("predates");
+    expect(gw.fetchCalls).toEqual(["a"]);
+    expect(d.db.payments.filter((p) => p.kind === "fetch")).toHaveLength(1);
+  });
+
+  it("still reuses the copy for free when the source has published nothing since", async () => {
+    const sources = [makeSource({ id: "a", fetchPrice: 0.004 })];
+    const engine = fakeEngine({ decide: () => [cacheDecision("a")] });
+    const gw = fakeGateway();
+    const d = deps(sources, engine, gw, {
+      cachedAt: cache("a"),
+      newestItem: { a: "2026-07-19T00:00:00.000Z" }, // older than the copy
+    });
+
+    const { run } = await drive({ question: "q", budget: 0.05 }, d);
+
+    expect(engine.decideInput?.candidates[0].cached).toBe(true);
+    expect(run.decisions[0].action).toBe("CACHE");
+    expect(gw.fetchCalls).toEqual([]);
+    expect(d.db.payments.some((p) => p.kind === "fetch")).toBe(false);
+    expect(run.citations.length).toBeGreaterThan(0); // a cached read still earns a citation reward
+  });
+
+  it("skips rather than overspends when the fetch budget cannot cover the forced re-read", async () => {
+    // fetchBudget on 0.01 is 0.005; two stale sources at 0.004 each can't both be re-read.
+    const sources = ["a", "b"].map((id) => makeSource({ id, fetchPrice: 0.004 }));
+    const engine = fakeEngine({ decide: () => [cacheDecision("a"), cacheDecision("b")] });
+    const gw = fakeGateway();
+    const d = deps(sources, engine, gw, {
+      cachedAt: { ...cache("a"), ...cache("b") },
+      newestItem: { a: "2026-07-24T00:00:00.000Z", b: "2026-07-24T00:00:00.000Z" },
+    });
+
+    const budget = 0.01;
+    const { run } = await drive({ question: "q", budget }, d);
+
+    const tolls = d.db.payments
+      .filter((p) => p.kind === "fetch")
+      .reduce((sum, p) => sum + p.amountUsdc, 0);
+    expect(tolls).toBeLessThanOrEqual(fetchBudget(budget) + 1e-9);
+    expect(run.decisions.filter((x) => x.action === "SKIP")).toHaveLength(1);
+    expect(run.decisions.some((x) => x.action === "CACHE")).toBe(false); // never a free stale read
   });
 });
 
