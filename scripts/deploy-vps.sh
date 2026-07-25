@@ -89,7 +89,7 @@ ssh "$SSH" "cd $APP_DIR && (pm2 reload keryx 2>/dev/null || pm2 start npm --name
 # before the funder runs dry; the registry watchdog field-compares the on-chain SourceRegistry
 # against the payout cache (both alert via KERYX_ALERT_WEBHOOK). All cd into the app dir so npm run
 # picks up .env.local.
-say "7/7 installing hourly backup + treasury/registry watchdog cron"
+say "7/7 installing hourly backup + treasury/registry/llm watchdog cron"
 ssh "$SSH" bash -se <<REMOTE
 set -euo pipefail
 NPM=\$(command -v npm)
@@ -98,8 +98,11 @@ mkdir -p $APP_DIR/data/backups
 BACKUP="0 * * * * cd $APP_DIR && \$NPM run backup >> $APP_DIR/data/backups/backup.log 2>&1 # keryx-backup"
 TREASURY="30 * * * * cd $APP_DIR && \$NPM run check-treasury >> $APP_DIR/data/backups/treasury.log 2>&1 # keryx-treasury"
 REGISTRY="45 * * * * cd $APP_DIR && \$NPM run check-registry >> $APP_DIR/data/backups/registry.log 2>&1 # keryx-registry"
-( crontab -l 2>/dev/null | grep -vE '# keryx-(backup|treasury|registry)' || true ; echo "\$BACKUP"; echo "\$TREASURY"; echo "\$REGISTRY" ) | crontab -
-echo "cron installed:"; crontab -l | grep -E 'keryx-(backup|treasury|registry)'
+# The reasoning chain falls back silently by design, so a dead provider shows up as nothing at all
+# unless something asks it a question on a schedule.
+LLM="15 * * * * cd $APP_DIR && \$NPM run check-llm >> $APP_DIR/data/backups/llm.log 2>&1 # keryx-llm"
+( crontab -l 2>/dev/null | grep -vE '# keryx-(backup|treasury|registry|llm)' || true ; echo "\$BACKUP"; echo "\$TREASURY"; echo "\$REGISTRY"; echo "\$LLM" ) | crontab -
+echo "cron installed:"; crontab -l | grep -E 'keryx-(backup|treasury|registry|llm)'
 REMOTE
 
 cat <<DONE

@@ -28,6 +28,7 @@
     "backup": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/backup-db.mts",
     "check-treasury": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/check-treasury.mts",
     "check-registry": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/check-registry.mts",
+    "check-llm": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/check-llm.mts",
     "register-discord": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/register-discord-commands.mts",
     "register-telegram": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/register-telegram-webhook.mts",
     "withdraw": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/withdraw.mts",
