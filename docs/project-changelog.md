@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-07-24  
+**Last Updated:** 2026-07-25  
 **Current Version:** 0.6.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
@@ -8,6 +8,30 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 ---
 
 ## Unreleased
+
+### An archived answer now says whether it still stands (2026-07-25)
+A dispatch is a finished record: it read what its sources held that minute, paid for it, and
+stopped. The sources kept publishing, and nothing in Keryx noticed — a two-week-old answer read
+exactly like one minted five minutes ago. With ~450 answers in the archive and search as the way
+strangers arrive, staleness was the corpus's one real quality problem. Every permalink now carries
+the provable half of that question: **how many posts have the sources this answer cited published
+since it settled**, with a re-ask that buys the new material (and pays those creators again). It
+never claims the new posts *change* the answer — deciding that means buying and re-reading them,
+which is the reader's money to spend, not our guess to make. The wallet's own ledger at `/me/asks`
+carries the same signal per row, from one query for the whole page rather than one per dispatch.
+The care is all in what the note refuses to say: a source with **no feed** is one Keryx never
+re-reads, so its silence is ignorance rather than evidence and the note stays away entirely — only
+sources Keryx actually polls can support a "nothing new since" claim, and when only some of them do,
+the note says which fraction. Sources that are **delisted or unverified** drop out of both the count
+and the denominator, because a re-ask could not buy from them anyway. Posts dated in the **future**
+are ignored (feeds do get timezones wrong, and one bad date must not pin an answer to "stale"
+forever), and undated posts never count, since they cannot prove they are new. Ingest now normalises
+every feed date to ISO — these comparisons are lexicographic, and one RFC-822 date sorts above every
+ISO string, which would have read as newer than every dispatch ever settled. `lib/answers-freshness.ts`
+plus two indexed adapter queries (`countItemsPublishedBetween`, `newestItemDates`, migration `0018`
++ a matching SQLite index); 26 tests. Verified against a production build on real data: a dispatch
+whose cited blog published 3 posts shows the count and its re-ask, a dispatch whose watched source
+has been quiet shows "still current", and one citing only feedless sources renders no note at all.
 
 ### Public pages are cacheable again — one `headers()` call was making the whole site dynamic (2026-07-25)
 `/answers` declared `revalidate = 600` and had been ignoring it for as long as it existed: every hit

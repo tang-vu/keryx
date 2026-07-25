@@ -211,6 +211,44 @@ export class SupabaseAdapter implements KeryxDB {
     }));
   }
 
+  /**
+   * Counted client-side rather than with a `group by`: PostgREST has no grouped-count form, and the
+   * alternative (one `head: true` count request per source) is a round trip per cited source. The
+   * window keeps the row set small — posts published since one dispatch, across the handful of
+   * sources it cited.
+   */
+  async countItemsPublishedBetween(
+    sourceIds: string[],
+    sinceIso: string,
+    untilIso: string,
+  ): Promise<Record<string, number>> {
+    if (sourceIds.length === 0) return {};
+    const { data } = await this.sb
+      .from("source_items")
+      .select("source_id")
+      .in("source_id", sourceIds)
+      .gt("published_at", sinceIso)
+      .lte("published_at", untilIso);
+    const counts: Record<string, number> = {};
+    for (const r of data ?? []) counts[r.source_id] = (counts[r.source_id] ?? 0) + 1;
+    return counts;
+  }
+
+  async newestItemDates(sourceIds: string[]): Promise<Record<string, string>> {
+    if (sourceIds.length === 0) return {};
+    // `not is null` matters here: Postgres sorts NULLs first on a descending order, so without it
+    // the first row per source could be an undated one and every source would look dateless.
+    const { data } = await this.sb
+      .from("source_items")
+      .select("source_id, published_at")
+      .in("source_id", sourceIds)
+      .not("published_at", "is", null)
+      .order("published_at", { ascending: false });
+    const newest: Record<string, string> = {};
+    for (const r of data ?? []) if (!newest[r.source_id]) newest[r.source_id] = r.published_at;
+    return newest;
+  }
+
   async isCreatorWallet(addr: string): Promise<boolean> {
     // ilike performs case-insensitive comparison in Postgres — avoids LOWER() on
     // the indexed wallet_address column, which would prevent index use.

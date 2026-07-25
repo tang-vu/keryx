@@ -15,6 +15,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { citedSourceIds, hasNewMaterial } from "@/lib/answers-freshness";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,6 +32,18 @@ export async function GET(req: NextRequest) {
 
   const db = await getDb();
   const runs = await db.listQueryRunsByAsker(session.address, limit);
+
+  // "Has anything been published since I asked this?" for the whole ledger in one query: the newest
+  // post per cited source, compared per row. Restricted to sources still on sale — a re-ask can't
+  // buy from a source the creator has delisted, so flagging it would send the user nowhere.
+  // listSources() already drops deactivated rows; unverified ones the agent won't read either.
+  const onSale = new Set(
+    (await db.listSources()).filter((s) => s.verified !== false).map((s) => s.id),
+  );
+  const citedIds = [
+    ...new Set(runs.flatMap((r) => citedSourceIds(r.citations ?? [])).filter((id) => onSale.has(id))),
+  ];
+  const newestBySource = await db.newestItemDates(citedIds);
 
   const asks = runs.map((r) => ({
     id: r.id,
@@ -50,6 +63,9 @@ export async function GET(req: NextRequest) {
     confidence: r.confidence?.level ?? null,
     funded: r.askerFunded === true,
     isFollowUp: Boolean(r.parentId),
+    // True when a source this dispatch cited has published since it settled. A hint that a re-ask
+    // would read something new — never a claim that the answer is now wrong.
+    hasNewMaterial: hasNewMaterial(r.citations ?? [], newestBySource, r.createdAt),
   }));
 
   const funded = asks.filter((a) => a.funded);

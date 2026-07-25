@@ -6,6 +6,8 @@ import { cleanText, relatedAnswers } from "@/lib/answers-archive";
 import { getArchiveCached } from "@/lib/answers-archive-cache";
 import { RelatedDispatches } from "@/components/keryx/related-dispatches";
 import { FollowUpForm } from "@/components/keryx/follow-up-form";
+import { FreshnessNote } from "@/components/keryx/freshness-note";
+import { loadFreshness } from "@/lib/answers-freshness";
 import { ConfidenceBadge } from "@/components/keryx/confidence-badge";
 import { deriveConfidence } from "@/lib/agent/confidence";
 import { DispatchView } from "./dispatch-view";
@@ -67,10 +69,14 @@ export default async function DispatchPage({ params }: PageProps) {
   // truth (settled / batched) instead of reconstructing a "simulated" view.
   const payments = await db.listPaymentsByQuery(id);
 
-  // The thread this dispatch sits in: what it followed from, and what followed from it.
-  const [parent, followUps] = await Promise.all([
+  // The thread this dispatch sits in: what it followed from, and what followed from it — plus
+  // whether the sources it cited have published since it settled (see lib/answers-freshness).
+  // Freshness is only as current as this page's revalidate window, which is the right granularity:
+  // an hour-old count of new posts still tells a reader the same thing.
+  const [parent, followUps, freshness] = await Promise.all([
     run.parentId ? db.getQueryRun(run.parentId) : Promise.resolve(null),
     db.listFollowUps(id),
+    loadFreshness(db, run),
   ]);
 
   // Internal link mesh: point this permalink at its archive neighbours.
@@ -156,6 +162,8 @@ export default async function DispatchPage({ params }: PageProps) {
         ) : null}
 
         <DispatchView run={run} payments={payments} />
+
+        <FreshnessNote freshness={freshness} dispatchId={id} question={run.question} />
 
         {followUps.length ? (
           <section className="mt-8 max-w-[860px]">

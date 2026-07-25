@@ -29,6 +29,8 @@ interface AskRow {
   confidence: "High" | "Moderate" | "Low" | null;
   funded: boolean;
   isFollowUp: boolean;
+  /** A cited source has published since this dispatch settled — a re-ask would read new material. */
+  hasNewMaterial: boolean;
 }
 
 interface Totals {
@@ -173,6 +175,15 @@ export function MyAsksView() {
               <span>{a.citationCount} cited</span>
               {a.confidence && <span>{a.confidence.toLowerCase()} confidence</span>}
               {a.isFollowUp && <span>follow-up</span>}
+              {a.hasNewMaterial && (
+                <Link
+                  href={`/?q=${encodeURIComponent(a.question)}&parent=${a.id}&run=1`}
+                  title="A source this dispatch cited has published since — re-asking buys the new material"
+                  className="border border-seal px-1.5 py-0.5 uppercase tracking-[0.1em] text-seal transition-colors hover:bg-seal hover:text-cream"
+                >
+                  new material · re-ask
+                </Link>
+              )}
             </div>
             {a.creators.length > 0 && (
               <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">

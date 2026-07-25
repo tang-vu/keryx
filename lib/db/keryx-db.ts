@@ -156,6 +156,19 @@ export interface KeryxDB {
   getSourceMeta(id: string): Promise<SourceMeta | null>;
   addItems(items: SourceItem[]): Promise<void>;
   getItems(sourceId: string): Promise<SourceItem[]>;
+  /** Posts each of `sourceIds` published inside (`sinceIso`, `untilIso`], keyed by source id;
+   *  sources with none are absent rather than zero. Backs the freshness note on a dispatch —
+   *  "what have these sources published since this answer settled". Undated rows never count
+   *  (they cannot prove they are new) and `untilIso` exists so a feed with a future-dated post
+   *  cannot pin an answer to "stale" forever. */
+  countItemsPublishedBetween(
+    sourceIds: string[],
+    sinceIso: string,
+    untilIso: string,
+  ): Promise<Record<string, number>>;
+  /** Newest publication date per source, for the sources that have one. One round trip for a whole
+   *  list of dispatches — a ledger of 50 rows must not cost 50 count queries. */
+  newestItemDates(sourceIds: string[]): Promise<Record<string, string>>;
 
   // ── notify-on-citation webhooks (off-chain, private to the source owner) ──
   /** Set or rotate a source's citation webhook (url + HMAC secret). Upsert keyed by source id. */

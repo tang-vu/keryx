@@ -61,6 +61,10 @@ CREATE TABLE IF NOT EXISTS source_items (
   link TEXT, published_at TEXT,
   ipfs_cid TEXT, item_key_enc TEXT, item_iv TEXT, item_auth_tag TEXT
 );
+-- Every read of this table is "one source, newest first" — discovery, the freshness counts, and the
+-- ingest dedupe pass. Safe to declare beside the table: both columns are original, so this is not a
+-- no-op-plus-failure on a database that predates a later ALTER (cf. query_runs).
+CREATE INDEX IF NOT EXISTS source_items_source_published ON source_items(source_id, published_at);
 CREATE TABLE IF NOT EXISTS cache_items (
   source_id TEXT PRIMARY KEY, text TEXT, updated_at TEXT
 );
@@ -415,6 +419,48 @@ export class SqliteAdapter implements KeryxDB {
       itemIv: (r.item_iv as string) ?? undefined,
       itemAuthTag: (r.item_auth_tag as string) ?? undefined,
     }));
+  }
+
+  /**
+   * The `published_at LIKE` guard is not decoration: the column holds whatever the feed said, and
+   * these comparisons are lexicographic. An RFC-822 date ("Wed, 02 Oct …") sorts above every ISO
+   * string, so one badly-dated row would read as newer than any answer. Only ISO-shaped values are
+   * allowed to prove recency; ingest normalises new rows to ISO (see lib/ingest/rss.ts).
+   */
+  async countItemsPublishedBetween(
+    sourceIds: string[],
+    sinceIso: string,
+    untilIso: string,
+  ): Promise<Record<string, number>> {
+    if (sourceIds.length === 0) return {};
+    const holes = sourceIds.map(() => "?").join(",");
+    const rows = this.db
+      .prepare(
+        `SELECT source_id, COUNT(*) AS n FROM source_items
+          WHERE source_id IN (${holes})
+            AND published_at LIKE '____-__-__%'
+            AND published_at > ? AND published_at <= ?
+          GROUP BY source_id`,
+      )
+      .all(...sourceIds, sinceIso, untilIso);
+    const counts: Record<string, number> = {};
+    for (const r of rows) counts[r.source_id as string] = Number(r.n);
+    return counts;
+  }
+
+  async newestItemDates(sourceIds: string[]): Promise<Record<string, string>> {
+    if (sourceIds.length === 0) return {};
+    const holes = sourceIds.map(() => "?").join(",");
+    const rows = this.db
+      .prepare(
+        `SELECT source_id, MAX(published_at) AS newest FROM source_items
+          WHERE source_id IN (${holes}) AND published_at LIKE '____-__-__%'
+          GROUP BY source_id`,
+      )
+      .all(...sourceIds);
+    const newest: Record<string, string> = {};
+    for (const r of rows) if (r.newest) newest[r.source_id as string] = r.newest as string;
+    return newest;
   }
 
   async isCreatorWallet(addr: string): Promise<boolean> {

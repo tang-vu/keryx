@@ -16,6 +16,22 @@ function stripHtml(s: string): string {
     .trim();
 }
 
+/**
+ * Normalise a feed's date to ISO-8601, or drop it.
+ *
+ * `isoDate` is rss-parser's own parse of `pubDate` and is already ISO whenever the date was
+ * readable, so the raw `pubDate` fallback only fires on dates it could not read. Storing one of
+ * those verbatim would be worse than storing nothing: publication dates are compared as strings
+ * (ordering, and the freshness counts behind an archived answer), and an RFC-822 date sorts above
+ * every ISO string — one such row would read as newer than any dispatch, forever.
+ */
+function isoPublishedAt(isoDate?: string, pubDate?: string): string | undefined {
+  const raw = isoDate ?? pubDate;
+  if (!raw) return undefined;
+  const at = new Date(raw);
+  return Number.isNaN(at.getTime()) ? undefined : at.toISOString();
+}
+
 export interface IngestedFeed {
   feedTitle: string;
   feedDescription: string;
@@ -38,7 +54,7 @@ export async function ingestRss(rssUrl: string, max = 10): Promise<IngestedFeed>
       summary: summary || full.slice(0, 280),
       content: full || summary,
       link: it.link ?? "",
-      publishedAt: it.isoDate ?? it.pubDate ?? undefined,
+      publishedAt: isoPublishedAt(it.isoDate, it.pubDate),
     };
   });
   return {
