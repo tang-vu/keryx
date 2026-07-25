@@ -84,12 +84,12 @@ ssh "$SSH" "cd $APP_DIR && npm ci --no-audit --no-fund && NODE_OPTIONS=--max-old
 say "6/7 (re)starting app under pm2 on :$PORT"
 ssh "$SSH" "cd $APP_DIR && (pm2 reload keryx 2>/dev/null || pm2 start npm --name keryx -- run start) && pm2 save && pm2 startup systemd -u root --hp /root >/dev/null 2>&1; pm2 status"
 
-# --- 7. hourly cron: consistent DB backup + treasury + registry watchdogs ----
+# --- 7. hourly cron: consistent DB backup + treasury/registry/llm/dispatch watchdogs ----
 # Backup snapshots the live db (off-box when KERYX_BACKUP_REMOTE set); the treasury watchdog alerts
 # before the funder runs dry; the registry watchdog field-compares the on-chain SourceRegistry
 # against the payout cache (both alert via KERYX_ALERT_WEBHOOK). All cd into the app dir so npm run
 # picks up .env.local.
-say "7/7 installing hourly backup + treasury/registry/llm watchdog cron"
+say "7/7 installing hourly backup + treasury/registry/llm/dispatch watchdog cron"
 ssh "$SSH" bash -se <<REMOTE
 set -euo pipefail
 NPM=\$(command -v npm)
@@ -101,8 +101,11 @@ REGISTRY="45 * * * * cd $APP_DIR && \$NPM run check-registry >> $APP_DIR/data/ba
 # The reasoning chain falls back silently by design, so a dead provider shows up as nothing at all
 # unless something asks it a question on a schedule.
 LLM="15 * * * * cd $APP_DIR && \$NPM run check-llm >> $APP_DIR/data/backups/llm.log 2>&1 # keryx-llm"
-( crontab -l 2>/dev/null | grep -vE '# keryx-(backup|treasury|registry|llm)' || true ; echo "\$BACKUP"; echo "\$TREASURY"; echo "\$REGISTRY"; echo "\$LLM" ) | crontab -
-echo "cron installed:"; crontab -l | grep -E 'keryx-(backup|treasury|registry|llm)'
+# And a probe cannot prove the answer was used: this one reads the agent's own recent dispatches and
+# alerts when they stop being model-reasoned, stop deciding, or stop paying creators.
+DISPATCH="50 * * * * cd $APP_DIR && \$NPM run check-dispatches >> $APP_DIR/data/backups/dispatches.log 2>&1 # keryx-dispatches"
+( crontab -l 2>/dev/null | grep -vE '# keryx-(backup|treasury|registry|llm|dispatches)' || true ; echo "\$BACKUP"; echo "\$TREASURY"; echo "\$REGISTRY"; echo "\$LLM"; echo "\$DISPATCH" ) | crontab -
+echo "cron installed:"; crontab -l | grep -E 'keryx-(backup|treasury|registry|llm|dispatches)'
 REMOTE
 
 cat <<DONE

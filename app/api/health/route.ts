@@ -11,6 +11,10 @@
 import { getDb } from "@/lib/db";
 import { config, llmProvider } from "@/lib/config";
 import { PARITY_STATE_KEY, type ParitySummary } from "@/lib/registry/parity";
+import {
+  DISPATCH_HEALTH_STATE_KEY,
+  type DispatchHealthSummary,
+} from "@/lib/ops/dispatch-health";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -57,12 +61,24 @@ export async function GET() {
       registry = { address: config.registryReadAddress, lastSyncedBlock, parity };
     }
 
+    // Dispatch section: the hourly outcome watchdog (scripts/check-dispatches.mts) writes the
+    // verdict; the probe only reads it back, so /api/health stays one aggregate read plus two
+    // key lookups. A missing or malformed row hides the section, never the probe.
+    let dispatches: DispatchHealthSummary | null = null;
+    try {
+      const raw = await db.getSyncState(DISPATCH_HEALTH_STATE_KEY);
+      dispatches = raw ? (JSON.parse(raw) as DispatchHealthSummary) : null;
+    } catch {
+      /* an unreadable summary must not take the health probe down with it */
+    }
+
     return Response.json(
       {
         ok: true,
         db: "ok",
         ...base,
         registry,
+        dispatches,
         traction: {
           totalPayments: m.totalPayments,
           creatorPayoutsUsdc: Number(m.totalCreatorPayoutsUsdc.toFixed(6)),

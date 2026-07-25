@@ -14,6 +14,10 @@ import {
   RegistryStatusSection,
   type RegistryHealth,
 } from "@/components/keryx/registry-status-section";
+import {
+  DispatchHealthSection,
+  type DispatchHealth,
+} from "@/components/keryx/dispatch-health-section";
 
 interface Health {
   ok: boolean;
@@ -25,6 +29,7 @@ interface Health {
   network: string;
   time: string;
   registry?: RegistryHealth | null;
+  dispatches?: DispatchHealth | null;
   traction?: {
     totalPayments: number;
     creatorPayoutsUsdc: number;
@@ -137,6 +142,8 @@ export default function StatusPage() {
                 </dl>
               </>
             )}
+
+            {health?.dispatches && <DispatchHealthSection dispatches={health.dispatches} />}
 
             {health?.registry && <RegistryStatusSection registry={health.registry} />}
 
