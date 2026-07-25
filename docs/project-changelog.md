@@ -29,9 +29,17 @@ identical claims across dispatches collapse into one line carrying the worst cov
 freshest date, so a reader learns the hole is still open rather than when it first appeared. An
 earlier cut grouped gaps into keyword topics the way the archive groups questions and the facets came
 out as "reduce", "guide", "time" — sub-claims are sentences, so their tokens describe grammar as
-often as subject. The claim itself is the unit; nobody can act on "time". Also public as
-`GET /api/wanted` (in the OpenAPI spec), linked from the registry and the nav, in the sitemap.
-`lib/demand-signal.ts`, 12 tests.
+often as subject. The claim itself is the unit; nobody can act on "time". Two things the live board
+taught within the hour: the engine re-decomposes every question from scratch, so one hole arrives as
+a family of near-identical sentences ("…transfer USDC *between* domains" / "…*across* domains" were
+two rows) — merging on the claim's significant vocabulary rather than its exact text turned three
+gaps shown as six rows into three, and lifted the top entry to **CCTP burn-and-mint, 11 dispatches
+at 0% coverage**. That merge is equality on the token set and never a similarity threshold, because
+"reduces fees" and "increases fees" overlap on nearly every token and mean opposite things. And
+since anyone can ask anything through the front doors, "Hi" decomposed into a sub-claim no source
+covered and reached the board twice; a claim carrying fewer than two subject words is now dropped as
+describing nothing anyone could write. Also public as `GET /api/wanted` (in the OpenAPI spec),
+linked from the registry and the nav, in the sitemap. `lib/demand-signal.ts`, 15 tests.
 
 ### A cached copy stops being free once the source has moved past it (2026-07-26)
 Found by the panel built the same day, on its first look at real production data: one source had been

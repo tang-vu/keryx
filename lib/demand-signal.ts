@@ -80,11 +80,23 @@ export function finalCoverage(run: QueryRun): Map<string, number> {
   return out;
 }
 
+/**
+ * Enough of a sentence to be a demand signal.
+ *
+ * Anyone can ask anything through the front doors, and "Hi" decomposes into a sub-claim that no
+ * source covers — which is true, and meaningless. Production put exactly that on the board, twice.
+ * A claim carrying fewer than two subject words describes nothing a creator could write about, so
+ * it is dropped rather than published as unserved demand.
+ */
+function hasSubstance(claim: string): boolean {
+  return topicTokens(claim).size >= 2;
+}
+
 /** Claims this dispatch finished below `threshold`. Empty for a run that measured nothing. */
 export function claimGaps(run: QueryRun, threshold = DEFAULTS.threshold): ClaimGap[] {
   const gaps: ClaimGap[] = [];
   for (const [claim, coverage] of finalCoverage(run)) {
-    if (coverage >= threshold) continue;
+    if (coverage >= threshold || !hasSubstance(claim)) continue;
     gaps.push({ claim, coverage, queryId: run.id, question: run.question, createdAt: run.createdAt });
   }
   return gaps;
