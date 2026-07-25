@@ -36,6 +36,7 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
     model: string,
     system: string,
     user: string,
+    maxTokens = 2048,
   ): Promise<Record<string, unknown>> {
     const res = await fetch(`${this.opts.baseUrl}/chat/completions`, {
       method: "POST",
@@ -51,7 +52,7 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
         ],
         response_format: { type: "json_object" },
         temperature: 0.3,
-        max_tokens: 2048,
+        max_tokens: maxTokens,
       }),
     });
     if (!res.ok) {
@@ -63,8 +64,21 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
       throw err;
     }
     const data = (await res.json()) as {
-      choices?: { message?: { content?: string } }[];
+      choices?: { message?: { content?: string }; finish_reason?: string }[];
     };
-    return extractJson(data.choices?.[0]?.message?.content ?? "{}");
+    const choice = data.choices?.[0];
+    // A reply cut off at the token ceiling is truncated JSON, which parses to nothing — and
+    // "nothing" reads downstream as a decision rather than a failure. Surface it with a retryable
+    // status so the resilience layer treats it like any other provider hiccup: retry, then drop a
+    // tier. This is exactly how a 20-source corpus against a flat 2048-token cap turned into runs
+    // that bought nothing while their traces looked deliberate.
+    if (choice?.finish_reason === "length") {
+      const err = new Error(
+        `LLM reply hit the ${maxTokens}-token ceiling before closing its JSON`,
+      ) as Error & { status?: number };
+      err.status = 503;
+      throw err;
+    }
+    return extractJson(choice?.message?.content ?? "{}");
   }
 }

@@ -23,12 +23,30 @@ import type {
 export abstract class JsonChatEngine implements ReasoningEngine {
   abstract readonly name: string;
 
-  /** Call the model and return a parsed JSON object. Subclass-specific transport. */
+  /**
+   * Call the model and return a parsed JSON object. Subclass-specific transport.
+   *
+   * `maxTokens` matters for the steps whose reply scales with the corpus: one line per candidate
+   * source, per gathered excerpt, per citation. A reply that hits the ceiling comes back as
+   * truncated JSON, which parses to nothing — and "nothing" used to look exactly like a decision to
+   * buy nothing. Implementations MUST throw when the model stops on the length limit rather than
+   * hand back a half-object; the resilience layer then retries and drops a tier, loudly.
+   */
   protected abstract chatJson(
     model: string,
     system: string,
     user: string,
+    maxTokens?: number,
   ): Promise<Record<string, unknown>>;
+
+  /**
+   * Output ceiling for a reply that carries one entry per item. Generous per item (a rationale is
+   * prose) with a floor for the fixed parts and a hard cap well inside provider limits, so a corpus
+   * that grows does not silently walk into truncation the way 20 sources did against a flat 2048.
+   */
+  protected budgetFor(items: number): number {
+    return Math.min(8192, 1024 + items * 256);
+  }
 
   async decompose(question: string): Promise<string[]> {
     const out = await this.chatJson(
@@ -74,9 +92,17 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         schema:
           '{"decisions":[{"sourceId":string,"action":"BUY"|"CACHE"|"SKIP","expectedValue":number(0..1),"confidence":number(0..1),"rationale":string,"targets":number[]}]}',
       }),
+      this.budgetFor(candidates.length),
     );
     const byId = new Map(input.candidates.map((c) => [c.id, c]));
     const decisions = (out.decisions as Record<string, unknown>[]) ?? [];
+    // A reply with no decisions at all, when candidates were offered, is not a frugal choice — it is
+    // a reply that did not survive (capped, malformed, off-schema). Saying "buy nothing" on its
+    // behalf would silently switch the agent off, and every source would stop earning while the
+    // trace still read like a deliberate decision. Fail instead: the resilience layer drops a tier.
+    if (decisions.length === 0 && input.candidates.length > 0) {
+      throw new Error("decide returned no decisions for " + input.candidates.length + " candidates");
+    }
     return decisions
       .map((d) => {
         const c = byId.get(d.sourceId as string);
@@ -111,6 +137,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         schema:
           '{"sufficient":boolean,"rationale":string,"perClaim":[{"claim":string,"coverage":number(0..1),"coveredBy":string[]}]}',
       }),
+      this.budgetFor(input.subClaims.length + input.gathered.length),
     );
     const rawClaims = (out.perClaim as Record<string, unknown>[]) ?? [];
     const perClaim: ClaimSufficiency[] = rawClaims.map((c) => ({
@@ -151,6 +178,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         schema:
           '{"claims":[{"claim":string,"coverage":number(0..1),"coveredBy":string[],"rationale":string}],"shouldBuyMore":boolean,"recommendedIds":string[],"rationale":string}',
       }),
+      this.budgetFor(input.subClaims.length + input.skippedSources.length),
     );
     const claims = (out.claims as ReevaluateOutput["claims"]) ?? [];
     return {
@@ -189,6 +217,8 @@ export abstract class JsonChatEngine implements ReasoningEngine {
           '{"answer":string (markdown with [S#] citations),"citedMarkers":string[],' +
           '"conflicts":[{"point":string,"positions":[{"marker":string,"stance":string}],"trusted":string,"reason":string}]}',
       }),
+      // The answer itself is prose, so this floor carries the write-up on top of the per-source parts.
+      this.budgetFor(4 + input.gathered.length),
     );
     return {
       answer: (out.answer as string) ?? "",
@@ -214,6 +244,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         })),
         schema: '{"attributions":[{"sourceId":string,"weight":number,"rationale":string}]}',
       }),
+      this.budgetFor(input.used.length),
     );
     const atts =
       (out.attributions as { sourceId: string; weight: number; rationale: string }[]) ?? [];

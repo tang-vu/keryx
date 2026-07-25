@@ -14,13 +14,23 @@ export class AnthropicEngine extends JsonChatEngine {
     model: string,
     system: string,
     user: string,
+    maxTokens = 2048,
   ): Promise<Record<string, unknown>> {
     const msg = await this.client.messages.create({
       model,
-      max_tokens: 2048,
+      max_tokens: maxTokens,
       system,
       messages: [{ role: "user", content: user }],
     });
+    // Same rule as the OpenAI-compatible transport: a reply stopped by the token ceiling is
+    // truncated JSON, and half an object must fail rather than read as an answer.
+    if (msg.stop_reason === "max_tokens") {
+      const err = new Error(
+        `LLM reply hit the ${maxTokens}-token ceiling before closing its JSON`,
+      ) as Error & { status?: number };
+      err.status = 503;
+      throw err;
+    }
     const text = msg.content
       .filter((b): b is Anthropic.TextBlock => b.type === "text")
       .map((b) => b.text)
