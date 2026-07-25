@@ -11,6 +11,7 @@ import { NotifyEmailPanel } from "./notify-email-panel";
 import { PreviewDepthPanel } from "./preview-depth-panel";
 import { EmbedBadgePanel } from "./embed-badge-panel";
 import { EmbedWidgetPanel } from "./embed-widget-panel";
+import { DecisionFeedbackPanel } from "./decision-feedback-panel";
 
 interface CreatorData {
   source: {
@@ -124,6 +125,10 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
           accent="seal"
         />
       </section>
+
+      {/* Public: why the agent buys or passes on this source, in its own words. Sits above the
+          price dial because it is the input to using that dial. */}
+      <DecisionFeedbackPanel creatorId={creatorId} />
 
       {/* Owner-only: price-per-read dial + permanent delist (renders nothing for non-owners) */}
       <ListingControlsPanel creatorId={creatorId} />

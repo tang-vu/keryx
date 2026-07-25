@@ -447,6 +447,24 @@ export const openapiSpec = {
         },
       },
     },
+    "/api/creator/{id}/performance": {
+      get: {
+        operationId: "getCreatorPerformance",
+        summary: "How the agent judged one source (decision feedback)",
+        description:
+          "Aggregates the agent's own buy/cache/skip decisions for one source across the recent " +
+          "dispatch window: how often it was weighed, chosen, cited and passed, the median " +
+          "expected value on each side of the choice, the median listed price of the sources " +
+          "chosen in the runs that passed on it, and the most recent skip rationales verbatim. " +
+          "Public — every underlying decision trace is already published on its dispatch " +
+          "permalink. `performance` is null when the window never weighed the source.",
+        parameters: [{ in: "path", name: "id", required: true, schema: { type: "string" } }],
+        responses: {
+          "200": { description: "{ sourceId, name, windowRuns, performance }" },
+          "404": { description: "Source not found." },
+        },
+      },
+    },
     "/api/sources": {
       get: {
         operationId: "listSources",
