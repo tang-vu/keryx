@@ -8,6 +8,8 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+// Pure data module (no env imports), so the picker and the server agree on which id is the default.
+import { DEFAULT_MODEL_ID } from "@/lib/llm/model-catalog";
 
 interface AskFormProps {
   disabled?: boolean;
@@ -183,7 +185,7 @@ export function AskForm({ disabled, onAsk }: AskFormProps) {
                     >
                       <option value="">Default · DeepSeek</option>
                       {models
-                        .filter((m) => m.id !== "deepseek-chat")
+                        .filter((m) => m.id !== DEFAULT_MODEL_ID)
                         .map((m) => (
                           <option key={m.id} value={m.id} title={m.note}>
                             {m.label}

@@ -23,14 +23,24 @@ export interface ModelChoice {
   note: string;
 }
 
-export const DEFAULT_MODEL_ID = "deepseek-chat";
+export const DEFAULT_MODEL_ID = "deepseek-flash";
+
+/**
+ * Ids that no longer exist upstream, mapped to what replaced them. A public id is a contract:
+ * API callers, saved widget embeds and the OpenAI-compatible surface all pass these strings, so a
+ * retired id must keep resolving rather than silently drop the caller to the default.
+ */
+const RETIRED_IDS: Record<string, string> = {
+  // DeepSeek retired the `deepseek-chat` wire name; the API now serves v4-flash / v4-pro only.
+  "deepseek-chat": "deepseek-flash",
+};
 
 export const MODEL_CATALOG: ModelChoice[] = [
   {
-    id: "deepseek-chat",
-    label: "DeepSeek V3",
+    id: "deepseek-flash",
+    label: "DeepSeek V4 Flash",
     provider: "deepseek",
-    model: "deepseek-chat",
+    model: "deepseek-v4-flash",
     note: "The workhorse — fast, dependable, and the fallback for every other pick.",
   },
   {
@@ -79,17 +89,20 @@ export const MODEL_CATALOG: ModelChoice[] = [
     id: "gemma4",
     label: "Gemma 4",
     provider: "ollama",
-    model: "gemma4",
+    // The provider publishes this one only under its size tag; the bare name 404s.
+    model: "gemma4:31b",
     note: "Google's newest open-weight family.",
   },
 ];
 
 /**
- * Look up a catalog entry by public id. Accepts the bare id or the `keryx:`-prefixed
- * form used on the OpenAI-compatible surface. Unknown → null (caller uses the default).
+ * Look up a catalog entry by public id. Accepts the bare id, the `keryx:`-prefixed form used on
+ * the OpenAI-compatible surface, and any retired id (mapped to its replacement). Unknown → null
+ * (caller uses the default).
  */
 export function findModelChoice(id?: string | null): ModelChoice | null {
   if (!id) return null;
   const bare = id.trim().replace(/^keryx:/, "");
-  return MODEL_CATALOG.find((m) => m.id === bare) ?? null;
+  const resolved = RETIRED_IDS[bare] ?? bare;
+  return MODEL_CATALOG.find((m) => m.id === resolved) ?? null;
 }

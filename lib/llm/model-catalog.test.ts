@@ -32,4 +32,22 @@ describe("model catalog", () => {
     const def = findModelChoice(DEFAULT_MODEL_ID);
     expect(def?.provider).toBe("deepseek");
   });
+
+  /**
+   * A public id is a contract: API callers, saved widget embeds and the OpenAI-compatible surface
+   * pass these strings. When a provider retires a wire name, the id it was published under must
+   * keep resolving — otherwise those callers silently land on the default with no way to tell.
+   */
+  it("still resolves a retired id, onto its replacement", () => {
+    expect(findModelChoice("deepseek-chat")?.id).toBe(DEFAULT_MODEL_ID);
+    expect(findModelChoice("keryx:deepseek-chat")?.id).toBe(DEFAULT_MODEL_ID);
+  });
+
+  /** Wire names must be exactly what the provider publishes — a near-miss tag 404s and falls back
+   *  to a weaker tier while every log still names the model the asker picked. */
+  it("carries the provider's exact wire names", () => {
+    expect(findModelChoice(DEFAULT_MODEL_ID)?.model).toBe("deepseek-v4-flash");
+    expect(findModelChoice("gemma4")?.model).toBe("gemma4:31b");
+    expect(findModelChoice("qwen3.5-397b")?.model).toBe("qwen3.5:397b");
+  });
 });

@@ -94,8 +94,8 @@ export const config = {
   anthropicKey: process.env.ANTHROPIC_API_KEY ?? "",
   deepseekKey: process.env.DEEPSEEK_API_KEY ?? process.env.OPENAI_API_KEY ?? "",
   llmBaseUrl: process.env.KERYX_LLM_BASE_URL ?? "https://api.deepseek.com",
-  llmModel: process.env.KERYX_LLM_MODEL ?? "deepseek-chat",
-  synthesisModel: process.env.KERYX_SYNTHESIS_MODEL ?? "deepseek-chat",
+  llmModel: process.env.KERYX_LLM_MODEL ?? "deepseek-v4-flash",
+  synthesisModel: process.env.KERYX_SYNTHESIS_MODEL ?? "deepseek-v4-flash",
   // Ollama Cloud (OpenAI-compatible) — serves the model picker's open-weight options
   // (GLM, DeepSeek V4, Kimi, Qwen, MiniMax, GPT-OSS, Gemma). Unset → picker offers
   // only the DeepSeek default. A picked model that errors falls back to DeepSeek,
