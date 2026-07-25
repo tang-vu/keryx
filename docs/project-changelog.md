@@ -9,6 +9,43 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### The agent had stopped reasoning, and everything said it was fine (2026-07-25)
+Found while pulling live figures for a traction post: **every reasoning step in production had been
+failing and falling back to the deterministic heuristic.** DeepSeek retired the `deepseek-chat` wire
+name — the default tier *and* the tier every other model pick falls back onto — so decompose, decide,
+sufficiency, synthesize and attribute were each returning HTTP 400 and dropping to the offline
+engine. Runs still completed, still cited, still settled real USDC. Nothing anywhere said otherwise:
+`/api/health` reported `reasoning: deepseek`, and every dispatch was stamped
+`llm:deepseek:deepseek-chat` on its permalink, in the archive and in the API response. Resilience
+without a watchdog does not prevent an outage; it converts one into a silent quality regression,
+which is worse, because the product's whole claim is that the buy/skip decisions are model-reasoned.
+Four fixes, each closing a different half of the failure:
+- **Wire names now match what the providers actually publish** (verified against both live model
+  lists — 8/8 answering). The Gemma pick was broken the same way: the provider serves it only under
+  its size tag. Public ids are a contract, so `deepseek-chat` keeps resolving onto its replacement
+  rather than silently dropping API callers, saved widget embeds and OpenAI-compatible clients to the
+  default.
+- **A run is labelled by the engine that answered it.** `ResilientEngine` tallies which tier served
+  each step: the pick when it answered, `heuristic (fallback from …)` when nothing it produced
+  survived, and the middle tier by name in a chained fallback. Engines are no longer cached across
+  runs — per-instance tallies would blend concurrent askers — which costs a few field assignments.
+- **A truncated reply fails instead of reading as a decision.** With the model restored, the agent
+  bought *nothing*: the corpus had grown to 20 sources and the decide reply no longer fit the flat
+  2048-token ceiling (measured: `finish_reason=length`, 2048/2048 completion tokens, unparseable
+  body), and truncated JSON parsed to an empty object, which the orchestrator read as "nothing was
+  worth buying" — a trace that looked like a deliberate frugal choice while every source earned zero.
+  Both transports now throw on a ceiling stop with a retryable status; the steps whose reply scales
+  with the corpus ask for a ceiling sized to the item count; and `decide` refuses outright to turn an
+  empty reply into a decision while candidates were on the table.
+- **An hourly watchdog** (`npm run check-llm`, cron at :15) probes every credentialed model with a
+  real `decompose` call through the same engine the agent uses. A default-tier failure alerts loudly;
+  a broken alternative pick, which still degrades to a real answer, is reported without the alarm.
+
+Verified end-to-end on production: all 8 models answering, and a real dispatch making 20 model-reasoned
+decisions with specific rationales (4 CACHE / 16 SKIP), 2 citations, $0.02 settled to creators.
+17 new tests. Two dispatches between the first and third fix (08:37 UTC) recorded zero decisions and
+zero spend — they are real runs that bought nothing, and are left in the log as they happened.
+
 ### An archived answer now says whether it still stands (2026-07-25)
 A dispatch is a finished record: it read what its sources held that minute, paid for it, and
 stopped. The sources kept publishing, and nothing in Keryx noticed — a two-week-old answer read
