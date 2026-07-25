@@ -20,6 +20,7 @@ const NAV = [
   { href: "/dashboard", label: "Ledger" },
   { href: "/answers", label: "Archive" },
   { href: "/sources", label: "Registry" },
+  { href: "/wanted", label: "Wanted" },
   { href: "/register", label: "Issue a toll" },
   { href: "/me/sources", label: "My sources" },
   { href: "/me/asks", label: "My dispatches" },

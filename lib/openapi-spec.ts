@@ -447,6 +447,29 @@ export const openapiSpec = {
         },
       },
     },
+    "/api/wanted": {
+      get: {
+        operationId: "getDemandBoard",
+        summary: "Claims paid dispatches left uncovered (demand board)",
+        description:
+          "Sub-claims that real paid dispatches finished below the coverage threshold — demand " +
+          "the corpus could not serve, each carrying the dispatch id that proves it. Identical " +
+          "claims across dispatches collapse to one entry with `seen`. Public, no auth. Runs " +
+          "that recorded no coverage assessment are skipped entirely rather than counted as gaps.",
+        parameters: [
+          {
+            in: "query",
+            name: "limit",
+            required: false,
+            schema: { type: "integer", minimum: 1, maximum: 100, default: 20 },
+          },
+        ],
+        responses: {
+          "200": { description: "{ windowRuns, gaps: [{ claim, coverage, seen, queryId, question, createdAt }] }" },
+          "503": { description: "Demand board temporarily unavailable." },
+        },
+      },
+    },
     "/api/creator/{id}/performance": {
       get: {
         operationId: "getCreatorPerformance",

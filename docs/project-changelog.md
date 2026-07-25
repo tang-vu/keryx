@@ -9,6 +9,30 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### The corpus now publishes what it could not answer (2026-07-26)
+Keryx knows something a search engine does not: not what people looked for, but what they **spent
+money on and did not get**. Every dispatch breaks its question into sub-claims and scores, per claim,
+how well the sources it bought actually covered each one — and that score was being written to the
+trace and read by nobody. [`/wanted`](https://keryx.cc/wanted) publishes it: the claims real paid
+dispatches finished short, worst and most-recurring first, each linking to the dispatch that proves
+it. For a creator weighing whether listing a feed is worth the trouble, that is the difference
+between a guess and a market signal — demand already proven, supply missing, with a receipt. Sampled
+across 14 consecutive production dispatches: 14 carried coverage data and 19 claims finished under
+40%, among them "the agent must learn from past spending outcomes", "fintechs integrate USDC via
+APIs to facilitate instant settlement", "agreement among authors is necessary for a fair split".
+The honesty rules do the real work here, because the page asks people to write something on the
+strength of it: a run carrying **no** coverage assessment (an older run, or one answered by the
+deterministic fallback) is skipped entirely rather than counted as a failure — absence of
+measurement is not evidence of absence; the run's **last** assessment wins, since coverage is
+re-scored as the agent reads and the early checks legitimately read 0 before anything is bought; and
+identical claims across dispatches collapse into one line carrying the worst coverage but the
+freshest date, so a reader learns the hole is still open rather than when it first appeared. An
+earlier cut grouped gaps into keyword topics the way the archive groups questions and the facets came
+out as "reduce", "guide", "time" — sub-claims are sentences, so their tokens describe grammar as
+often as subject. The claim itself is the unit; nobody can act on "time". Also public as
+`GET /api/wanted` (in the OpenAPI spec), linked from the registry and the nav, in the sitemap.
+`lib/demand-signal.ts`, 12 tests.
+
 ### A cached copy stops being free once the source has moved past it (2026-07-26)
 Found by the panel built the same day, on its first look at real production data: one source had been
 weighed in **396 dispatches, read 383 times, and bought zero times.** `cache_items` holds one blob per

@@ -135,7 +135,11 @@ export default async function SourcesPage() {
           </Link>
           <p className="mt-3 font-mono text-[10.5px] leading-relaxed text-ink-3">
             Listing is permissionless — paste an RSS feed, prove you own it, and every citation
-            pays your wallet directly.
+            pays your wallet directly. Not sure what to list?{" "}
+            <Link href="/wanted" className="underline underline-offset-4 hover:text-seal">
+              See what the corpus couldn&apos;t answer
+            </Link>
+            .
           </p>
         </div>
       </main>
