@@ -21,6 +21,7 @@ import type {
   TraceStep,
 } from "../types";
 import type { GatheredContent, SourceCandidate } from "../llm";
+import { effectiveEngineName } from "../llm/resilient-engine";
 import type { AgentDeps } from "./deps";
 import { discoverExternalCandidates } from "./external-discovery";
 import { buildMemoryContext, buildReputationContext, saveMemory } from "./query-memory";
@@ -514,7 +515,9 @@ export async function* runAgent(
       id: queryId,
       question: input.question,
       budget,
-      engine: engine.name,
+      // What actually answered, not what was picked: a run that fell back to the heuristic must not
+      // present itself as model-reasoned (see ResilientEngine.effectiveName).
+      engine: effectiveEngineName(engine),
       subClaims,
       decisions: finalDecisions,
       citations,

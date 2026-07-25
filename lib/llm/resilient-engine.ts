@@ -35,30 +35,18 @@ function isTransient(err: unknown): boolean {
   return status === 429 || status === 408 || status >= 500;
 }
 
-async function withFallback<T>(
-  label: string,
-  fallbackName: string,
-  primary: () => Promise<T>,
-  fallback: () => Promise<T>,
-): Promise<T> {
-  let lastErr: unknown;
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    try {
-      return await primary();
-    } catch (err) {
-      lastErr = err;
-      if (!isTransient(err) || attempt === MAX_ATTEMPTS) break;
-      await new Promise((r) => setTimeout(r, 400 * 2 ** (attempt - 1))); // 400ms, 800ms
-    }
-  }
-  const reason = lastErr instanceof Error ? lastErr.message : String(lastErr);
-  console.warn(`[keryx llm] ${label} fell back to ${fallbackName} after provider failure: ${reason}`);
-  return fallback();
+/** What actually answered: an inner ResilientEngine reports its own effective tier, not its hope. */
+export function effectiveEngineName(engine: ReasoningEngine): string {
+  return engine instanceof ResilientEngine ? engine.effectiveName : engine.name;
 }
 
 export class ResilientEngine implements ReasoningEngine {
   readonly name: string;
   private readonly fallback: ReasoningEngine;
+  /** Reasoning steps the primary engine answered itself. */
+  private served = 0;
+  /** Steps that had to drop a tier. */
+  private fell = 0;
 
   constructor(
     private readonly primary: ReasoningEngine,
@@ -68,13 +56,45 @@ export class ResilientEngine implements ReasoningEngine {
     this.fallback = fallback ?? new HeuristicEngine();
   }
 
-  private run<T>(label: string, call: (e: ReasoningEngine) => Promise<T>): Promise<T> {
-    return withFallback(
-      label,
-      this.fallback.name,
-      () => call(this.primary),
-      () => call(this.fallback),
+  /**
+   * The engine name a run should actually be *labelled* with.
+   *
+   * `name` is the pick the asker asked for and is fixed at construction — which is exactly how a
+   * run whose every step fell back to the heuristic still got stamped `llm:deepseek:…` on its
+   * permalink, in the archive and in the API response. A stale model id upstream turned that into
+   * days of heuristic answers all presented as model-reasoned. For a product whose claim is that
+   * the buy/skip decisions are model-reasoned, the label has to be earned per run.
+   *
+   * These counters are per-instance, which is only safe because engines are built per run
+   * (see lib/llm/index.ts) — a shared instance would blend two askers' runs into one tally.
+   */
+  get effectiveName(): string {
+    if (this.fell === 0) return this.name;
+    const answered = effectiveEngineName(this.fallback);
+    // Nothing the pick produced survived: lead with the engine that actually answered.
+    if (this.served === 0) return `${answered} (fallback from ${this.name})`;
+    return `${this.name} + ${answered} on ${this.fell} step${this.fell !== 1 ? "s" : ""}`;
+  }
+
+  private async run<T>(label: string, call: (e: ReasoningEngine) => Promise<T>): Promise<T> {
+    let lastErr: unknown;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        const out = await call(this.primary);
+        this.served++; // this step really was answered by the pick — the run may say so
+        return out;
+      } catch (err) {
+        lastErr = err;
+        if (!isTransient(err) || attempt === MAX_ATTEMPTS) break;
+        await new Promise((r) => setTimeout(r, 400 * 2 ** (attempt - 1))); // 400ms, 800ms
+      }
+    }
+    const reason = lastErr instanceof Error ? lastErr.message : String(lastErr);
+    console.warn(
+      `[keryx llm] ${label} fell back to ${this.fallback.name} after provider failure: ${reason}`,
     );
+    this.fell++;
+    return call(this.fallback);
   }
 
   decompose(question: string): Promise<string[]> {

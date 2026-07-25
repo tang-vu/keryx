@@ -15,7 +15,10 @@ import { ResilientEngine } from "./resilient-engine";
 import { findModelChoice, MODEL_CATALOG, type ModelChoice } from "./model-catalog";
 import type { ReasoningEngine } from "./reasoning-engine";
 
-const cache = new Map<string, ReasoningEngine>();
+// Deliberately NOT cached across runs. A ResilientEngine tallies, per instance, which tier actually
+// answered each reasoning step (see its `effectiveName`) so a run is labelled by what served it
+// rather than by what it hoped to use. One shared instance would blend concurrent askers' runs into
+// a single tally. Construction is a few field assignments over the global fetch — nothing to pool.
 
 /** Catalog entries usable with the currently configured credentials. */
 export function availableModels(): ModelChoice[] {
@@ -65,12 +68,7 @@ function buildChoiceEngine(choice: ModelChoice): ReasoningEngine {
 
 export function getReasoningEngine(modelId?: string): ReasoningEngine {
   const choice = resolveModelChoice(modelId);
-  const key = choice ? choice.id : "default";
-  const hit = cache.get(key);
-  if (hit) return hit;
-  const engine = choice ? buildChoiceEngine(choice) : buildDefaultEngine();
-  cache.set(key, engine);
-  return engine;
+  return choice ? buildChoiceEngine(choice) : buildDefaultEngine();
 }
 
 export type { ReasoningEngine } from "./reasoning-engine";
