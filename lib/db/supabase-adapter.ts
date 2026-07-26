@@ -16,6 +16,7 @@ import type {
   WithdrawalRecord,
 } from "../types";
 import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, FeedbackStats, KeryxDB, QueryMemoryEntry, RateLimitDecision, SessionGrantRecord, UserRecord } from "./keryx-db";
+import type { LedgerAccount } from "../gateway/settlement-parity";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 import { normalizePreviewDepth } from "../sources/preview-depth";
@@ -492,6 +493,44 @@ export class SupabaseAdapter implements KeryxDB {
       enginePayments: rows.length - extRows.length,
       engineVolumeUsdc: round(vol - extVol),
     };
+  }
+
+  async settlementLedger(): Promise<LedgerAccount[]> {
+    const [{ data: pays }, { data: outs }] = await Promise.all([
+      this.sb.from("payment_events").select("payee,source_name,amount_usdc,kind,settled"),
+      this.sb.from("withdrawals").select("wallet,amount_usdc"),
+    ]);
+
+    // Keyed lowercased: the two tables were written by different code paths and disagree on
+    // checksum casing. The display address is whichever casing the payment ledger recorded.
+    const accounts = new Map<string, LedgerAccount>();
+    for (const p of pays ?? []) {
+      if (!p.payee || p.kind === "inbound" || !p.settled) continue;
+      const key = String(p.payee).toLowerCase();
+      const acc = accounts.get(key) ?? {
+        address: String(p.payee),
+        ...(p.source_name ? { label: String(p.source_name) } : {}),
+        paidUsdc: 0,
+        paymentCount: 0,
+        withdrawnUsdc: 0,
+        withdrawCount: 0,
+      };
+      acc.paidUsdc += Number(p.amount_usdc);
+      acc.paymentCount += 1;
+      accounts.set(key, acc);
+    }
+    for (const w of outs ?? []) {
+      const acc = accounts.get(String(w.wallet ?? "").toLowerCase());
+      if (!acc) continue; // a cash-out from a wallet this ledger never paid is not ours to explain
+      acc.withdrawnUsdc += Number(w.amount_usdc);
+      acc.withdrawCount += 1;
+    }
+
+    return [...accounts.values()].map((a) => ({
+      ...a,
+      paidUsdc: round(a.paidUsdc),
+      withdrawnUsdc: round(a.withdrawnUsdc),
+    }));
   }
 
   async getSyncState(key: string): Promise<string | null> {

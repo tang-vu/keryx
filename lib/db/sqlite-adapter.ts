@@ -17,6 +17,7 @@ import type {
   WithdrawalRecord,
 } from "../types";
 import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, FeedbackStats, KeryxDB, QueryMemoryEntry, RateLimitDecision, SessionGrantRecord, UserRecord } from "./keryx-db";
+import type { LedgerAccount } from "../gateway/settlement-parity";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 import { normalizePreviewDepth } from "../sources/preview-depth";
@@ -782,6 +783,35 @@ export class SqliteAdapter implements KeryxDB {
       enginePayments: p.c - ext.c,
       engineVolumeUsdc: round(p.v - ext.v),
     };
+  }
+
+  async settlementLedger(): Promise<LedgerAccount[]> {
+    // Addresses are compared lowercased (the two tables were written by different code paths and
+    // disagree on checksum casing) but displayed as the payment ledger recorded them.
+    const rows = this.db
+      .prepare(
+        `SELECT MIN(p.payee) address,
+                MAX(p.source_name) label,
+                COALESCE(SUM(p.amount_usdc),0) paid,
+                COUNT(*) n,
+                COALESCE((SELECT SUM(w.amount_usdc) FROM withdrawals w
+                          WHERE LOWER(w.wallet) = LOWER(p.payee)),0) out,
+                COALESCE((SELECT COUNT(*) FROM withdrawals w
+                          WHERE LOWER(w.wallet) = LOWER(p.payee)),0) outn
+           FROM payment_events p
+          WHERE p.settled = 1 AND p.kind != 'inbound' AND p.payee IS NOT NULL
+          GROUP BY LOWER(p.payee)`,
+      )
+      .all() as { address: string; label: string | null; paid: number; n: number; out: number; outn: number }[];
+
+    return rows.map((r) => ({
+      address: r.address,
+      ...(r.label ? { label: r.label } : {}),
+      paidUsdc: round(r.paid),
+      paymentCount: r.n,
+      withdrawnUsdc: round(r.out),
+      withdrawCount: r.outn,
+    }));
   }
 
   // ── api keys ──

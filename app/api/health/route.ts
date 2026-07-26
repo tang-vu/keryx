@@ -15,6 +15,10 @@ import {
   DISPATCH_HEALTH_STATE_KEY,
   type DispatchHealthSummary,
 } from "@/lib/ops/dispatch-health";
+import {
+  SETTLEMENT_PARITY_STATE_KEY,
+  type SettlementParitySummary,
+} from "@/lib/gateway/settlement-parity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -72,6 +76,17 @@ export async function GET() {
       /* an unreadable summary must not take the health probe down with it */
     }
 
+    // Settlement section: the hourly parity watchdog (scripts/check-settlement.mts) does the
+    // Circle round-trip; the probe only reads its verdict back. Same failure rule as above — an
+    // unreadable summary hides the section, never the probe.
+    let settlement: SettlementParitySummary | null = null;
+    try {
+      const raw = await db.getSyncState(SETTLEMENT_PARITY_STATE_KEY);
+      settlement = raw ? (JSON.parse(raw) as SettlementParitySummary) : null;
+    } catch {
+      /* a malformed summary must not take the health probe down with it */
+    }
+
     return Response.json(
       {
         ok: true,
@@ -79,6 +94,7 @@ export async function GET() {
         ...base,
         registry,
         dispatches,
+        settlement,
         traction: {
           totalPayments: m.totalPayments,
           creatorPayoutsUsdc: Number(m.totalCreatorPayoutsUsdc.toFixed(6)),

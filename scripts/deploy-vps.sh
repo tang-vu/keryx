@@ -89,7 +89,7 @@ ssh "$SSH" "cd $APP_DIR && (pm2 reload keryx 2>/dev/null || pm2 start npm --name
 # before the funder runs dry; the registry watchdog field-compares the on-chain SourceRegistry
 # against the payout cache (both alert via KERYX_ALERT_WEBHOOK). All cd into the app dir so npm run
 # picks up .env.local.
-say "7/7 installing hourly backup + treasury/registry/llm/dispatch watchdog cron"
+say "7/7 installing hourly backup + treasury/registry/llm/dispatch/settlement watchdog cron"
 ssh "$SSH" bash -se <<REMOTE
 set -euo pipefail
 NPM=\$(command -v npm)
@@ -104,8 +104,11 @@ LLM="15 * * * * cd $APP_DIR && \$NPM run check-llm >> $APP_DIR/data/backups/llm.
 # And a probe cannot prove the answer was used: this one reads the agent's own recent dispatches and
 # alerts when they stop being model-reasoned, stop deciding, or stop paying creators.
 DISPATCH="50 * * * * cd $APP_DIR && \$NPM run check-dispatches >> $APP_DIR/data/backups/dispatches.log 2>&1 # keryx-dispatches"
-( crontab -l 2>/dev/null | grep -vE '# keryx-(backup|treasury|registry|llm|dispatches)' || true ; echo "\$BACKUP"; echo "\$TREASURY"; echo "\$REGISTRY"; echo "\$LLM"; echo "\$DISPATCH" ) | crontab -
-echo "cron installed:"; crontab -l | grep -E 'keryx-(backup|treasury|registry|llm|dispatches)'
+# Gateway payouts leave no explorer hash, so the only outside witness that creators really hold what
+# Keryx says is Circle's own balance API. This asks it, wallet by wallet, and alerts on a shortfall.
+SETTLEMENT="55 * * * * cd $APP_DIR && \$NPM run check-settlement >> $APP_DIR/data/backups/settlement.log 2>&1 # keryx-settlement"
+( crontab -l 2>/dev/null | grep -vE '# keryx-(backup|treasury|registry|llm|dispatches|settlement)' || true ; echo "\$BACKUP"; echo "\$TREASURY"; echo "\$REGISTRY"; echo "\$LLM"; echo "\$DISPATCH"; echo "\$SETTLEMENT" ) | crontab -
+echo "cron installed:"; crontab -l | grep -E 'keryx-(backup|treasury|registry|llm|dispatches|settlement)'
 REMOTE
 
 cat <<DONE

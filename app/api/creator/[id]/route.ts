@@ -5,6 +5,11 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import {
+  findAccount,
+  SETTLEMENT_PARITY_STATE_KEY,
+  type SettlementParitySummary,
+} from "@/lib/gateway/settlement-parity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -70,6 +75,26 @@ export async function GET(
       question: questionById.get(p.queryId) ?? null,
     }));
 
+    // Circle's own word on this creator's money. Gateway payouts carry no explorer hash, so the
+    // hourly parity watchdog asks Circle what it holds per payee and stores the answer; this reads
+    // it back for the wallets that belong to this source — its own (fetch tolls) and each author's
+    // (citation splits). Null when the sweep has not run yet: no claim is better than a stale one.
+    let gatewayProof: {
+      checkedAt: string;
+      wallets: { address: string; label?: string; owedUsdc: number; heldUsdc: number | null; verdict: string }[];
+    } | null = null;
+    try {
+      const raw = await db.getSyncState(SETTLEMENT_PARITY_STATE_KEY);
+      const summary = raw ? (JSON.parse(raw) as SettlementParitySummary) : null;
+      const mine = [source.walletAddress, ...(source.authors ?? []).map((a) => a.walletAddress)];
+      const wallets = [...new Set(mine.filter(Boolean).map((w) => w.toLowerCase()))]
+        .map((w) => findAccount(summary, w))
+        .filter((a): a is NonNullable<typeof a> => a !== null);
+      if (summary && wallets.length > 0) gatewayProof = { checkedAt: summary.checkedAt, wallets };
+    } catch {
+      /* an unreadable summary costs the proof row, never the profile */
+    }
+
     return NextResponse.json({
       source: {
         id: source.id,
@@ -79,6 +104,7 @@ export async function GET(
         fetchPrice: source.fetchPrice,
         verified: source.verified,
       },
+      gatewayProof,
       stats: {
         totalEarned,
         settledTotal,

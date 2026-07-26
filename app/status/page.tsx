@@ -18,6 +18,10 @@ import {
   DispatchHealthSection,
   type DispatchHealth,
 } from "@/components/keryx/dispatch-health-section";
+import {
+  SettlementProofSection,
+  type SettlementHealth,
+} from "@/components/keryx/settlement-proof-section";
 
 interface Health {
   ok: boolean;
@@ -30,6 +34,7 @@ interface Health {
   time: string;
   registry?: RegistryHealth | null;
   dispatches?: DispatchHealth | null;
+  settlement?: SettlementHealth | null;
   traction?: {
     totalPayments: number;
     creatorPayoutsUsdc: number;
@@ -146,6 +151,8 @@ export default function StatusPage() {
             {health?.dispatches && <DispatchHealthSection dispatches={health.dispatches} />}
 
             {health?.registry && <RegistryStatusSection registry={health.registry} />}
+
+            {health?.settlement && <SettlementProofSection settlement={health.settlement} />}
 
             {treasury?.available && treasury.unifiedBalance && (
               <>

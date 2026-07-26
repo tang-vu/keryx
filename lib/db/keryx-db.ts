@@ -3,6 +3,7 @@
  * All amounts are USDC numbers. Metrics are computed only from real rows.
  */
 
+import type { LedgerAccount } from "../gateway/settlement-parity";
 import type {
   DailyVolume,
   DashboardMetrics,
@@ -294,6 +295,11 @@ export interface KeryxDB {
    *  all-time leaderboard instead of a capped recent-feed slice. */
   listPaymentsBySource(sourceId: string): Promise<PaymentRecord[]>;
   metrics(): Promise<DashboardMetrics>;
+  /** Per payee wallet: settled USDC in, recorded cash-outs out. The settlement-parity watchdog
+   *  reconciles these against what Circle's Gateway says it holds for the same address, so both
+   *  sides must be all-time totals — a capped slice would read as a shortfall. Inbound platform
+   *  fees are excluded: they are revenue, not a balance held for a creator. */
+  settlementLedger(): Promise<LedgerAccount[]>;
   /** Settled USDC per UTC day over the last `days` days, zero-filled, oldest→today. Full-table
    *  aggregation — independent of the capped live feed, so older days aren't undercounted. */
   dailySettled(days: number): Promise<DailyVolume[]>;

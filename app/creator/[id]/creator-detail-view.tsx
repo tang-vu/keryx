@@ -12,6 +12,7 @@ import { PreviewDepthPanel } from "./preview-depth-panel";
 import { EmbedBadgePanel } from "./embed-badge-panel";
 import { EmbedWidgetPanel } from "./embed-widget-panel";
 import { DecisionFeedbackPanel } from "./decision-feedback-panel";
+import { GatewayProofPanel, type GatewayProof } from "./gateway-proof-panel";
 
 interface CreatorData {
   source: {
@@ -22,6 +23,8 @@ interface CreatorData {
     fetchPrice: number;
     verified: boolean;
   };
+  /** Circle's own figure for this creator's wallets, from the hourly parity sweep. */
+  gatewayProof: GatewayProof | null;
   stats: {
     totalEarned: number;
     settledTotal: number;
@@ -61,7 +64,7 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
     return <CreatorSkeleton />;
   }
 
-  const { source, stats, recentPayments, dailyEarnings } = data;
+  const { source, stats, recentPayments, dailyEarnings, gatewayProof } = data;
   const maxDaily = Math.max(...dailyEarnings.map((d) => d.amount), 0.001);
 
   return (
@@ -125,6 +128,10 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
           accent="seal"
         />
       </section>
+
+      {/* Public: the earnings above, checked against Circle's own books. Sits directly under the
+          tiles it corroborates — the proof is worth little a scroll away from the claim. */}
+      <GatewayProofPanel proof={gatewayProof} />
 
       {/* Public: why the agent buys or passes on this source, in its own words. Sits above the
           price dial because it is the input to using that dial. */}

@@ -36,3 +36,54 @@ export async function getGatewayAvailableAtomic(address: string): Promise<bigint
     return null;
   }
 }
+
+/** How many depositors to ask about per request — the API takes a list; this keeps each modest. */
+const BATCH = 25;
+
+/**
+ * Gateway holdings for many addresses at once, in whole USDC, keyed by LOWERCASED address.
+ *
+ * Used by the settlement-parity watchdog to check what Keryx tells creators against what Circle
+ * actually holds for them. Two rules carry the honesty of that check:
+ *
+ *  - An address the API did not answer for maps to `null`, never to 0. A silent Circle must read
+ *    as "unknown", or an outage would look exactly like a creator's money vanishing.
+ *  - `pendingBatch` counts toward the balance. Funds mid-settlement have left the payer and are
+ *    owed to the payee; excluding them would invent a shortfall for every busy wallet.
+ *
+ * A failed chunk marks only its own addresses unknown, so one bad request cannot blank the sweep.
+ */
+export async function getGatewayHeldUsdc(addresses: string[]): Promise<Map<string, number | null>> {
+  const unique = [...new Set(addresses.map((a) => a.toLowerCase()))];
+  const out = new Map<string, number | null>(unique.map((a) => [a, null]));
+
+  for (let i = 0; i < unique.length; i += BATCH) {
+    const chunk = unique.slice(i, i + BATCH);
+    try {
+      const upstream = await fetch(GATEWAY_BALANCE_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: "USDC",
+          sources: chunk.map((depositor) => ({ depositor, domain: config.cctpDomain })),
+        }),
+        signal: AbortSignal.timeout(20_000),
+      });
+      if (!upstream.ok) continue; // chunk stays unknown
+
+      const data = (await upstream.json()) as {
+        balances?: Array<{ depositor?: string; balance?: string; pendingBatch?: string }>;
+      };
+      for (const b of data.balances ?? []) {
+        const key = b.depositor?.toLowerCase();
+        // Key off the echoed depositor rather than array position: an answer that dropped or
+        // reordered an entry would otherwise attach one creator's balance to another's claim.
+        if (!key || !out.has(key)) continue;
+        out.set(key, Number(b.balance ?? 0) + Number(b.pendingBatch ?? 0));
+      }
+    } catch {
+      /* timeout or transport error — the chunk's addresses stay unknown */
+    }
+  }
+  return out;
+}
