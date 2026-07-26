@@ -37,8 +37,13 @@ export async function getGatewayAvailableAtomic(address: string): Promise<bigint
   }
 }
 
-/** How many depositors to ask about per request — the API takes a list; this keeps each modest. */
-const BATCH = 25;
+/**
+ * Depositors per request. Circle's hard limit: 21 sources answers
+ * `400 {"message":"Invalid request: sources: No more than 20 sources allowed"}`,
+ * and because a rejected chunk marks every address in it unknown, one address over the line
+ * blanks the whole sweep rather than trimming it.
+ */
+const BATCH = 20;
 
 /**
  * Gateway holdings for many addresses at once, in whole USDC, keyed by LOWERCASED address.

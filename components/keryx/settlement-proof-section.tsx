@@ -63,8 +63,13 @@ export function SettlementProofSection({ settlement }: { settlement: SettlementH
         <Row k="Ledger claims held" v={usd(settlement.owedUsdc)} />
         <Row k="Circle confirms" v={usd(settlement.confirmedUsdc)} />
         <Row
-          k="Short"
-          v={counts.short === 0 ? "none" : `${counts.short} wallet${counts.short === 1 ? "" : "s"}`}
+          k={counts.unknown > 0 ? "Short · unanswered" : "Short"}
+          v={
+            // An unanswered wallet is not a clean row: it means Circle said nothing about that
+            // money, and that "Circle confirms" above is understating what is really backed.
+            (counts.short === 0 ? "none" : `${counts.short} wallet${counts.short === 1 ? "" : "s"}`) +
+            (counts.unknown > 0 ? ` · ${counts.unknown} unanswered` : "")
+          }
           alert={counts.short > 0}
         />
       </dl>

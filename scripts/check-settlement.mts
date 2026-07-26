@@ -64,6 +64,13 @@ async function main(): Promise<void> {
     console.log(`[settlement] ${report.counts.unknown} wallet(s) unanswered by the balance API.`);
   }
 
+  if (report.counts.unknown === report.accounts.length) {
+    // Nothing was checked, so "no shortfall found" is not a clean bill of health — say so plainly
+    // rather than let a silent Circle read as confirmation.
+    console.log("[settlement] nothing verified this run — the balance API answered for no wallet.");
+    return;
+  }
+
   if (report.issues.length === 0) {
     console.log(`[settlement] OK — every answered wallet holds at least what Keryx claims for it.`);
     return;
