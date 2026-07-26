@@ -6,12 +6,15 @@ citation reward to every creator it cites, on Arc testnet.
 
 - **Base URL:** `https://keryx.cc/api/v1`
 - **Model:** `keryx` (default), or pick a reasoning model chat-app style with
-  `keryx:<id>` — e.g. `keryx:glm-5.2`, `keryx:deepseek-v4-pro`, `keryx:qwen3.5-397b`.
+  `keryx:<id>` — currently `keryx:deepseek-flash` (workhorse) and `keryx:deepseek-v4-pro`.
   `GET /api/v1/models` lists what's live. Unknown ids run the default, and any pick that
-  errors mid-run falls back to DeepSeek (then the offline heuristic) — an ask always answers.
-  Heavy picks (DeepSeek V4 Pro, Qwen 3.5 397B) can take 2–3 minutes for the full research
-  loop: use `stream: true` with them — a non-streaming call may hit proxy timeouts even
-  though the run completes and settles server-side (the answer stays at its dispatch URL).
+  errors mid-run falls back to Flash (then the offline heuristic) — an ask always answers.
+  The open-weight options served through Ollama Cloud (`glm-5.2`, `qwen3.5-397b`, `gemma4`,
+  `kimi-k2.7-code`, `minimax-m3`, `gpt-oss-120b`) were withdrawn on 2026-07-26; those ids still
+  resolve — to the workhorse — so existing callers and saved embeds keep working.
+  V4 Pro can take 2–3 minutes for the full research loop: use `stream: true` with it — a
+  non-streaming call may hit proxy timeouts even though the run completes and settles
+  server-side (the answer stays at its dispatch URL).
 - **Auth:** send any token as the API key. On the **free tier** the token is ignored
   (treasury-funded, IP rate-limited). Send a **`kx_live_…`** key (mint at
   [keryx.cc/dev](https://keryx.cc/dev)) for higher limits + usage metering.

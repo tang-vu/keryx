@@ -96,15 +96,9 @@ export const config = {
   llmBaseUrl: process.env.KERYX_LLM_BASE_URL ?? "https://api.deepseek.com",
   llmModel: process.env.KERYX_LLM_MODEL ?? "deepseek-v4-flash",
   synthesisModel: process.env.KERYX_SYNTHESIS_MODEL ?? "deepseek-v4-flash",
-  // Ollama Cloud (OpenAI-compatible) — serves the model picker's open-weight options
-  // (GLM, DeepSeek V4, Kimi, Qwen, MiniMax, GPT-OSS, Gemma). Unset → picker offers
-  // only the DeepSeek default. A picked model that errors falls back to DeepSeek,
-  // then to the offline heuristic, so an ask always answers.
-  ollamaKey: process.env.OLLAMA_API_KEY ?? "",
-  ollamaBaseUrl: process.env.KERYX_OLLAMA_BASE_URL ?? "https://ollama.com/v1",
-  // Fraction (0..1) of volume-engine runs that use a non-default (Ollama) model.
-  // Kept low on purpose: the Ollama account is rate-limit-billed, so DeepSeek stays
-  // the engine's workhorse and the alternates only add provenance variety.
+  // Fraction (0..1) of volume-engine runs that use a non-default catalog model (currently V4 Pro)
+  // rather than the workhorse. Kept low: Pro is slower and the engine's job is steady volume, so
+  // the alternates only add provenance variety.
   engineAltModelRatio: Math.min(1, Math.max(0, num(process.env.KERYX_ENGINE_ALT_MODEL_RATIO, 0.1))),
   // Fraction (0..1) of volume-engine runs that re-ask an open demand-board gap instead of a fresh
   // question. A retry is a normal paid dispatch — same budget, real settlement — so this trades no

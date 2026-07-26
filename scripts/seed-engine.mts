@@ -17,7 +17,7 @@ import { collectRun, getAgentDeps } from "../lib/agent/index.ts";
 import { SEED_QUESTIONS } from "../lib/seed-questions.ts";
 import { generateQuestion } from "../lib/seed-question-generator.ts";
 import { newestContent, pickGapRetry, type RetryCandidate } from "../lib/demand-retry.ts";
-import { availableModels, getReasoningEngine } from "../lib/llm/index.ts";
+import { availableModels, DEFAULT_MODEL_ID, getReasoningEngine } from "../lib/llm/index.ts";
 import { config } from "../lib/config.ts";
 
 // ── args ──
@@ -66,10 +66,9 @@ const startOffset = useCursor ? readCursor() : parseInt(offsetArg!, 10) || 0;
 
 const deps = await getAgentDeps();
 
-// Model policy: DeepSeek is the workhorse. A small, env-tuned slice of runs uses an
-// alternate open-weight model (Ollama Cloud) for engine diversity — kept rare because
-// that account is rate-limit-billed and must never become the daemon's dependency.
-const altModels = availableModels().filter((m) => m.provider === "ollama");
+// Model policy: Flash is the workhorse. A small, env-tuned slice of runs uses another catalog
+// model for engine diversity — kept rare because those are slower and steady volume is the point.
+const altModels = availableModels().filter((m) => m.id !== DEFAULT_MODEL_ID);
 function pickRunModel(): string | undefined {
   if (forcedModel) return forcedModel;
   if (altModels.length === 0 || Math.random() >= config.engineAltModelRatio) return undefined;

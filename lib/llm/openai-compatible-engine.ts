@@ -2,15 +2,15 @@
  * OpenAICompatibleEngine — any OpenAI-compatible chat API via the shared prompts.
  * Uses the chat-completions endpoint with response_format json_object. No extra SDK dependency.
  *
- * Default construction targets DeepSeek (the workhorse + guaranteed fallback tier).
- * Pass opts to target another host/model — e.g. Ollama Cloud for the model picker.
+ * Default construction targets DeepSeek Flash (the workhorse + guaranteed fallback tier).
+ * Pass opts to pin another host/model — every non-default catalog pick does.
  */
 
 import { config } from "../config";
 import { extractJson, JsonChatEngine } from "./json-chat-engine";
 
 export interface OpenAICompatibleOpts {
-  /** Engine name recorded on each run, e.g. "llm:ollama:glm-5.2". */
+  /** Engine name recorded on each run, e.g. "llm:deepseek:deepseek-v4-pro". */
   name: string;
   baseUrl: string;
   apiKey: string;

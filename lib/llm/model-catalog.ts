@@ -4,11 +4,16 @@
  *
  * `id` is the public identifier used in API payloads and the UI ("keryx:<id>" also
  * accepted on the OpenAI-compatible surface). `model` is the provider wire name.
- * DeepSeek is the default and the guaranteed fallback tier: any other pick that
+ * Flash is the default and the guaranteed fallback tier: any other pick that
  * errors falls back to it (then to the offline heuristic), so an ask always answers.
+ *
+ * The catalog once carried seven open-weight models routed through Ollama Cloud. That account is
+ * gone, and a picker offering models that answer only by silently falling back to DeepSeek is a
+ * promise the product cannot keep — so they are retired rather than left on the shelf. Both entries
+ * here are served by DeepSeek's own API on the one key the box already has.
  */
 
-export type ModelProvider = "deepseek" | "ollama";
+export type ModelProvider = "deepseek";
 
 export interface ModelChoice {
   /** Public id used in API payloads and the picker. Colon-free (`keryx:` prefixing). */
@@ -33,6 +38,15 @@ export const DEFAULT_MODEL_ID = "deepseek-flash";
 const RETIRED_IDS: Record<string, string> = {
   // DeepSeek retired the `deepseek-chat` wire name; the API now serves v4-flash / v4-pro only.
   "deepseek-chat": "deepseek-flash",
+  // The open-weight tier is gone with the Ollama Cloud account. Every one of these ids may still be
+  // sitting in a saved widget embed or someone's API client, so they resolve to the workhorse
+  // instead of 400-ing — which is what the picker did for them at the end anyway.
+  "glm-5.2": "deepseek-flash",
+  "kimi-k2.7-code": "deepseek-flash",
+  "qwen3.5-397b": "deepseek-flash",
+  "minimax-m3": "deepseek-flash",
+  "gpt-oss-120b": "deepseek-flash",
+  gemma4: "deepseek-flash",
 };
 
 export const MODEL_CATALOG: ModelChoice[] = [
@@ -46,52 +60,9 @@ export const MODEL_CATALOG: ModelChoice[] = [
   {
     id: "deepseek-v4-pro",
     label: "DeepSeek V4 Pro",
-    provider: "ollama",
+    provider: "deepseek",
     model: "deepseek-v4-pro",
     note: "Deepest reasoning in the stable — thorough, noticeably slower.",
-  },
-  {
-    id: "glm-5.2",
-    label: "GLM 5.2",
-    provider: "ollama",
-    model: "glm-5.2",
-    note: "Strong reasoning generalist (Zhipu).",
-  },
-  {
-    id: "kimi-k2.7-code",
-    label: "Kimi K2.7 Code",
-    provider: "ollama",
-    model: "kimi-k2.7-code",
-    note: "Code specialist (Moonshot).",
-  },
-  {
-    id: "qwen3.5-397b",
-    label: "Qwen 3.5 397B",
-    provider: "ollama",
-    model: "qwen3.5:397b",
-    note: "Large open-weight generalist — thorough, noticeably slower.",
-  },
-  {
-    id: "minimax-m3",
-    label: "MiniMax M3",
-    provider: "ollama",
-    model: "minimax-m3",
-    note: "Fast generalist with tool strength.",
-  },
-  {
-    id: "gpt-oss-120b",
-    label: "GPT-OSS 120B",
-    provider: "ollama",
-    model: "gpt-oss:120b",
-    note: "OpenAI's open-weight model.",
-  },
-  {
-    id: "gemma4",
-    label: "Gemma 4",
-    provider: "ollama",
-    // The provider publishes this one only under its size tag; the bare name 404s.
-    model: "gemma4:31b",
-    note: "Google's newest open-weight family.",
   },
 ];
 

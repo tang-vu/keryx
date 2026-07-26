@@ -9,6 +9,29 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### The model picker no longer offers models it cannot serve (2026-07-26)
+The hourly reasoning watchdog reported 7 of 8 models returning 403 — not a bad key, a dead account:
+three said *"your subscription payment is past due"*, four *"this model requires a subscription"*. From
+production run labels the open-weight tier last answered **2026-07-24 01:08** and was falling back by
+**2026-07-26 00:10**. Nothing was broken in the demo path, which is the uncomfortable part: the
+default tier answered throughout, the two affected runs were correctly stamped
+`deepseek-v4-flash (fallback from llm:ollama:kimi-k2.7-code)`, and the watchdog fired exactly as
+designed — *"7 reasoning models unavailable (default tier is fine)"*. The system degraded honestly and
+kept working. But a picker offering eight models where seven answer only by silently becoming a ninth
+is a promise the product cannot keep, so the Ollama Cloud tier is withdrawn rather than left on the
+shelf. Owner's call: no intention of paying that bill.
+The catalog is not down to one, though — checking rather than assuming turned up that
+`deepseek-v4-pro` was routed through Ollama while **DeepSeek's own API serves it** on the key the box
+already has (`curl https://api.deepseek.com/models` → `deepseek-v4-flash`, `deepseek-v4-pro`). It was
+re-pointed, so two real models remain. That re-pointing had a trap worth naming: a `deepseek`-provider
+pick was built as a bare `OpenAICompatibleEngine()`, which falls back to `config.llmModel` — so V4 Pro
+would have run **Flash** while every log named it Pro, the exact mislabelling `effectiveName` was
+added to prevent. Non-default picks now pin their wire model explicitly. The six withdrawn ids all
+still resolve, onto the workhorse: a public id is a contract, and one of them may be sitting in a
+saved widget embed or someone's API client. `OLLAMA_API_KEY` / `KERYX_OLLAMA_BASE_URL` are gone from
+config; the picker and `/api/v1/models` were already data-driven off the catalog, so both narrowed on
+their own. 413 tests.
+
 ### The demand board pays out: Keryx re-asks what it missed (2026-07-26)
 [`/wanted`](https://keryx.cc/wanted) published the holes; a board nobody returns to is a wishlist.
 Now the agent goes back. A slice of volume-engine runs (`KERYX_ENGINE_GAP_RETRY_RATIO`, default 25%)

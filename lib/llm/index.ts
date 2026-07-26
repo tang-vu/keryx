@@ -2,9 +2,9 @@
  * Reasoning engine selector. Default chain: Anthropic > DeepSeek (OpenAI-compatible) >
  * deterministic heuristic (offline, no API key — dev only, never the demo path).
  *
- * Model picker: pass a catalog model id to run that model instead. Ollama-served picks
- * wrap with fallback = DeepSeek (itself falling back to the heuristic), so whichever
- * model the asker chooses, the run ALWAYS answers.
+ * Model picker: pass a catalog model id to run that model instead. A non-default pick wraps
+ * with fallback = Flash (itself falling back to the heuristic), so whichever model the asker
+ * chooses, the run ALWAYS answers.
  */
 
 import { config, llmProvider } from "../config";
@@ -12,7 +12,7 @@ import { AnthropicEngine } from "./anthropic-engine";
 import { HeuristicEngine } from "./heuristic-engine";
 import { OpenAICompatibleEngine } from "./openai-compatible-engine";
 import { ResilientEngine } from "./resilient-engine";
-import { findModelChoice, MODEL_CATALOG, type ModelChoice } from "./model-catalog";
+import { DEFAULT_MODEL_ID, findModelChoice, MODEL_CATALOG, type ModelChoice } from "./model-catalog";
 import type { ReasoningEngine } from "./reasoning-engine";
 
 // Deliberately NOT cached across runs. A ResilientEngine tallies, per instance, which tier actually
@@ -22,9 +22,7 @@ import type { ReasoningEngine } from "./reasoning-engine";
 
 /** Catalog entries usable with the currently configured credentials. */
 export function availableModels(): ModelChoice[] {
-  return MODEL_CATALOG.filter((m) =>
-    m.provider === "deepseek" ? config.deepseekKey.length > 0 : config.ollamaKey.length > 0,
-  );
+  return config.deepseekKey.length > 0 ? [...MODEL_CATALOG] : [];
 }
 
 /**
@@ -35,9 +33,7 @@ export function availableModels(): ModelChoice[] {
 export function resolveModelChoice(id?: string | null): ModelChoice | null {
   const m = findModelChoice(id);
   if (!m) return null;
-  const usable =
-    m.provider === "deepseek" ? config.deepseekKey.length > 0 : config.ollamaKey.length > 0;
-  return usable ? m : null;
+  return config.deepseekKey.length > 0 ? m : null;
 }
 
 /** The credential-priority default engine (no model override). */
@@ -52,18 +48,23 @@ function buildDefaultEngine(): ReasoningEngine {
   }
 }
 
-/** A catalog pick. Ollama models get DeepSeek as their (resilient) fallback tier. */
+/**
+ * A catalog pick. Every non-default pick must PIN its wire model: the bare engine falls back to
+ * `config.llmModel`, so leaving it unset would run the workhorse while the run reported itself as
+ * the picked model — the exact mislabelling `effectiveName` exists to prevent.
+ *
+ * The default entry is the one exception, because it *is* what the bare engine serves.
+ * Flash stays the guaranteed tier beneath any other pick.
+ */
 function buildChoiceEngine(choice: ModelChoice): ReasoningEngine {
-  if (choice.provider === "deepseek") return new ResilientEngine(new OpenAICompatibleEngine());
+  if (choice.id === DEFAULT_MODEL_ID) return new ResilientEngine(new OpenAICompatibleEngine());
   const primary = new OpenAICompatibleEngine({
-    name: `llm:ollama:${choice.model}`,
-    baseUrl: config.ollamaBaseUrl,
-    apiKey: config.ollamaKey,
+    name: `llm:deepseek:${choice.model}`,
+    baseUrl: config.llmBaseUrl,
+    apiKey: config.deepseekKey,
     model: choice.model,
   });
-  const fallback =
-    config.deepseekKey.length > 0 ? new ResilientEngine(new OpenAICompatibleEngine()) : undefined;
-  return new ResilientEngine(primary, fallback);
+  return new ResilientEngine(primary, new ResilientEngine(new OpenAICompatibleEngine()));
 }
 
 export function getReasoningEngine(modelId?: string): ReasoningEngine {

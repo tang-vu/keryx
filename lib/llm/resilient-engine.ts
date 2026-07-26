@@ -5,7 +5,7 @@
  *   2. falls back to the given fallback engine (default: the deterministic HeuristicEngine)
  *      so the run always completes.
  *
- * Fallbacks chain: an Ollama-served pick wraps with fallback = ResilientEngine(DeepSeek),
+ * Fallbacks chain: a non-default pick wraps with fallback = ResilientEngine(Flash),
  * which itself falls back to the heuristic — so an ask ALWAYS answers, in tiers of
  * decreasing capability. The orchestrator still enforces the hard budget cap on top —
  * fallback reasoning only supplies judgment, never moves money. The happy path is

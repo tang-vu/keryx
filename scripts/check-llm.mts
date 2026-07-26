@@ -28,20 +28,12 @@ const PROMPT = "Does a stablecoin settle instantly?";
 
 /** One un-wrapped provider call — no resilience layer, so a failure surfaces instead of degrading. */
 async function probe(m: ModelChoice): Promise<{ ok: true } | { ok: false; error: string }> {
-  const engine =
-    m.provider === "deepseek"
-      ? new OpenAICompatibleEngine({
-          name: `llm:deepseek:${m.model}`,
-          baseUrl: config.llmBaseUrl,
-          apiKey: config.deepseekKey,
-          model: m.model,
-        })
-      : new OpenAICompatibleEngine({
-          name: `llm:ollama:${m.model}`,
-          baseUrl: config.ollamaBaseUrl,
-          apiKey: config.ollamaKey,
-          model: m.model,
-        });
+  const engine = new OpenAICompatibleEngine({
+    name: `llm:deepseek:${m.model}`,
+    baseUrl: config.llmBaseUrl,
+    apiKey: config.deepseekKey,
+    model: m.model,
+  });
   try {
     const claims = await engine.decompose(PROMPT);
     if (!Array.isArray(claims) || claims.length === 0) {

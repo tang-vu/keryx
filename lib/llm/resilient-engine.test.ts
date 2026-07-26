@@ -55,24 +55,24 @@ describe("ResilientEngine labelling", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     let calls = 0;
     const flaky = {
-      ...workingEngine("llm:ollama:glm-5.2"),
+      ...workingEngine("llm:deepseek:deepseek-v4-pro"),
       decompose: () => (++calls === 1 ? Promise.resolve(["ok"]) : Promise.reject(hardError())),
     } as unknown as ReasoningEngine;
     const e = new ResilientEngine(flaky);
     await e.decompose("q"); // served by the pick
     await e.decompose("q"); // falls back
-    expect(e.effectiveName).toBe("llm:ollama:glm-5.2 + heuristic on 1 step");
+    expect(e.effectiveName).toBe("llm:deepseek:deepseek-v4-pro + heuristic on 1 step");
   });
 
-  /** Ollama picks fall back to DeepSeek, which falls back to the heuristic. A run served by the
+  /** A non-default pick falls back to Flash, which falls back to the heuristic. A run served by the
    *  middle tier must name that tier — not the pick above it, and not the heuristic below. */
   it("reports the tier that answered in a chained fallback", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
-    const deepseek = new ResilientEngine(workingEngine("llm:deepseek:deepseek-v4-flash"));
-    const e = new ResilientEngine(brokenEngine("llm:ollama:gemma4", 404), deepseek);
+    const flash = new ResilientEngine(workingEngine("llm:deepseek:deepseek-v4-flash"));
+    const e = new ResilientEngine(brokenEngine("llm:deepseek:deepseek-v4-pro", 404), flash);
     await e.decompose("q");
     expect(e.effectiveName).toBe(
-      "llm:deepseek:deepseek-v4-flash (fallback from llm:ollama:gemma4)",
+      "llm:deepseek:deepseek-v4-flash (fallback from llm:deepseek:deepseek-v4-pro)",
     );
   });
 
