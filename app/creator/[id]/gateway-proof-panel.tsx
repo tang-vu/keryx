@@ -26,6 +26,7 @@ export interface GatewayProof {
     label?: string;
     owedUsdc: number;
     heldUsdc: number | null;
+    onchainUsdc?: number | null;
     verdict: string;
   }[];
 }
@@ -82,11 +83,18 @@ export function GatewayProofPanel({ proof }: { proof: GatewayProof | null }) {
                 </td>
                 <td className="py-2 pr-3 text-right tabular-nums text-ink-2">
                   {w.heldUsdc === null ? "—" : `$${fmtUsdc(w.heldUsdc)}`}
+                  {w.verdict === "cashedOut" && typeof w.onchainUsdc === "number" && (
+                    <span className="text-faint"> +${fmtUsdc(w.onchainUsdc)} in your wallet</span>
+                  )}
                 </td>
                 <td
                   className={`py-2 text-right ${w.verdict === "short" ? "text-destructive" : "text-ink-3"}`}
                 >
-                  {w.verdict === "surplus" ? "backed +extra" : w.verdict}
+                  {w.verdict === "surplus"
+                    ? "backed +extra"
+                    : w.verdict === "cashedOut"
+                      ? "cashed out"
+                      : w.verdict}
                 </td>
               </tr>
             ))}
@@ -107,7 +115,9 @@ export function GatewayProofPanel({ proof }: { proof: GatewayProof | null }) {
       </pre>
       <p className="mt-2 font-mono text-[10px] leading-relaxed text-faint">
         A balance above the claim is your own money — deposits, or payouts from any other x402
-        service that pays this wallet. Keryx only ever flags a balance that falls short of it.
+        service that pays this wallet. If you have already cashed out, the money shows in your own
+        wallet on-chain instead and the row reads &ldquo;cashed out&rdquo;. Keryx only flags a
+        balance that neither the Gateway nor your wallet accounts for.
       </p>
     </section>
   );

@@ -14,12 +14,18 @@
  *
  * The invariant, stated so it can only catch us flattering ourselves:
  *
- *     held(Circle) >= paid(ledger) - withdrawn(ledger) - tolerance
+ *     held(Circle) + onchain(wallet) >= paid(ledger) - withdrawn(ledger) - tolerance
  *
  * A wallet holding MORE than Keryx accounts for is not an error and never alerts. Gateway balances
  * are the creator's own: they may deposit into them, or be paid by some other x402 service entirely.
  * Only a SHORTFALL is a finding, because that is the one direction that means Keryx overstated what
  * a creator has — the failure a skeptic actually cares about.
+ *
+ * The wallet term is not slack either, and the first production run is why it exists: two creators
+ * came up short by $0.046 and $0.061, and both were holding exactly that money in their own wallets
+ * on-chain. A Gateway balance belongs to its owner, who may move it through this app, Circle's CLI,
+ * or anything else that signs for them — and only the first of those leaves a row in Keryx's books.
+ * Reading the Gateway alone, every self-service cash-out would be reported as missing money.
  *
  * Tolerance is not fudge. Circle charges a fee to withdraw, and the ledger records what the creator
  * asked to move, not the fee burned alongside it, so each recorded cash-out legitimately leaves the
@@ -58,17 +64,22 @@ export interface LedgerAccount {
 /**
  * - `confirmed` — Circle holds what Keryx says it does, inside tolerance.
  * - `surplus`   — Circle holds more. The creator's own money; noted, never an issue.
- * - `short`     — Circle holds less than Keryx claims. The only alarm.
+ * - `cashedOut` — Circle holds less, but the creator's own wallet holds the difference on-chain.
+ *                 They moved their money themselves, which they may do at any time and by any
+ *                 route; the payouts are still fully accounted for, so this never alarms.
+ * - `short`     — neither the Gateway nor the wallet accounts for what Keryx claims. The alarm.
  * - `unknown`   — the API did not answer for this address. Absence of an answer is not a zero.
  */
-export type AccountVerdict = "confirmed" | "surplus" | "short" | "unknown";
+export type AccountVerdict = "confirmed" | "surplus" | "cashedOut" | "short" | "unknown";
 
 export interface AccountParity extends LedgerAccount {
-  /** What Keryx's books say is still sitting in the Gateway: paid − withdrawn. */
+  /** What Keryx's books say should still be in the Gateway: paid − withdrawn. */
   owedUsdc: number;
   /** What Circle says it holds (available + in-flight batch). Null when unreachable. */
   heldUsdc: number | null;
-  /** held − owed. Positive is the creator's surplus; negative is our shortfall. */
+  /** Plain USDC in the wallet itself. Only read for accounts the Gateway came up short on. */
+  onchainUsdc?: number | null;
+  /** held − owed. Positive is the creator's surplus; negative is a Gateway shortfall. */
   deltaUsdc: number | null;
   /** How far held may sit below owed before it counts: withdraw fees + dust. */
   toleranceUsdc: number;
@@ -82,6 +93,8 @@ export interface SettlementParityReport {
   owedUsdc: number;
   /** Circle-confirmed total across the wallets that answered. */
   confirmedUsdc: number;
+  /** Claims the Gateway no longer holds because the creator moved the money to their own wallet. */
+  cashedOutUsdc: number;
   counts: Record<AccountVerdict, number>;
   /** Shortfalls only, worst first — what the watchdog alerts on. */
   issues: AccountParity[];
@@ -94,20 +107,39 @@ function round6(n: number): number {
   return Math.round(n * 1e6) / 1e6;
 }
 
-/** Reconcile one wallet. Pure — the caller does the I/O and hands both numbers in. */
-export function reconcileAccount(account: LedgerAccount, held: number | null): AccountParity {
+/**
+ * Reconcile one wallet. Pure — the caller does the I/O and hands the numbers in.
+ *
+ * `onchain` is optional and only worth reading for a wallet the Gateway came up short on: it
+ * answers "did this money leave the Gateway *to its owner*?", which in a non-custodial product is
+ * the ordinary explanation. A creator can cash out through this app, Circle's CLI, or anything
+ * else that signs for their wallet, and only the first of those leaves a row in Keryx's books.
+ */
+export function reconcileAccount(
+  account: LedgerAccount,
+  held: number | null,
+  onchain?: number | null,
+): AccountParity {
   const owedUsdc = round6(account.paidUsdc - account.withdrawnUsdc);
   const toleranceUsdc = round6(account.withdrawCount * WITHDRAW_FEE_USDC + DUST_USDC);
+  const base = { ...account, owedUsdc, toleranceUsdc, ...(onchain === undefined ? {} : { onchainUsdc: onchain }) };
 
   if (held === null) {
-    return { ...account, owedUsdc, heldUsdc: null, deltaUsdc: null, toleranceUsdc, verdict: "unknown" };
+    return { ...base, heldUsdc: null, deltaUsdc: null, verdict: "unknown" };
   }
 
   const deltaUsdc = round6(held - owedUsdc);
-  const verdict: AccountVerdict =
+  let verdict: AccountVerdict =
     deltaUsdc < -toleranceUsdc ? "short" : deltaUsdc > toleranceUsdc ? "surplus" : "confirmed";
 
-  return { ...account, owedUsdc, heldUsdc: round6(held), deltaUsdc, toleranceUsdc, verdict };
+  // Gateway plus wallet is the whole of what a payout could have become. If together they cover
+  // the claim, nothing is missing — the creator simply moved their own money somewhere Keryx
+  // does not book. Only a gap that survives both readings is a finding.
+  if (verdict === "short" && typeof onchain === "number" && held + onchain >= owedUsdc - toleranceUsdc) {
+    verdict = "cashedOut";
+  }
+
+  return { ...base, heldUsdc: round6(held), deltaUsdc, verdict };
 }
 
 /**
@@ -120,22 +152,41 @@ export function reconcileSettlement(
   ledger: LedgerAccount[],
   held: HeldBalances,
   checkedAt: string,
+  onchain: HeldBalances = new Map(),
 ): SettlementParityReport {
   const accounts = ledger
     .filter((a) => a.paidUsdc - a.withdrawnUsdc > DUST_USDC)
-    .map((a) => reconcileAccount(a, held.get(a.address.toLowerCase()) ?? null))
+    .map((a) => {
+      const key = a.address.toLowerCase();
+      // `has` rather than `??`: an address the caller looked up and got no answer for is a known
+      // unknown, and must not be confused with one that was never worth looking up.
+      return reconcileAccount(
+        a,
+        held.get(key) ?? null,
+        onchain.has(key) ? onchain.get(key) : undefined,
+      );
+    })
     .sort((a, b) => b.owedUsdc - a.owedUsdc);
 
-  const counts: Record<AccountVerdict, number> = { confirmed: 0, surplus: 0, short: 0, unknown: 0 };
+  const counts: Record<AccountVerdict, number> = {
+    confirmed: 0,
+    surplus: 0,
+    cashedOut: 0,
+    short: 0,
+    unknown: 0,
+  };
   let owedUsdc = 0;
   let confirmedUsdc = 0;
+  let cashedOutUsdc = 0;
   for (const a of accounts) {
     counts[a.verdict] += 1;
     owedUsdc += a.owedUsdc;
-    // Only balances Circle actually answered for count as confirmed, and a wallet is credited
-    // with what it is owed, not its surplus — this figure means "independently backed", so it
-    // must never exceed the claim it is backing.
-    if (a.heldUsdc !== null && a.verdict !== "short") confirmedUsdc += a.owedUsdc;
+    // A wallet is credited with what it is owed, never its surplus — this figure means
+    // "independently backed", so it must not exceed the claim it backs. Cash-outs are counted
+    // apart: that money is accounted for, but it is the wallet holding it now, not the Gateway,
+    // and folding the two would overstate what Circle actually confirmed.
+    if (a.verdict === "confirmed" || a.verdict === "surplus") confirmedUsdc += a.owedUsdc;
+    if (a.verdict === "cashedOut") cashedOutUsdc += a.owedUsdc;
   }
 
   return {
@@ -143,6 +194,7 @@ export function reconcileSettlement(
     accounts,
     owedUsdc: round6(owedUsdc),
     confirmedUsdc: round6(confirmedUsdc),
+    cashedOutUsdc: round6(cashedOutUsdc),
     counts,
     issues: accounts
       .filter((a) => a.verdict === "short")
@@ -155,9 +207,17 @@ export interface SettlementParitySummary {
   checkedAt: string;
   owedUsdc: number;
   confirmedUsdc: number;
+  cashedOutUsdc: number;
   counts: Record<AccountVerdict, number>;
   /** Per wallet, so a creator page can show Circle's own figure for its address. */
-  accounts: { address: string; label?: string; owedUsdc: number; heldUsdc: number | null; verdict: AccountVerdict }[];
+  accounts: {
+    address: string;
+    label?: string;
+    owedUsdc: number;
+    heldUsdc: number | null;
+    onchainUsdc?: number | null;
+    verdict: AccountVerdict;
+  }[];
 }
 
 export function summarizeSettlement(report: SettlementParityReport): SettlementParitySummary {
@@ -165,12 +225,14 @@ export function summarizeSettlement(report: SettlementParityReport): SettlementP
     checkedAt: report.checkedAt,
     owedUsdc: report.owedUsdc,
     confirmedUsdc: report.confirmedUsdc,
+    cashedOutUsdc: report.cashedOutUsdc,
     counts: report.counts,
     accounts: report.accounts.map((a) => ({
       address: a.address,
       ...(a.label ? { label: a.label } : {}),
       owedUsdc: a.owedUsdc,
       heldUsdc: a.heldUsdc,
+      ...(a.onchainUsdc === undefined ? {} : { onchainUsdc: a.onchainUsdc }),
       verdict: a.verdict,
     })),
   };

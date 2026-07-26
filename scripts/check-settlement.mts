@@ -12,6 +12,11 @@
  * it and be paid into it by any other x402 service — so holding more than Keryx accounts for is
  * expected and silent. Holding less is the one direction that means Keryx overstated a payout.
  *
+ * Being their own account also means they can empty it without telling us, so a wallet that comes
+ * up short gets a second reading: its plain on-chain USDC balance. Money that merely moved from the
+ * Gateway to its owner is still accounted for and is reported as a cash-out, not a discrepancy.
+ * Only a gap that survives both readings is worth waking anyone for.
+ *
  * Run:  npm run check-settlement    (wired hourly via cron in deploy-vps.sh)
  * Exit: 0 parity holds · 1 a wallet is short (alert fired) · 2 the check itself failed
  * Env:  KERYX_ALERT_WEBHOOK — Discord/Slack webhook for the alert (optional; logs regardless)
@@ -19,6 +24,7 @@
 
 import { getDb } from "../lib/db/index.ts";
 import { getGatewayHeldUsdc } from "../lib/gateway/gateway-balance.ts";
+import { getOnchainUsdcBalances } from "../lib/gateway/onchain-usdc-balance.ts";
 import { sendAlert } from "../lib/notify/alert.ts";
 import {
   labelAccounts,
@@ -41,17 +47,34 @@ async function main(): Promise<void> {
     return;
   }
 
-  const held = await getGatewayHeldUsdc(ledger.map((a) => a.address));
-  const report = reconcileSettlement(labelAccounts(ledger, sources), held, new Date().toISOString());
+  const labelled = labelAccounts(ledger, sources);
+  const held = await getGatewayHeldUsdc(labelled.map((a) => a.address));
+  const checkedAt = new Date().toISOString();
 
+  // Second reading, for the shortfalls only: a Gateway balance is the creator's own account, so
+  // money that left it has usually just moved to their wallet — through Circle's CLI or any other
+  // tool that signs for them, none of which write a row here. Reading the chain for those few
+  // addresses separates "the creator cashed out" from "Keryx overstated a payout".
+  const firstPass = reconcileSettlement(labelled, held, checkedAt);
+  const onchain =
+    firstPass.issues.length > 0
+      ? await getOnchainUsdcBalances(firstPass.issues.map((a) => a.address))
+      : new Map<string, number | null>();
+  const report = reconcileSettlement(labelled, held, checkedAt, onchain);
+
+  const cashed =
+    report.cashedOutUsdc > 0
+      ? `; ${usd(report.cashedOutUsdc)} already cashed out to creators' own wallets`
+      : "";
   console.log(
-    `[settlement] ${report.accounts.length} wallet(s) with a live claim — ledger says ${usd(report.owedUsdc)} still held; Circle confirms ${usd(report.confirmedUsdc)}.`,
+    `[settlement] ${report.accounts.length} wallet(s) with a live claim — ledger says ${usd(report.owedUsdc)} still held; Circle confirms ${usd(report.confirmedUsdc)}${cashed}.`,
   );
   for (const a of report.accounts) {
     const label = a.label ?? a.address;
     const heldStr = a.heldUsdc === null ? "unanswered" : usd(a.heldUsdc);
+    const chain = typeof a.onchainUsdc === "number" ? ` · wallet ${usd(a.onchainUsdc)}` : "";
     console.log(
-      `  ${a.verdict.padEnd(9)} ${label.slice(0, 42).padEnd(42)} claim ${usd(a.owedUsdc).padStart(11)} · gateway ${heldStr}`,
+      `  ${a.verdict.padEnd(9)} ${label.slice(0, 42).padEnd(42)} claim ${usd(a.owedUsdc).padStart(11)} · gateway ${heldStr}${chain}`,
     );
   }
 
@@ -72,7 +95,9 @@ async function main(): Promise<void> {
   }
 
   if (report.issues.length === 0) {
-    console.log(`[settlement] OK — every answered wallet holds at least what Keryx claims for it.`);
+    console.log(
+      `[settlement] OK — every answered wallet accounts for what Keryx claims, in the Gateway or in the creator's own wallet.`,
+    );
     return;
   }
 
@@ -87,7 +112,7 @@ async function main(): Promise<void> {
     .join(", ");
   await sendAlert(
     `settlement parity short (${report.issues.length} wallet${report.issues.length === 1 ? "" : "s"})`,
-    `Circle's Gateway holds less than the payout ledger claims for: ${worst}. Either a payout was recorded that never settled, or a cash-out left the Gateway without a row — run \`npm run check-settlement\` on the box for the full table.`,
+    `Neither Circle's Gateway nor the wallet itself holds what the payout ledger claims for: ${worst}. A self-service cash-out is already ruled out (the on-chain balance was read too), so this is a payout recorded that never settled — run \`npm run check-settlement\` on the box for the full table.`,
   );
   process.exitCode = 1;
 }

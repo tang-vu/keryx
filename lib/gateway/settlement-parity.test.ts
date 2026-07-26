@@ -56,6 +56,24 @@ describe("reconcileAccount", () => {
     expect(r.deltaUsdc).toBeCloseTo(-0.305, 6);
   });
 
+  it("reads a gap the creator's own wallet covers as a cash-out, not a discrepancy", () => {
+    // Production's first run: two creators were short in the Gateway and holding exactly that
+    // money on-chain, having moved it themselves through a route Keryx never books.
+    const r = reconcileAccount(account({ paidUsdc: 5.837471 }), 5.791471, 0.05729);
+    expect(r.verdict).toBe("cashedOut");
+    expect(r.onchainUsdc).toBe(0.05729);
+  });
+
+  it("still flags a gap that neither the Gateway nor the wallet covers", () => {
+    const r = reconcileAccount(account({ paidUsdc: 5.837471 }), 5.791471, 0.004);
+    expect(r.verdict).toBe("short");
+  });
+
+  it("does not let an unreadable chain turn a shortfall into a cash-out", () => {
+    expect(reconcileAccount(account(), 0.1, null).verdict).toBe("short");
+    expect(reconcileAccount(account(), 0.1, undefined).verdict).toBe("short");
+  });
+
   it("reads an unanswered address as unknown, never as zero", () => {
     const r = reconcileAccount(account(), null);
     expect(r.verdict).toBe("unknown");
@@ -82,9 +100,27 @@ describe("reconcileSettlement", () => {
       AT,
     );
     expect(report.accounts.map((a) => a.label)).toEqual(["A", "B", "C"]);
-    expect(report.counts).toEqual({ confirmed: 1, surplus: 0, short: 1, unknown: 1 });
+    expect(report.counts).toEqual({ confirmed: 1, surplus: 0, cashedOut: 0, short: 1, unknown: 1 });
     expect(report.owedUsdc).toBe(6);
     expect(report.issues.map((a) => a.label)).toEqual(["B"]);
+  });
+
+  it("keeps cashed-out money out of the Circle-confirmed figure", () => {
+    const report = reconcileSettlement(
+      ledger.slice(0, 2),
+      new Map([
+        ["0xaaa0000000000000000000000000000000000001", 3],
+        ["0xbbb0000000000000000000000000000000000002", 0.5],
+      ]),
+      AT,
+      new Map([["0xbbb0000000000000000000000000000000000002", 1.5]]),
+    );
+    expect(report.counts.cashedOut).toBe(1);
+    // The claim is accounted for, but by the creator's wallet — saying "Circle confirms" it would
+    // credit Circle with money it plainly is not holding.
+    expect(report.confirmedUsdc).toBe(3);
+    expect(report.cashedOutUsdc).toBe(2);
+    expect(report.issues).toHaveLength(0);
   });
 
   it("counts only backed claims as confirmed, and never counts surplus as backing", () => {
@@ -129,6 +165,7 @@ describe("summarizeSettlement", () => {
       AT,
     );
     const summary = summarizeSettlement(report);
+    expect(summary.cashedOutUsdc).toBe(0);
     expect(summary.accounts).toEqual([
       { address: "0xAAa0000000000000000000000000000000000001", label: "A", owedUsdc: 3, heldUsdc: 3, verdict: "confirmed" },
     ]);

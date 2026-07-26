@@ -19,13 +19,15 @@ export interface SettlementHealth {
   checkedAt: string;
   owedUsdc: number;
   confirmedUsdc: number;
-  counts: { confirmed: number; surplus: number; short: number; unknown: number };
+  cashedOutUsdc: number;
+  counts: { confirmed: number; surplus: number; cashedOut: number; short: number; unknown: number };
   accounts: {
     address: string;
     label?: string;
     owedUsdc: number;
     heldUsdc: number | null;
-    verdict: "confirmed" | "surplus" | "short" | "unknown";
+    onchainUsdc?: number | null;
+    verdict: "confirmed" | "surplus" | "cashedOut" | "short" | "unknown";
   }[];
 }
 
@@ -41,7 +43,9 @@ const usd = (n: number) => `$${n.toFixed(6)}`;
 
 export function SettlementProofSection({ settlement }: { settlement: SettlementHealth }) {
   const { counts, accounts } = settlement;
-  const backed = counts.confirmed + counts.surplus;
+  // "Backed" includes wallets whose money the creator has since moved out to their own address:
+  // the payout is still accounted for, just not by Circle. Only `short` is unaccounted for.
+  const backed = counts.confirmed + counts.surplus + counts.cashedOut;
   const answered = backed + counts.short;
   const top = accounts.slice(0, 8);
 
@@ -61,7 +65,13 @@ export function SettlementProofSection({ settlement }: { settlement: SettlementH
           alert={counts.short > 0}
         />
         <Row k="Ledger claims held" v={usd(settlement.owedUsdc)} />
-        <Row k="Circle confirms" v={usd(settlement.confirmedUsdc)} />
+        <Row
+          k="Circle confirms"
+          v={
+            usd(settlement.confirmedUsdc) +
+            (settlement.cashedOutUsdc > 0 ? ` · ${usd(settlement.cashedOutUsdc)} cashed out` : "")
+          }
+        />
         <Row
           k={counts.unknown > 0 ? "Short · unanswered" : "Short"}
           v={
@@ -96,11 +106,14 @@ export function SettlementProofSection({ settlement }: { settlement: SettlementH
                   </td>
                   <td className="py-1.5 pr-3 text-right tabular-nums text-ink-2">
                     {a.heldUsdc === null ? "—" : usd(a.heldUsdc)}
+                    {a.verdict === "cashedOut" && typeof a.onchainUsdc === "number" && (
+                      <span className="text-faint"> +{usd(a.onchainUsdc)} in wallet</span>
+                    )}
                   </td>
                   <td
                     className={`py-1.5 text-right ${a.verdict === "short" ? "text-destructive" : "text-ink-3"}`}
                   >
-                    {a.verdict}
+                    {a.verdict === "cashedOut" ? "cashed out" : a.verdict}
                   </td>
                 </tr>
               ))}
@@ -112,7 +125,9 @@ export function SettlementProofSection({ settlement }: { settlement: SettlementH
       <p className="mt-3 font-mono text-[10px] leading-relaxed tracking-wide text-faint">
         Gateway settlement leaves no per-payment explorer hash, so every hour Keryx asks Circle what
         it holds for each payee and publishes both numbers. A wallet holding <em>more</em> than
-        Keryx accounts for is the creator&rsquo;s own money and never flags. Check any row yourself:
+        Keryx accounts for is the creator&rsquo;s own money and never flags; one holding less is
+        read against its on-chain balance first, because a creator may cash out by any route they
+        like. Check any row yourself:
       </p>
       <pre className="mt-2 overflow-x-auto border border-line bg-paper-2 p-3 font-mono text-[10px] leading-relaxed text-ink-2">
 {`curl -s https://gateway-api-testnet.circle.com/v1/balances \\
