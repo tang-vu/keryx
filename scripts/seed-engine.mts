@@ -16,6 +16,7 @@ import path from "node:path";
 import { collectRun, getAgentDeps } from "../lib/agent/index.ts";
 import { SEED_QUESTIONS } from "../lib/seed-questions.ts";
 import { generateQuestion } from "../lib/seed-question-generator.ts";
+import { newestContent, pickGapRetry, type RetryCandidate } from "../lib/demand-retry.ts";
 import { availableModels, getReasoningEngine } from "../lib/llm/index.ts";
 import { config } from "../lib/config.ts";
 
@@ -80,6 +81,9 @@ console.log(`   engine: ${getReasoningEngine(forcedModel).name}  ·  mode: ${dep
 if (!forcedModel && altModels.length > 0) {
   console.log(`   alt models: ${altModels.length} available @ ${(config.engineAltModelRatio * 100).toFixed(0)}% of runs`);
 }
+if (config.engineGapRetryRatio > 0) {
+  console.log(`   gap retries: ${(config.engineGapRetryRatio * 100).toFixed(0)}% of runs re-ask an open /wanted claim (when content has arrived since)`);
+}
 console.log(`   budget/query: $${budget}  ·  spend cap: ${limit === Infinity ? "none" : "$" + limit}`);
 console.log(`   ${loop ? "looping until cap" : `${count} queries`}  ·  delay ${delayMs}ms\n`);
 
@@ -92,6 +96,25 @@ if (deps.gateway.mode === "real") {
 // Snapshot the live source registry once — its tags seed the LLM question generator so every
 // query stays on-topic to whatever creators are actually registered.
 const sources = await deps.db.listSources().catch(() => []);
+
+// Some runs re-ask a question the corpus was paid for and left under-covered, rather than asking
+// something new — but only when content has arrived since it failed, so the retry has a real chance
+// of a different answer. The window is read fresh each time: in --loop mode an earlier retry in this
+// same process must be visible, or the loop would re-ask one gap forever.
+const RETRY_WINDOW_RUNS = 200;
+async function pickRetry(): Promise<RetryCandidate | null> {
+  if (Math.random() >= config.engineGapRetryRatio) return null;
+  try {
+    const live = await deps.db.listSources();
+    const arrived = newestContent(
+      await deps.db.newestItemDates(live.map((s) => s.id)),
+      live,
+    );
+    return pickGapRetry(await deps.db.listRecentQueries(RETRY_WINDOW_RUNS), arrived);
+  } catch {
+    return null; // a retry is an optimisation; never let it stop the engine asking something
+  }
+}
 
 let totalSpent = 0;
 let totalPayments = 0;
@@ -111,20 +134,25 @@ async function maybePush(question: string, spent: number, payments: number) {
 }
 
 while ((loop || i < count) && totalSpent < limit) {
-  // LLM-generated, on-topic & effectively non-repeating; the cursor index is the deterministic
+  // Either re-ask a hole the corpus was paid for and missed, or ask something new. New questions
+  // are LLM-generated, on-topic & effectively non-repeating; the cursor index is the deterministic
   // fallback seed used when no Anthropic key is set or generation fails.
-  const question = await generateQuestion(sources, startOffset + i);
+  const retry = await pickRetry();
+  const question = retry ? retry.question : await generateQuestion(sources, startOffset + i);
   const start = Date.now();
   try {
     // Per-run model pick — engine instances are cached, so this is a cheap map lookup.
     const modelId = pickRunModel();
     const runDeps = modelId ? { ...deps, engine: getReasoningEngine(modelId) } : deps;
-    const run = await collectRun({ question, budget, origin: "engine" }, { deps: runDeps });
+    const run = await collectRun(
+      { question, budget, origin: "engine", ...(retry ? { retryOf: retry.queryId } : {}) },
+      { deps: runDeps },
+    );
     totalSpent += run.totalSpent;
     totalPayments += run.citations.length + run.decisions.filter((d) => d.action === "BUY").length;
     const ms = Date.now() - start;
     console.log(
-      `#${String(i + 1).padStart(3)} [$${totalSpent.toFixed(6)}] ${run.decisions.filter((d) => d.action === "BUY").length}b/${run.decisions.filter((d) => d.action === "SKIP").length}s → ${run.citations.length} cite(s) $${run.totalSpent.toFixed(6)} (${ms}ms)${modelId ? `  · ${modelId}` : ""}  «${question.slice(0, 52)}»`,
+      `#${String(i + 1).padStart(3)} [$${totalSpent.toFixed(6)}] ${run.decisions.filter((d) => d.action === "BUY").length}b/${run.decisions.filter((d) => d.action === "SKIP").length}s → ${run.citations.length} cite(s) $${run.totalSpent.toFixed(6)} (${ms}ms)${modelId ? `  · ${modelId}` : ""}${retry ? `  · ↻ retry of ${retry.claim.slice(0, 40)}… (was ${Math.round(retry.coverage * 100)}%)` : ""}  «${question.slice(0, 52)}»`,
     );
     await maybePush(question, run.totalSpent, run.citations.length);
   } catch (err) {

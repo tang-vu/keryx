@@ -22,6 +22,14 @@
  *    difference between "the corpus failed this" and "the agent had not started".
  *  - **Every line keeps its receipt.** Each gap carries the dispatch that produced it, so a reader
  *    can open the trace and check the claim really was left uncovered rather than take our word.
+ *  - **The agent's own repeats are not demand.** Keryx re-asks a failed question once the corpus
+ *    gains content that might answer it (`retryOf`). That retry is a real paid dispatch and it can
+ *    genuinely close a hole — but it is Keryx arriving, not a reader, so it never adds to the
+ *    recurrence count. Otherwise the board would inflate the very holes it chose to re-test.
+ *  - **A hole that got filled is not still open.** A claim later covered by *any* dispatch is
+ *    published as filled rather than left on the wanted list, so nobody writes to a brief that has
+ *    already been served. The filling run must postdate the last failure: coverage can regress, and
+ *    a fill from before the most recent miss proves nothing about today.
  */
 
 import { topicTokens } from "./answers-topics";
@@ -36,10 +44,25 @@ export interface ClaimGap {
   createdAt: string;
 }
 
+/** The dispatch that finally covered a claim the corpus had been missing. */
+export interface GapFill {
+  queryId: string;
+  question: string;
+  coverage: number;
+  createdAt: string;
+  /** True when Keryx re-asked the failed question itself rather than a reader happening to ask. */
+  byRetry: boolean;
+  /** Sources this dispatch paid — the creators whose content closed the hole. */
+  paid: { sourceId: string; sourceName: string; reward: number }[];
+}
+
 /** An under-covered claim as published: worst occurrence, plus how often it has recurred. */
 export interface DemandGap extends ClaimGap {
-  /** Distinct dispatches that finished this same claim under-covered. */
+  /** Distinct dispatches that finished this same claim under-covered. Retries are excluded — the
+   *  agent re-asking itself is not another reader hitting the hole. */
   seen: number;
+  /** Set once a later dispatch covered this claim. Such a gap is reported as filled, not wanted. */
+  filledBy?: GapFill;
 }
 
 export interface DemandOptions {
@@ -121,26 +144,47 @@ function claimKey(claim: string): string {
 }
 
 /**
- * Aggregate a run window into the published board. Claims that say the same thing collapse to one
- * line carrying the worst occurrence and the count — a hole hit by several dispatches is a
- * genuinely recurring one, worth ranking above a one-off.
- *
- * Order: recurrence first, then how badly it was missed, then recency. `runs` may arrive in any
- * order.
+ * Every claim the window under-covered, keyed by meaning, each already resolved to open or filled.
+ * Both published lists are slices of this, so a claim can never appear on both.
  */
-export function buildDemand(runs: QueryRun[], options: DemandOptions = {}): DemandGap[] {
-  const { threshold, limit } = { ...DEFAULTS, ...options };
+function aggregate(runs: QueryRun[], threshold: number): DemandGap[] {
   const byClaim = new Map<string, DemandGap>();
+  /** Newest dispatch that covered each claim key, whether or not it ever failed there. */
+  const covered = new Map<string, GapFill>();
 
   for (const run of runs) {
+    const coverage = finalCoverage(run);
+    // A retry is a real dispatch that buys and pays; it just is not another reader. It can still
+    // fill a hole, so it is read for coverage — only the recurrence count ignores it.
+    const isRetry = Boolean(run.retryOf);
+
+    for (const [claim, value] of coverage) {
+      if (value < threshold || !hasSubstance(claim)) continue;
+      const key = claimKey(claim);
+      const prior = covered.get(key);
+      if (prior && prior.createdAt >= run.createdAt) continue;
+      covered.set(key, {
+        queryId: run.id,
+        question: run.question,
+        coverage: value,
+        createdAt: run.createdAt,
+        byRetry: isRetry,
+        paid: (run.citations ?? []).map((c) => ({
+          sourceId: c.sourceId,
+          sourceName: c.sourceName,
+          reward: c.reward,
+        })),
+      });
+    }
+
     for (const gap of claimGaps(run, threshold)) {
       const key = claimKey(gap.claim);
       const existing = byClaim.get(key);
       if (!existing) {
-        byClaim.set(key, { ...gap, seen: 1 });
+        byClaim.set(key, { ...gap, seen: isRetry ? 0 : 1 });
         continue;
       }
-      existing.seen += 1;
+      if (!isRetry) existing.seen += 1;
       // Keep the worst occurrence whole — its wording, its coverage and its dispatch travel
       // together, so the sentence on the board is the one the linked trace actually assessed.
       // The date is the exception: it always shows the freshest hit, because a creator needs to
@@ -155,10 +199,58 @@ export function buildDemand(runs: QueryRun[], options: DemandOptions = {}): Dema
     }
   }
 
-  return [...byClaim.values()]
-    .sort(
-      (a, b) =>
-        b.seen - a.seen || a.coverage - b.coverage || b.createdAt.localeCompare(a.createdAt),
-    )
-    .slice(0, limit);
+  for (const [key, gap] of byClaim) {
+    const fill = covered.get(key);
+    // Strictly after the last failure. A fill recorded before the most recent miss says the corpus
+    // could answer this once and then stopped — that is a hole, not a fill.
+    if (fill && fill.createdAt > gap.createdAt) gap.filledBy = fill;
+  }
+
+  return [...byClaim.values()];
+}
+
+/**
+ * The wanted list: claims still open. Claims that say the same thing collapse to one line carrying
+ * the worst occurrence and the count — a hole hit by several dispatches is a genuinely recurring
+ * one, worth ranking above a one-off.
+ *
+ * Order: recurrence first, then how badly it was missed, then recency. `runs` may arrive in any
+ * order.
+ */
+export function buildDemand(runs: QueryRun[], options: DemandOptions = {}): DemandGap[] {
+  return buildBoard(runs, options).open;
+}
+
+/**
+ * The other half of the board: holes that closed. Newest fill first, because the point of showing
+ * these is that the loop pays out — demand published, content arrives, the agent comes back and
+ * buys it — and the most recent one is the one that proves the loop still runs.
+ */
+export function buildFilled(runs: QueryRun[], options: DemandOptions = {}): DemandGap[] {
+  return buildBoard(runs, options).filled;
+}
+
+/**
+ * Both lists from one pass. Reading coverage means walking every trace in the window, so the page
+ * that renders open *and* filled asks for them together rather than paying for that twice.
+ */
+export function buildBoard(
+  runs: QueryRun[],
+  options: DemandOptions = {},
+): { open: DemandGap[]; filled: DemandGap[] } {
+  const { threshold, limit } = { ...DEFAULTS, ...options };
+  const all = aggregate(runs, threshold);
+  return {
+    open: all
+      .filter((gap) => !gap.filledBy)
+      .sort(
+        (a, b) =>
+          b.seen - a.seen || a.coverage - b.coverage || b.createdAt.localeCompare(a.createdAt),
+      )
+      .slice(0, limit),
+    filled: all
+      .filter((gap) => gap.filledBy)
+      .sort((a, b) => b.filledBy!.createdAt.localeCompare(a.filledBy!.createdAt))
+      .slice(0, limit),
+  };
 }

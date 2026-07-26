@@ -42,6 +42,9 @@ export interface RunInput {
   /** Catalog model id the asker picked (model-catalog.ts). Read by collectRun when it builds
    *  deps; unknown/unset → default engine. Every pick falls back so the run always answers. */
   model?: string;
+  /** Set when this dispatch re-asks a question the corpus previously left under-covered. Recorded
+   *  on the run so the demand board can tell an independent dispatch from the agent's own retry. */
+  retryOf?: string;
 }
 
 export async function* runAgent(
@@ -547,6 +550,8 @@ export async function* runAgent(
       totalToCreators: totalSpent, // 100% of spend reaches creator wallets
       trace,
       createdAt: new Date().toISOString(),
+      // Only present on a retry, so every other surface keeps reading runs exactly as before.
+      ...(input.retryOf ? { retryOf: input.retryOf } : {}),
       // Early returns (no sources, no purchase) never reach the verdict step — nothing was read,
       // so the honest label is Low rather than an absent field the surfaces would have to guess at.
       confidence: runConfidence ?? { level: "Low", reason: "no source was read for this question" },

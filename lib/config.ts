@@ -106,6 +106,11 @@ export const config = {
   // Kept low on purpose: the Ollama account is rate-limit-billed, so DeepSeek stays
   // the engine's workhorse and the alternates only add provenance variety.
   engineAltModelRatio: Math.min(1, Math.max(0, num(process.env.KERYX_ENGINE_ALT_MODEL_RATIO, 0.1))),
+  // Fraction (0..1) of volume-engine runs that re-ask an open demand-board gap instead of a fresh
+  // question. A retry is a normal paid dispatch — same budget, real settlement — so this trades no
+  // traction away; it spends a slice of the engine's questions on holes the corpus was paid for and
+  // missed. Only fires when content has arrived since the gap failed, so the true rate is lower.
+  engineGapRetryRatio: Math.min(1, Math.max(0, num(process.env.KERYX_ENGINE_GAP_RETRY_RATIO, 0.25))),
 
   // ── App ──
   baseUrl: process.env.BASE_URL ?? "http://localhost:3000",

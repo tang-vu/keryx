@@ -176,6 +176,11 @@ export interface QueryRun {
   /** The dispatch this one follows up on. A follow-up is a full paid dispatch in its own right —
    *  it buys and pays creators again; the parent only supplied the question's context. */
   parentId?: string;
+  /** The under-covered dispatch this one re-asks. A retry is the *same question* put to the corpus
+   *  again after it gained content that might answer it — unlike `parentId`, which carries a
+   *  different, follow-up question. The two are kept apart because the demand board must never read
+   *  the agent's own repeat as a second reader arriving at the same hole. */
+  retryOf?: string;
   /** How confident the agent is in this answer. Absent on runs recorded before it became a field;
    *  deriveConfidence() reconstructs it from the trace's verdict step for those. */
   confidence?: Confidence;

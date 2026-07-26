@@ -14,7 +14,7 @@ import Link from "next/link";
 import { getDb } from "@/lib/db";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
-import { buildDemand, type DemandGap } from "@/lib/demand-signal";
+import { buildBoard, type DemandGap } from "@/lib/demand-signal";
 
 // The window moves with the daemon; a few times an hour is fresh enough for a board people act on
 // over days, and keeps the trace parsing off the request path.
@@ -34,17 +34,17 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION },
 };
 
-async function loadDemand(): Promise<DemandGap[]> {
+async function loadBoard(): Promise<{ open: DemandGap[]; filled: DemandGap[] }> {
   try {
     const db = await getDb();
-    return buildDemand(await db.listRecentQueries(WINDOW_RUNS));
+    return buildBoard(await db.listRecentQueries(WINDOW_RUNS));
   } catch {
-    return []; // a DB hiccup renders the empty state, never a broken board
+    return { open: [], filled: [] }; // a DB hiccup renders the empty state, never a broken board
   }
 }
 
 export default async function WantedPage() {
-  const gaps = await loadDemand();
+  const { open: gaps, filled } = await loadBoard();
 
   return (
     <div className="min-h-screen bg-paper-2">
@@ -109,6 +109,59 @@ export default async function WantedPage() {
               </li>
             ))}
           </ol>
+        )}
+
+        {/* The payoff, and the reason the list above is worth acting on: holes that closed. Keryx
+            re-asks a failed question once content arrives that might answer it, so a creator who
+            lists against an open claim does not have to wait for a reader to happen by. */}
+        {filled.length > 0 && (
+          <section className="mt-14">
+            <h2 className="font-display text-[22px] font-medium tracking-tight text-ink">
+              Filled — and <em className="italic text-paid">paid for.</em>
+            </h2>
+            <p className="mt-2 max-w-[62ch] font-serif text-[15px] leading-[1.55] text-ink-2">
+              Claims the corpus was missing and now covers. When something new lands that might
+              answer an open claim, Keryx puts the question again — a real dispatch, buying the new
+              material and paying whoever wrote it.
+            </p>
+
+            <ol className="mt-6 flex flex-col gap-3">
+              {filled.map((gap) => {
+                const fill = gap.filledBy!;
+                const total = fill.paid.reduce((s, p) => s + p.reward, 0);
+                return (
+                  <li key={gap.claim} className="border border-line bg-paper p-4">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-paid">
+                        {Math.round(gap.coverage * 100)}% → {Math.round(fill.coverage * 100)}% covered
+                        {fill.byRetry && <> · re-asked by Keryx</>}
+                      </span>
+                      <span className="shrink-0 font-mono text-[10px] text-ink-3">
+                        {new Date(fill.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+
+                    <p className="mt-2 font-serif text-[15px] leading-snug text-ink">{gap.claim}</p>
+
+                    <p className="mt-2 font-mono text-[10.5px] leading-relaxed text-ink-3">
+                      {fill.paid.length > 0 ? (
+                        <>
+                          paid {fill.paid.map((p) => p.sourceName).join(", ")} $
+                          {total.toFixed(6)} ·{" "}
+                        </>
+                      ) : null}
+                      <Link
+                        href={`/dispatch/${fill.queryId}`}
+                        className="underline underline-offset-4 transition-colors hover:text-seal"
+                      >
+                        closed by this dispatch
+                      </Link>
+                    </p>
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
         )}
 
         <div className="mt-12 border-t border-ink pt-6">

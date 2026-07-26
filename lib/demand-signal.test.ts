@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { buildDemand, claimGaps, finalCoverage } from "./demand-signal";
+import { buildBoard, buildDemand, buildFilled, claimGaps, finalCoverage } from "./demand-signal";
 import type { QueryRun, TraceStep } from "./types";
 
 function step(phase: TraceStep["phase"], detail: unknown): TraceStep {
@@ -157,5 +157,86 @@ describe("buildDemand", () => {
 
   it("is empty when the corpus covered everything it was asked", () => {
     expect(buildDemand([run("r1", [suf([["USDC settles on Arc", 0.9]])])])).toEqual([]);
+  });
+});
+
+const DAY = (n: number) => `2026-07-${String(n).padStart(2, "0")}T00:00:00.000Z`;
+const CLAIM = "Gateway batches sub-cent tolls";
+
+describe("retries are not demand", () => {
+  it("does not count the agent re-asking itself as another reader hitting the hole", () => {
+    const reader = run("r1", [suf([[CLAIM, 0.2]])], { createdAt: DAY(10) });
+    const retry = run("r2", [suf([[CLAIM, 0.2]])], {
+      createdAt: DAY(12),
+      question: "question r1",
+      retryOf: "r1",
+    });
+    const [gap] = buildDemand([reader, retry]);
+    expect(gap.seen).toBe(1); // two dispatches missed it; only one of them was demand
+    expect(gap.createdAt).toBe(DAY(12)); // but the hole is still open as of the retry
+  });
+
+  it("still lets a retry close the hole it was sent to close", () => {
+    const reader = run("r1", [suf([[CLAIM, 0.2]])], { createdAt: DAY(10) });
+    const retry = run("r2", [suf([[CLAIM, 0.85]])], {
+      createdAt: DAY(12),
+      question: "question r1",
+      retryOf: "r1",
+    });
+    expect(buildDemand([reader, retry])).toEqual([]);
+    const [filled] = buildFilled([reader, retry]);
+    expect(filled.filledBy).toMatchObject({ queryId: "r2", byRetry: true, coverage: 0.85 });
+  });
+});
+
+describe("filled gaps", () => {
+  const paid = [
+    { marker: "S1", sourceId: "s1", sourceName: "Conzit", weight: 1, reward: 0.002, rationale: "" },
+  ];
+
+  it("publishes who got paid for closing it", () => {
+    const missed = run("r1", [suf([[CLAIM, 0.1]])], { createdAt: DAY(10) });
+    const covered = run("r2", [suf([[CLAIM, 0.9]])], { createdAt: DAY(12), citations: paid });
+    expect(buildFilled([missed, covered])[0].filledBy).toMatchObject({
+      queryId: "r2",
+      byRetry: false, // a reader happened to ask; the corpus had gained the answer either way
+      paid: [{ sourceId: "s1", sourceName: "Conzit", reward: 0.002 }],
+    });
+  });
+
+  it("does not call a hole filled by coverage that predates the last miss", () => {
+    // The corpus could answer this once and then stopped — a regression, not a fill.
+    const covered = run("r1", [suf([[CLAIM, 0.9]])], { createdAt: DAY(10) });
+    const missed = run("r2", [suf([[CLAIM, 0.1]])], { createdAt: DAY(12) });
+    expect(buildDemand([covered, missed]).map((g) => g.claim)).toEqual([CLAIM]);
+    expect(buildFilled([covered, missed])).toEqual([]);
+  });
+
+  it("credits the fill to the newest dispatch that covered it", () => {
+    const missed = run("r1", [suf([[CLAIM, 0.1]])], { createdAt: DAY(10) });
+    const first = run("r2", [suf([[CLAIM, 0.7]])], { createdAt: DAY(11) });
+    const latest = run("r3", [suf([[CLAIM, 0.8]])], { createdAt: DAY(13) });
+    expect(buildFilled([missed, first, latest])[0].filledBy?.queryId).toBe("r3");
+  });
+
+  it("matches a fill to the hole even when the claim was phrased differently", () => {
+    const missed = run("r1", [suf([["CCTP moves USDC between domains by burn and mint.", 0.1]])], {
+      createdAt: DAY(10),
+    });
+    const covered = run("r2", [suf([["CCTP moves USDC across domains by burn and mint.", 0.9]])], {
+      createdAt: DAY(12),
+    });
+    expect(buildDemand([missed, covered])).toEqual([]);
+    expect(buildFilled([missed, covered])).toHaveLength(1);
+  });
+
+  it("keeps a claim off both lists at once", () => {
+    const missed = run("r1", [suf([[CLAIM, 0.1], ["Arc finality under one second", 0.2]])], {
+      createdAt: DAY(10),
+    });
+    const covered = run("r2", [suf([[CLAIM, 0.9]])], { createdAt: DAY(12) });
+    const board = buildBoard([missed, covered]);
+    expect(board.open.map((g) => g.claim)).toEqual(["Arc finality under one second"]);
+    expect(board.filled.map((g) => g.claim)).toEqual([CLAIM]);
   });
 });

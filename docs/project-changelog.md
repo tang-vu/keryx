@@ -9,6 +9,32 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### The demand board pays out: Keryx re-asks what it missed (2026-07-26)
+[`/wanted`](https://keryx.cc/wanted) published the holes; a board nobody returns to is a wishlist.
+Now the agent goes back. A slice of volume-engine runs (`KERYX_ENGINE_GAP_RETRY_RATIO`, default 25%)
+re-asks a question the corpus was paid for and left under-covered — a full dispatch at the normal
+budget, buying whatever is new and paying whoever wrote it — so a creator who lists a feed against an
+open claim does not have to wait for a reader to happen by. Two lists now: what is still wanted, and
+what got **filled**, each filled row naming the sources that dispatch paid and linking the trace.
+Everything hard here is in the guards, because a retry costs real USDC. It fires only when content
+has arrived since that question failed — and "arrived" had to mean two things, not one: a new post
+shows up as a publication date, but a *newly listed source* does not, since an established blog's
+posts are all back-dated, so registration day counts too. That was the case the whole feature exists
+to serve and the naive version would have missed it entirely. Dates after now are ignored, because
+feeds do stamp items ahead of time and one such item would sit above every dispatch forever, making
+every gap permanently retryable. A retry that fails pushes the gap's own date past the content, and
+one that succeeds takes it off the open list, so a gap stops being eligible on its own either way —
+except when the retry measures *nothing* (heuristic fallback, truncated reply), which records neither
+and would have let the engine re-ask that one question every tick for as long as the reasoning
+provider stayed down; a retry ledger keyed on the question text closes that. The honesty rule that
+matters most: **a retry is not demand.** It is a real paid dispatch and it can genuinely close a
+hole, but it is Keryx arriving, not a reader, so it never adds to the recurrence count — otherwise
+the board would inflate the very holes it chose to re-test, and the "asked 11×" that makes a claim
+worth writing about would partly be the agent talking to itself. Filled requires the covering
+dispatch to postdate the *last* miss: coverage regresses, and a fill from before the most recent
+failure proves nothing about today. Also in `GET /api/wanted` as `filled` (OpenAPI updated).
+`lib/demand-retry.ts`, `lib/demand-signal.ts`, 35 tests.
+
 ### The corpus now publishes what it could not answer (2026-07-26)
 Keryx knows something a search engine does not: not what people looked for, but what they **spent
 money on and did not get**. Every dispatch breaks its question into sub-claims and scores, per claim,

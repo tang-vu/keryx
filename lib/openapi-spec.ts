@@ -455,7 +455,9 @@ export const openapiSpec = {
           "Sub-claims that real paid dispatches finished below the coverage threshold — demand " +
           "the corpus could not serve, each carrying the dispatch id that proves it. Identical " +
           "claims across dispatches collapse to one entry with `seen`. Public, no auth. Runs " +
-          "that recorded no coverage assessment are skipped entirely rather than counted as gaps.",
+          "that recorded no coverage assessment are skipped entirely rather than counted as gaps, " +
+          "and Keryx's own retries of a failed question never add to `seen`. `filled` carries " +
+          "claims a later dispatch went on to cover, each with the sources that dispatch paid.",
         parameters: [
           {
             in: "query",
@@ -465,7 +467,11 @@ export const openapiSpec = {
           },
         ],
         responses: {
-          "200": { description: "{ windowRuns, gaps: [{ claim, coverage, seen, queryId, question, createdAt }] }" },
+          "200": {
+            description:
+              "{ windowRuns, gaps: [{ claim, coverage, seen, queryId, question, createdAt }], " +
+              "filled: [{ claim, coverage, filledBy: { queryId, question, coverage, createdAt, byRetry, paid } }] }",
+          },
           "503": { description: "Demand board temporarily unavailable." },
         },
       },
