@@ -3,7 +3,7 @@
  * This is the "show me the agent's reasoning logs" view.
  *
  * Usage: npm run ask -- "How do x402 and stablecoins enable AI agent commerce?" --budget 0.05
- *        npm run ask -- "…" --model glm-5.2      (catalog id; see lib/llm/model-catalog.ts)
+ *        npm run ask -- "…" --model deepseek-v4-pro   (catalog id; see lib/llm/model-catalog.ts)
  */
 
 import { collectRun } from "../lib/agent/index.ts";
