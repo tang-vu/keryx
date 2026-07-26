@@ -27,6 +27,10 @@ const tiers = {
   // Owner-triggered feed refresh, keyed by SOURCE id (not caller): each call is an outbound
   // fetch of the creator's feed host, and hammering a third-party blog is the thing to stop.
   feedRefresh: 2,
+  // Anonymous "check my feed against the demand board", keyed by IP. Every call makes this server
+  // fetch an address the caller chose, so it is deliberately tighter than the public read tier —
+  // room to try a handful of feeds, none to sweep a network through us.
+  feedProbe: 6,
 } as const;
 
 export type RateLimitTier = keyof typeof tiers;

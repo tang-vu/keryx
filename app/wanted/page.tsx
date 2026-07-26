@@ -14,6 +14,7 @@ import Link from "next/link";
 import { getDb } from "@/lib/db";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
+import { FeedMatchForm } from "@/components/keryx/feed-match-form";
 import { buildBoard, type DemandGap } from "@/lib/demand-signal";
 
 // The window moves with the daemon; a few times an hour is fresh enough for a board people act on
@@ -110,6 +111,11 @@ export default async function WantedPage() {
             ))}
           </ol>
         )}
+
+        {/* Reading the list above and guessing which line is yours is the work this page used to
+            leave to the reader. With an empty board there is nothing to check against, so the tool
+            only appears when there is. */}
+        {gaps.length > 0 && <FeedMatchForm />}
 
         {/* The payoff, and the reason the list above is worth acting on: holes that closed. Keryx
             re-asks a failed question once content arrives that might answer it, so a creator who

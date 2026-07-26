@@ -9,6 +9,42 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### "Would Keryx buy your feed?" — the demand board answers back (2026-07-26)
+[`/wanted`](https://keryx.cc/wanted) tells a writer what the corpus is missing and then leaves them
+to work out whether any of it is theirs. Now they can ask: paste an RSS URL and the agent reads the
+feed and returns the same verdict it would give the source on the money path — **BUY or SKIP**, its
+own rationale, and the open claims it expects the posts to address. No wallet, no signature, nothing
+stored; the feed is read for the length of one request. `POST /api/wanted/match`.
+Getting to an honest answer took discarding two that looked right. **Word overlap** between claims
+and posts, measured against the live board and eight real feeds, produced its best pairs by matching
+*"Caching reduces bandwidth and latency costs"* to a post about a Philippine bank's stablecoin pilot:
+shared vocabulary between a ten-word claim and a 280-character summary is not evidence, and no
+threshold separates the two — strict returns nothing, loose returns nonsense. Then **asking whether
+the previews *support* the claims** (the `sufficiency` step the board is built from): the model
+answered honestly and answered 0.2 to everything, including for a feed that genuinely covers the
+subject, because a title and a summary never support anything — that is the entire reason the agent
+pays for the full text. The question that works is the one the agent actually asks about a source it
+has not read: `decide`. The feed is presented exactly as discovery presents a listed source (four
+recent items, `- title: summary`), which surfaced a bias worth recording — an earlier cut labelled the
+candidate *"Unlisted RSS feed"* in its description, and the agent duly held that against it in its
+rationale, a penalty this check had invented for a fact the money path never sees. It now carries the
+feed's own blurb, and the verdicts sharpened accordingly: an on-topic feed goes BUY at 0.9 expected
+value naming x402 and per-citation settlement, general crypto news goes SKIP *"none of the subClaims
+about CCTP, EIP-712, sub-cent USDC"*. Two guards on what gets shown: claim indexes outside the list
+are dropped (a hallucinated one would put a stranger's claim in front of a writer as their own), and
+a target list covering more than half the board is dropped whole — offered forty claims production
+named thirty-six, which is the agent saying "broadly relevant", not "these ones", and printing it as
+a shortlist would send someone off to work on all of it.
+Because the caller now picks an address this server connects to, `lib/net/public-fetch.ts` resolves
+every hop before the socket opens and refuses loopback, RFC-1918, link-local (`169.254.169.254` is
+the reason this exists), CGNAT and their IPv6 equivalents, checking *every* address a name answers
+with rather than the first, and unwrapping IPv4-mapped IPv6. Its one residual is stated in the file:
+a record that changes between our lookup and the socket's is not stopped by this. Rate limit is a new
+IP-keyed tier (6/min), tighter than public reads because each call is both an outbound fetch and a
+reasoning call. A verdict reached without a model is labelled *word overlap (reasoning offline)*
+rather than dressed up as the agent's. `/register?rss=` prefills the feed, so a verdict leads
+straight into listing. 441 tests.
+
 ### The model picker no longer offers models it cannot serve (2026-07-26)
 The hourly reasoning watchdog reported 7 of 8 models returning 403 — not a bad key, a dead account:
 three said *"your subscription payment is past due"*, four *"this model requires a subscription"*. From

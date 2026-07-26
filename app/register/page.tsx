@@ -46,19 +46,22 @@ export default function RegisterPage() {
   // the single form, so a claim always snaps back to that tab.
   const [mode, setMode] = useState<"single" | "bulk">("single");
 
-  // Deep-link prefill (e.g. the browser extension's "list this page as a paid source"): read
-  // ?url= / ?name= / ?desc= from the address bar and seed the manual register fields. Parsed from
-  // window.location on mount (client-only) so the page needs no Suspense boundary for useSearchParams.
+  // Deep-link prefill: ?url= / ?name= / ?desc= seed the manual fields (the browser extension's
+  // "list this page as a paid source"), ?rss= seeds the feed field (the demand board's feed check,
+  // which arrives having already read that feed). Parsed from window.location on mount
+  // (client-only) so the page needs no Suspense boundary for useSearchParams.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const url = params.get("url")?.trim();
     const name = params.get("name")?.trim();
     const description = params.get("desc")?.trim();
-    if (!url && !name) return;
+    const rssUrl = params.get("rss")?.trim();
+    if (!url && !name && !rssUrl) return;
     setPrefill({
       ...(url ? { url } : {}),
       ...(name ? { name } : {}),
       ...(description ? { description } : {}),
+      ...(rssUrl ? { rssUrl } : {}),
     });
     setFormKey((k) => k + 1);
     setMode("single");

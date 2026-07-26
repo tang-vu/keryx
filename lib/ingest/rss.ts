@@ -40,7 +40,23 @@ export interface IngestedFeed {
 }
 
 export async function ingestRss(rssUrl: string, max = 10): Promise<IngestedFeed> {
-  const feed = await parser.parseURL(rssUrl);
+  return toIngestedFeed(await parser.parseURL(rssUrl), rssUrl, max);
+}
+
+/**
+ * The same read, from XML already in hand.
+ *
+ * The public feed check fetches the file itself — it has to, because a URL a stranger typed needs
+ * every redirect hop vetted before the socket opens (`lib/net/public-fetch.ts`), which a parser
+ * that owns its own transport cannot do. Parsing is identical either way, so it lives in one place.
+ */
+export async function ingestRssXml(xml: string, rssUrl: string, max = 10): Promise<IngestedFeed> {
+  return toIngestedFeed(await parser.parseString(xml), rssUrl, max);
+}
+
+type ParsedFeed = Awaited<ReturnType<typeof parser.parseString>>;
+
+function toIngestedFeed(feed: ParsedFeed, rssUrl: string, max: number): IngestedFeed {
   const items = (feed.items ?? []).slice(0, max).map((it) => {
     const full = stripHtml(
       (it as { "content:encoded"?: string })["content:encoded"] ??
