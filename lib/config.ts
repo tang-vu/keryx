@@ -96,6 +96,11 @@ export const config = {
   llmBaseUrl: process.env.KERYX_LLM_BASE_URL ?? "https://api.deepseek.com",
   llmModel: process.env.KERYX_LLM_MODEL ?? "deepseek-v4-flash",
   synthesisModel: process.env.KERYX_SYNTHESIS_MODEL ?? "deepseek-v4-flash",
+  // Xiaomi MiMo — a second picker tier on its own credential, OpenAI-compatible. Never the default:
+  // the default tier is the one every other pick falls back to, and that stays on one provider.
+  // The base URL carries /v1 (DeepSeek's does not); the engine appends /chat/completions to it.
+  mimoKey: process.env.MIMO_API_KEY ?? "",
+  mimoBaseUrl: process.env.KERYX_MIMO_BASE_URL ?? "https://api.xiaomimimo.com/v1",
   // Fraction (0..1) of volume-engine runs that use a non-default catalog model (currently V4 Pro)
   // rather than the workhorse. Kept low: Pro is slower and the engine's job is steady volume, so
   // the alternates only add provenance variety.

@@ -53,16 +53,26 @@ describe("model catalog", () => {
   });
 
   /** Wire names must be exactly what the provider publishes — a near-miss tag 404s and falls back
-   *  to a weaker tier while every log still names the model the asker picked. Both are served by
-   *  DeepSeek's own API; `curl https://api.deepseek.com/models` is the check. */
-  it("carries the provider's exact wire names", () => {
+   *  to a weaker tier while every log still names the model the asker picked. Verified against each
+   *  provider's own list: `curl https://api.deepseek.com/models`,
+   *  `curl https://api.xiaomimimo.com/v1/models`. */
+  it("carries each provider's exact wire names", () => {
     expect(findModelChoice(DEFAULT_MODEL_ID)?.model).toBe("deepseek-v4-flash");
     expect(findModelChoice("deepseek-v4-pro")?.model).toBe("deepseek-v4-pro");
+    expect(findModelChoice("mimo-v2.5")?.model).toBe("mimo-v2.5");
+    expect(findModelChoice("mimo-v2.5-pro")?.model).toBe("mimo-v2.5-pro");
   });
 
-  /** Every entry must be reachable with the one DeepSeek key. An entry needing a credential the box
-   *  does not have is a picker option that answers only by silently degrading. */
-  it("serves every catalog entry from the DeepSeek provider", () => {
-    expect(MODEL_CATALOG.every((m) => m.provider === "deepseek")).toBe(true);
+  /** Every entry must name a provider `provider-endpoints.ts` can resolve. An entry pointing at a
+   *  provider nothing knows how to reach is a picker option that answers only by degrading. */
+  it("names a known provider on every entry", () => {
+    const known = new Set(["deepseek", "mimo"]);
+    expect(MODEL_CATALOG.every((m) => known.has(m.provider))).toBe(true);
+  });
+
+  /** The default is the tier every other pick falls back onto, so it must never be the one whose
+   *  credential is optional. */
+  it("keeps the default on the provider the box is built around", () => {
+    expect(findModelChoice(DEFAULT_MODEL_ID)?.provider).toBe("deepseek");
   });
 });

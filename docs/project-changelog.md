@@ -9,6 +9,29 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### A second house in the picker: Xiaomi MiMo (2026-07-26)
+`keryx:mimo-v2.5` and `keryx:mimo-v2.5-pro` join the catalog — the first models here served by a
+provider other than DeepSeek, on their own credential
+([`https://api.xiaomimimo.com/v1`](https://mimo.mi.com/docs/en-US/api/chat/openai-api),
+OpenAI-compatible, JSON mode confirmed against both wire names before a line was written). Verified
+end to end, not just credentialed: a real dispatch on V2.5 Pro ran the whole chain — decompose,
+decide, re-evaluate, synthesize, attribute — and recorded itself as `llm:mimo:mimo-v2.5-pro`, the
+label the resilience layer only grants when that model actually served every step.
+Adding a provider meant first removing the assumption that there was only one. DeepSeek's key and
+host were written out in three places — the picker's availability filter, the engine builder, and
+the hourly watchdog — so a second provider would have had to be added to all three, and whichever
+one got missed would have failed exactly the way this codebase least wants: silently, by answering
+from a working model while every log kept naming the one the asker picked. They now share
+`lib/llm/provider-endpoints.ts`, whose null-for-uncredentialed result is what keeps the picker
+honest: a model the box has no key for is never offered rather than offered and quietly degraded.
+Two consequences fall out of doing it properly. A non-default pick now falls back to *this box's*
+default chain rather than to DeepSeek by name, so a deployment credentialed for one provider only
+still degrades to something it can actually reach. And the watchdog probes each model through its
+own provider's credentials — probing all four with one key is precisely how a second provider's
+outage would have looked like a healthy box. `npm run check-llm` → 4/4 answering. The default stays
+DeepSeek Flash: it is the tier every other pick falls back onto, and that is not a job for the
+credential that is optional. 447 tests.
+
 ### "Would Keryx buy your feed?" — the demand board answers back (2026-07-26)
 [`/wanted`](https://keryx.cc/wanted) tells a writer what the corpus is missing and then leaves them
 to work out whether any of it is theirs. Now they can ask: paste an RSS URL and the agent reads the

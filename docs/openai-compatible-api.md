@@ -6,7 +6,8 @@ citation reward to every creator it cites, on Arc testnet.
 
 - **Base URL:** `https://keryx.cc/api/v1`
 - **Model:** `keryx` (default), or pick a reasoning model chat-app style with
-  `keryx:<id>` — currently `keryx:deepseek-flash` (workhorse) and `keryx:deepseek-v4-pro`.
+  `keryx:<id>` — currently `keryx:deepseek-flash` (workhorse), `keryx:deepseek-v4-pro`,
+  `keryx:mimo-v2.5` and `keryx:mimo-v2.5-pro` (Xiaomi MiMo, added 2026-07-26).
   `GET /api/v1/models` lists what's live. Unknown ids run the default, and any pick that
   errors mid-run falls back to Flash (then the offline heuristic) — an ask always answers.
   The open-weight options served through Ollama Cloud (`glm-5.2`, `qwen3.5-397b`, `gemma4`,

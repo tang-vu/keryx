@@ -9,11 +9,12 @@
  *
  * The catalog once carried seven open-weight models routed through Ollama Cloud. That account is
  * gone, and a picker offering models that answer only by silently falling back to DeepSeek is a
- * promise the product cannot keep — so they are retired rather than left on the shelf. Both entries
- * here are served by DeepSeek's own API on the one key the box already has.
+ * promise the product cannot keep — so they are retired rather than left on the shelf. Every entry
+ * left is served by a credential the box actually holds; `provider-endpoints.ts` decides which, and
+ * an entry whose provider is uncredentialed is filtered out of the picker rather than offered.
  */
 
-export type ModelProvider = "deepseek";
+export type ModelProvider = "deepseek" | "mimo";
 
 export interface ModelChoice {
   /** Public id used in API payloads and the picker. Colon-free (`keryx:` prefixing). */
@@ -63,6 +64,20 @@ export const MODEL_CATALOG: ModelChoice[] = [
     provider: "deepseek",
     model: "deepseek-v4-pro",
     note: "Deepest reasoning in the stable — thorough, noticeably slower.",
+  },
+  {
+    id: "mimo-v2.5",
+    label: "MiMo V2.5",
+    provider: "mimo",
+    model: "mimo-v2.5",
+    note: "Xiaomi's workhorse — a second house reading the same sources.",
+  },
+  {
+    id: "mimo-v2.5-pro",
+    label: "MiMo V2.5 Pro",
+    provider: "mimo",
+    model: "mimo-v2.5-pro",
+    note: "Xiaomi's deeper tier — more considered, slower to answer.",
   },
 ];
 

@@ -18,20 +18,26 @@
  * Env:  KERYX_ALERT_WEBHOOK — Discord/Slack webhook for the alert (optional; logs regardless)
  */
 
-import { config, llmProvider } from "../lib/config.ts";
+import { llmProvider } from "../lib/config.ts";
 import { availableModels, DEFAULT_MODEL_ID } from "../lib/llm/index.ts";
 import { OpenAICompatibleEngine } from "../lib/llm/openai-compatible-engine.ts";
+import { endpointFor } from "../lib/llm/provider-endpoints.ts";
 import { sendAlert } from "../lib/notify/alert.ts";
 import type { ModelChoice } from "../lib/llm/model-catalog.ts";
 
 const PROMPT = "Does a stablecoin settle instantly?";
 
-/** One un-wrapped provider call — no resilience layer, so a failure surfaces instead of degrading. */
+/** One un-wrapped provider call — no resilience layer, so a failure surfaces instead of degrading.
+ *  Credentials come from the model's own provider: probing every entry with one provider's key is
+ *  how a second provider's outage would look like a healthy box. */
 async function probe(m: ModelChoice): Promise<{ ok: true } | { ok: false; error: string }> {
+  const endpoint = endpointFor(m.provider);
+  if (!endpoint) return { ok: false, error: `no credential configured for ${m.provider}` };
+
   const engine = new OpenAICompatibleEngine({
-    name: `llm:deepseek:${m.model}`,
-    baseUrl: config.llmBaseUrl,
-    apiKey: config.deepseekKey,
+    name: `llm:${m.provider}:${m.model}`,
+    baseUrl: endpoint.baseUrl,
+    apiKey: endpoint.apiKey,
     model: m.model,
   });
   try {
@@ -46,12 +52,14 @@ async function probe(m: ModelChoice): Promise<{ ok: true } | { ok: false; error:
 }
 
 async function main(): Promise<void> {
-  if (llmProvider() === "heuristic") {
+  const models = availableModels();
+  // Offline only when nothing at all is credentialed. A box holding a picker provider's key but not
+  // the default one still has models worth probing, and skipping them would report silence as health.
+  if (llmProvider() === "heuristic" && models.length === 0) {
     console.log("[llm] no provider credentials — offline dev mode, nothing to probe.");
     return;
   }
 
-  const models = availableModels();
   const results = await Promise.all(models.map(async (m) => ({ m, r: await probe(m) })));
 
   for (const { m, r } of results) {
