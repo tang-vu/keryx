@@ -9,6 +9,28 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### Circle confirms the payouts Keryx claims it made (2026-07-26)
+Every payout figure on the site came from Keryx's own database, which is a weak proof for the one
+claim the product rests on. Citation rewards settle inside Circle's Gateway, so their receipt is a
+Circle transfer id rather than an EVM hash: of 7,893 payment rows, exactly zero carried a hash
+anyone could open on ArcScan. Circle answers this itself — its balance API is public and needs no
+key — so an hourly watchdog (`npm run check-settlement`) now asks it, wallet by wallet, what it
+holds for every payee Keryx has ever paid, and publishes both numbers side by side on `/status` and
+on each creator page, with the `curl` to run. The first sweep confirmed 20 of 22 wallets, several to
+the exact micro-USDC.
+The invariant is deliberately one-directional: only a claim *nothing* accounts for is a finding. A
+wallet holding more than Keryx booked is the creator's own money — deposits, or payouts from any
+other x402 service that pays that address — and never alerts. Two subtleties came from the data
+rather than the design. Circle rejects more than 20 depositors per request, and because a rejected
+chunk marks its addresses unknown, one address over the line blanked the entire first production
+run (correctly claiming nothing, but proving nothing either). And the two wallets that came up
+short, by $0.046 and $0.061, turned out to be holding exactly that money in their own wallets
+on-chain: a Gateway balance belongs to its owner, who may cash out through Circle's CLI or anything
+else that signs for them, and only this app's own withdraw leaves a row here. A shortfall now gets a
+second reading against the wallet's on-chain balance, and money that merely moved to its owner is
+reported as a cash-out — counted apart from what Circle confirms, since the Gateway plainly is not
+holding it.
+
 ### A second house in the picker: Xiaomi MiMo (2026-07-26)
 `keryx:mimo-v2.5` and `keryx:mimo-v2.5-pro` join the catalog — the first models here served by a
 provider other than DeepSeek, on their own credential
