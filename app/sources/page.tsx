@@ -12,6 +12,7 @@ import { getDb } from "@/lib/db";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { SourceRegistryRow } from "@/components/keryx/source-registry-row";
+import { breadcrumbJsonLd } from "@/lib/seo-structured-data";
 import { fmtUsdc } from "@/components/keryx/phase-style";
 import type { Source } from "@/lib/types";
 
@@ -67,23 +68,26 @@ export default async function SourcesPage() {
   const onchainCount = entries.filter((e) => e.source.onchainId).length;
   const totalPaid = entries.reduce((s, e) => s + e.totalEarnedUsdc, 0);
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    name: "Keryx Source Registry",
-    description: DESCRIPTION,
-    url: `${BASE}/sources`,
-    mainEntity: {
-      "@type": "ItemList",
-      numberOfItems: entries.length,
-      itemListElement: entries.slice(0, 100).map((e, i) => ({
-        "@type": "ListItem",
-        position: i + 1,
-        url: `${BASE}/creator/${e.source.id}`,
-        name: e.source.name,
-      })),
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: "Keryx Source Registry",
+      description: DESCRIPTION,
+      url: `${BASE}/sources`,
+      mainEntity: {
+        "@type": "ItemList",
+        numberOfItems: entries.length,
+        itemListElement: entries.slice(0, 100).map((e, i) => ({
+          "@type": "ListItem",
+          position: i + 1,
+          url: `${BASE}/creator/${e.source.id}`,
+          name: e.source.name,
+        })),
+      },
     },
-  };
+    breadcrumbJsonLd(BASE, [{ name: "Keryx", path: "/" }, { name: "The Registry" }]),
+  ];
 
   return (
     <div className="min-h-screen bg-paper-2">

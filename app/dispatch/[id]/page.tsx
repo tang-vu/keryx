@@ -10,6 +10,7 @@ import { FreshnessNote } from "@/components/keryx/freshness-note";
 import { loadFreshness } from "@/lib/answers-freshness";
 import { ConfidenceBadge } from "@/components/keryx/confidence-badge";
 import { deriveConfidence } from "@/lib/agent/confidence";
+import { breadcrumbJsonLd, crumbLabel } from "@/lib/seo-structured-data";
 import { DispatchView } from "./dispatch-view";
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
@@ -92,27 +93,39 @@ export default async function DispatchPage({ params }: PageProps) {
   // QAPage structured data — lets search + AI crawlers read this permalink as a
   // question with an accepted answer, and surface the sources it credited.
   const answerText = cleanText(run.answer);
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "QAPage",
-    mainEntity: {
-      "@type": "Question",
-      name: run.question,
-      answerCount: answerText ? 1 : 0,
-      ...(answerText
-        ? {
-            acceptedAnswer: {
-              "@type": "Answer",
-              text: answerText,
-              url: `${BASE}/dispatch/${id}`,
-              ...(run.citations.length
-                ? { citation: run.citations.map((c) => c.sourceName).filter(Boolean) }
-                : {}),
-            },
-          }
-        : {}),
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "QAPage",
+      mainEntity: {
+        "@type": "Question",
+        name: run.question,
+        answerCount: answerText ? 1 : 0,
+        // The answer's own date, so a result can show when this was settled rather than guessing.
+        dateCreated: run.createdAt,
+        ...(answerText
+          ? {
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: answerText,
+                url: `${BASE}/dispatch/${id}`,
+                dateCreated: run.createdAt,
+                ...(run.citations.length
+                  ? { citation: run.citations.map((c) => c.sourceName).filter(Boolean) }
+                  : {}),
+              },
+            }
+          : {}),
+      },
     },
-  };
+    // A dispatch id says nothing about where the page sits; the trail is what a result shows
+    // instead of the raw URL, and it matches the links in this page's own header.
+    breadcrumbJsonLd(BASE, [
+      { name: "Keryx", path: "/" },
+      { name: "The Archive", path: "/answers" },
+      { name: crumbLabel(run.question) },
+    ]),
+  ];
 
   return (
     <div className="min-h-screen bg-paper-2">

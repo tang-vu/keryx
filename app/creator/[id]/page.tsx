@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db";
+import { breadcrumbJsonLd } from "@/lib/seo-structured-data";
 import { CreatorDetailView } from "./creator-detail-view";
+
+const BASE = process.env.BASE_URL || "https://keryx.cc";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -19,10 +22,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   try {
     const db = await getDb();
     const source = await db.getSource(id);
-    if (!source) return { title: "Creator not found — Keryx" };
+    if (!source) return { title: "Creator not found — Keryx", robots: { index: false } };
+    const title = `${source.name} — Keryx Creator`;
+    const description = `${source.name} earns USDC every time an AI agent cites their work on Keryx.`;
     return {
-      title: `${source.name} — Keryx Creator`,
-      description: `${source.name} earns USDC every time an AI agent cites their work on Keryx.`,
+      title,
+      description,
+      // The registry links here, so this is a page search engines will reach — give it one address
+      // of its own rather than letting it inherit the site canonical.
+      alternates: { canonical: `/creator/${id}` },
+      openGraph: { title, description, url: `${BASE}/creator/${id}`, type: "profile" },
+      twitter: { card: "summary_large_image", title, description },
     };
   } catch {
     return { title: "Keryx Creator" };
@@ -35,8 +45,33 @@ export default async function CreatorPage({ params }: PageProps) {
   const source = await db.getSource(id);
   if (!source) notFound();
 
+  // A creator page is a profile: who they are, what they publish, and the trail back to the
+  // registry that lists them.
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "ProfilePage",
+      url: `${BASE}/creator/${id}`,
+      mainEntity: {
+        "@type": "Organization",
+        name: source.name,
+        ...(source.url ? { url: source.url } : {}),
+        description: `${source.name} is listed with Keryx and is paid in USDC each time an AI agent cites its work.`,
+      },
+    },
+    breadcrumbJsonLd(BASE, [
+      { name: "Keryx", path: "/" },
+      { name: "The Registry", path: "/sources" },
+      { name: source.name },
+    ]),
+  ];
+
   return (
     <div className="min-h-screen bg-paper-2">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <header className="border-b border-ink bg-paper">
         <div className="mx-auto flex max-w-[1180px] items-center justify-between px-4 py-3 sm:px-[30px]">
           <Link
