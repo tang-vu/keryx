@@ -37,7 +37,7 @@ import type { DailyVolume, DashboardMetrics, PaymentRecord, WithdrawalRecord } f
 const POLL_MS = 10_000;
 
 function fmtDuration(ms: number): string {
-  if (ms <= 0) return "â€”";
+  if (ms <= 0) return "—";
   if (ms < 1_000) return `${ms}ms`;
   return `${(ms / 1_000).toFixed(ms < 10_000 ? 1 : 0)}s`;
 }
@@ -136,7 +136,7 @@ export default function DashboardPage() {
           <MetricCard
             label="External queries"
             value={String(metrics?.externalQueries ?? 0)}
-            sub={`${metrics?.externalPayingQueries ?? 0} paid Â· ${Math.round(
+            sub={`${metrics?.externalPayingQueries ?? 0} paid · ${Math.round(
               (metrics?.externalReaderToPayerConversion ?? 0) * 100,
             )}% conversion`}
             icon={TrendingUp}
@@ -146,7 +146,7 @@ export default function DashboardPage() {
           <MetricCard
             label="Returning actors"
             value={String(metrics?.returningExternalActors ?? 0)}
-            sub={`${metrics?.identifiedExternalActors ?? 0} identified Â· ${Math.round(
+            sub={`${metrics?.identifiedExternalActors ?? 0} identified · ${Math.round(
               (metrics?.returningExternalActorRate ?? 0) * 100,
             )}% returning`}
             icon={UserRoundCheck}
