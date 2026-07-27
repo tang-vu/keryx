@@ -117,11 +117,18 @@ export interface UserRecord {
   lastSeenAt: string;
 }
 
-/** A single query memory: which sources were cited and how well for a past query. */
+/** A single query memory: which sources a past run could have cited, and which it did. */
 export interface QueryMemoryEntry {
   id: string;
-  /** Per-source citation data from a past run */
+  /** Per-source citation data from a past run — cited sources only. */
   sourceScores: Record<string, { name: string; weight: number; reward: number }>;
+  /**
+   * Every source the run actually read, cited or not — the denominator behind any claim about how
+   * often a source earns its toll. Deliberately not "every source that was listed": a source the
+   * agent skipped was never given the chance to be cited, and counting that as a miss would let one
+   * skip justify the next. Absent on entries written before it was recorded.
+   */
+  sourcesRead?: string[];
   /** Topic keywords extracted from the question */
   topics: string[];
   createdAt: string;

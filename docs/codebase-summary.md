@@ -19,8 +19,10 @@ Core decompose→discover→decide→fetch→sufficiency→synthesize→attribut
 | `prompts.ts` | LLM system/user prompts for each step. |
 
 Discovery is semantic (embedding cosine similarity), and cross-query memory feeds past source
-usefulness back into future buy/skip decisions. Economic invariants (spend ≤ budget, payouts =
-weights, splits sum exactly) are covered by a vitest suite run in CI.
+usefulness back into future buy/skip decisions — scoped to past runs about the same subject, and
+scored against the runs that read a source rather than every run it was listed for. Economic
+invariants (spend ≤ budget, payouts = weights, splits sum exactly) are covered by a vitest suite
+run in CI.
 
 ---
 

@@ -24,7 +24,7 @@ import type { GatheredContent, SourceCandidate } from "../llm";
 import { effectiveEngineName } from "../llm/resilient-engine";
 import type { AgentDeps } from "./deps";
 import { discoverExternalCandidates } from "./external-discovery";
-import { buildMemoryContext, buildReputationContext, saveMemory } from "./query-memory";
+import { buildDecisionContext, saveMemory } from "./query-memory";
 import { dispatchCitationNotify } from "../notify/citation-webhook";
 import { dispatchCitationEmail } from "../notify/citation-email";
 import { allocateSplit } from "../payments/split-allocation";
@@ -146,23 +146,27 @@ export async function* runAgent(
   // Load query memory — aggregated source performance from past runs
   const candidateIds = sources.map((s) => s.id);
   let memoryContext: string | undefined;
+  let reputationContext: string | undefined;
   try {
-    memoryContext = await buildMemoryContext(db, input.question, candidateIds) || undefined;
+    // One read of the log serves both halves: the per-source track record and the composite
+    // reputation are two readings of the same scored set, and re-loading it would only risk them
+    // disagreeing. Both are scoped to past runs about *this* subject, so both are absent on a
+    // question the corpus has not been asked before — see query-memory.ts.
+    const ctx = await buildDecisionContext(db, input.question, sources.map((s) => ({ id: s.id, name: s.name })));
+    memoryContext = ctx.memory;
+    reputationContext = ctx.reputation;
     if (memoryContext) {
-      yield emit("discover", `Loaded query memory: ${candidateIds.length} known sources from past runs.`, { memory: true });
+      yield emit(
+        "discover",
+        `Recalled ${ctx.sample} past run${ctx.sample === 1 ? "" : "s"} on this subject — how these sources performed when they were available.`,
+        { memory: true, sample: ctx.sample },
+      );
+    }
+    if (reputationContext) {
+      yield emit("discover", "ERC-8004 reputation loaded — composite scores on this subject.", { reputation: true });
     }
   } catch {
     // Memory is best-effort — never block a run on memory load failure
-  }
-  // Load ERC-8004 reputation — composite score per source from past queries
-  let reputationContext: string | undefined;
-  try {
-    reputationContext = await buildReputationContext(db, candidateIds) || undefined;
-    if (reputationContext) {
-      yield emit("discover", "ERC-8004 reputation loaded — composite scores from past queries.", { reputation: true });
-    }
-  } catch {
-    // Reputation is best-effort
   }
   // Combine memory + reputation into a single context string for the decide prompt
   const fullContext = [memoryContext, reputationContext].filter(Boolean).join("\n\n") || undefined;
@@ -523,9 +527,11 @@ export async function* runAgent(
     }
   }
 
-  // Save query memory for cross-query learning (best-effort, fire-and-forget)
+  // Save query memory for cross-query learning (best-effort, fire-and-forget). What the agent read
+  // goes with it, not just what it cited: a source paid for and then left unquoted is the only
+  // evidence the next decision has that it does not earn its toll.
   try {
-    await saveMemory(db, queryId, input.question, citations);
+    await saveMemory(db, queryId, input.question, citations, [...gatheredIds]);
   } catch {
     // Never fail a run on memory save
   }

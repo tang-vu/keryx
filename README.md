@@ -55,8 +55,9 @@ the model reasons about money and shows its work, streamed live to the UI:
   to trust and says why.
 - **Confidence verdict** 📊 — it rates its own answer (High / Moderate / Low) and hedges the prose
   accordingly, instead of bluffing.
-- **Cross-query memory** — sources that proved useful (or useless) in past runs shift future
-  buy/skip decisions.
+- **Cross-query memory** — sources that proved useful (or useless) in past runs *on the same
+  subject* shift future buy/skip decisions. A source is scored against the runs that actually read
+  it, so a skip never becomes evidence against the source it skipped.
 - **Semantic discovery** — candidate matching by embedding similarity, not keyword luck.
 - **Emergent frugality** — it stops early, reuses its cache, and correctly spends *nothing* when
   nothing is worth buying.

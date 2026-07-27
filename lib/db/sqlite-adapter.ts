@@ -124,7 +124,8 @@ CREATE TABLE IF NOT EXISTS answer_feedback (
 CREATE INDEX IF NOT EXISTS answer_feedback_query ON answer_feedback(query_id);
 CREATE TABLE IF NOT EXISTS query_memories (
   id            TEXT PRIMARY KEY,
-  source_scores TEXT NOT NULL,          -- JSON: { sourceId: { name, weight, reward } }
+  source_scores TEXT NOT NULL,          -- JSON: { sourceId: { name, weight, reward } } — cited only
+  sources_read  TEXT,                   -- JSON: string[] — every source the run read, cited or not
   topics        TEXT NOT NULL,          -- JSON: string[]
   created_at    TEXT NOT NULL
 );
@@ -230,6 +231,18 @@ export class SqliteAdapter implements KeryxDB {
     // on a fresh database), and both paths need the indexes.
     this.db.exec(`CREATE INDEX IF NOT EXISTS query_runs_parent ON query_runs(parent_id)`);
     this.db.exec(`CREATE INDEX IF NOT EXISTS query_runs_asker ON query_runs(asker, created_at)`);
+
+    // query_memories.sources_read: NULL on every entry written before the agent recorded what it
+    // read. Those entries can prove a citation happened but never that a source was read and passed
+    // over, so scoring skips them rather than reading a missing list as an empty one.
+    const memCols = new Set(
+      (this.db.prepare(`PRAGMA table_info(query_memories)`).all() as { name: string }[]).map(
+        (c) => c.name,
+      ),
+    );
+    if (!memCols.has("sources_read")) {
+      this.db.exec(`ALTER TABLE query_memories ADD COLUMN sources_read TEXT`);
+    }
 
     // source_items table: encrypted-content columns added in Phase 04.
     // Existing rows have NULL for these; produce() falls back to DB plaintext content.
@@ -921,11 +934,12 @@ export class SqliteAdapter implements KeryxDB {
   async saveQueryMemory(entry: QueryMemoryEntry): Promise<void> {
     this.db
       .prepare(
-        `INSERT INTO query_memories (id,source_scores,topics,created_at) VALUES (?,?,?,?)`,
+        `INSERT INTO query_memories (id,source_scores,sources_read,topics,created_at) VALUES (?,?,?,?,?)`,
       )
       .run(
         entry.id,
         JSON.stringify(entry.sourceScores),
+        entry.sourcesRead ? JSON.stringify(entry.sourcesRead) : null,
         JSON.stringify(entry.topics),
         entry.createdAt,
       );
@@ -937,12 +951,16 @@ export class SqliteAdapter implements KeryxDB {
       .all(limit) as {
       id: string;
       source_scores: string;
+      sources_read: string | null;
       topics: string;
       created_at: string;
     }[];
     return rows.map((r) => ({
       id: r.id,
       sourceScores: JSON.parse(r.source_scores),
+      // NULL on entries written before the column existed — left undefined so scoring can tell
+      // "the run read nothing" apart from "we never recorded what it read".
+      sourcesRead: r.sources_read ? JSON.parse(r.sources_read) : undefined,
       topics: JSON.parse(r.topics),
       createdAt: r.created_at,
     }));

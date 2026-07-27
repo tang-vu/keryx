@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-07-26  
+**Last Updated:** 2026-07-27  
 **Current Version:** 0.6.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
@@ -8,6 +8,49 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 ---
 
 ## Unreleased
+
+### The agent was learning the wrong lesson from its own history (2026-07-27)
+Cross-query memory summarises past runs into the `decide` prompt so a buy/skip call knows how a
+source has actually performed. Read against the live log, what it was telling the agent was wrong in
+two ways that both pushed the same direction.
+
+It was **subject-blind**. The `topics` column had been written on all 902 stored runs and never once
+read back; a source's hit rate was its citations divided by *every* recent run, whatever the
+question. On production data that told the agent Vitalik's blog was cited in 8% of runs and
+Stablecoin Ledger in 64% — but the 92% Vitalik "missed" were questions about CCTP and card rails
+that his blog has no business answering, while the broad sources scored well by being present
+everywhere. The prompt was rewarding breadth and quietly penalising exactly the specialist that
+would have answered the question in front of it. Scoring is now scoped to past runs that share
+subject vocabulary with the question being asked, reusing the archive's own tokeniser so a stored
+`transfers` still meets a freshly-stemmed `transfer`.
+
+And it kept **only positive evidence**. Nothing was recorded but citations, so "this source was read
+and quoted" was storable and "this source was read and ignored" was not — the module's own docstring
+promised a `cited 0/3` line that no data path could ever produce, and its `totalQueries` counter
+incremented in lockstep with `citedCount`, always equal, hiding the gap behind a denominator that
+looked real. What gets bought gets cited, and what gets cited gets bought. Runs now record every
+source they read, cited or not, and save that record even when the run cited nothing at all.
+
+The denominator is deliberately *runs that read the source*, not *runs where it was listed*. Counting
+a skipped source as a miss would let one skip justify the next and condemn a newly listed source
+before it was ever tried — so a source simply absent from the summary is stated as absent, not as
+failing. Two calls came from measurement rather than taste. Backfilling the new column from
+`payment_events` looked easy and is impossible: 4,819 distinct run-source pairs were cited but only
+2,085 were ever paid a fetch toll, because 57% of reads are cache hits that leave no payment row —
+a backfill could recover reads that ended in a citation and almost none that didn't, rebuilding the
+exact bias being removed. Historical rows are therefore skipped rather than guessed at, and the
+summary stays silent for the few runs it takes to earn a real one. And requiring *two* shared topic
+tokens instead of one cleanly killed a homonym (`prune tomato plants` binds to runs about pruning
+chain state) but also silenced short questions squarely on subject — "how does x402 settle a
+per-request toll" shares two tokens with exactly one past run out of 400. A missing record costs the
+decision more than a weak one, so the floor stays at one token and the scoring window is filled by
+overlap strength instead, letting close matches crowd out coincidental ones where a subject is well
+covered.
+
+Verified end to end on a real dispatch: the run recorded 8 sources read against 5 cited, and the next
+question on that subject drew `Recalled 5 past runs`, a summary carrying both `cited in 4 of 6 runs
+that read it` and `read in 1 run on this subject, never cited`, and decide rationales that cite the
+subject-scoped reputation back (`high reputation (★★, 30/100)`). 475 tests.
 
 ### Circle confirms the payouts Keryx claims it made (2026-07-26)
 Every payout figure on the site came from Keryx's own database, which is a weak proof for the one

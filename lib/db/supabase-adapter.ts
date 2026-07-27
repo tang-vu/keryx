@@ -736,6 +736,7 @@ export class SupabaseAdapter implements KeryxDB {
     await this.sb.from("query_memories").insert({
       id: entry.id,
       source_scores: entry.sourceScores, // JSONB column auto-serializes
+      sources_read: entry.sourcesRead ?? null,
       topics: entry.topics,
       created_at: entry.createdAt,
     });
@@ -750,6 +751,9 @@ export class SupabaseAdapter implements KeryxDB {
     return (data ?? []).map((r) => ({
       id: r.id,
       sourceScores: r.source_scores, // JSONB auto-deserializes
+      // NULL on rows written before the column existed — see the sqlite adapter for why it stays
+      // undefined rather than becoming an empty list.
+      sourcesRead: r.sources_read ?? undefined,
       topics: r.topics,
       createdAt: r.created_at,
     }));
