@@ -37,8 +37,10 @@ export interface RunInput {
   budget?: number;
   queryId?: string;
   /** Who triggered this run — stamped on every payment so traction can separate genuine external
-   *  usage (web askers, A2A callers) from the autonomous volume engine. Defaults to "engine". */
+   *  usage (web, A2A, MCP) from the autonomous volume engine. Defaults to "engine". */
   origin?: PaymentOrigin;
+  /** Stable actor verified by the server (SIWE/API key). Never accept an unverified client value. */
+  asker?: string;
   /** Catalog model id the asker picked (model-catalog.ts). Read by collectRun when it builds
    *  deps; unknown/unset → default engine. Every pick falls back so the run always answers. */
   model?: string;
@@ -55,7 +57,7 @@ export async function* runAgent(
   const startedAt = Date.now();
   const budget = input.budget ?? config.defaultBudget;
   const queryId = input.queryId ?? crypto.randomUUID();
-  // Stamp every payment from this run with its origin (engine | web | a2a) for honest traction split.
+  // Stamp every payment from this run with its origin for the honest traction split.
   const origin: PaymentOrigin = input.origin ?? "engine";
   const trace: TraceStep[] = [];
   const payments: PaymentRecord[] = [];
@@ -566,6 +568,7 @@ export async function* runAgent(
       trace,
       createdAt: new Date().toISOString(),
       origin,
+      ...(input.asker ? { asker: input.asker.toLowerCase() } : {}),
       durationMs: Math.max(0, Date.now() - startedAt),
       paymentMode: gateway.mode,
       paymentAttempts,

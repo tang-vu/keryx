@@ -110,6 +110,32 @@ describe("calculateDashboardMetrics", () => {
     expect(metrics.externalSettlementSuccessRate).toBe(0.75);
   });
 
+  it("counts Remote MCP as external and attributes only verified key wallets", () => {
+    const metrics = calculateDashboardMetrics(
+      [
+        {
+          amountUsdc: 0.01,
+          sourceId: "creator",
+          queryId: "mcp-1",
+          kind: "citation",
+          origin: "mcp",
+          settled: true,
+        },
+      ],
+      [
+        { id: "mcp-1", origin: "mcp", asker: "0xMcpAgent" },
+        { id: "mcp-2", origin: "mcp", asker: "0xmcpagent" },
+        { id: "mcp-anon", origin: "mcp" },
+      ],
+    );
+
+    expect(metrics.externalQueries).toBe(3);
+    expect(metrics.engineQueries).toBe(0);
+    expect(metrics.identifiedExternalActors).toBe(1);
+    expect(metrics.returningExternalActors).toBe(1);
+    expect(metrics.externalCreatorPayoutsUsdc).toBe(0.01);
+  });
+
   it("treats legacy unknown origins as internal", () => {
     const metrics = calculateDashboardMetrics([], [
       { id: "legacy", origin: null, asker: "0xmaybe" },

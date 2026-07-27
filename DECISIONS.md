@@ -5,6 +5,18 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-21** · Distribution/Payments · *Add stateless Remote MCP beside, not instead of, the caller-funded
+stdio MCP package.*
+`https://keryx.cc/mcp` creates a fresh Web Standard Streamable HTTP server per request and exposes
+the shared `collectRun` research core. Remote calls are treasury-funded because a hosted server
+cannot safely hold each caller's local x402 buyer wallet: anonymous calls reuse the IP-limited
+free tier and `anonMaxBudget`; ask-scoped API keys get the keyed limit, `a2aMaxBudget`, and
+server-verified wallet attribution. A separate `mcp` origin keeps this channel measurable without
+mislabeling it as inbound-paid A2A traffic. The npm stdio path remains available for agents that
+must pay Keryx's x402 toll from their own wallet. Stateless JSON mode fits Next/serverless and gives
+up durable sessions/server notifications, which the two request/response tools do not need.
+Reversible: easy (remove `/mcp` and the registry remote; additive origin rows stay readable).
+
 **D-20** · Traction · *External completed queries, not aggregate self-generated payments, are the
 primary product KPI.*
 Persist `origin` on `query_runs` so zero-spend dispatches remain in the correct conversion
@@ -14,7 +26,9 @@ counted only from a server-verified SIWE wallet or a settled inbound A2A payer�
 not fingerprinted. Money metrics read only `settled=true` rows. Latency and settlement-success
 samples start when telemetry ships; historical rows stay NULL rather than receiving invented
 values. Why: the system already proves the rail works, so the next bottleneck is repeat external
-demand and answer quality. Reversible: easy (the fields are additive; presentation can change).
+demand and answer quality. Remote MCP is a distinct external origin; authenticated MCP actors use
+the verified API-key wallet and anonymous MCP callers remain unattributed. Reversible: easy (the
+fields are additive; presentation can change).
 
 **D-19** · Notify · *Citation email alerts are a second independent channel beside the webhook, not a column on it.*
 Own table (`source_notify_email`) + own dispatcher mirroring the webhook's contract (settled-legs-only,

@@ -6,14 +6,34 @@ question. Keryx autonomously buys paid sources under a budget, answers with inli
 Arc-testnet wallet — so every call is a real on-chain payment, visible live on
 [keryx.cc/dashboard](https://keryx.cc/dashboard).
 
-## Tools
+## Remote MCP (no install)
+
+Connect a Streamable HTTP client directly to:
+
+```text
+https://keryx.cc/mcp
+```
+
+The remote server exposes:
+
+| Tool | What it does |
+|------|--------------|
+| `research` | Runs budgeted creator-paid research and returns the answer, citations, confidence, settlement telemetry, and dispatch URL. |
+| `keryx_status` | Shows the caller tier and active creator-payment budget cap. |
+
+It includes an anonymous IP-limited trial. For higher limits and verified wallet attribution, send
+an ask-scoped Keryx API key as `Authorization: Bearer kx_live_…`. The remote path is treasury-funded;
+the budget is clamped server-side, and the local x402 option below remains available when the caller
+should pay Keryx's inbound toll from its own wallet.
+
+## Local x402 MCP tools
 
 | Tool | What it does |
 |------|--------------|
 | `ask_keryx` | Ask a research question (+ optional USDC `budget`). Returns a cited answer and the creators Keryx paid downstream. Costs **0.02 USDC** per call, paid from your wallet. |
 | `keryx_wallet_status` | Show the wallet this server pays from — address, balances, whether it's ready, and how to fund it. **Run this first.** |
 
-## Setup (≈3 minutes)
+## Local x402 setup (≈3 minutes)
 
 Published to npm as [`keryx-mcp`](https://www.npmjs.com/package/keryx-mcp) — no clone, no build.
 

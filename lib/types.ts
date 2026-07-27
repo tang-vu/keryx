@@ -89,10 +89,10 @@ export interface Citation {
 }
 
 /** Where a payment originated. `engine` = Keryx's own autonomous volume engine; `web` = a human
- *  asking on the site; `a2a` = an external agent calling the paid A2A endpoint. web + a2a = genuine
- *  EXTERNAL usage (real people / third-party agents), kept distinct from engine-generated volume so
- *  traction is reported honestly. Legacy rows (pre-tagging) are NULL and counted as engine. */
-export type PaymentOrigin = "engine" | "web" | "a2a";
+ *  asking through a first-party surface; `a2a` = an external agent calling the paid x402 endpoint;
+ *  `mcp` = a remote MCP client. web + a2a + mcp = genuine EXTERNAL usage, kept distinct from
+ *  engine-generated volume so traction is reported honestly. Legacy NULL rows count as engine. */
+export type PaymentOrigin = "engine" | "web" | "a2a" | "mcp";
 
 /** A settled payment. `inbound` = another agent paid Keryx (A2A); fetch/citation = Keryx paid a creator. */
 export interface PaymentRecord {
@@ -109,7 +109,7 @@ export interface PaymentRecord {
   txHash?: string | null;
   network: string;
   settled: boolean; // true only when really settled on-chain (false = offline dev)
-  origin?: PaymentOrigin; // engine | web | a2a — see PaymentOrigin
+  origin?: PaymentOrigin; // engine | web | a2a | mcp — see PaymentOrigin
   createdAt: string;
 }
 
@@ -184,9 +184,8 @@ export interface QueryRun {
   /** How confident the agent is in this answer. Absent on runs recorded before it became a field;
    *  deriveConfidence() reconstructs it from the trace's verdict step for those. */
   confidence?: Confidence;
-  /** Lowercased wallet that dispatched this run, taken from the server-verified SIWE session —
-   *  never from a client-supplied field. Absent on anonymous asks and on every engine/A2A run,
-   *  which have no signed-in wallet to attribute to. */
+  /** Lowercased wallet that dispatched this run, taken from a server-verified SIWE session or API
+   *  key — never from a client-supplied field. Absent on anonymous asks and unidentified agents. */
   asker?: string;
   /** True when that wallet's own session key paid for the run; false/absent means the dispatch
    *  ran on Keryx's treasury (the free trial). Kept apart so a receipts page can never present
@@ -213,8 +212,8 @@ export interface DashboardMetrics {
   totalQueries: number;
   payingQueries: number; // queries that produced >= 1 payment
   readerToPayerConversion: number; // payingQueries / totalQueries
-  // Honest traction split: external = web askers + A2A callers (real outside usage); the rest is
-  // the autonomous volume engine. engine = totalPayments - externalPayments.
+  // Honest traction split: external = web + A2A + MCP (real outside usage); the rest is the
+  // autonomous volume engine. engine = totalPayments - externalPayments.
   externalPayments: number;
   externalVolumeUsdc: number;
   enginePayments: number;

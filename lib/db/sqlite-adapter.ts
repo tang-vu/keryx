@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS query_runs (
   total_spent REAL, total_to_creators REAL, answer TEXT, data TEXT,
   parent_id TEXT,                       -- the dispatch this one follows up on
   asker TEXT,                           -- lowercased wallet that dispatched it (SIWE-verified)
-  origin TEXT,                          -- engine | web | a2a
+  origin TEXT,                          -- engine | web | a2a | mcp
   duration_ms INTEGER,
   payment_mode TEXT,
   payment_attempts INTEGER,
@@ -301,7 +301,7 @@ export class SqliteAdapter implements KeryxDB {
     if (!itemCols.has("item_iv")) this.db.exec(`ALTER TABLE source_items ADD COLUMN item_iv TEXT`);
     if (!itemCols.has("item_auth_tag")) this.db.exec(`ALTER TABLE source_items ADD COLUMN item_auth_tag TEXT`);
 
-    // payment_events.origin: tags each payment as engine | web | a2a so the dashboard can separate
+    // payment_events.origin: tags each payment by request channel so the dashboard can separate
     // genuine external usage from autonomous engine volume. Pre-existing rows (all engine-generated
     // to date) get NULL, which metrics() treats as engine — backfill them explicitly so the data is
     // unambiguous and the column never overstates external usage.

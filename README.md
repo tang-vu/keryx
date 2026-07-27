@@ -118,9 +118,13 @@ Example trace (real output):
 - **Browser extension** ([`extension/`](extension/)) — highlight text on any page and ask Keryx
   from a toolbar popup, or right-click to list a page you own as a paid source. A thin,
   no-key client over the OpenAI-compatible endpoint; load unpacked on any Chromium browser.
-- **MCP server** — on the [official MCP registry](https://registry.modelcontextprotocol.io/v0/servers?search=keryx);
-  `npx -y keryx-mcp@latest` gives Claude, Cursor, or any MCP client a paid-research tool backed by
-  real settlement.
+- **Remote MCP** — connect an MCP client directly to [`https://keryx.cc/mcp`](https://keryx.cc/mcp)
+  over Streamable HTTP: no package or local wallet process. The `research` tool has an anonymous,
+  IP-limited trial; an ask-scoped `kx_live_…` Bearer key raises the cap and attributes usage to its
+  verified wallet. Creator rewards still settle in USDC on Arc.
+- **Local x402 MCP** — on the [official MCP registry](https://registry.modelcontextprotocol.io/v0/servers?search=keryx);
+  `npx -y keryx-mcp@latest` keeps the caller-funded path: its local Arc wallet pays Keryx's x402
+  toll before Keryx researches and pays creators.
 - **Discord slash command** — [install the Keryx app](https://discord.com/oauth2/authorize?client_id=1527619548809924678)
   in any server and type `/ask`: the reply embed carries the grounded answer, every creator paid,
   and a link to the dispatch trace. No bot process — signed interactions POST straight to the API

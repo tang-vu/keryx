@@ -26,7 +26,7 @@ export interface MetricFeedbackRow {
   rating: "up" | "down";
 }
 
-const EXTERNAL = new Set<PaymentOrigin>(["web", "a2a"]);
+const EXTERNAL = new Set<PaymentOrigin>(["web", "a2a", "mcp"]);
 
 function round(n: number): number {
   return Math.round(n * 1_000_000) / 1_000_000;
@@ -68,7 +68,7 @@ export function calculateDashboardMetrics(
   );
   const externalVolume = externalPayments.reduce((sum, p) => sum + p.amountUsdc, 0);
 
-  // Stable actor = a server-verified SIWE wallet, or the payer of a settled inbound A2A call.
+  // Stable actor = a server-verified SIWE/API-key wallet, or the payer of a settled inbound A2A call.
   // Anonymous web queries remain unattributed rather than being fingerprinted by IP/cookie.
   const inboundPayerByQuery = new Map<string, string>();
   for (const p of payments) {
@@ -79,9 +79,9 @@ export function calculateDashboardMetrics(
   const queriesByActor = new Map<string, Set<string>>();
   for (const run of externalRuns) {
     const actor =
-      run.origin === "web"
-        ? run.asker?.toLowerCase()
-        : inboundPayerByQuery.get(run.id);
+      run.origin === "a2a"
+        ? inboundPayerByQuery.get(run.id)
+        : run.asker?.toLowerCase();
     if (!actor) continue;
     const queries = queriesByActor.get(actor) ?? new Set<string>();
     queries.add(run.id);

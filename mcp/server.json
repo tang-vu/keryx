@@ -9,6 +9,12 @@
   },
   "websiteUrl": "https://keryx.cc",
   "version": "0.1.1",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://keryx.cc/mcp"
+    }
+  ],
   "packages": [
     {
       "registryType": "npm",
