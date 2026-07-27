@@ -4,18 +4,20 @@
  * rendered server-side so search + AI crawlers index a growing corpus that
  * links back into each /dispatch/[id] permalink. This is the organic on-ramp:
  * people find a Keryx answer in search, then ask their own.
+ *
+ * This route is page 1. Older pages live at /answers/page/[n] and render the same document —
+ * see lib/answers-pagination for why the index is sliced at all.
  */
 
 import type { Metadata } from "next";
-import Link from "next/link";
-import { getDb } from "@/lib/db";
-import { buildArchive, searchTerm, type ArchiveEntry } from "@/lib/answers-archive";
+import { getArchiveCached } from "@/lib/answers-archive-cache";
 import { buildTopics } from "@/lib/answers-topics";
+import { paginateArchive } from "@/lib/answers-pagination";
+import { breadcrumbJsonLd } from "@/lib/seo-structured-data";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
-import { ArchiveAnswerRow } from "@/components/keryx/archive-answer-row";
-import { ArchiveSearch } from "@/components/keryx/archive-search";
-import { ArchiveTopicChips } from "@/components/keryx/archive-topic-chips";
+import { ArchiveIndexView } from "@/components/keryx/archive-index-view";
+import { archiveIndexJsonLd } from "./archive-index-json-ld";
 
 // Recompute a few times an hour — the corpus grows as new dispatches settle.
 export const revalidate = 600;
@@ -38,38 +40,23 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION },
 };
 
-async function loadArchive(): Promise<ArchiveEntry[]> {
-  try {
-    const db = await getDb();
-    const runs = await db.listRecentQueries(600);
-    return buildArchive(runs);
-  } catch {
-    return [];
-  }
-}
-
 export default async function AnswersPage() {
-  const entries = await loadArchive();
+  const entries = await getArchiveCached();
   const totalToCreators = entries.reduce((s, e) => s + e.toCreators, 0);
   const topics = buildTopics(entries);
+  const slice = paginateArchive(entries, 1);
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    name: "Keryx Answer Archive",
-    description: DESCRIPTION,
-    url: `${BASE}/answers`,
-    mainEntity: {
-      "@type": "ItemList",
-      numberOfItems: entries.length,
-      itemListElement: entries.slice(0, 100).map((e, i) => ({
-        "@type": "ListItem",
-        position: i + 1,
-        url: `${BASE}/dispatch/${e.id}`,
-        name: e.question,
-      })),
-    },
-  };
+  const jsonLd = [
+    archiveIndexJsonLd({
+      base: BASE,
+      url: `${BASE}/answers`,
+      name: "Keryx Answer Archive",
+      description: DESCRIPTION,
+      slice,
+      totalEntries: entries.length,
+    }),
+    breadcrumbJsonLd(BASE, [{ name: "Keryx", path: "/" }, { name: "The Archive" }]),
+  ];
 
   return (
     <div className="min-h-screen bg-paper-2">
@@ -78,55 +65,12 @@ export default async function AnswersPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-
-      <main className="mx-auto max-w-[860px] px-4 pb-20 pt-12 sm:px-[30px]">
-        <div className="mb-2 flex items-baseline justify-between gap-4">
-          <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-seal">
-            The archive
-          </span>
-          <a
-            href="/answers/feed.xml"
-            className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-ink-3 underline decoration-dotted underline-offset-4 transition-colors hover:text-seal"
-          >
-            Atom feed ↗
-          </a>
-        </div>
-        <h1 className="font-display text-[clamp(30px,5vw,46px)] font-medium leading-[1.05] tracking-tight text-ink">
-          Every answer, <em className="italic text-paid">paid for.</em>
-        </h1>
-        <p className="mt-4 max-w-[62ch] font-serif text-[17px] leading-[1.55] text-ink-2">
-          {entries.length > 0 ? (
-            <>
-              {entries.length} question{entries.length !== 1 ? "s" : ""} the herald has answered —
-              each grounded in cited sources and settled with a real micropayment to the writers it
-              quoted. <span className="text-paid">${totalToCreators.toFixed(4)}</span> paid to
-              creators across this archive.
-            </>
-          ) : (
-            <>The archive is warming up — no settled dispatches to show yet.</>
-          )}
-        </p>
-
-        <ArchiveTopicChips topics={topics} />
-
-        {entries.length > 0 && (
-          <ArchiveSearch terms={entries.map(searchTerm)}>
-            {entries.map((e) => (
-              <ArchiveAnswerRow key={e.id} entry={e} />
-            ))}
-          </ArchiveSearch>
-        )}
-
-        <div className="mt-12 border-t border-ink pt-6">
-          <Link
-            href="/"
-            className="inline-block border border-ink bg-seal px-[18px] py-2.5 font-mono text-[11.5px] font-semibold uppercase tracking-[0.12em] text-paper transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)]"
-          >
-            Ask your own question ▸
-          </Link>
-        </div>
-      </main>
-
+      <ArchiveIndexView
+        slice={slice}
+        topics={topics}
+        totalEntries={entries.length}
+        totalToCreators={totalToCreators}
+      />
       <SiteFooter />
     </div>
   );

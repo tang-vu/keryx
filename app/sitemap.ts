@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
-import { getDb } from "@/lib/db";
-import { buildArchive } from "@/lib/answers-archive";
+import { getArchiveCached } from "@/lib/answers-archive-cache";
 import { buildTopics } from "@/lib/answers-topics";
+import { answersPagePath, paginateArchive } from "@/lib/answers-pagination";
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
 
@@ -22,16 +22,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/privacy`, changeFrequency: "monthly", priority: 0.3 },
   ];
 
-  // Enumerate only the canonical dispatch per question — buildArchive already
-  // dedupes, so the sitemap never advertises near-duplicate answer pages.
+  // The archive, built once and shared with the pages it describes (lib/answers-archive-cache) —
+  // so the sitemap can never advertise a dispatch the index has already dropped, or miss one it
+  // still links to. Entries are already deduped to one canonical dispatch per question, so this
+  // never offers a crawler two URLs for the same answer.
   let answerRoutes: MetadataRoute.Sitemap = [];
   // Topic hubs: the corpus's own structure, derived from the questions, so they enter the sitemap
   // as the archive grows a new beat — no hand-maintained category list to fall behind.
   let topicRoutes: MetadataRoute.Sitemap = [];
-  try {
-    const db = await getDb();
-    const runs = await db.listRecentQueries(600);
-    const archive = buildArchive(runs);
+  // The paginated index. Older answers are only reachable through these, so a crawler that never
+  // gets past page 1 still finds every page listed here.
+  let pageRoutes: MetadataRoute.Sitemap = [];
+
+  const archive = await getArchiveCached();
+  if (archive.length > 0) {
     answerRoutes = archive.map((e) => ({
       url: `${BASE}/dispatch/${e.id}`,
       lastModified: new Date(e.createdAt),
@@ -43,9 +47,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly" as const,
       priority: 0.7,
     }));
-  } catch {
-    // DB unreachable (e.g. at build with no local db) — ship the static routes.
+    const { totalPages } = paginateArchive(archive, 1);
+    for (let p = 2; p <= totalPages; p++) {
+      pageRoutes.push({
+        url: `${BASE}${answersPagePath(p)}`,
+        changeFrequency: "weekly" as const,
+        // Below the index, above an individual answer: these exist to be crawled through.
+        priority: 0.7,
+      });
+    }
   }
 
-  return [...staticRoutes, ...topicRoutes, ...answerRoutes];
+  return [...staticRoutes, ...pageRoutes, ...topicRoutes, ...answerRoutes];
 }

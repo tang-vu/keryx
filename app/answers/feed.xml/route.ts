@@ -5,8 +5,7 @@
  * dispatch per question), same revalidation cadence.
  */
 
-import { getDb } from "@/lib/db";
-import { buildArchive } from "@/lib/answers-archive";
+import { getArchiveCached } from "@/lib/answers-archive-cache";
 import { buildAnswersFeedXml } from "@/lib/answers-feed";
 
 export const revalidate = 600;
@@ -14,15 +13,9 @@ export const revalidate = 600;
 const BASE = process.env.BASE_URL || "https://keryx.cc";
 
 export async function GET(): Promise<Response> {
-  let xml: string;
-  try {
-    const db = await getDb();
-    const runs = await db.listRecentQueries(600);
-    xml = buildAnswersFeedXml(buildArchive(runs), BASE);
-  } catch {
-    // DB unreachable (e.g. building with no local db) — serve a valid, empty feed.
-    xml = buildAnswersFeedXml([], BASE);
-  }
+  // getArchiveCached never throws (a DB hiccup serves the last good copy, or nothing) and the
+  // builder takes the newest few — see FEED_ENTRY_LIMIT.
+  const xml = buildAnswersFeedXml(await getArchiveCached(), BASE);
   return new Response(xml, {
     headers: {
       "Content-Type": "application/atom+xml; charset=utf-8",

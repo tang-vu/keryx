@@ -10,9 +10,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getDb } from "@/lib/db";
-import { buildArchive, searchTerm, type ArchiveEntry } from "@/lib/answers-archive";
+import { searchTerm, type ArchiveEntry } from "@/lib/answers-archive";
+import { getArchiveCached } from "@/lib/answers-archive-cache";
 import { buildTopics, filterByTopic, type ArchiveTopic } from "@/lib/answers-topics";
+import { paginateArchive } from "@/lib/answers-pagination";
+import { breadcrumbJsonLd } from "@/lib/seo-structured-data";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { ArchiveAnswerRow } from "@/components/keryx/archive-answer-row";
@@ -33,8 +35,7 @@ interface TopicData {
 
 async function loadTopic(slug: string): Promise<TopicData> {
   try {
-    const db = await getDb();
-    const archive = buildArchive(await db.listRecentQueries(600));
+    const archive = await getArchiveCached();
     const topics = buildTopics(archive);
     const entries = filterByTopic(archive, slug);
     // A slug outside the ranked facets can still be a legitimate topic someone linked to; it
@@ -56,10 +57,7 @@ async function loadTopic(slug: string): Promise<TopicData> {
  */
 export async function generateStaticParams(): Promise<{ slug: string }[]> {
   try {
-    const db = await getDb();
-    return buildTopics(buildArchive(await db.listRecentQueries(600))).map((t) => ({
-      slug: t.slug,
-    }));
+    return buildTopics(await getArchiveCached()).map((t) => ({ slug: t.slug }));
   } catch {
     // No database at build time — every hub is then rendered on demand.
     return [];
@@ -99,23 +97,38 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
   const { topic, entries, topics, toCreators } = await loadTopic(slug);
   if (!topic || entries.length === 0) notFound();
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    name: `${topic.label} — Keryx answers`,
-    url: `${BASE}/answers/topic/${topic.slug}`,
-    isPartOf: { "@type": "CollectionPage", name: "Keryx Answer Archive", url: `${BASE}/answers` },
-    mainEntity: {
-      "@type": "ItemList",
-      numberOfItems: entries.length,
-      itemListElement: entries.slice(0, 100).map((e, i) => ({
-        "@type": "ListItem",
-        position: i + 1,
-        url: `${BASE}/dispatch/${e.id}`,
-        name: e.question,
-      })),
+  // A hub is an entry point to a beat, not a second copy of the archive: the biggest topic can
+  // claim well over half the corpus, and rendering all of it put these pages near a megabyte. So
+  // the page shows a beat's most recent answers, the filter still reaches the rest, and complete
+  // coverage is the paginated archive's job — every dispatch is reachable from /answers either way.
+  const { items: shown, rest } = paginateArchive(entries, 1);
+
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: `${topic.label} — Keryx answers`,
+      url: `${BASE}/answers/topic/${topic.slug}`,
+      isPartOf: { "@type": "CollectionPage", name: "Keryx Answer Archive", url: `${BASE}/answers` },
+      mainEntity: {
+        "@type": "ItemList",
+        numberOfItems: entries.length,
+        // The answers this page actually links to — a list that advertises entries the page
+        // doesn't carry is a promise the markup doesn't keep.
+        itemListElement: shown.map((e, i) => ({
+          "@type": "ListItem",
+          position: i + 1,
+          url: `${BASE}/dispatch/${e.id}`,
+          name: e.question,
+        })),
+      },
     },
-  };
+    breadcrumbJsonLd(BASE, [
+      { name: "Keryx", path: "/" },
+      { name: "The Archive", path: "/answers" },
+      { name: topic.label },
+    ]),
+  ];
 
   return (
     <div className="min-h-screen bg-paper-2">
@@ -143,11 +156,33 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
 
         <ArchiveTopicChips topics={topics} activeSlug={topic.slug} />
 
-        <ArchiveSearch terms={entries.map(searchTerm)} placeholder={`Filter ${topic.label} answers…`}>
-          {entries.map((e) => (
+        <ArchiveSearch
+          terms={shown.map(searchTerm)}
+          others={rest.map((e) => ({
+            id: e.id,
+            question: e.question,
+            sources: e.sourceNames.join(" "),
+          }))}
+          placeholder={`Filter ${topic.label} answers…`}
+        >
+          {shown.map((e) => (
             <ArchiveAnswerRow key={e.id} entry={e} />
           ))}
         </ArchiveSearch>
+
+        {rest.length > 0 && (
+          <p className="mt-8 border-t border-line pt-5 font-serif text-[15px] leading-[1.55] text-ink-2">
+            Showing the {shown.length} most recent of {entries.length} on this beat — the filter
+            above still searches all of them, and{" "}
+            <Link
+              href="/answers"
+              className="underline decoration-line underline-offset-4 transition-colors hover:text-ink hover:decoration-ink"
+            >
+              the full archive
+            </Link>{" "}
+            is paginated end to end.
+          </p>
+        )}
 
         <div className="mt-12 border-t border-ink pt-6">
           <Link
