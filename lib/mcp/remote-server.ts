@@ -3,12 +3,14 @@ import { z } from "zod";
 import { collectRun } from "../agent";
 import { config } from "../config";
 import { resolveModelChoice } from "../llm";
-import type { QueryRun } from "../types";
+import type { McpClientChannel, QueryRun } from "../types";
 
 export interface RemoteMcpAccess {
   budgetCap: number;
   /** Wallet from a verified Keryx API key. Anonymous MCP clients leave this absent. */
   actor?: string;
+  /** Self-declared setup URL channel. Telemetry only; never identity or payment authority. */
+  clientChannel: McpClientChannel;
 }
 
 type ResearchRunner = typeof collectRun;
@@ -103,6 +105,7 @@ export function createRemoteMcpServer(
           budget: Math.min(requested, access.budgetCap),
           queryId: crypto.randomUUID(),
           origin: "mcp",
+          mcpClient: access.clientChannel,
           ...(access.actor ? { asker: access.actor } : {}),
           ...(modelChoice ? { model: modelChoice.id } : {}),
         });

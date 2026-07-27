@@ -15,6 +15,7 @@ import type {
   Confidence,
   Decision,
   PaymentOrigin,
+  McpClientChannel,
   PaymentRecord,
   QueryRun,
   TracePhase,
@@ -39,6 +40,8 @@ export interface RunInput {
   /** Who triggered this run — stamped on every payment so traction can separate genuine external
    *  usage (web, A2A, MCP) from the autonomous volume engine. Defaults to "engine". */
   origin?: PaymentOrigin;
+  /** Normalized MCP setup channel. Self-declared telemetry, never caller authority. */
+  mcpClient?: McpClientChannel;
   /** Stable actor verified by the server (SIWE/API key). Never accept an unverified client value. */
   asker?: string;
   /** Catalog model id the asker picked (model-catalog.ts). Read by collectRun when it builds
@@ -568,6 +571,7 @@ export async function* runAgent(
       trace,
       createdAt: new Date().toISOString(),
       origin,
+      ...(origin === "mcp" && input.mcpClient ? { mcpClient: input.mcpClient } : {}),
       ...(input.asker ? { asker: input.asker.toLowerCase() } : {}),
       durationMs: Math.max(0, Date.now() - startedAt),
       paymentMode: gateway.mode,

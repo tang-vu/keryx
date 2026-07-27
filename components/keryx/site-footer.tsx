@@ -21,6 +21,7 @@ const HOUSE: FooterLink[] = [
   { label: "The ledger", href: "/dashboard" },
   { label: "Issue a toll", href: "/register" },
   { label: "Playground", href: "/playground" },
+  { label: "Remote MCP", href: "/integrations/mcp" },
   { label: "API for agents ↗", href: "/api/docs", external: true },
 ];
 

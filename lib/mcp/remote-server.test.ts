@@ -40,7 +40,7 @@ describe("remote MCP server", () => {
   it("exposes research and clamps budget while preserving verified attribution", async () => {
     const runner = vi.fn(async () => completedRun());
     const server = createRemoteMcpServer(
-      { budgetCap: 0.03, actor: "0xAbC" },
+      { budgetCap: 0.03, actor: "0xAbC", clientChannel: "codex" },
       runner,
     );
     const client = new Client({ name: "test-client", version: "1.0.0" });
@@ -61,6 +61,7 @@ describe("remote MCP server", () => {
         budget: 0.03,
         origin: "mcp",
         asker: "0xAbC",
+        mcpClient: "codex",
       }),
     );
     expect(result.isError).not.toBe(true);

@@ -123,8 +123,8 @@ describe("calculateDashboardMetrics", () => {
         },
       ],
       [
-        { id: "mcp-1", origin: "mcp", asker: "0xMcpAgent" },
-        { id: "mcp-2", origin: "mcp", asker: "0xmcpagent" },
+        { id: "mcp-1", origin: "mcp", asker: "0xMcpAgent", mcpClient: "codex" },
+        { id: "mcp-2", origin: "mcp", asker: "0xmcpagent", mcpClient: "codex" },
         { id: "mcp-anon", origin: "mcp" },
       ],
     );
@@ -134,6 +134,10 @@ describe("calculateDashboardMetrics", () => {
     expect(metrics.identifiedExternalActors).toBe(1);
     expect(metrics.returningExternalActors).toBe(1);
     expect(metrics.externalCreatorPayoutsUsdc).toBe(0.01);
+    expect(metrics.mcpClientQueries).toEqual([
+      { client: "codex", queries: 2, payingQueries: 1 },
+      { client: "unknown", queries: 1, payingQueries: 0 },
+    ]);
   });
 
   it("treats legacy unknown origins as internal", () => {

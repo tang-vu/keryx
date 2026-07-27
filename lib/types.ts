@@ -159,6 +159,12 @@ export interface Confidence {
   reason: string;
 }
 
+/**
+ * Self-declared MCP distribution channel. This is useful for activation telemetry only: the URL
+ * query can be edited by any caller, so it must never grant identity, auth, or payment authority.
+ */
+export type McpClientChannel = "codex" | "claude" | "cursor" | "direct" | "other";
+
 /** Complete record of one agent run over a question. */
 export interface QueryRun {
   id: string;
@@ -194,6 +200,8 @@ export interface QueryRun {
   /** Verified request channel. Persisted on the run as well as its payments so zero-spend
    *  dispatches still count in an honest external conversion denominator. */
   origin?: PaymentOrigin;
+  /** Self-declared MCP client channel, normalized from the setup URL. Telemetry only. */
+  mcpClient?: McpClientChannel;
   /** End-to-end orchestrator time for completed runs. Absent on historical rows. */
   durationMs?: number;
   /** Settlement telemetry for completed runs; historical rows intentionally remain unsampled. */
@@ -237,6 +245,12 @@ export interface DashboardMetrics {
   externalSettlementAttempts: number;
   externalSettledPayments: number;
   externalSettlementSuccessRate: number;
+  /** Remote MCP dispatches grouped by their self-declared setup channel. */
+  mcpClientQueries: Array<{
+    client: McpClientChannel | "unknown";
+    queries: number;
+    payingQueries: number;
+  }>;
   /** Global answer satisfaction rate (up / total feedback). Added by /api/metrics. */
   satisfactionRate?: number;
   /** Total feedback votes received. Added by /api/metrics. */

@@ -1,14 +1,18 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it } from "vitest";
-import { isAllowedMcpOrigin, POST } from "../../app/mcp/route";
+import { isAllowedMcpOrigin, normalizeMcpClient, POST } from "../../app/mcp/route";
 
 const headers = {
   "content-type": "application/json",
   accept: "application/json, text/event-stream",
 };
 
-function request(body: unknown, extraHeaders: Record<string, string> = {}) {
-  return new NextRequest("http://localhost:3000/mcp", {
+function request(
+  body: unknown,
+  extraHeaders: Record<string, string> = {},
+  query = "",
+) {
+  return new NextRequest(`http://localhost:3000/mcp${query}`, {
     method: "POST",
     headers: { ...headers, ...extraHeaders },
     body: JSON.stringify(body),
@@ -16,6 +20,14 @@ function request(body: unknown, extraHeaders: Record<string, string> = {}) {
 }
 
 describe("/mcp", () => {
+  it("normalizes setup channels to a bounded telemetry vocabulary", () => {
+    expect(normalizeMcpClient("CODEX")).toBe("codex");
+    expect(normalizeMcpClient("claude")).toBe("claude");
+    expect(normalizeMcpClient("cursor")).toBe("cursor");
+    expect(normalizeMcpClient(null)).toBe("direct");
+    expect(normalizeMcpClient("anything-user-controlled")).toBe("other");
+  });
+
   it("serves MCP initialize over stateless Streamable HTTP", async () => {
     const response = await POST(
       request({

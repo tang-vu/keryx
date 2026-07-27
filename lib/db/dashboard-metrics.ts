@@ -1,4 +1,4 @@
-import type { DashboardMetrics, PaymentOrigin } from "../types";
+import type { DashboardMetrics, McpClientChannel, PaymentOrigin } from "../types";
 
 export interface MetricPaymentRow {
   amountUsdc: number;
@@ -19,6 +19,7 @@ export interface MetricRunRow {
   paymentAttempts?: number | null;
   settledPayments?: number | null;
   confidenceLevel?: "High" | "Moderate" | "Low" | null;
+  mcpClient?: McpClientChannel | null;
 }
 
 export interface MetricFeedbackRow {
@@ -62,6 +63,18 @@ export function calculateDashboardMetrics(
     0,
   );
   const externalPayingIds = new Set(externalCreatorPayments.map((p) => p.queryId));
+  const mcpChannels = new Map<
+    McpClientChannel | "unknown",
+    { queries: number; payingQueries: number }
+  >();
+  for (const run of externalRuns) {
+    if (run.origin !== "mcp") continue;
+    const channel = run.mcpClient ?? "unknown";
+    const current = mcpChannels.get(channel) ?? { queries: 0, payingQueries: 0 };
+    current.queries += 1;
+    if (externalPayingIds.has(run.id)) current.payingQueries += 1;
+    mcpChannels.set(channel, current);
+  }
 
   const externalPayments = payments.filter(
     (p) => p.origin && EXTERNAL.has(p.origin),
@@ -160,5 +173,8 @@ export function calculateDashboardMetrics(
     externalSettlementSuccessRate: settlementAttempts
       ? round(settledAttempts / settlementAttempts)
       : 0,
+    mcpClientQueries: [...mcpChannels.entries()]
+      .map(([client, counts]) => ({ client, ...counts }))
+      .sort((a, b) => b.queries - a.queries || a.client.localeCompare(b.client)),
   };
 }

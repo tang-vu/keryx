@@ -20,6 +20,7 @@ const NAV = [
   { href: "/dashboard", label: "Ledger" },
   { href: "/answers", label: "Archive" },
   { href: "/sources", label: "Registry" },
+  { href: "/integrations/mcp", label: "MCP" },
   { href: "/wanted", label: "Wanted" },
   { href: "/register", label: "Issue a toll" },
   { href: "/me/sources", label: "My sources" },
@@ -60,7 +61,7 @@ export function SiteHeader() {
 
           {/* Desktop nav */}
           <nav className="hidden items-center gap-1.5 md:flex">
-            {NAV.slice(0, 4).map((link) => {
+            {NAV.slice(0, 5).map((link) => {
               const active =
                 link.href === "/"
                   ? pathname === "/"

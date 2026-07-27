@@ -14,7 +14,11 @@ afterAll(() => {
   for (const suffix of ["", "-wal", "-shm"]) fs.rmSync(dbFile + suffix, { force: true });
 });
 
-function run(id: string, origin: "engine" | "web" | "a2a", asker?: string): QueryRun {
+function run(
+  id: string,
+  origin: "engine" | "web" | "a2a" | "mcp",
+  asker?: string,
+): QueryRun {
   return {
     id,
     question: id,
@@ -29,6 +33,7 @@ function run(id: string, origin: "engine" | "web" | "a2a", asker?: string): Quer
     trace: [],
     createdAt: "2026-07-27T00:00:00.000Z",
     origin,
+    ...(origin === "mcp" ? { mcpClient: "cursor" as const } : {}),
     durationMs: 1_500,
     paymentMode: "real",
     paymentAttempts: 1,
@@ -40,7 +45,7 @@ function run(id: string, origin: "engine" | "web" | "a2a", asker?: string): Quer
 
 function payment(
   queryId: string,
-  origin: "engine" | "web" | "a2a",
+  origin: "engine" | "web" | "a2a" | "mcp",
   settled = true,
 ): PaymentRecord {
   return {
@@ -81,5 +86,15 @@ describe("SQLite dashboard metrics", () => {
     expect(leaderboard).toHaveLength(1);
     expect(leaderboard[0].totalEarnedUsdc).toBe(0.02);
     expect(leaderboard[0].paymentCount).toBe(2);
+  });
+
+  it("persists the MCP setup channel in normalized metrics", async () => {
+    await db.saveQueryRun(run("mcp-cursor", "mcp"));
+    await db.recordPayment(payment("mcp-cursor", "mcp"));
+
+    const metrics = await db.metrics();
+    expect(metrics.mcpClientQueries).toEqual([
+      { client: "cursor", queries: 1, payingQueries: 1 },
+    ]);
   });
 });

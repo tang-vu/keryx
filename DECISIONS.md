@@ -5,6 +5,16 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-22** · Distribution/Telemetry · *Attribute Remote MCP activation with a bounded setup-URL
+channel, never with protocol client metadata.*
+The stateless Streamable HTTP transport does not retain `initialize.clientInfo` for a later
+`tools/call`, so each published setup URL declares one bounded channel:
+`?client=codex|claude|cursor`. Missing and unrecognized values normalize to `direct` and `other`;
+historical rows remain unknown. This is intentionally self-declared activation telemetry only.
+Stable actor attribution still comes exclusively from a verified API-key wallet, and the channel
+cannot change auth, rate limits, budget caps, or payment authority. Reversible: easy (stop
+publishing tagged URLs; the nullable column is additive).
+
 **D-21** · Distribution/Payments · *Add stateless Remote MCP beside, not instead of, the caller-funded
 stdio MCP package.*
 `https://keryx.cc/mcp` creates a fresh Web Standard Streamable HTTP server per request and exposes

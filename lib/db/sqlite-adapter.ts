@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS query_runs (
   parent_id TEXT,                       -- the dispatch this one follows up on
   asker TEXT,                           -- lowercased wallet that dispatched it (SIWE-verified)
   origin TEXT,                          -- engine | web | a2a | mcp
+  mcp_client TEXT,                      -- self-declared setup channel; telemetry only
   duration_ms INTEGER,
   payment_mode TEXT,
   payment_attempts INTEGER,
@@ -271,11 +272,16 @@ export class SqliteAdapter implements KeryxDB {
       this.db.exec(`ALTER TABLE query_runs ADD COLUMN settled_payments INTEGER`);
     if (!runCols.has("confidence_level"))
       this.db.exec(`ALTER TABLE query_runs ADD COLUMN confidence_level TEXT`);
+    if (!runCols.has("mcp_client"))
+      this.db.exec(`ALTER TABLE query_runs ADD COLUMN mcp_client TEXT`);
     // Unconditional: the columns are guaranteed present by the lines above (or by the CREATE TABLE
     // on a fresh database), and both paths need the indexes.
     this.db.exec(`CREATE INDEX IF NOT EXISTS query_runs_parent ON query_runs(parent_id)`);
     this.db.exec(`CREATE INDEX IF NOT EXISTS query_runs_asker ON query_runs(asker, created_at)`);
     this.db.exec(`CREATE INDEX IF NOT EXISTS query_runs_origin ON query_runs(origin, created_at)`);
+    this.db.exec(
+      `CREATE INDEX IF NOT EXISTS query_runs_mcp_client ON query_runs(mcp_client, created_at)`,
+    );
 
     // query_memories.sources_read: NULL on every entry written before the agent recorded what it
     // read. Those entries can prove a citation happened but never that a source was read and passed
@@ -752,8 +758,8 @@ export class SqliteAdapter implements KeryxDB {
         `INSERT OR REPLACE INTO query_runs (
            id,created_at,question,budget,engine,total_spent,total_to_creators,answer,data,
            parent_id,asker,origin,duration_ms,payment_mode,payment_attempts,settled_payments,
-           confidence_level
-         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+           confidence_level,mcp_client
+         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       )
       .run(
         run.id,
@@ -773,6 +779,7 @@ export class SqliteAdapter implements KeryxDB {
         run.paymentAttempts ?? null,
         run.settledPayments ?? null,
         run.confidence?.level ?? null,
+        run.mcpClient ?? null,
       );
   }
 
@@ -908,7 +915,7 @@ export class SqliteAdapter implements KeryxDB {
     const runs = this.db
       .prepare(
         `SELECT id,origin,asker,duration_ms,payment_mode,payment_attempts,settled_payments,
-                confidence_level
+                confidence_level,mcp_client
            FROM query_runs`,
       )
       .all()
@@ -922,6 +929,8 @@ export class SqliteAdapter implements KeryxDB {
         settledPayments: r.settled_payments == null ? null : Number(r.settled_payments),
         confidenceLevel:
           (r.confidence_level as "High" | "Moderate" | "Low" | null) ?? null,
+        mcpClient:
+          (r.mcp_client as import("../types").McpClientChannel | null) ?? null,
       }));
     const feedback = this.db
       .prepare(`SELECT query_id,rating FROM answer_feedback`)

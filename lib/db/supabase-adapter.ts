@@ -382,6 +382,7 @@ export class SupabaseAdapter implements KeryxDB {
       parent_id: run.parentId ?? null,
       asker: run.asker?.toLowerCase() ?? null,
       origin: run.origin ?? "engine",
+      mcp_client: run.mcpClient ?? null,
       duration_ms: run.durationMs ?? null,
       payment_mode: run.paymentMode ?? null,
       payment_attempts: run.paymentAttempts ?? null,
@@ -519,7 +520,7 @@ export class SupabaseAdapter implements KeryxDB {
       ),
       this.allRows(
         "query_runs",
-        "id,origin,asker,duration_ms,payment_mode,payment_attempts,settled_payments,confidence_level",
+        "id,origin,asker,duration_ms,payment_mode,payment_attempts,settled_payments,confidence_level,mcp_client",
       ),
       this.allRows("answer_feedback", "query_id,rating"),
     ]);
@@ -543,6 +544,8 @@ export class SupabaseAdapter implements KeryxDB {
         settledPayments: r.settled_payments == null ? null : Number(r.settled_payments),
         confidenceLevel:
           (r.confidence_level as "High" | "Moderate" | "Low" | null) ?? null,
+        mcpClient:
+          (r.mcp_client as import("../types").McpClientChannel | null) ?? null,
       })),
       feedbackRows.map((f) => ({
         queryId: String(f.query_id),

@@ -15,6 +15,7 @@ import { config } from "@/lib/config";
 import { getDb } from "@/lib/db";
 import { createRemoteMcpServer, type RemoteMcpAccess } from "@/lib/mcp/remote-server";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
+import type { McpClientChannel } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -74,6 +75,15 @@ function isResearchCall(body: unknown): boolean {
   return message.method === "tools/call" && message.params?.name === "research";
 }
 
+export function normalizeMcpClient(value: string | null): McpClientChannel {
+  if (!value) return "direct";
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "codex" || normalized === "claude" || normalized === "cursor") {
+    return normalized;
+  }
+  return "other";
+}
+
 async function resolveAccess(
   req: NextRequest,
   researchCall: boolean,
@@ -93,7 +103,11 @@ async function resolveAccess(
       const db = await getDb();
       void db.incrementUsage(key.keyId);
     }
-    return { budgetCap: config.a2aMaxBudget, actor: key.walletAddress.toLowerCase() };
+    return {
+      budgetCap: config.a2aMaxBudget,
+      actor: key.walletAddress.toLowerCase(),
+      clientChannel: normalizeMcpClient(req.nextUrl.searchParams.get("client")),
+    };
   }
 
   if (researchCall) {
@@ -104,7 +118,10 @@ async function resolveAccess(
     });
     if (limited) return limited;
   }
-  return { budgetCap: config.anonMaxBudget };
+  return {
+    budgetCap: config.anonMaxBudget,
+    clientChannel: normalizeMcpClient(req.nextUrl.searchParams.get("client")),
+  };
 }
 
 async function handle(req: NextRequest): Promise<Response> {
