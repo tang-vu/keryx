@@ -26,6 +26,32 @@ an ask-scoped Keryx API key as `Authorization: Bearer kx_live_…`. The remote p
 the budget is clamped server-side, and the local x402 option below remains available when the caller
 should pay Keryx's inbound toll from its own wallet.
 
+### Connect from Codex
+
+```bash
+codex mcp add keryx --url https://keryx.cc/mcp
+```
+
+### Connect from Claude Code
+
+```bash
+claude mcp add --transport http keryx https://keryx.cc/mcp
+```
+
+### Connect from Cursor
+
+```json
+{
+  "mcpServers": {
+    "keryx": {
+      "url": "https://keryx.cc/mcp"
+    }
+  }
+}
+```
+
+See [`docs/remote-mcp.md`](../docs/remote-mcp.md) for API-key variants and the trust model.
+
 ## Local x402 MCP tools
 
 | Tool | What it does |

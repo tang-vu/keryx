@@ -38,8 +38,47 @@ the `/mcp` route and registry `remotes` entry; existing `mcp` rows remain readab
 
 ## Client configuration
 
-Use `https://keryx.cc/mcp` as a Streamable HTTP server URL. Authentication is optional. Clients
-with a Keryx key may send:
+Use `https://keryx.cc/mcp` as a Streamable HTTP server URL.
+
+### Codex
+
+```bash
+codex mcp add keryx --url https://keryx.cc/mcp
+```
+
+For an authenticated key stored in `KERYX_API_KEY`:
+
+```bash
+codex mcp add keryx --url https://keryx.cc/mcp --bearer-token-env-var KERYX_API_KEY
+```
+
+Codex CLI, the IDE extension, and the ChatGPT desktop app share this MCP configuration on the same
+Codex host.
+
+### Claude Code
+
+```bash
+claude mcp add --transport http keryx https://keryx.cc/mcp
+```
+
+Add `--scope user` to make it available outside the current project. For authenticated use, append
+`--header "Authorization: Bearer <kx_live_…>"`.
+
+### Cursor
+
+Create `.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "keryx": {
+      "url": "https://keryx.cc/mcp"
+    }
+  }
+}
+```
+
+Authentication is optional. Clients with a Keryx key may send:
 
 ```text
 Authorization: Bearer kx_live_…

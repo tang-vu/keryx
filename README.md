@@ -121,7 +121,9 @@ Example trace (real output):
 - **Remote MCP** — connect an MCP client directly to [`https://keryx.cc/mcp`](https://keryx.cc/mcp)
   over Streamable HTTP: no package or local wallet process. The `research` tool has an anonymous,
   IP-limited trial; an ask-scoped `kx_live_…` Bearer key raises the cap and attributes usage to its
-  verified wallet. Creator rewards still settle in USDC on Arc.
+  verified wallet. Creator rewards still settle in USDC on Arc. Quick connect:
+  `codex mcp add keryx --url https://keryx.cc/mcp` or
+  `claude mcp add --transport http keryx https://keryx.cc/mcp`.
 - **Local x402 MCP** — on the [official MCP registry](https://registry.modelcontextprotocol.io/v0/servers?search=keryx);
   `npx -y keryx-mcp@latest` keeps the caller-funded path: its local Arc wallet pays Keryx's x402
   toll before Keryx researches and pays creators.
