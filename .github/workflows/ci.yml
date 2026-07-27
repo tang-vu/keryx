@@ -37,6 +37,11 @@ jobs:
         # ts-node needs the CommonJS tsconfig; the app tsconfig uses bundler/esnext.
         run: npx hardhat --tsconfig tsconfig.hardhat.json test
 
+      - name: Production dependency audit (critical gate)
+        # Current Next 16.2.x pins PostCSS 8.4.x; keep the remaining high advisory visible
+        # without making CI permanently red until Next publishes a compatible patched pin.
+        run: npm audit --omit=dev --audit-level=critical
+
       - name: Build (Next.js)
         run: npm run build
 

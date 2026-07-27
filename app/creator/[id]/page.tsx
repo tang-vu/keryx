@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { breadcrumbJsonLd } from "@/lib/seo-structured-data";
+import { safeInlineJson } from "@/lib/safe-json";
 import { CreatorDetailView } from "./creator-detail-view";
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
@@ -70,7 +71,7 @@ export default async function CreatorPage({ params }: PageProps) {
     <div className="min-h-screen bg-paper-2">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeInlineJson(jsonLd) }}
       />
       <header className="border-b border-ink bg-paper">
         <div className="mx-auto flex max-w-[1180px] items-center justify-between px-4 py-3 sm:px-[30px]">

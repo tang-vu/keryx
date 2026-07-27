@@ -16,7 +16,7 @@ import type {
   SourceItem,
   WithdrawalRecord,
 } from "../types";
-import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, FeedbackStats, KeryxDB, QueryMemoryEntry, RateLimitDecision, SessionGrantRecord, UserRecord } from "./keryx-db";
+import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, FeedbackStats, KeryxDB, OnrampReservation, QueryMemoryEntry, RateLimitDecision, SessionGrantRecord, UserRecord } from "./keryx-db";
 import type { LedgerAccount } from "../gateway/settlement-parity";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
@@ -577,12 +577,88 @@ export class SqliteAdapter implements KeryxDB {
     };
   }
 
-  /** Rounded to micro-USDC so repeated float additions can't drift the cap accounting. */
+  /** Reserve atomically, including the cap predicate, so concurrent asks cannot both pass. */
   async addSessionGrantSpend(sessionId: string, amount: number): Promise<boolean> {
     const res = this.db
-      .prepare(`UPDATE session_grants SET spent = ROUND(spent + ?, 6) WHERE session_id = ?`)
-      .run(amount, sessionId);
+      .prepare(
+        `UPDATE session_grants
+            SET spent = ROUND(spent + ?, 6)
+          WHERE session_id = ?
+            AND ROUND(spent + ?, 6) <= cap
+            AND expiry > ?`,
+      )
+      .run(amount, sessionId, amount, Date.now());
     return Number(res.changes) > 0;
+  }
+
+  async reserveOnramp(
+    addressKey: string,
+    dayKey: string,
+    amount: number,
+    dailyCap: number,
+    now: number,
+  ): Promise<OnrampReservation> {
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      const claimed = this.db
+        .prepare(`SELECT 1 FROM sync_state WHERE key = ?`)
+        .get(addressKey);
+      if (claimed) {
+        this.db.exec("ROLLBACK");
+        return "already-funded";
+      }
+      const row = this.db
+        .prepare(`SELECT value FROM sync_state WHERE key = ?`)
+        .get(dayKey) as { value: string } | undefined;
+      const total = Number.parseFloat(row?.value ?? "0") || 0;
+      if (total + amount > dailyCap + 1e-9) {
+        this.db.exec("ROLLBACK");
+        return "daily-cap";
+      }
+      const updatedAt = new Date(now).toISOString();
+      this.db
+        .prepare(`INSERT INTO sync_state (key,value,updated_at) VALUES (?,?,?)`)
+        .run(addressKey, String(now), updatedAt);
+      this.db
+        .prepare(
+          `INSERT INTO sync_state (key,value,updated_at) VALUES (?,?,?)
+           ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at`,
+        )
+        .run(dayKey, String(total + amount), updatedAt);
+      this.db.exec("COMMIT");
+      return "reserved";
+    } catch (err) {
+      try { this.db.exec("ROLLBACK"); } catch { /* transaction already closed */ }
+      throw err;
+    }
+  }
+
+  async releaseOnramp(addressKey: string, dayKey: string, amount: number): Promise<void> {
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      this.db.prepare(`DELETE FROM sync_state WHERE key = ?`).run(addressKey);
+      const row = this.db
+        .prepare(`SELECT value FROM sync_state WHERE key = ?`)
+        .get(dayKey) as { value: string } | undefined;
+      const total = Math.max(0, (Number.parseFloat(row?.value ?? "0") || 0) - amount);
+      this.db
+        .prepare(`UPDATE sync_state SET value=?, updated_at=? WHERE key=?`)
+        .run(String(total), new Date().toISOString(), dayKey);
+      this.db.exec("COMMIT");
+    } catch (err) {
+      try { this.db.exec("ROLLBACK"); } catch { /* transaction already closed */ }
+      throw err;
+    }
+  }
+
+  async releaseSessionGrantSpend(sessionId: string, amount: number): Promise<void> {
+    this.db
+      .prepare(
+        `UPDATE session_grants
+            SET spent = MAX(0, ROUND(spent - ?, 6))
+          WHERE session_id = ?`,
+      )
+      .run(amount, sessionId);
   }
 
   async deleteSessionGrant(sessionId: string): Promise<void> {

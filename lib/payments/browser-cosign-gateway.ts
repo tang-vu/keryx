@@ -17,7 +17,7 @@
 import { config } from "../config";
 import type { Author, PaymentRecord, Source } from "../types";
 import { makePayment, type FetchResult, type PaymentGateway } from "./payment-gateway";
-import { canSpend, isGrantValid, recordSpend } from "./session-grants";
+import { isGrantValid, releaseSpend, reserveSpend } from "./session-grants";
 
 export interface SignRequest {
   reqId: string;
@@ -134,18 +134,17 @@ export class BrowserCoSignGateway implements PaymentGateway {
       throw new Error("session grant expired or revoked — aborting spend");
     }
 
-    // Pre-spend cap guard: enforce before requesting a signature so the browser
-    // never signs an authorization the grant can't cover.
-    if (!(await canSpend(this.sessionId, amount))) {
-      throw new Error(`session cap would be exceeded (amount=${amount})`);
-    }
-
     // Step 1: hit the URL without a payment header to obtain the 402 challenge.
     // The challenge MUST be requested with the same method the paid retry will use:
     // /api/source is GET, but /api/cite is POST-only (a GET there returns 405, not 402).
     const reqId = crypto.randomUUID();
     const method = kind === "fetch" ? "GET" : "POST";
     const requirements = await this.fetchRequirements(url, method);
+
+    // Reserve in one atomic DB operation before a bearer authorization can exist.
+    if (!(await reserveSpend(this.sessionId, amount))) {
+      throw new Error(`session cap would be exceeded (amount=${amount})`);
+    }
 
     // Step 2: Ask the browser to sign. The browser validates payTo/amount against
     // the grant cap before signing — defence against a compromised server sending
@@ -154,6 +153,9 @@ export class BrowserCoSignGateway implements PaymentGateway {
     try {
       paymentHeader = await this.requestSignature(reqId, requirements, kind, source.id);
     } catch (err) {
+      await releaseSpend(this.sessionId, amount).catch((releaseErr) => {
+        console.error("[keryx] failed to release unused session reservation:", releaseErr);
+      });
       // Timeout or revoke — record a skipped payment rather than crashing the run.
       const message = err instanceof Error ? err.message : String(err);
       throw new Error(`sign-request failed (${message}) — skipping ${source.name}`);
@@ -176,17 +178,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
       throw new Error(`source fetch failed after payment: ${retryRes.status} ${body.slice(0, 120)}`);
     }
 
-    // Step 4: Record the spend in the server grant tracker. The payment already settled
-    // on-chain above; if the grant vanished between canSpend and here (a revoke racing an
-    // in-flight settle), the on-chain Gateway balance is still the true ceiling — log the
-    // drift rather than discarding a payment that really happened.
-    if (!(await recordSpend(this.sessionId, amount))) {
-      console.warn(
-        `[keryx] recordSpend skipped for ${this.sessionId} — grant changed mid-settle; on-chain balance remains the cap`,
-      );
-    }
-
-    // Step 5: Extract the settled tx from the response header, if present.
+    // Step 4: Extract the settled tx from the response header, if present.
     const paymentResponse = retryRes.headers.get("PAYMENT-RESPONSE");
     let txHash: string | null = null;
     if (paymentResponse) {

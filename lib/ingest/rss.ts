@@ -5,6 +5,7 @@
 
 import Parser from "rss-parser";
 import type { SourceItem } from "../types";
+import { fetchPublicText } from "../net/public-fetch";
 
 const parser = new Parser({ timeout: 15000 });
 
@@ -40,7 +41,12 @@ export interface IngestedFeed {
 }
 
 export async function ingestRss(rssUrl: string, max = 10): Promise<IngestedFeed> {
-  return toIngestedFeed(await parser.parseURL(rssUrl), rssUrl, max);
+  const xml = await fetchPublicText(rssUrl, {
+    timeoutMs: 15_000,
+    maxBytes: 5_000_000,
+    maxHops: 3,
+  });
+  return ingestRssXml(xml, rssUrl, max);
 }
 
 /**

@@ -20,6 +20,7 @@ import { SiteFooter } from "@/components/keryx/site-footer";
 import { ArchiveAnswerRow } from "@/components/keryx/archive-answer-row";
 import { ArchiveSearch } from "@/components/keryx/archive-search";
 import { ArchiveTopicChips } from "@/components/keryx/archive-topic-chips";
+import { safeInlineJson } from "@/lib/safe-json";
 
 // Same cadence as the archive it slices — new dispatches join a topic without a redeploy.
 export const revalidate = 600;
@@ -135,7 +136,7 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
       <SiteHeader />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeInlineJson(jsonLd) }}
       />
 
       <main className="mx-auto max-w-[860px] px-4 pb-20 pt-12 sm:px-[30px]">

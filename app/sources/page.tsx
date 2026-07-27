@@ -15,6 +15,7 @@ import { SourceRegistryRow } from "@/components/keryx/source-registry-row";
 import { breadcrumbJsonLd } from "@/lib/seo-structured-data";
 import { fmtUsdc } from "@/components/keryx/phase-style";
 import type { Source } from "@/lib/types";
+import { safeInlineJson } from "@/lib/safe-json";
 
 // Recompute a few times an hour — new registrations arrive via the indexer.
 export const revalidate = 600;
@@ -94,7 +95,7 @@ export default async function SourcesPage() {
       <SiteHeader />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeInlineJson(jsonLd) }}
       />
 
       <main className="mx-auto max-w-[860px] px-4 pb-20 pt-12 sm:px-[30px]">

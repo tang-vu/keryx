@@ -42,6 +42,8 @@ next-env.d.ts
 # AI/agent workflow artifacts — keep out of the public repo
 CLAUDE.md
 .claude/
+AGENTS.md
+.agents/
 plans/
 .keryx-shots/
 repomix-output.*

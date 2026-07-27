@@ -24,11 +24,16 @@
 
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
+import { Agent, fetch as undiciFetch } from "undici";
 
 export interface FetchLimits {
   timeoutMs?: number;
   maxBytes?: number;
   maxHops?: number;
+}
+
+export interface PublicRequestLimits {
+  timeoutMs?: number;
 }
 
 const DEFAULTS = { timeoutMs: 10_000, maxBytes: 2_000_000, maxHops: 3 } satisfies Required<FetchLimits>;
@@ -76,6 +81,10 @@ export function isPublicAddress(address: string): boolean {
  * probe smuggles a payload past a naive host check (`http://public.example@127.0.0.1/`).
  */
 export async function assertPublicUrl(raw: string): Promise<URL> {
+  return (await resolvePublicUrl(raw)).url;
+}
+
+async function resolvePublicUrl(raw: string): Promise<{ url: URL; addresses: string[] }> {
   let url: URL;
   try {
     url = new URL(raw);
@@ -100,7 +109,20 @@ export async function assertPublicUrl(raw: string): Promise<URL> {
   if (!addresses.every(isPublicAddress)) {
     throw new UnsafeTargetError("that address is on a private network");
   }
-  return url;
+  return { url, addresses };
+}
+
+function pinnedAgent(address: string): Agent {
+  const family = isIP(address) as 4 | 6;
+  return new Agent({
+    connect: {
+      // assertPublicUrl validated every answer. Pin the socket to one of those exact answers so
+      // the HTTP client cannot perform a second DNS lookup that rebinds to a private address.
+      lookup(_hostname, _options, callback) {
+        callback(null, address, family);
+      },
+    },
+  });
 }
 
 /**
@@ -118,25 +140,64 @@ export async function fetchPublicText(raw: string, limits: FetchLimits = {}): Pr
   try {
     let target = raw;
     for (let hop = 0; hop <= maxHops; hop++) {
-      const url = await assertPublicUrl(target);
-      const res = await fetch(url, {
-        redirect: "manual",
-        signal: ctrl.signal,
-        headers: { "User-Agent": "Keryx-FeedCheck/1", Accept: "application/rss+xml, application/xml, text/xml, */*" },
-      });
+      const { url, addresses } = await resolvePublicUrl(target);
+      const dispatcher = pinnedAgent(addresses[0]!);
+      try {
+        const res = await undiciFetch(url, {
+          dispatcher,
+          redirect: "manual",
+          signal: ctrl.signal,
+          headers: { "User-Agent": "Keryx-FeedCheck/1", Accept: "application/rss+xml, application/xml, text/xml, */*" },
+        });
 
-      if (res.status >= 300 && res.status < 400) {
-        const location = res.headers.get("location");
-        if (!location) throw new UnsafeTargetError("that address redirects nowhere");
-        target = new URL(location, url).toString();
-        continue;
+        if (res.status >= 300 && res.status < 400) {
+          const location = res.headers.get("location");
+          if (!location) throw new UnsafeTargetError("that address redirects nowhere");
+          await res.body?.cancel();
+          target = new URL(location, url).toString();
+          continue;
+        }
+        if (!res.ok) throw new UnsafeTargetError(`the feed answered ${res.status}`);
+        return await readCapped(res as unknown as Response, maxBytes);
+      } finally {
+        await dispatcher.close();
       }
-      if (!res.ok) throw new UnsafeTargetError(`the feed answered ${res.status}`);
-      return await readCapped(res, maxBytes);
     }
     throw new UnsafeTargetError("that address redirects too many times");
   } finally {
     clearTimeout(timer);
+  }
+}
+
+/**
+ * Send one request to an untrusted public URL. Redirects are refused: replaying a signed
+ * webhook POST elsewhere is surprising, and following it unchecked would re-open SSRF.
+ */
+export async function fetchPublicUrl(
+  raw: string,
+  init: RequestInit,
+  limits: PublicRequestLimits = {},
+): Promise<Response> {
+  const { url, addresses } = await resolvePublicUrl(raw);
+  const dispatcher = pinnedAgent(addresses[0]!);
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), limits.timeoutMs ?? DEFAULTS.timeoutMs);
+  const onAbort = () => ctrl.abort();
+  init.signal?.addEventListener("abort", onAbort, { once: true });
+  try {
+    const requestInit = {
+      ...init,
+      dispatcher,
+      redirect: "error" as const,
+      signal: ctrl.signal,
+    } as unknown as Parameters<typeof undiciFetch>[1];
+    const response = await undiciFetch(url, requestInit);
+    await response.body?.cancel();
+    return response as unknown as Response;
+  } finally {
+    clearTimeout(timer);
+    init.signal?.removeEventListener("abort", onAbort);
+    await dispatcher.close();
   }
 }
 

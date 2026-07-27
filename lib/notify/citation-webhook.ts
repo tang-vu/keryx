@@ -14,6 +14,7 @@
 import crypto from "node:crypto";
 import type { KeryxDB } from "../db";
 import type { Citation, PaymentRecord, Source } from "../types";
+import { fetchPublicUrl } from "../net/public-fetch";
 
 /** Outbound POST timeout. A creator's endpoint shouldn't be able to slow the agent for long. */
 const TIMEOUT_MS = Math.max(
@@ -117,7 +118,7 @@ export async function dispatchCitationNotify(
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
     try {
-      const res = await fetch(notify.url, {
+      const res = await fetchPublicUrl(notify.url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

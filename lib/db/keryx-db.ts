@@ -104,6 +104,8 @@ export interface RateLimitDecision {
   msBeforeNext: number;
 }
 
+export type OnrampReservation = "reserved" | "already-funded" | "daily-cap";
+
 /** A user account, keyed by wallet address (lowercased). Created on first SIWE
  *  sign-in. Non-custodial: an identity/profile index only — no funds, no keys,
  *  no credentials. Access control still re-derives the role live (see resolveRole). */
@@ -212,6 +214,16 @@ export interface KeryxDB {
   getSyncState(key: string): Promise<string | null>;
   /** Upsert a named sync-state value. */
   setSyncState(key: string, value: string): Promise<void>;
+  /** Atomically reserve one address claim and increment the shared daily faucet total. */
+  reserveOnramp(
+    addressKey: string,
+    dayKey: string,
+    amount: number,
+    dailyCap: number,
+    now: number,
+  ): Promise<OnrampReservation>;
+  /** Undo a reservation when the chain transfer definitely failed. */
+  releaseOnramp(addressKey: string, dayKey: string, amount: number): Promise<void>;
 
   // ── browser co-sign session grants (no keys, only caps + accounting) ──
   /** Create or replace the grant for a session id. Resets `spent` — callers re-register with a
@@ -219,8 +231,10 @@ export interface KeryxDB {
   upsertSessionGrant(grant: Omit<SessionGrantRecord, "spent">): Promise<void>;
   /** Fetch a grant. Returns null when absent; expiry is the caller's to interpret. */
   getSessionGrant(sessionId: string): Promise<SessionGrantRecord | null>;
-  /** Atomically add to `spent`. False when no grant row exists to charge. */
+  /** Atomically reserve against `spent` only when the live grant has enough cap. */
   addSessionGrantSpend(sessionId: string, amount: number): Promise<boolean>;
+  /** Release a reservation after signing fails before an authorization is submitted. */
+  releaseSessionGrantSpend(sessionId: string, amount: number): Promise<void>;
   deleteSessionGrant(sessionId: string): Promise<void>;
   /** Drop every grant that lapsed at or before `now` (unix ms). */
   deleteExpiredSessionGrants(now: number): Promise<void>;

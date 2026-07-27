@@ -16,6 +16,7 @@ import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { ArchiveIndexView } from "@/components/keryx/archive-index-view";
 import { archiveIndexJsonLd } from "../../archive-index-json-ld";
+import { safeInlineJson } from "@/lib/safe-json";
 
 export const revalidate = 600;
 
@@ -96,7 +97,7 @@ export default async function AnswersPageN({ params }: { params: Promise<{ n: st
       <SiteHeader />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeInlineJson(jsonLd) }}
       />
       <ArchiveIndexView
         slice={slice}

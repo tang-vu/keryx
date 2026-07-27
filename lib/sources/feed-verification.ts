@@ -13,6 +13,8 @@
  * proves control of a DIFFERENT wallet, which the verifier rejects via the ownership check.
  */
 
+import { fetchPublicText } from "../net/public-fetch";
+
 const FETCH_TIMEOUT_MS = 15_000;
 // Cap the scanned body so a hostile feed URL can't stream an unbounded response into memory.
 const MAX_FEED_BYTES = 5_000_000;
@@ -36,19 +38,14 @@ export async function feedContainsToken(feedUrl: string, wallet: string): Promis
   if (!url) return false;
   const token = verificationToken(wallet);
 
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
   try {
-    const res = await fetch(url, {
-      signal: ctrl.signal,
-      headers: { "user-agent": "keryx-feed-verifier/1.0", accept: "application/rss+xml, application/xml, text/xml, */*" },
+    const raw = await fetchPublicText(url, {
+      timeoutMs: FETCH_TIMEOUT_MS,
+      maxBytes: MAX_FEED_BYTES,
+      maxHops: 3,
     });
-    if (!res.ok) return false;
-    const raw = (await res.text()).slice(0, MAX_FEED_BYTES);
     return raw.toLowerCase().includes(token);
   } catch {
     return false;
-  } finally {
-    clearTimeout(timer);
   }
 }

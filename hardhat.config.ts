@@ -43,6 +43,9 @@ const deployerKey =
   process.env.BUYER_PRIVATE_KEY;
 
 const config: HardhatUserConfig = {
+  paths: {
+    tests: "./contracts/test",
+  },
   solidity: {
     version: "0.8.24",
     settings: {

@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import { PaperGrain } from "@/components/keryx/paper-grain";
 import { InkBleedCursor } from "@/components/keryx/ink-bleed-cursor";
 import { MintEngravings } from "@/components/keryx/mint-engravings";
+import { safeInlineJson } from "@/lib/safe-json";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -145,7 +146,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       >
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
+          dangerouslySetInnerHTML={{ __html: safeInlineJson(JSON_LD) }}
         />
         <MintEngravings />
         <PaperGrain />

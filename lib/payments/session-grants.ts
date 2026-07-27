@@ -59,6 +59,15 @@ export async function recordSpend(sessionId: string, amount: number): Promise<bo
   return db.addSessionGrantSpend(sessionId, amount);
 }
 
+/** Reserve cap before asking the browser to create a bearer payment authorization. */
+export const reserveSpend = recordSpend;
+
+/** Release a reservation only while no payment authorization has been submitted. */
+export async function releaseSpend(sessionId: string, amount: number): Promise<void> {
+  const db = await getDb();
+  await db.releaseSessionGrantSpend(sessionId, amount);
+}
+
 export async function dropGrant(sessionId: string): Promise<void> {
   const db = await getDb();
   await db.deleteSessionGrant(sessionId);

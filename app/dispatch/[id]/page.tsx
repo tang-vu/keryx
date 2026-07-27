@@ -11,6 +11,7 @@ import { loadFreshness } from "@/lib/answers-freshness";
 import { ConfidenceBadge } from "@/components/keryx/confidence-badge";
 import { deriveConfidence } from "@/lib/agent/confidence";
 import { breadcrumbJsonLd, crumbLabel } from "@/lib/seo-structured-data";
+import { safeInlineJson } from "@/lib/safe-json";
 import { DispatchView } from "./dispatch-view";
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
@@ -131,7 +132,7 @@ export default async function DispatchPage({ params }: PageProps) {
     <div className="min-h-screen bg-paper-2">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeInlineJson(jsonLd) }}
       />
       {/* Minimal header */}
       <header className="border-b border-ink bg-paper">

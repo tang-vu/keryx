@@ -22,6 +22,7 @@ const {
   isGrantValid,
   canSpend,
   recordSpend,
+  releaseSpend,
   dropGrant,
   pruneExpiredGrants,
 } = await import("./session-grants");
@@ -142,6 +143,23 @@ describe("cap enforcement", () => {
     await storeGrant(SESSION, grantFor(1));
     await Promise.all(Array.from({ length: 20 }, () => recordSpend(SESSION, 0.001)));
     expect((await getGrant(SESSION))?.spent).toBeCloseTo(0.02, 6);
+  });
+
+  it("atomically refuses concurrent reservations beyond the cap", async () => {
+    await storeGrant(SESSION, grantFor(0.01));
+    const accepted = await Promise.all(
+      Array.from({ length: 20 }, () => recordSpend(SESSION, 0.001)),
+    );
+
+    expect(accepted.filter(Boolean)).toHaveLength(10);
+    expect((await getGrant(SESSION))?.spent).toBe(0.01);
+  });
+
+  it("releases a reservation that was never submitted", async () => {
+    await storeGrant(SESSION, grantFor(0.01));
+    expect(await recordSpend(SESSION, 0.006)).toBe(true);
+    await releaseSpend(SESSION, 0.006);
+    expect((await getGrant(SESSION))?.spent).toBe(0);
   });
 });
 

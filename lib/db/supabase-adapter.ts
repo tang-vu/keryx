@@ -15,11 +15,30 @@ import type {
   SourceItem,
   WithdrawalRecord,
 } from "../types";
-import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, FeedbackStats, KeryxDB, QueryMemoryEntry, RateLimitDecision, SessionGrantRecord, UserRecord } from "./keryx-db";
+import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, FeedbackStats, KeryxDB, OnrampReservation, QueryMemoryEntry, RateLimitDecision, SessionGrantRecord, UserRecord } from "./keryx-db";
 import type { LedgerAccount } from "../gateway/settlement-parity";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 import { normalizePreviewDepth } from "../sources/preview-depth";
+
+/**
+ * supabase-js normally resolves PostgREST failures as `{ data, error }`. Most adapter methods
+ * intentionally return domain data rather than Supabase result objects, so silently ignoring
+ * `error` can make a failed ledger write look successful. Making non-2xx responses reject at the
+ * transport boundary gives every read/write normal promise semantics and keeps caller catch paths
+ * effective.
+ */
+export async function throwingSupabaseFetch(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  const response = await fetch(input, init);
+  if (response.ok) return response;
+  const detail = await response.clone().text().catch(() => "");
+  throw new Error(
+    `Supabase request failed (${response.status})${detail ? `: ${detail.slice(0, 500)}` : ""}`,
+  );
+}
 
 export class SupabaseAdapter implements KeryxDB {
   private sb: SupabaseClient;
@@ -28,7 +47,10 @@ export class SupabaseAdapter implements KeryxDB {
     this.sb = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { auth: { persistSession: false } },
+      {
+        auth: { persistSession: false },
+        global: { fetch: throwingSupabaseFetch },
+      },
     );
   }
 
@@ -580,14 +602,51 @@ export class SupabaseAdapter implements KeryxDB {
     };
   }
 
-  /** Delegates to a SQL function so the increment is atomic, matching the SQLite adapter.
-   *  A read-modify-write here would lose a spend whenever two sources settle concurrently. */
+  /** The SQL function reserves only when spent + amount remains under cap. */
   async addSessionGrantSpend(sessionId: string, amount: number): Promise<boolean> {
-    const { data } = await this.sb.rpc("add_session_grant_spend", {
+    const { data, error } = await this.sb.rpc("reserve_session_grant_spend", {
+      p_session_id: sessionId,
+      p_amount: amount,
+      p_now: Date.now(),
+    });
+    if (error) throw error;
+    return data === true;
+  }
+
+  async reserveOnramp(
+    addressKey: string,
+    dayKey: string,
+    amount: number,
+    dailyCap: number,
+    now: number,
+  ): Promise<OnrampReservation> {
+    const { data, error } = await this.sb.rpc("reserve_onramp", {
+      p_address_key: addressKey,
+      p_day_key: dayKey,
+      p_amount: amount,
+      p_daily_cap: dailyCap,
+      p_now: now,
+    });
+    if (error) throw error;
+    if (data === "reserved" || data === "already-funded" || data === "daily-cap") return data;
+    throw new Error(`reserve_onramp returned unexpected result: ${String(data)}`);
+  }
+
+  async releaseOnramp(addressKey: string, dayKey: string, amount: number): Promise<void> {
+    const { error } = await this.sb.rpc("release_onramp", {
+      p_address_key: addressKey,
+      p_day_key: dayKey,
+      p_amount: amount,
+    });
+    if (error) throw error;
+  }
+
+  async releaseSessionGrantSpend(sessionId: string, amount: number): Promise<void> {
+    const { error } = await this.sb.rpc("release_session_grant_spend", {
       p_session_id: sessionId,
       p_amount: amount,
     });
-    return data === true;
+    if (error) throw error;
   }
 
   async deleteSessionGrant(sessionId: string): Promise<void> {

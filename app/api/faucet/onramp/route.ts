@@ -78,37 +78,7 @@ export async function POST(req: Request) {
   if (!config.funderKey) return disabled("Onramp not configured (no funder wallet)");
   const db = await getDb();
 
-  // 1. Once per address.
-  try {
-    const prior = await db.getSyncState(addrKey(lower));
-    if (prior) {
-      return NextResponse.json(
-        {
-          error: "already funded",
-          message: "This address was already onramped once. Top up via the Circle faucet.",
-          faucet: CIRCLE_FAUCET,
-        },
-        { status: 409 },
-      );
-    }
-  } catch {
-    // Fail closed on the once-per-address check would block legit callers on a transient DB error;
-    // fail open is acceptable here because the global daily cap still bounds total drain.
-  }
-
-  // 2. Global daily cap — bounds total drain regardless of how many addresses ask.
   const dk = dayKey();
-  let dayTotal = 0;
-  try {
-    dayTotal = parseFloat((await db.getSyncState(dk)) ?? "0") || 0;
-  } catch {
-    /* treat as 0 on read error */
-  }
-  if (dayTotal + DRIP_USDC > DAILY_CAP_USDC) {
-    return disabled("Daily onramp cap reached — use the Circle faucet");
-  }
-
-  // 3. Funder buffer check.
   const funder = privateKeyToAccount(config.funderKey as `0x${string}`);
   const publicClient = createPublicClient({ chain: arcTestnet, transport: http(config.rpcUrl) });
   const wallet = createWalletClient({ account: funder, chain: arcTestnet, transport: http(config.rpcUrl) });
@@ -117,15 +87,38 @@ export async function POST(req: Request) {
     return disabled("Funder balance too low — use the Circle faucet");
   }
 
+  // Final authority: reserve the address claim and daily amount in one DB transaction.
+  let reservation: Awaited<ReturnType<typeof db.reserveOnramp>>;
+  try {
+    reservation = await db.reserveOnramp(
+      addrKey(lower),
+      dk,
+      DRIP_USDC,
+      DAILY_CAP_USDC,
+      Date.now(),
+    );
+  } catch (err) {
+    console.error("[onramp] reservation failed:", err);
+    return disabled("Onramp accounting unavailable — try again shortly");
+  }
+  if (reservation === "already-funded") {
+    return NextResponse.json(
+      {
+        error: "already funded",
+        message: "This address was already onramped once. Top up via the Circle faucet.",
+        faucet: CIRCLE_FAUCET,
+      },
+      { status: 409 },
+    );
+  }
+  if (reservation === "daily-cap") {
+    return disabled("Daily onramp cap reached — use the Circle faucet");
+  }
+
   try {
     const tx = await wallet.sendTransaction({ to: address as `0x${string}`, value: DRIP });
     const receipt = await publicClient.waitForTransactionReceipt({ hash: tx });
     if (receipt.status !== "success") throw new Error(`drip tx reverted (${tx})`);
-
-    // Persist the per-address claim + advance the daily total. Best-effort: the money is already
-    // sent, so a write failure must not 500 the caller (the in-memory cap/limit still applies).
-    db.setSyncState(addrKey(lower), String(Date.now())).catch(() => {});
-    db.setSyncState(dk, String(dayTotal + DRIP_USDC)).catch(() => {});
 
     return NextResponse.json({
       ok: true,
@@ -135,6 +128,9 @@ export async function POST(req: Request) {
       explorer: config.explorerUrl,
     });
   } catch (err) {
+    await db.releaseOnramp(addrKey(lower), dk, DRIP_USDC).catch((releaseErr) => {
+      console.error("[onramp] failed to release reservation:", releaseErr);
+    });
     console.error("[onramp] drip failed:", err instanceof Error ? err.message : String(err));
     return NextResponse.json(
       { error: "drip failed — try again or use the Circle faucet", faucet: CIRCLE_FAUCET },
