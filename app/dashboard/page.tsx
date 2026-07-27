@@ -9,10 +9,13 @@ import { useEffect, useState } from "react";
 import {
   ArrowLeftRight,
   Banknote,
+  Clock3,
   Coins,
+  Gauge,
   Receipt,
   ThumbsUp,
   TrendingUp,
+  UserRoundCheck,
   Users,
 } from "lucide-react";
 import { SiteHeader } from "@/components/keryx/site-header";
@@ -31,7 +34,13 @@ import { DispatchHistory } from "@/components/keryx/dispatch-history";
 import { fmtUsdc } from "@/components/keryx/phase-style";
 import type { DailyVolume, DashboardMetrics, PaymentRecord, WithdrawalRecord } from "@/lib/types";
 
-const POLL_MS = 2000;
+const POLL_MS = 10_000;
+
+function fmtDuration(ms: number): string {
+  if (ms <= 0) return "â€”";
+  if (ms < 1_000) return `${ms}ms`;
+  return `${(ms / 1_000).toFixed(ms < 10_000 ? 1 : 0)}s`;
+}
 
 interface MetricsResponse {
   metrics: DashboardMetrics;
@@ -103,10 +112,10 @@ export default function DashboardPage() {
               The ledger
             </div>
             <h1 className="letterpress mt-2.5 font-display text-[clamp(28px,3.6vw,40px)] font-medium tracking-tight text-ink">
-              Traction
+              External traction
             </h1>
             <p className="mt-1.5 text-sm text-ink-2">
-              Real value flowing to creators — every payment Keryx has settled.
+              Real people and third-party agents using Keryx; internal volume stays separate.
             </p>
           </div>
           <span className="hidden shrink-0 items-center gap-2 rounded-full border border-paid/40 bg-paid/[0.07] px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.1em] text-paid sm:inline-flex">
@@ -123,6 +132,87 @@ export default function DashboardPage() {
           on-chain anchor is the batched settlement wallet, linked from the live feed.
         </p>
 
+        <section className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
+          <MetricCard
+            label="External queries"
+            value={String(metrics?.externalQueries ?? 0)}
+            sub={`${metrics?.externalPayingQueries ?? 0} paid Â· ${Math.round(
+              (metrics?.externalReaderToPayerConversion ?? 0) * 100,
+            )}% conversion`}
+            icon={TrendingUp}
+            accent="emerald"
+            loading={!metrics}
+          />
+          <MetricCard
+            label="Returning actors"
+            value={String(metrics?.returningExternalActors ?? 0)}
+            sub={`${metrics?.identifiedExternalActors ?? 0} identified Â· ${Math.round(
+              (metrics?.returningExternalActorRate ?? 0) * 100,
+            )}% returning`}
+            icon={UserRoundCheck}
+            accent="emerald"
+            loading={!metrics}
+          />
+          <MetricCard
+            label="Cost / ext. query"
+            value={`$${fmtUsdc(metrics?.externalAvgCostPerQueryUsdc)}`}
+            sub={`$${fmtUsdc(metrics?.externalCreatorPayoutsUsdc)} to creators`}
+            icon={Coins}
+            accent="amber"
+            loading={!metrics}
+          />
+          <MetricCard
+            label={
+              (metrics?.externalFeedbackTotal ?? 0) > 0
+                ? "External satisfaction"
+                : "High-confidence answers"
+            }
+            value={
+              (metrics?.externalFeedbackTotal ?? 0) === 0 &&
+              (metrics?.externalConfidenceSamples ?? 0) === 0
+                ? "Collecting"
+                : `${Math.round(
+                    (((metrics?.externalFeedbackTotal ?? 0) > 0
+                      ? metrics?.externalSatisfactionRate
+                      : metrics?.externalHighConfidenceRate) ?? 0) * 100,
+                  )}%`
+            }
+            sub={
+              (metrics?.externalFeedbackTotal ?? 0) > 0
+                ? `${metrics?.externalFeedbackTotal ?? 0} external votes`
+                : `${metrics?.externalConfidenceSamples ?? 0} completed samples`
+            }
+            icon={ThumbsUp}
+            accent="emerald"
+            loading={!metrics}
+          />
+          <MetricCard
+            label="External p95 latency"
+            value={fmtDuration(metrics?.externalP95DurationMs ?? 0)}
+            sub={`${metrics?.externalDurationSamples ?? 0} completed samples`}
+            icon={Clock3}
+            accent="neutral"
+            loading={!metrics}
+          />
+          <MetricCard
+            label="Settlement success"
+            value={
+              (metrics?.externalSettlementAttempts ?? 0) > 0
+                ? `${Math.round((metrics?.externalSettlementSuccessRate ?? 0) * 100)}%`
+                : "Collecting"
+            }
+            sub={`${metrics?.externalSettledPayments ?? 0} / ${
+              metrics?.externalSettlementAttempts ?? 0
+            } external creator payments`}
+            icon={Gauge}
+            accent="emerald"
+            loading={!metrics}
+          />
+        </section>
+
+        <div className="mb-4 mt-10 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
+          Lifetime settled ledger
+        </div>
         <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
           <MetricCard
             label="Total payments"
@@ -231,13 +321,15 @@ function ProvenanceStrip({ metrics }: { metrics: DashboardMetrics | null }) {
       <span className="uppercase tracking-[0.12em] text-ink-3">Volume provenance</span>
       <span className="inline-flex items-center gap-1.5">
         <span className="h-1.5 w-1.5 rounded-full bg-paid" />
-        External (web + A2A): <span className="font-semibold text-ink">{ext}</span> payments · $
-        {fmtUsdc(extVol)}
+        External (web + A2A):{" "}
+        <span className="font-semibold text-ink">{metrics?.externalQueries ?? 0}</span> queries ·{" "}
+        <span className="font-semibold text-ink">{ext}</span> payments · ${fmtUsdc(extVol)}
       </span>
       <span className="inline-flex items-center gap-1.5">
         <span className="h-1.5 w-1.5 rounded-full bg-ink-3" />
-        Autonomous engine: <span className="font-semibold text-ink">{eng}</span> payments · $
-        {fmtUsdc(engVol)}
+        Autonomous engine:{" "}
+        <span className="font-semibold text-ink">{metrics?.engineQueries ?? 0}</span> queries ·{" "}
+        <span className="font-semibold text-ink">{eng}</span> payments · ${fmtUsdc(engVol)}
       </span>
       <span className="text-ink-3">Both real, settled on Arc.</span>
       <a

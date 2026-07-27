@@ -20,6 +20,7 @@ import type { LedgerAccount } from "../gateway/settlement-parity";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 import { normalizePreviewDepth } from "../sources/preview-depth";
+import { calculateDashboardMetrics } from "./dashboard-metrics";
 
 /**
  * supabase-js normally resolves PostgREST failures as `{ data, error }`. Most adapter methods
@@ -56,6 +57,27 @@ export class SupabaseAdapter implements KeryxDB {
 
   async init(): Promise<void> {
     /* schema applied via migrations */
+  }
+
+  /** Supabase projects commonly cap one PostgREST response at 1,000 rows. Metrics are all-time,
+   * so silently accepting the first page would undercount as soon as traction becomes meaningful. */
+  private async allRows(
+    table: string,
+    columns: string,
+    orderBy = "id",
+  ): Promise<Record<string, unknown>[]> {
+    const pageSize = 1_000;
+    const rows: Record<string, unknown>[] = [];
+    for (let from = 0; ; from += pageSize) {
+      const { data } = await this.sb
+        .from(table)
+        .select(columns)
+        .order(orderBy, { ascending: true })
+        .range(from, from + pageSize - 1);
+      const page = (data ?? []) as unknown as Record<string, unknown>[];
+      rows.push(...page);
+      if (page.length < pageSize) return rows;
+    }
   }
 
   async upsertSource(s: Source): Promise<void> {
@@ -359,6 +381,12 @@ export class SupabaseAdapter implements KeryxDB {
       data: run,
       parent_id: run.parentId ?? null,
       asker: run.asker?.toLowerCase() ?? null,
+      origin: run.origin ?? "engine",
+      duration_ms: run.durationMs ?? null,
+      payment_mode: run.paymentMode ?? null,
+      payment_attempts: run.paymentAttempts ?? null,
+      settled_payments: run.settledPayments ?? null,
+      confidence_level: run.confidence?.level ?? null,
     });
   }
 
@@ -484,37 +512,43 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async metrics(): Promise<DashboardMetrics> {
-    const { data: pays } = await this.sb
-      .from("payment_events")
-      .select("amount_usdc,source_id,query_id,kind,origin");
-    const { count: qCount } = await this.sb
-      .from("query_runs")
-      .select("*", { count: "exact", head: true });
-    const rows = pays ?? [];
-    const vol = rows.reduce((s, r) => s + Number(r.amount_usdc), 0);
-    // Creator payouts exclude inbound A2A fees (platform revenue, not creator earnings).
-    const creatorRows = rows.filter((r) => r.kind !== "inbound");
-    const creatorVol = creatorRows.reduce((s, r) => s + Number(r.amount_usdc), 0);
-    const creators = new Set(creatorRows.map((r) => r.source_id)).size;
-    const paying = new Set(creatorRows.map((r) => r.query_id)).size;
-    const totalQueries = qCount ?? 0;
-    // External usage = web askers + A2A callers. NULL origin (legacy rows) counts as engine.
-    const extRows = rows.filter((r) => r.origin === "web" || r.origin === "a2a");
-    const extVol = extRows.reduce((s, r) => s + Number(r.amount_usdc), 0);
-    return {
-      totalPayments: rows.length,
-      totalVolumeUsdc: round(vol),
-      totalCreatorPayoutsUsdc: round(creatorVol),
-      creatorsEarning: creators,
-      avgPaymentUsdc: rows.length ? round(vol / rows.length) : 0,
-      totalQueries,
-      payingQueries: paying,
-      readerToPayerConversion: totalQueries ? round(paying / totalQueries) : 0,
-      externalPayments: extRows.length,
-      externalVolumeUsdc: round(extVol),
-      enginePayments: rows.length - extRows.length,
-      engineVolumeUsdc: round(vol - extVol),
-    };
+    const [paymentRows, runRows, feedbackRows] = await Promise.all([
+      this.allRows(
+        "payment_events",
+        "amount_usdc,source_id,query_id,kind,origin,settled,payer",
+      ),
+      this.allRows(
+        "query_runs",
+        "id,origin,asker,duration_ms,payment_mode,payment_attempts,settled_payments,confidence_level",
+      ),
+      this.allRows("answer_feedback", "query_id,rating"),
+    ]);
+    return calculateDashboardMetrics(
+      paymentRows.map((p) => ({
+        amountUsdc: Number(p.amount_usdc),
+        sourceId: String(p.source_id ?? ""),
+        queryId: String(p.query_id ?? ""),
+        kind: p.kind as "fetch" | "citation" | "inbound",
+        origin: (p.origin as import("../types").PaymentOrigin | null) ?? null,
+        settled: Boolean(p.settled),
+        payer: (p.payer as string | null) ?? null,
+      })),
+      runRows.map((r) => ({
+        id: String(r.id),
+        origin: (r.origin as import("../types").PaymentOrigin | null) ?? null,
+        asker: (r.asker as string | null) ?? null,
+        durationMs: r.duration_ms == null ? null : Number(r.duration_ms),
+        paymentMode: (r.payment_mode as "real" | "offline" | null) ?? null,
+        paymentAttempts: r.payment_attempts == null ? null : Number(r.payment_attempts),
+        settledPayments: r.settled_payments == null ? null : Number(r.settled_payments),
+        confidenceLevel:
+          (r.confidence_level as "High" | "Moderate" | "Low" | null) ?? null,
+      })),
+      feedbackRows.map((f) => ({
+        queryId: String(f.query_id),
+        rating: f.rating as "up" | "down",
+      })),
+    );
   }
 
   async settlementLedger(): Promise<LedgerAccount[]> {
@@ -840,18 +874,19 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async creatorLeaderboard(): Promise<CreatorEarnings[]> {
-    const { data } = await this.sb
-      .from("payment_events")
-      .select("source_id,source_name,payee,amount_usdc,kind");
+    const data = await this.allRows(
+      "payment_events",
+      "source_id,source_name,payee,amount_usdc,kind,settled",
+    );
     const map = new Map<string, CreatorEarnings>();
-    for (const r of data ?? []) {
-      if (r.kind === "inbound") continue;
+    for (const r of data) {
+      if (r.kind === "inbound" || !r.settled) continue;
       const e =
-        map.get(r.source_id) ??
+        map.get(String(r.source_id)) ??
         ({
-          sourceId: r.source_id,
-          sourceName: r.source_name,
-          walletAddress: r.payee,
+          sourceId: String(r.source_id),
+          sourceName: String(r.source_name),
+          walletAddress: String(r.payee),
           totalEarnedUsdc: 0,
           paymentCount: 0,
           citationCount: 0,
@@ -859,7 +894,7 @@ export class SupabaseAdapter implements KeryxDB {
       e.totalEarnedUsdc = round(e.totalEarnedUsdc + Number(r.amount_usdc));
       e.paymentCount += 1;
       if (r.kind === "citation") e.citationCount += 1;
-      map.set(r.source_id, e);
+      map.set(String(r.source_id), e);
     }
     return [...map.values()].sort((a, b) => b.totalEarnedUsdc - a.totalEarnedUsdc);
   }

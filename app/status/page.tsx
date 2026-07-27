@@ -40,6 +40,11 @@ interface Health {
     creatorPayoutsUsdc: number;
     creatorsEarning: number;
     totalQueries: number;
+    externalQueries: number;
+    externalPayingQueries: number;
+    returningExternalActors: number;
+    externalSettlementSuccessRate: number;
+    externalSettlementAttempts: number;
   };
 }
 
@@ -143,7 +148,26 @@ export default function StatusPage() {
                   <Row k="Settled payments" v={health.traction.totalPayments.toLocaleString()} />
                   <Row k="Creator payouts" v={`$${health.traction.creatorPayoutsUsdc.toFixed(4)}`} />
                   <Row k="Creators earning" v={String(health.traction.creatorsEarning)} />
-                  <Row k="Queries" v={health.traction.totalQueries.toLocaleString()} />
+                  <Row k="External queries" v={health.traction.externalQueries.toLocaleString()} />
+                  <Row
+                    k="External paid"
+                    v={health.traction.externalPayingQueries.toLocaleString()}
+                  />
+                  <Row
+                    k="Returning actors"
+                    v={health.traction.returningExternalActors.toLocaleString()}
+                  />
+                  <Row
+                    k="Settlement success"
+                    v={
+                      health.traction.externalSettlementAttempts > 0
+                        ? `${Math.round(
+                            health.traction.externalSettlementSuccessRate * 100,
+                          )}%`
+                        : "collecting"
+                    }
+                  />
+                  <Row k="All queries" v={health.traction.totalQueries.toLocaleString()} />
                 </dl>
               </>
             )}

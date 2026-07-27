@@ -5,6 +5,17 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-20** · Traction · *External completed queries, not aggregate self-generated payments, are the
+primary product KPI.*
+Persist `origin` on `query_runs` so zero-spend dispatches remain in the correct conversion
+denominator; payment-origin alone cannot do that. External means a real web asker or third-party
+A2A caller, while the autonomous volume engine remains visible but secondary. Returning actors are
+counted only from a server-verified SIWE wallet or a settled inbound A2A payer—anonymous users are
+not fingerprinted. Money metrics read only `settled=true` rows. Latency and settlement-success
+samples start when telemetry ships; historical rows stay NULL rather than receiving invented
+values. Why: the system already proves the rail works, so the next bottleneck is repeat external
+demand and answer quality. Reversible: easy (the fields are additive; presentation can change).
+
 **D-19** · Notify · *Citation email alerts are a second independent channel beside the webhook, not a column on it.*
 Own table (`source_notify_email`) + own dispatcher mirroring the webhook's contract (settled-legs-only,
 fire-and-forget, never throws), so a creator can run either channel or both and existing webhook code

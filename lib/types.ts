@@ -192,6 +192,15 @@ export interface QueryRun {
    *  ran on Keryx's treasury (the free trial). Kept apart so a receipts page can never present
    *  Keryx's spend as the user's. */
   askerFunded?: boolean;
+  /** Verified request channel. Persisted on the run as well as its payments so zero-spend
+   *  dispatches still count in an honest external conversion denominator. */
+  origin?: PaymentOrigin;
+  /** End-to-end orchestrator time for completed runs. Absent on historical rows. */
+  durationMs?: number;
+  /** Settlement telemetry for completed runs; historical rows intentionally remain unsampled. */
+  paymentMode?: "real" | "offline";
+  paymentAttempts?: number;
+  settledPayments?: number;
 }
 
 /** Aggregate metrics for the traction dashboard. Computed only from real, settled rows in prod. */
@@ -210,6 +219,25 @@ export interface DashboardMetrics {
   externalVolumeUsdc: number;
   enginePayments: number;
   engineVolumeUsdc: number;
+  externalQueries: number;
+  engineQueries: number;
+  externalPayingQueries: number;
+  externalReaderToPayerConversion: number;
+  externalCreatorPayoutsUsdc: number;
+  externalAvgCostPerQueryUsdc: number;
+  identifiedExternalActors: number;
+  returningExternalActors: number;
+  returningExternalActorRate: number;
+  externalDurationSamples: number;
+  externalAvgDurationMs: number;
+  externalP95DurationMs: number;
+  externalConfidenceSamples: number;
+  externalHighConfidenceRate: number;
+  externalFeedbackTotal: number;
+  externalSatisfactionRate: number;
+  externalSettlementAttempts: number;
+  externalSettledPayments: number;
+  externalSettlementSuccessRate: number;
   /** Global answer satisfaction rate (up / total feedback). Added by /api/metrics. */
   satisfactionRate?: number;
   /** Total feedback votes received. Added by /api/metrics. */

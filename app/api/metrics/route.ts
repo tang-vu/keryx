@@ -12,12 +12,12 @@ export const dynamic = "force-dynamic";
  * distinct topics), so the dashboard panel stays hidden until it's meaningful.
  */
 function topicBreakdown(
-  payments: { kind: string; sourceId: string }[],
+  payments: { kind: string; sourceId: string; settled: boolean }[],
   tagsById: Map<string, string[]>,
 ): { name: string; pct: number }[] {
   const tally = new Map<string, number>();
   for (const p of payments) {
-    if (p.kind !== "citation") continue;
+    if (!p.settled || p.kind !== "citation") continue;
     const tags = tagsById.get(p.sourceId);
     if (!tags?.length) continue;
     const share = 1 / tags.length;

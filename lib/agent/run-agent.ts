@@ -52,12 +52,15 @@ export async function* runAgent(
   deps: AgentDeps,
 ): AsyncGenerator<TraceStep, QueryRun, void> {
   const { engine, db, gateway } = deps;
+  const startedAt = Date.now();
   const budget = input.budget ?? config.defaultBudget;
   const queryId = input.queryId ?? crypto.randomUUID();
   // Stamp every payment from this run with its origin (engine | web | a2a) for honest traction split.
   const origin: PaymentOrigin = input.origin ?? "engine";
   const trace: TraceStep[] = [];
   const payments: PaymentRecord[] = [];
+  let paymentAttempts = 0;
+  let settledPayments = 0;
   let finalDecisions: Decision[] = [];
   let citations: Citation[] = [];
   // Set once the verdict is computed; read by finish(). A `let` (not the closure-captured const)
@@ -260,7 +263,9 @@ export async function* runAgent(
     } else {
       yield emit("fetch", `Paying $${source.fetchPrice} toll to ${source.name}…`);
       try {
+        paymentAttempts++;
         const { content, payment } = await gateway.payFetch({ source, queryId });
+        if (payment.settled) settledPayments++;
         payment.origin = origin;
         await db.setCached(source.id, content);
         await db.recordPayment(payment);
@@ -371,7 +376,9 @@ export async function* runAgent(
         yield emit("reevaluate", `Filling gap — buying ${source.name} ($${source.fetchPrice})…`);
 
         try {
+          paymentAttempts++;
           const { content, payment } = await gateway.payFetch({ source, queryId });
+          if (payment.settled) settledPayments++;
           payment.origin = origin;
           await db.setCached(source.id, content);
           await db.recordPayment(payment);
@@ -488,7 +495,9 @@ export async function* runAgent(
       if (amount <= 0) continue;
       const rationale = `Citation reward (${(c.weight * 100).toFixed(0)}% contribution${authors.length > 1 ? `, ${(author.splitWeight * 100).toFixed(0)}% author split` : ""}).`;
       try {
+        paymentAttempts++;
         const payment = await gateway.payCitation({ source, author, amount, weight: c.weight, queryId, rationale });
+        if (payment.settled) settledPayments++;
         payment.origin = origin;
         await db.recordPayment(payment);
         payments.push(payment);
@@ -556,6 +565,11 @@ export async function* runAgent(
       totalToCreators: totalSpent, // 100% of spend reaches creator wallets
       trace,
       createdAt: new Date().toISOString(),
+      origin,
+      durationMs: Math.max(0, Date.now() - startedAt),
+      paymentMode: gateway.mode,
+      paymentAttempts,
+      settledPayments,
       // Only present on a retry, so every other surface keeps reading runs exactly as before.
       ...(input.retryOf ? { retryOf: input.retryOf } : {}),
       // Early returns (no sources, no purchase) never reach the verdict step — nothing was read,

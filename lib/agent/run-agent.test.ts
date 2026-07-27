@@ -277,10 +277,15 @@ describe("runAgent — money-safety invariants", () => {
     const sources = [makeSource({ id: "a", fetchPrice: 0.004 })];
     const d = deps(sources, fakeEngine(), fakeGateway());
 
-    const { run } = await drive({ question: "q", budget }, d);
+    const { run } = await drive({ question: "q", budget, origin: "web" }, d);
 
     expect(run.totalToCreators).toBe(run.totalSpent);
     expect(run.totalSpent).toBeGreaterThan(0);
+    expect(run.origin).toBe("web");
+    expect(run.paymentMode).toBe("real");
+    expect(run.paymentAttempts).toBe(2);
+    expect(run.settledPayments).toBe(2);
+    expect(run.durationMs).toBeGreaterThanOrEqual(0);
     // Every payment leaves the agent and lands in a creator wallet — never the agent, never a fee sink.
     for (const p of d.db.payments) {
       expect(p.payer).toBe(AGENT);

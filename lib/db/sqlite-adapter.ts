@@ -21,6 +21,7 @@ import type { LedgerAccount } from "../gateway/settlement-parity";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 import { normalizePreviewDepth } from "../sources/preview-depth";
+import { calculateDashboardMetrics } from "./dashboard-metrics";
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS sources (
@@ -78,7 +79,13 @@ CREATE TABLE IF NOT EXISTS query_runs (
   id TEXT PRIMARY KEY, created_at TEXT, question TEXT, budget REAL, engine TEXT,
   total_spent REAL, total_to_creators REAL, answer TEXT, data TEXT,
   parent_id TEXT,                       -- the dispatch this one follows up on
-  asker TEXT                            -- lowercased wallet that dispatched it (SIWE-verified)
+  asker TEXT,                           -- lowercased wallet that dispatched it (SIWE-verified)
+  origin TEXT,                          -- engine | web | a2a
+  duration_ms INTEGER,
+  payment_mode TEXT,
+  payment_attempts INTEGER,
+  settled_payments INTEGER,
+  confidence_level TEXT
 );
 -- No index on parent_id here: CREATE TABLE IF NOT EXISTS is a no-op against a database that
 -- predates the column, so an index naming it would fail at boot on exactly the databases that
@@ -227,10 +234,48 @@ export class SqliteAdapter implements KeryxDB {
     // query_runs.asker: NULL on every dispatch that predates attribution, and on every anonymous,
     // engine, or A2A run — none of those has a signed-in wallet, so they belong to no one's ledger.
     if (!runCols.has("asker")) this.db.exec(`ALTER TABLE query_runs ADD COLUMN asker TEXT`);
+    if (!runCols.has("origin")) {
+      this.db.exec(`ALTER TABLE query_runs ADD COLUMN origin TEXT`);
+      const hasPaymentOrigin = (
+        this.db.prepare(`PRAGMA table_info(payment_events)`).all() as { name: string }[]
+      ).some((c) => c.name === "origin");
+      if (!hasPaymentOrigin) {
+        this.db.exec(`ALTER TABLE payment_events ADD COLUMN origin TEXT`);
+        this.db.exec(`UPDATE payment_events SET origin='engine' WHERE origin IS NULL`);
+      }
+      // Historical external rows can be proven from their payment ledger. A zero-payment legacy
+      // run has no trustworthy provenance and therefore remains internal.
+      this.db.exec(`
+        UPDATE query_runs
+           SET origin = CASE
+             WHEN EXISTS (
+               SELECT 1 FROM payment_events p
+                WHERE p.query_id=query_runs.id AND p.origin='a2a'
+             ) THEN 'a2a'
+             WHEN EXISTS (
+               SELECT 1 FROM payment_events p
+                WHERE p.query_id=query_runs.id AND p.origin='web'
+             ) THEN 'web'
+             ELSE 'engine'
+           END
+         WHERE origin IS NULL
+      `);
+    }
+    if (!runCols.has("duration_ms"))
+      this.db.exec(`ALTER TABLE query_runs ADD COLUMN duration_ms INTEGER`);
+    if (!runCols.has("payment_mode"))
+      this.db.exec(`ALTER TABLE query_runs ADD COLUMN payment_mode TEXT`);
+    if (!runCols.has("payment_attempts"))
+      this.db.exec(`ALTER TABLE query_runs ADD COLUMN payment_attempts INTEGER`);
+    if (!runCols.has("settled_payments"))
+      this.db.exec(`ALTER TABLE query_runs ADD COLUMN settled_payments INTEGER`);
+    if (!runCols.has("confidence_level"))
+      this.db.exec(`ALTER TABLE query_runs ADD COLUMN confidence_level TEXT`);
     // Unconditional: the columns are guaranteed present by the lines above (or by the CREATE TABLE
     // on a fresh database), and both paths need the indexes.
     this.db.exec(`CREATE INDEX IF NOT EXISTS query_runs_parent ON query_runs(parent_id)`);
     this.db.exec(`CREATE INDEX IF NOT EXISTS query_runs_asker ON query_runs(asker, created_at)`);
+    this.db.exec(`CREATE INDEX IF NOT EXISTS query_runs_origin ON query_runs(origin, created_at)`);
 
     // query_memories.sources_read: NULL on every entry written before the agent recorded what it
     // read. Those entries can prove a citation happened but never that a source was read and passed
@@ -704,8 +749,11 @@ export class SqliteAdapter implements KeryxDB {
   async saveQueryRun(run: QueryRun): Promise<void> {
     this.db
       .prepare(
-        `INSERT OR REPLACE INTO query_runs (id,created_at,question,budget,engine,total_spent,total_to_creators,answer,data,parent_id,asker)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+        `INSERT OR REPLACE INTO query_runs (
+           id,created_at,question,budget,engine,total_spent,total_to_creators,answer,data,
+           parent_id,asker,origin,duration_ms,payment_mode,payment_attempts,settled_payments,
+           confidence_level
+         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       )
       .run(
         run.id,
@@ -719,6 +767,12 @@ export class SqliteAdapter implements KeryxDB {
         JSON.stringify(run),
         run.parentId ?? null,
         run.asker?.toLowerCase() ?? null,
+        run.origin ?? "engine",
+        run.durationMs ?? null,
+        run.paymentMode ?? null,
+        run.paymentAttempts ?? null,
+        run.settledPayments ?? null,
+        run.confidence?.level ?? null,
       );
   }
 
@@ -836,42 +890,47 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async metrics(): Promise<DashboardMetrics> {
-    const p = this.db
+    const payments = this.db
       .prepare(
-        `SELECT COUNT(*) c, COALESCE(SUM(amount_usdc),0) v, COALESCE(AVG(amount_usdc),0) a FROM payment_events`,
+        `SELECT amount_usdc,source_id,query_id,kind,origin,settled,payer
+           FROM payment_events`,
       )
-      .get() as { c: number; v: number; a: number };
-    // Creator payouts exclude inbound A2A fees (those are revenue to the platform, not creators).
-    const cp = this.db
+      .all()
+      .map((p) => ({
+        amountUsdc: Number(p.amount_usdc),
+        sourceId: String(p.source_id ?? ""),
+        queryId: String(p.query_id ?? ""),
+        kind: p.kind as "fetch" | "citation" | "inbound",
+        origin: (p.origin as import("../types").PaymentOrigin | null) ?? null,
+        settled: Number(p.settled) === 1,
+        payer: (p.payer as string | null) ?? null,
+      }));
+    const runs = this.db
       .prepare(
-        `SELECT COALESCE(SUM(amount_usdc),0) v, COUNT(DISTINCT source_id) n FROM payment_events WHERE kind != 'inbound'`,
+        `SELECT id,origin,asker,duration_ms,payment_mode,payment_attempts,settled_payments,
+                confidence_level
+           FROM query_runs`,
       )
-      .get() as { v: number; n: number };
-    const q = this.db.prepare(`SELECT COUNT(*) n FROM query_runs`).get() as { n: number };
-    const paying = this.db
-      .prepare(`SELECT COUNT(DISTINCT query_id) n FROM payment_events WHERE kind != 'inbound'`)
-      .get() as { n: number };
-    // External usage = web askers + A2A callers. NULL origin (legacy rows) counts as engine, so
-    // the external figures never overstate real outside traffic.
-    const ext = this.db
-      .prepare(
-        `SELECT COUNT(*) c, COALESCE(SUM(amount_usdc),0) v FROM payment_events WHERE origin IN ('web','a2a')`,
-      )
-      .get() as { c: number; v: number };
-    return {
-      totalPayments: p.c,
-      totalVolumeUsdc: round(p.v),
-      totalCreatorPayoutsUsdc: round(cp.v),
-      creatorsEarning: cp.n,
-      avgPaymentUsdc: round(p.a),
-      totalQueries: q.n,
-      payingQueries: paying.n,
-      readerToPayerConversion: q.n ? round(paying.n / q.n) : 0,
-      externalPayments: ext.c,
-      externalVolumeUsdc: round(ext.v),
-      enginePayments: p.c - ext.c,
-      engineVolumeUsdc: round(p.v - ext.v),
-    };
+      .all()
+      .map((r) => ({
+        id: String(r.id),
+        origin: (r.origin as import("../types").PaymentOrigin | null) ?? null,
+        asker: (r.asker as string | null) ?? null,
+        durationMs: r.duration_ms == null ? null : Number(r.duration_ms),
+        paymentMode: (r.payment_mode as "real" | "offline" | null) ?? null,
+        paymentAttempts: r.payment_attempts == null ? null : Number(r.payment_attempts),
+        settledPayments: r.settled_payments == null ? null : Number(r.settled_payments),
+        confidenceLevel:
+          (r.confidence_level as "High" | "Moderate" | "Low" | null) ?? null,
+      }));
+    const feedback = this.db
+      .prepare(`SELECT query_id,rating FROM answer_feedback`)
+      .all()
+      .map((f) => ({
+        queryId: String(f.query_id),
+        rating: f.rating as "up" | "down",
+      }));
+    return calculateDashboardMetrics(payments, runs, feedback);
   }
 
   async settlementLedger(): Promise<LedgerAccount[]> {
@@ -1074,7 +1133,9 @@ export class SqliteAdapter implements KeryxDB {
         `SELECT source_id, source_name, payee,
                 COALESCE(SUM(amount_usdc),0) total, COUNT(*) cnt,
                 SUM(CASE WHEN kind='citation' THEN 1 ELSE 0 END) cites
-         FROM payment_events WHERE kind != 'inbound' GROUP BY source_id ORDER BY total DESC`,
+         FROM payment_events
+         WHERE kind != 'inbound' AND settled = 1
+         GROUP BY source_id ORDER BY total DESC`,
       )
       .all();
     return rows.map((r) => ({

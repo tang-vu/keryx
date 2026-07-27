@@ -20,6 +20,26 @@ console.log(`Queries               ${m.totalQueries}`);
 console.log(`Paying queries        ${m.payingQueries}`);
 console.log(`Reader→payer conv.    ${(m.readerToPayerConversion * 100).toFixed(0)}%`);
 
+console.log("\nExternal traction");
+console.log("─".repeat(48));
+console.log(`External queries      ${m.externalQueries}`);
+console.log(`External paying       ${m.externalPayingQueries}`);
+console.log(`External conversion   ${(m.externalReaderToPayerConversion * 100).toFixed(0)}%`);
+console.log(`Returning actors      ${m.returningExternalActors}/${m.identifiedExternalActors}`);
+console.log(`Cost / ext. query     $${m.externalAvgCostPerQueryUsdc}`);
+console.log(
+  `External p95 latency  ${
+    m.externalDurationSamples ? `${m.externalP95DurationMs}ms` : "collecting"
+  } (${m.externalDurationSamples} samples)`,
+);
+console.log(
+  `Settlement success   ${
+    m.externalSettlementAttempts
+      ? `${(m.externalSettlementSuccessRate * 100).toFixed(1)}%`
+      : "collecting"
+  } (${m.externalSettledPayments}/${m.externalSettlementAttempts})`,
+);
+
 console.log("\n🏆 Creator leaderboard");
 console.log("─".repeat(48));
 for (const c of board) {
