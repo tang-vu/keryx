@@ -8,7 +8,7 @@
 import { describe, expect, it } from "vitest";
 import { judgeFeedAgainstGaps } from "./demand-match-judge";
 import { ResilientEngine } from "./llm/resilient-engine";
-import type { DemandGap } from "./demand-signal";
+import { demandGapId, type DemandGap } from "./demand-signal";
 import type { FeedPost } from "./demand-match";
 import type { DecideInput, ReasoningEngine } from "./llm/reasoning-engine";
 import type { Decision } from "./types";
@@ -18,6 +18,7 @@ const OTHER = "Gateway settles sub-cent USDC payments without an on-chain transa
 
 function gap(claim: string): DemandGap {
   return {
+    id: demandGapId(claim),
     claim,
     coverage: 0.1,
     queryId: "q1",

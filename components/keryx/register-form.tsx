@@ -41,6 +41,13 @@ interface Verification {
   instructions: string;
 }
 
+interface GapIntentReceipt {
+  id: string;
+  gapId: string;
+  claim: string;
+  status: "pending" | "running" | "filled" | "missed" | "unpaid" | "stale" | "failed";
+}
+
 interface OnchainRegisterParams {
   urlHash: `0x${string}`; // keccak256(toBytes(canonicalUrl)) — contract derives id on-chain
   payoutWallet: `0x${string}`;
@@ -58,6 +65,8 @@ export interface RegisterPrefill {
   url?: string;
   description?: string;
   fetchPrice?: number;
+  gapId?: string;
+  matchedItemLink?: string;
 }
 
 export function RegisterForm({
@@ -88,6 +97,7 @@ export function RegisterForm({
   const [verification, setVerification] = useState<Verification | null>(null);
   // One-time webhook secret returned at register time — shown once, never re-fetchable.
   const [notify, setNotify] = useState<{ url: string; secret: string } | null>(null);
+  const [gapIntent, setGapIntent] = useState<GapIntentReceipt | null>(null);
 
   // wagmi hooks for the on-chain register call (only used when registry is configured).
   const { writeContractAsync } = useWriteContract();
@@ -100,6 +110,12 @@ export function RegisterForm({
     const baseBody = {
       ...(prefillWalletAddress ? { walletAddress: prefillWalletAddress } : {}),
       ...(notifyUrl.trim() ? { notifyUrl: notifyUrl.trim() } : {}),
+      ...(prefill?.gapId && prefill.matchedItemLink
+        ? {
+            gapId: prefill.gapId,
+            matchedItemLink: prefill.matchedItemLink,
+          }
+        : {}),
     };
     // The price the creator picked is written into the register() call, so it must reach the server
     // on BOTH paths — a feed-listed source that omitted it fell back to the server's default and
@@ -138,6 +154,7 @@ export function RegisterForm({
 
       // Webhook secret (when a notify URL was supplied) — shown once on the success card.
       setNotify((data.notify as { url: string; secret: string } | null) ?? null);
+      setGapIntent((data.gapIntent as GapIntentReceipt | null) ?? null);
 
       if (data.mode === "onchain") {
         // On-chain path: call registry.register() from the creator's connected wallet.
@@ -180,6 +197,7 @@ export function RegisterForm({
             || ("rssUrl" in body && typeof body.rssUrl === "string" ? body.rssUrl : returnedSourceId),
           walletAddress: params.payoutWallet,
           fetchPrice: parseFloat(fetchPrice) || 0,
+          verified: data.verification ? false : true,
           authors: params.authors.map((a) => ({
             name: a.wallet,
             splitWeight: a.basisPoints / 10_000,
@@ -224,12 +242,14 @@ export function RegisterForm({
         source={created}
         verification={verification}
         notify={notify}
+        gapIntent={gapIntent}
         pendingTxHash={pendingTxHash}
         onVerified={() => setCreated((c) => (c ? { ...c, verified: true } : c))}
         onAgain={() => {
           setCreated(null);
           setVerification(null);
           setNotify(null);
+          setGapIntent(null);
           setPendingTxHash(undefined);
         }}
       />
@@ -397,6 +417,7 @@ function SuccessCard({
   source,
   verification,
   notify,
+  gapIntent,
   pendingTxHash,
   onVerified,
   onAgain,
@@ -404,6 +425,7 @@ function SuccessCard({
   source: CreatedSource;
   verification: Verification | null;
   notify: { url: string; secret: string } | null;
+  gapIntent: GapIntentReceipt | null;
   pendingTxHash?: `0x${string}`;
   onVerified: () => void;
   onAgain: () => void;
@@ -423,6 +445,7 @@ function SuccessCard({
           <VerifyPanel source={source} verification={verification} onVerified={onVerified} />
         )}
         {notify && <NotifySecretPanel notify={notify} />}
+        {gapIntent && <GapIntentPanel intent={gapIntent} />}
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">
             Tolls settle to your connected wallet
@@ -467,6 +490,24 @@ function SuccessCard({
           Register another source
         </button>
       </div>
+    </div>
+  );
+}
+
+function GapIntentPanel({ intent }: { intent: GapIntentReceipt }) {
+  return (
+    <div className="rounded-md border border-seal/40 bg-seal/[0.06] p-4">
+      <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-seal">
+        Targeted retry queued
+      </p>
+      <p className="mt-2 text-sm leading-relaxed text-ink-2">
+        Once this source is indexed and feed ownership is verified, Keryx will retry the paid
+        question with a bounded treasury budget. The claim counts as filled only if this post
+        supplies qualifying evidence and its citation reward really settles.
+      </p>
+      <p className="mt-2 font-serif text-[14px] leading-snug text-ink">
+        “{intent.claim}”
+      </p>
     </div>
   );
 }

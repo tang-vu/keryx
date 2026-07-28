@@ -9,6 +9,7 @@ import crypto from "node:crypto";
 import type {
   DailyVolume,
   DashboardMetrics,
+  GapIntent,
   PaymentRecord,
   QueryRun,
   Source,
@@ -297,6 +298,119 @@ export class SupabaseAdapter implements KeryxDB {
     return newest;
   }
 
+  async createGapIntent(
+    input: Omit<
+      GapIntent,
+      | "id"
+      | "status"
+      | "attempts"
+      | "leaseExpiresAt"
+      | "retryRunId"
+      | "coverage"
+      | "rewardUsdc"
+      | "lastError"
+      | "createdAt"
+      | "updatedAt"
+    >,
+  ): Promise<GapIntent> {
+    const now = new Date().toISOString();
+    await this.sb.from("gap_intents").upsert(
+      {
+        id: crypto.randomUUID(),
+        gap_id: input.gapId,
+        claim: input.claim,
+        question: input.question,
+        failed_query_id: input.failedQueryId,
+        source_id: input.sourceId,
+        source_item_link: input.sourceItemLink,
+        owner_wallet: input.ownerWallet.toLowerCase(),
+        status: "pending",
+        attempts: 0,
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        onConflict: "gap_id,source_id,source_item_link",
+        ignoreDuplicates: true,
+      },
+    );
+    const { data } = await this.sb
+      .from("gap_intents")
+      .select("*")
+      .eq("gap_id", input.gapId)
+      .eq("source_id", input.sourceId)
+      .eq("source_item_link", input.sourceItemLink)
+      .single();
+    return rowToGapIntent(data);
+  }
+
+  async listGapIntents(limit = 200): Promise<GapIntent[]> {
+    const { data } = await this.sb
+      .from("gap_intents")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(Math.max(1, Math.min(Math.trunc(limit), 1_000)));
+    return (data ?? []).map(rowToGapIntent);
+  }
+
+  async claimGapIntent(now: number, leaseMs: number): Promise<GapIntent | null> {
+    const { data } = await this.sb.rpc("claim_gap_intent", {
+      p_now: now,
+      p_lease_ms: Math.max(1_000, leaseMs),
+    });
+    const row = Array.isArray(data) ? data[0] : data;
+    return row ? rowToGapIntent(row as Record<string, unknown>) : null;
+  }
+
+  async finishGapIntent(
+    id: string,
+    result: {
+      status: "filled" | "missed" | "unpaid";
+      retryRunId: string;
+      coverage: number;
+      rewardUsdc: number;
+      lastError?: string;
+    },
+  ): Promise<void> {
+    const { data } = await this.sb
+      .from("gap_intents")
+      .update({
+        status: result.status,
+        retry_run_id: result.retryRunId,
+        coverage: result.coverage,
+        reward_usdc: result.rewardUsdc,
+        last_error: result.lastError ?? null,
+        lease_expires_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .eq("status", "running")
+      .select("id")
+      .maybeSingle();
+    if (!data) throw new Error(`gap intent ${id} is no longer leased`);
+  }
+
+  async failGapIntent(id: string, error: string, maxAttempts: number): Promise<void> {
+    await this.sb.rpc("fail_gap_intent", {
+      p_id: id,
+      p_error: error.slice(0, 500),
+      p_max_attempts: Math.max(1, Math.trunc(maxAttempts)),
+    });
+  }
+
+  async expireGapIntent(id: string, reason: string): Promise<void> {
+    await this.sb
+      .from("gap_intents")
+      .update({
+        status: "stale",
+        last_error: reason.slice(0, 500),
+        lease_expires_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .eq("status", "running");
+  }
+
   async isCreatorWallet(addr: string): Promise<boolean> {
     // ilike performs case-insensitive comparison in Postgres — avoids LOWER() on
     // the indexed wallet_address column, which would prevent index use.
@@ -520,7 +634,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async metrics(): Promise<DashboardMetrics> {
-    const [paymentRows, runRows, feedbackRows] = await Promise.all([
+    const [paymentRows, runRows, feedbackRows, gapIntentRows, sourceRows] = await Promise.all([
       this.allRows(
         "payment_events",
         "amount_usdc,source_id,query_id,kind,origin,settled,payer",
@@ -530,7 +644,15 @@ export class SupabaseAdapter implements KeryxDB {
         "id,origin,asker,duration_ms,payment_mode,payment_attempts,settled_payments,confidence_level,mcp_client,evidence_claim_count,grounded_claim_count,rewarded_citation_count",
       ),
       this.allRows("answer_feedback", "query_id,rating"),
+      this.allRows("gap_intents", "id,status,source_id,owner_wallet"),
+      this.allRows("sources", "id,wallet_address"),
     ]);
+    const sourceOwners = new Map(
+      sourceRows.map((source) => [
+        String(source.id),
+        String(source.wallet_address).toLowerCase(),
+      ]),
+    );
     return calculateDashboardMetrics(
       paymentRows.map((p) => ({
         amountUsdc: Number(p.amount_usdc),
@@ -570,6 +692,15 @@ export class SupabaseAdapter implements KeryxDB {
         queryId: String(f.query_id),
         rating: f.rating as "up" | "down",
       })),
+      gapIntentRows
+        .filter(
+          (intent) =>
+            sourceOwners.get(String(intent.source_id)) ===
+            String(intent.owner_wallet).toLowerCase(),
+        )
+        .map((intent) => ({
+          status: intent.status as import("../types").GapIntentStatus,
+        })),
     );
   }
 
@@ -941,6 +1072,34 @@ function rowToSource(r: Record<string, unknown>): Source {
     verified: r.verified === undefined || r.verified === null ? true : Boolean(r.verified),
     // preview_depth=null grandfathers the row as "full".
     previewDepth: normalizePreviewDepth(r.preview_depth),
+  };
+}
+
+function rowToGapIntent(r: Record<string, unknown>): GapIntent {
+  return {
+    id: String(r.id),
+    gapId: String(r.gap_id),
+    claim: String(r.claim),
+    question: String(r.question),
+    failedQueryId: String(r.failed_query_id),
+    sourceId: String(r.source_id),
+    sourceItemLink: String(r.source_item_link ?? ""),
+    ownerWallet: String(r.owner_wallet).toLowerCase(),
+    status: r.status as GapIntent["status"],
+    attempts: Number(r.attempts ?? 0),
+    ...(r.lease_expires_at === null || r.lease_expires_at === undefined
+      ? {}
+      : { leaseExpiresAt: Number(r.lease_expires_at) }),
+    ...(r.retry_run_id ? { retryRunId: String(r.retry_run_id) } : {}),
+    ...(r.coverage === null || r.coverage === undefined
+      ? {}
+      : { coverage: Number(r.coverage) }),
+    ...(r.reward_usdc === null || r.reward_usdc === undefined
+      ? {}
+      : { rewardUsdc: Number(r.reward_usdc) }),
+    ...(r.last_error ? { lastError: String(r.last_error) } : {}),
+    createdAt: String(r.created_at),
+    updatedAt: String(r.updated_at),
   };
 }
 

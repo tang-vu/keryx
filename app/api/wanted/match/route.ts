@@ -89,6 +89,7 @@ export async function POST(req: NextRequest) {
     rationale: verdict.rationale,
     expectedValue: verdict.expectedValue,
     matches: verdict.matches.map((m) => ({
+      id: m.gap.id,
       claim: m.gap.claim,
       coverage: m.gap.coverage,
       seen: m.gap.seen,

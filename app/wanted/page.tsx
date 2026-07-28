@@ -16,6 +16,7 @@ import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { FeedMatchForm } from "@/components/keryx/feed-match-form";
 import { buildBoard, type DemandGap } from "@/lib/demand-signal";
+import type { GapIntentStatus } from "@/lib/types";
 
 // The window moves with the daemon; a few times an hour is fresh enough for a board people act on
 // over days, and keeps the trace parsing off the request path.
@@ -35,17 +36,60 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION },
 };
 
-async function loadBoard(): Promise<{ open: DemandGap[]; filled: DemandGap[] }> {
+interface PublicOffer {
+  id: string;
+  gapId: string;
+  sourceId: string;
+  sourceName: string;
+  sourceItemLink: string;
+  status: GapIntentStatus;
+  attempts: number;
+  retryRunId?: string;
+  coverage?: number;
+  rewardUsdc?: number;
+}
+
+async function loadBoard(): Promise<{
+  open: DemandGap[];
+  filled: DemandGap[];
+  offers: PublicOffer[];
+}> {
   try {
     const db = await getDb();
-    return buildBoard(await db.listRecentQueries(WINDOW_RUNS));
+    const [runs, intents, sources] = await Promise.all([
+      db.listRecentQueries(WINDOW_RUNS),
+      db.listGapIntents(200),
+      db.listAllSources(),
+    ]);
+    const names = new Map(sources.map((source) => [source.id, source.name]));
+    return {
+      ...buildBoard(runs),
+      offers: intents
+        .filter((intent) => names.has(intent.sourceId))
+        .map((intent) => ({
+          id: intent.id,
+          gapId: intent.gapId,
+          sourceId: intent.sourceId,
+          sourceName: names.get(intent.sourceId) ?? intent.sourceId,
+          sourceItemLink: intent.sourceItemLink,
+          status: intent.status,
+          attempts: intent.attempts,
+          retryRunId: intent.retryRunId,
+          coverage: intent.coverage,
+          rewardUsdc: intent.rewardUsdc,
+        })),
+    };
   } catch {
-    return { open: [], filled: [] }; // a DB hiccup renders the empty state, never a broken board
+    return { open: [], filled: [], offers: [] };
   }
 }
 
 export default async function WantedPage() {
-  const { open: gaps, filled } = await loadBoard();
+  const { open: gaps, filled, offers } = await loadBoard();
+  const offersByGap = new Map<string, PublicOffer[]>();
+  for (const offer of offers) {
+    offersByGap.set(offer.gapId, [...(offersByGap.get(offer.gapId) ?? []), offer]);
+  }
 
   return (
     <div className="min-h-screen bg-paper-2">
@@ -107,6 +151,31 @@ export default async function WantedPage() {
                     “{gap.question}”
                   </Link>
                 </p>
+                {(offersByGap.get(gap.id)?.length ?? 0) > 0 && (
+                  <ul className="mt-3 border-t border-line pt-3">
+                    {offersByGap.get(gap.id)!.map((offer) => (
+                      <li
+                        key={offer.id}
+                        className="font-mono text-[10.5px] leading-relaxed text-ink-3"
+                      >
+                        {offer.sourceName} · {offerStatus(offer)}
+                        {offer.sourceItemLink && (
+                          <>
+                            {" · "}
+                            <a
+                              href={offer.sourceItemLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="underline underline-offset-4 hover:text-seal"
+                            >
+                              offered post
+                            </a>
+                          </>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </li>
             ))}
           </ol>
@@ -123,18 +192,21 @@ export default async function WantedPage() {
         {filled.length > 0 && (
           <section className="mt-14">
             <h2 className="font-display text-[22px] font-medium tracking-tight text-ink">
-              Filled — and <em className="italic text-paid">paid for.</em>
+              Filled — and <em className="italic text-paid">covered now.</em>
             </h2>
             <p className="mt-2 max-w-[62ch] font-serif text-[15px] leading-[1.55] text-ink-2">
               Claims the corpus was missing and now covers. When something new lands that might
-              answer an open claim, Keryx puts the question again — a real dispatch, buying the new
-              material and paying whoever wrote it.
+              answer an open claim, Keryx puts the question again — a real dispatch that buys the
+              new material. A targeted creator offer is only marked fulfilled when its citation
+              reward also settles.
             </p>
 
             <ol className="mt-6 flex flex-col gap-3">
               {filled.map((gap) => {
                 const fill = gap.filledBy!;
-                const total = fill.paid.reduce((s, p) => s + p.reward, 0);
+                const fulfilledOffers = (offersByGap.get(gap.id) ?? []).filter(
+                  (offer) => offer.status === "filled",
+                );
                 return (
                   <li key={gap.claim} className="border border-line bg-paper p-4">
                     <div className="flex items-baseline justify-between gap-3">
@@ -152,8 +224,7 @@ export default async function WantedPage() {
                     <p className="mt-2 font-mono text-[10.5px] leading-relaxed text-ink-3">
                       {fill.paid.length > 0 ? (
                         <>
-                          paid {fill.paid.map((p) => p.sourceName).join(", ")} $
-                          {total.toFixed(6)} ·{" "}
+                          cited {fill.paid.map((p) => p.sourceName).join(", ")} ·{" "}
                         </>
                       ) : null}
                       <Link
@@ -163,6 +234,15 @@ export default async function WantedPage() {
                         closed by this dispatch
                       </Link>
                     </p>
+                    {fulfilledOffers.map((offer) => (
+                      <p
+                        key={offer.id}
+                        className="mt-1 font-mono text-[10.5px] text-paid"
+                      >
+                        offer fulfilled · {offer.sourceName} received $
+                        {(offer.rewardUsdc ?? 0).toFixed(6)} settled USDC
+                      </p>
+                    ))}
                   </li>
                 );
               })}
@@ -191,4 +271,23 @@ export default async function WantedPage() {
       <SiteFooter />
     </div>
   );
+}
+
+function offerStatus(offer: PublicOffer): string {
+  switch (offer.status) {
+    case "pending":
+      return "queued until the source is indexed + verified";
+    case "running":
+      return `targeted retry running · attempt ${offer.attempts}/3`;
+    case "filled":
+      return `fulfilled · $${(offer.rewardUsdc ?? 0).toFixed(6)} settled`;
+    case "unpaid":
+      return "evidence passed, settlement did not complete";
+    case "missed":
+      return "retry completed, evidence still fell short";
+    case "stale":
+      return "closed without retry because the claim was already filled";
+    case "failed":
+      return "retry stopped after bounded failures";
+  }
 }

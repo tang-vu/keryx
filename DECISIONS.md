@@ -5,6 +5,27 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-24** · Demand/Settlement · *A creator's wanted-claim offer is durable coordination, never
+payment authority; fulfillment requires evidence and real settlement.*
+Each open semantic claim gets a stable SHA-256 id. The feed-match handoff carries only that opaque
+id and the matched post URL; registration re-resolves the claim from the current demand board and
+requires the post to exist in the RSS payload Keryx just ingested. The resulting `gap_intents` row
+snapshots the failed question and offered source, but cannot choose a payee or spend a creator's
+funds. The volume daemon atomically leases only intents whose source cache row is active, ownership
+verified, and still owned by the wallet that made the offer. It retries with Keryx's existing
+server-side x402 treasury path, capped at 0.05 USDC, a ten-minute crash-reclaim lease, and three
+attempts; registration and verification requests never spend.
+
+Completion is deliberately stricter than the generic demand board: `filled` requires the offered
+source to carry reward-qualified evidence for the same semantic claim, evidence-bounded coverage
+of at least 0.4, and a `settled=true` citation ledger leg with a Circle settlement identifier for
+that source and retry run. Grounded-without-settlement is `unpaid`; weak/mismatched evidence is
+`missed`; an offer whose gap closes before verification becomes `stale` without spend; repeated
+execution errors become `failed`. SourceRegistry/payTo validation and integer
+micro-USDC splitting remain unchanged. Why: feed matching previously ended at a registration link,
+while probabilistic retries could neither target the creator's offer nor prove that the advertised
+gap-to-payout loop completed. Reversible: medium (additive queue/table/UI; no new payment rail).
+
 **D-23** · Grounding/Settlement · *A model citation cannot authorize a reward without a
 deterministically verified evidence span.*
 Synthesis now proposes `claimIndex + marker + exact quote + support`; the orchestrator accepts it

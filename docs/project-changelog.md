@@ -1,13 +1,35 @@
 # Keryx Project Changelog
 
 **Last Updated:** 2026-07-28
-**Current Version:** 0.7.0
+**Current Version:** 0.8.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
 
 ---
 
 ## Unreleased
+
+### A wanted claim can now become a verified creator payout (2026-07-28)
+The feed checker used to stop at “List this feed”: it knew which post matched which open claim, then
+discarded both facts during registration. Now every match has a stable opaque claim id and its own
+“Offer this post” handoff. Registration distrusts that URL state: it rebuilds the live demand board,
+requires the claim to remain open, and requires the selected post to be present in the RSS payload
+Keryx itself ingested before it writes an idempotent `gap_intents` row.
+
+The 24/7 volume daemon services those offers before probabilistic gap retries. An atomic lease makes
+the queue crash-reclaimable and single-worker safe; only an active, feed-verified source still owned
+by the offering wallet can be leased. The retry spends Keryx's existing testnet treasury path, never
+the creator or browser session, with a hard $0.05 ceiling, ten-minute lease, and three-attempt bound.
+No new escrow, transfer primitive, or payout authority was added.
+
+Most importantly, “filled” is now financial state rather than copy. The offered source must produce
+reward-qualified exact-quote evidence for the same semantic claim, final evidence-bounded coverage
+must reach 40%, and the citation ledger must contain a real settled leg plus Circle settlement id
+for that source and run. Evidence without settlement is `unpaid`; weak evidence is `missed`; a
+claim filled while its source waits for verification becomes `stale` without spend; bounded
+execution failures are `failed`. `/wanted`, `GET /api/wanted`, registration success, and the public
+dashboard expose the queue/funnel without leaking it into traction: offer and fill counts are
+separate from external-query KPIs, and simulated payments can never increment fulfillment.
 
 ### A citation must carry evidence before it can carry money (2026-07-28)
 A live CCTP retry exposed a financial-state bug, not merely a weak answer: re-evaluation correctly

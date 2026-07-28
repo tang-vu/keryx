@@ -19,6 +19,7 @@ import Link from "next/link";
 import { Loader2, Rss } from "lucide-react";
 
 interface Match {
+  id: string;
   claim: string;
   coverage: number;
   seen: number;
@@ -223,6 +224,14 @@ function Verdict({ result, rssUrl }: { result: Result; rssUrl: string }) {
                     “{m.question}”
                   </Link>
                 </p>
+                {m.post?.link && (
+                  <Link
+                    href={registrationHref(rssUrl, m)}
+                    className="mt-3 inline-block border border-ink bg-seal px-3 py-2 font-mono text-[10.5px] font-semibold uppercase tracking-[0.1em] text-paper transition-transform hover:-translate-y-0.5"
+                  >
+                    Offer this post for this claim ▸
+                  </Link>
+                )}
               </li>
             ))}
           </ol>
@@ -247,7 +256,11 @@ function Verdict({ result, rssUrl }: { result: Result; rssUrl: string }) {
 
       <div className="mt-6">
         <Link
-          href={`/register?rss=${encodeURIComponent(rssUrl)}`}
+          href={
+            matches[0]?.post?.link
+              ? registrationHref(rssUrl, matches[0])
+              : `/register?rss=${encodeURIComponent(rssUrl)}`
+          }
           className="inline-block border border-ink bg-seal px-[18px] py-2.5 font-mono text-[11.5px] font-semibold uppercase tracking-[0.12em] text-paper transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)]"
         >
           {matches.length > 0 ? "List this feed ▸" : "List it anyway ▸"}
@@ -259,4 +272,13 @@ function Verdict({ result, rssUrl }: { result: Result; rssUrl: string }) {
       </div>
     </div>
   );
+}
+
+function registrationHref(rssUrl: string, match: Match): string {
+  const params = new URLSearchParams({
+    rss: rssUrl,
+    gap: match.id,
+    post: match.post?.link ?? "",
+  });
+  return `/register?${params.toString()}`;
 }

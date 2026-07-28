@@ -20,6 +20,11 @@ import { urlHash, sourceId } from "@/lib/registry/registry-client";
 import { claimOnchainIdForExistingSource } from "@/lib/sources/pre-registry-adoption";
 import { feedContainsToken, verificationToken } from "@/lib/sources/feed-verification";
 import { isDeliverableUrl, randomNotifySecret } from "@/lib/notify/citation-webhook";
+import {
+  GapOfferError,
+  queueGapOffer,
+  resolveGapOffer,
+} from "@/lib/demand-intent";
 import type { SourceItem } from "@/lib/types";
 
 type KeryxDB = Awaited<ReturnType<typeof getDb>>;
@@ -105,6 +110,21 @@ export async function prepareSourceRegistration(
     };
   }
 
+  let gapOffer;
+  try {
+    gapOffer = await resolveGapOffer(
+      db,
+      body.gapId,
+      body.matchedItemLink,
+      feedItems,
+    );
+  } catch (err) {
+    if (err instanceof GapOfferError) {
+      return { status: 409, payload: { error: err.message } };
+    }
+    throw err;
+  }
+
   // ── On-chain path (registry configured) ──────────────────────────────────
   if (config.registryAddress) {
     const canonicalUrl = input.url || input.rssUrl || "";
@@ -177,6 +197,7 @@ export async function prepareSourceRegistration(
         sourceId: rowId,
         registryAddress: config.registryAddress,
         notify: await applyNotify(rowId),
+        gapIntent: await queueGapOffer(db, gapOffer, rowId, sessionWallet),
         // The indexer writes a NEW row UNVERIFIED — earning needs feed-ownership proof first. A row
         // claimed from before the registry already gave that proof, and must not be asked again.
         verification: claimed?.verified
@@ -205,6 +226,7 @@ export async function prepareSourceRegistration(
   const verifiedAtRegister =
     Boolean(input.rssUrl) && (await feedContainsToken(input.rssUrl!, sessionWallet));
   const source = await createSource(db, { ...input, verified: verifiedAtRegister });
+  const gapIntent = await queueGapOffer(db, gapOffer, source.id, sessionWallet);
   return {
     status: 200,
     payload: {
@@ -218,6 +240,7 @@ export async function prepareSourceRegistration(
         authors: source.authors.map((a) => ({ name: a.name, splitWeight: a.splitWeight })),
       },
       notify: await applyNotify(source.id),
+      gapIntent,
       verification: verifiedAtRegister ? null : verificationInfo(sessionWallet, input.rssUrl),
     },
   };

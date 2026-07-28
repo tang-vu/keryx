@@ -14,6 +14,7 @@ import {
   Gauge,
   Receipt,
   ShieldCheck,
+  Target,
   ThumbsUp,
   TrendingUp,
   UserRoundCheck,
@@ -205,6 +206,18 @@ export default function DashboardPage() {
             sub={`${metrics?.externalDurationSamples ?? 0} completed samples`}
             icon={Clock3}
             accent="neutral"
+            loading={!metrics}
+          />
+          <MetricCard
+            label="Wanted claims filled"
+            value={
+              (metrics?.gapIntentOffers ?? 0) > 0
+                ? `${Math.round((metrics?.gapIntentFillRate ?? 0) * 100)}%`
+                : "Collecting"
+            }
+            sub={`${metrics?.gapIntentFilled ?? 0} / ${metrics?.gapIntentOffers ?? 0} offers · ${metrics?.gapIntentPending ?? 0} queued`}
+            icon={Target}
+            accent="emerald"
             loading={!metrics}
           />
           <MetricCard

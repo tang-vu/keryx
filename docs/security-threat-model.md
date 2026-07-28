@@ -1,6 +1,6 @@
 # Keryx Security Threat Model
 
-**Version:** 2026-07-28 (Evidence-gated citation rewards)
+**Version:** 2026-07-28 (Wanted-claim fulfillment loop)
 **Scope:** Non-custodial dApp — SIWE auth, browser co-sign session, SourceRegistry, IPFS gated content, API keys, offline dev path.
 
 ---
@@ -37,6 +37,7 @@
 | S25 | `/api/cite/[id]` | Absurd `amount` skews the leaderboard | **PASS (2026-06-21 fix)** | `amount > config.maxCitationUsdc` (default 5) → 400. NOT a drain vector — the caller self-pays via x402 to a source-validated wallet — so this is a fat-finger / metric-skew bound, not a spend control. `app/api/cite/[id]/route.ts`. |
 | S27 | `/mcp` Remote MCP | Anonymous client drains treasury; hostile browser Origin reaches the protocol endpoint; spoofed actor inflates returning-user metrics | **PASS (2026-07-27)** | `research` is clamped to `anonMaxBudget` and IP-limited through `treasuryAsk`; valid ask-scoped keys use the keyed limiter and `a2aMaxBudget`. Stable actor comes only from the verified key wallet. The setup URL's bounded `client` value is explicitly telemetry-only and cannot alter auth, limits, or payment authority. Present Origin headers are allowlisted and invalid values receive 403. `app/mcp/route.ts`, `lib/mcp/remote-server.ts`. |
 | S28 | Citation reward | Empty/off-schema synthesis promotes every read source to a paid citation; stale coverage produces false High confidence | **PASS (2026-07-28)** | Reward eligibility is the intersection of an inline marker, synthesis declaration, valid decomposed claim index, exact quote found in gathered content, and support ≥ 0.4. A final post-purchase coverage pass is bounded by the validated evidence ledger. Rejected markers are stripped from the answer and cannot reach attribution or `payCitation`; invalid attribution cannot add a source/payee. Regression includes the production CCTP zero-coverage case. `lib/agent/evidence-ledger.ts`, `lib/agent/run-agent.ts`. |
+| S29 | Wanted-claim retry | Browser forges a claim/post/source mapping, unverified or stale offer drains treasury, concurrent workers double-spend, or simulated reward is advertised as fulfillment | **PASS (2026-07-28)** | Registration re-resolves the opaque gap id from the live board and requires the post URL in the just-ingested feed; claim/question/wallet/source are server-derived. Atomic leases require the source active, feed-verified, and owned by the offering wallet; the worker re-checks that the gap is still open immediately before spend and closes a stale offer without running it. Treasury retry is capped at $0.05, reclaimed after ten minutes, and terminal after three attempts. `filled` requires target-source reward-qualified evidence, coverage ≥ 0.4, and a settled citation leg with settlement id; otherwise status is `missed`/`unpaid`/`stale`/`failed`. `lib/demand-intent.ts`, `lib/gap-intent-runner.ts`, `gap_intents`. |
 
 ---
 

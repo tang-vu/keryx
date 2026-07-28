@@ -35,6 +35,10 @@ export interface MetricFeedbackRow {
   rating: "up" | "down";
 }
 
+export interface MetricGapIntentRow {
+  status: import("../types").GapIntentStatus;
+}
+
 const EXTERNAL = new Set<PaymentOrigin>(["web", "a2a", "mcp"]);
 
 function round(n: number): number {
@@ -90,6 +94,7 @@ export function calculateDashboardMetrics(
   paymentRows: MetricPaymentRow[],
   runRows: MetricRunRow[],
   feedbackRows: MetricFeedbackRow[] = [],
+  gapIntentRows: MetricGapIntentRow[] = [],
 ): DashboardMetrics {
   const payments = paymentRows.filter((p) => p.settled);
   const creatorPayments = payments.filter((p) => p.kind !== "inbound");
@@ -227,6 +232,17 @@ export function calculateDashboardMetrics(
         Number(run.evidenceClaimCount ?? 0) > 0 &&
         Number(run.rewardedCitationCount ?? 0) === 0,
     ).length,
+    gapIntentOffers: gapIntentRows.length,
+    gapIntentFilled: gapIntentRows.filter((intent) => intent.status === "filled").length,
+    gapIntentPending: gapIntentRows.filter(
+      (intent) => intent.status === "pending" || intent.status === "running",
+    ).length,
+    gapIntentFillRate: gapIntentRows.length
+      ? round(
+          gapIntentRows.filter((intent) => intent.status === "filled").length /
+            gapIntentRows.length,
+        )
+      : 0,
     externalFeedbackTotal: externalFeedback.length,
     externalSatisfactionRate: externalFeedback.length
       ? round(externalFeedback.filter((f) => f.rating === "up").length / externalFeedback.length)

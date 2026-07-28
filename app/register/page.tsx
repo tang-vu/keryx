@@ -56,12 +56,15 @@ export default function RegisterPage() {
     const name = params.get("name")?.trim();
     const description = params.get("desc")?.trim();
     const rssUrl = params.get("rss")?.trim();
+    const gapId = params.get("gap")?.trim();
+    const matchedItemLink = params.get("post")?.trim();
     if (!url && !name && !rssUrl) return;
     setPrefill({
       ...(url ? { url } : {}),
       ...(name ? { name } : {}),
       ...(description ? { description } : {}),
       ...(rssUrl ? { rssUrl } : {}),
+      ...(gapId && matchedItemLink ? { gapId, matchedItemLink } : {}),
     });
     setFormKey((k) => k + 1);
     setMode("single");

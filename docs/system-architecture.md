@@ -1,6 +1,6 @@
 # Keryx System Architecture
 
-**Version:** 0.2.0 Decentralized dApp (2026-06-18)  
+**Version:** 0.8.0 Wanted-claim fulfillment (2026-07-28)
 **Status:** Shipped (Phases 01–06 complete)
 
 ---
@@ -106,6 +106,34 @@ BROWSER                              KERYX SERVER                     ARC + CIRC
 5. Store payment_events, metrics → SQLite or Supabase
    └─ Used by /api/metrics + keryx.cc dashboard
 ```
+
+### Wanted-Claim Fulfillment Loop
+
+```
+/wanted feed match → /register                 VOLUME DAEMON                 PAYMENT TRUTH
+──────────────────────────────                 ─────────────                 ─────────────
+stable gap id + matched post
+        │
+        ├─ rebuild live board
+        ├─ require post in ingested RSS
+        └─ queue idempotent gap_intent
+                 │
+                 └──────────────▶ atomic lease (active + verified + same owner)
+                                      ├─ retry failed question, treasury ≤ $0.05
+                                      ├─ normal discover/BUY/evidence/x402 path
+                                      └─ classify:
+                                           filled = target evidence ≥ 0.4
+                                                    + settled citation receipt
+                                           unpaid = evidence, no settlement
+                                           missed = evidence still short
+                                           stale  = gap closed before spend
+                                           failed = three execution failures
+```
+
+The intent row is coordination only. Registration and verification never initiate spend; payTo
+still comes from SourceRegistry and the retry uses the same server-side Gateway path as the volume
+engine. A ten-minute lease is reclaimable after a crash and prevents two workers from selecting the
+same pending offer concurrently.
 
 ### Creator Registration Flow
 
@@ -345,6 +373,17 @@ aggregation independent of full receipt payloads and leave pre-ledger history un
 | tx_hash | TEXT | Arc tx (if settled) |
 | settled | BOOLEAN | true = on-chain confirmed |
 | timestamp | DATETIME | when payment occurred |
+
+**`gap_intents`** — creator offers against measured demand gaps
+| Column | Type | Notes |
+|--------|------|-------|
+| gap_id / claim | TEXT | stable semantic id + server-snapshotted open claim |
+| failed_query_id | TEXT | dispatch whose question is retried |
+| source_id / source_item_link | TEXT | offered verified source and matched RSS post |
+| owner_wallet | TEXT | must continue to match source ownership before lease |
+| status / attempts | TEXT / INTEGER | pending, running, filled, missed, unpaid, failed; max 3 |
+| lease_expires_at | INTEGER | crash-reclaimable single-worker lease |
+| retry_run_id / coverage / reward_usdc | scalar | public result; reward is settled-only |
 
 **`queries`** — one per agent run
 | Column | Type | Notes |

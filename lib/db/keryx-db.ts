@@ -7,6 +7,7 @@ import type { LedgerAccount } from "../gateway/settlement-parity";
 import type {
   DailyVolume,
   DashboardMetrics,
+  GapIntent,
   PaymentRecord,
   QueryRun,
   Source,
@@ -179,6 +180,43 @@ export interface KeryxDB {
   /** Newest publication date per source, for the sources that have one. One round trip for a whole
    *  list of dispatches — a ledger of 50 rows must not cost 50 count queries. */
   newestItemDates(sourceIds: string[]): Promise<Record<string, string>>;
+
+  // ── creator offers against demand-board gaps ──
+  /** Idempotently queue one verified-wallet source against one measured gap. */
+  createGapIntent(
+    intent: Omit<
+      GapIntent,
+      | "id"
+      | "status"
+      | "attempts"
+      | "leaseExpiresAt"
+      | "retryRunId"
+      | "coverage"
+      | "rewardUsdc"
+      | "lastError"
+      | "createdAt"
+      | "updatedAt"
+    >,
+  ): Promise<GapIntent>;
+  /** Public coordination view; contains no secrets or payout authority. */
+  listGapIntents(limit?: number): Promise<GapIntent[]>;
+  /** Atomically lease one pending intent whose source is active + verified. */
+  claimGapIntent(now: number, leaseMs: number): Promise<GapIntent | null>;
+  /** Complete a leased intent after its bounded treasury retry finishes. */
+  finishGapIntent(
+    id: string,
+    result: {
+      status: Extract<GapIntent["status"], "filled" | "missed" | "unpaid">;
+      retryRunId: string;
+      coverage: number;
+      rewardUsdc: number;
+      lastError?: string;
+    },
+  ): Promise<void>;
+  /** Release a failed lease for bounded retry, or make it terminal after max attempts. */
+  failGapIntent(id: string, error: string, maxAttempts: number): Promise<void>;
+  /** Close a leased offer without spending because its demand gap is no longer open. */
+  expireGapIntent(id: string, reason: string): Promise<void>;
 
   // ── notify-on-citation webhooks (off-chain, private to the source owner) ──
   /** Set or rotate a source's citation webhook (url + HMAC secret). Upsert keyed by source id. */

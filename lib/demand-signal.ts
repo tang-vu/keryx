@@ -32,6 +32,7 @@
  *    a fill from before the most recent miss proves nothing about today.
  */
 
+import crypto from "node:crypto";
 import { topicTokens } from "./answers-topics";
 import type { QueryRun } from "./types";
 
@@ -58,6 +59,8 @@ export interface GapFill {
 
 /** An under-covered claim as published: worst occurrence, plus how often it has recurred. */
 export interface DemandGap extends ClaimGap {
+  /** Stable identifier for this semantic claim family; safe to carry through registration. */
+  id: string;
   /** Distinct dispatches that finished this same claim under-covered. Retries are excluded — the
    *  agent re-asking itself is not another reader hitting the hole. */
   seen: number;
@@ -148,6 +151,14 @@ function claimKey(claim: string): string {
   return tokens.length > 0 ? tokens.join(" ") : claim.trim().toLowerCase();
 }
 
+/** Public, opaque id for carrying one open gap through feed-match and source registration. */
+export function demandGapId(claim: string): string {
+  return crypto
+    .createHash("sha256")
+    .update(`keryx-gap:v1:${claimKey(claim)}`)
+    .digest("hex");
+}
+
 /**
  * Every claim the window under-covered, keyed by meaning, each already resolved to open or filled.
  * Both published lists are slices of this, so a claim can never appear on both.
@@ -186,7 +197,11 @@ function aggregate(runs: QueryRun[], threshold: number): DemandGap[] {
       const key = claimKey(gap.claim);
       const existing = byClaim.get(key);
       if (!existing) {
-        byClaim.set(key, { ...gap, seen: isRetry ? 0 : 1 });
+        byClaim.set(key, {
+          ...gap,
+          id: demandGapId(gap.claim),
+          seen: isRetry ? 0 : 1,
+        });
         continue;
       }
       if (!isRetry) existing.seen += 1;

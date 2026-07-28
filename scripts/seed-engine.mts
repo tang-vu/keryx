@@ -19,6 +19,13 @@ import { generateQuestion } from "../lib/seed-question-generator.ts";
 import { newestContent, pickGapRetry, type RetryCandidate } from "../lib/demand-retry.ts";
 import { availableModels, DEFAULT_MODEL_ID, getReasoningEngine } from "../lib/llm/index.ts";
 import { config } from "../lib/config.ts";
+import { buildBoard } from "../lib/demand-signal.ts";
+import {
+  finishGapIntentFromRun,
+  GAP_INTENT_LEASE_MS,
+  GAP_INTENT_MAX_ATTEMPTS,
+  GAP_INTENT_MAX_BUDGET_USDC,
+} from "../lib/gap-intent-runner.ts";
 
 // ── args ──
 const argv = process.argv.slice(2);
@@ -101,6 +108,7 @@ const sources = await deps.db.listSources().catch(() => []);
 // of a different answer. The window is read fresh each time: in --loop mode an earlier retry in this
 // same process must be visible, or the loop would re-ask one gap forever.
 const RETRY_WINDOW_RUNS = 200;
+const GAP_INTENT_WINDOW_RUNS = 400; // must match /wanted and registration validation
 async function pickRetry(): Promise<RetryCandidate | null> {
   if (Math.random() >= config.engineGapRetryRatio) return null;
   try {
@@ -113,6 +121,33 @@ async function pickRetry(): Promise<RetryCandidate | null> {
   } catch {
     return null; // a retry is an optimisation; never let it stop the engine asking something
   }
+}
+
+async function claimOpenGapIntent() {
+  const intent = await deps.db
+    .claimGapIntent(Date.now(), GAP_INTENT_LEASE_MS)
+    .catch(() => null);
+  if (!intent) return null;
+  try {
+    const stillOpen = buildBoard(
+      await deps.db.listRecentQueries(GAP_INTENT_WINDOW_RUNS),
+      { limit: GAP_INTENT_WINDOW_RUNS },
+    ).open.some((gap) => gap.id === intent.gapId);
+    if (stillOpen) return intent;
+    await deps.db.expireGapIntent(
+      intent.id,
+      "The wanted claim closed before this source became eligible for retry.",
+    );
+  } catch (err) {
+    await deps.db
+      .failGapIntent(
+        intent.id,
+        err instanceof Error ? err.message : String(err),
+        GAP_INTENT_MAX_ATTEMPTS,
+      )
+      .catch(() => {});
+  }
+  return null;
 }
 
 let totalSpent = 0;
@@ -136,25 +171,56 @@ while ((loop || i < count) && totalSpent < limit) {
   // Either re-ask a hole the corpus was paid for and missed, or ask something new. New questions
   // are LLM-generated, on-topic & effectively non-repeating; the cursor index is the deterministic
   // fallback seed used when no Anthropic key is set or generation fails.
-  const retry = await pickRetry();
-  const question = retry ? retry.question : await generateQuestion(sources, startOffset + i);
+  const gapIntent = await claimOpenGapIntent();
+  const retry = gapIntent ? null : await pickRetry();
+  const question = gapIntent
+    ? gapIntent.question
+    : retry
+      ? retry.question
+      : await generateQuestion(sources, startOffset + i);
+  const runBudget = gapIntent
+    ? Math.min(budget, config.defaultBudget, GAP_INTENT_MAX_BUDGET_USDC)
+    : budget;
   const start = Date.now();
   try {
     // Per-run model pick — engine instances are cached, so this is a cheap map lookup.
     const modelId = pickRunModel();
     const runDeps = modelId ? { ...deps, engine: getReasoningEngine(modelId) } : deps;
     const run = await collectRun(
-      { question, budget, origin: "engine", ...(retry ? { retryOf: retry.queryId } : {}) },
+      {
+        question,
+        budget: runBudget,
+        origin: "engine",
+        ...(gapIntent
+          ? { retryOf: gapIntent.failedQueryId }
+          : retry
+            ? { retryOf: retry.queryId }
+            : {}),
+      },
       { deps: runDeps },
     );
+    // Settlement already happened inside collectRun. Charge it to --limit before status
+    // bookkeeping, or a transient result-write failure could make real spend invisible to the cap.
     totalSpent += run.totalSpent;
     totalPayments += run.citations.length + run.decisions.filter((d) => d.action === "BUY").length;
+    const gapOutcome = gapIntent
+      ? await finishGapIntentFromRun(deps.db, gapIntent, run)
+      : null;
     const ms = Date.now() - start;
     console.log(
-      `#${String(i + 1).padStart(3)} [$${totalSpent.toFixed(6)}] ${run.decisions.filter((d) => d.action === "BUY").length}b/${run.decisions.filter((d) => d.action === "SKIP").length}s → ${run.citations.length} cite(s) $${run.totalSpent.toFixed(6)} (${ms}ms)${modelId ? `  · ${modelId}` : ""}${retry ? `  · ↻ retry of ${retry.claim.slice(0, 40)}… (was ${Math.round(retry.coverage * 100)}%)` : ""}  «${question.slice(0, 52)}»`,
+      `#${String(i + 1).padStart(3)} [$${totalSpent.toFixed(6)}] ${run.decisions.filter((d) => d.action === "BUY").length}b/${run.decisions.filter((d) => d.action === "SKIP").length}s → ${run.citations.length} cite(s) $${run.totalSpent.toFixed(6)} (${ms}ms)${modelId ? `  · ${modelId}` : ""}${gapIntent ? `  · wanted ${gapOutcome?.status} (${Math.round((gapOutcome?.coverage ?? 0) * 100)}%, $${(gapOutcome?.rewardUsdc ?? 0).toFixed(6)})` : retry ? `  · ↻ retry of ${retry.claim.slice(0, 40)}… (was ${Math.round(retry.coverage * 100)}%)` : ""}  «${question.slice(0, 52)}»`,
     );
     await maybePush(question, run.totalSpent, run.citations.length);
   } catch (err) {
+    if (gapIntent) {
+      await deps.db
+        .failGapIntent(
+          gapIntent.id,
+          err instanceof Error ? err.message : String(err),
+          GAP_INTENT_MAX_ATTEMPTS,
+        )
+        .catch(() => {});
+    }
     console.error(`#${i + 1} FAILED: ${err instanceof Error ? err.message : String(err)}`);
   }
   i++;

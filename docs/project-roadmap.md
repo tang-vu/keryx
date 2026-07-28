@@ -291,6 +291,7 @@ Mainnet ← blocked on: Phase 07–10, security audit, legal
 | **v0.5.0** | 2026-07-16 | Security residuals closed (Phase 07) + registry write-mode + OpenAI-compatible API + extension + answer archive | ✓ Shipped |
 | **v0.6.0** | 2026-07-21 | Chat front doors (Discord/Telegram/Slack) + creator ledger exports + scoped keys + durable limits + Atom feed (Phases 09–10 closed) | ✓ Shipped |
 | **v0.7.0** | 2026-07-28 | Evidence-gated citations, exact-quote ledger, coverage-bound confidence and structured receipts | ✓ Shipped |
+| **v0.8.0** | 2026-07-28 | Wanted-claim creator offers, durable targeted retries, evidence + settlement fulfillment receipts | ✓ Shipped |
 | **v1.0.0** | 2026-12-31 | Mainnet + Full Feature Parity | Planned |
 | **v2.0.0** | 2027-Q2 | Stretch Goals (Agent Marketplace, Video, Derivatives) | Backlog |
 

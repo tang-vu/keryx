@@ -108,6 +108,42 @@ export interface ClaimCoverageRecord {
   coveredBy: string[]; // reward-qualifying source markers only
 }
 
+export type GapIntentStatus =
+  | "pending"
+  | "running"
+  | "filled"
+  | "missed"
+  | "unpaid"
+  | "stale"
+  | "failed";
+
+/**
+ * One creator source offered against a measured demand-board gap.
+ *
+ * This is coordination state, never payment authority: owner/payTo still comes from the source
+ * registry, the retry spends only Keryx's bounded treasury path, and `filled` requires both
+ * evidence-qualified coverage and a settled citation payment to the offered source.
+ */
+export interface GapIntent {
+  id: string;
+  gapId: string;
+  claim: string;
+  question: string;
+  failedQueryId: string;
+  sourceId: string;
+  sourceItemLink: string;
+  ownerWallet: string;
+  status: GapIntentStatus;
+  attempts: number;
+  leaseExpiresAt?: number;
+  retryRunId?: string;
+  coverage?: number;
+  rewardUsdc?: number;
+  lastError?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** Where a payment originated. `engine` = Keryx's own autonomous volume engine; `web` = a human
  *  asking through a first-party surface; `a2a` = an external agent calling the paid x402 endpoint;
  *  `mcp` = a remote MCP client. web + a2a + mcp = genuine EXTERNAL usage, kept distinct from
@@ -271,6 +307,12 @@ export interface DashboardMetrics {
   groundedClaimRate: number;
   /** Measured runs where no citation passed the reward gate. */
   citationPoolWithheldRuns: number;
+  /** Creator offers queued from /wanted, including terminal outcomes. */
+  gapIntentOffers: number;
+  /** Offers with evidence-qualified coverage and real settled citation reward. */
+  gapIntentFilled: number;
+  gapIntentPending: number;
+  gapIntentFillRate: number;
   externalFeedbackTotal: number;
   externalSatisfactionRate: number;
   externalSettlementAttempts: number;

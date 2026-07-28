@@ -6,10 +6,11 @@
 
 import { describe, expect, it } from "vitest";
 import { matchFeedToGaps, type FeedPost } from "./demand-match";
-import type { DemandGap } from "./demand-signal";
+import { demandGapId, type DemandGap } from "./demand-signal";
 
 function gap(claim: string, over: Partial<DemandGap> = {}): DemandGap {
   return {
+    id: over.id ?? demandGapId(claim),
     claim,
     coverage: 0.1,
     queryId: "q1",

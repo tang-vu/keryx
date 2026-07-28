@@ -82,6 +82,10 @@ Example trace (real output):
 
 ## For creators
 
+- **Claim proven demand** — [keryx.cc/wanted](https://keryx.cc/wanted) shows claims paid
+  dispatches left under-covered. Check your RSS feed, offer the exact matching post, and Keryx
+  queues a bounded targeted retry after ownership verification. Fulfillment is public only when
+  that source passes the evidence gate and its citation reward really settles.
 - **Onboard from your own wallet** — paste an RSS feed at [keryx.cc/register](https://keryx.cc/register)
   and your wallet writes the source to the on-chain registry itself. Keryx sets up the x402-priced
   endpoint and the free preview; it never holds your key, and the faucet on that page covers the gas.

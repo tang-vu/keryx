@@ -496,7 +496,8 @@ export const openapiSpec = {
           "claims across dispatches collapse to one entry with `seen`. Public, no auth. Runs " +
           "that recorded no coverage assessment are skipped entirely rather than counted as gaps, " +
           "and Keryx's own retries of a failed question never add to `seen`. `filled` carries " +
-          "claims a later dispatch went on to cover, each with the sources that dispatch paid.",
+          "claims a later dispatch went on to cover. `offers` exposes durable creator-offer status; " +
+          "`filled` offer status requires both evidence-qualified coverage and real settlement.",
         parameters: [
           {
             in: "query",
@@ -508,8 +509,9 @@ export const openapiSpec = {
         responses: {
           "200": {
             description:
-              "{ windowRuns, gaps: [{ claim, coverage, seen, queryId, question, createdAt }], " +
-              "filled: [{ claim, coverage, filledBy: { queryId, question, coverage, createdAt, byRetry, paid } }] }",
+              "{ windowRuns, gaps: [{ id, claim, coverage, seen, queryId, question, createdAt }], " +
+              "filled: [...], offers: [{ id, gapId, sourceId, sourceItemLink, status, attempts, " +
+              "retryRunId?, coverage?, rewardUsdc?, createdAt, updatedAt }] }",
           },
           "503": { description: "Demand board temporarily unavailable." },
         },

@@ -203,4 +203,17 @@ describe("calculateDashboardMetrics", () => {
     });
     expect(runEvidenceMetrics("{}").evidenceClaimCount).toBeNull();
   });
+
+  it("reports the wanted-claim fulfillment funnel separately from query traction", () => {
+    const metrics = calculateDashboardMetrics([], [], [], [
+      { status: "filled" },
+      { status: "pending" },
+      { status: "running" },
+      { status: "missed" },
+    ]);
+    expect(metrics.gapIntentOffers).toBe(4);
+    expect(metrics.gapIntentFilled).toBe(1);
+    expect(metrics.gapIntentPending).toBe(2);
+    expect(metrics.gapIntentFillRate).toBe(0.25);
+  });
 });

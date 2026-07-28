@@ -1,6 +1,6 @@
 # Keryx Codebase Summary
 
-**Version:** 0.7.0 (live product, updated 2026-07-28)
+**Version:** 0.8.0 (live product, updated 2026-07-28)
 
 This document maps the codebase structure for the non-custodial Keryx dApp. Organized by domain; files < 200 LOC per kebab-case naming standard.
 
@@ -24,6 +24,12 @@ usefulness back into future buy/skip decisions — scoped to past runs about the
 scored against the runs that read a source rather than every run it was listed for. Economic
 invariants (spend ≤ budget, payouts = weights, splits sum exactly) are covered by a vitest suite
 run in CI.
+
+### `lib/demand-*` + `lib/gap-intent-runner.ts`
+`demand-signal.ts` publishes stable semantic claim ids; `demand-intent.ts` validates a feed-match
+handoff against the live board and ingested RSS items; `gap-intent-runner.ts` classifies a targeted
+retry only from reward-qualified evidence plus the settled citation ledger. The volume engine
+atomically leases these offers before its probabilistic retry/new-question path.
 
 ---
 
@@ -156,6 +162,7 @@ Swappable SQLite (dev) / Supabase (prod) via `KeryxDB` interface.
 - `payment_events`: fetch toll + citation reward per source + cite intent
 - `api_keys`: SHA-256 hashed keys, per-creator minting
 - `session_grants`: user-funded session EOA, cap, spent
+- `gap_intents`: creator offer queue, bounded retry lease, evidence/settlement outcome
 
 ---
 
@@ -183,6 +190,7 @@ RESTful endpoints for agent, sources, metrics, API keys.
 | `/creator/[id]` | public | Creator earnings page data + notify-webhook config. |
 | `/runs`, `/dispatch/[id]` | public | Query history + shareable per-dispatch permalinks. |
 | `/feedback` | public | Thumbs up/down answer quality votes. |
+| `/wanted` | public | Open/filled demand claims plus public creator-offer status receipts. |
 | `/docs` | public | OpenAPI (Scalar UI). |
 | `/faucet`, `/faucet/onramp` | public | Testnet USDC drip + one-call funding for external callers. |
 
@@ -230,7 +238,7 @@ CLI tools for admin + dev. Node --experimental-transform-types.
 | `ask.mts` | Run agent once, print reasoning trace. |
 | `demo-full-cycle.mts` | One-command full cycle (~90s) with on-chain proof (`npm run demo`). |
 | `seed-sources.mts` | Populate DB with demo sources. |
-| `seed-engine.mts` | Volume engine: run agent N times over LLM-generated questions (budget-guarded). |
+| `seed-engine.mts` | Volume engine: service verified wanted-claim offers first, then gap retries/generated questions (all budget-guarded). |
 | `a2a-client.mts` / `web-client.mts` | Headless external-path clients: A2A x402 caller + scripted browser-session asker. |
 | `metrics.mts` | Print aggregate traction (settled USDC, top sources, query count). |
 | `withdraw.mts` | Operator-side creator cash-out (reserves Circle's fee before signing). |
@@ -270,6 +278,7 @@ Next.js 16 App Router.
 | `/` | Hero + CTA (ask or register) + live ask form. |
 | `/connect` | Wallet connect + SIWE sign-in. |
 | `/register` | Creator onboarding: paste RSS → wallet + x402 endpoint; verified creators set their own payout wallet. |
+| `/wanted` | Evidence-backed demand board, feed matcher, claim-specific creator offer and fulfillment status. |
 | `/dashboard` | Public traction dashboard: metrics, leaderboard, recent dispatches, payments feed. |
 | `/creator/[id]` | Public creator earnings page + social card (lifetime USDC, per-question payouts). |
 | `/dispatch/[id]` | Shareable permalink for one agent run (trace, citations, settled payouts, social card). |

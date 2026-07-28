@@ -5,7 +5,14 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { buildBoard, buildDemand, buildFilled, claimGaps, finalCoverage } from "./demand-signal";
+import {
+  buildBoard,
+  buildDemand,
+  buildFilled,
+  claimGaps,
+  demandGapId,
+  finalCoverage,
+} from "./demand-signal";
 import type { QueryRun, TraceStep } from "./types";
 
 function step(phase: TraceStep["phase"], detail: unknown): TraceStep {
@@ -111,11 +118,21 @@ describe("buildDemand", () => {
     // Wording, coverage and receipt all come from the worst hit, so the sentence on the board is
     // the one the linked dispatch assessed.
     expect(merged[0]).toMatchObject({
+      id: demandGapId("CCTP moves USDC between domains by burn and mint."),
       seen: 2,
       coverage: 0.1,
       claim: "CCTP moves USDC across domains by burn and mint.",
       queryId: "r2",
     });
+  });
+
+  it("keeps a stable opaque id across equivalent wording", () => {
+    expect(demandGapId("CCTP moves USDC between domains by burn and mint.")).toBe(
+      demandGapId("CCTP moves USDC across domains by burn and mint."),
+    );
+    expect(demandGapId("Batching reduces settlement fees.")).not.toBe(
+      demandGapId("Batching increases settlement fees."),
+    );
   });
 
   it("never folds a claim into its own negation", () => {

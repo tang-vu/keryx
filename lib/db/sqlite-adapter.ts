@@ -10,6 +10,7 @@ import crypto from "node:crypto";
 import type {
   DailyVolume,
   DashboardMetrics,
+  GapIntent,
   PaymentRecord,
   QueryRun,
   Source,
@@ -70,6 +71,29 @@ CREATE TABLE IF NOT EXISTS source_items (
 -- ingest dedupe pass. Safe to declare beside the table: both columns are original, so this is not a
 -- no-op-plus-failure on a database that predates a later ALTER (cf. query_runs).
 CREATE INDEX IF NOT EXISTS source_items_source_published ON source_items(source_id, published_at);
+CREATE TABLE IF NOT EXISTS gap_intents (
+  id TEXT PRIMARY KEY,
+  gap_id TEXT NOT NULL,
+  claim TEXT NOT NULL,
+  question TEXT NOT NULL,
+  failed_query_id TEXT NOT NULL,
+  source_id TEXT NOT NULL,
+  source_item_link TEXT NOT NULL DEFAULT '',
+  owner_wallet TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  attempts INTEGER NOT NULL DEFAULT 0,
+  lease_expires_at INTEGER,
+  retry_run_id TEXT,
+  coverage REAL,
+  reward_usdc REAL,
+  last_error TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS gap_intents_offer
+  ON gap_intents(gap_id, source_id, source_item_link);
+CREATE INDEX IF NOT EXISTS gap_intents_queue
+  ON gap_intents(status, created_at);
 CREATE TABLE IF NOT EXISTS cache_items (
   source_id TEXT PRIMARY KEY, text TEXT, updated_at TEXT
 );
@@ -654,6 +678,187 @@ export class SqliteAdapter implements KeryxDB {
     return Number(res.changes) > 0;
   }
 
+  async createGapIntent(
+    input: Omit<
+      GapIntent,
+      | "id"
+      | "status"
+      | "attempts"
+      | "leaseExpiresAt"
+      | "retryRunId"
+      | "coverage"
+      | "rewardUsdc"
+      | "lastError"
+      | "createdAt"
+      | "updatedAt"
+    >,
+  ): Promise<GapIntent> {
+    const now = new Date().toISOString();
+    const id = crypto.randomUUID();
+    this.db
+      .prepare(
+        `INSERT INTO gap_intents (
+           id,gap_id,claim,question,failed_query_id,source_id,source_item_link,
+           owner_wallet,status,attempts,created_at,updated_at
+         ) VALUES (?,?,?,?,?,?,?,?, 'pending',0,?,?)
+         ON CONFLICT(gap_id,source_id,source_item_link) DO NOTHING`,
+      )
+      .run(
+        id,
+        input.gapId,
+        input.claim,
+        input.question,
+        input.failedQueryId,
+        input.sourceId,
+        input.sourceItemLink,
+        input.ownerWallet.toLowerCase(),
+        now,
+        now,
+      );
+    const row = this.db
+      .prepare(
+        `SELECT * FROM gap_intents
+          WHERE gap_id=? AND source_id=? AND source_item_link=?`,
+      )
+      .get(input.gapId, input.sourceId, input.sourceItemLink);
+    return rowToGapIntent(row as Record<string, unknown>);
+  }
+
+  async listGapIntents(limit = 200): Promise<GapIntent[]> {
+    const rows = this.db
+      .prepare(
+        `SELECT * FROM gap_intents
+          ORDER BY created_at DESC
+          LIMIT ?`,
+      )
+      .all(Math.max(1, Math.min(Math.trunc(limit), 1_000)));
+    return rows.map((row) =>
+      rowToGapIntent(row as Record<string, unknown>),
+    );
+  }
+
+  async claimGapIntent(
+    now: number,
+    leaseMs: number,
+  ): Promise<GapIntent | null> {
+    this.db
+      .prepare(
+        `UPDATE gap_intents
+            SET status='failed',
+                last_error=COALESCE(last_error,'retry lease expired'),
+                lease_expires_at=NULL,
+                updated_at=?
+          WHERE status='running'
+            AND lease_expires_at<=?
+            AND attempts>=3`,
+      )
+      .run(new Date(now).toISOString(), now);
+    const row = this.db
+      .prepare(
+        `UPDATE gap_intents
+            SET status='running',
+                attempts=attempts+1,
+                lease_expires_at=?,
+                last_error=NULL,
+                updated_at=?
+          WHERE id=(
+            SELECT gi.id
+              FROM gap_intents gi
+              JOIN sources s ON s.id=gi.source_id
+             WHERE (
+               gi.status='pending'
+               OR (gi.status='running' AND gi.lease_expires_at<=?)
+             )
+               AND gi.attempts<3
+               AND s.active=1
+               AND s.verified=1
+               AND LOWER(s.wallet_address)=LOWER(gi.owner_wallet)
+             ORDER BY gi.created_at ASC
+             LIMIT 1
+          )
+          RETURNING *`,
+      )
+      .get(
+        now + Math.max(1_000, leaseMs),
+        new Date(now).toISOString(),
+        now,
+      );
+    return row
+      ? rowToGapIntent(row as Record<string, unknown>)
+      : null;
+  }
+
+  async finishGapIntent(
+    id: string,
+    result: {
+      status: "filled" | "missed" | "unpaid";
+      retryRunId: string;
+      coverage: number;
+      rewardUsdc: number;
+      lastError?: string;
+    },
+  ): Promise<void> {
+    const update = this.db
+      .prepare(
+        `UPDATE gap_intents
+            SET status=?,
+                retry_run_id=?,
+                coverage=?,
+                reward_usdc=?,
+                last_error=?,
+                lease_expires_at=NULL,
+                updated_at=?
+          WHERE id=? AND status='running'`,
+      )
+      .run(
+        result.status,
+        result.retryRunId,
+        result.coverage,
+        result.rewardUsdc,
+        result.lastError ?? null,
+        new Date().toISOString(),
+        id,
+      );
+    if (Number(update.changes) !== 1) {
+      throw new Error(`gap intent ${id} is no longer leased`);
+    }
+  }
+
+  async failGapIntent(
+    id: string,
+    error: string,
+    maxAttempts: number,
+  ): Promise<void> {
+    this.db
+      .prepare(
+        `UPDATE gap_intents
+            SET status=CASE WHEN attempts>=? THEN 'failed' ELSE 'pending' END,
+                last_error=?,
+                lease_expires_at=NULL,
+                updated_at=?
+          WHERE id=? AND status='running'`,
+      )
+      .run(
+        Math.max(1, Math.trunc(maxAttempts)),
+        error.slice(0, 500),
+        new Date().toISOString(),
+        id,
+      );
+  }
+
+  async expireGapIntent(id: string, reason: string): Promise<void> {
+    this.db
+      .prepare(
+        `UPDATE gap_intents
+            SET status='stale',
+                last_error=?,
+                lease_expires_at=NULL,
+                updated_at=?
+          WHERE id=? AND status='running'`,
+      )
+      .run(reason.slice(0, 500), new Date().toISOString(), id);
+  }
+
   async reserveOnramp(
     addressKey: string,
     dayKey: string,
@@ -969,7 +1174,18 @@ export class SqliteAdapter implements KeryxDB {
         queryId: String(f.query_id),
         rating: f.rating as "up" | "down",
       }));
-    return calculateDashboardMetrics(payments, runs, feedback);
+    const gapIntents = this.db
+      .prepare(
+        `SELECT gi.status
+           FROM gap_intents gi
+           JOIN sources s ON s.id=gi.source_id
+          WHERE LOWER(s.wallet_address)=LOWER(gi.owner_wallet)`,
+      )
+      .all()
+      .map((intent) => ({
+        status: intent.status as import("../types").GapIntentStatus,
+      }));
+    return calculateDashboardMetrics(payments, runs, feedback, gapIntents);
   }
 
   async settlementLedger(): Promise<LedgerAccount[]> {
@@ -1233,6 +1449,34 @@ function rowToSource(r: Record<string, unknown>): Source {
     verified: r.verified === undefined || r.verified === null ? true : Boolean(r.verified),
     // preview_depth=null grandfathers the row as "full"; normalize guards any bad value.
     previewDepth: normalizePreviewDepth(r.preview_depth),
+  };
+}
+
+function rowToGapIntent(r: Record<string, unknown>): GapIntent {
+  return {
+    id: String(r.id),
+    gapId: String(r.gap_id),
+    claim: String(r.claim),
+    question: String(r.question),
+    failedQueryId: String(r.failed_query_id),
+    sourceId: String(r.source_id),
+    sourceItemLink: String(r.source_item_link ?? ""),
+    ownerWallet: String(r.owner_wallet).toLowerCase(),
+    status: r.status as GapIntent["status"],
+    attempts: Number(r.attempts ?? 0),
+    ...(r.lease_expires_at === null || r.lease_expires_at === undefined
+      ? {}
+      : { leaseExpiresAt: Number(r.lease_expires_at) }),
+    ...(r.retry_run_id ? { retryRunId: String(r.retry_run_id) } : {}),
+    ...(r.coverage === null || r.coverage === undefined
+      ? {}
+      : { coverage: Number(r.coverage) }),
+    ...(r.reward_usdc === null || r.reward_usdc === undefined
+      ? {}
+      : { rewardUsdc: Number(r.reward_usdc) }),
+    ...(r.last_error ? { lastError: String(r.last_error) } : {}),
+    createdAt: String(r.created_at),
+    updatedAt: String(r.updated_at),
   };
 }
 

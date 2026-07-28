@@ -26,9 +26,38 @@ export async function GET(req: NextRequest) {
 
   try {
     const db = await getDb();
-    const runs = await db.listRecentQueries(WINDOW_RUNS);
+    const [runs, intents, sources] = await Promise.all([
+      db.listRecentQueries(WINDOW_RUNS),
+      db.listGapIntents(200),
+      db.listAllSources(),
+    ]);
     const board = buildBoard(runs, { limit });
-    return NextResponse.json({ windowRuns: WINDOW_RUNS, gaps: board.open, filled: board.filled });
+    const sourceOwners = new Map(
+      sources.map((source) => [source.id, source.walletAddress.toLowerCase()]),
+    );
+    return NextResponse.json({
+      windowRuns: WINDOW_RUNS,
+      gaps: board.open,
+      filled: board.filled,
+      offers: intents
+        .filter(
+          (intent) =>
+            sourceOwners.get(intent.sourceId) === intent.ownerWallet.toLowerCase(),
+        )
+        .map((intent) => ({
+          id: intent.id,
+          gapId: intent.gapId,
+          sourceId: intent.sourceId,
+          sourceItemLink: intent.sourceItemLink,
+          status: intent.status,
+          attempts: intent.attempts,
+          retryRunId: intent.retryRunId,
+          coverage: intent.coverage,
+          rewardUsdc: intent.rewardUsdc,
+          createdAt: intent.createdAt,
+          updatedAt: intent.updatedAt,
+        })),
+    });
   } catch {
     return NextResponse.json({ error: "demand board unavailable" }, { status: 503 });
   }
