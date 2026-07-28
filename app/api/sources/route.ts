@@ -40,10 +40,14 @@ import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { prepareSourceRegistration } from "@/lib/sources/prepare-registration";
 import { paginateSourceList } from "@/lib/sources/paginate-source-list";
+import { consumePoint } from "@/lib/rate-limit-store";
 import type { Source } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const GAP_OFFERS_PER_WALLET_PER_DAY = 5;
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 function toPublicSource(s: Source) {
   return {
@@ -102,6 +106,28 @@ export async function POST(req: NextRequest) {
 
   const db = await getDb();
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+
+  // Every accepted wanted-claim offer can authorize one bounded treasury retry. Keep a durable
+  // per-wallet daily valve in addition to the database's one-offer-per-gap/owner admission lock.
+  if (body.gapId != null || body.matchedItemLink != null) {
+    const admitted = await consumePoint(
+      session.address.toLowerCase(),
+      "gap-offer",
+      GAP_OFFERS_PER_WALLET_PER_DAY,
+      ONE_DAY_MS,
+    );
+    if (!admitted.allowed) {
+      const retryAfter = Math.max(1, Math.ceil(admitted.msBeforeNext / 1000));
+      return Response.json(
+        {
+          error: "wanted-claim offer limit reached",
+          message: "A wallet may submit at most five treasury-retry offers per day.",
+          retryAfter,
+        },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } },
+      );
+    }
+  }
 
   // The wallet address is always taken from the session — a client-supplied walletAddress is
   // ignored to prevent wallet spoofing. Delegate the actual register to the shared core, which the

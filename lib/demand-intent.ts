@@ -7,6 +7,7 @@
  */
 
 import type { KeryxDB } from "./db/keryx-db";
+import { matchFeedToGaps } from "./demand-match";
 import { buildBoard } from "./demand-signal";
 import type { GapIntent, SourceItem } from "./types";
 
@@ -66,6 +67,15 @@ export async function resolveGapOffer(
       "That wanted claim has already been filled or moved outside the current demand window.",
     );
   }
+  const verifiedMatch = matchFeedToGaps([gap], feedItems, { limit: 1 })[0];
+  if (
+    !verifiedMatch?.post.link ||
+    canonicalLink(verifiedMatch.post.link) !== itemLink
+  ) {
+    throw new GapOfferError(
+      "That post no longer matches this wanted claim from its public feed preview.",
+    );
+  }
 
   return {
     gapId: gap.id,
@@ -76,7 +86,13 @@ export async function resolveGapOffer(
   };
 }
 
-/** Idempotently persist a server-resolved offer once the source id is known. */
+/**
+ * Idempotently persist a server-resolved offer once the source id is known.
+ *
+ * The database admits at most one offer per gap and owner wallet, even when the owner relists the
+ * feed with another source id or post URL. That bound is payment authority: every admitted offer
+ * can cause a treasury-funded retry, so item-level uniqueness is not sufficient.
+ */
 export async function queueGapOffer(
   db: KeryxDB,
   offer: ResolvedGapOffer | null,

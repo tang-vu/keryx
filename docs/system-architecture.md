@@ -1,6 +1,6 @@
 # Keryx System Architecture
 
-**Version:** 0.8.0 Wanted-claim fulfillment (2026-07-28)
+**Version:** 0.8.0 Treasury admission hardening (2026-07-29)
 **Status:** Shipped (Phases 01–06 complete)
 
 ---
@@ -116,7 +116,9 @@ stable gap id + matched post
         │
         ├─ rebuild live board
         ├─ require post in ingested RSS
-        └─ queue idempotent gap_intent
+        ├─ independently match preview to claim
+        ├─ enforce 5 offers / verified wallet / day
+        └─ atomically queue one intent / gap + owner
                  │
                  └──────────────▶ atomic lease (active + verified + same owner)
                                       ├─ retry failed question, treasury ≤ $0.05
@@ -132,8 +134,11 @@ stable gap id + matched post
 
 The intent row is coordination only. Registration and verification never initiate spend; payTo
 still comes from SourceRegistry and the retry uses the same server-side Gateway path as the volume
-engine. A ten-minute lease is reclaimable after a crash and prevents two workers from selecting the
-same pending offer concurrently.
+engine. Preview matching prevents an unrelated feed item from being attached to a gap. The atomic
+gap-and-owner admission rule prevents one wallet from multiplying a single wanted claim across
+sources or posts, while the daily wallet quota bounds distinct offers. A ten-minute lease is
+reclaimable after a crash and prevents two workers from selecting the same pending offer
+concurrently.
 
 ### Creator Registration Flow
 

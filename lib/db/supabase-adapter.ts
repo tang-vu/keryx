@@ -313,35 +313,20 @@ export class SupabaseAdapter implements KeryxDB {
       | "updatedAt"
     >,
   ): Promise<GapIntent> {
-    const now = new Date().toISOString();
-    await this.sb.from("gap_intents").upsert(
-      {
-        id: crypto.randomUUID(),
-        gap_id: input.gapId,
-        claim: input.claim,
-        question: input.question,
-        failed_query_id: input.failedQueryId,
-        source_id: input.sourceId,
-        source_item_link: input.sourceItemLink,
-        owner_wallet: input.ownerWallet.toLowerCase(),
-        status: "pending",
-        attempts: 0,
-        created_at: now,
-        updated_at: now,
-      },
-      {
-        onConflict: "gap_id,source_id,source_item_link",
-        ignoreDuplicates: true,
-      },
-    );
-    const { data } = await this.sb
-      .from("gap_intents")
-      .select("*")
-      .eq("gap_id", input.gapId)
-      .eq("source_id", input.sourceId)
-      .eq("source_item_link", input.sourceItemLink)
-      .single();
-    return rowToGapIntent(data);
+    const { data, error } = await this.sb.rpc("create_gap_intent", {
+      p_id: crypto.randomUUID(),
+      p_gap_id: input.gapId,
+      p_claim: input.claim,
+      p_question: input.question,
+      p_failed_query_id: input.failedQueryId,
+      p_source_id: input.sourceId,
+      p_source_item_link: input.sourceItemLink,
+      p_owner_wallet: input.ownerWallet.toLowerCase(),
+    });
+    if (error) throw error;
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) throw new Error("create_gap_intent returned no row");
+    return rowToGapIntent(row as Record<string, unknown>);
   }
 
   async listGapIntents(limit = 200): Promise<GapIntent[]> {

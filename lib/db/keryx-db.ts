@@ -182,7 +182,7 @@ export interface KeryxDB {
   newestItemDates(sourceIds: string[]): Promise<Record<string, string>>;
 
   // ── creator offers against demand-board gaps ──
-  /** Idempotently queue one verified-wallet source against one measured gap. */
+  /** Atomically admit at most one treasury-retry offer per measured gap and owner wallet. */
   createGapIntent(
     intent: Omit<
       GapIntent,

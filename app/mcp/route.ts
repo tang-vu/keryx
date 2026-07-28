@@ -68,11 +68,15 @@ function jsonRpcHttpError(req: NextRequest, status: number, code: number, messag
   );
 }
 
-function isResearchCall(body: unknown): boolean {
-  if (Array.isArray(body)) return body.some(isResearchCall);
-  if (!body || typeof body !== "object") return false;
+export function researchCallCount(body: unknown): number {
+  if (Array.isArray(body)) {
+    return body.reduce((count, message) => count + researchCallCount(message), 0);
+  }
+  if (!body || typeof body !== "object") return 0;
   const message = body as { method?: unknown; params?: { name?: unknown } };
-  return message.method === "tools/call" && message.params?.name === "research";
+  return message.method === "tools/call" && message.params?.name === "research"
+    ? 1
+    : 0;
 }
 
 export function normalizeMcpClient(value: string | null): McpClientChannel {
@@ -131,7 +135,16 @@ async function handle(req: NextRequest): Promise<Response> {
 
   const parsedBody =
     req.method === "POST" ? await req.clone().json().catch(() => undefined) : undefined;
-  const access = await resolveAccess(req, isResearchCall(parsedBody));
+  const researchCalls = researchCallCount(parsedBody);
+  if (researchCalls > 1) {
+    return jsonRpcHttpError(
+      req,
+      400,
+      -32600,
+      "A request may contain at most one treasury-funded research call.",
+    );
+  }
+  const access = await resolveAccess(req, researchCalls === 1);
   if (access instanceof Response) {
     const headers = new Headers(access.headers);
     corsHeaders(req).forEach((value, key) => headers.set(key, value));

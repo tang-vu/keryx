@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-07-28
+**Last Updated:** 2026-07-29
 **Current Version:** 0.8.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
@@ -8,6 +8,17 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 ---
 
 ## Unreleased
+
+### Treasury-funded entry points now admit the funded unit, not just the HTTP request (2026-07-29)
+Wanted-claim offers are independently matched against the selected feed preview at registration,
+atomically limited to one offer per gap and verified owner across sources/posts, and capped at five
+offers per wallet per day. Remote MCP rejects batches containing multiple `research` calls, closing
+the equivalent one-request-to-many-spends path.
+
+The shared public-fetch guard now recognizes hexadecimal IPv4-mapped IPv6 addresses before applying
+private-network rules. The testnet onramp also distinguishes a pre-broadcast send failure from an
+unknown receipt after broadcast: only the former (or a confirmed revert) releases the reservation;
+an ambiguous transaction returns `pending` with its hash and cannot be retried into a double drip.
 
 ### A wanted claim can now become a verified creator payout (2026-07-28)
 The feed checker used to stop at “List this feed”: it knew which post matched which open claim, then

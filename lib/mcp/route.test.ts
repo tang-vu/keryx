@@ -1,6 +1,11 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it } from "vitest";
-import { isAllowedMcpOrigin, normalizeMcpClient, POST } from "../../app/mcp/route";
+import {
+  isAllowedMcpOrigin,
+  normalizeMcpClient,
+  POST,
+  researchCallCount,
+} from "../../app/mcp/route";
 
 const headers = {
   "content-type": "application/json",
@@ -26,6 +31,16 @@ describe("/mcp", () => {
     expect(normalizeMcpClient("cursor")).toBe("cursor");
     expect(normalizeMcpClient(null)).toBe("direct");
     expect(normalizeMcpClient("anything-user-controlled")).toBe("other");
+  });
+
+  it("counts paid research calls inside a JSON-RPC batch", () => {
+    expect(
+      researchCallCount([
+        { method: "tools/call", params: { name: "research" } },
+        { method: "tools/call", params: { name: "keryx_status" } },
+        { method: "tools/call", params: { name: "research" } },
+      ]),
+    ).toBe(2);
   });
 
   it("serves MCP initialize over stateless Streamable HTTP", async () => {
@@ -64,6 +79,28 @@ describe("/mcp", () => {
       "research",
       "keryx_status",
     ]);
+  });
+
+  it("rejects a batch that would run more than one treasury-funded research call", async () => {
+    const call = (id: number) => ({
+      jsonrpc: "2.0",
+      id,
+      method: "tools/call",
+      params: {
+        name: "research",
+        arguments: { question: `Question ${id}` },
+      },
+    });
+    const response = await POST(request([call(1), call(2)]));
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual(
+      expect.objectContaining({
+        error: expect.objectContaining({
+          message: "A request may contain at most one treasury-funded research call.",
+        }),
+      }),
+    );
   });
 
   it("rejects an untrusted browser Origin", async () => {

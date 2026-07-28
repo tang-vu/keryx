@@ -35,7 +35,10 @@ describe("isPublicAddress", () => {
   it("unwraps IPv4-mapped IPv6, the same address wearing a different notation", () => {
     expect(isPublicAddress("::ffff:127.0.0.1")).toBe(false);
     expect(isPublicAddress("::ffff:10.0.0.1")).toBe(false);
+    expect(isPublicAddress("::ffff:7f00:1")).toBe(false);
+    expect(isPublicAddress("0:0:0:0:0:ffff:a9fe:a9fe")).toBe(false);
     expect(isPublicAddress("::ffff:93.184.216.34")).toBe(true);
+    expect(isPublicAddress("::ffff:5db8:d822")).toBe(true);
   });
 
   it("treats 172.15 and 172.32 as public — the private block is 16..31 only", () => {
@@ -63,6 +66,8 @@ describe("assertPublicUrl", () => {
     await refuses("http://127.0.0.1:3000/feed.xml");
     await refuses("http://169.254.169.254/latest/meta-data/");
     await refuses("http://[::1]:8080/feed");
+    // WHATWG URL canonicalizes the dotted tail to ::ffff:7f00:1 before the guard sees it.
+    await refuses("http://[::ffff:127.0.0.1]:3000/feed.xml");
   });
 
   it("refuses credentials in the URL — how a probe smuggles a host past a naive check", async () => {

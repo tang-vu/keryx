@@ -41,6 +41,53 @@ const DEFAULTS = { timeoutMs: 10_000, maxBytes: 2_000_000, maxHops: 3 } satisfie
 /** Why a URL was refused. Phrased for the person who pasted it. */
 export class UnsafeTargetError extends Error {}
 
+/** Expand an IPv6 address into eight hextets, including dotted IPv4 tails. */
+function ipv6Hextets(address: string): number[] | null {
+  let raw = address.toLowerCase().split("%", 1)[0]!;
+  const dottedAt = raw.lastIndexOf(":");
+  if (raw.includes(".") && dottedAt >= 0) {
+    const dotted = raw.slice(dottedAt + 1);
+    if (isIP(dotted) !== 4) return null;
+    const octets = dotted.split(".").map(Number);
+    raw =
+      raw.slice(0, dottedAt + 1) +
+      `${((octets[0]! << 8) | octets[1]!).toString(16)}:` +
+      `${((octets[2]! << 8) | octets[3]!).toString(16)}`;
+  }
+
+  const halves = raw.split("::");
+  if (halves.length > 2) return null;
+  const parse = (part: string) =>
+    part
+      ? part.split(":").map((piece) =>
+          /^[0-9a-f]{1,4}$/.test(piece) ? Number.parseInt(piece, 16) : Number.NaN,
+        )
+      : [];
+  const left = parse(halves[0] ?? "");
+  const right = parse(halves[1] ?? "");
+  if ([...left, ...right].some((part) => !Number.isInteger(part))) return null;
+
+  if (halves.length === 1) return left.length === 8 ? left : null;
+  const missing = 8 - left.length - right.length;
+  if (missing < 1) return null;
+  return [...left, ...Array<number>(missing).fill(0), ...right];
+}
+
+/** IPv4-mapped/compatible IPv6 reaches the embedded IPv4 socket on dual-stack hosts. */
+function embeddedIpv4(address: string): string | null {
+  const parts = ipv6Hextets(address);
+  if (!parts) return null;
+  const mapped = parts.slice(0, 5).every((part) => part === 0) && parts[5] === 0xffff;
+  const compatible = parts.slice(0, 6).every((part) => part === 0);
+  if (!mapped && !compatible) return null;
+  return [
+    parts[6]! >> 8,
+    parts[6]! & 0xff,
+    parts[7]! >> 8,
+    parts[7]! & 0xff,
+  ].join(".");
+}
+
 /**
  * Is this a routable public address?
  *
@@ -50,9 +97,8 @@ export class UnsafeTargetError extends Error {}
  * otherwise.
  */
 export function isPublicAddress(address: string): boolean {
-  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i.exec(address);
-  const addr = mapped ? mapped[1]! : address;
-  const family = isIP(addr);
+  const family = isIP(address);
+  const addr = address;
   if (family === 4) {
     const [a, b] = addr.split(".").map(Number) as [number, number, number, number];
     if (a === 0 || a === 10 || a === 127) return false;
@@ -64,11 +110,14 @@ export function isPublicAddress(address: string): boolean {
     return true;
   }
   if (family === 6) {
-    const lower = addr.toLowerCase();
-    if (lower === "::" || lower === "::1") return false;
-    if (/^f[cd]/.test(lower)) return false; // unique-local
-    if (/^fe[89ab]/.test(lower)) return false; // link-local
-    if (lower.startsWith("ff")) return false; // multicast
+    const embedded = embeddedIpv4(addr);
+    if (embedded) return isPublicAddress(embedded);
+    const parts = ipv6Hextets(addr);
+    if (!parts) return false;
+    if ((parts[0]! & 0xfe00) === 0xfc00) return false; // unique-local fc00::/7
+    if ((parts[0]! & 0xffc0) === 0xfe80) return false; // link-local fe80::/10
+    if ((parts[0]! & 0xffc0) === 0xfec0) return false; // deprecated site-local fec0::/10
+    if ((parts[0]! & 0xff00) === 0xff00) return false; // multicast ff00::/8
     return true;
   }
   return false;

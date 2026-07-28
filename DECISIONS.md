@@ -5,6 +5,26 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-25** · Treasury/Security · *Treasury-funded work is admitted as a bounded unit, and an
+ambiguous post-broadcast transfer keeps its reservation.*
+Wanted-claim registration now independently re-runs the public-preview claim matcher instead of
+accepting mere feed membership. Admission is atomic at one intent per `(gap, verified owner)`
+across every source and post, with a durable five-offer-per-wallet daily limit at the registration
+boundary. This makes a creator's semantic offer—not each attacker-selected URL—the unit that can
+enter the treasury retry queue. Remote MCP applies the same principle by rejecting a JSON-RPC
+batch containing more than one treasury-funded `research` call, so an HTTP-request rate-limit
+token cannot fan out into multiple spends.
+
+Untrusted URL classification expands IPv6 before checking IPv4-compatible and IPv4-mapped
+addresses, preventing hexadecimal forms such as `::ffff:7f00:1` from bypassing private-network
+rules. The testnet onramp reserves an address before sending and releases it only when no
+transaction was broadcast or a receipt confirms a revert. A receipt timeout after a transaction
+hash is returned becomes `pending` and retains the reservation, because retrying an ambiguous
+transfer can double-drip. Why: financial rate limits must cover the actual funded unit, URL
+canonicalization must not weaken SSRF policy, and uncertain settlement is not failure.
+Reversible: medium (limits are configurable in code; the conservative reservation rule requires
+reconciliation before a retry can be made safe).
+
 **D-24** · Demand/Settlement · *A creator's wanted-claim offer is durable coordination, never
 payment authority; fulfillment requires evidence and real settlement.*
 Each open semantic claim gets a stable SHA-256 id. The feed-match handoff carries only that opaque

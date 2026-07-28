@@ -694,34 +694,51 @@ export class SqliteAdapter implements KeryxDB {
     >,
   ): Promise<GapIntent> {
     const now = new Date().toISOString();
-    const id = crypto.randomUUID();
-    this.db
-      .prepare(
-        `INSERT INTO gap_intents (
-           id,gap_id,claim,question,failed_query_id,source_id,source_item_link,
-           owner_wallet,status,attempts,created_at,updated_at
-         ) VALUES (?,?,?,?,?,?,?,?, 'pending',0,?,?)
-         ON CONFLICT(gap_id,source_id,source_item_link) DO NOTHING`,
-      )
-      .run(
-        id,
-        input.gapId,
-        input.claim,
-        input.question,
-        input.failedQueryId,
-        input.sourceId,
-        input.sourceItemLink,
-        input.ownerWallet.toLowerCase(),
-        now,
-        now,
-      );
-    const row = this.db
-      .prepare(
-        `SELECT * FROM gap_intents
-          WHERE gap_id=? AND source_id=? AND source_item_link=?`,
-      )
-      .get(input.gapId, input.sourceId, input.sourceItemLink);
-    return rowToGapIntent(row as Record<string, unknown>);
+    const owner = input.ownerWallet.toLowerCase();
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      const existing = this.db
+        .prepare(
+          `SELECT * FROM gap_intents
+            WHERE gap_id=? AND LOWER(owner_wallet)=?
+            ORDER BY created_at ASC
+            LIMIT 1`,
+        )
+        .get(input.gapId, owner);
+      if (existing) {
+        this.db.exec("COMMIT");
+        return rowToGapIntent(existing as Record<string, unknown>);
+      }
+
+      const id = crypto.randomUUID();
+      this.db
+        .prepare(
+          `INSERT INTO gap_intents (
+             id,gap_id,claim,question,failed_query_id,source_id,source_item_link,
+             owner_wallet,status,attempts,created_at,updated_at
+           ) VALUES (?,?,?,?,?,?,?,?, 'pending',0,?,?)`,
+        )
+        .run(
+          id,
+          input.gapId,
+          input.claim,
+          input.question,
+          input.failedQueryId,
+          input.sourceId,
+          input.sourceItemLink,
+          owner,
+          now,
+          now,
+        );
+      const row = this.db
+        .prepare(`SELECT * FROM gap_intents WHERE id=?`)
+        .get(id);
+      this.db.exec("COMMIT");
+      return rowToGapIntent(row as Record<string, unknown>);
+    } catch (err) {
+      try { this.db.exec("ROLLBACK"); } catch { /* transaction already closed */ }
+      throw err;
+    }
   }
 
   async listGapIntents(limit = 200): Promise<GapIntent[]> {

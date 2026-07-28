@@ -63,6 +63,30 @@ describe("gap intent queue", () => {
     expect(await db.claimGapIntent(now, 60_000)).toBeNull();
   });
 
+  it("admits only one treasury retry per gap and owner across different posts and sources", async () => {
+    const first = await db.createGapIntent({
+      gapId: "e".repeat(64),
+      claim: "CCTP burns and mints USDC",
+      question: "How does CCTP work?",
+      failedQueryId: "failed-5",
+      sourceId: source.id,
+      sourceItemLink: "https://example.com/cctp-1",
+      ownerWallet: "0xabc",
+    });
+    const second = await db.createGapIntent({
+      gapId: "e".repeat(64),
+      claim: "CCTP burns and mints USDC",
+      question: "How does CCTP work?",
+      failedQueryId: "failed-5",
+      sourceId: "another-source",
+      sourceItemLink: "https://example.com/cctp-2",
+      ownerWallet: "0xAbC",
+    });
+
+    expect(second.id).toBe(first.id);
+    expect(await db.listGapIntents()).toHaveLength(1);
+  });
+
   it("never leases an offer whose wallet does not own the source", async () => {
     await db.createGapIntent({
       gapId: "b".repeat(64),

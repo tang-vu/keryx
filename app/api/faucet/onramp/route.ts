@@ -33,6 +33,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { consumePoint } from "@/lib/rate-limit-store";
 import { config } from "@/lib/config";
 import { getDb } from "@/lib/db";
+import { executeOnrampTransfer } from "@/lib/faucet/onramp-transfer";
 
 export const runtime = "nodejs";
 
@@ -115,26 +116,66 @@ export async function POST(req: Request) {
     return disabled("Daily onramp cap reached — use the Circle faucet");
   }
 
-  try {
-    const tx = await wallet.sendTransaction({ to: address as `0x${string}`, value: DRIP });
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: tx });
-    if (receipt.status !== "success") throw new Error(`drip tx reverted (${tx})`);
+  const outcome = await executeOnrampTransfer(
+    () => wallet.sendTransaction({ to: address as `0x${string}`, value: DRIP }),
+    async (tx) => {
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: tx });
+      return { status: receipt.status };
+    },
+  );
 
-    return NextResponse.json({
-      ok: true,
-      tx,
-      amount: formatEther(DRIP),
-      address,
-      explorer: config.explorerUrl,
-    });
-  } catch (err) {
+  if (outcome.status === "send-failed" || outcome.status === "reverted") {
     await db.releaseOnramp(addrKey(lower), dk, DRIP_USDC).catch((releaseErr) => {
       console.error("[onramp] failed to release reservation:", releaseErr);
     });
-    console.error("[onramp] drip failed:", err instanceof Error ? err.message : String(err));
+    const reason =
+      outcome.status === "send-failed"
+        ? outcome.error
+        : new Error(`drip tx reverted (${outcome.txHash})`);
+    console.error(
+      "[onramp] drip failed:",
+      reason instanceof Error ? reason.message : String(reason),
+    );
     return NextResponse.json(
       { error: "drip failed — try again or use the Circle faucet", faucet: CIRCLE_FAUCET },
       { status: 500 },
     );
   }
+
+  const state = JSON.stringify({
+    status: outcome.status,
+    tx: outcome.txHash,
+    updatedAt: new Date().toISOString(),
+  });
+  await db.setSyncState(addrKey(lower), state).catch((stateErr) => {
+    // The original reservation row remains authoritative even if richer evidence cannot be stored.
+    console.error("[onramp] failed to persist transfer state:", stateErr);
+  });
+
+  if (outcome.status === "pending") {
+    console.warn(
+      `[onramp] receipt unavailable for ${outcome.txHash}; reservation retained pending reconciliation`,
+    );
+    return NextResponse.json(
+      {
+        ok: true,
+        status: "pending",
+        tx: outcome.txHash,
+        amount: formatEther(DRIP),
+        address,
+        explorer: config.explorerUrl,
+        message: "Transfer broadcast; receipt is still pending. Do not retry this address.",
+      },
+      { status: 202 },
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    status: "confirmed",
+    tx: outcome.txHash,
+    amount: formatEther(DRIP),
+    address,
+    explorer: config.explorerUrl,
+  });
 }

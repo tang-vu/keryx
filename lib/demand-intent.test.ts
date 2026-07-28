@@ -69,6 +69,23 @@ describe("resolveGapOffer", () => {
     ).rejects.toBeInstanceOf(GapOfferError);
   });
 
+  it("rechecks that the selected post actually matches the live claim preview", async () => {
+    const unrelated = {
+      ...post,
+      title: "Summer recipes",
+      summary: "Tomatoes, basil, and olive oil.",
+      link: "https://example.com/recipes",
+    };
+    await expect(
+      resolveGapOffer(
+        dbWithRuns([failed]),
+        gap.id,
+        unrelated.link,
+        [unrelated],
+      ),
+    ).rejects.toThrow("no longer matches");
+  });
+
   it("rejects a gap once a later run has filled it", async () => {
     const filled: QueryRun = {
       ...failed,
