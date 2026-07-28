@@ -109,3 +109,80 @@ describe("output ceiling", () => {
     expect(engine.ceilingFor(10_000)).toBeLessThanOrEqual(8192);
   });
 });
+
+describe("synthesis evidence contract", () => {
+  it("parses claim-indexed exact-quote evidence for orchestrator validation", async () => {
+    const engine = new StubEngine({
+      answer: "USDC is burned on the source domain [S1].",
+      citedMarkers: ["S1"],
+      evidence: [
+        {
+          claimIndex: 0,
+          marker: "S1",
+          quote: "USDC is burned on the source domain.",
+          support: 0.87,
+        },
+      ],
+      conflicts: [],
+    });
+
+    const result = await engine.synthesize({
+      question: "How does CCTP work?",
+      subClaims: ["CCTP burns USDC on the source domain."],
+      gathered: [
+        {
+          sourceId: "source-1",
+          sourceName: "Circle docs",
+          marker: "S1",
+          text: "USDC is burned on the source domain.",
+        },
+      ],
+    });
+
+    expect(result.evidence).toEqual([
+      {
+        claimIndex: 0,
+        marker: "S1",
+        quote: "USDC is burned on the source domain.",
+        support: 0.87,
+      },
+    ]);
+  });
+});
+
+describe("final sufficiency contract", () => {
+  it("keeps caller-owned claim identity when the model paraphrases it", async () => {
+    const engine = new StubEngine({
+      sufficient: true,
+      rationale: "covered",
+      perClaim: [
+        {
+          claim: "model paraphrase",
+          coverage: 0.8,
+          coveredBy: ["S1"],
+        },
+      ],
+    });
+
+    const result = await engine.sufficiency({
+      question: "How does CCTP work?",
+      subClaims: ["CCTP burns USDC on the source domain."],
+      gathered: [
+        {
+          sourceId: "source-1",
+          sourceName: "Circle docs",
+          marker: "S1",
+          text: "USDC is burned on the source domain.",
+        },
+      ],
+    });
+
+    expect(result.perClaim).toEqual([
+      {
+        claim: "CCTP burns USDC on the source domain.",
+        coverage: 0.8,
+        coveredBy: ["S1"],
+      },
+    ]);
+  });
+});

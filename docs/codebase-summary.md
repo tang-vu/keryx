@@ -1,6 +1,6 @@
 # Keryx Codebase Summary
 
-**Version:** 0.4.0 (live product, updated 2026-07-03)
+**Version:** 0.7.0 (live product, updated 2026-07-28)
 
 This document maps the codebase structure for the non-custodial Keryx dApp. Organized by domain; files < 200 LOC per kebab-case naming standard.
 
@@ -14,6 +14,7 @@ Core decompose→discover→decide→fetch→sufficiency→synthesize→attribut
 | File | Purpose |
 |------|---------|
 | `run-agent.ts` | Main agent orchestrator. Yields reasoning traces via async generator. Powers both server-side (volume engine) and interactive (SSE). |
+| `evidence-ledger.ts` | Deterministic claim → source → exact-quote gate. Bounds final coverage and the set eligible for citation rewards. |
 | `steps/` | Each step (decompose, discover, decide, etc.) as a separate generator function. Includes adjudication (conflicting sources → trust one, with reasons) and the confidence verdict (agent rates its own answer High/Moderate/Low). |
 | `decisions.ts` | Agent decision log: buy/skip/cache per source, with rationale. |
 | `prompts.ts` | LLM system/user prompts for each step. |

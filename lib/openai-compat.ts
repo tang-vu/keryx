@@ -74,6 +74,17 @@ export function keryxMeta(run: QueryRun) {
       weight: c.weight,
       reward: c.reward,
     })),
+    evidence: (run.evidence ?? [])
+      .filter((item) => item.qualifiesForReward)
+      .map((item) => ({
+        claimIndex: item.claimIndex,
+        claim: item.claim,
+        source: item.sourceName,
+        marker: item.marker,
+        quote: item.quote,
+        support: item.support,
+      })),
+    claimCoverage: run.claimCoverage ?? [],
     creatorsPaid: run.citations.length,
     totalToCreators: run.totalToCreators,
     engine: run.engine,

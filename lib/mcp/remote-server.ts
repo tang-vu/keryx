@@ -25,6 +25,17 @@ export function remoteResearchResult(run: QueryRun) {
       weight: citation.weight,
       rewardUsdc: citation.reward,
     })),
+    evidence: (run.evidence ?? [])
+      .filter((item) => item.qualifiesForReward)
+      .map((item) => ({
+        claimIndex: item.claimIndex,
+        claim: item.claim,
+        source: item.sourceName,
+        marker: item.marker,
+        quote: item.quote,
+        support: item.support,
+      })),
+    claimCoverage: run.claimCoverage ?? [],
     totalToCreatorsUsdc: run.totalToCreators,
     confidence: run.confidence,
     engine: run.engine,
@@ -46,10 +57,14 @@ function researchText(result: ReturnType<typeof remoteResearchResult>): string {
     result.paymentMode === "real"
       ? `${result.settledPayments}/${result.paymentAttempts} payment attempts settled`
       : "offline payment simulation";
+  const groundedClaims = result.claimCoverage.filter(
+    (claim) => claim.coverage >= 0.4,
+  ).length;
 
   return (
     `${result.answer}\n\n` +
     `Creator rewards\n${rewards}\n\n` +
+    `Evidence: ${groundedClaims}/${result.claimCoverage.length} claims passed the grounding threshold\n` +
     `Total recorded to creators: $${result.totalToCreatorsUsdc.toFixed(4)} USDC · ${settlement}\n` +
     `Confidence: ${result.confidence?.level ?? "Low"} · ${result.dispatchUrl}`
   );

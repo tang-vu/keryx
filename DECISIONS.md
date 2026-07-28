@@ -5,6 +5,26 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-23** · Grounding/Settlement · *A model citation cannot authorize a reward without a
+deterministically verified evidence span.*
+Synthesis now proposes `claimIndex + marker + exact quote + support`; the orchestrator accepts it
+only when the claim index exists, the marker names content actually read, the normalized quote is
+present in that source, the marker appears inline in the answer, and synthesis declared it cited.
+Public evidence excerpts are capped at 240 characters so a receipt cannot substitute for gated
+content. Rejected markers are removed from the public answer and never enter `citations`, so they
+cannot reach `payCitation`; a failed final-assessment call also fails reward authorization closed
+without discarding the completed answer. Final confidence and the demand board use coverage bounded by both the final
+assessment and the strongest reward-qualified evidence, never source count or a stale pre-purchase
+snapshot. Fetch tolls already settled remain valid payment for access; when no citation passes the
+gate the citation pool stays unspent. Attribution may only weight the evidence-qualified set; an
+invalid/incomplete attribution falls back to an equal split inside that set and can never introduce
+a payee. Why: a live CCTP retry correctly measured every claim at 0% and wrote a negative answer,
+but an empty `citedMarkers` fallback promoted all 13 reads to citations, labelled the answer High
+confidence, and settled equal rewards. The model may propose economic state; code must authorize it.
+New nullable scalar counters power the dashboard without loading every receipt, while historical
+runs remain explicitly unsampled. Reversible: medium (additive run schema, but the reward gate is
+now a financial invariant).
+
 **D-22** · Distribution/Telemetry · *Attribute Remote MCP activation with a bounded setup-URL
 channel, never with protocol client metadata.*
 The stateless Streamable HTTP transport does not retain `initialize.clientInfo` for a later

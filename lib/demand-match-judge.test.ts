@@ -59,7 +59,12 @@ function engineDeciding(
     },
     sufficiency: async () => ({ sufficient: false, rationale: "" }),
     reevaluate: async () => ({ claims: [], shouldBuyMore: false, recommendedIds: [], rationale: "" }),
-    synthesize: async () => ({ answer: "", citedMarkers: [], conflicts: [] }),
+    synthesize: async () => ({
+      answer: "",
+      citedMarkers: [],
+      conflicts: [],
+      evidence: [],
+    }),
     attribute: async () => [],
   };
 }

@@ -199,13 +199,20 @@ export class HeuristicEngine implements ReasoningEngine {
 
   async synthesize(input: SynthInput): Promise<SynthResult> {
     if (input.gathered.length === 0) {
-      return { answer: "No sources were worth purchasing for this question.", citedMarkers: [], conflicts: [] };
+      return {
+        answer: "No sources were worth purchasing for this question.",
+        citedMarkers: [],
+        conflicts: [],
+        evidence: [],
+      };
     }
     const cited = new Set<string>();
+    const evidence: SynthResult["evidence"] = [];
     const lines: string[] = [];
     const claims = input.subClaims.length ? input.subClaims : [input.question];
 
-    for (const claim of claims) {
+    for (let claimIndex = 0; claimIndex < claims.length; claimIndex++) {
+      const claim = claims[claimIndex]!;
       const ct = tokenize(claim);
       let best = { score: 0, sentence: "", marker: "" };
       for (const g of input.gathered) {
@@ -217,6 +224,12 @@ export class HeuristicEngine implements ReasoningEngine {
       if (best.sentence) {
         cited.add(best.marker);
         lines.push(`${best.sentence} [${best.marker}]`);
+        evidence.push({
+          claimIndex,
+          marker: best.marker,
+          quote: best.sentence.slice(0, 240).trim(),
+          support: round(best.score),
+        });
       }
     }
     const answer = lines.length
@@ -224,7 +237,7 @@ export class HeuristicEngine implements ReasoningEngine {
       : `${input.gathered[0].text.slice(0, 240)}… [${input.gathered[0].marker}]`;
     if (lines.length === 0) cited.add(input.gathered[0].marker);
     // The heuristic engine does not detect cross-source conflicts — that requires an LLM.
-    return { answer, citedMarkers: [...cited], conflicts: [] };
+    return { answer, citedMarkers: [...cited], conflicts: [], evidence };
   }
 
   async attribute(

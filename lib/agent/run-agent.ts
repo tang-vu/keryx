@@ -11,9 +11,11 @@
 
 import { config } from "../config";
 import type {
+  ClaimCoverageRecord,
   Citation,
   Confidence,
   Decision,
+  EvidenceRecord,
   PaymentOrigin,
   McpClientChannel,
   PaymentRecord,
@@ -21,7 +23,11 @@ import type {
   TracePhase,
   TraceStep,
 } from "../types";
-import type { GatheredContent, SourceCandidate } from "../llm";
+import type {
+  GatheredContent,
+  SourceCandidate,
+  SufficiencyResult,
+} from "../llm";
 import { effectiveEngineName } from "../llm/resilient-engine";
 import type { AgentDeps } from "./deps";
 import { discoverExternalCandidates } from "./external-discovery";
@@ -32,6 +38,11 @@ import { allocateSplit } from "../payments/split-allocation";
 import { sendAlert } from "../notify/alert";
 import { normalizePreviewDepth, previewSummary } from "../sources/preview-depth";
 import { isCacheFresh, newestPublishedAt } from "./cache-freshness";
+import {
+  buildEvidenceLedger,
+  MIN_REWARD_SUPPORT,
+  removeUnsupportedCitationMarkers,
+} from "./evidence-ledger";
 
 export interface RunInput {
   question: string;
@@ -68,6 +79,9 @@ export async function* runAgent(
   let settledPayments = 0;
   let finalDecisions: Decision[] = [];
   let citations: Citation[] = [];
+  let evidence: EvidenceRecord[] = [];
+  let claimCoverage: ClaimCoverageRecord[] = [];
+  let evidenceMeasured = false;
   // Set once the verdict is computed; read by finish(). A `let` (not the closure-captured const)
   // so the early-return paths, which never reach the verdict step, still produce a valid run.
   let runConfidence: Confidence | undefined;
@@ -362,6 +376,14 @@ export async function* runAgent(
           c,
         );
       }
+      lastSufficient =
+        reeval.claims.length > 0 &&
+        reeval.claims.every(
+          (claim) => claim.coverage >= MIN_REWARD_SUPPORT,
+        );
+      lastGaps = reeval.claims.filter(
+        (claim) => claim.coverage < MIN_REWARD_SUPPORT,
+      ).length;
 
       yield emit("reevaluate", reeval.rationale, {
         shouldBuyMore: reeval.shouldBuyMore,
@@ -414,6 +436,59 @@ export async function* runAgent(
     );
   }
 
+  // 4c) FINAL COVERAGE — always reassess after every cache read and re-evaluation purchase.
+  // Earlier snapshots help decide whether to spend more, but cannot authorize confidence or
+  // citation rewards: CACHE-only runs used to keep an unmeasured lastGaps=0, while re-evaluation
+  // purchases left the pre-purchase coverage snapshot behind.
+  let finalSufficiency: SufficiencyResult;
+  let finalAssessmentAvailable = true;
+  try {
+    finalSufficiency = await engine.sufficiency({
+      question: input.question,
+      subClaims,
+      gathered,
+    });
+  } catch (error) {
+    finalAssessmentAvailable = false;
+    const reason =
+      error instanceof Error ? error.message : "unknown assessment error";
+    finalSufficiency = {
+      sufficient: false,
+      rationale:
+        "Final evidence assessment was unavailable; coverage defaults to zero and citation rewards are withheld.",
+      perClaim: subClaims.map((claim) => ({
+        claim,
+        coverage: 0,
+        coveredBy: [],
+      })),
+    };
+    yield emit(
+      "sufficiency",
+      `Final coverage assessment failed (${reason}); continuing conservatively with zero coverage.`,
+      { final: true, failed: true },
+    );
+  }
+  for (const c of finalSufficiency.perClaim ?? []) {
+    const pct = Math.round(c.coverage * 100);
+    const by = c.coveredBy.length
+      ? ` by ${c.coveredBy.join(", ")}`
+      : "";
+    yield emit(
+      "sufficiency",
+      `Final check — "${c.claim.slice(0, 60)}${c.claim.length > 60 ? "…" : ""}": ${pct}% assessed${by}`,
+      c,
+    );
+  }
+  yield emit(
+    "sufficiency",
+    `Final coverage assessment — ${finalSufficiency.rationale}`,
+    {
+      final: true,
+      sufficient: finalSufficiency.sufficient,
+      perClaim: finalSufficiency.perClaim,
+    },
+  );
+
   // 5) SYNTHESIZE
   yield emit("synthesize", `Synthesizing a grounded answer from ${gathered.length} source(s)…`);
   const synthesized = await engine.synthesize({ question: input.question, subClaims, gathered });
@@ -429,14 +504,58 @@ export async function* runAgent(
     );
   }
 
-  const citedMarkers = synthesized.citedMarkers;
   // Guard against an empty body (e.g. the model returned unparseable JSON) so the run never
   // completes "done" showing a blank answer after real money was spent.
   let answer = synthesized.answer?.trim()
     ? synthesized.answer
     : `Read and paid for ${gathered.length} source(s) (${gathered.map((g) => g.sourceName).join(", ")}), but couldn't compose a written summary this run. Please try again.`;
-  const citedSet = new Set(citedMarkers.length ? citedMarkers : gathered.map((g) => g.marker));
-  const used = gathered.filter((g) => citedSet.has(g.marker));
+  const ledger = buildEvidenceLedger({
+    subClaims,
+    gathered,
+    answer,
+    declaredMarkers: synthesized.citedMarkers,
+    proposedEvidence: synthesized.evidence ?? [],
+    finalAssessment: finalSufficiency.perClaim,
+    rewardAuthorizationAvailable: finalAssessmentAvailable,
+  });
+  evidence = ledger.evidence;
+  claimCoverage = ledger.claimCoverage;
+  evidenceMeasured = true;
+  answer = removeUnsupportedCitationMarkers(
+    answer,
+    ledger.acceptedMarkers,
+  );
+  const used = gathered.filter((g) =>
+    ledger.acceptedMarkers.has(g.marker),
+  );
+
+  for (const item of evidence) {
+    yield emit(
+      "evidence",
+      `${item.qualifiesForReward ? "Verified" : "Below reward gate"} — ${item.marker} supports claim ${item.claimIndex + 1} at ${Math.round(item.support * 100)}%: “${item.quote.slice(0, 140)}${item.quote.length > 140 ? "…" : ""}”`,
+      item,
+    );
+  }
+  if (
+    ledger.droppedEvidence > 0 ||
+    ledger.droppedCitations.length > 0
+  ) {
+    yield emit(
+      "evidence",
+      `Rejected ${ledger.droppedEvidence} invalid evidence span(s) and ${ledger.droppedCitations.length} unsupported citation marker(s); rejected markers cannot receive citation rewards.`,
+      {
+        droppedEvidence: ledger.droppedEvidence,
+        droppedCitations: ledger.droppedCitations,
+      },
+    );
+  }
+  if (used.length === 0) {
+    yield emit(
+      "evidence",
+      `No citation passed the evidence gate — the $${citationPool.toFixed(6)} citation pool stays unspent; settled access tolls still stand.`,
+      { citationPoolUsdc: round(citationPool), withheld: true },
+    );
+  }
 
   // 5c) VERDICT — derive how confident the agent is from its own coverage signals (sources
   // corroborating the answer, sub-claims left thin, disagreements adjudicated). When the evidence
@@ -445,15 +564,33 @@ export async function* runAgent(
   const adjudicatedNote = conflictsResolved
     ? `, ${conflictsResolved} disagreement${conflictsResolved === 1 ? "" : "s"} adjudicated`
     : "";
+  const gaps = claimCoverage.filter(
+    (claim) => claim.coverage < MIN_REWARD_SUPPORT,
+  ).length;
+  const strongClaims = claimCoverage.filter(
+    (claim) => claim.coverage >= 0.7,
+  ).length;
+  const allStrong =
+    claimCoverage.length > 0 && strongClaims === claimCoverage.length;
+  const allGrounded = claimCoverage.length > 0 && gaps === 0;
   const gapsNote = (n: number) => `${n} sub-claim${n === 1 ? "" : "s"}`;
   const verdict: Confidence =
     used.length === 0
-      ? { level: "Low", reason: "no source grounded the answer" }
-      : used.length >= 2 && lastGaps === 0
-        ? { level: "High", reason: `${used.length} sources corroborate it with every sub-claim covered${adjudicatedNote}` }
-        : used.length <= 1 && lastGaps > 0
-          ? { level: "Low", reason: `only ${used.length} source and ${gapsNote(lastGaps)} left thinly covered` }
-          : { level: "Moderate", reason: `${used.length} source${used.length === 1 ? "" : "s"} cited${lastGaps > 0 ? `, ${gapsNote(lastGaps)} thinly covered` : ""}${adjudicatedNote}` };
+      ? { level: "Low", reason: "no citation passed the evidence gate" }
+      : allStrong && used.length >= 2
+        ? {
+            level: "High",
+            reason: `${used.length} evidence-verified sources ground every sub-claim${adjudicatedNote}`,
+          }
+        : allGrounded
+          ? {
+              level: "Moderate",
+              reason: `${used.length} evidence-verified source${used.length === 1 ? "" : "s"} cover every sub-claim, but corroboration or support strength is limited${adjudicatedNote}`,
+            }
+          : {
+              level: "Low",
+              reason: `${gapsNote(gaps)} remain below the evidence threshold${adjudicatedNote}`,
+            };
   runConfidence = verdict;
 
   if (verdict.level === "Low" && used.length > 0) {
@@ -464,20 +601,32 @@ export async function* runAgent(
   yield emit("verdict", `Confidence: ${verdict.level} — ${verdict.reason}.`, verdict);
 
   // 6) ATTRIBUTE contribution weights
-  const attributions = await engine.attribute({ question: input.question, answer, used });
-  const weightById = new Map(attributions.map((a) => [a.sourceId, a]));
-  citations = used.map((g) => {
-    const a = weightById.get(g.sourceId);
-    const weight = a?.weight ?? 1 / used.length;
-    return {
-      marker: g.marker,
-      sourceId: g.sourceId,
-      sourceName: g.sourceName,
-      weight,
-      reward: round(citationPool * weight),
-      rationale: a?.rationale ?? "Equal contribution.",
-    };
-  });
+  if (used.length > 0) {
+    const proposedAttributions = await engine.attribute({
+      question: input.question,
+      answer,
+      used,
+    });
+    const attributions = resolveAttributions(
+      used,
+      proposedAttributions,
+    );
+    const rewards = allocateSplit(
+      round(citationPool),
+      attributions.map((item) => item.weight),
+    );
+    citations = used.map((g, index) => {
+      const attribution = attributions[index]!;
+      return {
+        marker: g.marker,
+        sourceId: g.sourceId,
+        sourceName: g.sourceName,
+        weight: attribution.weight,
+        reward: rewards[index] ?? 0,
+        rationale: attribution.rationale,
+      };
+    });
+  }
   for (const c of citations) {
     yield emit("attribute", `${c.sourceName} contributed ${(c.weight * 100).toFixed(0)}% → reward $${c.reward}`, c);
   }
@@ -565,6 +714,7 @@ export async function* runAgent(
       subClaims,
       decisions: finalDecisions,
       citations,
+      ...(evidenceMeasured ? { evidence, claimCoverage } : {}),
       answer,
       totalSpent,
       totalToCreators: totalSpent, // 100% of spend reaches creator wallets
@@ -593,4 +743,57 @@ function short(tx?: string | null): string {
 }
 function round(n: number): number {
   return Math.round(n * 1e6) / 1e6;
+}
+
+/**
+ * Accept model weights only when every evidence-eligible source appears exactly once with a finite
+ * positive weight. Otherwise fall back to an equal split across the already-validated citations:
+ * an attribution transport/schema failure must not redirect money, but it also must not make a
+ * genuinely grounded creator silently lose the reward promised by the product.
+ */
+function resolveAttributions(
+  used: GatheredContent[],
+  proposed: { sourceId: string; weight: number; rationale: string }[],
+): { sourceId: string; weight: number; rationale: string }[] {
+  const allowed = new Set(used.map((item) => item.sourceId));
+  const byId = new Map<
+    string,
+    { sourceId: string; weight: number; rationale: string }
+  >();
+  let invalid = false;
+  for (const item of proposed) {
+    if (
+      !allowed.has(item.sourceId) ||
+      byId.has(item.sourceId) ||
+      !Number.isFinite(item.weight) ||
+      item.weight <= 0
+    ) {
+      invalid = true;
+      continue;
+    }
+    byId.set(item.sourceId, item);
+  }
+
+  if (!invalid && byId.size === used.length) {
+    const total = [...byId.values()].reduce(
+      (sum, item) => sum + item.weight,
+      0,
+    );
+    if (Number.isFinite(total) && total > 0) {
+      return used.map((item) => {
+        const attribution = byId.get(item.sourceId)!;
+        return {
+          ...attribution,
+          weight: attribution.weight / total,
+        };
+      });
+    }
+  }
+
+  return used.map((item) => ({
+    sourceId: item.sourceId,
+    weight: 1 / used.length,
+    rationale:
+      "Evidence-validated citation; equal split used because attribution was incomplete or invalid.",
+  }));
 }

@@ -1,6 +1,6 @@
 # Keryx Security Threat Model
 
-**Version:** 2026-07-27 (Remote MCP hardening)
+**Version:** 2026-07-28 (Evidence-gated citation rewards)
 **Scope:** Non-custodial dApp — SIWE auth, browser co-sign session, SourceRegistry, IPFS gated content, API keys, offline dev path.
 
 ---
@@ -36,6 +36,7 @@
 | S24 | `/api/ask` (no-session treasury path) | Anonymous caller drives unbounded treasury spend — `budget` was caller-controlled (coerced finite>0 only) and the route had **no rate limit**, so a script could POST a huge budget in a loop and drain `RealGateway` (treasury) USDC / fabricate volume. | **PASS (2026-06-21 fix)** | No-session budget clamped to `config.anonMaxBudget` (default 0.1, just above the UI dial's 0.08 max). IP-keyed rate limit `treasuryAsk` (5 / 60s) via `cf-connecting-ip`. Browser co-sign path (user funds their own grant-capped session) is intentionally exempt from both. `app/api/ask/route.ts`, `lib/rate-limit.ts`. |
 | S25 | `/api/cite/[id]` | Absurd `amount` skews the leaderboard | **PASS (2026-06-21 fix)** | `amount > config.maxCitationUsdc` (default 5) → 400. NOT a drain vector — the caller self-pays via x402 to a source-validated wallet — so this is a fat-finger / metric-skew bound, not a spend control. `app/api/cite/[id]/route.ts`. |
 | S27 | `/mcp` Remote MCP | Anonymous client drains treasury; hostile browser Origin reaches the protocol endpoint; spoofed actor inflates returning-user metrics | **PASS (2026-07-27)** | `research` is clamped to `anonMaxBudget` and IP-limited through `treasuryAsk`; valid ask-scoped keys use the keyed limiter and `a2aMaxBudget`. Stable actor comes only from the verified key wallet. The setup URL's bounded `client` value is explicitly telemetry-only and cannot alter auth, limits, or payment authority. Present Origin headers are allowlisted and invalid values receive 403. `app/mcp/route.ts`, `lib/mcp/remote-server.ts`. |
+| S28 | Citation reward | Empty/off-schema synthesis promotes every read source to a paid citation; stale coverage produces false High confidence | **PASS (2026-07-28)** | Reward eligibility is the intersection of an inline marker, synthesis declaration, valid decomposed claim index, exact quote found in gathered content, and support ≥ 0.4. A final post-purchase coverage pass is bounded by the validated evidence ledger. Rejected markers are stripped from the answer and cannot reach attribution or `payCitation`; invalid attribution cannot add a source/payee. Regression includes the production CCTP zero-coverage case. `lib/agent/evidence-ledger.ts`, `lib/agent/run-agent.ts`. |
 
 ---
 

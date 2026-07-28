@@ -21,7 +21,10 @@ import type { LedgerAccount } from "../gateway/settlement-parity";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 import { normalizePreviewDepth } from "../sources/preview-depth";
-import { calculateDashboardMetrics } from "./dashboard-metrics";
+import {
+  calculateDashboardMetrics,
+  runEvidenceMetrics,
+} from "./dashboard-metrics";
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS sources (
@@ -86,7 +89,10 @@ CREATE TABLE IF NOT EXISTS query_runs (
   payment_mode TEXT,
   payment_attempts INTEGER,
   settled_payments INTEGER,
-  confidence_level TEXT
+  confidence_level TEXT,
+  evidence_claim_count INTEGER,
+  grounded_claim_count INTEGER,
+  rewarded_citation_count INTEGER
 );
 -- No index on parent_id here: CREATE TABLE IF NOT EXISTS is a no-op against a database that
 -- predates the column, so an index naming it would fail at boot on exactly the databases that
@@ -274,6 +280,12 @@ export class SqliteAdapter implements KeryxDB {
       this.db.exec(`ALTER TABLE query_runs ADD COLUMN confidence_level TEXT`);
     if (!runCols.has("mcp_client"))
       this.db.exec(`ALTER TABLE query_runs ADD COLUMN mcp_client TEXT`);
+    if (!runCols.has("evidence_claim_count"))
+      this.db.exec(`ALTER TABLE query_runs ADD COLUMN evidence_claim_count INTEGER`);
+    if (!runCols.has("grounded_claim_count"))
+      this.db.exec(`ALTER TABLE query_runs ADD COLUMN grounded_claim_count INTEGER`);
+    if (!runCols.has("rewarded_citation_count"))
+      this.db.exec(`ALTER TABLE query_runs ADD COLUMN rewarded_citation_count INTEGER`);
     // Unconditional: the columns are guaranteed present by the lines above (or by the CREATE TABLE
     // on a fresh database), and both paths need the indexes.
     this.db.exec(`CREATE INDEX IF NOT EXISTS query_runs_parent ON query_runs(parent_id)`);
@@ -753,13 +765,15 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async saveQueryRun(run: QueryRun): Promise<void> {
+    const evidenceTelemetry = runEvidenceMetrics(run);
     this.db
       .prepare(
         `INSERT OR REPLACE INTO query_runs (
            id,created_at,question,budget,engine,total_spent,total_to_creators,answer,data,
            parent_id,asker,origin,duration_ms,payment_mode,payment_attempts,settled_payments,
-           confidence_level,mcp_client
-         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+           confidence_level,mcp_client,evidence_claim_count,grounded_claim_count,
+           rewarded_citation_count
+         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       )
       .run(
         run.id,
@@ -780,6 +794,9 @@ export class SqliteAdapter implements KeryxDB {
         run.settledPayments ?? null,
         run.confidence?.level ?? null,
         run.mcpClient ?? null,
+        evidenceTelemetry.evidenceClaimCount,
+        evidenceTelemetry.groundedClaimCount,
+        evidenceTelemetry.rewardedCitationCount,
       );
   }
 
@@ -915,7 +932,8 @@ export class SqliteAdapter implements KeryxDB {
     const runs = this.db
       .prepare(
         `SELECT id,origin,asker,duration_ms,payment_mode,payment_attempts,settled_payments,
-                confidence_level,mcp_client
+                confidence_level,mcp_client,evidence_claim_count,grounded_claim_count,
+                rewarded_citation_count
            FROM query_runs`,
       )
       .all()
@@ -931,6 +949,18 @@ export class SqliteAdapter implements KeryxDB {
           (r.confidence_level as "High" | "Moderate" | "Low" | null) ?? null,
         mcpClient:
           (r.mcp_client as import("../types").McpClientChannel | null) ?? null,
+        evidenceClaimCount:
+          r.evidence_claim_count == null
+            ? null
+            : Number(r.evidence_claim_count),
+        groundedClaimCount:
+          r.grounded_claim_count == null
+            ? null
+            : Number(r.grounded_claim_count),
+        rewardedCitationCount:
+          r.rewarded_citation_count == null
+            ? null
+            : Number(r.rewarded_citation_count),
       }));
     const feedback = this.db
       .prepare(`SELECT query_id,rating FROM answer_feedback`)

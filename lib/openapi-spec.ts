@@ -73,6 +73,40 @@ export const openapiSpec = {
               },
             },
           },
+          evidence: {
+            type: "array",
+            description:
+              "Exact source spans that passed Keryx's deterministic evidence gate.",
+            items: {
+              type: "object",
+              properties: {
+                claimIndex: { type: "integer" },
+                claim: { type: "string" },
+                marker: { type: "string" },
+                sourceName: { type: "string" },
+                quote: { type: "string" },
+                support: { type: "number" },
+                qualifiesForReward: { type: "boolean" },
+              },
+            },
+          },
+          claimCoverage: {
+            type: "array",
+            description:
+              "Final per-claim coverage bounded by validated evidence.",
+            items: {
+              type: "object",
+              properties: {
+                claimIndex: { type: "integer" },
+                claim: { type: "string" },
+                coverage: { type: "number" },
+                coveredBy: {
+                  type: "array",
+                  items: { type: "string" },
+                },
+              },
+            },
+          },
           creatorsPaid: { type: "integer" },
           totalToCreators: { type: "number" },
           feePaid: { type: "number" },
@@ -139,6 +173,11 @@ export const openapiSpec = {
               creatorsPaid: { type: "integer" },
               totalToCreators: { type: "number" },
               dispatchUrl: { type: "string" },
+              evidence: { type: "array", items: { type: "object" } },
+              claimCoverage: {
+                type: "array",
+                items: { type: "object" },
+              },
             },
           },
         },

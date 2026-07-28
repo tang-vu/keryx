@@ -88,6 +88,26 @@ export interface Citation {
   rationale: string; // why this weight
 }
 
+/** A source span that survived the deterministic evidence gate for one decomposed claim. */
+export interface EvidenceRecord {
+  claimIndex: number;
+  claim: string;
+  marker: string;
+  sourceId: string;
+  sourceName: string;
+  quote: string;
+  support: number; // 0..1, model-proposed but bounded after the quote is verified
+  qualifiesForReward: boolean;
+}
+
+/** The final, evidence-bounded coverage used for confidence and the public demand board. */
+export interface ClaimCoverageRecord {
+  claimIndex: number;
+  claim: string;
+  coverage: number; // min(final assessment, strongest validated evidence)
+  coveredBy: string[]; // reward-qualifying source markers only
+}
+
 /** Where a payment originated. `engine` = Keryx's own autonomous volume engine; `web` = a human
  *  asking through a first-party surface; `a2a` = an external agent calling the paid x402 endpoint;
  *  `mcp` = a remote MCP client. web + a2a + mcp = genuine EXTERNAL usage, kept distinct from
@@ -136,6 +156,7 @@ export type TracePhase =
   | "sufficiency"
   | "reevaluate"
   | "synthesize"
+  | "evidence"
   | "adjudicate"
   | "verdict"
   | "attribute"
@@ -174,6 +195,10 @@ export interface QueryRun {
   subClaims: string[];
   decisions: Decision[];
   citations: Citation[];
+  /** Claim → source → quote ledger validated by the orchestrator. Absent on historical runs. */
+  evidence?: EvidenceRecord[];
+  /** Final evidence-bounded coverage. Absent on historical runs; trace remains the fallback. */
+  claimCoverage?: ClaimCoverageRecord[];
   answer: string;
   totalSpent: number; // USDC actually spent (tolls + rewards)
   totalToCreators: number; // USDC that reached creator wallets
@@ -240,6 +265,12 @@ export interface DashboardMetrics {
   externalP95DurationMs: number;
   externalConfidenceSamples: number;
   externalHighConfidenceRate: number;
+  /** Runs recorded after the evidence ledger shipped; historical runs are not guessed. */
+  evidenceRunSamples: number;
+  evidenceClaimSamples: number;
+  groundedClaimRate: number;
+  /** Measured runs where no citation passed the reward gate. */
+  citationPoolWithheldRuns: number;
   externalFeedbackTotal: number;
   externalSatisfactionRate: number;
   externalSettlementAttempts: number;

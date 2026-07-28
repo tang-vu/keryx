@@ -82,6 +82,11 @@ const DEFAULTS = { threshold: 0.4, limit: 20 } satisfies Required<DemandOptions>
  * in trace order, so a later assessment overwrites an earlier one.
  */
 export function finalCoverage(run: QueryRun): Map<string, number> {
+  if (run.claimCoverage?.length) {
+    return new Map(
+      run.claimCoverage.map((item) => [item.claim, item.coverage]),
+    );
+  }
   const out = new Map<string, number>();
   for (const step of run.trace ?? []) {
     const detail = step.detail as Record<string, unknown> | undefined;

@@ -144,6 +144,10 @@ export async function POST(req: NextRequest) {
           weight: c.weight,
           reward: c.reward,
         })),
+        evidence: (run.evidence ?? []).filter(
+          (item) => item.qualifiesForReward,
+        ),
+        claimCoverage: run.claimCoverage ?? [],
         creatorsPaid: run.citations.length,
         totalToCreators: run.totalToCreators,
         feePaid: settle.amountUsdc,

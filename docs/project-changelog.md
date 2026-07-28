@@ -1,13 +1,39 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-07-27  
-**Current Version:** 0.6.0
+**Last Updated:** 2026-07-28
+**Current Version:** 0.7.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
 
 ---
 
 ## Unreleased
+
+### A citation must carry evidence before it can carry money (2026-07-28)
+A live CCTP retry exposed a financial-state bug, not merely a weak answer: re-evaluation correctly
+measured all four claims at 0% and synthesis correctly said none of the sources contained the
+answer, but an empty `citedMarkers` fallback promoted all 13 gathered sources to citations.
+`lastGaps` still held its default zero, so the run called itself High confidence, attribution fell
+back to equal weights, and real citation rewards settled to every source.
+
+Synthesis now proposes a claim index, source marker, exact quote and support score for every
+citation. `lib/agent/evidence-ledger.ts` validates the claim index and marker, confirms the quote
+occurs in content the agent actually read, and requires the marker both inline and in the declared
+citation list. Only that intersection can reach attribution and `payCitation`; rejected markers
+are removed from the public answer, and public excerpts are capped at 240 characters. A final
+coverage pass runs after cache reads and re-evaluation
+purchases, then each claim's public coverage is capped by its strongest reward-qualified evidence.
+No evidence means Low confidence and an unspent citation pool, while access tolls already settled
+remain valid. If that final assessment fails, answer delivery continues but citation rewards fail
+closed.
+
+The evidence ledger is persisted on `QueryRun`, shown on dispatches, and returned in Remote MCP,
+A2A and OpenAI-compatible structured receipts. Invalid attribution can no longer name a new payee;
+it falls back only inside the evidence-qualified set. Citation rewards are allocated across sources
+and authors in integer micro-USDC. Regression tests cover the production CCTP shape, fabricated
+quotes, oversized excerpts, missing citation legs, final-assessment failure and attribution
+redirection. Dashboard evidence metrics use nullable scalar counters rather than loading every
+receipt; historical rows remain explicitly unsampled.
 
 ### The agent was learning the wrong lesson from its own history (2026-07-27)
 Cross-query memory summarises past runs into the `decide` prompt so a buy/skip call knows how a

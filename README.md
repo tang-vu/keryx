@@ -55,6 +55,9 @@ the model reasons about money and shows its work, streamed live to the UI:
   to trust and says why.
 - **Confidence verdict** 📊 — it rates its own answer (High / Moderate / Low) and hedges the prose
   accordingly, instead of bluffing.
+- **Evidence ledger** — every rewarded citation carries a claim-indexed exact quote. The
+  orchestrator verifies that quote against content it actually read before the marker can receive
+  a citation reward; rejected markers are removed from the answer.
 - **Cross-query memory** — sources that proved useful (or useless) in past runs *on the same
   subject* shift future buy/skip decisions. A source is scored against the runs that actually read
   it, so a skip never becomes evidence against the source it skipped.
@@ -174,7 +177,8 @@ reported figure is a real, settled transaction; offline dev runs are loudly labe
 
 - **x402 pay-per-request** (`@circle-fin/x402-batching`) — a two-toll design: a small fixed
   *access* toll to read, plus a dynamic *citation* reward priced by contribution weight. Fetched
-  but uncited earns the toll; cited earns proportionally more.
+  but uncited earns the toll; cited earns proportionally more only after its evidence passes the
+  deterministic grounding gate.
 - **Circle Gateway nanopayments** — batched sub-cent settlement (floor $0.000001). Average Keryx
   payment: ~$0.0044 — a true nanopayment, uneconomical on any card rail.
 - **Circle App Kit (Unified Balance Kit)** — chain-abstracted treasury balance, published live on

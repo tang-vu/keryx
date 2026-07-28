@@ -13,6 +13,7 @@ import {
   Coins,
   Gauge,
   Receipt,
+  ShieldCheck,
   ThumbsUp,
   TrendingUp,
   UserRoundCheck,
@@ -183,6 +184,18 @@ export default function DashboardPage() {
                 : `${metrics?.externalConfidenceSamples ?? 0} completed samples`
             }
             icon={ThumbsUp}
+            accent="emerald"
+            loading={!metrics}
+          />
+          <MetricCard
+            label="Evidence-grounded claims"
+            value={
+              (metrics?.evidenceClaimSamples ?? 0) > 0
+                ? `${Math.round((metrics?.groundedClaimRate ?? 0) * 100)}%`
+                : "Collecting"
+            }
+            sub={`${metrics?.evidenceClaimSamples ?? 0} claims · ${metrics?.citationPoolWithheldRuns ?? 0} pools withheld`}
+            icon={ShieldCheck}
             accent="emerald"
             loading={!metrics}
           />

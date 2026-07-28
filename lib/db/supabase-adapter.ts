@@ -20,7 +20,10 @@ import type { LedgerAccount } from "../gateway/settlement-parity";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 import { normalizePreviewDepth } from "../sources/preview-depth";
-import { calculateDashboardMetrics } from "./dashboard-metrics";
+import {
+  calculateDashboardMetrics,
+  runEvidenceMetrics,
+} from "./dashboard-metrics";
 
 /**
  * supabase-js normally resolves PostgREST failures as `{ data, error }`. Most adapter methods
@@ -369,6 +372,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async saveQueryRun(run: QueryRun): Promise<void> {
+    const evidenceTelemetry = runEvidenceMetrics(run);
     await this.sb.from("query_runs").upsert({
       id: run.id,
       created_at: run.createdAt,
@@ -388,6 +392,9 @@ export class SupabaseAdapter implements KeryxDB {
       payment_attempts: run.paymentAttempts ?? null,
       settled_payments: run.settledPayments ?? null,
       confidence_level: run.confidence?.level ?? null,
+      evidence_claim_count: evidenceTelemetry.evidenceClaimCount,
+      grounded_claim_count: evidenceTelemetry.groundedClaimCount,
+      rewarded_citation_count: evidenceTelemetry.rewardedCitationCount,
     });
   }
 
@@ -520,7 +527,7 @@ export class SupabaseAdapter implements KeryxDB {
       ),
       this.allRows(
         "query_runs",
-        "id,origin,asker,duration_ms,payment_mode,payment_attempts,settled_payments,confidence_level,mcp_client",
+        "id,origin,asker,duration_ms,payment_mode,payment_attempts,settled_payments,confidence_level,mcp_client,evidence_claim_count,grounded_claim_count,rewarded_citation_count",
       ),
       this.allRows("answer_feedback", "query_id,rating"),
     ]);
@@ -546,6 +553,18 @@ export class SupabaseAdapter implements KeryxDB {
           (r.confidence_level as "High" | "Moderate" | "Low" | null) ?? null,
         mcpClient:
           (r.mcp_client as import("../types").McpClientChannel | null) ?? null,
+        evidenceClaimCount:
+          r.evidence_claim_count == null
+            ? null
+            : Number(r.evidence_claim_count),
+        groundedClaimCount:
+          r.grounded_claim_count == null
+            ? null
+            : Number(r.grounded_claim_count),
+        rewardedCitationCount:
+          r.rewarded_citation_count == null
+            ? null
+            : Number(r.rewarded_citation_count),
       })),
       feedbackRows.map((f) => ({
         queryId: String(f.query_id),

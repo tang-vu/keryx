@@ -43,6 +43,10 @@ export function AnswerCard({ run, meta, permalink }: { run: QueryRun; meta: AskM
             />
           </div>
 
+          {run.claimCoverage?.length ? (
+            <EvidenceLedger run={run} />
+          ) : null}
+
           {run.citations.length > 0 && (
             <div className="mt-7 border-t border-ink pt-5">
               <p className="mb-3.5 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-3">
@@ -88,6 +92,65 @@ export function AnswerCard({ run, meta, permalink }: { run: QueryRun; meta: AskM
           permalink={permalink}
         />
       </div>
+    </div>
+  );
+}
+
+function EvidenceLedger({ run }: { run: QueryRun }) {
+  const evidence = run.evidence ?? [];
+  return (
+    <div className="mt-7 border-t border-ink pt-5">
+      <p className="mb-3.5 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-3">
+        Evidence ledger — quotes verified before rewards
+      </p>
+      <ol className="space-y-3">
+        {run.claimCoverage?.map((claim) => {
+          const spans = evidence.filter(
+            (item) =>
+              item.claimIndex === claim.claimIndex &&
+              item.qualifiesForReward,
+          );
+          return (
+            <li
+              key={`${claim.claimIndex}-${claim.claim}`}
+              className="border-l-2 border-line pl-3"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <p className="font-serif text-[14px] leading-snug text-ink">
+                  {claim.claim}
+                </p>
+                <span
+                  className={cn(
+                    "shrink-0 font-mono text-[11px] tabular-nums",
+                    claim.coverage >= 0.4 ? "text-paid" : "text-seal",
+                  )}
+                >
+                  {Math.round(claim.coverage * 100)}%
+                </span>
+              </div>
+              {spans.length > 0 ? (
+                <div className="mt-1.5 space-y-1.5">
+                  {spans.map((item, index) => (
+                    <blockquote
+                      key={`${item.marker}-${index}`}
+                      className="font-serif text-[13px] italic leading-snug text-ink-2"
+                    >
+                      “{item.quote}”{" "}
+                      <span className="not-italic text-paid">
+                        [{item.marker}] {item.sourceName}
+                      </span>
+                    </blockquote>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.08em] text-seal">
+                  No reward-qualifying evidence
+                </p>
+              )}
+            </li>
+          );
+        })}
+      </ol>
     </div>
   );
 }

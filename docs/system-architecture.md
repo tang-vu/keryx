@@ -293,6 +293,20 @@ Indexer Loop (every ~30s in production):
 
 ---
 
+### Evidence-gated citation settlement
+
+Before step 2 above can allocate a citation reward, synthesis proposes
+`claimIndex + source marker + exact quote + support`. The orchestrator verifies that the claim and
+marker exist, the quote occurs in content actually read, and the marker is both inline in the
+answer and declared cited. Public evidence excerpts are capped at 240 characters. Final per-claim
+coverage is the lower of the last post-purchase
+assessment and the strongest qualifying evidence. Rejected markers are removed from the answer
+and never reach `payCitation`; if the final assessment is unavailable, reward authorization fails
+closed while answer delivery continues. Fetch tolls already paid remain settled. The persisted `evidence`
+and `claimCoverage` fields are the source of truth for new dispatches, with historical trace
+coverage retained as a compatibility fallback. Nullable scalar evidence counters keep dashboard
+aggregation independent of full receipt payloads and leave pre-ledger history unsampled.
+
 ## Data Persistence
 
 ### Database Schema

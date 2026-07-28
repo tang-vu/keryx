@@ -1,4 +1,9 @@
-import type { DashboardMetrics, McpClientChannel, PaymentOrigin } from "../types";
+import type {
+  DashboardMetrics,
+  McpClientChannel,
+  PaymentOrigin,
+  QueryRun,
+} from "../types";
 
 export interface MetricPaymentRow {
   amountUsdc: number;
@@ -20,6 +25,9 @@ export interface MetricRunRow {
   settledPayments?: number | null;
   confidenceLevel?: "High" | "Moderate" | "Low" | null;
   mcpClient?: McpClientChannel | null;
+  evidenceClaimCount?: number | null;
+  groundedClaimCount?: number | null;
+  rewardedCitationCount?: number | null;
 }
 
 export interface MetricFeedbackRow {
@@ -37,6 +45,40 @@ function percentile95(values: number[]): number {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
   return sorted[Math.max(0, Math.ceil(sorted.length * 0.95) - 1)]!;
+}
+
+export interface RunEvidenceMetrics {
+  evidenceClaimCount: number | null;
+  groundedClaimCount: number | null;
+  rewardedCitationCount: number | null;
+}
+
+/** Derive additive evidence telemetry from a completed QueryRun without backfilling history. */
+export function runEvidenceMetrics(data: unknown): RunEvidenceMetrics {
+  let run = data as Partial<QueryRun> | null;
+  if (typeof data === "string") {
+    try {
+      run = JSON.parse(data) as Partial<QueryRun>;
+    } catch {
+      run = null;
+    }
+  }
+  if (!run || !Array.isArray(run.claimCoverage)) {
+    return {
+      evidenceClaimCount: null,
+      groundedClaimCount: null,
+      rewardedCitationCount: null,
+    };
+  }
+  return {
+    evidenceClaimCount: run.claimCoverage.length,
+    groundedClaimCount: run.claimCoverage.filter(
+      (claim) => claim.coverage >= 0.4,
+    ).length,
+    rewardedCitationCount: Array.isArray(run.citations)
+      ? run.citations.length
+      : 0,
+  };
 }
 
 /**
@@ -111,6 +153,17 @@ export function calculateDashboardMetrics(
     .map((r) => r.confidenceLevel)
     .filter((level): level is "High" | "Moderate" | "Low" => Boolean(level));
   const externalFeedback = feedbackRows.filter((f) => externalIds.has(f.queryId));
+  const evidenceRuns = runRows.filter(
+    (run) => run.evidenceClaimCount != null,
+  );
+  const evidenceClaimSamples = evidenceRuns.reduce(
+    (sum, run) => sum + Number(run.evidenceClaimCount ?? 0),
+    0,
+  );
+  const groundedClaims = evidenceRuns.reduce(
+    (sum, run) => sum + Number(run.groundedClaimCount ?? 0),
+    0,
+  );
 
   const settlementRuns = externalRuns.filter(
     (r) =>
@@ -164,6 +217,16 @@ export function calculateDashboardMetrics(
     externalHighConfidenceRate: confidence.length
       ? round(confidence.filter((level) => level === "High").length / confidence.length)
       : 0,
+    evidenceRunSamples: evidenceRuns.length,
+    evidenceClaimSamples,
+    groundedClaimRate: evidenceClaimSamples
+      ? round(groundedClaims / evidenceClaimSamples)
+      : 0,
+    citationPoolWithheldRuns: evidenceRuns.filter(
+      (run) =>
+        Number(run.evidenceClaimCount ?? 0) > 0 &&
+        Number(run.rewardedCitationCount ?? 0) === 0,
+    ).length,
     externalFeedbackTotal: externalFeedback.length,
     externalSatisfactionRate: externalFeedback.length
       ? round(externalFeedback.filter((f) => f.rating === "up").length / externalFeedback.length)

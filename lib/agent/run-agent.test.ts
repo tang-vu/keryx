@@ -27,6 +27,8 @@ import type {
   DecideInput,
   ReevaluateInput,
   ReasoningEngine,
+  SufficiencyResult,
+  SynthResult,
   SufficiencyInput,
   SynthInput,
 } from "../llm/reasoning-engine";
@@ -68,13 +70,20 @@ function buy(c: { id: string; name: string; price: number }, ev = 0.8): Decision
 
 interface EngineOverrides {
   decide?: (input: DecideInput) => Decision[];
-  sufficiency?: (input: SufficiencyInput) => { sufficient: boolean; rationale: string };
+  sufficiency?: (input: SufficiencyInput) => SufficiencyResult;
   reevaluate?: (input: ReevaluateInput) => {
+    claims?: {
+      claim: string;
+      coverage: number;
+      coveredBy: string[];
+      rationale: string;
+    }[];
     shouldBuyMore: boolean;
     recommendedIds: string[];
     rationale: string;
   };
-  synthesize?: (input: SynthInput) => { answer: string; citedMarkers: string[] };
+  synthesize?: (input: SynthInput) => Partial<SynthResult> &
+    Pick<SynthResult, "answer" | "citedMarkers">;
   attribute?: (
     used: { sourceId: string }[],
   ) => { sourceId: string; weight: number; rationale: string }[];
@@ -94,16 +103,45 @@ function fakeEngine(over: EngineOverrides = {}): ReasoningEngine & { decideInput
       return (over.decide ?? ((i) => i.candidates.map((c) => buy({ id: c.id, name: c.name, price: c.fetchPrice }))))(input);
     },
     async sufficiency(input: SufficiencyInput) {
-      const r = (over.sufficiency ?? (() => ({ sufficient: true, rationale: "enough read" })))(input);
-      return { ...r, perClaim: [] };
+      const defaultClaims = input.subClaims.map((claim) => ({
+        claim,
+        coverage: 0.9,
+        coveredBy: input.gathered.map((g) => g.marker),
+      }));
+      const r = (
+        over.sufficiency ??
+        (() => ({
+          sufficient: true,
+          rationale: "enough read",
+          perClaim: defaultClaims,
+        }))
+      )(input);
+      return { ...r, perClaim: r.perClaim ?? defaultClaims };
     },
     async reevaluate(input: ReevaluateInput) {
       const r = (over.reevaluate ?? (() => ({ shouldBuyMore: false, recommendedIds: [], rationale: "no gaps" })))(input);
       return { claims: [], ...r };
     },
     async synthesize(input: SynthInput) {
-      const r = (over.synthesize ?? ((i) => ({ answer: "grounded answer", citedMarkers: i.gathered.map((g) => g.marker) })))(input);
-      return { ...r, conflicts: [] };
+      if (over.synthesize) {
+        const r = over.synthesize(input);
+        return {
+          ...r,
+          conflicts: r.conflicts ?? [],
+          evidence: r.evidence ?? [],
+        };
+      }
+      return {
+        answer: `grounded answer ${input.gathered.map((g) => `[${g.marker}]`).join(" ")}`,
+        citedMarkers: input.gathered.map((g) => g.marker),
+        conflicts: [],
+        evidence: input.gathered.map((g) => ({
+          claimIndex: 0,
+          marker: g.marker,
+          quote: g.text,
+          support: 0.9,
+        })),
+      };
     },
     async attribute(input: { used: { sourceId: string }[] }) {
       return (over.attribute ?? ((used) => used.map((u) => ({ sourceId: u.sourceId, weight: 1 / used.length, rationale: "equal" }))))(input.used);
@@ -427,6 +465,183 @@ describe("runAgent — money-safety invariants", () => {
     expect(run.citations.length).toBeGreaterThan(0); // answered + settled from the survivor
     // The failed toll charged nothing.
     expect(d.db.payments.some((p) => p.sourceId === "a" && p.kind === "fetch")).toBe(false);
+  });
+
+  it("withholds every citation reward when a negative answer has zero evidence (CCTP regression)", async () => {
+    const sources = ["a", "b"].map((id) =>
+      makeSource({ id, fetchPrice: 0.004 }),
+    );
+    const cacheDecision = (source: Source): Decision => ({
+      ...buy({
+        id: source.id,
+        name: source.name,
+        price: source.fetchPrice,
+      }),
+      action: "CACHE",
+    });
+    const engine = fakeEngine({
+      decide: () => sources.map(cacheDecision),
+      sufficiency: (input) => ({
+        sufficient: false,
+        rationale: "nothing covers CCTP",
+        perClaim: input.subClaims.map((claim) => ({
+          claim,
+          coverage: 0,
+          coveredBy: [],
+        })),
+      }),
+      synthesize: () => ({
+        answer:
+          "The provided sources do not contain information about CCTP.",
+        citedMarkers: [],
+        evidence: [],
+      }),
+    });
+    const gw = fakeGateway();
+    const d = deps(sources, engine, gw, {
+      cachedAt: {
+        a: "2026-07-28T00:00:00.000Z",
+        b: "2026-07-28T00:00:00.000Z",
+      },
+    });
+
+    const { run, steps } = await drive(
+      { question: "How does CCTP work?", budget: 0.04 },
+      d,
+    );
+
+    expect(run.citations).toEqual([]);
+    expect(run.evidence).toEqual([]);
+    expect(run.claimCoverage?.[0]?.coverage).toBe(0);
+    expect(run.confidence?.level).toBe("Low");
+    expect(gw.citationCalls).toEqual([]);
+    expect(
+      d.db.payments.some((payment) => payment.kind === "citation"),
+    ).toBe(false);
+    expect(
+      steps.some(
+        (step) =>
+          step.phase === "evidence" &&
+          /citation pool stays unspent/i.test(step.message),
+      ),
+    ).toBe(true);
+  });
+
+  it("finishes the answer but fails citation rewards closed when the final assessment errors", async () => {
+    const source = makeSource({ id: "a", fetchPrice: 0.004 });
+    const engine = fakeEngine({
+      decide: () => [
+        {
+          ...buy({
+            id: source.id,
+            name: source.name,
+            price: source.fetchPrice,
+          }),
+          action: "CACHE",
+        },
+      ],
+      sufficiency: () => {
+        throw new Error("assessment transport unavailable");
+      },
+    });
+    const gw = fakeGateway();
+    const d = deps([source], engine, gw, {
+      cachedAt: { a: "2026-07-28T00:00:00.000Z" },
+    });
+
+    const { run, steps } = await drive(
+      { question: "q", budget: 0.05 },
+      d,
+    );
+
+    expect(run.answer).toContain("grounded answer");
+    expect(run.citations).toEqual([]);
+    expect(run.confidence?.level).toBe("Low");
+    expect(gw.citationCalls).toEqual([]);
+    expect(
+      steps.some(
+        (step) =>
+          step.phase === "sufficiency" &&
+          /continuing conservatively/i.test(step.message),
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects a citation whose proposed quote does not occur in the paid source", async () => {
+    const source = makeSource({ id: "a", fetchPrice: 0.004 });
+    const engine = fakeEngine({
+      synthesize: () => ({
+        answer: "A claim that looks grounded [S1].",
+        citedMarkers: ["S1"],
+        evidence: [
+          {
+            claimIndex: 0,
+            marker: "S1",
+            quote: "fabricated evidence that is not in the source",
+            support: 1,
+          },
+        ],
+      }),
+    });
+    const gw = fakeGateway();
+    const d = deps([source], engine, gw);
+
+    const { run } = await drive(
+      { question: "q", budget: 0.05 },
+      d,
+    );
+
+    expect(run.citations).toEqual([]);
+    expect(run.evidence).toEqual([]);
+    expect(gw.citationCalls).toEqual([]);
+    expect(
+      d.db.payments.filter((payment) => payment.kind === "fetch"),
+    ).toHaveLength(1);
+    expect(run.totalSpent).toBe(source.fetchPrice);
+  });
+
+  it("never lets incomplete attribution redirect an evidence-verified citation pool", async () => {
+    const sources = ["a", "b"].map((id) =>
+      makeSource({ id, fetchPrice: 0.004 }),
+    );
+    const engine = fakeEngine({
+      sufficiency: (input) => ({
+        sufficient: false,
+        rationale: "read every candidate",
+        perClaim: input.subClaims.map((claim) => ({
+          claim,
+          coverage: 0.9,
+          coveredBy: input.gathered.map((g) => g.marker),
+        })),
+      }),
+      attribute: () => [
+        { sourceId: "ghost", weight: 1, rationale: "redirect" },
+      ],
+    });
+    const gw = fakeGateway();
+    const d = deps(sources, engine, gw);
+
+    const { run } = await drive(
+      { question: "q", budget: 0.05 },
+      d,
+    );
+
+    expect(run.citations).toHaveLength(2);
+    expect(run.citations.map((citation) => citation.sourceId)).toEqual([
+      "a",
+      "b",
+    ]);
+    expect(run.citations.every((citation) => citation.weight === 0.5)).toBe(
+      true,
+    );
+    expect(
+      run.citations.every((citation) =>
+        /evidence-validated/i.test(citation.rationale),
+      ),
+    ).toBe(true);
+    expect(
+      gw.citationCalls.some((call) => call.sourceId === "ghost"),
+    ).toBe(false);
   });
 
   it("falls back to the configured default budget when none is provided", async () => {

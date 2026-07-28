@@ -1,6 +1,6 @@
 {
   "name": "keryx",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "description": "Keryx — a citation-toll reading agent. Pays creators every time their work is cited, in USDC on Arc.",
   "scripts": {
@@ -9,6 +9,7 @@
     "start": "next start -p 3939",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:contracts": "hardhat --tsconfig tsconfig.hardhat.json test",
     "test:watch": "vitest",
     "generate-wallets": "node --import tsx --no-warnings scripts/generate-wallets.mts",
     "seed-sources": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/seed-sources.mts",

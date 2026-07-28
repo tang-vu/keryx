@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { calculateDashboardMetrics } from "./dashboard-metrics";
+import {
+  calculateDashboardMetrics,
+  runEvidenceMetrics,
+} from "./dashboard-metrics";
 
 describe("calculateDashboardMetrics", () => {
   it("keeps internal volume out of the primary external KPIs", () => {
@@ -157,5 +160,47 @@ describe("calculateDashboardMetrics", () => {
     expect(metrics.externalDurationSamples).toBe(1);
     expect(metrics.externalAvgDurationMs).toBe(1_250);
     expect(metrics.externalP95DurationMs).toBe(1_250);
+  });
+
+  it("reports evidence grounding without inventing samples for historical runs", () => {
+    const metrics = calculateDashboardMetrics([], [
+      { id: "historical", origin: "engine" },
+      {
+        id: "grounded",
+        origin: "web",
+        evidenceClaimCount: 2,
+        groundedClaimCount: 2,
+        rewardedCitationCount: 1,
+      },
+      {
+        id: "withheld",
+        origin: "engine",
+        evidenceClaimCount: 2,
+        groundedClaimCount: 0,
+        rewardedCitationCount: 0,
+      },
+    ]);
+
+    expect(metrics.evidenceRunSamples).toBe(2);
+    expect(metrics.evidenceClaimSamples).toBe(4);
+    expect(metrics.groundedClaimRate).toBe(0.5);
+    expect(metrics.citationPoolWithheldRuns).toBe(1);
+  });
+
+  it("derives additive evidence telemetry from QueryRun JSON", () => {
+    expect(
+      runEvidenceMetrics({
+        citations: [{ sourceId: "s1" }],
+        claimCoverage: [
+          { claimIndex: 0, claim: "a", coverage: 0.8, coveredBy: ["S1"] },
+          { claimIndex: 1, claim: "b", coverage: 0.1, coveredBy: [] },
+        ],
+      }),
+    ).toEqual({
+      evidenceClaimCount: 2,
+      groundedClaimCount: 1,
+      rewardedCitationCount: 1,
+    });
+    expect(runEvidenceMetrics("{}").evidenceClaimCount).toBeNull();
   });
 });

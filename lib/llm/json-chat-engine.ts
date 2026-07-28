@@ -140,11 +140,22 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       this.budgetFor(input.subClaims.length + input.gathered.length),
     );
     const rawClaims = (out.perClaim as Record<string, unknown>[]) ?? [];
-    const perClaim: ClaimSufficiency[] = rawClaims.map((c) => ({
-      claim: (c.claim as string) ?? "",
-      coverage: clamp01(c.coverage as number),
-      coveredBy: Array.isArray(c.coveredBy) ? (c.coveredBy as string[]) : [],
-    }));
+    // The claim text is caller-owned state. Preserve the requested order and wording rather than
+    // trusting the model to repeat it exactly; a harmless paraphrase must not erase final coverage.
+    const perClaim: ClaimSufficiency[] = input.subClaims.map(
+      (claim, index) => {
+        const item = rawClaims[index] ?? {};
+        return {
+          claim,
+          coverage: clamp01(item.coverage as number),
+          coveredBy: Array.isArray(item.coveredBy)
+            ? (item.coveredBy as unknown[]).filter(
+                (marker): marker is string => typeof marker === "string",
+              )
+            : [],
+        };
+      },
+    );
     return {
       sufficient: Boolean(out.sufficient),
       rationale: (out.rationale as string) ?? "",
@@ -201,6 +212,10 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       config.synthesisModel,
       "You write a grounded, accurate answer using ONLY the provided sources. " +
         "Cite inline with the source markers like [S1]. Cite every claim. Do not invent facts. " +
+        "For every supported decomposed claim, copy a short exact quote (240 characters maximum) from the source into " +
+        "`evidence`, using the claim's zero-based index. Do not paraphrase evidence quotes. " +
+        "A source belongs in `citedMarkers` only when it appears inline and has an evidence item. " +
+        "If the sources do not support a claim, say so and emit no citation/evidence for it. " +
         "When two or more sources disagree on a factual point, do NOT average or blur them: decide " +
         "which to trust based on specificity, internal consistency, and recency; write the answer " +
         "reflecting the trusted source; and record each disagreement in `conflicts` (use an empty " +
@@ -215,6 +230,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         })),
         schema:
           '{"answer":string (markdown with [S#] citations),"citedMarkers":string[],' +
+          '"evidence":[{"claimIndex":number,"marker":string,"quote":string,"support":number(0..1)}],' +
           '"conflicts":[{"point":string,"positions":[{"marker":string,"stance":string}],"trusted":string,"reason":string}]}',
       }),
       // The answer itself is prose, so this floor carries the write-up on top of the per-source parts.
@@ -223,6 +239,14 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     return {
       answer: (out.answer as string) ?? "",
       citedMarkers: Array.isArray(out.citedMarkers) ? (out.citedMarkers as string[]) : [],
+      evidence: Array.isArray(out.evidence)
+        ? (out.evidence as Record<string, unknown>[]).map((item) => ({
+            claimIndex: Number(item.claimIndex),
+            marker: typeof item.marker === "string" ? item.marker : "",
+            quote: typeof item.quote === "string" ? item.quote : "",
+            support: clamp01(Number(item.support)),
+          }))
+        : [],
       conflicts: parseConflicts(out.conflicts),
     };
   }

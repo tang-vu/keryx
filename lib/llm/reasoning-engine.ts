@@ -86,12 +86,26 @@ export interface Conflict {
   reason: string; // why it trusted that one (specificity, internal consistency, recency)
 }
 
+/**
+ * One model-proposed evidence span. The orchestrator treats this as an untrusted proposal:
+ * claimIndex must name a real decomposed claim, marker must name gathered content, and quote must
+ * occur verbatim (after whitespace normalization) in that source before it can authorize a
+ * citation reward.
+ */
+export interface ProposedEvidence {
+  claimIndex: number; // 0-based index into SynthInput.subClaims
+  marker: string; // S1, S2, ...
+  quote: string; // short verbatim span copied from the gathered source
+  support: number; // 0..1 estimate of how directly the span supports the claim
+}
+
 /** Result of synthesis: the grounded answer, which markers it cited, and any source
  *  conflicts the agent adjudicated on the way to writing it. */
 export interface SynthResult {
   answer: string;
   citedMarkers: string[];
   conflicts: Conflict[];
+  evidence: ProposedEvidence[];
 }
 
 export interface AttributeInput {
