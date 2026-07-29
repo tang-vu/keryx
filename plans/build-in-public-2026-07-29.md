@@ -13,77 +13,87 @@ traction claims. Keryx remains on Arc testnet.
 
 ### 1/9
 
-> Build in public: in 3 days, Keryx moved from “an agent that pays for sources” to a stricter open research economy.
->
-> Better source judgment. Remote MCP. Evidence-gated rewards. Wanted claims that can end in verified creator payouts. 🧵
+Build in public: in 3 days, Keryx moved from “an agent that pays for sources” to a stricter open research economy.
+
+Better source judgment. Remote MCP. Evidence-gated rewards. Wanted claims that can end in verified creator payouts. 🧵
 
 ### 2/9
 
-> First, we fixed what the agent learns from history.
->
-> A source is now judged only by relevant past questions—not unrelated traffic. The public answer archive also stopped dropping older pages and gained canonical navigation, crawl paths, and complete topic coverage.
+First, we fixed what the agent learns from history.
+
+A source is now judged only by relevant past questions—not unrelated traffic. The public answer archive also stopped dropping older pages and gained canonical navigation, crawl paths, and complete topic coverage.
 
 ### 3/9
 
-> We also changed what Keryx calls traction.
->
-> External completed queries are now the primary KPI; autonomous engine volume stays visible but secondary. Returning users require verified identity, and money metrics count settled records only—no fingerprinting or simulated revenue.
+We also changed what Keryx calls traction.
+
+External completed queries are now the primary KPI; autonomous engine volume stays visible but secondary. Returning users require verified identity, and money metrics count settled records only—no fingerprinting or simulated revenue.
 
 ### 4/9
 
-> Keryx is now available as a hosted Remote MCP server:
->
-> `https://keryx.cc/mcp`
->
-> Codex, Claude, Cursor, or a direct MCP client can inspect Keryx and run the same research loop without installing the local package.
->
-> Setup: https://keryx.cc/integrations/mcp
+Keryx is now available as a hosted Remote MCP server:
+
+`https://keryx.cc/mcp`
+
+Codex, Claude, Cursor, or a direct MCP client can inspect Keryx and run the same research loop without installing the local package.
+
+Setup: https://keryx.cc/integrations/mcp
 
 ### 5/9
 
-> The most important payment change: a model citation can no longer authorize money by itself.
->
-> A reward now needs a valid claim, an inline source marker, an exact quote found in content Keryx actually read, and enough support. No evidence = no citation payout.
+The most important payment change: a model citation can no longer authorize money by itself.
+
+A reward now needs a valid claim, an inline source marker, an exact quote found in content Keryx actually read, and enough support. No evidence = no citation payout.
 
 ### 6/9
 
-> `/wanted` now closes the loop.
->
-> A creator can offer a specific RSS post for a claim Keryx previously failed to answer. Keryx retries that question, reads through the normal x402 path, and calls it “filled” only when the source earns a real settled citation.
+`/wanted` now closes the loop.
+
+A creator can offer a specific RSS post for a claim Keryx previously failed to answer. Keryx retries that question, reads through the normal x402 path, and calls it “filled” only when the source earns a real settled citation.
 
 ### 7/9
 
-> We also hardened every new treasury boundary:
->
-> • atomic session caps + onramp claims  
-> • wanted offers: 1/gap-owner, 5/wallet/day  
-> • 1 funded research call/MCP batch  
-> • mapped-IPv6 SSRF blocked  
-> • uncertain receipts cannot double-drip
+We also hardened every new treasury boundary:
+
+• atomic session caps + onramp claims
+
+• wanted offers: 1/gap-owner, 5/wallet/day
+
+• 1 funded research call/MCP batch
+
+• mapped-IPv6 SSRF blocked
+
+• uncertain receipts cannot double-drip
 
 ### 8/9
 
-> Verification for the release:
->
-> ✓ 543 Vitest tests  
-> ✓ TypeScript check  
-> ✓ Next.js production build  
-> ✓ 16 SourceRegistry contract tests  
-> ✓ live VPS health on commit `ad08452`
->
-> Settlement mode remains real on Arc testnet.
+Verification for the release:
+
+✓ 543 Vitest tests
+
+✓ TypeScript check
+
+✓ Next.js production build
+
+✓ 16 SourceRegistry contract tests
+
+✓ live VPS health on commit `ad08452`
+
+Settlement mode remains real on Arc testnet.
 
 ### 9/9
 
-> Rule behind this release:
->
-> Models may propose relevance, evidence, and attribution. Code must authorize payment.
->
-> Try Keryx: https://keryx.cc  
-> Wanted claims: https://keryx.cc/wanted  
-> Release: https://github.com/tang-vu/keryx/releases/tag/v0.8.0
->
-> #BuildInPublic #AIagents #x402
+Rule behind this release:
+
+Models may propose relevance, evidence, and attribution. Code must authorize payment.
+
+Try Keryx: https://keryx.cc
+
+Wanted claims: https://keryx.cc/wanted
+
+Release: https://github.com/tang-vu/keryx/releases/tag/v0.8.0
+
+#BuildInPublic #AIagents #x402
 
 ---
 
@@ -144,4 +154,4 @@ on Arc testnet.
 - v0.8.0 release: <https://github.com/tang-vu/keryx/releases/tag/v0.8.0>
 - Full code range: <https://github.com/tang-vu/keryx/compare/6788f1696ecb497c974de4c7a2edd400466f396f...ad084524266a2832c1ea2874c507e23d07adc670>
 
-> Models may propose relevance, evidence, and attribution. Code must authorize payment.
+Models may propose relevance, evidence, and attribution. Code must authorize payment.
