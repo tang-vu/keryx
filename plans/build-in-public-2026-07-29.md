@@ -101,57 +101,34 @@ Release: https://github.com/tang-vu/keryx/releases/tag/v0.8.0
 
 ### Keryx v0.8.0 — evidence before money, and a path from wanted claim to creator payout
 
-Over the last three days, Keryx shipped 12 commits that make its research and payment loop more
-open, more useful to other agents, and much stricter about what is allowed to move money.
+Three days, 12 commits, one rule: models may propose relevance, evidence, and attribution; code
+must authorize payment.
 
-**The agent now judges sources using relevant history.** A source is no longer penalized or promoted
-because of unrelated questions from older runs. The public answer archive also exposes its complete
-history with canonical navigation, crawl paths, and topic coverage instead of quietly forgetting
-older pages.
+**Remote MCP:** Codex, Claude, Cursor, and direct MCP clients can now invoke Keryx at
+`https://keryx.cc/mcp`. External completed queries are the primary KPI; autonomous traffic remains
+visible but secondary.
 
-**Keryx now has a hosted Remote MCP endpoint.** Codex, Claude, Cursor, and direct MCP clients can
-connect to `https://keryx.cc/mcp`, inspect the available tools, and invoke the same research pipeline
-without installing the local npm package. The setup hub is live at
-<https://keryx.cc/integrations/mcp>.
+**Evidence before money:** citation rewards now require a valid claim, inline source marker, exact
+quote found in content Keryx actually read, and sufficient support. No verified evidence means no
+citation payout.
 
-**Traction now means external demand first.** Completed questions from real web askers and
-third-party agents are the primary KPI; autonomous engine volume remains visible but secondary.
-Returning actors require a server-verified wallet or settled inbound payer, and money metrics read
-only settled records. Anonymous visitors are not fingerprinted and historical samples are not
-invented.
+**Wanted claim → creator payout:** at <https://keryx.cc/wanted>, a creator can offer an RSS post for
+a claim Keryx previously failed to answer. Keryx re-checks the live gap and feed preview, retries
+through the normal x402 path, and marks it `filled` only when the offered source produces qualified
+evidence and receives a genuinely settled citation.
 
-**Citation rewards are now evidence-gated.** A model saying “cite this source” is no longer payment
-authority. Keryx requires a valid decomposed claim, an inline source marker, an exact quote found in
-content the agent actually read, and sufficient support. Rejected citations cannot enter
-attribution or settlement, and confidence is bounded by the same verified evidence ledger.
+**Hardening:** atomic session/onramp reservations; one wanted offer per gap and verified owner;
+five offers per wallet/day; one funded research call per MCP batch; DNS-pinned public fetches;
+IPv4-mapped IPv6 SSRF blocking; and no double drip while an onramp receipt is uncertain.
 
-**The wanted board now has a financial completion loop.** At <https://keryx.cc/wanted>, a creator can
-offer a specific RSS post for a claim Keryx previously failed to answer. Registration re-checks the
-live gap and public feed preview. A durable worker then retries the failed question through the
-normal x402 path, with a hard treasury ceiling and bounded attempts. “Filled” requires both
-reward-qualified evidence and a genuinely settled citation leg for the offered source; otherwise
-the result stays explicitly `unpaid`, `missed`, `stale`, or `failed`.
+The agent also judges sources using relevant history, and the public archive now exposes complete
+topic/crawl coverage instead of dropping older pages.
 
-**The newly exposed boundaries were hardened before release.** Wanted offers are atomic at one per
-gap and verified owner, with a five-per-wallet daily valve. Remote MCP rejects batches containing
-multiple treasury-funded research calls. The public fetcher blocks hexadecimal IPv4-mapped IPv6
-private targets. The testnet onramp retains its reservation when a transaction was broadcast but
-the receipt is still uncertain, preventing a retry from double-dripping.
+Verified: 543 Vitest tests, TypeScript, production build, and 16 SourceRegistry contract tests.
+Live at commit `ad08452` with real settlement mode on Arc testnet.
 
-Earlier in the same range, session-cap spending and onramp address/daily claims moved from
-check-then-write sequences to atomic database reservations. Public feed and webhook requests pin
-validated DNS answers to the socket, closing rebinding between validation and connection.
+Product: <https://keryx.cc>
 
-The release passed 543 Vitest tests, TypeScript checking, a production Next.js build, and all 16
-SourceRegistry contract tests. It is live on the VPS at commit `ad08452`, with real settlement mode
-on Arc testnet.
+MCP setup: <https://keryx.cc/integrations/mcp>
 
-**Links**
-
-- Product: <https://keryx.cc>
-- Wanted claims: <https://keryx.cc/wanted>
-- Remote MCP setup: <https://keryx.cc/integrations/mcp>
-- v0.8.0 release: <https://github.com/tang-vu/keryx/releases/tag/v0.8.0>
-- Full code range: <https://github.com/tang-vu/keryx/compare/6788f1696ecb497c974de4c7a2edd400466f396f...ad084524266a2832c1ea2874c507e23d07adc670>
-
-Models may propose relevance, evidence, and attribution. Code must authorize payment.
+Release: <https://github.com/tang-vu/keryx/releases/tag/v0.8.0>
