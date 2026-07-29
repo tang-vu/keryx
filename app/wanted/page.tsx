@@ -132,7 +132,14 @@ export default async function WantedPage() {
                   </span>
                 </div>
 
-                <p className="mt-2 font-serif text-[16px] leading-snug text-ink">{gap.claim}</p>
+                <p className="mt-2 font-serif text-[16px] leading-snug text-ink">
+                  <Link
+                    href={`/wanted/${gap.id}`}
+                    className="underline decoration-line underline-offset-4 transition-colors hover:text-seal hover:decoration-seal"
+                  >
+                    {gap.claim}
+                  </Link>
+                </p>
 
                 {/* The coverage bar is the whole argument: the emptiness IS the opportunity. */}
                 <div className="mt-3 h-1.5 w-full bg-paper-2" aria-hidden>
@@ -219,7 +226,14 @@ export default async function WantedPage() {
                       </span>
                     </div>
 
-                    <p className="mt-2 font-serif text-[15px] leading-snug text-ink">{gap.claim}</p>
+                    <p className="mt-2 font-serif text-[15px] leading-snug text-ink">
+                      <Link
+                        href={`/wanted/${gap.id}`}
+                        className="underline decoration-line underline-offset-4 transition-colors hover:text-seal hover:decoration-seal"
+                      >
+                        {gap.claim}
+                      </Link>
+                    </p>
 
                     <p className="mt-2 font-mono text-[10.5px] leading-relaxed text-ink-3">
                       {fill.paid.length > 0 ? (

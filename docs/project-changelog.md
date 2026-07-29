@@ -9,6 +9,20 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### Every wanted claim is now a shareable creator brief (2026-07-29)
+Each open or recently filled demand gap now has a canonical `/wanted/[gapId]` page with the measured
+coverage, recurrence count, failed dispatch receipt, current creator offers, and a banknote-style
+social card. A creator can share or open one exact brief, paste an RSS feed, and ask the same
+BUY/SKIP judge about that claim alone instead of scanning the whole board. Open and filled brief
+URLs also enter the sitemap.
+
+The narrower handoff does not narrow the safety checks. The scoped feed probe resolves the opaque
+id against a freshly rebuilt board and refuses a stale or filled claim. Registration still re-reads
+the RSS payload, independently matches the selected post, verifies source ownership, and applies
+the durable offer quotas before anything can enter the treasury queue. The page calls the offer
+what it is: an invitation to one bounded testnet retry, not a guaranteed bounty. Only qualifying
+evidence plus a real settled citation can mark it fulfilled.
+
 ### Treasury-funded entry points now admit the funded unit, not just the HTTP request (2026-07-29)
 Wanted-claim offers are independently matched against the selected feed preview at registration,
 atomically limited to one offer per gap and verified owner across sources/posts, and capped at five

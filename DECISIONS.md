@@ -5,6 +5,24 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-26** · Distribution/Demand · *A shareable wanted brief is a live coordination view, never a
+bounty promise or payment authority.*
+Every published gap may be opened at `/wanted/[gapId]` with claim-specific metadata, a social card,
+the failed dispatch receipt, current offer state, and a feed probe scoped to that claim. The URL
+carries only the existing opaque semantic id. Both the page and probe rebuild the current
+evidence-bounded demand board; a claim that is no longer open cannot be offered from stale shared
+state. Registration still re-reads the feed, independently matches the selected post, resolves
+SourceRegistry ownership, and applies the one-offer-per-gap-owner plus five-per-wallet daily
+admission limits.
+
+The page says explicitly that this is not a guaranteed bounty. Keryx may sponsor one treasury retry
+up to 0.05 testnet USDC after indexing and ownership verification, but `filled` still requires
+claim-matched evidence, at least 0.4 evidence-bounded coverage, and a genuinely settled citation
+leg. Shared metadata, social previews, and feed-probe results cannot select `payTo`, increase a
+budget, queue spend, or mark fulfillment. Why: the gap-to-payout loop existed but one undifferentiated
+board was difficult to route to the specific writer who could close a claim. Reversible: easy
+(remove the permalink and scoped presentation; the queue and settlement path are unchanged).
+
 **D-25** · Treasury/Security · *Treasury-funded work is admitted as a bounded unit, and an
 ambiguous post-broadcast transfer keeps its reservation.*
 Wanted-claim registration now independently re-runs the public-preview claim matcher instead of

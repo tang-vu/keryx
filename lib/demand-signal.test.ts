@@ -11,6 +11,7 @@ import {
   buildFilled,
   claimGaps,
   demandGapId,
+  findDemandGap,
   finalCoverage,
 } from "./demand-signal";
 import type { QueryRun, TraceStep } from "./types";
@@ -133,6 +134,19 @@ describe("buildDemand", () => {
     expect(demandGapId("Batching reduces settlement fees.")).not.toBe(
       demandGapId("Batching increases settlement fees."),
     );
+  });
+
+  it("resolves a shared opaque id only against the current board", () => {
+    const board = buildDemand([
+      run("r1", [suf([["CCTP burn and mint across domains", 0.1]])]),
+    ]);
+    const id = board[0]!.id;
+
+    expect(findDemandGap(board, id.toUpperCase())?.claim).toBe(
+      "CCTP burn and mint across domains",
+    );
+    expect(findDemandGap(board, "not-a-gap-id")).toBeUndefined();
+    expect(findDemandGap([], id)).toBeUndefined();
   });
 
   it("never folds a claim into its own negation", () => {

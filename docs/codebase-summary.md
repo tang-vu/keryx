@@ -190,7 +190,7 @@ RESTful endpoints for agent, sources, metrics, API keys.
 | `/creator/[id]` | public | Creator earnings page data + notify-webhook config. |
 | `/runs`, `/dispatch/[id]` | public | Query history + shareable per-dispatch permalinks. |
 | `/feedback` | public | Thumbs up/down answer quality votes. |
-| `/wanted` | public | Open/filled demand claims plus public creator-offer status receipts. |
+| `/wanted`, `/wanted/[id]` | public | Open/filled demand board plus canonical shareable claim briefs and creator-offer status receipts. |
 | `/docs` | public | OpenAPI (Scalar UI). |
 | `/faucet`, `/faucet/onramp` | public | Testnet USDC drip + one-call funding for external callers. |
 
@@ -278,7 +278,7 @@ Next.js 16 App Router.
 | `/` | Hero + CTA (ask or register) + live ask form. |
 | `/connect` | Wallet connect + SIWE sign-in. |
 | `/register` | Creator onboarding: paste RSS → wallet + x402 endpoint; verified creators set their own payout wallet. |
-| `/wanted` | Evidence-backed demand board, feed matcher, claim-specific creator offer and fulfillment status. |
+| `/wanted`, `/wanted/[id]` | Evidence-backed demand board plus canonical claim briefs, scoped feed matching, creator offers, and fulfillment status. |
 | `/dashboard` | Public traction dashboard: metrics, leaderboard, recent dispatches, payments feed. |
 | `/creator/[id]` | Public creator earnings page + social card (lifetime USDC, per-question payouts). |
 | `/dispatch/[id]` | Shareable permalink for one agent run (trace, citations, settled payouts, social card). |

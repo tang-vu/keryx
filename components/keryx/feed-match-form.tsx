@@ -40,7 +40,14 @@ interface Result {
   matches: Match[];
 }
 
-export function FeedMatchForm() {
+export function FeedMatchForm({
+  gapId,
+  claim,
+}: {
+  /** Optional current-board gap id. The server resolves it again; it is never spend authority. */
+  gapId?: string;
+  claim?: string;
+} = {}) {
   const [rssUrl, setRssUrl] = useState("");
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +63,7 @@ export function FeedMatchForm() {
       const res = await fetch("/api/wanted/match", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rssUrl: url }),
+        body: JSON.stringify({ rssUrl: url, ...(gapId ? { gapId } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -81,7 +88,7 @@ export function FeedMatchForm() {
       <div className="border border-ink">
         <div className="flex items-center justify-between gap-4 border-b border-ink bg-ink px-5 py-3 text-cream">
           <span className="font-mono text-[10.5px] uppercase tracking-[0.18em]">
-            Would Keryx buy your feed?
+            {gapId ? "Would Keryx buy your feed for this claim?" : "Would Keryx buy your feed?"}
           </span>
           <span className="hidden font-mono text-[10.5px] uppercase tracking-[0.12em] text-cream/70 sm:inline">
             No wallet · nothing stored
@@ -124,6 +131,12 @@ export function FeedMatchForm() {
               {busy ? "Reading your feed…" : "Put it to the agent"}
             </button>
           </div>
+
+          {gapId && claim && (
+            <p className="mt-4 border-l-2 border-seal pl-3 font-serif text-[14px] leading-snug text-ink-2">
+              “{claim}”
+            </p>
+          )}
 
           {error && (
             <p className="mt-4 border border-line bg-paper-2 px-4 py-3 font-mono text-[11px] leading-relaxed text-ink-2">

@@ -75,6 +75,7 @@ export interface DemandOptions {
 }
 
 const DEFAULTS = { threshold: 0.4, limit: 20 } satisfies Required<DemandOptions>;
+const DEMAND_GAP_ID = /^[a-f0-9]{64}$/;
 
 /**
  * The run's last word on each of its claims, keyed by claim text. Empty when the run carries no
@@ -157,6 +158,19 @@ export function demandGapId(claim: string): string {
     .createHash("sha256")
     .update(`keryx-gap:v1:${claimKey(claim)}`)
     .digest("hex");
+}
+
+/**
+ * Resolve an opaque public gap id against a freshly rebuilt board.
+ *
+ * A shared URL is coordination only: the id never carries the claim text, payout address, or
+ * permission to spend. Callers must rebuild the current board and resolve it here before showing
+ * or acting on a brief, so a filled/expired claim cannot be revived from stale URL state.
+ */
+export function findDemandGap(gaps: DemandGap[], rawId: unknown): DemandGap | undefined {
+  const id = typeof rawId === "string" ? rawId.trim().toLowerCase() : "";
+  if (!DEMAND_GAP_ID.test(id)) return undefined;
+  return gaps.find((gap) => gap.id === id);
 }
 
 /**

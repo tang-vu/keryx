@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { getArchiveCached } from "@/lib/answers-archive-cache";
 import { buildTopics } from "@/lib/answers-topics";
 import { answersPagePath, paginateArchive } from "@/lib/answers-pagination";
+import { loadWantedBoard, WANTED_DETAIL_LIMIT } from "@/lib/wanted-board";
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
 
@@ -34,6 +35,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // The paginated index. Older answers are only reachable through these, so a crawler that never
   // gets past page 1 still finds every page listed here.
   let pageRoutes: MetadataRoute.Sitemap = [];
+  let wantedRoutes: MetadataRoute.Sitemap = [];
 
   const archive = await getArchiveCached();
   if (archive.length > 0) {
@@ -59,5 +61,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
-  return [...staticRoutes, ...pageRoutes, ...topicRoutes, ...answerRoutes];
+  try {
+    const wanted = await loadWantedBoard(WANTED_DETAIL_LIMIT);
+    wantedRoutes = [...wanted.open, ...wanted.filled].map((gap) => ({
+      url: `${BASE}/wanted/${gap.id}`,
+      lastModified: new Date(gap.filledBy?.createdAt ?? gap.createdAt),
+      changeFrequency: gap.filledBy ? ("monthly" as const) : ("daily" as const),
+      priority: gap.filledBy ? 0.5 : 0.7,
+    }));
+  } catch {
+    // The static sitemap remains valid if the live demand projection is briefly unavailable.
+  }
+
+  return [...staticRoutes, ...pageRoutes, ...topicRoutes, ...wantedRoutes, ...answerRoutes];
 }

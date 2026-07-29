@@ -132,6 +132,11 @@ stable gap id + matched post
                                            failed = three execution failures
 ```
 
+`/wanted/[gapId]` is a canonical read-only projection of this loop: it rebuilds the same live board,
+shows the failed dispatch receipt, and scopes the anonymous feed judge to one current claim. A stale
+or filled id cannot continue to registration from the probe, and the social/share URL carries no
+claim text, payout address, budget, or authority.
+
 The intent row is coordination only. Registration and verification never initiate spend; payTo
 still comes from SourceRegistry and the retry uses the same server-side Gateway path as the volume
 engine. Preview matching prevents an unrelated feed item from being attached to a gap. The atomic

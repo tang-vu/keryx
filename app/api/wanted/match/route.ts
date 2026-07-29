@@ -17,7 +17,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { buildBoard } from "@/lib/demand-signal";
+import { buildBoard, findDemandGap } from "@/lib/demand-signal";
 import { judgeFeedAgainstGaps } from "@/lib/demand-match-judge";
 import { ingestRssXml } from "@/lib/ingest/rss";
 import { getReasoningEngine } from "@/lib/llm";
@@ -30,6 +30,8 @@ export const dynamic = "force-dynamic";
 const WINDOW_RUNS = 400;
 /** Deeper than the page shows: a writer's beat may sit well below the loudest holes. */
 const BOARD_LIMIT = 40;
+/** A shared brief may have moved down the ranking while remaining open. */
+const SCOPED_BOARD_LIMIT = WINDOW_RUNS * 4;
 const MAX_POSTS = 20;
 
 export async function POST(req: NextRequest) {
@@ -37,9 +39,11 @@ export async function POST(req: NextRequest) {
   if (blocked) return blocked;
 
   let rssUrl: string;
+  let gapId: unknown;
   try {
-    const body = (await req.json()) as { rssUrl?: unknown };
+    const body = (await req.json()) as { rssUrl?: unknown; gapId?: unknown };
     rssUrl = typeof body.rssUrl === "string" ? body.rssUrl.trim() : "";
+    gapId = body.gapId;
   } catch {
     return NextResponse.json({ error: "send { rssUrl }" }, { status: 400 });
   }
@@ -69,9 +73,25 @@ export async function POST(req: NextRequest) {
   let open;
   try {
     const db = await getDb();
-    open = buildBoard(await db.listRecentQueries(WINDOW_RUNS), { limit: BOARD_LIMIT }).open;
+    open = buildBoard(await db.listRecentQueries(WINDOW_RUNS), {
+      limit: gapId == null ? BOARD_LIMIT : SCOPED_BOARD_LIMIT,
+    }).open;
   } catch {
     return NextResponse.json({ error: "demand board unavailable" }, { status: 503 });
+  }
+
+  if (gapId != null) {
+    const gap = findDemandGap(open, gapId);
+    if (!gap) {
+      return NextResponse.json(
+        {
+          error: "wanted claim unavailable",
+          message: "That claim is no longer open. Refresh the wanted board before offering a post.",
+        },
+        { status: 404 },
+      );
+    }
+    open = [gap];
   }
 
   const verdict = await judgeFeedAgainstGaps(open, feed.items, getReasoningEngine(), {
