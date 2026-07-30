@@ -42,9 +42,8 @@ export function A2aCallCard() {
       </div>
 
       <p className="px-5 pt-3.5 text-sm leading-relaxed text-ink-2">
-        Keryx is itself a paid x402 endpoint. Your agent pays the $0.02 toll; Keryx runs its full
-        reasoning loop, answers with citations, and pays the creators it cites — downstream, on Arc.
-        Inbound A2A fees count as external traction, kept separate from the autonomous engine.
+        Keryx is itself a paid x402 endpoint. One $0.02 call triggers the full loop: research,
+        source selection, a cited answer, and downstream creator payouts in USDC on Arc.
       </p>
 
       <div className="relative m-5 mt-3.5 border border-line bg-paper-2">
