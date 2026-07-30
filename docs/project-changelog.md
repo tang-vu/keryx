@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-07-29
+**Last Updated:** 2026-07-30
 **Current Version:** 0.8.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
@@ -8,6 +8,19 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 ---
 
 ## Unreleased
+
+### Browser co-sign sessions are identities again, and every advertised brief stays offerable (2026-07-30)
+The co-sign ask route no longer treats a public wallet address as bearer authentication. Before it
+exempts a request from the anonymous treasury tier or emits a sign-request id, the active SIWE
+wallet must match both the requested session and the persisted grant owner. Disconnecting an SSE
+request now cancels its pending pre-signature slot immediately, so an unused cap reservation is
+released without waiting for the thirty-second signing timeout.
+
+The shareable wanted page and scoped feed judge could advertise up to 1,600 live claims from the
+400-dispatch window, while final registration revalidated only the top 400. A lower-ranked creator
+brief could therefore pass the BUY judge and then be rejected as outside the window. All three
+surfaces now share the same four-claims-per-dispatch detail horizon, with a regression covering a
+live claim ranked below the condensed board cutoff.
 
 ### Every wanted claim is now a shareable creator brief (2026-07-29)
 Each open or recently filled demand gap now has a canonical `/wanted/[gapId]` page with the measured

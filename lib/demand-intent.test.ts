@@ -6,6 +6,7 @@ import {
 } from "./demand-intent";
 import { buildDemand } from "./demand-signal";
 import type { QueryRun, SourceItem } from "./types";
+import { WANTED_DETAIL_LIMIT } from "./wanted-limits";
 
 const CLAIM = "CCTP burns and mints USDC across domains.";
 const failed: QueryRun = {
@@ -98,5 +99,36 @@ describe("resolveGapOffer", () => {
     await expect(
       resolveGapOffer(dbWithRuns([failed, filled]), gap.id, post.link, [post]),
     ).rejects.toThrow("already been filled");
+  });
+
+  it("accepts a live brief below the condensed top-400 board cutoff", async () => {
+    const alpha = (value: number) => {
+      let out = "";
+      for (let n = value; n >= 0; n = Math.floor(n / 26) - 1) {
+        out = String.fromCharCode(97 + (n % 26)) + out;
+      }
+      return out;
+    };
+    const rankedClaim = (runIndex: number, claimIndex: number) =>
+      `Missing evidence for uniquetopic${alpha(runIndex * 4 + claimIndex)} protocol`;
+    const higherRanked = Array.from({ length: 120 }, (_, runIndex) => ({
+      ...failed,
+      id: `higher-${runIndex}`,
+      question: `Higher-ranked question ${runIndex}`,
+      subClaims: Array.from({ length: 4 }, (_, claimIndex) => rankedClaim(runIndex, claimIndex)),
+      claimCoverage: Array.from({ length: 4 }, (_, claimIndex) => {
+        const claim = rankedClaim(runIndex, claimIndex);
+        return { claimIndex, claim, coverage: 0, coveredBy: [] };
+      }),
+      createdAt: `2026-07-29T${String(runIndex % 24).padStart(2, "0")}:00:00.000Z`,
+    }));
+    const runs = [...higherRanked, failed];
+
+    expect(buildDemand(runs, { limit: WANTED_DETAIL_LIMIT }).findIndex((item) => item.id === gap.id))
+      .toBeGreaterThanOrEqual(400);
+    await expect(resolveGapOffer(dbWithRuns(runs), gap.id, post.link, [post])).resolves.toMatchObject({
+      gapId: gap.id,
+      sourceItemLink: post.link,
+    });
   });
 });

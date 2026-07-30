@@ -9,9 +9,9 @@
 import { getDb } from "./db";
 import { buildBoard, findDemandGap, type DemandGap } from "./demand-signal";
 import type { GapIntentStatus } from "./types";
+import { WANTED_WINDOW_RUNS } from "./wanted-limits";
 
-export const WANTED_WINDOW_RUNS = 400;
-export const WANTED_DETAIL_LIMIT = WANTED_WINDOW_RUNS * 4;
+export { WANTED_DETAIL_LIMIT } from "./wanted-limits";
 
 export interface PublicWantedOffer {
   id: string;

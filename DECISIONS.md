@@ -5,6 +5,19 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-27** · Browser co-sign/Security · *A persisted session grant is payment state, not bearer
+authentication.*
+The `/api/ask` browser co-sign path now requires the active SIWE wallet to equal the client-supplied
+session id and the persisted grant owner before the request receives the user-funded exemption or
+any sign-request id. A wallet address is public; treating it as sufficient proof let another caller
+reserve that wallet's spend cap with invalid payment headers and use the co-sign route to bypass the
+anonymous treasury rate tier. The attacker could not sign with or steal the session funds, but could
+strand the victim's capacity and consume server-side reasoning. Pending signature slots also bind to
+the SSE abort signal, so a disconnect removes the slot and releases the pre-signature reservation
+immediately rather than waiting thirty seconds. Why: ownership must come from SIWE, while the grant
+only bounds an already-authenticated owner's spend. Reversible: low (removing the binding would
+reopen a cross-session denial-of-service path).
+
 **D-26** · Distribution/Demand · *A shareable wanted brief is a live coordination view, never a
 bounty promise or payment authority.*
 Every published gap may be opened at `/wanted/[gapId]` with claim-specific metadata, a social card,

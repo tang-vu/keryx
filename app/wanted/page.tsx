@@ -16,6 +16,7 @@ import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { FeedMatchForm } from "@/components/keryx/feed-match-form";
 import { buildBoard, type DemandGap } from "@/lib/demand-signal";
+import { WANTED_WINDOW_RUNS } from "@/lib/wanted-limits";
 import type { GapIntentStatus } from "@/lib/types";
 
 // The window moves with the daemon; a few times an hour is fresh enough for a board people act on
@@ -23,7 +24,6 @@ import type { GapIntentStatus } from "@/lib/types";
 export const revalidate = 600;
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
-const WINDOW_RUNS = 400;
 const TITLE = "Wanted — questions Keryx was paid to answer and couldn't";
 const DESCRIPTION =
   "Real sub-claims from paid dispatches that Keryx's corpus left uncovered. Demand with a receipt: list a source that covers one and every citation pays your wallet in USDC.";
@@ -57,7 +57,7 @@ async function loadBoard(): Promise<{
   try {
     const db = await getDb();
     const [runs, intents, sources] = await Promise.all([
-      db.listRecentQueries(WINDOW_RUNS),
+      db.listRecentQueries(WANTED_WINDOW_RUNS),
       db.listGapIntents(200),
       db.listAllSources(),
     ]);
@@ -107,12 +107,12 @@ export default async function WantedPage() {
             <>
               Every dispatch breaks its question into claims, buys what looks worth buying, then
               scores how well it actually covered each one. These {gaps.length} claims finished
-              short across the last {WINDOW_RUNS} dispatches — readers paid, and Keryx came back
+              short across the last {WANTED_WINDOW_RUNS} dispatches — readers paid, and Keryx came back
               thin. Publish on one and the next agent that asks has somewhere to spend.
             </>
           ) : (
             <>
-              Nothing on the board: across the last {WINDOW_RUNS} dispatches, the corpus covered
+              Nothing on the board: across the last {WANTED_WINDOW_RUNS} dispatches, the corpus covered
               every claim it was asked to support. Come back after the next quiet week.
             </>
           )}

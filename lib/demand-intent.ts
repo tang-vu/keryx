@@ -10,8 +10,8 @@ import type { KeryxDB } from "./db/keryx-db";
 import { matchFeedToGaps } from "./demand-match";
 import { buildBoard } from "./demand-signal";
 import type { GapIntent, SourceItem } from "./types";
+import { WANTED_DETAIL_LIMIT, WANTED_WINDOW_RUNS } from "./wanted-limits";
 
-const WINDOW_RUNS = 400;
 const GAP_ID = /^[a-f0-9]{64}$/;
 
 export interface ResolvedGapOffer {
@@ -58,8 +58,8 @@ export async function resolveGapOffer(
     );
   }
 
-  const open = buildBoard(await db.listRecentQueries(WINDOW_RUNS), {
-    limit: WINDOW_RUNS,
+  const open = buildBoard(await db.listRecentQueries(WANTED_WINDOW_RUNS), {
+    limit: WANTED_DETAIL_LIMIT,
   }).open;
   const gap = open.find((candidate) => candidate.id === gapId);
   if (!gap) {

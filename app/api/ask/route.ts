@@ -24,7 +24,7 @@ import { config } from "@/lib/config";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
 import { getDb } from "@/lib/db";
 import { buildFollowUpQuestion } from "@/lib/agent/follow-up-question";
-import { isGrantValid } from "@/lib/payments/session-grants";
+import { getGrant } from "@/lib/payments/session-grants";
 import { awaitSignature } from "@/lib/payments/pending-signatures";
 import type { PaymentRequirements } from "@/lib/payments/browser-cosign-gateway";
 import type { QueryRun } from "@/lib/types";
@@ -35,19 +35,29 @@ export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => ({}))) as {
-    question?: string;
-    budget?: number;
-    sessionId?: string;
-    parentId?: string;
-    model?: string;
+    question?: unknown;
+    budget?: unknown;
+    sessionId?: unknown;
+    parentId?: unknown;
+    model?: unknown;
   };
   // Model pick from the UI's picker. Validated inside getAgentDeps → resolveModelChoice:
   // unknown/unconfigured ids silently run the default engine, and every pick has a
   // DeepSeek → heuristic fallback chain, so a crafted value can never fail an ask.
   const model = typeof body.model === "string" ? body.model : undefined;
-  const question = (body.question ?? "").trim();
+  const question = typeof body.question === "string" ? body.question.trim() : "";
   if (!question) {
     return Response.json({ error: "question is required" }, { status: 400 });
+  }
+
+  // A present session id means "spend my browser-funded grant". Never coerce a malformed value or
+  // silently reinterpret an empty one as the anonymous treasury path.
+  let sessionId: string | undefined;
+  if (body.sessionId !== undefined) {
+    if (typeof body.sessionId !== "string" || !body.sessionId.trim()) {
+      return Response.json({ error: "sessionId must be a non-empty string" }, { status: 400 });
+    }
+    sessionId = body.sessionId.trim().toLowerCase();
   }
 
   // Follow-up: anchor the question to its parent so "how does that compare?" is answerable. Only
@@ -55,16 +65,15 @@ export async function POST(req: NextRequest) {
   // unknown parent id degrades to a standalone ask rather than failing the dispatch.
   let parentId: string | undefined;
   let askQuestion = question;
-  if (body.parentId) {
-    const parent = await (await getDb()).getQueryRun(body.parentId);
+  const requestedParentId =
+    typeof body.parentId === "string" && body.parentId.trim() ? body.parentId.trim() : undefined;
+  if (requestedParentId) {
+    const parent = await (await getDb()).getQueryRun(requestedParentId);
     if (parent) {
       parentId = parent.id;
       askQuestion = buildFollowUpQuestion(parent.question, question);
     }
   }
-
-  // Optional browser co-sign session. Normalise to lowercase to match grant keys.
-  const sessionId = body.sessionId ? body.sessionId.toLowerCase() : undefined;
 
   // Who gets this dispatch in their ledger. Read from the SIWE cookie — the one wallet claim the
   // server has actually verified — and read HERE, in request scope: the stream body below runs
@@ -72,13 +81,37 @@ export async function POST(req: NextRequest) {
   // unattributed rather than borrowing `sessionId`, which is client-supplied.
   const asker = (await getSession())?.address?.toLowerCase();
 
+  // A session id is a public wallet address, not a bearer secret. Bind the browser co-sign path to
+  // the SIWE identity that created the grant before exempting it from the treasury rate limit or
+  // exposing sign-request ids. Otherwise another caller could reserve a known wallet's cap with
+  // bogus headers and use that victim session as an unmetered LLM front door.
+  if (sessionId && !asker) {
+    return Response.json(
+      {
+        error: "session_auth_required",
+        message: "Sign in with the wallet that created this spending session.",
+      },
+      { status: 401 },
+    );
+  }
+  if (sessionId && asker !== sessionId) {
+    return Response.json(
+      {
+        error: "session_owner_mismatch",
+        message: "This spending session belongs to a different wallet.",
+      },
+      { status: 403 },
+    );
+  }
+
   // If the client presents a session but the server grant is gone (TTL lapsed, or the user
   // revoked it), do NOT silently fall back to the treasury gateway — that would spend Keryx's
   // own USDC for a user who meant to spend their own. Tell the client to recover (re-derive the
   // key + re-register the grant against the live Gateway balance). Grants now survive a restart,
   // so a deploy no longer lands here. A request with NO sessionId is the legitimate
   // anonymous/treasury path and is left untouched.
-  if (sessionId && !(await isGrantValid(sessionId))) {
+  const grant = sessionId ? await getGrant(sessionId) : undefined;
+  if (sessionId && (!grant || grant.ownerAddr.toLowerCase() !== asker)) {
     return Response.json(
       {
         error: "session_expired",
@@ -137,7 +170,7 @@ export async function POST(req: NextRequest) {
           ): Promise<string> => {
             send("sign-request", { reqId, requirements, kind, sourceId });
             // Scope the pending slot to this session so a caller can't resolve another session's sign-request.
-            return awaitSignature(capturedSessionId, reqId);
+            return awaitSignature(capturedSessionId, reqId, abort.signal);
           };
 
           deps = await getAgentDeps({

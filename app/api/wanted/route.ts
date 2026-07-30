@@ -13,11 +13,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { buildBoard } from "@/lib/demand-signal";
+import { WANTED_WINDOW_RUNS } from "@/lib/wanted-limits";
 
 export const runtime = "nodejs";
 export const revalidate = 600;
 
-const WINDOW_RUNS = 400;
 const MAX_LIMIT = 100;
 
 export async function GET(req: NextRequest) {
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   try {
     const db = await getDb();
     const [runs, intents, sources] = await Promise.all([
-      db.listRecentQueries(WINDOW_RUNS),
+      db.listRecentQueries(WANTED_WINDOW_RUNS),
       db.listGapIntents(200),
       db.listAllSources(),
     ]);
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
       sources.map((source) => [source.id, source.walletAddress.toLowerCase()]),
     );
     return NextResponse.json({
-      windowRuns: WINDOW_RUNS,
+      windowRuns: WANTED_WINDOW_RUNS,
       gaps: board.open,
       filled: board.filled,
       offers: intents

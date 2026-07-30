@@ -1,6 +1,6 @@
 # Keryx Security Threat Model
 
-**Version:** 2026-07-29 (Treasury admission and ambiguous-settlement hardening)
+**Version:** 2026-07-30 (Browser session binding and abort cleanup)
 **Scope:** Non-custodial dApp — SIWE auth, browser co-sign session, SourceRegistry, IPFS gated content, API keys, offline dev path.
 
 ---
@@ -40,6 +40,7 @@
 | S29 | Wanted-claim retry | Browser forges a claim/post/source mapping, multiplies one gap across many sources/posts, unverified or stale offers drain treasury, concurrent workers double-spend, or simulated reward is advertised as fulfillment | **PASS (2026-07-29)** | Registration re-resolves the opaque gap id from the live board, requires the post URL in the just-ingested feed, and independently confirms that the public preview still matches the claim. Claim/question/wallet/source are server-derived. Admission is atomic at one intent per gap and verified owner across sources/posts, plus a durable five-offer-per-wallet daily limit. Atomic worker leases require the source active, feed-verified, and owned by the offering wallet; the worker re-checks that the gap is still open immediately before spend and closes a stale offer without running it. Treasury retry is capped at $0.05, reclaimed after ten minutes, and terminal after three attempts. `filled` requires target-source reward-qualified evidence, coverage ≥ 0.4, and a settled citation leg with settlement id; otherwise status is `missed`/`unpaid`/`stale`/`failed`. `lib/demand-intent.ts`, `app/api/sources/route.ts`, `lib/gap-intent-runner.ts`, `gap_intents`. |
 | S30 | Testnet onramp | Receipt timeout after broadcast is treated as failure, releasing the address reservation and allowing a second drip while the first transaction may settle | **PASS (2026-07-29)** | The address is reserved before send. A send failure or confirmed reverted receipt releases it; once a transaction hash exists, an unknown receipt state returns HTTP 202 `pending` and keeps the reservation. Sync state records the hash for reconciliation. `lib/faucet/onramp-transfer.ts`, `app/api/faucet/onramp/route.ts`. |
 | S31 | Server-side URL fetch | IPv4-mapped IPv6 hexadecimal notation bypasses private/loopback checks and reaches internal services | **PASS (2026-07-29)** | IPv6 addresses are expanded to hextets and mapped/compatible embedded IPv4 addresses are classified through the IPv4 policy. Regression covers canonical `::ffff:7f00:1`, expanded metadata addresses, and public mapped addresses. `lib/net/public-fetch.ts`. |
+| S32 | Browser co-sign | A public wallet address with an active grant is replayed as `sessionId` to bypass the anonymous rate tier, reserve the victim's cap, or receive pending request ids | **PASS (2026-07-30)** | `/api/ask` requires the SIWE wallet to equal both `sessionId` and the persisted grant owner before selecting browser co-sign. A disconnect aborts and removes any pending pre-signature slot immediately, allowing the unused reservation to be released. `app/api/ask/route.ts`, `lib/payments/pending-signatures.ts`. |
 
 ---
 

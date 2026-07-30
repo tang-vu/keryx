@@ -20,6 +20,7 @@ interface PendingSignature {
   resolve: (header: string) => void;
   reject: (reason: Error) => void;
   timer: ReturnType<typeof setTimeout>;
+  cleanupAbort: () => void;
 }
 
 /** How long the browser has to respond to a sign-request before we give up. */
@@ -34,17 +35,34 @@ function pendingKey(sessionId: string, reqId: string): string {
  * header when the browser calls back, or rejects after SIGN_TIMEOUT_MS. The resolved header is
  * the raw base64 `{signature, authorization}` string.
  */
-export function awaitSignature(sessionId: string, reqId: string): Promise<string> {
+export function awaitSignature(
+  sessionId: string,
+  reqId: string,
+  abortSignal?: AbortSignal,
+): Promise<string> {
   cancelPending(sessionId, reqId); // clean up any stale entry (shouldn't happen, but be safe)
   const key = pendingKey(sessionId, reqId);
 
   return new Promise<string>((resolve, reject) => {
+    const onAbort = () => {
+      const slot = pending.get(key);
+      if (!slot) return;
+      clearTimeout(slot.timer);
+      pending.delete(key);
+      slot.cleanupAbort();
+      reject(new Error("client disconnected"));
+    };
+    const cleanupAbort = () => abortSignal?.removeEventListener("abort", onAbort);
     const timer = setTimeout(() => {
       pending.delete(key);
+      cleanupAbort();
       reject(new Error(`sign-request timed out after ${SIGN_TIMEOUT_MS / 1000}s`));
     }, SIGN_TIMEOUT_MS);
 
-    pending.set(key, { resolve, reject, timer });
+    pending.set(key, { resolve, reject, timer, cleanupAbort });
+    abortSignal?.addEventListener("abort", onAbort, { once: true });
+    // Abort may have happened just before the listener was attached.
+    if (abortSignal?.aborted) onAbort();
   });
 }
 
@@ -59,6 +77,7 @@ export function resolveSignature(sessionId: string, reqId: string, header: strin
   if (!slot) return false;
   clearTimeout(slot.timer);
   pending.delete(key);
+  slot.cleanupAbort();
   slot.resolve(header);
   return true;
 }
@@ -69,5 +88,6 @@ export function cancelPending(sessionId: string, reqId: string): void {
   if (!slot) return;
   clearTimeout(slot.timer);
   pending.delete(key);
+  slot.cleanupAbort();
   slot.reject(new Error("cancelled"));
 }

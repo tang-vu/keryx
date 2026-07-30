@@ -23,15 +23,14 @@ import { ingestRssXml } from "@/lib/ingest/rss";
 import { getReasoningEngine } from "@/lib/llm";
 import { fetchPublicText, UnsafeTargetError } from "@/lib/net/public-fetch";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
+import { WANTED_DETAIL_LIMIT, WANTED_WINDOW_RUNS } from "@/lib/wanted-limits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const WINDOW_RUNS = 400;
 /** Deeper than the page shows: a writer's beat may sit well below the loudest holes. */
 const BOARD_LIMIT = 40;
 /** A shared brief may have moved down the ranking while remaining open. */
-const SCOPED_BOARD_LIMIT = WINDOW_RUNS * 4;
 const MAX_POSTS = 20;
 
 export async function POST(req: NextRequest) {
@@ -73,8 +72,8 @@ export async function POST(req: NextRequest) {
   let open;
   try {
     const db = await getDb();
-    open = buildBoard(await db.listRecentQueries(WINDOW_RUNS), {
-      limit: gapId == null ? BOARD_LIMIT : SCOPED_BOARD_LIMIT,
+    open = buildBoard(await db.listRecentQueries(WANTED_WINDOW_RUNS), {
+      limit: gapId == null ? BOARD_LIMIT : WANTED_DETAIL_LIMIT,
     }).open;
   } catch {
     return NextResponse.json({ error: "demand board unavailable" }, { status: 503 });
