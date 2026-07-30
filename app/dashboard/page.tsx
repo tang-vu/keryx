@@ -12,6 +12,7 @@ import {
   Clock3,
   Coins,
   Gauge,
+  Info,
   Receipt,
   ShieldCheck,
   Target,
@@ -114,10 +115,11 @@ export default function DashboardPage() {
               The ledger
             </div>
             <h1 className="letterpress mt-2.5 font-display text-[clamp(28px,3.6vw,40px)] font-medium tracking-tight text-ink">
-              External traction
+              Independent usage
             </h1>
             <p className="mt-1.5 text-sm text-ink-2">
-              Real people and third-party agents using Keryx; internal volume stays separate.
+              People and third-party agents choosing Keryx; first-party activity remains visible
+              below.
             </p>
           </div>
           <span className="hidden shrink-0 items-center gap-2 rounded-full border border-paid/40 bg-paid/[0.07] px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.1em] text-paid sm:inline-flex">
@@ -136,7 +138,7 @@ export default function DashboardPage() {
 
         <section className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
           <MetricCard
-            label="External queries"
+            label="Independent queries"
             value={String(metrics?.externalQueries ?? 0)}
             sub={`${metrics?.externalPayingQueries ?? 0} paid · ${Math.round(
               (metrics?.externalReaderToPayerConversion ?? 0) * 100,
@@ -156,7 +158,7 @@ export default function DashboardPage() {
             loading={!metrics}
           />
           <MetricCard
-            label="Cost / ext. query"
+            label="Cost / independent query"
             value={`$${fmtUsdc(metrics?.externalAvgCostPerQueryUsdc)}`}
             sub={`$${fmtUsdc(metrics?.externalCreatorPayoutsUsdc)} to creators`}
             icon={Coins}
@@ -166,7 +168,7 @@ export default function DashboardPage() {
           <MetricCard
             label={
               (metrics?.externalFeedbackTotal ?? 0) > 0
-                ? "External satisfaction"
+                ? "Independent satisfaction"
                 : "High-confidence answers"
             }
             value={
@@ -181,7 +183,7 @@ export default function DashboardPage() {
             }
             sub={
               (metrics?.externalFeedbackTotal ?? 0) > 0
-                ? `${metrics?.externalFeedbackTotal ?? 0} external votes`
+                ? `${metrics?.externalFeedbackTotal ?? 0} independent votes`
                 : `${metrics?.externalConfidenceSamples ?? 0} completed samples`
             }
             icon={ThumbsUp}
@@ -201,7 +203,7 @@ export default function DashboardPage() {
             loading={!metrics}
           />
           <MetricCard
-            label="External p95 latency"
+            label="Independent p95 latency"
             value={fmtDuration(metrics?.externalP95DurationMs ?? 0)}
             sub={`${metrics?.externalDurationSamples ?? 0} completed samples`}
             icon={Clock3}
@@ -229,7 +231,7 @@ export default function DashboardPage() {
             }
             sub={`${metrics?.externalSettledPayments ?? 0} / ${
               metrics?.externalSettlementAttempts ?? 0
-            } external creator payments`}
+            } independent creator payments`}
             icon={Gauge}
             accent="emerald"
             loading={!metrics}
@@ -332,11 +334,7 @@ export default function DashboardPage() {
   );
 }
 
-/**
- * Honest provenance of the volume: how much is genuine EXTERNAL usage (humans asking on the site +
- * external agents calling the paid A2A endpoint) vs Keryx's own autonomous volume engine. Both are
- * real settled USDC on Arc; the split is shown so traction is never overstated.
- */
+/** Present independent demand first while keeping first-party activity visible and inspectable. */
 function ProvenanceStrip({ metrics }: { metrics: DashboardMetrics | null }) {
   const ext = metrics?.externalPayments ?? 0;
   const extVol = metrics?.externalVolumeUsdc ?? 0;
@@ -344,20 +342,37 @@ function ProvenanceStrip({ metrics }: { metrics: DashboardMetrics | null }) {
   const engVol = metrics?.engineVolumeUsdc ?? 0;
   return (
     <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 border border-line bg-paper-2/40 px-4 py-3 font-mono text-[11px] text-ink-2">
-      <span className="uppercase tracking-[0.12em] text-ink-3">Volume provenance</span>
+      <span className="group relative inline-flex items-center gap-1 uppercase tracking-[0.12em] text-ink-3">
+        Usage mix
+        <button
+          type="button"
+          aria-label="How Keryx classifies usage"
+          aria-describedby="usage-mix-help"
+          className="rounded-full text-ink-3 transition-colors hover:text-seal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-seal/40"
+        >
+          <Info size={13} aria-hidden="true" />
+        </button>
+        <span
+          id="usage-mix-help"
+          role="tooltip"
+          className="pointer-events-none absolute left-0 top-full z-20 mt-2 w-72 border border-line bg-paper px-3 py-2 font-mono text-[10px] normal-case leading-relaxed tracking-normal text-ink-2 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+        >
+          Independent usage comes from people and third-party agents through web, MCP, or A2A.
+          First-party activity is initiated by Keryx itself. Settled totals include both.
+        </span>
+      </span>
       <span className="inline-flex items-center gap-1.5">
         <span className="h-1.5 w-1.5 rounded-full bg-paid" />
-        External (web + A2A):{" "}
+        Independent usage:{" "}
         <span className="font-semibold text-ink">{metrics?.externalQueries ?? 0}</span> queries ·{" "}
         <span className="font-semibold text-ink">{ext}</span> payments · ${fmtUsdc(extVol)}
       </span>
       <span className="inline-flex items-center gap-1.5">
         <span className="h-1.5 w-1.5 rounded-full bg-ink-3" />
-        Autonomous engine:{" "}
+        First-party agent activity:{" "}
         <span className="font-semibold text-ink">{metrics?.engineQueries ?? 0}</span> queries ·{" "}
         <span className="font-semibold text-ink">{eng}</span> payments · ${fmtUsdc(engVol)}
       </span>
-      <span className="text-ink-3">Both real, settled on Arc.</span>
       <a
         href="/api/docs"
         target="_blank"
@@ -365,7 +380,7 @@ function ProvenanceStrip({ metrics }: { metrics: DashboardMetrics | null }) {
         className="ml-auto font-semibold text-seal transition-colors hover:underline"
         title="Keryx is a paid x402 endpoint — point your agent at it"
       >
-        Your agent can call this ↗
+        Call Keryx from your agent ↗
       </a>
     </div>
   );

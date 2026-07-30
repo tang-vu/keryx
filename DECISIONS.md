@@ -5,6 +5,16 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-28** · Dashboard/Positioning · *Independent demand leads; first-party agent activity remains
+visible as provenance, not as a competing traction claim.*
+The public ledger now calls human and third-party web/MCP/A2A use “Independent usage” and Keryx's
+own runs “First-party agent activity.” The underlying origin buckets and settled-only metrics are
+unchanged. Their distinction stays visible in one compact usage-mix strip, while the definition
+moves behind an accessible tooltip and the aggregate ledger remains below. Why: blockchain
+settlement proves that value moved, but it does not prove who initiated the demand. Keeping that
+provenance preserves credible traction without making defensive disclosure the page's headline.
+Reversible: easy (presentation-only copy and layout).
+
 **D-27** · Browser co-sign/Security · *A persisted session grant is payment state, not bearer
 authentication.*
 The `/api/ask` browser co-sign path now requires the active SIWE wallet to equal the client-supplied

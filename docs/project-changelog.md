@@ -9,6 +9,13 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### Independent demand now leads the ledger (2026-07-30)
+The public ledger now presents outside web, MCP, and A2A use as “Independent usage,” with Keryx's
+own volume labeled “First-party agent activity.” Both buckets remain visible in a compact usage-mix
+strip, but the provenance explanation now lives in an accessible tooltip instead of competing with
+the primary KPI. Settlement totals and origin classification are unchanged: Arc proves the
+payments, while the retained split explains who initiated the demand.
+
 ### Browser co-sign sessions are identities again, and every advertised brief stays offerable (2026-07-30)
 The co-sign ask route no longer treats a public wallet address as bearer authentication. Before it
 exempts a request from the anonymous treasury tier or emits a sign-request id, the active SIWE
