@@ -29,6 +29,10 @@ ssh -o BatchMode=yes -o ConnectTimeout=10 "$SSH" true 2>/dev/null \
 # 1. sync source — the OLD .next keeps serving (git touches source only, not .next)
 say "1/5 syncing source at $APP_DIR (live build keeps serving)"
 ssh "$SSH" "cd $APP_DIR && git fetch -q origin && git reset -q --hard origin/main && git log -1 --oneline"
+COMMIT=$(ssh "$SSH" "cd $APP_DIR && git rev-parse --short HEAD")
+# Next can inline server env while bundling, so the commit must be present BEFORE the build.
+ssh "$SSH" "cd $APP_DIR \
+  && (grep -q '^KERYX_COMMIT=' .env.local && sed -i 's/^KERYX_COMMIT=.*/KERYX_COMMIT=$COMMIT/' .env.local || echo 'KERYX_COMMIT=$COMMIT' >> .env.local)"
 
 # 2. install deps only when the lockfile actually moved (npm ci is the slow part)
 say "2/5 deps (npm ci only if package-lock changed)"
@@ -47,20 +51,22 @@ REMOTE
 say "3/5 building into .next.tmp (old build still live)"
 ssh "$SSH" "cd $APP_DIR && rm -rf .next.tmp && NODE_OPTIONS=--max-old-space-size=1536 NEXT_DIST_DIR=.next.tmp npm run build"
 
-# 4. atomic swap + reload + stamp the deployed commit for /api/health & /status
+# 4. atomic swap + reload
 say "4/5 swapping in the new build + reload"
-COMMIT=$(ssh "$SSH" "cd $APP_DIR && git rev-parse --short HEAD")
 ssh "$SSH" "cd $APP_DIR \
-  && (grep -q '^KERYX_COMMIT=' .env.local && sed -i 's/^KERYX_COMMIT=.*/KERYX_COMMIT=$COMMIT/' .env.local || echo 'KERYX_COMMIT=$COMMIT' >> .env.local) \
   && rm -rf .next.bak && mv .next .next.bak && mv .next.tmp .next \
   && pm2 reload keryx --update-env"
 
-# 5. health-gate: roll back to the previous build if the new one doesn't answer 200
+# 5. health-gate: roll back unless the new build answers 200 AND reports the pushed commit
 say "5/5 health check ($HEALTH)"
 ok=""
 for i in $(seq 1 20); do
-  code=$(ssh "$SSH" "curl -s -o /dev/null -w '%{http_code}' $HEALTH" 2>/dev/null || echo 000)
-  if [ "$code" = "200" ]; then ok=1; echo "healthy after ${i}s — $COMMIT live"; break; fi
+  body=$(ssh "$SSH" "curl -fsS $HEALTH" 2>/dev/null || true)
+  if printf '%s' "$body" | grep -q "\"commit\":\"$COMMIT\""; then
+    ok=1
+    echo "healthy after ${i}s — $COMMIT live"
+    break
+  fi
   sleep 1
 done
 if [ -z "$ok" ]; then
