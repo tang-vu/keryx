@@ -26,6 +26,9 @@ say() { printf '\n\033[1;36m=== %s\033[0m\n' "$*"; }
 ssh -o BatchMode=yes -o ConnectTimeout=10 "$SSH" true 2>/dev/null \
   || { echo "ERROR: 'ssh $SSH' failed — provision first with scripts/deploy-vps.sh" >&2; exit 1; }
 
+PREVIOUS_COMMIT=$(ssh "$SSH" "curl -fsS $HEALTH" 2>/dev/null \
+  | sed -n 's/.*"commit":"\([^"]*\)".*/\1/p' || true)
+
 # 1. sync source — the OLD .next keeps serving (git touches source only, not .next)
 say "1/5 syncing source at $APP_DIR (live build keeps serving)"
 ssh "$SSH" "cd $APP_DIR && git fetch -q origin && git reset -q --hard origin/main && git log -1 --oneline"
@@ -55,7 +58,7 @@ ssh "$SSH" "cd $APP_DIR && rm -rf .next.tmp && NODE_OPTIONS=--max-old-space-size
 say "4/5 swapping in the new build + reload"
 ssh "$SSH" "cd $APP_DIR \
   && rm -rf .next.bak && mv .next .next.bak && mv .next.tmp .next \
-  && pm2 reload keryx --update-env"
+  && KERYX_COMMIT=$COMMIT pm2 reload keryx --update-env"
 
 # 5. health-gate: roll back unless the new build answers 200 AND reports the pushed commit
 say "5/5 health check ($HEALTH)"
@@ -71,7 +74,8 @@ for i in $(seq 1 20); do
 done
 if [ -z "$ok" ]; then
   echo "!! new build unhealthy — rolling back to the previous build" >&2
-  ssh "$SSH" "cd $APP_DIR && rm -rf .next && mv .next.bak .next && pm2 reload keryx --update-env"
+  ssh "$SSH" "cd $APP_DIR && rm -rf .next && mv .next.bak .next \
+    && KERYX_COMMIT=$PREVIOUS_COMMIT pm2 reload keryx --update-env"
   echo "rolled back; keryx.cc is serving the previous build." >&2
   exit 1
 fi
