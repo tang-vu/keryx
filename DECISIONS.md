@@ -5,6 +5,26 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-29** · Reasoning/Reliability · *A paid dispatch crosses configured model providers before it
+may degrade to deterministic reasoning, and the receipt records every tier it actually tried.*
+The default chain is credential-aware: Anthropic, DeepSeek Flash, MiMo V2.5, then the heuristic.
+A caller-picked model leads the chain and excludes only that exact engine from the default
+fallbacks. Each transport aborts at a configurable deadline; transient errors retry three times,
+then a process-wide circuit opens after two exhausted reasoning calls for sixty seconds. A hard
+4xx configuration error opens immediately. The circuit is keyed by engine wire name, so one noisy
+provider cannot suppress another.
+
+Every completed run persists bounded per-step attempt telemetry: engine, tier, attempt, latency,
+outcome, HTTP status and a coarse error category. Provider bodies are never stored because they may
+echo paid source context. The dispatch watchdog aggregates real-model failover saves, failures and
+circuit skips onto `/status`. The compact `engine` label remains the public summary, but it is now
+backed by structured evidence rather than string parsing alone. Payment authority is unchanged:
+models still only propose decisions/evidence, while the orchestrator alone enforces spend caps,
+payTo, evidence qualification and integer settlement. Why: production showed 4/6 recent runs losing
+a reasoning step to the heuristic while both DeepSeek and MiMo passed live probes; resilience was
+available but the healthy second provider was not in the default failure path. Reversible: medium
+(remove the secondary tiers/telemetry; no database migration or payment-rail change).
+
 **D-28** · Dashboard/Positioning · *Independent demand leads; first-party agent activity remains
 visible as provenance, not as a competing traction claim.*
 The public ledger now calls human and third-party web/MCP/A2A use “Independent usage” and Keryx's

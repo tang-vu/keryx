@@ -1,7 +1,7 @@
 /**
  * Public model list for the ask form's picker. Returns only the catalog entries whose
  * provider credentials are configured, so the UI never offers a model that can't run.
- * (Every pick still has a DeepSeek → heuristic fallback chain server-side.)
+ * (Every pick still has a configured-provider → heuristic fallback chain server-side.)
  */
 
 import { availableModels } from "@/lib/llm";

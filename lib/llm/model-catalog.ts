@@ -4,8 +4,8 @@
  *
  * `id` is the public identifier used in API payloads and the UI ("keryx:<id>" also
  * accepted on the OpenAI-compatible surface). `model` is the provider wire name.
- * Flash is the default and the guaranteed fallback tier: any other pick that
- * errors falls back to it (then to the offline heuristic), so an ask always answers.
+ * Flash is the default workhorse. Any picked model that errors crosses the other configured
+ * provider defaults before the offline heuristic, so an ask always answers.
  *
  * The catalog once carried seven open-weight models routed through Ollama Cloud. That account is
  * gone, and a picker offering models that answer only by silently falling back to DeepSeek is a

@@ -57,6 +57,13 @@ export interface DispatchHealthSummary {
   /** Runs that put USDC in at least one creator's hands. */
   paying: number;
   creatorPayoutUsdc: number;
+  /** Provider-attempt telemetry begins with v0.8.1; historical runs are intentionally unsampled. */
+  reasoningAttemptSamples: number;
+  providerFailures: number;
+  circuitOpenSkips: number;
+  /** Steps served by a real model below tier zero. */
+  providerFailoverSteps: number;
+  servedBy: Array<{ engine: string; steps: number }>;
   /** Newest dispatch known, window or not — makes "silent" legible ("last one 4h ago"). */
   lastDispatchAt: string | null;
   alarms: DispatchAlarm[];
@@ -105,6 +112,15 @@ export function assessDispatchHealth(runs: QueryRun[], opts: AssessOptions): Dis
   const zeroDecision = recent.filter((r) => (r.decisions?.length ?? 0) === 0).length;
   const paying = recent.filter((r) => (r.totalToCreators ?? 0) > 0).length;
   const creatorPayoutUsdc = recent.reduce((sum, r) => sum + (r.totalToCreators ?? 0), 0);
+  const attempts = recent.flatMap((run) => run.reasoningAttempts ?? []);
+  const servedCounts = new Map<string, number>();
+  for (const attempt of attempts) {
+    if (attempt.outcome !== "served") continue;
+    servedCounts.set(attempt.engine, (servedCounts.get(attempt.engine) ?? 0) + 1);
+  }
+  const servedBy = [...servedCounts.entries()]
+    .map(([engine, steps]) => ({ engine, steps }))
+    .sort((a, b) => b.steps - a.steps || a.engine.localeCompare(b.engine));
 
   const alarms: DispatchAlarm[] = [];
 
@@ -173,6 +189,16 @@ export function assessDispatchHealth(runs: QueryRun[], opts: AssessOptions): Dis
     zeroDecision,
     paying,
     creatorPayoutUsdc: Number(creatorPayoutUsdc.toFixed(6)),
+    reasoningAttemptSamples: attempts.length,
+    providerFailures: attempts.filter((attempt) => attempt.outcome === "failed").length,
+    circuitOpenSkips: attempts.filter((attempt) => attempt.outcome === "circuit-open").length,
+    providerFailoverSteps: attempts.filter(
+      (attempt) =>
+        attempt.outcome === "served" &&
+        attempt.tier > 0 &&
+        !attempt.engine.toLowerCase().startsWith("heuristic"),
+    ).length,
+    servedBy,
     lastDispatchAt: newest,
     alarms,
   };

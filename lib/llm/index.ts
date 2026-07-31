@@ -1,79 +1,90 @@
 /**
- * Reasoning engine selector. Default chain: Anthropic > DeepSeek (OpenAI-compatible) >
- * deterministic heuristic (offline, no API key — dev only, never the demo path).
+ * Reasoning engine selector.
  *
- * Model picker: pass a catalog model id to run that model instead. A non-default pick wraps
- * with fallback = Flash (itself falling back to the heuristic), so whichever model the asker
- * chooses, the run ALWAYS answers.
+ * The default chain contains every configured provider before the deterministic heuristic:
+ * Anthropic -> DeepSeek Flash -> MiMo V2.5 -> heuristic. A caller-picked model leads the chain,
+ * then falls back through the other configured defaults. Engines are built per run because their
+ * effective label and attempt telemetry are run-local; provider circuit state is shared separately.
  */
 
-import { llmProvider } from "../config";
+import { config } from "../config";
 import { AnthropicEngine } from "./anthropic-engine";
 import { HeuristicEngine } from "./heuristic-engine";
 import { OpenAICompatibleEngine } from "./openai-compatible-engine";
 import { ResilientEngine } from "./resilient-engine";
-import { DEFAULT_MODEL_ID, findModelChoice, MODEL_CATALOG, type ModelChoice } from "./model-catalog";
+import {
+  DEFAULT_MODEL_ID,
+  findModelChoice,
+  MODEL_CATALOG,
+  type ModelChoice,
+} from "./model-catalog";
 import { endpointFor } from "./provider-endpoints";
 import type { ReasoningEngine } from "./reasoning-engine";
 
-// Deliberately NOT cached across runs. A ResilientEngine tallies, per instance, which tier actually
-// answered each reasoning step (see its `effectiveName`) so a run is labelled by what served it
-// rather than by what it hoped to use. One shared instance would blend concurrent askers' runs into
-// a single tally. Construction is a few field assignments over the global fetch — nothing to pool.
-
-/** Catalog entries usable with the currently configured credentials — per provider, not in bulk:
- *  a box holding one provider's key must offer that provider's models and no others. */
+/** Catalog entries usable with credentials configured on this process. */
 export function availableModels(): ModelChoice[] {
-  return MODEL_CATALOG.filter((m) => endpointFor(m.provider) !== null);
+  return MODEL_CATALOG.filter((model) => endpointFor(model.provider) !== null);
 }
 
 /**
- * Resolve a caller-supplied model id to a usable catalog entry. Accepts the bare id or
- * the `keryx:`-prefixed form. Unknown ids, or picks whose provider key is not configured,
- * resolve to null — the caller then runs the default engine (never an error to the asker).
+ * Resolve a public model id to a usable entry. Unknown or uncredentialed picks become null and the
+ * caller uses the default chain instead of failing an ask.
  */
 export function resolveModelChoice(id?: string | null): ModelChoice | null {
-  const m = findModelChoice(id);
-  if (!m) return null;
-  return endpointFor(m.provider) ? m : null;
+  const model = findModelChoice(id);
+  if (!model) return null;
+  return endpointFor(model.provider) ? model : null;
 }
 
-/** The credential-priority default engine (no model override). */
-function buildDefaultEngine(): ReasoningEngine {
-  switch (llmProvider()) {
-    case "anthropic":
-      return new ResilientEngine(new AnthropicEngine());
-    case "deepseek":
-      return new ResilientEngine(new OpenAICompatibleEngine());
-    default:
-      return new HeuristicEngine();
-  }
-}
-
-/**
- * A catalog pick. Every non-default pick must PIN its wire model: the bare engine falls back to
- * `config.llmModel`, so leaving it unset would run the workhorse while the run reported itself as
- * the picked model — the exact mislabelling `effectiveName` exists to prevent.
- *
- * The default entry is the one exception, because it *is* what the bare engine serves.
- * Flash stays the guaranteed tier beneath any other pick.
- */
-function buildChoiceEngine(choice: ModelChoice): ReasoningEngine {
-  if (choice.id === DEFAULT_MODEL_ID) return new ResilientEngine(new OpenAICompatibleEngine());
+function openAiEngine(choice: ModelChoice): ReasoningEngine | null {
   const endpoint = endpointFor(choice.provider);
-  // Unreachable through resolveModelChoice, which filters these out; belt and braces for a direct
-  // caller, and it degrades the way everything else here does rather than throwing at an asker.
-  if (!endpoint) return buildDefaultEngine();
-
-  const primary = new OpenAICompatibleEngine({
+  if (!endpoint) return null;
+  return new OpenAICompatibleEngine({
     name: `llm:${choice.provider}:${choice.model}`,
     baseUrl: endpoint.baseUrl,
     apiKey: endpoint.apiKey,
     model: choice.model,
   });
-  // Falls back to whatever this box's default chain is, not to DeepSeek by name: a box credentialed
-  // for one provider only would otherwise fall back to a key it does not have.
-  return new ResilientEngine(primary, buildDefaultEngine());
+}
+
+function defaultRealEngines(exclude = new Set<string>()): ReasoningEngine[] {
+  const engines: ReasoningEngine[] = [];
+
+  if (config.anthropicKey) {
+    const anthropic = new AnthropicEngine();
+    if (!exclude.has(anthropic.name)) engines.push(anthropic);
+  }
+
+  // The bare constructor preserves KERYX_LLM_MODEL / KERYX_SYNTHESIS_MODEL for the default tier.
+  // Catalog picks stay pinned to their public wire model in openAiEngine().
+  const deepseek = endpointFor("deepseek") ? new OpenAICompatibleEngine() : null;
+  if (deepseek && !exclude.has(deepseek.name)) engines.push(deepseek);
+
+  const mimo = openAiEngine(findModelChoice("mimo-v2.5")!);
+  if (mimo && !exclude.has(mimo.name)) engines.push(mimo);
+
+  return engines;
+}
+
+function buildChain(realEngines: ReasoningEngine[]): ReasoningEngine {
+  let fallback: ReasoningEngine = new HeuristicEngine();
+  for (let tier = realEngines.length - 1; tier >= 0; tier--) {
+    fallback = new ResilientEngine(realEngines[tier]!, fallback, tier);
+  }
+  return fallback;
+}
+
+function buildDefaultEngine(): ReasoningEngine {
+  const engines = defaultRealEngines();
+  return engines.length > 0 ? buildChain(engines) : new HeuristicEngine();
+}
+
+function buildChoiceEngine(choice: ModelChoice): ReasoningEngine {
+  if (choice.id === DEFAULT_MODEL_ID) return buildDefaultEngine();
+
+  const primary = openAiEngine(choice);
+  if (!primary) return buildDefaultEngine();
+  return buildChain([primary, ...defaultRealEngines(new Set([primary.name]))]);
 }
 
 export function getReasoningEngine(modelId?: string): ReasoningEngine {
@@ -83,4 +94,9 @@ export function getReasoningEngine(modelId?: string): ReasoningEngine {
 
 export type { ReasoningEngine } from "./reasoning-engine";
 export * from "./reasoning-engine";
-export { MODEL_CATALOG, DEFAULT_MODEL_ID, findModelChoice, type ModelChoice } from "./model-catalog";
+export {
+  MODEL_CATALOG,
+  DEFAULT_MODEL_ID,
+  findModelChoice,
+  type ModelChoice,
+} from "./model-catalog";

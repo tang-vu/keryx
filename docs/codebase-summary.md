@@ -223,7 +223,7 @@ Provider-agnostic LLM abstraction.
 
 | File | Purpose |
 |------|---------|
-| `index.ts` | Factory: Anthropic / DeepSeek / heuristic. |
+| `index.ts` | Credential-aware chain: Anthropic / DeepSeek / MiMo / heuristic. |
 | `providers/` | Per-provider implementations (streaming response handling). |
 
 ---

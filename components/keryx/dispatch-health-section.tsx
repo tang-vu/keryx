@@ -21,6 +21,11 @@ export interface DispatchHealth {
   zeroDecision: number;
   paying: number;
   creatorPayoutUsdc: number;
+  reasoningAttemptSamples?: number;
+  providerFailures?: number;
+  circuitOpenSkips?: number;
+  providerFailoverSteps?: number;
+  servedBy?: Array<{ engine: string; steps: number }>;
   lastDispatchAt: string | null;
   alarms: { code: string; message: string }[];
 }
@@ -55,9 +60,29 @@ export function DispatchHealthSection({ dispatches: d }: { dispatches: DispatchH
           alert={d.runs > 0 && d.paying === 0}
         />
         <Row k="To creators" v={`$${d.creatorPayoutUsdc.toFixed(4)}`} />
+        <Row
+          k="Cross-provider saves"
+          v={d.reasoningAttemptSamples ? String(d.providerFailoverSteps ?? 0) : "collecting"}
+        />
+        <Row
+          k="Provider failures"
+          v={
+            d.reasoningAttemptSamples
+              ? `${d.providerFailures ?? 0}${
+                  d.circuitOpenSkips ? ` · ${d.circuitOpenSkips} circuit skips` : ""
+                }`
+              : "collecting"
+          }
+        />
         <Row k="Last dispatch" v={d.lastDispatchAt ? ago(d.lastDispatchAt) : "—"} />
         <Row k="Checked" v={ago(d.checkedAt)} />
       </dl>
+      {(d.servedBy?.length ?? 0) > 0 && (
+        <p className="mt-3 font-mono text-[10px] tracking-wide text-faint">
+          Served steps:{" "}
+          {d.servedBy!.map((item) => `${item.engine.replace(/^llm:/, "")} ${item.steps}`).join(" · ")}
+        </p>
+      )}
       {d.alarms.length > 0 && (
         <ul className="mt-4 space-y-1.5 font-mono text-[11px] text-destructive">
           {d.alarms.map((a) => (
@@ -68,9 +93,9 @@ export function DispatchHealthSection({ dispatches: d }: { dispatches: DispatchH
         </ul>
       )}
       <p className="mt-3 font-mono text-[10px] tracking-wide text-faint">
-        Hourly read of the agent&apos;s own dispatches. The reasoning chain falls back rather than
-        fail, so a dead provider shows up here — as runs answered by the heuristic and creators
-        earning nothing — long before it shows up as an error.
+        Hourly read of the agent&apos;s own dispatches. A failed provider crosses to another
+        configured model before the deterministic heuristic; every attempt and circuit skip is
+        carried on the run receipt.
       </p>
     </>
   );

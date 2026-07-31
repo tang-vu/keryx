@@ -34,26 +34,34 @@ const SYSTEM =
 
 /** Raw single-shot text completion on whichever real provider is configured. */
 async function chatText(system: string, user: string): Promise<string> {
-  if (llmProvider() === "anthropic") {
+  const provider = llmProvider();
+  if (provider === "anthropic") {
     const client = new Anthropic({ apiKey: config.anthropicKey });
-    const msg = await client.messages.create({
+    const msg = await client.messages.create(
+      {
       model: config.llmModel, // same model the reasoning engine runs — valid in the daemon's env
       max_tokens: 64,
       temperature: 1,
       system,
-      messages: [{ role: "user", content: user }],
-    });
+        messages: [{ role: "user", content: user }],
+      },
+      { signal: AbortSignal.timeout(config.llmTimeoutMs) },
+    );
     return msg.content
       .filter((b): b is Anthropic.TextBlock => b.type === "text")
       .map((b) => b.text)
       .join("");
   }
   // OpenAI-compatible (DeepSeek) — plain text, no JSON envelope.
-  const res = await fetch(`${config.llmBaseUrl}/chat/completions`, {
+  const baseUrl = provider === "mimo" ? config.mimoBaseUrl : config.llmBaseUrl;
+  const apiKey = provider === "mimo" ? config.mimoKey : config.deepseekKey;
+  const model = provider === "mimo" ? "mimo-v2.5" : config.llmModel;
+  const res = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.deepseekKey}` },
+    signal: AbortSignal.timeout(config.llmTimeoutMs),
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
-      model: config.llmModel,
+      model,
       messages: [{ role: "system", content: system }, { role: "user", content: user }],
       temperature: 1,
       max_tokens: 64,

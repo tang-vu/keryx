@@ -22,7 +22,7 @@ export interface AgentDeps {
  * opts.gatewayOpts — forwarded to getPaymentGateway() when no pre-built gateway
  *   is supplied (the common case for collectRun / volume engine / A2A).
  * opts.model — catalog model id the asker picked; unknown/unset → default engine.
- *   Whatever the pick, the engine chain always falls back (DeepSeek → heuristic).
+ *   Whatever the pick, the engine crosses configured providers before the heuristic.
  */
 export async function getAgentDeps(opts?: {
   gateway?: PaymentGateway;

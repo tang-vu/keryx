@@ -11,6 +11,31 @@
 
 import type { Decision } from "../types";
 
+export type ReasoningStep =
+  | "decompose"
+  | "decide"
+  | "sufficiency"
+  | "reevaluate"
+  | "synthesize"
+  | "attribute";
+
+/**
+ * One actual attempt to serve a reasoning step. Errors are deliberately reduced to a status/code:
+ * provider response bodies can contain request context and must not become public run metadata.
+ */
+export interface ReasoningAttempt {
+  step: ReasoningStep;
+  engine: string;
+  /** Zero is the requested/default tier; larger values are progressively deeper fallbacks. */
+  tier: number;
+  attempt: number;
+  startedAt: number;
+  durationMs: number;
+  outcome: "served" | "failed" | "circuit-open";
+  status?: number;
+  error?: "timeout" | "rate_limited" | "provider" | "network" | "invalid_request";
+}
+
 /** A discoverable source the agent may choose to pay for (preview is free). */
 export interface SourceCandidate {
   id: string;

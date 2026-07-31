@@ -1,13 +1,32 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-07-30
-**Current Version:** 0.8.0
+**Last Updated:** 2026-07-31
+**Current Version:** 0.8.1
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
 
 ---
 
 ## Unreleased
+
+### Reasoning now fails across providers, not straight into a heuristic (2026-07-31)
+Production's six-hour outcome window showed four of six dispatches losing at least one reasoning
+step to the deterministic fallback even though live probes confirmed both DeepSeek and MiMo were
+answering. The resilience wrapper retried DeepSeek, then skipped the healthy second provider and
+went directly offline.
+
+The default chain is now credential-aware: Anthropic → DeepSeek Flash → MiMo V2.5 → heuristic.
+A picked model leads the same chain without repeating itself. Provider requests abort after a
+configurable 30-second deadline, and a process-wide circuit stops later dispatches waiting through
+a repeatedly dead tier (two exhausted calls, sixty-second cooldown by default; hard 4xx failures
+open immediately).
+
+Each run now carries bounded attempt telemetry for every reasoning step—served engine, tier,
+attempt, latency, outcome and sanitized error category/status. Provider response bodies are never
+persisted. The dispatch watchdog and `/status` expose provider failures, circuit skips, steps saved
+by cross-provider failover and which engine actually served them. The payment path is unchanged:
+the orchestrator still owns budget enforcement, evidence qualification, payTo validation and
+settlement.
 
 ### Independent demand now leads the ledger (2026-07-30)
 The public ledger now presents outside web, MCP, and A2A use as “Independent usage,” with Keryx's

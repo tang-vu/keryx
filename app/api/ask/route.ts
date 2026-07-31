@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
   };
   // Model pick from the UI's picker. Validated inside getAgentDeps → resolveModelChoice:
   // unknown/unconfigured ids silently run the default engine, and every pick has a
-  // DeepSeek → heuristic fallback chain, so a crafted value can never fail an ask.
+  // Configured-provider → heuristic fallback chain, so a crafted value can never fail an ask.
   const model = typeof body.model === "string" ? body.model : undefined;
   const question = typeof body.question === "string" ? body.question.trim() : "";
   if (!question) {

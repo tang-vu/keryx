@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
 
   // Model routing: "keryx" (default) or "keryx:<catalog-id>" (see GET /v1/models) runs the agent
   // with that reasoning model. Unknown/unconfigured ids run the default — never a client error —
-  // and any pick that fails mid-run falls back to DeepSeek, then the offline heuristic.
+  // and any pick that fails mid-run crosses configured providers, then the offline heuristic.
   const modelChoice = resolveModelChoice(body.model);
   const modelName = modelChoice ? `keryx:${modelChoice.id}` : MODEL;
 

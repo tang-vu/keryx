@@ -1,6 +1,6 @@
 # Keryx Project Roadmap
 
-**Version:** 0.6.0 (live product, updated 2026-07-21)
+**Version:** 0.8.1 (live product, updated 2026-07-31)
 **Status:** In continuous operation at [keryx.cc](https://keryx.cc) — real settlement 24/7, shipping in public.
 
 ---
@@ -292,6 +292,7 @@ Mainnet ← blocked on: Phase 07–10, security audit, legal
 | **v0.6.0** | 2026-07-21 | Chat front doors (Discord/Telegram/Slack) + creator ledger exports + scoped keys + durable limits + Atom feed (Phases 09–10 closed) | ✓ Shipped |
 | **v0.7.0** | 2026-07-28 | Evidence-gated citations, exact-quote ledger, coverage-bound confidence and structured receipts | ✓ Shipped |
 | **v0.8.0** | 2026-07-28 | Wanted-claim creator offers, durable targeted retries, evidence + settlement fulfillment receipts | ✓ Shipped |
+| **v0.8.1** | 2026-07-31 | Cross-provider reasoning failover, circuits, and per-step attempt receipts | ✓ Shipped |
 | **v1.0.0** | 2026-12-31 | Mainnet + Full Feature Parity | Planned |
 | **v2.0.0** | 2027-Q2 | Stretch Goals (Agent Marketplace, Video, Derivatives) | Backlog |
 

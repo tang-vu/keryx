@@ -57,6 +57,14 @@ async function main(): Promise<void> {
       `${summary.paying} paying, $${summary.creatorPayoutUsdc.toFixed(6)} to creators`,
   );
 
+  if (summary.reasoningAttemptSamples > 0) {
+    console.log(
+      `[dispatches] ${summary.reasoningAttemptSamples} reasoning attempts — ` +
+        `${summary.providerFailures} failed, ${summary.circuitOpenSkips} circuit-open, ` +
+        `${summary.providerFailoverSteps} step(s) saved by another model`,
+    );
+  }
+
   // Persist BEFORE judging — /status should show a failing window too, not only a healthy one.
   await db.setSyncState(DISPATCH_HEALTH_STATE_KEY, JSON.stringify(summary));
 

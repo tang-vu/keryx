@@ -90,17 +90,29 @@ export const config = {
   embeddingModel: process.env.KERYX_EMBEDDING_MODEL ?? "text-embedding-3-small",
 
   // ── LLM ──
-  // Provider priority: Anthropic > DeepSeek/OpenAI-compatible > offline heuristic.
+  // Provider priority: Anthropic > DeepSeek > MiMo > offline heuristic. Every configured real
+  // provider becomes a fallback tier before the deterministic heuristic.
   anthropicKey: process.env.ANTHROPIC_API_KEY ?? "",
   deepseekKey: process.env.DEEPSEEK_API_KEY ?? process.env.OPENAI_API_KEY ?? "",
   llmBaseUrl: process.env.KERYX_LLM_BASE_URL ?? "https://api.deepseek.com",
   llmModel: process.env.KERYX_LLM_MODEL ?? "deepseek-v4-flash",
   synthesisModel: process.env.KERYX_SYNTHESIS_MODEL ?? "deepseek-v4-flash",
-  // Xiaomi MiMo — a second picker tier on its own credential, OpenAI-compatible. Never the default:
-  // the default tier is the one every other pick falls back to, and that stays on one provider.
+  // Xiaomi MiMo — a second picker and failover tier on its own credential, OpenAI-compatible.
+  // When it is the only credentialed provider it becomes the default real engine.
   // The base URL carries /v1 (DeepSeek's does not); the engine appends /chat/completions to it.
   mimoKey: process.env.MIMO_API_KEY ?? "",
   mimoBaseUrl: process.env.KERYX_MIMO_BASE_URL ?? "https://api.xiaomimimo.com/v1",
+  // Transport timeouts abort the provider request. Circuit state is process-wide so repeated
+  // failures in one run keep later runs from waiting through the same dead tier.
+  llmTimeoutMs: Math.max(1_000, Math.round(num(process.env.KERYX_LLM_TIMEOUT_MS, 30_000))),
+  llmCircuitFailures: Math.max(
+    1,
+    Math.round(num(process.env.KERYX_LLM_CIRCUIT_FAILURES, 2)),
+  ),
+  llmCircuitCooldownMs: Math.max(
+    1_000,
+    Math.round(num(process.env.KERYX_LLM_CIRCUIT_COOLDOWN_MS, 60_000)),
+  ),
   // Fraction (0..1) of volume-engine runs that use a non-default catalog model (currently V4 Pro)
   // rather than the workhorse. Kept low: Pro is slower and the engine's job is steady volume, so
   // the alternates only add provenance variety.
@@ -198,12 +210,13 @@ export const config = {
   deployerKey: (process.env.DEPLOYER_PRIVATE_KEY ?? "") as `0x${string}` | "",
 } as const;
 
-export type LlmProvider = "anthropic" | "deepseek" | "heuristic";
+export type LlmProvider = "anthropic" | "deepseek" | "mimo" | "heuristic";
 
 /** Which reasoning engine to use, by available credentials. */
 export function llmProvider(): LlmProvider {
   if (config.anthropicKey.length > 0) return "anthropic";
   if (config.deepseekKey.length > 0) return "deepseek";
+  if (config.mimoKey.length > 0) return "mimo";
   return "heuristic";
 }
 

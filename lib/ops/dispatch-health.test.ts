@@ -100,6 +100,40 @@ describe("assessDispatchHealth", () => {
     expect(codes([partial, run(), run(), run()])).toEqual([]);
   });
 
+  it("reports cross-provider saves from structured attempt telemetry", () => {
+    const saved = run({
+      engine: "llm:mimo:mimo-v2.5 (fallback from llm:deepseek:deepseek-v4-flash)",
+      reasoningAttempts: [
+        {
+          step: "synthesize",
+          engine: "llm:deepseek:deepseek-v4-flash",
+          tier: 0,
+          attempt: 1,
+          startedAt: NOW.getTime(),
+          durationMs: 10,
+          outcome: "failed",
+          status: 503,
+          error: "provider",
+        },
+        {
+          step: "synthesize",
+          engine: "llm:mimo:mimo-v2.5",
+          tier: 1,
+          attempt: 1,
+          startedAt: NOW.getTime() + 10,
+          durationMs: 20,
+          outcome: "served",
+        },
+      ],
+    });
+    const summary = assessDispatchHealth([saved], { now: NOW, expectReasoning: true });
+
+    expect(summary.providerFailures).toBe(1);
+    expect(summary.providerFailoverSteps).toBe(1);
+    expect(summary.servedBy).toEqual([{ engine: "llm:mimo:mimo-v2.5", steps: 1 }]);
+    expect(summary.alarms).toEqual([]);
+  });
+
   // The 2026-07-25 outage, second half: decide truncated past its ceiling and parsed to nothing,
   // which read as a deliberately frugal run while every creator earned zero.
   it("alarms when the agent decides nothing and pays nobody", () => {

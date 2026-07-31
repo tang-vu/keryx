@@ -16,12 +16,15 @@ export class AnthropicEngine extends JsonChatEngine {
     user: string,
     maxTokens = 2048,
   ): Promise<Record<string, unknown>> {
-    const msg = await this.client.messages.create({
-      model,
-      max_tokens: maxTokens,
-      system,
-      messages: [{ role: "user", content: user }],
-    });
+    const msg = await this.client.messages.create(
+      {
+        model,
+        max_tokens: maxTokens,
+        system,
+        messages: [{ role: "user", content: user }],
+      },
+      { signal: AbortSignal.timeout(config.llmTimeoutMs) },
+    );
     // Same rule as the OpenAI-compatible transport: a reply stopped by the token ceiling is
     // truncated JSON, and half an object must fail rather than read as an answer.
     if (msg.stop_reason === "max_tokens") {

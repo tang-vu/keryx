@@ -5,8 +5,13 @@
  * on its permalink, in the archive and in the API response, for days, with nothing saying so.
  */
 
-import { describe, expect, it, vi } from "vitest";
-import { ResilientEngine, effectiveEngineName } from "./resilient-engine";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  ResilientEngine,
+  effectiveEngineName,
+  reasoningAttempts,
+  resetReasoningCircuitBreakers,
+} from "./resilient-engine";
 import type { ReasoningEngine } from "./reasoning-engine";
 
 /** An engine whose every call rejects with the given status (undefined = network error). */
@@ -36,6 +41,11 @@ function workingEngine(name: string): ReasoningEngine {
 }
 
 describe("ResilientEngine labelling", () => {
+  beforeEach(() => {
+    resetReasoningCircuitBreakers();
+    vi.restoreAllMocks();
+  });
+
   it("keeps the pick's name when the pick answers", async () => {
     const e = new ResilientEngine(workingEngine("llm:deepseek:deepseek-v4-flash"));
     await e.decompose("q");
@@ -74,6 +84,20 @@ describe("ResilientEngine labelling", () => {
     expect(e.effectiveName).toBe(
       "llm:deepseek:deepseek-v4-flash (fallback from llm:deepseek:deepseek-v4-pro)",
     );
+    expect(reasoningAttempts(e)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          engine: "llm:deepseek:deepseek-v4-pro",
+          outcome: "failed",
+          error: "invalid_request",
+          status: 404,
+        }),
+        expect.objectContaining({
+          engine: "llm:deepseek:deepseek-v4-flash",
+          outcome: "served",
+        }),
+      ]),
+    );
   });
 
   it("retries a transient failure before giving up on the pick", async () => {
@@ -93,6 +117,38 @@ describe("ResilientEngine labelling", () => {
 
   it("reads a plain engine's name straight through", () => {
     expect(effectiveEngineName(workingEngine("heuristic"))).toBe("heuristic");
+  });
+
+  it("opens a hard-failure circuit and skips the dead provider on the next step", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    let primaryCalls = 0;
+    const broken = {
+      ...brokenEngine("llm:deepseek:bad-model", 400),
+      decompose: () => {
+        primaryCalls++;
+        return Promise.reject(hardError());
+      },
+    } as unknown as ReasoningEngine;
+    const fallback = workingEngine("llm:mimo:mimo-v2.5");
+    const e = new ResilientEngine(broken, fallback);
+
+    await e.decompose("first");
+    await e.decompose("second");
+
+    expect(primaryCalls).toBe(1);
+    expect(reasoningAttempts(e)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          engine: "llm:deepseek:bad-model",
+          outcome: "circuit-open",
+          attempt: 0,
+        }),
+        expect.objectContaining({
+          engine: "llm:mimo:mimo-v2.5",
+          outcome: "served",
+        }),
+      ]),
+    );
   });
 });
 

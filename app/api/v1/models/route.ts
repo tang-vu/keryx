@@ -2,7 +2,7 @@
  * OpenAI-compatible model list. Many clients GET /v1/models on connect to populate a picker or
  * verify the base_url; without it they error before the first chat call. "keryx" is the research
  * agent itself (default reasoning model); "keryx:<id>" runs the same agent with that catalog
- * model as its brain — any pick that fails falls back to DeepSeek, then the offline heuristic.
+ * model as its brain — any pick that fails crosses configured providers, then the offline heuristic.
  */
 
 import { availableModels } from "@/lib/llm";

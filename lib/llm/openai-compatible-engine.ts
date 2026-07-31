@@ -2,7 +2,7 @@
  * OpenAICompatibleEngine — any OpenAI-compatible chat API via the shared prompts.
  * Uses the chat-completions endpoint with response_format json_object. No extra SDK dependency.
  *
- * Default construction targets DeepSeek Flash (the workhorse + guaranteed fallback tier).
+ * Default construction targets DeepSeek Flash, the primary workhorse.
  * Pass opts to pin another host/model — every non-default catalog pick does.
  */
 
@@ -40,6 +40,7 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
   ): Promise<Record<string, unknown>> {
     const res = await fetch(`${this.opts.baseUrl}/chat/completions`, {
       method: "POST",
+      signal: AbortSignal.timeout(config.llmTimeoutMs),
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${this.opts.apiKey}`,

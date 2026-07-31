@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
       // Run the full agent — it autonomously pays the creators it cites. origin "a2a" marks the
       // downstream citation payouts as external (driven by a real outside agent, not the engine).
       // Optional model pick (catalog id, see /api/models). Unknown → default; every pick
-      // has a DeepSeek → heuristic fallback chain, so a bad value never fails a paid call.
+      // has a configured-provider → heuristic fallback chain, so a bad value never fails a paid call.
       const run = await collectRun({
         question,
         budget: a2aBudget,

@@ -228,6 +228,8 @@ export interface QueryRun {
   question: string;
   budget: number;
   engine: string; // which reasoning engine produced this (llm:model | heuristic)
+  /** Per-step provider attempts, including fallbacks. Absent on pre-v0.8.1 runs. */
+  reasoningAttempts?: import("./llm/reasoning-engine").ReasoningAttempt[];
   subClaims: string[];
   decisions: Decision[];
   citations: Citation[];

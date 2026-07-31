@@ -28,7 +28,7 @@ import type {
   SourceCandidate,
   SufficiencyResult,
 } from "../llm";
-import { effectiveEngineName } from "../llm/resilient-engine";
+import { effectiveEngineName, reasoningAttempts } from "../llm/resilient-engine";
 import type { AgentDeps } from "./deps";
 import { discoverExternalCandidates } from "./external-discovery";
 import { buildDecisionContext, saveMemory } from "./query-memory";
@@ -711,6 +711,7 @@ export async function* runAgent(
       // What actually answered, not what was picked: a run that fell back to the heuristic must not
       // present itself as model-reasoned (see ResilientEngine.effectiveName).
       engine: effectiveEngineName(engine),
+      reasoningAttempts: reasoningAttempts(engine),
       subClaims,
       decisions: finalDecisions,
       citations,
