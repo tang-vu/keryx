@@ -17,7 +17,8 @@ went directly offline.
 
 The default chain is now credential-aware: Anthropic → DeepSeek Flash → MiMo V2.5 → heuristic.
 A picked model leads the same chain without repeating itself. Provider requests abort after a
-configurable 30-second deadline, and a process-wide circuit stops later dispatches waiting through
+configurable 60-second deadline; a full timeout crosses providers immediately, while faster
+transient failures may retry. A process-wide circuit stops later dispatches waiting through
 a repeatedly dead tier (two exhausted calls, sixty-second cooldown by default; hard 4xx failures
 open immediately).
 

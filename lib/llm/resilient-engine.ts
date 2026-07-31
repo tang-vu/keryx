@@ -40,6 +40,13 @@ function isTransient(err: unknown): boolean {
   return status === 429 || status === 408 || status >= 500;
 }
 
+/** A full transport deadline is complete; repeating it only multiplies failover latency. */
+function isTimeout(err: unknown): boolean {
+  const status = (err as { status?: number })?.status;
+  const name = (err as { name?: string })?.name;
+  return status === 408 || name === "TimeoutError" || name === "AbortError";
+}
+
 /** Persist only a bounded category/status, never a provider body that may echo request context. */
 function errorTelemetry(err: unknown): Pick<ReasoningAttempt, "status" | "error"> {
   const status = (err as { status?: number })?.status;
@@ -210,7 +217,7 @@ export class ResilientEngine implements ReasoningEngine {
           outcome: "failed",
           ...errorTelemetry(err),
         });
-        if (!isTransient(err) || attempt === MAX_ATTEMPTS) break;
+        if (isTimeout(err) || !isTransient(err) || attempt === MAX_ATTEMPTS) break;
         await new Promise((resolve) => setTimeout(resolve, 400 * 2 ** (attempt - 1)));
       }
     }

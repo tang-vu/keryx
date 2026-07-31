@@ -9,8 +9,10 @@ Format: **D-NN** · area · decision · why · reversibility.
 may degrade to deterministic reasoning, and the receipt records every tier it actually tried.*
 The default chain is credential-aware: Anthropic, DeepSeek Flash, MiMo V2.5, then the heuristic.
 A caller-picked model leads the chain and excludes only that exact engine from the default
-fallbacks. Each transport aborts at a configurable deadline; transient errors retry three times,
-then a process-wide circuit opens after two exhausted reasoning calls for sixty seconds. A hard
+fallbacks. Each transport aborts at a configurable sixty-second deadline; rate limits, 5xx and
+network failures retry three times, while a full timeout crosses providers immediately rather than
+waiting through the same deadline again. A process-wide circuit opens after two exhausted
+reasoning calls for sixty seconds. A hard
 4xx configuration error opens immediately. The circuit is keyed by engine wire name, so one noisy
 provider cannot suppress another.
 

@@ -115,6 +115,28 @@ describe("ResilientEngine labelling", () => {
     expect(e.effectiveName).toBe("llm:deepseek:deepseek-v4-flash"); // never fell back
   });
 
+  it("fails over immediately after a full timeout instead of repeating the deadline", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    let attempts = 0;
+    const timedOut = {
+      ...workingEngine("llm:deepseek:deepseek-v4-flash"),
+      decompose: () => {
+        attempts++;
+        return Promise.reject(Object.assign(new Error("timed out"), { status: 408 }));
+      },
+    } as unknown as ReasoningEngine;
+    const e = new ResilientEngine(timedOut, workingEngine("llm:mimo:mimo-v2.5"));
+
+    await expect(e.decompose("q")).resolves.toEqual(["claim"]);
+    expect(attempts).toBe(1);
+    expect(reasoningAttempts(e)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ engine: "llm:deepseek:deepseek-v4-flash", outcome: "failed" }),
+        expect.objectContaining({ engine: "llm:mimo:mimo-v2.5", outcome: "served" }),
+      ]),
+    );
+  });
+
   it("reads a plain engine's name straight through", () => {
     expect(effectiveEngineName(workingEngine("heuristic"))).toBe("heuristic");
   });

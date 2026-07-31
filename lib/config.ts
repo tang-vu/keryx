@@ -104,7 +104,7 @@ export const config = {
   mimoBaseUrl: process.env.KERYX_MIMO_BASE_URL ?? "https://api.xiaomimimo.com/v1",
   // Transport timeouts abort the provider request. Circuit state is process-wide so repeated
   // failures in one run keep later runs from waiting through the same dead tier.
-  llmTimeoutMs: Math.max(1_000, Math.round(num(process.env.KERYX_LLM_TIMEOUT_MS, 30_000))),
+  llmTimeoutMs: Math.max(1_000, Math.round(num(process.env.KERYX_LLM_TIMEOUT_MS, 60_000))),
   llmCircuitFailures: Math.max(
     1,
     Math.round(num(process.env.KERYX_LLM_CIRCUIT_FAILURES, 2)),
