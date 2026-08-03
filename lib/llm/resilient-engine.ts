@@ -4,7 +4,8 @@
  * Each real tier retries transient failures only when no alternate model provider remains. When
  * another real tier is available, one failed attempt rotates immediately instead of multiplying
  * latency against the same unhealthy provider. The deterministic heuristic remains the final
- * tier. Provider circuits are process-wide, while attempt telemetry stays per engine instance/run.
+ * tier. Provider-step circuits are process-wide, while attempt telemetry stays per engine
+ * instance/run.
  */
 
 import { config } from "../config";
@@ -33,6 +34,10 @@ interface CircuitState {
 
 /** Shared across per-run instances so one noisy provider is contained across dispatches. */
 const circuits = new Map<string, CircuitState>();
+
+function circuitKey(name: string, step: ReasoningStep): string {
+  return `${name}\u0000${step}`;
+}
 
 /** Transient means retryable: rate limits, timeouts, 5xx, or a network error with no status. */
 function isTransient(err: unknown): boolean {
@@ -63,22 +68,32 @@ function errorTelemetry(err: unknown): Pick<ReasoningAttempt, "status" | "error"
   return { error: "network" };
 }
 
-function isCircuitOpen(name: string, now: number): boolean {
-  const state = circuits.get(name);
+function isCircuitOpen(name: string, step: ReasoningStep, now: number): boolean {
+  const key = circuitKey(name, step);
+  const state = circuits.get(key);
   if (!state) return false;
   if (state.openUntil > now) return true;
-  circuits.delete(name); // cooldown elapsed: let this call be the half-open probe
+  // A closed circuit below its failure threshold must retain its count for the next call. Only an
+  // actually-open circuit whose cooldown elapsed becomes a half-open probe with a clean counter.
+  if (state.openUntil === 0) return false;
+  circuits.delete(key);
   return false;
 }
 
-function markCircuitSuccess(name: string): void {
-  circuits.delete(name);
+function markCircuitSuccess(name: string, step: ReasoningStep): void {
+  circuits.delete(circuitKey(name, step));
 }
 
-function markCircuitFailure(name: string, transient: boolean, now: number): void {
-  const previous = circuits.get(name)?.failures ?? 0;
+function markCircuitFailure(
+  name: string,
+  step: ReasoningStep,
+  transient: boolean,
+  now: number,
+): void {
+  const key = circuitKey(name, step);
+  const previous = circuits.get(key)?.failures ?? 0;
   const failures = transient ? previous + 1 : config.llmCircuitFailures;
-  circuits.set(name, {
+  circuits.set(key, {
     failures,
     openUntil:
       failures >= config.llmCircuitFailures ? now + config.llmCircuitCooldownMs : 0,
@@ -175,7 +190,7 @@ export class ResilientEngine implements ReasoningEngine {
     call: (engine: ReasoningEngine) => Promise<T>,
   ): Promise<T> {
     const now = Date.now();
-    if (isCircuitOpen(this.name, now)) {
+    if (isCircuitOpen(this.name, label, now)) {
       this.attempts.push({
         step: label,
         engine: this.name,
@@ -208,7 +223,7 @@ export class ResilientEngine implements ReasoningEngine {
           durationMs: Math.max(0, Date.now() - startedAt),
           outcome: "served",
         });
-        markCircuitSuccess(this.name);
+        markCircuitSuccess(this.name, label);
         this.served++;
         return out;
       } catch (err) {
@@ -228,7 +243,7 @@ export class ResilientEngine implements ReasoningEngine {
       }
     }
 
-    markCircuitFailure(this.name, isTransient(lastErr), Date.now());
+    markCircuitFailure(this.name, label, isTransient(lastErr), Date.now());
     const reason = lastErr instanceof Error ? lastErr.message : String(lastErr);
     console.warn(
       `[keryx llm] ${label} fell back to ${this.fallback.name} after provider failure: ${reason}`,

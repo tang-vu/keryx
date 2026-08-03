@@ -5,6 +5,26 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-31** · Reasoning/Latency · *Circuit health is scoped to a provider and reasoning step, and
+sub-threshold failures survive until that same step succeeds.*
+A model that reliably handles small decomposition and sufficiency prompts may still time out on the
+much larger all-source decision payload. Circuit state is therefore keyed by `(engine, step)`:
+success in `decompose` cannot erase repeated `decide` failures, and an open `decide` circuit does
+not suppress that provider for work it still serves well. Transient failures below the threshold
+remain counted while the circuit is closed; the previous implementation accidentally deleted that
+counter at the start of the next call, so a transient circuit with threshold two could never open.
+Hard 4xx failures still open immediately, cooldown still admits a half-open probe, and every skip
+remains visible in the run receipt.
+
+Why: twelve live receipts carried 20 failed `decide` attempts and about 1.57 million milliseconds
+in that step alone, yet the six-hour watchdog reported zero circuit skips. Successful lightweight
+steps kept clearing the engine-wide state, while the below-threshold deletion also prevented
+failure accumulation. Step-scoped containment bypasses only the payload/provider combination that
+is failing and preserves independent healthy capability. Payment authority is unchanged: the
+selected engine still only proposes decisions; budget, registry payTo, evidence and settlement
+remain deterministic. Reversible: easy (return to engine-wide keys, though that restores the live
+failure pattern).
+
 **D-30** · Reasoning/Latency · *An available alternate model provider is the retry; do not retry
 the same failing transport first.*
 When a reasoning tier has another configured model provider behind it, a transient 429, 5xx or

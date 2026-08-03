@@ -212,6 +212,57 @@ describe("ResilientEngine labelling", () => {
       ]),
     );
   });
+
+  it("opens a transient circuit per reasoning step without suppressing healthy steps", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    let decideCalls = 0;
+    let decomposeCalls = 0;
+    const primary = {
+      ...workingEngine("llm:deepseek:deepseek-v4-flash"),
+      decompose: () => {
+        decomposeCalls++;
+        return Promise.resolve(["primary still healthy here"]);
+      },
+      decide: () => {
+        decideCalls++;
+        return Promise.reject(Object.assign(new Error("provider overloaded"), { status: 503 }));
+      },
+    } as unknown as ReasoningEngine;
+    const e = new ResilientEngine(primary, workingEngine("llm:mimo:mimo-v2.5"));
+    const input = {
+      question: "q",
+      subClaims: [],
+      candidates: [],
+      budget: 0.05,
+      spentSoFar: 0,
+    };
+
+    // Two transient failures reach the default circuit threshold. Successful decompose calls in
+    // between must clear only their own step key, not erase decide's failure history.
+    await e.decide(input);
+    await expect(e.decompose("q")).resolves.toEqual(["primary still healthy here"]);
+    await e.decide(input);
+    await expect(e.decompose("q")).resolves.toEqual(["primary still healthy here"]);
+    await e.decide(input);
+
+    expect(decideCalls).toBe(2);
+    expect(decomposeCalls).toBe(2);
+    expect(reasoningAttempts(e)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          step: "decide",
+          engine: "llm:deepseek:deepseek-v4-flash",
+          outcome: "circuit-open",
+          attempt: 0,
+        }),
+        expect.objectContaining({
+          step: "decompose",
+          engine: "llm:deepseek:deepseek-v4-flash",
+          outcome: "served",
+        }),
+      ]),
+    );
+  });
 });
 
 /** A non-transient error: retrying a 400 would just burn the same wall clock three times. */

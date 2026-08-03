@@ -9,6 +9,21 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### A provider can be healthy for one reasoning step and unhealthy for another (2026-08-03)
+The live receipt log showed 20 failed `decide` attempts across twelve runs and roughly 1.57 million
+milliseconds in that step, while the watchdog reported zero circuit skips. The circuit was keyed
+only by provider: a successful small `decompose`, `sufficiency` or `reevaluate` call erased the
+failure from the much larger all-source decision payload. A second state bug deleted transient
+failure counts below the threshold at the beginning of the next call, so the default two-failure
+circuit could not open at all.
+
+Circuit state is now process-wide per `(provider, reasoning step)`. Repeated decision failures can
+temporarily route only `decide` to the next configured model while the same primary keeps serving
+the steps it handles well. Sub-threshold failures accumulate until that step succeeds; cooldown
+still permits a half-open probe, hard configuration errors still open immediately, and circuit
+skips remain explicit in each receipt and `/status`. No payment or evidence authority moved into
+the resilience layer.
+
 ### Failures rotate providers before they multiply latency (2026-08-03)
 The first production window after multi-provider failover proved the recovery path but exposed its
 cost: 21 failed provider attempts across 82 samples, eight reasoning steps saved by the alternate
