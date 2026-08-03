@@ -15,7 +15,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { collectRun, getAgentDeps } from "../lib/agent/index.ts";
 import { SEED_QUESTIONS } from "../lib/seed-questions.ts";
-import { generateQuestion } from "../lib/seed-question-generator.ts";
+import {
+  generateQuestion,
+  type QuestionSourceContext,
+} from "../lib/seed-question-generator.ts";
 import { newestContent, pickGapRetry, type RetryCandidate } from "../lib/demand-retry.ts";
 import { availableModels, DEFAULT_MODEL_ID, getReasoningEngine } from "../lib/llm/index.ts";
 import { config } from "../lib/config.ts";
@@ -90,6 +93,9 @@ if (!forcedModel && altModels.length > 0) {
 if (config.engineGapRetryRatio > 0) {
   console.log(`   gap retries: ${(config.engineGapRetryRatio * 100).toFixed(0)}% of runs re-ask an open /wanted claim (when content has arrived since)`);
 }
+console.log(
+  `   question policy: ${((1 - config.engineQuestionExplorationRatio) * 100).toFixed(0)}% current-preview seeded / ${(config.engineQuestionExplorationRatio * 100).toFixed(0)}% exploration`,
+);
 console.log(`   budget/query: $${budget}  ·  spend cap: ${limit === Infinity ? "none" : "$" + limit}`);
 console.log(`   ${loop ? "looping until cap" : `${count} queries`}  ·  delay ${delayMs}ms\n`);
 
@@ -99,9 +105,21 @@ if (deps.gateway.mode === "real") {
   console.log(`   agent wallet: ${address}\n`);
 }
 
-// Snapshot the live source registry once — its tags seed the LLM question generator so every
-// query stays on-topic to whatever creators are actually registered.
-const sources = await deps.db.listSources().catch(() => []);
+// Snapshot only public discovery material. Normal questions rotate through one source's free
+// previews; paid item content never enters question generation.
+const sources = (await deps.db.listSources().catch(() => [])).filter(
+  (source) => source.active !== false && source.verified !== false,
+);
+const questionContexts: QuestionSourceContext[] = (
+  await Promise.all(
+    sources.map(async (source) => ({
+      source,
+      items: (await deps.db.getItems(source.id).catch(() => []))
+        .slice(0, 4)
+        .map((item) => ({ title: item.title, summary: item.summary })),
+    })),
+  )
+).filter((context) => context.items.length > 0);
 
 // Some runs re-ask a question the corpus was paid for and left under-covered, rather than asking
 // something new — but only when content has arrived since it failed, so the retry has a real chance
@@ -173,11 +191,16 @@ while ((loop || i < count) && totalSpent < limit) {
   // fallback seed used when no Anthropic key is set or generation fails.
   const gapIntent = await claimOpenGapIntent();
   const retry = gapIntent ? null : await pickRetry();
+  let freshQuestion: string | null = null;
+  if (!gapIntent && !retry) {
+    const explore = Math.random() < config.engineQuestionExplorationRatio;
+    freshQuestion = await generateQuestion(questionContexts, startOffset + i, { explore });
+  }
   const question = gapIntent
     ? gapIntent.question
     : retry
       ? retry.question
-      : await generateQuestion(sources, startOffset + i);
+      : freshQuestion!;
   const runBudget = gapIntent
     ? Math.min(budget, config.defaultBudget, GAP_INTENT_MAX_BUDGET_USDC)
     : budget;

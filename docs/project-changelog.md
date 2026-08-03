@@ -9,6 +9,20 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### The background agent asks what the corpus can answer (2026-08-03)
+The autonomous question generator sampled tags across the entire registry. Those combinations
+sounded realistic but repeatedly asked for claims absent from every item Keryx could buy: recent
+runs on CCTP, account abstraction and agent toolchains correctly finished with zero evidence. That
+behavior created useful gaps occasionally, but as the default it paid access tolls without giving a
+creator a fair chance to earn a citation and pulled the evidence-grounded claim rate to 33%.
+
+Normal background ticks now rotate through active, ownership-verified sources and seed one question
+from that source's current free titles and summaries. A deterministic vocabulary gate rejects an
+adjacent-topic completion and falls back to a title-anchored question; paid content is never exposed
+to generation. A configurable 10% exploration slice still samples broad registry themes for honest
+`/wanted` discovery. Normal provider failures use only the corpus-aligned fallback bank. All daemon
+traffic remains first-party, so none of this can manufacture Independent usage or returning actors.
+
 ### A provider can be healthy for one reasoning step and unhealthy for another (2026-08-03)
 The live receipt log showed 20 failed `decide` attempts across twelve runs and roughly 1.57 million
 milliseconds in that step, while the watchdog reported zero circuit skips. The circuit was keyed

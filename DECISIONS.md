@@ -5,6 +5,25 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-32** · First-party quality/Metrics · *Normal autonomous questions are seeded from one current
+free preview; broad exploration is explicit, bounded, and still labeled first-party.*
+The volume engine now rotates through active, ownership-verified sources that have current items.
+For a normal tick it gives the question model one publication's name, description, tags, and up to
+four free title/summary previews. The result must share concrete vocabulary with that preview or it
+is replaced by a deterministic title-anchored question. Paid item content never enters generation.
+Ten percent of fresh ticks may still use registry-wide themes to discover genuine corpus gaps;
+`KERYX_ENGINE_QUESTION_EXPLORATION_RATIO` controls that slice. Provider failure on a normal tick
+falls back only to the core, corpus-aligned bank, never accidentally to the broad exploration bank.
+
+Why: production's 33% evidence-grounded claim rate was not primarily a permissive/strict gate
+problem. Recent first-party runs asked about CCTP, account abstraction and agent toolchains, then
+correctly found zero supporting text across the material they bought. Sampling unrelated tags from
+the whole registry made a plausible question, not an answerable one. Preview seeding improves the
+economic loop honestly: the daemon should pay more often because it found useful evidence, while a
+small exploration budget preserves the `/wanted` demand signal. These runs remain `origin=engine`;
+the change cannot increment Independent usage, actors, votes, or conversion. Reversible: easy
+(raise the exploration ratio or restore registry-wide theme generation).
+
 **D-31** · Reasoning/Latency · *Circuit health is scoped to a provider and reasoning step, and
 sub-threshold failures survive until that same step succeeds.*
 A model that reliably handles small decomposition and sufficiency prompts may still time out on the

@@ -117,6 +117,12 @@ export const config = {
   // rather than the workhorse. Kept low: Pro is slower and the engine's job is steady volume, so
   // the alternates only add provenance variety.
   engineAltModelRatio: Math.min(1, Math.max(0, num(process.env.KERYX_ENGINE_ALT_MODEL_RATIO, 0.1))),
+  // Most autonomous volume questions should be answerable from a concrete current source preview.
+  // Keep a bounded exploratory slice so the agent still measures real corpus gaps for /wanted.
+  engineQuestionExplorationRatio: Math.min(
+    1,
+    Math.max(0, num(process.env.KERYX_ENGINE_QUESTION_EXPLORATION_RATIO, 0.1)),
+  ),
   // Fraction (0..1) of volume-engine runs that re-ask an open demand-board gap instead of a fresh
   // question. A retry is a normal paid dispatch — same budget, real settlement — so this trades no
   // traction away; it spends a slice of the engine's questions on holes the corpus was paid for and

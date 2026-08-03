@@ -4,7 +4,7 @@
  * demonstrates restraint — buying nothing is also a valid, logged decision).
  */
 
-export const SEED_QUESTIONS: string[] = [
+export const CORE_SEED_QUESTIONS: string[] = [
   "How do x402 and stablecoin micropayments enable autonomous AI agent commerce?",
   "Why does a stable unit of account matter for an agent operating under a budget?",
   "How do nanopayments make sub-cent per-citation payments economical?",
@@ -20,6 +20,9 @@ export const SEED_QUESTIONS: string[] = [
   "What are the trade-offs between caching content and re-fetching it under a budget?",
   "How do stablecoins like USDC reduce settlement risk for an autonomous buyer?",
   "Why is weighted contribution a fairer model than flat per-fetch payment?",
+];
+
+export const EXPLORATION_SEED_QUESTIONS: string[] = [
   // Broader real-world topics so the agent must discover & buy the real creator
   // feeds in the registry (AI tooling, Ethereum, stablecoins/payments news) —
   // this is what makes newly onboarded creators actually earn citations.
@@ -35,7 +38,18 @@ export const SEED_QUESTIONS: string[] = [
   "How is crypto being used for cross-border payments and remittances?",
 ];
 
+export const SEED_QUESTIONS: string[] = [
+  ...CORE_SEED_QUESTIONS,
+  ...EXPLORATION_SEED_QUESTIONS,
+];
+
 /** Deterministic pick by index (avoids Math.random for reproducibility). */
 export function pickQuestion(i: number): string {
   return SEED_QUESTIONS[i % SEED_QUESTIONS.length];
+}
+
+/** Safe fallback for a normal corpus-seeded tick. Broad exploratory questions are selected only
+ *  by the explicit exploration path, never because a provider failed to generate a question. */
+export function pickGroundedQuestion(i: number): string {
+  return CORE_SEED_QUESTIONS[i % CORE_SEED_QUESTIONS.length];
 }
