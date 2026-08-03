@@ -33,6 +33,10 @@ The build runs **on the VPS** (~2–5 min on 1 GB RAM + swap). pm2 reloads with 
 
 > **If you forget to push**, the deploy silently ships the *previous* commit (`git reset --hard origin/main` discards nothing local — it just checks out what GitHub has). Always push first.
 
+On Windows, the npm script enters WSL to run Bash but automatically delegates SSH back to Windows
+OpenSSH so it uses the documented `keryx-vps` alias. Set `KERYX_SSH_BIN` only when a different SSH
+client/config should be used.
+
 ## Release (optional — tag + announce)
 Not required to be live; do this to mark a milestone.
 ```bash
