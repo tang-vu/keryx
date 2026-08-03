@@ -115,6 +115,46 @@ describe("ResilientEngine labelling", () => {
     expect(e.effectiveName).toBe("llm:deepseek:deepseek-v4-flash"); // never fell back
   });
 
+  it("rotates after one transient failure when another real provider is available", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    let primaryAttempts = 0;
+    let fallbackAttempts = 0;
+    const flaky = {
+      ...workingEngine("llm:deepseek:deepseek-v4-flash"),
+      decompose: () => {
+        primaryAttempts++;
+        return Promise.reject(Object.assign(new Error("LLM 429"), { status: 429 }));
+      },
+    } as unknown as ReasoningEngine;
+    const alternate = {
+      ...workingEngine("llm:mimo:mimo-v2.5"),
+      decompose: () => {
+        fallbackAttempts++;
+        return Promise.resolve(["served by alternate"]);
+      },
+    } as unknown as ReasoningEngine;
+    const e = new ResilientEngine(flaky, alternate);
+
+    await expect(e.decompose("q")).resolves.toEqual(["served by alternate"]);
+    expect(primaryAttempts).toBe(1);
+    expect(fallbackAttempts).toBe(1);
+    expect(reasoningAttempts(e)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          engine: "llm:deepseek:deepseek-v4-flash",
+          attempt: 1,
+          outcome: "failed",
+          error: "rate_limited",
+        }),
+        expect.objectContaining({
+          engine: "llm:mimo:mimo-v2.5",
+          attempt: 1,
+          outcome: "served",
+        }),
+      ]),
+    );
+  });
+
   it("fails over immediately after a full timeout instead of repeating the deadline", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     let attempts = 0;

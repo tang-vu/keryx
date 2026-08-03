@@ -5,6 +5,22 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-30** · Reasoning/Latency · *An available alternate model provider is the retry; do not retry
+the same failing transport first.*
+When a reasoning tier has another configured model provider behind it, a transient 429, 5xx or
+network failure crosses providers after one attempt. Only the last real provider before the
+deterministic heuristic retains the three-attempt retry budget, preserving resilience for a
+single-provider deployment and giving the model path a final chance before deterministic
+degradation. Full transport timeouts and hard 4xx errors already cross immediately.
+
+Why: after cross-provider failover shipped, the live six-hour window showed 21 failed provider
+attempts across 82 samples and eight steps saved by the alternate model, with no heuristic
+fallbacks, while independent p95 dispatch latency was 83.66 seconds. Repeating a failing primary
+was adding wall-clock delay before taking the action that actually recovered the step. The
+structured attempt receipt and provider-scoped circuit breaker remain unchanged. Payment
+authority is also unchanged: provider rotation cannot choose a payee, exceed a budget, or bypass
+the evidence gate. Reversible: easy (restore per-tier retries or make the policy configurable).
+
 **D-29** · Reasoning/Reliability · *A paid dispatch crosses configured model providers before it
 may degrade to deterministic reasoning, and the receipt records every tier it actually tried.*
 The default chain is credential-aware: Anthropic, DeepSeek Flash, MiMo V2.5, then the heuristic.

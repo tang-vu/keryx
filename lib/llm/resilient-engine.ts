@@ -1,9 +1,10 @@
 /**
  * ResilientEngine keeps a reasoning step alive without hiding who actually answered it.
  *
- * Each real tier retries transient failures, then falls through to the next configured provider.
- * The deterministic heuristic remains the final tier. Provider circuits are process-wide, while
- * attempt telemetry stays per engine instance/run.
+ * Each real tier retries transient failures only when no alternate model provider remains. When
+ * another real tier is available, one failed attempt rotates immediately instead of multiplying
+ * latency against the same unhealthy provider. The deterministic heuristic remains the final
+ * tier. Provider circuits are process-wide, while attempt telemetry stays per engine instance/run.
  */
 
 import { config } from "../config";
@@ -189,7 +190,12 @@ export class ResilientEngine implements ReasoningEngine {
     }
 
     let lastErr: unknown;
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    // A configured alternate provider is itself the retry. Spend the three-attempt local retry
+    // budget only on the last real provider before the heuristic; otherwise rotate after one
+    // failure and give the next independent transport a chance. This keeps single-provider
+    // deployments resilient while avoiding repeated 429/5xx/network waits in multi-provider ones.
+    const maxAttempts = this.fallback instanceof HeuristicEngine ? MAX_ATTEMPTS : 1;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       const startedAt = Date.now();
       try {
         const out = await call(this.primary);
@@ -217,7 +223,7 @@ export class ResilientEngine implements ReasoningEngine {
           outcome: "failed",
           ...errorTelemetry(err),
         });
-        if (isTimeout(err) || !isTransient(err) || attempt === MAX_ATTEMPTS) break;
+        if (isTimeout(err) || !isTransient(err) || attempt === maxAttempts) break;
         await new Promise((resolve) => setTimeout(resolve, 400 * 2 ** (attempt - 1)));
       }
     }

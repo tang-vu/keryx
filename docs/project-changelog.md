@@ -9,6 +9,19 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### Failures rotate providers before they multiply latency (2026-08-03)
+The first production window after multi-provider failover proved the recovery path but exposed its
+cost: 21 failed provider attempts across 82 samples, eight reasoning steps saved by the alternate
+model, no heuristic fallbacks, and an independent-dispatch p95 of 83.66 seconds. Retrying the same
+primary before crossing providers was spending wall clock on the path that had just failed.
+
+A configured alternate model provider is now the retry. A transient 429, 5xx or network failure
+crosses to it after one attempt; only the last real provider before the heuristic keeps the local
+three-attempt budget. A deployment with one provider therefore retains its existing resilience,
+while a deployment with several independent transports rotates through them without serially
+exhausting each one. Timeout, circuit-breaker and sanitized per-attempt telemetry behavior stays
+intact, as do every budget, evidence and settlement invariant.
+
 ### Reasoning now fails across providers, not straight into a heuristic (2026-07-31)
 Production's six-hour outcome window showed four of six dispatches losing at least one reasoning
 step to the deterministic fallback even though live probes confirmed both DeepSeek and MiMo were

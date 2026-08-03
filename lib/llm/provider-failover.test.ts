@@ -59,6 +59,56 @@ describe("credential-aware provider chain", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it("does not retry a transient DeepSeek failure before crossing to configured MiMo", async () => {
+    vi.resetModules();
+    vi.stubEnv("ANTHROPIC_API_KEY", "");
+    vi.stubEnv("DEEPSEEK_API_KEY", "deepseek-key");
+    vi.stubEnv("OPENAI_API_KEY", "");
+    vi.stubEnv("MIMO_API_KEY", "mimo-key");
+
+    let deepseekCalls = 0;
+    let mimoCalls = 0;
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.startsWith("https://api.deepseek.com")) {
+        deepseekCalls++;
+        return new Response("rate limited", { status: 429 });
+      }
+      if (url.startsWith("https://api.xiaomimimo.com")) {
+        mimoCalls++;
+        return Response.json({
+          choices: [{ message: { content: '{"claims":["rotated to MiMo"]}' } }],
+        });
+      }
+      throw new Error(`unexpected URL: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { getReasoningEngine } = await import("./index");
+    const { reasoningAttempts } = await import("./resilient-engine");
+    const engine = getReasoningEngine();
+
+    await expect(engine.decompose("q")).resolves.toEqual(["rotated to MiMo"]);
+    expect(deepseekCalls).toBe(1);
+    expect(mimoCalls).toBe(1);
+    expect(reasoningAttempts(engine)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          engine: "llm:deepseek:deepseek-v4-flash",
+          attempt: 1,
+          outcome: "failed",
+          error: "rate_limited",
+        }),
+        expect.objectContaining({
+          engine: "llm:mimo:mimo-v2.5",
+          attempt: 1,
+          outcome: "served",
+        }),
+      ]),
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("uses MiMo as the default real engine when it is the only configured provider", async () => {
     vi.resetModules();
     vi.stubEnv("ANTHROPIC_API_KEY", "");
