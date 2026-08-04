@@ -5,6 +5,23 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-34** · Traction provenance/Local caller · *One workstation daemon is one persistent actor;
+it may add requests, but it never rotates wallets to manufacture people.*
+The owner's workstation may run a low-frequency SIWE-authenticated client against the sponsored
+web endpoint. It creates one ignored local wallet, reuses it permanently, asks a title-anchored
+question from a current free source preview, and runs once every eight to twelve hours with a
+$0.03 budget. Scheduling is persisted before network work, so a crash/restart sleeps rather than
+looping treasury spend. It never sends the Keryx bot key and therefore lands as `origin=web` with a
+server-verified `asker`. It also never signs unattended x402 charges: creator settlement comes from
+the existing bounded sponsored-web path.
+
+Why: a user-directed agent on another machine is real external demand, but wallet rotation whose
+only purpose is raising the actors tile is Sybil traffic. This policy can add exactly one identified
+actor and, after its second completed run, one returning actor. Later ticks increase that actor's
+usage, not the actor count. Current-preview questions make the small spend useful to creators rather
+than turning the daemon into a gap generator. Reversible: easy (stop/delete the local PM2 process;
+the wallet remains in ignored local state for audit continuity).
+
 **D-33** · Feed refresh/SSRF · *Pinned DNS answers support both single-result and `all: true`
 Node lookup callbacks; never fall back to an unpinned fetch for compatibility.*
 The outbound public-URL guard resolves and validates every address, then gives Undici a custom

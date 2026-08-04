@@ -9,6 +9,18 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### One workstation is one caller, not a wallet farm (2026-08-04)
+A new opt-in local caller gives the owner's workstation one durable SIWE identity and asks a
+current-preview-grounded question every eight to twelve hours. It uses the bounded sponsored web
+path, so the process never receives authority to sign recurring x402 charges, and it never sends
+Keryx's bot key. The persisted schedule is written before each request to prevent a PM2 crash loop
+from repeatedly spending treasury funds.
+
+The identity is deliberately non-rotating. Its first completed run can add one identified external
+actor; its second makes that same identity returning. Later runs add honest usage, not actors. A
+different key per tick would make the dashboard move, but it would describe wallets manufactured by
+Keryx rather than independent people or agents.
+
 ### Node 24 no longer turns every pinned feed request into an invalid IP (2026-08-04)
 Keryx validates every DNS answer for a creator-supplied feed and pins the actual socket to one of
 those public addresses. After the VPS moved to Node 24, family autoselection began asking the custom

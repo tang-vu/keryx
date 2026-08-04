@@ -37,6 +37,7 @@
     "withdraw": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/withdraw.mts",
     "testmint": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/testmint-topup.mts",
     "refresh-feeds": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/refresh-feeds.mts",
+    "local-caller": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/local-caller-daemon.mts",
     "migrate-ipfs": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/migrate-content-to-ipfs.mts",
     "pack:extension": "node --import tsx --no-warnings scripts/pack-extension.mts"
   },
