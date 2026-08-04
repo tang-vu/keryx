@@ -5,6 +5,22 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-33** · Feed refresh/SSRF · *Pinned DNS answers support both single-result and `all: true`
+Node lookup callbacks; never fall back to an unpinned fetch for compatibility.*
+The outbound public-URL guard resolves and validates every address, then gives Undici a custom
+lookup function that can return only one already-approved IP. That function now responds with
+`[{ address, family }]` when Node requests `all: true`, and retains `(address, family)` for the
+single-result form. Feed refresh also includes the immediate transport cause below Undici's generic
+`fetch failed` wrapper so future network failures remain diagnosable without a reproduction shell.
+
+Why: production moved to Node 24, whose connection family autoselection invokes custom DNS lookup
+with `all: true`. The old Node 20-shaped callback returned a string and family; Node 24 interpreted
+that as a missing array entry and rejected all twelve external feeds with
+`ERR_INVALID_IP_ADDRESS: Invalid IP address: undefined`. Using native DNS as a fallback would make
+feeds work but reopen the DNS-rebinding gap the pinned dispatcher closes. Supporting both callback
+contracts restores refresh while preserving the same vetted address as socket authority.
+Reversible: low (only if the minimum Node runtime and Undici contract change together).
+
 **D-32** · First-party quality/Metrics · *Normal autonomous questions are seeded from one current
 free preview; broad exploration is explicit, bounded, and still labeled first-party.*
 The volume engine now rotates through active, ownership-verified sources that have current items.

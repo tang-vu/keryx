@@ -4,7 +4,12 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { assertPublicUrl, isPublicAddress, UnsafeTargetError } from "./public-fetch";
+import {
+  assertPublicUrl,
+  createPinnedLookup,
+  isPublicAddress,
+  UnsafeTargetError,
+} from "./public-fetch";
 
 describe("isPublicAddress", () => {
   it("accepts routable addresses", () => {
@@ -77,5 +82,32 @@ describe("assertPublicUrl", () => {
   it("passes a public IP literal through without touching DNS", async () => {
     const url = await assertPublicUrl("https://93.184.216.34/feed.xml");
     expect(url.hostname).toBe("93.184.216.34");
+  });
+});
+
+describe("createPinnedLookup", () => {
+  function resolvePinned(address: string, all: boolean) {
+    return new Promise<{ result: string | Array<{ address: string; family: number }>; family?: number }>(
+      (resolve, reject) => {
+        createPinnedLookup(address)("ignored.example", { all }, (err, result, family) => {
+          if (err) reject(err);
+          else resolve({ result, family });
+        });
+      },
+    );
+  }
+
+  it("returns the legacy one-address shape when the socket asks for one result", async () => {
+    await expect(resolvePinned("93.184.216.34", false)).resolves.toEqual({
+      result: "93.184.216.34",
+      family: 4,
+    });
+  });
+
+  it("returns Node 24's address-array shape when family autoselection asks for all", async () => {
+    await expect(resolvePinned("2606:2800:220:1:248:1893:25c8:1946", true)).resolves.toEqual({
+      result: [{ address: "2606:2800:220:1:248:1893:25c8:1946", family: 6 }],
+      family: undefined,
+    });
   });
 });

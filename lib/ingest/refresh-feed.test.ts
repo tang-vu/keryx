@@ -76,6 +76,14 @@ describe("refreshSourceFeed", () => {
     expect(items).toHaveLength(0);
   });
 
+  it("includes the transport cause below Undici's generic fetch failure", async () => {
+    const { db } = fakeDb();
+    const out = await refreshSourceFeed(db, SRC, async () => {
+      throw new Error("fetch failed", { cause: new Error("connect ETIMEDOUT") });
+    });
+    expect(out.error).toBe("fetch failed: connect ETIMEDOUT");
+  });
+
   it("reports a feed-less source as { error } without ingesting", async () => {
     const { db } = fakeDb();
     const out = await refreshSourceFeed(db, { id: "x", name: "Manual" }, async () => {

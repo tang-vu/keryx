@@ -9,6 +9,18 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### Node 24 no longer turns every pinned feed request into an invalid IP (2026-08-04)
+Keryx validates every DNS answer for a creator-supplied feed and pins the actual socket to one of
+those public addresses. After the VPS moved to Node 24, family autoselection began asking the custom
+lookup callback for `all: true`; the callback still returned Node's older single-address shape.
+Node read that result as `undefined`, so all twelve real feeds failed before opening a connection.
+
+The pinned lookup now returns the address-array form Node 24 requires while retaining the legacy
+single-address form. It does not fall back to unpinned DNS, so the SSRF/DNS-rebinding defense stays
+intact. Refresh errors now retain Undici's immediate transport cause instead of reporting only
+`fetch failed`. Regression tests cover both callback contracts, and a no-write live probe fetched
+and parsed all 12 production feeds successfully.
+
 ### The background agent asks what the corpus can answer (2026-08-03)
 The autonomous question generator sampled tags across the entire registry. Those combinations
 sounded realistic but repeatedly asked for claims absent from every item Keryx could buy: recent

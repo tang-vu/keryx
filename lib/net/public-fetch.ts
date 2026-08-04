@@ -23,7 +23,7 @@
  */
 
 import { lookup } from "node:dns/promises";
-import { isIP } from "node:net";
+import { isIP, type LookupFunction } from "node:net";
 import { Agent, fetch as undiciFetch } from "undici";
 
 export interface FetchLimits {
@@ -161,15 +161,30 @@ async function resolvePublicUrl(raw: string): Promise<{ url: URL; addresses: str
   return { url, addresses };
 }
 
-function pinnedAgent(address: string): Agent {
+/**
+ * Return a DNS lookup function that can only resolve to the already-vetted address.
+ *
+ * Node 20 usually asks custom lookups for one result, while Node 24's family autoselection asks
+ * with `all: true`. The latter requires an array of `{ address, family }`; returning the older
+ * three-argument shape makes Node interpret `undefined` as an IP and reject every connection.
+ */
+export function createPinnedLookup(address: string): LookupFunction {
   const family = isIP(address) as 4 | 6;
+  return (_hostname, options, callback) => {
+    if (options.all) {
+      callback(null, [{ address, family }]);
+      return;
+    }
+    callback(null, address, family);
+  };
+}
+
+function pinnedAgent(address: string): Agent {
   return new Agent({
     connect: {
       // assertPublicUrl validated every answer. Pin the socket to one of those exact answers so
       // the HTTP client cannot perform a second DNS lookup that rebinds to a private address.
-      lookup(_hostname, _options, callback) {
-        callback(null, address, family);
-      },
+      lookup: createPinnedLookup(address),
     },
   });
 }

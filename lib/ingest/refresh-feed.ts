@@ -31,6 +31,16 @@ export interface RefreshOutcome {
 
 type Ingest = (rssUrl: string) => Promise<IngestedFeed>;
 
+/** Preserve the transport cause Undici attaches below its generic `fetch failed` wrapper. */
+function feedError(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  const cause = (error as Error & { cause?: unknown }).cause;
+  if (cause instanceof Error && cause.message && cause.message !== error.message) {
+    return `${error.message}: ${cause.message}`;
+  }
+  return error.message;
+}
+
 /** Re-fetch one source's feed and add anything the DB has never seen. Never throws for
  *  feed-side problems — those come back as { error } so a sweep can record them per-source. */
 export async function refreshSourceFeed(
@@ -46,7 +56,7 @@ export async function refreshSourceFeed(
   try {
     feed = await ingest(source.rssUrl.trim());
   } catch (err) {
-    return { ...base, added: 0, error: err instanceof Error ? err.message : String(err) };
+    return { ...base, added: 0, error: feedError(err) };
   }
 
   const seen = new Set(existing.map((i) => i.link).filter(Boolean));
