@@ -24,16 +24,22 @@ const base = Array.isArray(nextConfig) ? nextConfig : [nextConfig];
 const config = [
   // Generated bindings and the design-handoff artifact are not hand-authored source — skip them.
   { ignores: ["typechain-types/**", ".design-handoff/**"] },
-  ...base,
-  {
-    rules: {
-      // React Compiler's set-state-in-effect over-fires on the app's intentional, benign patterns:
-      // reading a browser-only value (window.location.origin) after mount, loading once on mount,
-      // and resetting UI state on a route change. Keep it a warning, not a build-blocking error
-      // (project policy: don't be harsh on lint, but stay compilable).
-      "react-hooks/set-state-in-effect": "warn",
-    },
-  },
+  // Flat-config plugins are scoped to the object that declares them. Patch the Next object that
+  // already owns react-hooks instead of adding a detached rules-only object (which ESLint 9.39+
+  // rejects as a missing plugin).
+  ...base.map((entry) =>
+    entry.plugins?.["react-hooks"]
+      ? {
+          ...entry,
+          rules: {
+            ...entry.rules,
+            // React Compiler's set-state-in-effect over-fires on the app's intentional, benign
+            // mount/route-reset patterns. Keep it visible without making those patterns fatal.
+            "react-hooks/set-state-in-effect": "warn",
+          },
+        }
+      : entry,
+  ),
 ];
 
 export default config;

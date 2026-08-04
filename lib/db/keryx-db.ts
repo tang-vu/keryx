@@ -105,6 +105,22 @@ export interface RateLimitDecision {
   msBeforeNext: number;
 }
 
+/** Durable health for one `(provider, reasoning step)` circuit. No prompt, response, or key data
+ * is stored; only bounded failure counters and unix-ms scheduling state. */
+export interface ReasoningCircuitRecord {
+  key: string;
+  failures: number;
+  openUntil: number;
+  probeUntil: number;
+  updatedAt: number;
+}
+
+/** Result of atomically checking an open circuit or leasing its single half-open probe. */
+export interface ReasoningCircuitDecision {
+  allowed: boolean;
+  retryAfterMs: number;
+}
+
 export type OnrampReservation = "reserved" | "already-funded" | "daily-cap";
 
 /** A user account, keyed by wallet address (lowercased). Created on first SIWE
@@ -290,6 +306,26 @@ export interface KeryxDB {
   ): Promise<RateLimitDecision>;
   /** Drop every counter whose window closed at or before `now` (unix ms). */
   deleteExpiredRateLimits(now: number): Promise<void>;
+
+  // Reasoning-provider circuits: durable and shared across processes.
+  /** Allow normal calls while closed; after a cooldown, atomically lease one half-open probe so
+   *  the web process and short-lived volume workers do not all retry the same unhealthy tier. */
+  acquireReasoningCircuit(
+    key: string,
+    now: number,
+    probeLeaseMs: number,
+  ): Promise<ReasoningCircuitDecision>;
+  /** Retain the failure streak across cooldowns and reopen with exponential backoff. */
+  recordReasoningCircuitFailure(
+    key: string,
+    transient: boolean,
+    now: number,
+    failureThreshold: number,
+    baseCooldownMs: number,
+    maxCooldownMs: number,
+  ): Promise<ReasoningCircuitRecord>;
+  /** A real provider success is the only event that closes and forgets the circuit. */
+  clearReasoningCircuit(key: string): Promise<void>;
 
   // ── query runs ──
   saveQueryRun(run: QueryRun): Promise<void>;

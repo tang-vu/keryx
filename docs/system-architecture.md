@@ -1,6 +1,6 @@
 # Keryx System Architecture
 
-**Version:** 0.8.0 Treasury admission hardening (2026-07-29)
+**Version:** 0.8.1 Reasoning resilience (2026-08-04)
 **Status:** Shipped (Phases 01–06 complete)
 
 ---
@@ -418,17 +418,25 @@ aggregation independent of full receipt payloads and leave pre-ledger history un
 | last_used | DATETIME | tracking |
 | created_at | DATETIME | mint timestamp |
 
-**`session_grants`** — user-funded session EOAs
+**`session_grants`** — user-funded session EOAs (cap accounting only; no private key)
 | Column | Type | Notes |
 |--------|------|-------|
-| id | TEXT PRIMARY KEY | UUID |
-| session_id | TEXT | browser tab identifier |
-| session_address | TEXT | funded EOA (viem generated) |
-| grant_cap_usdc | REAL | user-funded amount |
-| spent_usdc | REAL | cumulative spend |
-| status | TEXT | active \| revoked |
-| created_at | DATETIME | when grant issued |
-| expires_at | DATETIME | grant TTL (12h default) |
+| session_id | TEXT PRIMARY KEY | lowercased SIWE owner wallet |
+| sess_addr | TEXT | browser-held funded session EOA |
+| owner_addr | TEXT | grant owner identity |
+| cap | REAL | Gateway-verified USDC ceiling |
+| spent | REAL | atomically reserved/consumed spend |
+| expiry | INTEGER | unix-ms grant expiry (1h default) |
+| tx_hash | TEXT | funding transaction or recovered marker |
+
+**`reasoning_circuits`** — shared LLM provider-step health (no prompt/response data)
+| Column | Type | Notes |
+|--------|------|-------|
+| key | TEXT PRIMARY KEY | provider wire name + reasoning step |
+| failures | INTEGER | retained failure streak |
+| open_until | INTEGER | unix-ms adaptive cooldown |
+| probe_until | INTEGER | single half-open probe lease |
+| updated_at | INTEGER | unix-ms last transition |
 
 ---
 

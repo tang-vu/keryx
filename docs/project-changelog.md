@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-07-31
+**Last Updated:** 2026-08-04
 **Current Version:** 0.8.1
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
@@ -8,6 +8,24 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 ---
 
 ## Unreleased
+
+### Provider outages survive the worker that observed them (2026-08-04)
+Production kept recording DeepSeek `decide` and `synthesize` failures with no circuit skips even
+after the per-step circuit fix. The missing boundary was the process itself: every normal volume
+tick launches a fresh one-shot worker, while web and A2A requests run in a different Next process.
+The module-level failure streak died with the worker, and the old sixty-second cooldown was always
+over before the next autonomous dispatch. Completed answers still settled correctly through MiMo,
+but recent dispatches took 100–280 seconds after waiting through avoidable 503s and timeouts.
+
+Circuit state now lives in the shared SQLite/Supabase store under `(provider, reasoning step)`.
+Open circuits route directly to the next configured model across workers and deploys. One atomic
+half-open probe is admitted after cooldown; concurrent callers keep using the alternate, a failed
+probe doubles the cooldown from 30 minutes up to four hours, and only a real provider success clears
+the streak. The store fails down to its in-process mirror if persistence is unavailable. Attempt
+receipts include the remaining retry delay, while budget enforcement, evidence qualification,
+payTo authority and settlement are unchanged. Regression tests model two fresh workers sharing one
+database. The previously broken ESLint flat-config override was also attached to the Next config
+object that owns `react-hooks`, restoring `npm run lint` with the intended warnings and zero errors.
 
 ### One workstation is one caller, not a wallet farm (2026-08-04)
 A new opt-in local caller gives the owner's workstation one durable SIWE identity and asks a

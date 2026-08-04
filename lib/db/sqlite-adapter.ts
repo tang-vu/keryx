@@ -17,7 +17,20 @@ import type {
   SourceItem,
   WithdrawalRecord,
 } from "../types";
-import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, FeedbackStats, KeryxDB, OnrampReservation, QueryMemoryEntry, RateLimitDecision, SessionGrantRecord, UserRecord } from "./keryx-db";
+import type {
+  ApiKeyRow,
+  ApiKeyUsage,
+  CreatorEarnings,
+  FeedbackStats,
+  KeryxDB,
+  OnrampReservation,
+  QueryMemoryEntry,
+  RateLimitDecision,
+  ReasoningCircuitDecision,
+  ReasoningCircuitRecord,
+  SessionGrantRecord,
+  UserRecord,
+} from "./keryx-db";
 import type { LedgerAccount } from "../gateway/settlement-parity";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
@@ -183,6 +196,13 @@ CREATE TABLE IF NOT EXISTS rate_limit_counters (
   reset_at INTEGER NOT NULL            -- unix ms the window closes
 );
 CREATE INDEX IF NOT EXISTS rate_limit_counters_reset ON rate_limit_counters(reset_at);
+CREATE TABLE IF NOT EXISTS reasoning_circuits (
+  key         TEXT PRIMARY KEY,
+  failures    INTEGER NOT NULL,
+  open_until  INTEGER NOT NULL,
+  probe_until INTEGER NOT NULL,
+  updated_at  INTEGER NOT NULL
+);
 `;
 
 export class SqliteAdapter implements KeryxDB {
@@ -984,6 +1004,103 @@ export class SqliteAdapter implements KeryxDB {
 
   async deleteExpiredRateLimits(now: number): Promise<void> {
     this.db.prepare(`DELETE FROM rate_limit_counters WHERE reset_at <= ?`).run(now);
+  }
+
+  async acquireReasoningCircuit(
+    key: string,
+    now: number,
+    probeLeaseMs: number,
+  ): Promise<ReasoningCircuitDecision> {
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      const row = this.db
+        .prepare(`SELECT open_until, probe_until FROM reasoning_circuits WHERE key = ?`)
+        .get(key) as { open_until: number; probe_until: number } | undefined;
+
+      if (!row || (Number(row.open_until) === 0 && Number(row.probe_until) <= now)) {
+        this.db.exec("COMMIT");
+        return { allowed: true, retryAfterMs: 0 };
+      }
+
+      const openUntil = Number(row.open_until);
+      const probeUntil = Number(row.probe_until);
+      if (openUntil > now || probeUntil > now) {
+        this.db.exec("COMMIT");
+        return {
+          allowed: false,
+          retryAfterMs: Math.max(0, Math.max(openUntil, probeUntil) - now),
+        };
+      }
+
+      const leasedUntil = now + probeLeaseMs;
+      this.db
+        .prepare(`UPDATE reasoning_circuits SET probe_until = ?, updated_at = ? WHERE key = ?`)
+        .run(leasedUntil, now, key);
+      this.db.exec("COMMIT");
+      return { allowed: true, retryAfterMs: 0 };
+    } catch (err) {
+      try { this.db.exec("ROLLBACK"); } catch { /* transaction already closed */ }
+      throw err;
+    }
+  }
+
+  async recordReasoningCircuitFailure(
+    key: string,
+    transient: boolean,
+    now: number,
+    failureThreshold: number,
+    baseCooldownMs: number,
+    maxCooldownMs: number,
+  ): Promise<ReasoningCircuitRecord> {
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      const row = this.db
+        .prepare(`SELECT failures FROM reasoning_circuits WHERE key = ?`)
+        .get(key) as { failures: number } | undefined;
+      const previous = Number(row?.failures ?? 0);
+      const failures = transient
+        ? previous + 1
+        : Math.max(previous + 1, failureThreshold);
+      const exponent = Math.max(0, Math.min(20, failures - failureThreshold));
+      const cooldown = Math.min(
+        Math.max(baseCooldownMs, maxCooldownMs),
+        baseCooldownMs * 2 ** exponent,
+      );
+      const record: ReasoningCircuitRecord = {
+        key,
+        failures,
+        openUntil: failures >= failureThreshold ? now + cooldown : 0,
+        probeUntil: 0,
+        updatedAt: now,
+      };
+      this.db
+        .prepare(
+          `INSERT INTO reasoning_circuits
+             (key, failures, open_until, probe_until, updated_at)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT(key) DO UPDATE SET
+             failures=excluded.failures,
+             open_until=excluded.open_until,
+             probe_until=excluded.probe_until,
+             updated_at=excluded.updated_at`,
+        )
+        .run(
+          record.key,
+          record.failures,
+          record.openUntil,
+          record.probeUntil,
+          record.updatedAt,
+        );
+      this.db.exec("COMMIT");
+      return record;
+    } catch (err) {
+      try { this.db.exec("ROLLBACK"); } catch { /* transaction already closed */ }
+      throw err;
+    }
+  }
+
+  async clearReasoningCircuit(key: string): Promise<void> {
+    this.db.prepare(`DELETE FROM reasoning_circuits WHERE key = ?`).run(key);
   }
 
   async saveQueryRun(run: QueryRun): Promise<void> {

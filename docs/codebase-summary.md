@@ -162,6 +162,7 @@ Swappable SQLite (dev) / Supabase (prod) via `KeryxDB` interface.
 - `payment_events`: fetch toll + citation reward per source + cite intent
 - `api_keys`: SHA-256 hashed keys, per-creator minting
 - `session_grants`: user-funded session EOA, cap, spent
+- `reasoning_circuits`: shared provider-step failure streak, cooldown and half-open probe lease
 - `gap_intents`: creator offer queue, bounded retry lease, evidence/settlement outcome
 
 ---
@@ -224,6 +225,8 @@ Provider-agnostic LLM abstraction.
 | File | Purpose |
 |------|---------|
 | `index.ts` | Credential-aware chain: Anthropic / DeepSeek / MiMo / heuristic. |
+| `resilient-engine.ts` | Per-step failover + honest attempt receipts; never owns budget/payment authority. |
+| `reasoning-circuit-store.ts` | DB-shared adaptive circuits across Next and one-shot workers; memory fail-degraded path. |
 | `providers/` | Per-provider implementations (streaming response handling). |
 
 ---

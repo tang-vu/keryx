@@ -4,8 +4,8 @@
  * Each real tier retries transient failures only when no alternate model provider remains. When
  * another real tier is available, one failed attempt rotates immediately instead of multiplying
  * latency against the same unhealthy provider. The deterministic heuristic remains the final
- * tier. Provider-step circuits are process-wide, while attempt telemetry stays per engine
- * instance/run.
+ * tier. Provider-step circuits are durable across server/worker processes, while attempt telemetry
+ * stays per engine instance/run.
  */
 
 import { config } from "../config";
@@ -24,19 +24,16 @@ import type {
   SynthResult,
 } from "./reasoning-engine";
 import type { Decision } from "../types";
+import {
+  memoryReasoningCircuitStore,
+  type ReasoningCircuitStore,
+} from "./reasoning-circuit-store";
 
 const MAX_ATTEMPTS = 3;
 
-interface CircuitState {
-  failures: number;
-  openUntil: number;
-}
-
-/** Shared across per-run instances so one noisy provider is contained across dispatches. */
-const circuits = new Map<string, CircuitState>();
-
 function circuitKey(name: string, step: ReasoningStep): string {
-  return `${name}\u0000${step}`;
+  // JSON keeps the pair unambiguous without NUL: SQLite accepts NUL in TEXT, PostgreSQL does not.
+  return JSON.stringify([name, step]);
 }
 
 /** Transient means retryable: rate limits, timeouts, 5xx, or a network error with no status. */
@@ -68,41 +65,9 @@ function errorTelemetry(err: unknown): Pick<ReasoningAttempt, "status" | "error"
   return { error: "network" };
 }
 
-function isCircuitOpen(name: string, step: ReasoningStep, now: number): boolean {
-  const key = circuitKey(name, step);
-  const state = circuits.get(key);
-  if (!state) return false;
-  if (state.openUntil > now) return true;
-  // A closed circuit below its failure threshold must retain its count for the next call. Only an
-  // actually-open circuit whose cooldown elapsed becomes a half-open probe with a clean counter.
-  if (state.openUntil === 0) return false;
-  circuits.delete(key);
-  return false;
-}
-
-function markCircuitSuccess(name: string, step: ReasoningStep): void {
-  circuits.delete(circuitKey(name, step));
-}
-
-function markCircuitFailure(
-  name: string,
-  step: ReasoningStep,
-  transient: boolean,
-  now: number,
-): void {
-  const key = circuitKey(name, step);
-  const previous = circuits.get(key)?.failures ?? 0;
-  const failures = transient ? previous + 1 : config.llmCircuitFailures;
-  circuits.set(key, {
-    failures,
-    openUntil:
-      failures >= config.llmCircuitFailures ? now + config.llmCircuitCooldownMs : 0,
-  });
-}
-
-/** Test/ops hook. Production circuits close only after a success or cooldown. */
+/** Test hook for the hermetic memory store. Production state is cleared only by a real success. */
 export function resetReasoningCircuitBreakers(): void {
-  circuits.clear();
+  memoryReasoningCircuitStore.reset();
 }
 
 /** What actually answered: a nested resilient tier reports its own effective result. */
@@ -128,6 +93,7 @@ export class ResilientEngine implements ReasoningEngine {
     private readonly primary: ReasoningEngine,
     fallback?: ReasoningEngine,
     private readonly tier = 0,
+    private readonly circuitStore: ReasoningCircuitStore = memoryReasoningCircuitStore,
   ) {
     this.name = primary.name;
     this.fallback = fallback ?? new HeuristicEngine();
@@ -190,7 +156,17 @@ export class ResilientEngine implements ReasoningEngine {
     call: (engine: ReasoningEngine) => Promise<T>,
   ): Promise<T> {
     const now = Date.now();
-    if (isCircuitOpen(this.name, label, now)) {
+    // A configured alternate provider is itself the retry. Spend the three-attempt local retry
+    // budget only on the last real provider before the heuristic; otherwise rotate after one
+    // failure and give the next independent transport a chance.
+    const maxAttempts = this.fallback instanceof HeuristicEngine ? MAX_ATTEMPTS : 1;
+    const key = circuitKey(this.name, label);
+    const circuit = await this.circuitStore.acquire(
+      key,
+      now,
+      maxAttempts * config.llmTimeoutMs + 5_000,
+    );
+    if (!circuit.allowed) {
       this.attempts.push({
         step: label,
         engine: this.name,
@@ -199,17 +175,13 @@ export class ResilientEngine implements ReasoningEngine {
         startedAt: now,
         durationMs: 0,
         outcome: "circuit-open",
+        retryAfterMs: circuit.retryAfterMs,
       });
       this.fell++;
       return this.runFallback(label, call);
     }
 
     let lastErr: unknown;
-    // A configured alternate provider is itself the retry. Spend the three-attempt local retry
-    // budget only on the last real provider before the heuristic; otherwise rotate after one
-    // failure and give the next independent transport a chance. This keeps single-provider
-    // deployments resilient while avoiding repeated 429/5xx/network waits in multi-provider ones.
-    const maxAttempts = this.fallback instanceof HeuristicEngine ? MAX_ATTEMPTS : 1;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       const startedAt = Date.now();
       try {
@@ -223,7 +195,7 @@ export class ResilientEngine implements ReasoningEngine {
           durationMs: Math.max(0, Date.now() - startedAt),
           outcome: "served",
         });
-        markCircuitSuccess(this.name, label);
+        await this.circuitStore.succeeded(key);
         this.served++;
         return out;
       } catch (err) {
@@ -243,7 +215,20 @@ export class ResilientEngine implements ReasoningEngine {
       }
     }
 
-    markCircuitFailure(this.name, label, isTransient(lastErr), Date.now());
+    // With a real alternate available, one exhausted call is enough to route later work around
+    // this tier. A single-provider deployment keeps the configurable threshold before it falls to
+    // deterministic reasoning. Failure streaks survive half-open probes and grow the cooldown.
+    await this.circuitStore.failed(key, {
+      transient: isTransient(lastErr),
+      now: Date.now(),
+      failureThreshold:
+        this.fallback instanceof HeuristicEngine ? config.llmCircuitFailures : 1,
+      baseCooldownMs: config.llmCircuitCooldownMs,
+      maxCooldownMs: Math.max(
+        config.llmCircuitCooldownMs,
+        config.llmCircuitMaxCooldownMs,
+      ),
+    });
     const reason = lastErr instanceof Error ? lastErr.message : String(lastErr);
     console.warn(
       `[keryx llm] ${label} fell back to ${this.fallback.name} after provider failure: ${reason}`,

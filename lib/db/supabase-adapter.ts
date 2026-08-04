@@ -16,7 +16,20 @@ import type {
   SourceItem,
   WithdrawalRecord,
 } from "../types";
-import type { ApiKeyRow, ApiKeyUsage, CreatorEarnings, FeedbackStats, KeryxDB, OnrampReservation, QueryMemoryEntry, RateLimitDecision, SessionGrantRecord, UserRecord } from "./keryx-db";
+import type {
+  ApiKeyRow,
+  ApiKeyUsage,
+  CreatorEarnings,
+  FeedbackStats,
+  KeryxDB,
+  OnrampReservation,
+  QueryMemoryEntry,
+  RateLimitDecision,
+  ReasoningCircuitDecision,
+  ReasoningCircuitRecord,
+  SessionGrantRecord,
+  UserRecord,
+} from "./keryx-db";
 import type { LedgerAccount } from "../gateway/settlement-parity";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
@@ -855,6 +868,58 @@ export class SupabaseAdapter implements KeryxDB {
 
   async deleteExpiredRateLimits(now: number): Promise<void> {
     await this.sb.from("rate_limit_counters").delete().lte("reset_at", now);
+  }
+
+  async acquireReasoningCircuit(
+    key: string,
+    now: number,
+    probeLeaseMs: number,
+  ): Promise<ReasoningCircuitDecision> {
+    const { data, error } = await this.sb.rpc("acquire_reasoning_circuit", {
+      p_key: key,
+      p_now: now,
+      p_probe_ms: probeLeaseMs,
+    });
+    if (error || !data) throw error ?? new Error("acquire_reasoning_circuit returned no row");
+    const row = Array.isArray(data) ? data[0] : data;
+    return {
+      allowed: row.allowed === true,
+      retryAfterMs: Math.max(0, Number(row.retry_after_ms)),
+    };
+  }
+
+  async recordReasoningCircuitFailure(
+    key: string,
+    transient: boolean,
+    now: number,
+    failureThreshold: number,
+    baseCooldownMs: number,
+    maxCooldownMs: number,
+  ): Promise<ReasoningCircuitRecord> {
+    const { data, error } = await this.sb.rpc("record_reasoning_circuit_failure", {
+      p_key: key,
+      p_transient: transient,
+      p_now: now,
+      p_threshold: failureThreshold,
+      p_base_cooldown_ms: baseCooldownMs,
+      p_max_cooldown_ms: maxCooldownMs,
+    });
+    if (error || !data) {
+      throw error ?? new Error("record_reasoning_circuit_failure returned no row");
+    }
+    const row = Array.isArray(data) ? data[0] : data;
+    return {
+      key,
+      failures: Number(row.failures),
+      openUntil: Number(row.open_until),
+      probeUntil: 0,
+      updatedAt: now,
+    };
+  }
+
+  async clearReasoningCircuit(key: string): Promise<void> {
+    const { error } = await this.sb.from("reasoning_circuits").delete().eq("key", key);
+    if (error) throw error;
   }
 
   // ── api keys ──

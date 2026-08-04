@@ -32,6 +32,8 @@ export interface ReasoningAttempt {
   startedAt: number;
   durationMs: number;
   outcome: "served" | "failed" | "circuit-open";
+  /** Remaining shared cooldown/half-open lease when this attempt was skipped. */
+  retryAfterMs?: number;
   status?: number;
   error?: "timeout" | "rate_limited" | "provider" | "network" | "invalid_request";
 }

@@ -13,6 +13,10 @@ import { HeuristicEngine } from "./heuristic-engine";
 import { OpenAICompatibleEngine } from "./openai-compatible-engine";
 import { ResilientEngine } from "./resilient-engine";
 import {
+  durableReasoningCircuitStore,
+  memoryReasoningCircuitStore,
+} from "./reasoning-circuit-store";
+import {
   DEFAULT_MODEL_ID,
   findModelChoice,
   MODEL_CATALOG,
@@ -67,9 +71,18 @@ function defaultRealEngines(exclude = new Set<string>()): ReasoningEngine[] {
 }
 
 function buildChain(realEngines: ReasoningEngine[]): ReasoningEngine {
+  // Vitest engines must be hermetic; production/server/CLI chains share durable DB state.
+  const circuitStore = process.env.VITEST
+    ? memoryReasoningCircuitStore
+    : durableReasoningCircuitStore;
   let fallback: ReasoningEngine = new HeuristicEngine();
   for (let tier = realEngines.length - 1; tier >= 0; tier--) {
-    fallback = new ResilientEngine(realEngines[tier]!, fallback, tier);
+    fallback = new ResilientEngine(
+      realEngines[tier]!,
+      fallback,
+      tier,
+      circuitStore,
+    );
   }
   return fallback;
 }

@@ -102,8 +102,8 @@ export const config = {
   // The base URL carries /v1 (DeepSeek's does not); the engine appends /chat/completions to it.
   mimoKey: process.env.MIMO_API_KEY ?? "",
   mimoBaseUrl: process.env.KERYX_MIMO_BASE_URL ?? "https://api.xiaomimimo.com/v1",
-  // Transport timeouts abort the provider request. Circuit state is process-wide so repeated
-  // failures in one run keep later runs from waiting through the same dead tier.
+  // Transport timeouts abort the provider request. Circuit state is stored in the shared DB so
+  // the Next server and fresh one-shot volume workers inherit the same provider-step health.
   llmTimeoutMs: Math.max(1_000, Math.round(num(process.env.KERYX_LLM_TIMEOUT_MS, 60_000))),
   llmCircuitFailures: Math.max(
     1,
@@ -111,7 +111,13 @@ export const config = {
   ),
   llmCircuitCooldownMs: Math.max(
     1_000,
-    Math.round(num(process.env.KERYX_LLM_CIRCUIT_COOLDOWN_MS, 60_000)),
+    Math.round(num(process.env.KERYX_LLM_CIRCUIT_COOLDOWN_MS, 1_800_000)),
+  ),
+  // Each failed half-open probe doubles the cooldown up to this ceiling. A real success clears the
+  // streak immediately; merely waiting out the window does not erase evidence of a long outage.
+  llmCircuitMaxCooldownMs: Math.max(
+    1_000,
+    Math.round(num(process.env.KERYX_LLM_CIRCUIT_MAX_COOLDOWN_MS, 14_400_000)),
   ),
   // Fraction (0..1) of volume-engine runs that use a non-default catalog model (currently V4 Pro)
   // rather than the workhorse. Kept low: Pro is slower and the engine's job is steady volume, so

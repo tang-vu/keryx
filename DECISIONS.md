@@ -5,6 +5,28 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-36** · Reasoning/Latency · *Provider-step circuit health is durable across workers; an
+expired cooldown leases one half-open probe and a failed probe backs off exponentially.*
+The Next server and the autonomous volume daemon are separate processes, and each normal volume
+tick launches a fresh `seed --count 1` worker. Circuit state therefore lives in the shared database
+under `(engine, reasoning step)`, not only in a module `Map`. A closed circuit admits calls. Once
+open, it routes immediately to the next configured provider. When the cooldown expires, one worker
+atomically leases the probe while concurrent callers keep using the alternate; a crashed probe is
+recoverable when its lease expires. A successful real response deletes the streak. Another failed
+probe retains it and doubles the cooldown from 30 minutes up to four hours. When a real alternate
+exists, one exhausted call is enough to open; a last-provider-to-heuristic transition retains the
+configurable two-failure threshold. Database failure degrades to the mirrored in-process circuit,
+never turns a successful model response into a failure, and never changes spend or payout state.
+
+Why: production receipts after D-31 still showed zero circuit skips while the same DeepSeek
+`decide` and `synthesize` steps repeatedly spent 40–60 seconds on 503s/timeouts before MiMo served
+them. The implementation was locally correct but lifecycle-wrong: the worker that learned the
+failure exited, and even a long-lived process forgot the streak when the sixty-second cooldown
+expired. The result was completed, fully settled answers taking 100–280 seconds despite a healthy
+alternate. Durable state and retained half-open history make the resilience mechanism match the
+actual deployment topology. Reversible: medium (drop `reasoning_circuits` and inject the memory
+store; provider order, receipts, payment authority, budgets, and evidence gates are unchanged).
+
 **D-35** · Public updates/Canteen · *Publish selectively: useful public product progress and
 verified real traction belong on Canteen; private operations and security details do not.*
 Canteen is an external product channel, not an automatic mirror of commits, deploys, logs, or
