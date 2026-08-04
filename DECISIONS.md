@@ -5,6 +5,21 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-35** · Public updates/Canteen · *Publish selectively: useful public product progress and
+verified real traction belong on Canteen; private operations and security details do not.*
+Canteen is an external product channel, not an automatic mirror of commits, deploys, logs, or
+internal experiments. A product update must be understandable and useful to an outside reader. A
+traction update must use verified, genuinely settled figures and enough public context to interpret
+them. Do not publish local caller identities or addresses, daemon cadence or schedules, machine and
+PM2 topology, configuration or environment details, credentials, raw operational logs, internal
+failure traces, or security-sensitive/anti-abuse implementation details. If an update mixes public
+progress with private details, publish only the safe public summary; if no meaningful safe summary
+remains, skip the Canteen update.
+
+Why: consistent public progress helps distribution, while indiscriminate operational disclosure
+creates privacy and security risk and turns the product feed into noise. Reversible: easy (revise
+the editorial boundary), but already-published sensitive data may not be retractable.
+
 **D-34** · Traction provenance/Local caller · *One workstation daemon is one persistent actor;
 it may add requests, but it never rotates wallets to manufacture people.*
 The owner's workstation may run a low-frequency SIWE-authenticated client against the sponsored
@@ -20,7 +35,8 @@ only purpose is raising the actors tile is Sybil traffic. This policy can add ex
 actor and, after its second completed run, one returning actor. Later ticks increase that actor's
 usage, not the actor count. Current-preview questions make the small spend useful to creators rather
 than turning the daemon into a gap generator. Reversible: easy (stop/delete the local PM2 process;
-the wallet remains in ignored local state for audit continuity).
+the public identity and schedule remain in ignored local state for audit continuity, while its
+signing key remains only in the ignored `.env.local`).
 
 **D-33** · Feed refresh/SSRF · *Pinned DNS answers support both single-result and `all: true`
 Node lookup callbacks; never fall back to an unpinned fetch for compatibility.*

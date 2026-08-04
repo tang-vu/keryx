@@ -5,8 +5,9 @@
  * genuine external `web` caller without granting an unattended process authority to sign recurring
  * x402 charges. The identity is never rotated: one process is one actor, not a wallet farm.
  *
- * Run under the local PM2 instance with `npm run local-caller`. The ignored state file contains the
- * private key; stdout contains only its public address and run summaries.
+ * Run under the local PM2 instance with `npm run local-caller`. The private key stays in the
+ * ignored `.env.local`; the ignored state file and stdout contain only public identity/scheduling
+ * data. Legacy state files are migrated in place without rotating the identity.
  */
 
 import fs from "node:fs";
@@ -32,6 +33,8 @@ const MAX_SLEEP_SECONDS = boundedInteger(
   7 * 24 * 60 * 60,
 );
 const STATE_PATH = path.resolve(process.cwd(), "data", "local-caller-state.json");
+const ENV_PATH = path.resolve(process.cwd(), ".env.local");
+const PRIVATE_KEY_ENV = "KERYX_LOCAL_CALLER_PRIVATE_KEY";
 const once = process.argv.includes("--once");
 const dryRun = process.argv.includes("--dry-run");
 
@@ -42,6 +45,10 @@ interface CallerState {
   nextRunAt: string;
   createdAt: string;
 }
+
+type StoredCallerState = Omit<CallerState, "privateKey"> & {
+  privateKey?: `0x${string}`;
+};
 
 interface PublicSource {
   id: string;
@@ -78,39 +85,69 @@ function log(message: string) {
 }
 
 function saveState(state: CallerState) {
+  const { privateKey: _privateKey, ...stored } = state;
   fs.mkdirSync(path.dirname(STATE_PATH), { recursive: true });
-  fs.writeFileSync(STATE_PATH, JSON.stringify(state, null, 2), { mode: 0o600 });
+  fs.writeFileSync(STATE_PATH, JSON.stringify(stored, null, 2), { mode: 0o600 });
+}
+
+function isPrivateKey(value: unknown): value is `0x${string}` {
+  return typeof value === "string" && /^0x[0-9a-f]{64}$/i.test(value);
+}
+
+function persistPrivateKey(privateKey: `0x${string}`) {
+  const current = fs.existsSync(ENV_PATH) ? fs.readFileSync(ENV_PATH, "utf8") : "";
+  if (new RegExp(`^${PRIVATE_KEY_ENV}=`, "m").test(current)) {
+    throw new Error(`${PRIVATE_KEY_ENV} exists in ${ENV_PATH} but was not loaded`);
+  }
+  const separator = current.length > 0 && !current.endsWith("\n") ? "\n" : "";
+  fs.appendFileSync(ENV_PATH, `${separator}${PRIVATE_KEY_ENV}=${privateKey}\n`, { mode: 0o600 });
+  process.env[PRIVATE_KEY_ENV] = privateKey;
 }
 
 function loadState(): CallerState {
-  if (!fs.existsSync(STATE_PATH)) {
-    const privateKey = generatePrivateKey();
-    const state: CallerState = {
-      privateKey,
-      address: privateKeyToAccount(privateKey).address,
-      cursor: 0,
-      nextRunAt: new Date(0).toISOString(),
-      createdAt: nowLabel(),
-    };
-    saveState(state);
-    return state;
+  const exists = fs.existsSync(STATE_PATH);
+  const parsed = exists
+    ? (JSON.parse(fs.readFileSync(STATE_PATH, "utf8")) as Partial<StoredCallerState>)
+    : {};
+  const configuredKey = process.env[PRIVATE_KEY_ENV];
+  if (configuredKey !== undefined && !isPrivateKey(configuredKey)) {
+    throw new Error(`invalid ${PRIVATE_KEY_ENV}; refusing to rotate identity`);
+  }
+  if (parsed.privateKey !== undefined && !isPrivateKey(parsed.privateKey)) {
+    throw new Error(`invalid legacy private key in ${STATE_PATH}; refusing to rotate identity`);
+  }
+  if (
+    configuredKey &&
+    parsed.privateKey &&
+    configuredKey.toLowerCase() !== parsed.privateKey.toLowerCase()
+  ) {
+    throw new Error(`legacy state and ${PRIVATE_KEY_ENV} disagree; refusing to rotate identity`);
   }
 
-  const parsed = JSON.parse(fs.readFileSync(STATE_PATH, "utf8")) as Partial<CallerState>;
-  if (!parsed.privateKey || !/^0x[0-9a-f]{64}$/i.test(parsed.privateKey)) {
-    throw new Error(`invalid private key in ${STATE_PATH}; refusing to rotate identity`);
+  let privateKey = configuredKey ?? parsed.privateKey;
+  if (!privateKey) {
+    if (exists) {
+      throw new Error(`missing ${PRIVATE_KEY_ENV}; refusing to rotate existing identity`);
+    }
+    privateKey = generatePrivateKey();
   }
-  const address = privateKeyToAccount(parsed.privateKey).address;
+  if (!configuredKey) {
+    persistPrivateKey(privateKey);
+  }
+
+  const address = privateKeyToAccount(privateKey).address;
   if (parsed.address && parsed.address.toLowerCase() !== address.toLowerCase()) {
     throw new Error(`wallet/address mismatch in ${STATE_PATH}; refusing to rotate identity`);
   }
-  return {
-    privateKey: parsed.privateKey,
+  const state: CallerState = {
+    privateKey,
     address,
     cursor: Number.isSafeInteger(parsed.cursor) && Number(parsed.cursor) >= 0 ? Number(parsed.cursor) : 0,
     nextRunAt: parsed.nextRunAt ?? new Date(0).toISOString(),
     createdAt: parsed.createdAt ?? nowLabel(),
   };
+  if (!exists || parsed.privateKey) saveState(state);
+  return state;
 }
 
 function nextDelaySeconds() {

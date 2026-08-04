@@ -16,6 +16,9 @@ path, so the process never receives authority to sign recurring x402 charges, an
 Keryx's bot key. The persisted schedule is written before each request to prevent a PM2 crash loop
 from repeatedly spending treasury funds.
 
+The durable signing key stays in ignored `.env.local`; the state JSON holds only its public address
+and schedule. Existing local state migrates without rotating the actor.
+
 The identity is deliberately non-rotating. Its first completed run can add one identified external
 actor; its second makes that same identity returning. Later runs add honest usage, not actors. A
 different key per tick would make the dashboard move, but it would describe wallets manufactured by
