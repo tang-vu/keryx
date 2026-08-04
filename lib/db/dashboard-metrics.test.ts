@@ -54,6 +54,29 @@ describe("calculateDashboardMetrics", () => {
     expect(metrics.externalP95DurationMs).toBe(2_000);
   });
 
+  it("reports pending confirmations without promoting them into traction", () => {
+    const metrics = calculateDashboardMetrics(
+      [
+        {
+          amountUsdc: 0.004,
+          sourceId: "s1",
+          queryId: "web-pending",
+          kind: "citation",
+          origin: "web",
+          settled: false,
+          settlementStatus: "pending",
+        },
+      ],
+      [{ id: "web-pending", origin: "web" }],
+    );
+
+    expect(metrics.totalPayments).toBe(0);
+    expect(metrics.totalVolumeUsdc).toBe(0);
+    expect(metrics.externalPayingQueries).toBe(0);
+    expect(metrics.pendingPaymentConfirmations).toBe(1);
+    expect(metrics.pendingPaymentVolumeUsdc).toBe(0.004);
+  });
+
   it("attributes A2A actors only from settled inbound payer evidence", () => {
     const metrics = calculateDashboardMetrics(
       [

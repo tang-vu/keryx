@@ -141,9 +141,10 @@ export async function settleThenServe(
     // Circle's facilitator occasionally throws a transient 4xx ("Circle Gateway verify
     // failed (400)…") on otherwise-valid payments (~5% on testnet). Retry the throwing
     // call a couple of times with a short backoff before giving up.
-    // verify() is read-only — always safe to retry. settle() is retried only when it
-    // THROWS (no confirmation received): the EIP-3009 nonce is consumed only by a
-    // successful on-chain settle, so a transient throw leaves the nonce reusable.
+    // verify() is read-only — always safe to retry. settle() is retried only with the identical
+    // EIP-3009 authorization: the single-use nonce prevents a duplicate debit. A throw is still
+    // ambiguous (the first call may have succeeded before its response was lost), so buyers that
+    // never receive this route's PAYMENT-RESPONSE retain the attempt as pending.
     let verify;
     try {
       verify = await withRetry(() => facilitator.verify(activePayload, requirements), "verify", opts.endpoint);
@@ -166,7 +167,8 @@ export async function settleThenServe(
     try {
       settle = await withRetry(() => facilitator.settle(activePayload, requirements), "settle", opts.endpoint);
     } catch (err) {
-      // A settle throw means no confirmation was received (nonce unconsumed) — safe to retry bare.
+      // No confirmation was received. Retrying the identical nonce cannot double-debit, but the
+      // eventual caller still treats a missing success response as pending rather than failed.
       if (activePayload === payload) throw err;
       console.warn(`[x402] settle rejected bazaar-extended payload ${opts.endpoint} — retrying bare`);
       activePayload = payload;

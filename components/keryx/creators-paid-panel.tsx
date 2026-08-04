@@ -8,8 +8,9 @@
  * not per-tx EVM hashes — the verifiable on-chain link is the settlement wallet, in the footer.
  */
 
-import { Check } from "lucide-react";
+import { Check, Clock3 } from "lucide-react";
 import type { PaymentRecord } from "@/lib/types";
+import { paymentSettlementStatus } from "@/lib/payments/payment-state";
 import type { StreamMode } from "@/lib/hooks/use-ask-stream";
 import { fmtUsdc, shortAddr } from "./phase-style";
 import { SectionHeading } from "./banknote";
@@ -35,9 +36,17 @@ export function CreatorsPaidPanel({
   mode,
   streaming,
 }: CreatorsPaidPanelProps) {
-  const total = payments.reduce((sum, p) => sum + (p.amountUsdc ?? 0), 0);
+  const total = payments
+    .filter((payment) => paymentSettlementStatus(payment) !== "pending")
+    .reduce((sum, payment) => sum + (payment.amountUsdc ?? 0), 0);
   const hasPayments = payments.length > 0;
-  const settled = hasPayments && !streaming;
+  const pendingCount = payments.filter(
+    (payment) => paymentSettlementStatus(payment) === "pending",
+  ).length;
+  const paidInFull =
+    hasPayments &&
+    !streaming &&
+    payments.every((payment) => paymentSettlementStatus(payment) === "settled");
   const pctOf = (p: PaymentRecord) =>
     typeof p.weight === "number"
       ? Math.round(p.weight * 100)
@@ -57,7 +66,12 @@ export function CreatorsPaidPanel({
                 className="flex items-center justify-center overflow-hidden border-r border-paper font-mono text-[10px] text-cream last:border-r-0"
                 style={{
                   flex: Math.max(p.amountUsdc ?? 0.0001, 0.0001),
-                  background: i % 2 ? "var(--paid-2)" : "var(--paid)",
+                  background:
+                    paymentSettlementStatus(p) === "pending"
+                      ? "#b45309"
+                      : i % 2
+                        ? "var(--paid-2)"
+                        : "var(--paid)",
                 }}
               >
                 {pctOf(p)}%
@@ -87,13 +101,18 @@ export function CreatorsPaidPanel({
                   {p.sourceName}
                 </p>
                 <p className="font-mono text-[11px] text-ink-3">
-                  {p.settled && p.txHash ? (
+                  {paymentSettlementStatus(p) === "settled" && p.txHash ? (
                     <span
                       className="inline-flex items-center gap-1 text-paid"
                       title={`Circle Gateway settlement ID ${p.txHash} — batched on-chain on Arc (not a per-tx EVM hash)`}
                     >
                       <Check className="h-2.5 w-2.5" />
                       batched
+                    </span>
+                  ) : paymentSettlementStatus(p) === "pending" ? (
+                    <span className="inline-flex items-center gap-1 text-amber-700">
+                      <Clock3 className="h-2.5 w-2.5" />
+                      confirmation pending
                     </span>
                   ) : (
                     <span>{shortAddr(p.payee)} · simulated</span>
@@ -104,7 +123,7 @@ export function CreatorsPaidPanel({
                 {pctOf(p)}%
               </span>
               <span className="w-[68px] shrink-0 text-right font-mono text-sm tabular-nums text-paid">
-                +${fmtUsdc(p.amountUsdc)}
+                ${fmtUsdc(p.amountUsdc)}{paymentSettlementStatus(p) === "pending" ? " ?" : ""}
               </span>
             </div>
           ))}
@@ -113,7 +132,9 @@ export function CreatorsPaidPanel({
         {hasPayments && (
           <div className="flex items-center justify-between gap-4 border-t border-ink px-5 py-3.5">
             <span className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-ink-3">
-              {mode === "real" ? (
+              {pendingCount > 0 ? (
+                `${pendingCount} pending · confirmed total`
+              ) : mode === "real" ? (
                 <a
                   href={SETTLEMENT_PROOF}
                   target="_blank"
@@ -133,7 +154,7 @@ export function CreatorsPaidPanel({
           </div>
         )}
 
-        {settled && (
+        {paidInFull && (
           <PaidStamp className="absolute -bottom-5 -right-3 z-10 h-28 w-28" />
         )}
       </div>

@@ -35,6 +35,7 @@ import type { LedgerAccount } from "../gateway/settlement-parity";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 import { normalizePreviewDepth } from "../sources/preview-depth";
+import { assertPaymentSettlementState } from "../payments/payment-state";
 import {
   calculateDashboardMetrics,
   runEvidenceMetrics,
@@ -113,7 +114,8 @@ CREATE TABLE IF NOT EXISTS cache_items (
 CREATE TABLE IF NOT EXISTS payment_events (
   id TEXT PRIMARY KEY, created_at TEXT, kind TEXT, query_id TEXT, source_id TEXT,
   source_name TEXT, payer TEXT, payee TEXT, amount_usdc REAL, weight REAL,
-  rationale TEXT, tx_hash TEXT, network TEXT, settled INTEGER
+  rationale TEXT, tx_hash TEXT, network TEXT, settled INTEGER,
+  settlement_status TEXT NOT NULL DEFAULT 'simulated', authorization_id TEXT
 );
 CREATE TABLE IF NOT EXISTS query_runs (
   id TEXT PRIMARY KEY, created_at TEXT, question TEXT, budget REAL, engine TEXT,
@@ -264,6 +266,33 @@ export class SqliteAdapter implements KeryxDB {
     );
     if (!metaCols.has("rss_url")) this.db.exec(`ALTER TABLE source_meta ADD COLUMN rss_url TEXT`);
 
+    // Explicit payment state: historical settled rows had Circle evidence; historical false rows
+    // were offline simulations. New browser co-sign ambiguity is always written as `pending`.
+    const paymentCols = new Set(
+      (this.db.prepare(`PRAGMA table_info(payment_events)`).all() as { name: string }[]).map(
+        (c) => c.name,
+      ),
+    );
+    if (!paymentCols.has("origin")) {
+      this.db.exec(`ALTER TABLE payment_events ADD COLUMN origin TEXT`);
+      this.db.exec(`UPDATE payment_events SET origin='engine' WHERE origin IS NULL`);
+    }
+    if (!paymentCols.has("settlement_status")) {
+      this.db.exec(
+        `ALTER TABLE payment_events ADD COLUMN settlement_status TEXT NOT NULL DEFAULT 'simulated'`,
+      );
+      this.db.exec(
+        `UPDATE payment_events SET settlement_status=CASE WHEN settled=1 THEN 'settled' ELSE 'simulated' END`,
+      );
+    }
+    if (!paymentCols.has("authorization_id")) {
+      this.db.exec(`ALTER TABLE payment_events ADD COLUMN authorization_id TEXT`);
+    }
+    this.db.exec(
+      `CREATE INDEX IF NOT EXISTS payment_events_pending
+         ON payment_events(created_at DESC) WHERE settlement_status='pending'`,
+    );
+
     // api_keys scope columns. NULL on every pre-existing key and read as "all scopes, all owned
     // sources" — narrowing a key that already works in someone's integration would break it.
     const keyCols = new Set(
@@ -363,19 +392,6 @@ export class SqliteAdapter implements KeryxDB {
     if (!itemCols.has("item_iv")) this.db.exec(`ALTER TABLE source_items ADD COLUMN item_iv TEXT`);
     if (!itemCols.has("item_auth_tag")) this.db.exec(`ALTER TABLE source_items ADD COLUMN item_auth_tag TEXT`);
 
-    // payment_events.origin: tags each payment by request channel so the dashboard can separate
-    // genuine external usage from autonomous engine volume. Pre-existing rows (all engine-generated
-    // to date) get NULL, which metrics() treats as engine — backfill them explicitly so the data is
-    // unambiguous and the column never overstates external usage.
-    const payCols = new Set(
-      (this.db.prepare(`PRAGMA table_info(payment_events)`).all() as { name: string }[]).map(
-        (c) => c.name,
-      ),
-    );
-    if (!payCols.has("origin")) {
-      this.db.exec(`ALTER TABLE payment_events ADD COLUMN origin TEXT`);
-      this.db.exec(`UPDATE payment_events SET origin='engine' WHERE origin IS NULL`);
-    }
   }
 
   async upsertSource(s: Source): Promise<void> {
@@ -1166,10 +1182,11 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async recordPayment(p: PaymentRecord): Promise<void> {
+    const settlementStatus = assertPaymentSettlementState(p);
     this.db
       .prepare(
-        `INSERT INTO payment_events (id,created_at,kind,query_id,source_id,source_name,payer,payee,amount_usdc,weight,rationale,tx_hash,network,settled,origin)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        `INSERT INTO payment_events (id,created_at,kind,query_id,source_id,source_name,payer,payee,amount_usdc,weight,rationale,tx_hash,network,settled,settlement_status,authorization_id,origin)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       )
       .run(
         p.id ?? crypto.randomUUID(),
@@ -1186,6 +1203,8 @@ export class SqliteAdapter implements KeryxDB {
         p.txHash ?? null,
         p.network,
         p.settled ? 1 : 0,
+        settlementStatus,
+        p.authorizationId ?? null,
         p.origin ?? "engine",
       );
   }
@@ -1255,7 +1274,7 @@ export class SqliteAdapter implements KeryxDB {
   async metrics(): Promise<DashboardMetrics> {
     const payments = this.db
       .prepare(
-        `SELECT amount_usdc,source_id,query_id,kind,origin,settled,payer
+        `SELECT amount_usdc,source_id,query_id,kind,origin,settled,settlement_status,payer
            FROM payment_events`,
       )
       .all()
@@ -1266,6 +1285,8 @@ export class SqliteAdapter implements KeryxDB {
         kind: p.kind as "fetch" | "citation" | "inbound",
         origin: (p.origin as import("../types").PaymentOrigin | null) ?? null,
         settled: Number(p.settled) === 1,
+        settlementStatus:
+          (p.settlement_status as import("../types").PaymentSettlementStatus | null) ?? null,
         payer: (p.payer as string | null) ?? null,
       }));
     const runs = this.db
@@ -1629,6 +1650,10 @@ function rowToPayment(r: Record<string, unknown>): PaymentRecord {
     txHash: (r.tx_hash as string) ?? null,
     network: r.network as string,
     settled: Boolean(r.settled),
+    settlementStatus:
+      (r.settlement_status as PaymentRecord["settlementStatus"]) ??
+      (Boolean(r.settled) ? "settled" : "simulated"),
+    authorizationId: (r.authorization_id as string) ?? undefined,
     origin: (r.origin as PaymentRecord["origin"]) ?? undefined,
     createdAt: r.created_at as string,
   };

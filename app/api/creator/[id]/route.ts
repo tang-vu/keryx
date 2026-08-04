@@ -44,9 +44,9 @@ export async function GET(
 
     const settledPayments = creatorPayments.filter((p) => p.settled);
     const settledTotal = settledPayments.reduce((sum, p) => sum + p.amountUsdc, 0);
-    const totalEarned = entry?.totalEarnedUsdc ?? creatorPayments.reduce((s, p) => s + p.amountUsdc, 0);
-    const paymentCount = entry?.paymentCount ?? creatorPayments.length;
-    const citationCount = entry?.citationCount ?? creatorPayments.filter((p) => p.kind === "citation").length;
+    const totalEarned = entry?.totalEarnedUsdc ?? settledTotal;
+    const paymentCount = entry?.paymentCount ?? settledPayments.length;
+    const citationCount = entry?.citationCount ?? settledPayments.filter((p) => p.kind === "citation").length;
 
     // Earnings per day from all-time settled payouts.
     const dailyMap = new Map<string, number>();

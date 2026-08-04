@@ -13,6 +13,7 @@
  */
 
 import type { PaymentRecord } from "../types";
+import { paymentSettlementStatus } from "../payments/payment-state";
 
 export interface EarningsExportRow {
   date: string;
@@ -21,7 +22,9 @@ export interface EarningsExportRow {
   amount_usdc: string;
   weight: string;
   settled: string;
+  settlement_status: string;
   settlement_ref: string;
+  authorization_id: string;
   payer: string;
   network: string;
   origin: string;
@@ -36,7 +39,9 @@ export const EARNINGS_COLUMNS: (keyof EarningsExportRow)[] = [
   "amount_usdc",
   "weight",
   "settled",
+  "settlement_status",
   "settlement_ref",
+  "authorization_id",
   "payer",
   "network",
   "origin",
@@ -61,7 +66,9 @@ export function buildEarningsRows(
     amount_usdc: p.amountUsdc.toFixed(6),
     weight: p.weight === undefined ? "" : p.weight.toFixed(4),
     settled: p.settled ? "yes" : "no",
+    settlement_status: paymentSettlementStatus(p),
     settlement_ref: p.txHash ?? "",
+    authorization_id: p.authorizationId ?? "",
     payer: p.payer,
     network: p.network,
     origin: p.origin ?? "",

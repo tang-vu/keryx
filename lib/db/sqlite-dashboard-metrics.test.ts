@@ -72,6 +72,11 @@ describe("SQLite dashboard metrics", () => {
     await db.recordPayment(payment("web-1", "web"));
     await db.recordPayment(payment("web-2", "web", false));
     await db.recordPayment(payment("engine-1", "engine"));
+    await db.recordPayment({
+      ...payment("web-pending", "web", false),
+      settlementStatus: "pending",
+      authorizationId: "nonce-pending",
+    });
     await db.recordFeedback("web-1", "up");
 
     const metrics = await db.metrics();
@@ -82,6 +87,14 @@ describe("SQLite dashboard metrics", () => {
     expect(metrics.externalDurationSamples).toBe(2);
     expect(metrics.externalFeedbackTotal).toBe(1);
     expect(metrics.externalSatisfactionRate).toBe(1);
+    expect(metrics.pendingPaymentConfirmations).toBe(1);
+    expect(metrics.pendingPaymentVolumeUsdc).toBe(0.01);
+    const pending = (await db.listPayments(10)).find((row) => row.queryId === "web-pending");
+    expect(pending).toMatchObject({
+      settlementStatus: "pending",
+      authorizationId: "nonce-pending",
+      settled: false,
+    });
     const leaderboard = await db.creatorLeaderboard();
     expect(leaderboard).toHaveLength(1);
     expect(leaderboard[0].totalEarnedUsdc).toBe(0.02);

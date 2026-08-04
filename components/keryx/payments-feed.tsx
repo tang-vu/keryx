@@ -7,8 +7,9 @@
  * per-tx explorer page; on-chain proof is the batched settlement wallet, linked in the header.
  */
 
-import { Check } from "lucide-react";
+import { Check, Clock3 } from "lucide-react";
 import type { PaymentRecord } from "@/lib/types";
+import { paymentSettlementStatus } from "@/lib/payments/payment-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -113,13 +114,21 @@ export function PaymentsFeed({ payments }: { payments: PaymentRecord[] }) {
                     {shortAddr(p.payer)} → {shortAddr(p.payee)}
                   </TableCell>
                   <TableCell className="pr-6">
-                    {p.settled && p.txHash ? (
+                    {paymentSettlementStatus(p) === "settled" && p.txHash ? (
                       <span
                         className="inline-flex items-center gap-1.5 font-mono text-[11px] text-paid"
                         title={`Circle Gateway settlement ID ${p.txHash} — batched on-chain on Arc (not a per-tx EVM hash)`}
                       >
                         <Check className="h-3 w-3" />
                         batched
+                      </span>
+                    ) : paymentSettlementStatus(p) === "pending" ? (
+                      <span
+                        className="inline-flex items-center gap-1.5 font-mono text-[11px] text-amber-700"
+                        title={p.authorizationId ? `Authorization ${p.authorizationId}` : undefined}
+                      >
+                        <Clock3 className="h-3 w-3" />
+                        pending proof
                       </span>
                     ) : (
                       <span className="text-[11px] text-muted-foreground">

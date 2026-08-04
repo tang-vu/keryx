@@ -105,6 +105,8 @@ export async function GET() {
           returningExternalActors: m.returningExternalActors,
           externalSettlementSuccessRate: m.externalSettlementSuccessRate,
           externalSettlementAttempts: m.externalSettlementAttempts,
+          pendingPaymentConfirmations: m.pendingPaymentConfirmations,
+          pendingPaymentVolumeUsdc: m.pendingPaymentVolumeUsdc,
         },
       },
       { headers: { "Cache-Control": "no-store" } },

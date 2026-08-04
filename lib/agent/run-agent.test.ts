@@ -21,6 +21,7 @@ import { describe, it, expect } from "vitest";
 import { runAgent, type RunInput } from "./run-agent";
 import { config } from "../config";
 import { makePayment, type PaymentGateway } from "../payments/payment-gateway";
+import { PaymentPendingError } from "../payments/payment-state";
 import type { AgentDeps } from "./deps";
 import type { KeryxDB } from "../db/keryx-db";
 import type {
@@ -465,6 +466,61 @@ describe("runAgent — money-safety invariants", () => {
     expect(run.citations.length).toBeGreaterThan(0); // answered + settled from the survivor
     // The failed toll charged nothing.
     expect(d.db.payments.some((p) => p.sourceId === "a" && p.kind === "fetch")).toBe(false);
+  });
+
+  it("persists an ambiguous post-signature toll as pending without counting it as spent", async () => {
+    const source = makeSource({ id: "a", fetchPrice: 0.004 });
+    const engine = fakeEngine();
+    const gw = fakeGateway();
+    gw.payFetch = async ({ source: candidate, queryId }) => {
+      const payment = makePayment({
+        id: "x402:nonce-a",
+        kind: "fetch",
+        queryId,
+        sourceId: candidate.id,
+        sourceName: candidate.name,
+        payer: AGENT,
+        payee: candidate.walletAddress,
+        amountUsdc: candidate.fetchPrice,
+        settled: false,
+        settlementStatus: "pending",
+        authorizationId: "nonce-a",
+      });
+      throw new PaymentPendingError("confirmation pending", payment);
+    };
+    const d = deps([source], engine, gw);
+
+    const { run, steps } = await drive({ question: "q", budget: 0.05 }, d);
+
+    expect(run.totalSpent).toBe(0);
+    expect(run.totalToCreators).toBe(0);
+    expect(run.paymentAttempts).toBe(1);
+    expect(run.settledPayments).toBe(0);
+    expect(run.pendingPayments).toBe(1);
+    expect(run.answer).toContain("remain pending");
+    expect(d.db.payments).toHaveLength(1);
+    expect(d.db.payments[0]).toMatchObject({
+      settlementStatus: "pending",
+      settled: false,
+      authorizationId: "nonce-a",
+    });
+    expect(steps.some((step) => step.message.includes("confirmation is pending"))).toBe(true);
+  });
+
+  it("does not relabel a settled payment as a failed purchase when the ledger write fails", async () => {
+    const source = makeSource({ id: "a", fetchPrice: 0.004 });
+    const d = deps([source], fakeEngine(), fakeGateway());
+    d.db.recordPayment = async () => {
+      throw new Error("database unavailable");
+    };
+
+    const { run, steps } = await drive({ question: "q", budget: 0.05 }, d);
+
+    expect(run.answer).toContain("grounded answer");
+    expect(run.totalSpent).toBeGreaterThan(0);
+    expect(run.settledPayments).toBe(2);
+    expect(steps.some((step) => step.message.includes("receipt retained"))).toBe(true);
+    expect(steps.some((step) => step.message.includes("Couldn't buy"))).toBe(false);
   });
 
   it("withholds every citation reward when a negative answer has zero evidence (CCTP regression)", async () => {

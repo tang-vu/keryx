@@ -126,6 +126,7 @@ export class RealGateway implements PaymentGateway {
       amountUsdc: numAmount(r.formattedAmount, source.fetchPrice),
       txHash: r.transaction,
       settled: true,
+      settlementStatus: "settled",
       rationale: "Access toll settled on Arc via x402.",
     });
     return { content, payment };
@@ -162,6 +163,7 @@ export class RealGateway implements PaymentGateway {
       rationale,
       txHash: r.transaction,
       settled: true,
+      settlementStatus: "settled",
     });
   }
 }

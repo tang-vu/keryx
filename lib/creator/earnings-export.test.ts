@@ -61,6 +61,27 @@ describe("buildEarningsRows", () => {
     );
     expect(rows[0].weight).toBe("");
   });
+
+  it("distinguishes a submitted authorization from an offline simulation", () => {
+    const rows = buildEarningsRows(
+      [
+        payment({
+          settled: false,
+          settlementStatus: "pending",
+          authorizationId: "nonce-1",
+          txHash: null,
+        }),
+      ],
+      new Map(),
+      "https://keryx.cc",
+    );
+    expect(rows[0]).toMatchObject({
+      settled: "no",
+      settlement_status: "pending",
+      authorization_id: "nonce-1",
+      settlement_ref: "",
+    });
+  });
 });
 
 describe("toCsv", () => {

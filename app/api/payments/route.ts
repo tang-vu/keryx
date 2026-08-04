@@ -1,4 +1,4 @@
-/** GET /api/payments?limit=50 → recent settled/simulated payments (live feed). */
+/** GET /api/payments?limit=50 → recent settled/simulated/pending attempts (live feed). */
 
 import { NextRequest } from "next/server";
 import { getDb } from "@/lib/db";

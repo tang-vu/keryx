@@ -12,6 +12,7 @@ export interface MetricPaymentRow {
   kind: "fetch" | "citation" | "inbound";
   origin?: PaymentOrigin | null;
   settled: boolean;
+  settlementStatus?: import("../types").PaymentSettlementStatus | null;
   payer?: string | null;
 }
 
@@ -96,6 +97,9 @@ export function calculateDashboardMetrics(
   feedbackRows: MetricFeedbackRow[] = [],
   gapIntentRows: MetricGapIntentRow[] = [],
 ): DashboardMetrics {
+  const pending = paymentRows.filter(
+    (payment) => !payment.settled && payment.settlementStatus === "pending",
+  );
   const payments = paymentRows.filter((p) => p.settled);
   const creatorPayments = payments.filter((p) => p.kind !== "inbound");
   const volume = payments.reduce((sum, p) => sum + p.amountUsdc, 0);
@@ -252,6 +256,10 @@ export function calculateDashboardMetrics(
     externalSettlementSuccessRate: settlementAttempts
       ? round(settledAttempts / settlementAttempts)
       : 0,
+    pendingPaymentConfirmations: pending.length,
+    pendingPaymentVolumeUsdc: round(
+      pending.reduce((sum, payment) => sum + payment.amountUsdc, 0),
+    ),
     mcpClientQueries: [...mcpChannels.entries()]
       .map(([client, counts]) => ({ client, ...counts }))
       .sort((a, b) => b.queries - a.queries || a.client.localeCompare(b.client)),

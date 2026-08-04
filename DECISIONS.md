@@ -5,6 +5,30 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-37** · Browser co-sign/Settlement · *After a signed authorization crosses the submission
+boundary, uncertainty is `pending`, never `failed`, `simulated`, or settled traction.*
+The server now binds every 402 challenge to the orchestrator-authorised network, USDC asset,
+integer micro-USDC amount, source/author `payTo`, Gateway contract, signing domain, and lifetime.
+It then decodes the browser response before submission and requires its signer, payee, value,
+nonce, signature shape, and validity window to match that challenge. A mismatch is pre-submission:
+the atomic session reservation is released. Once the validated header is sent to the paid route,
+any timeout, non-success HTTP response, or 2xx response without a valid Circle settlement reference
+creates a durable `payment_events` row with `settlement_status=pending` and the public EIP-3009
+nonce, but never the signature. The reservation remains consumed because the facilitator may have
+settled before its response was lost. Re-evaluation also treats that reserved amount as spent for
+the per-query cap, preventing an ambiguous first attempt plus a replacement from exceeding budget.
+
+Pending amounts appear in the trace, receipt, creator ledger, live payments feed, dashboard warning,
+and health telemetry, while remaining outside `settled=true`, spent totals, creator earnings,
+notifications, fulfillment, parity claims, and traction. Post-payment cache/ledger write failures
+are isolated from the payment call: the dispatch retains the receipt and content instead of
+relabelling a completed settlement as a failed purchase. Exact per-nonce reconciliation remains a
+separate operation because Circle's public balance endpoint is aggregate; refreshing a session
+re-bases its cap from the live balance but does not invent a settlement verdict for the old row.
+Why: transport failure after a bearer authorization exists is not evidence that no money moved,
+and a missing response is equally not evidence that money settled. Reversible: medium (additive
+ledger state and conservative accounting; removing it would reintroduce false payment claims).
+
 **D-36** · Reasoning/Latency · *Provider-step circuit health is durable across workers; an
 expired cooldown leases one half-open probe and a failed probe backs off exponentially.*
 The Next server and the autonomous volume daemon are separate processes, and each normal volume

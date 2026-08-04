@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BadgeCheck, Banknote, Calendar, Hash, Wallet } from "lucide-react";
+import { BadgeCheck, Banknote, Calendar, Clock3, Hash, Wallet } from "lucide-react";
 import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
 import { cn } from "@/lib/utils";
 import { ListingControlsPanel } from "./listing-controls-panel";
@@ -38,6 +38,7 @@ interface CreatorData {
     kind: string;
     amountUsdc: number;
     settled: boolean;
+    settlementStatus?: "settled" | "simulated" | "pending";
     txHash: string | null;
     createdAt: string;
     /** The question that triggered this payout — what work of theirs was used. */
@@ -232,6 +233,11 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
                   {p.settled && p.txHash && (
                     <p className="font-mono text-[10px] text-ink-3">
                       tx {p.txHash.slice(0, 10)}…
+                    </p>
+                  )}
+                  {p.settlementStatus === "pending" && (
+                    <p className="inline-flex items-center gap-1 font-mono text-[10px] text-amber-700">
+                      <Clock3 className="h-2.5 w-2.5" /> pending proof
                     </p>
                   )}
                 </div>

@@ -7,6 +7,7 @@ import { CreatorsPaidPanel } from "@/components/keryx/creators-paid-panel";
 import { AnswerCard } from "@/components/keryx/answer-card";
 import { ConfidenceBadge } from "@/components/keryx/confidence-badge";
 import { deriveConfidence } from "@/lib/agent/confidence";
+import { paymentSettlementStatus } from "@/lib/payments/payment-state";
 
 export function DispatchView({
   run,
@@ -34,12 +35,16 @@ export function DispatchView({
       txHash: null,
       network: "",
       settled: false,
+      settlementStatus: "simulated",
       createdAt: run.createdAt,
     }));
   }, [run, payments]);
 
   // "real" lights up the on-chain settlement link; offline stays honest as simulated.
-  const mode = payouts.some((p) => p.settled) ? "real" : "offline";
+  const mode = run.paymentMode ??
+    (payouts.some((payment) => paymentSettlementStatus(payment) !== "simulated")
+      ? "real"
+      : "offline");
 
   return (
     <>

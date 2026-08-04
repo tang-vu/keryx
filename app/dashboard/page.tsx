@@ -129,6 +129,14 @@ export default function DashboardPage() {
         </header>
 
         {metrics && <ProvenanceStrip metrics={metrics} />}
+        {metrics && metrics.pendingPaymentConfirmations > 0 && (
+          <div className="mt-3 border border-amber-600/40 bg-amber-50 px-4 py-3 font-mono text-[11px] text-amber-800">
+            {metrics.pendingPaymentConfirmations} signed authorization
+            {metrics.pendingPaymentConfirmations === 1 ? "" : "s"} ($
+            {fmtUsdc(metrics.pendingPaymentVolumeUsdc)}) await settlement proof. They are excluded
+            from every settled traction total below.
+          </div>
+        )}
         <p className="mt-2 max-w-3xl font-mono text-[10px] leading-relaxed text-ink-3">
           Sub-cent rewards are netted off-chain in the Circle Gateway ledger and finalized on Arc in
           batches, so the per-payment IDs in the feed are Gateway settlement references, not per-tx

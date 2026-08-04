@@ -46,6 +46,7 @@ export class OfflineGateway implements PaymentGateway {
       amountUsdc: source.fetchPrice,
       txHash: null,
       settled: false,
+      settlementStatus: "simulated",
       rationale: "Access toll (simulated — offline dev mode).",
     });
     return { content, payment };
@@ -78,6 +79,7 @@ export class OfflineGateway implements PaymentGateway {
       rationale,
       txHash: null,
       settled: false,
+      settlementStatus: "simulated",
     });
   }
 }

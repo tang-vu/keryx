@@ -68,7 +68,8 @@ Multi-backend payment gateway with common interface. Selects backend at runtime 
 |------|---------|
 | `payment-gateway.ts` | Interface defining `payFetch()` + `payCitation()`. |
 | `real-gateway.ts` | `RealGateway`: server-side x402 via Circle's `GatewayClient`. Used by volume engine + A2A. |
-| `browser-cosign-gateway.ts` | `BrowserCoSignGateway`: browser co-signs via session key. SSE flow emits sign-requests, /api/ask/sign resolves them. |
+| `browser-cosign-gateway.ts` | `BrowserCoSignGateway`: binds the 402 challenge + returned authorization to the reserved source/amount, then submits the browser co-sign. Post-submit uncertainty becomes durable `pending`. |
+| `payment-state.ts` | Explicit `settled` / `simulated` / `pending` semantics and the typed post-submit pending error. |
 | `offline-gateway.ts` | `OfflineGateway`: heuristic offline mode. No keys, `settled:false`. |
 | `session-grants.ts` | Session grant store: track user-funded session EOAs, spend cap, spent-to-date per tab. |
 | `index.ts` | Factory selecting the right gateway backend. |
@@ -159,7 +160,7 @@ Swappable SQLite (dev) / Supabase (prod) via `KeryxDB` interface.
 
 **Key tables:**
 - `sources`: URL hash, creator wallet, IPFS CID, split config
-- `payment_events`: fetch toll + citation reward per source + cite intent
+- `payment_events`: fetch toll + citation reward per source, with explicit settlement status and optional browser authorization nonce; pending rows never count as traction
 - `api_keys`: SHA-256 hashed keys, per-creator minting
 - `session_grants`: user-funded session EOA, cap, spent
 - `reasoning_circuits`: shared provider-step failure streak, cooldown and half-open probe lease

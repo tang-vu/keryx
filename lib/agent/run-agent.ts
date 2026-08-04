@@ -35,6 +35,7 @@ import { buildDecisionContext, saveMemory } from "./query-memory";
 import { dispatchCitationNotify } from "../notify/citation-webhook";
 import { dispatchCitationEmail } from "../notify/citation-email";
 import { allocateSplit } from "../payments/split-allocation";
+import { paymentSettlementStatus, pendingPaymentFrom } from "../payments/payment-state";
 import { sendAlert } from "../notify/alert";
 import { normalizePreviewDepth, previewSummary } from "../sources/preview-depth";
 import { isCacheFresh, newestPublishedAt } from "./cache-freshness";
@@ -77,6 +78,7 @@ export async function* runAgent(
   const payments: PaymentRecord[] = [];
   let paymentAttempts = 0;
   let settledPayments = 0;
+  let pendingPayments = 0;
   let finalDecisions: Decision[] = [];
   let citations: Citation[] = [];
   let evidence: EvidenceRecord[] = [];
@@ -94,6 +96,20 @@ export async function* runAgent(
     const s: TraceStep = { phase, message, detail, ts: Date.now() };
     trace.push(s);
     return s;
+  }
+
+  async function persistPaymentRecord(payment: PaymentRecord): Promise<string | null> {
+    try {
+      await db.recordPayment(payment);
+      return null;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      void sendAlert(
+        "payment ledger write failed",
+        `${payment.kind} $${payment.amountUsdc} for ${payment.sourceName} (${payment.queryId}): ${message}`,
+      );
+      return message;
+    }
   }
 
   // 1) DECOMPOSE
@@ -285,21 +301,46 @@ export async function* runAgent(
         paymentAttempts++;
         const { content, payment } = await gateway.payFetch({ source, queryId });
         if (payment.settled) settledPayments++;
+        if (paymentSettlementStatus(payment) === "pending") pendingPayments++;
         payment.origin = origin;
-        await db.setCached(source.id, content);
-        await db.recordPayment(payment);
         payments.push(payment);
+        const ledgerError = await persistPaymentRecord(payment);
+        try {
+          await db.setCached(source.id, content);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          yield emit("fetch", `Read ${source.name}, but its cache could not be refreshed (${message}).`);
+        }
         gathered.push({ sourceId: source.id, sourceName: source.name, marker, text: content });
         yield emit(
           "fetch",
-          `Paid $${payment.amountUsdc} to ${source.name} ${payment.settled ? `(settled ${short(payment.txHash)})` : "(simulated)"} — ${marker}`,
+          `${fetchPaymentMessage(payment, source.name)} — ${marker}`,
           payment,
         );
+        if (ledgerError) {
+          yield emit("fetch", `Payment receipt retained in this dispatch, but the ledger row could not be written (${ledgerError}).`);
+        }
       } catch (err) {
         // One toll failing (transient settlement error, exhausted grant, sign timeout) must not
         // kill the whole run — skip this source and answer from whatever was already read.
         fetchFailures++;
         const reason = err instanceof Error ? err.message : String(err);
+        const pending = pendingPaymentFrom(err);
+        if (pending) {
+          pending.origin = origin;
+          pendingPayments++;
+          payments.push(pending);
+          const ledgerError = await persistPaymentRecord(pending);
+          yield emit(
+            "fetch",
+            `Signed $${pending.amountUsdc} authorization for ${source.name}; confirmation is pending, so it is not counted as spent — skipping this source and continuing.`,
+            pending,
+          );
+          if (ledgerError) {
+            yield emit("fetch", `Pending authorization retained in this dispatch, but the ledger row could not be written (${ledgerError}).`);
+          }
+          continue;
+        }
         yield emit("fetch", `Couldn't buy ${source.name} (${reason}) — skipping it, continuing with what's read.`);
         continue;
       }
@@ -406,10 +447,16 @@ export async function* runAgent(
           paymentAttempts++;
           const { content, payment } = await gateway.payFetch({ source, queryId });
           if (payment.settled) settledPayments++;
+          if (paymentSettlementStatus(payment) === "pending") pendingPayments++;
           payment.origin = origin;
-          await db.setCached(source.id, content);
-          await db.recordPayment(payment);
           payments.push(payment);
+          const ledgerError = await persistPaymentRecord(payment);
+          try {
+            await db.setCached(source.id, content);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            yield emit("reevaluate", `Read ${source.name}, but its cache could not be refreshed (${message}).`);
+          }
           gathered.push({ sourceId: source.id, sourceName: source.name, marker, text: content });
           gatheredIds.add(source.id);
           remainingBudget -= source.fetchPrice;
@@ -417,11 +464,33 @@ export async function* runAgent(
 
           yield emit(
             "reevaluate",
-            `Paid $${payment.amountUsdc} to ${source.name} ${payment.settled ? `(settled ${short(payment.txHash)})` : "(simulated)"} — ${marker}`,
+            `${fetchPaymentMessage(payment, source.name)} — ${marker}`,
             payment,
           );
+          if (ledgerError) {
+            yield emit("reevaluate", `Payment receipt retained in this dispatch, but the ledger row could not be written (${ledgerError}).`);
+          }
         } catch (err) {
           const reason = err instanceof Error ? err.message : String(err);
+          const pending = pendingPaymentFrom(err);
+          if (pending) {
+            pending.origin = origin;
+            pendingPayments++;
+            payments.push(pending);
+            const ledgerError = await persistPaymentRecord(pending);
+            // It may already have settled, so this reservation still consumes the per-query slice.
+            remainingBudget -= source.fetchPrice;
+            spentTolls += source.fetchPrice;
+            yield emit(
+              "reevaluate",
+              `Signed $${pending.amountUsdc} authorization for ${source.name}; confirmation is pending and the reserved budget stays consumed.`,
+              pending,
+            );
+            if (ledgerError) {
+              yield emit("reevaluate", `Pending authorization retained in this dispatch, but the ledger row could not be written (${ledgerError}).`);
+            }
+            continue;
+          }
           yield emit("reevaluate", `Couldn't buy ${source.name} to fill gap (${reason}) — continuing.`);
         }
       }
@@ -431,7 +500,9 @@ export async function* runAgent(
   if (gathered.length === 0) {
     return finish(
       fetchFailures > 0
-        ? "The agent tried to buy sources but every purchase failed — likely an exhausted budget or a temporary settlement error. Nothing was charged for the failed attempts; please try again."
+        ? pendingPayments > 0
+          ? "The agent submitted one or more signed source payments, but no settlement confirmation returned. Those amounts remain pending and are not counted as spent; the session reservation stays consumed until its live balance is refreshed."
+          : "The agent tried to buy sources but every purchase failed before submission — likely an exhausted budget or a temporary settlement error. No payment authorization was submitted; please try again."
         : "The agent decided no source was worth paying for this question.",
     );
   }
@@ -652,18 +723,48 @@ export async function* runAgent(
         paymentAttempts++;
         const payment = await gateway.payCitation({ source, author, amount, weight: c.weight, queryId, rationale });
         if (payment.settled) settledPayments++;
+        if (paymentSettlementStatus(payment) === "pending") pendingPayments++;
         payment.origin = origin;
-        await db.recordPayment(payment);
         payments.push(payment);
-        citationPayments.push(payment);
+        const ledgerError = await persistPaymentRecord(payment);
+        if (paymentSettlementStatus(payment) !== "pending") citationPayments.push(payment);
         yield emit(
           "settle",
-          `Settled $${payment.amountUsdc} citation reward → ${author.name} ${payment.settled ? `(${short(payment.txHash)})` : "(simulated)"}`,
+          citationPaymentMessage(payment, author.name),
           payment,
         );
+        if (ledgerError) {
+          yield emit("settle", `Payment receipt retained in this dispatch, but the ledger row could not be written (${ledgerError}).`);
+        }
+        if (paymentSettlementStatus(payment) === "pending") {
+          void sendAlert(
+            `citation settlement pending → ${author.name}`,
+            `$${amount} for "${source.name}" has a submitted authorization but no Circle confirmation.`,
+          );
+        }
       } catch (err) {
         // The answer is already written — a citation-settlement hiccup must not discard it.
         const reason = err instanceof Error ? err.message : String(err);
+        const pending = pendingPaymentFrom(err);
+        if (pending) {
+          pending.origin = origin;
+          pendingPayments++;
+          payments.push(pending);
+          const ledgerError = await persistPaymentRecord(pending);
+          yield emit(
+            "settle",
+            `Submitted $${pending.amountUsdc} citation authorization → ${author.name}; settlement confirmation is pending and is not counted as paid.`,
+            pending,
+          );
+          if (ledgerError) {
+            yield emit("settle", `Pending authorization retained in this dispatch, but the ledger row could not be written (${ledgerError}).`);
+          }
+          void sendAlert(
+            `citation settlement pending → ${author.name}`,
+            `$${amount} for "${source.name}": ${reason}`,
+          );
+          continue;
+        }
         yield emit("settle", `Couldn't settle the reward to ${author.name} (${reason}) — the answer stands.`, { error: reason });
         // A real-mode failure means a creator was owed USDC that didn't land — worth an ops alert.
         // Offline/simulated runs never settle, so they don't alert. Fire-and-forget (never throws).
@@ -703,7 +804,11 @@ export async function* runAgent(
 
   // ── helpers ──
   function finish(answer: string): QueryRun {
-    const totalSpent = round(payments.reduce((s, p) => s + p.amountUsdc, 0));
+    const totalSpent = round(
+      payments
+        .filter((payment) => paymentSettlementStatus(payment) !== "pending")
+        .reduce((sum, payment) => sum + payment.amountUsdc, 0),
+    );
     const run: QueryRun = {
       id: queryId,
       question: input.question,
@@ -728,19 +833,45 @@ export async function* runAgent(
       paymentMode: gateway.mode,
       paymentAttempts,
       settledPayments,
+      pendingPayments,
       // Only present on a retry, so every other surface keeps reading runs exactly as before.
       ...(input.retryOf ? { retryOf: input.retryOf } : {}),
       // Early returns (no sources, no purchase) never reach the verdict step — nothing was read,
       // so the honest label is Low rather than an absent field the surfaces would have to guess at.
       confidence: runConfidence ?? { level: "Low", reason: "no source was read for this question" },
     };
-    emit("done", `Done. Spent $${totalSpent} across ${payments.length} payment(s) to creators.`);
+    emit(
+      "done",
+      `Done. Spent $${totalSpent} across ${payments.length - pendingPayments} confirmed/simulated payment(s) to creators${pendingPayments ? `; ${pendingPayments} authorization(s) await settlement confirmation` : ""}.`,
+    );
     return run;
   }
 }
 
 function short(tx?: string | null): string {
   return tx ? `${tx.slice(0, 10)}…` : "no-tx";
+}
+
+function fetchPaymentMessage(payment: PaymentRecord, sourceName: string): string {
+  const status = paymentSettlementStatus(payment);
+  if (status === "settled") {
+    return `Paid $${payment.amountUsdc} to ${sourceName} (settled ${short(payment.txHash)})`;
+  }
+  if (status === "pending") {
+    return `Unlocked ${sourceName} after a $${payment.amountUsdc} signed authorization (settlement confirmation pending)`;
+  }
+  return `Simulated $${payment.amountUsdc} toll to ${sourceName} (offline)`;
+}
+
+function citationPaymentMessage(payment: PaymentRecord, authorName: string): string {
+  const status = paymentSettlementStatus(payment);
+  if (status === "settled") {
+    return `Settled $${payment.amountUsdc} citation reward → ${authorName} (${short(payment.txHash)})`;
+  }
+  if (status === "pending") {
+    return `Submitted $${payment.amountUsdc} citation authorization → ${authorName}; settlement confirmation pending`;
+  }
+  return `Simulated $${payment.amountUsdc} citation reward → ${authorName} (offline)`;
 }
 function round(n: number): number {
   return Math.round(n * 1e6) / 1e6;

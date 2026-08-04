@@ -88,6 +88,7 @@ export function AnswerCard({ run, meta, permalink }: { run: QueryRun; meta: AskM
           skipped={skipped}
           cached={cached}
           engine={run.engine}
+          pending={run.pendingPayments ?? 0}
           meta={meta}
           permalink={permalink}
         />
@@ -248,6 +249,7 @@ interface SummaryStripProps {
   skipped: number;
   cached: number;
   engine: string;
+  pending: number;
   meta: AskMeta | null;
   permalink?: string;
 }
@@ -259,11 +261,12 @@ function SummaryStrip({
   skipped,
   cached,
   engine,
+  pending,
   meta,
   permalink,
 }: SummaryStripProps) {
   const [copied, setCopied] = useState(false);
-  const pct = spent > 0 ? Math.round((toCreators / spent) * 100) : 100;
+  const pct = spent > 0 ? Math.round((toCreators / spent) * 100) : pending > 0 ? 0 : 100;
 
   const copyPermalink = useCallback(() => {
     if (!permalink) return;
@@ -277,6 +280,7 @@ function SummaryStrip({
     <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-ink bg-paper-2 px-6 py-3.5 text-sm sm:px-9">
       <Stat label="Spent" value={`$${fmtUsdc(spent)}`} mono />
       <Stat label="To creators" value={`${pct}%`} accent />
+      {pending > 0 && <Stat label="Pending proof" value={`${pending}`} />}
       <Stat
         label="Decisions"
         value={`${bought} bought · ${cached} cached · ${skipped} skipped`}

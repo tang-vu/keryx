@@ -12,7 +12,7 @@
  * Unauthenticated / offline asks fall through to the server-side gateway unchanged.
  */
 
-import { useMemo, useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { buildSourceIndex, type SourceIndex } from "@/lib/payments/client-payto-allowlist";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
@@ -29,7 +29,6 @@ import type { SessionGrantBinding } from "@/components/keryx/session-grant-panel
 import { OnboardingTour } from "@/components/keryx/onboarding-tour";
 import { ActivityTicker } from "@/components/keryx/activity-ticker";
 import { useAskStream } from "@/lib/hooks/use-ask-stream";
-import type { PaymentRecord } from "@/lib/types";
 
 export default function AskPage() {
   // grantBinding drives re-render when the grant activates/revokes so
@@ -71,29 +70,6 @@ export default function AskPage() {
   });
   const streaming = state.status === "streaming";
   const started = state.status !== "idle";
-
-  // Derive creator payouts: prefer streamed settle payments; otherwise fall
-  // back to the final run's citations (each citation = a reward to a creator).
-  const payouts = useMemo<PaymentRecord[]>(() => {
-    if (state.payments.length > 0) return state.payments;
-    if (state.run?.citations?.length) {
-      return state.run.citations.map((c) => ({
-        kind: "citation" as const,
-        queryId: state.run!.id,
-        sourceId: c.sourceId,
-        sourceName: c.sourceName,
-        payer: "0xAGENT",
-        payee: c.sourceId,
-        amountUsdc: c.reward,
-        weight: c.weight,
-        txHash: null,
-        network: "",
-        settled: false,
-        createdAt: state.run!.createdAt,
-      }));
-    }
-    return [];
-  }, [state.payments, state.run]);
 
   return (
     <div className="min-h-screen bg-paper-2">
@@ -220,7 +196,7 @@ export default function AskPage() {
             <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
               <ReasoningConsole steps={state.steps} streaming={streaming} budget={state.budget} />
               <CreatorsPaidPanel
-                payments={payouts}
+                payments={state.payments}
                 mode={state.meta?.mode ?? null}
                 streaming={streaming}
               />

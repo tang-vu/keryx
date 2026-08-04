@@ -16,6 +16,7 @@ import { config } from "../config";
 import type { Author, PaymentRecord, Source } from "../types";
 import type { KeryxDB } from "../db";
 import type { RequestSignatureFn } from "./browser-cosign-gateway";
+import { assertPaymentSettlementState } from "./payment-state";
 
 export interface FetchResult {
   content: string;
@@ -85,9 +86,11 @@ export function makePayment(
   partial: Omit<PaymentRecord, "network" | "createdAt"> &
     Partial<Pick<PaymentRecord, "network" | "createdAt">>,
 ): PaymentRecord {
-  return {
+  const payment: PaymentRecord = {
     network: config.networkId,
     createdAt: new Date().toISOString(),
     ...partial,
   };
+  payment.settlementStatus = assertPaymentSettlementState(payment);
+  return payment;
 }

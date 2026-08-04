@@ -25,6 +25,7 @@ import type {
 } from "@/lib/types";
 import type { PaymentRequirementsInput } from "@/lib/x402-client-sign";
 import type { SourceIndex } from "@/lib/payments/client-payto-allowlist";
+import { isPaymentRecord } from "@/lib/payments/payment-state";
 
 export type StreamMode = "real" | "offline";
 
@@ -148,8 +149,8 @@ export function useAskStream(opts?: AskStreamOpts) {
         if (step.phase === "attribute" && step.detail) {
           next.citations = [...s.citations, step.detail as Citation];
         }
-        if (step.phase === "settle" && step.detail) {
-          next.payments = [...s.payments, step.detail as PaymentRecord];
+        if (step.phase === "settle" && isPaymentRecord(step.detail)) {
+          next.payments = [...s.payments, step.detail];
         }
         return next;
       });

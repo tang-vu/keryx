@@ -150,7 +150,10 @@ export interface GapIntent {
  *  engine-generated volume so traction is reported honestly. Legacy NULL rows count as engine. */
 export type PaymentOrigin = "engine" | "web" | "a2a" | "mcp";
 
-/** A settled payment. `inbound` = another agent paid Keryx (A2A); fetch/citation = Keryx paid a creator. */
+/** One payment attempt's evidence state. */
+export type PaymentSettlementStatus = "settled" | "simulated" | "pending";
+
+/** `inbound` = another agent paid Keryx (A2A); fetch/citation = Keryx paid a creator. */
 export interface PaymentRecord {
   id?: string;
   kind: "fetch" | "citation" | "inbound";
@@ -164,7 +167,12 @@ export interface PaymentRecord {
   rationale?: string;
   txHash?: string | null;
   network: string;
-  settled: boolean; // true only when really settled on-chain (false = offline dev)
+  settled: boolean; // compatibility/metrics bit: true only with real Circle settlement evidence
+  /** Distinguishes offline simulation from a submitted authorization awaiting proof. Optional so
+   *  archived rows written before this field existed remain readable. */
+  settlementStatus?: PaymentSettlementStatus;
+  /** EIP-3009 nonce for browser co-sign attempts. Correlation evidence, never a signature. */
+  authorizationId?: string;
   origin?: PaymentOrigin; // engine | web | a2a | mcp — see PaymentOrigin
   createdAt: string;
 }
@@ -271,6 +279,8 @@ export interface QueryRun {
   paymentMode?: "real" | "offline";
   paymentAttempts?: number;
   settledPayments?: number;
+  /** Signed browser authorizations submitted without a definitive settlement response. */
+  pendingPayments?: number;
 }
 
 /** Aggregate metrics for the traction dashboard. Computed only from real, settled rows in prod. */
@@ -320,6 +330,9 @@ export interface DashboardMetrics {
   externalSettlementAttempts: number;
   externalSettledPayments: number;
   externalSettlementSuccessRate: number;
+  /** Operational uncertainty only; excluded from every settled payment and traction total. */
+  pendingPaymentConfirmations: number;
+  pendingPaymentVolumeUsdc: number;
   /** Remote MCP dispatches grouped by their self-declared setup channel. */
   mcpClientQueries: Array<{
     client: McpClientChannel | "unknown";

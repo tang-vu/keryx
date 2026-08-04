@@ -34,6 +34,7 @@ import type { LedgerAccount } from "../gateway/settlement-parity";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 import { normalizePreviewDepth } from "../sources/preview-depth";
+import { assertPaymentSettlementState } from "../payments/payment-state";
 import {
   calculateDashboardMetrics,
   runEvidenceMetrics,
@@ -544,6 +545,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async recordPayment(p: PaymentRecord): Promise<void> {
+    const settlementStatus = assertPaymentSettlementState(p);
     await this.sb.from("payment_events").insert({
       id: p.id ?? crypto.randomUUID(),
       created_at: p.createdAt,
@@ -559,6 +561,8 @@ export class SupabaseAdapter implements KeryxDB {
       tx_hash: p.txHash ?? null,
       network: p.network,
       settled: p.settled,
+      settlement_status: settlementStatus,
+      authorization_id: p.authorizationId ?? null,
       origin: p.origin ?? "engine",
     });
   }
@@ -635,7 +639,7 @@ export class SupabaseAdapter implements KeryxDB {
     const [paymentRows, runRows, feedbackRows, gapIntentRows, sourceRows] = await Promise.all([
       this.allRows(
         "payment_events",
-        "amount_usdc,source_id,query_id,kind,origin,settled,payer",
+        "amount_usdc,source_id,query_id,kind,origin,settled,settlement_status,payer",
       ),
       this.allRows(
         "query_runs",
@@ -659,6 +663,8 @@ export class SupabaseAdapter implements KeryxDB {
         kind: p.kind as "fetch" | "citation" | "inbound",
         origin: (p.origin as import("../types").PaymentOrigin | null) ?? null,
         settled: Boolean(p.settled),
+        settlementStatus:
+          (p.settlement_status as import("../types").PaymentSettlementStatus | null) ?? null,
         payer: (p.payer as string | null) ?? null,
       })),
       runRows.map((r) => ({
@@ -1181,6 +1187,10 @@ function rowToPayment(r: Record<string, unknown>): PaymentRecord {
     txHash: (r.tx_hash as string) ?? null,
     network: r.network as string,
     settled: Boolean(r.settled),
+    settlementStatus:
+      (r.settlement_status as PaymentRecord["settlementStatus"]) ??
+      (Boolean(r.settled) ? "settled" : "simulated"),
+    authorizationId: (r.authorization_id as string) ?? undefined,
     origin: (r.origin as PaymentRecord["origin"]) ?? undefined,
     createdAt: r.created_at as string,
   };
