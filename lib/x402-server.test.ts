@@ -131,4 +131,26 @@ describe("settleThenServe bazaar discovery passthrough", () => {
     expect(res.status).toBe(402);
     expect(settleMock).not.toHaveBeenCalled();
   });
+
+  it("retains settlement proof when the paid resource producer fails", async () => {
+    verifyMock.mockResolvedValue(VALID);
+    settleMock.mockResolvedValue(SETTLED);
+
+    const res = await settleThenServe(paidRequest(), baseOpts, () => {
+      throw new Error("database unavailable");
+    });
+
+    expect(res.status).toBe(500);
+    expect(await res.json()).toMatchObject({
+      error: "paid resource unavailable after settlement",
+    });
+    const encoded = res.headers.get("PAYMENT-RESPONSE");
+    expect(encoded).toBeTruthy();
+    expect(JSON.parse(Buffer.from(encoded!, "base64").toString("utf-8"))).toEqual({
+      success: true,
+      transaction: SETTLED.transaction,
+      payer: SETTLED.payer,
+      network: "eip155:5042002",
+    });
+  });
 });

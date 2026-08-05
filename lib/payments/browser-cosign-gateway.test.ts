@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { config } from "../config";
 import type { Source } from "../types";
-import { pendingPaymentFrom } from "./payment-state";
+import { pendingPaymentFrom, settledPaymentFrom } from "./payment-state";
 
 const grantMocks = vi.hoisted(() => ({
   isGrantValid: vi.fn(),
@@ -78,7 +78,7 @@ function signedHeader(over: Partial<{ from: string; to: string; value: string; n
   ).toString("base64");
 }
 
-function settledResponse(): Response {
+function settledResponse(status = 200): Response {
   const encoded = Buffer.from(
     JSON.stringify({
       success: true,
@@ -89,7 +89,7 @@ function settledResponse(): Response {
   ).toString("base64");
   return Response.json(
     { content: "paid content" },
-    { headers: { "PAYMENT-RESPONSE": encoded } },
+    { status, headers: { "PAYMENT-RESPONSE": encoded } },
   );
 }
 
@@ -201,5 +201,34 @@ describe("BrowserCoSignGateway", () => {
       txHash: "circle-settlement-id",
       authorizationId: NONCE,
     });
+  });
+
+  it("retains a confirmed settlement when paid content delivery returns 5xx", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(challenge())
+      .mockResolvedValueOnce(settledResponse(500));
+    vi.stubGlobal("fetch", fetchMock);
+    const gateway = new BrowserCoSignGateway(
+      "session",
+      SESSION,
+      vi.fn().mockResolvedValue(signedHeader()),
+    );
+
+    let caught: unknown;
+    try {
+      await gateway.payFetch({ source, queryId: "q1" });
+    } catch (error) {
+      caught = error;
+    }
+    expect(settledPaymentFrom(caught)).toMatchObject({
+      queryId: "q1",
+      settled: true,
+      settlementStatus: "settled",
+      txHash: "circle-settlement-id",
+      authorizationId: NONCE,
+    });
+    expect(pendingPaymentFrom(caught)).toBeNull();
+    expect(grantMocks.releaseSpend).not.toHaveBeenCalled();
   });
 });

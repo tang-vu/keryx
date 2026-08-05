@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-08-04
+**Last Updated:** 2026-08-05
 **Current Version:** 0.8.1
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
@@ -8,6 +8,21 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 ---
 
 ## Unreleased
+
+### Settled receipts survive paid-resource delivery failures (2026-08-05)
+A creator payment can finish before Keryx reads IPFS, refreshes a cache, writes a database row, or
+produces the paid response. A failure in that later work used to return HTTP 500 without the Circle
+receipt, so the browser conservatively retained an already-confirmed debit as `pending` forever.
+
+The seller wrapper now attaches its valid `PAYMENT-RESPONSE` to post-settlement 5xx responses.
+Both browser co-sign and treasury-funded buyers check that proof before HTTP status and pass a typed
+settled-delivery failure to the orchestrator. The treasury transport continues using Circle's
+official batching signer, but reads the paid response itself because the SDK's high-level `pay()`
+throws away response headers on non-2xx. Keryx records the settled creator payment and consumes its
+budget, but skips unavailable fetch content so it can never become citation evidence; the rest of the answer
+continues. Citation rewards whose acknowledgement fails after settlement remain paid and eligible
+for the existing settled-only creator notification. No signature or bearer authorization is
+persisted.
 
 ### Provider outages survive the worker that observed them (2026-08-04)
 Production kept recording DeepSeek `decide` and `synthesize` failures with no circuit skips even

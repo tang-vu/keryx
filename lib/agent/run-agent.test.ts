@@ -12,6 +12,7 @@
  *   6. unverified sources are off the money path (listed, but never discovered/read/cited/paid);
  *   7. a single toll failure degrades gracefully — the run still answers from what it read;
  *   8. a missing budget falls back to the configured default.
+ *   9. a confirmed debit stays settled when post-payment content/acknowledgement delivery fails.
  *
  * The engine, DB, and gateway are injected as fakes, so these exercise the orchestrator's
  * deterministic control flow only — no LLM, no network, no chain.
@@ -21,7 +22,7 @@ import { describe, it, expect } from "vitest";
 import { runAgent, type RunInput } from "./run-agent";
 import { config } from "../config";
 import { makePayment, type PaymentGateway } from "../payments/payment-gateway";
-import { PaymentPendingError } from "../payments/payment-state";
+import { PaymentPendingError, PaymentSettledError } from "../payments/payment-state";
 import type { AgentDeps } from "./deps";
 import type { KeryxDB } from "../db/keryx-db";
 import type {
@@ -505,6 +506,83 @@ describe("runAgent — money-safety invariants", () => {
       authorizationId: "nonce-a",
     });
     expect(steps.some((step) => step.message.includes("confirmation is pending"))).toBe(true);
+  });
+
+  it("retains a settled toll when content delivery fails and continues without the source", async () => {
+    const source = makeSource({ id: "a", fetchPrice: 0.004 });
+    const gw = fakeGateway();
+    gw.payFetch = async ({ source: candidate, queryId }) => {
+      const payment = makePayment({
+        id: "x402:nonce-a",
+        kind: "fetch",
+        queryId,
+        sourceId: candidate.id,
+        sourceName: candidate.name,
+        payer: AGENT,
+        payee: candidate.walletAddress,
+        amountUsdc: candidate.fetchPrice,
+        settled: true,
+        settlementStatus: "settled",
+        txHash: "circle-settlement-id",
+        authorizationId: "nonce-a",
+      });
+      throw new PaymentSettledError("content unavailable", payment);
+    };
+    const d = deps([source], fakeEngine(), gw);
+
+    const { run, steps } = await drive({ question: "q", budget: 0.05 }, d);
+
+    expect(run.totalSpent).toBe(source.fetchPrice);
+    expect(run.totalToCreators).toBe(source.fetchPrice);
+    expect(run.settledPayments).toBe(1);
+    expect(run.pendingPayments).toBe(0);
+    expect(run.citations).toHaveLength(0);
+    expect(d.db.payments).toHaveLength(1);
+    expect(d.db.payments[0]).toMatchObject({
+      settled: true,
+      settlementStatus: "settled",
+      txHash: "circle-settlement-id",
+    });
+    expect(steps.some((step) => step.message.includes("content response failed after settlement"))).toBe(true);
+  });
+
+  it("retains a settled citation reward when its paid acknowledgement fails", async () => {
+    const source = makeSource({ id: "a", fetchPrice: 0.004 });
+    const gw = fakeGateway();
+    gw.payCitation = async ({ source: cited, author, amount, weight, queryId, rationale }) => {
+      const payment = makePayment({
+        id: "x402:nonce-cite",
+        kind: "citation",
+        queryId,
+        sourceId: cited.id,
+        sourceName: cited.name,
+        payer: AGENT,
+        payee: author.walletAddress,
+        amountUsdc: amount,
+        weight,
+        rationale,
+        settled: true,
+        settlementStatus: "settled",
+        txHash: "circle-citation-settlement-id",
+        authorizationId: "nonce-cite",
+      });
+      throw new PaymentSettledError("acknowledgement unavailable", payment);
+    };
+    const d = deps([source], fakeEngine(), gw);
+
+    const { run, steps } = await drive({ question: "q", budget: 0.05 }, d);
+
+    expect(run.citations).toHaveLength(1);
+    expect(run.settledPayments).toBe(2);
+    expect(run.pendingPayments).toBe(0);
+    expect(run.totalSpent).toBeGreaterThan(source.fetchPrice);
+    expect(d.db.payments).toHaveLength(2);
+    expect(d.db.payments.find((p) => p.kind === "citation")).toMatchObject({
+      settled: true,
+      settlementStatus: "settled",
+      txHash: "circle-citation-settlement-id",
+    });
+    expect(steps.some((step) => step.message.includes("acknowledgement failed"))).toBe(true);
   });
 
   it("does not relabel a settled payment as a failed purchase when the ledger write fails", async () => {

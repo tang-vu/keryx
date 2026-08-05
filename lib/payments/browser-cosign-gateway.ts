@@ -17,27 +17,21 @@
 import { config } from "../config";
 import type { Author, PaymentRecord, Source } from "../types";
 import { makePayment, type FetchResult, type PaymentGateway } from "./payment-gateway";
-import { PaymentPendingError } from "./payment-state";
+import { PaymentPendingError, PaymentSettledError } from "./payment-state";
 import { isGrantValid, releaseSpend, reserveSpend } from "./session-grants";
+import {
+  assertExpectedRequirements,
+  sameAddress,
+  settlementReference,
+  type PaymentRequirements,
+} from "./x402-payment-evidence";
+
+export type { PaymentRequirements } from "./x402-payment-evidence";
 
 export interface SignRequest {
   reqId: string;
   /** Full payment requirements object from the source's 402 challenge. */
   requirements: PaymentRequirements;
-}
-
-export interface PaymentRequirements {
-  scheme: string;
-  network: string;
-  asset: string;
-  amount: string;
-  payTo: string;
-  maxTimeoutSeconds: number;
-  extra: {
-    name: string;
-    version: string;
-    verifyingContract: string;
-  };
 }
 
 interface ChallengeBody {
@@ -220,31 +214,30 @@ export class BrowserCoSignGateway implements PaymentGateway {
       );
     }
 
+    // Step 4: Extract settlement proof before interpreting the HTTP delivery status. A paid route
+    // can fail while producing content after Circle has already confirmed the debit; its 5xx still
+    // carries PAYMENT-RESPONSE and must remain settled rather than being relabelled pending.
+    const paymentResponse = retryRes.headers.get("PAYMENT-RESPONSE");
+    const txHash = settlementReference(paymentResponse, payer);
+
     if (!retryRes.ok) {
       const reason = `HTTP ${retryRes.status}`;
+      if (txHash) {
+        throw new PaymentSettledError(
+          `payment settled, but the paid route could not deliver its response (${reason})`,
+          makePayment({
+            ...basePayment,
+            txHash,
+            settled: true,
+            settlementStatus: "settled",
+            rationale: `Circle settlement confirmed, but the paid route returned ${reason}.`,
+          }),
+        );
+      }
       throw new PaymentPendingError(
         `settlement confirmation pending after signed submission (${reason})`,
         pending(reason),
       );
-    }
-
-    // Step 4: Extract the settled tx from the response header, if present.
-    const paymentResponse = retryRes.headers.get("PAYMENT-RESPONSE");
-    let txHash: string | null = null;
-    if (paymentResponse) {
-      try {
-        const parsed = JSON.parse(Buffer.from(paymentResponse, "base64").toString("utf-8"));
-        if (
-          parsed?.success === true &&
-          typeof parsed.transaction === "string" &&
-          parsed.transaction.length > 0 &&
-          typeof parsed.payer === "string" &&
-          sameAddress(parsed.payer, payer) &&
-          parsed.network === config.networkId
-        ) {
-          txHash = parsed.transaction;
-        }
-      } catch { /* non-critical */ }
     }
 
     const bodyJson = await retryRes.json().catch(() => ({})) as Record<string, unknown>;
@@ -303,37 +296,6 @@ export class BrowserCoSignGateway implements PaymentGateway {
     }
 
     return match;
-  }
-}
-
-function atomicUsdc(amount: number): string {
-  return Math.max(1, Math.round(amount * 1_000_000)).toString();
-}
-
-function sameAddress(left: unknown, right: string): boolean {
-  return typeof left === "string" && left.toLowerCase() === right.toLowerCase();
-}
-
-/** A 402 challenge must equal the source/author and integer micro-USDC amount the orchestrator
- * already authorised. An endpoint does not get to redefine a reserved spend. */
-function assertExpectedRequirements(
-  requirements: PaymentRequirements,
-  expectedPayee: string,
-  expectedAmount: number,
-): void {
-  if (requirements.scheme !== "exact") throw new Error("402 challenge has an unsupported scheme");
-  if (requirements.network !== config.networkId) throw new Error("402 challenge has the wrong network");
-  if (!sameAddress(requirements.asset, config.usdcAddress)) throw new Error("402 challenge has the wrong asset");
-  if (!sameAddress(requirements.payTo, expectedPayee)) throw new Error("402 challenge payTo does not match the authorised creator");
-  if (requirements.amount !== atomicUsdc(expectedAmount)) throw new Error("402 challenge amount does not match the reserved spend");
-  if (requirements.maxTimeoutSeconds !== config.maxTimeoutSeconds) {
-    throw new Error("402 challenge has an unexpected authorization lifetime");
-  }
-  if (!sameAddress(requirements.extra?.verifyingContract ?? "", config.gatewayWallet)) {
-    throw new Error("402 challenge has the wrong Gateway contract");
-  }
-  if (requirements.extra?.name !== "GatewayWalletBatched" || requirements.extra?.version !== "1") {
-    throw new Error("402 challenge has an unsupported signing domain");
   }
 }
 

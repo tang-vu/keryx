@@ -35,7 +35,11 @@ import { buildDecisionContext, saveMemory } from "./query-memory";
 import { dispatchCitationNotify } from "../notify/citation-webhook";
 import { dispatchCitationEmail } from "../notify/citation-email";
 import { allocateSplit } from "../payments/split-allocation";
-import { paymentSettlementStatus, pendingPaymentFrom } from "../payments/payment-state";
+import {
+  paymentSettlementStatus,
+  pendingPaymentFrom,
+  settledPaymentFrom,
+} from "../payments/payment-state";
 import { sendAlert } from "../notify/alert";
 import { normalizePreviewDepth, previewSummary } from "../sources/preview-depth";
 import { isCacheFresh, newestPublishedAt } from "./cache-freshness";
@@ -325,6 +329,22 @@ export async function* runAgent(
         // kill the whole run — skip this source and answer from whatever was already read.
         fetchFailures++;
         const reason = err instanceof Error ? err.message : String(err);
+        const settled = settledPaymentFrom(err);
+        if (settled) {
+          settled.origin = origin;
+          settledPayments++;
+          payments.push(settled);
+          const ledgerError = await persistPaymentRecord(settled);
+          yield emit(
+            "fetch",
+            `Paid $${settled.amountUsdc} to ${source.name}, but its content response failed after settlement; receipt retained and the run continues without that source.`,
+            settled,
+          );
+          if (ledgerError) {
+            yield emit("fetch", `Settled receipt retained in this dispatch, but the ledger row could not be written (${ledgerError}).`);
+          }
+          continue;
+        }
         const pending = pendingPaymentFrom(err);
         if (pending) {
           pending.origin = origin;
@@ -472,6 +492,25 @@ export async function* runAgent(
           }
         } catch (err) {
           const reason = err instanceof Error ? err.message : String(err);
+          const settled = settledPaymentFrom(err);
+          if (settled) {
+            settled.origin = origin;
+            settledPayments++;
+            payments.push(settled);
+            const ledgerError = await persistPaymentRecord(settled);
+            // This source was selected only during re-evaluation, so consume its query slice here.
+            remainingBudget -= source.fetchPrice;
+            spentTolls += source.fetchPrice;
+            yield emit(
+              "reevaluate",
+              `Paid $${settled.amountUsdc} to ${source.name}, but its content response failed after settlement; receipt retained and the gap remains open.`,
+              settled,
+            );
+            if (ledgerError) {
+              yield emit("reevaluate", `Settled receipt retained in this dispatch, but the ledger row could not be written (${ledgerError}).`);
+            }
+            continue;
+          }
           const pending = pendingPaymentFrom(err);
           if (pending) {
             pending.origin = origin;
@@ -745,6 +784,23 @@ export async function* runAgent(
       } catch (err) {
         // The answer is already written — a citation-settlement hiccup must not discard it.
         const reason = err instanceof Error ? err.message : String(err);
+        const settled = settledPaymentFrom(err);
+        if (settled) {
+          settled.origin = origin;
+          settledPayments++;
+          payments.push(settled);
+          citationPayments.push(settled);
+          const ledgerError = await persistPaymentRecord(settled);
+          yield emit(
+            "settle",
+            `Paid $${settled.amountUsdc} citation reward → ${author.name}; Circle confirmed settlement even though the paid route acknowledgement failed.`,
+            settled,
+          );
+          if (ledgerError) {
+            yield emit("settle", `Settled receipt retained in this dispatch, but the ledger row could not be written (${ledgerError}).`);
+          }
+          continue;
+        }
         const pending = pendingPaymentFrom(err);
         if (pending) {
           pending.origin = origin;

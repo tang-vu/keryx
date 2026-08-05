@@ -2,15 +2,19 @@
  * RealGateway — settles on Arc testnet via Circle x402 batched nanopayments.
  *
  * Uses a PERSISTENT spend wallet (data/spend-wallet.json) that maintains a reusable Gateway
- * balance: it funds gas + deposits USDC only when the balance drops below a threshold, then
- * `gateway.pay()`s each source/cite endpoint (payTo = creator wallet → real settlement to creators).
+ * balance: it funds gas + deposits USDC only when the balance drops below a threshold, then uses
+ * Circle's batching signer for each source/cite endpoint (payTo = creator wallet → settlement).
  * Circle's facilitator won't settle against tiny balances, so we keep ~1 USDC and top up as needed;
  * the orchestrator's per-query budget (not the deposit) caps actual spend.
  */
 
 import fs from "node:fs";
 import path from "node:path";
-import { GatewayClient, type SupportedChainName } from "@circle-fin/x402-batching/client";
+import {
+  BatchEvmScheme,
+  GatewayClient,
+  type SupportedChainName,
+} from "@circle-fin/x402-batching/client";
 import {
   createPublicClient,
   createWalletClient,
@@ -24,6 +28,8 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { config } from "../config";
 import type { Author, PaymentRecord, Source } from "../types";
 import { makePayment, type FetchResult, type PaymentGateway } from "./payment-gateway";
+import { PaymentPendingError, PaymentSettledError } from "./payment-state";
+import { payWithServerSigner, type ServerX402Attempt } from "./server-x402-client";
 
 const GAS_TOPUP = parseEther("0.05"); // native USDC for gas (18 decimals on Arc)
 const GAS_MIN = parseEther("0.01");
@@ -45,6 +51,7 @@ export class RealGateway implements PaymentGateway {
   readonly mode = "real" as const;
   private spendKey = loadSpendKey();
   private spend = privateKeyToAccount(this.spendKey);
+  private batchScheme = new BatchEvmScheme(this.spend);
   private gateway = new GatewayClient({
     chain: config.network as SupportedChainName,
     privateKey: this.spendKey,
@@ -114,21 +121,25 @@ export class RealGateway implements PaymentGateway {
 
   async payFetch({ source, queryId }: { source: Source; queryId: string }): Promise<FetchResult> {
     const url = `${config.baseUrl}/api/source/${source.id}`;
-    const r = await this.gateway.pay<{ content?: string; text?: string }>(url);
-    const content = r.data?.content ?? r.data?.text ?? JSON.stringify(r.data ?? {});
-    const payment = makePayment({
+    const attempt = await payWithServerSigner<{ content?: string; text?: string }>({
+      url,
+      method: "GET",
+      expectedPayee: source.walletAddress,
+      expectedAmount: source.fetchPrice,
+      payer: this.spend.address,
+      signer: this.batchScheme,
+    });
+    const payment = paymentFromAttempt(attempt, {
       kind: "fetch",
       queryId,
       sourceId: source.id,
       sourceName: source.name,
       payer: this.spend.address,
       payee: source.walletAddress,
-      amountUsdc: numAmount(r.formattedAmount, source.fetchPrice),
-      txHash: r.transaction,
-      settled: true,
-      settlementStatus: "settled",
-      rationale: "Access toll settled on Arc via x402.",
+      settledRationale: "Access toll settled on Arc via x402.",
     });
+    throwIfDeliveryFailed(attempt, payment, source.name);
+    const content = attempt.data?.content ?? attempt.data?.text ?? JSON.stringify(attempt.data ?? {});
     return { content, payment };
   }
 
@@ -150,25 +161,81 @@ export class RealGateway implements PaymentGateway {
     const url = `${config.baseUrl}/api/cite/${source.id}?author=${encodeURIComponent(
       author.walletAddress,
     )}&amount=${amount.toFixed(6)}&query=${encodeURIComponent(queryId)}`;
-    const r = await this.gateway.pay<{ ok?: boolean }>(url, { method: "POST" });
-    return makePayment({
+    const attempt = await payWithServerSigner<{ ok?: boolean }>({
+      url,
+      method: "POST",
+      expectedPayee: author.walletAddress,
+      expectedAmount: amount,
+      payer: this.spend.address,
+      signer: this.batchScheme,
+    });
+    const payment = paymentFromAttempt(attempt, {
       kind: "citation",
       queryId,
       sourceId: source.id,
       sourceName: source.name,
       payer: this.spend.address,
       payee: author.walletAddress,
-      amountUsdc: numAmount(r.formattedAmount, amount),
       weight,
-      rationale,
-      txHash: r.transaction,
-      settled: true,
-      settlementStatus: "settled",
+      settledRationale: rationale,
     });
+    throwIfDeliveryFailed(attempt, payment, source.name);
+    return payment;
   }
 }
 
-function numAmount(formatted: string | undefined, fallback: number): number {
-  const n = formatted ? parseFloat(formatted) : NaN;
-  return Number.isFinite(n) ? n : fallback;
+interface AttemptPaymentContext {
+  kind: "fetch" | "citation";
+  queryId: string;
+  sourceId: string;
+  sourceName: string;
+  payer: string;
+  payee: string;
+  weight?: number;
+  settledRationale: string;
+}
+
+function paymentFromAttempt(
+  attempt: ServerX402Attempt<unknown>,
+  context: AttemptPaymentContext,
+): PaymentRecord {
+  const settled = attempt.settlementStatus === "settled";
+  return makePayment({
+    id: `x402:${attempt.authorizationId}`,
+    kind: context.kind,
+    queryId: context.queryId,
+    sourceId: context.sourceId,
+    sourceName: context.sourceName,
+    payer: context.payer,
+    payee: context.payee,
+    amountUsdc: attempt.amountUsdc,
+    weight: context.weight,
+    txHash: attempt.transaction,
+    settled,
+    settlementStatus: attempt.settlementStatus,
+    authorizationId: attempt.authorizationId,
+    rationale: settled
+      ? context.settledRationale
+      : `Signed x402 authorization submitted; settlement confirmation unavailable (${attempt.reason ?? "missing Circle receipt"}).`,
+  });
+}
+
+function throwIfDeliveryFailed(
+  attempt: ServerX402Attempt<unknown>,
+  payment: PaymentRecord,
+  sourceName: string,
+): void {
+  if (attempt.delivered) return;
+  const reason = attempt.reason ?? "paid resource unavailable";
+  if (payment.settled) {
+    payment.rationale = `Circle settlement confirmed, but the paid route failed (${reason}).`;
+    throw new PaymentSettledError(
+      `payment settled, but ${sourceName} could not deliver its paid response (${reason})`,
+      payment,
+    );
+  }
+  throw new PaymentPendingError(
+    `settlement confirmation pending after signed submission (${reason})`,
+    payment,
+  );
 }

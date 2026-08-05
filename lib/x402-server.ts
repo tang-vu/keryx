@@ -179,16 +179,37 @@ export async function settleThenServe(
       return NextResponse.json({ error: "settlement failed", reason: settle.errorReason }, { status: 402 });
     }
     console.log(`[x402] settled ${opts.endpoint}: ${settle.transaction}`);
-    const body = await produce({
+    const paymentResponse = b64(JSON.stringify({
+      success: true,
+      transaction: settle.transaction,
+      payer: settle.payer ?? verify.payer,
+      network: requirements.network,
+    }));
+    const settleInfo = {
       payer: settle.payer ?? verify.payer ?? "unknown",
       transaction: settle.transaction ?? "",
       amountUsdc: opts.priceUsdc,
-    });
+    };
+
+    // Settlement and resource delivery are separate state transitions. Once Circle confirms the
+    // debit, a producer/DB/IPFS failure must not erase that proof and make the buyer call a real
+    // payment pending. Return the receipt on the 5xx so the buyer can retain the settled ledger
+    // leg while skipping unavailable content.
+    let body: unknown;
+    try {
+      body = await produce(settleInfo);
+    } catch (produceError) {
+      const message = produceError instanceof Error ? produceError.message : String(produceError);
+      console.error(`[x402] paid resource failed after settlement ${opts.endpoint}: ${message}`);
+      const res = NextResponse.json(
+        { error: "paid resource unavailable after settlement" },
+        { status: 500 },
+      );
+      res.headers.set("PAYMENT-RESPONSE", paymentResponse);
+      return res;
+    }
     const res = NextResponse.json(body ?? { ok: true });
-    res.headers.set(
-      "PAYMENT-RESPONSE",
-      b64(JSON.stringify({ success: true, transaction: settle.transaction, payer: settle.payer ?? verify.payer, network: requirements.network })),
-    );
+    res.headers.set("PAYMENT-RESPONSE", paymentResponse);
     return res;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

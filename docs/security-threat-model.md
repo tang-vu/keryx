@@ -1,6 +1,6 @@
 # Keryx Security Threat Model
 
-**Version:** 2026-08-04 (Browser settlement ambiguity and challenge binding)
+**Version:** 2026-08-05 (Post-settlement delivery failure keeps its receipt)
 **Scope:** Non-custodial dApp — SIWE auth, browser co-sign session, SourceRegistry, IPFS gated content, API keys, offline dev path.
 
 ---
@@ -42,6 +42,7 @@
 | S31 | Server-side URL fetch | IPv4-mapped IPv6 hexadecimal notation bypasses private/loopback checks and reaches internal services | **PASS (2026-07-29)** | IPv6 addresses are expanded to hextets and mapped/compatible embedded IPv4 addresses are classified through the IPv4 policy. Regression covers canonical `::ffff:7f00:1`, expanded metadata addresses, and public mapped addresses. `lib/net/public-fetch.ts`. |
 | S32 | Browser co-sign | A public wallet address with an active grant is replayed as `sessionId` to bypass the anonymous rate tier, reserve the victim's cap, or receive pending request ids | **PASS (2026-07-30)** | `/api/ask` requires the SIWE wallet to equal both `sessionId` and the persisted grant owner before selecting browser co-sign. A disconnect aborts and removes any pending pre-signature slot immediately, allowing the unused reservation to be released. `app/api/ask/route.ts`, `lib/payments/pending-signatures.ts`. |
 | S33 | Browser co-sign | A timeout/non-success response after signature submission is called uncharged, or a 2xx without settlement proof is called simulated/settled; a retry can exceed the cap | **PASS (2026-08-04)** | The post-submit boundary creates a durable `pending` row keyed by the EIP-3009 nonce and retains both session and per-query reservations. Pending rows are visible but excluded from settled/spent/earnings/traction/notification/fulfillment paths. Only a valid Circle `PAYMENT-RESPONSE` reference sets `settled=true`; no signature is persisted. Post-payment DB/cache failures no longer enter the purchase-failure catch. `lib/payments/payment-state.ts`, `lib/payments/browser-cosign-gateway.ts`, `lib/agent/run-agent.ts`, `payment_events`. |
+| S34 | x402 delivery | DB/IPFS/content production fails after Circle already settled, erasing the receipt and permanently under-reporting a real debit as pending | **PASS (2026-08-05)** | `settleThenServe` constructs the settlement response before running the paid producer and attaches it to a producer 5xx. Browser and server-funded buyers validate payer, network, success and transaction before interpreting HTTP status, then carry a typed settled record to the agent. The server-funded transport still delegates authorization signing to Circle's `BatchEvmScheme`. The receipt is persisted and budget stays consumed, while failed fetch content is excluded from evidence. `lib/x402-server.ts`, `lib/payments/browser-cosign-gateway.ts`, `lib/payments/server-x402-client.ts`, `lib/payments/real-gateway.ts`, `lib/agent/run-agent.ts`. |
 
 ---
 

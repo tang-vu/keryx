@@ -5,6 +5,26 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-38** · Settlement/Delivery · *A confirmed Circle receipt remains settled even when the paid
+resource fails after settlement; delivery success never rewrites payment truth.*
+`settleThenServe` now builds the `PAYMENT-RESPONSE` immediately after a successful facilitator
+settlement and attaches it to both the normal response and any later producer 5xx. Browser co-sign
+and server-funded buyers evaluate that receipt before the HTTP status: a valid
+payer/network/transaction proof creates a typed settled-delivery error, while a non-success
+response without valid proof remains pending. The server-funded path still uses Circle's official
+`BatchEvmScheme` to create the authorization; Keryx owns only the response classification because
+the SDK's high-level `pay()` discards headers on non-2xx. The agent persists the settled leg, counts
+it in spend and creator earnings, keeps
+the session/query reservation consumed, and continues without unavailable source content. A
+settled citation acknowledgement failure still qualifies the paid creator notification because
+the reward itself landed; a fetch delivery failure never enters the evidence set.
+
+Why: source DB, IPFS, decryption, or answer-production work happens after the irreversible payment
+boundary. Treating its failure as ambiguous discarded definitive evidence Keryx already held and
+could permanently under-report a real creator payment. Treating the failed body as usable content
+would instead corrupt grounding. Payment and delivery therefore need explicit, independent state
+transitions. Reversible: low (typed error and response-header preservation; no rail/schema change).
+
 **D-37** · Browser co-sign/Settlement · *After a signed authorization crosses the submission
 boundary, uncertainty is `pending`, never `failed`, `simulated`, or settled traction.*
 The server now binds every 402 challenge to the orchestrator-authorised network, USDC asset,

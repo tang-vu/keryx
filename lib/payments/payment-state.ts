@@ -34,6 +34,22 @@ export function pendingPaymentFrom(error: unknown): PaymentRecord | null {
   return error instanceof PaymentPendingError ? error.payment : null;
 }
 
+/** Thrown when Circle returned definitive settlement proof but the paid route could not deliver
+ * its resource/acknowledgement. The debit is settled even though the caller must skip the content. */
+export class PaymentSettledError extends Error {
+  readonly payment: PaymentRecord;
+
+  constructor(message: string, payment: PaymentRecord) {
+    super(message);
+    this.name = "PaymentSettledError";
+    this.payment = payment;
+  }
+}
+
+export function settledPaymentFrom(error: unknown): PaymentRecord | null {
+  return error instanceof PaymentSettledError ? error.payment : null;
+}
+
 export function isPaymentRecord(value: unknown): value is PaymentRecord {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<PaymentRecord>;
