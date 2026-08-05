@@ -5,8 +5,29 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-40** · Article market/Authority · *Publishers may sign temporary article discounts; the
+SourceRegistry creator, list-price ceiling, active flag, and payout wallet remain authoritative.*
+An offer is EIP-712 over `sourceId + itemId + contentVersion + priceUsdc6 + expiresAt + nonce` on
+Arc testnet. Only the live registry `creator` may publish or revoke an on-chain source's current
+offer revision; pricing fails closed when that authority cannot be freshly read. The offer price is
+integer micro-USDC, at least the x402 minimum, never above the live registry price, and expires
+within 30 days. Replacing or revoking the one current revision makes an earlier `offerId` return
+409 before a paid challenge. A content change does the same through the existing version binding.
+
+The server verifies the signature during owner admission, marketplace discovery, agent selection,
+and again before 402. Browser co-signers independently refresh SourceRegistry, verify the creator
+signature, price ceiling, exact article identity, expiry, challenge amount, and payee before
+creating a bearer authorization. Treasury buyers verify challenge amount/payee and paid response
+pricing. Fetch receipts persist offer id, effective amount, and list price. Pre-registry sources
+retain the documented public-index wallet/price residual; their wallet signs offers directly.
+Why: article identity created a stable object, but a source-level price still prevented a publisher
+from pricing a flagship investigation differently from a routine post. A public signed offer book
+makes price competition inspectable without introducing custody, escrow, buyer order matching, or
+article metadata as payout authority. Reversible: medium (drop the additive offer table/routes and
+all articles immediately fall back to their registry list price).
+
 **D-39** · Content economics/Evidence · *The exact article version is the unit Keryx discovers,
-buys, caches, cites, and rewards; SourceRegistry remains the sole authority for price and payee.*
+buys, caches, cites, and rewards; SourceRegistry remains the authority for list-price ceiling and payee.*
 For each verified publication, discovery chooses one relevant `source_items` row from free title and
 preview metadata. The reasoning candidate carries a separate `item:<id>` asset identity while its
 registry `sourceId` remains attached for source-owned `fetchPrice`, `walletAddress`, and author

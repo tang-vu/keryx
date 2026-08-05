@@ -72,6 +72,36 @@ export interface SourceItemIdentity {
   itemPublishedAt?: string;
 }
 
+/**
+ * A creator-signed, version-bound discount for one article.
+ *
+ * `priceUsdc6` is an integer so the signed price is exactly the amount x402 settles. The
+ * SourceRegistry publication price remains the ceiling and payout authority; an offer can only
+ * make one exact article cheaper until `expiresAt`.
+ */
+export interface ArticleOffer {
+  id: string;
+  sourceId: string;
+  itemId: string;
+  contentVersion: string;
+  priceUsdc6: number;
+  expiresAt: number; // unix seconds
+  signer: string;
+  nonce: string;
+  signature: string;
+  createdAt: string;
+}
+
+/** Public purchase terms carried through discovery, payment, and receipts. */
+export interface ArticleOfferRef {
+  id: string;
+  priceUsdc: number;
+  listPriceUsdc: number;
+  expiresAt: number;
+  /** Signed payload sent to browser co-signers so they can verify amount independently. */
+  proof?: ArticleOffer;
+}
+
 export type DecisionAction = "BUY" | "SKIP" | "CACHE";
 
 /** The agent's reasoned choice about a single candidate source. The rationale is the product. */
@@ -83,6 +113,9 @@ export interface Decision extends Partial<SourceItemIdentity> {
   action: DecisionAction;
   expectedValue: number; // 0..1 — predicted usefulness for the question
   price: number; // USDC toll
+  /** Creator-signed article discount selected by the agent, when one beat the list price. */
+  offerId?: string;
+  listPrice?: number;
   confidence: number; // 0..1
   rationale: string; // human-readable WHY (buy/skip/cache)
   targets: number[]; // indexes of sub-claims this source is expected to address
@@ -174,6 +207,9 @@ export interface PaymentRecord extends Partial<SourceItemIdentity> {
   payer: string;
   payee: string;
   amountUsdc: number;
+  /** Article offer provenance. Absent for list-price, legacy, and citation payments. */
+  offerId?: string;
+  listPriceUsdc?: number;
   weight?: number;
   rationale?: string;
   txHash?: string | null;

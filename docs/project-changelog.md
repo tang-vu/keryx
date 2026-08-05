@@ -1,13 +1,28 @@
 # Keryx Project Changelog
 
 **Last Updated:** 2026-08-05
-**Current Version:** 0.9.0
+**Current Version:** 0.10.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
 
 ---
 
 ## Unreleased
+
+### Publishers can sign article-level offers; agents buy against an open price book (2026-08-05)
+Keryx now exposes every payable article version at `/market` and `/api/offers`. A publisher can
+open the Article Offer Desk on its creator page, choose an exact item, price and expiry, and sign an
+EIP-712 offer without sending a transaction. The signed payload binds source, item, content
+version, integer micro-USDC amount, expiry and nonce. One current revision per article makes
+replacement and revocation deterministic.
+
+SourceRegistry remains the hard authority: its creator is the only signer accepted for on-chain
+sources, its price is the ceiling, its active flag gates the rail, and its payout wallet receives
+the x402 settlement. A stale version, revoked/replaced offer or expired signature returns 409
+before 402. Browser session co-signers independently refresh the registry and verify payee, creator
+signature, article identity, expiry and challenge amount; treasury buyers verify the same paid
+terms around settlement. Agent decisions, SSE traces and payment receipts retain effective price,
+list price and offer id, while invalid offers safely fall back to list price during discovery.
 
 ### The thing Keryx buys is now an exact article, not an entire feed (2026-08-05)
 Discovery now chooses one relevant article per verified publication using only free title and

@@ -2,7 +2,8 @@
 import { NextRequest } from "next/server";
 
 import { getDb } from "@/lib/db";
-import { sourceFetchPayTo } from "@/lib/registry/source-fetch-payto";
+import { sourceFetchTerms } from "@/lib/registry/source-fetch-payto";
+import { articlePaidPath, resolveValidArticleOffer } from "@/lib/offers/resolve-article-offer";
 import {
   sourceItemCacheKey,
   sourceItemIdentity,
@@ -33,15 +34,45 @@ export async function GET(
       { status: 409 },
     );
   }
-  const payTo = await sourceFetchPayTo(source);
+  const terms = await sourceFetchTerms(source, { refresh: true });
+  if (!terms.active || source.active === false || source.verified === false) {
+    return Response.json({ error: "source is not active on the earning rail" }, { status: 410 });
+  }
+  const requestedOfferId = req.nextUrl.searchParams.get("offer");
+  const resolvedOffer = await resolveValidArticleOffer(db, source, item, terms);
+  if (requestedOfferId && resolvedOffer?.offer.id !== requestedOfferId) {
+    return Response.json(
+      { error: "article offer changed or expired; rediscover before paying" },
+      { status: 409 },
+    );
+  }
+  if (
+    requestedOfferId &&
+    req.nextUrl.searchParams.get("listPriceUsdc6") !==
+      String(Math.round(terms.listPriceUsdc * 1_000_000))
+  ) {
+    return Response.json(
+      { error: "source list price changed; rediscover before paying" },
+      { status: 409 },
+    );
+  }
+  const offer = requestedOfferId ? resolvedOffer : null;
+  const priceUsdc = offer?.ref.priceUsdc ?? terms.listPriceUsdc;
   const cacheKey = sourceItemCacheKey(id, item);
+  const endpoint = articlePaidPath({
+    sourceId: id,
+    itemId,
+    contentVersion: identity.contentVersion,
+    offerId: offer?.offer.id,
+    listPriceUsdc: offer?.ref.listPriceUsdc,
+  });
 
   return settleThenServe(
     req,
     {
-      priceUsdc: source.fetchPrice,
-      payTo,
-      endpoint: `/api/source/${id}/item/${encodeURIComponent(itemId)}?version=${encodeURIComponent(identity.contentVersion)}`,
+      priceUsdc,
+      payTo: terms.payTo,
+      endpoint,
       description: `${source.name} — ${item.title}`,
     },
     async (settle) => {
@@ -51,7 +82,16 @@ export async function GET(
         (await resolveSourceItemContent(item, settle, { allowSummaryFallback: false }));
       if (!cached) await db.setCached(cacheKey, content);
 
-      return { content, name: source.name, item: identity };
+      return {
+        content,
+        name: source.name,
+        item: identity,
+        pricing: {
+          offerId: offer?.offer.id ?? null,
+          priceUsdc,
+          listPriceUsdc: terms.listPriceUsdc,
+        },
+      };
     },
   );
 }

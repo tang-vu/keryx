@@ -26,7 +26,10 @@ import { getDb } from "@/lib/db";
 import { buildFollowUpQuestion } from "@/lib/agent/follow-up-question";
 import { getGrant } from "@/lib/payments/session-grants";
 import { awaitSignature } from "@/lib/payments/pending-signatures";
-import type { PaymentRequirements } from "@/lib/payments/browser-cosign-gateway";
+import type {
+  BrowserPaymentContext,
+  PaymentRequirements,
+} from "@/lib/payments/browser-cosign-gateway";
 import type { QueryRun } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -159,7 +162,8 @@ export async function POST(req: NextRequest) {
 
         if (useBrowserCoSign && sessionId) {
           // Build the requestSignature callback that the BrowserCoSignGateway calls for each BUY.
-          // It emits an SSE sign-request event and suspends until /api/ask/sign resolves it.
+          // It emits the payment requirements plus article/offer proof in an SSE sign-request
+          // event and suspends until /api/ask/sign resolves it.
           // sessionId is narrowed (non-null) by the useBrowserCoSign guard above.
           const capturedSessionId = sessionId;
           const requestSignature = (
@@ -167,8 +171,9 @@ export async function POST(req: NextRequest) {
             requirements: PaymentRequirements,
             kind: "fetch" | "citation",
             sourceId: string,
+            paymentContext?: BrowserPaymentContext,
           ): Promise<string> => {
-            send("sign-request", { reqId, requirements, kind, sourceId });
+            send("sign-request", { reqId, requirements, kind, sourceId, paymentContext });
             // Scope the pending slot to this session so a caller can't resolve another session's sign-request.
             return awaitSignature(capturedSessionId, reqId, abort.signal);
           };

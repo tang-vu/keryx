@@ -45,7 +45,7 @@ export default function AskPage() {
   useEffect(() => {
     fetch("/api/sources")
       .then((r) => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
-      .then((data: { sources?: Array<{ id?: string; walletAddress?: string; onchainId?: string }> }) => {
+      .then((data: { sources?: Array<{ id?: string; walletAddress?: string; fetchPrice?: number; onchainId?: string }> }) => {
         setSourceIndex(buildSourceIndex(data.sources ?? []));
       })
       .catch((err) => {

@@ -16,6 +16,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import type { WalletClient } from "viem";
+import type { BrowserPaymentContext } from "@/lib/payments/browser-cosign-gateway";
 import type {
   Citation,
   Decision,
@@ -160,12 +161,14 @@ export function useAskStream(opts?: AskStreamOpts) {
     if (event === "sign-request") {
       // Browser co-sign: the server asks us to sign an EIP-712 payment authorization.
       // We do this in the background — no await in the event loop, fire-and-forget promise.
-      // `kind` also rides this event; the payTo allowlist below covers fetch tolls and
-      // citation rewards alike, so it no longer changes what the browser checks.
-      const { reqId, requirements, sourceId } = data as {
+      // `kind` also rides this event: fetches require the exact registry payout wallet,
+      // while citation rewards may target any registry-authorised author wallet.
+      const { reqId, requirements, sourceId, kind, paymentContext } = data as {
         reqId: string;
         requirements: PaymentRequirementsInput;
         sourceId?: string;
+        kind?: "fetch" | "citation";
+        paymentContext?: BrowserPaymentContext;
       };
       const sessionId = opts?.sessionId;
       const getWallet = opts?.getSessionWalletClient;
@@ -203,8 +206,8 @@ export function useAskStream(opts?: AskStreamOpts) {
         }
 
         // payTo validation — the last gate before a bearer authorization exists.
-        // Both fetch tolls and citation rewards are checked against the wallets the
-        // on-chain registry authorises for this exact source. A sourceId the browser
+        // Fetch tolls are checked against the source payout wallet; citation rewards
+        // use the registry's full author allowlist. A sourceId the browser
         // never saw in /api/sources, or a registry it cannot read, means refuse: the
         // server's timeout skips the source, which costs a reward, not the user's USDC.
         //
@@ -212,20 +215,47 @@ export function useAskStream(opts?: AskStreamOpts) {
         // rolling deploy). Fall back to cap-only enforcement rather than refusing every
         // payment mid-swap; the cap remains the binding ceiling either way.
         const index = opts?.sourceIndex;
+        if (kind === "fetch" && paymentContext?.offer && (!sourceId || !index || index.size === 0)) {
+          console.warn(
+            "[keryx] sign-request refused: signed article offer cannot be verified without the source index",
+          );
+          return;
+        }
         if (sourceId && index && index.size > 0) {
-          const { resolveAllowedPayTo } = await import("@/lib/payments/client-payto-allowlist");
-          const allowed = await resolveAllowedPayTo(sourceId, index);
-          if (!allowed) {
+          const { isPaymentPayeeAllowed, resolveSourcePaymentAuthority } = await import(
+            "@/lib/payments/client-payto-allowlist"
+          );
+          const authority = await resolveSourcePaymentAuthority(sourceId, index, { refresh: true });
+          if (!authority) {
             console.warn(
               `[keryx] sign-request refused: cannot establish the authorised payees for source ${sourceId}`,
             );
             return;
           }
-          if (!allowed.has(requirements.payTo.toLowerCase())) {
+          if (!isPaymentPayeeAllowed(authority, requirements.payTo, kind)) {
             console.warn(
-              `[keryx] sign-request refused: payTo ${requirements.payTo} is not an authorised payee of ${sourceId}`,
+              `[keryx] sign-request refused: payTo ${requirements.payTo} is not authorised for this ${kind ?? "payment"} on ${sourceId}`,
             );
             return;
+          }
+
+          // Fetch prices have independent browser authority too. List-price reads must equal the
+          // registry ceiling. Discounted reads must carry a creator signature over this exact
+          // article version, amount, and expiry; a compromised server cannot invent one.
+          if (kind === "fetch") {
+            const { validateBrowserFetchPrice } = await import(
+              "@/lib/payments/browser-fetch-price-policy"
+            );
+            const priceDecision = await validateBrowserFetchPrice({
+              sourceId,
+              amountUsdc6: requirements.amount,
+              authority,
+              context: paymentContext,
+            });
+            if (!priceDecision.allowed) {
+              console.warn(`[keryx] sign-request refused: ${priceDecision.reason}`);
+              return;
+            }
           }
         }
 

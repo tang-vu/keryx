@@ -39,6 +39,9 @@ export type PayToAllowlist =
       status: "onchain";
       wallets: ReadonlySet<string>;
       payoutWallet: string;
+      creator: string;
+      fetchPriceUsdc6: bigint;
+      active: boolean;
       stale: boolean;
     }
   /** No registry record — either the source predates the registry or none is configured. */
@@ -49,6 +52,9 @@ export type PayToAllowlist =
 interface CacheEntry {
   wallets: ReadonlySet<string>;
   payoutWallet: string;
+  creator: string;
+  fetchPriceUsdc6: bigint;
+  active: boolean;
   readAt: number;
 }
 
@@ -72,7 +78,10 @@ function walletsOf(record: {
  * Serves a cached set within TTL, and falls back to a stale set when the chain
  * read fails, so an RPC blip degrades to "slightly old truth" rather than "no truth".
  */
-export async function allowedPayTo(onchainId: string): Promise<PayToAllowlist> {
+export async function allowedPayTo(
+  onchainId: string,
+  options: { refresh?: boolean } = {},
+): Promise<PayToAllowlist> {
   // A source that claims a registry id while no registry is configured means the guard is
   // silently doing nothing. Say so once, loudly — an inert check is worse than no check,
   // because it reads like protection.
@@ -83,11 +92,14 @@ export async function allowedPayTo(onchainId: string): Promise<PayToAllowlist> {
 
   const key = onchainId.toLowerCase();
   const hit = cache.get(key);
-  if (hit && Date.now() - hit.readAt < TTL_MS) {
+  if (!options.refresh && hit && Date.now() - hit.readAt < TTL_MS) {
     return {
       status: "onchain",
       wallets: hit.wallets,
       payoutWallet: hit.payoutWallet,
+      creator: hit.creator,
+      fetchPriceUsdc6: hit.fetchPriceUsdc6,
+      active: hit.active,
       stale: false,
     };
   }
@@ -97,8 +109,24 @@ export async function allowedPayTo(onchainId: string): Promise<PayToAllowlist> {
     if (!record) return { status: "unregistered" };
     const wallets = walletsOf(record);
     const payoutWallet = record.payoutWallet;
-    cache.set(key, { wallets, payoutWallet, readAt: Date.now() });
-    return { status: "onchain", wallets, payoutWallet, stale: false };
+    const entry = {
+      wallets,
+      payoutWallet,
+      creator: record.creator,
+      fetchPriceUsdc6: record.fetchPriceUsdc6,
+      active: record.active,
+      readAt: Date.now(),
+    };
+    cache.set(key, entry);
+    return {
+      status: "onchain",
+      wallets: entry.wallets,
+      payoutWallet: entry.payoutWallet,
+      creator: entry.creator,
+      fetchPriceUsdc6: entry.fetchPriceUsdc6,
+      active: entry.active,
+      stale: false,
+    };
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
     // A previously-read set is far better than no check at all: authors change on a
@@ -108,6 +136,9 @@ export async function allowedPayTo(onchainId: string): Promise<PayToAllowlist> {
         status: "onchain",
         wallets: hit.wallets,
         payoutWallet: hit.payoutWallet,
+        creator: hit.creator,
+        fetchPriceUsdc6: hit.fetchPriceUsdc6,
+        active: hit.active,
         stale: true,
       };
     }

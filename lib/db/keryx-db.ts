@@ -5,6 +5,7 @@
 
 import type { LedgerAccount } from "../gateway/settlement-parity";
 import type {
+  ArticleOffer,
   DailyVolume,
   DashboardMetrics,
   GapIntent,
@@ -185,6 +186,14 @@ export interface KeryxDB {
   getItems(sourceId: string): Promise<SourceItem[]>;
   /** Resolve one article only within its owning registry source. */
   getItem(sourceId: string, itemId: string): Promise<SourceItem | null>;
+  /** Current immutable offer revision for one article, if the creator has published one. */
+  getArticleOffer(sourceId: string, itemId: string): Promise<ArticleOffer | null>;
+  /** Current offer revisions. Passing no source id returns the public marketplace book. */
+  listArticleOffers(sourceId?: string): Promise<ArticleOffer[]>;
+  /** Atomically replaces the current revision for `(sourceId,itemId)`. */
+  setArticleOffer(offer: ArticleOffer): Promise<void>;
+  /** Revoke the current offer for one article. No-op when none exists. */
+  deleteArticleOffer(sourceId: string, itemId: string): Promise<void>;
   /** Posts each of `sourceIds` published inside (`sinceIso`, `untilIso`], keyed by source id;
    *  sources with none are absent rather than zero. Backs the freshness note on a dispatch —
    *  "what have these sources published since this answer settled". Undated rows never count

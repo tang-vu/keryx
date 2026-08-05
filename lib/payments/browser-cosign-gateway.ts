@@ -15,12 +15,13 @@
  */
 
 import { config } from "../config";
-import type { Author, PaymentRecord, Source, SourceItem, SourceItemIdentity } from "../types";
+import type { ArticleOfferRef, Author, PaymentRecord, Source, SourceItem, SourceItemIdentity } from "../types";
 import {
   matchesSourceItemIdentity,
   sourceItemIdentity,
 } from "../sources/source-item-asset";
 import { sourceFetchPayTo } from "../registry/source-fetch-payto";
+import { articlePaidPath } from "../offers/resolve-article-offer";
 import { makePayment, type FetchResult, type PaymentGateway } from "./payment-gateway";
 import { PaymentPendingError, PaymentSettledError } from "./payment-state";
 import { isGrantValid, releaseSpend, reserveSpend } from "./session-grants";
@@ -37,6 +38,11 @@ export interface SignRequest {
   reqId: string;
   /** Full payment requirements object from the source's 402 challenge. */
   requirements: PaymentRequirements;
+}
+
+export interface BrowserPaymentContext {
+  item?: SourceItemIdentity;
+  offer?: ArticleOfferRef;
 }
 
 interface ChallengeBody {
@@ -74,6 +80,8 @@ export type RequestSignatureFn = (
    *  wallets from it — for citations that is the only way to check payTo, since author
    *  wallets are deliberately not enumerable from any public endpoint. */
   sourceId: string,
+  /** Exact article terms the browser independently checks before signing a fetch. */
+  paymentContext?: BrowserPaymentContext,
 ) => Promise<string>;
 
 export class BrowserCoSignGateway implements PaymentGateway {
@@ -103,13 +111,23 @@ export class BrowserCoSignGateway implements PaymentGateway {
     source,
     item,
     queryId,
+    priceUsdc = source.fetchPrice,
+    offer,
   }: {
     source: Source;
     item?: SourceItem;
     queryId: string;
+    priceUsdc?: number;
+    offer?: ArticleOfferRef;
   }): Promise<FetchResult> {
     const url = item
-      ? `${config.baseUrl}/api/source/${source.id}/item/${encodeURIComponent(item.id)}?version=${encodeURIComponent(sourceItemIdentity(item).contentVersion)}`
+      ? `${config.baseUrl}${articlePaidPath({
+          sourceId: source.id,
+          itemId: item.id,
+          contentVersion: sourceItemIdentity(item).contentVersion,
+          offerId: offer?.id,
+          listPriceUsdc: offer?.listPriceUsdc,
+        })}`
       : `${config.baseUrl}/api/source/${source.id}`;
     const identity = item ? sourceItemIdentity(item) : undefined;
     const fetchPayee = await sourceFetchPayTo(source);
@@ -118,12 +136,13 @@ export class BrowserCoSignGateway implements PaymentGateway {
       source,
       queryId,
       "fetch",
-      source.fetchPrice,
+      priceUsdc,
       undefined,
       undefined,
       undefined,
       identity,
       fetchPayee,
+      offer,
     );
     return { content, payment };
   }
@@ -175,6 +194,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
     author?: Author,
     item?: SourceItemIdentity,
     payeeOverride?: string,
+    offer?: ArticleOfferRef,
   ): Promise<{ content: string; payment: PaymentRecord }> {
     // Guard: abort if client disconnected or grant revoked.
     if (this.abortSignal?.aborted) {
@@ -205,7 +225,13 @@ export class BrowserCoSignGateway implements PaymentGateway {
     let paymentHeader: string;
     let signed: SignedHeaderBody;
     try {
-      paymentHeader = await this.requestSignature(reqId, requirements, kind, source.id);
+      paymentHeader = await this.requestSignature(
+        reqId,
+        requirements,
+        kind,
+        source.id,
+        kind === "fetch" ? { item, offer } : undefined,
+      );
       signed = parseAndValidateSignedHeader(paymentHeader, requirements, this.sessAddr);
     } catch (err) {
       await releaseSpend(this.sessionId, amount).catch((releaseErr) => {
@@ -225,6 +251,8 @@ export class BrowserCoSignGateway implements PaymentGateway {
       sourceId: source.id,
       sourceName: source.name,
       ...item,
+      offerId: offer?.id,
+      listPriceUsdc: offer?.listPriceUsdc,
       payer,
       payee,
       amountUsdc: amount,
@@ -311,6 +339,18 @@ export class BrowserCoSignGateway implements PaymentGateway {
       );
     }
 
+    if (item && !matchesArticlePricing(bodyJson.pricing, amount, offer)) {
+      const reason = "paid response did not match the selected article offer";
+      if (payment.settled) {
+        payment.rationale = `Circle settlement confirmed, but ${reason}.`;
+        throw new PaymentSettledError(
+          `payment settled, but ${source.name} returned different article pricing`,
+          payment,
+        );
+      }
+      throw new PaymentPendingError(`settlement confirmation pending and ${reason}`, payment);
+    }
+
     return { content, payment };
   }
 
@@ -355,6 +395,24 @@ export class BrowserCoSignGateway implements PaymentGateway {
 
     return match;
   }
+}
+
+function matchesArticlePricing(
+  value: unknown,
+  expectedPrice: number,
+  offer?: ArticleOfferRef,
+): boolean {
+  if (!value || typeof value !== "object") return false;
+  const pricing = value as {
+    offerId?: string | null;
+    priceUsdc?: number;
+    listPriceUsdc?: number;
+  };
+  return (
+    pricing.offerId === (offer?.id ?? null) &&
+    Math.abs(Number(pricing.priceUsdc) - expectedPrice) < 0.0000005 &&
+    (!offer || Math.abs(Number(pricing.listPriceUsdc) - offer.listPriceUsdc) < 0.0000005)
+  );
 }
 
 /** Invalid/mismatched browser data is rejected before submission, while releasing the reservation

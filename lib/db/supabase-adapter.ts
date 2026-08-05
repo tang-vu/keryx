@@ -7,6 +7,7 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import crypto from "node:crypto";
 import type {
+  ArticleOffer,
   DailyVolume,
   DashboardMetrics,
   GapIntent,
@@ -284,6 +285,51 @@ export class SupabaseAdapter implements KeryxDB {
       .eq("id", itemId)
       .maybeSingle();
     return data ? rowToSourceItem(data) : null;
+  }
+
+  async getArticleOffer(sourceId: string, itemId: string): Promise<ArticleOffer | null> {
+    const { data } = await this.sb
+      .from("article_offers")
+      .select("*")
+      .eq("source_id", sourceId)
+      .eq("item_id", itemId)
+      .maybeSingle();
+    return data ? rowToArticleOffer(data) : null;
+  }
+
+  async listArticleOffers(sourceId?: string): Promise<ArticleOffer[]> {
+    let query = this.sb.from("article_offers").select("*");
+    if (sourceId) query = query.eq("source_id", sourceId);
+    const { data } = await query.order("created_at", { ascending: false });
+    return (data ?? []).map(rowToArticleOffer);
+  }
+
+  async setArticleOffer(offer: ArticleOffer): Promise<void> {
+    const { error } = await this.sb.from("article_offers").upsert(
+      {
+        source_id: offer.sourceId,
+        item_id: offer.itemId,
+        id: offer.id,
+        content_version: offer.contentVersion,
+        price_usdc6: offer.priceUsdc6,
+        expires_at: offer.expiresAt,
+        signer: offer.signer,
+        nonce: offer.nonce,
+        signature: offer.signature,
+        created_at: offer.createdAt,
+      },
+      { onConflict: "source_id,item_id" },
+    );
+    if (error) throw error;
+  }
+
+  async deleteArticleOffer(sourceId: string, itemId: string): Promise<void> {
+    const { error } = await this.sb
+      .from("article_offers")
+      .delete()
+      .eq("source_id", sourceId)
+      .eq("item_id", itemId);
+    if (error) throw error;
   }
 
   /**
@@ -581,6 +627,8 @@ export class SupabaseAdapter implements KeryxDB {
       item_url: p.itemUrl ?? null,
       content_version: p.contentVersion ?? null,
       item_published_at: p.itemPublishedAt ?? null,
+      offer_id: p.offerId ?? null,
+      list_price_usdc: p.listPriceUsdc ?? null,
     });
   }
 
@@ -1166,6 +1214,21 @@ function rowToSourceItem(r: Record<string, unknown>): SourceItem {
   };
 }
 
+function rowToArticleOffer(r: Record<string, unknown>): ArticleOffer {
+  return {
+    id: r.id as string,
+    sourceId: r.source_id as string,
+    itemId: r.item_id as string,
+    contentVersion: r.content_version as string,
+    priceUsdc6: Number(r.price_usdc6),
+    expiresAt: Number(r.expires_at),
+    signer: r.signer as string,
+    nonce: r.nonce as string,
+    signature: r.signature as string,
+    createdAt: r.created_at as string,
+  };
+}
+
 function rowToGapIntent(r: Record<string, unknown>): GapIntent {
   return {
     id: String(r.id),
@@ -1232,6 +1295,11 @@ function rowToPayment(r: Record<string, unknown>): PaymentRecord {
     itemUrl: (r.item_url as string) ?? undefined,
     contentVersion: (r.content_version as string) ?? undefined,
     itemPublishedAt: (r.item_published_at as string) ?? undefined,
+    offerId: (r.offer_id as string) ?? undefined,
+    listPriceUsdc:
+      r.list_price_usdc === null || r.list_price_usdc === undefined
+        ? undefined
+        : Number(r.list_price_usdc),
     createdAt: r.created_at as string,
   };
 }

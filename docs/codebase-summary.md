@@ -1,6 +1,6 @@
 # Keryx Codebase Summary
 
-**Version:** 0.9.0 (article-level evidence exchange, updated 2026-08-05)
+**Version:** 0.10.0 (creator-signed article offer market, updated 2026-08-05)
 
 This document maps the codebase structure for the non-custodial Keryx dApp. Organized by domain; files < 200 LOC per kebab-case naming standard.
 
@@ -152,8 +152,17 @@ Encrypted content on IPFS. Pinata client + server-side AES-256-GCM encryption/de
 `source-item-asset.ts` gives each article an immutable content version, opaque cache key, and
 metadata-only relevance selection. `/api/source/[id]/item/[itemId]` binds that version before the
 402 challenge and serves only the paid article after settlement. The older `/api/source/[id]`
-bundle route remains for sources that do not yet have item rows. In both cases, SourceRegistry—not
-article metadata—controls the price and payout wallet.
+bundle route remains for sources that do not yet have item rows. SourceRegistry controls the
+creator, active state, list-price ceiling and payout wallet; article metadata controls none of them.
+
+### `lib/offers/` + `/market` + `app/api/offers/`
+
+`article-offer.ts` defines and verifies the Arc EIP-712 publisher signature.
+`resolve-article-offer.ts` applies current-version/creator/ceiling/expiry checks before discovery or
+402, while `offer-book.ts` projects public free metadata without paid text. The creator offer API
+stores one current revision per article; the browser price policy independently checks the same
+proof before a session key signs. `/market` is the human price book and `/api/offers` is its
+agent-readable equivalent.
 
 ---
 
@@ -176,6 +185,7 @@ Swappable SQLite (dev) / Supabase (prod) via `KeryxDB` interface.
 - `session_grants`: user-funded session EOA, cap, spent
 - `reasoning_circuits`: shared provider-step failure streak, cooldown and half-open probe lease
 - `gap_intents`: creator offer queue, bounded retry lease, evidence/settlement outcome
+- `article_offers`: one current EIP-712 price revision per exact article version
 
 ---
 
@@ -204,6 +214,7 @@ RESTful endpoints for agent, sources, metrics, API keys.
 | `/runs`, `/dispatch/[id]` | public | Query history + shareable per-dispatch permalinks. |
 | `/feedback` | public | Thumbs up/down answer quality votes. |
 | `/wanted`, `/wanted/[id]` | public | Open/filled demand board plus canonical shareable claim briefs and creator-offer status receipts. |
+| `/offers` | public | Article offer book: free metadata, effective/list prices, paid paths, signature proofs. |
 | `/docs` | public | OpenAPI (Scalar UI). |
 | `/faucet`, `/faucet/onramp` | public | Testnet USDC drip + one-call funding for external callers. |
 
@@ -294,6 +305,7 @@ Next.js 16 App Router.
 | `/connect` | Wallet connect + SIWE sign-in. |
 | `/register` | Creator onboarding: paste RSS → wallet + x402 endpoint; verified creators set their own payout wallet. |
 | `/wanted`, `/wanted/[id]` | Evidence-backed demand board plus canonical claim briefs, scoped feed matching, creator offers, and fulfillment status. |
+| `/market` | Public exact-article price book with publisher-signed discounts and x402 paths. |
 | `/dashboard` | Public traction dashboard: metrics, leaderboard, recent dispatches, payments feed. |
 | `/creator/[id]` | Public creator earnings page + social card (lifetime USDC, per-question payouts). |
 | `/dispatch/[id]` | Shareable permalink for one agent run (trace, citations, settled payouts, social card). |

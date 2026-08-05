@@ -22,6 +22,7 @@ import type {
   QueryRun,
   Source,
   SourceItem,
+  ArticleOfferRef,
   TracePhase,
   TraceStep,
 } from "../types";
@@ -51,6 +52,8 @@ import {
   sourceItemCacheKey,
   sourceItemIdentity,
 } from "../sources/source-item-asset";
+import { sourceFetchTerms } from "../registry/source-fetch-payto";
+import { resolveValidArticleOffer } from "../offers/resolve-article-offer";
 import {
   buildEvidenceLedger,
   MIN_REWARD_SUPPORT,
@@ -81,6 +84,9 @@ interface InternalAsset {
   source: Source;
   item?: SourceItem;
   cacheKey: string;
+  priceUsdc: number;
+  listPriceUsdc: number;
+  offer?: ArticleOfferRef;
 }
 
 export async function* runAgent(
@@ -151,7 +157,10 @@ export async function* runAgent(
   // the first purchase of a source would be the last toll it ever earned, and every later answer
   // would be built from text the source has moved on from. See ./cache-freshness.ts.
   const freshCache = new Set<string>();
+  let signedOfferCount = 0;
   for (const s of sources) {
+    const terms = await sourceFetchTerms(s);
+    if (!terms.active) continue;
     const items = await db.getItems(s.id);
     // Honor the creator's preview-depth: the agent scores on exactly what a paying reader would see
     // for free. Article selection never inspects paid full text.
@@ -165,6 +174,9 @@ export async function* runAgent(
       const cached = Boolean(await db.getCachedAt(cacheKey));
       if (cached) freshCache.add(id);
       const summary = previewSummary(item.summary, depth);
+      const resolvedOffer = await resolveValidArticleOffer(db, s, item, terms);
+      if (resolvedOffer) signedOfferCount++;
+      const priceUsdc = resolvedOffer?.ref.priceUsdc ?? terms.listPriceUsdc;
       const candidate: SourceCandidate = {
         id,
         sourceId: s.id,
@@ -172,12 +184,31 @@ export async function* runAgent(
         name: `${s.name} — ${item.title}`,
         description: s.description,
         tags: s.tags,
-        fetchPrice: s.fetchPrice,
+        fetchPrice: priceUsdc,
+        ...(resolvedOffer
+          ? {
+              offer: {
+                id: resolvedOffer.offer.id,
+                listPriceUsdc: terms.listPriceUsdc,
+                expiresAt: resolvedOffer.offer.expiresAt,
+              },
+            }
+          : {}),
         cached,
         preview: summary ? `- ${item.title}: ${summary}` : `- ${item.title}`,
       };
       candidates.push(candidate);
-      assetById.set(id, { candidate, source: s, item, cacheKey });
+      assetById.set(id, {
+        candidate,
+        source: s,
+        item,
+        cacheKey,
+        priceUsdc,
+        listPriceUsdc: terms.listPriceUsdc,
+        offer: resolvedOffer
+          ? { ...resolvedOffer.ref, proof: resolvedOffer.offer }
+          : undefined,
+      });
       continue;
     }
 
@@ -194,18 +225,31 @@ export async function* runAgent(
       name: s.name,
       description: s.description,
       tags: s.tags,
-      fetchPrice: s.fetchPrice,
+      fetchPrice: terms.listPriceUsdc,
       cached,
       preview: s.description,
     };
     candidates.push(candidate);
-    assetById.set(s.id, { candidate, source: s, cacheKey: s.id });
+    assetById.set(s.id, {
+      candidate,
+      source: s,
+      cacheKey: s.id,
+      priceUsdc: terms.listPriceUsdc,
+      listPriceUsdc: terms.listPriceUsdc,
+    });
   }
   yield emit(
     "discover",
     `Discovered ${candidates.length} verified source(s)${unverifiedCount > 0 ? ` — skipped ${unverifiedCount} unverified (feed ownership unproven, off the money path)` : ""}`,
     candidates.map((c) => c.name),
   );
+  if (signedOfferCount > 0) {
+    yield emit(
+      "discover",
+      `Verified ${signedOfferCount} creator-signed article offer${signedOfferCount === 1 ? "" : "s"}; discounted prices are version-bound and capped by SourceRegistry.`,
+      { signedOfferCount },
+    );
+  }
 
   // Probe the live open x402 marketplace (Circle services) — real third-party endpoints the agent
   // can reason over alongside its creators. They settle off Keryx's Arc rail, so they're
@@ -279,6 +323,11 @@ export async function* runAgent(
         assetId: asset.candidate.id,
         sourceId: asset.source.id,
         sourceName: asset.candidate.name,
+        // The engine judges value; authoritative marketplace terms decide the amount reserved.
+        price: asset.priceUsdc,
+        ...(asset.offer
+          ? { offerId: asset.offer.id, listPrice: asset.listPriceUsdc }
+          : {}),
         ...asset.candidate.item,
       }];
     });
@@ -372,10 +421,19 @@ export async function* runAgent(
       });
       yield emit("fetch", `Reused cached ${assetLabel} (free) — ${marker}`);
     } else {
-      yield emit("fetch", `Paying $${source.fetchPrice} toll to read ${assetLabel}…`);
+      yield emit(
+        "fetch",
+        `Paying $${asset.priceUsdc} toll to read ${assetLabel}${asset.offer ? ` (signed offer; list $${asset.listPriceUsdc})` : ""}…`,
+      );
       try {
         paymentAttempts++;
-        const { content, payment } = await gateway.payFetch({ source, item, queryId });
+        const { content, payment } = await gateway.payFetch({
+          source,
+          item,
+          queryId,
+          priceUsdc: asset.priceUsdc,
+          offer: asset.offer,
+        });
         if (payment.settled) settledPayments++;
         if (paymentSettlementStatus(payment) === "pending") pendingPayments++;
         payment.origin = origin;
@@ -492,7 +550,7 @@ export async function* runAgent(
           return {
             id: d.assetId ?? d.sourceId,
             name: d.sourceName,
-            price: asset?.source.fetchPrice ?? 0,
+            price: asset?.priceUsdc ?? 0,
             preview: asset?.candidate.preview ?? "",
           };
         });
@@ -538,16 +596,22 @@ export async function* runAgent(
         const source = asset?.source;
         // Guard against an engine recommending a source we already read (duplicate marker +
         // double payment) or that no longer fits the remaining budget.
-        if (!asset || !source || gatheredIds.has(recId) || source.fetchPrice > remainingBudget + 1e-9) continue;
+        if (!asset || !source || gatheredIds.has(recId) || asset.priceUsdc > remainingBudget + 1e-9) continue;
 
         const marker = `S${++markerN}`;
         const assetLabel = asset.item ? `${source.name} — ${asset.item.title}` : source.name;
         const itemIdentity = asset.candidate.item ?? {};
-        yield emit("reevaluate", `Filling gap — buying ${assetLabel} ($${source.fetchPrice})…`);
+        yield emit("reevaluate", `Filling gap — buying ${assetLabel} ($${asset.priceUsdc})…`);
 
         try {
           paymentAttempts++;
-          const { content, payment } = await gateway.payFetch({ source, item: asset.item, queryId });
+          const { content, payment } = await gateway.payFetch({
+            source,
+            item: asset.item,
+            queryId,
+            priceUsdc: asset.priceUsdc,
+            offer: asset.offer,
+          });
           if (payment.settled) settledPayments++;
           if (paymentSettlementStatus(payment) === "pending") pendingPayments++;
           payment.origin = origin;
@@ -568,8 +632,8 @@ export async function* runAgent(
             text: content,
           });
           gatheredIds.add(asset.candidate.id);
-          remainingBudget -= source.fetchPrice;
-          spentTolls += source.fetchPrice;
+          remainingBudget -= asset.priceUsdc;
+          spentTolls += asset.priceUsdc;
 
           yield emit(
             "reevaluate",
@@ -588,8 +652,8 @@ export async function* runAgent(
             payments.push(settled);
             const ledgerError = await persistPaymentRecord(settled);
             // This source was selected only during re-evaluation, so consume its query slice here.
-            remainingBudget -= source.fetchPrice;
-            spentTolls += source.fetchPrice;
+            remainingBudget -= asset.priceUsdc;
+            spentTolls += asset.priceUsdc;
             yield emit(
               "reevaluate",
               `Paid $${settled.amountUsdc} to ${assetLabel}, but its content response failed after settlement; receipt retained and the gap remains open.`,
@@ -607,8 +671,8 @@ export async function* runAgent(
             payments.push(pending);
             const ledgerError = await persistPaymentRecord(pending);
             // It may already have settled, so this reservation still consumes the per-query slice.
-            remainingBudget -= source.fetchPrice;
-            spentTolls += source.fetchPrice;
+            remainingBudget -= asset.priceUsdc;
+            spentTolls += asset.priceUsdc;
             yield emit(
               "reevaluate",
               `Signed $${pending.amountUsdc} authorization for ${assetLabel}; confirmation is pending and the reserved budget stays consumed.`,

@@ -41,6 +41,9 @@ describe("authorisedPayees", () => {
       status: "onchain",
       wallets: new Set([PAYOUT.toLowerCase(), AUTHOR.toLowerCase()]),
       payoutWallet: PAYOUT,
+      creator: PAYOUT,
+      fetchPriceUsdc6: BigInt(2_000),
+      active: true,
       stale: false,
     });
 

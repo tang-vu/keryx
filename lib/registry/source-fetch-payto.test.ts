@@ -30,6 +30,9 @@ describe("source fetch payout authority", () => {
       status: "onchain",
       payoutWallet,
       wallets: new Set([payoutWallet]),
+      creator: payoutWallet,
+      fetchPriceUsdc6: BigInt(4_000),
+      active: true,
       stale: false,
     });
 

@@ -1,6 +1,6 @@
 # Keryx System Architecture
 
-**Version:** 0.9.0 Article-level evidence exchange (2026-08-05)
+**Version:** 0.10.0 Creator-signed article offer market (2026-08-05)
 **Status:** Shipped (Phases 01–06 complete)
 
 ---
@@ -56,8 +56,8 @@ BROWSER                              KERYX SERVER                     ARC + CIRC
 
 8. SSE Loop: Agent Execution (inside agent/run-agent.ts)
    ├─ decompose: break question into sub-claims
-   ├─ discover: query registry, select one relevant article per publication from free metadata
-   ├─ decide: BUY / SKIP / CACHE per exact article version (rationale logged)
+   ├─ discover: query registry + signed offer book; select one relevant article per publication
+   ├─ decide: BUY / SKIP / CACHE per exact version and effective price (rationale logged)
    │
    │  ON BUY:
    │  ├─ emit SSE event: sign-request {reqId, payTo, amount, verifyingContract, ...}
@@ -66,8 +66,8 @@ BROWSER                              KERYX SERVER                     ARC + CIRC
    │  ├─ POST /api/ask/sign {sessionId, reqId, paymentHeader}
    │  └─ Server resolves pending promise, retries source with header
    │
-   ├─ fetch: GET /api/source/[id]/item/[itemId]?version=… with x402 signature
-   │  ├─ Server rejects a changed version before payment
+   ├─ fetch: GET /api/source/[id]/item/[itemId]?version=…&offer=… with x402 signature
+   │  ├─ Server rejects a changed version, offer, or expiry before payment
    │  └─ x402 verify/settle → decrypt only that article → emit SSE "step: fetched"
    │
    ├─ sufficiency: "have we read enough?" → STOP if yes, next BUY if no
@@ -91,7 +91,8 @@ An article candidate has two identities with deliberately different jobs:
 | Identity | Authority |
 |---|---|
 | `itemId + contentVersion` | Discovery, paid delivery, cache, evidence, citation display, receipt metadata |
-| Registry `sourceId` | Active/verified status, fetch price, source-owned `payTo`, author reward splits |
+| Registry `sourceId` | Active/verified status, list-price ceiling, creator, source-owned `payTo`, author reward splits |
+| Signed `offerId` | Temporary article discount only; exact item/version/price/expiry, never a payee |
 
 Plaintext versions are SHA-256 digests of the stored article identity and body; encrypted versions
 are their immutable IPFS CIDs. A paid article request must name the selected version. If ingest
@@ -101,6 +102,22 @@ revision into a free read. Sources without item rows retain `/api/source/[id]` a
 path; that route is not used for normal article discovery. The free source preview exposes each
 article's `itemId`, `contentVersion`, canonical URL, and ready-to-call `paidPath` while still applying
 the creator's configured summary depth, so external agents can participate without DB access.
+
+### Creator-Signed Article Offer Book
+
+The publisher pricing wallet signs EIP-712 over `sourceId`, `itemId`, `contentVersion`, integer
+`priceUsdc6`, `expiresAt`, and a nonce. For an on-chain source that signer must equal the freshly
+read `SourceRegistry.creator`; the offer cannot exceed the live registry price and cannot outlive
+30 days. SQLite/Supabase stores one current immutable revision per article. Replacing or revoking
+it immediately makes an older paid path return 409 before a challenge can be signed.
+
+`GET /api/offers` and `/market` expose free metadata, effective/list price, paid path, and the
+signature envelope. During a dispatch the agent ranks candidates by expected value per effective
+dollar. The browser independently refreshes registry authority and verifies offer signature,
+identity, expiry, challenge amount, active state, and payee; the server-funded buyer performs the
+same amount/payee/body checks around Circle settlement. No offer can redirect payout or raise the
+registry ceiling. A missing, invalid, expired, or unavailable offer degrades to list price during
+discovery and fails closed if its stale `offerId` is explicitly presented to the paid route.
 
 ### Server-Side Volume Engine (No Browser)
 
@@ -402,6 +419,16 @@ aggregation independent of full receipt payloads and leave pre-ledger history un
 | tx_hash | TEXT | Arc tx (if settled) |
 | settled | BOOLEAN | true = on-chain confirmed |
 | timestamp | DATETIME | when payment occurred |
+| offer_id / list_price_usdc | TEXT / REAL | signed discount provenance for article fetches |
+
+**`article_offers`** — one current creator-signed discount revision per article
+| Column | Type | Notes |
+|--------|------|-------|
+| source_id / item_id | TEXT | exact parent source and article |
+| id | TEXT | keccak256 of the EIP-712 signature; carried in paid paths and receipts |
+| content_version | TEXT | stale after any article content change |
+| price_usdc6 / expires_at | INTEGER | exact x402 amount and unix-second expiry |
+| signer / nonce / signature | TEXT | public creator authorization proof |
 
 **`gap_intents`** — creator offers against measured demand gaps
 | Column | Type | Notes |
@@ -565,7 +592,9 @@ See `docs/security-threat-model.md` for full matrix.
 | GET `/api/sources` | public | List sources (paginated) |
 | POST `/api/sources` | creator JWT | Register new source (optional `notifyUrl`) |
 | GET/POST `/api/creator/[id]/notify` | owner JWT | Get / set / rotate / disable citation webhook (secret shown once) |
-| GET `/api/source/[id]/item/[itemId]?version=…` | x402 | Fetch one exact article version (402 if unpaid) |
+| GET `/api/source/[id]/item/[itemId]?version=…&offer=…` | x402 | Fetch one exact article version at list price or a current signed offer (402 if unpaid) |
+| GET `/api/offers` | public | Payable article book with effective prices and verifiable signed offers |
+| GET/POST/DELETE `/api/creator/[id]/offers` | owner SIWE | Inspect, publish, or revoke current article offers |
 | GET `/api/source/[id]` | x402 | Legacy source-bundle fetch for rows without articles |
 | GET `/api/source/[id]/preview` | public | Free plaintext preview |
 | POST `/api/cite/[id]` | x402 | Citation reward endpoint |

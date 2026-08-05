@@ -10,7 +10,7 @@ export const openapiSpec = {
   openapi: "3.1.0",
   info: {
     title: "Keryx API",
-    version: "0.2.0",
+    version: "0.3.0",
     description:
       "Citation-toll autonomous research. POST a question + budget — Keryx buys paid sources via x402, " +
       "answers with citations, and settles weighted nanopayments to every cited creator in USDC on Arc. " +
@@ -533,6 +533,50 @@ export const openapiSpec = {
           "200": { description: "{ sourceId, name, windowRuns, performance }" },
           "404": { description: "Source not found." },
         },
+      },
+    },
+    "/api/offers": {
+      get: {
+        operationId: "listArticleMarket",
+        summary: "List payable article versions and creator-signed offers",
+        description:
+          "Public article offer book built only from free preview metadata. Every row includes " +
+          "the exact item/content version, registry list price, effective x402 price, and paidPath. " +
+          "A discounted row also carries the creator's EIP-712 signature and JSON-safe typed data " +
+          "so another agent can verify it independently. Paid content is never returned here.",
+        parameters: [
+          { in: "query", name: "q", required: false, schema: { type: "string" } },
+          { in: "query", name: "limit", required: false, schema: { type: "integer", minimum: 1, maximum: 100 } },
+        ],
+        responses: {
+          "200": { description: "{ offers: ArticleMarketEntry[], count }" },
+        },
+      },
+    },
+    "/api/creator/{id}/offers": {
+      get: {
+        operationId: "getCreatorArticleOffers",
+        summary: "Owner view of article pricing and current offers",
+        parameters: [{ in: "path", name: "id", required: true, schema: { type: "string" } }],
+        responses: { "200": { description: "Pricing authority, article identities, and current offers." }, "401": { description: "SIWE session required." }, "403": { description: "Only the registry creator may price articles." } },
+      },
+      post: {
+        operationId: "publishArticleOffer",
+        summary: "Publish a creator-signed, version-bound article discount",
+        description:
+          "Requires the live SIWE wallet to equal SourceRegistry.creator. The EIP-712 price is " +
+          "integer micro-USDC, cannot exceed the live registry ceiling, expires within 30 days, " +
+          "and is reverified before every 402 challenge.",
+        parameters: [{ in: "path", name: "id", required: true, schema: { type: "string" } }],
+        requestBody: { required: true, content: { "application/json": { schema: { type: "object" } } } },
+        responses: { "201": { description: "Offer published." }, "400": { description: "Invalid price, expiry, nonce, or signature." }, "409": { description: "Article version changed or source cannot earn." } },
+      },
+      delete: {
+        operationId: "revokeArticleOffer",
+        summary: "Revoke the current offer for one article",
+        parameters: [{ in: "path", name: "id", required: true, schema: { type: "string" } }],
+        requestBody: { required: true, content: { "application/json": { schema: { type: "object", properties: { itemId: { type: "string" } }, required: ["itemId"] } } } },
+        responses: { "200": { description: "Offer revoked; registry list price applies." } },
       },
     },
     "/api/sources": {

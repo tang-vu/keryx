@@ -4,7 +4,7 @@
  * and clearly excluded from "real settlement" claims. Dev only.
  */
 
-import type { Author, PaymentRecord, Source, SourceItem, SourceItemIdentity } from "../types";
+import type { ArticleOfferRef, Author, PaymentRecord, Source, SourceItem, SourceItemIdentity } from "../types";
 import type { KeryxDB } from "../db";
 import { sourceItemIdentity } from "../sources/source-item-asset";
 import { makePayment, type FetchResult, type PaymentGateway } from "./payment-gateway";
@@ -27,10 +27,14 @@ export class OfflineGateway implements PaymentGateway {
     source,
     item,
     queryId,
+    priceUsdc = source.fetchPrice,
+    offer,
   }: {
     source: Source;
     item?: SourceItem;
     queryId: string;
+    priceUsdc?: number;
+    offer?: ArticleOfferRef;
   }): Promise<FetchResult> {
     const items = item ? [item] : await this.db.getItems(source.id);
     const content = item
@@ -47,9 +51,11 @@ export class OfflineGateway implements PaymentGateway {
       sourceId: source.id,
       sourceName: source.name,
       ...itemIdentity,
+      offerId: offer?.id,
+      listPriceUsdc: offer?.listPriceUsdc,
       payer: this.address,
       payee: source.walletAddress,
-      amountUsdc: source.fetchPrice,
+      amountUsdc: priceUsdc,
       txHash: null,
       settled: false,
       settlementStatus: "simulated",

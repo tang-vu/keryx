@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import type {
+  ArticleOffer,
   DailyVolume,
   DashboardMetrics,
   GapIntent,
@@ -85,6 +86,20 @@ CREATE TABLE IF NOT EXISTS source_items (
 -- ingest dedupe pass. Safe to declare beside the table: both columns are original, so this is not a
 -- no-op-plus-failure on a database that predates a later ALTER (cf. query_runs).
 CREATE INDEX IF NOT EXISTS source_items_source_published ON source_items(source_id, published_at);
+CREATE TABLE IF NOT EXISTS article_offers (
+  source_id TEXT NOT NULL,
+  item_id TEXT NOT NULL,
+  id TEXT NOT NULL UNIQUE,
+  content_version TEXT NOT NULL,
+  price_usdc6 INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL,
+  signer TEXT NOT NULL,
+  nonce TEXT NOT NULL,
+  signature TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (source_id, item_id)
+);
+CREATE INDEX IF NOT EXISTS article_offers_expires ON article_offers(expires_at);
 CREATE TABLE IF NOT EXISTS gap_intents (
   id TEXT PRIMARY KEY,
   gap_id TEXT NOT NULL,
@@ -116,7 +131,8 @@ CREATE TABLE IF NOT EXISTS payment_events (
   source_name TEXT, payer TEXT, payee TEXT, amount_usdc REAL, weight REAL,
   rationale TEXT, tx_hash TEXT, network TEXT, settled INTEGER,
   settlement_status TEXT NOT NULL DEFAULT 'simulated', authorization_id TEXT,
-  item_id TEXT, item_title TEXT, item_url TEXT, content_version TEXT, item_published_at TEXT
+  item_id TEXT, item_title TEXT, item_url TEXT, content_version TEXT, item_published_at TEXT,
+  offer_id TEXT, list_price_usdc REAL
 );
 CREATE TABLE IF NOT EXISTS query_runs (
   id TEXT PRIMARY KEY, created_at TEXT, question TEXT, budget REAL, engine TEXT,
@@ -299,6 +315,12 @@ export class SqliteAdapter implements KeryxDB {
       if (!paymentCols.has(column)) {
         this.db.exec(`ALTER TABLE payment_events ADD COLUMN ${column} TEXT`);
       }
+    }
+    if (!paymentCols.has("offer_id")) {
+      this.db.exec(`ALTER TABLE payment_events ADD COLUMN offer_id TEXT`);
+    }
+    if (!paymentCols.has("list_price_usdc")) {
+      this.db.exec(`ALTER TABLE payment_events ADD COLUMN list_price_usdc REAL`);
     }
     this.db.exec(
       `CREATE INDEX IF NOT EXISTS payment_events_pending
@@ -575,6 +597,54 @@ export class SqliteAdapter implements KeryxDB {
       .prepare(`SELECT * FROM source_items WHERE source_id=? AND id=? LIMIT 1`)
       .get(sourceId, itemId);
     return row ? rowToSourceItem(row) : null;
+  }
+
+  async getArticleOffer(sourceId: string, itemId: string): Promise<ArticleOffer | null> {
+    const row = this.db
+      .prepare(`SELECT * FROM article_offers WHERE source_id=? AND item_id=? LIMIT 1`)
+      .get(sourceId, itemId);
+    return row ? rowToArticleOffer(row) : null;
+  }
+
+  async listArticleOffers(sourceId?: string): Promise<ArticleOffer[]> {
+    const rows = sourceId
+      ? this.db
+          .prepare(`SELECT * FROM article_offers WHERE source_id=? ORDER BY created_at DESC`)
+          .all(sourceId)
+      : this.db.prepare(`SELECT * FROM article_offers ORDER BY created_at DESC`).all();
+    return rows.map(rowToArticleOffer);
+  }
+
+  async setArticleOffer(offer: ArticleOffer): Promise<void> {
+    this.db
+      .prepare(
+        `INSERT INTO article_offers
+           (source_id,item_id,id,content_version,price_usdc6,expires_at,signer,nonce,signature,created_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?)
+         ON CONFLICT(source_id,item_id) DO UPDATE SET
+           id=excluded.id,content_version=excluded.content_version,
+           price_usdc6=excluded.price_usdc6,expires_at=excluded.expires_at,
+           signer=excluded.signer,nonce=excluded.nonce,signature=excluded.signature,
+           created_at=excluded.created_at`,
+      )
+      .run(
+        offer.sourceId,
+        offer.itemId,
+        offer.id,
+        offer.contentVersion,
+        offer.priceUsdc6,
+        offer.expiresAt,
+        offer.signer,
+        offer.nonce,
+        offer.signature,
+        offer.createdAt,
+      );
+  }
+
+  async deleteArticleOffer(sourceId: string, itemId: string): Promise<void> {
+    this.db
+      .prepare(`DELETE FROM article_offers WHERE source_id=? AND item_id=?`)
+      .run(sourceId, itemId);
   }
 
   /**
@@ -1204,8 +1274,8 @@ export class SqliteAdapter implements KeryxDB {
     const settlementStatus = assertPaymentSettlementState(p);
     this.db
       .prepare(
-        `INSERT INTO payment_events (id,created_at,kind,query_id,source_id,source_name,payer,payee,amount_usdc,weight,rationale,tx_hash,network,settled,settlement_status,authorization_id,origin,item_id,item_title,item_url,content_version,item_published_at)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        `INSERT INTO payment_events (id,created_at,kind,query_id,source_id,source_name,payer,payee,amount_usdc,weight,rationale,tx_hash,network,settled,settlement_status,authorization_id,origin,item_id,item_title,item_url,content_version,item_published_at,offer_id,list_price_usdc)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       )
       .run(
         p.id ?? crypto.randomUUID(),
@@ -1230,6 +1300,8 @@ export class SqliteAdapter implements KeryxDB {
         p.itemUrl ?? null,
         p.contentVersion ?? null,
         p.itemPublishedAt ?? null,
+        p.offerId ?? null,
+        p.listPriceUsdc ?? null,
       );
   }
 
@@ -1647,6 +1719,21 @@ function rowToSourceItem(r: Record<string, unknown>): SourceItem {
   };
 }
 
+function rowToArticleOffer(r: Record<string, unknown>): ArticleOffer {
+  return {
+    id: r.id as string,
+    sourceId: r.source_id as string,
+    itemId: r.item_id as string,
+    contentVersion: r.content_version as string,
+    priceUsdc6: Number(r.price_usdc6),
+    expiresAt: Number(r.expires_at),
+    signer: r.signer as string,
+    nonce: r.nonce as string,
+    signature: r.signature as string,
+    createdAt: r.created_at as string,
+  };
+}
+
 function rowToGapIntent(r: Record<string, unknown>): GapIntent {
   return {
     id: String(r.id),
@@ -1700,6 +1787,11 @@ function rowToPayment(r: Record<string, unknown>): PaymentRecord {
     itemUrl: (r.item_url as string) ?? undefined,
     contentVersion: (r.content_version as string) ?? undefined,
     itemPublishedAt: (r.item_published_at as string) ?? undefined,
+    offerId: (r.offer_id as string) ?? undefined,
+    listPriceUsdc:
+      r.list_price_usdc === null || r.list_price_usdc === undefined
+        ? undefined
+        : Number(r.list_price_usdc),
     createdAt: r.created_at as string,
   };
 }

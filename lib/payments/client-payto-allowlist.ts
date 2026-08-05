@@ -1,72 +1,102 @@
-"use client";
-
-/**
- * Browser-side resolution of "which wallets may this payment go to".
- *
- * An EIP-712 TransferWithAuthorization is a bearer instrument: once the session key
- * signs one, whoever holds it can move that USDC to `to`. So the browser's payTo check
- * is not defence-in-depth behind the server — for the interactive path it is the last
- * check that runs before the money is committed. A sign-request naming an attacker's
- * address must be refused here or not at all.
- *
- * Two independent keys must agree before a payment is signed:
- *   1. The source must be publicly listed (present in the /api/sources index the browser
- *      fetched itself), so a fabricated source id cannot smuggle in an arbitrary payee.
- *   2. The payee must be authorised for that exact source by the on-chain SourceRegistry,
- *      which the settlement host cannot rewrite.
- * Tampering with only the database fails key 2; registering only on-chain fails key 1.
- *
- * Fetch tolls and citation rewards use the same allowlist — a source's payout wallet and
- * its author wallets are exactly the addresses the registry says may be paid for it.
- */
-
+/** Browser-side payment authority resolved from the public index plus SourceRegistry. */
 import { allowedPayTo } from "../registry/payto-guard";
 
-/** The subset of /api/sources the browser needs to police payments. */
 export interface IndexedSource {
   walletAddress: string;
+  fetchPrice?: number;
   /** bytes32 registry id, absent for sources that predate the on-chain registry. */
   onchainId?: string;
 }
 
 export type SourceIndex = ReadonlyMap<string, IndexedSource>;
 
+export interface SourcePaymentAuthority {
+  wallets: ReadonlySet<string>;
+  /** Exact payout wallet for source fetch tolls; author wallets are citation-only. */
+  fetchPayTo: string;
+  creator: string;
+  listPriceUsdc: number;
+  onchain: boolean;
+  active: boolean;
+}
+
+/** Fetch tolls go only to the source payout; citation rewards may go to an authorised author. */
+export function isPaymentPayeeAllowed(
+  authority: SourcePaymentAuthority,
+  payTo: string,
+  kind: "fetch" | "citation" | undefined,
+): boolean {
+  const requestedPayee = payTo.toLowerCase();
+  return kind === "fetch"
+    ? requestedPayee === authority.fetchPayTo
+    : authority.wallets.has(requestedPayee);
+}
+
 /**
- * Wallets this source may be paid at, or null when the browser cannot establish that
- * set — an unlisted source id, or a registry read that failed with nothing cached.
- * A null result means refuse to sign: skipping one citation costs a creator one reward,
- * signing an unverifiable authorization costs the user real USDC.
+ * Resolve payees, creator, and list-price ceiling together. A null result means refuse to sign.
+ * `refresh` bypasses the registry cache for the final browser check before money is committed.
  */
-export async function resolveAllowedPayTo(
+export async function resolveSourcePaymentAuthority(
   sourceId: string,
   index: SourceIndex,
-): Promise<ReadonlySet<string> | null> {
+  options: { refresh?: boolean } = {},
+): Promise<SourcePaymentAuthority | null> {
   const entry = index.get(sourceId);
   if (!entry) return null;
 
-  // Sources registered before the on-chain registry have no record to consult. Their
-  // payout wallet is public, so it remains enumerable — just without the second key.
-  if (!entry.onchainId) return new Set([entry.walletAddress.toLowerCase()]);
+  const fallback = (): SourcePaymentAuthority => ({
+    wallets: new Set([entry.walletAddress.toLowerCase()]),
+    fetchPayTo: entry.walletAddress.toLowerCase(),
+    creator: entry.walletAddress,
+    listPriceUsdc: Number(entry.fetchPrice ?? 0),
+    onchain: false,
+    active: true,
+  });
+  if (!entry.onchainId) return fallback();
 
-  const allowlist = await allowedPayTo(entry.onchainId);
+  const allowlist = await allowedPayTo(entry.onchainId, options);
   switch (allowlist.status) {
     case "onchain":
-      return allowlist.wallets;
+      return {
+        wallets: allowlist.wallets,
+        fetchPayTo: allowlist.payoutWallet.toLowerCase(),
+        creator: allowlist.creator,
+        listPriceUsdc: Number(allowlist.fetchPriceUsdc6) / 1_000_000,
+        onchain: true,
+        active: allowlist.active,
+      };
     case "unregistered":
-      return new Set([entry.walletAddress.toLowerCase()]);
+      return fallback();
     case "unavailable":
       return null;
   }
 }
 
-/** Build the index from the public /api/sources payload. */
+/** Backward-compatible payee-only view used by citation and session policy checks. */
+export async function resolveAllowedPayTo(
+  sourceId: string,
+  index: SourceIndex,
+): Promise<ReadonlySet<string> | null> {
+  return (await resolveSourcePaymentAuthority(sourceId, index))?.wallets ?? null;
+}
+
+/** Build the index from the public `/api/sources` payload. */
 export function buildSourceIndex(
-  sources: ReadonlyArray<{ id?: string; walletAddress?: string; onchainId?: string }>,
+  sources: ReadonlyArray<{
+    id?: string;
+    walletAddress?: string;
+    fetchPrice?: number;
+    onchainId?: string;
+  }>,
 ): SourceIndex {
   const index = new Map<string, IndexedSource>();
-  for (const s of sources) {
-    if (!s.id || !s.walletAddress) continue;
-    index.set(s.id, { walletAddress: s.walletAddress, onchainId: s.onchainId });
+  for (const source of sources) {
+    if (!source.id || !source.walletAddress) continue;
+    index.set(source.id, {
+      walletAddress: source.walletAddress,
+      fetchPrice: source.fetchPrice,
+      onchainId: source.onchainId,
+    });
   }
   return index;
 }

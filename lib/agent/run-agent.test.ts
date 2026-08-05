@@ -19,6 +19,7 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { privateKeyToAccount } from "viem/accounts";
 import { runAgent, type RunInput } from "./run-agent";
 import { config } from "../config";
 import { makePayment, type PaymentGateway } from "../payments/payment-gateway";
@@ -34,11 +35,13 @@ import type {
   SufficiencyInput,
   SynthInput,
 } from "../llm/reasoning-engine";
-import type { Author, Decision, PaymentRecord, QueryRun, Source, SourceItem, TraceStep } from "../types";
+import type { ArticleOffer, Author, Decision, PaymentRecord, QueryRun, Source, SourceItem, TraceStep } from "../types";
 import {
   sourceItemCacheKey,
+  sourceItemContentVersion,
   sourceItemIdentity,
 } from "../sources/source-item-asset";
+import { articleOfferId, articleOfferTypedData } from "../offers/article-offer";
 
 const AGENT = "0xAGENT";
 const EPS = 1e-6;
@@ -159,6 +162,8 @@ function fakeEngine(over: EngineOverrides = {}): ReasoningEngine & { decideInput
 interface FakeGateway extends PaymentGateway {
   fetchCalls: string[];
   fetchItems: (string | undefined)[];
+  fetchPrices: number[];
+  fetchOffers: (string | undefined)[];
   citationCalls: { sourceId: string; payee: string; amount: number }[];
 }
 
@@ -168,15 +173,19 @@ function fakeGateway(opts: { failOn?: string } = {}): FakeGateway {
     mode: "real",
     fetchCalls: [],
     fetchItems: [],
+    fetchPrices: [],
+    fetchOffers: [],
     citationCalls: [],
     agentAddress: () => AGENT,
     async ensureFunded() {
       return { address: AGENT };
     },
-    async payFetch({ source, item, queryId }) {
+    async payFetch({ source, item, queryId, priceUsdc = source.fetchPrice, offer }) {
       if (opts.failOn === source.id) throw new Error("settlement failed");
       gw.fetchCalls.push(source.id);
       gw.fetchItems.push(item?.id);
+      gw.fetchPrices.push(priceUsdc);
+      gw.fetchOffers.push(offer?.id);
       const payment = makePayment({
         kind: "fetch",
         queryId,
@@ -185,7 +194,9 @@ function fakeGateway(opts: { failOn?: string } = {}): FakeGateway {
         ...(item ? sourceItemIdentity(item) : {}),
         payer: AGENT,
         payee: source.walletAddress,
-        amountUsdc: source.fetchPrice,
+        amountUsdc: priceUsdc,
+        offerId: offer?.id,
+        listPriceUsdc: offer?.listPriceUsdc,
         settled: true,
         txHash: "0xfetch",
       });
@@ -222,6 +233,8 @@ interface DbState {
   items?: Record<string, SourceItem[]>;
   /** Cache timestamps keyed by exact opaque cache key. */
   cachedByKey?: Record<string, string>;
+  /** Current signed offer keyed by `${sourceId}:${itemId}`. */
+  offers?: Record<string, ArticleOffer>;
 }
 
 /** A KeryxDB that serves the given sources and records payments. Only the methods the
@@ -248,6 +261,9 @@ function fakeDb(sources: Source[], state: DbState = {}): KeryxDB & { payments: P
           publishedAt,
         },
       ];
+    },
+    async getArticleOffer(sourceId: string, itemId: string) {
+      return state.offers?.[`${sourceId}:${itemId}`] ?? null;
     },
     async getCached(sourceId: string) {
       return state.cachedAt?.[sourceId] || state.cachedByKey?.[sourceId]
@@ -857,6 +873,70 @@ describe("runAgent — article-level economics", () => {
     expect(run.citations[0]).toMatchObject(sourceItemIdentity(relevant));
     expect(run.evidence?.[0]).toMatchObject(sourceItemIdentity(relevant));
     expect(d.db.payments.every((payment) => payment.itemId === relevant.id)).toBe(true);
+  });
+
+  it("uses a creator-signed article offer as the trusted decision and payment price", async () => {
+    const account = privateKeyToAccount(`0x${"33".repeat(32)}`);
+    const source = makeSource({
+      id: "a",
+      walletAddress: account.address,
+      fetchPrice: 0.004,
+    });
+    const item: SourceItem = {
+      id: "offer-article",
+      sourceId: source.id,
+      title: "Agent offer markets",
+      summary: "Signed article discounts for autonomous buyers",
+      content: "Signed article discounts let autonomous buyers compare exact evidence costs.",
+      link: "https://a.example/offer-article",
+    };
+    const message = {
+      sourceId: source.id,
+      itemId: item.id,
+      contentVersion: sourceItemContentVersion(item),
+      priceUsdc6: 1_000,
+      expiresAt: Math.floor(Date.now() / 1_000) + 3_600,
+      nonce: `0x${"ef".repeat(32)}` as `0x${string}`,
+    };
+    const signature = await account.signTypedData(articleOfferTypedData(message));
+    const offer: ArticleOffer = {
+      id: articleOfferId(signature),
+      ...message,
+      signer: account.address,
+      signature,
+      createdAt: new Date().toISOString(),
+    };
+    const engine = fakeEngine({
+      // A broken model substitutes a near-zero price; the orchestrator must restore verified terms.
+      decide: (input) => [
+        buy({ id: input.candidates[0].id, name: input.candidates[0].name, price: 0.000001 }),
+      ],
+    });
+    const gw = fakeGateway();
+    const d = deps([source], engine, gw, {
+      items: { [source.id]: [item] },
+      offers: { [`${source.id}:${item.id}`]: offer },
+    });
+
+    const { run, steps } = await drive(
+      { question: "How do agent offer markets work?", budget: 0.01 },
+      d,
+    );
+
+    expect(engine.decideInput?.candidates[0].fetchPrice).toBe(0.001);
+    expect(run.decisions[0]).toMatchObject({
+      price: 0.001,
+      offerId: offer.id,
+      listPrice: 0.004,
+    });
+    expect(gw.fetchPrices).toEqual([0.001]);
+    expect(gw.fetchOffers).toEqual([offer.id]);
+    expect(d.db.payments.find((payment) => payment.kind === "fetch")).toMatchObject({
+      amountUsdc: 0.001,
+      offerId: offer.id,
+      listPriceUsdc: 0.004,
+    });
+    expect(steps.some((step) => /creator-signed article offer/i.test(step.message))).toBe(true);
   });
 
   it("cannot pay twice when a model duplicates the same article decision", async () => {

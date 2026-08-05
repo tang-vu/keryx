@@ -26,11 +26,12 @@ import {
 import { arcTestnet } from "viem/chains";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { config } from "../config";
-import type { Author, PaymentRecord, Source, SourceItem, SourceItemIdentity } from "../types";
+import type { ArticleOfferRef, Author, PaymentRecord, Source, SourceItem, SourceItemIdentity } from "../types";
 import {
   matchesSourceItemIdentity,
   sourceItemIdentity,
 } from "../sources/source-item-asset";
+import { articlePaidPath } from "../offers/resolve-article-offer";
 import { sourceFetchPayTo } from "../registry/source-fetch-payto";
 import { makePayment, type FetchResult, type PaymentGateway } from "./payment-gateway";
 import { PaymentPendingError, PaymentSettledError } from "./payment-state";
@@ -128,13 +129,23 @@ export class RealGateway implements PaymentGateway {
     source,
     item,
     queryId,
+    priceUsdc = source.fetchPrice,
+    offer,
   }: {
     source: Source;
     item?: SourceItem;
     queryId: string;
+    priceUsdc?: number;
+    offer?: ArticleOfferRef;
   }): Promise<FetchResult> {
     const url = item
-      ? `${config.baseUrl}/api/source/${source.id}/item/${encodeURIComponent(item.id)}?version=${encodeURIComponent(sourceItemIdentity(item).contentVersion)}`
+      ? `${config.baseUrl}${articlePaidPath({
+          sourceId: source.id,
+          itemId: item.id,
+          contentVersion: sourceItemIdentity(item).contentVersion,
+          offerId: offer?.id,
+          listPriceUsdc: offer?.listPriceUsdc,
+        })}`
       : `${config.baseUrl}/api/source/${source.id}`;
     const itemIdentity = item ? sourceItemIdentity(item) : undefined;
     const fetchPayee = await sourceFetchPayTo(source);
@@ -142,11 +153,12 @@ export class RealGateway implements PaymentGateway {
       content?: string;
       text?: string;
       item?: SourceItemIdentity;
+      pricing?: { offerId?: string | null; priceUsdc?: number; listPriceUsdc?: number };
     }>({
       url,
       method: "GET",
       expectedPayee: fetchPayee,
-      expectedAmount: source.fetchPrice,
+      expectedAmount: priceUsdc,
       payer: this.spend.address,
       signer: this.batchScheme,
     });
@@ -156,6 +168,8 @@ export class RealGateway implements PaymentGateway {
       sourceId: source.id,
       sourceName: source.name,
       ...(itemIdentity ?? {}),
+      offerId: offer?.id,
+      listPriceUsdc: offer?.listPriceUsdc,
       payer: this.spend.address,
       payee: fetchPayee,
       settledRationale: "Access toll settled on Arc via x402.",
@@ -163,6 +177,9 @@ export class RealGateway implements PaymentGateway {
     throwIfDeliveryFailed(attempt, payment, source.name);
     if (itemIdentity && !matchesSourceItemIdentity(attempt.data?.item, itemIdentity)) {
       throwIdentityMismatch(payment, source.name);
+    }
+    if (itemIdentity && !matchesArticlePricing(attempt.data?.pricing, priceUsdc, offer)) {
+      throwPricingMismatch(payment, source.name);
     }
     const content = attempt.data?.content ?? attempt.data?.text ?? JSON.stringify(attempt.data ?? {});
     return { content, payment };
@@ -221,6 +238,8 @@ interface AttemptPaymentContext extends Partial<SourceItemIdentity> {
   payee: string;
   weight?: number;
   settledRationale: string;
+  offerId?: string;
+  listPriceUsdc?: number;
 }
 
 function paymentFromAttempt(
@@ -239,6 +258,8 @@ function paymentFromAttempt(
     itemUrl: context.itemUrl,
     contentVersion: context.contentVersion,
     itemPublishedAt: context.itemPublishedAt,
+    offerId: context.offerId,
+    listPriceUsdc: context.listPriceUsdc,
     payer: context.payer,
     payee: context.payee,
     amountUsdc: attempt.amountUsdc,
@@ -286,4 +307,34 @@ function throwIdentityMismatch(payment: PaymentRecord, sourceName: string): neve
     `settlement confirmation pending and ${reason}`,
     payment,
   );
+}
+
+function matchesArticlePricing(
+  value: unknown,
+  expectedPrice: number,
+  offer?: ArticleOfferRef,
+): boolean {
+  if (!value || typeof value !== "object") return false;
+  const pricing = value as {
+    offerId?: string | null;
+    priceUsdc?: number;
+    listPriceUsdc?: number;
+  };
+  return (
+    pricing.offerId === (offer?.id ?? null) &&
+    Math.abs(Number(pricing.priceUsdc) - expectedPrice) < 0.0000005 &&
+    (!offer || Math.abs(Number(pricing.listPriceUsdc) - offer.listPriceUsdc) < 0.0000005)
+  );
+}
+
+function throwPricingMismatch(payment: PaymentRecord, sourceName: string): never {
+  const reason = "paid response did not match the selected article offer";
+  if (payment.settled) {
+    payment.rationale = `Circle settlement confirmed, but ${reason}.`;
+    throw new PaymentSettledError(
+      `payment settled, but ${sourceName} returned different article pricing`,
+      payment,
+    );
+  }
+  throw new PaymentPendingError(`settlement confirmation pending and ${reason}`, payment);
 }

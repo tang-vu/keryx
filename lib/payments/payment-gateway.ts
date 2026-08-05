@@ -13,7 +13,14 @@
  */
 
 import { config } from "../config";
-import type { Author, PaymentRecord, Source, SourceItem, SourceItemIdentity } from "../types";
+import type {
+  ArticleOfferRef,
+  Author,
+  PaymentRecord,
+  Source,
+  SourceItem,
+  SourceItemIdentity,
+} from "../types";
 import type { KeryxDB } from "../db";
 import type { RequestSignatureFn } from "./browser-cosign-gateway";
 import { assertPaymentSettlementState } from "./payment-state";
@@ -28,7 +35,14 @@ export interface PaymentGateway {
   /** Ensure the agent's spend wallet is funded for this run. Returns the agent address. */
   ensureFunded(budget: number): Promise<{ address: string; depositTx?: string }>;
   /** Pay the x402 access toll for one article, or the legacy source bundle when item is absent. */
-  payFetch(args: { source: Source; item?: SourceItem; queryId: string }): Promise<FetchResult>;
+  payFetch(args: {
+    source: Source;
+    item?: SourceItem;
+    queryId: string;
+    /** Trusted discovery price, independently checked against the x402 challenge. */
+    priceUsdc?: number;
+    offer?: ArticleOfferRef;
+  }): Promise<FetchResult>;
   /** Settle a weighted citation reward to one author wallet. */
   payCitation(args: {
     source: Source;

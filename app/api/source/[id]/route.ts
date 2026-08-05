@@ -15,7 +15,7 @@
 import { NextRequest } from "next/server";
 import { getDb } from "@/lib/db";
 import { resolveSourceItemContent } from "@/lib/sources/resolve-source-item-content";
-import { sourceFetchPayTo } from "@/lib/registry/source-fetch-payto";
+import { sourceFetchTerms } from "@/lib/registry/source-fetch-payto";
 import { settleThenServe } from "@/lib/x402-server";
 
 export const runtime = "nodejs";
@@ -31,13 +31,16 @@ export async function GET(
   if (!source) {
     return Response.json({ error: "source not found" }, { status: 404 });
   }
-  const payTo = await sourceFetchPayTo(source);
+  const terms = await sourceFetchTerms(source, { refresh: true });
+  if (!terms.active || source.active === false || source.verified === false) {
+    return Response.json({ error: "source is not active on the earning rail" }, { status: 410 });
+  }
 
   return settleThenServe(
     req,
     {
-      priceUsdc: source.fetchPrice,
-      payTo,
+      priceUsdc: terms.listPriceUsdc,
+      payTo: terms.payTo,
       endpoint: `/api/source/${id}`,
       description: `${source.name} — full content`,
     },

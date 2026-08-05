@@ -49,6 +49,12 @@ export interface SourceCandidate {
   description: string;
   tags: string[];
   fetchPrice: number;
+  /** Creator-signed discount terms; list price remains the registry ceiling. */
+  offer?: {
+    id: string;
+    listPriceUsdc: number;
+    expiresAt: number;
+  };
   cached: boolean; // content already fetched & cached this session/recently
   preview: string; // free preview (recent item titles + summaries)
   /**

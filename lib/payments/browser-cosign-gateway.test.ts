@@ -218,7 +218,12 @@ describe("BrowserCoSignGateway", () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(challenge())
-      .mockResolvedValueOnce(settledResponse(200, { item: identity }));
+      .mockResolvedValueOnce(
+        settledResponse(200, {
+          item: identity,
+          pricing: { offerId: null, priceUsdc: source.fetchPrice, listPriceUsdc: source.fetchPrice },
+        }),
+      );
     vi.stubGlobal("fetch", fetchMock);
     const gateway = new BrowserCoSignGateway(
       "session",
@@ -232,6 +237,59 @@ describe("BrowserCoSignGateway", () => {
       `version=${encodeURIComponent(identity.contentVersion)}`,
     );
     expect(result.payment).toMatchObject(identity);
+  });
+
+  it("binds a creator offer id, discounted amount, and list price through co-signing", async () => {
+    const item: SourceItem = {
+      id: "article-offer",
+      sourceId: source.id,
+      title: "Offer market",
+      summary: "Preview",
+      content: "Paid article",
+      link: "https://example.test/offer-market",
+    };
+    const identity = sourceItemIdentity(item);
+    const offer = {
+      id: `0x${"55".repeat(32)}`,
+      priceUsdc: 0.001,
+      listPriceUsdc: 0.002,
+      expiresAt: 2_000_000_000,
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(challenge(requirements({ amount: "1000" })))
+      .mockResolvedValueOnce(
+        settledResponse(200, {
+          item: identity,
+          pricing: {
+            offerId: offer.id,
+            priceUsdc: offer.priceUsdc,
+            listPriceUsdc: offer.listPriceUsdc,
+          },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const gateway = new BrowserCoSignGateway(
+      "session",
+      SESSION,
+      vi.fn().mockResolvedValue(signedHeader({ value: "1000" })),
+    );
+
+    const result = await gateway.payFetch({
+      source,
+      item,
+      queryId: "q1",
+      priceUsdc: offer.priceUsdc,
+      offer,
+    });
+
+    expect(String(fetchMock.mock.calls[0][0])).toContain(`offer=${offer.id}`);
+    expect(grantMocks.reserveSpend).toHaveBeenCalledWith("session", 0.001);
+    expect(result.payment).toMatchObject({
+      amountUsdc: 0.001,
+      offerId: offer.id,
+      listPriceUsdc: 0.002,
+    });
   });
 
   it("retains settlement but rejects content whose echoed article identity differs", async () => {
