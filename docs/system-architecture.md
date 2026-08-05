@@ -98,7 +98,9 @@ are their immutable IPFS CIDs. A paid article request must name the selected ver
 updates the row between discovery and purchase, the route returns 409 before a challenge can be
 signed. The cache is version-keyed and therefore cannot turn an old feed bundle or another article
 revision into a free read. Sources without item rows retain `/api/source/[id]` as a compatibility
-path; that route is not used for normal article discovery.
+path; that route is not used for normal article discovery. The free source preview exposes each
+article's `itemId`, `contentVersion`, canonical URL, and ready-to-call `paidPath` while still applying
+the creator's configured summary depth, so external agents can participate without DB access.
 
 ### Server-Side Volume Engine (No Browser)
 

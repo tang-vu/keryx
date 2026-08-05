@@ -6,6 +6,10 @@
 import { NextRequest } from "next/server";
 import { getDb } from "@/lib/db";
 import { normalizePreviewDepth, previewSummary } from "@/lib/sources/preview-depth";
+import {
+  sourceItemAssetId,
+  sourceItemIdentity,
+} from "@/lib/sources/source-item-asset";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,8 +34,16 @@ export async function GET(
     previewDepth: depth,
     preview: items.slice(0, 5).map((i) => {
       const summary = previewSummary(i.summary, depth);
+      const identity = sourceItemIdentity(i);
+      const metadata = {
+        assetId: sourceItemAssetId(i.id),
+        ...identity,
+        // Compatibility alias for clients that already render preview[].title.
+        title: i.title,
+        paidPath: `/api/source/${source.id}/item/${encodeURIComponent(i.id)}?version=${encodeURIComponent(identity.contentVersion)}`,
+      };
       // "locked" yields an empty summary — omit the field so the shape reads as title-only.
-      return summary ? { title: i.title, summary } : { title: i.title };
+      return summary ? { ...metadata, summary } : metadata;
     }),
   });
 }

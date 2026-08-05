@@ -19,7 +19,8 @@ the answer instead of naming only its parent publication.
 The paid article route rejects a missing or changed content version before returning a 402
 challenge, then settles the publication's existing registry price to its source-owned wallet and
 releases only that article. Plaintext uses a SHA-256 version; encrypted content uses its immutable
-IPFS CID. SourceRegistry remains payout authority, including multi-author splits—article metadata
+IPFS CID. Free previews now publish that payable identity and `paidPath` without weakening the
+creator's summary-depth setting, so outside agents can discover and buy the same object. SourceRegistry remains payout authority, including multi-author splits—article metadata
 cannot redirect funds. Historical source-level receipts and sources without item rows keep their
 old path. A post-settlement article delivery failure retains the receipt but cannot enter evidence.
 
