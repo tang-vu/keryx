@@ -76,6 +76,7 @@ export function buildCitationEmailContent(
 
   const text = [
     `Your source "${payload.source.name}" was just cited by the Keryx agent and paid ${amount} USDC (${weightPct} contribution weight), settled on ${payload.network}.`,
+    ...(payload.article ? [`Article: ${payload.article.itemTitle}`] : []),
     ``,
     `The question your work helped answer:`,
     `  ${payload.query.question}`,
@@ -91,6 +92,7 @@ export function buildCitationEmailContent(
 <div style="max-width:560px;margin:0 auto;padding:28px 24px;background:#faf6ec;color:#211d16;font-family:Georgia,'Times New Roman',serif;border:1px solid #d8cfb8;">
   <p style="margin:0 0 4px;font-family:monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#8c2f24;">Keryx &middot; citation settled</p>
   <h1 style="margin:0 0 16px;font-size:20px;font-weight:600;">${escapeHtml(payload.source.name)} was cited &mdash; ${amount} USDC is yours</h1>
+  ${payload.article ? `<p style="margin:0 0 12px;font-size:14px;line-height:1.6;"><strong>Article:</strong> ${escapeHtml(payload.article.itemTitle)}</p>` : ""}
   <p style="margin:0 0 12px;font-size:14px;line-height:1.6;">The Keryx agent relied on your work (${weightPct} contribution weight) and settled ${amount} USDC to your wallet on ${escapeHtml(payload.network)}. The question it answered:</p>
   <blockquote style="margin:0 0 16px;padding:10px 14px;border-left:3px solid #8c2f24;background:#f3ecdb;font-size:14px;line-height:1.6;">${escapeHtml(payload.query.question)}</blockquote>
   <p style="margin:0 0 20px;font-size:14px;line-height:1.6;">

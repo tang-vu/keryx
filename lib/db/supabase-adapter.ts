@@ -115,6 +115,8 @@ export class SupabaseAdapter implements KeryxDB {
       active: s.active !== false, // treat undefined as true
       verified: s.verified !== false, // treat undefined as true (grandfather curated/seed rows)
       preview_depth: s.previewDepth ?? null,
+      onchain_id: s.onchainId ?? null,
+      register_tx: s.registerTx ?? null,
     });
   }
 
@@ -272,6 +274,16 @@ export class SupabaseAdapter implements KeryxDB {
       itemIv: r.item_iv ?? undefined,
       itemAuthTag: r.item_auth_tag ?? undefined,
     }));
+  }
+
+  async getItem(sourceId: string, itemId: string): Promise<SourceItem | null> {
+    const { data } = await this.sb
+      .from("source_items")
+      .select("*")
+      .eq("source_id", sourceId)
+      .eq("id", itemId)
+      .maybeSingle();
+    return data ? rowToSourceItem(data) : null;
   }
 
   /**
@@ -564,6 +576,11 @@ export class SupabaseAdapter implements KeryxDB {
       settlement_status: settlementStatus,
       authorization_id: p.authorizationId ?? null,
       origin: p.origin ?? "engine",
+      item_id: p.itemId ?? null,
+      item_title: p.itemTitle ?? null,
+      item_url: p.itemUrl ?? null,
+      content_version: p.contentVersion ?? null,
+      item_published_at: p.itemPublishedAt ?? null,
     });
   }
 
@@ -1128,6 +1145,24 @@ function rowToSource(r: Record<string, unknown>): Source {
     verified: r.verified === undefined || r.verified === null ? true : Boolean(r.verified),
     // preview_depth=null grandfathers the row as "full".
     previewDepth: normalizePreviewDepth(r.preview_depth),
+    onchainId: (r.onchain_id as string) ?? undefined,
+    registerTx: (r.register_tx as string) ?? undefined,
+  };
+}
+
+function rowToSourceItem(r: Record<string, unknown>): SourceItem {
+  return {
+    id: r.id as string,
+    sourceId: r.source_id as string,
+    title: r.title as string,
+    summary: r.summary as string,
+    content: r.content as string,
+    link: r.link as string,
+    publishedAt: (r.published_at as string) ?? undefined,
+    ipfsCid: (r.ipfs_cid as string) ?? undefined,
+    itemKeyEnc: (r.item_key_enc as string) ?? undefined,
+    itemIv: (r.item_iv as string) ?? undefined,
+    itemAuthTag: (r.item_auth_tag as string) ?? undefined,
   };
 }
 
@@ -1192,6 +1227,11 @@ function rowToPayment(r: Record<string, unknown>): PaymentRecord {
       (Boolean(r.settled) ? "settled" : "simulated"),
     authorizationId: (r.authorization_id as string) ?? undefined,
     origin: (r.origin as PaymentRecord["origin"]) ?? undefined,
+    itemId: (r.item_id as string) ?? undefined,
+    itemTitle: (r.item_title as string) ?? undefined,
+    itemUrl: (r.item_url as string) ?? undefined,
+    contentVersion: (r.content_version as string) ?? undefined,
+    itemPublishedAt: (r.item_published_at as string) ?? undefined,
     createdAt: r.created_at as string,
   };
 }

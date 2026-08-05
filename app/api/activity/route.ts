@@ -35,6 +35,11 @@ export async function GET() {
     const activity = citations.map((p) => ({
       sourceId: p.sourceId,
       sourceName: p.sourceName,
+      itemId: p.itemId ?? null,
+      itemTitle: p.itemTitle ?? null,
+      itemUrl: p.itemUrl ?? null,
+      contentVersion: p.contentVersion ?? null,
+      itemPublishedAt: p.itemPublishedAt ?? null,
       question: questionById.get(p.queryId) ?? null,
       rewardUsdc: p.amountUsdc,
       origin: p.origin ?? "engine",

@@ -33,8 +33,8 @@ because paying is cheaper than not knowing.
 Keryx is a **citation-toll reading agent** — an autonomous reader with a wallet, and the payment
 rail underneath it. Give it a question and a budget:
 
-1. It **decomposes** the question into sub-claims and **discovers** candidate sources (free previews).
-2. It **decides**, per source: *buy / skip / cache* — expected value vs price vs remaining budget,
+1. It **decomposes** the question into sub-claims and **discovers** exact article candidates from free previews.
+2. It **decides**, per article version: *buy / skip / cache* — expected value vs price vs remaining budget,
    with a human-readable rationale for every choice.
 3. It **pays the x402 toll** only for what it buys, checks **sufficiency** after each read, and
    stops early when it has enough.
@@ -50,7 +50,7 @@ being *useful* — not by being clicked.
 Most "payment agents" are scripts with a wallet. Keryx's differentiator is **visible agency** —
 the model reasons about money and shows its work, streamed live to the UI:
 
-- **Buy / skip / cache with rationale** — every spend decision is logged in plain language, per source.
+- **Buy / skip / cache with rationale** — every spend decision names the exact article version and explains why.
 - **Adjudication** ⚖️ — when two sources conflict, the agent doesn't average them; it decides which
   to trust and says why.
 - **Confidence verdict** 📊 — it rates its own answer (High / Moderate / Low) and hedges the prose
@@ -240,7 +240,7 @@ BROWSER (Web App)                    IPFS + Arc Smart Contracts              Cir
     /api/ask (SSE) ──────────────────▶ /api/session/*   (grant, credit)       rpc.testnet.arc.network
     browser streams                     /api/ask         (agent asks, gets
     sign-requests                       /api/ask/sign    sign-requests back)
-    ◀────────────────────────────────  /api/source/[id] (fetch toll + IPFS key)
+    ◀────────────────────────────────  /api/source/[id]/item/[itemId]?version=…
     client-side session key             /api/cite        (citation reward)
     signs EIP-712                       /api/keys        (API key mint/verify)
     auto-signs (NO prompt)              /api/agent/ask   (A2A, x402-priced)

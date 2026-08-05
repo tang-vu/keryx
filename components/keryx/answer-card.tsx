@@ -53,28 +53,50 @@ export function AnswerCard({ run, meta, permalink }: { run: QueryRun; meta: AskM
                 Footnotes — each one pays its author
               </p>
               <ul>
-                {run.citations.map((c) => (
-                  <li
-                    key={c.marker}
-                    className={cn(
-                      "flex items-center gap-3 border-b border-line py-2.5 transition-colors",
-                      highlight === c.marker && "bg-seal/[0.06]",
-                    )}
-                  >
-                    <span className="w-5 shrink-0 font-display text-[14px] font-semibold text-paid">
-                      {c.marker.replace(/\D/g, "") || c.marker}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate font-serif text-[15px] text-ink">
-                      {c.sourceName}
-                    </span>
-                    <span className="shrink-0 font-mono text-[11px] text-ink-3">
-                      {Math.round(c.weight * 100)}%
-                    </span>
-                    <span className="w-16 shrink-0 text-right font-mono text-sm tabular-nums text-paid">
-                      +${fmtUsdc(c.reward)}
-                    </span>
-                  </li>
-                ))}
+                {run.citations.map((c) => {
+                  const articleUrl = safeArticleUrl(c.itemUrl);
+                  return (
+                    <li
+                      key={c.marker}
+                      className={cn(
+                        "flex items-center gap-3 border-b border-line py-2.5 transition-colors",
+                        highlight === c.marker && "bg-seal/[0.06]",
+                      )}
+                    >
+                      <span className="w-5 shrink-0 font-display text-[14px] font-semibold text-paid">
+                        {c.marker.replace(/\D/g, "") || c.marker}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        {articleUrl ? (
+                          <a
+                            href={articleUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block truncate font-serif text-[15px] text-ink underline decoration-line underline-offset-2 hover:decoration-ink"
+                          >
+                            {c.itemTitle ?? c.sourceName}
+                          </a>
+                        ) : (
+                          <span className="block truncate font-serif text-[15px] text-ink">
+                            {c.itemTitle ?? c.sourceName}
+                          </span>
+                        )}
+                        {c.itemTitle ? (
+                          <span className="block truncate font-mono text-[10px] uppercase tracking-[0.08em] text-ink-3">
+                            {c.sourceName}
+                            {c.itemPublishedAt ? ` · ${c.itemPublishedAt.slice(0, 10)}` : ""}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="shrink-0 font-mono text-[11px] text-ink-3">
+                        {Math.round(c.weight * 100)}%
+                      </span>
+                      <span className="w-16 shrink-0 text-right font-mono text-sm tabular-nums text-paid">
+                        +${fmtUsdc(c.reward)}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}
@@ -95,6 +117,16 @@ export function AnswerCard({ run, meta, permalink }: { run: QueryRun; meta: AskM
       </div>
     </div>
   );
+}
+
+function safeArticleUrl(value?: string): string | undefined {
+  if (!value) return undefined;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:" ? value : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function EvidenceLedger({ run }: { run: QueryRun }) {
@@ -138,7 +170,7 @@ function EvidenceLedger({ run }: { run: QueryRun }) {
                     >
                       “{item.quote}”{" "}
                       <span className="not-italic text-paid">
-                        [{item.marker}] {item.sourceName}
+                        [{item.marker}] {item.itemTitle ?? item.sourceName}
                       </span>
                     </blockquote>
                   ))}

@@ -44,6 +44,11 @@ describe("SQLite payment settlement state migration", () => {
       queryId: "q3",
       sourceId: "s1",
       sourceName: "Source",
+      itemId: "article-1",
+      itemTitle: "Exact article",
+      itemUrl: "https://example.test/article-1",
+      contentVersion: "sha256:abc",
+      itemPublishedAt: "2026-08-03T00:00:00.000Z",
       payer: "payer",
       payee: "payee",
       amountUsdc: 0.004,
@@ -60,6 +65,9 @@ describe("SQLite payment settlement state migration", () => {
       settlementStatus: "pending",
       authorizationId: "nonce-new",
       settled: false,
+      itemId: "article-1",
+      itemTitle: "Exact article",
+      contentVersion: "sha256:abc",
     });
     const metrics = await db.metrics();
     expect(metrics.totalPayments).toBe(1);

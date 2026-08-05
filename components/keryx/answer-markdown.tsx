@@ -75,7 +75,11 @@ function renderWithCitations(
         key={`${keyBase}-c${idx}`}
         type="button"
         onClick={() => onCitationClick?.(marker)}
-        title={cite ? `${cite.sourceName} — ${Math.round(cite.weight * 100)}% weight` : marker}
+        title={
+          cite
+            ? `${cite.itemTitle ? `${cite.itemTitle} · ${cite.sourceName}` : cite.sourceName} — ${Math.round(cite.weight * 100)}% weight`
+            : marker
+        }
         className="mx-0.5 inline-flex -translate-y-1.5 items-center align-baseline font-mono text-[0.62em] font-semibold text-seal transition-opacity hover:opacity-70"
       >
         [{marker.replace(/\D/g, "") || marker}]

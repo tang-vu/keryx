@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { config } from "../config";
-import type { Source } from "../types";
+import type { Source, SourceItem } from "../types";
+import { sourceItemIdentity } from "../sources/source-item-asset";
 import { pendingPaymentFrom, settledPaymentFrom } from "./payment-state";
 
 const grantMocks = vi.hoisted(() => ({
@@ -78,7 +79,7 @@ function signedHeader(over: Partial<{ from: string; to: string; value: string; n
   ).toString("base64");
 }
 
-function settledResponse(status = 200): Response {
+function settledResponse(status = 200, body: Record<string, unknown> = {}): Response {
   const encoded = Buffer.from(
     JSON.stringify({
       success: true,
@@ -88,7 +89,7 @@ function settledResponse(status = 200): Response {
     }),
   ).toString("base64");
   return Response.json(
-    { content: "paid content" },
+    { content: "paid content", ...body },
     { status, headers: { "PAYMENT-RESPONSE": encoded } },
   );
 }
@@ -200,6 +201,74 @@ describe("BrowserCoSignGateway", () => {
       settlementStatus: "settled",
       txHash: "circle-settlement-id",
       authorizationId: NONCE,
+    });
+  });
+
+  it("binds an article payment and receipt to the selected content version", async () => {
+    const item: SourceItem = {
+      id: "article-1",
+      sourceId: source.id,
+      title: "Arc receipts",
+      summary: "Preview",
+      content: "Paid article",
+      link: "https://example.test/arc-receipts",
+      publishedAt: "2026-08-05T00:00:00.000Z",
+    };
+    const identity = sourceItemIdentity(item);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(challenge())
+      .mockResolvedValueOnce(settledResponse(200, { item: identity }));
+    vi.stubGlobal("fetch", fetchMock);
+    const gateway = new BrowserCoSignGateway(
+      "session",
+      SESSION,
+      vi.fn().mockResolvedValue(signedHeader()),
+    );
+
+    const result = await gateway.payFetch({ source, item, queryId: "q1" });
+
+    expect(String(fetchMock.mock.calls[0][0])).toContain(
+      `version=${encodeURIComponent(identity.contentVersion)}`,
+    );
+    expect(result.payment).toMatchObject(identity);
+  });
+
+  it("retains settlement but rejects content whose echoed article identity differs", async () => {
+    const item: SourceItem = {
+      id: "article-1",
+      sourceId: source.id,
+      title: "Arc receipts",
+      summary: "Preview",
+      content: "Paid article",
+      link: "https://example.test/arc-receipts",
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(challenge())
+      .mockResolvedValueOnce(
+        settledResponse(200, {
+          item: { ...sourceItemIdentity(item), itemId: "different-article" },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const gateway = new BrowserCoSignGateway(
+      "session",
+      SESSION,
+      vi.fn().mockResolvedValue(signedHeader()),
+    );
+
+    let caught: unknown;
+    try {
+      await gateway.payFetch({ source, item, queryId: "q1" });
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(settledPaymentFrom(caught)).toMatchObject({
+      settled: true,
+      itemId: item.id,
+      contentVersion: sourceItemIdentity(item).contentVersion,
     });
   });
 

@@ -63,11 +63,22 @@ export interface SourceItem {
   itemAuthTag?: string;   // base64: 16-byte GCM auth tag for the content ciphertext
 }
 
+/** Immutable identity for the exact article version the agent evaluated and purchased. */
+export interface SourceItemIdentity {
+  itemId: string;
+  itemTitle: string;
+  itemUrl: string;
+  contentVersion: string;
+  itemPublishedAt?: string;
+}
+
 export type DecisionAction = "BUY" | "SKIP" | "CACHE";
 
 /** The agent's reasoned choice about a single candidate source. The rationale is the product. */
-export interface Decision {
+export interface Decision extends Partial<SourceItemIdentity> {
   sourceId: string;
+  /** Candidate identity used during reasoning. Article candidates are `item:<itemId>`. */
+  assetId?: string;
   sourceName: string;
   action: DecisionAction;
   expectedValue: number; // 0..1 — predicted usefulness for the question
@@ -79,7 +90,7 @@ export interface Decision {
 }
 
 /** One contributing source in the final answer, with its weighted reward. */
-export interface Citation {
+export interface Citation extends Partial<SourceItemIdentity> {
   marker: string; // e.g. "S1"
   sourceId: string;
   sourceName: string;
@@ -89,7 +100,7 @@ export interface Citation {
 }
 
 /** A source span that survived the deterministic evidence gate for one decomposed claim. */
-export interface EvidenceRecord {
+export interface EvidenceRecord extends Partial<SourceItemIdentity> {
   claimIndex: number;
   claim: string;
   marker: string;
@@ -154,7 +165,7 @@ export type PaymentOrigin = "engine" | "web" | "a2a" | "mcp";
 export type PaymentSettlementStatus = "settled" | "simulated" | "pending";
 
 /** `inbound` = another agent paid Keryx (A2A); fetch/citation = Keryx paid a creator. */
-export interface PaymentRecord {
+export interface PaymentRecord extends Partial<SourceItemIdentity> {
   id?: string;
   kind: "fetch" | "citation" | "inbound";
   queryId: string;

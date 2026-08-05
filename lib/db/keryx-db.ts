@@ -183,6 +183,8 @@ export interface KeryxDB {
   getSourceMeta(id: string): Promise<SourceMeta | null>;
   addItems(items: SourceItem[]): Promise<void>;
   getItems(sourceId: string): Promise<SourceItem[]>;
+  /** Resolve one article only within its owning registry source. */
+  getItem(sourceId: string, itemId: string): Promise<SourceItem | null>;
   /** Posts each of `sourceIds` published inside (`sinceIso`, `untilIso`], keyed by source id;
    *  sources with none are absent rather than zero. Backs the freshness note on a dispatch —
    *  "what have these sources published since this answer settled". Undated rows never count

@@ -1,6 +1,6 @@
 # Keryx Codebase Summary
 
-**Version:** 0.8.0 (live product, updated 2026-07-28)
+**Version:** 0.9.0 (article-level evidence exchange, updated 2026-08-05)
 
 This document maps the codebase structure for the non-custodial Keryx dApp. Organized by domain; files < 200 LOC per kebab-case naming standard.
 
@@ -13,10 +13,10 @@ Core decompose→discover→decide→fetch→sufficiency→synthesize→attribut
 
 | File | Purpose |
 |------|---------|
-| `run-agent.ts` | Main agent orchestrator. Yields reasoning traces via async generator. Powers both server-side (volume engine) and interactive (SSE). |
+| `run-agent.ts` | Main agent orchestrator. Selects one relevant article version per publication, then yields reasoning/payment traces for server-side and interactive runs. |
 | `evidence-ledger.ts` | Deterministic claim → source → exact-quote gate. Bounds final coverage and the set eligible for citation rewards. |
 | `steps/` | Each step (decompose, discover, decide, etc.) as a separate generator function. Includes adjudication (conflicting sources → trust one, with reasons) and the confidence verdict (agent rates its own answer High/Moderate/Low). |
-| `decisions.ts` | Agent decision log: buy/skip/cache per source, with rationale. |
+| `decisions.ts` | Agent decision log: buy/skip/cache per article candidate, with rationale. |
 | `prompts.ts` | LLM system/user prompts for each step. |
 
 Discovery is semantic (embedding cosine similarity), and cross-query memory feeds past source
@@ -146,6 +146,14 @@ Encrypted content on IPFS. Pinata client + server-side AES-256-GCM encryption/de
 | `index.ts` | Public interface. |
 
 **Design:** Content uploaded encrypted to IPFS (ciphertext only). Plaintext decryption occurs inside x402 `produce()` callback after payment verification. Free preview served plaintext.
+
+### `lib/sources/` + `app/api/source/`
+
+`source-item-asset.ts` gives each article an immutable content version, opaque cache key, and
+metadata-only relevance selection. `/api/source/[id]/item/[itemId]` binds that version before the
+402 challenge and serves only the paid article after settlement. The older `/api/source/[id]`
+bundle route remains for sources that do not yet have item rows. In both cases, SourceRegistry—not
+article metadata—controls the price and payout wallet.
 
 ---
 

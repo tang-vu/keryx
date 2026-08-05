@@ -1,6 +1,6 @@
 # Keryx System Architecture
 
-**Version:** 0.8.1 Reasoning resilience (2026-08-04)
+**Version:** 0.9.0 Article-level evidence exchange (2026-08-05)
 **Status:** Shipped (Phases 01–06 complete)
 
 ---
@@ -56,8 +56,8 @@ BROWSER                              KERYX SERVER                     ARC + CIRC
 
 8. SSE Loop: Agent Execution (inside agent/run-agent.ts)
    ├─ decompose: break question into sub-claims
-   ├─ discover: query registry, find candidate sources
-   ├─ decide: BUY / SKIP per source (rationale logged)
+   ├─ discover: query registry, select one relevant article per publication from free metadata
+   ├─ decide: BUY / SKIP / CACHE per exact article version (rationale logged)
    │
    │  ON BUY:
    │  ├─ emit SSE event: sign-request {reqId, payTo, amount, verifyingContract, ...}
@@ -66,8 +66,9 @@ BROWSER                              KERYX SERVER                     ARC + CIRC
    │  ├─ POST /api/ask/sign {sessionId, reqId, paymentHeader}
    │  └─ Server resolves pending promise, retries source with header
    │
-   ├─ fetch: GET /api/source/[id] with x402 payment-signature header
-   │  └─ Server: x402 verify → decrypt IPFS content → emit SSE "step: fetched"
+   ├─ fetch: GET /api/source/[id]/item/[itemId]?version=… with x402 signature
+   │  ├─ Server rejects a changed version before payment
+   │  └─ x402 verify/settle → decrypt only that article → emit SSE "step: fetched"
    │
    ├─ sufficiency: "have we read enough?" → STOP if yes, next BUY if no
    ├─ synthesize: LLM answer + [S#] citations
@@ -82,6 +83,22 @@ BROWSER                              KERYX SERVER                     ARC + CIRC
     ├─ Browser: GatewayClient.withdraw() residual balance
     └─ Grant marked revoked, in-flight runs abort
 ```
+
+### Article Asset and Payment Authority
+
+An article candidate has two identities with deliberately different jobs:
+
+| Identity | Authority |
+|---|---|
+| `itemId + contentVersion` | Discovery, paid delivery, cache, evidence, citation display, receipt metadata |
+| Registry `sourceId` | Active/verified status, fetch price, source-owned `payTo`, author reward splits |
+
+Plaintext versions are SHA-256 digests of the stored article identity and body; encrypted versions
+are their immutable IPFS CIDs. A paid article request must name the selected version. If ingest
+updates the row between discovery and purchase, the route returns 409 before a challenge can be
+signed. The cache is version-keyed and therefore cannot turn an old feed bundle or another article
+revision into a free read. Sources without item rows retain `/api/source/[id]` as a compatibility
+path; that route is not used for normal article discovery.
 
 ### Server-Side Volume Engine (No Browser)
 
@@ -278,10 +295,10 @@ Indexer Loop (every ~30s in production):
 │ 4. Server: Store CID in DB sources.content_cid                  │
 │                                                                  │
 │ FETCH PATH (x402):                                              │
-│ 1. Agent decided BUY → server GET /api/source/[id]              │
-│ 2. x402 GET included 402 challenge header from IPFS CID fetch   │
+│ 1. Agent selected article + version from free metadata          │
+│ 2. GET /api/source/[id]/item/[itemId]?version=… → 402 challenge │
 │ 3. Browser signs EIP-712 → POST /api/ask/sign                   │
-│ 4. Server: verifies x402 signature                              │
+│ 4. Server: verifies version, x402 signature, price, and payTo   │
 │ 5. Inside x402.produce() callback:                              │
 │    ├─ Fetch ciphertext from Pinata (CID known)                  │
 │    ├─ AES-256-GCM decrypt {ciphertext, CONTENT_MASTER_KEY}      │
@@ -546,7 +563,8 @@ See `docs/security-threat-model.md` for full matrix.
 | GET `/api/sources` | public | List sources (paginated) |
 | POST `/api/sources` | creator JWT | Register new source (optional `notifyUrl`) |
 | GET/POST `/api/creator/[id]/notify` | owner JWT | Get / set / rotate / disable citation webhook (secret shown once) |
-| GET `/api/source/[id]` | x402 | Fetch source content (402 if unpaid) |
+| GET `/api/source/[id]/item/[itemId]?version=…` | x402 | Fetch one exact article version (402 if unpaid) |
+| GET `/api/source/[id]` | x402 | Legacy source-bundle fetch for rows without articles |
 | GET `/api/source/[id]/preview` | public | Free plaintext preview |
 | POST `/api/cite/[id]` | x402 | Citation reward endpoint |
 | GET `/api/keys` | creator JWT | List API keys |

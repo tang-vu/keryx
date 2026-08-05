@@ -31,6 +31,7 @@ describe("resolveAllowedPayTo", () => {
     allowedPayTo.mockResolvedValue({
       status: "onchain",
       wallets: new Set([SOURCE_WALLET.toLowerCase(), AUTHOR.toLowerCase()]),
+      payoutWallet: SOURCE_WALLET,
       stale: false,
     });
 

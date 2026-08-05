@@ -20,6 +20,8 @@ import type {
   McpClientChannel,
   PaymentRecord,
   QueryRun,
+  Source,
+  SourceItem,
   TracePhase,
   TraceStep,
 } from "../types";
@@ -44,6 +46,12 @@ import { sendAlert } from "../notify/alert";
 import { normalizePreviewDepth, previewSummary } from "../sources/preview-depth";
 import { isCacheFresh, newestPublishedAt } from "./cache-freshness";
 import {
+  selectRelevantSourceItem,
+  sourceItemAssetId,
+  sourceItemCacheKey,
+  sourceItemIdentity,
+} from "../sources/source-item-asset";
+import {
   buildEvidenceLedger,
   MIN_REWARD_SUPPORT,
   removeUnsupportedCitationMarkers,
@@ -66,6 +74,13 @@ export interface RunInput {
   /** Set when this dispatch re-asks a question the corpus previously left under-covered. Recorded
    *  on the run so the demand board can tell an independent dispatch from the agent's own retry. */
   retryOf?: string;
+}
+
+interface InternalAsset {
+  candidate: SourceCandidate;
+  source: Source;
+  item?: SourceItem;
+  cacheKey: string;
 }
 
 export async function* runAgent(
@@ -130,6 +145,7 @@ export async function* runAgent(
   const sources = allSources.filter((s) => s.verified !== false);
   const unverifiedCount = allSources.length - sources.length;
   const candidates: SourceCandidate[] = [];
+  const assetById = new Map<string, InternalAsset>();
   // Sources whose cached copy still matches what they publish. A copy the source has published
   // past is not a free read of it any more, so it is offered as a paid fetch instead — otherwise
   // the first purchase of a source would be the last toll it ever earned, and every later answer
@@ -137,28 +153,53 @@ export async function* runAgent(
   const freshCache = new Set<string>();
   for (const s of sources) {
     const items = await db.getItems(s.id);
-    if (isCacheFresh(await db.getCachedAt(s.id), newestPublishedAt(items), Date.now())) {
-      freshCache.add(s.id);
-    }
     // Honor the creator's preview-depth: the agent scores on exactly what a paying reader would see
-    // for free, so a locked source is judged on its titles + description, not its full summaries.
+    // for free. Article selection never inspects paid full text.
     const depth = normalizePreviewDepth(s.previewDepth);
-    const preview = items
-      .slice(0, 4)
-      .map((i) => {
-        const summary = previewSummary(i.summary, depth);
-        return summary ? `- ${i.title}: ${summary}` : `- ${i.title}`;
-      })
-      .join("\n");
-    candidates.push({
+    const item = selectRelevantSourceItem(input.question, subClaims, s.tags, items);
+
+    if (item) {
+      const id = sourceItemAssetId(item.id);
+      const identity = sourceItemIdentity(item);
+      const cacheKey = sourceItemCacheKey(s.id, item);
+      const cached = Boolean(await db.getCachedAt(cacheKey));
+      if (cached) freshCache.add(id);
+      const summary = previewSummary(item.summary, depth);
+      const candidate: SourceCandidate = {
+        id,
+        sourceId: s.id,
+        item: identity,
+        name: `${s.name} — ${item.title}`,
+        description: s.description,
+        tags: s.tags,
+        fetchPrice: s.fetchPrice,
+        cached,
+        preview: summary ? `- ${item.title}: ${summary}` : `- ${item.title}`,
+      };
+      candidates.push(candidate);
+      assetById.set(id, { candidate, source: s, item, cacheKey });
+      continue;
+    }
+
+    // Historical source rows with no articles retain the original source-level purchase path.
+    const cached = isCacheFresh(
+      await db.getCachedAt(s.id),
+      newestPublishedAt(items),
+      Date.now(),
+    );
+    if (cached) freshCache.add(s.id);
+    const candidate: SourceCandidate = {
       id: s.id,
+      sourceId: s.id,
       name: s.name,
       description: s.description,
       tags: s.tags,
       fetchPrice: s.fetchPrice,
-      cached: freshCache.has(s.id),
-      preview,
-    });
+      cached,
+      preview: s.description,
+    };
+    candidates.push(candidate);
+    assetById.set(s.id, { candidate, source: s, cacheKey: s.id });
   }
   yield emit(
     "discover",
@@ -214,13 +255,33 @@ export async function* runAgent(
   const fullContext = [memoryContext, reputationContext].filter(Boolean).join("\n\n") || undefined;
   const proposed = await engine.decide({ question: input.question, subClaims, candidates, budget, spentSoFar: 0, memoryContext: fullContext });
   const sourceById = new Map(sources.map((s) => [s.id, s]));
+  const assetBySourceId = new Map(
+    [...assetById.values()].map((asset) => [asset.source.id, asset]),
+  );
   const isExternal = (id: string) => id.startsWith("ext:");
   const externalById = new Map(external.map((c) => [c.id, c]));
 
   // External marketplace endpoints are discovery-only: the engine judges their value, but the
   // orchestrator never settles to them (off Keryx's Arc rail) — enforced here like the budget cap,
   // so a model BUY can never leak into a real off-rail purchase.
-  const internalProposed = proposed.filter((d) => !isExternal(d.sourceId));
+  const proposedAssetIds = new Set<string>();
+  const internalProposed = proposed
+    .filter((d) => !isExternal(d.sourceId))
+    .flatMap((d) => {
+      // Current engines return candidate ids. Accept a registry source id too so an in-flight
+      // fallback/custom engine cannot erase all decisions during this additive rollout.
+      const asset = assetById.get(d.sourceId) ?? assetBySourceId.get(d.sourceId);
+      if (!asset) return [];
+      if (proposedAssetIds.has(asset.candidate.id)) return [];
+      proposedAssetIds.add(asset.candidate.id);
+      return [{
+        ...d,
+        assetId: asset.candidate.id,
+        sourceId: asset.source.id,
+        sourceName: asset.candidate.name,
+        ...asset.candidate.item,
+      }];
+    });
   const externalProposed = proposed.filter((d) => isExternal(d.sourceId));
 
   // rank internal BUY proposals by value-per-dollar; flip to SKIP when the fetch budget can't cover them
@@ -233,11 +294,11 @@ export async function* runAgent(
     // other purchase: converting it later at fetch time would settle a toll the fetch budget never
     // accounted for. If the budget can't cover it, the guard below turns it into a SKIP.
     const d =
-      r.action === "CACHE" && !freshCache.has(r.sourceId)
+      r.action === "CACHE" && !freshCache.has(r.assetId ?? r.sourceId)
         ? {
             ...r,
             action: "BUY" as const,
-            rationale: `${r.rationale} — cached copy predates this source's newest post, so buying a fresh read.`,
+            rationale: `${r.rationale} — no cache exists for this exact content version, so buying a fresh read.`,
           }
         : r;
     if (d.action === "BUY") {
@@ -276,7 +337,7 @@ export async function* runAgent(
   let markerN = 0;
   let fetchFailures = 0;
   const buys = finalDecisions.filter(
-    (d) => (d.action === "BUY" || d.action === "CACHE") && !isExternal(d.sourceId),
+    (d) => (d.action === "BUY" || d.action === "CACHE") && !d.external,
   );
 
   // Ensure the spend wallet holds a settle-able Gateway balance before any payment
@@ -293,32 +354,50 @@ export async function* runAgent(
   let lastGaps = 0; // sub-claims with coverage < 0.4 from the most recent sufficiency check
 
   for (const d of buys) {
-    const source = sourceById.get(d.sourceId)!;
+    const asset = assetById.get(d.assetId ?? d.sourceId);
+    if (!asset) continue;
+    const { source, item, cacheKey } = asset;
+    const itemIdentity = asset.candidate.item ?? {};
+    const assetLabel = item ? `${source.name} — ${item.title}` : source.name;
     const marker = `S${++markerN}`;
     if (d.action === "CACHE") {
-      const cached = (await db.getCached(d.sourceId)) ?? "";
-      gathered.push({ sourceId: source.id, sourceName: source.name, marker, text: cached });
-      yield emit("fetch", `Reused cached ${source.name} (free) — ${marker}`);
+      const cached = (await db.getCached(cacheKey)) ?? "";
+      gathered.push({
+        assetId: asset.candidate.id,
+        sourceId: source.id,
+        sourceName: source.name,
+        ...itemIdentity,
+        marker,
+        text: cached,
+      });
+      yield emit("fetch", `Reused cached ${assetLabel} (free) — ${marker}`);
     } else {
-      yield emit("fetch", `Paying $${source.fetchPrice} toll to ${source.name}…`);
+      yield emit("fetch", `Paying $${source.fetchPrice} toll to read ${assetLabel}…`);
       try {
         paymentAttempts++;
-        const { content, payment } = await gateway.payFetch({ source, queryId });
+        const { content, payment } = await gateway.payFetch({ source, item, queryId });
         if (payment.settled) settledPayments++;
         if (paymentSettlementStatus(payment) === "pending") pendingPayments++;
         payment.origin = origin;
         payments.push(payment);
         const ledgerError = await persistPaymentRecord(payment);
         try {
-          await db.setCached(source.id, content);
+          await db.setCached(cacheKey, content);
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
-          yield emit("fetch", `Read ${source.name}, but its cache could not be refreshed (${message}).`);
+          yield emit("fetch", `Read ${assetLabel}, but its cache could not be refreshed (${message}).`);
         }
-        gathered.push({ sourceId: source.id, sourceName: source.name, marker, text: content });
+        gathered.push({
+          assetId: asset.candidate.id,
+          sourceId: source.id,
+          sourceName: source.name,
+          ...itemIdentity,
+          marker,
+          text: content,
+        });
         yield emit(
           "fetch",
-          `${fetchPaymentMessage(payment, source.name)} — ${marker}`,
+          `${fetchPaymentMessage(payment, assetLabel)} — ${marker}`,
           payment,
         );
         if (ledgerError) {
@@ -337,7 +416,7 @@ export async function* runAgent(
           const ledgerError = await persistPaymentRecord(settled);
           yield emit(
             "fetch",
-            `Paid $${settled.amountUsdc} to ${source.name}, but its content response failed after settlement; receipt retained and the run continues without that source.`,
+            `Paid $${settled.amountUsdc} to ${assetLabel}, but its content response failed after settlement; receipt retained and the run continues without that article.`,
             settled,
           );
           if (ledgerError) {
@@ -353,7 +432,7 @@ export async function* runAgent(
           const ledgerError = await persistPaymentRecord(pending);
           yield emit(
             "fetch",
-            `Signed $${pending.amountUsdc} authorization for ${source.name}; confirmation is pending, so it is not counted as spent — skipping this source and continuing.`,
+            `Signed $${pending.amountUsdc} authorization for ${assetLabel}; confirmation is pending, so it is not counted as spent — skipping this article and continuing.`,
             pending,
           );
           if (ledgerError) {
@@ -361,7 +440,7 @@ export async function* runAgent(
           }
           continue;
         }
-        yield emit("fetch", `Couldn't buy ${source.name} (${reason}) — skipping it, continuing with what's read.`);
+        yield emit("fetch", `Couldn't buy ${assetLabel} (${reason}) — skipping it, continuing with what's read.`);
         continue;
       }
 
@@ -391,7 +470,7 @@ export async function* runAgent(
   // potentially buy additional previously-skipped sources to fill gaps. Multi-pass
   // reasoning: the agent "thinks twice" about whether its initial buy/skip choices
   // left any sub-claim unsupported, and spends remaining budget to close the gap.
-  const gatheredIds = new Set(gathered.map((g) => g.sourceId));
+  const gatheredIds = new Set(gathered.map((g) => g.assetId ?? g.sourceId));
   let remainingBudget = fetchBudget - spentTolls;
 
   // Skip re-evaluation when the last sufficiency check already confirmed full coverage —
@@ -406,15 +485,15 @@ export async function* runAgent(
             d.action === "SKIP" &&
             !d.external &&
             !isExternal(d.sourceId) &&
-            !gatheredIds.has(d.sourceId),
+            !gatheredIds.has(d.assetId ?? d.sourceId),
         )
         .map((d) => {
-          const s = sourceById.get(d.sourceId);
+          const asset = assetById.get(d.assetId ?? d.sourceId);
           return {
-            id: d.sourceId,
+            id: d.assetId ?? d.sourceId,
             name: d.sourceName,
-            price: s?.fetchPrice ?? 0,
-            preview: s?.description ?? "",
+            price: asset?.source.fetchPrice ?? 0,
+            preview: asset?.candidate.preview ?? "",
           };
         });
 
@@ -455,36 +534,46 @@ export async function* runAgent(
 
       // Buy additional sources the engine recommended to fill coverage gaps
       for (const recId of reeval.recommendedIds) {
-        const source = sourceById.get(recId) ?? sources.find((s) => s.id === recId);
+        const asset = assetById.get(recId);
+        const source = asset?.source;
         // Guard against an engine recommending a source we already read (duplicate marker +
         // double payment) or that no longer fits the remaining budget.
-        if (!source || gatheredIds.has(recId) || source.fetchPrice > remainingBudget + 1e-9) continue;
+        if (!asset || !source || gatheredIds.has(recId) || source.fetchPrice > remainingBudget + 1e-9) continue;
 
         const marker = `S${++markerN}`;
-        yield emit("reevaluate", `Filling gap — buying ${source.name} ($${source.fetchPrice})…`);
+        const assetLabel = asset.item ? `${source.name} — ${asset.item.title}` : source.name;
+        const itemIdentity = asset.candidate.item ?? {};
+        yield emit("reevaluate", `Filling gap — buying ${assetLabel} ($${source.fetchPrice})…`);
 
         try {
           paymentAttempts++;
-          const { content, payment } = await gateway.payFetch({ source, queryId });
+          const { content, payment } = await gateway.payFetch({ source, item: asset.item, queryId });
           if (payment.settled) settledPayments++;
           if (paymentSettlementStatus(payment) === "pending") pendingPayments++;
           payment.origin = origin;
           payments.push(payment);
           const ledgerError = await persistPaymentRecord(payment);
           try {
-            await db.setCached(source.id, content);
+            await db.setCached(asset.cacheKey, content);
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            yield emit("reevaluate", `Read ${source.name}, but its cache could not be refreshed (${message}).`);
+            yield emit("reevaluate", `Read ${assetLabel}, but its cache could not be refreshed (${message}).`);
           }
-          gathered.push({ sourceId: source.id, sourceName: source.name, marker, text: content });
-          gatheredIds.add(source.id);
+          gathered.push({
+            assetId: asset.candidate.id,
+            sourceId: source.id,
+            sourceName: source.name,
+            ...itemIdentity,
+            marker,
+            text: content,
+          });
+          gatheredIds.add(asset.candidate.id);
           remainingBudget -= source.fetchPrice;
           spentTolls += source.fetchPrice;
 
           yield emit(
             "reevaluate",
-            `${fetchPaymentMessage(payment, source.name)} — ${marker}`,
+            `${fetchPaymentMessage(payment, assetLabel)} — ${marker}`,
             payment,
           );
           if (ledgerError) {
@@ -503,7 +592,7 @@ export async function* runAgent(
             spentTolls += source.fetchPrice;
             yield emit(
               "reevaluate",
-              `Paid $${settled.amountUsdc} to ${source.name}, but its content response failed after settlement; receipt retained and the gap remains open.`,
+              `Paid $${settled.amountUsdc} to ${assetLabel}, but its content response failed after settlement; receipt retained and the gap remains open.`,
               settled,
             );
             if (ledgerError) {
@@ -522,7 +611,7 @@ export async function* runAgent(
             spentTolls += source.fetchPrice;
             yield emit(
               "reevaluate",
-              `Signed $${pending.amountUsdc} authorization for ${source.name}; confirmation is pending and the reserved budget stays consumed.`,
+              `Signed $${pending.amountUsdc} authorization for ${assetLabel}; confirmation is pending and the reserved budget stays consumed.`,
               pending,
             );
             if (ledgerError) {
@@ -530,7 +619,7 @@ export async function* runAgent(
             }
             continue;
           }
-          yield emit("reevaluate", `Couldn't buy ${source.name} to fill gap (${reason}) — continuing.`);
+          yield emit("reevaluate", `Couldn't buy ${assetLabel} to fill gap (${reason}) — continuing.`);
         }
       }
     }
@@ -731,6 +820,11 @@ export async function* runAgent(
         marker: g.marker,
         sourceId: g.sourceId,
         sourceName: g.sourceName,
+        itemId: g.itemId,
+        itemTitle: g.itemTitle,
+        itemUrl: g.itemUrl,
+        contentVersion: g.contentVersion,
+        itemPublishedAt: g.itemPublishedAt,
         weight: attribution.weight,
         reward: rewards[index] ?? 0,
         rationale: attribution.rationale,
@@ -760,7 +854,25 @@ export async function* runAgent(
       const rationale = `Citation reward (${(c.weight * 100).toFixed(0)}% contribution${authors.length > 1 ? `, ${(author.splitWeight * 100).toFixed(0)}% author split` : ""}).`;
       try {
         paymentAttempts++;
-        const payment = await gateway.payCitation({ source, author, amount, weight: c.weight, queryId, rationale });
+        const item =
+          c.itemId && c.itemTitle && c.itemUrl && c.contentVersion
+            ? {
+                itemId: c.itemId,
+                itemTitle: c.itemTitle,
+                itemUrl: c.itemUrl,
+                contentVersion: c.contentVersion,
+                ...(c.itemPublishedAt ? { itemPublishedAt: c.itemPublishedAt } : {}),
+              }
+            : undefined;
+        const payment = await gateway.payCitation({
+          source,
+          author,
+          item,
+          amount,
+          weight: c.weight,
+          queryId,
+          rationale,
+        });
         if (payment.settled) settledPayments++;
         if (paymentSettlementStatus(payment) === "pending") pendingPayments++;
         payment.origin = origin;
@@ -851,7 +963,13 @@ export async function* runAgent(
   // goes with it, not just what it cited: a source paid for and then left unquoted is the only
   // evidence the next decision has that it does not earn its toll.
   try {
-    await saveMemory(db, queryId, input.question, citations, [...gatheredIds]);
+    await saveMemory(
+      db,
+      queryId,
+      input.question,
+      citations,
+      [...new Set(gathered.map((item) => item.sourceId))],
+    );
   } catch {
     // Never fail a run on memory save
   }

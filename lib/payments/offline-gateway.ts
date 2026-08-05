@@ -4,8 +4,9 @@
  * and clearly excluded from "real settlement" claims. Dev only.
  */
 
-import type { Author, PaymentRecord, Source } from "../types";
+import type { Author, PaymentRecord, Source, SourceItem, SourceItemIdentity } from "../types";
 import type { KeryxDB } from "../db";
+import { sourceItemIdentity } from "../sources/source-item-asset";
 import { makePayment, type FetchResult, type PaymentGateway } from "./payment-gateway";
 
 export class OfflineGateway implements PaymentGateway {
@@ -24,23 +25,28 @@ export class OfflineGateway implements PaymentGateway {
 
   async payFetch({
     source,
+    item,
     queryId,
   }: {
     source: Source;
+    item?: SourceItem;
     queryId: string;
   }): Promise<FetchResult> {
-    const items = await this.db.getItems(source.id);
-    const content =
-      items
-        .slice(0, 5)
-        .map((i) => `## ${i.title}\n${i.content || i.summary}`)
-        .join("\n\n") || source.description;
+    const items = item ? [item] : await this.db.getItems(source.id);
+    const content = item
+      ? item.content || item.summary
+      : items
+          .slice(0, 5)
+          .map((i) => `## ${i.title}\n${i.content || i.summary}`)
+          .join("\n\n") || source.description;
+    const itemIdentity = item ? sourceItemIdentity(item) : {};
 
     const payment = makePayment({
       kind: "fetch",
       queryId,
       sourceId: source.id,
       sourceName: source.name,
+      ...itemIdentity,
       payer: this.address,
       payee: source.walletAddress,
       amountUsdc: source.fetchPrice,
@@ -55,6 +61,7 @@ export class OfflineGateway implements PaymentGateway {
   async payCitation({
     source,
     author,
+    item,
     amount,
     weight,
     queryId,
@@ -62,6 +69,7 @@ export class OfflineGateway implements PaymentGateway {
   }: {
     source: Source;
     author: Author;
+    item?: SourceItemIdentity;
     amount: number;
     weight: number;
     queryId: string;
@@ -72,6 +80,7 @@ export class OfflineGateway implements PaymentGateway {
       queryId,
       sourceId: source.id,
       sourceName: source.name,
+      ...item,
       payer: this.address,
       payee: author.walletAddress,
       amountUsdc: amount,

@@ -43,6 +43,7 @@ describe("allowedPayTo", () => {
     expect(result.status).toBe("onchain");
     if (result.status !== "onchain") return;
     expect(result.stale).toBe(false);
+    expect(result.payoutWallet).toBe(PAYOUT);
     for (const wallet of [PAYOUT, AUTHOR_A, AUTHOR_B]) {
       expect(isAllowed(result.wallets, wallet)).toBe(true);
     }

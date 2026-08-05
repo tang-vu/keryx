@@ -67,6 +67,14 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       price: c.fetchPrice,
       cached: c.cached,
       preview: c.preview.slice(0, 600),
+      ...(c.item
+        ? {
+            article: c.item.itemTitle,
+            articleUrl: c.item.itemUrl,
+            publishedAt: c.item.itemPublishedAt,
+            contentVersion: c.item.contentVersion,
+          }
+        : {}),
       ...(c.external
         ? { external: true, settlesOn: c.external.chains, settlesOnArc: c.external.onArc }
         : {}),
@@ -132,6 +140,9 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         gathered: input.gathered.map((g) => ({
           marker: g.marker,
           source: g.sourceName,
+          article: g.itemTitle,
+          articleUrl: g.itemUrl,
+          publishedAt: g.itemPublishedAt,
           text: g.text.slice(0, 800),
         })),
         schema:
@@ -177,6 +188,9 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         gathered: input.gathered.map((g) => ({
           marker: g.marker,
           source: g.sourceName,
+          article: g.itemTitle,
+          articleUrl: g.itemUrl,
+          publishedAt: g.itemPublishedAt,
           text: g.text.slice(0, 800),
         })),
         skippedSources: input.skippedSources.map((s) => ({
@@ -226,6 +240,9 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         sources: input.gathered.map((g) => ({
           marker: g.marker,
           name: g.sourceName,
+          article: g.itemTitle,
+          articleUrl: g.itemUrl,
+          publishedAt: g.itemPublishedAt,
           text: g.text.slice(0, 2000),
         })),
         schema:

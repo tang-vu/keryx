@@ -115,7 +115,8 @@ CREATE TABLE IF NOT EXISTS payment_events (
   id TEXT PRIMARY KEY, created_at TEXT, kind TEXT, query_id TEXT, source_id TEXT,
   source_name TEXT, payer TEXT, payee TEXT, amount_usdc REAL, weight REAL,
   rationale TEXT, tx_hash TEXT, network TEXT, settled INTEGER,
-  settlement_status TEXT NOT NULL DEFAULT 'simulated', authorization_id TEXT
+  settlement_status TEXT NOT NULL DEFAULT 'simulated', authorization_id TEXT,
+  item_id TEXT, item_title TEXT, item_url TEXT, content_version TEXT, item_published_at TEXT
 );
 CREATE TABLE IF NOT EXISTS query_runs (
   id TEXT PRIMARY KEY, created_at TEXT, question TEXT, budget REAL, engine TEXT,
@@ -287,6 +288,17 @@ export class SqliteAdapter implements KeryxDB {
     }
     if (!paymentCols.has("authorization_id")) {
       this.db.exec(`ALTER TABLE payment_events ADD COLUMN authorization_id TEXT`);
+    }
+    for (const column of [
+      "item_id",
+      "item_title",
+      "item_url",
+      "content_version",
+      "item_published_at",
+    ]) {
+      if (!paymentCols.has(column)) {
+        this.db.exec(`ALTER TABLE payment_events ADD COLUMN ${column} TEXT`);
+      }
     }
     this.db.exec(
       `CREATE INDEX IF NOT EXISTS payment_events_pending
@@ -556,6 +568,13 @@ export class SqliteAdapter implements KeryxDB {
       itemIv: (r.item_iv as string) ?? undefined,
       itemAuthTag: (r.item_auth_tag as string) ?? undefined,
     }));
+  }
+
+  async getItem(sourceId: string, itemId: string): Promise<SourceItem | null> {
+    const row = this.db
+      .prepare(`SELECT * FROM source_items WHERE source_id=? AND id=? LIMIT 1`)
+      .get(sourceId, itemId);
+    return row ? rowToSourceItem(row) : null;
   }
 
   /**
@@ -1185,8 +1204,8 @@ export class SqliteAdapter implements KeryxDB {
     const settlementStatus = assertPaymentSettlementState(p);
     this.db
       .prepare(
-        `INSERT INTO payment_events (id,created_at,kind,query_id,source_id,source_name,payer,payee,amount_usdc,weight,rationale,tx_hash,network,settled,settlement_status,authorization_id,origin)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        `INSERT INTO payment_events (id,created_at,kind,query_id,source_id,source_name,payer,payee,amount_usdc,weight,rationale,tx_hash,network,settled,settlement_status,authorization_id,origin,item_id,item_title,item_url,content_version,item_published_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       )
       .run(
         p.id ?? crypto.randomUUID(),
@@ -1206,6 +1225,11 @@ export class SqliteAdapter implements KeryxDB {
         settlementStatus,
         p.authorizationId ?? null,
         p.origin ?? "engine",
+        p.itemId ?? null,
+        p.itemTitle ?? null,
+        p.itemUrl ?? null,
+        p.contentVersion ?? null,
+        p.itemPublishedAt ?? null,
       );
   }
 
@@ -1607,6 +1631,22 @@ function rowToSource(r: Record<string, unknown>): Source {
   };
 }
 
+function rowToSourceItem(r: Record<string, unknown>): SourceItem {
+  return {
+    id: r.id as string,
+    sourceId: r.source_id as string,
+    title: r.title as string,
+    summary: r.summary as string,
+    content: r.content as string,
+    link: r.link as string,
+    publishedAt: (r.published_at as string) ?? undefined,
+    ipfsCid: (r.ipfs_cid as string) ?? undefined,
+    itemKeyEnc: (r.item_key_enc as string) ?? undefined,
+    itemIv: (r.item_iv as string) ?? undefined,
+    itemAuthTag: (r.item_auth_tag as string) ?? undefined,
+  };
+}
+
 function rowToGapIntent(r: Record<string, unknown>): GapIntent {
   return {
     id: String(r.id),
@@ -1655,6 +1695,11 @@ function rowToPayment(r: Record<string, unknown>): PaymentRecord {
       (Boolean(r.settled) ? "settled" : "simulated"),
     authorizationId: (r.authorization_id as string) ?? undefined,
     origin: (r.origin as PaymentRecord["origin"]) ?? undefined,
+    itemId: (r.item_id as string) ?? undefined,
+    itemTitle: (r.item_title as string) ?? undefined,
+    itemUrl: (r.item_url as string) ?? undefined,
+    contentVersion: (r.content_version as string) ?? undefined,
+    itemPublishedAt: (r.item_published_at as string) ?? undefined,
     createdAt: r.created_at as string,
   };
 }

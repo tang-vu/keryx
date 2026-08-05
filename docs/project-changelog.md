@@ -1,13 +1,27 @@
 # Keryx Project Changelog
 
 **Last Updated:** 2026-08-05
-**Current Version:** 0.8.1
+**Current Version:** 0.9.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
 
 ---
 
 ## Unreleased
+
+### The thing Keryx buys is now an exact article, not an entire feed (2026-08-05)
+Discovery now chooses one relevant article per verified publication using only free title and
+preview metadata. The model reasons about that article, and the same `itemId + contentVersion`
+continues through the x402 fetch, versioned cache, evidence ledger, citation, payment receipt,
+activity feed, and creator notification. Public footnotes link to the work that actually supported
+the answer instead of naming only its parent publication.
+
+The paid article route rejects a missing or changed content version before returning a 402
+challenge, then settles the publication's existing registry price to its source-owned wallet and
+releases only that article. Plaintext uses a SHA-256 version; encrypted content uses its immutable
+IPFS CID. SourceRegistry remains payout authority, including multi-author splits—article metadata
+cannot redirect funds. Historical source-level receipts and sources without item rows keep their
+old path. A post-settlement article delivery failure retains the receipt but cannot enter evidence.
 
 ### Settled receipts survive paid-resource delivery failures (2026-08-05)
 A creator payment can finish before Keryx reads IPFS, refreshes a cache, writes a database row, or

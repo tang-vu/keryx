@@ -5,6 +5,28 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-39** · Content economics/Evidence · *The exact article version is the unit Keryx discovers,
+buys, caches, cites, and rewards; SourceRegistry remains the sole authority for price and payee.*
+For each verified publication, discovery chooses one relevant `source_items` row from free title and
+preview metadata. The reasoning candidate carries a separate `item:<id>` asset identity while its
+registry `sourceId` remains attached for source-owned `fetchPrice`, `walletAddress`, and author
+splits. Paid reads use `/api/source/[id]/item/[itemId]?version=<contentVersion>`; the route rejects a
+changed or missing version before issuing a 402 challenge, settles to the source owner, then serves
+only that article. Plaintext rows use a SHA-256 content version and encrypted rows use their
+content-addressed IPFS CID. Cache keys include source, item, and version, so an old whole-feed cache
+or another revision can never silently satisfy the purchase. Fetch and citation receipts,
+evidence, public footnotes, activity, and creator notifications carry the same article identity.
+
+The first slice intentionally permits at most one article candidate per publication in one run, so
+existing source-level attribution and payout splitting remain unambiguous. Publications with no
+item rows keep the historical source-bundle path, and old nullable receipts remain readable. Item
+metadata is never payout authority. Post-settlement delivery failure still follows D-38: retain the
+settled receipt, exclude unavailable text from evidence, and continue the answer from other reads.
+Why: buying an entire feed made the paid object, cited evidence, cache, and creator work disagree;
+an article-level receipt makes the market leg inspectable and gives future bidding/reputation a
+stable object to price. Reversible: medium (additive route/metadata and legacy fallback; removing it
+would collapse new article receipts back into ambiguous source bundles).
+
 **D-38** · Settlement/Delivery · *A confirmed Circle receipt remains settled even when the paid
 resource fails after settlement; delivery success never rewrites payment truth.*
 `settleThenServe` now builds the `PAYMENT-RESPONSE` immediately after a successful facilitator

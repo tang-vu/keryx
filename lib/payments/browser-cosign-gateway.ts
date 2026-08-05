@@ -15,7 +15,12 @@
  */
 
 import { config } from "../config";
-import type { Author, PaymentRecord, Source } from "../types";
+import type { Author, PaymentRecord, Source, SourceItem, SourceItemIdentity } from "../types";
+import {
+  matchesSourceItemIdentity,
+  sourceItemIdentity,
+} from "../sources/source-item-asset";
+import { sourceFetchPayTo } from "../registry/source-fetch-payto";
 import { makePayment, type FetchResult, type PaymentGateway } from "./payment-gateway";
 import { PaymentPendingError, PaymentSettledError } from "./payment-state";
 import { isGrantValid, releaseSpend, reserveSpend } from "./session-grants";
@@ -94,15 +99,39 @@ export class BrowserCoSignGateway implements PaymentGateway {
     return { address: this.sessAddr };
   }
 
-  async payFetch({ source, queryId }: { source: Source; queryId: string }): Promise<FetchResult> {
-    const url = `${config.baseUrl}/api/source/${source.id}`;
-    const { content, payment } = await this.buyWithCoSign(url, source, queryId, "fetch", source.fetchPrice);
+  async payFetch({
+    source,
+    item,
+    queryId,
+  }: {
+    source: Source;
+    item?: SourceItem;
+    queryId: string;
+  }): Promise<FetchResult> {
+    const url = item
+      ? `${config.baseUrl}/api/source/${source.id}/item/${encodeURIComponent(item.id)}?version=${encodeURIComponent(sourceItemIdentity(item).contentVersion)}`
+      : `${config.baseUrl}/api/source/${source.id}`;
+    const identity = item ? sourceItemIdentity(item) : undefined;
+    const fetchPayee = await sourceFetchPayTo(source);
+    const { content, payment } = await this.buyWithCoSign(
+      url,
+      source,
+      queryId,
+      "fetch",
+      source.fetchPrice,
+      undefined,
+      undefined,
+      undefined,
+      identity,
+      fetchPayee,
+    );
     return { content, payment };
   }
 
   async payCitation({
     source,
     author,
+    item,
     amount,
     weight,
     queryId,
@@ -110,6 +139,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
   }: {
     source: Source;
     author: Author;
+    item?: SourceItemIdentity;
     amount: number;
     weight: number;
     queryId: string;
@@ -118,7 +148,17 @@ export class BrowserCoSignGateway implements PaymentGateway {
     const url = `${config.baseUrl}/api/cite/${source.id}?author=${encodeURIComponent(
       author.walletAddress,
     )}&amount=${amount.toFixed(6)}&query=${encodeURIComponent(queryId)}`;
-    const { payment } = await this.buyWithCoSign(url, source, queryId, "citation", amount, weight, rationale, author);
+    const { payment } = await this.buyWithCoSign(
+      url,
+      source,
+      queryId,
+      "citation",
+      amount,
+      weight,
+      rationale,
+      author,
+      item,
+    );
     return payment;
   }
 
@@ -133,6 +173,8 @@ export class BrowserCoSignGateway implements PaymentGateway {
     weight?: number,
     rationale?: string,
     author?: Author,
+    item?: SourceItemIdentity,
+    payeeOverride?: string,
   ): Promise<{ content: string; payment: PaymentRecord }> {
     // Guard: abort if client disconnected or grant revoked.
     if (this.abortSignal?.aborted) {
@@ -149,7 +191,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
     const reqId = crypto.randomUUID();
     const method = kind === "fetch" ? "GET" : "POST";
     const requirements = await this.fetchRequirements(url, method);
-    const payee = author?.walletAddress ?? source.walletAddress;
+    const payee = payeeOverride ?? author?.walletAddress ?? source.walletAddress;
     assertExpectedRequirements(requirements, payee, amount);
 
     // Reserve in one atomic DB operation before a bearer authorization can exist.
@@ -182,6 +224,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
       queryId,
       sourceId: source.id,
       sourceName: source.name,
+      ...item,
       payer,
       payee,
       amountUsdc: amount,
@@ -252,6 +295,21 @@ export class BrowserCoSignGateway implements PaymentGateway {
         ? (rationale ?? "Browser co-sign toll settled on Arc via x402.")
         : "Content returned after signed x402 submission, but the settlement response was missing or invalid.",
     });
+
+    if (item && !matchesSourceItemIdentity(bodyJson.item, item)) {
+      const reason = "paid response did not match the selected article version";
+      if (payment.settled) {
+        payment.rationale = `Circle settlement confirmed, but ${reason}.`;
+        throw new PaymentSettledError(
+          `payment settled, but ${source.name} returned a different article identity`,
+          payment,
+        );
+      }
+      throw new PaymentPendingError(
+        `settlement confirmation pending and ${reason}`,
+        payment,
+      );
+    }
 
     return { content, payment };
   }

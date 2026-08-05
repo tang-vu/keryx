@@ -14,10 +14,9 @@
 
 import { NextRequest } from "next/server";
 import { getDb } from "@/lib/db";
+import { resolveSourceItemContent } from "@/lib/sources/resolve-source-item-content";
+import { sourceFetchPayTo } from "@/lib/registry/source-fetch-payto";
 import { settleThenServe } from "@/lib/x402-server";
-import { fetchByCid, hasPinata } from "@/lib/ipfs/pinata-client";
-import { decryptContent, hasContentKey } from "@/lib/ipfs/content-crypto";
-import type { SourceItem } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,12 +31,13 @@ export async function GET(
   if (!source) {
     return Response.json({ error: "source not found" }, { status: 404 });
   }
+  const payTo = await sourceFetchPayTo(source);
 
   return settleThenServe(
     req,
     {
       priceUsdc: source.fetchPrice,
-      payTo: source.walletAddress,
+      payTo,
       endpoint: `/api/source/${id}`,
       description: `${source.name} — full content`,
     },
@@ -50,8 +50,12 @@ export async function GET(
         return { content: cached, name: source.name, items: items.length };
       }
 
-      const ipfsEnabled = hasPinata() && hasContentKey();
-      const resolved = await Promise.all(items.map((item) => resolveItem(item, ipfsEnabled, settle)));
+      const resolved = await Promise.all(
+        items.map(async (item) => ({
+          title: item.title,
+          text: await resolveSourceItemContent(item, settle, { allowSummaryFallback: true }),
+        })),
+      );
 
       const content =
         resolved.map((i) => `## ${i.title}\n${i.text}`).join("\n\n") ||
@@ -63,37 +67,4 @@ export async function GET(
       return { content, name: source.name, items: items.length };
     },
   );
-}
-
-/** Resolve a single item's full text: decrypt from IPFS or fall back to DB plaintext. */
-async function resolveItem(
-  item: SourceItem,
-  ipfsEnabled: boolean,
-  settle: { payer: string; transaction: string },
-): Promise<{ title: string; text: string }> {
-  const title = item.title;
-
-  // IPFS path: item was encrypted and pinned at ingest time.
-  if (ipfsEnabled && item.ipfsCid && item.itemKeyEnc && item.itemIv && item.itemAuthTag) {
-    try {
-      const cipherBuf = await fetchByCid(item.ipfsCid);
-      const plaintext = decryptContent(
-        cipherBuf.toString("base64"),
-        item.itemKeyEnc,
-        item.itemIv,
-        item.itemAuthTag,
-      );
-      // Log key release for auditability — payer + tx, never log plaintext or key material.
-      console.log(`[ipfs] decrypted item ${item.id} for payer ${settle.payer} tx ${settle.transaction}`);
-      return { title, text: plaintext };
-    } catch (err) {
-      // Decrypt failure (corrupted CID, gateway error, key mismatch) — serve summary fallback.
-      // This is an ops issue; the payment already settled so we must return something.
-      console.error(`[ipfs] decrypt failed for item ${item.id}:`, err);
-      return { title, text: item.summary || "[content unavailable — decryption error]" };
-    }
-  }
-
-  // Fallback: plaintext from DB (offline dev or pre-IPFS items).
-  return { title, text: item.content || item.summary };
 }

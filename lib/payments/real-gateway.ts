@@ -26,7 +26,12 @@ import {
 import { arcTestnet } from "viem/chains";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { config } from "../config";
-import type { Author, PaymentRecord, Source } from "../types";
+import type { Author, PaymentRecord, Source, SourceItem, SourceItemIdentity } from "../types";
+import {
+  matchesSourceItemIdentity,
+  sourceItemIdentity,
+} from "../sources/source-item-asset";
+import { sourceFetchPayTo } from "../registry/source-fetch-payto";
 import { makePayment, type FetchResult, type PaymentGateway } from "./payment-gateway";
 import { PaymentPendingError, PaymentSettledError } from "./payment-state";
 import { payWithServerSigner, type ServerX402Attempt } from "./server-x402-client";
@@ -119,12 +124,28 @@ export class RealGateway implements PaymentGateway {
     return { address: this.spend.address, depositTx: dep.depositTxHash };
   }
 
-  async payFetch({ source, queryId }: { source: Source; queryId: string }): Promise<FetchResult> {
-    const url = `${config.baseUrl}/api/source/${source.id}`;
-    const attempt = await payWithServerSigner<{ content?: string; text?: string }>({
+  async payFetch({
+    source,
+    item,
+    queryId,
+  }: {
+    source: Source;
+    item?: SourceItem;
+    queryId: string;
+  }): Promise<FetchResult> {
+    const url = item
+      ? `${config.baseUrl}/api/source/${source.id}/item/${encodeURIComponent(item.id)}?version=${encodeURIComponent(sourceItemIdentity(item).contentVersion)}`
+      : `${config.baseUrl}/api/source/${source.id}`;
+    const itemIdentity = item ? sourceItemIdentity(item) : undefined;
+    const fetchPayee = await sourceFetchPayTo(source);
+    const attempt = await payWithServerSigner<{
+      content?: string;
+      text?: string;
+      item?: SourceItemIdentity;
+    }>({
       url,
       method: "GET",
-      expectedPayee: source.walletAddress,
+      expectedPayee: fetchPayee,
       expectedAmount: source.fetchPrice,
       payer: this.spend.address,
       signer: this.batchScheme,
@@ -134,11 +155,15 @@ export class RealGateway implements PaymentGateway {
       queryId,
       sourceId: source.id,
       sourceName: source.name,
+      ...(itemIdentity ?? {}),
       payer: this.spend.address,
-      payee: source.walletAddress,
+      payee: fetchPayee,
       settledRationale: "Access toll settled on Arc via x402.",
     });
     throwIfDeliveryFailed(attempt, payment, source.name);
+    if (itemIdentity && !matchesSourceItemIdentity(attempt.data?.item, itemIdentity)) {
+      throwIdentityMismatch(payment, source.name);
+    }
     const content = attempt.data?.content ?? attempt.data?.text ?? JSON.stringify(attempt.data ?? {});
     return { content, payment };
   }
@@ -146,6 +171,7 @@ export class RealGateway implements PaymentGateway {
   async payCitation({
     source,
     author,
+    item,
     amount,
     weight,
     queryId,
@@ -153,6 +179,7 @@ export class RealGateway implements PaymentGateway {
   }: {
     source: Source;
     author: Author;
+    item?: SourceItemIdentity;
     amount: number;
     weight: number;
     queryId: string;
@@ -174,6 +201,7 @@ export class RealGateway implements PaymentGateway {
       queryId,
       sourceId: source.id,
       sourceName: source.name,
+      ...item,
       payer: this.spend.address,
       payee: author.walletAddress,
       weight,
@@ -184,7 +212,7 @@ export class RealGateway implements PaymentGateway {
   }
 }
 
-interface AttemptPaymentContext {
+interface AttemptPaymentContext extends Partial<SourceItemIdentity> {
   kind: "fetch" | "citation";
   queryId: string;
   sourceId: string;
@@ -206,6 +234,11 @@ function paymentFromAttempt(
     queryId: context.queryId,
     sourceId: context.sourceId,
     sourceName: context.sourceName,
+    itemId: context.itemId,
+    itemTitle: context.itemTitle,
+    itemUrl: context.itemUrl,
+    contentVersion: context.contentVersion,
+    itemPublishedAt: context.itemPublishedAt,
     payer: context.payer,
     payee: context.payee,
     amountUsdc: attempt.amountUsdc,
@@ -236,6 +269,21 @@ function throwIfDeliveryFailed(
   }
   throw new PaymentPendingError(
     `settlement confirmation pending after signed submission (${reason})`,
+    payment,
+  );
+}
+
+function throwIdentityMismatch(payment: PaymentRecord, sourceName: string): never {
+  const reason = "paid response did not match the selected article version";
+  if (payment.settled) {
+    payment.rationale = `Circle settlement confirmed, but ${reason}.`;
+    throw new PaymentSettledError(
+      `payment settled, but ${sourceName} returned a different article identity`,
+      payment,
+    );
+  }
+  throw new PaymentPendingError(
+    `settlement confirmation pending and ${reason}`,
     payment,
   );
 }

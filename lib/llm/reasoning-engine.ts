@@ -9,7 +9,7 @@
  * `HeuristicEngine` (deterministic, runs offline with no API key).
  */
 
-import type { Decision } from "../types";
+import type { Decision, SourceItemIdentity } from "../types";
 
 export type ReasoningStep =
   | "decompose"
@@ -41,6 +41,10 @@ export interface ReasoningAttempt {
 /** A discoverable source the agent may choose to pay for (preview is free). */
 export interface SourceCandidate {
   id: string;
+  /** Registry source behind the asset. Equals id for legacy source-level candidates. */
+  sourceId?: string;
+  /** Exact article version offered by this candidate. */
+  item?: SourceItemIdentity;
   name: string;
   description: string;
   tags: string[];
@@ -71,7 +75,9 @@ export interface DecideInput {
 }
 
 /** Content the agent has unlocked, ready to read. */
-export interface GatheredContent {
+export interface GatheredContent extends Partial<SourceItemIdentity> {
+  /** Reasoning candidate that produced this read; distinct from registry sourceId for articles. */
+  assetId?: string;
   sourceId: string;
   sourceName: string;
   marker: string; // S1, S2, ... assigned by gather order

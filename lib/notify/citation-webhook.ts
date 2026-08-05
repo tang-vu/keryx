@@ -13,7 +13,7 @@
 
 import crypto from "node:crypto";
 import type { KeryxDB } from "../db";
-import type { Citation, PaymentRecord, Source } from "../types";
+import type { Citation, PaymentRecord, Source, SourceItemIdentity } from "../types";
 import { fetchPublicUrl } from "../net/public-fetch";
 
 /** Outbound POST timeout. A creator's endpoint shouldn't be able to slow the agent for long. */
@@ -30,6 +30,8 @@ export interface CitationWebhookPayload {
   deliveryId: string;
   timestamp: string;
   source: { id: string; name: string };
+  /** Exact article version that earned this citation, absent on historical source-level runs. */
+  article?: SourceItemIdentity;
   query: { id: string; question: string };
   /** Contribution weight of this source to the answer (0..1). */
   weight: number;
@@ -76,6 +78,22 @@ export function buildCitationPayload(input: {
     deliveryId: crypto.randomUUID(),
     timestamp: new Date().toISOString(),
     source: { id: input.source.id, name: input.source.name },
+    ...(input.citation.itemId &&
+    input.citation.itemTitle &&
+    input.citation.itemUrl &&
+    input.citation.contentVersion
+      ? {
+          article: {
+            itemId: input.citation.itemId,
+            itemTitle: input.citation.itemTitle,
+            itemUrl: input.citation.itemUrl,
+            contentVersion: input.citation.contentVersion,
+            ...(input.citation.itemPublishedAt
+              ? { itemPublishedAt: input.citation.itemPublishedAt }
+              : {}),
+          },
+        }
+      : {}),
     query: { id: input.queryId, question: input.question },
     weight: input.citation.weight,
     amountUsdc,

@@ -34,7 +34,11 @@ import type {
   SufficiencyInput,
   SynthInput,
 } from "../llm/reasoning-engine";
-import type { Author, Decision, PaymentRecord, QueryRun, Source, TraceStep } from "../types";
+import type { Author, Decision, PaymentRecord, QueryRun, Source, SourceItem, TraceStep } from "../types";
+import {
+  sourceItemCacheKey,
+  sourceItemIdentity,
+} from "../sources/source-item-asset";
 
 const AGENT = "0xAGENT";
 const EPS = 1e-6;
@@ -154,6 +158,7 @@ function fakeEngine(over: EngineOverrides = {}): ReasoningEngine & { decideInput
 
 interface FakeGateway extends PaymentGateway {
   fetchCalls: string[];
+  fetchItems: (string | undefined)[];
   citationCalls: { sourceId: string; payee: string; amount: number }[];
 }
 
@@ -162,34 +167,38 @@ function fakeGateway(opts: { failOn?: string } = {}): FakeGateway {
   const gw: FakeGateway = {
     mode: "real",
     fetchCalls: [],
+    fetchItems: [],
     citationCalls: [],
     agentAddress: () => AGENT,
     async ensureFunded() {
       return { address: AGENT };
     },
-    async payFetch({ source, queryId }) {
+    async payFetch({ source, item, queryId }) {
       if (opts.failOn === source.id) throw new Error("settlement failed");
       gw.fetchCalls.push(source.id);
+      gw.fetchItems.push(item?.id);
       const payment = makePayment({
         kind: "fetch",
         queryId,
         sourceId: source.id,
         sourceName: source.name,
+        ...(item ? sourceItemIdentity(item) : {}),
         payer: AGENT,
         payee: source.walletAddress,
         amountUsdc: source.fetchPrice,
         settled: true,
         txHash: "0xfetch",
       });
-      return { content: `content:${source.id}`, payment };
+      return { content: item?.content || `content:${source.id}`, payment };
     },
-    async payCitation({ source, author, amount, weight, queryId, rationale }) {
+    async payCitation({ source, author, item, amount, weight, queryId, rationale }) {
       gw.citationCalls.push({ sourceId: source.id, payee: author.walletAddress, amount });
       return makePayment({
         kind: "citation",
         queryId,
         sourceId: source.id,
         sourceName: source.name,
+        ...item,
         payer: AGENT,
         payee: author.walletAddress,
         amountUsdc: amount,
@@ -209,6 +218,10 @@ interface DbState {
   cachedAt?: Record<string, string>;
   /** ISO publication date of the source's newest post. */
   newestItem?: Record<string, string>;
+  /** Explicit article rows, newest first. */
+  items?: Record<string, SourceItem[]>;
+  /** Cache timestamps keyed by exact opaque cache key. */
+  cachedByKey?: Record<string, string>;
 }
 
 /** A KeryxDB that serves the given sources and records payments. Only the methods the
@@ -221,6 +234,7 @@ function fakeDb(sources: Source[], state: DbState = {}): KeryxDB & { payments: P
       return sources;
     },
     async getItems(sourceId: string) {
+      if (state.items?.[sourceId]) return state.items[sourceId];
       const publishedAt = state.newestItem?.[sourceId];
       if (!publishedAt) return [];
       return [
@@ -236,10 +250,12 @@ function fakeDb(sources: Source[], state: DbState = {}): KeryxDB & { payments: P
       ];
     },
     async getCached(sourceId: string) {
-      return state.cachedAt?.[sourceId] ? `cached:${sourceId}` : null;
+      return state.cachedAt?.[sourceId] || state.cachedByKey?.[sourceId]
+        ? `cached:${sourceId}`
+        : null;
     },
     async getCachedAt(sourceId: string) {
-      return state.cachedAt?.[sourceId] ?? null;
+      return state.cachedAt?.[sourceId] ?? state.cachedByKey?.[sourceId] ?? null;
     },
     async setCached() {},
     async recordPayment(p: PaymentRecord) {
@@ -788,10 +804,7 @@ describe("runAgent — money-safety invariants", () => {
   });
 });
 
-/** A cached copy is a free read of the source only while it still IS the source. Once the feed has
- *  moved past it, reusing it both starves the creator of the toll and answers from text they have
- *  superseded — so it becomes a purchase, budgeted like any other. */
-describe("runAgent — cache freshness", () => {
+describe("runAgent — article-level economics", () => {
   const cache = (id: string) => ({ [id]: "2026-07-20T00:00:00.000Z" });
   const cacheDecision = (id: string, name = id.toUpperCase()): Decision => ({
     sourceId: id,
@@ -804,7 +817,79 @@ describe("runAgent — cache freshness", () => {
     targets: [0],
   });
 
-  it("buys a fresh read when the source published after the cached copy was taken", async () => {
+  it("selects and receipts the relevant article rather than buying the whole feed", async () => {
+    const source = makeSource({ id: "a", fetchPrice: 0.004 });
+    const relevant: SourceItem = {
+      id: "arc-settlement",
+      sourceId: "a",
+      title: "Arc settlement reaches deterministic finality",
+      summary: "A technical note about Arc settlement evidence.",
+      content: "Arc settlement evidence is retained after paid delivery fails.",
+      link: "https://a.example/arc-settlement",
+      publishedAt: "2026-07-19T00:00:00.000Z",
+    };
+    const newerButIrrelevant: SourceItem = {
+      id: "football",
+      sourceId: "a",
+      title: "Football results",
+      summary: "A weekly sports roundup.",
+      content: "The home team won its match this week.",
+      link: "https://a.example/football",
+      publishedAt: "2026-07-20T00:00:00.000Z",
+    };
+    const gw = fakeGateway();
+    const d = deps([source], fakeEngine(), gw, {
+      items: { a: [newerButIrrelevant, relevant] },
+    });
+
+    const { run } = await drive(
+      { question: "How does Arc settlement retain evidence?", budget: 0.05 },
+      d,
+    );
+
+    expect(gw.fetchItems).toEqual([relevant.id]);
+    expect(run.decisions[0]).toMatchObject({
+      assetId: `item:${relevant.id}`,
+      sourceId: source.id,
+      itemId: relevant.id,
+      itemTitle: relevant.title,
+    });
+    expect(run.citations[0]).toMatchObject(sourceItemIdentity(relevant));
+    expect(run.evidence?.[0]).toMatchObject(sourceItemIdentity(relevant));
+    expect(d.db.payments.every((payment) => payment.itemId === relevant.id)).toBe(true);
+  });
+
+  it("cannot pay twice when a model duplicates the same article decision", async () => {
+    const source = makeSource({ id: "a", fetchPrice: 0.004 });
+    const item: SourceItem = {
+      id: "article-1",
+      sourceId: source.id,
+      title: "Arc settlement",
+      summary: "Arc settlement preview",
+      content: "Arc settlement content long enough for evidence.",
+      link: "https://a.example/article-1",
+    };
+    const engine = fakeEngine({
+      decide: (input) => {
+        const candidate = input.candidates[0];
+        const decision = buy({
+          id: candidate.id,
+          name: candidate.name,
+          price: candidate.fetchPrice,
+        });
+        return [decision, { ...decision }];
+      },
+    });
+    const gw = fakeGateway();
+    const d = deps([source], engine, gw, { items: { a: [item] } });
+
+    const { run } = await drive({ question: "Arc settlement", budget: 0.05 }, d);
+
+    expect(run.decisions).toHaveLength(1);
+    expect(gw.fetchItems).toEqual([item.id]);
+  });
+
+  it("buys an exact article when only the old source-bundle cache exists", async () => {
     const sources = [makeSource({ id: "a", fetchPrice: 0.004 })];
     const engine = fakeEngine({ decide: () => [cacheDecision("a")] });
     const gw = fakeGateway();
@@ -817,18 +902,28 @@ describe("runAgent — cache freshness", () => {
 
     expect(engine.decideInput?.candidates[0].cached).toBe(false); // offered as a paid read
     expect(run.decisions[0].action).toBe("BUY");
-    expect(run.decisions[0].rationale).toContain("predates");
+    expect(run.decisions[0].rationale).toContain("exact content version");
     expect(gw.fetchCalls).toEqual(["a"]);
     expect(d.db.payments.filter((p) => p.kind === "fetch")).toHaveLength(1);
   });
 
-  it("still reuses the copy for free when the source has published nothing since", async () => {
-    const sources = [makeSource({ id: "a", fetchPrice: 0.004 })];
+  it("reuses a cached immutable article version for free", async () => {
+    const source = makeSource({ id: "a", fetchPrice: 0.004 });
+    const item: SourceItem = {
+      id: "a-i1",
+      sourceId: "a",
+      title: "post",
+      summary: "summary",
+      content: "article content long enough for evidence",
+      link: "https://example.test/post",
+      publishedAt: "2026-07-19T00:00:00.000Z",
+    };
+    const cacheKey = sourceItemCacheKey(source.id, item);
     const engine = fakeEngine({ decide: () => [cacheDecision("a")] });
     const gw = fakeGateway();
-    const d = deps(sources, engine, gw, {
-      cachedAt: cache("a"),
-      newestItem: { a: "2026-07-19T00:00:00.000Z" }, // older than the copy
+    const d = deps([source], engine, gw, {
+      items: { a: [item] },
+      cachedByKey: { [cacheKey]: "2026-07-20T00:00:00.000Z" },
     });
 
     const { run } = await drive({ question: "q", budget: 0.05 }, d);
@@ -840,8 +935,8 @@ describe("runAgent — cache freshness", () => {
     expect(run.citations.length).toBeGreaterThan(0); // a cached read still earns a citation reward
   });
 
-  it("skips rather than overspends when the fetch budget cannot cover the forced re-read", async () => {
-    // fetchBudget on 0.01 is 0.005; two stale sources at 0.004 each can't both be re-read.
+  it("skips rather than overspends when exact article versions are not cached", async () => {
+    // fetchBudget on 0.01 is 0.005; two uncached article reads at 0.004 cannot both be bought.
     const sources = ["a", "b"].map((id) => makeSource({ id, fetchPrice: 0.004 }));
     const engine = fakeEngine({ decide: () => [cacheDecision("a"), cacheDecision("b")] });
     const gw = fakeGateway();
@@ -858,7 +953,7 @@ describe("runAgent — cache freshness", () => {
       .reduce((sum, p) => sum + p.amountUsdc, 0);
     expect(tolls).toBeLessThanOrEqual(fetchBudget(budget) + 1e-9);
     expect(run.decisions.filter((x) => x.action === "SKIP")).toHaveLength(1);
-    expect(run.decisions.some((x) => x.action === "CACHE")).toBe(false); // never a free stale read
+    expect(run.decisions.some((x) => x.action === "CACHE")).toBe(false);
   });
 });
 

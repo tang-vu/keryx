@@ -35,7 +35,12 @@ const TTL_MS = 10 * 60_000;
 
 export type PayToAllowlist =
   /** Read from the chain. `stale` marks a cached set served after a failed refresh. */
-  | { status: "onchain"; wallets: ReadonlySet<string>; stale: boolean }
+  | {
+      status: "onchain";
+      wallets: ReadonlySet<string>;
+      payoutWallet: string;
+      stale: boolean;
+    }
   /** No registry record — either the source predates the registry or none is configured. */
   | { status: "unregistered" }
   /** The chain could not be read and nothing was cached. Caller decides open vs closed. */
@@ -43,6 +48,7 @@ export type PayToAllowlist =
 
 interface CacheEntry {
   wallets: ReadonlySet<string>;
+  payoutWallet: string;
   readAt: number;
 }
 
@@ -78,20 +84,33 @@ export async function allowedPayTo(onchainId: string): Promise<PayToAllowlist> {
   const key = onchainId.toLowerCase();
   const hit = cache.get(key);
   if (hit && Date.now() - hit.readAt < TTL_MS) {
-    return { status: "onchain", wallets: hit.wallets, stale: false };
+    return {
+      status: "onchain",
+      wallets: hit.wallets,
+      payoutWallet: hit.payoutWallet,
+      stale: false,
+    };
   }
 
   try {
     const record = await getRegistrySource(onchainId as Hex);
     if (!record) return { status: "unregistered" };
     const wallets = walletsOf(record);
-    cache.set(key, { wallets, readAt: Date.now() });
-    return { status: "onchain", wallets, stale: false };
+    const payoutWallet = record.payoutWallet;
+    cache.set(key, { wallets, payoutWallet, readAt: Date.now() });
+    return { status: "onchain", wallets, payoutWallet, stale: false };
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
     // A previously-read set is far better than no check at all: authors change on a
     // human timescale, RPC nodes fail on a network one.
-    if (hit) return { status: "onchain", wallets: hit.wallets, stale: true };
+    if (hit) {
+      return {
+        status: "onchain",
+        wallets: hit.wallets,
+        payoutWallet: hit.payoutWallet,
+        stale: true,
+      };
+    }
     return { status: "unavailable", error };
   }
 }
