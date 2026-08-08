@@ -10,6 +10,7 @@ import type { KeryxDB } from "./db/keryx-db";
 import { matchFeedToGaps } from "./demand-match";
 import { buildBoard } from "./demand-signal";
 import type { GapIntent, SourceItem } from "./types";
+import { sourceItemContentVersion } from "./sources/source-item-asset";
 import { WANTED_DETAIL_LIMIT, WANTED_WINDOW_RUNS } from "./wanted-limits";
 
 const GAP_ID = /^[a-f0-9]{64}$/;
@@ -20,6 +21,9 @@ export interface ResolvedGapOffer {
   question: string;
   failedQueryId: string;
   sourceItemLink: string;
+  itemId?: string;
+  contentVersion?: string;
+  articleOfferId?: string;
 }
 
 export class GapOfferError extends Error {}
@@ -83,6 +87,28 @@ export async function resolveGapOffer(
     question: gap.question,
     failedQueryId: gap.queryId,
     sourceItemLink: item.link,
+  };
+}
+
+/** Resolve an already-listed exact article against the same live-board admission rule. */
+export async function resolveExistingArticleGapOffer(
+  db: KeryxDB,
+  gapId: unknown,
+  item: SourceItem,
+  requestedVersion: unknown,
+  articleOfferId?: string,
+): Promise<ResolvedGapOffer> {
+  const contentVersion = sourceItemContentVersion(item);
+  if (requestedVersion !== contentVersion) {
+    throw new GapOfferError("That article version changed. Refresh before offering it.");
+  }
+  const resolved = await resolveGapOffer(db, gapId, item.link, [item]);
+  if (!resolved) throw new GapOfferError("Choose an exact article for this wanted claim.");
+  return {
+    ...resolved,
+    itemId: item.id,
+    contentVersion,
+    ...(articleOfferId ? { articleOfferId } : {}),
   };
 }
 

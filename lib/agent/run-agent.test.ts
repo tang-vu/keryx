@@ -875,6 +875,58 @@ describe("runAgent — article-level economics", () => {
     expect(d.db.payments.every((payment) => payment.itemId === relevant.id)).toBe(true);
   });
 
+  it("admits an exact wanted-response article without forcing the model to buy it", async () => {
+    const source = makeSource({ id: "a", fetchPrice: 0.004 });
+    const organic: SourceItem = {
+      id: "organic",
+      sourceId: source.id,
+      title: "Arc settlement evidence",
+      summary: "The obvious keyword match",
+      content: "Organic evidence",
+      link: "https://a.example/organic",
+    };
+    const offered: SourceItem = {
+      id: "offered",
+      sourceId: source.id,
+      title: "Creator response",
+      summary: "A less obvious public preview",
+      content: "The exact offered evidence",
+      link: "https://a.example/offered",
+    };
+    const engine = fakeEngine({
+      decide: (input) => [{
+        sourceId: input.candidates[0].id,
+        sourceName: input.candidates[0].name,
+        action: "SKIP",
+        expectedValue: 0.2,
+        price: input.candidates[0].fetchPrice,
+        confidence: 0.9,
+        rationale: "the offered preview is not worth its toll",
+        targets: [0],
+      }],
+    });
+    const gw = fakeGateway();
+    const d = deps([source], engine, gw, { items: { a: [organic, offered] } });
+
+    const { run, steps } = await drive({
+      question: "How does Arc settlement retain evidence?",
+      budget: 0.05,
+      targetAsset: {
+        sourceId: source.id,
+        itemId: offered.id,
+        contentVersion: sourceItemContentVersion(offered),
+      },
+    }, d);
+
+    expect(engine.decideInput?.candidates[0]).toMatchObject({
+      id: "item:offered",
+      item: { itemId: offered.id },
+    });
+    expect(run.decisions[0]).toMatchObject({ action: "SKIP", itemId: offered.id });
+    expect(gw.fetchItems).toEqual([]);
+    expect(steps.some((step) => step.message.includes("still decides BUY or SKIP"))).toBe(true);
+  });
+
   it("uses a creator-signed article offer as the trusted decision and payment price", async () => {
     const account = privateKeyToAccount(`0x${"33".repeat(32)}`);
     const source = makeSource({

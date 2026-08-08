@@ -393,6 +393,9 @@ export class SupabaseAdapter implements KeryxDB {
       p_failed_query_id: input.failedQueryId,
       p_source_id: input.sourceId,
       p_source_item_link: input.sourceItemLink,
+      p_item_id: input.itemId ?? null,
+      p_content_version: input.contentVersion ?? null,
+      p_article_offer_id: input.articleOfferId ?? null,
       p_owner_wallet: input.ownerWallet.toLowerCase(),
     });
     if (error) throw error;
@@ -701,7 +704,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async metrics(): Promise<DashboardMetrics> {
-    const [paymentRows, runRows, feedbackRows, gapIntentRows, sourceRows] = await Promise.all([
+    const [paymentRows, runRows, feedbackRows, gapIntentRows] = await Promise.all([
       this.allRows(
         "payment_events",
         "amount_usdc,source_id,query_id,kind,origin,settled,settlement_status,payer",
@@ -711,15 +714,8 @@ export class SupabaseAdapter implements KeryxDB {
         "id,origin,asker,duration_ms,payment_mode,payment_attempts,settled_payments,confidence_level,mcp_client,evidence_claim_count,grounded_claim_count,rewarded_citation_count",
       ),
       this.allRows("answer_feedback", "query_id,rating"),
-      this.allRows("gap_intents", "id,status,source_id,owner_wallet"),
-      this.allRows("sources", "id,wallet_address"),
+      this.allRows("gap_intents", "id,status"),
     ]);
-    const sourceOwners = new Map(
-      sourceRows.map((source) => [
-        String(source.id),
-        String(source.wallet_address).toLowerCase(),
-      ]),
-    );
     return calculateDashboardMetrics(
       paymentRows.map((p) => ({
         amountUsdc: Number(p.amount_usdc),
@@ -761,15 +757,9 @@ export class SupabaseAdapter implements KeryxDB {
         queryId: String(f.query_id),
         rating: f.rating as "up" | "down",
       })),
-      gapIntentRows
-        .filter(
-          (intent) =>
-            sourceOwners.get(String(intent.source_id)) ===
-            String(intent.owner_wallet).toLowerCase(),
-        )
-        .map((intent) => ({
+      gapIntentRows.map((intent) => ({
           status: intent.status as import("../types").GapIntentStatus,
-        })),
+      })),
     );
   }
 
@@ -1238,6 +1228,9 @@ function rowToGapIntent(r: Record<string, unknown>): GapIntent {
     failedQueryId: String(r.failed_query_id),
     sourceId: String(r.source_id),
     sourceItemLink: String(r.source_item_link ?? ""),
+    ...(r.item_id ? { itemId: String(r.item_id) } : {}),
+    ...(r.content_version ? { contentVersion: String(r.content_version) } : {}),
+    ...(r.article_offer_id ? { articleOfferId: String(r.article_offer_id) } : {}),
     ownerWallet: String(r.owner_wallet).toLowerCase(),
     status: r.status as GapIntent["status"],
     attempts: Number(r.attempts ?? 0),

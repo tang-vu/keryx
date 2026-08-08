@@ -9,6 +9,16 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### Wanted claims now accept exact articles from creators already in the market (2026-08-08)
+
+- Added a SIWE owner flow on each wanted brief that finds the creator's matching indexed article,
+  optionally publishes an EIP-712 discount, and queues one bounded response without relisting RSS.
+- Gap intents now retain exact item/version/offer identity. The worker refreshes registry creator and
+  immutable pricing state before treasury spend; stale responses close without payment.
+- The exact response is guaranteed a candidate slot, not a purchase. BUY/SKIP stays visible and
+  autonomous, and fulfillment still requires qualifying evidence plus a real settled citation.
+- Legacy source-only gap intents remain readable and retry with their historical behavior.
+
 ### Publishers can sign article-level offers; agents buy against an open price book (2026-08-05)
 Keryx now exposes every payable article version at `/market` and `/api/offers`. A publisher can
 open the Article Offer Desk on its creator page, choose an exact item, price and expiry, and sign an

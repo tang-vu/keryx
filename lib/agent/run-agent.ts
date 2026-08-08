@@ -50,6 +50,7 @@ import {
   selectRelevantSourceItem,
   sourceItemAssetId,
   sourceItemCacheKey,
+  sourceItemContentVersion,
   sourceItemIdentity,
 } from "../sources/source-item-asset";
 import { sourceFetchTerms } from "../registry/source-fetch-payto";
@@ -77,6 +78,17 @@ export interface RunInput {
   /** Set when this dispatch re-asks a question the corpus previously left under-covered. Recorded
    *  on the run so the demand board can tell an independent dispatch from the agent's own retry. */
   retryOf?: string;
+  /**
+   * Exact creator response admitted for a wanted-claim retry. This is discovery coordination,
+   * never a forced purchase or payout authority: the asset is guaranteed a candidate slot, while
+   * the reasoning engine still emits BUY/SKIP and every payment still resolves registry terms.
+   */
+  targetAsset?: {
+    sourceId: string;
+    itemId: string;
+    contentVersion: string;
+    articleOfferId?: string;
+  };
 }
 
 interface InternalAsset {
@@ -165,7 +177,14 @@ export async function* runAgent(
     // Honor the creator's preview-depth: the agent scores on exactly what a paying reader would see
     // for free. Article selection never inspects paid full text.
     const depth = normalizePreviewDepth(s.previewDepth);
-    const item = selectRelevantSourceItem(input.question, subClaims, s.tags, items);
+    const target = input.targetAsset?.sourceId === s.id ? input.targetAsset : undefined;
+    const item = target
+      ? items.find((candidate) => candidate.id === target.itemId) ?? null
+      : selectRelevantSourceItem(input.question, subClaims, s.tags, items);
+
+    if (target && (!item || sourceItemContentVersion(item) !== target.contentVersion)) {
+      throw new Error("wanted response article changed or disappeared before discovery");
+    }
 
     if (item) {
       const id = sourceItemAssetId(item.id);
@@ -175,6 +194,9 @@ export async function* runAgent(
       if (cached) freshCache.add(id);
       const summary = previewSummary(item.summary, depth);
       const resolvedOffer = await resolveValidArticleOffer(db, s, item, terms);
+      if (target?.articleOfferId && resolvedOffer?.offer.id !== target.articleOfferId) {
+        throw new Error("wanted response article offer expired or was replaced before discovery");
+      }
       if (resolvedOffer) signedOfferCount++;
       const priceUsdc = resolvedOffer?.ref.priceUsdc ?? terms.listPriceUsdc;
       const candidate: SourceCandidate = {
@@ -197,7 +219,10 @@ export async function* runAgent(
         cached,
         preview: summary ? `- ${item.title}: ${summary}` : `- ${item.title}`,
       };
-      candidates.push(candidate);
+      // Put the offered work first so large catalogs cannot hide it from a bounded model prompt.
+      // Position is not a recommendation: the engine still prices and decides it normally.
+      if (target) candidates.unshift(candidate);
+      else candidates.push(candidate);
       assetById.set(id, {
         candidate,
         source: s,
@@ -237,6 +262,20 @@ export async function* runAgent(
       priceUsdc: terms.listPriceUsdc,
       listPriceUsdc: terms.listPriceUsdc,
     });
+  }
+
+  if (input.targetAsset) {
+    const admitted = assetById.get(sourceItemAssetId(input.targetAsset.itemId));
+    if (!admitted || admitted.source.id !== input.targetAsset.sourceId) {
+      throw new Error("wanted response source is not active, verified, or payable");
+    }
+  }
+  if (input.targetAsset) {
+    yield emit(
+      "discover",
+      "Admitted the creator's exact article response as a candidate; the agent still decides BUY or SKIP",
+      input.targetAsset,
+    );
   }
   yield emit(
     "discover",

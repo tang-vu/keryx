@@ -51,6 +51,9 @@ describe("gap intent queue", () => {
       failedQueryId: "failed-1",
       sourceId: source.id,
       sourceItemLink: "https://example.com/cctp",
+      itemId: "article-1",
+      contentVersion: "sha256:article-1",
+      articleOfferId: "offer-1",
       ownerWallet: "0xabc",
     };
     const first = await db.createGapIntent(input);
@@ -59,7 +62,14 @@ describe("gap intent queue", () => {
 
     const now = Date.now();
     const leased = await db.claimGapIntent(now, 60_000);
-    expect(leased).toMatchObject({ id: first.id, status: "running", attempts: 1 });
+    expect(leased).toMatchObject({
+      id: first.id,
+      status: "running",
+      attempts: 1,
+      itemId: "article-1",
+      contentVersion: "sha256:article-1",
+      articleOfferId: "offer-1",
+    });
     expect(await db.claimGapIntent(now, 60_000)).toBeNull();
   });
 
@@ -87,7 +97,7 @@ describe("gap intent queue", () => {
     expect(await db.listGapIntents()).toHaveLength(1);
   });
 
-  it("never leases an offer whose wallet does not own the source", async () => {
+  it("leases active coordination without confusing cached payout wallet with creator authority", async () => {
     await db.createGapIntent({
       gapId: "b".repeat(64),
       claim: "Arc finality",
@@ -97,7 +107,10 @@ describe("gap intent queue", () => {
       sourceItemLink: "https://example.com/arc",
       ownerWallet: "0xdef",
     });
-    expect(await db.claimGapIntent(Date.now(), 60_000)).toBeNull();
+    expect(await db.claimGapIntent(Date.now(), 60_000)).toMatchObject({
+      status: "running",
+      ownerWallet: "0xdef",
+    });
   });
 
   it("records a terminal fulfilled receipt and clears its lease", async () => {

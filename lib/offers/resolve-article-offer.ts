@@ -15,7 +15,7 @@ export interface ResolvedArticleOffer {
 
 /** Invalid, expired, stale-version, or tampered offers silently fall back to list price. */
 export async function resolveValidArticleOffer(
-  db: KeryxDB,
+  db: Pick<KeryxDB, "getArticleOffer">,
   source: Source,
   item: SourceItem,
   terms: SourceFetchTerms,

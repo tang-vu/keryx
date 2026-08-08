@@ -84,8 +84,10 @@ Example trace (real output):
 ## For creators
 
 - **Claim proven demand** — [keryx.cc/wanted](https://keryx.cc/wanted) shows claims paid
-  dispatches left under-covered. Check your RSS feed, offer the exact matching post, and Keryx
-  queues a bounded targeted retry after ownership verification. Fulfillment is public only when
+  dispatches left under-covered. A new creator can check and list an RSS feed; an existing registry
+  creator can offer the exact indexed article directly and optionally sign a temporary discount.
+  Keryx guarantees that version a candidate slot, not a purchase, then queues one bounded retry
+  after refreshing creator authority. Fulfillment is public only when
   that source passes the evidence gate and its citation reward really settles. Every claim has a
   canonical shareable brief and social card, so the specific gap can reach the writer who covers it.
 - **Onboard from your own wallet** — paste an RSS feed at [keryx.cc/register](https://keryx.cc/register)

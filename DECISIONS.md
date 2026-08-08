@@ -5,6 +5,27 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-41** · Demand market/Agency · *A creator may answer a measured wanted claim with one exact
+article version; the response guarantees candidacy, never purchase or payout.* Existing registry
+creators can submit an already-indexed article from the wanted brief instead of relisting its feed.
+Admission recomputes the live gap from completed dispatch receipts, matches only the article's free
+title/preview, refreshes SourceRegistry creator/active/list-price authority, and snapshots
+`sourceId + itemId + contentVersion + current articleOfferId?`. One semantic gap plus registry
+creator admits at most one bounded treasury retry, with the existing per-wallet daily valve.
+
+The worker atomically leases the intent, then refreshes the same registry creator, article version,
+and signed discount before spending. A transient registry failure retries within the lease bound;
+a changed creator, article, offer, or already-filled gap closes the coordination row without spend.
+The exact article is placed first in the reasoning candidates so prompt limits cannot hide it, but
+the agent still emits BUY/SKIP/CACHE under its normal hard budget. Fulfillment remains evidence plus
+real settlement: the offered article's claim-indexed quote must qualify and its citation reward must
+carry Circle evidence. Legacy source-only intents retain their historical generic retry.
+
+Why: `/wanted` exposed demand and `/market` exposed exact supply, but registration was the only
+bridge and the retry did not actually carry the offered article. This closes the market loop without
+letting creator coordination become recommendation, spend, or payout authority. Reversible: medium
+(nullable intent fields and additive route/UI; old retries and the article market remain usable).
+
 **D-40** · Article market/Authority · *Publishers may sign temporary article discounts; the
 SourceRegistry creator, list-price ceiling, active flag, and payout wallet remain authoritative.*
 An offer is EIP-712 over `sourceId + itemId + contentVersion + priceUsdc6 + expiresAt + nonce` on

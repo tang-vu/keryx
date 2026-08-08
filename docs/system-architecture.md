@@ -181,6 +181,15 @@ sources or posts, while the daily wallet quota bounds distinct offers. A ten-min
 reclaimable after a crash and prevents two workers from selecting the same pending offer
 concurrently.
 
+An existing creator can now answer the same brief without relisting a feed. The SIWE owner surface
+selects the best-matching already-indexed article from its free title/preview and snapshots
+`sourceId + itemId + contentVersion + articleOfferId?`. Before the volume engine spends, it refreshes
+the live registry creator/active state, exact article version, and signed discount revision. Stale
+coordination closes without payment; a transient registry outage remains bounded by the existing
+three-attempt lease. The exact article is put first in the candidate prompt so it cannot be hidden
+by catalog limits, but it receives no forced BUY or value boost. Normal budget, evidence, citation,
+and settlement rules decide the outcome.
+
 ### Creator Registration Flow
 
 ```

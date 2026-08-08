@@ -19,6 +19,9 @@ export interface PublicWantedOffer {
   sourceId: string;
   sourceName: string;
   sourceItemLink: string;
+  itemId?: string;
+  contentVersion?: string;
+  articleOfferId?: string;
   status: GapIntentStatus;
   attempts: number;
   retryRunId?: string;
@@ -44,17 +47,17 @@ export async function loadWantedBoard(limit = 20): Promise<PublicWantedBoard> {
 
   return {
     ...board,
-    offers: intents
-      .filter((intent) => {
-        const source = sourceById.get(intent.sourceId);
-        return source?.walletAddress.toLowerCase() === intent.ownerWallet.toLowerCase();
-      })
-      .map((intent) => ({
+    // Admission and worker claim both verify the live registry creator. The public projection must
+    // not confuse that creator with the (possibly different) payout wallet cached on the source.
+    offers: intents.filter((intent) => sourceById.has(intent.sourceId)).map((intent) => ({
         id: intent.id,
         gapId: intent.gapId,
         sourceId: intent.sourceId,
         sourceName: sourceById.get(intent.sourceId)?.name ?? intent.sourceId,
         sourceItemLink: intent.sourceItemLink,
+        itemId: intent.itemId,
+        contentVersion: intent.contentVersion,
+        articleOfferId: intent.articleOfferId,
         status: intent.status,
         attempts: intent.attempts,
         retryRunId: intent.retryRunId,

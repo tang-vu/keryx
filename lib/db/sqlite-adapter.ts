@@ -108,6 +108,9 @@ CREATE TABLE IF NOT EXISTS gap_intents (
   failed_query_id TEXT NOT NULL,
   source_id TEXT NOT NULL,
   source_item_link TEXT NOT NULL DEFAULT '',
+  item_id TEXT,
+  content_version TEXT,
+  article_offer_id TEXT,
   owner_wallet TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending',
   attempts INTEGER NOT NULL DEFAULT 0,
@@ -425,6 +428,18 @@ export class SqliteAdapter implements KeryxDB {
     if (!itemCols.has("item_key_enc")) this.db.exec(`ALTER TABLE source_items ADD COLUMN item_key_enc TEXT`);
     if (!itemCols.has("item_iv")) this.db.exec(`ALTER TABLE source_items ADD COLUMN item_iv TEXT`);
     if (!itemCols.has("item_auth_tag")) this.db.exec(`ALTER TABLE source_items ADD COLUMN item_auth_tag TEXT`);
+
+    // Exact wanted-response identity. Legacy rows remain NULL and retain their generic retry.
+    const gapCols = new Set(
+      (this.db.prepare(`PRAGMA table_info(gap_intents)`).all() as { name: string }[]).map(
+        (c) => c.name,
+      ),
+    );
+    if (!gapCols.has("item_id")) this.db.exec(`ALTER TABLE gap_intents ADD COLUMN item_id TEXT`);
+    if (!gapCols.has("content_version"))
+      this.db.exec(`ALTER TABLE gap_intents ADD COLUMN content_version TEXT`);
+    if (!gapCols.has("article_offer_id"))
+      this.db.exec(`ALTER TABLE gap_intents ADD COLUMN article_offer_id TEXT`);
 
   }
 
@@ -840,8 +855,8 @@ export class SqliteAdapter implements KeryxDB {
         .prepare(
           `INSERT INTO gap_intents (
              id,gap_id,claim,question,failed_query_id,source_id,source_item_link,
-             owner_wallet,status,attempts,created_at,updated_at
-           ) VALUES (?,?,?,?,?,?,?,?, 'pending',0,?,?)`,
+             item_id,content_version,article_offer_id,owner_wallet,status,attempts,created_at,updated_at
+           ) VALUES (?,?,?,?,?,?,?,?,?,?,?, 'pending',0,?,?)`,
         )
         .run(
           id,
@@ -851,6 +866,9 @@ export class SqliteAdapter implements KeryxDB {
           input.failedQueryId,
           input.sourceId,
           input.sourceItemLink,
+          input.itemId ?? null,
+          input.contentVersion ?? null,
+          input.articleOfferId ?? null,
           owner,
           now,
           now,
@@ -914,7 +932,6 @@ export class SqliteAdapter implements KeryxDB {
                AND gi.attempts<3
                AND s.active=1
                AND s.verified=1
-               AND LOWER(s.wallet_address)=LOWER(gi.owner_wallet)
              ORDER BY gi.created_at ASC
              LIMIT 1
           )
@@ -1426,12 +1443,7 @@ export class SqliteAdapter implements KeryxDB {
         rating: f.rating as "up" | "down",
       }));
     const gapIntents = this.db
-      .prepare(
-        `SELECT gi.status
-           FROM gap_intents gi
-           JOIN sources s ON s.id=gi.source_id
-          WHERE LOWER(s.wallet_address)=LOWER(gi.owner_wallet)`,
-      )
+      .prepare(`SELECT status FROM gap_intents`)
       .all()
       .map((intent) => ({
         status: intent.status as import("../types").GapIntentStatus,
@@ -1743,6 +1755,9 @@ function rowToGapIntent(r: Record<string, unknown>): GapIntent {
     failedQueryId: String(r.failed_query_id),
     sourceId: String(r.source_id),
     sourceItemLink: String(r.source_item_link ?? ""),
+    ...(r.item_id ? { itemId: String(r.item_id) } : {}),
+    ...(r.content_version ? { contentVersion: String(r.content_version) } : {}),
+    ...(r.article_offer_id ? { articleOfferId: String(r.article_offer_id) } : {}),
     ownerWallet: String(r.owner_wallet).toLowerCase(),
     status: r.status as GapIntent["status"],
     attempts: Number(r.attempts ?? 0),

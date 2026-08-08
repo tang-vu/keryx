@@ -1,11 +1,11 @@
 # Keryx Project Roadmap
 
-**Version:** 0.10.0 (creator-signed article offer market, updated 2026-08-05)
+**Version:** 0.11.0 (exact-article wanted responses, updated 2026-08-08)
 **Status:** In continuous operation at [keryx.cc](https://keryx.cc) — real settlement 24/7, shipping in public.
 
 ---
 
-## Where Keryx is today (v0.10.0, August 2026)
+## Where Keryx is today (v0.11.0, August 2026)
 
 Shipped and running:
 - ✓ Non-custodial dApp core (SIWE auth, on-chain SourceRegistry, browser co-sign sessions, encrypted IPFS content, public API + keys)
@@ -295,6 +295,7 @@ Mainnet ← blocked on: Phase 07–10, security audit, legal
 | **v0.8.1** | 2026-07-31 | Cross-provider reasoning failover, circuits, and per-step attempt receipts | ✓ Shipped |
 | **v0.9.0** | 2026-08-05 | Exact article-version discovery, x402 purchase, cache, evidence, citation, and receipts | ✓ Shipped |
 | **v0.10.0** | 2026-08-05 | Public article price book, EIP-712 publisher offers, agent effective-price selection, browser verification | ✓ Shipped |
+| **v0.11.0** | 2026-08-08 | Existing creators answer wanted claims with exact article versions and evidence-settled targeted retries | ✓ Shipped |
 | **v1.0.0** | 2026-12-31 | Mainnet + Full Feature Parity | Planned |
 | **v2.0.0** | 2027-Q2 | Stretch Goals (Agent Marketplace, Video, Derivatives) | Backlog |
 

@@ -30,6 +30,10 @@ run in CI.
 handoff against the live board and ingested RSS items; `gap-intent-runner.ts` classifies a targeted
 retry only from reward-qualified evidence plus the settled citation ledger. The volume engine
 atomically leases these offers before its probabilistic retry/new-question path.
+`gap-intent-target.ts` performs the worker-side registry creator, article-version, and signed-offer
+recheck for already-listed exact responses. `/api/wanted/respond` plus
+`existing-article-response-form.tsx` closes the UI/API loop from public demand to exact supply while
+leaving BUY/SKIP with `run-agent.ts`.
 
 ---
 

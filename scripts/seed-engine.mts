@@ -29,6 +29,10 @@ import {
   GAP_INTENT_MAX_ATTEMPTS,
   GAP_INTENT_MAX_BUDGET_USDC,
 } from "../lib/gap-intent-runner.ts";
+import {
+  StaleGapIntentTargetError,
+  validateGapIntentTarget,
+} from "../lib/gap-intent-target.ts";
 
 // ── args ──
 const argv = process.argv.slice(2);
@@ -151,19 +155,23 @@ async function claimOpenGapIntent() {
       await deps.db.listRecentQueries(GAP_INTENT_WINDOW_RUNS),
       { limit: GAP_INTENT_WINDOW_RUNS },
     ).open.some((gap) => gap.id === intent.gapId);
-    if (stillOpen) return intent;
+    if (stillOpen) {
+      const targetAsset = await validateGapIntentTarget(deps.db, intent);
+      return { intent, targetAsset };
+    }
     await deps.db.expireGapIntent(
       intent.id,
       "The wanted claim closed before this source became eligible for retry.",
     );
   } catch (err) {
-    await deps.db
-      .failGapIntent(
-        intent.id,
-        err instanceof Error ? err.message : String(err),
-        GAP_INTENT_MAX_ATTEMPTS,
-      )
-      .catch(() => {});
+    const message = err instanceof Error ? err.message : String(err);
+    if (err instanceof StaleGapIntentTargetError) {
+      await deps.db.expireGapIntent(intent.id, message).catch(() => {});
+    } else {
+      await deps.db
+        .failGapIntent(intent.id, message, GAP_INTENT_MAX_ATTEMPTS)
+        .catch(() => {});
+    }
   }
   return null;
 }
@@ -189,7 +197,8 @@ while ((loop || i < count) && totalSpent < limit) {
   // Either re-ask a hole the corpus was paid for and missed, or ask something new. New questions
   // are LLM-generated, on-topic & effectively non-repeating; the cursor index is the deterministic
   // fallback seed used when no Anthropic key is set or generation fails.
-  const gapIntent = await claimOpenGapIntent();
+  const claimedGap = await claimOpenGapIntent();
+  const gapIntent = claimedGap?.intent ?? null;
   const retry = gapIntent ? null : await pickRetry();
   let freshQuestion: string | null = null;
   if (!gapIntent && !retry) {
@@ -215,7 +224,10 @@ while ((loop || i < count) && totalSpent < limit) {
         budget: runBudget,
         origin: "engine",
         ...(gapIntent
-          ? { retryOf: gapIntent.failedQueryId }
+          ? {
+              retryOf: gapIntent.failedQueryId,
+              ...(claimedGap?.targetAsset ? { targetAsset: claimedGap.targetAsset } : {}),
+            }
           : retry
             ? { retryOf: retry.queryId }
             : {}),

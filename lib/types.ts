@@ -176,6 +176,11 @@ export interface GapIntent {
   failedQueryId: string;
   sourceId: string;
   sourceItemLink: string;
+  /** Exact paid asset offered for this gap. Absent only on legacy registration-era intents. */
+  itemId?: string;
+  contentVersion?: string;
+  /** Current creator-signed discount revision, when the response was admitted below list price. */
+  articleOfferId?: string;
   ownerWallet: string;
   status: GapIntentStatus;
   attempts: number;

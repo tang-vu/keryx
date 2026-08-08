@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FeedMatchForm } from "@/components/keryx/feed-match-form";
+import { ExistingArticleResponseForm } from "@/components/keryx/existing-article-response-form";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { WantedShareButton } from "@/components/keryx/wanted-share-button";
@@ -150,6 +151,8 @@ export default async function WantedClaimPage({ params }: PageProps) {
 
             <OffersList offers={offers} />
 
+            <ExistingArticleResponseForm gapId={gap.id} />
+
             <FeedMatchForm gapId={gap.id} claim={gap.claim} />
           </>
         ) : (
@@ -215,7 +218,19 @@ function OffersList({ offers }: { offers: PublicWantedOffer[] }) {
                   </a>
                 </>
               ) : null}
+              {offer.contentVersion ? (
+                <> · exact {offer.contentVersion.slice(0, 18)}…</>
+              ) : null}
+              {offer.articleOfferId ? <> · signed price</> : null}
             </p>
+            {offer.retryRunId ? (
+              <Link
+                href={`/dispatch/${offer.retryRunId}`}
+                className="mt-1 inline-block font-mono text-[10px] text-seal underline underline-offset-4"
+              >
+                inspect autonomous retry ↗
+              </Link>
+            ) : null}
           </li>
         ))}
       </ul>

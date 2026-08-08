@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { KeryxDB } from "./db/keryx-db";
 import {
   GapOfferError,
+  resolveExistingArticleGapOffer,
   resolveGapOffer,
 } from "./demand-intent";
 import { buildDemand } from "./demand-signal";
@@ -130,5 +131,28 @@ describe("resolveGapOffer", () => {
       gapId: gap.id,
       sourceItemLink: post.link,
     });
+  });
+});
+
+describe("resolveExistingArticleGapOffer", () => {
+  it("binds the live gap to the exact stored article version", async () => {
+    const item: SourceItem = { ...post, id: "article-1", sourceId: "source-1" };
+    const { sourceItemContentVersion } = await import("./sources/source-item-asset");
+    const version = sourceItemContentVersion(item);
+    await expect(
+      resolveExistingArticleGapOffer(dbWithRuns([failed]), gap.id, item, version, "offer-1"),
+    ).resolves.toMatchObject({
+      gapId: gap.id,
+      itemId: item.id,
+      contentVersion: version,
+      articleOfferId: "offer-1",
+    });
+  });
+
+  it("rejects a stale browser-carried article version", async () => {
+    const item: SourceItem = { ...post, id: "article-1", sourceId: "source-1" };
+    await expect(
+      resolveExistingArticleGapOffer(dbWithRuns([failed]), gap.id, item, "sha256:stale"),
+    ).rejects.toThrow("version changed");
   });
 });
