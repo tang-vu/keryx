@@ -92,4 +92,13 @@ if [ -z "$ok" ]; then
 fi
 
 run_ssh "$SSH" "cd $APP_DIR && rm -rf .next.bak"
+# Code deploys are the normal production path, so operational schedules introduced by a release
+# must be refreshed here too (deploy-vps.sh only runs during first provisioning).
+run_ssh "$SSH" bash -se <<REMOTE
+set -euo pipefail
+NPM=\$(command -v npm)
+RECONCILE="*/10 * * * * cd $APP_DIR && \$NPM run reconcile-payments >> $APP_DIR/data/backups/reconcile.log 2>&1 # keryx-reconcile"
+( crontab -l 2>/dev/null | grep -v '# keryx-reconcile' || true ; echo "\$RECONCILE" ) | crontab -
+echo "reconciliation cron installed"
+REMOTE
 echo "✅ redeploy complete — $COMMIT live on keryx.cc (low-downtime)"

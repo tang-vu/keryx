@@ -393,6 +393,18 @@ export interface KeryxDB {
   // ── payments ──
   recordPayment(p: PaymentRecord): Promise<void>;
   listPayments(limit: number): Promise<PaymentRecord[]>;
+  /** Real authorizations that crossed the submission boundary without a Circle receipt. */
+  listPendingPayments(limit: number): Promise<PaymentRecord[]>;
+  /**
+   * Promote exactly one still-pending authorization after Circle's transfer API independently
+   * confirms its nonce, payer, payee, amount, and network. Compare-and-set semantics make the
+   * operation idempotent and prevent a late reconciler from overwriting newer state.
+   */
+  settlePendingPayment(
+    id: string,
+    authorizationId: string,
+    circleTransferId: string,
+  ): Promise<boolean>;
   /** Citation payouts for one dispatch, oldest→newest. Carries real settlement
    *  state (settled / tx) so permalinks reflect on-chain truth, not a reconstruction. */
   listPaymentsByQuery(queryId: string): Promise<PaymentRecord[]>;

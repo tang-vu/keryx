@@ -5,6 +5,23 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-43** · Settlement/Recovery · *An ambiguous signed submission may become settled only from
+Circle's nonce-indexed transfer ledger and one exact economic tuple.* A post-submit timeout keeps
+its existing durable pending row and never stores the bearer signature. The reconciliation worker
+searches Circle by EIP-3009 nonce, then independently binds the result to the recorded payer,
+payee, Arc network as both sending and recipient network, USDC, and integer micro-USDC amount.
+`received`, `batched`, `confirmed`, and `completed` all prove the same Gateway acceptance that a
+successful settle response would have returned; the Circle transfer id becomes the receipt.
+Missing, failed, duplicate, malformed, or mismatched results stay pending and outside traction,
+earnings, notifications, and wanted-claim fulfillment. Promotion is a compare-and-set on payment
+id, nonce, and pending state, so concurrent watchdogs are idempotent and cannot replace a receipt.
+
+Why: retaining uncertainty prevented double-spend but could permanently under-report a real debit
+when only the HTTP response was lost. Aggregate Gateway balances cannot identify which concurrent
+authorization settled; Circle's transfer search now exposes the nonce and full tuple needed to do
+so without retaining replayable payment material. Reversible: low (disable the scheduled worker;
+pending rows remain conservatively pending and the original payment path is unchanged).
+
 **D-42** · Dashboard/Positioning · *Lead with the combined settled citation economy; preserve
 demand provenance as a compact breakdown instead of fragmenting the headline.* The ledger's first
 screen now presents total queries, settled payments, settled USDC volume, and creator payouts as one

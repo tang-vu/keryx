@@ -9,6 +9,14 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### Ambiguous x402 submissions now self-heal from Circle evidence (2026-08-08)
+
+- Added a nonce-indexed reconciler for signed submissions whose HTTP settle response was lost.
+- Promote only one exact Circle transfer matching payer, payee, Arc network, USDC amount, and nonce;
+  all missing, failed, duplicate, malformed, or conflicting evidence remains fail-closed.
+- Made promotion atomic and idempotent across SQLite and Supabase, scheduled it every ten minutes,
+  and exposed its last verified result on `/api/health` and `/status`.
+
 ### The ledger now reads as one settled citation economy (2026-08-08)
 
 - Promoted total queries, verified payments, settled USDC volume, and creator payouts into one

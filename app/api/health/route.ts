@@ -19,6 +19,10 @@ import {
   SETTLEMENT_PARITY_STATE_KEY,
   type SettlementParitySummary,
 } from "@/lib/gateway/settlement-parity";
+import {
+  PENDING_RECONCILIATION_STATE_KEY,
+  type PendingReconciliationSummary,
+} from "@/lib/gateway/x402-transfer-reconciliation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -87,6 +91,18 @@ export async function GET() {
       /* a malformed summary must not take the health probe down with it */
     }
 
+    // Per-authorization Circle reconciliation is separate from aggregate wallet parity: the first
+    // proves an ambiguous nonce, while the second proves the creator balances backing settled rows.
+    let reconciliation: PendingReconciliationSummary | null = null;
+    try {
+      const raw = await db.getSyncState(PENDING_RECONCILIATION_STATE_KEY);
+      reconciliation = raw
+        ? (JSON.parse(raw) as PendingReconciliationSummary)
+        : null;
+    } catch {
+      /* operational evidence is additive; never turn malformed telemetry into downtime */
+    }
+
     return Response.json(
       {
         ok: true,
@@ -95,6 +111,7 @@ export async function GET() {
         registry,
         dispatches,
         settlement,
+        reconciliation,
         traction: {
           totalPayments: m.totalPayments,
           creatorPayoutsUsdc: Number(m.totalCreatorPayoutsUsdc.toFixed(6)),

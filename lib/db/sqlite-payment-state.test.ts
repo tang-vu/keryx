@@ -73,5 +73,30 @@ describe("SQLite payment settlement state migration", () => {
     expect(metrics.totalPayments).toBe(1);
     expect(metrics.pendingPaymentConfirmations).toBe(1);
     expect(metrics.pendingPaymentVolumeUsdc).toBe(0.004);
+
+    expect(await db.listPendingPayments(10)).toHaveLength(1);
+    await expect(
+      db.settlePendingPayment("x402:nonce-new", "wrong-nonce", "circle-wrong"),
+    ).resolves.toBe(false);
+    await expect(
+      db.settlePendingPayment("x402:nonce-new", "nonce-new", "circle-transfer"),
+    ).resolves.toBe(true);
+    // A second worker racing behind the first cannot promote it twice or replace the receipt.
+    await expect(
+      db.settlePendingPayment("x402:nonce-new", "nonce-new", "circle-replacement"),
+    ).resolves.toBe(false);
+
+    const reconciled = (await db.listPayments(10)).find(
+      (row) => row.id === "x402:nonce-new",
+    );
+    expect(reconciled).toMatchObject({
+      settled: true,
+      settlementStatus: "settled",
+      txHash: "circle-transfer",
+    });
+    const reconciledMetrics = await db.metrics();
+    expect(reconciledMetrics.totalPayments).toBe(2);
+    expect(reconciledMetrics.pendingPaymentConfirmations).toBe(0);
+    expect(reconciledMetrics.pendingPaymentVolumeUsdc).toBe(0);
   });
 });

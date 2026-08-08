@@ -644,6 +644,43 @@ export class SupabaseAdapter implements KeryxDB {
     return (data ?? []).map(rowToPayment);
   }
 
+  async listPendingPayments(limit: number): Promise<PaymentRecord[]> {
+    const { data, error } = await this.sb
+      .from("payment_events")
+      .select("*")
+      .eq("settlement_status", "pending")
+      .eq("settled", false)
+      .not("authorization_id", "is", null)
+      .order("created_at", { ascending: true })
+      .limit(limit);
+    if (error) throw error;
+    return (data ?? []).map(rowToPayment);
+  }
+
+  async settlePendingPayment(
+    id: string,
+    authorizationId: string,
+    circleTransferId: string,
+  ): Promise<boolean> {
+    const { data, error } = await this.sb
+      .from("payment_events")
+      .update({
+        settled: true,
+        settlement_status: "settled",
+        tx_hash: circleTransferId,
+      })
+      .eq("id", id)
+      .eq("authorization_id", authorizationId)
+      .eq("settled", false)
+      .eq("settlement_status", "pending")
+      .select("id");
+    if (error) throw error;
+    if ((data?.length ?? 0) > 1) {
+      throw new Error(`pending payment compare-and-set updated multiple rows for ${id}`);
+    }
+    return data?.length === 1;
+  }
+
   async listPaymentsByQuery(queryId: string): Promise<PaymentRecord[]> {
     const { data } = await this.sb
       .from("payment_events")

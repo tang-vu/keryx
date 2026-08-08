@@ -22,6 +22,10 @@ import {
   SettlementProofSection,
   type SettlementHealth,
 } from "@/components/keryx/settlement-proof-section";
+import {
+  PendingReconciliationSection,
+  type PendingReconciliationHealth,
+} from "@/components/keryx/pending-reconciliation-section";
 
 interface Health {
   ok: boolean;
@@ -35,6 +39,7 @@ interface Health {
   registry?: RegistryHealth | null;
   dispatches?: DispatchHealth | null;
   settlement?: SettlementHealth | null;
+  reconciliation?: PendingReconciliationHealth | null;
   traction?: {
     totalPayments: number;
     creatorPayoutsUsdc: number;
@@ -180,6 +185,10 @@ export default function StatusPage() {
             {health?.registry && <RegistryStatusSection registry={health.registry} />}
 
             {health?.settlement && <SettlementProofSection settlement={health.settlement} />}
+
+            {health?.reconciliation && (
+              <PendingReconciliationSection reconciliation={health.reconciliation} />
+            )}
 
             {treasury?.available && treasury.unifiedBalance && (
               <>

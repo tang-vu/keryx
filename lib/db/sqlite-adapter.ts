@@ -1329,6 +1329,32 @@ export class SqliteAdapter implements KeryxDB {
     return rows.map(rowToPayment);
   }
 
+  async listPendingPayments(limit: number): Promise<PaymentRecord[]> {
+    const rows = this.db
+      .prepare(
+        `SELECT * FROM payment_events
+         WHERE settlement_status='pending' AND settled=0 AND authorization_id IS NOT NULL
+         ORDER BY created_at ASC LIMIT ?`,
+      )
+      .all(limit);
+    return rows.map(rowToPayment);
+  }
+
+  async settlePendingPayment(
+    id: string,
+    authorizationId: string,
+    circleTransferId: string,
+  ): Promise<boolean> {
+    const result = this.db
+      .prepare(
+        `UPDATE payment_events
+         SET settled=1, settlement_status='settled', tx_hash=?
+         WHERE id=? AND authorization_id=? AND settled=0 AND settlement_status='pending'`,
+      )
+      .run(circleTransferId, id, authorizationId);
+    return result.changes === 1;
+  }
+
   async listPaymentsByQuery(queryId: string): Promise<PaymentRecord[]> {
     const rows = this.db
       .prepare(

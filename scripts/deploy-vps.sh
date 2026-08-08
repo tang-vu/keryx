@@ -89,7 +89,7 @@ ssh "$SSH" "cd $APP_DIR && (pm2 reload keryx 2>/dev/null || pm2 start npm --name
 # before the funder runs dry; the registry watchdog field-compares the on-chain SourceRegistry
 # against the payout cache (both alert via KERYX_ALERT_WEBHOOK). All cd into the app dir so npm run
 # picks up .env.local.
-say "7/7 installing hourly backup + treasury/registry/llm/dispatch/settlement watchdog cron"
+say "7/7 installing backup + treasury/registry/llm/dispatch/settlement/reconciliation watchdog cron"
 ssh "$SSH" bash -se <<REMOTE
 set -euo pipefail
 NPM=\$(command -v npm)
@@ -107,8 +107,11 @@ DISPATCH="50 * * * * cd $APP_DIR && \$NPM run check-dispatches >> $APP_DIR/data/
 # Gateway payouts leave no explorer hash, so the only outside witness that creators really hold what
 # Keryx says is Circle's own balance API. This asks it, wallet by wallet, and alerts on a shortfall.
 SETTLEMENT="55 * * * * cd $APP_DIR && \$NPM run check-settlement >> $APP_DIR/data/backups/settlement.log 2>&1 # keryx-settlement"
-( crontab -l 2>/dev/null | grep -vE '# keryx-(backup|treasury|registry|llm|dispatches|settlement)' || true ; echo "\$BACKUP"; echo "\$TREASURY"; echo "\$REGISTRY"; echo "\$LLM"; echo "\$DISPATCH"; echo "\$SETTLEMENT" ) | crontab -
-echo "cron installed:"; crontab -l | grep -E 'keryx-(backup|treasury|registry|llm|dispatches|settlement)'
+# A lost HTTP response no longer leaves an accepted payment ambiguous forever: Circle's transfer
+# ledger is searched by the authorization nonce and every economic field is independently bound.
+RECONCILE="*/10 * * * * cd $APP_DIR && \$NPM run reconcile-payments >> $APP_DIR/data/backups/reconcile.log 2>&1 # keryx-reconcile"
+( crontab -l 2>/dev/null | grep -vE '# keryx-(backup|treasury|registry|llm|dispatches|settlement|reconcile)' || true ; echo "\$BACKUP"; echo "\$TREASURY"; echo "\$REGISTRY"; echo "\$LLM"; echo "\$DISPATCH"; echo "\$SETTLEMENT"; echo "\$RECONCILE" ) | crontab -
+echo "cron installed:"; crontab -l | grep -E 'keryx-(backup|treasury|registry|llm|dispatches|settlement|reconcile)'
 REMOTE
 
 cat <<DONE
