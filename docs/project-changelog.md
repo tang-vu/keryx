@@ -9,6 +9,16 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### The ledger now reads as one settled citation economy (2026-08-08)
+
+- Promoted total queries, verified payments, settled USDC volume, and creator payouts into one
+  headline block instead of splitting the strongest totals below independent-demand cards.
+- Kept independent and Keryx-agent activity visible as a compact provenance breakdown, so combined
+  settlement scale is never misrepresented as third-party traction.
+- Grouped conversion, retention, satisfaction, settlement reliability, and grounding as trust
+  signals; sample-free KPIs stay hidden until they have evidence, while latency and unit economics
+  sit in operational detail.
+
 ### Wanted claims now accept exact articles from creators already in the market (2026-08-08)
 
 - Added a SIWE owner flow on each wanted brief that finds the creator's matching indexed article,

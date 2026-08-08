@@ -19,7 +19,6 @@ import {
   ThumbsUp,
   TrendingUp,
   UserRoundCheck,
-  Users,
 } from "lucide-react";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
@@ -115,11 +114,11 @@ export default function DashboardPage() {
               The ledger
             </div>
             <h1 className="letterpress mt-2.5 font-display text-[clamp(28px,3.6vw,40px)] font-medium tracking-tight text-ink">
-              Independent usage
+              The settled citation economy
             </h1>
             <p className="mt-1.5 text-sm text-ink-2">
-              People and third-party agents choosing Keryx; first-party activity remains visible
-              below.
+              Real USDC paid for sources Keryx read and cited, finalized through Circle Gateway on
+              Arc.
             </p>
           </div>
           <span className="hidden shrink-0 items-center gap-2 rounded-full border border-paid/40 bg-paid/[0.07] px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.1em] text-paid sm:inline-flex">
@@ -127,6 +126,41 @@ export default function DashboardPage() {
             Settling on Arc
           </span>
         </header>
+
+        <section className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <MetricCard
+            label="Total queries"
+            value={String(metrics?.totalQueries ?? 0)}
+            sub="independent + Keryx agents"
+            icon={TrendingUp}
+            accent="neutral"
+            loading={!metrics}
+          />
+          <MetricCard
+            label="Settled payments"
+            value={String(metrics?.totalPayments ?? 0)}
+            sub="verified payment records"
+            icon={Receipt}
+            accent="neutral"
+            loading={!metrics}
+          />
+          <MetricCard
+            label="Settled volume"
+            value={`$${fmtUsdc(metrics?.totalVolumeUsdc)}`}
+            sub="USDC"
+            icon={ArrowLeftRight}
+            accent="amber"
+            loading={!metrics}
+          />
+          <MetricCard
+            label="Creator payouts"
+            value={`$${fmtUsdc(metrics?.totalCreatorPayoutsUsdc)}`}
+            sub={`${metrics?.creatorsEarning ?? 0} creators earning`}
+            icon={Coins}
+            accent="emerald"
+            loading={!metrics}
+          />
+        </section>
 
         {metrics && <ProvenanceStrip metrics={metrics} />}
         {metrics && metrics.pendingPaymentConfirmations > 0 && (
@@ -144,27 +178,74 @@ export default function DashboardPage() {
           on-chain anchor is the batched settlement wallet, linked from the live feed.
         </p>
 
-        <section className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <div className="mb-4 mt-10 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
+          Independent demand &amp; trust
+        </div>
+        <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
           <MetricCard
-            label="Independent queries"
-            value={String(metrics?.externalQueries ?? 0)}
-            sub={`${metrics?.externalPayingQueries ?? 0} paid · ${Math.round(
+            label="Paid independent queries"
+            value={`${metrics?.externalPayingQueries ?? 0} / ${metrics?.externalQueries ?? 0}`}
+            sub={`${Math.round(
               (metrics?.externalReaderToPayerConversion ?? 0) * 100,
-            )}% conversion`}
+            )}% reader-to-payer conversion`}
             icon={TrendingUp}
             accent="emerald"
             loading={!metrics}
           />
-          <MetricCard
-            label="Returning actors"
-            value={String(metrics?.returningExternalActors ?? 0)}
-            sub={`${metrics?.identifiedExternalActors ?? 0} identified · ${Math.round(
-              (metrics?.returningExternalActorRate ?? 0) * 100,
-            )}% returning`}
-            icon={UserRoundCheck}
-            accent="emerald"
-            loading={!metrics}
-          />
+          {(metrics?.identifiedExternalActors ?? 0) > 0 && (
+            <MetricCard
+              label="Returning actors"
+              value={`${metrics?.returningExternalActors ?? 0} / ${metrics?.identifiedExternalActors ?? 0}`}
+              sub={`${Math.round((metrics?.returningExternalActorRate ?? 0) * 100)}% returned`}
+              icon={UserRoundCheck}
+              accent="emerald"
+            />
+          )}
+          {(metrics?.externalFeedbackTotal ?? 0) > 0 && (
+            <MetricCard
+              label="Independent satisfaction"
+              value={`${Math.round(
+                (metrics?.externalSatisfactionRate ?? 0) *
+                  (metrics?.externalFeedbackTotal ?? 0),
+              )} / ${metrics?.externalFeedbackTotal ?? 0}`}
+              sub={`${Math.round((metrics?.externalSatisfactionRate ?? 0) * 100)}% positive`}
+              icon={ThumbsUp}
+              accent="emerald"
+            />
+          )}
+          {(metrics?.externalSettlementAttempts ?? 0) > 0 && (
+            <MetricCard
+              label="Settlement success"
+              value={`${metrics?.externalSettledPayments ?? 0} / ${metrics?.externalSettlementAttempts ?? 0}`}
+              sub={`${Math.round((metrics?.externalSettlementSuccessRate ?? 0) * 100)}% independent creator payments`}
+              icon={Gauge}
+              accent="emerald"
+            />
+          )}
+          {(metrics?.evidenceClaimSamples ?? 0) > 0 && (
+            <MetricCard
+              label="Evidence-grounded claims"
+              value={`${Math.round((metrics?.groundedClaimRate ?? 0) * 100)}%`}
+              sub={`${metrics?.evidenceClaimSamples ?? 0} claims · ${metrics?.citationPoolWithheldRuns ?? 0} pools withheld`}
+              icon={ShieldCheck}
+              accent="emerald"
+            />
+          )}
+          {(metrics?.gapIntentOffers ?? 0) > 0 && (
+            <MetricCard
+              label="Wanted claims filled"
+              value={`${metrics?.gapIntentFilled ?? 0} / ${metrics?.gapIntentOffers ?? 0}`}
+              sub={`${Math.round((metrics?.gapIntentFillRate ?? 0) * 100)}% filled · ${metrics?.gapIntentPending ?? 0} queued`}
+              icon={Target}
+              accent="emerald"
+            />
+          )}
+        </section>
+
+        <div className="mb-4 mt-10 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
+          Economics &amp; operations
+        </div>
+        <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
           <MetricCard
             label="Cost / independent query"
             value={`$${fmtUsdc(metrics?.externalAvgCostPerQueryUsdc)}`}
@@ -174,40 +255,11 @@ export default function DashboardPage() {
             loading={!metrics}
           />
           <MetricCard
-            label={
-              (metrics?.externalFeedbackTotal ?? 0) > 0
-                ? "Independent satisfaction"
-                : "High-confidence answers"
-            }
-            value={
-              (metrics?.externalFeedbackTotal ?? 0) === 0 &&
-              (metrics?.externalConfidenceSamples ?? 0) === 0
-                ? "Collecting"
-                : `${Math.round(
-                    (((metrics?.externalFeedbackTotal ?? 0) > 0
-                      ? metrics?.externalSatisfactionRate
-                      : metrics?.externalHighConfidenceRate) ?? 0) * 100,
-                  )}%`
-            }
-            sub={
-              (metrics?.externalFeedbackTotal ?? 0) > 0
-                ? `${metrics?.externalFeedbackTotal ?? 0} independent votes`
-                : `${metrics?.externalConfidenceSamples ?? 0} completed samples`
-            }
-            icon={ThumbsUp}
-            accent="emerald"
-            loading={!metrics}
-          />
-          <MetricCard
-            label="Evidence-grounded claims"
-            value={
-              (metrics?.evidenceClaimSamples ?? 0) > 0
-                ? `${Math.round((metrics?.groundedClaimRate ?? 0) * 100)}%`
-                : "Collecting"
-            }
-            sub={`${metrics?.evidenceClaimSamples ?? 0} claims · ${metrics?.citationPoolWithheldRuns ?? 0} pools withheld`}
-            icon={ShieldCheck}
-            accent="emerald"
+            label="Average settled payment"
+            value={`$${fmtUsdc(metrics?.avgPaymentUsdc)}`}
+            sub="USDC"
+            icon={Banknote}
+            accent="neutral"
             loading={!metrics}
           />
           <MetricCard
@@ -218,93 +270,6 @@ export default function DashboardPage() {
             accent="neutral"
             loading={!metrics}
           />
-          <MetricCard
-            label="Wanted claims filled"
-            value={
-              (metrics?.gapIntentOffers ?? 0) > 0
-                ? `${Math.round((metrics?.gapIntentFillRate ?? 0) * 100)}%`
-                : "Collecting"
-            }
-            sub={`${metrics?.gapIntentFilled ?? 0} / ${metrics?.gapIntentOffers ?? 0} offers · ${metrics?.gapIntentPending ?? 0} queued`}
-            icon={Target}
-            accent="emerald"
-            loading={!metrics}
-          />
-          <MetricCard
-            label="Settlement success"
-            value={
-              (metrics?.externalSettlementAttempts ?? 0) > 0
-                ? `${Math.round((metrics?.externalSettlementSuccessRate ?? 0) * 100)}%`
-                : "Collecting"
-            }
-            sub={`${metrics?.externalSettledPayments ?? 0} / ${
-              metrics?.externalSettlementAttempts ?? 0
-            } independent creator payments`}
-            icon={Gauge}
-            accent="emerald"
-            loading={!metrics}
-          />
-        </section>
-
-        <div className="mb-4 mt-10 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
-          Lifetime settled ledger
-        </div>
-        <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-          <MetricCard
-            label="Total payments"
-            value={String(metrics?.totalPayments ?? 0)}
-            icon={Receipt}
-            accent="neutral"
-            loading={!metrics}
-          />
-          <MetricCard
-            label="Total volume"
-            value={`$${fmtUsdc(metrics?.totalVolumeUsdc)}`}
-            sub="USDC"
-            icon={ArrowLeftRight}
-            accent="amber"
-            loading={!metrics}
-          />
-          <MetricCard
-            label="Creator payouts"
-            value={`$${fmtUsdc(metrics?.totalCreatorPayoutsUsdc)}`}
-            sub="USDC to creators"
-            icon={Coins}
-            accent="emerald"
-            loading={!metrics}
-          />
-          <MetricCard
-            label="Creators earning"
-            value={String(metrics?.creatorsEarning ?? 0)}
-            icon={Users}
-            accent="amber"
-            loading={!metrics}
-          />
-          <MetricCard
-            label="Avg payment"
-            value={`$${fmtUsdc(metrics?.avgPaymentUsdc)}`}
-            sub="USDC"
-            icon={Banknote}
-            accent="neutral"
-            loading={!metrics}
-          />
-          <MetricCard
-            label="Reader → payer"
-            value={`${Math.round((metrics?.readerToPayerConversion ?? 0) * 100)}%`}
-            sub={`${metrics?.payingQueries ?? 0} / ${metrics?.totalQueries ?? 0} queries`}
-            icon={TrendingUp}
-            accent="emerald"
-            loading={!metrics}
-          />
-          {(metrics?.feedbackTotal ?? 0) > 0 && (
-            <MetricCard
-              label="Satisfaction"
-              value={`${Math.round((metrics?.satisfactionRate ?? 0) * 100)}%`}
-              sub={`${metrics?.feedbackTotal ?? 0} votes`}
-              icon={ThumbsUp}
-              accent="emerald"
-            />
-          )}
         </section>
 
         {topics.length > 0 ? (
@@ -342,7 +307,7 @@ export default function DashboardPage() {
   );
 }
 
-/** Present independent demand first while keeping first-party activity visible and inspectable. */
+/** Keep demand provenance inspectable without fragmenting the settled-economy headline. */
 function ProvenanceStrip({ metrics }: { metrics: DashboardMetrics | null }) {
   const ext = metrics?.externalPayments ?? 0;
   const extVol = metrics?.externalVolumeUsdc ?? 0;
@@ -371,13 +336,13 @@ function ProvenanceStrip({ metrics }: { metrics: DashboardMetrics | null }) {
       </span>
       <span className="inline-flex items-center gap-1.5">
         <span className="h-1.5 w-1.5 rounded-full bg-paid" />
-        Independent usage:{" "}
+        Independent:{" "}
         <span className="font-semibold text-ink">{metrics?.externalQueries ?? 0}</span> queries ·{" "}
         <span className="font-semibold text-ink">{ext}</span> payments · ${fmtUsdc(extVol)}
       </span>
       <span className="inline-flex items-center gap-1.5">
         <span className="h-1.5 w-1.5 rounded-full bg-ink-3" />
-        First-party agent activity:{" "}
+        Keryx agents:{" "}
         <span className="font-semibold text-ink">{metrics?.engineQueries ?? 0}</span> queries ·{" "}
         <span className="font-semibold text-ink">{eng}</span> payments · ${fmtUsdc(engVol)}
       </span>
