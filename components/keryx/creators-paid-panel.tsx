@@ -8,9 +8,12 @@
  * not per-tx EVM hashes — the verifiable on-chain link is the settlement wallet, in the footer.
  */
 
-import { Check, Clock3 } from "lucide-react";
+import { Check, CircleX, Clock3 } from "lucide-react";
 import type { PaymentRecord } from "@/lib/types";
-import { paymentSettlementStatus } from "@/lib/payments/payment-state";
+import {
+  paymentCountsAsSpent,
+  paymentSettlementStatus,
+} from "@/lib/payments/payment-state";
 import type { StreamMode } from "@/lib/hooks/use-ask-stream";
 import { fmtUsdc, shortAddr } from "./phase-style";
 import { SectionHeading } from "./banknote";
@@ -37,11 +40,14 @@ export function CreatorsPaidPanel({
   streaming,
 }: CreatorsPaidPanelProps) {
   const total = payments
-    .filter((payment) => paymentSettlementStatus(payment) !== "pending")
+    .filter(paymentCountsAsSpent)
     .reduce((sum, payment) => sum + (payment.amountUsdc ?? 0), 0);
   const hasPayments = payments.length > 0;
   const pendingCount = payments.filter(
     (payment) => paymentSettlementStatus(payment) === "pending",
+  ).length;
+  const failedCount = payments.filter(
+    (payment) => paymentSettlementStatus(payment) === "failed",
   ).length;
   const paidInFull =
     hasPayments &&
@@ -67,7 +73,9 @@ export function CreatorsPaidPanel({
                 style={{
                   flex: Math.max(p.amountUsdc ?? 0.0001, 0.0001),
                   background:
-                    paymentSettlementStatus(p) === "pending"
+                    paymentSettlementStatus(p) === "failed"
+                      ? "#b91c1c"
+                      : paymentSettlementStatus(p) === "pending"
                       ? "#b45309"
                       : i % 2
                         ? "var(--paid-2)"
@@ -109,6 +117,11 @@ export function CreatorsPaidPanel({
                       <Check className="h-2.5 w-2.5" />
                       batched
                     </span>
+                  ) : paymentSettlementStatus(p) === "failed" ? (
+                    <span className="inline-flex items-center gap-1 text-red-700">
+                      <CircleX className="h-2.5 w-2.5" />
+                      failed · not charged
+                    </span>
                   ) : paymentSettlementStatus(p) === "pending" ? (
                     <span className="inline-flex items-center gap-1 text-amber-700">
                       <Clock3 className="h-2.5 w-2.5" />
@@ -123,7 +136,12 @@ export function CreatorsPaidPanel({
                 {pctOf(p)}%
               </span>
               <span className="w-[68px] shrink-0 text-right font-mono text-sm tabular-nums text-paid">
-                ${fmtUsdc(p.amountUsdc)}{paymentSettlementStatus(p) === "pending" ? " ?" : ""}
+                ${fmtUsdc(p.amountUsdc)}
+                {paymentSettlementStatus(p) === "pending"
+                  ? " ?"
+                  : paymentSettlementStatus(p) === "failed"
+                    ? " ×"
+                    : ""}
               </span>
             </div>
           ))}
@@ -134,6 +152,8 @@ export function CreatorsPaidPanel({
             <span className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-ink-3">
               {pendingCount > 0 ? (
                 `${pendingCount} pending · confirmed total`
+              ) : failedCount > 0 ? (
+                `${failedCount} failed · not charged`
               ) : mode === "real" ? (
                 <a
                   href={SETTLEMENT_PROOF}

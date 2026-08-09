@@ -39,6 +39,7 @@ import { dispatchCitationNotify } from "../notify/citation-webhook";
 import { dispatchCitationEmail } from "../notify/citation-email";
 import { allocateSplit } from "../payments/split-allocation";
 import {
+  paymentCountsAsSpent,
   paymentSettlementStatus,
   pendingPaymentFrom,
   settledPaymentFrom,
@@ -981,7 +982,7 @@ export async function* runAgent(
         payment.origin = origin;
         payments.push(payment);
         const ledgerError = await persistPaymentRecord(payment);
-        if (paymentSettlementStatus(payment) !== "pending") citationPayments.push(payment);
+        if (paymentCountsAsSpent(payment)) citationPayments.push(payment);
         yield emit(
           "settle",
           citationPaymentMessage(payment, author.name),
@@ -1083,7 +1084,7 @@ export async function* runAgent(
   function finish(answer: string): QueryRun {
     const totalSpent = round(
       payments
-        .filter((payment) => paymentSettlementStatus(payment) !== "pending")
+        .filter(paymentCountsAsSpent)
         .reduce((sum, payment) => sum + payment.amountUsdc, 0),
     );
     const run: QueryRun = {

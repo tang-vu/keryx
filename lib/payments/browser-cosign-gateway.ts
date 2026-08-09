@@ -95,6 +95,8 @@ export class BrowserCoSignGateway implements PaymentGateway {
     private readonly sessAddr: string,
     private readonly requestSignature: RequestSignatureFn,
     private readonly abortSignal?: AbortSignal,
+    /** Generation of the cap reservation. A later Circle failure may release only this epoch. */
+    private readonly grantEpoch: string = "legacy-test-grant",
   ) {}
 
   agentAddress(): string {
@@ -258,6 +260,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
       amountUsdc: amount,
       weight,
       authorizationId: signed.authorization.nonce,
+      grantEpoch: this.grantEpoch,
     } as const;
     const pending = (reason: string) => makePayment({
       ...basePayment,

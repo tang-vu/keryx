@@ -483,6 +483,7 @@ aggregation independent of full receipt payloads and leave pre-ledger history un
 | spent | REAL | atomically reserved/consumed spend |
 | expiry | INTEGER | unix-ms grant expiry (1h default) |
 | tx_hash | TEXT | funding transaction or recovered marker |
+| grant_epoch | TEXT | fresh generation id on create/recover; binds safe failed-payment release |
 
 **`reasoning_circuits`** — shared LLM provider-step health (no prompt/response data)
 | Column | Type | Notes |

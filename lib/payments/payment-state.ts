@@ -18,6 +18,14 @@ export function assertPaymentSettlementState(
   return status;
 }
 
+/** Amounts that actually count in a completed run. Failed and ambiguous attempts never do. */
+export function paymentCountsAsSpent(
+  payment: Pick<PaymentRecord, "settled" | "settlementStatus">,
+): boolean {
+  const status = paymentSettlementStatus(payment);
+  return status === "settled" || status === "simulated";
+}
+
 /** Thrown only after a signed authorization crossed the submission boundary. The attached record
  * is safe to persist/display and deliberately contains no signature. */
 export class PaymentPendingError extends Error {

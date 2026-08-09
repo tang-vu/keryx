@@ -7,7 +7,7 @@
  * per-tx explorer page; on-chain proof is the batched settlement wallet, linked in the header.
  */
 
-import { Check, Clock3 } from "lucide-react";
+import { Check, CircleX, Clock3 } from "lucide-react";
 import type { PaymentRecord } from "@/lib/types";
 import { paymentSettlementStatus } from "@/lib/payments/payment-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -107,7 +107,12 @@ export function PaymentsFeed({ payments }: { payments: PaymentRecord[] }) {
                   <TableCell className="max-w-[180px] truncate text-sm font-medium">
                     {p.sourceName}
                   </TableCell>
-                  <TableCell className="text-right font-mono text-sm font-semibold tabular-nums text-paid">
+                  <TableCell
+                    className={cn(
+                      "text-right font-mono text-sm font-semibold tabular-nums",
+                      paymentSettlementStatus(p) === "failed" ? "text-red-700" : "text-paid",
+                    )}
+                  >
                     ${fmtUsdc(p.amountUsdc)}
                   </TableCell>
                   <TableCell className="font-mono text-[11px] text-muted-foreground">
@@ -121,6 +126,14 @@ export function PaymentsFeed({ payments }: { payments: PaymentRecord[] }) {
                       >
                         <Check className="h-3 w-3" />
                         batched
+                      </span>
+                    ) : paymentSettlementStatus(p) === "failed" ? (
+                      <span
+                        className="inline-flex items-center gap-1.5 font-mono text-[11px] text-red-700"
+                        title={p.txHash ? `Circle transfer ${p.txHash}` : undefined}
+                      >
+                        <CircleX className="h-3 w-3" />
+                        failed · not charged
                       </span>
                     ) : paymentSettlementStatus(p) === "pending" ? (
                       <span

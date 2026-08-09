@@ -171,6 +171,14 @@ export default function DashboardPage() {
             from every settled traction total below.
           </div>
         )}
+        {metrics && metrics.failedPaymentAttempts > 0 && (
+          <div className="mt-3 border border-red-600/40 bg-red-50 px-4 py-3 font-mono text-[11px] text-red-800">
+            {metrics.failedPaymentAttempts} Circle-terminal payment attempt
+            {metrics.failedPaymentAttempts === 1 ? "" : "s"} ($
+            {fmtUsdc(metrics.failedPaymentVolumeUsdc)}) failed and were not charged. These receipts
+            are excluded from every settled traction total below.
+          </div>
+        )}
         <p className="mt-2 max-w-3xl font-mono text-[10px] leading-relaxed text-ink-3">
           Sub-cent rewards are netted off-chain in the Circle Gateway ledger and finalized on Arc in
           batches, so the per-payment IDs in the feed are Gateway settlement references, not per-tx

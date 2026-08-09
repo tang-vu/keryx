@@ -5,6 +5,22 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-44** · Settlement/Capacity · *A Circle-terminal failed transfer closes the pending receipt,
+but may release browser capacity only into the exact grant generation that reserved it.* Each
+create/recover operation assigns a fresh opaque `grantEpoch`; a browser pending payment retains
+that epoch beside its non-secret authorization nonce. Reconciliation first requires the same exact
+Circle economic tuple as D-43, then atomically changes `pending` to `failed`. It subtracts the
+reserved micro-USDC only when the current grant still has the recorded epoch and session EOA.
+Legacy rows and failures from an earlier recovered grant close without changing the current cap.
+Failed receipts remain visible but count as neither spend, creator earnings, settlement success,
+notifications, fulfillment, nor traction.
+
+Why: Circle's terminal `failed` state is definitive evidence that this authorization did not settle,
+so retaining its reservation forever is unnecessary; applying that refund to a newly recovered
+grant could instead grant extra capacity after the user has already rebased and spent. Reversible:
+medium (the failed ledger state is additive; disabling release safely returns to conservative cap
+retention).
+
 **D-43** · Settlement/Recovery · *An ambiguous signed submission may become settled only from
 Circle's nonce-indexed transfer ledger and one exact economic tuple.* A post-submit timeout keeps
 its existing durable pending row and never stores the bearer signature. The reconciliation worker
@@ -12,8 +28,8 @@ searches Circle by EIP-3009 nonce, then independently binds the result to the re
 payee, Arc network as both sending and recipient network, USDC, and integer micro-USDC amount.
 `received`, `batched`, `confirmed`, and `completed` all prove the same Gateway acceptance that a
 successful settle response would have returned; the Circle transfer id becomes the receipt.
-Missing, failed, duplicate, malformed, or mismatched results stay pending and outside traction,
-earnings, notifications, and wanted-claim fulfillment. Promotion is a compare-and-set on payment
+Missing, duplicate, malformed, or mismatched results stay pending and outside traction, earnings,
+notifications, and wanted-claim fulfillment. An exact terminal failure follows D-44. Promotion is a compare-and-set on payment
 id, nonce, and pending state, so concurrent watchdogs are idempotent and cannot replace a receipt.
 
 Why: retaining uncertainty prevented double-spend but could permanently under-report a real debit

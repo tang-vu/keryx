@@ -99,4 +99,93 @@ describe("SQLite payment settlement state migration", () => {
     expect(reconciledMetrics.pendingPaymentConfirmations).toBe(0);
     expect(reconciledMetrics.pendingPaymentVolumeUsdc).toBe(0);
   });
+
+  it("fails a pending payment and releases only its live grant generation", async () => {
+    const sessionId = "0xowner";
+    const sessAddr = "0x1111111111111111111111111111111111111111";
+    await db.upsertSessionGrant({
+      sessionId,
+      sessAddr,
+      ownerAddr: sessionId,
+      cap: 0.02,
+      expiry: Date.now() + 60_000,
+      txHash: "0xfund",
+      grantEpoch: "epoch-live",
+    });
+    expect(await db.addSessionGrantSpend(sessionId, 0.006)).toBe(true);
+    await db.recordPayment({
+      id: "x402:failed-live",
+      createdAt: "2026-08-04T00:01:00.000Z",
+      kind: "fetch",
+      queryId: "q4",
+      sourceId: "s1",
+      sourceName: "Source",
+      payer: sessAddr,
+      payee: "0x2222222222222222222222222222222222222222",
+      amountUsdc: 0.006,
+      txHash: null,
+      network: "eip155:5042002",
+      settled: false,
+      settlementStatus: "pending",
+      authorizationId: "failed-live",
+      grantEpoch: "epoch-live",
+    });
+
+    await expect(
+      db.failPendingPayment("x402:failed-live", "failed-live", "circle-failed"),
+    ).resolves.toEqual({ resolved: true, reservationReleased: true });
+    expect((await db.getSessionGrant(sessionId))?.spent).toBe(0);
+    expect((await db.listPayments(20)).find((row) => row.id === "x402:failed-live"))
+      .toMatchObject({ settled: false, settlementStatus: "failed", txHash: "circle-failed" });
+    await expect(
+      db.failPendingPayment("x402:failed-live", "failed-live", "circle-retry"),
+    ).resolves.toEqual({ resolved: false, reservationReleased: false });
+  });
+
+  it("does not release a failed authorization into a recovered grant generation", async () => {
+    const sessionId = "0xrecovered-owner";
+    const sessAddr = "0x3333333333333333333333333333333333333333";
+    await db.upsertSessionGrant({
+      sessionId,
+      sessAddr,
+      ownerAddr: sessionId,
+      cap: 0.02,
+      expiry: Date.now() + 60_000,
+      txHash: "0xfund-old",
+      grantEpoch: "epoch-old",
+    });
+    expect(await db.addSessionGrantSpend(sessionId, 0.006)).toBe(true);
+    await db.recordPayment({
+      id: "x402:failed-old",
+      createdAt: "2026-08-04T00:02:00.000Z",
+      kind: "fetch",
+      queryId: "q5",
+      sourceId: "s1",
+      sourceName: "Source",
+      payer: sessAddr,
+      payee: "0x4444444444444444444444444444444444444444",
+      amountUsdc: 0.006,
+      txHash: null,
+      network: "eip155:5042002",
+      settled: false,
+      settlementStatus: "pending",
+      authorizationId: "failed-old",
+      grantEpoch: "epoch-old",
+    });
+    await db.upsertSessionGrant({
+      sessionId,
+      sessAddr,
+      ownerAddr: sessionId,
+      cap: 0.02,
+      expiry: Date.now() + 60_000,
+      txHash: "recovered",
+      grantEpoch: "epoch-new",
+    });
+    expect(await db.addSessionGrantSpend(sessionId, 0.004)).toBe(true);
+
+    await expect(
+      db.failPendingPayment("x402:failed-old", "failed-old", "circle-failed-old"),
+    ).resolves.toEqual({ resolved: true, reservationReleased: false });
+    expect((await db.getSessionGrant(sessionId))?.spent).toBe(0.004);
+  });
 });

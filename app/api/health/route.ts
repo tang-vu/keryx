@@ -96,9 +96,14 @@ export async function GET() {
     let reconciliation: PendingReconciliationSummary | null = null;
     try {
       const raw = await db.getSyncState(PENDING_RECONCILIATION_STATE_KEY);
-      reconciliation = raw
-        ? (JSON.parse(raw) as PendingReconciliationSummary)
-        : null;
+      if (raw) {
+        const parsed = JSON.parse(raw) as PendingReconciliationSummary;
+        reconciliation = {
+          ...parsed,
+          // Rolling deploy compatibility: summaries written before D-44 lack this additive field.
+          releasedReservations: parsed.releasedReservations ?? 0,
+        };
+      }
     } catch {
       /* operational evidence is additive; never turn malformed telemetry into downtime */
     }
@@ -124,6 +129,8 @@ export async function GET() {
           externalSettlementAttempts: m.externalSettlementAttempts,
           pendingPaymentConfirmations: m.pendingPaymentConfirmations,
           pendingPaymentVolumeUsdc: m.pendingPaymentVolumeUsdc,
+          failedPaymentAttempts: m.failedPaymentAttempts,
+          failedPaymentVolumeUsdc: m.failedPaymentVolumeUsdc,
         },
       },
       { headers: { "Cache-Control": "no-store" } },

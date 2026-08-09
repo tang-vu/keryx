@@ -77,6 +77,27 @@ describe("calculateDashboardMetrics", () => {
     expect(metrics.pendingPaymentVolumeUsdc).toBe(0.004);
   });
 
+  it("reports failed receipts without counting them as spend or traction", () => {
+    const metrics = calculateDashboardMetrics(
+      [{
+        amountUsdc: 0.006,
+        sourceId: "s1",
+        queryId: "web-failed",
+        kind: "fetch",
+        origin: "web",
+        settled: false,
+        settlementStatus: "failed",
+      }],
+      [{ id: "web-failed", origin: "web" }],
+    );
+
+    expect(metrics.totalPayments).toBe(0);
+    expect(metrics.totalVolumeUsdc).toBe(0);
+    expect(metrics.pendingPaymentConfirmations).toBe(0);
+    expect(metrics.failedPaymentAttempts).toBe(1);
+    expect(metrics.failedPaymentVolumeUsdc).toBe(0.006);
+  });
+
   it("attributes A2A actors only from settled inbound payer evidence", () => {
     const metrics = calculateDashboardMetrics(
       [

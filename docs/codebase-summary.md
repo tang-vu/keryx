@@ -73,12 +73,12 @@ Multi-backend payment gateway with common interface. Selects backend at runtime 
 | `payment-gateway.ts` | Interface defining `payFetch()` + `payCitation()`. |
 | `real-gateway.ts` | `RealGateway`: server-funded Circle Gateway path used by volume engine + A2A; keeps signed-submission outcome explicit. |
 | `browser-cosign-gateway.ts` | `BrowserCoSignGateway`: binds the 402 challenge + returned authorization to the reserved source/amount, then submits the browser co-sign. Post-submit uncertainty becomes durable `pending`; a valid receipt on a delivery 5xx remains settled. |
-| `payment-state.ts` | Explicit `settled` / `simulated` / `pending` semantics plus typed pending and settled-delivery errors. |
-| `gateway/x402-transfer-reconciliation.ts` | Resolves lost settle responses from Circle's nonce-indexed transfer ledger; exact tuple verification and idempotent pending→settled promotion only. |
+| `payment-state.ts` | Explicit `settled` / `simulated` / `pending` / `failed` semantics plus typed pending and settled-delivery errors. |
+| `gateway/x402-transfer-reconciliation.ts` | Resolves lost settle responses from Circle's nonce-indexed transfer ledger; exact tuple verification, idempotent settlement, and generation-bound terminal-failure capacity release. |
 | `server-x402-client.ts` | Server-funded x402 transport: Circle `BatchEvmScheme` signing with Keryx-owned receipt/error classification so non-2xx cannot discard settlement proof. |
 | `x402-payment-evidence.ts` | Shared challenge binding and Circle receipt validation for browser and server-funded buyers. |
 | `offline-gateway.ts` | `OfflineGateway`: heuristic offline mode. No keys, `settled:false`. |
-| `session-grants.ts` | Session grant store: track user-funded session EOAs, spend cap, spent-to-date per tab. |
+| `session-grants.ts` | Session grant store: track user-funded session EOAs, spend cap, spent-to-date, and a fresh epoch per create/recover. |
 | `index.ts` | Factory selecting the right gateway backend. |
 
 ### `lib/x402-server.ts`

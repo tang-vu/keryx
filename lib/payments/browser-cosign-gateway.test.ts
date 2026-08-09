@@ -142,6 +142,8 @@ describe("BrowserCoSignGateway", () => {
       "session",
       SESSION,
       vi.fn().mockResolvedValue(signedHeader()),
+      undefined,
+      "epoch-pending",
     );
 
     let caught: unknown;
@@ -156,6 +158,7 @@ describe("BrowserCoSignGateway", () => {
       settled: false,
       settlementStatus: "pending",
       authorizationId: NONCE,
+      grantEpoch: "epoch-pending",
       amountUsdc: source.fetchPrice,
     });
     expect(payment?.id).toBe(`x402:${NONCE}`);

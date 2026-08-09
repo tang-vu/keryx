@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS payment_events (
   id TEXT PRIMARY KEY, created_at TEXT, kind TEXT, query_id TEXT, source_id TEXT,
   source_name TEXT, payer TEXT, payee TEXT, amount_usdc REAL, weight REAL,
   rationale TEXT, tx_hash TEXT, network TEXT, settled INTEGER,
-  settlement_status TEXT NOT NULL DEFAULT 'simulated', authorization_id TEXT,
+  settlement_status TEXT NOT NULL DEFAULT 'simulated', authorization_id TEXT, grant_epoch TEXT,
   item_id TEXT, item_title TEXT, item_url TEXT, content_version TEXT, item_published_at TEXT,
   offer_id TEXT, list_price_usdc REAL
 );
@@ -209,7 +209,8 @@ CREATE TABLE IF NOT EXISTS session_grants (
   cap        REAL NOT NULL,             -- USDC ceiling, clamped to the real Gateway balance
   spent      REAL NOT NULL DEFAULT 0,
   expiry     INTEGER NOT NULL,          -- unix ms
-  tx_hash    TEXT NOT NULL
+  tx_hash    TEXT NOT NULL,
+  grant_epoch TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS session_grants_expiry ON session_grants(expiry);
 CREATE TABLE IF NOT EXISTS rate_limit_counters (
@@ -308,6 +309,9 @@ export class SqliteAdapter implements KeryxDB {
     if (!paymentCols.has("authorization_id")) {
       this.db.exec(`ALTER TABLE payment_events ADD COLUMN authorization_id TEXT`);
     }
+    if (!paymentCols.has("grant_epoch")) {
+      this.db.exec(`ALTER TABLE payment_events ADD COLUMN grant_epoch TEXT`);
+    }
     for (const column of [
       "item_id",
       "item_title",
@@ -329,6 +333,20 @@ export class SqliteAdapter implements KeryxDB {
       `CREATE INDEX IF NOT EXISTS payment_events_pending
          ON payment_events(created_at DESC) WHERE settlement_status='pending'`,
     );
+
+    const grantCols = new Set(
+      (this.db.prepare(`PRAGMA table_info(session_grants)`).all() as { name: string }[]).map(
+        (c) => c.name,
+      ),
+    );
+    if (!grantCols.has("grant_epoch")) {
+      this.db.exec(`ALTER TABLE session_grants ADD COLUMN grant_epoch TEXT`);
+      // Existing grants predate generation-bound releases. Give each a unique legacy generation;
+      // old pending payments have no epoch and therefore cannot release against it.
+      this.db.exec(
+        `UPDATE session_grants SET grant_epoch=lower(hex(randomblob(16))) WHERE grant_epoch IS NULL`,
+      );
+    }
 
     // api_keys scope columns. NULL on every pre-existing key and read as "all scopes, all owned
     // sources" — narrowing a key that already works in someone's integration would break it.
@@ -775,8 +793,8 @@ export class SqliteAdapter implements KeryxDB {
     this.db
       .prepare(
         `INSERT OR REPLACE INTO session_grants
-           (session_id, sess_addr, owner_addr, cap, spent, expiry, tx_hash)
-         VALUES (?,?,?,?,0,?,?)`,
+           (session_id, sess_addr, owner_addr, cap, spent, expiry, tx_hash, grant_epoch)
+         VALUES (?,?,?,?,0,?,?,?)`,
       )
       .run(
         grant.sessionId,
@@ -785,6 +803,7 @@ export class SqliteAdapter implements KeryxDB {
         grant.cap,
         grant.expiry,
         grant.txHash,
+        grant.grantEpoch,
       );
   }
 
@@ -801,6 +820,7 @@ export class SqliteAdapter implements KeryxDB {
       spent: r.spent as number,
       expiry: Number(r.expiry),
       txHash: r.tx_hash as string,
+      grantEpoch: r.grant_epoch as string,
     };
   }
 
@@ -1291,8 +1311,8 @@ export class SqliteAdapter implements KeryxDB {
     const settlementStatus = assertPaymentSettlementState(p);
     this.db
       .prepare(
-        `INSERT INTO payment_events (id,created_at,kind,query_id,source_id,source_name,payer,payee,amount_usdc,weight,rationale,tx_hash,network,settled,settlement_status,authorization_id,origin,item_id,item_title,item_url,content_version,item_published_at,offer_id,list_price_usdc)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        `INSERT INTO payment_events (id,created_at,kind,query_id,source_id,source_name,payer,payee,amount_usdc,weight,rationale,tx_hash,network,settled,settlement_status,authorization_id,grant_epoch,origin,item_id,item_title,item_url,content_version,item_published_at,offer_id,list_price_usdc)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       )
       .run(
         p.id ?? crypto.randomUUID(),
@@ -1311,6 +1331,7 @@ export class SqliteAdapter implements KeryxDB {
         p.settled ? 1 : 0,
         settlementStatus,
         p.authorizationId ?? null,
+        p.grantEpoch ?? null,
         p.origin ?? "engine",
         p.itemId ?? null,
         p.itemTitle ?? null,
@@ -1353,6 +1374,52 @@ export class SqliteAdapter implements KeryxDB {
       )
       .run(circleTransferId, id, authorizationId);
     return result.changes === 1;
+  }
+
+  async failPendingPayment(
+    id: string,
+    authorizationId: string,
+    circleTransferId: string,
+  ): Promise<{ resolved: boolean; reservationReleased: boolean }> {
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      const payment = this.db
+        .prepare(
+          `SELECT payer, amount_usdc, grant_epoch FROM payment_events
+           WHERE id=? AND authorization_id=? AND settled=0 AND settlement_status='pending'`,
+        )
+        .get(id, authorizationId) as
+          | { payer: string; amount_usdc: number; grant_epoch: string | null }
+          | undefined;
+      if (!payment) {
+        this.db.exec("ROLLBACK");
+        return { resolved: false, reservationReleased: false };
+      }
+
+      this.db
+        .prepare(
+          `UPDATE payment_events SET settlement_status='failed', tx_hash=?
+           WHERE id=? AND authorization_id=? AND settled=0 AND settlement_status='pending'`,
+        )
+        .run(circleTransferId, id, authorizationId);
+
+      let reservationReleased = false;
+      if (payment.grant_epoch) {
+        const released = this.db
+          .prepare(
+            `UPDATE session_grants
+             SET spent=MAX(0, ROUND(spent - ?, 6))
+             WHERE grant_epoch=? AND lower(sess_addr)=lower(?)`,
+          )
+          .run(payment.amount_usdc, payment.grant_epoch, payment.payer);
+        reservationReleased = released.changes === 1;
+      }
+      this.db.exec("COMMIT");
+      return { resolved: true, reservationReleased };
+    } catch (error) {
+      try { this.db.exec("ROLLBACK"); } catch { /* transaction already closed */ }
+      throw error;
+    }
   }
 
   async listPaymentsByQuery(queryId: string): Promise<PaymentRecord[]> {
@@ -1822,6 +1889,7 @@ function rowToPayment(r: Record<string, unknown>): PaymentRecord {
       (r.settlement_status as PaymentRecord["settlementStatus"]) ??
       (Boolean(r.settled) ? "settled" : "simulated"),
     authorizationId: (r.authorization_id as string) ?? undefined,
+    grantEpoch: (r.grant_epoch as string) ?? undefined,
     origin: (r.origin as PaymentRecord["origin"]) ?? undefined,
     itemId: (r.item_id as string) ?? undefined,
     itemTitle: (r.item_title as string) ?? undefined,

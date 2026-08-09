@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BadgeCheck, Banknote, Calendar, Clock3, Hash, Wallet } from "lucide-react";
+import { BadgeCheck, Banknote, Calendar, CircleX, Clock3, Hash, Wallet } from "lucide-react";
 import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
 import { cn } from "@/lib/utils";
 import { ListingControlsPanel } from "./listing-controls-panel";
@@ -39,7 +39,7 @@ interface CreatorData {
     kind: string;
     amountUsdc: number;
     settled: boolean;
-    settlementStatus?: "settled" | "simulated" | "pending";
+    settlementStatus?: "settled" | "simulated" | "pending" | "failed";
     txHash: string | null;
     createdAt: string;
     /** The question that triggered this payout — what work of theirs was used. */
@@ -231,7 +231,12 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <span className="font-mono text-sm font-semibold text-paid">
+                  <span
+                    className={cn(
+                      "font-mono text-sm font-semibold",
+                      p.settlementStatus === "failed" ? "text-red-700" : "text-paid",
+                    )}
+                  >
                     ${fmtUsdc(p.amountUsdc)}
                   </span>
                   {p.settled && p.txHash && (
@@ -242,6 +247,11 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
                   {p.settlementStatus === "pending" && (
                     <p className="inline-flex items-center gap-1 font-mono text-[10px] text-amber-700">
                       <Clock3 className="h-2.5 w-2.5" /> pending proof
+                    </p>
+                  )}
+                  {p.settlementStatus === "failed" && (
+                    <p className="inline-flex items-center gap-1 font-mono text-[10px] text-red-700">
+                      <CircleX className="h-2.5 w-2.5" /> failed · not charged
                     </p>
                   )}
                 </div>

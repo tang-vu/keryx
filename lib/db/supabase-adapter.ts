@@ -624,6 +624,7 @@ export class SupabaseAdapter implements KeryxDB {
       settled: p.settled,
       settlement_status: settlementStatus,
       authorization_id: p.authorizationId ?? null,
+      grant_epoch: p.grantEpoch ?? null,
       origin: p.origin ?? "engine",
       item_id: p.itemId ?? null,
       item_title: p.itemTitle ?? null,
@@ -679,6 +680,24 @@ export class SupabaseAdapter implements KeryxDB {
       throw new Error(`pending payment compare-and-set updated multiple rows for ${id}`);
     }
     return data?.length === 1;
+  }
+
+  async failPendingPayment(
+    id: string,
+    authorizationId: string,
+    circleTransferId: string,
+  ): Promise<{ resolved: boolean; reservationReleased: boolean }> {
+    const { data, error } = await this.sb.rpc("fail_pending_payment", {
+      p_id: id,
+      p_authorization_id: authorizationId,
+      p_circle_transfer_id: circleTransferId,
+    });
+    if (error) throw error;
+    const row = Array.isArray(data) ? data[0] : data;
+    return {
+      resolved: row?.resolved === true,
+      reservationReleased: row?.reservation_released === true,
+    };
   }
 
   async listPaymentsByQuery(queryId: string): Promise<PaymentRecord[]> {
@@ -864,6 +883,7 @@ export class SupabaseAdapter implements KeryxDB {
       spent: 0,
       expiry: grant.expiry,
       tx_hash: grant.txHash,
+      grant_epoch: grant.grantEpoch,
     });
   }
 
@@ -882,6 +902,7 @@ export class SupabaseAdapter implements KeryxDB {
       spent: Number(data.spent),
       expiry: Number(data.expiry),
       txHash: data.tx_hash,
+      grantEpoch: data.grant_epoch,
     };
   }
 
@@ -1319,6 +1340,7 @@ function rowToPayment(r: Record<string, unknown>): PaymentRecord {
       (r.settlement_status as PaymentRecord["settlementStatus"]) ??
       (Boolean(r.settled) ? "settled" : "simulated"),
     authorizationId: (r.authorization_id as string) ?? undefined,
+    grantEpoch: (r.grant_epoch as string) ?? undefined,
     origin: (r.origin as PaymentRecord["origin"]) ?? undefined,
     itemId: (r.item_id as string) ?? undefined,
     itemTitle: (r.item_title as string) ?? undefined,

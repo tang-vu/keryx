@@ -100,6 +100,9 @@ export function calculateDashboardMetrics(
   const pending = paymentRows.filter(
     (payment) => !payment.settled && payment.settlementStatus === "pending",
   );
+  const failed = paymentRows.filter(
+    (payment) => !payment.settled && payment.settlementStatus === "failed",
+  );
   const payments = paymentRows.filter((p) => p.settled);
   const creatorPayments = payments.filter((p) => p.kind !== "inbound");
   const volume = payments.reduce((sum, p) => sum + p.amountUsdc, 0);
@@ -259,6 +262,10 @@ export function calculateDashboardMetrics(
     pendingPaymentConfirmations: pending.length,
     pendingPaymentVolumeUsdc: round(
       pending.reduce((sum, payment) => sum + payment.amountUsdc, 0),
+    ),
+    failedPaymentAttempts: failed.length,
+    failedPaymentVolumeUsdc: round(
+      failed.reduce((sum, payment) => sum + payment.amountUsdc, 0),
     ),
     mcpClientQueries: [...mcpChannels.entries()]
       .map(([client, counts]) => ({ client, ...counts }))

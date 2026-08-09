@@ -68,12 +68,19 @@ export interface SessionGrantRecord {
   ownerAddr: string;
   /** Total USDC the user funded — the hard spending ceiling. */
   cap: number;
-  /** USDC spent so far under this grant (monotonically increasing). */
+  /** USDC reserved/consumed under this grant; definitive pre-settle failures may release it. */
   spent: number;
   /** Unix ms at which this grant lapses. */
   expiry: number;
   /** On-chain tx that funded the session EOA, or "recovered". Record-keeping only. */
   txHash: string;
+  /** Changes on every create/recover, binding later reservation release to one cap generation. */
+  grantEpoch: string;
+}
+
+export interface FailedPendingPaymentResult {
+  resolved: boolean;
+  reservationReleased: boolean;
 }
 
 /** A row from api_keys (safe to return to the owner — no hash, no raw key). */
@@ -405,6 +412,12 @@ export interface KeryxDB {
     authorizationId: string,
     circleTransferId: string,
   ): Promise<boolean>;
+  /** Resolve a Circle-terminal failure and release browser capacity only for the same grant epoch. */
+  failPendingPayment(
+    id: string,
+    authorizationId: string,
+    circleTransferId: string,
+  ): Promise<FailedPendingPaymentResult>;
   /** Citation payouts for one dispatch, oldest→newest. Carries real settlement
    *  state (settled / tx) so permalinks reflect on-chain truth, not a reconstruction. */
   listPaymentsByQuery(queryId: string): Promise<PaymentRecord[]>;

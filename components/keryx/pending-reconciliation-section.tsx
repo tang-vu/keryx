@@ -4,6 +4,7 @@ export interface PendingReconciliationHealth {
   promoted: number;
   awaiting: number;
   failed: number;
+  releasedReservations?: number;
   mismatched: number;
   raced: number;
   oldestPendingAt: string | null;
@@ -23,7 +24,7 @@ export function PendingReconciliationSection({
 }: {
   reconciliation: PendingReconciliationHealth;
 }) {
-  const clean = reconciliation.failed === 0 && reconciliation.mismatched === 0;
+  const clean = reconciliation.mismatched === 0;
   return (
     <section className="mt-8 border-t border-line pt-5">
       <div className="flex items-center justify-between gap-4">
@@ -38,15 +39,16 @@ export function PendingReconciliationSection({
         <Row k="Accepted by Circle" v={reconciliation.promoted.toLocaleString()} />
         <Row k="Still awaiting proof" v={reconciliation.awaiting.toLocaleString()} />
         <Row
-          k="Failed / mismatched"
-          v={`${reconciliation.failed.toLocaleString()} / ${reconciliation.mismatched.toLocaleString()}`}
+          k="Terminal failures"
+          v={`${reconciliation.failed.toLocaleString()} (${(reconciliation.releasedReservations ?? 0).toLocaleString()} reservations released)`}
         />
+        <Row k="Tuple mismatches" v={reconciliation.mismatched.toLocaleString()} />
         <Row k="Last checked" v={new Date(reconciliation.checkedAt).toLocaleString()} />
       </dl>
       <p className="mt-3 font-mono text-[10px] leading-relaxed tracking-wide text-faint">
-        Pending authorizations become settled only when Circle returns the same nonce, payer,
-        payee, Arc network and exact micro-USDC amount. Missing or conflicting evidence stays out
-        of traction and creator earnings.
+        Accepted transfers settle only on an exact tuple. Circle-terminal failures close without
+        earnings and release capacity only for the same grant generation. Missing or conflicting
+        evidence stays pending.
       </p>
     </section>
   );

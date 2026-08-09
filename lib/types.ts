@@ -200,7 +200,7 @@ export interface GapIntent {
 export type PaymentOrigin = "engine" | "web" | "a2a" | "mcp";
 
 /** One payment attempt's evidence state. */
-export type PaymentSettlementStatus = "settled" | "simulated" | "pending";
+export type PaymentSettlementStatus = "settled" | "simulated" | "pending" | "failed";
 
 /** `inbound` = another agent paid Keryx (A2A); fetch/citation = Keryx paid a creator. */
 export interface PaymentRecord extends Partial<SourceItemIdentity> {
@@ -225,6 +225,9 @@ export interface PaymentRecord extends Partial<SourceItemIdentity> {
   settlementStatus?: PaymentSettlementStatus;
   /** EIP-3009 nonce for browser co-sign attempts. Correlation evidence, never a signature. */
   authorizationId?: string;
+  /** Grant generation that reserved this browser-funded amount. A terminal failure may release
+   *  capacity only while the current grant still has this exact epoch. */
+  grantEpoch?: string;
   origin?: PaymentOrigin; // engine | web | a2a | mcp — see PaymentOrigin
   createdAt: string;
 }
@@ -385,6 +388,9 @@ export interface DashboardMetrics {
   /** Operational uncertainty only; excluded from every settled payment and traction total. */
   pendingPaymentConfirmations: number;
   pendingPaymentVolumeUsdc: number;
+  /** Circle-terminal failures; retained as receipts but excluded from spend and traction. */
+  failedPaymentAttempts: number;
+  failedPaymentVolumeUsdc: number;
   /** Remote MCP dispatches grouped by their self-declared setup channel. */
   mcpClientQueries: Array<{
     client: McpClientChannel | "unknown";

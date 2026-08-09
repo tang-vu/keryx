@@ -39,7 +39,10 @@ export interface PendingReconciliationSummary {
   scanned: number;
   promoted: number;
   awaiting: number;
+  /** Pending rows closed from exact Circle `failed` evidence. */
   failed: number;
+  /** Browser cap reservations released against the same still-active grant generation. */
+  releasedReservations: number;
   mismatched: number;
   raced: number;
   oldestPendingAt: string | null;
@@ -172,7 +175,10 @@ export function checkPendingTransfer(
 
 /** Reconcile oldest-first so a fixed scan limit cannot starve long-lived ambiguous rows. */
 export async function reconcilePendingPayments(
-  db: Pick<KeryxDB, "listPendingPayments" | "settlePendingPayment" | "setSyncState">,
+  db: Pick<
+    KeryxDB,
+    "listPendingPayments" | "settlePendingPayment" | "failPendingPayment" | "setSyncState"
+  >,
   options: { limit?: number; search?: TransferSearch; signal?: AbortSignal } = {},
 ): Promise<PendingReconciliationSummary> {
   const pending = await db.listPendingPayments(options.limit ?? 100);
@@ -182,6 +188,7 @@ export async function reconcilePendingPayments(
     promoted: 0,
     awaiting: 0,
     failed: 0,
+    releasedReservations: 0,
     mismatched: 0,
     raced: 0,
     oldestPendingAt: pending[0]?.createdAt ?? null,
@@ -195,18 +202,31 @@ export async function reconcilePendingPayments(
       await search(payment, options.signal),
     );
     if (check.verdict === "awaiting") summary.awaiting++;
-    if (check.verdict === "failed") summary.failed++;
     if (check.verdict === "mismatch") summary.mismatched++;
-    if (check.verdict !== "settled" || !check.transfer || !payment.id || !payment.authorizationId) {
+    if (!check.transfer || !payment.id || !payment.authorizationId) {
       continue;
     }
-    const promoted = await db.settlePendingPayment(
-      payment.id,
-      payment.authorizationId,
-      check.transfer.id,
-    );
-    if (promoted) summary.promoted++;
-    else summary.raced++;
+    if (check.verdict === "settled") {
+      const promoted = await db.settlePendingPayment(
+        payment.id,
+        payment.authorizationId,
+        check.transfer.id,
+      );
+      if (promoted) summary.promoted++;
+      else summary.raced++;
+    } else if (check.verdict === "failed") {
+      const failed = await db.failPendingPayment(
+        payment.id,
+        payment.authorizationId,
+        check.transfer.id,
+      );
+      if (failed.resolved) {
+        summary.failed++;
+        if (failed.reservationReleased) summary.releasedReservations++;
+      } else {
+        summary.raced++;
+      }
+    }
   }
 
   await db.setSyncState(PENDING_RECONCILIATION_STATE_KEY, JSON.stringify(summary));

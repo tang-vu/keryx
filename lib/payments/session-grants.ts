@@ -28,10 +28,12 @@ export function grantExpiry(): number {
 
 export async function storeGrant(
   sessionId: string,
-  grant: Omit<SessionGrant, "sessionId" | "spent">,
-): Promise<void> {
+  grant: Omit<SessionGrant, "sessionId" | "spent" | "grantEpoch">,
+): Promise<string> {
   const db = await getDb();
-  await db.upsertSessionGrant({ ...grant, sessionId });
+  const grantEpoch = crypto.randomUUID();
+  await db.upsertSessionGrant({ ...grant, sessionId, grantEpoch });
+  return grantEpoch;
 }
 
 /**

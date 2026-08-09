@@ -90,11 +90,16 @@ describe("pending x402 transfer reconciliation", () => {
 
   it("promotes through an idempotent compare-and-set and persists an ops summary", async () => {
     const settlePendingPayment = vi.fn(async () => true);
+    const failPendingPayment = vi.fn(async () => ({
+      resolved: true,
+      reservationReleased: false,
+    }));
     const setSyncState = vi.fn(async () => undefined);
     const summary = await reconcilePendingPayments(
       {
         listPendingPayments: async () => [payment()],
         settlePendingPayment,
+        failPendingPayment,
         setSyncState,
       },
       { search: async () => [transfer()] },
@@ -107,5 +112,34 @@ describe("pending x402 transfer reconciliation", () => {
     );
     expect(summary).toMatchObject({ scanned: 1, promoted: 1, awaiting: 0, raced: 0 });
     expect(setSyncState).toHaveBeenCalledOnce();
+  });
+
+  it("terminalizes an exact Circle failure and records capacity release", async () => {
+    const failPendingPayment = vi.fn(async () => ({
+      resolved: true,
+      reservationReleased: true,
+    }));
+    const summary = await reconcilePendingPayments(
+      {
+        listPendingPayments: async () => [payment({ grantEpoch: "epoch-1" })],
+        settlePendingPayment: vi.fn(async () => false),
+        failPendingPayment,
+        setSyncState: vi.fn(async () => undefined),
+      },
+      { search: async () => [transfer({ status: "failed" })] },
+    );
+
+    expect(failPendingPayment).toHaveBeenCalledWith(
+      "x402:0xabc",
+      "0xAbC",
+      "circle-transfer-id",
+    );
+    expect(summary).toMatchObject({
+      scanned: 1,
+      failed: 1,
+      releasedReservations: 1,
+      mismatched: 0,
+      raced: 0,
+    });
   });
 });

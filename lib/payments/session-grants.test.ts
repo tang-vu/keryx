@@ -67,11 +67,13 @@ describe("grant lifecycle", () => {
   });
 
   it("re-registering resets the spend, because the new cap is the live Gateway residual", async () => {
-    await storeGrant(SESSION, grantFor(1));
+    const firstEpoch = await storeGrant(SESSION, grantFor(1));
     await recordSpend(SESSION, 0.4);
-    await storeGrant(SESSION, grantFor(0.6));
+    const secondEpoch = await storeGrant(SESSION, grantFor(0.6));
 
     const grant = await getGrant(SESSION);
+    expect(secondEpoch).not.toBe(firstEpoch);
+    expect(grant?.grantEpoch).toBe(secondEpoch);
     expect(grant?.cap).toBe(0.6);
     expect(grant?.spent).toBe(0);
   });

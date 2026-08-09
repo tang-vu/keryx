@@ -82,6 +82,7 @@ export async function getPaymentGateway(db: KeryxDB, opts?: GatewayOpts): Promis
         grant.sessAddr,
         opts.requestSignature,
         opts.abortSignal,
+        grant.grantEpoch,
       );
     }
   }

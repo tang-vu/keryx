@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-08-05
+**Last Updated:** 2026-08-09
 **Current Version:** 0.10.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
@@ -9,11 +9,20 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ## Unreleased
 
+### Failed Circle transfers safely restore browser capacity (2026-08-09)
+
+- Exact Circle-terminal failures now close ambiguous pending receipts as visible `failed · not
+  charged` attempts, excluded from spend, earnings, notifications, fulfillment, and traction.
+- Bound every browser reservation to a fresh grant generation so reconciliation restores capacity
+  only to the unchanged session grant, never to a newly recovered/rebased cap.
+- Made failure and release one idempotent transaction in SQLite and Supabase; added permanent failed
+  receipt telemetry to the dashboard and health response.
+
 ### Ambiguous x402 submissions now self-heal from Circle evidence (2026-08-08)
 
 - Added a nonce-indexed reconciler for signed submissions whose HTTP settle response was lost.
 - Promote only one exact Circle transfer matching payer, payee, Arc network, USDC amount, and nonce;
-  all missing, failed, duplicate, malformed, or conflicting evidence remains fail-closed.
+  missing, duplicate, malformed, or conflicting evidence remains fail-closed.
 - Made promotion atomic and idempotent across SQLite and Supabase, scheduled it every ten minutes,
   and exposed its last verified result on `/api/health` and `/status`.
 
