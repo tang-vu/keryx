@@ -25,7 +25,10 @@ alter table public.source_items
   drop constraint if exists source_items_storage_mode_check;
 alter table public.source_items
   add constraint source_items_storage_mode_check
-  check (storage_mode is null or storage_mode in ('ipfs_encrypted', 'db_plaintext'));
+  check (
+    storage_mode is null or
+    storage_mode in ('ipfs_encrypted', 'db_encrypted', 'db_plaintext')
+  );
 
 -- These tables can contain purchased plaintext or decryption envelopes. Public metadata is served
 -- through bounded application routes, never through direct PostgREST reads.
@@ -33,4 +36,3 @@ drop policy if exists "public read source_items" on public.source_items;
 drop policy if exists "public read cache_items" on public.cache_items;
 revoke select on table public.source_items from anon, authenticated;
 revoke select on table public.cache_items from anon, authenticated;
-

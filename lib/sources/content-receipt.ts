@@ -37,7 +37,9 @@ export function normalizeStorageMode(
   value: unknown,
   item: Pick<SourceItem, "ipfsCid">,
 ): ContentStorageMode {
-  if (value === "ipfs_encrypted" || value === "db_plaintext") return value;
+  if (value === "ipfs_encrypted" || value === "db_encrypted" || value === "db_plaintext") {
+    return value;
+  }
   return item.ipfsCid ? "ipfs_encrypted" : "db_plaintext";
 }
 
@@ -66,7 +68,7 @@ export function contentReceipt(item: SourceItem): ContentReceiptRef {
 export function isPublisherSignedFullText(item: SourceItem): boolean {
   return (
     normalizeDeliveryKind(item.deliveryKind, item.content) === "full_text" &&
-    normalizeStorageMode(item.storageMode, item) === "ipfs_encrypted" &&
+    normalizeStorageMode(item.storageMode, item) !== "db_plaintext" &&
     Boolean(item.manifest)
   );
 }

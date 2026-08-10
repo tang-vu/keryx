@@ -3,13 +3,12 @@
  * Generates a creator wallet when one isn't supplied. Used by the seed script,
  * the /register flow, and RSS ingest.
  *
- * When PINATA_JWT + CONTENT_MASTER_KEY are set, item.content is encrypted with
- * AES-256-GCM and pinned to Pinata IPFS. The plaintext content field is cleared
- * (empty string) so it never lands in the DB in plaintext. Decryption only happens
- * inside settleThenServe's produce() after x402 settles.
+ * Item content is encrypted with AES-256-GCM before durable storage. Pinata deployments keep
+ * ciphertext on IPFS; otherwise the private DB content column keeps ciphertext plus the same
+ * envelope. Decryption only happens inside settleThenServe's produce() after x402 settles.
  *
  * Explicit offline development may store labeled plaintext. A production or treasury-funded
- * process fails closed when either encryption dependency is missing.
+ * process fails closed when CONTENT_MASTER_KEY is missing.
  */
 
 import { config } from "../config";

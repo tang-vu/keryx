@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { SourceItem } from "../types";
+import { encryptContent } from "../ipfs/content-crypto";
 import { contentBodyHash, contentBytes } from "./content-receipt";
 import { resolveSourceItemContent } from "./resolve-source-item-content";
 
@@ -43,5 +44,30 @@ describe("post-settlement content receipt validation", () => {
       ),
     ).resolves.toBe(item.summary);
   });
-});
 
+  it("decrypts the private DB ciphertext fallback only inside the paid resolver", async () => {
+    const previous = process.env.CONTENT_MASTER_KEY;
+    process.env.CONTENT_MASTER_KEY = "89".repeat(32);
+    try {
+      const envelope = encryptContent(body);
+      await expect(
+        resolveSourceItemContent(
+          {
+            ...item,
+            content: envelope.cipherB64,
+            storageMode: "db_encrypted",
+            itemKeyEnc: envelope.wrappedKeyB64,
+            itemIv: envelope.ivB64,
+            itemAuthTag: envelope.authTagB64,
+            itemWrapIv: envelope.wrapIvB64,
+          },
+          settle,
+          { allowSummaryFallback: false },
+        ),
+      ).resolves.toBe(body);
+    } finally {
+      if (previous === undefined) delete process.env.CONTENT_MASTER_KEY;
+      else process.env.CONTENT_MASTER_KEY = previous;
+    }
+  });
+});

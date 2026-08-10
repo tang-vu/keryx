@@ -70,5 +70,24 @@ describe("shared source-item storage boundary", () => {
     expect(stored.plaintextBytes).toBe(contentBytes(body));
     expect(stored.bodyHash).toBe(contentBodyHash(body));
   });
-});
 
+  it("keeps ciphertext in the private DB when Pinata is unavailable", async () => {
+    delete process.env.PINATA_JWT;
+    process.env.CONTENT_MASTER_KEY = "78".repeat(32);
+    const stored = await storeSourceItem(item, { requireEncrypted: true });
+
+    expect(stored.storageMode).toBe("db_encrypted");
+    expect(stored.content).not.toBe(body);
+    expect(stored.content).not.toContain(body);
+    expect(
+      decryptContent(
+        stored.content,
+        stored.itemKeyEnc!,
+        stored.itemIv!,
+        stored.itemAuthTag!,
+        stored.itemWrapIv,
+      ),
+    ).toBe(body);
+    await expect(storeSourceItem(stored, { requireEncrypted: true })).resolves.toEqual(stored);
+  });
+});

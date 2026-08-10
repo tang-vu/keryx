@@ -116,7 +116,7 @@ export function ArticleContentPanel({ creatorId }: { creatorId: string }) {
       });
       const result = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(result.error ?? "Could not publish full text");
-      toast.success("Signed full text encrypted and pinned to IPFS.");
+      toast.success("Signed full text encrypted and published.");
       setContent("");
       await load();
     } catch (error) {
@@ -133,7 +133,8 @@ export function ArticleContentPanel({ creatorId }: { creatorId: string }) {
       </h2>
       <p className="mb-4 max-w-2xl font-serif text-[13px] text-ink-2">
         Attach the complete article to its RSS entry. Your wallet signs the body hash; Keryx stores
-        only encrypted ciphertext on public IPFS and reveals plaintext after payment settles.
+        only encrypted ciphertext (IPFS when configured, private DB fallback otherwise) and reveals
+        plaintext after payment settles.
       </p>
 
       <div className="grid gap-3">

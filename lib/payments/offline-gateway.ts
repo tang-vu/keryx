@@ -7,6 +7,7 @@
 import type { ArticleOfferRef, Author, PaymentRecord, Source, SourceItem, SourceItemIdentity } from "../types";
 import type { KeryxDB } from "../db";
 import { sourceItemIdentity } from "../sources/source-item-asset";
+import { resolveSourceItemContent } from "../sources/resolve-source-item-content";
 import { makePayment, type FetchResult, type PaymentGateway } from "./payment-gateway";
 
 export class OfflineGateway implements PaymentGateway {
@@ -37,12 +38,16 @@ export class OfflineGateway implements PaymentGateway {
     offer?: ArticleOfferRef;
   }): Promise<FetchResult> {
     const items = item ? [item] : await this.db.getItems(source.id);
+    const settle = { payer: this.address, transaction: "offline-simulation" };
     const content = item
-      ? item.content || item.summary
-      : items
-          .slice(0, 5)
-          .map((i) => `## ${i.title}\n${i.content || i.summary}`)
-          .join("\n\n") || source.description;
+      ? await resolveSourceItemContent(item, settle, { allowSummaryFallback: false })
+      : (await Promise.all(
+          items.slice(0, 5).map(async (candidate) =>
+            `## ${candidate.title}\n${await resolveSourceItemContent(candidate, settle, {
+              allowSummaryFallback: true,
+            })}`,
+          ),
+        )).join("\n\n") || source.description;
     const itemIdentity = item ? sourceItemIdentity(item) : {};
 
     const payment = makePayment({

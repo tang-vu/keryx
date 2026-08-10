@@ -1,27 +1,22 @@
 /**
- * migrate-content-to-ipfs.mts — one-time migration of existing DB content to IPFS.
+ * migrate-content-to-ipfs.mts — one-time migration of plaintext content to encrypted storage.
  *
  * For each source_item that has plaintext content but no ipfs_cid:
- *   1. Encrypt content with AES-256-GCM (encryptContent)
- *   2. Pin ciphertext to Pinata IPFS (pinEncrypted)
- *   3. Update the DB row with CID + envelope fields; clear plaintext content
+ *   1. Encrypt content with AES-256-GCM
+ *   2. Prefer Pinata IPFS; otherwise retain ciphertext in the private DB column
+ *   3. Update the DB row with envelope fields and no plaintext
  *
- * Idempotent: skips items that already have ipfs_cid set.
- * Requires: PINATA_JWT + CONTENT_MASTER_KEY in .env.local
+ * Idempotent: skips items already marked ipfs_encrypted or db_encrypted.
+ * Requires: CONTENT_MASTER_KEY in .env.local. PINATA_JWT is optional.
  *
  * Run: node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/migrate-content-to-ipfs.mts
  */
 
 import { getDb } from "../lib/db/index.ts";
-import { hasPinata, pinEncrypted } from "../lib/ipfs/pinata-client.ts";
-import { encryptContent, hasContentKey } from "../lib/ipfs/content-crypto.ts";
-import { contentBodyHash, contentBytes, normalizeDeliveryKind } from "../lib/sources/content-receipt.ts";
+import { hasContentKey } from "../lib/ipfs/content-crypto.ts";
+import { storeSourceItem } from "../lib/sources/store-source-item.ts";
 
 async function main() {
-  if (!hasPinata()) {
-    console.error("PINATA_JWT is not set. Cannot run migration.");
-    process.exit(1);
-  }
   if (!hasContentKey()) {
     console.error("CONTENT_MASTER_KEY is not set or invalid. Cannot run migration.");
     process.exit(1);
@@ -43,7 +38,7 @@ async function main() {
     const items = await db.getItems(source.id);
     for (const item of items) {
       // Already migrated — skip.
-      if (item.ipfsCid) {
+      if (item.storageMode === "ipfs_encrypted" || item.storageMode === "db_encrypted") {
         skipped++;
         continue;
       }
@@ -54,26 +49,12 @@ async function main() {
       }
 
       try {
-        const envelope = encryptContent(item.content);
-        const cipherBuf = Buffer.from(envelope.cipherB64, "base64");
-        const cid = await pinEncrypted(cipherBuf, `keryx-item-${item.id}.enc`);
-
-        // Write back the full item with IPFS fields + cleared plaintext.
-        await db.addItems([{
-          ...item,
-          content: "",          // plaintext cleared; lives on IPFS only
-          ipfsCid: cid,
-          itemKeyEnc: envelope.wrappedKeyB64,
-          itemIv: envelope.ivB64,
-          itemAuthTag: envelope.authTagB64,
-          itemWrapIv: envelope.wrapIvB64,
-          storageMode: "ipfs_encrypted",
-          deliveryKind: normalizeDeliveryKind(item.deliveryKind, item.content),
-          plaintextBytes: contentBytes(item.content),
-          bodyHash: contentBodyHash(item.content),
-        }]);
-
-        console.log(`  [ok] item ${item.id} (${item.title.slice(0, 50)}) → ${cid}`);
+        const stored = await storeSourceItem(item, { requireEncrypted: true });
+        await db.addItems([stored]);
+        const destination = stored.ipfsCid
+          ? `IPFS ${stored.ipfsCid}`
+          : "encrypted DB fallback";
+        console.log(`  [ok] item ${item.id} (${item.title.slice(0, 50)}) → ${destination}`);
         migrated++;
       } catch (err) {
         console.error(`  [fail] item ${item.id}:`, err instanceof Error ? err.message : err);

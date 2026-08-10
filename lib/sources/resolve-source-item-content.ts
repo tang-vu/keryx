@@ -17,6 +17,33 @@ export async function resolveSourceItemContent(
   settle: { payer: string; transaction: string },
   options: ResolveOptions,
 ): Promise<string> {
+  if (item.storageMode === "db_encrypted") {
+    const completeEnvelope = Boolean(
+      item.content && item.itemKeyEnc && item.itemIv && item.itemAuthTag,
+    );
+    if (!completeEnvelope || !hasContentKey()) {
+      return fallbackOrThrow(item, options, "encrypted database article is not decryptable");
+    }
+    try {
+      const plaintext = decryptContent(
+        item.content,
+        item.itemKeyEnc!,
+        item.itemIv!,
+        item.itemAuthTag!,
+        item.itemWrapIv,
+      );
+      const invalid = await invalidReceiptReason(item, plaintext, options.expectedManifestSigner);
+      if (invalid) throw new Error(invalid);
+      return plaintext;
+    } catch (error) {
+      console.error(
+        `[content] encrypted DB read failed for item ${item.id}:`,
+        error instanceof Error ? error.message : String(error),
+      );
+      return fallbackOrThrow(item, options, "encrypted database article decryption failed");
+    }
+  }
+
   if (item.ipfsCid) {
     const completeEnvelope = Boolean(item.itemKeyEnc && item.itemIv && item.itemAuthTag);
     if (!completeEnvelope || !hasPinata() || !hasContentKey()) {

@@ -152,7 +152,8 @@ Encrypted content on IPFS. Pinata client + server-side AES-256-GCM encryption/de
 
 **Design:** Content uploaded encrypted to IPFS (ciphertext only). Plaintext decryption occurs inside
 x402 `produce()` after payment verification, and any decrypted cache is encrypted again before it
-reaches SQLite/Supabase. Free previews and public content receipts contain metadata only.
+reaches SQLite/Supabase. When Pinata is unavailable the content envelope itself uses a private
+encrypted-DB fallback, never plaintext. Free previews and public content receipts contain metadata only.
 
 ### `lib/sources/` + `app/api/source/`
 

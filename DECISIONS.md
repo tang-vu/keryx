@@ -11,13 +11,15 @@ SourceRegistry remains the only payout authority.* RSS ingest now labels bodies 
 text. A registry creator may replace one indexed article with a full body and sign EIP-712 over
 `sourceId + itemId + canonicalUrl + SHA-256 bodyHash + plaintextBytes + deliveryKind + nonce`.
 The owner API refreshes registry authority, verifies the signature against the exact bytes, then
-encrypts and pins the body before committing its CID/envelope/manifest. The public receipt carries
+encrypts the body before committing its envelope/manifest. Pinata availability chooses public IPFS
+ciphertext or a private encrypted-DB fallback; it never chooses plaintext. The public receipt carries
 only delivery/storage kind, byte count, hash, and manifest identity. It cannot set price, `payTo`,
 active state, or author splits.
 
 Every registration and refresh path now crosses one content-storage boundary. Production and
-treasury-funded processes fail closed when Pinata or the content key is absent; explicit offline
-development remains labeled plaintext. Decrypted caches are envelope-encrypted in SQLite/Supabase,
+treasury-funded processes fail closed when the content key is absent; a Pinata outage retains
+ciphertext in the DB, while explicit offline development remains labeled plaintext. Decrypted
+caches are envelope-encrypted in SQLite/Supabase,
 legacy cache rows are sealed at initialization, and direct public reads of `source_items` and
 `cache_items` are removed. Key wrapping now uses a fresh AES-GCM nonce per envelope while retaining
 read compatibility with legacy zero-nonce rows. Why: the old RSS path sold `contentSnippet` as full

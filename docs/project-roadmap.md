@@ -55,7 +55,7 @@ Live figures at [`/status`](https://keryx.cc/status); snapshots in [TRACTION.md]
 | Worker session key | Key derived and held in a dedicated Web Worker; tab stores only AES-GCM ciphertext under a non-extractable wrapping key; the worker refuses unauthorised payees and any transaction outside USDC/Gateway | ✓ Done 2026-07-09 | Narrows R3 |
 | On-chain registration live | Registry switched on: creators register from their own wallet, indexer projects events into the cache | ✓ Done 2026-07-10 | Ends server-generated payout keys for new sources |
 | Lit Protocol | Integrate Lit for client-side IPFS key release | Blocked | Closes C2; needs Arc on Lit's chain list |
-| Signed content receipts | Registry owner signs exact full-text hash/bytes/URL; ciphertext-only IPFS + encrypted DB cache | ✓ Done 2026-08-10 | Manifest authenticates content, never payout or pricing |
+| Signed content receipts | Registry owner signs exact full-text hash/bytes/URL; ciphertext-only IPFS or encrypted DB fallback + encrypted cache | ✓ Done 2026-08-10 | Manifest authenticates content, never payout or pricing |
 
 **Two plan corrections found while building:**
 - *"Web Crypto non-exportable session key"* is not achievable as written. `SubtleCrypto` supports

@@ -50,7 +50,7 @@ export interface Author {
 export type ContentDeliveryKind = "full_text" | "excerpt" | "abstract" | "metadata_only";
 
 /** Where the paid body rests before settlement-gated delivery. */
-export type ContentStorageMode = "ipfs_encrypted" | "db_plaintext";
+export type ContentStorageMode = "ipfs_encrypted" | "db_encrypted" | "db_plaintext";
 
 /**
  * Creator-signed statement about one exact paid body. It authenticates content provenance only:

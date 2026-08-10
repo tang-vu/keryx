@@ -14,7 +14,7 @@ export interface StoreSourceItemOptions {
   pin?: typeof pinEncrypted;
 }
 
-/** True only for a server that can actually settle real payments. Offline development stays easy. */
+/** Real deployments require encryption; Pinata availability only chooses ciphertext location. */
 export function realContentStorageRequired(): boolean {
   return (
     process.env.KERYX_FORCE_OFFLINE !== "1" &&
@@ -30,6 +30,15 @@ export async function storeSourceItem(
   item: SourceItem,
   options: StoreSourceItemOptions = {},
 ): Promise<SourceItem> {
+  if (
+    item.storageMode === "db_encrypted" &&
+    item.content &&
+    item.itemKeyEnc &&
+    item.itemIv &&
+    item.itemAuthTag
+  ) {
+    return item;
+  }
   const content = item.content ?? "";
   const hasContent = content.trim().length > 0;
   const deliveryKind = normalizeDeliveryKind(item.deliveryKind, content);
@@ -50,15 +59,29 @@ export async function storeSourceItem(
   if (!hasContent) return { ...base, storageMode: "db_plaintext" };
 
   const requireEncrypted = options.requireEncrypted ?? realContentStorageRequired();
-  if (!hasPinata() || !hasContentKey()) {
+  if (!hasContentKey()) {
     if (requireEncrypted) {
-      throw new Error("encrypted content storage is required but Pinata or CONTENT_MASTER_KEY is unavailable");
+      throw new Error("encrypted content storage is required but CONTENT_MASTER_KEY is unavailable");
     }
     return { ...base, storageMode: "db_plaintext" };
   }
 
+  const envelope = encryptContent(content);
+  const encryptedDbItem = (): SourceItem => ({
+    ...base,
+    // The content column is server-private and holds ciphertext only. This fallback keeps source
+    // registration available when Pinata is absent without weakening the at-rest boundary.
+    content: envelope.cipherB64,
+    ipfsCid: undefined,
+    itemKeyEnc: envelope.wrappedKeyB64,
+    itemIv: envelope.ivB64,
+    itemAuthTag: envelope.authTagB64,
+    itemWrapIv: envelope.wrapIvB64,
+    storageMode: "db_encrypted",
+  });
+  if (!hasPinata()) return encryptedDbItem();
+
   try {
-    const envelope = encryptContent(content);
     const cid = await (options.pin ?? pinEncrypted)(
       Buffer.from(envelope.cipherB64, "base64"),
       `keryx-item-${item.id}.enc`,
@@ -74,12 +97,11 @@ export async function storeSourceItem(
       storageMode: "ipfs_encrypted",
     };
   } catch (error) {
-    if (requireEncrypted) throw error;
     console.warn(
-      `[content] encrypt+pin failed for item ${item.id}; storing explicit offline plaintext`,
+      `[content] IPFS pin failed for item ${item.id}; retaining encrypted DB fallback`,
       error instanceof Error ? error.message : String(error),
     );
-    return { ...base, storageMode: "db_plaintext" };
+    return encryptedDbItem();
   }
 }
 

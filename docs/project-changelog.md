@@ -12,8 +12,9 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 ### Signed full-text receipts and attention-bounded reading (2026-08-10)
 
 - Added a creator-owned EIP-712 full-text vault: the live registry owner signs the exact article
-  URL, SHA-256 body hash, UTF-8 byte count, delivery kind, and nonce before Keryx encrypts and pins
-  it. Public discovery/citations expose only a content receipt, never the body or payment authority.
+  URL, SHA-256 body hash, UTF-8 byte count, delivery kind, and nonce before Keryx encrypts it.
+  Ciphertext prefers IPFS and falls back to private encrypted DB storage when Pinata is absent;
+  public discovery/citations expose only a content receipt, never the body or payment authority.
 - Made RSS disclosure honest (`full_text` / `excerpt` / `abstract` / `metadata_only`) and routed
   registration, on-chain preparation, and feed refresh through one fail-closed encrypted-storage
   boundary.
