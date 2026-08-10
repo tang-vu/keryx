@@ -30,8 +30,10 @@ async function main() {
   const db = await getDb();
   await db.init();
 
-  const sources = await db.listSources();
-  console.log(`Found ${sources.length} active sources.`);
+  // Encrypt inactive/history rows too. They are off the earning rail, but deactivation must not
+  // leave paid plaintext behind on disk or in the Supabase table.
+  const sources = await db.listAllSources();
+  console.log(`Found ${sources.length} sources (active and inactive).`);
 
   let migrated = 0;
   let skipped = 0;
