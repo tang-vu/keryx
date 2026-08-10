@@ -27,6 +27,8 @@ export interface EncryptedEnvelope {
   authTagB64: string;
   /** base64-encoded per-item key wrapped (encrypted) with CONTENT_MASTER_KEY */
   wrappedKeyB64: string;
+  /** base64-encoded random nonce used to wrap the per-item key (envelope v2) */
+  wrapIvB64: string;
 }
 
 /**
@@ -43,9 +45,10 @@ export function encryptContent(plaintext: string): EncryptedEnvelope {
   const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
   const authTag = cipher.getAuthTag();
 
-  // Wrap (encrypt) the per-item key with the master key using a fixed zero-iv.
-  // Using a fixed iv here is safe because the master key + each item key pair is unique.
-  const wrapIv = Buffer.alloc(IV_LEN, 0);
+  // Wrap the per-item key under a fresh nonce. AES-GCM nonces may never repeat under one master
+  // key, even when every plaintext item key is random: nonce reuse breaks GCM confidentiality and
+  // authentication. Older envelopes omitted this field and are read with their historical zero IV.
+  const wrapIv = randomBytes(IV_LEN);
   const wrapCipher = createCipheriv(ALGO, masterKey, wrapIv);
   const wrappedKey = Buffer.concat([wrapCipher.update(itemKey), wrapCipher.final()]);
   // Append the wrap auth tag so we can verify integrity on unwrap.
@@ -57,6 +60,7 @@ export function encryptContent(plaintext: string): EncryptedEnvelope {
     ivB64: iv.toString("base64"),
     authTagB64: authTag.toString("base64"),
     wrappedKeyB64: wrappedKeyWithTag.toString("base64"),
+    wrapIvB64: wrapIv.toString("base64"),
   };
 }
 
@@ -70,6 +74,7 @@ export function decryptContent(
   wrappedKeyB64: string,
   ivB64: string,
   authTagB64: string,
+  wrapIvB64?: string,
 ): string {
   const masterKey = getMasterKey();
   const cipherBuf = Buffer.from(cipherB64, "base64");
@@ -82,7 +87,10 @@ export function decryptContent(
   const wrapTag = wrappedKeyWithTag.subarray(wrappedKeyWithTag.length - 16);
 
   // Unwrap the per-item key.
-  const wrapIv = Buffer.alloc(IV_LEN, 0);
+  const wrapIv = wrapIvB64
+    ? Buffer.from(wrapIvB64, "base64")
+    : Buffer.alloc(IV_LEN, 0);
+  if (wrapIv.length !== IV_LEN) throw new Error("invalid content key-wrap nonce");
   const unwrapper = createDecipheriv(ALGO, masterKey, wrapIv);
   unwrapper.setAuthTag(wrapTag);
   const itemKey = Buffer.concat([unwrapper.update(wrappedKey), unwrapper.final()]);

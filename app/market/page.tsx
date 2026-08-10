@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BadgeDollarSign, Clock3, ExternalLink, ShieldCheck } from "lucide-react";
+import { BadgeDollarSign, Clock3, ExternalLink, FileCheck2, ShieldCheck } from "lucide-react";
 
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { SiteHeader } from "@/components/keryx/site-header";
@@ -84,13 +84,20 @@ export default async function MarketPage({
                   <Link href={`/creator/${entry.sourceId}`} className="font-mono text-[10px] uppercase tracking-[0.12em] text-seal hover:underline">
                     {entry.sourceName}
                   </Link>
-                  {entry.offer ? (
-                    <span className="inline-flex items-center gap-1 border border-paid/30 bg-paid/10 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.1em] text-paid">
-                      <ShieldCheck className="h-3 w-3" /> signed −{entry.savingsPercent}%
-                    </span>
-                  ) : (
-                    <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-ink-3">registry price</span>
-                  )}
+                  <div className="flex flex-wrap justify-end gap-1.5">
+                    {entry.contentReceipt?.manifestId && entry.contentReceipt.deliveryKind === "full_text" && (
+                      <span className="inline-flex items-center gap-1 border border-seal/30 bg-seal/10 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.1em] text-seal">
+                        <FileCheck2 className="h-3 w-3" /> signed full text
+                      </span>
+                    )}
+                    {entry.offer ? (
+                      <span className="inline-flex items-center gap-1 border border-paid/30 bg-paid/10 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.1em] text-paid">
+                        <ShieldCheck className="h-3 w-3" /> signed −{entry.savingsPercent}%
+                      </span>
+                    ) : (
+                      <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-ink-3">registry price</span>
+                    )}
+                  </div>
                 </div>
                 <h2 className="font-display text-xl font-semibold leading-tight text-ink">
                   <a href={entry.itemUrl} target="_blank" rel="noreferrer" className="hover:text-seal">

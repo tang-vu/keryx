@@ -1,11 +1,11 @@
 # Keryx Project Roadmap
 
-**Version:** 0.11.0 (exact-article wanted responses, updated 2026-08-08)
+**Version:** 0.12.0 (signed full-text receipts and attention budgets, updated 2026-08-10)
 **Status:** In continuous operation at [keryx.cc](https://keryx.cc) — real settlement 24/7, shipping in public.
 
 ---
 
-## Where Keryx is today (v0.11.0, August 2026)
+## Where Keryx is today (v0.12.0, August 2026)
 
 Shipped and running:
 - ✓ Non-custodial dApp core (SIWE auth, on-chain SourceRegistry, browser co-sign sessions, encrypted IPFS content, public API + keys)
@@ -55,6 +55,7 @@ Live figures at [`/status`](https://keryx.cc/status); snapshots in [TRACTION.md]
 | Worker session key | Key derived and held in a dedicated Web Worker; tab stores only AES-GCM ciphertext under a non-extractable wrapping key; the worker refuses unauthorised payees and any transaction outside USDC/Gateway | ✓ Done 2026-07-09 | Narrows R3 |
 | On-chain registration live | Registry switched on: creators register from their own wallet, indexer projects events into the cache | ✓ Done 2026-07-10 | Ends server-generated payout keys for new sources |
 | Lit Protocol | Integrate Lit for client-side IPFS key release | Blocked | Closes C2; needs Arc on Lit's chain list |
+| Signed content receipts | Registry owner signs exact full-text hash/bytes/URL; ciphertext-only IPFS + encrypted DB cache | ✓ Done 2026-08-10 | Manifest authenticates content, never payout or pricing |
 
 **Two plan corrections found while building:**
 - *"Web Crypto non-exportable session key"* is not achievable as written. `SubtleCrypto` supports
@@ -296,6 +297,7 @@ Mainnet ← blocked on: Phase 07–10, security audit, legal
 | **v0.9.0** | 2026-08-05 | Exact article-version discovery, x402 purchase, cache, evidence, citation, and receipts | ✓ Shipped |
 | **v0.10.0** | 2026-08-05 | Public article price book, EIP-712 publisher offers, agent effective-price selection, browser verification | ✓ Shipped |
 | **v0.11.0** | 2026-08-08 | Existing creators answer wanted claims with exact article versions and evidence-settled targeted retries | ✓ Shipped |
+| **v0.12.0** | 2026-08-10 | Publisher-signed full text, honest delivery receipts, encrypted caches, attention-bounded source selection | ✓ Shipped |
 | **v1.0.0** | 2026-12-31 | Mainnet + Full Feature Parity | Planned |
 | **v2.0.0** | 2027-Q2 | Stretch Goals (Agent Marketplace, Video, Derivatives) | Backlog |
 

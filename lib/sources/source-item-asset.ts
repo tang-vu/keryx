@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import type { SourceItem, SourceItemIdentity } from "../types";
+import { contentReceipt } from "./content-receipt";
 
 const STOP_WORDS = new Set([
   "a",
@@ -83,6 +84,7 @@ export function sourceItemIdentity(item: SourceItem): SourceItemIdentity {
     itemUrl: item.link,
     contentVersion: sourceItemContentVersion(item),
     ...(item.publishedAt ? { itemPublishedAt: item.publishedAt } : {}),
+    contentReceipt: contentReceipt(item),
   };
 }
 
@@ -98,7 +100,9 @@ export function matchesSourceItemIdentity(
     actual.itemTitle === expected.itemTitle &&
     actual.itemUrl === expected.itemUrl &&
     actual.contentVersion === expected.contentVersion &&
-    actual.itemPublishedAt === expected.itemPublishedAt
+    actual.itemPublishedAt === expected.itemPublishedAt &&
+    (!expected.contentReceipt ||
+      JSON.stringify(actual.contentReceipt) === JSON.stringify(expected.contentReceipt))
   );
 }
 

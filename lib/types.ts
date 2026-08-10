@@ -46,6 +46,42 @@ export interface Author {
   splitWeight: number; // 0..1, weights within a single source sum to 1
 }
 
+/** What the paid body honestly contains. RSS metadata alone must never be advertised as full text. */
+export type ContentDeliveryKind = "full_text" | "excerpt" | "abstract" | "metadata_only";
+
+/** Where the paid body rests before settlement-gated delivery. */
+export type ContentStorageMode = "ipfs_encrypted" | "db_plaintext";
+
+/**
+ * Creator-signed statement about one exact paid body. It authenticates content provenance only:
+ * SourceRegistry remains payout authority and ArticleOffer remains pricing authority.
+ */
+export interface ArticleContentManifest {
+  id: string;
+  sourceId: string;
+  itemId: string;
+  canonicalUrl: string;
+  bodyHash: string;
+  plaintextBytes: number;
+  deliveryKind: ContentDeliveryKind;
+  signer: string;
+  nonce: string;
+  signature: string;
+  createdAt: string;
+}
+
+/** Public, non-secret content receipt metadata carried from discovery through the dispatch. */
+export interface ContentReceiptRef {
+  deliveryKind: ContentDeliveryKind;
+  storageMode: ContentStorageMode;
+  plaintextBytes: number;
+  bodyHash?: string;
+  manifestId?: string;
+  manifestSigner?: string;
+  /** Full public signature proof; it authenticates metadata only and contains no plaintext/key. */
+  manifest?: ArticleContentManifest;
+}
+
 /** A content item belonging to a source (ingested from RSS). Preview is free; content is paid. */
 export interface SourceItem {
   id: string;
@@ -61,6 +97,13 @@ export interface SourceItem {
   itemKeyEnc?: string;    // base64: per-item AES key wrapped with CONTENT_MASTER_KEY (+ 16-byte GCM tag)
   itemIv?: string;        // base64: 12-byte GCM nonce used to encrypt the content
   itemAuthTag?: string;   // base64: 16-byte GCM auth tag for the content ciphertext
+  /** Random AES-GCM nonce for wrapping the item key. Missing means the legacy zero-IV envelope. */
+  itemWrapIv?: string;
+  deliveryKind?: ContentDeliveryKind;
+  storageMode?: ContentStorageMode;
+  plaintextBytes?: number;
+  bodyHash?: string;
+  manifest?: ArticleContentManifest;
 }
 
 /** Immutable identity for the exact article version the agent evaluated and purchased. */
@@ -70,6 +113,7 @@ export interface SourceItemIdentity {
   itemUrl: string;
   contentVersion: string;
   itemPublishedAt?: string;
+  contentReceipt?: ContentReceiptRef;
 }
 
 /**

@@ -26,6 +26,7 @@ import {
   resolveGapOffer,
 } from "@/lib/demand-intent";
 import type { SourceItem } from "@/lib/types";
+import { storeSourceItems } from "@/lib/sources/store-source-item";
 
 type KeryxDB = Awaited<ReturnType<typeof getDb>>;
 
@@ -146,16 +147,6 @@ export async function prepareSourceRegistration(
     const claimed = await claimOnchainIdForExistingSource(db, sessionWallet, canonicalUrl, sid);
     const rowId = claimed?.id ?? sid;
 
-    // Store off-chain metadata so the indexer can merge it when it processes SourceRegistered.
-    // Keyed by the registry id, which is what the indexer has in hand. rssUrl rides along because
-    // it is not on-chain and a freshly-indexed source has no other way to learn its own feed.
-    await db.setSourceMeta(sid, {
-      name: input.name,
-      description: input.description,
-      url: canonicalUrl,
-      rssUrl: input.rssUrl,
-    });
-
     // Ingest RSS items to DB now — keyed by the row the indexer will write, so the agent cache
     // is ready before the indexer processes the SourceRegistered event. Item ids are minted fresh
     // and source_items keys on the id alone, so a re-registration would shelve a second copy of
@@ -165,13 +156,26 @@ export async function prepareSourceRegistration(
       : new Set<string>();
     const unseen = feedItems.filter((it) => !it.link || !seen.has(it.link));
     if (unseen.length > 0) {
-      const items: SourceItem[] = unseen.map((it) => ({
-        ...it,
-        id: crypto.randomUUID(),
-        sourceId: rowId,
-      }));
+      const items: SourceItem[] = await storeSourceItems(
+        unseen.map((it) => ({
+          ...it,
+          id: crypto.randomUUID(),
+          sourceId: rowId,
+        })),
+      );
+      await db.setCached(rowId, "");
       await db.addItems(items);
     }
+
+    // Store metadata only after external content storage succeeds, so a Pinata/key outage cannot
+    // advertise a registration payload whose articles never reached the durable boundary.
+    // Keyed by the registry id, which is what the indexer has in hand; rssUrl is off-chain only.
+    await db.setSourceMeta(sid, {
+      name: input.name,
+      description: input.description,
+      url: canonicalUrl,
+      rssUrl: input.rssUrl,
+    });
 
     // fetchPriceUsdc6: convert USDC float → 6-decimal integer (e.g. 0.002 → 2000).
     const fetchPriceUsdc6 = BigInt(
@@ -209,7 +213,9 @@ export async function prepareSourceRegistration(
           payoutWallet: sessionWallet,
           authors,
           fetchPriceUsdc6: fetchPriceUsdc6.toString(), // JSON can't carry BigInt natively
-          contentCid: "", // Phase 04 will populate this with the IPFS CID
+          // Per-article encrypted CIDs live in source_items; this publication-level registry field
+          // remains empty until a future immutable catalog manifest is registered on-chain.
+          contentCid: "",
           tags: (input.tags ?? []).join(","),
         },
       },

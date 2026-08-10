@@ -8,16 +8,15 @@
  * (empty string) so it never lands in the DB in plaintext. Decryption only happens
  * inside settleThenServe's produce() after x402 settles.
  *
- * When either env var is unset (offline dev), content is stored as plaintext in the
- * DB — same behavior as before this phase.
+ * Explicit offline development may store labeled plaintext. A production or treasury-funded
+ * process fails closed when either encryption dependency is missing.
  */
 
 import { config } from "../config";
 import type { Author, Source, SourceItem } from "../types";
 import type { KeryxDB } from "../db";
 import { getOrCreateWallet } from "./wallet-store";
-import { hasPinata, pinEncrypted } from "../ipfs/pinata-client";
-import { encryptContent, hasContentKey } from "../ipfs/content-crypto";
+import { storeSourceItems } from "./store-source-item";
 
 export interface CreateSourceInput {
   name: string;
@@ -80,43 +79,16 @@ export async function createSource(
     createdAt: new Date().toISOString(),
   };
 
+  // Complete every external encryption/pin operation before publishing the source row. A missing
+  // production storage dependency must not leave a half-registered publication with no articles.
+  const items: SourceItem[] = input.items?.length
+    ? await storeSourceItems(
+      input.items.map((it) => ({ ...it, id: crypto.randomUUID(), sourceId: id })),
+    )
+    : [];
+
   await db.upsertSource(source);
-
-  if (input.items?.length) {
-    const ipfsActive = hasPinata() && hasContentKey();
-    const items: SourceItem[] = await Promise.all(
-      input.items.map(async (it) => {
-        const itemId = crypto.randomUUID();
-        if (!ipfsActive || !it.content) {
-          // Offline dev or empty content — store plaintext in DB as before.
-          return { ...it, id: itemId, sourceId: id };
-        }
-
-        try {
-          const envelope = encryptContent(it.content);
-          const cipherBuf = Buffer.from(envelope.cipherB64, "base64");
-          const cid = await pinEncrypted(cipherBuf, `keryx-item-${itemId}.enc`);
-          // Plaintext content cleared — it lives on IPFS as ciphertext only.
-          return {
-            ...it,
-            id: itemId,
-            sourceId: id,
-            content: "",       // never stored in DB when IPFS path is active
-            ipfsCid: cid,
-            itemKeyEnc: envelope.wrappedKeyB64,
-            itemIv: envelope.ivB64,
-            itemAuthTag: envelope.authTagB64,
-          };
-        } catch (err) {
-          // Encryption/pin failure: fall back to plaintext DB storage and log.
-          // Content is still served — just not IPFS-gated for this item.
-          console.warn(`[ipfs] encrypt+pin failed for item ${itemId}, falling back to DB:`, err);
-          return { ...it, id: itemId, sourceId: id };
-        }
-      }),
-    );
-    await db.addItems(items);
-  }
+  if (items.length) await db.addItems(items);
 
   return source;
 }

@@ -377,6 +377,7 @@ export async function* runAgent(
   const ranked = [...internalProposed].sort(
     (a, b) => b.expectedValue / (b.price || 1e-9) - a.expectedValue / (a.price || 1e-9),
   );
+  let attentionUsed = 0;
   for (const r of ranked) {
     // A CACHE proposal against a copy the source has published past is not a free read of that
     // source. Charge for it — here, before the budget guard, so the re-read is reserved like any
@@ -390,6 +391,28 @@ export async function* runAgent(
             rationale: `${r.rationale} — no cache exists for this exact content version, so buying a fresh read.`,
           }
         : r;
+    if (
+      d.action === "CACHE" &&
+      ((d.targets?.length ?? 0) === 0 || d.expectedValue < config.minCacheExpectedValue)
+    ) {
+      finalDecisions.push({
+        ...d,
+        action: "SKIP",
+        rationale: `${d.rationale} — cached bytes are free, but this read does not clear the attention gate (EV ${d.expectedValue.toFixed(2)}, minimum ${config.minCacheExpectedValue.toFixed(2)}, with a required claim target).`,
+      });
+      continue;
+    }
+    if (
+      (d.action === "BUY" || d.action === "CACHE") &&
+      attentionUsed >= config.maxAttentionSources
+    ) {
+      finalDecisions.push({
+        ...d,
+        action: "SKIP",
+        rationale: `${d.rationale} — the ${config.maxAttentionSources}-source attention budget is full, so lower-ranked evidence is skipped.`,
+      });
+      continue;
+    }
     if (d.action === "BUY") {
       if (spentTolls + d.price > fetchBudget + 1e-9) {
         finalDecisions.push({
@@ -401,6 +424,7 @@ export async function* runAgent(
       }
       spentTolls += d.price; // reserve
     }
+    if (d.action === "BUY" || d.action === "CACHE") attentionUsed++;
     finalDecisions.push(d);
   }
 
@@ -538,6 +562,10 @@ export async function* runAgent(
           }
           continue;
         }
+        // This is a definite pre-submission failure: typed pending/settled errors above are the
+        // only post-authorization exits. Release the query-local reservation so another source can
+        // fill the evidence gap without weakening the browser grant's independent atomic cap.
+        spentTolls = Math.max(0, round(spentTolls - asset.priceUsdc));
         yield emit("fetch", `Couldn't buy ${assetLabel} (${reason}) — skipping it, continuing with what's read.`);
         continue;
       }
@@ -568,6 +596,9 @@ export async function* runAgent(
   // potentially buy additional previously-skipped sources to fill gaps. Multi-pass
   // reasoning: the agent "thinks twice" about whether its initial buy/skip choices
   // left any sub-claim unsupported, and spends remaining budget to close the gap.
+  // The selection pass reserves context slots, but failed/stop-early fetches never entered the
+  // synthesis context and therefore must not block a useful gap-filling read.
+  attentionUsed = gathered.length;
   const gatheredIds = new Set(gathered.map((g) => g.assetId ?? g.sourceId));
   let remainingBudget = fetchBudget - spentTolls;
 
@@ -577,6 +608,13 @@ export async function* runAgent(
     yield emit("reevaluate", `All sub-claims already well-covered (sufficiency passed with 0 gaps) — skipping re-evaluation to save latency.`);
   } else if (gathered.length > 0 && config.reevaluateRounds > 0) {
     for (let round = 0; round < config.reevaluateRounds; round++) {
+      if (attentionUsed >= config.maxAttentionSources) {
+        yield emit(
+          "reevaluate",
+          `Attention budget is full at ${config.maxAttentionSources} source(s); no broader context will be purchased.`,
+        );
+        break;
+      }
       const skipped = finalDecisions
         .filter(
           (d) =>
@@ -632,6 +670,13 @@ export async function* runAgent(
 
       // Buy additional sources the engine recommended to fill coverage gaps
       for (const recId of reeval.recommendedIds) {
+        if (attentionUsed >= config.maxAttentionSources) {
+          yield emit(
+            "reevaluate",
+            `Attention budget reached ${config.maxAttentionSources} source(s); stopping gap expansion.`,
+          );
+          break;
+        }
         const asset = assetById.get(recId);
         const source = asset?.source;
         // Guard against an engine recommending a source we already read (duplicate marker +
@@ -671,6 +716,7 @@ export async function* runAgent(
             marker,
             text: content,
           });
+          attentionUsed++;
           gatheredIds.add(asset.candidate.id);
           remainingBudget -= asset.priceUsdc;
           spentTolls += asset.priceUsdc;
@@ -929,6 +975,7 @@ export async function* runAgent(
         itemUrl: g.itemUrl,
         contentVersion: g.contentVersion,
         itemPublishedAt: g.itemPublishedAt,
+        contentReceipt: g.contentReceipt,
         weight: attribution.weight,
         reward: rewards[index] ?? 0,
         rationale: attribution.rationale,
@@ -966,6 +1013,7 @@ export async function* runAgent(
                 itemUrl: c.itemUrl,
                 contentVersion: c.contentVersion,
                 ...(c.itemPublishedAt ? { itemPublishedAt: c.itemPublishedAt } : {}),
+                ...(c.contentReceipt ? { contentReceipt: c.contentReceipt } : {}),
               }
             : undefined;
         const payment = await gateway.payCitation({

@@ -82,6 +82,7 @@ export function buildEvidenceLedger(input: {
       itemUrl: source.itemUrl,
       contentVersion: source.contentVersion,
       itemPublishedAt: source.itemPublishedAt,
+      contentReceipt: source.contentReceipt,
       quote,
       support,
       qualifiesForReward:

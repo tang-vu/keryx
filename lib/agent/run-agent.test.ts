@@ -1067,6 +1067,72 @@ describe("runAgent — article-level economics", () => {
     expect(run.citations.length).toBeGreaterThan(0); // a cached read still earns a citation reward
   });
 
+  it("skips low-value cached content because free bytes still consume attention", async () => {
+    const source = makeSource({ id: "a", fetchPrice: 0.004 });
+    const engine = fakeEngine({
+      decide: () => [{ ...cacheDecision("a"), expectedValue: 0.2 }],
+    });
+    const d = deps([source], engine, fakeGateway(), {
+      cachedAt: cache("a"),
+    });
+
+    const { run } = await drive({ question: "q", budget: 0.05 }, d);
+
+    expect(run.decisions[0]).toMatchObject({ action: "SKIP" });
+    expect(run.decisions[0]?.rationale).toContain("attention gate");
+    expect(run.citations).toEqual([]);
+  });
+
+  it("caps the synthesis context independently from the money budget", async () => {
+    const sources = Array.from({ length: config.maxAttentionSources + 1 }, (_, index) =>
+      makeSource({ id: `s${index}`, fetchPrice: 0.001 }),
+    );
+    const engine = fakeEngine({
+      decide: () => sources.map((source) => cacheDecision(source.id, source.name)),
+      sufficiency: (input) => ({
+        sufficient: false,
+        rationale: "inspect admitted context",
+        perClaim: input.subClaims.map((claim) => ({ claim, coverage: 0, coveredBy: [] })),
+      }),
+      synthesize: () => ({ answer: "No supported answer.", citedMarkers: [], evidence: [] }),
+    });
+    const d = deps(sources, engine, fakeGateway(), {
+      cachedAt: Object.fromEntries(sources.map((source) => [source.id, "2026-07-20T00:00:00.000Z"])),
+    });
+
+    const { run } = await drive({ question: "q", budget: 0.05 }, d);
+
+    expect(run.decisions.filter((decision) => decision.action === "CACHE")).toHaveLength(
+      config.maxAttentionSources,
+    );
+    expect(
+      run.decisions.some(
+        (decision) => decision.action === "SKIP" && decision.rationale.includes("attention budget is full"),
+      ),
+    ).toBe(true);
+  });
+
+  it("releases failed context and query-budget reservations for a gap-filling source", async () => {
+    const sources = Array.from({ length: config.maxAttentionSources + 1 }, (_, index) =>
+      makeSource({ id: `s${index}`, fetchPrice: 0.001 }),
+    );
+    const engine = fakeEngine({
+      sufficiency: () => ({ sufficient: false, rationale: "one source failed" }),
+      reevaluate: () => ({
+        shouldBuyMore: true,
+        recommendedIds: [`s${config.maxAttentionSources}`],
+        rationale: "replace the failed read",
+      }),
+    });
+    const gw = fakeGateway({ failOn: "s0" });
+    const d = deps(sources, engine, gw);
+
+    await drive({ question: "q", budget: 0.05 }, d);
+
+    expect(gw.fetchCalls).toContain(`s${config.maxAttentionSources}`);
+    expect(gw.fetchCalls).toHaveLength(config.maxAttentionSources);
+  });
+
   it("skips rather than overspends when exact article versions are not cached", async () => {
     // fetchBudget on 0.01 is 0.005; two uncached article reads at 0.004 cannot both be bought.
     const sources = ["a", "b"].map((id) => makeSource({ id, fetchPrice: 0.004 }));

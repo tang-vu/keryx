@@ -1,13 +1,27 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-08-09
-**Current Version:** 0.10.0
+**Last Updated:** 2026-08-10
+**Current Version:** 0.12.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
 
 ---
 
 ## Unreleased
+
+### Signed full-text receipts and attention-bounded reading (2026-08-10)
+
+- Added a creator-owned EIP-712 full-text vault: the live registry owner signs the exact article
+  URL, SHA-256 body hash, UTF-8 byte count, delivery kind, and nonce before Keryx encrypts and pins
+  it. Public discovery/citations expose only a content receipt, never the body or payment authority.
+- Made RSS disclosure honest (`full_text` / `excerpt` / `abstract` / `metadata_only`) and routed
+  registration, on-chain preparation, and feed refresh through one fail-closed encrypted-storage
+  boundary.
+- Encrypted decrypted-content caches at rest, sealed legacy rows on boot, removed Supabase public
+  read policies for paid storage, and replaced the reused AES-GCM key-wrap nonce with random v2
+  nonces while preserving legacy reads.
+- Added a separate four-source attention budget. Cached reads need a claim target and minimum
+  expected value, and re-evaluation cannot grow synthesis context past the same visible cap.
 
 ### Failed Circle transfers safely restore browser capacity (2026-08-09)
 

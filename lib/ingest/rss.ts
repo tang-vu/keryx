@@ -64,17 +64,31 @@ type ParsedFeed = Awaited<ReturnType<typeof parser.parseString>>;
 
 function toIngestedFeed(feed: ParsedFeed, rssUrl: string, max: number): IngestedFeed {
   const items = (feed.items ?? []).slice(0, max).map((it) => {
-    const full = stripHtml(
-      (it as { "content:encoded"?: string })["content:encoded"] ??
-        it.content ??
-        it.contentSnippet ??
-        "",
+    const encoded = stripHtml(
+      (it as { "content:encoded"?: string })["content:encoded"] ?? "",
     );
-    const summary = stripHtml(it.contentSnippet ?? it.content ?? "").slice(0, 280);
+    const atomContent = stripHtml(it.content ?? "");
+    const snippet = stripHtml(it.contentSnippet ?? "");
+    const full = stripHtml(
+      encoded || atomContent || snippet,
+    );
+    const summary = (snippet || atomContent).slice(0, 280);
+    // RSS has no universal "this is the complete article" bit. Treat a substantial
+    // content:encoded body as full text, a longer Atom body as an excerpt, and the usual short
+    // description/snippet as an abstract. Publishers can later replace any row with a signed
+    // full-text manifest; until then the market tells buyers exactly what it has.
+    const deliveryKind: SourceItem["deliveryKind"] = encoded.length >= 800
+      ? "full_text"
+      : full.length === 0
+        ? "metadata_only"
+        : full.length > Math.max(500, summary.length * 1.5)
+          ? "excerpt"
+          : "abstract";
     return {
       title: it.title?.trim() || "Untitled",
       summary: summary || full.slice(0, 280),
       content: full || summary,
+      deliveryKind,
       link: it.link ?? "",
       publishedAt: isoPublishedAt(it.isoDate, it.pubDate),
     };

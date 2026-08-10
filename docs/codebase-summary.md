@@ -1,6 +1,6 @@
 # Keryx Codebase Summary
 
-**Version:** 0.10.0 (creator-signed article offer market, updated 2026-08-05)
+**Version:** 0.12.0 (signed full-text receipts and attention budgets, updated 2026-08-10)
 
 This document maps the codebase structure for the non-custodial Keryx dApp. Organized by domain; files < 200 LOC per kebab-case naming standard.
 
@@ -147,10 +147,12 @@ Encrypted content on IPFS. Pinata client + server-side AES-256-GCM encryption/de
 | File | Purpose |
 |------|---------|
 | `pinata-client.ts` | Upload + retrieve from Pinata IPFS (app-managed gateway). |
-| `content-crypto.ts` | AES-256-GCM encrypt (upload) + decrypt (server-side, post-payment-verify). |
+| `content-crypto.ts` | AES-256-GCM encrypt/decrypt with per-envelope content and key-wrap nonces; reads legacy envelopes. |
 | `index.ts` | Public interface. |
 
-**Design:** Content uploaded encrypted to IPFS (ciphertext only). Plaintext decryption occurs inside x402 `produce()` callback after payment verification. Free preview served plaintext.
+**Design:** Content uploaded encrypted to IPFS (ciphertext only). Plaintext decryption occurs inside
+x402 `produce()` after payment verification, and any decrypted cache is encrypted again before it
+reaches SQLite/Supabase. Free previews and public content receipts contain metadata only.
 
 ### `lib/sources/` + `app/api/source/`
 
@@ -159,6 +161,10 @@ metadata-only relevance selection. `/api/source/[id]/item/[itemId]` binds that v
 402 challenge and serves only the paid article after settlement. The older `/api/source/[id]`
 bundle route remains for sources that do not yet have item rows. SourceRegistry controls the
 creator, active state, list-price ceiling and payout wallet; article metadata controls none of them.
+`store-source-item.ts` is the shared registration/refresh storage boundary. `content-receipt.ts`
+projects honest public delivery/storage metadata. `article-content-manifest.ts` verifies a registry
+creator's EIP-712 signature over an exact full-text body, and the creator profile's full-text vault
+encrypts/pins it without giving the manifest pricing or payout authority.
 
 ### `lib/offers/` + `/market` + `app/api/offers/`
 
@@ -191,6 +197,8 @@ Swappable SQLite (dev) / Supabase (prod) via `KeryxDB` interface.
 - `reasoning_circuits`: shared provider-step failure streak, cooldown and half-open probe lease
 - `gap_intents`: creator offer queue, bounded retry lease, evidence/settlement outcome
 - `article_offers`: one current EIP-712 price revision per exact article version
+- `source_items`: encrypted article envelope plus delivery/hash/publisher-manifest receipt metadata
+- `cache_items`: encrypted-at-rest post-settlement working copies (explicit labeled plaintext offline)
 
 ---
 
@@ -206,6 +214,7 @@ RESTful endpoints for agent, sources, metrics, API keys.
 | `/agent/ask` | x402 challenge | A2A: other agents buy Keryx's research per-call. |
 | `/sources` | GET: public, POST: creator JWT | List sources / register new source. |
 | `/source/[id]` | x402 challenge | Fetch content (returns 402 if unpaid, plaintext after x402 settle). |
+| `/creator/[id]/content` | creator JWT + registry owner | List receipt metadata or publish signed encrypted full text. |
 | `/cite/[id]` | x402 challenge | Citation reward endpoint (dynamic price). |
 | `/keys` | SIWE JWT | Mint / verify API keys. |
 | `/payments` | SIWE JWT | Fetch user's payment history + earnings. |
@@ -241,6 +250,8 @@ Centralized config. Sources: env vars, defaults, offline fallbacks.
 | `registryDeployBlock` | number | Indexer start block |
 | `pinataJwt` | string | Pinata API key |
 | `contentMasterKey` | hex | AES-256-GCM encryption key |
+| `maxAttentionSources` | number | Maximum paid + cached sources admitted to synthesis |
+| `minCacheExpectedValue` | number | Minimum EV for a claim-targeted cached read |
 | `forceOffline` | boolean | Run heuristic + no settlement |
 | `devWallets` | string[] | Env allowlist for dev role |
 
@@ -339,7 +350,7 @@ Shared TypeScript interfaces for agent, payments, registry, DB.
 | `tailwind.config.ts` | Tailwind setup + Keryx Mint colors. |
 | `hardhat.config.ts` | Hardhat: Arc testnet, viem, test timeout. |
 | `.env.example` | Template env vars. |
-| `package.json` | v0.4.0, deps (Next 16, React 19, wagmi, viem, `@circle-fin/x402-batching`, `@circle-fin/unified-balance-kit`, `@x402/*` v2, pinata, siwe, jose, rate-limiter-flexible, tailwindcss, hardhat). |
+| `package.json` | v0.12.0, deps (Next 16, React 19, wagmi, viem, `@circle-fin/x402-batching`, `@circle-fin/unified-balance-kit`, `@x402/*` v2, pinata, siwe, jose, rate-limiter-flexible, tailwindcss, hardhat). |
 
 ---
 

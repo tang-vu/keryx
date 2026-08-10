@@ -7,6 +7,7 @@ import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
 import { cn } from "@/lib/utils";
 import { ListingControlsPanel } from "./listing-controls-panel";
 import { ArticleOffersPanel } from "./article-offers-panel";
+import { ArticleContentPanel } from "./article-content-panel";
 import { NotifyWebhookPanel } from "./notify-webhook-panel";
 import { NotifyEmailPanel } from "./notify-email-panel";
 import { PreviewDepthPanel } from "./preview-depth-panel";
@@ -141,6 +142,9 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
 
       {/* Owner-only: price-per-read dial + permanent delist (renders nothing for non-owners) */}
       <ListingControlsPanel creatorId={creatorId} />
+
+      {/* Owner-only: publisher-signed full text, encrypted before durable storage */}
+      <ArticleContentPanel creatorId={creatorId} />
 
       {/* Owner-only: signed, version-bound article discounts */}
       <ArticleOffersPanel creatorId={creatorId} />

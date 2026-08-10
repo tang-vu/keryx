@@ -76,6 +76,21 @@ describe("refreshSourceFeed", () => {
     expect(items).toHaveLength(0);
   });
 
+  it("writes nothing when the encrypted-storage boundary rejects the new batch", async () => {
+    const { db, items } = fakeDb();
+    const out = await refreshSourceFeed(
+      db,
+      SRC,
+      async () => feedOf("https://blog.example/2"),
+      async () => {
+        throw new Error("Pinata unavailable");
+      },
+    );
+    expect(out).toMatchObject({ added: 0, total: 0 });
+    expect(out.error).toContain("content storage failed: Pinata unavailable");
+    expect(items).toHaveLength(0);
+  });
+
   it("includes the transport cause below Undici's generic fetch failure", async () => {
     const { db } = fakeDb();
     const out = await refreshSourceFeed(db, SRC, async () => {

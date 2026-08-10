@@ -5,6 +5,36 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-46** · Content authenticity/Confidentiality · *A paid-body receipt proves what is stored, while
+SourceRegistry remains the only payout authority.* RSS ingest now labels bodies conservatively as
+`full_text`, `excerpt`, `abstract`, or `metadata_only`; it never calls an ordinary snippet full
+text. A registry creator may replace one indexed article with a full body and sign EIP-712 over
+`sourceId + itemId + canonicalUrl + SHA-256 bodyHash + plaintextBytes + deliveryKind + nonce`.
+The owner API refreshes registry authority, verifies the signature against the exact bytes, then
+encrypts and pins the body before committing its CID/envelope/manifest. The public receipt carries
+only delivery/storage kind, byte count, hash, and manifest identity. It cannot set price, `payTo`,
+active state, or author splits.
+
+Every registration and refresh path now crosses one content-storage boundary. Production and
+treasury-funded processes fail closed when Pinata or the content key is absent; explicit offline
+development remains labeled plaintext. Decrypted caches are envelope-encrypted in SQLite/Supabase,
+legacy cache rows are sealed at initialization, and direct public reads of `source_items` and
+`cache_items` are removed. Key wrapping now uses a fresh AES-GCM nonce per envelope while retaining
+read compatibility with legacy zero-nonce rows. Why: the old RSS path sold `contentSnippet` as full
+text, refresh/registry paths bypassed encryption, public DB policies exposed paid storage, cached
+plaintext survived settlement, and repeated GCM nonces under one master key were cryptographically
+unsafe. Reversible: medium (manifest/receipt columns are additive; ciphertext migration is
+one-way unless decrypted with the retained server key).
+
+**D-45** · Reasoning/Attention · *Free cache reuse still spends an explicit attention budget.* The
+orchestrator admits at most four paid-or-cached sources into one synthesis context by default,
+ranked by expected value per dollar. A `CACHE` proposal must name at least one decomposed claim and
+clear a configurable expected-value floor; re-evaluation cannot expand past the same cap. Every
+rejection is surfaced as a normal SKIP rationale, independent of the USDC fetch budget. Why: zero
+toll does not make text free to read—irrelevant cached bodies consume model context, increase
+latency, and dilute evidence even though they do not move money. Reversible: easy (two environment
+thresholds; no payment or persistence authority changes).
+
 **D-44** · Settlement/Capacity · *A Circle-terminal failed transfer closes the pending receipt,
 but may release browser capacity only into the exact grant generation that reserved it.* Each
 create/recover operation assigns a fresh opaque `grantEpoch`; a browser pending payment retains

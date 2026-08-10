@@ -73,6 +73,18 @@ export const config = {
   // and may buy additional previously-skipped sources to fill gaps. 0 disables re-evaluation
   // (single-pass behavior, pre-v0.4). Default 1 keeps latency low while still showing multi-pass.
   reevaluateRounds: Math.round(num(process.env.KERYX_REEVALUATE_ROUNDS, 1)),
+  // A source consumes scarce model context even when its bytes came from a free cache. Bound total
+  // reads independently from USDC so a cheap/noisy catalog cannot dilute the evidence set.
+  maxAttentionSources: Math.max(
+    1,
+    Math.round(num(process.env.KERYX_MAX_ATTENTION_SOURCES, 4)),
+  ),
+  // Cached content is free in money, not in attention. Only reuse it when the engine predicts
+  // material value and names at least one sub-claim it can support.
+  minCacheExpectedValue: Math.min(
+    1,
+    Math.max(0, num(process.env.KERYX_MIN_CACHE_EXPECTED_VALUE, 0.45)),
+  ),
 
   // ── Open x402 marketplace discovery ──
   // When on, the agent probes the live Circle x402 service bazaar (`circle services search`) during

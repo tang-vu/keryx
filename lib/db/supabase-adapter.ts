@@ -36,6 +36,13 @@ import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 import { normalizePreviewDepth } from "../sources/preview-depth";
 import { assertPaymentSettlementState } from "../payments/payment-state";
+import { hasContentKey } from "../ipfs/content-crypto";
+import {
+  cacheEncryptionRequired,
+  isEncryptedCacheValue,
+  openCacheText,
+  sealCacheText,
+} from "../sources/content-cache";
 import {
   calculateDashboardMetrics,
   runEvidenceMetrics,
@@ -75,7 +82,23 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async init(): Promise<void> {
-    /* schema applied via migrations */
+    // Schema is applied via migrations. Seal legacy plaintext caches before accepting traffic;
+    // service-role access is required and migration 0033 removes the old public-read policy.
+    if (cacheEncryptionRequired() && !hasContentKey()) {
+      throw new Error("CONTENT_MASTER_KEY is required for paid-content cache access in real mode");
+    }
+    if (hasContentKey()) {
+      const rows = await this.allRows("cache_items", "source_id,text", "source_id");
+      for (const row of rows) {
+        const text = typeof row.text === "string" ? row.text : "";
+        const sourceId = typeof row.source_id === "string" ? row.source_id : "";
+        if (!sourceId || !text || isEncryptedCacheValue(text)) continue;
+        await this.sb
+          .from("cache_items")
+          .update({ text: sealCacheText(text) })
+          .eq("source_id", sourceId);
+      }
+    }
   }
 
   /** Supabase projects commonly cap one PostgREST response at 1,000 rows. Metrics are all-time,
@@ -252,6 +275,16 @@ export class SupabaseAdapter implements KeryxDB {
         item_key_enc: i.itemKeyEnc ?? null,
         item_iv: i.itemIv ?? null,
         item_auth_tag: i.itemAuthTag ?? null,
+        item_wrap_iv: i.itemWrapIv ?? null,
+        delivery_kind: i.deliveryKind ?? null,
+        storage_mode: i.storageMode ?? null,
+        plaintext_bytes: i.plaintextBytes ?? null,
+        body_hash: i.bodyHash ?? null,
+        manifest_id: i.manifest?.id ?? null,
+        manifest_signer: i.manifest?.signer ?? null,
+        manifest_nonce: i.manifest?.nonce ?? null,
+        manifest_signature: i.manifest?.signature ?? null,
+        manifest_created_at: i.manifest?.createdAt ?? null,
       })),
     );
   }
@@ -274,6 +307,12 @@ export class SupabaseAdapter implements KeryxDB {
       itemKeyEnc: r.item_key_enc ?? undefined,
       itemIv: r.item_iv ?? undefined,
       itemAuthTag: r.item_auth_tag ?? undefined,
+      itemWrapIv: r.item_wrap_iv ?? undefined,
+      deliveryKind: r.delivery_kind ?? undefined,
+      storageMode: r.storage_mode ?? undefined,
+      plaintextBytes: r.plaintext_bytes ?? undefined,
+      bodyHash: r.body_hash ?? undefined,
+      manifest: rowToArticleContentManifest(r),
     }));
   }
 
@@ -527,7 +566,7 @@ export class SupabaseAdapter implements KeryxDB {
       .select("text")
       .eq("source_id", sourceId)
       .maybeSingle();
-    return data?.text ?? null;
+    return data?.text ? openCacheText(data.text) : null;
   }
 
   async getCachedAt(sourceId: string): Promise<string | null> {
@@ -542,7 +581,11 @@ export class SupabaseAdapter implements KeryxDB {
   async setCached(sourceId: string, text: string): Promise<void> {
     await this.sb
       .from("cache_items")
-      .upsert({ source_id: sourceId, text, updated_at: new Date().toISOString() });
+      .upsert({
+        source_id: sourceId,
+        text: sealCacheText(text),
+        updated_at: new Date().toISOString(),
+      });
   }
 
   async saveQueryRun(run: QueryRun): Promise<void> {
@@ -1259,6 +1302,34 @@ function rowToSourceItem(r: Record<string, unknown>): SourceItem {
     itemKeyEnc: (r.item_key_enc as string) ?? undefined,
     itemIv: (r.item_iv as string) ?? undefined,
     itemAuthTag: (r.item_auth_tag as string) ?? undefined,
+    itemWrapIv: (r.item_wrap_iv as string) ?? undefined,
+    deliveryKind: (r.delivery_kind as SourceItem["deliveryKind"]) ?? undefined,
+    storageMode: (r.storage_mode as SourceItem["storageMode"]) ?? undefined,
+    plaintextBytes:
+      r.plaintext_bytes === null || r.plaintext_bytes === undefined
+        ? undefined
+        : Number(r.plaintext_bytes),
+    bodyHash: (r.body_hash as string) ?? undefined,
+    manifest: rowToArticleContentManifest(r),
+  };
+}
+
+function rowToArticleContentManifest(
+  r: Record<string, unknown>,
+): SourceItem["manifest"] {
+  if (!r.manifest_id || !r.manifest_signature || !r.manifest_signer) return undefined;
+  return {
+    id: String(r.manifest_id),
+    sourceId: String(r.source_id),
+    itemId: String(r.id),
+    canonicalUrl: String(r.link ?? ""),
+    bodyHash: String(r.body_hash ?? ""),
+    plaintextBytes: Number(r.plaintext_bytes ?? 0),
+    deliveryKind: (r.delivery_kind as NonNullable<SourceItem["deliveryKind"]>) ?? "abstract",
+    signer: String(r.manifest_signer),
+    nonce: String(r.manifest_nonce ?? ""),
+    signature: String(r.manifest_signature),
+    createdAt: String(r.manifest_created_at ?? ""),
   };
 }
 

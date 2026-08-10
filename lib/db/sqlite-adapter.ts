@@ -37,6 +37,13 @@ import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 import { normalizePreviewDepth } from "../sources/preview-depth";
 import { assertPaymentSettlementState } from "../payments/payment-state";
+import { hasContentKey } from "../ipfs/content-crypto";
+import {
+  cacheEncryptionRequired,
+  isEncryptedCacheValue,
+  openCacheText,
+  sealCacheText,
+} from "../sources/content-cache";
 import {
   calculateDashboardMetrics,
   runEvidenceMetrics,
@@ -80,7 +87,10 @@ CREATE TABLE IF NOT EXISTS sync_state (
 CREATE TABLE IF NOT EXISTS source_items (
   id TEXT PRIMARY KEY, source_id TEXT, title TEXT, summary TEXT, content TEXT,
   link TEXT, published_at TEXT,
-  ipfs_cid TEXT, item_key_enc TEXT, item_iv TEXT, item_auth_tag TEXT
+  ipfs_cid TEXT, item_key_enc TEXT, item_iv TEXT, item_auth_tag TEXT, item_wrap_iv TEXT,
+  delivery_kind TEXT, storage_mode TEXT, plaintext_bytes INTEGER, body_hash TEXT,
+  manifest_id TEXT, manifest_signer TEXT, manifest_nonce TEXT, manifest_signature TEXT,
+  manifest_created_at TEXT
 );
 -- Every read of this table is "one source, newest first" — discovery, the freshness counts, and the
 -- ingest dedupe pass. Safe to declare beside the table: both columns are original, so this is not a
@@ -248,6 +258,30 @@ export class SqliteAdapter implements KeryxDB {
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");
     this.db.exec(SCHEMA);
     this.ensureColumns();
+    if (cacheEncryptionRequired() && !hasContentKey()) {
+      throw new Error("CONTENT_MASTER_KEY is required for paid-content cache access in real mode");
+    }
+    this.encryptLegacyCacheRows();
+  }
+
+  /** Seal every pre-v1 plaintext cache row in one transaction before the server accepts traffic. */
+  private encryptLegacyCacheRows(): void {
+    if (!hasContentKey()) return;
+    const rows = this.db.prepare(`SELECT source_id,text FROM cache_items`).all() as {
+      source_id: string;
+      text: string | null;
+    }[];
+    const legacy = rows.filter((row) => row.text && !isEncryptedCacheValue(row.text));
+    if (legacy.length === 0) return;
+    const update = this.db.prepare(`UPDATE cache_items SET text=? WHERE source_id=?`);
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      for (const row of legacy) update.run(sealCacheText(row.text!), row.source_id);
+      this.db.exec("COMMIT");
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
   }
 
   /**
@@ -446,6 +480,16 @@ export class SqliteAdapter implements KeryxDB {
     if (!itemCols.has("item_key_enc")) this.db.exec(`ALTER TABLE source_items ADD COLUMN item_key_enc TEXT`);
     if (!itemCols.has("item_iv")) this.db.exec(`ALTER TABLE source_items ADD COLUMN item_iv TEXT`);
     if (!itemCols.has("item_auth_tag")) this.db.exec(`ALTER TABLE source_items ADD COLUMN item_auth_tag TEXT`);
+    if (!itemCols.has("item_wrap_iv")) this.db.exec(`ALTER TABLE source_items ADD COLUMN item_wrap_iv TEXT`);
+    if (!itemCols.has("delivery_kind")) this.db.exec(`ALTER TABLE source_items ADD COLUMN delivery_kind TEXT`);
+    if (!itemCols.has("storage_mode")) this.db.exec(`ALTER TABLE source_items ADD COLUMN storage_mode TEXT`);
+    if (!itemCols.has("plaintext_bytes")) this.db.exec(`ALTER TABLE source_items ADD COLUMN plaintext_bytes INTEGER`);
+    if (!itemCols.has("body_hash")) this.db.exec(`ALTER TABLE source_items ADD COLUMN body_hash TEXT`);
+    if (!itemCols.has("manifest_id")) this.db.exec(`ALTER TABLE source_items ADD COLUMN manifest_id TEXT`);
+    if (!itemCols.has("manifest_signer")) this.db.exec(`ALTER TABLE source_items ADD COLUMN manifest_signer TEXT`);
+    if (!itemCols.has("manifest_nonce")) this.db.exec(`ALTER TABLE source_items ADD COLUMN manifest_nonce TEXT`);
+    if (!itemCols.has("manifest_signature")) this.db.exec(`ALTER TABLE source_items ADD COLUMN manifest_signature TEXT`);
+    if (!itemCols.has("manifest_created_at")) this.db.exec(`ALTER TABLE source_items ADD COLUMN manifest_created_at TEXT`);
 
     // Exact wanted-response identity. Legacy rows remain NULL and retain their generic retry.
     const gapCols = new Set(
@@ -596,13 +640,19 @@ export class SqliteAdapter implements KeryxDB {
   async addItems(items: SourceItem[]): Promise<void> {
     const stmt = this.db.prepare(
       `INSERT OR REPLACE INTO source_items
-         (id,source_id,title,summary,content,link,published_at,ipfs_cid,item_key_enc,item_iv,item_auth_tag)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+         (id,source_id,title,summary,content,link,published_at,ipfs_cid,item_key_enc,item_iv,item_auth_tag,
+          item_wrap_iv,delivery_kind,storage_mode,plaintext_bytes,body_hash,manifest_id,manifest_signer,
+          manifest_nonce,manifest_signature,manifest_created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     );
     for (const i of items)
       stmt.run(
         i.id, i.sourceId, i.title, i.summary, i.content, i.link, i.publishedAt ?? null,
         i.ipfsCid ?? null, i.itemKeyEnc ?? null, i.itemIv ?? null, i.itemAuthTag ?? null,
+        i.itemWrapIv ?? null, i.deliveryKind ?? null, i.storageMode ?? null,
+        i.plaintextBytes ?? null, i.bodyHash ?? null, i.manifest?.id ?? null,
+        i.manifest?.signer ?? null, i.manifest?.nonce ?? null, i.manifest?.signature ?? null,
+        i.manifest?.createdAt ?? null,
       );
   }
 
@@ -622,6 +672,15 @@ export class SqliteAdapter implements KeryxDB {
       itemKeyEnc: (r.item_key_enc as string) ?? undefined,
       itemIv: (r.item_iv as string) ?? undefined,
       itemAuthTag: (r.item_auth_tag as string) ?? undefined,
+      itemWrapIv: (r.item_wrap_iv as string) ?? undefined,
+      deliveryKind: (r.delivery_kind as SourceItem["deliveryKind"]) ?? undefined,
+      storageMode: (r.storage_mode as SourceItem["storageMode"]) ?? undefined,
+      plaintextBytes:
+        r.plaintext_bytes === null || r.plaintext_bytes === undefined
+          ? undefined
+          : Number(r.plaintext_bytes),
+      bodyHash: (r.body_hash as string) ?? undefined,
+      manifest: rowToArticleContentManifest(r),
     }));
   }
 
@@ -756,7 +815,7 @@ export class SqliteAdapter implements KeryxDB {
 
   async getCached(sourceId: string): Promise<string | null> {
     const row = this.db.prepare(`SELECT text FROM cache_items WHERE source_id=?`).get(sourceId);
-    return row ? (row.text as string) : null;
+    return row ? openCacheText(row.text as string) : null;
   }
 
   async getCachedAt(sourceId: string): Promise<string | null> {
@@ -771,7 +830,7 @@ export class SqliteAdapter implements KeryxDB {
       .prepare(
         `INSERT OR REPLACE INTO cache_items (source_id,text,updated_at) VALUES (?,?,?)`,
       )
-      .run(sourceId, text, new Date().toISOString());
+      .run(sourceId, sealCacheText(text), new Date().toISOString());
   }
 
   async getSyncState(key: string): Promise<string | null> {
@@ -1821,6 +1880,34 @@ function rowToSourceItem(r: Record<string, unknown>): SourceItem {
     itemKeyEnc: (r.item_key_enc as string) ?? undefined,
     itemIv: (r.item_iv as string) ?? undefined,
     itemAuthTag: (r.item_auth_tag as string) ?? undefined,
+    itemWrapIv: (r.item_wrap_iv as string) ?? undefined,
+    deliveryKind: (r.delivery_kind as SourceItem["deliveryKind"]) ?? undefined,
+    storageMode: (r.storage_mode as SourceItem["storageMode"]) ?? undefined,
+    plaintextBytes:
+      r.plaintext_bytes === null || r.plaintext_bytes === undefined
+        ? undefined
+        : Number(r.plaintext_bytes),
+    bodyHash: (r.body_hash as string) ?? undefined,
+    manifest: rowToArticleContentManifest(r),
+  };
+}
+
+function rowToArticleContentManifest(
+  r: Record<string, unknown>,
+): SourceItem["manifest"] {
+  if (!r.manifest_id || !r.manifest_signature || !r.manifest_signer) return undefined;
+  return {
+    id: String(r.manifest_id),
+    sourceId: String(r.source_id),
+    itemId: String(r.id),
+    canonicalUrl: String(r.link ?? ""),
+    bodyHash: String(r.body_hash ?? ""),
+    plaintextBytes: Number(r.plaintext_bytes ?? 0),
+    deliveryKind: (r.delivery_kind as NonNullable<SourceItem["deliveryKind"]>) ?? "abstract",
+    signer: String(r.manifest_signer),
+    nonce: String(r.manifest_nonce ?? ""),
+    signature: String(r.manifest_signature),
+    createdAt: String(r.manifest_created_at ?? ""),
   };
 }
 

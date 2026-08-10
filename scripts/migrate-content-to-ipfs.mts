@@ -15,6 +15,7 @@
 import { getDb } from "../lib/db/index.ts";
 import { hasPinata, pinEncrypted } from "../lib/ipfs/pinata-client.ts";
 import { encryptContent, hasContentKey } from "../lib/ipfs/content-crypto.ts";
+import { contentBodyHash, contentBytes, normalizeDeliveryKind } from "../lib/sources/content-receipt.ts";
 
 async function main() {
   if (!hasPinata()) {
@@ -63,6 +64,11 @@ async function main() {
           itemKeyEnc: envelope.wrappedKeyB64,
           itemIv: envelope.ivB64,
           itemAuthTag: envelope.authTagB64,
+          itemWrapIv: envelope.wrapIvB64,
+          storageMode: "ipfs_encrypted",
+          deliveryKind: normalizeDeliveryKind(item.deliveryKind, item.content),
+          plaintextBytes: contentBytes(item.content),
+          bodyHash: contentBodyHash(item.content),
         }]);
 
         console.log(`  [ok] item ${item.id} (${item.title.slice(0, 50)}) → ${cid}`);

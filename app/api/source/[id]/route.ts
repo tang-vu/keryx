@@ -56,7 +56,10 @@ export async function GET(
       const resolved = await Promise.all(
         items.map(async (item) => ({
           title: item.title,
-          text: await resolveSourceItemContent(item, settle, { allowSummaryFallback: true }),
+          text: await resolveSourceItemContent(item, settle, {
+            allowSummaryFallback: true,
+            expectedManifestSigner: terms.creator,
+          }),
         })),
       );
 

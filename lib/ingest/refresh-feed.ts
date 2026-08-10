@@ -11,11 +11,13 @@
 
 import { ingestRss, type IngestedFeed } from "./rss";
 import type { Source, SourceItem } from "@/lib/types";
+import { storeSourceItems } from "@/lib/sources/store-source-item";
 
 /** The narrow slice of KeryxDB refresh needs — keeps the module trivially testable. */
 export interface RefreshDb {
   getItems(sourceId: string): Promise<SourceItem[]>;
   addItems(items: SourceItem[]): Promise<void>;
+  setCached?(sourceId: string, text: string): Promise<void>;
 }
 
 export interface RefreshOutcome {
@@ -30,6 +32,7 @@ export interface RefreshOutcome {
 }
 
 type Ingest = (rssUrl: string) => Promise<IngestedFeed>;
+type Store = (items: SourceItem[]) => Promise<SourceItem[]>;
 
 /** Preserve the transport cause Undici attaches below its generic `fetch failed` wrapper. */
 function feedError(error: unknown): string {
@@ -47,6 +50,7 @@ export async function refreshSourceFeed(
   db: RefreshDb,
   source: Pick<Source, "id" | "name" | "rssUrl">,
   ingest: Ingest = ingestRss,
+  store: Store = storeSourceItems,
 ): Promise<RefreshOutcome> {
   const existing = await db.getItems(source.id);
   const base = { sourceId: source.id, name: source.name, total: existing.length };
@@ -62,9 +66,15 @@ export async function refreshSourceFeed(
   const seen = new Set(existing.map((i) => i.link).filter(Boolean));
   const unseen = feed.items.filter((it) => it.link && !seen.has(it.link));
   if (unseen.length > 0) {
-    await db.addItems(
-      unseen.map((it) => ({ ...it, id: crypto.randomUUID(), sourceId: source.id })),
-    );
+    try {
+      const stored = await store(
+        unseen.map((it) => ({ ...it, id: crypto.randomUUID(), sourceId: source.id })),
+      );
+      await db.setCached?.(source.id, "");
+      await db.addItems(stored);
+    } catch (error) {
+      return { ...base, added: 0, error: `content storage failed: ${feedError(error)}` };
+    }
   }
   return { ...base, added: unseen.length, total: existing.length + unseen.length };
 }
@@ -74,6 +84,7 @@ export async function refreshSourceFeed(
 export async function refreshAllFeeds(
   db: RefreshDb & { listSources(): Promise<Source[]> },
   ingest: Ingest = ingestRss,
+  store: Store = storeSourceItems,
 ): Promise<RefreshOutcome[]> {
   // listSources() already excludes deactivated rows. Unverified rows are excluded here too:
   // nobody has proven they own that feed, and a squatter's listing must not make Keryx crawl it.
@@ -81,6 +92,6 @@ export async function refreshAllFeeds(
     (s) => s.verified !== false && s.rssUrl?.trim(),
   );
   const out: RefreshOutcome[] = [];
-  for (const s of sources) out.push(await refreshSourceFeed(db, s, ingest));
+  for (const s of sources) out.push(await refreshSourceFeed(db, s, ingest, store));
   return out;
 }

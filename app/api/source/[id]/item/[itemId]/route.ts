@@ -79,7 +79,10 @@ export async function GET(
       const cached = await db.getCached(cacheKey);
       const content =
         cached ??
-        (await resolveSourceItemContent(item, settle, { allowSummaryFallback: false }));
+        (await resolveSourceItemContent(item, settle, {
+          allowSummaryFallback: false,
+          expectedManifestSigner: terms.creator,
+        }));
       if (!cached) await db.setCached(cacheKey, content);
 
       return {

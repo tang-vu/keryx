@@ -64,7 +64,21 @@ describe("source item assets", () => {
   });
 
   it("uses the immutable IPFS CID as the encrypted content version", () => {
-    const encrypted = item({ id: "encrypted", content: "", ipfsCid: "bafy-article" });
+    const encrypted = item({
+      id: "encrypted",
+      content: "",
+      ipfsCid: "bafy-article",
+      deliveryKind: "full_text",
+      storageMode: "ipfs_encrypted",
+      plaintextBytes: 500,
+      bodyHash: `0x${"ab".repeat(32)}`,
+    });
     expect(sourceItemContentVersion(encrypted)).toBe("ipfs:bafy-article");
+    expect(sourceItemIdentity(encrypted).contentReceipt).toMatchObject({
+      deliveryKind: "full_text",
+      storageMode: "ipfs_encrypted",
+      plaintextBytes: 500,
+      bodyHash: encrypted.bodyHash,
+    });
   });
 });
