@@ -20,5 +20,5 @@ ESLint, and a production Next.js build.
 Links:
 
 - Live proof: <https://keryx.cc/proof>
-- App repository: <https://github.com/tangtalk/keryx>
-- Standalone Arc primitives: <https://github.com/tangtalk/keryx-arc-primitives>
+- App repository: <https://github.com/tang-vu/keryx>
+- Standalone Arc primitives: <https://github.com/tang-vu/keryx-arc-primitives>
