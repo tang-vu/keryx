@@ -1,0 +1,344 @@
+1
+00:00:00,120 --> 00:00:03,321
+AI agents can read thousands of pages,
+
+2
+00:00:03,321 --> 00:00:08,351
+but the creators whose evidence shapes
+an answer usually receive nothing.
+
+3
+00:00:08,351 --> 00:00:09,723
+Keryx changes that.
+
+4
+00:00:09,723 --> 00:00:14,753
+A user asks a question and sets a hard
+USDC budget.
+
+5
+00:00:14,753 --> 00:00:17,953
+The agent discovers sources, explains
+every buy,
+
+6
+00:00:17,953 --> 00:00:22,526
+skip, and cache decision, buys only the
+evidence it values,
+
+7
+00:00:22,526 --> 00:00:26,184
+cites what survives verification, and
+pays those creators.
+
+8
+00:00:27,104 --> 00:00:29,804
+This is the entire economic loop.
+
+9
+00:00:29,804 --> 00:00:34,754
+The browser holds the session key and
+funds a capped Circle
+
+10
+00:00:34,754 --> 00:00:35,654
+Gateway balance.
+
+11
+00:00:35,654 --> 00:00:40,605
+Keryx decomposes the question, discovers articles
+from the on-chain Source Registry,
+
+12
+00:00:40,605 --> 00:00:42,855
+and prices each exact version.
+
+13
+00:00:42,855 --> 00:00:47,355
+An X four oh two access toll unlocks
+selected content.
+
+14
+00:00:47,355 --> 00:00:50,505
+After synthesis, the evidence gate
+measures contribution.
+
+15
+00:00:50,505 --> 00:00:54,555
+A second, weighted reward goes only to
+cited sources.
+
+16
+00:00:54,555 --> 00:00:59,055
+The cap, decisions, payments, and
+settlement state remain visible throughout.
+
+17
+00:00:59,975 --> 00:01:03,916
+Here is a real public dispatch on Arc
+testnet.
+
+18
+00:01:03,916 --> 00:01:08,733
+The agent was asked how long X four oh
+two payments
+
+19
+00:01:08,733 --> 00:01:11,798
+take to finalize, with a five-cent
+ceiling.
+
+20
+00:01:11,798 --> 00:01:16,615
+It discovered candidates, rejected sources that
+were off-topic or too expensive,
+
+21
+00:01:16,615 --> 00:01:18,804
+and bought three relevant pieces.
+
+22
+00:01:18,804 --> 00:01:22,307
+The trace records the reason for every
+choice.
+
+23
+00:01:22,307 --> 00:01:25,811
+It stopped within budget, produced a
+cited answer,
+
+24
+00:01:25,811 --> 00:01:29,314
+and allocated the citation pool by
+measured contribution:
+
+25
+00:01:29,314 --> 00:01:32,379
+forty percent, forty percent, and twenty
+percent.
+
+26
+00:01:33,299 --> 00:01:36,850
+Payment is not a decorative success
+badge.
+
+27
+00:01:36,850 --> 00:01:41,417
+Each purchased article first returned
+HTTP four oh two.
+
+28
+00:01:41,417 --> 00:01:44,968
+Keryx authorized the exact network, USDC
+asset,
+
+29
+00:01:44,968 --> 00:01:50,549
+amount, and creator-controlled payee, then retried
+with the signed payment header.
+
+30
+00:01:50,549 --> 00:01:56,130
+Circle Gateway returned settlement references for
+the access tolls and citation
+
+31
+00:01:56,130 --> 00:01:56,637
+rewards.
+
+32
+00:01:56,637 --> 00:02:00,189
+The completed dispatch preserves the
+answer, citations,
+
+33
+00:02:00,189 --> 00:02:03,740
+spend, and receipts as one audit trail.
+
+34
+00:02:04,660 --> 00:02:07,923
+The code uses Circle's official packages
+directly.
+
+35
+00:02:07,923 --> 00:02:13,051
+In real gateway dot T S, Batch E V M
+Scheme
+
+36
+00:02:13,051 --> 00:02:16,780
+and Gateway Client connect the buyer to
+Arc.
+
+37
+00:02:16,780 --> 00:02:20,975
+In X four oh two server dot T S,
+
+38
+00:02:20,975 --> 00:02:24,239
+each challenge binds the Arc network,
+USDC,
+
+39
+00:02:24,239 --> 00:02:28,900
+integer micro-USDC amount, creator pay-to
+address, and Gateway verifying contract.
+
+40
+00:02:28,900 --> 00:02:33,095
+The seller verifies and settles before
+serving paid content.
+
+41
+00:02:33,095 --> 00:02:36,824
+Unified Balance Kit powers the public
+treasury view.
+
+42
+00:02:36,824 --> 00:02:41,952
+These are the production integration
+points reviewers can inspect in the
+
+43
+00:02:41,952 --> 00:02:45,215
+repository and validate in the running
+product.
+
+44
+00:02:46,135 --> 00:02:49,146
+For browser users, Keryx remains
+non-custodial.
+
+45
+00:02:49,146 --> 00:02:54,667
+Before a bearer authorization can exist,
+the server atomically reserves the
+
+46
+00:02:54,667 --> 00:02:57,177
+amount against the session cap.
+
+47
+00:02:57,177 --> 00:03:01,694
+The browser independently validates the
+challenge and co-signs it.
+
+48
+00:03:01,694 --> 00:03:07,214
+After submission, missing confirmation is pending,
+never quietly marked failed or
+
+49
+00:03:07,214 --> 00:03:07,716
+settled.
+
+50
+00:03:07,716 --> 00:03:11,731
+Payout authority comes from Source
+Registry on Arc,
+
+51
+00:03:11,731 --> 00:03:14,241
+not an editable database row.
+
+52
+00:03:14,241 --> 00:03:19,762
+Finally, run agent dot T S allocates
+every citation reward in
+
+53
+00:03:19,762 --> 00:03:25,282
+integer micro-USDC, including multi-author splits, so
+the payment legs add up
+
+54
+00:03:25,282 --> 00:03:25,784
+exactly.
+
+55
+00:03:26,704 --> 00:03:30,965
+The proof pages separate scale from
+adoption.
+
+56
+00:03:30,965 --> 00:03:37,662
+At this production snapshot, Keryx has
+settled 9,527 payments and 45.
+
+57
+00:03:37,662 --> 00:03:42,532
+154314 in Arc testnet USDC volume, with
+39.
+
+58
+00:03:42,532 --> 00:03:45,576
+234314 paid to creator wallets.
+
+59
+00:03:45,576 --> 00:03:50,446
+Independently initiated usage is
+reported separately: 142 queries,
+
+60
+00:03:50,446 --> 00:03:55,925
+613 payments, 4 identified external
+actors, all 4 returning,
+
+61
+00:03:55,925 --> 00:04:01,403
+and 68 of 68 measured external
+settlement attempts successful.
+
+62
+00:04:01,403 --> 00:04:06,273
+Twenty registry records match Arc with
+zero mismatches,
+
+63
+00:04:06,273 --> 00:04:11,144
+and creator withdrawals resolve to
+individual ArcScan transactions.
+
+64
+00:04:11,144 --> 00:04:16,014
+Simulated and pending payments never
+enter these totals.
+
+65
+00:04:16,934 --> 00:04:22,395
+Keryx already integrates USDC, Agent
+Stack through Gateway Nanopayments and X
+
+66
+00:04:22,395 --> 00:04:25,870
+four oh two, App Kits, and Gateway.
+
+67
+00:04:25,870 --> 00:04:31,331
+The next six months move this proven
+testnet loop toward production:
+
+68
+00:04:31,331 --> 00:04:36,792
+independent security review, C C T P and
+Forwarding Service for
+
+69
+00:04:36,792 --> 00:04:40,763
+cross-chain funding, optional Circle
+Wallets for programmatic callers,
+
+70
+00:04:40,763 --> 00:04:46,224
+external creator and agent pilots, and
+an audited Arc mainnet launch.
+
+71
+00:04:46,224 --> 00:04:49,699
+Keryx turns citation from attribution
+into settlement:
+
+72
+00:04:49,699 --> 00:04:54,168
+every decision visible, every reward
+evidence-weighted, every payment verifiable.

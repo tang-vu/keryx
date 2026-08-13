@@ -1,0 +1,86 @@
+{
+  "generatedAt": "2026-08-13T15:08:21.570Z",
+  "threshold": 0.24,
+  "scenes": [
+    {
+      "scene": "01-hook",
+      "model": "mimo-v2.5-asr",
+      "voiceModel": "mimo-v2.5-tts",
+      "voice": "Milo",
+      "playbackRate": 1.06,
+      "wordErrorRate": 0.0702,
+      "expected": "AI agents can read thousands of pages, but the creators whose evidence shapes an answer usually receive nothing. Keryx changes that. A user asks a question and sets a hard USDC budget. The agent discovers sources, explains every buy, skip, and cache decision, buys only the evidence it values, cites what survives verification, and pays those creators.",
+      "transcript": "think>\n<chinese> AI agents can read thousands of pages, but the creators whose evidence shapes an answer usually receive nothing. Carrick's changes that. A user asks a question and sets a hard USDC budget. The agent discovers sources, explains every buy, skip, and cache decision, buys only the evidence it values, cites what survives verification, and pays those creators."
+    },
+    {
+      "scene": "02-loop",
+      "model": "mimo-v2.5-asr",
+      "voiceModel": "mimo-v2.5-tts",
+      "voice": "Milo",
+      "playbackRate": 1.06,
+      "wordErrorRate": 0.0441,
+      "expected": "This is the entire economic loop. The browser holds the session key and funds a capped Circle Gateway balance. Keryx decomposes the question, discovers articles from the on-chain Source Registry, and prices each exact version. An X four oh two access toll unlocks selected content. After synthesis, the evidence gate measures contribution. A second, weighted reward goes only to cited sources. The cap, decisions, payments, and settlement state remain visible throughout.",
+      "transcript": "think>\n<chinese> This is the entire economic loop. The browser holds the session key and funds a capped circle gateway balance. Carrick decomposes the question, discovers articles from the on-chain source registry, and prices each exact version. An X402 access toll unlocks selected content. After synthesis, the evidence gate measures contribution. A second weighted reward goes only to cited sources. The cap, decisions, payments, and settlement state remain visible throughout."
+    },
+    {
+      "scene": "03-dispatch",
+      "model": "mimo-v2.5-asr",
+      "voiceModel": "mimo-v2.5-tts",
+      "voice": "Milo",
+      "playbackRate": 1.06,
+      "wordErrorRate": 0.0411,
+      "expected": "Here is a real public dispatch on Arc testnet. The agent was asked how long X four oh two payments take to finalize, with a five-cent ceiling. It discovered candidates, rejected sources that were off-topic or too expensive, and bought three relevant pieces. The trace records the reason for every choice. It stopped within budget, produced a cited answer, and allocated the citation pool by measured contribution: forty percent, forty percent, and twenty percent.",
+      "transcript": "<chinese> Here is a real public dispatch on Ochtestnet. The agent was asked how long X402 payments take to finalize with a five-cent ceiling. It discovered candidates, rejected sources that were off-topic or too expensive, and bought three relevant pieces. The trace records the reason for every choice. It stopped within budget, produced a cited answer, and allocated the citation pool by measured contribution: forty percent, forty percent, and twenty percent."
+    },
+    {
+      "scene": "04-receipts",
+      "model": "mimo-v2.5-asr",
+      "voiceModel": "mimo-v2.5-tts",
+      "voice": "Milo",
+      "playbackRate": 1.06,
+      "wordErrorRate": 0.082,
+      "expected": "Payment is not a decorative success badge. Each purchased article first returned HTTP four oh two. Keryx authorized the exact network, USDC asset, amount, and creator-controlled payee, then retried with the signed payment header. Circle Gateway returned settlement references for the access tolls and citation rewards. The completed dispatch preserves the answer, citations, spend, and receipts as one audit trail.",
+      "transcript": "10. Payment is not a decorative success badge. Each purchased article first returned HTTP 402. Carricks authorized the exact network USDC asset amount and creator-controlled payee, then retried with the signed payment header. Circle Gateway returned settlement references for the access tolls and citation rewards. The completed dispatch preserves the answer, citations, spend, and receipts as one audit trail."
+    },
+    {
+      "scene": "05-circle-code",
+      "model": "mimo-v2.5-asr",
+      "voiceModel": "mimo-v2.5-tts",
+      "voice": "Milo",
+      "playbackRate": 1.06,
+      "wordErrorRate": 0.1395,
+      "expected": "The code uses Circle's official packages directly. In real gateway dot T S, Batch E V M Scheme and Gateway Client connect the buyer to Arc. In X four oh two server dot T S, each challenge binds the Arc network, USDC, integer micro-USDC amount, creator pay-to address, and Gateway verifying contract. The seller verifies and settles before serving paid content. Unified Balance Kit powers the public treasury view. These are the production integration points reviewers can inspect in the repository and validate in the running product.",
+      "transcript": "2. The code uses Circle's official packages directly. In real gateway.ts, batch EVM scheme and gateway client connect the buyer to Arc. In x402 server.ts, each challenge binds the Arc network, USDC, integer microUSDC amount, creator pay to address, and gateway verifying contract. The seller verifies and settles before serving paid content. Unified Balance Kit powers the public treasury view. These are the production integration points reviewers can inspect in the repository and validate in the running product."
+    },
+    {
+      "scene": "06-authority-code",
+      "model": "mimo-v2.5-asr",
+      "voiceModel": "mimo-v2.5-tts",
+      "voice": "Milo",
+      "playbackRate": 1.06,
+      "wordErrorRate": 0.1098,
+      "expected": "For browser users, Keryx remains non-custodial. Before a bearer authorization can exist, the server atomically reserves the amount against the session cap. The browser independently validates the challenge and co-signs it. After submission, missing confirmation is pending, never quietly marked failed or settled. Payout authority comes from Source Registry on Arc, not an editable database row. Finally, run agent dot T S allocates every citation reward in integer micro-USDC, including multi-author splits, so the payment legs add up exactly.",
+      "transcript": "<chinese> For browser users, Carrick's remains non-custodial. Before a bearer authorization can exist, the server atomically reserves the amount against the session cap. The browser independently validates the challenge and co-signs it. After submission, missing confirmation is pending, never quietly marked failed or settled. Payout authority comes from source registry on Ark, not an editable database row. Finally, run agent.ts allocates every citation reward in integer microUSDC, including multi-author splits, so the payment legs add up exactly."
+    },
+    {
+      "scene": "07-proof",
+      "model": "mimo-v2.5-asr",
+      "voiceModel": "mimo-v2.5-tts",
+      "voice": "Milo",
+      "playbackRate": 1.06,
+      "wordErrorRate": 0.0854,
+      "expected": "The proof pages separate scale from adoption. At this production snapshot, Keryx has settled 9,527 payments and 45.154314 in Arc testnet USDC volume, with 39.234314 paid to creator wallets. Independently initiated usage is reported separately: 142 queries, 613 payments, 4 identified external actors, all 4 returning, and 68 of 68 measured external settlement attempts successful. Twenty registry records match Arc with zero mismatches, and creator withdrawals resolve to individual ArcScan transactions. Simulated and pending payments never enter these totals.",
+      "transcript": "2. The proof pages separate scale from adoption. At this production snapshot, Carrick has settled 9,527 payments and 45.154314 inches Arc Testnet USDC volume, with 39.234314 paid to creator wallets. Independently initiated usage is reported separately: 142 queries, 613 payments, four identified external actors, all four returning, and 68 of 68 measured external settlement attempts successful. Twenty registry records match Arc with zero mismatches, and creator withdrawals resolve to individual Arc Scant transactions. Simulated and pending payments never enter these totals."
+    },
+    {
+      "scene": "08-roadmap",
+      "model": "mimo-v2.5-asr",
+      "voiceModel": "mimo-v2.5-tts",
+      "voice": "Milo",
+      "playbackRate": 1.06,
+      "wordErrorRate": 0.1486,
+      "expected": "Keryx already integrates USDC, Agent Stack through Gateway Nanopayments and X four oh two, App Kits, and Gateway. The next six months move this proven testnet loop toward production: independent security review, C C T P and Forwarding Service for cross-chain funding, optional Circle Wallets for programmatic callers, external creator and agent pilots, and an audited Arc mainnet launch. Keryx turns citation from attribution into settlement: every decision visible, every reward evidence-weighted, every payment verifiable.",
+      "transcript": "2. Carrick's already integrates USDC agent stack through gateway, Nano payments, and X402 app kits and gateway. The next six months move this proven testnet loop toward production: independent security review, CCTP and forwarding service for cross-chain funding, optional Circle wallets for programmatic callers, external creator and agent pilots, and an audited Arc mainnet launch. Carrick's turns citation from attribution into settlement. Every decision visible, every reward evidence-weighted, every payment verifiable."
+    }
+  ]
+}
