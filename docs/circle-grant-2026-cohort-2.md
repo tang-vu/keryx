@@ -12,7 +12,6 @@ Each form field below has one `text` block. Use the copy button on that block an
 - Incorporation status
 - Funding status
 - Conflict-of-interest answer
-- Unlisted demo video URL
 - Investor deck URL
 - Confirm that `@tangvu_dev` is the X handle to submit
 
@@ -344,7 +343,7 @@ Grant funding will convert a proven testnet product into an audited, externally 
 ### Video demo of the product
 
 ```text
-[PASTE UNLISTED VIDEO URL — MAXIMUM 5 MINUTES]
+https://youtu.be/De22GVl2KnY
 ```
 
 ### Recording script (not a form answer)
@@ -396,7 +395,7 @@ Do not use that statement unless it is fully true. Disclose any relationship tha
 
 - [ ] Enter the professional email, legal entity, location, incorporation, funding, and conflict answers.
 - [ ] Confirm `@tangvu_dev` is the intended X handle.
-- [ ] Record and upload a video no longer than five minutes.
+- [x] Record and upload a video no longer than five minutes: https://youtu.be/De22GVl2KnY
 - [ ] Upload the deck and confirm both links work in a logged-out/private browser.
 - [ ] Do not mark Circle Wallets or CCTP as current integrations.
 - [ ] Refresh the traction block from https://keryx.cc/proof immediately before submission if the numbers have materially changed.
