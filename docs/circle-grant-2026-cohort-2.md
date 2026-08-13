@@ -18,11 +18,11 @@
 
 ### Primary contact first name
 
-Tang
+Vũ
 
 ### Primary contact last name
 
-Vu
+Tăng
 
 ### Email address
 
@@ -38,9 +38,9 @@ Keryx
 
 ### Founder names, roles, bios
 
-Tang Vu — Founder and Lead Engineer. Tang is the solo technical lead responsible for Keryx's
+Tăng Vũ — Founder and Lead Engineer. Vũ is the solo technical lead responsible for Keryx's
 product, architecture, smart contracts, Circle Gateway integration, security model, deployment,
-and creator/agent developer experience. Since launching Keryx, Tang has shipped the system from an
+and creator/agent developer experience. Since launching Keryx, Vũ has shipped the system from an
 x402 prototype into a continuously operated Arc application with non-custodial browser spending,
 on-chain payout authority, encrypted paid content, settlement reconciliation, public evidence, and
 661 application tests plus 16 smart-contract tests.
@@ -61,7 +61,7 @@ Standalone reusable Arc primitives: <https://github.com/tang-vu/keryx-arc-primit
 
 ### Where are you and your founders located?
 
-`Tang Vu, Founder and Lead Engineer, [ACTION REQUIRED: City, State/Province, Country]`
+`Tăng Vũ, Founder and Lead Engineer, [ACTION REQUIRED: City, State/Province, Country]`
 
 ### Where is your business located?
 
@@ -454,7 +454,7 @@ transaction volume.
 8. **Business model:** paid agent/API plans and enterprise integrations; creator rewards remain a
    pass-through pool.
 9. **Six-month milestones:** audit, CCTP/Agent Wallets, external pilot, Arc mainnet launch.
-10. **Team and ask:** Tang Vu, shipped evidence, requested Circle technical/marketing support and
+10. **Team and ask:** Tăng Vũ, shipped evidence, requested Circle technical/marketing support and
     milestone-based funding.
 
 ## 7. Conflict of Interest
