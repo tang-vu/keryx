@@ -292,13 +292,12 @@ function createSrt(sceneResults) {
   return entries.map((entry, index) => `${index + 1}\n${srtTime(entry.start)} --> ${srtTime(entry.end)}\n${entry.text}\n`).join("\n");
 }
 
-function createClip(image, audio, target, duration, reversePan = false) {
-  const frames = Math.max(1, Math.round(duration * 30));
-  const x = reversePan
-    ? `(in_w-out_w)*(1-n/${frames})`
-    : `(in_w-out_w)*n/${frames}`;
+function createClip(image, audio, target, duration) {
   const fadeOut = Math.max(0, duration - 0.28).toFixed(3);
-  const videoFilter = `scale=1958:1102,crop=1920:1080:x='${x}':y='(in_h-out_h)/2',fade=t=in:st=0:d=0.22,fade=t=out:st=${fadeOut}:d=0.28,format=yuv420p`;
+  // Keep the 1080p scene pixel-locked. The previous 38px slow pan advanced through an
+  // integer crop coordinate, so it held for several frames and then jumped by one pixel — a
+  // visible micro-stutter on text-heavy UI. Scene fades provide motion without degrading type.
+  const videoFilter = `scale=1920:1080,fade=t=in:st=0:d=0.22,fade=t=out:st=${fadeOut}:d=0.28,format=yuv420p`;
   const audioFilter = `atempo=${voicePlaybackRate},apad=pad_dur=0.8,afade=t=in:st=0:d=0.12,afade=t=out:st=${Math.max(0, duration - 0.35).toFixed(3)}:d=0.3`;
   run(ffmpeg, [
     "-y", "-loop", "1", "-framerate", "30", "-i", image, "-i", audio,
@@ -441,7 +440,7 @@ try {
     const audioDuration = sourceAudioDuration / voicePlaybackRate;
     const clipDuration = audioDuration + 0.72;
     const clipPath = path.join(clipsDir, `${scene.id}.mp4`);
-    createClip(scene.image, audioPath, clipPath, clipDuration, index % 2 === 1);
+    createClip(scene.image, audioPath, clipPath, clipDuration);
     verification.push({ scene: scene.id, model: "mimo-v2.5-asr", voiceModel: "mimo-v2.5-tts", voice: "Milo", playbackRate: voicePlaybackRate, wordErrorRate: Number(wer.toFixed(4)), expected: scene.narration, transcript });
     sceneResults.push({ ...scene, audioPath, sourceAudioDuration, audioDuration, clipDuration, clipPath });
     log(`Verified ${scene.id}: WER ${wer.toFixed(3)}, ${audioDuration.toFixed(1)}s mastered`);
@@ -461,8 +460,8 @@ try {
     "-y", "-i", roughPath,
     "-f", "lavfi", "-i", `aevalsrc=${bed}:s=48000:d=${roughDuration.toFixed(3)}`,
     "-filter_complex",
-    `[0:v]subtitles=${subtitleFilterPath}:force_style='FontName=Segoe UI,FontSize=19,PrimaryColour=&H00F5F1E8,OutlineColour=&HCC11110F,BorderStyle=3,BackColour=&H9911110F,Outline=1,Shadow=0,MarginV=42,Alignment=2'[v];[0:a]volume=1.0[voice];[1:a]lowpass=f=650,afade=t=in:st=0:d=2,afade=t=out:st=${Math.max(0, roughDuration - 2).toFixed(3)}:d=2[bed];[voice][bed]amix=inputs=2:weights='1 1':normalize=0,loudnorm=I=-16:TP=-1.5:LRA=7[a]`,
-    "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", videoPath,
+    `[0:v]fps=30,subtitles=${subtitleFilterPath}:force_style='FontName=Segoe UI,FontSize=19,PrimaryColour=&H00F5F1E8,OutlineColour=&HCC11110F,BorderStyle=3,BackColour=&H9911110F,Outline=1,Shadow=0,MarginV=42,Alignment=2'[v];[0:a]volume=1.0[voice];[1:a]lowpass=f=650,afade=t=in:st=0:d=2,afade=t=out:st=${Math.max(0, roughDuration - 2).toFixed(3)}:d=2[bed];[voice][bed]amix=inputs=2:weights='1 1':normalize=0,loudnorm=I=-16:TP=-1.5:LRA=7[a]`,
+    "-map", "[v]", "-map", "[a]", "-r", "30", "-fps_mode", "cfr", "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", videoPath,
   ], { stdio: "ignore" });
 
   log("Rendering the 10-slide investor deck and YouTube thumbnail");

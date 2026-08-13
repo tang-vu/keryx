@@ -1,8 +1,8 @@
 # Circle 2026 Cohort 2 deliverables
 
-Upload-ready files generated from the live product on 2026-08-13 15:03:00 UTC.
+Upload-ready files generated from the live product on 2026-08-13 15:14:39 UTC.
 
-- **Video:** `keryx-circle-grant-demo.mp4` (1920×1080, 295.1 seconds)
+- **Video:** `keryx-circle-grant-demo.mp4` (1920×1080, 296.9 seconds)
 - **Investor deck:** `keryx-circle-investor-deck.pdf` (10 slides)
 - **YouTube captions:** `keryx-circle-grant-demo.en.srt`
 - **YouTube thumbnail:** `keryx-circle-grant-thumbnail.png`
