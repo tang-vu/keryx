@@ -9,12 +9,13 @@
 
 **Hackathon:** Lepton Agents (Canteen × Circle, on Arc) · **primary track RFB 6 (Creator & Publisher Monetization)** · window **Jun 15 → Jul 6, 2026** (extended +1 wk from Jun 29), async judging (no live demo day). **Rubric:** 30% Agentic sophistication · 30% Traction · 20% Circle tooling · 20% Innovation.
 
-> **STATUS (2026-07-06) — LIVE.** Deployed at **[keryx.cc](https://keryx.cc)** (VPS + Cloudflare Tunnel),
-> funded, settling **real** x402 nanopayments on Arc testnet (`KERYX_FORCE_OFFLINE=0`): 3,470+ settled
-> payments, ~$16.3 USDC to 20 creators, 714 autonomous queries. The phase log below is the build history;
-> the project has since evolved into a **non-custodial dApp** (SIWE auth, browser co-signed x402, on-chain
-> SourceRegistry, encrypted IPFS, public API keys). See `README.md` + `docs/` for current architecture.
-> Remaining push is **external traction + submission artifacts** (video, form), not core build.
+> **STATUS (2026-08-13) — LIVE, CONTINUOUSLY SHIPPING.** Deployed at
+> **[keryx.cc](https://keryx.cc)** with real Arc-testnet settlement, a non-custodial browser co-sign
+> path, SourceRegistry payout authority, encrypted paid content, public agent integrations, and a
+> settled-only provenance ledger. The phase checklist below is historical build context; current
+> facts and their verifying systems are composed at **[keryx.cc/proof](https://keryx.cc/proof)**.
+> The active product bottleneck is independently initiated usage and creator adoption, not core rail
+> construction.
 
 ---
 
@@ -121,6 +122,6 @@ The scaffold's "agent" is a dumb 1-tx/sec loop over 4 hardcoded URLs. **Zero rea
 4. **Deploy** — ✅ VPS at keryx.cc via Cloudflare Tunnel (not Vercel).
 
 ## Status
-Phases 0–4 ✅ · Phase 6 ✅ (volume engine) · Phase 5 (web UI) in progress (frontend agent) ·
-Phase 7 pending human credentials (fund wallet, LLM key) + enhancements. Backend fully verified;
-docs drafted. Deploy via Cloudflare Tunnel once UI lands.
+Phases 0–7 are deployed. Keryx is in continuous-operation mode: protect settlement correctness,
+improve evidence quality and onboarding from real feedback, grow independent demand, and publish
+only source-linked product/traction updates. See `docs/project-roadmap.md` for the maintained roadmap.

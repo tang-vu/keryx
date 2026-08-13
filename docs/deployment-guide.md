@@ -50,6 +50,27 @@ npm run arc:update -- --traction "<REAL settled numbers only>"
 ```
 Current tag: `v0.1.0`. **Only send `--traction` when the numbers are real and settled.** `arc:update` posts publicly to the hackathon org — confirm before announcing.
 
+## Attributable Arc RPC
+
+`KERYX_RPC_URL` is server-only. Production may use the tokenized endpoint returned by
+`arc-canteen rpc-url` so registry/indexer/watchdog reads are attributable to the project's Canteen
+account. Store it only in the VPS `.env.local`; never paste it into an issue, build log, screenshot,
+`NEXT_PUBLIC_*` variable, or committed file. `/api/health` and `/proof` deliberately expose only the
+safe provider label plus the head block retained by the registry watchdog.
+
+Useful read-only verification before a release:
+
+```bash
+arc-canteen rpc eth_chainId
+arc-canteen rpc eth_blockNumber
+# JSON params: SourceRegistry address + "latest"
+arc-canteen rpc eth_getCode '["0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536","latest"]'
+```
+
+On Windows, keep Python text I/O in UTF-8 when using CLI releases that still rely on the platform
+default encoding: `$env:PYTHONUTF8='1'`. This is a compatibility workaround, not a reason to expose
+the RPC URL.
+
 ## Rollback
 ```bash
 # fast: pin the VPS to a known-good commit and rebuild

@@ -1,11 +1,11 @@
 # Keryx Project Roadmap
 
-**Version:** 0.12.0 (signed full-text receipts and attention budgets, updated 2026-08-10)
+**Version:** 0.13.0 (public proof and attributable Arc evidence, updated 2026-08-13)
 **Status:** In continuous operation at [keryx.cc](https://keryx.cc) — real settlement 24/7, shipping in public.
 
 ---
 
-## Where Keryx is today (v0.12.0, August 2026)
+## Where Keryx is today (v0.13.0, August 2026)
 
 Shipped and running:
 - ✓ Non-custodial dApp core (SIWE auth, on-chain SourceRegistry, browser co-sign sessions, encrypted IPFS content, public API + keys)
@@ -15,6 +15,8 @@ Shipped and running:
 - ✓ External on-ramps: MCP server (npm + official registry), A2A x402 endpoint, free no-wallet trial
 - ✓ Ops: low-downtime health-gated deploys, treasury + registry-parity watchdogs, rotating off-box backups, CI (typecheck + economic-invariant suite)
 - ✓ Circle stack: x402 + Gateway batching + Wallets + Contracts + App Kit (Unified Balance on `/status` + `/api/treasury`)
+- ✓ Public proof dossier: deployed commit + CI, independent usage, RPC/index parity, Circle balance
+  parity, and ArcScan-resolvable creator cash-outs on `/proof`
 - ✓ Security threat model verified (23/23) · Hardhat 16/16 · vitest suite green
 
 Live figures at [`/status`](https://keryx.cc/status); snapshots in [TRACTION.md](../TRACTION.md).
@@ -298,6 +300,7 @@ Mainnet ← blocked on: Phase 07–10, security audit, legal
 | **v0.10.0** | 2026-08-05 | Public article price book, EIP-712 publisher offers, agent effective-price selection, browser verification | ✓ Shipped |
 | **v0.11.0** | 2026-08-08 | Existing creators answer wanted claims with exact article versions and evidence-settled targeted retries | ✓ Shipped |
 | **v0.12.0** | 2026-08-10 | Publisher-signed full text, honest delivery receipts, encrypted caches, attention-bounded source selection | ✓ Shipped |
+| **v0.13.0** | 2026-08-13 | Public proof dossier: deployed source, independent usage, Arc RPC/registry parity, Circle backing, on-chain cash-outs | ✓ Shipped |
 | **v1.0.0** | 2026-12-31 | Mainnet + Full Feature Parity | Planned |
 | **v2.0.0** | 2027-Q2 | Stretch Goals (Agent Marketplace, Video, Derivatives) | Backlog |
 

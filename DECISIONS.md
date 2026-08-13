@@ -5,6 +5,27 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-47** · Public proof/Provenance · *No aggregate is self-proving; publish each claim beside the
+authority that can actually verify it and the limit of that authority.* `/proof` composes five
+existing, independent evidence layers without creating a new payment or identity source of truth:
+the runtime commit binds the deployed build to GitHub and CI; Arc RPC plus SourceRegistry establish
+creator, payout, price and split authority; the Circle balance API checks whether creator wallets
+still hold what Keryx's settled ledger says they earned; ArcScan withdrawal hashes prove earnings
+can leave Gateway on-chain; and the origin ledger separates independently initiated demand from
+Keryx's own agents. Anonymous queries remain queries, never inferred unique people, while all money
+figures remain settled-only under D-20/D-28/D-42.
+
+The registry watchdog now retains the Arc head block it observed so a public reader can compare the
+RPC head with the index checkpoint. `/api/health` publishes only a coarse RPC provider label; it
+never returns the configured URL because Canteen endpoints contain server credentials. The page
+states what each layer cannot prove—especially that a Circle transfer id is not an Arc transaction
+hash and that real first-party volume is not external adoption. Payment authority, browser custody,
+spend caps, reconciliation, delivery and settlement state transitions are unchanged. Why: the
+proofs existed across `/status`, `/dashboard`, ArcScan and GitHub, but an outside evaluator could not
+map a headline claim to its verifying system without already understanding Keryx's architecture.
+Reversible: easy (remove the composed page and additive health fields; underlying watchdogs and
+ledgers are unchanged).
+
 **D-46** · Content authenticity/Confidentiality · *A paid-body receipt proves what is stored, while
 SourceRegistry remains the only payout authority.* RSS ingest now labels bodies conservatively as
 `full_text`, `excerpt`, `abstract`, or `metadata_only`; it never calls an ordinary snippet full

@@ -16,6 +16,8 @@ export interface RegistryHealth {
     chainCount: number;
     comparedCount: number;
     issueCount: number;
+    /** Optional while an older watchdog summary survives a rolling deploy. */
+    headBlock?: string;
   } | null;
 }
 
@@ -61,6 +63,7 @@ export function RegistryStatusSection({ registry }: { registry: RegistryHealth }
           v={parityLabel}
           alert={parity !== null && parity.issueCount > 0}
         />
+        <Row k="RPC head" v={parity?.headBlock ?? "—"} />
         <Row k="Indexed block" v={registry.lastSyncedBlock ?? "—"} />
       </dl>
       <p className="mt-3 font-mono text-[10px] tracking-wide text-faint">

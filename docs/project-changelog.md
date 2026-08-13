@@ -1,13 +1,27 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-08-10
-**Current Version:** 0.12.0
+**Last Updated:** 2026-08-13
+**Current Version:** 0.13.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
 
 ---
 
 ## Unreleased
+
+### Public proof links every claim to the system that can verify it (2026-08-13)
+
+- Added `/proof`, a live evidence dossier that binds the deployed commit to GitHub CI, exposes
+  settled-only citation totals, and keeps independent usage visibly separate from first-party
+  autonomous volume.
+- Composed SourceRegistry parity, Circle wallet-balance parity, and recent ArcScan-resolvable
+  creator withdrawals in one place while stating what each layer does—and does not—prove.
+- Retained the Arc RPC head in the registry watchdog summary and exposed only a safe provider label;
+  tokenized Canteen RPC URLs and their secret paths never enter the public response.
+- Added a public evidence map for grant/community review plus a CI badge and current, provenance-
+  separated traction snapshot in the repository documentation.
+- Release validation: **660 application tests**, **16 contract tests**, TypeScript, ESLint (no
+  errors; pre-existing warnings only), and the full Next.js production build.
 
 ### Signed full-text receipts and attention-bounded reading (2026-08-10)
 

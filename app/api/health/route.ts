@@ -23,6 +23,7 @@ import {
   PENDING_RECONCILIATION_STATE_KEY,
   type PendingReconciliationSummary,
 } from "@/lib/gateway/x402-transfer-reconciliation";
+import { classifyArcRpcProvider } from "@/lib/ops/public-proof";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,6 +42,8 @@ export async function GET() {
     reasoning: llmProvider(),
     settles: !forceOffline && config.funderKey ? "real" : "offline",
     network: config.network,
+    // Deliberately a coarse label: tokenized RPC URLs are server credentials and never public.
+    rpcProvider: classifyArcRpcProvider(config.rpcUrl),
     time: new Date().toISOString(),
   };
 
@@ -122,9 +125,17 @@ export async function GET() {
           creatorPayoutsUsdc: Number(m.totalCreatorPayoutsUsdc.toFixed(6)),
           creatorsEarning: m.creatorsEarning,
           totalQueries: m.totalQueries,
+          externalPayments: m.externalPayments,
+          externalCreatorPayoutsUsdc: Number(m.externalCreatorPayoutsUsdc.toFixed(6)),
           externalQueries: m.externalQueries,
           externalPayingQueries: m.externalPayingQueries,
+          identifiedExternalActors: m.identifiedExternalActors,
           returningExternalActors: m.returningExternalActors,
+          externalFeedbackTotal: m.externalFeedbackTotal,
+          externalSatisfactionRate: m.externalSatisfactionRate,
+          enginePayments: m.enginePayments,
+          engineQueries: m.engineQueries,
+          groundedClaimRate: m.groundedClaimRate,
           externalSettlementSuccessRate: m.externalSettlementSuccessRate,
           externalSettlementAttempts: m.externalSettlementAttempts,
           pendingPaymentConfirmations: m.pendingPaymentConfirmations,

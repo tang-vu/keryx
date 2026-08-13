@@ -9,7 +9,7 @@ import { describe, it, expect } from "vitest";
 import type { Hex } from "viem";
 import type { Source } from "../types";
 import type { OnChainRecord } from "./registry-client";
-import { compareRecord, auditRegistryParity, type RegistryReader } from "./parity";
+import { compareRecord, auditRegistryParity, summarize, type RegistryReader } from "./parity";
 
 const ONCHAIN_ID = "0x162cd3f7a89f71eb96005c3f8925c14ccdfc5be95c798724615c77c0f18b94bd" as Hex;
 const PAYOUT = "0xBFdD569fde6C02B4Bf245b14d829a80d1CA790c8";
@@ -131,7 +131,13 @@ describe("auditRegistryParity", () => {
     expect(report.chainCount).toBe(1);
     expect(report.comparedCount).toBe(1);
     expect(report.issues).toEqual([]);
+    expect(report.headBlock).toBe("1000");
     expect(report.lastSyncedBlock).toBe("990");
+    expect(summarize(report)).toMatchObject({
+      headBlock: "1000",
+      lastSyncedBlock: "990",
+      issueCount: 0,
+    });
   });
 
   it("flags an active on-chain record the cache has no row for", async () => {

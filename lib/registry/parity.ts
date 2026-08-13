@@ -52,6 +52,8 @@ export interface ParitySummary {
   chainCount: number;
   comparedCount: number;
   issueCount: number;
+  /** Arc RPC head observed by the same sweep that read the registry. */
+  headBlock: string;
   lastSyncedBlock: string | null;
 }
 
@@ -177,6 +179,7 @@ export function summarize(report: ParityReport): ParitySummary {
     chainCount: report.chainCount,
     comparedCount: report.comparedCount,
     issueCount: report.issues.length,
+    headBlock: report.headBlock,
     lastSyncedBlock: report.lastSyncedBlock,
   };
 }

@@ -35,6 +35,7 @@ interface Health {
   reasoning: string;
   settles: string;
   network: string;
+  rpcProvider: string;
   time: string;
   registry?: RegistryHealth | null;
   dispatches?: DispatchHealth | null;
@@ -141,6 +142,7 @@ export default function StatusPage() {
               <Row k="Settlement" v={health?.settles ?? "—"} />
               <Row k="Reasoning" v={health?.reasoning ?? "—"} />
               <Row k="Network" v={health?.network ?? "—"} />
+              <Row k="RPC provider" v={health?.rpcProvider ?? "—"} />
               <Row k="Commit" v={health?.commit ?? "—"} />
             </dl>
 

@@ -1,6 +1,6 @@
 # Keryx Codebase Summary
 
-**Version:** 0.12.0 (signed full-text receipts and attention budgets, updated 2026-08-10)
+**Version:** 0.13.0 (public proof and attributable Arc evidence, updated 2026-08-13)
 
 This document maps the codebase structure for the non-custodial Keryx dApp. Organized by domain; files < 200 LOC per kebab-case naming standard.
 
