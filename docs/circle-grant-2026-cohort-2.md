@@ -1,9 +1,13 @@
 # Circle 2026 Cohort 2 — Keryx grant proposal draft
 
-**Status:** Copy-ready draft with required owner fields marked `[ACTION REQUIRED]`  
-**Prepared:** 2026-08-13  
-**Recommended track:** Agentic economic activity  
-**Live product:** <https://keryx.cc>  
+**Status:** Copy-ready draft with required owner fields marked `[ACTION REQUIRED]`
+
+**Prepared:** 2026-08-13
+
+**Recommended track:** Agentic economic activity
+
+**Live product:** <https://keryx.cc>
+
 **Public evidence dashboard:** <https://keryx.cc/proof>
 
 > Before submitting, replace every `[ACTION REQUIRED]` value and remove all editor notes. Do not
