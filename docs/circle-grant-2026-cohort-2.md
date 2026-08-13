@@ -174,51 +174,58 @@ Select `Yes`. If an explanation field appears, paste:
 Yes — Arc testnet (eip155:5042002). SourceRegistry: https://testnet.arcscan.app/address/0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536. Public chain, registry, and settlement evidence: https://keryx.cc/proof.
 ```
 
+### Please enter the smart contract addresses
+
+```text
+SourceRegistry (Arc testnet, eip155:5042002): 0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536
+```
+
 ### Which other chain(s) are you currently live on?
 
 ```text
-None. Keryx's payment, registry, and creator cash-out flows are deliberately restricted to Arc testnet. The agent may discover public x402 services on other chains, but those candidates are discovery-only and cannot be purchased by the current orchestrator.
+None. Keryx is currently deployed only on Arc testnet (eip155:5042002).
 ```
 
 ### Which Circle products are currently integrated?
 
-Select the closest matching checkboxes:
+Select these checkboxes:
 
 ```text
 USDC
-Circle Gateway
-Nanopayments / Agent Nanopayments
-x402
-Circle App Kit / Unified Balance Kit
+Agent Stack
+App Kits
+Gateway
+Other (explain below)
 ```
 
-Do not select these as current integrations:
+For `Other (explain below)`, paste:
 
 ```text
-Circle Wallets / Agent Wallets
-CCTP
-Circle Contracts / Smart Contract Platform
-Paymaster
-StableFX
-Circle Mint
-Circle Payments Network (CPN)
+Circle Gateway Nanopayments and x402, implemented with @circle-fin/x402-batching for both buyer and seller payment flows.
 ```
 
-Reason for the exclusions: current wallets are self-managed; Keryx does not directly call CCTP TokenMessenger/MessageTransmitter; and SourceRegistry is a custom Hardhat/viem contract rather than a Circle Contracts deployment.
+Do not select `Contracts`: SourceRegistry is a custom Hardhat/viem contract, not a Circle Contracts deployment. Do not select `CCTP` or `Wallets` as current integrations: Keryx does not directly call CCTP TokenMessenger/MessageTransmitter, and its current wallets are self-managed.
 
 ### Which Circle products do you plan to integrate?
 
-Select the closest matching checkboxes:
+Select these checkboxes:
 
 ```text
-CCTP V2
-Forwarding Service
-Circle Agent Wallets / Circle Wallets
-Circle Gateway and Nanopayments on Arc mainnet
-USDC on Arc mainnet
+USDC
+Agent Stack
+CCTP
+Gateway
+Wallets
+Other (explain below)
 ```
 
-If an explanation field appears, paste:
+For `Other (explain below)`, paste:
+
+```text
+CCTP Forwarding Service for funding Arc sessions from Ethereum and Base, plus Gateway Nanopayments and x402 on Arc mainnet.
+```
+
+If an additional explanation field appears, paste:
 
 ```text
 Keryx plans to add CCTP V2 and Forwarding Service so agents and creators can fund Arc sessions from native USDC on Ethereum or Base without manually bridging. An optional Circle Agent Wallets path will support programmatic and enterprise callers while preserving the existing user-held browser signer. After security review and product availability, the proven Gateway Nanopayments, x402 settlement, creator payout, and withdrawal flows will move to Arc mainnet USDC.
