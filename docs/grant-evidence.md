@@ -16,7 +16,7 @@ v0.13 release boundary.
 The Aug 5–13 work is product/rail work rather than cosmetic churn: article-version x402 purchases,
 publisher-signed offers and full-text receipts, encrypted paid storage, ambiguous Circle transfer
 reconciliation, safe failed-authorization recovery, and this source-linked proof surface.
-The v0.13 release passed **660 Vitest tests**, **16 SourceRegistry contract tests**, TypeScript, ESLint
+The v0.13 release passed **661 Vitest tests**, **16 SourceRegistry contract tests**, TypeScript, ESLint
 with no errors, and the full Next.js production build.
 
 ## CLI and Arc RPC
