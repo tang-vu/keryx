@@ -69,8 +69,8 @@ describe("reconcileAccount", () => {
     expect(r.verdict).toBe("short");
   });
 
-  it("does not let an unreadable chain turn a shortfall into a cash-out", () => {
-    expect(reconcileAccount(account(), 0.1, null).verdict).toBe("short");
+  it("keeps a provisional shortfall but treats an attempted, unreadable chain check as unknown", () => {
+    expect(reconcileAccount(account(), 0.1, null).verdict).toBe("unknown");
     expect(reconcileAccount(account(), 0.1, undefined).verdict).toBe("short");
   });
 
@@ -154,6 +154,19 @@ describe("reconcileSettlement", () => {
   it("reports an address the balance sweep never mentioned as unknown", () => {
     const report = reconcileSettlement(ledger.slice(0, 1), new Map(), AT);
     expect(report.accounts[0].verdict).toBe("unknown");
+  });
+
+  it("does not publish a settlement finding when the required Arc balance read failed", () => {
+    const address = "0xaaa0000000000000000000000000000000000001";
+    const report = reconcileSettlement(
+      ledger.slice(0, 1),
+      new Map([[address, 2.5]]),
+      AT,
+      new Map([[address, null]]),
+    );
+    expect(report.accounts[0].verdict).toBe("unknown");
+    expect(report.counts).toEqual({ confirmed: 0, surplus: 0, cashedOut: 0, short: 0, unknown: 1 });
+    expect(report.issues).toHaveLength(0);
   });
 });
 

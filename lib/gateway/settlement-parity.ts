@@ -68,7 +68,8 @@ export interface LedgerAccount {
  *                 They moved their money themselves, which they may do at any time and by any
  *                 route; the payouts are still fully accounted for, so this never alarms.
  * - `short`     — neither the Gateway nor the wallet accounts for what Keryx claims. The alarm.
- * - `unknown`   — the API did not answer for this address. Absence of an answer is not a zero.
+ * - `unknown`   — Circle did not answer, or a Gateway shortfall could not be checked on Arc.
+ *                 Absence of an answer is not a zero and cannot prove a settlement failure.
  */
 export type AccountVerdict = "confirmed" | "surplus" | "cashedOut" | "short" | "unknown";
 
@@ -135,8 +136,15 @@ export function reconcileAccount(
   // Gateway plus wallet is the whole of what a payout could have become. If together they cover
   // the claim, nothing is missing — the creator simply moved their own money somewhere Keryx
   // does not book. Only a gap that survives both readings is a finding.
-  if (verdict === "short" && typeof onchain === "number" && held + onchain >= owedUsdc - toleranceUsdc) {
-    verdict = "cashedOut";
+  if (verdict === "short") {
+    if (onchain === null) {
+      // The caller attempted the second evidence leg and Arc did not answer. Keep `undefined`
+      // distinct: the first pass intentionally omits the chain read so it can identify which
+      // wallets need one. Once attempted, an unavailable RPC is uncertainty, not proof of zero.
+      verdict = "unknown";
+    } else if (typeof onchain === "number" && held + onchain >= owedUsdc - toleranceUsdc) {
+      verdict = "cashedOut";
+    }
   }
 
   return { ...base, heldUsdc: round6(held), deltaUsdc, verdict };

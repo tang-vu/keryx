@@ -73,12 +73,12 @@ export function SettlementProofSection({ settlement }: { settlement: SettlementH
           }
         />
         <Row
-          k={counts.unknown > 0 ? "Short · unanswered" : "Short"}
+          k={counts.unknown > 0 ? "Short · unverified" : "Short"}
           v={
-            // An unanswered wallet is not a clean row: it means Circle said nothing about that
-            // money, and that "Circle confirms" above is understating what is really backed.
+            // An unverified wallet is not a clean row: Circle or the Arc RPC did not complete the
+            // evidence chain, so "Circle confirms" above understates what is really backed.
             (counts.short === 0 ? "none" : `${counts.short} wallet${counts.short === 1 ? "" : "s"}`) +
-            (counts.unknown > 0 ? ` · ${counts.unknown} unanswered` : "")
+            (counts.unknown > 0 ? ` · ${counts.unknown} unverified` : "")
           }
           alert={counts.short > 0}
         />

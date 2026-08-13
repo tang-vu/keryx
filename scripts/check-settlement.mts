@@ -82,15 +82,17 @@ async function main(): Promise<void> {
   await db.setSyncState(SETTLEMENT_PARITY_STATE_KEY, JSON.stringify(summarizeSettlement(report)));
 
   if (report.counts.unknown > 0) {
-    // Not a failure: Circle being unreachable says nothing about the money. Worth printing, since
-    // it also means `confirmedUsdc` understates what is really backed.
-    console.log(`[settlement] ${report.counts.unknown} wallet(s) unanswered by the balance API.`);
+    // Not a failure: Circle or the Arc RPC being unreachable says nothing about the money. Worth
+    // printing, since it also means `confirmedUsdc` understates what is really backed.
+    console.log(
+      `[settlement] ${report.counts.unknown} wallet(s) could not be fully verified (Circle or Arc RPC unanswered).`,
+    );
   }
 
   if (report.counts.unknown === report.accounts.length) {
     // Nothing was checked, so "no shortfall found" is not a clean bill of health — say so plainly
     // rather than let a silent Circle read as confirmation.
-    console.log("[settlement] nothing verified this run — the balance API answered for no wallet.");
+    console.log("[settlement] nothing fully verified this run; an evidence provider did not answer.");
     return;
   }
 

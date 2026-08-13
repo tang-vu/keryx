@@ -5,6 +5,17 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-48** · Settlement evidence · *An unavailable verification leg is `unknown`, never a zero
+balance or a settlement finding.* The Circle parity sweep first identifies Gateway shortfalls,
+then reads those creators' Arc USDC balances because they may have cashed out through another
+client. `undefined` remains the internal first-pass marker that selects those wallets for a chain
+read; after the read is attempted, `null` means the RPC did not answer and the public verdict is
+`unknown`. Only a numeric Arc balance that still leaves a gap can produce `short` and an alert.
+Why: otherwise an expired or unavailable RPC credential turns missing evidence into a false claim
+that a creator payout never settled, contradicting the settled-only reporting invariant. This
+changes watchdog classification only; ledger rows, settlement state, payout authority and funds
+are untouched. Reversible: easy (pure reconciliation semantics plus presentation copy).
+
 **D-47** · Public proof/Provenance · *No aggregate is self-proving; publish each claim beside the
 authority that can actually verify it and the limit of that authority.* `/proof` composes five
 existing, independent evidence layers without creating a new payment or identity source of truth:
