@@ -12,7 +12,6 @@ Each form field below has one `text` block. Use the copy button on that block an
 - Incorporation status
 - Funding status
 - Conflict-of-interest answer
-- Investor deck URL
 - Confirm that `@tangvu_dev` is the X handle to submit
 
 ## 1. Applicant Details
@@ -357,7 +356,7 @@ https://youtu.be/De22GVl2KnY
 ### Investor deck
 
 ```text
-[PASTE VIEWER-ACCESSIBLE DECK URL]
+https://drive.google.com/file/d/1TNHbjz2_CyQwLCUGJNmKAyFlfEgl935f/view?usp=drive_link
 ```
 
 ### Recommended deck outline (not a form answer)
@@ -396,7 +395,7 @@ Do not use that statement unless it is fully true. Disclose any relationship tha
 - [ ] Enter the professional email, legal entity, location, incorporation, funding, and conflict answers.
 - [ ] Confirm `@tangvu_dev` is the intended X handle.
 - [x] Record and upload a video no longer than five minutes: https://youtu.be/De22GVl2KnY
-- [ ] Upload the deck and confirm both links work in a logged-out/private browser.
+- [x] Upload the deck and confirm both video and deck work without login: https://drive.google.com/file/d/1TNHbjz2_CyQwLCUGJNmKAyFlfEgl935f/view?usp=drive_link
 - [ ] Do not mark Circle Wallets or CCTP as current integrations.
 - [ ] Refresh the traction block from https://keryx.cc/proof immediately before submission if the numbers have materially changed.
 - [ ] Confirm the website, repository, latest release, proof dashboard, and ArcScan links open while logged out.
