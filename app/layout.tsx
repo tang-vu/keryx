@@ -14,7 +14,7 @@ import "./globals.css";
 const defaultUrl =
   process.env.BASE_URL ||
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
-  (process.env.NODE_ENV === "production" ? "https://keryx.cc" : "http://localhost:3000");
+  (process.env.NODE_ENV === "production" ? "https://keryx.cc" : "http://localhost:3939");
 
 const TITLE = "Keryx — citations are currency";
 const DESCRIPTION =

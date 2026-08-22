@@ -11,7 +11,7 @@
  * Default BASE_URL: http://localhost:3000 (the scaffold dev server)
  */
 
-import { GatewayClient, type SupportedChainName } from "@circle-fin/x402-batching/client";
+import { GatewayClient } from "@circle-fin/x402-batching/client";
 import { createPublicClient, erc20Abi, formatUnits, http, parseUnits } from "viem";
 import { arcTestnet } from "viem/chains";
 import fs from "node:fs";
@@ -22,7 +22,7 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 const USDC = (process.env.KERYX_USDC_ADDRESS ??
   "0x3600000000000000000000000000000000000000") as `0x${string}`;
 const RPC = process.env.KERYX_RPC_URL ?? "https://rpc.testnet.arc.network";
-const CHAIN = (process.env.KERYX_NETWORK ?? "arcTestnet") as SupportedChainName;
+const CHAIN = "arcTestnet" as const;
 const SCAFFOLD_URL = (process.argv[2] ?? "http://localhost:3000").replace(/\/$/, "");
 const DEPOSIT_USDC = process.env.KERYX_GATEWAY_DEPOSIT ?? "0.5";
 const FAUCET = "https://faucet.circle.com";

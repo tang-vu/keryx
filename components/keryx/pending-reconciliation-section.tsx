@@ -8,6 +8,9 @@ export interface PendingReconciliationHealth {
   mismatched: number;
   raced: number;
   oldestPendingAt: string | null;
+  oldestPendingAgeSeconds: number | null;
+  status: "clean" | "awaiting" | "stale" | "critical" | "mismatch";
+  degraded: boolean;
 }
 
 function Row({ k, v }: { k: string; v: string }) {
@@ -24,15 +27,22 @@ export function PendingReconciliationSection({
 }: {
   reconciliation: PendingReconciliationHealth;
 }) {
-  const clean = reconciliation.mismatched === 0;
+  const clean = reconciliation.status === "clean";
+  const label = {
+    clean: "clean",
+    awaiting: "awaiting Circle",
+    stale: "stale pending",
+    critical: "critical pending",
+    mismatch: "review required",
+  }[reconciliation.status];
   return (
     <section className="mt-8 border-t border-line pt-5">
       <div className="flex items-center justify-between gap-4">
         <h2 className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
           Ambiguous payment reconciliation
         </h2>
-        <span className={`font-mono text-[10px] uppercase tracking-[0.12em] ${clean ? "text-paid" : "text-red-700"}`}>
-          {clean ? "tuple-verified" : "review required"}
+        <span className={`font-mono text-[10px] uppercase tracking-[0.12em] ${clean ? "text-paid" : reconciliation.degraded ? "text-red-700" : "text-amber-700"}`}>
+          {label}
         </span>
       </div>
       <dl className="mt-3">
@@ -43,6 +53,10 @@ export function PendingReconciliationSection({
           v={`${reconciliation.failed.toLocaleString()} (${(reconciliation.releasedReservations ?? 0).toLocaleString()} reservations released)`}
         />
         <Row k="Tuple mismatches" v={reconciliation.mismatched.toLocaleString()} />
+        <Row
+          k="Oldest pending age"
+          v={formatAge(reconciliation.oldestPendingAgeSeconds)}
+        />
         <Row k="Last checked" v={new Date(reconciliation.checkedAt).toLocaleString()} />
       </dl>
       <p className="mt-3 font-mono text-[10px] leading-relaxed tracking-wide text-faint">
@@ -52,4 +66,14 @@ export function PendingReconciliationSection({
       </p>
     </section>
   );
+}
+
+function formatAge(seconds: number | null): string {
+  if (seconds === null) return "none";
+  const days = Math.floor(seconds / 86_400);
+  const hours = Math.floor((seconds % 86_400) / 3_600);
+  const minutes = Math.floor((seconds % 3_600) / 60);
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
 }

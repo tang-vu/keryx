@@ -115,6 +115,13 @@ interface AskStreamOpts {
 }
 
 export function useAskStream(opts?: AskStreamOpts) {
+  const {
+    getSessionWalletClient,
+    sessionId,
+    grantCap,
+    sourceIndex,
+    onSessionExpired,
+  } = opts ?? {};
   const [state, setState] = useState<AskStreamState>(INITIAL);
   const abortRef = useRef<AbortController | null>(null);
   // Tracks the cumulative USDC the browser has signed in the current ask() run.
@@ -170,8 +177,7 @@ export function useAskStream(opts?: AskStreamOpts) {
         kind?: "fetch" | "citation";
         paymentContext?: BrowserPaymentContext;
       };
-      const sessionId = opts?.sessionId;
-      const getWallet = opts?.getSessionWalletClient;
+      const getWallet = getSessionWalletClient;
 
       if (!sessionId || !getWallet) {
         // No session configured — server shouldn't be sending sign-requests, but handle gracefully.
@@ -193,7 +199,7 @@ export function useAskStream(opts?: AskStreamOpts) {
 
         // If a cap is configured, refuse to sign once the cumulative signed
         // total for this run would exceed it. Small epsilon (1e-9) for float rounding.
-        const cap = opts?.grantCap;
+        const cap = grantCap;
         if (cap !== undefined) {
           if (signedTotalRef.current + amountUsdc > cap + 1e-9) {
             console.warn(
@@ -214,7 +220,7 @@ export function useAskStream(opts?: AskStreamOpts) {
         // sourceId is absent only when an older server build is still streaming (a
         // rolling deploy). Fall back to cap-only enforcement rather than refusing every
         // payment mid-swap; the cap remains the binding ceiling either way.
-        const index = opts?.sourceIndex;
+        const index = sourceIndex;
         if (kind === "fetch" && paymentContext?.offer && (!sourceId || !index || index.size === 0)) {
           console.warn(
             "[keryx] sign-request refused: signed article offer cannot be verified without the source index",
@@ -299,7 +305,7 @@ export function useAskStream(opts?: AskStreamOpts) {
   // opts is an object reference — destructure the primitive/stable values into the dep array
   // so the hook re-creates handleEvent when the grant activates or the cap changes.
   // sourceIndex is a Map: stable after the one-time /api/sources fetch in app/page.tsx.
-  }, [opts?.sessionId, opts?.getSessionWalletClient, opts?.grantCap, opts?.sourceIndex]);
+  }, [sessionId, getSessionWalletClient, grantCap, sourceIndex]);
 
   const ask = useCallback(
     async (question: string, budget: number, parentId?: string, model?: string) => {
@@ -318,7 +324,7 @@ export function useAskStream(opts?: AskStreamOpts) {
             question,
             budget,
             // Include session id when a browser co-sign grant is active.
-            ...(opts?.sessionId ? { sessionId: opts.sessionId } : {}),
+            ...(sessionId ? { sessionId } : {}),
             // Follow-up: the server anchors the question to this dispatch's own question.
             ...(parentId ? { parentId } : {}),
             // Reasoning-model pick from the form's picker. Server-validated against the
@@ -344,7 +350,7 @@ export function useAskStream(opts?: AskStreamOpts) {
 
           if (res.status === 401 && errCode === "session_expired") {
             // Flip the grant UI to "expired" so the user gets the recover prompt.
-            opts?.onSessionExpired?.();
+            onSessionExpired?.();
             setState((s) => ({
               ...s,
               status: "error",
@@ -424,7 +430,7 @@ export function useAskStream(opts?: AskStreamOpts) {
         }));
       }
     },
-    [handleEvent, reset, opts?.sessionId, opts?.onSessionExpired],
+    [handleEvent, reset, sessionId, onSessionExpired],
   );
 
   return { state, ask, reset };

@@ -29,6 +29,7 @@ import {
 
 interface Health {
   ok: boolean;
+  status?: "operational" | "degraded";
   db: string;
   commit: string | null;
   uptimeSeconds: number;
@@ -113,7 +114,7 @@ export default function StatusPage() {
     };
   }, []);
 
-  const up = reachable && health?.ok;
+  const up = reachable && health?.ok && health.status !== "degraded";
   const label = up ? "All systems operational" : reachable ? "Degraded" : "Unreachable";
 
   return (

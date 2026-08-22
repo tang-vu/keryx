@@ -39,7 +39,7 @@
   },
   "dependencies": {
     "@circle-fin/x402-batching": "^2.1.0",
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "viem": "^2.52.2",
     "zod": "^3.25.76"
   }

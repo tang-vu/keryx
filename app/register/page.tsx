@@ -51,23 +51,26 @@ export default function RegisterPage() {
   // which arrives having already read that feed). Parsed from window.location on mount
   // (client-only) so the page needs no Suspense boundary for useSearchParams.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const url = params.get("url")?.trim();
-    const name = params.get("name")?.trim();
-    const description = params.get("desc")?.trim();
-    const rssUrl = params.get("rss")?.trim();
-    const gapId = params.get("gap")?.trim();
-    const matchedItemLink = params.get("post")?.trim();
-    if (!url && !name && !rssUrl) return;
-    setPrefill({
-      ...(url ? { url } : {}),
-      ...(name ? { name } : {}),
-      ...(description ? { description } : {}),
-      ...(rssUrl ? { rssUrl } : {}),
-      ...(gapId && matchedItemLink ? { gapId, matchedItemLink } : {}),
-    });
-    setFormKey((k) => k + 1);
-    setMode("single");
+    const timer = window.setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      const url = params.get("url")?.trim();
+      const name = params.get("name")?.trim();
+      const description = params.get("desc")?.trim();
+      const rssUrl = params.get("rss")?.trim();
+      const gapId = params.get("gap")?.trim();
+      const matchedItemLink = params.get("post")?.trim();
+      if (!url && !name && !rssUrl) return;
+      setPrefill({
+        ...(url ? { url } : {}),
+        ...(name ? { name } : {}),
+        ...(description ? { description } : {}),
+        ...(rssUrl ? { rssUrl } : {}),
+        ...(gapId && matchedItemLink ? { gapId, matchedItemLink } : {}),
+      });
+      setFormKey((k) => k + 1);
+      setMode("single");
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   // Check whether we already have a valid session cookie on mount.

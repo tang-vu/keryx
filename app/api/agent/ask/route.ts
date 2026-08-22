@@ -16,6 +16,7 @@ import { a2aDiscovery } from "@/lib/x402-discovery";
 import { verifyApiKey } from "@/lib/api-keys";
 import { hasScope, parseScopes } from "@/lib/api-key-scopes";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
+import { parseAskQuestion } from "@/lib/ask-input";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -60,13 +61,14 @@ export async function POST(req: NextRequest) {
   // themselves via a wallet-issued key. Rate-limit and meter by key id.
   // The key does NOT bypass x402 — payment-signature is still required below.
   const authHeader = req.headers.get("authorization");
-  const rawKey = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
+  const rawKey = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : undefined;
   if (rawKey) {
-    const limited = await checkRateLimit(rawKey, "ask");
-    if (limited) return limited;
-
     const keyCtx = await verifyApiKey(rawKey);
     if (!keyCtx) return Response.json({ error: "invalid or revoked api key" }, { status: 401 });
+    // Never persist a bearer secret as a rate-limit bucket. Verification maps it to the durable,
+    // non-secret key id first; invalid keys are rejected without touching the counter store.
+    const limited = await checkRateLimit(keyCtx.keyId, "ask");
+    if (limited) return limited;
     // An export-only key (e.g. one handed to an accountant) must not drive agent runs.
     if (!hasScope(parseScopes(keyCtx.scopes), "ask")) {
       return Response.json({ error: "this api key is not scoped for ask" }, { status: 403 });
@@ -84,12 +86,15 @@ export async function POST(req: NextRequest) {
   // ── End key pre-check ──
 
   const body = (await req.json().catch(() => ({}))) as {
-    question?: string;
-    budget?: number;
-    model?: string;
+    question?: unknown;
+    budget?: unknown;
+    model?: unknown;
   };
-  const question = (body.question ?? "").trim();
-  if (!question) return Response.json({ error: "question is required" }, { status: 400 });
+  const parsedQuestion = parseAskQuestion(body.question);
+  if (!parsedQuestion.success) {
+    return Response.json({ error: parsedQuestion.error }, { status: 400 });
+  }
+  const question = parsedQuestion.question;
   // Clamp a caller-supplied budget to the A2A ceiling so it can't drive arbitrary treasury-funded
   // creator payouts. A missing / invalid value is left undefined → runAgent applies its default.
   const a2aBudget =
@@ -134,7 +139,8 @@ export async function POST(req: NextRequest) {
         budget: a2aBudget,
         queryId,
         origin: isBot ? "engine" : "a2a",
-        model: typeof body.model === "string" ? body.model : undefined,
+        model:
+          typeof body.model === "string" ? body.model.trim().slice(0, 64) || undefined : undefined,
       });
       return {
         queryId: run.id,

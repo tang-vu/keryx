@@ -37,7 +37,10 @@ export function SiteHeader() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menu on route change
-  useEffect(() => setMenuOpen(false), [pathname]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setMenuOpen(false), 0);
+    return () => window.clearTimeout(timer);
+  }, [pathname]);
 
   // Close on outside click
   useEffect(() => {

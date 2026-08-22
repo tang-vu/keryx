@@ -241,7 +241,10 @@ export default function DevPage() {
     }
   }
 
-  useEffect(() => { void loadKeys(); }, []);
+  useEffect(() => {
+    const timer = window.setTimeout(() => void loadKeys(), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   async function handleMint(e: React.FormEvent) {
     e.preventDefault();

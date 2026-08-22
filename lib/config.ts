@@ -1,11 +1,12 @@
 /**
  * Keryx runtime configuration — single source of truth for chain, economics, and providers.
- * Everything is env-driven so flipping testnet → mainnet is one config change.
+ * Keryx is Arc-testnet-only today. Environment overrides tune the testnet deployment; they are not
+ * a mainnet switch because network ids, explorer, Gateway APIs, and browser chain config are pinned.
  */
 
 export const config = {
   // ── Chain (Arc testnet defaults) ──
-  network: process.env.KERYX_NETWORK ?? "arcTestnet",
+  network: "arcTestnet",
   // x402 network identifier used in payment requirements
   networkId: "eip155:5042002",
   rpcUrl: process.env.KERYX_RPC_URL ?? "https://rpc.testnet.arc.network",
@@ -47,9 +48,13 @@ export const config = {
   // Hard ceiling on the budget the anonymous (no-session) treasury path will honor. That path is
   // unauthenticated and spends Keryx's OWN funds (RealGateway), with `budget` caller-controlled —
   // without a cap a caller could POST an arbitrarily large budget and drive treasury spend. The
-  // browser co-sign path spends the user's own funded session (grant-cap bounded) and is NOT
-  // clamped. Default 0.1 sits just above the UI budget dial's 0.08 max, so the demo is unaffected.
+  // browser co-sign path spends the user's own funded session (grant-cap bounded) and has its own
+  // per-dispatch clamp below. Default 0.1 sits just above the UI budget dial's 0.08 max.
   anonMaxBudget: num(process.env.KERYX_ANON_MAX_BUDGET, 0.1),
+  // A browser grant can hold more for a session, but one dispatch cannot turn that entire balance
+  // into a caller-controlled payout/compute request. The remaining persisted grant cap is a second,
+  // tighter bound at request time.
+  sessionAskMaxBudget: num(process.env.KERYX_SESSION_ASK_MAX_BUDGET, 0.25),
   // Sanity ceiling (USDC) on a single citation settlement reaching /api/cite. Not a drain vector
   // (the caller self-pays via x402 to a source-owned wallet), but bounds a fat-finger / absurd
   // `amount` that would skew the leaderboard. ~100×+ above any realistic weighted reward.
@@ -148,7 +153,7 @@ export const config = {
   engineGapRetryRatio: Math.min(1, Math.max(0, num(process.env.KERYX_ENGINE_GAP_RETRY_RATIO, 0.25))),
 
   // ── App ──
-  baseUrl: process.env.BASE_URL ?? "http://localhost:3000",
+  baseUrl: process.env.BASE_URL ?? "http://localhost:3939",
   // Shared secret Keryx's own headless drivers (web-client, a2a-client) pass as `?bot=` so the
   // public /api/ask and /api/agent/ask routes tag their self-generated traffic as `engine`
   // (self-volume) instead of `web`/`a2a`. This keeps the dashboard's external bucket honestly
@@ -236,11 +241,31 @@ export const config = {
 
 export type LlmProvider = "anthropic" | "deepseek" | "mimo" | "heuristic";
 
+type RealLlmProvider = Exclude<LlmProvider, "heuristic">;
+
+/**
+ * Ordered real-provider tiers. Production keeps the historical order unless an operator gives a
+ * deployment-local override; unknown and duplicate names are ignored so a typo cannot select an
+ * unconfigured transport or remove the deterministic final fallback.
+ */
+export function llmProviderOrder(): RealLlmProvider[] {
+  const fallback: RealLlmProvider[] = ["anthropic", "deepseek", "mimo"];
+  const requested = (process.env.KERYX_LLM_PROVIDER_ORDER ?? "")
+    .split(",")
+    .map((provider) => provider.trim().toLowerCase())
+    .filter((provider): provider is RealLlmProvider =>
+      provider === "anthropic" || provider === "deepseek" || provider === "mimo",
+    );
+  return requested.length > 0 ? [...new Set(requested)] : fallback;
+}
+
 /** Which reasoning engine to use, by available credentials. */
 export function llmProvider(): LlmProvider {
-  if (config.anthropicKey.length > 0) return "anthropic";
-  if (config.deepseekKey.length > 0) return "deepseek";
-  if (config.mimoKey.length > 0) return "mimo";
+  for (const provider of llmProviderOrder()) {
+    if (provider === "anthropic" && config.anthropicKey.length > 0) return provider;
+    if (provider === "deepseek" && config.deepseekKey.length > 0) return provider;
+    if (provider === "mimo" && config.mimoKey.length > 0) return provider;
+  }
   return "heuristic";
 }
 

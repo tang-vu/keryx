@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-08-13
+**Last Updated:** 2026-08-22
 **Current Version:** 0.13.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
@@ -8,6 +8,23 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 ---
 
 ## Unreleased
+
+### Security and operational hardening (2026-08-22)
+
+- Stopped durable rate limits from ever receiving raw API bearer values, keyed verified callers by
+  non-secret key id, and purged legacy secret-bearing buckets on SQLite/Supabase startup/migration.
+- Completed Supabase schema parity for feedback/query memory and locked every private table and
+  economic RPC behind explicit RLS/service-role privileges.
+- Bounded questions, wallet-scoped browser compute, and each session dispatch budget while keeping
+  browser signer custody, atomic reservations, and Circle-evidence-only reconciliation unchanged.
+- Added stale/critical pending-authorization health, deduplicated ops alerts, deploy-time TypeScript
+  gates, and global CSP/transport/frame/MIME/referrer/permissions headers.
+- Updated the safe dependency lane to Next 16.3.2, MCP SDK 1.30, Circle App Kit packages, and x402
+  2.23; production audit now has zero critical/high advisories and CI gates on high severity.
+- Made the MiMo/DeepSeek/Anthropic fallback order operator-configurable with documented partial-list
+  semantics and deterministic heuristic fallback.
+- Pinned the standalone MCP buyer and treasure-hunt client to Arc testnet, removed the old
+  environment-only mainnet switch, and cleared all React/ESLint warnings without changing UI flows.
 
 ### Public proof links every claim to the system that can verify it (2026-08-13)
 

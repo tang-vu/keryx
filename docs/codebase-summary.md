@@ -210,8 +210,8 @@ RESTful endpoints for agent, sources, metrics, API keys.
 
 | Route | Auth | Purpose |
 |-------|------|---------|
-| `/ask` | SIWE JWT or API key | Stream agent execution (SSE) + sign-requests. |
-| `/ask/sign` | SIWE JWT | Receive browser-signed EIP-712 header. |
+| `/ask` | Anonymous treasury tier, or SIWE-owned grant | Stream agent execution (SSE) + browser sign-requests. |
+| `/ask/sign` | Active grant + session-scoped unpredictable request id | Receive one browser-signed EIP-712 header while the owning SSE request is pending. |
 | `/agent/ask` | x402 challenge | A2A: other agents buy Keryx's research per-call. |
 | `/sources` | GET: public, POST: creator JWT | List sources / register new source. |
 | `/source/[id]` | x402 challenge | Fetch content (returns 402 if unpaid, plaintext after x402 settle). |

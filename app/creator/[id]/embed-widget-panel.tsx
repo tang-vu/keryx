@@ -8,19 +8,16 @@
  * Complements the static badge (proof) with a live surface (demand).
  */
 
-import { useEffect, useState } from "react";
 import { Copy, MessageSquareQuote } from "lucide-react";
 import { toast } from "sonner";
+import { useBrowserOrigin } from "@/lib/hooks/use-browser-origin";
 
 // SSR + first client render agree on the canonical host; refined on mount so
 // localhost/preview copies carry the right URL.
 const CANONICAL = "https://keryx.cc";
 
 export function EmbedWidgetPanel({ creatorId }: { creatorId: string }) {
-  const [origin, setOrigin] = useState(CANONICAL);
-  useEffect(() => {
-    if (typeof window !== "undefined") setOrigin(window.location.origin);
-  }, []);
+  const origin = useBrowserOrigin(CANONICAL);
 
   const snippet = `<script src="${origin}/keryx-widget.js" data-keryx-source="${creatorId}" async></script>`;
   const previewUrl = `${origin}/embed?source=${encodeURIComponent(creatorId)}`;

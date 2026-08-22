@@ -13,14 +13,16 @@
  * The cap is never the number the client asked for: it is clamped to the USDC Circle's
  * Gateway actually holds for the session EOA. A client that overstates its deposit gets
  * the real balance as its ceiling instead of a rejection, so an honest client racing its
- * own agent's spend is never dead-ended. When Circle cannot be reached we fall back to
- * the session EOA's native balance, which at least proves the address was funded.
+ * own agent's spend is never dead-ended. For a fresh grant, when Circle cannot be reached
+ * we fall back to the session EOA's native balance, which at least proves the address was
+ * funded. If neither balance source is available, or if a recovery cannot be verified
+ * against Circle, the request fails closed and the client retries later.
  *
  * SIWE session required. Only the authenticated wallet can create a grant.
  */
 
 import { NextRequest } from "next/server";
-import { createPublicClient, http, parseUnits } from "viem";
+import { createPublicClient, http, isAddress, parseUnits } from "viem";
 import { arcTestnet } from "viem/chains";
 import { getSession } from "@/lib/auth";
 import { storeGrant, grantExpiry } from "@/lib/payments/session-grants";
@@ -56,7 +58,7 @@ export async function POST(req: NextRequest) {
   const { sessAddr, budget, txHash, recover } = body;
 
   // Validate required fields.
-  if (!sessAddr || !sessAddr.startsWith("0x") || sessAddr.length < 40) {
+  if (!sessAddr || !isAddress(sessAddr)) {
     return Response.json({ error: "sessAddr must be a valid hex address" }, { status: 400 });
   }
   if (typeof budget !== "number" || !Number.isFinite(budget) || budget <= 0 || budget > 10) {
@@ -115,15 +117,23 @@ export async function POST(req: NextRequest) {
         );
       }
     } catch (err) {
-      // Both Circle and the RPC are unreachable. Fail open: an inflated cap only lets the
-      // liar's own settlements 402 at Circle, which holds the real ceiling regardless.
+      // Do not create payment authority from a caller claim when neither independent funding
+      // source is reachable. Circle remains the economic ceiling, but a fail-open grant also buys
+      // server-side compute and weakens the visible hard-cap story.
       console.warn(
-        "[grant] no funding check possible (fail-open):",
+        "[grant] funding check unavailable:",
         err instanceof Error ? err.message : String(err),
+      );
+      return Response.json(
+        { error: "Session funding could not be verified. Try again when Arc RPC is available." },
+        { status: 503 },
       );
     }
   } else {
-    console.warn(`[grant] Circle unreachable — recovered grant for ${sessAddr} not balance-checked`);
+    return Response.json(
+      { error: "Circle Gateway balance is unavailable; session recovery is temporarily paused." },
+      { status: 503 },
+    );
   }
 
   // One active grant per SIWE address — use the address as the sessionId so

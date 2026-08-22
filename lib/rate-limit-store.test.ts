@@ -72,6 +72,18 @@ describe("consumePoint", () => {
     expect((await consumePoint("1.2.3.4", "treasuryAsk", 1, WINDOW)).allowed).toBe(false);
   });
 
+  it("purges legacy counters that persisted a raw API bearer key", async () => {
+    const db = await freshDb();
+    const legacyBucket = `ask:kx_live_${"a".repeat(96)}`;
+    expect((await db.consumeRateLimit(legacyBucket, 1, WINDOW, Date.now())).allowed).toBe(true);
+
+    // Startup migration on the same durable file removes the secret-bearing row.
+    const restarted = await openDb();
+    expect((await restarted.consumeRateLimit(legacyBucket, 1, WINDOW, Date.now())).allowed).toBe(
+      true,
+    );
+  });
+
   it("opens a fresh window once the old one lapses", async () => {
     const db = await freshDb();
     getDb.mockResolvedValue(db);

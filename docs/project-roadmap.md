@@ -17,7 +17,7 @@ Shipped and running:
 - ✓ Circle stack: x402 + Gateway batching + Wallets + Contracts + App Kit (Unified Balance on `/status` + `/api/treasury`)
 - ✓ Public proof dossier: deployed commit + CI, independent usage, RPC/index parity, Circle balance
   parity, and ArcScan-resolvable creator cash-outs on `/proof`
-- ✓ Security threat model verified (23/23) · Hardhat 16/16 · vitest suite green
+- ✓ Security threat model current through S39 · Hardhat 16/16 · vitest suite green
 
 Live figures at [`/status`](https://keryx.cc/status); snapshots in [TRACTION.md](../TRACTION.md).
 
@@ -165,16 +165,16 @@ Live figures at [`/status`](https://keryx.cc/status); snapshots in [TRACTION.md]
 - [x] Browser co-sign non-custodial spend (session key → cap-enforced)
 - [x] IPFS encrypted content (upload → store CID → post-payment decrypt)
 - [x] Public API (x402 + API keys + OpenAPI)
-- [x] Security verified (23-point matrix + grep audit)
+- [x] Security verified (living matrix + secret grep audit)
 - [x] Integration: all phases work together
 - [x] Offline dev mode preserved
 - [x] VPS deployment ready
 
 ### Phase 07 (Security Upgrades)
-- [ ] Web Crypto signing reduces XSS impact to zero (no exportable key)
+- [ ] Separate-origin signer boundary removes the one-time derivation-signature XSS residual
 - [ ] Lit Protocol integration deployed (once Arc added to Lit)
 - [ ] Residuals R1–R4 closed (verified in threat model)
-- [ ] No security regressions (threat matrix still 23/23 pass)
+- [ ] No security regressions (all current threat-matrix entries pass)
 
 ### Phase 08 (Scalability)
 - [ ] Redis rate-limit in production (multi-instance load test ≥1000 qps)

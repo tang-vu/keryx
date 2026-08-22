@@ -34,6 +34,7 @@ import {
   traceLine,
 } from "@/lib/openai-compat";
 import type { PaymentOrigin } from "@/lib/types";
+import { parseAskQuestion } from "@/lib/ask-input";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,10 +70,12 @@ export async function POST(req: NextRequest) {
 
   if (rawKey?.startsWith("kx_live_")) {
     // The caller intends to authenticate with a Keryx key — hold them to it.
-    const limited = await checkRateLimit(rawKey, "ask");
-    if (limited) return limited;
     const keyCtx = await verifyApiKey(rawKey);
     if (!keyCtx) return openaiError("invalid or revoked api key", 401, "invalid_api_key");
+    // The raw bearer value is a secret. Only its verified, non-secret database id may enter the
+    // durable rate-limit store.
+    const limited = await checkRateLimit(keyCtx.keyId, "ask");
+    if (limited) return limited;
     // An export-only key (e.g. one handed to an accountant) must not drive agent runs.
     if (!hasScope(parseScopes(keyCtx.scopes), "ask")) {
       return openaiError("this api key is not scoped for ask", 403, "insufficient_scope");
@@ -92,8 +95,11 @@ export async function POST(req: NextRequest) {
   }
 
   const body = (await req.json().catch(() => ({}))) as ChatCompletionRequest;
-  const question = lastUserQuestion(body.messages);
-  if (!question) return openaiError("no user message with content", 400, "invalid_request");
+  const parsedQuestion = parseAskQuestion(lastUserQuestion(body.messages));
+  if (!parsedQuestion.success) {
+    return openaiError(parsedQuestion.error, 400, "invalid_request");
+  }
+  const question = parsedQuestion.question;
 
   // Model routing: "keryx" (default) or "keryx:<catalog-id>" (see GET /v1/models) runs the agent
   // with that reasoning model. Unknown/unconfigured ids run the default — never a client error —

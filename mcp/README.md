@@ -105,9 +105,9 @@ All optional — sane Arc-testnet defaults are built in.
 | `KERYX_GATEWAY_DEPOSIT` | `0.5` | USDC moved into Gateway per top-up. |
 | `KERYX_RPC_URL` | `https://rpc.testnet.arc.network` | Arc testnet RPC. |
 
-> **Real money, testnet.** Calls settle real USDC on Arc testnet. The generated wallet holds only
-> what you faucet into it; Keryx never touches your keys. To go mainnet, point `KERYX_BASE_URL` at a
-> mainnet deployment and fund with real USDC — only with eyes open.
+> **Testnet funds only.** Calls settle Arc testnet USDC. The generated wallet holds only what you
+> faucet into it; Keryx never touches your keys. The published buyer is pinned to Arc testnet.
+> Mainnet requires a separate audited release and is not enabled by an environment variable.
 
 ## From source (development)
 

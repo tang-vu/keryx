@@ -22,7 +22,7 @@ git add -A && git commit -m "feat(scope): what changed"
 # 2. push — MANDATORY: deploy resets the VPS to origin/main
 git push origin main
 
-# 3. deploy (local → VPS: reset to origin/main, ship .env.local, npm ci, build, pm2 reload)
+# 3. deploy (local → VPS: reset to origin/main, npm ci, typecheck, build, pm2 reload)
 npm run deploy            # = bash scripts/deploy-vps.sh
 
 # 4. verify
@@ -74,7 +74,7 @@ the RPC URL.
 ## Rollback
 ```bash
 # fast: pin the VPS to a known-good commit and rebuild
-ssh keryx-vps "cd /root/keryx && git reset --hard <good-sha> && npm ci && NODE_OPTIONS=--max-old-space-size=1536 npm run build && pm2 reload keryx"
+ssh keryx-vps "cd /root/keryx && git reset --hard <good-sha> && npm ci && npm run typecheck && NODE_OPTIONS=--max-old-space-size=1536 npm run build && pm2 reload keryx"
 # or do it cleanly via git: revert locally → push → npm run deploy
 ```
 
@@ -123,6 +123,11 @@ but not a disk loss).
 - **Dispatch-outcome watchdog** — `npm run check-dispatches` reads the agent's own last 6h of dispatches (`KERYX_DISPATCH_WINDOW_HOURS`) and alerts on five failure shapes: nothing dispatched at all (`silent` — whatever dispatches has stopped), runs answered outright by the deterministic fallback (`unreasoned`), most runs losing a step to it (`degraded`), every run recording no decision (`undecided`), and a window in which no creator earned anything (`nothing-bought`). It complements the reasoning-provider watchdog above, which proves a provider *can* answer but not that a run *used* the answer — after the retired wire name was fixed, the agent still bought nothing for hours because the decide reply had outgrown its token ceiling. Citation rewards settle even when content comes from cache, so an unpaid window means nothing was cited, not that the agent shopped frugally; windows under 3 runs and boxes with no model credentials stay quiet. `npm run deploy` installs it as an hourly cron (`# keryx-dispatches`, minute :50), logging to `data/backups/dispatches.log`; the summary lands in `sync_state.dispatchHealth` and renders on [`/status`](https://keryx.cc/status).
 - **Settlement parity watchdog** — `npm run check-settlement` takes every wallet Keryx has ever paid and asks Circle's public balance API what it actually holds for that address. This exists because Gateway payouts settle off-chain: their receipt is a Circle transfer id, not an EVM hash, so no payout row can be checked on ArcScan and "trust our database" was the only proof creators had. The invariant is one-directional — `gateway + wallet >= paid − withdrawn − tolerance` — so a wallet holding *more* than Keryx accounts for (their own deposits, or payouts from any other x402 service) never alerts; only a claim nothing accounts for does. A shortfall gets a second reading against the wallet's plain on-chain USDC balance first, because a Gateway balance belongs to its owner and they may cash out through Circle's CLI or any other tool, leaving no row here; that is reported as a cash-out, not a discrepancy. Tolerance is Circle's withdraw fee per recorded cash-out plus dust. `npm run deploy` installs it as an hourly cron (`# keryx-settlement`, minute :55), logging to `data/backups/settlement.log`; the summary lands in `sync_state.settlementParity` and renders on [`/status`](https://keryx.cc/status) and on each creator page.
 - **Failed-settlement alerts** — a real-mode citation reward that fails to settle (a creator owed USDC that didn't land) fires the same alert channel.
+- **Pending-authorization age alerts** — the ten-minute reconciler marks one-hour-old unresolved
+  x402 authorizations stale and 24-hour-old ones critical. `/api/health` stays HTTP 200 for deploy
+  readiness but reports `status: degraded`; `/status` shows the oldest age. The alert is deduplicated
+  by authorization/status. Age never releases capacity: only exact Circle accepted/failed evidence
+  can change the pending row or its grant reservation.
 - **Alert channel** — set `KERYX_ALERT_WEBHOOK` in the VPS `.env.local` to a Discord/Slack incoming webhook. Unset → alerts still print to `pm2 logs`, just not delivered out-of-band.
 - **Uptime/health** — point an external monitor (UptimeRobot, etc.) at [`/api/health`](https://keryx.cc/api/health); a same-box check can't catch the box being down.
 

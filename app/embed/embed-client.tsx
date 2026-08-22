@@ -20,6 +20,7 @@ import { TraceRow } from "@/components/keryx/trace-row";
 import { AnswerMarkdown } from "@/components/keryx/answer-markdown";
 import { fmtUsdc } from "@/components/keryx/phase-style";
 import { useAskStream } from "@/lib/hooks/use-ask-stream";
+import { useBrowserOrigin } from "@/lib/hooks/use-browser-origin";
 
 const CANONICAL = "https://keryx.cc";
 
@@ -28,10 +29,7 @@ export function EmbedClient() {
   const sourceId = params.get("source");
 
   // Host origin for outbound links — refined on mount so localhost previews work.
-  const [origin, setOrigin] = useState(CANONICAL);
-  useEffect(() => {
-    if (typeof window !== "undefined") setOrigin(window.location.origin);
-  }, []);
+  const origin = useBrowserOrigin(CANONICAL);
 
   // Resolve the hosting source's name from the public listing (best-effort).
   const [sourceName, setSourceName] = useState<string | null>(null);

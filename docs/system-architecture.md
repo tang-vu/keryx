@@ -543,7 +543,9 @@ keryx.cc (Cloudflare CNAME)
 **Documented residuals** (trade-offs, tracked):
 - R1: Citation payTo redirect under full compromise (cap-bounded; author manifest fix post-hackathon)
 - R2: Grant funding not on-chain verified (retry fails at Gateway; balance API check post-hackathon)
-- R3: Session key in sessionStorage (XSS surface cap-bounded; Web Crypto non-exportable post-hackathon)
+- R3: Worker-held session key; only AES-GCM ciphertext is tab-persisted. XSS during the one-time
+  wallet derivation signature can reproduce it, and same-origin injected code can spend the cap to
+  registry-valid payees. A separate-origin signer boundary is the remaining mitigation.
 - R4: Grant state lost on server restart (acceptable for testnet; persist grant metadata post-hackathon)
 
 See `docs/security-threat-model.md` for full matrix.
@@ -597,8 +599,8 @@ See `docs/security-threat-model.md` for full matrix.
 
 | Endpoint | Auth | Purpose |
 |----------|------|---------|
-| POST `/api/ask` | JWT or API key | Stream agent execution (SSE) |
-| POST `/api/ask/sign` | JWT | Receive browser-signed EIP-712 |
+| POST `/api/ask` | Anonymous treasury tier or SIWE-owned grant | Stream agent execution (SSE) |
+| POST `/api/ask/sign` | Active grant + scoped pending reqId | Receive browser-signed EIP-712 |
 | GET `/api/sources` | public | List sources (paginated) |
 | POST `/api/sources` | creator JWT | Register new source (optional `notifyUrl`) |
 | GET/POST `/api/creator/[id]/notify` | owner JWT | Get / set / rotate / disable citation webhook (secret shown once) |

@@ -355,8 +355,9 @@ Keryx started at the **Lepton Agents Hackathon** (Canteen × Circle, on Arc, Jun
 canonical build of the "herald" model — *content cited, paid per citation* — and never stopped
 running. It has been live at [keryx.cc](https://keryx.cc) since, settling real value every hour,
 onboarding real feeds, and shipping continuously in public. Next: Lit Protocol for client-side IPFS
-key release, growing external agent traffic through the MCP and A2A on-ramps, and a single config
-flag between this system and mainnet.
+key release and growing external agent traffic through the MCP and A2A on-ramps. Mainnet remains a
+separate audited migration: the current network id, Gateway endpoints, explorer, and browser chain
+are deliberately pinned to Arc testnet, with no single-variable production-money switch.
 
 ## Stack
 

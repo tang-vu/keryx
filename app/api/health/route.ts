@@ -24,6 +24,10 @@ import {
   type PendingReconciliationSummary,
 } from "@/lib/gateway/x402-transfer-reconciliation";
 import { classifyArcRpcProvider } from "@/lib/ops/public-proof";
+import {
+  assessPendingReconciliation,
+  type PendingReconciliationAssessment,
+} from "@/lib/gateway/pending-reconciliation-health";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -96,7 +100,8 @@ export async function GET() {
 
     // Per-authorization Circle reconciliation is separate from aggregate wallet parity: the first
     // proves an ambiguous nonce, while the second proves the creator balances backing settled rows.
-    let reconciliation: PendingReconciliationSummary | null = null;
+    let reconciliation: (PendingReconciliationSummary & PendingReconciliationAssessment) | null =
+      null;
     try {
       const raw = await db.getSyncState(PENDING_RECONCILIATION_STATE_KEY);
       if (raw) {
@@ -105,15 +110,19 @@ export async function GET() {
           ...parsed,
           // Rolling deploy compatibility: summaries written before D-44 lack this additive field.
           releasedReservations: parsed.releasedReservations ?? 0,
+          ...assessPendingReconciliation(parsed),
         };
       }
     } catch {
       /* operational evidence is additive; never turn malformed telemetry into downtime */
     }
 
+    const operationalStatus = reconciliation?.degraded ? "degraded" : "operational";
+
     return Response.json(
       {
         ok: true,
+        status: operationalStatus,
         db: "ok",
         ...base,
         registry,

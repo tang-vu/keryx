@@ -31,6 +31,8 @@ import type {
   PaymentRequirements,
 } from "@/lib/payments/browser-cosign-gateway";
 import type { QueryRun } from "@/lib/types";
+import { MAX_ASK_QUESTION_CHARS, parseAskQuestion } from "@/lib/ask-input";
+import { isAddress } from "viem";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,18 +49,20 @@ export async function POST(req: NextRequest) {
   // Model pick from the UI's picker. Validated inside getAgentDeps → resolveModelChoice:
   // unknown/unconfigured ids silently run the default engine, and every pick has a
   // Configured-provider → heuristic fallback chain, so a crafted value can never fail an ask.
-  const model = typeof body.model === "string" ? body.model : undefined;
-  const question = typeof body.question === "string" ? body.question.trim() : "";
-  if (!question) {
-    return Response.json({ error: "question is required" }, { status: 400 });
+  const model =
+    typeof body.model === "string" ? body.model.trim().slice(0, 64) || undefined : undefined;
+  const parsedQuestion = parseAskQuestion(body.question);
+  if (!parsedQuestion.success) {
+    return Response.json({ error: parsedQuestion.error }, { status: 400 });
   }
+  const question = parsedQuestion.question;
 
   // A present session id means "spend my browser-funded grant". Never coerce a malformed value or
   // silently reinterpret an empty one as the anonymous treasury path.
   let sessionId: string | undefined;
   if (body.sessionId !== undefined) {
-    if (typeof body.sessionId !== "string" || !body.sessionId.trim()) {
-      return Response.json({ error: "sessionId must be a non-empty string" }, { status: 400 });
+    if (typeof body.sessionId !== "string" || !isAddress(body.sessionId.trim())) {
+      return Response.json({ error: "sessionId must be a valid wallet address" }, { status: 400 });
     }
     sessionId = body.sessionId.trim().toLowerCase();
   }
@@ -74,7 +78,12 @@ export async function POST(req: NextRequest) {
     const parent = await (await getDb()).getQueryRun(requestedParentId);
     if (parent) {
       parentId = parent.id;
-      askQuestion = buildFollowUpQuestion(parent.question, question);
+      // Historical rows predate the input bound. Keep one old dispatch from expanding a new model
+      // prompt without limit while preserving enough context for a useful follow-up.
+      askQuestion = buildFollowUpQuestion(
+        parent.question.slice(0, MAX_ASK_QUESTION_CHARS),
+        question,
+      );
     }
   }
 
@@ -125,11 +134,15 @@ export async function POST(req: NextRequest) {
   }
   const useBrowserCoSign = Boolean(sessionId);
 
-  // Anonymous (no-session) requests run on the treasury gateway (RealGateway) and are
-  // unauthenticated — rate-limit by client IP so the endpoint can't be scripted into a
-  // treasury drain or fake-volume loop. The co-sign path spends the user's own funded
-  // session (grant-cap bounded), so it is intentionally exempt from this IP tier.
-  if (!useBrowserCoSign) {
+  // Anonymous requests are IP-limited against treasury drain. Browser co-sign payments are
+  // grant-funded, but their model/search compute is separately limited by verified owner wallet.
+  if (useBrowserCoSign && sessionId) {
+    const limited = await checkRateLimit(sessionId, "sessionAsk", {
+      code: "session_rate_limit",
+      message: "This wallet has dispatched several questions recently. Try again shortly.",
+    });
+    if (limited) return limited;
+  } else {
     const limited = await checkRateLimit(clientIp(req), "treasuryAsk", {
       code: "free_trial_limit",
       message:
@@ -137,6 +150,29 @@ export async function POST(req: NextRequest) {
     });
     if (limited) return limited;
   }
+
+  const coercedBudget =
+    typeof body.budget === "number" && Number.isFinite(body.budget) && body.budget > 0
+      ? body.budget
+      : config.defaultBudget;
+  const remainingGrantUsdc = grant
+    ? Math.max(
+        0,
+        Math.round(grant.cap * 1_000_000) - Math.round(grant.spent * 1_000_000),
+      ) / 1_000_000
+    : undefined;
+  if (useBrowserCoSign && (!remainingGrantUsdc || remainingGrantUsdc <= 0)) {
+    return Response.json(
+      {
+        error: "session_budget_exhausted",
+        message: "This spending session has no unreserved USDC left.",
+      },
+      { status: 402 },
+    );
+  }
+  const askBudget = useBrowserCoSign
+    ? Math.min(coercedBudget, remainingGrantUsdc!, config.sessionAskMaxBudget)
+    : Math.min(coercedBudget, config.anonMaxBudget);
 
   const encoder = new TextEncoder();
 
@@ -198,18 +234,6 @@ export async function POST(req: NextRequest) {
         // then counts only genuine third-party askers.
         const isBot =
           !!config.botKey && req.nextUrl.searchParams.get("bot") === config.botKey;
-        // Coerce the caller-supplied budget — a missing / NaN / ≤0 value must never reach the
-        // agent (it would print "$NaN" across the trace or no-op the run). Invalid → default.
-        const coercedBudget =
-          typeof body.budget === "number" && Number.isFinite(body.budget) && body.budget > 0
-            ? body.budget
-            : config.defaultBudget;
-        // Treasury (no-session) path is unauthenticated and spends Keryx's own funds, so hard-cap
-        // the budget a caller can authorize. The co-sign path spends the user's own session and is
-        // left as signed. The UI dial maxes at 0.08 (< cap), so the legitimate demo is unaffected.
-        const askBudget = useBrowserCoSign
-          ? coercedBudget
-          : Math.min(coercedBudget, config.anonMaxBudget);
         const gen = runAgent(
           { question: askQuestion, budget: askBudget, origin: isBot ? "engine" : "web" },
           deps,

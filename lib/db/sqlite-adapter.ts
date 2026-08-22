@@ -258,6 +258,10 @@ export class SqliteAdapter implements KeryxDB {
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");
     this.db.exec(SCHEMA);
     this.ensureColumns();
+    // Releases before 2026-08-22 keyed two authenticated routes by the raw `kx_live_...` bearer
+    // value before verification. Remove those legacy counters during every startup so the live DB
+    // and every restored snapshot converge back to the documented hash-only secret invariant.
+    this.db.exec(`DELETE FROM rate_limit_counters WHERE bucket GLOB 'ask:kx_live_*'`);
     if (cacheEncryptionRequired() && !hasContentKey()) {
       throw new Error("CONTENT_MASTER_KEY is required for paid-content cache access in real mode");
     }

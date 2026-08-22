@@ -7,12 +7,16 @@
  * Missing or mismatched results remain pending and outside settled metrics and creator earnings.
  *
  * Run: npm run reconcile-payments (installed every 10 minutes by deploy-vps.sh)
- * Exit: 0 clean/awaiting only · 1 mismatched Circle evidence · 2 check failed
+ * Exit: 0 clean/awaiting only · 1 stale/critical/mismatched evidence · 2 check failed
  */
 
 import { getDb } from "../lib/db/index.ts";
 import { reconcilePendingPayments } from "../lib/gateway/x402-transfer-reconciliation.ts";
 import { sendAlert } from "../lib/notify/alert.ts";
+import {
+  PENDING_RECONCILIATION_ALERT_STATE_KEY,
+  assessPendingReconciliation,
+} from "../lib/gateway/pending-reconciliation-health.ts";
 
 async function main(): Promise<void> {
   const db = await getDb();
@@ -25,11 +29,31 @@ async function main(): Promise<void> {
     console.log(`[reconcile] oldest unresolved authorization: ${summary.oldestPendingAt}`);
   }
 
-  if (summary.mismatched === 0) return;
-  await sendAlert(
-    "pending x402 reconciliation needs review",
-    `Circle returned ${summary.mismatched} transfer(s) whose economic tuple conflicts with Keryx while checking ${summary.scanned} pending authorization(s). None of those rows were changed; inspect the reconciliation log.`,
-  );
+  const assessment = assessPendingReconciliation(summary);
+  const needsReview = summary.mismatched > 0 || assessment.degraded;
+  const previous = await db.getSyncState(PENDING_RECONCILIATION_ALERT_STATE_KEY);
+  if (!needsReview) {
+    if (previous) await db.setSyncState(PENDING_RECONCILIATION_ALERT_STATE_KEY, "");
+    return;
+  }
+
+  // Alert once for each oldest authorization/status pair. A one-hour stale warning may alert again
+  // when it crosses 24 hours, but the ten-minute cron does not spam the same incident repeatedly.
+  const fingerprint = JSON.stringify({
+    oldestPendingAt: summary.oldestPendingAt,
+    status: assessment.status,
+  });
+  if (previous !== fingerprint) {
+    const age = assessment.oldestPendingAgeSeconds ?? 0;
+    const ageHours = (age / 3_600).toFixed(1);
+    await sendAlert(
+      "pending x402 reconciliation needs review",
+      summary.mismatched > 0
+        ? `Circle returned ${summary.mismatched} conflicting economic tuple(s) while checking ${summary.scanned} pending authorization(s). None were changed.`
+        : `${summary.awaiting} authorization(s) still lack definitive Circle evidence; the oldest has remained pending for ${ageHours} hours. Its reservation remains held.`,
+    );
+    await db.setSyncState(PENDING_RECONCILIATION_ALERT_STATE_KEY, fingerprint);
+  }
   process.exitCode = 1;
 }
 

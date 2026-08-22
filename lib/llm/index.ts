@@ -7,7 +7,7 @@
  * effective label and attempt telemetry are run-local; provider circuit state is shared separately.
  */
 
-import { config } from "../config";
+import { config, llmProviderOrder } from "../config";
 import { AnthropicEngine } from "./anthropic-engine";
 import { HeuristicEngine } from "./heuristic-engine";
 import { OpenAICompatibleEngine } from "./openai-compatible-engine";
@@ -54,18 +54,18 @@ function openAiEngine(choice: ModelChoice): ReasoningEngine | null {
 function defaultRealEngines(exclude = new Set<string>()): ReasoningEngine[] {
   const engines: ReasoningEngine[] = [];
 
-  if (config.anthropicKey) {
-    const anthropic = new AnthropicEngine();
-    if (!exclude.has(anthropic.name)) engines.push(anthropic);
+  for (const provider of llmProviderOrder()) {
+    let engine: ReasoningEngine | null = null;
+    if (provider === "anthropic" && config.anthropicKey) {
+      engine = new AnthropicEngine();
+    } else if (provider === "deepseek" && endpointFor("deepseek")) {
+      // The bare constructor preserves KERYX_LLM_MODEL / KERYX_SYNTHESIS_MODEL for this tier.
+      engine = new OpenAICompatibleEngine();
+    } else if (provider === "mimo") {
+      engine = openAiEngine(findModelChoice("mimo-v2.5")!);
+    }
+    if (engine && !exclude.has(engine.name)) engines.push(engine);
   }
-
-  // The bare constructor preserves KERYX_LLM_MODEL / KERYX_SYNTHESIS_MODEL for the default tier.
-  // Catalog picks stay pinned to their public wire model in openAiEngine().
-  const deepseek = endpointFor("deepseek") ? new OpenAICompatibleEngine() : null;
-  if (deepseek && !exclude.has(deepseek.name)) engines.push(deepseek);
-
-  const mimo = openAiEngine(findModelChoice("mimo-v2.5")!);
-  if (mimo && !exclude.has(mimo.name)) engines.push(mimo);
 
   return engines;
 }

@@ -8,19 +8,16 @@
  * back to the creator's live earnings page, turning payouts into proof and reach.
  */
 
-import { useEffect, useState } from "react";
 import { BadgeCheck, Copy } from "lucide-react";
 import { toast } from "sonner";
+import { useBrowserOrigin } from "@/lib/hooks/use-browser-origin";
 
 // SSR + first client render agree on the canonical host; refined to the real origin on mount
 // so localhost/preview embeds copy the right URL too.
 const CANONICAL = "https://keryx.cc";
 
 export function EmbedBadgePanel({ creatorId }: { creatorId: string }) {
-  const [origin, setOrigin] = useState(CANONICAL);
-  useEffect(() => {
-    if (typeof window !== "undefined") setOrigin(window.location.origin);
-  }, []);
+  const origin = useBrowserOrigin(CANONICAL);
 
   const badgeUrl = `${origin}/api/creator/${creatorId}/badge.svg`;
   const pageUrl = `${origin}/creator/${creatorId}`;

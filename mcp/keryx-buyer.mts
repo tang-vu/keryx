@@ -14,7 +14,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { GatewayClient, type SupportedChainName } from "@circle-fin/x402-batching/client";
+import { GatewayClient } from "@circle-fin/x402-batching/client";
 import { createPublicClient, erc20Abi, formatUnits, http, parseUnits } from "viem";
 import { arcTestnet } from "viem/chains";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
@@ -22,7 +22,9 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 const USDC = (process.env.KERYX_USDC_ADDRESS ??
   "0x3600000000000000000000000000000000000000") as `0x${string}`;
 const RPC = process.env.KERYX_RPC_URL ?? "https://rpc.testnet.arc.network";
-const CHAIN = (process.env.KERYX_NETWORK ?? "arcTestnet") as SupportedChainName;
+// The published buyer is intentionally testnet-only. A mainnet release needs a separate,
+// reviewed package and deployment; changing an environment variable must never enable spending.
+const CHAIN = "arcTestnet" as const;
 const BASE_URL = (process.env.KERYX_BASE_URL ?? "https://keryx.cc").replace(/\/$/, "");
 const FEE_USDC = Number(process.env.KERYX_A2A_FEE ?? "0.02");
 const DEPOSIT_USDC = process.env.KERYX_GATEWAY_DEPOSIT ?? "0.5";

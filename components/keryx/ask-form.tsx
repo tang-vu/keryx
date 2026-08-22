@@ -10,6 +10,7 @@
 import { useEffect, useRef, useState } from "react";
 // Pure data module (no env imports), so the picker and the server agree on which id is the default.
 import { DEFAULT_MODEL_ID } from "@/lib/llm/model-catalog";
+import { MAX_ASK_QUESTION_CHARS } from "@/lib/ask-input";
 
 interface AskFormProps {
   disabled?: boolean;
@@ -93,14 +94,17 @@ export function AskForm({ disabled, onAsk }: AskFormProps) {
   useEffect(() => {
     if (prefilled.current) return;
     prefilled.current = true;
-    const { q, budget: b, run, parent, model: m } = readSharedAsk();
-    if (q) setQuestion(q);
-    if (b !== null) setBudget(b);
-    if (m) setModel(m);
-    parentRef.current = parent ?? undefined;
-    // Opt-in auto-dispatch: only when the link explicitly asks for it and a question is present.
-    // Treasury free-trial rate limits still apply, so this can't be turned into a spend amplifier.
-    if (q && run && !disabled) onAsk(q, b ?? 0.05, parent ?? undefined, m ?? undefined);
+    const timer = window.setTimeout(() => {
+      const { q, budget: b, run, parent, model: m } = readSharedAsk();
+      if (q) setQuestion(q);
+      if (b !== null) setBudget(b);
+      if (m) setModel(m);
+      parentRef.current = parent ?? undefined;
+      // Opt-in auto-dispatch: only when the link explicitly asks for it and a question is present.
+      // Treasury free-trial rate limits still apply, so this can't be turned into a spend amplifier.
+      if (q && run && !disabled) onAsk(q, b ?? 0.05, parent ?? undefined, m ?? undefined);
+    }, 0);
+    return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -162,6 +166,7 @@ export function AskForm({ disabled, onAsk }: AskFormProps) {
               }}
               placeholder="Ask anything worth paying to read…"
               rows={2}
+              maxLength={MAX_ASK_QUESTION_CHARS}
               disabled={disabled}
               className="w-full resize-none border-0 border-b border-ink bg-transparent pb-3 font-display text-[clamp(22px,2.6vw,30px)] font-medium leading-tight text-ink outline-none placeholder:font-normal placeholder:text-faint focus:border-seal"
             />

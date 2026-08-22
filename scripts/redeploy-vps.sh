@@ -61,9 +61,9 @@ else
 fi
 REMOTE
 
-# 3. build into .next.tmp — the live .next is untouched, so an OOM here is harmless
-say "3/5 building into .next.tmp (old build still live)"
-run_ssh "$SSH" "cd $APP_DIR && rm -rf .next.tmp && NODE_OPTIONS=--max-old-space-size=1536 NEXT_DIST_DIR=.next.tmp npm run build"
+# 3. typecheck, then build into .next.tmp — the live .next is untouched on any failure
+say "3/5 typechecking + building into .next.tmp (old build still live)"
+run_ssh "$SSH" "cd $APP_DIR && npm run typecheck && rm -rf .next.tmp && NODE_OPTIONS=--max-old-space-size=1536 NEXT_DIST_DIR=.next.tmp npm run build"
 
 # 4. atomic swap + reload
 say "4/5 swapping in the new build + reload"

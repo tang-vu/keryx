@@ -12,6 +12,49 @@ afterEach(() => {
 });
 
 describe("credential-aware provider chain", () => {
+  it("honors an operator order with MiMo primary and DeepSeek backup", async () => {
+    vi.resetModules();
+    vi.stubEnv("ANTHROPIC_API_KEY", "");
+    vi.stubEnv("DEEPSEEK_API_KEY", "deepseek-key");
+    vi.stubEnv("OPENAI_API_KEY", "");
+    vi.stubEnv("MIMO_API_KEY", "mimo-key");
+    vi.stubEnv("KERYX_LLM_PROVIDER_ORDER", "mimo,deepseek");
+
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.startsWith("https://api.xiaomimimo.com")) {
+        return new Response("temporarily unavailable", { status: 503 });
+      }
+      if (url.startsWith("https://api.deepseek.com")) {
+        return Response.json({
+          choices: [{ message: { content: '{"claims":["served by DeepSeek backup"]}' } }],
+        });
+      }
+      throw new Error(`unexpected URL: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { getReasoningEngine } = await import("./index");
+    const { effectiveEngineName, reasoningAttempts } = await import("./resilient-engine");
+    const engine = getReasoningEngine();
+
+    expect(engine.name).toBe("llm:mimo:mimo-v2.5");
+    await expect(engine.decompose("q")).resolves.toEqual(["served by DeepSeek backup"]);
+    expect(effectiveEngineName(engine)).toBe(
+      "llm:deepseek:deepseek-v4-flash (fallback from llm:mimo:mimo-v2.5)",
+    );
+    expect(reasoningAttempts(engine)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ engine: "llm:mimo:mimo-v2.5", tier: 0, outcome: "failed" }),
+        expect.objectContaining({
+          engine: "llm:deepseek:deepseek-v4-flash",
+          tier: 1,
+          outcome: "served",
+        }),
+      ]),
+    );
+  });
+
   it("serves a failed DeepSeek step from MiMo before the heuristic", async () => {
     vi.resetModules();
     vi.stubEnv("ANTHROPIC_API_KEY", "");

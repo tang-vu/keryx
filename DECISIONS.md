@@ -5,6 +5,25 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-49** · Security/Operations · *Authentication secrets, payment authority, compute allowance,
+and settlement evidence are separate state machines.* A raw API bearer value is verified before
+the durable limiter sees it; valid callers are keyed by non-secret database id and legacy secret
+buckets are purged. Supabase keeps browser roles read-only only for explicitly public metadata,
+while private tables and every economic RPC are service-role-only under RLS. Browser sessions still
+derive payment authority exclusively from the SIWE owner, the browser-held signer, the persisted
+atomic grant, and Circle evidence; separately, their server compute is wallet-rate-limited and each
+dispatch is bounded by the remaining grant plus a lower per-run ceiling. Grant create/recovery now
+fails closed when independent balance evidence is unavailable.
+
+An old pending authorization degrades public/operational health after one hour and becomes critical
+after 24 hours, but age alone never settles, fails, or releases it. Only the exact Circle tuple under
+D-43/D-44 changes financial state. Deploys now run an explicit TypeScript gate before the low-
+downtime build, and the web origin ships a CSP/security-header baseline without forcing every public
+archive page into dynamic nonce rendering. Why: a secret identifier, a compute quota, a spend cap,
+and a settlement receipt contain different authority; using one as another created data exposure or
+unbounded operational work even when the financial cap itself remained sound. Reversible: medium
+(limits/headers are tunable; database privilege and secret-storage fixes should not be reversed).
+
 **D-48** · Settlement evidence · *An unavailable verification leg is `unknown`, never a zero
 balance or a settlement finding.* The Circle parity sweep first identifies Gateway shortfalls,
 then reads those creators' Arc USDC balances because they may have cashed out through another
@@ -353,6 +372,9 @@ the evidence gate. Reversible: easy (restore per-tier retries or make the policy
 **D-29** · Reasoning/Reliability · *A paid dispatch crosses configured model providers before it
 may degrade to deterministic reasoning, and the receipt records every tier it actually tried.*
 The default chain is credential-aware: Anthropic, DeepSeek Flash, MiMo V2.5, then the heuristic.
+A deployment may set `KERYX_LLM_PROVIDER_ORDER` to an explicit ordered allowlist of those real
+providers; omitted names are intentionally disabled, invalid/duplicate names are ignored, and an
+empty/all-invalid value restores the default. The deterministic heuristic always remains last.
 A caller-picked model leads the chain and excludes only that exact engine from the default
 fallbacks. Each transport aborts at a configurable sixty-second deadline; rate limits, 5xx and
 network failures retry three times, while a full timeout crosses providers immediately rather than
@@ -558,8 +580,8 @@ Why: repo is `keryx` (Greek herald/town-crier — announces + is paid); fits the
 **D-02** · Scope · *Keep the scaffold's working x402/Gateway plumbing verbatim; rebuild only the agent + creator economy on top.*
 Why: payments are the risky/verified part — don't re-derive them; spend effort on the reasoning brain (the differentiator). Reversible: n/a.
 
-**D-01** · Chain · *Build on Arc testnet (5042002) with a single mainnet config flag.*
-Why: hackathon guardrail — no real money without go-ahead. Reversible: easy (config).
+**D-01** · Chain · *Build on Arc testnet (5042002); mainnet is a separate audited migration, not a config flag.*
+Why: a one-variable switch cannot safely change every chain, token, Gateway, registry, browser, monitoring, and operating assumption. This supersedes the original hackathon-era config-flag shortcut. Reversible only through an explicit mainnet release and go/no-go review.
 
 **D-15** · Enhancements · *Implement all four enhancements, sequenced by score-impact.* (user: "all four; you decide how to win")
 Order: (1) Agent-to-agent mode — expose Keryx as a paid x402 endpoint other agents call; (2) External x402 discovery via `circle services search`; (3) Onchain PaymentSplitter (Circle Contracts) for atomic splits; (4) ERC-8004 agent identity + creator reputation feeding source selection. Core (web app + real settlement + volume) lands first. Reversible: easy (each is additive).

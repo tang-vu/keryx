@@ -18,8 +18,11 @@ const tiers = {
   public: 60,
   // Anonymous (no-session) /api/ask calls drive a real treasury-funded agent run — expensive in
   // LLM tokens and real USDC. Keyed by client IP. 5/60s is generous for a human demoing the site
-  // but blocks scripted treasury-drain / fake-volume loops. Session co-sign calls bypass this tier.
+  // but blocks scripted treasury-drain / fake-volume loops. Session co-sign uses its own tier.
   treasuryAsk: 5,
+  // Browser co-sign spends the user's grant rather than Keryx's treasury, but every dispatch still
+  // consumes server-side model/search capacity. Key by the SIWE-verified owner wallet.
+  sessionAsk: 10,
   // Unkeyed A2A callers (/api/agent/ask without a Bearer key). The x402 fee gates the run, but an
   // unauthenticated caller could still loop large-budget treasury payouts — IP-key it. More
   // generous than treasuryAsk because A2A is a paid path; keyed callers use the `ask` tier instead.
