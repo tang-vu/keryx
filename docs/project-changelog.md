@@ -17,8 +17,8 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
   economic RPC behind explicit RLS/service-role privileges.
 - Bounded questions, wallet-scoped browser compute, and each session dispatch budget while keeping
   browser signer custody, atomic reservations, and Circle-evidence-only reconciliation unchanged.
-- Added stale/critical pending-authorization health, deduplicated ops alerts, deploy-time TypeScript
-  gates, and global CSP/transport/frame/MIME/referrer/permissions headers.
+- Added stale/critical pending-authorization health, deduplicated ops alerts, swap-backed deploy-time
+  TypeScript gates, and global CSP/transport/frame/MIME/referrer/permissions headers.
 - Updated the safe dependency lane to Next 16.3.2, MCP SDK 1.30, Circle App Kit packages, and x402
   2.23; production audit now has zero critical/high advisories and CI gates on high severity.
 - Made the MiMo/DeepSeek/Anthropic fallback order operator-configurable with documented partial-list

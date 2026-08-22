@@ -78,7 +78,7 @@ ssh "$SSH" "cd $APP_DIR && (grep -q '^BASE_URL=' .env.local && sed -i 's#^BASE_U
 
 # --- 5. install deps + build (swap-backed) -----------------------------------
 say "5/7 npm ci + typecheck + build (this is the slow step on 1GB)"
-ssh "$SSH" "cd $APP_DIR && npm ci --no-audit --no-fund && npm run typecheck && NODE_OPTIONS=--max-old-space-size=1536 npm run build"
+ssh "$SSH" "cd $APP_DIR && npm ci --no-audit --no-fund && NODE_OPTIONS=--max-old-space-size=1536 npm run typecheck && NODE_OPTIONS=--max-old-space-size=1536 npm run build"
 
 # --- 6. start under pm2, persist across reboot -------------------------------
 say "6/7 (re)starting app under pm2 on :$PORT"
