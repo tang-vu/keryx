@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_ASK_QUESTION_CHARS, parseAskQuestion } from "./ask-input";
+import { MAX_ASK_QUESTION_CHARS, parseAskQuestion, parseResearchMode } from "./ask-input";
 
 describe("parseAskQuestion", () => {
   it("trims a bounded question", () => {
@@ -16,5 +16,14 @@ describe("parseAskQuestion", () => {
       success: false,
       error: expect.stringContaining(String(MAX_ASK_QUESTION_CHARS)),
     });
+  });
+});
+
+describe("parseResearchMode", () => {
+  it("accepts explicit modes and preserves Deep for missing or crafted API values", () => {
+    expect(parseResearchMode("quick")).toBe("quick");
+    expect(parseResearchMode("deep")).toBe("deep");
+    expect(parseResearchMode(undefined)).toBe("deep");
+    expect(parseResearchMode("turbo")).toBe("deep");
   });
 });

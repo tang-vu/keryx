@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/privacy" },
 };
 
-const UPDATED = "July 16, 2026";
+const UPDATED = "August 23, 2026";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -52,7 +52,7 @@ export default function PrivacyPage() {
           <p>
             Keryx is a reading agent that answers questions and pays the writers it cites, in USDC
             on the Arc testnet. We keep what the product needs to work and nothing else: no ads, no
-            analytics scripts, no trackers, no selling or sharing of data with data brokers. The one
+            third-party analytics scripts, no ad trackers, no selling or sharing of data with data brokers. The one
             thing you should know before anything else: <strong className="text-ink">answered
             questions are published</strong> — each answer gets a public permalink and may appear in
             the public archive, because paying creators per citation only works in the open.
@@ -61,16 +61,30 @@ export default function PrivacyPage() {
 
         <Section title="When you ask a question">
           <p>
-            Your question is sent to our server, which sends it to a large-language-model provider
-            (Anthropic) to plan the research and write the grounded answer. The question, the
+            Your question is sent to our server, which sends it to a configured large-language-model
+            provider to plan the research and write the grounded answer. The question, the
             answer, the agent&apos;s reasoning trace, and the payments it triggered are stored and
             published at a permalink (<span className="font-mono text-[13.5px]">/dispatch/…</span>),
             and canonical questions appear in the public <Link href="/answers" className="text-seal underline underline-offset-2">archive</Link>.
             Don&apos;t put anything in a question you wouldn&apos;t put on a public page.
           </p>
           <p>
-            The free, no-wallet tier is rate-limited by IP address. That IP is held in server memory
-            only for rate-limiting and is not written to the database or joined to your questions.
+            The free, no-wallet tier is rate-limited by a one-way bucket derived from the IP address.
+            The raw IP is not written to the database or joined to your questions; expired limiter
+            buckets are deleted automatically.
+          </p>
+        </Section>
+
+        <Section title="Aggregate product counters">
+          <p>
+            Keryx keeps first-party daily counters so we can see where the product is slow or
+            confusing: for example, how many landing views became accepted asks and completed
+            answers, or how many creator registrations reached verification, a settled citation,
+            and a cash-out. Each row contains only a UTC date, an allowlisted event name, and a
+            count. It contains no wallet, IP, cookie, fingerprint, user agent, referrer, question,
+            source, or payment identifier. Landing counting uses tab-local session storage only to
+            avoid counting the same tab repeatedly that day; it creates no stable user id and sends
+            requests without credentials. These are event totals, never claimed as unique people.
           </p>
         </Section>
 
@@ -125,7 +139,8 @@ export default function PrivacyPage() {
 
         <Section title="Third parties we rely on">
           <p>
-            Anthropic processes question text to produce answers (per their API terms). Circle and
+            The configured reasoning provider processes question text to produce answers under its
+            API terms. Circle and
             the Arc network process the on-chain payments. Pinata pins the encrypted IPFS content
             creators upload. Each sees only what its job requires; none of them get your data for
             advertising.
@@ -135,8 +150,9 @@ export default function PrivacyPage() {
         <Section title="Retention, changes, contact">
           <p>
             Published dispatches and on-chain records are retained indefinitely — they are the
-            public ledger the product is built on. Rate-limit state lives in memory and is gone on
-            restart. If this policy changes, the date above changes with it. Questions, corrections,
+            public ledger the product is built on. Expired rate-limit buckets are deleted; aggregate
+            product counters retain only daily totals. If this policy changes, the date above changes
+            with it. Questions, corrections,
             or deletion requests for off-chain data:{" "}
             <a href="mailto:vutang2212@gmail.com" className="text-seal underline underline-offset-2">
               vutang2212@gmail.com

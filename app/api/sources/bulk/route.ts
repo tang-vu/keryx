@@ -19,6 +19,7 @@ import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { prepareSourceRegistration } from "@/lib/sources/prepare-registration";
 import { sanitizeFeedUrls } from "@/lib/ingest/feed-list";
+import { recordActivationEvent } from "@/lib/activation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -82,5 +83,8 @@ export async function POST(req: NextRequest) {
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, feeds.length) }, worker));
 
   const ready = results.filter((r) => r.ok).length;
+  for (let index = 0; index < ready; index++) {
+    await recordActivationEvent(db, "creator_registration_started");
+  }
   return Response.json({ total: results.length, ready, results });
 }

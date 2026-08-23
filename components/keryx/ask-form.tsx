@@ -11,10 +11,17 @@ import { useEffect, useRef, useState } from "react";
 // Pure data module (no env imports), so the picker and the server agree on which id is the default.
 import { DEFAULT_MODEL_ID } from "@/lib/llm/model-catalog";
 import { MAX_ASK_QUESTION_CHARS } from "@/lib/ask-input";
+import type { ResearchMode } from "@/lib/types";
 
 interface AskFormProps {
   disabled?: boolean;
-  onAsk: (question: string, budget: number, parentId?: string, model?: string) => void;
+  onAsk: (
+    question: string,
+    budget: number,
+    parentId?: string,
+    model?: string,
+    researchMode?: ResearchMode,
+  ) => void;
 }
 
 /** Picker entry from GET /api/models — only models the server can actually run. */
@@ -38,9 +45,10 @@ function readSharedAsk(): {
   run: boolean;
   parent: string | null;
   model: string | null;
+  mode: ResearchMode;
 } {
   if (typeof window === "undefined")
-    return { q: null, budget: null, run: false, parent: null, model: null };
+    return { q: null, budget: null, run: false, parent: null, model: null, mode: "quick" };
   const p = new URLSearchParams(window.location.search);
   const q = p.get("q")?.trim().slice(0, MAX_SHARED_Q) || null;
   const b = parseFloat(p.get("budget") ?? "");
@@ -52,7 +60,8 @@ function readSharedAsk(): {
   // Model pick from a shared link. Server-validated against the catalog (unknown → default),
   // so the raw value is safe to carry; cap the length to keep the wire tidy.
   const model = p.get("model")?.trim().slice(0, 40) || null;
-  return { q, budget, run: p.get("run") === "1", parent, model };
+  const mode = p.get("mode") === "deep" ? "deep" : "quick";
+  return { q, budget, run: p.get("run") === "1", parent, model, mode };
 }
 
 const SUGGESTIONS = [
@@ -76,6 +85,7 @@ export function AskForm({ disabled, onAsk }: AskFormProps) {
   // Reasoning-model pick, chat-app style. "" = server default (DeepSeek). The picker only
   // renders when the server offers more than one model; every pick falls back server-side.
   const [model, setModel] = useState("");
+  const [researchMode, setResearchMode] = useState<ResearchMode>("quick");
   const [models, setModels] = useState<PickerModel[]>([]);
   useEffect(() => {
     fetch("/api/models")
@@ -95,14 +105,17 @@ export function AskForm({ disabled, onAsk }: AskFormProps) {
     if (prefilled.current) return;
     prefilled.current = true;
     const timer = window.setTimeout(() => {
-      const { q, budget: b, run, parent, model: m } = readSharedAsk();
+      const { q, budget: b, run, parent, model: m, mode } = readSharedAsk();
       if (q) setQuestion(q);
       if (b !== null) setBudget(b);
       if (m) setModel(m);
+      setResearchMode(mode);
       parentRef.current = parent ?? undefined;
       // Opt-in auto-dispatch: only when the link explicitly asks for it and a question is present.
       // Treasury free-trial rate limits still apply, so this can't be turned into a spend amplifier.
-      if (q && run && !disabled) onAsk(q, b ?? 0.05, parent ?? undefined, m ?? undefined);
+      if (q && run && !disabled) {
+        onAsk(q, b ?? 0.05, parent ?? undefined, m ?? undefined, mode);
+      }
     }, 0);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -111,7 +124,7 @@ export function AskForm({ disabled, onAsk }: AskFormProps) {
   const submit = () => {
     const q = question.trim();
     if (!q || disabled) return;
-    onAsk(q, budget, parentRef.current, model || undefined);
+    onAsk(q, budget, parentRef.current, model || undefined, researchMode);
   };
 
   return (
@@ -177,6 +190,34 @@ export function AskForm({ disabled, onAsk }: AskFormProps) {
                 Drag the budget — watch the decisions change
               </span>
               <div className="flex flex-wrap items-center gap-3">
+                <div
+                  className="flex border border-ink"
+                  role="radiogroup"
+                  aria-label="Research depth"
+                >
+                  {(["quick", "deep"] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      role="radio"
+                      aria-checked={researchMode === mode}
+                      disabled={disabled}
+                      onClick={() => setResearchMode(mode)}
+                      title={
+                        mode === "quick"
+                          ? "Up to 2 claim-targeted reads; skips the external marketplace and gap-expansion pass"
+                          : "Up to 4 reads with marketplace discovery and a bounded coverage-gap pass"
+                      }
+                      className={`px-2.5 py-2 font-mono text-[10.5px] uppercase tracking-[0.08em] transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                        researchMode === mode
+                          ? "bg-ink text-cream"
+                          : "bg-paper text-ink-3 hover:text-ink"
+                      }`}
+                    >
+                      {mode}
+                    </button>
+                  ))}
+                </div>
                 {models.length > 1 && (
                   <label className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.1em] text-ink-3">
                     Counsel

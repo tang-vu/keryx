@@ -31,6 +31,7 @@ import { arcTestnet } from "@/lib/chains";
 import { config } from "@/lib/config";
 import { REGISTRY_ABI, getRegistrySource } from "@/lib/registry/registry-client";
 import { subscribeRegistryLogs } from "./indexer-event-subscription";
+import { safeErrorMessage } from "../ops/safe-error-message";
 import type { KeryxDB } from "./keryx-db";
 import type { Author, Source } from "@/lib/types";
 
@@ -234,7 +235,7 @@ export function startIndexer(db: KeryxDB, heartbeatMs = 30_000): () => void {
       await syncOnce(db);
     } catch (err) {
       // Log errors but don't crash the server — the next wake retries from last checkpoint.
-      console.error("[keryx indexer]", err instanceof Error ? err.message : err);
+      console.error("[keryx indexer]", safeErrorMessage(err));
     } finally {
       running = false;
       if (pending) {

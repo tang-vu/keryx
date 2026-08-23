@@ -17,6 +17,7 @@ import { NextRequest } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { feedContainsToken, verificationToken } from "@/lib/sources/feed-verification";
+import { recordActivationEvent } from "@/lib/activation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,5 +68,6 @@ export async function POST(req: NextRequest) {
   }
 
   await db.upsertSource({ ...source, verified: true });
+  await recordActivationEvent(db, "creator_verification_completed");
   return Response.json({ verified: true });
 }

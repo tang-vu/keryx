@@ -30,8 +30,9 @@ import type {
   BrowserPaymentContext,
   PaymentRequirements,
 } from "@/lib/payments/browser-cosign-gateway";
-import type { QueryRun } from "@/lib/types";
-import { MAX_ASK_QUESTION_CHARS, parseAskQuestion } from "@/lib/ask-input";
+import type { QueryRun, ResearchMode } from "@/lib/types";
+import { MAX_ASK_QUESTION_CHARS, parseAskQuestion, parseResearchMode } from "@/lib/ask-input";
+import { recordActivationEvent } from "@/lib/activation";
 import { isAddress } from "viem";
 
 export const runtime = "nodejs";
@@ -45,6 +46,7 @@ export async function POST(req: NextRequest) {
     sessionId?: unknown;
     parentId?: unknown;
     model?: unknown;
+    mode?: unknown;
   };
   // Model pick from the UI's picker. Validated inside getAgentDeps → resolveModelChoice:
   // unknown/unconfigured ids silently run the default engine, and every pick has a
@@ -56,6 +58,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: parsedQuestion.error }, { status: 400 });
   }
   const question = parsedQuestion.question;
+  const researchMode: ResearchMode = parseResearchMode(body.mode);
 
   // A present session id means "spend my browser-funded grant". Never coerce a malformed value or
   // silently reinterpret an empty one as the anonymous treasury path.
@@ -174,6 +177,11 @@ export async function POST(req: NextRequest) {
     ? Math.min(coercedBudget, remainingGrantUsdc!, config.sessionAskMaxBudget)
     : Math.min(coercedBudget, config.anonMaxBudget);
 
+  const isBot = !!config.botKey && req.nextUrl.searchParams.get("bot") === config.botKey;
+  if (!isBot) {
+    await recordActivationEvent(await getDb(), "reader_ask_started");
+  }
+
   const encoder = new TextEncoder();
 
   // AbortController tied to the client connection so sign-request promises are
@@ -226,16 +234,19 @@ export async function POST(req: NextRequest) {
           deps = await getAgentDeps({ model });
         }
 
-        send("meta", { engine: deps.engine.name, mode: deps.gateway.mode });
+        send("meta", { engine: deps.engine.name, mode: deps.gateway.mode, researchMode });
         // A request through /api/ask is a genuine human on the site → tag as external "web" usage
         // (the volume engine never goes through this route; it calls collectRun directly).
         // Exception: Keryx's own headless web-client drives this same route 24/7 and passes the
         // shared bot key, so its self-generated volume is tagged `engine` — the external bucket
         // then counts only genuine third-party askers.
-        const isBot =
-          !!config.botKey && req.nextUrl.searchParams.get("bot") === config.botKey;
         const gen = runAgent(
-          { question: askQuestion, budget: askBudget, origin: isBot ? "engine" : "web" },
+          {
+            question: askQuestion,
+            budget: askBudget,
+            researchMode,
+            origin: isBot ? "engine" : "web",
+          },
           deps,
         );
         let res = await gen.next();
@@ -248,6 +259,14 @@ export async function POST(req: NextRequest) {
         // If we broke early due to abort, skip saving — the run is incomplete.
         if (res.done) {
           const run = res.value as QueryRun;
+          let isReturning = false;
+          if (!isBot && asker) {
+            try {
+              isReturning = (await deps.db.listQueryRunsByAsker(asker, 1)).length > 0;
+            } catch {
+              // Funnel classification is best-effort and must not strand a completed paid answer.
+            }
+          }
           if (parentId) run.parentId = parentId;
           if (asker) {
             run.asker = asker;
@@ -257,6 +276,12 @@ export async function POST(req: NextRequest) {
             run.askerFunded = useBrowserCoSign;
           }
           await deps.db.saveQueryRun(run);
+          if (!isBot) {
+            await recordActivationEvent(deps.db, "reader_answer_completed");
+            if (isReturning) {
+              await recordActivationEvent(deps.db, "reader_returning_dispatch");
+            }
+          }
           send("done", run);
         }
       } catch (err) {

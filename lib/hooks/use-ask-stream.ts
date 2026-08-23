@@ -22,6 +22,7 @@ import type {
   Decision,
   PaymentRecord,
   QueryRun,
+  ResearchMode,
   TraceStep,
 } from "@/lib/types";
 import type { PaymentRequirementsInput } from "@/lib/x402-client-sign";
@@ -33,6 +34,7 @@ export type StreamMode = "real" | "offline";
 export interface AskMeta {
   engine: string;
   mode: StreamMode;
+  researchMode?: ResearchMode;
 }
 
 /**
@@ -308,7 +310,13 @@ export function useAskStream(opts?: AskStreamOpts) {
   }, [sessionId, getSessionWalletClient, grantCap, sourceIndex]);
 
   const ask = useCallback(
-    async (question: string, budget: number, parentId?: string, model?: string) => {
+    async (
+      question: string,
+      budget: number,
+      parentId?: string,
+      model?: string,
+      researchMode: ResearchMode = "quick",
+    ) => {
       reset();
       // Reset per-run signed total — each ask() is an independent budget run.
       signedTotalRef.current = 0;
@@ -330,6 +338,7 @@ export function useAskStream(opts?: AskStreamOpts) {
             // Reasoning-model pick from the form's picker. Server-validated against the
             // catalog; unknown/unset runs the default, and every pick falls back on error.
             ...(model ? { model } : {}),
+            mode: researchMode,
           }),
           signal: controller.signal,
         });

@@ -26,6 +26,7 @@ import { config } from "@/lib/config";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import type { WireBurnIntent } from "@/lib/gateway/withdraw-intent";
+import { recordActivationEvent } from "@/lib/activation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -164,6 +165,12 @@ export async function POST(req: NextRequest) {
       });
     } catch (err) {
       console.error(`[withdraw] could not record cash-out: ${err instanceof Error ? err.message : String(err)}`);
+    }
+
+    try {
+      await recordActivationEvent(await getDb(), "creator_withdrawal_completed");
+    } catch {
+      // The on-chain receipt is authoritative; aggregate telemetry remains best-effort.
     }
 
     console.log(`[withdraw] minted $${amountUsdc} → ${recipient} · tx ${mintTxHash}`);

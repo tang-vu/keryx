@@ -5,6 +5,30 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-50** · Product/Attention/Telemetry · *Research depth may bound attention and latency, while
+free previews may only remove spend authority; activation telemetry is aggregate operational
+state, never identity.* Web dispatches default to Quick: at most two claim-targeted paid or cached
+reads, no off-Arc marketplace probe, and no gap-expansion round. Deep preserves the existing
+four-source attention ceiling, external discovery, and bounded re-evaluation. Both modes retain the
+same hard USDC budget, browser signer custody, atomic grant reservation, registry payout authority,
+evidence gate, integer citation allocation, and Circle-only settlement truth.
+
+Before the first paid fetch, Keryx maps engine-proposed source targets from free previews onto the
+decomposed claims. Invalid claim indexes are discarded; an untargeted or below-floor BUY/CACHE is
+deterministically changed to SKIP. The pre-check can warn, narrow, or stop a spend plan, but cannot
+add a source, increase a price/budget, select `payTo`, or authorize a reward. Final confidence and
+creator rewards still come only from paid/cached body evidence under D-23, never from preview
+coverage.
+
+The activation funnel stores one row per `(UTC day, allowlisted event)` with an integer count. It
+stores no actor, wallet, IP, cookie, fingerprint, user agent, referrer, question, source, or payment
+identifier; its public dashboard calls these event totals, not unique users. Wallet-based returning
+asks are classified from the existing SIWE-attributed dispatch ledger and only the aggregate event
+is incremented. Why: current latency, grounding, and adoption data need a faster default plus a
+measurable path from landing to answer and creator cash-out without weakening payment authority or
+introducing surveillance. Reversible: easy (switch the web default, remove the downward-only gate,
+or stop incrementing aggregate counters; economic state is unchanged).
+
 **D-49** · Security/Operations · *Authentication secrets, payment authority, compute allowance,
 and settlement evidence are separate state machines.* A raw API bearer value is verified before
 the durable limiter sees it; valid callers are keyed by non-secret database id and legacy secret

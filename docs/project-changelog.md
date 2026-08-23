@@ -1,13 +1,28 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-08-22
-**Current Version:** 0.13.0
+**Last Updated:** 2026-08-23
+**Current Version:** 0.14.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
 
 ---
 
 ## Unreleased
+
+### Faster research modes and privacy-preserving activation funnel (2026-08-23)
+
+- Added a Quick web default (two claim-targeted reads, no external marketplace probe or expansion
+  round) beside the existing Deep research pass; both preserve the same visible budget, evidence
+  gate, payout authority, and honest settlement state.
+- Added a free-preview coverage pre-check before any paid fetch. Untargeted and below-floor
+  purchase proposals become visible SKIPs; preview coverage can only narrow spend and never
+  authorize a payee, citation, or reward.
+- Added a public 30-day reader/creator activation view backed only by UTC-day event counters. No
+  analytics cookie, wallet, IP, fingerprint, question, source, or payment id enters the counter
+  table, and the dashboard labels the figures as events rather than unique people.
+- Updated the privacy policy and added SQLite/Supabase parity plus tests for the new counters.
+- Redacted credential-bearing RPC/WS URLs from indexer error logs without changing checkpoint or
+  retry behavior.
 
 ### Security and operational hardening (2026-08-22)
 

@@ -7,6 +7,8 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import crypto from "node:crypto";
 import type {
+  ActivationEvent,
+  ActivationFunnel,
   ArticleOffer,
   DailyVolume,
   DashboardMetrics,
@@ -47,6 +49,7 @@ import {
   calculateDashboardMetrics,
   runEvidenceMetrics,
 } from "./dashboard-metrics";
+import { activationWindow, emptyActivationCounts } from "../activation";
 
 /**
  * supabase-js normally resolves PostgREST failures as `{ data, error }`. Most adapter methods
@@ -686,6 +689,28 @@ export class SupabaseAdapter implements KeryxDB {
       .order("created_at", { ascending: false })
       .limit(limit);
     return (data ?? []).map(rowToPayment);
+  }
+
+  async recordActivationEvent(event: ActivationEvent, day: string): Promise<void> {
+    const { data } = await this.sb.rpc("increment_activation_event", {
+      p_day: day,
+      p_event: event,
+    });
+    if (data === null) return;
+  }
+
+  async activationFunnel(days: number): Promise<ActivationFunnel> {
+    const window = activationWindow(days);
+    const counts = emptyActivationCounts();
+    const { data } = await this.sb
+      .from("activation_events")
+      .select("event,count")
+      .gte("day", window.sinceDay);
+    for (const row of data ?? []) {
+      const event = row.event as ActivationEvent;
+      if (Object.hasOwn(counts, event)) counts[event] += Number(row.count);
+    }
+    return { ...window, counts };
   }
 
   async listPendingPayments(limit: number): Promise<PaymentRecord[]> {

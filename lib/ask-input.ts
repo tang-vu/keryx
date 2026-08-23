@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ResearchMode } from "./types";
 
 /** Public questions are copied into model prompts, traces, and durable dispatch rows. */
 export const MAX_ASK_QUESTION_CHARS = 2_000;
@@ -21,4 +22,12 @@ export function parseAskQuestion(value: unknown):
     success: false,
     error: parsed.error.issues[0]?.message ?? "invalid question",
   };
+}
+
+const ResearchModeSchema = z.enum(["quick", "deep"]);
+
+/** Missing mode preserves the established API/integration behavior. The web UI sends Quick. */
+export function parseResearchMode(value: unknown): ResearchMode {
+  const parsed = ResearchModeSchema.safeParse(value);
+  return parsed.success ? parsed.data : "deep";
 }

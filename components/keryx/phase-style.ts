@@ -21,6 +21,7 @@ import {
   Quote,
   RotateCcw,
   Scale,
+  ScanSearch,
   Search,
   type LucideIcon,
 } from "lucide-react";
@@ -41,6 +42,7 @@ const PAID = "bg-paid/10 text-paid border-paid/30";
 export const PHASE_STYLES: Record<TracePhase, PhaseStyle> = {
   decompose: { label: "Decompose", chip: NEUTRAL, dot: "bg-ink-3", icon: Brain },
   discover: { label: "Discover", chip: NEUTRAL, dot: "bg-ink-3", icon: Search },
+  coverage: { label: "Pre-check", chip: SEAL, dot: "bg-seal", icon: ScanSearch },
   decide: { label: "Decide", chip: SEAL, dot: "bg-seal", icon: Scale },
   fetch: { label: "Fetch", chip: PAID, dot: "bg-paid", icon: Download },
   sufficiency: { label: "Sufficiency", chip: NEUTRAL, dot: "bg-ink-3", icon: BadgeCheck },

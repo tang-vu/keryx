@@ -281,6 +281,7 @@ function fakeDb(sources: Source[], state: DbState = {}): KeryxDB & { payments: P
       return [];
     },
     async saveQueryMemory() {},
+    async recordActivationEvent() {},
     async getSourceNotify() {
       return null;
     },
@@ -321,6 +322,46 @@ const citationPool = (budget: number) => budget * config.citationPoolRatio;
 // ── tests ───────────────────────────────────────────────────────────────────
 
 describe("runAgent — money-safety invariants", () => {
+  it("bounds Quick mode to two claim-targeted reads and records the preview plan", async () => {
+    const sources = ["a", "b", "c"].map((id) => makeSource({ id, fetchPrice: 0.002 }));
+    const engine = fakeEngine({
+      sufficiency: () => ({ sufficient: false, rationale: "keep reading" }),
+      reevaluate: () => ({
+        shouldBuyMore: true,
+        recommendedIds: ["c"],
+        rationale: "deep-only expansion",
+      }),
+    });
+    const gw = fakeGateway();
+    const { run, steps } = await drive(
+      { question: "q", budget: 0.05, researchMode: "quick" },
+      deps(sources, engine, gw),
+    );
+
+    expect(gw.fetchCalls).toHaveLength(2);
+    expect(run.researchMode).toBe("quick");
+    expect(run.previewCoverage).toMatchObject({ status: "ready", coveredClaims: 1 });
+    expect(steps.some((step) => step.phase === "reevaluate")).toBe(false);
+  });
+
+  it("turns an untargeted BUY into a visible no-spend SKIP", async () => {
+    const source = makeSource({ id: "a", fetchPrice: 0.002 });
+    const engine = fakeEngine({
+      decide: (input) => input.candidates.map((candidate) => ({
+        ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
+        targets: [],
+      })),
+    });
+    const gw = fakeGateway();
+    const { run } = await drive({ question: "q", budget: 0.05 }, deps([source], engine, gw));
+
+    expect(gw.fetchCalls).toEqual([]);
+    expect(run.totalSpent).toBe(0);
+    expect(run.previewCoverage?.status).toBe("insufficient");
+    expect(run.decisions[0]).toMatchObject({ action: "SKIP" });
+    expect(run.decisions[0]?.rationale).toMatch(/no toll is authorized/i);
+  });
+
   it("never spends more on tolls than the fetch budget, even when the engine BUYs everything", async () => {
     const budget = 0.05;
     // Three sources at 0.02 each. fetchBudget = 0.025, so only one fits; the rest must flip to SKIP.

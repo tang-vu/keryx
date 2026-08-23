@@ -28,6 +28,8 @@ import { getSession } from "@/lib/auth";
 import { storeGrant, grantExpiry } from "@/lib/payments/session-grants";
 import { getGatewayAvailableAtomic } from "@/lib/gateway/gateway-balance";
 import { config } from "@/lib/config";
+import { getDb } from "@/lib/db";
+import { recordActivationEvent } from "@/lib/activation";
 
 export const runtime = "nodejs";
 
@@ -149,6 +151,14 @@ export async function POST(req: NextRequest) {
     expiry: grantExpiry(),
     txHash: txHash ?? "recovered", // no new funding tx in recovery mode
   });
+
+  if (!recover) {
+    try {
+      await recordActivationEvent(await getDb(), "reader_session_funded");
+    } catch {
+      // Funding/grant success is authoritative; telemetry is best-effort only.
+    }
+  }
 
   return Response.json({
     ok: true,

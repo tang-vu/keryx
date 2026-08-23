@@ -42,6 +42,7 @@ import { prepareSourceRegistration } from "@/lib/sources/prepare-registration";
 import { paginateSourceList } from "@/lib/sources/paginate-source-list";
 import { consumePoint } from "@/lib/rate-limit-store";
 import type { Source } from "@/lib/types";
+import { recordActivationEvent } from "@/lib/activation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -133,5 +134,8 @@ export async function POST(req: NextRequest) {
   // ignored to prevent wallet spoofing. Delegate the actual register to the shared core, which the
   // bulk-import route reuses per feed so both paths stay byte-identical.
   const { status, payload } = await prepareSourceRegistration(db, session.address, body);
+  if (status >= 200 && status < 300) {
+    await recordActivationEvent(db, "creator_registration_started");
+  }
   return Response.json(payload, { status });
 }

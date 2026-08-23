@@ -50,14 +50,17 @@ BROWSER                              KERYX SERVER                     ARC + CIRC
    ├─ Server stores grant: {sessAddr, cap, spent:0, status:active}
    └─ Session is now funded and ready
 
-7. User asks question + sets budget
-   ├─ POST /api/ask {question, budget, sessionId}
+7. User asks question + sets budget + Quick/Deep depth
+   ├─ POST /api/ask {question, budget, sessionId, mode}
    └─ Server streams SSE:
 
 8. SSE Loop: Agent Execution (inside agent/run-agent.ts)
    ├─ decompose: break question into sub-claims
    ├─ discover: query registry + signed offer book; select one relevant article per publication
    ├─ decide: BUY / SKIP / CACHE per exact version and effective price (rationale logged)
+   ├─ coverage pre-check: free previews must map every payable read to a real sub-claim
+   │  └─ may downgrade BUY/CACHE → SKIP; cannot add spend, payTo, or reward authority
+   ├─ Quick: ≤2 reads, no external marketplace/gap expansion; Deep: existing ≤4 + bounded expansion
    │
    │  ON BUY:
    │  ├─ emit SSE event: sign-request {reqId, payTo, amount, verifyingContract, ...}

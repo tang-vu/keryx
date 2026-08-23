@@ -5,6 +5,8 @@
 
 import type { LedgerAccount } from "../gateway/settlement-parity";
 import type {
+  ActivationEvent,
+  ActivationFunnel,
   ArticleOffer,
   DailyVolume,
   DashboardMetrics,
@@ -354,6 +356,12 @@ export interface KeryxDB {
   /** Dispatches a wallet ran while signed in, newest first. Address match is case-insensitive:
    *  runs are stamped lowercased, but callers hand over whatever casing the session carries. */
   listQueryRunsByAsker(wallet: string, limit: number): Promise<QueryRun[]>;
+
+  // ── privacy-preserving activation telemetry ──
+  /** Atomically increment one aggregate UTC-day counter. No actor, wallet, IP, or cookie. */
+  recordActivationEvent(event: ActivationEvent, day: string): Promise<void>;
+  /** Aggregate coarse event totals for a bounded UTC-day window. Counts are not unique users. */
+  activationFunnel(days: number): Promise<ActivationFunnel>;
 
   // ── auth helpers ──
   /** True when any source in the registry has this wallet address (case-insensitive). */

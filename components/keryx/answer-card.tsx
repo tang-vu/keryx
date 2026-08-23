@@ -31,6 +31,14 @@ export function AnswerCard({ run, meta, permalink }: { run: QueryRun; meta: AskM
       {confidence ? (
         <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
           <ConfidenceBadge confidence={confidence} showReason />
+          <span className="border border-line bg-paper-2 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-3">
+            {(run.researchMode ?? meta?.researchMode ?? "deep")} research
+          </span>
+          {run.previewCoverage ? (
+            <span className="font-mono text-[10px] text-ink-3">
+              preview plan {run.previewCoverage.coveredClaims}/{run.previewCoverage.totalClaims} claims
+            </span>
+          ) : null}
         </div>
       ) : null}
       <div className="border border-ink bg-paper">

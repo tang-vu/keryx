@@ -8,6 +8,8 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import type {
+  ActivationEvent,
+  ActivationFunnel,
   ArticleOffer,
   DailyVolume,
   DashboardMetrics,
@@ -48,6 +50,7 @@ import {
   calculateDashboardMetrics,
   runEvidenceMetrics,
 } from "./dashboard-metrics";
+import { activationWindow, emptyActivationCounts } from "../activation";
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS sources (
@@ -163,6 +166,18 @@ CREATE TABLE IF NOT EXISTS query_runs (
   grounded_claim_count INTEGER,
   rewarded_citation_count INTEGER
 );
+CREATE TABLE IF NOT EXISTS activation_events (
+  day TEXT NOT NULL,
+  event TEXT NOT NULL CHECK (event IN (
+    'reader_landing','reader_ask_started','reader_answer_completed',
+    'reader_wallet_connected','reader_session_funded','reader_returning_dispatch',
+    'creator_registration_started','creator_verification_completed',
+    'creator_citation_settled','creator_withdrawal_completed'
+  )),
+  count INTEGER NOT NULL DEFAULT 0 CHECK (count >= 0),
+  PRIMARY KEY (day, event)
+);
+CREATE INDEX IF NOT EXISTS activation_events_day ON activation_events(day);
 -- No index on parent_id here: CREATE TABLE IF NOT EXISTS is a no-op against a database that
 -- predates the column, so an index naming it would fail at boot on exactly the databases that
 -- carry the real traction. ensureColumns() adds the column first, then the index.
@@ -1411,6 +1426,30 @@ export class SqliteAdapter implements KeryxDB {
       .prepare(`SELECT * FROM payment_events ORDER BY created_at DESC LIMIT ?`)
       .all(limit);
     return rows.map(rowToPayment);
+  }
+
+  async recordActivationEvent(event: ActivationEvent, day: string): Promise<void> {
+    this.db
+      .prepare(
+        `INSERT INTO activation_events (day,event,count) VALUES (?,?,1)
+         ON CONFLICT(day,event) DO UPDATE SET count=count+1`,
+      )
+      .run(day, event);
+  }
+
+  async activationFunnel(days: number): Promise<ActivationFunnel> {
+    const window = activationWindow(days);
+    const counts = emptyActivationCounts();
+    const rows = this.db
+      .prepare(
+        `SELECT event, SUM(count) AS count FROM activation_events
+          WHERE day >= ? GROUP BY event`,
+      )
+      .all(window.sinceDay) as Array<{ event: ActivationEvent; count: number }>;
+    for (const row of rows) {
+      if (Object.hasOwn(counts, row.event)) counts[row.event] = Number(row.count);
+    }
+    return { ...window, counts };
   }
 
   async listPendingPayments(limit: number): Promise<PaymentRecord[]> {

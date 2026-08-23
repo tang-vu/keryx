@@ -19,7 +19,9 @@ import type {
   PaymentOrigin,
   McpClientChannel,
   PaymentRecord,
+  PreviewCoverage,
   QueryRun,
+  ResearchMode,
   Source,
   SourceItem,
   ArticleOfferRef,
@@ -61,10 +63,18 @@ import {
   MIN_REWARD_SUPPORT,
   removeUnsupportedCitationMarkers,
 } from "./evidence-ledger";
+import {
+  buildPreviewCoverage,
+  normalizeClaimTargets,
+  previewCoverageBlockReason,
+} from "./coverage-precheck";
+import { recordActivationEvent } from "../activation";
 
 export interface RunInput {
   question: string;
   budget?: number;
+  /** Quick bounds attention/expansion for latency; Deep preserves the full research pass. */
+  researchMode?: ResearchMode;
   queryId?: string;
   /** Who triggered this run — stamped on every payment so traction can separate genuine external
    *  usage (web, A2A, MCP) from the autonomous volume engine. Defaults to "engine". */
@@ -121,6 +131,7 @@ export async function* runAgent(
   let citations: Citation[] = [];
   let evidence: EvidenceRecord[] = [];
   let claimCoverage: ClaimCoverageRecord[] = [];
+  let previewCoverage: PreviewCoverage | undefined;
   let evidenceMeasured = false;
   // Set once the verdict is computed; read by finish(). A `let` (not the closure-captured const)
   // so the early-return paths, which never reach the verdict step, still produce a valid run.
@@ -128,6 +139,10 @@ export async function* runAgent(
 
   const fetchBudget = budget * (1 - config.citationPoolRatio);
   const citationPool = budget * config.citationPoolRatio;
+  const researchMode: ResearchMode = input.researchMode ?? "deep";
+  const attentionLimit =
+    researchMode === "quick" ? Math.min(2, config.maxAttentionSources) : config.maxAttentionSources;
+  const reevaluateRounds = researchMode === "quick" ? 0 : config.reevaluateRounds;
   let spentTolls = 0;
 
   function emit(phase: TracePhase, message: string, detail?: unknown): TraceStep {
@@ -154,6 +169,13 @@ export async function* runAgent(
   yield emit("decompose", `Breaking down: "${input.question}"`);
   const subClaims = await engine.decompose(input.question);
   yield emit("decompose", `Identified ${subClaims.length} sub-claim(s) to support`, subClaims);
+  yield emit(
+    "decompose",
+    researchMode === "quick"
+      ? `Quick mode: at most ${attentionLimit} paid/cached reads, with no marketplace probe or gap-expansion round.`
+      : `Deep mode: up to ${attentionLimit} paid/cached reads plus one bounded gap-expansion pass when needed.`,
+    { researchMode, attentionLimit, reevaluateRounds },
+  );
 
   // 2) DISCOVER
   // Earning gate: only feed-ownership-verified sources are discoverable to the agent, so a wallet
@@ -294,7 +316,10 @@ export async function* runAgent(
   // Probe the live open x402 marketplace (Circle services) — real third-party endpoints the agent
   // can reason over alongside its creators. They settle off Keryx's Arc rail, so they're
   // discovery-only: evaluated and logged, never purchased.
-  const external = await discoverExternalCandidates(input.question, subClaims);
+  const external =
+    researchMode === "deep"
+      ? await discoverExternalCandidates(input.question, subClaims)
+      : [];
   if (external.length > 0) {
     candidates.push(...external);
     const chains = [...new Set(external.flatMap((c) => c.external!.chains))].join(", ");
@@ -365,6 +390,7 @@ export async function* runAgent(
         sourceName: asset.candidate.name,
         // The engine judges value; authoritative marketplace terms decide the amount reserved.
         price: asset.priceUsdc,
+        targets: normalizeClaimTargets(d.targets, subClaims.length),
         ...(asset.offer
           ? { offerId: asset.offer.id, listPrice: asset.listPriceUsdc }
           : {}),
@@ -391,6 +417,15 @@ export async function* runAgent(
             rationale: `${r.rationale} — no cache exists for this exact content version, so buying a fresh read.`,
           }
         : r;
+    const coverageBlock = previewCoverageBlockReason(d, subClaims.length);
+    if (coverageBlock) {
+      finalDecisions.push({
+        ...d,
+        action: "SKIP",
+        rationale: `${d.rationale} — ${coverageBlock}, so no toll is authorized.`,
+      });
+      continue;
+    }
     if (
       d.action === "CACHE" &&
       ((d.targets?.length ?? 0) === 0 || d.expectedValue < config.minCacheExpectedValue)
@@ -404,12 +439,12 @@ export async function* runAgent(
     }
     if (
       (d.action === "BUY" || d.action === "CACHE") &&
-      attentionUsed >= config.maxAttentionSources
+      attentionUsed >= attentionLimit
     ) {
       finalDecisions.push({
         ...d,
         action: "SKIP",
-        rationale: `${d.rationale} — the ${config.maxAttentionSources}-source attention budget is full, so lower-ranked evidence is skipped.`,
+        rationale: `${d.rationale} — the ${attentionLimit}-source ${researchMode} attention budget is full, so lower-ranked evidence is skipped.`,
       });
       continue;
     }
@@ -440,6 +475,18 @@ export async function* runAgent(
       rationale: `${base} External x402 endpoint on ${chain} (~$${d.price.toFixed(4)}/call) — off Keryx's Arc rail, so discovered & evaluated but not purchased this run.`,
     });
   }
+
+  previewCoverage = buildPreviewCoverage(subClaims, finalDecisions);
+  const coveragePct = Math.round(previewCoverage.ratio * 100);
+  yield emit(
+    "coverage",
+    previewCoverage.status === "ready"
+      ? `Free-preview pre-check maps an actionable source to every sub-claim (${previewCoverage.coveredClaims}/${previewCoverage.totalClaims}); paid reading may proceed within the budget.`
+      : previewCoverage.status === "partial"
+        ? `Free-preview pre-check covers ${previewCoverage.coveredClaims}/${previewCoverage.totalClaims} sub-claims (${coveragePct}%). The agent may buy only claim-targeted sources and will label the answer provisional if paid evidence stays thin.`
+        : "Free-preview pre-check found no claim-targeted source worth its toll. No paid fetch will be attempted.",
+    previewCoverage,
+  );
 
   for (const d of finalDecisions) {
     yield emit("decide", `${d.action} ${d.sourceName} — ${d.rationale}`, d);
@@ -604,14 +651,14 @@ export async function* runAgent(
 
   // Skip re-evaluation when the last sufficiency check already confirmed full coverage —
   // no point burning an LLM call to discover there are no gaps.
-  if (lastSufficient && lastGaps === 0 && config.reevaluateRounds > 0) {
+  if (lastSufficient && lastGaps === 0 && reevaluateRounds > 0) {
     yield emit("reevaluate", `All sub-claims already well-covered (sufficiency passed with 0 gaps) — skipping re-evaluation to save latency.`);
-  } else if (gathered.length > 0 && config.reevaluateRounds > 0) {
-    for (let round = 0; round < config.reevaluateRounds; round++) {
-      if (attentionUsed >= config.maxAttentionSources) {
+  } else if (gathered.length > 0 && reevaluateRounds > 0) {
+    for (let round = 0; round < reevaluateRounds; round++) {
+      if (attentionUsed >= attentionLimit) {
         yield emit(
           "reevaluate",
-          `Attention budget is full at ${config.maxAttentionSources} source(s); no broader context will be purchased.`,
+          `Attention budget is full at ${attentionLimit} source(s); no broader context will be purchased.`,
         );
         break;
       }
@@ -670,10 +717,10 @@ export async function* runAgent(
 
       // Buy additional sources the engine recommended to fill coverage gaps
       for (const recId of reeval.recommendedIds) {
-        if (attentionUsed >= config.maxAttentionSources) {
+        if (attentionUsed >= attentionLimit) {
           yield emit(
             "reevaluate",
-            `Attention budget reached ${config.maxAttentionSources} source(s); stopping gap expansion.`,
+            `Attention budget reached ${attentionLimit} source(s); stopping gap expansion.`,
           );
           break;
         }
@@ -1108,6 +1155,9 @@ export async function* runAgent(
       void dispatchCitationNotify(db, notifyInput);
       // The human channel: same settled-only guard, plus a per-source hourly rate cap inside.
       void dispatchCitationEmail(db, notifyInput);
+      if (citationPayments.some((payment) => paymentSettlementStatus(payment) === "settled")) {
+        await recordActivationEvent(db, "creator_citation_settled");
+      }
     }
   }
 
@@ -1139,6 +1189,8 @@ export async function* runAgent(
       id: queryId,
       question: input.question,
       budget,
+      researchMode,
+      ...(previewCoverage ? { previewCoverage } : {}),
       // What actually answered, not what was picked: a run that fell back to the heuristic must not
       // present itself as model-reasoned (see ResilientEngine.effectiveName).
       engine: effectiveEngineName(engine),

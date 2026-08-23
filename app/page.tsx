@@ -31,6 +31,29 @@ import { ActivityTicker } from "@/components/keryx/activity-ticker";
 import { useAskStream } from "@/lib/hooks/use-ask-stream";
 
 export default function AskPage() {
+  // One coarse landing event per tab/day. No stable id is created and credentials are omitted, so
+  // the server receives only the allowlisted event name and increments a UTC-day counter.
+  useEffect(() => {
+    const day = new Date().toISOString().slice(0, 10);
+    const key = `keryx:activation:landing:${day}`;
+    try {
+      if (window.sessionStorage.getItem(key)) return;
+      window.sessionStorage.setItem(key, "pending");
+      void fetch("/api/activation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event: "reader_landing" }),
+        credentials: "omit",
+        keepalive: true,
+      }).then((response) => {
+        if (response.ok) window.sessionStorage.setItem(key, "1");
+        else window.sessionStorage.removeItem(key);
+      }).catch(() => window.sessionStorage.removeItem(key));
+    } catch {
+      // Storage disabled or telemetry unavailable: the product remains fully functional.
+    }
+  }, []);
+
   // grantBinding drives re-render when the grant activates/revokes so
   // useAskStream's handleEvent picks up the new sessionId via its dep array.
   const [grantBinding, setGrantBinding] = useState<SessionGrantBinding>({

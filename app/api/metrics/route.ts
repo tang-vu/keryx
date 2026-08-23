@@ -33,18 +33,24 @@ function topicBreakdown(
 
 export async function GET() {
   const db = await getDb();
-  const [metrics, leaderboard, payments, sources, dailySettled, feedback] = await Promise.all([
+  const [metrics, leaderboard, payments, sources, dailySettled, feedback, activationFunnel] = await Promise.all([
     db.metrics(),
     db.creatorLeaderboard(),
     db.listPayments(1000),
     db.listSources(),
     db.dailySettled(14),
     db.getFeedbackStats(),
+    db.activationFunnel(30).catch(() => undefined),
   ]);
   const tagsById = new Map(sources.map((s) => [s.id, (s.tags ?? []).slice(0, 3)]));
   const topics = topicBreakdown(payments, tagsById);
   return Response.json({
-    metrics: { ...metrics, satisfactionRate: feedback.rate, feedbackTotal: feedback.total },
+    metrics: {
+      ...metrics,
+      satisfactionRate: feedback.rate,
+      feedbackTotal: feedback.total,
+      activationFunnel,
+    },
     leaderboard,
     topics,
     dailySettled,

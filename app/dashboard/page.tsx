@@ -34,6 +34,7 @@ import { TopicsPanel, type Topic } from "@/components/keryx/topics-panel";
 import { A2aCallCard } from "@/components/keryx/a2a-call-card";
 import { DispatchHistory } from "@/components/keryx/dispatch-history";
 import { fmtUsdc } from "@/components/keryx/phase-style";
+import { ActivationFunnelPanel } from "@/components/keryx/activation-funnel";
 import type { DailyVolume, DashboardMetrics, PaymentRecord, WithdrawalRecord } from "@/lib/types";
 
 const POLL_MS = 10_000;
@@ -163,6 +164,9 @@ export default function DashboardPage() {
         </section>
 
         {metrics && <ProvenanceStrip metrics={metrics} />}
+        {metrics?.activationFunnel && (
+          <ActivationFunnelPanel funnel={metrics.activationFunnel} />
+        )}
         {metrics && metrics.pendingPaymentConfirmations > 0 && (
           <div className="mt-3 border border-amber-600/40 bg-amber-50 px-4 py-3 font-mono text-[11px] text-amber-800">
             {metrics.pendingPaymentConfirmations} signed authorization

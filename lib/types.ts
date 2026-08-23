@@ -243,6 +243,42 @@ export interface GapIntent {
  *  engine-generated volume so traction is reported honestly. Legacy NULL rows count as engine. */
 export type PaymentOrigin = "engine" | "web" | "a2a" | "mcp";
 
+/** User-visible research depth. It changes attention/latency policy, never payment authority. */
+export type ResearchMode = "quick" | "deep";
+
+/** Free-preview plan coverage measured before any paid fetch is attempted. */
+export interface PreviewCoverage {
+  status: "ready" | "partial" | "insufficient";
+  coveredClaims: number;
+  totalClaims: number;
+  ratio: number;
+  claims: Array<{
+    claimIndex: number;
+    claim: string;
+    candidateIds: string[];
+    strongestExpectedValue: number;
+  }>;
+}
+
+/** Coarse first-party product events. Rows store only UTC day + event + aggregate count. */
+export type ActivationEvent =
+  | "reader_landing"
+  | "reader_ask_started"
+  | "reader_answer_completed"
+  | "reader_wallet_connected"
+  | "reader_session_funded"
+  | "reader_returning_dispatch"
+  | "creator_registration_started"
+  | "creator_verification_completed"
+  | "creator_citation_settled"
+  | "creator_withdrawal_completed";
+
+export interface ActivationFunnel {
+  windowDays: number;
+  sinceDay: string;
+  counts: Record<ActivationEvent, number>;
+}
+
 /** One payment attempt's evidence state. */
 export type PaymentSettlementStatus = "settled" | "simulated" | "pending" | "failed";
 
@@ -294,6 +330,7 @@ export interface WithdrawalRecord {
 export type TracePhase =
   | "decompose"
   | "discover"
+  | "coverage"
   | "decide"
   | "fetch"
   | "sufficiency"
@@ -334,6 +371,10 @@ export interface QueryRun {
   id: string;
   question: string;
   budget: number;
+  /** Quick/Deep attention policy selected for this dispatch. Historical runs default to Deep. */
+  researchMode?: ResearchMode;
+  /** Free-preview plan coverage captured before the first paid fetch. */
+  previewCoverage?: PreviewCoverage;
   engine: string; // which reasoning engine produced this (llm:model | heuristic)
   /** Per-step provider attempts, including fallbacks. Absent on pre-v0.8.1 runs. */
   reasoningAttempts?: import("./llm/reasoning-engine").ReasoningAttempt[];
@@ -445,6 +486,8 @@ export interface DashboardMetrics {
   satisfactionRate?: number;
   /** Total feedback votes received. Added by /api/metrics. */
   feedbackTotal?: number;
+  /** Coarse first-party event totals; never unique-user or wallet counts. */
+  activationFunnel?: ActivationFunnel;
 }
 
 /** One day's settled USDC volume. `day` is a UTC `YYYY-MM-DD` key. */

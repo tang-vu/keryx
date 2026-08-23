@@ -16,6 +16,7 @@ import { createPublicClient, webSocket, type Address } from "viem";
 import { arcTestnet } from "@/lib/chains";
 import { config } from "@/lib/config";
 import { REGISTRY_ABI } from "@/lib/registry/registry-client";
+import { safeErrorMessage } from "@/lib/ops/safe-error-message";
 
 /**
  * Subscribe to registry log pushes; call `onActivity` on every batch.
@@ -40,13 +41,13 @@ export function subscribeRegistryLogs(onActivity: () => void): () => void {
       onError: (err) => {
         // Transient socket errors are expected across a long-lived process; the
         // transport reconnects and the heartbeat keeps indexing meanwhile.
-        console.warn("[keryx indexer] ws subscription error:", err.message);
+        console.warn("[keryx indexer] ws subscription error:", safeErrorMessage(err));
       },
     });
   } catch (err) {
     console.warn(
       "[keryx indexer] ws subscription unavailable, heartbeat-only:",
-      err instanceof Error ? err.message : err,
+      safeErrorMessage(err),
     );
     return () => {};
   }

@@ -24,6 +24,7 @@ import { getDb } from "@/lib/db";
 import { config } from "@/lib/config";
 import { arcTestnet } from "@/lib/chains";
 import { isDevWallet, type Role } from "@/lib/auth";
+import { recordActivationEvent } from "@/lib/activation";
 
 export const runtime = "nodejs";
 
@@ -126,6 +127,12 @@ export async function POST(req: Request) {
     maxAge: 7 * 86400, // 7 days in seconds
     path: "/",
   });
+
+  try {
+    await recordActivationEvent(await getDb(), "reader_wallet_connected");
+  } catch {
+    // Aggregate telemetry must never block an otherwise-valid sign-in.
+  }
 
   // `created` lets the client distinguish "account created" from "welcome back".
   return Response.json({ ok: true, address, role, created });
