@@ -64,6 +64,10 @@ the model reasons about money and shows its work, streamed live to the UI:
 - **Living answer receipts** — archived conclusions never silently change. Keryx flags when an
   exact paid SHA-256/IPFS article version has been superseded, exposes a metadata-only freshness API,
   and itemizes the source/evidence/coverage/settled-payment delta after a reader explicitly re-asks.
+- **Portable research receipts** — every permalink exports one deterministic JSON bundle containing
+  its answer hash, BUY/SKIP/CACHE decisions, exact article versions, claim evidence and sanitized
+  Circle settlement snapshot. Retain its SHA-256 to detect later changes; the self-check does not
+  pretend to be a Keryx, publisher, or on-chain signature.
 - **Cross-query memory** — sources that proved useful (or useless) in past runs *on the same
   subject* shift future buy/skip decisions. A source is scored against the runs that actually read
   it, so a skip never becomes evidence against the source it skipped.
@@ -166,6 +170,10 @@ Example trace (real output):
   [browser playground](https://keryx.cc/playground) — it also hands you the exact curl/Python/JS call.
 - **Public API with wallet-issued keys** — SIWE-authenticated key minting (hashed, show-once,
   rate-limited) and OpenAPI docs at [`/api/docs`](https://keryx.cc/api/docs).
+- **Receipt export + local verification** — `GET /api/dispatch/<id>/receipt` returns the portable
+  research receipt; download it from any permalink and run
+  `npm run verify:receipt -- ./keryx-receipt-<id>.json` to recompute its payload digest. See the
+  [receipt format and trust boundary](./docs/research-receipts.md).
 - **Non-custodial by design** — interactive spend uses a session EOA the *user* funds from their
   own wallet; the browser co-signs each x402 authorization in-tab. The funded amount is the hard
   cap. Keryx never holds your key or your funds.

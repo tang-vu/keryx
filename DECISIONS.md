@@ -5,6 +5,28 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-52** · Product/Provenance · *A portable research receipt binds one exported snapshot, but its
+digest is integrity evidence rather than identity or settlement authority.* `GET
+/api/dispatch/[id]/receipt` deterministically projects an archived dispatch into visible
+BUY/SKIP/CACHE decisions, the exact answer and its separate SHA-256, claim-indexed public evidence,
+cited article versions/content receipts, and sanitized creator-payment rows. Recursive sorted-key
+canonicalization hashes the entire payload. A local verifier catches changes that do not also
+replace the integrity block; `--expect` compares against a digest retained separately, and an HTTPS
+verification also compares the response header. The self-hash is explicitly not a Keryx or
+publisher signature and cannot prove who served the original bytes after export.
+
+Payment truth remains the durable ledger state from D-37/D-43/D-44. Only rows classified settled
+from Circle evidence enter settled totals; pending, terminal failed and offline simulation amounts
+remain separate. New runs' finish-time settled+pending count is compared with the durable rows, and
+a mismatch is labeled `incomplete` instead of trusting `QueryRun.totalToCreators`. The public bundle
+omits payer addresses, authorization nonces and internal row ids, calls no Gateway/decryption/registry
+write path, and carries Circle transfer ids as settlement references rather than Arc transaction
+hashes. Exact reconciliation may legitimately change the settlement snapshot and therefore its
+digest, while the archived answer hash stays stable. Why: Keryx had all the parts of a research
+receipt but no single artifact another agent could download, archive and integrity-check without
+scraping UI or trusting aggregate money fields. Reversible: easy (remove the read-only projection,
+export affordance and verifier; no economic or archived state changes).
+
 **D-51** · Product/Provenance · *An archived answer is immutable; freshness is a metadata audit,
 and only a new paid dispatch may judge replacement evidence.* Each versioned citation already
 records the exact SHA-256 or encrypted IPFS CID bought for that answer. Keryx now compares that

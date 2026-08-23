@@ -10,6 +10,7 @@ import { FreshnessNote } from "@/components/keryx/freshness-note";
 import { loadFreshness } from "@/lib/answers-freshness";
 import { compareAnswerReceipts } from "@/lib/answers-delta";
 import { AnswerDeltaPanel } from "@/components/keryx/answer-delta";
+import { PortableReceiptPanel } from "@/components/keryx/portable-receipt-panel";
 import { ConfidenceBadge } from "@/components/keryx/confidence-badge";
 import { deriveConfidence } from "@/lib/agent/confidence";
 import { breadcrumbJsonLd, crumbLabel } from "@/lib/seo-structured-data";
@@ -182,6 +183,8 @@ export default async function DispatchPage({ params }: PageProps) {
         ) : null}
 
         <DispatchView run={run} payments={payments} />
+
+        <PortableReceiptPanel dispatchId={id} />
 
         {delta ? <AnswerDeltaPanel delta={delta} /> : null}
 

@@ -10,7 +10,7 @@ export const openapiSpec = {
   openapi: "3.1.0",
   info: {
     title: "Keryx API",
-    version: "0.4.0",
+    version: "0.5.0",
     description:
       "Citation-toll autonomous research. POST a question + budget — Keryx buys paid sources via x402, " +
       "answers with citations, and settles weighted nanopayments to every cited creator in USDC on Arc. " +
@@ -253,9 +253,131 @@ export const openapiSpec = {
           limits: { type: "array", items: { type: "string" } },
         },
       },
+      ResearchReceipt: {
+        type: "object",
+        required: ["payload", "integrity"],
+        properties: {
+          payload: {
+            type: "object",
+            required: ["schema", "dispatch", "agency", "claims", "citations", "settlement", "limits"],
+            properties: {
+              schema: { type: "string", const: "urn:keryx:research-receipt:1" },
+              dispatch: {
+                type: "object",
+                properties: {
+                  id: { type: "string" },
+                  question: { type: "string" },
+                  answer: { type: "string" },
+                  answerSha256: { type: "string", pattern: "^sha256:[a-f0-9]{64}$" },
+                  createdAt: { type: "string", format: "date-time" },
+                  budgetUsdc: { type: "number" },
+                  researchMode: { type: "string", enum: ["quick", "deep"] },
+                  engine: { type: "string" },
+                  confidence: { type: ["object", "null"] },
+                },
+              },
+              agency: {
+                type: "object",
+                properties: {
+                  decisions: {
+                    type: "array",
+                    description: "Visible BUY/SKIP/CACHE decisions; never payment authority.",
+                    items: { type: "object" },
+                  },
+                },
+              },
+              claims: {
+                type: "array",
+                description: "Decomposed claims with evidence-bounded coverage and exact public excerpts.",
+                items: { type: "object" },
+              },
+              citations: {
+                type: "array",
+                description: "Exact cited assets and planned reward weights. Actual money is in settlement.",
+                items: { type: "object" },
+              },
+              settlement: {
+                type: "object",
+                description:
+                  "Sanitized creator-payment snapshot. Only Circle-evidenced rows enter settled totals; " +
+                  "payer and authorization correlation data are omitted.",
+                properties: {
+                  mode: { type: "string", enum: ["real", "offline", "legacy"] },
+                  status: {
+                    type: "string",
+                    enum: ["settled", "pending", "failed", "mixed", "none", "offline", "incomplete"],
+                  },
+                  ledgerCompleteness: {
+                    type: "string",
+                    enum: ["complete", "incomplete", "legacy", "not_applicable"],
+                  },
+                  settledCreatorUsdc: { type: "number" },
+                  settledAccessUsdc: { type: "number" },
+                  settledCitationUsdc: { type: "number" },
+                  pendingCreatorUsdc: { type: "number" },
+                  failedCreatorUsdc: { type: "number" },
+                  simulatedCreatorUsdc: { type: "number" },
+                  creatorPayments: { type: "array", items: { type: "object" } },
+                },
+              },
+              limits: { type: "array", items: { type: "string" } },
+            },
+          },
+          integrity: {
+            type: "object",
+            required: ["algorithm", "canonicalization", "scope", "digest"],
+            properties: {
+              algorithm: { type: "string", const: "sha256" },
+              canonicalization: { type: "string", const: "keryx-json-v1" },
+              scope: { type: "string", const: "payload" },
+              digest: { type: "string", pattern: "^sha256:[a-f0-9]{64}$" },
+            },
+          },
+        },
+      },
     },
   },
   paths: {
+    "/api/dispatch/{id}/receipt": {
+      get: {
+        operationId: "getDispatchResearchReceipt",
+        summary: "Export an integrity-checkable research receipt",
+        description:
+          "Projects one archived dispatch into deterministic JSON containing its answer hash, " +
+          "visible BUY/SKIP/CACHE decisions, exact cited asset versions, evidence-bounded claims, " +
+          "and a sanitized creator settlement snapshot. Retain the SHA-256 separately to detect a " +
+          "later payload change; the self-hash is not a Keryx or creator signature. Read-only: no purchase, decryption, grant reservation, " +
+          "or settlement mutation. Public, no auth.",
+        parameters: [
+          { in: "path", name: "id", required: true, schema: { type: "string" } },
+          {
+            in: "query",
+            name: "download",
+            required: false,
+            schema: { type: "string", enum: ["1"] },
+            description: "Set to 1 to return an attachment filename.",
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Portable receipt and X-Keryx-Receipt-Digest response header.",
+            headers: {
+              "X-Keryx-Receipt-Digest": {
+                description: "Same SHA-256 digest carried in the JSON integrity block.",
+                schema: { type: "string" },
+              },
+            },
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ResearchReceipt" },
+              },
+            },
+          },
+          "404": { description: "Dispatch not found." },
+          "503": { description: "Receipt projection is temporarily unavailable." },
+        },
+      },
+    },
     "/api/dispatch/{id}/freshness": {
       get: {
         operationId: "getDispatchFreshness",

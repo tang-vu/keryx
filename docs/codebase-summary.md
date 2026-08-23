@@ -1,6 +1,6 @@
 # Keryx Codebase Summary
 
-**Version:** 0.15.0 (living answer receipts, updated 2026-08-23)
+**Version:** 0.16.0 (portable research receipts, updated 2026-08-23)
 
 This document maps the codebase structure for the non-custodial Keryx dApp. Organized by domain; files < 200 LOC per kebab-case naming standard.
 
@@ -15,6 +15,16 @@ This document maps the codebase structure for the non-custodial Keryx dApp. Orga
 metadata-only and cannot buy or decrypt content. `answers-delta.ts` compares two same-question dispatch receipts after a reader-authorized
 re-ask; different follow-up questions return no delta. Both are projections over existing records
 and never rewrite an answer, evidence span, payment, confidence verdict, or payout authority.
+
+### `lib/research-receipt*.ts`
+
+Projects one completed run plus its durable payment rows into portable canonical JSON: answer hash,
+visible agency, exact cited versions/public content receipts, claim evidence, and sanitized
+settlement state. Its SHA-256 covers the full payload; the verifier can compare it with an HTTPS
+header or separately retained digest without claiming signer authenticity. Only Circle-evidenced rows enter settled totals; row-count mismatches fail visibly to
+`incomplete`, while payer/session addresses and authorization correlation ids are omitted.
+The entrypoint, public asset copier, settlement classifier, integrity verifier and schema types stay
+separate; the wire format and verifier boundary are documented in `docs/research-receipts.md`.
 
 ### `lib/agent/`
 Core decompose→discover→decide→fetch→sufficiency→synthesize→attribute→settle loop. Reads via stable `KeryxDB` interface; agnostic to persistence layer.
@@ -236,6 +246,7 @@ RESTful endpoints for agent, sources, metrics, API keys.
 | `/creator/[id]` | public | Creator earnings page data + notify-webhook config. |
 | `/runs`, `/dispatch/[id]` | public | Query history + shareable per-dispatch permalinks. |
 | `/dispatch/[id]/freshness` | public | Exact citation-version drift + new-post metadata; no purchase or decryption. |
+| `/dispatch/[id]/receipt` | public | Deterministic research-receipt JSON + SHA-256 integrity block; optional attachment download. |
 | `/feedback` | public | Thumbs up/down answer quality votes. |
 | `/wanted`, `/wanted/[id]` | public | Open/filled demand board plus canonical shareable claim briefs and creator-offer status receipts. |
 | `/offers` | public | Article offer book: free metadata, effective/list prices, paid paths, signature proofs. |
@@ -302,6 +313,7 @@ CLI tools for admin + dev. Node --experimental-transform-types.
 | `arc-update.mts` | Push traction snapshot to Arc Canteen (for keryx.cc product card). |
 | `ingest-source.mts` | Add source from external registry to local DB. |
 | `migrate-content-to-ipfs.mts` | Batch encrypt + pin existing content. |
+| `verify-research-receipt.mts` | Recompute a downloaded/file-or-URL receipt digest; no keys or network writes. |
 
 ### `mcp/`
 `keryx-mcp` — MCP server published on npm + the official MCP registry (`npx -y keryx-mcp@latest`).

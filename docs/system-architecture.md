@@ -1,6 +1,6 @@
 # Keryx System Architecture
 
-**Version:** 0.15.0 Living answer receipts (2026-08-23)
+**Version:** 0.16.0 Portable research receipts (2026-08-23)
 **Status:** Shipped (Phases 01–06 complete)
 
 ---
@@ -122,6 +122,32 @@ Missing payment rows remain unprovable and offline simulations remain zero settl
 follow-up with different scope is not compared. This closes the loop from "material moved" to
 "here is what the reader-authorized paid reread actually changed" without creating standing spend
 authority.
+
+### Portable Research Receipt
+
+`lib/research-receipt.ts` builds a deterministic read model from one immutable `QueryRun` plus its
+current durable `payment_events` rows. `GET /api/dispatch/[id]/receipt` exposes the result and the
+permalink links both an inline JSON view and an attachment download. The payload contains:
+
+- the exact public answer plus a stable UTF-8 SHA-256;
+- the visible BUY/SKIP/CACHE plan and exact item/version metadata;
+- each decomposed claim, evidence-bounded coverage and capped public evidence spans;
+- cited weights/planned rewards, kept separate from actual settlement;
+- sanitized creator payment rows and separate settled/pending/failed/simulated totals.
+
+The entire payload is canonicalized with recursively sorted object keys and SHA-256 hashed. The
+repository verifier recomputes that digest from a file or URL, compares the HTTPS response header
+when present, and accepts a separately retained `--expect` digest. The embedded self-hash catches an
+unrecomputed edit but is not an authenticity signature: it neither proves who originally served the bytes nor replaces a
+publisher content manifest, Circle settlement evidence, SourceRegistry authority, or ArcScan proof.
+
+For new real runs, the projection compares durable settled/pending/failed rows with the number of
+settled plus pending authorizations recorded when the run finished. A missing/extra row makes the
+snapshot `incomplete`; it never falls back to `totalToCreators`. Payer/session addresses, EIP-3009
+authorization ids and internal database ids are omitted. Reconciliation can legitimately replace a
+pending state with exact Circle settled/failed evidence, producing a new snapshot digest while the
+answer hash remains unchanged. Receipt generation performs no payment, reservation, registry write,
+purchase or decrypt operation.
 
 ### Creator-Signed Article Offer Book
 

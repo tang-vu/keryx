@@ -1,13 +1,31 @@
 # Keryx Project Changelog
 
 **Last Updated:** 2026-08-23
-**Current Version:** 0.15.0
+**Current Version:** 0.16.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
 
 ---
 
 ## Unreleased
+
+### Portable, integrity-checkable research receipts (2026-08-23)
+
+- Added public `GET /api/dispatch/{id}/receipt` and a download affordance on every permalink. One
+  deterministic payload carries the exact answer and answer hash, visible BUY/SKIP/CACHE decisions,
+  claim-indexed evidence, cited article versions/public content receipts, and a sanitized creator
+  settlement snapshot.
+- Added recursive sorted-key canonical JSON plus a SHA-256 integrity block and
+  `npm run verify:receipt -- <file-or-url> [--expect sha256:…]`. URL verification also compares the
+  HTTPS response header; file verification can compare a separately retained digest. The receipt
+  says explicitly that its self-hash is not a server, publisher, Circle, or on-chain signature.
+- Kept economic truth fail-closed: only Circle-evidenced rows enter settled totals; pending,
+  terminal failed and offline simulation amounts stay separate. Missing durable rows make the
+  settlement snapshot `incomplete`, and payer addresses, authorization nonces and internal row ids
+  never enter the export.
+- Kept the feature read-only. It invokes no Gateway, session reservation, registry mutation,
+  content purchase or decryption, and exact Circle reconciliation may update only the exported
+  settlement snapshot—not the archived answer.
 
 ### Living answers: exact citation drift and re-ask deltas (2026-08-23)
 
