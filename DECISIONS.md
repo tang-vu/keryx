@@ -5,6 +5,25 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-51** · Product/Provenance · *An archived answer is immutable; freshness is a metadata audit,
+and only a new paid dispatch may judge replacement evidence.* Each versioned citation already
+records the exact SHA-256 or encrypted IPFS CID bought for that answer. Keryx now compares that
+receipt with the same article id in its current index and reports `current`, `superseded`, or
+`unavailable`. A superseded version means only that the asset changed. It cannot lower confidence,
+erase a quote, reverse a payout, or assert that the answer became incorrect; an unavailable current
+asset and any failed source/publication lookup remain unknown rather than being treated as unchanged.
+The public freshness API exposes the same metadata and its limits without decrypting or buying content.
+
+When a reader explicitly re-asks the same normalized question, the new permalink compares the two
+immutable receipts: cited sources, exact versions, matched-claim coverage, confidence, evidence-span
+counts and Circle-settled creator payouts. Missing payment rows make the monetary delta unknown,
+and simulations remain zero settled money. A different follow-up question never receives this delta.
+The re-ask itself remains a normal dispatch with the same Quick/Deep attention policy, hard budget,
+browser custody, registry payout authority, evidence gate, and Circle-only settlement truth. Why:
+the archive can now show both content drift and what a paid reread actually changed without silently
+refreshing conclusions or spending on a reader's behalf. Reversible: easy (remove the audit/delta
+projections; no economic or archived state is rewritten).
+
 **D-50** · Product/Attention/Telemetry · *Research depth may bound attention and latency, while
 free previews may only remove spend authority; activation telemetry is aggregate operational
 state, never identity.* Web dispatches default to Quick: at most two claim-targeted paid or cached

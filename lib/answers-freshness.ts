@@ -25,6 +25,7 @@
 
 import type { Citation, QueryRun } from "./types";
 import type { KeryxDB } from "./db/keryx-db";
+import { checkCitedVersions, type CitedVersionCheck } from "./answers-version-audit";
 
 /** One cited source that has published since the dispatch. */
 export interface FreshSource {
@@ -48,6 +49,20 @@ export interface Freshness {
   newItems: number;
   /** Only the sources that moved, busiest first, then by name for a stable order. */
   sources: FreshSource[];
+  /** Citations new enough to carry both item id and exact paid content version. */
+  versionedCitations: number;
+  /** Exact versions that still match Keryx's current indexed article asset. */
+  currentVersions: number;
+  /** Same article identity, but its currently indexed immutable version has changed. */
+  supersededVersions: number;
+  /** Exact citation receipts whose current article asset could not be loaded. */
+  unavailableVersions: number;
+  /** Per-citation machine-readable version audit. Historical source-level citations are omitted. */
+  versions: CitedVersionCheck[];
+  /** Source records that failed to load. Missing/deactivated sources are not failures. */
+  unavailableSourceChecks: number;
+  /** Whether the publication-date query completed. */
+  publicationCheck: "complete" | "unavailable" | "not_applicable";
 }
 
 /**
@@ -74,6 +89,11 @@ export function freshnessOf(
   citations: Citation[],
   counts: Record<string, number>,
   watched: ReadonlySet<string> = new Set(),
+  versions: CitedVersionCheck[] = [],
+  checks: {
+    unavailableSourceChecks?: number;
+    publicationCheck?: Freshness["publicationCheck"];
+  } = {},
 ): Freshness {
   const names = new Map<string, string>();
   for (const c of citations) if (c.sourceId && !names.has(c.sourceId)) names.set(c.sourceId, c.sourceName);
@@ -90,10 +110,29 @@ export function freshnessOf(
     watchedCount: [...names.keys()].filter((id) => watched.has(id)).length,
     newItems: sources.reduce((n, s) => n + s.newItems, 0),
     sources,
+    versionedCitations: versions.length,
+    currentVersions: versions.filter((item) => item.status === "current").length,
+    supersededVersions: versions.filter((item) => item.status === "superseded").length,
+    unavailableVersions: versions.filter((item) => item.status === "unavailable").length,
+    versions,
+    unavailableSourceChecks: checks.unavailableSourceChecks ?? 0,
+    publicationCheck: checks.publicationCheck ?? "not_applicable",
   };
 }
 
-const EMPTY: Freshness = { citedCount: 0, watchedCount: 0, newItems: 0, sources: [] };
+const EMPTY: Freshness = {
+  citedCount: 0,
+  watchedCount: 0,
+  newItems: 0,
+  sources: [],
+  versionedCitations: 0,
+  currentVersions: 0,
+  supersededVersions: 0,
+  unavailableVersions: 0,
+  versions: [],
+  unavailableSourceChecks: 0,
+  publicationCheck: "not_applicable",
+};
 
 /**
  * Read the freshness of one dispatch. Type-only DB import, so this stays testable with a plain
@@ -113,22 +152,45 @@ export async function loadFreshness(
   const ids = citedSourceIds(citations);
   if (ids.length === 0) return EMPTY;
 
-  const rows = await Promise.all(ids.map((id) => db.getSource(id).catch(() => null)));
-  const live = rows.filter((s) => s && s.active !== false && s.verified !== false);
+  const rows = await Promise.all(
+    ids.map(async (id) => {
+      try {
+        return { source: await db.getSource(id), unavailable: false };
+      } catch {
+        return { source: null, unavailable: true };
+      }
+    }),
+  );
+  const unavailableSourceChecks = rows.filter((row) => row.unavailable).length;
+  const live = rows
+    .map((row) => row.source)
+    .filter((s) => s && s.active !== false && s.verified !== false);
   const onSale = new Set(live.map((s) => s!.id));
-  if (onSale.size === 0) return EMPTY;
+  if (onSale.size === 0) {
+    return unavailableSourceChecks > 0
+      ? { ...EMPTY, unavailableSourceChecks }
+      : EMPTY;
+  }
   // A source with no feed is one Keryx never re-reads, so its silence proves nothing.
   const watched = new Set(live.filter((s) => s!.rssUrl).map((s) => s!.id));
 
-  const counts = await db.countItemsPublishedBetween(
-    [...onSale],
-    run.createdAt,
-    new Date(now).toISOString(),
-  );
+  const liveCitations = citations.filter((c) => onSale.has(c.sourceId));
+  const [countResult, versions] = await Promise.all([
+    db
+      .countItemsPublishedBetween([...onSale], run.createdAt, new Date(now).toISOString())
+      .then((counts) => ({ counts, available: true as const }))
+      .catch(() => ({ counts: {} as Record<string, number>, available: false as const })),
+    checkCitedVersions(db, liveCitations),
+  ]);
   return freshnessOf(
-    citations.filter((c) => onSale.has(c.sourceId)),
-    counts,
+    liveCitations,
+    countResult.counts,
     watched,
+    versions,
+    {
+      unavailableSourceChecks,
+      publicationCheck: countResult.available ? "complete" : "unavailable",
+    },
   );
 }
 

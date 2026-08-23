@@ -8,6 +8,8 @@ import { RelatedDispatches } from "@/components/keryx/related-dispatches";
 import { FollowUpForm } from "@/components/keryx/follow-up-form";
 import { FreshnessNote } from "@/components/keryx/freshness-note";
 import { loadFreshness } from "@/lib/answers-freshness";
+import { compareAnswerReceipts } from "@/lib/answers-delta";
+import { AnswerDeltaPanel } from "@/components/keryx/answer-delta";
 import { ConfidenceBadge } from "@/components/keryx/confidence-badge";
 import { deriveConfidence } from "@/lib/agent/confidence";
 import { breadcrumbJsonLd, crumbLabel } from "@/lib/seo-structured-data";
@@ -75,11 +77,15 @@ export default async function DispatchPage({ params }: PageProps) {
   // whether the sources it cited have published since it settled (see lib/answers-freshness).
   // Freshness is only as current as this page's revalidate window, which is the right granularity:
   // an hour-old count of new posts still tells a reader the same thing.
-  const [parent, followUps, freshness] = await Promise.all([
+  const [parent, parentPayments, followUps, freshness] = await Promise.all([
     run.parentId ? db.getQueryRun(run.parentId) : Promise.resolve(null),
+    run.parentId ? db.listPaymentsByQuery(run.parentId) : Promise.resolve([]),
     db.listFollowUps(id),
     loadFreshness(db, run),
   ]);
+  const delta = parent
+    ? compareAnswerReceipts(parent, run, { previous: parentPayments, current: payments })
+    : null;
 
   // Internal link mesh: point this permalink at its archive neighbours.
   const related = relatedAnswers(
@@ -176,6 +182,8 @@ export default async function DispatchPage({ params }: PageProps) {
         ) : null}
 
         <DispatchView run={run} payments={payments} />
+
+        {delta ? <AnswerDeltaPanel delta={delta} /> : null}
 
         <FreshnessNote freshness={freshness} dispatchId={id} question={run.question} />
 

@@ -19,6 +19,16 @@ function cite(sourceId: string, name = sourceId, marker = "S1"): Citation {
   return { marker, sourceId, sourceName: name, weight: 1, reward: 0.001, rationale: "" };
 }
 
+const emptyVersionAudit = {
+  versionedCitations: 0,
+  currentVersions: 0,
+  supersededVersions: 0,
+  unavailableVersions: 0,
+  versions: [],
+  unavailableSourceChecks: 0,
+  publicationCheck: "not_applicable" as const,
+};
+
 describe("citedSourceIds", () => {
   it("collapses several markers on one source into a single id, in first-cited order", () => {
     expect(
@@ -44,7 +54,13 @@ describe("freshnessOf", () => {
 
   it("is a quiet 'still current' when nothing has been published", () => {
     const f = freshnessOf([cite("a", "Alpha")], {}, new Set(["a"]));
-    expect(f).toEqual({ citedCount: 1, watchedCount: 1, newItems: 0, sources: [] });
+    expect(f).toEqual({
+      citedCount: 1,
+      watchedCount: 1,
+      newItems: 0,
+      sources: [],
+      ...emptyVersionAudit,
+    });
   });
 
   /** Silence from a source nobody polls is not evidence — the note must be able to tell them apart. */
@@ -134,6 +150,9 @@ function stubDb(
       calls.push({ ids: [...ids].sort(), since, until });
       return Object.fromEntries(ids.map((id) => [id, 2]));
     },
+    async getItem() {
+      return null;
+    },
   };
   return { db: db as unknown as KeryxDB, calls };
 }
@@ -148,7 +167,7 @@ describe("loadFreshness", () => {
     expect(calls).toEqual([
       { ids: ["a", "b"], since: run.createdAt, until: "2026-07-25T00:00:00.000Z" },
     ]);
-    expect(f).toMatchObject({ citedCount: 2, newItems: 4 });
+    expect(f).toMatchObject({ citedCount: 2, newItems: 4, publicationCheck: "complete" });
   });
 
   it("drops a delisted source from both the count and the denominator", async () => {
@@ -167,7 +186,13 @@ describe("loadFreshness", () => {
   it("says nothing at all when no cited source is still on sale", async () => {
     const { db, calls } = stubDb();
     const f = await loadFreshness(db, { citations: [cite("gone")], createdAt: run.createdAt }, now);
-    expect(f).toEqual({ citedCount: 0, watchedCount: 0, newItems: 0, sources: [] });
+    expect(f).toEqual({
+      citedCount: 0,
+      watchedCount: 0,
+      newItems: 0,
+      sources: [],
+      ...emptyVersionAudit,
+    });
     expect(calls).toEqual([]); // no point querying items for a source nobody can buy
   });
 
@@ -178,6 +203,7 @@ describe("loadFreshness", () => {
       watchedCount: 0,
       newItems: 0,
       sources: [],
+      ...emptyVersionAudit,
     });
     expect(calls).toEqual([]);
   });
@@ -192,5 +218,32 @@ describe("loadFreshness", () => {
     const f = await loadFreshness(db, run, now);
     expect(f.citedCount).toBe(2);
     expect(f.watchedCount).toBe(1);
+  });
+
+  it("keeps a source lookup failure visible instead of calling it absent or current", async () => {
+    const { db: base } = stubDb();
+    const db = {
+      ...base,
+      async getSource(id: string) {
+        if (id === "a") throw new Error("source store unavailable");
+        return base.getSource(id);
+      },
+    } as KeryxDB;
+    const f = await loadFreshness(db, run, now);
+    expect(f).toMatchObject({ citedCount: 1, unavailableSourceChecks: 1 });
+  });
+
+  it("contains a publication query failure as unavailable rather than a false quiet feed", async () => {
+    const { db: base } = stubDb();
+    const db = {
+      ...base,
+      countItemsPublishedBetween: async () => Promise.reject(new Error("items unavailable")),
+    } as KeryxDB;
+    const f = await loadFreshness(db, run, now);
+    expect(f).toMatchObject({
+      citedCount: 2,
+      newItems: 0,
+      publicationCheck: "unavailable",
+    });
   });
 });

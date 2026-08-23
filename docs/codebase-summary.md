@@ -1,12 +1,20 @@
 # Keryx Codebase Summary
 
-**Version:** 0.13.0 (public proof and attributable Arc evidence, updated 2026-08-13)
+**Version:** 0.15.0 (living answer receipts, updated 2026-08-23)
 
 This document maps the codebase structure for the non-custodial Keryx dApp. Organized by domain; files < 200 LOC per kebab-case naming standard.
 
 ---
 
 ## Core Agent Brain
+
+### `lib/answers-version-audit.ts` + `lib/answers-freshness.ts` + `lib/answers-delta.ts`
+
+`answers-version-audit.ts` audits immutable citation versions against the current article index;
+`answers-freshness.ts` keeps that audit and feed-level new-post counts separate. The public API is
+metadata-only and cannot buy or decrypt content. `answers-delta.ts` compares two same-question dispatch receipts after a reader-authorized
+re-ask; different follow-up questions return no delta. Both are projections over existing records
+and never rewrite an answer, evidence span, payment, confidence verdict, or payout authority.
 
 ### `lib/agent/`
 Core decompose→discover→decide→fetch→sufficiency→synthesize→attribute→settle loop. Reads via stable `KeryxDB` interface; agnostic to persistence layer.
@@ -227,6 +235,7 @@ RESTful endpoints for agent, sources, metrics, API keys.
 | `/health` | public | Liveness + readiness JSON (uptime, commit, settlement mode, traction). |
 | `/creator/[id]` | public | Creator earnings page data + notify-webhook config. |
 | `/runs`, `/dispatch/[id]` | public | Query history + shareable per-dispatch permalinks. |
+| `/dispatch/[id]/freshness` | public | Exact citation-version drift + new-post metadata; no purchase or decryption. |
 | `/feedback` | public | Thumbs up/down answer quality votes. |
 | `/wanted`, `/wanted/[id]` | public | Open/filled demand board plus canonical shareable claim briefs and creator-offer status receipts. |
 | `/offers` | public | Article offer book: free metadata, effective/list prices, paid paths, signature proofs. |

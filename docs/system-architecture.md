@@ -1,6 +1,6 @@
 # Keryx System Architecture
 
-**Version:** 0.10.0 Creator-signed article offer market (2026-08-05)
+**Version:** 0.15.0 Living answer receipts (2026-08-23)
 **Status:** Shipped (Phases 01–06 complete)
 
 ---
@@ -105,6 +105,23 @@ revision into a free read. Sources without item rows retain `/api/source/[id]` a
 path; that route is not used for normal article discovery. The free source preview exposes each
 article's `itemId`, `contentVersion`, canonical URL, and ready-to-call `paidPath` while still applying
 the creator's configured summary depth, so external agents can participate without DB access.
+
+### Living Answer Audit
+
+Archived dispatches never mutate. `lib/answers-version-audit.ts` compares each citation's stored
+`itemId + contentVersion` with the current `source_items` asset using the same SHA-256/IPFS version
+function that protects the paid route. `GET /api/dispatch/[id]/freshness` publishes that
+metadata-only result for other agents. `superseded` means a replacement version exists;
+`unavailable` remains unknown. Neither state reads plaintext, changes confidence, changes a payment,
+or triggers a dispatch.
+
+The permalink's re-ask link runs the normal paid research path. If the resulting child dispatch has
+the same normalized question as its parent, `lib/answers-delta.ts` compares the two immutable
+receipts (sources, versions, coverage, confidence, evidence counts and Circle-settled payouts).
+Missing payment rows remain unprovable and offline simulations remain zero settled money. A genuine
+follow-up with different scope is not compared. This closes the loop from "material moved" to
+"here is what the reader-authorized paid reread actually changed" without creating standing spend
+authority.
 
 ### Creator-Signed Article Offer Book
 

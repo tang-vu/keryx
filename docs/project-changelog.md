@@ -1,13 +1,29 @@
 # Keryx Project Changelog
 
 **Last Updated:** 2026-08-23
-**Current Version:** 0.14.0
+**Current Version:** 0.15.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
 
 ---
 
 ## Unreleased
+
+### Living answers: exact citation drift and re-ask deltas (2026-08-23)
+
+- Extended archive freshness from a feed-level "new posts" hint to an exact paid-asset audit:
+  each versioned citation's SHA-256/IPFS identity is compared with the article Keryx currently
+  indexes and classified `current`, `superseded`, or `unavailable`.
+- Added public `GET /api/dispatch/{id}/freshness` metadata receipts with explicit interpretation
+  limits. The endpoint never buys, decrypts, or judges replacement content, and adapter failures
+  stay visible as unknown rather than becoming a false "current" result.
+- Added a receipt delta for user-initiated same-question re-asks: sources added/removed, exact
+  versions changed, matched-claim coverage, confidence, verified evidence spans, dispatch cost,
+  and Circle-settled creator payout movement. Missing ledger rows render that delta unprovable;
+  simulations never appear as settled money. Genuine follow-up questions are never compared as if
+  they were the same scope.
+- Kept archived answers, evidence and settlement immutable; current material enters an answer only
+  through the existing explicit budgeted re-ask and x402/citation payment flow.
 
 ### Faster research modes and privacy-preserving activation funnel (2026-08-23)
 

@@ -10,7 +10,7 @@ export const openapiSpec = {
   openapi: "3.1.0",
   info: {
     title: "Keryx API",
-    version: "0.3.0",
+    version: "0.4.0",
     description:
       "Citation-toll autonomous research. POST a question + budget — Keryx buys paid sources via x402, " +
       "answers with citations, and settles weighted nanopayments to every cited creator in USDC on Arc. " +
@@ -208,9 +208,80 @@ export const openapiSpec = {
         type: "object",
         properties: { error: { type: "string" } },
       },
+      DispatchFreshness: {
+        type: "object",
+        properties: {
+          queryId: { type: "string" },
+          settledAt: { type: "string", format: "date-time" },
+          checkedAt: { type: "string", format: "date-time" },
+          freshness: {
+            type: "object",
+            properties: {
+              citedCount: { type: "integer" },
+              watchedCount: { type: "integer" },
+              newItems: { type: "integer" },
+              versionedCitations: { type: "integer" },
+              currentVersions: { type: "integer" },
+              supersededVersions: { type: "integer" },
+              unavailableVersions: { type: "integer" },
+              unavailableSourceChecks: { type: "integer" },
+              publicationCheck: {
+                type: "string",
+                enum: ["complete", "unavailable", "not_applicable"],
+              },
+              versions: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    marker: { type: "string" },
+                    sourceId: { type: "string" },
+                    sourceName: { type: "string" },
+                    itemId: { type: "string" },
+                    itemTitle: { type: "string" },
+                    citedVersion: { type: "string" },
+                    currentVersion: { type: "string" },
+                    status: {
+                      type: "string",
+                      enum: ["current", "superseded", "unavailable"],
+                    },
+                  },
+                },
+              },
+            },
+          },
+          limits: { type: "array", items: { type: "string" } },
+        },
+      },
     },
   },
   paths: {
+    "/api/dispatch/{id}/freshness": {
+      get: {
+        operationId: "getDispatchFreshness",
+        summary: "Audit exact citation-version drift without buying content",
+        description:
+          "Compares the immutable content version each dispatch bought with Keryx's current " +
+          "indexed article asset, and counts newly published feed items. Metadata-only: this " +
+          "endpoint never decrypts or purchases replacement text and never treats drift as a " +
+          "correctness verdict. Public, no auth.",
+        parameters: [
+          { in: "path", name: "id", required: true, schema: { type: "string" } },
+        ],
+        responses: {
+          "200": {
+            description: "Current metadata audit with explicit interpretation limits.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/DispatchFreshness" },
+              },
+            },
+          },
+          "404": { description: "Dispatch not found." },
+          "503": { description: "Freshness metadata is temporarily unavailable." },
+        },
+      },
+    },
     "/api/agent/ask": {
       post: {
         operationId: "agentAsk",

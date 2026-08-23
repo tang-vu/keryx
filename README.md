@@ -61,6 +61,9 @@ the model reasons about money and shows its work, streamed live to the UI:
 - **Evidence ledger** — every rewarded citation carries a claim-indexed exact quote. The
   orchestrator verifies that quote against content it actually read before the marker can receive
   a citation reward; rejected markers are removed from the answer.
+- **Living answer receipts** — archived conclusions never silently change. Keryx flags when an
+  exact paid SHA-256/IPFS article version has been superseded, exposes a metadata-only freshness API,
+  and itemizes the source/evidence/coverage/settled-payment delta after a reader explicitly re-asks.
 - **Cross-query memory** — sources that proved useful (or useless) in past runs *on the same
   subject* shift future buy/skip decisions. A source is scored against the runs that actually read
   it, so a skip never becomes evidence against the source it skipped.
