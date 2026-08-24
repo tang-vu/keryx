@@ -13,6 +13,28 @@ function run(overrides: Partial<QueryRun> = {}): QueryRun {
     question: "How does a portable research receipt work?",
     budget: 0.05,
     researchMode: "quick",
+    evidencePortfolio: {
+      policy: "claim-coverage-v1",
+      eligibleCandidates: 1,
+      attentionLimit: 2,
+      fetchBudgetUsdc: 0.025,
+      selectedAssetIds: ["item:item-1"],
+      selectedBuyUsdc: 0.01,
+      unusedFetchBudgetUsdc: 0.015,
+      predictedCoveredClaims: 2,
+      claims: [
+        { claimIndex: 0, selectedCandidateIds: ["item:item-1"], predictedCoverage: 0.8 },
+        { claimIndex: 1, selectedCandidateIds: ["item:item-1"], predictedCoverage: 0.8 },
+      ],
+      outcome: {
+        readAssetIds: ["item:item-1"],
+        evidenceAssetIds: ["item:item-1"],
+        nonqualifyingReads: 0,
+        unreadSelected: 0,
+        groundedClaims: 1,
+        evidenceYield: 1,
+      },
+    },
     engine: "llm:test",
     subClaims: ["The receipt binds evidence.", "Settlement remains independently classified."],
     decisions: [
@@ -118,6 +140,12 @@ describe("portable research receipt", () => {
     expect(verifyResearchReceipt(receipt)).toMatchObject({ valid: true });
     expect(receipt.payload.dispatch.answerSha256).toMatch(/^sha256:[a-f0-9]{64}$/);
     expect(receipt.payload.agency.decisions[0]).toMatchObject({ action: "BUY", targets: [0, 1] });
+    expect(receipt.payload.agency.evidencePortfolio).toMatchObject({
+      policy: "claim-coverage-v1",
+      selectedAssetIds: ["item:item-1"],
+      selectedBuyUsdc: 0.01,
+      outcome: { evidenceYield: 1, groundedClaims: 1 },
+    });
     expect(receipt.payload.claims[0]).toMatchObject({ coverage: 0.8, coveredBy: ["S1"] });
     expect(receipt.payload.claims[0]?.evidence[0]).toMatchObject({
       marker: "S1",

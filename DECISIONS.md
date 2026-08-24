@@ -5,6 +5,33 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-53** · Reasoning/Spend selection · *Choose an evidence portfolio under separate money and
+attention budgets; preview predictions still cannot authorize evidence or payment.* After the
+reasoning engine proposes BUY/CACHE/SKIP with normalized claim targets, the existing preview gates
+first downgrade untargeted, below-floor, and unusable-cache proposals. A deterministic selector may
+then choose only a subset of the remaining BUY/CACHE proposals. It cannot promote SKIP, add a
+candidate, change the registry/offer price, select `payTo`, increase the dispatch/fetch cap, or
+authorize a citation reward.
+
+The selector maximizes predicted claim coverage with diminishing returns, so corroboration can add
+value without letting four redundant sources automatically occupy every context slot. BUY consumes
+its authoritative micro-USDC price plus one attention slot; CACHE consumes zero fetch USDC plus one
+attention slot, regardless of its public list price. A small explicit attention cost leaves a slot
+unused when another read adds too little predicted coverage. Quick remains capped at two sources and
+Deep at four. The selected set is input-order invariant, bounded to a deterministic candidate window
+for future large catalogs, and read in marginal-coverage order; CACHE wins only a true ordering tie
+so sufficient free evidence can stop a later signature.
+
+The pre-spend plan and its per-claim predictions are visible in the SSE trace, archived run, UI and
+portable receipt. After synthesis, a separate outcome records which selected reads produced
+reward-qualified evidence. Preview coverage remains a forecast; final confidence, citations and
+creator rewards still come exclusively from exact paid/cached body quotes under D-23, and actual
+money remains Circle-evidenced under D-37/D-43/D-44. Why: value-per-list-price ranking treated a
+cached article as if it still cost its listed toll and could crowd an exact, higher-value source out
+of the scarce attention budget; production quality was limited by evidence coverage rather than
+settlement reliability. Reversible: easy (restore the former subset policy; no key, grant, payment,
+registry, cache, or database migration changes).
+
 **D-52** · Product/Provenance · *A portable research receipt binds one exported snapshot, but its
 digest is integrity evidence rather than identity or settlement authority.* `GET
 /api/dispatch/[id]/receipt` deterministically projects an archived dispatch into visible

@@ -39,6 +39,19 @@ export function AnswerCard({ run, meta, permalink }: { run: QueryRun; meta: AskM
               preview plan {run.previewCoverage.coveredClaims}/{run.previewCoverage.totalClaims} claims
             </span>
           ) : null}
+          {run.evidencePortfolio ? (
+            <span
+              className="font-mono text-[10px] text-ink-3"
+              title="CACHE costs one attention slot but zero fetch USDC; evidence yield counts selected reads that produced reward-qualifying evidence."
+            >
+              portfolio {run.evidencePortfolio.selectedAssetIds.length}/
+              {run.evidencePortfolio.eligibleCandidates}
+              {run.evidencePortfolio.outcome?.evidenceYield !== null &&
+              run.evidencePortfolio.outcome?.evidenceYield !== undefined
+                ? ` · evidence ${Math.round(run.evidencePortfolio.outcome.evidenceYield * 100)}%`
+                : ""}
+            </span>
+          ) : null}
         </div>
       ) : null}
       <div className="border border-ink bg-paper">

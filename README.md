@@ -68,6 +68,9 @@ the model reasons about money and shows its work, streamed live to the UI:
   its answer hash, BUY/SKIP/CACHE decisions, exact article versions, claim evidence and sanitized
   Circle settlement snapshot. Retain its SHA-256 to detect later changes; the self-check does not
   pretend to be a Keryx, publisher, or on-chain signature.
+- **Claim-aware evidence portfolios** — Keryx chooses a non-redundant set of positive source
+  proposals under separate attention and fetch-USDC caps. CACHE correctly costs zero fetch USDC but
+  one context slot; the receipt compares preview-predicted coverage with evidence yield after read.
 - **Cross-query memory** — sources that proved useful (or useless) in past runs *on the same
   subject* shift future buy/skip decisions. A source is scored against the runs that actually read
   it, so a skip never becomes evidence against the source it skipped.

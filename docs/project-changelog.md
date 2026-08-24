@@ -1,13 +1,30 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-08-23
-**Current Version:** 0.16.0
+**Last Updated:** 2026-08-24
+**Current Version:** 0.17.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
 
 ---
 
 ## Unreleased
+
+### Claim-aware evidence portfolios (2026-08-24)
+
+- Replaced per-row expected-value/list-price sorting with a deterministic portfolio selector that
+  maximizes predicted claim coverage with diminishing returns under the existing Quick/Deep
+  attention ceiling and fetch-budget cap.
+- Made the two scarce resources explicit: BUY consumes its authoritative registry/offer price plus
+  one attention slot; CACHE consumes zero fetch USDC plus one attention slot. A cache entry's list
+  price can no longer crowd a stronger exact source out of the synthesis context.
+- Kept the selector downward-only: it may choose a subset of model BUY/CACHE proposals after the
+  preview gates, but cannot promote SKIP, add a source, alter `payTo`/price, raise a budget, or
+  authorize evidence/citation rewards.
+- Added a visible pre-spend portfolio trace, archived per-claim predictions, post-run evidence yield,
+  an answer-card summary, and the same bounded data in portable research receipts.
+- Added focused selection, permutation, dual-budget, diminishing-return, outcome and end-to-end
+  economic regression tests. Final confidence and money remain evidence/Circle-gated exactly as
+  before.
 
 ### Portable, integrity-checkable research receipts (2026-08-23)
 

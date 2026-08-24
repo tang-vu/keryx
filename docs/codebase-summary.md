@@ -1,6 +1,6 @@
 # Keryx Codebase Summary
 
-**Version:** 0.16.0 (portable research receipts, updated 2026-08-23)
+**Version:** 0.17.0 (claim-aware evidence portfolios, updated 2026-08-24)
 
 This document maps the codebase structure for the non-custodial Keryx dApp. Organized by domain; files < 200 LOC per kebab-case naming standard.
 
@@ -32,6 +32,7 @@ Core decompose→discover→decide→fetch→sufficiency→synthesize→attribut
 | File | Purpose |
 |------|---------|
 | `run-agent.ts` | Main agent orchestrator. Selects one relevant article version per publication, then yields reasoning/payment traces for server-side and interactive runs. |
+| `evidence-portfolio.ts` | Deterministically selects a non-redundant subset of model BUY/CACHE proposals under separate fetch-USDC and attention caps; records preview forecasts and post-gate evidence yield. |
 | `evidence-ledger.ts` | Deterministic claim → source → exact-quote gate. Bounds final coverage and the set eligible for citation rewards. |
 | `steps/` | Each step (decompose, discover, decide, etc.) as a separate generator function. Includes adjudication (conflicting sources → trust one, with reasons) and the confidence verdict (agent rates its own answer High/Moderate/Low). |
 | `decisions.ts` | Agent decision log: buy/skip/cache per article candidate, with rationale. |
@@ -40,7 +41,10 @@ Core decompose→discover→decide→fetch→sufficiency→synthesize→attribut
 Discovery is semantic (embedding cosine similarity), and cross-query memory feeds past source
 usefulness back into future buy/skip decisions — scoped to past runs about the same subject, and
 scored against the runs that read a source rather than every run it was listed for. Economic
-invariants (spend ≤ budget, payouts = weights, splits sum exactly) are covered by a vitest suite
+selection is portfolio-based: preview expected values and claim targets forecast a bounded source
+set, while only paid/cached body evidence may ground a claim or authorize a reward. CACHE has zero
+fetch cost but consumes the same scarce context slot as BUY. Economic invariants (spend ≤ budget,
+payouts = weights, splits sum exactly) are covered by a vitest suite
 run in CI.
 
 ### `lib/demand-*` + `lib/gap-intent-runner.ts`

@@ -15,6 +15,7 @@ import {
   type ReceiptClaim,
   type ReceiptDecision,
   type ReceiptEvidence,
+  type ReceiptEvidencePortfolio,
   type ResearchReceipt,
   type ResearchReceiptPayload,
 } from "./research-receipt-types";
@@ -33,6 +34,7 @@ export type {
   ReceiptCreatorPayment,
   ReceiptDecision,
   ReceiptEvidence,
+  ReceiptEvidencePortfolio,
   ReceiptLedgerCompleteness,
   ReceiptPaymentStatus,
   ReceiptSettlement,
@@ -41,6 +43,38 @@ export type {
   ResearchReceipt,
   ResearchReceiptPayload,
 } from "./research-receipt-types";
+
+function projectEvidencePortfolio(
+  portfolio: NonNullable<QueryRun["evidencePortfolio"]>,
+): ReceiptEvidencePortfolio {
+  return {
+    policy: portfolio.policy,
+    eligibleCandidates: portfolio.eligibleCandidates,
+    attentionLimit: portfolio.attentionLimit,
+    fetchBudgetUsdc: micros(portfolio.fetchBudgetUsdc),
+    selectedAssetIds: [...portfolio.selectedAssetIds],
+    selectedBuyUsdc: micros(portfolio.selectedBuyUsdc),
+    unusedFetchBudgetUsdc: micros(portfolio.unusedFetchBudgetUsdc),
+    predictedCoveredClaims: portfolio.predictedCoveredClaims,
+    claims: portfolio.claims.map((claim) => ({
+      claimIndex: claim.claimIndex,
+      selectedCandidateIds: [...claim.selectedCandidateIds],
+      predictedCoverage: claim.predictedCoverage,
+    })),
+    ...(portfolio.outcome
+      ? {
+          outcome: {
+            readAssetIds: [...portfolio.outcome.readAssetIds],
+            evidenceAssetIds: [...portfolio.outcome.evidenceAssetIds],
+            nonqualifyingReads: portfolio.outcome.nonqualifyingReads,
+            unreadSelected: portfolio.outcome.unreadSelected,
+            groundedClaims: portfolio.outcome.groundedClaims,
+            evidenceYield: portfolio.outcome.evidenceYield,
+          },
+        }
+      : {}),
+  };
+}
 
 function projectDecision(decision: Decision): ReceiptDecision {
   return {
@@ -105,7 +139,12 @@ export function buildResearchReceipt(run: QueryRun, payments: PaymentRecord[]): 
       engine: run.engine,
       confidence: confidence ? { ...confidence } : null,
     },
-    agency: { decisions: run.decisions.map(projectDecision) },
+    agency: {
+      decisions: run.decisions.map(projectDecision),
+      ...(run.evidencePortfolio
+        ? { evidencePortfolio: projectEvidencePortfolio(run.evidencePortfolio) }
+        : {}),
+    },
     claims: projectClaims(run),
     citations: run.citations.map((citation) => ({
       marker: citation.marker,

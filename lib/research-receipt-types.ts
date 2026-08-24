@@ -19,6 +19,30 @@ export interface ReceiptDecision extends ReceiptAsset {
   external: boolean;
 }
 
+export interface ReceiptEvidencePortfolio {
+  policy: "claim-coverage-v1";
+  eligibleCandidates: number;
+  attentionLimit: number;
+  fetchBudgetUsdc: number;
+  selectedAssetIds: string[];
+  selectedBuyUsdc: number;
+  unusedFetchBudgetUsdc: number;
+  predictedCoveredClaims: number;
+  claims: Array<{
+    claimIndex: number;
+    selectedCandidateIds: string[];
+    predictedCoverage: number;
+  }>;
+  outcome?: {
+    readAssetIds: string[];
+    evidenceAssetIds: string[];
+    nonqualifyingReads: number;
+    unreadSelected: number;
+    groundedClaims: number;
+    evidenceYield: number | null;
+  };
+}
+
 export interface ReceiptEvidence extends ReceiptAsset {
   marker: string;
   sourceId: string;
@@ -109,7 +133,10 @@ export interface ResearchReceiptPayload {
     engine: string;
     confidence: QueryRun["confidence"] | null;
   };
-  agency: { decisions: ReceiptDecision[] };
+  agency: {
+    decisions: ReceiptDecision[];
+    evidencePortfolio?: ReceiptEvidencePortfolio;
+  };
   claims: ReceiptClaim[];
   citations: ReceiptCitation[];
   settlement: ReceiptSettlement;

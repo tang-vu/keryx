@@ -15,6 +15,7 @@ import type {
   Citation,
   Confidence,
   Decision,
+  EvidencePortfolio,
   EvidenceRecord,
   PaymentOrigin,
   McpClientChannel,
@@ -68,6 +69,10 @@ import {
   normalizeClaimTargets,
   previewCoverageBlockReason,
 } from "./coverage-precheck";
+import {
+  attachEvidencePortfolioOutcome,
+  selectEvidencePortfolio,
+} from "./evidence-portfolio";
 import { recordActivationEvent } from "../activation";
 
 export interface RunInput {
@@ -132,6 +137,7 @@ export async function* runAgent(
   let evidence: EvidenceRecord[] = [];
   let claimCoverage: ClaimCoverageRecord[] = [];
   let previewCoverage: PreviewCoverage | undefined;
+  let evidencePortfolio: EvidencePortfolio | undefined;
   let evidenceMeasured = false;
   // Set once the verdict is computed; read by finish(). A `let` (not the closure-captured const)
   // so the early-return paths, which never reach the verdict step, still produce a valid run.
@@ -399,12 +405,11 @@ export async function* runAgent(
     });
   const externalProposed = proposed.filter((d) => isExternal(d.sourceId));
 
-  // rank internal BUY proposals by value-per-dollar; flip to SKIP when the fetch budget can't cover them
-  const ranked = [...internalProposed].sort(
-    (a, b) => b.expectedValue / (b.price || 1e-9) - a.expectedValue / (a.price || 1e-9),
-  );
-  let attentionUsed = 0;
-  for (const r of ranked) {
+  // Normalize model proposals and apply the downward-only preview gates before portfolio
+  // selection. The portfolio may choose a subset of positive proposals; it can never promote a
+  // model SKIP, create a candidate, or alter the authoritative registry/offer price.
+  const preparedDecisions: Decision[] = [];
+  for (const r of internalProposed) {
     // A CACHE proposal against a copy the source has published past is not a free read of that
     // source. Charge for it — here, before the budget guard, so the re-read is reserved like any
     // other purchase: converting it later at fetch time would settle a toll the fetch budget never
@@ -419,7 +424,7 @@ export async function* runAgent(
         : r;
     const coverageBlock = previewCoverageBlockReason(d, subClaims.length);
     if (coverageBlock) {
-      finalDecisions.push({
+      preparedDecisions.push({
         ...d,
         action: "SKIP",
         rationale: `${d.rationale} — ${coverageBlock}, so no toll is authorized.`,
@@ -430,38 +435,63 @@ export async function* runAgent(
       d.action === "CACHE" &&
       ((d.targets?.length ?? 0) === 0 || d.expectedValue < config.minCacheExpectedValue)
     ) {
-      finalDecisions.push({
+      preparedDecisions.push({
         ...d,
         action: "SKIP",
         rationale: `${d.rationale} — cached bytes are free, but this read does not clear the attention gate (EV ${d.expectedValue.toFixed(2)}, minimum ${config.minCacheExpectedValue.toFixed(2)}, with a required claim target).`,
       });
       continue;
     }
-    if (
-      (d.action === "BUY" || d.action === "CACHE") &&
-      attentionUsed >= attentionLimit
-    ) {
-      finalDecisions.push({
-        ...d,
-        action: "SKIP",
-        rationale: `${d.rationale} — the ${attentionLimit}-source ${researchMode} attention budget is full, so lower-ranked evidence is skipped.`,
-      });
-      continue;
-    }
-    if (d.action === "BUY") {
-      if (spentTolls + d.price > fetchBudget + 1e-9) {
-        finalDecisions.push({
-          ...d,
-          action: "SKIP",
-          rationale: `${d.rationale} — but the fetch budget ($${fetchBudget.toFixed(4)}) is exhausted, so skipping.`,
-        });
-        continue;
-      }
-      spentTolls += d.price; // reserve
-    }
-    if (d.action === "BUY" || d.action === "CACHE") attentionUsed++;
-    finalDecisions.push(d);
+    preparedDecisions.push(d);
   }
+
+  evidencePortfolio = selectEvidencePortfolio({
+    decisions: preparedDecisions,
+    claimCount: subClaims.length,
+    attentionLimit,
+    fetchBudgetUsdc: fetchBudget,
+  });
+  const selectedAssets = new Set(evidencePortfolio.selectedAssetIds);
+  const preparedByAsset = new Map(
+    preparedDecisions.map((decision) => [decision.assetId ?? decision.sourceId, decision]),
+  );
+
+  // Selected decisions lead the visible ledger and fetch order. The optimizer orders them by
+  // marginal claim coverage, preferring a free CACHE read on a true tie so paid tolls can still be
+  // stopped before signing when cached evidence is already sufficient.
+  for (const assetId of evidencePortfolio.selectedAssetIds) {
+    const decision = preparedByAsset.get(assetId);
+    if (!decision || (decision.action !== "BUY" && decision.action !== "CACHE")) continue;
+    const claimText = decision.targets.map((target) => target + 1).join(", ");
+    finalDecisions.push({
+      ...decision,
+      rationale:
+        `${decision.rationale} — selected for the claim-aware evidence portfolio ` +
+        `(targets claim${decision.targets.length === 1 ? "" : "s"} ${claimText}; ` +
+        (decision.action === "CACHE"
+          ? "0 fetch USDC, 1 attention slot)."
+          : `$${decision.price.toFixed(6)} fetch USDC, 1 attention slot).`),
+    });
+  }
+  for (const decision of preparedDecisions) {
+    const assetId = decision.assetId ?? decision.sourceId;
+    if (selectedAssets.has(assetId)) continue;
+    if (decision.action === "BUY" || decision.action === "CACHE") {
+      finalDecisions.push({
+        ...decision,
+        action: "SKIP",
+        rationale:
+          `${decision.rationale} — the claim-aware portfolio chose a stronger, less redundant ` +
+          `set inside the ${attentionLimit}-source attention and $${fetchBudget.toFixed(6)} fetch-budget caps, so this proposal stays unspent.`,
+      });
+    } else {
+      finalDecisions.push(decision);
+    }
+  }
+  // This is a query-local reservation only. The browser grant remains independently and atomically
+  // reserved per actual sign request inside BrowserCosignGateway.
+  spentTolls = evidencePortfolio.selectedBuyUsdc;
+  let attentionUsed = evidencePortfolio.selectedAssetIds.length;
 
   // record external evaluations — always SKIP (discovery only), keeping the engine's value reasoning
   for (const d of externalProposed) {
@@ -477,6 +507,13 @@ export async function* runAgent(
   }
 
   previewCoverage = buildPreviewCoverage(subClaims, finalDecisions);
+  const selectedCached = finalDecisions.filter((decision) => decision.action === "CACHE").length;
+  const selectedBought = finalDecisions.filter((decision) => decision.action === "BUY").length;
+  yield emit(
+    "coverage",
+    `Claim-aware portfolio selected ${evidencePortfolio.selectedAssetIds.length}/${evidencePortfolio.eligibleCandidates} positive proposal(s): ${selectedCached} cached + ${selectedBought} fresh, predicting ${evidencePortfolio.predictedCoveredClaims}/${subClaims.length} claim(s) above the evidence floor with $${evidencePortfolio.selectedBuyUsdc.toFixed(6)}/$${fetchBudget.toFixed(6)} fetch USDC reserved.`,
+    evidencePortfolio,
+  );
   const coveragePct = Math.round(previewCoverage.ratio * 100);
   yield emit(
     "coverage",
@@ -916,6 +953,15 @@ export async function* runAgent(
   });
   evidence = ledger.evidence;
   claimCoverage = ledger.claimCoverage;
+  if (evidencePortfolio) {
+    evidencePortfolio = attachEvidencePortfolioOutcome(evidencePortfolio, {
+      read: gathered,
+      acceptedMarkers: ledger.acceptedMarkers,
+      groundedClaims: claimCoverage.filter(
+        (claim) => claim.coverage >= MIN_REWARD_SUPPORT,
+      ).length,
+    });
+  }
   evidenceMeasured = true;
   answer = removeUnsupportedCitationMarkers(
     answer,
@@ -1191,6 +1237,7 @@ export async function* runAgent(
       budget,
       researchMode,
       ...(previewCoverage ? { previewCoverage } : {}),
+      ...(evidencePortfolio ? { evidencePortfolio } : {}),
       // What actually answered, not what was picked: a run that fell back to the heuristic must not
       // present itself as model-reasoned (see ResilientEngine.effectiveName).
       engine: effectiveEngineName(engine),

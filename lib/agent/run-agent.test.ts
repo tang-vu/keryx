@@ -874,6 +874,50 @@ describe("runAgent — article-level economics", () => {
     targets: [0],
   });
 
+  it("keeps the strongest cached evidence when cheaper list prices would previously crowd it out", async () => {
+    const sources = [
+      makeSource({ id: "exact", fetchPrice: 0.004 }),
+      makeSource({ id: "cheap", fetchPrice: 0.002 }),
+      makeSource({ id: "cheapest", fetchPrice: 0.001 }),
+    ];
+    const expectedValue: Record<string, number> = {
+      exact: 0.88,
+      cheap: 0.8,
+      cheapest: 0.7,
+    };
+    const engine = fakeEngine({
+      decide: (input) =>
+        input.candidates.map((candidate) => ({
+          ...cacheDecision(candidate.id, candidate.name),
+          expectedValue: expectedValue[candidate.id]!,
+        })),
+      sufficiency: (input) => ({
+        sufficient: false,
+        rationale: "inspect the whole selected portfolio",
+        perClaim: input.subClaims.map((claim) => ({ claim, coverage: 0, coveredBy: [] })),
+      }),
+      synthesize: () => ({ answer: "No supported answer.", citedMarkers: [], evidence: [] }),
+    });
+    const d = deps(sources, engine, fakeGateway(), {
+      cachedAt: Object.fromEntries(sources.map((source) => [source.id, "2026-07-20T00:00:00.000Z"])),
+    });
+
+    const { run } = await drive(
+      { question: "the exact cached evidence", budget: 0.05, researchMode: "quick" },
+      d,
+    );
+
+    expect(run.decisions.find((decision) => decision.sourceId === "exact")).toMatchObject({
+      action: "CACHE",
+      expectedValue: 0.88,
+    });
+    expect(run.decisions.find((decision) => decision.sourceId === "cheapest")).toMatchObject({
+      action: "SKIP",
+    });
+    expect(run.evidencePortfolio?.selectedAssetIds).toEqual(["exact", "cheap"]);
+    expect(run.evidencePortfolio?.selectedBuyUsdc).toBe(0);
+  });
+
   it("selects and receipts the relevant article rather than buying the whole feed", async () => {
     const source = makeSource({ id: "a", fetchPrice: 0.004 });
     const relevant: SourceItem = {
@@ -1124,7 +1168,7 @@ describe("runAgent — article-level economics", () => {
     expect(run.citations).toEqual([]);
   });
 
-  it("caps the synthesis context independently from the money budget", async () => {
+  it("bounds synthesis context and leaves redundant attention slots unused", async () => {
     const sources = Array.from({ length: config.maxAttentionSources + 1 }, (_, index) =>
       makeSource({ id: `s${index}`, fetchPrice: 0.001 }),
     );
@@ -1143,12 +1187,14 @@ describe("runAgent — article-level economics", () => {
 
     const { run } = await drive({ question: "q", budget: 0.05 }, d);
 
-    expect(run.decisions.filter((decision) => decision.action === "CACHE")).toHaveLength(
-      config.maxAttentionSources,
-    );
+    expect(run.decisions.filter((decision) => decision.action === "CACHE")).toHaveLength(2);
+    expect(run.evidencePortfolio).toMatchObject({
+      eligibleCandidates: config.maxAttentionSources + 1,
+      attentionLimit: config.maxAttentionSources,
+    });
     expect(
       run.decisions.some(
-        (decision) => decision.action === "SKIP" && decision.rationale.includes("attention budget is full"),
+        (decision) => decision.action === "SKIP" && decision.rationale.includes("less redundant"),
       ),
     ).toBe(true);
   });
@@ -1171,7 +1217,7 @@ describe("runAgent — article-level economics", () => {
     await drive({ question: "q", budget: 0.05 }, d);
 
     expect(gw.fetchCalls).toContain(`s${config.maxAttentionSources}`);
-    expect(gw.fetchCalls).toHaveLength(config.maxAttentionSources);
+    expect(gw.fetchCalls).toHaveLength(2);
   });
 
   it("skips rather than overspends when exact article versions are not cached", async () => {

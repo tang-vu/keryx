@@ -260,6 +260,35 @@ export interface PreviewCoverage {
   }>;
 }
 
+/**
+ * The deterministic source set selected from the model's claim-targeted BUY/CACHE proposals.
+ * This is a preview-derived attention/spend plan, never evidence or payment authority.
+ */
+export interface EvidencePortfolio {
+  policy: "claim-coverage-v1";
+  eligibleCandidates: number;
+  attentionLimit: number;
+  fetchBudgetUsdc: number;
+  selectedAssetIds: string[];
+  selectedBuyUsdc: number;
+  unusedFetchBudgetUsdc: number;
+  predictedCoveredClaims: number;
+  claims: Array<{
+    claimIndex: number;
+    selectedCandidateIds: string[];
+    predictedCoverage: number;
+  }>;
+  /** Present only after the paid/cached bodies have passed through the evidence gate. */
+  outcome?: {
+    readAssetIds: string[];
+    evidenceAssetIds: string[];
+    nonqualifyingReads: number;
+    unreadSelected: number;
+    groundedClaims: number;
+    evidenceYield: number | null;
+  };
+}
+
 /** Coarse first-party product events. Rows store only UTC day + event + aggregate count. */
 export type ActivationEvent =
   | "reader_landing"
@@ -375,6 +404,8 @@ export interface QueryRun {
   researchMode?: ResearchMode;
   /** Free-preview plan coverage captured before the first paid fetch. */
   previewCoverage?: PreviewCoverage;
+  /** Dual-budget, claim-aware source portfolio captured before the first paid fetch. */
+  evidencePortfolio?: EvidencePortfolio;
   engine: string; // which reasoning engine produced this (llm:model | heuristic)
   /** Per-step provider attempts, including fallbacks. Absent on pre-v0.8.1 runs. */
   reasoningAttempts?: import("./llm/reasoning-engine").ReasoningAttempt[];

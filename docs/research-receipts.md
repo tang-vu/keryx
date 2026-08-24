@@ -16,6 +16,8 @@ The SHA-256 covers the full `payload`, canonicalized with recursively sorted obj
 
 - exact public question and answer, plus a separate stable hash of the answer text;
 - the agent's visible BUY/SKIP/CACHE decisions and their claim targets;
+- the claim-aware pre-spend portfolio, separate fetch/attention caps, per-claim predicted coverage,
+  and post-run read-to-evidence yield when available;
 - decomposed claims, evidence-bounded coverage and public evidence excerpts;
 - cited source/article identity, SHA-256 or IPFS content version, and public publisher manifest;
 - a sanitized snapshot of every creator access/citation payment state.
@@ -23,6 +25,10 @@ The SHA-256 covers the full `payload`, canonicalized with recursively sorted obj
 Evidence excerpts remain capped by the existing evidence ledger. Paid article plaintext, cache
 contents, encryption material, session/payer addresses, authorization nonces and internal database
 ids are not exported.
+
+Portfolio coverage is a free-preview forecast, not a factual claim. It can only select a subset of
+the reasoning engine's positive BUY/CACHE proposals. Actual claim coverage and reward eligibility
+remain under `claims[].coverage` and its verified evidence spans.
 
 ## Verify a file or URL
 
