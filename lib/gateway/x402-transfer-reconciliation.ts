@@ -5,6 +5,10 @@ export const PENDING_RECONCILIATION_STATE_KEY = "pendingPaymentReconciliation";
 export const CIRCLE_X402_TRANSFERS_URL =
   "https://gateway-api-testnet.circle.com/v1/x402/transfers";
 
+const TRANSFER_SEARCH_LOOKBACK_MS = 24 * 60 * 60 * 1_000;
+const TRANSFER_SEARCH_PAGE_SIZE = 50;
+const TRANSFER_SEARCH_MAX_PAGES = 20;
+
 const ACCEPTED_STATUSES = new Set(["received", "batched", "confirmed", "completed"]);
 
 export interface CircleX402Transfer {
@@ -97,26 +101,79 @@ export async function searchCircleTransfer(
   fetchImpl: typeof fetch = fetch,
 ): Promise<CircleX402Transfer[]> {
   if (!payment.authorizationId) return [];
-  const url = new URL(CIRCLE_X402_TRANSFERS_URL);
-  url.searchParams.set("from", payment.payer);
-  url.searchParams.set("to", payment.payee);
-  url.searchParams.set("network", payment.network);
-  url.searchParams.set("nonce", payment.authorizationId);
-  url.searchParams.set("pageSize", "10");
+  const createdAt = Date.parse(payment.createdAt);
+  if (!Number.isFinite(createdAt)) {
+    throw new Error("pending payment has an invalid creation time");
+  }
 
-  const response = await fetchImpl(url, {
-    signal,
-    headers: { Accept: "application/json" },
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw new Error(`Circle x402 transfer search returned HTTP ${response.status}`);
+  // Circle's documented search filters do not include the authorization nonce. Bound the result
+  // set from shortly before the local submission, then follow every cursor and independently bind
+  // the nonce plus the full economic tuple below. There is deliberately no endDate: a bearer
+  // authorization can be submitted after Keryx recorded the ambiguous response. A nonce query
+  // parameter is silently ignored by the current API; relying on it and reading only page one can
+  // strand an older authorization once newer payments between the same wallets push it beyond the
+  // default page.
+  const baseUrl = new URL(CIRCLE_X402_TRANSFERS_URL);
+  baseUrl.searchParams.set("from", payment.payer);
+  baseUrl.searchParams.set("to", payment.payee);
+  baseUrl.searchParams.set("network", payment.network);
+  baseUrl.searchParams.set("token", "USDC");
+  baseUrl.searchParams.set(
+    "startDate",
+    new Date(createdAt - TRANSFER_SEARCH_LOOKBACK_MS).toISOString(),
+  );
+  baseUrl.searchParams.set("pageSize", String(TRANSFER_SEARCH_PAGE_SIZE));
+
+  const transfers: CircleX402Transfer[] = [];
+  let pageAfter: string | null = null;
+  for (let page = 0; page < TRANSFER_SEARCH_MAX_PAGES; page++) {
+    const url = new URL(baseUrl);
+    if (pageAfter) url.searchParams.set("pageAfter", pageAfter);
+    const response = await fetchImpl(url, {
+      signal,
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      throw new Error(`Circle x402 transfer search returned HTTP ${response.status}`);
+    }
+    const body = (await response.json()) as { transfers?: unknown };
+    if (!Array.isArray(body.transfers) || !body.transfers.every(isCircleTransfer)) {
+      throw new Error("Circle x402 transfer search returned an invalid response");
+    }
+    transfers.push(...body.transfers);
+
+    pageAfter = nextPageCursor(response.headers.get("Link"));
+    if (!pageAfter) return transfers;
   }
-  const body = (await response.json()) as { transfers?: unknown };
-  if (!Array.isArray(body.transfers) || !body.transfers.every(isCircleTransfer)) {
-    throw new Error("Circle x402 transfer search returned an invalid response");
+
+  throw new Error(
+    `Circle x402 transfer search exceeded ${TRANSFER_SEARCH_MAX_PAGES} pages`,
+  );
+}
+
+function nextPageCursor(linkHeader: string | null): string | null {
+  if (!linkHeader) return null;
+  for (const part of linkHeader.split(",")) {
+    const match = part.match(/^\s*<([^>]+)>\s*;\s*rel="next"\s*$/i);
+    if (!match) continue;
+    let next: URL;
+    try {
+      next = new URL(match[1]);
+    } catch {
+      throw new Error("Circle x402 transfer search returned an invalid next-page link");
+    }
+    const expected = new URL(CIRCLE_X402_TRANSFERS_URL);
+    if (next.origin !== expected.origin || next.pathname !== expected.pathname) {
+      throw new Error("Circle x402 transfer search returned an untrusted next-page link");
+    }
+    const cursor = next.searchParams.get("pageAfter");
+    if (!cursor) {
+      throw new Error("Circle x402 transfer search next-page link omitted its cursor");
+    }
+    return cursor;
   }
-  return body.transfers;
+  return null;
 }
 
 export function checkPendingTransfer(

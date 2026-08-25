@@ -1,6 +1,6 @@
 # Keryx System Architecture
 
-**Version:** 0.16.0 Portable research receipts (2026-08-23)
+**Version:** 0.18.0 Complete Circle reconciliation searches (2026-08-25)
 **Status:** Shipped (Phases 01–06 complete)
 
 ---
@@ -148,6 +148,19 @@ authorization ids and internal database ids are omitted. Reconciliation can legi
 pending state with exact Circle settled/failed evidence, producing a new snapshot digest while the
 answer hash remains unchanged. Receipt generation performs no payment, reservation, registry write,
 purchase or decrypt operation.
+
+### Ambiguous Settlement Reconciliation
+
+A signed authorization that crossed the HTTP submission boundary without a valid Circle response
+is persisted as `pending`; it is excluded from settled spend, earnings, notifications, fulfillment,
+and traction. The scheduled reconciler queries Circle with documented payer, payee, Arc network,
+USDC and start-date filters, then follows every trusted `pageAfter` cursor inside a fixed scan bound.
+Circle does not document a nonce search filter, so query parameters are never treated as proof.
+
+Only one exact nonce + payer + payee + sending/recipient network + token + integer micro-USDC match
+can promote the row. An exact Circle `failed` state may atomically terminalize it and release browser
+capacity only against the same grant generation. Missing, malformed, conflicting, cross-origin, or
+truncated search evidence changes no financial state.
 
 ### Creator-Signed Article Offer Book
 

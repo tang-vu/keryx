@@ -73,19 +73,73 @@ describe("pending x402 transfer reconciliation", () => {
     });
   });
 
-  it("queries by nonce but treats filters as untrusted response shaping", async () => {
+  it("uses documented filters and treats response shaping as untrusted", async () => {
     const fetchImpl = vi.fn(async (input: string | URL | Request) => {
       const url = new URL(String(input));
-      expect(url.searchParams.get("nonce")).toBe("0xAbC");
+      expect(url.searchParams.has("nonce")).toBe(false);
       expect(url.searchParams.get("from")).toBe(payment().payer);
       expect(url.searchParams.get("to")).toBe(payment().payee);
       expect(url.searchParams.get("network")).toBe("eip155:5042002");
+      expect(url.searchParams.get("token")).toBe("USDC");
+      expect(url.searchParams.get("pageSize")).toBe("50");
+      expect(url.searchParams.get("startDate")).toBe("2026-08-07T00:00:00.000Z");
+      expect(url.searchParams.has("endDate")).toBe(false);
       return Response.json({ transfers: [transfer()] });
     }) as typeof fetch;
 
     await expect(searchCircleTransfer(payment(), undefined, fetchImpl)).resolves.toEqual([
       transfer(),
     ]);
+  });
+
+  it("follows Circle cursors so a later page can prove an older authorization", async () => {
+    const fetchImpl = vi.fn(async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      if (!url.searchParams.has("pageAfter")) {
+        const next = new URL(url);
+        next.searchParams.set("pageAfter", "cursor-2");
+        return Response.json(
+          { transfers: [transfer({ id: "newer", nonce: "0xdef" })] },
+          { headers: { Link: `<${next}>; rel="next"` } },
+        );
+      }
+      expect(url.searchParams.get("pageAfter")).toBe("cursor-2");
+      return Response.json({ transfers: [transfer()] });
+    }) as typeof fetch;
+
+    await expect(searchCircleTransfer(payment(), undefined, fetchImpl)).resolves.toEqual([
+      transfer({ id: "newer", nonce: "0xdef" }),
+      transfer(),
+    ]);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects a next-page link outside Circle's transfer endpoint", async () => {
+    const fetchImpl = vi.fn(async () => Response.json(
+      { transfers: [] },
+      { headers: { Link: '<https://attacker.test/transfers?pageAfter=stolen>; rel="next"' } },
+    )) as typeof fetch;
+
+    await expect(searchCircleTransfer(payment(), undefined, fetchImpl)).rejects.toThrow(
+      /untrusted next-page link/i,
+    );
+  });
+
+  it("fails closed instead of treating a truncated cursor scan as no evidence", async () => {
+    let cursor = 0;
+    const fetchImpl = vi.fn(async (input: string | URL | Request) => {
+      const next = new URL(String(input));
+      next.searchParams.set("pageAfter", `cursor-${++cursor}`);
+      return Response.json(
+        { transfers: [] },
+        { headers: { Link: `<${next}>; rel="next"` } },
+      );
+    }) as typeof fetch;
+
+    await expect(searchCircleTransfer(payment(), undefined, fetchImpl)).rejects.toThrow(
+      /exceeded 20 pages/i,
+    );
+    expect(fetchImpl).toHaveBeenCalledTimes(20);
   });
 
   it("promotes through an idempotent compare-and-set and persists an ops summary", async () => {

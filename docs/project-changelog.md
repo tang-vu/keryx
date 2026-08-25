@@ -1,13 +1,23 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-08-24
-**Current Version:** 0.17.0
+**Last Updated:** 2026-08-25
+**Current Version:** 0.18.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
 
 ---
 
 ## Unreleased
+
+### Complete Circle reconciliation searches (2026-08-25)
+
+- Replaced the undocumented Circle `nonce` query assumption and first-page-only lookup with the
+  API's documented payer/payee/network/token/date filters plus complete cursor traversal.
+- Kept settlement fail-closed: every candidate page is untrusted response shaping, while promotion
+  or terminal failure still requires one exact nonce + payer + payee + Arc + USDC + micro-USDC
+  tuple. Missing evidence remains pending.
+- Bounded the scan to 20 trusted Circle pages and rejects malformed or cross-origin next links,
+  preventing both silent partial searches and pagination-driven SSRF.
 
 ### Claim-aware evidence portfolios (2026-08-24)
 

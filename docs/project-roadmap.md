@@ -1,11 +1,11 @@
 # Keryx Project Roadmap
 
-**Version:** 0.17.0 (claim-aware evidence portfolios, updated 2026-08-24)
+**Version:** 0.18.0 (complete Circle reconciliation searches, updated 2026-08-25)
 **Status:** In continuous operation at [keryx.cc](https://keryx.cc) — real settlement 24/7, shipping in public.
 
 ---
 
-## Where Keryx is today (v0.17.0, August 2026)
+## Where Keryx is today (v0.18.0, August 2026)
 
 Shipped and running:
 - ✓ Non-custodial dApp core (SIWE auth, on-chain SourceRegistry, browser co-sign sessions, encrypted IPFS content, public API + keys)
@@ -26,6 +26,8 @@ Shipped and running:
   SHA-256 integrity checks, public download endpoint, and a local verifier
 - ✓ Claim-aware evidence portfolios: deterministic dual-budget source-set selection, visible
   per-claim forecasts, diminishing-return attention, and post-run evidence yield
+- ✓ Cursor-complete Circle x402 reconciliation: documented transfer filters, bounded pagination,
+  trusted next-link validation, and unchanged exact-tuple settlement authority
 
 Live figures at [`/status`](https://keryx.cc/status); snapshots in [TRACTION.md](../TRACTION.md).
 
@@ -313,6 +315,7 @@ Mainnet ← blocked on: Phase 07–10, security audit, legal
 | **v0.15.0** | 2026-08-23 | Living answers: exact citation drift + agent-readable freshness + re-ask receipt deltas | ✓ Shipped |
 | **v0.16.0** | 2026-08-23 | Portable research receipts: deterministic evidence + settled-ledger bundle, SHA-256 integrity, export + verifier | ✓ Shipped |
 | **v0.17.0** | 2026-08-24 | Claim-aware evidence portfolio: dual-budget coverage optimization + evidence yield | ✓ Shipped |
+| **v0.18.0** | 2026-08-25 | Complete Circle reconciliation search | ✓ Shipped |
 | **v1.0.0** | 2026-12-31 | Mainnet + Full Feature Parity | Planned |
 | **v2.0.0** | 2027-Q2 | Stretch Goals (Agent Marketplace, Video, Derivatives) | Backlog |
 

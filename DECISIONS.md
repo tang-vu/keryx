@@ -5,6 +5,24 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-54** · Settlement/Reconciliation · *Search Circle's documented transfer index completely;
+query filters may narrow candidates but never prove a nonce or settlement state.* Circle's x402
+transfer-search API filters by payer, payee, network, token, date and cursors, but not by EIP-3009
+nonce. Keryx previously sent an undocumented `nonce` parameter and read only ten rows. If Circle
+ignored that parameter, later payments between the same wallets could push the ambiguous transfer
+off page one and leave a valid settlement permanently pending.
+
+Reconciliation now starts one day before the locally recorded submission, leaves the end open so
+a bearer authorization submitted later is still discoverable, requests 50 rows, and follows every
+Circle `pageAfter` cursor up to a fail-closed bound. Next links must remain on the configured Circle
+transfer endpoint. Only after retrieval does Keryx require exactly one matching nonce, payer,
+payee, Arc network on both sides, USDC token and integer micro-USDC amount. A malformed response,
+untrusted cursor, or exhausted scan bound changes no ledger state; an empty complete scan remains
+pending rather than becoming failed. Why: production's first long-lived ambiguous receipt exposed
+that the lookup assumed an API filter the installed Circle SDK and current documentation do not
+offer. Reversible: easy (transport-only search policy; no schema, key, grant, price, or payout
+authority change).
+
 **D-53** · Reasoning/Spend selection · *Choose an evidence portfolio under separate money and
 attention budgets; preview predictions still cannot authorize evidence or payment.* After the
 reasoning engine proposes BUY/CACHE/SKIP with normalized claim targets, the existing preview gates
