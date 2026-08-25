@@ -1,8 +1,9 @@
 /**
  * Resolve ambiguous post-submit x402 authorizations against Circle's transfer ledger.
  *
- * Circle exposes nonce-filtered transfer search. A row is promoted only when nonce, payer, payee,
- * Arc network and USDC amount all match. Accepted transfers become settled. Circle-terminal
+ * Circle exposes filtered, cursor-paginated transfer search but no nonce filter. A row is promoted
+ * only when nonce, payer, payee, Arc network and USDC amount all match. Accepted transfers become
+ * settled. Circle-terminal
  * failures become failed receipts and release browser capacity only against the same grant epoch.
  * Missing or mismatched results remain pending and outside settled metrics and creator earnings.
  *
@@ -23,10 +24,13 @@ async function main(): Promise<void> {
   const signal = AbortSignal.timeout(45_000);
   const summary = await reconcilePendingPayments(db, { limit: 250, signal });
   console.log(
-    `[reconcile] scanned ${summary.scanned}; promoted ${summary.promoted}; terminal failures ${summary.failed}; released reservations ${summary.releasedReservations}; awaiting ${summary.awaiting}; mismatched ${summary.mismatched}; raced ${summary.raced}.`,
+    `[reconcile] scanned ${summary.scanned}; promoted ${summary.promoted}; terminal failures ${summary.failed}; released reservations ${summary.releasedReservations}; awaiting ${summary.awaiting} (${summary.browserAwaiting} browser, ${summary.treasuryAwaiting} treasury); expired ${summary.expiredAwaiting}; unknown expiry ${summary.unknownExpiryAwaiting}; mismatched ${summary.mismatched}; raced ${summary.raced}.`,
   );
   if (summary.oldestPendingAt) {
     console.log(`[reconcile] oldest unresolved authorization: ${summary.oldestPendingAt}`);
+  }
+  if (summary.earliestAuthorizationExpiresAt) {
+    console.log(`[reconcile] earliest exact signed expiry: ${summary.earliestAuthorizationExpiresAt}`);
   }
 
   const assessment = assessPendingReconciliation(summary);
@@ -42,6 +46,10 @@ async function main(): Promise<void> {
   const fingerprint = JSON.stringify({
     oldestPendingAt: summary.oldestPendingAt,
     status: assessment.status,
+    browserAwaiting: summary.browserAwaiting,
+    treasuryAwaiting: summary.treasuryAwaiting,
+    expiredAwaiting: summary.expiredAwaiting,
+    unknownExpiryAwaiting: summary.unknownExpiryAwaiting,
   });
   if (previous !== fingerprint) {
     const age = assessment.oldestPendingAgeSeconds ?? 0;
@@ -50,11 +58,33 @@ async function main(): Promise<void> {
       "pending x402 reconciliation needs review",
       summary.mismatched > 0
         ? `Circle returned ${summary.mismatched} conflicting economic tuple(s) while checking ${summary.scanned} pending authorization(s). None were changed.`
-        : `${summary.awaiting} authorization(s) still lack definitive Circle evidence; the oldest has remained pending for ${ageHours} hours. Its reservation remains held.`,
+        : awaitingAlert(summary, ageHours),
     );
     await db.setSyncState(PENDING_RECONCILIATION_ALERT_STATE_KEY, fingerprint);
   }
   process.exitCode = 1;
+}
+
+function awaitingAlert(
+  summary: Awaited<ReturnType<typeof reconcilePendingPayments>>,
+  ageHours: string,
+): string {
+  const details = [
+    `${summary.awaiting} authorization(s) still lack definitive Circle evidence; the oldest has remained pending for ${ageHours} hours.`,
+  ];
+  if (summary.browserAwaiting > 0) {
+    details.push(`${summary.browserAwaiting} browser reservation(s) remain held.`);
+  }
+  if (summary.treasuryAwaiting > 0) {
+    details.push(`${summary.treasuryAwaiting} treasury attempt(s) hold no browser grant capacity.`);
+  }
+  if (summary.expiredAwaiting > 0) {
+    details.push(`${summary.expiredAwaiting} signed validity window(s) have elapsed, but expiry is not Circle failure evidence.`);
+  }
+  if (summary.unknownExpiryAwaiting > 0) {
+    details.push(`${summary.unknownExpiryAwaiting} legacy row(s) lack an exact signed expiry.`);
+  }
+  return details.join(" ");
 }
 
 main().catch((error) => {

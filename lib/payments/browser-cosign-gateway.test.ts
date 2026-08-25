@@ -61,7 +61,7 @@ function challenge(req = requirements()): Response {
   });
 }
 
-function signedHeader(over: Partial<{ from: string; to: string; value: string; nonce: string }> = {}): string {
+function signedHeader(over: Partial<{ from: string; to: string; value: string; nonce: string; validBefore: string }> = {}): string {
   const now = Math.floor(Date.now() / 1_000);
   return Buffer.from(
     JSON.stringify({
@@ -138,10 +138,11 @@ describe("BrowserCoSignGateway", () => {
       .mockResolvedValueOnce(challenge())
       .mockRejectedValueOnce(new Error("socket reset"));
     vi.stubGlobal("fetch", fetchMock);
+    const validBefore = String(Math.floor(Date.now() / 1_000) + config.maxTimeoutSeconds);
     const gateway = new BrowserCoSignGateway(
       "session",
       SESSION,
-      vi.fn().mockResolvedValue(signedHeader()),
+      vi.fn().mockResolvedValue(signedHeader({ validBefore })),
       undefined,
       "epoch-pending",
     );
@@ -158,6 +159,7 @@ describe("BrowserCoSignGateway", () => {
       settled: false,
       settlementStatus: "pending",
       authorizationId: NONCE,
+      authorizationExpiresAt: new Date(Number(validBefore) * 1_000).toISOString(),
       grantEpoch: "epoch-pending",
       amountUsdc: source.fetchPrice,
     });
@@ -183,6 +185,7 @@ describe("BrowserCoSignGateway", () => {
       settled: false,
       settlementStatus: "pending",
       authorizationId: NONCE,
+      authorizationExpiresAt: expect.any(String),
     });
   });
 
@@ -204,6 +207,7 @@ describe("BrowserCoSignGateway", () => {
       settlementStatus: "settled",
       txHash: "circle-settlement-id",
       authorizationId: NONCE,
+      authorizationExpiresAt: expect.any(String),
     });
   });
 

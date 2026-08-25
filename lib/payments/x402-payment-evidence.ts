@@ -22,6 +22,19 @@ export function sameAddress(left: unknown, right: string): boolean {
   return typeof left === "string" && left.toLowerCase() === right.toLowerCase();
 }
 
+/** Preserve the exact signed EIP-3009 validity boundary without retaining the signature. */
+export function authorizationExpiryIso(validBefore: unknown): string {
+  if (typeof validBefore !== "string" || !/^\d+$/.test(validBefore)) {
+    throw new Error("signed authorization has an invalid validBefore");
+  }
+  const seconds = Number(validBefore);
+  const maxDateSeconds = 8_640_000_000_000;
+  if (!Number.isSafeInteger(seconds) || seconds <= 0 || seconds > maxDateSeconds) {
+    throw new Error("signed authorization validBefore is outside the supported date range");
+  }
+  return new Date(seconds * 1_000).toISOString();
+}
+
 /** A 402 challenge must equal the payee and integer micro-USDC amount already authorised by the
  * orchestrator. A paid endpoint does not get to redefine a reserved spend. */
 export function assertExpectedRequirements(

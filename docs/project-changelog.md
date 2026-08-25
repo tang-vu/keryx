@@ -1,13 +1,22 @@
 # Keryx Project Changelog
 
 **Last Updated:** 2026-08-25
-**Current Version:** 0.18.0
+**Current Version:** 0.19.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
 
 ---
 
 ## Unreleased
+
+### Exact authorization expiry and pending ownership (2026-08-25)
+
+- Persisted the exact signed EIP-3009 `validBefore` for new browser and treasury x402 attempts;
+  historical pending rows remain explicitly unknown rather than receiving an inferred deadline.
+- Split unresolved reconciliation telemetry into browser reservations and treasury attempts, and
+  exposed expired, unknown-expiry, and earliest-known-expiry context in health/status and alerts.
+- Kept the financial boundary unchanged: elapsed authorization validity is not Circle failure
+  evidence and cannot release a browser grant reservation or mark a payment settled/failed.
 
 ### Complete Circle reconciliation searches (2026-08-25)
 

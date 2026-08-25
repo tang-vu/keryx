@@ -27,6 +27,7 @@ import { PaymentPendingError, PaymentSettledError } from "./payment-state";
 import { isGrantValid, releaseSpend, reserveSpend } from "./session-grants";
 import {
   assertExpectedRequirements,
+  authorizationExpiryIso,
   sameAddress,
   settlementReference,
   type PaymentRequirements,
@@ -260,6 +261,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
       amountUsdc: amount,
       weight,
       authorizationId: signed.authorization.nonce,
+      authorizationExpiresAt: authorizationExpiryIso(signed.authorization.validBefore),
       grantEpoch: this.grantEpoch,
     } as const;
     const pending = (reason: string) => makePayment({

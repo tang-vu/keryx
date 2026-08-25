@@ -268,6 +268,7 @@ function paymentFromAttempt(
     settled,
     settlementStatus: attempt.settlementStatus,
     authorizationId: attempt.authorizationId,
+    authorizationExpiresAt: attempt.authorizationExpiresAt,
     rationale: settled
       ? context.settledRationale
       : `Signed x402 authorization submitted; settlement confirmation unavailable (${attempt.reason ?? "missing Circle receipt"}).`,

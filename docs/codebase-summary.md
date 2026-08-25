@@ -1,6 +1,6 @@
 # Keryx Codebase Summary
 
-**Version:** 0.18.0 (complete Circle reconciliation searches, updated 2026-08-25)
+**Version:** 0.19.0 (exact authorization expiry and pending ownership, updated 2026-08-25)
 
 This document maps the codebase structure for the non-custodial Keryx dApp. Organized by domain; files < 200 LOC per kebab-case naming standard.
 
@@ -96,7 +96,7 @@ Multi-backend payment gateway with common interface. Selects backend at runtime 
 | `real-gateway.ts` | `RealGateway`: server-funded Circle Gateway path used by volume engine + A2A; keeps signed-submission outcome explicit. |
 | `browser-cosign-gateway.ts` | `BrowserCoSignGateway`: binds the 402 challenge + returned authorization to the reserved source/amount, then submits the browser co-sign. Post-submit uncertainty becomes durable `pending`; a valid receipt on a delivery 5xx remains settled. |
 | `payment-state.ts` | Explicit `settled` / `simulated` / `pending` / `failed` semantics plus typed pending and settled-delivery errors. |
-| `gateway/x402-transfer-reconciliation.ts` | Resolves lost settle responses through documented Circle filters plus bounded cursor traversal; exact nonce/economic-tuple verification, idempotent settlement, and generation-bound terminal-failure capacity release. |
+| `gateway/x402-transfer-reconciliation.ts` | Resolves lost settle responses through documented Circle filters plus bounded cursor traversal; exact nonce/economic-tuple verification, browser/treasury pending classification, signed-expiry telemetry, idempotent settlement, and generation-bound terminal-failure capacity release. |
 | `server-x402-client.ts` | Server-funded x402 transport: Circle `BatchEvmScheme` signing with Keryx-owned receipt/error classification so non-2xx cannot discard settlement proof. |
 | `x402-payment-evidence.ts` | Shared challenge binding and Circle receipt validation for browser and server-funded buyers. |
 | `offline-gateway.ts` | `OfflineGateway`: heuristic offline mode. No keys, `settled:false`. |
@@ -214,7 +214,9 @@ Swappable SQLite (dev) / Supabase (prod) via `KeryxDB` interface.
 
 **Key tables:**
 - `sources`: URL hash, creator wallet, IPFS CID, split config
-- `payment_events`: fetch toll + citation reward per source, with explicit settlement status and optional browser authorization nonce; pending rows never count as traction
+- `payment_events`: fetch toll + citation reward per source, with explicit settlement status,
+  authorization nonce, exact signed expiry when available, and browser grant epoch; pending rows
+  never count as traction
 - `api_keys`: SHA-256 hashed keys, per-creator minting
 - `session_grants`: user-funded session EOA, cap, spent
 - `reasoning_circuits`: shared provider-step failure streak, cooldown and half-open probe lease

@@ -57,6 +57,7 @@ describe("SQLite payment settlement state migration", () => {
       settled: false,
       settlementStatus: "pending",
       authorizationId: "nonce-new",
+      authorizationExpiresAt: "2033-05-18T03:33:20.000Z",
       origin: "web",
     });
 
@@ -64,6 +65,7 @@ describe("SQLite payment settlement state migration", () => {
     expect(pending).toMatchObject({
       settlementStatus: "pending",
       authorizationId: "nonce-new",
+      authorizationExpiresAt: "2033-05-18T03:33:20.000Z",
       settled: false,
       itemId: "article-1",
       itemTitle: "Exact article",

@@ -196,4 +196,41 @@ describe("pending x402 transfer reconciliation", () => {
       raced: 0,
     });
   });
+
+  it("separates browser reservations from treasury attempts and reports exact expiry", async () => {
+    const summary = await reconcilePendingPayments(
+      {
+        listPendingPayments: async () => [
+          payment({
+            id: "browser",
+            authorizationId: "0x01",
+            grantEpoch: "epoch-1",
+            authorizationExpiresAt: "2033-05-18T03:33:20.000Z",
+          }),
+          payment({
+            id: "treasury-expired",
+            authorizationId: "0x02",
+            authorizationExpiresAt: "2026-01-01T00:00:00.000Z",
+          }),
+          payment({ id: "treasury-legacy", authorizationId: "0x03" }),
+        ],
+        settlePendingPayment: vi.fn(async () => false),
+        failPendingPayment: vi.fn(async () => ({
+          resolved: false,
+          reservationReleased: false,
+        })),
+        setSyncState: vi.fn(async () => undefined),
+      },
+      { search: async () => [] },
+    );
+
+    expect(summary).toMatchObject({
+      awaiting: 3,
+      browserAwaiting: 1,
+      treasuryAwaiting: 2,
+      expiredAwaiting: 1,
+      unknownExpiryAwaiting: 1,
+      earliestAuthorizationExpiresAt: "2026-01-01T00:00:00.000Z",
+    });
+  });
 });

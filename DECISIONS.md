@@ -5,6 +5,21 @@ Format: **D-NN** · area · decision · why · reversibility.
 
 ---
 
+**D-55** · Settlement/Operations · *Persist the signed authorization expiry exactly, but never use
+expiry as settlement or failure evidence.* Both browser and treasury x402 buyers now normalize the
+`validBefore` carried by the signed EIP-3009 payload into `payment_events.authorization_expires_at`
+before submission. Historical rows stay NULL because deriving a deadline from `created_at` would
+fabricate evidence. Reconciliation reports exact expired/unknown-expiry counts and separates
+browser-funded rows, whose grant reservations remain held, from treasury rows, which consume no
+browser capacity.
+
+Crossing `validBefore` does not terminalize a row or release a reservation: Circle may have accepted
+the authorization before expiry even when Keryx lost the response. Only the existing exact Circle
+transfer tuple can prove accepted or failed state. Why: the first long-lived production ambiguity
+made the authorization window and the funding owner operationally important, while a generic
+“reservation remains held” alert incorrectly described a treasury attempt. Reversible: easy
+(additive nullable metadata and presentation; settlement authority is unchanged).
+
 **D-54** · Settlement/Reconciliation · *Search Circle's documented transfer index completely;
 query filters may narrow candidates but never prove a nonce or settlement state.* Circle's x402
 transfer-search API filters by payer, payee, network, token, date and cursors, but not by EIP-3009

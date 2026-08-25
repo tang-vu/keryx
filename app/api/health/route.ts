@@ -106,11 +106,20 @@ export async function GET() {
       const raw = await db.getSyncState(PENDING_RECONCILIATION_STATE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as PendingReconciliationSummary;
-        reconciliation = {
+        const normalized: PendingReconciliationSummary = {
           ...parsed,
-          // Rolling deploy compatibility: summaries written before D-44 lack this additive field.
+          // Rolling deploy compatibility: older summaries lack these additive fields. Their
+          // pending rows cannot be assigned an exact expiry or funding path from the summary.
+          browserAwaiting: parsed.browserAwaiting ?? 0,
+          treasuryAwaiting: parsed.treasuryAwaiting ?? 0,
+          expiredAwaiting: parsed.expiredAwaiting ?? 0,
+          unknownExpiryAwaiting: parsed.unknownExpiryAwaiting ?? parsed.awaiting ?? 0,
+          earliestAuthorizationExpiresAt: parsed.earliestAuthorizationExpiresAt ?? null,
           releasedReservations: parsed.releasedReservations ?? 0,
-          ...assessPendingReconciliation(parsed),
+        };
+        reconciliation = {
+          ...normalized,
+          ...assessPendingReconciliation(normalized),
         };
       }
     } catch {

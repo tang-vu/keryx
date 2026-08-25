@@ -6,6 +6,8 @@ import type { PaymentRequirements } from "./x402-payment-evidence";
 const PAYER = `0x${"11".repeat(20)}`;
 const PAYEE = `0x${"22".repeat(20)}`;
 const NONCE = `0x${"33".repeat(32)}`;
+const VALID_BEFORE = "2000000000";
+const EXPIRES_AT = "2033-05-18T03:33:20.000Z";
 
 function requirements(over: Partial<PaymentRequirements> = {}): PaymentRequirements {
   return {
@@ -53,7 +55,7 @@ const signer = {
   createPaymentPayload: vi.fn(async (x402Version: number) => ({
     x402Version,
     payload: {
-      authorization: { nonce: NONCE },
+      authorization: { nonce: NONCE, validBefore: VALID_BEFORE },
       signature: `0x${"ab".repeat(65)}`,
     },
   })),
@@ -84,6 +86,7 @@ describe("payWithServerSigner", () => {
       settlementStatus: "settled",
       transaction: "circle-settlement-id",
       authorizationId: NONCE,
+      authorizationExpiresAt: EXPIRES_AT,
       httpStatus: 500,
     });
   });
@@ -108,6 +111,7 @@ describe("payWithServerSigner", () => {
       settlementStatus: "pending",
       transaction: null,
       authorizationId: NONCE,
+      authorizationExpiresAt: EXPIRES_AT,
       reason: "socket reset",
     });
   });
@@ -150,5 +154,24 @@ describe("payWithServerSigner", () => {
       fetchImpl,
     })).rejects.toThrow(/payTo does not match/i);
     expect(signer.createPaymentPayload).not.toHaveBeenCalled();
+  });
+
+  it("rejects a signer payload without an exact validBefore", async () => {
+    signer.createPaymentPayload.mockResolvedValueOnce({
+      x402Version: 2,
+      payload: {
+        authorization: { nonce: NONCE, validBefore: undefined as unknown as string },
+        signature: `0x${"ab".repeat(65)}`,
+      },
+    });
+    await expect(payWithServerSigner({
+      url: "https://example.test/paid",
+      method: "GET",
+      expectedPayee: PAYEE,
+      expectedAmount: 0.002,
+      payer: PAYER,
+      signer,
+      fetchImpl: vi.fn().mockResolvedValueOnce(challenge()),
+    })).rejects.toThrow(/validBefore/i);
   });
 });

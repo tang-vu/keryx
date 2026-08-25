@@ -3,6 +3,11 @@ export interface PendingReconciliationHealth {
   scanned: number;
   promoted: number;
   awaiting: number;
+  browserAwaiting?: number;
+  treasuryAwaiting?: number;
+  expiredAwaiting?: number;
+  unknownExpiryAwaiting?: number;
+  earliestAuthorizationExpiresAt?: string | null;
   failed: number;
   releasedReservations?: number;
   mismatched: number;
@@ -49,6 +54,26 @@ export function PendingReconciliationSection({
         <Row k="Accepted by Circle" v={reconciliation.promoted.toLocaleString()} />
         <Row k="Still awaiting proof" v={reconciliation.awaiting.toLocaleString()} />
         <Row
+          k="Browser reservations held"
+          v={(reconciliation.browserAwaiting ?? 0).toLocaleString()}
+        />
+        <Row
+          k="Treasury attempts pending"
+          v={(reconciliation.treasuryAwaiting ?? 0).toLocaleString()}
+        />
+        <Row
+          k="Expired, still unresolved"
+          v={(reconciliation.expiredAwaiting ?? 0).toLocaleString()}
+        />
+        <Row
+          k="Exact expiry unavailable"
+          v={(reconciliation.unknownExpiryAwaiting ?? 0).toLocaleString()}
+        />
+        <Row
+          k="Earliest signed expiry"
+          v={formatDate(reconciliation.earliestAuthorizationExpiresAt)}
+        />
+        <Row
           k="Terminal failures"
           v={`${reconciliation.failed.toLocaleString()} (${(reconciliation.releasedReservations ?? 0).toLocaleString()} reservations released)`}
         />
@@ -62,10 +87,17 @@ export function PendingReconciliationSection({
       <p className="mt-3 font-mono text-[10px] leading-relaxed tracking-wide text-faint">
         Accepted transfers settle only on an exact tuple. Circle-terminal failures close without
         earnings and release capacity only for the same grant generation. Missing or conflicting
-        evidence stays pending.
+        evidence stays pending. Expiry is operational context, never proof that Circle failed or
+        that a browser reservation can be released.
       </p>
     </section>
   );
+}
+
+function formatDate(value: string | null | undefined): string {
+  if (!value) return "none";
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? new Date(parsed).toLocaleString() : "unknown";
 }
 
 function formatAge(seconds: number | null): string {

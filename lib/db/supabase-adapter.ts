@@ -670,6 +670,7 @@ export class SupabaseAdapter implements KeryxDB {
       settled: p.settled,
       settlement_status: settlementStatus,
       authorization_id: p.authorizationId ?? null,
+      authorization_expires_at: p.authorizationExpiresAt ?? null,
       grant_epoch: p.grantEpoch ?? null,
       origin: p.origin ?? "engine",
       item_id: p.itemId ?? null,
@@ -1436,6 +1437,7 @@ function rowToPayment(r: Record<string, unknown>): PaymentRecord {
       (r.settlement_status as PaymentRecord["settlementStatus"]) ??
       (Boolean(r.settled) ? "settled" : "simulated"),
     authorizationId: (r.authorization_id as string) ?? undefined,
+    authorizationExpiresAt: (r.authorization_expires_at as string) ?? undefined,
     grantEpoch: (r.grant_epoch as string) ?? undefined,
     origin: (r.origin as PaymentRecord["origin"]) ?? undefined,
     itemId: (r.item_id as string) ?? undefined,

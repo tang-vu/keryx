@@ -146,7 +146,8 @@ CREATE TABLE IF NOT EXISTS payment_events (
   id TEXT PRIMARY KEY, created_at TEXT, kind TEXT, query_id TEXT, source_id TEXT,
   source_name TEXT, payer TEXT, payee TEXT, amount_usdc REAL, weight REAL,
   rationale TEXT, tx_hash TEXT, network TEXT, settled INTEGER,
-  settlement_status TEXT NOT NULL DEFAULT 'simulated', authorization_id TEXT, grant_epoch TEXT,
+  settlement_status TEXT NOT NULL DEFAULT 'simulated', authorization_id TEXT,
+  authorization_expires_at TEXT, grant_epoch TEXT,
   item_id TEXT, item_title TEXT, item_url TEXT, content_version TEXT, item_published_at TEXT,
   offer_id TEXT, list_price_usdc REAL
 );
@@ -361,6 +362,9 @@ export class SqliteAdapter implements KeryxDB {
     }
     if (!paymentCols.has("authorization_id")) {
       this.db.exec(`ALTER TABLE payment_events ADD COLUMN authorization_id TEXT`);
+    }
+    if (!paymentCols.has("authorization_expires_at")) {
+      this.db.exec(`ALTER TABLE payment_events ADD COLUMN authorization_expires_at TEXT`);
     }
     if (!paymentCols.has("grant_epoch")) {
       this.db.exec(`ALTER TABLE payment_events ADD COLUMN grant_epoch TEXT`);
@@ -1389,8 +1393,8 @@ export class SqliteAdapter implements KeryxDB {
     const settlementStatus = assertPaymentSettlementState(p);
     this.db
       .prepare(
-        `INSERT INTO payment_events (id,created_at,kind,query_id,source_id,source_name,payer,payee,amount_usdc,weight,rationale,tx_hash,network,settled,settlement_status,authorization_id,grant_epoch,origin,item_id,item_title,item_url,content_version,item_published_at,offer_id,list_price_usdc)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        `INSERT INTO payment_events (id,created_at,kind,query_id,source_id,source_name,payer,payee,amount_usdc,weight,rationale,tx_hash,network,settled,settlement_status,authorization_id,authorization_expires_at,grant_epoch,origin,item_id,item_title,item_url,content_version,item_published_at,offer_id,list_price_usdc)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       )
       .run(
         p.id ?? crypto.randomUUID(),
@@ -1409,6 +1413,7 @@ export class SqliteAdapter implements KeryxDB {
         p.settled ? 1 : 0,
         settlementStatus,
         p.authorizationId ?? null,
+        p.authorizationExpiresAt ?? null,
         p.grantEpoch ?? null,
         p.origin ?? "engine",
         p.itemId ?? null,
@@ -2019,6 +2024,7 @@ function rowToPayment(r: Record<string, unknown>): PaymentRecord {
       (r.settlement_status as PaymentRecord["settlementStatus"]) ??
       (Boolean(r.settled) ? "settled" : "simulated"),
     authorizationId: (r.authorization_id as string) ?? undefined,
+    authorizationExpiresAt: (r.authorization_expires_at as string) ?? undefined,
     grantEpoch: (r.grant_epoch as string) ?? undefined,
     origin: (r.origin as PaymentRecord["origin"]) ?? undefined,
     itemId: (r.item_id as string) ?? undefined,

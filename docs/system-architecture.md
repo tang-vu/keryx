@@ -1,6 +1,6 @@
 # Keryx System Architecture
 
-**Version:** 0.18.0 Complete Circle reconciliation searches (2026-08-25)
+**Version:** 0.19.0 Exact authorization expiry and pending ownership (2026-08-25)
 **Status:** Shipped (Phases 01–06 complete)
 
 ---
@@ -161,6 +161,12 @@ Only one exact nonce + payer + payee + sending/recipient network + token + integ
 can promote the row. An exact Circle `failed` state may atomically terminalize it and release browser
 capacity only against the same grant generation. Missing, malformed, conflicting, cross-origin, or
 truncated search evidence changes no financial state.
+
+Every new browser or treasury attempt stores the exact signed EIP-3009 `validBefore` as
+`authorization_expires_at`; old rows remain NULL. Health/status split unresolved rows into browser
+reservations and treasury attempts, and show expired/unknown validity windows. An elapsed window is
+diagnostic context only: the authorization may have been accepted before expiry, so it cannot prove
+failure or release capacity.
 
 ### Creator-Signed Article Offer Book
 
@@ -486,6 +492,9 @@ aggregation independent of full receipt payloads and leave pre-ledger history un
 | type | TEXT | fetch_toll \| citation_reward |
 | tx_hash | TEXT | Arc tx (if settled) |
 | settled | BOOLEAN | true = on-chain confirmed |
+| settlement_status / authorization_id | TEXT | explicit state + EIP-3009 correlation nonce |
+| authorization_expires_at | DATETIME | exact signed `validBefore`; nullable for historical rows |
+| grant_epoch | TEXT | browser reservation generation; NULL for treasury attempts |
 | timestamp | DATETIME | when payment occurred |
 | offer_id / list_price_usdc | TEXT / REAL | signed discount provenance for article fetches |
 

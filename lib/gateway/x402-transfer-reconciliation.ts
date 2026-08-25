@@ -43,6 +43,16 @@ export interface PendingReconciliationSummary {
   scanned: number;
   promoted: number;
   awaiting: number;
+  /** Unresolved browser-funded rows whose session reservation remains held. */
+  browserAwaiting: number;
+  /** Unresolved server-treasury rows; these do not consume browser grant capacity. */
+  treasuryAwaiting: number;
+  /** Unresolved rows whose exact signed validBefore has passed. Not failure evidence. */
+  expiredAwaiting: number;
+  /** Legacy or malformed unresolved rows without an exact signed validity boundary. */
+  unknownExpiryAwaiting: number;
+  /** Earliest exact signed validity boundary among unresolved rows. */
+  earliestAuthorizationExpiresAt: string | null;
   /** Pending rows closed from exact Circle `failed` evidence. */
   failed: number;
   /** Browser cap reservations released against the same still-active grant generation. */
@@ -244,6 +254,11 @@ export async function reconcilePendingPayments(
     scanned: pending.length,
     promoted: 0,
     awaiting: 0,
+    browserAwaiting: 0,
+    treasuryAwaiting: 0,
+    expiredAwaiting: 0,
+    unknownExpiryAwaiting: 0,
+    earliestAuthorizationExpiresAt: null,
     failed: 0,
     releasedReservations: 0,
     mismatched: 0,
@@ -258,7 +273,25 @@ export async function reconcilePendingPayments(
       payment,
       await search(payment, options.signal),
     );
-    if (check.verdict === "awaiting") summary.awaiting++;
+    if (check.verdict === "awaiting") {
+      summary.awaiting++;
+      if (payment.grantEpoch) summary.browserAwaiting++;
+      else summary.treasuryAwaiting++;
+      const expiry = payment.authorizationExpiresAt
+        ? Date.parse(payment.authorizationExpiresAt)
+        : Number.NaN;
+      if (!Number.isFinite(expiry)) {
+        summary.unknownExpiryAwaiting++;
+      } else {
+        if (expiry <= Date.parse(summary.checkedAt)) summary.expiredAwaiting++;
+        if (
+          summary.earliestAuthorizationExpiresAt === null ||
+          expiry < Date.parse(summary.earliestAuthorizationExpiresAt)
+        ) {
+          summary.earliestAuthorizationExpiresAt = new Date(expiry).toISOString();
+        }
+      }
+    }
     if (check.verdict === "mismatch") summary.mismatched++;
     if (!check.transfer || !payment.id || !payment.authorizationId) {
       continue;

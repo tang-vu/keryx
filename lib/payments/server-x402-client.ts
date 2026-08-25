@@ -2,6 +2,7 @@ import type { PaymentSettlementStatus } from "../types";
 import { config } from "../config";
 import {
   assertExpectedRequirements,
+  authorizationExpiryIso,
   settlementReference,
   type PaymentRequirements,
 } from "./x402-payment-evidence";
@@ -25,6 +26,7 @@ export interface ServerX402Attempt<T> {
   settlementStatus: Extract<PaymentSettlementStatus, "settled" | "pending">;
   transaction: string | null;
   authorizationId: string;
+  authorizationExpiresAt: string;
   amountUsdc: number;
   httpStatus?: number;
   reason?: string;
@@ -78,7 +80,7 @@ export async function payWithServerSigner<T>({
   assertExpectedRequirements(requirements, expectedPayee, expectedAmount);
 
   const signed = await signer.createPaymentPayload(challenge.x402Version, requirements);
-  const authorizationId = authorizationNonce(signed.payload);
+  const authorization = authorizationEvidence(signed.payload);
   const paymentHeader = Buffer.from(JSON.stringify({
     ...signed,
     resource: challenge.resource ?? { url },
@@ -96,7 +98,7 @@ export async function payWithServerSigner<T>({
       delivered: false,
       settlementStatus: "pending",
       transaction: null,
-      authorizationId,
+      ...authorization,
       amountUsdc: expectedAmount,
       reason: errorMessage(error),
     };
@@ -110,7 +112,7 @@ export async function payWithServerSigner<T>({
   const base = {
     settlementStatus,
     transaction,
-    authorizationId,
+    ...authorization,
     amountUsdc: expectedAmount,
     httpStatus: paidResponse.status,
   } as const;
@@ -126,12 +128,20 @@ export async function payWithServerSigner<T>({
   }
 }
 
-function authorizationNonce(payload: unknown): string {
-  const authorization = (payload as { authorization?: { nonce?: unknown } } | null)?.authorization;
+function authorizationEvidence(payload: unknown): {
+  authorizationId: string;
+  authorizationExpiresAt: string;
+} {
+  const authorization = (
+    payload as { authorization?: { nonce?: unknown; validBefore?: unknown } } | null
+  )?.authorization;
   if (typeof authorization?.nonce !== "string" || !/^0x[0-9a-f]{64}$/i.test(authorization.nonce)) {
     throw new Error("batch signer returned an invalid authorization nonce");
   }
-  return authorization.nonce;
+  return {
+    authorizationId: authorization.nonce,
+    authorizationExpiresAt: authorizationExpiryIso(authorization.validBefore),
+  };
 }
 
 function errorMessage(error: unknown): string {
