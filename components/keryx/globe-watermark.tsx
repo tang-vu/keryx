@@ -13,6 +13,7 @@
  */
 
 import { useEffect, useRef } from "react";
+import type { GeometryObject, Topology } from "topojson-specification";
 import { cn } from "@/lib/utils";
 
 export function GlobeWatermark({ className }: { className?: string }) {
@@ -113,9 +114,12 @@ export function GlobeWatermark({ className }: { className?: string }) {
       sizeNow();
       path = geoPath(projection, ctx!);
       draw(); // spin the ocean disc + graticule immediately
-      const w = atlas.default;
-      land = topojson.feature(w, w.objects.countries);
-      borders = topojson.mesh(w, w.objects.countries, (a, b) => a !== b);
+      // JSON modules widen their discriminant strings, so restore the package's
+      // Topology type after loading the trusted atlas shipped in node_modules.
+      const w = atlas.default as unknown as Topology;
+      const countries = w.objects.countries as GeometryObject;
+      land = topojson.feature(w, countries);
+      borders = topojson.mesh(w, countries, (a, b) => a !== b);
       if (reduced) draw(); // animated path keeps drawing via rAF; static needs a nudge
     })();
 
