@@ -2,7 +2,6 @@ export function contentSecurityPolicy(production = process.env.NODE_ENV === "pro
   const script = [
     "'self'",
     "'unsafe-inline'",
-    "https://cdn.jsdelivr.net",
     ...(production ? [] : ["'unsafe-eval'"]),
   ];
   return [

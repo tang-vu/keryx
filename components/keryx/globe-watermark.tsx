@@ -7,7 +7,9 @@
  * parent fades it (low opacity) so it reads as an engraved watermark, not art.
  *
  * d3-geo, topojson-client, and the country atlas are loaded lazily on the
- * client so they never touch the SSR bundle.
+ * client so they never touch the SSR bundle. The atlas ships with the app:
+ * relying on a runtime CDN fetch makes the countries disappear under CSP or
+ * when that third party is unavailable.
  */
 
 import { useEffect, useRef } from "react";
@@ -99,22 +101,19 @@ export function GlobeWatermark({ className }: { className?: string }) {
     };
 
     (async () => {
-      const [{ geoOrthographic, geoPath, geoGraticule10 }, topojson] =
-        await Promise.all([import("d3-geo"), import("topojson-client")]);
+      const [{ geoOrthographic, geoPath, geoGraticule10 }, topojson, atlas] =
+        await Promise.all([
+          import("d3-geo"),
+          import("topojson-client"),
+          import("world-atlas/countries-110m.json"),
+        ]);
       if (!mounted) return;
       projection = geoOrthographic().clipAngle(90).precision(0.4);
       graticule = geoGraticule10();
       sizeNow();
       path = geoPath(projection, ctx!);
       draw(); // spin the ocean disc + graticule immediately
-      // Country borders stream in from the world atlas (cached CDN); the globe
-      // degrades gracefully to a blank ocean disc if the fetch fails.
-      const w = await fetch(
-        "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json",
-      )
-        .then((r) => r.json())
-        .catch(() => null as any);
-      if (!mounted || !w) return;
+      const w = atlas.default;
       land = topojson.feature(w, w.objects.countries);
       borders = topojson.mesh(w, w.objects.countries, (a, b) => a !== b);
       if (reduced) draw(); // animated path keeps drawing via rAF; static needs a nudge

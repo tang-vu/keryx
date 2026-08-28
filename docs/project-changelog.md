@@ -1,6 +1,14 @@
 # Keryx Project Changelog
 
-**Last Updated:** 2026-08-25
+### Self-contained globe geography (2026-08-28)
+
+- Bundled the existing `world-atlas` country geometry with the client-side globe instead of
+  fetching it from jsDelivr at runtime. The production content-security policy correctly blocked
+  that undeclared connection, which left the globe spinning without its land or country borders.
+- Removed the now-unused CDN script allowance from the application CSP, keeping the decorative
+  globe functional without adding another third-party network origin.
+
+**Last Updated:** 2026-08-28
 **Current Version:** 0.19.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).

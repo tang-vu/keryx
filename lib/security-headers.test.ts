@@ -8,7 +8,7 @@ describe("application security headers", () => {
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain("https://gateway-api-testnet.circle.com");
     expect(csp).toContain("https://*.supabase.co");
-    expect(csp).toContain("https://cdn.jsdelivr.net");
+    expect(csp).not.toContain("https://cdn.jsdelivr.net");
     expect(csp).not.toContain("'unsafe-eval'");
     expect(contentSecurityPolicy(false)).not.toContain("upgrade-insecure-requests");
   });
