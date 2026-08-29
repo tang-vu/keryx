@@ -412,6 +412,9 @@ export interface QueryRun {
   engine: string; // which reasoning engine produced this (llm:model | heuristic)
   /** Per-step provider attempts, including fallbacks. Absent on pre-v0.8.1 runs. */
   reasoningAttempts?: import("./llm/reasoning-engine").ReasoningAttempt[];
+  /** Provider token counters captured per response. Empty means a measured heuristic-only run;
+   * absent means historical/unsampled. */
+  llmUsage?: import("./llm/reasoning-engine").LlmUsageRecord[];
   subClaims: string[];
   decisions: Decision[];
   citations: Citation[];
@@ -442,6 +445,8 @@ export interface QueryRun {
    *  ran on Keryx's treasury (the free trial). Kept apart so a receipts page can never present
    *  Keryx's spend as the user's. */
   askerFunded?: boolean;
+  /** Funding provenance set by the trusted server path, never by a public request body. */
+  fundingOwner?: "browser" | "treasury" | "offline";
   /** Verified request channel. Persisted on the run as well as its payments so zero-spend
    *  dispatches still count in an honest external conversion denominator. */
   origin?: PaymentOrigin;

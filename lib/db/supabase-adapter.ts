@@ -49,6 +49,11 @@ import {
   calculateDashboardMetrics,
   runEvidenceMetrics,
 } from "./dashboard-metrics";
+import {
+  calculateTestnetEconomics,
+  economicsRunSample,
+  type EconomicsRunSample,
+} from "../economics/testnet-economics";
 import { activationWindow, emptyActivationCounts } from "../activation";
 
 /**
@@ -615,6 +620,7 @@ export class SupabaseAdapter implements KeryxDB {
       evidence_claim_count: evidenceTelemetry.evidenceClaimCount,
       grounded_claim_count: evidenceTelemetry.groundedClaimCount,
       rewarded_citation_count: evidenceTelemetry.rewardedCitationCount,
+      economics_data: economicsRunSample(run),
     });
   }
 
@@ -884,6 +890,31 @@ export class SupabaseAdapter implements KeryxDB {
       })),
       gapIntentRows.map((intent) => ({
           status: intent.status as import("../types").GapIntentStatus,
+      })),
+    );
+  }
+
+  async economics() {
+    const [runRows, paymentRows] = await Promise.all([
+      this.allRows("query_runs", "id,economics_data"),
+      this.allRows(
+        "payment_events",
+        "query_id,kind,amount_usdc,settled,settlement_status,grant_epoch",
+      ),
+    ]);
+    return calculateTestnetEconomics(
+      runRows.flatMap((row) => {
+        const sample = row.economics_data as EconomicsRunSample | null;
+        return sample ? [sample] : [];
+      }),
+      paymentRows.map((row) => ({
+        queryId: String(row.query_id ?? ""),
+        kind: row.kind as "fetch" | "citation" | "inbound",
+        amountUsdc: Number(row.amount_usdc),
+        settled: Boolean(row.settled),
+        settlementStatus:
+          (row.settlement_status as import("../types").PaymentSettlementStatus | null) ?? null,
+        grantEpoch: (row.grant_epoch as string | null) ?? null,
       })),
     );
   }

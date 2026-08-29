@@ -18,10 +18,28 @@ import type {
   SynthInput,
   SynthResult,
   Conflict,
+  LlmUsageRecord,
 } from "./reasoning-engine";
 
 export abstract class JsonChatEngine implements ReasoningEngine {
   abstract readonly name: string;
+  private readonly usageRecords: LlmUsageRecord[] = [];
+
+  get usage(): readonly LlmUsageRecord[] {
+    return [...this.usageRecords];
+  }
+
+  /** Store only provider counters. Never store prompts, completions, or request identifiers. */
+  protected recordUsage(usage: Omit<LlmUsageRecord, "engine">): void {
+    const finite = (value: number) => Math.max(0, Math.floor(Number.isFinite(value) ? value : 0));
+    this.usageRecords.push({
+      engine: this.name,
+      model: usage.model,
+      inputTokens: finite(usage.inputTokens),
+      cachedInputTokens: Math.min(finite(usage.cachedInputTokens), finite(usage.inputTokens)),
+      outputTokens: finite(usage.outputTokens),
+    });
+  }
 
   /**
    * Call the model and return a parsed JSON object. Subclass-specific transport.

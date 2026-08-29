@@ -1,5 +1,13 @@
 # Keryx Project Changelog
 
+### Testnet economics observatory (2026-08-29)
+
+- Added run-local, provider-reported token counters without retaining prompts or completions.
+- Added trusted funding provenance so browser pass-through and treasury subsidy stay distinct.
+- Added a read-only `/api/economics` snapshot and a clearly labeled status-page panel for settled
+  inbound revenue, creator funding, priced LLM cost, and hypothetical service margin.
+- Historical and unknown-price records remain unknown/unpriced; no settlement state is inferred.
+
 ### Self-contained globe geography (2026-08-28)
 
 - Bundled the existing `world-atlas` country geometry with the client-side globe instead of

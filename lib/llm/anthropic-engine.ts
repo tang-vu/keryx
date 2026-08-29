@@ -25,6 +25,15 @@ export class AnthropicEngine extends JsonChatEngine {
       },
       { signal: AbortSignal.timeout(config.llmTimeoutMs) },
     );
+    const usage = msg.usage as typeof msg.usage & {
+      cache_read_input_tokens?: number | null;
+    };
+    this.recordUsage({
+      model,
+      inputTokens: usage.input_tokens ?? 0,
+      cachedInputTokens: usage.cache_read_input_tokens ?? 0,
+      outputTokens: usage.output_tokens ?? 0,
+    });
     // Same rule as the OpenAI-compatible transport: a reply stopped by the token ceiling is
     // truncated JSON, and half an object must fail rather than read as an answer.
     if (msg.stop_reason === "max_tokens") {

@@ -246,6 +246,7 @@ export async function POST(req: NextRequest) {
             budget: askBudget,
             researchMode,
             origin: isBot ? "engine" : "web",
+            fundingOwner: useBrowserCoSign ? "browser" : "treasury",
           },
           deps,
         );

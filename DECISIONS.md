@@ -3,6 +3,21 @@
 Autonomous architecture/product/UX decisions, with rationale. Newest first.
 Format: **D-NN** · area · decision · why · reversibility.
 
+**D-57** · Testnet economics · *Observe unit economics without changing payment authority or
+presenting projections as revenue.* Every new dispatch records trusted server-side funding
+provenance (`browser`, `treasury`, or explicit `offline`) plus provider-reported token counters;
+prompts and completions are never retained. The economics observer joins those sampled runs to the
+existing payment ledger. Only rows with exact settled evidence count as inbound revenue or creator
+spend, pending payments remain pending, and historical funding is `unknown` rather than inferred.
+
+DeepSeek cost estimates use a dated, versioned table from the vendor's canonical pricing page.
+Unknown providers/models make a run unpriced instead of silently costing zero. A separate shadow
+policy models $0.02 Quick / $0.05 Deep orchestration fees and a $0.005 infrastructure allowance;
+it excludes creator pass-through and is displayed as “simulation · not revenue.” Why: testnet needs
+evidence for a viable mainnet price before adding a fee, while Keryx must not corrupt the creator's
+100% payout rail or confuse treasury-subsidized volume with customer economics. Reversible: easy
+(additive run metadata, read-only API/status surface, no settlement/schema/contract change).
+
 **D-56** · Agent quality/evaluation · *Gate reasoning changes with a hermetic frozen-corpus
 evaluation harness; keep payment safety deterministic and separate from semantic scoring.* Every
 case runs the production orchestrator against an isolated in-memory SQLite database and the

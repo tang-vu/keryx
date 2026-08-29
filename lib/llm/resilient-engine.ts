@@ -18,6 +18,7 @@ import type {
   ReevaluateOutput,
   ReasoningEngine,
   ReasoningStep,
+  LlmUsageRecord,
   SufficiencyInput,
   SufficiencyResult,
   SynthInput,
@@ -80,6 +81,12 @@ export function reasoningAttempts(engine: ReasoningEngine): ReasoningAttempt[] {
   return engine instanceof ResilientEngine ? engine.telemetry : [];
 }
 
+/** Provider counters from every tier that was actually called during this run. */
+export function reasoningUsage(engine: ReasoningEngine): LlmUsageRecord[] {
+  if (engine instanceof ResilientEngine) return engine.usage;
+  return [...(engine.usage ?? [])];
+}
+
 export class ResilientEngine implements ReasoningEngine {
   readonly name: string;
   private readonly fallback: ReasoningEngine;
@@ -115,6 +122,10 @@ export class ResilientEngine implements ReasoningEngine {
     return [...this.attempts, ...nested].sort(
       (a, b) => a.startedAt - b.startedAt || a.tier - b.tier || a.attempt - b.attempt,
     );
+  }
+
+  get usage(): LlmUsageRecord[] {
+    return [...(this.primary.usage ?? []), ...reasoningUsage(this.fallback)];
   }
 
   private async runFallback<T>(

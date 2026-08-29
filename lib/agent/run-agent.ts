@@ -34,7 +34,7 @@ import type {
   SourceCandidate,
   SufficiencyResult,
 } from "../llm";
-import { effectiveEngineName, reasoningAttempts } from "../llm/resilient-engine";
+import { effectiveEngineName, reasoningAttempts, reasoningUsage } from "../llm/resilient-engine";
 import type { AgentDeps } from "./deps";
 import { discoverExternalCandidates } from "./external-discovery";
 import { buildDecisionContext, saveMemory } from "./query-memory";
@@ -88,6 +88,8 @@ export interface RunInput {
   mcpClient?: McpClientChannel;
   /** Stable actor verified by the server (SIWE/API key). Never accept an unverified client value. */
   asker?: string;
+  /** Trusted server-side funding provenance. Public request bodies must never populate this. */
+  fundingOwner?: "browser" | "treasury" | "offline";
   /** Catalog model id the asker picked (model-catalog.ts). Read by collectRun when it builds
    *  deps; unknown/unset → default engine. Every pick falls back so the run always answers. */
   model?: string;
@@ -1242,6 +1244,7 @@ export async function* runAgent(
       // present itself as model-reasoned (see ResilientEngine.effectiveName).
       engine: effectiveEngineName(engine),
       reasoningAttempts: reasoningAttempts(engine),
+      llmUsage: reasoningUsage(engine),
       subClaims,
       decisions: finalDecisions,
       citations,
@@ -1254,6 +1257,7 @@ export async function* runAgent(
       origin,
       ...(origin === "mcp" && input.mcpClient ? { mcpClient: input.mcpClient } : {}),
       ...(input.asker ? { asker: input.asker.toLowerCase() } : {}),
+      fundingOwner: gateway.mode === "offline" ? "offline" : (input.fundingOwner ?? "treasury"),
       durationMs: Math.max(0, Date.now() - startedAt),
       paymentMode: gateway.mode,
       paymentAttempts,

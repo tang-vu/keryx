@@ -50,6 +50,11 @@ import {
   calculateDashboardMetrics,
   runEvidenceMetrics,
 } from "./dashboard-metrics";
+import {
+  calculateTestnetEconomics,
+  economicsRunSample,
+  type EconomicsRunSample,
+} from "../economics/testnet-economics";
 import { activationWindow, emptyActivationCounts } from "../activation";
 
 const SCHEMA = `
@@ -165,7 +170,8 @@ CREATE TABLE IF NOT EXISTS query_runs (
   confidence_level TEXT,
   evidence_claim_count INTEGER,
   grounded_claim_count INTEGER,
-  rewarded_citation_count INTEGER
+  rewarded_citation_count INTEGER,
+  economics_data TEXT
 );
 CREATE TABLE IF NOT EXISTS activation_events (
   day TEXT NOT NULL,
@@ -471,6 +477,8 @@ export class SqliteAdapter implements KeryxDB {
       this.db.exec(`ALTER TABLE query_runs ADD COLUMN grounded_claim_count INTEGER`);
     if (!runCols.has("rewarded_citation_count"))
       this.db.exec(`ALTER TABLE query_runs ADD COLUMN rewarded_citation_count INTEGER`);
+    if (!runCols.has("economics_data"))
+      this.db.exec(`ALTER TABLE query_runs ADD COLUMN economics_data TEXT`);
     // Unconditional: the columns are guaranteed present by the lines above (or by the CREATE TABLE
     // on a fresh database), and both paths need the indexes.
     this.db.exec(`CREATE INDEX IF NOT EXISTS query_runs_parent ON query_runs(parent_id)`);
@@ -1329,14 +1337,15 @@ export class SqliteAdapter implements KeryxDB {
 
   async saveQueryRun(run: QueryRun): Promise<void> {
     const evidenceTelemetry = runEvidenceMetrics(run);
+    const economicsSample = economicsRunSample(run);
     this.db
       .prepare(
         `INSERT OR REPLACE INTO query_runs (
            id,created_at,question,budget,engine,total_spent,total_to_creators,answer,data,
            parent_id,asker,origin,duration_ms,payment_mode,payment_attempts,settled_payments,
            confidence_level,mcp_client,evidence_claim_count,grounded_claim_count,
-           rewarded_citation_count
-         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+           rewarded_citation_count,economics_data
+         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       )
       .run(
         run.id,
@@ -1360,6 +1369,7 @@ export class SqliteAdapter implements KeryxDB {
         evidenceTelemetry.evidenceClaimCount,
         evidenceTelemetry.groundedClaimCount,
         evidenceTelemetry.rewardedCitationCount,
+        economicsSample ? JSON.stringify(economicsSample) : null,
       );
   }
 
@@ -1649,6 +1659,35 @@ export class SqliteAdapter implements KeryxDB {
         status: intent.status as import("../types").GapIntentStatus,
       }));
     return calculateDashboardMetrics(payments, runs, feedback, gapIntents);
+  }
+
+  async economics() {
+    const runs = this.db
+      .prepare(`SELECT economics_data FROM query_runs WHERE economics_data IS NOT NULL`)
+      .all()
+      .flatMap((row) => {
+        try {
+          const sample = JSON.parse(String(row.economics_data)) as EconomicsRunSample | null;
+          return sample ? [sample] : [];
+        } catch {
+          return [];
+        }
+      });
+    const payments = this.db
+      .prepare(
+        `SELECT query_id,kind,amount_usdc,settled,settlement_status,grant_epoch FROM payment_events`,
+      )
+      .all()
+      .map((row) => ({
+        queryId: String(row.query_id ?? ""),
+        kind: row.kind as "fetch" | "citation" | "inbound",
+        amountUsdc: Number(row.amount_usdc),
+        settled: Number(row.settled) === 1,
+        settlementStatus:
+          (row.settlement_status as import("../types").PaymentSettlementStatus | null) ?? null,
+        grantEpoch: (row.grant_epoch as string | null) ?? null,
+      }));
+    return calculateTestnetEconomics(runs, payments);
   }
 
   async settlementLedger(): Promise<LedgerAccount[]> {

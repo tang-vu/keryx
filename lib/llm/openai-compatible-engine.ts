@@ -64,9 +64,23 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
       err.status = res.status;
       throw err;
     }
+    const wireModel = this.opts.model ?? model;
     const data = (await res.json()) as {
       choices?: { message?: { content?: string }; finish_reason?: string }[];
+      usage?: {
+        prompt_tokens?: number;
+        completion_tokens?: number;
+        prompt_tokens_details?: { cached_tokens?: number };
+      };
     };
+    if (data.usage) {
+      this.recordUsage({
+        model: wireModel,
+        inputTokens: data.usage.prompt_tokens ?? 0,
+        cachedInputTokens: data.usage.prompt_tokens_details?.cached_tokens ?? 0,
+        outputTokens: data.usage.completion_tokens ?? 0,
+      });
+    }
     const choice = data.choices?.[0];
     // A reply cut off at the token ceiling is truncated JSON, which parses to nothing — and
     // "nothing" reads downstream as a decision rather than a failure. Surface it with a retryable

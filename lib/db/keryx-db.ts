@@ -4,6 +4,7 @@
  */
 
 import type { LedgerAccount } from "../gateway/settlement-parity";
+import type { TestnetEconomicsSnapshot } from "../economics/testnet-economics";
 import type {
   ActivationEvent,
   ActivationFunnel,
@@ -356,6 +357,8 @@ export interface KeryxDB {
   /** Dispatches a wallet ran while signed in, newest first. Address match is case-insensitive:
    *  runs are stamped lowercased, but callers hand over whatever casing the session carries. */
   listQueryRunsByAsker(wallet: string, limit: number): Promise<QueryRun[]>;
+  /** Testnet-only observed costs/subsidies and hypothetical service pricing. Never settlement. */
+  economics(): Promise<TestnetEconomicsSnapshot>;
 
   // ── privacy-preserving activation telemetry ──
   /** Atomically increment one aggregate UTC-day counter. No actor, wallet, IP, or cookie. */

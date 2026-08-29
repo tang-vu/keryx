@@ -38,6 +38,16 @@ export interface ReasoningAttempt {
   error?: "timeout" | "rate_limited" | "provider" | "network" | "invalid_request";
 }
 
+/** Provider-reported token usage for one completed (or billable truncated) model response.
+ * Prompts and provider response bodies are deliberately never retained. */
+export interface LlmUsageRecord {
+  engine: string;
+  model: string;
+  inputTokens: number;
+  cachedInputTokens: number;
+  outputTokens: number;
+}
+
 /** A discoverable source the agent may choose to pay for (preview is free). */
 export interface SourceCandidate {
   id: string;
@@ -186,6 +196,9 @@ export interface ReevaluateOutput {
 export interface ReasoningEngine {
   /** identifier recorded on each query run, e.g. "llm:claude-haiku-4-5" or "heuristic" */
   readonly name: string;
+
+  /** Run-local provider usage. Absent on engines that predate/support no usage telemetry. */
+  readonly usage?: readonly LlmUsageRecord[];
 
   /** Break a question into the atomic sub-claims an answer must support. */
   decompose(question: string): Promise<string[]>;
