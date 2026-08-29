@@ -324,7 +324,7 @@ export async function* runAgent(
   // discovery-only: evaluated and logged, never purchased.
   const external =
     researchMode === "deep"
-      ? await discoverExternalCandidates(input.question, subClaims)
+      ? await (deps.discoverExternal ?? discoverExternalCandidates)(input.question, subClaims)
       : [];
   if (external.length > 0) {
     candidates.push(...external);

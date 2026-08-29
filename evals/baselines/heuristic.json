@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "corpusFingerprint": "dcfe855ccb18a7efcba1de6919539356d0dc75bf9603812d3dba50993bde6769",
+  "engine": "heuristic",
+  "maxScoreRegression": 2,
+  "score": 98.33,
+  "cases": {
+    "relevance-with-distractor": 100,
+    "stable-budget": 100,
+    "multi-claim-portfolio": 100,
+    "irrelevant-corpus": 100,
+    "preview-body-mismatch": 90,
+    "budget-denial": 100
+  }
+}

@@ -3,6 +3,19 @@
 Autonomous architecture/product/UX decisions, with rationale. Newest first.
 Format: **D-NN** · area · decision · why · reversibility.
 
+**D-56** · Agent quality/evaluation · *Gate reasoning changes with a hermetic frozen-corpus
+evaluation harness; keep payment safety deterministic and separate from semantic scoring.* Every
+case runs the production orchestrator against an isolated in-memory SQLite database and the
+explicit offline gateway. A second fail-closed grader rejects settled or pending payments, real
+transaction evidence, budget overruns, forbidden reads, unexpected citations, and insufficient
+evidence coverage before a weighted quality score is considered. The reviewed baseline is bound to
+the complete corpus by SHA-256, and CI rejects both material per-case regressions and unreviewed
+corpus changes. Provider-backed model comparisons are opt-in and never inherit the default
+heuristic baseline. Why: unit tests protect economic invariants, but prompt/model/selection changes
+could still degrade evidence yield or citation decisions without breaking types or safety tests.
+Reversible: easy (tooling and CI gate only; no runtime, registry, key, pricing, or settlement
+authority changes).
+
 ---
 
 **D-55** · Settlement/Operations · *Persist the signed authorization expiry exactly, but never use

@@ -30,6 +30,9 @@ jobs:
       - name: Unit tests (economic invariants)
         run: npm test
 
+      - name: Agent quality regression (hermetic, no settlement)
+        run: npm run eval:agent:ci
+
       - name: Compile contracts
         run: npx hardhat compile
 

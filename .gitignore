@@ -36,6 +36,7 @@ yarn-error.log*
 .vercel
 .turbo
 coverage/
+.artifacts/
 *.tsbuildinfo
 next-env.d.ts
 
