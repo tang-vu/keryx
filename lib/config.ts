@@ -45,6 +45,9 @@ export const config = {
   gatewayMinAvailableUsdc: num(process.env.KERYX_GATEWAY_MIN_AVAILABLE, 0.1),
   // Agent-to-agent: fee another agent pays Keryx to answer a question (x402 → treasury).
   a2aFeeUsdc: num(process.env.KERYX_A2A_FEE, 0.02),
+  // Deep-mode orchestration fee. The caller's creator-spend cap is added to this fee in the
+  // dynamic A2A v2 challenge, so paid calls cannot create a larger treasury liability.
+  a2aDeepFeeUsdc: num(process.env.KERYX_A2A_DEEP_FEE, 0.05),
   // Hard ceiling on the budget the anonymous (no-session) treasury path will honor. That path is
   // unauthenticated and spends Keryx's OWN funds (RealGateway), with `budget` caller-controlled —
   // without a cap a caller could POST an arbitrarily large budget and drive treasury spend. The

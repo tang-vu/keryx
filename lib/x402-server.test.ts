@@ -37,7 +37,7 @@ function paidRequest(): NextRequest {
     x402Version: 2,
     resource: { url: "/api/agent/ask", description: "test", mimeType: "application/json" },
     accepted: { scheme: "exact" },
-    payload: { authorization: { from: "0xbuyer" }, signature: "0xsig" },
+    payload: { authorization: { from: "0xbuyer", nonce: "0xnonce" }, signature: "0xsig" },
   };
   return new NextRequest("http://localhost/api/agent/ask", {
     method: "POST",
@@ -71,6 +71,7 @@ describe("settleThenServe bazaar discovery passthrough", () => {
 
     const res = await settleThenServe(paidRequest(), { ...baseOpts, discovery: DISCOVERY }, (s) => ({
       payer: s.payer,
+      authorizationId: s.authorizationId,
     }));
 
     expect(res.status).toBe(200);
@@ -78,9 +79,10 @@ describe("settleThenServe bazaar discovery passthrough", () => {
     expect(settleMock.mock.calls[0][0].extensions).toEqual({ bazaar: { info: DISCOVERY } });
     // The signed inner payload is untouched by the merge.
     expect(settleMock.mock.calls[0][0].payload).toEqual({
-      authorization: { from: "0xbuyer" },
+      authorization: { from: "0xbuyer", nonce: "0xnonce" },
       signature: "0xsig",
     });
+    expect(await res.json()).toMatchObject({ authorizationId: "0xnonce" });
   });
 
   it("verify throwing on the extended payload falls back to bare and still settles", async () => {

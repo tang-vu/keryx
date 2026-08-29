@@ -84,4 +84,32 @@ describe("testnet economics", () => {
     expect(snapshot).toMatchObject({ sampledRuns: 1, pricedRuns: 1, providerCalls: 0 });
     expect(snapshot.shadowGrossMarginUsd).toBe(0.015);
   });
+
+  it("separates prepaid A2A creator spend from treasury subsidy", () => {
+    const snapshot = calculateTestnetEconomics(
+      [run("a2a-v2", "treasury")],
+      [
+        { queryId: "a2a-v2", kind: "inbound", amountUsdc: 0.1, settled: true, settlementStatus: "settled" },
+        { queryId: "a2a-v2", kind: "citation", amountUsdc: 0.03, settled: true, settlementStatus: "settled" },
+        { queryId: "a2a-v2", kind: "fetch", amountUsdc: 0.01, settled: false, settlementStatus: "pending" },
+      ],
+      new Date("2026-08-29T00:00:00.000Z"),
+      [{
+        queryId: "a2a-v2",
+        creatorBudgetUsdc: 0.05,
+        serviceFeeUsdc: 0.05,
+        status: "completed",
+        // Deliberately stale: the observatory must derive reserve from current ledger evidence.
+        response: { pricing: { unusedCreatorReserveUsdc: 0.02 } },
+      }],
+    );
+    expect(snapshot).toMatchObject({
+      settledA2aV2ServiceFeesUsdc: 0.05,
+      prepaidA2aCreatorCapsUsdc: 0.05,
+      prepaidA2aCreatorSpendUsdc: 0.03,
+      completedA2aUnusedReserveUsdc: 0.01,
+      pendingCreatorSpendUsdc: 0.01,
+      treasuryCreatorSubsidyUsdc: 0,
+    });
+  });
 });

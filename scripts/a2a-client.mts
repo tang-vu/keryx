@@ -57,7 +57,7 @@ console.log(`   client Gateway balance: ${bal.gateway.formattedAvailable} USDC\n
 const askUrl = config.botKey
   ? `${config.baseUrl}/api/agent/ask?bot=${encodeURIComponent(config.botKey)}`
   : `${config.baseUrl}/api/agent/ask`;
-const r = await gateway.pay<{ answer: string; creatorsPaid: number; totalToCreators: number; citations: { source: string; reward: number }[]; feePaid: number }>(
+const r = await gateway.pay<{ answer: string; creatorsPaid: number; totalToCreators: number; citations: { source: string; reward: number }[]; feePaid: number; totalPricePaid: number; pricing: { unusedCreatorReserveUsdc: number } }>(
   askUrl,
   { method: "POST", body: { question, budget } },
 );
@@ -66,5 +66,6 @@ console.log(`✅ Paid Keryx ${r.formattedAmount} USDC (settled ${String(r.transa
 console.log("📝 Keryx's answer:\n" + r.data.answer + "\n");
 console.log(`💸 Keryx paid ${r.data.creatorsPaid} creator(s) $${r.data.totalToCreators} downstream:`);
 for (const c of r.data.citations ?? []) console.log(`   • ${c.source}: $${c.reward}`);
-console.log(`\n   Net: external agent → Keryx ($${r.data.feePaid}) → creators ($${r.data.totalToCreators}). Recursive citation economy. ✨\n`);
+console.log(`\n   Package: $${r.data.totalPricePaid} total = $${r.data.feePaid} service + $${r.data.totalToCreators} creators + $${r.data.pricing.unusedCreatorReserveUsdc} unused reserve.`);
+console.log("   Fixed-price and non-refundable; one authorization can launch creators only once.\n");
 process.exit(0);

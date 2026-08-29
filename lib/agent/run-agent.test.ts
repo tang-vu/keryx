@@ -571,6 +571,7 @@ describe("runAgent — money-safety invariants", () => {
     expect(run.paymentAttempts).toBe(1);
     expect(run.settledPayments).toBe(0);
     expect(run.pendingPayments).toBe(1);
+    expect(run.pendingSpendUsdc).toBe(0.004);
     expect(run.answer).toContain("remain pending");
     expect(d.db.payments).toHaveLength(1);
     expect(d.db.payments[0]).toMatchObject({

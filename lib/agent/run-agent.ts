@@ -1233,6 +1233,11 @@ export async function* runAgent(
         .filter(paymentCountsAsSpent)
         .reduce((sum, payment) => sum + payment.amountUsdc, 0),
     );
+    const pendingSpendUsdc = round(
+      payments
+        .filter((payment) => paymentSettlementStatus(payment) === "pending")
+        .reduce((sum, payment) => sum + payment.amountUsdc, 0),
+    );
     const run: QueryRun = {
       id: queryId,
       question: input.question,
@@ -1263,6 +1268,7 @@ export async function* runAgent(
       paymentAttempts,
       settledPayments,
       pendingPayments,
+      pendingSpendUsdc,
       // Only present on a retry, so every other surface keeps reading runs exactly as before.
       ...(input.retryOf ? { retryOf: input.retryOf } : {}),
       // Early returns (no sources, no purchase) never reach the verdict step — nothing was read,

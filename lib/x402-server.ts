@@ -84,6 +84,8 @@ export interface SettleInfo {
   payer: string;
   transaction: string;
   amountUsdc: number;
+  /** Signed EIP-3009 nonce when present. Correlation/idempotency only, never settlement proof. */
+  authorizationId: string | null;
 }
 
 export async function settleThenServe(
@@ -189,6 +191,10 @@ export async function settleThenServe(
       payer: settle.payer ?? verify.payer ?? "unknown",
       transaction: settle.transaction ?? "",
       amountUsdc: opts.priceUsdc,
+      authorizationId:
+        typeof payload?.payload?.authorization?.nonce === "string"
+          ? payload.payload.authorization.nonce
+          : null,
     };
 
     // Settlement and resource delivery are separate state transitions. Once Circle confirms the

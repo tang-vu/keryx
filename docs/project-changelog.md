@@ -1,5 +1,14 @@
 # Keryx Project Changelog
 
+### A2A Paid Research v2 (2026-08-29)
+
+- Replaced the margin-unsafe fixed A2A toll with a body-derived all-in testnet quote: fixed
+  Quick/Deep orchestration fee plus the bounded downstream creator-spend cap.
+- Added private durable authorization orders and deterministic inbound ledger ids so one settled
+  x402 authorization cannot launch duplicate creator payments.
+- Added itemized pricing receipts, replay recovery/status reads, updated discovery/OpenAPI/client
+  examples, and fail-closed cap accounting.
+
 ### Testnet economics observatory (2026-08-29)
 
 - Added run-local, provider-reported token counters without retaining prompts or completions.

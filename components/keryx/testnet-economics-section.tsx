@@ -9,6 +9,10 @@ export interface TestnetEconomicsHealth {
   shadowServiceFeesUsdc: number;
   shadowGrossMarginUsd: number;
   settledInboundRevenueUsdc: number;
+  settledA2aV2ServiceFeesUsdc: number;
+  prepaidA2aCreatorCapsUsdc: number;
+  prepaidA2aCreatorSpendUsdc: number;
+  completedA2aUnusedReserveUsdc: number;
   browserCreatorSpendUsdc: number;
   treasuryCreatorSubsidyUsdc: number;
   unknownFundingCreatorSpendUsdc: number;
@@ -47,12 +51,15 @@ export function TestnetEconomicsSection({ economics }: { economics: TestnetEcono
       </div>
 
       <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-        <Metric label="Settled A2A revenue" value={money(economics.settledInboundRevenueUsdc)} />
+        <Metric label="Settled A2A gross" value={money(economics.settledInboundRevenueUsdc)} />
+        <Metric label="A2A v2 service fees" value={money(economics.settledA2aV2ServiceFeesUsdc)} />
+        <Metric label="A2A prepaid creators" value={money(economics.prepaidA2aCreatorSpendUsdc)} />
         <Metric label="Treasury creator subsidy" value={money(economics.treasuryCreatorSubsidyUsdc)} />
         <Metric label="Browser-funded creators" value={money(economics.browserCreatorSpendUsdc)} />
         <Metric label="Estimated LLM cost" value={money(economics.estimatedLlmCostUsd)} />
         <Metric label="Shadow service fees" value={money(economics.shadowServiceFeesUsdc)} />
         <Metric label="Shadow gross margin" value={money(economics.shadowGrossMarginUsd)} />
+        <Metric label="Completed unused reserve" value={money(economics.completedA2aUnusedReserveUsdc)} />
       </dl>
 
       <p className="mt-3 text-[10px] leading-relaxed tracking-wide text-faint">

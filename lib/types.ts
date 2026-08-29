@@ -460,6 +460,8 @@ export interface QueryRun {
   settledPayments?: number;
   /** Signed browser authorizations submitted without a definitive settlement response. */
   pendingPayments?: number;
+  /** Submitted creator authorizations awaiting Circle confirmation, in exact micro-USDC. */
+  pendingSpendUsdc?: number;
 }
 
 /** Aggregate metrics for the traction dashboard. Computed only from real, settled rows in prod. */

@@ -13,6 +13,8 @@ Shipped and running:
 - ✓ Agent capabilities: adjudication of conflicting sources, confidence verdicts, cross-query memory, semantic discovery
 - ✓ Creator lifecycle end-to-end: RSS onboarding → owner verification → citation webhooks → public earnings pages → self-serve gasless cash-out
 - ✓ External on-ramps: MCP server (npm + official registry), A2A x402 endpoint, free no-wallet trial
+- ✓ A2A Paid Research v2: dynamic fixed-price quote covers the creator cap before treasury spend;
+  authorization-keyed durable orders prevent duplicate downstream runs
 - ✓ Ops: low-downtime health-gated deploys, treasury + registry-parity watchdogs, rotating off-box backups, CI (typecheck + economic-invariant suite)
 - ✓ Circle stack: x402 + Gateway batching + Wallets + Contracts + App Kit (Unified Balance on `/status` + `/api/treasury`)
 - ✓ Public proof dossier: deployed commit + CI, independent usage, RPC/index parity, Circle balance

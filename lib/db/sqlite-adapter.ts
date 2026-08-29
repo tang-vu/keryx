@@ -35,6 +35,7 @@ import type {
   UserRecord,
 } from "./keryx-db";
 import type { LedgerAccount } from "../gateway/settlement-parity";
+import type { A2aOrder } from "../a2a/order";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 import { normalizePreviewDepth } from "../sources/preview-depth";
@@ -172,6 +173,24 @@ CREATE TABLE IF NOT EXISTS query_runs (
   grounded_claim_count INTEGER,
   rewarded_citation_count INTEGER,
   economics_data TEXT
+);
+CREATE TABLE IF NOT EXISTS a2a_orders (
+  id TEXT PRIMARY KEY,
+  query_id TEXT NOT NULL UNIQUE,
+  authorization_id TEXT NOT NULL,
+  request_hash TEXT NOT NULL,
+  payer TEXT NOT NULL,
+  payee TEXT NOT NULL,
+  amount_usdc REAL NOT NULL,
+  creator_budget_usdc REAL NOT NULL,
+  service_fee_usdc REAL NOT NULL,
+  research_mode TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('running','completed','failed')),
+  transaction_id TEXT NOT NULL,
+  response_data TEXT,
+  error_code TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS activation_events (
   day TEXT NOT NULL,
@@ -1400,10 +1419,18 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async recordPayment(p: PaymentRecord): Promise<void> {
+    this.insertPayment(p, false);
+  }
+
+  async recordPaymentOnce(p: PaymentRecord): Promise<boolean> {
+    return this.insertPayment(p, true);
+  }
+
+  private insertPayment(p: PaymentRecord, ignoreDuplicate: boolean): boolean {
     const settlementStatus = assertPaymentSettlementState(p);
-    this.db
+    const result = this.db
       .prepare(
-        `INSERT INTO payment_events (id,created_at,kind,query_id,source_id,source_name,payer,payee,amount_usdc,weight,rationale,tx_hash,network,settled,settlement_status,authorization_id,authorization_expires_at,grant_epoch,origin,item_id,item_title,item_url,content_version,item_published_at,offer_id,list_price_usdc)
+        `${ignoreDuplicate ? "INSERT OR IGNORE" : "INSERT"} INTO payment_events (id,created_at,kind,query_id,source_id,source_name,payer,payee,amount_usdc,weight,rationale,tx_hash,network,settled,settlement_status,authorization_id,authorization_expires_at,grant_epoch,origin,item_id,item_title,item_url,content_version,item_published_at,offer_id,list_price_usdc)
          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       )
       .run(
@@ -1434,6 +1461,68 @@ export class SqliteAdapter implements KeryxDB {
         p.offerId ?? null,
         p.listPriceUsdc ?? null,
       );
+    return result.changes === 1;
+  }
+
+  async createA2aOrder(order: A2aOrder): Promise<{ created: boolean; order: A2aOrder }> {
+    const result = this.db
+      .prepare(
+        `INSERT OR IGNORE INTO a2a_orders
+         (id,query_id,authorization_id,request_hash,payer,payee,amount_usdc,creator_budget_usdc,
+          service_fee_usdc,research_mode,status,transaction_id,response_data,error_code,
+          created_at,updated_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      )
+      .run(
+        order.id,
+        order.queryId,
+        order.authorizationId,
+        order.requestHash,
+        order.payer,
+        order.payee,
+        order.amountUsdc,
+        order.creatorBudgetUsdc,
+        order.serviceFeeUsdc,
+        order.researchMode,
+        order.status,
+        order.transaction,
+        order.response ? JSON.stringify(order.response) : null,
+        order.errorCode,
+        order.createdAt,
+        order.updatedAt,
+      );
+    const row = this.db.prepare(`SELECT * FROM a2a_orders WHERE id=?`).get(order.id);
+    if (!row) throw new Error("A2A order insert could not be read back");
+    return { created: result.changes === 1, order: rowToA2aOrder(row) };
+  }
+
+  async getA2aOrder(id: string): Promise<A2aOrder | null> {
+    const row = this.db.prepare(`SELECT * FROM a2a_orders WHERE id=?`).get(id);
+    return row ? rowToA2aOrder(row) : null;
+  }
+
+  async completeA2aOrder(
+    id: string,
+    response: Record<string, unknown>,
+    updatedAt: string,
+  ): Promise<boolean> {
+    const result = this.db
+      .prepare(
+        `UPDATE a2a_orders SET status='completed',response_data=?,error_code=NULL,updated_at=?
+         WHERE id=? AND status='running'`,
+      )
+      .run(JSON.stringify(response), updatedAt, id);
+    return result.changes === 1;
+  }
+
+  async failA2aOrder(id: string, errorCode: string, updatedAt: string): Promise<boolean> {
+    const result = this.db
+      .prepare(
+        `UPDATE a2a_orders SET status='failed',error_code=?,updated_at=?
+         WHERE id=? AND status='running'`,
+      )
+      .run(errorCode, updatedAt, id);
+    return result.changes === 1;
   }
 
   async listPayments(limit: number): Promise<PaymentRecord[]> {
@@ -1543,6 +1632,16 @@ export class SqliteAdapter implements KeryxDB {
     const rows = this.db
       .prepare(
         `SELECT * FROM payment_events WHERE query_id=? AND kind='citation' ORDER BY created_at ASC`,
+      )
+      .all(queryId);
+    return rows.map(rowToPayment);
+  }
+
+  async listCreatorPaymentAttemptsByQuery(queryId: string): Promise<PaymentRecord[]> {
+    const rows = this.db
+      .prepare(
+        `SELECT * FROM payment_events
+         WHERE query_id=? AND kind!='inbound' ORDER BY created_at ASC`,
       )
       .all(queryId);
     return rows.map(rowToPayment);
@@ -1687,7 +1786,21 @@ export class SqliteAdapter implements KeryxDB {
           (row.settlement_status as import("../types").PaymentSettlementStatus | null) ?? null,
         grantEpoch: (row.grant_epoch as string | null) ?? null,
       }));
-    return calculateTestnetEconomics(runs, payments);
+    const a2aOrders = this.db
+      .prepare(
+        `SELECT query_id,creator_budget_usdc,service_fee_usdc,status,response_data FROM a2a_orders`,
+      )
+      .all()
+      .map((row) => ({
+        queryId: String(row.query_id),
+        creatorBudgetUsdc: Number(row.creator_budget_usdc),
+        serviceFeeUsdc: Number(row.service_fee_usdc),
+        status: row.status as "running" | "completed" | "failed",
+        response: row.response_data
+          ? (JSON.parse(String(row.response_data)) as Record<string, unknown>)
+          : null,
+      }));
+    return calculateTestnetEconomics(runs, payments, new Date(), a2aOrders);
   }
 
   async settlementLedger(): Promise<LedgerAccount[]> {
@@ -2077,6 +2190,29 @@ function rowToPayment(r: Record<string, unknown>): PaymentRecord {
         ? undefined
         : Number(r.list_price_usdc),
     createdAt: r.created_at as string,
+  };
+}
+
+function rowToA2aOrder(r: Record<string, unknown>): A2aOrder {
+  return {
+    id: String(r.id),
+    queryId: String(r.query_id),
+    authorizationId: String(r.authorization_id),
+    requestHash: String(r.request_hash),
+    payer: String(r.payer),
+    payee: String(r.payee),
+    amountUsdc: Number(r.amount_usdc),
+    creatorBudgetUsdc: Number(r.creator_budget_usdc),
+    serviceFeeUsdc: Number(r.service_fee_usdc),
+    researchMode: r.research_mode === "quick" ? "quick" : "deep",
+    status: r.status as A2aOrder["status"],
+    transaction: String(r.transaction_id),
+    response: r.response_data
+      ? (JSON.parse(String(r.response_data)) as Record<string, unknown>)
+      : null,
+    errorCode: r.error_code == null ? null : String(r.error_code),
+    createdAt: String(r.created_at),
+    updatedAt: String(r.updated_at),
   };
 }
 

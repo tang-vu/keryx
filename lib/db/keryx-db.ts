@@ -5,6 +5,7 @@
 
 import type { LedgerAccount } from "../gateway/settlement-parity";
 import type { TestnetEconomicsSnapshot } from "../economics/testnet-economics";
+import type { A2aOrder } from "../a2a/order";
 import type {
   ActivationEvent,
   ActivationFunnel,
@@ -410,6 +411,8 @@ export interface KeryxDB {
 
   // ── payments ──
   recordPayment(p: PaymentRecord): Promise<void>;
+  /** Insert a deterministic ledger row once. False means the id already exists. */
+  recordPaymentOnce(p: PaymentRecord): Promise<boolean>;
   listPayments(limit: number): Promise<PaymentRecord[]>;
   /** Real authorizations that crossed the submission boundary without a Circle receipt. */
   listPendingPayments(limit: number): Promise<PaymentRecord[]>;
@@ -432,6 +435,8 @@ export interface KeryxDB {
   /** Citation payouts for one dispatch, oldest→newest. Carries real settlement
    *  state (settled / tx) so permalinks reflect on-chain truth, not a reconstruction. */
   listPaymentsByQuery(queryId: string): Promise<PaymentRecord[]>;
+  /** Internal A2A accounting view: every fetch/citation attempt for one dispatch. */
+  listCreatorPaymentAttemptsByQuery(queryId: string): Promise<PaymentRecord[]>;
   /** All earning payouts for one source (newest first), excluding inbound funding.
    *  Full-table — the creator page derives its totals from this so they match the
    *  all-time leaderboard instead of a capped recent-feed slice. */
@@ -446,6 +451,16 @@ export interface KeryxDB {
    *  aggregation — independent of the capped live feed, so older days aren't undercounted. */
   dailySettled(days: number): Promise<DailyVolume[]>;
   creatorLeaderboard(): Promise<CreatorEarnings[]>;
+
+  // Durable A2A authorization state: one settled inbound authorization may run creators once.
+  createA2aOrder(order: A2aOrder): Promise<{ created: boolean; order: A2aOrder }>;
+  getA2aOrder(id: string): Promise<A2aOrder | null>;
+  completeA2aOrder(
+    id: string,
+    response: Record<string, unknown>,
+    updatedAt: string,
+  ): Promise<boolean>;
+  failA2aOrder(id: string, errorCode: string, updatedAt: string): Promise<boolean>;
 
   // ── query memory (cross-query learning — agent remembers which sources work) ──
   /** Save a query memory entry after a successful run. */

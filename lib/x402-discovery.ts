@@ -34,7 +34,7 @@ export const a2aDiscovery = {
   path: "/api/agent/ask",
   method: "POST",
   description:
-    "Autonomous research: Keryx buys and reads paid sources, answers with citations, and pays every cited creator downstream.",
+    "Fixed-price autonomous research: orchestration fee plus a caller-selected creator-spend cap, itemized after settlement.",
   mimeType: "application/json",
   input: {
     type: "http",
@@ -50,9 +50,15 @@ export const a2aDiscovery = {
         },
         budget: {
           type: "number",
-          minimum: 0,
+          minimum: 0.000001,
+          maximum: config.a2aMaxBudget,
           description:
-            "Max USDC the agent may spend buying sources (optional; clamped to the server ceiling)",
+            "Prepaid creator-spend cap in USDC (optional; clamped to the server ceiling)",
+        },
+        researchMode: {
+          type: "string",
+          enum: ["quick", "deep"],
+          description: "Quick or Deep orchestration fee/attention policy (default Deep)",
         },
       },
     },
@@ -77,7 +83,12 @@ export const a2aDiscovery = {
       },
       creatorsPaid: { type: "integer", description: "Number of cited sources paid downstream" },
       totalToCreators: { type: "number", description: "Total USDC settled to creators for this answer" },
-      feePaid: { type: "number", description: "The x402 fee this call paid Keryx" },
+      feePaid: { type: "number", description: "Fixed orchestration fee" },
+      totalPricePaid: { type: "number", description: "All-in x402 package price" },
+      pricing: {
+        type: "object",
+        description: "Service fee, prepaid creator cap, settled/pending creator spend, and unused reserve",
+      },
       engine: { type: "string", description: "Reasoning engine used (anthropic | deepseek | heuristic)" },
     },
   },

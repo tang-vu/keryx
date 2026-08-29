@@ -10,8 +10,11 @@ read-only: it cannot authorize, settle, retry, release, or relabel a payment.
 - Each provider response contributes token counters only: engine, wire model, input tokens, cached
   input tokens, and output tokens. Prompts, completions, provider bodies, and request ids are not
   stored.
-- Settled inbound x402 payments are observed service revenue on testnet. Settled creator payments
+- Settled inbound x402 payments are observed gross receipts on testnet. Settled creator payments
   are split by their run's funding owner. Pending payments stay outside settled totals.
+- A2A v2 orders split the settled all-in package into its fixed service fee, prepaid creator cap,
+  actual creator spend, and completed unused reserve. Covered creator spend is not called a
+  treasury subsidy; pre-v2 A2A history remains unknown rather than being retroactively reclassified.
 - Runs and payments from before this telemetry remain unknown/unsampled. They are never backfilled
   from weak assumptions.
 

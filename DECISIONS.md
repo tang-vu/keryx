@@ -3,6 +3,25 @@
 Autonomous architecture/product/UX decisions, with rationale. Newest first.
 Format: **D-NN** · area · decision · why · reversibility.
 
+**D-58** · A2A economics/idempotency · *Sell testnet research as a dynamically quoted fixed-price
+package and bind one downstream run to one settled inbound authorization.* POST validates the body
+before constructing its x402 requirements. Price is exact integer micro-USDC: the Quick/Deep
+orchestration fee plus the caller-selected creator-spend cap, clamped to the server ceiling. Keryx's
+treasury remains the downstream signer, but the confirmed inbound amount covers its worst-case
+creator liability before research begins. The package is explicitly non-refundable; receipts split
+service fee, actual creator spend, and unused reserve rather than presenting reserve as payout.
+
+An authorization-scoped order id hashes network, payer, treasury payee, and EIP-3009 nonce (falling
+back to Circle's settled transaction id only when the facilitator omits the nonce). The inbound
+ledger id and query id derive from that order. A private durable order row atomically claims the
+authorization; replays return completed/processing/failed state and never call the orchestrator
+again. Completed QueryRun persistence can repair the narrow order-completion crash window, but an
+order that failed before a QueryRun exists is never automatically retried because downstream legs
+may already have settled. Why: the old fixed $0.02 inbound toll could authorize up to $0.50 of
+treasury creator spend, and replayed successful authorizations had no durable once-only run claim.
+Reversible: medium (public A2A pricing contract and additive private order table; creator payment,
+registry authority, Gateway signing, and browser sessions are unchanged).
+
 **D-57** · Testnet economics · *Observe unit economics without changing payment authority or
 presenting projections as revenue.* Every new dispatch records trusted server-side funding
 provenance (`browser`, `treasury`, or explicit `offline`) plus provider-reported token counters;

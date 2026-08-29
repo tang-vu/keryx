@@ -34,6 +34,7 @@ import type {
   UserRecord,
 } from "./keryx-db";
 import type { LedgerAccount } from "../gateway/settlement-parity";
+import type { A2aOrder } from "../a2a/order";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 import { normalizePreviewDepth } from "../sources/preview-depth";
@@ -689,6 +690,90 @@ export class SupabaseAdapter implements KeryxDB {
     });
   }
 
+  async recordPaymentOnce(p: PaymentRecord): Promise<boolean> {
+    if (!p.id) throw new Error("recordPaymentOnce requires a deterministic payment id");
+    const settlementStatus = assertPaymentSettlementState(p);
+    const { data, error } = await this.sb
+      .from("payment_events")
+      .upsert(
+        {
+          id: p.id,
+          created_at: p.createdAt,
+          kind: p.kind,
+          query_id: p.queryId,
+          source_id: p.sourceId,
+          source_name: p.sourceName,
+          payer: p.payer,
+          payee: p.payee,
+          amount_usdc: p.amountUsdc,
+          weight: p.weight ?? null,
+          rationale: p.rationale ?? null,
+          tx_hash: p.txHash ?? null,
+          network: p.network,
+          settled: p.settled,
+          settlement_status: settlementStatus,
+          authorization_id: p.authorizationId ?? null,
+          authorization_expires_at: p.authorizationExpiresAt ?? null,
+          grant_epoch: p.grantEpoch ?? null,
+          origin: p.origin ?? "engine",
+        },
+        { onConflict: "id", ignoreDuplicates: true },
+      )
+      .select("id");
+    if (error) throw error;
+    return (data ?? []).length === 1;
+  }
+
+  async createA2aOrder(order: A2aOrder): Promise<{ created: boolean; order: A2aOrder }> {
+    const row = a2aOrderToRow(order);
+    const { data, error } = await this.sb.from("a2a_orders").insert(row).select("*").maybeSingle();
+    if (!error && data) return { created: true, order: rowToA2aOrder(data) };
+    if (error?.code !== "23505") throw error ?? new Error("A2A order insert returned no row");
+    const { data: existing, error: readError } = await this.sb
+      .from("a2a_orders")
+      .select("*")
+      .eq("id", order.id)
+      .maybeSingle();
+    if (readError || !existing) throw readError ?? new Error("A2A order conflict could not be read");
+    return { created: false, order: rowToA2aOrder(existing) };
+  }
+
+  async getA2aOrder(id: string): Promise<A2aOrder | null> {
+    const { data, error } = await this.sb
+      .from("a2a_orders")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? rowToA2aOrder(data) : null;
+  }
+
+  async completeA2aOrder(
+    id: string,
+    response: Record<string, unknown>,
+    updatedAt: string,
+  ): Promise<boolean> {
+    const { data, error } = await this.sb
+      .from("a2a_orders")
+      .update({ status: "completed", response_data: response, error_code: null, updated_at: updatedAt })
+      .eq("id", id)
+      .eq("status", "running")
+      .select("id");
+    if (error) throw error;
+    return (data ?? []).length === 1;
+  }
+
+  async failA2aOrder(id: string, errorCode: string, updatedAt: string): Promise<boolean> {
+    const { data, error } = await this.sb
+      .from("a2a_orders")
+      .update({ status: "failed", error_code: errorCode, updated_at: updatedAt })
+      .eq("id", id)
+      .eq("status", "running")
+      .select("id");
+    if (error) throw error;
+    return (data ?? []).length === 1;
+  }
+
   async listPayments(limit: number): Promise<PaymentRecord[]> {
     const { data } = await this.sb
       .from("payment_events")
@@ -782,6 +867,17 @@ export class SupabaseAdapter implements KeryxDB {
       .eq("query_id", queryId)
       .eq("kind", "citation")
       .order("created_at", { ascending: true });
+    return (data ?? []).map(rowToPayment);
+  }
+
+  async listCreatorPaymentAttemptsByQuery(queryId: string): Promise<PaymentRecord[]> {
+    const { data, error } = await this.sb
+      .from("payment_events")
+      .select("*")
+      .eq("query_id", queryId)
+      .neq("kind", "inbound")
+      .order("created_at", { ascending: true });
+    if (error) throw error;
     return (data ?? []).map(rowToPayment);
   }
 
@@ -895,11 +991,15 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async economics() {
-    const [runRows, paymentRows] = await Promise.all([
+    const [runRows, paymentRows, a2aOrderRows] = await Promise.all([
       this.allRows("query_runs", "id,economics_data"),
       this.allRows(
         "payment_events",
         "query_id,kind,amount_usdc,settled,settlement_status,grant_epoch",
+      ),
+      this.allRows(
+        "a2a_orders",
+        "query_id,creator_budget_usdc,service_fee_usdc,status,response_data",
       ),
     ]);
     return calculateTestnetEconomics(
@@ -915,6 +1015,14 @@ export class SupabaseAdapter implements KeryxDB {
         settlementStatus:
           (row.settlement_status as import("../types").PaymentSettlementStatus | null) ?? null,
         grantEpoch: (row.grant_epoch as string | null) ?? null,
+      })),
+      new Date(),
+      a2aOrderRows.map((row) => ({
+        queryId: String(row.query_id),
+        creatorBudgetUsdc: Number(row.creator_budget_usdc),
+        serviceFeeUsdc: Number(row.service_fee_usdc),
+        status: row.status as "running" | "completed" | "failed",
+        response: (row.response_data as Record<string, unknown> | null) ?? null,
       })),
     );
   }
@@ -1482,6 +1590,48 @@ function rowToPayment(r: Record<string, unknown>): PaymentRecord {
         ? undefined
         : Number(r.list_price_usdc),
     createdAt: r.created_at as string,
+  };
+}
+
+function a2aOrderToRow(order: A2aOrder) {
+  return {
+    id: order.id,
+    query_id: order.queryId,
+    authorization_id: order.authorizationId,
+    request_hash: order.requestHash,
+    payer: order.payer,
+    payee: order.payee,
+    amount_usdc: order.amountUsdc,
+    creator_budget_usdc: order.creatorBudgetUsdc,
+    service_fee_usdc: order.serviceFeeUsdc,
+    research_mode: order.researchMode,
+    status: order.status,
+    transaction_id: order.transaction,
+    response_data: order.response,
+    error_code: order.errorCode,
+    created_at: order.createdAt,
+    updated_at: order.updatedAt,
+  };
+}
+
+function rowToA2aOrder(r: Record<string, unknown>): A2aOrder {
+  return {
+    id: String(r.id),
+    queryId: String(r.query_id),
+    authorizationId: String(r.authorization_id),
+    requestHash: String(r.request_hash),
+    payer: String(r.payer),
+    payee: String(r.payee),
+    amountUsdc: Number(r.amount_usdc),
+    creatorBudgetUsdc: Number(r.creator_budget_usdc),
+    serviceFeeUsdc: Number(r.service_fee_usdc),
+    researchMode: r.research_mode === "quick" ? "quick" : "deep",
+    status: r.status as A2aOrder["status"],
+    transaction: String(r.transaction_id),
+    response: (r.response_data as Record<string, unknown> | null) ?? null,
+    errorCode: r.error_code == null ? null : String(r.error_code),
+    createdAt: String(r.created_at),
+    updatedAt: String(r.updated_at),
   };
 }
 

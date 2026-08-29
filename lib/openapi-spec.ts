@@ -6,6 +6,8 @@
  * This is the standard workaround until x402 standardizes an OpenAPI extension.
  */
 
+import { config } from "./config";
+
 export const openapiSpec = {
   openapi: "3.1.0",
   info: {
@@ -52,8 +54,15 @@ export const openapiSpec = {
           question: { type: "string", description: "Research question.", example: "What is Arc?" },
           budget: {
             type: "number",
-            description: "Max USDC budget for creator payouts (default 0.05).",
+            minimum: 0.000001,
+            maximum: config.a2aMaxBudget,
+            description: "Prepaid creator-spend cap in USDC (default 0.05).",
             example: 0.05,
+          },
+          researchMode: {
+            type: "string",
+            enum: ["quick", "deep"],
+            default: "deep",
           },
         },
       },
@@ -110,6 +119,20 @@ export const openapiSpec = {
           creatorsPaid: { type: "integer" },
           totalToCreators: { type: "number" },
           feePaid: { type: "number" },
+          totalPricePaid: { type: "number" },
+          pricing: {
+            type: "object",
+            properties: {
+              policy: { type: "string", example: "a2a-fixed-package-v2" },
+              researchMode: { type: "string", enum: ["quick", "deep"] },
+              serviceFeeUsdc: { type: "number" },
+              creatorBudgetUsdc: { type: "number" },
+              settledCreatorSpendUsdc: { type: "number" },
+              pendingCreatorSpendUsdc: { type: "number" },
+              unusedCreatorReserveUsdc: { type: "number" },
+              refundable: { type: "boolean", enum: [false] },
+            },
+          },
           engine: { type: "string" },
         },
       },
@@ -405,14 +428,33 @@ export const openapiSpec = {
       },
     },
     "/api/agent/ask": {
+      get: {
+        operationId: "inspectOrPollAgentAsk",
+        summary: "Inspect default A2A pricing or poll an existing order",
+        parameters: [
+          {
+            in: "query",
+            name: "queryId",
+            required: false,
+            schema: { type: "string", pattern: "^a2a_[a-f0-9]{64}$" },
+            description: "When present, reads durable completed/processing/failed state without payment.",
+          },
+        ],
+        responses: {
+          "200": { description: "Durable order state for the supplied queryId." },
+          "402": { description: "No queryId: side-effect-free default-package x402 discovery challenge." },
+          "404": { description: "A2A order not found." },
+        },
+      },
       post: {
         operationId: "agentAsk",
         summary: "Run autonomous research (x402 pay-per-call)",
         description:
           "Keryx answers a research question, buys the paid sources worth reading, " +
           "and settles weighted citation nanopayments to creators in USDC on Arc. " +
-          "The caller pays `config.a2aFeeUsdc` (default 0.02 USDC) to the treasury via x402. " +
-          "Creators are paid downstream from the budget.",
+          "The body determines an exact all-in x402 price before settlement: a fixed Quick/Deep " +
+          "orchestration fee plus the bounded creator-spend cap. The non-refundable receipt " +
+          "itemizes actual creator spend and unused reserve.",
         security: [{ X402Payment: [] }, { ApiKeyAuth: [], X402Payment: [] }],
         requestBody: {
           required: true,
@@ -439,7 +481,7 @@ export const openapiSpec = {
           },
           "402": {
             description:
-              "Payment required. Response body is empty. " +
+              "Payment required. The exact amount is derived from the validated request body. " +
               "`PAYMENT-REQUIRED` header contains base64-encoded JSON with payment requirements " +
               "(amount, asset, payTo address, network, scheme).",
             headers: {

@@ -14,12 +14,13 @@ import { Check, Copy, Terminal } from "lucide-react";
 
 const ORIGIN = "https://keryx.cc";
 
-const SNIPPET = `# 1 · inspect the toll — free, no payment
+const SNIPPET = `# 1 · inspect the default package — free, no payment
 curl -s ${ORIGIN}/api/agent/ask
 
-# 2 · pay $0.02 USDC on Arc, then ask (x402)
+# 2 · POST body sets the exact quote, then pay via x402
 circle services pay ${ORIGIN}/api/agent/ask -X POST
-#    body → {"question": "...", "budget": 0.05}`;
+#    body → {"question":"...","budget":0.05,"researchMode":"deep"}
+#    default Deep total: $0.05 service + $0.05 creator cap = $0.10`;
 
 export function A2aCallCard() {
   const [copied, setCopied] = useState(false);
@@ -37,13 +38,14 @@ export function A2aCallCard() {
           Call Keryx from your own agent
         </h2>
         <span className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-ink-3">
-          POST /api/agent/ask · $0.02 USDC · Arc eip155:5042002
+          POST /api/agent/ask · dynamic fixed price · Arc eip155:5042002
         </span>
       </div>
 
       <p className="px-5 pt-3.5 text-sm leading-relaxed text-ink-2">
-        Keryx is itself a paid x402 endpoint. One $0.02 call triggers the full loop: research,
-        source selection, a cited answer, and downstream creator payouts in USDC on Arc.
+        Keryx is itself a paid x402 endpoint. The request prepays a fixed Quick/Deep service fee
+        plus its hard creator-spend cap; the receipt itemizes what reached creators and what reserve
+        stayed unused.
       </p>
 
       <div className="relative m-5 mt-3.5 border border-line bg-paper-2">
