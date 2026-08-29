@@ -1,5 +1,13 @@
 # Keryx Project Changelog
 
+### Auditable legacy reconciliation acknowledgement (2026-08-30)
+
+- Added an evidence-gated operator lane for permanently ambiguous pre-expiry-telemetry treasury
+  authorizations without changing their pending financial state.
+- Split public reconciliation health into acknowledged and unacknowledged awaiting rows; browser
+  reservations, known-expiry rows, and Circle mismatches remain impossible to suppress.
+- Added an idempotent tuple-bound audit record, guarded production CLI, tests, and operating runbook.
+
 ### A2A Paid Research v2 (2026-08-29)
 
 - Replaced the margin-unsafe fixed A2A toll with a body-derived all-in testnet quote: fixed

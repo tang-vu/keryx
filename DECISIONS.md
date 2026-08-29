@@ -3,6 +3,27 @@
 Autonomous architecture/product/UX decisions, with rationale. Newest first.
 Format: **D-NN** · area · decision · why · reversibility.
 
+**D-59** · Settlement/Operations · *Acknowledge permanently ambiguous legacy treasury attempts
+without rewriting financial truth or suppressing user-cap risk.* A private sync-state audit record
+may stop stale/critical readiness escalation only when an operator names one exact payment id, a
+fresh cursor-complete Circle search returns no matching transfer, the row is older than 24 hours,
+the signed expiry is unavailable, no browser grant generation is attached, and the payer exactly
+matches the address derived from the server's persistent spend key (with stored metadata parity).
+The acknowledgement
+is bound to the complete payer/payee/network/nonce/integer-amount tuple by SHA-256 and is idempotent;
+a conflicting replay fails rather than replacing the first audit record.
+
+The payment remains `pending`, stays outside settled earnings and traction, and is searched again
+on every reconciliation pass. Exact Circle accepted/failed evidence still wins immediately;
+conflicting evidence always degrades health. Browser reservations and rows with exact signed expiry
+cannot use this lane. Public health reports `acknowledged` plus separate acknowledged/unacknowledged
+counts instead of calling an investigated, non-cap-holding legacy treasury ambiguity a permanent
+readiness failure. Why: the first pre-expiry-telemetry treasury timeout has no retained bearer
+signature or terminal Circle receipt and therefore can never honestly be backfilled as failed, but
+leaving the same reviewed incident as a forever-critical readiness alarm creates alert fatigue.
+Reversible: easy (remove or ignore the private acknowledgement; the underlying payment row was
+never changed).
+
 **D-58** · A2A economics/idempotency · *Sell testnet research as a dynamically quoted fixed-price
 package and bind one downstream run to one settled inbound authorization.* POST validates the body
 before constructing its x402 requirements. Price is exact integer micro-USDC: the Quick/Deep

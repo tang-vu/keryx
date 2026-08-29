@@ -18,13 +18,26 @@ import {
   PENDING_RECONCILIATION_ALERT_STATE_KEY,
   assessPendingReconciliation,
 } from "../lib/gateway/pending-reconciliation-health.ts";
+import {
+  PENDING_RECONCILIATION_ACK_STATE_KEY,
+  parsePendingReconciliationAcknowledgements,
+} from "../lib/gateway/pending-reconciliation-acknowledgement.ts";
+import { readTreasurySpendWalletAddress } from "../lib/payments/treasury-spend-wallet.ts";
 
 async function main(): Promise<void> {
   const db = await getDb();
   const signal = AbortSignal.timeout(45_000);
-  const summary = await reconcilePendingPayments(db, { limit: 250, signal });
+  const acknowledgements = parsePendingReconciliationAcknowledgements(
+    await db.getSyncState(PENDING_RECONCILIATION_ACK_STATE_KEY),
+  );
+  const summary = await reconcilePendingPayments(db, {
+    limit: 250,
+    signal,
+    acknowledgements,
+    treasuryPayer: readTreasurySpendWalletAddress(),
+  });
   console.log(
-    `[reconcile] scanned ${summary.scanned}; promoted ${summary.promoted}; terminal failures ${summary.failed}; released reservations ${summary.releasedReservations}; awaiting ${summary.awaiting} (${summary.browserAwaiting} browser, ${summary.treasuryAwaiting} treasury); expired ${summary.expiredAwaiting}; unknown expiry ${summary.unknownExpiryAwaiting}; mismatched ${summary.mismatched}; raced ${summary.raced}.`,
+    `[reconcile] scanned ${summary.scanned}; promoted ${summary.promoted}; terminal failures ${summary.failed}; released reservations ${summary.releasedReservations}; awaiting ${summary.awaiting} (${summary.acknowledgedAwaiting} acknowledged, ${summary.unacknowledgedAwaiting} alertable; ${summary.browserAwaiting} browser, ${summary.treasuryAwaiting} treasury); expired ${summary.expiredAwaiting}; unknown expiry ${summary.unknownExpiryAwaiting}; mismatched ${summary.mismatched}; raced ${summary.raced}.`,
   );
   if (summary.oldestPendingAt) {
     console.log(`[reconcile] oldest unresolved authorization: ${summary.oldestPendingAt}`);
@@ -48,6 +61,8 @@ async function main(): Promise<void> {
     status: assessment.status,
     browserAwaiting: summary.browserAwaiting,
     treasuryAwaiting: summary.treasuryAwaiting,
+    acknowledgedAwaiting: summary.acknowledgedAwaiting,
+    unacknowledgedAwaiting: summary.unacknowledgedAwaiting,
     expiredAwaiting: summary.expiredAwaiting,
     unknownExpiryAwaiting: summary.unknownExpiryAwaiting,
   });

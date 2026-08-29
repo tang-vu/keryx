@@ -1,5 +1,9 @@
 import type { KeryxDB } from "../db/keryx-db";
 import type { PaymentRecord } from "../types";
+import {
+  isAcknowledgedLegacyTreasuryPending,
+  type PendingReconciliationAcknowledgement,
+} from "./pending-reconciliation-acknowledgement";
 
 export const PENDING_RECONCILIATION_STATE_KEY = "pendingPaymentReconciliation";
 export const CIRCLE_X402_TRANSFERS_URL =
@@ -43,6 +47,10 @@ export interface PendingReconciliationSummary {
   scanned: number;
   promoted: number;
   awaiting: number;
+  /** Awaiting legacy treasury attempts explicitly risk-accepted without changing payment state. */
+  acknowledgedAwaiting: number;
+  /** Awaiting rows that still participate in stale/critical health escalation. */
+  unacknowledgedAwaiting: number;
   /** Unresolved browser-funded rows whose session reservation remains held. */
   browserAwaiting: number;
   /** Unresolved server-treasury rows; these do not consume browser grant capacity. */
@@ -60,6 +68,7 @@ export interface PendingReconciliationSummary {
   mismatched: number;
   raced: number;
   oldestPendingAt: string | null;
+  oldestUnacknowledgedPendingAt: string | null;
 }
 
 type TransferSearch = (
@@ -246,7 +255,13 @@ export async function reconcilePendingPayments(
     KeryxDB,
     "listPendingPayments" | "settlePendingPayment" | "failPendingPayment" | "setSyncState"
   >,
-  options: { limit?: number; search?: TransferSearch; signal?: AbortSignal } = {},
+  options: {
+    limit?: number;
+    search?: TransferSearch;
+    signal?: AbortSignal;
+    acknowledgements?: PendingReconciliationAcknowledgement[];
+    treasuryPayer?: string | null;
+  } = {},
 ): Promise<PendingReconciliationSummary> {
   const pending = await db.listPendingPayments(options.limit ?? 100);
   const summary: PendingReconciliationSummary = {
@@ -254,6 +269,8 @@ export async function reconcilePendingPayments(
     scanned: pending.length,
     promoted: 0,
     awaiting: 0,
+    acknowledgedAwaiting: 0,
+    unacknowledgedAwaiting: 0,
     browserAwaiting: 0,
     treasuryAwaiting: 0,
     expiredAwaiting: 0,
@@ -264,6 +281,7 @@ export async function reconcilePendingPayments(
     mismatched: 0,
     raced: 0,
     oldestPendingAt: pending[0]?.createdAt ?? null,
+    oldestUnacknowledgedPendingAt: null,
   };
   const search = options.search ?? searchCircleTransfer;
 
@@ -275,6 +293,21 @@ export async function reconcilePendingPayments(
     );
     if (check.verdict === "awaiting") {
       summary.awaiting++;
+      if (
+        isAcknowledgedLegacyTreasuryPending(
+          payment,
+          options.acknowledgements ?? [],
+          options.treasuryPayer,
+          Date.parse(summary.checkedAt),
+        )
+      ) {
+        summary.acknowledgedAwaiting++;
+      } else {
+        summary.unacknowledgedAwaiting++;
+        if (summary.oldestUnacknowledgedPendingAt === null) {
+          summary.oldestUnacknowledgedPendingAt = payment.createdAt;
+        }
+      }
       if (payment.grantEpoch) summary.browserAwaiting++;
       else summary.treasuryAwaiting++;
       const expiry = payment.authorizationExpiresAt

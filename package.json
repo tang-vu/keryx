@@ -37,6 +37,7 @@
     "check-dispatches": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/check-dispatches.mts",
     "check-settlement": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/check-settlement.mts",
     "reconcile-payments": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/reconcile-payments.mts",
+    "acknowledge-pending": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/acknowledge-pending-payment.mts",
     "register-discord": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/register-discord-commands.mts",
     "register-telegram": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/register-telegram-webhook.mts",
     "withdraw": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/withdraw.mts",

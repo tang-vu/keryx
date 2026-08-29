@@ -97,6 +97,8 @@ Multi-backend payment gateway with common interface. Selects backend at runtime 
 | `browser-cosign-gateway.ts` | `BrowserCoSignGateway`: binds the 402 challenge + returned authorization to the reserved source/amount, then submits the browser co-sign. Post-submit uncertainty becomes durable `pending`; a valid receipt on a delivery 5xx remains settled. |
 | `payment-state.ts` | Explicit `settled` / `simulated` / `pending` / `failed` semantics plus typed pending and settled-delivery errors. |
 | `gateway/x402-transfer-reconciliation.ts` | Resolves lost settle responses through documented Circle filters plus bounded cursor traversal; exact nonce/economic-tuple verification, browser/treasury pending classification, signed-expiry telemetry, idempotent settlement, and generation-bound terminal-failure capacity release. |
+| `gateway/pending-reconciliation-acknowledgement.ts` | Tuple-bound private audit records for reviewed legacy treasury ambiguity; never changes payment state, never applies to browser/known-expiry/wrong-payer rows, and keeps Circle reconciliation active. |
+| `payments/treasury-spend-wallet.ts` | Derives the persistent server spend-wallet's public identity from its existing key and fail-closes if stored address metadata differs; never returns, logs, generates, or persists the key elsewhere. |
 | `server-x402-client.ts` | Server-funded x402 transport: Circle `BatchEvmScheme` signing with Keryx-owned receipt/error classification so non-2xx cannot discard settlement proof. |
 | `x402-payment-evidence.ts` | Shared challenge binding and Circle receipt validation for browser and server-funded buyers. |
 | `offline-gateway.ts` | `OfflineGateway`: heuristic offline mode. No keys, `settled:false`. |

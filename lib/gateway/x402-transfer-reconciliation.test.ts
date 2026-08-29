@@ -6,6 +6,7 @@ import {
   searchCircleTransfer,
   type CircleX402Transfer,
 } from "./x402-transfer-reconciliation";
+import { createPendingReconciliationAcknowledgement } from "./pending-reconciliation-acknowledgement";
 
 const payment = (overrides: Partial<PaymentRecord> = {}): PaymentRecord => ({
   id: "x402:0xabc",
@@ -23,6 +24,7 @@ const payment = (overrides: Partial<PaymentRecord> = {}): PaymentRecord => ({
   createdAt: "2026-08-08T00:00:00.000Z",
   ...overrides,
 });
+const TREASURY = payment().payer;
 
 const transfer = (
   overrides: Partial<CircleX402Transfer> = {},
@@ -198,6 +200,14 @@ describe("pending x402 transfer reconciliation", () => {
   });
 
   it("separates browser reservations from treasury attempts and reports exact expiry", async () => {
+    const legacy = payment({ id: "treasury-legacy", authorizationId: "0x03" });
+    const acknowledgement = createPendingReconciliationAcknowledgement(legacy, {
+      treasuryPayer: TREASURY,
+      reason: "Circle scan was complete and returned no matching transfer.",
+      circleCheckedAt: "2026-08-29T23:59:00.000Z",
+      circleCandidateCount: 0,
+      now: new Date("2026-08-30T00:00:00.000Z"),
+    });
     const summary = await reconcilePendingPayments(
       {
         listPendingPayments: async () => [
@@ -212,7 +222,7 @@ describe("pending x402 transfer reconciliation", () => {
             authorizationId: "0x02",
             authorizationExpiresAt: "2026-01-01T00:00:00.000Z",
           }),
-          payment({ id: "treasury-legacy", authorizationId: "0x03" }),
+          legacy,
         ],
         settlePendingPayment: vi.fn(async () => false),
         failPendingPayment: vi.fn(async () => ({
@@ -221,16 +231,52 @@ describe("pending x402 transfer reconciliation", () => {
         })),
         setSyncState: vi.fn(async () => undefined),
       },
-      { search: async () => [] },
+      {
+        search: async () => [],
+        acknowledgements: [acknowledgement],
+        treasuryPayer: TREASURY,
+      },
     );
 
     expect(summary).toMatchObject({
       awaiting: 3,
+      acknowledgedAwaiting: 1,
+      unacknowledgedAwaiting: 2,
       browserAwaiting: 1,
       treasuryAwaiting: 2,
       expiredAwaiting: 1,
       unknownExpiryAwaiting: 1,
       earliestAuthorizationExpiresAt: "2026-01-01T00:00:00.000Z",
     });
+  });
+
+  it("never lets an acknowledgement suppress a browser reservation", async () => {
+    const treasury = payment({ id: "legacy", authorizationId: "0x04" });
+    const acknowledgement = createPendingReconciliationAcknowledgement(treasury, {
+      treasuryPayer: TREASURY,
+      reason: "Circle scan was complete and returned no matching transfer.",
+      circleCheckedAt: "2026-08-29T23:59:00.000Z",
+      circleCandidateCount: 0,
+      now: new Date("2026-08-30T00:00:00.000Z"),
+    });
+    const summary = await reconcilePendingPayments(
+      {
+        listPendingPayments: async () => [
+          payment({ id: "legacy", authorizationId: "0x04", grantEpoch: "browser-epoch" }),
+        ],
+        settlePendingPayment: vi.fn(async () => false),
+        failPendingPayment: vi.fn(async () => ({
+          resolved: false,
+          reservationReleased: false,
+        })),
+        setSyncState: vi.fn(async () => undefined),
+      },
+      {
+        search: async () => [],
+        acknowledgements: [acknowledgement],
+        treasuryPayer: TREASURY,
+      },
+    );
+    expect(summary).toMatchObject({ acknowledgedAwaiting: 0, unacknowledgedAwaiting: 1 });
   });
 });

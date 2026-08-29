@@ -127,7 +127,10 @@ but not a disk loss).
   x402 authorizations stale and 24-hour-old ones critical. `/api/health` stays HTTP 200 for deploy
   readiness but reports `status: degraded`; `/status` shows the oldest age. The alert is deduplicated
   by authorization/status. Age never releases capacity: only exact Circle accepted/failed evidence
-  can change the pending row or its grant reservation.
+  can change the pending row or its grant reservation. A legacy treasury row with no exact expiry
+  may be operator-acknowledged only through the evidence-gated procedure in
+  `docs/pending-reconciliation-acknowledgement.md`; it stays pending and continuously reconciled,
+  while browser reservations and Circle mismatches remain impossible to acknowledge away.
 - **Alert channel** — set `KERYX_ALERT_WEBHOOK` in the VPS `.env.local` to a Discord/Slack incoming webhook. Unset → alerts still print to `pm2 logs`, just not delivered out-of-band.
 - **Uptime/health** — point an external monitor (UptimeRobot, etc.) at [`/api/health`](https://keryx.cc/api/health); a same-box check can't catch the box being down.
 

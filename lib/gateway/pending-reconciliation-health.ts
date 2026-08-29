@@ -6,6 +6,7 @@ export const PENDING_RECONCILIATION_ALERT_STATE_KEY = "pendingPaymentReconciliat
 
 export type PendingReconciliationStatus =
   | "clean"
+  | "acknowledged"
   | "awaiting"
   | "stale"
   | "critical"
@@ -21,7 +22,13 @@ export interface PendingReconciliationAssessment {
  * those state transitions still require the exact Circle tuple in x402-transfer-reconciliation.
  */
 export function assessPendingReconciliation(
-  summary: Pick<PendingReconciliationSummary, "awaiting" | "mismatched" | "oldestPendingAt">,
+  summary: Pick<PendingReconciliationSummary, "awaiting" | "mismatched" | "oldestPendingAt"> &
+    Partial<
+      Pick<
+        PendingReconciliationSummary,
+        "acknowledgedAwaiting" | "unacknowledgedAwaiting" | "oldestUnacknowledgedPendingAt"
+      >
+    >,
   now = Date.now(),
 ): PendingReconciliationAssessment {
   if (summary.mismatched > 0) {
@@ -32,8 +39,22 @@ export function assessPendingReconciliation(
     };
   }
 
-  const age = ageSeconds(summary.oldestPendingAt, now);
-  if (summary.awaiting === 0 || age === null) {
+  if (summary.awaiting === 0) {
+    return { status: "clean", oldestPendingAgeSeconds: null, degraded: false };
+  }
+  const unacknowledged = summary.unacknowledgedAwaiting ?? summary.awaiting;
+  if (unacknowledged === 0) {
+    return {
+      status: "acknowledged",
+      oldestPendingAgeSeconds: ageSeconds(summary.oldestPendingAt, now),
+      degraded: false,
+    };
+  }
+  const age = ageSeconds(
+    summary.oldestUnacknowledgedPendingAt ?? summary.oldestPendingAt,
+    now,
+  );
+  if (age === null) {
     return { status: "clean", oldestPendingAgeSeconds: null, degraded: false };
   }
   if (age * 1_000 >= PENDING_RECONCILIATION_CRITICAL_MS) {

@@ -112,10 +112,15 @@ export async function GET() {
           // pending rows cannot be assigned an exact expiry or funding path from the summary.
           browserAwaiting: parsed.browserAwaiting ?? 0,
           treasuryAwaiting: parsed.treasuryAwaiting ?? 0,
+          acknowledgedAwaiting: parsed.acknowledgedAwaiting ?? 0,
+          unacknowledgedAwaiting:
+            parsed.unacknowledgedAwaiting ?? parsed.awaiting ?? 0,
           expiredAwaiting: parsed.expiredAwaiting ?? 0,
           unknownExpiryAwaiting: parsed.unknownExpiryAwaiting ?? parsed.awaiting ?? 0,
           earliestAuthorizationExpiresAt: parsed.earliestAuthorizationExpiresAt ?? null,
           releasedReservations: parsed.releasedReservations ?? 0,
+          oldestUnacknowledgedPendingAt:
+            parsed.oldestUnacknowledgedPendingAt ?? parsed.oldestPendingAt ?? null,
         };
         reconciliation = {
           ...normalized,

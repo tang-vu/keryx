@@ -38,4 +38,36 @@ describe("assessPendingReconciliation", () => {
       degraded: true,
     });
   });
+
+  it("keeps an acknowledged legacy treasury ambiguity visible without degrading readiness", () => {
+    expect(
+      assessPendingReconciliation(
+        {
+          ...summary(10 * PENDING_RECONCILIATION_CRITICAL_MS),
+          acknowledgedAwaiting: 1,
+          unacknowledgedAwaiting: 0,
+          oldestUnacknowledgedPendingAt: null,
+        },
+        NOW,
+      ),
+    ).toMatchObject({ status: "acknowledged", degraded: false });
+  });
+
+  it("still degrades on the oldest unacknowledged row when acknowledged rows are older", () => {
+    expect(
+      assessPendingReconciliation(
+        {
+          awaiting: 2,
+          mismatched: 0,
+          oldestPendingAt: "2026-01-01T00:00:00.000Z",
+          acknowledgedAwaiting: 1,
+          unacknowledgedAwaiting: 1,
+          oldestUnacknowledgedPendingAt: new Date(
+            NOW - PENDING_RECONCILIATION_WARN_MS,
+          ).toISOString(),
+        },
+        NOW,
+      ),
+    ).toMatchObject({ status: "stale", degraded: true });
+  });
 });

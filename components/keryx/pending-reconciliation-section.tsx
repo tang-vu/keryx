@@ -3,6 +3,8 @@ export interface PendingReconciliationHealth {
   scanned: number;
   promoted: number;
   awaiting: number;
+  acknowledgedAwaiting?: number;
+  unacknowledgedAwaiting?: number;
   browserAwaiting?: number;
   treasuryAwaiting?: number;
   expiredAwaiting?: number;
@@ -13,8 +15,9 @@ export interface PendingReconciliationHealth {
   mismatched: number;
   raced: number;
   oldestPendingAt: string | null;
+  oldestUnacknowledgedPendingAt?: string | null;
   oldestPendingAgeSeconds: number | null;
-  status: "clean" | "awaiting" | "stale" | "critical" | "mismatch";
+  status: "clean" | "acknowledged" | "awaiting" | "stale" | "critical" | "mismatch";
   degraded: boolean;
 }
 
@@ -35,6 +38,7 @@ export function PendingReconciliationSection({
   const clean = reconciliation.status === "clean";
   const label = {
     clean: "clean",
+    acknowledged: "acknowledged legacy",
     awaiting: "awaiting Circle",
     stale: "stale pending",
     critical: "critical pending",
@@ -53,6 +57,14 @@ export function PendingReconciliationSection({
       <dl className="mt-3">
         <Row k="Accepted by Circle" v={reconciliation.promoted.toLocaleString()} />
         <Row k="Still awaiting proof" v={reconciliation.awaiting.toLocaleString()} />
+        <Row
+          k="Acknowledged legacy treasury"
+          v={(reconciliation.acknowledgedAwaiting ?? 0).toLocaleString()}
+        />
+        <Row
+          k="Unacknowledged alerts"
+          v={(reconciliation.unacknowledgedAwaiting ?? reconciliation.awaiting).toLocaleString()}
+        />
         <Row
           k="Browser reservations held"
           v={(reconciliation.browserAwaiting ?? 0).toLocaleString()}
@@ -87,8 +99,10 @@ export function PendingReconciliationSection({
       <p className="mt-3 font-mono text-[10px] leading-relaxed tracking-wide text-faint">
         Accepted transfers settle only on an exact tuple. Circle-terminal failures close without
         earnings and release capacity only for the same grant generation. Missing or conflicting
-        evidence stays pending. Expiry is operational context, never proof that Circle failed or
-        that a browser reservation can be released.
+        evidence stays pending. A reviewed legacy treasury ambiguity may be acknowledged to stop a
+        permanent readiness alert, but remains pending, outside earnings, and under reconciliation.
+        Browser reservations can never use this acknowledgement path. Expiry is operational
+        context, never proof that Circle failed or that a browser reservation can be released.
       </p>
     </section>
   );
