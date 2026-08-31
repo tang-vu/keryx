@@ -1,5 +1,13 @@
 # Keryx Project Changelog
 
+### Browser-visible API docs and Cloudflare traffic telemetry (2026-08-31)
+
+- Restored the Scalar API reference by allowing its exact standalone script URL only on
+  `/api/docs`; jsDelivr remains blocked on every other application page.
+- Allowed Cloudflare's versioned Web Analytics beacon origin globally while retaining same-origin
+  RUM ingestion, so browser traffic telemetry works without opening an additional data endpoint.
+- Added regression coverage for both CSP boundaries.
+
 ### Auditable legacy reconciliation acknowledgement (2026-08-30)
 
 - Added an evidence-gated operator lane for permanently ambiguous pre-expiry-telemetry treasury

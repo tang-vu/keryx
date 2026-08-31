@@ -1,5 +1,9 @@
 import type { NextConfig } from "next";
-import { appSecurityHeaders } from "./lib/security-headers";
+import {
+  appSecurityHeaders,
+  contentSecurityPolicy,
+  SCALAR_API_REFERENCE_SCRIPT_URL,
+} from "./lib/security-headers";
 
 const nextConfig: NextConfig = {
   // Keryx serves live data (agent runs, payments, metrics) — no static caching.
@@ -12,7 +16,20 @@ const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
 
   async headers() {
-    return [{ source: "/(.*)", headers: appSecurityHeaders() }];
+    return [
+      { source: "/(.*)", headers: appSecurityHeaders() },
+      // Matching rules are applied in order, so this CSP replaces the global CSP only for the
+      // standalone Scalar document. Other pages still cannot execute scripts from jsDelivr.
+      {
+        source: "/api/docs",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: contentSecurityPolicy(undefined, [SCALAR_API_REFERENCE_SCRIPT_URL]),
+          },
+        ],
+      },
+    ];
   },
 
   // The production VPS has ~1GB RAM (+2GB swap). next build's in-process TypeScript
