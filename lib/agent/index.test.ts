@@ -9,14 +9,21 @@ import { collectRun } from "./index";
 
 const run = {
   id: "a2a_test",
+  question: "q",
+  budget: 0.01,
   answer: "answer",
+  subClaims: [],
+  decisions: [],
   citations: [],
   evidence: [],
   claimCoverage: [],
+  totalSpent: 0,
   totalToCreators: 0,
+  trace: [],
+  createdAt: "2026-09-02T00:00:00.000Z",
   engine: "test",
   paymentMode: "real",
-} as QueryRun;
+} satisfies QueryRun;
 
 describe("collectRun persistence boundary", () => {
   beforeEach(() => {
