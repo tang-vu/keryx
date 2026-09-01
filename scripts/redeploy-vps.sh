@@ -25,11 +25,29 @@ HEALTH="http://localhost:$PORT/api/health"
 # keryx-vps` works from PowerShell. Prefer Windows OpenSSH when it is mounted in WSL; native Linux
 # and macOS keep using `ssh`. KERYX_SSH_BIN remains an explicit escape hatch for other setups.
 SSH_BIN=${KERYX_SSH_BIN:-ssh}
-if [[ -z "${KERYX_SSH_BIN:-}" && -x /mnt/c/Windows/System32/OpenSSH/ssh.exe ]]; then
+SSH_ARGS=()
+if [[ -z "${KERYX_SSH_BIN:-}" && -x /mnt/c/Windows/System32/OpenSSH/ssh.exe ]] \
+  && /mnt/c/Windows/System32/OpenSSH/ssh.exe -V >/dev/null 2>&1; then
   SSH_BIN=/mnt/c/Windows/System32/OpenSSH/ssh.exe
 fi
 
-run_ssh() { "$SSH_BIN" "$@"; }
+# Some WSL installations mount Windows executables but disable interop, so the path above exists
+# yet cannot run. In that case use native WSL ssh with the Windows alias/known-host file; the WSL
+# home still supplies its permission-safe private key. An explicit KERYX_SSH_BIN always wins.
+if [[ -z "${KERYX_SSH_BIN:-}" && "$SSH_BIN" = ssh ]]; then
+  for candidate in /mnt/c/Users/*/.ssh/config; do
+    if [[ -r "$candidate" ]] && grep -Eiq '^[[:space:]]*Host[[:space:]]+keryx-vps([[:space:]]|$)' "$candidate"; then
+      SSH_ARGS=(-F "$candidate")
+      known_hosts="$(dirname "$candidate")/known_hosts"
+      if [[ -r "$known_hosts" ]]; then
+        SSH_ARGS+=(-o "UserKnownHostsFile=$known_hosts")
+      fi
+      break
+    fi
+  done
+fi
+
+run_ssh() { "$SSH_BIN" "${SSH_ARGS[@]}" "$@"; }
 
 say() { printf '\n\033[1;36m=== %s\033[0m\n' "$*"; }
 
