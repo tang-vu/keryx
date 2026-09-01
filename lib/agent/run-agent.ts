@@ -96,6 +96,11 @@ export interface RunInput {
   /** Set when this dispatch re-asks a question the corpus previously left under-covered. Recorded
    *  on the run so the demand board can tell an independent dispatch from the agent's own retry. */
   retryOf?: string;
+  /** Trusted durable checkpoint awaited immediately before every creator gateway call. Public
+   *  callers never set it; A2A uses it to prove whether a crashed job could have moved value. */
+  onCreatorPaymentBoundary?: () => Promise<void>;
+  /** Trusted durable checkpoint awaited by collectRun immediately before QueryRun persistence. */
+  onQueryRunSaveBoundary?: () => Promise<void>;
   /**
    * Exact creator response admitted for a wanted-claim retry. This is discovery coordination,
    * never a forced purchase or payout authority: the asset is guaranteed a candidate slot, while
@@ -577,6 +582,7 @@ export async function* runAgent(
       );
       try {
         paymentAttempts++;
+        await input.onCreatorPaymentBoundary?.();
         const { content, payment } = await gateway.payFetch({
           source,
           item,
@@ -776,6 +782,7 @@ export async function* runAgent(
 
         try {
           paymentAttempts++;
+          await input.onCreatorPaymentBoundary?.();
           const { content, payment } = await gateway.payFetch({
             source,
             item: asset.item,
@@ -1100,6 +1107,7 @@ export async function* runAgent(
       const rationale = `Citation reward (${(c.weight * 100).toFixed(0)}% contribution${authors.length > 1 ? `, ${(author.splitWeight * 100).toFixed(0)}% author split` : ""}).`;
       try {
         paymentAttempts++;
+        await input.onCreatorPaymentBoundary?.();
         const item =
           c.itemId && c.itemTitle && c.itemUrl && c.contentVersion
             ? {

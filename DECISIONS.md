@@ -3,6 +3,48 @@
 Autonomous architecture/product/UX decisions, with rationale. Newest first.
 Format: **D-NN** · area · decision · why · reversibility.
 
+**D-61** · A2A operations/recovery · *Resolve ambiguous paid jobs with evidence-bound terminal
+metadata transitions, never by rerunning research.* `payment_events` plus Circle reconciliation
+remain the source of truth for creator settlement; the saved real-mode `QueryRun` is the source of
+truth for a deliverable answer; `a2a_orders` is the authorization-keyed control plane. An operator
+may inspect one exact `a2a_<sha256>` order without mutation, then perform only one of two
+compare-and-set transitions from a started `running` order:
+
+1. `repair_completed` reconstructs the response from that order's already-durable real-mode
+   `QueryRun`. It does not call the agent or any payment gateway.
+2. `close_failed` is available only after the 15-minute review threshold, only when no QueryRun
+   exists, and only for a journal-v1 order whose durable payment-boundary field is still null and
+   whose creator-attempt ledger is empty. Historical orders and every job that reached a creator
+   gateway call remain under review even if currently recorded attempts look definitive: absence
+   of a row cannot prove a process did not die between value movement and ledger persistence.
+
+Every new A2A run awaits the order's `payment_started_at` compare-and-set immediately before each
+creator gateway call. A null value is therefore negative evidence only when the same order carries
+`execution_journal_version=1`; old rows are never backfilled into that guarantee. It also crosses a
+`result_saving_at` checkpoint immediately before QueryRun persistence, so a stale close cannot race
+a late no-payment answer into existence. Saved-run repair
+also requires the QueryRun's integer settled+pending total to equal the durable ledger's
+settled+pending+failed total, so a lost payment write cannot become an incomplete buyer receipt.
+
+The same row atomically stores a bounded resolution record (action, fixed evidence-derived reason,
+resolver class, timestamp, and integer micro-USDC evidence) with the terminal outcome. Mutating CLI
+commands require the exact order id twice, expose no private question, wallet, transaction, or
+worker identity, and provide no retry command. Public failure polling itemizes current settled and
+pending creator economics plus the sanitized resolution record. Queue health exposes aggregate
+counts and recent latency only; one `review_required` order or a queue older than two minutes marks
+operations degraded without taking liveness down.
+
+Settlement state transitions remain owned by the existing Circle reconciliation path; a review
+cannot promote, fail, refund, or synthesize a payment. Late definitive Circle evidence therefore
+continues to update the financial ledger independently of the terminal job record. Adversarial
+gates cover terminal-CAS races, saved offline runs, missing-ledger totals, historical/no-boundary
+rows, pending/simulated attempts, stale thresholds, cap overflow, private-data omission, and
+aggregate queue/latency classification. Why: the prior
+durable worker prevented duplicate spend but left a paid pilot order with no executable runbook or
+error-budget signal. Reversible: medium (additive private audit data, a private CLI, aggregate
+health fields, and additive public failure receipt fields; payment authority and the no-rerun
+invariant do not change).
+
 **D-60** · A2A product reliability · *Acknowledge long paid research with a durable opt-in async
 job, but never lease-retry an order after creator spending may have begun.* Existing callers retain
 `responseMode=wait`; production callers may send `responseMode=async` or `Prefer: respond-async`.

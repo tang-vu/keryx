@@ -86,6 +86,30 @@ export const openapiSpec = {
           message: { type: "string" },
         },
       },
+      A2aFailedResponse: {
+        type: "object",
+        required: ["status", "queryId", "error", "pricing", "creatorPayments"],
+        properties: {
+          status: { type: "string", enum: ["failed"] },
+          queryId: { type: "string", pattern: "^a2a_[a-f0-9]{64}$" },
+          error: { type: "string" },
+          pricing: { type: "object" },
+          creatorPayments: {
+            type: "object",
+            properties: {
+              attempts: { type: "integer" },
+              failedUsdc: { type: "number" },
+              simulatedUsdc: { type: "number" },
+              accountingComplete: { type: "boolean" },
+            },
+          },
+          resolution: {
+            type: "object",
+            description:
+              "Sanitized evidence-bound terminal resolution. Private question, wallets, transaction, and worker identity are never returned.",
+          },
+        },
+      },
       AskResponse: {
         type: "object",
         properties: {
@@ -462,7 +486,20 @@ export const openapiSpec = {
           },
         ],
         responses: {
-          "200": { description: "Durable order state for the supplied queryId." },
+          "200": {
+            description: "Durable order state for the supplied queryId.",
+            content: {
+              "application/json": {
+                schema: {
+                  oneOf: [
+                    { $ref: "#/components/schemas/A2aPendingResponse" },
+                    { $ref: "#/components/schemas/AskResponse" },
+                    { $ref: "#/components/schemas/A2aFailedResponse" },
+                  ],
+                },
+              },
+            },
+          },
           "402": { description: "No queryId: side-effect-free default-package x402 discovery challenge." },
           "404": { description: "A2A order not found." },
         },

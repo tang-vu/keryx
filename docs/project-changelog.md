@@ -1,5 +1,16 @@
 # Keryx Project Changelog
 
+### Evidence-bound A2A operator resolution (2026-09-02)
+
+- Added a private exact-order inspect/repair/close runbook for `review_required` jobs; neither
+  terminal action can rerun research or mutate payment settlement truth.
+- Bound repair to a saved real QueryRun whose totals match the durable ledger; journal-v1 jobs now
+  checkpoint before every creator gateway call and before QueryRun persistence. Only a stale job
+  proven not to cross either boundary can be closed; historical/payment-started ambiguity remains
+  review-only.
+- Added buyer-visible failed-job economics plus identifier-free queue, error-rate, and p50/p95
+  latency health, with degraded readiness when review work or a stale queue exists.
+
 ### Durable asynchronous A2A research (2026-09-01)
 
 - Added opt-in `202 Accepted` A2A jobs with standard `Prefer: respond-async`, a durable poll URL,

@@ -34,7 +34,12 @@ import type {
   UserRecord,
 } from "./keryx-db";
 import type { LedgerAccount } from "../gateway/settlement-parity";
-import type { A2aOrder } from "../a2a/order";
+import type { A2aOrder, A2aOrderResolutionUpdate } from "../a2a/order";
+import {
+  summarizeA2aOperations,
+  type A2aOperationsRow,
+  type A2aOperationsSnapshot,
+} from "../a2a/operations";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 import { normalizePreviewDepth } from "../sources/preview-depth";
@@ -758,6 +763,24 @@ export class SupabaseAdapter implements KeryxDB {
     return row ? rowToA2aOrder(row as Record<string, unknown>) : null;
   }
 
+  async markA2aOrderPaymentStarted(id: string, startedAt: string): Promise<boolean> {
+    const { data, error } = await this.sb.rpc("mark_a2a_payment_started", {
+      p_id: id,
+      p_started_at: startedAt,
+    });
+    if (error) throw error;
+    return data === true;
+  }
+
+  async markA2aOrderResultSaving(id: string, startedAt: string): Promise<boolean> {
+    const { data, error } = await this.sb.rpc("mark_a2a_result_saving", {
+      p_id: id,
+      p_started_at: startedAt,
+    });
+    if (error) throw error;
+    return data === true;
+  }
+
   async completeA2aOrder(
     id: string,
     response: Record<string, unknown>,
@@ -782,6 +805,35 @@ export class SupabaseAdapter implements KeryxDB {
       .select("id");
     if (error) throw error;
     return (data ?? []).length === 1;
+  }
+
+  async resolveA2aOrder(id: string, update: A2aOrderResolutionUpdate): Promise<boolean> {
+    const { data, error } = await this.sb.rpc("resolve_a2a_order", {
+      p_id: id,
+      p_outcome: update.status,
+      p_response: update.status === "completed" ? update.response : null,
+      p_error_code: update.status === "failed" ? update.errorCode : null,
+      p_resolution: update.resolution,
+      p_started_before: update.status === "failed" ? update.startedBefore : null,
+    });
+    if (error) throw error;
+    return data === true;
+  }
+
+  async a2aOperationsSnapshot(nowMs: number): Promise<A2aOperationsSnapshot> {
+    const since = new Date(nowMs - 24 * 60 * 60_000).toISOString();
+    const { data, error } = await this.sb
+      .from("a2a_orders")
+      .select("status,created_at,updated_at,started_at")
+      .or(`status.eq.running,updated_at.gte.${since}`);
+    if (error) throw error;
+    const rows = (data ?? []).map((row) => ({
+      status: row.status as A2aOrder["status"],
+      createdAt: String(row.created_at),
+      updatedAt: String(row.updated_at),
+      startedAt: row.started_at == null ? null : String(row.started_at),
+    })) satisfies A2aOperationsRow[];
+    return summarizeA2aOperations(rows, nowMs);
   }
 
   async listPayments(limit: number): Promise<PaymentRecord[]> {
@@ -1620,8 +1672,12 @@ function a2aOrderToRow(order: A2aOrder) {
     request_data: order.request,
     started_at: order.startedAt,
     worker_id: order.workerId,
+    execution_journal_version: order.executionJournalVersion,
+    payment_started_at: order.paymentStartedAt,
+    result_saving_at: order.resultSavingAt,
     response_data: order.response,
     error_code: order.errorCode,
+    resolution_data: order.resolution,
     created_at: order.createdAt,
     updated_at: order.updatedAt,
   };
@@ -1644,8 +1700,12 @@ function rowToA2aOrder(r: Record<string, unknown>): A2aOrder {
     request: (r.request_data as A2aOrder["request"]) ?? null,
     startedAt: r.started_at == null ? null : String(r.started_at),
     workerId: r.worker_id == null ? null : String(r.worker_id),
+    executionJournalVersion: r.execution_journal_version === 1 ? 1 : null,
+    paymentStartedAt: r.payment_started_at == null ? null : String(r.payment_started_at),
+    resultSavingAt: r.result_saving_at == null ? null : String(r.result_saving_at),
     response: (r.response_data as Record<string, unknown> | null) ?? null,
     errorCode: r.error_code == null ? null : String(r.error_code),
+    resolution: (r.resolution_data as A2aOrder["resolution"]) ?? null,
     createdAt: String(r.created_at),
     updatedAt: String(r.updated_at),
   };

@@ -2,11 +2,17 @@ import { collectRun } from "../agent";
 import type { KeryxDB } from "../db/keryx-db";
 import type { QueryRun } from "../types";
 import { a2aRequestHash, type A2aOrder, type A2aOrderRequest } from "./order";
-import { a2aResponseFromRun, quoteFromA2aOrder } from "./result";
+import { verifiedA2aResponseFromRun } from "./operator-resolution";
 
 type A2aWorkerDb = Pick<
   KeryxDB,
-  "claimNextA2aOrder" | "getA2aOrder" | "completeA2aOrder" | "failA2aOrder"
+  | "claimNextA2aOrder"
+  | "getA2aOrder"
+  | "completeA2aOrder"
+  | "failA2aOrder"
+  | "markA2aOrderPaymentStarted"
+  | "markA2aOrderResultSaving"
+  | "listCreatorPaymentAttemptsByQuery"
 >;
 
 type A2aCollector = (input: Parameters<typeof collectRun>[0]) => Promise<QueryRun>;
@@ -34,6 +40,7 @@ function validRequest(order: A2aOrder, expectedPayee?: string): A2aOrderRequest 
   ) {
     return null;
   }
+  if (order.executionJournalVersion !== 1 || order.paymentStartedAt !== null) return null;
   const micro = (amount: number) => Math.round(amount * 1e6);
   const creatorMicros = micro(order.creatorBudgetUsdc);
   const feeMicros = micro(order.serviceFeeUsdc);
@@ -74,9 +81,9 @@ export async function runClaimedA2aOrder(
     return { id: order.id, status: "failed", errorCode: "invalid_order_data" };
   }
 
-  let response: Record<string, unknown>;
+  let run: QueryRun;
   try {
-    const run = await (options.collector ?? collectRun)({
+    run = await (options.collector ?? collectRun)({
       question: request.question,
       budget: order.creatorBudgetUsdc,
       researchMode: order.researchMode,
@@ -84,11 +91,33 @@ export async function runClaimedA2aOrder(
       origin: request.origin,
       fundingOwner: "treasury",
       model: request.model,
+      onCreatorPaymentBoundary: async () => {
+        if (!(await db.markA2aOrderPaymentStarted(order.id, new Date().toISOString()))) {
+          throw new Error("A2A creator-payment boundary could not be journaled");
+        }
+      },
+      onQueryRunSaveBoundary: async () => {
+        if (!(await db.markA2aOrderResultSaving(order.id, new Date().toISOString()))) {
+          throw new Error("A2A QueryRun-save boundary could not be journaled");
+        }
+      },
     });
-    response = a2aResponseFromRun(run, quoteFromA2aOrder(order));
   } catch {
     await db.failA2aOrder(order.id, "research_failed", new Date().toISOString()).catch(() => false);
     return { id: order.id, status: "failed", errorCode: "research_failed" };
+  }
+
+  let response: Record<string, unknown>;
+  try {
+    const current = await db.getA2aOrder(order.id);
+    if (!current || current.status !== "running") {
+      throw new Error("A2A order changed before its saved run could be verified");
+    }
+    response = (await verifiedA2aResponseFromRun(db, current, run)).response;
+  } catch {
+    // The QueryRun is durable, but a missing/mismatched creator ledger cannot produce an honest
+    // receipt. Keep the order recoverable; never rerun research or overwrite it as failed.
+    return { id: order.id, status: "recovery_pending" };
   }
 
   // collectRun persisted its QueryRun before returning. A missing/ambiguous order-completion write

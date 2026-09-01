@@ -35,7 +35,12 @@ import type {
   UserRecord,
 } from "./keryx-db";
 import type { LedgerAccount } from "../gateway/settlement-parity";
-import type { A2aOrder } from "../a2a/order";
+import type { A2aOrder, A2aOrderResolutionUpdate } from "../a2a/order";
+import {
+  summarizeA2aOperations,
+  type A2aOperationsRow,
+  type A2aOperationsSnapshot,
+} from "../a2a/operations";
 import { fillDailySeries } from "./daily-series";
 import { shortAddress } from "../utils";
 import { normalizePreviewDepth } from "../sources/preview-depth";
@@ -190,8 +195,12 @@ CREATE TABLE IF NOT EXISTS a2a_orders (
   request_data TEXT,
   started_at TEXT,
   worker_id TEXT,
+  execution_journal_version INTEGER,
+  payment_started_at TEXT,
+  result_saving_at TEXT,
   response_data TEXT,
   error_code TEXT,
+  resolution_data TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -569,6 +578,14 @@ export class SqliteAdapter implements KeryxDB {
     if (!hadStartedAt) this.db.exec(`ALTER TABLE a2a_orders ADD COLUMN started_at TEXT`);
     if (!a2aCols.has("worker_id"))
       this.db.exec(`ALTER TABLE a2a_orders ADD COLUMN worker_id TEXT`);
+    if (!a2aCols.has("resolution_data"))
+      this.db.exec(`ALTER TABLE a2a_orders ADD COLUMN resolution_data TEXT`);
+    if (!a2aCols.has("execution_journal_version"))
+      this.db.exec(`ALTER TABLE a2a_orders ADD COLUMN execution_journal_version INTEGER`);
+    if (!a2aCols.has("payment_started_at"))
+      this.db.exec(`ALTER TABLE a2a_orders ADD COLUMN payment_started_at TEXT`);
+    if (!a2aCols.has("result_saving_at"))
+      this.db.exec(`ALTER TABLE a2a_orders ADD COLUMN result_saving_at TEXT`);
     if (!hadStartedAt) {
       this.db.exec(
         `UPDATE a2a_orders SET started_at=updated_at,worker_id=COALESCE(worker_id,'legacy')
@@ -1497,8 +1514,9 @@ export class SqliteAdapter implements KeryxDB {
         `INSERT OR IGNORE INTO a2a_orders
          (id,query_id,authorization_id,request_hash,payer,payee,amount_usdc,creator_budget_usdc,
           service_fee_usdc,research_mode,status,transaction_id,request_data,started_at,worker_id,
-          response_data,error_code,created_at,updated_at)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          execution_journal_version,payment_started_at,result_saving_at,response_data,error_code,resolution_data,
+          created_at,updated_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       )
       .run(
         order.id,
@@ -1516,8 +1534,12 @@ export class SqliteAdapter implements KeryxDB {
         order.request ? JSON.stringify(order.request) : null,
         order.startedAt,
         order.workerId,
+        order.executionJournalVersion,
+        order.paymentStartedAt,
+        order.resultSavingAt,
         order.response ? JSON.stringify(order.response) : null,
         order.errorCode,
+        order.resolution ? JSON.stringify(order.resolution) : null,
         order.createdAt,
         order.updatedAt,
       );
@@ -1546,6 +1568,30 @@ export class SqliteAdapter implements KeryxDB {
     return row ? rowToA2aOrder(row) : null;
   }
 
+  async markA2aOrderPaymentStarted(id: string, startedAt: string): Promise<boolean> {
+    const result = this.db
+      .prepare(
+        `UPDATE a2a_orders
+            SET payment_started_at=COALESCE(payment_started_at,?),updated_at=?
+          WHERE id=? AND status='running' AND started_at IS NOT NULL
+            AND execution_journal_version=1`,
+      )
+      .run(startedAt, startedAt, id);
+    return result.changes === 1;
+  }
+
+  async markA2aOrderResultSaving(id: string, startedAt: string): Promise<boolean> {
+    const result = this.db
+      .prepare(
+        `UPDATE a2a_orders
+            SET result_saving_at=COALESCE(result_saving_at,?),updated_at=?
+          WHERE id=? AND status='running' AND started_at IS NOT NULL
+            AND execution_journal_version=1`,
+      )
+      .run(startedAt, startedAt, id);
+    return result.changes === 1;
+  }
+
   async completeA2aOrder(
     id: string,
     response: Record<string, unknown>,
@@ -1568,6 +1614,149 @@ export class SqliteAdapter implements KeryxDB {
       )
       .run(errorCode, updatedAt, id);
     return result.changes === 1;
+  }
+
+  async resolveA2aOrder(id: string, update: A2aOrderResolutionUpdate): Promise<boolean> {
+    const resolution = JSON.stringify(update.resolution);
+    const evidence = update.resolution.evidence;
+    if (update.status === "completed") {
+      if (
+        update.resolution.action !== "repair_completed" ||
+        !evidence.queryRunFound ||
+        evidence.simulatedCreatorMicros > 0
+      ) {
+        return false;
+      }
+      const result = this.db
+        .prepare(
+          `WITH normalized AS (
+             SELECT ROUND(amount_usdc*1000000) micros,
+                    COALESCE(
+                      settlement_status,
+                      CASE WHEN settled=1 THEN 'settled' ELSE 'simulated' END
+                    ) evidence_status
+               FROM payment_events
+              WHERE query_id=(SELECT query_id FROM a2a_orders WHERE id=?) AND kind!='inbound'
+           ), creator_evidence AS (
+             SELECT COUNT(*) attempts,
+                    COALESCE(SUM(CASE WHEN evidence_status='settled' THEN micros ELSE 0 END),0) settled,
+                    COALESCE(SUM(CASE WHEN evidence_status='pending' THEN micros ELSE 0 END),0) pending,
+                    COALESCE(SUM(CASE WHEN evidence_status='failed' THEN micros ELSE 0 END),0) failed,
+                    COALESCE(SUM(CASE WHEN evidence_status='simulated' THEN micros ELSE 0 END),0) simulated
+               FROM normalized
+           )
+           UPDATE a2a_orders
+              SET status='completed',response_data=?,error_code=NULL,resolution_data=?,updated_at=?
+            WHERE id=? AND status='running' AND started_at IS NOT NULL
+              AND EXISTS (
+                SELECT 1 FROM query_runs
+                 WHERE query_runs.id=a2a_orders.query_id AND payment_mode='real'
+              )
+              AND (SELECT attempts FROM creator_evidence)=?
+              AND (SELECT settled FROM creator_evidence)=?
+              AND (SELECT pending FROM creator_evidence)=?
+              AND (SELECT failed FROM creator_evidence)=?
+              AND (SELECT simulated FROM creator_evidence)=?
+              AND (SELECT simulated FROM creator_evidence)=0
+              AND COALESCE(execution_journal_version,0)=?
+              AND (payment_started_at IS NOT NULL)=?
+              AND (result_saving_at IS NOT NULL)=?
+              AND (SELECT settled+pending FROM creator_evidence)
+                    <=ROUND(creator_budget_usdc*1000000)`,
+        )
+        .run(
+          id,
+          JSON.stringify(update.response),
+          resolution,
+          update.resolution.resolvedAt,
+          id,
+          evidence.creatorAttempts,
+          evidence.settledCreatorMicros,
+          evidence.pendingCreatorMicros,
+          evidence.failedCreatorMicros,
+          evidence.simulatedCreatorMicros,
+          evidence.executionJournalVersion ?? 0,
+          evidence.paymentBoundaryCrossed ? 1 : 0,
+          evidence.resultSaveBoundaryCrossed ? 1 : 0,
+        );
+      return result.changes === 1;
+    }
+
+    if (
+      update.resolution.action !== "close_failed" ||
+      evidence.queryRunFound ||
+      evidence.executionJournalVersion !== 1 ||
+      evidence.paymentBoundaryCrossed ||
+      evidence.resultSaveBoundaryCrossed ||
+      evidence.creatorAttempts > 0
+    ) {
+      return false;
+    }
+
+    const result = this.db
+      .prepare(
+        `WITH normalized AS (
+           SELECT ROUND(amount_usdc*1000000) micros,
+                  COALESCE(
+                    settlement_status,
+                    CASE WHEN settled=1 THEN 'settled' ELSE 'simulated' END
+                  ) evidence_status
+             FROM payment_events
+            WHERE query_id=(SELECT query_id FROM a2a_orders WHERE id=?) AND kind!='inbound'
+         ), creator_evidence AS (
+           SELECT COUNT(*) attempts,
+                  COALESCE(SUM(CASE WHEN evidence_status='settled' THEN micros ELSE 0 END),0) settled,
+                  COALESCE(SUM(CASE WHEN evidence_status='pending' THEN micros ELSE 0 END),0) pending,
+                  COALESCE(SUM(CASE WHEN evidence_status='failed' THEN micros ELSE 0 END),0) failed,
+                  COALESCE(SUM(CASE WHEN evidence_status='simulated' THEN micros ELSE 0 END),0) simulated
+             FROM normalized
+         )
+         UPDATE a2a_orders
+            SET status='failed',response_data=NULL,error_code=?,resolution_data=?,updated_at=?
+          WHERE id=? AND status='running' AND started_at IS NOT NULL AND started_at<=?
+            AND execution_journal_version=1 AND payment_started_at IS NULL
+            AND result_saving_at IS NULL
+            AND NOT EXISTS (SELECT 1 FROM query_runs WHERE query_runs.id=a2a_orders.query_id)
+            AND (SELECT attempts FROM creator_evidence)=?
+            AND (SELECT settled FROM creator_evidence)=?
+            AND (SELECT pending FROM creator_evidence)=?
+            AND (SELECT failed FROM creator_evidence)=?
+            AND (SELECT simulated FROM creator_evidence)=?
+            AND (SELECT attempts FROM creator_evidence)=0
+            AND (SELECT settled+pending FROM creator_evidence)
+                  <=ROUND(creator_budget_usdc*1000000)`,
+      )
+      .run(
+        id,
+        update.errorCode,
+        resolution,
+        update.resolution.resolvedAt,
+        id,
+        update.startedBefore,
+        evidence.creatorAttempts,
+        evidence.settledCreatorMicros,
+        evidence.pendingCreatorMicros,
+        evidence.failedCreatorMicros,
+        evidence.simulatedCreatorMicros,
+      );
+    return result.changes === 1;
+  }
+
+  async a2aOperationsSnapshot(nowMs: number): Promise<A2aOperationsSnapshot> {
+    const since = new Date(nowMs - 24 * 60 * 60_000).toISOString();
+    const rows = this.db
+      .prepare(
+        `SELECT status,created_at,updated_at,started_at FROM a2a_orders
+          WHERE status='running' OR updated_at>=?`,
+      )
+      .all(since)
+      .map((row) => ({
+        status: row.status as A2aOrder["status"],
+        createdAt: String(row.created_at),
+        updatedAt: String(row.updated_at),
+        startedAt: row.started_at == null ? null : String(row.started_at),
+      })) satisfies A2aOperationsRow[];
+    return summarizeA2aOperations(rows, nowMs);
   }
 
   async listPayments(limit: number): Promise<PaymentRecord[]> {
@@ -2257,10 +2446,16 @@ function rowToA2aOrder(r: Record<string, unknown>): A2aOrder {
       : null,
     startedAt: r.started_at == null ? null : String(r.started_at),
     workerId: r.worker_id == null ? null : String(r.worker_id),
+    executionJournalVersion: r.execution_journal_version === 1 ? 1 : null,
+    paymentStartedAt: r.payment_started_at == null ? null : String(r.payment_started_at),
+    resultSavingAt: r.result_saving_at == null ? null : String(r.result_saving_at),
     response: r.response_data
       ? (JSON.parse(String(r.response_data)) as Record<string, unknown>)
       : null,
     errorCode: r.error_code == null ? null : String(r.error_code),
+    resolution: r.resolution_data
+      ? (JSON.parse(String(r.resolution_data)) as A2aOrder["resolution"])
+      : null,
     createdAt: String(r.created_at),
     updatedAt: String(r.updated_at),
   };

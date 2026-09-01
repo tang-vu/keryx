@@ -4,7 +4,7 @@
  * Two jobs: (1) the post-reload gate for the low-downtime redeploy
  * (scripts/redeploy-vps.sh) — a non-200 here triggers an automatic rollback to the
  * previous build; (2) a public uptime signal for the /status page and any external
- * monitor. Cheap by design: one aggregate DB read, no chain or LLM calls. Returns 200
+ * monitor. Cheap by design: aggregate DB reads only, no chain or LLM calls. Returns 200
  * when ready, 503 when the datastore is unreachable.
  */
 
@@ -53,7 +53,7 @@ export async function GET() {
 
   try {
     const db = await getDb();
-    const m = await db.metrics();
+    const [m, a2aJobs] = await Promise.all([db.metrics(), db.a2aOperationsSnapshot(Date.now())]);
 
     // Registry section: served from sync_state only — the hourly parity watchdog
     // (scripts/check-registry.mts) does the chain reads; the probe stays chain-free.
@@ -165,7 +165,9 @@ export async function GET() {
         a2aWorker.status === "stopped" ||
         a2aWorker.status === "recovery_pending");
     const operationalStatus =
-      reconciliation?.degraded || workerDegraded ? "degraded" : "operational";
+      reconciliation?.degraded || workerDegraded || a2aJobs.degraded
+        ? "degraded"
+        : "operational";
 
     return Response.json(
       {
@@ -178,6 +180,7 @@ export async function GET() {
         settlement,
         reconciliation,
         a2aWorker,
+        a2aJobs,
         traction: {
           totalPayments: m.totalPayments,
           creatorPayoutsUsdc: Number(m.totalCreatorPayoutsUsdc.toFixed(6)),

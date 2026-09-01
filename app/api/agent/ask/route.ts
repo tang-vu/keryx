@@ -16,14 +16,26 @@ import { hasScope, parseScopes } from "@/lib/api-key-scopes";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
 import { parseAskQuestion } from "@/lib/ask-input";
 import {
-  a2aReceiptEconomics,
   parseResearchMode,
   quoteA2aResearch,
 } from "@/lib/a2a/pricing";
-import { a2aOrderId, a2aRequestHash, sameA2aOrder, type A2aOrder } from "@/lib/a2a/order";
-import { a2aResponseFromRun, quoteFromA2aOrder } from "@/lib/a2a/result";
+import {
+  A2A_REVIEW_AFTER_MS,
+  a2aOrderId,
+  a2aRequestHash,
+  sameA2aOrder,
+  type A2aOrder,
+} from "@/lib/a2a/order";
+import {
+  currentA2aEconomics,
+  publicA2aResolution,
+  quoteFromA2aOrder,
+} from "@/lib/a2a/result";
+import {
+  repairA2aOrderFromSavedRun,
+  verifiedA2aResponseFromRun,
+} from "@/lib/a2a/operator-resolution";
 import type { KeryxDB } from "@/lib/db/keryx-db";
-import { paymentSettlementStatus } from "@/lib/payments/payment-state";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,30 +53,59 @@ function requirements(priceUsdc: number, payTo = config.sellerAddress ?? "") {
 
 async function currentCompletedResponse(db: KeryxDB, order: A2aOrder) {
   const attempts = await db.listCreatorPaymentAttemptsByQuery(order.queryId);
-  const settled = attempts
-    .filter((payment) => paymentSettlementStatus(payment) === "settled")
-    .reduce((sum, payment) => sum + payment.amountUsdc, 0);
-  const pending = attempts
-    .filter((payment) => paymentSettlementStatus(payment) === "pending")
-    .reduce((sum, payment) => sum + payment.amountUsdc, 0);
+  const economics = currentA2aEconomics(order, attempts);
   return {
     ...(order.response ?? {}),
-    totalToCreators: Math.round(settled * 1e6) / 1e6,
-    pricing: a2aReceiptEconomics(quoteFromA2aOrder(order), settled, pending),
+    totalToCreators: economics.totalToCreators,
+    pricing: economics.pricing,
   };
 }
 
-function pendingResponse(order: A2aOrder, replayed = false) {
+async function currentFailedResponse(db: KeryxDB, order: A2aOrder, replayed = false) {
+  const attempts = await db.listCreatorPaymentAttemptsByQuery(order.queryId);
+  const economics = currentA2aEconomics(order, attempts);
+  const accountingComplete =
+    order.executionJournalVersion === 1 &&
+    order.paymentStartedAt === null &&
+    economics.creatorPayments.attempts === 0;
+  return {
+    status: "failed",
+    queryId: order.queryId,
+    error: order.errorCode ?? "research_failed",
+    pricing: accountingComplete
+      ? { ...economics.pricing, accountingComplete: true }
+      : {
+          ...economics.pricing,
+          unusedCreatorReserveUsdc: null,
+          accountingComplete: false,
+        },
+    creatorPayments: { ...economics.creatorPayments, accountingComplete },
+    ...(!accountingComplete
+      ? {
+          message:
+            "Recorded creator payments are a lower bound; the job crossed a payment boundary without a complete saved run.",
+        }
+      : {}),
+    ...(order.resolution ? { resolution: publicA2aResolution(order) } : {}),
+    ...(replayed ? { replayed: true } : {}),
+  };
+}
+
+function pendingResponse(order: A2aOrder, replayed = false, message?: string) {
   const startedMs = order.startedAt ? Date.parse(order.startedAt) : Number.NaN;
-  const needsReview = Number.isFinite(startedMs) && Date.now() - startedMs > 15 * 60_000;
+  const needsReview =
+    !!order.startedAt &&
+    (!Number.isFinite(startedMs) || Date.now() - startedMs >= A2A_REVIEW_AFTER_MS);
   const status = needsReview ? "review_required" : order.startedAt ? "processing" : "queued";
   return {
     status,
     queryId: order.queryId,
     pollUrl: `/api/agent/ask?queryId=${encodeURIComponent(order.queryId)}`,
-    ...(needsReview
-      ? { message: "The paid job started but did not finish; operator review is required before any retry." }
-      : {}),
+    ...(message
+      ? { message }
+      : needsReview
+        ? { message: "The paid job started but did not finish; operator review is required before any retry." }
+        : {}),
     ...(replayed ? { replayed: true } : {}),
   };
 }
@@ -83,13 +124,22 @@ export async function GET(req?: NextRequest) {
       return Response.json(await currentCompletedResponse(db, order));
     }
     if (order.status === "failed") {
-      return Response.json({ status: "failed", queryId, error: order.errorCode ?? "research_failed" });
+      return Response.json(await currentFailedResponse(db, order));
     }
     const saved = await db.getQueryRun(queryId);
     if (saved) {
-      const recovered = a2aResponseFromRun(saved, quoteFromA2aOrder(order));
-      await db.completeA2aOrder(queryId, recovered, new Date().toISOString());
-      return Response.json(recovered);
+      try {
+        const recovered = await repairA2aOrderFromSavedRun(db, order, saved, "automatic-poll");
+        return Response.json(await currentCompletedResponse(db, recovered));
+      } catch {
+        return Response.json(
+          pendingResponse(
+            order,
+            false,
+            "A saved result exists, but its creator-payment ledger requires review before delivery.",
+          ),
+        );
+      }
     }
     return Response.json(pendingResponse(order));
   }
@@ -205,8 +255,12 @@ export async function POST(req: NextRequest) {
       request: { question: parsedQuestion.question, model, origin },
       startedAt: respondAsync ? null : now,
       workerId: respondAsync ? null : `request:${orderId}`,
+      executionJournalVersion: 1,
+      paymentStartedAt: null,
+      resultSavingAt: null,
       response: null,
       errorCode: null,
+      resolution: null,
       createdAt: now,
       updatedAt: now,
     };
@@ -238,19 +292,26 @@ export async function POST(req: NextRequest) {
         return { ...(await currentCompletedResponse(db, claimed.order)), replayed: true };
       }
       if (claimed.order.status === "failed") {
-        return {
-          status: "failed",
-          queryId,
-          error: claimed.order.errorCode ?? "research_failed",
-          replayed: true,
-        };
+        return currentFailedResponse(db, claimed.order, true);
       }
       // Recover the narrow crash window after collectRun saved but before order completion landed.
       const saved = await db.getQueryRun(queryId);
       if (saved) {
-        const recovered = a2aResponseFromRun(saved, quote);
-        await db.completeA2aOrder(orderId, recovered, new Date().toISOString());
-        return { ...recovered, replayed: true };
+        try {
+          const recovered = await repairA2aOrderFromSavedRun(
+            db,
+            claimed.order,
+            saved,
+            "automatic-poll",
+          );
+          return { ...(await currentCompletedResponse(db, recovered)), replayed: true };
+        } catch {
+          return pendingResponse(
+            claimed.order,
+            true,
+            "A saved result exists, but its creator-payment ledger requires review before delivery.",
+          );
+        }
       }
       return pendingResponse(claimed.order, true);
     }
@@ -266,9 +327,9 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    let response: Record<string, unknown>;
+    let run: Awaited<ReturnType<typeof collectRun>>;
     try {
-      const run = await collectRun({
+      run = await collectRun({
         question: parsedQuestion.question,
         budget: quote.creatorBudgetUsdc,
         researchMode,
@@ -276,12 +337,26 @@ export async function POST(req: NextRequest) {
         origin,
         fundingOwner: "treasury",
         model,
+        onCreatorPaymentBoundary: async () => {
+          if (!(await db.markA2aOrderPaymentStarted(orderId, new Date().toISOString()))) {
+            throw new Error("A2A creator-payment boundary could not be journaled");
+          }
+        },
+        onQueryRunSaveBoundary: async () => {
+          if (!(await db.markA2aOrderResultSaving(orderId, new Date().toISOString()))) {
+            throw new Error("A2A QueryRun-save boundary could not be journaled");
+          }
+        },
       });
-      response = a2aResponseFromRun(run, quote);
     } catch (error) {
       await db.failA2aOrder(orderId, "research_failed", new Date().toISOString()).catch(() => false);
       throw error;
     }
+    const currentOrder = await db.getA2aOrder(orderId);
+    if (!currentOrder || currentOrder.status !== "running") {
+      throw new Error("A2A order changed before its saved run could be verified");
+    }
+    const response = (await verifiedA2aResponseFromRun(db, currentOrder, run)).response;
     // The QueryRun is already durable. If this final CAS is lost or ambiguous, leave the order
     // running so GET/replay can repair it instead of hiding a possibly paid result as failed.
     if (!(await db.completeA2aOrder(orderId, response, new Date().toISOString()))) {

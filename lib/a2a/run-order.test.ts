@@ -26,8 +26,12 @@ function claimedOrder(): A2aOrder {
     request,
     startedAt: "2026-09-01T00:00:00.000Z",
     workerId: "worker",
+    executionJournalVersion: 1,
+    paymentStartedAt: null,
+    resultSavingAt: null,
     response: null,
     errorCode: null,
+    resolution: null,
     createdAt: "2026-09-01T00:00:00.000Z",
     updatedAt: "2026-09-01T00:00:00.000Z",
   };
@@ -35,21 +39,35 @@ function claimedOrder(): A2aOrder {
 
 describe("durable A2A worker", () => {
   it("revalidates the paid request and completes a real treasury run", async () => {
+    let current = claimedOrder();
     const db = {
       completeA2aOrder: vi.fn().mockResolvedValue(true),
-      getA2aOrder: vi.fn(),
+      getA2aOrder: vi.fn(async () => current),
       failA2aOrder: vi.fn().mockResolvedValue(true),
+      markA2aOrderPaymentStarted: vi.fn(async (_id, at) => {
+        current = { ...current, paymentStartedAt: at };
+        return true;
+      }),
+      markA2aOrderResultSaving: vi.fn(async (_id, at) => {
+        current = { ...current, resultSavingAt: at };
+        return true;
+      }),
+      listCreatorPaymentAttemptsByQuery: vi.fn().mockResolvedValue([]),
     };
-    const collector = vi.fn(async (input) => ({
-      id: input.queryId!,
-      answer: "answer",
-      citations: [],
-      evidence: [],
-      claimCoverage: [],
-      totalToCreators: 0,
-      engine: "heuristic",
-      paymentMode: "real" as const,
-    }));
+    const collector = vi.fn(async (input) => {
+      await input.onCreatorPaymentBoundary?.();
+      await input.onQueryRunSaveBoundary?.();
+      return {
+        id: input.queryId!,
+        answer: "answer",
+        citations: [],
+        evidence: [],
+        claimCoverage: [],
+        totalToCreators: 0,
+        engine: "heuristic",
+        paymentMode: "real" as const,
+      };
+    });
 
     const outcome = await runClaimedA2aOrder(db as never, claimedOrder(), {
       collector: collector as never,
@@ -61,6 +79,8 @@ describe("durable A2A worker", () => {
       expect.objectContaining({ fundingOwner: "treasury", budget: 0.05, question: "What changed?" }),
     );
     expect(db.completeA2aOrder).toHaveBeenCalledOnce();
+    expect(db.markA2aOrderPaymentStarted).toHaveBeenCalledOnce();
+    expect(db.markA2aOrderResultSaving).toHaveBeenCalledOnce();
     expect(db.failA2aOrder).not.toHaveBeenCalled();
   });
 

@@ -33,8 +33,12 @@ describe("A2A authorization identity", () => {
       request: { question: "private question", origin: "a2a" },
       startedAt: null,
       workerId: null,
+      executionJournalVersion: 1,
+      paymentStartedAt: null,
+      resultSavingAt: null,
       response: null,
       errorCode: null,
+      resolution: null,
       createdAt: "now",
       updatedAt: "now",
     };

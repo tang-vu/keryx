@@ -22,6 +22,7 @@ export async function collectRun(
     res = await gen.next();
   }
   const run = res.value;
+  await input.onQueryRunSaveBoundary?.();
   await deps.db.saveQueryRun(run);
   return run;
 }

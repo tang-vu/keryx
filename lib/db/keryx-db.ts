@@ -5,7 +5,8 @@
 
 import type { LedgerAccount } from "../gateway/settlement-parity";
 import type { TestnetEconomicsSnapshot } from "../economics/testnet-economics";
-import type { A2aOrder } from "../a2a/order";
+import type { A2aOrder, A2aOrderResolutionUpdate } from "../a2a/order";
+import type { A2aOperationsSnapshot } from "../a2a/operations";
 import type {
   ActivationEvent,
   ActivationFunnel,
@@ -457,12 +458,20 @@ export interface KeryxDB {
   getA2aOrder(id: string): Promise<A2aOrder | null>;
   /** Atomically claims the oldest never-started job. Started jobs are never auto-requeued. */
   claimNextA2aOrder(workerId: string, startedAt: string): Promise<A2aOrder | null>;
+  /** Durably crosses the creator-payment boundary before any gateway authorization can begin. */
+  markA2aOrderPaymentStarted(id: string, startedAt: string): Promise<boolean>;
+  /** Durably crosses the QueryRun-save boundary before a no-payment result can appear. */
+  markA2aOrderResultSaving(id: string, startedAt: string): Promise<boolean>;
   completeA2aOrder(
     id: string,
     response: Record<string, unknown>,
     updatedAt: string,
   ): Promise<boolean>;
   failA2aOrder(id: string, errorCode: string, updatedAt: string): Promise<boolean>;
+  /** Evidence-gated terminal CAS. It never runs research or mutates payment settlement state. */
+  resolveA2aOrder(id: string, update: A2aOrderResolutionUpdate): Promise<boolean>;
+  /** Identifier-free aggregate queue, terminal outcome, and recent latency health. */
+  a2aOperationsSnapshot(nowMs: number): Promise<A2aOperationsSnapshot>;
 
   // ── query memory (cross-query learning — agent remembers which sources work) ──
   /** Save a query memory entry after a successful run. */

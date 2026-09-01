@@ -1,6 +1,6 @@
 # Keryx Project Roadmap
 
-**Version:** 0.19.0 (exact authorization expiry and pending ownership, updated 2026-08-25)
+**Version:** 0.19.0 (A2A operator resolution and queue/error-budget health, updated 2026-09-02)
 **Status:** In continuous operation at [keryx.cc](https://keryx.cc) — real settlement 24/7, shipping in public.
 
 ---
@@ -17,6 +17,8 @@ Shipped and running:
   authorization-keyed durable orders prevent duplicate downstream runs
 - ✓ Durable A2A execution: standards-based `202` acknowledgement, private atomic worker claim,
   read-only polling, and explicit post-start review state without automatic double-spend retries
+- ✓ Evidence-bound A2A operations: private inspect/repair/close runbook, atomic audit receipts,
+  pre-payment boundary journals, missing-ledger refusal, and identifier-free queue/latency health
 - ✓ Evidence-gated legacy reconciliation acknowledgement: reviewed treasury-only ambiguity remains
   pending and continuously checked without creating a permanent readiness alert
 - ✓ Ops: low-downtime health-gated deploys, treasury + registry-parity watchdogs, rotating off-box backups, CI (typecheck + economic-invariant suite)
@@ -45,7 +47,7 @@ The next milestone is not mainnet volume. It is 3–5 external agent teams repea
 narrow research outcome with measurable latency, evidence coverage, completion, settlement, and
 repeat-use rates. Durable A2A jobs remove the first operational blocker. The remaining gates are:
 
-1. worker/error-budget observability and an operator resolution runbook for `review_required`;
+1. ✓ worker/error-budget observability and an operator resolution runbook for `review_required`;
 2. a versioned research package/SLA with buyer-visible quality and latency receipts;
 3. pilot credentials, usage reporting, support ownership, and explicit testnet terms;
 4. four weeks of genuine external cohorts and positive settled unit economics;

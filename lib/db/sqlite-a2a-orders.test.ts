@@ -32,8 +32,12 @@ const order: A2aOrder = {
   request: { question: "q", origin: "a2a" },
   startedAt: "2026-08-29T00:00:00.000Z",
   workerId: "request:a2a_order",
+  executionJournalVersion: 1,
+  paymentStartedAt: null,
+  resultSavingAt: null,
   response: null,
   errorCode: null,
+  resolution: null,
   createdAt: "2026-08-29T00:00:00.000Z",
   updatedAt: "2026-08-29T00:00:00.000Z",
 };
@@ -109,6 +113,147 @@ describe("SQLite A2A order idempotency", () => {
     expect(claimed).toMatchObject({ id: queued.id, startedAt: "2026-08-29T00:04:00.000Z" });
     expect([left, right].filter(Boolean)).toHaveLength(1);
     expect(await db.claimNextA2aOrder("worker-late", "2026-08-29T00:05:00.000Z")).toBeNull();
+  });
+
+  it("journals the first creator-payment boundary before gateway work can begin", async () => {
+    const journaled = {
+      ...order,
+      id: "a2a_journaled",
+      queryId: "a2a_journaled",
+      authorizationId: "0xjournaled",
+      transaction: "circle-journaled",
+    };
+    await db.createA2aOrder(journaled);
+    expect(
+      await db.markA2aOrderPaymentStarted(journaled.id, "2026-08-29T00:00:10.000Z"),
+    ).toBe(true);
+    expect(
+      await db.markA2aOrderPaymentStarted(journaled.id, "2026-08-29T00:00:20.000Z"),
+    ).toBe(true);
+    expect(await db.getA2aOrder(journaled.id)).toMatchObject({
+      executionJournalVersion: 1,
+      paymentStartedAt: "2026-08-29T00:00:10.000Z",
+    });
+  });
+
+  it("lets the QueryRun-save checkpoint win atomically over a stale close", async () => {
+    const saving = {
+      ...order,
+      id: "a2a_result_saving",
+      queryId: "a2a_result_saving",
+      authorizationId: "0xresult-saving",
+      transaction: "circle-result-saving",
+    };
+    await db.createA2aOrder(saving);
+    expect(
+      await db.markA2aOrderResultSaving(saving.id, "2026-08-29T00:15:00.000Z"),
+    ).toBe(true);
+    expect(await db.getA2aOrder(saving.id)).toMatchObject({
+      status: "running",
+      resultSavingAt: "2026-08-29T00:15:00.000Z",
+    });
+    expect(
+      await db.resolveA2aOrder(saving.id, {
+        status: "failed",
+        errorCode: "operator_reviewed_no_result",
+        startedBefore: "2026-08-29T00:05:00.000Z",
+        resolution: {
+          action: "close_failed",
+          actor: "operator-cli",
+          reason: "no_saved_run_before_execution_boundaries",
+          evidence: {
+            executionJournalVersion: 1,
+            paymentBoundaryCrossed: false,
+            resultSaveBoundaryCrossed: false,
+            creatorAttempts: 0,
+            settledCreatorMicros: 0,
+            pendingCreatorMicros: 0,
+            failedCreatorMicros: 0,
+            simulatedCreatorMicros: 0,
+            queryRunFound: false,
+          },
+          resolvedAt: "2026-08-29T00:20:00.000Z",
+        },
+      }),
+    ).toBe(false);
+    expect(await db.getA2aOrder(saving.id)).toMatchObject({ status: "running" });
+  });
+
+  it("atomically stores reviewed failure evidence and refuses ambiguous payment rows", async () => {
+    const stale = {
+      ...order,
+      id: "a2a_reviewed",
+      queryId: "a2a_reviewed",
+      authorizationId: "0xreviewed",
+      transaction: "circle-reviewed",
+      startedAt: "2026-08-29T00:00:00.000Z",
+    };
+    await db.createA2aOrder(stale);
+    const resolution = {
+      action: "close_failed" as const,
+      actor: "operator-cli" as const,
+      reason: "no_saved_run_before_execution_boundaries" as const,
+      evidence: {
+        executionJournalVersion: 1 as const,
+        paymentBoundaryCrossed: false,
+        resultSaveBoundaryCrossed: false,
+        creatorAttempts: 0,
+        settledCreatorMicros: 0,
+        pendingCreatorMicros: 0,
+        failedCreatorMicros: 0,
+        simulatedCreatorMicros: 0,
+        queryRunFound: false,
+      },
+      resolvedAt: "2026-08-29T00:20:00.000Z",
+    };
+    expect(
+      await db.resolveA2aOrder(stale.id, {
+        status: "failed",
+        errorCode: "operator_reviewed_no_result",
+        startedBefore: "2026-08-29T00:05:00.000Z",
+        resolution,
+      }),
+    ).toBe(true);
+    expect(await db.getA2aOrder(stale.id)).toMatchObject({
+      status: "failed",
+      errorCode: "operator_reviewed_no_result",
+      resolution,
+    });
+
+    const ambiguous = {
+      ...stale,
+      id: "a2a_ambiguous",
+      queryId: "a2a_ambiguous",
+      authorizationId: "0xambiguous",
+      transaction: "circle-ambiguous",
+      status: "running" as const,
+      resolution: null,
+      paymentStartedAt: null,
+    };
+    await db.createA2aOrder(ambiguous);
+    await db.recordPayment({
+      id: "pending-a2a-creator",
+      kind: "fetch",
+      queryId: ambiguous.queryId,
+      sourceId: "source",
+      sourceName: "Source",
+      payer: ambiguous.payee,
+      payee: ambiguous.payer,
+      amountUsdc: 0.01,
+      network: "eip155:5042002",
+      settled: false,
+      settlementStatus: "pending",
+      createdAt: "2026-08-29T00:01:00.000Z",
+    });
+    expect(
+      await db.resolveA2aOrder(ambiguous.id, {
+        status: "failed",
+        errorCode: "operator_reviewed_no_result",
+        startedBefore: "2026-08-29T00:05:00.000Z",
+        resolution: { ...resolution, resolvedAt: "2026-08-29T00:21:00.000Z" },
+      }),
+    ).toBe(false);
+    expect(await db.getA2aOrder(ambiguous.id)).toMatchObject({ status: "running" });
   });
 
   it("marks legacy running rows started so migration cannot accidentally rerun creator spend", async () => {

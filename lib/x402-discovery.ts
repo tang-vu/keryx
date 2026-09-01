@@ -79,6 +79,15 @@ export const a2aDiscovery = {
       },
       queryId: { type: "string", description: "Dispatch id — reasoning trace at /dispatch/{queryId}" },
       pollUrl: { type: "string", description: "Read-only result URL for async jobs" },
+      error: { type: "string", description: "Terminal safe error code when status is failed" },
+      resolution: {
+        type: "object",
+        description: "Sanitized evidence-bound operator resolution for a reviewed failure",
+      },
+      creatorPayments: {
+        type: "object",
+        description: "Attempt count plus failed/simulated creator-payment amounts",
+      },
       answer: { type: "string", description: "Grounded answer with inline citation markers" },
       citations: {
         type: "array",

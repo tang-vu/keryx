@@ -3,6 +3,45 @@ import type { ResearchMode } from "../types";
 
 export type A2aOrderStatus = "running" | "completed" | "failed";
 
+export const A2A_REVIEW_AFTER_MS = 15 * 60_000;
+export const A2A_QUEUE_SLA_MS = 2 * 60_000;
+
+export interface A2aResolutionEvidence {
+  executionJournalVersion: 1 | null;
+  paymentBoundaryCrossed: boolean;
+  resultSaveBoundaryCrossed: boolean;
+  creatorAttempts: number;
+  settledCreatorMicros: number;
+  pendingCreatorMicros: number;
+  failedCreatorMicros: number;
+  simulatedCreatorMicros: number;
+  queryRunFound: boolean;
+}
+
+export interface A2aOrderResolution {
+  action: "repair_completed" | "close_failed";
+  actor: "automatic-poll" | "operator-cli";
+  reason:
+    | "saved_real_query_run"
+    | "no_saved_run_before_execution_boundaries";
+  evidence: A2aResolutionEvidence;
+  resolvedAt: string;
+}
+
+export type A2aOrderResolutionUpdate =
+  | {
+      status: "completed";
+      response: Record<string, unknown>;
+      resolution: A2aOrderResolution;
+    }
+  | {
+      status: "failed";
+      errorCode: "operator_reviewed_no_result";
+      /** The CAS accepts only jobs started at or before this timestamp. */
+      startedBefore: string;
+      resolution: A2aOrderResolution;
+    };
+
 export interface A2aOrderRequest {
   question: string;
   model?: string;
@@ -27,8 +66,16 @@ export interface A2aOrder {
   /** Null means durably queued. Once set, the job is never automatically claimed again. */
   startedAt: string | null;
   workerId: string | null;
+  /** Versioned proof that creator payment calls are checkpointed before they can begin. */
+  executionJournalVersion: 1 | null;
+  /** Set durably before the first creator gateway call; null proves no call only for journal v1. */
+  paymentStartedAt: string | null;
+  /** Set before QueryRun persistence so operator close cannot race a late no-payment result. */
+  resultSavingAt: string | null;
   response: Record<string, unknown> | null;
   errorCode: string | null;
+  /** Private immutable evidence for an operator/automatic recovery transition. */
+  resolution: A2aOrderResolution | null;
   createdAt: string;
   updatedAt: string;
 }

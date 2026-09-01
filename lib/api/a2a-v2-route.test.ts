@@ -60,6 +60,9 @@ describe("A2A v2 route", () => {
     createA2aOrder: ReturnType<typeof vi.fn>;
     completeA2aOrder: ReturnType<typeof vi.fn>;
     failA2aOrder: ReturnType<typeof vi.fn>;
+    resolveA2aOrder: ReturnType<typeof vi.fn>;
+    markA2aOrderPaymentStarted: ReturnType<typeof vi.fn>;
+    markA2aOrderResultSaving: ReturnType<typeof vi.fn>;
     getQueryRun: ReturnType<typeof vi.fn>;
     getA2aOrder: ReturnType<typeof vi.fn>;
     listCreatorPaymentAttemptsByQuery: ReturnType<typeof vi.fn>;
@@ -71,13 +74,22 @@ describe("A2A v2 route", () => {
     mocks.checkRateLimit.mockResolvedValue(null);
     db = {
       recordPaymentOnce: vi.fn().mockResolvedValue(true),
-      createA2aOrder: vi.fn(async (order) => ({ created: true, order })),
+      createA2aOrder: vi.fn(),
       completeA2aOrder: vi.fn().mockResolvedValue(true),
       failA2aOrder: vi.fn().mockResolvedValue(true),
+      resolveA2aOrder: vi.fn().mockResolvedValue(true),
+      markA2aOrderPaymentStarted: vi.fn().mockResolvedValue(true),
+      markA2aOrderResultSaving: vi.fn().mockResolvedValue(true),
       getQueryRun: vi.fn().mockResolvedValue(null),
       getA2aOrder: vi.fn().mockResolvedValue(null),
-      listCreatorPaymentAttemptsByQuery: vi.fn().mockResolvedValue([]),
+      listCreatorPaymentAttemptsByQuery: vi.fn().mockResolvedValue([
+        { amountUsdc: 0.031, settled: true, settlementStatus: "settled" },
+      ]),
     };
+    db.createA2aOrder.mockImplementation(async (order) => {
+      db.getA2aOrder.mockResolvedValue(order);
+      return { created: true, order };
+    });
     mocks.getDb.mockResolvedValue(db);
     mocks.collectRun.mockImplementation(async (input) => ({ ...run, id: input.queryId }));
     mocks.settleThenServe.mockImplementation(async (_req, opts, produce) => {
@@ -170,13 +182,21 @@ describe("A2A v2 route", () => {
   it("repairs a lost completion write from the saved real QueryRun", async () => {
     db.createA2aOrder.mockImplementation(async (order) => ({ created: false, order }));
     db.getQueryRun.mockImplementation(async (queryId) => ({ ...run, id: queryId }));
+    db.getA2aOrder.mockImplementation(async (queryId) => ({
+      ...db.createA2aOrder.mock.calls[0]?.[0],
+      id: queryId,
+      queryId,
+      status: "completed",
+      response: { status: "completed", queryId },
+    }));
     const response = await POST(request({ question: "q", budget: 0.05, researchMode: "deep" }));
     expect(await response.json()).toMatchObject({ status: "completed", replayed: true });
-    expect(db.completeA2aOrder).toHaveBeenCalledOnce();
+    expect(db.resolveA2aOrder).toHaveBeenCalledOnce();
+    expect(db.completeA2aOrder).not.toHaveBeenCalled();
     expect(mocks.collectRun).not.toHaveBeenCalled();
   });
 
-  it("never publishes a simulated saved run for a settled call", async () => {
+  it("keeps a simulated saved run under review without publishing it", async () => {
     db.createA2aOrder.mockImplementation(async (order) => ({ created: false, order }));
     db.getQueryRun.mockImplementation(async (queryId) => ({
       ...run,
@@ -184,8 +204,9 @@ describe("A2A v2 route", () => {
       paymentMode: "offline",
     }));
     const response = await POST(request({ question: "q", budget: 0.05, researchMode: "deep" }));
-    expect(response.status).toBe(500);
-    expect(db.completeA2aOrder).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ status: "processing", replayed: true });
+    expect(db.resolveA2aOrder).not.toHaveBeenCalled();
     expect(mocks.collectRun).not.toHaveBeenCalled();
   });
 
@@ -217,8 +238,12 @@ describe("A2A v2 route", () => {
       request: { question: "q", origin: "a2a" },
       startedAt: "now",
       workerId: "worker",
+      executionJournalVersion: 1,
+      paymentStartedAt: null,
+      resultSavingAt: null,
       response: { status: "completed", queryId, answer: "saved" },
       errorCode: null,
+      resolution: null,
       createdAt: "now",
       updatedAt: "now",
     });
@@ -259,8 +284,12 @@ describe("A2A v2 route", () => {
       request: { question: "private question", origin: "a2a" },
       startedAt: null,
       workerId: null,
+      executionJournalVersion: 1,
+      paymentStartedAt: null,
+      resultSavingAt: null,
       response: null,
       errorCode: null,
+      resolution: null,
       createdAt: "now",
       updatedAt: "now",
     };
@@ -270,11 +299,101 @@ describe("A2A v2 route", () => {
     expect(payload).toMatchObject({ status: "queued", queryId });
     expect(JSON.stringify(payload)).not.toContain("private question");
 
-    db.getA2aOrder.mockResolvedValue({ ...queued, startedAt: "now", workerId: "worker" });
+    db.getA2aOrder.mockResolvedValue({
+      ...queued,
+      startedAt: new Date().toISOString(),
+      workerId: "worker",
+    });
     const processing = await GET(
       new NextRequest(`http://localhost/api/agent/ask?queryId=${queryId}`),
     );
     expect(await processing.json()).toMatchObject({ status: "processing", queryId });
+  });
+
+  it("publishes audited failed economics without exposing private order data", async () => {
+    const queryId = `a2a_${"c".repeat(64)}`;
+    const failedOrder = {
+      id: queryId,
+      queryId,
+      authorizationId: "0xprivate-nonce",
+      requestHash: "request-hash",
+      payer: "0x1111111111111111111111111111111111111111",
+      payee: "0x2222222222222222222222222222222222222222",
+      amountUsdc: 0.1,
+      creatorBudgetUsdc: 0.05,
+      serviceFeeUsdc: 0.05,
+      researchMode: "deep",
+      status: "failed",
+      transaction: "private-circle-transfer",
+      request: { question: "private failed question", origin: "a2a" },
+      startedAt: "2026-09-01T00:00:00.000Z",
+      workerId: "private-worker",
+      executionJournalVersion: 1,
+      paymentStartedAt: null,
+      resultSavingAt: null,
+      response: null,
+      errorCode: "operator_reviewed_no_result",
+      resolution: {
+        action: "close_failed",
+        actor: "operator-cli",
+        reason: "no_saved_run_before_execution_boundaries",
+        evidence: {
+          executionJournalVersion: 1,
+          paymentBoundaryCrossed: false,
+          resultSaveBoundaryCrossed: false,
+          creatorAttempts: 0,
+          settledCreatorMicros: 0,
+          pendingCreatorMicros: 0,
+          failedCreatorMicros: 0,
+          simulatedCreatorMicros: 0,
+          queryRunFound: false,
+        },
+        resolvedAt: "2026-09-01T00:20:00.000Z",
+      },
+      createdAt: "2026-09-01T00:00:00.000Z",
+      updatedAt: "2026-09-01T00:20:00.000Z",
+    } as const;
+    db.getA2aOrder.mockResolvedValue(failedOrder);
+    db.listCreatorPaymentAttemptsByQuery.mockResolvedValue([]);
+    const response = await GET(new NextRequest(`http://localhost/api/agent/ask?queryId=${queryId}`));
+    const payload = await response.json();
+    expect(payload).toMatchObject({
+      status: "failed",
+      error: "operator_reviewed_no_result",
+      pricing: {
+        settledCreatorSpendUsdc: 0,
+        pendingCreatorSpendUsdc: 0,
+        unusedCreatorReserveUsdc: 0.05,
+      },
+      creatorPayments: { attempts: 0, failedUsdc: 0, accountingComplete: true },
+      resolution: {
+        action: "close_failed",
+        reason: "no_saved_run_before_execution_boundaries",
+        evidence: { settledCreatorSpendUsdc: 0, failedCreatorSpendUsdc: 0 },
+      },
+    });
+    expect(JSON.stringify(payload)).not.toMatch(
+      /private failed question|private-worker|private-circle-transfer|0xprivate-nonce/,
+    );
+
+    db.getA2aOrder.mockResolvedValue({
+      ...failedOrder,
+      paymentStartedAt: "2026-09-01T00:00:01.000Z",
+      errorCode: "research_failed",
+      resolution: null,
+    });
+    db.listCreatorPaymentAttemptsByQuery.mockResolvedValue([
+      { amountUsdc: 0.01, settled: true, settlementStatus: "settled" },
+    ]);
+    const incomplete = await GET(
+      new NextRequest(`http://localhost/api/agent/ask?queryId=${queryId}`),
+    );
+    expect(await incomplete.json()).toMatchObject({
+      status: "failed",
+      pricing: { accountingComplete: false, unusedCreatorReserveUsdc: null },
+      creatorPayments: { accountingComplete: false },
+      message: expect.stringContaining("lower bound"),
+    });
   });
 
   it("refuses payment before issuing a challenge when the server is forced offline", async () => {
@@ -284,7 +403,7 @@ describe("A2A v2 route", () => {
     expect(mocks.settleThenServe).not.toHaveBeenCalled();
   });
 
-  it("fails the paid order when the producer unexpectedly returns offline accounting", async () => {
+  it("does not terminally hide a saved run with unexpected offline accounting", async () => {
     mocks.collectRun.mockImplementation(async (input) => ({
       ...run,
       id: input.queryId,
@@ -292,7 +411,7 @@ describe("A2A v2 route", () => {
     }));
     const response = await POST(request({ question: "q", budget: 0.05 }));
     expect(response.status).toBe(500);
-    expect(db.failA2aOrder).toHaveBeenCalledOnce();
+    expect(db.failA2aOrder).not.toHaveBeenCalled();
     expect(db.completeA2aOrder).not.toHaveBeenCalled();
   });
 
