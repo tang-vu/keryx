@@ -81,8 +81,11 @@ say "5/7 npm ci + typecheck + build (this is the slow step on 1GB)"
 ssh "$SSH" "cd $APP_DIR && npm ci --no-audit --no-fund && NODE_OPTIONS=--max-old-space-size=1536 npm run typecheck && NODE_OPTIONS=--max-old-space-size=1536 npm run build"
 
 # --- 6. start under pm2, persist across reboot -------------------------------
-say "6/7 (re)starting app under pm2 on :$PORT"
-ssh "$SSH" "cd $APP_DIR && (pm2 reload keryx 2>/dev/null || pm2 start npm --name keryx -- run start) && pm2 save && pm2 startup systemd -u root --hp /root >/dev/null 2>&1; pm2 status"
+say "6/7 (re)starting app + durable A2A worker under pm2 on :$PORT"
+ssh "$SSH" "cd $APP_DIR \
+  && (pm2 reload keryx 2>/dev/null || pm2 start npm --name keryx -- run start) \
+  && (pm2 restart keryx-a2a-worker --update-env 2>/dev/null || pm2 start npm --name keryx-a2a-worker --kill-timeout 330000 -- run a2a-worker) \
+  && pm2 save && pm2 startup systemd -u root --hp /root >/dev/null 2>&1; pm2 status"
 
 # --- 7. hourly cron: consistent DB backup + treasury/registry/llm/dispatch watchdogs ----
 # Backup snapshots the live db (off-box when KERYX_BACKUP_REMOTE set); the treasury watchdog alerts

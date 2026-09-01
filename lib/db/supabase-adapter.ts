@@ -748,6 +748,16 @@ export class SupabaseAdapter implements KeryxDB {
     return data ? rowToA2aOrder(data) : null;
   }
 
+  async claimNextA2aOrder(workerId: string, startedAt: string): Promise<A2aOrder | null> {
+    const { data, error } = await this.sb.rpc("claim_a2a_order", {
+      p_worker_id: workerId,
+      p_started_at: startedAt,
+    });
+    if (error) throw error;
+    const row = Array.isArray(data) ? data[0] : data;
+    return row ? rowToA2aOrder(row as Record<string, unknown>) : null;
+  }
+
   async completeA2aOrder(
     id: string,
     response: Record<string, unknown>,
@@ -1607,6 +1617,9 @@ function a2aOrderToRow(order: A2aOrder) {
     research_mode: order.researchMode,
     status: order.status,
     transaction_id: order.transaction,
+    request_data: order.request,
+    started_at: order.startedAt,
+    worker_id: order.workerId,
     response_data: order.response,
     error_code: order.errorCode,
     created_at: order.createdAt,
@@ -1628,6 +1641,9 @@ function rowToA2aOrder(r: Record<string, unknown>): A2aOrder {
     researchMode: r.research_mode === "quick" ? "quick" : "deep",
     status: r.status as A2aOrder["status"],
     transaction: String(r.transaction_id),
+    request: (r.request_data as A2aOrder["request"]) ?? null,
+    startedAt: r.started_at == null ? null : String(r.started_at),
+    workerId: r.worker_id == null ? null : String(r.worker_id),
     response: (r.response_data as Record<string, unknown> | null) ?? null,
     errorCode: r.error_code == null ? null : String(r.error_code),
     createdAt: String(r.created_at),

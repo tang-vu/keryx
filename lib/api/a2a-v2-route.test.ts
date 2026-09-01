@@ -82,12 +82,13 @@ describe("A2A v2 route", () => {
     mocks.collectRun.mockImplementation(async (input) => ({ ...run, id: input.queryId }));
     mocks.settleThenServe.mockImplementation(async (_req, opts, produce) => {
       try {
-        return Response.json(await produce({
+        const produced = await produce({
           payer: "0x1111111111111111111111111111111111111111",
           transaction: "circle-transfer",
           amountUsdc: opts.priceUsdc,
           authorizationId: "0xnonce",
-        }));
+        });
+        return produced instanceof Response ? produced : Response.json(produced);
       } catch {
         return Response.json({ error: "paid resource unavailable after settlement" }, { status: 500 });
       }
@@ -133,6 +134,37 @@ describe("A2A v2 route", () => {
     const response = await POST(request({ question: "q", budget: 0.05, researchMode: "deep" }));
     expect(await response.json()).toMatchObject({ status: "processing", replayed: true });
     expect(mocks.collectRun).not.toHaveBeenCalled();
+  });
+
+  it("settles, durably queues, and returns 202 without running research inline", async () => {
+    const response = await POST(
+      request({ question: "q", budget: 0.05, researchMode: "deep", responseMode: "async" }),
+    );
+    expect(response.status).toBe(202);
+    expect(response.headers.get("location")).toMatch(/^\/api\/agent\/ask\?queryId=a2a_/);
+    expect(response.headers.get("retry-after")).toBe("2");
+    expect(await response.json()).toMatchObject({ status: "queued", pollUrl: expect.any(String) });
+    expect(mocks.collectRun).not.toHaveBeenCalled();
+    const proposed = db.createA2aOrder.mock.calls[0][0];
+    expect(proposed).toMatchObject({
+      request: { question: "q", origin: "a2a" },
+      startedAt: null,
+      workerId: null,
+    });
+  });
+
+  it("honors Prefer: respond-async and rejects unknown response modes", async () => {
+    const preferred = request({ question: "q", budget: 0.05 });
+    preferred.headers.set("prefer", "respond-async");
+    const preferredResponse = await POST(preferred);
+    expect(preferredResponse.status).toBe(202);
+    expect(preferredResponse.headers.get("preference-applied")).toBe("respond-async");
+    expect(preferredResponse.headers.get("vary")).toBe("Prefer");
+    expect(mocks.collectRun).not.toHaveBeenCalled();
+
+    const invalid = await POST(request({ question: "q", responseMode: "later" }));
+    expect(invalid.status).toBe(400);
+    expect(mocks.settleThenServe).toHaveBeenCalledOnce();
   });
 
   it("repairs a lost completion write from the saved real QueryRun", async () => {
@@ -182,6 +214,9 @@ describe("A2A v2 route", () => {
       researchMode: "deep",
       status: "completed",
       transaction: "circle-transfer",
+      request: { question: "q", origin: "a2a" },
+      startedAt: "now",
+      workerId: "worker",
       response: { status: "completed", queryId, answer: "saved" },
       errorCode: null,
       createdAt: "now",
@@ -206,6 +241,42 @@ describe("A2A v2 route", () => {
     expect(mocks.collectRun).not.toHaveBeenCalled();
   });
 
+  it("distinguishes queued from processing without exposing private worker input", async () => {
+    const queryId = `a2a_${"b".repeat(64)}`;
+    const queued = {
+      id: queryId,
+      queryId,
+      authorizationId: "0xnonce",
+      requestHash: "request-hash",
+      payer: "0x1111111111111111111111111111111111111111",
+      payee: "0x2222222222222222222222222222222222222222",
+      amountUsdc: 0.1,
+      creatorBudgetUsdc: 0.05,
+      serviceFeeUsdc: 0.05,
+      researchMode: "deep",
+      status: "running",
+      transaction: "circle-transfer",
+      request: { question: "private question", origin: "a2a" },
+      startedAt: null,
+      workerId: null,
+      response: null,
+      errorCode: null,
+      createdAt: "now",
+      updatedAt: "now",
+    };
+    db.getA2aOrder.mockResolvedValue(queued);
+    const response = await GET(new NextRequest(`http://localhost/api/agent/ask?queryId=${queryId}`));
+    const payload = await response.json();
+    expect(payload).toMatchObject({ status: "queued", queryId });
+    expect(JSON.stringify(payload)).not.toContain("private question");
+
+    db.getA2aOrder.mockResolvedValue({ ...queued, startedAt: "now", workerId: "worker" });
+    const processing = await GET(
+      new NextRequest(`http://localhost/api/agent/ask?queryId=${queryId}`),
+    );
+    expect(await processing.json()).toMatchObject({ status: "processing", queryId });
+  });
+
   it("refuses payment before issuing a challenge when the server is forced offline", async () => {
     vi.stubEnv("KERYX_FORCE_OFFLINE", "1");
     const response = await POST(request({ question: "q", budget: 0.05 }));
@@ -223,5 +294,15 @@ describe("A2A v2 route", () => {
     expect(response.status).toBe(500);
     expect(db.failA2aOrder).toHaveBeenCalledOnce();
     expect(db.completeA2aOrder).not.toHaveBeenCalled();
+  });
+
+  it("does not terminally fail a saved paid run when only the completion CAS is unavailable", async () => {
+    db.completeA2aOrder.mockRejectedValue(new Error("database timeout"));
+
+    const response = await POST(request({ question: "q", budget: 0.05 }));
+
+    expect(response.status).toBe(500);
+    expect(mocks.collectRun).toHaveBeenCalledOnce();
+    expect(db.failA2aOrder).not.toHaveBeenCalled();
   });
 });

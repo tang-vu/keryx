@@ -19,10 +19,9 @@ import {
   a2aReceiptEconomics,
   parseResearchMode,
   quoteA2aResearch,
-  type A2aQuote,
 } from "@/lib/a2a/pricing";
 import { a2aOrderId, a2aRequestHash, sameA2aOrder, type A2aOrder } from "@/lib/a2a/order";
-import type { QueryRun } from "@/lib/types";
+import { a2aResponseFromRun, quoteFromA2aOrder } from "@/lib/a2a/result";
 import type { KeryxDB } from "@/lib/db/keryx-db";
 import { paymentSettlementStatus } from "@/lib/payments/payment-state";
 
@@ -40,41 +39,6 @@ function requirements(priceUsdc: number, payTo = config.sellerAddress ?? "") {
   };
 }
 
-function responseFromRun(run: QueryRun, quote: ReturnType<typeof quoteA2aResearch>) {
-  if (run.paymentMode !== "real") {
-    throw new Error("paid A2A research did not use the real treasury gateway");
-  }
-  return {
-    status: "completed",
-    queryId: run.id,
-    answer: run.answer,
-    citations: run.citations.map((citation) => ({
-      source: citation.sourceName,
-      weight: citation.weight,
-      reward: citation.reward,
-    })),
-    evidence: (run.evidence ?? []).filter((item) => item.qualifiesForReward),
-    claimCoverage: run.claimCoverage ?? [],
-    creatorsPaid: run.citations.length,
-    totalToCreators: run.totalToCreators,
-    feePaid: quote.serviceFeeUsdc,
-    totalPricePaid: quote.totalPriceUsdc,
-    pricing: a2aReceiptEconomics(quote, run.totalToCreators, run.pendingSpendUsdc ?? 0),
-    engine: run.engine,
-  } satisfies Record<string, unknown>;
-}
-
-function quoteFromOrder(order: A2aOrder): A2aQuote {
-  return {
-    policy: "a2a-fixed-package-v2",
-    researchMode: order.researchMode,
-    creatorBudgetUsdc: order.creatorBudgetUsdc,
-    serviceFeeUsdc: order.serviceFeeUsdc,
-    totalPriceUsdc: order.amountUsdc,
-    refundable: false,
-  };
-}
-
 async function currentCompletedResponse(db: KeryxDB, order: A2aOrder) {
   const attempts = await db.listCreatorPaymentAttemptsByQuery(order.queryId);
   const settled = attempts
@@ -86,7 +50,22 @@ async function currentCompletedResponse(db: KeryxDB, order: A2aOrder) {
   return {
     ...(order.response ?? {}),
     totalToCreators: Math.round(settled * 1e6) / 1e6,
-    pricing: a2aReceiptEconomics(quoteFromOrder(order), settled, pending),
+    pricing: a2aReceiptEconomics(quoteFromA2aOrder(order), settled, pending),
+  };
+}
+
+function pendingResponse(order: A2aOrder, replayed = false) {
+  const startedMs = order.startedAt ? Date.parse(order.startedAt) : Number.NaN;
+  const needsReview = Number.isFinite(startedMs) && Date.now() - startedMs > 15 * 60_000;
+  const status = needsReview ? "review_required" : order.startedAt ? "processing" : "queued";
+  return {
+    status,
+    queryId: order.queryId,
+    pollUrl: `/api/agent/ask?queryId=${encodeURIComponent(order.queryId)}`,
+    ...(needsReview
+      ? { message: "The paid job started but did not finish; operator review is required before any retry." }
+      : {}),
+    ...(replayed ? { replayed: true } : {}),
   };
 }
 
@@ -108,11 +87,11 @@ export async function GET(req?: NextRequest) {
     }
     const saved = await db.getQueryRun(queryId);
     if (saved) {
-      const recovered = responseFromRun(saved, quoteFromOrder(order));
+      const recovered = a2aResponseFromRun(saved, quoteFromA2aOrder(order));
       await db.completeA2aOrder(queryId, recovered, new Date().toISOString());
       return Response.json(recovered);
     }
-    return Response.json({ status: "processing", queryId });
+    return Response.json(pendingResponse(order));
   }
   if (!config.sellerAddress || !config.funderKey || process.env.KERYX_FORCE_OFFLINE === "1") {
     return Response.json({ error: "real A2A treasury is unavailable" }, { status: 503 });
@@ -129,6 +108,7 @@ export async function GET(req?: NextRequest) {
       question: "string (required)",
       budget: `creator-spend cap in USDC (optional, max ${config.a2aMaxBudget})`,
       researchMode: "quick | deep (optional; default deep)",
+      responseMode: "wait | async (optional; async returns 202 + poll URL)",
     },
     response: "cited answer + itemized service fee, creator spend, and unused reserve",
     docs: "/api/docs",
@@ -162,6 +142,7 @@ export async function POST(req: NextRequest) {
     budget?: unknown;
     model?: unknown;
     researchMode?: unknown;
+    responseMode?: unknown;
   };
   const parsedQuestion = parseAskQuestion(body.question);
   if (!parsedQuestion.success) {
@@ -173,6 +154,14 @@ export async function POST(req: NextRequest) {
   if (!treasury) return Response.json({ error: "treasury wallet not configured" }, { status: 500 });
   const model =
     typeof body.model === "string" ? body.model.trim().slice(0, 64) || undefined : undefined;
+  if (body.responseMode !== undefined && body.responseMode !== "wait" && body.responseMode !== "async") {
+    return Response.json({ error: "responseMode must be wait or async" }, { status: 400 });
+  }
+  const preferAsync = req.headers
+    .get("prefer")
+    ?.split(",")
+    .some((value) => value.trim().toLowerCase() === "respond-async");
+  const respondAsync = body.responseMode === "async" || (body.responseMode === undefined && preferAsync);
   const requestHash = a2aRequestHash({
     question: parsedQuestion.question,
     creatorBudgetUsdc: quote.creatorBudgetUsdc,
@@ -213,6 +202,9 @@ export async function POST(req: NextRequest) {
       researchMode,
       status: "running",
       transaction: settle.transaction,
+      request: { question: parsedQuestion.question, model, origin },
+      startedAt: respondAsync ? null : now,
+      workerId: respondAsync ? null : `request:${orderId}`,
       response: null,
       errorCode: null,
       createdAt: now,
@@ -256,13 +248,25 @@ export async function POST(req: NextRequest) {
       // Recover the narrow crash window after collectRun saved but before order completion landed.
       const saved = await db.getQueryRun(queryId);
       if (saved) {
-        const recovered = responseFromRun(saved, quote);
+        const recovered = a2aResponseFromRun(saved, quote);
         await db.completeA2aOrder(orderId, recovered, new Date().toISOString());
         return { ...recovered, replayed: true };
       }
-      return { status: "processing", queryId, replayed: true };
+      return pendingResponse(claimed.order, true);
     }
 
+    if (respondAsync) {
+      return Response.json(pendingResponse(claimed.order), {
+        status: 202,
+        headers: {
+          Location: `/api/agent/ask?queryId=${encodeURIComponent(queryId)}`,
+          "Retry-After": "2",
+          ...(preferAsync ? { "Preference-Applied": "respond-async", Vary: "Prefer" } : {}),
+        },
+      });
+    }
+
+    let response: Record<string, unknown>;
     try {
       const run = await collectRun({
         question: parsedQuestion.question,
@@ -273,14 +277,16 @@ export async function POST(req: NextRequest) {
         fundingOwner: "treasury",
         model,
       });
-      const response = responseFromRun(run, quote);
-      if (!(await db.completeA2aOrder(orderId, response, new Date().toISOString()))) {
-        throw new Error("A2A order completion lost its running-state claim");
-      }
-      return response;
+      response = a2aResponseFromRun(run, quote);
     } catch (error) {
       await db.failA2aOrder(orderId, "research_failed", new Date().toISOString()).catch(() => false);
       throw error;
     }
+    // The QueryRun is already durable. If this final CAS is lost or ambiguous, leave the order
+    // running so GET/replay can repair it instead of hiding a possibly paid result as failed.
+    if (!(await db.completeA2aOrder(orderId, response, new Date().toISOString()))) {
+      throw new Error("A2A order completion is pending durable recovery");
+    }
+    return response;
   });
 }

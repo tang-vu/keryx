@@ -155,4 +155,22 @@ describe("settleThenServe bazaar discovery passthrough", () => {
       network: "eip155:5042002",
     });
   });
+
+  it("preserves a producer Response status and headers while attaching settlement proof", async () => {
+    verifyMock.mockResolvedValue(VALID);
+    settleMock.mockResolvedValue(SETTLED);
+
+    const res = await settleThenServe(paidRequest(), baseOpts, () =>
+      Response.json(
+        { status: "queued" },
+        { status: 202, headers: { Location: "/api/agent/ask?queryId=a2a_test", "Retry-After": "2" } },
+      ),
+    );
+
+    expect(res.status).toBe(202);
+    expect(res.headers.get("location")).toBe("/api/agent/ask?queryId=a2a_test");
+    expect(res.headers.get("retry-after")).toBe("2");
+    expect(res.headers.get("payment-response")).toBeTruthy();
+    expect(await res.json()).toEqual({ status: "queued" });
+  });
 });

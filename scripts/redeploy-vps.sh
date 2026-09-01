@@ -65,8 +65,12 @@ REMOTE
 say "3/5 typechecking + building into .next.tmp (old build still live)"
 run_ssh "$SSH" "cd $APP_DIR && NODE_OPTIONS=--max-old-space-size=1536 npm run typecheck && rm -rf .next.tmp && NODE_OPTIONS=--max-old-space-size=1536 NEXT_DIST_DIR=.next.tmp npm run build"
 
-# 4. atomic swap + reload
-say "4/5 swapping in the new build + reload"
+# 4. Start/restart the new durable worker before exposing the async route, then swap the web build.
+# PM2 gives an in-flight worker up to 330s to finish after SIGINT; started jobs are never requeued.
+say "4/5 starting A2A worker + swapping in the new build + reload"
+run_ssh "$SSH" "cd $APP_DIR \
+  && (pm2 restart keryx-a2a-worker --update-env 2>/dev/null || pm2 start npm --name keryx-a2a-worker --kill-timeout 330000 -- run a2a-worker) \
+  && test \"\$(pm2 pid keryx-a2a-worker)\" != \"0\""
 run_ssh "$SSH" "cd $APP_DIR \
   && rm -rf .next.bak && mv .next .next.bak && mv .next.tmp .next \
   && KERYX_COMMIT=$COMMIT pm2 reload keryx --update-env"

@@ -60,14 +60,25 @@ export const a2aDiscovery = {
           enum: ["quick", "deep"],
           description: "Quick or Deep orchestration fee/attention policy (default Deep)",
         },
+        responseMode: {
+          type: "string",
+          enum: ["wait", "async"],
+          description:
+            "Async returns 202 with a durable poll URL; default wait preserves compatibility",
+        },
       },
     },
   },
   output: {
     type: "object",
-    required: ["queryId", "answer", "citations"],
+    required: ["status", "queryId"],
     properties: {
+      status: {
+        type: "string",
+        description: "queued | processing | review_required | completed | failed",
+      },
       queryId: { type: "string", description: "Dispatch id — reasoning trace at /dispatch/{queryId}" },
+      pollUrl: { type: "string", description: "Read-only result URL for async jobs" },
       answer: { type: "string", description: "Grounded answer with inline citation markers" },
       citations: {
         type: "array",

@@ -25,6 +25,7 @@
     "arc:update": "node --import tsx --no-warnings scripts/arc-update.mts",
     "verify:receipt": "node --import tsx --no-warnings scripts/verify-research-receipt.mts",
     "a2a": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/a2a-client.mts",
+    "a2a-worker": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/a2a-research-worker.mts",
     "mcp": "node --import tsx --no-warnings --env-file-if-exists=.env.local mcp/keryx-mcp-server.mts",
     "web": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/web-client.mts",
     "deploy": "bash scripts/deploy-vps.sh",

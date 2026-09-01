@@ -64,6 +64,26 @@ export const openapiSpec = {
             enum: ["quick", "deep"],
             default: "deep",
           },
+          responseMode: {
+            type: "string",
+            enum: ["wait", "async"],
+            default: "wait",
+            description:
+              "Use async for a durable 202 acknowledgement, then poll the returned URL. Prefer: respond-async is also supported.",
+          },
+        },
+      },
+      A2aPendingResponse: {
+        type: "object",
+        required: ["status", "queryId", "pollUrl"],
+        properties: {
+          status: {
+            type: "string",
+            enum: ["queued", "processing", "review_required"],
+          },
+          queryId: { type: "string", pattern: "^a2a_[a-f0-9]{64}$" },
+          pollUrl: { type: "string" },
+          message: { type: "string" },
         },
       },
       AskResponse: {
@@ -437,7 +457,8 @@ export const openapiSpec = {
             name: "queryId",
             required: false,
             schema: { type: "string", pattern: "^a2a_[a-f0-9]{64}$" },
-            description: "When present, reads durable completed/processing/failed state without payment.",
+            description:
+              "When present, reads durable queued/processing/review-required/completed/failed state without payment.",
           },
         ],
         responses: {
@@ -454,7 +475,8 @@ export const openapiSpec = {
           "and settles weighted citation nanopayments to creators in USDC on Arc. " +
           "The body determines an exact all-in x402 price before settlement: a fixed Quick/Deep " +
           "orchestration fee plus the bounded creator-spend cap. The non-refundable receipt " +
-          "itemizes actual creator spend and unused reserve.",
+          "itemizes actual creator spend and unused reserve. Production callers can request a " +
+          "durable 202 job with responseMode=async or Prefer: respond-async.",
         security: [{ X402Payment: [] }, { ApiKeyAuth: [], X402Payment: [] }],
         requestBody: {
           required: true,
@@ -467,8 +489,35 @@ export const openapiSpec = {
               "application/json": { schema: { $ref: "#/components/schemas/AskResponse" } },
             },
           },
+          "202": {
+            description:
+              "Payment settled and research durably queued. Poll Location until completed, failed, or review_required.",
+            headers: {
+              Location: {
+                description: "Read-only durable order URL.",
+                schema: { type: "string" },
+              },
+              "Retry-After": {
+                description: "Suggested seconds before the next poll.",
+                schema: { type: "integer" },
+              },
+              "Preference-Applied": {
+                description: "Present when Prefer: respond-async selected async delivery.",
+                schema: { type: "string", enum: ["respond-async"] },
+              },
+              "PAYMENT-RESPONSE": {
+                description: "Base64-encoded x402 settlement confirmation.",
+                schema: { type: "string", format: "base64" },
+              },
+            },
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/A2aPendingResponse" },
+              },
+            },
+          },
           "400": {
-            description: "Missing or empty question.",
+            description: "Invalid question or response mode.",
             content: {
               "application/json": { schema: { $ref: "#/components/schemas/Error" } },
             },

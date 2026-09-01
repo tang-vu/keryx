@@ -187,6 +187,9 @@ CREATE TABLE IF NOT EXISTS a2a_orders (
   research_mode TEXT NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('running','completed','failed')),
   transaction_id TEXT NOT NULL,
+  request_data TEXT,
+  started_at TEXT,
+  worker_id TEXT,
   response_data TEXT,
   error_code TEXT,
   created_at TEXT NOT NULL,
@@ -552,6 +555,30 @@ export class SqliteAdapter implements KeryxDB {
       this.db.exec(`ALTER TABLE gap_intents ADD COLUMN content_version TEXT`);
     if (!gapCols.has("article_offer_id"))
       this.db.exec(`ALTER TABLE gap_intents ADD COLUMN article_offer_id TEXT`);
+
+    // Durable async A2A jobs. Existing `running` rows may already have spent creator funds, so
+    // migration marks them started and the new worker can never claim them automatically.
+    const a2aCols = new Set(
+      (this.db.prepare(`PRAGMA table_info(a2a_orders)`).all() as { name: string }[]).map(
+        (c) => c.name,
+      ),
+    );
+    const hadStartedAt = a2aCols.has("started_at");
+    if (!a2aCols.has("request_data"))
+      this.db.exec(`ALTER TABLE a2a_orders ADD COLUMN request_data TEXT`);
+    if (!hadStartedAt) this.db.exec(`ALTER TABLE a2a_orders ADD COLUMN started_at TEXT`);
+    if (!a2aCols.has("worker_id"))
+      this.db.exec(`ALTER TABLE a2a_orders ADD COLUMN worker_id TEXT`);
+    if (!hadStartedAt) {
+      this.db.exec(
+        `UPDATE a2a_orders SET started_at=updated_at,worker_id=COALESCE(worker_id,'legacy')
+         WHERE status='running'`,
+      );
+    }
+    this.db.exec(
+      `CREATE INDEX IF NOT EXISTS a2a_orders_queued
+       ON a2a_orders(created_at) WHERE status='running' AND started_at IS NULL`,
+    );
 
   }
 
@@ -1469,9 +1496,9 @@ export class SqliteAdapter implements KeryxDB {
       .prepare(
         `INSERT OR IGNORE INTO a2a_orders
          (id,query_id,authorization_id,request_hash,payer,payee,amount_usdc,creator_budget_usdc,
-          service_fee_usdc,research_mode,status,transaction_id,response_data,error_code,
-          created_at,updated_at)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          service_fee_usdc,research_mode,status,transaction_id,request_data,started_at,worker_id,
+          response_data,error_code,created_at,updated_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       )
       .run(
         order.id,
@@ -1486,6 +1513,9 @@ export class SqliteAdapter implements KeryxDB {
         order.researchMode,
         order.status,
         order.transaction,
+        order.request ? JSON.stringify(order.request) : null,
+        order.startedAt,
+        order.workerId,
         order.response ? JSON.stringify(order.response) : null,
         order.errorCode,
         order.createdAt,
@@ -1498,6 +1528,21 @@ export class SqliteAdapter implements KeryxDB {
 
   async getA2aOrder(id: string): Promise<A2aOrder | null> {
     const row = this.db.prepare(`SELECT * FROM a2a_orders WHERE id=?`).get(id);
+    return row ? rowToA2aOrder(row) : null;
+  }
+
+  async claimNextA2aOrder(workerId: string, startedAt: string): Promise<A2aOrder | null> {
+    const row = this.db
+      .prepare(
+        `UPDATE a2a_orders SET started_at=?,worker_id=?,updated_at=?
+         WHERE id=(
+           SELECT id FROM a2a_orders
+            WHERE status='running' AND started_at IS NULL AND request_data IS NOT NULL
+            ORDER BY created_at,id LIMIT 1
+         ) AND status='running' AND started_at IS NULL
+         RETURNING *`,
+      )
+      .get(startedAt, workerId, startedAt) as Record<string, unknown> | undefined;
     return row ? rowToA2aOrder(row) : null;
   }
 
@@ -2207,6 +2252,11 @@ function rowToA2aOrder(r: Record<string, unknown>): A2aOrder {
     researchMode: r.research_mode === "quick" ? "quick" : "deep",
     status: r.status as A2aOrder["status"],
     transaction: String(r.transaction_id),
+    request: r.request_data
+      ? (JSON.parse(String(r.request_data)) as A2aOrder["request"])
+      : null,
+    startedAt: r.started_at == null ? null : String(r.started_at),
+    workerId: r.worker_id == null ? null : String(r.worker_id),
     response: r.response_data
       ? (JSON.parse(String(r.response_data)) as Record<string, unknown>)
       : null,

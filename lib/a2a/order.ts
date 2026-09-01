@@ -3,6 +3,12 @@ import type { ResearchMode } from "../types";
 
 export type A2aOrderStatus = "running" | "completed" | "failed";
 
+export interface A2aOrderRequest {
+  question: string;
+  model?: string;
+  origin: "a2a" | "engine";
+}
+
 export interface A2aOrder {
   id: string;
   queryId: string;
@@ -16,6 +22,11 @@ export interface A2aOrder {
   researchMode: ResearchMode;
   status: A2aOrderStatus;
   transaction: string;
+  /** Private worker input. Never expose this field from the polling endpoint. */
+  request: A2aOrderRequest | null;
+  /** Null means durably queued. Once set, the job is never automatically claimed again. */
+  startedAt: string | null;
+  workerId: string | null;
   response: Record<string, unknown> | null;
   errorCode: string | null;
   createdAt: string;

@@ -12,9 +12,15 @@ The request body is validated before the 402 challenge is built:
 {
   "question": "What is Arc finality?",
   "budget": 0.05,
-  "researchMode": "deep"
+  "researchMode": "deep",
+  "responseMode": "async"
 }
 ```
+
+`responseMode` defaults to `wait` for existing buyers. `async` (or the standard
+`Prefer: respond-async` header) is the production integration: after Circle settlement, Keryx
+persists the private job and returns `202 Accepted`, `Location`, `Retry-After`, the x402
+`PAYMENT-RESPONSE`, and a read-only `pollUrl`. The caller polls that URL without paying again.
 
 `budget` is the maximum downstream creator spend, not Keryx's fee. The exact all-in x402 price is:
 
@@ -55,9 +61,11 @@ Circle settled authorization
  deterministic inbound ledger row
           |
           v
- running order -- successful QueryRun --> completed + stored response
+ running + no started_at (queued) -- atomic worker claim --> running + started_at (processing)
+          |                                               |
+          |                                               +-- successful QueryRun --> completed
           |
-          +-- producer failure ----------> failed (no automatic rerun)
+          +-- invalid private payload -------------------------> failed before creator spend
 ```
 
 The order id is SHA-256 over the network, payer, treasury payee, and signed EIP-3009 nonce. This is
@@ -67,12 +75,16 @@ only if a valid facilitator response omits the nonce.
 
 Creating the order is an atomic insert-if-absent. A replay must match the complete economic tuple:
 payer, payee, authorization, transaction, amount, creator cap, service fee, research mode, and a
-canonical SHA-256 hash of question + normalized model + pricing inputs. The private order stores the
-hash, not a second copy of the question.
+canonical SHA-256 hash of question + normalized model + pricing inputs. Async execution requires a
+private service-role-only copy of the normalized worker input; the worker recomputes that hash and
+refuses creator spend if the payload changed. Polling never returns the private input.
 
 - `completed`: return the stored response; never rerun.
 - `running` with a saved QueryRun: repair order completion and return it.
-- `running` without a saved QueryRun: return `processing`; never guess whether creator legs ran.
+- `running` without `started_at`: return `queued`; only the worker's atomic claim may start it.
+- `running` with recent `started_at`: return `processing`; never guess whether creator legs ran.
+- `running` for more than 15 minutes without a saved QueryRun: return `review_required`; do not
+  retry until an operator reconciles downstream evidence.
 - `failed`: return the terminal safe error; never automatically spend again.
 
 Callers can poll `GET /api/agent/ask?queryId=a2a_<sha256>` after losing a response. The endpoint is
@@ -84,8 +96,10 @@ read-only and cannot start or retry research.
 - Verify/settle rejected: no order and no downstream spend.
 - Settlement confirmed, ledger/order write fails: return the `PAYMENT-RESPONSE` settlement proof on
   the 5xx. A replay can safely finish missing idempotent records.
-- Process loss while running: do not automatically rerun. A partial downstream settlement is more
-  harmful than a stuck order; operations must reconcile evidence first.
+- Process loss before claim: the order remains queued and another worker may claim it exactly once.
+- Process loss after claim: do not automatically rerun. A partial downstream settlement is more
+  harmful than a stuck order; polling exposes `review_required` after 15 minutes and operations
+  must reconcile evidence first.
 - Creator accounting exceeds the prepaid cap by even one micro-USDC: fail closed and do not publish
   a misleading pricing receipt.
 

@@ -131,7 +131,41 @@ export async function GET() {
       /* operational evidence is additive; never turn malformed telemetry into downtime */
     }
 
-    const operationalStatus = reconciliation?.degraded ? "degraded" : "operational";
+    // The async A2A worker updates this private heartbeat while idle and after each order. Do not
+    // expose its host/process identity. A missing row is valid on dev installations that never run
+    // the paid worker; once observed, a stale/stopped worker makes production readiness degraded.
+    let a2aWorker: {
+      status: string;
+      updatedAt: string;
+      stale: boolean;
+    } | null = null;
+    try {
+      const raw = await db.getSyncState("a2aWorker");
+      if (raw) {
+        const parsed = JSON.parse(raw) as {
+          status?: unknown;
+          updatedAt?: unknown;
+        };
+        if (typeof parsed.status === "string" && typeof parsed.updatedAt === "string") {
+          const updatedMs = Date.parse(parsed.updatedAt);
+          a2aWorker = {
+            status: parsed.status,
+            updatedAt: parsed.updatedAt,
+            stale: !Number.isFinite(updatedMs) || Date.now() - updatedMs > 10 * 60_000,
+          };
+        }
+      }
+    } catch {
+      /* same additive-observability rule as the other private sync-state summaries */
+    }
+
+    const workerDegraded =
+      !!a2aWorker &&
+      (a2aWorker.stale ||
+        a2aWorker.status === "stopped" ||
+        a2aWorker.status === "recovery_pending");
+    const operationalStatus =
+      reconciliation?.degraded || workerDegraded ? "degraded" : "operational";
 
     return Response.json(
       {
@@ -143,6 +177,7 @@ export async function GET() {
         dispatches,
         settlement,
         reconciliation,
+        a2aWorker,
         traction: {
           totalPayments: m.totalPayments,
           creatorPayoutsUsdc: Number(m.totalCreatorPayoutsUsdc.toFixed(6)),

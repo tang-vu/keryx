@@ -91,7 +91,7 @@ export interface SettleInfo {
 export async function settleThenServe(
   req: NextRequest,
   opts: PaidOptions,
-  produce: (settle: SettleInfo) => Promise<unknown> | unknown,
+  produce: (settle: SettleInfo) => Promise<unknown | Response> | unknown | Response,
 ): Promise<NextResponse> {
   const requirements = buildRequirements(opts.priceUsdc, opts.payTo);
   const sig = req.headers.get("payment-signature");
@@ -201,7 +201,7 @@ export async function settleThenServe(
     // debit, a producer/DB/IPFS failure must not erase that proof and make the buyer call a real
     // payment pending. Return the receipt on the 5xx so the buyer can retain the settled ledger
     // leg while skipping unavailable content.
-    let body: unknown;
+    let body: unknown | Response;
     try {
       body = await produce(settleInfo);
     } catch (produceError) {
@@ -214,7 +214,14 @@ export async function settleThenServe(
       res.headers.set("PAYMENT-RESPONSE", paymentResponse);
       return res;
     }
-    const res = NextResponse.json(body ?? { ok: true });
+    const res =
+      body instanceof Response
+        ? new NextResponse(body.body, {
+            status: body.status,
+            statusText: body.statusText,
+            headers: body.headers,
+          })
+        : NextResponse.json(body ?? { ok: true });
     res.headers.set("PAYMENT-RESPONSE", paymentResponse);
     return res;
   } catch (err) {

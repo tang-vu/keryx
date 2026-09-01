@@ -1,5 +1,14 @@
 # Keryx Project Changelog
 
+### Durable asynchronous A2A research (2026-09-01)
+
+- Added opt-in `202 Accepted` A2A jobs with standard `Prefer: respond-async`, a durable poll URL,
+  and preserved x402 settlement proof while keeping synchronous callers compatible.
+- Added a private single-consumer PM2 worker with atomic SQLite/Supabase claims, request-hash
+  revalidation before creator spend, graceful deploy shutdown, and no unsafe post-start retries.
+- Exposed honest queued/processing/review-required states and updated client, discovery, OpenAPI,
+  migration, deployment, and money-path regression coverage.
+
 ### Browser-visible API docs and Cloudflare traffic telemetry (2026-08-31)
 
 - Restored the Scalar API reference by allowing its exact standalone script URL only on

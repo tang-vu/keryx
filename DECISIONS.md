@@ -3,6 +3,24 @@
 Autonomous architecture/product/UX decisions, with rationale. Newest first.
 Format: **D-NN** · area · decision · why · reversibility.
 
+**D-60** · A2A product reliability · *Acknowledge long paid research with a durable opt-in async
+job, but never lease-retry an order after creator spending may have begun.* Existing callers retain
+`responseMode=wait`; production callers may send `responseMode=async` or `Prefer: respond-async`.
+Only after Circle settles the exact package does Keryx store private normalized worker input and
+return `202 Accepted` with a poll location plus the same `PAYMENT-RESPONSE` settlement proof.
+
+For migration compatibility, the internal status remains `running`: a null `started_at` means
+queued, while the private worker atomically stamps `started_at` and `worker_id` before calling the
+agent. It recomputes the D-58 canonical request hash before any creator spend. Historical running
+orders are backfilled as started and cannot enter the queue. A pre-claim crash is safe to claim;
+an after-claim crash is never automatically requeued because a downstream Circle response may
+have been lost after value moved. Polling surfaces that ambiguity as `review_required` after 15
+minutes. Circle settlement, treasury signing, registry/offer `payTo`, creator caps, exact
+micro-USDC allocation, and evidence-gated rewards remain unchanged. Why: an 80–150 second paid HTTP
+request is not an operable external-agent product, while a generic retrying queue would weaken the
+once-only spend invariant. Reversible: medium (additive private columns/worker and public async
+contract; synchronous compatibility and every payment authority remain intact).
+
 **D-59** · Settlement/Operations · *Acknowledge permanently ambiguous legacy treasury attempts
 without rewriting financial truth or suppressing user-cap risk.* A private sync-state audit record
 may stop stale/critical readiness escalation only when an operator names one exact payment id, a

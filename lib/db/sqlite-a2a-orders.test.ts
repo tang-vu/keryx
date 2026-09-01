@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { afterAll, describe, expect, it } from "vitest";
 import { SqliteAdapter } from "./sqlite-adapter";
 import type { A2aOrder } from "../a2a/order";
@@ -28,6 +29,9 @@ const order: A2aOrder = {
   researchMode: "deep",
   status: "running",
   transaction: "circle-transfer",
+  request: { question: "q", origin: "a2a" },
+  startedAt: "2026-08-29T00:00:00.000Z",
+  workerId: "request:a2a_order",
   response: null,
   errorCode: null,
   createdAt: "2026-08-29T00:00:00.000Z",
@@ -84,5 +88,65 @@ describe("SQLite A2A order idempotency", () => {
     ]);
     expect([left.created, right.created].sort()).toEqual([false, true]);
     expect(left.order).toEqual(right.order);
+  });
+
+  it("atomically claims a queued job once and never reclaims a started job", async () => {
+    const queued = {
+      ...order,
+      id: "a2a_queued",
+      queryId: "a2a_queued",
+      authorizationId: "0xqueued",
+      transaction: "circle-queued",
+      startedAt: null,
+      workerId: null,
+    };
+    await db.createA2aOrder(queued);
+    const [left, right] = await Promise.all([
+      db.claimNextA2aOrder("worker-left", "2026-08-29T00:04:00.000Z"),
+      db.claimNextA2aOrder("worker-right", "2026-08-29T00:04:00.000Z"),
+    ]);
+    const claimed = left ?? right;
+    expect(claimed).toMatchObject({ id: queued.id, startedAt: "2026-08-29T00:04:00.000Z" });
+    expect([left, right].filter(Boolean)).toHaveLength(1);
+    expect(await db.claimNextA2aOrder("worker-late", "2026-08-29T00:05:00.000Z")).toBeNull();
+  });
+
+  it("marks legacy running rows started so migration cannot accidentally rerun creator spend", async () => {
+    const legacyFile = path.join(os.tmpdir(), `keryx-a2a-legacy-${process.pid}.sqlite`);
+    const legacyRaw = new DatabaseSync(legacyFile);
+    legacyRaw.exec(`
+      CREATE TABLE a2a_orders (
+        id TEXT PRIMARY KEY, query_id TEXT NOT NULL UNIQUE, authorization_id TEXT NOT NULL,
+        request_hash TEXT NOT NULL, payer TEXT NOT NULL, payee TEXT NOT NULL,
+        amount_usdc REAL NOT NULL, creator_budget_usdc REAL NOT NULL,
+        service_fee_usdc REAL NOT NULL, research_mode TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('running','completed','failed')),
+        transaction_id TEXT NOT NULL, response_data TEXT, error_code TEXT,
+        created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+      );
+      INSERT INTO a2a_orders VALUES (
+        'a2a_legacy','a2a_legacy','0xlegacy','legacy-hash',
+        '0x1111111111111111111111111111111111111111',
+        '0x2222222222222222222222222222222222222222',
+        0.1,0.05,0.05,'deep','running','circle-legacy',NULL,NULL,
+        '2026-08-28T00:00:00.000Z','2026-08-28T00:01:00.000Z'
+      );
+    `);
+    legacyRaw.close();
+
+    const migrated = new SqliteAdapter(legacyFile);
+    try {
+      await migrated.init();
+      expect(await migrated.getA2aOrder("a2a_legacy")).toMatchObject({
+        request: null,
+        startedAt: "2026-08-28T00:01:00.000Z",
+        workerId: "legacy",
+      });
+      expect(await migrated.claimNextA2aOrder("worker", "2026-09-01T00:00:00.000Z")).toBeNull();
+    } finally {
+      migrated.close();
+      for (const suffix of ["", "-wal", "-shm"])
+        fs.rmSync(legacyFile + suffix, { force: true });
+    }
   });
 });

@@ -30,6 +30,9 @@ describe("A2A authorization identity", () => {
       researchMode: "deep",
       status: "running",
       transaction: "circle-1",
+      request: { question: "private question", origin: "a2a" },
+      startedAt: null,
+      workerId: null,
       response: null,
       errorCode: null,
       createdAt: "now",
@@ -41,7 +44,7 @@ describe("A2A authorization identity", () => {
     expect(sameA2aOrder(order, { ...order, requestHash: "different" })).toBe(false);
   });
 
-  it("binds the canonical request semantics without storing the question in the order", () => {
+  it("binds canonical request semantics without leaking the question into its identifier", () => {
     const input = {
       question: "private question",
       creatorBudgetUsdc: 0.05,

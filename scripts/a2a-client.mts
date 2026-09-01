@@ -57,15 +57,48 @@ console.log(`   client Gateway balance: ${bal.gateway.formattedAvailable} USDC\n
 const askUrl = config.botKey
   ? `${config.baseUrl}/api/agent/ask?bot=${encodeURIComponent(config.botKey)}`
   : `${config.baseUrl}/api/agent/ask`;
-const r = await gateway.pay<{ answer: string; creatorsPaid: number; totalToCreators: number; citations: { source: string; reward: number }[]; feePaid: number; totalPricePaid: number; pricing: { unusedCreatorReserveUsdc: number } }>(
+type Completed = {
+  status: "completed";
+  queryId: string;
+  answer: string;
+  creatorsPaid: number;
+  totalToCreators: number;
+  citations: { source: string; reward: number }[];
+  feePaid: number;
+  totalPricePaid: number;
+  pricing: { unusedCreatorReserveUsdc: number };
+};
+type Pending = {
+  status: "queued" | "processing" | "review_required" | "failed";
+  queryId: string;
+  pollUrl: string;
+  error?: string;
+  message?: string;
+};
+
+const r = await gateway.pay<Completed | Pending>(
   askUrl,
-  { method: "POST", body: { question, budget } },
+  { method: "POST", body: { question, budget, responseMode: "async" } },
 );
 
 console.log(`✅ Paid Keryx ${r.formattedAmount} USDC (settled ${String(r.transaction).slice(0, 10)}…)\n`);
-console.log("📝 Keryx's answer:\n" + r.data.answer + "\n");
-console.log(`💸 Keryx paid ${r.data.creatorsPaid} creator(s) $${r.data.totalToCreators} downstream:`);
-for (const c of r.data.citations ?? []) console.log(`   • ${c.source}: $${c.reward}`);
-console.log(`\n   Package: $${r.data.totalPricePaid} total = $${r.data.feePaid} service + $${r.data.totalToCreators} creators + $${r.data.pricing.unusedCreatorReserveUsdc} unused reserve.`);
+let result = r.data;
+while (result.status !== "completed") {
+  if (result.status === "failed" || result.status === "review_required") {
+    throw new Error(result.error ?? result.message ?? `A2A order ${result.status}`);
+  }
+  console.log(`   ${result.status}; polling ${result.queryId}…`);
+  await new Promise((resolve) => setTimeout(resolve, 2_000));
+  const polled = await fetch(new URL(result.pollUrl, config.baseUrl), {
+    headers: { accept: "application/json" },
+  });
+  if (!polled.ok) throw new Error(`A2A poll failed (${polled.status})`);
+  result = (await polled.json()) as Completed | Pending;
+}
+
+console.log("📝 Keryx's answer:\n" + result.answer + "\n");
+console.log(`💸 Keryx paid ${result.creatorsPaid} creator(s) $${result.totalToCreators} downstream:`);
+for (const c of result.citations ?? []) console.log(`   • ${c.source}: $${c.reward}`);
+console.log(`\n   Package: $${result.totalPricePaid} total = $${result.feePaid} service + $${result.totalToCreators} creators + $${result.pricing.unusedCreatorReserveUsdc} unused reserve.`);
 console.log("   Fixed-price and non-refundable; one authorization can launch creators only once.\n");
 process.exit(0);

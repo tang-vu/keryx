@@ -15,6 +15,8 @@ Shipped and running:
 - ✓ External on-ramps: MCP server (npm + official registry), A2A x402 endpoint, free no-wallet trial
 - ✓ A2A Paid Research v2: dynamic fixed-price quote covers the creator cap before treasury spend;
   authorization-keyed durable orders prevent duplicate downstream runs
+- ✓ Durable A2A execution: standards-based `202` acknowledgement, private atomic worker claim,
+  read-only polling, and explicit post-start review state without automatic double-spend retries
 - ✓ Evidence-gated legacy reconciliation acknowledgement: reviewed treasury-only ambiguity remains
   pending and continuously checked without creating a permanent readiness alert
 - ✓ Ops: low-downtime health-gated deploys, treasury + registry-parity watchdogs, rotating off-box backups, CI (typecheck + economic-invariant suite)
@@ -36,6 +38,18 @@ Shipped and running:
   status, and ops alerts without treating elapsed validity as settlement evidence
 
 Live figures at [`/status`](https://keryx.cc/status); snapshots in [TRACTION.md](../TRACTION.md).
+
+### Current productization focus: paid design-partner pilots
+
+The next milestone is not mainnet volume. It is 3–5 external agent teams repeatedly buying one
+narrow research outcome with measurable latency, evidence coverage, completion, settlement, and
+repeat-use rates. Durable A2A jobs remove the first operational blocker. The remaining gates are:
+
+1. worker/error-budget observability and an operator resolution runbook for `review_required`;
+2. a versioned research package/SLA with buyer-visible quality and latency receipts;
+3. pilot credentials, usage reporting, support ownership, and explicit testnet terms;
+4. four weeks of genuine external cohorts and positive settled unit economics;
+5. only then: external security review and a separately approved mainnet migration.
 
 ---
 
