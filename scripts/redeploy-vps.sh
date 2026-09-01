@@ -88,7 +88,8 @@ run_ssh "$SSH" "cd $APP_DIR && NODE_OPTIONS=--max-old-space-size=1536 npm run ty
 say "4/5 starting A2A worker + swapping in the new build + reload"
 run_ssh "$SSH" "cd $APP_DIR \
   && (pm2 restart keryx-a2a-worker --update-env 2>/dev/null || pm2 start npm --name keryx-a2a-worker --kill-timeout 330000 -- run a2a-worker) \
-  && test \"\$(pm2 pid keryx-a2a-worker)\" != \"0\""
+  && test \"\$(pm2 pid keryx-a2a-worker)\" != \"0\" \
+  && pm2 save >/dev/null"
 run_ssh "$SSH" "cd $APP_DIR \
   && rm -rf .next.bak && mv .next .next.bak && mv .next.tmp .next \
   && KERYX_COMMIT=$COMMIT pm2 reload keryx --update-env"
