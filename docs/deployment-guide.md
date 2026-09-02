@@ -37,18 +37,28 @@ On Windows, the npm script enters WSL to run Bash but automatically delegates SS
 OpenSSH so it uses the documented `keryx-vps` alias. Set `KERYX_SSH_BIN` only when a different SSH
 client/config should be used.
 
-## Release (optional — tag + announce)
-Not required to be live; do this to mark a milestone.
+## Release (required for a versioned product milestone)
+
+Before merging a user-visible milestone, bump the root `package.json` and lockfile version. After
+the `main` CI gate succeeds, the `publish-release` job reads that version and creates the missing
+`vX.Y.Z` tag plus a public GitHub Release with generated notes. If the release already exists, the
+job is idempotent.
+
 ```bash
-# bump version in package.json, then:
+# verify CI made the release visible
+gh release view vX.Y.Z --web
+
+# manual recovery only if the release job itself failed
 git tag vX.Y.Z && git push origin vX.Y.Z
-gh release create vX.Y.Z --title "vX.Y.Z — <name>" --notes "…"   # optional GitHub Release
+gh release create vX.Y.Z --verify-tag --title "Keryx vX.Y.Z" --generate-notes --latest
 
 # hackathon traction/product update to arc-canteen:
 npm run arc:update -- "Product: redesigned UI shipped to keryx.cc"
 npm run arc:update -- --traction "<REAL settled numbers only>"
 ```
-Current tag: `v0.1.0`. **Only send `--traction` when the numbers are real and settled.** `arc:update` posts publicly to the hackathon org — confirm before announcing.
+
+The GitHub Release is part of completion, not an optional announcement. **Only send `--traction`
+when the numbers are real and settled.** `arc:update` posts publicly to the hackathon org.
 
 ## Attributable Arc RPC
 
