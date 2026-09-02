@@ -1,11 +1,17 @@
 import { config } from "../config";
 import type { ResearchMode } from "../types";
+import {
+  A2A_RESEARCH_PACKAGE_VERSION,
+  a2aResearchPackageForVersion,
+  type A2aResearchPackage,
+} from "./research-package";
 
 const MICROS = 1_000_000;
 
 export interface A2aQuote {
   policy: "a2a-fixed-package-v2";
   researchMode: ResearchMode;
+  researchPackage: A2aResearchPackage | null;
   creatorBudgetUsdc: number;
   serviceFeeUsdc: number;
   totalPriceUsdc: number;
@@ -20,7 +26,11 @@ export function parseResearchMode(value: unknown): ResearchMode {
   return value === "quick" ? "quick" : "deep";
 }
 
-export function quoteA2aResearch(rawBudget: unknown, mode: ResearchMode): A2aQuote {
+export function quoteA2aResearch(
+  rawBudget: unknown,
+  mode: ResearchMode,
+  packageVersion: string = A2A_RESEARCH_PACKAGE_VERSION,
+): A2aQuote {
   const requested =
     typeof rawBudget === "number" && Number.isFinite(rawBudget) && rawBudget > 0
       ? rawBudget
@@ -35,6 +45,7 @@ export function quoteA2aResearch(rawBudget: unknown, mode: ResearchMode): A2aQuo
   return {
     policy: "a2a-fixed-package-v2",
     researchMode: mode,
+    researchPackage: a2aResearchPackageForVersion(mode, packageVersion),
     creatorBudgetUsdc: creatorBudgetMicros / MICROS,
     serviceFeeUsdc: serviceFeeMicros / MICROS,
     totalPriceUsdc: (creatorBudgetMicros + serviceFeeMicros) / MICROS,

@@ -344,6 +344,46 @@ describe("runAgent — money-safety invariants", () => {
     expect(steps.some((step) => step.phase === "reevaluate")).toBe(false);
   });
 
+  it("honors a trusted package snapshot instead of mutable server defaults", async () => {
+    const sources = ["a", "b", "c"].map((id) => makeSource({ id, fetchPrice: 0.002 }));
+    const engine = fakeEngine({
+      sufficiency: () => ({ sufficient: false, rationale: "keep reading" }),
+      reevaluate: () => ({
+        shouldBuyMore: true,
+        recommendedIds: ["b", "c"],
+        rationale: "would expand without the package bound",
+      }),
+    });
+    const gw = fakeGateway();
+    const { steps } = await drive(
+      {
+        question: "q",
+        budget: 0.05,
+        researchMode: "deep",
+        executionLimits: { attentionLimit: 1, reevaluateRounds: 0 },
+      },
+      deps(sources, engine, gw),
+    );
+
+    expect(gw.fetchCalls).toHaveLength(1);
+    expect(steps.some((step) => step.phase === "reevaluate")).toBe(false);
+  });
+
+  it("rejects an invalid trusted execution package before source spend", async () => {
+    const gw = fakeGateway();
+    await expect(
+      drive(
+        {
+          question: "q",
+          budget: 0.05,
+          executionLimits: { attentionLimit: 0, reevaluateRounds: 0 },
+        },
+        deps([makeSource({ id: "a" })], fakeEngine(), gw),
+      ),
+    ).rejects.toThrow("invalid trusted agent execution limits");
+    expect(gw.fetchCalls).toEqual([]);
+  });
+
   it("turns an untargeted BUY into a visible no-spend SKIP", async () => {
     const source = makeSource({ id: "a", fetchPrice: 0.002 });
     const engine = fakeEngine({

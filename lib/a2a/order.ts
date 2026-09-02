@@ -1,5 +1,10 @@
 import crypto from "node:crypto";
 import type { ResearchMode } from "../types";
+import {
+  a2aResearchPackageFingerprint,
+  isSupportedA2aResearchPackage,
+  type A2aResearchPackage,
+} from "./research-package";
 
 export type A2aOrderStatus = "running" | "completed" | "failed";
 
@@ -59,6 +64,8 @@ export interface A2aOrder {
   creatorBudgetUsdc: number;
   serviceFeeUsdc: number;
   researchMode: ResearchMode;
+  /** Immutable execution and measurement contract accepted in the paid quote. */
+  researchPackage: A2aResearchPackage | null;
   status: A2aOrderStatus;
   transaction: string;
   /** Private worker input. Never expose this field from the polling endpoint. */
@@ -106,6 +113,30 @@ export function a2aRequestHash(input: {
   creatorBudgetUsdc: number;
   serviceFeeUsdc: number;
   researchMode: ResearchMode;
+  researchPackage: A2aResearchPackage | null;
+  model?: string;
+}): string {
+  return crypto
+    .createHash("sha256")
+    .update(
+      JSON.stringify({
+        question: input.question,
+        creatorBudgetUsdc6: Math.round(input.creatorBudgetUsdc * 1e6),
+        serviceFeeUsdc6: Math.round(input.serviceFeeUsdc * 1e6),
+        researchMode: input.researchMode,
+        researchPackageFingerprint: a2aResearchPackageFingerprint(input.researchPackage),
+        model: input.model ?? null,
+      }),
+    )
+    .digest("hex");
+}
+
+/** Pre-package request hash, retained only to read and drain already-paid historical orders. */
+export function legacyA2aRequestHash(input: {
+  question: string;
+  creatorBudgetUsdc: number;
+  serviceFeeUsdc: number;
+  researchMode: ResearchMode;
   model?: string;
 }): string {
   return crypto
@@ -122,13 +153,48 @@ export function a2aRequestHash(input: {
     .digest("hex");
 }
 
+function sameRequestContract(a: A2aOrder, b: A2aOrder): boolean {
+  if (
+    a2aResearchPackageFingerprint(a.researchPackage) ===
+    a2aResearchPackageFingerprint(b.researchPackage)
+  ) {
+    return a.requestHash === b.requestHash;
+  }
+
+  // A settled pre-package authorization must remain replay-readable after this deployment. Verify
+  // both the historical hash and the newly proposed package hash from the same private request;
+  // this compatibility lane can return old state but can never make the legacy order worker-safe.
+  const legacy = a.researchPackage === null ? a : b.researchPackage === null ? b : null;
+  const versioned = legacy === a ? b : legacy === b ? a : null;
+  if (
+    !legacy ||
+    !versioned ||
+    !versioned.request ||
+    !isSupportedA2aResearchPackage(versioned.researchPackage, versioned.researchMode)
+  ) {
+    return false;
+  }
+  const input = {
+    question: versioned.request.question,
+    creatorBudgetUsdc: versioned.creatorBudgetUsdc,
+    serviceFeeUsdc: versioned.serviceFeeUsdc,
+    researchMode: versioned.researchMode,
+    model: versioned.request.model,
+  };
+  return (
+    legacy.requestHash === legacyA2aRequestHash(input) &&
+    versioned.requestHash ===
+      a2aRequestHash({ ...input, researchPackage: versioned.researchPackage })
+  );
+}
+
 /** A conflict may be replay, but never trust it until the incoming economic tuple agrees. */
 export function sameA2aOrder(a: A2aOrder, b: A2aOrder): boolean {
   return (
     a.id === b.id &&
     a.queryId === b.queryId &&
     a.authorizationId.toLowerCase() === b.authorizationId.toLowerCase() &&
-    a.requestHash === b.requestHash &&
+    sameRequestContract(a, b) &&
     a.payer.toLowerCase() === b.payer.toLowerCase() &&
     a.payee.toLowerCase() === b.payee.toLowerCase() &&
     Math.round(a.amountUsdc * 1e6) === Math.round(b.amountUsdc * 1e6) &&

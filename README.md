@@ -164,7 +164,9 @@ Example trace (real output):
   with a dispatch-trace link. No bot token or scopes — replies ride the command's `response_url`.
   Setup + app manifest in ([`docs/slack-bot-setup.md`](./docs/slack-bot-setup.md)).
 - **Agent-to-agent API** — `POST /api/agent/ask` lets other agents buy Keryx's research over x402:
-  an agent paying an agent that pays creators, end to end.
+  an agent paying an agent that pays creators, end to end. Versioned Quick/Deep packages pin the
+  execution contract and return provisional-SLO latency plus deterministic evidence-quality
+  receipts; see [`docs/a2a-research-packages.md`](./docs/a2a-research-packages.md).
 - **OpenAI-compatible endpoint** — point any OpenAI SDK or tool (LangChain, LlamaIndex, OpenWebUI,
   LibreChat, Continue) at `https://keryx.cc/api/v1` with model `keryx`: a drop-in Chat Completions
   API. Free with no key, or pass a `kx_live_…` key as the Bearer token for higher limits. Every

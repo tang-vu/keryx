@@ -1,11 +1,11 @@
 # Keryx Project Roadmap
 
-**Version:** 0.19.0 (A2A operator resolution and queue/error-budget health, updated 2026-09-02)
+**Version:** 0.20.0 (versioned A2A research packages and service receipts, updated 2026-09-02)
 **Status:** In continuous operation at [keryx.cc](https://keryx.cc) — real settlement 24/7, shipping in public.
 
 ---
 
-## Where Keryx is today (v0.19.0, August 2026)
+## Where Keryx is today (v0.20.0, September 2026)
 
 Shipped and running:
 - ✓ Non-custodial dApp core (SIWE auth, on-chain SourceRegistry, browser co-sign sessions, encrypted IPFS content, public API + keys)
@@ -19,6 +19,8 @@ Shipped and running:
   read-only polling, and explicit post-start review state without automatic double-spend retries
 - ✓ Evidence-bound A2A operations: private inspect/repair/close runbook, atomic audit receipts,
   pre-payment boundary journals, missing-ledger refusal, and identifier-free queue/latency health
+- ✓ Versioned A2A research packages: immutable Quick/Deep execution snapshots bound into paid
+  orders, caller version pinning, live provisional-SLO status, and terminal latency/quality receipts
 - ✓ Evidence-gated legacy reconciliation acknowledgement: reviewed treasury-only ambiguity remains
   pending and continuously checked without creating a permanent readiness alert
 - ✓ Ops: low-downtime health-gated deploys, treasury + registry-parity watchdogs, rotating off-box backups, CI (typecheck + economic-invariant suite)
@@ -48,7 +50,8 @@ narrow research outcome with measurable latency, evidence coverage, completion, 
 repeat-use rates. Durable A2A jobs remove the first operational blocker. The remaining gates are:
 
 1. ✓ worker/error-budget observability and an operator resolution runbook for `review_required`;
-2. a versioned research package/SLA with buyer-visible quality and latency receipts;
+2. ✓ a versioned research package with buyer-visible quality and latency receipts; its SLO stays
+   provisional until four weeks of genuine external cohorts justify an SLA;
 3. pilot credentials, usage reporting, support ownership, and explicit testnet terms;
 4. four weeks of genuine external cohorts and positive settled unit economics;
 5. only then: external security review and a separately approved mainnet migration.
@@ -339,6 +342,7 @@ Mainnet ← blocked on: Phase 07–10, security audit, legal
 | **v0.17.0** | 2026-08-24 | Claim-aware evidence portfolio: dual-budget coverage optimization + evidence yield | ✓ Shipped |
 | **v0.18.0** | 2026-08-25 | Complete Circle reconciliation search | ✓ Shipped |
 | **v0.19.0** | 2026-08-25 | Exact authorization expiry + browser/treasury pending ownership | ✓ Shipped |
+| **v0.20.0** | 2026-09-02 | Versioned A2A execution contracts + provisional SLO/quality receipts | ✓ Shipped |
 | **v1.0.0** | 2026-12-31 | Mainnet + Full Feature Parity | Planned |
 | **v2.0.0** | 2027-Q2 | Stretch Goals (Agent Marketplace, Video, Derivatives) | Backlog |
 

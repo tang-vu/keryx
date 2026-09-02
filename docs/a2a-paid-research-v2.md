@@ -13,9 +13,14 @@ The request body is validated before the 402 challenge is built:
   "question": "What is Arc finality?",
   "budget": 0.05,
   "researchMode": "deep",
+  "packageVersion": "1.0.0",
   "responseMode": "async"
 }
 ```
+
+`packageVersion` is optional and currently accepts `1.0.0`. Pin it in production integrations so
+an unsupported contract fails with `409` before any payment. Exact package semantics and promotion
+criteria are in [Versioned A2A research packages](./a2a-research-packages.md).
 
 `responseMode` defaults to `wait` for existing buyers. `async` (or the standard
 `Prefer: respond-async` header) is the production integration: after Circle settlement, Keryx
@@ -82,7 +87,8 @@ only if a valid facilitator response omits the nonce.
 
 Creating the order is an atomic insert-if-absent. A replay must match the complete economic tuple:
 payer, payee, authorization, transaction, amount, creator cap, service fee, research mode, and a
-canonical SHA-256 hash of question + normalized model + pricing inputs. Async execution requires a
+canonical SHA-256 hash of question + normalized model + pricing inputs + the accepted package
+fingerprint. Async execution requires a
 private service-role-only copy of the normalized worker input; the worker recomputes that hash and
 refuses creator spend if the payload changed. Polling never returns the private input.
 
@@ -96,6 +102,11 @@ refuses creator spend if the payload changed. Polling never returns the private 
   operator resolution; never automatically spend again. If the payment boundary was crossed
   without a complete QueryRun, recorded creator amounts are labeled a lower bound and unused
   reserve is `null`, never inferred from an incomplete ledger.
+
+New versioned orders also return the immutable `researchPackage`. Pending states carry
+`serviceStatus`; completed/failed states carry `serviceReceipt`. These are measured provisional SLO
+fields with no remedy, not a contractual SLA. Historical null-package orders omit them rather than
+being backfilled into a contract they never accepted.
 
 Callers can poll `GET /api/agent/ask?queryId=a2a_<sha256>` after losing a response. The endpoint is
 financially read-only: it cannot start/retry research or create payment attempts. It may perform
@@ -170,7 +181,7 @@ Any A2A money-path change requires:
 1. Pricing boundary and integer-rounding tests.
 2. Replay, concurrent claim, tuple-mismatch, terminal CAS, and response-loss tests.
 3. Operator repair/close, stale boundary, pending/simulated refusal, private-data omission, queue
-   SLA, and recent latency tests.
+   SLO, package integrity, and recent latency tests.
 4. Existing x402 verify/settle and API-key/rate-limit regression tests.
 5. Full Vitest suite, TypeScript, ESLint, contract tests, and Next production build.
 6. `$keryx-review` across route → x402 server → DB order → treasury gateway → creator settlement.

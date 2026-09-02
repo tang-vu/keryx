@@ -9,6 +9,11 @@
  */
 
 import { config } from "./config";
+import {
+  A2A_RESEARCH_PACKAGE_VERSION,
+  listA2aResearchPackages,
+  supportedA2aPackageVersions,
+} from "./a2a/research-package";
 
 /** Discovery declaration for POST /api/agent/ask — the outward-facing paid research endpoint. */
 export const a2aDiscovery = {
@@ -35,6 +40,7 @@ export const a2aDiscovery = {
   method: "POST",
   description:
     "Fixed-price autonomous research: orchestration fee plus a caller-selected creator-spend cap, itemized after settlement.",
+  researchPackages: listA2aResearchPackages(),
   mimeType: "application/json",
   input: {
     type: "http",
@@ -59,6 +65,12 @@ export const a2aDiscovery = {
           type: "string",
           enum: ["quick", "deep"],
           description: "Quick or Deep orchestration fee/attention policy (default Deep)",
+        },
+        packageVersion: {
+          type: "string",
+          enum: supportedA2aPackageVersions(),
+          description:
+            "Optional execution-contract pin. Unsupported versions are rejected before payment.",
         },
         responseMode: {
           type: "string",
@@ -108,6 +120,19 @@ export const a2aDiscovery = {
       pricing: {
         type: "object",
         description: "Service fee, prepaid creator cap, settled/pending creator spend, and unused reserve",
+      },
+      researchPackage: {
+        type: "object",
+        description: "Immutable execution and measurement contract accepted before payment",
+      },
+      serviceStatus: {
+        type: "object",
+        description: "Live elapsed time and provisional SLO deadline for pending work",
+      },
+      serviceReceipt: {
+        type: "object",
+        description:
+          "Terminal latency and deterministic evidence-quality measurement; this provisional SLO has no remedy",
       },
       engine: { type: "string", description: "Reasoning engine used (anthropic | deepseek | heuristic)" },
     },

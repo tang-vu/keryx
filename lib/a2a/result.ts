@@ -3,11 +3,16 @@ import type { A2aOrder } from "./order";
 import type { QueryRun } from "../types";
 import type { PaymentRecord } from "../types";
 import { creatorResolutionEvidence } from "./payment-evidence";
+import {
+  completedA2aServiceReceipt,
+  isSupportedA2aResearchPackage,
+} from "./research-package";
 
 export function quoteFromA2aOrder(order: A2aOrder): A2aQuote {
   return {
     policy: "a2a-fixed-package-v2",
     researchMode: order.researchMode,
+    researchPackage: order.researchPackage,
     creatorBudgetUsdc: order.creatorBudgetUsdc,
     serviceFeeUsdc: order.serviceFeeUsdc,
     totalPriceUsdc: order.amountUsdc,
@@ -15,10 +20,28 @@ export function quoteFromA2aOrder(order: A2aOrder): A2aQuote {
   };
 }
 
-export function a2aResponseFromRun(run: QueryRun, quote: A2aQuote) {
+export function a2aResponseFromRun(
+  run: QueryRun,
+  quote: A2aQuote,
+  timing?: { acceptedAt: string; startedAt: string | null; baseUrl?: string },
+) {
   if (run.paymentMode !== "real") {
     throw new Error("paid A2A research did not use the real treasury gateway");
   }
+  const researchPackage = quote.researchPackage;
+  const packageReceipt =
+    timing && isSupportedA2aResearchPackage(researchPackage, quote.researchMode)
+      ? {
+          researchPackage,
+          serviceReceipt: completedA2aServiceReceipt({
+            researchPackage,
+            acceptedAt: timing.acceptedAt,
+            startedAt: timing.startedAt,
+            run,
+            baseUrl: timing.baseUrl,
+          }),
+        }
+      : {};
   return {
     status: "completed",
     queryId: run.id,
@@ -36,6 +59,7 @@ export function a2aResponseFromRun(run: QueryRun, quote: A2aQuote) {
     totalPricePaid: quote.totalPriceUsdc,
     pricing: a2aReceiptEconomics(quote, run.totalToCreators, run.pendingSpendUsdc ?? 0),
     engine: run.engine,
+    ...packageReceipt,
   } satisfies Record<string, unknown>;
 }
 

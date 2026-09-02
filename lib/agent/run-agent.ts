@@ -101,6 +101,12 @@ export interface RunInput {
   onCreatorPaymentBoundary?: () => Promise<void>;
   /** Trusted durable checkpoint awaited by collectRun immediately before QueryRun persistence. */
   onQueryRunSaveBoundary?: () => Promise<void>;
+  /** Trusted per-dispatch execution contract. A2A supplies the package snapshot accepted before
+   * payment; public request bodies cannot set this value directly. */
+  executionLimits?: {
+    attentionLimit: number;
+    reevaluateRounds: number;
+  };
   /**
    * Exact creator response admitted for a wanted-claim retry. This is discovery coordination,
    * never a forced purchase or payout authority: the asset is guaranteed a candidate slot, while
@@ -153,9 +159,21 @@ export async function* runAgent(
   const fetchBudget = budget * (1 - config.citationPoolRatio);
   const citationPool = budget * config.citationPoolRatio;
   const researchMode: ResearchMode = input.researchMode ?? "deep";
-  const attentionLimit =
+  const defaultAttentionLimit =
     researchMode === "quick" ? Math.min(2, config.maxAttentionSources) : config.maxAttentionSources;
-  const reevaluateRounds = researchMode === "quick" ? 0 : config.reevaluateRounds;
+  const defaultReevaluateRounds = researchMode === "quick" ? 0 : config.reevaluateRounds;
+  const attentionLimit = input.executionLimits?.attentionLimit ?? defaultAttentionLimit;
+  const reevaluateRounds = input.executionLimits?.reevaluateRounds ?? defaultReevaluateRounds;
+  if (
+    !Number.isInteger(attentionLimit) ||
+    attentionLimit < 1 ||
+    attentionLimit > 32 ||
+    !Number.isInteger(reevaluateRounds) ||
+    reevaluateRounds < 0 ||
+    reevaluateRounds > 8
+  ) {
+    throw new Error("invalid trusted agent execution limits");
+  }
   let spentTolls = 0;
 
   function emit(phase: TracePhase, message: string, detail?: unknown): TraceStep {

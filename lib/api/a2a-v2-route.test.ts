@@ -45,11 +45,19 @@ function request(body: unknown) {
 
 const run = {
   id: "filled-by-test",
+  question: "q",
+  budget: 0.05,
   answer: "answer",
+  subClaims: ["claim"],
+  decisions: [],
   citations: [],
   evidence: [],
-  claimCoverage: [],
+  claimCoverage: [{ claimIndex: 0, claim: "claim", coverage: 0, coveredBy: [] }],
+  totalSpent: 0.031,
   totalToCreators: 0.031,
+  trace: [],
+  createdAt: "2026-09-02T00:01:00.000Z",
+  durationMs: 60_000,
   engine: "heuristic",
   paymentMode: "real",
 };
@@ -116,6 +124,7 @@ describe("A2A v2 route", () => {
         budget: 0.05,
         researchMode: "deep",
         fundingOwner: "treasury",
+        executionLimits: { attentionLimit: 4, reevaluateRounds: 1 },
       }),
     );
     expect(await response.json()).toMatchObject({
@@ -126,6 +135,13 @@ describe("A2A v2 route", () => {
         settledCreatorSpendUsdc: 0.031,
         pendingCreatorSpendUsdc: 0,
         unusedCreatorReserveUsdc: 0.019,
+      },
+      researchPackage: { id: "keryx-deep", version: "1.0.0" },
+      serviceReceipt: {
+        outcome: "completed",
+        targetCompletionMs: 300_000,
+        objectiveKind: "provisional_slo",
+        quality: { status: "measured", groundedClaimRate: 0 },
       },
     });
   });
@@ -139,6 +155,31 @@ describe("A2A v2 route", () => {
     expect(await response.json()).toMatchObject({ status: "completed", replayed: true });
     expect(mocks.collectRun).not.toHaveBeenCalled();
     expect(db.completeA2aOrder).not.toHaveBeenCalled();
+  });
+
+  it("returns a historical completed authorization without relabeling it package v1", async () => {
+    db.createA2aOrder.mockImplementation(async (order) => ({
+      created: false,
+      order: {
+        ...order,
+        requestHash: "8cb6a2f97128ce20d77011dc361c084ec5d64ec7613adfabda891816b148075a",
+        researchPackage: null,
+        request: null,
+        status: "completed",
+        response: { status: "completed", queryId: order.id, answer: "historical answer" },
+      },
+    }));
+
+    const response = await POST(request({ question: "q", budget: 0.05, researchMode: "deep" }));
+    const payload = await response.json();
+    expect(payload).toMatchObject({
+      status: "completed",
+      answer: "historical answer",
+      replayed: true,
+    });
+    expect(payload).not.toHaveProperty("researchPackage");
+    expect(payload).not.toHaveProperty("serviceReceipt");
+    expect(mocks.collectRun).not.toHaveBeenCalled();
   });
 
   it("returns processing for an already-claimed authorization with no saved run", async () => {
@@ -155,7 +196,17 @@ describe("A2A v2 route", () => {
     expect(response.status).toBe(202);
     expect(response.headers.get("location")).toMatch(/^\/api\/agent\/ask\?queryId=a2a_/);
     expect(response.headers.get("retry-after")).toBe("2");
-    expect(await response.json()).toMatchObject({ status: "queued", pollUrl: expect.any(String) });
+    expect(await response.json()).toMatchObject({
+      status: "queued",
+      pollUrl: expect.any(String),
+      researchPackage: { id: "keryx-deep", version: "1.0.0" },
+      serviceStatus: {
+        state: "queued",
+        targetCompletionMs: 300_000,
+        targetBreached: false,
+        objectiveKind: "provisional_slo",
+      },
+    });
     expect(mocks.collectRun).not.toHaveBeenCalled();
     const proposed = db.createA2aOrder.mock.calls[0][0];
     expect(proposed).toMatchObject({
@@ -177,6 +228,16 @@ describe("A2A v2 route", () => {
     const invalid = await POST(request({ question: "q", responseMode: "later" }));
     expect(invalid.status).toBe(400);
     expect(mocks.settleThenServe).toHaveBeenCalledOnce();
+  });
+
+  it("rejects an unsupported package version before issuing or settling a payment", async () => {
+    const response = await POST(request({ question: "q", packageVersion: "2.0.0" }));
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: "unsupported A2A research package version",
+      supportedPackageVersions: ["1.0.0"],
+    });
+    expect(mocks.settleThenServe).not.toHaveBeenCalled();
   });
 
   it("repairs a lost completion write from the saved real QueryRun", async () => {
@@ -233,6 +294,7 @@ describe("A2A v2 route", () => {
       creatorBudgetUsdc: 0.05,
       serviceFeeUsdc: 0.05,
       researchMode: "deep",
+      researchPackage: null,
       status: "completed",
       transaction: "circle-transfer",
       request: { question: "q", origin: "a2a" },
@@ -279,6 +341,7 @@ describe("A2A v2 route", () => {
       creatorBudgetUsdc: 0.05,
       serviceFeeUsdc: 0.05,
       researchMode: "deep",
+      researchPackage: null,
       status: "running",
       transaction: "circle-transfer",
       request: { question: "private question", origin: "a2a" },
@@ -323,6 +386,7 @@ describe("A2A v2 route", () => {
       creatorBudgetUsdc: 0.05,
       serviceFeeUsdc: 0.05,
       researchMode: "deep",
+      researchPackage: null,
       status: "failed",
       transaction: "private-circle-transfer",
       request: { question: "private failed question", origin: "a2a" },

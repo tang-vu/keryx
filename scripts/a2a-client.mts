@@ -13,6 +13,7 @@ import { createPublicClient, createWalletClient, erc20Abi, http, parseEther, par
 import { arcTestnet } from "viem/chains";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { config } from "../lib/config.ts";
+import { A2A_RESEARCH_PACKAGE_VERSION } from "../lib/a2a/research-package.ts";
 
 const STORE = path.resolve(process.cwd(), "data", "a2a-client-wallet.json");
 fs.mkdirSync(path.dirname(STORE), { recursive: true });
@@ -67,6 +68,22 @@ type Completed = {
   feePaid: number;
   totalPricePaid: number;
   pricing: { unusedCreatorReserveUsdc: number };
+  researchPackage: {
+    id: "keryx-quick" | "keryx-deep";
+    version: string;
+  };
+  serviceReceipt: {
+    targetMet: boolean;
+    totalDurationMs: number;
+    targetCompletionMs: number;
+    objectiveKind: "provisional_slo";
+    remedy: "none";
+    quality?: {
+      status: "measured" | "unavailable";
+      groundedClaimRate: number | null;
+    };
+    portableReceiptUrl?: string;
+  };
 };
 type Pending = {
   status: "queued" | "processing" | "review_required" | "failed";
@@ -74,11 +91,24 @@ type Pending = {
   pollUrl: string;
   error?: string;
   message?: string;
+  serviceStatus?: {
+    elapsedMs: number;
+    targetCompletionMs: number;
+    targetBreached: boolean;
+  };
 };
 
 const r = await gateway.pay<Completed | Pending>(
   askUrl,
-  { method: "POST", body: { question, budget, responseMode: "async" } },
+  {
+    method: "POST",
+    body: {
+      question,
+      budget,
+      responseMode: "async",
+      packageVersion: A2A_RESEARCH_PACKAGE_VERSION,
+    },
+  },
 );
 
 console.log(`✅ Paid Keryx ${r.formattedAmount} USDC (settled ${String(r.transaction).slice(0, 10)}…)\n`);
@@ -100,5 +130,19 @@ console.log("📝 Keryx's answer:\n" + result.answer + "\n");
 console.log(`💸 Keryx paid ${result.creatorsPaid} creator(s) $${result.totalToCreators} downstream:`);
 for (const c of result.citations ?? []) console.log(`   • ${c.source}: $${c.reward}`);
 console.log(`\n   Package: $${result.totalPricePaid} total = $${result.feePaid} service + $${result.totalToCreators} creators + $${result.pricing.unusedCreatorReserveUsdc} unused reserve.`);
-console.log("   Fixed-price and non-refundable; one authorization can launch creators only once.\n");
+console.log(
+  `   Contract: ${result.researchPackage.id}@${result.researchPackage.version}; ${result.serviceReceipt.totalDurationMs}ms / ${result.serviceReceipt.targetCompletionMs}ms provisional SLO (${result.serviceReceipt.targetMet ? "met" : "missed"}).`,
+);
+if (result.serviceReceipt.quality) {
+  const rate = result.serviceReceipt.quality.groundedClaimRate;
+  console.log(
+    `   Evidence quality: ${result.serviceReceipt.quality.status}${rate === null ? "" : `, ${(rate * 100).toFixed(1)}% grounded claims`}.`,
+  );
+}
+if (result.serviceReceipt.portableReceiptUrl) {
+  console.log(`   Portable receipt: ${new URL(result.serviceReceipt.portableReceiptUrl, config.baseUrl)}`);
+}
+console.log(
+  "   Fixed-price and non-refundable; the provisional SLO has no remedy; one authorization can launch creators only once.\n",
+);
 process.exit(0);

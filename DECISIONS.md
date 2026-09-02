@@ -3,6 +3,35 @@
 Autonomous architecture/product/UX decisions, with rationale. Newest first.
 Format: **D-NN** · area · decision · why · reversibility.
 
+**D-62** · A2A product contract · *Bind every newly paid order to an immutable, versioned
+research-package snapshot and return measured service receipts, while keeping the initial service
+level explicitly provisional.* Package `1.0.0` publishes two modes: Quick uses at most two
+attention slots and no re-evaluation round with a 180-second target; Deep uses at most four slots
+and one round with a 300-second target. Both measure claim grounding against evidence-ledger v1's
+`0.4` threshold. The snapshot is stored on the private order and its canonical fingerprint is part
+of the request hash/replay tuple, so an async worker cannot silently execute changed deployment
+defaults after the buyer paid. A caller may pin `packageVersion`; an unsupported version fails
+before any 402 settlement.
+
+Queued work returns the accepted contract, elapsed time, deadline and breach state. Completed work
+returns accepted/start/finish timing, queue/execution/end-to-end durations, target result, exact
+grounded-claim counts/rate when the complete claim ledger is available, evidence/citation counts,
+confidence, and the portable receipt URL. Failed work returns timing without fabricating quality
+results or an SLO success. Historical orders keep a null package and never inherit v1 labels.
+The service receipt remains application response data rather than being folded into x402's payment
+proof: the emerging x402 offer/receipt extension is not yet a stable place for Keryx-specific
+latency and evidence semantics.
+
+`provisional_slo`, `best_effort`, and `remedy:none` are machine-readable parts of the contract: this
+is not yet a contractual SLA or refund promise. Promotion requires four consecutive weeks of
+genuine external paid cohorts, at least 30 terminal orders per package, published completion and
+within-target rates, no unresolved review queue, and explicit support/legal/remedy ownership.
+Creator `payTo`, registry/offer authority, x402/Circle settlement, prepaid caps, integer allocation,
+and evidence-gated rewards do not change. Why: a repeat buyer must know what execution they bought
+and be able to measure delivery, but two observed external Deep runs and zero Quick runs are not a
+credible SLA basis. Reversible: medium (additive public contract/receipt and private JSON snapshot;
+payment and payout authority are unchanged).
+
 **D-61** · A2A operations/recovery · *Resolve ambiguous paid jobs with evidence-bound terminal
 metadata transitions, never by rerunning research.* `payment_events` plus Circle reconciliation
 remain the source of truth for creator settlement; the saved real-mode `QueryRun` is the source of

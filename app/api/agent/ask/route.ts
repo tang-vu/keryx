@@ -36,6 +36,15 @@ import {
   verifiedA2aResponseFromRun,
 } from "@/lib/a2a/operator-resolution";
 import type { KeryxDB } from "@/lib/db/keryx-db";
+import {
+  A2A_RESEARCH_PACKAGE_VERSION,
+  acceptsA2aPackageVersion,
+  failedA2aServiceReceipt,
+  isSupportedA2aResearchPackage,
+  listA2aResearchPackages,
+  pendingA2aServiceStatus,
+  supportedA2aPackageVersions,
+} from "@/lib/a2a/research-package";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -68,6 +77,12 @@ async function currentFailedResponse(db: KeryxDB, order: A2aOrder, replayed = fa
     order.executionJournalVersion === 1 &&
     order.paymentStartedAt === null &&
     economics.creatorPayments.attempts === 0;
+  const researchPackage = isSupportedA2aResearchPackage(
+    order.researchPackage,
+    order.researchMode,
+  )
+    ? order.researchPackage
+    : null;
   return {
     status: "failed",
     queryId: order.queryId,
@@ -80,6 +95,17 @@ async function currentFailedResponse(db: KeryxDB, order: A2aOrder, replayed = fa
           accountingComplete: false,
         },
     creatorPayments: { ...economics.creatorPayments, accountingComplete },
+    ...(researchPackage
+      ? {
+          researchPackage,
+          serviceReceipt: failedA2aServiceReceipt({
+            researchPackage,
+            acceptedAt: order.createdAt,
+            startedAt: order.startedAt,
+            finishedAt: order.updatedAt,
+          }),
+        }
+      : {}),
     ...(!accountingComplete
       ? {
           message:
@@ -97,10 +123,27 @@ function pendingResponse(order: A2aOrder, replayed = false, message?: string) {
     !!order.startedAt &&
     (!Number.isFinite(startedMs) || Date.now() - startedMs >= A2A_REVIEW_AFTER_MS);
   const status = needsReview ? "review_required" : order.startedAt ? "processing" : "queued";
+  const researchPackage = isSupportedA2aResearchPackage(
+    order.researchPackage,
+    order.researchMode,
+  )
+    ? order.researchPackage
+    : null;
   return {
     status,
     queryId: order.queryId,
     pollUrl: `/api/agent/ask?queryId=${encodeURIComponent(order.queryId)}`,
+    ...(researchPackage
+      ? {
+          researchPackage,
+          serviceStatus: pendingA2aServiceStatus({
+            researchPackage,
+            state: status,
+            acceptedAt: order.createdAt,
+            startedAt: order.startedAt,
+          }),
+        }
+      : {}),
     ...(message
       ? { message }
       : needsReview
@@ -152,12 +195,14 @@ export async function GET(req?: NextRequest) {
     method: "POST",
     pricingPolicy: quote.policy,
     defaultQuote: quote,
+    researchPackages: listA2aResearchPackages(),
     network: config.networkId,
     payTo: config.sellerAddress,
     request: {
       question: "string (required)",
       budget: `creator-spend cap in USDC (optional, max ${config.a2aMaxBudget})`,
       researchMode: "quick | deep (optional; default deep)",
+      packageVersion: `${A2A_RESEARCH_PACKAGE_VERSION} (optional; pins the execution contract)`,
       responseMode: "wait | async (optional; async returns 202 + poll URL)",
     },
     response: "cited answer + itemized service fee, creator spend, and unused reserve",
@@ -192,6 +237,7 @@ export async function POST(req: NextRequest) {
     budget?: unknown;
     model?: unknown;
     researchMode?: unknown;
+    packageVersion?: unknown;
     responseMode?: unknown;
   };
   const parsedQuestion = parseAskQuestion(body.question);
@@ -199,7 +245,24 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: parsedQuestion.error }, { status: 400 });
   }
   const researchMode = parseResearchMode(body.researchMode);
-  const quote = quoteA2aResearch(body.budget, researchMode);
+  if (!acceptsA2aPackageVersion(body.packageVersion)) {
+    return Response.json(
+      {
+        error: "unsupported A2A research package version",
+        supportedPackageVersions: supportedA2aPackageVersions(),
+      },
+      { status: 409 },
+    );
+  }
+  const packageVersion =
+    typeof body.packageVersion === "string"
+      ? body.packageVersion
+      : A2A_RESEARCH_PACKAGE_VERSION;
+  const quote = quoteA2aResearch(body.budget, researchMode, packageVersion);
+  const researchPackage = quote.researchPackage;
+  if (!researchPackage) {
+    return Response.json({ error: "research package unavailable" }, { status: 503 });
+  }
   const treasury = config.sellerAddress;
   if (!treasury) return Response.json({ error: "treasury wallet not configured" }, { status: 500 });
   const model =
@@ -217,6 +280,7 @@ export async function POST(req: NextRequest) {
     creatorBudgetUsdc: quote.creatorBudgetUsdc,
     serviceFeeUsdc: quote.serviceFeeUsdc,
     researchMode,
+    researchPackage,
     model,
   });
 
@@ -250,6 +314,7 @@ export async function POST(req: NextRequest) {
       creatorBudgetUsdc: quote.creatorBudgetUsdc,
       serviceFeeUsdc: quote.serviceFeeUsdc,
       researchMode,
+      researchPackage,
       status: "running",
       transaction: settle.transaction,
       request: { question: parsedQuestion.question, model, origin },
@@ -279,7 +344,7 @@ export async function POST(req: NextRequest) {
         authorizationId,
         settled: true,
         origin,
-        rationale: `A2A v2 package: $${quote.serviceFeeUsdc} service fee + $${quote.creatorBudgetUsdc} creator-spend cap.`,
+        rationale: `A2A ${researchPackage.id}@${researchPackage.version}: $${quote.serviceFeeUsdc} service fee + $${quote.creatorBudgetUsdc} creator-spend cap.`,
       }),
     );
 
@@ -337,6 +402,7 @@ export async function POST(req: NextRequest) {
         origin,
         fundingOwner: "treasury",
         model,
+        executionLimits: { ...researchPackage.execution },
         onCreatorPaymentBoundary: async () => {
           if (!(await db.markA2aOrderPaymentStarted(orderId, new Date().toISOString()))) {
             throw new Error("A2A creator-payment boundary could not be journaled");

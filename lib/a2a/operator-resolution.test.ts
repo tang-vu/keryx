@@ -6,6 +6,7 @@ import {
   inspectA2aOrder,
   repairA2aOrderFromSavedRun,
 } from "./operator-resolution";
+import { a2aResearchPackage } from "./research-package";
 
 const now = "2026-09-01T12:00:00.000Z";
 
@@ -21,6 +22,7 @@ function order(overrides: Partial<A2aOrder> = {}): A2aOrder {
     creatorBudgetUsdc: 0.05,
     serviceFeeUsdc: 0.05,
     researchMode: "deep",
+    researchPackage: a2aResearchPackage("deep"),
     status: "running",
     transaction: "circle-transfer",
     request: { question: "private question", origin: "a2a" },

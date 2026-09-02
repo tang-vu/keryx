@@ -1,8 +1,17 @@
 import { collectRun } from "../agent";
 import type { KeryxDB } from "../db/keryx-db";
 import type { QueryRun } from "../types";
-import { a2aRequestHash, type A2aOrder, type A2aOrderRequest } from "./order";
+import {
+  a2aRequestHash,
+  legacyA2aRequestHash,
+  type A2aOrder,
+  type A2aOrderRequest,
+} from "./order";
 import { verifiedA2aResponseFromRun } from "./operator-resolution";
+import {
+  isSupportedA2aResearchPackage,
+  type A2aResearchPackage,
+} from "./research-package";
 
 type A2aWorkerDb = Pick<
   KeryxDB,
@@ -29,7 +38,10 @@ export interface A2aWorkerOutcome {
   errorCode?: "invalid_order_data" | "research_failed";
 }
 
-function validRequest(order: A2aOrder, expectedPayee?: string): A2aOrderRequest | null {
+function validRequest(
+  order: A2aOrder,
+  expectedPayee?: string,
+): { request: A2aOrderRequest; executionLimits?: A2aResearchPackage["execution"] } | null {
   const request = order.request;
   if (
     !request ||
@@ -40,7 +52,15 @@ function validRequest(order: A2aOrder, expectedPayee?: string): A2aOrderRequest 
   ) {
     return null;
   }
-  if (order.executionJournalVersion !== 1 || order.paymentStartedAt !== null) return null;
+  if (
+    order.executionJournalVersion !== 1 ||
+    order.paymentStartedAt !== null ||
+    order.resultSavingAt !== null ||
+    (order.researchPackage !== null &&
+      !isSupportedA2aResearchPackage(order.researchPackage, order.researchMode))
+  ) {
+    return null;
+  }
   const micro = (amount: number) => Math.round(amount * 1e6);
   const creatorMicros = micro(order.creatorBudgetUsdc);
   const feeMicros = micro(order.serviceFeeUsdc);
@@ -59,14 +79,24 @@ function validRequest(order: A2aOrder, expectedPayee?: string): A2aOrderRequest 
   ) {
     return null;
   }
-  const hash = a2aRequestHash({
+  const hashInput = {
     question: request.question,
     creatorBudgetUsdc: order.creatorBudgetUsdc,
     serviceFeeUsdc: order.serviceFeeUsdc,
     researchMode: order.researchMode,
     model: request.model,
-  });
-  return hash === order.requestHash && order.id === order.queryId ? request : null;
+  };
+  const hash = order.researchPackage
+    ? a2aRequestHash({ ...hashInput, researchPackage: order.researchPackage })
+    : legacyA2aRequestHash(hashInput);
+  return hash === order.requestHash && order.id === order.queryId
+    ? {
+        request,
+        ...(order.researchPackage
+          ? { executionLimits: { ...order.researchPackage.execution } }
+          : {}),
+      }
+    : null;
 }
 
 /** Runs one already-claimed job. A failed/ambiguous started job is terminal and never requeued. */
@@ -75,11 +105,12 @@ export async function runClaimedA2aOrder(
   order: A2aOrder,
   options: A2aRunOptions = {},
 ): Promise<A2aWorkerOutcome> {
-  const request = validRequest(order, options.expectedPayee);
-  if (!request) {
+  const valid = validRequest(order, options.expectedPayee);
+  if (!valid) {
     await db.failA2aOrder(order.id, "invalid_order_data", new Date().toISOString());
     return { id: order.id, status: "failed", errorCode: "invalid_order_data" };
   }
+  const { request, executionLimits } = valid;
 
   let run: QueryRun;
   try {
@@ -91,6 +122,7 @@ export async function runClaimedA2aOrder(
       origin: request.origin,
       fundingOwner: "treasury",
       model: request.model,
+      ...(executionLimits ? { executionLimits } : {}),
       onCreatorPaymentBoundary: async () => {
         if (!(await db.markA2aOrderPaymentStarted(order.id, new Date().toISOString()))) {
           throw new Error("A2A creator-payment boundary could not be journaled");

@@ -7,12 +7,16 @@
  */
 
 import { config } from "./config";
+import {
+  A2A_RESEARCH_PACKAGE_VERSION,
+  supportedA2aPackageVersions,
+} from "./a2a/research-package";
 
 export const openapiSpec = {
   openapi: "3.1.0",
   info: {
     title: "Keryx API",
-    version: "0.5.0",
+    version: "0.20.0",
     description:
       "Citation-toll autonomous research. POST a question + budget — Keryx buys paid sources via x402, " +
       "answers with citations, and settles weighted nanopayments to every cited creator in USDC on Arc. " +
@@ -47,6 +51,121 @@ export const openapiSpec = {
       },
     },
     schemas: {
+      A2aResearchPackage: {
+        type: "object",
+        required: ["schema", "id", "version", "researchMode", "execution", "serviceLevel", "quality"],
+        properties: {
+          schema: { type: "string", const: "urn:keryx:a2a-research-package:1" },
+          id: { type: "string", enum: ["keryx-quick", "keryx-deep"] },
+          version: { type: "string", enum: supportedA2aPackageVersions() },
+          researchMode: { type: "string", enum: ["quick", "deep"] },
+          execution: {
+            type: "object",
+            required: ["attentionLimit", "reevaluateRounds"],
+            properties: {
+              attentionLimit: { type: "integer" },
+              reevaluateRounds: { type: "integer" },
+            },
+          },
+          serviceLevel: {
+            type: "object",
+            required: ["kind", "targetCompletionMs", "startsAt", "remedy"],
+            properties: {
+              kind: { type: "string", const: "provisional_slo" },
+              targetCompletionMs: { type: "integer" },
+              startsAt: { type: "string", const: "accepted_at" },
+              remedy: { type: "string", const: "none" },
+            },
+          },
+          quality: {
+            type: "object",
+            required: ["measurement", "groundingThreshold", "commitment"],
+            properties: {
+              measurement: { type: "string", const: "evidence-ledger-v1" },
+              groundingThreshold: { type: "number", const: 0.4 },
+              commitment: { type: "string", const: "best_effort" },
+            },
+          },
+        },
+      },
+      A2aServiceStatus: {
+        type: "object",
+        required: [
+          "packageId",
+          "packageVersion",
+          "state",
+          "acceptedAt",
+          "startedAt",
+          "targetCompletionAt",
+          "targetCompletionMs",
+          "elapsedMs",
+          "targetBreached",
+          "objectiveKind",
+          "remedy",
+        ],
+        properties: {
+          packageId: { type: "string", enum: ["keryx-quick", "keryx-deep"] },
+          packageVersion: { type: "string", enum: supportedA2aPackageVersions() },
+          state: { type: "string", enum: ["queued", "processing", "review_required"] },
+          acceptedAt: { type: "string", format: "date-time" },
+          startedAt: { type: ["string", "null"], format: "date-time" },
+          targetCompletionAt: { type: "string", format: "date-time" },
+          targetCompletionMs: { type: "integer" },
+          elapsedMs: { type: "integer" },
+          targetBreached: { type: "boolean" },
+          objectiveKind: { type: "string", const: "provisional_slo" },
+          remedy: { type: "string", const: "none" },
+        },
+      },
+      A2aServiceReceipt: {
+        type: "object",
+        required: [
+          "packageId",
+          "packageVersion",
+          "outcome",
+          "acceptedAt",
+          "startedAt",
+          "finishedAt",
+          "queueDurationMs",
+          "executionDurationMs",
+          "totalDurationMs",
+          "targetCompletionMs",
+          "targetMet",
+          "objectiveKind",
+          "remedy",
+        ],
+        properties: {
+          packageId: { type: "string", enum: ["keryx-quick", "keryx-deep"] },
+          packageVersion: { type: "string", enum: supportedA2aPackageVersions() },
+          outcome: { type: "string", enum: ["completed", "failed"] },
+          acceptedAt: { type: "string", format: "date-time" },
+          startedAt: { type: ["string", "null"], format: "date-time" },
+          finishedAt: { type: "string", format: "date-time" },
+          queueDurationMs: { type: ["integer", "null"] },
+          executionDurationMs: { type: ["integer", "null"] },
+          totalDurationMs: { type: "integer" },
+          targetCompletionMs: { type: "integer" },
+          targetMet: { type: "boolean" },
+          objectiveKind: { type: "string", const: "provisional_slo" },
+          remedy: { type: "string", const: "none" },
+          quality: {
+            type: "object",
+            properties: {
+              measurement: { type: "string", const: "evidence-ledger-v1" },
+              groundingThreshold: { type: "number", const: 0.4 },
+              status: { type: "string", enum: ["measured", "unavailable"] },
+              claimCount: { type: "integer" },
+              measuredClaims: { type: "integer" },
+              groundedClaims: { type: "integer" },
+              groundedClaimRate: { type: ["number", "null"] },
+              qualifyingEvidence: { type: "integer" },
+              rewardedCitations: { type: "integer" },
+              confidence: { type: ["object", "null"] },
+            },
+          },
+          portableReceiptUrl: { type: "string" },
+        },
+      },
       AskRequest: {
         type: "object",
         required: ["question"],
@@ -63,6 +182,13 @@ export const openapiSpec = {
             type: "string",
             enum: ["quick", "deep"],
             default: "deep",
+          },
+          packageVersion: {
+            type: "string",
+            enum: supportedA2aPackageVersions(),
+            default: A2A_RESEARCH_PACKAGE_VERSION,
+            description:
+              "Optional version pin for the immutable execution contract; unsupported versions fail before payment.",
           },
           responseMode: {
             type: "string",
@@ -83,6 +209,8 @@ export const openapiSpec = {
           },
           queryId: { type: "string", pattern: "^a2a_[a-f0-9]{64}$" },
           pollUrl: { type: "string" },
+          researchPackage: { $ref: "#/components/schemas/A2aResearchPackage" },
+          serviceStatus: { $ref: "#/components/schemas/A2aServiceStatus" },
           message: { type: "string" },
         },
       },
@@ -93,6 +221,8 @@ export const openapiSpec = {
           status: { type: "string", enum: ["failed"] },
           queryId: { type: "string", pattern: "^a2a_[a-f0-9]{64}$" },
           error: { type: "string" },
+          researchPackage: { $ref: "#/components/schemas/A2aResearchPackage" },
+          serviceReceipt: { $ref: "#/components/schemas/A2aServiceReceipt" },
           pricing: { type: "object" },
           creatorPayments: {
             type: "object",
@@ -114,6 +244,9 @@ export const openapiSpec = {
         type: "object",
         properties: {
           queryId: { type: "string" },
+          status: { type: "string", enum: ["completed"] },
+          researchPackage: { $ref: "#/components/schemas/A2aResearchPackage" },
+          serviceReceipt: { $ref: "#/components/schemas/A2aServiceReceipt" },
           answer: { type: "string" },
           citations: {
             type: "array",
@@ -513,7 +646,9 @@ export const openapiSpec = {
           "The body determines an exact all-in x402 price before settlement: a fixed Quick/Deep " +
           "orchestration fee plus the bounded creator-spend cap. The non-refundable receipt " +
           "itemizes actual creator spend and unused reserve. Production callers can request a " +
-          "durable 202 job with responseMode=async or Prefer: respond-async.",
+          "durable 202 job with responseMode=async or Prefer: respond-async. Each new order stores " +
+          "a versioned execution contract and returns provisional latency/evidence-quality measurements; " +
+          "these objectives have no contractual remedy.",
         security: [{ X402Payment: [] }, { ApiKeyAuth: [], X402Payment: [] }],
         requestBody: {
           required: true,
@@ -555,6 +690,12 @@ export const openapiSpec = {
           },
           "400": {
             description: "Invalid question or response mode.",
+            content: {
+              "application/json": { schema: { $ref: "#/components/schemas/Error" } },
+            },
+          },
+          "409": {
+            description: "Requested research package version is unsupported; no payment is issued.",
             content: {
               "application/json": { schema: { $ref: "#/components/schemas/Error" } },
             },

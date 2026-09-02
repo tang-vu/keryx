@@ -72,7 +72,10 @@ export async function verifiedA2aResponseFromRun(
   const attempts = await db.listCreatorPaymentAttemptsByQuery(order.queryId);
   const evidence = creatorResolutionEvidence(order, attempts, true);
   assertEconomicEvidence(order, evidence);
-  const response = a2aResponseFromRun(run, quoteFromA2aOrder(order));
+  const response = a2aResponseFromRun(run, quoteFromA2aOrder(order), {
+    acceptedAt: order.createdAt,
+    startedAt: order.startedAt,
+  });
   assertSavedRunAccounting(run, evidence);
   return { response, evidence };
 }

@@ -190,6 +190,7 @@ CREATE TABLE IF NOT EXISTS a2a_orders (
   creator_budget_usdc REAL NOT NULL,
   service_fee_usdc REAL NOT NULL,
   research_mode TEXT NOT NULL,
+  package_data TEXT,
   status TEXT NOT NULL CHECK (status IN ('running','completed','failed')),
   transaction_id TEXT NOT NULL,
   request_data TEXT,
@@ -586,6 +587,8 @@ export class SqliteAdapter implements KeryxDB {
       this.db.exec(`ALTER TABLE a2a_orders ADD COLUMN payment_started_at TEXT`);
     if (!a2aCols.has("result_saving_at"))
       this.db.exec(`ALTER TABLE a2a_orders ADD COLUMN result_saving_at TEXT`);
+    if (!a2aCols.has("package_data"))
+      this.db.exec(`ALTER TABLE a2a_orders ADD COLUMN package_data TEXT`);
     if (!hadStartedAt) {
       this.db.exec(
         `UPDATE a2a_orders SET started_at=updated_at,worker_id=COALESCE(worker_id,'legacy')
@@ -1513,10 +1516,10 @@ export class SqliteAdapter implements KeryxDB {
       .prepare(
         `INSERT OR IGNORE INTO a2a_orders
          (id,query_id,authorization_id,request_hash,payer,payee,amount_usdc,creator_budget_usdc,
-          service_fee_usdc,research_mode,status,transaction_id,request_data,started_at,worker_id,
+          service_fee_usdc,research_mode,package_data,status,transaction_id,request_data,started_at,worker_id,
           execution_journal_version,payment_started_at,result_saving_at,response_data,error_code,resolution_data,
           created_at,updated_at)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       )
       .run(
         order.id,
@@ -1529,6 +1532,7 @@ export class SqliteAdapter implements KeryxDB {
         order.creatorBudgetUsdc,
         order.serviceFeeUsdc,
         order.researchMode,
+        order.researchPackage ? JSON.stringify(order.researchPackage) : null,
         order.status,
         order.transaction,
         order.request ? JSON.stringify(order.request) : null,
@@ -2439,6 +2443,9 @@ function rowToA2aOrder(r: Record<string, unknown>): A2aOrder {
     creatorBudgetUsdc: Number(r.creator_budget_usdc),
     serviceFeeUsdc: Number(r.service_fee_usdc),
     researchMode: r.research_mode === "quick" ? "quick" : "deep",
+    researchPackage: r.package_data
+      ? (JSON.parse(String(r.package_data)) as A2aOrder["researchPackage"])
+      : null,
     status: r.status as A2aOrder["status"],
     transaction: String(r.transaction_id),
     request: r.request_data

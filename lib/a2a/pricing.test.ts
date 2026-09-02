@@ -4,11 +4,13 @@ import { a2aReceiptEconomics, quoteA2aResearch } from "./pricing";
 describe("A2A v2 pricing", () => {
   it("adds the fixed service fee to the exact creator-spend cap", () => {
     expect(quoteA2aResearch(0.05, "quick")).toMatchObject({
+      researchPackage: { id: "keryx-quick", version: "1.0.0" },
       creatorBudgetUsdc: 0.05,
       serviceFeeUsdc: 0.02,
       totalPriceUsdc: 0.07,
     });
     expect(quoteA2aResearch(0.05, "deep")).toMatchObject({
+      researchPackage: { id: "keryx-deep", version: "1.0.0" },
       creatorBudgetUsdc: 0.05,
       serviceFeeUsdc: 0.05,
       totalPriceUsdc: 0.1,

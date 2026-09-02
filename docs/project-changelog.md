@@ -1,5 +1,15 @@
 # Keryx Project Changelog
 
+### Versioned A2A research packages and service receipts (2026-09-02)
+
+- Added immutable Quick/Deep package `1.0.0` snapshots, persisted after settlement and included in
+  the request hash so queued work executes the exact attention/re-evaluation contract quoted to the
+  buyer; unsupported version pins fail before payment.
+- Added buyer-visible pending deadlines plus terminal queue/execution/total latency and deterministic
+  evidence-quality measurements, linked to the existing portable research receipt.
+- Labeled the initial targets `provisional_slo`, `best_effort`, `remedy:none`; historical orders stay
+  unversioned and the current tiny external sample is not promoted into an SLA or traction claim.
+
 ### Evidence-bound A2A operator resolution (2026-09-02)
 
 - Added a private exact-order inspect/repair/close runbook for `review_required` jobs; neither
@@ -62,7 +72,7 @@
   globe functional without adding another third-party network origin.
 
 **Last Updated:** 2026-08-28
-**Current Version:** 0.19.0
+**Current Version:** 0.20.0
 
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
 

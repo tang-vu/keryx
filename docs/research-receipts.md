@@ -10,6 +10,11 @@ GET https://keryx.cc/api/dispatch/{queryId}/receipt?download=1
 The first form returns JSON inline. `download=1` adds an attachment filename. Both responses carry
 the same digest in `X-Keryx-Receipt-Digest` and `integrity.digest`.
 
+For a newly paid A2A order, the terminal API response also includes a `serviceReceipt`. That smaller
+receipt measures the accepted package's latency and evidence quality and links here through
+`portableReceiptUrl`; this portable receipt remains the detailed integrity/settlement artifact.
+Historical A2A responses may have no package or service receipt and must not be interpreted as v1.
+
 ## What the receipt binds
 
 The SHA-256 covers the full `payload`, canonicalized with recursively sorted object keys:

@@ -6,6 +6,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { SqliteAdapter } from "./sqlite-adapter";
 import type { A2aOrder } from "../a2a/order";
 import type { PaymentRecord } from "../types";
+import { a2aResearchPackage } from "../a2a/research-package";
 
 const dbFile = path.join(os.tmpdir(), `keryx-a2a-orders-${process.pid}.sqlite`);
 const db = new SqliteAdapter(dbFile);
@@ -27,6 +28,7 @@ const order: A2aOrder = {
   creatorBudgetUsdc: 0.05,
   serviceFeeUsdc: 0.05,
   researchMode: "deep",
+  researchPackage: a2aResearchPackage("deep"),
   status: "running",
   transaction: "circle-transfer",
   request: { question: "q", origin: "a2a" },

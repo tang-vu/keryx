@@ -19,7 +19,9 @@ curl -s ${ORIGIN}/api/agent/ask
 
 # 2 · POST body sets the exact quote, then pay via x402
 circle services pay ${ORIGIN}/api/agent/ask -X POST
-#    body → {"question":"...","budget":0.05,"researchMode":"deep"}
+#    body → {"question":"...","budget":0.05,"researchMode":"deep",
+#             "packageVersion":"1.0.0","responseMode":"async"}
+#    Deep v1: 4 attention slots · 1 re-evaluation · provisional target 300s
 #    default Deep total: $0.05 service + $0.05 creator cap = $0.10`;
 
 export function A2aCallCard() {
@@ -45,7 +47,8 @@ export function A2aCallCard() {
       <p className="px-5 pt-3.5 text-sm leading-relaxed text-ink-2">
         Keryx is itself a paid x402 endpoint. The request prepays a fixed Quick/Deep service fee
         plus its hard creator-spend cap; the receipt itemizes what reached creators and what reserve
-        stayed unused.
+        stayed unused. Package v1 pins the execution contract and returns measured latency and
+        evidence quality; its initial SLO is provisional, not a refund-backed SLA.
       </p>
 
       <div className="relative m-5 mt-3.5 border border-line bg-paper-2">

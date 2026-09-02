@@ -14,6 +14,10 @@ const resolutionMigration = fs.readFileSync(
   path.resolve(process.cwd(), "supabase/migrations/0040_a2a_operator_resolution.sql"),
   "utf8",
 );
+const packageMigration = fs.readFileSync(
+  path.resolve(process.cwd(), "supabase/migrations/0041_a2a_research_packages.sql"),
+  "utf8",
+);
 
 describe("A2A order migration", () => {
   it("keeps orders private and constrains terminal states and money", () => {
@@ -67,5 +71,11 @@ describe("A2A order migration", () => {
     expect(resolutionMigration).toContain(
       "REVOKE ALL ON FUNCTION public.mark_a2a_result_saving(text, timestamptz)",
     );
+  });
+
+  it("stores new package snapshots without pretending historical orders used them", () => {
+    expect(packageMigration).toContain("ADD COLUMN IF NOT EXISTS package_data jsonb");
+    expect(packageMigration).not.toMatch(/UPDATE\s+public\.a2a_orders/i);
+    expect(packageMigration).toContain("bound into request_hash");
   });
 });
