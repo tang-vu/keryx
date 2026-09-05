@@ -31,6 +31,18 @@ existing economic contract. None of these is claimed as new ETHOnline work.
   for queued/completed and failed jobs, pending/unknown amounts, terminal polling stop,
   memory clearing, invalid caps and mobile overflow. No paid POST is made by these checks.
 
+## Release dependency follow-up
+
+Release follow-up: the first CI run passed functional tests but its unchanged dependency
+tree failed the high-severity audit gate. Pin transitive `toml` to 4.3.0, retaining
+Anchor's CommonJS `parse(Buffer)` contract, and refresh compatible `fast-uri`/`qs`
+versions. Add parser compatibility and pollution/depth regression checks. The audit
+gate remains enabled; this dependency remediation is part of the release validation.
+
+Advisories: https://github.com/advisories/GHSA-v5mp-jgw5-2x6j,
+https://github.com/advisories/GHSA-82x6-q7mm-w9cf,
+https://github.com/advisories/GHSA-f65p-4m7j-42xc.
+
 ## Next deliverables
 
 1. A bounded buyer-agent client using its own funded wallet, validating the exact x402
