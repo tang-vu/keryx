@@ -28,6 +28,7 @@ const NAV = [
   { href: "/me/sources", label: "My sources" },
   { href: "/me/asks", label: "My dispatches" },
   { href: "/playground", label: "Playground" },
+  { href: "/research", label: "Paid research" },
   { href: "/dev", label: "Dev portal" },
 ];
 

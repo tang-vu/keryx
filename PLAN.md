@@ -1,5 +1,9 @@
 # Keryx — Build Plan
 
+> **Active event (2026-09-05):** ETHOnline 2026 continuity work is tracked in
+> [docs/ethonline-2026.md](docs/ethonline-2026.md). The Lepton phases and rubric below
+> remain historical. Current product direction is maintained in `docs/project-roadmap.md`.
+
 > **Keryx** (κῆρυξ, *herald*): the agent that announces a creator's work — and pays them every time it does.
 >
 > A citation-toll reading agent. Ask a question; the agent autonomously decides which paid

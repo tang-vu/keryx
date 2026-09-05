@@ -1,5 +1,14 @@
 # Keryx Project Changelog
 
+### Paid research buyer workspace (2026-09-05)
+
+- Added `/research` with server-priced package preparation and copyable async request JSON.
+- Added paid-job lookup, bounded polling, evidence and honest settled/pending/unknown
+  economics. Jobs remain private bearer identifiers kept only in page memory.
+- Started the ETHOnline continuity log at `docs/ethonline-2026.md`, with the September 2
+  baseline and explicit separation of existing features from event work.
+- This milestone does not add browser purchasing or independent receipt verification.
+
 ### Versioned A2A research packages and service receipts (2026-09-02)
 
 - Added immutable Quick/Deep package `1.0.0` snapshots, persisted after settlement and included in

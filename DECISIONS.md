@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-63** · Buyer workspace · *Expose server-priced package preparation and existing paid-job
+inspection as a read-only workspace before adding another signer.* `/research` reuses the
+paid endpoint's quote function and accepted job responses. It never authorizes a payment,
+starts a job, or turns unknown creator economics into zero. Job IDs retain the existing
+bearer-access semantics and stay in component memory; no public directory or persistent
+browser history is introduced. Polling uses a locally constructed same-origin endpoint,
+stops on terminal/review states, and cannot resubmit a purchase. The current GET may repair
+order metadata from an already-durable run under the existing D-61 evidence gate; the
+workspace introduces no new recovery authority. Why: the paid API already has durable jobs
+and service receipts, but buyers lack a cohesive way to inspect them. Separate client
+payment/recovery and receipt verification need their own bounded implementation. Reversible:
+easy (additive UI, no schema or settlement changes).
+
 Autonomous architecture/product/UX decisions, with rationale. Newest first.
 Format: **D-NN** · area · decision · why · reversibility.
 
