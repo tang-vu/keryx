@@ -26,6 +26,7 @@ typechain-types/
 *.sqlite3
 *.db
 data/
+.buyer-jobs/
 
 # misc
 .DS_Store

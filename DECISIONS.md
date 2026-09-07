@@ -1,5 +1,19 @@
 # Keryx — Decision Log
 
+**D-64** · Independent buyer · *Journal a single authorization before submission; recovery
+only reads the original deterministic order.* The caller provides its own already-funded EOA,
+trusted treasury payee and all-in price ceiling. A separate CLI imports no server config,
+funds no wallet and signs only pinned Arc-testnet USDC/Gateway batching requirements.
+Each exclusive job directory stores request, economic tuple and nonce before signing;
+submission is checkpointed before the bearer header leaves memory. Resume cannot sign,
+POST or infer payment failure from missing orders or authorization expiry. This preserves
+uncertainty even in a crash before actual submission and may require operator review.
+The response proof is retained before reading delivery and labeled seller-relayed; receipt
+hash/request binding is separate from independent financial verification. Payout authority,
+treasury caps, paid package semantics and server reconciliation remain unchanged.
+Why: the existing demo bootstraps itself from Keryx funds and cannot safely recover client
+process loss. Reversible: easy (additive CLI/journal and workspace download/guide).
+
 **D-63** · Buyer workspace · *Expose server-priced package preparation and existing paid-job
 inspection as a read-only workspace before adding another signer.* `/research` reuses the
 paid endpoint's quote function and accepted job responses. It never authorizes a payment,

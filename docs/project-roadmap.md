@@ -1,10 +1,11 @@
 # Keryx Project Roadmap
 
-**Version:** 0.21.0 (paid research buyer workspace, updated 2026-09-05)
+**Version:** 0.22.0 (independent buyer client and recovery, updated 2026-09-07)
 
 **Active event:** [ETHOnline 2026 continuity build log](./ethonline-2026.md). The first
 event milestone exposes package preparation and paid-job inspection at `/research`.
-The external buyer client and independent receipt verification are next; the September 30
+The external buyer client now checks receipt integrity and request binding; independent
+Circle settlement verification is not claimed. External paid pilot validation is next. The September 30
 prize deadline does not supersede the separate mainnet go/no-go requirements.
 **Status:** In continuous operation at [keryx.cc](https://keryx.cc) — real settlement 24/7, shipping in public.
 

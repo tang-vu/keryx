@@ -43,11 +43,28 @@ Advisories: https://github.com/advisories/GHSA-v5mp-jgw5-2x6j,
 https://github.com/advisories/GHSA-82x6-q7mm-w9cf,
 https://github.com/advisories/GHSA-f65p-4m7j-42xc.
 
+## September 7 — Independent buyer client (v0.22.0)
+
+Added `npm run buyer -- quote|buy|resume`, with caller-provided key/payee/price cap,
+exclusive pre-submission journals, GET-only recovery, seller-relayed payment evidence
+retained independently of delivery, and receipt integrity/request binding checks.
+The workspace now downloads request JSON and links to `docs/buyer-agent.md`.
+Fault-injection tests use a deterministic unfunded signer and mocked HTTP; they are
+not settled transactions or external demand. Live paid pilot validation still requires
+an independently funded buyer and is not claimed by these tests.
+
+The unsigned client was also checked against production: the Quick request with a
+0.03-USDC creator cap returned a 0.05-USDC total challenge, accepted without signing
+or paying. This validates live challenge compatibility, not paid delivery.
+An all-in limit below that quote was refused before signing. Local validation passed:
+31 focused buyer/order/receipt tests, TypeScript, focused lint, production build and
+a browser check of the exact request download on mobile. Production dependency audit
+had zero high/critical findings; low/moderate transitive findings remain.
+
 ## Next deliverables
 
-1. A bounded buyer-agent client using its own funded wallet, validating the exact x402
-   challenge before signing, preserving uncertain payment/recovery evidence and verifying
-   the returned portable receipt. The old self-funded demo client is not independent demand.
+1. Validate the new buyer client with an independently funded testnet pilot, including
+   reconnecting to an existing paid job. The old self-funded demo client is not independent demand.
 2. Pilot onboarding and repeat usage from 3–5 external teams (target, not achieved traction).
 3. Before/after demo, architecture diagram, integration guide and submission by September 16.
 4. Separate mainnet-readiness assessment for September 30. No mainnet enablement or real

@@ -1,5 +1,15 @@
 # Keryx Project Changelog
 
+### Independent buyer client (2026-09-07)
+
+- Added caller-funded `buyer quote/buy/resume` with pinned Arc-testnet payment policy,
+  total-price caps, exclusive pre-sign/submission journals and GET-only recovery.
+- Retained seller-relayed payment evidence independently of HTTP delivery; verified
+  accepted package, question/answer binding and portable receipt integrity while keeping
+  independent financial verification explicitly out of that checksum claim.
+- Added request download and buyer setup guide to `/research`. No server key access,
+  automatic funding, mainnet, or new payout authority.
+
 ### Paid research buyer workspace (2026-09-05)
 
 - Added `/research` with server-priced package preparation and copyable async request JSON.
