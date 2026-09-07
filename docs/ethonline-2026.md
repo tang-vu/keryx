@@ -33,6 +33,28 @@ existing economic contract. None of these is claimed as new ETHOnline work.
   Regression cases reject missing, empty, string, negative, fractional and out-of-range target
   indexes for BUY/CACHE and exercise successful fallback; intentional SKIP stays valid.
 
+### Post-deploy validation at `0aadd53`
+
+- Full CI and production health passed. The same explicit Keryx question now selected two
+  cached sources with valid target indexes. The agent correctly declined a Keryx-specific
+  answer because those sources did not document Keryx. No creator reward was issued.
+- One final 0.05-USDC Quick request asked about the HTTP 402/x402 access flow covered by
+  the available corpus. It completed in 55.925 seconds with a cited answer and one
+  0.015-USDC citation reward to the curated Agent Economy Weekly seed source. Access was
+  cached, so there was no new content-access toll. The unused reserve was 0.015 USDC.
+- The complete receipt ledger reports the reward settled with no pending creator amount.
+  A separate read from Circle matched its transfer ID, recipient, Arc network and 15,000
+  micro-USDC amount. Circle reported `received` with no batch transaction hash at inspection;
+  this is accepted Gateway transfer evidence, not proof of completed on-chain batch finality.
+- Receipt integrity and request binding passed. Final coverage was 0.3, 0.3 and 0 for the
+  three research targets: none met the grounding threshold, so grounded-claim rate was 0%
+  and confidence remained Low despite qualifying excerpts/citation reward. The payout path
+  is demonstrated; a sufficiently supported research outcome still needs work.
+- These are owner-operated tests against curated seed content, not independent customer
+  demand. Three additional jobs in this continuation cost 0.15 testnet USDC in package
+  charges plus deposit/approval gas (four total pilots, 0.20 USDC in package charges).
+  Private job IDs, journals and credentials remain excluded from Git.
+
 ## September 7 — Owner-operated pilot and research-quality follow-up (v0.22.2)
 
 - A separate owner-controlled EOA funded through the Arc testnet faucet deposited 0.05

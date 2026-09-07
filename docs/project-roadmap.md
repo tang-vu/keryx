@@ -9,7 +9,9 @@ Circle settlement verification is not claimed. An owner-operated paid testnet pi
 purchase/recovery/receipt checks but produced no supported answer. Planning and empty-evidence
 reporting are now improved. A second paid pilot exposed missing target links in positive model
 decisions; the prompt/output contract now rejects this malformed output for reasoning fallback.
-A successful cited-answer paid pilot and external validation remain next. The September 30
+An owner-operated follow-up now produced a cited answer and an accepted 0.015-USDC Gateway
+citation reward to a curated seed source, but no research target reached the grounding
+threshold. Adequate evidence coverage and external validation remain next. The September 30
 prize deadline does not supersede the separate mainnet go/no-go requirements.
 **Status:** In continuous operation at [keryx.cc](https://keryx.cc) — real settlement 24/7, shipping in public.
 
