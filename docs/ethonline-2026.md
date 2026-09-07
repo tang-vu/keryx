@@ -61,6 +61,10 @@ An all-in limit below that quote was refused before signing. Local validation pa
 a browser check of the exact request download on mobile. Production dependency audit
 had zero high/critical findings; low/moderate transitive findings remain.
 
+Post-review patch v0.22.1 makes receipt archival atomic: re-download repairs a partial
+same-digest file without overwriting older receipt versions or submitting a payment.
+The fault test corrupts the local archive and verifies recovery via GET requests only.
+
 ## Next deliverables
 
 1. Validate the new buyer client with an independently funded testnet pilot, including

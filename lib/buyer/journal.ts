@@ -1,4 +1,5 @@
-import { mkdir, open, readFile } from "node:fs/promises";
+import { mkdir, open, readFile, rename, unlink } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { resolve, join, dirname } from "node:path";
 import { z } from "zod";
 import { authorizationSchema, buyerRequestSchema, buyerJobId, requirementSchema } from "./policy";
@@ -43,4 +44,18 @@ export async function readBuyerJournal(directory: string): Promise<BuyerIntent> 
   const text = await readFile(join(directory, "intent.json"), "utf8");
   if (text.length > 65536) throw new Error("Buyer journal is too large");
   return buyerIntentSchema.parse(JSON.parse(text));
+}
+
+/** Receipt snapshots can be downloaded again; atomically replace only their digest-addressed file. */
+export async function archiveBuyerReceipt(directory: string, name: string, receipt: unknown) {
+  if (!/^receipt-[a-f0-9]{64}\.json$/.test(name)) throw new Error("Invalid receipt archive name");
+  const temporary = `.receipt-${randomUUID()}.tmp`;
+  try {
+    await writeBuyerFile(directory, temporary, receipt);
+    await rename(join(directory, temporary), join(directory, name));
+    if (process.platform !== "win32") {
+      const parent = await open(directory, "r");
+      try { await parent.sync(); } finally { await parent.close(); }
+    }
+  } finally { await unlink(join(directory, temporary)).catch(() => undefined); }
 }

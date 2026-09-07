@@ -1,6 +1,6 @@
 # Keryx Project Roadmap
 
-**Version:** 0.22.0 (independent buyer client and recovery, updated 2026-09-07)
+**Version:** 0.22.1 (independent buyer client and atomic receipt recovery, updated 2026-09-07)
 
 **Active event:** [ETHOnline 2026 continuity build log](./ethonline-2026.md). The first
 event milestone exposes package preparation and paid-job inspection at `/research`.

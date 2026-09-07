@@ -2,7 +2,7 @@ import type { Hex } from "viem";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { BUYER_ENDPOINT, BUYER_ORIGIN, BuyerRefusal, buyerRequestSchema, chooseRequirement, newAuthorization, buyerJobId, type BuyerRequest, type BuyerAuthorization } from "./policy";
-import { createBuyerJournal, readBuyerJournal, writeBuyerFile, type BuyerIntent } from "./journal";
+import { archiveBuyerReceipt, createBuyerJournal, readBuyerJournal, writeBuyerFile, type BuyerIntent } from "./journal";
 import { buyerFetch, readBuyerJson, type BuyerFetch } from "./transport";
 import { sellerPaymentEvidence, verifyBuyerJob, verifyBuyerReceipt } from "./verify-result";
 
@@ -66,7 +66,6 @@ export async function resumeResearch(directory: string, http: BuyerFetch = buyer
   const verification = verifyBuyerReceipt(receipt, receiptResponse.headers.get("x-keryx-receipt-digest"), intent, job.answer!);
   // Content-addressed files retain earlier snapshots when reconciliation changes settlement.
   const name = `receipt-${verification.digest.slice(7)}.json`;
-  try { await writeBuyerFile(directory, name, receipt); }
-  catch (error) { if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error; }
+  await archiveBuyerReceipt(directory, name, receipt);
   return { ...job, packageFingerprint, payment, verification, receiptFile: name, workspace: `${BUYER_ORIGIN}/research` };
 }

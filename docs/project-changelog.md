@@ -1,5 +1,10 @@
 # Keryx Project Changelog
 
+### Atomic buyer receipt archival (2026-09-07, v0.22.1)
+
+- Atomically publish digest-addressed receipt files so a crash during download cannot
+  leave a partial archive that a later resume mistakenly treats as complete.
+
 ### Independent buyer client (2026-09-07)
 
 - Added caller-funded `buyer quote/buy/resume` with pinned Arc-testnet payment policy,

@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -100,6 +100,11 @@ describe("bounded buyer", () => {
     expect(result).toHaveProperty("verification.requestBinding", "verified");
     expect(result.payment.state).toBe("unconfirmed");
     expect(await readdir(path)).toContain(`receipt-${receipt.integrity.digest.slice(7)}.json`);
+    const receiptPath = join(path, `receipt-${receipt.integrity.digest.slice(7)}.json`);
+    await writeFile(receiptPath, '{"partial":');
+    const retry = vi.fn<typeof fetch>().mockResolvedValueOnce(Response.json(job)).mockResolvedValueOnce(Response.json(receipt, { headers: { "x-keryx-receipt-digest": receipt.integrity.digest } }));
+    await resumeResearch(path, retry);
+    expect(JSON.parse(await readFile(receiptPath, "utf8"))).toEqual(receipt);
     expect(() => verifyBuyerJob({ ...job, researchPackage: a2aResearchPackage("deep") }, intent)).toThrow();
     expect(() => verifyBuyerReceipt(receipt, receipt.integrity.digest, { ...intent, request: { ...request, question: "Different question" } }, answer)).toThrow();
     expect(() => verifyBuyerReceipt(receipt, "sha256:wrong", intent, answer)).toThrow();
