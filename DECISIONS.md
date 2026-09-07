@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-65** · Research quality · *Plan questions before evidence, and report an empty evidence
+set as measured zero support.* The first owner-operated buyer pilot paid successfully but
+decomposed an ambiguous citation-settlement question into invented patent-dispute assertions.
+Planning now asks for research questions, preserves explicit user scope, and supplies Keryx's
+product context for unqualified citation-payment questions. Malformed targets fall back to the
+original question. This is prompt guidance, not a deterministic guarantee of interpretation.
+Runs with no eligible/read sources retain zero coverage for each target, low confidence and
+distinct pending/settled source-payment messages. The workspace distinguishes completed
+execution from supported research. Historical missing measurements remain unknown; package
+prices, non-refundable terms, authorization and payout gates are unchanged. Why: completion
+and receipt integrity passed while useful research failed. Reversible: easy (no schema migration).
+
 **D-64** · Independent buyer · *Journal a single authorization before submission; recovery
 only reads the original deterministic order.* The caller provides its own already-funded EOA,
 trusted treasury payee and all-in price ceiling. A separate CLI imports no server config,

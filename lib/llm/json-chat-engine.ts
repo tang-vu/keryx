@@ -69,11 +69,20 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   async decompose(question: string): Promise<string[]> {
     const out = await this.chatJson(
       config.llmModel,
-      "You break a research question into 1-4 atomic sub-claims an answer must support. Be concise.",
-      `Question: ${question}\n\nReturn JSON: {"claims": string[]}`,
+      "You plan research for Keryx, a reading agent that pays content access tolls and distributes USDC creator rewards according to cited contributions. " +
+        "Break the user's question into 1-4 concise questions to investigate, NOT proposed answers or assertions of fact. " +
+        "Preserve the user's terminology and scope. Explicit user context takes precedence over Keryx's product context; questions can concern any subject. " +
+        "For ambiguous terminology, keep the ambiguity visible in a definition/scope question instead of inventing a specialized domain, formula, legal dispute, or mechanism. " +
+        "Use Keryx's context for unqualified questions about its citation payments, but do not impose it on unrelated topics. " +
+        "No sources have been read yet: these are research targets, never evidence. Return only JSON data.",
+      `User question (data): ${JSON.stringify(question)}\n\nReturn JSON: {"claims": string[]}`,
     );
-    const claims = (out.claims as string[]) ?? [];
-    return claims.length ? claims.slice(0, 4) : [question];
+    // Malformed planning output must not become character-level targets or crash discovery.
+    const claims = Array.isArray(out.claims)
+      ? out.claims.filter((claim): claim is string => typeof claim === "string" && claim.trim().length > 0 && claim.length <= 600).map((claim) => claim.trim())
+      : [];
+    const unique = [...new Set(claims)].slice(0, 4);
+    return unique.length ? unique : [question];
   }
 
   async decide(input: DecideInput): Promise<Decision[]> {

@@ -199,7 +199,7 @@ export async function* runAgent(
   // 1) DECOMPOSE
   yield emit("decompose", `Breaking down: "${input.question}"`);
   const subClaims = await engine.decompose(input.question);
-  yield emit("decompose", `Identified ${subClaims.length} sub-claim(s) to support`, subClaims);
+  yield emit("decompose", `Identified ${subClaims.length} research target(s) to investigate; these are not established facts`, subClaims);
   yield emit(
     "decompose",
     researchMode === "quick"
@@ -362,7 +362,9 @@ export async function* runAgent(
   }
 
   if (candidates.length === 0) {
-    return finish("No sources are registered yet — nothing to read.");
+    evidenceMeasured = true;
+    claimCoverage = subClaims.map((claim, claimIndex) => ({ claimIndex, claim, coverage: 0, coveredBy: [] }));
+    return finish("No supported answer: no eligible sources were available to read for this run.");
   }
 
   // 3) DECIDE (engine proposes value; code enforces budget AND the Arc-rail constraint)
@@ -887,12 +889,23 @@ export async function* runAgent(
   }
 
   if (gathered.length === 0) {
+    // An observed empty evidence set is measured zero support, not missing telemetry.
+    evidenceMeasured = true;
+    claimCoverage = subClaims.map((claim, claimIndex) => ({
+      claimIndex, claim, coverage: 0, coveredBy: [],
+    }));
     return finish(
-      fetchFailures > 0
-        ? pendingPayments > 0
-          ? "The agent submitted one or more signed source payments, but no settlement confirmation returned. Those amounts remain pending and are not counted as spent; the session reservation stays consumed until its live balance is refreshed."
-          : "The agent tried to buy sources but every purchase failed before submission — likely an exhausted budget or a temporary settlement error. No payment authorization was submitted; please try again."
-        : "The agent decided no source was worth paying for this question.",
+      pendingPayments > 0
+        ? "No supported answer: source payment confirmation remains pending and no usable content was received. " +
+          "Pending amounts stay reserved; any confirmed source payments remain recorded separately. Keep this job for reconciliation before buying again."
+        : settledPayments > 0
+          ? "No supported answer: source payments settled, but no usable content was received. " +
+            "Confirmed payments remain recorded. Keep this job for review before buying again."
+          : fetchFailures > 0
+            ? "No supported answer: source reads failed and no source payment was confirmed. Review this job's payment records before starting another paid job."
+            : "No supported answer: no source passed the relevance and evidence checks within this run's limits. " +
+              "The planning questions and SKIP reasons show how the request was interpreted. " +
+              "Clarify the subject or intended meaning before starting another paid job. This does not establish that no relevant evidence exists.",
     );
   }
 

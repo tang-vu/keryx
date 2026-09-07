@@ -1,5 +1,14 @@
 # Keryx Project Changelog
 
+### Research planning and empty-evidence outcomes (2026-09-07, v0.22.2)
+
+- Plan concise research questions rather than assumed factual answers, with explicit user
+  context taking precedence over Keryx's citation-payment context; validate provider output.
+- Record zero evidence coverage when no source is available or read. Distinguish pending
+  source payments and settled-but-undelivered content in the terminal explanation.
+- Warn buyers when a completed job has zero grounded claims or unavailable quality
+  measurement. Completion and valid receipts do not establish useful research.
+
 ### Atomic buyer receipt archival (2026-09-07, v0.22.1)
 
 - Atomically publish digest-addressed receipt files so a crash during download cannot

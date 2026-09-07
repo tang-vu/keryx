@@ -69,6 +69,8 @@ export function ResearchJob() {
     {job && <div className="mt-5 space-y-6">
       {(job.message || job.error) && <p className="border-l-2 border-seal pl-4 font-serif">{job.message ?? job.error}</p>}
       {job.status === "review_required" && <p className="font-serif">Operator review is required. Automatic polling has stopped. Refresh this job after review; do not submit a new payment to recover it.</p>}
+      {job.status === "completed" && job.serviceReceipt?.quality?.status === "measured" && job.serviceReceipt.quality.groundedClaimRate === 0 && <p role="status" className="border-l-2 border-seal pl-4 font-serif">No supported answer. The job finished, but none of its research targets reached the evidence threshold. Review the interpretation and evidence before buying again. The fixed package remains paid; unused creator reserve is not a refund.</p>}
+      {job.status === "completed" && job.serviceReceipt?.quality?.status === "unavailable" && <p className="border-l-2 border-seal pl-4 font-serif">Research quality is unverified. Job completion and a valid receipt do not establish a supported answer.</p>}
       {(job.serviceStatus || job.serviceReceipt) && <p className="font-mono text-xs">{Math.round((job.serviceStatus?.elapsedMs ?? job.serviceReceipt!.totalDurationMs) / 1000)}s elapsed · {Math.round((job.serviceStatus?.targetCompletionMs ?? job.serviceReceipt!.targetCompletionMs) / 1000)}s provisional target · {job.serviceStatus ? (job.serviceStatus.targetBreached ? "target exceeded" : "in progress") : job.serviceReceipt!.targetMet ? "target met" : "target not met"}. No SLA remedy.</p>}
       {job.pricing ? <>
         <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

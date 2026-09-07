@@ -12,6 +12,27 @@ recovery, Quick/Deep package v1 and portable/service receipts already existed.
 See `PLAN.md` for historical context and `docs/a2a-paid-research-v2.md` for the
 existing economic contract. None of these is claimed as new ETHOnline work.
 
+## September 7 — Owner-operated pilot and research-quality follow-up (v0.22.2)
+
+- A separate owner-controlled EOA funded through the Arc testnet faucet deposited 0.05
+  USDC and made one Quick purchase. Approval/deposit receipts succeeded, Circle Gateway
+  available balance moved from 0.05 to zero after purchase, and the seller relayed a Circle
+  transfer reference. GET-only recovery retrieved the job and verified receipt integrity
+  and request binding. Private job journals are excluded from this public log.
+- The job completed in 52.656 seconds but produced no supported answer or creator payments.
+  Its planner interpreted the ambiguous question as patent-citation settlement and the
+  preview gate rejected every source. The unused 0.03 creator reserve is part of the
+  non-refundable package, not a refund. This is internal validation, not customer traction.
+- Changed planning to research questions with scope/ambiguity guidance and validated
+  provider output. Empty evidence now records zero support; pending and settled source
+  payments keep distinct explanations. The buyer workspace makes zero/unknown quality visible.
+- A bounded live DeepSeek v4 Flash planning check kept the citation-payment question in
+  Keryx context and preserved explicit patent and gardening questions. This checks planning
+  only, not a second paid end-to-end pilot or a guarantee against interpretation errors.
+- Validation: 131 focused LLM/orchestrator/A2A/buyer tests, TypeScript, focused lint and
+  production build passed. Mobile browser checks with intercepted fixtures confirmed distinct
+  zero-support and unavailable-quality messages and no paid POST.
+
 ## September 5 — Buyer workspace (v0.21.0)
 
 - Added `/research`: server-priced Quick/Deep packages using the same quote function as

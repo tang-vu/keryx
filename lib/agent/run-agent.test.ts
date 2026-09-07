@@ -42,6 +42,7 @@ import {
   sourceItemIdentity,
 } from "../sources/source-item-asset";
 import { articleOfferId, articleOfferTypedData } from "../offers/article-offer";
+import { a2aResearchPackage, completedA2aServiceReceipt } from "../a2a/research-package";
 
 const AGENT = "0xAGENT";
 const EPS = 1e-6;
@@ -400,6 +401,14 @@ describe("runAgent — money-safety invariants", () => {
     expect(run.previewCoverage?.status).toBe("insufficient");
     expect(run.decisions[0]).toMatchObject({ action: "SKIP" });
     expect(run.decisions[0]?.rationale).toMatch(/no toll is authorized/i);
+    expect(run.answer).toContain("No supported answer");
+    expect(run.claimCoverage).toEqual([{ claimIndex: 0, claim: "the sub-claim", coverage: 0, coveredBy: [] }]);
+    expect(run.evidence).toEqual([]);
+    const receipt = completedA2aServiceReceipt({
+      researchPackage: a2aResearchPackage("quick"),
+      acceptedAt: run.createdAt, startedAt: run.createdAt, run,
+    });
+    expect(receipt.quality).toMatchObject({ status: "measured", groundedClaimRate: 0, qualifyingEvidence: 0 });
   });
 
   it("never spends more on tolls than the fetch budget, even when the engine BUYs everything", async () => {
@@ -612,7 +621,7 @@ describe("runAgent — money-safety invariants", () => {
     expect(run.settledPayments).toBe(0);
     expect(run.pendingPayments).toBe(1);
     expect(run.pendingSpendUsdc).toBe(0.004);
-    expect(run.answer).toContain("remain pending");
+    expect(run.answer).toContain("remains pending");
     expect(d.db.payments).toHaveLength(1);
     expect(d.db.payments[0]).toMatchObject({
       settlementStatus: "pending",
@@ -651,6 +660,9 @@ describe("runAgent — money-safety invariants", () => {
     expect(run.settledPayments).toBe(1);
     expect(run.pendingPayments).toBe(0);
     expect(run.citations).toHaveLength(0);
+    expect(run.answer).toContain("source payments settled");
+    expect(run.answer).not.toContain("before submission");
+    expect(run.claimCoverage?.[0]?.coverage).toBe(0);
     expect(d.db.payments).toHaveLength(1);
     expect(d.db.payments[0]).toMatchObject({
       settled: true,
