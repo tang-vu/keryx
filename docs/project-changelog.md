@@ -1,5 +1,12 @@
 # Keryx Project Changelog
 
+### Explicit research targets for source decisions (2026-09-07, v0.22.3)
+
+- Explain zero-based target indexes to the decision model and supply indexed research questions.
+- Reject BUY/CACHE replies without valid target links so existing reasoning fallback can
+  recover before source spend, instead of silently turning every positive proposal into SKIP.
+- Preserve intentional SKIP and all preview, payout, budget and evidence gates.
+
 ### Research planning and empty-evidence outcomes (2026-09-07, v0.22.2)
 
 - Plan concise research questions rather than assumed factual answers, with explicit user

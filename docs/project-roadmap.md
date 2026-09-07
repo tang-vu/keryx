@@ -1,13 +1,15 @@
 # Keryx Project Roadmap
 
-**Version:** 0.22.2 (research planning and empty-evidence outcomes, updated 2026-09-07)
+**Version:** 0.22.3 (explicit source-decision target contract, updated 2026-09-07)
 
 **Active event:** [ETHOnline 2026 continuity build log](./ethonline-2026.md). The first
 event milestone exposes package preparation and paid-job inspection at `/research`.
 The external buyer client now checks receipt integrity and request binding; independent
 Circle settlement verification is not claimed. An owner-operated paid testnet pilot passed
 purchase/recovery/receipt checks but produced no supported answer. Planning and empty-evidence
-reporting are now improved; a successful cited-answer pilot and external validation remain next. The September 30
+reporting are now improved. A second paid pilot exposed missing target links in positive model
+decisions; the prompt/output contract now rejects this malformed output for reasoning fallback.
+A successful cited-answer paid pilot and external validation remain next. The September 30
 prize deadline does not supersede the separate mainnet go/no-go requirements.
 **Status:** In continuous operation at [keryx.cc](https://keryx.cc) — real settlement 24/7, shipping in public.
 

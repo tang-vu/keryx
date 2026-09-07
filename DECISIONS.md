@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-66** · Preview target contract · *Reject an actionable LLM decision that omits valid
+research-target indexes before any source payment.* The second owner-operated buyer pilot
+planned the intended Keryx topic, but every positive proposal lacked usable targets and the
+preview gate correctly blocked it. The decision prompt now supplies indexed targets and
+explains the required zero-based links. BUY/CACHE output with missing, empty or invalid
+targets fails the reasoning step, using existing bounded retry/provider fallback and visible
+attempt telemetry. Intentional SKIP remains valid. No target is inferred from rationale;
+the preview gate, authoritative prices, budget/attention bounds and evidence-gated rewards
+remain intact. Why: malformed positive proposals must not masquerade as deliberate no-spend
+decisions. Reversible: easy (LLM output contract, no payment or storage migration).
+
 **D-65** · Research quality · *Plan questions before evidence, and report an empty evidence
 set as measured zero support.* The first owner-operated buyer pilot paid successfully but
 decomposed an ambiguous citation-settlement question into invented patent-dispute assertions.

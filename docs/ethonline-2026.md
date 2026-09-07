@@ -12,6 +12,27 @@ recovery, Quick/Deep package v1 and portable/service receipts already existed.
 See `PLAN.md` for historical context and `docs/a2a-paid-research-v2.md` for the
 existing economic contract. None of these is claimed as new ETHOnline work.
 
+## September 7 — Second pilot and decision-target repair (v0.22.3)
+
+- Ran one more owner-operated Quick purchase for 0.05 USDC testnet on v0.22.2, with an
+  explicit question about Keryx access tolls and citation contribution weights. Deposit
+  receipts succeeded; the seller returned a Circle transfer reference and the buyer
+  verified the completed job's receipt integrity and request binding.
+- Planning stayed on topic, but all positive source proposals lacked usable research-target
+  indexes. The preview gate blocked them. The job ended in 35.279 seconds with measured
+  zero coverage, zero creator payments and 0.03 unused reserve under the existing fixed-price
+  terms. This was not a successful research pilot or independent customer demand.
+- Added explicit indexed targets and BUY/CACHE target requirements to the decision prompt.
+  Missing/invalid target links now fail the model step for bounded retry/fallback before
+  source spend. Intentional SKIP and all deterministic spend/evidence gates are preserved.
+- Live DeepSeek v4 Flash completed the frozen x402-with-distractor evaluation: relevant source
+  read and cited, unrelated gardening source skipped, 50% grounded targets and low confidence.
+  The evaluation used an isolated database and OfflineGateway: all payment amounts were
+  simulated, and its passing score is not evidence of a settled creator payout.
+- Validation: 54 focused model/orchestrator/preview tests, TypeScript and focused lint passed.
+  Regression cases reject missing, empty, string, negative, fractional and out-of-range target
+  indexes for BUY/CACHE and exercise successful fallback; intentional SKIP stays valid.
+
 ## September 7 — Owner-operated pilot and research-quality follow-up (v0.22.2)
 
 - A separate owner-controlled EOA funded through the Arc testnet faucet deposited 0.05

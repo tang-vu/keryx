@@ -11,6 +11,7 @@
 import { describe, expect, it } from "vitest";
 import { JsonChatEngine } from "./json-chat-engine";
 import type { DecideInput } from "./reasoning-engine";
+import { ResilientEngine, reasoningAttempts } from "./resilient-engine";
 
 /** A test engine that returns whatever JSON the case wants, and records the ceiling it was given. */
 class StubEngine extends JsonChatEngine {
@@ -62,7 +63,7 @@ describe("decide", () => {
   it("accepts a real reply and keeps the model's action and rationale", async () => {
     const engine = new StubEngine({
       decisions: [
-        { sourceId: "s0", action: "BUY", expectedValue: 0.9, confidence: 0.8, rationale: "on point" },
+        { sourceId: "s0", action: "BUY", expectedValue: 0.9, confidence: 0.8, rationale: "on point", targets: [0] },
       ],
     });
     const out = await engine.decide(decideInput(2));
@@ -73,6 +74,31 @@ describe("decide", () => {
   it("says nothing is worth buying only when nothing was offered", async () => {
     const engine = new StubEngine({});
     await expect(engine.decide(decideInput(0))).resolves.toEqual([]);
+  });
+
+  it.each([undefined, [], ["0"], [-1], [1], [0.5], [0, 99]])(
+    "rejects actionable decisions with invalid targets %j before spend", async (targets) => {
+      for (const action of ["BUY", "CACHE"]) {
+        const engine = new StubEngine({ decisions: [{ sourceId: "s0", action, expectedValue: 0.9, confidence: 0.8, rationale: "relevant", targets }] });
+        await expect(engine.decide(decideInput(1))).rejects.toThrow(/without valid research targets/);
+      }
+    },
+  );
+
+  it("preserves an intentional SKIP with no evidence target", async () => {
+    const engine = new StubEngine({ decisions: [{ sourceId: "s0", action: "SKIP", expectedValue: 0, confidence: 1, rationale: "unrelated", targets: [] }] });
+    expect(await engine.decide(decideInput(1))).toMatchObject([{ action: "SKIP", targets: [] }]);
+  });
+
+  it("recovers missing target links through a valid fallback rather than dropping every source", async () => {
+    const primary = new StubEngine({ decisions: [{ sourceId: "s0", action: "BUY", expectedValue: 1, confidence: 1, rationale: "relevant" }] });
+    const fallback = new StubEngine({ decisions: [{ sourceId: "s0", action: "BUY", expectedValue: 1, confidence: 1, rationale: "supports target 0", targets: [0] }] });
+    const engine = new ResilientEngine(primary, fallback);
+    expect(await engine.decide(decideInput(1))).toMatchObject([{ action: "BUY", targets: [0] }]);
+    expect(reasoningAttempts(engine)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ step: "decide", outcome: "failed" }),
+      expect.objectContaining({ step: "decide", outcome: "served", tier: 1 }),
+    ]));
   });
 
   it("drops a decision naming a source that was never a candidate", async () => {

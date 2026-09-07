@@ -114,13 +114,17 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       "You are a frugal research agent deciding which paid sources to buy under a budget. " +
         "For EACH candidate choose action BUY (pay the toll, high value), CACHE (already cached & still useful, reuse free), or SKIP (not worth it). " +
         "Weigh expected value against price; prefer cheaper sufficient sources; avoid redundancy. " +
+        "The subClaims list contains indexed research targets. For every BUY or CACHE, targets MUST contain at least one of their zero-based claimIndex integers " +
+        "that the source's preview can help investigate (for example targets:[0,2]). Use only indexes from this request. " +
+        "Explain the connection in the rationale. If no target is supported by the preview, choose SKIP with targets:[]. " +
+        "A relevant rationale without valid targets cannot authorize a read. These are predicted relevance links, not verified evidence or permission to pay citation rewards. " +
         "Some candidates have external:true — these are live endpoints from the open x402 marketplace that settle on OTHER chains, not Keryx's Arc rail. " +
         "You cannot settle to them this run, so mark them SKIP, but still judge their real topical value and say WHY in the rationale (note the off-rail chain). " +
         memoryBlock +
         "Give a short, specific, human-readable rationale citing WHY. Output strict JSON only.",
       JSON.stringify({
         question: input.question,
-        subClaims: input.subClaims,
+        subClaims: input.subClaims.map((claim, claimIndex) => ({ claimIndex, question: claim })),
         budget: input.budget,
         spentSoFar: input.spentSoFar,
         candidates,
@@ -130,7 +134,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       this.budgetFor(candidates.length),
     );
     const byId = new Map(input.candidates.map((c) => [c.id, c]));
-    const decisions = (out.decisions as Record<string, unknown>[]) ?? [];
+    const decisions = Array.isArray(out.decisions) ? out.decisions : [];
     // A reply with no decisions at all, when candidates were offered, is not a frugal choice — it is
     // a reply that did not survive (capped, malformed, off-schema). Saying "buy nothing" on its
     // behalf would silently switch the agent off, and every source would stop earning while the
@@ -140,12 +144,21 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     }
     return decisions
       .map((d) => {
+        if (!d || typeof d !== "object" || Array.isArray(d)) throw new Error("decide returned a malformed decision");
         const c = byId.get(d.sourceId as string);
         if (!c) return null;
+        const action = normalizeAction(d.action as string);
+        if ((action === "BUY" || action === "CACHE") &&
+          (!Array.isArray(d.targets) || d.targets.length === 0 || !d.targets.every((target: unknown) =>
+            typeof target === "number" && Number.isInteger(target) && target >= 0 && target < input.subClaims.length))) {
+          // Retry/fallback happens before the orchestrator can submit any source payment.
+          // Never fabricate target links or weaken the downward-only preview gate.
+          throw new Error("decide returned an actionable source without valid research targets");
+        }
         return {
           sourceId: c.id,
           sourceName: c.name,
-          action: normalizeAction(d.action as string),
+          action,
           expectedValue: clamp01(d.expectedValue as number),
           price: c.fetchPrice,
           confidence: clamp01(d.confidence as number),
