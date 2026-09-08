@@ -4,6 +4,15 @@ Event window: September 4–16, 2026. Baseline: `5e83d45` (September 2), the
 repository HEAD inspected on September 5 before any ETHOnline work. This log does
 not assert that a track selection or submission has been completed in ETHGlobal.
 
+## September 8 — Quote-selection diagnostics
+
+September 8 follow-up tooling: `scripts/eval-quote-selection.mts` reproduces the
+journaling citation failure with an offline quote-availability check and an opt-in,
+six-run live comparison. Both baseline and evidence-first prompts still produced
+inconsistent coverage. Original versus reviewed scores isolate a reviewer false-negative
+alongside the prior selection problem. No experimental prompt was deployed. Detailed
+results and reproduction instructions are in `docs/engineering/`.
+
 ## Existing before the event
 
 Citation-toll research, browser co-signing, SourceRegistry payout authority, encrypted

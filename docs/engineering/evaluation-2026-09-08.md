@@ -83,3 +83,27 @@ All passes used DeepSeek v4 Flash; a second pass on the same model is not indepe
 factual corroboration. No source registration, paid job or settlement was performed.
 Unit tests verify that review cannot raise support, malformed/missing/duplicate entries
 fail closed, and a reviewer outage retains the draft with zero support and a visible trace.
+
+## Repeated quote-selection diagnosis (production remains v0.22.7)
+
+The exact pre-submission journal sentence is present in the model's quote menu. Two
+three-repeat interleaved comparisons tested the production prompt against an experimental
+prompt that selects evidence before writing prose, using DeepSeek v4 Flash throughout.
+Final journaling-target ledger coverage varied substantially:
+
+| Batch | Production prompt | Evidence-first experiment |
+| --- | --- | --- |
+| Initial diagnostic | 0, 0.4, 0 | 0.7, 0, 0 |
+| Reproducible script | 0, 0.7, 0.7 | 0, 0, 0 |
+
+In the second batch every run selected the expected journal sentence. Recorded original
+proposal support was high, but review sometimes lowered the correct quotation below the
+reward threshold. Selection alone therefore does not explain the remaining gap. The small
+sample does not establish an improvement from reordering output; no production prompt
+change was adopted. Next, calibrate the reviewer with fixed supporting and mismatched
+question/quote pairs before another runtime change.
+
+`scripts/eval-quote-selection.mts` now separates availability, selection, original support,
+reviewed support and final ledger coverage. Its offline fixture check passed; its live
+six-run comparison completed without fallback. These are first-party model diagnostics,
+not paid jobs, settlement evidence or external validation.

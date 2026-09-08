@@ -50,3 +50,25 @@ from external adoption.
 
 See [the September 8 evaluation](./evaluation-2026-09-08.md) for the actual partial
 results and remaining model/quotation failures. This kit is not a claim of pilot success.
+
+## Reproduce the quote-selection experiment
+
+`node --import tsx scripts/eval-quote-selection.mts --check` verifies, without API calls,
+that the journal-before-signing sentence survives RSS ingestion, passage selection and
+the quote menu. The default invocation also performs only this fixture check.
+
+For an opt-in live comparison, set `KERYX_LLM_MODEL` and `KERYX_SYNTHESIS_MODEL` to
+`deepseek-v4-flash` and run:
+
+```bash
+node --import tsx --env-file=.env.local scripts/eval-quote-selection.mts --live
+```
+
+This performs three interleaved runs each of the production prompt and an experimental
+evidence-first prompt, up to 18 model requests. It uses the direct configured DeepSeek
+engine without fallback, database access or payment calls. It incurs model API usage.
+Original proposal scores, reviewed evidence and final ledger coverage are saved to a
+timestamped file under ignored `.artifacts/evals/`. Completed rows survive a later error.
+The expected-quote flag checks one known sentence, not overall answer correctness.
+The experimental prompt does not change production behavior; these small repeated runs
+are diagnostics, not a quality pass/fail gate or an independent factual benchmark.
