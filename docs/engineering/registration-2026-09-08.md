@@ -21,4 +21,5 @@ endpoint returned `verified: true`. The public preview lists both dated articles
 This establishes first-party source onboarding, not a paid read, creator reward,
 external customer or independently verified research result. The RSS articles remain
 publicly available. Private publisher credentials stay in a gitignored local environment
-file and are not included in this record. A new paid full-corpus pilot remains next.
+file and are not included in this record. The subsequent
+[paid pilot](./pilot-2026-09-08.md) records payment evidence and remaining quality gaps.

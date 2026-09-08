@@ -1,9 +1,9 @@
 # ETHOnline 2026 demo rehearsal
 
-Prepared against `d80de4d` / v0.22.9. This is a proposed three-minute recording,
+Prepared against `438301e` / v0.22.10. This is a proposed three-minute recording,
 not an asserted event video requirement or a completed recording. Publisher onboarding
-is now complete (see the registration evidence in `docs/engineering/`); the paid
-first-party corpus scene still requires a verified paid job.
+is complete. The [paid first-party pilot](./engineering/pilot-2026-09-08.md) now
+provides a verified two-payment receipt and a partial research-quality result.
 
 ## Opening pitch
 

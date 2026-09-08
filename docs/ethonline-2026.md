@@ -6,6 +6,12 @@ not assert that a track selection or submission has been completed in ETHGlobal.
 
 ## September 8 — Quote-selection diagnostics
 
+Post-deployment verification at `438301e`: GET-only resume of the same paid job
+returned a complete two-payment receipt (0.002 access + 0.015 citation), with digest
+and request binding verified. Both old and corrected snapshots were retained.
+[Public pilot evidence](./engineering/pilot-2026-09-08.md) records Circle transfer
+checks, the partial coverage result and the earlier isolated submission uncertainty.
+
 An owner-operated Engineering pilot completed in 36.855 seconds after a 0.05-USDC
 Quick purchase. Both substantive recovery/journaling targets reached coverage 1, but
 the planner's redundant third target remained 0 (reported grounded rate 0.666667).
