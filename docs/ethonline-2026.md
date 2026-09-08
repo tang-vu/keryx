@@ -6,6 +6,13 @@ not assert that a track selection or submission has been completed in ETHGlobal.
 
 ## September 9 — English walkthrough rehearsal
 
+Prepared an [English submission working draft](./ethonline-submission.md) with a
+baseline/event-work distinction, Arc/Circle code map, architecture diagram, pilot
+evidence and owner handoff checklist. It is not a submitted entry. Video publication,
+deck upload and dashboard selection remain unverified. An editable five-slide HTML
+presentation and local PDF are now prepared, covering architecture and both pilot
+results; slide dimensions/overflow and the PDF's five pages were checked.
+
 A new owner-operated paid follow-up on the same English question completed in
 31.600 seconds on `69558cd`. The planner produced two targets with evidence coverage
 0.8/0.9 (grounded rate 1.0). This run used the existing full-text cache and settled
