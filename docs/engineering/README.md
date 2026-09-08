@@ -48,8 +48,9 @@ wallet must sign the registry transaction. A supplied wallet field cannot replac
 session wallet. After indexing, verify RSS ownership from the same wallet session.
 Do not interpret API preparation alone as an on-chain registered source.
 
-The feed has no ownership token by default. This prevents the kit from silently naming
-an owner. A later publisher-signed content manifest is a separate feature; RSS delivery
+The owner requested a dedicated Arc-testnet publisher wallet, now identified in the feed
+by `keryx-verify:0x6644A7C63C559454e77D5834554DCa3a60fcFDA2`. Publishing this token
+does not by itself complete registry registration. A later publisher-signed content manifest is a separate feature; RSS delivery
 depth alone is not a cryptographic publisher signature.
 
 For revisions, add a new dated article and feed entry rather than rewriting a published

@@ -5,7 +5,7 @@ import { ingestRssXml } from "../lib/ingest/rss.ts";
 
 const directory = new URL("../docs/engineering/", import.meta.url);
 const feedUrl = "https://raw.githubusercontent.com/tang-vu/keryx/main/docs/engineering/feed.xml";
-const description = "First-party Keryx engineering documentation. Public full articles; not independent reporting or external customer traction.";
+const description = "First-party Keryx engineering documentation. Public full articles; not independent reporting or external customer traction. keryx-verify:0x6644A7C63C559454e77D5834554DCa3a60fcFDA2";
 const articles = [
   { file: "2026-09-08-citation-rewards.md", title: "How Keryx pays cited creators", summary: "Keryx access tolls, citation rewards, exact-quote evidence checks, contribution weights and settlement limits." },
   { file: "2026-09-08-buyer-recovery.md", title: "Recovering a Keryx paid research job", summary: "How Keryx buyers quote, journal a purchase and resume the original job without signing a second payment." },

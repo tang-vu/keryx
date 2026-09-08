@@ -3,7 +3,7 @@
 <channel>
 <title>Keryx Engineering (first-party)</title>
 <link>https://github.com/tang-vu/keryx/tree/main/docs/engineering</link>
-<description>First-party Keryx engineering documentation. Public full articles; not independent reporting or external customer traction.</description>
+<description>First-party Keryx engineering documentation. Public full articles; not independent reporting or external customer traction. keryx-verify:0x6644A7C63C559454e77D5834554DCa3a60fcFDA2</description>
 <item><title>How Keryx pays cited creators</title><link>https://github.com/tang-vu/keryx/blob/main/docs/engineering/2026-09-08-citation-rewards.md</link>
 <guid isPermaLink="true">https://github.com/tang-vu/keryx/blob/main/docs/engineering/2026-09-08-citation-rewards.md</guid><pubDate>Tue, 08 Sep 2026 00:00:00 GMT</pubDate>
 <description>Keryx access tolls, citation rewards, exact-quote evidence checks, contribution weights and settlement limits.</description><content:encoded><![CDATA[# How Keryx pays cited creators
