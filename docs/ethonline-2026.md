@@ -6,6 +6,13 @@ not assert that a track selection or submission has been completed in ETHGlobal.
 
 ## September 8 — Quote-selection diagnostics
 
+v0.22.11 separates source/style constraints from substantive questions inside planning.
+The final 18-output diagnostic produced no instruction-only targets; source reliability
+and comparison questions remained. One Vietnamese result still combined two topics.
+A full-corpus model-only follow-up on the pilot question reached 0.9/0.9 evidence
+coverage. This does not overwrite the earlier paid job or demonstrate new settlement.
+See [planning evaluation](./engineering/planning-2026-09-08.md) for scope and limitations.
+
 Post-deployment verification at `438301e`: GET-only resume of the same paid job
 returned a complete two-payment receipt (0.002 access + 0.015 citation), with digest
 and request binding verified. Both old and corrected snapshots were retained.

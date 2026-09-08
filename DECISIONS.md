@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-75** · Planning scope · *Separate source/style constraints from information needs
+inside the existing planning request.* The paid Engineering pilot produced a redundant
+documentation-summary target and understated coverage. The planner first lists internal
+`constraints`, then substantive `claims`; only claims become research targets. The original
+user question still accompanies discovery, decisions, coverage and synthesis, so this
+internal list does not replace or enforce user instructions. Explicit reliability and
+source-comparison questions remain substantive. No post-hoc target deletion, raised
+coverage score or payment gate change is introduced. Final repeated model diagnostics
+observed no instruction-only target in 18 outputs, but one Vietnamese output merged
+two requested topics and source qualifiers were not consistently repeated in targets.
+Reversible: easy (prompt only, unchanged public/storage contracts).
+
 **D-74** · Complete portable accounting · *Build portable receipts from all creator
 payment attempts, not the legacy citation-only query.* A paid Engineering pilot reported
 0.017 USDC creator spend while its receipt included only the 0.015 citation leg. The

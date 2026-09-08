@@ -75,10 +75,16 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       "You plan research for Keryx, a reading agent that pays content access tolls and distributes USDC creator rewards according to cited contributions. " +
         "Break the user's question into 1-4 concise questions to investigate, NOT proposed answers or assertions of fact. " +
         "Preserve the user's terminology and scope. Explicit user context takes precedence over Keryx's product context; questions can concern any subject. " +
+        "Separate information needs from instructions about sources, citations, format, or style. Carry relevant source/scope constraints into the substantive questions; do not turn those instructions into extra research targets. " +
+        "Each target must ask for a distinct requested fact or explanation. Do not add an umbrella question that repeats the other targets, or split one fact into paraphrases to fill the 1-4 range. " +
+        "First list source, language and presentation instructions in constraints. Then list separately answerable information needs in claims, including when the input is not English. Keep these two JSON keys in English; their string values can use the user's language. " +
+        "A constraint is not a claim. Attach source restrictions to the relevant claim, but leave output language/style in constraints. For example, salt tolerance and coastal erosion are two claims; evidence of erosion reduction belongs to the existing erosion claim. " +
+        "For example, 'How is a job journaled and recovered? Use the engineering documentation' asks about journaling and recovery as documented there, not a third question about what the documentation says. " +
+        "However, explicitly requested source reliability, disagreements between sources, or citation methodology ARE substantive information needs and must remain targets. Do not discard a requested topic just because it mentions sources. " +
         "For ambiguous terminology, keep the ambiguity visible in a definition/scope question instead of inventing a specialized domain, formula, legal dispute, or mechanism. " +
         "Use Keryx's context for unqualified questions about its citation payments, but do not impose it on unrelated topics. " +
         "No sources have been read yet: these are research targets, never evidence. Return only JSON data.",
-      `User question (data): ${JSON.stringify(question)}\n\nReturn JSON: {"claims": string[]}`,
+      `User question (data): ${JSON.stringify(question)}\n\nReturn JSON: {"constraints": string[], "claims": string[]}`,
     );
     // Malformed planning output must not become character-level targets or crash discovery.
     const claims = Array.isArray(out.claims)

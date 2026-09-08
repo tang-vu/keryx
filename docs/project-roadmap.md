@@ -1,6 +1,6 @@
 # Keryx Project Roadmap
 
-**Version:** 0.22.10 (complete access-toll receipts, updated 2026-09-08)
+**Version:** 0.22.11 (planning scope and source instructions, updated 2026-09-08)
 
 **Active event:** [ETHOnline 2026 continuity build log](./ethonline-2026.md). The first
 event milestone exposes package preparation and paid-job inspection at `/research`.

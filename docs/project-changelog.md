@@ -1,5 +1,14 @@
 # Keryx Project Changelog
 
+### Research scope and source instructions (2026-09-08, v0.22.11)
+
+- Planner separates source, language and formatting instructions from substantive
+  research questions, while retaining explicitly requested source reliability/comparison.
+- Add an opt-in 18-request planning diagnostic with manual semantic expectations.
+  Final outputs had no instruction-only target; one Vietnamese output still merged two
+  topics. A model-only Engineering follow-up reached 0.9 coverage on both pilot questions.
+  These results do not establish a new paid pilot or general planning reliability.
+
 ### Complete access-toll receipts (2026-09-08, v0.22.10)
 
 - Fix the portable receipt endpoint omitting access tolls by using the complete creator
