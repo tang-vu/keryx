@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+<channel>
+<title>Keryx Engineering (first-party)</title>
+<link>https://github.com/tang-vu/keryx/tree/main/docs/engineering</link>
+<description>First-party Keryx engineering documentation. Public full articles; not independent reporting or external customer traction.</description>
+<item><title>How Keryx pays cited creators</title><link>https://github.com/tang-vu/keryx/blob/main/docs/engineering/2026-09-08-citation-rewards.md</link>
+<guid isPermaLink="true">https://github.com/tang-vu/keryx/blob/main/docs/engineering/2026-09-08-citation-rewards.md</guid><pubDate>Tue, 08 Sep 2026 00:00:00 GMT</pubDate>
+<description>Keryx access tolls, citation rewards, exact-quote evidence checks, contribution weights and settlement limits.</description><content:encoded><![CDATA[# How Keryx pays cited creators
+
+Published September 8, 2026 by Keryx. This is first-party engineering documentation
+based on repository commit 9ea84fa, not independent reporting or customer evidence.
+
+Keryx separates the cost of opening source content from the reward for citing it.
+An access toll purchases a read through the source's x402 endpoint. A citation reward
+is a separate payment considered after the answer is written and its evidence checked.
+Cached content can avoid a new access toll while still contributing to an answer and
+qualifying for a citation reward. A paid read does not guarantee a citation reward.
+
+The agent divides the research budget into an access budget and a citation pool using
+the configured citation-pool ratio. Source selection also respects an attention limit.
+The reasoning model proposes which sources to BUY, SKIP or read from CACHE, but its
+proposals do not directly authorize unlimited spending. The orchestrator applies the
+budget, source and payment checks before executing a read.
+
+After reading, the model assesses coverage for the research questions and drafts an
+answer with source markers such as [S1]. It also proposes evidence records containing
+a research-question index, source marker, exact quote and estimated support score.
+The deterministic evidence ledger checks these proposals against the original content
+that was actually gathered. A proposed quotation must occur in that source after
+whitespace normalization, and must be between 8 and 240 characters long.
+
+A citation can qualify for a reward only when its source marker appears in the answer,
+the synthesis declares that marker, and a validated quotation has support of at least
+0.4. If the final evidence-assessment transport fails, reward authorization is disabled.
+These checks verify an evidence link; they do not independently establish that the
+publisher's statements are true or that the model's support estimate is correct.
+
+Research coverage and reward eligibility are distinct. For each research question,
+reported coverage is the minimum of the final model assessment and the strongest
+qualifying evidence support. A narrow quotation may qualify for a citation reward even
+when the final assessment says the wider question is only partially answered. A reward
+therefore does not establish that the job achieved adequate coverage.
+
+The model proposes contribution weights for accepted sources. Keryx resolves those
+weights and allocates the citation pool using integer micro-USDC amounts. Only sources
+accepted by the evidence ledger enter this allocation. Creator payment calls then use
+the source's authoritative payment terms; a model-proposed weight does not choose a
+recipient or change the source's payout authority. When no citation qualifies, the
+citation pool stays unspent, while access tolls already settled remain paid.
+
+The receipt distinguishes settled and pending payment records. A Circle transfer
+reference is not automatically an explorer transaction hash or proof of completed
+on-chain batch finality. Likewise, receipt integrity verifies that the receipt content
+has not changed; it does not prove independent customer demand or factual correctness.
+
+Implementation references at the documented revision:
+- https://github.com/tang-vu/keryx/blob/9ea84fa/lib/agent/run-agent.ts
+- https://github.com/tang-vu/keryx/blob/9ea84fa/lib/agent/evidence-ledger.ts
+- https://github.com/tang-vu/keryx/blob/9ea84fa/lib/registry/source-fetch-payto.ts
+
+]]></content:encoded></item>
+<item><title>Recovering a Keryx paid research job</title><link>https://github.com/tang-vu/keryx/blob/main/docs/engineering/2026-09-08-buyer-recovery.md</link>
+<guid isPermaLink="true">https://github.com/tang-vu/keryx/blob/main/docs/engineering/2026-09-08-buyer-recovery.md</guid><pubDate>Tue, 08 Sep 2026 00:00:00 GMT</pubDate>
+<description>How Keryx buyers quote, journal a purchase and resume the original job without signing a second payment.</description><content:encoded><![CDATA[# Recovering a Keryx paid research job
+
+Published September 8, 2026 by Keryx. This first-party note describes the buyer client
+at repository commit 9ea84fa. It is not a report of external adoption.
+
+The independent Keryx buyer client separates quoting, buying and recovering a research
+job. The buyer provides a trusted Keryx treasury payee and an all-in price ceiling.
+The all-in ceiling includes both the service fee and creator budget. The client uses
+the caller's already-funded wallet; it does not automatically fund or deposit for it.
+
+The quote command sends an unsigned request and validates the returned payment
+challenge. A successful quote does not pay or start research. The buy command obtains
+a fresh quote, checks the payment policy again, writes a durable job journal, signs
+once and submits once. Each purchase needs a new private job directory.
+
+Before signing, the journal records the normalized request, payment terms, nonce and
+deterministic job identifier. A second durable boundary is written before the signed
+submission is sent. Private keys and payment signatures are not written into the
+journal. The job identifier itself is sensitive because it provides bearer access to
+the research result. A journal should not be posted publicly or placed in a shared folder.
+
+After a connection failure or process restart, use the resume command with the same
+job directory. Resume sends only GET requests for the original job. It does not sign
+a new authorization or replay a purchase. An unknown order or expired authorization
+does not prove that a payment failed. Deleting the journal and buying again can create
+a second debit, so ambiguous cases may require operator reconciliation.
+
+The completed job must match the original package, creator cap, paid total and request.
+The client checks the portable receipt's canonical SHA-256 digest and binds it to the
+original question and returned answer. Receipt snapshots are archived by digest;
+reconciliation may later produce a different snapshot without erasing the older one.
+
+Payment evidence and content delivery remain separate. A retained success response
+with a Circle reference is labeled seller-reported settlement. It is not an independent
+Circle query or an on-chain finality proof. Without that response, payment can remain
+unconfirmed even when a job exists. Creator amounts can also be settled, pending or
+unknown; the client must not silently turn missing accounting into zero.
+
+A completed job means execution finished, not that the answer was adequately supported.
+The service receipt reports evidence coverage separately. The package is best effort,
+with provisional completion objectives and no promised remedy. Unused creator reserve
+under the fixed-price package is not an automatic refund. Buyers should inspect both
+the research result and its economics before judging the outcome.
+
+Implementation and usage references at the documented revision:
+- https://github.com/tang-vu/keryx/blob/9ea84fa/docs/buyer-agent.md
+- https://github.com/tang-vu/keryx/blob/9ea84fa/lib/a2a/research-package.ts
+
+]]></content:encoded></item>
+</channel></rss>

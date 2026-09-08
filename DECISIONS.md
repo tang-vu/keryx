@@ -1,5 +1,15 @@
 # Keryx — Decision Log
 
+**D-68** · Research corpus · *Publish dated first-party engineering notes with pinned code
+references and complete RSS bodies before another paid pilot.* The seed abstracts do not
+document Keryx sufficiently. The publisher kit supplies that missing material without
+rewriting old seed receipts, impersonating independent publishers or assigning a payout
+wallet. Public feed availability is separate from creator registration, feed verification,
+publisher-signed manifests and payment. Live model evaluation remains partial and records
+semantic/quotation failures alongside model scores. Why: useful source material and honest
+quality evaluation must precede further paid-pilot claims. Reversible: easy (documentation
+and feed build/check tooling; no runtime, storage or payment migration).
+
 **D-67** · Evidence context · *Select bounded verbatim passages from already-unlocked
 content instead of sending different opening-only slices to each model step.* Scan at most
 200,000 JavaScript string characters per source; retain its opening and up to three

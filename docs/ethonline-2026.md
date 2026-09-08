@@ -14,6 +14,19 @@ existing economic contract. None of these is claimed as new ETHOnline work.
 
 ## September 8 — Relevant evidence passages (v0.22.4)
 
+### First-party source material follow-up
+
+- Added `docs/engineering/`: two complete, code-referenced Keryx articles, a generated
+  public RSS feed and a publisher onboarding guide. The feed builder verifies exact
+  full-body ingestion and CI refuses a stale generated feed.
+- This documentation kit is not registered as a creator source and assigns no wallet.
+  Its articles are openly available; no exclusive-content or external-creator claim is made.
+- Live model evaluation produced partial answers. DeepSeek hit output ceilings and
+  MiMo fallback served the requests. One overlong quote was rejected; another exact
+  quote passed the ledger despite not directly explaining the requested recovery behavior.
+  See `docs/engineering/evaluation-2026-09-08.md`; model coverage is not independent quality proof.
+- No paid job, source registration, fund movement or application-runtime change was made.
+
 - Investigation found full RSS bodies were already retained when supplied by a feed, but
   model stages received only the first 800/1,000/2,000 characters. Select bounded verbatim
   passages from already-unlocked content and share them across assessment and synthesis.

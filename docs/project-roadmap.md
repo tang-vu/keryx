@@ -14,7 +14,9 @@ citation reward to a curated seed source, but no research target reached the gro
 threshold. Models now receive relevant verbatim passages from already-unlocked long sources
 instead of only their opening text, with explicit abstract/excerpt metadata. Thin seed
 abstracts still require deeper source content; adequate real-pilot coverage and external
-validation remain next. The September 30
+validation remain next. A first-party engineering publisher kit now supplies complete,
+code-referenced articles and a checked RSS feed in `docs/engineering/`; it is not yet a
+registered creator source or an external adoption claim. The September 30
 prize deadline does not supersede the separate mainnet go/no-go requirements.
 **Status:** In continuous operation at [keryx.cc](https://keryx.cc) — real settlement 24/7, shipping in public.
 
