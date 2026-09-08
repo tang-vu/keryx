@@ -8,7 +8,10 @@ provides a verified two-payment receipt and a partial research-quality result.
 A [captioned English rehearsal](./engineering/walkthrough-2026-09-09.md) was recorded
 on September 9 against live `95ef47b`. The local MP4 is 114.96 seconds and shows the
 existing pilot, with masked job ID and no new payment. It has no audio or CLI terminal
-scene and is not an uploaded event submission. The sequence below remains the fuller plan.
+scene and is not an uploaded event submission. A 177.12-second follow-up now adds
+labelled presentations of actual CLI quote and resume output, with private fields
+omitted. It remains caption-only and does not show a new signature or purchase.
+The sequence below remains the fuller plan.
 
 ## Opening pitch
 

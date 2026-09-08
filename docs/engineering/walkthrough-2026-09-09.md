@@ -24,9 +24,35 @@ See [the paid pilot evidence](./pilot-2026-09-08.md) for payment authority limit
 
 ## Remaining rehearsal work
 
-- This video explains the independent buyer CLI but does not record its quote,
-  signature or terminal receipt verification. Those scenes remain in the broader
-  [demo plan](../ethonline-demo.md); browser lookup alone does not prove CLI recovery.
+### Follow-up: CLI output included
+
+The CLI was run again with the original request and private journal, without loading
+a signing key. Unsigned `quote` returned `paid: false`, total 50,000 micro-USDC,
+creator cap 30,000 and service fee 20,000. GET-only `resume` completed and verified
+request binding, receipt integrity and the complete two-payment ledger. The digest
+remained `sha256:c07503a70c7fe18d42d7650ec2a671a6beed1931c90baa8b3ee3fdfc72158ccb`.
+
+A follow-up video inserts these actual outputs between request preparation and
+existing-job lookup:
+
+- Local artifact: `.artifacts/rehearsal/keryx-ethonline-english-demo-with-cli.mp4`
+- Duration: 177.12 seconds; size: 5,286,318 bytes; H.264, 1440 x 1000, no audio.
+- SHA-256: `72cdf252ac5ff256a80523481f3664fd11bdd9e79e2eee8a18a6779cf5ba0af9`
+- CLI scenes are explicitly labelled presentations of selected captured stdout,
+  not live terminal recordings. Private identifiers and acknowledgement details are
+  omitted, command paths shortened, and the result is not offered as the full receipt.
+- The displayed verification is the real CLI result; its settlement authority remains
+  Keryx's ledger, not independently verified chain finality.
+- Full decoding passed; no black segment of at least 0.5 seconds was detected.
+  CLI frames were visually checked for readable output and privacy labels.
+
+The original shorter video remains available. Neither artifact records a new signature
+or purchase, and neither has been uploaded or submitted to ETHGlobal.
+
+### Still outstanding
+
+- The follow-up includes captured quote/resume output, but not a live terminal session
+  or purchase/signature scene. Browser lookup alone does not prove CLI recovery.
 - Add narration if wanted for the final submission; this artifact is caption-only.
 - The source-decision card repeats the article title because the saved source name
   already includes it. This is a presentation issue observed during recording, not

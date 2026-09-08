@@ -13,6 +13,13 @@ remains visible. Video decode and sampled-frame review passed; recording observe
 payment POSTs or page errors. The local MP4 has no narration or terminal CLI scene.
 [Provenance and remaining work](./engineering/walkthrough-2026-09-09.md).
 
+A follow-up 177.12-second rehearsal includes selected stdout from newly executed
+unsigned CLI quote and GET-only resume of the original pilot. Quote remained unpaid;
+resume verified the unchanged receipt digest, request binding and two-payment ledger.
+The inserted scenes are labelled captured-output presentations, not a live terminal
+or new purchase. Full video decoding and sampled-frame review passed. No narration
+or event upload has been completed.
+
 ## September 8 — Quote-selection diagnostics
 
 v0.22.12 adds source decisions to the completed-job buyer workspace, using the
