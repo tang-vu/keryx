@@ -83,3 +83,33 @@ internal, Keryx-funded demo and is not evidence of independent customer demand.
 Protocol reference: [Circle nanopayments](https://developers.circle.com/gateway/nanopayments).
 The signed domain/types also match the installed batching SDK and Keryx's existing
 browser co-sign path; no new seller or creator settlement rail is introduced.
+
+## Prepare a report for mentor or operator feedback
+
+Use the same private journal to obtain a redacted diagnostic:
+
+```bash
+node --import tsx scripts/buyer-agent.mts report --state .buyer-jobs/job-1 > buyer-report.json
+```
+
+This direct Node command keeps stdout as one JSON document and needs no signing key.
+It uses the same GET-only recovery path, including receipt integrity/request checks
+and local receipt archiving for completed jobs. It never buys or signs again.
+Exit 0 means a completed verified report; exit 2 still prints a valid report for an
+incomplete, failed, review-required or unknown-order state. Exit 1 means refusal/error;
+do not treat an empty redirected file as a report. `report` does not accept `--watch`.
+
+The report includes status, available pricing, timing, numeric target coverage and
+receipt verification/accounting summaries. Missing data stays null, pending spend
+stays pending, and an unknown order is `not_found_uncertain`, not proof of a failed
+payment. `accountingAgreement` compares job and receipt settled/pending totals in
+micro-USDC; `differs` preserves both reported amounts for investigation. A completed
+report does not establish adequate research quality or independent settlement.
+
+Only explicitly allowed fields are copied. Job IDs, wallet and transfer identifiers,
+receipt digests, paths, questions, answers, quotations, source names and free-form
+errors are omitted. Amounts, timing and quality can still reveal information, so read
+the report before sharing. It is a diagnostic projection, not the original portable
+receipt; a recipient cannot use it to independently verify the private result.
+Choose any additional question context yourself. Never attach the private journal
+or full `resume` output to a public check-in.

@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
 import { recoverTypedDataAddress } from "viem";
 import { buyResearch, quoteBuyer, resumeResearch } from "./client";
+import { reportResearch } from "./report";
 import { BUYER_ENDPOINT, BUYER_NETWORK, BUYER_USDC, BUYER_GATEWAY, buyerTypedData, chooseRequirement, type BuyerRequest } from "./policy";
 import { readBuyerJournal } from "./journal";
 import { a2aResearchPackage } from "../a2a/research-package";
@@ -99,6 +100,17 @@ describe("bounded buyer", () => {
     expect(result.status).toBe("completed");
     expect(result).toHaveProperty("verification.requestBinding", "verified");
     expect(result.payment.state).toBe("unconfirmed");
+    const reportHttp = vi.fn<typeof fetch>().mockResolvedValueOnce(Response.json(job)).mockResolvedValueOnce(Response.json(receipt, { headers: { "x-keryx-receipt-digest": receipt.integrity.digest } }));
+    const report = await reportResearch(path, reportHttp);
+    expect(report.status).toBe("completed");
+    expect(report.receiptVerification?.integrity).toBe("verified");
+    expect(JSON.stringify(report)).not.toContain(intent.queryId);
+    for (const [, init] of reportHttp.mock.calls) {
+      expect(init?.method ?? "GET").toBe("GET");
+      expect(init?.headers).toEqual({ accept: "application/json" });
+    }
+    const tampered = vi.fn<typeof fetch>().mockResolvedValueOnce(Response.json(job)).mockResolvedValueOnce(Response.json(receipt, { headers: { "x-keryx-receipt-digest": "sha256:wrong" } }));
+    await expect(reportResearch(path, tampered)).rejects.toThrow("digest mismatch");
     expect(await readdir(path)).toContain(`receipt-${receipt.integrity.digest.slice(7)}.json`);
     const receiptPath = join(path, `receipt-${receipt.integrity.digest.slice(7)}.json`);
     await writeFile(receiptPath, '{"partial":');

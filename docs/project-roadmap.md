@@ -1,6 +1,11 @@
 # Keryx Project Roadmap
 
-**Version:** 0.22.13 (relevant evidence passages, updated 2026-09-09)
+**Version:** 0.22.14 (shareable buyer diagnostics, updated 2026-09-09)
+
+Buyers can now prepare an allowlisted `report` for mentor/operator feedback through
+GET-only recovery. It retains unknown accounting and excludes identifiers/research
+content. This supplies per-job diagnostics; independent adoption, support ownership
+and measured external cohorts remain open.
 
 The English pipeline diagnostic now has a passage-selection repair for omitted receipt
 verification, with regression protection for the paid pilot's recovery explanation.

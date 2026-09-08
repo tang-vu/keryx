@@ -1,5 +1,17 @@
 # Keryx Project Changelog
 
+### Shareable buyer diagnostics (2026-09-09, v0.22.14)
+
+- Add `buyer report --state` using existing GET-only recovery and receipt checks.
+  An independent allowlist omits identifiers, research content and arbitrary errors
+  while retaining status, numeric quality, timing and accounting information.
+- Preserve unknown/pending states and show disagreement between job and receipt
+  totals. Reports remain local diagnostics, not portable receipts or independent
+  settlement proof. Buyers review potentially sensitive metrics before sharing.
+- Tests cover nested privacy fields, incomplete states, missing verification,
+  accounting disagreement and receipt tampering. Existing completed and ambiguous
+  owner-operated journals were checked without signing or purchasing again.
+
 ### Relevant English evidence passages (2026-09-09, v0.22.13)
 
 - Preserve nearby sentence boundaries and prioritize target terms not already present

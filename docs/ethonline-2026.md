@@ -6,6 +6,14 @@ not assert that a track selection or submission has been completed in ETHGlobal.
 
 ## September 9 — English walkthrough rehearsal
 
+Added `buyer report --state` for feedback without sharing private job responses.
+The independent allowlist retains numeric diagnostics and explicit accounting states;
+it excludes bearer IDs, research text, wallet/transfer identifiers and raw errors.
+28 buyer tests, TypeScript and changed-file ESLint passed. GET-only checks of an
+existing completed pilot and the earlier ambiguous journal retained, respectively,
+verified matching accounting and `not_found_uncertain`/`unconfirmed` with null totals.
+No purchase or external-customer validation was added by these checks.
+
 Prepared a 157.4-second [narrated English follow-up](./engineering/walkthrough-2026-09-09.md)
 on current production UI, reopening the supported September 9 pilot. Fresh unsigned
 quote and GET-only resume retained the original receipt digest and complete ledger.

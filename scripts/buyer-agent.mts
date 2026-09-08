@@ -2,6 +2,7 @@
 import { readFile } from "node:fs/promises";
 import { privateKeyToAccount } from "viem/accounts";
 import { buyResearch, quoteBuyer, resumeResearch } from "../lib/buyer/client.ts";
+import { reportResearch } from "../lib/buyer/report.ts";
 import { addressSchema, BuyerRefusal, buyerRequestSchema, buyerTypedData } from "../lib/buyer/policy.ts";
 import { parseBuyerBudget } from "../lib/a2a/buyer-workspace.ts";
 
@@ -10,25 +11,34 @@ const usage = `Keryx buyer agent (Arc testnet only)
   npm run buyer -- quote --request request.json --payee 0x... --max-total 0.10
   npm run buyer -- buy --request request.json --payee 0x... --max-total 0.10 --state ./job-1
   npm run buyer -- resume --state ./job-1 [--watch]
+  npm run buyer -- report --state ./job-1
 
 buy needs KERYX_BUYER_PRIVATE_KEY in .env.buyer.local (or the environment) and an
 already-funded Gateway balance. No wallet creation, funding, deposits or approvals.
---state must name a NEW private directory; its parent must already exist.
+buy --state must name a NEW private directory; its parent must already exist.
+resume and report use the original existing journal directory.
 resume never signs or sends payments. Keep the directory after any timeout or error.
+report uses the same GET-only recovery and prints a redacted diagnostic for review before sharing.
 Payee must be pinned from a trusted source, not accepted blindly from the challenge.`;
 
 async function main() {
   if (command === "--help" || !command) { console.log(usage); return; }
-  if (!["quote", "buy", "resume"].includes(command)) throw new Error("Unknown command; use --help");
+  if (!["quote", "buy", "resume", "report"].includes(command)) throw new Error("Unknown command; use --help");
   const options: Record<string, string> = {};
   let watch = false;
-  const allowed = command === "resume" ? ["--state"] : ["--request", "--payee", "--max-total", ...(command === "buy" ? ["--state"] : [])];
+  const allowed = command === "resume" || command === "report" ? ["--state"] : ["--request", "--payee", "--max-total", ...(command === "buy" ? ["--state"] : [])];
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--watch" && command === "resume" && !watch) { watch = true; continue; }
     if (!allowed.includes(args[i]) || options[args[i]] !== undefined || !args[i + 1] || args[i + 1].startsWith("--")) throw new Error("Invalid or duplicate option; use --help");
     options[args[i]] = args[++i];
   }
   for (const key of allowed) if (!options[key]) throw new Error(`Missing ${key}`);
+  if (command === "report") {
+    const result = await reportResearch(options["--state"]);
+    console.log(JSON.stringify(result, null, 2));
+    if (result.status !== "completed") process.exitCode = 2;
+    return;
+  }
   if (command === "resume") {
     const stopAt = Date.now() + 600_000;
     for (let attempt = 0; attempt < (watch ? 120 : 1); attempt++) {

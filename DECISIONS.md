@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-78** · Buyer support · *Share an allowlisted diagnostic instead of a private job
+response or journal.* `buyer report` reuses GET-only recovery and receipt verification,
+then emits only bounded numeric fields and known status values. Its independent
+schema strips job IDs, wallet/transfer identifiers, digests, paths, research text and
+unstructured messages at every nested boundary. Missing measurements remain null and
+uncertain payments remain unconfirmed. Job pricing and verified receipt totals stay
+separate; micro-USDC comparison reports agreement or disagreement without rewriting
+either. This is a local buyer assertion, not a portable receipt, independent settlement
+proof or anonymity guarantee; economic/quality figures may still be sensitive. No
+signer, purchase retry, new public endpoint or payment-authority change. Reversible:
+easy (additional CLI projection).
+
 **D-77** · Evidence selection · *Spend the context budget on missing target terms and
 preserve nearby sentence boundaries.* An English receipt/SQL diagnostic omitted the
 available digest-verification sentence. Tracking the best word-match ratio per target
