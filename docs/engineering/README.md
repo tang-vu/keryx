@@ -76,8 +76,17 @@ are diagnostics, not a quality pass/fail gate or an independent factual benchmar
 For fixed question/quote pairs that isolate the reviewer from synthesis selection, use
 `node --import tsx scripts/eval-evidence-review.mts --check`. Adding `--live` instead
 of `--check`, with the same environment/model setup above, runs six reviewer requests:
-three each against the frozen v0.22.7 prompt and the current prompt. The 15 manually
+three each against the frozen v0.22.7 prompt and the current prompt. The 18 manually
 labelled pairs include direct/partial support, wrong timing, absent mechanisms,
 hypothetical behavior and instruction injection. Reports retain scores and model review
 output under `.artifacts/evals/`; model errors fail rather than using fallback. Labels
 and thresholds are diagnostic expectations, not proof of overall answer quality.
+
+`node --import tsx scripts/eval-research-boundaries.mts --check` validates five broader
+fixtures without model use. With `--live` and the same environment setup, it evaluates
+receipt binding/history, explicit negative answers about coverage/finality, absent SQL
+details, a title-only source and empty input (up to 15 direct model requests). It saves
+assessment, prose, evidence and coverage under `.artifacts/evals/`, and exits nonzero
+on a model error or an unexpected coverage boundary. Expected negative answers are
+answerable; absent evidence must not authorize rewards. Passing thresholds does not
+independently verify prose correctness, payment behavior or external adoption.

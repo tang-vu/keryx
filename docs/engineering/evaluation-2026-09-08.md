@@ -126,3 +126,21 @@ scored only 0.1; the correct journal quote scored 0.8. This improves the observe
 but repeated broader quality and a paid end-to-end pilot remain unverified. No source
 registration or payment was performed. Reviewer and ledger tests (35) and TypeScript
 passed; the reviewer still cannot increase original proposed support.
+
+## v0.22.9 broader boundary checks
+
+Five new full-synthesis cases exposed two failures: receipt history was assigned index 2
+when only indices 0 and 1 existed, and explicit negative answers about evidence coverage
+and batch finality were rated zero. Absent SQL details, title-only recovery and empty
+input correctly retained zero assessment/ledger coverage.
+
+After supplying explicit target/index objects and clarifying that a negative answer can
+be supporting evidence, the receipt targets reached 1/1 and the negative-answer targets
+0.9/0.95 in one follow-up run. All three missing-information cases remained zero; all five
+boundary cases passed. This is a small first-party model-only evaluation, not a paid run.
+
+The fixed-pair diagnostic expanded to 18 cases. Over three runs per prompt, the frozen
+v0.22.7 reviewer had three false negatives and the current reviewer had one; neither had
+an observed false positive. Variability remains, and no general accuracy guarantee follows.
+35 focused reviewer/ledger tests and TypeScript passed. The new script stores prose for
+inspection because threshold checks alone cannot prove an answer's factual correctness.

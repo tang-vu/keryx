@@ -248,7 +248,9 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       "You write a grounded, accurate answer using ONLY the provided sources. " + EVIDENCE_CONTEXT_GUIDANCE +
         "Cite inline with the source markers like [S1]. Cite every claim. Do not invent facts. " +
         "For every supported research question, select a quoteId from quoteOptions in an evidence item with " +
-        "the question's zero-based claimIndex and the option's exact marker. Do not output raw quote text or invent IDs. " +
+        "the claimIndex explicitly supplied in researchTargets and the option's exact marker. " +
+        "Reuse that same claimIndex for multiple quotes answering one target; do not number answer sentences or evidence items. " +
+        "Do not output raw quote text or invent IDs. " +
         "Each option is already a bounded verbatim excerpt; choose only options that directly answer that question. " +
         "A related warning or shared topic is not evidence for an unmentioned procedure. " +
         "Select the smallest sufficient set, at most two options per research question; emit separate evidence items when needed. " +
@@ -262,7 +264,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         "array when the sources are consistent). Output strict JSON.",
       JSON.stringify({
         question: input.question,
-        subClaims: input.subClaims,
+        researchTargets: input.subClaims.map((question, claimIndex) => ({ claimIndex, question })),
         sources,
         quoteOptions,
         schema:

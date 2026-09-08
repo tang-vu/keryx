@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-73** · Question identity and negative answers · *Supply explicit target/index pairs
+to synthesis, and score evidence for answering a question rather than agreeing with its
+premise.* A broader live diagnostic found synthesis numbering answer sentences instead
+of the two requested targets, and review assigning zero to explicit negative answers
+about coverage/finality. Synthesis now receives named `researchTargets` with their
+caller-owned indices; invalid indices still fail the existing ledger. Review explicitly
+allows a source-backed negative answer or limitation. No index is silently remapped,
+no score is raised after review, and no payment gate changes. Five boundary cases passed
+after the prompt changes; repeated fixed-pair review still had one false negative, so
+general reliability remains unproven. Reversible: easy (internal prompt contract only).
+
 **D-72** · Review calibration · *Have the relevance reviewer state the supported fact
 before scoring its relationship to the requested action, actor and timing.* Repeated
 diagnostics isolated false negatives even when synthesis selected the correct journal

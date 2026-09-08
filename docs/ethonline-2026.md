@@ -6,6 +6,13 @@ not assert that a track selection or submission has been completed in ETHGlobal.
 
 ## September 8 — Quote-selection diagnostics
 
+v0.22.9 extends evaluation to five boundary cases and fixes two reproduced failures:
+misnumbered research targets and rejection of explicit negative answers. All five cases
+passed on the follow-up model run, including zero coverage for all missing-information
+cases. The 18-pair reviewer comparison still observed one false negative with the current
+prompt, so reliability work continues. 35 focused tests and TypeScript passed; no paid
+job, registration or settlement was performed for this update.
+
 v0.22.8 follow-up: calibrated relevance review to state the supported fact before
 scoring action/actor/timing. A repeated 15-pair model comparison observed four false
 negatives with the old prompt and none with the candidate, with zero observed false

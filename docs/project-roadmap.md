@@ -1,6 +1,6 @@
 # Keryx Project Roadmap
 
-**Version:** 0.22.8 (fact-based relevance scoring, updated 2026-09-08)
+**Version:** 0.22.9 (explicit targets and negative-answer evidence, updated 2026-09-08)
 
 **Active event:** [ETHOnline 2026 continuity build log](./ethonline-2026.md). The first
 event milestone exposes package preparation and paid-job inspection at `/research`.
@@ -24,7 +24,10 @@ remains outstanding. Scoped coverage now has a negative evidence-removal check, 
 separate quote-relevance pass can only lower support; it rejects the observed mismatched
 journaling citation even when the broader source coverage is high. Fixed-pair reviewer
 calibration now reduces observed false negatives; a follow-up full-article model run
-reached 0.8/0.9 on both questions, without establishing reliable paid-pilot quality. The September 30
+reached 0.8/0.9 on both questions, without establishing reliable paid-pilot quality.
+Broader diagnostics now cover receipt updates, explicit negative answers and missing
+information; all five boundary cases passed after correcting target-index prompting and
+negative-answer review. Fixed-pair reviewer variability remains. The September 30
 prize deadline does not supersede the separate mainnet go/no-go requirements.
 **Status:** In continuous operation at [keryx.cc](https://keryx.cc) — real settlement 24/7, shipping in public.
 

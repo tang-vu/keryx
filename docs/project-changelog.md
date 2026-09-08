@@ -1,5 +1,14 @@
 # Keryx Project Changelog
 
+### Explicit research targets and negative answers (2026-09-08, v0.22.9)
+
+- Supply caller-owned target indices explicitly, distinguishing research targets from
+  generated answer sentences and evidence items.
+- Accept quoted evidence that directly answers a question with a negative or limitation;
+  agreement with a question's implied premise is not the criterion for relevance.
+- Add five opt-in research boundary cases. Receipt-binding and settlement-limit failures
+  passed after the change; absent details, title-only and empty input retained zero coverage.
+
 ### Fact-based relevance scoring (2026-09-08, v0.22.8)
 
 - Ask the reviewer to identify what each quote establishes before scoring its relevance,
