@@ -5,6 +5,11 @@ not an asserted event video requirement or a completed recording. Publisher onbo
 is complete. The [paid first-party pilot](./engineering/pilot-2026-09-08.md) now
 provides a verified two-payment receipt and a partial research-quality result.
 
+A [captioned English rehearsal](./engineering/walkthrough-2026-09-09.md) was recorded
+on September 9 against live `95ef47b`. The local MP4 is 114.96 seconds and shows the
+existing pilot, with masked job ID and no new payment. It has no audio or CLI terminal
+scene and is not an uploaded event submission. The sequence below remains the fuller plan.
+
 ## Opening pitch
 
 > Keryx turns a research question and a USDC budget into an inspectable agent job.

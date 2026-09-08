@@ -4,6 +4,15 @@ Event window: September 4–16, 2026. Baseline: `5e83d45` (September 2), the
 repository HEAD inspected on September 5 before any ETHOnline work. This log does
 not assert that a track selection or submission has been completed in ETHGlobal.
 
+## September 9 — English walkthrough rehearsal
+
+Recorded a 114.96-second captioned production walkthrough of the existing paid
+Engineering pilot, including request preparation, read-only lookup, creator accounting,
+source decisions and evidence. No new purchase; the original partial-quality result
+remains visible. Video decode and sampled-frame review passed; recording observed no
+payment POSTs or page errors. The local MP4 has no narration or terminal CLI scene.
+[Provenance and remaining work](./engineering/walkthrough-2026-09-09.md).
+
 ## September 8 — Quote-selection diagnostics
 
 v0.22.12 adds source decisions to the completed-job buyer workspace, using the
