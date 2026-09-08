@@ -234,6 +234,11 @@ The fault test corrupts the local archive and verifies recovery via GET requests
 
 ## Next deliverables
 
+A [three-minute rehearsal script and architecture diagram](./ethonline-demo.md) now
+cover request preparation, buyer recovery, evidence and settlement reporting. This is
+a recording plan, not a completed video; the new full-corpus paid scene remains pending
+publisher onboarding and verification. Existing failed pilots must retain their actual results.
+
 1. Validate the new buyer client with an independently funded testnet pilot, including
    reconnecting to an existing paid job. The old self-funded demo client is not independent demand.
 2. Pilot onboarding and repeat usage from 3–5 external teams (target, not achieved traction).
