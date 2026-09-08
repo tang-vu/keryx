@@ -54,8 +54,9 @@ or purchase, and neither has been uploaded or submitted to ETHGlobal.
 - The follow-up includes captured quote/resume output, but not a live terminal session
   or purchase/signature scene. Browser lookup alone does not prove CLI recovery.
 - Add narration if wanted for the final submission; this artifact is caption-only.
-- The source-decision card repeats the article title because the saved source name
-  already includes it. This is a presentation issue observed during recording, not
-  evidence that the source was bought twice.
+- The recorded source-decision card repeats the article title because the saved source
+  name already includes it. Production fix `69558cd` was subsequently verified against
+  the original pilot through GET-only browser lookup: the title appears once. Existing
+  video files preserve the older UI; this was never evidence of a duplicate purchase.
 - Publication and event submission have not been performed. The local binary is
   intentionally outside Git; the repository records its provenance and checksum.
