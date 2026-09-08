@@ -13,6 +13,11 @@ labelled presentations of actual CLI quote and resume output, with private field
 omitted. It remains caption-only and does not show a new signature or purchase.
 The sequence below remains the fuller plan.
 
+The [September 9 follow-up pilot](./engineering/pilot-2026-09-09.md) is a separate
+job with two supported targets and CACHE/SKIP decisions. Existing video files still
+show the earlier partial-quality BUY/SKIP pilot; do not attribute the new result to
+those recordings.
+
 ## Opening pitch
 
 > Keryx turns a research question and a USDC budget into an inspectable agent job.

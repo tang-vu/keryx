@@ -5,6 +5,10 @@ Both full articles are indexed and RSS ownership is verified. The subsequent
 [paid pilot](./pilot-2026-09-08.md) verified access and citation payments, with partial
 research-quality coverage.
 
+A [September 9 paid follow-up](./pilot-2026-09-09.md) reached the evidence threshold
+on both substantive targets using the cached article, with a new citation reward.
+It is one owner-operated result, not a broad reliability claim.
+
 These dated, first-party notes provide complete source material for researching Keryx's
 own behavior. They are documentation, not independent corroboration or external creator
 traction. Their implementation references are pinned to the inspected code revision.

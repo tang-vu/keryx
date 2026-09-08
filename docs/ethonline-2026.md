@@ -6,6 +6,14 @@ not assert that a track selection or submission has been completed in ETHGlobal.
 
 ## September 9 — English walkthrough rehearsal
 
+A new owner-operated paid follow-up on the same English question completed in
+31.600 seconds on `69558cd`. The planner produced two targets with evidence coverage
+0.8/0.9 (grounded rate 1.0). This run used the existing full-text cache and settled
+0.015 USDC in citation reward; there was no new access toll. The receipt ledger was
+complete and Circle returned the matching transfer as received, without a chain hash.
+[Detailed pilot evidence and limits](./engineering/pilot-2026-09-09.md). This does not
+establish repeatability, uncached-purchase quality or external traction.
+
 The rehearsal exposed duplicate article titles in source-decision cards. The display
 now appends a separate article title only when the saved name does not already equal
 it or end in the same ` — title` suffix. Historical source labels and receipt digests
