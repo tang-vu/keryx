@@ -6,6 +6,12 @@ not assert that a track selection or submission has been completed in ETHGlobal.
 
 ## September 8 — Quote-selection diagnostics
 
+Publisher onboarding preparation: the read-only `build-engineering-feed.mts --check-remote`
+preflight confirms both published full articles exactly match the checked local feed.
+Registration remains pending a publisher-controlled wallet, signed session and registry
+transaction; API preparation alone is not registration. No owner wallet was inferred
+from the separate buyer pilot, and no source or payment was created by this check.
+
 v0.22.9 extends evaluation to five boundary cases and fixes two reproduced failures:
 misnumbered research targets and rejection of explicit negative answers. All five cases
 passed on the follow-up model run, including zero coverage for all missing-information

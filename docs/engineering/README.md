@@ -19,6 +19,16 @@ The check passes the generated RSS through Keryx's real ingestion parser and ver
 that each full article survives ingestion. It also refuses a stale checked-in feed.
 No environment file, API key, database or payment connection is needed.
 
+Before registering the source, run:
+
+```bash
+node --import tsx scripts/build-engineering-feed.mts --check-remote
+```
+
+This read-only preflight checks the local feed first, then compares the published GitHub
+RSS with it using a bounded network request. It fails if publication is stale or unavailable.
+It does not overwrite files, claim feed ownership, register a source or make a payment.
+
 The feed URL after pushing is:
 https://raw.githubusercontent.com/tang-vu/keryx/main/docs/engineering/feed.xml
 
@@ -31,6 +41,12 @@ https://raw.githubusercontent.com/tang-vu/keryx/main/docs/engineering/feed.xml
    wallet and feed-ownership checks. SourceRegistry remains payout authority.
 4. Verify that the article previews report full-text delivery and the intended source
    owns the listing before starting a bounded, owner-operated testnet pilot.
+
+Registration at `https://keryx.cc/register` uses a signed SIWE session. With the registry
+configured, the API prepares metadata and transaction parameters; the connected owner
+wallet must sign the registry transaction. A supplied wallet field cannot replace the
+session wallet. After indexing, verify RSS ownership from the same wallet session.
+Do not interpret API preparation alone as an on-chain registered source.
 
 The feed has no ownership token by default. This prevents the kit from silently naming
 an owner. A later publisher-signed content manifest is a separate feature; RSS delivery

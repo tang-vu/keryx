@@ -35,9 +35,18 @@ for (const [index, article] of articles.entries()) {
   assert.equal(ingested.items[index].summary, article.summary);
 }
 const output = new URL("feed.xml", directory);
-if (process.argv.includes("--check")) {
+const args = process.argv.slice(2);
+assert(args.every(arg => ["--check", "--check-remote"].includes(arg)), "Use --check or --check-remote.");
+const checking = args.includes("--check") || args.includes("--check-remote");
+if (checking) {
   assert.equal(readFileSync(output, "utf8").replace(/\r\n/g, "\n"), xml, "Regenerate the engineering feed before publishing.");
 } else {
   writeFileSync(output, xml, "utf8");
 }
-console.log(`${process.argv.includes("--check") ? "Verified" : "Generated"} ${articles.length} complete first-party articles: ${fileURLToPath(output)}`);
+if (args.includes("--check-remote")) {
+  const response = await fetch(feedUrl, { signal: AbortSignal.timeout(15_000), cache: "no-store" });
+  assert(response.ok, `Published engineering feed returned HTTP ${response.status}.`);
+  assert.equal((await response.text()).replace(/\r\n/g, "\n"), xml, "Published feed differs from the checked local feed; verify the pushed revision before registering.");
+  console.log("Published RSS matches the checked local articles. This does not establish wallet ownership or registration.");
+}
+console.log(`${checking ? "Verified" : "Generated"} ${articles.length} complete first-party articles: ${fileURLToPath(output)}`);
