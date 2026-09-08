@@ -1,6 +1,6 @@
 # Keryx Project Roadmap
 
-**Version:** 0.22.9 (explicit targets and negative-answer evidence, updated 2026-09-08)
+**Version:** 0.22.10 (complete access-toll receipts, updated 2026-09-08)
 
 **Active event:** [ETHOnline 2026 continuity build log](./ethonline-2026.md). The first
 event milestone exposes package preparation and paid-job inspection at `/research`.
@@ -17,7 +17,10 @@ abstracts still require deeper source content; adequate real-pilot coverage and 
 validation remain next. A first-party engineering publisher kit now supplies complete,
 code-referenced articles and a checked RSS feed in `docs/engineering/`; it is now registered
 and ownership-verified with a dedicated owner-controlled Arc-testnet wallet. This is
-first-party onboarding, not external adoption; the full-corpus paid pilot remains next. Bounded DeepSeek JSON requests
+first-party onboarding, not external adoption. A subsequent owner-operated paid pilot
+read the recovery article and grounded both substantive targets, but a redundant planner
+target kept its overall quality partial. It also exposed a receipt endpoint omitting the
+access toll; the endpoint now uses the complete creator-payment query. Bounded DeepSeek JSON requests
 and overlapping evidence windows now address reproduced transport and omitted-context
 failures. Synthesis now selects bounded verbatim quote options, resolving the reproduced
 overlong-quote failures in the small corpus evaluation; complete quality validation

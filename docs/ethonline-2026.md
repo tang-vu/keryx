@@ -6,6 +6,14 @@ not assert that a track selection or submission has been completed in ETHGlobal.
 
 ## September 8 — Quote-selection diagnostics
 
+An owner-operated Engineering pilot completed in 36.855 seconds after a 0.05-USDC
+Quick purchase. Both substantive recovery/journaling targets reached coverage 1, but
+the planner's redundant third target remained 0 (reported grounded rate 0.666667).
+The initial receipt omitted a 0.002-USDC access toll despite job accounting of 0.017;
+v0.22.10 fixes the endpoint's use of a citation-only query. 31 focused receipt/buyer
+tests passed, including settled and pending toll regressions. This is first-party
+testnet validation, not external adoption or fully adequate research quality.
+
 Publisher onboarding completed after the owner requested a dedicated testnet wallet
 and confirmed faucet funding. SourceRegistry registration succeeded, the index contains
 the new first-party Engineering source, RSS ownership is verified, and both full-text

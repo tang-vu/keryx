@@ -1,5 +1,13 @@
 # Keryx Project Changelog
 
+### Complete access-toll receipts (2026-09-08, v0.22.10)
+
+- Fix the portable receipt endpoint omitting access tolls by using the complete creator
+  payment-attempt query. A live pilot exposed 0.017-USDC job accounting versus a receipt
+  containing only its 0.015-USDC citation reward.
+- Preserve pending tolls as pending, exclude inbound funding, and retain existing digest
+  verification. Buyers can refresh the same job and archive a new receipt without paying again.
+
 ### Explicit research targets and negative answers (2026-09-08, v0.22.9)
 
 - Supply caller-owned target indices explicitly, distinguishing research targets from

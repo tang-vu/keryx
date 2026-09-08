@@ -23,7 +23,7 @@ export async function GET(
     const run = await db.getQueryRun(id);
     if (!run) return Response.json({ error: "not found" }, { status: 404 });
 
-    const payments = await db.listPaymentsByQuery(id);
+    const payments = await db.listCreatorPaymentAttemptsByQuery(id);
     const receipt = buildResearchReceipt(run, payments);
     const headers = new Headers({
       "Cache-Control": "no-store",

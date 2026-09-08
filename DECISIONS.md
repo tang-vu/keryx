@@ -1,5 +1,15 @@
 # Keryx — Decision Log
 
+**D-74** · Complete portable accounting · *Build portable receipts from all creator
+payment attempts, not the legacy citation-only query.* A paid Engineering pilot reported
+0.017 USDC creator spend while its receipt included only the 0.015 citation leg. The
+receipt route used `listPaymentsByQuery`, whose documented meaning is citation payouts;
+switch to the existing `listCreatorPaymentAttemptsByQuery` used for complete accounting.
+The projection still excludes inbound funding and preserves settled/pending/failed
+classification. No payment is resent, no database row is rewritten, and the buyer keeps
+the old receipt snapshot when the corrected projection produces a new digest. Regression
+tests cover both settled and pending access tolls. Reversible: easy (read-path fix only).
+
 **D-73** · Question identity and negative answers · *Supply explicit target/index pairs
 to synthesis, and score evidence for answering a question rather than agreeing with its
 premise.* A broader live diagnostic found synthesis numbering answer sentences instead
