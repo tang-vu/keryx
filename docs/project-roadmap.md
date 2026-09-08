@@ -1,6 +1,6 @@
 # Keryx Project Roadmap
 
-**Version:** 0.22.5 (bounded JSON and overlapping evidence, updated 2026-09-08)
+**Version:** 0.22.6 (bounded quote selection, updated 2026-09-08)
 
 **Active event:** [ETHOnline 2026 continuity build log](./ethonline-2026.md). The first
 event milestone exposes package preparation and paid-job inspection at `/research`.
@@ -18,7 +18,9 @@ validation remain next. A first-party engineering publisher kit now supplies com
 code-referenced articles and a checked RSS feed in `docs/engineering/`; it is not yet a
 registered creator source or an external adoption claim. Bounded DeepSeek JSON requests
 and overlapping evidence windows now address reproduced transport and omitted-context
-failures; complete quality validation remains outstanding. The September 30
+failures. Synthesis now selects bounded verbatim quote options, resolving the reproduced
+overlong-quote failures in the small corpus evaluation; complete quality validation
+remains outstanding. The September 30
 prize deadline does not supersede the separate mainnet go/no-go requirements.
 **Status:** In continuous operation at [keryx.cc](https://keryx.cc) — real settlement 24/7, shipping in public.
 

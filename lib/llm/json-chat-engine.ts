@@ -6,6 +6,7 @@
 
 import { config } from "../config";
 import { evidenceContext, EVIDENCE_CONTEXT_GUIDANCE } from "./evidence-context";
+import { buildQuoteOptions, resolveQuoteEvidence } from "./quote-options";
 import type { Decision } from "../types";
 import type {
   AttributeInput,
@@ -252,16 +253,18 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   }
 
   async synthesize(input: SynthInput): Promise<SynthResult> {
+    const sources = evidenceContext(input.question, input.subClaims, input.gathered);
+    const quoteOptions = buildQuoteOptions(sources);
     const out = await this.chatJson(
       config.synthesisModel,
       "You write a grounded, accurate answer using ONLY the provided sources. " + EVIDENCE_CONTEXT_GUIDANCE +
         "Cite inline with the source markers like [S1]. Cite every claim. Do not invent facts. " +
-        "For every supported decomposed claim, copy a short exact quote (240 characters maximum) from the source into " +
-        "`evidence`, using the claim's zero-based index. Do not paraphrase evidence quotes. " +
-        "Use the shortest contiguous quote that directly answers that specific research question; " +
-        "a related warning or shared topic is not evidence for an unmentioned procedure. " +
-        "Check each quote's length before returning it; never exceed 240 characters or join separate passages. " +
-        "Prefer one sentence under 180 characters. If several sentences are needed, emit separate short evidence items for the same claimIndex. " +
+        "For every supported research question, select a quoteId from quoteOptions in an evidence item with " +
+        "the question's zero-based claimIndex and the option's exact marker. Do not output raw quote text or invent IDs. " +
+        "Each option is already a bounded verbatim excerpt; choose only options that directly answer that question. " +
+        "A related warning or shared topic is not evidence for an unmentioned procedure. " +
+        "Select the smallest sufficient set, at most two options per research question; emit separate evidence items when needed. " +
+        "If no option supports an answer, state the gap and omit its evidence; never assume every option deserves a citation. " +
         "Address every research question in the answer, explicitly naming any unanswered part. " +
         "A source belongs in `citedMarkers` only when it appears inline and has an evidence item. " +
         "If the sources do not support a claim, say so and emit no citation/evidence for it. " +
@@ -272,10 +275,11 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       JSON.stringify({
         question: input.question,
         subClaims: input.subClaims,
-        sources: evidenceContext(input.question, input.subClaims, input.gathered),
+        sources,
+        quoteOptions,
         schema:
           '{"answer":string (markdown with [S#] citations),"citedMarkers":string[],' +
-          '"evidence":[{"claimIndex":number,"marker":string,"quote":string,"support":number(0..1)}],' +
+          '"evidence":[{"claimIndex":number,"marker":string,"quoteId":string,"support":number(0..1)}],' +
           '"conflicts":[{"point":string,"positions":[{"marker":string,"stance":string}],"trusted":string,"reason":string}]}',
       }),
       // The answer itself is prose, so this floor carries the write-up on top of the per-source parts.
@@ -284,14 +288,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     return {
       answer: (out.answer as string) ?? "",
       citedMarkers: Array.isArray(out.citedMarkers) ? (out.citedMarkers as string[]) : [],
-      evidence: Array.isArray(out.evidence)
-        ? (out.evidence as Record<string, unknown>[]).map((item) => ({
-            claimIndex: Number(item.claimIndex),
-            marker: typeof item.marker === "string" ? item.marker : "",
-            quote: typeof item.quote === "string" ? item.quote : "",
-            support: clamp01(Number(item.support)),
-          }))
-        : [],
+      evidence: resolveQuoteEvidence(out.evidence, quoteOptions),
       conflicts: parseConflicts(out.conflicts),
     };
   }

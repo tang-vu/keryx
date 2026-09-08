@@ -45,3 +45,20 @@ The model still proposed an overlong reward-check quotation, which the ledger re
 The journal target's conservative model assessment kept it below the grounding threshold.
 Thus the observed transport/context problems improved, but not every target passed.
 No source registration, payment or end-to-end paid pilot is claimed by this evaluation.
+
+## v0.22.6 follow-up
+
+Synthesis now selects bounded verbatim excerpts by ID. The final live check again used
+the same two questions and supplied targets, with four calls served by DeepSeek v4 Flash
+without fallback. All selected quotations passed textual validation: zero dropped evidence
+for either question, including the previously overlong reward-check excerpt.
+
+Final ledger coverage was 1/0.6 for the reward question and 0.3/0.6 for recovery. The
+answer and selected excerpts covered access versus citation payment, quotation/marker
+requirements, journaling, and GET-only resume without signing or replay. The journaling
+target still scored below 0.4 under the separate model assessment. This small, first-party
+model evaluation therefore does not establish complete research quality or external demand.
+
+Tests cover sentence selection, long text/Unicode boundaries, exact source substrings,
+unknown and cross-source IDs, raw-text injection, and unchanged downstream ledger checks.
+The quote menu adds bounded prompt text but no extra model call, fetch or payment.

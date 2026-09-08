@@ -14,6 +14,18 @@ existing economic contract. None of these is claimed as new ETHOnline work.
 
 ## September 8 — Relevant evidence passages (v0.22.4)
 
+### Bounded quote selection (v0.22.6)
+
+- Replace free-form quote copying in JSON synthesis with selection from bounded verbatim
+  quote options derived from already-unlocked passages. Invalid IDs/source mismatches
+  remain rejected by the unchanged evidence ledger; no quote is automatically shortened.
+- Two live corpus questions, four DeepSeek calls: no fallback and no dropped evidence.
+  Final target coverage was 1/0.6 and 0.3/0.6, so quality remains partial. This is a model
+  evaluation on first-party documents, not a registered creator or paid end-to-end pilot.
+- Validation: 163 focused agent/model tests, TypeScript and six hermetic evaluation cases
+  passed. Options preserve exact original spans and bounded text, including Unicode and
+  gaps; invalid selections cannot substitute model-written text or another source.
+
 ### Bounded JSON and overlapping evidence (v0.22.5)
 
 - Configure DeepSeek V4 JSON steps explicitly as non-thinking, with provider-specific

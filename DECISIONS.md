@@ -1,5 +1,20 @@
 # Keryx — Decision Log
 
+**D-70** · Evidence selection · *Let JSON synthesis select bounded verbatim quote options
+instead of copying arbitrary quote text.* Options come only from the already-unlocked
+passages supplied to synthesis: sentence segments, split at word boundaries when necessary,
+8–240 characters each, at most 64 per source. Their combined text cannot exceed the selected
+passage text; the additional prompt menu can repeat up to 2,000 characters per source.
+The model selects an ID, source marker, research target and support score. Unknown IDs,
+cross-source selections, raw quote text and malformed entries yield invalid proposals for
+the existing ledger to reject. No overlong model proposal is silently shortened or assigned
+new support. IDs are local to the model request; public receipts retain ordinary quote text.
+The ledger still checks original-source occurrence, target/marker membership, support and
+assessment availability. Neither an offered option nor exact text proves semantic relevance;
+coverage remains model-assessed. Why: repeated prompt instructions did not prevent overlong
+quotes from erasing otherwise relevant evidence. Reversible: easy (internal model contract;
+no receipt schema, payment authority, content-access or storage migration).
+
 **D-69** · Bounded reasoning · *Explicitly disable DeepSeek V4 thinking for JSON steps,
 and retain relevant evidence that overlaps another selected window.* DeepSeek documents
 thinking as enabled by default; the live corpus evaluation exhausted output allowances

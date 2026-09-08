@@ -145,7 +145,7 @@ describe("synthesis evidence contract", () => {
         {
           claimIndex: 0,
           marker: "S1",
-          quote: "USDC is burned on the source domain.",
+          quoteId: "q0_0",
           support: 0.87,
         },
       ],

@@ -1,5 +1,14 @@
 # Keryx Project Changelog
 
+### Bounded quote selection (2026-09-08, v0.22.6)
+
+- Give synthesis a menu of short, verbatim excerpts from its unlocked source passages.
+  Models select quote IDs; Keryx resolves the exact text before existing ledger validation.
+- Reject unknown or mismatched selections without accepting model-supplied replacements.
+  Public receipt shape, quote-size limits and payment authority are unchanged.
+- Live first-party corpus checks no longer rejected evidence for overlong quotations;
+  coverage remained partial and no paid pilot was run.
+
 ### Bounded DeepSeek JSON and overlapping evidence (2026-09-08, v0.22.5)
 
 - Explicitly use non-thinking mode for DeepSeek V4 JSON steps, preserving output caps,
