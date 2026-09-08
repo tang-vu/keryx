@@ -6,6 +6,13 @@ not assert that a track selection or submission has been completed in ETHGlobal.
 
 ## September 9 — English walkthrough rehearsal
 
+Added a ten-run English model diagnostic with actual decomposition rather than
+fixed evaluator targets. Missing external metrics, SQL isolation and empty input
+remained unsupported. A mixed receipt/SQL question exposed wrong-topic synthesis
+and an omitted digest-verification passage; one reviewer pass still allowed partial
+support for that wrong explanation. [Results and reproduction](./engineering/english-pipeline-2026-09-09.md).
+This is a detected remaining defect, not a ten-case pass or new paid pilot.
+
 Prepared an [English submission working draft](./ethonline-submission.md) with a
 baseline/event-work distinction, Arc/Circle code map, architecture diagram, pilot
 evidence and owner handoff checklist. It is not a submitted entry. Video publication,

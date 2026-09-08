@@ -9,6 +9,10 @@ A [September 9 paid follow-up](./pilot-2026-09-09.md) reached the evidence thres
 on both substantive targets using the cached article, with a new citation reward.
 It is one owner-operated result, not a broad reliability claim.
 
+The [broader English pipeline diagnostic](./english-pipeline-2026-09-09.md) preserves
+missing-information boundaries but exposes a receipt-verification retrieval/relevance
+failure. The successful paid question must not be generalized to all research tasks.
+
 These dated, first-party notes provide complete source material for researching Keryx's
 own behavior. They are documentation, not independent corroboration or external creator
 traction. Their implementation references are pinned to the inspected code revision.
