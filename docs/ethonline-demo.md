@@ -1,6 +1,6 @@
 # ETHOnline 2026 demo rehearsal
 
-Prepared against `438301e` / v0.22.10. This is a proposed three-minute recording,
+Prepared for v0.22.12. This is a proposed three-minute recording,
 not an asserted event video requirement or a completed recording. Publisher onboarding
 is complete. The [paid first-party pilot](./engineering/pilot-2026-09-08.md) now
 provides a verified two-payment receipt and a partial research-quality result.
@@ -20,7 +20,7 @@ provides a verified two-payment receipt and a partial research-quality result.
 | 0:00–0:25 | `/research`, Quick package, question and creator cap | The displayed total includes service fee and creator cap; this workspace prepares the request rather than signing a purchase. |
 | 0:25–0:50 | Downloaded request and unsigned buyer `quote` result | The buyer pins a trusted payee and an all-in limit before signing. Quote success is not payment or a started job. |
 | 0:50–1:20 | A verified testnet purchase, then `resume` using its original journal | The journal is written before submission. Recovery polls the same job without signing again. Only show this scene once actually verified. |
-| 1:20–2:05 | Completed result, agent decisions and evidence on the available result/receipt surface | Explain a real BUY/SKIP/CACHE decision from this run and a quote linked to its research target. Do not invent a decision absent from the run. |
+| 1:20–2:05 | `/research`: Source decisions, Research answer and Claim evidence | Explain a recorded decision and its rationale, then a quote linked to its target. A BUY decision alone does not establish payment. The Engineering pilot has BUY/SKIP, not CACHE; show the actions actually present. |
 | 2:05–2:35 | Quality and creator accounting in `/research`; CLI receipt verification | Completion, evidence coverage and settlement are separate. Show actual settled/pending/unknown values. |
 | 2:35–3:00 | Continuity delta and limitation | Workspace, buyer recovery and research-quality changes are event work; the existing payment rails predate ETHOnline. First-party tests are not external adoption. |
 

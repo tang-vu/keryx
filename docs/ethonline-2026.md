@@ -6,6 +6,15 @@ not assert that a track selection or submission has been completed in ETHGlobal.
 
 ## September 8 — Quote-selection diagnostics
 
+v0.22.12 adds source decisions to the completed-job buyer workspace, using the
+existing portable receipt. It validates the job/answer match and keeps receipt
+loading failures separate from the answer. The saved Engineering pilot contains
+21 decisions with BUY/SKIP; CACHE is supported by the view but not claimed for that
+pilot. Browser display is server-reported, not independent digest or payment verification.
+Validation: 11 focused tests and TypeScript passed. Browser fixtures covered a mismatched
+receipt, read-only retry, BUY/SKIP/CACHE rendering, target mapping, mobile width and
+clearing the job, with zero payment POSTs or page errors. Fixtures are not paid runs.
+
 v0.22.11 separates source/style constraints from substantive questions inside planning.
 The final 18-output diagnostic produced no instruction-only targets; source reliability
 and comparison questions remained. One Vietnamese result still combined two topics.

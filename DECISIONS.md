@@ -1,5 +1,13 @@
 # Keryx — Decision Log
 
+**D-76** · Buyer-visible agency · *Read source decisions from the existing portable
+receipt instead of adding another paid-job response contract.* Completed jobs in the
+buyer workspace show recorded BUY/SKIP/CACHE choices, quoted access prices, rationales
+and target links. The browser checks the display schema and matches job ID and answer;
+this is not digest verification or proof of settlement. Receipt errors remain isolated
+from the completed answer, retries are GET-only, and clearing/switching the job aborts
+the request. No new database, payment or public receipt fields. Reversible: easy.
+
 **D-75** · Planning scope · *Separate source/style constraints from information needs
 inside the existing planning request.* The paid Engineering pilot produced a redundant
 documentation-summary target and understated coverage. The planner first lists internal

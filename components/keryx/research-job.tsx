@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ResearchDecisions } from "./research-decisions";
 import { a2aQueryIdSchema, buyerJobSchema, shouldPollBuyerJob, type BuyerJob } from "@/lib/a2a/buyer-workspace";
 
 const control = "border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40";
@@ -84,6 +85,7 @@ export function ResearchJob() {
       </> : <p className="font-serif text-ink-3">Creator settlement totals are not available in this response yet.</p>}
       {job.serviceReceipt?.quality && <p className="font-serif">Grounded claims: {job.serviceReceipt.quality.status === "measured" && job.serviceReceipt.quality.groundedClaimRate !== null ? `${(job.serviceReceipt.quality.groundedClaimRate * 100).toFixed(1)}%` : "measurement unavailable"}.</p>}
       {job.answer && <div><h3 className="font-display text-2xl">Research answer</h3><p className="mt-3 whitespace-pre-wrap font-serif leading-relaxed">{job.answer}</p></div>}
+      {job.status === "completed" && typeof job.answer === "string" && <ResearchDecisions key={job.queryId} queryId={job.queryId} answer={job.answer} claims={job.claimCoverage ?? []} />}
       {!!job.claimCoverage?.length && <div><h3 className="font-display text-2xl">Claim evidence</h3><ol className="mt-4 space-y-4">{job.claimCoverage.map((claim, index) => <li key={index} className="border border-line p-4">
         <p className="font-serif">{claim.claim}</p><p className="mt-2 font-mono text-xs">{(claim.coverage * 100).toFixed(1)}% evidence coverage</p>
         {job.evidence?.filter((item) => item.claimIndex === claim.claimIndex).map((item, i) => <blockquote key={i} className="mt-3 border-l border-line pl-3 font-serif text-sm"><p>“{item.quote}”</p><cite>{item.sourceName}</cite></blockquote>)}

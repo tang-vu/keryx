@@ -1,5 +1,13 @@
 # Keryx Project Changelog
 
+### Source decisions in the buyer workspace (2026-09-08, v0.22.12)
+
+- Completed jobs now show recorded BUY/SKIP/CACHE decisions with source, article,
+  quoted access price, rationale and research targets, read from the portable receipt.
+- Match receipt job ID and answer before displaying decisions; loading errors preserve
+  the answer and offer a GET-only retry. Decisions do not establish completed payments,
+  and browser display does not claim receipt digest verification.
+
 ### Research scope and source instructions (2026-09-08, v0.22.11)
 
 - Planner separates source, language and formatting instructions from substantive
