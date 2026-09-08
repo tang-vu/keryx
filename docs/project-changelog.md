@@ -1,5 +1,11 @@
 # Keryx Project Changelog
 
+### Decision label correction (2026-09-09)
+
+- Avoid appending the article title a second time when a recorded decision's source
+  name already equals that title or ends with the same delimited article title.
+  This corrects the Engineering pilot's display without rewriting its saved receipt.
+
 ### Source decisions in the buyer workspace (2026-09-08, v0.22.12)
 
 - Completed jobs now show recorded BUY/SKIP/CACHE decisions with source, article,

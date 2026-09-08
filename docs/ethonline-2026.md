@@ -6,6 +6,11 @@ not assert that a track selection or submission has been completed in ETHGlobal.
 
 ## September 9 — English walkthrough rehearsal
 
+The rehearsal exposed duplicate article titles in source-decision cards. The display
+now appends a separate article title only when the saved name does not already equal
+it or end in the same ` — title` suffix. Historical source labels and receipt digests
+remain unchanged.
+
 Recorded a 114.96-second captioned production walkthrough of the existing paid
 Engineering pilot, including request preparation, read-only lookup, creator accounting,
 source decisions and evidence. No new purchase; the original partial-quality result

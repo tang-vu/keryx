@@ -43,7 +43,7 @@ export function ResearchDecisions({ queryId, answer, claims }: {
       : decisions.length === 0 ? <p className="mt-3 font-serif">No source decisions were recorded for this job.</p>
       : <ol className="mt-4 space-y-3">{decisions.map((decision, index) => <li key={index} className="border border-line p-4">
         <p className="font-mono text-xs">{decision.action} · quoted access price {decision.priceUsdc.toFixed(6)} USDC</p>
-        <p className="mt-2 font-serif font-semibold">{decision.sourceName}{decision.itemTitle ? ` — ${decision.itemTitle}` : ""}</p>
+        <p className="mt-2 font-serif font-semibold">{decision.sourceName}{decision.itemTitle && decision.sourceName !== decision.itemTitle && !decision.sourceName.endsWith(` — ${decision.itemTitle}`) ? ` — ${decision.itemTitle}` : ""}</p>
         <p className="mt-2 font-serif">{decision.rationale}</p>
         {!!decision.targets.length && <ul className="mt-3 list-inside list-disc font-serif text-sm text-ink-3">{decision.targets.map((target, i) => <li key={i}>{claims.find(claim => claim.claimIndex === target)?.claim ?? `Research target ${target + 1} (text unavailable)`}</li>)}</ul>}
       </li>)}</ol>}
