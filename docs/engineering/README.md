@@ -72,3 +72,12 @@ timestamped file under ignored `.artifacts/evals/`. Completed rows survive a lat
 The expected-quote flag checks one known sentence, not overall answer correctness.
 The experimental prompt does not change production behavior; these small repeated runs
 are diagnostics, not a quality pass/fail gate or an independent factual benchmark.
+
+For fixed question/quote pairs that isolate the reviewer from synthesis selection, use
+`node --import tsx scripts/eval-evidence-review.mts --check`. Adding `--live` instead
+of `--check`, with the same environment/model setup above, runs six reviewer requests:
+three each against the frozen v0.22.7 prompt and the current prompt. The 15 manually
+labelled pairs include direct/partial support, wrong timing, absent mechanisms,
+hypothetical behavior and instruction injection. Reports retain scores and model review
+output under `.artifacts/evals/`; model errors fail rather than using fallback. Labels
+and thresholds are diagnostic expectations, not proof of overall answer quality.

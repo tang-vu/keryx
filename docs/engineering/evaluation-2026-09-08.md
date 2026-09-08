@@ -107,3 +107,22 @@ question/quote pairs before another runtime change.
 reviewed support and final ledger coverage. Its offline fixture check passed; its live
 six-run comparison completed without fallback. These are first-party model diagnostics,
 not paid jobs, settlement evidence or external validation.
+
+## v0.22.8 reviewer calibration
+
+The initial 10-pair comparison found four false-negative classifications across three
+v0.22.7 reviewer runs and one across three fact-first runs, with zero false positives
+in either group. Expanding to 15 fixed pairs added paraphrased storage, too-late storage,
+a hypothetical future feature, instruction injection and signature secrecy. Across three
+runs, v0.22.7 produced four false negatives and the candidate produced none; neither
+produced a false positive. These counts classify each pair against the existing 0.4
+threshold and manually assigned direct/partial-support labels, not independent truth.
+
+The current reviewer states what a quotation establishes before comparing its action,
+actor and timing with the question. In one subsequent two-question full-corpus run,
+ledger coverage reached 0.8/0.9 for toll/reward checks and 0.8/0.9 for journaling/recovery.
+The incorrect resume-after-failure quote assigned to the pre-submission target still
+scored only 0.1; the correct journal quote scored 0.8. This improves the observed case,
+but repeated broader quality and a paid end-to-end pilot remain unverified. No source
+registration or payment was performed. Reviewer and ledger tests (35) and TypeScript
+passed; the reviewer still cannot increase original proposed support.

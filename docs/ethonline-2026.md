@@ -6,6 +6,13 @@ not assert that a track selection or submission has been completed in ETHGlobal.
 
 ## September 8 — Quote-selection diagnostics
 
+v0.22.8 follow-up: calibrated relevance review to state the supported fact before
+scoring action/actor/timing. A repeated 15-pair model comparison observed four false
+negatives with the old prompt and none with the candidate, with zero observed false
+positives in either group. One full-corpus check reached 0.8/0.9 on both questions.
+35 focused tests and TypeScript passed. This is model-only first-party evaluation,
+not paid-pilot success or external traction; see the dated evaluation for limitations.
+
 September 8 follow-up tooling: `scripts/eval-quote-selection.mts` reproduces the
 journaling citation failure with an offline quote-availability check and an opt-in,
 six-run live comparison. Both baseline and evidence-first prompts still produced

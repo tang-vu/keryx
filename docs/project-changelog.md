@@ -1,5 +1,15 @@
 # Keryx Project Changelog
 
+### Fact-based relevance scoring (2026-09-08, v0.22.8)
+
+- Ask the reviewer to identify what each quote establishes before scoring its relevance,
+  reducing reproduced rejection of correct procedural evidence with equivalent wording.
+- Add an opt-in fixed-pair comparison against the v0.22.7 reviewer, including wrong timing,
+  missing mechanisms, hypothetical features and instruction injection.
+- Keep the existing support ceiling, payment gates and review call/token limits. The
+  small first-party corpus run reached 0.8/0.9 coverage on both questions; wider and paid
+  end-to-end quality validation remains outstanding.
+
 ### Scoped coverage and quote relevance review (2026-09-08, v0.22.7)
 
 - Assess the exact requested scope and derive the stop decision from valid source-linked

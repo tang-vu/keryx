@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-72** · Review calibration · *Have the relevance reviewer state the supported fact
+before scoring its relationship to the requested action, actor and timing.* Repeated
+diagnostics isolated false negatives even when synthesis selected the correct journal
+sentence. The reviewer now distinguishes equivalent wording and explicit mechanisms
+from merely related topics, without demanding unasked implementation details. The
+internal `supportedFact` is a model assessment, not a new quote, public receipt field or
+independent authority. Existing support minimum, fail-closed parsing, quote checks and
+payment allocation remain unchanged. This uses the existing review request and token
+ceiling; the extra text may consume more output tokens, and truncation still withholds
+support. A 15-pair repeated diagnostic found fewer false negatives without observed
+false positives; this small model-only check does not prove general quality. Reversible:
+easy (prompt/schema only; no payment or storage migration).
+
 **D-71** · Coverage and relevance · *Assess the requested scope, then separately review
 whether each selected quote supports its assigned target.* JSON coverage now uses an explicit
 rubric and asks for supported answers and missing requested parts. Source links must resolve
