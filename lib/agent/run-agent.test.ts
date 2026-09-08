@@ -827,6 +827,20 @@ describe("runAgent — money-safety invariants", () => {
     ).toBe(true);
   });
 
+  it("surfaces relevance review failure while preserving the draft and withholding rewards", async () => {
+    const source = makeSource({ id: "a", fetchPrice: 0.004 });
+    const engine = fakeEngine({ synthesize: (input) => ({
+      answer: "The completed draft [S1].", citedMarkers: ["S1"], evidenceReview: "unavailable",
+      evidence: input.gathered.map((g) => ({ claimIndex: 0, marker: g.marker, quote: g.text, support: 0 })),
+    }) });
+    const gw = fakeGateway();
+    const { run, steps } = await drive({ question: "q", budget: 0.05 }, deps([source], engine, gw));
+    expect(run.answer).toContain("completed draft");
+    expect(run.citations).toEqual([]);
+    expect(gw.citationCalls).toEqual([]);
+    expect(steps.some((step) => step.phase === "evidence" && /relevance review unavailable/i.test(step.message))).toBe(true);
+  });
+
   it("rejects a citation whose proposed quote does not occur in the paid source", async () => {
     const source = makeSource({ id: "a", fetchPrice: 0.004 });
     const engine = fakeEngine({

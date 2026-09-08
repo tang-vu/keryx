@@ -62,3 +62,24 @@ model evaluation therefore does not establish complete research quality or exter
 Tests cover sentence selection, long text/Unicode boundaries, exact source substrings,
 unknown and cross-source IDs, raw-text injection, and unchanged downstream ledger checks.
 The quote menu adds bounded prompt text but no extra model call, fetch or payment.
+
+## v0.22.7 follow-up
+
+Coverage now assesses only the requested question, with a defined rubric and validated
+source markers. Removing the buyer article's procedure text while retaining its title
+and provenance made both recovery targets score zero and the sufficient flag false.
+With the complete articles, coverage assessments recognized the explicit answers.
+
+Calibration alone exposed a remaining false positive: synthesis assigned a quote about
+resuming after failure to the target asking how the job is preserved before submission.
+The new separate relevance pass rated that pair zero. Final ledger coverage was 0.8/0.9
+for access/reward checks and 0/0.7 for journaling/recovery behavior. The result is therefore
+still partial; rejecting the mismatched quote is the intended improvement, not a claim
+that the full pilot now succeeds.
+
+The two-question final check used four orchestration steps plus one bounded review
+request inside each synthesis (six model requests). Review status was completed for both.
+All passes used DeepSeek v4 Flash; a second pass on the same model is not independent
+factual corroboration. No source registration, paid job or settlement was performed.
+Unit tests verify that review cannot raise support, malformed/missing/duplicate entries
+fail closed, and a reviewer outage retains the draft with zero support and a visible trace.

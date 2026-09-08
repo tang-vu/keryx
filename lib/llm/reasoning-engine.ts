@@ -155,6 +155,8 @@ export interface SynthResult {
   citedMarkers: string[];
   conflicts: Conflict[];
   evidence: ProposedEvidence[];
+  /** Optional second-pass relevance check; engines without this pass leave it absent. */
+  evidenceReview?: "completed" | "unavailable";
 }
 
 export interface AttributeInput {

@@ -1,5 +1,22 @@
 # Keryx — Decision Log
 
+**D-71** · Coverage and relevance · *Assess the requested scope, then separately review
+whether each selected quote supports its assigned target.* JSON coverage now uses an explicit
+rubric and asks for supported answers and missing requested parts. Source links must resolve
+to nonempty gathered content; malformed/missing scores remain zero. The sufficient flag is
+derived from all validated targets meeting the existing 0.4 threshold, avoiding contradictory
+model flags. JSON synthesis adds one bounded relevance-review request for up to 32 proposals.
+It sees each question/quote pair, not the original support score, and can only lower support.
+Missing, duplicate, malformed or out-of-bound reviews cannot authorize evidence. A review
+transport failure preserves the draft with zero support and an explicit stream message;
+there is no inner retry or new payment. Provider token usage includes this extra call under
+the synthesis step; it adds up to one configured transport deadline and model cost. The same
+provider can serve both passes: this is not independent factual verification. The original
+quote ledger, assessment minimum, integer allocation and payout authority remain intact.
+Why: calibration alone raised coverage while accepting a resume-after-failure quote for a
+pre-submission journaling question. The review correctly rejected that link. Reversible:
+medium (reasoning behavior/trace only; no persisted receipt schema or payment migration).
+
 **D-70** · Evidence selection · *Let JSON synthesis select bounded verbatim quote options
 instead of copying arbitrary quote text.* Options come only from the already-unlocked
 passages supplied to synthesis: sentence segments, split at word boundaries when necessary,

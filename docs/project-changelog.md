@@ -1,5 +1,14 @@
 # Keryx Project Changelog
 
+### Scoped coverage and quote relevance review (2026-09-08, v0.22.7)
+
+- Assess the exact requested scope and derive the stop decision from valid source-linked
+  coverage, preserving zero for missing/malformed evidence rather than trusting a second flag.
+- Review selected question/quote pairs in a separate bounded model pass that can only
+  lower support. Preserve the draft and withhold citation rewards when review is unavailable.
+- Surface review status in the trace. Original quote and payment gates remain unchanged;
+  this adds one model call to JSON synthesis, not independent factual verification.
+
 ### Bounded quote selection (2026-09-08, v0.22.6)
 
 - Give synthesis a menu of short, verbatim excerpts from its unlocked source passages.

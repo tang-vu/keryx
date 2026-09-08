@@ -965,6 +965,12 @@ export async function* runAgent(
   // 5) SYNTHESIZE
   yield emit("synthesize", `Synthesizing a grounded answer from ${gathered.length} source(s)…`);
   const synthesized = await engine.synthesize({ question: input.question, subClaims, gathered });
+  if (synthesized.evidenceReview) {
+    yield emit("evidence", synthesized.evidenceReview === "unavailable"
+      ? "Evidence relevance review unavailable; keeping the draft with citation rewards withheld."
+      : "Relevance review returned; only checked excerpts can retain support, and review cannot raise it.",
+    { relevanceReview: synthesized.evidenceReview });
+  }
 
   // 5b) ADJUDICATE — when the sources disagreed, the synthesizer trusted one over another rather
   // than averaging them. Surface each resolution so the reasoning behind the answer stays visible.

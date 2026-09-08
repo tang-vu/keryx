@@ -14,6 +14,20 @@ existing economic contract. None of these is claimed as new ETHOnline work.
 
 ## September 8 — Relevant evidence passages (v0.22.4)
 
+### Scoped coverage and relevance review (v0.22.7)
+
+- Give coverage a question-scoped rubric, validate links to actual gathered text, and
+  derive sufficiency from the existing threshold rather than a contradictory model flag.
+- Add one bounded question/quote relevance review inside JSON synthesis. Support can
+  only decrease; unavailable review preserves the draft with rewards withheld and a
+  visible trace. Payment limits and the original evidence ledger remain unchanged.
+- Live evidence-removal control scored both recovery targets zero. On complete articles,
+  the reviewer correctly rejected the observed resume/journaling mismatch. Final coverage
+  was 0.8/0.9 and 0/0.7: still a partial, first-party model evaluation, not a paid pilot.
+- Validation: 178 focused agent/model tests across the final suite and added trace case,
+  TypeScript and six hermetic evaluation cases passed. An earlier local circuit-store
+  timeout passed on focused rerun and the subsequent complete focused suite.
+
 ### Bounded quote selection (v0.22.6)
 
 - Replace free-form quote copying in JSON synthesis with selection from bounded verbatim

@@ -140,6 +140,7 @@ describe("synthesis evidence contract", () => {
   it("parses claim-indexed exact-quote evidence for orchestrator validation", async () => {
     const engine = new StubEngine({
       answer: "USDC is burned on the source domain [S1].",
+      reviews: [{ index: 0, support: 0.9 }],
       citedMarkers: ["S1"],
       evidence: [
         {
