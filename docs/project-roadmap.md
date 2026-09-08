@@ -1,6 +1,11 @@
 # Keryx Project Roadmap
 
-**Version:** 0.22.12 (buyer-visible source decisions, updated 2026-09-08)
+**Version:** 0.22.13 (relevant evidence passages, updated 2026-09-09)
+
+The English pipeline diagnostic now has a passage-selection repair for omitted receipt
+verification, with regression protection for the paid pilot's recovery explanation.
+Two rounds retained unsupported SQL/metrics/empty-input outcomes; this remains a narrow
+first-party model check. See [the diagnostic and follow-up](./engineering/english-pipeline-2026-09-09.md).
 
 **Active event:** [ETHOnline 2026 continuity build log](./ethonline-2026.md). The first
 event milestone exposes package preparation and paid-job inspection at `/research`.

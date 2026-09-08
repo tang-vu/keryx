@@ -60,3 +60,39 @@ then rerun mixed supported/unsupported cases. Keep the source-text budget, verba
 provenance and reward gates intact. A context repair also needs semantic retesting;
 it cannot by itself prove that the reviewer stops accepting wrong-topic evidence.
 No production behavior or old receipt was changed by this diagnostic.
+
+## Passage-selection repair and repeated English check
+
+The follow-up changes `lib/llm/evidence-context.ts`: target-term coverage replaces
+the best single-window match ratio, sentence boundaries are preferred near bounded
+window edges, and overlapping ranges consume their unique character count. The
+2,000-character source-text budget and 200,000-character scan ceiling remain. A
+smaller opening leaves room for relevant later context. All passages remain exact
+substrings; no model-generated summary or new paid read is used for selection.
+
+A term-ranking-only candidate recovered receipt verification but lost the recovery
+mechanism. That regression was caught before deployment. Tests now cover the actual
+English pilot question as well as the earlier differently worded recovery question,
+the mixed receipt/SQL question and seven sentence positions near window edges.
+
+Final artifact: `english-pipeline-2026-09-08T18-05-57-367Z.json`, two rounds using
+`deepseek-v4-flash`, with real decomposition and the same first-party corpus.
+
+| Case | First round coverage | Second round coverage | Answer and quote inspection |
+| --- | --- | --- | --- |
+| Pilot recovery question | 0.9 / 0.7 | 0.9 / 0.7 | Before-signing journal, same-directory GET-only resume, no new authorization/purchase |
+| Receipt verification plus missing SQL isolation | 1 / 0 | 0.9 / 0 | Canonical SHA-256 and question/answer binding; SQL still unspecified |
+| Access versus citation, and finality | 1 / 1 | 0.9 / 1 | Separate payment legs and explicit rejection of finality inference |
+| External success rate and p95 latency | 0 / 0 | 0 / 0 | No invented metrics or reward-eligible evidence |
+| Recovery with empty corpus | 0 | 0 | No supported answer or reward-eligible evidence |
+
+The recovery prose includes the complete mechanism, but individual selected quotes
+cover narrower parts and the ledger reports 0.7 for that target. Scores were not raised
+to make the result look complete. Sentence-boundary recognition remains heuristic;
+long sentences and unusual punctuation can still yield clipped excerpts. This test
+does not establish broad retrieval quality, reviewer reliability, discovery behavior,
+cache behavior or settlement. No USDC purchase was made and existing receipts remain
+unchanged.
+
+Validation for the repair: 102 tests across `lib/llm` and the evidence ledger passed,
+along with TypeScript and ESLint on the changed implementation/test files.

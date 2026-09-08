@@ -1,5 +1,20 @@
 # Keryx — Decision Log
 
+**D-77** · Evidence selection · *Spend the context budget on missing target terms and
+preserve nearby sentence boundaries.* An English receipt/SQL diagnostic omitted the
+available digest-verification sentence. Tracking the best word-match ratio per target
+treated repeated generic terms as coverage; fixed windows also cut recovery context.
+Track the union of covered target terms instead, prefer sentence boundaries within
+bounded overlapping windows, and charge merged source characters against the unchanged
+2,000-character per-source budget. Retain a smaller opening for provenance/context.
+The scan stays capped at 200,000 characters; long or unrecognized sentences fall back
+to character windows. These are lexical heuristics, not proof of semantic relevance.
+Assessment, re-evaluation, synthesis and attribution still receive verbatim source
+slices through the same helper. No reward threshold, payout authority, model request
+count or receipt schema changes. Two English rounds recovered receipt and recovery
+answers while missing SQL, metrics and empty-corpus questions remained unsupported;
+this does not establish general research quality. Reversible: easy (selection only).
+
 **D-76** · Buyer-visible agency · *Read source decisions from the existing portable
 receipt instead of adding another paid-job response contract.* Completed jobs in the
 buyer workspace show recorded BUY/SKIP/CACHE choices, quoted access prices, rationales

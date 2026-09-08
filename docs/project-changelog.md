@@ -1,5 +1,17 @@
 # Keryx Project Changelog
 
+### Relevant English evidence passages (2026-09-09, v0.22.13)
+
+- Preserve nearby sentence boundaries and prioritize target terms not already present
+  in selected context. Count overlapping passages once against the unchanged 2,000
+  source-character budget, with a 200,000-character scan ceiling.
+- Fix the reproduced missing receipt-digest passage while retaining the English
+  pilot's journaling and GET-only recovery explanation. Regression cases also exercise
+  sentence placement near window edges and exact substring provenance.
+- Two rounds of five English model-only cases recovered the receipt explanation and
+  retained unsupported SQL/metrics/empty-input outcomes. This is not a new paid pilot
+  or a measured production success rate; reward gates and payment paths are unchanged.
+
 ### Decision label correction (2026-09-09)
 
 - Avoid appending the article title a second time when a recorded decision's source

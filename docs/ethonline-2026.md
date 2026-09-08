@@ -6,6 +6,13 @@ not assert that a track selection or submission has been completed in ETHGlobal.
 
 ## September 9 — English walkthrough rehearsal
 
+Repaired the English diagnostic's omitted receipt-verification passage: selection now
+prioritizes missing target terms and nearby complete sentences within the same source
+budget. Regression tests retain both receipt binding and GET-only recovery. Two new
+rounds answered those questions correctly while missing SQL/metrics and empty input
+remained unsupported. The detailed follow-up below records coverage and limitations;
+no new paid job or historical receipt rewrite was involved.
+
 Added a ten-run English model diagnostic with actual decomposition rather than
 fixed evaluator targets. Missing external metrics, SQL isolation and empty input
 remained unsupported. A mixed receipt/SQL question exposed wrong-topic synthesis

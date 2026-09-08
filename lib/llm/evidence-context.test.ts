@@ -13,6 +13,31 @@ const longText = "Release history and unrelated maintenance notes. ".repeat(130)
 const gathered: GatheredContent[] = [{ sourceId: "test", sourceName: "Fixture", marker: "S1", text: longText }];
 
 describe("bounded evidence context", () => {
+  it("keeps both journaling and GET-only recovery for the English paid-pilot question", async () => {
+    const feed = await ingestRssXml(readFileSync("docs/engineering/feed.xml", "utf8"), "https://example.test/feed");
+    const article = feed.items.find(item => item.title === "Recovering a Keryx paid research job")!;
+    const result = selectEvidencePassages(article.content,
+      "How does the Keryx buyer journal a job before submission, and how can it recover after losing the response without paying again? Use the Keryx Engineering source for the documented behavior.",
+      ["How does the Keryx buyer journal a job before submission?", "How can the Keryx buyer recover after losing the response without paying again?"]);
+    for (const quote of [
+      "Before signing, the journal records the normalized request, payment terms, nonce and deterministic job identifier.",
+      "Resume sends only GET requests for the original job.",
+      "It does not sign a new authorization or replay a purchase.",
+    ]) expect(result.passages.some(p => p.text.includes(quote))).toBe(true);
+    expect(result.passages.reduce((sum, p) => sum + p.text.length, 0)).toBeLessThanOrEqual(2000);
+    for (const p of result.passages) expect(p.text).toBe(article.content.slice(p.start, p.end));
+  });
+  it("keeps receipt integrity evidence when a second target asks for absent SQL details", async () => {
+    const feed = await ingestRssXml(readFileSync("docs/engineering/feed.xml", "utf8"), "https://example.test/feed");
+    const article = feed.items.find(item => item.title === "Recovering a Keryx paid research job")!;
+    const result = selectEvidencePassages(article.content,
+      "How does Keryx verify a research receipt, and which SQL isolation level does its buyer journal use?",
+      ["How does Keryx verify a research receipt?", "Which SQL isolation level does Keryx's buyer journal use?"]);
+    expect(result.passages.some(p => p.text.includes("canonical SHA-256 digest"))).toBe(true);
+    expect(result.passages.some(p => p.text.includes("original question and returned answer"))).toBe(true);
+    expect(result.passages.reduce((sum, p) => sum + p.text.length, 0)).toBeLessThanOrEqual(2000);
+    for (const p of result.passages) expect(p.text).toBe(article.content.slice(p.start, p.end));
+  });
   it("keeps recovery instructions that overlap an already selected journal passage", async () => {
     const feed = await ingestRssXml(readFileSync("docs/engineering/feed.xml", "utf8"), "https://example.test/feed");
     const article = feed.items.find((item) => item.title === "Recovering a Keryx paid research job")!;
@@ -55,6 +80,19 @@ describe("bounded evidence context", () => {
     const result = selectEvidencePassages(text, "orchard pruning and solar battery storage", ["orchard pruning", "solar battery storage"]);
     expect(result.passages.some((p) => p.text.includes("orchard pruning"))).toBe(true);
     expect(result.passages.some((p) => p.text.includes("Solar battery storage"))).toBe(true);
+  });
+
+  it.each([390, 590, 790, 1190, 1590, 1990, 2390])("keeps a complete relevant sentence near a window edge at %i", (offset) => {
+    const sentence = "Receipt integrity is checked against the original request.";
+    const prefix = "Unrelated background. ".repeat(Math.floor(offset / 22)).padEnd(offset, " ");
+    const text = prefix + sentence + " General appendix. ".repeat(150);
+    const result = selectEvidencePassages(text, "How is receipt integrity checked?", ["How is receipt integrity checked?"]);
+    expect(result.passages.some(p => p.text.includes(sentence))).toBe(true);
+    expect(result.passages.reduce((sum, p) => sum + p.text.length, 0)).toBeLessThanOrEqual(2000);
+    for (const [index, p] of result.passages.entries()) {
+      expect(p.text).toBe(text.slice(p.start, p.end));
+      if (index) expect(p.start).toBeGreaterThan(result.passages[index - 1].end);
+    }
   });
 
   it("makes the scan limit explicit and stays bounded for empty or unmatched requests", () => {
