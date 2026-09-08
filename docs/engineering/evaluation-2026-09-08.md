@@ -26,3 +26,22 @@ selection/quotation quality without relaxing the quote-length or payment gates.
 
 Local checks passed: exact full-body RSS round-trip, generated-feed freshness and
 TypeScript. CI now checks the feed alongside the existing repository validation.
+
+## v0.22.5 follow-up
+
+Explicit non-thinking requests fixed the observed DeepSeek truncation in the final
+four-call assessment/synthesis check: all four were served by DeepSeek v4 Flash on
+the first attempt, each taking about 2 seconds, without provider fallback. This small
+sample is not a latency SLO. Token ceilings were unchanged.
+
+The earlier recovery failure was traced to the context selector excluding a relevant
+window because it overlapped the journal window. Allowing and merging overlapping
+windows recovered the instructions to use resume with the same directory, send only
+GET requests, and avoid signing or replaying a purchase. The final answer and its quote
+explicitly contained those instructions; the quote passed original-text validation.
+
+Coverage in that final check was 0.6/0 for the reward question and 0.3/0.6 for recovery.
+The model still proposed an overlong reward-check quotation, which the ledger rejected.
+The journal target's conservative model assessment kept it below the grounding threshold.
+Thus the observed transport/context problems improved, but not every target passed.
+No source registration, payment or end-to-end paid pilot is claimed by this evaluation.

@@ -44,6 +44,7 @@ function openAiEngine(choice: ModelChoice): ReasoningEngine | null {
   const endpoint = endpointFor(choice.provider);
   if (!endpoint) return null;
   return new OpenAICompatibleEngine({
+    provider: choice.provider,
     name: `llm:${choice.provider}:${choice.model}`,
     baseUrl: endpoint.baseUrl,
     apiKey: endpoint.apiKey,

@@ -10,6 +10,8 @@ import { config } from "../config";
 import { extractJson, JsonChatEngine } from "./json-chat-engine";
 
 export interface OpenAICompatibleOpts {
+  /** Explicit provider identity; vendor options must not leak to generic compatible hosts. */
+  provider?: "deepseek" | "mimo";
   /** Engine name recorded on each run, e.g. "llm:deepseek:deepseek-v4-pro". */
   name: string;
   baseUrl: string;
@@ -25,6 +27,7 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
   constructor(opts?: OpenAICompatibleOpts) {
     super();
     this.opts = opts ?? {
+      provider: "deepseek",
       name: `llm:deepseek:${config.llmModel}`,
       baseUrl: config.llmBaseUrl,
       apiKey: config.deepseekKey,
@@ -38,6 +41,7 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
     user: string,
     maxTokens = 2048,
   ): Promise<Record<string, unknown>> {
+    const wireModel = this.opts.model ?? model;
     const res = await fetch(`${this.opts.baseUrl}/chat/completions`, {
       method: "POST",
       signal: AbortSignal.timeout(config.llmTimeoutMs),
@@ -46,7 +50,12 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
         Authorization: `Bearer ${this.opts.apiKey}`,
       },
       body: JSON.stringify({
-        model: this.opts.model ?? model,
+        model: wireModel,
+        // V4 defaults to thinking, which can consume a bounded JSON step's entire output
+        // allowance before producing content. Keep the existing token cap and failover.
+        ...(this.opts.provider === "deepseek" && /^deepseek-v4-(flash|pro)$/.test(wireModel)
+          ? { thinking: { type: "disabled" } }
+          : {}),
         messages: [
           { role: "system", content: system + " Respond with a single JSON object." },
           { role: "user", content: user },
@@ -64,7 +73,6 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
       err.status = res.status;
       throw err;
     }
-    const wireModel = this.opts.model ?? model;
     const data = (await res.json()) as {
       choices?: { message?: { content?: string }; finish_reason?: string }[];
       usage?: {

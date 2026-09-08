@@ -258,6 +258,11 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         "Cite inline with the source markers like [S1]. Cite every claim. Do not invent facts. " +
         "For every supported decomposed claim, copy a short exact quote (240 characters maximum) from the source into " +
         "`evidence`, using the claim's zero-based index. Do not paraphrase evidence quotes. " +
+        "Use the shortest contiguous quote that directly answers that specific research question; " +
+        "a related warning or shared topic is not evidence for an unmentioned procedure. " +
+        "Check each quote's length before returning it; never exceed 240 characters or join separate passages. " +
+        "Prefer one sentence under 180 characters. If several sentences are needed, emit separate short evidence items for the same claimIndex. " +
+        "Address every research question in the answer, explicitly naming any unanswered part. " +
         "A source belongs in `citedMarkers` only when it appears inline and has an evidence item. " +
         "If the sources do not support a claim, say so and emit no citation/evidence for it. " +
         "When two or more sources disagree on a factual point, do NOT average or blur them: decide " +

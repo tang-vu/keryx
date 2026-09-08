@@ -1,5 +1,20 @@
 # Keryx — Decision Log
 
+**D-69** · Bounded reasoning · *Explicitly disable DeepSeek V4 thinking for JSON steps,
+and retain relevant evidence that overlaps another selected window.* DeepSeek documents
+thinking as enabled by default; the live corpus evaluation exhausted output allowances
+before JSON completed. Only explicitly identified DeepSeek flash/pro requests receive
+the vendor option; generic compatible endpoints and other providers do not. Token caps,
+usage accounting and truncation-triggered failover remain intact. The passage selector
+now permits overlap, discounts repeated context and merges adjacent/overlapping spans
+as exact original substrings. Four selected windows still carry at most 2,000 raw source
+characters. This fixes a reproduced omission of GET-only resume instructions between
+selected windows. Short, directly relevant quotations are reinforced in the prompt;
+semantic relevance remains model-assessed and overlong quotes still fail the ledger.
+Why: the two observed failures had concrete transport/context causes; raising spend or
+weakening evidence gates would not resolve them. Reversible: easy (no storage/payment change).
+Vendor reference checked September 8: https://api-docs.deepseek.com/guides/thinking_mode/
+
 **D-68** · Research corpus · *Publish dated first-party engineering notes with pinned code
 references and complete RSS bodies before another paid pilot.* The seed abstracts do not
 document Keryx sufficiently. The publisher kit supplies that missing material without

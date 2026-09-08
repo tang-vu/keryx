@@ -1,5 +1,13 @@
 # Keryx Project Changelog
 
+### Bounded DeepSeek JSON and overlapping evidence (2026-09-08, v0.22.5)
+
+- Explicitly use non-thinking mode for DeepSeek V4 JSON steps, preserving output caps,
+  usage counters and truncation fallback; other providers retain their own request shape.
+- Allow and merge overlapping evidence windows so a relevant passage crossing a selected
+  edge is not excluded. Exact original substrings and the 2,000-character bound remain.
+- Reinforce short, question-specific quotations without relaxing the evidence ledger.
+
 ### Relevant passages from unlocked sources (2026-09-08, v0.22.4)
 
 - Replace fixed opening-only model context with bounded verbatim passages selected for

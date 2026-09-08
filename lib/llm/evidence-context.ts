@@ -38,18 +38,30 @@ export function selectEvidencePassages(text: string, question: string, subClaims
     let best: typeof windows[number] | undefined;
     let bestScore = 0;
     for (const window of windows) {
-      if (selected.some((other) => window.start < other.end && other.start < window.end)) continue;
+      if (selected.includes(window)) continue;
+      const novelFraction = 1 - selected.reduce((sum, other) => sum + Math.max(0,
+        Math.min(window.end, other.end) - Math.max(window.start, other.start)), 0) / (window.end - window.start);
       const score = window.scores.reduce((sum, value, index) => sum + Math.max(0, value - coverage[index]!), 0)
-        + window.questionScore * 0.1;
+        + window.questionScore * 0.1 * Math.max(0, novelFraction);
       if (score > bestScore) { best = window; bestScore = score; }
     }
     if (!best) break;
     selected.push(best);
     best.scores.forEach((value, index) => { coverage[index] = Math.max(coverage[index]!, value); });
   }
+  // Adjacent/overlapping windows are one exact substring, not concatenated quotations.
+  // Allowing overlap avoids excluding evidence that straddles a previously selected edge.
+  const passages: { start: number; end: number; text: string }[] = [];
+  for (const window of selected.sort((a, b) => a.start - b.start)) {
+    const previous = passages.at(-1);
+    if (previous && window.start <= previous.end) {
+      previous.end = Math.max(previous.end, window.end);
+      previous.text = text.slice(previous.start, previous.end);
+    } else passages.push({ start: window.start, end: window.end, text: window.text });
+  }
   return {
     originalCharacters: text.length, scannedCharacters: scanned.length, excerpted: true,
-    passages: selected.sort((a, b) => a.start - b.start).map(({ start, end, text }) => ({ start, end, text })),
+    passages,
   };
 }
 

@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { ingestRssXml } from "../ingest/rss";
 import { evidenceContext, selectEvidencePassages } from "./evidence-context";
 import { JsonChatEngine } from "./json-chat-engine";
 import { buildEvidenceLedger } from "../agent/evidence-ledger";
@@ -11,6 +13,16 @@ const longText = "Release history and unrelated maintenance notes. ".repeat(130)
 const gathered: GatheredContent[] = [{ sourceId: "test", sourceName: "Fixture", marker: "S1", text: longText }];
 
 describe("bounded evidence context", () => {
+  it("keeps recovery instructions that overlap an already selected journal passage", async () => {
+    const feed = await ingestRssXml(readFileSync("docs/engineering/feed.xml", "utf8"), "https://example.test/feed");
+    const article = feed.items.find((item) => item.title === "Recovering a Keryx paid research job")!;
+    const result = selectEvidencePassages(article.content,
+      "How can a Keryx buyer recover a job after losing the submission response without paying again?",
+      ["How does the buyer preserve the original job before submission?", "What does resume do after response loss, and what payment actions does it avoid?"]);
+    expect(result.passages.some((p) => p.text.includes("Resume sends only GET requests for the original job."))).toBe(true);
+    expect(result.passages.reduce((sum, p) => sum + p.text.length, 0)).toBeLessThanOrEqual(2000);
+    for (const passage of result.passages) expect(passage.text).toBe(article.content.slice(passage.start, passage.end));
+  });
   it("recovers late evidence without rewriting source text or exceeding the old synthesis text budget", () => {
     expect(longText.slice(0, 2000)).not.toContain(quote);
     const result = selectEvidencePassages(longText, question, claims);

@@ -14,6 +14,21 @@ existing economic contract. None of these is claimed as new ETHOnline work.
 
 ## September 8 — Relevant evidence passages (v0.22.4)
 
+### Bounded JSON and overlapping evidence (v0.22.5)
+
+- Configure DeepSeek V4 JSON steps explicitly as non-thinking, with provider-specific
+  scoping, unchanged token ceilings, usage accounting and truncation fallback.
+- Allow overlapping evidence windows and merge them as exact original substrings.
+  This recovers GET-only resume instructions previously excluded by the overlap rule;
+  the source-context budget remains at most 2,000 raw characters.
+- Strengthen short, claim-specific quotation guidance; the deterministic evidence gate
+  remains unchanged. The final live corpus check served all four steps on DeepSeek without
+  fallback and recovered the correct resume answer/quote. An overlong reward quote was
+  still rejected and coverage remained partial. No new paid job was run.
+- Validation covers vendor-option isolation, preserved token caps/truncation handling,
+  and the actual missed recovery passage in the checked-in first-party corpus.
+  All 160 focused agent/model tests, TypeScript and six hermetic evaluation cases passed.
+
 ### First-party source material follow-up
 
 - Added `docs/engineering/`: two complete, code-referenced Keryx articles, a generated
