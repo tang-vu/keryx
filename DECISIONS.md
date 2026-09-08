@@ -1,5 +1,19 @@
 # Keryx — Decision Log
 
+**D-67** · Evidence context · *Select bounded verbatim passages from already-unlocked
+content instead of sending different opening-only slices to each model step.* Scan at most
+200,000 JavaScript string characters per source; retain its opening and up to three
+non-overlapping 500-character windows ranked by lexical question/target coverage. At most
+2,000 source-text characters reach each model step, plus structured metadata. Sufficiency,
+re-evaluation and synthesis share the selection for identical inputs; attribution uses the
+question because its interface has no decomposed targets. Explicit offsets, original/scanned
+lengths and delivery kind distinguish omitted content and abstracts. Quotes still validate
+against the original unlocked text; no fetch, storage migration, payout authority or budget
+change is introduced. Selection can miss paraphrases, clipped boundary spans, or evidence
+past the scan limit; an omitted passage is not evidence of absence. A short abstract remains
+short. Why: fixed 800/1,000/2,000-character prefixes hid late evidence and gave model stages
+inconsistent source context. Reversible: easy (shared model-context helper).
+
 **D-66** · Preview target contract · *Reject an actionable LLM decision that omits valid
 research-target indexes before any source payment.* The second owner-operated buyer pilot
 planned the intended Keryx topic, but every positive proposal lacked usable targets and the

@@ -12,6 +12,26 @@ recovery, Quick/Deep package v1 and portable/service receipts already existed.
 See `PLAN.md` for historical context and `docs/a2a-paid-research-v2.md` for the
 existing economic contract. None of these is claimed as new ETHOnline work.
 
+## September 8 — Relevant evidence passages (v0.22.4)
+
+- Investigation found full RSS bodies were already retained when supplied by a feed, but
+  model stages received only the first 800/1,000/2,000 characters. Select bounded verbatim
+  passages from already-unlocked content and share them across assessment and synthesis.
+  Include delivery depth and omitted-content metadata in reasoning context.
+- The selector scans at most 200,000 characters and sends at most 2,000 raw source-text
+  characters per source. Lexical selection is not comprehensive semantic retrieval.
+  Original-source exact-quote validation and all payment gates remain unchanged.
+- Validation: 153 agent/model tests, TypeScript and six hermetic evaluation cases passed.
+  Regression tests cover late evidence, separate targets, exact original spans, context
+  consistency, abstract provenance and scan/output bounds.
+- A three-call live DeepSeek v4 Flash check used an authored fictional protocol with two
+  unique facts after character 2,000. The opening-only control scored both targets zero;
+  selected passages scored both fully covered and produced exact supporting quotes.
+  This is a synthetic model evaluation, not an external research result or payment.
+- No additional paid pilot was run for this update. The previous pilot's 327-byte abstract
+  cannot gain missing details through passage selection; deeper source material and a
+  sufficiently supported real research outcome remain outstanding.
+
 ## September 7 — Second pilot and decision-target repair (v0.22.3)
 
 - Ran one more owner-operated Quick purchase for 0.05 USDC testnet on v0.22.2, with an

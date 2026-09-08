@@ -1,5 +1,13 @@
 # Keryx Project Changelog
 
+### Relevant passages from unlocked sources (2026-09-08, v0.22.4)
+
+- Replace fixed opening-only model context with bounded verbatim passages selected for
+  the question and research targets, including relevant evidence later in a long source.
+- Give sufficiency, re-evaluation and synthesis the same passages; expose delivery depth
+  and omitted-content metadata so an abstract is not presented as a complete article.
+- Preserve original-text quote validation, content access gates and payment limits.
+
 ### Explicit research targets for source decisions (2026-09-07, v0.22.3)
 
 - Explain zero-based target indexes to the decision model and supply indexed research questions.

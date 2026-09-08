@@ -5,6 +5,7 @@
  */
 
 import { config } from "../config";
+import { evidenceContext, EVIDENCE_CONTEXT_GUIDANCE } from "./evidence-context";
 import type { Decision } from "../types";
 import type {
   AttributeInput,
@@ -94,6 +95,8 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       price: c.fetchPrice,
       cached: c.cached,
       preview: c.preview.slice(0, 600),
+      deliveryKind: c.item?.contentReceipt?.deliveryKind ?? "unknown",
+      plaintextBytes: c.item?.contentReceipt?.plaintextBytes,
       ...(c.item
         ? {
             article: c.item.itemTitle,
@@ -118,6 +121,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         "that the source's preview can help investigate (for example targets:[0,2]). Use only indexes from this request. " +
         "Explain the connection in the rationale. If no target is supported by the preview, choose SKIP with targets:[]. " +
         "A relevant rationale without valid targets cannot authorize a read. These are predicted relevance links, not verified evidence or permission to pay citation rewards. " +
+        "Consider deliveryKind and plaintextBytes when present: an abstract or excerpt may only answer a narrow question, and a title does not establish full-text availability. " +
         "Some candidates have external:true — these are live endpoints from the open x402 marketplace that settle on OTHER chains, not Keryx's Arc rail. " +
         "You cannot settle to them this run, so mark them SKIP, but still judge their real topical value and say WHY in the rationale (note the off-rail chain). " +
         memoryBlock +
@@ -173,18 +177,11 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     const out = await this.chatJson(
       config.llmModel,
       "You decide if enough has been read to answer confidently. For EACH sub-claim, estimate its coverage (0.0 = not covered, 1.0 = fully supported) " +
-        "and list which source markers cover it. Stopping early saves budget; only continue if a sub-claim has coverage below 0.4. Output strict JSON.",
+        "and list which source markers cover it. Stopping early saves budget; only continue if a sub-claim has coverage below 0.4. " + EVIDENCE_CONTEXT_GUIDANCE + "Output strict JSON.",
       JSON.stringify({
         question: input.question,
         subClaims: input.subClaims,
-        gathered: input.gathered.map((g) => ({
-          marker: g.marker,
-          source: g.sourceName,
-          article: g.itemTitle,
-          articleUrl: g.itemUrl,
-          publishedAt: g.itemPublishedAt,
-          text: g.text.slice(0, 800),
-        })),
+        gathered: evidenceContext(input.question, input.subClaims, input.gathered),
         schema:
           '{"sufficient":boolean,"rationale":string,"perClaim":[{"claim":string,"coverage":number(0..1),"coveredBy":string[]}]}',
       }),
@@ -221,18 +218,11 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         "For each claim, estimate how well the gathered content supports it (0.0 = not covered, 1.0 = fully covered). " +
         "If any claim has coverage below 0.5 AND there are affordable skipped sources that could fill the gap, " +
         "recommend buying them (in priority order). Only recommend sources whose price fits the remaining budget. " +
-        "Be frugal — don't buy more if coverage is already adequate. Output strict JSON.",
+        "Be frugal — don't buy more if coverage is already adequate. " + EVIDENCE_CONTEXT_GUIDANCE + "Output strict JSON.",
       JSON.stringify({
         question: input.question,
         subClaims: input.subClaims,
-        gathered: input.gathered.map((g) => ({
-          marker: g.marker,
-          source: g.sourceName,
-          article: g.itemTitle,
-          articleUrl: g.itemUrl,
-          publishedAt: g.itemPublishedAt,
-          text: g.text.slice(0, 800),
-        })),
+        gathered: evidenceContext(input.question, input.subClaims, input.gathered),
         skippedSources: input.skippedSources.map((s) => ({
           id: s.id,
           name: s.name,
@@ -264,7 +254,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   async synthesize(input: SynthInput): Promise<SynthResult> {
     const out = await this.chatJson(
       config.synthesisModel,
-      "You write a grounded, accurate answer using ONLY the provided sources. " +
+      "You write a grounded, accurate answer using ONLY the provided sources. " + EVIDENCE_CONTEXT_GUIDANCE +
         "Cite inline with the source markers like [S1]. Cite every claim. Do not invent facts. " +
         "For every supported decomposed claim, copy a short exact quote (240 characters maximum) from the source into " +
         "`evidence`, using the claim's zero-based index. Do not paraphrase evidence quotes. " +
@@ -277,14 +267,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       JSON.stringify({
         question: input.question,
         subClaims: input.subClaims,
-        sources: input.gathered.map((g) => ({
-          marker: g.marker,
-          name: g.sourceName,
-          article: g.itemTitle,
-          articleUrl: g.itemUrl,
-          publishedAt: g.itemPublishedAt,
-          text: g.text.slice(0, 2000),
-        })),
+        sources: evidenceContext(input.question, input.subClaims, input.gathered),
         schema:
           '{"answer":string (markdown with [S#] citations),"citedMarkers":string[],' +
           '"evidence":[{"claimIndex":number,"marker":string,"quote":string,"support":number(0..1)}],' +
@@ -313,16 +296,11 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   ): Promise<{ sourceId: string; weight: number; rationale: string }[]> {
     const out = await this.chatJson(
       config.synthesisModel,
-      "You assign each cited source a contribution weight (0..1) for how much it grounded the answer. Weights must sum to ~1. Output strict JSON.",
+      "You assign each cited source a contribution weight (0..1) for how much it grounded the answer. " + EVIDENCE_CONTEXT_GUIDANCE + "Weights must sum to ~1. Output strict JSON.",
       JSON.stringify({
         question: input.question,
         answer: input.answer,
-        sources: input.used.map((u) => ({
-          sourceId: u.sourceId,
-          marker: u.marker,
-          name: u.sourceName,
-          text: u.text.slice(0, 1000),
-        })),
+        sources: evidenceContext(input.question, [], input.used),
         schema: '{"attributions":[{"sourceId":string,"weight":number,"rationale":string}]}',
       }),
       this.budgetFor(input.used.length),

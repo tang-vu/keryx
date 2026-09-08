@@ -1,6 +1,6 @@
 # Keryx Project Roadmap
 
-**Version:** 0.22.3 (explicit source-decision target contract, updated 2026-09-07)
+**Version:** 0.22.4 (relevant evidence passages, updated 2026-09-08)
 
 **Active event:** [ETHOnline 2026 continuity build log](./ethonline-2026.md). The first
 event milestone exposes package preparation and paid-job inspection at `/research`.
@@ -11,7 +11,10 @@ reporting are now improved. A second paid pilot exposed missing target links in 
 decisions; the prompt/output contract now rejects this malformed output for reasoning fallback.
 An owner-operated follow-up now produced a cited answer and an accepted 0.015-USDC Gateway
 citation reward to a curated seed source, but no research target reached the grounding
-threshold. Adequate evidence coverage and external validation remain next. The September 30
+threshold. Models now receive relevant verbatim passages from already-unlocked long sources
+instead of only their opening text, with explicit abstract/excerpt metadata. Thin seed
+abstracts still require deeper source content; adequate real-pilot coverage and external
+validation remain next. The September 30
 prize deadline does not supersede the separate mainnet go/no-go requirements.
 **Status:** In continuous operation at [keryx.cc](https://keryx.cc) — real settlement 24/7, shipping in public.
 
