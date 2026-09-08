@@ -6,6 +6,12 @@ not assert that a track selection or submission has been completed in ETHGlobal.
 
 ## September 9 — English walkthrough rehearsal
 
+Prepared a 157.4-second [narrated English follow-up](./engineering/walkthrough-2026-09-09.md)
+on current production UI, reopening the supported September 9 pilot. Fresh unsigned
+quote and GET-only resume retained the original receipt digest and complete ledger.
+The video uses labelled captured CLI fields and synthetic English narration; no new
+purchase, external usage, upload or event submission is claimed.
+
 Repaired the English diagnostic's omitted receipt-verification passage: selection now
 prioritizes missing target terms and nearby complete sentences within the same source
 budget. Regression tests retain both receipt binding and GET-only recovery. Two new

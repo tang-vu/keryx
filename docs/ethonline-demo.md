@@ -1,5 +1,15 @@
 # ETHOnline 2026 demo rehearsal
 
+Latest recording: **157.4 seconds with synthetic English narration**, showing the
+supported September 9 pilot on production UI `5e86b91` / v0.22.13. It includes newly
+executed unsigned quote and GET-only resume output, presented as selected captured
+CLI fields. The paid job itself is unchanged from `69558cd`. This artifact supersedes
+the older caption-only rehearsals as the suggested owner-review version.
+[Provenance, local path and checksum](./engineering/walkthrough-2026-09-09.md);
+[narration script](./ethonline-narration.md). No upload or event submission occurred.
+
+## Earlier rehearsal plan and artifacts
+
 Prepared for v0.22.12. This is a proposed three-minute recording,
 not an asserted event video requirement or a completed recording. Publisher onboarding
 is complete. The [paid first-party pilot](./engineering/pilot-2026-09-08.md) now
@@ -14,9 +24,9 @@ omitted. It remains caption-only and does not show a new signature or purchase.
 The sequence below remains the fuller plan.
 
 The [September 9 follow-up pilot](./engineering/pilot-2026-09-09.md) is a separate
-job with two supported targets and CACHE/SKIP decisions. Existing video files still
+job with two supported targets and CACHE/SKIP decisions. The two older video files
 show the earlier partial-quality BUY/SKIP pilot; do not attribute the new result to
-those recordings.
+those recordings. The narrated follow-up above now shows the supported pilot.
 
 ## Opening pitch
 

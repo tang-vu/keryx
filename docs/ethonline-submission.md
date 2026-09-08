@@ -133,9 +133,11 @@ application already meets a September 30 mainnet-readiness condition.
 
 - Confirm Continuity Track selection and the final bounty selection in the dashboard.
 - Adapt this text to the enabled final submission fields and their current limits.
-- Publish a reviewed video and paste its public URL. The 177.12-second local rehearsal
-  includes UI footage and labelled selected CLI stdout, has no audio and shows the
-  older partial-quality pilot. Do not label it as the newer successful run.
+- Publish a reviewed video and paste its public URL. The latest 157.4-second local
+  rehearsal shows the supported September 9 pilot on the current UI, with labelled
+  selected CLI stdout and synthetic English narration. It reopens an existing job;
+  it does not show a new signature/purchase. Earlier caption-only recordings show
+  the older partial-quality pilot. [Artifact and provenance](./engineering/walkthrough-2026-09-09.md).
 - Review and upload the prepared five-slide presentation with its architecture page.
   The local PDF and checked-in HTML source are listed below; no deck upload has occurred.
 - Submit through the owner account when the final form and artifacts are ready.
