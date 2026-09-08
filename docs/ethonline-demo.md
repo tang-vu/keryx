@@ -1,8 +1,9 @@
 # ETHOnline 2026 demo rehearsal
 
 Prepared against `d80de4d` / v0.22.9. This is a proposed three-minute recording,
-not an asserted event video requirement or a completed recording. The paid first-party
-corpus scene remains pending publisher onboarding and a verified paid job.
+not an asserted event video requirement or a completed recording. Publisher onboarding
+is now complete (see the registration evidence in `docs/engineering/`); the paid
+first-party corpus scene still requires a verified paid job.
 
 ## Opening pitch
 

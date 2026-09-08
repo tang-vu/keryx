@@ -1,5 +1,9 @@
 # Keryx engineering publisher kit
 
+**Registered on Arc testnet:** [September 8 registration evidence](./registration-2026-09-08.md).
+Both full articles are indexed and RSS ownership is verified. A paid research pilot using
+this source has not yet been demonstrated by that registration.
+
 These dated, first-party notes provide complete source material for researching Keryx's
 own behavior. They are documentation, not independent corroboration or external creator
 traction. Their implementation references are pinned to the inspected code revision.

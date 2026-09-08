@@ -15,8 +15,9 @@ threshold. Models now receive relevant verbatim passages from already-unlocked l
 instead of only their opening text, with explicit abstract/excerpt metadata. Thin seed
 abstracts still require deeper source content; adequate real-pilot coverage and external
 validation remain next. A first-party engineering publisher kit now supplies complete,
-code-referenced articles and a checked RSS feed in `docs/engineering/`; it is not yet a
-registered creator source or an external adoption claim. Bounded DeepSeek JSON requests
+code-referenced articles and a checked RSS feed in `docs/engineering/`; it is now registered
+and ownership-verified with a dedicated owner-controlled Arc-testnet wallet. This is
+first-party onboarding, not external adoption; the full-corpus paid pilot remains next. Bounded DeepSeek JSON requests
 and overlapping evidence windows now address reproduced transport and omitted-context
 failures. Synthesis now selects bounded verbatim quote options, resolving the reproduced
 overlong-quote failures in the small corpus evaluation; complete quality validation

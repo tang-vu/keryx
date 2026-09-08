@@ -6,6 +6,13 @@ not assert that a track selection or submission has been completed in ETHGlobal.
 
 ## September 8 — Quote-selection diagnostics
 
+Publisher onboarding completed after the owner requested a dedicated testnet wallet
+and confirmed faucet funding. SourceRegistry registration succeeded, the index contains
+the new first-party Engineering source, RSS ownership is verified, and both full-text
+article previews are available. The list price is 0.002 USDC with the dedicated owner
+as sole recipient. [Registration evidence](./engineering/registration-2026-09-08.md)
+records the public transaction and IDs. This is not a paid research run or external traction.
+
 Publisher onboarding preparation: the read-only `build-engineering-feed.mts --check-remote`
 preflight confirms both published full articles exactly match the checked local feed.
 Registration remains pending a publisher-controlled wallet, signed session and registry
