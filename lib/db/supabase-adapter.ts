@@ -36,6 +36,8 @@ import type {
 } from "./keryx-db";
 import type { LedgerAccount } from "../gateway/settlement-parity";
 import type { A2aOrder, A2aOrderResolutionUpdate } from "../a2a/order";
+import type { PrivateResearchIntent } from "../a2a/private-research-intent";
+import { getSupabasePrivateResearchIntent, reserveSupabasePrivateResearchIntent } from "./private-research-intents";
 import {
   summarizeA2aOperations,
   type A2aOperationsRow,
@@ -643,6 +645,14 @@ export class SupabaseAdapter implements KeryxDB {
         text: sealCacheText(text),
         updated_at: new Date().toISOString(),
       });
+  }
+
+  async reservePrivateResearchIntent(intent: PrivateResearchIntent) {
+    return reserveSupabasePrivateResearchIntent(this.sb, intent);
+  }
+
+  async getPrivateResearchIntent(id: string, payer: string) {
+    return getSupabasePrivateResearchIntent(this.sb, id, payer);
   }
 
   async saveQueryRun(run: QueryRun): Promise<void> {

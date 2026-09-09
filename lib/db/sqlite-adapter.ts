@@ -37,6 +37,8 @@ import type {
 } from "./keryx-db";
 import type { LedgerAccount } from "../gateway/settlement-parity";
 import type { A2aOrder, A2aOrderResolutionUpdate } from "../a2a/order";
+import type { PrivateResearchIntent } from "../a2a/private-research-intent";
+import { PRIVATE_RESEARCH_INTENTS_SQL, getSqlitePrivateResearchIntent, reserveSqlitePrivateResearchIntent } from "./private-research-intents";
 import {
   summarizeA2aOperations,
   type A2aOperationsRow,
@@ -306,6 +308,7 @@ CREATE TABLE IF NOT EXISTS web_sessions (
 );
 CREATE INDEX IF NOT EXISTS web_sessions_expiry ON web_sessions(expires_at);
 CREATE INDEX IF NOT EXISTS web_sessions_wallet ON web_sessions(wallet, expires_at);
+${PRIVATE_RESEARCH_INTENTS_SQL}
 `;
 
 export class SqliteAdapter implements KeryxDB {
@@ -1450,6 +1453,14 @@ export class SqliteAdapter implements KeryxDB {
 
   async clearReasoningCircuit(key: string): Promise<void> {
     this.db.prepare(`DELETE FROM reasoning_circuits WHERE key = ?`).run(key);
+  }
+
+  async reservePrivateResearchIntent(intent: PrivateResearchIntent) {
+    return reserveSqlitePrivateResearchIntent(this.db, intent);
+  }
+
+  async getPrivateResearchIntent(id: string, payer: string) {
+    return getSqlitePrivateResearchIntent(this.db, id, payer);
   }
 
   async saveQueryRun(run: QueryRun): Promise<void> {

@@ -1,5 +1,19 @@
 # Keryx — Decision Log
 
+**D-96** · Durable private intent reservation · *Keep signed private input outside
+the public run, order and payment tables, with an immutable first writer.* A dedicated
+private intent table stores the normalized signed request, original salt, authorization,
+quote and merchant snapshot. Its `prv_` identity is domain-separated from legacy order
+IDs and binds network, payer, payee and nonce. Both adapters reverify stored signature
+and request binding, scope reads to an independently authenticated payer supplied by
+the server, and reject conflicting retries without replacing the original. SQLite
+blocks updates with a trigger; PostgreSQL grants the application only insert/select
+and denies anonymous/authenticated direct access. A reservation is not settlement or
+a runnable order. No caller uses this storage yet; seller reservation, payment state,
+private execution/results, notifications, cross-query learning and authenticated
+recovery still require integration. Backup copies contain bearer authorizations and
+private questions and must retain the existing private-data handling protections.
+
 **D-95** · Private merchant and signature verification · *Verify the private request
 against a server-selected quote and a distinct trusted merchant before admission.*
 The new, currently unwired verifier checks canonical commitment equality and the EOA

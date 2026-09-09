@@ -6,6 +6,7 @@
 import type { LedgerAccount } from "../gateway/settlement-parity";
 import type { TestnetEconomicsSnapshot } from "../economics/testnet-economics";
 import type { A2aOrder, A2aOrderResolutionUpdate } from "../a2a/order";
+import type { PrivateResearchIntent } from "../a2a/private-research-intent";
 import type { A2aOperationsSnapshot } from "../a2a/operations";
 import type {
   ActivationEvent,
@@ -359,6 +360,10 @@ export interface KeryxDB {
   clearReasoningCircuit(key: string): Promise<void>;
 
   // ── query runs ──
+  /** Private signed intent only, never payment evidence or a runnable order. First writer wins. */
+  reservePrivateResearchIntent(intent: PrivateResearchIntent): Promise<PrivateResearchIntent>;
+  /** Caller must supply an independently authenticated payer. Never expose via bearer-ID lookup. */
+  getPrivateResearchIntent(id: string, payer: string): Promise<PrivateResearchIntent | null>;
   saveQueryRun(run: QueryRun): Promise<void>;
   getQueryRun(id: string): Promise<QueryRun | null>;
   listRecentQueries(limit: number): Promise<QueryRun[]>;

@@ -64,6 +64,47 @@ submission is not a login credential. The facilitator remains the authority for 
 verification/settlement, and ambiguous outcomes must remain recoverable. Funding the
 private merchant and creator-spend execution also require an explicit bounded design.
 
+### Durable private intent storage (not routed)
+
+Both adapters now support a separate `private_research_intents` table. Reservation
+preparation verifies the EOA signature and commitment before deriving a `prv_` ID from
+the network/payer/payee/nonce tuple under a private-specific identity domain. It copies
+trusted quote/policy inputs before awaiting cryptographic work. The durable document
+holds the normalized request, original salt, payment authorization/signature, quote
+and merchant snapshot. These are sensitive records; hashing the ID does not encrypt
+their contents. Existing backup and service-role/operator trust boundaries apply.
+
+Insert-on-conflict-do-nothing plus validated readback retains the first writer.
+Conflicting policy snapshots are refused, and neither changed questions nor corrupt
+identity/owner data can pass revalidation. Lookup requires an explicit payer predicate;
+the future route must derive it from a live authenticated session rather than a URL or
+submitted wallet. No raw intent lookup is exposed over HTTP. Signature evidence remains
+available after expiration without implying that a new payment would be valid.
+
+SQLite creates the isolated table/index and rejects updates with a trigger. PostgreSQL
+migration `0046_private_research_intents.sql` enables RLS, revokes client table access,
+and gives `service_role` only insert/select. Application deletion/retention is deliberately
+not implemented by this migration. Neither adapter writes reservations into public
+`query_runs`, `a2a_orders` or `payment_events`. This is a reservation only, never a paid
+order, receipt, runnable job or metric of successful payment. No production caller uses
+these methods, and the migration has only been exercised in disposable local databases.
+
+Validation: actual SQLite tests use two connections, duplicate/conflicting reservations,
+owner isolation, corruption, public-table absence and reopening the database. Supabase
+SDK tests inspect bound owner/ID queries and ignore-duplicate writes and reject outage
+or missing/corrupt readback. `scripts/check-private-research-intents.sql` was executed
+against disposable PostgreSQL 17 after migration 0046: first-writer retention, scoped
+selection and actual public-read/application-update/delete privilege denial passed.
+It contains synthetic SQL data, not a live signature or facilitator payment proof.
+
+Execution remains a separate integration step. `runAgent` currently sends the question
+to citation notification dispatchers before saving the final run. It also calls
+`saveMemory`, which persists question-derived topic tokens, source scores and the query
+ID into shared `query_memories`; subsequent research consumes those shared records.
+Private jobs must not feed public/shared learning or outbound question-bearing
+notifications without an explicit policy. Filtering the final saved answer alone is
+insufficient, even when private intent storage itself is isolated.
+
 ## Implemented account enumeration
 
 `GET /api/me/jobs` requires a valid, unrevoked SIWE account session. The server derives
