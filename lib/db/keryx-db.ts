@@ -372,6 +372,11 @@ export interface KeryxDB {
   /** True when any source in the registry has this wallet address (case-insensitive). */
   isCreatorWallet(addr: string): Promise<boolean>;
 
+  /** Persist a newly issued SIWE challenge hash; duplicate active hashes never replace a row. */
+  createAuthChallenge(hash: string, issuedAt: number, expiresAt: number): Promise<void>;
+  /** Atomically consume one issued, unexpired challenge across processes; missing/replayed is false. */
+  consumeAuthChallenge(hash: string, now: number): Promise<boolean>;
+
   // ── users (account index; non-custodial identity, no funds) ──
   /** Create the account on first sign-in, else refresh role + last_seen. Returns
    *  the stored record and whether it was newly created (true on first sign-in). */

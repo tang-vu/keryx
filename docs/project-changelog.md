@@ -1,5 +1,15 @@
 # Keryx Project Changelog
 
+### Durable sign-in challenges (2026-09-09, v0.22.27)
+
+- Persist five-minute SIWE challenge hashes and atomically consume them before
+  signature verification. Retaining an old cookie no longer permits a second login.
+- Deny sign-in when challenge storage is unavailable; bound body bytes/read time and
+  rate-limit nonce issuance and verification. Keep auth responses uncached.
+- Verify real signatures, replay, concurrent processes, expiry and outages in tests;
+  execute the Supabase migration and concurrency checks against isolated PostgreSQL.
+- Preserve existing sessions. Private buyer history and session revocation remain open.
+
 ### Portable buyer recovery (2026-09-09, v0.22.26)
 
 - Preserve the original request and any saved seller payment acknowledgement in a

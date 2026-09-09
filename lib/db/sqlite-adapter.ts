@@ -290,6 +290,12 @@ CREATE TABLE IF NOT EXISTS reasoning_circuits (
   probe_until INTEGER NOT NULL,
   updated_at  INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS auth_challenges (
+  hash TEXT PRIMARY KEY CHECK(length(hash) = 64 AND hash NOT GLOB '*[^a-f0-9]*'),
+  issued_at INTEGER NOT NULL CHECK(issued_at >= 0),
+  expires_at INTEGER NOT NULL CHECK(expires_at > issued_at AND expires_at <= issued_at + 300000)
+);
+CREATE INDEX IF NOT EXISTS auth_challenges_expiry ON auth_challenges(expires_at);
 `;
 
 export class SqliteAdapter implements KeryxDB {
@@ -885,6 +891,17 @@ export class SqliteAdapter implements KeryxDB {
       .prepare(`SELECT 1 FROM sources WHERE LOWER(wallet_address) = LOWER(?) LIMIT 1`)
       .get(addr);
     return row !== undefined;
+  }
+
+  async createAuthChallenge(hash: string, issuedAt: number, expiresAt: number): Promise<void> {
+    this.db.prepare("DELETE FROM auth_challenges WHERE expires_at <= ?").run(issuedAt);
+    this.db.prepare("INSERT INTO auth_challenges (hash, issued_at, expires_at) VALUES (?, ?, ?)").run(hash, issuedAt, expiresAt);
+  }
+
+  async consumeAuthChallenge(hash: string, now: number): Promise<boolean> {
+    const result = this.db.prepare("DELETE FROM auth_challenges WHERE hash = ? AND issued_at <= ? AND expires_at > ?")
+      .run(hash, now, now);
+    return Number(result.changes) === 1;
   }
 
   async upsertUser(addr: string, role: string): Promise<{ user: UserRecord; created: boolean }> {

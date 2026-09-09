@@ -1,7 +1,7 @@
 /**
  * POST /api/auth/verify
  *
- * Verifies a SIWE signature against the stored nonce cookie, then mints a
+ * Consumes an issued, unexpired server challenge and verifies SIWE, then mints a
  * 7-day HS256 JWT into an httpOnly keryx_session cookie.
  *
  * Role derivation (in priority order):
@@ -11,10 +11,10 @@
  *
  * On a successful verify the wallet's account is upserted (created on first
  * sign-in, role + last_seen refreshed thereafter). Account persistence is
- * best-effort: a DB failure never blocks sign-in.
+ * best-effort after challenge consumption; challenge storage failures deny sign-in.
  *
- * The nonce cookie is deleted immediately after the first verify attempt
- * (whether it succeeds or fails) to prevent replay attacks.
+ * Deleting the cookie alone cannot prevent replay. The durable challenge is consumed
+ * atomically before signature verification, including an invalid signature attempt.
  */
 
 import { SiweMessage } from "siwe";
@@ -25,30 +25,28 @@ import { config } from "@/lib/config";
 import { arcTestnet } from "@/lib/chains";
 import { isDevWallet, type Role } from "@/lib/auth";
 import { recordActivationEvent } from "@/lib/activation";
+import { authChallengeHash, authJson, authNonceSchema, readSignInBody } from "@/lib/auth-challenge";
+import { createHash } from "node:crypto";
+import { checkRateLimit, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => null);
-  if (!body?.message || !body?.signature) {
-    return Response.json({ error: "message and signature required" }, { status: 400 });
-  }
-
   const jar = await cookies();
   const storedNonce = jar.get("siwe_nonce")?.value;
 
-  // Always consume the nonce before returning — prevents replay regardless of outcome.
+  // Clear the browser copy too; actual replay prevention is the database operation below.
   jar.delete("siwe_nonce");
 
-  if (!storedNonce) {
-    return Response.json({ error: "nonce missing or expired" }, { status: 401 });
+  if (!authNonceSchema.safeParse(storedNonce).success) {
+    return authJson({ error: "nonce missing or expired" }, 401);
   }
 
   // Bind the session to this host. An EMPTY Host header would make siwe skip the
   // domain check entirely (it treats a falsy domain as "don't validate"), so reject it.
   const host = req.headers.get("host");
   if (!host) {
-    return Response.json({ error: "missing host" }, { status: 400 });
+    return authJson({ error: "missing host" }, 400);
   }
   // Login-CSRF defense-in-depth beyond SameSite=Strict: if the browser sent an
   // Origin header, its host must match the request host.
@@ -56,16 +54,27 @@ export async function POST(req: Request) {
   if (origin) {
     try {
       if (new URL(origin).host !== host) {
-        return Response.json({ error: "origin mismatch" }, { status: 403 });
+        return authJson({ error: "origin mismatch" }, 403);
       }
     } catch {
-      return Response.json({ error: "bad origin" }, { status: 400 });
+      return authJson({ error: "bad origin" }, 400);
     }
   }
 
-  // siwe.verify() checks signature recovery, nonce match, domain, issuedAt and
-  // expirationTime — but it does NOT validate chainId (the field is ignored), so
-  // we enforce chainId ourselves after a successful verify.
+  if (!config.jwtSecret) return authJson({ error: "sign-in unavailable" }, 503);
+  const key = createHash("sha256").update(clientIp(req)).digest("hex");
+  const limited = await checkRateLimit(`auth-verify:${key}`, "public");
+  if (limited) { limited.headers.set("Cache-Control", "no-store"); return limited; }
+  const body = await readSignInBody(req).catch(() => null);
+  if (!body) return authJson({ error: "invalid sign-in body" }, 400);
+  try {
+    if (!await (await getDb()).consumeAuthChallenge(authChallengeHash(storedNonce!), Date.now())) {
+      return authJson({ error: "nonce missing, expired or already used; sign in again" }, 401);
+    }
+  } catch { return authJson({ error: "sign-in unavailable; request a new challenge later" }, 503); }
+
+  // The library verifies signature, nonce, domain and supplied expiry. Freshness
+  // comes from the server challenge; enforce chainId separately below.
   let siwe: SiweMessage;
   try {
     siwe = new SiweMessage(body.message as string);
@@ -75,21 +84,15 @@ export async function POST(req: Request) {
       domain: host,
     });
     if (!success) {
-      return Response.json({ error: error?.type ?? "verification failed" }, { status: 401 });
+      return authJson({ error: error?.type ?? "verification failed" }, 401);
     }
   } catch {
-    return Response.json({ error: "invalid siwe message" }, { status: 400 });
+    return authJson({ error: "invalid siwe message" }, 400);
   }
 
   // Bind the session to Arc testnet — blocks replay of a signature scoped to another chain.
   if (siwe.chainId !== arcTestnet.id) {
-    return Response.json({ error: "wrong chain" }, { status: 401 });
-  }
-
-  if (!config.jwtSecret) {
-    // JWT_SECRET not configured — auth cannot issue tokens. Return a clear error
-    // so developers know to set JWT_SECRET in .env.local.
-    return Response.json({ error: "JWT_SECRET not configured" }, { status: 503 });
+    return authJson({ error: "wrong chain" }, 401);
   }
 
   // Derive role: dev allowlist first (env-only, no DB), then creator check (DB).
@@ -135,5 +138,5 @@ export async function POST(req: Request) {
   }
 
   // `created` lets the client distinguish "account created" from "welcome back".
-  return Response.json({ ok: true, address, role, created });
+  return authJson({ ok: true, address, role, created });
 }

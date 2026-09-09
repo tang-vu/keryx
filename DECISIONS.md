@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-90** · Sign-in replay prevention · *A cookie binds the browser flow; only a
+durable, issued, unexpired challenge can authorize a new session.* A local real-SIWE
+fixture reproduced replay by retaining the old nonce cookie. The server now stores
+only a domain-separated nonce hash with a five-minute server expiry, then atomically
+deletes one eligible challenge before signature verification. Cookie deletion is not
+the authority. SQLite and service-role-only Supabase RPCs implement the same condition;
+database failures deny sign-in. Bounded uploads and separate hashed-IP rate buckets
+limit admission. A rejected signature consumes its challenge; malformed/oversized or
+cross-origin requests do not reach that boundary. Current JWTs are not rotated or
+revoked by this change. Session revocation, private buyer history and broader auth
+review remain separate mainnet work. Restores must discard ephemeral login challenges
+before serving traffic, without discarding payment authorizations or journals.
+
 **D-89** · Portable buyer recovery · *Copy the original intent and any saved seller
 acknowledgement across runtimes without restoring submission authority.* The bounded,
 versioned bundle contains no signatures, keys, URL override or permission to pay.

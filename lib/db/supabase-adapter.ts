@@ -536,6 +536,17 @@ export class SupabaseAdapter implements KeryxDB {
     return data !== null;
   }
 
+  async createAuthChallenge(hash: string, issuedAt: number, expiresAt: number): Promise<void> {
+    const { error } = await this.sb.rpc("create_auth_challenge", { p_hash: hash, p_issued_at: issuedAt, p_expires_at: expiresAt });
+    if (error) throw error;
+  }
+
+  async consumeAuthChallenge(hash: string, now: number): Promise<boolean> {
+    const { data, error } = await this.sb.rpc("consume_auth_challenge", { p_hash: hash, p_now: now });
+    if (error || typeof data !== "boolean") throw error ?? new Error("Invalid challenge-consumption result");
+    return data;
+  }
+
   async upsertUser(addr: string, role: string): Promise<{ user: UserRecord; created: boolean }> {
     const wallet = addr.toLowerCase();
     const now = new Date().toISOString();

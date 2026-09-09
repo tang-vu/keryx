@@ -6,7 +6,12 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.26 (portable buyer recovery, updated 2026-09-09)
+**Version:** 0.22.27 (durable sign-in challenges, updated 2026-09-09)
+
+Sign-in now requires a server-issued, unexpired, atomically consumed challenge.
+The [auth evidence](./engineering/durable-sign-in-2026-09-09.md) covers real SIWE
+signatures, replay, SQLite process contention and PostgreSQL semantics. This advances
+M2; session revocation and payer-scoped private research history remain unfinished.
 
 Deployment now records successful dependency installation rather than inferring it
 from Git reflog state. Failure and reuse checks advance O1; full host/tunnel recovery,
