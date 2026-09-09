@@ -33,3 +33,12 @@ Validation before release:
 
 Full browser checkout still needs portable authorization/package checks, transactional
 local journals, wallet/deposit controls and lost-response recovery acceptance.
+
+Release verification: CI passed for `605c30e` and the documentation follow-up
+`a6fdd80`. Production health reported `a6fdd80` and `operational`. Chromium opened the
+saved owner-operated pilot-7 job on the public workspace and observed the browser
+integrity confirmation. The 390-pixel mobile viewport had no horizontal overflow;
+the job ID stayed out of the address bar, with no paid POSTs or page errors.
+Separately, all three archived pilot-6/7 receipt snapshots produced identical Node
+and Chromium verification results. This reused existing research, not a new purchase
+or an independent customer test. The product update was saved to Canteen after deploy.

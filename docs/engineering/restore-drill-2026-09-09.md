@@ -36,12 +36,30 @@ Ignored local evidence is under `.artifacts/restore-drill-2026-09-09/`. The init
 schema-expectation result was retained separately from the corrected result. These
 artifacts contain private application data and must not be attached to public updates.
 
+## Adapter and encrypted-cache follow-up
+
+The current `SqliteAdapter` was subsequently initialized on a separate snapshot copy
+in offline mode. Dashboard and A2A operation aggregates were readable. Full-row
+fingerprints before/after initialization matched for `payment_events`, `a2a_orders`,
+`session_grants`, `withdrawals` and `query_runs`. No HTTP server or worker was started;
+the check made zero fetch calls. The local adapter/import/read/fingerprint stage took
+3182 ms, which is not a service recovery-time measurement.
+
+A separate read-only check used the existing local `CONTENT_MASTER_KEY` environment
+value to authenticate and decrypt all 386 encrypted cache rows. None failed and no
+legacy plaintext cache rows were found. Plaintext and key material were neither
+printed nor written to artifacts. Only counts and verification status were recorded.
+This proves access to this snapshot's cache using a currently available key; it does
+not demonstrate restoring a lost key from off-site storage or retrieving IPFS objects.
+The additional ignored reports are `adapter-startup-report.json` and
+`cache-decryption-report.json` in the same private drill directory.
+
 ## Remaining acceptance work
 
 O1/M5 remain incomplete. Configure and verify encrypted off-site backup delivery,
-retention/access controls and recovery credentials. Exercise an isolated application
-startup against restored state, including paid-content decryption with the intended
-key-recovery procedure, without replaying unsettled authorizations or jobs. Validate
+retention/access controls and recovery credentials. Exercise an isolated full service
+startup against restored state, including the intended off-site key-recovery procedure
+and paid delivery from both database and IPFS, without replaying unsettled authorizations or jobs. Validate
 the pending-payment/operator-review procedure and a timed service restore/rollback.
 Agree recovery objectives and test them against measured snapshots, including the
 changes lost since the chosen snapshot. Passing SQLite integrity alone does not
@@ -51,3 +69,8 @@ During the same deployment window, three sequential public health GETs returned 
 200 and `operational` in 3512, 2982 and 898 ms. Those few observations are not a load
 test or an uptime/latency SLO. Deployment still builds on the same small VPS that
 serves traffic; capacity and deployment isolation need separate acceptance evidence.
+
+The later `a6fdd80` deployment log separately reported 5.1 minutes writing the
+Turbopack filesystem cache after compilation. The deploy script recreates its temporary
+build directory, so cache preservation/use should be reviewed before the next release.
+No cache configuration was changed as part of this drill.
