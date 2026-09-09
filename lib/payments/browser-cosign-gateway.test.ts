@@ -103,6 +103,25 @@ describe("BrowserCoSignGateway", () => {
     grantMocks.releaseSpend.mockResolvedValue(undefined);
   });
 
+  it("keeps the citation job identity out of both HTTP requests while retaining local payment attribution", async () => {
+    const queryId = "private-job-transport-marker";
+    const fetchMock = vi.fn().mockResolvedValueOnce(challenge()).mockResolvedValueOnce(settledResponse());
+    vi.stubGlobal("fetch", fetchMock);
+    const gateway = new BrowserCoSignGateway("session", SESSION, vi.fn().mockResolvedValue(signedHeader()));
+    const payment = await gateway.payCitation({ source, author: { name: "Author", walletAddress: PAYEE, splitWeight: 1 },
+      amount: 0.002, weight: 1, queryId, rationale: "Synthetic citation" });
+    expect(payment).toMatchObject({ queryId, kind: "citation", amountUsdc: 0.002 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    for (const [url, options] of fetchMock.mock.calls) {
+      const target = new URL(url, "https://synthetic.example");
+      expect([...target.searchParams.keys()].sort()).toEqual(["amount", "author"]);
+      expect(target.searchParams.get("author")).toBe(PAYEE);
+      expect(target.searchParams.get("amount")).toBe("0.002000");
+      expect(JSON.stringify([url, options])).not.toContain(queryId);
+      expect(options.method).toBe("POST");
+    }
+  });
+
   it("rejects a challenge whose amount differs from the reserved spend", async () => {
     const fetchMock = vi.fn().mockResolvedValue(challenge(requirements({ amount: "9000" })));
     vi.stubGlobal("fetch", fetchMock);

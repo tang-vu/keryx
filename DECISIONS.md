@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-102** ? Citation transport privacy ? *Keep job identity in the local payment
+record, not in the citation request URL.* The citation seller uses only the source,
+author and amount; its unused `query` parameter unnecessarily exposed correlation
+metadata to request logs and transport providers. Both browser co-sign and treasury
+requests now omit it for the challenge and paid retry. Internal payment records retain
+the original query ID, including pending and settled-but-undelivered outcomes, so
+accounting and reconciliation keep their attribution. Existing incoming URLs remain
+compatible because the seller never consumed this field. Source, payee, amount and
+nonce checks are unchanged. This reduces URL disclosure; it does not make public
+results private or hide amounts/payees from the payment provider. Private creator
+ledger and end-to-end result access isolation still require integration.
+
 **D-101** ? Private result durability ? *Keep the first completed snapshot in an
 isolated store, scoped to the verified intent owner and permanent worker claim.*
 Both adapters require validated settled payment/intent/worker state before saving.

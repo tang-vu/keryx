@@ -1,5 +1,14 @@
 # Keryx Project Changelog
 
+### Citation request privacy (2026-09-09, v0.22.32)
+
+- Remove unused job IDs from citation challenge and payment request URLs in browser
+  co-sign and treasury gateways. Keep job attribution in internal payment records,
+  including uncertain settlement and settled-but-undelivered responses.
+- Preserve source/payee/amount checks and existing citation endpoint compatibility.
+- Include internal private worker claims and isolated immutable result snapshots.
+  These foundations do not enable private research purchases or authenticated results.
+
 ### Public payment merchant reservations (2026-09-09, v0.22.31)
 
 - Reject configured private merchant recipients on public research, source and citation

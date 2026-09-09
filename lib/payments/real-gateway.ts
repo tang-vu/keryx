@@ -204,7 +204,7 @@ export class RealGateway implements PaymentGateway {
   }): Promise<PaymentRecord> {
     const url = `${config.baseUrl}/api/cite/${source.id}?author=${encodeURIComponent(
       author.walletAddress,
-    )}&amount=${amount.toFixed(6)}&query=${encodeURIComponent(queryId)}`;
+    )}&amount=${amount.toFixed(6)}`;
     const attempt = await payWithServerSigner<{ ok?: boolean }>({
       url,
       method: "POST",

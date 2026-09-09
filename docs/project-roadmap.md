@@ -6,7 +6,11 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.31 (public merchant reservation checks, updated 2026-09-09)
+**Version:** 0.22.32 (citation request privacy, updated 2026-09-09)
+
+Citation requests now omit unused job IDs from URLs while retaining local payment
+attribution. Private worker claims and result snapshots are implemented internally;
+private creator accounting and authenticated result delivery remain unfinished.
 
 Public x402 sellers now reject configured reserved private merchant recipients before
 verification or settlement, including stripped/rewritten unsigned metadata. Private

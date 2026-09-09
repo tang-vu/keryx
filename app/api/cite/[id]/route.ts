@@ -1,7 +1,7 @@
 /**
  * x402 citation settlement. Dynamic price = the agent-computed weighted reward.
  * payTo is the specified author wallet (validated to belong to the source).
- * POST /api/cite/[id]?author=<wallet>&amount=<usdc>&query=<id>
+ * POST /api/cite/[id]?author=<wallet>&amount=<usdc>
  *
  * payTo authority is the on-chain SourceRegistry, not the `sources.authors` column:
  * the column is a file on this host, so a write to it would silently reroute every
