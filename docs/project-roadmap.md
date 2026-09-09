@@ -6,7 +6,11 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.15 (business scenarios and mainnet acceptance map, updated 2026-09-09)
+**Version:** 0.22.16 (framework security patch, updated 2026-09-09)
+
+The next buyer milestone follows the [browser checkout design](./browser-research-checkout.md).
+It requires shared browser-safe validation, transactional local recovery and an
+explicit wallet purchase flow; the design document does not enable checkout.
 
 Buyers can now prepare an allowlisted `report` for mentor/operator feedback through
 GET-only recovery. It retains unknown accounting and excludes identifiers/research

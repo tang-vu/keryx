@@ -1,5 +1,15 @@
 # Keryx Project Changelog
 
+### Framework security patch (2026-09-09, v0.22.16)
+
+- Raise the Next.js and ESLint integration minimum to 16.3.3; the lockfile resolves
+  both to 16.3.4. Update the scoped sharp override to 0.35.4 and its native libraries.
+  This addresses the Next.js Windows/AVIF and sharp/libheif advisories reported by CI.
+- The production dependency audit now reports zero high/critical advisories; 7 low
+  and 17 moderate findings remain. The audit gate is unchanged.
+- Record the proposed browser checkout authority, durable submission and GET-only
+  recovery design. Browser purchasing remains implementation work, not a shipped feature.
+
 ### Business model and mainnet delivery map (2026-09-09, v0.22.15)
 
 - Add a local USD scenario calculator for package receipts, creator payments,
