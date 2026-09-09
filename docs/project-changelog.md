@@ -1,5 +1,14 @@
 # Keryx Project Changelog
 
+### Portable buyer recovery (2026-09-09, v0.22.26)
+
+- Preserve the original request and any saved seller payment acknowledgement in a
+  bounded browser/CLI recovery bundle. Continue accepting legacy intent files.
+- Add local-only CLI import/export with exclusive creation; imports never acquire
+  signing or payment permission. Keep copied evidence explicitly unverified.
+- Verify browser-to-Node-to-browser recovery and native CLI commands without a wallet
+  or network. Funding backups, private server history and independent users remain open.
+
 ### Browser pilot fixes and native CLI validation (2026-09-09, v0.22.25)
 
 - Disable credit lookup until the connected wallet client is ready.

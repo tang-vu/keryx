@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-89** · Portable buyer recovery · *Copy the original intent and any saved seller
+acknowledgement across runtimes without restoring submission authority.* The bounded,
+versioned bundle contains no signatures, keys, URL override or permission to pay.
+Both runtimes recompute the original job ID. Browser insertion is exclusive and
+atomic; Node import creates a new single-use state directory. Existing and partially
+written directories remain unavailable to `buy`. Legacy intent-only files remain
+valid for GET recovery. Missing evidence stays unknown, and copied acknowledgements
+remain unverified seller assertions: payer/network matching does not establish
+cryptographic job-level settlement. Receipt binding remains a separate check. This
+addresses the owner browser pilot's lost portable acknowledgement without claiming
+wallet/funding backup or authenticated server history. Reversible: easy; legacy
+intent files and existing journals remain supported.
+
 **D-88** · Deployment dependency state · *Reuse a recorded successful installation,
 not a Git reflog comparison.* The VPS clears an installation stamp before `npm ci`
 and writes it only after success. Reuse matches manifest/lock, runtime/ABI/npm/config,

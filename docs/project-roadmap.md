@@ -6,7 +6,7 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.25 (browser pilot fixes and native CLI validation, updated 2026-09-09)
+**Version:** 0.22.26 (portable buyer recovery, updated 2026-09-09)
 
 Deployment now records successful dependency installation rather than inferring it
 from Git reflog state. Failure and reuse checks advance O1; full host/tunnel recovery,
@@ -27,12 +27,13 @@ recovery. Independent wallet/mobile usage and complete replacement/lost-storage
 recovery still block full B1 acceptance.
 
 Saved-job verification binds receipts to the locally saved/imported original request.
-The portable intent does not include the later payment acknowledgement. History remains
-local; bearer-ID lookup is not authenticated server history.
+Versioned browser/CLI recovery exports now include any saved payment acknowledgement;
+legacy intent-only files remain supported. Imported records cannot submit payments.
+History remains local; bearer-ID lookup is not authenticated server history.
 
 The [browser checkout design](./browser-research-checkout.md) remains the rationale for
 shared validation, transactional recovery and explicit wallet review. Further buyer
-work includes fuller portable recovery, independent wallet UX and private server history.
+work includes funding/lost-storage recovery, independent wallet UX and private server history.
 
 Buyers can now prepare an allowlisted `report` for mentor/operator feedback through
 GET-only recovery. It retains unknown accounting and excludes identifiers/research

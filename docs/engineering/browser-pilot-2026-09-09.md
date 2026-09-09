@@ -72,7 +72,11 @@ The portable intent currently excludes the later payment acknowledgement. Accord
 CLI recovery from that file reported payment acknowledgement as unconfirmed while
 still verifying the completed job and creator receipt. The browser retained its own
 HTTP-202 acknowledgement. A fuller portable recovery bundle remains product work;
-do not silently invent missing acknowledgement evidence.
+do not silently invent missing acknowledgement evidence. A subsequent
+[v0.22.26 recovery implementation](./portable-recovery-2026-09-09.md) preserved the
+actual saved browser acknowledgement in a new export and recovered this same job
+through the CLI without signing or paying again. The original intent-only file
+still does not contain that evidence.
 
 ## Remaining acceptance
 

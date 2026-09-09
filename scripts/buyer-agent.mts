@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { privateKeyToAccount } from "viem/accounts";
 import { buyResearch, quoteBuyer, resumeResearch } from "../lib/buyer/client.ts";
 import { reportResearch } from "../lib/buyer/report.ts";
+import { importBuyerRecovery, exportBuyerRecovery } from "../lib/buyer/recovery-file.ts";
 import { addressSchema, BuyerRefusal, buyerRequestSchema, buyerTypedData } from "../lib/buyer/protocol.ts";
 import { parseBuyerBudget } from "../lib/a2a/buyer-workspace.ts";
 
@@ -12,6 +13,8 @@ const usage = `Keryx buyer agent (Arc testnet only)
   npm run buyer -- buy --request request.json --payee 0x... --max-total 0.10 --state ./job-1
   npm run buyer -- resume --state ./job-1 [--watch]
   npm run buyer -- report --state ./job-1
+  npm run buyer -- import --file keryx-recovery.json --state ./recovered-job
+  npm run buyer -- export --state ./job-1 --file keryx-recovery.json
 
 buy needs KERYX_BUYER_PRIVATE_KEY in .env.buyer.local (or the environment) and an
 already-funded Gateway balance. No wallet creation, funding, deposits or approvals.
@@ -19,20 +22,31 @@ buy --state must name a NEW private directory; its parent must already exist.
 resume and report use the original existing journal directory.
 resume never signs or sends payments. Keep the directory after any timeout or error.
 report uses the same GET-only recovery and prints a redacted diagnostic for review before sharing.
+import/export are local-only and never sign or pay. Import needs a NEW state directory;
+export needs a NEW destination file. Keep recovery files private: they grant job access.
+Saved payment acknowledgements remain seller assertions, not independent settlement proof.
 Payee must be pinned from a trusted source, not accepted blindly from the challenge.`;
 
 async function main() {
   if (command === "--help" || !command) { console.log(usage); return; }
-  if (!["quote", "buy", "resume", "report"].includes(command)) throw new Error("Unknown command; use --help");
+  if (!["quote", "buy", "resume", "report", "import", "export"].includes(command)) throw new Error("Unknown command; use --help");
   const options: Record<string, string> = {};
   let watch = false;
-  const allowed = command === "resume" || command === "report" ? ["--state"] : ["--request", "--payee", "--max-total", ...(command === "buy" ? ["--state"] : [])];
+  const allowed = command === "import" || command === "export" ? ["--state", "--file"]
+    : command === "resume" || command === "report" ? ["--state"] : ["--request", "--payee", "--max-total", ...(command === "buy" ? ["--state"] : [])];
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--watch" && command === "resume" && !watch) { watch = true; continue; }
     if (!allowed.includes(args[i]) || options[args[i]] !== undefined || !args[i + 1] || args[i + 1].startsWith("--")) throw new Error("Invalid or duplicate option; use --help");
     options[args[i]] = args[++i];
   }
   for (const key of allowed) if (!options[key]) throw new Error(`Missing ${key}`);
+  if (command === "import" || command === "export") {
+    if (command === "import") await importBuyerRecovery(options["--file"], options["--state"]);
+    else await exportBuyerRecovery(options["--state"], options["--file"]);
+    console.log(command === "import" ? "Recovery imported locally. Use resume with this state directory; no payment was sent."
+      : "Private recovery file exported with any saved payment acknowledgement. No payment was sent.");
+    return;
+  }
   if (command === "report") {
     const result = await reportResearch(options["--state"]);
     console.log(JSON.stringify(result, null, 2));

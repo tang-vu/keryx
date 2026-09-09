@@ -1,8 +1,8 @@
 # Browser research checkout design
 
-Status: proposed implementation boundary, September 9, 2026. This document does not
-mean checkout is available. Baseline: `35736f8`; `/research` still prepares requests
-and inspects existing jobs. Acceptance belongs to B1/B2 in
+Status: design history with implementation updates, September 9, 2026. The original
+proposal used baseline `35736f8`; later releases added checkout, funding and recovery.
+Full acceptance belongs to B1/B2 in
 [the delivery plan](./mainnet-delivery-plan.md).
 
 Implementation progress, v0.22.17: receipt envelope/canonicalization now has a pure
@@ -21,8 +21,11 @@ passed. The subsequent v0.22.19 engine adds transactional browser persistence,
 one-shot EOA submission and GET-only recovery. Wallet/deposit controls and the
 checkout UI were still required at that release. The v0.22.21 workspace now exposes
 review/signing for an already funded Gateway EOA and local history/import/export with
-verified GET recovery. Browser deposits, a fresh browser-wallet paid pilot and full
-B1/B2 acceptance remain unfinished. See [UI evidence](./engineering/browser-checkout-ui-2026-09-09.md).
+verified GET recovery. v0.22.22 added deposits, followed by a fresh owner-operated
+browser funding/purchase/recovery pilot. v0.22.26 preserves acknowledgements across
+browser/CLI recovery exports. Full B1/B2 acceptance, independent wallet/mobile use,
+lost funding storage and authenticated server history remain unfinished.
+See [UI evidence](./engineering/browser-checkout-ui-2026-09-09.md).
 See [browser purchase engine evidence](./engineering/browser-buyer-engine-2026-09-09.md).
 
 ## Current implementation evidence

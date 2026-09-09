@@ -1,5 +1,9 @@
 /** Hermetic Chromium checks: intercepted HTTPS only, synthetic never-funded identities. */
 import assert from "node:assert/strict";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { importBuyerRecovery, exportBuyerRecovery } from "../lib/buyer/recovery-file";
 import { build } from "esbuild";
 import { chromium } from "playwright";
 import { privateKeyToAccount } from "viem/accounts";
@@ -26,6 +30,7 @@ const bundle = await build({ stdin: { contents: 'export * from "./lib/buyer/brow
   bundle: true, platform: "browser", format: "iife", globalName: "BrowserBuyerTest", write: false, metafile: true });
 assert(!Object.keys(bundle.metafile.inputs).some(path => /^lib\/(config|db\/)/.test(path) || /^lib\/buyer\/(journal|client|policy)\.ts$/.test(path)), "Server dependency crossed the browser boundary");
 const browser = await chromium.launch({ headless: true });
+const portableDirectory = await mkdtemp(join(tmpdir(), "keryx-browser-portable-"));
 try {
   const context = await browser.newContext();
   // tsx preserves function names with this helper; Playwright serializes callbacks alone.
@@ -48,7 +53,25 @@ try {
   await a.reload(); await a.addScriptTag({ content: bundle.outputFiles[0].text });
   assert.equal(await a.evaluate(value => window.BrowserBuyerTest.claimBrowserSubmission(value), original), false);
   const copy = await a.evaluate(id => window.BrowserBuyerTest.exportBrowserJournal(id), original.queryId);
-  assert.deepEqual(JSON.parse(copy), original);
+  assert.deepEqual(JSON.parse(copy), { schema: "keryx-buyer-recovery-v1", intent: original });
+  const acknowledgement = { httpStatus: 202, evidence: { success: true as const, payer: account.address, network: requirement.network, transaction: "synthetic-seller-ack" } };
+  await a.evaluate(async ({ original, acknowledgement }) => {
+    await window.BrowserBuyerTest.saveBrowserAcknowledgement(original, acknowledgement);
+  }, { original, acknowledgement });
+  const portable = await a.evaluate(id => window.BrowserBuyerTest.exportBrowserJournal(id), original.queryId);
+  const input = join(portableDirectory, "browser.json");
+  const output = join(portableDirectory, "node.json");
+  const state = join(portableDirectory, "state");
+  await writeFile(input, portable);
+  await importBuyerRecovery(input, state);
+  await exportBuyerRecovery(state, output);
+  const nodeCopy = await readFile(output, "utf8");
+  assert.deepEqual(JSON.parse(nodeCopy), JSON.parse(portable));
+  await a.evaluate(id => window.BrowserBuyerTest.deleteBrowserJournal(id), original.queryId);
+  const restored = await b.evaluate(text => window.BrowserBuyerTest.importBrowserJournal(text), nodeCopy);
+  assert.deepEqual(restored.acknowledgement, acknowledgement);
+  assert.equal(restored.origin, "imported");
+  assert.equal(await a.evaluate(value => window.BrowserBuyerTest.claimBrowserSubmission(value), original), false);
   const imported = intent(2);
   await a.evaluate(value => window.BrowserBuyerTest.importBrowserJournal(JSON.stringify(value)), imported);
   assert.equal(await b.evaluate(value => window.BrowserBuyerTest.claimBrowserSubmission(value), imported), false);
@@ -149,4 +172,4 @@ try {
   assert.deepEqual(fundingChecks, { cancelledWhileUncertain: false, depositClaimed: true, unlocked: true, cancelledReady: true, history: 2 });
   assert.deepEqual(errors, []);
   console.log("PASS: Chromium cross-tab journals, commit/abort, private recovery, one-shot purchase and funding gates, uncertain cancellation refusal and retained funding history. All HTTP intercepted; no settlement.");
-} finally { await browser.close(); }
+} finally { await browser.close(); await rm(portableDirectory, { recursive: true, force: true }); }

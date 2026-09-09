@@ -4,14 +4,11 @@ import { canonicalJson } from "../canonical-json";
 import { a2aQueryIdSchema } from "../a2a/buyer-workspace";
 import { buyerIntentEnvelopeSchema, type BuyerIntentEnvelope } from "./protocol";
 import { verifyBrowserIntent } from "./browser-result";
-import { sellerEvidenceSchema, validateSellerEvidence } from "./result-binding";
+import { validateSellerEvidence } from "./result-binding";
+import { paymentAcknowledgementSchema as acknowledgementSchema, parseBuyerRecovery, encodeBuyerRecovery, type PaymentAcknowledgement } from "./recovery";
 
 const DATABASE = "keryx-buyer-jobs-v1";
 const STORE = "jobs";
-const acknowledgementSchema = z.object({
-  httpStatus: z.number().int().min(100).max(599),
-  evidence: sellerEvidenceSchema.nullable(),
-}).strict();
 const recordSchema = z.object({
   schema: z.literal("keryx-browser-job-v1"),
   queryId: a2aQueryIdSchema,
@@ -38,11 +35,12 @@ async function validateRecord(value: unknown): Promise<BrowserJournal> {
   return record;
 }
 
-async function insert(value: unknown, origin: BrowserJournal["origin"]): Promise<BrowserJournal> {
+async function insert(value: unknown, origin: BrowserJournal["origin"], acknowledgement?: PaymentAcknowledgement): Promise<BrowserJournal> {
   const intent = await verifyBrowserIntent(value);
   const now = new Date().toISOString();
-  const record = recordSchema.parse({ schema: "keryx-browser-job-v1", queryId: intent.queryId,
-    intent, origin, submission: origin === "created" ? "prepared" : "submission_possible", createdAt: now, updatedAt: now });
+  const record = await validateRecord({ schema: "keryx-browser-job-v1", queryId: intent.queryId,
+    intent, origin, submission: origin === "created" ? "prepared" : "submission_possible", createdAt: now, updatedAt: now,
+    ...(acknowledgement ? { acknowledgement } : {}) });
   await transaction<void>("readwrite", (store, done) => { store.add(record).onsuccess = () => done(undefined); });
   const saved = await readBrowserJournal(record.queryId);
   if (canonicalJson(saved) !== canonicalJson(record)) throw new Error("Buyer journal read-back mismatch");
@@ -54,8 +52,8 @@ export const createBrowserJournal = (intent: BuyerIntentEnvelope) => insert(inte
 
 /** An imported CLI/recovery file cannot acquire permission to submit, even if never paid. */
 export async function importBrowserJournal(text: string): Promise<BrowserJournal> {
-  if (new TextEncoder().encode(text).length > 65536) throw new Error("Recovery file exceeds 64 KB");
-  return insert(JSON.parse(text.replace(/^\uFEFF/, "")), "imported");
+  const recovery = parseBuyerRecovery(text);
+  return insert(recovery.intent, "imported", recovery.acknowledgement);
 }
 
 export async function readBrowserJournal(queryId: string): Promise<BrowserJournal> {
@@ -119,7 +117,8 @@ export async function saveBrowserAcknowledgement(intent: BuyerIntentEnvelope, va
 }
 
 export async function exportBrowserJournal(queryId: string): Promise<string> {
-  return JSON.stringify((await readBrowserJournal(queryId)).intent, null, 2) + "\n";
+  const row = await readBrowserJournal(queryId);
+  return encodeBuyerRecovery(row.intent, row.acknowledgement);
 }
 
 /** Local privacy control only: deleting a journal never cancels a job or authorization. */

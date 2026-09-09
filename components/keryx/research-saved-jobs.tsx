@@ -62,6 +62,7 @@ export function ResearchSavedJobs() {
   return <section aria-labelledby="saved-jobs-heading" className="border border-line bg-paper p-6">
     <h2 id="saved-jobs-heading" className="font-display text-3xl">Saved research jobs</h2>
     <p className="mt-3 font-serif text-sm text-ink-3">Private recovery data is stored in this browser. Anyone using this browser profile can read it. A recovery file grants access to the job; keep it private. This is local history, not an account backup.</p>
+    <p className="mt-2 font-serif text-sm text-ink-3">Exports include any saved payment acknowledgement. Importing restores access without paying again. Copied acknowledgements are seller assertions, not independent settlement proof.</p>
     <div className="mt-4 flex flex-wrap items-center gap-3">
       <button type="button" className={control} onClick={refresh}>Refresh saved jobs</button>
       <label className={`${control} cursor-pointer`}>Import recovery file<input type="file" accept="application/json,.json" className="sr-only" onChange={async event => {
@@ -97,7 +98,7 @@ export function ResearchSavedJobs() {
       <p role="status" aria-live="polite" className="mt-4 font-mono text-xs">{loading ? "Looking up the original job…" : visible?.status.replaceAll("_", " ")}</p>
       {error && <p role="alert" className="mt-3 font-serif text-seal">{error}</p>}
       {visible && <>
-        <p className="mt-3 font-serif text-sm">{visible.payment.state === "seller_reported_settled" ? "The seller acknowledged the payment; this is not independent settlement verification." : "No saved payment acknowledgement. This does not prove the payment failed."}</p>
+        <p className="mt-3 font-serif text-sm">{visible.payment.state === "seller_reported_settled" ? "Saved data reports a seller payment acknowledgement; this is not independent settlement verification." : "No saved payment acknowledgement. This does not prove the payment failed."}</p>
         {visible.status === "not_found_uncertain" ? <p className="mt-3 font-serif text-seal">No order was found. A missing order does not prove no debit. Keep the recovery file for review; do not buy again to recover.</p> : <>
           {"verification" in visible && visible.verification && <p className="mt-3 font-serif text-sm">Receipt integrity and original-request binding verified locally. This does not certify research truth or independently verify settlement.</p>}
           <ResearchJobDetails job={visible} onDownloadReceipt={"receipt" in visible ? () => downloadBuyerJson(JSON.stringify(visible.receipt, null, 2) + "\n", "receipt") : undefined} />

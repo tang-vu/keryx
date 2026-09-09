@@ -20,6 +20,32 @@ No mainnet support, automatic funding, deposits or approvals are included.
 
 ## Quote, buy, resume
 
+To recover an existing browser job, use **Export recovery file** in saved jobs,
+then import it into a new private directory. These commands need no wallet and
+do not contact the network until `resume`:
+
+```bash
+npm run buyer -- import --file keryx-recovery.json --state .buyer-jobs/recovered-job
+npm run buyer -- resume --state .buyer-jobs/recovered-job
+npm run buyer -- export --state .buyer-jobs/recovered-job --file .buyer-jobs/recovery-copy.json
+```
+
+The parent directory must exist. Import refuses existing state directories; export
+refuses existing destination files. Browser import accepts either the exported
+`keryx-buyer-recovery-v1` bundle or an older `intent.json`. The bundle preserves any
+saved HTTP status and allowlisted seller acknowledgement. Legacy intents cannot
+recover acknowledgement data that was never included. Import never grants permission
+to sign or submit again, even when the original intent was only prepared.
+
+Recovery files contain the private question and bearer job identifier. They exclude
+signatures and keys, but must still be kept private. A copied acknowledgement is an
+unverified seller assertion; its payer/network check is not cryptographic proof that
+the seller settled this specific job. Receipt integrity and original-request binding
+are checked separately during recovery. This bundle does not back up wallet keys,
+Gateway funding attempts, browser accounts or the server database.
+
+For a new purchase:
+
 Replace `0xYOUR_VERIFIED_KERYX_PAYEE` with the public treasury address. The total cap
 includes BOTH the service fee and creator cap. The following 0.10-USDC cap is an
 example, not a current price promise.
