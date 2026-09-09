@@ -10,13 +10,15 @@
  * an unfunded address is a rejection, an unreachable Circle is not.
  */
 
-import { parseUnits } from "viem";
 import { config } from "../config";
+import { readBoundedJson } from "../read-bounded-json";
+import { gatewayAvailableAtomic } from "./available-balance";
 
 // Verified from @circle-fin/x402-batching/dist/client/index.js:638-672.
 const GATEWAY_BALANCE_API = "https://gateway-api-testnet.circle.com/v1/balances";
 
 export async function getGatewayAvailableAtomic(address: string): Promise<bigint | null> {
+  if (!/^0x[a-fA-F0-9]{40}$/.test(address)) return null;
   try {
     const upstream = await fetch(GATEWAY_BALANCE_API, {
       method: "POST",
@@ -25,13 +27,12 @@ export async function getGatewayAvailableAtomic(address: string): Promise<bigint
         token: "USDC",
         sources: [{ depositor: address, domain: config.cctpDomain }],
       }),
+      signal: AbortSignal.timeout(15_000),
+      redirect: "error",
+      cache: "no-store",
     });
-    if (!upstream.ok) return null;
-
-    const data = (await upstream.json()) as { balances?: Array<{ balance?: string }> };
-    // Circle returns a human-decimal string ("0.05"), the same value its SDK feeds to
-    // parseUnits(balance, 6). Convert to atomic units — BigInt() would throw on the decimal.
-    return parseUnits(data.balances?.[0]?.balance ?? "0", 6);
+    if (!upstream.ok) { await upstream.body?.cancel(); return null; }
+    return gatewayAvailableAtomic(await readBoundedJson(upstream), address, config.cctpDomain);
   } catch {
     return null;
   }

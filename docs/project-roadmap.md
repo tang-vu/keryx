@@ -6,7 +6,7 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.19 (browser purchase engine, updated 2026-09-09)
+**Version:** 0.22.20 (Gateway credit uncertainty, updated 2026-09-09)
 
 Buyer policy, order identity, package contracts and complete journal/receipt binding now
 have browser-compatible modules with Node parity. The browser engine now has transactional

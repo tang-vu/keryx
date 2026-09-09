@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-84** · Gateway balance uncertainty · *An unreadable balance is not zero and must
+not suggest another deposit.* Before connecting the browser buyer engine, tracing its
+funding dependency found that the session credit endpoint and creator panel converted
+Circle errors into zero. The single-depositor reader now requires a matching USDC,
+domain and depositor row with exact six-decimal units, bounded bytes and a deadline.
+The credit endpoint returns non-cacheable HTTP 503 with `available: null` on unknown
+funds, while an explicit matching zero remains a successful known balance. Browser
+consumers check identity/network and keep lookup failure distinct from empty funds.
+Signature recovery preserves the worker when balance lookup fails; creator earnings
+show an unavailable state with retry. No deposit, grant cap or withdrawal is invented
+from this observation. Reversible: medium (credit-response semantics and its callers).
+
 **D-83** · Browser purchase durability · *Commit local recovery state before signing,
 and a one-shot submission boundary before sending.* IndexedDB stores only validated
 intents and allowlisted seller acknowledgements, never signatures. An exclusive insert

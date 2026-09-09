@@ -1,5 +1,7 @@
 "use client";
 
+import { readGatewayCredit } from "../gateway/read-credit";
+
 /**
  * useSessionGrant — manages the browser-side session key lifecycle.
  *
@@ -150,14 +152,7 @@ export function useSessionGrant() {
    * Re-registering also restores a grant the server lost, so a redeploy never strands a session.
    */
   const resumeSession = useCallback(async (sessAddr: string): Promise<boolean> => {
-    let residualUsdc = 0;
-    try {
-      const r = await fetch(`/api/session/credit?address=${encodeURIComponent(sessAddr)}`);
-      const c = (await r.json().catch(() => ({}))) as { available?: string };
-      residualUsdc = Number(BigInt(c.available ?? "0")) / 1e6;
-    } catch {
-      return false;
-    }
+    const residualUsdc = Number(await readGatewayCredit(sessAddr)) / 1e6;
     if (residualUsdc <= 0) return false;
 
     const res = await fetch("/api/session/grant", {

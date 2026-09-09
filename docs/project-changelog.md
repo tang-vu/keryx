@@ -1,5 +1,12 @@
 # Keryx Project Changelog
 
+### Honest Gateway credit status (2026-09-09, v0.22.20)
+
+- Distinguish Circle lookup outages from known zero funds; validate depositor, domain
+  and exact micro-USDC before returning a balance.
+- Keep session recovery retryable on unknown funds. Creator earnings now show an
+  unavailable state with retry instead of a false zero.
+
 ### Browser purchase engine (2026-09-09, v0.22.19)
 
 - Add strict IndexedDB journals, atomic submission claims and private recovery import/export.

@@ -4,21 +4,26 @@
  * Server-side proxy for Circle's Gateway balance API — the browser is blocked by CORS.
  * Returns { available: string } in atomic USDC units (6 decimals).
  *
- * Non-fatal: returns { available: "0" } on any upstream error so the browser's grant
- * poll loop keeps retrying rather than crashing the flow.
+ * Unknown balances return HTTP 503 with available: null. Never turn an upstream
+ * outage into evidence that the wallet needs more funding.
  */
 
 import { NextRequest } from "next/server";
 import { getGatewayAvailableAtomic } from "@/lib/gateway/gateway-balance";
+import { config } from "@/lib/config";
 
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
+  const headers = { "Cache-Control": "no-store" };
   const address = req.nextUrl.searchParams.get("address");
-  if (!address || !address.startsWith("0x")) {
-    return Response.json({ available: "0" }, { status: 400 });
+  if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
+    return Response.json({ available: null, status: "invalid_address" }, { status: 400, headers });
   }
 
   const available = await getGatewayAvailableAtomic(address);
-  return Response.json({ available: (available ?? BigInt(0)).toString() });
+  const identity = { address: address.toLowerCase(), network: config.networkId };
+  return available === null
+    ? Response.json({ ...identity, available: null, status: "unavailable" }, { status: 503, headers })
+    : Response.json({ ...identity, available: available.toString(), status: "known" }, { headers });
 }

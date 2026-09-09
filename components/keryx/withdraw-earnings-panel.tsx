@@ -11,34 +11,41 @@
  * Styled to match The Mint aesthetic (banknote frame, mono labels).
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useWalletClient } from "wagmi";
 import { Loader2, ArrowUpRight, Coins } from "lucide-react";
 import { toast } from "sonner";
 import { buildAndSignWithdrawIntent } from "@/lib/gateway/withdraw-intent";
 import { config } from "@/lib/config";
 import { fmtUsdc } from "./phase-style";
+import { readGatewayCredit } from "@/lib/gateway/read-credit";
 
 export function WithdrawEarningsPanel({ address }: { address: string }) {
   const { data: walletClient } = useWalletClient();
-  const [availableAtomic, setAvailableAtomic] = useState<bigint | null>(null); // null = loading
+  const [balance, setBalance] = useState<{ address: string; available: bigint | null; error: boolean } | null>(null);
+  const balanceRead = useRef({ value: 0 });
+  const availableAtomic = balance?.address === address ? balance.available : null;
+  const balanceError = balance?.address === address && balance.error;
   const [busy, setBusy] = useState(false);
   const [lastTx, setLastTx] = useState<string | null>(null);
 
   const loadBalance = useCallback(async () => {
+    const read = ++balanceRead.current.value;
+    setBalance({ address, available: null, error: false });
     try {
-      const res = await fetch(`/api/session/credit?address=${encodeURIComponent(address)}`);
-      const data = (await res.json().catch(() => ({}))) as { available?: string };
-      setAvailableAtomic(BigInt(data.available ?? "0"));
+      const available = await readGatewayCredit(address);
+      if (read === balanceRead.current.value) setBalance({ address, available, error: false });
     } catch {
-      setAvailableAtomic(BigInt(0));
+      if (read === balanceRead.current.value) setBalance({ address, available: null, error: true });
     }
   }, [address]);
 
   useEffect(() => {
+    const sequence = balanceRead.current;
     (async () => {
       await loadBalance();
     })();
+    return () => { sequence.value++; };
   }, [loadBalance]);
 
   const available = availableAtomic === null ? null : Number(availableAtomic) / 1e6;
@@ -129,12 +136,21 @@ export function WithdrawEarningsPanel({ address }: { address: string }) {
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Coins className="h-4 w-4" />}
         {busy
           ? "Withdrawing…"
+          : balanceError
+          ? "Balance unavailable"
+          : available === null
+          ? "Checking balance…"
           : hasFunds
           ? `Withdraw $${fmtUsdc(net)} to my wallet ▸`
           : belowFeeFloor
           ? "Balance below the withdraw fee"
           : "Nothing to withdraw yet"}
       </button>
+
+      {balanceError && <p role="status" className="mt-3 font-serif text-sm text-ink-2">
+        Gateway balance could not be read. This does not mean your earnings are zero.{" "}
+        <button type="button" onClick={() => { void loadBalance(); }} className="underline">Retry balance check</button>
+      </p>}
 
       {lastTx && (
         <a
