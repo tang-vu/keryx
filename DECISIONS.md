@@ -1,5 +1,19 @@
 # Keryx — Decision Log
 
+**D-109** · Private buyer spend projection · *Read current durable payment evidence
+separately from immutable research output.* The backend owner projection allowlists
+economic and source fields, excludes signed authorizations/worker identities/private
+text, and never reads historical result totals. Exact micro-USDC strings separate
+unresolved admission, Circle processing (`received`/`batched`) and confirmation
+evidence. Neither facilitator success nor a stored Circle stage is represented as
+independently verified chain finality. Every admission stays committed, including
+expired or confirmed legs; uncommitted budget is an observation, not a refund or
+permission to spend. Sequential reads are not a transactional financial snapshot.
+Missing ownership returns no projection before ledger access; storage errors propagate
+instead of manufacturing zero spend. The caller must authenticate the payer. This
+internal view does not expose a route, enable private purchases, or provide creator
+analytics; authenticated result delivery and its disclosure review remain required.
+
 **D-108** ? Private research executor and effects ? *Run the signed job once with a
 complete private storage/disclosure strategy, never via public dependency defaults.*
 The backend executor reads verified intent/payment state, returns stored results or an

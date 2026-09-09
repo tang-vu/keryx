@@ -458,6 +458,29 @@ evidence with immutable snapshots. Private quote/payment admission, global treas
 funding policy, authenticated polling/history, browser/CLI journals, failure operations
 and end-to-end public-projection tests remain required before private purchases open.
 
+## Private spend read model (backend only)
+
+`privateSpendView` returns a versioned owner projection from the verified intent and
+current private incoming/creator ledgers. It does not parse research snapshots or use
+their historical spend totals. Incoming price is distinguished from not-submitted,
+pending and confirmed incoming payment. Creator amounts are integer micro-USDC strings:
+committed = unresolved + processing + confirmed; uncommitted = budget - committed.
+Processing means first-observed Circle `received` or `batched`; confirmed includes
+facilitator success or first-observed Circle `confirmed`/`completed`. Per-leg evidence
+source, stage and reference are retained, and chain finality is explicitly unverified.
+
+These sequential reads may lag concurrent admissions/confirmations and cannot authorize
+spending, refunds or account profit. Expiry never releases committed money. Uncommitted
+budget is not a promised refund. Storage errors fail the read, rather than returning a
+misleading zero. The explicit output allowlist excludes questions, answers, signed
+payment headers, salts, authorization nonces, worker IDs and the private job identifier.
+Source IDs and recipient addresses are owner-only data, not a public analytics feed.
+
+SQLite integration verifies late confirmation after immutable result save, all supported
+Circle stages, exact fractional-USDC sums, unchanged commitments after expiry, storage
+outages and wrong-owner denial before ledger access. The caller still authenticates the
+payer. No HTTP route or browser integration is enabled by this backend read model.
+
 ## Implemented account enumeration
 
 `GET /api/me/jobs` requires a valid, unrevoked SIWE account session. The server derives

@@ -26,6 +26,7 @@ import { runPrivateResearch } from "../a2a/run-private-research";
 import type { ReasoningEngine } from "../llm/reasoning-engine";
 import type { PaymentRequirements } from "../payments/x402-payment-evidence";
 import { privateResearchEffects } from "../agent/private-research-effects";
+import { privateSpendView } from "../a2a/private-spend-view";
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-private-intents-"));
 const file = path.join(directory, "test.sqlite");
@@ -327,6 +328,55 @@ async function creatorFixture() {
   const claim = (await db.claimPrivateResearchExecution(value.id, account.address))!;
   return { value, claim };
 }
+
+it("projects owner spend from late durable evidence without using stale result totals or disclosing authorization", async () => {
+  const { value, claim } = await creatorFixture();
+  const statuses = [null, "received", "batched", "confirmed", "completed", "facilitator"] as const;
+  const legs = statuses.map((_, index) => ({ ...creatorSubmission("0", `spend-view-source-${index}`, "3001"),
+    submission: { ...creatorSubmission("0", "unused", "3001").submission,
+      authorizationId: `0x${(900 + index).toString(16).padStart(64, "0")}` } }));
+  for (const leg of legs) expect(await db.admitPrivateCreatorSubmission(value.id, account.address, claim.workerId, leg)).toBe(true);
+  const snapshot = await db.savePrivateResearchResult(value.id, account.address, claim.workerId, syntheticResult(value.id));
+  const pending = await privateSpendView(db, value.id, account.address);
+  expect(pending?.creator).toMatchObject({ committedMicros: "18006", unresolvedMicros: "18006", confirmedMicros: "0" });
+  for (let index = 1; index < statuses.length; index++) {
+    const status = statuses[index];
+    const proof: PrivateCreatorConfirmation = status === "facilitator"
+      ? { source: "circle-facilitator-success", transaction: `synthetic-view-${index}`, submission: legs[index].submission }
+      : { source: "circle-transfer-search", transaction: `synthetic-view-${index}`, submission: legs[index].submission, transferStatus: status! };
+    await db.confirmPrivateCreatorSubmission(value.id, account.address, claim.workerId, proof);
+  }
+  const view = await privateSpendView(other, value.id, account.address);
+  expect(view).toMatchObject({ chainFinalityVerified: false, incoming: { status: "settled", priceMicros: "50000" },
+    creator: { budgetMicros: "30000", committedMicros: "18006", unresolvedMicros: "3001", processingMicros: "6002",
+      confirmedMicros: "9003", uncommittedMicros: "11994" } });
+  expect(view?.creator.payments.map(payment => payment.status).sort()).toEqual(
+    ["unresolved", "received", "batched", "confirmed", "completed", "facilitator-confirmed"].sort());
+  expect(await db.getPrivateResearchResult(value.id, account.address)).toEqual(snapshot);
+  const serialized = JSON.stringify(view);
+  for (const secret of [value.id, claim.workerId, value.submission.salt, value.submission.payment.signature,
+    value.submission.payment.authorization.nonce, request.question, syntheticResult(value.id).answer,
+    ...legs.map(leg => leg.submission.authorizationId)]) expect(serialized).not.toContain(secret);
+  expect(await privateSpendView(db, value.id, merchants.privatePayee)).toBeNull();
+  const reader = { getPrivateResearchIntent: db.getPrivateResearchIntent.bind(db), getPrivatePaymentState: db.getPrivatePaymentState.bind(db),
+    listPrivateCreatorSubmissions: db.listPrivateCreatorSubmissions.bind(db),
+    getPrivateCreatorConfirmation: vi.fn().mockRejectedValue(new Error("synthetic confirmation outage")) };
+  await expect(privateSpendView(reader, value.id, account.address)).rejects.toThrow("synthetic confirmation outage");
+  vi.useFakeTimers(); vi.setSystemTime(new Date("2040-01-01T00:00:00Z"));
+  try { expect((await privateSpendView(db, value.id, account.address))?.creator).toEqual(view?.creator); }
+  finally { vi.useRealTimers(); }
+});
+
+it("distinguishes a private price commitment from incoming payment and denies nonowners before ledger reads", async () => {
+  const { value } = await executionFixture();
+  expect((await privateSpendView(db, value.id, account.address))?.incoming).toMatchObject({ status: "not-submitted", priceMicros: "50000", reference: null });
+  await db.claimPrivatePaymentSubmission(value.id, account.address);
+  expect((await privateSpendView(db, value.id, account.address))?.incoming).toMatchObject({ status: "pending", reference: null });
+  const forbidden = vi.fn().mockRejectedValue(new Error("must not read"));
+  expect(await privateSpendView({ getPrivateResearchIntent: db.getPrivateResearchIntent.bind(db), getPrivatePaymentState: forbidden,
+    listPrivateCreatorSubmissions: forbidden, getPrivateCreatorConfirmation: forbidden }, value.id, merchants.privatePayee)).toBeNull();
+  expect(forbidden).not.toHaveBeenCalled();
+});
 
 it("keeps private caches local and accepts payment observations only against durable admitted/confirmed evidence", async () => {
   const { value, claim } = await creatorFixture();
