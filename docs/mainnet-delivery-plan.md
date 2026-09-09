@@ -97,6 +97,11 @@ prevent independent product, measurement or reliability work from continuing.
 
 ## Delivery sequence
 
+Operational evidence update (September 9): a [local SQLite snapshot restore check](./engineering/restore-drill-2026-09-09.md)
+passed checksum, gzip, integrity and required-column checks. Scheduled off-site backup,
+complete service/key recovery and payment-reconciliation drills remain unverified;
+O1/M5 are still open.
+
 1. Establish this acceptance map and the executable economics model; obtain actual
    fixed costs and provider billing data without inventing zeros.
 2. Complete usable browser quote/buy/recover under the buyer's own wallet authority,
