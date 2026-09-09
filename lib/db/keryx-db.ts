@@ -3,6 +3,7 @@
  * All amounts are USDC numbers. Metrics are computed only from real rows.
  */
 
+import type { PrivateResearchResult } from "./private-research-results";
 import type { PrivateExecutionClaim } from "./private-research-executions";
 import type { LedgerAccount } from "../gateway/settlement-parity";
 import type { TestnetEconomicsSnapshot } from "../economics/testnet-economics";
@@ -366,6 +367,9 @@ export interface KeryxDB {
   reservePrivateResearchIntent(intent: PrivateResearchIntent): Promise<PrivateResearchIntent>;
   /** Caller must supply an independently authenticated payer. Never expose via bearer-ID lookup. */
   getPrivateResearchIntent(id: string, payer: string): Promise<PrivateResearchIntent | null>;
+  /** Backend-only immutable snapshots; authenticate payer independently before reading. */
+  savePrivateResearchResult(id: string, payer: string, workerId: string, run: QueryRun): Promise<PrivateResearchResult>;
+  getPrivateResearchResult(id: string, payer: string): Promise<PrivateResearchResult | null>;
   /** Only a fresh non-null claim authorizes execution. Never replay from a stored worker ID. */
   claimPrivateResearchExecution(id: string, payer: string): Promise<PrivateExecutionClaim | null>;
   /** Backend diagnosis only; caller must authenticate the payer separately. */

@@ -1,5 +1,23 @@
 # Keryx — Decision Log
 
+**D-101** ? Private result durability ? *Keep the first completed snapshot in an
+isolated store, scoped to the verified intent owner and permanent worker claim.*
+Both adapters require validated settled payment/intent/worker state before saving.
+The snapshot is copied before asynchronous lookups and checked against the signed
+job ID, question, creator budget and research mode. Atomic insert-if-absent retains
+the first exact serialization; exact retries acknowledge it and conflicting data
+cannot overwrite it. Readback is required before acknowledging persistence. Missing
+or failed readback leaves the save uncertain, never permission to execute research or
+pay again. Owner-scoped reads revalidate admission; no public run/order/payment table,
+archive, memory or notification hook is touched. The stored `query-run-v1` text is an
+opaque backend snapshot, not a validated buyer receipt or settlement proof. Future
+owner-facing projections must validate their required fields and bind financial claims
+to the isolated creator ledger. Supabase clients cannot read or mutate the table; only
+service-role reads and a worker/owner-scoped insertion RPC are granted. This is storage
+isolation, not end-to-end encryption: backend operators and authorized backups retain
+access. Private execution, creator ledger, authenticated polling and transport remain
+unavailable until the complete flow is integrated and tested.
+
 **D-100** ? Private worker admission ? *Claim execution once, only after validating
 an owner-bound settled payment; never use elapsed time as permission to execute again.*
 SQLite and Supabase store a separate permanent execution claim. An atomic insert

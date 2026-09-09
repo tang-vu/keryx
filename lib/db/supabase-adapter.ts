@@ -4,6 +4,7 @@
  * Requires the tables in supabase/migrations to exist (service-role key used for writes).
  */
 
+import { saveSupabasePrivateResult, getSupabasePrivateResult } from "./private-research-results";
 import { claimSupabasePrivateExecution, getSupabasePrivateExecution } from "./private-research-executions";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import crypto from "node:crypto";
@@ -652,6 +653,13 @@ export class SupabaseAdapter implements KeryxDB {
 
   async reservePrivateResearchIntent(intent: PrivateResearchIntent) {
     return reserveSupabasePrivateResearchIntent(this.sb, intent);
+  }
+
+  async savePrivateResearchResult(id: string, payer: string, workerId: string, run: QueryRun) {
+    return saveSupabasePrivateResult(this.sb, id, payer, workerId, run);
+  }
+  async getPrivateResearchResult(id: string, payer: string) {
+    return getSupabasePrivateResult(this.sb, id, payer);
   }
 
   async claimPrivateResearchExecution(id: string, payer: string) {

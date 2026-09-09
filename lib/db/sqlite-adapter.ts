@@ -3,6 +3,7 @@
  * The offline-dev datastore; the deployed app uses the Supabase adapter instead.
  */
 
+import { saveSqlitePrivateResult, getSqlitePrivateResult, PRIVATE_RESEARCH_RESULTS_SQL } from "./private-research-results";
 import { claimSqlitePrivateExecution, getSqlitePrivateExecution, PRIVATE_RESEARCH_EXECUTIONS_SQL } from "./private-research-executions";
 import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
@@ -314,6 +315,7 @@ CREATE INDEX IF NOT EXISTS web_sessions_wallet ON web_sessions(wallet, expires_a
 ${PRIVATE_RESEARCH_INTENTS_SQL}
 ${PRIVATE_RESEARCH_PAYMENTS_SQL}
 ${PRIVATE_RESEARCH_EXECUTIONS_SQL}
+${PRIVATE_RESEARCH_RESULTS_SQL}
 `;
 
 export class SqliteAdapter implements KeryxDB {
@@ -1462,6 +1464,13 @@ export class SqliteAdapter implements KeryxDB {
 
   async reservePrivateResearchIntent(intent: PrivateResearchIntent) {
     return reserveSqlitePrivateResearchIntent(this.db, intent);
+  }
+
+  async savePrivateResearchResult(id: string, payer: string, workerId: string, run: QueryRun) {
+    return saveSqlitePrivateResult(this.db, id, payer, workerId, run);
+  }
+  async getPrivateResearchResult(id: string, payer: string) {
+    return getSqlitePrivateResult(this.db, id, payer);
   }
 
   async claimPrivateResearchExecution(id: string, payer: string) {

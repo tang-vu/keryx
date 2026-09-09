@@ -225,6 +225,38 @@ claim behavior, not live settlement or end-to-end privacy. Worker IDs must stay 
 public and account projections. A future effects factory must bind its stores to the
 fresh claim and preserve per-leg evidence before enabling any private paid flow.
 
+## Implemented isolated result snapshots
+
+`savePrivateResearchResult` accepts a backend `QueryRun` plus the intent ID, payer and
+worker identity. It snapshots before asynchronous validation, checks the signed
+question/budget/mode and ID, requires the stored settled-payment and worker claim,
+and inserts into `private_research_results` without replacing an existing snapshot.
+Repeated saves acknowledge only the exact first JSON serialization. A conflicting
+serialization or missing/unavailable readback fails; it never authorizes rerunning the
+agent. The application retains its in-memory result when deciding how to recover a
+failed save. Automatic result-save recovery is not wired yet.
+
+`getPrivateResearchResult` rechecks owner/admission and returns an opaque backend
+`query-run-v1` snapshot and save timestamp, without a worker ID. Its caller must obtain
+the payer through independent authentication. The stored text is bounded to 4,194,304
+JavaScript string units at admission. Identity validation is deliberately distinct
+from validating every optional result field, evidence quality or ledger totals: future
+buyer projections and receipts must perform those checks. Neither a stored answer nor
+its claimed totals are independent proof of settled creator payments.
+
+The first-result policy does not add data to public runs, orders, payments, caches,
+notifications or derived research gaps. It provides storage separation and database
+privileges, not encryption from operators; approved backend and backup access still
+sees the contents. No HTTP read/write endpoint is enabled by this storage change.
+
+Tests cover wrong owner/worker, missing claim, request mismatch, concurrent duplicate
+saves, conflicting overwrite, mutation during async verification, restart recovery,
+corrupt stored identity and synthetic Supabase missing/conflicting/unavailable
+readback. Disposable PostgreSQL checks after migrations 0046?0049 verify insertion
+binding, first-result retention and denied client/direct service-role mutations.
+The complete private effects factory, creator ledger, safe result projection,
+authenticated browser/CLI recovery and end-to-end leakage tests remain outstanding.
+
 ## Implemented account enumeration
 
 `GET /api/me/jobs` requires a valid, unrevoked SIWE account session. The server derives
