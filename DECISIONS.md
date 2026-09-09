@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-79** · Business readiness · *Keep business scenarios separate from measured testnet
+economics and actual pricing.* The owner expanded the goal to a complete ecosystem,
+revenue/profit model and mainnet readiness. The observer currently leaves most sampled
+runs unpriced; its partial shadow margin is not monthly profit. A pure local calculator
+uses explicit USD assumptions, exact micro-dollar arithmetic and null unknowns. It
+shows service-fee-only contribution separately from fixed-package retained reserve,
+counts creator spend once and rounds break-even volume upward. No quote, settlement
+or network configuration changes. The new delivery acceptance map includes product
+journeys, independent cohorts, full costs, security/operations evidence and external
+Arc/Gateway availability; launch still needs explicit owner approval. Reversible:
+easy (planning tool and acceptance documentation).
+
 **D-78** · Buyer support · *Share an allowlisted diagnostic instead of a private job
 response or journal.* `buyer report` reuses GET-only recovery and receipt verification,
 then emits only bounded numeric fields and known status values. Its independent

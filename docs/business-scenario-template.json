@@ -1,0 +1,16 @@
+{
+  "basis": "illustrative",
+  "paidJobsPerMonth": null,
+  "serviceFeeUsdPerJob": "0.02",
+  "creatorBudgetUsdPerJob": "0.03",
+  "creatorSpendUsdPerJob": null,
+  "variableCostUsdPerJob": {
+    "llm": null,
+    "infrastructure": null,
+    "paymentAndGas": null,
+    "support": null,
+    "refundAndLoss": null
+  },
+  "fixedMonthlyUsd": null,
+  "acquisitionMonthlyUsd": null
+}

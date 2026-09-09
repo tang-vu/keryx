@@ -1,5 +1,16 @@
 # Keryx Project Changelog
 
+### Business model and mainnet delivery map (2026-09-09, v0.22.15)
+
+- Add a local USD scenario calculator for package receipts, creator payments,
+  service-fee contribution, retained-reserve scenarios and break-even paid volume.
+  Unknown demand/costs stay unknown; calculations use exact integer micro-dollars.
+- Define acceptance across buyer, creator, developer, operations, quality, economics
+  and mainnet release evidence. The observed 290 unpriced runs out of 306 prevent
+  treating the current partial cost estimate as profit.
+- This changes no offers, payment authority or network configuration. Mainnet launch
+  remains subject to vendor support, complete evidence and explicit owner approval.
+
 ### Shareable buyer diagnostics (2026-09-09, v0.22.14)
 
 - Add `buyer report --state` using existing GET-only recovery and receipt checks.

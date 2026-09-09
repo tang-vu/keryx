@@ -17,6 +17,12 @@
 
 ---
 
+## Delivery and economics
+
+[Product and mainnet delivery plan](docs/mainnet-delivery-plan.md) tracks the remaining
+buyer, creator, operator and release requirements. The [business scenario calculator](docs/business-model.md)
+models costs, contribution and break-even with explicit assumptions; unknown costs stay unknown.
+
 ## The problem
 
 The web's economics assume a human reader: you write, people visit, attention becomes ads,

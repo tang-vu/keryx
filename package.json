@@ -1,6 +1,6 @@
 {
   "name": "keryx",
-  "version": "0.22.14",
+  "version": "0.22.15",
   "private": true,
   "description": "Keryx — a citation-toll reading agent. Pays creators every time their work is cited, in USDC on Arc.",
   "scripts": {
@@ -49,7 +49,8 @@
     "local-caller": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/local-caller-daemon.mts",
     "migrate-ipfs": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/migrate-content-to-ipfs.mts",
     "pack:extension": "node --import tsx --no-warnings scripts/pack-extension.mts",
-    "grant:media": "node --env-file-if-exists=.env.local scripts/create-circle-grant-media.mjs"
+    "grant:media": "node --env-file-if-exists=.env.local scripts/create-circle-grant-media.mjs",
+    "economics:plan": "node --import tsx --no-warnings scripts/plan-business.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.69.0",

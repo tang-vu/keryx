@@ -1,6 +1,12 @@
 # Keryx Project Roadmap
 
-**Version:** 0.22.14 (shareable buyer diagnostics, updated 2026-09-09)
+**Expanded objective:** [complete product, economics and mainnet delivery](./mainnet-delivery-plan.md).
+That acceptance map is now the active work sequence. ETHOnline remains an intermediate
+milestone; older aspirational phase metrics below are historical. The first new tool
+is an [explicit business-scenario calculator](./business-model.md), with unknown costs
+kept unknown and no permission to activate mainnet.
+
+**Version:** 0.22.15 (business scenarios and mainnet acceptance map, updated 2026-09-09)
 
 Buyers can now prepare an allowlisted `report` for mentor/operator feedback through
 GET-only recovery. It retains unknown accounting and excludes identifiers/research
