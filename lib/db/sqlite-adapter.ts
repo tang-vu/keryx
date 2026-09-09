@@ -33,6 +33,7 @@ import type {
   ReasoningCircuitRecord,
   SessionGrantRecord,
   UserRecord,
+  WebSessionRecord,
 } from "./keryx-db";
 import type { LedgerAccount } from "../gateway/settlement-parity";
 import type { A2aOrder, A2aOrderResolutionUpdate } from "../a2a/order";
@@ -296,6 +297,13 @@ CREATE TABLE IF NOT EXISTS auth_challenges (
   expires_at INTEGER NOT NULL CHECK(expires_at > issued_at AND expires_at <= issued_at + 300000)
 );
 CREATE INDEX IF NOT EXISTS auth_challenges_expiry ON auth_challenges(expires_at);
+CREATE TABLE IF NOT EXISTS web_sessions (
+  hash TEXT PRIMARY KEY CHECK(length(hash) = 64 AND hash NOT GLOB '*[^a-f0-9]*'),
+  wallet TEXT NOT NULL CHECK(length(wallet) = 42 AND substr(wallet,1,2) = '0x' AND substr(wallet,3) NOT GLOB '*[^a-f0-9]*'),
+  issued_at INTEGER NOT NULL CHECK(issued_at >= 0),
+  expires_at INTEGER NOT NULL CHECK(expires_at > issued_at AND expires_at <= issued_at + 604800000)
+);
+CREATE INDEX IF NOT EXISTS web_sessions_expiry ON web_sessions(expires_at);
 `;
 
 export class SqliteAdapter implements KeryxDB {
@@ -896,6 +904,21 @@ export class SqliteAdapter implements KeryxDB {
   async createAuthChallenge(hash: string, issuedAt: number, expiresAt: number): Promise<void> {
     this.db.prepare("DELETE FROM auth_challenges WHERE expires_at <= ?").run(issuedAt);
     this.db.prepare("INSERT INTO auth_challenges (hash, issued_at, expires_at) VALUES (?, ?, ?)").run(hash, issuedAt, expiresAt);
+  }
+
+  async createWebSession(record: WebSessionRecord): Promise<void> {
+    this.db.prepare("DELETE FROM web_sessions WHERE expires_at <= ?").run(record.issuedAt);
+    this.db.prepare("INSERT INTO web_sessions (hash,wallet,issued_at,expires_at) VALUES (?,?,?,?)")
+      .run(record.hash, record.wallet.toLowerCase(), record.issuedAt, record.expiresAt);
+  }
+
+  async getWebSession(hash: string): Promise<WebSessionRecord | null> {
+    const row = this.db.prepare("SELECT hash,wallet,issued_at,expires_at FROM web_sessions WHERE hash = ?").get(hash);
+    return row ? { hash: String(row.hash), wallet: String(row.wallet), issuedAt: Number(row.issued_at), expiresAt: Number(row.expires_at) } : null;
+  }
+
+  async revokeWebSession(hash: string, wallet: string): Promise<void> {
+    this.db.prepare("DELETE FROM web_sessions WHERE hash = ? AND wallet = LOWER(?)").run(hash, wallet);
   }
 
   async consumeAuthChallenge(hash: string, now: number): Promise<boolean> {

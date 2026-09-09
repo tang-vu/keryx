@@ -14,7 +14,8 @@ import type { ArcChainGuard } from "@/lib/hooks/use-arc-chain-guard";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type AuthState = "idle" | "signing" | "verifying";
+import type { AuthState } from "@/lib/hooks/use-siwe-auth";
+export type { AuthState } from "@/lib/hooks/use-siwe-auth";
 
 // ── StepDot ───────────────────────────────────────────────────────────────────
 
@@ -149,9 +150,11 @@ export function SignInStep({
 export function SignedInStep({
   session,
   onSignOut,
+  busy = false,
 }: {
   session: { address: string; role: string };
   onSignOut: () => void;
+  busy?: boolean;
 }) {
   return (
     <div className="space-y-5">
@@ -184,10 +187,11 @@ export function SignedInStep({
       <button
         type="button"
         onClick={onSignOut}
+        disabled={busy}
         className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-ink-3 hover:text-seal hover:underline"
       >
         <LogOut className="h-3.5 w-3.5" />
-        Sign out
+        {busy ? "Signing out…" : "Sign out"}
       </button>
     </div>
   );

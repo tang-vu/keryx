@@ -14,12 +14,12 @@
  * signed out, and the session object when signed in.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAccount, useSignMessage } from "wagmi";
 import { SiweMessage } from "siwe";
 import { arcTestnet } from "@/lib/chains";
 
-export type AuthState = "idle" | "signing" | "verifying";
+export type AuthState = "idle" | "signing" | "verifying" | "signing-out";
 export interface AuthSession {
   address: string;
   role: string;
@@ -36,16 +36,20 @@ export function useSiweAuth() {
   const { signMessageAsync } = useSignMessage();
   const [authState, setAuthState] = useState<AuthState>("idle");
   const [session, setSession] = useState<AuthSession | null | undefined>(undefined);
+  const revision = useRef(0);
+  const channel = useRef<BroadcastChannel | null>(null);
 
   /** Re-read the current session cookie. Returns the session (or null). */
   const refresh = useCallback(async (): Promise<AuthSession | null> => {
+    const attempt = ++revision.current;
     try {
-      const res = await fetch("/api/auth/session");
+      const res = await fetch("/api/auth/session", { cache: "no-store" });
+      if (!res.ok && res.status !== 401) throw new Error("Session lookup unavailable");
       const s = res.ok ? ((await res.json()).session ?? null) : null;
+      if (attempt !== revision.current) return null;
       setSession(s);
       return s;
     } catch {
-      setSession(null);
       return null;
     }
   }, []);
@@ -54,18 +58,37 @@ export function useSiweAuth() {
   // setState lands only in the async continuation, after the fetch resolves.
   useEffect(() => {
     let active = true;
-    fetch("/api/auth/session")
+    const attempt = ++revision.current;
+    fetch("/api/auth/session", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data: { session?: AuthSession | null } | null) => {
-        if (active) setSession(data?.session ?? null);
+        if (active && attempt === revision.current) setSession(data?.session ?? null);
       })
       .catch(() => {
-        if (active) setSession(null);
+        if (active && attempt === revision.current) setSession(null);
       });
     return () => {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    const changed = (event: Event) => {
+      if ((event as CustomEvent).detail === "signed-out") { revision.current++; setSession(null); }
+      else void refresh();
+    };
+    const focused = () => { void refresh(); };
+    window.addEventListener("keryx:auth", changed);
+    window.addEventListener("focus", focused);
+    try {
+      channel.current = new BroadcastChannel("keryx-auth-v1");
+      channel.current.onmessage = focused;
+    } catch { /* Focus refresh remains available when browser messaging is disabled. */ }
+    return () => {
+      window.removeEventListener("keryx:auth", changed); window.removeEventListener("focus", focused);
+      channel.current?.close(); channel.current = null;
+    };
+  }, [refresh]);
 
   const signIn = useCallback(async (): Promise<SignInResult> => {
     if (!address) return { ok: false };
@@ -115,6 +138,7 @@ export function useSiweAuth() {
       // Notify other hook instances (e.g. the session/faucet panel mounted
       // separately) that auth state changed, so they re-check without a reload.
       if (typeof window !== "undefined") window.dispatchEvent(new Event("keryx:auth"));
+      channel.current?.postMessage("changed");
       return { ok: true, created: verifyData.created, role };
     } finally {
       setAuthState("idle");
@@ -122,9 +146,14 @@ export function useSiweAuth() {
   }, [address, signMessageAsync, refresh]);
 
   const signOut = useCallback(async () => {
-    await fetch("/api/auth/signout", { method: "POST" });
-    setSession(null);
-    if (typeof window !== "undefined") window.dispatchEvent(new Event("keryx:auth"));
+    setAuthState("signing-out");
+    try {
+      const response = await fetch("/api/auth/signout", { method: "POST", cache: "no-store", signal: AbortSignal.timeout(15000) });
+      if (!response.ok || (await response.json()).ok !== true) throw new Error("Sign-out could not be confirmed. Please retry.");
+      revision.current++; setSession(null);
+      window.dispatchEvent(new CustomEvent("keryx:auth", { detail: "signed-out" }));
+      channel.current?.postMessage("changed");
+    } finally { setAuthState("idle"); }
   }, []);
 
   return { address, isConnected, session, authState, signIn, signOut, refresh };

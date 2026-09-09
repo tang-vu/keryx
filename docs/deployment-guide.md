@@ -136,9 +136,21 @@ last `KERYX_BACKUP_KEEP` (default 48) under `data/backups/`, and — when config
 ```bash
 # manual snapshot (local or on the VPS)
 ssh keryx-vps "cd /root/keryx && npm run backup"
-# restore: gunzip a snapshot over the db (stop the app first so nothing writes mid-restore)
-ssh keryx-vps "cd /root/keryx && pm2 stop keryx && gunzip -c data/backups/<snap>.sqlite.gz > data/keryx.sqlite && pm2 start keryx"
 ```
+
+Restore requires a maintenance window: stop the web process, A2A worker, automation
+and scheduled database writers, then verify no process still holds the database.
+Restore into a separate staging file, verify its checksum/integrity and initialize
+the target schema offline before replacing the live file. Keep a rollback copy and
+handle the stopped database's WAL/SHM files deliberately; stopping only the web process
+is insufficient. Full service-restore acceptance remains open in the delivery plan.
+
+Before restored data serves requests, clear the ephemeral `auth_challenges` and
+`web_sessions` tables after schema initialization. A stale snapshot must not resurrect
+a consumed login challenge or revoked web session. This requires users to sign in
+again. Preserve all payment grants, reservations, authorizations and research journals;
+account-session cleanup is not a payment-state reset. See
+[revocable-session recovery](./engineering/revocable-sessions-2026-09-09.md).
 
 **Off-box copy (survives a dead disk) — one-time setup.** The local snapshots above still sit on the
 same box, so a dead disk loses them too. Copy each snapshot to Cloudflare R2 (free tier, zero egress,

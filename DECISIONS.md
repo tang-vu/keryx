@@ -1,5 +1,20 @@
 # Keryx — Decision Log
 
+**D-91** · Revocable account sessions · *A signed JWT is necessary but insufficient
+for account access.* Each new login persists a hash of a random session identifier,
+the exact wallet and second-aligned issue/expiry times before issuing its JWT.
+Verification pins algorithm, issuer, audience, token type and validated claims, then
+requires the exact active database row. Logout removes that row before clearing the
+cookie; storage uncertainty returns an error and retains the cookie for retry.
+Other device sessions remain independent. Legacy JWTs without this binding must
+sign in again; no silent upgrade or compatibility bypass is allowed. Browser hook
+revisions prevent late lookups from resurrecting logged-out UI, and other tabs refresh
+through ephemeral browser messaging. Account logout does not erase spend grants,
+pending authorizations or completed research. Already accepted work may finish.
+Before restoring service from a backup, discard ephemeral login challenges and web
+sessions so an older snapshot cannot resurrect revoked authority. Private research
+access policy and multi-device session management remain further account work.
+
 **D-90** · Sign-in replay prevention · *A cookie binds the browser flow; only a
 durable, issued, unexpired challenge can authorize a new session.* A local real-SIWE
 fixture reproduced replay by retaining the old nonce cookie. The server now stores

@@ -48,6 +48,9 @@ jobs:
       - name: Browser checkout UI (hermetic, no settlement)
         run: npm run test:browser-checkout
 
+      - name: Browser sign-out (hermetic, no signing)
+        run: npm run test:browser-auth
+
       - name: Business calculator UI (local arithmetic, no settlement)
         run: npm run test:business-calculator
 

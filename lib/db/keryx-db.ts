@@ -21,6 +21,14 @@ import type {
   WithdrawalRecord,
 } from "../types";
 
+export interface WebSessionRecord {
+  hash: string;
+  wallet: string;
+  /** Unix milliseconds, matching the JWT's second-rounded timestamps. */
+  issuedAt: number;
+  expiresAt: number;
+}
+
 export interface CreatorEarnings {
   sourceId: string;
   sourceName: string;
@@ -376,6 +384,10 @@ export interface KeryxDB {
   createAuthChallenge(hash: string, issuedAt: number, expiresAt: number): Promise<void>;
   /** Atomically consume one issued, unexpired challenge across processes; missing/replayed is false. */
   consumeAuthChallenge(hash: string, now: number): Promise<boolean>;
+  createWebSession(record: WebSessionRecord): Promise<void>;
+  getWebSession(hash: string): Promise<WebSessionRecord | null>;
+  /** Idempotent owner-scoped removal; absence also proves this token cannot authenticate. */
+  revokeWebSession(hash: string, wallet: string): Promise<void>;
 
   // ── users (account index; non-custodial identity, no funds) ──
   /** Create the account on first sign-in, else refresh role + last_seen. Returns

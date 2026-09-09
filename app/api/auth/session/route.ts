@@ -8,14 +8,14 @@
  * Returns 401 when no valid session cookie exists.
  */
 
-import { getSessionFresh } from "@/lib/auth";
+import { readSessionState, resolveRole } from "@/lib/auth";
+import { authJson } from "@/lib/auth-challenge";
 
 export const runtime = "nodejs";
 
 export async function GET() {
-  const session = await getSessionFresh();
-  if (!session) {
-    return Response.json({ session: null }, { status: 401 });
-  }
-  return Response.json({ session });
+  const result = await readSessionState();
+  if (result.state === "unavailable") return authJson({ error: "session lookup unavailable" }, 503);
+  if (result.state !== "authenticated") return authJson({ session: null }, 401);
+  return authJson({ session: { address: result.session.address, role: await resolveRole(result.session.address) } });
 }

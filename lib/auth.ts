@@ -1,13 +1,13 @@
 /**
  * Server-side auth helpers for route handlers. Reads the keryx_session JWT
- * from the httpOnly cookie set during SIWE verify. Stateless — no DB lookup.
+ * from the httpOnly cookie set during SIWE verify, backed by a revocable database row.
  *
  * getSession() returns null (not throws) on any failure so callers can branch
  * without a try/catch. requireRole() returns a 401 Response when the session
  * is absent or the role doesn't match — callers just `return requireRole(...)`.
  *
  * When JWT_SECRET is unset (offline dev with no env), getSession always returns
- * null. Build still passes; auth simply isn't enforced until the secret is set.
+ * null. Protected routes receive no authenticated identity until a secret is set.
  *
  * Role freshness: roles are NEVER read from the JWT's baked `role` claim for
  * access control. resolveRole() re-derives the role live from env + DB at the
@@ -15,10 +15,10 @@
  * a source is granted the correct role immediately — no re-login required.
  */
 
-import { jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { config } from "./config";
 import { getDb } from "./db";
+import { isWebSessionActive, parseWebSession } from "./auth-session";
 
 export type Role = "creator" | "asker" | "dev";
 
@@ -49,24 +49,20 @@ export async function resolveRole(address: string): Promise<Role> {
   return "asker";
 }
 
-/** Returns the decoded session payload (address + JWT's baked role), or null if absent/invalid/expired. */
-export async function getSession(): Promise<Session | null> {
-  if (!config.jwtSecret) return null;
-
-  const token = (await cookies()).get("keryx_session")?.value;
-  if (!token) return null;
-
+export async function readSessionState(): Promise<
+  { state: "authenticated"; session: Session } | { state: "signed_out" | "unavailable" }
+> {
   try {
-    const secret = new TextEncoder().encode(config.jwtSecret);
-    const { payload } = await jwtVerify(token, secret);
-    const address = payload.address as string | undefined;
-    const role = payload.role as Role | undefined;
-    if (!address || !role) return null;
-    return { address, role };
-  } catch {
-    // Expired, tampered, or wrong secret — treat as unauthenticated.
-    return null;
-  }
+    const claims = await parseWebSession((await cookies()).get("keryx_session")?.value, config.jwtSecret);
+    if (!claims || !await isWebSessionActive(await getDb(), claims)) return { state: "signed_out" };
+    return { state: "authenticated", session: { address: claims.address, role: claims.role } };
+  } catch { return { state: "unavailable" }; }
+}
+
+/** Protected callers receive no authority when a session is absent, revoked or unavailable. */
+export async function getSession(): Promise<Session | null> {
+  const result = await readSessionState();
+  return result.state === "authenticated" ? result.session : null;
 }
 
 /**

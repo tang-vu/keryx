@@ -32,6 +32,7 @@ import type {
   ReasoningCircuitRecord,
   SessionGrantRecord,
   UserRecord,
+  WebSessionRecord,
 } from "./keryx-db";
 import type { LedgerAccount } from "../gateway/settlement-parity";
 import type { A2aOrder, A2aOrderResolutionUpdate } from "../a2a/order";
@@ -538,6 +539,24 @@ export class SupabaseAdapter implements KeryxDB {
 
   async createAuthChallenge(hash: string, issuedAt: number, expiresAt: number): Promise<void> {
     const { error } = await this.sb.rpc("create_auth_challenge", { p_hash: hash, p_issued_at: issuedAt, p_expires_at: expiresAt });
+    if (error) throw error;
+  }
+
+  async createWebSession(record: WebSessionRecord): Promise<void> {
+    const { error } = await this.sb.rpc("create_web_session", {
+      p_hash: record.hash, p_wallet: record.wallet.toLowerCase(), p_issued_at: record.issuedAt, p_expires_at: record.expiresAt,
+    });
+    if (error) throw error;
+  }
+
+  async getWebSession(hash: string): Promise<WebSessionRecord | null> {
+    const { data, error } = await this.sb.from("web_sessions").select("hash,wallet,issued_at,expires_at").eq("hash", hash).maybeSingle();
+    if (error) throw error;
+    return data ? { hash: data.hash, wallet: data.wallet, issuedAt: Number(data.issued_at), expiresAt: Number(data.expires_at) } : null;
+  }
+
+  async revokeWebSession(hash: string, wallet: string): Promise<void> {
+    const { error } = await this.sb.from("web_sessions").delete().eq("hash", hash).eq("wallet", wallet.toLowerCase());
     if (error) throw error;
   }
 

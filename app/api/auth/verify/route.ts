@@ -2,7 +2,7 @@
  * POST /api/auth/verify
  *
  * Consumes an issued, unexpired server challenge and verifies SIWE, then mints a
- * 7-day HS256 JWT into an httpOnly keryx_session cookie.
+ * revocable HS256 JWT into an httpOnly cookie, capped at seven days and SIWE expiry.
  *
  * Role derivation (in priority order):
  *   1. dev   — address is in KERYX_DEV_WALLETS env allowlist
@@ -18,7 +18,6 @@
  */
 
 import { SiweMessage } from "siwe";
-import { SignJWT } from "jose";
 import { cookies } from "next/headers";
 import { getDb } from "@/lib/db";
 import { config } from "@/lib/config";
@@ -28,6 +27,7 @@ import { recordActivationEvent } from "@/lib/activation";
 import { authChallengeHash, authJson, authNonceSchema, readSignInBody } from "@/lib/auth-challenge";
 import { createHash } from "node:crypto";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
+import { issueWebSession } from "@/lib/auth-session";
 
 export const runtime = "nodejs";
 
@@ -113,21 +113,18 @@ export async function POST(req: Request) {
     const db = await getDb();
     ({ created } = await db.upsertUser(address, role));
   } catch {
-    // account index unavailable — sign-in still proceeds (stateless JWT).
+    // Account indexing is best-effort; durable session creation below is mandatory.
   }
 
-  const secret = new TextEncoder().encode(config.jwtSecret);
-  const jwt = await new SignJWT({ address, role })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime("7d")
-    .sign(secret);
+  let issued: Awaited<ReturnType<typeof issueWebSession>>;
+  try { issued = await issueWebSession(await getDb(), config.jwtSecret, address, role, siwe.expirationTime); }
+  catch { return authJson({ error: "session creation unavailable; sign in again" }, 503); }
 
-  jar.set("keryx_session", jwt, {
+  jar.set("keryx_session", issued.token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
-    maxAge: 7 * 86400, // 7 days in seconds
+    maxAge: issued.maxAge,
     path: "/",
   });
 

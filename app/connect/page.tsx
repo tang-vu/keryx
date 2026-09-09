@@ -54,12 +54,10 @@ export default function ConnectPage() {
     // Fully disconnect so the flow returns to step 1 (connect), not a re-sign of
     // the same wallet still showing as connected.
     try {
-      await disconnectAsync();
-    } catch {
-      /* already disconnected — ignore */
-    }
-    await signOut();
-    toast("Signed out");
+      await signOut();
+      try { await disconnectAsync(); } catch { /* Connector may already be disconnected. */ }
+      toast("Signed out");
+    } catch { toast.error("Sign-out could not be confirmed. Please retry."); }
   }, [disconnectAsync, signOut]);
 
   return (
@@ -103,7 +101,7 @@ export default function ConnectPage() {
             )}
 
             {isConnected && session && (
-              <SignedInStep session={session} onSignOut={handleSignOut} />
+              <SignedInStep session={session} onSignOut={handleSignOut} busy={authState !== "idle"} />
             )}
           </div>
         </div>

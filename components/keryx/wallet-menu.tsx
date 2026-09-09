@@ -60,14 +60,12 @@ export function WalletMenu() {
   // Sign out = clear the session AND disconnect the wallet, so the menu returns to
   // "Connect Wallet" (not "Sign in" for the same wallet).
   const handleSignOut = useCallback(async () => {
-    setSignedOut(true);
     try {
-      await disconnectAsync();
-    } catch {
-      /* already disconnected — ignore */
-    }
-    await signOut();
-    toast("Signed out");
+      await signOut();
+      setSignedOut(true);
+      try { await disconnectAsync(); } catch { /* Connector may already be disconnected. */ }
+      toast("Signed out");
+    } catch { toast.error("Sign-out could not be confirmed. Please retry."); }
   }, [disconnectAsync, signOut]);
   // Set true only when the user picks a wallet here — gates auto-sign-in so a
   // rehydrated connection on page load never pops an unsolicited signature.
@@ -170,8 +168,9 @@ export function WalletMenu() {
           <DropdownMenuItem
             className="cursor-pointer rounded-none text-seal focus:bg-seal/10 focus:text-seal"
             onClick={handleSignOut}
+            disabled={busy}
           >
-            <LogOut className="h-3.5 w-3.5" /> Sign out
+            <LogOut className="h-3.5 w-3.5" /> {authState === "signing-out" ? "Signing out…" : "Sign out"}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

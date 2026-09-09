@@ -1,5 +1,15 @@
 # Keryx Project Changelog
 
+### Revocable account sessions (2026-09-09, v0.22.28)
+
+- Bind new login tokens to durable, wallet-specific sessions; reject revoked,
+  expired, mismatched and legacy tokens. Cap sessions at the signed SIWE expiry.
+- Revoke on the server before confirming logout. Preserve retry on storage errors,
+  synchronize browser views and ignore stale session lookups after logout.
+- Verify real JWTs, device isolation, outages, PostgreSQL permissions and Chromium
+  logout behavior. Existing login cookies require one fresh sign-in after release.
+- Preserve payment journals and spend authority; private research history remains open.
+
 ### Durable sign-in challenges (2026-09-09, v0.22.27)
 
 - Persist five-minute SIWE challenge hashes and atomically consume them before
