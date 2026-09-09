@@ -44,7 +44,7 @@ import type { A2aOrder, A2aOrderResolutionUpdate } from "../a2a/order";
 import type { PrivateResearchIntent } from "../a2a/private-research-intent";
 import type { PrivatePaymentConfirmation } from "../a2a/private-payment-state";
 import { PRIVATE_RESEARCH_PAYMENTS_SQL, claimSqlitePrivatePayment, getSqlitePrivatePayment, confirmSqlitePrivatePayment } from "./private-research-payments";
-import { PRIVATE_RESEARCH_INTENTS_SQL, getSqlitePrivateResearchIntent, reserveSqlitePrivateResearchIntent } from "./private-research-intents";
+import { PRIVATE_RESEARCH_INTENTS_SQL, getSqlitePrivateResearchIntent, reserveSqlitePrivateResearchIntent, listSqlitePrivateResearchHistory, type PrivateHistoryCursor } from "./private-research-intents";
 import {
   summarizeA2aOperations,
   type A2aOperationsRow,
@@ -1510,6 +1510,9 @@ export class SqliteAdapter implements KeryxDB {
 
   async getPrivateResearchIntent(id: string, payer: string) {
     return getSqlitePrivateResearchIntent(this.db, id, payer);
+  }
+  async listPrivateResearchHistory(payer: string, before?: PrivateHistoryCursor) {
+    return listSqlitePrivateResearchHistory(this.db, payer, before);
   }
 
   async saveQueryRun(run: QueryRun): Promise<void> {

@@ -43,7 +43,7 @@ import type { A2aOrder, A2aOrderResolutionUpdate } from "../a2a/order";
 import type { PrivateResearchIntent } from "../a2a/private-research-intent";
 import type { PrivatePaymentConfirmation } from "../a2a/private-payment-state";
 import { claimSupabasePrivatePayment, getSupabasePrivatePayment, confirmSupabasePrivatePayment } from "./private-research-payments";
-import { getSupabasePrivateResearchIntent, reserveSupabasePrivateResearchIntent } from "./private-research-intents";
+import { getSupabasePrivateResearchIntent, reserveSupabasePrivateResearchIntent, listSupabasePrivateResearchHistory, type PrivateHistoryCursor } from "./private-research-intents";
 import {
   summarizeA2aOperations,
   type A2aOperationsRow,
@@ -697,6 +697,9 @@ export class SupabaseAdapter implements KeryxDB {
 
   async getPrivateResearchIntent(id: string, payer: string) {
     return getSupabasePrivateResearchIntent(this.sb, id, payer);
+  }
+  async listPrivateResearchHistory(payer: string, before?: PrivateHistoryCursor) {
+    return listSupabasePrivateResearchHistory(this.sb, payer, before);
   }
 
   async saveQueryRun(run: QueryRun): Promise<void> {

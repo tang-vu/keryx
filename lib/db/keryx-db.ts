@@ -369,6 +369,7 @@ export interface KeryxDB {
   reservePrivateResearchIntent(intent: PrivateResearchIntent): Promise<PrivateResearchIntent>;
   /** Caller must supply an independently authenticated payer. Never expose via bearer-ID lookup. */
   getPrivateResearchIntent(id: string, payer: string): Promise<PrivateResearchIntent | null>;
+  listPrivateResearchHistory(payer: string, before?: import("./private-research-intents").PrivateHistoryCursor): Promise<import("./private-research-intents").PrivateHistoryEntry[]>;
   /** Trusted facilitator observation only. Persistence errors must not discard an observed receipt. */
   confirmPrivateCreatorSubmission(id: string, payer: string, workerId: string, confirmation: PrivateCreatorConfirmation): Promise<PrivateCreatorConfirmationRecord>;
   getPrivateCreatorConfirmation(id: string, payer: string, authorizationId: string): Promise<PrivateCreatorConfirmationRecord | null>;

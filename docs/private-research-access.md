@@ -510,6 +510,30 @@ browser/CLI integration, creator views and complete privacy acceptance remain re
 
 ## Implemented account enumeration
 
+### Private history backend
+
+`listPrivateResearchHistory` on both adapters filters durable intents by normalized
+payer, orders by `created_at DESC, id DESC`, and reads at most 26 records for a 25-job
+page plus sentinel. A composite index (PostgreSQL migration 0053 and SQLite startup DDL)
+supports this access pattern. Every row is verified against its signed intent and owner;
+invalid storage or database errors fail the read. The cursor retains database timestamp
+precision and the exact private ID. It is a pagination selector, not authorization.
+
+`privateHistoryPage` strips signed proofs and returns only ID, creation time, original
+question, model/package selection and price commitment. It labels entries as private
+intents rather than inferring payment or execution. Pending, interrupted and completed
+jobs all remain discoverable. Concurrent newer entries appear on a fresh first page;
+continuation pages use the last displayed key. Cursors and IDs belong in private bodies,
+not URLs or public analytics. The history HTTP/UI workflow is not yet connected.
+
+SQLite tests cover 27 equal-time owner records, another owner, insertion between pages,
+no duplicate/missing results, unknown wallets and output redaction. Mocked PostgREST
+tests verify payer/limit/order/filter constraints, microsecond timestamp preservation,
+malformed-cursor rejection before I/O, corrupt proof/foreign rows and storage errors.
+These are local synthetic tests, not independent buyer activity.
+
+### Existing public-job account history
+
 `GET /api/me/jobs` requires a valid, unrevoked SIWE account session. The server derives
 the payer from that session; query-string wallets, API-key identities, client labels
 and cursor contents cannot choose the account. SQLite and the service-role-only

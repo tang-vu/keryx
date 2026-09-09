@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-111** · Private history enumeration · *Recover private job identities from the
+owner's durable intents, independently of browser storage and job completion.* Both
+adapters expose a backend-only 25-row keyset page plus sentinel, filtered by the
+normalized payer and ordered by creation timestamp then ID. Every returned intent is
+revalidated against its signature, identity and owner before projection. An explicit
+allowlist returns the original question/package and price commitment, not signatures,
+salts or payment authority. A history entry does not imply a paid or completed job;
+the result endpoint provides current state separately. Cursor timestamps preserve DB
+precision; cursors never grant access to another payer's records. A matching composite
+index supports the order. This is backend groundwork for account recovery; authenticated
+history transport and browser/CLI integration remain to be connected.
+
 **D-110** · Authenticated private result reading · *Read-only POST with a live owner
 session, a bounded body selector and an explicit result schema.* The new account route
 derives the payer from the revocable session, requires same-origin access, and never
