@@ -1,7 +1,8 @@
 # Private research access and payer history
 
-September 9, 2026. Account history is implemented in v0.22.30; private-result mode is
-not implemented or advertised as available. This work advances B2/M6 without replacing
+September 9, 2026. Account history is implemented in v0.22.30. v0.22.33 adds an
+authenticated private result read route; private purchases and their user workflow
+remain unavailable. This work advances B2/M6 without replacing
 the full acceptance map in `mainnet-delivery-plan.md`.
 
 Protocol foundation added after v0.22.30: `lib/buyer/private-request-commitment.ts`
@@ -479,7 +480,33 @@ Source IDs and recipient addresses are owner-only data, not a public analytics f
 SQLite integration verifies late confirmation after immutable result save, all supported
 Circle stages, exact fractional-USDC sums, unchanged commitments after expiry, storage
 outages and wrong-owner denial before ledger access. The caller still authenticates the
-payer. No HTTP route or browser integration is enabled by this backend read model.
+payer. The v0.22.33 result route below supplies session authentication before invoking
+this read model; browser integration remains unfinished.
+
+## Authenticated private result read route (v0.22.33)
+
+`POST /api/me/private-jobs/result` is a read-only account endpoint. The JSON body is
+exactly `{ "id": "prv_<64 lowercase hex characters>" }`; no payer override is accepted.
+The live, unrevoked SIWE session supplies ownership. Same-origin requests are required,
+body size is capped at 1 KiB (including chunked requests) and body reading at five seconds.
+Identifiers stay out of route URLs. Responses use `Cache-Control: no-store`; missing
+and foreign jobs both return 404, and storage or projection corruption yields a generic
+503. No request data or caught storage error is logged by this handler.
+
+The versioned response contains the original question/package selection, current spend
+projection, and one of `awaiting-payment`, `awaiting-execution`, `execution-claimed`, or
+`completed`. Execution-claimed says only that a permanent claim exists, not that a worker
+is alive. Completed results expose validated answer, subclaims, source decisions,
+citations, evidence and coverage. Missing historical evidence measurements stay null.
+Raw trace, provider telemetry, nested content receipts, transport payloads, worker IDs,
+signed authorizations and historical aggregate payment totals are not returned. Citation
+`recordedRewardUsdc` is snapshot attribution; current spend evidence is separate.
+
+This is an owner read projection, not a portable cryptographically verified receipt.
+Its shape is validated against signed request identity and claim indices; model prose
+still requires the normal safe renderer. The endpoint never retries execution or funds,
+signs or submits a payment. Private quote/purchase admission, private history enumeration,
+browser/CLI integration, creator views and complete privacy acceptance remain required.
 
 ## Implemented account enumeration
 

@@ -27,6 +27,7 @@ import type { ReasoningEngine } from "../llm/reasoning-engine";
 import type { PaymentRequirements } from "../payments/x402-payment-evidence";
 import { privateResearchEffects } from "../agent/private-research-effects";
 import { privateSpendView } from "../a2a/private-spend-view";
+import { privateResultView } from "../a2a/private-result-view";
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-private-intents-"));
 const file = path.join(directory, "test.sqlite");
@@ -473,6 +474,13 @@ it("runs one complete private job with durable source/reward receipts and no sha
     expect(complete.run.question).toBe(value.submission.request.question);
     expect(complete.run.totalSpent).toBeCloseTo(0.017, 6);
     expect(complete.diagnostics).toEqual({ alerts: 0, suppressedCitationNotifications: 1 });
+    const ownerResult = await privateResultView(other, value.id, account.address);
+    expect(ownerResult).toMatchObject({ status: "completed", result: { answer: complete.run.answer,
+      decisions: complete.run.decisions.map(({ sourceId, action, rationale }) => expect.objectContaining({ sourceId, action, rationale })) },
+      spend: { creator: { confirmedMicros: "17000", unresolvedMicros: "0" } } });
+    expect(await privateResultView(db, value.id, merchants.publicResearchPayee)).toBeNull();
+    expect(JSON.stringify(ownerResult)).not.toContain(value.submission.payment.signature);
+    expect(ownerResult?.result).not.toHaveProperty("trace");
     const legs = await db.listPrivateCreatorSubmissions(value.id, account.address);
     expect(legs).toHaveLength(2);
     for (const leg of legs) expect(await db.getPrivateCreatorConfirmation(value.id, account.address, leg.data.submission.authorizationId)).not.toBeNull();

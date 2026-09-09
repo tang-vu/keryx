@@ -1,5 +1,19 @@
 # Keryx — Decision Log
 
+**D-110** · Authenticated private result reading · *Read-only POST with a live owner
+session, a bounded body selector and an explicit result schema.* The new account route
+derives the payer from the revocable session, requires same-origin access, and never
+starts execution or submits payment. Wrong-owner/missing jobs share a 404 response;
+storage/schema failures return a generic 503 with no raw error. Responses are no-store.
+The result projection binds signed intent identity, requires real treasury A2A provenance,
+validates displayed decisions/evidence/claim indices and strips unselected nested fields.
+It exposes answer/evidence/agency to the owner, omits raw trace and authorization data,
+and composes current spend independently of historical snapshot totals. Citation reward
+figures are explicitly recorded snapshot amounts, not current payment confirmation.
+Execution-claimed is not a worker heartbeat or permission to retry. Private purchases,
+private account enumeration, UI/CLI recovery and provider/public-projection acceptance
+remain incomplete; the read route alone does not activate private research sales.
+
 **D-109** · Private buyer spend projection · *Read current durable payment evidence
 separately from immutable research output.* The backend owner projection allowlists
 economic and source fields, excludes signed authorizations/worker identities/private

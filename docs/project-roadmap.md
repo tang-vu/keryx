@@ -6,16 +6,17 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.32 (citation request privacy, updated 2026-09-09)
+**Version:** 0.22.33 (authenticated private result reads, updated 2026-09-09)
 
-Citation requests now omit unused job IDs from URLs while retaining local payment
-attribution. Private worker claims and result snapshots are implemented internally;
-private creator accounting and authenticated result delivery remain unfinished.
+Private results now have a read-only account endpoint using live owner sessions,
+validated answer/decision projections and current private payment evidence. Internal
+execution and creator accounting are implemented; private purchasing, account
+enumeration, browser/CLI workflows and full privacy acceptance remain unfinished.
 
 Public x402 sellers now reject configured reserved private merchant recipients before
 verification or settlement, including stripped/rewritten unsigned metadata. Private
 request signing, isolated intent/payment storage and the reservation guard are foundations;
-private research quotes, execution and result access remain unavailable. No private
+private research quotes and the buyer workflow remain unavailable. No private
 merchant is provisioned by this release.
 
 Sign-in now requires a server-issued, unexpired, atomically consumed challenge.

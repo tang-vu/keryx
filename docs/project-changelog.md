@@ -1,5 +1,15 @@
 # Keryx Project Changelog
 
+### Authenticated private result reads (2026-09-09, v0.22.33)
+
+- Add a read-only account endpoint with revocable owner sessions, no-store responses,
+  bounded body selectors and generic missing/foreign-job errors.
+- Return validated answer, source decisions and evidence, separately from current
+  durable spend. Distinguish Circle processing stages from confirmation evidence;
+  do not claim independently verified chain finality or manufacture refunds.
+- Include isolated execution, private creator journals and reconciliation foundations.
+  Private purchases, browser/CLI recovery and complete privacy acceptance remain open.
+
 ### Citation request privacy (2026-09-09, v0.22.32)
 
 - Remove unused job IDs from citation challenge and payment request URLs in browser
