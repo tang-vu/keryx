@@ -1,5 +1,21 @@
 # Keryx — Decision Log
 
+**D-86** · Browser Gateway funding · *Persist each explicit approval/deposit attempt
+before asking the wallet, and recover uncertain attempts without replay.* Funding
+uses the connected EOA on Arc testnet, exact USDC approval and `deposit(token,value)`
+to its own Gateway balance, capped at 1 testnet USDC per plan. A separate IndexedDB
+store has one active plan per payer across tabs. Each claimed step records the pending
+nonce and observed block; confirmation requires matching sender, target, calldata,
+value, nonce, transaction/receipt block and two confirmations. Only provider code 4001
+reopens a rejected prompt. Missing responses remain locked for hash-based RPC recovery;
+approval never automatically starts a deposit. Unknown credit stops funding, and mined
+deposit evidence is distinct from Circle's available credit. Browser storage, RPC and
+wallet providers remain trust dependencies; lost storage and replaced/cancelled wallet
+transactions need further recovery work. Fresh paid wallet runtime and independent
+buyer acceptance remain open. Shared wallet options now wait for hydration because
+browser-only connector discovery differed from SSR and caused a reproduced React error.
+Reversible: medium (browser additions; no server settlement or existing journal migration).
+
 **D-85** · Browser buyer workspace · *Bind a visible purchase review to the connected
 EOA, then keep recovery independent of that wallet.* `/research` now connects the
 one-shot engine to the user's wallet rather than the playground worker. The adapter

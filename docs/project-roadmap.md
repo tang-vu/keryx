@@ -6,13 +6,15 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.21 (browser checkout and local recovery, updated 2026-09-09)
+**Version:** 0.22.22 (browser funding and wallet hydration, updated 2026-09-09)
 
 Buyer policy, order identity, package contracts and complete journal/receipt binding now
 have browser-compatible modules with Node parity. The browser engine now has transactional
 storage, one-shot submission and GET recovery. The workspace now offers
-wallet review/signing for existing Gateway funds and local saved-job recovery. Browser
-deposits and a fresh browser-wallet paid pilot still block full B1 acceptance. See [the portability evidence](./engineering/buyer-portability-2026-09-09.md).
+wallet review/signing, local saved-job recovery and explicit two-step Gateway deposits.
+Synthetic lost-response/reload recovery passes; a fresh browser-wallet paid pilot and
+complete replacement/lost-storage recovery still block full B1 acceptance. See
+[funding evidence and remaining acceptance](./engineering/browser-funding-2026-09-09.md).
 
 The source-decision panel now checks receipt integrity and displayed job/answer binding
 in the browser. Original-request binding still needs the buyer journal. Shared receipt

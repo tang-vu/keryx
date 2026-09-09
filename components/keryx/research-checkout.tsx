@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAccount, useSwitchChain, useWalletClient } from "wagmi";
 import { formatUnits } from "viem";
 import { WalletPicker } from "./wallet-picker";
+import { ResearchFunding } from "./research-funding";
 import { useResearchWorkspace } from "./research-workspace";
 import { buyerRequestSchema, type BuyerRequest } from "@/lib/buyer/protocol";
 import { connectedBuyerWallet } from "@/lib/buyer/connected-wallet";
@@ -23,6 +24,7 @@ export function ResearchCheckout({ question, mode, budget, version, total, payee
   const [review, setReview] = useState<Review | null>(null);
   const [accepted, setAccepted] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [fundingBusy, setFundingBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [credit, setCredit] = useState<{ address: string; micros: string } | null>(null);
   const [recovery, setRecovery] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export function ResearchCheckout({ question, mode, budget, version, total, payee
   useEffect(() => () => { operation.current?.abort(); }, []);
 
   async function checkBalance() {
-    if (!wallet || !address || operation.current) return;
+    if (!wallet || !address || operation.current || fundingBusy) return;
     const abort = new AbortController(); operation.current = abort; setBusy(true); setMessage("Checking your Gateway balance…");
     try {
       const value = await connectedBuyerWallet(wallet, address, abort.signal).readWallet();
@@ -47,7 +49,7 @@ export function ResearchCheckout({ question, mode, budget, version, total, payee
   }
 
   async function purchase() {
-    if (!wallet || !review || !reviewCurrent || !accepted || operation.current) return;
+    if (!wallet || !review || !reviewCurrent || !accepted || operation.current || fundingBusy) return;
     const abort = new AbortController(); operation.current = abort;
     setBusy(true); setRecovery(null); setMessage("Checking the current price and wallet…");
     let preparedId: string | null = null;
@@ -91,10 +93,11 @@ export function ResearchCheckout({ question, mode, budget, version, total, payee
         void switchChainAsync({ chainId: 5042002 }).catch(() => setMessage("Network switch was not completed. Choose Arc testnet in your wallet."));
       }}>{switching ? "Switching…" : "Switch to Arc testnet"}</button> : <>
         <div className="flex flex-wrap items-center gap-3">
-          <button type="button" disabled={busy} className={control} onClick={() => { void checkBalance(); }}>Check Gateway balance</button>
+          <button type="button" disabled={busy || fundingBusy} className={control} onClick={() => { void checkBalance(); }}>Check Gateway balance</button>
           <span className="font-mono text-xs">Available: {currentCredit === null ? "not checked" : `${formatUnits(BigInt(currentCredit), 6)} USDC`}</span>
         </div>
-        {currentCredit !== null && BigInt(currentCredit) < BigInt(amount) && <p className="font-serif text-sm text-seal">Gateway funds are below the package price. Wallet gas balance and Gateway funds are separate. This checkout requires an already funded Gateway wallet.</p>}
+        {currentCredit !== null && BigInt(currentCredit) < BigInt(amount) && <p className="font-serif text-sm text-seal">Gateway funds are below the package price. Wallet gas balance and Gateway funds are separate. Use the deposit controls below, then check Gateway balance again.</p>}
+        <ResearchFunding key={address} payer={address} initialAmount={total} disabled={busy} onBusy={setFundingBusy} onChanged={() => setCredit(null)} />
         <button type="button" className={control} disabled={busy || !parsed.success || !wallet || BigInt(amount) > BigInt(1_000_000)} onClick={() => {
           if (!parsed.success || !address) return;
           setReview({ request: parsed.data, payer: address, payee, amount }); setAccepted(false); setMessage("");
@@ -109,7 +112,7 @@ export function ResearchCheckout({ question, mode, budget, version, total, payee
         <span>I accept the fixed, non-refundable price and best-effort research. Unused creator reserve is retained, not refunded. My question and recovery journal will be stored on this device; I will keep a private recovery file in case browser data is lost.</span>
       </label>
       {!reviewCurrent && <p role="status" className="text-seal">The question, price or wallet changed. Review the purchase again.</p>}
-      <button type="button" disabled={!accepted || !reviewCurrent || busy} className={`${control} bg-ink text-paper`} onClick={() => { void purchase(); }}>{busy ? "Purchase in progress…" : `Buy research — ${formatUnits(BigInt(review.amount), 6)} USDC`}</button>
+      <button type="button" disabled={!accepted || !reviewCurrent || busy || fundingBusy} className={`${control} bg-ink text-paper`} onClick={() => { void purchase(); }}>{busy ? "Purchase in progress…" : `Buy research — ${formatUnits(BigInt(review.amount), 6)} USDC`}</button>
     </div>}
     {recovery && <button type="button" className={control} onClick={() => downloadBuyerJson(recovery, "recovery")}>Download recovery file</button>}
     <p role="status" aria-live="polite" className="font-serif text-sm">{message}</p>

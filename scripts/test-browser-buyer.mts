@@ -8,7 +8,7 @@ import { buyerJobId } from "../lib/buyer/policy";
 
 declare global {
   interface Window {
-    BrowserBuyerTest: typeof import("../lib/buyer/browser-journal") & typeof import("../lib/buyer/browser-client");
+    BrowserBuyerTest: typeof import("../lib/buyer/browser-journal") & typeof import("../lib/buyer/browser-client") & typeof import("../lib/buyer/funding-journal");
     signSyntheticBuyer: (value: Parameters<typeof buyerTypedData>[0]) => Promise<`0x${string}`>;
   }
 }
@@ -22,7 +22,7 @@ function intent(n: number): BuyerIntentEnvelope {
   return { schema: "keryx-buyer-intent-v1", request: { question: "Browser journal recovery", budget: 0.03, researchMode: "quick", packageVersion: "1.0.0", responseMode: "async" }, requirement, authorization, queryId: buyerJobId(authorization) };
 }
 
-const bundle = await build({ stdin: { contents: 'export * from "./lib/buyer/browser-journal"; export * from "./lib/buyer/browser-client";', resolveDir: process.cwd() },
+const bundle = await build({ stdin: { contents: 'export * from "./lib/buyer/browser-journal"; export * from "./lib/buyer/browser-client"; export * from "./lib/buyer/funding-journal";', resolveDir: process.cwd() },
   bundle: true, platform: "browser", format: "iife", globalName: "BrowserBuyerTest", write: false, metafile: true });
 assert(!Object.keys(bundle.metafile.inputs).some(path => /^lib\/(config|db\/)/.test(path) || /^lib\/buyer\/(journal|client|policy)\.ts$/.test(path)), "Server dependency crossed the browser boundary");
 const browser = await chromium.launch({ headless: true });
@@ -126,6 +126,27 @@ try {
   }, purchase.queryId);
   assert.deepEqual(resumed, { gets: 1, status: "not_found_uncertain", payment: "seller_reported_settled" });
   assert.equal((await a.evaluate(() => window.BrowserBuyerTest.listBrowserJournals())).length, 3);
+  const created = await Promise.allSettled(pages.map(page => page.evaluate(payer => window.BrowserBuyerTest.createFundingRecord(payer, "50000"), account.address)));
+  assert.equal(created.filter(result => result.status === "fulfilled").length, 1, "Only one active funding operation per payer across tabs");
+  const funding = created.find(result => result.status === "fulfilled");
+  if (funding?.status !== "fulfilled") throw new Error("Missing funding record");
+  const fundingClaims = await Promise.all(pages.map(page => page.evaluate(id => window.BrowserBuyerTest.claimFundingStep(id, "approval", 7, "100"), funding.value.id)));
+  assert.equal(fundingClaims.filter(Boolean).length, 1);
+  const fundingChecks = await a.evaluate(async id => {
+    const api = window.BrowserBuyerTest;
+    const cancelledWhileUncertain = await api.cancelFundingRecord(id);
+    const approval = `0x${"1".repeat(64)}`, deposit = `0x${"2".repeat(64)}`;
+    await api.saveFundingHash(id, "approval", approval);
+    await api.confirmFundingStep(id, "approval", approval, "confirmed");
+    const depositClaimed = await api.claimFundingStep(id, "deposit", 8, "102");
+    await api.saveFundingHash(id, "deposit", deposit);
+    await api.confirmFundingStep(id, "deposit", deposit, "confirmed");
+    const first = await api.readFundingRecord(id);
+    const next = await api.createFundingRecord(first.payer, "50000");
+    const cancelledReady = await api.cancelFundingRecord(next.id);
+    return { cancelledWhileUncertain, depositClaimed, unlocked: !first.activePayer, cancelledReady, history: (await api.listFundingRecords(first.payer)).length };
+  }, funding.value.id);
+  assert.deepEqual(fundingChecks, { cancelledWhileUncertain: false, depositClaimed: true, unlocked: true, cancelledReady: true, history: 2 });
   assert.deepEqual(errors, []);
-  console.log("PASS: Chromium cross-tab journal, commit/abort, recovery import/export/delete, real signature verification, one-shot HTTP-500 acknowledgement and GET-only reload. All HTTP intercepted; no settlement.");
+  console.log("PASS: Chromium cross-tab journals, commit/abort, private recovery, one-shot purchase and funding gates, uncertain cancellation refusal and retained funding history. All HTTP intercepted; no settlement.");
 } finally { await browser.close(); }

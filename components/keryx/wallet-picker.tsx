@@ -23,6 +23,11 @@ import { Loader2, Wallet, QrCode, Smartphone } from "lucide-react";
 import { useConnect, type Connector } from "wagmi";
 import { toast } from "sonner";
 import Image from "next/image";
+import { useSyncExternalStore } from "react";
+
+const subscribeHydration = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
 
 // Connector ids/types that get their own dedicated button, so they are excluded
 // from the EIP-6963 injected-wallet list.
@@ -41,6 +46,7 @@ const ROW =
 
 export function WalletPicker({ isBusy, onConnected: _onConnected, onSelect }: Props) {
   const { connect, connectors, isPending } = useConnect();
+  const hydrated = useSyncExternalStore(subscribeHydration, clientSnapshot, serverSnapshot);
   const busy = isBusy || isPending;
 
   // EIP-6963 discovered wallets: type "injected" with a real, unique id (the
@@ -80,6 +86,10 @@ export function WalletPicker({ isBusy, onConnected: _onConnected, onSelect }: Pr
       },
     );
   };
+
+  // Browser-only WalletConnect and injected discovery can differ from SSR.
+  // Keep the first client render identical; expose live connectors after hydration.
+  if (!hydrated) return <p role="status" className="font-mono text-xs text-ink-3">Loading wallet options…</p>;
 
   // Nothing usable: no injected wallet, no MetaMask SDK, no WalletConnect.
   // Guide the user to a path that works.

@@ -1,5 +1,14 @@
 # Keryx Project Changelog
 
+### Browser funding and wallet hydration (2026-09-09, v0.22.22)
+
+- Add exact approval and separate deposit controls for the buyer's own Gateway balance.
+- Persist funding attempts across tabs/reloads; recover uncertain transactions by
+  matching the original nonce and on-chain call without resubmitting.
+- Fix server/client wallet-option mismatch during initial page hydration.
+- Verify synthetic lost-response recovery in Chromium. Fresh paid wallet runtime and
+  independent buyer acceptance remain open; no new settlement or revenue is claimed.
+
 ### Browser checkout and local recovery (2026-09-09, v0.22.21)
 
 - Review and sign one research purchase with an already funded Gateway EOA.
