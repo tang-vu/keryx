@@ -6,7 +6,7 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.29 (account session controls, updated 2026-09-09)
+**Version:** 0.22.30 (payer job history, updated 2026-09-09)
 
 Sign-in now requires a server-issued, unexpired, atomically consumed challenge.
 The [auth evidence](./engineering/durable-sign-in-2026-09-09.md) covers real SIWE
@@ -14,7 +14,10 @@ signatures, replay, SQLite process contention and PostgreSQL semantics. This adv
 M2. [Revocable web sessions](./engineering/revocable-sessions-2026-09-09.md) now
 invalidate retained cookies after logout. The account now lists active sign-ins and
 can revoke selected or all other sessions, with owner isolation and confirmed results.
-Device key recovery and payer-scoped private research history remain unfinished.
+Paid job account history now enumerates durable browser/CLI/A2A orders for the signed-in
+payer, including jobs without local recovery files or completed results. It does not
+make historical results private. [Private research access](./private-research-access.md)
+and device key recovery remain unfinished.
 
 Deployment now records successful dependency installation rather than inferring it
 from Git reflog state. Failure and reuse checks advance O1; full host/tunnel recovery,

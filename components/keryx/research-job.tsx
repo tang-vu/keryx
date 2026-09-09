@@ -1,17 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { ResearchJobDetails } from "./research-job-details";
 import { a2aQueryIdSchema, buyerJobSchema, shouldPollBuyerJob, type BuyerJob } from "@/lib/a2a/buyer-workspace";
 
 const control = "border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40";
 
-export function ResearchJob() {
-  const [input, setInput] = useState("");
-  const [lookup, setLookup] = useState<{ id: string; revision: number } | null>(null);
+export function ResearchJob({ initialId }: { initialId?: string } = {}) {
+  const fieldId = useId();
+  const initial = a2aQueryIdSchema.safeParse(initialId);
+  const [input, setInput] = useState(initial.success ? initial.data : "");
+  const [lookup, setLookup] = useState<{ id: string; revision: number } | null>(initial.success ? { id: initial.data, revision: 0 } : null);
   const [job, setJob] = useState<BuyerJob | null>(null);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(initial.success);
   const [updated, setUpdated] = useState("");
 
   useEffect(() => {
@@ -55,12 +57,12 @@ export function ResearchJob() {
     setLookup((previous) => ({ id: parsed.data, revision: (previous?.revision ?? 0) + 1 }));
   }
 
-  return <section aria-labelledby="job-heading" className="border border-line bg-paper p-6">
-    <h2 id="job-heading" className="font-display text-3xl">2. Follow a paid job</h2>
+  return <section aria-labelledby={`${fieldId}-heading`} className="border border-line bg-paper p-6">
+    <h2 id={`${fieldId}-heading`} className="font-display text-3xl">Follow a paid job</h2>
     <p className="mt-3 font-serif text-ink-3">Your job ID grants access to its result. Keep it private. This page does not save it to browser storage or the address bar.</p>
     <form onSubmit={(event) => { event.preventDefault(); openJob(); }} className="mt-5 flex flex-wrap gap-3">
-      <label htmlFor="research-job-id" className="sr-only">Paid job ID</label>
-      <input id="research-job-id" value={input} onChange={(event) => setInput(event.target.value)} placeholder="a2a_…" autoComplete="off" spellCheck={false} className="min-w-0 flex-1 basis-full border border-line bg-paper-2 p-3 font-mono text-xs sm:basis-auto" />
+      <label htmlFor={fieldId} className="sr-only">Paid job ID</label>
+      <input id={fieldId} value={input} onChange={(event) => setInput(event.target.value)} placeholder="a2a_…" autoComplete="off" spellCheck={false} className="min-w-0 flex-1 basis-full border border-line bg-paper-2 p-3 font-mono text-xs sm:basis-auto" />
       <button className={control}>Open / refresh</button>
       {lookup && <button type="button" className={control} onClick={() => { setLookup(null); setInput(""); setJob(null); setError(""); setUpdated(""); setLoading(false); }}>Clear job</button>}
     </form>

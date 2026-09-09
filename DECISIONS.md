@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-93** · Payer history and research privacy · *Account enumeration and result
+confidentiality are different authorities.* `/api/me/jobs` enumerates durable orders
+only for the active signed-in payer, independent of browser journal availability or
+whether a result was saved. Timestamp/ID keyset pagination handles tied timestamps;
+cursor contents never select another wallet. The projection excludes authorization
+nonces, worker fields and raw responses. GET-only result inspection does not recreate
+a pre-payment intent or establish original-request receipt verification. Historical
+jobs retain their existing publication/access contract; the UI says so. The complete
+private-result migration, including public projections, notifications, payer-bound
+recovery and versioned request identity, is tracked in `docs/private-research-access.md`.
+
 **D-92** · Account session management · *A session selector is not a credential.*
 The authenticated wallet may list active sessions and revoke a selected session or
 all other sessions. Every operation verifies a live signed session and scopes its

@@ -475,6 +475,8 @@ export interface KeryxDB {
   // Durable A2A authorization state: one settled inbound authorization may run creators once.
   createA2aOrder(order: A2aOrder): Promise<{ created: boolean; order: A2aOrder }>;
   getA2aOrder(id: string): Promise<A2aOrder | null>;
+  /** Payer-authorized inventory, newest first; 26 rows allow a 25-row page plus sentinel. */
+  listA2aOrdersByPayer(wallet: string, before?: { createdAt: string; id: string }): Promise<A2aOrder[]>;
   /** Atomically claims the oldest never-started job. Started jobs are never auto-requeued. */
   claimNextA2aOrder(workerId: string, startedAt: string): Promise<A2aOrder | null>;
   /** Durably crosses the creator-payment boundary before any gateway authorization can begin. */

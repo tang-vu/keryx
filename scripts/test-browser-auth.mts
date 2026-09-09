@@ -66,3 +66,4 @@ try {
 } finally { await browser.close(); }
 
 await import("./test-browser-sessions.mts");
+await import("./test-browser-account-history.mts");

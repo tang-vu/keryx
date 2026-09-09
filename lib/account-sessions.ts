@@ -8,9 +8,9 @@ import { isWebSessionActive, parseWebSession, webSessionHash } from "./auth-sess
 export async function accountSessionContext() {
   try {
     const claims = await parseWebSession((await cookies()).get("keryx_session")?.value, config.jwtSecret);
-    if (!claims) return authJson({ error: "Sign in to manage your sessions." }, 401);
+    if (!claims) return authJson({ error: "Sign in to access your account." }, 401);
     const db = await getDb();
-    if (!await isWebSessionActive(db, claims)) return authJson({ error: "Sign in to manage your sessions." }, 401);
+    if (!await isWebSessionActive(db, claims)) return authJson({ error: "Sign in to access your account." }, 401);
     return { db, wallet: claims.address.toLowerCase(), currentId: webSessionHash(claims.jti) };
   } catch { return authJson({ error: "Session management is unavailable. Please retry." }, 503); }
 }

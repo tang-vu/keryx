@@ -206,6 +206,7 @@ CREATE TABLE IF NOT EXISTS a2a_orders (
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
+CREATE INDEX IF NOT EXISTS a2a_orders_payer_history ON a2a_orders(LOWER(payer), created_at DESC, id DESC);
 CREATE TABLE IF NOT EXISTS activation_events (
   day TEXT NOT NULL,
   event TEXT NOT NULL CHECK (event IN (
@@ -1605,6 +1606,13 @@ export class SqliteAdapter implements KeryxDB {
   async getA2aOrder(id: string): Promise<A2aOrder | null> {
     const row = this.db.prepare(`SELECT * FROM a2a_orders WHERE id=?`).get(id);
     return row ? rowToA2aOrder(row) : null;
+  }
+
+  async listA2aOrdersByPayer(wallet: string, before?: { createdAt: string; id: string }): Promise<A2aOrder[]> {
+    const rows = before
+      ? this.db.prepare("SELECT * FROM a2a_orders WHERE LOWER(payer) = LOWER(?) AND (created_at < ? OR (created_at = ? AND id < ?)) ORDER BY created_at DESC, id DESC LIMIT 26").all(wallet, before.createdAt, before.createdAt, before.id)
+      : this.db.prepare("SELECT * FROM a2a_orders WHERE LOWER(payer) = LOWER(?) ORDER BY created_at DESC, id DESC LIMIT 26").all(wallet);
+    return rows.map(rowToA2aOrder);
   }
 
   async claimNextA2aOrder(workerId: string, startedAt: string): Promise<A2aOrder | null> {

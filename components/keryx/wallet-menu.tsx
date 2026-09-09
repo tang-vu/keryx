@@ -157,6 +157,11 @@ export function WalletMenu() {
               <Receipt className="h-3.5 w-3.5" /> My dispatches
             </Link>
           </DropdownMenuItem>
+          <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">
+            <Link href="/research#account-jobs-heading">
+              <Receipt className="h-3.5 w-3.5" /> Paid jobs
+            </Link>
+          </DropdownMenuItem>
           {isCreator && (
             <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">
               <Link href="/register">

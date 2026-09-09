@@ -796,6 +796,14 @@ export class SupabaseAdapter implements KeryxDB {
     return data ? rowToA2aOrder(data) : null;
   }
 
+  async listA2aOrdersByPayer(wallet: string, before?: { createdAt: string; id: string }): Promise<A2aOrder[]> {
+    const { data, error } = await this.sb.rpc("list_a2a_orders_for_payer", {
+      p_wallet: wallet.toLowerCase(), p_before_created_at: before?.createdAt ?? null, p_before_id: before?.id ?? null,
+    });
+    if (error) throw error;
+    return (data ?? []).map(rowToA2aOrder);
+  }
+
   async claimNextA2aOrder(workerId: string, startedAt: string): Promise<A2aOrder | null> {
     const { data, error } = await this.sb.rpc("claim_a2a_order", {
       p_worker_id: workerId,

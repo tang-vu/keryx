@@ -6,6 +6,7 @@ import { ResearchRequest } from "@/components/keryx/research-request";
 import { ResearchJob } from "@/components/keryx/research-job";
 import { ResearchWorkspace } from "@/components/keryx/research-workspace";
 import { ResearchSavedJobs } from "@/components/keryx/research-saved-jobs";
+import { ResearchAccountJobs } from "@/components/keryx/research-account-jobs";
 import { config } from "@/lib/config";
 import { quoteA2aResearch } from "@/lib/a2a/pricing";
 import { parseBuyerBudget } from "@/lib/a2a/buyer-workspace";
@@ -68,6 +69,7 @@ export default async function ResearchPage({ searchParams }: {
         </section>
         <ResearchSavedJobs />
         </ResearchWorkspace>
+        <ResearchAccountJobs />
         <ResearchJob />
         <p className="font-serif text-ink-3">New to the API? <Link href="/api/docs" className="underline">Read the API reference</Link>. To try a sponsored question, <Link href="/playground" className="underline">open the playground</Link>.</p>
       </main>

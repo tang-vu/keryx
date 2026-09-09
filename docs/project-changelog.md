@@ -1,5 +1,16 @@
 # Keryx Project Changelog
 
+### Paid job account history (2026-09-09, v0.22.30)
+
+- Add a payer-scoped, authenticated list of browser/CLI/A2A purchases at `/research`,
+  linked from the wallet menu. Keep queued, failed and review-needed jobs discoverable.
+- Page through tied timestamps without skipping jobs. Deny revoked/foreign identity
+  and distinguish storage errors from an empty history.
+- Open job results using GET only, without putting the selected ID in the address bar.
+  Preserve original recovery-file verification as a separate check.
+- Explain that account history is restricted but historical result publication is
+  unchanged. The full private-research migration remains explicit unfinished work.
+
 ### Account session controls (2026-09-09, v0.22.29)
 
 - Add signed-in session inventory to Connect, linked from the wallet menu. Show
