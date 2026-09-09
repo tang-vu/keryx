@@ -36,10 +36,7 @@ import type {
 } from "../llm";
 import { effectiveEngineName, reasoningAttempts, reasoningUsage } from "../llm/resilient-engine";
 import type { AgentDeps } from "./deps";
-import { discoverExternalCandidates } from "./external-discovery";
-import { buildDecisionContext, saveMemory } from "./query-memory";
-import { dispatchCitationNotify } from "../notify/citation-webhook";
-import { dispatchCitationEmail } from "../notify/citation-email";
+import { resolveResearchEffects } from "./research-effects";
 import { allocateSplit } from "../payments/split-allocation";
 import {
   paymentCountsAsSpent,
@@ -47,7 +44,6 @@ import {
   pendingPaymentFrom,
   settledPaymentFrom,
 } from "../payments/payment-state";
-import { sendAlert } from "../notify/alert";
 import { normalizePreviewDepth, previewSummary } from "../sources/preview-depth";
 import { isCacheFresh, newestPublishedAt } from "./cache-freshness";
 import {
@@ -73,7 +69,6 @@ import {
   attachEvidencePortfolioOutcome,
   selectEvidencePortfolio,
 } from "./evidence-portfolio";
-import { recordActivationEvent } from "../activation";
 
 export interface RunInput {
   question: string;
@@ -135,6 +130,7 @@ export async function* runAgent(
   deps: AgentDeps,
 ): AsyncGenerator<TraceStep, QueryRun, void> {
   const { engine, db, gateway } = deps;
+  const effects = resolveResearchEffects(db, deps.effects, deps.discoverExternal, input.queryId);
   const startedAt = Date.now();
   const budget = input.budget ?? config.defaultBudget;
   const queryId = input.queryId ?? crypto.randomUUID();
@@ -184,11 +180,11 @@ export async function* runAgent(
 
   async function persistPaymentRecord(payment: PaymentRecord): Promise<string | null> {
     try {
-      await db.recordPayment(payment);
+      await effects.recordPayment(payment);
       return null;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      void sendAlert(
+      effects.alert(
         "payment ledger write failed",
         `${payment.kind} $${payment.amountUsdc} for ${payment.sourceName} (${payment.queryId}): ${message}`,
       );
@@ -244,7 +240,7 @@ export async function* runAgent(
       const id = sourceItemAssetId(item.id);
       const identity = sourceItemIdentity(item);
       const cacheKey = sourceItemCacheKey(s.id, item);
-      const cached = Boolean(await db.getCachedAt(cacheKey));
+      const cached = Boolean(await effects.getCachedAt(cacheKey));
       if (cached) freshCache.add(id);
       const summary = previewSummary(item.summary, depth);
       const resolvedOffer = await resolveValidArticleOffer(db, s, item, terms);
@@ -293,7 +289,7 @@ export async function* runAgent(
 
     // Historical source rows with no articles retain the original source-level purchase path.
     const cached = isCacheFresh(
-      await db.getCachedAt(s.id),
+      await effects.getCachedAt(s.id),
       newestPublishedAt(items),
       Date.now(),
     );
@@ -349,7 +345,7 @@ export async function* runAgent(
   // discovery-only: evaluated and logged, never purchased.
   const external =
     researchMode === "deep"
-      ? await (deps.discoverExternal ?? discoverExternalCandidates)(input.question, subClaims)
+      ? await effects.discoverExternal(input.question, subClaims)
       : [];
   if (external.length > 0) {
     candidates.push(...external);
@@ -377,7 +373,7 @@ export async function* runAgent(
     // reputation are two readings of the same scored set, and re-loading it would only risk them
     // disagreeing. Both are scoped to past runs about *this* subject, so both are absent on a
     // question the corpus has not been asked before — see query-memory.ts.
-    const ctx = await buildDecisionContext(db, input.question, sources.map((s) => ({ id: s.id, name: s.name })));
+    const ctx = await effects.decisionContext(input.question, sources.map((s) => ({ id: s.id, name: s.name })));
     memoryContext = ctx.memory;
     reputationContext = ctx.reputation;
     if (memoryContext) {
@@ -585,7 +581,7 @@ export async function* runAgent(
     const assetLabel = item ? `${source.name} — ${item.title}` : source.name;
     const marker = `S${++markerN}`;
     if (d.action === "CACHE") {
-      const cached = (await db.getCached(cacheKey)) ?? "";
+      const cached = (await effects.getCached(cacheKey)) ?? "";
       gathered.push({
         assetId: asset.candidate.id,
         sourceId: source.id,
@@ -616,7 +612,7 @@ export async function* runAgent(
         payments.push(payment);
         const ledgerError = await persistPaymentRecord(payment);
         try {
-          await db.setCached(cacheKey, content);
+          await effects.setCached(cacheKey, content);
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           yield emit("fetch", `Read ${assetLabel}, but its cache could not be refreshed (${message}).`);
@@ -816,7 +812,7 @@ export async function* runAgent(
           payments.push(payment);
           const ledgerError = await persistPaymentRecord(payment);
           try {
-            await db.setCached(asset.cacheKey, content);
+            await effects.setCached(asset.cacheKey, content);
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             yield emit("reevaluate", `Read ${assetLabel}, but its cache could not be refreshed (${message}).`);
@@ -1180,7 +1176,7 @@ export async function* runAgent(
           yield emit("settle", `Payment receipt retained in this dispatch, but the ledger row could not be written (${ledgerError}).`);
         }
         if (paymentSettlementStatus(payment) === "pending") {
-          void sendAlert(
+          effects.alert(
             `citation settlement pending → ${author.name}`,
             `$${amount} for "${source.name}" has a submitted authorization but no Circle confirmation.`,
           );
@@ -1219,7 +1215,7 @@ export async function* runAgent(
           if (ledgerError) {
             yield emit("settle", `Pending authorization retained in this dispatch, but the ledger row could not be written (${ledgerError}).`);
           }
-          void sendAlert(
+          effects.alert(
             `citation settlement pending → ${author.name}`,
             `$${amount} for "${source.name}": ${reason}`,
           );
@@ -1229,7 +1225,7 @@ export async function* runAgent(
         // A real-mode failure means a creator was owed USDC that didn't land — worth an ops alert.
         // Offline/simulated runs never settle, so they don't alert. Fire-and-forget (never throws).
         if (gateway.mode === "real") {
-          void sendAlert(`citation settlement failed → ${author.name}`, `$${amount} for "${source.name}": ${reason}`);
+          effects.alert(`citation settlement failed → ${author.name}`, `$${amount} for "${source.name}": ${reason}`);
         }
       }
     }
@@ -1245,11 +1241,9 @@ export async function* runAgent(
         question: input.question,
         network: config.network,
       };
-      void dispatchCitationNotify(db, notifyInput);
-      // The human channel: same settled-only guard, plus a per-source hourly rate cap inside.
-      void dispatchCitationEmail(db, notifyInput);
+      effects.notifyCitation(notifyInput);
       if (citationPayments.some((payment) => paymentSettlementStatus(payment) === "settled")) {
-        await recordActivationEvent(db, "creator_citation_settled");
+        await effects.activation("creator_citation_settled");
       }
     }
   }
@@ -1258,8 +1252,7 @@ export async function* runAgent(
   // goes with it, not just what it cited: a source paid for and then left unquoted is the only
   // evidence the next decision has that it does not earn its toll.
   try {
-    await saveMemory(
-      db,
+    await effects.saveMemory(
       queryId,
       input.question,
       citations,

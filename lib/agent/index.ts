@@ -6,6 +6,7 @@
 import type { QueryRun, TraceStep } from "../types";
 import { getAgentDeps, type AgentDeps } from "./deps";
 import { runAgent, type RunInput } from "./run-agent";
+import { resolveResearchEffects } from "./research-effects";
 
 export { runAgent, type RunInput } from "./run-agent";
 export { getAgentDeps, type AgentDeps } from "./deps";
@@ -15,7 +16,8 @@ export async function collectRun(
   opts?: { deps?: AgentDeps; onStep?: (s: TraceStep) => void },
 ): Promise<QueryRun> {
   const deps = opts?.deps ?? (await getAgentDeps({ model: input.model }));
-  const gen = runAgent(input, deps);
+  const effects = resolveResearchEffects(deps.db, deps.effects, deps.discoverExternal, input.queryId);
+  const gen = runAgent(input, { ...deps, effects });
   let res = await gen.next();
   while (!res.done) {
     opts?.onStep?.(res.value);
@@ -23,6 +25,6 @@ export async function collectRun(
   }
   const run = res.value;
   await input.onQueryRunSaveBoundary?.();
-  await deps.db.saveQueryRun(run);
+  await effects.saveQueryRun(run);
   return run;
 }

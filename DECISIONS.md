@@ -1,5 +1,19 @@
 # Keryx — Decision Log
 
+**D-99** · Research execution effects · *Select one complete, job-scoped effects
+strategy before reasoning or funding; never fill missing private handlers with public
+defaults.* The orchestrator now routes payment persistence, cache reads/writes,
+discovery, shared memory, citation notifications, alerts and activation through an
+explicit server-owned interface. `collectRun` retains the same selected strategy for
+final persistence after its existing save checkpoint. Historical public callers use
+the unchanged public implementation. Reserved `prv_` IDs require an explicit job scope;
+missing methods, a public scope or another job ID fail before execution. Scope metadata
+is not payer authentication, payment evidence or proof that an implementation is
+private. The future private factory must verify admission and supply isolated durable
+stores and disclosure-safe observers. Gateway/provider behavior, public SSE delivery,
+creator earnings and authenticated result recovery still require separate integration.
+This refactor does not enable a private route or advertise private results.
+
 **D-98** · Public seller merchant reservation · *Reject reserved private recipients
 before any public x402 verification, settlement or content delivery.* The server-only
 `KERYX_PRIVATE_RESEARCH_RESERVED_PAYEES` list includes current and retired private

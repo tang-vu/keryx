@@ -165,6 +165,40 @@ Backup/restore procedures must preserve both private tables and reconcile potent
 lost submission state before reopening private payment traffic; do not clear these
 records with login-session cleanup. That full operational drill remains unperformed.
 
+### Agent effects boundary (internal integration work)
+
+The core orchestrator now resolves one complete server-owned `ResearchEffects`
+strategy before reasoning or funding. It routes payment recording, cache access,
+external discovery, decision memory, memory saving, citation notifications, operator
+alerts and activation through that strategy. `collectRun` uses the same strategy for
+the final result write after its durable save checkpoint. Source/catalog/offer reads
+retain their existing authority. Normal callers select the historical public behavior.
+
+An explicit strategy must provide every handler. Missing handlers never fall back to
+public storage or notification code. A job scope must match the current query ID;
+reserved `prv_` IDs reject both omitted strategies and explicit public strategies.
+These checks happen before the model or gateway is called. Scope is a consistency
+check, **not** authentication or a proof that arbitrary supplied handlers are safe.
+Strategies are backend code dependencies, not JSON request fields. No private effects
+factory or production private execution path has been enabled.
+
+Synthetic orchestrator tests exercise a full collected answer with one cached source,
+one paid source and bounded citation rewards. All shared DB write/cache/memory/notify
+methods are poisoned, while the explicitly scoped test sink captures effects and the
+result. Missing handlers, mismatched scope and accidental public defaults are denied
+before reasoning/funding. A selected ledger failure still retains confirmed synthetic
+payment evidence in the completed answer. Public collection and checkpoint ordering
+remain tested. These are hermetic control-flow checks, not live payments or an end-to-end
+privacy acceptance claim.
+
+The next private factory must bind authenticated payer/settled intent/worker claim to
+isolated durable result and creator-payment stores, safe cache/memory rules and safe
+notification/alert observers. A complete effects object alone does not provide these
+guarantees. Gateway/provider SDK behavior and logging remain separate review surfaces.
+The existing public SSE route also has its own public persistence/response contract;
+do not turn it into a private route merely by injecting these effects. Full private
+creator accounting, authenticated recovery and public-projection tests remain required.
+
 ## Implemented account enumeration
 
 `GET /api/me/jobs` requires a valid, unrevoked SIWE account session. The server derives

@@ -18,9 +18,11 @@
  * deterministic control flow only — no LLM, no network, no chain.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
 import { runAgent, type RunInput } from "./run-agent";
+import { collectRun } from "./index";
+import type { ResearchEffects } from "./research-effects";
 import { config } from "../config";
 import { makePayment, type PaymentGateway } from "../payments/payment-gateway";
 import { PaymentPendingError, PaymentSettledError } from "../payments/payment-state";
@@ -1312,3 +1314,112 @@ describe("runAgent — article-level economics", () => {
 function round(n: number): number {
   return Math.round(n * 1e6) / 1e6;
 }
+
+/** Complete synthetic effect sink; not a production private store or privacy guarantee. */
+function isolatedTestEffects(queryId?: string): ResearchEffects {
+  return {
+    scope: queryId ? { kind: "job", queryId } : { kind: "public" },
+    recordPayment: vi.fn(async () => {}), getCached: vi.fn(async () => null),
+    getCachedAt: vi.fn(async () => null), setCached: vi.fn(async () => {}),
+    saveQueryRun: vi.fn(async () => {}), discoverExternal: vi.fn(async () => []),
+    decisionContext: vi.fn(async () => ({ sample: 0 })), saveMemory: vi.fn(async () => {}),
+    notifyCitation: vi.fn(), alert: vi.fn(), activation: vi.fn(async () => {}),
+  };
+}
+
+it("routes a complete collected run through explicit effects without public writes or shared cache/memory access", async () => {
+  const question = "Confidential synthetic research marker";
+  const queryId = `prv_${"a".repeat(64)}`;
+  const sources = [makeSource({ id: "cached" }), makeSource({ id: "paid" })];
+  const engine = fakeEngine({ decide: input => input.candidates.map(candidate => ({
+    ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
+    action: candidate.cached ? "CACHE" : "BUY",
+  })) });
+  const d = deps(sources, engine, fakeGateway());
+  const forbidden = vi.fn(async () => { throw new Error("Public effect forbidden"); });
+  for (const method of ["recordPayment", "getCached", "getCachedAt", "setCached", "saveQueryMemory", "loadQueryMemories",
+    "getSourceNotify", "getSourceNotifyEmail", "recordActivationEvent", "saveQueryRun"] as const) {
+    Object.assign(d.db, { [method]: forbidden });
+  }
+  d.discoverExternal = vi.fn(async () => { throw new Error("Legacy discovery forbidden"); });
+  const effects = isolatedTestEffects(queryId);
+  effects.getCachedAt = vi.fn(async key => key === "cached" ? new Date().toISOString() : null);
+  effects.getCached = vi.fn(async () => "Scoped cached evidence");
+  const saveOrder: string[] = [];
+  effects.saveQueryRun = vi.fn(async () => { saveOrder.push("save"); });
+  const run = await collectRun({ question, queryId, budget: 0.05,
+    onQueryRunSaveBoundary: async () => { saveOrder.push("boundary"); },
+  }, { deps: { ...d, effects } });
+  expect(run.question).toBe(question);
+  expect(run.answer).not.toBe("");
+  expect(run.totalSpent).toBeCloseTo(0.027, 6); // One toll + bounded citation pool, unchanged.
+  expect(run.citations).toHaveLength(2);
+  expect(forbidden).not.toHaveBeenCalled();
+  expect(d.discoverExternal).not.toHaveBeenCalled();
+  expect(effects.getCached).toHaveBeenCalledWith("cached");
+  expect(effects.setCached).toHaveBeenCalledWith("paid", "content:paid");
+  expect(effects.recordPayment).toHaveBeenCalledTimes(3);
+  expect(effects.discoverExternal).toHaveBeenCalledWith(question, expect.any(Array));
+  expect(effects.decisionContext).toHaveBeenCalledWith(question, expect.any(Array));
+  expect(effects.saveMemory).toHaveBeenCalledWith(queryId, question, expect.any(Array), expect.arrayContaining(["cached", "paid"]));
+  expect(effects.notifyCitation).toHaveBeenCalledTimes(2);
+  expect(effects.notifyCitation).toHaveBeenCalledWith(expect.objectContaining({ question, queryId }));
+  expect(effects.saveQueryRun).toHaveBeenCalledWith(run);
+  expect(saveOrder).toEqual(["boundary", "save"]);
+});
+
+it("refuses every incomplete explicit strategy before reasoning, funding or public fallback", async () => {
+  const d = deps([makeSource({ id: "one" })], fakeEngine(), fakeGateway());
+  const reason = vi.spyOn(d.engine, "decompose"), fund = vi.spyOn(d.gateway, "ensureFunded");
+  for (const missing of Object.keys(isolatedTestEffects())) {
+    const incomplete = { ...isolatedTestEffects() } as unknown as Record<string, unknown>;
+    delete incomplete[missing];
+    await expect(collectRun({ question: "Synthetic private input" }, {
+      deps: { ...d, effects: incomplete as unknown as ResearchEffects },
+    })).rejects.toThrow("Incomplete research effects strategy");
+  }
+  expect(reason).not.toHaveBeenCalled(); expect(fund).not.toHaveBeenCalled();
+});
+
+it("refuses reserved private IDs when a caller accidentally omits the effects strategy", async () => {
+  const d = deps([], fakeEngine(), fakeGateway());
+  const reason = vi.spyOn(d.engine, "decompose"), fund = vi.spyOn(d.gateway, "ensureFunded");
+  const input = { question: "Synthetic private input", queryId: `prv_${"b".repeat(64)}` };
+  await expect(collectRun(input, { deps: d })).rejects.toThrow("explicit effects strategy");
+  await expect(drive(input, d)).rejects.toThrow("explicit effects strategy");
+  expect(reason).not.toHaveBeenCalled(); expect(fund).not.toHaveBeenCalled();
+});
+
+it("keeps confirmed payment evidence in the answer when the selected ledger sink fails", async () => {
+  const effects = isolatedTestEffects(`prv_${"c".repeat(64)}`);
+  effects.recordPayment = vi.fn(async () => { throw new Error("Synthetic restricted ledger failure"); });
+  const d = deps([makeSource({ id: "one" })], fakeEngine(), fakeGateway());
+  const run = await collectRun({ question: "Synthetic private input", queryId: `prv_${"c".repeat(64)}`, budget: 0.05 }, { deps: { ...d, effects } });
+  expect(run.answer).not.toBe("");
+  expect(run.totalSpent).toBeCloseTo(0.027, 6);
+  expect(effects.alert).toHaveBeenCalledWith("payment ledger write failed", expect.any(String));
+  expect(d.db.payments).toEqual([]);
+  expect(effects.saveQueryRun).toHaveBeenCalledWith(run);
+});
+
+it("rejects a complete public or different-job strategy for a private run before reasoning", async () => {
+  const d = deps([], fakeEngine(), fakeGateway());
+  const reason = vi.spyOn(d.engine, "decompose");
+  const input = { question: "Synthetic private input", queryId: `prv_${"d".repeat(64)}` };
+  await expect(collectRun(input, { deps: { ...d, effects: isolatedTestEffects() } })).rejects.toThrow("explicit effects strategy");
+  await expect(collectRun(input, { deps: { ...d, effects: isolatedTestEffects(`prv_${"e".repeat(64)}`) } })).rejects.toThrow("another job");
+  expect(reason).not.toHaveBeenCalled();
+});
+
+it("retains public collection and its persistence checkpoint when no strategy is supplied", async () => {
+  const d = deps([makeSource({ id: "one" })], fakeEngine(), fakeGateway());
+  const order: string[] = [];
+  d.db.saveQueryRun = vi.fn(async () => { order.push("save"); });
+  const run = await collectRun({ question: "Ordinary public research", queryId: "public-test", budget: 0.05,
+    onQueryRunSaveBoundary: async () => { order.push("boundary"); },
+  }, { deps: d });
+  expect(d.db.saveQueryRun).toHaveBeenCalledWith(run);
+  expect(d.db.payments).toHaveLength(2);
+  expect(run.totalSpent).toBeCloseTo(0.027, 6);
+  expect(order).toEqual(["boundary", "save"]);
+});

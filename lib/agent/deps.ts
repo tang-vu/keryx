@@ -8,6 +8,7 @@ import { getDb, type KeryxDB } from "../db";
 import { getReasoningEngine, type ReasoningEngine } from "../llm";
 import { getPaymentGateway, type GatewayOpts, type PaymentGateway } from "../payments/payment-gateway";
 import type { SourceCandidate } from "../llm";
+import type { ResearchEffects } from "./research-effects";
 
 export interface AgentDeps {
   engine: ReasoningEngine;
@@ -15,6 +16,8 @@ export interface AgentDeps {
   gateway: PaymentGateway;
   /** Injectable external discovery keeps tests/evals hermetic without changing production policy. */
   discoverExternal?: (question: string, subClaims: string[]) => Promise<SourceCandidate[]>;
+  /** Complete trusted storage/disclosure strategy. Omitted means the historical public contract. */
+  effects?: ResearchEffects;
 }
 
 /**
