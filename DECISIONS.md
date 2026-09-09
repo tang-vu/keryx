@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-94** · Private request commitment foundation · *A proposed private job binds
+its normalized request and quoted transfer terms into a domain-separated SHA-256
+nonce with a fresh 32-byte Web Crypto salt.* The existing EIP-3009 typed signature
+then covers that nonce. The pure browser/Node module pins the future resource, access
+policy, network, asset, Gateway domain, payer/payee, amount, time bounds, package
+contract and requested model. Unknown fields fail validation; legacy request schemas
+remain unchanged. Binding equality alone is neither signature verification nor
+settlement, authentication or confidentiality. No route uses this module yet. Keep
+salt/request data in private storage, preserve old nonces and paid journals, and do
+not advertise private quotes until admission, cross-version replay handling, storage,
+all public projections and authenticated recovery are implemented and reviewed.
+
 **D-93** · Payer history and research privacy · *Account enumeration and result
 confidentiality are different authorities.* `/api/me/jobs` enumerates durable orders
 only for the active signed-in payer, independent of browser journal availability or

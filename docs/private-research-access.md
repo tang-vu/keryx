@@ -4,6 +4,32 @@ September 9, 2026. Account history is implemented in v0.22.30; private-result mo
 not implemented or advertised as available. This work advances B2/M6 without replacing
 the full acceptance map in `mainnet-delivery-plan.md`.
 
+Protocol foundation added after v0.22.30: `lib/buyer/private-request-commitment.ts`
+provides shared canonicalization, secure fresh salt generation and nonce verification.
+It has no route or signing/submission integration. The reserved private resource is
+not a supported endpoint. Existing requests, nonces and journals are unchanged.
+
+The [ERC-3009 specification](https://eips.ethereum.org/EIPS/eip-3009) includes the
+32-byte nonce in the signed authorization. [Circle's SDK reference](https://developers.circle.com/gateway/nanopayments/references/sdk)
+describes its EIP-3009 payment payload. The installed batching SDK 2.1.0 client defines
+that nonce as bytes32 and normally generates it randomly. Using a salted request hash
+is Keryx's proposed application binding, not a Circle-defined privacy feature or a
+claim of live facilitator acceptance.
+
+The commitment covers the private policy, exact normalized question, package contract,
+model choice, resource, network/token/Gateway domain and transfer terms. Unknown fields
+are rejected. Question edge whitespace follows the existing question parser; Unicode
+content otherwise remains exact. A fresh 32-byte salt keeps repeated requests distinct.
+Salt and request must remain private: hashing is not encryption or an access-control
+mechanism. Never recompute a fresh nonce when recovering an existing paid intent.
+
+Offline tests use an ephemeral in-memory signer to show that changing the request and
+recomputing its nonce invalidates the original typed signature. A fixed vector agrees
+across Node crypto, Web Crypto and actual Chromium; mutation checks cover the bound
+fields. No live authorization was submitted. Server admission before payment, durable
+first-writer/replay rules across old and new endpoints, private storage and recovery,
+facilitator verification, public-output filtering and independent review remain open.
+
 ## Implemented account enumeration
 
 `GET /api/me/jobs` requires a valid, unrevoked SIWE account session. The server derives

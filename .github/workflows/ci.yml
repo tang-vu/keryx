@@ -51,6 +51,9 @@ jobs:
       - name: Browser sign-out (hermetic, no signing)
         run: npm run test:browser-auth
 
+      - name: Private request commitment (hermetic, no signing)
+        run: node --import tsx scripts/test-browser-private-commitment.mts
+
       - name: Business calculator UI (local arithmetic, no settlement)
         run: npm run test:business-calculator
 
