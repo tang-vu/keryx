@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { a2aQueryIdSchema } from "./buyer-workspace";
+import { browserSha256, verifyBrowserReceipt } from "../browser-receipt-integrity";
 
 const receiptDecisionsSchema = z.object({
   payload: z.object({
@@ -26,3 +27,13 @@ export function readBuyerDecisions(value: unknown, queryId: string, answer: stri
 }
 
 export type BuyerDecisions = ReturnType<typeof readBuyerDecisions>;
+
+/** Integrity and displayed-result binding only; no original buyer intent is available here. */
+export async function verifyBrowserDecisions(value: unknown, headerDigest: string | null, queryId: string, answer: string) {
+  const verified = await verifyBrowserReceipt(value);
+  if (!verified.valid || verified.actualDigest !== headerDigest) throw new Error("Receipt integrity or response digest mismatch");
+  const decisions = readBuyerDecisions(value, queryId, answer);
+  const { payload } = z.object({ payload: z.object({ dispatch: z.object({ answerSha256: z.string() }) }) }).parse(value);
+  if (payload.dispatch.answerSha256 !== await browserSha256(answer)) throw new Error("Receipt answer digest mismatch");
+  return decisions;
+}

@@ -6,7 +6,11 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.16 (framework security patch, updated 2026-09-09)
+**Version:** 0.22.17 (browser receipt integrity, updated 2026-09-09)
+
+The source-decision panel now checks receipt integrity and displayed job/answer binding
+in the browser. Original-request binding still needs the buyer journal. Shared receipt
+primitives are the first portability step; browser purchase/recovery remains incomplete.
 
 The next buyer milestone follows the [browser checkout design](./browser-research-checkout.md).
 It requires shared browser-safe validation, transactional local recovery and an

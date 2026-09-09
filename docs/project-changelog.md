@@ -1,5 +1,15 @@
 # Keryx Project Changelog
 
+### Browser receipt integrity (2026-09-09, v0.22.17)
+
+- Verify source-decision receipts with Web Crypto before displaying them: canonical
+  payload digest, HTTPS response digest, displayed job/answer and answer hash must match.
+  Invalid or unavailable receipts leave the research answer available and offer retry.
+- Share canonicalization/envelope checks with the existing Node verifier without
+  changing receipt format or synchronous CLI APIs. Bound JSON response bytes at 2 MB.
+- Display the verification scope explicitly: no original-request verification without
+  a buyer journal, and no independent settlement claim. Browser checkout remains open.
+
 ### Framework security patch (2026-09-09, v0.22.16)
 
 - Raise the Next.js and ESLint integration minimum to 16.3.3; the lockfile resolves

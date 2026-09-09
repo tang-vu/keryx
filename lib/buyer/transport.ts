@@ -7,19 +7,4 @@ export async function buyerFetch(url: string, init: RequestInit = {}): Promise<R
   return fetch(url, { ...init, redirect: "error", credentials: "omit", cache: "no-store", signal: AbortSignal.timeout(30_000) });
 }
 
-export async function readBuyerJson(response: Response): Promise<unknown> {
-  if (!response.body) throw new Error("Missing response body");
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.length;
-      if (size > 2_000_000) throw new Error("Buyer response exceeds 2 MB");
-      chunks.push(value);
-    }
-    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
-  } finally { await reader.cancel().catch(() => undefined); reader.releaseLock(); }
-}
+export { readBoundedJson as readBuyerJson } from "../read-bounded-json";

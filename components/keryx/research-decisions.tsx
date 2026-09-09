@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { readBuyerDecisions, type BuyerDecisions } from "@/lib/a2a/buyer-decisions";
+import { verifyBrowserDecisions, type BuyerDecisions } from "@/lib/a2a/buyer-decisions";
+import { readBoundedJson } from "@/lib/read-bounded-json";
 
 export function ResearchDecisions({ queryId, answer, claims }: {
   queryId: string;
@@ -24,8 +25,9 @@ export function ResearchDecisions({ queryId, answer, claims }: {
           referrerPolicy: "no-referrer",
         });
         if (!response.ok) throw new Error("Receipt unavailable");
-        const next = readBuyerDecisions(await response.json(), queryId, answer);
-        if (active) setDecisions(next);
+        const next = await verifyBrowserDecisions(await readBoundedJson(response), response.headers.get("x-keryx-receipt-digest"), queryId, answer);
+        if (active && !abort.signal.aborted) setDecisions(next);
+        else if (active) setError(true);
       } catch {
         if (active) setError(true);
       } finally { clearTimeout(timer); }
@@ -35,9 +37,10 @@ export function ResearchDecisions({ queryId, answer, claims }: {
 
   return <details className="border border-line p-4">
     <summary className="cursor-pointer"><h3 className="inline font-display text-2xl">Source decisions{decisions ? ` (${decisions.length})` : ""}</h3></summary>
-    <p className="mt-2 font-serif text-sm text-ink-3">Why the agent chose BUY, SKIP or CACHE. A decision is a plan, not proof of a completed read or payment. Shown from the server receipt; use the buyer CLI to verify its integrity.</p>
+    <p className="mt-2 font-serif text-sm text-ink-3">Why the agent chose BUY, SKIP or CACHE. A decision is a plan, not proof of a completed read or payment.</p>
+    {decisions !== null && <p role="status" className="mt-2 font-mono text-xs">Receipt integrity checked in this browser. Matches the displayed job and answer. Settlement remains server-reported; original request verification requires the buyer journal.</p>}
     {error ? <div role="status" className="mt-3 font-serif text-sm">
-      Source decisions could not be loaded. Your answer is still available.
+      Source decisions could not be loaded or verified. Your answer is still available.
       <button type="button" onClick={() => setRevision(value => value + 1)} className="ml-3 border border-ink px-3 py-2 font-mono text-xs">Retry loading decisions</button>
     </div> : decisions === null ? <p role="status" className="mt-3 font-mono text-xs">Loading source decisions…</p>
       : decisions.length === 0 ? <p className="mt-3 font-serif">No source decisions were recorded for this job.</p>

@@ -5,6 +5,12 @@ mean checkout is available. Baseline: `35736f8`; `/research` still prepares requ
 and inspects existing jobs. Acceptance belongs to B1/B2 in
 [the delivery plan](./mainnet-delivery-plan.md).
 
+Implementation progress, v0.22.17: receipt envelope/canonicalization now has a pure
+shared core; Node retains synchronous hashing and the browser uses Web Crypto.
+The existing decision panel checks digest/header and displayed job/answer binding.
+The bounded JSON decoder is portable. This does not yet port buyer authorization,
+deterministic order IDs, package fingerprints or original-request receipt verification.
+
 ## Current implementation evidence
 
 - `lib/buyer/client.ts` quotes without payment, creates an immutable local intent,

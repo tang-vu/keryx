@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-80** · Browser receipt evidence · *Share canonicalization and envelope policy,
+but hash in each runtime.* The research workspace now checks source-decision receipt
+bytes with Web Crypto, the HTTPS digest header, displayed job/answer and answer hash.
+The Node verifier retains its synchronous API and existing `keryx-json-v1` digest
+format through the same pure core. A shared 2 MB streaming decoder bounds input before
+parsing/hashing. Missing crypto, malformed data or mismatched receipts withhold only
+the decision panel; they do not discard the answer or trigger payment. This verifies
+integrity and displayed-result binding, not original buyer intent, research truth or
+independent settlement. Full request verification still requires a buyer journal.
+Reversible: easy (browser verification UI and runtime adapters).
+
 **D-79** · Business readiness · *Keep business scenarios separate from measured testnet
 economics and actual pricing.* The owner expanded the goal to a complete ecosystem,
 revenue/profit model and mainnet readiness. The observer currently leaves most sampled
