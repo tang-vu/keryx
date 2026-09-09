@@ -1,5 +1,15 @@
 # Keryx — Decision Log
 
+**D-87** · Business planning UI · *Use the same exact arithmetic on the page and in
+the CLI, keeping estimates separate from the testnet ledger.* `/economics` exposes
+the existing USD scenario model with editable assumptions, alternative service-fee
+and retained-reserve contributions, monthly results and rounded break-even volume.
+Unknown costs stay unknown; invalid edits suppress stale results. Inputs live only
+in page memory with deliberate local JSON import/export, and a late import cannot
+overwrite intervening edits. Initial fees are illustrative. The calculator neither
+changes offers nor reads telemetry, signs, pays or establishes actual profitability.
+Reversible: easy (new page and presentation over the existing pure model).
+
 **D-86** · Browser Gateway funding · *Persist each explicit approval/deposit attempt
 before asking the wallet, and recover uncertain attempts without replay.* Funding
 uses the connected EOA on Arc testnet, exact USDC approval and `deposit(token,value)`

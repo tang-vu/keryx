@@ -1,5 +1,14 @@
 # Keryx Project Changelog
 
+### Business calculator workspace (2026-09-09, v0.22.23)
+
+- Add `/economics` with editable USD assumptions, two contribution views, monthly
+  operating results and break-even volume using the same exact model as the CLI.
+- Preserve unknown costs and hide stale outputs on invalid input. Export/import
+  inputs locally and export reports containing both assumptions and results.
+- Add a Chromium regression for arithmetic presentation, unknown/invalid states,
+  private downloads, import validation and reset. No realized-profit claim.
+
 ### Browser funding and wallet hydration (2026-09-09, v0.22.22)
 
 - Add exact approval and separate deposit controls for the buyer's own Gateway balance.

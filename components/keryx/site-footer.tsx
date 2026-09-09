@@ -23,6 +23,7 @@ const HOUSE: FooterLink[] = [
   { label: "Issue a toll", href: "/register" },
   { label: "Playground", href: "/playground" },
   { label: "Paid research", href: "/research" },
+  { label: "Business calculator", href: "/economics" },
   { label: "Remote MCP", href: "/integrations/mcp" },
   { label: "API for agents ↗", href: "/api/docs", external: true },
 ];

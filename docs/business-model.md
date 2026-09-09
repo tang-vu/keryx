@@ -1,5 +1,12 @@
 # Keryx business model and scenario calculator
 
+The browser calculator at `/economics` uses the same arithmetic and validation as the
+CLI. It offers editable assumptions, side-by-side contribution/break-even views and
+local input/report JSON exports. Import the inputs file to continue a saved scenario;
+the report also includes the results. Values are held in page memory, not sent to an
+API or persisted automatically. Invalid edits hide previous results; blank optional
+inputs remain unknown. Fees in the initial template are illustrative, not live offers.
+
 The current product sells a fixed-price research package: a service fee plus a
 creator budget. Source access and citation rewards consume that budget; they are
 not a second service fee. The existing fixed-price policy retains unused reserve
@@ -78,3 +85,17 @@ Fixed operating costs have been requested from the owner and remain unknown.
 Next measurement work is per-period/per-package independent cohorts, exact service
 fee collections versus creator obligations, complete model/support costs and repeat
 buyer outcomes. See [the full delivery and mainnet acceptance plan](./mainnet-delivery-plan.md).
+
+## Browser verification (September 9, 2026)
+
+The 13 pure-model tests pass. `npm run test:business-calculator` renders the actual
+React component in Chromium and checks the two alternative margins, exact break-even,
+unknown demand/costs, invalid edits suppressing stale results, input/report downloads,
+validated import, failed import preserving existing values and reset. Its HTTP is
+intercepted; the component makes no data or payment request. The same check passes
+with production CSS at 390px and 1440px without horizontal overflow.
+
+A local Next production build and browser smoke check passed hydration, scenario
+editing, report download and those viewport widths. The desktop rendering was
+visually inspected. These checks validate the tool, not the supplied economic
+assumptions or a measured profitable business.

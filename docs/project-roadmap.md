@@ -6,7 +6,12 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.22 (browser funding and wallet hydration, updated 2026-09-09)
+**Version:** 0.22.23 (business calculator workspace, updated 2026-09-09)
+
+The exact [business model](./business-model.md) is now available in a browser workspace
+at `/economics`, including local assumption/report exports and validated imports.
+This improves scenario planning; actual billing reconciliation, operating costs and
+independent cohort evidence remain open economics requirements.
 
 Buyer policy, order identity, package contracts and complete journal/receipt binding now
 have browser-compatible modules with Node parity. The browser engine now has transactional
