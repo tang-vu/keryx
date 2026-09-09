@@ -5,7 +5,7 @@ import { z } from "zod";
 import { BUYER_NETWORK, BUYER_USDC, addressSchema } from "../buyer/protocol";
 import { getSqlitePrivateExecution, getSupabasePrivateExecution } from "./private-research-executions";
 
-const schema = z.object({
+export const privateCreatorSubmissionSchema = z.object({
   kind: z.enum(["fetch", "citation"]), sourceId: z.string().min(1).max(256), itemId: z.string().min(1).max(256).nullable(),
   submission: z.object({
     authorizationId: z.string().regex(/^0x[a-fA-F0-9]{64}$/).transform(v => v.toLowerCase()),
@@ -15,10 +15,10 @@ const schema = z.object({
     network: z.literal(BUYER_NETWORK), asset: addressSchema.transform(v => v.toLowerCase()).refine(v => v === BUYER_USDC.toLowerCase()),
   }).strict(),
 }).strict();
-export type PrivateCreatorSubmission = z.infer<typeof schema>;
+export type PrivateCreatorSubmission = z.infer<typeof privateCreatorSubmissionSchema>;
 export type PrivateCreatorSubmissionRecord = { jobId: string; legId: string; workerId: string; startedAt: string; data: PrivateCreatorSubmission };
 function checked(value: unknown) {
-  const parsed = schema.safeParse(value);
+  const parsed = privateCreatorSubmissionSchema.safeParse(value);
   if (!parsed.success) throw new Error("Invalid private creator submission");
   return parsed.data;
 }

@@ -312,6 +312,42 @@ trusted settlement observations without erasing receipts on DB failure, expose s
 creator earnings, reconcile uncertainty and complete the isolated research effects
 factory plus authenticated result recovery. A submitted tuple is never settled revenue.
 
+## Implemented creator confirmation storage and journal adapter
+
+`confirmPrivateCreatorSubmission` matches a backend trusted observation to the exact
+admitted tuple and permanent worker under the intent owner. A separate first-writer
+confirmation row retains the transaction reference and save timestamp. Exact retries
+acknowledge it; conflicting references, missing admission, foreign owner/worker and
+mismatched tuple fields cannot confirm. `getPrivateCreatorConfirmation` revalidates
+owner/admission and stored tuple before returning backend data. These methods do not
+accept public receipt envelopes, release creator capacity or reopen a worker.
+
+`privateCreatorJournal` combines the admission callback with outcome persistence. It
+admits at most one signed request, retains the observed attempt across DB failures and
+reports `confirmation-unpersisted` without changing a settled debit into a failure or
+losing a paid-but-undelivered receipt. The retained outcome can retry persistence only;
+no signing or HTTP is performed by that retry. A pending observation remains pending,
+and mismatched nonce/amount/expiry is returned for recovery without promoting storage.
+Only trusted server transport results may enter this adapter; a source label and tuple
+are not independent settlement evidence. Source payout authority is still the caller's
+responsibility.
+
+Synthetic integration exercises the actual server transport with a paid HTTP 500,
+SQLite admission, a failed confirmation write and subsequent successful persistence,
+proving one signing call and exactly one paid HTTP request. Other tests cover exact
+retry/conflict, late confirmation after saved result, wrong owner/worker, corrupt data,
+restart reads, pending/mismatched observations and Supabase write/readback outages.
+PostgreSQL migration/RPC checks after 0046?0051 verify tuple binding, retained references,
+unreleased budget and denied client/direct service-role mutation.
+
+This is an internal adapter, not a production private research route. Recovery of a
+receipt retained in memory differs from recovery after a process crash: the latter
+still needs exact Circle reconciliation from the durable admission tuple. Historical
+result snapshots remain immutable; future owner projections must combine them with
+current ledger evidence rather than treating stale result counters as final settlement.
+Creator earnings views, reconciliation and the complete effects/gateway factory remain
+unfinished. No synthetic confirmation is included in public settlement or traction data.
+
 ## Implemented account enumeration
 
 `GET /api/me/jobs` requires a valid, unrevoked SIWE account session. The server derives

@@ -3,6 +3,7 @@
  * All amounts are USDC numbers. Metrics are computed only from real rows.
  */
 
+import type { PrivateCreatorConfirmation, PrivateCreatorConfirmationRecord } from "./private-creator-confirmations";
 import type { PrivateCreatorSubmission, PrivateCreatorSubmissionRecord } from "./private-creator-submissions";
 import type { PrivateResearchResult } from "./private-research-results";
 import type { PrivateExecutionClaim } from "./private-research-executions";
@@ -368,6 +369,9 @@ export interface KeryxDB {
   reservePrivateResearchIntent(intent: PrivateResearchIntent): Promise<PrivateResearchIntent>;
   /** Caller must supply an independently authenticated payer. Never expose via bearer-ID lookup. */
   getPrivateResearchIntent(id: string, payer: string): Promise<PrivateResearchIntent | null>;
+  /** Trusted facilitator observation only. Persistence errors must not discard an observed receipt. */
+  confirmPrivateCreatorSubmission(id: string, payer: string, workerId: string, confirmation: PrivateCreatorConfirmation): Promise<PrivateCreatorConfirmationRecord>;
+  getPrivateCreatorConfirmation(id: string, payer: string, authorizationId: string): Promise<PrivateCreatorConfirmationRecord | null>;
   /** Only true admits signed I/O. Caller must bind source payout authority and authenticate the owner. */
   admitPrivateCreatorSubmission(id: string, payer: string, workerId: string, data: PrivateCreatorSubmission): Promise<boolean>;
   listPrivateCreatorSubmissions(id: string, payer: string): Promise<PrivateCreatorSubmissionRecord[]>;

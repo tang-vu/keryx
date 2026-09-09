@@ -3,6 +3,7 @@
  * The offline-dev datastore; the deployed app uses the Supabase adapter instead.
  */
 
+import { confirmSqlitePrivateCreator, getSqlitePrivateCreatorConfirmation, type PrivateCreatorConfirmation, PRIVATE_CREATOR_CONFIRMATIONS_SQL } from "./private-creator-confirmations";
 import { admitSqlitePrivateCreatorSubmission, listSqlitePrivateCreatorSubmissions, type PrivateCreatorSubmission, PRIVATE_CREATOR_SUBMISSIONS_SQL } from "./private-creator-submissions";
 import { saveSqlitePrivateResult, getSqlitePrivateResult, PRIVATE_RESEARCH_RESULTS_SQL } from "./private-research-results";
 import { claimSqlitePrivateExecution, getSqlitePrivateExecution, PRIVATE_RESEARCH_EXECUTIONS_SQL } from "./private-research-executions";
@@ -318,6 +319,7 @@ ${PRIVATE_RESEARCH_PAYMENTS_SQL}
 ${PRIVATE_RESEARCH_EXECUTIONS_SQL}
 ${PRIVATE_RESEARCH_RESULTS_SQL}
 ${PRIVATE_CREATOR_SUBMISSIONS_SQL}
+${PRIVATE_CREATOR_CONFIRMATIONS_SQL}
 `;
 
 export class SqliteAdapter implements KeryxDB {
@@ -1466,6 +1468,13 @@ export class SqliteAdapter implements KeryxDB {
 
   async reservePrivateResearchIntent(intent: PrivateResearchIntent) {
     return reserveSqlitePrivateResearchIntent(this.db, intent);
+  }
+
+  async confirmPrivateCreatorSubmission(id: string, payer: string, workerId: string, confirmation: PrivateCreatorConfirmation) {
+    return confirmSqlitePrivateCreator(this.db, id, payer, workerId, confirmation);
+  }
+  async getPrivateCreatorConfirmation(id: string, payer: string, authorizationId: string) {
+    return getSqlitePrivateCreatorConfirmation(this.db, id, payer, authorizationId);
   }
 
   async admitPrivateCreatorSubmission(id: string, payer: string, workerId: string, data: PrivateCreatorSubmission) {

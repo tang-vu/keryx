@@ -1,4 +1,4 @@
--- Disposable PostgreSQL after 0046 through 0050. Synthetic fixtures, no payment evidence.
+-- Disposable PostgreSQL after 0046 through 0051. Synthetic fixtures, no payment evidence.
 \set ON_ERROR_STOP on
 begin;
 set local role service_role;
@@ -12,6 +12,7 @@ do $$
 declare id text := 'prv_'||repeat('a',64); owner text := '0x'||repeat('a',40); other text := '0x'||repeat('b',40);
   proof jsonb := jsonb_build_object('source','circle-facilitator-success','transaction','synthetic-original',
     'network','eip155:5042002','payer',owner,'payee',other,'amountMicros','50000','authorizationId','0x'||repeat('c',64));
+  creator_proof jsonb;
 begin
   if public.claim_private_research_execution(id,owner,'00000000-0000-4000-8000-000000000001') then raise exception 'unpaid execution'; end if;
   perform public.confirm_private_research_payment(id,owner,proof);
@@ -58,6 +59,23 @@ begin
   if not exists(select 1 from public.private_research_results where serialized_run='{"synthetic":1}') then raise exception 'original result replaced'; end if;
   if public.admit_private_creator_submission(id,owner,'00000000-0000-4000-8000-000000000001',repeat('3',64),'0x'||repeat('3',64),1,
     jsonb_build_object('submission',jsonb_build_object('authorizationId','0x'||repeat('3',64),'amountMicros','1'))) then raise exception 'creator admitted after result'; end if;
+  select jsonb_build_object('source','circle-facilitator-success','transaction','synthetic-creator-original','submission',data->'submission')
+    into creator_proof from public.private_creator_submissions where authorization_id='0x'||repeat('1',64);
+  perform public.confirm_private_creator_submission(id,other,'00000000-0000-4000-8000-000000000001',creator_proof);
+  perform public.confirm_private_creator_submission(id,owner,'00000000-0000-4000-8000-000000000002',creator_proof);
+  if exists(select 1 from public.private_creator_confirmations) then raise exception 'foreign creator confirmation'; end if;
+  begin
+    perform public.confirm_private_creator_submission(id,owner,'00000000-0000-4000-8000-000000000001',jsonb_set(creator_proof,'{submission,amountMicros}','"20001"'));
+    raise exception 'mismatched creator confirmation accepted';
+  exception when raise_exception then if sqlerrm <> 'creator confirmation mismatch' then raise; end if; end;
+  perform public.confirm_private_creator_submission(id,owner,'00000000-0000-4000-8000-000000000001',creator_proof);
+  perform public.confirm_private_creator_submission(id,owner,'00000000-0000-4000-8000-000000000001',creator_proof||'{"transaction":"replacement"}'::jsonb);
+  if not exists(select 1 from public.private_creator_confirmations where data->>'transaction'='synthetic-creator-original') then raise exception 'creator receipt replaced'; end if;
+  if (select sum(amount_micros) from public.private_creator_submissions) <> 29999 then raise exception 'confirmation released budget'; end if;
+  begin delete from public.private_creator_confirmations;
+    raise exception 'creator confirmation delete allowed'; exception when insufficient_privilege then null; end;
+  begin update public.private_creator_confirmations set data='{}';
+    raise exception 'creator confirmation update allowed'; exception when insufficient_privilege then null; end;
   begin delete from public.private_research_results;
     raise exception 'result delete allowed'; exception when insufficient_privilege then null; end;
   begin update public.private_research_results set serialized_run='{}';
@@ -72,6 +90,8 @@ end;
 $$;
 set local role anon;
 do $$ begin
+  begin perform public.confirm_private_creator_submission('x','x','00000000-0000-4000-8000-000000000001','{}'); raise exception 'client creator confirmation allowed'; exception when insufficient_privilege then null; end;
+  begin perform * from public.private_creator_confirmations; raise exception 'client creator confirmation read allowed'; exception when insufficient_privilege then null; end;
   begin perform public.admit_private_creator_submission('x','x','00000000-0000-4000-8000-000000000001','x','x',1,'{}'); raise exception 'client creator admission allowed'; exception when insufficient_privilege then null; end;
   begin perform * from public.private_creator_submissions; raise exception 'client creator read allowed'; exception when insufficient_privilege then null; end;
   begin perform public.save_private_research_result('x','x','00000000-0000-4000-8000-000000000001','{}'); raise exception 'client result write allowed'; exception when insufficient_privilege then null; end;
@@ -83,6 +103,8 @@ do $$ begin
 end; $$;
 set local role authenticated;
 do $$ begin
+  begin perform public.confirm_private_creator_submission('x','x','00000000-0000-4000-8000-000000000001','{}'); raise exception 'client creator confirmation allowed'; exception when insufficient_privilege then null; end;
+  begin perform * from public.private_creator_confirmations; raise exception 'client creator confirmation read allowed'; exception when insufficient_privilege then null; end;
   begin perform public.admit_private_creator_submission('x','x','00000000-0000-4000-8000-000000000001','x','x',1,'{}'); raise exception 'client creator admission allowed'; exception when insufficient_privilege then null; end;
   begin perform * from public.private_creator_submissions; raise exception 'client creator read allowed'; exception when insufficient_privilege then null; end;
   begin perform public.save_private_research_result('x','x','00000000-0000-4000-8000-000000000001','{}'); raise exception 'client result write allowed'; exception when insufficient_privilege then null; end;
@@ -93,4 +115,4 @@ do $$ begin
 end; $$;
 reset role;
 rollback;
-select 'PASS: one submission claim, owner-scoped immutable confirmation, one settled-only execution, immutable private result, capped creator admission, restricted RPCs' as result;
+select 'PASS: one submission claim, owner-scoped immutable confirmation, one settled-only execution, immutable private result, capped creator admission, immutable creator confirmation, restricted RPCs' as result;

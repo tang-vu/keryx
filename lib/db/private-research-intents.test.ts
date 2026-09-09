@@ -18,6 +18,8 @@ import type { QueryRun } from "../types";
 import { admitSupabasePrivateCreatorSubmission, type PrivateCreatorSubmission } from "./private-creator-submissions";
 import { payWithServerSigner } from "../payments/server-x402-client";
 import { config } from "../config";
+import { confirmSupabasePrivateCreator, type PrivateCreatorConfirmation } from "./private-creator-confirmations";
+import { privateCreatorJournal } from "../payments/private-creator-journal";
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-private-intents-"));
 const file = path.join(directory, "test.sqlite");
@@ -319,6 +321,95 @@ async function creatorFixture() {
   const claim = (await db.claimPrivateResearchExecution(value.id, account.address))!;
   return { value, claim };
 }
+
+it("recovers a confirmed paid 5xx into the private ledger after a storage outage without repeating signed HTTP", async () => {
+  const { value, claim } = await creatorFixture();
+  const leg = creatorSubmission("3", "confirmed-transport-source");
+  const journal = privateCreatorJournal({ admitPrivateCreatorSubmission: db.admitPrivateCreatorSubmission.bind(db),
+    confirmPrivateCreatorSubmission: vi.fn().mockRejectedValueOnce(new Error("synthetic storage outage"))
+      .mockImplementation(db.confirmPrivateCreatorSubmission.bind(db)) },
+    { id: value.id, payer: account.address, workerId: claim.workerId, kind: leg.kind, sourceId: leg.sourceId, itemId: leg.itemId });
+  const quote = { ...requirement, amount: "20000", payTo: leg.submission.payee, maxTimeoutSeconds: config.maxTimeoutSeconds };
+  const fetchImpl = vi.fn().mockResolvedValueOnce(new Response("{}", { status: 402, headers: {
+    "PAYMENT-REQUIRED": Buffer.from(JSON.stringify({ x402Version: 2, accepts: [quote] })).toString("base64"),
+  } })).mockResolvedValueOnce(new Response("{}", { status: 500, headers: {
+    "PAYMENT-RESPONSE": Buffer.from(JSON.stringify({ success: true, transaction: "synthetic-paid-500", payer: leg.submission.payer, network: BUYER_NETWORK })).toString("base64"),
+  } }));
+  const signer = { createPaymentPayload: vi.fn(async () => ({ x402Version: 2, payload: { signature: "synthetic-unfunded-signature",
+    authorization: { from: leg.submission.payer, to: leg.submission.payee, value: "20000", nonce: leg.submission.authorizationId, validBefore: "2000000000" } } })) };
+  const observed = await payWithServerSigner({ url: "https://synthetic.example/paid", method: "POST", expectedPayee: leg.submission.payee,
+    expectedAmount: 0.02, payer: leg.submission.payer, signer, fetchImpl, beforeSubmit: journal.beforeSubmit });
+  expect(await journal.recordOutcome(observed)).toMatchObject({ journalStatus: "confirmation-unpersisted", attempt: { settlementStatus: "settled", delivered: false, transaction: "synthetic-paid-500" } });
+  expect(await db.getPrivateCreatorConfirmation(value.id, account.address, leg.submission.authorizationId)).toBeNull();
+  expect(await journal.recordOutcome(observed)).toMatchObject({ journalStatus: "confirmed", attempt: { settlementStatus: "settled", delivered: false } });
+  expect(await db.getPrivateCreatorConfirmation(value.id, account.address, leg.submission.authorizationId)).toMatchObject({ confirmation: { transaction: "synthetic-paid-500" } });
+  expect(fetchImpl).toHaveBeenCalledTimes(2);
+  expect(signer.createPaymentPayload).toHaveBeenCalledTimes(1);
+});
+
+it("confirms only an admitted matching creator tuple and retains the first receipt without reopening budget", async () => {
+  const { value, claim } = await creatorFixture();
+  const leg = creatorSubmission("6", "confirmation-source");
+  const proof: PrivateCreatorConfirmation = { source: "circle-facilitator-success", transaction: "synthetic-creator-reference", submission: leg.submission };
+  await expect(db.confirmPrivateCreatorSubmission(value.id, account.address, claim.workerId, proof)).rejects.toThrow("submission unavailable");
+  expect(await db.getPrivateCreatorConfirmation(value.id, account.address, leg.submission.authorizationId)).toBeNull();
+  await db.admitPrivateCreatorSubmission(value.id, account.address, claim.workerId, leg);
+  await expect(db.confirmPrivateCreatorSubmission(value.id, merchants.publicResearchPayee, claim.workerId, proof)).rejects.toThrow("submission unavailable");
+  await expect(db.confirmPrivateCreatorSubmission(value.id, account.address, "wrong-worker", proof)).rejects.toThrow("submission unavailable");
+  for (const patch of [{ amountMicros: "20001" }, { payer: merchants.publicResearchPayee }, { payee: merchants.privatePayee }, { authorizationExpiresAt: "2040-01-01T00:00:00.000Z" }]) {
+    await expect(db.confirmPrivateCreatorSubmission(value.id, account.address, claim.workerId, { ...proof, submission: { ...proof.submission, ...patch } })).rejects.toThrow("confirmation mismatch");
+  }
+  // Late confirmation can follow result persistence; it does not execute or rewrite the result.
+  await db.savePrivateResearchResult(value.id, account.address, claim.workerId, syntheticResult(value.id));
+  const saved = await db.confirmPrivateCreatorSubmission(value.id, account.address, claim.workerId, proof);
+  expect(saved.confirmation).toEqual(proof);
+  expect(await other.confirmPrivateCreatorSubmission(value.id, account.address, claim.workerId, proof)).toEqual(saved);
+  await expect(other.confirmPrivateCreatorSubmission(value.id, account.address, claim.workerId, { ...proof, transaction: "replacement" })).rejects.toThrow("confirmation conflict");
+  expect(await db.getPrivateCreatorConfirmation(value.id, merchants.publicResearchPayee, leg.submission.authorizationId)).toBeNull();
+  const reopened = new SqliteAdapter(file);
+  try { await reopened.init(); expect(await reopened.getPrivateCreatorConfirmation(value.id, account.address, leg.submission.authorizationId)).toEqual(saved); }
+  finally { reopened.close(); }
+  expect((await db.listPrivateCreatorSubmissions(value.id, account.address)).map(row => row.data.submission.amountMicros)).toEqual(["20000"]);
+  expect(await db.admitPrivateCreatorSubmission(value.id, account.address, claim.workerId, leg)).toBe(false);
+  for (const table of ["query_runs", "a2a_orders", "payment_events"]) expect(raw.prepare(`SELECT count(*) AS n FROM ${table}`).get()?.n).toBe(0);
+  raw.prepare("UPDATE private_creator_confirmations SET data=? WHERE authorization_id=?").run("{}", leg.submission.authorizationId);
+  await expect(db.getPrivateCreatorConfirmation(value.id, account.address, leg.submission.authorizationId)).rejects.toThrow("Invalid private creator confirmation state");
+});
+
+it("Supabase never acknowledges creator confirmation without exact owner-scoped readback", async () => {
+  const { value, claim } = await creatorFixture();
+  const leg = creatorSubmission("0", "supabase-confirmation-source");
+  await db.admitPrivateCreatorSubmission(value.id, account.address, claim.workerId, leg);
+  const [stored] = await db.listPrivateCreatorSubmissions(value.id, account.address);
+  const date = "2026-09-09T00:00:00.000Z";
+  const proof: PrivateCreatorConfirmation = { source: "circle-facilitator-success", transaction: "synthetic-supabase-reference", submission: leg.submission };
+  for (const outcome of ["saved", "missing", "conflicting", "rpc-outage", "read-outage"] as const) {
+    const http = vi.fn<typeof fetch>(async (url, options) => {
+      const route = new URL(String(url)).pathname;
+      if (route.endsWith("/private_research_intents")) return Response.json([{ data: value }]);
+      if (route.endsWith("/private_research_payment_attempts")) return Response.json([{ started_at: date, settled_at: date,
+        confirmation: { ...confirmation, authorizationId: value.submission.payment.authorization.nonce } }]);
+      if (route.endsWith("/private_research_executions")) return Response.json([{ worker_id: claim.workerId, started_at: date }]);
+      if (route.endsWith("/private_creator_submissions")) return Response.json([{ leg_id: stored.legId, worker_id: claim.workerId,
+        authorization_id: leg.submission.authorizationId, amount_micros: 20000, data: leg, started_at: date }]);
+      if (route.endsWith("/rpc/confirm_private_creator_submission")) {
+        expect(JSON.parse(String(options?.body))).toEqual({ p_id: value.id, p_payer: account.address.toLowerCase(), p_worker_id: claim.workerId, p_confirmation: proof });
+        return new Response(null, { status: outcome === "rpc-outage" ? 503 : 204 });
+      }
+      if (route.endsWith("/private_creator_confirmations")) {
+        expect(new URL(String(url)).searchParams.get("authorization_id")).toBe(`eq.${leg.submission.authorizationId}`);
+        if (outcome === "read-outage") return new Response("{}", { status: 503 });
+        return Response.json(outcome === "missing" ? [] : [{ data: outcome === "conflicting" ? { ...proof, transaction: "other-reference" } : proof, settled_at: date }]);
+      }
+      throw new Error("Unexpected synthetic request");
+    });
+    const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+    const pending = confirmSupabasePrivateCreator(client, value.id, account.address, claim.workerId, proof);
+    if (outcome === "saved") expect(await pending).toEqual({ confirmation: proof, settledAt: date });
+    else await expect(pending).rejects.toThrow();
+    expect(http.mock.calls.filter(([url]) => String(url).includes("/rpc/"))).toHaveLength(1);
+  }
+});
 
 it("atomically caps concurrent creator admissions and never readmits an existing leg, nonce or expired attempt", async () => {
   const { value, claim } = await creatorFixture();

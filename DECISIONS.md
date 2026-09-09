@@ -1,5 +1,22 @@
 # Keryx — Decision Log
 
+**D-105** ? Private creator confirmations ? *Persist the first trusted settlement
+observation against an admitted tuple; preserve observed receipts if persistence is
+uncertain.* The separate confirmation store requires the same owner and worker and
+matches nonce, expiry, payer, payee, integer amount, network and asset to admission.
+It acknowledges exact retries, rejects conflicting references on readback and never
+releases creator budget or reopens execution. Confirmations can arrive after result
+saving; immutable historical snapshots are not rewritten. The private journal adapter
+connects pre-submit admission to outcome persistence and returns the original observed
+attempt with `confirmation-unpersisted` if a DB write/readback fails. Retrying outcome
+persistence does not sign or send HTTP; the same journal cannot admit a second signed
+request. Unknown/mismatched observations do not promote the ledger. The source label
+is not cryptographic proof: only trusted transport outcomes may construct these records.
+Synthetic integration covers paid HTTP 500 plus DB outage and subsequent persistence
+without a second paid request. Production gateways are not connected to this factory;
+Circle reconciliation, restart recovery of unpersisted observations, safe creator
+projections and full private execution remain outstanding.
+
 **D-104** ? Private creator admission ledger ? *Atomically consume the signed
 creator budget before HTTP submission, once per economic leg and nonce.* A separate
 `private_creator_submissions` table records only non-bearer tuple evidence under an
