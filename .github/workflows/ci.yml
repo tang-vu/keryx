@@ -33,6 +33,9 @@ jobs:
           node scripts/dependency-state.mjs record
           node scripts/dependency-state.mjs check
 
+      - name: Buyer CLI startup (no wallet or network)
+        run: node --import tsx scripts/buyer-agent.mts --help
+
       - name: Unit tests (economic invariants)
         run: npm test
 

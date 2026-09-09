@@ -1,5 +1,13 @@
 # Keryx Project Changelog
 
+### Browser pilot fixes and native CLI validation (2026-09-09, v0.22.25)
+
+- Disable credit lookup until the connected wallet client is ready.
+- Fix native buyer CLI imports and add a real CLI startup check to CI.
+- Record an owner-operated Arc-testnet browser pilot: exact funding, lost deposit
+  response recovery, one paid research request, reload and bound receipt verification.
+  First-party source rewards and testnet activity are not independent adoption or profit.
+
 ### Verified deployment dependency reuse (2026-09-09, v0.22.24)
 
 - Replace Git-reflog install decisions with a stamp written only after successful

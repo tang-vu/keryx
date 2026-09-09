@@ -23,6 +23,7 @@ const bundle = await build({ stdin: { contents: `
   import {ResearchRequest} from './components/keryx/research-request';
   import {ResearchWorkspace} from './components/keryx/research-workspace';
   import {ResearchSavedJobs} from './components/keryx/research-saved-jobs';
+  window.testWalletReady=false;
   window.testBuyerWallet=createWalletClient({account:'${account.address}',transport:custom({request:request=>window.syntheticWalletRequest(request)},{retryCount:0})});
   window.testFundingChain={getChainId:async()=>5042002,readContract:async()=>200000n,getBalance:async()=>1000000000000000000n,
     estimateGas:async()=>21000n,estimateFeesPerGas:async()=>({maxFeePerGas:1000000n,maxPriorityFeePerGas:1000000n}),
@@ -35,12 +36,14 @@ const bundle = await build({ stdin: { contents: `
   define: { "process.env.NODE_ENV": '"production"' }, plugins: [{ name: "synthetic-wagmi", setup(b) {
     b.onResolve({ filter: /^(wagmi|next\/image)$/ }, args => ({ path: args.path, namespace: "synthetic" }));
     b.onLoad({ filter: /.*/, namespace: "synthetic" }, args => ({ contents: args.path === "next/image" ? "export default function Image(){return null;}" : `
+      import {useSyncExternalStore} from 'react';
+      const subscribe=notify=>{window.addEventListener('test-wallet-ready',notify);return()=>window.removeEventListener('test-wallet-ready',notify);};
       export const useAccount=()=>({address:'${account.address}',chainId:5042002});
-      export const useWalletClient=()=>({data:window.testBuyerWallet});
+      export const useWalletClient=()=>({data:useSyncExternalStore(subscribe,()=>window.testWalletReady,()=>false)?window.testBuyerWallet:undefined});
       export const usePublicClient=()=>window.testFundingChain;
       export const useSwitchChain=()=>({switchChainAsync:async()=>{},isPending:false});
       export const useConnect=()=>({connect:()=>{},connectors:[],isPending:false});
-    `, loader: "js" }));
+    `, loader: "js", resolveDir: process.cwd() }));
   } }] });
 assert(!Object.keys(bundle.metafile.inputs).some(path => /^lib\/(config|db\/)/.test(path)), "Server dependency in browser UI bundle");
 const browser = await chromium.launch({ headless: true });
@@ -129,6 +132,10 @@ try {
     await page.goto("https://keryx.cc/research");
     if (process.env.BUYER_UI_CSS) await page.addStyleTag({ content: await readFile(process.env.BUYER_UI_CSS, "utf8") });
     await page.addScriptTag({ content: bundle.outputFiles[0].text });
+    const balanceButton = page.getByRole("button", { name: "Check Gateway balance", exact: true });
+    await balanceButton.waitFor();
+    assert(await balanceButton.isDisabled(), "Credit lookup must wait for the wallet client");
+    await page.evaluate(() => { Object.assign(window, { testWalletReady: true }); window.dispatchEvent(new Event("test-wallet-ready")); });
   }
   await mount();
   await page.getByLabel("Research question", { exact: true }).fill(question);

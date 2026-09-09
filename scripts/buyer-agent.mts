@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { privateKeyToAccount } from "viem/accounts";
 import { buyResearch, quoteBuyer, resumeResearch } from "../lib/buyer/client.ts";
 import { reportResearch } from "../lib/buyer/report.ts";
-import { addressSchema, BuyerRefusal, buyerRequestSchema, buyerTypedData } from "../lib/buyer/policy.ts";
+import { addressSchema, BuyerRefusal, buyerRequestSchema, buyerTypedData } from "../lib/buyer/protocol.ts";
 import { parseBuyerBudget } from "../lib/a2a/buyer-workspace.ts";
 
 const [command, ...args] = process.argv.slice(2);

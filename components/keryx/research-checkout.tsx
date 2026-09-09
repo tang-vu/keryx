@@ -93,7 +93,7 @@ export function ResearchCheckout({ question, mode, budget, version, total, payee
         void switchChainAsync({ chainId: 5042002 }).catch(() => setMessage("Network switch was not completed. Choose Arc testnet in your wallet."));
       }}>{switching ? "Switching…" : "Switch to Arc testnet"}</button> : <>
         <div className="flex flex-wrap items-center gap-3">
-          <button type="button" disabled={busy || fundingBusy} className={control} onClick={() => { void checkBalance(); }}>Check Gateway balance</button>
+          <button type="button" disabled={busy || fundingBusy || !wallet} className={control} onClick={() => { void checkBalance(); }}>Check Gateway balance</button>
           <span className="font-mono text-xs">Available: {currentCredit === null ? "not checked" : `${formatUnits(BigInt(currentCredit), 6)} USDC`}</span>
         </div>
         {currentCredit !== null && BigInt(currentCredit) < BigInt(amount) && <p className="font-serif text-sm text-seal">Gateway funds are below the package price. Wallet gas balance and Gateway funds are separate. Use the deposit controls below, then check Gateway balance again.</p>}

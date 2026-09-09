@@ -6,7 +6,7 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.24 (verified deployment dependency reuse, updated 2026-09-09)
+**Version:** 0.22.25 (browser pilot fixes and native CLI validation, updated 2026-09-09)
 
 Deployment now records successful dependency installation rather than inferring it
 from Git reflog state. Failure and reuse checks advance O1; full host/tunnel recovery,
@@ -21,17 +21,18 @@ Buyer policy, order identity, package contracts and complete journal/receipt bin
 have browser-compatible modules with Node parity. The browser engine now has transactional
 storage, one-shot submission and GET recovery. The workspace now offers
 wallet review/signing, local saved-job recovery and explicit two-step Gateway deposits.
-Synthetic lost-response/reload recovery passes; a fresh browser-wallet paid pilot and
-complete replacement/lost-storage recovery still block full B1 acceptance. See
-[funding evidence and remaining acceptance](./engineering/browser-funding-2026-09-09.md).
+The [fresh owner-operated browser pilot](./engineering/browser-pilot-2026-09-09.md)
+now covers real testnet funding, lost deposit response, one paid request and receipt
+recovery. Independent wallet/mobile usage and complete replacement/lost-storage
+recovery still block full B1 acceptance.
 
-The source-decision panel now checks receipt integrity and displayed job/answer binding
-in the browser. Original-request binding still needs the buyer journal. Shared receipt
-primitives are the first portability step; browser purchase/recovery remains incomplete.
+Saved-job verification binds receipts to the locally saved/imported original request.
+The portable intent does not include the later payment acknowledgement. History remains
+local; bearer-ID lookup is not authenticated server history.
 
-The next buyer milestone follows the [browser checkout design](./browser-research-checkout.md).
-It requires shared browser-safe validation, transactional local recovery and an
-explicit wallet purchase flow; the design document does not enable checkout.
+The [browser checkout design](./browser-research-checkout.md) remains the rationale for
+shared validation, transactional recovery and explicit wallet review. Further buyer
+work includes fuller portable recovery, independent wallet UX and private server history.
 
 Buyers can now prepare an allowlisted `report` for mentor/operator feedback through
 GET-only recovery. It retains unknown accounting and excludes identifiers/research
