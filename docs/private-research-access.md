@@ -419,6 +419,45 @@ A balance check is not a fleet-wide treasury reservation. Private merchant provi
 whole-job funding policy, safe creator/result projections, authenticated client recovery
 and end-to-end leakage tests remain prerequisites for enabling private purchases.
 
+## Implemented private research executor and effects
+
+`runPrivateResearch` is a backend library operation. Its caller must authenticate the
+payer independently and supply a trusted signer, address, balance reader and engine
+factory. The executor derives the question, creator budget, depth, model and package
+limits from verified stored intent; it never accepts replacement unsigned research
+input. It requires settled incoming payment, returns an existing stored result or
+already-claimed status, checks prefunding and acquires one durable worker claim. Only
+the winner invokes the orchestrator with an explicit private gateway/effects strategy.
+
+`privateResearchEffects` checks owner/worker consistency and keeps paid content in a
+cache scoped to that strategy instance. Cache is cleared after successful result save.
+Private jobs do not use shared query memory, reputation scoring, external marketplace
+discovery, public activation counters or outbound citation/alert observers. Registered
+verified sources remain discoverable through the normal source catalog. Suppressed
+notifications/alerts are counted locally without retaining or transmitting payloads.
+Payment observations are checked against private durable admission; settled observations
+require matching saved confirmation. This observer never creates public payment rows
+or promotes a caller-supplied settled flag. Confirmation outages remain visible through
+the private run's trace and retained payment evidence. Completed runs go only to the
+owner/worker-scoped private snapshot store.
+
+A synthetic integration test uses signed immutable intent and real SQLite adapters,
+two competing workers, the actual orchestrator/private gateway/HTTP transport, two
+synthetic creator legs and saved-result replay. It verifies one reasoning execution,
+one toll plus citation reward, both durable confirmations and no public cache, payment,
+result, memory or notification method calls on either connection. Wrong worker,
+unpaid/underfunded jobs, isolated cache instances and unbacked settled observations
+are also tested. These are unfunded hermetic tests, not live customer settlement.
+
+The library does not expose HTTP routes or create the production signer/model factory.
+It is not proof that external model providers, their telemetry or other public routes
+satisfy the complete private contract. Exceptions after a claim retain that claim for
+recovery; they do not automatically rerun reasoning or release financial authority.
+Creator earnings and live result/receipt projections must merge current private ledger
+evidence with immutable snapshots. Private quote/payment admission, global treasury
+funding policy, authenticated polling/history, browser/CLI journals, failure operations
+and end-to-end public-projection tests remain required before private purchases open.
+
 ## Implemented account enumeration
 
 `GET /api/me/jobs` requires a valid, unrevoked SIWE account session. The server derives

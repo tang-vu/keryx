@@ -22,6 +22,10 @@ import { confirmSupabasePrivateCreator, type PrivateCreatorConfirmation } from "
 import { privateCreatorJournal } from "../payments/private-creator-journal";
 import { reconcilePrivateCreatorSubmissions } from "../gateway/private-creator-reconciliation";
 import { searchCircleTransfer, CIRCLE_X402_TRANSFERS_URL } from "../gateway/x402-transfer-reconciliation";
+import { runPrivateResearch } from "../a2a/run-private-research";
+import type { ReasoningEngine } from "../llm/reasoning-engine";
+import type { PaymentRequirements } from "../payments/x402-payment-evidence";
+import { privateResearchEffects } from "../agent/private-research-effects";
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-private-intents-"));
 const file = path.join(directory, "test.sqlite");
@@ -323,6 +327,114 @@ async function creatorFixture() {
   const claim = (await db.claimPrivateResearchExecution(value.id, account.address))!;
   return { value, claim };
 }
+
+it("keeps private caches local and accepts payment observations only against durable admitted/confirmed evidence", async () => {
+  const { value, claim } = await creatorFixture();
+  const leg = creatorSubmission("2", "effects-source");
+  await db.admitPrivateCreatorSubmission(value.id, account.address, claim.workerId, leg);
+  const context = { id: value.id, payer: account.address, workerId: claim.workerId };
+  await expect(privateResearchEffects(db, { ...context, workerId: "wrong" })).rejects.toThrow("authority unavailable");
+  const first = await privateResearchEffects(db, context), second = await privateResearchEffects(db, context);
+  await first.effects.setCached("asset", "Private cache marker");
+  expect(await first.effects.getCached("asset")).toBe("Private cache marker");
+  expect(await second.effects.getCached("asset")).toBeNull();
+  expect(await first.effects.discoverExternal("Private question", [])).toEqual([]);
+  expect(await first.effects.decisionContext("Private question", [])).toEqual({ sample: 0 });
+  const payment = { kind: "citation" as const, queryId: value.id, sourceId: leg.sourceId, sourceName: "Source", payer: leg.submission.payer,
+    payee: leg.submission.payee, amountUsdc: 0.02, network: BUYER_NETWORK, settled: false, settlementStatus: "pending" as const,
+    authorizationId: leg.submission.authorizationId, authorizationExpiresAt: leg.submission.authorizationExpiresAt, createdAt: "2026-09-09T00:00:00.000Z" };
+  await first.effects.recordPayment(payment);
+  await expect(first.effects.recordPayment({ ...payment, amountUsdc: 0.03 })).rejects.toThrow("mismatch");
+  await expect(first.effects.recordPayment({ ...payment, settled: true, settlementStatus: "settled", txHash: "synthetic-effect-reference" })).rejects.toThrow("requires recovery");
+  await expect(first.effects.recordPayment({ ...payment, settlementStatus: "simulated" })).rejects.toThrow("mismatch");
+  await db.confirmPrivateCreatorSubmission(value.id, account.address, claim.workerId, { source: "circle-facilitator-success", transaction: "synthetic-effect-reference", submission: leg.submission });
+  await first.effects.recordPayment({ ...payment, settled: true, settlementStatus: "settled", txHash: "synthetic-effect-reference" });
+  first.effects.alert("Private alert marker", "Private alert body");
+  expect(first.diagnostics.alerts).toBe(1);
+  expect(JSON.stringify(first.diagnostics)).not.toContain("Private alert");
+  await first.effects.saveQueryRun(syntheticResult(value.id));
+  expect(await first.effects.getCached("asset")).toBeNull();
+});
+
+it("denies unpaid or underfunded execution before a worker claim or any reasoning", async () => {
+  const { value, proof } = await executionFixture();
+  const options = { signerAddress: merchants.privatePayee, signer: { createPaymentPayload: vi.fn() },
+    getGatewayBalance: vi.fn(async () => BigInt(0)), engineForModel: vi.fn() };
+  await expect(runPrivateResearch(db, value.id, account.address, options)).rejects.toThrow("Settled private payment unavailable");
+  expect(options.getGatewayBalance).not.toHaveBeenCalled();
+  await db.claimPrivatePaymentSubmission(value.id, account.address);
+  await db.confirmPrivatePayment(value.id, account.address, proof);
+  await expect(runPrivateResearch(db, value.id, account.address, options)).rejects.toThrow("prefunding");
+  expect(await db.getPrivateResearchExecution(value.id, account.address)).toBeNull();
+  expect(options.engineForModel).not.toHaveBeenCalled();
+  expect(options.signer.createPaymentPayload).not.toHaveBeenCalled();
+  await db.claimPrivateResearchExecution(value.id, account.address);
+  options.getGatewayBalance.mockClear();
+  expect(await runPrivateResearch(db, value.id, account.address, options)).toEqual({ status: "already-claimed" });
+  expect(options.getGatewayBalance).not.toHaveBeenCalled();
+});
+
+it("runs one complete private job with durable source/reward receipts and no shared research effects", async () => {
+  const { value, proof } = await executionFixture();
+  await db.claimPrivatePaymentSubmission(value.id, account.address);
+  await db.confirmPrivatePayment(value.id, account.address, proof);
+  await db.upsertSource({ id: "private-pipeline-source", name: "Pipeline source", description: "Research evidence", tags: ["research"],
+    url: "https://synthetic.example/source", walletAddress: merchants.publicResearchPayee, authors: [], fetchPrice: 0.002,
+    createdAt: "2026-09-09T00:00:00.000Z", verified: true });
+  const spies = [db, other].flatMap(connection => (["recordPayment", "saveQueryRun", "getCached", "getCachedAt", "setCached", "saveQueryMemory", "loadQueryMemories",
+    "recordActivationEvent", "getSourceNotify", "getSourceNotifyEmail"] as const)
+    .map(method => vi.spyOn(connection, method).mockRejectedValue(new Error("Shared private effect forbidden"))));
+  const decompose = vi.fn(async () => ["The synthetic research claim"]);
+  const engine: ReasoningEngine = { name: "synthetic-private-engine", decompose,
+    decide: async input => input.candidates.map(c => ({ sourceId: c.id, sourceName: c.name, action: "BUY", expectedValue: 0.9,
+      price: c.fetchPrice, confidence: 0.9, rationale: "Synthetic evidence purchase", targets: [0] })),
+    sufficiency: async input => ({ sufficient: true, rationale: "Synthetic evidence is sufficient", perClaim: input.subClaims.map(claim => ({ claim, coverage: 0.9, coveredBy: input.gathered.map(g => g.marker) })) }),
+    reevaluate: async () => ({ claims: [], shouldBuyMore: false, recommendedIds: [], rationale: "No further sources" }),
+    synthesize: async input => ({ answer: `Synthetic cited answer ${input.gathered.map(g => `[${g.marker}]`).join(" ")}`,
+      citedMarkers: input.gathered.map(g => g.marker), conflicts: [], evidence: input.gathered.map(g => ({ claimIndex: 0, marker: g.marker, quote: g.text, support: 0.9 })) }),
+    attribute: async input => input.used.map(source => ({ sourceId: source.sourceId, weight: 1 / input.used.length, rationale: "Synthetic contribution" })),
+  };
+  let nonceIndex = 80;
+  const signer = { createPaymentPayload: vi.fn(async (_version: number, terms: PaymentRequirements) => ({ x402Version: 2, payload: {
+    signature: "synthetic-unfunded-signature", authorization: { from: merchants.privatePayee, to: terms.payTo, value: terms.amount,
+      nonce: `0x${(++nonceIndex).toString(16).padStart(64, "0")}`, validBefore: "2000000000" } } })) };
+  const http = vi.fn<typeof fetch>(async (input, init) => {
+    const url = new URL(String(input), "https://synthetic.example");
+    expect(["/api/source/private-pipeline-source", "/api/cite/private-pipeline-source"]).toContain(url.pathname);
+    if (!new Headers(init?.headers).has("Payment-Signature")) {
+      const amount = url.pathname.includes("/cite/") ? String(Math.round(Number(url.searchParams.get("amount")) * 1e6)) : "2000";
+      return new Response("{}", { status: 402, headers: { "PAYMENT-REQUIRED": Buffer.from(JSON.stringify({ x402Version: 2,
+        accepts: [{ ...requirement, amount, payTo: merchants.publicResearchPayee, maxTimeoutSeconds: config.maxTimeoutSeconds }] })).toString("base64") } });
+    }
+    return Response.json({ content: "This synthetic source contains detailed evidence supporting the research claim for a private test job.", ok: true }, { headers: {
+      "PAYMENT-RESPONSE": Buffer.from(JSON.stringify({ success: true, transaction: `synthetic-pipeline-${nonceIndex}`, payer: merchants.privatePayee, network: BUYER_NETWORK })).toString("base64"),
+    } });
+  });
+  const previousBase = config.baseUrl;
+  Object.assign(config, { baseUrl: "https://synthetic.example" });
+  vi.stubGlobal("fetch", http);
+  try {
+    const options = { signerAddress: merchants.privatePayee, signer, getGatewayBalance: vi.fn(async () => BigInt(30000)), engineForModel: vi.fn(() => engine) };
+    const outcomes = await Promise.all([runPrivateResearch(db, value.id, account.address, options), runPrivateResearch(other, value.id, account.address, options)]);
+    expect(outcomes.map(outcome => outcome.status).sort()).toEqual(["already-claimed", "completed"]);
+    const complete = outcomes.find(outcome => outcome.status === "completed")!;
+    if (complete.status !== "completed") throw new Error("Expected completion");
+    expect(complete.run.citations, complete.run.trace.map(step => step.message.replaceAll(value.id, "[synthetic job]")).join("\n")).toHaveLength(1);
+    expect(complete.run.question).toBe(value.submission.request.question);
+    expect(complete.run.totalSpent).toBeCloseTo(0.017, 6);
+    expect(complete.diagnostics).toEqual({ alerts: 0, suppressedCitationNotifications: 1 });
+    const legs = await db.listPrivateCreatorSubmissions(value.id, account.address);
+    expect(legs).toHaveLength(2);
+    for (const leg of legs) expect(await db.getPrivateCreatorConfirmation(value.id, account.address, leg.data.submission.authorizationId)).not.toBeNull();
+    expect(await runPrivateResearch(db, value.id, account.address, options)).toMatchObject({ status: "stored" });
+    expect(decompose).toHaveBeenCalledTimes(1);
+    expect(signer.createPaymentPayload).toHaveBeenCalledTimes(2);
+    expect(http).toHaveBeenCalledTimes(4);
+    for (const spy of spies) expect(spy).not.toHaveBeenCalled();
+    expect(await db.getPrivateResearchResult(value.id, merchants.publicResearchPayee)).toBeNull();
+    for (const table of ["query_runs", "a2a_orders", "payment_events", "cache_items"]) expect(raw.prepare(`SELECT count(*) AS n FROM ${table}`).get()?.n).toBe(0);
+  } finally { Object.assign(config, { baseUrl: previousBase }); for (const spy of spies) spy.mockRestore(); vi.unstubAllGlobals(); }
+});
 
 it("reconciles a durable private attempt after reopening using complete Circle pagination and retained search provenance", async () => {
   const { value, claim } = await creatorFixture();

@@ -1,5 +1,24 @@
 # Keryx — Decision Log
 
+**D-108** ? Private research executor and effects ? *Run the signed job once with a
+complete private storage/disclosure strategy, never via public dependency defaults.*
+The backend executor reads verified intent/payment state, returns stored results or an
+existing-claim status without restarting research, checks prefunding, and atomically
+claims execution before invoking the agent. Question, budget, depth, model selection
+and execution limits come from the signed intent/package. It assembles the explicit
+private gateway and effects rather than calling the public dependency selector.
+Effects use only a job-local in-memory content cache, no shared memory/reputation or
+external discovery, no outbound citation notifications/alerts and no public activation
+writes. Payment observations must match durable admission and, when settled, a saved
+confirmation; a flag on an arbitrary PaymentRecord cannot promote private settlement.
+Only the scoped private result store receives the completed run. Diagnostic observers
+retain counts only. The caller still authenticates the payer and supplies trusted
+signer/balance/model dependencies. Synthetic SQLite integration covers concurrent
+workers, actual transport/journal operations, grounded citation rewards, forbidden
+shared effects and saved-result replay without payment. No private HTTP quote/purchase
+or production signer factory is activated; provider disclosure review, isolated read
+projections, creator earnings and authenticated browser/CLI recovery remain required.
+
 **D-107** ? Private server payment gateway ? *Share creator payment operations while
 keeping legacy wallet custody/funding out of private construction.* `ServerPaymentGateway`
 now owns source/article purchases, citation payments, price/content identity checks and
