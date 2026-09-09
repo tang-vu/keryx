@@ -199,6 +199,32 @@ The existing public SSE route also has its own public persistence/response contr
 do not turn it into a private route merely by injecting these effects. Full private
 creator accounting, authenticated recovery and public-projection tests remain required.
 
+## Implemented private execution admission boundary
+
+`claimPrivateResearchExecution` returns a new backend worker claim only once for a
+validated owner intent whose separate payment journal is settled. SQLite uses atomic
+insert-select plus primary-key exclusion; Supabase uses a restricted service-role RPC.
+The adapter verifies the signed intent and complete stored confirmation tuple before
+claiming and again during successful readback. The RPC alone is not cryptographic
+verification, and stored confirmation still requires trusted facilitator provenance.
+
+Repeated claims return null. Another payer, absent/pending/corrupt payment, failed RPC,
+lost readback or mismatched worker identity cannot authorize execution. A read-only
+`getPrivateResearchExecution` supports backend diagnosis; reading an existing claim
+never authorizes a replacement worker. This is not an expiring lease. Never clear these
+records on restart, authorization expiry or database restore, because prior creator
+payments may have happened. Lost-response cases deliberately require later evidence-
+based recovery; automatic recovery and actual private execution remain unimplemented.
+
+Validation includes two SQLite connections, database reopen with a far-future clock,
+wrong payer, pending/corrupt payment, corrupt worker state, synthetic Supabase transport
+failures, and real disposable PostgreSQL migration/role/claim checks using
+`scripts/check-private-research-payments.sql` after migrations 0046?0048. These fixtures
+are synthetic, unfunded and separate from public result/payment tables. They establish
+claim behavior, not live settlement or end-to-end privacy. Worker IDs must stay out of
+public and account projections. A future effects factory must bind its stores to the
+fresh claim and preserve per-leg evidence before enabling any private paid flow.
+
 ## Implemented account enumeration
 
 `GET /api/me/jobs` requires a valid, unrevoked SIWE account session. The server derives

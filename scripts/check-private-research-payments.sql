@@ -1,4 +1,4 @@
--- Disposable PostgreSQL after 0046 + 0047. Synthetic fixtures, no payment evidence.
+-- Disposable PostgreSQL after 0046 + 0047 + 0048. Synthetic fixtures, no payment evidence.
 \set ON_ERROR_STOP on
 begin;
 set local role service_role;
@@ -13,11 +13,13 @@ declare id text := 'prv_'||repeat('a',64); owner text := '0x'||repeat('a',40); o
   proof jsonb := jsonb_build_object('source','circle-facilitator-success','transaction','synthetic-original',
     'network','eip155:5042002','payer',owner,'payee',other,'amountMicros','50000','authorizationId','0x'||repeat('c',64));
 begin
+  if public.claim_private_research_execution(id,owner,'00000000-0000-4000-8000-000000000001') then raise exception 'unpaid execution'; end if;
   perform public.confirm_private_research_payment(id,owner,proof);
   if exists(select 1 from public.private_research_payment_attempts) then raise exception 'confirmation created an unclaimed attempt'; end if;
   if public.claim_private_research_payment(id,other) then raise exception 'foreign claim'; end if;
   if not public.claim_private_research_payment(id,owner) then raise exception 'first claim denied'; end if;
   if public.claim_private_research_payment(id,owner) then raise exception 'duplicate claim'; end if;
+  if public.claim_private_research_execution(id,owner,'00000000-0000-4000-8000-000000000001') then raise exception 'pending execution'; end if;
   perform public.confirm_private_research_payment(id,other,proof);
   if exists(select 1 from public.private_research_payment_attempts where confirmation is not null) then raise exception 'foreign confirmation'; end if;
   begin
@@ -30,19 +32,31 @@ begin
   perform public.confirm_private_research_payment(id,owner,proof||'{"transaction":"synthetic-replacement"}'::jsonb);
   if not exists(select 1 from public.private_research_payment_attempts where confirmation->>'transaction'='synthetic-original' and settled_at is not null) then raise exception 'confirmed reference replaced'; end if;
   if public.claim_private_research_payment(id,owner) then raise exception 'settled attempt reclaimed'; end if;
+  if public.claim_private_research_execution(id,other,'00000000-0000-4000-8000-000000000001') then raise exception 'foreign execution'; end if;
+  if not public.claim_private_research_execution(id,owner,'00000000-0000-4000-8000-000000000001') then raise exception 'execution denied'; end if;
+  if public.claim_private_research_execution(id,owner,'00000000-0000-4000-8000-000000000002') then raise exception 'duplicate execution'; end if;
+  if not exists(select 1 from public.private_research_executions where worker_id='00000000-0000-4000-8000-000000000001') then raise exception 'original worker replaced'; end if;
+  begin delete from public.private_research_executions;
+    raise exception 'execution delete allowed'; exception when insufficient_privilege then null; end;
+  begin update public.private_research_executions set worker_id='00000000-0000-4000-8000-000000000002';
+    raise exception 'execution update allowed'; exception when insufficient_privilege then null; end;
   begin update public.private_research_payment_attempts set confirmation=null,settled_at=null;
     raise exception 'direct update allowed'; exception when insufficient_privilege then null; end;
 end;
 $$;
 set local role anon;
 do $$ begin
+  begin perform public.claim_private_research_execution('x','x','00000000-0000-4000-8000-000000000001'); raise exception 'public execution allowed'; exception when insufficient_privilege then null; end;
+  begin perform * from public.private_research_executions; raise exception 'public execution read allowed'; exception when insufficient_privilege then null; end;
   begin perform public.claim_private_research_payment('x','x'); raise exception 'public claim allowed'; exception when insufficient_privilege then null; end;
   begin perform * from public.private_research_payment_attempts; raise exception 'public read allowed'; exception when insufficient_privilege then null; end;
 end; $$;
 set local role authenticated;
 do $$ begin
+  begin perform public.claim_private_research_execution('x','x','00000000-0000-4000-8000-000000000001'); raise exception 'authenticated execution allowed'; exception when insufficient_privilege then null; end;
+  begin perform * from public.private_research_executions; raise exception 'authenticated execution read allowed'; exception when insufficient_privilege then null; end;
   begin perform public.confirm_private_research_payment('x','x','{}'); raise exception 'public confirmation allowed'; exception when insufficient_privilege then null; end;
 end; $$;
 reset role;
 rollback;
-select 'PASS: one submission claim, owner-scoped immutable confirmation, restricted private RPCs' as result;
+select 'PASS: one submission claim, owner-scoped immutable confirmation, one settled-only execution, restricted private RPCs' as result;

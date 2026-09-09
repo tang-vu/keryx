@@ -12,6 +12,7 @@ import { SqliteAdapter } from "./sqlite-adapter";
 import { getSupabasePrivateResearchIntent, reserveSupabasePrivateResearchIntent } from "./private-research-intents";
 import { claimSupabasePrivatePayment, confirmSupabasePrivatePayment } from "./private-research-payments";
 import type { PrivatePaymentConfirmation } from "../a2a/private-payment-state";
+import { claimSupabasePrivateExecution } from "./private-research-executions";
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-private-intents-"));
 const file = path.join(directory, "test.sqlite");
@@ -215,4 +216,82 @@ it("a newly inserted claim cannot authorize submission if readback already shows
       settled_at: "2026-09-09T00:00:01.000Z" }]));
   const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
   expect(await claimSupabasePrivatePayment(client, intent.id, account.address)).toMatchObject({ claimed: false, state: { status: "settled" } });
+});
+
+async function executionFixture() {
+  const next = await createPrivateAuthorization(request, requirement, account.address, merchants, 1788912000000);
+  const signature = await account.signTypedData(buyerTypedData(next.authorization));
+  const value = await preparePrivateResearchIntent({ request: next.request, salt: next.salt, payment: { authorization: next.authorization, signature } }, requirement, merchants);
+  await db.reservePrivateResearchIntent(value);
+  return { value, proof: { ...confirmation, authorizationId: next.authorization.nonce } };
+}
+
+it("requires confirmed payment before execution and grants only one worker across connections and restarts", async () => {
+  const { value, proof } = await executionFixture();
+  await expect(db.claimPrivateResearchExecution(value.id, account.address)).rejects.toThrow("Settled private payment unavailable");
+  await db.claimPrivatePaymentSubmission(value.id, account.address);
+  await expect(db.claimPrivateResearchExecution(value.id, account.address)).rejects.toThrow("Settled private payment unavailable");
+  expect(await db.getPrivateResearchExecution(value.id, account.address)).toBeNull();
+  await db.confirmPrivatePayment(value.id, account.address, proof);
+  await expect(other.claimPrivateResearchExecution(value.id, merchants.privatePayee)).rejects.toThrow("Settled private payment unavailable");
+  const claims = await Promise.all([db.claimPrivateResearchExecution(value.id, account.address), other.claimPrivateResearchExecution(value.id, account.address)]);
+  const accepted = claims.filter(Boolean);
+  expect(accepted).toHaveLength(1);
+  expect(accepted[0]).toMatchObject({ id: value.id, workerId: expect.any(String), startedAt: expect.any(String) });
+  expect(await db.getPrivateResearchExecution(value.id, merchants.privatePayee)).toBeNull();
+  const reopened = new SqliteAdapter(file);
+  vi.useFakeTimers(); vi.setSystemTime(new Date("2040-01-01T00:00:00Z"));
+  try {
+    await reopened.init();
+    expect(await reopened.claimPrivateResearchExecution(value.id, account.address)).toBeNull();
+    expect(await reopened.getPrivateResearchExecution(value.id, account.address)).toEqual(accepted[0]);
+  } finally { vi.useRealTimers(); reopened.close(); }
+  for (const table of ["query_runs", "a2a_orders", "payment_events"]) {
+    expect(raw.prepare(`SELECT count(*) AS n FROM ${table}`).get()?.n).toBe(0);
+  }
+});
+
+it("refuses corrupt payment or worker state instead of granting execution", async () => {
+  const { value, proof } = await executionFixture();
+  await db.claimPrivatePaymentSubmission(value.id, account.address);
+  await db.confirmPrivatePayment(value.id, account.address, proof);
+  const original = raw.prepare("SELECT confirmation FROM private_research_payment_attempts WHERE id=?").get(value.id)!;
+  raw.prepare("UPDATE private_research_payment_attempts SET confirmation=? WHERE id=?").run("{}", value.id);
+  await expect(db.claimPrivateResearchExecution(value.id, account.address)).rejects.toThrow("Invalid private payment state");
+  expect(raw.prepare("SELECT id FROM private_research_executions WHERE id=?").get(value.id)).toBeUndefined();
+  raw.prepare("UPDATE private_research_payment_attempts SET confirmation=? WHERE id=?").run(String(original.confirmation), value.id);
+  await db.claimPrivateResearchExecution(value.id, account.address);
+  raw.prepare("UPDATE private_research_executions SET worker_id=? WHERE id=?").run("invalid", value.id);
+  await expect(db.getPrivateResearchExecution(value.id, account.address)).rejects.toThrow("Invalid private execution state");
+  expect(await db.claimPrivateResearchExecution(value.id, account.address)).toBeNull();
+});
+
+it("Supabase requires a fresh RPC claim and matching validated readback; lost responses never authorize execution", async () => {
+  const settled = { started_at: "2026-09-09T00:00:00.000Z", confirmation, settled_at: "2026-09-09T00:00:01.000Z" };
+  for (const outcome of ["fresh", "duplicate", "lost-rpc", "lost-readback", "wrong-worker"] as const) {
+    let workerId = "";
+    const http = vi.fn<typeof fetch>(async (url, options) => {
+      const route = new URL(String(url)).pathname;
+      if (route.endsWith("/private_research_intents")) return Response.json([{ data: intent }]);
+      if (route.endsWith("/private_research_payment_attempts")) return Response.json([settled]);
+      if (route.endsWith("/rpc/claim_private_research_execution")) {
+        const body = JSON.parse(String(options?.body));
+        expect(body).toEqual({ p_id: intent.id, p_payer: account.address.toLowerCase(), p_worker_id: expect.any(String) });
+        workerId = body.p_worker_id;
+        return outcome === "lost-rpc" ? new Response("{}", { status: 503 }) : Response.json(outcome !== "duplicate");
+      }
+      if (route.endsWith("/private_research_executions")) {
+        expect(new URL(String(url)).searchParams.get("id")).toBe(`eq.${intent.id}`);
+        if (outcome === "lost-readback") return new Response("{}", { status: 503 });
+        return Response.json([{ worker_id: outcome === "wrong-worker" ? "00000000-0000-4000-8000-000000000000" : workerId, started_at: settled.settled_at }]);
+      }
+      throw new Error("Unexpected synthetic request");
+    });
+    const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+    const result = claimSupabasePrivateExecution(client, intent.id, account.address);
+    if (outcome === "fresh") expect(await result).toEqual({ id: intent.id, workerId, startedAt: settled.settled_at });
+    else if (outcome === "duplicate") expect(await result).toBeNull();
+    else await expect(result).rejects.toThrow();
+    expect(http.mock.calls.filter(([url]) => String(url).includes("/rpc/"))).toHaveLength(1);
+  }
 });

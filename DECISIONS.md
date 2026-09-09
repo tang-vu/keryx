@@ -1,5 +1,21 @@
 # Keryx — Decision Log
 
+**D-100** ? Private worker admission ? *Claim execution once, only after validating
+an owner-bound settled payment; never use elapsed time as permission to execute again.*
+SQLite and Supabase store a separate permanent execution claim. An atomic insert
+selects an existing owner intent with a confirmed payment; the adapter additionally
+revalidates the original signed intent and full confirmation tuple. Only a fresh insert
+followed by a matching validated readback returns a server-generated worker identity.
+Duplicate claims return no execution authority, including after restart or authorization
+expiry. Lost RPC/readback responses fail closed and must be inspected/recovered without
+replaying paid work. Supabase grants service-role reads and one restricted claim RPC,
+with no client access or direct application updates/deletes. Worker identity is backend
+state, not an account response or a substitute for authenticated payer access. These
+claims are groundwork for private effects/result persistence; no scheduler, execution
+route, receipt transport or private merchant is enabled yet. Do not clear or rewind
+claims during a restore: a worker may already have paid creators. Recovery requires
+per-leg evidence and durable result state before any retry can be authorized.
+
 **D-99** · Research execution effects · *Select one complete, job-scoped effects
 strategy before reasoning or funding; never fill missing private handlers with public
 defaults.* The orchestrator now routes payment persistence, cache reads/writes,
