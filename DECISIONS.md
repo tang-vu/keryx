@@ -1,5 +1,20 @@
 # Keryx — Decision Log
 
+**D-85** · Browser buyer workspace · *Bind a visible purchase review to the connected
+EOA, then keep recovery independent of that wallet.* `/research` now connects the
+one-shot engine to the user's wallet rather than the playground worker. The adapter
+reads `eth_accounts` and `eth_chainId` before/after Gateway lookup and before signing;
+captured hook metadata is not live authority. Question, package, price and payee must
+still match the accepted review. A private recovery download is offered before signing
+and retained as an explicit action. Browser history/import/export/removal uses the
+validated IndexedDB journal; only GET can follow saved or imported jobs. Completed
+results require original-request receipt verification before a verified download is
+offered. All payment/quality uncertainty remains visible. The existing manual job-ID
+viewer reuses the same answer/economics presentation. Local history is not account
+authentication or a permanent backup. Initial checkout requires a funded Gateway EOA;
+browser deposits and a fresh end-to-end paid wallet pilot remain unfinished B1 work.
+Reversible: medium (UI/adapter additions; no server settlement or journal migration).
+
 **D-84** · Gateway balance uncertainty · *An unreadable balance is not zero and must
 not suggest another deposit.* Before connecting the browser buyer engine, tracing its
 funding dependency found that the session credit endpoint and creator panel converted

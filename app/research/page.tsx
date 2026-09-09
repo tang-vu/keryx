@@ -4,6 +4,8 @@ import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { ResearchRequest } from "@/components/keryx/research-request";
 import { ResearchJob } from "@/components/keryx/research-job";
+import { ResearchWorkspace } from "@/components/keryx/research-workspace";
+import { ResearchSavedJobs } from "@/components/keryx/research-saved-jobs";
 import { config } from "@/lib/config";
 import { quoteA2aResearch } from "@/lib/a2a/pricing";
 import { parseBuyerBudget } from "@/lib/a2a/buyer-workspace";
@@ -33,8 +35,9 @@ export default async function ResearchPage({ searchParams }: {
           <p className="font-mono text-xs uppercase tracking-widest text-seal">Paid research · Arc testnet</p>
           <h1 className="mt-3 font-display text-5xl">Give your agent a research budget.</h1>
           <p className="mt-5 max-w-2xl font-serif text-lg text-ink-2">Know the price before your agent pays. Follow the job, read its evidence, and see what reached creators.</p>
-          <p className="mt-3 font-serif text-sm text-ink-3">Use a funded x402 client to purchase. This workspace prepares requests and follows existing jobs.</p>
+          <p className="mt-3 font-serif text-sm text-ink-3">Buy with a funded Gateway wallet, or prepare a request for your own agent. Keep a private recovery file to follow your job after a disconnect.</p>
         </header>
+        <ResearchWorkspace>
         <section aria-labelledby="package-heading" className="border border-line bg-paper p-6">
           <h2 id="package-heading" className="font-display text-3xl">1. Price your research</h2>
           <form action="/research" className="mt-5 flex flex-wrap items-end gap-4">
@@ -59,10 +62,12 @@ export default async function ResearchPage({ searchParams }: {
             <p className="mt-2 font-serif text-sm text-ink-3">Fixed-price and non-refundable. Unused creator reserve stays in the package. Quality is best effort; the provisional target has no refund or service-credit remedy. The payment challenge at purchase is authoritative.</p>
             {available ? <>
               <p className="mt-4 break-all font-mono text-xs">Payment network: {config.networkId}<br />Keryx payee: {config.sellerAddress}</p>
-              <ResearchRequest key={`${mode}:${quote.creatorBudgetUsdc}`} mode={mode} budget={quote.creatorBudgetUsdc} version={quote.researchPackage.version} total={quote.totalPriceUsdc} />
+              <ResearchRequest key={`${mode}:${quote.creatorBudgetUsdc}`} mode={mode} budget={quote.creatorBudgetUsdc} version={quote.researchPackage.version} total={quote.totalPriceUsdc} payee={config.sellerAddress} />
             </> : <p role="status" className="mt-4 text-seal">Paid testnet research is currently unavailable. Job lookup remains available below.</p>}
           </>}
         </section>
+        <ResearchSavedJobs />
+        </ResearchWorkspace>
         <ResearchJob />
         <p className="font-serif text-ink-3">New to the API? <Link href="/api/docs" className="underline">Read the API reference</Link>. To try a sponsored question, <Link href="/playground" className="underline">open the playground</Link>.</p>
       </main>

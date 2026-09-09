@@ -28,6 +28,14 @@ balance. No signature, deposit, withdrawal or other on-chain write was made.
 Production UI and endpoint verification must follow the deployment; unit tests alone
 do not prove the live behavior.
 
+Production follow-up: `6ef1870` deployed and public health reported that commit as
+operational. The live credit endpoint refused a malformed address with HTTP 400/null
+and returned a matching known testnet balance with `Cache-Control: no-store`. Archived
+receipt verification and mobile lookup checks also passed without payment. A separate
+Chromium test of the creator component showed unavailable/retry on HTTP 503 and known
+empty only after a successful explicit-zero response. The v0.22.20 Canteen product
+update was saved and its push completed.
+
 Protocol reference checked September 9:
 [Circle: token balances](https://developers.circle.com/api-reference/gateway/all/get-token-balances).
 The installed batching SDK 2.1.0 also throws for an absent balance row instead of

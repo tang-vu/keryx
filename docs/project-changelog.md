@@ -1,5 +1,14 @@
 # Keryx Project Changelog
 
+### Browser checkout and local recovery (2026-09-09, v0.22.21)
+
+- Review and sign one research purchase with an already funded Gateway EOA.
+- Add saved jobs, recovery import/export, explicit local deletion and verified receipt
+  downloads. Reload and import use GET only, with payment uncertainty preserved.
+- Recheck provider account/chain around balance lookup and before signing.
+- Add a hermetic React/Chromium checkout regression gate. Browser deposit controls
+  and fresh-wallet paid runtime acceptance remain unfinished.
+
 ### Honest Gateway credit status (2026-09-09, v0.22.20)
 
 - Distinguish Circle lookup outages from known zero funds; validate depositor, domain

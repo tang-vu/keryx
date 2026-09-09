@@ -36,6 +36,9 @@ jobs:
       - name: Browser buyer recovery (hermetic, no settlement)
         run: npm run test:browser-buyer
 
+      - name: Browser checkout UI (hermetic, no settlement)
+        run: npm run test:browser-checkout
+
       - name: Agent quality regression (hermetic, no settlement)
         run: npm run eval:agent:ci
 
