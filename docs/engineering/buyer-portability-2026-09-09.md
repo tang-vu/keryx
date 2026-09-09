@@ -47,3 +47,17 @@ evidence, not an independent buyer, a new paid pilot or a completed checkout jou
 
 Next: transactional browser journals, one-shot submission and GET-only recovery,
 then wallet funding/signing UI and complete interruption/concurrency acceptance.
+
+## Production follow-up
+
+`e3b60a2` deployed successfully and public health reported that commit as operational.
+Live checks verified an unsigned valid 402 quote, refusal of inherited package names
+with the API's documented HTTP 409, and the archived pilot receipt in the browser.
+The first smoke mistakenly expected 400; the assertion was corrected after checking
+the route and its actual 409 response. No payment signature was sent. Mobile checks
+found no horizontal overflow, page errors or private job ID in the address bar.
+The Arc Canteen product update was saved and its push completed.
+
+The disposable-cache build compiled in 7.4 minutes and generated pages in 36.7 seconds;
+it did not emit the previous filesystem-cache write stage. This is one deployment,
+not a general build-time benchmark or production-capacity claim.

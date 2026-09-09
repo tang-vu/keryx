@@ -1,5 +1,13 @@
 # Keryx Project Changelog
 
+### Browser purchase engine (2026-09-09, v0.22.19)
+
+- Add strict IndexedDB journals, atomic submission claims and private recovery import/export.
+- Add exact-price and EOA signature checks, repeated wallet/balance validation,
+  one-shot submission, durable seller acknowledgements and GET-only receipt recovery.
+- Add a hermetic Chromium CI gate for transaction aborts, cross-tab/reload behavior
+  and synthetic signing. No user checkout UI or new real payment is enabled.
+
 ### Shared buyer protocol and disposable-build cache (2026-09-09, v0.22.18)
 
 - Share payment/request policy, order identity, package contracts and receipt binding

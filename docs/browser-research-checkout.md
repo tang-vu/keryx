@@ -17,8 +17,10 @@ adapters generate nonces with Web Crypto and verify journal/result/original-requ
 binding without importing Node configuration or filesystem code. Node synchronous
 exports and old journal formats remain supported. Golden v2 IDs and Quick/Deep
 fingerprints, 79 focused tests and a Chromium check against an archived pilot journal
-passed. Transactional browser persistence, one-shot orchestration, wallet/deposit
-controls and the checkout UI are still required; these modules do not enable purchase.
+passed. The subsequent v0.22.19 engine adds transactional browser persistence,
+one-shot EOA submission and GET-only recovery. Wallet/deposit controls and the
+checkout UI are still required; these modules are not yet exposed for user purchases.
+See [browser purchase engine evidence](./engineering/browser-buyer-engine-2026-09-09.md).
 
 ## Current implementation evidence
 

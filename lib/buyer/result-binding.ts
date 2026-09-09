@@ -5,12 +5,19 @@ import { canonicalJson } from "../canonical-json";
 import type { BuyerIntentEnvelope as BuyerIntent } from "./protocol";
 import { BUYER_NETWORK, decodeHeader } from "./protocol";
 
-export function sellerPaymentEvidence(header: string | null, intent: BuyerIntent) {
+export const sellerEvidenceSchema = z.object({ success: z.literal(true), transaction: z.string().min(1).max(256), payer: z.string(), network: z.literal(BUYER_NETWORK) });
+
+export function validateSellerEvidence(value: unknown, intent: BuyerIntent) {
   try {
-    const evidence = z.object({ success: z.literal(true), transaction: z.string().min(1).max(256), payer: z.string(), network: z.literal(BUYER_NETWORK) }).parse(decodeHeader(header));
+    const evidence = sellerEvidenceSchema.parse(value);
     if (evidence.payer.toLowerCase() !== intent.authorization.from.toLowerCase()) return null;
     return { ...evidence, authority: "seller-relayed-payment-response" as const, independentlyVerified: false as const };
   } catch { return null; }
+}
+
+export function sellerPaymentEvidence(header: string | null, intent: BuyerIntent) {
+  try { return validateSellerEvidence(decodeHeader(header), intent); }
+  catch { return null; }
 }
 
 export function verifyBuyerJobBinding(value: unknown, intent: BuyerIntent) {

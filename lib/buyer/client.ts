@@ -1,20 +1,12 @@
 import type { Hex } from "viem";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { BUYER_ENDPOINT, BUYER_ORIGIN, BuyerRefusal, buyerRequestSchema, chooseRequirement, newAuthorization, buyerJobId, type BuyerRequest, type BuyerAuthorization } from "./policy";
+import { BUYER_ENDPOINT, BUYER_ORIGIN, buyerRequestSchema, newAuthorization, buyerJobId, type BuyerRequest, type BuyerAuthorization } from "./policy";
 import { archiveBuyerReceipt, createBuyerJournal, readBuyerJournal, writeBuyerFile, type BuyerIntent } from "./journal";
 import { buyerFetch, readBuyerJson, type BuyerFetch } from "./transport";
 import { sellerPaymentEvidence, verifyBuyerJob, verifyBuyerReceipt } from "./verify-result";
-
-export async function quoteBuyer(request: BuyerRequest, payee: string, maxTotalMicros: string, http: BuyerFetch = buyerFetch) {
-  const normalized = buyerRequestSchema.parse(request);
-  const response = await http(BUYER_ENDPOINT, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(normalized) });
-  try {
-    if (response.status !== 402) throw new BuyerRefusal(`SKIP: expected an unpaid quote; received HTTP ${response.status}`);
-    try { return chooseRequirement(response.headers.get("payment-required"), normalized, payee, maxTotalMicros); }
-    catch { throw new BuyerRefusal("SKIP: challenge does not uniquely match the pinned resource, network, token, payee, signing domain, validity and total-price limit"); }
-  } finally { await response.body?.cancel(); }
-}
+import { quoteBuyer } from "./quote";
+export { quoteBuyer } from "./quote";
 
 export async function buyResearch(input: {
   request: BuyerRequest; payee: string; maxTotalMicros: string; payer: string; directory: string;

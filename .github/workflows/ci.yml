@@ -30,6 +30,12 @@ jobs:
       - name: Unit tests (economic invariants)
         run: npm test
 
+      - name: Install Chromium for buyer persistence checks
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser buyer recovery (hermetic, no settlement)
+        run: npm run test:browser-buyer
+
       - name: Agent quality regression (hermetic, no settlement)
         run: npm run eval:agent:ci
 

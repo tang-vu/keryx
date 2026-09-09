@@ -1,5 +1,21 @@
 # Keryx — Decision Log
 
+**D-83** · Browser purchase durability · *Commit local recovery state before signing,
+and a one-shot submission boundary before sending.* IndexedDB stores only validated
+intents and allowlisted seller acknowledgements, never signatures. An exclusive insert
+and verified read-back precede the wallet prompt; a strict read/write transaction grants
+only one tab permission to submit an intent. Request success is insufficient: transaction
+completion is required. Imported files are recovery-only, and local deletion does not
+cancel a payment or server job. The browser orchestrator rechecks the exact reviewed
+price, EOA, Arc-testnet chain and the EOA's Gateway balance; it recovers the returned
+EIP-712 signer before committing the submission gate. Changed prices require review,
+including lower prices. After that gate, response/storage failures remain uncertain;
+acknowledgements survive HTTP 500 and recovery uses GET only. The transport pins origin,
+rejects redirects/URL credentials and combines caller cancellation with its deadline.
+This is the purchase engine, not yet a connected-wallet UI or a completed B1 journey.
+Same-origin scripts and browser storage eviction remain explicit residual risks.
+Reversible: medium (local journal version and purchase orchestration; no ledger migration).
+
 **D-82** · Deployment cache · *Do not write a persistent compiler cache for a disposable
 build directory.* The `a6fdd80` deploy spent 5.1 minutes writing Turbopack's cache after
 compilation. `redeploy-vps.sh` recreates `.next.tmp` before each build, so that cache
