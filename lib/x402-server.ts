@@ -10,6 +10,7 @@
 import { BatchFacilitatorClient } from "@circle-fin/x402-batching/server";
 import { NextRequest, NextResponse } from "next/server";
 import { config } from "./config";
+import { guardPublicMerchant } from "./payments/public-merchant-guard";
 
 const facilitator = new BatchFacilitatorClient();
 
@@ -56,6 +57,8 @@ function b64(s: string): string {
  * the same price + schema as the paid POST, without running the handler or taking any payment.
  */
 export function challengeResponse(opts: PaidOptions, body: unknown = {}): NextResponse {
+  const denied = guardPublicMerchant(opts.payTo);
+  if (denied) return denied;
   const requirements = buildRequirements(opts.priceUsdc, opts.payTo);
   const challenge = {
     x402Version: 2,
@@ -93,6 +96,8 @@ export async function settleThenServe(
   opts: PaidOptions,
   produce: (settle: SettleInfo) => Promise<unknown | Response> | unknown | Response,
 ): Promise<NextResponse> {
+  const deniedMerchant = guardPublicMerchant(opts.payTo);
+  if (deniedMerchant) return deniedMerchant;
   const requirements = buildRequirements(opts.priceUsdc, opts.payTo);
   const sig = req.headers.get("payment-signature");
 
@@ -130,6 +135,9 @@ export async function settleThenServe(
         accepted: requirements,
         payload: { authorization: decoded?.authorization, signature: decoded?.signature },
       };
+
+  const deniedAuthorization = guardPublicMerchant(opts.payTo, { to: payload?.payload?.authorization?.to });
+  if (deniedAuthorization) return deniedAuthorization;
 
   // Best-effort discovery: carry the declared bazaar metadata through verify/settle so the
   // facilitator can catalog this service. The extension must never break the money path — every

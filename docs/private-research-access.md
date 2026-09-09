@@ -48,13 +48,29 @@ EOA tests cover request changes with recomputed nonces, substituted payer/signat
 wrong signing domain/chain, authoritative quote mismatches and malformed policies.
 Chromium also verifies rejection of colliding merchants before authorization creation.
 
-The future private merchant must be reserved from **every** public seller path,
-including source and citation payees, before private signing or quotes are enabled.
-The signed `to` field can then separate payment purposes without relying on a mutable
-nonce-purpose table that an older database restore might lose. This is a design
-requirement, **not an implemented cross-endpoint replay defense**: the shared public
-seller middleware has not changed. Merchant rotation and backup recovery must preserve
-the reserved address set. Never register the private merchant as a public creator.
+In v0.22.31 the shared public seller guard rejects configured reserved recipients on
+research, source/article and citation paths before facilitator verification or
+settlement. The unused legacy seller wrapper also applies the guard. It checks the
+quoted payee and signed authorization `to`; changing/stripping unsigned resource or
+discovery metadata cannot bypass it. With reservations active, malformed or missing
+authorization recipients are rejected before reaching the external verifier.
+
+The server-only `KERYX_PRIVATE_RESEARCH_RESERVED_PAYEES` setting is a comma-separated
+list of up to 32 current/retired merchant addresses. Addresses are normalized; invalid
+configuration, an absent valid public merchant, or collision with `SELLER_ADDRESS`
+fails public admission with 503. Reserved payees return 403 without a payment challenge
+or receipt. Ordinary public payees retain their existing behavior. No private merchant
+has been provisioned: the empty default preserves public-only operation and is **not**
+permission to enable private quotes. Future private admission must require a nonempty
+validated reservation set containing its merchant. Keep the set through rotation and
+backup recovery; never repurpose a reserved merchant as a public creator.
+
+Offline signed adversarial tests cover full SDK and inner browser payloads, unsigned
+metadata replacement, current/retired and case-variant payees, malformed recipients,
+invalid/colliding configuration and the legacy wrapper. They assert zero facilitator,
+producer and payment-record calls on denial and preserve public payment behavior.
+Changing the signed recipient invalidates the original EOA signature. These tests do
+not establish private execution, storage confidentiality end to end or live settlement.
 
 Integration must derive first-admission pricing from server policy and persist the
 accepted quote and access policy atomically before work or external side effects.
@@ -137,7 +153,7 @@ Anonymous/authenticated clients cannot read or invoke the RPCs. SQLite uses a un
 intent key and insert/update compare-and-set operations. Neither path creates public
 payments, queues work, refunds, clears reservations, or infers failure on expiry.
 Private reconciliation, exact terminal failure handling, network submission, merchant
-reservation, worker execution and authenticated result delivery remain open.
+provisioning/admission validation, worker execution and authenticated result delivery remain open.
 
 Validation uses synthetic data, not live payments: SQLite covers two-connection claims,
 restart/expiry persistence, missing pre-submission boundaries, owner/tuple mismatch,

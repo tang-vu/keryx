@@ -207,6 +207,9 @@ export const config = {
   // funderKey is Keryx's own TREASURY wallet — used by the volume engine, A2A, and collectRun.
   // It is NEVER used for user sessions (those are funded by the user's own browser-held EOA).
   sellerAddress: (process.env.SELLER_ADDRESS ?? "") as `0x${string}` | "",
+  // Current and retired private research merchants. Public x402 sellers must never accept them.
+  // Empty until private merchant provisioning; this alone does not enable private research.
+  privateResearchReservedPayees: process.env.KERYX_PRIVATE_RESEARCH_RESERVED_PAYEES ?? "",
   funderKey: (process.env.AGENT_FUNDER_PRIVATE_KEY ??
     process.env.BUYER_PRIVATE_KEY ??
     "") as `0x${string}` | "",

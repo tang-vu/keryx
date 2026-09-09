@@ -20,6 +20,7 @@ import { BatchFacilitatorClient } from "@circle-fin/x402-batching/server";
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import { config } from "./config";
+import { guardPublicMerchant } from "./payments/public-merchant-guard";
 
 // Arc Testnet contract addresses (from @circle-fin/x402-batching SDK)
 const ARC_TESTNET_NETWORK = "eip155:5042002";
@@ -77,6 +78,8 @@ export function withGateway(
   const requirements = buildPaymentRequirements(price);
 
   return async (req: NextRequest) => {
+    const deniedMerchant = guardPublicMerchant(requirements.payTo);
+    if (deniedMerchant) return deniedMerchant;
     const paymentSignature = req.headers.get("payment-signature");
 
     // No payment — return 402 with Gateway batching payment requirements
@@ -109,6 +112,10 @@ export function withGateway(
       const paymentPayload: PaymentPayload = JSON.parse(
         Buffer.from(paymentSignature, "base64").toString("utf-8"),
       );
+
+      const authorization = paymentPayload?.payload?.authorization as { to?: unknown } | undefined;
+      const deniedAuthorization = guardPublicMerchant(requirements.payTo, { to: authorization?.to });
+      if (deniedAuthorization) return deniedAuthorization;
 
       const verifyResult = await facilitator.verify(
         paymentPayload,

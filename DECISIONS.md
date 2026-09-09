@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-98** · Public seller merchant reservation · *Reject reserved private recipients
+before any public x402 verification, settlement or content delivery.* The server-only
+`KERYX_PRIVATE_RESEARCH_RESERVED_PAYEES` list includes current and retired private
+merchants. Public research, source/article and citation sellers check both their quoted
+payee and the authorization's signed recipient; unsigned resource/discovery metadata
+cannot bypass the decision. The unused legacy wrapper applies the same guard. Active
+reservations also reject missing/malformed authorization recipients rather than rely
+on vendor address coercion. Invalid lists or a public/private merchant collision return
+503 instead of disabling the guard. Keep this configuration through rotation and
+restore; do not repurpose reserved wallets as public creator payees. An empty list
+preserves current public-only operation and must never coexist with enabled private
+quotes. No private merchant is provisioned or private flow enabled in v0.22.31.
+
 **D-97** · Private payment submission journal · *Persist one submission boundary
 per private intent and keep ambiguity durable.* A separate payment-attempt record is
 claimed atomically before any future facilitator I/O. Exactly one caller can obtain

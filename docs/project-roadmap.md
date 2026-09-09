@@ -6,7 +6,13 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.30 (payer job history, updated 2026-09-09)
+**Version:** 0.22.31 (public merchant reservation checks, updated 2026-09-09)
+
+Public x402 sellers now reject configured reserved private merchant recipients before
+verification or settlement, including stripped/rewritten unsigned metadata. Private
+request signing, isolated intent/payment storage and the reservation guard are foundations;
+private research quotes, execution and result access remain unavailable. No private
+merchant is provisioned by this release.
 
 Sign-in now requires a server-issued, unexpired, atomically consumed challenge.
 The [auth evidence](./engineering/durable-sign-in-2026-09-09.md) covers real SIWE
@@ -40,7 +46,8 @@ recovery still block full B1 acceptance.
 Saved-job verification binds receipts to the locally saved/imported original request.
 Versioned browser/CLI recovery exports now include any saved payment acknowledgement;
 legacy intent-only files remain supported. Imported records cannot submit payments.
-History remains local; bearer-ID lookup is not authenticated server history.
+Recovery journals remain local; authenticated account enumeration complements them.
+Historical result URLs retain their original access contract and are not private results.
 
 The [browser checkout design](./browser-research-checkout.md) remains the rationale for
 shared validation, transactional recovery and explicit wallet review. Further buyer

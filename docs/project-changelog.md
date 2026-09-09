@@ -1,5 +1,18 @@
 # Keryx Project Changelog
 
+### Public payment merchant reservations (2026-09-09, v0.22.31)
+
+- Reject configured private merchant recipients on public research, source and citation
+  x402 paths before facilitator verification/settlement or resource delivery.
+- Check the signed recipient independently of unsigned resource/discovery metadata;
+  reject malformed recipient aliases while reservations are configured.
+- Reserve current and retired addresses; fail closed on malformed configuration or a
+  collision with the public research merchant. Preserve ordinary public payment behavior.
+- Include the unused legacy seller wrapper in the guard. Add signed offline adversarial
+  tests; no private merchant, private quote or private payment is enabled by this release.
+- Include internal signed-request, immutable intent and payment-journal foundations.
+  Complete private execution, authenticated recovery and public-output isolation remain open.
+
 ### Paid job account history (2026-09-09, v0.22.30)
 
 - Add a payer-scoped, authenticated list of browser/CLI/A2A purchases at `/research`,
