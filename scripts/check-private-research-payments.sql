@@ -1,4 +1,4 @@
--- Disposable PostgreSQL after 0046 through 0051. Synthetic fixtures, no payment evidence.
+-- Disposable PostgreSQL after 0046 through 0052. Synthetic fixtures, no payment evidence.
 \set ON_ERROR_STOP on
 begin;
 set local role service_role;
@@ -71,6 +71,18 @@ begin
   perform public.confirm_private_creator_submission(id,owner,'00000000-0000-4000-8000-000000000001',creator_proof);
   perform public.confirm_private_creator_submission(id,owner,'00000000-0000-4000-8000-000000000001',creator_proof||'{"transaction":"replacement"}'::jsonb);
   if not exists(select 1 from public.private_creator_confirmations where data->>'transaction'='synthetic-creator-original') then raise exception 'creator receipt replaced'; end if;
+  select jsonb_build_object('source','circle-transfer-search','transaction','synthetic-search-original','transferStatus','batched','submission',data->'submission')
+    into creator_proof from public.private_creator_submissions where authorization_id='0x'||repeat('2',64);
+  begin
+    perform public.confirm_private_creator_submission(id,owner,'00000000-0000-4000-8000-000000000001',creator_proof||'{"transferStatus":"failed"}'::jsonb);
+    raise exception 'failed transfer promoted';
+  exception when raise_exception then if sqlerrm <> 'creator confirmation mismatch' then raise; end if; end;
+  begin
+    perform public.confirm_private_creator_submission(id,owner,'00000000-0000-4000-8000-000000000001',creator_proof-'transferStatus');
+    raise exception 'missing transfer stage promoted';
+  exception when raise_exception then if sqlerrm <> 'creator confirmation mismatch' then raise; end if; end;
+  perform public.confirm_private_creator_submission(id,owner,'00000000-0000-4000-8000-000000000001',creator_proof);
+  if not exists(select 1 from public.private_creator_confirmations where data->>'source'='circle-transfer-search' and data->>'transferStatus'='batched') then raise exception 'search provenance missing'; end if;
   if (select sum(amount_micros) from public.private_creator_submissions) <> 29999 then raise exception 'confirmation released budget'; end if;
   begin delete from public.private_creator_confirmations;
     raise exception 'creator confirmation delete allowed'; exception when insufficient_privilege then null; end;
@@ -115,4 +127,4 @@ do $$ begin
 end; $$;
 reset role;
 rollback;
-select 'PASS: one submission claim, owner-scoped immutable confirmation, one settled-only execution, immutable private result, capped creator admission, immutable creator confirmation, restricted RPCs' as result;
+select 'PASS: one submission claim, owner-scoped immutable confirmation, one settled-only execution, immutable private result, capped creator admission, immutable creator confirmation with search provenance, restricted RPCs' as result;

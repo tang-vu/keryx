@@ -4,11 +4,15 @@ import { z } from "zod";
 import { privateCreatorSubmissionSchema, listSqlitePrivateCreatorSubmissions, listSupabasePrivateCreatorSubmissions,
   type PrivateCreatorSubmissionRecord } from "./private-creator-submissions";
 
-const schema = z.object({
-  source: z.literal("circle-facilitator-success"),
+const confirmationFields = {
   transaction: z.string().min(1).max(256).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/),
   submission: privateCreatorSubmissionSchema.shape.submission,
-}).strict();
+};
+const schema = z.discriminatedUnion("source", [
+  z.object({ source: z.literal("circle-facilitator-success"), ...confirmationFields }).strict(),
+  z.object({ source: z.literal("circle-transfer-search"), ...confirmationFields,
+    transferStatus: z.enum(["received", "batched", "confirmed", "completed"]) }).strict(),
+]);
 /** Internal trusted transport observation; never accept this envelope from an HTTP caller. */
 export type PrivateCreatorConfirmation = z.infer<typeof schema>;
 export type PrivateCreatorConfirmationRecord = { confirmation: PrivateCreatorConfirmation; settledAt: string };

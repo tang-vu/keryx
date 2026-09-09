@@ -1,5 +1,22 @@
 # Keryx — Decision Log
 
+**D-106** ? Private creator reconciliation ? *Recover from the durable submission
+using complete Circle search and retain the origin/stage of the evidence.* The private
+backend reconciler reuses the existing paginated search and exact nonce/payer/payee/
+network/USDC/integer-amount matcher. It sends no private job/source identity to search,
+never signs or retries payments, and never writes public payment metrics. A separate
+`circle-transfer-search` confirmation variant stores the transfer ID and first-observed
+Circle status; `received`/`batched` are accepted processing stages, not on-chain finality.
+Existing facilitator receipts retain their original provenance. Missing, failed,
+unknown, mismatched or ambiguous search evidence cannot promote storage or release
+budget. DB/search outages remain unresolved. A bounded owner-scoped cursor permits
+continued scanning beyond old pending rows; callers must follow it and begin a fresh
+scan later to revisit unresolved rows. Immutable existing confirmations are skipped,
+so this does not track later finality changes. Tests cover reopen recovery and a match
+on the second Circle page. No production scheduler/private route is enabled. Exact
+terminal-failure handling, finality tracking, safe projections and full private
+execution remain separate required work.
+
 **D-105** ? Private creator confirmations ? *Persist the first trusted settlement
 observation against an admitted tuple; preserve observed receipts if persistence is
 uncertain.* The separate confirmation store requires the same owner and worker and

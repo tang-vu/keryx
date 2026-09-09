@@ -20,6 +20,8 @@ import { payWithServerSigner } from "../payments/server-x402-client";
 import { config } from "../config";
 import { confirmSupabasePrivateCreator, type PrivateCreatorConfirmation } from "./private-creator-confirmations";
 import { privateCreatorJournal } from "../payments/private-creator-journal";
+import { reconcilePrivateCreatorSubmissions } from "../gateway/private-creator-reconciliation";
+import { searchCircleTransfer, CIRCLE_X402_TRANSFERS_URL } from "../gateway/x402-transfer-reconciliation";
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-private-intents-"));
 const file = path.join(directory, "test.sqlite");
@@ -321,6 +323,37 @@ async function creatorFixture() {
   const claim = (await db.claimPrivateResearchExecution(value.id, account.address))!;
   return { value, claim };
 }
+
+it("reconciles a durable private attempt after reopening using complete Circle pagination and retained search provenance", async () => {
+  const { value, claim } = await creatorFixture();
+  const leg = creatorSubmission("4", "reconciliation-source");
+  await db.admitPrivateCreatorSubmission(value.id, account.address, claim.workerId, leg);
+  const transfer = { id: "synthetic-recovered-transfer", status: "received", token: "USDC", sendingNetwork: BUYER_NETWORK,
+    recipientNetwork: BUYER_NETWORK, fromAddress: leg.submission.payer, toAddress: leg.submission.payee,
+    amount: leg.submission.amountMicros, nonce: leg.submission.authorizationId, txHash: null,
+    createdAt: "2026-09-09T00:00:00.000Z", updatedAt: "2026-09-09T00:00:00.000Z" };
+  const http = vi.fn<typeof fetch>().mockResolvedValueOnce(Response.json({ transfers: [{ ...transfer, nonce: `0x${"5".repeat(64)}` }] },
+    { headers: { Link: `<${CIRCLE_X402_TRANSFERS_URL}?pageAfter=synthetic-cursor>; rel="next"` } }))
+    .mockResolvedValueOnce(Response.json({ transfers: [transfer] }));
+  const reopened = new SqliteAdapter(file);
+  try {
+    await reopened.init();
+    expect(await reconcilePrivateCreatorSubmissions(reopened, value.id, account.address, { search: (payment, signal) => searchCircleTransfer(payment, signal, http) }))
+      .toMatchObject({ confirmed: 1, unavailable: 0 });
+    expect(await reopened.getPrivateCreatorConfirmation(value.id, account.address, leg.submission.authorizationId)).toMatchObject({ confirmation: {
+      source: "circle-transfer-search", transaction: transfer.id, transferStatus: "received", submission: leg.submission } });
+    const skip = vi.fn();
+    expect(await reconcilePrivateCreatorSubmissions(reopened, value.id, account.address, { search: skip })).toMatchObject({ alreadyConfirmed: 1 });
+    expect(skip).not.toHaveBeenCalled();
+  } finally { reopened.close(); }
+  expect(http).toHaveBeenCalledTimes(2);
+  expect(new URL(String(http.mock.calls[1][0])).searchParams.get("pageAfter")).toBe("synthetic-cursor");
+  for (const [url, options] of http.mock.calls) {
+    expect(JSON.stringify([url, options])).not.toContain(value.id);
+    expect(JSON.stringify([url, options])).not.toContain(leg.sourceId);
+    expect(new Headers(options?.headers).has("Payment-Signature")).toBe(false);
+  }
+});
 
 it("recovers a confirmed paid 5xx into the private ledger after a storage outage without repeating signed HTTP", async () => {
   const { value, claim } = await creatorFixture();

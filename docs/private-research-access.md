@@ -348,6 +348,46 @@ current ledger evidence rather than treating stale result counters as final sett
 Creator earnings views, reconciliation and the complete effects/gateway factory remain
 unfinished. No synthetic confirmation is included in public settlement or traction data.
 
+## Implemented private creator search reconciliation
+
+`reconcilePrivateCreatorSubmissions` is an owner-scoped backend operation over durable
+admissions. It uses the existing complete paginated Circle search and exact economic
+tuple matcher. Search inputs omit private job/source identity; requests contain no
+payment signature. Existing confirmations are skipped. Newly matched evidence is
+stored through the same owner/worker-bound first-writer confirmation method, with
+`source: circle-transfer-search`, the Circle transfer ID and `transferStatus`.
+
+Circle's [transfer documentation](https://developers.circle.com/api-reference/gateway/all/get-x402transfer-by-id)
+distinguishes accepted/processing from on-chain confirmation and completion. Recorded
+`received` or `batched` is not proof of on-chain finality. `transferStatus` is the first
+observed stage, not a live status tracker. Existing confirmations are immutable; future
+finality-aware user/creator projections must preserve that distinction. The
+[search documentation](https://developers.circle.com/api-reference/gateway/all/search-x402transfers)
+lists address/network/token/date/cursor filters. A September 9 read-only probe against
+the deployed testnet `/v1/x402/transfers` endpoint returned HTTP 200 and a sample with
+nonce and the required economic fields. Only field names/status were inspected in
+output; no identifiers, signatures or new payment were published.
+
+No match, duplicate/mismatched tuples, unknown status and search/storage failure leave
+an attempt unresolved. An exact failed transfer is counted as `failedObserved` only;
+this helper does not persist terminal failure, release capacity or initiate another
+payment. Expiry is never failure evidence. Confirmation persistence failure can safely
+retry the read-only search later. A limit of 1?100 records and a backend-only leg cursor
+allow complete traversal; callers must follow `nextCursor` until `remaining` is zero,
+then start a fresh scan on a later reconciliation cycle. Abort returns partial counts
+and the continuation position. Never expose this backend cursor/summary as a public
+research response without an explicit authenticated projection.
+
+Tests include SQLite reopen recovery from a second Circle result page, source/job
+metadata omission, accepted-stage retention, unchanged existing confirmations,
+no-match/failed/mismatched/duplicate/unknown evidence, storage outages and bounded
+continuation. PostgreSQL checks after migrations 0046?0052 reject absent/failed search
+stages and retain search provenance under the restricted confirmation RPC. All
+confirmation fixtures are synthetic. The helper is not scheduled in production and
+private execution remains disabled; terminal failure handling and finality tracking,
+creator earnings projections, the private effects factory and authenticated recovery
+still require integration.
+
 ## Implemented account enumeration
 
 `GET /api/me/jobs` requires a valid, unrevoked SIWE account session. The server derives
