@@ -1,5 +1,14 @@
 # Keryx Project Changelog
 
+### Shared buyer protocol and disposable-build cache (2026-09-09, v0.22.18)
+
+- Share payment/request policy, order identity, package contracts and receipt binding
+  between Node and browser adapters. Existing CLI APIs and v2 IDs remain compatible;
+  browser checkout UI and transactional submission are still being implemented.
+- Refuse inherited object-property names as unregistered package versions.
+- Skip Turbopack filesystem-cache writes only for disposable `.next.tmp` deploy builds,
+  which recreate their cache directory each time. Normal build/dev defaults remain.
+
 ### Browser receipt integrity (2026-09-09, v0.22.17)
 
 - Verify source-decision receipts with Web Crypto before displaying them: canonical

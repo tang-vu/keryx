@@ -1,5 +1,28 @@
 # Keryx — Decision Log
 
+**D-82** · Deployment cache · *Do not write a persistent compiler cache for a disposable
+build directory.* The `a6fdd80` deploy spent 5.1 minutes writing Turbopack's cache after
+compilation. `redeploy-vps.sh` recreates `.next.tmp` before each build, so that cache
+cannot warm the next deployment. Disable build filesystem caching only when
+`NEXT_DIST_DIR=.next.tmp`, following the installed Next.js build-environment guide.
+Normal builds and development retain their cache defaults. This does not disable
+runtime caching or relax typecheck/build/health gates. Reversible: easy (one build option).
+
+**D-81** · Buyer runtime portability · *Share policy and result binding while keeping
+runtime cryptography separate.* Browser checkout needs the same refusal rules and
+recovery identity as the independent CLI. Shared modules now own request/challenge
+schemas, typed data, the v2 order-ID preimage, immutable package definitions/fingerprint
+serialization and result/request binding. Node keeps its synchronous public APIs and
+filesystem journal; browser adapters use Web Crypto and contain no server configuration
+or filesystem imports. Header decoding uses bounded UTF-8/base64 primitives in both
+runtimes. Package checks resolve the journal's recorded version rather than assuming
+the current package. Imported browser intents are validation/recovery inputs, not
+permission to sign or resubmit. Existing IDs, package fingerprints and receipt bytes
+remain compatible. This foundation introduces no checkout UI or payment submission.
+Package lookup additionally refuses inherited object property names as unregistered
+versions; a prototype property is not a published package contract.
+Reversible: medium (shared API imports; no ledger or wire-format migration).
+
 **D-80** · Browser receipt evidence · *Share canonicalization and envelope policy,
 but hash in each runtime.* The research workspace now checks source-decision receipt
 bytes with Web Crypto, the HTTPS digest header, displayed job/answer and answer hash.

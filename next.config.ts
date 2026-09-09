@@ -14,6 +14,9 @@ const nextConfig: NextConfig = {
   // `next start` is launched WITHOUT the env, so it always serves the default ".next".
   // Unset everywhere else → ".next", so there is no behavior change outside a deploy.
   distDir: process.env.NEXT_DIST_DIR || ".next",
+  // The deploy recreates .next.tmp every time, so its filesystem cache is never reused.
+  // Keep normal local/CI cache behavior; skip the wasted write only for that temporary build.
+  experimental: { turbopackFileSystemCacheForBuild: process.env.NEXT_DIST_DIR !== ".next.tmp" },
 
   async headers() {
     return [

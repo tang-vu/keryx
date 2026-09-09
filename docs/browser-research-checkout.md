@@ -11,6 +11,15 @@ The existing decision panel checks digest/header and displayed job/answer bindin
 The bounded JSON decoder is portable. This does not yet port buyer authorization,
 deterministic order IDs, package fingerprints or original-request receipt verification.
 
+Subsequent internal portability work now supplies shared request/challenge policy,
+EIP-712 typed data, deterministic order identity and package definitions. Browser
+adapters generate nonces with Web Crypto and verify journal/result/original-request
+binding without importing Node configuration or filesystem code. Node synchronous
+exports and old journal formats remain supported. Golden v2 IDs and Quick/Deep
+fingerprints, 79 focused tests and a Chromium check against an archived pilot journal
+passed. Transactional browser persistence, one-shot orchestration, wallet/deposit
+controls and the checkout UI are still required; these modules do not enable purchase.
+
 ## Current implementation evidence
 
 - `lib/buyer/client.ts` quotes without payment, creates an immutable local intent,

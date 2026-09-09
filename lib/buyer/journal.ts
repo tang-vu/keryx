@@ -2,15 +2,9 @@ import { mkdir, open, readFile, rename, unlink } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { resolve, join, dirname } from "node:path";
 import { z } from "zod";
-import { authorizationSchema, buyerRequestSchema, buyerJobId, requirementSchema } from "./policy";
+import { buyerJobId, buyerIntentEnvelopeSchema } from "./policy";
 
-export const buyerIntentSchema = z.object({
-  schema: z.literal("keryx-buyer-intent-v1"),
-  request: buyerRequestSchema,
-  requirement: requirementSchema,
-  authorization: authorizationSchema,
-  queryId: z.string(),
-}).strict().superRefine((v, ctx) => {
+export const buyerIntentSchema = buyerIntentEnvelopeSchema.superRefine((v, ctx) => {
   if (v.queryId !== buyerJobId(v.authorization) || v.authorization.value !== v.requirement.amount
     || v.authorization.to.toLowerCase() !== v.requirement.payTo.toLowerCase()) {
     ctx.addIssue({ code: "custom", message: "Journal authorization does not match its job" });

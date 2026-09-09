@@ -1,3 +1,4 @@
+import { a2aOrderIdentity } from "./order-identity";
 import crypto from "node:crypto";
 import type { ResearchMode } from "../types";
 import {
@@ -95,15 +96,7 @@ export function a2aOrderId(input: {
 }): string {
   const digest = crypto
     .createHash("sha256")
-    .update(
-      [
-        "keryx-a2a-v2",
-        input.network,
-        input.payer.toLowerCase(),
-        input.payee.toLowerCase(),
-        input.authorizationId.toLowerCase(),
-      ].join("|"),
-    )
+    .update(a2aOrderIdentity(input))
     .digest("hex");
   return `a2a_${digest}`;
 }
