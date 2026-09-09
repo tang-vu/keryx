@@ -1,5 +1,13 @@
 # Keryx Project Changelog
 
+### Verified deployment dependency reuse (2026-09-09, v0.22.24)
+
+- Replace Git-reflog install decisions with a stamp written only after successful
+  installation and matched against dependency/runtime/config state.
+- Invalidate before installation so failed attempts cannot silently qualify for reuse.
+- Ignore version-only root metadata only when installation has no root lifecycle,
+  workspace or local-dependency sensitivity. Update routine-deploy and outage guidance.
+
 ### Business calculator workspace (2026-09-09, v0.22.23)
 
 - Add `/economics` with editable USD assumptions, two contribution views, monthly

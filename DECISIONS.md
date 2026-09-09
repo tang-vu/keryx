@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-88** · Deployment dependency state · *Reuse a recorded successful installation,
+not a Git reflog comparison.* The VPS clears an installation stamp before `npm ci`
+and writes it only after success. Reuse matches manifest/lock, runtime/ABI/npm/config,
+installed hidden lock and presence of direct dependency manifests. Version-only root
+release metadata is ignored only without install hooks, workspaces or local deps.
+This avoids unnecessary reinstallations and prevents a failed installation from
+being mistaken for a completed one after Git advances. The helper is dependency-free
+Node code; config values are hashed, not exposed. It is not an installed-file security
+audit or a deployment concurrency lock. A transient SSH/public-tunnel interruption
+during v0.22.22 recovered while the original deploy continued; its root cause remains
+unknown. Reversible: easy (remove stamp to force a clean installation).
+
 **D-87** · Business planning UI · *Use the same exact arithmetic on the page and in
 the CLI, keeping estimates separate from the testnet ledger.* `/economics` exposes
 the existing USD scenario model with editable assumptions, alternative service-fee

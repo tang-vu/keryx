@@ -5,31 +5,67 @@ How Keryx ships to production. **The live site is served from a VPS**, not Verce
 ## Topology
 - **VPS** (`root@`, app at `/root/keryx`) runs the Next.js app under **pm2** (process `keryx`, port **3939**).
 - **Cloudflare named tunnel** maps `https://keryx.cc` → `http://localhost:3939` on the VPS (already configured).
-- Deploy is **driven from your local machine** by `scripts/deploy-vps.sh`, which SSHes in and does `git reset --hard origin/main`.
+- Routine deploys use `npm run redeploy` (`scripts/redeploy-vps.sh`), which SSHes in and checks out `origin/main`. `npm run deploy` is the separate provisioning path.
 - ⇒ **The VPS serves whatever is on `origin/main`.** Local edits are invisible until committed **and pushed**.
 
 ## One-time prereqs (already set up on this machine)
 - SSH alias `keryx-vps` in `~/.ssh/config` with key auth (`ssh keryx-vps` works passwordless).
-- `.env.local` present in repo root (real wallet/LLM keys) — scp'd to the VPS each deploy; never committed.
+- The provisioning path copies `.env.local` to the VPS. Routine redeploys retain the VPS environment and update the release identifier. Never commit or print its secrets.
 - VPS has Node 24, pm2, cloudflared, and 2 GB swap (the script provisions these; re-runnable).
 - Cloudflare tunnel `keryx.cc → :3939` live.
 
 ## Standard deploy — run after every change you want live
 ```bash
 # 1. commit (conventional message, no AI refs)
-git add -A && git commit -m "feat(scope): what changed"
+git add <in-scope-files> && git commit -m "feat(scope): what changed"
 
 # 2. push — MANDATORY: deploy resets the VPS to origin/main
 git push origin main
 
-# 3. deploy (local → VPS: reset to origin/main, npm ci, typecheck, build, pm2 reload)
-npm run deploy            # = bash scripts/deploy-vps.sh
+# 3. deploy (verify dependencies, typecheck, temporary build, health-gated reload)
+npm run redeploy
 
 # 4. verify
-curl -s -o /dev/null -w '%{http_code}\n' https://keryx.cc      # expect 200
-ssh keryx-vps "cd /root/keryx && git log -1 --oneline"          # expect your commit
+curl -fsS https://keryx.cc/api/health # check commit and operational status; don't publish full telemetry
 ```
-The build runs **on the VPS** (~2–5 min on 1 GB RAM + swap). pm2 reloads with zero/near-zero downtime and `pm2 save` persists it across reboots.
+The build runs **on the VPS** and can remain quiet for several minutes. A September 9
+build compiled in 6.7 minutes before page generation and reload. The old `.next` keeps
+serving while `.next.tmp` builds. This reduces planned downtime; it does not guarantee
+availability during host, memory, dependency-install or tunnel failures.
+
+### Successful dependency installation state
+
+`scripts/dependency-state.mjs` uses only Node built-ins, so it can run before installation.
+Reuse requires a stamp in `node_modules` matching the manifest, lockfile, Node/ABI,
+platform, npm version/effective configuration and installed hidden lockfile; direct
+dependency package manifests must still exist. Registry/auth configuration is hashed
+in memory and never printed or persisted in plaintext by this helper.
+
+Only root release-version metadata is ignored, and only when root install hooks,
+workspaces and local dependencies are absent. Dependency resolutions/integrities,
+scripts and install settings remain significant. An absent, invalid or unreadable
+stamp requires installation. The stamp is removed before `npm ci` and written only
+after that command succeeds, so a failed install cannot become reusable merely because
+Git's reflog changed. Existing unmarked installations reinstall once.
+
+This is evidence of a completed installation under matching inputs, not a byte-level
+audit of every package file or a concurrent-deployment lock. Keep deployments serialized.
+The local checks cover version-only reuse, meaningful changes, missing dependencies,
+invalidated/failed attempts and absence of plaintext configuration in the stamp:
+`node --test scripts/dependency-state.check.mjs`.
+
+The behavior of clean installation and lifecycle hooks was checked against
+[npm ci](https://docs.npmjs.com/cli/v11/commands/npm-ci/) and
+[npm scripts](https://docs.npmjs.com/cli/v11/using-npm/scripts/) on September 9.
+
+### Interrupted observations
+
+Keep the original deploy handle. A quiet build or SSH observation timeout does not
+prove the remote command stopped; check the same handle, remote process state and
+public/internal health before retrying. On September 9, public HTTP 530 and SSH
+timeouts recovered without a VPS reboot, and the original deployment completed.
+The root cause of that interruption was not established. Do not claim the dependency
+reuse change fixes host or tunnel outages.
 
 > **If you forget to push**, the deploy silently ships the *previous* commit (`git reset --hard origin/main` discards nothing local — it just checks out what GitHub has). Always push first.
 
@@ -83,10 +119,13 @@ the RPC URL.
 
 ## Rollback
 ```bash
-# fast: pin the VPS to a known-good commit and rebuild
-ssh keryx-vps "cd /root/keryx && git reset --hard <good-sha> && npm ci && npm run typecheck && NODE_OPTIONS=--max-old-space-size=1536 npm run build && pm2 reload keryx"
-# or do it cleanly via git: revert locally → push → npm run deploy
+# After confirming no deployment is still running, revert the identified bad change
+# locally, validate it, push the correction, then use the normal temporary-build path.
+npm run redeploy
 ```
+The redeploy script automatically restores its previous build when its internal
+post-reload commit health gate fails. A later manual rollback must also account for
+worker/config/database compatibility; do not overwrite the active build in place.
 
 ## Backups (SQLite is the source of truth)
 All real traction lives in one SQLite file (`/root/keryx/data/keryx.sqlite`). `npm run backup` takes a

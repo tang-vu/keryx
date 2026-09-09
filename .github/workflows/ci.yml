@@ -27,6 +27,12 @@ jobs:
       - name: Typecheck (tsc)
         run: npm run typecheck
 
+      - name: Deployment dependency-state checks (no install or network)
+        run: |
+          node --test scripts/dependency-state.check.mjs
+          node scripts/dependency-state.mjs record
+          node scripts/dependency-state.mjs check
+
       - name: Unit tests (economic invariants)
         run: npm test
 

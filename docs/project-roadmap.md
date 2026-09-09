@@ -6,7 +6,11 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.23 (business calculator workspace, updated 2026-09-09)
+**Version:** 0.22.24 (verified deployment dependency reuse, updated 2026-09-09)
+
+Deployment now records successful dependency installation rather than inferring it
+from Git reflog state. Failure and reuse checks advance O1; full host/tunnel recovery,
+off-site restore, alert delivery and release-wide operational drills remain open.
 
 The exact [business model](./business-model.md) is now available in a browser workspace
 at `/economics`, including local assumption/report exports and validated imports.

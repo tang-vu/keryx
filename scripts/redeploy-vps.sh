@@ -9,7 +9,7 @@
 # keryx.cc exactly as it was (no stale-lock outage). After reload we hit /api/health and
 # automatically roll back to the previous build if the new one doesn't come up.
 #
-# Use this for code-only changes. For dependency installs the lockfile triggers an
+# Use this for code-only changes. Changes to successful-install inputs trigger an
 # `npm ci`; for first-time provisioning (Node, pm2, swap, cloudflared) use deploy-vps.sh.
 #
 # Prereq: `ssh keryx-vps` works by key (see deploy-vps.sh) and the box is already provisioned.
@@ -66,16 +66,18 @@ COMMIT=$(run_ssh "$SSH" "cd $APP_DIR && git rev-parse --short HEAD")
 run_ssh "$SSH" "cd $APP_DIR \
   && (grep -q '^KERYX_COMMIT=' .env.local && sed -i 's/^KERYX_COMMIT=.*/KERYX_COMMIT=$COMMIT/' .env.local || echo 'KERYX_COMMIT=$COMMIT' >> .env.local)"
 
-# 2. install deps only when the lockfile actually moved (npm ci is the slow part)
-say "2/5 deps (npm ci only if package-lock changed)"
+# 2. Reuse only a recorded successful install for these inputs, never Git reflog state.
+say "2/5 deps (verify successful installation state)"
 run_ssh "$SSH" bash -se <<'REMOTE'
 set -euo pipefail
 cd /root/keryx
-if git diff --quiet 'HEAD@{1}' HEAD -- package-lock.json 2>/dev/null; then
-  echo "lockfile unchanged → skip npm ci"
+if node scripts/dependency-state.mjs check; then
+  echo "verified install inputs unchanged → skip npm ci"
 else
-  echo "lockfile changed (or unknown) → npm ci"
+  echo "install inputs changed (or unverified) → npm ci"
+  node scripts/dependency-state.mjs invalidate
   npm ci --no-audit --no-fund
+  node scripts/dependency-state.mjs record
 fi
 REMOTE
 
