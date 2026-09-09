@@ -27,6 +27,7 @@ import {
 } from "@/components/keryx/connect-steps";
 import { useArcChainGuard } from "@/lib/hooks/use-arc-chain-guard";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
+import { AccountSessions } from "@/components/keryx/account-sessions";
 
 export default function ConnectPage() {
   const { disconnect, disconnectAsync } = useDisconnect();
@@ -105,6 +106,7 @@ export default function ConnectPage() {
             )}
           </div>
         </div>
+        {session && <div className="max-w-2xl"><AccountSessions key={session.address.toLowerCase()} /></div>}
       </main>
     </div>
   );

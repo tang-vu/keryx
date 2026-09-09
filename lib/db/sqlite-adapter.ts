@@ -304,6 +304,7 @@ CREATE TABLE IF NOT EXISTS web_sessions (
   expires_at INTEGER NOT NULL CHECK(expires_at > issued_at AND expires_at <= issued_at + 604800000)
 );
 CREATE INDEX IF NOT EXISTS web_sessions_expiry ON web_sessions(expires_at);
+CREATE INDEX IF NOT EXISTS web_sessions_wallet ON web_sessions(wallet, expires_at);
 `;
 
 export class SqliteAdapter implements KeryxDB {
@@ -919,6 +920,15 @@ export class SqliteAdapter implements KeryxDB {
 
   async revokeWebSession(hash: string, wallet: string): Promise<void> {
     this.db.prepare("DELETE FROM web_sessions WHERE hash = ? AND wallet = LOWER(?)").run(hash, wallet);
+  }
+
+  async listWebSessions(wallet: string, now: number): Promise<WebSessionRecord[]> {
+    return this.db.prepare("SELECT hash,wallet,issued_at,expires_at FROM web_sessions WHERE wallet = LOWER(?) AND issued_at <= ? AND expires_at > ? ORDER BY issued_at DESC, hash ASC LIMIT 101")
+      .all(wallet, now, now).map(row => ({ hash: String(row.hash), wallet: String(row.wallet), issuedAt: Number(row.issued_at), expiresAt: Number(row.expires_at) }));
+  }
+
+  async revokeOtherWebSessions(wallet: string, keepHash: string): Promise<void> {
+    this.db.prepare("DELETE FROM web_sessions WHERE wallet = LOWER(?) AND hash != ?").run(wallet, keepHash);
   }
 
   async consumeAuthChallenge(hash: string, now: number): Promise<boolean> {

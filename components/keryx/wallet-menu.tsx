@@ -164,6 +164,11 @@ export function WalletMenu() {
               </Link>
             </DropdownMenuItem>
           )}
+          <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">
+            <Link href="/connect#account-sessions-title">
+              <ShieldCheck className="h-3.5 w-3.5" /> Manage sessions
+            </Link>
+          </DropdownMenuItem>
           <DropdownMenuSeparator className="bg-line" />
           <DropdownMenuItem
             className="cursor-pointer rounded-none text-seal focus:bg-seal/10 focus:text-seal"

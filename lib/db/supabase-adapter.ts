@@ -560,6 +560,19 @@ export class SupabaseAdapter implements KeryxDB {
     if (error) throw error;
   }
 
+  async listWebSessions(wallet: string, now: number): Promise<WebSessionRecord[]> {
+    const { data, error } = await this.sb.from("web_sessions").select("hash,wallet,issued_at,expires_at")
+      .eq("wallet", wallet.toLowerCase()).lte("issued_at", now).gt("expires_at", now)
+      .order("issued_at", { ascending: false }).order("hash", { ascending: true }).limit(101);
+    if (error) throw error;
+    return (data ?? []).map(row => ({ hash: row.hash, wallet: row.wallet, issuedAt: Number(row.issued_at), expiresAt: Number(row.expires_at) }));
+  }
+
+  async revokeOtherWebSessions(wallet: string, keepHash: string): Promise<void> {
+    const { error } = await this.sb.from("web_sessions").delete().eq("wallet", wallet.toLowerCase()).neq("hash", keepHash);
+    if (error) throw error;
+  }
+
   async consumeAuthChallenge(hash: string, now: number): Promise<boolean> {
     const { data, error } = await this.sb.rpc("consume_auth_challenge", { p_hash: hash, p_now: now });
     if (error || typeof data !== "boolean") throw error ?? new Error("Invalid challenge-consumption result");

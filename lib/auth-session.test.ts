@@ -14,6 +14,8 @@ vi.mock("@/lib/config", () => ({ config: { jwtSecret: "synthetic-session-secret"
 import { POST as signout } from "@/app/api/auth/signout/route";
 import { GET as sessionRoute } from "@/app/api/auth/session/route";
 import { getSession } from "./auth";
+import { GET as listSessions, DELETE as revokeOthers } from "@/app/api/auth/sessions/route";
+import { DELETE as revokeSelected } from "@/app/api/auth/sessions/[id]/route";
 
 const root = mkdtempSync(join(tmpdir(), "keryx-web-session-")); const file = join(root, "db.sqlite");
 const database = new SqliteAdapter(file); await database.init();
@@ -29,6 +31,60 @@ afterAll(() => { database.close(); for (const suffix of ["", "-wal", "-shm"]) rm
 const issue = (wallet = alice) => issueWebSession(database, secret, wallet, "asker");
 const lookup = (token: string) => storage.run(cookieJar(token), () => sessionRoute());
 const logoutRequest = (origin = "https://keryx.cc") => new Request("https://keryx.cc/api/auth/signout", { method: "POST", headers: { host: "keryx.cc", origin } });
+
+it("lists only the signed-in wallet and revokes selected or all other sessions without crossing wallets", async () => {
+  const wallet = `0x${"c".repeat(40)}`, otherWallet = `0x${"d".repeat(40)}`;
+  const current = await issue(wallet), other = await issue(wallet), third = await issue(wallet), foreign = await issue(otherWallet);
+  const id = async (token: string) => webSessionHash((await parseWebSession(token, secret))!.jti);
+  const currentId = await id(current.token), otherId = await id(other.token), foreignId = await id(foreign.token);
+  const asCurrent = <T>(fn: () => T) => storage.run(cookieJar(current.token), fn);
+  const list = await asCurrent(() => listSessions());
+  expect(list.headers.get("cache-control")).toBe("no-store");
+  const body = await list.json();
+  expect(body.sessions).toHaveLength(3); expect(body.truncated).toBe(false);
+  expect(body.sessions.filter((s: { current: boolean }) => s.current).map((s: { id: string }) => s.id)).toEqual([currentId]);
+  expect(JSON.stringify(body)).not.toContain(current.token);
+  expect(body.sessions.some((s: { id: string }) => s.id === foreignId)).toBe(false);
+  const selected = (sessionId: string) => asCurrent(() => revokeSelected(logoutRequest(), { params: Promise.resolve({ id: sessionId }) }));
+  expect((await selected(foreignId)).status).toBe(200); expect((await lookup(foreign.token)).status).toBe(200);
+  expect((await selected(currentId)).status).toBe(409); expect((await lookup(current.token)).status).toBe(200);
+  expect((await selected(otherId)).status).toBe(200); expect((await selected(otherId)).status).toBe(200);
+  expect((await lookup(other.token)).status).toBe(401); expect((await lookup(third.token)).status).toBe(200);
+  expect((await asCurrent(() => revokeOthers(logoutRequest()))).status).toBe(200);
+  expect((await lookup(third.token)).status).toBe(401); expect((await lookup(current.token)).status).toBe(200);
+  expect((await lookup(foreign.token)).status).toBe(200);
+});
+
+it("denies missing/revoked identity and cross-origin management; does not acknowledge no-op deletion", async () => {
+  const current = await issue(`0x${"e".repeat(40)}`), other = await issue(`0x${"e".repeat(40)}`);
+  const id = webSessionHash((await parseWebSession(other.token, secret))!.jti);
+  expect((await storage.run(cookieJar(), () => listSessions())).status).toBe(401);
+  const run = <T>(fn: () => T) => storage.run(cookieJar(current.token), fn);
+  expect((await run(() => revokeOthers(logoutRequest("https://foreign.example")))).status).toBe(403);
+  expect((await run(() => revokeOthers(new Request("https://keryx.cc", { method: "DELETE" })))).status).toBe(403);
+  const noop = vi.spyOn(database, "revokeWebSession").mockResolvedValue(undefined);
+  expect((await run(() => revokeSelected(logoutRequest(), { params: Promise.resolve({ id }) }))).status).toBe(503);
+  noop.mockRestore();
+  const bulkNoop = vi.spyOn(database, "revokeOtherWebSessions").mockResolvedValue(undefined);
+  expect((await run(() => revokeOthers(logoutRequest()))).status).toBe(503); bulkNoop.mockRestore();
+  const unavailable = vi.spyOn(database, "listWebSessions").mockRejectedValue(new Error("outage"));
+  expect((await run(() => listSessions())).status).toBe(503); unavailable.mockRestore();
+  await run(() => signout(logoutRequest()));
+  expect((await run(() => revokeOthers(logoutRequest()))).status).toBe(401);
+  expect((await lookup(other.token)).status).toBe(200);
+});
+
+it("bounds inventory while bulk revocation also reaches sessions outside the displayed window", async () => {
+  const wallet = `0x${"f".repeat(40)}`;
+  const current = await issue(wallet);
+  const now = Math.floor(Date.now() / 1000) * 1000;
+  for (let index = 1; index <= 105; index++) await database.createWebSession({ hash: index.toString(16).padStart(64, "0"), wallet, issuedAt: now, expiresAt: now + 60000 });
+  const run = <T>(fn: () => T) => storage.run(cookieJar(current.token), fn);
+  const body = await (await run(() => listSessions())).json();
+  expect(body.sessions).toHaveLength(100); expect(body.truncated).toBe(true);
+  expect((await run(() => revokeOthers(logoutRequest()))).status).toBe(200);
+  expect((await (await run(() => listSessions())).json()).sessions).toHaveLength(1);
+});
 
 it("revokes a real token before clearing the cookie and rejects retained-cookie access", async () => {
   const { token } = await issue();

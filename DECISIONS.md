@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-92** · Account session management · *A session selector is not a credential.*
+The authenticated wallet may list active sessions and revoke a selected session or
+all other sessions. Every operation verifies a live signed session and scopes its
+database predicate to that wallet. Browser mutations require a matching Origin.
+Only hashed selectors and issue/expiry times leave the server; raw JWT identifiers,
+tokens, IP addresses and invented device/location labels do not. Inventory is capped
+at 100 with an explicit truncation notice, while bulk revocation reaches all matching
+rows atomically and preserves the current session. Read-back failures and no-op writes
+cannot report successful revocation. Another wallet's selector gives no access and
+gets the same idempotent response as an absent selector. Already accepted work and
+payment authorizations retain their separately documented authority. Private research
+history and device key recovery remain distinct requirements.
+
 **D-91** · Revocable account sessions · *A signed JWT is necessary but insufficient
 for account access.* Each new login persists a hash of a random session identifier,
 the exact wallet and second-aligned issue/expiry times before issuing its JWT.

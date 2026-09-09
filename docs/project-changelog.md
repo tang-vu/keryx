@@ -1,5 +1,15 @@
 # Keryx Project Changelog
 
+### Account session controls (2026-09-09, v0.22.29)
+
+- Add signed-in session inventory to Connect, linked from the wallet menu. Show
+  creation/expiry and the current session without collecting device fingerprints.
+- Revoke one session or all other sessions under the authenticated wallet. Preserve
+  the current session and other wallets; confirm storage results before reporting success.
+- Bound displayed inventory and include older sessions in bulk revocation. Test
+  cross-wallet denial, revoked callers, storage uncertainty and mobile UI behavior.
+- These controls end account access, not accepted jobs or signed payment authority.
+
 ### Revocable account sessions (2026-09-09, v0.22.28)
 
 - Bind new login tokens to durable, wallet-specific sessions; reject revoked,

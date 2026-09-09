@@ -26,4 +26,20 @@ it("propagates storage failures without reporting revocation", async () => {
   const db = adapter();
   await expect(db.createWebSession({ hash, wallet, issuedAt: 1000, expiresAt: 2000 })).rejects.toThrow();
   await expect(db.revokeWebSession(hash, wallet)).rejects.toThrow();
+  await expect(db.listWebSessions(wallet, 1000)).rejects.toThrow();
+  await expect(db.revokeOtherWebSessions(wallet, hash)).rejects.toThrow();
+});
+
+it("bounds active-session listing and scopes bulk deletion to the wallet excluding this session", async () => {
+  const http = vi.fn<typeof fetch>().mockResolvedValueOnce(Response.json([{ hash, wallet, issued_at: 1000, expires_at: 3000 }]))
+    .mockResolvedValueOnce(new Response(null, { status: 204 }));
+  vi.stubGlobal("fetch", http); const db = adapter();
+  expect(await db.listWebSessions(wallet.toUpperCase(), 2000)).toEqual([{ hash, wallet, issuedAt: 1000, expiresAt: 3000 }]);
+  await db.revokeOtherWebSessions(wallet.toUpperCase(), hash);
+  const list = new URL(String(http.mock.calls[0][0])), deletion = new URL(String(http.mock.calls[1][0]));
+  expect(list.searchParams.get("wallet")).toBe(`eq.${wallet}`);
+  expect(list.searchParams.get("issued_at")).toBe("lte.2000"); expect(list.searchParams.get("expires_at")).toBe("gt.2000");
+  expect(list.searchParams.get("limit")).toBe("101"); expect(list.searchParams.get("order")).toBe("issued_at.desc,hash.asc");
+  expect(http.mock.calls[1][1]?.method).toBe("DELETE");
+  expect(deletion.searchParams.get("wallet")).toBe(`eq.${wallet}`); expect(deletion.searchParams.get("hash")).toBe(`neq.${hash}`);
 });

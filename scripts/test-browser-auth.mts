@@ -64,3 +64,5 @@ try {
   assert.deepEqual(errors, []);
   console.log("PASS: real wallet-menu logout failure retains sign-in/connection, confirmed logout clears both hook instances, and a delayed lookup cannot resurrect session UI. All HTTP intercepted; no signing or payments.");
 } finally { await browser.close(); }
+
+await import("./test-browser-sessions.mts");

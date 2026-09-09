@@ -386,6 +386,8 @@ export interface KeryxDB {
   consumeAuthChallenge(hash: string, now: number): Promise<boolean>;
   createWebSession(record: WebSessionRecord): Promise<void>;
   getWebSession(hash: string): Promise<WebSessionRecord | null>;
+  listWebSessions(wallet: string, now: number): Promise<WebSessionRecord[]>;
+  revokeOtherWebSessions(wallet: string, keepHash: string): Promise<void>;
   /** Idempotent owner-scoped removal; absence also proves this token cannot authenticate. */
   revokeWebSession(hash: string, wallet: string): Promise<void>;
 
