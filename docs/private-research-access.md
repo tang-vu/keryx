@@ -275,6 +275,43 @@ admission bound to its verified job/worker and creator spend cap, then persist t
 settlement evidence without erasing a receipt on storage failure. Reconciliation,
 creator earnings projections and safe recovery remain required before private use.
 
+## Implemented private creator admission storage
+
+`admitPrivateCreatorSubmission` validates the authenticated-owner lookup and permanent
+worker, then snapshots a strict non-bearer payment tuple plus source/article/kind.
+Only a new durable insertion and exact readback return true. False or exceptions never
+authorize signed HTTP. Same source/article/kind/payee is one economic leg within the
+job; a different nonce cannot bypass that identity. Authorization nonces are also
+unique across the private ledger. These are backend methods, not HTTP inputs.
+
+The original signed creator budget caps the sum of all admitted integer micro-USDC.
+Pending, expired and eventually settled amounts all consume this cap; this admission
+slice has no release, retry or settlement transition. SQLite inserts conditionally in
+one statement. Supabase locks the worker row before checking the sum; result saving
+uses the same lock and admissions after a saved result are denied. The caller must
+still validate the source's payout authority and the actual treasury signer. The buyer
+and creator-payment signer are deliberately separate identities.
+
+`listPrivateCreatorSubmissions` is owner-scoped backend recovery data, with worker IDs
+and source attribution, not a creator/public response. It revalidates admission and
+stored tuple/amount/leg identity. No public payment/feed/earnings rows are written.
+The Supabase table permits service-role reads and only the restricted admission RPC;
+clients cannot read or write it and direct application updates/deletes are denied.
+
+Tests cover SQLite concurrent cap contention, economic-leg and cross-job nonce reuse,
+restart/expiry, wrong worker/payer, malformed or bearer-bearing input, post-result
+admission and Supabase missing/corrupt/unavailable readback. A synthetic actual transport
+call waits for this SQLite admission and a fresh-nonce retry cannot resubmit a pending
+leg. PostgreSQL migration/role checks live in `scripts/check-private-research-payments.sql`
+after migrations 0046?0050. A disposable two-session PostgreSQL contention check admitted
+only one of two 20,000-micro requests under a 30,000-micro budget. All fixtures are
+synthetic and unfunded; none establishes real settlement or full private readiness.
+
+No production factory connects this store to the gateway yet. Next work must persist
+trusted settlement observations without erasing receipts on DB failure, expose safe
+creator earnings, reconcile uncertainty and complete the isolated research effects
+factory plus authenticated result recovery. A submitted tuple is never settled revenue.
+
 ## Implemented account enumeration
 
 `GET /api/me/jobs` requires a valid, unrevoked SIWE account session. The server derives

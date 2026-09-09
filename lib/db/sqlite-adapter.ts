@@ -3,6 +3,7 @@
  * The offline-dev datastore; the deployed app uses the Supabase adapter instead.
  */
 
+import { admitSqlitePrivateCreatorSubmission, listSqlitePrivateCreatorSubmissions, type PrivateCreatorSubmission, PRIVATE_CREATOR_SUBMISSIONS_SQL } from "./private-creator-submissions";
 import { saveSqlitePrivateResult, getSqlitePrivateResult, PRIVATE_RESEARCH_RESULTS_SQL } from "./private-research-results";
 import { claimSqlitePrivateExecution, getSqlitePrivateExecution, PRIVATE_RESEARCH_EXECUTIONS_SQL } from "./private-research-executions";
 import { DatabaseSync } from "node:sqlite";
@@ -316,6 +317,7 @@ ${PRIVATE_RESEARCH_INTENTS_SQL}
 ${PRIVATE_RESEARCH_PAYMENTS_SQL}
 ${PRIVATE_RESEARCH_EXECUTIONS_SQL}
 ${PRIVATE_RESEARCH_RESULTS_SQL}
+${PRIVATE_CREATOR_SUBMISSIONS_SQL}
 `;
 
 export class SqliteAdapter implements KeryxDB {
@@ -1464,6 +1466,13 @@ export class SqliteAdapter implements KeryxDB {
 
   async reservePrivateResearchIntent(intent: PrivateResearchIntent) {
     return reserveSqlitePrivateResearchIntent(this.db, intent);
+  }
+
+  async admitPrivateCreatorSubmission(id: string, payer: string, workerId: string, data: PrivateCreatorSubmission) {
+    return admitSqlitePrivateCreatorSubmission(this.db, id, payer, workerId, data);
+  }
+  async listPrivateCreatorSubmissions(id: string, payer: string) {
+    return listSqlitePrivateCreatorSubmissions(this.db, id, payer);
   }
 
   async savePrivateResearchResult(id: string, payer: string, workerId: string, run: QueryRun) {

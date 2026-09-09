@@ -3,6 +3,7 @@
  * All amounts are USDC numbers. Metrics are computed only from real rows.
  */
 
+import type { PrivateCreatorSubmission, PrivateCreatorSubmissionRecord } from "./private-creator-submissions";
 import type { PrivateResearchResult } from "./private-research-results";
 import type { PrivateExecutionClaim } from "./private-research-executions";
 import type { LedgerAccount } from "../gateway/settlement-parity";
@@ -367,6 +368,9 @@ export interface KeryxDB {
   reservePrivateResearchIntent(intent: PrivateResearchIntent): Promise<PrivateResearchIntent>;
   /** Caller must supply an independently authenticated payer. Never expose via bearer-ID lookup. */
   getPrivateResearchIntent(id: string, payer: string): Promise<PrivateResearchIntent | null>;
+  /** Only true admits signed I/O. Caller must bind source payout authority and authenticate the owner. */
+  admitPrivateCreatorSubmission(id: string, payer: string, workerId: string, data: PrivateCreatorSubmission): Promise<boolean>;
+  listPrivateCreatorSubmissions(id: string, payer: string): Promise<PrivateCreatorSubmissionRecord[]>;
   /** Backend-only immutable snapshots; authenticate payer independently before reading. */
   savePrivateResearchResult(id: string, payer: string, workerId: string, run: QueryRun): Promise<PrivateResearchResult>;
   getPrivateResearchResult(id: string, payer: string): Promise<PrivateResearchResult | null>;

@@ -1,11 +1,11 @@
--- Disposable PostgreSQL after 0046 through 0049. Synthetic fixtures, no payment evidence.
+-- Disposable PostgreSQL after 0046 through 0050. Synthetic fixtures, no payment evidence.
 \set ON_ERROR_STOP on
 begin;
 set local role service_role;
 insert into public.private_research_intents(id,payer,data) values (
   'prv_'||repeat('a',64),'0x'||repeat('a',40),
   jsonb_build_object('requirement',jsonb_build_object('network','eip155:5042002'),
-    'submission',jsonb_build_object('payment',jsonb_build_object('authorization',jsonb_build_object(
+    'submission',jsonb_build_object('request',jsonb_build_object('budget',0.03),'payment',jsonb_build_object('authorization',jsonb_build_object(
       'from','0x'||repeat('a',40),'to','0x'||repeat('b',40),'value','50000','nonce','0x'||repeat('c',64)))))
 );
 do $$
@@ -36,12 +36,28 @@ begin
   if not public.claim_private_research_execution(id,owner,'00000000-0000-4000-8000-000000000001') then raise exception 'execution denied'; end if;
   if public.claim_private_research_execution(id,owner,'00000000-0000-4000-8000-000000000002') then raise exception 'duplicate execution'; end if;
   if not exists(select 1 from public.private_research_executions where worker_id='00000000-0000-4000-8000-000000000001') then raise exception 'original worker replaced'; end if;
+  if public.admit_private_creator_submission(id,other,'00000000-0000-4000-8000-000000000001',repeat('1',64),'0x'||repeat('1',64),20000,
+    jsonb_build_object('submission',jsonb_build_object('authorizationId','0x'||repeat('1',64),'amountMicros','20000'))) then raise exception 'foreign creator admission'; end if;
+  if not public.admit_private_creator_submission(id,owner,'00000000-0000-4000-8000-000000000001',repeat('1',64),'0x'||repeat('1',64),20000,
+    jsonb_build_object('submission',jsonb_build_object('authorizationId','0x'||repeat('1',64),'amountMicros','20000'))) then raise exception 'first creator denied'; end if;
+  if public.admit_private_creator_submission(id,owner,'00000000-0000-4000-8000-000000000001',repeat('1',64),'0x'||repeat('2',64),1000,
+    jsonb_build_object('submission',jsonb_build_object('authorizationId','0x'||repeat('2',64),'amountMicros','1000'))) then raise exception 'duplicate creator leg'; end if;
+  if public.admit_private_creator_submission(id,owner,'00000000-0000-4000-8000-000000000001',repeat('2',64),'0x'||repeat('2',64),10001,
+    jsonb_build_object('submission',jsonb_build_object('authorizationId','0x'||repeat('2',64),'amountMicros','10001'))) then raise exception 'creator budget exceeded'; end if;
+  if not public.admit_private_creator_submission(id,owner,'00000000-0000-4000-8000-000000000001',repeat('2',64),'0x'||repeat('2',64),9999,
+    jsonb_build_object('submission',jsonb_build_object('authorizationId','0x'||repeat('2',64),'amountMicros','9999'))) then raise exception 'remaining creator budget denied'; end if;
+  begin delete from public.private_creator_submissions;
+    raise exception 'creator delete allowed'; exception when insufficient_privilege then null; end;
+  begin update public.private_creator_submissions set amount_micros=1;
+    raise exception 'creator update allowed'; exception when insufficient_privilege then null; end;
   perform public.save_private_research_result(id,other,'00000000-0000-4000-8000-000000000001','{"synthetic":1}');
   perform public.save_private_research_result(id,owner,'00000000-0000-4000-8000-000000000002','{"synthetic":1}');
   if exists(select 1 from public.private_research_results) then raise exception 'foreign result save'; end if;
   perform public.save_private_research_result(id,owner,'00000000-0000-4000-8000-000000000001','{"synthetic":1}');
   perform public.save_private_research_result(id,owner,'00000000-0000-4000-8000-000000000001','{"synthetic":2}');
   if not exists(select 1 from public.private_research_results where serialized_run='{"synthetic":1}') then raise exception 'original result replaced'; end if;
+  if public.admit_private_creator_submission(id,owner,'00000000-0000-4000-8000-000000000001',repeat('3',64),'0x'||repeat('3',64),1,
+    jsonb_build_object('submission',jsonb_build_object('authorizationId','0x'||repeat('3',64),'amountMicros','1'))) then raise exception 'creator admitted after result'; end if;
   begin delete from public.private_research_results;
     raise exception 'result delete allowed'; exception when insufficient_privilege then null; end;
   begin update public.private_research_results set serialized_run='{}';
@@ -56,6 +72,8 @@ end;
 $$;
 set local role anon;
 do $$ begin
+  begin perform public.admit_private_creator_submission('x','x','00000000-0000-4000-8000-000000000001','x','x',1,'{}'); raise exception 'client creator admission allowed'; exception when insufficient_privilege then null; end;
+  begin perform * from public.private_creator_submissions; raise exception 'client creator read allowed'; exception when insufficient_privilege then null; end;
   begin perform public.save_private_research_result('x','x','00000000-0000-4000-8000-000000000001','{}'); raise exception 'client result write allowed'; exception when insufficient_privilege then null; end;
   begin perform * from public.private_research_results; raise exception 'client result read allowed'; exception when insufficient_privilege then null; end;
   begin perform public.claim_private_research_execution('x','x','00000000-0000-4000-8000-000000000001'); raise exception 'public execution allowed'; exception when insufficient_privilege then null; end;
@@ -65,6 +83,8 @@ do $$ begin
 end; $$;
 set local role authenticated;
 do $$ begin
+  begin perform public.admit_private_creator_submission('x','x','00000000-0000-4000-8000-000000000001','x','x',1,'{}'); raise exception 'client creator admission allowed'; exception when insufficient_privilege then null; end;
+  begin perform * from public.private_creator_submissions; raise exception 'client creator read allowed'; exception when insufficient_privilege then null; end;
   begin perform public.save_private_research_result('x','x','00000000-0000-4000-8000-000000000001','{}'); raise exception 'client result write allowed'; exception when insufficient_privilege then null; end;
   begin perform * from public.private_research_results; raise exception 'client result read allowed'; exception when insufficient_privilege then null; end;
   begin perform public.claim_private_research_execution('x','x','00000000-0000-4000-8000-000000000001'); raise exception 'authenticated execution allowed'; exception when insufficient_privilege then null; end;
@@ -73,4 +93,4 @@ do $$ begin
 end; $$;
 reset role;
 rollback;
-select 'PASS: one submission claim, owner-scoped immutable confirmation, one settled-only execution, immutable private result, restricted RPCs' as result;
+select 'PASS: one submission claim, owner-scoped immutable confirmation, one settled-only execution, immutable private result, capped creator admission, restricted RPCs' as result;

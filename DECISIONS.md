@@ -1,5 +1,23 @@
 # Keryx — Decision Log
 
+**D-104** ? Private creator admission ledger ? *Atomically consume the signed
+creator budget before HTTP submission, once per economic leg and nonce.* A separate
+`private_creator_submissions` table records only non-bearer tuple evidence under an
+owner-validated permanent worker. The leg key binds kind, source, optional article
+and recipient; changing only the nonce cannot pay that leg again. Nonces are unique
+across this ledger. SQLite uses one insert-select; Supabase serializes on the worker
+row before summing integer micro-USDC against the original signed creator budget.
+Result sealing takes the same PostgreSQL lock and new legs are denied after a saved
+result. Only a fresh insert and matching validated readback admit HTTP; duplicates,
+cap exhaustion or lost acknowledgement do not. Every admitted amount remains held,
+including uncertain outcomes and expired authorizations. No release or settlement
+promotion is implemented in this slice. The caller must supply independently checked
+source payout/spender authority; ledger identity is not a replacement for registry
+checks or trusted signer evidence. The transport and SQLite ledger are integrated in
+synthetic tests, but no production gateway/factory supplies this journal yet. Creator
+settlement promotion, earnings projections, reconciliation and private execution
+remain unfinished. Never clear this table during restore/restart to obtain capacity.
+
 **D-103** ? Creator submission persistence boundary ? *Allow an exact non-bearer
 journal admission immediately before treasury signed HTTP submission.* The server
 x402 transport accepts an optional backend `beforeSubmit` callback. When supplied,
