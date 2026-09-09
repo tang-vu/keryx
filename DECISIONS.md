@@ -1,5 +1,20 @@
 # Keryx — Decision Log
 
+**D-95** · Private merchant and signature verification · *Verify the private request
+against a server-selected quote and a distinct trusted merchant before admission.*
+The new, currently unwired verifier checks canonical commitment equality and the EOA
+EIP-712 signature locally. The submitted body cannot choose authoritative quote terms,
+merchant policy or payer identity. Both server verification and fresh buyer intent
+creation reject a private/public research merchant collision. This keeps the original
+nonce format intact and prepares stateless purpose separation through signed `to`.
+All public seller paths must reserve the private merchant before enabling private
+quotes; that enforcement and merchant configuration are not implemented yet. A nonce
+purpose table alone is insufficient because restoring older state could lose it.
+Original quote terms and access policy must survive retries, rotation and restore.
+Signature verification is not settlement, balance, fresh validity or access proof;
+a paid job must remain recoverable after its original authorization expires. No route,
+signer integration, funds or privacy feature is activated by this internal change.
+
 **D-94** · Private request commitment foundation · *A proposed private job binds
 its normalized request and quoted transfer terms into a domain-separated SHA-256
 nonce with a fresh 32-byte Web Crypto salt.* The existing EIP-3009 typed signature

@@ -2,7 +2,8 @@
 import { z } from "zod";
 import { browserSha256 } from "../browser-receipt-integrity";
 import { a2aPackageFingerprintInput, a2aResearchPackageForVersion } from "../a2a/research-package-definition";
-import { addressSchema, authorizationSchema, authorizationWithNonce, buyerRequestSchema, requirementSchema } from "./protocol";
+import { authorizationSchema, authorizationWithNonce, buyerRequestSchema, requirementSchema } from "./protocol";
+import { requirePrivateMerchant, type PrivateMerchantPolicy } from "./private-merchant-policy";
 
 export const PRIVATE_RESEARCH_RESOURCE = "https://keryx.cc/api/agent/private-ask";
 export const privateRequestSchema = buyerRequestSchema.extend({
@@ -45,9 +46,9 @@ export async function privateRequestNonce(request: unknown, requirement: unknown
 }
 
 /** Fresh intent only. Import/recovery must reuse saved salt and authorization, never call this. */
-export async function createPrivateAuthorization(requestValue: unknown, requirementValue: unknown, payer: string, trustedPayee: string, now = Date.now()) {
+export async function createPrivateAuthorization(requestValue: unknown, requirementValue: unknown, payer: string, merchants: PrivateMerchantPolicy, now = Date.now()) {
   const request = privateRequestSchema.parse(requestValue), requirement = requirementSchema.parse(requirementValue);
-  if (requirement.payTo.toLowerCase() !== addressSchema.parse(trustedPayee).toLowerCase()) throw new Error("Quote payee does not match the trusted merchant");
+  requirePrivateMerchant(requirement, merchants);
   const salt = `0x${Array.from(globalThis.crypto.getRandomValues(new Uint8Array(32)), byte => byte.toString(16).padStart(2, "0")).join("")}`;
   const placeholder = authorizationWithNonce(payer, requirement, `0x${"0".repeat(64)}`, now);
   const { nonce: _placeholder, ...terms } = placeholder;

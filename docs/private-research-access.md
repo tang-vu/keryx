@@ -30,6 +30,40 @@ fields. No live authorization was submitted. Server admission before payment, du
 first-writer/replay rules across old and new endpoints, private storage and recovery,
 facilitator verification, public-output filtering and independent review remain open.
 
+### Local signature verification and merchant policy (not routed)
+
+`lib/a2a/private-request-verification.ts` now verifies the complete committed request
+and its EOA signature against an independently supplied server quote and merchant
+policy. Its strict submission shape does not accept client `accepted`, `requirement`,
+resource or payer overrides. The payer is derived from the verified authorization.
+Errors return null without logging private request or payment data. Verification is
+offline and preserves original signature evidence after expiry; it is not a check
+of current validity, Gateway balance, nonce use, settlement or account access.
+
+Fresh buyer authorization creation now requires trusted private and public research
+merchant addresses and rejects equality (case-insensitive), missing/invalid addresses
+and a quote paying another merchant. No merchant has been created or configured yet.
+The canonical nonce vector and all legacy journals remain unchanged. Real ephemeral
+EOA tests cover request changes with recomputed nonces, substituted payer/signature,
+wrong signing domain/chain, authoritative quote mismatches and malformed policies.
+Chromium also verifies rejection of colliding merchants before authorization creation.
+
+The future private merchant must be reserved from **every** public seller path,
+including source and citation payees, before private signing or quotes are enabled.
+The signed `to` field can then separate payment purposes without relying on a mutable
+nonce-purpose table that an older database restore might lose. This is a design
+requirement, **not an implemented cross-endpoint replay defense**: the shared public
+seller middleware has not changed. Merchant rotation and backup recovery must preserve
+the reserved address set. Never register the private merchant as a public creator.
+
+Integration must derive first-admission pricing from server policy and persist the
+accepted quote and access policy atomically before work or external side effects.
+Retries must use those immutable original terms, not today's fee configuration.
+Authenticated result recovery still needs a live payer session; possession of a signed
+submission is not a login credential. The facilitator remains the authority for payment
+verification/settlement, and ambiguous outcomes must remain recoverable. Funding the
+private merchant and creator-spend execution also require an explicit bounded design.
+
 ## Implemented account enumeration
 
 `GET /api/me/jobs` requires a valid, unrevoked SIWE account session. The server derives

@@ -7,6 +7,7 @@ import { createPrivateAuthorization, matchesPrivateRequestCommitment, privateReq
 
 export const request = { question: "What evidence supports this claim?", budget: 0.03, researchMode: "deep", packageVersion: "1.0.0", responseMode: "async", access: "payer-private-v1", model: null };
 export const payer = `0x${"1".repeat(40)}`, payee = `0x${"2".repeat(40)}`;
+const merchants = { privatePayee: payee, publicResearchPayee: payer };
 export const requirement = { scheme: "exact", network: BUYER_NETWORK, asset: BUYER_USDC, amount: "50000", payTo: payee, maxTimeoutSeconds: 604860, extra: { name: "GatewayWalletBatched", version: "1", verifyingContract: BUYER_GATEWAY } };
 export const terms = { from: payer, to: payee, value: "50000", validAfter: "1788911400", validBefore: "1789516860" };
 export const salt = `0x${"3".repeat(64)}`;
@@ -41,20 +42,20 @@ it("binds question, model, budget, package, payer, merchant, price, time and sal
 });
 
 it("creates fresh nonces, refuses a wrong merchant and refuses unavailable secure randomness", async () => {
-  const first = await createPrivateAuthorization(request, requirement, payer, payee, 1788912000000);
-  const second = await createPrivateAuthorization(request, requirement, payer, payee, 1788912000000);
+  const first = await createPrivateAuthorization(request, requirement, payer, merchants, 1788912000000);
+  const second = await createPrivateAuthorization(request, requirement, payer, merchants, 1788912000000);
   expect(first.salt).not.toBe(second.salt); expect(first.authorization.nonce).not.toBe(second.authorization.nonce);
   expect(await matchesPrivateRequestCommitment(first.request, requirement, first.authorization, first.salt)).toBe(true);
-  await expect(createPrivateAuthorization(request, requirement, payer, payer)).rejects.toThrow("trusted merchant");
+  await expect(createPrivateAuthorization(request, requirement, payer, { ...merchants, privatePayee: `0x${"4".repeat(40)}` })).rejects.toThrow("trusted merchant");
   vi.stubGlobal("crypto", undefined);
-  await expect(createPrivateAuthorization(request, requirement, payer, payee)).rejects.toThrow();
+  await expect(createPrivateAuthorization(request, requirement, payer, merchants)).rejects.toThrow();
   expect(await matchesPrivateRequestCommitment(first.request, requirement, first.authorization, first.salt)).toBe(false);
 });
 
 it("requires a new EIP-712 signature if a caller recomputes the nonce for changed research", async () => {
   // Disposable key remains in memory, never persisted, funded or sent to any network.
   const account = privateKeyToAccount(`0x${randomBytes(32).toString("hex")}`);
-  const original = await createPrivateAuthorization(request, requirement, account.address, payee, 1788912000000);
+  const original = await createPrivateAuthorization(request, requirement, account.address, merchants, 1788912000000);
   const typed = buyerTypedData(original.authorization);
   const signature = await account.signTypedData(typed);
   expect(await verifyTypedData({ ...typed, address: account.address, signature })).toBe(true);
