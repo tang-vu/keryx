@@ -1,5 +1,21 @@
 # Keryx — Decision Log
 
+**D-107** ? Private server payment gateway ? *Share creator payment operations while
+keeping legacy wallet custody/funding out of private construction.* `ServerPaymentGateway`
+now owns source/article purchases, citation payments, price/content identity checks and
+receipt-preserving error handling. The existing `RealGateway` retains its legacy
+spend-wallet loading and funding implementation and inherits those operations.
+`PrivateServerGateway` instead requires an explicit signer/address and a read-only
+Gateway-balance callback; it never creates a wallet, loads the legacy key file, deposits
+or transfers funds itself. It refuses another job before HTTP, attaches the durable
+private journal to both fetch and citation legs, and retains confirmed debit evidence
+when confirmation persistence or paid delivery fails. Insufficient funds require
+explicit prefunding. This does not provision a signer or merchant, prove the freshness
+of a caller-supplied worker, or replace source/registry payout checks. The execution
+factory must obtain a fresh durable claim and supply trusted environment-owned signer
+and balance dependencies. Full isolated research effects, creator projections and
+private HTTP/client recovery remain unconnected; no private endpoint is enabled.
+
 **D-106** ? Private creator reconciliation ? *Recover from the durable submission
 using complete Circle search and retain the origin/stage of the evidence.* The private
 backend reconciler reuses the existing paginated search and exact nonce/payer/payee/

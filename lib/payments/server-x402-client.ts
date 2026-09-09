@@ -14,7 +14,7 @@ interface ChallengeBody {
   accepts?: PaymentRequirements[];
 }
 
-interface BatchPayloadSigner {
+export interface BatchPayloadSigner {
   createPaymentPayload(
     x402Version: number,
     requirements: PaymentRequirements,

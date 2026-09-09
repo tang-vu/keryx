@@ -388,6 +388,37 @@ private execution remains disabled; terminal failure handling and finality track
 creator earnings projections, the private effects factory and authenticated recovery
 still require integration.
 
+## Implemented private server gateway
+
+The shared `ServerPaymentGateway` contains creator fetch/citation operations and their
+existing source/article price, identity and receipt handling. Public `RealGateway`
+retains its own legacy wallet and automatic-funding behavior. Private construction
+uses `PrivateServerGateway`, which accepts an explicit signer/address, the private DB
+journal methods, a job owner/worker context and a read-only balance callback. It does
+not load/create a legacy spend wallet or send deposit/transfer transactions. Keys must
+be provisioned through the environment-owned signer factory, which is not wired yet.
+
+The gateway rejects another job before unsigned HTTP, checks prefunded balance in
+integer micro-USDC and attaches `privateCreatorJournal` to both access tolls and
+citation legs. Admission is awaited before signed HTTP. Receipt persistence is attempted
+before returning delivery/payment results. A paid-but-undelivered or ambiguous result
+keeps its payment evidence; a confirmation DB outage is explicitly marked for recovery.
+A mismatched receipt cannot make paid content eligible. No question/rationale or job ID
+is added to the outgoing payment request URL.
+
+Tests instantiate this gateway without legacy wallets, exercise read-only prefunding
+checks, wrong-job denial, actual server-transport fetch/citation journal ordering,
+rejected admission and pending/paid-500 outcomes with confirmation outages. Existing
+public treasury transport tests exercise the inherited operations without constructing
+or funding a real wallet. All payment fixtures are synthetic and unfunded.
+
+This is an internal gateway, not complete private execution. Its caller must validate
+and freshly claim the job, provide the correct trusted signer/balance adapter, preserve
+source/registry payout authority and install a complete private effects strategy.
+A balance check is not a fleet-wide treasury reservation. Private merchant provisioning,
+whole-job funding policy, safe creator/result projections, authenticated client recovery
+and end-to-end leakage tests remain prerequisites for enabling private purchases.
+
 ## Implemented account enumeration
 
 `GET /api/me/jobs` requires a valid, unrevoked SIWE account session. The server derives

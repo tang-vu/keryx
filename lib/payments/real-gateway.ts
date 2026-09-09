@@ -26,16 +26,7 @@ import {
 import { arcTestnet } from "viem/chains";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { config } from "../config";
-import type { ArticleOfferRef, Author, PaymentRecord, Source, SourceItem, SourceItemIdentity } from "../types";
-import {
-  matchesSourceItemIdentity,
-  sourceItemIdentity,
-} from "../sources/source-item-asset";
-import { articlePaidPath } from "../offers/resolve-article-offer";
-import { sourceFetchPayTo } from "../registry/source-fetch-payto";
-import { makePayment, type FetchResult, type PaymentGateway } from "./payment-gateway";
-import { PaymentPendingError, PaymentSettledError } from "./payment-state";
-import { payWithServerSigner, type ServerX402Attempt } from "./server-x402-client";
+import { ServerPaymentGateway } from "./server-payment-gateway";
 
 const GAS_TOPUP = parseEther("0.05"); // native USDC for gas (18 decimals on Arc)
 const GAS_MIN = parseEther("0.01");
@@ -53,11 +44,10 @@ function loadSpendKey(): `0x${string}` {
   }
 }
 
-export class RealGateway implements PaymentGateway {
-  readonly mode = "real" as const;
+export class RealGateway extends ServerPaymentGateway {
   private spendKey = loadSpendKey();
-  private spend = privateKeyToAccount(this.spendKey);
-  private batchScheme = new BatchEvmScheme(this.spend);
+  protected spend = privateKeyToAccount(this.spendKey);
+  protected batchScheme = new BatchEvmScheme(this.spend);
   private gateway = new GatewayClient({
     chain: config.network as SupportedChainName,
     privateKey: this.spendKey,
@@ -70,10 +60,6 @@ export class RealGateway implements PaymentGateway {
     chain: arcTestnet,
     transport: http(config.rpcUrl),
   });
-
-  agentAddress(): string {
-    return this.spend.address;
-  }
 
   async ensureFunded(budget: number): Promise<{ address: string; depositTx?: string }> {
     // 1) Gas: native USDC for the deposit/approval txs.
@@ -125,217 +111,4 @@ export class RealGateway implements PaymentGateway {
     return { address: this.spend.address, depositTx: dep.depositTxHash };
   }
 
-  async payFetch({
-    source,
-    item,
-    queryId,
-    priceUsdc = source.fetchPrice,
-    offer,
-  }: {
-    source: Source;
-    item?: SourceItem;
-    queryId: string;
-    priceUsdc?: number;
-    offer?: ArticleOfferRef;
-  }): Promise<FetchResult> {
-    const url = item
-      ? `${config.baseUrl}${articlePaidPath({
-          sourceId: source.id,
-          itemId: item.id,
-          contentVersion: sourceItemIdentity(item).contentVersion,
-          offerId: offer?.id,
-          listPriceUsdc: offer?.listPriceUsdc,
-        })}`
-      : `${config.baseUrl}/api/source/${source.id}`;
-    const itemIdentity = item ? sourceItemIdentity(item) : undefined;
-    const fetchPayee = await sourceFetchPayTo(source);
-    const attempt = await payWithServerSigner<{
-      content?: string;
-      text?: string;
-      item?: SourceItemIdentity;
-      pricing?: { offerId?: string | null; priceUsdc?: number; listPriceUsdc?: number };
-    }>({
-      url,
-      method: "GET",
-      expectedPayee: fetchPayee,
-      expectedAmount: priceUsdc,
-      payer: this.spend.address,
-      signer: this.batchScheme,
-    });
-    const payment = paymentFromAttempt(attempt, {
-      kind: "fetch",
-      queryId,
-      sourceId: source.id,
-      sourceName: source.name,
-      ...(itemIdentity ?? {}),
-      offerId: offer?.id,
-      listPriceUsdc: offer?.listPriceUsdc,
-      payer: this.spend.address,
-      payee: fetchPayee,
-      settledRationale: "Access toll settled on Arc via x402.",
-    });
-    throwIfDeliveryFailed(attempt, payment, source.name);
-    if (itemIdentity && !matchesSourceItemIdentity(attempt.data?.item, itemIdentity)) {
-      throwIdentityMismatch(payment, source.name);
-    }
-    if (itemIdentity && !matchesArticlePricing(attempt.data?.pricing, priceUsdc, offer)) {
-      throwPricingMismatch(payment, source.name);
-    }
-    const content = attempt.data?.content ?? attempt.data?.text ?? JSON.stringify(attempt.data ?? {});
-    return { content, payment };
-  }
-
-  async payCitation({
-    source,
-    author,
-    item,
-    amount,
-    weight,
-    queryId,
-    rationale,
-  }: {
-    source: Source;
-    author: Author;
-    item?: SourceItemIdentity;
-    amount: number;
-    weight: number;
-    queryId: string;
-    rationale: string;
-  }): Promise<PaymentRecord> {
-    const url = `${config.baseUrl}/api/cite/${source.id}?author=${encodeURIComponent(
-      author.walletAddress,
-    )}&amount=${amount.toFixed(6)}`;
-    const attempt = await payWithServerSigner<{ ok?: boolean }>({
-      url,
-      method: "POST",
-      expectedPayee: author.walletAddress,
-      expectedAmount: amount,
-      payer: this.spend.address,
-      signer: this.batchScheme,
-    });
-    const payment = paymentFromAttempt(attempt, {
-      kind: "citation",
-      queryId,
-      sourceId: source.id,
-      sourceName: source.name,
-      ...item,
-      payer: this.spend.address,
-      payee: author.walletAddress,
-      weight,
-      settledRationale: rationale,
-    });
-    throwIfDeliveryFailed(attempt, payment, source.name);
-    return payment;
-  }
-}
-
-interface AttemptPaymentContext extends Partial<SourceItemIdentity> {
-  kind: "fetch" | "citation";
-  queryId: string;
-  sourceId: string;
-  sourceName: string;
-  payer: string;
-  payee: string;
-  weight?: number;
-  settledRationale: string;
-  offerId?: string;
-  listPriceUsdc?: number;
-}
-
-function paymentFromAttempt(
-  attempt: ServerX402Attempt<unknown>,
-  context: AttemptPaymentContext,
-): PaymentRecord {
-  const settled = attempt.settlementStatus === "settled";
-  return makePayment({
-    id: `x402:${attempt.authorizationId}`,
-    kind: context.kind,
-    queryId: context.queryId,
-    sourceId: context.sourceId,
-    sourceName: context.sourceName,
-    itemId: context.itemId,
-    itemTitle: context.itemTitle,
-    itemUrl: context.itemUrl,
-    contentVersion: context.contentVersion,
-    itemPublishedAt: context.itemPublishedAt,
-    offerId: context.offerId,
-    listPriceUsdc: context.listPriceUsdc,
-    payer: context.payer,
-    payee: context.payee,
-    amountUsdc: attempt.amountUsdc,
-    weight: context.weight,
-    txHash: attempt.transaction,
-    settled,
-    settlementStatus: attempt.settlementStatus,
-    authorizationId: attempt.authorizationId,
-    authorizationExpiresAt: attempt.authorizationExpiresAt,
-    rationale: settled
-      ? context.settledRationale
-      : `Signed x402 authorization submitted; settlement confirmation unavailable (${attempt.reason ?? "missing Circle receipt"}).`,
-  });
-}
-
-function throwIfDeliveryFailed(
-  attempt: ServerX402Attempt<unknown>,
-  payment: PaymentRecord,
-  sourceName: string,
-): void {
-  if (attempt.delivered) return;
-  const reason = attempt.reason ?? "paid resource unavailable";
-  if (payment.settled) {
-    payment.rationale = `Circle settlement confirmed, but the paid route failed (${reason}).`;
-    throw new PaymentSettledError(
-      `payment settled, but ${sourceName} could not deliver its paid response (${reason})`,
-      payment,
-    );
-  }
-  throw new PaymentPendingError(
-    `settlement confirmation pending after signed submission (${reason})`,
-    payment,
-  );
-}
-
-function throwIdentityMismatch(payment: PaymentRecord, sourceName: string): never {
-  const reason = "paid response did not match the selected article version";
-  if (payment.settled) {
-    payment.rationale = `Circle settlement confirmed, but ${reason}.`;
-    throw new PaymentSettledError(
-      `payment settled, but ${sourceName} returned a different article identity`,
-      payment,
-    );
-  }
-  throw new PaymentPendingError(
-    `settlement confirmation pending and ${reason}`,
-    payment,
-  );
-}
-
-function matchesArticlePricing(
-  value: unknown,
-  expectedPrice: number,
-  offer?: ArticleOfferRef,
-): boolean {
-  if (!value || typeof value !== "object") return false;
-  const pricing = value as {
-    offerId?: string | null;
-    priceUsdc?: number;
-    listPriceUsdc?: number;
-  };
-  return (
-    pricing.offerId === (offer?.id ?? null) &&
-    Math.abs(Number(pricing.priceUsdc) - expectedPrice) < 0.0000005 &&
-    (!offer || Math.abs(Number(pricing.listPriceUsdc) - offer.listPriceUsdc) < 0.0000005)
-  );
-}
-
-function throwPricingMismatch(payment: PaymentRecord, sourceName: string): never {
-  const reason = "paid response did not match the selected article offer";
-  if (payment.settled) {
-    payment.rationale = `Circle settlement confirmed, but ${reason}.`;
-    throw new PaymentSettledError(
-      `payment settled, but ${sourceName} returned different article pricing`,
-      payment,
-    );
-  }
-  throw new PaymentPendingError(`settlement confirmation pending and ${reason}`, payment);
 }
