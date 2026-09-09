@@ -37,6 +37,8 @@ import type {
 import type { LedgerAccount } from "../gateway/settlement-parity";
 import type { A2aOrder, A2aOrderResolutionUpdate } from "../a2a/order";
 import type { PrivateResearchIntent } from "../a2a/private-research-intent";
+import type { PrivatePaymentConfirmation } from "../a2a/private-payment-state";
+import { claimSupabasePrivatePayment, getSupabasePrivatePayment, confirmSupabasePrivatePayment } from "./private-research-payments";
 import { getSupabasePrivateResearchIntent, reserveSupabasePrivateResearchIntent } from "./private-research-intents";
 import {
   summarizeA2aOperations,
@@ -649,6 +651,16 @@ export class SupabaseAdapter implements KeryxDB {
 
   async reservePrivateResearchIntent(intent: PrivateResearchIntent) {
     return reserveSupabasePrivateResearchIntent(this.sb, intent);
+  }
+
+  async claimPrivatePaymentSubmission(id: string, payer: string) {
+    return claimSupabasePrivatePayment(this.sb, id, payer);
+  }
+  async getPrivatePaymentState(id: string, payer: string) {
+    return getSupabasePrivatePayment(this.sb, id, payer);
+  }
+  async confirmPrivatePayment(id: string, payer: string, confirmation: PrivatePaymentConfirmation) {
+    return confirmSupabasePrivatePayment(this.sb, id, payer, confirmation);
   }
 
   async getPrivateResearchIntent(id: string, payer: string) {

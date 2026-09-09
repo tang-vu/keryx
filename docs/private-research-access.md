@@ -105,6 +105,50 @@ Private jobs must not feed public/shared learning or outbound question-bearing
 notifications without an explicit policy. Filtering the final saved answer alone is
 insufficient, even when private intent storage itself is isolated.
 
+### Private payment submission journal (not routed)
+
+`private_research_payment_attempts` is separate from the immutable intent and public
+payment ledger. A validated owner-bound intent must exist before a single insert can
+claim the submission boundary. The winning caller receives `claimed: true` only after
+readback confirms pending state. Lost readback throws; another caller, a restarted
+process, or an already-confirmed readback cannot authorize another submission. A marker
+can precede actual network I/O, so pending means **possibly submitted**, not proof that
+Circle received anything. Elapsed signature validity does not change this state.
+
+The internal confirmation envelope identifies the original network, payer, payee,
+integer amount and nonce plus a facilitator reference. It is not Circle's wire format
+and its `source` label is not evidence by itself. Future backend transport may construct
+it only from an actual trusted successful facilitator call associated with the exact
+original request. It must never be taken from an HTTP client body. No code invokes
+Circle through this new journal yet, and no real private settlement has been recorded.
+
+Confirmation updates only an existing unconfirmed attempt. Validated readback is
+required to report journal success. Exact retries preserve the first timestamp and
+reference; competing references fail without replacement. The state getter also checks
+the intent's signed ownership and validates persisted confirmation fields. A reference
+is a facilitator settlement acknowledgement, not invented on-chain finality. Transport
+must retain any observed actual receipt even if a database write/read subsequently
+fails; this database API alone is not a paid-response handler.
+
+PostgreSQL migration `0047_private_research_payments.sql` permits application reads and
+restricted owner-scoped transition RPCs only. The functions use a fixed empty search
+path, qualified tables, and compare confirmation terms with the original intent.
+Anonymous/authenticated clients cannot read or invoke the RPCs. SQLite uses a unique
+intent key and insert/update compare-and-set operations. Neither path creates public
+payments, queues work, refunds, clears reservations, or infers failure on expiry.
+Private reconciliation, exact terminal failure handling, network submission, merchant
+reservation, worker execution and authenticated result delivery remain open.
+
+Validation uses synthetic data, not live payments: SQLite covers two-connection claims,
+restart/expiry persistence, missing pre-submission boundaries, owner/tuple mismatch,
+idempotent confirmation and conflicting references. Supabase SDK checks require
+readback even after RPC success and deny submission if readback has already settled.
+The disposable PostgreSQL 17 check `scripts/check-private-research-payments.sql`
+verifies actual transition semantics and privilege denial after migrations 0046/0047.
+Backup/restore procedures must preserve both private tables and reconcile potentially
+lost submission state before reopening private payment traffic; do not clear these
+records with login-session cleanup. That full operational drill remains unperformed.
+
 ## Implemented account enumeration
 
 `GET /api/me/jobs` requires a valid, unrevoked SIWE account session. The server derives

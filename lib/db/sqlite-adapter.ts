@@ -38,6 +38,8 @@ import type {
 import type { LedgerAccount } from "../gateway/settlement-parity";
 import type { A2aOrder, A2aOrderResolutionUpdate } from "../a2a/order";
 import type { PrivateResearchIntent } from "../a2a/private-research-intent";
+import type { PrivatePaymentConfirmation } from "../a2a/private-payment-state";
+import { PRIVATE_RESEARCH_PAYMENTS_SQL, claimSqlitePrivatePayment, getSqlitePrivatePayment, confirmSqlitePrivatePayment } from "./private-research-payments";
 import { PRIVATE_RESEARCH_INTENTS_SQL, getSqlitePrivateResearchIntent, reserveSqlitePrivateResearchIntent } from "./private-research-intents";
 import {
   summarizeA2aOperations,
@@ -309,6 +311,7 @@ CREATE TABLE IF NOT EXISTS web_sessions (
 CREATE INDEX IF NOT EXISTS web_sessions_expiry ON web_sessions(expires_at);
 CREATE INDEX IF NOT EXISTS web_sessions_wallet ON web_sessions(wallet, expires_at);
 ${PRIVATE_RESEARCH_INTENTS_SQL}
+${PRIVATE_RESEARCH_PAYMENTS_SQL}
 `;
 
 export class SqliteAdapter implements KeryxDB {
@@ -1457,6 +1460,16 @@ export class SqliteAdapter implements KeryxDB {
 
   async reservePrivateResearchIntent(intent: PrivateResearchIntent) {
     return reserveSqlitePrivateResearchIntent(this.db, intent);
+  }
+
+  async claimPrivatePaymentSubmission(id: string, payer: string) {
+    return claimSqlitePrivatePayment(this.db, id, payer);
+  }
+  async getPrivatePaymentState(id: string, payer: string) {
+    return getSqlitePrivatePayment(this.db, id, payer);
+  }
+  async confirmPrivatePayment(id: string, payer: string, confirmation: PrivatePaymentConfirmation) {
+    return confirmSqlitePrivatePayment(this.db, id, payer, confirmation);
   }
 
   async getPrivateResearchIntent(id: string, payer: string) {

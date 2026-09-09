@@ -1,5 +1,20 @@
 # Keryx — Decision Log
 
+**D-97** · Private payment submission journal · *Persist one submission boundary
+per private intent and keep ambiguity durable.* A separate payment-attempt record is
+claimed atomically before any future facilitator I/O. Exactly one caller can obtain
+a fresh pending claim; replay, restart, elapsed authorization validity and an already
+confirmed readback never authorize another submission. Confirmation is a one-way
+compare-and-set bound to the original network, payer, payee, amount and nonce. Exact
+repeats retain the first reference; conflicting confirmations fail. The confirmation
+envelope is an internal backend contract, not cryptographic evidence and not a client
+receipt format. Only an actual trusted facilitator success may populate it in real
+execution. PostgreSQL exposes restricted owner-scoped transitions and denies direct
+application updates. This internal storage has no network executor or route yet.
+Future transport must preserve an observed Circle receipt even when journaling fails;
+missing readback remains unknown. No expiry-driven failure, retry, refund, worker
+enqueue or public traction follows from this journal alone.
+
 **D-96** · Durable private intent reservation · *Keep signed private input outside
 the public run, order and payment tables, with an immutable first writer.* A dedicated
 private intent table stores the normalized signed request, original salt, authorization,

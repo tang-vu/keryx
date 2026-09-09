@@ -7,6 +7,7 @@ import type { LedgerAccount } from "../gateway/settlement-parity";
 import type { TestnetEconomicsSnapshot } from "../economics/testnet-economics";
 import type { A2aOrder, A2aOrderResolutionUpdate } from "../a2a/order";
 import type { PrivateResearchIntent } from "../a2a/private-research-intent";
+import type { PrivatePaymentConfirmation, PrivatePaymentState } from "../a2a/private-payment-state";
 import type { A2aOperationsSnapshot } from "../a2a/operations";
 import type {
   ActivationEvent,
@@ -364,6 +365,11 @@ export interface KeryxDB {
   reservePrivateResearchIntent(intent: PrivateResearchIntent): Promise<PrivateResearchIntent>;
   /** Caller must supply an independently authenticated payer. Never expose via bearer-ID lookup. */
   getPrivateResearchIntent(id: string, payer: string): Promise<PrivateResearchIntent | null>;
+  /** Only claimed:true may cross the submission boundary; retries must recover the existing attempt. */
+  claimPrivatePaymentSubmission(id: string, payer: string): Promise<{ claimed: boolean; state: PrivatePaymentState }>;
+  getPrivatePaymentState(id: string, payer: string): Promise<PrivatePaymentState | null>;
+  /** Internal trusted facilitator evidence only, never a caller-provided confirmation body. */
+  confirmPrivatePayment(id: string, payer: string, confirmation: PrivatePaymentConfirmation): Promise<PrivatePaymentState>;
   saveQueryRun(run: QueryRun): Promise<void>;
   getQueryRun(id: string): Promise<QueryRun | null>;
   listRecentQueries(limit: number): Promise<QueryRun[]>;

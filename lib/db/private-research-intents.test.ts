@@ -10,6 +10,8 @@ import { BUYER_GATEWAY, BUYER_NETWORK, BUYER_USDC, buyerTypedData } from "../buy
 import { preparePrivateResearchIntent } from "../a2a/private-research-intent";
 import { SqliteAdapter } from "./sqlite-adapter";
 import { getSupabasePrivateResearchIntent, reserveSupabasePrivateResearchIntent } from "./private-research-intents";
+import { claimSupabasePrivatePayment, confirmSupabasePrivatePayment } from "./private-research-payments";
+import type { PrivatePaymentConfirmation } from "../a2a/private-payment-state";
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-private-intents-"));
 const file = path.join(directory, "test.sqlite");
@@ -122,4 +124,95 @@ it("Supabase outages and missing or foreign readbacks cannot claim a successful 
   const http = vi.fn<typeof fetch>().mockResolvedValue(new Response("{}", { status: 503 }));
   const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
   await expect(getSupabasePrivateResearchIntent(client, intent.id, account.address)).rejects.toThrow("storage unavailable");
+});
+
+// Synthetic confirmation fixtures exercise storage, not real Circle settlement.
+const confirmation: PrivatePaymentConfirmation = {
+  source: "circle-facilitator-success", transaction: "synthetic-transfer-reference",
+  network: BUYER_NETWORK, payer: account.address, payee: merchants.privatePayee,
+  amountMicros: requirement.amount, authorizationId: fresh.authorization.nonce,
+};
+
+it("grants one durable submission claim across two connections and never reclaims after a restart", async () => {
+  await db.reservePrivateResearchIntent(intent);
+  expect(await db.getPrivatePaymentState(intent.id, account.address)).toBeNull();
+  const claims = await Promise.all([db.claimPrivatePaymentSubmission(intent.id, account.address), other.claimPrivatePaymentSubmission(intent.id, account.address)]);
+  expect(claims.filter(result => result.claimed)).toHaveLength(1);
+  expect(claims.every(result => result.state.status === "pending")).toBe(true);
+  const reopened = new SqliteAdapter(file);
+  vi.useFakeTimers(); vi.setSystemTime(new Date("2040-01-01T00:00:00Z"));
+  try {
+    await reopened.init();
+    expect(await reopened.claimPrivatePaymentSubmission(intent.id, account.address)).toMatchObject({ claimed: false, state: { status: "pending", confirmation: null } });
+  } finally { vi.useRealTimers(); reopened.close(); }
+});
+
+it("rejects another payer and mismatched confirmation tuples without promoting pending state", async () => {
+  expect(await db.getPrivatePaymentState(intent.id, merchants.privatePayee)).toBeNull();
+  await expect(db.claimPrivatePaymentSubmission(intent.id, merchants.privatePayee)).rejects.toThrow("intent unavailable");
+  await expect(db.confirmPrivatePayment(intent.id, merchants.privatePayee, confirmation)).rejects.toThrow("intent unavailable");
+  for (const altered of [
+    { ...confirmation, payer: merchants.privatePayee }, { ...confirmation, payee: merchants.publicResearchPayee },
+    { ...confirmation, amountMicros: "60000" }, { ...confirmation, authorizationId: `0x${"4".repeat(64)}` },
+    { ...confirmation, transaction: "" }, { ...confirmation, network: "eip155:1" },
+  ]) await expect(db.confirmPrivatePayment(intent.id, account.address, altered as PrivatePaymentConfirmation)).rejects.toThrow("confirmation mismatch");
+  expect(await db.getPrivatePaymentState(intent.id, account.address)).toMatchObject({ status: "pending" });
+});
+
+it("retains one confirmed reference, acknowledges exact retries and rejects conflicting references", async () => {
+  const settled = await db.confirmPrivatePayment(intent.id, account.address, confirmation);
+  expect(settled).toMatchObject({ status: "settled", confirmation: { transaction: confirmation.transaction, payer: account.address.toLowerCase() } });
+  expect(await other.confirmPrivatePayment(intent.id, account.address, confirmation)).toEqual(settled);
+  await expect(other.confirmPrivatePayment(intent.id, account.address, { ...confirmation, transaction: "another-reference" })).rejects.toThrow("confirmation conflict");
+  expect(await db.claimPrivatePaymentSubmission(intent.id, account.address)).toEqual({ claimed: false, state: settled });
+});
+
+it("cannot confirm a reservation that never crossed the durable submission boundary", async () => {
+  const next = await createPrivateAuthorization(request, requirement, account.address, merchants, 1788912000000);
+  const nextSignature = await account.signTypedData(buyerTypedData(next.authorization));
+  const nextIntent = await preparePrivateResearchIntent({ request: next.request, salt: next.salt, payment: { authorization: next.authorization, signature: nextSignature } }, requirement, merchants);
+  await db.reservePrivateResearchIntent(nextIntent);
+  await expect(db.confirmPrivatePayment(nextIntent.id, account.address, { ...confirmation, authorizationId: next.authorization.nonce })).rejects.toThrow("confirmation conflict");
+  expect(await db.getPrivatePaymentState(nextIntent.id, account.address)).toBeNull();
+});
+
+it("Supabase claims through the restricted RPC and requires valid readback before authorizing submission", async () => {
+  const pending = { started_at: "2026-09-09T00:00:00.000Z", confirmation: null, settled_at: null };
+  const http = vi.fn<typeof fetch>()
+    .mockResolvedValueOnce(Response.json([{ data: intent }]))
+    .mockResolvedValueOnce(Response.json(true))
+    .mockResolvedValueOnce(Response.json([{ data: intent }]))
+    .mockResolvedValueOnce(Response.json([pending]));
+  const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+  expect(await claimSupabasePrivatePayment(client, intent.id, account.address)).toMatchObject({ claimed: true, state: { status: "pending" } });
+  expect(String(http.mock.calls[1][0])).toContain("/rpc/claim_private_research_payment");
+  expect(JSON.parse(String(http.mock.calls[1][1]?.body))).toEqual({ p_id: intent.id, p_payer: account.address.toLowerCase() });
+  const broken = vi.fn<typeof fetch>()
+    .mockResolvedValueOnce(Response.json([{ data: intent }]))
+    .mockResolvedValueOnce(Response.json(true))
+    .mockResolvedValueOnce(new Response("{}", { status: 503 }));
+  const unavailable = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: broken }, auth: { persistSession: false } });
+  await expect(claimSupabasePrivatePayment(unavailable, intent.id, account.address)).rejects.toThrow();
+});
+
+it("Supabase does not report confirmation from an RPC success without confirmed readback", async () => {
+  const http = vi.fn<typeof fetch>()
+    .mockResolvedValueOnce(Response.json([{ data: intent }]))
+    .mockResolvedValueOnce(new Response(null, { status: 204 }))
+    .mockResolvedValueOnce(Response.json([{ data: intent }]))
+    .mockResolvedValueOnce(Response.json([{ started_at: "2026-09-09T00:00:00.000Z", confirmation: null, settled_at: null }]));
+  const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+  await expect(confirmSupabasePrivatePayment(client, intent.id, account.address, confirmation)).rejects.toThrow("confirmation conflict");
+  expect(String(http.mock.calls[1][0])).toContain("/rpc/confirm_private_research_payment");
+});
+
+it("a newly inserted claim cannot authorize submission if readback already shows settlement", async () => {
+  const http = vi.fn<typeof fetch>()
+    .mockResolvedValueOnce(Response.json([{ data: intent }]))
+    .mockResolvedValueOnce(Response.json(true))
+    .mockResolvedValueOnce(Response.json([{ data: intent }]))
+    .mockResolvedValueOnce(Response.json([{ started_at: "2026-09-09T00:00:00.000Z", confirmation,
+      settled_at: "2026-09-09T00:00:01.000Z" }]));
+  const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+  expect(await claimSupabasePrivatePayment(client, intent.id, account.address)).toMatchObject({ claimed: false, state: { status: "settled" } });
 });
