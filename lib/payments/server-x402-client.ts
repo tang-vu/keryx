@@ -2,6 +2,7 @@ import type { PaymentSettlementStatus } from "../types";
 import { config } from "../config";
 import {
   assertExpectedRequirements,
+  atomicUsdc,
   authorizationExpiryIso,
   settlementReference,
   type PaymentRequirements,
@@ -32,6 +33,17 @@ export interface ServerX402Attempt<T> {
   reason?: string;
 }
 
+/** Non-bearer evidence for a durable pre-submit journal. Never includes the signature/header. */
+export interface ServerX402Submission {
+  authorizationId: string;
+  authorizationExpiresAt: string;
+  payer: string;
+  payee: string;
+  amountMicros: string;
+  network: string;
+  asset: string;
+}
+
 interface PayWithServerSignerInput {
   url: string;
   method: "GET" | "POST";
@@ -40,6 +52,8 @@ interface PayWithServerSignerInput {
   payer: string;
   signer: BatchPayloadSigner;
   fetchImpl?: typeof fetch;
+  /** Must durably admit this exact attempt or throw. Called before signed HTTP I/O, never retried here. */
+  beforeSubmit?: (submission: Readonly<ServerX402Submission>) => Promise<void>;
 }
 
 /** Circle's GatewayClient throws away PAYMENT-RESPONSE on non-2xx paid responses. Keryx needs the
@@ -53,6 +67,7 @@ export async function payWithServerSigner<T>({
   payer,
   signer,
   fetchImpl = fetch,
+  beforeSubmit,
 }: PayWithServerSignerInput): Promise<ServerX402Attempt<T>> {
   const headers = { "Content-Type": "application/json", Accept: "application/json" };
   const challengeResponse = await fetchImpl(url, { method, headers });
@@ -78,6 +93,8 @@ export async function payWithServerSigner<T>({
   ) ?? challenge.accepts?.[0];
   if (!requirements) throw new Error(`no usable payment requirements in 402 from ${url}`);
   assertExpectedRequirements(requirements, expectedPayee, expectedAmount);
+  const network = requirements.network;
+  const asset = requirements.asset;
 
   const signed = await signer.createPaymentPayload(challenge.x402Version, requirements);
   const authorization = authorizationEvidence(signed.payload);
@@ -86,6 +103,20 @@ export async function payWithServerSigner<T>({
     resource: challenge.resource ?? { url },
     accepted: requirements,
   })).toString("base64");
+
+  if (beforeSubmit) {
+    const signedAuthorization = (signed.payload as { authorization?: { from?: unknown; to?: unknown; value?: unknown } } | null)?.authorization;
+    const amountMicros = atomicUsdc(expectedAmount);
+    if (typeof signedAuthorization?.from !== "string" || signedAuthorization.from.toLowerCase() !== payer.toLowerCase()
+      || typeof signedAuthorization.to !== "string" || signedAuthorization.to.toLowerCase() !== expectedPayee.toLowerCase()
+      || signedAuthorization.value !== amountMicros) {
+      throw new Error("Signed payment does not match submission journal identity");
+    }
+    // Header and scalar evidence are captured before the callback; it cannot rewrite the payment.
+    // Outside the transport catch: a failed journal must never cause a signed request.
+    await beforeSubmit(Object.freeze({ ...authorization, authorizationId: authorization.authorizationId.toLowerCase(),
+      payer: payer.toLowerCase(), payee: expectedPayee.toLowerCase(), amountMicros, network, asset: asset.toLowerCase() }));
+  }
 
   let paidResponse: Response;
   try {

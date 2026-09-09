@@ -1,5 +1,19 @@
 # Keryx — Decision Log
 
+**D-103** ? Creator submission persistence boundary ? *Allow an exact non-bearer
+journal admission immediately before treasury signed HTTP submission.* The server
+x402 transport accepts an optional backend `beforeSubmit` callback. When supplied,
+it matches the signer's from/to/value to the expected payment and passes only nonce,
+expiry, normalized payer/payee, integer micro-USDC, network and asset. The signed
+header and immutable scalar evidence are captured before awaiting the callback.
+Callback rejection prevents HTTP submission and is not retried or converted into a
+post-submit pending result. Once submission happens, response loss remains pending
+and confirmed settlement evidence remains available even on a failed paid response.
+The callback itself must enforce durable uniqueness, private job/worker authority
+and the atomic creator budget; this hook does not implement those policies or prove
+payment. Existing public callers omit it. No real gateway/private factory currently
+supplies a journal, so the private ledger and recovery gap remain open until integrated.
+
 **D-102** ? Citation transport privacy ? *Keep job identity in the local payment
 record, not in the citation request URL.* The citation seller uses only the source,
 author and amount; its unused `query` parameter unnecessarily exposed correlation

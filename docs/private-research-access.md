@@ -257,6 +257,24 @@ binding, first-result retention and denied client/direct service-role mutations.
 The complete private effects factory, creator ledger, safe result projection,
 authenticated browser/CLI recovery and end-to-end leakage tests remain outstanding.
 
+## Creator submission transport hook (not connected)
+
+The server x402 transport now accepts a backend-only `beforeSubmit` callback after
+constructing the signed header and before sending it. With the callback present,
+signer from/to/value must match the expected payment. The callback receives a frozen
+non-bearer tuple (nonce, expiry, payer, payee, integer amount, network and asset), never
+the header, signature, URL, question or rationale. The transport awaits admission;
+a failed or lost storage acknowledgement cannot cause signed HTTP I/O or an automatic
+retry. After I/O, normal receipt handling still distinguishes settled and pending.
+
+Synthetic transport tests block admission to verify ordering, reject journal failures
+and mismatched signed tuples, and retain pending evidence after a lost paid response.
+This hook is not a journal implementation or a payment proof. It is currently unused
+by production gateways. The private factory must provide atomic durable per-leg
+admission bound to its verified job/worker and creator spend cap, then persist trusted
+settlement evidence without erasing a receipt on storage failure. Reconciliation,
+creator earnings projections and safe recovery remain required before private use.
+
 ## Implemented account enumeration
 
 `GET /api/me/jobs` requires a valid, unrevoked SIWE account session. The server derives
