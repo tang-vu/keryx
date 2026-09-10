@@ -1,5 +1,19 @@
 # Keryx — Decision Log
 
+**D-135** - Private worker ticks - *Process one bounded candidate page serially through
+the existing executor; retain the cursor privately and isolate per-job failures.*
+Overlapping ticks on one worker instance are refused. Configuration and signer methods
+are snapshotted at construction, with explicit provider validation and no legacy engine
+fallback configuration. The cursor advances after errors so a bad job cannot starve
+later IDs, and resets after a short page. Pause only between jobs; never race a paid
+execution against a polling timeout. Executor claims remain the cross-process authority.
+Summaries contain counters only. A returned run counts as completed only when private
+result storage can be read; absent storage is reported as unpersisted. Claimed jobs
+are never reset or reexecuted. The polling primitive is tested with the actual executor
+and SQLite using a blocked provider transport, local fallback and an empty corpus.
+A daemon, operator bootstrap, readiness gate and recovery for claimed-but-unpersisted
+jobs remain outstanding; these counters alone are not an operational readiness signal.
+
 **D-134** - Private worker discovery - *Page backend-only candidate IDs by dedicated
 treasury signer, requiring stored settlement fields and no existing execution claim.*
 SQLite and a service-role-only PostgreSQL function select at most 25 IDs/owners in

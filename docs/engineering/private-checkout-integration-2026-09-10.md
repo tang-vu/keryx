@@ -28,8 +28,15 @@ The original buyer journal is unchanged. The private job is absent from public q
 and A2A order reads, and a different owner cannot obtain its private result.
 
 The quote is 50,000 micro-USDC, with a 30,000 creator budget and 20,000 service fee.
-These are synthetic test values, not receipts or revenue. No research worker executes,
-so creator commitments remain zero and the uncommitted budget is not a refund.
+These are synthetic test values, not receipts or revenue. Creator commitments remain
+zero in this empty-corpus drill and the uncommitted budget is not a refund.
+
+The worker extension now runs the actual private executor after persisted synthetic
+success. Global fetch throws before reaching a network, exercising the local reasoning
+fallback against an empty corpus. The worker saves a private result, the owner view
+becomes completed, and a second tick finds no candidate. No creator signature is
+requested. This tests execution and persistence wiring, not answer quality or paid
+content delivery.
 
 ## Reproduction and limits
 
@@ -38,7 +45,7 @@ The test forbids global fetch, uses a temporary SQLite file and journal, and rem
 its own files after closing the database. TypeScript checking also passed.
 
 The drill does not exercise the real HTTP purchase route, SIWE middleware, Circle,
-provider requests, creator purchases, browser storage, network finality, PostgreSQL
+external provider requests, creator purchases, browser storage, network finality, PostgreSQL
 restarts or process crashes during fsync. Those require separate evidence. Private
 purchasing remains unavailable; this advances the recovery evidence without completing
 the buyer journey or the mainnet settlement/recovery gate.

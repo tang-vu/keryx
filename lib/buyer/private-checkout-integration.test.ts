@@ -12,11 +12,12 @@ import { submitPrivateBuyerJournal } from "./private-submission";
 import { recoverPrivateBuyerResult } from "./private-recovery";
 import { PRIVATE_RESEARCH_RESOURCE } from "./private-request-commitment";
 import { BUYER_NETWORK, BUYER_ORIGIN } from "./protocol";
+import { createPrivateWorker } from "../a2a/private-worker";
 
 afterEach(() => vi.unstubAllGlobals());
 
 // Actual EOA signatures, local journal and SQLite adapters; no HTTP server, real
-// facilitator, funded wallet, provider call or on-chain settlement is exercised.
+// facilitator, funded wallet, external provider request or on-chain settlement is exercised.
 it.each(["after-settlement", "during-settlement"] as const)(
   "recovers across a database reopen with response loss %s and no second debit attempt", async (loss) => {
     vi.stubGlobal("fetch", vi.fn(() => { throw new Error("Network forbidden in this integration test"); }));
@@ -91,11 +92,20 @@ it.each(["after-settlement", "during-settlement"] as const)(
       expect(await privateResultView(db, prepared.id, merchants.publicResearchPayee)).toBeNull();
       expect(await db.getQueryRun(prepared.id)).toBeNull();
       expect(await db.getA2aOrder(prepared.id)).toBeNull();
+      expect(fetch).not.toHaveBeenCalled();
       if (loss === "after-settlement") {
-        expect(await db.claimPrivateResearchExecution(prepared.id, account.address)).not.toBeNull();
+        const signer = { createPaymentPayload: vi.fn(async (): Promise<never> => { throw new Error("No creator payment expected for an empty corpus"); }) };
+        const worker = createPrivateWorker(db, { signerAddress: context.privateTreasurySigner, signer,
+          getGatewayBalance: async () => BigInt(30000), privateProvider: { modelId: "deepseek-flash", provider: "deepseek",
+            baseUrl: "https://synthetic.example/v1", apiKey: "synthetic-not-secret" } });
+        expect(await worker.tick()).toMatchObject({ status: "processed", visited: 1, completed: 1, errors: 0, unpersisted: 0 });
+        expect(await privateResultView(db, prepared.id, account.address)).toMatchObject({ status: "completed" });
+        expect(await worker.tick()).toMatchObject({ visited: 0 });
+        expect(signer.createPaymentPayload).not.toHaveBeenCalled();
+        expect(fetch).toHaveBeenCalled();
+        expect(vi.mocked(fetch).mock.calls.every(([url]) => String(url) === "https://synthetic.example/v1/chat/completions")).toBe(true);
         expect(await db.listPrivateWorkerCandidates(context.privateTreasurySigner)).toEqual([]);
       }
-      expect(fetch).not.toHaveBeenCalled();
     } finally {
       db.close();
       for (const name of ["private-intent.json", "private-submission-attempt.json"]) await unlink(join(journal, name)).catch(() => undefined);
