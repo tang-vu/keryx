@@ -1,5 +1,22 @@
 # Keryx — Decision Log
 
+**D-162** - Private treasury reuse - *Release only never-committed budget after durable
+result sealing; keep every admitted authorization charged to the lifetime ceiling.*
+Creator admission and result persistence already serialize against the execution identity.
+Once a validated result exists, no new creator leg can enter that job. An append-only,
+job-keyed release records original creator budget minus the sum of all admitted legs.
+No caller supplies the release amount. Confirmed, pending, processing, expired and
+failed-observed submissions all remain allocated; neither answer totals nor absence of a
+receipt can free their backing. A worker claim or encrypted backup without a restored
+database result is insufficient. Original reservations, nonces and execution claims stay
+intact. The coordinator applies the release idempotently after its creator page completes,
+and retries storage failures on later sweeps without signing or resubmitting payments.
+SQLite uses a conditional atomic insert; PostgreSQL takes the pool and execution locks,
+with service-only RPC authority. New reservations and operator summaries subtract the
+recorded release; conservative backing remains capacity minus confirmed outflows. This
+is internal capacity reuse, not a transfer, refund, top-up, revenue or profit. Releasing
+admitted failed legs, capital replenishment and long-history scheduling remain separate work.
+
 **D-161** - Remote wallet SDK startup - *Restore remembered connectors; initialize other
 remote SDKs only after explicit wallet selection.*
 The installed wagmi reconnect action probes every connector's provider, and WalletConnect

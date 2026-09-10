@@ -65,7 +65,7 @@ it("redacts unexpected errors and supports exactly one tick or an already stoppe
 it("runs recovery then reconciliation before execution and drains reconciliation on shutdown", async () => {
   const events: string[] = [], stop = new AbortController();
   const counts = { status: "reconciliation" as const, visited: 1, incomingConfirmed: 0, creatorConfirmed: 0,
-    processing: 0, awaiting: 1, failedObserved: 0, mismatched: 0, errors: 0, remainingLegs: 0 };
+    processing: 0, awaiting: 1, failedObserved: 0, mismatched: 0, errors: 0, remainingLegs: 0, allocationsReleased: 0 };
   const recovery = { tick: vi.fn(async () => { events.push("recover"); return { status: "recovery" as const, visited: 0, restored: 0, errors: 0, ready: true }; }), close: vi.fn() };
   const reconciliation = { tick: vi.fn(async () => { events.push("reconcile"); return counts; }) };
   const worker = { tick: vi.fn(async () => { events.push("execute"); return { status: "busy" as const }; }) };
@@ -84,7 +84,7 @@ it("keeps reconciliation failures visible even when independent paid work succee
   const worker = { tick: vi.fn(async () => ({ status: "processed" as const, visited: 0, completed: 0, stored: 0,
     alreadyClaimed: 0, unpersisted: 0, errors: 0, providerServedJobs: 0, providerFailedJobs: 0, fallbackJobs: 0, reasoningUnknownJobs: 0 })) };
   const reconciliation = { tick: vi.fn(async () => ({ status: "reconciliation" as const, visited: 1,
-    incomingConfirmed: 0, creatorConfirmed: 0, processing: 0, awaiting: 0, failedObserved: 0, mismatched: 1, errors: 0, remainingLegs: 0 })) };
+    incomingConfirmed: 0, creatorConfirmed: 0, processing: 0, awaiting: 0, failedObserved: 0, mismatched: 1, errors: 0, remainingLegs: 0, allocationsReleased: 0 })) };
   await runPrivateWorkerLoop(worker, { signal: new AbortController().signal, once: true, reconciliation, observe, report });
   expect(worker.tick).toHaveBeenCalledTimes(1);
   expect(observe.mock.calls.flat()).toEqual(["starting", "working", "degraded", "stopped"]);

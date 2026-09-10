@@ -40,7 +40,8 @@ export async function getSqlitePrivateTreasurySummary(db: DatabaseSync, signer: 
     FROM private_treasury_reservations r JOIN private_creator_submissions s ON s.job_id=r.job_id
     LEFT JOIN private_creator_confirmations c ON c.authorization_id=s.authorization_id WHERE r.signer=?
   ) SELECT p.capacity_micros AS capacity,
-    COALESCE((SELECT SUM(amount_micros) FROM private_treasury_reservations WHERE signer=p.signer),0) AS allocated,
+    COALESCE((SELECT SUM(r.amount_micros-COALESCE(x.amount_micros,0)) FROM private_treasury_reservations r
+      LEFT JOIN private_treasury_releases x ON x.job_id=r.job_id WHERE r.signer=p.signer),0) AS allocated,
     COALESCE((SELECT SUM(amount_micros) FROM legs),0) AS committed,
     COALESCE((SELECT SUM(confirmed) FROM legs),0) AS confirmed,
     COALESCE((SELECT SUM(invalid) FROM legs),0) AS invalid

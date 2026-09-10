@@ -12,7 +12,7 @@ const clean = { confirmed: 0, processing: 0, awaiting: 0, failedObserved: 0, mis
 
 it("moves past unresolved incoming jobs, resumes creator pages and restarts complete sweeps", async () => {
   const select = vi.fn().mockResolvedValueOnce([a]).mockResolvedValueOnce([b]).mockResolvedValueOnce([]).mockResolvedValueOnce([a]);
-  const db = { listPrivateReconciliationCandidates: select } as unknown as KeryxDB;
+  const db = { listPrivateReconciliationCandidates: select, releasePrivateTreasury: vi.fn().mockResolvedValue(null) } as unknown as KeryxDB;
   steps.incoming.mockResolvedValueOnce({ status: "awaiting" }).mockResolvedValue({ status: "already-confirmed" });
   steps.creators.mockResolvedValueOnce({ ...clean, remaining: 1, nextCursor: "a".repeat(64), processing: 25 })
     .mockResolvedValueOnce({ ...clean, confirmed: 1 }).mockResolvedValue(clean);
@@ -32,7 +32,7 @@ it("moves past unresolved incoming jobs, resumes creator pages and restarts comp
 
 it("prevents overlap, drains on cancellation and redacts failures without stranding later jobs", async () => {
   const select = vi.fn().mockResolvedValueOnce([a]).mockResolvedValueOnce([b]);
-  const db = { listPrivateReconciliationCandidates: select } as unknown as KeryxDB;
+  const db = { listPrivateReconciliationCandidates: select, releasePrivateTreasury: vi.fn().mockResolvedValue(null) } as unknown as KeryxDB;
   let finish!: (value: { status: string }) => void;
   steps.incoming.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }))
     .mockRejectedValueOnce(new Error("Synthetic private error body"));
@@ -54,7 +54,7 @@ it("prevents overlap, drains on cancellation and redacts failures without strand
 it("passes a bounded cancellation signal to searches and refuses malformed selection pages", async () => {
   vi.useFakeTimers();
   const select = vi.fn().mockResolvedValue([a]);
-  const db = { listPrivateReconciliationCandidates: select } as unknown as KeryxDB;
+  const db = { listPrivateReconciliationCandidates: select, releasePrivateTreasury: vi.fn().mockResolvedValue(null) } as unknown as KeryxDB;
   steps.incoming.mockImplementation((_db, _id, _payer, options) => new Promise(resolve => {
     options.signal.addEventListener("abort", () => resolve({ status: "unavailable" }), { once: true });
   }));

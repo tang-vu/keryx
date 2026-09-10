@@ -8,8 +8,9 @@ PostgreSQL migration 0057 provides a service-role-only SECURITY INVOKER function
 The fields distinguish:
 
 - Capacity: the immutable configured lifetime ceiling, not a bank or Gateway balance.
-- Allocated: creator budgets permanently reserved for admitted private jobs.
-- Unallocated: capacity minus allocations; completed jobs do not release allocations.
+- Allocated: original creator budgets minus once-recorded releases of never-committed
+  budget after result sealing (updated in v0.22.49).
+- Unallocated: capacity minus effective allocations. Admitted authorizations always remain allocated.
 - Committed: creator payment legs already admitted against those jobs.
 - Confirmed: admitted amounts with matching stored facilitator-success evidence or
   transfer-search status confirmed/completed. Received/batched are not confirmed.
@@ -18,9 +19,10 @@ The fields distinguish:
 
 Conservative backing preserves coverage for unallocated capacity and all allocated
 amounts not recorded as confirmed outflows. It can overstate required available funds
-when Circle has already withheld an unresolved amount, or when a completed job retains
-unused allocation. Resolving those cases requires reconciliation and a separate,
-reviewed capacity-release policy. This summary changes neither reservation nor balance.
+when Circle has already withheld an unresolved amount. The
+[sealed-job release policy](./private-treasury-release-2026-09-10.md) permits reuse of
+never-committed budget but does not change the backing formula. This summary itself
+changes neither reservation nor balance.
 It must not be interpreted as withdrawable funds, profit or a refund.
 
 The reader checks total ordering (confirmed <= committed <= allocated <= capacity),

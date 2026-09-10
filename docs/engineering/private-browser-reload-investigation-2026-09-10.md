@@ -75,3 +75,9 @@ loads; both vendor QR/connection interfaces were visually verified in full Chrom
 These checks did not pair a real wallet, sign a message or send a payment. They validate
 SDK startup and presentation, not mobile pairing, independent wallet behavior, an end-to-end
 latency improvement or a fix for the earlier stalls.
+
+A subsequent live read-only owner check on commit `f551131` (September 10, 15:02 UTC)
+passed import, result recovery, desktop/mobile layout, reload, local deletion and
+re-import recovery. It made six private reads and zero payment requests, observed
+zero page errors, rejected a foreign session with 404 and confirmed logout. This
+remains one owner-operated journey; it does not establish independent wallet acceptance.

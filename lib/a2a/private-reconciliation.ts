@@ -8,8 +8,9 @@ import type { searchCircleTransfer } from "../gateway/x402-transfer-reconciliati
 
 const candidate = z.object({ id: privateResearchIdSchema, payer: addressSchema }).strict();
 
-/** Serial read-only Circle searches followed by exact evidence persistence. No signer,
- * settlement retry, release or execution. Cursors are private and reset after a full sweep. */
+/** Serial read-only Circle searches followed by exact evidence persistence and local
+ * release of sealed, never-committed budget. No signer, settlement retry or execution.
+ * Cursors are private and reset after a full sweep. */
 export function createPrivateReconciliation(db: KeryxDB, signer: string, options: { search?: typeof searchCircleTransfer } = {}) {
   const treasury = addressSchema.parse(signer).toLowerCase();
   const search = options.search;
@@ -21,7 +22,7 @@ export function createPrivateReconciliation(db: KeryxDB, signer: string, options
   return {
     async tick(signal?: AbortSignal) {
       const counts = { status: "reconciliation" as const, visited: 0, incomingConfirmed: 0, creatorConfirmed: 0,
-        processing: 0, awaiting: 0, failedObserved: 0, mismatched: 0, errors: 0, remainingLegs: 0 };
+        processing: 0, awaiting: 0, failedObserved: 0, mismatched: 0, errors: 0, remainingLegs: 0, allocationsReleased: 0 };
       if (busy) return { ...counts, errors: 1 };
       if (signal?.aborted) return counts;
       busy = true;
@@ -59,7 +60,13 @@ export function createPrivateReconciliation(db: KeryxDB, signer: string, options
         counts.errors += creators.unavailable;
         counts.remainingLegs = creators.remaining;
         legCursor = creators.nextCursor ?? undefined;
-        if (creators.remaining === 0) next();
+        if (creators.remaining === 0) {
+          if (!stop.aborted) {
+            const released = await db.releasePrivateTreasury(current.id, current.payer, treasury);
+            if (released?.newlyReleased) counts.allocationsReleased++;
+          }
+          next();
+        }
         return counts;
       } catch { next(); return { ...counts, errors: counts.errors + 1 }; }
       finally { clearTimeout(timer); busy = false; }

@@ -10,6 +10,7 @@ import { PRIVATE_TREASURY_CAPACITY_SQL, reserveSqlitePrivateTreasury, getSqliteP
 import { claimSqlitePrivateExecution, getSqlitePrivateExecution, PRIVATE_RESEARCH_EXECUTIONS_SQL } from "./private-research-executions";
 import { DatabaseSync } from "node:sqlite";
 import { getSqlitePrivateTreasurySummary } from "./private-treasury-summary";
+import { PRIVATE_TREASURY_RELEASE_SQL, releaseSqlitePrivateTreasury } from "./private-treasury-release";
 import { listSqlitePrivateWorkerCandidates, listSqlitePrivateReconciliationCandidates } from "./private-worker-candidates";
 import fs from "node:fs";
 import path from "node:path";
@@ -324,6 +325,7 @@ ${PRIVATE_RESEARCH_EXECUTIONS_SQL}
 ${PRIVATE_RESEARCH_RESULTS_SQL}
 ${PRIVATE_CREATOR_SUBMISSIONS_SQL}
 ${PRIVATE_CREATOR_CONFIRMATIONS_SQL}
+${PRIVATE_TREASURY_RELEASE_SQL}
 `;
 
 export class SqliteAdapter implements KeryxDB {
@@ -1478,6 +1480,7 @@ export class SqliteAdapter implements KeryxDB {
   }
   async getPrivateTreasury(id: string, payer: string) { return getSqlitePrivateTreasury(this.db, id, payer); }
   async getPrivateTreasurySummary(signer: string) { return getSqlitePrivateTreasurySummary(this.db, signer); }
+  async releasePrivateTreasury(id: string, payer: string, signer: string) { return releaseSqlitePrivateTreasury(this.db, id, payer, signer); }
   async listPrivateWorkerCandidates(signer: string, after?: string) { return listSqlitePrivateWorkerCandidates(this.db, signer, after); }
   async listPrivateReconciliationCandidates(signer: string, after?: string) { return listSqlitePrivateReconciliationCandidates(this.db, signer, after); }
 

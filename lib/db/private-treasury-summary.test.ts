@@ -7,6 +7,7 @@ it("keeps reserved, committed and confirmed amounts distinct without multiplying
   try {
     db.exec(`CREATE TABLE private_treasury_pools(signer TEXT,capacity_micros INTEGER);
       CREATE TABLE private_treasury_reservations(job_id TEXT,signer TEXT,amount_micros INTEGER);
+      CREATE TABLE private_treasury_releases(job_id TEXT,amount_micros INTEGER);
       CREATE TABLE private_creator_submissions(job_id TEXT,authorization_id TEXT,amount_micros INTEGER,data TEXT);
       CREATE TABLE private_creator_confirmations(authorization_id TEXT,data TEXT);`);
     expect(await getSqlitePrivateTreasurySummary(db, signer)).toBeNull();

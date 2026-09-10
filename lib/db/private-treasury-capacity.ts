@@ -49,8 +49,8 @@ function matched(row: Record<string, unknown> | undefined, signer: string, amoun
   return true;
 }
 
-/** Permanent allocation from an immutable operator-funded ceiling, NOT a live balance or
- * rolling window. All uncertain and completed jobs keep their allocation. No automatic refill.
+/** Allocation from an immutable operator-funded ceiling, NOT a live balance or
+ * rolling window. Sealed jobs may release only never-committed budget. No automatic refill.
  * Caller must establish a dedicated signer and verified backing before configuring its ceiling. */
 export async function reserveSqlitePrivateTreasury(db: DatabaseSync, id: string, payer: string, value: PrivateTreasuryPolicy) {
   const selected = policy(value);
@@ -63,7 +63,8 @@ export async function reserveSqlitePrivateTreasury(db: DatabaseSync, id: string,
   if (String(pool?.capacity_micros) !== selected.capacityMicros) throw new Error("Private treasury capacity policy conflict");
   db.prepare(`INSERT INTO private_treasury_reservations(job_id,signer,amount_micros)
     SELECT ?,p.signer,? FROM private_treasury_pools p WHERE p.signer=? AND ? <= p.capacity_micros -
-      (SELECT coalesce(sum(amount_micros),0) FROM private_treasury_reservations WHERE signer=p.signer)
+      (SELECT coalesce(sum(r.amount_micros-coalesce(x.amount_micros,0)),0)
+        FROM private_treasury_reservations r LEFT JOIN private_treasury_releases x ON x.job_id=r.job_id WHERE r.signer=p.signer)
     ON CONFLICT(job_id) DO NOTHING`).run(id, amount, selected.signer, amount);
   return matched(db.prepare("SELECT signer,amount_micros FROM private_treasury_reservations WHERE job_id=?").get(id), selected.signer, amount);
 }

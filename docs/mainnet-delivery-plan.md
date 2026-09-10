@@ -97,6 +97,13 @@ prevent independent product, measurement or reliability work from continuing.
 
 ## Delivery sequence
 
+Version 0.22.49 adds [sealed private-job capacity reuse](./engineering/private-treasury-release-2026-09-10.md):
+return only never-committed creator budget, retaining every admitted authorization and
+original execution/payment barrier. SQLite and PostgreSQL contention/recovery checks
+advance O1/M4; lifetime capital replenishment and broader operational acceptance remain open.
+Actual operating bills and realized profit evidence are owner-private; public formulas
+and illustrative economics do not require publishing those records.
+
 Operational evidence update (September 9): a [local SQLite snapshot restore check](./engineering/restore-drill-2026-09-09.md)
 passed checksum, gzip, integrity and required-column checks. Scheduled off-site backup,
 complete service/key recovery and payment-reconciliation drills remain unverified;

@@ -19,6 +19,16 @@ volume, fetch exchange rates, change offers or authorize payments. Every amount 
 a user-supplied USD estimate. Convert any USDC-denominated inputs explicitly before
 using it; parity must not be mistaken for a measured exchange rate.
 
+## Private operating data
+
+Actual hosting/domain bills, AI invoices, paid-service expenses and realized operating
+results are owner-private. Do not put those figures in the public website, repository,
+submission material or Canteen updates without the owner's explicit permission. Public
+formulas and illustrative inputs are separate from internal billing evidence. The owner
+has not supplied actual monthly operating costs; unknown values remain unknown. A local
+export may contain entered costs, so review it before sharing and keep private exports
+outside tracked repository files.
+
 ## Formulas
 
 Let `N` be paid jobs per month, `F` the service fee per job, `B` the creator budget,
