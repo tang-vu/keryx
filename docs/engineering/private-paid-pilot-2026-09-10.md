@@ -66,3 +66,21 @@ no provider invoice reconciliation or profit claim follows from this pilot.
 
 Still outstanding: independent buyer acceptance, private browser checkout, portable
 private receipts, paid-job shutdown/crash recovery drills and mainnet release gates.
+
+## Follow-up: browser recovery on v0.22.45
+
+Production commit `49eddf7` adds private browser checkout and local recovery. A live
+read-only acceptance check imported the original CLI intent into an ephemeral browser,
+recovered the existing answer, and recovered it again after reload. The owner saw
+0.017000 USDC of confirmed creator spend; a different authenticated account received
+404. Mobile and desktop checks found no horizontal overflow or JavaScript page errors.
+The check allowed private history/result reads, blocked background analytics, sent no
+payment requests, and confirmed temporary session sign-out. The protected local proof
+contains aggregate checks only; the original private intent remains unmodified.
+
+This closes the live browser import/reload recovery check, not a new browser payment
+or independent wallet-extension acceptance. Worker inspection found an idle worker
+matching the deployed commit and 83000 micro-USDC of Gateway backing against the same
+required amount. These are operational observations, not chain-finality certification.
+The original pilot's historical usage remains unpriced; v0.22.44 added call-level
+accounting for subsequent runs without rewriting its evidence.
