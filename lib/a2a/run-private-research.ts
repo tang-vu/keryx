@@ -35,6 +35,10 @@ export async function runPrivateResearch(db: KeryxDB, id: string, payer: string,
   const built = privateProvider === undefined ? null : privateReasoningEngine(privateProvider);
   if (committedPolicy !== (built ? privateReasoningPolicyInput(built.disclosure) : null)) throw new Error("Private reasoning policy does not match the signed request");
   if (!built && !engineForModel) throw new Error("Private reasoning engine unavailable");
+  if (committedPolicy) {
+    const reservation = await db.getPrivateTreasury(id, payer);
+    if (!reservation || reservation.signer !== signerAddress.toLowerCase()) throw new Error("Private treasury allocation unavailable for this signer");
+  }
   const balance = await getGatewayBalance();
   if (typeof balance !== "bigint" || balance < BigInt(Math.round(request.budget * 1e6))) throw new Error("Private creator payer requires prefunding");
   const engine = built?.engine ?? engineForModel!(request.model);

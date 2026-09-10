@@ -337,6 +337,26 @@ async function creatorFixture() {
 
 const reasoningPolicy = { modelId: "deepseek-flash", provider: "deepseek" as const, wireModel: "deepseek-v4-flash",
   endpoint: "https://synthetic.example/v1/chat/completions", fallback: "local-heuristic" as const, redirects: "prohibited" as const };
+const treasury = { signer: `0x${"99".repeat(20)}`, capacityMicros: "10000000" };
+it("refuses settlement without treasury policy or capacity and refuses execution under another signer", async () => {
+  const first = await executionFixture({ ...request, model: reasoningPolicy.modelId, reasoning: reasoningPolicy });
+  const second = await executionFixture({ ...request, model: reasoningPolicy.modelId, reasoning: reasoningPolicy });
+  const pool = { signer: `0x${"77".repeat(20)}`, capacityMicros: "30000" };
+  const facilitator = vi.fn(async (action: "verify" | "settle") => action === "verify" ? { isValid: true, payer: account.address }
+    : { success: true, payer: account.address, network: BUYER_NETWORK, transaction: "synthetic-capacity-payment" });
+  await expect(submitPrivateIncomingPayment(db, first.value.id, account.address, { facilitator, now: 1788912000000 })).rejects.toThrow("treasury policy");
+  expect(facilitator).not.toHaveBeenCalled();
+  expect(await submitPrivateIncomingPayment(db, first.value.id, account.address, { facilitator, treasury: pool, now: 1788912000000 })).toMatchObject({ status: "settled" });
+  expect(await submitPrivateIncomingPayment(other, second.value.id, account.address, { facilitator, treasury: pool, now: 1788912000000 })).toMatchObject({ status: "capacity-unavailable" });
+  expect(facilitator.mock.calls.filter(([action]) => action === "settle")).toHaveLength(1);
+  expect(await db.getPrivatePaymentState(second.value.id, account.address)).toBeNull();
+  expect(await db.getPrivateTreasury(first.value.id, merchants.publicResearchPayee)).toBeNull();
+  const balance = vi.fn(async () => BigInt(30000));
+  await expect(runPrivateResearch(db, first.value.id, account.address, { signerAddress: treasury.signer, privateProvider,
+    signer: { createPaymentPayload: vi.fn() }, getGatewayBalance: balance })).rejects.toThrow("allocation unavailable");
+  expect(balance).not.toHaveBeenCalled();
+  expect(await db.getPrivateResearchExecution(first.value.id, account.address)).toBeNull();
+});
 const privateProvider = { modelId: "deepseek-flash", provider: "deepseek" as const,
   baseUrl: "https://synthetic.example/v1", apiKey: "synthetic-unfunded-credential" };
 
@@ -413,7 +433,7 @@ it("submits incoming payment only once across concurrent connections and omits p
     expect((await other.getPrivatePaymentState(value.id, account.address))?.status).toBe("pending");
     return { success: true, payer: account.address, network: BUYER_NETWORK, transaction: "synthetic-incoming-success" };
   });
-  const options = { facilitator, now: 1788912000000 };
+  const options = { facilitator, treasury, now: 1788912000000 };
   await Promise.all([submitPrivateIncomingPayment(db, value.id, account.address, options), submitPrivateIncomingPayment(other, value.id, account.address, options)]);
   expect(facilitator.mock.calls.filter(([action]) => action === "settle")).toHaveLength(1);
   expect(await submitPrivateIncomingPayment(other, value.id, account.address, options)).toMatchObject({ status: "settled" });
@@ -431,10 +451,10 @@ it("keeps uncertain incoming attempts pending and retains success evidence after
     });
     const failure = outcome === "persist-failed" ? vi.spyOn(db, "confirmPrivatePayment").mockRejectedValue(new Error("synthetic-storage-error")) : null;
     let result;
-    try { result = await submitPrivateIncomingPayment(db, value.id, account.address, { facilitator, now: 1788912000000 }); }
+    try { result = await submitPrivateIncomingPayment(db, value.id, account.address, { facilitator, treasury, now: 1788912000000 }); }
     finally { failure?.mockRestore(); }
     expect(result.status).toBe(outcome === "persist-failed" ? "confirmation-unpersisted" : "pending");
-    expect(await submitPrivateIncomingPayment(other, value.id, account.address, { facilitator, now: 2000000000000 })).toMatchObject({ status: "pending" });
+    expect(await submitPrivateIncomingPayment(other, value.id, account.address, { facilitator, treasury, now: 2000000000000 })).toMatchObject({ status: "pending" });
     expect(facilitator).toHaveBeenCalledTimes(2);
     if (outcome === "persist-failed") {
       expect(result.confirmation).not.toBeNull();
@@ -447,9 +467,9 @@ it("keeps uncertain incoming attempts pending and retains success evidence after
 it("does not claim incoming payment on rejected verification or authorize a foreign payer", async () => {
   const { value } = await executionFixture({ ...request, model: reasoningPolicy.modelId, reasoning: reasoningPolicy });
   const facilitator = vi.fn(async () => ({ isValid: false, payer: account.address }));
-  await expect(submitPrivateIncomingPayment(db, value.id, merchants.privatePayee, { facilitator, now: 1788912000000 })).rejects.toThrow("unavailable");
+  await expect(submitPrivateIncomingPayment(db, value.id, merchants.privatePayee, { facilitator, treasury, now: 1788912000000 })).rejects.toThrow("unavailable");
   expect(facilitator).not.toHaveBeenCalled();
-  expect(await submitPrivateIncomingPayment(db, value.id, account.address, { facilitator, now: 1788912000000 })).toMatchObject({ status: "verification-rejected" });
+  expect(await submitPrivateIncomingPayment(db, value.id, account.address, { facilitator, treasury, now: 1788912000000 })).toMatchObject({ status: "verification-rejected" });
   expect(await other.getPrivatePaymentState(value.id, account.address)).toBeNull();
 });
 
@@ -478,7 +498,7 @@ it("executes a signed v2 job through its real pinned transport and ignores an ar
   expect(await db.getPrivatePaymentState(value.id, account.address)).toBeNull();
   const facilitator = vi.fn(async (action: "verify" | "settle") => action === "verify" ? { isValid: true, payer: account.address }
     : { success: true, network: BUYER_NETWORK, payer: account.address, transaction: "synthetic-admitted-payment" });
-  expect(await submitPrivateIncomingPayment(db, value.id, account.address, { facilitator, now: 1788912000000 })).toMatchObject({ status: "settled" });
+  expect(await submitPrivateIncomingPayment(db, value.id, account.address, { facilitator, treasury, now: 1788912000000 })).toMatchObject({ status: "settled" });
   const injected = vi.fn(() => { throw new Error("Unapproved engine selected"); });
   const signer = { createPaymentPayload: vi.fn() };
   const http = vi.fn<typeof fetch>(async (url, init) => {
@@ -490,7 +510,7 @@ it("executes a signed v2 job through its real pinned transport and ignores an ar
   });
   vi.stubGlobal("fetch", http);
   try {
-    const outcome = await runPrivateResearch(db, value.id, account.address, { signerAddress: merchants.privatePayee, signer,
+    const outcome = await runPrivateResearch(db, value.id, account.address, { signerAddress: treasury.signer, signer,
       privateProvider, engineForModel: injected, getGatewayBalance: async () => BigInt(30000) });
     expect(outcome.status).toBe("completed");
     expect(http).toHaveBeenCalled();
@@ -502,7 +522,7 @@ it("executes a signed v2 job through its real pinned transport and ignores an ar
     expect(injected).not.toHaveBeenCalled();
     expect(signer.createPaymentPayload).not.toHaveBeenCalled();
     expect(await other.getPrivateResearchResult(value.id, account.address)).not.toBeNull();
-    expect(await runPrivateResearch(db, value.id, account.address, { signerAddress: merchants.privatePayee, signer,
+    expect(await runPrivateResearch(db, value.id, account.address, { signerAddress: treasury.signer, signer,
       getGatewayBalance: async () => { throw new Error("Recovery must not check funding"); } })).toMatchObject({ status: "stored" });
   } finally { vi.unstubAllGlobals(); }
 });

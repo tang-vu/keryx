@@ -4,6 +4,7 @@ import { PRIVATE_RESEARCH_RESOURCE } from "../buyer/private-request-commitment";
 import { privatePaymentConfirmation } from "../a2a/private-payment-state";
 import { BUYER_NETWORK, addressSchema } from "../buyer/protocol";
 import { readBoundedJson } from "../read-bounded-json";
+import type { PrivateTreasuryPolicy } from "../db/private-treasury-capacity";
 
 const facilitatorUrl = "https://gateway-api-testnet.circle.com/v1/x402/";
 type PaymentBody = { paymentPayload: unknown; paymentRequirements: unknown };
@@ -20,14 +21,17 @@ export async function privateIncomingFacilitator(action: "verify" | "settle", bo
  * Returned confirmation is backend evidence for persistence recovery, never a bearer payload. */
 export async function submitPrivateIncomingPayment(db: KeryxDB, id: string, payer: string, options: {
   facilitator?: typeof privateIncomingFacilitator; now?: number;
+  treasury?: PrivateTreasuryPolicy;
 } = {}) {
   const facilitator = options.facilitator ?? privateIncomingFacilitator;
   const now = options.now ?? Date.now();
+  const treasury = options.treasury === undefined ? undefined : { ...options.treasury };
   const intent = await db.getPrivateResearchIntent(id, payer);
   if (!intent) throw new Error("Private research intent unavailable");
   const previous = await db.getPrivatePaymentState(id, payer);
   if (previous) return { status: previous.status, confirmation: previous.confirmation };
   if (!("reasoning" in intent.submission.request)) throw new Error("Provider-bound private intent required");
+  if (!treasury) throw new Error("Private treasury policy unavailable");
   const authorization = intent.submission.payment.authorization;
   if (!Number.isSafeInteger(now) || now < 0 || BigInt(Math.floor(now / 1000)) <= BigInt(authorization.validAfter)
     || BigInt(Math.floor(now / 1000)) >= BigInt(authorization.validBefore)) throw new Error("Private authorization is not currently valid");
@@ -40,6 +44,7 @@ export async function submitPrivateIncomingPayment(db: KeryxDB, id: string, paye
   catch { throw new Error("Private payment verification unavailable"); }
   const verified = z.object({ isValid: z.literal(true), payer: addressSchema }).safeParse(verification);
   if (!verified.success || verified.data.payer.toLowerCase() !== authorization.from) return { status: "verification-rejected" as const, confirmation: null };
+  if (!await db.reservePrivateTreasury(id, payer, treasury)) return { status: "capacity-unavailable" as const, confirmation: null };
   const claim = await db.claimPrivatePaymentSubmission(id, payer);
   if (!claim.claimed) return { status: claim.state.status, confirmation: claim.state.confirmation };
   let confirmation;

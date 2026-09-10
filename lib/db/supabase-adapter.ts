@@ -5,7 +5,7 @@
  */
 
 import { confirmSupabasePrivateCreator, getSupabasePrivateCreatorConfirmation, type PrivateCreatorConfirmation } from "./private-creator-confirmations";
-import { reserveSupabasePrivateTreasury, type PrivateTreasuryPolicy } from "./private-treasury-capacity";
+import { reserveSupabasePrivateTreasury, getSupabasePrivateTreasury, type PrivateTreasuryPolicy } from "./private-treasury-capacity";
 import { admitSupabasePrivateCreatorSubmission, listSupabasePrivateCreatorSubmissions, type PrivateCreatorSubmission } from "./private-creator-submissions";
 import { saveSupabasePrivateResult, getSupabasePrivateResult } from "./private-research-results";
 import { claimSupabasePrivateExecution, getSupabasePrivateExecution } from "./private-research-executions";
@@ -660,6 +660,7 @@ export class SupabaseAdapter implements KeryxDB {
   async reservePrivateTreasury(id: string, payer: string, policy: PrivateTreasuryPolicy) {
     return reserveSupabasePrivateTreasury(this.sb, id, payer, policy);
   }
+  async getPrivateTreasury(id: string, payer: string) { return getSupabasePrivateTreasury(this.sb, id, payer); }
 
   async confirmPrivateCreatorSubmission(id: string, payer: string, workerId: string, confirmation: PrivateCreatorConfirmation) {
     return confirmSupabasePrivateCreator(this.sb, id, payer, workerId, confirmation);

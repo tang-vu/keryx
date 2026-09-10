@@ -6,7 +6,7 @@
 import { confirmSqlitePrivateCreator, getSqlitePrivateCreatorConfirmation, type PrivateCreatorConfirmation, PRIVATE_CREATOR_CONFIRMATIONS_SQL } from "./private-creator-confirmations";
 import { admitSqlitePrivateCreatorSubmission, listSqlitePrivateCreatorSubmissions, type PrivateCreatorSubmission, PRIVATE_CREATOR_SUBMISSIONS_SQL } from "./private-creator-submissions";
 import { saveSqlitePrivateResult, getSqlitePrivateResult, PRIVATE_RESEARCH_RESULTS_SQL } from "./private-research-results";
-import { PRIVATE_TREASURY_CAPACITY_SQL, reserveSqlitePrivateTreasury, type PrivateTreasuryPolicy } from "./private-treasury-capacity";
+import { PRIVATE_TREASURY_CAPACITY_SQL, reserveSqlitePrivateTreasury, getSqlitePrivateTreasury, type PrivateTreasuryPolicy } from "./private-treasury-capacity";
 import { claimSqlitePrivateExecution, getSqlitePrivateExecution, PRIVATE_RESEARCH_EXECUTIONS_SQL } from "./private-research-executions";
 import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
@@ -1474,6 +1474,7 @@ export class SqliteAdapter implements KeryxDB {
   async reservePrivateTreasury(id: string, payer: string, policy: PrivateTreasuryPolicy) {
     return reserveSqlitePrivateTreasury(this.db, id, payer, policy);
   }
+  async getPrivateTreasury(id: string, payer: string) { return getSqlitePrivateTreasury(this.db, id, payer); }
 
   async confirmPrivateCreatorSubmission(id: string, payer: string, workerId: string, confirmation: PrivateCreatorConfirmation) {
     return confirmSqlitePrivateCreator(this.db, id, payer, workerId, confirmation);

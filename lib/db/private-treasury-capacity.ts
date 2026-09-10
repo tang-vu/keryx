@@ -7,6 +7,26 @@ import { getSqlitePrivateResearchIntent, getSupabasePrivateResearchIntent } from
 const capacity = z.string().regex(/^[1-9]\d{0,11}$/);
 const policySchema = z.object({ signer: addressSchema, capacityMicros: capacity }).strict();
 export type PrivateTreasuryPolicy = z.infer<typeof policySchema>;
+export type PrivateTreasuryReservation = { signer: string; amountMicros: string };
+function reservation(row: Record<string, unknown> | undefined, amount: number): PrivateTreasuryReservation | null {
+  if (!row) return null;
+  const signer = addressSchema.parse(row.signer).toLowerCase();
+  if (row.signer !== signer || Number(row.amount_micros) !== amount) throw new Error("Private treasury reservation conflict");
+  return { signer, amountMicros: String(amount) };
+}
+export async function getSqlitePrivateTreasury(db: DatabaseSync, id: string, payer: string) {
+  const intent = await getSqlitePrivateResearchIntent(db, id, payer);
+  if (!intent) return null;
+  return reservation(db.prepare("SELECT signer,amount_micros FROM private_treasury_reservations WHERE job_id=?").get(id),
+    Math.round(intent.submission.request.budget * 1e6));
+}
+export async function getSupabasePrivateTreasury(db: SupabaseClient, id: string, payer: string) {
+  const intent = await getSupabasePrivateResearchIntent(db, id, payer);
+  if (!intent) return null;
+  const { data, error } = await db.from("private_treasury_reservations").select("signer,amount_micros").eq("job_id", id).maybeSingle();
+  if (error) throw new Error("Private treasury reservation unavailable");
+  return reservation(data ?? undefined, Math.round(intent.submission.request.budget * 1e6));
+}
 export const PRIVATE_TREASURY_CAPACITY_SQL = `
 CREATE TABLE IF NOT EXISTS private_treasury_pools (
   signer TEXT PRIMARY KEY, capacity_micros INTEGER NOT NULL CHECK(capacity_micros > 0 AND capacity_micros <= 999999999999)

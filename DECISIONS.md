@@ -1,5 +1,19 @@
 # Keryx — Decision Log
 
+**D-122** - Treasury admission enforcement - *Reserve shared creator capacity after
+payer verification but before incoming settle; bind v2 execution to the saved signer.*
+Fresh private payment submission requires an explicit operator treasury policy. Verified
+payments that cannot obtain capacity return capacity-unavailable before claiming or
+submitting settlement. A lost allocation acknowledgement cannot authorize settlement;
+a later attempt can recover the same immutable allocation. Existing incoming attempts
+return their previous state without reallocation. Before any funding check or execution
+claim, v2 execution reads an owner-scoped allocation and requires its signer to match
+the actual creator-payment signer. Readback also validates the signed budget. Stored
+results and existing execution claims remain recoverable without creating allocations.
+No configured ceiling proves funds exist: dedicated signer backing, safe replenishment
+and release handling remain operational prerequisites. Public purchase routes remain
+closed; no real allocation or payment was created by these synthetic tests.
+
 **D-121** - Shared private treasury capacity - *Allocate signed creator budgets
 atomically against an immutable ceiling for a dedicated signer.* Per-job caps alone
 cannot prevent concurrent jobs from assuming the same available funds. The new database
