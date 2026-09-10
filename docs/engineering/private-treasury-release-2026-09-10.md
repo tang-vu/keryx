@@ -53,6 +53,16 @@ zero-amount records. Reports contain no question, job identifier, signature or b
 
 ## Deployment and remaining limits
 
+Production commit `9947585` passed CI run `34496057436` and the VPS production build.
+Health reported that commit as operational. The resumed worker matched its configured
+release and was observed idle with Gateway backing sufficient for the unchanged ceiling.
+It recorded one release for the existing owner-operated testnet job. A read-only before/
+after digest comparison confirmed that the original reservations, signed intents, payment
+attempts, execution claims, saved results, creator submissions and confirmations were
+unchanged. The returned capacity matched original budget minus admitted spend. This
+acceptance performed no new purchase, funding or settlement request. Private aggregate
+observations are retained in ignored operator artifacts; no billing figures are published.
+
 PostgreSQL requires migration 0060 before this worker or allocator starts. SQLite creates
 the append-only release table and immutability triggers at initialization. Apply the normal
 worker drain/deploy procedure. The coordinator may release eligible historical jobs on
