@@ -30,6 +30,8 @@ import { privateSpendView } from "../a2a/private-spend-view";
 import { privateResultView } from "../a2a/private-result-view";
 import { submitPrivateIncomingPayment } from "../payments/private-incoming-payment";
 import { reconcilePrivateIncomingPayment } from "../gateway/private-incoming-reconciliation";
+import { admitPrivateResearch } from "../a2a/admit-private-research";
+import { createPrivateQuote } from "../a2a/private-quote";
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-private-intents-"));
 const file = path.join(directory, "test.sqlite");
@@ -428,9 +430,18 @@ it("retains signed provider disclosure and denies missing or changed execution p
 });
 
 it("executes a signed v2 job through its real pinned transport and ignores an arbitrary injected engine", async () => {
-  const { value, proof } = await executionFixture({ ...request, model: reasoningPolicy.modelId, reasoning: reasoningPolicy });
-  await db.claimPrivatePaymentSubmission(value.id, account.address);
-  await db.confirmPrivatePayment(value.id, account.address, proof);
+  const { access: _access, model: _model, ...input } = request;
+  const options = { provider: privateProvider, requirement, merchants };
+  const quote = createPrivateQuote(input, options);
+  const authorization = await createPrivateAuthorization(quote.request, quote.requirement, account.address, merchants, 1788912000000);
+  const signature = await account.signTypedData(buyerTypedData(authorization.authorization));
+  const signed = { request: authorization.request, salt: authorization.salt, payment: { authorization: authorization.authorization, signature } };
+  const value = await admitPrivateResearch(db, signed, account.address, options);
+  expect(await admitPrivateResearch(other, signed, account.address, options)).toEqual(value);
+  expect(await db.getPrivatePaymentState(value.id, account.address)).toBeNull();
+  const facilitator = vi.fn(async (action: "verify" | "settle") => action === "verify" ? { isValid: true, payer: account.address }
+    : { success: true, network: BUYER_NETWORK, payer: account.address, transaction: "synthetic-admitted-payment" });
+  expect(await submitPrivateIncomingPayment(db, value.id, account.address, { facilitator, now: 1788912000000 })).toMatchObject({ status: "settled" });
   const injected = vi.fn(() => { throw new Error("Unapproved engine selected"); });
   const signer = { createPaymentPayload: vi.fn() };
   const http = vi.fn<typeof fetch>(async (url, init) => {
@@ -457,6 +468,21 @@ it("executes a signed v2 job through its real pinned transport and ignores an ar
     expect(await runPrivateResearch(db, value.id, account.address, { signerAddress: merchants.privatePayee, signer,
       getGatewayBalance: async () => { throw new Error("Recovery must not check funding"); } })).toMatchObject({ status: "stored" });
   } finally { vi.unstubAllGlobals(); }
+});
+
+it("rejects unsigned, foreign-owner, legacy and changed-provider admissions before storage", async () => {
+  const bound = await createPrivateAuthorization({ ...request, model: reasoningPolicy.modelId, reasoning: reasoningPolicy }, requirement, account.address, merchants, 1788912000000);
+  const signature = await account.signTypedData(buyerTypedData(bound.authorization));
+  const signed = { request: bound.request, salt: bound.salt, payment: { authorization: bound.authorization, signature } };
+  const reservation = vi.spyOn(db, "reservePrivateResearchIntent");
+  const options = { provider: privateProvider, requirement, merchants };
+  try {
+    await expect(admitPrivateResearch(db, signed, merchants.privatePayee, options)).rejects.toThrow("owner mismatch");
+    await expect(admitPrivateResearch(db, { ...signed, request: { ...bound.request, question: "Modified" } }, account.address, options)).rejects.toThrow("Invalid private research intent");
+    await expect(admitPrivateResearch(db, signed, account.address, { ...options, provider: { ...privateProvider, baseUrl: "https://other.example" } })).rejects.toThrow("provider policy");
+    await expect(admitPrivateResearch(db, submission, account.address, options)).rejects.toThrow();
+    expect(reservation).not.toHaveBeenCalled();
+  } finally { reservation.mockRestore(); }
 });
 
 it("projects owner spend from late durable evidence without using stale result totals or disclosing authorization", async () => {

@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-120** - Authenticated private admission - *Rebuild trusted quote terms and
+match the verified signed request before reserving an intent.* The backend boundary
+requires the authenticated payer to equal the locally verified signing EOA. It resolves
+provider disclosure from a copied operator configuration, reconstructs the quote from
+the signed research fields and trusted payment requirement, and applies the strict v2
+quote validator. Foreign owners, tampered requests, legacy requests and changed provider
+policies fail before any database write. Identical admissions retain the original intent;
+reservation neither submits payment nor grants execution. The helper returns only an ID
+and reserved status, not bearer authorization. The real database test now composes quote,
+EOA signing, admission, synthetic facilitator settlement, pinned engine execution and
+stored-result recovery. Live-session routing, operator pricing and endpoint approval,
+capacity reservation and browser consent still need wiring before purchase activation.
+
 **D-119** - Private incoming recovery - *Persist exact confirmed/completed Circle
 transfer-search evidence without resubmitting payment.* Owner-scoped reconciliation
 uses the shared bounded, paginated search and independently matches nonce, payer,
