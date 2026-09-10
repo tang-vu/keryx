@@ -68,6 +68,31 @@ Private-worker supervision,
 checkout admission readiness, result recovery under the intended operational configuration and
 an owner-operated end-to-end testnet purchase remain outstanding.
 
+## Controlled worker lifecycle drill
+
+After funding, a real child process ran `scripts/private-research-worker.mts` on the VPS
+against deployed commit `076b208a41325879a8a54f5fa363d44dc4456841`, with both enable flags
+set only in the child environment. Before starting it, the database was checked for no
+private treasury pool, no eligible worker candidates and no reconciliation candidates for
+this treasury. The public private-purchase route remained unmounted.
+
+The parent observed the actual child PID in a fresh idle status record, then ran the actual
+operations inspector in a separate process. It exited zero with matched configuration/build,
+idle phase and 100000 micro-USDC of available and required backing. It still returned
+`checkoutReady: false`.
+
+The worker completed a clean recovery sweep (two non-backup directory entries, zero restores
+or errors), an empty reconciliation tick and an empty execution tick. Completed, stored,
+claimed, unpersisted, provider and error counters were all zero. No paid research ran.
+The parent sent SIGTERM to that same live child and awaited its exit: code zero, no terminating
+signal, 31 ms elapsed after SIGTERM, and no stderr output. The resulting status was stopped,
+mode 0600, and the cooperative lock was absent. Both persisted enable flags remained zero.
+
+This proves startup, matching operational inspection and graceful **idle** shutdown for this
+configuration on this host. It does not prove draining an active paid job, crash recovery with
+a real encrypted result, supervisor restart behavior, public merchant-guard installation or
+readiness to accept buyer payments. No daemon was left running by this drill.
+
 The public application continues serving the deployed release. No private keys, provider credentials
 or real customer inputs are included in this evidence document. The transaction hashes above are
 public testnet evidence and expose the corresponding on-chain addresses.
