@@ -371,6 +371,7 @@ export interface KeryxDB {
   reservePrivateResearchIntent(intent: PrivateResearchIntent): Promise<PrivateResearchIntent>;
   /** Backend-only candidate hints; each execution still requires validated atomic admission. */
   listPrivateWorkerCandidates(signer: string, after?: string): Promise<import("./private-worker-candidates").PrivateWorkerCandidate[]>;
+  listPrivateReconciliationCandidates(signer: string, after?: string): Promise<import("./private-worker-candidates").PrivateWorkerCandidate[]>;
   reservePrivateTreasury(id: string, payer: string, policy: PrivateTreasuryPolicy): Promise<boolean>;
   getPrivateTreasury(id: string, payer: string): Promise<PrivateTreasuryReservation | null>;
   getPrivateTreasurySummary(signer: string): Promise<PrivateTreasurySummary | null>;

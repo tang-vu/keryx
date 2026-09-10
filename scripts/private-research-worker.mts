@@ -43,10 +43,12 @@ async function main() {
         if (!worker) throw new Error();
         await runPrivateWorkerLoop(worker, { signal: stop.signal, once: values.once,
           recovery: createPrivateResultRecovery(db, spool),
+          reconciliation: worker.reconciliation,
           observe: privateWorkerStatusWriter(process.env.KERYX_PRIVATE_RESULT_SPOOL_DIRECTORY!, process.env.KERYX_COMMIT, worker.configurationId),
           report: summary => {
             console.log(JSON.stringify(summary));
             if (summary.status === "tick-unavailable" || summary.status === "scan-unavailable"
+              || (summary.status === "reconciliation" && (summary.mismatched > 0 || summary.failedObserved > 0))
               || ("errors" in summary && summary.errors > 0) || ("unpersisted" in summary && summary.unpersisted > 0)) process.exitCode = 1;
           } });
       } finally {

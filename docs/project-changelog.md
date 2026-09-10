@@ -1,5 +1,12 @@
 # Keryx Project Changelog
 
+### Private worker reconciliation (2026-09-10, v0.22.42)
+
+- Reconcile treasury-reserved private jobs before eligible worker execution, with bounded creator pages and resumable cursors.
+- Advance processing creator evidence only for the same transfer and admitted submission; keep pending and confirmed counts distinct.
+- Preserve uncertainty, original authorization claims and redacted diagnostics across shutdown and search/storage failures.
+- Verify SQLite end-to-end evidence recovery and PostgreSQL selection/promotion rules; private production activation remains pending.
+
 ### Provider usage validation (2026-09-10, v0.22.41)
 
 - Keep empty, partial and malformed provider usage out of measured cost estimates.

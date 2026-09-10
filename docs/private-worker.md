@@ -186,7 +186,27 @@ balance responses. They cover disabled configuration, address binding, wrong dom
 public-funder reuse and unknown-versus-zero balance. No live signature, funding,
 provider request or payment is sent by these tests.
 
+Enabled worker iterations now reconcile one treasury-reserved job after encrypted result recovery
+and before executing eligible work. Selection includes pending incoming payments and already
+executed jobs. Incoming and creator searches use the existing exact evidence matchers and never
+sign, resubmit payments or release capacity. Creator processing observations continue to be checked
+and can advance only for the same transfer and admitted submission.
+
+Each iteration visits at most 25 creator legs for that job; private in-memory cursors continue the
+next page before moving to another job. Empty job selection restarts the sweep. Restarting the
+process resets cursors and safely re-reads evidence. A 30-second cooperative search signal bounds
+network work; database waits and a callback ignoring cancellation can take longer. Shutdown drains
+the active reconciliation call and starts no new execution. `--once` is one iteration, not a complete
+reconciliation sweep. The normal pause occurs after execution, so this is not a fixed-time SLA.
+
+Reports include only aggregate reconciliation counts. Errors, mismatches and failed observations
+keep the iteration degraded even if other eligible research succeeds and set the command's eventual
+exit code to one. Pending/processing evidence remains pending/processing. All lifetime reservations,
+including completed jobs, remain in this bounded sweep; large histories need further scheduling work.
+Supabase deployments require migrations 58 and 59; SQLite uses the existing private tables.
+Production private-worker activation and a live testnet acceptance run remain outstanding.
+
 Remaining activation work includes production process configuration, verified dedicated
-funding and signer inventory, health/readiness shared with checkout, reconciliation,
+funding and signer inventory, health/readiness shared with checkout,
 claimed-but-unpersisted result recovery, and an owner-operated testnet acceptance run.
 Do not treat constructing a worker or setting these flags as completion of those gates.

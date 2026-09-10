@@ -9,6 +9,7 @@ import { privateRuntimePolicy } from "./private-runtime-policy";
 import { createPrivateWorker } from "./private-worker";
 import type { PrivateResultSpool } from "./private-result-spool";
 import { privateWorkerConfigurationId } from "./private-worker-configuration";
+import { createPrivateReconciliation } from "./private-reconciliation";
 
 /** Explicit operator bootstrap only: no legacy wallet loading, key generation,
  * deposits, transfers, daemon start or public checkout activation. Returning a worker
@@ -35,6 +36,6 @@ export function privateWorkerBootstrap(db: KeryxDB, resultSpool?: PrivateResultS
           throw new Error("Private Gateway balance unavailable");
         return balance;
       } });
-    return Object.freeze({ ...worker, configurationId });
+    return Object.freeze({ ...worker, configurationId, reconciliation: createPrivateReconciliation(db, account.address) });
   } catch { throw new Error("Private worker configuration unavailable"); }
 }

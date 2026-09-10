@@ -7,7 +7,7 @@
 import { confirmSupabasePrivateCreator, getSupabasePrivateCreatorConfirmation, type PrivateCreatorConfirmation } from "./private-creator-confirmations";
 import { reserveSupabasePrivateTreasury, getSupabasePrivateTreasury, type PrivateTreasuryPolicy } from "./private-treasury-capacity";
 import { getSupabasePrivateTreasurySummary } from "./private-treasury-summary";
-import { listSupabasePrivateWorkerCandidates } from "./private-worker-candidates";
+import { listSupabasePrivateWorkerCandidates, listSupabasePrivateReconciliationCandidates } from "./private-worker-candidates";
 import { admitSupabasePrivateCreatorSubmission, listSupabasePrivateCreatorSubmissions, type PrivateCreatorSubmission } from "./private-creator-submissions";
 import { saveSupabasePrivateResult, getSupabasePrivateResult } from "./private-research-results";
 import { claimSupabasePrivateExecution, getSupabasePrivateExecution } from "./private-research-executions";
@@ -665,6 +665,7 @@ export class SupabaseAdapter implements KeryxDB {
   async getPrivateTreasury(id: string, payer: string) { return getSupabasePrivateTreasury(this.sb, id, payer); }
   async getPrivateTreasurySummary(signer: string) { return getSupabasePrivateTreasurySummary(this.sb, signer); }
   async listPrivateWorkerCandidates(signer: string, after?: string) { return listSupabasePrivateWorkerCandidates(this.sb, signer, after); }
+  async listPrivateReconciliationCandidates(signer: string, after?: string) { return listSupabasePrivateReconciliationCandidates(this.sb, signer, after); }
 
   async confirmPrivateCreatorSubmission(id: string, payer: string, workerId: string, confirmation: PrivateCreatorConfirmation) {
     return confirmSupabasePrivateCreator(this.sb, id, payer, workerId, confirmation);

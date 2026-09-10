@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-153** - Private worker reconciliation scheduling - *Recover results, observe pending payments,
+then execute eligible work with separate accounting authority.*
+Enabled workers now visit one treasury-reserved job per iteration, including unconfirmed incoming
+payments and already executed jobs. Exact existing reconcilers perform read-only Circle searches
+and persist matching evidence; the coordinator has no signer or payment submission capability.
+Creator scans continue in pages of 25 using private in-memory cursors; empty job pages restart
+the sweep so earlier inserted IDs are revisited. A cooperative 30-second search signal and process
+shutdown stop additional searches without racing paid work. Database waits may outlast that signal.
+Errors advance past a bad job, remain redacted and mark the iteration degraded; they do not prevent
+unrelated settled jobs from executing. Processing, failed observations and mismatches never release
+capacity or authorize retry. This is polling, not a readiness lease or latency guarantee; completed
+reservations remain in the sweep and large histories will need indexed pending-only selection.
+
 **D-152** - Private creator evidence progression - *Keep checking processing observations and
 only advance the same transfer to confirmed evidence.*
 A real SQLite regression reproduced received/batched creator records being permanently skipped,

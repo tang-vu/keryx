@@ -34,6 +34,7 @@ import { admitPrivateResearch } from "../a2a/admit-private-research";
 import { createPrivateQuote } from "../a2a/private-quote";
 import { reserveSupabasePrivateTreasury } from "./private-treasury-capacity";
 import { privateResearchService } from "../a2a/private-research-service";
+import { createPrivateReconciliation } from "../a2a/private-reconciliation";
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-private-intents-"));
 const file = path.join(directory, "test.sqlite");
@@ -768,6 +769,38 @@ it("reconciles a durable private attempt after reopening using complete Circle p
     expect(JSON.stringify([url, options])).not.toContain(leg.sourceId);
     expect(new Headers(options?.headers).has("Payment-Signature")).toBe(false);
   }
+});
+
+it("sweeps reserved incoming and executed creator jobs through the actual reconciliation coordinator", async () => {
+  const incoming = await executionFixture();
+  const completed = await creatorFixture();
+  const policy = { signer: `0x${"e1".repeat(20)}`, capacityMicros: "100000" };
+  await db.reservePrivateTreasury(incoming.value.id, account.address, policy);
+  await db.reservePrivateTreasury(completed.value.id, account.address, policy);
+  await db.claimPrivatePaymentSubmission(incoming.value.id, account.address);
+  const original = creatorSubmission("c", "coordinator-source");
+  const leg = { ...original, submission: { ...original.submission, payer: policy.signer } };
+  await db.admitPrivateCreatorSubmission(completed.value.id, account.address, completed.claim.workerId, leg);
+  const search = vi.fn(async (payment: import("../types").PaymentRecord) => [{
+    id: payment.kind === "inbound" ? "synthetic-coordinator-incoming" : "synthetic-coordinator-creator",
+    status: "completed" as const, token: "USDC", sendingNetwork: BUYER_NETWORK, recipientNetwork: BUYER_NETWORK,
+    fromAddress: payment.payer!, toAddress: payment.payee!, amount: String(Math.round(payment.amountUsdc * 1e6)),
+    nonce: payment.authorizationId!, txHash: null, createdAt: payment.createdAt!, updatedAt: payment.createdAt!,
+  }]);
+  const sorted = [incoming.value.id, completed.value.id].sort();
+  expect((await other.listPrivateReconciliationCandidates(policy.signer)).map(row => row.id)).toEqual([sorted[0]]);
+  expect((await other.listPrivateReconciliationCandidates(policy.signer, sorted[0])).map(row => row.id)).toEqual([sorted[1]]);
+  expect(await other.listPrivateReconciliationCandidates(merchants.publicResearchPayee)).toEqual([]);
+  const runner = createPrivateReconciliation(other, policy.signer, { search });
+  const reports = [await runner.tick(), await runner.tick(), await runner.tick()];
+  expect(reports.reduce((sum, row) => sum + row.incomingConfirmed, 0)).toBe(1);
+  expect(reports.reduce((sum, row) => sum + row.creatorConfirmed, 0)).toBe(1);
+  expect(reports.every(row => row.errors === 0)).toBe(true);
+  expect(search).toHaveBeenCalledTimes(2);
+  expect((await db.getPrivatePaymentState(incoming.value.id, account.address))?.status).toBe("settled");
+  expect((await privateSpendView(db, completed.value.id, account.address))?.creator.confirmedMicros).toBe("20000");
+  expect(await db.claimPrivateResearchExecution(completed.value.id, account.address)).toBeNull();
+  expect(JSON.stringify(reports)).not.toContain(incoming.value.id);
 });
 
 it("advances recorded creator processing evidence to confirmed spend without reopening its authorization", async () => {

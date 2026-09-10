@@ -31,3 +31,21 @@ export async function listSupabasePrivateWorkerCandidates(db: SupabaseClient, si
   if (error) throw new Error("Private worker candidates unavailable");
   return z.array(candidate).max(25).parse(data);
 }
+
+/** One reserved job, including pending incoming payments and completed executions.
+ * This is an internal reconciliation hint, never a payment or execution authorization. */
+export async function listSqlitePrivateReconciliationCandidates(db: DatabaseSync, signer: string, after?: string) {
+  const selected = selection(signer, after);
+  const rows = db.prepare(`SELECT i.id,i.payer FROM private_treasury_reservations r
+    JOIN private_research_intents i ON i.id=r.job_id
+    WHERE r.signer=? AND (? IS NULL OR i.id>?) ORDER BY i.id ASC LIMIT 1`)
+    .all(selected.signer, selected.after, selected.after);
+  return z.array(candidate).max(1).parse(rows);
+}
+
+export async function listSupabasePrivateReconciliationCandidates(db: SupabaseClient, signer: string, after?: string) {
+  const selected = selection(signer, after);
+  const { data, error } = await db.rpc("list_private_reconciliation_candidates", { p_signer: selected.signer, p_after: selected.after });
+  if (error) throw new Error("Private reconciliation candidates unavailable");
+  return z.array(candidate).max(1).parse(data);
+}
