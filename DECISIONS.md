@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-143** - Private operator exclusion - *Hold an exclusive spool-directory lock for
+the complete worker run or manual restore operation.*
+The command acquires `private-worker.lock` before database initialization and releases
+it only after draining work and closing the database. Exclusive creation rejects a
+second operator; release verifies the original random instance record before deletion.
+Partial lock writes and process crashes require manual inspection, never age/PID-based
+takeover. The lock coordinates these commands on a controlled local filesystem; it
+does not fence arbitrary code, separate spool directories or distributed workers.
+The permanent database execution claim remains execution authority. No private payment
+nonce or claim may be reset as part of cleaning an abandoned filesystem lock.
+
 **D-142** - Private worker observation - *Persist bounded local lifecycle observations
 without treating them as a checkout lease.*
 The operator loop writes starting/recovering/working/idle/degraded/stopped transitions

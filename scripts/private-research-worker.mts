@@ -3,6 +3,7 @@ import { runPrivateWorkerLoop } from "../lib/a2a/private-worker-loop";
 import { privateResultSpoolFromEnv } from "../lib/a2a/private-result-spool-config";
 import { createPrivateResultRecovery } from "../lib/a2a/private-result-recovery";
 import { privateWorkerStatusWriter } from "../lib/a2a/private-worker-status";
+import { withPrivateWorkerLock } from "../lib/a2a/private-worker-lock";
 
 async function main() {
   const { values } = parseArgs({ options: { once: { type: "boolean" }, help: { type: "boolean" },
@@ -14,12 +15,14 @@ async function main() {
   if (values.restore !== undefined) {
     if (values.once || !/^[a-f0-9]{64}$/.test(values.restore)) throw new Error();
     const spool = await privateResultSpoolFromEnv();
-    // Authenticate the local backup before opening or initializing any database.
-    await spool.read(values.restore);
-    const { getDb } = await import("../lib/db");
-    const db = await getDb();
-    try { console.log(JSON.stringify(await spool.restore(db, values.restore))); }
-    finally { (db as { close?: () => void }).close?.(); }
+    await withPrivateWorkerLock(process.env.KERYX_PRIVATE_RESULT_SPOOL_DIRECTORY!, async () => {
+      // Authenticate the local backup before opening or initializing any database.
+      await spool.read(values.restore!);
+      const { getDb } = await import("../lib/db");
+      const db = await getDb();
+      try { console.log(JSON.stringify(await spool.restore(db, values.restore!))); }
+      finally { (db as { close?: () => void }).close?.(); }
+    });
     return;
   }
   const flag = process.env.KERYX_PRIVATE_WORKER_ENABLED;
@@ -28,24 +31,29 @@ async function main() {
   const stop = new AbortController();
   const shutdown = () => stop.abort();
   process.on("SIGINT", shutdown); process.on("SIGTERM", shutdown);
-  let db: Awaited<ReturnType<typeof import("../lib/db")["getDb"]>> | undefined;
   try {
     const spool = await privateResultSpoolFromEnv();
-    const { getDb } = await import("../lib/db");
-    const { privateWorkerBootstrap } = await import("../lib/a2a/private-worker-bootstrap");
-    db = await getDb();
-    const worker = privateWorkerBootstrap(db, spool);
-    if (!worker) throw new Error();
-    await runPrivateWorkerLoop(worker, { signal: stop.signal, once: values.once,
-      recovery: createPrivateResultRecovery(db, spool),
-      observe: privateWorkerStatusWriter(process.env.KERYX_PRIVATE_RESULT_SPOOL_DIRECTORY!, process.env.KERYX_COMMIT),
-      report: summary => {
-        console.log(JSON.stringify(summary));
-        if (summary.status === "tick-unavailable" || summary.status === "scan-unavailable"
-          || ("errors" in summary && summary.errors > 0) || ("unpersisted" in summary && summary.unpersisted > 0)) process.exitCode = 1;
-      } });
+    await withPrivateWorkerLock(process.env.KERYX_PRIVATE_RESULT_SPOOL_DIRECTORY!, async () => {
+      let db: Awaited<ReturnType<typeof import("../lib/db")["getDb"]>> | undefined;
+      try {
+        const { getDb } = await import("../lib/db");
+        const { privateWorkerBootstrap } = await import("../lib/a2a/private-worker-bootstrap");
+        db = await getDb();
+        const worker = privateWorkerBootstrap(db, spool);
+        if (!worker) throw new Error();
+        await runPrivateWorkerLoop(worker, { signal: stop.signal, once: values.once,
+          recovery: createPrivateResultRecovery(db, spool),
+          observe: privateWorkerStatusWriter(process.env.KERYX_PRIVATE_RESULT_SPOOL_DIRECTORY!, process.env.KERYX_COMMIT),
+          report: summary => {
+            console.log(JSON.stringify(summary));
+            if (summary.status === "tick-unavailable" || summary.status === "scan-unavailable"
+              || ("errors" in summary && summary.errors > 0) || ("unpersisted" in summary && summary.unpersisted > 0)) process.exitCode = 1;
+          } });
+      } finally {
+        (db as { close?: () => void } | undefined)?.close?.();
+      }
+    });
   } finally {
-    (db as { close?: () => void } | undefined)?.close?.();
     process.off("SIGINT", shutdown); process.off("SIGTERM", shutdown);
   }
 }

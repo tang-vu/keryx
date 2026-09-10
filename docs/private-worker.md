@@ -63,6 +63,22 @@ file. Run one worker per spool and stop it before manual recovery. A scan is not
 filesystem snapshot or cross-process coordination mechanism. New backups written
 after a sweep are discovered by a subsequent sweep.
 
+Both the enabled worker and manual restore command exclusively create
+`private-worker.lock` in the spool directory before opening the database. A second
+command refuses to run. The owner holds this lock until active work drains and the
+database closes, and verifies its own random instance record before deleting it.
+An operation error still releases an intact owned lock; a partial initial write,
+forced kill, or replaced lock leaves a reservation requiring inspection.
+
+There is deliberately no automatic stale-lock takeover. Before manually removing
+an abandoned lock, stop the supervisor and verify every worker/restore process using
+that directory has terminated; a stale timestamp or reused PID is insufficient.
+Inspect retained backups and original database claims. Remove only the abandoned
+filesystem lock, never payment authorizations, submission attempts or execution claims.
+The lock is cooperative exclusion on a controlled local filesystem, not distributed
+fencing or protection against a local actor who can replace its files. Direct library
+callers and different spool directories are outside its scope.
+
 When explicitly enabled, both `KERYX_PRIVATE_WORKER_ENABLED=1` and
 `KERYX_PRIVATE_RESEARCH_ENABLED=1` are required, together with the existing private
 runtime policy: dedicated merchant and treasury addresses, capacity, service fee,
