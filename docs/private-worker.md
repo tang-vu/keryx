@@ -8,6 +8,10 @@ signal is activated by installing this release.
 
 ## Managed VPS service
 
+The current VPS has a running managed worker with purchasing still disabled. The
+[supervision and deploy drill](./engineering/private-worker-supervision-2026-09-10.md)
+records actual startup, stop/resume, deployment ordering and the remaining acceptance limits.
+
 `ops/keryx-private-worker.service` describes the existing `/root/keryx` VPS layout and
 `/usr/bin/node`. Install it only after private policy, keys, backing and recovery storage have
 been provisioned and checked. It explicitly loads `.env.local` and `.env.private-worker.local`;
