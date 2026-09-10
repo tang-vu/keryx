@@ -28,7 +28,8 @@ export function createPrivateWorker(db: KeryxDB, options: Omit<ExecutionOptions,
       if (busy) return { status: "busy" as const };
       if (signal?.aborted) return { status: "paused" as const };
       busy = true;
-      const counts = { visited: 0, completed: 0, stored: 0, alreadyClaimed: 0, unpersisted: 0, errors: 0 };
+      const counts = { visited: 0, completed: 0, stored: 0, alreadyClaimed: 0, unpersisted: 0, errors: 0,
+        providerServedJobs: 0, providerFailedJobs: 0, fallbackJobs: 0, reasoningUnknownJobs: 0 };
       try {
         let page;
         try {
@@ -46,6 +47,11 @@ export function createPrivateWorker(db: KeryxDB, options: Omit<ExecutionOptions,
           try {
             const result = await runPrivateResearch(db, row.id, row.payer, execution);
             if (result.status === "completed") {
+              const attempts = result.run?.reasoningAttempts ?? [];
+              if (attempts.length === 0) counts.reasoningUnknownJobs++;
+              if (attempts.some(attempt => attempt.tier === 0 && attempt.outcome === "served")) counts.providerServedJobs++;
+              if (attempts.some(attempt => attempt.tier === 0 && (attempt.outcome === "failed" || attempt.outcome === "circuit-open"))) counts.providerFailedJobs++;
+              if (attempts.some(attempt => attempt.tier > 0 && attempt.outcome === "served")) counts.fallbackJobs++;
               if (await db.getPrivateResearchResult(row.id, row.payer)) counts.completed++;
               else counts.unpersisted++;
             } else if (result.status === "stored") counts.stored++;

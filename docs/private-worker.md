@@ -25,6 +25,18 @@ exit code nonzero; the daemon continues polling until stopped. `--once` is a sin
 work tick, not a readiness check: if enabled and funded, it can execute paid creator
 operations for eligible jobs. No command generates keys or funds a wallet.
 
+Tick summaries also distinguish observed reasoning from persistence success:
+`providerServedJobs`, `providerFailedJobs`, `fallbackJobs` and `reasoningUnknownJobs`.
+The first three count job-level flags from the returned run's attempt trace: tier-zero
+served, tier-zero failed/circuit-open, and a served fallback tier respectively. Mixed
+jobs can increment multiple counters. A returned run without attempts is unknown.
+Stored-result reads and already-claimed jobs do not claim fresh provider activity;
+execution errors may have no returned trace and remain in the errors counter.
+No engine identifiers or raw provider errors appear in summaries. Allowed local
+fallback can produce a completed saved job, so these observations do not independently
+change completion state or the loop's exit code. Zero failures, an empty queue or an
+idle worker must not be advertised as proof of provider health or answer quality.
+
 Enabled workers also require `KERYX_PRIVATE_RESULT_SPOOL_DIRECTORY` (an absolute,
 operator-controlled directory with an existing parent) and
 `KERYX_PRIVATE_RESULT_SPOOL_KEY` (a dedicated 32-byte encryption key, encoded as 64 hex

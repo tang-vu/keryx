@@ -4,7 +4,8 @@ afterEach(() => vi.useRealTimers());
 
 it("records lifecycle boundaries and does not start work when the pre-work status write fails", async () => {
   const report = vi.fn(), signal = new AbortController().signal;
-  const tick = vi.fn(async () => ({ status: "processed" as const, visited: 0, completed: 0, stored: 0, alreadyClaimed: 0, unpersisted: 0, errors: 0 }));
+  const tick = vi.fn(async () => ({ status: "processed" as const, visited: 0, completed: 0, stored: 0, alreadyClaimed: 0, unpersisted: 0, errors: 0,
+    providerServedJobs: 0, providerFailedJobs: 0, fallbackJobs: 0, reasoningUnknownJobs: 0 }));
   const observe = vi.fn(async (_phase: string) => {});
   await runPrivateWorkerLoop({ tick }, { signal, once: true, report, observe });
   expect(observe.mock.calls.flat()).toEqual(["starting", "working", "idle", "stopped"]);

@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-150** - Private worker reasoning counters - *Report observed provider and fallback
+use separately from successful result persistence.*
+For newly executed jobs that return a run, the worker counts primary-tier served,
+failed/circuit-open and fallback-tier served attempts as job-level flags. Missing
+attempt traces are unknown. These counters can overlap for mixed runs and do not
+include re-read stored jobs or claim-only responses. Execution exceptions remain
+errors and may provide no reasoning trace. Only aggregate counts leave the worker;
+no engine names or provider error bodies are copied. Allowed heuristic fallback does
+not turn a saved result into a failed payment/job, and zero observed failures is not
+a provider-health guarantee.
+
 **D-149** - Private purchase session revalidation - *Recheck the original live owner
 session after readiness/body waits and before invoking payment admission.*
 A regression test with actual SQLite revocation reproduced the prepared handler

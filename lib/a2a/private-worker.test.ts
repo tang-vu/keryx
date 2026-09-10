@@ -37,6 +37,20 @@ it("continues after one job fails, pages serially and resets the cursor after a 
   expect(mocks.run.mock.calls[0][3].privateProvider.baseUrl).toBe("https://synthetic.example/v1");
 });
 
+it("reports actual provider and fallback use separately from successful result storage", async () => {
+  const { worker, list } = fixture();
+  list.mockResolvedValue([row(1), row(2), row(3), row(4)]);
+  mocks.run.mockResolvedValueOnce({ status: "completed", run: { reasoningAttempts: [
+    { tier: 0, outcome: "failed", error: "network", engine: "synthetic-private-engine" }, { tier: 1, outcome: "served" },
+  ] } }).mockResolvedValueOnce({ status: "completed", run: { reasoningAttempts: [
+    { tier: 0, outcome: "served" }, { tier: 0, outcome: "circuit-open" }, { tier: 1, outcome: "served" },
+  ] } }).mockResolvedValueOnce({ status: "completed", run: { reasoningAttempts: [{ tier: 0, outcome: "served" }] } })
+    .mockResolvedValueOnce({ status: "completed", run: {} });
+  const report = await worker.tick();
+  expect(report).toMatchObject({ completed: 4, errors: 0, providerServedJobs: 2, providerFailedJobs: 2, fallbackJobs: 2, reasoningUnknownJobs: 1 });
+  expect(JSON.stringify(report)).not.toContain("synthetic-private-engine");
+});
+
 it("excludes overlapping ticks and pauses only between executions", async () => {
   const { worker, list } = fixture();
   const abort = new AbortController();
