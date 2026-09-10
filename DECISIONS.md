@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-123** - Explicit private runtime configuration - *Default off; require distinct
+merchant/treasury authority and an operator allowlisted reasoning endpoint.* The backend
+policy parser accepts only an explicit 0/1 enable flag, pinned Arc testnet context and
+complete private credentials/configuration. The private merchant must appear in the
+public seller reservation set. Its payee and creator treasury signer cannot reuse known
+public treasury authorities; the creator signer must also match the configured private
+address and must not be a reserved merchant. Context signer addresses must be derived
+from actual backend signer instances. The private engine factory resolves the endpoint,
+which must match an explicit operator allowlist. Parser failures never expose raw input
+or credentials. This validates configuration consistency only, not funding, legal/provider
+retention approval or a complete signer inventory. The parser is not yet a route switch;
+no purchase endpoint is activated by setting these variables alone.
+
 **D-122** - Treasury admission enforcement - *Reserve shared creator capacity after
 payer verification but before incoming settle; bind v2 execution to the saved signer.*
 Fresh private payment submission requires an explicit operator treasury policy. Verified
