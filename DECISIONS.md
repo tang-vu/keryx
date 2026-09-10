@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-147** - Private treasury backing observation - *Compare recorded conservative
+coverage with Gateway available micro-USDC, preserving unknown and insufficient states.*
+The read-only inspector snapshots trusted treasury policy, verifies the pinned network
+and domain, and requires stored capacity to match configuration. An absent pool uses
+the full configured ceiling, never zero. A null balance remains unavailable. Accounting
+is read again after the uncached balance request; observed changes invalidate the
+comparison. Cancellation prevents subsequent reads, though an already-started Gateway
+request retains its own transport timeout. A backed observation never reports checkout
+ready: it is not an atomic cross-system reservation and cannot establish exclusive
+signer authority, provider health or future available funds.
+
 **D-146** - Private treasury observation - *Read lifetime capacity, allocations and
 creator commitments in one SQL snapshot, keeping uncertain payments separate.*
 Both adapters expose an operator-only summary; PostgreSQL uses a service-role-only

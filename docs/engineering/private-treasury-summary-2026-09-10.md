@@ -27,7 +27,23 @@ The reader checks total ordering (confirmed <= committed <= allocated <= capacit
 stored amount/payer consistency and confirmation-to-submission agreement. It relies
 on existing validated database admission for the underlying signed payment records;
 it does not independently authenticate receipts or verify chain finality. Actual
-Gateway balance comparison, signer inventory and checkout admission remain unwired.
+signer inventory and checkout admission remain unwired.
+
+`inspectPrivateTreasuryBacking` now compares the conservative target with the existing
+uncached Gateway available-balance reader for the configured treasury signer. It
+accepts only the pinned Arc-testnet network/domain and matching stored capacity.
+Before a pool exists, the target is the full configured capacity. Zero is known
+insufficiency when coverage is required; null/transport failure is balance-unavailable.
+The database snapshot is checked again after the balance read and a changed snapshot
+produces accounting-changed. Cancellation prevents subsequent operations but does not
+abort an already-started balance reader, which has its own transport timeout.
+
+Even `backed` remains `checkoutReady: false`: funds can change after observation, the
+two systems are not atomically locked, and unallocated capacity can be zero. Callers
+still require validated signer inventory, worker/provider checks, job-specific capacity
+and the original atomic reservation. The inspector never deposits, transfers, reserves,
+releases or refunds funds. Its focused tests inject Gateway balances and database
+observations; they are not evidence of a funded private production treasury.
 
 Local evidence on September 10, 2026:
 
