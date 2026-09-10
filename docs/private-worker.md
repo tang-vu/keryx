@@ -117,6 +117,16 @@ funding/configuration lease. Status replacement fsyncs the file but does not pro
 directory-entry crash durability. Old observations must never enable payment admission.
 Public health/readiness integration and a process-status command are still pending.
 
+The prepared private purchase HTTP handler now awaits a server-owned asynchronous
+bootstrap through `readyPrivatePurchaseService`. Its read-only checks receive an
+AbortSignal and have a five-second deadline; errors, timeout and request cancellation
+return unavailable. A late result cannot invoke submission. The handler also checks
+request cancellation immediately before calling the purchase service. The timeout
+does not forcibly stop a callback that ignores cancellation, so bootstrap must never
+sign, reserve funds, settle or start jobs. Actual matching worker/configuration and
+backing checks remain unwired; neither a fresh status file nor this helper enables
+private purchasing.
+
 Tests use ephemeral unfunded keys, verify an SDK-created signature locally and inject
 balance responses. They cover disabled configuration, address binding, wrong domain,
 public-funder reuse and unknown-versus-zero balance. No live signature, funding,

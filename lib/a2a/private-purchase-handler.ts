@@ -1,16 +1,13 @@
 import { accountSessionContext, sessionMutationOrigin } from "../account-sessions";
 import { authJson } from "../auth-challenge";
-import type { KeryxDB } from "../db/keryx-db";
-import type { privateResearchService } from "./private-research-service";
 import { readBoundedRequestJson } from "../read-bounded-request-json";
-
-type Service = NonNullable<ReturnType<typeof privateResearchService>>;
+import { readyPrivatePurchaseService, type PrivatePurchaseBootstrap } from "./private-purchase-readiness";
 
 /** HTTP boundary prepared for a future worker-ready bootstrap. No public route
  * currently mounts this handler. The limiter and service bootstrap must be supplied
  * by server code, never selected from request data. */
 export function privatePurchaseHandler(options: {
-  bootstrap: (db: KeryxDB) => Service | null;
+  bootstrap: PrivatePurchaseBootstrap;
   limit: (wallet: string) => Promise<Response | null>;
 }) {
   const { bootstrap, limit } = options;
@@ -25,11 +22,12 @@ export function privatePurchaseHandler(options: {
         const headers = new Headers(limited.headers); headers.set("Cache-Control", "no-store");
         return new Response(limited.body, { status: limited.status, headers });
       }
-      const service = bootstrap(context.db);
+      const service = await readyPrivatePurchaseService(bootstrap, context.db, req.signal);
       if (!service) return authJson({ error: "Private checkout is not available yet." }, 503);
       let input: unknown;
       try { input = await readBoundedRequestJson(req); }
       catch { return authJson({ error: "Invalid private purchase request." }, 400); }
+      if (req.signal.aborted) return authJson({ error: "Private checkout request was cancelled." }, 503);
       const result = await service.submit(input, context.wallet);
       if (result.recoveryConfirmation) {
         // Retry only evidence persistence, never verification/settlement. If storage

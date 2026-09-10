@@ -50,7 +50,7 @@ function read(token?: string, body: unknown = { id: intent.id }, origin = "https
 
 it("protects the purchase handler before invoking the backend and keeps response data private", async () => {
   const submit = vi.fn(async (_input: unknown, _payer: string) => ({ response: { id: intent.id, paymentStatus: "pending" as const }, recoveryConfirmation: null }));
-  const bootstrap = vi.fn(() => ({ quote: vi.fn(), submit }));
+  const bootstrap = vi.fn(async () => ({ quote: vi.fn(), submit }));
   const limit = vi.fn(async (): Promise<Response | null> => null);
   const handler = privatePurchaseHandler({ bootstrap, limit });
   const call = (token?: string, body = "{}", origin = "https://keryx.cc") => storage.run(token, () => handler(new Request("https://keryx.cc/api/agent/private-ask", {
@@ -79,7 +79,7 @@ it("protects the purchase handler before invoking the backend and keeps response
 
 it("keeps purchases disabled when bootstrap is not ready", async () => {
   const { token } = await issueWebSession(db, secret, account.address, "asker");
-  const handler = privatePurchaseHandler({ bootstrap: () => null, limit: async () => null });
+  const handler = privatePurchaseHandler({ bootstrap: async () => null, limit: async () => null });
   const response = await storage.run(token, () => handler(new Request("https://keryx.cc/api/agent/private-ask", {
     method: "POST", headers: { host: "keryx.cc", origin: "https://keryx.cc" }, body: "{}" })));
   expect(response.status).toBe(503);

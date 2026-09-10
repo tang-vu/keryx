@@ -1,5 +1,15 @@
 # Keryx — Decision Log
 
+**D-144** - Private purchase readiness boundary - *Await bounded server-owned checks
+before obtaining a purchase service.*
+The prepared HTTP handler supports asynchronous bootstrap and supplies a cancellation
+signal to read-only readiness checks. Errors, request cancellation and a five-second
+timeout return unavailable; late resolution cannot call submit. Bootstrap must not
+sign, reserve or settle because timed-out underlying work can continue if it ignores
+cancellation. Request cancellation is checked again before submission. No concrete
+worker/funding/configuration acceptance policy or public purchase route is enabled
+by this boundary; the advisory status file alone remains insufficient authority.
+
 **D-143** - Private operator exclusion - *Hold an exclusive spool-directory lock for
 the complete worker run or manual restore operation.*
 The command acquires `private-worker.lock` before database initialization and releases
