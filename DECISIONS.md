@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-141** - Private buyer checkout - *Compose independently pinned request and price
+limits, temporary owner sign-in, availability checks and a single journaled submission.*
+The CLI accepts a bounded private request file, never a question on the command line.
+It snapshots buyer policy before asynchronous work and refuses an existing state
+directory before login. Server availability is necessary before payment signing;
+the current quote route still disables purchasing. A changed owner, provider, request
+or price fails validation. The payment authorization and attempt marker are durable
+before HTTP submission. Ambiguous responses require read-only recovery, not a retry.
+Sign-out must be confirmed before success returns; a late sign-out failure does not
+mean payment was never attempted. The command does not activate checkout or mainnet.
+
 **D-140** - Automatic result recovery - *Run bounded encrypted-backup recovery before
 admitting more private worker jobs.*
 The operator loop scans at most 25 directory entries per iteration with a retained

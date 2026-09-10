@@ -1,5 +1,14 @@
 # Keryx Project Changelog
 
+### Private buyer checkout and result recovery (2026-09-10, v0.22.38)
+
+- Add a private checkout CLI with independently pinned research/provider policy and price limits.
+- Check owner and server availability before payment signing; preserve a single-attempt journal and confirm sign-out.
+- Recover completed private results from encrypted backups without reexecuting paid research.
+- Require encrypted storage for enabled workers and run bounded automatic recovery before new work.
+- Verify client response loss and separate-process operator restoration using synthetic data only.
+- Private purchasing remains disabled; no private production wallets, worker or backup keys are provisioned.
+
 ### Private worker operator command (2026-09-10, v0.22.37)
 
 - Add an explicitly configured private-worker command with one-tick mode and graceful shutdown.
