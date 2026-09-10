@@ -18,7 +18,7 @@ export async function reconcilePrivateCreatorSubmissions(db: ReconciliationDb, i
     if (index < 0) throw new Error("Private reconciliation cursor unavailable");
     offset = index + 1;
   }
-  const summary = { scanned: 0, confirmed: 0, alreadyConfirmed: 0, awaiting: 0, failedObserved: 0, mismatched: 0, unavailable: 0,
+  const summary = { scanned: 0, confirmed: 0, processing: 0, alreadyConfirmed: 0, awaiting: 0, failedObserved: 0, mismatched: 0, unavailable: 0,
     remaining: rows.length - offset, nextCursor: options.cursor ?? null as string | null };
   if (!summary.remaining) summary.nextCursor = null;
   const search = options.search ?? searchCircleTransfer;
@@ -28,7 +28,9 @@ export async function reconcilePrivateCreatorSubmissions(db: ReconciliationDb, i
     summary.nextCursor = summary.remaining ? row.legId : null;
     const submission = row.data.submission;
     try {
-      if (await db.getPrivateCreatorConfirmation(id, payer, submission.authorizationId)) {
+      const existing = await db.getPrivateCreatorConfirmation(id, payer, submission.authorizationId);
+      if (existing && (existing.confirmation.source === "circle-facilitator-success" ||
+        existing.confirmation.transferStatus === "confirmed" || existing.confirmation.transferStatus === "completed")) {
         summary.alreadyConfirmed++; continue;
       }
       // The shared search needs payment fields, but no private research identity/content.
@@ -41,9 +43,12 @@ export async function reconcilePrivateCreatorSubmissions(db: ReconciliationDb, i
       if (result.verdict === "failed") { summary.failedObserved++; continue; }
       const transfer = result.transfer;
       if (result.verdict !== "settled" || !transfer || transfer.status === "failed") { summary.mismatched++; continue; }
+      if (existing && existing.confirmation.transaction !== transfer.id) { summary.mismatched++; continue; }
+      const processing = transfer.status === "received" || transfer.status === "batched";
+      if (existing && processing) { summary.processing++; continue; }
       await db.confirmPrivateCreatorSubmission(id, payer, row.workerId, { source: "circle-transfer-search", transaction: transfer.id,
         transferStatus: transfer.status, submission });
-      summary.confirmed++;
+      if (processing) summary.processing++; else summary.confirmed++;
     } catch {
       // Storage/search ambiguity is not a settlement failure and cannot authorize another payment.
       summary.unavailable++;

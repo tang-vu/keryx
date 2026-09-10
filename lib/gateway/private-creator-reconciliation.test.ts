@@ -17,7 +17,9 @@ function storage() { return { listPrivateCreatorSubmissions: vi.fn().mockResolve
 it("retains the exact accepted Circle stage and strips private job/source context from search input", async () => {
   for (const status of ["received", "batched", "confirmed", "completed"] as const) {
     const db = storage(), search = vi.fn().mockResolvedValue([{ ...transfer, status }]);
-    expect(await reconcilePrivateCreatorSubmissions(db, row.jobId, "owner", { search })).toMatchObject({ confirmed: 1, unavailable: 0, remaining: 0 });
+    const processing = status === "received" || status === "batched";
+    expect(await reconcilePrivateCreatorSubmissions(db, row.jobId, "owner", { search })).toMatchObject({
+      confirmed: processing ? 0 : 1, processing: processing ? 1 : 0, unavailable: 0, remaining: 0 });
     expect(db.confirmPrivateCreatorSubmission).toHaveBeenCalledWith(row.jobId, "owner", row.workerId, {
       source: "circle-transfer-search", transaction: transfer.id, transferStatus: status, submission: row.data.submission });
     expect(JSON.stringify(search.mock.calls[0][0])).not.toContain(row.jobId);
@@ -50,7 +52,8 @@ it("keeps storage/search failures unresolved and permits bounded continuation be
     const lookup = where === "search" ? vi.fn().mockRejectedValue(new Error("synthetic outage")) : vi.fn().mockResolvedValue([transfer]);
     expect(await reconcilePrivateCreatorSubmissions(failing, row.jobId, "owner", { search: lookup })).toMatchObject({ confirmed: 0, unavailable: 1 });
   }
-  const already = storage(); already.getPrivateCreatorConfirmation.mockResolvedValue({});
+  const already = storage(); already.getPrivateCreatorConfirmation.mockResolvedValue({ confirmation: {
+    source: "circle-facilitator-success", transaction: transfer.id, submission: row.data.submission } });
   const skipped = vi.fn();
   expect(await reconcilePrivateCreatorSubmissions(already, row.jobId, "owner", { search: skipped })).toMatchObject({ alreadyConfirmed: 1 });
   expect(skipped).not.toHaveBeenCalled();
@@ -63,4 +66,18 @@ it("returns the continuation position on abort without visiting another leg", as
   expect(await reconcilePrivateCreatorSubmissions(db, row.jobId, "owner", { search, signal: controller.signal })).toMatchObject({
     scanned: 1, awaiting: 1, remaining: 1, nextCursor: row.legId });
   expect(search).toHaveBeenCalledTimes(1);
+});
+
+it("continues processing observations but refuses to replace their transfer identity", async () => {
+  const db = storage();
+  db.getPrivateCreatorConfirmation.mockResolvedValue({ confirmation: { source: "circle-transfer-search",
+    transferStatus: "batched", transaction: transfer.id, submission: row.data.submission } });
+  expect(await reconcilePrivateCreatorSubmissions(db, row.jobId, "owner", {
+    search: vi.fn().mockResolvedValue([{ ...transfer, status: "received" }]),
+  })).toMatchObject({ processing: 1, confirmed: 0, alreadyConfirmed: 0 });
+  expect(db.confirmPrivateCreatorSubmission).not.toHaveBeenCalled();
+  expect(await reconcilePrivateCreatorSubmissions(db, row.jobId, "owner", {
+    search: vi.fn().mockResolvedValue([{ ...transfer, id: "synthetic-replacement" }]),
+  })).toMatchObject({ mismatched: 1, confirmed: 0 });
+  expect(db.confirmPrivateCreatorSubmission).not.toHaveBeenCalled();
 });

@@ -754,12 +754,12 @@ it("reconciles a durable private attempt after reopening using complete Circle p
   try {
     await reopened.init();
     expect(await reconcilePrivateCreatorSubmissions(reopened, value.id, account.address, { search: (payment, signal) => searchCircleTransfer(payment, signal, http) }))
-      .toMatchObject({ confirmed: 1, unavailable: 0 });
+      .toMatchObject({ processing: 1, confirmed: 0, unavailable: 0 });
     expect(await reopened.getPrivateCreatorConfirmation(value.id, account.address, leg.submission.authorizationId)).toMatchObject({ confirmation: {
       source: "circle-transfer-search", transaction: transfer.id, transferStatus: "received", submission: leg.submission } });
-    const skip = vi.fn();
-    expect(await reconcilePrivateCreatorSubmissions(reopened, value.id, account.address, { search: skip })).toMatchObject({ alreadyConfirmed: 1 });
-    expect(skip).not.toHaveBeenCalled();
+    const stillProcessing = vi.fn().mockResolvedValue([transfer]);
+    expect(await reconcilePrivateCreatorSubmissions(reopened, value.id, account.address, { search: stillProcessing })).toMatchObject({ processing: 1, alreadyConfirmed: 0 });
+    expect(stillProcessing).toHaveBeenCalledTimes(1);
   } finally { reopened.close(); }
   expect(http).toHaveBeenCalledTimes(2);
   expect(new URL(String(http.mock.calls[1][0])).searchParams.get("pageAfter")).toBe("synthetic-cursor");
@@ -768,6 +768,29 @@ it("reconciles a durable private attempt after reopening using complete Circle p
     expect(JSON.stringify([url, options])).not.toContain(leg.sourceId);
     expect(new Headers(options?.headers).has("Payment-Signature")).toBe(false);
   }
+});
+
+it("advances recorded creator processing evidence to confirmed spend without reopening its authorization", async () => {
+  const { value, claim } = await creatorFixture();
+  const leg = creatorSubmission("9", "processing-progress-source");
+  await db.admitPrivateCreatorSubmission(value.id, account.address, claim.workerId, leg);
+  const initial: PrivateCreatorConfirmation = { source: "circle-transfer-search", transaction: "synthetic-stage-progression",
+    transferStatus: "received", submission: leg.submission };
+  const first = await db.confirmPrivateCreatorSubmission(value.id, account.address, claim.workerId, initial);
+  await expect(db.confirmPrivateCreatorSubmission(value.id, account.address, claim.workerId, {
+    ...initial, transferStatus: "completed", transaction: "synthetic-different-transfer",
+  })).rejects.toThrow("confirmation conflict");
+  expect((await privateSpendView(db, value.id, account.address))?.creator).toMatchObject({ processingMicros: "20000", confirmedMicros: "0" });
+  const search = vi.fn().mockResolvedValue([{ id: initial.transaction, status: "completed", token: "USDC",
+    sendingNetwork: BUYER_NETWORK, recipientNetwork: BUYER_NETWORK, fromAddress: leg.submission.payer,
+    toAddress: leg.submission.payee, amount: leg.submission.amountMicros, nonce: leg.submission.authorizationId,
+    txHash: null, createdAt: first.settledAt, updatedAt: first.settledAt }]);
+  expect(await reconcilePrivateCreatorSubmissions(other, value.id, account.address, { search })).toMatchObject({ confirmed: 1 });
+  expect(search).toHaveBeenCalledTimes(1);
+  expect((await db.getPrivateCreatorConfirmation(value.id, account.address, leg.submission.authorizationId))?.settledAt).toBe(first.settledAt);
+  expect((await privateSpendView(db, value.id, account.address))?.creator).toMatchObject({ processingMicros: "0", confirmedMicros: "20000" });
+  await expect(db.confirmPrivateCreatorSubmission(value.id, account.address, claim.workerId, initial)).rejects.toThrow("confirmation conflict");
+  expect(await db.admitPrivateCreatorSubmission(value.id, account.address, claim.workerId, leg)).toBe(false);
 });
 
 it("recovers a confirmed paid 5xx into the private ledger after a storage outage without repeating signed HTTP", async () => {

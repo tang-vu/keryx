@@ -62,7 +62,14 @@ export async function confirmSqlitePrivateCreator(db: DatabaseSync, id: string, 
   matched(confirmation, attempt);
   db.prepare(`INSERT INTO private_creator_confirmations(authorization_id,data)
     SELECT s.authorization_id,? FROM private_creator_submissions s JOIN private_research_intents i ON i.id=s.job_id
-    WHERE s.job_id=? AND s.worker_id=? AND i.payer=? AND s.authorization_id=? ON CONFLICT(authorization_id) DO NOTHING`)
+    WHERE s.job_id=? AND s.worker_id=? AND i.payer=? AND s.authorization_id=?
+    ON CONFLICT(authorization_id) DO UPDATE SET data=excluded.data
+    WHERE json_extract(private_creator_confirmations.data,'$.source')='circle-transfer-search'
+      AND json_extract(excluded.data,'$.source')='circle-transfer-search'
+      AND json_extract(private_creator_confirmations.data,'$.transferStatus') IN ('received','batched')
+      AND json_extract(excluded.data,'$.transferStatus') IN ('confirmed','completed')
+      AND json_extract(private_creator_confirmations.data,'$.transaction')=json_extract(excluded.data,'$.transaction')
+      AND json_extract(private_creator_confirmations.data,'$.submission')=json_extract(excluded.data,'$.submission')`)
     .run(JSON.stringify(confirmation), id, workerId, payer.toLowerCase(), key);
   return requireOriginal(await getSqlitePrivateCreatorConfirmation(db, id, payer, key), confirmation);
 }

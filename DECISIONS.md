@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-152** - Private creator evidence progression - *Keep checking processing observations and
+only advance the same transfer to confirmed evidence.*
+A real SQLite regression reproduced received/batched creator records being permanently skipped,
+so owner spend and treasury backing could never reflect later confirmation. Reconciliation now
+distinguishes processing from confirmed counts and rechecks processing records. Both adapters allow
+one atomic update from received/batched to confirmed/completed only for the same search source,
+transfer identifier and complete admitted submission. Facilitator and confirmed records stay
+immutable; mismatched transfers and downgrades cannot replace evidence. The existing timestamp
+remains the first observation time, not a finality timestamp. This supersedes the earlier blanket
+first-writer rule for processing search stages only. No authorization, budget or execution claim is
+released or replayed. This remains Circle-observed evidence, not independent chain verification.
+
 **D-151** - Economics usage coverage - *Missing provider usage is unknown cost, not free work.*
 Price a run only when its reasoning attempts account for all recorded provider responses and
 contain no failed provider attempt. Circuit-open skips are not calls; explicit heuristic-only

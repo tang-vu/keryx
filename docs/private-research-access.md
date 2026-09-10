@@ -354,15 +354,19 @@ unfinished. No synthetic confirmation is included in public settlement or tracti
 `reconcilePrivateCreatorSubmissions` is an owner-scoped backend operation over durable
 admissions. It uses the existing complete paginated Circle search and exact economic
 tuple matcher. Search inputs omit private job/source identity; requests contain no
-payment signature. Existing confirmations are skipped. Newly matched evidence is
-stored through the same owner/worker-bound first-writer confirmation method, with
+payment signature. Facilitator success and confirmed/completed observations are skipped;
+received/batched observations are checked again. Newly matched evidence is
+stored through the same owner/worker-bound confirmation method, with
 `source: circle-transfer-search`, the Circle transfer ID and `transferStatus`.
 
 Circle's [transfer documentation](https://developers.circle.com/api-reference/gateway/all/get-x402transfer-by-id)
 distinguishes accepted/processing from on-chain confirmation and completion. Recorded
-`received` or `batched` is not proof of on-chain finality. `transferStatus` is the first
-observed stage, not a live status tracker. Existing confirmations are immutable; future
-finality-aware user/creator projections must preserve that distinction. The
+`received` or `batched` is not proof of on-chain finality. These processing records may
+advance atomically to confirmed/completed only for the identical Circle transfer ID and
+admitted submission. Confirmed records and facilitator receipts cannot be replaced or
+downgraded. `settledAt` retains its original first-observation timestamp; it is not a
+confirmation timestamp. Reconciliation reports processing separately from confirmed counts.
+The database remains an observation, not an independently verified chain-finality proof. The
 [search documentation](https://developers.circle.com/api-reference/gateway/all/search-x402transfers)
 lists address/network/token/date/cursor filters. A September 9 read-only probe against
 the deployed testnet `/v1/x402/transfers` endpoint returned HTTP 200 and a sample with
@@ -466,8 +470,8 @@ current private incoming/creator ledgers. It does not parse research snapshots o
 their historical spend totals. Incoming price is distinguished from not-submitted,
 pending and confirmed incoming payment. Creator amounts are integer micro-USDC strings:
 committed = unresolved + processing + confirmed; uncommitted = budget - committed.
-Processing means first-observed Circle `received` or `batched`; confirmed includes
-facilitator success or first-observed Circle `confirmed`/`completed`. Per-leg evidence
+Processing means recorded Circle `received` or `batched`; confirmed includes
+facilitator success or recorded Circle `confirmed`/`completed`. Per-leg evidence
 source, stage and reference are retained, and chain finality is explicitly unverified.
 
 These sequential reads may lag concurrent admissions/confirmations and cannot authorize
