@@ -115,7 +115,30 @@ can become stale: this is not proof of a dead process. The reader explicitly kee
 one worker per operator-controlled spool; it supplies neither process fencing nor a
 funding/configuration lease. Status replacement fsyncs the file but does not promise
 directory-entry crash durability. Old observations must never enable payment admission.
-Public health/readiness integration and a process-status command are still pending.
+Public health/readiness integration remains pending. An operator diagnostic command
+is available:
+
+```sh
+npm run private:inspect -- --help
+node --env-file=.env.private-worker.local --import tsx --no-warnings scripts/private-operations-inspect.mts
+```
+
+With private research disabled or unset, it prints disabled without loading keys or
+the database. Otherwise it requires the validated private runtime policy, an absolute
+existing spool-directory path and `KERYX_COMMIT` matching the worker build. It derives
+signer addresses from explicit environment keys but never signs, funds or starts work.
+The normal database adapter is initialized, which may perform its usual schema setup;
+inspection does not write payment records or create a spool. Run from the same app
+directory/database environment as the worker.
+
+Reports combine configuration/phase matching with Gateway backing observations, without
+wallet identities, process IDs, provider endpoints, questions or job IDs. Worker state
+is read before and after the backing request; changed instance/configuration/phase is
+reported as changed. Exit zero for enabled inspection means a matching idle observation,
+backed treasury and nonzero unallocated capacity. Disabled inspection also exits zero.
+Neither is checkout readiness: `checkoutReady` remains false. The command does not
+verify the provider, all signer inventory, a durable admission lease or production
+recovery. It uses the same advisory freshness limits described above.
 
 Status schema v2 includes `configurationId`, computed by bootstrap from its validated
 network, merchant addresses, treasury signer/capacity, service fee and full reasoning

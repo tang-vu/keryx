@@ -1,5 +1,13 @@
 # Keryx Project Changelog
 
+### Private operations inspection (2026-09-10, v0.22.39)
+
+- Add `private:inspect` to report worker configuration/phase and treasury backing observations.
+- Bind worker status to its operating policy and use exclusive locks for worker/manual recovery commands.
+- Verify process exclusion and retained crash locks with actual isolated Node processes.
+- Add private treasury snapshots for both database adapters and distinguish unknown Gateway balance from insufficient coverage.
+- Bound asynchronous purchase-readiness checks; private purchasing remains disabled pending complete operational acceptance.
+
 ### Private buyer checkout and result recovery (2026-09-10, v0.22.38)
 
 - Add a private checkout CLI with independently pinned research/provider policy and price limits.

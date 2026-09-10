@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-148** - Private operations inspection - *Compose worker-policy and treasury
+observations in an explicit operator diagnostic command without enabling checkout.*
+The command derives configured signer addresses without signing, validates private
+runtime policy, and opens the normal database adapter. It reads worker state before
+and after the backing check to flag a changed instance/configuration/phase. Reports
+omit process IDs, wallet identities, provider endpoints and private job data. Exit zero
+only means these observations show matching idle state, backing and spare capacity;
+checkoutReady remains false. Disabled configuration does not import signer/database
+modules. Database initialization may apply normal adapter schema setup. No spool is
+created and no execution or payment operation is invoked. Provider acceptance, durable
+admission fencing and the remaining product/mainnet gates are not inferred.
+
 **D-147** - Private treasury backing observation - *Compare recorded conservative
 coverage with Gateway available micro-USDC, preserving unknown and insufficient states.*
 The read-only inspector snapshots trusted treasury policy, verifies the pinned network
