@@ -2,6 +2,17 @@ import { afterEach, expect, it, vi } from "vitest";
 import { runPrivateWorkerLoop } from "./private-worker-loop";
 afterEach(() => vi.useRealTimers());
 
+it("withholds new work until recovery permits it and always closes the recovery scan", async () => {
+  const tick = vi.fn(async () => ({ status: "busy" as const }));
+  const recovery = { tick: vi.fn().mockResolvedValue({ status: "recovery", visited: 25, restored: 25, errors: 0, ready: false }), close: vi.fn() };
+  const report = vi.fn(), signal = new AbortController().signal;
+  await runPrivateWorkerLoop({ tick }, { signal, once: true, recovery, report });
+  expect(tick).not.toHaveBeenCalled(); expect(recovery.close).toHaveBeenCalledTimes(1);
+  recovery.tick.mockResolvedValue({ status: "recovery", visited: 0, restored: 0, errors: 0, ready: true });
+  await runPrivateWorkerLoop({ tick }, { signal, once: true, recovery, report });
+  expect(tick).toHaveBeenCalledTimes(1); expect(recovery.close).toHaveBeenCalledTimes(2);
+});
+
 it("drains an active tick on shutdown without starting another", async () => {
   const stop = new AbortController(), report = vi.fn();
   let finish!: () => void;

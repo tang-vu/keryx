@@ -15,6 +15,9 @@ it("encrypts result and context, survives reopen, rejects tampering and retains 
   try {
     const spool = await createPrivateResultSpool(directory, key);
     const first = await spool.save(context, run), second = await spool.save(context, run);
+    const tokens = [];
+    for await (const token of spool.entries()) tokens.push(token);
+    expect(tokens.sort()).toEqual([first, second].sort());
     const original = await readFile(join(directory, `${first}.json`), "utf8");
     for (const secret of [key, context.id, context.payer, context.workerId, run.question, run.answer]) expect(original).not.toContain(secret);
     expect(await readFile(join(directory, `${second}.json`), "utf8")).not.toBe(original);

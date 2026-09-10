@@ -26,7 +26,7 @@ it("is disabled without configuration and binds the real batching signer to the 
     KERYX_PRIVATE_PROVIDER_BASE_URL: "https://synthetic.example/v1", KERYX_PRIVATE_PROVIDER_API_KEY: "synthetic-secret",
     KERYX_PRIVATE_APPROVED_ENDPOINTS: '["https://synthetic.example/v1/chat/completions"]' };
   for (const [key, value] of Object.entries(env)) vi.stubEnv(key, value);
-  const spool = { save: vi.fn(), read: vi.fn(), restore: vi.fn() };
+  const spool = { save: vi.fn(), read: vi.fn(), restore: vi.fn(), entries: vi.fn() };
   expect(() => privateWorkerBootstrap({} as KeryxDB)).toThrow("configuration unavailable");
   expect(state.worker).not.toHaveBeenCalled();
   const worker = { tick: vi.fn() }; state.worker.mockReturnValue(worker);

@@ -1,6 +1,7 @@
 import { parseArgs } from "node:util";
 import { runPrivateWorkerLoop } from "../lib/a2a/private-worker-loop";
 import { privateResultSpoolFromEnv } from "../lib/a2a/private-result-spool-config";
+import { createPrivateResultRecovery } from "../lib/a2a/private-result-recovery";
 
 async function main() {
   const { values } = parseArgs({ options: { once: { type: "boolean" }, help: { type: "boolean" },
@@ -35,6 +36,7 @@ async function main() {
     const worker = privateWorkerBootstrap(db, spool);
     if (!worker) throw new Error();
     await runPrivateWorkerLoop(worker, { signal: stop.signal, once: values.once,
+      recovery: createPrivateResultRecovery(db, spool),
       report: summary => {
         console.log(JSON.stringify(summary));
         if (summary.status === "tick-unavailable" || summary.status === "scan-unavailable"

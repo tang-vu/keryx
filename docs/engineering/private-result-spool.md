@@ -35,7 +35,11 @@ still lose a result. This is not an offsite backup, execution authorization or
 independently verifiable payment receipt.
 
 Recovery uses `private-worker -- --restore <backup-token>` with the token from the
-backup filename. Enumeration and recovery scheduling, key backup/rotation, retention limits,
+backup filename. The worker also performs serial automatic recovery in batches of at
+most 25 directory entries; it waits for a clean sweep before executing new work.
+The iterator advances past failed files and closes on graceful shutdown. It is not
+a snapshot or a lock against other processes: run one worker per spool and stop it
+before manual recovery. Key backup/rotation, retention limits,
 disk monitoring and crash drills remain unfinished. Do not activate checkout based
 on this helper alone.
 

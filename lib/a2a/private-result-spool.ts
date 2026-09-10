@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, createSecretKey, randomBytes } from "node:crypto";
-import { mkdir, lstat, open, unlink } from "node:fs/promises";
+import { mkdir, lstat, open, opendir, unlink } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { z } from "zod";
 import { addressSchema } from "../buyer/protocol";
@@ -67,6 +67,14 @@ export async function createPrivateResultSpool(directory: string, keyHex: string
       } catch { throw new Error("Private result backup unavailable"); }
     }
     return {
+      async *entries(): AsyncGenerator<string | null> {
+        // Yield every entry, including unrelated files, so callers can bound scanning.
+        const directory = await opendir(root);
+        for await (const entry of directory) {
+          yield entry.isFile() && /^[a-f0-9]{64}\.json$/.test(entry.name)
+            ? entry.name.slice(0, -5) : null;
+        }
+      },
       async save(context: z.infer<typeof contextSchema>, run: QueryRun) {
         try {
           // Capture the entire result before asynchronous filesystem work.

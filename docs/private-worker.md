@@ -46,8 +46,22 @@ admission. Run from the same application directory with the same database enviro
 as the worker (SQLite otherwise defaults to `data/keryx.sqlite` under the current
 directory). Success prints only `{"status":"restored"}`. Failures omit private details
 and require inspecting both the database and backup; do not rerun the research job.
-See [backup limits](./engineering/private-result-spool.md). There is no automatic
-scan/recovery scheduler yet.
+See [backup limits](./engineering/private-result-spool.md).
+
+The enabled operator loop automatically scans backups before executing more research.
+Each iteration examines at most 25 directory entries, counting unrelated entries too,
+and retains its position until the sweep ends. Failed backups remain available and
+do not prevent later entries from being examined. New jobs wait for an entire sweep
+without scan or restore errors. Recovery logs only visited/restored/error counters and
+`ready`; this field permits the next local work tick, not public checkout readiness.
+An interrupted restore drains before the directory iterator closes.
+
+`--once` performs one recovery batch and executes a work tick only if that batch ends
+a clean sweep. A backlog may therefore require daemon operation or explicit token
+restoration. Do not repeatedly restart once mode to traverse past a persistent bad
+file. Run one worker per spool and stop it before manual recovery. A scan is not a
+filesystem snapshot or cross-process coordination mechanism. New backups written
+after a sweep are discovered by a subsequent sweep.
 
 When explicitly enabled, both `KERYX_PRIVATE_WORKER_ENABLED=1` and
 `KERYX_PRIVATE_RESEARCH_ENABLED=1` are required, together with the existing private

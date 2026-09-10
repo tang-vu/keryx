@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-140** - Automatic result recovery - *Run bounded encrypted-backup recovery before
+admitting more private worker jobs.*
+The operator loop scans at most 25 directory entries per iteration with a retained
+iterator. Failed restores remain on disk; scanning advances rather than repeatedly
+selecting the first failed file. New work waits for a complete error-free sweep.
+Restoration uses existing immutable database admission and never reexecutes research.
+Shutdown drains a current restore before closing the iterator. Directory errors and
+restore failures produce counters only. This assumes one operator worker per spool;
+it is not a cross-process lock or a snapshot of concurrently modified directories.
+Production provisioning, key lifecycle, disk monitoring and crash acceptance remain open.
+
 **D-139** - Private recovery operations - *Require encrypted result storage for the
 operator worker and provide a separate single-backup restore command.*
 The enabled bootstrap rejects a missing spool. The command requires an absolute
