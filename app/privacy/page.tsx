@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/privacy" },
 };
 
-const UPDATED = "August 23, 2026";
+const UPDATED = "September 10, 2026";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -51,15 +51,16 @@ export default function PrivacyPage() {
         <Section title="The short version">
           <p>
             Keryx is a reading agent that answers questions and pays the writers it cites, in USDC
-            on the Arc testnet. We keep what the product needs to work and nothing else: no ads, no
-            third-party analytics scripts, no ad trackers, no selling or sharing of data with data brokers. The one
-            thing you should know before anything else: <strong className="text-ink">answered
-            questions are published</strong> — each answer gets a public permalink and may appear in
-            the public archive, because paying creators per citation only works in the open.
+            on the Arc testnet. <strong className="text-ink">Public research is published.</strong>{" "}
+            The separately labeled private research pilot restricts result access to the paying
+            account, while Keryx and the disclosed AI provider still process the question.
+            Choose the appropriate mode before submitting. We do not sell question or wallet
+            data to data brokers. Hosting and wallet services process operational data as
+            described below.
           </p>
         </Section>
 
-        <Section title="When you ask a question">
+        <Section title="When you ask a public question">
           <p>
             Your question is sent to our server, which sends it to a configured large-language-model
             provider to plan the research and write the grounded answer. The question, the
@@ -72,6 +73,33 @@ export default function PrivacyPage() {
             The free, no-wallet tier is rate-limited by a one-way bucket derived from the IP address.
             The raw IP is not written to the database or joined to your questions; expired limiter
             buckets are deleted automatically.
+          </p>
+        </Section>
+
+        <Section title="Private research pilot">
+          <p>
+            Private purchasing is limited to configured Arc testnet pilot accounts. The private
+            checkout shows the AI provider, model and endpoint before you buy. Keryx and that
+            provider process your question; this is not end-to-end encryption. The private
+            result and history routes require sign-in as the paying account. Private jobs use
+            separate storage and are excluded from the public research archive and public
+            payment activity. Payment records on the underlying network may still be public.
+          </p>
+          <p>
+            The browser asks you to accept saving the private question and payment signature
+            locally before purchase. Recovery files also contain the question and signature in
+            plaintext. Keep exports in private storage. Importing a file saves a local recovery
+            copy; it does not send a new payment. Anyone controlling your browser profile or
+            scripts running on this site could access local data.
+          </p>
+          <p>
+            In <Link href="/research" className="text-seal underline underline-offset-2">Research</Link>,
+            choose Delete local private data and confirm to remove a saved question and signature
+            from the browser journal. A minimal account/job marker remains to prevent another
+            submission. An exported file can restore recovery access later. Deletion does not
+            cancel a signed or in-flight payment, refund funds, delete the server result, or
+            remove exports, backups, disk remnants or copies in other open tabs. Close other
+            tabs to clear their displayed copies. This is not secure disk erasure.
           </p>
         </Section>
 
@@ -142,8 +170,16 @@ export default function PrivacyPage() {
             The configured reasoning provider processes question text to produce answers under its
             API terms. Circle and
             the Arc network process the on-chain payments. Pinata pins the encrypted IPFS content
-            creators upload. Each sees only what its job requires; none of them get your data for
-            advertising.
+            creators upload. Their processing is governed by their respective service terms.
+          </p>
+          <p>
+            The website is served through Cloudflare. Its performance beacon can send page-load
+            metrics to Cloudflare; see its{" "}
+            <a href="https://developers.cloudflare.com/web-analytics/data-metrics/data-origin-and-collection/" className="text-seal underline underline-offset-2">data collection documentation</a>.
+            Wallet connection tools, including MetaMask and WalletConnect when available, also
+            communicate with their service providers. WalletConnect operational telemetry has
+            been observed on the website. These web services are separate from the extension
+            and from Keryx&apos;s aggregate product counters.
           </p>
         </Section>
 
@@ -151,7 +187,9 @@ export default function PrivacyPage() {
           <p>
             Published dispatches and on-chain records are retained indefinitely — they are the
             public ledger the product is built on. Expired rate-limit buckets are deleted; aggregate
-            product counters retain only daily totals. If this policy changes, the date above changes
+            product counters retain only daily totals. Private pilot records are retained for
+            operation and recovery; no automatic server deletion schedule currently applies.
+            Local deletion does not remove server records or operational backups. If this policy changes, the date above changes
             with it. Questions, corrections,
             or deletion requests for off-chain data:{" "}
             <a href="mailto:vutang2212@gmail.com" className="text-seal underline underline-offset-2">

@@ -138,6 +138,14 @@ claim/deletion, pagination past deleted entries and UI confirmation/cancellation
 Live private browser payment, independent wallet/mobile acceptance, server retention
 and portable private receipt verification remain open.
 
+Privacy disclosure update (v0.22.47): `/privacy` distinguishes public publishing from
+the restricted private pilot, explains provider access, plaintext browser/export data,
+local deletion limits and the absence of automatic server expiry. It also corrects the
+old no-third-party-analytics claim after observing Cloudflare and WalletConnect requests.
+This describes current behavior; it does not close independent privacy review or retention
+implementation. The v0.22.46 local deletion flow passed Chromium/CI; its initial live probe
+did not complete and must not be recorded as accepted.
+
 1. Establish this acceptance map and the executable economics model; obtain actual
    fixed costs and provider billing data without inventing zeros.
 2. Complete usable browser quote/buy/recover under the buyer's own wallet authority,
