@@ -33,6 +33,7 @@ import { reconcilePrivateIncomingPayment } from "../gateway/private-incoming-rec
 import { admitPrivateResearch } from "../a2a/admit-private-research";
 import { createPrivateQuote } from "../a2a/private-quote";
 import { reserveSupabasePrivateTreasury } from "./private-treasury-capacity";
+import { privateResearchService } from "../a2a/private-research-service";
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-private-intents-"));
 const file = path.join(directory, "test.sqlite");
@@ -338,6 +339,38 @@ async function creatorFixture() {
 const reasoningPolicy = { modelId: "deepseek-flash", provider: "deepseek" as const, wireModel: "deepseek-v4-flash",
   endpoint: "https://synthetic.example/v1/chat/completions", fallback: "local-heuristic" as const, redirects: "prohibited" as const };
 const treasury = { signer: `0x${"99".repeat(20)}`, capacityMicros: "10000000" };
+it("composes runtime pricing, signature admission and single settlement without trusting client payment requirements", async () => {
+  const env = { KERYX_PRIVATE_RESEARCH_ENABLED: "1", KERYX_PRIVATE_RESEARCH_PAYEE: merchants.privatePayee,
+    KERYX_PRIVATE_RESEARCH_RESERVED_PAYEES: merchants.privatePayee, KERYX_PRIVATE_TREASURY_ADDRESS: treasury.signer,
+    KERYX_PRIVATE_TREASURY_CAPACITY_MICROS: treasury.capacityMicros, KERYX_PRIVATE_SERVICE_FEE_MICROS: "20000",
+    KERYX_PRIVATE_MODEL_ID: "deepseek-flash", KERYX_PRIVATE_PROVIDER: "deepseek", KERYX_PRIVATE_PROVIDER_BASE_URL: "https://synthetic.example/v1",
+    KERYX_PRIVATE_PROVIDER_API_KEY: "synthetic-secret", KERYX_PRIVATE_APPROVED_ENDPOINTS: '["https://synthetic.example/v1/chat/completions"]' };
+  const context = { network: BUYER_NETWORK, publicSeller: merchants.publicResearchPayee,
+    publicTreasurySigners: [`0x${"88".repeat(20)}`], privateTreasurySigner: treasury.signer };
+  const facilitator = vi.fn(async (action: "verify" | "settle") => action === "verify" ? { isValid: true, payer: account.address }
+    : { success: true, payer: account.address, network: BUYER_NETWORK, transaction: "synthetic-service-payment" });
+  const service = privateResearchService(db, env, context, { facilitator, now: () => 1788912000000 })!;
+  env.KERYX_PRIVATE_SERVICE_FEE_MICROS = "1"; env.KERYX_PRIVATE_PROVIDER_BASE_URL = "https://changed.example";
+  const { access: _access, model: _model, ...input } = request;
+  const quoted = service.quote(input);
+  expect(quoted.requirement.amount).toBe("50000");
+  expect(quoted.pricing.serviceFeeMicros).toBe("20000");
+  const fresh = await createPrivateAuthorization(quoted.request, quoted.requirement, account.address, merchants, 1788912000000);
+  const signed = { request: fresh.request, salt: fresh.salt,
+    payment: { authorization: fresh.authorization, signature: await account.signTypedData(buyerTypedData(fresh.authorization)) } };
+  await expect(service.submit({ ...signed, requirement: { ...quoted.requirement, amount: "30001" } }, account.address)).rejects.toThrow();
+  const underpriced = await createPrivateAuthorization(quoted.request, { ...quoted.requirement, amount: "30001" }, account.address, merchants, 1788912000000);
+  await expect(service.submit({ request: underpriced.request, salt: underpriced.salt, payment: { authorization: underpriced.authorization,
+    signature: await account.signTypedData(buyerTypedData(underpriced.authorization)) } }, account.address)).rejects.toThrow();
+  expect(facilitator).not.toHaveBeenCalled();
+  const accepted = await service.submit(signed, account.address);
+  expect(accepted.response.paymentStatus).toBe("settled");
+  expect(accepted.recoveryConfirmation).toBeNull();
+  expect(await service.submit(signed, account.address)).toEqual(accepted);
+  expect(facilitator).toHaveBeenCalledTimes(2);
+  expect(JSON.stringify(accepted.response)).not.toContain(fresh.salt);
+  expect(JSON.stringify(accepted.response)).not.toContain(signed.payment.signature);
+});
 it("refuses settlement without treasury policy or capacity and refuses execution under another signer", async () => {
   const first = await executionFixture({ ...request, model: reasoningPolicy.modelId, reasoning: reasoningPolicy });
   const second = await executionFixture({ ...request, model: reasoningPolicy.modelId, reasoning: reasoningPolicy });

@@ -8,6 +8,7 @@ const activeSchema = z.object({
   KERYX_PRIVATE_RESEARCH_PAYEE: addressSchema,
   KERYX_PRIVATE_TREASURY_ADDRESS: addressSchema,
   KERYX_PRIVATE_TREASURY_CAPACITY_MICROS: z.string().regex(/^[1-9]\d{0,11}$/),
+  KERYX_PRIVATE_SERVICE_FEE_MICROS: z.string().regex(/^[1-9]\d{0,5}$/).refine(value => Number(value) <= 500000),
   KERYX_PRIVATE_MODEL_ID: z.string().min(1),
   KERYX_PRIVATE_PROVIDER: z.enum(["deepseek", "mimo"]),
   KERYX_PRIVATE_PROVIDER_BASE_URL: z.string().url(),
@@ -42,7 +43,8 @@ export function privateRuntimePolicy(env: Readonly<Record<string, string | undef
     const { disclosure } = privateReasoningEngine(provider);
     const approved = z.array(z.string().url()).min(1).max(16).parse(JSON.parse(config.KERYX_PRIVATE_APPROVED_ENDPOINTS));
     if (!approved.includes(disclosure.endpoint)) throw new Error();
-    return { merchants, provider, disclosure, treasury: { signer, capacityMicros: config.KERYX_PRIVATE_TREASURY_CAPACITY_MICROS } };
+    return { merchants, provider, disclosure, serviceFeeMicros: config.KERYX_PRIVATE_SERVICE_FEE_MICROS,
+      treasury: { signer, capacityMicros: config.KERYX_PRIVATE_TREASURY_CAPACITY_MICROS } };
   } catch {
     // Zod/URL/JSON failures may include credentials or operator input; never propagate them.
     throw new Error("Private research runtime policy unavailable");

@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-124** - Private service composition - *Derive payment requirements from the
+validated runtime and an explicit integer service fee, never from submitted metadata.*
+The backend service snapshots runtime configuration, builds quotes with signed creator
+budget plus operator service fee, then rebuilds those same requirements for admission
+before invoking capacity-gated incoming settlement. Client-supplied payment requirements
+are rejected by the strict submission envelope; an otherwise valid signature for a
+lower amount cannot pass admission. Runtime fee input is mandatory, positive and bounded
+to keep total within the existing one-USDC testnet limit. Repeated signed submissions
+reuse durable intent/payment state. Only the response projection is intended for HTTP;
+unpersisted success evidence remains in a separate backend recovery field. No HTTP
+route, session authentication, browser checkout or worker activation is introduced.
+Those layers must consume this service and preserve its authority boundaries.
+
 **D-123** - Explicit private runtime configuration - *Default off; require distinct
 merchant/treasury authority and an operator allowlisted reasoning endpoint.* The backend
 policy parser accepts only an explicit 0/1 enable flag, pinned Arc testnet context and

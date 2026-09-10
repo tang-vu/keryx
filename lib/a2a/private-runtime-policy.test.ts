@@ -3,6 +3,7 @@ import { privateRuntimePolicy } from "./private-runtime-policy";
 const address = (digit: string) => `0x${digit.repeat(40)}`;
 const context = { network: "eip155:5042002", publicSeller: address("1"), publicTreasurySigners: [address("2")], privateTreasurySigner: address("3") };
 const env = { KERYX_PRIVATE_RESEARCH_ENABLED: "1", KERYX_PRIVATE_RESEARCH_PAYEE: address("4"),
+  KERYX_PRIVATE_SERVICE_FEE_MICROS: "20000",
   KERYX_PRIVATE_TREASURY_ADDRESS: address("3"), KERYX_PRIVATE_TREASURY_CAPACITY_MICROS: "500000",
   KERYX_PRIVATE_MODEL_ID: "deepseek-flash", KERYX_PRIVATE_PROVIDER: "deepseek", KERYX_PRIVATE_PROVIDER_BASE_URL: "https://synthetic.example/v1",
   KERYX_PRIVATE_PROVIDER_API_KEY: "synthetic-secret-marker", KERYX_PRIVATE_APPROVED_ENDPOINTS: '["https://synthetic.example/v1/chat/completions"]',
