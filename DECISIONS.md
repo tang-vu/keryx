@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-119** - Private incoming recovery - *Persist exact confirmed/completed Circle
+transfer-search evidence without resubmitting payment.* Owner-scoped reconciliation
+uses the shared bounded, paginated search and independently matches nonce, payer,
+recipient, networks, token and integer amount. Received/batched observations remain
+processing; missing, mismatched and failed observations keep the durable attempt
+pending and never authorize retry or release. Only confirmed/completed search evidence
+can satisfy incoming payment for execution. Its provenance and observed transfer stage
+remain distinct from facilitator success; neither asserts independently verified chain
+finality. Existing first confirmation is immutable. SQLite validation and PostgreSQL
+RPC migration 0054 accept the new evidence variant. No public endpoint, scheduler or
+purchase activation is introduced; operator wiring and acceptance drills remain open.
+
 **D-118** - Private incoming settlement - *Claim once before settle; retain ambiguous
 attempts permanently and return unpersisted confirmation for storage-only recovery.*
 The backend helper reads a verified durable intent owned by the caller, requires v2

@@ -3,14 +3,18 @@ import { addressSchema, BUYER_NETWORK } from "../buyer/protocol";
 import type { PrivateResearchIntent } from "./private-research-intent";
 
 /** Internal adapter evidence, never a receipt accepted from a caller's request body. */
-const confirmationSchema = z.object({
-  source: z.literal("circle-facilitator-success"),
+const confirmationFields = {
   transaction: z.string().min(1).max(256).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/),
   network: z.literal(BUYER_NETWORK),
   payer: addressSchema, payee: addressSchema,
   amountMicros: z.string().regex(/^[1-9]\d{0,6}$/),
   authorizationId: z.string().regex(/^0x[a-f0-9]{64}$/),
-}).strict();
+};
+const confirmationSchema = z.discriminatedUnion("source", [
+  z.object({ source: z.literal("circle-facilitator-success"), ...confirmationFields }).strict(),
+  z.object({ source: z.literal("circle-transfer-search"), ...confirmationFields,
+    transferStatus: z.enum(["confirmed", "completed"]) }).strict(),
+]);
 export type PrivatePaymentConfirmation = z.infer<typeof confirmationSchema>;
 export type PrivatePaymentState = {
   id: string;

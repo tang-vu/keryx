@@ -29,6 +29,7 @@ import { privateResearchEffects } from "../agent/private-research-effects";
 import { privateSpendView } from "../a2a/private-spend-view";
 import { privateResultView } from "../a2a/private-result-view";
 import { submitPrivateIncomingPayment } from "../payments/private-incoming-payment";
+import { reconcilePrivateIncomingPayment } from "../gateway/private-incoming-reconciliation";
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-private-intents-"));
 const file = path.join(directory, "test.sqlite");
@@ -335,6 +336,33 @@ const reasoningPolicy = { modelId: "deepseek-flash", provider: "deepseek" as con
   endpoint: "https://synthetic.example/v1/chat/completions", fallback: "local-heuristic" as const, redirects: "prohibited" as const };
 const privateProvider = { modelId: "deepseek-flash", provider: "deepseek" as const,
   baseUrl: "https://synthetic.example/v1", apiKey: "synthetic-unfunded-credential" };
+
+it("recovers incoming confirmation from exact Circle evidence while retaining uncertain and processing attempts", async () => {
+  for (const status of ["received", "batched", "confirmed", "completed", "failed", "missing", "wrong-amount"] as const) {
+    const { value } = await executionFixture({ ...request, model: reasoningPolicy.modelId, reasoning: reasoningPolicy });
+    await db.claimPrivatePaymentSubmission(value.id, account.address);
+    const authorization = value.submission.payment.authorization;
+    const transfer = { id: "synthetic-private-incoming-transfer", status: status === "missing" || status === "wrong-amount" ? "confirmed" as const : status,
+      token: "USDC", sendingNetwork: BUYER_NETWORK, recipientNetwork: BUYER_NETWORK, fromAddress: authorization.from,
+      toAddress: authorization.to, amount: status === "wrong-amount" ? "49999" : authorization.value, nonce: authorization.nonce,
+      txHash: null, createdAt: "2026-09-10T00:00:00Z", updatedAt: "2026-09-10T00:01:00Z" };
+    const search = vi.fn(async () => status === "missing" ? [] : [transfer]);
+    const result = await reconcilePrivateIncomingPayment(other, value.id, account.address, { search });
+    if (status === "confirmed" || status === "completed") {
+      expect(result.status).toBe("confirmed");
+      expect((await db.getPrivatePaymentState(value.id, account.address))?.confirmation).toMatchObject({ source: "circle-transfer-search", transferStatus: status });
+      expect(await reconcilePrivateIncomingPayment(db, value.id, account.address, { search })).toEqual({ status: "already-confirmed" });
+      expect(await db.claimPrivateResearchExecution(value.id, account.address)).not.toBeNull();
+    } else {
+      expect(result.status).toBe(status === "received" || status === "batched" ? "processing" : status === "failed" ? "failed-observed" : status === "missing" ? "awaiting" : "mismatch");
+      expect((await db.getPrivatePaymentState(value.id, account.address))?.status).toBe("pending");
+      expect((await db.claimPrivatePaymentSubmission(value.id, account.address)).claimed).toBe(false);
+    }
+    expect(search).toHaveBeenCalledTimes(1);
+    const serialized = JSON.stringify(search.mock.calls);
+    expect(serialized).not.toContain(value.id); expect(serialized).not.toContain(value.submission.request.question);
+  }
+});
 
 it("submits incoming payment only once across concurrent connections and omits private research from facilitator calls", async () => {
   const { value } = await executionFixture({ ...request, model: reasoningPolicy.modelId, reasoning: reasoningPolicy });
