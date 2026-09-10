@@ -1,6 +1,6 @@
 # Private worker operator integration
 
-`privateWorkerBootstrap(db)` prepares the private worker but does not start a process,
+`privateWorkerBootstrap(db, resultSpool)` prepares the private worker but does not start a process,
 run a tick, fund a wallet or enable checkout. It returns null when
 `KERYX_PRIVATE_WORKER_ENABLED` is unset or `0`. Other values except `1` fail closed.
 The operator command is available, but no production process or checkout-readiness
@@ -24,6 +24,30 @@ Output is JSON status/counters only. Errors and unpersisted results make the eve
 exit code nonzero; the daemon continues polling until stopped. `--once` is a single
 work tick, not a readiness check: if enabled and funded, it can execute paid creator
 operations for eligible jobs. No command generates keys or funds a wallet.
+
+Enabled workers also require `KERYX_PRIVATE_RESULT_SPOOL_DIRECTORY` (an absolute,
+operator-controlled directory with an existing parent) and
+`KERYX_PRIVATE_RESULT_SPOOL_KEY` (a dedicated 32-byte encryption key, encoded as 64 hex
+characters without `0x`). Keep the key in the ignored operator environment file.
+The command opens the spool before the database; enabled bootstrap rejects a missing
+spool. Back up this key separately from the encrypted files.
+
+To restore one saved result, stop the worker and use the random backup filename
+without its `.json` extension:
+
+```sh
+node --env-file=.env.private-worker.local --import tsx --no-warnings scripts/private-research-worker.mts --restore <backup-token>
+```
+
+Restore works with the worker disabled and does not require wallet or provider keys.
+It cannot be combined with `--once`. It authenticates the local file before opening
+the database, then revalidates the original owner and permanent claim through result
+admission. Run from the same application directory with the same database environment
+as the worker (SQLite otherwise defaults to `data/keryx.sqlite` under the current
+directory). Success prints only `{"status":"restored"}`. Failures omit private details
+and require inspecting both the database and backup; do not rerun the research job.
+See [backup limits](./engineering/private-result-spool.md). There is no automatic
+scan/recovery scheduler yet.
 
 When explicitly enabled, both `KERYX_PRIVATE_WORKER_ENABLED=1` and
 `KERYX_PRIVATE_RESEARCH_ENABLED=1` are required, together with the existing private

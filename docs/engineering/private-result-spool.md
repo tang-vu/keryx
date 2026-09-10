@@ -3,7 +3,9 @@
 The private executor accepts an optional `resultSpool`. When supplied, it saves an
 encrypted snapshot before writing the result to the database. If the database write
 fails, the permanent execution claim remains and the backup can be restored without
-running research or payments again. Production bootstrap does not yet supply a spool.
+running research or payments again. The operator worker command now supplies a spool
+from explicit environment configuration, and enabled bootstrap requires it. No
+production directory, key or running private worker has been provisioned.
 
 `createPrivateResultSpool(directory, keyHex)` requires an existing parent directory
 and a dedicated 32-byte encryption key represented by 64 hex characters. Operators
@@ -32,8 +34,8 @@ before a durable snapshot, loss of the encryption key, or loss of the only disk 
 still lose a result. This is not an offsite backup, execution authorization or
 independently verifiable payment receipt.
 
-Recovery currently requires the token from the backup filename. Bootstrap environment
-wiring, enumeration and recovery scheduling, key backup/rotation, retention limits,
+Recovery uses `private-worker -- --restore <backup-token>` with the token from the
+backup filename. Enumeration and recovery scheduling, key backup/rotation, retention limits,
 disk monitoring and crash drills remain unfinished. Do not activate checkout based
 on this helper alone.
 

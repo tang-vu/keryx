@@ -1,7 +1,10 @@
-import { mkdtemp, unlink, rmdir, readdir, readFile } from "node:fs/promises";
+import { mkdtemp, unlink, rmdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { pathToFileURL } from "node:url";
 import { randomBytes } from "node:crypto";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { SqliteAdapter } from "../db/sqlite-adapter";
@@ -24,7 +27,7 @@ it.each(["after-settlement", "during-settlement"] as const)(
   "recovers across a database reopen with response loss %s and no second debit attempt", async (loss) => {
     vi.stubGlobal("fetch", vi.fn(() => { throw new Error("Network forbidden in this integration test"); }));
     const root = await mkdtemp(join(tmpdir(), "keryx-private-integration-"));
-    const file = join(root, "test.sqlite"), journal = join(root, "journal");
+    const file = join(root, "data", "keryx.sqlite"), journal = join(root, "journal");
     let db = new SqliteAdapter(file);
     try {
       await db.init();
@@ -112,8 +115,19 @@ it.each(["after-settlement", "during-settlement"] as const)(
         const ciphertext = await readFile(join(backupDirectory, backups[0]), "utf8");
         expect(ciphertext).not.toContain(request.question); expect(ciphertext).not.toContain(prepared.id);
         db.close(); db = new SqliteAdapter(file); await db.init();
-        const recovery = await createPrivateResultSpool(backupDirectory, backupKey);
-        expect(await recovery.restore(db, backups[0].replace(/\.json$/, ""))).toEqual({ status: "restored" });
+        const guard = join(root, "network-guard.mjs");
+        await writeFile(guard, 'globalThis.fetch = () => { throw new Error("Network forbidden in recovery process"); };\n');
+        const childEnv: Record<string, string | undefined> = {};
+        for (const name of ["SystemRoot", "SYSTEMROOT", "WINDIR", "PATH", "TEMP", "TMP"])
+          if (process.env[name]) childEnv[name] = process.env[name];
+        const result = await promisify(execFile)(process.execPath, ["--import",
+          pathToFileURL(resolve("node_modules/tsx/dist/loader.mjs")).href, "--import", pathToFileURL(guard).href,
+          "--no-warnings", resolve("scripts/private-research-worker.mts"), "--restore", backups[0].replace(/\.json$/, "")],
+        { cwd: root, env: { ...childEnv, NODE_ENV: "test", KERYX_PRIVATE_WORKER_ENABLED: "0",
+          KERYX_PRIVATE_RESULT_SPOOL_DIRECTORY: backupDirectory, KERYX_PRIVATE_RESULT_SPOOL_KEY: backupKey },
+          timeout: 20000, maxBuffer: 4096 });
+        expect(result.stdout.trim()).toBe('{"status":"restored"}');
+        expect(result.stderr).toBe("");
         expect(await privateResultView(db, prepared.id, account.address)).toMatchObject({ status: "completed" });
         expect(await readdir(backupDirectory)).toEqual([]);
         expect(signer.createPaymentPayload).not.toHaveBeenCalled();
@@ -128,6 +142,8 @@ it.each(["after-settlement", "during-settlement"] as const)(
       for (const name of ["private-intent.json", "private-submission-attempt.json"]) await unlink(join(journal, name)).catch(() => undefined);
       await rmdir(journal).catch(() => undefined);
       for (const suffix of ["", "-wal", "-shm"]) await unlink(file + suffix).catch(() => undefined);
+      await rmdir(join(root, "data"));
+      await unlink(join(root, "network-guard.mjs")).catch(() => undefined);
       await rmdir(root);
     }
   });

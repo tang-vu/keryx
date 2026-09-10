@@ -1,5 +1,15 @@
 # Keryx — Decision Log
 
+**D-139** - Private recovery operations - *Require encrypted result storage for the
+operator worker and provide a separate single-backup restore command.*
+The enabled bootstrap rejects a missing spool. The command requires an absolute
+operator directory and an explicit encryption key before opening the database.
+Restore authenticates the backup before database initialization and uses immutable
+result admission without starting a worker or constructing a signer. It remains usable
+with the worker disabled and prints no private content. Operators must select the
+original database and stop concurrent work before manual recovery. Automatic recovery,
+key lifecycle and production provisioning are not implied by this command.
+
 **D-138** - Private result recovery - *Optionally persist an authenticated encrypted
 result backup before attempting the primary database write.*
 AES-256-GCM uses a dedicated environment-supplied encryption key, random IV and random

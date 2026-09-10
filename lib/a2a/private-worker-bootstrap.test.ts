@@ -26,11 +26,15 @@ it("is disabled without configuration and binds the real batching signer to the 
     KERYX_PRIVATE_PROVIDER_BASE_URL: "https://synthetic.example/v1", KERYX_PRIVATE_PROVIDER_API_KEY: "synthetic-secret",
     KERYX_PRIVATE_APPROVED_ENDPOINTS: '["https://synthetic.example/v1/chat/completions"]' };
   for (const [key, value] of Object.entries(env)) vi.stubEnv(key, value);
+  const spool = { save: vi.fn(), read: vi.fn(), restore: vi.fn() };
+  expect(() => privateWorkerBootstrap({} as KeryxDB)).toThrow("configuration unavailable");
+  expect(state.worker).not.toHaveBeenCalled();
   const worker = { tick: vi.fn() }; state.worker.mockReturnValue(worker);
-  expect(privateWorkerBootstrap({} as KeryxDB)).toBe(worker);
+  expect(privateWorkerBootstrap({} as KeryxDB, spool)).toBe(worker);
   expect(state.balance).not.toHaveBeenCalled();
   expect(worker.tick).not.toHaveBeenCalled();
   const options = state.worker.mock.calls[0][1];
+  expect(options.resultSpool).toBe(spool);
   expect(options.signerAddress).toBe(account.address);
   const signed = await options.signer.createPaymentPayload(2, { scheme: "exact", network: BUYER_NETWORK,
     asset: BUYER_USDC, amount: "1000", payTo: `0x${"5".repeat(40)}`, maxTimeoutSeconds: 604860,
@@ -44,9 +48,9 @@ it("is disabled without configuration and binds the real batching signer to the 
   await expect(options.getGatewayBalance()).rejects.toThrow("balance unavailable");
   state.config.cctpDomain = 0;
   await expect(options.getGatewayBalance()).rejects.toThrow("network unavailable");
-  expect(() => privateWorkerBootstrap({} as KeryxDB)).toThrow("configuration unavailable");
+  expect(() => privateWorkerBootstrap({} as KeryxDB, spool)).toThrow("configuration unavailable");
   state.config.cctpDomain = 26;
   vi.stubEnv("KERYX_PRIVATE_TREASURY_PRIVATE_KEY", state.config.funderKey);
   vi.stubEnv("KERYX_PRIVATE_TREASURY_ADDRESS", privateKeyToAccount(state.config.funderKey as `0x${string}`).address);
-  expect(() => privateWorkerBootstrap({} as KeryxDB)).toThrow("configuration unavailable");
+  expect(() => privateWorkerBootstrap({} as KeryxDB, spool)).toThrow("configuration unavailable");
 });

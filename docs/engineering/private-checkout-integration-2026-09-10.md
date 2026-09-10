@@ -36,8 +36,11 @@ success. Global fetch throws before reaching a network, exercising the local rea
 fallback against an empty corpus. An injected database write failure leaves an
 encrypted result backup and an execution-claimed owner view. The worker reports one
 error and a second tick finds no candidate, preventing execution replay. After closing
-and reopening SQLite, a reopened spool restores the original result through database
-admission, the owner view becomes completed, and the backup is removed. No creator
+and reopening SQLite, the operator `--restore` command in a separate Node process
+restores the original result through database admission. That process has no wallet
+or provider credentials, its worker is disabled, and a preload forbids global fetch.
+It emits only the restored status; the owner view becomes completed and the backup
+is removed. No creator
 signature is requested. This tests execution and persistence recovery wiring, not
 answer quality or paid content delivery.
 
