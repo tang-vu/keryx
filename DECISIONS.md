@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-155** - Private pilot HTTP integration - *Use the same account-aware operational bootstrap
+for quote availability and payment admission.*
+Mount the owner-session-only POST purchase route with same-origin checks, bounded JSON,
+per-wallet throttling and the disabled-by-default pilot bootstrap. Read purchase bodies before
+readiness so a slow body cannot age the operational observation; revalidate the session afterward.
+Quotes use the ready service's own policy snapshot and advertise availability only for an allowed
+authenticated payer. An unavailable bootstrap can still produce a non-purchasable quote preview.
+Both routes recheck the session after asynchronous readiness. Neither quotes nor HTTP 202 promise
+completed research or chain finality. Production flags remain off; supervision and an end-to-end
+owner pilot are required before enabling them. This supersedes D-154's unmounted-route status,
+not its best-effort availability limits or durable database payment authority.
+
 **D-154** - Restricted private purchase bootstrap - *Compose operational observations for
 explicit pilot accounts while keeping durable payment authority in the existing service.*
 The prepared bootstrap requires a separate purchase enable flag and a bounded server-configured

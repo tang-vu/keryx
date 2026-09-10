@@ -3,8 +3,7 @@ import { authJson } from "../auth-challenge";
 import { readBoundedRequestJson } from "../read-bounded-request-json";
 import { readyPrivatePurchaseService, type PrivatePurchaseBootstrap } from "./private-purchase-readiness";
 
-/** HTTP boundary prepared for a future worker-ready bootstrap. No public route
- * currently mounts this handler. The limiter and service bootstrap must be supplied
+/** Authenticated private purchase boundary. The limiter and service bootstrap must be supplied
  * by server code, never selected from request data. */
 export function privatePurchaseHandler(options: {
   bootstrap: PrivatePurchaseBootstrap;
@@ -22,11 +21,11 @@ export function privatePurchaseHandler(options: {
         const headers = new Headers(limited.headers); headers.set("Cache-Control", "no-store");
         return new Response(limited.body, { status: limited.status, headers });
       }
-      const service = await readyPrivatePurchaseService(bootstrap, context.db, req.signal);
-      if (!service) return authJson({ error: "Private checkout is not available yet." }, 503);
       let input: unknown;
       try { input = await readBoundedRequestJson(req); }
       catch { return authJson({ error: "Invalid private purchase request." }, 400); }
+      const service = await readyPrivatePurchaseService(bootstrap, context.db, req.signal, context.wallet);
+      if (!service) return authJson({ error: "Private checkout is not available yet." }, 503);
       // Readiness/body waits can outlive logout or session revocation. Recheck the
       // same owner and session before entering the payment service.
       const current = await accountSessionContext();

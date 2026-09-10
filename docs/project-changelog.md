@@ -1,5 +1,12 @@
 # Keryx Project Changelog
 
+### Restricted private checkout routes (2026-09-10, v0.22.43)
+
+- Mount authenticated private purchase admission behind explicit pilot configuration, worker and backing checks.
+- Use the same ready policy for account-specific quote availability, with per-wallet rate limits and session revalidation after waits.
+- Keep production purchasing disabled; preserve single-use submission and owner-only result recovery.
+- Verify route wiring, revoked sessions, non-pilot accounts and synthetic signed SQLite admission without repeated settlement.
+
 ### Private worker reconciliation (2026-09-10, v0.22.42)
 
 - Reconcile treasury-reserved private jobs before eligible worker execution, with bounded creator pages and resumable cursors.

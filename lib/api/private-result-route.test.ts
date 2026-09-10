@@ -14,14 +14,17 @@ import type { QueryRun } from "../types";
 import { privateWorkspaceHistorySchema, privateWorkspaceResultSchema } from "../a2a/private-workspace";
 import { privatePurchaseHandler } from "../a2a/private-purchase-handler";
 
-const mocks = vi.hoisted(() => ({ cookies: vi.fn(), db: vi.fn(), quoteBootstrap: vi.fn() }));
+const mocks = vi.hoisted(() => ({ cookies: vi.fn(), db: vi.fn(), quoteBootstrap: vi.fn(), purchaseBootstrap: vi.fn().mockResolvedValue(null), limit: vi.fn().mockResolvedValue(null) }));
 vi.mock("@/lib/a2a/private-quote-bootstrap", () => ({ privateQuoteBootstrap: mocks.quoteBootstrap }));
+vi.mock("@/lib/a2a/private-purchase-bootstrap", () => ({ privatePurchaseBootstrap: mocks.purchaseBootstrap }));
+vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: mocks.limit }));
 vi.mock("next/headers", () => ({ cookies: mocks.cookies }));
 vi.mock("@/lib/db", () => ({ getDb: mocks.db }));
 vi.mock("@/lib/config", () => ({ config: { jwtSecret: "synthetic-private-result-secret" } }));
 import { POST } from "@/app/api/me/private-jobs/result/route";
 import { POST as history } from "@/app/api/me/private-jobs/history/route";
 import { POST as quoteRoute } from "@/app/api/me/private-jobs/quote/route";
+import { POST as purchaseRoute } from "@/app/api/agent/private-ask/route";
 
 const root = mkdtempSync(join(tmpdir(), "keryx-private-result-")), file = join(root, "db.sqlite");
 const db = new SqliteAdapter(file); await db.init();
@@ -75,6 +78,22 @@ it("protects the purchase handler before invoking the backend and keeps response
   submit.mockRejectedValueOnce(new Error("synthetic-private-backend-detail"));
   const failed = await call(token);
   expect(failed.status).toBe(503); expect(await failed.text()).not.toContain("synthetic-private-backend-detail");
+});
+
+it("mounts the authenticated purchase route with its server-selected bootstrap and wallet limit", async () => {
+  const call = (token?: string) => storage.run(token, () => purchaseRoute(new Request("https://keryx.cc/api/agent/private-ask", {
+    method: "POST", headers: { host: "keryx.cc", origin: "https://keryx.cc" }, body: "{}" })));
+  expect((await call()).status).toBe(401);
+  const { token } = await issueWebSession(db, secret, account.address, "asker");
+  expect((await call(token)).status).toBe(503);
+  expect(mocks.limit).toHaveBeenCalledWith(`private-purchase:${account.address.toLowerCase()}`, "ask");
+  expect(mocks.purchaseBootstrap).toHaveBeenCalledWith(db, expect.any(AbortSignal), account.address.toLowerCase());
+  const submit = vi.fn(async () => ({ response: { id: intent.id, paymentStatus: "pending" }, recoveryConfirmation: null }));
+  mocks.purchaseBootstrap.mockResolvedValueOnce({ quote: vi.fn(), submit });
+  const accepted = await call(token);
+  expect(accepted.status).toBe(202);
+  expect(await accepted.json()).toEqual({ id: intent.id, paymentStatus: "pending" });
+  expect(submit).toHaveBeenCalledExactlyOnceWith({}, account.address.toLowerCase());
 });
 
 it("refuses payment if the authenticated session is revoked during readiness checks", async () => {
@@ -141,6 +160,38 @@ it("protects quote previews with live sessions, same origin and body limits with
   const claims = (await parseWebSession(token, secret))!;
   await db.revokeWebSession(webSessionHash(claims.jti), account.address);
   expect((await call(token)).status).toBe(401);
+});
+
+it("advertises purchase only from the same ready policy and rechecks sessions after readiness", async () => {
+  const { access: _access, model: _model, ...input } = request;
+  const { token } = await issueWebSession(db, secret, account.address, "asker");
+  const call = () => storage.run(token, () => quoteRoute(new Request("https://keryx.cc/api/me/private-jobs/quote", {
+    method: "POST", headers: { host: "keryx.cc", origin: "https://keryx.cc" }, body: JSON.stringify(input) })));
+  const submit = vi.fn(), quote = vi.fn(() => ({ syntheticReadyPolicy: true }));
+  mocks.purchaseBootstrap.mockResolvedValueOnce({ quote, submit });
+  const response = await call();
+  expect(await response.json()).toEqual({ wallet: account.address.toLowerCase(), purchasingAvailable: true, quote: { syntheticReadyPolicy: true } });
+  expect(response.headers.get("cache-control")).toBe("no-store");
+  expect(mocks.purchaseBootstrap).toHaveBeenLastCalledWith(db, expect.any(AbortSignal), account.address.toLowerCase());
+  expect(submit).not.toHaveBeenCalled();
+  const claims = (await parseWebSession(token, secret))!;
+  mocks.purchaseBootstrap.mockImplementationOnce(async () => {
+    await db.revokeWebSession(webSessionHash(claims.jti), account.address);
+    return { quote, submit };
+  });
+  expect((await call()).status).toBe(401);
+  expect(submit).not.toHaveBeenCalled();
+});
+
+it("limits quote checks before inspecting worker or funding state", async () => {
+  const { token } = await issueWebSession(db, secret, account.address, "asker");
+  mocks.purchaseBootstrap.mockClear();
+  mocks.limit.mockResolvedValueOnce(new Response("throttled", { status: 429, headers: { "Retry-After": "60" } }));
+  const response = await storage.run(token, () => quoteRoute(new Request("https://keryx.cc/api/me/private-jobs/quote", {
+    method: "POST", headers: { host: "keryx.cc", origin: "https://keryx.cc" }, body: "{}" })));
+  expect(response.status).toBe(429); expect(response.headers.get("cache-control")).toBe("no-store");
+  expect(response.headers.get("retry-after")).toBe("60");
+  expect(mocks.purchaseBootstrap).not.toHaveBeenCalled();
 });
 
 it("delivers owner-only research with live sessions, bounded states and no execution side effects", async () => {

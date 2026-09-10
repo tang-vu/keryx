@@ -8,11 +8,11 @@ import { privateRuntimePolicy } from "./private-runtime-policy";
 import { privateResearchService } from "./private-research-service";
 import { inspectPrivateOperations } from "./private-operations-inspection";
 
-/** Prepared owner-pilot bootstrap; no route mounts this yet. Observations limit
+/** Restricted owner-pilot bootstrap, disabled by default. Observations limit
  * admission availability, not payment authority. Durable treasury reservation and
  * single-use incoming attempts remain inside the research service. Call through
  * readyPrivatePurchaseService to bound these read-only observations. */
-export async function privatePurchaseBootstrap(db: KeryxDB, signal: AbortSignal) {
+export async function privatePurchaseBootstrap(db: KeryxDB, signal: AbortSignal, authenticatedPayer?: string) {
   const env = { ...process.env };
   if (signal.aborted || env.KERYX_PRIVATE_PURCHASE_ENABLED === undefined || env.KERYX_PRIVATE_PURCHASE_ENABLED === "0") return null;
   try {
@@ -24,6 +24,10 @@ export async function privatePurchaseBootstrap(db: KeryxDB, signal: AbortSignal)
     const payers = new Set(z.array(addressSchema).min(1).max(16).parse(
       z.string().max(1024).parse(env.KERYX_PRIVATE_PURCHASE_PAYERS).split(",").map(value => value.trim()),
     ).map(value => value.toLowerCase()));
+    if (authenticatedPayer !== undefined) {
+      const payer = addressSchema.safeParse(authenticatedPayer);
+      if (!payer.success || !payers.has(payer.data.toLowerCase())) return null;
+    }
     const key = z.string().regex(/^0x[a-fA-F0-9]{64}$/);
     const context = { network: config.networkId, publicSeller: config.sellerAddress,
       publicTreasurySigners: [privateKeyToAccount(key.parse(config.funderKey) as `0x${string}`).address],

@@ -3,7 +3,9 @@
 The client command composes temporary SIWE sign-in, independent quote validation,
 exclusive durable payment journaling, one submission attempt and confirmed sign-out.
 Production private purchasing is still unavailable. The client requires the quote
-response to explicitly report availability; the current route always reports false.
+response to explicitly report availability. The route only reports true for a configured pilot
+payer when the private purchase bootstrap's worker and backing checks pass; production flags
+remain disabled. The purchase route independently repeats those checks when submitting.
 No payment signature or journal is created in that case. This command does not enable
 the server, provision a merchant or prove worker readiness.
 

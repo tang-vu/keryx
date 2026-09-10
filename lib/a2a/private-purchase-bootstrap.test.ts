@@ -91,6 +91,13 @@ it.each([undefined, "0", "invalid"])("does not inspect or expose payment service
   expect(await privatePurchaseBootstrap(db, signal())).toBeNull(); expect(state.balance).not.toHaveBeenCalled();
 });
 
+it("rejects non-pilot authenticated accounts before operational reads", async () => {
+  expect(await privatePurchaseBootstrap(db, signal(), `0x${"9".repeat(40)}`)).toBeNull();
+  expect(await privatePurchaseBootstrap(db, signal(), "invalid")).toBeNull();
+  expect(state.balance).not.toHaveBeenCalled();
+  expect(await privatePurchaseBootstrap(db, signal(), payer)).not.toBeNull();
+});
+
 it.each(["working", "degraded", "stopped", "recovering"] as const)("refuses observed worker phase %s", async phase => {
   await writeStatus(phase); expect(await privatePurchaseBootstrap(db, signal())).toBeNull();
 });
