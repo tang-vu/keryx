@@ -10,6 +10,8 @@ The production worker implementation was unchanged from runtime commit `9947585`
 Initial harness runs exposed missing fixture encryption configuration and overly strict
 model-call/log assumptions; those runs were failures, not shutdown acceptance evidence.
 The completed run checks the actual job/database lifecycle with network access blocked.
+CI run `34500160012` passed on commit `804374b`, including the new Linux process step
+on Node 24 and the full existing test, browser, contract and production-build checks.
 
 ## Reproduction and boundaries
 
