@@ -1,0 +1,73 @@
+# Private worker operational preparation
+
+Prepared against deployed code `076b208` on September 10, 2026. This is preparation,
+not private checkout activation or mainnet readiness.
+
+## Observed configuration
+
+- Created distinct testnet merchant and treasury EOAs plus an independent 32-byte result-spool
+  encryption key. Secrets are confined to ignored environment files. The local wallet/key backup
+  has an explicit ACL for the current Windows user; the remote environment is mode 0600 and the
+  dedicated result directory is mode 0700. The initial encrypted SSH transfer was checked for exact
+  content equality before provider configuration was added on the server.
+- Both private enable flags remain zero. Nothing was registered as a private PM2 service.
+- The disabled configuration proposes a 100000-micro-USDC lifetime treasury ceiling and a
+  20000-micro-USDC service fee for the initial testnet acceptance work. These are configuration
+  values, not collected revenue or currently available private purchase terms. Backing was
+  verified separately after funding, as recorded below.
+- Runtime policy validation used the explicit existing DeepSeek credential and endpoint. Two
+  distinct configured public signer addresses were checked for separation. This does not establish
+  a complete inventory of every historical or file-backed signer.
+
+## Read-only inspection and provider probe
+
+The operations inspector was run with private research temporarily enabled only for that
+inspection process. It reported no worker status, zero available Gateway micro-USDC, required
+backing of 100000 micro-USDC, no treasury pool and `checkoutReady: false`. It did not create a
+reservation, fund a wallet, sign a payment or start a worker.
+
+A separate synthetic planning question was sent through the configured private reasoning engine
+to its approved endpoint. Observed one provider-served planning result and one usage record, with
+no provider failure, fallback or warning. No source/creator payment was requested. This is a single
+planning probe, not full research-quality acceptance, sustained provider health or invoice reconciliation.
+
+## Owner-funded testnet treasury
+
+After the owner reported faucet completion, direct Arc testnet reads showed 20 native USDC,
+20 ERC-20 USDC and zero Gateway USDC. Native and ERC-20 readings represent the same Arc asset
+at different decimal scales; they are not additive balances.
+
+The first bounded funding attempt stopped after durably recording approval nonce 0 as possible,
+without returning a transaction hash. Subsequent latest/pending nonce reads were both zero and
+the Gateway allowance was zero. Those observations alone were not treated as proof of rejection.
+The original journal was preserved. Recovery used the same nonce and exact 100000-micro-USDC
+approval, so the original and replacement approval could not both execute. The recovery recorded
+each signed transaction hash durably before broadcasting; deposit followed only after the exact
+approval transaction and receipt passed the existing funding verifier.
+
+- Approval: `0xff1282d3b36ae3cedff62122d62d247e333bf2250cbf1f88a88af0ae746afe8e`.
+- Deposit: `0x8cc92fe9576bcc8850620f958705b5c3cd7c4487b25594223a8c41f3e60ee2cd`.
+- Both receipts were successful and checked with two confirmations, exact sender, target,
+  calldata, value and nonce. Approval was limited to 0.1 USDC; no unlimited approval was used.
+- Subsequent Gateway balance was 100000 micro-USDC. Native wallet balance was
+  19.8969662827 USDC after the deposit and transaction fees.
+- The operations inspector reported `treasury.status: backed`, required backing and unallocated
+  capacity both 100000 micro-USDC, and no existing treasury pool. Worker status remained
+  unavailable and `checkoutReady` remained false, so the inspector correctly exited nonzero.
+
+This is owner-operated testnet funding, not a research purchase, creator payout or customer revenue.
+The inspector's `chainFinalityVerified` remains false; its backing observation does not independently
+verify settlement finality for future research jobs.
+
+## Remaining activation work
+
+The public application's reserved-merchant guard does not yet include this new private payee.
+Install and verify that guard before issuing a private payment authorization or accepting private
+merchant payments. Treasury faucet funding and the bounded Gateway deposit are now verified.
+Private-worker supervision,
+checkout admission readiness, result recovery under the intended operational configuration and
+an owner-operated end-to-end testnet purchase remain outstanding.
+
+The public application continues serving the deployed release. No private keys, provider credentials
+or real customer inputs are included in this evidence document. The transaction hashes above are
+public testnet evidence and expose the corresponding on-chain addresses.
