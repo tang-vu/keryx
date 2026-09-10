@@ -102,6 +102,12 @@ passed checksum, gzip, integrity and required-column checks. Scheduled off-site 
 complete service/key recovery and payment-reconciliation drills remain unverified;
 O1/M5 are still open.
 
+Private recovery evidence update (September 10): a [local buyer/backend integration drill](./engineering/private-checkout-integration-2026-09-10.md)
+connects quote acceptance, EOA signing, durable journals, SQLite payment admission and
+recovery after response loss and database reopen. Both persisted synthetic success and
+ambiguous settlement retain single-attempt behavior. Real HTTP checkout, Circle and
+worker execution were not exercised; B1/M4 remain open.
+
 1. Establish this acceptance map and the executable economics model; obtain actual
    fixed costs and provider billing data without inventing zeros.
 2. Complete usable browser quote/buy/recover under the buyer's own wallet authority,
