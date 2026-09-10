@@ -171,8 +171,23 @@ return unavailable. A late result cannot invoke submission. The handler also che
 request cancellation immediately before calling the purchase service. The timeout
 does not forcibly stop a callback that ignores cancellation, so bootstrap must never
 sign, reserve funds, settle or start jobs. Actual matching worker/configuration and
-backing checks remain unwired; neither a fresh status file nor this helper enables
-private purchasing.
+backing checks are composed in the prepared `privatePurchaseBootstrap`, but no HTTP route
+mounts it and neither a fresh status file nor this helper enables private purchasing.
+
+The restricted bootstrap additionally requires `KERYX_PRIVATE_PURCHASE_ENABLED=1` and
+`KERYX_PRIVATE_PURCHASE_PAYERS`, a comma-separated list of one to sixteen explicit pilot
+wallet addresses. Invalid, missing or wildcard lists are refused. It snapshots server policy,
+requires a matching idle worker, backed treasury and nonzero unallocated capacity, then restricts
+submission to authenticated payers in that snapshot. It makes no provider, signing or settlement
+call during bootstrap. The existing service still reserves capacity atomically and consumes a
+durable incoming attempt before settlement. Run bootstrap through the bounded readiness helper
+on each request; do not cache its service or derive the allowed payer from submitted JSON.
+
+These observations are best-effort pilot availability checks, not a durable worker/funding lease.
+A worker may stop after inspection; a later reservation may consume remaining capacity. No
+readiness observation supersedes database payment admission. Production enable flags, private
+quote availability and the absent purchase route remain unchanged. Supervisor operation, the
+authenticated route/quote integration and actual paid pilot acceptance are still outstanding.
 
 The prepared purchase handler revalidates the original active owner session after
 readiness and body reads, immediately before payment admission. A real SQLite

@@ -1,5 +1,20 @@
 # Keryx — Decision Log
 
+**D-154** - Restricted private purchase bootstrap - *Compose operational observations for
+explicit pilot accounts while keeping durable payment authority in the existing service.*
+The prepared bootstrap requires a separate purchase enable flag and a bounded server-configured
+list of payer addresses. It snapshots validated policy, derives configured signer identities,
+and requires a matching idle worker observation, fully backed treasury and nonzero unallocated
+capacity before exposing the service for that request. Run these read-only checks through the
+existing five-second readiness wrapper; never cache the returned service across requests.
+This is a best-effort availability gate for a restricted pilot, not a durable admission lease:
+the worker can stop or funds can change after observation. Atomic treasury reservation, exact
+authorization verification and the permanent incoming submission claim remain the payment
+authority. Worker supervision, owner session/origin checks and recovery remain necessary.
+No HTTP route mounts the new bootstrap, and neither quote availability nor production purchase
+flags change in this commit. General availability and mainnet acceptance require stronger
+operational evidence than this restricted gate.
+
 **D-153** - Private worker reconciliation scheduling - *Recover results, observe pending payments,
 then execute eligible work with separate accounting authority.*
 Enabled workers now visit one treasury-reserved job per iteration, including unconfirmed incoming
