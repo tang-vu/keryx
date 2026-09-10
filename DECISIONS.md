@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-134** - Private worker discovery - *Page backend-only candidate IDs by dedicated
+treasury signer, requiring stored settlement fields and no existing execution claim.*
+SQLite and a service-role-only PostgreSQL function select at most 25 IDs/owners in
+ascending ID order with an exclusive cursor. Restart each sweep after its last page
+to pick up newly inserted IDs below the cursor. No question, signature, provider key
+or receipt is returned. Selection is a hint, not signature/settlement validation or
+execution authority; runPrivateResearch must revalidate and win its atomic claim.
+Pending payments and already-claimed jobs cannot be selected, and claims are not leased
+or reset. Tests cover database reopen, cursor bounds and PostgreSQL permissions.
+The polling loop, worker bootstrap and operational readiness gate remain to be wired.
+
 **D-133** - Private purchase HTTP boundary - *Use a live account session and same-origin
 check before a server-provided limiter/bootstrap, bounded input and backend admission.*
 The handler takes its payer from the durable session, not body fields, and passes the

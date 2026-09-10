@@ -54,6 +54,7 @@ it.each(["after-settlement", "during-settlement"] as const)(
         endpoint: "https://synthetic.example/v1/chat/completions", fallback: "local-heuristic", redirects: "prohibited" } };
       const prepared = await preparePrivateBuyerJournal(journal, quote, expected, merchants,
         { maxTotalMicros: "50000", maxServiceFeeMicros: "20000" }, account, now);
+      expect(await db.listPrivateWorkerCandidates(context.privateTreasurySigner)).toEqual([]);
       const original = await readPrivateBuyerJournal(journal, account.address, merchants);
       // This injection represents the authenticated owner boundary, not an authentication test.
       const send = vi.fn(async (url: string, init?: RequestInit): Promise<Response> => {
@@ -71,6 +72,10 @@ it.each(["after-settlement", "during-settlement"] as const)(
       // Even bypassing the local journal marker cannot start another backend settlement.
       const replay = await service.submit(original.submission, account.address);
       const expectedStatus = loss === "after-settlement" ? "settled" : "pending";
+      expect(await db.listPrivateWorkerCandidates(context.privateTreasurySigner)).toEqual(loss === "after-settlement"
+        ? [{ id: prepared.id, payer: account.address.toLowerCase() }] : []);
+      expect(await db.listPrivateWorkerCandidates(context.publicTreasurySigners[0])).toEqual([]);
+      expect(await db.listPrivateWorkerCandidates(context.privateTreasurySigner, prepared.id)).toEqual([]);
       expect(replay.response.paymentStatus).toBe(expectedStatus);
       expect(facilitator.mock.calls.map(([action]) => action)).toEqual(["verify", "settle"]);
       const view = await recoverPrivateBuyerResult(journal, account.address, merchants, "keryx_session=synthetic",
@@ -86,6 +91,10 @@ it.each(["after-settlement", "during-settlement"] as const)(
       expect(await privateResultView(db, prepared.id, merchants.publicResearchPayee)).toBeNull();
       expect(await db.getQueryRun(prepared.id)).toBeNull();
       expect(await db.getA2aOrder(prepared.id)).toBeNull();
+      if (loss === "after-settlement") {
+        expect(await db.claimPrivateResearchExecution(prepared.id, account.address)).not.toBeNull();
+        expect(await db.listPrivateWorkerCandidates(context.privateTreasurySigner)).toEqual([]);
+      }
       expect(fetch).not.toHaveBeenCalled();
     } finally {
       db.close();
