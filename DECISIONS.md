@@ -1,5 +1,19 @@
 # Keryx — Decision Log
 
+**D-156** - Private worker supervision and deploy ordering - *Drain before replacing live
+worker code; retain crash evidence instead of forcing a restart.*
+Use a systemd unit on the existing VPS with explicit environment-file loading, SIGTERM,
+an unlimited stop timeout and no automatic SIGKILL or restart. The worker's existing
+permanent execution claims and cooperative lock remain untouched. Before changing Git or
+dependencies, deployment stops a previously active private service and verifies inactive state
+and zero MainPID. It starts that service again only after web health passes. Absent/inactive
+services stay that way. Failed/transitional states or a failed stop block source replacement;
+later deployment failures leave the private service stopped for operator inspection, including
+web rollback. A service being active is not an idle/readiness assertion. Infinite drain can
+delay deploy or shutdown indefinitely; an operator must inspect actual process/job state before
+any forced intervention. This unit uses the current root-owned single-host layout, not a claim
+of production identity isolation, automatic recovery, alert delivery or mainnet acceptance.
+
 **D-155** - Private pilot HTTP integration - *Use the same account-aware operational bootstrap
 for quote availability and payment admission.*
 Mount the owner-session-only POST purchase route with same-origin checks, bounded JSON,

@@ -6,6 +6,35 @@ run a tick, fund a wallet or enable checkout. It returns null when
 The operator command is available, but no production process or checkout-readiness
 signal is activated by installing this release.
 
+## Managed VPS service
+
+`ops/keryx-private-worker.service` describes the existing `/root/keryx` VPS layout and
+`/usr/bin/node`. Install it only after private policy, keys, backing and recovery storage have
+been provisioned and checked. It explicitly loads `.env.local` and `.env.private-worker.local`;
+service environment overrides enable worker/research only inside this process. It never enables
+the purchase flag in the web application. Secrets stay in the environment files, not unit text.
+
+The service uses SIGTERM, `TimeoutStopSec=infinity`, `SendSIGKILL=no` and `Restart=no`.
+Stopping it waits for active execution without a routine forced kill. A crash or failed start
+requires operator inspection of the process, retained lock, backup and original claims before
+restart. There is no automatic lock removal. Systemd status is supervision, not alert delivery
+or proof that a paid job can complete. Root ownership matches the current host; dedicated-user
+isolation remains a separate hardening task. Read-only system/home protections leave the app's
+data directory writable, and private temporary storage supports runtime tooling.
+
+`scripts/redeploy-vps.sh` now drains an active private service **before** Git/dependency changes.
+The stop helper checks inactive state and zero MainPID. Only after successful web health does
+deployment start a previously active service again. It never installs or enables a unit, and
+an absent/inactive service remains absent/inactive. A failed or transitional unit blocks deploy.
+A failure after draining leaves the private worker stopped, even if web rollback succeeds:
+inspect source/build identity, locks and recovery state before manually resuming. Do not blindly
+retry deployment as a recovery operation. A drain may wait indefinitely; inspect the live service
+job and process rather than interpreting elapsed time as permission to kill it.
+
+After starting or resuming, run `private:inspect` with the same environment and `KERYX_COMMIT`
+as the web release. Service-active status alone does not establish matching worker policy,
+idle state, backing, provider quality or checkout availability.
+
 ```sh
 npm run private-worker -- --help
 node --env-file=.env.private-worker.local --import tsx --no-warnings scripts/private-research-worker.mts --once

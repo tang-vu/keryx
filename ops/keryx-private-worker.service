@@ -1,0 +1,26 @@
+[Unit]
+Description=Keryx private research worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=root
+WorkingDirectory=/root/keryx
+ExecStart=/usr/bin/node --env-file=.env.local --env-file=.env.private-worker.local --import tsx --no-warnings scripts/private-research-worker.mts
+Environment=KERYX_PRIVATE_WORKER_ENABLED=1
+Environment=KERYX_PRIVATE_RESEARCH_ENABLED=1
+UMask=0077
+KillSignal=SIGTERM
+TimeoutStopSec=infinity
+SendSIGKILL=no
+Restart=no
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/root/keryx/data
+SyslogIdentifier=keryx-private-worker
+
+[Install]
+WantedBy=multi-user.target
