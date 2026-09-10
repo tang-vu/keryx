@@ -1,5 +1,24 @@
 # Keryx — Decision Log
 
+**D-158** - Private browser recovery foundation - *Reserve before signing and commit a
+single submission claim before HTTP.*
+Use a separate IndexedDB database for private jobs. A fresh unsigned draft binds the payer,
+private/public merchant separation, exact question, provider policy, budget, salt and nonce.
+Reserve it exclusively before a wallet prompt. Save and verify the first EOA signature against
+that draft, then use a strict-durability transaction with a complete-row comparison to admit
+only one submitting tab. Transaction completion, not individual write success, is the boundary.
+Any imported CLI/browser intent is recovery-only. Reload never generates a replacement
+authorization. Local enumeration includes reservations that never reached the server.
+The browser and CLI share signature validation, commitment checking and the existing job-ID
+preimage; Web Crypto preserves the server SHA-256 identity. Caller-supplied trusted merchant
+pins remain separate from saved or imported data. IndexedDB and explicit exports contain
+plaintext private questions and bearer signatures: they are not encrypted or protected from
+same-origin script compromise. The eventual UI must disclose this before storing and require
+an explicit export action. Browser persistence cannot prove payment, survive storage eviction
+or replace server-side admission. This stage provides storage primitives and Chromium tests;
+browser quote/review, wallet signing orchestration, HTTP submission and deletion UX are not
+enabled by importing the module.
+
 **D-157** - Provider call accounting - *Correlate usage with actual model calls, not reasoning steps.*
 The first private paid pilot recorded six served reasoning steps and seven usage records.
 Synthesis can perform a second evidence-review request, and its failure is intentionally caught

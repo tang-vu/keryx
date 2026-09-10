@@ -58,6 +58,9 @@ jobs:
       - name: Private request commitment (hermetic, no signing)
         run: node --import tsx scripts/test-browser-private-commitment.mts
 
+      - name: Private browser journal (hermetic, no settlement)
+        run: npm run test:browser-private-journal
+
       - name: Business calculator UI (local arithmetic, no settlement)
         run: npm run test:business-calculator
 

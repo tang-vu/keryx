@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { browserSha256 } from "../browser-receipt-integrity";
 import { z } from "zod";
 import { requirementSchema } from "../buyer/protocol";
 import { privateMerchantPolicySchema } from "../buyer/private-merchant-policy";
@@ -13,7 +13,7 @@ export async function preparePrivateResearchIntent(submission: unknown, expected
   const authorization = { ...verified.payment.authorization, from: verified.payer, to: verified.payment.authorization.to.toLowerCase() };
   const identity = ["keryx-private-order-v1", requirement.network, authorization.from, authorization.to, authorization.nonce].join("|");
   return {
-    id: `prv_${createHash("sha256").update(identity).digest("hex")}`,
+    id: `prv_${(await browserSha256(identity)).slice("sha256:".length)}`,
     submission: { request: verified.request, salt: verified.salt, payment: { authorization, signature: verified.payment.signature } },
     requirement: { ...requirement, payTo: requirement.payTo.toLowerCase(), asset: requirement.asset.toLowerCase(), extra: { ...requirement.extra, verifyingContract: requirement.extra.verifyingContract.toLowerCase() } },
     merchants: { privatePayee: merchants.privatePayee.toLowerCase(), publicResearchPayee: merchants.publicResearchPayee.toLowerCase() },

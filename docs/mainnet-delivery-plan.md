@@ -127,6 +127,11 @@ or payment rows were found for it. Billing coverage remains unknown because six 
 reasoning attempts produced seven usage records. This does not close independent buyer,
 complete cost accounting, paid-job crash recovery or mainnet acceptance gates.
 
+Private browser integration update: the [private browser journal](./private-browser-checkout.md)
+now has Chromium evidence for exclusive reservation, cross-tab submission claims, reload,
+recovery-only imports and storage failure. It is a persistence foundation; browser payment
+orchestration and the purchase UI are still required to complete the journey.
+
 1. Establish this acceptance map and the executable economics model; obtain actual
    fixed costs and provider billing data without inventing zeros.
 2. Complete usable browser quote/buy/recover under the buyer's own wallet authority,

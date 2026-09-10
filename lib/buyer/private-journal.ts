@@ -1,26 +1,9 @@
 import { mkdir, open } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { z } from "zod";
-import { addressSchema, requirementSchema } from "./protocol";
-import { PRIVATE_RESEARCH_RESOURCE } from "./private-request-commitment";
-import { privateResearchIdSchema, preparePrivateResearchIntent } from "../a2a/private-research-intent";
 import type { PrivateMerchantPolicy } from "./private-merchant-policy";
 import { writeBuyerFile } from "./journal";
-
-const envelope = z.object({ schema: z.literal("keryx-private-buyer-intent-v1"), resource: z.literal(PRIVATE_RESEARCH_RESOURCE),
-  id: privateResearchIdSchema, requirement: requirementSchema, submission: z.unknown() }).strict();
-
-/** Local plaintext journal, not encryption. Contains private research and a bearer authorization.
- * Restore verifies the original signature/commitment; it never refreshes the salt or nonce. */
-export async function validatePrivateBuyerIntent(value: unknown, payer: string, merchants: PrivateMerchantPolicy) {
-  const owner = addressSchema.parse(payer).toLowerCase();
-  const parsed = envelope.parse(value);
-  const intent = await preparePrivateResearchIntent(parsed.submission, parsed.requirement, merchants);
-  if (intent.id !== parsed.id || intent.submission.payment.authorization.from !== owner || !("reasoning" in intent.submission.request))
-    throw new Error("Private buyer journal does not match the owner or signed job");
-  return { schema: parsed.schema, resource: parsed.resource, id: intent.id, requirement: intent.requirement, submission: intent.submission };
-}
-
+import { validatePrivateBuyerIntent } from "./private-buyer-intent";
+export { validatePrivateBuyerIntent } from "./private-buyer-intent";
 export async function createPrivateBuyerJournal(directory: string, value: unknown, payer: string, merchants: PrivateMerchantPolicy) {
   const intent = await validatePrivateBuyerIntent(value, payer, merchants);
   const absolute = resolve(directory);
