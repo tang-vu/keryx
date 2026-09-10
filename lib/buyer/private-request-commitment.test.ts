@@ -13,6 +13,23 @@ export const terms = { from: payer, to: payee, value: "50000", validAfter: "1788
 export const salt = `0x${"3".repeat(64)}`;
 afterEach(() => vi.unstubAllGlobals());
 
+it("binds an explicit provider policy in a distinct v2 domain and refuses policy stripping or replacement", async () => {
+  const reasoning = { modelId: "deepseek-flash", provider: "deepseek", wireModel: "deepseek-v4-flash",
+    endpoint: "https://synthetic.example/v1/chat/completions", fallback: "local-heuristic", redirects: "prohibited" };
+  const bound = { ...request, model: reasoning.modelId, reasoning };
+  const canonical = privateRequestCommitmentInput(bound, requirement, terms, salt);
+  expect(JSON.parse(canonical).domain).toBe("keryx-private-request-commitment-v2");
+  const nonce = await privateRequestNonce(bound, requirement, terms, salt);
+  expect(nonce).toBe(`0x${createHash("sha256").update(canonical).digest("hex")}`);
+  expect(await matchesPrivateRequestCommitment(bound, requirement, { ...terms, nonce }, salt)).toBe(true);
+  expect(await matchesPrivateRequestCommitment({ ...request, model: reasoning.modelId }, requirement, { ...terms, nonce }, salt)).toBe(false);
+  for (const patch of [{ provider: "mimo" }, { wireModel: "different-model" }, { endpoint: "https://other.example/v1/chat/completions" },
+    { fallback: "another-provider" }, { redirects: "allowed" }, { apiKey: "synthetic-extra-field" }]) {
+    expect(await matchesPrivateRequestCommitment({ ...bound, reasoning: { ...reasoning, ...patch } }, requirement, { ...terms, nonce }, salt)).toBe(false);
+  }
+  expect(await matchesPrivateRequestCommitment({ ...bound, model: null }, requirement, { ...terms, nonce }, salt)).toBe(false);
+});
+
 it("matches independent Node hashing and normalizes only declared aliases", async () => {
   const canonical = privateRequestCommitmentInput(request, requirement, terms, salt);
   const nonce = await privateRequestNonce(request, requirement, terms, salt);
@@ -61,5 +78,18 @@ it("requires a new EIP-712 signature if a caller recomputes the nonce for change
   expect(await verifyTypedData({ ...typed, address: account.address, signature })).toBe(true);
   const { nonce: _old, ...originalTerms } = original.authorization;
   const changedNonce = await privateRequestNonce({ ...request, question: "Altered research" }, requirement, originalTerms, original.salt);
+  expect(await verifyTypedData({ ...buyerTypedData({ ...original.authorization, nonce: changedNonce }), address: account.address, signature })).toBe(false);
+});
+
+it("requires a new signature when a provider endpoint is changed even with a recomputed v2 nonce", async () => {
+  const account = privateKeyToAccount(`0x${randomBytes(32).toString("hex")}`);
+  const reasoning = { modelId: "deepseek-flash", provider: "deepseek", wireModel: "deepseek-v4-flash",
+    endpoint: "https://synthetic.example/v1/chat/completions", fallback: "local-heuristic", redirects: "prohibited" };
+  const bound = { ...request, model: reasoning.modelId, reasoning };
+  const original = await createPrivateAuthorization(bound, requirement, account.address, merchants, 1788912000000);
+  const signature = await account.signTypedData(buyerTypedData(original.authorization));
+  const { nonce: _old, ...originalTerms } = original.authorization;
+  const changedNonce = await privateRequestNonce({ ...bound, reasoning: { ...reasoning, endpoint: "https://other.example/chat/completions" } }, requirement, originalTerms, original.salt);
+  expect(await verifyTypedData({ ...buyerTypedData(original.authorization), address: account.address, signature })).toBe(true);
   expect(await verifyTypedData({ ...buyerTypedData({ ...original.authorization, nonce: changedNonce }), address: account.address, signature })).toBe(false);
 });

@@ -4,12 +4,18 @@ import { browserSha256 } from "../browser-receipt-integrity";
 import { a2aPackageFingerprintInput, a2aResearchPackageForVersion } from "../a2a/research-package-definition";
 import { authorizationSchema, authorizationWithNonce, buyerRequestSchema, requirementSchema } from "./protocol";
 import { requirePrivateMerchant, type PrivateMerchantPolicy } from "./private-merchant-policy";
+import { privateReasoningPolicySchema } from "./private-reasoning-policy";
 
 export const PRIVATE_RESEARCH_RESOURCE = "https://keryx.cc/api/agent/private-ask";
-export const privateRequestSchema = buyerRequestSchema.extend({
+const legacyPrivateRequestSchema = buyerRequestSchema.extend({
   access: z.literal("payer-private-v1"),
   model: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,63}$/).nullable(),
 }).strict();
+export const privateRequestSchema = z.union([
+  legacyPrivateRequestSchema.extend({ reasoning: privateReasoningPolicySchema }).strict()
+    .refine(request => request.model !== null && request.model === request.reasoning.modelId),
+  legacyPrivateRequestSchema,
+]);
 const saltSchema = z.string().regex(/^0x[a-f0-9]{64}$/);
 const timestamp = z.string().regex(/^(0|[1-9]\d{0,15})$/).refine(value => Number.isSafeInteger(Number(value)));
 const termsSchema = authorizationSchema.omit({ nonce: true }).extend({ validAfter: timestamp, validBefore: timestamp }).strict();
@@ -27,7 +33,7 @@ export function privateRequestCommitmentInput(requestValue: unknown, requirement
   const researchPackage = a2aResearchPackageForVersion(request.researchMode, request.packageVersion);
   if (!researchPackage) throw new Error("Unsupported private research package");
   return JSON.stringify({
-    domain: "keryx-private-request-commitment-v1",
+    domain: "reasoning" in request ? "keryx-private-request-commitment-v2" : "keryx-private-request-commitment-v1",
     resource: PRIVATE_RESEARCH_RESOURCE,
     network: requirement.network, asset: requirement.asset.toLowerCase(), scheme: requirement.scheme,
     verifyingContract: requirement.extra.verifyingContract.toLowerCase(),
@@ -35,6 +41,7 @@ export function privateRequestCommitmentInput(requestValue: unknown, requirement
     access: request.access, question: request.question, creatorBudgetMicros: String(Math.round(request.budget * 1e6)),
     researchMode: request.researchMode, packageVersion: request.packageVersion,
     packageContract: a2aPackageFingerprintInput(researchPackage), responseMode: request.responseMode, model: request.model,
+    ...("reasoning" in request ? { reasoning: request.reasoning } : {}),
     payer: terms.from.toLowerCase(), payee: terms.to.toLowerCase(), amountMicros: terms.value,
     validAfter: terms.validAfter, validBefore: terms.validBefore, salt,
   });

@@ -233,8 +233,8 @@ it("a newly inserted claim cannot authorize submission if readback already shows
   expect(await claimSupabasePrivatePayment(client, intent.id, account.address)).toMatchObject({ claimed: false, state: { status: "settled" } });
 });
 
-async function executionFixture() {
-  const next = await createPrivateAuthorization(request, requirement, account.address, merchants, 1788912000000);
+async function executionFixture(requestValue: unknown = request) {
+  const next = await createPrivateAuthorization(requestValue, requirement, account.address, merchants, 1788912000000);
   const signature = await account.signTypedData(buyerTypedData(next.authorization));
   const value = await preparePrivateResearchIntent({ request: next.request, salt: next.salt, payment: { authorization: next.authorization, signature } }, requirement, merchants);
   await db.reservePrivateResearchIntent(value);
@@ -329,6 +329,22 @@ async function creatorFixture() {
   const claim = (await db.claimPrivateResearchExecution(value.id, account.address))!;
   return { value, claim };
 }
+
+const reasoningPolicy = { modelId: "deepseek-flash", provider: "deepseek" as const, wireModel: "deepseek-v4-flash",
+  endpoint: "https://synthetic.example/v1/chat/completions", fallback: "local-heuristic" as const, redirects: "prohibited" as const };
+
+it("retains signed provider disclosure and denies missing or changed execution policy before funding or reasoning", async () => {
+  const { value, proof } = await executionFixture({ ...request, model: reasoningPolicy.modelId, reasoning: reasoningPolicy });
+  expect((await other.getPrivateResearchIntent(value.id, account.address))?.submission.request).toMatchObject({ reasoning: reasoningPolicy });
+  await db.claimPrivatePaymentSubmission(value.id, account.address);
+  await db.confirmPrivatePayment(value.id, account.address, proof);
+  const balance = vi.fn(async () => BigInt(30000)), engine = vi.fn();
+  const options = { signerAddress: merchants.privatePayee, signer: { createPaymentPayload: vi.fn() }, getGatewayBalance: balance, engineForModel: engine };
+  await expect(runPrivateResearch(db, value.id, account.address, options)).rejects.toThrow("does not match");
+  await expect(runPrivateResearch(db, value.id, account.address, { ...options, reasoningPolicy: { ...reasoningPolicy, endpoint: "https://other.example/chat/completions" } })).rejects.toThrow("does not match");
+  expect(balance).not.toHaveBeenCalled(); expect(engine).not.toHaveBeenCalled();
+  expect(await db.getPrivateResearchExecution(value.id, account.address)).toBeNull();
+});
 
 it("projects owner spend from late durable evidence without using stale result totals or disclosing authorization", async () => {
   const { value, claim } = await creatorFixture();
@@ -426,7 +442,7 @@ it("denies unpaid or underfunded execution before a worker claim or any reasonin
 });
 
 it("runs one complete private job with durable source/reward receipts and no shared research effects", async () => {
-  const { value, proof } = await executionFixture();
+  const { value, proof } = await executionFixture({ ...request, model: reasoningPolicy.modelId, reasoning: reasoningPolicy });
   await db.claimPrivatePaymentSubmission(value.id, account.address);
   await db.confirmPrivatePayment(value.id, account.address, proof);
   await db.upsertSource({ id: "private-pipeline-source", name: "Pipeline source", description: "Research evidence", tags: ["research"],
@@ -465,7 +481,7 @@ it("runs one complete private job with durable source/reward receipts and no sha
   Object.assign(config, { baseUrl: "https://synthetic.example" });
   vi.stubGlobal("fetch", http);
   try {
-    const options = { signerAddress: merchants.privatePayee, signer, getGatewayBalance: vi.fn(async () => BigInt(30000)), engineForModel: vi.fn(() => engine) };
+    const options = { signerAddress: merchants.privatePayee, signer, reasoningPolicy, getGatewayBalance: vi.fn(async () => BigInt(30000)), engineForModel: vi.fn(() => engine) };
     const outcomes = await Promise.all([runPrivateResearch(db, value.id, account.address, options), runPrivateResearch(other, value.id, account.address, options)]);
     expect(outcomes.map(outcome => outcome.status).sort()).toEqual(["already-claimed", "completed"]);
     const complete = outcomes.find(outcome => outcome.status === "completed")!;

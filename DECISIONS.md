@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-115** ? Signed private reasoning policy ? *Bind resolved provider, model,
+endpoint, local fallback and prohibited redirects into the authorization nonce.*
+Requests with an explicit strict reasoning disclosure use commitment domain v2;
+legacy v1 canonical bytes remain unchanged for historical verification. Unknown
+fields or a model/disclosure mismatch cannot silently downgrade to v1. Fresh backend
+execution requires its supplied policy to match the signed disclosure before funding
+checks, model construction or claiming work. Stored-result and existing-claim recovery
+remain read-only and do not depend on the current provider configuration. The trusted
+caller must supply the matching private engine factory; a matching policy alone does
+not prove which engine was injected. Legacy requests do not establish provider consent.
+No private purchase route is enabled by this change. Approved endpoint inventory,
+retention disclosure, buyer consent UI and actual payment admission remain outstanding.
+
 **D-114** · Private reasoning provider boundary · *Construct one explicit catalog
 model/endpoint with local fallback, no automatic provider rotation or redirects.*
 The backend factory requires an exact current catalog ID, matching provider, HTTPS
