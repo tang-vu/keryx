@@ -156,6 +156,13 @@ passed, while a separate headless-shell import stalled. A successful-run trace i
 JavaScript startup work but does not capture or explain a stalled interval. Keep the
 reliability gate open; no payment/recovery code fix is inferred from these diagnostics.
 
+Wallet startup update (v0.22.48): remote SDKs initialize for remembered connectors or
+explicit wallet selection. New visitors keep injected wallet discovery without probing
+every remote provider. Tests using actual wagmi actions cover manual connection, remembered
+non-current connections, capability forwarding, account/disconnect events, failed setup
+and retry. Saved IDs remain startup hints, never payment authorization. This is a startup
+change, not evidence that earlier renderer stalls are fixed or independent wallets accepted.
+
 1. Establish this acceptance map and the executable economics model; obtain actual
    fixed costs and provider billing data without inventing zeros.
 2. Complete usable browser quote/buy/recover under the buyer's own wallet authority,

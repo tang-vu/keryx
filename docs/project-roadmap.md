@@ -6,7 +6,7 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.47 (private research privacy disclosure, updated 2026-09-10)
+**Version:** 0.22.48 (deferred wallet SDK startup, updated 2026-09-10)
 
 The [private browser purchase and recovery flow](./private-browser-checkout.md) now connects
 reviewed provider/price terms, wallet signing and a durable one-attempt journal on `/research`.

@@ -1,7 +1,6 @@
 /**
- * Shared wagmi config factory. Exported as a function (makeConfig) so it can be
- * called in both the Server Component layout (for SSR cookie hydration) and the
- * client Providers component (which memoises the instance with useState).
+ * Shared wagmi config factory for the server/client provider tree. Providers
+ * memoises the instance; browser hydration restores persisted connection state.
  *
  * Connector strategy:
  *   - injected()     — desktop extensions + in-wallet dApp browsers (EIP-6963).
@@ -14,6 +13,7 @@
 import { createConfig, http, cookieStorage, createStorage } from "wagmi";
 import { injected, metaMask, walletConnect } from "wagmi/connectors";
 import { arcTestnet } from "./chains";
+import { deferredWalletConnector } from "./deferred-wallet-connector";
 
 export function makeConfig() {
   const projectId = process.env.NEXT_PUBLIC_WC_PROJECT_ID ?? "";
@@ -23,16 +23,15 @@ export function makeConfig() {
   // is configured — initialising it without one throws at runtime.
   const connectors = [
     injected(),
-    metaMask({ dappMetadata: { name: "Keryx", url: "https://keryx.cc" } }),
+    deferredWalletConnector(metaMask({ dapp: { name: "Keryx", url: "https://keryx.cc" } })),
     // Browser-only: WalletConnect Core is a process-wide singleton, so building
     // this connector during SSR re-inits it on every request and floods the server
-    // log with "already initialized" warnings. The server config is only used by
-    // cookieToInitialState, which never dials connectors — the client re-creates
-    // the config with the connector included, so hydration still finds it.
+    // log with "already initialized" warnings. The browser includes it for wallet
+    // selection; the deferred wrapper preserves remembered-connection startup.
     // showQrModal: true makes the WalletConnect connector open its own QR / mobile
     // wallet-list modal on connect — without it, clicking does nothing visible.
     ...(projectId && typeof window !== "undefined"
-      ? [walletConnect({ projectId, showQrModal: true })]
+      ? [deferredWalletConnector(walletConnect({ projectId, showQrModal: true }))]
       : []),
   ];
 

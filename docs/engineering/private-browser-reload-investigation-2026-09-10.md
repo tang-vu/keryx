@@ -60,3 +60,18 @@ headless-shell CI coverage. Capture an actual stalled interval before attributin
 cause or changing application payment/recovery logic. Independently measure wallet SDK
 startup and reconnection before redesigning their initialization. The previous successful
 deletion/re-import check remains a single observed journey, not a general stability claim.
+
+## Subsequent startup change: v0.22.48
+
+The remote-connector wrapper now defers new-visitor provider initialization while
+preserving remembered connectors and explicit selection (D-161). Eight focused tests
+use actual wagmi connection actions with synthetic providers, including restoration of
+a non-current saved connector, capability forwarding, account/disconnect events and
+setup failure/retry. Provider authorization remains required even with stored hints.
+
+Local production-browser checks observed no external request before selection in their
+observation window. Selecting MetaMask or WalletConnect started additional SDK chunk
+loads; both vendor QR/connection interfaces were visually verified in full Chromium.
+These checks did not pair a real wallet, sign a message or send a payment. They validate
+SDK startup and presentation, not mobile pairing, independent wallet behavior, an end-to-end
+latency improvement or a fix for the earlier stalls.

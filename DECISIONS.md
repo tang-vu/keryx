@@ -1,5 +1,21 @@
 # Keryx — Decision Log
 
+**D-161** - Remote wallet SDK startup - *Restore remembered connectors; initialize other
+remote SDKs only after explicit wallet selection.*
+The installed wagmi reconnect action probes every connector's provider, and WalletConnect
+also initializes its provider in setup. Wrap MetaMask and WalletConnect while keeping the
+injected connector unchanged. Capture recent and persisted connection IDs through wagmi
+storage before createConfig can persist its empty initial state. IDs are startup hints,
+not account authorization. Preserve all saved connections, including a non-current one.
+A never-selected remote provider refuses automatic probing; explicit connect activates it,
+initializes provider/event listeners once, and forwards original arguments, capability
+results and runtime connector context. Automatic setup errors are contained because wagmi
+does not await setup; explicit selection reports failure and can retry initialization.
+If connection hints were lost, selecting the wallet explicitly restores its normal SDK flow.
+Existing wallet/session/chain/balance/signature/payment checks remain authoritative. This
+reduces unnecessary SDK startup; it is not a diagnosed fix for prior headless renderer stalls.
+Vendor connector and storage-format upgrades require renewed restore/event tests.
+
 **D-160** - Private local deletion - *Remove question/signature payloads without removing the
 local submission barrier.*
 An explicit two-step browser action replaces a validated local journal with a minimal
