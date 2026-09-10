@@ -6,6 +6,7 @@
 import { confirmSqlitePrivateCreator, getSqlitePrivateCreatorConfirmation, type PrivateCreatorConfirmation, PRIVATE_CREATOR_CONFIRMATIONS_SQL } from "./private-creator-confirmations";
 import { admitSqlitePrivateCreatorSubmission, listSqlitePrivateCreatorSubmissions, type PrivateCreatorSubmission, PRIVATE_CREATOR_SUBMISSIONS_SQL } from "./private-creator-submissions";
 import { saveSqlitePrivateResult, getSqlitePrivateResult, PRIVATE_RESEARCH_RESULTS_SQL } from "./private-research-results";
+import { PRIVATE_TREASURY_CAPACITY_SQL, reserveSqlitePrivateTreasury, type PrivateTreasuryPolicy } from "./private-treasury-capacity";
 import { claimSqlitePrivateExecution, getSqlitePrivateExecution, PRIVATE_RESEARCH_EXECUTIONS_SQL } from "./private-research-executions";
 import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
@@ -315,6 +316,7 @@ CREATE TABLE IF NOT EXISTS web_sessions (
 CREATE INDEX IF NOT EXISTS web_sessions_expiry ON web_sessions(expires_at);
 CREATE INDEX IF NOT EXISTS web_sessions_wallet ON web_sessions(wallet, expires_at);
 ${PRIVATE_RESEARCH_INTENTS_SQL}
+${PRIVATE_TREASURY_CAPACITY_SQL}
 ${PRIVATE_RESEARCH_PAYMENTS_SQL}
 ${PRIVATE_RESEARCH_EXECUTIONS_SQL}
 ${PRIVATE_RESEARCH_RESULTS_SQL}
@@ -1468,6 +1470,9 @@ export class SqliteAdapter implements KeryxDB {
 
   async reservePrivateResearchIntent(intent: PrivateResearchIntent) {
     return reserveSqlitePrivateResearchIntent(this.db, intent);
+  }
+  async reservePrivateTreasury(id: string, payer: string, policy: PrivateTreasuryPolicy) {
+    return reserveSqlitePrivateTreasury(this.db, id, payer, policy);
   }
 
   async confirmPrivateCreatorSubmission(id: string, payer: string, workerId: string, confirmation: PrivateCreatorConfirmation) {

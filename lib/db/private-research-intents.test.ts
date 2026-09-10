@@ -32,6 +32,7 @@ import { submitPrivateIncomingPayment } from "../payments/private-incoming-payme
 import { reconcilePrivateIncomingPayment } from "../gateway/private-incoming-reconciliation";
 import { admitPrivateResearch } from "../a2a/admit-private-research";
 import { createPrivateQuote } from "../a2a/private-quote";
+import { reserveSupabasePrivateTreasury } from "./private-treasury-capacity";
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-private-intents-"));
 const file = path.join(directory, "test.sqlite");
@@ -338,6 +339,42 @@ const reasoningPolicy = { modelId: "deepseek-flash", provider: "deepseek" as con
   endpoint: "https://synthetic.example/v1/chat/completions", fallback: "local-heuristic" as const, redirects: "prohibited" as const };
 const privateProvider = { modelId: "deepseek-flash", provider: "deepseek" as const,
   baseUrl: "https://synthetic.example/v1", apiKey: "synthetic-unfunded-credential" };
+
+it("atomically caps treasury allocations across jobs, preserves retries and rejects policy or signer substitution", async () => {
+  const first = await executionFixture(), second = await executionFixture();
+  const policy = { signer: merchants.privatePayee, capacityMicros: "50000" };
+  const outcomes = await Promise.all([db.reservePrivateTreasury(first.value.id, account.address, policy),
+    other.reservePrivateTreasury(second.value.id, account.address, policy)]);
+  expect(outcomes.filter(Boolean)).toHaveLength(1);
+  const winner = outcomes[0] ? first.value : second.value;
+  expect(await other.reservePrivateTreasury(winner.id, account.address, policy)).toBe(true);
+  expect(raw.prepare("SELECT sum(amount_micros) AS n FROM private_treasury_reservations WHERE signer=?").get(policy.signer)?.n).toBe(30000);
+  await expect(db.reservePrivateTreasury(winner.id, account.address, { ...policy, capacityMicros: "60000" })).rejects.toThrow("policy conflict");
+  await expect(db.reservePrivateTreasury(winner.id, account.address, { ...policy, signer: merchants.publicResearchPayee })).rejects.toThrow("reservation conflict");
+  await expect(db.reservePrivateTreasury(winner.id, merchants.publicResearchPayee, policy)).rejects.toThrow("unavailable");
+  const reopened = new SqliteAdapter(file);
+  try {
+    await reopened.init();
+    expect(await reopened.reservePrivateTreasury(winner.id, account.address, policy)).toBe(true);
+    expect(await reopened.reservePrivateTreasury(outcomes[0] ? second.value.id : first.value.id, account.address, policy)).toBe(false);
+  } finally { reopened.close(); }
+});
+
+it("requires matching Supabase allocation readback and does not infer success from lost RPC responses", async () => {
+  for (const outcome of ["accepted", "denied", "lost", "wrong-signer", "missing"] as const) {
+    const http = vi.fn<typeof fetch>(async url => {
+      const route = new URL(String(url)).pathname;
+      if (route.endsWith("/private_research_intents")) return Response.json([{ data: intent }]);
+      if (route.endsWith("/rpc/reserve_private_treasury")) return outcome === "lost" ? new Response("{}", { status: 503 }) : Response.json(outcome !== "denied");
+      if (route.endsWith("/private_treasury_reservations")) return Response.json(outcome === "missing" ? [] : [{ signer: outcome === "wrong-signer" ? merchants.publicResearchPayee : merchants.privatePayee, amount_micros: 30000 }]);
+      throw new Error("Unexpected synthetic request");
+    });
+    const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+    const result = reserveSupabasePrivateTreasury(client, intent.id, account.address, { signer: merchants.privatePayee, capacityMicros: "50000" });
+    if (outcome === "accepted" || outcome === "denied") expect(await result).toBe(outcome === "accepted");
+    else await expect(result).rejects.toThrow();
+  }
+});
 
 it("recovers incoming confirmation from exact Circle evidence while retaining uncertain and processing attempts", async () => {
   for (const status of ["received", "batched", "confirmed", "completed", "failed", "missing", "wrong-amount"] as const) {

@@ -1,5 +1,19 @@
 # Keryx — Decision Log
 
+**D-121** - Shared private treasury capacity - *Allocate signed creator budgets
+atomically against an immutable ceiling for a dedicated signer.* Per-job caps alone
+cannot prevent concurrent jobs from assuming the same available funds. The new database
+primitive binds one permanent reservation per job to its verified signed creator budget.
+SQLite uses a single conditional insert; PostgreSQL locks the signer pool before summing
+allocations. Retries return the matching original allocation; signer/ceiling substitution
+fails. Supabase requires matching readback after RPC success and never treats a lost
+response as a new allocation authority. Integer micro-USDC values are bounded below the
+JavaScript safe integer limit. This is a conservative lifetime allocation, not a balance
+oracle: completed and uncertain jobs keep their allocations. It requires a dedicated,
+verified-funded signer with no other spending paths. No pool has been provisioned and
+the primitive is not yet wired into purchase/execution. Safe replenishment, unused-budget
+recovery and abuse-resistant prepayment admission remain prerequisites for public use.
+
 **D-120** - Authenticated private admission - *Rebuild trusted quote terms and
 match the verified signed request before reserving an intent.* The backend boundary
 requires the authenticated payer to equal the locally verified signing EOA. It resolves
