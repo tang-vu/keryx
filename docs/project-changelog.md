@@ -1,5 +1,13 @@
 # Keryx Project Changelog
 
+### Authenticated private quote previews (2026-09-10, v0.22.35)
+
+- Add a session-protected, no-store POST endpoint for private quote previews.
+- Validate origin and bounded request bodies; use server-owned pricing and provider configuration.
+- Default configuration off. Preview responses explicitly state that private purchasing is unavailable.
+- Include the private protocol, settlement recovery and shared treasury capacity foundations;
+  these do not activate private purchases, workers or mainnet.
+
 ### Private account workspace (2026-09-10, v0.22.34)
 
 - Add private history and result viewing on `/research`, with account recovery across

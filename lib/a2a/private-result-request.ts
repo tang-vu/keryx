@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { privateResearchIdSchema } from "./private-research-intent";
 import { privateWorkspaceCursorSchema } from "./private-workspace";
+import { buyerRequestSchema } from "../buyer/protocol";
 
 const schema = z.object({ id: privateResearchIdSchema }).strict();
 
@@ -13,7 +14,11 @@ export async function readPrivateHistoryRequest(request: Request) {
   return z.object({ cursor: privateWorkspaceCursorSchema.nullable().optional() }).strict().parse(await readPrivateBody(request));
 }
 
-async function readPrivateBody(request: Request): Promise<unknown> {
+export async function readPrivateQuoteRequest(request: Request) {
+  return buyerRequestSchema.parse(await readPrivateBody(request, 16384));
+}
+
+async function readPrivateBody(request: Request, maxBytes = 1024): Promise<unknown> {
   if (!request.body) throw new Error("Missing body");
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
@@ -27,7 +32,7 @@ async function readPrivateBody(request: Request): Promise<unknown> {
       const { value, done } = await Promise.race([reader.read(), deadline]);
       if (done) break;
       size += value.byteLength;
-      if (size > 1024) throw new Error("Body too large");
+      if (size > maxBytes) throw new Error("Body too large");
       chunks.push(value);
     }
     const bytes = new Uint8Array(size);

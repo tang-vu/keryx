@@ -13,12 +13,14 @@ import { readPrivateResultRequest } from "../a2a/private-result-request";
 import type { QueryRun } from "../types";
 import { privateWorkspaceHistorySchema, privateWorkspaceResultSchema } from "../a2a/private-workspace";
 
-const mocks = vi.hoisted(() => ({ cookies: vi.fn(), db: vi.fn() }));
+const mocks = vi.hoisted(() => ({ cookies: vi.fn(), db: vi.fn(), quoteBootstrap: vi.fn() }));
+vi.mock("@/lib/a2a/private-quote-bootstrap", () => ({ privateQuoteBootstrap: mocks.quoteBootstrap }));
 vi.mock("next/headers", () => ({ cookies: mocks.cookies }));
 vi.mock("@/lib/db", () => ({ getDb: mocks.db }));
 vi.mock("@/lib/config", () => ({ config: { jwtSecret: "synthetic-private-result-secret" } }));
 import { POST } from "@/app/api/me/private-jobs/result/route";
 import { POST as history } from "@/app/api/me/private-jobs/history/route";
+import { POST as quoteRoute } from "@/app/api/me/private-jobs/quote/route";
 
 const root = mkdtempSync(join(tmpdir(), "keryx-private-result-")), file = join(root, "db.sqlite");
 const db = new SqliteAdapter(file); await db.init();
@@ -44,6 +46,31 @@ function read(token?: string, body: unknown = { id: intent.id }, origin = "https
     method: "POST", headers: { host: "keryx.cc", origin, "content-type": "application/json" }, body: JSON.stringify(body),
   })));
 }
+
+it("protects quote previews with live sessions, same origin and body limits without invoking purchases", async () => {
+  const { access: _access, model: _model, ...input } = request;
+  const call = (token?: string, body: unknown = input, origin = "https://keryx.cc") => storage.run(token, () => quoteRoute(new Request("https://keryx.cc/api/me/private-jobs/quote", {
+    method: "POST", headers: { host: "keryx.cc", origin, "content-type": "application/json" }, body: JSON.stringify(body) })));
+  mocks.quoteBootstrap.mockReturnValue(null);
+  expect((await call()).status).toBe(401);
+  const { token } = await issueWebSession(db, secret, account.address, "asker");
+  expect((await call(token, input, "https://foreign.example")).status).toBe(403);
+  expect((await call(token, { ...input, payer: account.address })).status).toBe(400);
+  expect((await call(token, { ...input, question: "x".repeat(17000) })).status).toBe(400);
+  expect((await call(token)).status).toBe(503);
+  const quote = vi.fn(() => ({ synthetic: true }));
+  mocks.quoteBootstrap.mockReturnValue({ quote });
+  const response = await call(token);
+  expect(response.headers.get("cache-control")).toBe("no-store");
+  expect(await response.json()).toEqual({ wallet: account.address.toLowerCase(), purchasingAvailable: false, quote: { synthetic: true } });
+  expect(quote).toHaveBeenCalledWith(input);
+  mocks.quoteBootstrap.mockImplementation(() => { throw new Error("synthetic-private-provider-secret"); });
+  const error = await call(token); expect(error.status).toBe(503);
+  expect(await error.text()).not.toContain("synthetic-private-provider-secret");
+  const claims = (await parseWebSession(token, secret))!;
+  await db.revokeWebSession(webSessionHash(claims.jti), account.address);
+  expect((await call(token)).status).toBe(401);
+});
 
 it("delivers owner-only research with live sessions, bounded states and no execution side effects", async () => {
   const { token } = await issueWebSession(db, secret, account.address, "asker");

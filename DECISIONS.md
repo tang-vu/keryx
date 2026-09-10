@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-125** - Authenticated quote preview HTTP boundary - *Require live sessions and
+same-origin bounded POST bodies; expose preview terms only.* The new account quote
+route derives its owner from the revocable session, accepts at most 16 KiB within five
+seconds and returns no-store responses. Bootstrap defaults off and derives private and
+public treasury identities from explicitly configured keys without signing, funding or
+legacy wallet creation. Invalid/missing keys and stale public merchant reservations
+fail closed with generic errors. Only the quote method leaves bootstrap. Every successful
+response explicitly reports purchasingAvailable=false; no private payment endpoint is
+introduced. Production remains disabled until private runtime provisioning and the rest
+of checkout/worker/operational acceptance are complete.
+
 **D-124** - Private service composition - *Derive payment requirements from the
 validated runtime and an explicit integer service fee, never from submitted metadata.*
 The backend service snapshots runtime configuration, builds quotes with signed creator
