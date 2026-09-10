@@ -1,8 +1,8 @@
 # Private research access and payer history
 
 September 9, 2026. Account history is implemented in v0.22.30. v0.22.33 adds an
-authenticated private result read route; private purchases and their user workflow
-remain unavailable. This work advances B2/M6 without replacing
+authenticated private result read route. v0.22.34 connects private account history and
+result viewing on `/research`; private purchases remain unavailable. This work advances B2/M6 without replacing
 the full acceptance map in `mainnet-delivery-plan.md`.
 
 Protocol foundation added after v0.22.30: `lib/buyer/private-request-commitment.ts`
@@ -481,7 +481,7 @@ SQLite integration verifies late confirmation after immutable result save, all s
 Circle stages, exact fractional-USDC sums, unchanged commitments after expiry, storage
 outages and wrong-owner denial before ledger access. The caller still authenticates the
 payer. The v0.22.33 result route below supplies session authentication before invoking
-this read model; browser integration remains unfinished.
+this read model; v0.22.34 displays it in the private account workspace.
 
 ## Authenticated private result read route (v0.22.33)
 
@@ -506,7 +506,7 @@ This is an owner read projection, not a portable cryptographically verified rece
 Its shape is validated against signed request identity and claim indices; model prose
 still requires the normal safe renderer. The endpoint never retries execution or funds,
 signs or submits a payment. Private quote/purchase admission, private history enumeration,
-browser/CLI integration, creator views and complete privacy acceptance remain required.
+private purchase/CLI integration, creator views and complete privacy acceptance remain required.
 
 ## Implemented account enumeration
 
@@ -524,13 +524,39 @@ question, model/package selection and price commitment. It labels entries as pri
 intents rather than inferring payment or execution. Pending, interrupted and completed
 jobs all remain discoverable. Concurrent newer entries appear on a fresh first page;
 continuation pages use the last displayed key. Cursors and IDs belong in private bodies,
-not URLs or public analytics. The history HTTP/UI workflow is not yet connected.
+not URLs or public analytics. The v0.22.34 HTTP/UI workflow consumes this projection.
 
 SQLite tests cover 27 equal-time owner records, another owner, insertion between pages,
 no duplicate/missing results, unknown wallets and output redaction. Mocked PostgREST
 tests verify payer/limit/order/filter constraints, microsecond timestamp preservation,
 malformed-cursor rejection before I/O, corrupt proof/foreign rows and storage errors.
 These are local synthetic tests, not independent buyer activity.
+
+### Private workspace (v0.22.34)
+
+`POST /api/me/private-jobs/history` accepts only an optional nullable `cursor` in its
+JSON body, with the same 1 KiB/five-second read bounds, live owner session, same-origin
+policy and no-store response as private result reading. Both responses carry the
+authenticated wallet for client-side binding. `/research` now includes a separate
+private account section with refresh, pagination, result selection and close controls.
+No private identifier is stored in URLs, localStorage or sessionStorage by this UI.
+
+The component validates wallet, response schema and selected request fields. It cancels
+obsolete requests and ignores delayed responses after wallet/selection changes. A 401
+clears visible history/results and refreshes sign-in state. Errors remain distinct from
+an empty history. Opening/refreshing a result never submits or retries payment. Source
+decisions, claim quotes, citation attribution and current spend are rendered as text;
+no model-authored HTML or public dispatch/receipt link is introduced. Current payment
+confirmation is separate from recorded citation amounts, and uncommitted funds are
+explicitly not a refund. The browser result read is capped at 16 MiB and 20 seconds;
+ordinary buyer receipt reads retain their existing 2 MB limit.
+
+The hermetic Chromium script `npm run test:browser-private-history` runs the actual
+components with synthetic session/HTTP fixtures. It verifies error recovery, pagination,
+markup escaping, body-only private selectors, delayed-result isolation during wallet
+switches, 401 clearing and no browser storage. It allows only the history/result read
+endpoints. API tests separately use real durable test sessions and SQLite ownership.
+These tests are not live buyer purchases or independent adoption evidence.
 
 ### Existing public-job account history
 

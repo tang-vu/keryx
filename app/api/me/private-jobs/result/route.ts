@@ -16,6 +16,6 @@ export async function POST(req: Request) {
   catch { return authJson({ error: "Invalid private job request." }, 400); }
   try {
     const result = await privateResultView(context.db, input.id, context.wallet);
-    return result ? authJson(result) : authJson({ error: "Private job unavailable." }, 404);
+    return result ? authJson({ wallet: context.wallet, ...result }) : authJson({ error: "Private job unavailable." }, 404);
   } catch { return authJson({ error: "Private job is temporarily unavailable. Please retry." }, 503); }
 }

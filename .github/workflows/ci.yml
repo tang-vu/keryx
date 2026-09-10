@@ -51,6 +51,9 @@ jobs:
       - name: Browser sign-out (hermetic, no signing)
         run: npm run test:browser-auth
 
+      - name: Private history and result UI (hermetic, read-only)
+        run: npm run test:browser-private-history
+
       - name: Private request commitment (hermetic, no signing)
         run: node --import tsx scripts/test-browser-private-commitment.mts
 

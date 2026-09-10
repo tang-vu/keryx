@@ -11,12 +11,14 @@ import { BUYER_GATEWAY, BUYER_NETWORK, BUYER_USDC, buyerTypedData } from "../buy
 import { preparePrivateResearchIntent } from "../a2a/private-research-intent";
 import { readPrivateResultRequest } from "../a2a/private-result-request";
 import type { QueryRun } from "../types";
+import { privateWorkspaceHistorySchema, privateWorkspaceResultSchema } from "../a2a/private-workspace";
 
 const mocks = vi.hoisted(() => ({ cookies: vi.fn(), db: vi.fn() }));
 vi.mock("next/headers", () => ({ cookies: mocks.cookies }));
 vi.mock("@/lib/db", () => ({ getDb: mocks.db }));
 vi.mock("@/lib/config", () => ({ config: { jwtSecret: "synthetic-private-result-secret" } }));
 import { POST } from "@/app/api/me/private-jobs/result/route";
+import { POST as history } from "@/app/api/me/private-jobs/history/route";
 
 const root = mkdtempSync(join(tmpdir(), "keryx-private-result-")), file = join(root, "db.sqlite");
 const db = new SqliteAdapter(file); await db.init();
@@ -65,6 +67,7 @@ it("delivers owner-only research with live sessions, bounded states and no execu
   const response = await read(token);
   expect(response.status).toBe(200); expect(response.headers.get("cache-control")).toBe("no-store");
   const value = await response.json();
+  expect(privateWorkspaceResultSchema.parse(value).wallet).toBe(account.address.toLowerCase());
   expect(value).toMatchObject({ status: "completed", result: { answer: run.answer, evidence: null, claimCoverage: null },
     spend: { creator: { confirmedMicros: "0", committedMicros: "0" } } });
   const text = JSON.stringify(value);
@@ -77,6 +80,27 @@ it("delivers owner-only research with live sessions, bounded states and no execu
   const claims = (await parseWebSession(token, secret))!;
   await db.revokeWebSession(webSessionHash(claims.jti), account.address);
   expect((await read(token)).status).toBe(401);
+});
+
+it("lists private intents only for a live session owner and keeps cursor and owner selectors out of URLs", async () => {
+  const { token } = await issueWebSession(db, secret, account.address, "asker");
+  const list = (session?: string, body: unknown = {}, origin = "https://keryx.cc") => storage.run(session, () => history(new Request("https://keryx.cc/api/me/private-jobs/history", {
+    method: "POST", headers: { host: "keryx.cc", origin }, body: JSON.stringify(body),
+  })));
+  expect((await list()).status).toBe(401);
+  const response = await list(token);
+  expect(response.status).toBe(200); expect(response.headers.get("cache-control")).toBe("no-store");
+  const value = privateWorkspaceHistorySchema.parse(await response.json());
+  expect(value.wallet).toBe(account.address.toLowerCase()); expect(value.jobs.map(row => row.id)).toEqual([intent.id]);
+  for (const hidden of [signature, authorization.salt, authorization.authorization.nonce]) expect(JSON.stringify(value)).not.toContain(hidden);
+  expect((await list(token, { wallet: account.address })).status).toBe(400);
+  expect((await list(token, { cursor: { id: intent.id, createdAt: "invalid" } })).status).toBe(400);
+  expect((await list(token, {}, "https://foreign.example")).status).toBe(403);
+  const foreign = await issueWebSession(db, secret, merchants.privatePayee, "asker");
+  expect((await (await list(foreign.token)).json()).jobs).toEqual([]);
+  const claims = (await parseWebSession(token, secret))!;
+  await db.revokeWebSession(webSessionHash(claims.jti), account.address);
+  expect((await list(token)).status).toBe(401);
 });
 
 it("rejects anonymous, foreign-origin, oversized and caller-selected owners without revealing storage errors", async () => {

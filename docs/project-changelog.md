@@ -1,5 +1,16 @@
 # Keryx Project Changelog
 
+### Private account workspace (2026-09-10, v0.22.34)
+
+- Add private history and result viewing on `/research`, with account recovery across
+  devices, pagination, source decisions, cited evidence and current creator spend.
+- Use authenticated no-store reads with selectors in bounded request bodies. Clear
+  results on session changes/revocation and ignore stale responses from previous reads.
+- Keep private IDs out of URLs and browser storage; render research as safe text.
+  Private purchasing and portable private receipts remain unavailable.
+- Add a hermetic Chromium check for pagination, failure recovery, safe rendering,
+  wallet changes and session revocation, without signing or payment endpoints.
+
 ### Authenticated private result reads (2026-09-09, v0.22.33)
 
 - Add a read-only account endpoint with revocable owner sessions, no-store responses,

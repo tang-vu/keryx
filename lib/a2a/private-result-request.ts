@@ -1,10 +1,19 @@
 import { z } from "zod";
 import { privateResearchIdSchema } from "./private-research-intent";
+import { privateWorkspaceCursorSchema } from "./private-workspace";
 
 const schema = z.object({ id: privateResearchIdSchema }).strict();
 
 /** Keep private selectors out of URLs; cap chunked request bytes and read duration. */
 export async function readPrivateResultRequest(request: Request) {
+  return schema.parse(await readPrivateBody(request));
+}
+
+export async function readPrivateHistoryRequest(request: Request) {
+  return z.object({ cursor: privateWorkspaceCursorSchema.nullable().optional() }).strict().parse(await readPrivateBody(request));
+}
+
+async function readPrivateBody(request: Request): Promise<unknown> {
   if (!request.body) throw new Error("Missing body");
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
@@ -24,6 +33,6 @@ export async function readPrivateResultRequest(request: Request) {
     const bytes = new Uint8Array(size);
     let offset = 0;
     for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
-    return schema.parse(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)));
+    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
   } finally { clearTimeout(timer); await reader.cancel().catch(() => undefined); reader.releaseLock(); }
 }

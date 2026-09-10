@@ -6,12 +6,12 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.33 (authenticated private result reads, updated 2026-09-09)
+**Version:** 0.22.34 (private account workspace, updated 2026-09-10)
 
-Private results now have a read-only account endpoint using live owner sessions,
-validated answer/decision projections and current private payment evidence. Internal
-execution and creator accounting are implemented; private purchasing, account
-enumeration, browser/CLI workflows and full privacy acceptance remain unfinished.
+Private history and result viewing are connected on `/research` using live owner
+sessions, validated answer/decision projections and current private payment evidence.
+Internal execution and creator accounting are implemented; private purchasing, portable
+receipts, CLI recovery and full privacy acceptance remain unfinished.
 
 Public x402 sellers now reject configured reserved private merchant recipients before
 verification or settlement, including stripped/rewritten unsigned metadata. Private

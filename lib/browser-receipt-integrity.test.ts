@@ -13,6 +13,14 @@ function receipt() {
 }
 afterEach(() => vi.unstubAllGlobals());
 
+it("permits explicitly bounded private results larger than a portable receipt without raising the default limit", async () => {
+  const value = { answer: "🧾".repeat(510_000) };
+  const serialized = JSON.stringify(value);
+  await expect(readBoundedJson(new Response(serialized))).rejects.toThrow("2 MB");
+  expect(await readBoundedJson(new Response(serialized), 16_777_216)).toEqual(value);
+  await expect(readBoundedJson(new Response("{}"), Infinity)).rejects.toThrow("Invalid response size limit");
+});
+
 describe("browser receipt integrity", () => {
   it.each(["", "abc", "Unicode: café 🧾", "unpaired surrogate: \ud800", "line\nbreak"])("matches Node UTF-8 SHA-256 for %j", async value => {
     expect(await browserSha256(value)).toBe(sha256(value));

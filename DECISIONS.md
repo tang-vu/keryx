@@ -1,5 +1,19 @@
 # Keryx — Decision Log
 
+**D-112** · Private research account workspace · *Recover and read private jobs in
+memory under the signed-in account, without a new payment or public dispatch link.*
+The history endpoint shares live session checks, same-origin policy, bounded body
+selectors and no-store responses with private result reading. Both responses identify
+the authenticated wallet. The browser validates their schema, wallet and selected
+request fields, holds IDs only in component state, and cancels/ignores obsolete reads.
+Wallet-session changes remount the workspace; 401 responses clear history and results.
+The UI exposes source decisions, answer/evidence and current spend separately from
+snapshot citation attribution. Text is rendered without executing markup. It does not
+poll claimed workers as if they were alive or retry payments. Result reads permit a
+bounded 16 MiB UTF-8 body to accommodate the existing 4 MiB JS-string snapshot limit;
+other buyer reads retain their 2 MB default. Private purchases, portable private
+receipts, CLI integration and full provider/public-projection acceptance remain open.
+
 **D-111** · Private history enumeration · *Recover private job identities from the
 owner's durable intents, independently of browser storage and job completion.* Both
 adapters expose a backend-only 25-row keyset page plus sentinel, filtered by the
