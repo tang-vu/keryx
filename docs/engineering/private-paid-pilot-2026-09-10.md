@@ -84,3 +84,23 @@ matching the deployed commit and 83000 micro-USDC of Gateway backing against the
 required amount. These are operational observations, not chain-finality certification.
 The original pilot's historical usage remains unpriced; v0.22.44 added call-level
 accounting for subsequent runs without rewriting its evidence.
+
+## Follow-up: local deletion and re-import on v0.22.47
+
+One live owner-operated read-only check completed on production `b9d114e` at
+2026-09-10T14:13:31Z. It imported the original CLI recovery file, read the saved
+answer, recovered after reload, confirmed local deletion, reloaded again, and
+re-imported the original file to recover the same answer. A foreign authenticated
+account received 404. The check recorded six private reads, zero payment requests,
+zero JavaScript page errors, mobile/desktop layout checks and confirmed sign-out.
+Background analytics were blocked by the probe. Both recorded reload responses
+were HTTP 200 without a Cloudflare challenge header.
+
+Earlier probes intermittently stalled after reload or failed to complete re-import.
+Some required closing the temporary browser tree after it stopped responding to
+automation; no successful acceptance or confirmed sign-out is inferred for those
+aborted probes. Later diagnostics increased the UI wait allowance and enabled CPU
+profiling, but the successful run finished without capturing a stalled profile.
+This single completed run establishes the observed deletion/re-import journey,
+not a diagnosed fix for the earlier stalls or general browser reliability. Their
+cause, independent wallet acceptance and a fresh browser payment remain open.

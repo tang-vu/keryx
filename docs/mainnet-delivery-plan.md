@@ -144,7 +144,11 @@ local deletion limits and the absence of automatic server expiry. It also correc
 old no-third-party-analytics claim after observing Cloudflare and WalletConnect requests.
 This describes current behavior; it does not close independent privacy review or retention
 implementation. The v0.22.46 local deletion flow passed Chromium/CI; its initial live probe
-did not complete and must not be recorded as accepted.
+did not complete and must not be recorded as accepted. A later
+[v0.22.47 live owner-operated check](./engineering/private-paid-pilot-2026-09-10.md)
+completed deletion, reload and recovery-only re-import without payment. Earlier
+intermittent reload stalls remain undiagnosed; one pass does not close browser
+reliability or independent wallet acceptance.
 
 1. Establish this acceptance map and the executable economics model; obtain actual
    fixed costs and provider billing data without inventing zeros.
