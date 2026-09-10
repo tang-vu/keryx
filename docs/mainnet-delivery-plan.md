@@ -129,8 +129,11 @@ complete cost accounting, paid-job crash recovery or mainnet acceptance gates.
 
 Private browser integration update: the [private browser journal](./private-browser-checkout.md)
 now has Chromium evidence for exclusive reservation, cross-tab submission claims, reload,
-recovery-only imports and storage failure. It is a persistence foundation; browser payment
-orchestration and the purchase UI are still required to complete the journey.
+recovery-only imports and storage failure. v0.22.45 connects quote/provider review, local
+consent, current wallet/account/balance checks, one-attempt purchase and recovery in `/research`.
+The actual React/client/IndexedDB path passes synthetic response-loss and reload checks;
+live private browser payment, independent wallet/mobile acceptance, local deletion/retention
+and portable private receipt verification remain open.
 
 1. Establish this acceptance map and the executable economics model; obtain actual
    fixed costs and provider billing data without inventing zeros.

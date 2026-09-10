@@ -1,7 +1,26 @@
 # Private browser checkout
 
-The current production pilot purchases through the CLI. The browser already displays
-owner-scoped private history and results. Browser purchasing remains work in progress.
+The configured testnet pilot can review and purchase private research in `/research`,
+using the same owner-only server admission as the CLI. General availability is not enabled.
+The browser also displays private account history and locally retained recovery entries.
+
+## Purchase and recovery
+
+Sign in with the paying EOA account, enter a question, creator cap and maximum total, and
+choose **Review private price**. The difference between maximum total and creator cap bounds
+the service fee. Review the actual total, merchant, provider/model/endpoint and non-refundable
+best-effort terms. Accept the plaintext local-storage disclosure before buying. Gateway funding
+uses the existing bounded wallet funding controls and is separate from purchase authorization.
+
+Immediately before signing, a fresh available quote must match the reviewed terms exactly.
+The client checks the current session, wallet, Arc chain and Gateway credit around signing.
+The signed intent is retained before a single private POST. A lost or invalid response leads
+to recovery of the same job. Local imports, exports, history and recovery cannot initiate a
+new payment. No private selector is placed in a URL. A new purchase requires another explicit
+review; it is never the recovery mechanism for a previous purchase.
+
+The server-reported result is checked against the original question, package/model, budget,
+total and creator ledger. This is not a portable cryptographic receipt or chain-finality proof.
 
 ## Implemented journal boundary
 
@@ -44,7 +63,12 @@ exclusive reservation, signature/owner/merchant binding, two-tab submission cont
 reload, recovery-only imports, export, pagination, unavailable storage, transaction abort
 after a write request, and corrupted data. This is not a live wallet or Circle acceptance run.
 
-Next: quote and provider review with independently retained terms; current SIWE/wallet/chain
-and Gateway-balance checks around signing; one bounded private POST; recovery from the
-original journal after any uncertain response; accessible browser controls and manual wallet
-acceptance. Purchase availability remains constrained by the server's pilot allowlist.
+`npm run test:browser-private-checkout` exercises the actual React/client/IndexedDB path with
+synthetic EOA signing and intercepted HTTP. It covers unavailable pilot accounts, consent,
+review, response loss followed by recovery, reload/export, changed session/wallet and layout
+at mobile and desktop sizes using the application CSS. Funding is separately tested by the
+existing browser funding suite. No live payment is made by these checks.
+
+Still required: independent wallet-extension/mobile acceptance, a live browser private paid
+pilot, local deletion/retention UX and portable private receipt verification. Purchase
+availability remains constrained by the server's pilot allowlist.

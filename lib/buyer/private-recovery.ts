@@ -4,7 +4,7 @@ import type { PrivateMerchantPolicy } from "./private-merchant-policy";
 import { BUYER_ORIGIN } from "./protocol";
 import { buyerFetch, type BuyerFetch } from "./transport";
 import { readBoundedJson } from "../read-bounded-json";
-import { privateWorkspaceResultSchema } from "../a2a/private-workspace";
+import { validatePrivateBuyerResult } from "./private-result-binding";
 
 /** Node buyer recovery using an existing live account session. No login, signature,
  * submission retry or journal mutation. The returned view is server-reported evidence,
@@ -27,26 +27,5 @@ export async function recoverPrivateBuyerResult(directory: string, payer: string
     if (response.status === 404) throw new Error("Private result unavailable for this account");
     throw new Error("Private result recovery unavailable");
   }
-  try {
-    const view = privateWorkspaceResultSchema.parse(await readBoundedJson(response, 16_777_216));
-    const signed = intent.submission.request, creator = view.spend.creator;
-    const budget = String(Math.round(signed.budget * 1e6));
-    if (view.wallet !== payer.toLowerCase() || view.request.question !== signed.question || view.request.model !== signed.model
-      || view.request.researchMode !== signed.researchMode || view.request.packageVersion !== signed.packageVersion
-      || view.request.creatorBudgetMicros !== budget || creator.budgetMicros !== budget
-      || view.spend.incoming.priceMicros !== intent.submission.payment.authorization.value)
-      throw new Error();
-    if (BigInt(creator.committedMicros) !== BigInt(creator.unresolvedMicros) + BigInt(creator.processingMicros) + BigInt(creator.confirmedMicros)
-      || BigInt(budget) !== BigInt(creator.committedMicros) + BigInt(creator.uncommittedMicros)
-      || BigInt(creator.committedMicros) !== creator.payments.reduce((sum, leg) => sum + BigInt(leg.amountMicros), BigInt(0))) throw new Error();
-    const totals = { unresolved: BigInt(0), processing: BigInt(0), confirmed: BigInt(0) };
-    for (const leg of creator.payments) {
-      const group = leg.status === "unresolved" ? "unresolved" : leg.status === "received" || leg.status === "batched" ? "processing" : "confirmed";
-      totals[group] += BigInt(leg.amountMicros);
-    }
-    if (totals.unresolved !== BigInt(creator.unresolvedMicros) || totals.processing !== BigInt(creator.processingMicros)
-      || totals.confirmed !== BigInt(creator.confirmedMicros)
-      || (view.status === "awaiting-payment") !== (view.spend.incoming.status !== "settled")) throw new Error();
-    return view;
-  } catch { throw new Error("Private result does not match the signed research context or spend accounting"); }
+  return validatePrivateBuyerResult(await readBoundedJson(response, 16_777_216), payer, intent);
 }

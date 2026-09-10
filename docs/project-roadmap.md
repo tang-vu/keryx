@@ -6,7 +6,16 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.34 (private account workspace, updated 2026-09-10)
+**Version:** 0.22.45 (private browser checkout, updated 2026-09-10)
+
+The [private browser purchase and recovery flow](./private-browser-checkout.md) now connects
+reviewed provider/price terms, wallet signing and a durable one-attempt journal on `/research`.
+The server still restricts purchases to configured testnet pilot accounts. Managed worker
+supervision, an owner-operated CLI paid pilot and model-call usage accounting have separate
+evidence in the mainnet delivery plan and economics documentation. Independent acceptance,
+complete billing, privacy lifecycle and mainnet gates remain open.
+
+**Historical private-workspace baseline (v0.22.34):**
 
 Private history and result viewing are connected on `/research` using live owner
 sessions, validated answer/decision projections and current private payment evidence.

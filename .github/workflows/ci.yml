@@ -61,6 +61,9 @@ jobs:
       - name: Private browser journal (hermetic, no settlement)
         run: npm run test:browser-private-journal
 
+      - name: Private browser checkout (hermetic, no settlement)
+        run: npm run test:browser-private-checkout
+
       - name: Business calculator UI (local arithmetic, no settlement)
         run: npm run test:business-calculator
 

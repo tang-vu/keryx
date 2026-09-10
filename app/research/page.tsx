@@ -8,6 +8,8 @@ import { ResearchWorkspace } from "@/components/keryx/research-workspace";
 import { ResearchSavedJobs } from "@/components/keryx/research-saved-jobs";
 import { ResearchAccountJobs } from "@/components/keryx/research-account-jobs";
 import { ResearchPrivateJobs } from "@/components/keryx/research-private-jobs";
+import { ResearchPrivateCheckout } from "@/components/keryx/research-private-checkout";
+import { privateMerchantPolicySchema } from "@/lib/buyer/private-merchant-policy";
 import { config } from "@/lib/config";
 import { quoteA2aResearch } from "@/lib/a2a/pricing";
 import { parseBuyerBudget } from "@/lib/a2a/buyer-workspace";
@@ -29,6 +31,7 @@ export default async function ResearchPage({ searchParams }: {
   const validMode = params.mode === undefined || params.mode === "quick" || params.mode === "deep";
   const quote = budget !== null && validMode ? quoteA2aResearch(budget, mode) : null;
   const available = config.networkId === "eip155:5042002" && !!config.sellerAddress && !!config.funderKey && process.env.KERYX_FORCE_OFFLINE !== "1";
+  const privatePolicy = privateMerchantPolicySchema.safeParse({ privatePayee: process.env.KERYX_PRIVATE_RESEARCH_PAYEE, publicResearchPayee: config.sellerAddress });
   return (
     <div className="min-h-screen bg-paper-2 text-ink">
       <SiteHeader />
@@ -71,6 +74,8 @@ export default async function ResearchPage({ searchParams }: {
         <ResearchSavedJobs />
         </ResearchWorkspace>
         <ResearchAccountJobs />
+        {config.networkId === "eip155:5042002" && process.env.KERYX_PRIVATE_RESEARCH_ENABLED === "1" && privatePolicy.success
+          && <ResearchPrivateCheckout merchants={privatePolicy.data} />}
         <ResearchPrivateJobs />
         <ResearchJob />
         <p className="font-serif text-ink-3">New to the API? <Link href="/api/docs" className="underline">Read the API reference</Link>. To try a sponsored question, <Link href="/playground" className="underline">open the playground</Link>.</p>

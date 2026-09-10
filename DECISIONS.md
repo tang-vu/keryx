@@ -1,5 +1,25 @@
 # Keryx — Decision Log
 
+**D-159** - Private browser purchase integration - *Separate proposal, consent, signing and
+one-attempt submission; recover the existing intent after uncertainty.*
+The signed-in browser requests private terms with POST. A quote proposes the provider/model
+and endpoint for explicit review; it does not silently authorize a later policy. The buyer
+retains the full reviewed request, merchant pins and total/fee limits, then requires a fresh
+available quote to match exactly before generating an authorization. Account session, connected
+wallet, Arc chain and Gateway balance are checked around the signature. The first signature
+is saved even if the prompt outlives cancellation, then the durable browser claim precedes
+the sole private purchase POST. Failed, missing or malformed responses never trigger retry.
+Credentialed transport allows only exact same-origin session/quote/private-purchase/result
+routes, with no redirects or private query parameters. Recovery shares the CLI request/spend
+validator and sends no payment. The UI exposes configured pilot availability, provider policy,
+retained unused budget, best-effort quality and plaintext local-storage consent; export is
+explicit and imports remain recovery-only. The public page passes only merchant addresses,
+not provider credentials or treasury keys. Server admission/allowlisting remains authoritative.
+The Chromium acceptance uses synthetic wallet RPC and intercepted HTTP, including response
+loss, reload, account/wallet changes and viewport checks. It does not establish independent
+wallet-extension/mobile acceptance, a new live paid pilot, portable cryptographic private
+receipts, local deletion/retention completion or mainnet readiness.
+
 **D-158** - Private browser recovery foundation - *Reserve before signing and commit a
 single submission claim before HTTP.*
 Use a separate IndexedDB database for private jobs. A fresh unsigned draft binds the payer,

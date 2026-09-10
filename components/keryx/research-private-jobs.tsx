@@ -14,7 +14,7 @@ export function ResearchPrivateJobs() {
   return <section aria-labelledby="private-jobs-heading" className="border border-line bg-paper p-6">
     <h2 id="private-jobs-heading" className="font-display text-3xl">Private research for your wallet</h2>
     <p className="mt-3 font-serif text-sm text-ink-2">Find existing private jobs from your account, even on a new device. Opening a job never submits another payment.</p>
-    <p className="mt-2 font-serif text-sm text-ink-3">Private purchases are not open yet. This view does not change access to past public research. Results are restricted to the paying account; this is not end-to-end encryption.</p>
+    <p className="mt-2 font-serif text-sm text-ink-3">Private purchasing is limited to configured pilot accounts. This view does not change access to past public research. Results are restricted to the paying account; this is not end-to-end encryption.</p>
     {session === undefined ? <p role="status" className="mt-4">Checking sign-in…</p> : session
       ? <PrivateJobs key={session.address.toLowerCase()} wallet={session.address.toLowerCase()} />
       : <Link href="/connect" className="mt-4 inline-block underline">Sign in to view private jobs</Link>}
