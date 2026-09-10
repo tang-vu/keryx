@@ -5,6 +5,7 @@
  */
 
 import { config } from "../config";
+import { LlmCallLedger } from "./call-ledger";
 import { evidenceContext, EVIDENCE_CONTEXT_GUIDANCE } from "./evidence-context";
 import { buildQuoteOptions, resolveQuoteEvidence } from "./quote-options";
 import { COVERAGE_GUIDANCE, normalizeCoverage } from "./coverage-assessment";
@@ -27,6 +28,13 @@ import type {
 export abstract class JsonChatEngine implements ReasoningEngine {
   abstract readonly name: string;
   private readonly usageRecords: LlmUsageRecord[] = [];
+  private readonly callLedger = new LlmCallLedger();
+
+  get calls() { return this.callLedger.calls; }
+
+  private measuredChatJson(...args: Parameters<JsonChatEngine["chatJson"]>) {
+    return this.callLedger.track(this.name, () => this.chatJson(...args));
+  }
 
   get usage(): readonly LlmUsageRecord[] {
     return [...this.usageRecords];
@@ -34,13 +42,16 @@ export abstract class JsonChatEngine implements ReasoningEngine {
 
   /** Store only provider counters. Never store prompts, completions, or request identifiers. */
   protected recordUsage(usage: Omit<LlmUsageRecord, "engine">): void {
-    const finite = (value: number) => Math.max(0, Math.floor(Number.isFinite(value) ? value : 0));
+    const valid = (value: number) => Number.isSafeInteger(value) && value >= 0;
+    if (!valid(usage.inputTokens) || !valid(usage.cachedInputTokens) ||
+      !valid(usage.outputTokens) || usage.cachedInputTokens > usage.inputTokens) return;
     this.usageRecords.push({
       engine: this.name,
+      callId: this.callLedger.currentId,
       model: usage.model,
-      inputTokens: finite(usage.inputTokens),
-      cachedInputTokens: Math.min(finite(usage.cachedInputTokens), finite(usage.inputTokens)),
-      outputTokens: finite(usage.outputTokens),
+      inputTokens: usage.inputTokens,
+      cachedInputTokens: usage.cachedInputTokens,
+      outputTokens: usage.outputTokens,
     });
   }
 
@@ -70,7 +81,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   }
 
   async decompose(question: string): Promise<string[]> {
-    const out = await this.chatJson(
+    const out = await this.measuredChatJson(
       config.llmModel,
       "You plan research for Keryx, a reading agent that pays content access tolls and distributes USDC creator rewards according to cited contributions. " +
         "Break the user's question into 1-4 concise questions to investigate, NOT proposed answers or assertions of fact. " +
@@ -120,7 +131,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     const memoryBlock = input.memoryContext
       ? `\n\n${input.memoryContext}\n\n`
       : "";
-    const out = await this.chatJson(
+    const out = await this.measuredChatJson(
       config.llmModel,
       "You are a frugal research agent deciding which paid sources to buy under a budget. " +
         "For EACH candidate choose action BUY (pay the toll, high value), CACHE (already cached & still useful, reuse free), or SKIP (not worth it). " +
@@ -182,7 +193,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   }
 
   async sufficiency(input: SufficiencyInput): Promise<SufficiencyResult> {
-    const out = await this.chatJson(
+    const out = await this.measuredChatJson(
       config.llmModel,
       "You decide if enough has been read to answer confidently. For EACH sub-claim, estimate its coverage (0.0 = not covered, 1.0 = fully supported) " +
         "and list which source markers cover it. " + COVERAGE_GUIDANCE +
@@ -207,7 +218,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   }
 
   async reevaluate(input: ReevaluateInput): Promise<ReevaluateOutput> {
-    const out = await this.chatJson(
+    const out = await this.measuredChatJson(
       config.llmModel,
       "You are a research agent that has already read some sources. Now assess coverage per sub-claim. " + COVERAGE_GUIDANCE +
         "For each claim, estimate how well the gathered content supports it (0.0 = not covered, 1.0 = fully covered). " +
@@ -249,7 +260,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   async synthesize(input: SynthInput): Promise<SynthResult> {
     const sources = evidenceContext(input.question, input.subClaims, input.gathered);
     const quoteOptions = buildQuoteOptions(sources);
-    const out = await this.chatJson(
+    const out = await this.measuredChatJson(
       config.synthesisModel,
       "You write a grounded, accurate answer using ONLY the provided sources. " + EVIDENCE_CONTEXT_GUIDANCE +
         "Cite inline with the source markers like [S1]. Cite every claim. Do not invent facts. " +
@@ -285,7 +296,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     let review: unknown;
     if (proposals.length) {
       try {
-        review = await this.chatJson(
+        review = await this.measuredChatJson(
           config.llmModel,
           EVIDENCE_REVIEW_GUIDANCE,
           JSON.stringify({ evidence: proposals.slice(0, MAX_REVIEWED_EVIDENCE).map((proposal, index) => ({
@@ -312,7 +323,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   async attribute(
     input: AttributeInput,
   ): Promise<{ sourceId: string; weight: number; rationale: string }[]> {
-    const out = await this.chatJson(
+    const out = await this.measuredChatJson(
       config.synthesisModel,
       "You assign each cited source a contribution weight (0..1) for how much it grounded the answer. " + EVIDENCE_CONTEXT_GUIDANCE + "Weights must sum to ~1. Output strict JSON.",
       JSON.stringify({

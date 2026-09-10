@@ -11,6 +11,7 @@ function run(
     id,
     researchMode: id === "quick" ? "quick" : "deep",
     fundingOwner,
+    llmCalls: [{ id: "call-1", engine: model.startsWith("deepseek") ? `llm:deepseek:${model}` : `llm:mimo:${model}`, outcome: "returned" }],
     reasoningAttempts: [{
       step: "synthesize", engine: model.startsWith("deepseek") ? `llm:deepseek:${model}` : `llm:mimo:${model}`,
       tier: 0, attempt: 1, startedAt: 0, durationMs: 1, outcome: "served",
@@ -19,6 +20,7 @@ function run(
       {
         engine: model.startsWith("deepseek") ? `llm:deepseek:${model}` : `llm:mimo:${model}`,
         model,
+        callId: "call-1",
         inputTokens: 1_000_000,
         cachedInputTokens: 250_000,
         outputTokens: 500_000,
@@ -28,6 +30,23 @@ function run(
 }
 
 describe("testnet economics", () => {
+  it("rejects old complete projections and mismatched, duplicate or pending call evidence", () => {
+    const measured = run("measured", "treasury");
+    expect(calculateTestnetEconomics([{ ...measured, usageCoverage: "complete" }], []).pricedRuns).toBe(0);
+    for (const outcome of ["pending", "failed"] as const) {
+      const candidate = { ...measured, llmCalls: [{ ...measured.llmCalls![0], outcome }] };
+      expect(economicsRunSample(candidate as QueryRun)?.usageCoverage).toBe("unknown");
+    }
+    for (const callId of [undefined, "unrelated"]) {
+      const candidate = { ...measured, llmUsage: [{ ...measured.llmUsage![0], callId }] };
+      expect(economicsRunSample(candidate as QueryRun)?.usageCoverage).toBe("unknown");
+    }
+    const duplicate = { ...measured, llmCalls: [measured.llmCalls![0], measured.llmCalls![0]],
+      llmUsage: [measured.llmUsage![0], measured.llmUsage![0]] };
+    expect(economicsRunSample(duplicate as QueryRun)?.usageCoverage).toBe("unknown");
+    const historical = { ...measured, llmCalls: undefined };
+    expect(economicsRunSample(historical as QueryRun)?.usageCoverage).toBe("unknown");
+  });
   it("separates settled revenue, browser spend, treasury subsidy, and pending money", () => {
     const snapshot = calculateTestnetEconomics(
       [run("browser", "browser"), run("treasury", "treasury")],
@@ -111,7 +130,7 @@ describe("testnet economics", () => {
   it("requires coverage for every served call and preserves it through the compact projection", () => {
     const measured = run("measured", "treasury");
     expect(calculateTestnetEconomics([economicsRunSample(measured as QueryRun)!], []).pricedRuns).toBe(1);
-    measured.reasoningAttempts!.push({ ...measured.reasoningAttempts![0], step: "decide" });
+    measured.llmCalls = [...measured.llmCalls!, { ...measured.llmCalls![0], id: "missing-usage" }];
     expect(calculateTestnetEconomics([economicsRunSample(measured as QueryRun)!], []).pricedRuns).toBe(0);
   });
 
@@ -126,6 +145,7 @@ describe("testnet economics", () => {
   it("does not invent provider cost for a circuit-open skip followed by local execution", () => {
     const skipped = run("skipped", "treasury");
     skipped.llmUsage = [];
+    skipped.llmCalls = [];
     skipped.reasoningAttempts![0].outcome = "circuit-open";
     skipped.reasoningAttempts!.push({
       step: "synthesize", engine: "heuristic", tier: 1, attempt: 1,

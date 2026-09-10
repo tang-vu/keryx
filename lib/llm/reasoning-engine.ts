@@ -41,6 +41,8 @@ export interface ReasoningAttempt {
 /** Provider-reported token usage for one completed (or billable truncated) model response.
  * Prompts and provider response bodies are deliberately never retained. */
 export interface LlmUsageRecord {
+  /** Locally generated call correlation; absent on historical usage. */
+  callId?: string;
   engine: string;
   model: string;
   inputTokens: number;
@@ -201,6 +203,7 @@ export interface ReasoningEngine {
 
   /** Run-local provider usage. Absent on engines that predate/support no usage telemetry. */
   readonly usage?: readonly LlmUsageRecord[];
+  readonly calls?: readonly import("./call-ledger").LlmCallRecord[];
 
   /** Break a question into the atomic sub-claims an answer must support. */
   decompose(question: string): Promise<string[]>;

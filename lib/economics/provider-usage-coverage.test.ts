@@ -1,9 +1,45 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { privateReasoningEngine } from "../llm/private-engine";
-import { effectiveEngineName, reasoningAttempts, reasoningUsage } from "../llm/resilient-engine";
-import { calculateTestnetEconomics } from "./testnet-economics";
+import { effectiveEngineName, reasoningAttempts, reasoningUsage, reasoningCalls } from "../llm/resilient-engine";
+import { calculateTestnetEconomics, economicsRunSample } from "./testnet-economics";
+import type { QueryRun } from "../types";
 
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+
+it.each(["measured", "missing", "failed"])("accounts for the optional evidence review: %s", async (review) => {
+  const counters = { prompt_tokens: 100, completion_tokens: 10 };
+  const http = vi.fn<typeof fetch>()
+    .mockResolvedValueOnce(Response.json({ choices: [{ message: { content: JSON.stringify({
+      answer: "The synthetic source describes durable storage [S1].", citedMarkers: ["S1"],
+      evidence: [{ claimIndex: 0, marker: "S1", quoteId: "q0_0", support: 0.9 }], conflicts: [],
+    }) } }], usage: counters }))
+    .mockImplementationOnce(async () => {
+      if (review === "failed") throw new Error("Synthetic private provider error");
+      return Response.json({ choices: [{ message: { content: '{"reviews":[{"index":0,"support":0.9}]}' } }],
+        ...(review === "measured" ? { usage: counters } : {}),
+      });
+    });
+  vi.stubGlobal("fetch", http);
+  const { engine } = privateReasoningEngine({ modelId: "deepseek-flash", provider: "deepseek",
+    baseUrl: "https://synthetic-provider.example/v1", apiKey: "synthetic-not-a-credential" });
+  const result = await engine.synthesize({ question: "How is the synthetic result stored?",
+    subClaims: ["The synthetic result uses durable storage."], gathered: [{ sourceId: "synthetic",
+      sourceName: "Synthetic source", marker: "S1", text: "The synthetic result uses durable storage." }] });
+  expect(result.answer).toContain("[S1]");
+  expect(http).toHaveBeenCalledTimes(2);
+  expect(reasoningAttempts(engine)).toMatchObject([{ outcome: "served", step: "synthesize" }]);
+  const calls = reasoningCalls(engine)!;
+  expect(calls).toHaveLength(2);
+  expect(new Set(calls.map((call) => call.id)).size).toBe(2);
+  expect(JSON.stringify(calls)).not.toContain("Synthetic private provider error");
+  const run = { id: "synthetic-reviewed", engine: effectiveEngineName(engine),
+    reasoningAttempts: reasoningAttempts(engine), llmUsage: reasoningUsage(engine), llmCalls: calls } as QueryRun;
+  const sample = JSON.parse(JSON.stringify(economicsRunSample(run)));
+  expect(sample.usageCoverageVersion).toBe(2);
+  expect(calculateTestnetEconomics([sample], [])).toMatchObject({
+    pricedRuns: review === "measured" ? 1 : 0, unpricedRuns: review === "measured" ? 0 : 1,
+  });
+});
 
 it.each(["rejected", "truncated"])("keeps %s provider work unpriced after real local fallback", async (failure) => {
   vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -26,7 +62,7 @@ it.each(["rejected", "truncated"])("keeps %s provider work unpriced after real l
   expect(usage.length > 0).toBe(failure === "truncated");
   expect(calculateTestnetEconomics([{
     id: "synthetic-fallback-case", engine: effectiveEngineName(engine),
-    reasoningAttempts: attempts, llmUsage: usage,
+    reasoningAttempts: attempts, llmUsage: usage, llmCalls: reasoningCalls(engine),
   }], [])).toMatchObject({ pricedRuns: 0, unpricedRuns: 1, shadowGrossMarginUsd: 0 });
 });
 
@@ -54,7 +90,7 @@ it.each([
   expect(attempts).toMatchObject([{ outcome: "served", tier: 0 }]);
   const snapshot = calculateTestnetEconomics([{
     id: "synthetic-usage-case", engine: effectiveEngineName(engine),
-    reasoningAttempts: attempts, llmUsage: reasoningUsage(engine), researchMode: "quick",
+    reasoningAttempts: attempts, llmUsage: reasoningUsage(engine), llmCalls: reasoningCalls(engine), researchMode: "quick",
   }], []);
   expect(snapshot).toMatchObject({ sampledRuns: 1, pricedRuns: priced, unpricedRuns: 1 - priced });
   if (!priced) expect(snapshot.shadowGrossMarginUsd).toBe(0);

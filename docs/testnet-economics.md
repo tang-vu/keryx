@@ -9,7 +9,8 @@ read-only: it cannot authorize, settle, retry, release, or relabel a payment.
   `offline`. It is not accepted from a public request body.
 - Each provider response contributes token counters only: engine, wire model, input tokens, cached
   input tokens, and output tokens. Prompts, completions, provider bodies, and request ids are not
-  stored.
+  stored. Locally generated random call IDs correlate each usage record with its model call;
+  pending, returned and failed calls carry no request content.
 - Settled inbound x402 payments are observed gross receipts on testnet. Settled creator payments
   are split by their run's funding owner. Pending payments stay outside settled totals.
 - A2A v2 orders split the settled all-in package into its fixed service fee, prepaid creator cap,
@@ -46,11 +47,15 @@ charged by this feature.
 `pricedRuns` is the only denominator eligible for estimated LLM cost and shadow margin. An empty
 usage list can be priced at zero tokens only with explicit heuristic execution evidence and no
 failed provider attempts. A missing usage list is historical and unsampled. `unpricedRuns` includes
-unknown rates, failed provider attempts and missing usage coverage. Served provider attempts must
-match response counters per engine; circuit-open attempts did not call the provider. Failed attempts
+unknown rates, failed provider attempts and missing usage coverage. Each actual model call must
+match exactly one usage record by local ID and engine. A reasoning step may make several calls,
+including a second synthesis evidence review; a caught review error still makes coverage unknown.
+Circuit-open attempts did not call the provider. Failed attempts
 remain conservatively unpriced even when some usage was recorded, since this is not a billing audit.
-New compact database projections preserve only a `usageCoverage` classification, not attempt traces.
-Historical projections without this evidence remain unpriced; they are not silently backfilled.
+New compact database projections preserve `usageCoverage` and `usageCoverageVersion: 2`, not call
+or attempt traces. Historical projections, including earlier complete classifications without
+version 2, remain unpriced; they are not silently backfilled. This can lower the priced-run count
+after deployment without removing any recorded usage or payment history.
 Token totals still describe recorded responses, not all attempted or billable calls. Costs and shadow
 margin are partial totals for eligible runs only, never a whole-service profit claim.
 

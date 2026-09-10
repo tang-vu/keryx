@@ -412,9 +412,11 @@ export interface QueryRun {
   engine: string; // which reasoning engine produced this (llm:model | heuristic)
   /** Per-step provider attempts, including fallbacks. Absent on pre-v0.8.1 runs. */
   reasoningAttempts?: import("./llm/reasoning-engine").ReasoningAttempt[];
-  /** Provider token counters captured per response. Empty means a measured heuristic-only run;
-   * absent means historical/unsampled. */
+  /** Provider token counters captured per response. Empty alone does not prove zero cost;
+   * correlate with calls and reasoning attempts. Absent means historical/unsampled. */
   llmUsage?: import("./llm/reasoning-engine").LlmUsageRecord[];
+  /** Every instrumented model call, including optional review calls and failures. */
+  llmCalls?: readonly import("./llm/call-ledger").LlmCallRecord[];
   subClaims: string[];
   decisions: Decision[];
   citations: Citation[];

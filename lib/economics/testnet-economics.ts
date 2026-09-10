@@ -52,28 +52,33 @@ export interface EconomicsA2aOrderRow {
 export type EconomicsRunSample = Pick<
   QueryRun,
   "id" | "researchMode" | "fundingOwner" | "llmUsage"
-> & { usageCoverage?: "complete" | "unknown" };
+> & { usageCoverage?: "complete" | "unknown"; usageCoverageVersion?: 2 };
 
-/** A response counter alone cannot account for failed or unreported provider calls. */
+/** Require one valid usage record for every completed instrumented call. */
 function completeUsage(run: Partial<QueryRun>): boolean {
   if (!Array.isArray(run.reasoningAttempts) || !Array.isArray(run.llmUsage)) return false;
-  const served = new Map<string, number>();
-  for (const attempt of run.reasoningAttempts) {
-    if (attempt.engine === "heuristic" || attempt.outcome === "circuit-open") continue;
-    if (attempt.outcome !== "served") return false;
-    served.set(attempt.engine, (served.get(attempt.engine) ?? 0) + 1);
-  }
-  if (served.size === 0 && run.llmUsage.length === 0) {
+  const realAttempts = run.reasoningAttempts.filter(
+    (attempt) => attempt.engine !== "heuristic" && attempt.outcome !== "circuit-open",
+  );
+  if (realAttempts.some((attempt) => attempt.outcome !== "served")) return false;
+  if (realAttempts.length === 0 && run.llmUsage.length === 0 && !run.llmCalls?.length) {
     return run.engine === "heuristic" || run.reasoningAttempts.some(
       (attempt) => attempt.engine === "heuristic" && attempt.outcome === "served",
     );
   }
-  for (const usage of run.llmUsage) {
-    const remaining = served.get(usage.engine) ?? 0;
-    if (remaining < 1) return false;
-    served.set(usage.engine, remaining - 1);
+  if (!Array.isArray(run.llmCalls) || run.llmCalls.length !== run.llmUsage.length) return false;
+  if (realAttempts.length === 0) return false;
+  const calls = new Map<string, string>();
+  for (const call of run.llmCalls) {
+    if (!call.id || calls.has(call.id) || call.outcome !== "returned") return false;
+    calls.set(call.id, call.engine);
   }
-  return [...served.values()].every((count) => count === 0);
+  if (realAttempts.some((attempt) => !run.llmCalls!.some((call) => call.engine === attempt.engine))) return false;
+  for (const usage of run.llmUsage) {
+    if (!usage.callId || calls.get(usage.callId) !== usage.engine) return false;
+    calls.delete(usage.callId);
+  }
+  return calls.size === 0;
 }
 
 /** Compact DB projection. Historical unsampled runs remain NULL instead of being reconstructed. */
@@ -85,6 +90,7 @@ export function economicsRunSample(run: QueryRun): EconomicsRunSample | null {
     fundingOwner: run.fundingOwner,
     llmUsage: run.llmUsage,
     usageCoverage: completeUsage(run) ? "complete" : "unknown",
+    usageCoverageVersion: 2,
   };
 }
 
@@ -143,7 +149,7 @@ function fundingOwner(run: Partial<QueryRun>): QueryRun["fundingOwner"] | "unkno
  * from sampled counters. Historical and unknown-price data stays explicitly incomplete.
  */
 export function calculateTestnetEconomics(
-  runs: (Partial<QueryRun> & Pick<EconomicsRunSample, "usageCoverage">)[],
+  runs: (Partial<QueryRun> & Pick<EconomicsRunSample, "usageCoverage" | "usageCoverageVersion">)[],
   payments: EconomicsPaymentRow[],
   now = new Date(),
   a2aOrders: EconomicsA2aOrderRow[] = [],
@@ -163,7 +169,7 @@ export function calculateTestnetEconomics(
   for (const run of sampled) {
     const usage = run.llmUsage ?? [];
     let runCost = 0;
-    let complete = run.usageCoverage === "complete" ||
+    let complete = (run.usageCoverageVersion === 2 && run.usageCoverage === "complete") ||
       (run.usageCoverage === undefined && completeUsage(run));
     for (const call of usage) {
       providerCalls++;

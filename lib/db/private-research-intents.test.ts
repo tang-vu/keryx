@@ -555,7 +555,13 @@ it("executes a signed v2 job through its real pinned transport and ignores an ar
     }
     expect(injected).not.toHaveBeenCalled();
     expect(signer.createPaymentPayload).not.toHaveBeenCalled();
-    expect(await other.getPrivateResearchResult(value.id, account.address)).not.toBeNull();
+    const stored = await other.getPrivateResearchResult(value.id, account.address);
+    expect(stored).not.toBeNull();
+    const recoveredRun = JSON.parse(stored!.serializedRun);
+    expect(recoveredRun.llmCalls).toHaveLength(http.mock.calls.length);
+    expect(recoveredRun.llmCalls.every((call: { outcome: string }) => call.outcome === "returned")).toBe(true);
+    // This provider fixture omits usage: durable call evidence must not invent counters.
+    expect(recoveredRun.llmUsage).toEqual([]);
     expect(await runPrivateResearch(db, value.id, account.address, { signerAddress: treasury.signer, signer,
       getGatewayBalance: async () => { throw new Error("Recovery must not check funding"); } })).toMatchObject({ status: "stored" });
   } finally { vi.unstubAllGlobals(); }

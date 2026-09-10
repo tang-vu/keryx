@@ -28,6 +28,7 @@ describe("OpenAI-compatible usage telemetry", () => {
     await expect(engine.decompose("private question")).resolves.toEqual(["one"]);
     expect(engine.usage).toEqual([
       {
+        callId: engine.calls[0].id,
         engine: "llm:deepseek:deepseek-v4-flash",
         model: "deepseek-v4-flash",
         inputTokens: 120,

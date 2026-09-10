@@ -88,6 +88,12 @@ export function reasoningUsage(engine: ReasoningEngine): LlmUsageRecord[] {
   return [...(engine.usage ?? [])];
 }
 
+/** Missing instrumentation in any real tier keeps billing coverage unknown. */
+export function reasoningCalls(engine: ReasoningEngine): ReasoningEngine["calls"] {
+  if (engine.name === "heuristic") return [];
+  return engine.calls;
+}
+
 export class ResilientEngine implements ReasoningEngine {
   readonly name: string;
   private readonly fallback: ReasoningEngine;
@@ -127,6 +133,12 @@ export class ResilientEngine implements ReasoningEngine {
 
   get usage(): LlmUsageRecord[] {
     return [...(this.primary.usage ?? []), ...reasoningUsage(this.fallback)];
+  }
+
+  get calls(): ReasoningEngine["calls"] {
+    const primary = reasoningCalls(this.primary);
+    const fallback = reasoningCalls(this.fallback);
+    return primary && fallback ? [...primary, ...fallback] : undefined;
   }
 
   private async runFallback<T>(

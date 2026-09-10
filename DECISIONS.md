@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-157** - Provider call accounting - *Correlate usage with actual model calls, not reasoning steps.*
+The first private paid pilot recorded six served reasoning steps and seven usage records.
+Synthesis can perform a second evidence-review request, and its failure is intentionally caught
+to retain the answer. Each shared JSON transport invocation now receives a local random call ID,
+with pending/returned/failed state and asynchronously isolated correlation on its usage record.
+No prompts, response bodies or provider request IDs are retained. Anthropic SDK retries are
+disabled so retry attempts pass through the existing resilient engine and call ledger.
+Complete cost coverage requires one matching usage record per returned call, no failed or pending
+call, and explicit reasoning evidence. Failed work remains conservatively unpriced even with
+reported counters. Compact projections carry coverage version 2; old complete classifications
+cannot prove this stronger invariant and remain unpriced, without rewriting historical results.
+This fixes coverage eligibility, not vendor invoices, current rate verification, or profit.
+
 **D-156** - Private worker supervision and deploy ordering - *Drain before replacing live
 worker code; retain crash evidence instead of forcing a restart.*
 Use a systemd unit on the existing VPS with explicit environment-file loading, SIGTERM,

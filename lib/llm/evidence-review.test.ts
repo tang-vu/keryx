@@ -20,16 +20,16 @@ describe("evidence relevance review", () => {
   it("preserves the written answer when the reviewer fails, without authorizing rewards", async () => {
     class Engine extends JsonChatEngine {
       readonly name = "test";
-      calls = 0;
+      requestCount = 0;
       protected async chatJson() {
-        if (++this.calls === 2) throw new Error("review timeout");
+        if (++this.requestCount === 2) throw new Error("review timeout");
         return { answer: "A draft [S1].", citedMarkers: ["S1"], evidence: [{ claimIndex: 0, marker: "S1", quoteId: "q0_0", support: 1 }] };
       }
     }
     const engine = new Engine();
     const result = await engine.synthesize({ question: "What happens?", subClaims: ["What happens?"],
       gathered: [{ sourceId: "s1", sourceName: "Source", marker: "S1", text: "A source describes what happens." }] });
-    expect(engine.calls).toBe(2);
+    expect(engine.requestCount).toBe(2);
     expect(result.answer).toBe("A draft [S1].");
     expect(result.evidenceReview).toBe("unavailable");
     expect(result.evidence[0].support).toBe(0);

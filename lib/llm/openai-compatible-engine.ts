@@ -93,7 +93,7 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
     const reportedCached = data.usage?.prompt_tokens_details?.cached_tokens;
     const cachedInputTokens = reportedCached === undefined ? 0 : reportedCached;
     // Missing/malformed counters are unknown cost, not measured zero-token work.
-    // Keep the answer usable; economics detects the served attempt without a usage record.
+    // Keep the answer usable; economics detects the model call without a usage record.
     if (tokenCount(inputTokens) && tokenCount(outputTokens) &&
       tokenCount(cachedInputTokens) && cachedInputTokens <= inputTokens) {
       this.recordUsage({

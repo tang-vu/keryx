@@ -34,7 +34,7 @@ import type {
   SourceCandidate,
   SufficiencyResult,
 } from "../llm";
-import { effectiveEngineName, reasoningAttempts, reasoningUsage } from "../llm/resilient-engine";
+import { effectiveEngineName, reasoningAttempts, reasoningUsage, reasoningCalls } from "../llm/resilient-engine";
 import type { AgentDeps } from "./deps";
 import { resolveResearchEffects } from "./research-effects";
 import { allocateSplit } from "../payments/split-allocation";
@@ -1288,6 +1288,7 @@ export async function* runAgent(
       engine: effectiveEngineName(engine),
       reasoningAttempts: reasoningAttempts(engine),
       llmUsage: reasoningUsage(engine),
+      llmCalls: reasoningCalls(engine),
       subClaims,
       decisions: finalDecisions,
       citations,
