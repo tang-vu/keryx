@@ -4,7 +4,8 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
 export type PrivateWorkerPhase = "starting" | "recovering" | "working" | "idle" | "degraded" | "stopped";
-const schema = z.object({ schema: z.literal("keryx-private-worker-status-v1"), instance: z.string().uuid(),
+const schema = z.object({ schema: z.literal("keryx-private-worker-status-v2"), instance: z.string().uuid(),
+  configurationId: z.string().regex(/^[a-f0-9]{64}$/),
   pid: z.number().int().positive(), commit: z.string().regex(/^[a-f0-9]{7,40}$/).nullable(),
   phase: z.enum(["starting", "recovering", "working", "idle", "degraded", "stopped"]),
   recordedAt: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER) }).strict();
@@ -12,8 +13,8 @@ const filename = "private-worker-status.json";
 
 /** Advisory local status, never a checkout lease or proof of funding/provider health.
  * The directory must be the existing operator-controlled spool directory. */
-export function privateWorkerStatusWriter(directory: string, commit: string | undefined) {
-  const identity = { schema: "keryx-private-worker-status-v1" as const, instance: randomUUID(), pid: process.pid,
+export function privateWorkerStatusWriter(directory: string, commit: string | undefined, configurationId: string) {
+  const identity = { schema: "keryx-private-worker-status-v2" as const, instance: randomUUID(), pid: process.pid, configurationId,
     commit: commit && /^[a-f0-9]{7,40}$/.test(commit) ? commit : null };
   return async (phase: PrivateWorkerPhase) => {
     const temporary = join(directory, `.private-worker-status-${randomUUID()}.tmp`);
@@ -26,6 +27,16 @@ export function privateWorkerStatusWriter(directory: string, commit: string | un
     } catch { throw new Error("Private worker status write unavailable"); }
     finally { await unlink(temporary).catch(() => undefined); }
   };
+}
+
+/** Matching configuration remains advisory; no checkout authorization is returned. */
+export async function inspectPrivateWorkerConfiguration(directory: string, expected: { configurationId: string; commit: string }, now = Date.now()) {
+  if (!/^[a-f0-9]{64}$/.test(expected.configurationId) || !/^[a-f0-9]{7,40}$/.test(expected.commit))
+    return { status: "unavailable" as const, checkoutReady: false as const };
+  const observed = await readPrivateWorkerStatus(directory, now);
+  if (observed.status !== "observed") return { ...observed, checkoutReady: false as const };
+  return { status: observed.configurationId === expected.configurationId && observed.commit === expected.commit
+    ? "matched" as const : "mismatch" as const, phase: observed.phase, checkoutReady: false as const };
 }
 
 export async function readPrivateWorkerStatus(directory: string, now = Date.now()) {

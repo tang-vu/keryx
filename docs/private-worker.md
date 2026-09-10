@@ -103,7 +103,7 @@ The executor checks live availability before claiming each job.
 
 The enabled command also atomically replaces `private-worker-status.json` in its
 spool directory at lifecycle boundaries. Records contain an instance UUID, PID,
-optional build commit, phase and timestamp; no job ID, question, wallet key or provider
+optional build commit, configuration digest, phase and timestamp; no job ID, question, wallet key or provider
 credential is included. Phases are starting, recovering, working, idle, degraded and
 stopped. A failed pre-work status write prevents that iteration from starting work.
 No timer cancels an active execution to update telemetry.
@@ -116,6 +116,18 @@ one worker per operator-controlled spool; it supplies neither process fencing no
 funding/configuration lease. Status replacement fsyncs the file but does not promise
 directory-entry crash durability. Old observations must never enable payment admission.
 Public health/readiness integration and a process-status command are still pending.
+
+Status schema v2 includes `configurationId`, computed by bootstrap from its validated
+network, merchant addresses, treasury signer/capacity, service fee and full reasoning
+disclosure. Canonical ordering and lowercase addresses avoid accidental differences.
+API credentials and signing/encryption keys are excluded; changing a provider key does
+not change the digest and still requires a separate operational check. The bootstrap
+returns the digest alongside its worker so the command observes that same snapshot.
+`inspectPrivateWorkerConfiguration` compares it and the build commit exactly with
+server-selected expectations and reports matched/mismatch/stale/unavailable. A matched
+record remains `checkoutReady: false`. Old v1 status files are rejected rather than
+silently accepted without identity. This is not authentication of an untrusted file,
+proof of live funding or a replacement for full signer inventory.
 
 The prepared private purchase HTTP handler now awaits a server-owned asynchronous
 bootstrap through `readyPrivatePurchaseService`. Its read-only checks receive an

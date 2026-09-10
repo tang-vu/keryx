@@ -30,7 +30,9 @@ it("is disabled without configuration and binds the real batching signer to the 
   expect(() => privateWorkerBootstrap({} as KeryxDB)).toThrow("configuration unavailable");
   expect(state.worker).not.toHaveBeenCalled();
   const worker = { tick: vi.fn() }; state.worker.mockReturnValue(worker);
-  expect(privateWorkerBootstrap({} as KeryxDB, spool)).toBe(worker);
+  const bootstrapped = privateWorkerBootstrap({} as KeryxDB, spool);
+  expect(bootstrapped?.tick).toBe(worker.tick);
+  expect(bootstrapped?.configurationId).toMatch(/^[a-f0-9]{64}$/);
   expect(state.balance).not.toHaveBeenCalled();
   expect(worker.tick).not.toHaveBeenCalled();
   const options = state.worker.mock.calls[0][1];

@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-145** - Private worker configuration identity - *Bind advisory worker observations
+to a canonical digest of validated public operating policy.*
+The digest includes the pinned network, private/public merchants, treasury signer and
+capacity, service fee and full reasoning disclosure. Addresses are normalized and
+field order is canonical; credentials and signing/encryption keys are excluded.
+Bootstrap computes it from the validated policy used to construct the worker, and
+status-v2 records include it. Inspection requires an exact expected digest and commit;
+old status-v1 records are unavailable. Matching remains advisory and explicitly never
+returns checkout ready: it cannot verify provider credentials, actual funds, complete
+signer inventory, process fencing or storage health.
+
 **D-144** - Private purchase readiness boundary - *Await bounded server-owned checks
 before obtaining a purchase service.*
 The prepared HTTP handler supports asynchronous bootstrap and supplies a cancellation

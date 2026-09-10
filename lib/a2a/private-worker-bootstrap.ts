@@ -8,6 +8,7 @@ import { getGatewayAvailableAtomic } from "../gateway/gateway-balance";
 import { privateRuntimePolicy } from "./private-runtime-policy";
 import { createPrivateWorker } from "./private-worker";
 import type { PrivateResultSpool } from "./private-result-spool";
+import { privateWorkerConfigurationId } from "./private-worker-configuration";
 
 /** Explicit operator bootstrap only: no legacy wallet loading, key generation,
  * deposits, transfers, daemon start or public checkout activation. Returning a worker
@@ -25,7 +26,8 @@ export function privateWorkerBootstrap(db: KeryxDB, resultSpool?: PrivateResultS
     const policy = privateRuntimePolicy(env, { network: config.networkId, publicSeller: config.sellerAddress,
       publicTreasurySigners: [publicAccount.address], privateTreasurySigner: account.address });
     if (!policy) throw new Error();
-    return createPrivateWorker(db, { signerAddress: account.address, signer: new BatchEvmScheme(account), resultSpool,
+    const configurationId = privateWorkerConfigurationId(policy);
+    const worker = createPrivateWorker(db, { signerAddress: account.address, signer: new BatchEvmScheme(account), resultSpool,
       privateProvider: policy.provider, getGatewayBalance: async () => {
         if (config.networkId !== BUYER_NETWORK || config.cctpDomain !== 26) throw new Error("Private Gateway network unavailable");
         const balance = await getGatewayAvailableAtomic(account.address);
@@ -33,5 +35,6 @@ export function privateWorkerBootstrap(db: KeryxDB, resultSpool?: PrivateResultS
           throw new Error("Private Gateway balance unavailable");
         return balance;
       } });
+    return Object.freeze({ ...worker, configurationId });
   } catch { throw new Error("Private worker configuration unavailable"); }
 }

@@ -43,7 +43,7 @@ async function main() {
         if (!worker) throw new Error();
         await runPrivateWorkerLoop(worker, { signal: stop.signal, once: values.once,
           recovery: createPrivateResultRecovery(db, spool),
-          observe: privateWorkerStatusWriter(process.env.KERYX_PRIVATE_RESULT_SPOOL_DIRECTORY!, process.env.KERYX_COMMIT),
+          observe: privateWorkerStatusWriter(process.env.KERYX_PRIVATE_RESULT_SPOOL_DIRECTORY!, process.env.KERYX_COMMIT, worker.configurationId),
           report: summary => {
             console.log(JSON.stringify(summary));
             if (summary.status === "tick-unavailable" || summary.status === "scan-unavailable"
