@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-131** - Private buyer preparation - *Validate independently chosen quote terms,
+reserve a new local directory before signing, and verify/persist the signed intent
+before returning a journal reference.*
+The Node helper snapshots merchant policy and signer identity, uses the private v2
+commitment and existing Arc-testnet typed data, then verifies the actual EOA signature.
+An existing directory denies a fresh attempt before signing. Signing, validation or
+write failures retain the reservation and produce a generic error; callers must not
+delete it and regenerate an authorization as recovery. Output is a local journal
+reference, not a paid or submitted job. Plaintext journal and Windows ACL limitations
+remain unchanged. This helper performs no network call, funding, payment submission
+or feature activation, and is not yet exposed in the CLI or browser checkout.
+
 **D-130** - MCP input limits - *Read POST bodies once with a 64-KiB byte cap and
 a five-second deadline before access resolution or tool dispatch.*
 Count streamed bytes independently of Content-Length, reject invalid UTF-8/JSON with

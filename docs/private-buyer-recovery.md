@@ -4,6 +4,14 @@ The recovery command reads an existing `keryx-private-buyer-intent-v1` journal o
 testnet. Private checkout is still unavailable. Public buyer journals use a different
 format and cannot be recovered with this command.
 
+The internal Node preparation helper validates independently chosen quote terms and
+reserves a new journal directory before requesting a payment signature. It verifies
+the returned signature and durably writes the intent before returning. It is not yet
+a CLI or browser checkout command and does not submit payment. Keep any directory
+left by a failed preparation: even an empty or partial journal denies another fresh
+attempt there. Do not delete it to automatically retry signing. Existing recovery
+requires a complete, valid signed journal; a partial file does not authorize payment.
+
 Keep the original journal directory after a timeout. Recovery validates its signature,
 owner, commitment and job identity. It does not refresh the authorization or resubmit
 payment, and it leaves the original intent and attempt marker unchanged.

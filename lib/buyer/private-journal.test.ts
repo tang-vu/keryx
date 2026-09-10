@@ -10,6 +10,8 @@ import { buyerTypedData, BUYER_NETWORK, BUYER_USDC, BUYER_GATEWAY } from "./prot
 import { createPrivateBuyerJournal, readPrivateBuyerJournal, claimPrivateBuyerSubmission } from "./private-journal";
 import { recoverPrivateBuyerResult } from "./private-recovery";
 import { recoverPrivateBuyerWorkflow } from "./private-recovery-workflow";
+import { preparePrivateBuyerJournal } from "./private-checkout-preparation";
+import * as buyerJournal from "./journal";
 
 const account = privateKeyToAccount(generatePrivateKey());
 const merchants = { privatePayee: `0x${"2".repeat(40)}`, publicResearchPayee: `0x${"3".repeat(40)}` };
@@ -32,8 +34,66 @@ async function fixture() {
     signature: await account.signTypedData(buyerTypedData(fresh.authorization)) } };
   const intent = await preparePrivateResearchIntent(submission, quote.requirement, merchants);
   const value = { schema: "keryx-private-buyer-intent-v1", resource: PRIVATE_RESEARCH_RESOURCE, id: intent.id, requirement: quote.requirement, submission };
-  return { directory, value };
+  return { directory, value, quote };
 }
+
+it("validates independent quote limits before signing and prepares only one durable journal concurrently", async () => {
+  const { directory, quote } = await fixture();
+  const sign = vi.fn(account.signTypedData.bind(account));
+  const signer = { address: account.address, signTypedData: sign };
+  await expect(preparePrivateBuyerJournal(directory, quote, quote.request, merchants,
+    { maxTotalMicros: "49999", maxServiceFeeMicros: "20000" }, signer)).rejects.toThrow("preparation failed");
+  expect(sign).not.toHaveBeenCalled();
+  const limits = { maxTotalMicros: "50000", maxServiceFeeMicros: "20000" };
+  const results = await Promise.allSettled([preparePrivateBuyerJournal(directory, quote, quote.request, merchants, limits, signer),
+    preparePrivateBuyerJournal(directory, quote, quote.request, merchants, limits, signer)]);
+  expect(results.filter(result => result.status === "fulfilled")).toHaveLength(1);
+  expect(sign).toHaveBeenCalledTimes(1);
+  const restored = await readPrivateBuyerJournal(directory, account.address, merchants);
+  expect(restored.submission.request).toEqual(quote.request);
+  expect(restored.submission.payment.authorization.value).toBe("50000");
+  await expect(access(join(directory, "private-submission-attempt.json"))).rejects.toThrow();
+});
+
+it("keeps the directory reserved after signer failure without leaking its error or signing again", async () => {
+  const { directory, quote } = await fixture();
+  const sign = vi.fn(async (): Promise<`0x${string}`> => { throw new Error("synthetic-private-signer-detail"); });
+  const signer = { address: account.address, signTypedData: sign };
+  const limits = { maxTotalMicros: "50000", maxServiceFeeMicros: "20000" };
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await expect(preparePrivateBuyerJournal(directory, quote, quote.request, merchants, limits, signer))
+      .rejects.toThrow("Private buyer preparation failed. Keep any created journal directory; do not submit or regenerate its authorization.");
+  }
+  expect(sign).toHaveBeenCalledTimes(1);
+  await expect(access(join(directory, "private-intent.json"))).rejects.toThrow();
+});
+
+it("rejects a signature from a different account before persisting an intent", async () => {
+  const { directory, quote } = await fixture();
+  const other = privateKeyToAccount(generatePrivateKey());
+  await expect(preparePrivateBuyerJournal(directory, quote, quote.request, merchants,
+    { maxTotalMicros: "50000", maxServiceFeeMicros: "20000" },
+    { address: account.address, signTypedData: other.signTypedData.bind(other) })).rejects.toThrow("preparation failed");
+  await expect(access(join(directory, "private-intent.json"))).rejects.toThrow();
+});
+
+it("denies resumption after a partial journal write and does not request a replacement signature", async () => {
+  const { directory, quote } = await fixture();
+  const sign = vi.fn(account.signTypedData.bind(account));
+  const signer = { address: account.address, signTypedData: sign };
+  const limits = { maxTotalMicros: "50000", maxServiceFeeMicros: "20000" };
+  const write = vi.spyOn(buyerJournal, "writeBuyerFile").mockImplementationOnce(async (path, name) => {
+    await writeFile(join(path, name), "{");
+    throw new Error("synthetic-write-failure");
+  });
+  try {
+    await expect(preparePrivateBuyerJournal(directory, quote, quote.request, merchants, limits, signer)).rejects.toThrow("preparation failed");
+  } finally { write.mockRestore(); }
+  await expect(preparePrivateBuyerJournal(directory, quote, quote.request, merchants, limits, signer)).rejects.toThrow("preparation failed");
+  expect(sign).toHaveBeenCalledTimes(1);
+  await expect(claimPrivateBuyerSubmission(directory, account.address, merchants)).rejects.toThrow();
+  await expect(access(join(directory, "private-submission-attempt.json"))).rejects.toThrow();
+});
 
 it("restores the same signed authorization and grants only one local submission attempt across concurrent readers", async () => {
   const { directory, value } = await fixture();
