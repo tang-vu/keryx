@@ -162,6 +162,13 @@ sign, reserve funds, settle or start jobs. Actual matching worker/configuration 
 backing checks remain unwired; neither a fresh status file nor this helper enables
 private purchasing.
 
+The prepared purchase handler revalidates the original active owner session after
+readiness and body reads, immediately before payment admission. A real SQLite
+revocation test first reproduced acceptance after revocation and now receives 401
+without calling submit. Session errors also prevent submission. This does not cancel
+previously issued payment signatures or atomically synchronize logout with a payment
+already admitted to the service.
+
 Tests use ephemeral unfunded keys, verify an SDK-created signature locally and inject
 balance responses. They cover disabled configuration, address binding, wrong domain,
 public-funder reuse and unknown-versus-zero balance. No live signature, funding,

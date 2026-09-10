@@ -27,6 +27,12 @@ export function privatePurchaseHandler(options: {
       let input: unknown;
       try { input = await readBoundedRequestJson(req); }
       catch { return authJson({ error: "Invalid private purchase request." }, 400); }
+      // Readiness/body waits can outlive logout or session revocation. Recheck the
+      // same owner and session before entering the payment service.
+      const current = await accountSessionContext();
+      if (current instanceof Response) return current;
+      if (current.wallet !== context.wallet || current.currentId !== context.currentId)
+        return authJson({ error: "Sign in again before submitting a private purchase." }, 401);
       if (req.signal.aborted) return authJson({ error: "Private checkout request was cancelled." }, 503);
       const result = await service.submit(input, context.wallet);
       if (result.recoveryConfirmation) {

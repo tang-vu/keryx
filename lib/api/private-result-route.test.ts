@@ -77,6 +77,22 @@ it("protects the purchase handler before invoking the backend and keeps response
   expect(failed.status).toBe(503); expect(await failed.text()).not.toContain("synthetic-private-backend-detail");
 });
 
+it("refuses payment if the authenticated session is revoked during readiness checks", async () => {
+  const { token } = await issueWebSession(db, secret, account.address, "asker");
+  const claims = await parseWebSession(token, secret);
+  if (!claims) throw new Error("Synthetic session missing");
+  const submit = vi.fn(async () => ({ response: { id: intent.id, paymentStatus: "pending" as const }, recoveryConfirmation: null }));
+  const handler = privatePurchaseHandler({ limit: async () => null, bootstrap: async () => {
+    await db.revokeWebSession(webSessionHash(claims.jti), account.address);
+    return { quote: vi.fn(), submit };
+  } });
+  const response = await storage.run(token, () => handler(new Request("https://keryx.cc/api/agent/private-ask", {
+    method: "POST", headers: { host: "keryx.cc", origin: "https://keryx.cc" }, body: "{}" })));
+  expect(response.status).toBe(401);
+  expect(response.headers.get("cache-control")).toBe("no-store");
+  expect(submit).not.toHaveBeenCalled();
+});
+
 it("keeps purchases disabled when bootstrap is not ready", async () => {
   const { token } = await issueWebSession(db, secret, account.address, "asker");
   const handler = privatePurchaseHandler({ bootstrap: async () => null, limit: async () => null });

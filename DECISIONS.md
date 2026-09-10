@@ -1,5 +1,15 @@
 # Keryx — Decision Log
 
+**D-149** - Private purchase session revalidation - *Recheck the original live owner
+session after readiness/body waits and before invoking payment admission.*
+A regression test with actual SQLite revocation reproduced the prepared handler
+accepting a purchase after its session was revoked during asynchronous readiness.
+The handler now requires an active session with the same owner and session identifier;
+revocation or session lookup failure stops submission. This is a boundary check, not
+an atomic transaction spanning revocation and settlement. It does not revoke already
+issued payment signatures or cancel a submission that has already entered the service.
+The public private-purchase route remains unmounted.
+
 **D-148** - Private operations inspection - *Compose worker-policy and treasury
 observations in an explicit operator diagnostic command without enabling checkout.*
 The command derives configured signer addresses without signing, validates private
