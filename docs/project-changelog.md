@@ -1,5 +1,13 @@
 # Keryx Project Changelog
 
+### Private worker operator command (2026-09-10, v0.22.37)
+
+- Add an explicitly configured private-worker command with one-tick mode and graceful shutdown.
+- Connect bounded private candidate scans, dedicated signer/bootstrap and serial execution; report aggregate counts only.
+- Include buyer private journal preparation/submission and authenticated purchase-handler foundations.
+- Verify local response-loss recovery and executor persistence with synthetic payments and blocked external provider traffic.
+- Private checkout, production worker activation, independent receipts and mainnet remain unavailable.
+
 ### Bounded MCP requests (2026-09-10)
 
 - Limit POST JSON bodies to 64 KiB and five seconds before access checks or tool dispatch.

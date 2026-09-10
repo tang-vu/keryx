@@ -3,7 +3,27 @@
 `privateWorkerBootstrap(db)` prepares the private worker but does not start a process,
 run a tick, fund a wallet or enable checkout. It returns null when
 `KERYX_PRIVATE_WORKER_ENABLED` is unset or `0`. Other values except `1` fail closed.
-There is no production daemon or checkout-readiness signal yet.
+The operator command is available, but no production process or checkout-readiness
+signal is activated by installing this release.
+
+```sh
+npm run private-worker -- --help
+node --env-file=.env.private-worker.local --import tsx --no-warnings scripts/private-research-worker.mts --once
+```
+
+Omit `--once` to poll every five seconds after each completed tick. The npm command
+does not automatically load any environment file. With the enable flag absent or `0`,
+it prints `disabled` and exits before loading configuration, signers or the database.
+SIGINT/SIGTERM wake idle polling and prevent another job from starting; the process
+waits for active execution to finish before closing SQLite. Configure any supervisor's
+shutdown grace period to accommodate the complete job, not just the poll interval.
+Do not use a short forced kill as normal shutdown. An external forced kill or crash
+can still leave a permanent claim requiring operator recovery.
+
+Output is JSON status/counters only. Errors and unpersisted results make the eventual
+exit code nonzero; the daemon continues polling until stopped. `--once` is a single
+work tick, not a readiness check: if enabled and funded, it can execute paid creator
+operations for eligible jobs. No command generates keys or funds a wallet.
 
 When explicitly enabled, both `KERYX_PRIVATE_WORKER_ENABLED=1` and
 `KERYX_PRIVATE_RESEARCH_ENABLED=1` are required, together with the existing private
@@ -32,7 +52,7 @@ balance responses. They cover disabled configuration, address binding, wrong dom
 public-funder reuse and unknown-versus-zero balance. No live signature, funding,
 provider request or payment is sent by these tests.
 
-Remaining activation work includes a daemon with graceful shutdown, verified dedicated
+Remaining activation work includes production process configuration, verified dedicated
 funding and signer inventory, health/readiness shared with checkout, reconciliation,
 claimed-but-unpersisted result recovery, and an owner-operated testnet acceptance run.
 Do not treat constructing a worker or setting these flags as completion of those gates.

@@ -1,5 +1,15 @@
 # Keryx — Decision Log
 
+**D-137** - Private worker process - *Poll sequential bounded ticks with explicit
+operator environment configuration and drain active work on SIGINT/SIGTERM.*
+The command is disabled by default before configuration/database imports and does not
+automatically load a legacy environment file. Idle sleep is abortable, but active
+execution is awaited rather than raced against shutdown. Unexpected tick exceptions
+are redacted; summaries contain counters only. Errors/unpersisted results set a nonzero
+eventual exit code while the daemon continues polling. Once mode executes one tick,
+not a readiness probe. No PM2 registration or checkout activation ships with the command;
+funding, supervisor grace period and claimed-job recovery require operator acceptance.
+
 **D-136** - Private worker bootstrap - *Require explicit private worker and research
 configuration, derive the dedicated EOA from its environment key, and construct the
 batching signer without loading or creating legacy wallets.*
