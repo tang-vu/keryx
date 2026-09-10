@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-117** - Private quote terms - *Build secret-free provider-bound quotes and
+validate them against independently selected buyer terms before authorization.*
+The backend uses the same private engine factory as execution to resolve provider
+and wire model. The portable buyer validator requires v2 disclosure, exact resource,
+Arc testnet requirement and separate trusted merchant. Integer micro-USDC arithmetic
+checks total, creator budget and service fee against independent total and fee caps.
+Quotes explicitly retain unused budget and promise best-effort research only; misleading
+refund or quality terms are rejected. Successful parsing is neither buyer consent nor
+payment evidence. No HTTP route, signing, payment admission or provider call is enabled.
+Operator endpoint approval, retention disclosure and an actual consent flow remain open.
+
 **D-116** - Private execution transport authority - *Construct the v2 engine
 inside the executor from explicit backend configuration, then compare its disclosure
 to the signed request before any funding check or execution claim.* A separately
