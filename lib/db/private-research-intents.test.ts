@@ -28,6 +28,7 @@ import type { PaymentRequirements } from "../payments/x402-payment-evidence";
 import { privateResearchEffects } from "../agent/private-research-effects";
 import { privateSpendView } from "../a2a/private-spend-view";
 import { privateResultView } from "../a2a/private-result-view";
+import { submitPrivateIncomingPayment } from "../payments/private-incoming-payment";
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-private-intents-"));
 const file = path.join(directory, "test.sqlite");
@@ -334,6 +335,56 @@ const reasoningPolicy = { modelId: "deepseek-flash", provider: "deepseek" as con
   endpoint: "https://synthetic.example/v1/chat/completions", fallback: "local-heuristic" as const, redirects: "prohibited" as const };
 const privateProvider = { modelId: "deepseek-flash", provider: "deepseek" as const,
   baseUrl: "https://synthetic.example/v1", apiKey: "synthetic-unfunded-credential" };
+
+it("submits incoming payment only once across concurrent connections and omits private research from facilitator calls", async () => {
+  const { value } = await executionFixture({ ...request, model: reasoningPolicy.modelId, reasoning: reasoningPolicy });
+  const facilitator = vi.fn(async (action: "verify" | "settle", body: unknown) => {
+    const serialized = JSON.stringify(body);
+    expect(serialized).not.toContain(value.submission.request.question);
+    expect(serialized).not.toContain(value.id); expect(serialized).not.toContain(value.submission.salt);
+    if (action === "verify") return { isValid: true, payer: account.address };
+    expect((await other.getPrivatePaymentState(value.id, account.address))?.status).toBe("pending");
+    return { success: true, payer: account.address, network: BUYER_NETWORK, transaction: "synthetic-incoming-success" };
+  });
+  const options = { facilitator, now: 1788912000000 };
+  await Promise.all([submitPrivateIncomingPayment(db, value.id, account.address, options), submitPrivateIncomingPayment(other, value.id, account.address, options)]);
+  expect(facilitator.mock.calls.filter(([action]) => action === "settle")).toHaveLength(1);
+  expect(await submitPrivateIncomingPayment(other, value.id, account.address, options)).toMatchObject({ status: "settled" });
+  expect((await db.getPrivatePaymentState(value.id, account.address))?.confirmation?.transaction).toBe("synthetic-incoming-success");
+});
+
+it("keeps uncertain incoming attempts pending and retains success evidence after a database write failure without resettling", async () => {
+  for (const outcome of ["lost", "wrong-payer", "persist-failed"] as const) {
+    const { value } = await executionFixture({ ...request, model: reasoningPolicy.modelId, reasoning: reasoningPolicy });
+    const facilitator = vi.fn(async (action: "verify" | "settle") => {
+      if (action === "verify") return { isValid: true, payer: account.address };
+      if (outcome === "lost") throw new Error("synthetic-private-error-body");
+      return { success: true, payer: outcome === "wrong-payer" ? merchants.privatePayee : account.address,
+        network: BUYER_NETWORK, transaction: "synthetic-retained-confirmation" };
+    });
+    const failure = outcome === "persist-failed" ? vi.spyOn(db, "confirmPrivatePayment").mockRejectedValue(new Error("synthetic-storage-error")) : null;
+    let result;
+    try { result = await submitPrivateIncomingPayment(db, value.id, account.address, { facilitator, now: 1788912000000 }); }
+    finally { failure?.mockRestore(); }
+    expect(result.status).toBe(outcome === "persist-failed" ? "confirmation-unpersisted" : "pending");
+    expect(await submitPrivateIncomingPayment(other, value.id, account.address, { facilitator, now: 2000000000000 })).toMatchObject({ status: "pending" });
+    expect(facilitator).toHaveBeenCalledTimes(2);
+    if (outcome === "persist-failed") {
+      expect(result.confirmation).not.toBeNull();
+      await other.confirmPrivatePayment(value.id, account.address, result.confirmation!);
+      expect((await db.getPrivatePaymentState(value.id, account.address))?.status).toBe("settled");
+    }
+  }
+});
+
+it("does not claim incoming payment on rejected verification or authorize a foreign payer", async () => {
+  const { value } = await executionFixture({ ...request, model: reasoningPolicy.modelId, reasoning: reasoningPolicy });
+  const facilitator = vi.fn(async () => ({ isValid: false, payer: account.address }));
+  await expect(submitPrivateIncomingPayment(db, value.id, merchants.privatePayee, { facilitator, now: 1788912000000 })).rejects.toThrow("unavailable");
+  expect(facilitator).not.toHaveBeenCalled();
+  expect(await submitPrivateIncomingPayment(db, value.id, account.address, { facilitator, now: 1788912000000 })).toMatchObject({ status: "verification-rejected" });
+  expect(await other.getPrivatePaymentState(value.id, account.address)).toBeNull();
+});
 
 it("retains signed provider disclosure and denies missing or changed execution policy before funding or reasoning", async () => {
   const { value, proof } = await executionFixture({ ...request, model: reasoningPolicy.modelId, reasoning: reasoningPolicy });

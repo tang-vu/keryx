@@ -1,5 +1,21 @@
 # Keryx — Decision Log
 
+**D-118** - Private incoming settlement - *Claim once before settle; retain ambiguous
+attempts permanently and return unpersisted confirmation for storage-only recovery.*
+The backend helper reads a verified durable intent owned by the caller, requires v2
+provider binding for fresh submission, checks authorization time and verifies the payer
+before atomically claiming submission. Only the fresh claimant calls settle. Existing
+pending or settled attempts return without another facilitator call, including after
+expiry. Success requires a valid payer/network/transaction and exact saved authorization
+tuple. Invalid, lost or failed settlement responses remain pending. Confirmation write
+failure returns backend evidence for retrying persistence, never resubmitting payment.
+The fixed testnet transport uses a 30-second deadline, 64 KiB response limit, no redirects
+and no retry or discovery extensions. Payload metadata excludes question, salt, private
+job ID and provider disclosure. The installed batching SDK wire format was inspected;
+this path uses bounded HTTP instead of its unbounded default fetch. No public route is
+activated. Caller authentication, trusted quote/merchant/provider admission, incoming
+reconciliation and operational readiness remain prerequisites for opening purchases.
+
 **D-117** - Private quote terms - *Build secret-free provider-bound quotes and
 validate them against independently selected buyer terms before authorization.*
 The backend uses the same private engine factory as execution to resolve provider
