@@ -8,6 +8,12 @@ attempt traces. Old projections lack this evidence and remain unpriced. This con
 observer cannot prove invoice completeness or whole-service profit; dated rates and the explicit
 testnet shadow-pricing assumption remain unchanged.
 
+Transport follow-up: real engine tests reproduced empty, partial and malformed compatible-provider
+usage being normalized into apparently measured counters. Require explicit valid input/output
+counters before recording a response; preserve the valid answer when usage is unavailable. Optional
+cached counts may be absent but must be valid and bounded when present. This closes the parser gap
+before compact coverage is calculated; historical projections are not rewritten.
+
 **D-150** - Private worker reasoning counters - *Report observed provider and fallback
 use separately from successful result persistence.*
 For newly executed jobs that return a run, the worker counts primary-tier served,

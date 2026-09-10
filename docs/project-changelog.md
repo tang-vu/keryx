@@ -1,5 +1,11 @@
 # Keryx Project Changelog
 
+### Provider usage validation (2026-09-10, v0.22.41)
+
+- Keep empty, partial and malformed provider usage out of measured cost estimates.
+- Preserve valid research answers when accounting metadata is missing.
+- Exercise actual provider/resilience engines with missing usage, HTTP rejection and truncated replies.
+
 ### Cost coverage and private worker evidence (2026-09-10, v0.22.40)
 
 - Exclude failed-provider and incomplete-usage runs from hypothetical cost/margin estimates.

@@ -54,5 +54,11 @@ Historical projections without this evidence remain unpriced; they are not silen
 Token totals still describe recorded responses, not all attempted or billable calls. Costs and shadow
 margin are partial totals for eligible runs only, never a whole-service profit claim.
 
+The compatible-provider transport records usage only with explicit nonnegative safe integer input
+and output counts. Optional cached input defaults to zero only when absent; supplied cached counts
+must be valid and no larger than total input. Empty, partial or malformed usage remains absent,
+without turning an otherwise valid answer into a provider failure. Actual engine regression tests
+cover this boundary, HTTP rejection and billable truncated responses followed by local fallback.
+
 This is a testnet experiment, not accounting guidance, mainnet readiness, or permission to use real
 funds. Any future fee collection needs a separate authority/security design and explicit approval.

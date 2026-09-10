@@ -22,6 +22,10 @@ export interface OpenAICompatibleOpts {
   redirect?: "error";
 }
 
+function tokenCount(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+
 export class OpenAICompatibleEngine extends JsonChatEngine {
   readonly name: string;
   private readonly opts: OpenAICompatibleOpts;
@@ -84,12 +88,19 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
         prompt_tokens_details?: { cached_tokens?: number };
       };
     };
-    if (data.usage) {
+    const inputTokens = data.usage?.prompt_tokens;
+    const outputTokens = data.usage?.completion_tokens;
+    const reportedCached = data.usage?.prompt_tokens_details?.cached_tokens;
+    const cachedInputTokens = reportedCached === undefined ? 0 : reportedCached;
+    // Missing/malformed counters are unknown cost, not measured zero-token work.
+    // Keep the answer usable; economics detects the served attempt without a usage record.
+    if (tokenCount(inputTokens) && tokenCount(outputTokens) &&
+      tokenCount(cachedInputTokens) && cachedInputTokens <= inputTokens) {
       this.recordUsage({
         model: wireModel,
-        inputTokens: data.usage.prompt_tokens ?? 0,
-        cachedInputTokens: data.usage.prompt_tokens_details?.cached_tokens ?? 0,
-        outputTokens: data.usage.completion_tokens ?? 0,
+        inputTokens,
+        cachedInputTokens,
+        outputTokens,
       });
     }
     const choice = data.choices?.[0];
