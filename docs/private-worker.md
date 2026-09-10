@@ -1,0 +1,38 @@
+# Private worker operator integration
+
+`privateWorkerBootstrap(db)` prepares the private worker but does not start a process,
+run a tick, fund a wallet or enable checkout. It returns null when
+`KERYX_PRIVATE_WORKER_ENABLED` is unset or `0`. Other values except `1` fail closed.
+There is no production daemon or checkout-readiness signal yet.
+
+When explicitly enabled, both `KERYX_PRIVATE_WORKER_ENABLED=1` and
+`KERYX_PRIVATE_RESEARCH_ENABLED=1` are required, together with the existing private
+runtime policy: dedicated merchant and treasury addresses, capacity, service fee,
+reserved private payees, exact model/provider/base URL, provider credentials and the
+approved endpoint list. `KERYX_PRIVATE_TREASURY_PRIVATE_KEY` is read only from the
+environment. Keep it in an ignored environment file; do not put it in command arguments.
+
+The bootstrap derives its signer from that key and checks its address against the
+configured private treasury. It rejects reuse of the configured public funder, public
+seller or reserved merchant identities. The operator must still inventory other public
+or legacy signing wallets; this comparison does not discover every wallet in use.
+The configured reserved-payee list must agree with the public seller's cached guard.
+Only Arc testnet (`eip155:5042002`, Gateway domain 26) is accepted.
+The [Circle supported-chain reference](https://developers.circle.com/gateway/references/supported-blockchains),
+rechecked September 10, 2026, lists Arc as testnet-only with domain 26.
+
+The actual Circle `BatchEvmScheme` wraps the private EOA. Balance checks call the
+existing Gateway reader for that same address and preserve integer micro-USDC. Unknown
+balances throw; zero is never interpreted as permission to deposit. Startup performs
+no balance read and does not prove that the configured lifetime capacity is backed.
+The executor checks live availability before claiming each job.
+
+Tests use ephemeral unfunded keys, verify an SDK-created signature locally and inject
+balance responses. They cover disabled configuration, address binding, wrong domain,
+public-funder reuse and unknown-versus-zero balance. No live signature, funding,
+provider request or payment is sent by these tests.
+
+Remaining activation work includes a daemon with graceful shutdown, verified dedicated
+funding and signer inventory, health/readiness shared with checkout, reconciliation,
+claimed-but-unpersisted result recovery, and an owner-operated testnet acceptance run.
+Do not treat constructing a worker or setting these flags as completion of those gates.

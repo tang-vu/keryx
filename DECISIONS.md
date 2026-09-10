@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-136** - Private worker bootstrap - *Require explicit private worker and research
+configuration, derive the dedicated EOA from its environment key, and construct the
+batching signer without loading or creating legacy wallets.*
+The bootstrap validates runtime merchant/provider/treasury policy against configured
+public funder and seller identities, cached reserved payees, Arc-testnet network and
+domain 26. Worker balance reads use the existing bounded Gateway reader; unknown funds
+throw and zero remains zero. No deposit or transfer is initiated. The returned worker
+has not run, does not prove backing for its configured capacity, and is not checkout
+readiness. Tests verify a real SDK-generated signature locally with an unfunded EOA.
+Full operator signer inventory, prefunding, daemon health, recovery and launch gates
+remain required before activation; environment flags are not evidence those gates passed.
+
 **D-135** - Private worker ticks - *Process one bounded candidate page serially through
 the existing executor; retain the cursor privately and isolate per-job failures.*
 Overlapping ticks on one worker instance are refused. Configuration and signer methods
