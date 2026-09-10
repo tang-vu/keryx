@@ -1,4 +1,5 @@
-import { mkdtemp, unlink, rmdir } from "node:fs/promises";
+import { mkdtemp, unlink, rmdir, readdir, readFile } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
@@ -13,6 +14,7 @@ import { recoverPrivateBuyerResult } from "./private-recovery";
 import { PRIVATE_RESEARCH_RESOURCE } from "./private-request-commitment";
 import { BUYER_NETWORK, BUYER_ORIGIN } from "./protocol";
 import { createPrivateWorker } from "../a2a/private-worker";
+import { createPrivateResultSpool } from "../a2a/private-result-spool";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -95,12 +97,25 @@ it.each(["after-settlement", "during-settlement"] as const)(
       expect(fetch).not.toHaveBeenCalled();
       if (loss === "after-settlement") {
         const signer = { createPaymentPayload: vi.fn(async (): Promise<never> => { throw new Error("No creator payment expected for an empty corpus"); }) };
+        const backupKey = randomBytes(32).toString("hex"), backupDirectory = join(root, "spool");
+        const resultSpool = await createPrivateResultSpool(backupDirectory, backupKey);
         const worker = createPrivateWorker(db, { signerAddress: context.privateTreasurySigner, signer,
+          resultSpool,
           getGatewayBalance: async () => BigInt(30000), privateProvider: { modelId: "deepseek-flash", provider: "deepseek",
             baseUrl: "https://synthetic.example/v1", apiKey: "synthetic-not-secret" } });
-        expect(await worker.tick()).toMatchObject({ status: "processed", visited: 1, completed: 1, errors: 0, unpersisted: 0 });
-        expect(await privateResultView(db, prepared.id, account.address)).toMatchObject({ status: "completed" });
+        const storageFailure = vi.spyOn(db, "savePrivateResearchResult").mockRejectedValueOnce(new Error("Synthetic storage outage"));
+        try { expect(await worker.tick()).toMatchObject({ status: "processed", visited: 1, completed: 0, errors: 1, unpersisted: 0 }); }
+        finally { storageFailure.mockRestore(); }
+        expect(await privateResultView(db, prepared.id, account.address)).toMatchObject({ status: "execution-claimed" });
         expect(await worker.tick()).toMatchObject({ visited: 0 });
+        const backups = await readdir(backupDirectory); expect(backups).toHaveLength(1);
+        const ciphertext = await readFile(join(backupDirectory, backups[0]), "utf8");
+        expect(ciphertext).not.toContain(request.question); expect(ciphertext).not.toContain(prepared.id);
+        db.close(); db = new SqliteAdapter(file); await db.init();
+        const recovery = await createPrivateResultSpool(backupDirectory, backupKey);
+        expect(await recovery.restore(db, backups[0].replace(/\.json$/, ""))).toEqual({ status: "restored" });
+        expect(await privateResultView(db, prepared.id, account.address)).toMatchObject({ status: "completed" });
+        expect(await readdir(backupDirectory)).toEqual([]);
         expect(signer.createPaymentPayload).not.toHaveBeenCalled();
         expect(fetch).toHaveBeenCalled();
         expect(vi.mocked(fetch).mock.calls.every(([url]) => String(url) === "https://synthetic.example/v1/chat/completions")).toBe(true);
@@ -108,6 +123,8 @@ it.each(["after-settlement", "during-settlement"] as const)(
       }
     } finally {
       db.close();
+      for (const name of await readdir(join(root, "spool")).catch(() => [])) await unlink(join(root, "spool", name));
+      await rmdir(join(root, "spool")).catch(() => undefined);
       for (const name of ["private-intent.json", "private-submission-attempt.json"]) await unlink(join(journal, name)).catch(() => undefined);
       await rmdir(journal).catch(() => undefined);
       for (const suffix of ["", "-wal", "-shm"]) await unlink(file + suffix).catch(() => undefined);

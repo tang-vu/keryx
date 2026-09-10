@@ -8,6 +8,7 @@ import { a2aResearchPackageForVersion } from "./research-package-definition";
 import { addressSchema } from "../buyer/protocol";
 import { privateReasoningPolicyInput } from "../buyer/private-reasoning-policy";
 import { privateReasoningEngine, type PrivateReasoningConfig } from "../llm/private-engine";
+import type { PrivateResultSpool } from "./private-result-spool";
 
 /** Backend executor. Caller authenticates payer; this module never accepts an unsigned question or job policy. */
 export async function runPrivateResearch(db: KeryxDB, id: string, payer: string, options: {
@@ -15,8 +16,9 @@ export async function runPrivateResearch(db: KeryxDB, id: string, payer: string,
   /** Legacy v1 execution only; ignored for provider-bound v2 requests. */
   engineForModel?: (model: string | null) => ReasoningEngine;
   privateProvider?: PrivateReasoningConfig;
+  resultSpool?: PrivateResultSpool;
 }) {
-  const { signer, getGatewayBalance, engineForModel } = options;
+  const { signer, getGatewayBalance, engineForModel, resultSpool } = options;
   const requestedSignerAddress = options.signerAddress;
   // Snapshot credentials and routing before storage awaits; never accept a caller-supplied
   // disclosure as evidence of which transport will actually run.
@@ -46,7 +48,7 @@ export async function runPrivateResearch(db: KeryxDB, id: string, payer: string,
   if (!claim) return { status: "already-claimed" as const };
   const gateway = new PrivateServerGateway({ signerAddress, signer, getGatewayBalance,
     db, job: { id, owner: payer, workerId: claim.workerId } });
-  const { effects, diagnostics } = await privateResearchEffects(db, { id, payer, workerId: claim.workerId });
+  const { effects, diagnostics } = await privateResearchEffects(db, { id, payer, workerId: claim.workerId }, resultSpool);
   const run = await collectRun({ queryId: id, question: request.question, budget: request.budget, researchMode: request.researchMode,
     model: request.model ?? undefined, executionLimits: { ...contract.execution }, asker: intent.submission.payment.authorization.from,
     origin: "a2a", fundingOwner: "treasury" }, { deps: { db, engine, gateway, effects } });

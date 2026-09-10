@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-138** - Private result recovery - *Optionally persist an authenticated encrypted
+result backup before attempting the primary database write.*
+AES-256-GCM uses a dedicated environment-supplied encryption key, random IV and random
+filename token bound as authenticated data. Recovery calls the existing immutable
+result admission method, preserving original owner and permanent worker-claim checks.
+Only an exact database acknowledgment permits backup deletion. A database outage must
+not cause paid research to execute again. This is an optional executor dependency,
+not enabled by the production bootstrap. Key provisioning, recovery scheduling,
+retention and filesystem failure acceptance remain launch gates. See
+`docs/engineering/private-result-spool.md` for durability and privacy limits.
+
 **D-137** - Private worker process - *Poll sequential bounded ticks with explicit
 operator environment configuration and drain active work on SIGINT/SIGTERM.*
 The command is disabled by default before configuration/database imports and does not

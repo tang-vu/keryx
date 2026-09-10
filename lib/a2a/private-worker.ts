@@ -18,6 +18,7 @@ export function createPrivateWorker(db: KeryxDB, options: Omit<ExecutionOptions,
   const privateProvider = { ...options.privateProvider };
   privateReasoningEngine(privateProvider); // Validate explicit provider configuration before scanning.
   const execution = { signerAddress, privateProvider,
+    resultSpool: options.resultSpool,
     signer: { createPaymentPayload: options.signer.createPaymentPayload.bind(options.signer) },
     getGatewayBalance: options.getGatewayBalance };
   let cursor: string | undefined;

@@ -1,9 +1,10 @@
 import type { KeryxDB } from "../db/keryx-db";
 import type { ResearchEffects } from "./research-effects";
 import { assertPaymentSettlementState } from "../payments/payment-state";
+import type { PrivateResultSpool } from "../a2a/private-result-spool";
 
 /** Backend dependency only. The executor, not this consistency check, must obtain a fresh worker claim. */
-export async function privateResearchEffects(db: KeryxDB, context: { id: string; payer: string; workerId: string }) {
+export async function privateResearchEffects(db: KeryxDB, context: { id: string; payer: string; workerId: string }, spool?: PrivateResultSpool) {
   const { id, payer, workerId } = { ...context };
   const claim = await db.getPrivateResearchExecution(id, payer);
   if (!claim || claim.id !== id || claim.workerId !== workerId) throw new Error("Private execution authority unavailable");
@@ -33,7 +34,10 @@ export async function privateResearchEffects(db: KeryxDB, context: { id: string;
     getCachedAt: async key => cache.get(key)?.at ?? null,
     setCached: async (key, text) => { cache.set(key, { text, at: new Date().toISOString() }); },
     async saveQueryRun(run) {
-      await db.savePrivateResearchResult(id, payer, workerId, run);
+      if (spool) {
+        const token = await spool.save({ id, payer, workerId }, run);
+        await spool.restore(db, token);
+      } else await db.savePrivateResearchResult(id, payer, workerId, run);
       cache.clear();
     },
     discoverExternal: async () => [],

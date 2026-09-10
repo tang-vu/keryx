@@ -33,10 +33,13 @@ zero in this empty-corpus drill and the uncommitted budget is not a refund.
 
 The worker extension now runs the actual private executor after persisted synthetic
 success. Global fetch throws before reaching a network, exercising the local reasoning
-fallback against an empty corpus. The worker saves a private result, the owner view
-becomes completed, and a second tick finds no candidate. No creator signature is
-requested. This tests execution and persistence wiring, not answer quality or paid
-content delivery.
+fallback against an empty corpus. An injected database write failure leaves an
+encrypted result backup and an execution-claimed owner view. The worker reports one
+error and a second tick finds no candidate, preventing execution replay. After closing
+and reopening SQLite, a reopened spool restores the original result through database
+admission, the owner view becomes completed, and the backup is removed. No creator
+signature is requested. This tests execution and persistence recovery wiring, not
+answer quality or paid content delivery.
 
 ## Reproduction and limits
 
