@@ -61,9 +61,8 @@ verify settlement finality for future research jobs.
 
 ## Remaining activation work
 
-The public application's reserved-merchant guard does not yet include this new private payee.
-Install and verify that guard before issuing a private payment authorization or accepting private
-merchant payments. Treasury faucet funding and the bounded Gateway deposit are now verified.
+The public application's reserved-merchant guard now includes this private payee, verified below.
+Treasury faucet funding and the bounded Gateway deposit are also verified.
 Private-worker supervision,
 checkout admission readiness, result recovery under the intended operational configuration and
 an owner-operated end-to-end testnet purchase remain outstanding.
@@ -92,6 +91,32 @@ This proves startup, matching operational inspection and graceful **idle** shutd
 configuration on this host. It does not prove draining an active paid job, crash recovery with
 a real encrypted result, supervisor restart behavior, public merchant-guard installation or
 readiness to accept buyer payments. No daemon was left running by this drill.
+
+## Public merchant guard installation
+
+On September 10, the public environment's reserved-payee set was extended to include the new
+private merchant. Existing entries were retained, collision validation passed, and a parsed
+comparison verified every unrelated environment value was unchanged. An ignored mode-0600
+environment backup was retained before atomic replacement. Private enable flags remained zero.
+
+The host inventory covered six root environment files and both code-referenced wallet stores
+(`data/wallets.json` and `data/spend-wallet.json`): ten environment key entries and twenty stored
+wallet entries represented 22 distinct existing signers. Derived addresses matched wallet metadata;
+none matched the private merchant or treasury. This inventory excludes external devices and
+unreferenced backups, and does not make claims about their contents.
+
+All seven public/private merchant regression tests passed. `npm run redeploy` then typechecked,
+built and reloaded `origin/main` at `dc6f8f7`. At `2026-09-10T08:46:18.192Z`, the public health
+endpoint reported that commit and `operational`. An unsigned public A2A quote returned 402 with
+payment requirements. Three deliberately invalid, non-spendable payment payloads targeting the
+reserved private merchant each returned the exact guard's 403 response and no payment receipt:
+inner-only payload, full private-resource envelope, and a full envelope with public resource and
+rewritten unsigned metadata. No valid payment signature was generated or submitted by this probe.
+
+The unit tests establish rejection before facilitator invocation; the live HTTP probe establishes
+the configured rejection response on the deployed public A2A endpoint. Other seller resources
+share the tested guard but were not each exercised by this live probe. The private purchase route
+remains unmounted, and this deployment does not activate a private worker or checkout.
 
 The public application continues serving the deployed release. No private keys, provider credentials
 or real customer inputs are included in this evidence document. The transaction hashes above are
