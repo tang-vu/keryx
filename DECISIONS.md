@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-142** - Private worker observation - *Persist bounded local lifecycle observations
+without treating them as a checkout lease.*
+The operator loop writes starting/recovering/working/idle/degraded/stopped transitions
+to an atomically replaced file in the controlled spool directory. Starting new work
+requires its pre-work observation write to succeed; active execution is never raced
+against a telemetry timer. Records contain only process identity, commit, phase and
+timestamp. The reader rejects malformed, oversized, future and older-than-30-second
+observations and never reports checkout ready. A long active job may make the last
+observation stale without proving the worker died. Cross-process fencing, shared
+configuration identity, funding/provider checks and public admission remain separate
+unfinished gates. This is operational evidence, not payment authority.
+
 **D-141** - Private buyer checkout - *Compose independently pinned request and price
 limits, temporary owner sign-in, availability checks and a single journaled submission.*
 The CLI accepts a bounded private request file, never a question on the command line.

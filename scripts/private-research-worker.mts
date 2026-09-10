@@ -2,6 +2,7 @@ import { parseArgs } from "node:util";
 import { runPrivateWorkerLoop } from "../lib/a2a/private-worker-loop";
 import { privateResultSpoolFromEnv } from "../lib/a2a/private-result-spool-config";
 import { createPrivateResultRecovery } from "../lib/a2a/private-result-recovery";
+import { privateWorkerStatusWriter } from "../lib/a2a/private-worker-status";
 
 async function main() {
   const { values } = parseArgs({ options: { once: { type: "boolean" }, help: { type: "boolean" },
@@ -37,6 +38,7 @@ async function main() {
     if (!worker) throw new Error();
     await runPrivateWorkerLoop(worker, { signal: stop.signal, once: values.once,
       recovery: createPrivateResultRecovery(db, spool),
+      observe: privateWorkerStatusWriter(process.env.KERYX_PRIVATE_RESULT_SPOOL_DIRECTORY!, process.env.KERYX_COMMIT),
       report: summary => {
         console.log(JSON.stringify(summary));
         if (summary.status === "tick-unavailable" || summary.status === "scan-unavailable"

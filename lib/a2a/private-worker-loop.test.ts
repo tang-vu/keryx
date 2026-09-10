@@ -2,6 +2,20 @@ import { afterEach, expect, it, vi } from "vitest";
 import { runPrivateWorkerLoop } from "./private-worker-loop";
 afterEach(() => vi.useRealTimers());
 
+it("records lifecycle boundaries and does not start work when the pre-work status write fails", async () => {
+  const report = vi.fn(), signal = new AbortController().signal;
+  const tick = vi.fn(async () => ({ status: "processed" as const, visited: 0, completed: 0, stored: 0, alreadyClaimed: 0, unpersisted: 0, errors: 0 }));
+  const observe = vi.fn(async (_phase: string) => {});
+  await runPrivateWorkerLoop({ tick }, { signal, once: true, report, observe });
+  expect(observe.mock.calls.flat()).toEqual(["starting", "working", "idle", "stopped"]);
+  tick.mockClear(); observe.mockClear();
+  observe.mockImplementation(async phase => { if (phase === "working") throw new Error("Synthetic private filesystem failure"); });
+  await runPrivateWorkerLoop({ tick }, { signal, once: true, report, observe });
+  expect(tick).not.toHaveBeenCalled();
+  expect(observe.mock.calls.flat()).toEqual(["starting", "working", "degraded", "stopped"]);
+  expect(report).toHaveBeenCalledWith({ status: "tick-unavailable" });
+});
+
 it("withholds new work until recovery permits it and always closes the recovery scan", async () => {
   const tick = vi.fn(async () => ({ status: "busy" as const }));
   const recovery = { tick: vi.fn().mockResolvedValue({ status: "recovery", visited: 25, restored: 25, errors: 0, ready: false }), close: vi.fn() };

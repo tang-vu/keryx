@@ -85,6 +85,22 @@ balances throw; zero is never interpreted as permission to deposit. Startup perf
 no balance read and does not prove that the configured lifetime capacity is backed.
 The executor checks live availability before claiming each job.
 
+The enabled command also atomically replaces `private-worker-status.json` in its
+spool directory at lifecycle boundaries. Records contain an instance UUID, PID,
+optional build commit, phase and timestamp; no job ID, question, wallet key or provider
+credential is included. Phases are starting, recovering, working, idle, degraded and
+stopped. A failed pre-work status write prevents that iteration from starting work.
+No timer cancels an active execution to update telemetry.
+
+The internal `readPrivateWorkerStatus` reader bounds the file to 4 KiB and treats
+future timestamps or observations older than 30 seconds as stale. Long active jobs
+can become stale: this is not proof of a dead process. The reader explicitly keeps
+`checkoutReady: false` even for a fresh idle record. The file is advisory and assumes
+one worker per operator-controlled spool; it supplies neither process fencing nor a
+funding/configuration lease. Status replacement fsyncs the file but does not promise
+directory-entry crash durability. Old observations must never enable payment admission.
+Public health/readiness integration and a process-status command are still pending.
+
 Tests use ephemeral unfunded keys, verify an SDK-created signature locally and inject
 balance responses. They cover disabled configuration, address binding, wrong domain,
 public-funder reuse and unknown-versus-zero balance. No live signature, funding,
