@@ -1,5 +1,12 @@
 # Keryx Project Changelog
 
+### MCP dependency maintenance (2026-09-10)
+
+- Update the transitive Hono lockfile entry from 4.13.3 to 4.13.7 within the MCP SDK's existing compatible range.
+- Include upstream parser, SSG and JSX security fixes without changing application payment or authentication behavior.
+- Production dependency audit no longer flags Hono; 23 other findings remain (16 moderate, 7 low). This is not a mainnet security clearance or proof that the affected Hono APIs were exposed by Keryx.
+- Upstream release evidence: https://github.com/honojs/hono/releases/tag/v4.13.5 and https://github.com/honojs/hono/releases/tag/v4.13.7.
+
 ### Private buyer recovery CLI (2026-09-10, v0.22.36)
 
 - Add buyer:private:recover for existing signed private journals.
