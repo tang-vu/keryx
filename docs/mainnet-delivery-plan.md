@@ -105,8 +105,19 @@ O1/M5 are still open.
 Private recovery evidence update (September 10): a [local buyer/backend integration drill](./engineering/private-checkout-integration-2026-09-10.md)
 connects quote acceptance, EOA signing, durable journals, SQLite payment admission and
 recovery after response loss and database reopen. Both persisted synthetic success and
-ambiguous settlement retain single-attempt behavior. Real HTTP checkout, Circle and
-worker execution were not exercised; B1/M4 remain open.
+ambiguous settlement retain single-attempt behavior. The drill now also exercises the
+private executor with blocked provider traffic, an injected result-write failure,
+encrypted backup preservation and restoration through a separate operator process.
+Real HTTP checkout, Circle and paid creator delivery remain untested by that drill;
+B1/M4 remain open.
+
+Private worker operations update (September 10): the
+[process crash-lock drill](./engineering/private-worker-crash-lock-2026-09-10.md)
+verifies real-process exclusion and retained locks after forced termination on the
+local Windows filesystem. Cleanup happens only after the holder's close event. This
+does not prove production supervisor recovery, power-loss durability or readiness to
+accept payments; M5 remains open. Private checkout client composition and encrypted
+result recovery shipped in v0.22.38, while production private purchasing remains disabled.
 
 1. Establish this acceptance map and the executable economics model; obtain actual
    fixed costs and provider billing data without inventing zeros.
