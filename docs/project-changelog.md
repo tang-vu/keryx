@@ -1,5 +1,11 @@
 # Keryx Project Changelog
 
+### Bounded MCP requests (2026-09-10)
+
+- Limit POST JSON bodies to 64 KiB and five seconds before access checks or tool dispatch.
+- Reject invalid UTF-8 and malformed JSON with generic protocol errors; read the body once.
+- Count nested batch research calls iteratively and bound cleanup even when stream cancellation hangs.
+
 ### MCP dependency maintenance (2026-09-10)
 
 - Update the transitive Hono lockfile entry from 4.13.3 to 4.13.7 within the MCP SDK's existing compatible range.

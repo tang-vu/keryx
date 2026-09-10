@@ -25,6 +25,21 @@ function request(
 }
 
 describe("/mcp", () => {
+  it("rejects oversized bodies before tool dispatch and contains malformed JSON", async () => {
+    const response = await POST(request({ jsonrpc: "2.0", method: "tools/call", params: { name: "research", arguments: { question: "x".repeat(65536) } } }));
+    expect(response.status).toBe(400);
+    expect((await response.json()).error.code).toBe(-32700);
+    expect((await POST(request(null))).status).toBe(400);
+    const malformed = new NextRequest("http://localhost:3000/mcp", { method: "POST", headers, body: "{" });
+    expect((await POST(malformed)).status).toBe(400);
+  });
+
+  it("counts deeply nested batches without exhausting the call stack", () => {
+    let body: unknown = { method: "tools/call", params: { name: "research" } };
+    for (let i = 0; i < 10000; i++) body = [body];
+    expect(researchCallCount(body)).toBe(1);
+  });
+
   it("normalizes setup channels to a bounded telemetry vocabulary", () => {
     expect(normalizeMcpClient("CODEX")).toBe("codex");
     expect(normalizeMcpClient("claude")).toBe("claude");

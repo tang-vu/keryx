@@ -16,6 +16,7 @@ import { getDb } from "@/lib/db";
 import { createRemoteMcpServer, type RemoteMcpAccess } from "@/lib/mcp/remote-server";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
 import type { McpClientChannel } from "@/lib/types";
+import { readMcpBody } from "@/lib/mcp/request-body";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,14 +70,16 @@ function jsonRpcHttpError(req: NextRequest, status: number, code: number, messag
 }
 
 export function researchCallCount(body: unknown): number {
-  if (Array.isArray(body)) {
-    return body.reduce((count, message) => count + researchCallCount(message), 0);
+  const pending = [body];
+  let count = 0;
+  while (pending.length) {
+    const item = pending.pop();
+    if (Array.isArray(item)) { for (const child of item) pending.push(child); continue; }
+    if (!item || typeof item !== "object") continue;
+    const message = item as { method?: unknown; params?: { name?: unknown } };
+    if (message.method === "tools/call" && message.params?.name === "research") count++;
   }
-  if (!body || typeof body !== "object") return 0;
-  const message = body as { method?: unknown; params?: { name?: unknown } };
-  return message.method === "tools/call" && message.params?.name === "research"
-    ? 1
-    : 0;
+  return count;
 }
 
 export function normalizeMcpClient(value: string | null): McpClientChannel {
@@ -133,8 +136,11 @@ async function handle(req: NextRequest): Promise<Response> {
     return jsonRpcHttpError(req, 403, -32003, "Forbidden Origin header.");
   }
 
-  const parsedBody =
-    req.method === "POST" ? await req.clone().json().catch(() => undefined) : undefined;
+  let parsedBody: unknown;
+  if (req.method === "POST") {
+    try { parsedBody = await readMcpBody(req); }
+    catch { return jsonRpcHttpError(req, 400, -32700, "Invalid JSON body; limit 64 KiB and 5 seconds."); }
+  }
   const researchCalls = researchCallCount(parsedBody);
   if (researchCalls > 1) {
     return jsonRpcHttpError(

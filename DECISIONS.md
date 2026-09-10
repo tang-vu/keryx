@@ -1,5 +1,14 @@
 # Keryx — Decision Log
 
+**D-130** - MCP input limits - *Read POST bodies once with a 64-KiB byte cap and
+a five-second deadline before access resolution or tool dispatch.*
+Count streamed bytes independently of Content-Length, reject invalid UTF-8/JSON with
+a generic JSON-RPC error, and pass the parsed value into the SDK transport. Cancel
+without awaiting an untrusted cancellation promise so the deadline also bounds error
+cleanup. Walk nested batches iteratively to avoid recursive stack exhaustion. These
+limits complement existing origin, rate and treasury checks; they are not a global
+concurrency cap or a replacement for deployment-level request limits.
+
 **D-129** - Private recovery CLI - *Validate the journal before login, recover in a
 temporary session, then optionally write a new private snapshot after sign-out.*
 The command reads KERYX_BUYER_PRIVATE_KEY only from its environment and requires explicit
