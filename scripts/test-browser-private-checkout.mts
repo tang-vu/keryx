@@ -128,6 +128,7 @@ try {
   assert.equal(await page.getByLabel("Private research question").inputValue(), "");
   await mount();
   await page.getByRole("button", { name: "Refresh local private jobs", exact: true }).click();
+  await page.waitForFunction(() => !document.querySelector<HTMLInputElement>('input[type="file"]')?.disabled);
   assert.equal(await page.getByRole("button", { name: "Recover saved private job", exact: true }).count(), 0);
   await page.getByLabel("Import private recovery").setInputFiles({ name: "private-recovery.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(exported)) });
   await page.getByText(/Private recovery imported/).waitFor();
