@@ -615,6 +615,16 @@ Before enabling a private quote, implement all of these together:
 
 ## Observed implementation surfaces requiring coverage
 
+Reasoning log audit: provider fallback warnings and durable circuit-store diagnostics
+previously included arbitrary thrown messages (the circuit path only truncated them).
+They now omit error bodies. Provider diagnostics retain a category plus an integer HTTP
+status in the 100–599 range; nonnumeric/object status fields are omitted from telemetry.
+Synthetic tests force request/credential markers through thrown message, body, stack and
+malformed status fields, and verify fallback behavior without their appearance in logs
+or attempts. Circuit read/write/clear failures keep the in-memory safety net and log only
+the operation. This is a bounded source-level fix, not a complete provider/SDK audit or
+proof that previously written logs have been removed.
+
 - Dispatch pages, metadata, Open Graph images, direct JSON, receipts and freshness.
 - Archive cache, topics, sitemap, feeds, related answers, parent/follow-up context.
 - Recent runs, activity, raw payment feed and creator/portfolio exports.

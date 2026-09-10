@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-113** · Reasoning failure log privacy · *Retain operational categories, never
+raw provider or circuit-store error bodies.* Provider fallback previously interpolated
+the full thrown message into a warning, even though structured attempts already used
+categories. Errors can echo request text or credentials. Warnings now use the same
+category and a runtime-validated integer HTTP status only; malformed status values
+cannot enter structured attempts. Circuit-store failures log the failed operation and
+memory fallback without copying arbitrary database error text. Fallback and circuit
+behavior remain tested, including success after an outage. This removes these known
+disclosure paths; it does not certify SDK telemetry, provider retention, all application
+logs or historical log deletion. Those remain part of private-purchase acceptance.
+
 **D-112** · Private research account workspace · *Recover and read private jobs in
 memory under the signed-in account, without a new payment or public dispatch link.*
 The history endpoint shares live session checks, same-origin policy, bounded body

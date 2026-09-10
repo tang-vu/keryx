@@ -52,6 +52,23 @@ describe("ResilientEngine labelling", () => {
     expect(e.effectiveName).toBe("llm:deepseek:deepseek-v4-flash");
   });
 
+  it("keeps provider-echoed private content out of fallback logs and structured attempts", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const marker = "synthetic-private-question-and-token";
+    for (const status of [400, marker, { body: marker }, Infinity]) {
+      resetReasoningCircuitBreakers();
+      const engine = new ResilientEngine({ ...workingEngine("synthetic-primary"),
+        decompose: async () => { throw Object.assign(new Error(marker), { status, body: marker, stack: marker }); },
+      }, workingEngine("synthetic-fallback"));
+      expect(await engine.decompose(marker)).toEqual(["claim"]);
+      const attempts = reasoningAttempts(engine);
+      expect(attempts.some(attempt => attempt.outcome === "failed")).toBe(true);
+      expect(JSON.stringify(attempts)).not.toContain(marker);
+      expect(JSON.stringify(warn.mock.calls)).not.toContain(marker);
+    }
+    expect(JSON.stringify(warn.mock.calls)).toContain("HTTP 400");
+  });
+
   it("names the heuristic when nothing the pick produced survived", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const e = new ResilientEngine(brokenEngine("llm:deepseek:deepseek-chat", 400));

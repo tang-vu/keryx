@@ -28,10 +28,6 @@ export interface ReasoningCircuitStore {
   succeeded(key: string): Promise<void>;
 }
 
-function boundedError(err: unknown): string {
-  return (err instanceof Error ? err.message : String(err)).slice(0, 300);
-}
-
 export class MemoryReasoningCircuitStore implements ReasoningCircuitStore {
   private readonly states = new Map<string, ReasoningCircuitRecord>();
 
@@ -114,9 +110,9 @@ export class DurableReasoningCircuitStore implements ReasoningCircuitStore {
     try {
       const db = await this.loadDb();
       return await db.acquireReasoningCircuit(key, now, probeLeaseMs);
-    } catch (err) {
+    } catch {
       console.error(
-        `[keryx llm] durable circuit read failed; using process memory: ${boundedError(err)}`,
+        "[keryx llm] durable circuit read failed; using process memory",
       );
       return this.fallback.acquire(key, now, probeLeaseMs);
     }
@@ -138,9 +134,9 @@ export class DurableReasoningCircuitStore implements ReasoningCircuitStore {
       );
       this.fallback.remember(record);
       return record;
-    } catch (err) {
+    } catch {
       console.error(
-        `[keryx llm] durable circuit write failed; using process memory: ${boundedError(err)}`,
+        "[keryx llm] durable circuit write failed; using process memory",
       );
       return this.fallback.failed(key, policy);
     }
@@ -151,8 +147,8 @@ export class DurableReasoningCircuitStore implements ReasoningCircuitStore {
     try {
       const db = await this.loadDb();
       await db.clearReasoningCircuit(key);
-    } catch (err) {
-      console.error(`[keryx llm] durable circuit clear failed: ${boundedError(err)}`);
+    } catch {
+      console.error("[keryx llm] durable circuit clear failed");
     }
   }
 }

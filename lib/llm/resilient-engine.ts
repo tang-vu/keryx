@@ -53,7 +53,8 @@ function isTimeout(err: unknown): boolean {
 
 /** Persist only a bounded category/status, never a provider body that may echo request context. */
 function errorTelemetry(err: unknown): Pick<ReasoningAttempt, "status" | "error"> {
-  const status = (err as { status?: number })?.status;
+  const candidate = (err as { status?: unknown })?.status;
+  const status = typeof candidate === "number" && Number.isInteger(candidate) && candidate >= 100 && candidate <= 599 ? candidate : undefined;
   const name = (err as { name?: string })?.name;
   if (status === 408 || name === "TimeoutError" || name === "AbortError") {
     return { ...(status ? { status } : {}), error: "timeout" };
@@ -240,9 +241,9 @@ export class ResilientEngine implements ReasoningEngine {
         config.llmCircuitMaxCooldownMs,
       ),
     });
-    const reason = lastErr instanceof Error ? lastErr.message : String(lastErr);
+    const failure = errorTelemetry(lastErr);
     console.warn(
-      `[keryx llm] ${label} fell back to ${this.fallback.name} after provider failure: ${reason}`,
+      `[keryx llm] ${label} fell back to ${this.fallback.name} after provider failure: ${failure.error}${failure.status === undefined ? "" : ` (HTTP ${failure.status})`}`,
     );
     this.fell++;
     return this.runFallback(label, call);

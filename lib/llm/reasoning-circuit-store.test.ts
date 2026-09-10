@@ -98,9 +98,9 @@ describe("durable reasoning circuits", () => {
   });
 
   it("fails down to the memory mirror when circuit persistence is unavailable", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
     const store = new DurableReasoningCircuitStore(
-      async () => { throw new Error("database unavailable"); },
+      async () => { throw new Error("synthetic-private-database-error-body"); },
       new MemoryReasoningCircuitStore(),
     );
     await store.failed(KEY, {
@@ -111,5 +111,11 @@ describe("durable reasoning circuits", () => {
       maxCooldownMs: MAX,
     });
     expect((await store.acquire(KEY, 30_001, 500)).allowed).toBe(false);
+    await store.succeeded(KEY);
+    expect((await store.acquire(KEY, 30_002, 500)).allowed).toBe(true);
+    expect(JSON.stringify(log.mock.calls)).not.toContain("synthetic-private-database-error-body");
+    expect(JSON.stringify(log.mock.calls)).toContain("circuit write failed");
+    expect(JSON.stringify(log.mock.calls)).toContain("circuit read failed");
+    expect(JSON.stringify(log.mock.calls)).toContain("circuit clear failed");
   });
 });
