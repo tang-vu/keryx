@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-127** - Private buyer read recovery - *Use the validated local intent and a live
+account cookie to request the existing private result, never to resubmit payment.*
+The Node recovery helper calls only the pinned account result endpoint with the job ID
+in a POST body, a bounded deadline and redirect rejection. It never sends the original
+payment signature/salt or changes journal state. The returned owner, research fields,
+package, price and budget must match the signed intent; integer creator accounting and
+per-leg status totals must reconcile. Session expiry, missing results and malformed or
+mismatched responses produce generic failures without copying response bodies. This is
+a server-reported view, not an independently verified portable receipt; the existing
+response does not bind a result digest or expose a signed per-job result proof. CLI login,
+commands and encrypted local backup remain incomplete.
+
 **D-126** - Private buyer journal recovery - *Persist the original provider-bound
 signed intent and claim a local submission marker before any HTTP payment attempt.*
 The Node-side journal validates EOA ownership, canonical commitment, private resource,
