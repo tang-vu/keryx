@@ -55,6 +55,12 @@ shutdown grace period to accommodate the complete job, not just the poll interva
 Do not use a short forced kill as normal shutdown. An external forced kill or crash
 can still leave a permanent claim requiring operator recovery.
 
+The [Linux active-job lifecycle test](./engineering/private-worker-active-drain-2026-09-10.md)
+now exercises this actual entrypoint with synthetic prepaid jobs and blocked transports.
+It covers cooperative drain, queued-job preservation, crash-lock refusal and no replay
+after verified-stop cleanup. It does not prove recovery of a crashed job with no saved
+result, or interruption of live creator settlement.
+
 Output is JSON status/counters only. Errors and unpersisted results make the eventual
 exit code nonzero; the daemon continues polling until stopped. `--once` is a single
 work tick, not a readiness check: if enabled and funded, it can execute paid creator

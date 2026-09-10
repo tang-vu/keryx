@@ -40,6 +40,9 @@ jobs:
       - name: Unit tests (economic invariants)
         run: npm test
 
+      - name: Private worker Linux shutdown and crash (synthetic payments, network blocked)
+        run: node --import tsx scripts/test-private-worker-drain.mts
+
       - name: Install Chromium for buyer persistence checks
         run: npx playwright install --with-deps chromium
 

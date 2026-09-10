@@ -97,6 +97,13 @@ prevent independent product, measurement or reliability work from continuing.
 
 ## Delivery sequence
 
+Linux process acceptance now covers [active synthetic prepaid-job SIGTERM and SIGKILL](./engineering/private-worker-active-drain-2026-09-10.md)
+through the production worker entrypoint, real SQLite/spool and blocked transports.
+Cooperative stop preserves the queued job; crash preserves the original interrupted
+claim and allocation. This advances M4/M5 without claiming live creator-payment or
+systemd-under-load acceptance. Operator resolution for an interrupted job without a
+saved result remains a concrete missing user recovery flow.
+
 Version 0.22.49 adds [sealed private-job capacity reuse](./engineering/private-treasury-release-2026-09-10.md):
 return only never-committed creator budget, retaining every admitted authorization and
 original execution/payment barrier. SQLite and PostgreSQL contention/recovery checks
