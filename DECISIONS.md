@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-126** - Private buyer journal recovery - *Persist the original provider-bound
+signed intent and claim a local submission marker before any HTTP payment attempt.*
+The Node-side journal validates EOA ownership, canonical commitment, private resource,
+trusted merchant and derived job ID on create and restore. Restoring an expired intent
+is allowed for recovery; it never refreshes nonce, salt or signature. A bounded 64 KiB
+read prevents unbounded file parsing. Exclusive directory/file creation and fsync precede
+submission authority; existing or partial attempt markers deny another local attempt.
+This is a plaintext private journal with restricted creation modes, not encryption or
+a Windows ACL guarantee. Copies and tampering cannot replace server-side nonce checks.
+No CLI command, browser storage or payment request is activated by these helpers; clients
+must use the claimed validated snapshot and recovery-only paths after an attempt.
+
 **D-125** - Authenticated quote preview HTTP boundary - *Require live sessions and
 same-origin bounded POST bodies; expose preview terms only.* The new account quote
 route derives its owner from the revocable session, accepts at most 16 KiB within five
