@@ -10,7 +10,7 @@ import type { PrivateMerchantPolicy } from "@/lib/buyer/private-merchant-policy"
 import { previewPrivateBrowserQuote } from "@/lib/buyer/private-browser-quote";
 import { buyPrivateBrowserResearch } from "@/lib/buyer/private-browser-client";
 import { recoverPrivateBrowserResearch } from "@/lib/buyer/private-browser-recovery";
-import { listPrivateBrowserJournals, exportPrivateBrowserJournal, importPrivateBrowserJournal, type PrivateBrowserJournal } from "@/lib/buyer/private-browser-journal";
+import { listPrivateBrowserJournals, exportPrivateBrowserJournal, importPrivateBrowserJournal, deletePrivateBrowserJournal, type PrivateBrowserJournal } from "@/lib/buyer/private-browser-journal";
 import { connectedBuyerWallet } from "@/lib/buyer/connected-wallet";
 import { downloadBuyerJson } from "@/lib/buyer/download";
 import { ResearchPrivateResult } from "./research-private-result";
@@ -38,6 +38,7 @@ function PrivateCheckout({ payer, merchants }: { payer: string; merchants: Priva
   const [mode, setMode] = useState<"quick" | "deep">("quick"), [review, setReview] = useState<Review | null>(null);
   const [accepted, setAccepted] = useState(false), [busy, setBusy] = useState(false), [fundingBusy, setFundingBusy] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null), [result, setResult] = useState<PrivateWorkspaceResult | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [message, setMessage] = useState(""), [rows, setRows] = useState<PrivateBrowserJournal[]>([]), [cursor, setCursor] = useState<string | null>(null);
   const operation = useRef<AbortController | null>(null), mounted = useRef(true);
   const budget = parseBuyerBudget(budgetText, 1), total = parseBuyerBudget(totalText, 1);
@@ -110,6 +111,16 @@ function PrivateCheckout({ payer, merchants }: { payer: string; merchants: Priva
       if (!signal.aborted && mounted.current) { setActiveId(imported.id); setResult(null); clearReview(); setMessage("Private recovery imported. Choose Recover to read the original job; importing never sends payment."); }
     }, true);
   }
+  function deleteLocal(id: string) {
+    void work(async () => {
+      await deletePrivateBrowserJournal(id, payer, merchants);
+      if (mounted.current) {
+        setRows(previous => previous.filter(row => row.id !== id)); setDeletingId(null);
+        setActiveId(null); setResult(null); setQuestion(""); clearReview();
+        setMessage("Local private data deleted. This does not cancel payment or delete the server result. Account history remains available.");
+      }
+    }, true);
+  }
   return <div className="mt-5 space-y-5">
     <p className="break-all font-mono text-xs">Paying account: {payer}</p>
     {!walletReady && <div className="flex flex-wrap items-center gap-3"><WalletPicker isBusy={locked} onConnected={() => setMessage("Wallet connected. Use the signed-in paying account on Arc testnet.")} />
@@ -148,7 +159,14 @@ function PrivateCheckout({ payer, merchants }: { payer: string; merchants: Priva
       {rows.map(row => <div key={row.id} className="space-y-2 border border-line p-3">
         <p className="break-words text-sm">{row.draft.request.question}</p><p className="font-mono text-xs">{row.state === "reserved" ? "Signing incomplete" : row.state === "signed" ? "Signature saved; no submission recorded" : "Recovery only"}</p>
         <div className="flex flex-wrap gap-3"><button className={control} disabled={locked} onClick={() => open(row.id)}>Recover saved private job</button>
-          {row.intent && <button className={control} disabled={locked} onClick={() => exportJob(row.id)}>Export private recovery</button>}</div>
+          {row.intent && <button className={control} disabled={locked} onClick={() => exportJob(row.id)}>Export private recovery</button>}
+          <button className={control} disabled={locked} onClick={() => setDeletingId(row.id)}>Delete local private data</button></div>
+        {deletingId === row.id && <div role="group" aria-label="Confirm local private deletion" className="space-y-3 border border-line p-3">
+          <p className="text-sm">Delete the question and signature saved in this browser? Export first if you need recovery on another device. A minimal account/job marker remains to prevent another submission. Importing your saved file later restores recovery only.</p>
+          <p className="text-sm">This cannot cancel a signed or in-flight payment, refund funds, or delete server history, exports, backups or copies in other open tabs. It is not secure disk erasure. Close other tabs to clear their displayed copies.</p>
+          <div className="flex flex-wrap gap-3"><button className={control} disabled={locked} onClick={() => deleteLocal(row.id)}>Confirm delete local data</button>
+            <button className={control} disabled={locked} onClick={() => setDeletingId(null)}>Keep local data</button></div>
+        </div>}
       </div>)}
       {cursor && <button className={control} disabled={locked} onClick={() => void work(async () => refreshLocal(cursor))}>Load more local private jobs</button>}
     </div>

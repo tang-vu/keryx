@@ -132,7 +132,10 @@ now has Chromium evidence for exclusive reservation, cross-tab submission claims
 recovery-only imports and storage failure. v0.22.45 connects quote/provider review, local
 consent, current wallet/account/balance checks, one-attempt purchase and recovery in `/research`.
 The actual React/client/IndexedDB path passes synthetic response-loss and reload checks;
-live private browser payment, independent wallet/mobile acceptance, local deletion/retention
+v0.22.46 adds explicit local question/signature deletion with a minimal replay barrier
+and recovery-only re-import. Chromium checks cover deletion transaction failure, competing
+claim/deletion, pagination past deleted entries and UI confirmation/cancellation/reload.
+Live private browser payment, independent wallet/mobile acceptance, server retention
 and portable private receipt verification remain open.
 
 1. Establish this acceptance map and the executable economics model; obtain actual

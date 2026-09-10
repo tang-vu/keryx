@@ -15,6 +15,8 @@ const recordSchema = z.object({
   origin: z.enum(["created", "imported"]), state: z.enum(["reserved", "signed", "submission_possible"]),
   createdAt: z.string().datetime(),
 }).strict();
+const deletedSchema = z.object({ schema: z.literal("keryx-private-browser-deleted-v1"),
+  id: privateResearchIdSchema, payer: addressSchema }).strict();
 export type PrivateBrowserJournal = Omit<z.infer<typeof recordSchema>, "intent"> & { intent?: PrivateBuyerIntent };
 const transaction = <T>(mode: IDBTransactionMode, work: Parameters<typeof browserTransaction<T>>[2]) => browserTransaction<T>(spec, mode, work);
 
@@ -48,7 +50,10 @@ export async function listPrivateBrowserJournals(payer: string, merchants: Priva
     request.onsuccess = () => {
       const cursor = request.result;
       if (!cursor || values.length === 26) { done(values); return; }
-      if (after === null || String(cursor.primaryKey) > after) values.push(cursor.value);
+      if (after === null || String(cursor.primaryKey) > after) {
+        const deleted = deletedSchema.safeParse(cursor.value);
+        if (!deleted.success) values.push(cursor.value);
+      }
       cursor.continue();
     };
   });
@@ -108,8 +113,35 @@ export async function claimPrivateBrowserSubmission(value: unknown, payer: strin
 /** Imported CLI/browser intents are permanently recovery-only, even if never submitted. */
 export async function importPrivateBrowserJournal(value: unknown, payer: string, merchants: PrivateMerchantPolicy) {
   const intent = await validatePrivateBuyerIntent(value, payer, merchants);
-  return insert({ schema: "keryx-private-browser-job-v1", id: intent.id, payer: addressSchema.parse(payer).toLowerCase(),
+  const record = await validateRecord({ schema: "keryx-private-browser-job-v1", id: intent.id, payer: addressSchema.parse(payer).toLowerCase(),
     draft: privateDraftFromIntent(intent), intent, origin: "imported", state: "submission_possible", createdAt: new Date().toISOString() }, payer, merchants);
+  await transaction<void>("readwrite", (store, done, fail) => {
+    const request = store.get(record.id);
+    request.onsuccess = () => {
+      const deleted = deletedSchema.safeParse(request.result);
+      if (request.result !== undefined && (!deleted.success || deleted.data.payer !== record.payer || deleted.data.id !== record.id)) { fail(); return; }
+      store.put(record).onsuccess = () => done(undefined);
+    };
+  });
+  const saved = await readPrivateBrowserJournal(record.id, payer, merchants);
+  if (canonicalJson(saved) !== canonicalJson(record)) throw new Error("Private import read-back mismatch");
+  return saved;
+}
+
+/** Remove sensitive local payloads, retaining a minimal replay barrier. Not cancellation or secure erasure. */
+export async function deletePrivateBrowserJournal(id: string, payer: string, merchants: PrivateMerchantPolicy) {
+  const previous = await readPrivateBrowserJournal(id, payer, merchants);
+  const deleted = deletedSchema.parse({ schema: "keryx-private-browser-deleted-v1", id: previous.id, payer: previous.payer });
+  const removed = await transaction<boolean>("readwrite", (store, done, fail) => {
+    const request = store.get(id);
+    request.onsuccess = () => {
+      try {
+        if (canonicalJson(request.result) !== canonicalJson(previous)) { done(false); return; }
+        store.put(deleted).onsuccess = () => done(true);
+      } catch { fail(); }
+    };
+  });
+  if (!removed) throw new Error("Private job changed while deleting local data");
 }
 
 /** Plaintext export contains the question, salt and bearer signature. Never auto-download. */

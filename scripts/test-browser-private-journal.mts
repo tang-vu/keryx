@@ -117,6 +117,46 @@ try {
   await first.evaluate("Object.defineProperty(window,'indexedDB',window.indexedDBDescriptor);");
   await assert.rejects(invoke(second, "readPrivateBrowserJournal", blocked.id));
 
+  await assert.rejects(invoke(first, "deletePrivateBrowserJournal", imported.id, merchants.publicResearchPayee));
+  await first.evaluate(`window.originalPut=IDBObjectStore.prototype.put; IDBObjectStore.prototype.put=function(...args){
+    const request=window.originalPut.apply(this,args); this.transaction.abort(); return request; };`);
+  await assert.rejects(invoke(first, "deletePrivateBrowserJournal", imported.id));
+  await first.evaluate("IDBObjectStore.prototype.put=window.originalPut;");
+  assert.equal((await invoke(second, "readPrivateBrowserJournal", imported.id)).origin, "imported");
+  for (const state of ["reserved", "signed", "submission_possible"]) {
+    const removable = await fresh(), signedIntent = await sign(removable);
+    await invoke(first, "reservePrivateBrowserJournal", removable);
+    if (state !== "reserved") await invoke(first, "savePrivateBrowserSignature", signedIntent);
+    if (state === "submission_possible") await invoke(first, "claimPrivateBrowserSubmission", signedIntent);
+    await invoke(second, "deletePrivateBrowserJournal", removable.id);
+    const marker = await first.evaluate(`new Promise(resolve=>{const open=indexedDB.open('keryx-private-buyer-jobs-v1',1);
+      open.onsuccess=()=>{const db=open.result,tx=db.transaction('jobs','readonly'),read=tx.objectStore('jobs').get(${JSON.stringify(removable.id)});
+        tx.oncomplete=()=>{db.close();resolve(read.result);};};})`);
+    assert.deepEqual(marker, { schema: "keryx-private-browser-deleted-v1", id: removable.id, payer: account.address.toLowerCase() });
+    await assert.rejects(invoke(first, "readPrivateBrowserJournal", removable.id));
+    await assert.rejects(invoke(first, "exportPrivateBrowserJournal", removable.id));
+    await assert.rejects(invoke(first, "reservePrivateBrowserJournal", removable));
+    await assert.rejects(invoke(first, "savePrivateBrowserSignature", signedIntent));
+    await assert.rejects(invoke(first, "claimPrivateBrowserSubmission", signedIntent));
+    const restored = await invoke(first, "importPrivateBrowserJournal", signedIntent);
+    assert.equal(restored.origin, "imported"); assert.equal(restored.state, "submission_possible");
+    assert.equal(await invoke(second, "claimPrivateBrowserSubmission", signedIntent), false);
+    await invoke(second, "deletePrivateBrowserJournal", removable.id);
+  }
+  const afterDeletion = await first.evaluate(`(async()=>{const ids=[];let cursor=null;do{
+    const page=await window.journal.listPrivateBrowserJournals(${JSON.stringify(account.address)},${JSON.stringify(merchants)},cursor);
+    ids.push(...page.jobs.map(job=>job.id));cursor=page.nextCursor;
+  }while(cursor);return ids;})()`);
+  assert.deepEqual(afterDeletion, listing, "deleted markers must not hide later recovery pages");
+  const contested = await fresh(), contestedIntent = await sign(contested);
+  await invoke(first, "reservePrivateBrowserJournal", contested);
+  await invoke(first, "savePrivateBrowserSignature", contestedIntent);
+  const race = await Promise.allSettled([invoke(first, "claimPrivateBrowserSubmission", contestedIntent),
+    invoke(second, "deletePrivateBrowserJournal", contested.id)]);
+  if (race[1].status === "rejected") await invoke(second, "deletePrivateBrowserJournal", contested.id);
+  await assert.rejects(invoke(first, "claimPrivateBrowserSubmission", contestedIntent));
+  await assert.rejects(invoke(first, "reservePrivateBrowserJournal", contested));
+
   // Corruption is rejected rather than normalized into a new valid purchase.
   await first.evaluate(`new Promise((resolve,reject)=>{const open=indexedDB.open('keryx-private-buyer-jobs-v1',1);
     open.onsuccess=()=>{const db=open.result,tx=db.transaction('jobs','readwrite'),store=tx.objectStore('jobs');

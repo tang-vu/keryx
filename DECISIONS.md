@@ -1,5 +1,20 @@
 # Keryx — Decision Log
 
+**D-160** - Private local deletion - *Remove question/signature payloads without removing the
+local submission barrier.*
+An explicit two-step browser action replaces a validated local journal with a minimal
+account/job marker in the same strict-durability IndexedDB transaction. Complete-row
+comparison refuses concurrent state changes. The marker contains no question, salt,
+authorization or signature; local recovery pagination skips it. Exclusive reservations,
+signature saving and submission claiming cannot reuse a deleted job. An explicitly imported,
+validated backup may replace the marker atomically, but only as recovery-only imported state.
+This preserves the server's independent admission authority and does not cancel an already
+claimed/in-flight payment or release any budget. The UI clears its displayed result and draft;
+other open tabs, exported files, server history, browser/OS backups and storage-level remnants
+are outside this deletion boundary. This is application-level removal, not secure disk erasure.
+Corrupt or foreign-account journals remain fail-closed. Server retention, automatic expiry,
+cross-tab memory clearing and secure-erasure guarantees are not established by this feature.
+
 **D-159** - Private browser purchase integration - *Separate proposal, consent, signing and
 one-attempt submission; recover the existing intent after uncertainty.*
 The signed-in browser requests private terms with POST. A quote proposes the provider/model

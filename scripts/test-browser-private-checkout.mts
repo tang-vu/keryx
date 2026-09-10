@@ -117,5 +117,22 @@ try {
   await page.getByRole("button", { name: "Buy private research", exact: true }).click();
   await page.getByText(/This action did not finish/).waitFor();
   assert.equal(posted, 1); assert.equal(signed, 1); assert.deepEqual(errors, []);
+  await page.getByRole("button", { name: "Delete local private data", exact: true }).click();
+  await page.getByRole("group", { name: "Confirm local private deletion" }).waitFor();
+  await page.getByRole("button", { name: "Keep local data", exact: true }).click();
+  assert.equal(await page.getByRole("button", { name: "Recover saved private job", exact: true }).count(), 1);
+  await page.getByRole("button", { name: "Delete local private data", exact: true }).click();
+  await page.getByRole("button", { name: "Confirm delete local data", exact: true }).click();
+  await page.getByText(/Local private data deleted/).waitFor();
+  assert.equal(await page.getByRole("button", { name: "Recover saved private job", exact: true }).count(), 0);
+  assert.equal(await page.getByLabel("Private research question").inputValue(), "");
+  await mount();
+  await page.getByRole("button", { name: "Refresh local private jobs", exact: true }).click();
+  assert.equal(await page.getByRole("button", { name: "Recover saved private job", exact: true }).count(), 0);
+  await page.getByLabel("Import private recovery").setInputFiles({ name: "private-recovery.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(exported)) });
+  await page.getByText(/Private recovery imported/).waitFor();
+  await page.getByRole("button", { name: "Recover private purchase", exact: true }).click();
+  await page.getByText("Synthetic private browser answer", { exact: true }).waitFor();
+  assert.equal(posted, 1); assert.equal(signed, 1); assert.deepEqual(errors, []);
   console.log("PASS: private React quote/review/EOA checkout, durable response-loss recovery, reload/export, account and wallet changes, pilot gating, consent and mobile/desktop layout. Synthetic HTTP only; no funded payment.");
 } finally { await browser.close(); }

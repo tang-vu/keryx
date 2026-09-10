@@ -53,7 +53,16 @@ and offer export only on an explicit action. Do not put job identifiers in URLs 
 Browser eviction, profile deletion and device loss can remove the local journal. A successful
 IndexedDB commit does not establish disk/power-loss durability on every browser or device.
 Deleting local data cannot cancel an authorization, remove the server result or release funds.
-Retention, explicit deletion and recovery guidance still need UI integration.
+Choose **Delete local private data**, then confirm, to remove a job's stored question,
+salt and signature from the local journal. Export first if you need a portable recovery
+copy. A minimal account/job marker remains to block another local submission. It is
+omitted from local recovery lists. Importing a validated backup restores recovery only.
+Deletion clears this checkout's displayed result and draft; it does not cancel an
+authorization or in-flight request, refund funds, remove account/server history, clear
+other open tabs or erase exported files, backups or disk remnants. Close other tabs to
+clear their displayed copies. This is not secure disk erasure. Corrupt journals remain
+fail-closed rather than being silently overwritten. Server retention and automatic local
+expiry remain separate work.
 
 ## Verification and next integration
 
@@ -70,5 +79,5 @@ at mobile and desktop sizes using the application CSS. Funding is separately tes
 existing browser funding suite. No live payment is made by these checks.
 
 Still required: independent wallet-extension/mobile acceptance, a live browser private paid
-pilot, local deletion/retention UX and portable private receipt verification. Purchase
+pilot, server retention and portable private receipt verification. Purchase
 availability remains constrained by the server's pilot allowlist.
