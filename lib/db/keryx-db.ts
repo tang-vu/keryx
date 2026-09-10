@@ -5,6 +5,7 @@
 
 import type { PrivateCreatorConfirmation, PrivateCreatorConfirmationRecord } from "./private-creator-confirmations";
 import type { PrivateTreasuryPolicy, PrivateTreasuryReservation } from "./private-treasury-capacity";
+import type { PrivateTreasurySummary } from "./private-treasury-summary";
 import type { PrivateCreatorSubmission, PrivateCreatorSubmissionRecord } from "./private-creator-submissions";
 import type { PrivateResearchResult } from "./private-research-results";
 import type { PrivateExecutionClaim } from "./private-research-executions";
@@ -372,6 +373,7 @@ export interface KeryxDB {
   listPrivateWorkerCandidates(signer: string, after?: string): Promise<import("./private-worker-candidates").PrivateWorkerCandidate[]>;
   reservePrivateTreasury(id: string, payer: string, policy: PrivateTreasuryPolicy): Promise<boolean>;
   getPrivateTreasury(id: string, payer: string): Promise<PrivateTreasuryReservation | null>;
+  getPrivateTreasurySummary(signer: string): Promise<PrivateTreasurySummary | null>;
   /** Caller must supply an independently authenticated payer. Never expose via bearer-ID lookup. */
   getPrivateResearchIntent(id: string, payer: string): Promise<PrivateResearchIntent | null>;
   listPrivateResearchHistory(payer: string, before?: import("./private-research-intents").PrivateHistoryCursor): Promise<import("./private-research-intents").PrivateHistoryEntry[]>;

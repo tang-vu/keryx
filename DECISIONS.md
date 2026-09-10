@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-146** - Private treasury observation - *Read lifetime capacity, allocations and
+creator commitments in one SQL snapshot, keeping uncertain payments separate.*
+Both adapters expose an operator-only summary; PostgreSQL uses a service-role-only
+SECURITY INVOKER function. Confirmed amounts count facilitator success or confirmed/
+completed transfer-search evidence, never received/batched or missing proof. The
+conservative backing target is capacity minus recorded confirmed creator outflows.
+Pending/processing commitments remain covered, including potentially already deducted
+amounts, so this is conservative rather than a measured free balance. No allocation
+is released. Inconsistent totals or mismatched stored proof are refused. This is a
+database observation, not independent receipt verification, profit, refund authority,
+live funding evidence or a checkout-readiness decision.
+
 **D-145** - Private worker configuration identity - *Bind advisory worker observations
 to a canonical digest of validated public operating policy.*
 The digest includes the pinned network, private/public merchants, treasury signer and

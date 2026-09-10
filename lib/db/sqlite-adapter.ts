@@ -9,6 +9,7 @@ import { saveSqlitePrivateResult, getSqlitePrivateResult, PRIVATE_RESEARCH_RESUL
 import { PRIVATE_TREASURY_CAPACITY_SQL, reserveSqlitePrivateTreasury, getSqlitePrivateTreasury, type PrivateTreasuryPolicy } from "./private-treasury-capacity";
 import { claimSqlitePrivateExecution, getSqlitePrivateExecution, PRIVATE_RESEARCH_EXECUTIONS_SQL } from "./private-research-executions";
 import { DatabaseSync } from "node:sqlite";
+import { getSqlitePrivateTreasurySummary } from "./private-treasury-summary";
 import { listSqlitePrivateWorkerCandidates } from "./private-worker-candidates";
 import fs from "node:fs";
 import path from "node:path";
@@ -1476,6 +1477,7 @@ export class SqliteAdapter implements KeryxDB {
     return reserveSqlitePrivateTreasury(this.db, id, payer, policy);
   }
   async getPrivateTreasury(id: string, payer: string) { return getSqlitePrivateTreasury(this.db, id, payer); }
+  async getPrivateTreasurySummary(signer: string) { return getSqlitePrivateTreasurySummary(this.db, signer); }
   async listPrivateWorkerCandidates(signer: string, after?: string) { return listSqlitePrivateWorkerCandidates(this.db, signer, after); }
 
   async confirmPrivateCreatorSubmission(id: string, payer: string, workerId: string, confirmation: PrivateCreatorConfirmation) {

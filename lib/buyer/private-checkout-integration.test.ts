@@ -134,6 +134,8 @@ it.each(["after-settlement", "during-settlement"] as const)(
         expect(fetch).toHaveBeenCalled();
         expect(vi.mocked(fetch).mock.calls.every(([url]) => String(url) === "https://synthetic.example/v1/chat/completions")).toBe(true);
         expect(await db.listPrivateWorkerCandidates(context.privateTreasurySigner)).toEqual([]);
+        expect(await db.getPrivateTreasurySummary(context.privateTreasurySigner)).toMatchObject({ capacityMicros: "30000",
+          allocatedMicros: "30000", unallocatedMicros: "0", committedMicros: "0", confirmedMicros: "0", conservativeBackingMicros: "30000" });
       }
     } finally {
       db.close();
