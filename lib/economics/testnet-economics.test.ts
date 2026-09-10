@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { QueryRun } from "../types";
-import { calculateTestnetEconomics } from "./testnet-economics";
+import { calculateTestnetEconomics, economicsRunSample } from "./testnet-economics";
 
 function run(
   id: string,
@@ -11,6 +11,10 @@ function run(
     id,
     researchMode: id === "quick" ? "quick" : "deep",
     fundingOwner,
+    reasoningAttempts: [{
+      step: "synthesize", engine: model.startsWith("deepseek") ? `llm:deepseek:${model}` : `llm:mimo:${model}`,
+      tier: 0, attempt: 1, startedAt: 0, durationMs: 1, outcome: "served",
+    }],
     llmUsage: [
       {
         engine: model.startsWith("deepseek") ? `llm:deepseek:${model}` : `llm:mimo:${model}`,
@@ -80,9 +84,56 @@ describe("testnet economics", () => {
   });
 
   it("treats an explicitly measured heuristic-only run as priced zero-token work", () => {
-    const snapshot = calculateTestnetEconomics([{ id: "heuristic", llmUsage: [], researchMode: "quick" }], []);
+    const snapshot = calculateTestnetEconomics([{
+      id: "heuristic", engine: "heuristic", reasoningAttempts: [], llmUsage: [], researchMode: "quick",
+    }], []);
     expect(snapshot).toMatchObject({ sampledRuns: 1, pricedRuns: 1, providerCalls: 0 });
     expect(snapshot.shadowGrossMarginUsd).toBe(0.015);
+  });
+
+  it("does not price a failed provider followed by heuristic fallback as free work", () => {
+    const failed = run("fallback", "treasury");
+    failed.llmUsage = [];
+    failed.engine = "heuristic";
+    failed.reasoningAttempts![0].outcome = "failed";
+    failed.reasoningAttempts!.push({
+      step: "synthesize", engine: "heuristic", tier: 1, attempt: 1,
+      startedAt: 1, durationMs: 1, outcome: "served",
+    });
+    const sample = economicsRunSample(failed as QueryRun)!;
+    expect(sample.usageCoverage).toBe("unknown");
+    expect(sample).not.toHaveProperty("reasoningAttempts");
+    expect(calculateTestnetEconomics([JSON.parse(JSON.stringify(sample))], [])).toMatchObject({
+      pricedRuns: 0, unpricedRuns: 1, shadowGrossMarginUsd: 0,
+    });
+  });
+
+  it("requires coverage for every served call and preserves it through the compact projection", () => {
+    const measured = run("measured", "treasury");
+    expect(calculateTestnetEconomics([economicsRunSample(measured as QueryRun)!], []).pricedRuns).toBe(1);
+    measured.reasoningAttempts!.push({ ...measured.reasoningAttempts![0], step: "decide" });
+    expect(calculateTestnetEconomics([economicsRunSample(measured as QueryRun)!], []).pricedRuns).toBe(0);
+  });
+
+  it("keeps old projections without attempt coverage unpriced, including empty usage", () => {
+    const legacy = run("legacy", "treasury");
+    delete legacy.reasoningAttempts;
+    expect(calculateTestnetEconomics([legacy, { id: "empty", llmUsage: [] }], [])).toMatchObject({
+      sampledRuns: 2, pricedRuns: 0, unpricedRuns: 2, shadowGrossMarginUsd: 0,
+    });
+  });
+
+  it("does not invent provider cost for a circuit-open skip followed by local execution", () => {
+    const skipped = run("skipped", "treasury");
+    skipped.llmUsage = [];
+    skipped.reasoningAttempts![0].outcome = "circuit-open";
+    skipped.reasoningAttempts!.push({
+      step: "synthesize", engine: "heuristic", tier: 1, attempt: 1,
+      startedAt: 1, durationMs: 1, outcome: "served",
+    });
+    expect(calculateTestnetEconomics([economicsRunSample(skipped as QueryRun)!], [])).toMatchObject({
+      pricedRuns: 1, unpricedRuns: 0, estimatedLlmCostUsd: 0,
+    });
   });
 
   it("separates prepaid A2A creator spend from treasury subsidy", () => {

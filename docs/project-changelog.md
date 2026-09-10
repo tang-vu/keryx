@@ -1,5 +1,13 @@
 # Keryx Project Changelog
 
+### Cost coverage and private worker evidence (2026-09-10, v0.22.40)
+
+- Exclude failed-provider and incomplete-usage runs from hypothetical cost/margin estimates.
+- Preserve compact usage coverage for new runs; historical missing coverage remains unknown.
+- Revalidate private purchase sessions after readiness waits, before payment admission.
+- Report provider/fallback counters and exercise fallback through the real isolated private worker pipeline.
+- Private purchasing remains disabled; testnet telemetry is not revenue or profit.
+
 ### Private operations inspection (2026-09-10, v0.22.39)
 
 - Add `private:inspect` to report worker configuration/phase and treasury backing observations.

@@ -44,9 +44,15 @@ charged by this feature.
 ## Reading the snapshot
 
 `pricedRuns` is the only denominator eligible for estimated LLM cost and shadow margin. An empty
-usage list is a measured heuristic-only run and can be priced at zero tokens; a missing usage list
-is historical and unsampled. `unpricedRuns` means at least one provider call lacks an authoritative
-rate, so the observer refuses to manufacture a complete cost.
+usage list can be priced at zero tokens only with explicit heuristic execution evidence and no
+failed provider attempts. A missing usage list is historical and unsampled. `unpricedRuns` includes
+unknown rates, failed provider attempts and missing usage coverage. Served provider attempts must
+match response counters per engine; circuit-open attempts did not call the provider. Failed attempts
+remain conservatively unpriced even when some usage was recorded, since this is not a billing audit.
+New compact database projections preserve only a `usageCoverage` classification, not attempt traces.
+Historical projections without this evidence remain unpriced; they are not silently backfilled.
+Token totals still describe recorded responses, not all attempted or billable calls. Costs and shadow
+margin are partial totals for eligible runs only, never a whole-service profit claim.
 
 This is a testnet experiment, not accounting guidance, mainnet readiness, or permission to use real
 funds. Any future fee collection needs a separate authority/security design and explicit approval.

@@ -1,5 +1,13 @@
 # Keryx — Decision Log
 
+**D-151** - Economics usage coverage - *Missing provider usage is unknown cost, not free work.*
+Price a run only when its reasoning attempts account for all recorded provider responses and
+contain no failed provider attempt. Circuit-open skips are not calls; explicit heuristic-only
+execution can have zero token cost. Persist a compact coverage classification without copying
+attempt traces. Old projections lack this evidence and remain unpriced. This conservative
+observer cannot prove invoice completeness or whole-service profit; dated rates and the explicit
+testnet shadow-pricing assumption remain unchanged.
+
 **D-150** - Private worker reasoning counters - *Report observed provider and fallback
 use separately from successful result persistence.*
 For newly executed jobs that return a run, the worker counts primary-tier served,

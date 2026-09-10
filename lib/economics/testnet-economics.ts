@@ -52,7 +52,29 @@ export interface EconomicsA2aOrderRow {
 export type EconomicsRunSample = Pick<
   QueryRun,
   "id" | "researchMode" | "fundingOwner" | "llmUsage"
->;
+> & { usageCoverage?: "complete" | "unknown" };
+
+/** A response counter alone cannot account for failed or unreported provider calls. */
+function completeUsage(run: Partial<QueryRun>): boolean {
+  if (!Array.isArray(run.reasoningAttempts) || !Array.isArray(run.llmUsage)) return false;
+  const served = new Map<string, number>();
+  for (const attempt of run.reasoningAttempts) {
+    if (attempt.engine === "heuristic" || attempt.outcome === "circuit-open") continue;
+    if (attempt.outcome !== "served") return false;
+    served.set(attempt.engine, (served.get(attempt.engine) ?? 0) + 1);
+  }
+  if (served.size === 0 && run.llmUsage.length === 0) {
+    return run.engine === "heuristic" || run.reasoningAttempts.some(
+      (attempt) => attempt.engine === "heuristic" && attempt.outcome === "served",
+    );
+  }
+  for (const usage of run.llmUsage) {
+    const remaining = served.get(usage.engine) ?? 0;
+    if (remaining < 1) return false;
+    served.set(usage.engine, remaining - 1);
+  }
+  return [...served.values()].every((count) => count === 0);
+}
 
 /** Compact DB projection. Historical unsampled runs remain NULL instead of being reconstructed. */
 export function economicsRunSample(run: QueryRun): EconomicsRunSample | null {
@@ -62,6 +84,7 @@ export function economicsRunSample(run: QueryRun): EconomicsRunSample | null {
     researchMode: run.researchMode,
     fundingOwner: run.fundingOwner,
     llmUsage: run.llmUsage,
+    usageCoverage: completeUsage(run) ? "complete" : "unknown",
   };
 }
 
@@ -120,7 +143,7 @@ function fundingOwner(run: Partial<QueryRun>): QueryRun["fundingOwner"] | "unkno
  * from sampled counters. Historical and unknown-price data stays explicitly incomplete.
  */
 export function calculateTestnetEconomics(
-  runs: Partial<QueryRun>[],
+  runs: (Partial<QueryRun> & Pick<EconomicsRunSample, "usageCoverage">)[],
   payments: EconomicsPaymentRow[],
   now = new Date(),
   a2aOrders: EconomicsA2aOrderRow[] = [],
@@ -140,7 +163,8 @@ export function calculateTestnetEconomics(
   for (const run of sampled) {
     const usage = run.llmUsage ?? [];
     let runCost = 0;
-    let complete = true;
+    let complete = run.usageCoverage === "complete" ||
+      (run.usageCoverage === undefined && completeUsage(run));
     for (const call of usage) {
       providerCalls++;
       inputTokens += call.inputTokens;
