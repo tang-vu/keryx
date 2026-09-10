@@ -44,6 +44,15 @@ is removed. No creator
 signature is requested. This tests execution and persistence recovery wiring, not
 answer quality or paid content delivery.
 
+A second persisted-payment variant lets the database save normally while keeping
+provider traffic blocked. It exercises the actual worker, private engine, fallback,
+encrypted spool and SQLite result storage without mocking the executor's return value.
+The job completes with providerServedJobs=0, providerFailedJobs=1, fallbackJobs=1 and
+reasoningUnknownJobs=0. The next tick visits no job and reports no fresh provider or
+fallback activity. The owner can read the completed result, no backup remains, and
+the entire creator allocation remains reserved without any creator payment signature.
+This confirms that completion does not imply provider availability or answer quality.
+
 ## Reproduction and limits
 
 Run `npm test -- --run lib/buyer/private-checkout-integration.test.ts`.

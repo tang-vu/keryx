@@ -23,8 +23,12 @@ afterEach(() => vi.unstubAllGlobals());
 
 // Actual EOA signatures, local journal and SQLite adapters; no HTTP server, real
 // facilitator, funded wallet, external provider request or on-chain settlement is exercised.
-it.each(["after-settlement", "during-settlement"] as const)(
-  "recovers across a database reopen with response loss %s and no second debit attempt", async (loss) => {
+it.each([
+  { loss: "after-settlement", storageOutage: true },
+  { loss: "after-settlement", storageOutage: false },
+  { loss: "during-settlement", storageOutage: false },
+] as const)(
+  "recovers response loss $loss, storage outage $storageOutage, without a second debit attempt", async ({ loss, storageOutage }) => {
     vi.stubGlobal("fetch", vi.fn(() => { throw new Error("Network forbidden in this integration test"); }));
     const root = await mkdtemp(join(tmpdir(), "keryx-private-integration-"));
     const file = join(root, "data", "keryx.sqlite"), journal = join(root, "journal");
@@ -106,6 +110,14 @@ it.each(["after-settlement", "during-settlement"] as const)(
           resultSpool,
           getGatewayBalance: async () => BigInt(30000), privateProvider: { modelId: "deepseek-flash", provider: "deepseek",
             baseUrl: "https://synthetic.example/v1", apiKey: "synthetic-not-secret" } });
+        if (!storageOutage) {
+          const report = await worker.tick();
+          expect(report).toMatchObject({ status: "processed", visited: 1, completed: 1, errors: 0,
+            providerServedJobs: 0, providerFailedJobs: 1, fallbackJobs: 1, reasoningUnknownJobs: 0 });
+          expect(JSON.stringify(report)).not.toContain(request.question);
+          expect(JSON.stringify(report)).not.toContain(prepared.id);
+          expect(await worker.tick()).toMatchObject({ visited: 0, providerServedJobs: 0, providerFailedJobs: 0, fallbackJobs: 0 });
+        } else {
         const storageFailure = vi.spyOn(db, "savePrivateResearchResult").mockRejectedValueOnce(new Error("Synthetic storage outage"));
         try { expect(await worker.tick()).toMatchObject({ status: "processed", visited: 1, completed: 0, errors: 1, unpersisted: 0 }); }
         finally { storageFailure.mockRestore(); }
@@ -128,6 +140,7 @@ it.each(["after-settlement", "during-settlement"] as const)(
           timeout: 20000, maxBuffer: 4096 });
         expect(result.stdout.trim()).toBe('{"status":"restored"}');
         expect(result.stderr).toBe("");
+        }
         expect(await privateResultView(db, prepared.id, account.address)).toMatchObject({ status: "completed" });
         expect(await readdir(backupDirectory)).toEqual([]);
         expect(signer.createPaymentPayload).not.toHaveBeenCalled();
