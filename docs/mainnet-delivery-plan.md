@@ -150,6 +150,12 @@ completed deletion, reload and recovery-only re-import without payment. Earlier
 intermittent reload stalls remain undiagnosed; one pass does not close browser
 reliability or independent wallet acceptance.
 
+The [controlled reload investigation](./engineering/private-browser-reload-investigation-2026-09-10.md)
+adds signed-out, signed-in, local-journal and full-Chromium comparisons. Completed series
+passed, while a separate headless-shell import stalled. A successful-run trace identifies
+JavaScript startup work but does not capture or explain a stalled interval. Keep the
+reliability gate open; no payment/recovery code fix is inferred from these diagnostics.
+
 1. Establish this acceptance map and the executable economics model; obtain actual
    fixed costs and provider billing data without inventing zeros.
 2. Complete usable browser quote/buy/recover under the buyer's own wallet authority,
