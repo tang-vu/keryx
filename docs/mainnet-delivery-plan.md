@@ -117,7 +117,15 @@ verifies real-process exclusion and retained locks after forced termination on t
 local Windows filesystem. Cleanup happens only after the holder's close event. This
 does not prove production supervisor recovery, power-loss durability or readiness to
 accept payments; M5 remains open. Private checkout client composition and encrypted
-result recovery shipped in v0.22.38, while production private purchasing remains disabled.
+result recovery shipped in v0.22.38; private purchasing was disabled at that drill.
+
+Private paid acceptance update (September 10): the [first owner-operated private pilot](./engineering/private-paid-pilot-2026-09-10.md)
+completed through the CLI, managed worker and owner browser recovery on Arc testnet.
+Purchasing is restricted to one configured pilot account. Creator legs totaling 0.017 USDC
+were facilitator-confirmed; a foreign account could not read the result and no public run
+or payment rows were found for it. Billing coverage remains unknown because six served
+reasoning attempts produced seven usage records. This does not close independent buyer,
+complete cost accounting, paid-job crash recovery or mainnet acceptance gates.
 
 1. Establish this acceptance map and the executable economics model; obtain actual
    fixed costs and provider billing data without inventing zeros.

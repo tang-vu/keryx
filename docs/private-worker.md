@@ -8,7 +8,9 @@ signal is activated by installing this release.
 
 ## Managed VPS service
 
-The current VPS has a running managed worker with purchasing still disabled. The
+The current VPS has a running managed worker with purchasing restricted to one configured
+owner-operated testnet pilot account. The [first paid pilot](./engineering/private-paid-pilot-2026-09-10.md)
+records completed execution, payment evidence, owner recovery and remaining limitations. The
 [supervision and deploy drill](./engineering/private-worker-supervision-2026-09-10.md)
 records actual startup, stop/resume, deployment ordering and the remaining acceptance limits.
 
@@ -206,7 +208,7 @@ does not forcibly stop a callback that ignores cancellation, so bootstrap must n
 sign, reserve funds, settle or start jobs. Actual matching worker/configuration and
 backing checks are composed in `privatePurchaseBootstrap`, mounted at POST
 `/api/agent/private-ask`. Mounting the route does not enable purchasing: production flags
-remain disabled, and an active owner session and explicit pilot configuration are required.
+default to disabled, and an active owner session and explicit pilot configuration are required.
 
 The restricted bootstrap additionally requires `KERYX_PRIVATE_PURCHASE_ENABLED=1` and
 `KERYX_PRIVATE_PURCHASE_PAYERS`, a comma-separated list of one to sixteen explicit pilot
@@ -220,8 +222,9 @@ on each request; do not cache its service or derive the allowed payer from submi
 These observations are best-effort pilot availability checks, not a durable worker/funding lease.
 A worker may stop after inspection; a later reservation may consume remaining capacity. No
 readiness observation supersedes database payment admission. Production private purchasing
-remains disabled. Supervisor operation and actual paid pilot acceptance
-are still outstanding. The quote route now uses the same account-aware bootstrap and its
+is restricted to the configured owner pilot; general availability is not enabled. Supervisor
+operation and one paid pilot have been exercised, while paid-job crash/drain acceptance
+remains outstanding. The quote route now uses the same account-aware bootstrap and its
 policy snapshot to advertise `purchasingAvailable`; otherwise it can return a preview marked
 false. Quote and purchase calls have separate per-wallet limits of ten calls per minute.
 Both revalidate the original session after readiness. The purchase route reads its bounded
