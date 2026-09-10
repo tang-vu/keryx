@@ -12,6 +12,7 @@ import { recoverPrivateBuyerResult } from "./private-recovery";
 import { recoverPrivateBuyerWorkflow } from "./private-recovery-workflow";
 import { preparePrivateBuyerJournal } from "./private-checkout-preparation";
 import * as buyerJournal from "./journal";
+import { submitPrivateBuyerJournal } from "./private-submission";
 
 const account = privateKeyToAccount(generatePrivateKey());
 const merchants = { privatePayee: `0x${"2".repeat(40)}`, publicResearchPayee: `0x${"3".repeat(40)}` };
@@ -106,6 +107,53 @@ it("restores the same signed authorization and grants only one local submission 
   expect(await claimPrivateBuyerSubmission(directory, account.address, merchants)).toEqual({ claimed: false });
   expect(await readFile(join(directory, "private-submission-attempt.json"), "utf8")).not.toContain(value.submission.request.question);
   await expect(createPrivateBuyerJournal(directory, value, account.address, merchants)).rejects.toThrow();
+});
+
+it("submits the original private payload once and treats success only as server-reported", async () => {
+  const { directory, value } = await fixture();
+  await createPrivateBuyerJournal(directory, value, account.address, merchants);
+  const saved = await readPrivateBuyerJournal(directory, account.address, merchants);
+  const http = vi.fn(async (_url: string, init?: RequestInit) => {
+    expect(await readFile(join(directory, "private-submission-attempt.json"), "utf8")).toContain(value.id);
+    expect(JSON.parse(String(init?.body))).toEqual(saved.submission);
+    return Response.json({ id: value.id, paymentStatus: "settled" }, { status: 202 });
+  });
+  const results = await Promise.all([submitPrivateBuyerJournal(directory, account.address, merchants, "keryx_session=synthetic", http, 1788912000000),
+    submitPrivateBuyerJournal(directory, account.address, merchants, "keryx_session=synthetic", http, 1788912000000)]);
+  expect(results).toContainEqual({ status: "response-received", submissionAttempted: true, evidence: "server-reported", paymentStatus: "settled" });
+  expect(results).toContainEqual({ status: "recovery-required", submissionAttempted: false });
+  expect(http).toHaveBeenCalledTimes(1);
+  expect(http.mock.calls[0][0]).toBe(PRIVATE_RESEARCH_RESOURCE);
+  expect(http.mock.calls[0][1]).toMatchObject({ method: "POST", redirect: "error", cache: "no-store" });
+});
+
+it("never retries lost, rejected, foreign-job or oversized submission responses", async () => {
+  for (const kind of ["lost", "rejected", "foreign", "oversized"]) {
+    const { directory, value } = await fixture();
+    await createPrivateBuyerJournal(directory, value, account.address, merchants);
+    const http = vi.fn(async () => {
+      if (kind === "lost") throw new Error("synthetic-private-response-detail");
+      if (kind === "rejected") return new Response("synthetic-private-response-detail", { status: 401 });
+      if (kind === "oversized") return new Response("x".repeat(4097));
+      return Response.json({ id: "another-job", paymentStatus: "settled" });
+    });
+    expect(await submitPrivateBuyerJournal(directory, account.address, merchants, "keryx_session=synthetic", http, 1788912000000))
+      .toEqual({ status: "recovery-required", submissionAttempted: true });
+    expect(await submitPrivateBuyerJournal(directory, account.address, merchants, "keryx_session=synthetic", http, 1788912000000))
+      .toEqual({ status: "recovery-required", submissionAttempted: false });
+    expect(http).toHaveBeenCalledTimes(1);
+  }
+});
+
+it("does not send expired authorizations or malformed session headers", async () => {
+  const { directory, value } = await fixture();
+  await createPrivateBuyerJournal(directory, value, account.address, merchants);
+  const http = vi.fn(async () => Response.json({}));
+  await expect(submitPrivateBuyerJournal(directory, account.address, merchants, "keryx_session=synthetic; other=value", http, 1788912000000)).rejects.toThrow("context");
+  await expect(access(join(directory, "private-submission-attempt.json"))).rejects.toThrow();
+  expect(await submitPrivateBuyerJournal(directory, account.address, merchants, "keryx_session=synthetic", http,
+    Number(value.submission.payment.authorization.validBefore) * 1000)).toEqual({ status: "not-sent", reason: "authorization-not-current", submissionAttempted: false });
+  expect(http).not.toHaveBeenCalled();
 });
 
 it("denies foreign owners and edited intent content instead of regenerating an authorization", async () => {

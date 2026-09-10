@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-132** - Private buyer submission - *Send the verified saved payload only after an
+exclusive durable local attempt marker, and recover by reading after any uncertainty.*
+The internal Node transport requires an existing account cookie, pins the private URL,
+disallows redirects and sends no caller-supplied quote requirements. It does not sign,
+fund or retry. Non-success HTTP responses, timeouts, invalid/oversized bodies and foreign
+job IDs preserve the marker and require recovery. Existing markers prevent another
+HTTP attempt, including after rejection. An authorization outside its validity window
+is not sent and its claimed marker remains reserved. Successful responses are explicitly
+server-reported; they do not independently verify settlement or permit another payment.
+The private HTTP purchase route, CLI composition and worker activation remain unwired.
+
 **D-131** - Private buyer preparation - *Validate independently chosen quote terms,
 reserve a new local directory before signing, and verify/persist the signed intent
 before returning a journal reference.*

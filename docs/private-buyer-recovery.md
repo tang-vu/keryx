@@ -12,6 +12,13 @@ left by a failed preparation: even an empty or partial journal denies another fr
 attempt there. Do not delete it to automatically retry signing. Existing recovery
 requires a complete, valid signed journal; a partial file does not authorize payment.
 
+The internal submission transport reads that signed journal and persists its exclusive
+attempt marker before sending to the fixed private endpoint. It never follows redirects
+or retries a submission. HTTP rejection, lost responses and invalid response data all
+require read recovery; a server-reported settlement status is not independent proof.
+Expired authorizations are not sent. These internal helpers do not yet enable the private
+purchase endpoint or expose a purchase command.
+
 Keep the original journal directory after a timeout. Recovery validates its signature,
 owner, commitment and job identity. It does not refresh the authorization or resubmit
 payment, and it leaves the original intent and attempt marker unchanged.
