@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-128** - Temporary buyer account sessions - *Use pinned SIWE login for private
+read recovery, keep the cookie in memory and confirm revocation before returning.*
+The Node helper signs only a keryx.cc Arc-testnet SIWE message with a fresh validated
+challenge and 15-minute expiry. It does not accept arbitrary signable server text or
+payment typed data. Requests have bounded deadlines and bodies; raw auth errors and
+cookies are not propagated. Success or operation failure both enter sign-out cleanup;
+one idempotent revocation retry is allowed, and unconfirmed revocation is an explicit
+failure. A lost login response can create a server session whose cookie is unknown,
+so expiry remains the fallback and full revocation is not claimed in that case. This
+helper is not yet a CLI command and does not persist credentials or activate purchases.
+
 **D-127** - Private buyer read recovery - *Use the validated local intent and a live
 account cookie to request the existing private result, never to resubmit payment.*
 The Node recovery helper calls only the pinned account result endpoint with the job ID
