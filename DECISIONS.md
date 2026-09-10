@@ -1,5 +1,20 @@
 # Keryx — Decision Log
 
+**D-114** · Private reasoning provider boundary · *Construct one explicit catalog
+model/endpoint with local fallback, no automatic provider rotation or redirects.*
+The backend factory requires an exact current catalog ID, matching provider, HTTPS
+base URL without credentials/query/fragment and an explicit server credential. It
+rejects retired/default aliases rather than silently remapping them. Planning and
+synthesis use the same pinned wire model. Each job gets its own memory circuit store
+and deterministic heuristic fallback; public durable circuits and provider defaults
+are not selected. Fetch rejects redirects under the private option, and transport
+options are copied so caller mutation cannot reroute later steps. A secret-free
+disclosure records the resolved endpoint/model/fallback. It is not yet bound into
+buyer-approved quote/intent state, so this factory is not activated by private purchase
+or execution routes. Approved endpoint inventory, provider retention terms and durable
+disclosure binding remain release prerequisites. Existing public redirect behavior is
+preserved; the private factory explicitly selects the stricter policy.
+
 **D-113** · Reasoning failure log privacy · *Retain operational categories, never
 raw provider or circuit-store error bodies.* Provider fallback previously interpolated
 the full thrown message into a warning, even though structured attempts already used

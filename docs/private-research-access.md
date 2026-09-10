@@ -615,6 +615,23 @@ Before enabling a private quote, implement all of these together:
 
 ## Observed implementation surfaces requiring coverage
 
+Private model factory groundwork: `privateReasoningEngine` accepts trusted explicit
+model/provider/endpoint/credential policy and returns an engine plus a secret-free
+disclosure. It requires an exact current catalog ID (no retired alias remapping), pins
+the wire model across reasoning steps, rejects credential-bearing/query/fragment URLs,
+requires HTTPS, prohibits redirects and falls back only to the local heuristic. Circuits
+are instance-local, not shared with public research. Constructor inputs are copied.
+Synthetic tests cover model/endpoint pinning, caller mutation, local fallback, isolated
+circuits and invalid policy. A real loopback HTTP server proves that the private
+transport option stops a 307 before the redirected endpoint receives the request.
+
+This does not prove endpoint ownership or provider retention behavior. The factory is
+not selected by private purchase/execution routes yet. Admission must publish and bind
+the resolved disclosure into buyer-approved durable terms, reject mismatches during
+execution and use an operator-approved endpoint inventory. Existing null-model test
+intents do not implicitly authorize a default provider. Full privacy acceptance remains
+open; private purchases remain unavailable.
+
 Reasoning log audit: provider fallback warnings and durable circuit-store diagnostics
 previously included arbitrary thrown messages (the circuit path only truncated them).
 They now omit error bodies. Provider diagnostics retain a category plus an integer HTTP

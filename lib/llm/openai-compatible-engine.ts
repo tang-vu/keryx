@@ -18,6 +18,8 @@ export interface OpenAICompatibleOpts {
   apiKey: string;
   /** Fixed wire model. When set it overrides the per-call default (llmModel/synthesisModel). */
   model?: string;
+  /** Private callers prohibit redirects that could forward prompt content elsewhere. */
+  redirect?: "error";
 }
 
 export class OpenAICompatibleEngine extends JsonChatEngine {
@@ -26,7 +28,7 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
 
   constructor(opts?: OpenAICompatibleOpts) {
     super();
-    this.opts = opts ?? {
+    this.opts = opts ? { ...opts } : {
       provider: "deepseek",
       name: `llm:deepseek:${config.llmModel}`,
       baseUrl: config.llmBaseUrl,
@@ -44,6 +46,7 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
     const wireModel = this.opts.model ?? model;
     const res = await fetch(`${this.opts.baseUrl}/chat/completions`, {
       method: "POST",
+      ...(this.opts.redirect ? { redirect: this.opts.redirect } : {}),
       signal: AbortSignal.timeout(config.llmTimeoutMs),
       headers: {
         "Content-Type": "application/json",

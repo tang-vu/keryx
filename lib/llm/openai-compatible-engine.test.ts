@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { OpenAICompatibleEngine, type OpenAICompatibleOpts } from "./openai-compatible-engine";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 
 class TransportEngine extends OpenAICompatibleEngine {
   request(model = "deepseek-v4-flash") { return this.chatJson(model, "Return JSON", "test", 2048); }
@@ -7,6 +9,26 @@ class TransportEngine extends OpenAICompatibleEngine {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("bounded provider JSON requests", () => {
+  it("prohibits redirect delivery under the private transport policy with a real local HTTP server", async () => {
+    let redirectedRequests = 0;
+    const server = createServer((request, response) => {
+      request.resume();
+      if (request.url === "/chat/completions") { response.writeHead(307, { location: "/sink" }); response.end(); }
+      else { redirectedRequests++; response.setHeader("content-type", "application/json"); response.end(JSON.stringify({ choices: [{ message: { content: '{"ok":true}' } }] })); }
+    });
+    await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
+    try {
+      const options = { name: "synthetic", baseUrl: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, apiKey: "synthetic-only" };
+      await expect(new TransportEngine({ ...options, redirect: "error" }).request()).rejects.toThrow();
+      expect(redirectedRequests).toBe(0);
+      // Existing public default remains compatible; private construction explicitly forbids this.
+      expect(await new TransportEngine(options).request()).toEqual({ ok: true });
+      expect(redirectedRequests).toBe(1);
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+    }
+  });
   it.each([
     ["deepseek", "deepseek-v4-flash", true],
     ["deepseek", "deepseek-v4-pro", true],
