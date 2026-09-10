@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-129** - Private recovery CLI - *Validate the journal before login, recover in a
+temporary session, then optionally write a new private snapshot after sign-out.*
+The command reads KERYX_BUYER_PRIVATE_KEY only from its environment and requires explicit
+trusted merchant addresses. It never creates/funds wallets, signs payment typed data or
+changes original intent/attempt files. Default stdout contains state and integer spend
+summaries without job ID, question, answer or cookies. Explicit output is exclusive,
+plaintext and labelled server-reported evidence; an existing destination fails before
+login. Session revocation must be confirmed before output is written. Failure diagnostics
+omit private exception bodies. The command supports existing private journals only; it
+does not make private checkout, journal creation UI or independently verified private
+receipts available.
+
 **D-128** - Temporary buyer account sessions - *Use pinned SIWE login for private
 read recovery, keep the cookie in memory and confirm revocation before returning.*
 The Node helper signs only a keryx.cc Arc-testnet SIWE message with a fresh validated

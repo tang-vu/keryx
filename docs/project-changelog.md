@@ -1,5 +1,12 @@
 # Keryx Project Changelog
 
+### Private buyer recovery CLI (2026-09-10, v0.22.36)
+
+- Add buyer:private:recover for existing signed private journals.
+- Validate owner and commitment, sign a short-lived SIWE login, read the private result and confirm sign-out.
+- Print a redacted spend summary by default; optionally write a new plaintext server-reported snapshot.
+- Reject existing output files and leave original journal/attempt records unchanged. Private purchasing remains unavailable.
+
 ### Authenticated private quote previews (2026-09-10, v0.22.35)
 
 - Add a session-protected, no-store POST endpoint for private quote previews.

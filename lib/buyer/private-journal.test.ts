@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, writeFile, unlink, rmdir } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile, unlink, rmdir, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
@@ -9,13 +9,14 @@ import { createPrivateAuthorization, PRIVATE_RESEARCH_RESOURCE } from "./private
 import { buyerTypedData, BUYER_NETWORK, BUYER_USDC, BUYER_GATEWAY } from "./protocol";
 import { createPrivateBuyerJournal, readPrivateBuyerJournal, claimPrivateBuyerSubmission } from "./private-journal";
 import { recoverPrivateBuyerResult } from "./private-recovery";
+import { recoverPrivateBuyerWorkflow } from "./private-recovery-workflow";
 
 const account = privateKeyToAccount(generatePrivateKey());
 const merchants = { privatePayee: `0x${"2".repeat(40)}`, publicResearchPayee: `0x${"3".repeat(40)}` };
 const roots: string[] = [];
 afterEach(async () => {
   for (const root of roots.splice(0)) {
-    for (const name of ["private-intent.json", "private-submission-attempt.json"]) await unlink(join(root, "journal", name)).catch(() => undefined);
+    for (const name of ["private-intent.json", "private-submission-attempt.json", "snapshot.json"]) await unlink(join(root, "journal", name)).catch(() => undefined);
     await rmdir(join(root, "journal")).catch(() => undefined); await rmdir(root);
   }
 });
@@ -90,4 +91,40 @@ it("recovers through the private read endpoint without resubmission and rejects 
     await expect(recoverPrivateBuyerResult(directory, account.address, merchants, "keryx_session=synthetic", async () => Response.json({ ...view, ...patch }))).rejects.toThrow("does not match");
   await expect(recoverPrivateBuyerResult(directory, account.address, merchants, "keryx_session=synthetic", async () => new Response("private-error-body", { status: 401 }))).rejects.toThrow("live account session");
   await expect(recoverPrivateBuyerResult(directory, account.address, merchants, "keryx_session=synthetic; other=secret", http)).rejects.toThrow();
+});
+
+it("completes CLI recovery in a temporary session and writes private output only after confirmed sign-out", async () => {
+  const { directory, value } = await fixture();
+  await createPrivateBuyerJournal(directory, value, account.address, merchants);
+  const output = join(directory, "snapshot.json");
+  let refuseSignout = true;
+  const http = vi.fn(async (url: string) => {
+    if (url.endsWith("/api/auth/nonce")) return Response.json({ nonce: "syntheticNonce12345" });
+    if (url.endsWith("/api/auth/verify")) return Response.json({ ok: true }, { headers: { "set-cookie": "keryx_session=synthetic.session.cookie; Secure; HttpOnly" } });
+    if (url.endsWith("/api/auth/signout")) {
+      await expect(access(output)).rejects.toThrow();
+      return refuseSignout ? new Response("synthetic-error", { status: 503 }) : Response.json({ ok: true });
+    }
+    expect(url).toBe("https://keryx.cc/api/me/private-jobs/result");
+    return Response.json({ wallet: account.address.toLowerCase(), format: "private-result-v1", status: "awaiting-execution",
+      request: { question: value.submission.request.question, researchMode: "quick", model: "deepseek-flash", packageVersion: "1.0.0", creatorBudgetMicros: "30000" },
+      spend: { format: "private-spend-v1", chainFinalityVerified: false, incoming: { status: "settled", priceMicros: "50000" },
+        creator: { budgetMicros: "30000", committedMicros: "0", unresolvedMicros: "0", processingMicros: "0", confirmedMicros: "0", uncommittedMicros: "30000", payments: [] } }, result: null });
+  });
+  await expect(recoverPrivateBuyerWorkflow(directory, merchants, account, { output, http })).rejects.toThrow("revocation could not be confirmed");
+  await expect(access(output)).rejects.toThrow();
+  refuseSignout = false; http.mockClear();
+  const summary = await recoverPrivateBuyerWorkflow(directory, merchants, account, { output, http });
+  expect(summary).toMatchObject({ snapshotWritten: true, signOutConfirmed: true, paymentRequestsSent: 0, status: "awaiting-execution" });
+  expect(http.mock.calls.map(([url]) => new URL(url).pathname)).toEqual(["/api/auth/nonce", "/api/auth/verify", "/api/me/private-jobs/result", "/api/auth/signout"]);
+  expect(JSON.stringify(summary)).not.toContain(value.submission.request.question);
+  expect(JSON.stringify(summary)).not.toContain(value.id);
+  const saved = await readFile(output, "utf8");
+  expect(JSON.parse(saved).evidence).toBe("server-reported");
+  expect(saved).not.toContain("synthetic.session.cookie");
+  expect(saved).not.toContain(value.submission.payment.signature);
+  http.mockClear();
+  await expect(recoverPrivateBuyerWorkflow(directory, merchants, account, { output, http })).rejects.toThrow("already exists");
+  expect(http).not.toHaveBeenCalled();
+  expect(await readFile(output, "utf8")).toBe(saved);
 });
