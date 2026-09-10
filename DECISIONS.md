@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-116** - Private execution transport authority - *Construct the v2 engine
+inside the executor from explicit backend configuration, then compare its disclosure
+to the signed request before any funding check or execution claim.* A separately
+supplied policy could previously match while an injected engine used another provider.
+The v2 path now exclusively uses the pinned private factory, with no arbitrary engine
+callback. Configuration is copied before storage awaits. Legacy v1 callback execution
+remains for historical internal callers and does not establish provider consent; it
+cannot execute a v2 request. Stored-result and claimed-job recovery need no provider
+credentials. The factory does not perform HTTP during construction. Endpoint approval,
+retention terms, admission and buyer-facing consent remain necessary before purchases.
+
 **D-115** ? Signed private reasoning policy ? *Bind resolved provider, model,
 endpoint, local fallback and prohibited redirects into the authorization nonce.*
 Requests with an explicit strict reasoning disclosure use commitment domain v2;

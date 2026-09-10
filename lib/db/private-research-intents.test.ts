@@ -332,6 +332,8 @@ async function creatorFixture() {
 
 const reasoningPolicy = { modelId: "deepseek-flash", provider: "deepseek" as const, wireModel: "deepseek-v4-flash",
   endpoint: "https://synthetic.example/v1/chat/completions", fallback: "local-heuristic" as const, redirects: "prohibited" as const };
+const privateProvider = { modelId: "deepseek-flash", provider: "deepseek" as const,
+  baseUrl: "https://synthetic.example/v1", apiKey: "synthetic-unfunded-credential" };
 
 it("retains signed provider disclosure and denies missing or changed execution policy before funding or reasoning", async () => {
   const { value, proof } = await executionFixture({ ...request, model: reasoningPolicy.modelId, reasoning: reasoningPolicy });
@@ -341,9 +343,41 @@ it("retains signed provider disclosure and denies missing or changed execution p
   const balance = vi.fn(async () => BigInt(30000)), engine = vi.fn();
   const options = { signerAddress: merchants.privatePayee, signer: { createPaymentPayload: vi.fn() }, getGatewayBalance: balance, engineForModel: engine };
   await expect(runPrivateResearch(db, value.id, account.address, options)).rejects.toThrow("does not match");
-  await expect(runPrivateResearch(db, value.id, account.address, { ...options, reasoningPolicy: { ...reasoningPolicy, endpoint: "https://other.example/chat/completions" } })).rejects.toThrow("does not match");
+  await expect(runPrivateResearch(db, value.id, account.address, { ...options, privateProvider: { ...privateProvider, baseUrl: "https://other.example" } })).rejects.toThrow("does not match");
   expect(balance).not.toHaveBeenCalled(); expect(engine).not.toHaveBeenCalled();
   expect(await db.getPrivateResearchExecution(value.id, account.address)).toBeNull();
+});
+
+it("executes a signed v2 job through its real pinned transport and ignores an arbitrary injected engine", async () => {
+  const { value, proof } = await executionFixture({ ...request, model: reasoningPolicy.modelId, reasoning: reasoningPolicy });
+  await db.claimPrivatePaymentSubmission(value.id, account.address);
+  await db.confirmPrivatePayment(value.id, account.address, proof);
+  const injected = vi.fn(() => { throw new Error("Unapproved engine selected"); });
+  const signer = { createPaymentPayload: vi.fn() };
+  const http = vi.fn<typeof fetch>(async (url, init) => {
+    expect(String(url)).toBe(reasoningPolicy.endpoint);
+    expect(init?.redirect).toBe("error");
+    expect(JSON.parse(String(init?.body)).model).toBe(reasoningPolicy.wireModel);
+    return Response.json({ choices: [{ message: { content: JSON.stringify({ claims: ["Synthetic evidence question"],
+      answer: "Insufficient evidence in the empty synthetic catalog.", citedMarkers: [], evidence: [], conflicts: [] }) } }] });
+  });
+  vi.stubGlobal("fetch", http);
+  try {
+    const outcome = await runPrivateResearch(db, value.id, account.address, { signerAddress: merchants.privatePayee, signer,
+      privateProvider, engineForModel: injected, getGatewayBalance: async () => BigInt(30000) });
+    expect(outcome.status).toBe("completed");
+    expect(http).toHaveBeenCalled();
+    for (const [url, init] of http.mock.calls) {
+      expect(String(url)).toBe(reasoningPolicy.endpoint);
+      expect(init?.redirect).toBe("error");
+      expect(JSON.parse(String(init?.body)).model).toBe(reasoningPolicy.wireModel);
+    }
+    expect(injected).not.toHaveBeenCalled();
+    expect(signer.createPaymentPayload).not.toHaveBeenCalled();
+    expect(await other.getPrivateResearchResult(value.id, account.address)).not.toBeNull();
+    expect(await runPrivateResearch(db, value.id, account.address, { signerAddress: merchants.privatePayee, signer,
+      getGatewayBalance: async () => { throw new Error("Recovery must not check funding"); } })).toMatchObject({ status: "stored" });
+  } finally { vi.unstubAllGlobals(); }
 });
 
 it("projects owner spend from late durable evidence without using stale result totals or disclosing authorization", async () => {
@@ -442,7 +476,7 @@ it("denies unpaid or underfunded execution before a worker claim or any reasonin
 });
 
 it("runs one complete private job with durable source/reward receipts and no shared research effects", async () => {
-  const { value, proof } = await executionFixture({ ...request, model: reasoningPolicy.modelId, reasoning: reasoningPolicy });
+  const { value, proof } = await executionFixture();
   await db.claimPrivatePaymentSubmission(value.id, account.address);
   await db.confirmPrivatePayment(value.id, account.address, proof);
   await db.upsertSource({ id: "private-pipeline-source", name: "Pipeline source", description: "Research evidence", tags: ["research"],
@@ -481,7 +515,7 @@ it("runs one complete private job with durable source/reward receipts and no sha
   Object.assign(config, { baseUrl: "https://synthetic.example" });
   vi.stubGlobal("fetch", http);
   try {
-    const options = { signerAddress: merchants.privatePayee, signer, reasoningPolicy, getGatewayBalance: vi.fn(async () => BigInt(30000)), engineForModel: vi.fn(() => engine) };
+    const options = { signerAddress: merchants.privatePayee, signer, getGatewayBalance: vi.fn(async () => BigInt(30000)), engineForModel: vi.fn(() => engine) };
     const outcomes = await Promise.all([runPrivateResearch(db, value.id, account.address, options), runPrivateResearch(other, value.id, account.address, options)]);
     expect(outcomes.map(outcome => outcome.status).sort()).toEqual(["already-claimed", "completed"]);
     const complete = outcomes.find(outcome => outcome.status === "completed")!;

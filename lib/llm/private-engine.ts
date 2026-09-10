@@ -8,6 +8,7 @@ import { privateReasoningPolicySchema } from "../buyer/private-reasoning-policy"
 
 const policySchema = z.object({ modelId: z.string(), provider: z.enum(["deepseek", "mimo"]),
   baseUrl: z.string().url().max(2048), apiKey: z.string().min(1).max(4096).regex(/^[^\r\n]+$/) }).strict();
+export type PrivateReasoningConfig = z.infer<typeof policySchema>;
 
 /** Backend-only construction from trusted explicit policy. No default credentials/provider chain.
  * The admission layer must bind the returned disclosure to buyer-approved terms before execution.
