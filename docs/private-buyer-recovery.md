@@ -19,6 +19,13 @@ require read recovery; a server-reported settlement status is not independent pr
 Expired authorizations are not sent. These internal helpers do not yet enable the private
 purchase endpoint or expose a purchase command.
 
+The prepared HTTP purchase handler requires a durable account session and same-origin
+request, then applies a server-provided limiter and bootstrap. It reads at most 64 KiB
+within five seconds and returns only the private job ID and payment status with no-store
+headers. It is not mounted on a public route while worker readiness and operational
+activation remain incomplete. The handler's account and request checks are tested with
+local SQLite sessions; this is not proof of a live private checkout.
+
 Keep the original journal directory after a timeout. Recovery validates its signature,
 owner, commitment and job identity. It does not refresh the authorization or resubmit
 payment, and it leaves the original intent and attempt marker unchanged.

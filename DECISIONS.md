@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-133** - Private purchase HTTP boundary - *Use a live account session and same-origin
+check before a server-provided limiter/bootstrap, bounded input and backend admission.*
+The handler takes its payer from the durable session, not body fields, and passes the
+submission to the existing signature/pricing/treasury service. Responses are no-store
+and expose only job ID and server-reported payment status. Known confirmation that failed
+initial persistence gets one storage-only retry; no second payment operation runs. If
+storage remains unavailable, the original pending attempt requires reconciliation.
+Private exceptions and recovery confirmation are omitted from responses. A common
+64-KiB/five-second body reader now serves this handler and MCP without changing MCP's
+public error response. The purchase handler is not mounted at a public route: a
+worker-ready bootstrap, rate-limit wiring and operational acceptance remain required.
+
 **D-132** - Private buyer submission - *Send the verified saved payload only after an
 exclusive durable local attempt marker, and recover by reading after any uncertainty.*
 The internal Node transport requires an existing account cookie, pins the private URL,

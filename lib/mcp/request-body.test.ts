@@ -10,7 +10,7 @@ describe("MCP body limits", () => {
       cancel() { cancelled = true; },
     });
     const req = new Request("https://example.test", { method: "POST", body: stream, duplex: "half", headers: { "content-length": "1" } } as RequestInit);
-    await expect(readMcpBody(req)).rejects.toThrow("Invalid MCP body");
+    await expect(readMcpBody(req)).rejects.toThrow("Invalid request body");
     expect(cancelled).toBe(true);
   });
 
@@ -20,7 +20,7 @@ describe("MCP body limits", () => {
       let cancelled = false;
       const stream = new ReadableStream<Uint8Array>({ cancel() { cancelled = true; return new Promise(() => {}); } });
       const req = new Request("https://example.test", { method: "POST", body: stream, duplex: "half" } as RequestInit);
-      const result = expect(readMcpBody(req)).rejects.toThrow("Invalid MCP body");
+      const result = expect(readMcpBody(req)).rejects.toThrow("Invalid request body");
       await vi.advanceTimersByTimeAsync(5000);
       await result;
       expect(cancelled).toBe(true);

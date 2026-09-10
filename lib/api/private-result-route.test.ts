@@ -12,6 +12,7 @@ import { preparePrivateResearchIntent } from "../a2a/private-research-intent";
 import { readPrivateResultRequest } from "../a2a/private-result-request";
 import type { QueryRun } from "../types";
 import { privateWorkspaceHistorySchema, privateWorkspaceResultSchema } from "../a2a/private-workspace";
+import { privatePurchaseHandler } from "../a2a/private-purchase-handler";
 
 const mocks = vi.hoisted(() => ({ cookies: vi.fn(), db: vi.fn(), quoteBootstrap: vi.fn() }));
 vi.mock("@/lib/a2a/private-quote-bootstrap", () => ({ privateQuoteBootstrap: mocks.quoteBootstrap }));
@@ -46,6 +47,60 @@ function read(token?: string, body: unknown = { id: intent.id }, origin = "https
     method: "POST", headers: { host: "keryx.cc", origin, "content-type": "application/json" }, body: JSON.stringify(body),
   })));
 }
+
+it("protects the purchase handler before invoking the backend and keeps response data private", async () => {
+  const submit = vi.fn(async (_input: unknown, _payer: string) => ({ response: { id: intent.id, paymentStatus: "pending" as const }, recoveryConfirmation: null }));
+  const bootstrap = vi.fn(() => ({ quote: vi.fn(), submit }));
+  const limit = vi.fn(async (): Promise<Response | null> => null);
+  const handler = privatePurchaseHandler({ bootstrap, limit });
+  const call = (token?: string, body = "{}", origin = "https://keryx.cc") => storage.run(token, () => handler(new Request("https://keryx.cc/api/agent/private-ask", {
+    method: "POST", headers: { host: "keryx.cc", origin, "content-type": "application/json" }, body })));
+  expect((await call()).status).toBe(401);
+  const { token } = await issueWebSession(db, secret, account.address, "asker");
+  expect((await call(token, "{}", "https://foreign.example")).status).toBe(403);
+  expect(bootstrap).not.toHaveBeenCalled();
+  limit.mockResolvedValueOnce(new Response("throttled", { status: 429, headers: { "Retry-After": "60" } }));
+  const limited = await call(token);
+  expect(limited.status).toBe(429); expect(limited.headers.get("retry-after")).toBe("60");
+  expect(limited.headers.get("cache-control")).toBe("no-store");
+  expect(bootstrap).not.toHaveBeenCalled();
+  expect((await call(token, "{")).status).toBe(400);
+  expect((await call(token, JSON.stringify({ oversized: "x".repeat(65536) }))).status).toBe(400);
+  expect(submit).not.toHaveBeenCalled();
+  const response = await call(token, JSON.stringify({ payer: merchants.privatePayee }));
+  expect(response.status).toBe(202); expect(response.headers.get("cache-control")).toBe("no-store");
+  expect(await response.json()).toEqual({ id: intent.id, paymentStatus: "pending" });
+  // The backend receives the authenticated owner independently of untrusted body data.
+  expect(submit).toHaveBeenCalledWith({ payer: merchants.privatePayee }, account.address.toLowerCase());
+  submit.mockRejectedValueOnce(new Error("synthetic-private-backend-detail"));
+  const failed = await call(token);
+  expect(failed.status).toBe(503); expect(await failed.text()).not.toContain("synthetic-private-backend-detail");
+});
+
+it("keeps purchases disabled when bootstrap is not ready", async () => {
+  const { token } = await issueWebSession(db, secret, account.address, "asker");
+  const handler = privatePurchaseHandler({ bootstrap: () => null, limit: async () => null });
+  const response = await storage.run(token, () => handler(new Request("https://keryx.cc/api/agent/private-ask", {
+    method: "POST", headers: { host: "keryx.cc", origin: "https://keryx.cc" }, body: "{}" })));
+  expect(response.status).toBe(503);
+  expect(await response.json()).toEqual({ error: "Private checkout is not available yet." });
+});
+
+it("retries confirmation storage without settling again or returning the private proof", async () => {
+  const { token } = await issueWebSession(db, secret, account.address, "asker");
+  const proof = { source: "circle-facilitator-success" as const, transaction: "synthetic-private-proof-reference",
+    network: BUYER_NETWORK, payer: account.address.toLowerCase(), payee: merchants.privatePayee,
+    amountMicros: "50000", authorizationId: intent.submission.payment.authorization.nonce } as const;
+  const submit = vi.fn(async () => ({ response: { id: intent.id, paymentStatus: "confirmation-unpersisted" as const }, recoveryConfirmation: proof }));
+  const persist = vi.spyOn(db, "confirmPrivatePayment").mockRejectedValueOnce(new Error("synthetic-storage-detail"));
+  const handler = privatePurchaseHandler({ bootstrap: () => ({ quote: vi.fn(), submit }), limit: async () => null });
+  const response = await storage.run(token, () => handler(new Request("https://keryx.cc/api/agent/private-ask", {
+    method: "POST", headers: { host: "keryx.cc", origin: "https://keryx.cc" }, body: "{}" })));
+  expect(response.status).toBe(202);
+  expect(await response.json()).toEqual({ id: intent.id, paymentStatus: "confirmation-unpersisted" });
+  expect(submit).toHaveBeenCalledTimes(1);
+  expect(persist).toHaveBeenCalledExactlyOnceWith(intent.id, account.address.toLowerCase(), proof);
+});
 
 it("protects quote previews with live sessions, same origin and body limits without invoking purchases", async () => {
   const { access: _access, model: _model, ...input } = request;
