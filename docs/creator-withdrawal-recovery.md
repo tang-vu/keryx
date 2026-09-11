@@ -164,6 +164,39 @@ policy must precede any completed cash-out projection. Tests use locally signed
 synthetic transactions and receipts; they do not demonstrate a live mint.
 All eight receipt tests pass locally; the combined receipt, signed-transaction and
 journal run passes 25 tests. Focused lint and TypeScript checking also pass.
+Receipt matching commit `114dbfe` passed
+[CI run 34558650412](https://github.com/tang-vu/keryx/actions/runs/34558650412), including
+the journal process tests, PostgreSQL checks and production build.
+
+### RPC inclusion and finality observation
+
+`lib/gateway/withdrawal-receipt-observation.ts` connects the signed-byte and receipt
+matchers to read-only viem RPC calls. It verifies chain ID, requests the original hash,
+checks that hash at the exact transaction index of the receipt's canonical block and
+reads the `finalized` anchor. It reads the receipt and inclusion block again, rechecks
+the anchor by number and verifies chain ID again. Changed gas/receipt evidence, missing
+or duplicate inclusion, inconsistent blocks, unsupported finality and RPC errors return
+no observation. No failure, refund or reservation release follows from that result.
+
+Arc's [bridge integration guide](https://docs.arc.io/integrate/infrastructure/bridges)
+and [transaction lifecycle](https://docs.arc.io/integrate/wallets/transaction-lifecycle),
+checked September 11, document committed-block finality and `finalized` resolving to
+the latest committed block. A matching anchor may therefore be the receipt's own
+block; no arbitrary extra confirmation count is imposed. The observer reports
+`mint-finalized-observed`, `chainFinalityVerified: true` and explicitly
+`finalityBasis: operator-selected-rpc`. This means verification of RPC-reported
+inclusion/finality under that documented testnet policy. It does not independently
+verify validator signatures, establish RPC honesty or audit the minter implementation.
+The lower-level receipt matcher alone continues to report finality as unverified.
+
+The observer uses a five-second deadline, propagates abort to transport and rejects
+late completion. The finalized anchor must be no more than 60 seconds old and no
+more than five seconds ahead of the local clock, including at completion. Historical
+receipts may be older. Eight tests exercise viem's actual JSON-RPC decoding over a
+synthetic transport, one-block finality, transaction position, inconsistent reads,
+timeouts, caller cancellation and mutation. They send no live transaction. Production
+RPC selection, protected journal persistence of observations and cash-out projection
+remain part of worker integration; this module is not yet wired to the HTTP relay.
 
 The request-matching layer in `lib/gateway/withdrawal-attestation.ts` now checks a
 single attestation or a one-entry attestation set against the exact encoded original

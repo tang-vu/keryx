@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-170** - Arc receipt finality - *Verify original transaction inclusion and a
+consistent RPC finalized anchor under Arc's documented committed-block policy.*
+The observer rematches the signed transaction and receipt, verifies exact block/index
+inclusion and rechecks the receipt, inclusion block, finalized anchor and chain ID.
+Arc documents one committed block as final and finalized as the latest block, so the
+receipt's own block is sufficient when consistently observed. The finality result
+explicitly trusts the operator-selected RPC; it is not independent consensus-signature
+verification or minter implementation attestation. Bounded time, cancellation and head
+freshness checks prevent stale/late evidence. Unknown, missing or conflicting RPC data
+does not release funds or establish a failed withdrawal. Persisting observations and
+connecting the dedicated signer worker remain separate runtime integration work.
+
 **D-169** - Withdrawal receipt evidence - *Require the exact original transaction
 and canonical minter event before accepting receipt-level cash-out evidence.*
 Successful receipt status alone is insufficient. The matcher verifies the signed-byte
