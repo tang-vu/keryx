@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-187** - Withdrawal admission runtime - *Open and verify the existing protected
+relay journal for each server-owned backed admission.*
+The bootstrap snapshots operator configuration, requires the dedicated enabled testnet
+relay and checks its derived address against the persisted journal policy. Protected
+Linux files are inspected before and after opening SQLite; database identity and policy
+must remain unchanged. The original journal is validated without initialization or
+upgrade, and the shared-lock backing callback retains the connection until its awaited
+work settles. Missing history never falls back to a new database or public treasury.
+This composes runtime custody checks with durable gas admission; it does not configure
+a funded relay, register an HTTP endpoint or complete the creator recovery journey.
+
 **D-186** - Browser withdrawal submission - *Bind the committed one-attempt flow to
 a fixed same-origin transport and recover every uncertain HTTP outcome.*
 The browser sends only the retained signed wire request to the planned submission

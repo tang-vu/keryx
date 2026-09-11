@@ -104,6 +104,20 @@ integration and live acceptance remain required. Balance-only or no-op admission
 sufficient. Historical finality observations retain the existing operator-selected RPC
 trust; the backing snapshot does not independently revalidate historical consensus.
 
+`withdrawal-admission-bootstrap.ts` now supplies a concrete server-owned admission
+factory. It snapshots operator configuration, derives the isolated relay address,
+checks protected Linux file ownership and journal policy, opens existing SQLite and
+rechecks its identity before using the backing callback. It neither initializes nor
+upgrades history and retains the connection until admission settles. Missing history,
+key/policy mismatch and disabled runtime deny admission. Endpoint configuration still
+needs to bind this factory to the authenticated submission handler.
+
+Local Windows validation covers disabled/invalid configuration; the native Linux drill
+uses actual SQLite and viem HTTP decoding with synthetic RPC responses to verify
+durable reopen, idempotent holds, policy mismatch and missing-history rejection.
+These checks passed along with TypeScript and focused lint. The Linux Vitest cases
+are also included for CI; they do not demonstrate live funded operation.
+
 Eleven focused coordinator tests pass: concurrent callers, lost claim/vendor/storage
 responses, denied admission, cancellation, immutable request snapshots, invalid and
 oversized evidence, response-body deadline, owner isolation and projection privacy.
