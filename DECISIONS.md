@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-178** - Queue operator command - *Read an explicitly selected existing application
+database without initialization while writing only the protected relay journal.*
+The relay CLI gains a mutually exclusive queue mode with explicit operator gas terms,
+application database path and bounded cursor paging. Its application-store connection
+opens SQLite read-only, enables query-only mode and validates existing withdrawal
+tables. Linux owner/mode/link/ancestor and file-identity checks apply before using the
+selected database. There is no default path, adapter initialization, migration or
+silent file creation in this mode. Queue recovery does not sign, broadcast or call
+Circle. This connects the SQLite deployment's operator entrypoint; scheduling,
+funded relay provisioning and authenticated HTTP/browser integration remain open.
+
 **D-177** - Withdrawal queue recovery - *Enumerate held requests and attach stored
 attestations without repeating the transfer or assigning duplicate nonces.*
 The protected relay journal provides bounded cursor pages of admissions that do not

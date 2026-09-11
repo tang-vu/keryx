@@ -122,12 +122,44 @@ through the transfer coordinator, reopen recovery, pagination past missing evide
 wrong evidence/fee bounds, cancellation/lock retention and committed-slot readback
 loss. Focused lint and TypeScript checking pass. No live vendor/chain operation occurs.
 
-The queue core is not yet wired into an operator scheduler or HTTP route. Runtime
-must select the protected application store and operator gas terms explicitly, then
-run the queue and signing passes without inferring transfer failure from absent
-evidence. Gas-admission commit `6b6df21` passed
+The queue now has an explicit operator command for the SQLite deployment. It is not
+yet wired into a scheduler or HTTP route. Runtime must run queue and signing passes
+without inferring transfer failure from absent evidence. Gas-admission commit `6b6df21` passed
 [CI run 34562497548](https://github.com/tang-vu/keryx/actions/runs/34562497548), including
 Linux runtime checks and production build.
+
+### Operator queue mode
+
+`npm run withdrawal:relay -- --queue` requires the existing protected relay runtime
+configuration, plus these explicit operator arguments:
+
+- `--application-db`: absolute canonical path to the existing owner-only SQLite
+  application database. No default path, creation or migrations are performed.
+- `--gas`, `--max-fee-per-gas`, `--priority-fee-per-gas`, `--gas-budget-wei`: reviewed
+  integer transaction terms; fee and budget values use native wei. They must fit the
+  original request's reserved ceiling. This command does not estimate market fees.
+- Optional `--after-id` and `--limit` (1-64, default 32): private cursor paging.
+
+Queue mode is mutually exclusive with `--run` and `--upgrade`; queue-specific flags
+are rejected in other modes. The application database opens read-only/query-only,
+with existing withdrawal tables checked before processing. Linux permissions, links,
+ancestor ownership and file identity are checked using the same filesystem rules as
+the protected relay journal. The callback exposes only owner-scoped attestation reads.
+Missing, unrelated or permissive application files fail without creating/migrating
+them. Supabase operator selection needs separate wiring; there is no automatic
+fallback to a local application database. Exit code 2 reports aborted or unavailable
+requests; absent evidence remains pending. Cursor output stays in private operator
+state. No funded runtime or production scheduling is enabled by this addition.
+
+Local validation: six Windows-applicable tests pass, with seven Linux-only cases
+skipped on Windows; focused lint and TypeScript checking pass. A native Linux run of
+the actual queue CLI with unfunded synthetic accounts confirms original-nonce and
+duplicate recovery, unchanged application database bytes, absent prepared transaction,
+invalid flag/limit refusal, missing/unsafe database refusal and owner isolation.
+The Linux filesystem drill also confirms protected ancestry and writable/missing
+parent refusal. Queue-core commit `3641c09` passed
+[CI run 34562844128](https://github.com/tang-vu/keryx/actions/runs/34562844128), including
+production build. None of this establishes a live funded withdrawal acceptance run.
 
 ## Read-only mint observation
 

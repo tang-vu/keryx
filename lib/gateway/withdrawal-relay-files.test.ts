@@ -8,6 +8,11 @@ import { DatabaseSync } from "node:sqlite";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { createWithdrawalMintJournal } from "./withdrawal-mint-journal";
 import { inspectWithdrawalRelayFiles } from "./withdrawal-relay-files";
+import { creatorWithdrawalFixture } from "../../scripts/test-fixtures/creator-withdrawal";
+import { CREATOR_WITHDRAWAL_REQUESTS_SQL, reserveSqliteWithdrawalRequest, claimSqliteWithdrawalTransfer } from "../db/creator-withdrawal-requests";
+import { CREATOR_WITHDRAWAL_ATTESTATIONS_SQL, saveSqliteWithdrawalAttestation } from "../db/creator-withdrawal-attestations";
+import { readFileSync } from "node:fs";
+import { withWithdrawalApplicationStore } from "./withdrawal-application-store";
 
 const linux = it.skipIf(process.platform !== "linux"), directories: string[] = [];
 afterEach(() => { for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }); });
@@ -61,4 +66,48 @@ linux("runs the actual CLI for inspection, schema check and an empty relay pass 
 it("keeps CLI help free of runtime configuration", async () => {
   const { stdout } = await promisify(execFile)(process.execPath, ["--import", "tsx", "scripts/withdrawal-relay.mts", "--help"], { timeout: 25000 });
   expect(stdout).toContain("Default: inspect"); expect(stdout).toContain("never creates a wallet/journal");
+});
+
+linux("queues an existing application attestation through the real CLI without changing the application database", async () => {
+  const f = fixture(), original = await creatorWithdrawalFixture(), path = join(f.directory, "app.sqlite");
+  const app = new DatabaseSync(path); chmodSync(path, 0o600);
+  try {
+    app.exec(CREATOR_WITHDRAWAL_REQUESTS_SQL + CREATOR_WITHDRAWAL_ATTESTATIONS_SQL);
+    await reserveSqliteWithdrawalRequest(app, original.record);
+    const claim = (await claimSqliteWithdrawalTransfer(app, original.record.id, original.record.owner))!;
+    await saveSqliteWithdrawalAttestation(app, original.record.id, original.record.owner, claim.claimId, original.response);
+  } finally { app.close(); }
+  const mint = new DatabaseSync(join(f.directory, "mint.sqlite"));
+  try { await createWithdrawalMintJournal(mint, f.policy).admitGas(original.record, f.policy.lifetimeGasBudgetWei, new AbortController().signal); }
+  finally { mint.close(); }
+  const before = readFileSync(path), execute = promisify(execFile);
+  const invoke = (...extra: string[]) => execute(process.execPath, ["--import", "tsx", "scripts/withdrawal-relay.mts", "--queue",
+    "--application-db", path, "--gas", "300000", "--max-fee-per-gas", "2000000000",
+    "--priority-fee-per-gas", "1000000000", "--gas-budget-wei", "600000000000000", ...extra], { env: f.env, timeout: 30000 });
+  expect(JSON.parse((await invoke()).stdout)).toMatchObject({ state: "scanned", attached: 1, unavailable: 0 });
+  expect(JSON.parse((await invoke()).stdout)).toMatchObject({ attached: 0, scanned: 0 });
+  await expect(invoke("--run")).rejects.toThrow("private details omitted");
+  await expect(invoke("--limit", "65")).rejects.toThrow("private details omitted");
+  await withWithdrawalApplicationStore(path, async store => {
+    expect(await store.getCreatorWithdrawalAttestation(original.record.id, `0x${"00".repeat(20)}`)).toBeNull();
+  });
+  expect(readFileSync(path)).toEqual(before);
+  const reopened = new DatabaseSync(join(f.directory, "mint.sqlite"));
+  try {
+    const journal = createWithdrawalMintJournal(reopened, f.policy);
+    expect((await journal.getSlot(original.record.id))?.terms.nonce).toBe(0);
+    expect(await journal.getPrepared(original.record.id)).toBeNull();
+  } finally { reopened.close(); }
+}, 90000);
+
+linux("rejects missing, permissive and unrelated application stores without creating or migrating them", async () => {
+  const f = fixture(), missing = join(f.directory, "missing.sqlite"), callback = async () => null;
+  await expect(withWithdrawalApplicationStore(missing, callback)).rejects.toThrow("database unavailable");
+  expect(existsSync(missing)).toBe(false);
+  const wrong = join(f.directory, "wrong.sqlite"), db = new DatabaseSync(wrong); db.exec("CREATE TABLE unrelated(id INTEGER)"); db.close();
+  chmodSync(wrong, 0o600); const before = readFileSync(wrong);
+  await expect(withWithdrawalApplicationStore(wrong, callback)).rejects.toThrow();
+  expect(readFileSync(wrong)).toEqual(before);
+  chmodSync(wrong, 0o644);
+  await expect(withWithdrawalApplicationStore(wrong, callback)).rejects.toThrow("database unavailable");
 });

@@ -2,17 +2,25 @@ import { parseArgs } from "node:util";
 
 async function main() {
   const { values } = parseArgs({ options: { help: { type: "boolean" }, run: { type: "boolean" },
-    upgrade: { type: "boolean" } }, strict: true });
+    upgrade: { type: "boolean" }, queue: { type: "boolean" }, "application-db": { type: "string" },
+    gas: { type: "string" }, "max-fee-per-gas": { type: "string" }, "priority-fee-per-gas": { type: "string" },
+    "gas-budget-wei": { type: "string" }, "after-id": { type: "string" }, limit: { type: "string" } }, strict: true });
   if (values.help) {
-    console.log(`Usage: node --import tsx scripts/withdrawal-relay.mts [--run | --upgrade]
+    console.log(`Usage: node --import tsx scripts/withdrawal-relay.mts [--run | --upgrade | --queue]
 Default: inspect an existing protected Linux relay journal without RPC/signing.
 --run: one bounded testnet relay pass using the dedicated configured key.
 --upgrade: explicitly upgrade the original journal schema; does not relay.
+--queue: attach stored attestations to admitted requests; no RPC/signing/broadcast.
+  Requires --application-db ABSOLUTE_PATH --gas INTEGER --max-fee-per-gas WEI
+  --priority-fee-per-gas WEI --gas-budget-wei WEI; optional --after-id DIGEST --limit 1..64.
+  Continue private nextCursor pages; reset the cursor for each later full sweep.
 Load operator environment files explicitly. Disabled unless KERYX_WITHDRAWAL_RELAY_ENABLED=1.
 This command never creates a wallet/journal, renews an authorization or clears a lock.`);
     return;
   }
-  if (values.run && values.upgrade) throw new Error();
+  if ([values.run, values.upgrade, values.queue].filter(Boolean).length > 1) throw new Error();
+  if (!values.queue && [values["application-db"], values.gas, values["max-fee-per-gas"], values["priority-fee-per-gas"],
+    values["gas-budget-wei"], values["after-id"], values.limit].some(value => value !== undefined)) throw new Error();
   const { config } = await import("../lib/config");
   const { withdrawalRelayRuntime } = await import("../lib/gateway/withdrawal-relay-runtime");
   const runtime = withdrawalRelayRuntime(process.env, config.networkId);
@@ -24,7 +32,7 @@ This command never creates a wallet/journal, renews an authorization or clears a
   const { withPrivateWorkerLock } = await import("../lib/a2a/private-worker-lock");
   const policy = files.policy as Parameters<typeof createWithdrawalMintJournal>[1];
   if (policy.relayer?.toLowerCase() !== runtime.signer.address.toLowerCase()) throw new Error();
-  const db = new DatabaseSync(files.databasePath, { readOnly: !values.run && !values.upgrade });
+  const db = new DatabaseSync(files.databasePath, { readOnly: !values.run && !values.upgrade && !values.queue });
   const stop = new AbortController(), shutdown = () => stop.abort();
   process.on("SIGINT", shutdown); process.on("SIGTERM", shutdown);
   try {
@@ -39,7 +47,19 @@ This command never creates a wallet/journal, renews an authorization or clears a
       return;
     }
     const journal = createWithdrawalMintJournal(db, policy);
-    if (values.run) {
+    if (values.queue) {
+      const { withdrawalMintTermsSchema } = await import("../lib/gateway/withdrawal-mint-transaction");
+      const terms = withdrawalMintTermsSchema.parse({ relayer: runtime.signer.address, nonce: 0, gas: values.gas,
+        maxFeePerGas: values["max-fee-per-gas"], maxPriorityFeePerGas: values["priority-fee-per-gas"], gasBudgetWei: values["gas-budget-wei"] });
+      const limit = values.limit === undefined ? 32 : /^[1-9][0-9]?$/.test(values.limit) ? Number(values.limit) : NaN;
+      if (!values["application-db"] || !Number.isSafeInteger(limit) || limit > 64) throw new Error();
+      const { withWithdrawalApplicationStore } = await import("../lib/gateway/withdrawal-application-store");
+      const { queueWithdrawalRelayPage } = await import("../lib/gateway/withdrawal-relay-queue");
+      const result = await withWithdrawalApplicationStore(values["application-db"], store =>
+        queueWithdrawalRelayPage(files.directory, journal, store, terms, stop.signal, { afterId: values["after-id"], limit }));
+      console.log(JSON.stringify(result));
+      if (result.state === "aborted" || result.unavailable > 0) process.exitCode = 2;
+    } else if (values.run) {
       const { runWithdrawalRelayWorker, withdrawalRelayDependenciesForRpc } = await import("../lib/gateway/withdrawal-relay-worker");
       const result = await runWithdrawalRelayWorker(files.directory, journal, runtime.signer, runtime.otherSigners,
         withdrawalRelayDependenciesForRpc(config.rpcUrl, stop.signal), stop.signal);
