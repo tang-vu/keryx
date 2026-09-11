@@ -4,14 +4,20 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { config } from "../../lib/config";
 import { buildAndSignWithdrawIntent } from "../../lib/gateway/withdraw-intent";
 import { createWithdrawalRequest } from "../../lib/gateway/withdrawal-request";
+import { withdrawTypedData } from "../../lib/gateway/withdraw-protocol";
 import { WITHDRAWAL_MINTER_ABI } from "../../lib/gateway/withdrawal-mint-observation";
 
 /** Unfunded synthetic owner, attester and relay. Never sends an RPC request. */
-export async function creatorWithdrawalFixture() {
+export async function creatorWithdrawalFixture(options: { maxBlockHeight?: string } = {}) {
   const account = privateKeyToAccount(generatePrivateKey()), attester = privateKeyToAccount(generatePrivateKey());
   const relayer = privateKeyToAccount(generatePrivateKey()).address;
   const client = createWalletClient({ account, transport: custom({ request: async () => { throw new Error("RPC forbidden"); } }) });
-  const record = await createWithdrawalRequest(await buildAndSignWithdrawIntent(client, BigInt(50000)), {
+  const signed = await buildAndSignWithdrawIntent(client, BigInt(50000));
+  if (options.maxBlockHeight !== undefined) {
+    signed.burnIntent.maxBlockHeight = options.maxBlockHeight;
+    signed.signature = await account.signTypedData(withdrawTypedData(signed.burnIntent as Parameters<typeof withdrawTypedData>[0]));
+  }
+  const record = await createWithdrawalRequest(signed, {
     owner: account.address, recipient: account.address, domain: config.cctpDomain,
     gatewayWallet: config.gatewayWallet, gatewayMinter: config.gatewayMinter, asset: config.usdcAddress,
     maxValueMicros: "50000", maxFeeMicros: BigInt(Math.round(config.withdrawMaxFeeUsdc * 1e6)).toString(),

@@ -96,8 +96,8 @@ was checked September 11. A live read followed by unsigned estimation with diagn
 caps returned HTTP 200, matching transfer terms and a finite expiry inside the observed
 window. Three tests cover stale/conflicting RPC, vendor lag, excessive expiry, contract
 mismatch, duplicate domains, cancellation and stalls. These caps are not production
-defaults. Terms can become stale during review/signing, so production configuration and
-submission-time revalidation remain open.
+defaults. Terms can become stale during review/signing; the concrete HTTP service now
+revalidates them before submission as described below. Production cap selection remains open.
 
 ## HTTP configuration
 
@@ -115,6 +115,24 @@ Three focused tests verify opt-in, exact limit snapshots, zero fees and malforme
 unsafe configuration. This does not prove funded admission, active worker supervision
 or finite authorization expiry. Public routes remain unregistered and HTTP admission
 has not been activated on production.
+
+### Submission-time expiry revalidation
+
+HTTP configuration now also requires `KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS` (positive)
+and `KERYX_WITHDRAWAL_MAX_PROCESSING_LAG_BLOCKS` (nonnegative). The concrete service
+rejects unlimited maxBlockHeight for new submission. Signed terms must fit a fresh
+Circle/RPC window before gas admission and again after claim storage before Circle
+transport. Session revalidation follows asynchronous term validation before sending.
+If the second check fails, the retained claim remains uncertain and cannot send again;
+its gas hold is not released. Existing claimed requests use recovery without repeating
+height validation, gas admission or vendor submission. Older saved signatures remain
+readable and are never rewritten.
+
+Integration tests use real signed cookies, SQLite claims and finite EOA-signed fixture
+intents with synthetic height observations. They exercise rejection before admission,
+expiry advancing after claim storage, recovery without another call, and session
+revocation during the final height read. Finite-draft UI preparation, operating cap
+selection and funded end-to-end acceptance remain required before activation.
 
 ## Initial transfer coordinator
 

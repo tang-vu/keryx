@@ -28,6 +28,8 @@ export function withdrawalHttpConfiguration(env: Readonly<Record<string, string 
       maxFeeMicros: integer(selected.KERYX_WITHDRAWAL_MAX_FEE_MICROS, false),
     });
     return { env: selected, network: chain.networkId, rpcUrl: chain.rpcUrl, limits,
+      heightLimits: { maxAheadBlocks: integer(selected.KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS, true),
+        maxProcessingLagBlocks: integer(selected.KERYX_WITHDRAWAL_MAX_PROCESSING_LAG_BLOCKS, false) },
       ceilingWei: integer(selected.KERYX_WITHDRAWAL_GAS_CEILING_WEI, true) };
   } catch { throw new Error("Withdrawal HTTP configuration unavailable; verify explicit testnet limits and isolated relay"); }
 }

@@ -17,9 +17,10 @@ const json = (body: unknown, status: number) => Response.json(body, { status, he
 export function createWithdrawalSubmitHandler(options: {
   authenticate: () => Promise<Context | Response>; limits: Limits;
   admit: (record: WithdrawalRequestRecord, signal: AbortSignal) => Promise<void>;
+  validateTerms?: (record: WithdrawalRequestRecord, signal: AbortSignal) => Promise<void>;
   transfer: Parameters<typeof submitWithdrawalTransfer>[4];
 }) {
-  const { authenticate, admit, transfer } = options;
+  const { authenticate, admit, transfer, validateTerms } = options;
   const limits = limitsSchema.parse(structuredClone(options.limits));
   return async (req: Request): Promise<Response> => {
     if (req.method !== "POST") return new Response(null, { status: 405, headers: { Allow: "POST", "Cache-Control": "no-store" } });
@@ -54,9 +55,10 @@ export function createWithdrawalSubmitHandler(options: {
       // Limit/body/signature validation and admission can outlive the original session.
       await requireSession();
       const result = await submitWithdrawalTransfer(context.db, record, owner, async (original, signal) => {
-        await requireSession(); await admit(original, signal); await requireSession();
+        await requireSession(); await validateTerms?.(original, signal); await requireSession();
+        await admit(original, signal); await requireSession();
       }, async (original, signal) => {
-        await requireSession(); return transfer(original, signal);
+        await validateTerms?.(original, signal); await requireSession(); return transfer(original, signal);
       }, req.signal);
       await requireSession();
       return result ? json({ wallet: owner, ...result, mintStatus: "not-checked" }, 202)

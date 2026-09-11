@@ -7,7 +7,7 @@ import { SqliteAdapter } from "../db/sqlite-adapter";
 import { issueWebSession, parseWebSession, webSessionHash } from "../auth-session";
 import { creatorWithdrawalFixture } from "../../scripts/test-fixtures/creator-withdrawal";
 
-const mocks = vi.hoisted(() => ({ cookies: vi.fn(), db: vi.fn(), admit: vi.fn() }));
+const mocks = vi.hoisted(() => ({ cookies: vi.fn(), db: vi.fn(), admit: vi.fn(), height: vi.fn() }));
 vi.mock("next/headers", () => ({ cookies: mocks.cookies }));
 vi.mock("@/lib/db", () => ({ getDb: mocks.db }));
 vi.mock("@/lib/config", async importOriginal => {
@@ -15,6 +15,7 @@ vi.mock("@/lib/config", async importOriginal => {
   return { ...actual, config: { ...actual.config, jwtSecret: "synthetic-withdrawal-session" } };
 });
 vi.mock("./withdrawal-admission-bootstrap", () => ({ createWithdrawalRuntimeAdmission: () => mocks.admit }));
+vi.mock("./withdrawal-height-window", () => ({ withdrawalHeightWindowForRpc: mocks.height }));
 import { createWithdrawalHttpService } from "./withdrawal-http-service";
 
 const directory = mkdtempSync(join(tmpdir(), "keryx-withdrawal-http-"));
@@ -29,9 +30,11 @@ afterAll(() => { db.close(); rmSync(directory, { recursive: true, force: true })
 const request = (kind: string, body: unknown) => new Request(`https://keryx.test/api/me/withdrawals/${kind}`, {
   method: "POST", headers: { host: "keryx.test", origin: "https://keryx.test", "content-type": "application/json" }, body: JSON.stringify(body) });
 async function fixture() {
-  const f = await creatorWithdrawalFixture(), session = await issueWebSession(db, secret, f.record.owner, "creator");
+  const f = await creatorWithdrawalFixture({ maxBlockHeight: "11000" }), session = await issueWebSession(db, secret, f.record.owner, "creator");
+  mocks.height.mockReset(); mocks.height.mockResolvedValue({ minimumBlockHeight: "10500", maximumBlockHeight: "12000" });
   const { owner: _owner, recipient: _recipient, ...limits } = f.record.policy; void _owner; void _recipient;
-  const options = { env: {}, network: "eip155:5042002", rpcUrl: "https://rpc.synthetic.invalid", ceilingWei: "1", limits };
+  const options = { env: {}, network: "eip155:5042002", rpcUrl: "https://rpc.synthetic.invalid", ceilingWei: "1", limits,
+    heightLimits: { maxAheadBlocks: "2000", maxProcessingLagBlocks: "10" } };
   const service = createWithdrawalHttpService(options), state = { token: session.token };
   return { ...f, state, service, options, run: <T>(fn: () => T) => storage.run(state, fn),
     revoke: async () => db.revokeWebSession(webSessionHash((await parseWebSession(session.token, secret))!.jti), f.record.owner) };
@@ -81,4 +84,29 @@ it("retains the claim after real session revocation during claim storage and nev
 
 it("rejects other networks before constructing a submission service", async () => {
   const f = await fixture(); expect(() => createWithdrawalHttpService({ ...f.options, network: "eip155:1" })).toThrow();
+});
+
+it("rejects stale expiry before gas admission and retains a claim when expiry advances before transfer", async () => {
+  const early = await fixture(), fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher);
+  mocks.height.mockResolvedValue({ minimumBlockHeight: "11001", maximumBlockHeight: "12000" });
+  expect((await early.run(() => early.service.submit(request("submit", early.record.request)))).status).toBe(503);
+  expect(mocks.admit).not.toHaveBeenCalled();
+  expect(await db.getCreatorWithdrawalTransferClaim(early.record.id, early.record.owner)).toBeNull();
+  const late = await fixture();
+  mocks.height.mockResolvedValueOnce({ minimumBlockHeight: "10500", maximumBlockHeight: "12000" })
+    .mockResolvedValueOnce({ minimumBlockHeight: "11001", maximumBlockHeight: "12000" });
+  const result = await late.run(() => late.service.submit(request("submit", late.record.request)));
+  expect(await result.json()).toMatchObject({ status: "awaiting-transfer-evidence" });
+  expect(await db.getCreatorWithdrawalTransferClaim(late.record.id, late.record.owner)).not.toBeNull();
+  await late.run(() => late.service.submit(request("submit", late.record.request)));
+  expect(mocks.height).toHaveBeenCalledTimes(2); expect(fetcher).not.toHaveBeenCalled();
+});
+
+it("rechecks the live session after the final asynchronous height read", async () => {
+  const f = await fixture(), fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher);
+  mocks.height.mockResolvedValueOnce({ minimumBlockHeight: "10500", maximumBlockHeight: "12000" })
+    .mockImplementationOnce(async () => { await f.revoke(); return { minimumBlockHeight: "10500", maximumBlockHeight: "12000" }; });
+  expect((await f.run(() => f.service.submit(request("submit", f.record.request)))).status).toBe(503);
+  expect(await db.getCreatorWithdrawalTransferClaim(f.record.id, f.record.owner)).not.toBeNull();
+  expect(fetcher).not.toHaveBeenCalled();
 });

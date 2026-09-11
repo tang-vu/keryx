@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-200** - Submission-time expiry - *Revalidate finite signed terms before gas
+admission and again before the one permitted Circle call.*
+The concrete HTTP service requires explicit maximum-ahead and processing-lag block
+limits and rejects the legacy unlimited-expiry sentinel for new submissions. Each
+fresh submission checks the signed block height against current Circle/RPC bounds
+before holding gas, then repeats the check after claim storage. The live session is
+rechecked after asynchronous height validation before transport. If terms/session
+become unavailable after a claim, that claim and gas hold remain; an existing claim
+uses recovery without another validation/admission/transfer attempt. Expiry is not
+evidence of a failed payment and cannot release uncertain obligations. Legacy retained
+requests remain readable. UI finite-draft preparation and full funded acceptance are
+still required before production activation.
+
 **D-199** - Fresh source-chain expiry bounds - *Compare Circle's minimum expiry and
 processed height with a fresh consistent Arc-testnet RPC block.*
 The reader validates exactly one Arc-testnet domain, expected Gateway wallet/minter
