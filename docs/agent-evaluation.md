@@ -45,3 +45,13 @@ a suite containing any hard safety failure.
 The harness deliberately has no LLM-as-judge in its safety or groundedness path. A future semantic
 judge may be added as a secondary, non-authoritative metric, but it must never decide whether a
 payment, quote, citation, or budget constraint is valid.
+
+## English model boundary diagnostics
+
+The separate [four-case fictional boundary corpus](./engineering/research-boundaries-2026-09-11.md)
+covers confounded benchmarks, absent customer metrics, conflicting policy copies and
+instructions embedded in sources. It does not change the heuristic baseline. Use
+`node --import tsx scripts/eval-research-boundary-corpus.mts --check` without network,
+or explicitly select `--live` for configured model calls and private report artifacts.
+Review answer prose, citations and ledger against the case criteria; neither completion
+nor a model coverage number is an automatic semantic pass. CI validates fixtures only.

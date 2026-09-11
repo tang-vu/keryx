@@ -81,7 +81,9 @@ jobs:
         run: npm run test:business-calculator
 
       - name: Agent quality regression (hermetic, no settlement)
-        run: npm run eval:agent:ci
+        run: |
+          npm run eval:agent:ci
+          node --import tsx scripts/eval-research-boundary-corpus.mts --check
 
       - name: Engineering feed integrity (no settlement)
         run: node --import tsx scripts/build-engineering-feed.mts --check

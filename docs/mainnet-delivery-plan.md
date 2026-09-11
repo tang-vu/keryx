@@ -32,6 +32,11 @@ hosts; the repository's older `.arc.network` configuration must be explicitly
 revalidated before a network configuration change. These observations are dependency
 evidence, not an announcement of a mainnet launch date.
 
+Rechecked September 11: the same official Circle table still lists Arc as testnet-only
+for Gateway (domain 26, no mainnet identifier), and Arc's RPC reference still publishes
+testnet parameters while reserving mainnet parameters for separate publication. M1
+therefore remains unproven. No mainnet constants or service availability were inferred.
+
 ## Product acceptance map
 
 Each row requires code, meaningful tests and observed runtime behavior. A code path
@@ -82,6 +87,12 @@ Judge quoted support and answer usefulness, not merely model-generated coverage 
 Run repeated end-to-end checks including discovery, cache, paid delivery and failure
 handling. Record negative outcomes and evaluation/model versions. Package SLOs remain
 provisional until independent cohorts substantiate a promise.
+
+The [September 11 English boundary diagnostic](./engineering/research-boundaries-2026-09-11.md)
+adds four fictional cases outside the Engineering corpus and two live model rounds.
+The inspected prose preserved uncertainty and ignored a source instruction, but coverage
+varied substantially for an unresolved conflict. This is model-only evidence, not
+end-to-end research acceptance, independent review or a new confidence guarantee.
 
 ## Mainnet release gates
 
