@@ -42,6 +42,17 @@ lookup failures require inspection. Even `funded` is only a point-in-time RPC ob
 not proof that the key was never shared or used to sign off-chain. This helper does not
 create the journal or enable the service, and later admission must recheck gas backing.
 
+Run `node --import tsx scripts/withdrawal-provision.mts --help` for the operator command.
+With only `--address`, `--rpc` and `--lifetime-gas-budget-wei`, it performs a read-only
+preflight. Exit 0 means the sampled funding meets the selected ceiling; exit 2 means
+underfunded and exit 1 means unavailable/invalid. These are not settlement outcomes.
+To initialize, add `--initialize --directory ABSOLUTE_NEW_PATH --max-slots 1..1000
+--fresh-key-custody-verified`. The custody flag asserts an independently completed
+operator check; it is not an automated key audit. Initialization occurs only after
+a funded preflight. Keep output private and inspect any partial directory on error.
+The CLI does not load environment files or enable services, and never overwrites an
+existing journal. Use recovery for a previously used key even if its current nonce is zero.
+
 The process explicitly loads `.env.local`, optional `.env.private-worker.local`
 (for private treasury inventory), and `.env.withdrawal-relay.local`. Keep these files
 owner-only. The relay file must contain the explicitly enabled isolated relay policy;

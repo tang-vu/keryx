@@ -1,5 +1,15 @@
 # Keryx — Decision Log
 
+**D-213** - Explicit provisioning command - *Default to a read-only preflight and
+require complete operator choices before creating a new journal.*
+The standalone CLI accepts only public address/RPC and integer lifetime gas terms for
+inspection. Initialization additionally requires an absolute new directory, bounded
+slot count and explicit assertion of fresh-key custody verification. It validates these
+before RPC, refuses underfunding, then invokes exclusive durable initialization.
+Cancellation retains partial files. No environment keys are loaded, no authorization
+is signed and no relay or HTTP flag is enabled. The command cannot verify the custody
+assertion; that evidence remains an operator prerequisite rather than a chain claim.
+
 **D-212** - Fresh relay chain preflight - *Read current account state before treating
 a newly generated key as eligible for an empty journal.*
 The read-only helper checks Arc Testnet identity, a fresh rechecked block, latest and
