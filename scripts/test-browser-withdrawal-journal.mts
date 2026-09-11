@@ -20,8 +20,17 @@ window.journal=journal;window.fresh=p=>journal.createWithdrawalBrowserDraft(prep
   resolveDir: process.cwd(), loader: "ts" }, bundle: true, write: false, platform: "browser", format: "iife", define: { "process.env": "{}" } });
 const browser = await chromium.launch({ headless: true });
 try {
-  const context = await browser.newContext(); let requests = 0;
-  await context.route("**/*", route => {
+  const context = await browser.newContext(); let requests = 0, statusRequests = 0;
+  const statusResponses = new Map<string, { status: number; body: unknown }>();
+  let changeOwnerDuringStatus: (() => Promise<void>) | undefined;
+  await context.route("**/*", async route => {
+    if (route.request().url() === "https://withdrawal-journal.test/api/me/withdrawals/status") {
+      statusRequests++; assert.equal(route.request().method(), "POST");
+      const body = route.request().postDataJSON(); assert.deepEqual(Object.keys(body), ["id"]);
+      if (changeOwnerDuringStatus) await changeOwnerDuringStatus();
+      const response = statusResponses.get(body.id) ?? { status: 404, body: { error: "Withdrawal unavailable" } };
+      return route.fulfill({ status: response.status, contentType: "application/json", body: JSON.stringify(response.body) });
+    }
     requests++; assert.equal(route.request().method(), "GET"); assert.equal(route.request().url(), "https://withdrawal-journal.test/");
     return route.fulfill({ contentType: "text/html", body: "<main>Withdrawal journal fixture</main>" });
   });
@@ -132,6 +141,19 @@ try {
     return {failed,calls,state:(await window.journal.readWithdrawalBrowserJournal(id,owner)).state};})()`);
   assert.deepEqual(stoppedResult, { failed: true, calls: 0, state: "submission-possible" });
   assert.equal(await invoke(second, "claimWithdrawalBrowserSubmission", stoppedOriginal), false);
+  statusResponses.set(flowOriginal.id, { status: 200, body: { wallet: flowOriginal.owner, requestId: flowOriginal.id,
+    recipient: flowOriginal.policy.recipient, amountMicros: flowOriginal.request.burnIntent.spec.value,
+    status: "awaiting-transfer-evidence", chainFinalityVerified: false, mintStatus: "not-checked" } });
+  const recover = () => first.evaluate(`(async()=>{window.activeOwner=${JSON.stringify(account.address)};
+    return window.flow.recoverWithdrawalBrowserStatus(${JSON.stringify(flowOriginal.id)},${JSON.stringify(account.address)},
+      ()=>window.activeOwner,new AbortController().signal);})()`);
+  assert.equal((await recover()).state, "observed-transfer");
+  statusResponses.delete(flowOriginal.id);
+  assert.equal((await recover()).state, "unavailable");
+  assert.equal(await invoke(second, "claimWithdrawalBrowserSubmission", flowOriginal), false, "404 never renews a consumed claim");
+  changeOwnerDuringStatus = () => first.evaluate(`window.activeOwner='0x${"00".repeat(20)}'`).then(() => undefined);
+  await assert.rejects(recover());
+  assert.equal(statusRequests, 3);
   assert.equal(requests, 3);
   console.log("PASS: Chromium withdrawal draft/signature journal, cross-tab single claim, reload, owner isolation, abort, corruption and recovery-only import after storage loss; no payment HTTP.");
 } finally { await browser.close(); }

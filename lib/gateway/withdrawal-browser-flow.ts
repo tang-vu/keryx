@@ -2,6 +2,7 @@ import type { WalletClient } from "viem";
 import { withdrawTypedData } from "./withdraw-protocol";
 import { createWithdrawalRequest, withdrawalOwnerSchema, type WithdrawalRequestRecord } from "./withdrawal-request";
 import { readWithdrawalBrowserJournal, saveWithdrawalBrowserSignature, claimWithdrawalBrowserSubmission } from "./withdrawal-browser-journal";
+import { readWithdrawalBrowserStatus } from "./withdrawal-browser-status";
 
 type ActiveOwner = () => string | null;
 type Transfer = (original: WithdrawalRequestRecord, signal: AbortSignal) => Promise<unknown>;
@@ -56,4 +57,15 @@ export async function submitWithdrawalBrowserOnce(id: string, owner: string, act
   }
   requireActiveOwner(selected, activeOwner, signal);
   return { state: "recovery-required" as const };
+}
+
+/** Recovery reads only. Missing server evidence never resets a consumed local claim. */
+export async function recoverWithdrawalBrowserStatus(id: string, owner: string, activeOwner: ActiveOwner, signal: AbortSignal) {
+  const selected = withdrawalOwnerSchema.parse(owner);
+  requireActiveOwner(selected, activeOwner, signal);
+  const row = await readWithdrawalBrowserJournal(id, selected);
+  requireActiveOwner(selected, activeOwner, signal);
+  const result = await readWithdrawalBrowserStatus(row.draft, signal);
+  requireActiveOwner(selected, activeOwner, signal);
+  return result;
 }

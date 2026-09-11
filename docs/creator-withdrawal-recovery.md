@@ -251,6 +251,31 @@ Journal commit `00e58ab` passed
 [CI run 34564078587](https://github.com/tang-vu/keryx/actions/runs/34564078587), including
 the Chromium withdrawal journal test and production build.
 
+## Browser HTTP status recovery
+
+`lib/gateway/withdrawal-browser-status.ts` reads the planned authenticated status
+endpoint using a fixed relative URL and POST body containing only the original ID.
+It uses same-origin credentials, no cache/redirects/retries, a five-second total
+deadline and 2 KiB response limit. Delayed headers/body or cancellation fail without
+granting a later response authority. The strict projection must match the retained
+draft's owner, recipient, amount and EIP-712 ID, with `chainFinalityVerified: false`
+and `mintStatus: not-checked`. Extra payload fields and claimed completion are rejected.
+404 means unavailable evidence, not failed/unsent; 401 requires authentication.
+Server diagnostic messages are not propagated into the UI.
+
+`recoverWithdrawalBrowserStatus` reads the retained journal, checks the live account
+before HTTP and again before returning, and leaves submission markers untouched.
+Six focused tests cover original-data binding, fixed transport, authentication/absence,
+error redaction, response limits, caller mutation, abort, stalled headers/body and
+discarded late responses. The Chromium drill also exercises intercepted same-origin
+status HTTP, confirms that a 404 cannot renew submission permission and withholds
+results after account change. The public Next.js endpoint and production panel remain
+unwired; these checks do not establish live server/browser or funded acceptance.
+Focused tests, Chromium verification, lint and TypeScript checking pass locally.
+Browser-flow commit `4fd9722` passed
+[CI run 34564372010](https://github.com/tang-vu/keryx/actions/runs/34564372010), including
+production build.
+
 ## Read-only mint observation
 
 `lib/gateway/withdrawal-mint-observation.ts` revalidates the original request and matched

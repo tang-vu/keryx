@@ -1,5 +1,15 @@
 # Keryx — Decision Log
 
+**D-182** - Browser withdrawal status - *Bind HTTP transfer progress to the retained
+draft and never translate missing evidence into retry or completion authority.*
+The browser uses one fixed same-origin read-only POST carrying only the request ID,
+with cookies, no cache/redirects/retries, a five-second total deadline and 2 KiB body
+cap. The strict result matches owner, recipient, amount and original digest and accepts
+only transfer progress with mint finality explicitly unchecked. A 404 remains unavailable;
+401 requests authentication. Recovery rechecks the live account after reading and
+never changes the local submission marker. This transport is implemented and tested
+against intercepted HTTP; the public route and production UI are not activated here.
+
 **D-181** - Browser withdrawal execution - *Sign only the stored draft and reread the
 committed original before invoking an app-owned one-attempt transport.*
 The browser flow checks a live account accessor and cancellation around asynchronous
