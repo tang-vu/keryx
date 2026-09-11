@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-174** - Relay operator bootstrap - *Require an explicit dedicated key and protected
+existing journal before enabling the testnet worker command.*
+The CLI defaults to read-only local inspection, with separate explicit run and schema
+upgrade modes. It derives signer inventory from loaded private keys, requires public
+funder/private-active treasury coverage and rejects relay reuse. The configured relay
+address and journal policy must match that key. Linux ownership/mode, link, ancestor
+and database-identity checks bind the existing protected directory to the command;
+Windows needs a real ACL implementation before runtime execution. No key/journal is
+created and no crash lock is reclaimed automatically. Configuration completeness and
+off-host key isolation remain operator trust boundaries. The command is implemented,
+but no funded production relay is provisioned or enabled by this change.
+
 **D-173** - Withdrawal RPC lifetime - *Bound and abort the whole response, including
 its body, without automatic transaction retries.*
 The installed viem HTTP implementation uses an explicit fetch signal instead of its

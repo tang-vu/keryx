@@ -266,12 +266,57 @@ Focused lint and TypeScript checking pass. The preceding observation-journal com
 `fef15d8` passed [CI run 34559529412](https://github.com/tang-vu/keryx/actions/runs/34559529412),
 including production build.
 
-This is a callable worker core, not a provisioned production service. The operator
-entrypoint still must verify actual key inventory, protected directory/journal identity,
-backup/restore and shutdown configuration. Complete request admission, withdrawal
+This is a callable worker core, not a provisioned production service. Runtime
+provisioning still needs verified inventory completeness, backup/restore and supervisor
+configuration. Complete request admission, withdrawal
 projection, reverted/foreign-mint reconciliation, bounded cancellation/replacement,
 HTTP/browser integration and live acceptance remain open. The existing production
 withdrawal endpoint has not been switched to this worker.
+
+### Operator entrypoint
+
+`npm run withdrawal:relay` inspects an existing journal by default. It does not call
+RPC or sign and prints only aggregate slot/prepared/observed counts. `--run` executes
+one bounded testnet pass; `--upgrade` explicitly checks/upgrades schema without relaying.
+The flags are mutually exclusive. Environment files must be loaded explicitly; the
+command never creates a key/journal or removes an existing crash lock.
+
+Runtime configuration requires `KERYX_WITHDRAWAL_RELAY_ENABLED=1`,
+`KERYX_WITHDRAWAL_RELAY_ISOLATED=1`, `KERYX_WITHDRAWAL_RELAY_PRIVATE_KEY`,
+`KERYX_WITHDRAWAL_RELAY_ADDRESS` and an absolute `KERYX_WITHDRAWAL_RELAY_DIRECTORY`.
+The address must match the derived key. At least the actual public funder key must be
+loaded; an enabled private research treasury also requires its key. Every other
+nonempty loaded `*_PRIVATE_KEY` is parsed and its derived address compared with the
+relay. Configured seller/private recipient addresses are also excluded. Malformed,
+missing required or reused key configuration fails with a generic error. These checks
+cover the loaded inventory; the isolation flag is an operator declaration, not proof
+that the key was never copied or used outside that inventory.
+
+The Linux directory contains `policy.json` (at most 4 KiB) and an existing nonempty
+`mint.sqlite`. Directory, policy, database and present SQLite sidecars must belong to
+the process owner with no group/other access. Symlinks, file hard links and replaceable
+non-sticky ancestors are refused. Root-owned sticky `/tmp` is allowed for isolated
+tests. The command checks database inode/device and policy again after opening, binds
+the policy's relayer to the actual key and uses the journal's immutable policy check.
+Windows runtime execution is refused until equivalent ACL checks are implemented;
+POSIX mode bits are not presented as Windows access control.
+
+Inspection opens the database read-only under the cooperative lock. Upgrade uses the
+same lock; execution uses the worker's lock. SIGINT/SIGTERM abort the active pass and
+cleanup waits for awaited work. Output omits keys, request IDs, signed payloads and
+private policy contents. A waiting or aborted run exits with code 2 for operator
+handling; unknown errors exit 1. No automatic restart, wallet rotation or nonce reset
+is performed.
+
+Windows validation passed the runtime configuration tests and CLI help; Linux-specific
+tests are skipped there. A separate WSL check exercised the real CLI for inspection,
+schema checking, an empty relay pass, permission refusal and retained-lock refusal with
+unfunded synthetic keys. A second Linux check covered private ancestry and rejection
+of a writable ancestor. The Linux Vitest suite additionally covers links and policy
+bounds. This is runtime bootstrap evidence, not acceptance of a live paid withdrawal.
+Focused lint and TypeScript checking pass. Worker/transport commit `b8b4cf6` passed
+[CI run 34560433030](https://github.com/tang-vu/keryx/actions/runs/34560433030), including
+production build.
 
 The request-matching layer in `lib/gateway/withdrawal-attestation.ts` now checks a
 single attestation or a one-entry attestation set against the exact encoded original
