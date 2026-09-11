@@ -694,6 +694,17 @@ accepted a transfer or that a mint settled. SQLite paging/owner checks and inter
 real Supabase client query construction are tested. This does not constitute a live
 PostgREST integration test. Authenticated HTTP and browser history remain to be connected.
 
+The unmounted `withdrawal-history-handler.ts` now defines the private HTTP boundary:
+same-origin POST, a strict JSON cursor capped at 1 KiB, an owner from the live session,
+25-row pages and separate durable limits of 10 reads per wallet / 100 per service per
+minute. After the read, both wallet and session hash must still match. Errors and
+successes use no-store/no-referrer headers; unknown adapter fields are stripped and
+foreign owners, duplicate identities or inconsistent continuation cursors fail closed.
+Eight handler tests cover actual SQLite reads, projection, session revocation/replacement,
+malformed input, cancellation, adapter failures and quota exhaustion. No signing,
+transfer claim or settlement operation is available to this handler. Route binding,
+browser pagination and recovery without a retained local original remain open.
+
 ## Remaining implementation and acceptance
 
 ### Private relay journal foundation

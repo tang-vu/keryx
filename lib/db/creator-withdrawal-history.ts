@@ -2,13 +2,11 @@ import type { DatabaseSync } from "node:sqlite";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { validateWithdrawalRequest, withdrawalIdSchema, withdrawalOwnerSchema } from "../gateway/withdrawal-request";
+import { withdrawalHistoryCursorSchema, type WithdrawalHistoryCursor, type WithdrawalHistoryEntry, type WithdrawalHistoryPage } from "../gateway/withdrawal-history-types";
+export { withdrawalHistoryCursorSchema } from "../gateway/withdrawal-history-types";
+export type { WithdrawalHistoryCursor, WithdrawalHistoryEntry, WithdrawalHistoryPage } from "../gateway/withdrawal-history-types";
 
 const time = z.string().max(40).datetime({ offset: true });
-export const withdrawalHistoryCursorSchema = z.object({ createdAt: time, id: withdrawalIdSchema }).strict();
-export type WithdrawalHistoryCursor = z.infer<typeof withdrawalHistoryCursorSchema>;
-export type WithdrawalHistoryEntry = { id: string; owner: string; createdAt: string;
-  amountMicros: string; maxFeeMicros: string; recipient: string };
-export type WithdrawalHistoryPage = { requests: WithdrawalHistoryEntry[]; nextCursor: WithdrawalHistoryCursor | null };
 
 function selection(owner: string, cursor: WithdrawalHistoryCursor | undefined, limit: number) {
   return { owner: withdrawalOwnerSchema.parse(owner), cursor: cursor === undefined ? undefined : withdrawalHistoryCursorSchema.parse(cursor),

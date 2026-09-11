@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-218** - Private history response boundary - *Revalidate the exact account session
+after reading owner-scoped withdrawal metadata.*
+The history handler accepts only a bounded JSON cursor in a same-origin POST, derives
+the owner from authentication and applies a separate durable read quota. Response
+projection strips unexpected storage fields, rejects foreign/duplicate rows and
+requires a continuation cursor to match the final row. Revocation, account changes,
+same-wallet session replacement and cancellation withhold the result. Every response,
+including errors and rate limits, disables caching and referrer propagation. These
+rows remain request metadata, not settlement proof or permission to sign again.
+The handler is not yet mounted in a route or browser interface; integration and
+browser loss-of-local-storage acceptance remain open.
+
 **D-217** - Owner withdrawal history storage - *Enumerate authenticated-account
 recovery metadata without exporting bearer signatures in a history page.*
 Both adapters now select only a caller-supplied owner, ordered by admission timestamp
