@@ -17,12 +17,11 @@ redacted reports and `/research` preparation/inspection are implemented. Existin
 owner-operated pilots demonstrate testnet payment and recovery on a narrow first-party
 corpus. They do not establish an externally profitable service or broad research quality.
 
-The public economics snapshot at `2026-09-09T05:47:18.440Z` reported 306 sampled runs,
-16 priced runs and 290 unpriced runs, with `mimo-v2.5` unpriced. Its estimated LLM cost
-of 0.033683 USD covers only priced runs. Its 2.82-USDC A2A service-fee total is testnet
-ledger activity, not mainnet revenue. Neither this aggregate nor the shadow margin
-can establish monthly profit. Fixed operating costs, billing reconciliation and
-independent customer cohorts have not been verified for this baseline.
+Historical testnet telemetry has incomplete usage and pricing coverage. It cannot
+establish monthly profit or mainnet revenue. Usage-derived cost estimates and margins
+are internal operational data; the former public snapshot is retired in v0.22.59.
+Fixed operating costs, billing reconciliation and independent customer cohorts have
+not been verified for this baseline.
 
 Live official documentation checked September 9 lists Arc as testnet-only in
 [Circle Gateway supported blockchains](https://developers.circle.com/gateway/references/supported-blockchains).

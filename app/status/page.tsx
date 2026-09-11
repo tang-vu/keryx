@@ -26,10 +26,6 @@ import {
   PendingReconciliationSection,
   type PendingReconciliationHealth,
 } from "@/components/keryx/pending-reconciliation-section";
-import {
-  TestnetEconomicsSection,
-  type TestnetEconomicsHealth,
-} from "@/components/keryx/testnet-economics-section";
 
 interface Health {
   ok: boolean;
@@ -82,7 +78,6 @@ function fmtUptime(s: number): string {
 export default function StatusPage() {
   const [health, setHealth] = useState<Health | null>(null);
   const [treasury, setTreasury] = useState<Treasury | null>(null);
-  const [economics, setEconomics] = useState<TestnetEconomicsHealth | null>(null);
   const [reachable, setReachable] = useState(true);
 
   useEffect(() => {
@@ -108,25 +103,14 @@ export default function StatusPage() {
         /* section simply stays hidden */
       }
     };
-    const pollEconomics = async () => {
-      try {
-        const r = await fetch("/api/economics", { cache: "no-store" });
-        if (r.ok && alive) setEconomics((await r.json()) as TestnetEconomicsHealth);
-      } catch {
-        /* observatory stays hidden when unavailable */
-      }
-    };
     poll();
     pollTreasury();
-    pollEconomics();
     const id = setInterval(poll, 10_000);
     const tid = setInterval(pollTreasury, 60_000);
-    const eid = setInterval(pollEconomics, 60_000);
     return () => {
       alive = false;
       clearInterval(id);
       clearInterval(tid);
-      clearInterval(eid);
     };
   }, []);
 
@@ -209,7 +193,6 @@ export default function StatusPage() {
               <PendingReconciliationSection reconciliation={health.reconciliation} />
             )}
 
-            {economics && <TestnetEconomicsSection economics={economics} />}
 
             {treasury?.available && treasury.unifiedBalance && (
               <>

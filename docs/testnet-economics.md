@@ -19,8 +19,12 @@ read-only: it cannot authorize, settle, retry, release, or relabel a payment.
 - Runs and payments from before this telemetry remain unknown/unsampled. They are never backfilled
   from weak assumptions.
 
-The public snapshot is `GET /api/economics`; `/status` renders the same data under an explicit
-“simulation · not revenue” label.
+The snapshot is internal operational telemetry. Since v0.22.59, the former public
+`GET /api/economics` returns 410 without reading the database, and `/status` no longer
+fetches or renders it. Actual usage-derived cost estimates and margins, as well as
+invoices and realized costs/profit, stay private. Public formulas and explicitly
+illustrative scenarios remain available at `/economics`. A simulation label alone
+does not make internal operating data suitable for publication.
 
 ## Pricing policy
 

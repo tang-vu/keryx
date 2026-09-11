@@ -28,5 +28,8 @@ try {
   const page = await fetch(`${base}/me/withdrawals`, { redirect: "error", signal: AbortSignal.timeout(10000) });
   assert.equal(page.status, 200); assert.equal(page.headers.get("referrer-policy"), "no-referrer");
   assert.ok((await page.text()).includes("Account history shows requests saved on the server"));
-  console.log("PASS: production Next withdrawal history authentication, origin rejection and private framework headers.");
+  const economics = await fetch(`${base}/api/economics`, { redirect: "error", signal: AbortSignal.timeout(10000) });
+  assert.equal(economics.status, 410); assert.equal(economics.headers.get("cache-control"), "no-store");
+  assert.deepEqual(await economics.json(), { error: "Operational economics are private.", calculator: "/economics" });
+  console.log("PASS: production Next withdrawal history authentication/private headers and retired operational economics endpoint.");
 } finally { child.kill(); await exited; }

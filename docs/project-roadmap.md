@@ -6,7 +6,12 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.58 (past deposits after storage loss, updated 2026-09-11)
+**Version:** 0.22.59 (private operational economics, updated 2026-09-11)
+
+Usage-derived cost and shadow-margin telemetry are no longer published through
+`/api/economics` or the status page. The retired endpoint returns a static 410 with
+no-store; internal telemetry remains private. Public business formulas and illustrative
+scenarios remain available in the calculator, without importing operational totals.
 
 A wallet-supplied deposit hash can now be checked even without local funding records.
 The browser verifies a finalized call for the current wallet and displays historical

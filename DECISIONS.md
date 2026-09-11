@@ -1,5 +1,14 @@
 # Keryx — Decision Log
 
+**D-226** - Private operational economics - *A testnet or simulation label is not
+permission to publish internal operating estimates.* The legacy public economics
+endpoint exposed usage-derived cost and shadow-margin totals, and `/status` polled
+that snapshot. Both public surfaces are retired: the endpoint returns a static 410
+with no-store and no database read; the status widget and polling are removed.
+Internal telemetry and allocation calculations remain available to operator code.
+The public business calculator retains formulas and explicitly illustrative user
+assumptions. No invoice, private bill or realized profit is required for publication.
+
 **D-225** - Historical deposit lookup without local originals - *Observing a past
 deposit does not recreate a signing plan or prove current available credit.* A
 wallet-supplied hash can be inspected using the current payer, pinned Arc testnet
