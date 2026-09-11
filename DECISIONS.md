@@ -1,5 +1,22 @@
 # Keryx — Decision Log
 
+**D-163** - Private interruption recovery - *Restore the original backup first; an operator
+may close an interrupted execution to new creator payments without replaying it.*
+The operator uses the actual worker database, spool and encryption key under the same
+exclusive worker lock. The command never stops a process or removes a retained crash lock.
+A matching authenticated backup is restored with the original execution authority. Without
+a result, closing requires a complete bounded scan of recognized backups; unknown files,
+corruption and authority mismatch refuse the action. Preview is the default. Applying records
+an immutable interruption against the original owner and worker, serialized with creator
+admission. Only never-committed budget becomes reusable; every admitted authorization remains
+backed regardless of expiry or observed status. Original payments, nonces and execution claims
+are preserved. Late confirmations and restoration of the original result remain allowed,
+while the spend fence remains permanent. Owner views explicitly report interruption and no
+refund from this action. This extends D-162's result-only release eligibility. It is not
+automatic retry, a completed answer, reimbursement or proof of lost off-site backups.
+Operator quiescence, use of the correct storage and protected locator handling remain required;
+full support/refund policy and independent paid crash acceptance remain open.
+
 **D-162** - Private treasury reuse - *Release only never-committed budget after durable
 result sealing; keep every admitted authorization charged to the lifetime ceiling.*
 Creator admission and result persistence already serialize against the execution identity.

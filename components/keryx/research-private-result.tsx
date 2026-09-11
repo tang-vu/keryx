@@ -4,6 +4,7 @@ const statuses = {
   "awaiting-payment": "Payment has not been confirmed. This lookup does not retry payment.",
   "awaiting-execution": "Payment is confirmed; execution has not been claimed yet.",
   "execution-claimed": "Execution was claimed, but no completed result is stored yet. This does not establish that the worker is still running. Refresh later; do not pay again to recover this job.",
+  interrupted: "Research was interrupted and closed to new creator payments by the operator. No completed answer is stored. Keep your recovery file; do not pay again to recover this job. Existing payments remain subject to their recorded evidence. No refund has been issued by this action.",
   completed: "Research completed. Review its evidence and payment status separately.",
 };
 export function ResearchPrivateResult({ job }: { job: PrivateWorkspaceResult }) {
@@ -11,6 +12,7 @@ export function ResearchPrivateResult({ job }: { job: PrivateWorkspaceResult }) 
   return <div className="mt-5 space-y-5">
     <h3 className="break-words font-display text-2xl">{job.request.question}</h3>
     <p role="status" className="font-serif">{statuses[job.status]}</p>
+    {job.interruption && <p className="text-sm text-ink-3">Interruption recorded: {job.interruption.recordedAt}. A recovered original result can still appear here after an operator restores its backup.</p>}
     <p className="text-sm">Package payment: {incoming.status} · {privateUsdc(incoming.priceMicros)} · Arc testnet</p>
     <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{([
       ["Creator cap", creator.budgetMicros], ["Committed", creator.committedMicros], ["Unresolved", creator.unresolvedMicros],

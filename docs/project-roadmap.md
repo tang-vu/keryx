@@ -6,7 +6,12 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.49 (sealed-job treasury capacity reuse, updated 2026-09-10)
+**Version:** 0.22.50 (private interrupted-job resolution, updated 2026-09-11)
+
+[Interrupted private jobs](./private-interruption-resolution.md) now have an operator
+backup-first resolution and an explicit owner-visible outcome. New creator payments are
+blocked while every already-admitted obligation remains backed. This does not provide
+refunds or establish independent paid crash acceptance.
 
 The [private browser purchase and recovery flow](./private-browser-checkout.md) now connects
 reviewed provider/price terms, wallet signing and a durable one-attempt journal on `/research`.

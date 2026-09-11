@@ -30,7 +30,7 @@ try {
       await new Promise(resolve => setTimeout(resolve, 500));
     }
   }
-  const migrations = readdirSync("supabase/migrations").filter(file => /\.sql$/.test(file) && Number(file.slice(0, 4)) >= 46 && Number(file.slice(0, 4)) <= 60).sort();
+  const migrations = readdirSync("supabase/migrations").filter(file => /\.sql$/.test(file) && Number(file.slice(0, 4)) >= 46 && Number(file.slice(0, 4)) <= 61).sort();
   sql("create role anon; create role authenticated; create role service_role bypassrls;\n" +
     migrations.map(file => readFileSync(`supabase/migrations/${file}`, "utf8")).join("\n") + "\n" +
     readFileSync("scripts/check-private-treasury-release.sql", "utf8"));
@@ -56,5 +56,33 @@ try {
       (select coalesce(sum(amount_micros),0) from public.private_creator_submissions where job_id=${job("d")}) <> 30000 then raise exception 'seal/admit release mismatch'; end if;
   end $$;`);
   if (flags([await concurrent(admit)]) !== "f") throw new Error("Late creator admission allowed");
+  sql(readFileSync("scripts/check-private-interruptions.sql", "utf8"));
+  const interrupt = `select public.interrupt_private_research(${job("e")},${payer},${worker})`;
+  const competingLeg = `select public.admit_private_creator_submission(${job("e")},${payer},${worker},repeat('5',64),'0x'||repeat('5',64),10000,
+    jsonb_build_object('submission',jsonb_build_object('authorizationId','0x'||repeat('5',64),'amountMicros','10000','payer','0x'||repeat('5',40))))`;
+  await Promise.all([concurrent(interrupt), concurrent(competingLeg)]);
+  sql(`set role service_role; do $$ declare stamp timestamptz; spent bigint; amount bigint; proof jsonb; begin
+    select recorded_at into stamp from public.private_research_interruptions where id=${job("e")};
+    if stamp is null then raise exception 'interruption missing'; end if;
+    perform public.interrupt_private_research(${job("e")},${payer},${worker});
+    if (select recorded_at from public.private_research_interruptions where id=${job("e")}) <> stamp then raise exception 'interruption replay changed original'; end if;
+    perform public.release_private_treasury(${job("e")},${payer},'0x'||repeat('5',40));
+    select amount_micros into amount from public.private_treasury_releases where job_id=${job("e")};
+    select coalesce(sum(amount_micros),0) into spent from public.private_creator_submissions where job_id=${job("e")};
+    if amount + spent <> 30000 then raise exception 'interruption/admission release mismatch'; end if;
+    select jsonb_build_object('source','circle-facilitator-success','transaction','synthetic-late-confirmation','submission',data->'submission') into proof
+      from public.private_creator_submissions where job_id=${job("e")};
+    if proof is not null then
+      perform public.confirm_private_creator_submission(${job("e")},${payer},${worker},proof);
+      if not exists(select 1 from public.private_creator_confirmations where authorization_id='0x'||repeat('5',64)) then raise exception 'late evidence denied'; end if;
+    end if;
+    perform public.save_private_research_result(${job("e")},${payer},${worker},'{}');
+    if not exists(select 1 from public.private_research_results where id=${job("e")}) then raise exception 'late result restore denied'; end if;
+    if not exists(select 1 from public.private_research_interruptions where id=${job("e")}) then raise exception 'restore removed fence'; end if;
+    perform public.release_private_treasury(${job("e")},${payer},'0x'||repeat('5',40));
+    if (select amount_micros from public.private_treasury_releases where job_id=${job("e")}) <> amount then raise exception 'restore recycled capacity twice'; end if;
+  end $$;`);
+  if (flags([await concurrent(competingLeg)]) !== "f") throw new Error("Admission after interruption allowed");
+  console.log("PASS: PostgreSQL interruption/admission contention, original-record replay, late evidence/result restoration, capacity conservation and private permissions.");
   console.log("PASS: PostgreSQL 17 migrations, private permissions, unsealed/foreign denial, duplicate release, capacity contention, result-seal/admission race and pending-spend retention. Synthetic unfunded data only.");
 } finally { if (started) docker(["rm", "-f", name]); }

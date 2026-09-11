@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { fork } from "node:child_process";
-import { readFile, readdir, unlink } from "node:fs/promises";
+import { readFile, readdir, unlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { privateWorkerScenario } from "./test-fixtures/private-worker-scenario.mts";
@@ -14,12 +14,12 @@ const preload = pathToFileURL(join(project, "scripts/test-fixtures/private-worke
 type Scenario = Awaited<ReturnType<typeof privateWorkerScenario>>;
 type Event = { status: string; providerCalls?: number; forbiddenCalls?: number };
 
-function launch(scenario: Scenario, hold: boolean, once = false) {
+function launch(scenario: Scenario, hold: boolean, once = false, command?: { path: string; args: string[] }) {
   // Do not inherit wallet, provider, Supabase, NODE_OPTIONS or production environment.
   const env: NodeJS.ProcessEnv = { NODE_ENV: "test", TSX_TSCONFIG_PATH: join(project, "tsconfig.json"), ...scenario.env,
     KERYX_TEST_HOLD_PROVIDER: hold ? "1" : "0" };
   for (const name of ["PATH", "ESBUILD_BINARY_PATH"]) if (process.env[name]) env[name] = process.env[name];
-  const child = fork(workerPath, once ? ["--once"] : [], { cwd: scenario.root, env,
+  const child = fork(command?.path ?? workerPath, command?.args ?? (once ? ["--once"] : []), { cwd: scenario.root, env,
     execArgv: ["--no-warnings", "--import", loader, "--import", preload], stdio: ["ignore", "pipe", "pipe", "ipc"] });
   const events: Event[] = []; let stdout = "", stderr = "";
   child.on("message", message => { events.push(message as Event); });
@@ -129,8 +129,25 @@ async function crash() {
     assert.ok(await scenario.db.getPrivateResearchResult(queued, scenario.payer));
     assert.equal((await scenario.db.getPrivateTreasurySummary(scenario.treasury))?.allocatedMicros, "60000");
     console.log("PASS: SIGKILL retains the original claim, missing-result state and capacity; stale-lock restart is refused; verified-stop cleanup does not rerun the interrupted job.");
+    const locator = join(scenario.root, "operator-locator.json");
+    await writeFile(locator, JSON.stringify({ id: active, payer: scenario.payer }), { flag: "wx", mode: 0o600 });
+    const operatorPath = join(project, "scripts/private-interruption.mts");
+    for (const apply of [false, true]) {
+      const operator = launch(scenario, false, false, { path: operatorPath, args: ["--locator", locator, ...(apply ? ["--apply"] : [])] });
+      processes.push(operator);
+      assert.deepEqual(await operator.finish(), { code: 0, signal: null });
+      assert.equal(operator.stderr, "");
+      assert.ok(operator.summaries().some(row => row.status === (apply ? "interrupted" : "interruption-proposed") && row.paymentRequestsSent === 0));
+      assert.equal(operator.summaries().find(row => row.status === "test-network-summary")?.forbiddenCalls, 0);
+      assert.equal(operator.summaries().find(row => row.status === "test-network-summary")?.providerCalls, 0);
+      assert.equal(Boolean(await scenario.db.getPrivateResearchInterruption(active, scenario.payer)), apply);
+    }
+    assert.deepEqual(await scenario.db.getPrivateResearchExecution(active, scenario.payer), claim);
+    assert.equal(await scenario.db.getPrivateResearchResult(active, scenario.payer), null);
+    assert.equal((await scenario.db.getPrivateTreasurySummary(scenario.treasury))?.allocatedMicros, "30000");
+    console.log("PASS: the operator CLI previews, then records interruption of the crashed job without replay or refund; only never-committed capacity is released.");
   } finally { for (const process of processes) await process.cleanup(); await scenario.close(); }
 }
 
 await graceful(); await crash();
-console.log("No live funds, customer data, production worker, external provider or settlement network was used. Crash-without-result recovery remains an operator obligation.");
+console.log("No live funds, customer data, production worker, external provider or settlement network was used. Operator interruption is not a completed answer or a refund.");

@@ -21,7 +21,7 @@ const bundle = await build({ stdin: { contents: `import React from 'react';impor
 const browser = await chromium.launch({ headless: true });
 try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  let wallet = walletA, fail = true, delay = false, revoked = false, reads = 0;
+  let wallet = walletA, fail = true, delay = false, revoked = false, interrupted = false, reads = 0;
   let held: Route | undefined;
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   await page.route("**/*", async route => {
@@ -39,7 +39,9 @@ try {
         nextCursor: wallet === walletA && !body.cursor ? { id: id(1), createdAt: "2026-09-09T00:00:00.000Z" } : null } });
       assert.deepEqual(Object.keys(body), ["id"]);
       if (delay) { delay = false; held = route; return; }
-      return route.fulfill({ json: result(wallet, wallet === walletB ? "Wallet B private question" : "Wallet A private question") });
+      const selected = result(wallet, wallet === walletB ? "Wallet B private question" : "Wallet A private question");
+      return route.fulfill({ json: interrupted ? { ...selected, status: "interrupted", result: null,
+        interruption: { reason: "worker-interrupted", recordedAt: "2026-09-11T00:00:00.000Z" } } : selected });
     }
     return route.fulfill({ contentType: "text/html", body: '<div id="root"></div>' });
   });
@@ -53,6 +55,13 @@ try {
   await page.getByRole("button", { name: "View private job", exact: true }).first().click(); await page.getByText(answer, { exact: true }).waitFor();
   assert.equal(await page.locator("img").count(), 0); await page.getByText("Evidence does not support the question.", { exact: true }).waitFor();
   await page.getByText("Unresolved", { exact: true }).waitFor();
+  interrupted = true; await page.getByRole("button", { name: "Refresh this job" }).click();
+  await page.getByText(/Research was interrupted and closed to new creator payments/).waitFor();
+  assert.equal(await page.getByText(answer, { exact: true }).count(), 0);
+  await page.getByText(/No refund has been issued by this action/).waitFor();
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  interrupted = false; await page.getByRole("button", { name: "Refresh this job" }).click();
+  await page.getByText(answer, { exact: true }).waitFor();
   delay = true; await page.getByRole("button", { name: "Refresh this job" }).click();
   for (let n = 0; n < 100 && !held; n++) await page.waitForTimeout(10);
   assert(held);

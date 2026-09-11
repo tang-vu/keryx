@@ -1,5 +1,11 @@
 # Sealed private-job treasury capacity reuse
 
+**2026-09-11 follow-up (v0.22.50):** an immutable operator interruption now also
+fences new creator admission and permits release of never-committed capacity.
+All admitted authorizations remain allocated. The original v0.22.49 result-only
+implementation and live evidence below are historical; see
+[interruption resolution](../private-interruption-resolution.md) for the extension.
+
 Version 0.22.49 adds a once-per-job internal release of never-committed creator budget.
 It does not return money to the buyer or withdraw, transfer, deposit or mint funds.
 The package's buyer-facing unused-budget policy remains unchanged.

@@ -4,6 +4,12 @@ The configured testnet pilot can review and purchase private research in `/resea
 using the same owner-only server admission as the CLI. General availability is not enabled.
 The browser also displays private account history and locally retained recovery entries.
 
+An operator-resolved interrupted execution now shows `interrupted`, its recorded time
+and current payment evidence without a completed answer. Keep the recovery file and do
+not pay again to recover that job. The action issues no refund. If an original backup is
+later restored, refreshing shows the recovered answer. See the
+[operator procedure and limits](./private-interruption-resolution.md).
+
 ## Purchase and recovery
 
 Sign in with the paying EOA account, enter a question, creator cap and maximum total, and

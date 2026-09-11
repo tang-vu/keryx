@@ -101,8 +101,10 @@ Linux process acceptance now covers [active synthetic prepaid-job SIGTERM and SI
 through the production worker entrypoint, real SQLite/spool and blocked transports.
 Cooperative stop preserves the queued job; crash preserves the original interrupted
 claim and allocation. This advances M4/M5 without claiming live creator-payment or
-systemd-under-load acceptance. Operator resolution for an interrupted job without a
-saved result remains a concrete missing user recovery flow.
+systemd-under-load acceptance. Version 0.22.50 adds [operator interruption resolution](./private-interruption-resolution.md):
+restore the original backup first, otherwise record a permanent new-payment fence and
+an explicit owner-visible outcome. Only never-committed capacity is released. Refund/support
+policy, off-site recovery and independent paid crash acceptance remain open.
 
 Version 0.22.49 adds [sealed private-job capacity reuse](./engineering/private-treasury-release-2026-09-10.md):
 return only never-committed creator budget, retaining every admitted authorization and

@@ -1,5 +1,12 @@
 # Private worker active-job shutdown and crash acceptance
 
+**2026-09-11 follow-up (v0.22.50):** the process drill now also runs the actual
+operator preview/apply CLI after verified test-worker crash cleanup. It confirms no
+job replay, no provider/payment requests and release of only never-committed capacity.
+The local extended drill passed. The original evidence below remains historical;
+[interruption resolution](../private-interruption-resolution.md) documents the new flow
+and its remaining paid-acceptance limits.
+
 This Linux process test executes the actual `scripts/private-research-worker.mts`
 entrypoint, bootstrap, polling loop, private executor, SQLite adapter and encrypted
 result spool. It uses fresh unfunded keys and synthetic incoming-payment confirmations.

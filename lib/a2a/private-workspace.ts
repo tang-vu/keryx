@@ -14,7 +14,8 @@ export const privateWorkspaceHistorySchema = z.object({
 });
 export const privateWorkspaceResultSchema = z.object({
   wallet, format: z.literal("private-result-v1"),
-  status: z.enum(["awaiting-payment", "awaiting-execution", "execution-claimed", "completed"]),
+  status: z.enum(["awaiting-payment", "awaiting-execution", "execution-claimed", "interrupted", "completed"]),
+  interruption: z.object({ reason: z.literal("worker-interrupted"), recordedAt: date }).optional(),
   request: z.object({ question: z.string(), researchMode: z.enum(["quick", "deep"]), model: z.string().nullable(), packageVersion: z.string(), creatorBudgetMicros: micros }),
   spend: z.object({ format: z.literal("private-spend-v1"), chainFinalityVerified: z.literal(false),
     incoming: z.object({ status: z.enum(["not-submitted", "pending", "settled"]), priceMicros: micros }),
@@ -31,7 +32,8 @@ export const privateWorkspaceResultSchema = z.object({
     evidence: z.array(z.object({ claimIndex: z.number().int().nonnegative(), sourceName: z.string(), quote: z.string(), qualifiesForReward: z.boolean() })).nullable(),
     claimCoverage: z.array(z.object({ claimIndex: z.number().int().nonnegative(), claim: z.string(), coverage: unit })).nullable(),
   }).nullable(),
-}).refine(value => (value.status === "completed") === (value.result !== null));
+}).refine(value => (value.status === "completed") === (value.result !== null))
+  .refine(value => (value.status === "interrupted") === (value.interruption !== undefined));
 export type PrivateWorkspaceHistory = z.infer<typeof privateWorkspaceHistorySchema>;
 export type PrivateWorkspaceResult = z.infer<typeof privateWorkspaceResultSchema>;
 export function privateUsdc(value: string) {

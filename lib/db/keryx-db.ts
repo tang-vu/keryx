@@ -6,6 +6,7 @@
 import type { PrivateCreatorConfirmation, PrivateCreatorConfirmationRecord } from "./private-creator-confirmations";
 import type { PrivateTreasuryPolicy, PrivateTreasuryReservation } from "./private-treasury-capacity";
 import type { PrivateTreasuryRelease } from "./private-treasury-release";
+import type { PrivateResearchInterruption } from "./private-research-interruptions";
 import type { PrivateTreasurySummary } from "./private-treasury-summary";
 import type { PrivateCreatorSubmission, PrivateCreatorSubmissionRecord } from "./private-creator-submissions";
 import type { PrivateResearchResult } from "./private-research-results";
@@ -378,6 +379,9 @@ export interface KeryxDB {
   getPrivateTreasurySummary(signer: string): Promise<PrivateTreasurySummary | null>;
   /** Backend-only, once per sealed job. Every admitted creator leg remains allocated. */
   releasePrivateTreasury(id: string, payer: string, signer: string): Promise<PrivateTreasuryRelease | null>;
+  getPrivateResearchInterruption(id: string, payer: string): Promise<PrivateResearchInterruption | null>;
+  /** Internal operator authority, never a public cancellation/refund endpoint. */
+  interruptPrivateResearch(id: string, payer: string, workerId: string): Promise<PrivateResearchInterruption | null>;
   /** Caller must supply an independently authenticated payer. Never expose via bearer-ID lookup. */
   getPrivateResearchIntent(id: string, payer: string): Promise<PrivateResearchIntent | null>;
   listPrivateResearchHistory(payer: string, before?: import("./private-research-intents").PrivateHistoryCursor): Promise<import("./private-research-intents").PrivateHistoryEntry[]>;

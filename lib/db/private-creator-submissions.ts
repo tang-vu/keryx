@@ -63,6 +63,7 @@ export async function admitSqlitePrivateCreatorSubmission(db: DatabaseSync, id: 
     SELECT e.id,?,?,?,?,? FROM private_research_executions e JOIN private_research_intents i ON i.id=e.id
     WHERE e.id=? AND e.worker_id=? AND i.payer=?
       AND NOT EXISTS(SELECT 1 FROM private_research_results r WHERE r.id=e.id)
+      AND NOT EXISTS(SELECT 1 FROM private_research_interruptions x WHERE x.id=e.id)
       AND COALESCE((SELECT SUM(s.amount_micros) FROM private_creator_submissions s WHERE s.job_id=e.id),0)+?
         <= CAST(round(json_extract(i.data,'$.submission.request.budget')*1000000) AS INTEGER)
     ON CONFLICT DO NOTHING`).run(key, workerId, data.submission.authorizationId, amount, JSON.stringify(data), id, workerId, payer.toLowerCase(), amount);

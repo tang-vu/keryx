@@ -24,7 +24,7 @@ const resultSchema = z.object({
 
 type ResultReader = Pick<KeryxDB, "getPrivateResearchIntent" | "getPrivatePaymentState" |
   "listPrivateCreatorSubmissions" | "getPrivateCreatorConfirmation" |
-  "getPrivateResearchExecution" | "getPrivateResearchResult">;
+  "getPrivateResearchExecution" | "getPrivateResearchResult" | "getPrivateResearchInterruption">;
 
 /** Owner-only backend read; the HTTP/session boundary must authenticate payer independently. */
 export async function privateResultView(db: ResultReader, id: string, payer: string) {
@@ -40,7 +40,11 @@ export async function privateResultView(db: ResultReader, id: string, payer: str
   const claim = await db.getPrivateResearchExecution(id, payer);
   if (!claim) return { ...base, status: "awaiting-execution" as const, result: null };
   const saved = await db.getPrivateResearchResult(id, payer);
-  if (!saved) return { ...base, status: "execution-claimed" as const, result: null };
+  if (!saved) {
+    const interruption = await db.getPrivateResearchInterruption(id, payer);
+    if (interruption) return { ...base, status: "interrupted" as const, interruption, result: null };
+    return { ...base, status: "execution-claimed" as const, result: null };
+  }
   let run: z.infer<typeof resultSchema>;
   try {
     if (saved.format !== "query-run-v1" || saved.id !== id) throw new Error("Format mismatch");
