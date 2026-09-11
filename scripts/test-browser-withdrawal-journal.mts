@@ -15,12 +15,13 @@ const bundle = await build({ stdin: { contents: `import * as journal from './lib
 import {prepareWithdrawIntent} from './lib/gateway/withdraw-intent';
 import * as flow from './lib/gateway/withdrawal-browser-flow';
 import * as recovery from './lib/gateway/withdrawal-recovery-file';
+import * as preparation from './lib/gateway/withdrawal-browser-prepare';
 import {WithdrawalRecoveryPanel} from './components/keryx/withdrawal-recovery-panel';
 import {WithdrawalReviewPanel} from './components/keryx/withdrawal-review-panel';
 import {createElement, StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import {hashTypedData} from 'viem';
-window.flow=flow;window.recovery=recovery;window.hashTypedData=hashTypedData;
+window.flow=flow;window.recovery=recovery;window.preparation=preparation;window.hashTypedData=hashTypedData;
 window.mountRecovery=address=>{window.recoveryRoot??=createRoot(document.querySelector('main'));
 window.recoveryRoot.render(createElement(StrictMode,null,createElement(WithdrawalRecoveryPanel,{address})));};
 window.mountReview=(id,address,signature)=>{window.reviewSignCalls=0;window.recoveryRoot??=createRoot(document.querySelector('main'));
@@ -32,9 +33,15 @@ const browser = await chromium.launch({ headless: true });
 try {
   const context = await browser.newContext(); let requests = 0, statusRequests = 0, submitRequests = 0;
   let expectedSubmission: WithdrawalRequestRecord | undefined;
+  let preparedResponse: unknown, prepareRequests = 0;
   const statusResponses = new Map<string, { status: number; body: unknown }>();
   let changeOwnerDuringStatus: (() => Promise<void>) | undefined;
   await context.route("**/*", async route => {
+    if (route.request().url() === "https://withdrawal-journal.test/api/me/withdrawals/prepare") {
+      prepareRequests++; assert.equal(route.request().method(), "POST");
+      assert.deepEqual(route.request().postDataJSON(), { amountMicros: "50000" });
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(preparedResponse) });
+    }
     if (route.request().url() === "https://withdrawal-journal.test/api/me/withdrawals/submit") {
       submitRequests++; assert.equal(route.request().method(), "POST");
       assert.deepEqual(route.request().postDataJSON(), expectedSubmission?.request);
@@ -223,7 +230,15 @@ try {
   assert.equal(submitRequests, 1, "recovery UI never submits a payment");
   const reviewDraft = await first.evaluate<ReturnType<typeof createWithdrawalBrowserDraft>>(`window.journal.createWithdrawalBrowserDraft(
     {...window.fresh(${JSON.stringify(policy)}).burnIntent,maxBlockHeight:'11000'},${JSON.stringify(policy)})`);
-  await invoke(first, "reserveWithdrawalBrowserJournal", reviewDraft);
+  preparedResponse = { wallet: reviewDraft.owner, draft: reviewDraft, preparedAt: new Date().toISOString() };
+  const prepare = () => first.evaluate(`window.preparation.prepareWithdrawalBrowserDraft(${JSON.stringify(policy)},
+    ()=>${JSON.stringify(account.address)},new AbortController().signal)`);
+  const prepared = await prepare();
+  assert.equal(prepared.state, "reserved"); assert.equal(prepared.request, undefined);
+  assert.deepEqual((await invoke(second, "readWithdrawalBrowserJournal", reviewDraft.id)).draft, reviewDraft);
+  assert.equal(submitRequests, 1, "unsigned preparation never submits a payment");
+  await assert.rejects(prepare(), "duplicate preparation cannot replace a saved original");
+  assert.equal(prepareRequests, 2);
   const reviewOriginal = await sign(reviewDraft); expectedSubmission = reviewOriginal;
   await first.evaluate(`window.mountReview(${JSON.stringify(reviewDraft.id)},${JSON.stringify(account.address)},${JSON.stringify(reviewOriginal.request.signature)})`);
   await first.getByRole("button", { name: "Sign reviewed withdrawal" }).click();

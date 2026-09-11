@@ -58,6 +58,17 @@ tombstone policy need to preserve replay barriers while respecting the final pri
 
 ## Unsigned fee and expiry estimation
 
+`withdrawal-browser-prepare.ts` binds the unsigned preparation response to locally
+selected owner/recipient, contracts, exact micro-USDC amount and fee cap. It validates
+the complete draft identity, rejects unlimited/zero expiry and stale/future response
+timestamps, and reserves the original in IndexedDB with readback before returning it
+for review. It posts only the amount, with a 40-second deadline, 8 KiB response cap,
+no redirects and no automatic retries. Account changes and cancellation withhold the
+result; a storage operation already underway may still retain its unsigned original.
+Duplicate responses cannot replace saved drafts. Preparation neither signs nor sends
+a payment. Chromium covers this preparation through the existing review/sign/send
+panel using synthetic HTTP; the production route/workspace remains unmounted.
+
 `withdrawal-estimate.ts` prepares finite terms before draft reservation or signing.
 It sends only the transfer spec to the fixed testnet `/v1/estimate` endpoint, with a
 ten-second whole-response deadline, 8 KiB cap and no redirects/retries. It validates

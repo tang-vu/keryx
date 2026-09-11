@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-203** - Browser preparation authority - *Validate the unsigned response against
+locally selected terms and reserve it durably before exposing signing.*
+The browser posts only the selected integer amount to a fixed same-origin endpoint.
+It checks the entire returned policy and typed-data identity against the caller's
+reviewed owner, recipient, contracts and amount/fee caps, with finite expiry and bounded
+response age. Transport has a 40-second deadline, 8 KiB cap and no retries or redirects.
+Live account/cancellation checks surround response handling and IndexedDB reservation;
+an interrupted write may remain saved but cannot return signing authority. Duplicate
+drafts cannot overwrite existing originals. Chromium exercises prepare, cross-tab
+readback, duplicate rejection, review/sign and one-attempt submission with intercepted
+HTTP. Response age does not prove current chain expiry; submission-time server checks
+remain necessary. Public workspace/routes and funded acceptance remain open.
+
 **D-202** - Authenticated draft preparation - *Derive unsigned terms from the live
 owner and server caps, then recheck their height window before returning a draft.*
 The internal prepare handler accepts only integer amountMicros. Owner/recipient come
