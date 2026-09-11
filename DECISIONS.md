@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-195** - Creator recovery interface - *Keep wallet-scoped recovery separate from
+new withdrawal authorization and clear the view across account changes.*
+The recovery panel lists locally retained originals, checks authenticated status and
+downloads/imports private recovery files. It has no signing or payment-submission action.
+Wallet-keyed remounting cancels pending work and prevents another owner's rows from
+remaining visible. Operation guards survive React Strict Mode cleanup/restart without
+letting an old completion release the current operation. Imported requests remain
+recovery-only. Missing status does not imply a payment was never sent; finalized mint
+links require the validated status projection. The component is Chromium-tested but
+not mounted in production until the complete withdrawal workspace is ready.
+
 **D-194** - Portable withdrawal recovery - *Export the retained signed original and
 import it only into recovery-only browser storage.*
 The versioned Arc-testnet envelope is bounded to 16 KiB of UTF-8 and accepts only an

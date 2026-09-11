@@ -15,8 +15,13 @@ const bundle = await build({ stdin: { contents: `import * as journal from './lib
 import {prepareWithdrawIntent} from './lib/gateway/withdraw-intent';
 import * as flow from './lib/gateway/withdrawal-browser-flow';
 import * as recovery from './lib/gateway/withdrawal-recovery-file';
+import {WithdrawalRecoveryPanel} from './components/keryx/withdrawal-recovery-panel';
+import {createElement, StrictMode} from 'react';
+import {createRoot} from 'react-dom/client';
 import {hashTypedData} from 'viem';
 window.flow=flow;window.recovery=recovery;window.hashTypedData=hashTypedData;
+window.mountRecovery=address=>{window.recoveryRoot??=createRoot(document.querySelector('main'));
+window.recoveryRoot.render(createElement(StrictMode,null,createElement(WithdrawalRecoveryPanel,{address})));};
 window.journal=journal;window.fresh=p=>journal.createWithdrawalBrowserDraft(prepareWithdrawIntent(p.owner,50000n),p);`,
   resolveDir: process.cwd(), loader: "ts" }, bundle: true, write: false, platform: "browser", format: "iife", define: { "process.env": "{}" } });
 const browser = await chromium.launch({ headless: true });
@@ -182,5 +187,22 @@ try {
   await submitHttp(first); await submitHttp(second);
   assert.equal(submitRequests, 1, "lost HTTP response cannot authorize another transmission");
   assert.equal(requests, 3);
+  await first.evaluate(`window.mountRecovery(${JSON.stringify(account.address)})`);
+  await first.getByRole("heading", { name: "Recover a withdrawal" }).waitFor();
+  await first.getByRole("listitem").first().waitFor();
+  const [download] = await Promise.all([first.waitForEvent("download"),
+    first.locator("button:enabled").filter({ hasText: "Download private recovery file" }).first().click()]);
+  assert.equal(download.suggestedFilename(), "keryx-withdrawal-recovery.json");
+  const uiImported = await sign(await fresh());
+  await first.getByLabel("Import withdrawal recovery file").setInputFiles({ name: "recovery.json", mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify({ format: "keryx-withdrawal-recovery-v1", network: "eip155:5042002",
+      recoveryOnly: true, exportedAt: new Date().toISOString(), original: uiImported })) });
+  await first.getByRole("status").filter({ hasText: "Recovery file imported." }).waitFor();
+  assert.equal((await invoke(first, "readWithdrawalBrowserJournal", uiImported.id)).origin, "imported");
+  assert.equal(await invoke(first, "claimWithdrawalBrowserSubmission", uiImported), false);
+  await first.evaluate(`window.mountRecovery('0x${"00".repeat(20)}')`);
+  await first.getByText("No withdrawal requests saved for this wallet in this browser. Import a recovery file if you have one.", { exact: true }).waitFor();
+  assert.equal(await first.getByRole("button", { name: "Download private recovery file" }).count(), 0);
+  assert.equal(submitRequests, 1, "recovery UI never submits a payment");
   console.log("PASS: Chromium withdrawal journal, signing, cross-tab single HTTP submission, lost-response recovery, owner isolation, abort and recovery-only imports; all HTTP intercepted, no live payment.");
 } finally { await browser.close(); }

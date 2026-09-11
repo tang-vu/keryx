@@ -356,6 +356,22 @@ imports the file and confirms the original signature is restored while submissio
 remains prohibited; duplicate import and foreign-account export are rejected. UI file
 controls and independent lost-device acceptance remain open.
 
+## Recovery interface
+
+`components/keryx/withdrawal-recovery-panel.tsx` provides the English wallet-scoped
+saved-request list, pagination, status checks and private file download/import controls.
+Unsigned drafts cannot export a signed recovery file. Imports are size-bounded and use
+the recovery-only storage path; the panel never signs or submits payments. Unknown
+server state retains the original request, while validated observed-finality status
+links to the Arc-testnet transaction. Wallet changes remount the view and cancel pending
+work. A failed load does not masquerade as an empty local history.
+
+The real Chromium harness mounts this component under React Strict Mode, downloads a
+recovery file, imports a fresh original through the file input, verifies it cannot submit,
+and changes wallets to confirm owner rows disappear. HTTP remains intercepted. Component
+lint and TypeScript checking pass locally. The panel is not mounted in production yet;
+full workspace integration and independent wallet/mobile acceptance remain open.
+
 ## Browser HTTP submission
 
 `submitWithdrawalBrowserHttpOnce` connects the committed browser flow to
