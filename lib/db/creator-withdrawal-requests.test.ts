@@ -1,3 +1,4 @@
+import { listSupabaseWithdrawalHistory } from "./creator-withdrawal-history";
 import { randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -187,4 +188,45 @@ it("recovers an attestation storage response loss and rejects corrupted Supabase
   await expect(getSupabaseWithdrawalAttestation(client, record.id, record.owner)).rejects.toThrow("unavailable");
   expect(await db.getCreatorWithdrawalTransferClaim(record.id, record.owner)).toEqual(claim);
   expect(raw.prepare("SELECT count(*) AS n FROM creator_withdrawal_attestations WHERE id=?").get(record.id)?.n).toBe(1);
+});
+
+
+it("lists only the owner's signed requests with stable equal-time pagination and no bearer payload", async () => {
+  const account = privateKeyToAccount(generatePrivateKey());
+  const records = await Promise.all([fixture(account), fixture(account), fixture(account)]);
+  const foreign = await fixture();
+  const ordered = records.slice(0, 2).sort((a, b) => a.id < b.id ? 1 : -1);
+  for (const [index, record] of [...records, foreign].entries()) {
+    raw.prepare("INSERT INTO creator_withdrawal_requests(id,owner,data,created_at) VALUES(?,?,?,?)")
+      .run(record.id, record.owner, JSON.stringify(record), index < 2 ? "2026-09-11T01:00:00.000Z" : "2026-09-10T01:00:00.000Z");
+  }
+  const first = await db.listCreatorWithdrawalHistory(account.address, undefined, 1);
+  expect(first.requests.map(row => row.id)).toEqual([ordered[0].id]);
+  const second = await db.listCreatorWithdrawalHistory(account.address, first.nextCursor!, 1);
+  expect(second.requests.map(row => row.id)).toEqual([ordered[1].id]);
+  const third = await db.listCreatorWithdrawalHistory(account.address, second.nextCursor!, 1);
+  expect(third.requests.map(row => row.id)).toEqual([records[2].id]); expect(third.nextCursor).toBeNull();
+  expect(Object.keys(first.requests[0]).sort()).toEqual(["amountMicros", "createdAt", "id", "maxFeeMicros", "owner", "recipient"]);
+  expect(JSON.stringify(first)).not.toContain(records[0].request.signature);
+  await expect(db.listCreatorWithdrawalHistory(account.address, undefined, 26)).rejects.toThrow();
+});
+
+it("binds real Supabase query construction to owner, timestamp/id cursor and bounded limit", async () => {
+  const record = await fixture(), createdAt = "2026-09-11T01:00:00.123456+00:00";
+  let calls = 0, returned = record;
+  const sb = createClient("https://history.invalid", "synthetic-test-key", { global: { fetch: async (input) => {
+    calls++; const url = new URL(String(input));
+    expect(url.searchParams.get("owner")).toBe(`eq.${record.owner}`);
+    expect(url.searchParams.get("order")).toBe("created_at.desc,id.desc"); expect(url.searchParams.get("limit")).toBe("2");
+    expect(url.searchParams.get("or")).toBe(`(created_at.lt.${createdAt},and(created_at.eq.${createdAt},id.lt.${record.id}))`);
+    return Response.json([{ id: returned.id, owner: returned.owner, created_at: createdAt, data: returned }]);
+  } } });
+  const cursor = { createdAt, id: record.id };
+  const page = await listSupabaseWithdrawalHistory(sb, record.owner, cursor, 1);
+  expect(page.requests[0].amountMicros).toBe("50000");
+  returned = await fixture();
+  await expect(listSupabaseWithdrawalHistory(sb, record.owner, cursor, 1)).rejects.toThrow();
+  const before = calls;
+  await expect(listSupabaseWithdrawalHistory(sb, record.owner, { ...cursor, createdAt: "x),owner.neq.x" }, 1)).rejects.toThrow();
+  expect(calls).toBe(before);
 });

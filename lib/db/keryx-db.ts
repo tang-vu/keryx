@@ -3,6 +3,7 @@
  * All amounts are USDC numbers. Metrics are computed only from real rows.
  */
 
+import type { WithdrawalHistoryCursor, WithdrawalHistoryPage } from "./creator-withdrawal-history";
 import type { PrivateCreatorConfirmation, PrivateCreatorConfirmationRecord } from "./private-creator-confirmations";
 import type { PrivateTreasuryPolicy, PrivateTreasuryReservation } from "./private-treasury-capacity";
 import type { PrivateTreasuryRelease } from "./private-treasury-release";
@@ -558,6 +559,7 @@ export interface KeryxDB {
   recordWithdrawal(w: WithdrawalRecord): Promise<void>;
   /** Backend-only signed-request journal. Never expose bearer signatures in public feeds. */
   reserveCreatorWithdrawal(value: WithdrawalRequestRecord): Promise<WithdrawalRequestRecord>;
+  listCreatorWithdrawalHistory(owner: string, cursor?: WithdrawalHistoryCursor, limit?: number): Promise<WithdrawalHistoryPage>;
   getCreatorWithdrawal(id: string, owner: string): Promise<WithdrawalRequestRecord | null>;
   /** Single initial transfer admission; an existing claim is never execution permission. */
   claimCreatorWithdrawalTransfer(id: string, owner: string): Promise<WithdrawalTransferClaim | null>;

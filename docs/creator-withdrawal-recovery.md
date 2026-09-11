@@ -683,6 +683,17 @@ nor finality. No key, nonce reservation, signing, broadcast or database mutation
 performed. Preparing a transaction still needs fresh checks and exclusive bounded
 signer authority. This helper is not yet connected to the production relay.
 
+## Owner history storage
+
+`listCreatorWithdrawalHistory` now provides a bounded internal owner-scoped page in
+both database adapters. It uses the existing owner/time/id index and preserves timestamp
+precision with an id tie-breaker. Every original is validated before projecting request
+id, owner, admission time, amount, maximum fee and recipient. Signatures and attestations
+are excluded. Corrupt or foreign rows fail the read; a row does not imply that Circle
+accepted a transfer or that a mint settled. SQLite paging/owner checks and intercepted
+real Supabase client query construction are tested. This does not constitute a live
+PostgREST integration test. Authenticated HTTP and browser history remain to be connected.
+
 ## Remaining implementation and acceptance
 
 ### Private relay journal foundation

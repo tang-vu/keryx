@@ -4,6 +4,7 @@
  * Requires the tables in supabase/migrations to exist (service-role key used for writes).
  */
 
+import { listSupabaseWithdrawalHistory, type WithdrawalHistoryCursor } from "./creator-withdrawal-history";
 import { confirmSupabasePrivateCreator, getSupabasePrivateCreatorConfirmation, type PrivateCreatorConfirmation } from "./private-creator-confirmations";
 import { reserveSupabasePrivateTreasury, getSupabasePrivateTreasury, type PrivateTreasuryPolicy } from "./private-treasury-capacity";
 import { getSupabasePrivateTreasurySummary } from "./private-treasury-summary";
@@ -1101,6 +1102,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async reserveCreatorWithdrawal(value: WithdrawalRequestRecord) { return reserveSupabaseWithdrawalRequest(this.sb, value); }
+  async listCreatorWithdrawalHistory(owner: string, cursor?: WithdrawalHistoryCursor, limit = 25) { return listSupabaseWithdrawalHistory(this.sb, owner, cursor, limit); }
   async getCreatorWithdrawal(id: string, owner: string) { return getSupabaseWithdrawalRequest(this.sb, id, owner); }
   async claimCreatorWithdrawalTransfer(id: string, owner: string) { return claimSupabaseWithdrawalTransfer(this.sb, id, owner); }
   async getCreatorWithdrawalTransferClaim(id: string, owner: string) { return getSupabaseWithdrawalTransferClaim(this.sb, id, owner); }

@@ -3,6 +3,7 @@
  * The offline-dev datastore; the deployed app uses the Supabase adapter instead.
  */
 
+import { listSqliteWithdrawalHistory, type WithdrawalHistoryCursor } from "./creator-withdrawal-history";
 import { confirmSqlitePrivateCreator, getSqlitePrivateCreatorConfirmation, type PrivateCreatorConfirmation, PRIVATE_CREATOR_CONFIRMATIONS_SQL } from "./private-creator-confirmations";
 import { admitSqlitePrivateCreatorSubmission, listSqlitePrivateCreatorSubmissions, type PrivateCreatorSubmission, PRIVATE_CREATOR_SUBMISSIONS_SQL } from "./private-creator-submissions";
 import { saveSqlitePrivateResult, getSqlitePrivateResult, PRIVATE_RESEARCH_RESULTS_SQL } from "./private-research-results";
@@ -2055,6 +2056,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async reserveCreatorWithdrawal(value: WithdrawalRequestRecord) { return reserveSqliteWithdrawalRequest(this.db, value); }
+  async listCreatorWithdrawalHistory(owner: string, cursor?: WithdrawalHistoryCursor, limit = 25) { return listSqliteWithdrawalHistory(this.db, owner, cursor, limit); }
   async getCreatorWithdrawal(id: string, owner: string) { return getSqliteWithdrawalRequest(this.db, id, owner); }
   async claimCreatorWithdrawalTransfer(id: string, owner: string) { return claimSqliteWithdrawalTransfer(this.db, id, owner); }
   async getCreatorWithdrawalTransferClaim(id: string, owner: string) { return getSqliteWithdrawalTransferClaim(this.db, id, owner); }

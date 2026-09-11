@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-217** - Owner withdrawal history storage - *Enumerate authenticated-account
+recovery metadata without exporting bearer signatures in a history page.*
+Both adapters now select only a caller-supplied owner, ordered by admission timestamp
+and id with a bounded keyset cursor. Each stored original is signature/identity-checked
+before projecting id, owner, time, amount, maximum fee and recipient. Foreign or corrupt
+rows fail the page rather than becoming another account's history. Cursor validation
+precedes query construction; PostgreSQL timestamp precision is retained. A history row
+is an admitted request, not evidence of transfer or mint completion. Authentication,
+HTTP projection and the account interface still need integration; this internal read
+method grants no signing, retry, payment or public feed authority.
+
 **D-216** - Confidence with conflicting evidence - *A reported disagreement is
 not resolved merely because its coverage score is high.*
 The English diagnostic exposed unresolved same-revision policy conflicts with coverage
