@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-181** - Browser withdrawal execution - *Sign only the stored draft and reread the
+committed original before invoking an app-owned one-attempt transport.*
+The browser flow checks a live account accessor and cancellation around asynchronous
+work. A valid signature returned during account change/cancellation is retained for
+the original owner, but no submission follows. Existing signatures never trigger a
+new wallet prompt. Submission consumes the cross-tab marker and rereads storage before
+transport; lost responses or a post-claim account change leave recovery-only state.
+Transport response bodies are not treated as mint/finality evidence. These coordinators
+are implemented and Chromium-tested but remain separate from production HTTP/browser
+wiring and the final authenticated settlement-status projection.
+
 **D-180** - Browser withdrawal journal - *Persist the unsigned draft before the wallet
 prompt, then the original signature before a single cross-tab submission claim.*
 The intent builder now exposes an unsigned preparation step while its legacy wrapper

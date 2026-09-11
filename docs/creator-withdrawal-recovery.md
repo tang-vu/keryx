@@ -220,6 +220,37 @@ TypeScript checking pass. Status-handler commit `fcfe3d9` passed
 [CI run 34563608777](https://github.com/tang-vu/keryx/actions/runs/34563608777), including
 production build.
 
+## Browser signing and submission coordinator
+
+`lib/gateway/withdrawal-browser-flow.ts` joins the persisted journal to wallet signing
+and an app-owned transfer transport. Signing uses the exact stored draft and pinned
+wallet account, with a live active-account accessor and cancellation checks. A valid
+returned signature is saved for its original owner even if the account changed or the
+operation was cancelled during the prompt; no submission is performed by signing.
+An already-signed/imported row never triggers another wallet prompt.
+
+Submission consumes the strict cross-tab marker, rechecks the active account, rereads
+the committed original and only then calls transport. A changed/missing journal or
+post-claim account change cannot fall back to an in-memory request or renew permission.
+All transport outcomes require read-only recovery; an HTTP response is not accepted as
+mint completion. The app-owned transport still needs bounded HTTP/abort wiring, and
+the eventual status view must validate authenticated original mint evidence. The flow
+does not create drafts automatically or import missing history as fresh requests.
+
+The Chromium drill now also exercises real EOA signature identity through the flow,
+draft persistence before the wallet callback, no second prompt for a signed original,
+two-tab submission with lost response, durable-marker readback before transport,
+account changes during signing, and account changes after claiming but before sending.
+The latter retains the consumed marker with zero transport calls. Wallet/account and
+transport callbacks are synthetic; actual IndexedDB and signature verification run in
+Chromium. No funded wallet or production payment endpoint is used. Production UI/API
+integration remains open.
+
+Chromium flow verification, focused lint and TypeScript checking pass locally.
+Journal commit `00e58ab` passed
+[CI run 34564078587](https://github.com/tang-vu/keryx/actions/runs/34564078587), including
+the Chromium withdrawal journal test and production build.
+
 ## Read-only mint observation
 
 `lib/gateway/withdrawal-mint-observation.ts` revalidates the original request and matched

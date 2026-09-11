@@ -13,6 +13,9 @@ const policy: WithdrawPolicy = { owner: account.address, recipient: account.addr
   asset: "0x3600000000000000000000000000000000000000", maxValueMicros: "50000", maxFeeMicros: "2010000" };
 const bundle = await build({ stdin: { contents: `import * as journal from './lib/gateway/withdrawal-browser-journal';
 import {prepareWithdrawIntent} from './lib/gateway/withdraw-intent';
+import * as flow from './lib/gateway/withdrawal-browser-flow';
+import {hashTypedData} from 'viem';
+window.flow=flow;window.hashTypedData=hashTypedData;
 window.journal=journal;window.fresh=p=>journal.createWithdrawalBrowserDraft(prepareWithdrawIntent(p.owner,50000n),p);`,
   resolveDir: process.cwd(), loader: "ts" }, bundle: true, write: false, platform: "browser", format: "iife", define: { "process.env": "{}" } });
 const browser = await chromium.launch({ headless: true });
@@ -79,6 +82,56 @@ try {
   await first.evaluate("window.idbDescriptor=Object.getOwnPropertyDescriptor(window,'indexedDB');Object.defineProperty(window,'indexedDB',{value:undefined,configurable:true});");
   await assert.rejects(invoke(first, "reserveWithdrawalBrowserJournal", blocked));
   await first.evaluate("Object.defineProperty(window,'indexedDB',window.idbDescriptor)");
+  // Exercise the actual flow coordinator with real Node-generated EOA signatures.
+  const flowDraft = await fresh(); await invoke(first, "reserveWithdrawalBrowserJournal", flowDraft);
+  const flowOriginal = await sign(flowDraft);
+  const signFlow = (draft: typeof flowDraft, signed: WithdrawalRequestRecord, changeOwner: boolean) => first.evaluate(`(async()=>{
+    const owner=${JSON.stringify(account.address)},id=${JSON.stringify(draft.id)};window.activeOwner=owner;window.walletCalls=0;
+    const wallet={account:{address:owner},signTypedData:async typed=>{window.walletCalls++;
+      if(window.hashTypedData(typed)!==id)throw new Error('Changed wallet payload');
+      if((await window.journal.readWithdrawalBrowserJournal(id,owner)).state!=='reserved')throw new Error('Draft not durable before wallet prompt');
+      if(${changeOwner})window.activeOwner='0x${"00".repeat(20)}';return ${JSON.stringify(signed.request.signature)};}};
+    return window.flow.signWithdrawalBrowserDraft(id,owner,wallet,()=>window.activeOwner,new AbortController().signal);
+  })()`);
+  assert.equal((await signFlow(flowDraft, flowOriginal, false)).state, "signed");
+  await assert.rejects(signFlow(flowDraft, flowOriginal, false));
+  assert.equal(await first.evaluate("window.walletCalls"), 0, "a signed original never prompts the wallet again");
+  const submitFlow = (page: Page) => page.evaluate(`(async()=>{
+    const owner=${JSON.stringify(account.address)},id=${JSON.stringify(flowDraft.id)};window.activeOwner=owner;window.postCalls??=0;
+    return window.flow.submitWithdrawalBrowserOnce(id,owner,()=>window.activeOwner,async original=>{
+      window.postCalls++;window.transportOriginalId=original.id;
+      window.transportClaimState=(await window.journal.readWithdrawalBrowserJournal(id,owner)).state;
+      throw new Error('Synthetic lost transport response');
+    },new AbortController().signal);
+  })()`);
+  const outcomes = await Promise.all(pages.map(submitFlow));
+  assert.ok(outcomes.every(value => value.state === "recovery-required"));
+  assert.equal((await first.evaluate("window.postCalls")) + (await second.evaluate("window.postCalls")), 1);
+  for (const page of pages) if (await page.evaluate("window.postCalls")) {
+    assert.equal(await page.evaluate("window.transportOriginalId"), flowDraft.id);
+    assert.equal(await page.evaluate("window.transportClaimState"), "submission-possible");
+  }
+  await submitFlow(first);
+  assert.equal((await first.evaluate("window.postCalls")) + (await second.evaluate("window.postCalls")), 1);
+  const switched = await fresh(); await invoke(first, "reserveWithdrawalBrowserJournal", switched);
+  const switchedOriginal = await sign(switched);
+  await assert.rejects(signFlow(switched, switchedOriginal, true));
+  assert.equal((await invoke(second, "readWithdrawalBrowserJournal", switched.id)).state, "signed",
+    "a valid returned signature is retained for its original owner after account switch");
+  const wrongOwner = await first.evaluate(`window.flow.submitWithdrawalBrowserOnce(${JSON.stringify(switched.id)},${JSON.stringify(account.address)},
+    ()=>window.activeOwner,async()=>{throw new Error('Transport must not run');},new AbortController().signal).then(()=>false,()=>true)`);
+  assert.equal(wrongOwner, true);
+  assert.equal((await invoke(second, "readWithdrawalBrowserJournal", switched.id)).state, "signed");
+  // Account change after local admission consumes the marker but must never transmit.
+  const stopped = await fresh(); await invoke(first, "reserveWithdrawalBrowserJournal", stopped);
+  const stoppedOriginal = await sign(stopped); await invoke(first, "saveWithdrawalBrowserSignature", stoppedOriginal);
+  const stoppedResult = await first.evaluate(`(async()=>{let checks=0,calls=0;
+    const owner=${JSON.stringify(account.address)},id=${JSON.stringify(stopped.id)};
+    const failed=await window.flow.submitWithdrawalBrowserOnce(id,owner,()=>++checks<3?owner:'0x${"00".repeat(20)}',
+      async()=>{calls++;},new AbortController().signal).then(()=>false,()=>true);
+    return {failed,calls,state:(await window.journal.readWithdrawalBrowserJournal(id,owner)).state};})()`);
+  assert.deepEqual(stoppedResult, { failed: true, calls: 0, state: "submission-possible" });
+  assert.equal(await invoke(second, "claimWithdrawalBrowserSubmission", stoppedOriginal), false);
   assert.equal(requests, 3);
   console.log("PASS: Chromium withdrawal draft/signature journal, cross-tab single claim, reload, owner isolation, abort, corruption and recovery-only import after storage loss; no payment HTTP.");
 } finally { await browser.close(); }
