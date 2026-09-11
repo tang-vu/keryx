@@ -60,8 +60,8 @@ export async function submitWithdrawalBrowserOnce(id: string, owner: string, act
   return { state: "recovery-required" as const };
 }
 
-/** Production transport binding. The fixed endpoint is not registered until the
- * server runtime is configured; any HTTP outcome retains the original local claim. */
+/** Production transport binding. New submissions require explicit server runtime
+ * configuration; any HTTP outcome retains the original local claim. */
 export function submitWithdrawalBrowserHttpOnce(id: string, owner: string, activeOwner: ActiveOwner, signal: AbortSignal) {
   return submitWithdrawalBrowserOnce(id, owner, activeOwner,
     (original, currentSignal) => sendWithdrawalBrowserOriginal(original, currentSignal,

@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
 import { SqliteAdapter } from "../db/sqlite-adapter";
 import { issueWebSession, parseWebSession, webSessionHash } from "../auth-session";
@@ -17,6 +18,9 @@ vi.mock("@/lib/config", async importOriginal => {
 vi.mock("./withdrawal-admission-bootstrap", () => ({ createWithdrawalRuntimeAdmission: () => mocks.admit }));
 vi.mock("./withdrawal-height-window", () => ({ withdrawalHeightWindowForRpc: mocks.height }));
 import { createWithdrawalHttpService } from "./withdrawal-http-service";
+import { POST as prepareRoute } from "../../app/api/me/withdrawals/prepare/route";
+import { POST as submitRoute } from "../../app/api/me/withdrawals/submit/route";
+import { POST as statusRoute } from "../../app/api/me/withdrawals/status/route";
 
 const directory = mkdtempSync(join(tmpdir(), "keryx-withdrawal-http-"));
 const db = new SqliteAdapter(join(directory, "app.sqlite"));
@@ -25,7 +29,7 @@ beforeAll(async () => {
   await db.init(); mocks.db.mockResolvedValue(db);
   mocks.cookies.mockImplementation(async () => ({ get: () => ({ value: storage.getStore()?.token }) }));
 }, 60000);
-afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); mocks.admit.mockReset(); });
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); mocks.admit.mockReset(); });
 afterAll(() => { db.close(); rmSync(directory, { recursive: true, force: true }); });
 const request = (kind: string, body: unknown) => new Request(`https://keryx.test/api/me/withdrawals/${kind}`, {
   method: "POST", headers: { host: "keryx.test", origin: "https://keryx.test", "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -39,6 +43,60 @@ async function fixture() {
   return { ...f, state, service, options, run: <T>(fn: () => T) => storage.run(state, fn),
     revoke: async () => db.revokeWebSession(webSessionHash((await parseWebSession(session.token, secret))!.jti), f.record.owner) };
 }
+
+it("keeps actual recovery routes authenticated when creation is disabled or malformed", async () => {
+  const f = await fixture(), fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher);
+  await db.reserveCreatorWithdrawal(f.record);
+  vi.stubEnv("KERYX_WITHDRAWAL_HTTP_ENABLED", "0");
+  vi.stubEnv("KERYX_WITHDRAWAL_RELAY_DIRECTORY", "");
+  vi.stubEnv("KERYX_WITHDRAWAL_RELAY_PRIVATE_KEY", "invalid-unused-key");
+  for (const route of [prepareRoute, submitRoute]) {
+    const response = await f.run(() => route(request("submit", f.record.request)));
+    expect(response.status).toBe(503); expect(response.headers.get("cache-control")).toBe("no-store");
+  }
+  vi.stubEnv("KERYX_WITHDRAWAL_HTTP_ENABLED", "invalid");
+  expect((await storage.run({}, () => statusRoute(request("status", { id: f.record.id })))).status).toBe(401);
+  const response = await f.run(() => statusRoute(request("status", { id: f.record.id })));
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({ wallet: f.record.owner, status: "request-stored", mintStatus: "not-checked" });
+  expect(response.headers.get("vary")).toBe("Cookie, Origin");
+  const other = await fixture();
+  expect((await other.run(() => statusRoute(request("status", { id: f.record.id })))).status).toBe(404);
+  await f.revoke();
+  expect((await f.run(() => statusRoute(request("status", { id: f.record.id })))).status).toBe(401);
+  expect(fetcher).not.toHaveBeenCalled(); expect(mocks.admit).not.toHaveBeenCalled();
+});
+
+it("does not hide missing configured mint history behind a transfer-only success", async () => {
+  const f = await fixture(); await db.reserveCreatorWithdrawal(f.record);
+  vi.stubEnv("KERYX_WITHDRAWAL_HTTP_ENABLED", "0");
+  vi.stubEnv("KERYX_WITHDRAWAL_RELAY_DIRECTORY", join(directory, "missing-relay"));
+  const response = await f.run(() => statusRoute(request("status", { id: f.record.id })));
+  expect(response.status).toBe(503);
+  expect(JSON.stringify(await response.json())).not.toContain(directory);
+});
+
+it("binds enabled prepare and submit routes to server limits, sessions and one Circle attempt", async () => {
+  const f = await fixture(), key = generatePrivateKey();
+  const env = { KERYX_WITHDRAWAL_HTTP_ENABLED: "1", KERYX_WITHDRAWAL_RELAY_ENABLED: "1", KERYX_WITHDRAWAL_RELAY_ISOLATED: "1",
+    KERYX_WITHDRAWAL_RELAY_PRIVATE_KEY: key, KERYX_WITHDRAWAL_RELAY_ADDRESS: privateKeyToAccount(key).address,
+    KERYX_WITHDRAWAL_RELAY_DIRECTORY: directory, AGENT_FUNDER_PRIVATE_KEY: generatePrivateKey(), KERYX_FORCE_OFFLINE: "0",
+    KERYX_WITHDRAWAL_MAX_VALUE_MICROS: "50000", KERYX_WITHDRAWAL_MAX_FEE_MICROS: f.record.policy.maxFeeMicros,
+    KERYX_WITHDRAWAL_GAS_CEILING_WEI: "1", KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS: "2000", KERYX_WITHDRAWAL_MAX_PROCESSING_LAG_BLOCKS: "10" };
+  for (const [name, value] of Object.entries(env)) vi.stubEnv(name, value);
+  const fetcher = vi.fn(async (url, init) => {
+    if (String(url).endsWith("/estimate")) return Response.json([{ burnIntent: {
+      spec: JSON.parse(init.body)[0].spec, maxBlockHeight: "11000", maxFee: "1" } }]);
+    expect(JSON.parse(init.body)).toEqual([f.record.request]); return Response.json(f.response);
+  }); vi.stubGlobal("fetch", fetcher);
+  expect((await storage.run({}, () => prepareRoute(request("prepare", { amountMicros: "50000" })))).status).toBe(401);
+  const prepared = await f.run(() => prepareRoute(request("prepare", { amountMicros: "50000" })));
+  expect(prepared.status).toBe(200);
+  expect((await prepared.json()).draft.owner).toBe(f.record.owner);
+  expect((await f.run(() => submitRoute(request("submit", f.record.request)))).status).toBe(202);
+  expect((await f.run(() => submitRoute(request("submit", f.record.request)))).status).toBe(202);
+  expect(fetcher).toHaveBeenCalledTimes(2);
+});
 
 it("uses real signed cookies and durable owner claims around the concrete Circle HTTP transport", async () => {
   const f = await fixture(), fetcher = vi.fn(async (url, init) => {

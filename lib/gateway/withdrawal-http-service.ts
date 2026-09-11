@@ -17,7 +17,7 @@ export function createConfiguredWithdrawalHttpService(env: Parameters<typeof wit
 
 /** Server configuration only. Concrete cookie/session, database, relay admission and
  * Circle transport binding; never accept these options from a request body. Routes
- * remain unregistered until operator configuration and recovery integration are ready. */
+ * use explicit configuration; production activation still requires funded acceptance. */
 export function createWithdrawalHttpService(options: {
   env: Readonly<Record<string, string | undefined>>; network: string; rpcUrl: string; ceilingWei: string;
   limits: Parameters<typeof createWithdrawalSubmitHandler>[0]["limits"];

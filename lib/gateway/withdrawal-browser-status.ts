@@ -27,7 +27,7 @@ export function matchWithdrawalBrowserStatus(selected: Draft, value: unknown) {
 
 /** Fixed same-origin read-only endpoint. Only the selector enters the body; signatures,
  * policy and account identifiers stay out of URLs. Never retries or follows redirects.
- * The public route is not enabled until the complete recovery integration is ready. */
+ * Recovery is independent of the server's new-submission enable flag. */
 export async function readWithdrawalBrowserStatus(selected: Draft, signal: AbortSignal) {
   const copied = structuredClone(selected), draft = createWithdrawalBrowserDraft(copied.burnIntent, copied.policy);
   if (copied.id !== draft.id || copied.owner.toLowerCase() !== draft.owner) throw new Error("Withdrawal draft unavailable");

@@ -13,8 +13,8 @@ rows can reopen it after the workspace is remounted. Preparing another withdrawa
 an explicit separate action and does not erase the previous request. Changes to the
 owner or configured limits cancel pending preparation; unavailable creation limits
 retain the recovery panel. Chromium covers the composed flow with intercepted HTTP.
-The component is not yet mounted in production: the public routes and funded relay
-acceptance must be completed first.
+The component is not yet mounted in production. The Node.js POST routes are now
+registered in code; deployment and funded relay acceptance remain pending.
 
 A creator reviews the amount, recipient and bounded fees, signs once and retains the
 original request before transport. The server verifies the original owner/session and
@@ -134,8 +134,17 @@ caller mutation cannot silently change the selected limits.
 
 Three focused tests verify opt-in, exact limit snapshots, zero fees and malformed or
 unsafe configuration. This does not prove funded admission, active worker supervision
-or finite authorization expiry. Public routes remain unregistered and HTTP admission
-has not been activated on production.
+or funded end-to-end expiry acceptance. Public routes are registered in code and HTTP
+admission has not been activated on production.
+
+`withdrawal-http-route.ts` binds `/api/me/withdrawals/prepare`, `/submit` and `/status`
+to live revocable sessions. Prepare/submit require the explicit creation configuration.
+Status does not construct a signer or validate creation caps, so disabled or malformed
+creation settings do not block authenticated recovery. If a mint directory is configured
+but unreadable, status returns unavailable rather than hiding missing history. All
+responses use no-store, Vary Cookie/Origin and no-referrer headers. Actual route-export
+tests cover disabled creation, foreign wallets, revoked cookies, missing mint history,
+enabled unsigned preparation and one-attempt transfer using intercepted vendor HTTP.
 
 ### Submission-time expiry revalidation
 
@@ -170,8 +179,8 @@ Preparation uses separate durable limits of 3 per wallet / 20 service-wide per m
 Tests use real signed cookies and SQLite counters with intercepted estimation HTTP
 and synthetic height observations. They verify unsigned owner-bound output, no request
 reservation or gas admission, independent submission allowance, rejected extra fields
-and withholding after session revocation. Eight HTTP-service tests pass. The review
-component's preceding production build completed successfully; routes remain unregistered.
+and withholding after session revocation. Route binding adds three integration tests;
+eleven HTTP-service tests pass. Production activation still awaits funded acceptance.
 
 ## Initial transfer coordinator
 
@@ -337,8 +346,8 @@ with mint finality unchecked. Seven tests use actual SQLite request/claim/attest
 storage for duplicate HTTP calls, configured limits, client-policy/foreign-owner
 denial, limiter refusal, same-wallet session replacement at admission/claim boundaries,
 response loss and request restrictions. Admission and authentication callbacks
-in these tests are synthetic; real backed admission and cookie
-binding remain required. The handler is not registered as a public Next.js route.
+in these focused tests are synthetic. The concrete cookie/runtime binding now has
+separate service and actual route-export tests; funded production acceptance remains open.
 
 Both submit and status handlers now invoke `withdrawal-rate-limit.ts` directly using
 the authenticated database context. Fixed 60-second limits are 3 submissions per wallet

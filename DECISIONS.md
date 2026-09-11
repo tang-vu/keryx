@@ -1,5 +1,19 @@
 # Keryx — Decision Log
 
+**D-205** - Withdrawal route binding - *Keep authenticated recovery independent of
+creation enablement and signer configuration.*
+The Node.js POST routes for prepare, submit and status now bind concrete revocable
+sessions to the existing services. Preparation/submission require explicit validated
+HTTP and relay configuration. Status constructs only the authenticated reader and
+optional read-only mint journal; disabled creation or malformed unused signer/caps
+cannot block recovery. Configured but unreadable mint history returns unavailable,
+never silently degrades to transfer-only success. Every route returns no-store,
+Cookie/Origin-varying responses without raw operator errors. Tests import actual route
+exports with real cookie/SQLite state, checking disabled creation, owner isolation,
+revocation, missing history and one-attempt enabled transport. RPC heights and gas
+admission remain synthetic in these tests. Production UI mounting, deployment and
+funded operational acceptance are still pending.
+
 **D-204** - Creator withdrawal workspace - *Keep preparation, stored-original review
 and recovery together while making each new authorization an explicit action.*
 The internal English workspace accepts decimal USDC with at most six fractional
