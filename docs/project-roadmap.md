@@ -6,7 +6,13 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.50 (private interrupted-job resolution, updated 2026-09-11)
+**Version:** 0.22.51 (account withdrawal recovery page, updated 2026-09-11)
+
+`/me/withdrawals` now connects authenticated account/wallet matching to the withdrawal
+workspace, with a link from My sources. New requests remain disabled without explicit
+validated relay configuration; recovery remains available independently. The server
+passes only public contract and monetary limits to the client. Full funded relay
+acceptance and replacement of the legacy withdrawal flow remain open.
 
 [Interrupted private jobs](./private-interruption-resolution.md) now have an operator
 backup-first resolution and an explicit owner-visible outcome. New creator payments are

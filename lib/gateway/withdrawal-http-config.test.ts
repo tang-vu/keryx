@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { resolve } from "node:path";
 import { withdrawalHttpConfiguration } from "./withdrawal-http-config";
+import { withdrawalWorkspaceLimits } from "./withdrawal-workspace-limits";
 const chain = { networkId: "eip155:5042002", rpcUrl: "https://rpc.synthetic.invalid", cctpDomain: 26,
   gatewayWallet: "0x0077777d7EBA4688BDeF3E311b846F25870A19B9", gatewayMinter: "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B",
   usdcAddress: "0x3600000000000000000000000000000000000000" };
@@ -17,6 +18,16 @@ it("requires explicit HTTP opt-in without treating relay enablement as public ad
   expect(withdrawalHttpConfiguration({}, chain)).toBeNull();
   const env = fixture(); env.KERYX_WITHDRAWAL_HTTP_ENABLED = "0";
   expect(withdrawalHttpConfiguration(env, chain)).toBeNull();
+});
+it("projects only public limits to the workspace and retains recovery when creation is invalid", () => {
+  const env = fixture(), limits = withdrawalWorkspaceLimits(env, chain)!;
+  expect(Object.keys(limits).sort()).toEqual(["asset", "domain", "gatewayMinter", "gatewayWallet", "maxFeeMicros", "maxValueMicros"]);
+  const serialized = JSON.stringify(limits);
+  expect(serialized).not.toContain(env.KERYX_WITHDRAWAL_RELAY_PRIVATE_KEY);
+  expect(serialized).not.toContain(env.KERYX_WITHDRAWAL_RELAY_DIRECTORY);
+  expect(serialized).not.toContain(env.AGENT_FUNDER_PRIVATE_KEY);
+  expect(withdrawalWorkspaceLimits({}, chain)).toBeNull();
+  expect(withdrawalWorkspaceLimits({ ...env, KERYX_WITHDRAWAL_MAX_VALUE_MICROS: "invalid" }, chain)).toBeNull();
 });
 it("snapshots exact integer limits and allows a zero vendor fee cap", () => {
   const env = fixture(); env.KERYX_WITHDRAWAL_MAX_FEE_MICROS = "0";

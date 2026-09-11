@@ -13,8 +13,11 @@ rows can reopen it after the workspace is remounted. Preparing another withdrawa
 an explicit separate action and does not erase the previous request. Changes to the
 owner or configured limits cancel pending preparation; unavailable creation limits
 retain the recovery panel. Chromium covers the composed flow with intercepted HTTP.
-The component is not yet mounted in production. The Node.js POST routes are now
-registered in code; deployment and funded relay acceptance remain pending.
+The component is mounted by the dynamic, non-indexed `/me/withdrawals` account page,
+linked from My sources. The signed-in account must match the connected wallet. Only
+validated public monetary/contract limits cross into client props; disabled or invalid
+creation configuration leaves recovery available. The Node.js POST routes are registered;
+funded relay acceptance and replacement of the legacy withdrawal flow remain pending.
 
 A creator reviews the amount, recipient and bounded fees, signs once and retains the
 original request before transport. The server verifies the original owner/session and

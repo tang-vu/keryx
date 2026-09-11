@@ -5,6 +5,7 @@
  */
 
 import type { Metadata } from "next";
+import Link from "next/link";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { MySourcesView } from "./my-sources-view";
 
@@ -28,6 +29,7 @@ export default function MySourcesPage() {
           </p>
         </div>
         <MySourcesView />
+        <Link href="/me/withdrawals" className="mt-6 inline-block text-sm underline">Review and recover withdrawals</Link>
       </main>
     </>
   );

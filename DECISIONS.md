@@ -1,5 +1,15 @@
 # Keryx — Decision Log
 
+**D-206** - Account withdrawal page - *Expose recovery through a wallet-matched
+account page while keeping new withdrawals under explicit operator configuration.*
+The dynamic, non-indexed /me/withdrawals page links from My sources and mounts the
+English workspace only when the signed-in account and connected wallet agree. Session
+loss or account mismatch removes the workspace and cancels pending work. Server props
+contain only six allowlisted public policy fields; relay keys, gas budgets and private
+paths never cross that boundary. Disabled or invalid creation configuration yields
+recovery-only mode. This release does not enable the relay, claim full funded withdrawal
+acceptance, replace the legacy withdrawal flow or establish mainnet readiness.
+
 **D-205** - Withdrawal route binding - *Keep authenticated recovery independent of
 creation enablement and signer configuration.*
 The Node.js POST routes for prepare, submit and status now bind concrete revocable
