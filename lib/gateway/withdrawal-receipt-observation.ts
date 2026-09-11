@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { createPublicClient, http, type Hex, type PublicClient } from "viem";
+import { createPublicClient, type Hex, type PublicClient } from "viem";
+import { withdrawalRpcTransport } from "./withdrawal-rpc-transport";
 import type { WithdrawalRequestRecord } from "./withdrawal-request";
 import { matchWithdrawalMintTransaction, type WithdrawalMintTerms } from "./withdrawal-mint-transaction";
 import { matchWithdrawalMintReceipt } from "./withdrawal-mint-receipt";
@@ -77,7 +78,6 @@ export function withdrawalReceiptObserverForRpc(rpcUrl: string) {
     const url = new URL(rpcUrl);
     if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) throw new Error();
     const endpoint = url.toString();
-    return createWithdrawalReceiptObserver(signal => createPublicClient({ transport: http(endpoint,
-      { retryCount: 0, timeout: DEADLINE_MS, fetchOptions: { signal } }) }));
+    return createWithdrawalReceiptObserver(signal => createPublicClient({ transport: withdrawalRpcTransport(endpoint, signal) }));
   } catch { throw new Error("Withdrawal RPC unavailable"); }
 }

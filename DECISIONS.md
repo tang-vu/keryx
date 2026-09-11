@@ -1,5 +1,29 @@
 # Keryx — Decision Log
 
+**D-173** - Withdrawal RPC lifetime - *Bound and abort the whole response, including
+its body, without automatic transaction retries.*
+The installed viem HTTP implementation uses an explicit fetch signal instead of its
+internal timeout signal and ends its timeout after headers. The withdrawal transport
+therefore combines caller, internal and per-request deadline signals inside fetchFn,
+reads at most 4 MiB under a five-second deadline, and only then returns the buffered
+response for JSON parsing. Header/body stalls and oversized responses abort or fail;
+transport retries are disabled. Mint eligibility, receipt observation and the relay
+worker share this transport. This does not infer whether a remote node accepted a
+transaction before an HTTP failure; the original prepared journal remains authoritative.
+
+**D-172** - Withdrawal relay pass - *Recover original state before signing and hold
+the cooperative worker lock through every awaited operation.*
+The worker traverses original nonce slots, retains recorded observations and reconciles
+prepared transactions before further action. Current/pending nonce, chain, eligibility,
+gas funding and exact-term simulation gate signing/broadcast. Only journal-readback
+bytes are submitted; response loss cannot create another authorization or nonce.
+Unknown state pauses the pass, while a later pass may rebroadcast the same original
+bytes when the nonce remains available. Cancellation cannot release the process lock
+while an awaited dependency is still running. Runtime provisioning must still bind
+the dedicated key and actual inventory to the protected journal/directory. The core
+and its real RPC wiring are implemented; production service and HTTP/browser migration
+are not activated by this change.
+
 **D-171** - Durable observed mint - *Retain the first worker-observed finalized mint
 and distinguish historical evidence from an unknown latest RPC check.*
 Journal reconciliation invokes the server-owned read-only observer using original

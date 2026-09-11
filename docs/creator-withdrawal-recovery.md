@@ -113,7 +113,7 @@ future worker must only submit the durably read-back bytes. Ordered private requ
 IDs allow restart recovery without relying on an in-memory queue. No stored signature
 or raw transaction belongs in public APIs, application logs or Canteen updates.
 
-Remaining work includes worker locking and key inventory, protected journal storage
+Remaining runtime work includes binding the worker lock to its key inventory, protected journal storage
 and backup/restore, chain nonce reconciliation, fresh eligibility/gas checks, exact
 receipt/finality evidence, bounded replacement/cancellation, and HTTP/browser integration.
 Successive reserved nonces may queue behind an unresolved earlier slot; the worker
@@ -223,6 +223,55 @@ tables atomically. The original three-table journal (version 0) requires an expl
 all existing slots/prepared bytes. A version-1 journal missing observation history is
 corrupt, not an old journal to silently upgrade. Initialization cannot repair missing
 history. No production relay journal has been created or upgraded by this change.
+
+### Relay worker pass
+
+`lib/gateway/withdrawal-relay-worker.ts` now joins journal recovery, mint eligibility,
+local signing, original-byte broadcast and receipt reconciliation in one worker pass.
+It uses the existing cooperative lock helper in the dedicated relay directory. The
+lock remains held until awaited work returns, including when cancellation happens
+during an RPC. It is never reclaimed by elapsed time or PID. A process crash still
+requires operator inspection of the retained lock before restart.
+
+For each unresolved nonce in order, the worker reconciles any prepared transaction
+first. Existing recorded observations are retained and skipped; they do not starve
+later work through the active-step limit. Signing/broadcast requires the journal's
+relayer, a different configured inventory of other signers, Arc testnet identity,
+matching latest/pending nonce, observed mint eligibility, native gas funding, a
+compatible block gas/base-fee limit and a simulation with the exact selected gas terms.
+It signs locally only when no prepared bytes exist, persists/readbacks the original
+and broadcasts only that stored snapshot. Returned hashes must match the stored hash.
+
+Missing submission/receipt responses preserve the original. If a later receipt is
+observed, recovery does not sign or submit again. Otherwise, if the nonce remains
+available and eligibility still passes, a later pass may resend only the exact same
+stored bytes. A consumed/skipped/occupied nonce pauses the pass for reconciliation;
+it cannot produce a new nonce or Circle POST. The diagnostic counters distinguish
+local signatures, broadcast attempts and observations; they are not traction totals.
+
+`withdrawalRelayDependenciesForRpc` wires the real read-only observers and viem client.
+The shared `withdrawal-rpc-transport.ts` combines caller and deadline cancellation,
+disables retries and bounds each entire response to five seconds and 4 MiB, including
+the body. This avoids the installed viem behavior where an explicit fetch signal
+replaces its internal timeout signal and its header timeout ends before body parsing.
+
+Nine worker tests use actual local signatures and journals with synthetic RPC/finality
+adapters. They cover save-before-send, lost submission and database readback, exact-byte
+retry, nonce/funding refusal, lock lifetime, cancellation, completed-prefix progress
+and unexpected returned hashes. Five transport tests exercise real viem HTTP handling
+against a mocked fetch, including stalled headers/body and bounded response size.
+The combined worker, transport and observer run passes 29 tests locally. No live mint
+or public application withdrawal was performed.
+Focused lint and TypeScript checking pass. The preceding observation-journal commit
+`fef15d8` passed [CI run 34559529412](https://github.com/tang-vu/keryx/actions/runs/34559529412),
+including production build.
+
+This is a callable worker core, not a provisioned production service. The operator
+entrypoint still must verify actual key inventory, protected directory/journal identity,
+backup/restore and shutdown configuration. Complete request admission, withdrawal
+projection, reverted/foreign-mint reconciliation, bounded cancellation/replacement,
+HTTP/browser integration and live acceptance remain open. The existing production
+withdrawal endpoint has not been switched to this worker.
 
 The request-matching layer in `lib/gateway/withdrawal-attestation.ts` now checks a
 single attestation or a one-entry attestation set against the exact encoded original

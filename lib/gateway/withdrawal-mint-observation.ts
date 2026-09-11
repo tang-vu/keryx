@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { createPublicClient, encodeFunctionData, http, keccak256, recoverMessageAddress, zeroAddress, type PublicClient, type Hex } from "viem";
+import { createPublicClient, encodeFunctionData, keccak256, recoverMessageAddress, zeroAddress, type PublicClient, type Hex } from "viem";
+import { withdrawalRpcTransport } from "./withdrawal-rpc-transport";
 import { matchWithdrawalAttestation } from "./withdrawal-attestation";
 import { validateWithdrawalRequest, type WithdrawalRequestRecord } from "./withdrawal-request";
 
@@ -79,7 +80,6 @@ export function withdrawalMintObserverForRpc(rpcUrl: string) {
     const url = new URL(rpcUrl);
     if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) throw new Error();
     const endpoint = url.toString();
-    return createWithdrawalMintObserver(signal => createPublicClient({ transport: http(endpoint,
-      { retryCount: 0, timeout: DEADLINE_MS, fetchOptions: { signal } }) }));
+    return createWithdrawalMintObserver(signal => createPublicClient({ transport: withdrawalRpcTransport(endpoint, signal) }));
   } catch { throw new Error("Withdrawal RPC unavailable"); }
 }
