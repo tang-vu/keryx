@@ -1,5 +1,21 @@
 # Keryx — Decision Log
 
+**D-164** - Creator cash-out recovery - *Identify the original signed burn intent and persist
+initial transfer admission before contacting Circle.*
+The recovery journal uses the BurnIntent EIP-712 digest as its request identity, distinct
+from Circle's transfer UUID and encoded TransferSpec hash. Shared types preserve the
+browser's existing signing format. Validation snapshots the request and operator policy,
+checks exact padded addresses, same-chain routing, recipient, integer value/fee limits and
+the recovered owner signature. Private immutable request/attempt rows preserve the original
+policy and authorization. Only a successful new atomic claim with matching readback grants
+initial transfer authority; an existing claim, elapsed time or a lost RPC response does not.
+SQLite and service-only PostgreSQL RPCs implement the same admission rule. This is the first
+layer of a larger recovery flow: the existing HTTP relay is not yet rewired. Attestation
+binding/persistence, mint nonce authority and prepared-transaction recovery, authenticated
+lookup, durable browser recovery and end-to-end failure acceptance remain required before
+claiming cash-out recovery complete. The journal is private backend data, not settled earnings
+or a public receipt; mainnet support and real-fund activation remain separate gates.
+
 **D-163** - Private interruption recovery - *Restore the original backup first; an operator
 may close an interrupted execution to new creator payments without replaying it.*
 The operator uses the actual worker database, spool and encryption key under the same

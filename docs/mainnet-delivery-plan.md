@@ -97,6 +97,10 @@ prevent independent product, measurement or reliability work from continuing.
 
 ## Delivery sequence
 
+[Creator cash-out recovery](./creator-withdrawal-recovery.md) now has a shared signed-request
+identity and a private immutable single-admission journal in SQLite/PostgreSQL. The relay,
+attestation/mint persistence and browser recovery remain in progress; C2/M4 are not complete.
+
 Linux process acceptance now covers [active synthetic prepaid-job SIGTERM and SIGKILL](./engineering/private-worker-active-drain-2026-09-10.md)
 through the production worker entrypoint, real SQLite/spool and blocked transports.
 Cooperative stop preserves the queued job; crash preserves the original interrupted

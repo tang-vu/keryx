@@ -30,30 +30,7 @@ import {
 } from "viem";
 import { config } from "@/lib/config";
 
-/** TransferSpec + BurnIntent EIP-712 types, verbatim from the SDK (dist/client/index.js:1054-1080). */
-const BURN_INTENT_TYPES = {
-  TransferSpec: [
-    { name: "version", type: "uint32" },
-    { name: "sourceDomain", type: "uint32" },
-    { name: "destinationDomain", type: "uint32" },
-    { name: "sourceContract", type: "bytes32" },
-    { name: "destinationContract", type: "bytes32" },
-    { name: "sourceToken", type: "bytes32" },
-    { name: "destinationToken", type: "bytes32" },
-    { name: "sourceDepositor", type: "bytes32" },
-    { name: "destinationRecipient", type: "bytes32" },
-    { name: "sourceSigner", type: "bytes32" },
-    { name: "destinationCaller", type: "bytes32" },
-    { name: "value", type: "uint256" },
-    { name: "salt", type: "bytes32" },
-    { name: "hookData", type: "bytes" },
-  ],
-  BurnIntent: [
-    { name: "maxBlockHeight", type: "uint256" },
-    { name: "maxFee", type: "uint256" },
-    { name: "spec", type: "TransferSpec" },
-  ],
-} as const;
+import { WITHDRAW_TYPES as BURN_INTENT_TYPES } from "./withdraw-protocol";
 
 /** Wire-safe burn intent (all bigints serialised to decimal strings) sent to /api/withdraw. */
 export interface WireBurnIntent {

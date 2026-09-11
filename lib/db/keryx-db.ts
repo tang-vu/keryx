@@ -7,6 +7,8 @@ import type { PrivateCreatorConfirmation, PrivateCreatorConfirmationRecord } fro
 import type { PrivateTreasuryPolicy, PrivateTreasuryReservation } from "./private-treasury-capacity";
 import type { PrivateTreasuryRelease } from "./private-treasury-release";
 import type { PrivateResearchInterruption } from "./private-research-interruptions";
+import type { WithdrawalRequestRecord } from "../gateway/withdrawal-request";
+import type { WithdrawalTransferClaim } from "./creator-withdrawal-requests";
 import type { PrivateTreasurySummary } from "./private-treasury-summary";
 import type { PrivateCreatorSubmission, PrivateCreatorSubmissionRecord } from "./private-creator-submissions";
 import type { PrivateResearchResult } from "./private-research-results";
@@ -553,6 +555,12 @@ export interface KeryxDB {
   // ── creator cash-outs (on-chain Gateway withdraws) ──
   /** Persist a settled withdraw. Keyed by EVM tx hash, so re-recording the same tx is a no-op. */
   recordWithdrawal(w: WithdrawalRecord): Promise<void>;
+  /** Backend-only signed-request journal. Never expose bearer signatures in public feeds. */
+  reserveCreatorWithdrawal(value: WithdrawalRequestRecord): Promise<WithdrawalRequestRecord>;
+  getCreatorWithdrawal(id: string, owner: string): Promise<WithdrawalRequestRecord | null>;
+  /** Single initial transfer admission; an existing claim is never execution permission. */
+  claimCreatorWithdrawalTransfer(id: string, owner: string): Promise<WithdrawalTransferClaim | null>;
+  getCreatorWithdrawalTransferClaim(id: string, owner: string): Promise<WithdrawalTransferClaim | null>;
   /** Recent cash-outs, newest first — each carries a real /tx/-resolvable EVM hash. */
   listWithdrawals(limit: number): Promise<WithdrawalRecord[]>;
 }
