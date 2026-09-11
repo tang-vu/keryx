@@ -56,6 +56,31 @@ service role only, with no client access or direct service writes. Signed reques
 never appear in the public `/api/withdrawals` feed. Server retention and eventual
 tombstone policy need to preserve replay barriers while respecting the final privacy policy.
 
+## Unsigned fee and expiry estimation
+
+`withdrawal-estimate.ts` prepares finite terms before draft reservation or signing.
+It sends only the transfer spec to the fixed testnet `/v1/estimate` endpoint, with a
+ten-second whole-response deadline, 8 KiB cap and no redirects/retries. It validates
+the returned intent against the original spec, owner/recipient, integer value and fee
+cap, and caller-selected finite source-chain height bounds. The returned estimate
+does not reserve liquidity or authorize a payment. Stored drafts and signatures are
+not replaced by this helper.
+
+Official [estimation documentation](https://developers.circle.com/api-reference/gateway/all/estimate-transfer)
+and the [Gateway technical guide](https://developers.circle.com/gateway/references/technical-guide)
+were checked on September 11. The latter requires expiry sufficiently far ahead for
+the wallet withdrawal delay; an arbitrary short expiry is insufficient. The live
+testnet probe returned a direct array and 20-byte EVM addresses. The parser supports
+that observed shape and the documented body envelope, with identical strict intent
+checks after zero-padding valid addresses. It never discards nonzero address padding.
+
+Three focused tests cover exact spec/fee/finite-height bounds, both response shapes,
+address normalization, unsigned transport, caller mutation, stalls and error containment.
+A fresh unfunded synthetic-address probe returned HTTP 200 with matching finite terms;
+its broad diagnostic height bounds are not production policy. No signature, deposit,
+transfer or mint was performed. Fresh server height-window selection, submission-time
+expiry checks and review UI integration remain open.
+
 ## HTTP configuration
 
 `createConfiguredWithdrawalHttpService` requires `KERYX_WITHDRAWAL_HTTP_ENABLED=1`

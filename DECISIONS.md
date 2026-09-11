@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-198** - Finite withdrawal estimation - *Obtain unsigned fee/expiry estimates and
+accept them only when the exact transfer spec and operator height/fee bounds match.*
+The new pre-signing estimator calls only Circle testnet /v1/estimate with an unsigned
+spec, with bounded response size/deadline and no redirects/retries. It normalizes only
+valid 20-byte EVM addresses into zero-padded bytes32 before shared validation. Live
+testnet returned a direct array, while the reference also documents a body envelope;
+both require one validated intent. Changed spec fields, excessive fees and expiry
+outside the selected finite height window are rejected. A fresh unsigned, unfunded
+synthetic-address probe returned matching finite terms; no signature or transfer was
+sent. Fresh server-owned height bounds, durable draft reservation and review UI remain
+to be integrated. Existing signatures and journals are never rewritten by estimation.
+
 **D-197** - HTTP admission configuration - *Require independent HTTP opt-in and exact
 operator-selected caps before constructing the submission service.*
 The configured service factory requires KERYX_WITHDRAWAL_HTTP_ENABLED=1 in addition
