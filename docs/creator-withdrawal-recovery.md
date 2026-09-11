@@ -359,6 +359,22 @@ no further POST. All HTTP is intercepted; no funded transaction is performed. Lo
 focused tests, Chromium, lint and TypeScript checking pass. The production endpoint
 and withdrawal panel still require runtime integration and live testnet acceptance.
 
+## Cash-out persistence
+
+Both application adapters now delegate cash-out writes to `lib/db/withdrawal-records.ts`.
+The first transaction row is retained; duplicate writes must match its owner, recipient,
+amount and network. Original labels and timestamps are preserved. SQLite ignores only
+the transaction-hash conflict, while Supabase sends ignore-duplicates and checks write
+errors before an exact transaction readback. Missing/error/conflicting readbacks reject
+reporting success. A lost reporting response may retry this same record, never the
+payment. No payment-event or revenue row is created.
+
+Focused tests cover actual SQLite persistence, retained metadata, conflicting economics
+and lost-readback recovery. The actual Supabase client is exercised against intercepted
+HTTP for ignore-duplicates, matching readback, missing rows and vendor errors. This is
+not production PostgreSQL acceptance. The validated worker observation still needs to
+be bridged to the cash-out ledger; the writer itself does not establish mint provenance.
+
 ## Owner mint progress projection
 
 `withdrawal-mint-progress.ts` derives private creator progress from the validated

@@ -9,6 +9,7 @@ import { saveSqlitePrivateResult, getSqlitePrivateResult, PRIVATE_RESEARCH_RESUL
 import { PRIVATE_TREASURY_CAPACITY_SQL, reserveSqlitePrivateTreasury, getSqlitePrivateTreasury, type PrivateTreasuryPolicy } from "./private-treasury-capacity";
 import { claimSqlitePrivateExecution, getSqlitePrivateExecution, PRIVATE_RESEARCH_EXECUTIONS_SQL } from "./private-research-executions";
 import { DatabaseSync } from "node:sqlite";
+import { recordSqliteWithdrawal } from "./withdrawal-records";
 import { CREATOR_WITHDRAWAL_REQUESTS_SQL, reserveSqliteWithdrawalRequest, getSqliteWithdrawalRequest, claimSqliteWithdrawalTransfer, getSqliteWithdrawalTransferClaim } from "./creator-withdrawal-requests";
 import type { WithdrawalRequestRecord } from "../gateway/withdrawal-request";
 import { CREATOR_WITHDRAWAL_ATTESTATIONS_SQL, saveSqliteWithdrawalAttestation, getSqliteWithdrawalAttestation } from "./creator-withdrawal-attestations";
@@ -2050,22 +2051,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async recordWithdrawal(w: WithdrawalRecord): Promise<void> {
-    // tx_hash is the primary key, so re-recording the same withdraw is an idempotent no-op.
-    this.db
-      .prepare(
-        `INSERT OR IGNORE INTO withdrawals (tx_hash,created_at,label,source_name,wallet,recipient,amount_usdc,network)
-         VALUES (?,?,?,?,?,?,?,?)`,
-      )
-      .run(
-        w.txHash,
-        w.createdAt,
-        w.label,
-        w.sourceName ?? null,
-        w.wallet,
-        w.recipient,
-        w.amountUsdc,
-        w.network,
-      );
+    await recordSqliteWithdrawal(this.db, w);
   }
 
   async reserveCreatorWithdrawal(value: WithdrawalRequestRecord) { return reserveSqliteWithdrawalRequest(this.db, value); }

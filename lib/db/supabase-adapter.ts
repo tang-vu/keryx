@@ -17,6 +17,7 @@ import { admitSupabasePrivateCreatorSubmission, listSupabasePrivateCreatorSubmis
 import { saveSupabasePrivateResult, getSupabasePrivateResult } from "./private-research-results";
 import { claimSupabasePrivateExecution, getSupabasePrivateExecution } from "./private-research-executions";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { recordSupabaseWithdrawal } from "./withdrawal-records";
 import crypto from "node:crypto";
 import type {
   ActivationEvent,
@@ -1096,17 +1097,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async recordWithdrawal(w: WithdrawalRecord): Promise<void> {
-    // tx_hash is the primary key — upsert makes re-recording the same withdraw an idempotent no-op.
-    await this.sb.from("withdrawals").upsert({
-      tx_hash: w.txHash,
-      created_at: w.createdAt,
-      label: w.label,
-      source_name: w.sourceName ?? null,
-      wallet: w.wallet,
-      recipient: w.recipient,
-      amount_usdc: w.amountUsdc,
-      network: w.network,
-    });
+    await recordSupabaseWithdrawal(this.sb, w);
   }
 
   async reserveCreatorWithdrawal(value: WithdrawalRequestRecord) { return reserveSupabaseWithdrawalRequest(this.sb, value); }

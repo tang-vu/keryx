@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-191** - Cash-out record idempotency - *Keep the first transaction row and verify
+its economic identity on every repeated write.*
+SQLite now uses a targeted transaction-hash conflict clause instead of ignoring any
+constraint failure. Supabase uses ignore-duplicates rather than an overwriting upsert
+and checks both write and read errors. Both adapters read back the selected transaction
+and reject changed owner, recipient, amount or network. Earlier display metadata and
+timestamp remain unchanged on a valid repeat. Errors do not justify replaying a payment;
+only the same reporting write may be recovered. Cash-outs remain separate from payment
+events and revenue. This fixes persistence behavior, not provenance: callers still need
+validated mint evidence, and the new worker-to-ledger bridge remains to be implemented.
+
 **D-190** - Mint status integration - *Read protected relay history without signer
 capabilities and reauthenticate before releasing the owner projection.*
 When the server config supplies a relay directory, status opens that existing journal
