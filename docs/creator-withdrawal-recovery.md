@@ -732,6 +732,14 @@ requires the matching connected wallet. Server metadata does not reconstruct mis
 local signed terms or provide independent settlement evidence. End-to-end funded
 acceptance remains open.
 
+After the production build, CI starts a loopback-only Next server and runs
+`scripts/test-withdrawal-framework-headers.mts` without cookies or a wallet. It verifies
+history authentication/origin rejection, no-store/Vary headers, and no-referrer on the
+actual API and page responses. The check waits for its own server's ready signal and
+stops that process afterward. This covers framework header precedence that isolated
+handler tests cannot prove; authenticated user and funded payment acceptance remain
+separate checks.
+
 ## Remaining implementation and acceptance
 
 ### Private relay journal foundation

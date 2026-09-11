@@ -104,6 +104,9 @@ jobs:
       - name: Build (Next.js)
         run: npm run build
 
+      - name: Withdrawal production framework headers (loopback, no authentication or payment)
+        run: node --import tsx scripts/test-withdrawal-framework-headers.mts
+
       - name: Lint (informational)
         # Non-blocking: surfaces issues without failing CI on pre-existing debt.
         run: npm run lint
