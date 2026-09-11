@@ -61,7 +61,7 @@ export function createWithdrawalMintJournal(db: DatabaseSync, selected: Withdraw
       || checked.attestation.transferSpecHash !== row.spec_hash) throw new Error("Mint slot unavailable");
     return checked;
   }
-  async function reserve(request: WithdrawalRequestRecord, response: unknown, selectedTerms: WithdrawalMintTerms) {
+  async function reserve(request: WithdrawalRequestRecord, response: unknown, selectedTerms: WithdrawalMintTerms, signal?: AbortSignal) {
     const copied = structuredClone({ request, response });
     const terms = withdrawalMintTermsSchema.parse(selectedTerms);
     const verified = await validateWithdrawalRequest(copied.request);
@@ -69,6 +69,7 @@ export function createWithdrawalMintJournal(db: DatabaseSync, selected: Withdraw
     const slot: Slot = { request: verified, attestation, terms,
       maxGasCostWei: (BigInt(terms.gas) * BigInt(terms.maxFeePerGas)).toString() };
     if (terms.relayer !== policy.relayer) throw new Error("Mint relayer unavailable");
+    signal?.throwIfAborted();
     atomic(() => {
       const existing = db.prepare("SELECT data FROM mint_journal_slots WHERE id=?").get(verified.id);
       if (existing) {
@@ -125,6 +126,25 @@ export function createWithdrawalMintJournal(db: DatabaseSync, selected: Withdraw
     return rows.map(row => String(row.id));
   }
   const core = { reserve, getSlot, savePrepared, getPrepared, listRequestIds };
-  return { ...core, ...attachWithdrawalGasAdmission(db, policy, checkPolicy, atomic),
+  const admission = attachWithdrawalGasAdmission(db, policy, checkPolicy, atomic);
+  async function reserveAdmitted(id: string, response: unknown, selectedTerms: Omit<WithdrawalMintTerms, "nonce">, signal: AbortSignal) {
+    const copied = structuredClone(response);
+    const terms = withdrawalMintTermsSchema.parse({ ...selectedTerms, nonce: 0 });
+    const held = await admission.getGasAdmission(id);
+    if (!held) throw new Error("Mint gas admission unavailable");
+    const attestation = await matchWithdrawalAttestation(held.request, copied);
+    const existing = await getSlot(id);
+    signal.throwIfAborted();
+    if (existing) {
+      if (stable(existing.request) !== stable(held.request) || stable(existing.attestation) !== stable(attestation))
+        throw new Error("Mint admission conflict");
+      return existing;
+    }
+    // reserve atomically checks the nonce again. A competing assignment may reject
+    // this call, but cannot consume another nonce or alter an original slot.
+    terms.nonce = policy.initialNonce + listRequestIds().length;
+    return reserve(held.request, attestation, terms, signal);
+  }
+  return { ...core, ...admission, reserveAdmitted,
     ...attachWithdrawalObservations(db, core, checkPolicy, atomic) };
 }

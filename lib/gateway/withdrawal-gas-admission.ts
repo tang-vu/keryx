@@ -95,5 +95,15 @@ export function attachWithdrawalGasAdmission(db: DatabaseSync, policy: Withdrawa
     return { committedRequests: commitments.size, awaitingSlot: Number(awaitingSlot?.n),
       committedGasWei: total.toString(), remainingGasBudgetWei: (BigInt(policy.lifetimeGasBudgetWei) - total).toString() };
   }
-  return { admitGas, getGasAdmission, gasAdmissionSummary };
+  function listGasAdmissionIds(afterId?: string, limit = 32) {
+    checkPolicy(); mintGasCommitments(db, policy);
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 64
+      || (afterId !== undefined && !/^0x[a-f0-9]{64}$/.test(afterId))) throw new Error("Mint admission page unavailable");
+    const rows = db.prepare(`SELECT a.id FROM mint_journal_admissions a
+      LEFT JOIN mint_journal_slots s ON s.id=a.id WHERE s.id IS NULL AND a.id>? ORDER BY a.id LIMIT ?`)
+      .all(afterId ?? "", limit + 1);
+    const ids = rows.slice(0, limit).map(row => String(row.id));
+    return { ids, nextCursor: rows.length > limit ? ids.at(-1)! : null };
+  }
+  return { admitGas, getGasAdmission, gasAdmissionSummary, listGasAdmissionIds };
 }

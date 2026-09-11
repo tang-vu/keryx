@@ -99,6 +99,36 @@ the Linux runtime tests and production build.
 Transfer coordinator commit `c2cb047` passed
 [CI run 34561977865](https://github.com/tang-vu/keryx/actions/runs/34561977865).
 
+## Recovery of admitted requests into nonce slots
+
+`lib/gateway/withdrawal-relay-queue.ts` reads bounded private journal pages of gas
+admissions lacking nonce slots, and looks up stored attestations using each original
+owner. Missing evidence does not consume a nonce or block later ready requests.
+Malformed/misbound responses and terms above the held ceiling remain unavailable;
+their original gas holds remain intact. Journal `reserveAdmitted` attaches the
+matched response through the existing atomic nonce reservation. Concurrent assignment
+can reject a call but cannot duplicate a nonce. A committed slot with lost readback
+disappears from the pending page and remains readable as the original slot; direct
+recovery retains its original fee terms rather than replacing them with new settings.
+
+The queue shares the relay worker's cooperative directory lock and keeps it until
+awaited reads settle, including after cancellation. It performs no Circle POST,
+transaction signing, broadcast or completed cash-out recording. A cursor limits each
+pass to at most 64 lookups (32 by default). Callers continue with `nextCursor` and
+start subsequent full sweeps without a cursor to revisit unresolved requests and new
+admissions whose IDs sort earlier. Cursors and request IDs are private operator state.
+Five focused tests pass, including actual SQLite request/claim/attestation storage
+through the transfer coordinator, reopen recovery, pagination past missing evidence,
+wrong evidence/fee bounds, cancellation/lock retention and committed-slot readback
+loss. Focused lint and TypeScript checking pass. No live vendor/chain operation occurs.
+
+The queue core is not yet wired into an operator scheduler or HTTP route. Runtime
+must select the protected application store and operator gas terms explicitly, then
+run the queue and signing passes without inferring transfer failure from absent
+evidence. Gas-admission commit `6b6df21` passed
+[CI run 34562497548](https://github.com/tang-vu/keryx/actions/runs/34562497548), including
+Linux runtime checks and production build.
+
 ## Read-only mint observation
 
 `lib/gateway/withdrawal-mint-observation.ts` revalidates the original request and matched

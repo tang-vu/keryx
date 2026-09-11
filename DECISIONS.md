@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-177** - Withdrawal queue recovery - *Enumerate held requests and attach stored
+attestations without repeating the transfer or assigning duplicate nonces.*
+The protected relay journal provides bounded cursor pages of admissions that do not
+yet have nonce slots. A server-owned queue pass reads the original owner's matched
+application attestation under the same cooperative lock used by the signing worker.
+Missing evidence and per-request errors remain pending while later ready requests
+can be attached. Nonce assignment uses the existing atomic slot reservation; committed
+slots survive readback loss and retain original fee terms. Queue recovery performs no
+Circle submission, signing or broadcast. The private cursor bounds work, and later
+full sweeps restart without a cursor to revisit unknown requests and newer admissions.
+This implements the recovery core; operator scheduling, protected application-store
+selection and production HTTP/browser wiring remain integration work.
+
 **D-176** - Pre-transfer gas admission - *Reserve one immutable gas ceiling before
 Circle submission, then attach a nonce without charging the request twice.*
 Schema version 2 adds original-request admissions to the same protected SQLite
