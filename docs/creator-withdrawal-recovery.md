@@ -309,6 +309,8 @@ queue or relay unavailability; cancellation waits for the current phase and skip
 rest. Exit 2 means pending/unavailable work, never permission to regenerate or retry a
 Circle transfer. Operator scan counts are not new cash-outs or revenue. This mode is
 not yet installed as a scheduled service and has not passed funded relay acceptance.
+The prepared [systemd supervision and deploy procedure](./withdrawal-supervision.md)
+includes timer-first draining, no forced kill and restoration of prior scheduling only.
 
 `npm run withdrawal:relay -- --queue` requires the existing protected relay runtime
 configuration, plus these explicit operator arguments:

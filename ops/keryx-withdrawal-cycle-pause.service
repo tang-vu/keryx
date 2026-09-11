@@ -1,0 +1,7 @@
+[Unit]
+Description=Pause Keryx withdrawal scheduling after a failed cycle
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl stop keryx-withdrawal-cycle.timer
+NoNewPrivileges=yes

@@ -1,0 +1,26 @@
+[Unit]
+Description=Keryx bounded Arc Testnet withdrawal cycle
+After=network-online.target
+Wants=network-online.target
+OnFailure=keryx-withdrawal-cycle-pause.service
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root/keryx
+EnvironmentFile=/root/keryx/.env.withdrawal-cycle.local
+ExecStart=/usr/bin/node --env-file=.env.local --env-file-if-exists=.env.private-worker.local --env-file=.env.withdrawal-relay.local --import tsx --no-warnings scripts/withdrawal-relay.mts --cycle --application-db ${KERYX_WITHDRAWAL_APPLICATION_DB} --gas ${KERYX_WITHDRAWAL_MINT_GAS} --max-fee-per-gas ${KERYX_WITHDRAWAL_MINT_MAX_FEE_PER_GAS} --priority-fee-per-gas ${KERYX_WITHDRAWAL_MINT_PRIORITY_FEE_PER_GAS} --gas-budget-wei ${KERYX_WITHDRAWAL_MINT_GAS_BUDGET_WEI}
+SuccessExitStatus=2
+UMask=0077
+KillSignal=SIGTERM
+KillMode=control-group
+TimeoutStartSec=infinity
+TimeoutStopSec=infinity
+SendSIGKILL=no
+Restart=no
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/root/keryx/data
+SyslogIdentifier=keryx-withdrawal-cycle

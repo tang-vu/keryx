@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-210** - Withdrawal supervision and deployment - *Pause scheduling before draining
+the cycle, and restore only a previously active timer after web health succeeds.*
+Prepared systemd units run bounded oneshot cycles after prior completion. Expected
+pending exit 2 permits later checks of original requests; unexpected process failure
+pauses the timer for inspection. Shutdown uses SIGTERM with no forced kill. The deploy
+helper stops the timer, cancels even queued service activation, and verifies inactive
+state/zero MainPID before source changes. Manual cycles are never automatically
+repeated. Failed deploys remain paused rather than inferring earlier scheduling intent.
+Hermetic lifecycle checks and unit verification on the actual VPS pass; no units have
+been installed or enabled. Dedicated runtime provisioning, funded shutdown/restore
+acceptance and incident alert delivery remain open.
+
 **D-209** - Operator withdrawal cycle - *Compose bounded queue, relay and reporting
 passes without treating a pending phase as a payment failure.*
 The explicit --cycle CLI mode scans at most 32 pages of 32 rows, runs one existing

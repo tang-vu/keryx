@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Keryx withdrawal cycle after the previous pass finishes
+
+[Timer]
+OnActiveSec=30s
+OnUnitInactiveSec=30s
+AccuracySec=5s
+Unit=keryx-withdrawal-cycle.service
+
+[Install]
+WantedBy=timers.target

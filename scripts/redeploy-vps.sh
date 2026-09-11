@@ -58,10 +58,12 @@ run_ssh -o BatchMode=yes -o ConnectTimeout=10 "$SSH" true 2>/dev/null \
 PREVIOUS_COMMIT=$(run_ssh "$SSH" "curl -fsS $HEALTH" 2>/dev/null \
   | sed -n 's/.*"commit":"\([^"]*\)".*/\1/p' || true)
 
-# The private worker imports repository code and dependencies while running. Drain it
-# BEFORE changing either. A failed deploy leaves it stopped for operator inspection;
-# never restart it against a partially updated checkout or delete its recovery lock.
+# Both workers import repository code and dependencies while running. Pause cycle
+# scheduling and drain workers BEFORE changing either. Failed deploys leave them
+# stopped for inspection; never restart against partial code or delete recovery locks.
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+WITHDRAWAL_CYCLE_STATE=$(run_ssh "$SSH" bash -s -- stop < "$SCRIPT_DIR/withdrawal-cycle-deploy.sh")
+case "$WITHDRAWAL_CYCLE_STATE" in absent|inactive|manual|timer-active) ;; *) echo "Invalid withdrawal cycle stop observation" >&2; exit 1 ;; esac
 PRIVATE_WORKER_STATE=$(run_ssh "$SSH" bash -s -- stop < "$SCRIPT_DIR/private-worker-deploy.sh")
 case "$PRIVATE_WORKER_STATE" in absent|inactive|active) ;; *) echo "Invalid private worker stop observation" >&2; exit 1 ;; esac
 
@@ -125,6 +127,7 @@ fi
 
 run_ssh "$SSH" "cd $APP_DIR && rm -rf .next.bak"
 run_ssh "$SSH" bash -s -- resume "$PRIVATE_WORKER_STATE" < "$SCRIPT_DIR/private-worker-deploy.sh"
+run_ssh "$SSH" bash -s -- resume "$WITHDRAWAL_CYCLE_STATE" < "$SCRIPT_DIR/withdrawal-cycle-deploy.sh"
 # Code deploys are the normal production path, so operational schedules introduced by a release
 # must be refreshed here too (deploy-vps.sh only runs during first provisioning).
 run_ssh "$SSH" bash -se <<REMOTE

@@ -1,0 +1,76 @@
+# Withdrawal cycle supervision
+
+Status: prepared and verified for syntax/lifecycle; not installed or enabled on the
+production VPS. Funded testnet relay acceptance, incident alerts and backup/restore
+drills remain required before opening new withdrawals.
+
+The three `ops/keryx-withdrawal-cycle*` units target the existing `/root/keryx` host
+with `/usr/bin/node` (Node 24). The oneshot service runs the explicit `--cycle` command.
+The timer waits 30 seconds after activation or the previous cycle becomes inactive.
+Systemd does not start another instance of an already active service; original journal
+locks remain a second boundary for manually invoked commands. See the upstream
+[timer documentation](https://github.com/systemd/systemd/blob/main/man/systemd.timer.xml).
+
+Exit 2 is an expected pending/unavailable scan result, not failed payment or settlement.
+It remains visible in private operator output and the timer may check the same originals
+later. Unexpected process/startup failure invokes the pause unit to stop future timer
+activations. Inspect retained originals and locks before resuming; never remove a lock
+merely because a process or receipt is absent. Service status alone does not prove
+worker progress, settlement, adequate gas backing or delivery of an operator alert.
+
+## Configuration and activation
+
+Provision and verify the existing canonical owner-only relay directory and original
+application database under `/root/keryx/data`. No unit creates or migrates either.
+Choose the dedicated testnet key, key inventory, journal lifetime limits, fee/gas
+terms, backups and observed initial nonce before activation.
+
+The process explicitly loads `.env.local`, optional `.env.private-worker.local`
+(for private treasury inventory), and `.env.withdrawal-relay.local`. Keep these files
+owner-only. The relay file must contain the explicitly enabled isolated relay policy;
+the unit does not set enable flags or enable HTTP creation itself. Do not copy secrets
+into unit text or commit environment files.
+
+The required systemd `EnvironmentFile`, `.env.withdrawal-cycle.local`, contains only
+operator-selected CLI arguments, not signing keys:
+
+- `KERYX_WITHDRAWAL_APPLICATION_DB`: canonical existing application database path.
+- `KERYX_WITHDRAWAL_MINT_GAS`: integer gas limit.
+- `KERYX_WITHDRAWAL_MINT_MAX_FEE_PER_GAS`: integer native wei per gas.
+- `KERYX_WITHDRAWAL_MINT_PRIORITY_FEE_PER_GAS`: integer native wei per gas.
+- `KERYX_WITHDRAWAL_MINT_GAS_BUDGET_WEI`: integer maximum native gas cost.
+
+Use one systemd-compatible assignment per line and mode 0600. No default monetary
+values are supplied. Gas terms must fit each original held ceiling; configuration
+cannot change an already allocated nonce or saved signed transaction.
+
+Before installing all three units, verify them together with `systemd-analyze verify`,
+inspect the protected runtime, and run an owner-controlled bounded acceptance cycle.
+Install unit files with mode 0644, reload systemd, and enable/start only the timer after
+operational acceptance. This document is a deployment procedure, not evidence that
+activation or funded acceptance has occurred.
+
+## Shutdown and deployment
+
+The service uses SIGTERM, control-group shutdown, infinite stop grace, no SIGKILL and
+no process restart. It waits for awaited work to settle before closing its journal.
+An unresponsive dependency requires inspection of the actual process/job; elapsed
+time is not permission to delete a lock or create a replacement authorization.
+
+`withdrawal-cycle-deploy.sh` pauses the timer before draining the service. Even an
+inactive service receives a stop request to cancel queued activation. Only verified
+inactive state and zero MainPID allow source/dependency changes. Unsafe kill settings,
+failed/transitional states or failed stops stop deployment. After web health passes,
+only a previously active timer is restarted; an absent/inactive timer stays so, and a
+manual oneshot is not automatically repeated. The helper never installs/enables units.
+
+A failed deploy leaves scheduling paused. A later deploy cannot infer the earlier
+timer state: inspect checkout/build identity, pending systemd jobs and retained journal
+before deliberately resuming. This is the same conservative recovery requirement as
+the private research worker. Unit and journal output stays private; never publish
+cursors, signed authorizations or scan counts as revenue.
+
+Hermetic lifecycle tests cover timer-first ordering, queued activation cancellation,
+manual preservation, restoration, unsafe kill settings and failed/incomplete drains.
+Unit verification also passed on the actual VPS without installing or starting units.
+Actual systemd shutdown during funded minting remains unverified.

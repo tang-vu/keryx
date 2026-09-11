@@ -30,6 +30,7 @@ jobs:
       - name: Deployment dependency-state checks (no install or network)
         run: |
           bash scripts/private-worker-deploy.check.sh
+          bash scripts/withdrawal-cycle-deploy.check.sh
           node --test scripts/dependency-state.check.mjs
           node scripts/dependency-state.mjs record
           node scripts/dependency-state.mjs check
