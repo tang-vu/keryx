@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-223** - Final sufficiency in confidence - *High coverage and valid citations cannot
+override the final assessment's conclusion that the requested answer is incomplete.*
+The verdict now requires the final sufficiency result explicitly, rather than deriving
+completeness solely from numeric claim coverage. An insufficient final result keeps
+confidence Low and the existing provisional-answer notice visible. The evidence ledger
+and reward allocation remain separate: useful, supported citations can still earn
+their existing bounded rewards. Agent-loop regression compares sufficient/insufficient
+final assessments with identical valid quotes and confirms identical citation counts
+and total spend. This respects the assessment, not independent factual truth; mistaken
+or incomplete model assessments still require broader evaluation.
+
 **D-222** - Direct-answer stopping gate - *A partial coverage score cannot by itself
 justify skipping the remaining selected sources.*
 JSON reasoning previously stopped at 0.4 even though its own guidance called 0.4-0.6

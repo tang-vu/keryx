@@ -8,6 +8,13 @@ transaction id, or is not explicitly labelled `simulated`.
 
 ## Commands
 
+Since v0.22.56, final confidence also requires the final sufficiency conclusion.
+High coverage with an insufficient final result stays Low. Regression tests hold
+valid quotes and numeric coverage constant while changing the final conclusion, and
+verify that the confidence/notice changes without altering citation rewards or total
+spend. This is a consistency guarantee between assessment and presentation, not an
+independent factual-quality guarantee.
+
 Since v0.22.55, JSON-engine early stopping requires coverage >= 0.7 for every target,
 a nonempty supported answer, known source markers and an explicit empty list of missing
 requested parts. A high numeric score with a reported gap cannot stop reading. Unknown

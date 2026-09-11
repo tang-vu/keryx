@@ -1044,7 +1044,7 @@ export async function* runAgent(
   // Coverage cannot resolve a contradiction or turn a source preference into corroboration.
   const verdict = researchVerdict({ coverage: claimCoverage,
     citedMarkers: [...ledger.acceptedMarkers], sourceMarkers: gathered.map(source => source.marker),
-    conflicts: synthesized.conflicts ?? [] });
+    conflicts: synthesized.conflicts ?? [], finalAssessmentSufficient: finalSufficiency.sufficient });
   runConfidence = verdict;
 
   if (verdict.level === "Low" && used.length > 0) {

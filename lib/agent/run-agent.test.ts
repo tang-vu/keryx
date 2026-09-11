@@ -1453,6 +1453,29 @@ it("retains public collection and its persistence checkpoint when no strategy is
 });
 
 
+it("keeps earned citation rewards while an incomplete final assessment lowers confidence", async () => {
+  const totals: number[] = [];
+  for (const sufficient of [true, false]) {
+    const engine = fakeEngine({
+      sufficiency: input => ({ sufficient: sufficient && input.gathered.length >= 2, rationale: "Synthetic final assessment",
+        perClaim: input.subClaims.map(claim => ({ claim, coverage: 0.95, coveredBy: input.gathered.map(g => g.marker) })) }),
+      synthesize: input => ({ answer: "The reported throughput is supported [S1] [S2].", citedMarkers: input.gathered.map(g => g.marker),
+        evidence: input.gathered.map(g => ({ claimIndex: 0, marker: g.marker, quote: g.text, support: 0.95 })), conflicts: [] }),
+    });
+    const gateway = fakeGateway();
+    const { run } = await drive({ question: "What throughput and latency were measured?", budget: 0.04 },
+      deps([makeSource({ id: "alpha" }), makeSource({ id: "beta" })], engine, gateway));
+    expect(run.confidence?.level).toBe(sufficient ? "High" : "Low");
+    expect(run.citations).toHaveLength(2); expect(gateway.citationCalls).toHaveLength(2);
+    totals.push(run.totalSpent);
+    if (!sufficient) {
+      expect(run.answer).toContain("Low confidence");
+      expect(run.confidence?.reason).toContain("final assessment");
+    }
+  }
+  expect(totals[0]).toBe(totals[1]);
+});
+
 it("keeps valid citations while reported disagreement limits the final confidence", async () => {
   for (const trusted of ["none", "S1"]) {
     const sources = [makeSource({ id: "alpha" }), makeSource({ id: "beta" })];

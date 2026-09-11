@@ -6,7 +6,12 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.55 (direct-answer stopping gate, updated 2026-09-11)
+**Version:** 0.22.56 (final assessment in confidence, updated 2026-09-11)
+
+Final confidence now respects an insufficient final assessment even when claim scores
+are high and multiple citations pass the evidence gate. Such answers remain Low and
+provisional; valid citation rewards retain their existing authority. This closes the
+numeric-score/verdict mismatch, not the broader need to validate model assessments.
 
 JSON reasoning no longer stops on a partial coverage score alone. Every requested
 target must have a direct-answer score, explicit supported answer and no reported

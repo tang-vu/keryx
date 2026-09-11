@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { researchVerdict } from "./research-verdict";
 const base = { coverage: [{ claimIndex: 0, claim: "Which retention period applies?", coverage: 1, coveredBy: ["S1", "S2"] }],
-  citedMarkers: ["S1", "S2"], sourceMarkers: ["S1", "S2"] };
+  citedMarkers: ["S1", "S2"], sourceMarkers: ["S1", "S2"], finalAssessmentSufficient: true };
 const conflict = { point: "retention", positions: [{ marker: "S1", stance: "seven days" }, { marker: "S2", stance: "thirty days" }],
   trusted: "none", reason: "No precedence rule" };
 it("does not promote an unresolved conflict with perfect coverage and two citations", () => {
@@ -19,4 +19,10 @@ it("retains strong corroborated, weak and absent evidence verdicts without confl
   expect(researchVerdict({ ...base, conflicts: [], citedMarkers: ["S1"] }).level).toBe("Moderate");
   expect(researchVerdict({ ...base, conflicts: [], coverage: [{ ...base.coverage[0], coverage: 0.1 }] }).level).toBe("Low");
   expect(researchVerdict({ ...base, conflicts: [], citedMarkers: [] }).level).toBe("Low");
+});
+
+it("requires the final sufficiency conclusion even with perfect scores and multiple citations", () => {
+  expect(researchVerdict({ ...base, conflicts: [], finalAssessmentSufficient: false }))
+    .toEqual({ level: "Low", reason: "the final assessment does not establish a complete supported answer for every requested part" });
+  expect(researchVerdict({ ...base, conflicts: [{ ...conflict, trusted: "S1" }], finalAssessmentSufficient: false }).level).toBe("Low");
 });
