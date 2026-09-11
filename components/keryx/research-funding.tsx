@@ -9,6 +9,7 @@ import { connectedBuyerWallet } from "@/lib/buyer/connected-wallet";
 import { type FundingRecord, type FundingStep } from "@/lib/buyer/funding-policy";
 import { parseBuyerBudget } from "@/lib/a2a/buyer-workspace";
 import { BUYER_GATEWAY } from "@/lib/buyer/protocol";
+import { ResearchFundingActivity } from "./research-funding-activity";
 
 const control = "border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40";
 
@@ -160,5 +161,6 @@ export function ResearchFunding({ payer, initialAmount, disabled, onBusy, onChan
     {rows.some(row => row.deposit.status === "confirmed") && <p className="mt-3 font-serif text-sm">A saved deposit is confirmed on chain. Check the current Gateway balance before buying; previous deposits may already have been spent.</p>}
     <p role="status" className="mt-3 font-serif text-sm">{message}</p>
     <ul className="mt-3 space-y-2">{rows.filter(row => !row.activePayer).slice(0, 5).map(row => <li key={row.id} className="font-mono text-xs">{formatUnits(BigInt(row.amount), 6)} USDC · {row.cancelled ? "plan cancelled" : row.deposit.status === "confirmed" ? "deposit confirmed" : row.deposit.status === "replaced" || row.approval.status === "replaced" ? "original replaced by a different call; deposit not confirmed" : "transaction reverted"}{(row.deposit.hash ?? row.approval.hash) && <> · <a className="underline" href={`https://testnet.arcscan.app/tx/${row.deposit.hash ?? row.approval.hash}`} target="_blank" rel="noreferrer">Transaction</a></>}{(row.deposit.originalHash ?? row.approval.originalHash) && <> · <a className="underline" href={`https://testnet.arcscan.app/tx/${row.deposit.originalHash ?? row.approval.originalHash}`} target="_blank" rel="noreferrer">Original transaction</a></>}</li>)}</ul>
+    <ResearchFundingActivity key={payer.toLowerCase()} payer={payer} chain={chain} />
   </details>;
 }

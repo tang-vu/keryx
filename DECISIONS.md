@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-225** - Historical deposit lookup without local originals - *Observing a past
+deposit does not recreate a signing plan or prove current available credit.* A
+wallet-supplied hash can be inspected using the current payer, pinned Arc testnet
+Gateway/USDC addresses, exact deposit calldata and finalized canonical RPC evidence.
+The result is transient UI state, keyed by payer; no funding record, active lock,
+signature or retry permission is created. Success and revert remain distinct, and
+neither a missing lookup nor the absence of local records rules out other pending
+transactions. Unknown results require checking wallet activity and current credit.
+This supports historical lookup after storage loss, not recovering an unknown hash
+or resolving every lost pending operation. RPC and browser-origin trust remain.
+
 **D-224** - Explicit funding replacement recovery - *A consumed nonce is not proof
 that the planned deposit executed.* The browser may inspect a wallet-supplied hash
 without signing or rebroadcasting. It requires the original payer/nonce and post-intent

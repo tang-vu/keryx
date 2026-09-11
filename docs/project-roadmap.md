@@ -6,7 +6,13 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.57 (funding replacement recovery, updated 2026-09-11)
+**Version:** 0.22.58 (past deposits after storage loss, updated 2026-09-11)
+
+A wallet-supplied deposit hash can now be checked even without local funding records.
+The browser verifies a finalized call for the current wallet and displays historical
+success/revert separately from current available credit. No signing plan is recreated;
+account changes clear observations. Unknown hashes and lost pending operations still
+need wallet activity evidence rather than automatic retries.
 
 Funding now accepts an explicit replacement hash from wallet activity, with finalized
 same-payer/nonce evidence and an atomic journal update. Exact-call speedups and changed

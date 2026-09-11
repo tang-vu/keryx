@@ -34,3 +34,25 @@ reference. No endpoint or mainnet configuration was changed.
 Still required for B1: independently operated wallet speedup/cancellation acceptance,
 funded current-release recovery, complete lost-storage recovery, and mobile wallet
 handoff. Test completion does not mark that broader journey accepted.
+
+## Historical deposit lookup after storage loss
+
+v0.22.58 adds a separate read-only lookup using a deposit hash retained in wallet
+activity. It accepts only the current payer's exact USDC Gateway deposit call, with
+matched transaction/receipt/canonical block identity and RPC finalized evidence.
+Successful and reverted calls are distinct. A past deposit is not current credit:
+funds could have been spent or withdrawn, or Circle credit may still be updating.
+The existing current-balance check remains necessary before purchase or more funding.
+
+No local funding plan is imported, synthesized or unlocked by this lookup. Results
+remain transient and clear when the payer changes. A ten-second timeout and abort
+withhold incomplete observations. A missing hash or record is not evidence of failure
+or absence of another pending transaction. If the hash is lost from both browser and
+wallet activity, this feature cannot recover it.
+
+Fifteen deterministic tests cover wrong payer/target/token/value, malformed calldata,
+receipt/canonical/finality/network mismatches, historical amounts above today's new
+deposit cap, reverted calls, abort and timeout. A fresh Chromium context with no
+funding rows finds a synthetic deposit, leaves the journal empty, distinguishes current
+credit and clears the result on payer change. These are local synthetic acceptance,
+not a funded current-release or independently operated wallet test.
