@@ -6,7 +6,12 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.62 (creator listing authority, updated 2026-09-12)
+**Version:** 0.22.63 (listing freshness before signing, updated 2026-09-12)
+
+Listing actions now re-read and validate registry details immediately before opening
+the wallet. Changed fields require explicit review; read failures or wallet/source
+changes stop the action. This catches stale page snapshots but cannot eliminate edits
+made during an open wallet prompt without a future contract-level concurrency check.
 
 On-chain listing controls authorize the actual registry creator even when its payout
 wallet is separate. The browser pins creator writes and receipt reads to Arc Testnet,

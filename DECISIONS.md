@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-230** - Revalidate listing state before the wallet prompt - *A price-only UI must
+not silently resubmit obsolete payout, split or content fields.* Existing registry
+updates replace the whole record. Both management actions now fetch a bounded fresh
+snapshot and refuse to sign if any authority/update field differs, is malformed or
+cannot be read. Changed fields are displayed for review and require another deliberate
+action. A synchronous action lock and wallet/source identity check prevent overlapping
+prompts and continuation after an identity change during the read. This is a pre-prompt
+check, not contract-level compare-and-set: edits made while the wallet prompt is open
+can still race. A future registry revision and migration must address that atomicity;
+this release neither changes the deployed contract nor claims to eliminate that race.
+
 **D-229** - Listing management follows registry creator authority - *A payout wallet
 is not necessarily the wallet that registered a source.* On-chain listing reads now
 authorize the authenticated session against the live registry creator, rather than

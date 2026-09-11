@@ -33,14 +33,19 @@ export const useWaitForTransactionReceipt=({chainId})=>{window.listingReceiptCha
 const browser = await chromium.launch({ headless: true });
 try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  let currentPayout = payout, unavailable = false;
+  let hold: Promise<void> | undefined, observed: (() => void) | undefined;
   const errors: string[] = []; page.on("pageerror", e => errors.push(e.message));
-  await page.route("**/*", route => {
+  await page.route("**/*", async route => {
     const url = new URL(route.request().url());
     if (url.origin !== "https://listing.invalid") return route.abort();
-    if (url.pathname === "/api/creator/synthetic/listing") return route.fulfill({ json: {
+    if (url.pathname === "/api/creator/synthetic/listing") {
+      observed?.(); await hold;
+      if (unavailable) return route.fulfill({ status: 503, json: { error: "synthetic outage" } });
+      return route.fulfill({ json: {
       mode: "onchain", fetchPrice: 0.002, active: true, creator, registryAddress: registry,
-      onchainId: `0x${"1".repeat(64)}`, current: { payoutWallet: payout, authors: [], fetchPriceUsdc6: "2000", contentCid: "synthetic", tags: "research" },
-    } });
+      onchainId: `0x${"1".repeat(64)}`, current: { payoutWallet: currentPayout, authors: [], fetchPriceUsdc6: "2000", contentCid: "synthetic", tags: "research" },
+    } }); }
     return route.fulfill({ contentType: "text/html", body: '<meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div>' });
   });
   await page.goto("https://listing.invalid"); await page.addScriptTag({ content: bundle.outputFiles[0].text });
@@ -67,6 +72,43 @@ try {
   assert.equal((await page.evaluate(() => window.listingToasts.filter(x => x.kind === "success"))).length, 0);
   await page.evaluate(() => window.setListingReceipt({ status: "success" }));
   await page.waitForFunction(() => window.listingToasts.some(x => x.kind === "success" && x.message === "Transaction confirmed. Refreshing registry state."));
+
+  // A price edit must not silently restore the payout wallet from page-load time.
+  async function freshPage() {
+    await page.goto("https://listing.invalid"); await page.addScriptTag({ content: bundle.outputFiles[0].text });
+    for (const path of process.env.CREATOR_UI_CSS?.split("|") ?? []) await page.addStyleTag({ path });
+    await save.waitFor();
+    await page.evaluate(address => window.setListingWallet({ address, chainId: 5042002 }), creator);
+    await page.getByRole("slider").focus(); await page.keyboard.press("ArrowRight");
+  }
+  await freshPage(); currentPayout = `0x${"c".repeat(40)}`;
+  await save.click();
+  await page.waitForFunction(() => window.listingToasts.some(x => x.kind === "error" && x.message.includes("Listing changed")));
+  await page.getByText(currentPayout, { exact: true }).waitFor({ state: "visible" });
+  await page.getByText("The listing changed. Review these details before choosing your change again.", { exact: true }).waitFor();
+  if (process.env.CREATOR_UI_CSS) assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Creator review must fit a mobile viewport");
+  if (process.env.CREATOR_UI_SCREENSHOT) await page.screenshot({ path: process.env.CREATOR_UI_SCREENSHOT, fullPage: true });
+  assert.equal((await page.evaluate(() => window.listingWrites)).length, 0);
+  await page.getByRole("slider").focus(); await page.keyboard.press("ArrowRight");
+  await save.click(); await page.waitForFunction(() => window.listingWrites.length === 1);
+  assert.equal((await page.evaluate(() => window.listingWrites))[0].args[1], currentPayout);
+
+  unavailable = true;
+  await delist.click(); await page.getByRole("button", { name: "Click again to confirm", exact: false }).click();
+  await page.waitForFunction(() => window.listingToasts.some(x => x.kind === "error" && x.message.includes("could not be refreshed")));
+  assert.equal((await page.evaluate(() => window.listingWrites)).length, 1);
+  unavailable = false;
+
+  await freshPage();
+  let release!: () => void;
+  hold = new Promise<void>(resolve => { release = resolve; });
+  const requested = new Promise<void>(resolve => { observed = resolve; });
+  await save.click(); await requested;
+  await page.evaluate(address => window.setListingWallet({ address, chainId: 5042002 }), payout);
+  await page.getByText("Switch accounts before signing.", { exact: false }).waitFor();
+  release(); hold = undefined; observed = undefined;
+  await page.waitForFunction(() => window.listingToasts.some(x => x.kind === "error" && x.message.includes("Wallet or source changed")));
+  assert.equal((await page.evaluate(() => window.listingWrites)).length, 0);
   assert.deepEqual(errors, []);
-  console.log("PASS: creator listing blocks wrong/disconnected wallets and wrong networks; write intents and receipt reads pin Arc Testnet; reverted receipts are not confirmation. Synthetic wallet; no signing or settlement.");
+  console.log("PASS: creator listing pins wallet/network, distinguishes revert, refuses stale payout and unavailable authority, and stops after wallet changes during refresh. Synthetic wallet; no signing or settlement.");
 } finally { await browser.close(); }

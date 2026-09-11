@@ -10,13 +10,14 @@
  * cache within seconds. Offline sources: a plain POST writes the DB row directly.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Archive, Banknote, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { arcTestnet } from "viem/chains";
 import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
 import { REGISTRY_ABI } from "@/lib/registry/registry-client";
+import { parseListingSnapshot, sameListingSnapshot } from "@/lib/creator/listing-snapshot";
 
 interface ListingData {
   mode: "onchain" | "offline";
@@ -39,8 +40,15 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
   const [price, setPrice] = useState("0");
   const [busy, setBusy] = useState(false);
   const [delistArmed, setDelistArmed] = useState(false);
+  const [reviewRequired, setReviewRequired] = useState(false);
 
   const { address: connected, chainId } = useAccount();
+  const actionLock = useRef(false);
+  const identity = useRef({ creatorId, connected, chainId, active: false });
+  useLayoutEffect(() => {
+    identity.current = { creatorId, connected, chainId, active: true };
+    return () => { identity.current.active = false; };
+  }, [creatorId, connected, chainId]);
   const { writeContractAsync } = useWriteContract();
   const [pendingTx, setPendingTx] = useState<`0x${string}` | undefined>();
   const { isLoading: isMining, isSuccess: mined, data: receipt } = useWaitForTransactionReceipt({
@@ -52,7 +60,8 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
     try {
       const res = await fetch(`/api/creator/${creatorId}/listing`, { cache: "no-store" });
       if (!res.ok) return; // 401/403/404 → not the owner, stay hidden
-      const d = (await res.json()) as ListingData;
+      const value = (await res.json()) as ListingData;
+      const d = value.mode === "onchain" ? parseListingSnapshot(value) : value;
       setData(d);
       setPrice(String(d.fetchPrice));
     } catch {
@@ -90,25 +99,45 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
   const wrongNetwork = data.mode === "onchain" && chainId !== arcTestnet.id;
   const signingUnavailable = wrongWallet || wrongNetwork;
 
+  const refreshBeforeSigning = async () => {
+    const owner = identity.current;
+    const res = await fetch(`/api/creator/${creatorId}/listing`, { cache: "no-store", signal: AbortSignal.timeout(10_000) });
+    if (!res.ok) throw new Error("Listing authority could not be refreshed. No signature requested.");
+    const fresh = parseListingSnapshot(await res.json());
+    if (!owner.active || identity.current !== owner || owner.creatorId !== creatorId
+      || owner.chainId !== arcTestnet.id || owner.connected?.toLowerCase() !== fresh.creator) {
+      throw new Error("Wallet or source changed. Refresh before signing.");
+    }
+    if (!sameListingSnapshot(data, fresh)) {
+      setData(fresh); setPrice(String(fresh.fetchPrice)); setDelistArmed(false); setReviewRequired(true);
+      throw new Error("Listing changed. Review the refreshed details and choose your change again.");
+    }
+    if (!fresh.active) throw new Error("This source is delisted.");
+    setReviewRequired(false);
+    return fresh;
+  };
+
   const savePrice = async () => {
-    if (working || !priceChanged || signingUnavailable) return;
+    if (working || !priceChanged || signingUnavailable || actionLock.current) return;
+    actionLock.current = true;
     setBusy(true);
     try {
       if (data.mode === "onchain" && data.current && data.registryAddress && data.onchainId) {
+        const fresh = await refreshBeforeSigning();
         toast.loading("Waiting for wallet signature…", { id: "listing-tx" });
         const txHash = await writeContractAsync({
           account: connected,
           chainId: arcTestnet.id,
-          address: data.registryAddress,
+          address: fresh.registryAddress,
           abi: REGISTRY_ABI,
           functionName: "update",
           args: [
-            data.onchainId,
-            data.current.payoutWallet,
-            data.current.authors,
+            fresh.onchainId,
+            fresh.current.payoutWallet,
+            fresh.current.authors,
             BigInt(Math.round(parsedPrice * 1_000_000)),
-            data.current.contentCid,
-            data.current.tags,
+            fresh.current.contentCid,
+            fresh.current.tags,
           ],
         });
         setPendingTx(txHash);
@@ -128,29 +157,32 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
       toast.dismiss("listing-tx");
       toast.error(e instanceof Error ? e.message : "Failed to save");
     } finally {
+      actionLock.current = false;
       setBusy(false);
     }
   };
 
   const delist = async () => {
-    if (working || signingUnavailable) return;
+    if (working || signingUnavailable || actionLock.current) return;
     if (!delistArmed) {
       setDelistArmed(true);
       setTimeout(() => setDelistArmed(false), 6_000);
       return;
     }
     setDelistArmed(false);
+    actionLock.current = true;
     setBusy(true);
     try {
       if (data.mode === "onchain" && data.registryAddress && data.onchainId) {
+        const fresh = await refreshBeforeSigning();
         toast.loading("Waiting for wallet signature…", { id: "listing-tx" });
         const txHash = await writeContractAsync({
           account: connected,
           chainId: arcTestnet.id,
-          address: data.registryAddress,
+          address: fresh.registryAddress,
           abi: REGISTRY_ABI,
           functionName: "deactivate",
-          args: [data.onchainId],
+          args: [fresh.onchainId],
         });
         setPendingTx(txHash);
         toast.loading("Delist submitted — confirming…", { id: "listing-tx" });
@@ -169,6 +201,7 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
       toast.dismiss("listing-tx");
       toast.error(e instanceof Error ? e.message : "Failed to delist");
     } finally {
+      actionLock.current = false;
       setBusy(false);
     }
   };
@@ -240,6 +273,22 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
             <p className="mt-3 font-mono text-[10px] text-amber-700">
               Connect your creator wallet on Arc Testnet before changing this listing.
             </p>
+          )}
+
+          {data.mode === "onchain" && data.current && (
+            <details className="mt-4 border-t border-line pt-3 text-ink-3" open={reviewRequired}>
+              <summary className="cursor-pointer font-mono text-[11px]">Current registry details</summary>
+              {reviewRequired && <p className="mt-2 text-sm text-amber-700">The listing changed. Review these details before choosing your change again.</p>}
+              <p className="mt-2 text-xs">Price updates also submit these fields. Avoid editing this source elsewhere while the wallet prompt is open.</p>
+              <dl className="mt-3 space-y-2 break-all font-mono text-[11px]">
+                <div><dt>Payout wallet</dt><dd>{data.current.payoutWallet}</dd></div>
+                <div><dt>Author splits</dt><dd>{data.current.authors.length ? data.current.authors.map((a, i) => (
+                  <p key={`${a.wallet}-${i}`}>{a.wallet}: {a.basisPoints / 100}%</p>
+                )) : "Payout wallet receives 100%."}</dd></div>
+                <div><dt>Content reference</dt><dd>{data.current.contentCid || "None"}</dd></div>
+                <div><dt>Tags</dt><dd>{data.current.tags || "None"}</dd></div>
+              </dl>
+            </details>
           )}
 
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">

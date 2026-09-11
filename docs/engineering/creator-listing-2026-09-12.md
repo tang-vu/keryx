@@ -29,6 +29,27 @@ produce success feedback. These tests perform no signing or settlement.
 
 This does not establish independent creator onboarding or funded mainnet acceptance.
 Global account source discovery still uses cached payout/author membership. Existing
-contract updates replace the complete record; concurrent edits, fresh-state signing,
-transaction replacement and durable recovery require further work. RPC, authenticated
-session and browser integrity remain trust dependencies.
+contract updates replace the complete record; concurrent edits, transaction replacement
+and durable recovery require further work. RPC, authenticated session and browser
+integrity remain trust dependencies.
+
+## Pre-prompt freshness, v0.22.63
+
+Before either wallet action, a fresh GET (ten-second timeout) must match the displayed
+registry, source ID, creator, active state, price, payout, ordered author splits,
+content reference and tags. Schema checks preserve uint64 price, address, split and
+UTF-8 contract limits. A difference updates the visible details and requires another
+deliberate action. No automatic retry or signature follows a change or read failure.
+The panel rejects a wallet/source identity change while awaiting the read and locks
+concurrent actions before the first asynchronous step.
+
+Unit cases cover each changed field and malformed snapshots. The Chromium check
+changes the payout after page load and verifies zero write requests, visible review
+of the new payout, then a subsequent intentional write using that payout. It also
+withholds writes on unavailable authority and an account change during a delayed read.
+All wallets and API responses in these tests are synthetic.
+
+This is not atomic compare-and-set. Another edit after the read, including while the
+wallet prompt is open, can still race a full-record update. The UI states this limitation.
+Removing that window requires a contract revision and migration; no deployed contract
+or payout was changed by these checks.
