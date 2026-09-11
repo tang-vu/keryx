@@ -82,6 +82,25 @@ signer authority. This helper is not yet connected to the production relay.
 
 ## Remaining implementation and acceptance
 
+The signed-byte validator in `lib/gateway/withdrawal-mint-transaction.ts` now binds
+canonical EIP-1559 transaction bytes to the original request and attestation, exact
+relayer, nonce, minter, calldata, zero native value and selected gas terms. It derives
+the transaction hash from those bytes. It rejects unsigned, foreign-signed, wrong-chain,
+legacy, altered and high-s payloads. Signature recovery alone is insufficient: the
+[EIP-2 low-s rule](https://eips.ethereum.org/EIPS/eip-2) is checked separately.
+Gas limits and fee products use integer native wei, with a separate explicit ceiling;
+they are not interpreted as micro-USDC. Seven tests sign locally with unfunded accounts,
+including a high-s payload that recovers the expected sender but must still be rejected.
+
+Its result is `signed-transaction-matched-only`. This validates bytes for eventual
+durable storage/readback, but does not itself persist them, reserve a nonce, establish
+exclusive key custody, authorize broadcast or demonstrate current chain acceptance.
+Terms must eventually come from the durable operator-owned mint slot, never an HTTP
+client. Signed transaction bytes are private bearer data until broadcast and must not
+be included in public status feeds or logs. Attestation expiry does not expire an outer
+signed transaction: it can still be mined and consume gas while reverting. Unknown
+prepared transactions therefore cannot free their nonce or gas reservation on timeout.
+
 The request-matching layer in `lib/gateway/withdrawal-attestation.ts` now checks a
 single attestation or a one-entry attestation set against the exact encoded original
 spec, including every routing field, value, salt, empty hook and length. It also checks
@@ -135,6 +154,10 @@ the new PostgreSQL check and production build. Attestation persistence and spec-
 commit `30d6161` passed [CI run 34555613062](https://github.com/tang-vu/keryx/actions/runs/34555613062),
 including unit tests, PostgreSQL, browser/contract checks and production build. These
 backend layers are not yet wired into the production creator withdrawal journey.
+
+Observer and PostgreSQL concurrency fixes through commit `591a03b` passed
+[CI run 34557370494](https://github.com/tang-vu/keryx/actions/runs/34557370494), including
+the expanded PostgreSQL contention drill, browser/contract checks and production build.
 
 The read-only observer adds seven tests using real local signatures and viem's RPC
 encoding over a synthetic transport. They cover exact calldata and caller, rejected

@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-167** - Prepared mint identity - *Bind exact signed transaction bytes before any
+storage or broadcast authority can depend on their hash.*
+The validator accepts canonical Arc-testnet EIP-1559 mint transactions only. It rechecks
+the original request/attestation, recovered relayer, nonce, minter, calldata, zero native
+value and exact bounded gas terms; low-s is checked separately from address recovery.
+The raw-byte hash is the transaction identity. Native gas wei and ERC-20 micro-USDC
+remain separate integer units. The validator grants no nonce or broadcast authority;
+exclusive signer custody, atomic gas/nonce slots and durable prepared-byte readback
+still precede submission. An expired inner attestation cannot be used to release an
+unknown outer signed transaction, which may still consume gas if mined and reverted.
+
 **D-166** - Withdrawal journal concurrency - *Preserve both unique identities while
 making duplicate storage recovery reliable under PostgreSQL contention.*
 CI exposed unique-index races for the same request/spec and request/transfer UUID:
