@@ -81,6 +81,24 @@ its broad diagnostic height bounds are not production policy. No signature, depo
 transfer or mint was performed. Fresh server height-window selection, submission-time
 expiry checks and review UI integration remain open.
 
+### Fresh source-chain window
+
+`withdrawal-height-window.ts` reads Circle `/v1/info` and a fresh Arc-testnet RPC block.
+It requires exactly one matching ARC/Testnet domain, the selected Gateway wallet/minter
+and USDC support. The vendor processed height must not be ahead of RPC or farther behind
+than the explicit processing-lag cap. Minimum expiry must be ahead of the observed block
+and within the operator-selected maximum future-block distance. The reader rechecks
+block number/hash/timestamp and chain, bounds metadata to 32 KiB and the total operation
+to ten seconds. This preserves the existing operator-selected-RPC trust model.
+
+The official [Gateway info reference](https://developers.circle.com/api-reference/gateway/all/get-gateway-info)
+was checked September 11. A live read followed by unsigned estimation with diagnostic
+caps returned HTTP 200, matching transfer terms and a finite expiry inside the observed
+window. Three tests cover stale/conflicting RPC, vendor lag, excessive expiry, contract
+mismatch, duplicate domains, cancellation and stalls. These caps are not production
+defaults. Terms can become stale during review/signing, so production configuration and
+submission-time revalidation remain open.
+
 ## HTTP configuration
 
 `createConfiguredWithdrawalHttpService` requires `KERYX_WITHDRAWAL_HTTP_ENABLED=1`

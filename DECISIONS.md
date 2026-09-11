@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-199** - Fresh source-chain expiry bounds - *Compare Circle's minimum expiry and
+processed height with a fresh consistent Arc-testnet RPC block.*
+The reader validates exactly one Arc-testnet domain, expected Gateway wallet/minter
+addresses and USDC support. Operator-selected limits cap processing lag and the maximum
+future block distance; a vendor minimum outside that window is rejected rather than
+expanded automatically. The RPC chain and sampled block identity/timestamp are rechecked,
+with a total deadline and bounded vendor response. This is operator-selected RPC/Circle
+metadata trust, not independent consensus proof or a promise that terms remain valid
+after a wallet prompt. A live unsigned synthetic-address estimate passed the fresh
+window with diagnostic caps. Production cap selection and submission-time rechecks
+remain required; no funds or signatures were used.
+
 **D-198** - Finite withdrawal estimation - *Obtain unsigned fee/expiry estimates and
 accept them only when the exact transfer spec and operator height/fee bounds match.*
 The new pre-signing estimator calls only Circle testnet /v1/estimate with an unsigned
