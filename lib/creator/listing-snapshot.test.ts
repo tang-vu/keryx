@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 import { parseListingSnapshot, sameListingSnapshot } from "./listing-snapshot";
 const value = { mode: "onchain", active: true, fetchPrice: 0.002,
   registryAddress: `0x${"a".repeat(40)}`, onchainId: `0x${"1".repeat(64)}`, creator: `0x${"b".repeat(40)}`,
-  current: { payoutWallet: `0x${"c".repeat(40)}`, authors: [], fetchPriceUsdc6: "2000", contentCid: "cid", tags: "research" } };
+  current: { payoutWallet: `0x${"c".repeat(40)}`, authors: [{ wallet: `0x${"c".repeat(40)}`, basisPoints: 10000 }], fetchPriceUsdc6: "2000", contentCid: "cid", tags: "research" } };
 it("normalizes address casing and ignores unrelated response fields", () => {
   expect(sameListingSnapshot(value, { ...value, registryAddress: `0x${"A".repeat(40)}`, extra: "not-authority" })).toBe(true);
 });
@@ -22,6 +22,7 @@ it.each([
   { ...value, fetchPrice: 0.05 },
   { ...value, current: { ...value.current, tags: "é".repeat(129) } },
   { ...value, current: { ...value.current, authors: [{ wallet: value.creator, basisPoints: 9999 }] } },
+  { ...value, current: { ...value.current, authors: [] } },
 ])("refuses malformed or inconsistent state %#", fresh => {
   expect(() => parseListingSnapshot(fresh)).toThrow("Listing data is unavailable");
 });

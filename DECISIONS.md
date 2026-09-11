@@ -1,5 +1,15 @@
 # Keryx — Decision Log
 
+**D-231** - Separate revision-checked registry candidate - *An off-chain freshness
+read cannot make a pending full-record update atomic.* V2 requires an expected per-source
+revision for every edit and adds a price-only method plus a single-call record/revision
+snapshot. It excludes unchecked legacy edit selectors and prevents edits after delisting.
+Failed transactions roll revision changes back. The candidate is a distinct contract,
+not a silent change to the deployed V1 source or a permission to switch registry addresses.
+Creator-authorized migration, registry identity binding, client recovery, independent
+review and funded acceptance remain required; see the V2 candidate document. Both
+contracts require nonempty author splits, so browser snapshot validation now agrees.
+
 **D-230** - Revalidate listing state before the wallet prompt - *A price-only UI must
 not silently resubmit obsolete payout, split or content fields.* Existing registry
 updates replace the whole record. Both management actions now fetch a bounded fresh

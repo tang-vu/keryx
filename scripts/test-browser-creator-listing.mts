@@ -44,7 +44,7 @@ try {
       if (unavailable) return route.fulfill({ status: 503, json: { error: "synthetic outage" } });
       return route.fulfill({ json: {
       mode: "onchain", fetchPrice: 0.002, active: true, creator, registryAddress: registry,
-      onchainId: `0x${"1".repeat(64)}`, current: { payoutWallet: currentPayout, authors: [], fetchPriceUsdc6: "2000", contentCid: "synthetic", tags: "research" },
+      onchainId: `0x${"1".repeat(64)}`, current: { payoutWallet: currentPayout, authors: [{ wallet: payout, basisPoints: 10000 }], fetchPriceUsdc6: "2000", contentCid: "synthetic", tags: "research" },
     } }); }
     return route.fulfill({ contentType: "text/html", body: '<meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div>' });
   });

@@ -6,7 +6,13 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.63 (listing freshness before signing, updated 2026-09-12)
+**Version:** 0.22.64 (local registry V2 candidate, updated 2026-09-12)
+
+A [separate V2 contract candidate](./engineering/registry-v2-candidate.md) rejects stale
+revisions inside the EVM and offers price-only updates. Local tests include two queued
+edits sharing a revision. It is not deployed or wired into the application: V1's wallet
+prompt race remains open until reviewed integration and creator-authorized migration.
+Browser snapshot validation now rejects empty author lists, matching both contracts.
 
 Listing actions now re-read and validate registry details immediately before opening
 the wallet. Changed fields require explicit review; read failures or wallet/source

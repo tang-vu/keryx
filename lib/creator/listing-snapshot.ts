@@ -10,8 +10,8 @@ const snapshot = z.object({
   creator: address,
   current: z.object({
     payoutWallet: address,
-    authors: z.array(z.object({ wallet: address, basisPoints: z.number().int().min(1).max(10000) })).max(20)
-      .refine(authors => authors.length === 0 || authors.reduce((sum, a) => sum + a.basisPoints, 0) === 10000),
+    authors: z.array(z.object({ wallet: address, basisPoints: z.number().int().min(1).max(10000) })).min(1).max(20)
+      .refine(authors => authors.reduce((sum, a) => sum + a.basisPoints, 0) === 10000),
     fetchPriceUsdc6: z.string().regex(/^(0|[1-9][0-9]{0,19})$/)
       .refine(value => /^(0|[1-9][0-9]{0,19})$/.test(value) && BigInt(value) <= BigInt("18446744073709551615")),
     contentCid: text(128), tags: text(256),
