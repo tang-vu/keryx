@@ -28,12 +28,23 @@ try {
     }
   }
   sql("create role anon; create role authenticated; create role service_role bypassrls;\n"
-    + readFileSync("supabase/migrations/0062_creator_withdrawal_requests.sql", "utf8"));
+    + readFileSync("supabase/migrations/0062_creator_withdrawal_requests.sql", "utf8")
+    + readFileSync("supabase/migrations/0063_creator_withdrawal_spec_identity.sql", "utf8")
+    + readFileSync("supabase/migrations/0064_creator_withdrawal_attestations.sql", "utf8"));
   // DB concurrency fixture only. Signature verification is exercised by adapter tests.
   const reserve = `select public.reserve_creator_withdrawal(${id},${owner},jsonb_build_object(
-    'id',${id},'owner',${owner},'network','eip155:5042002','format','creator-withdrawal-request-v1'))`;
+    'id',${id},'owner',${owner},'network','eip155:5042002','format','creator-withdrawal-request-v1',
+    'request',jsonb_build_object('burnIntent',jsonb_build_object('spec',jsonb_build_object('salt','synthetic-spec')))))`;
   await Promise.all([concurrent(reserve), concurrent(reserve)]);
   assert.equal(sql("select count(*) from public.creator_withdrawal_requests").trim(), "1");
+  sql(`set role service_role; do $$ declare original jsonb; begin
+    select data into original from public.creator_withdrawal_requests where id=${id};
+    begin
+      perform public.reserve_creator_withdrawal('0x'||repeat('6',64),${owner},
+        original || jsonb_build_object('id','0x'||repeat('6',64)));
+      raise exception 'duplicate underlying spec accepted';
+    exception when unique_violation then null; end;
+  end $$;`);
   assert.equal(sql(`set role service_role; select public.claim_creator_withdrawal_transfer(${id},'0x'||repeat('9',40),'99999999-9999-4999-8999-999999999999')`).trim().split(/\s+/).at(-1), "f");
   const flags = (await Promise.all([concurrent(claim("3")), concurrent(claim("4"))]))
     .flatMap(value => value.split(/\s+/).filter(part => part === "t" || part === "f")).sort();
@@ -41,20 +52,37 @@ try {
   const original = sql(`select claim_id,started_at from public.creator_withdrawal_transfer_attempts where id=${id}`).trim();
   assert.equal((await concurrent(claim("5"))).split(/\s+/).filter(part => part === "t" || part === "f").join(), "f");
   assert.equal(sql(`select claim_id,started_at from public.creator_withdrawal_transfer_attempts where id=${id}`).trim(), original);
+  const attestation = `jsonb_build_object('requestId',${id},'transferId','77777777-7777-4777-8777-777777777777',
+    'format','creator-withdrawal-attestation-v1','authority','request-matched-only')`;
+  sql(`set role service_role; select public.save_creator_withdrawal_attestation(${id},${owner},
+    '99999999-9999-4999-8999-999999999999','77777777-7777-4777-8777-777777777777',${attestation});
+    select public.save_creator_withdrawal_attestation(${id},'0x'||repeat('9',40),
+    (select claim_id from public.creator_withdrawal_transfer_attempts where id=${id}),
+    '77777777-7777-4777-8777-777777777777',${attestation});`);
+  assert.equal(sql("select count(*) from public.creator_withdrawal_attestations").trim(), "0");
+  const save = `select public.save_creator_withdrawal_attestation(${id},${owner},
+    (select claim_id from public.creator_withdrawal_transfer_attempts where id=${id}),
+    '77777777-7777-4777-8777-777777777777',${attestation})`;
+  await Promise.all([concurrent(save), concurrent(save)]);
+  assert.equal(sql("select count(*) from public.creator_withdrawal_attestations").trim(), "1");
   sql(`set role service_role; do $$ begin
     begin update public.creator_withdrawal_requests set owner=owner; raise exception 'request update allowed'; exception when insufficient_privilege then null; end;
     begin delete from public.creator_withdrawal_requests; raise exception 'request delete allowed'; exception when insufficient_privilege then null; end;
     begin update public.creator_withdrawal_transfer_attempts set claim_id=claim_id; raise exception 'claim update allowed'; exception when insufficient_privilege then null; end;
     begin delete from public.creator_withdrawal_transfer_attempts; raise exception 'claim delete allowed'; exception when insufficient_privilege then null; end;
+    begin update public.creator_withdrawal_attestations set data=data; raise exception 'attestation update allowed'; exception when insufficient_privilege then null; end;
+    begin delete from public.creator_withdrawal_attestations; raise exception 'attestation delete allowed'; exception when insufficient_privilege then null; end;
   end $$; reset role;
   do $$ declare role_name text; begin
     foreach role_name in array array['anon','authenticated'] loop
       if has_table_privilege(role_name,'public.creator_withdrawal_requests','select')
         or has_table_privilege(role_name,'public.creator_withdrawal_transfer_attempts','select')
+        or has_table_privilege(role_name,'public.creator_withdrawal_attestations','select')
         or has_function_privilege(role_name,'public.reserve_creator_withdrawal(text,text,jsonb)','execute')
         or has_function_privilege(role_name,'public.claim_creator_withdrawal_transfer(text,text,uuid)','execute')
+        or has_function_privilege(role_name,'public.save_creator_withdrawal_attestation(text,text,uuid,uuid,jsonb)','execute')
       then raise exception 'public withdrawal journal authority'; end if;
     end loop;
   end $$;`);
-  console.log("PASS: PostgreSQL 17 duplicate request and competing claim admission, retained original attempt, foreign-owner denial and private service permissions. Synthetic database fixture only; no signing or transfers.");
+  console.log("PASS: PostgreSQL 17 request/spec uniqueness, competing claim admission, immutable request-matched attestation, foreign-owner/claim denial and private service permissions. Synthetic database fixture only; no signing or transfers.");
 } finally { if (started) docker(["rm", "-f", name]); }

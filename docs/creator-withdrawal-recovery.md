@@ -1,6 +1,6 @@
 # Creator cash-out recovery implementation
 
-Status, 2026-09-11: in progress. The signed-request and single-admission layers are
+Status, 2026-09-11: in progress. The signed-request, single-admission and matched-response layers are
 implemented; the production HTTP relay still needs integration with the full recovery
 flow. Do not describe this foundation as completed withdrawal recovery.
 
@@ -25,11 +25,22 @@ transfer UUID or encoded TransferSpec hash.
 
 `lib/gateway/withdrawal-request.ts` creates a versioned Arc-testnet private record.
 `lib/db/creator-withdrawal-requests.ts` and migration 0062 persist that original record
-and a separate single-use transfer claim. Repeated requests return the same stored
+and a separate single-use transfer claim. Migration 0063 also makes the underlying
+canonical TransferSpec unique. Changing a signed fee or block-height limit changes the
+BurnIntent ID but cannot create another journal/admission for that same transfer.
+Repeated requests return the same stored
 snapshot or reject conflicting policy; they cannot overwrite it. Only the newly inserted
 claim, with exact readback of its generated token, authorizes the first transfer call.
 Response loss leaves the attempt retained. Retry cannot acquire another claim. No
 network, signature service, Circle request or mint is performed by these database methods.
+
+Migration 0064 and `lib/db/creator-withdrawal-attestations.ts` save the original matched
+response under that same transfer claim. A foreign owner or different claim cannot save
+it. Duplicate writes read back the original timestamp and payload; a different response
+conflicts. Stored request identity, transfer UUID, spec hash and authority label are
+revalidated on every read. A lost database response can be recovered by reading/repeating
+the storage operation with the same snapshot, without another Circle POST. This does
+not renew an attestation or grant mint permission. No cash-out ledger row is created.
 
 The SQLite schema and Supabase adapter expose identical backend methods. Both retain
 request and claim identity; PostgreSQL grants journal reads and RPC execution to the
@@ -39,8 +50,19 @@ tombstone policy need to preserve replay barriers while respecting the final pri
 
 ## Remaining implementation and acceptance
 
-1. Bind Circle's attestation bytes and transfer status to the exact original spec;
-   persist response evidence without inventing confirmation from HTTP success alone.
+The request-matching layer in `lib/gateway/withdrawal-attestation.ts` now checks a
+single attestation or a one-entry attestation set against the exact encoded original
+spec, including every routing field, value, salt, empty hook and length. It also checks
+the returned expiration height against the payload. Its output explicitly says
+`request-matched-only`: this does not authenticate Circle's signature, establish current
+mint eligibility, prove settlement or verify chain finality. The encoding is checked
+against Circle's [TransferSpec](https://github.com/circlefin/evm-gateway-contracts/blob/fd51093c7a1ba8e50ea2c6029ebf1bdc2bb2b8e8/src/lib/TransferSpec.sol)
+and [attestation definitions](https://github.com/circlefin/evm-gateway-contracts/blob/fd51093c7a1ba8e50ea2c6029ebf1bdc2bb2b8e8/src/lib/Attestations.sol)
+at the pinned source revision. Deployed-contract/version matching remains required.
+
+1. Authenticate the request-matched attestation against the intended deployed minter,
+   and bind later Circle transfer status to the exact original spec. Persisting a response
+   is not confirmation from HTTP success alone.
 2. Establish exclusive, bounded mint signer/nonce authority. The current general funder
    also signs elsewhere; an isolated nonce counter would not control those other senders.
    Persist prepared transaction identity before broadcast and retain uncertainty after
@@ -64,16 +86,24 @@ must be verified separately from this testnet implementation.
 
 ## Current checks
 
-Nine focused tests pass, including the actual browser builder signing with an unfunded
+Fifteen focused tests pass, including the actual browser builder signing with an unfunded
 local account, modified terms, canonical encoding, caller mutation, SQLite connection/restart
 contention, immutable barriers, foreign-owner denial and Supabase committed-response loss.
 TypeScript and focused lint pass. The isolated PostgreSQL 17 harness also passes duplicate
 request/claim contention, original-attempt retention and service/client permission checks.
 Its unsigned synthetic SQL fixture tests database semantics; application tests separately
-verify signatures. None of these tests sends funds or establishes the integrated journey.
+verify signatures. Attestation checks cover changed spec fields, malformed headers,
+wrong set counts and inconsistent expiry. Persistence checks include restart, competing
+writes, foreign owner/claim, immutable records and lost-response/corrupt-readback handling.
+Synthetic response signatures are deliberately
+not presented as Circle authorization. None of these tests sends funds or establishes
+the integrated journey. Foundation commit `2bd3801` also passed
+[CI run 34554723909](https://github.com/tang-vu/keryx/actions/runs/34554723909), including
+the new PostgreSQL check and production build; later codec/spec-identity changes require
+their own release verification.
 
 ```sh
-npx vitest run lib/gateway/withdraw-protocol.test.ts lib/db/creator-withdrawal-requests.test.ts
+npx vitest run lib/gateway/withdraw-protocol.test.ts lib/db/creator-withdrawal-requests.test.ts lib/gateway/withdrawal-attestation.test.ts
 node --import tsx scripts/test-creator-withdrawal-postgres.mts
 npm run typecheck
 ```

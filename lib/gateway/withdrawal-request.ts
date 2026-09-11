@@ -1,7 +1,8 @@
 import { z } from "zod";
+import type { Hex } from "viem";
 import { verifyWithdrawRequest, withdrawPolicySchema, withdrawRequestSchema, type WithdrawPolicy } from "./withdraw-protocol";
 
-export const withdrawalIdSchema = z.string().regex(/^0x[a-f0-9]{64}$/);
+export const withdrawalIdSchema = z.string().regex(/^0x[a-f0-9]{64}$/).transform(value => value as Hex);
 export const withdrawalOwnerSchema = z.string().regex(/^0x[a-fA-F0-9]{40}$/).transform(value => value.toLowerCase());
 const schema = z.object({
   format: z.literal("creator-withdrawal-request-v1"), network: z.literal("eip155:5042002"),

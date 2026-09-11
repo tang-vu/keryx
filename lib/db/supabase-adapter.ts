@@ -11,6 +11,7 @@ import { releaseSupabasePrivateTreasury } from "./private-treasury-release";
 import { getSupabasePrivateInterruption, interruptSupabasePrivateResearch } from "./private-research-interruptions";
 import { reserveSupabaseWithdrawalRequest, getSupabaseWithdrawalRequest, claimSupabaseWithdrawalTransfer, getSupabaseWithdrawalTransferClaim } from "./creator-withdrawal-requests";
 import type { WithdrawalRequestRecord } from "../gateway/withdrawal-request";
+import { saveSupabaseWithdrawalAttestation, getSupabaseWithdrawalAttestation } from "./creator-withdrawal-attestations";
 import { listSupabasePrivateWorkerCandidates, listSupabasePrivateReconciliationCandidates } from "./private-worker-candidates";
 import { admitSupabasePrivateCreatorSubmission, listSupabasePrivateCreatorSubmissions, type PrivateCreatorSubmission } from "./private-creator-submissions";
 import { saveSupabasePrivateResult, getSupabasePrivateResult } from "./private-research-results";
@@ -1112,6 +1113,8 @@ export class SupabaseAdapter implements KeryxDB {
   async getCreatorWithdrawal(id: string, owner: string) { return getSupabaseWithdrawalRequest(this.sb, id, owner); }
   async claimCreatorWithdrawalTransfer(id: string, owner: string) { return claimSupabaseWithdrawalTransfer(this.sb, id, owner); }
   async getCreatorWithdrawalTransferClaim(id: string, owner: string) { return getSupabaseWithdrawalTransferClaim(this.sb, id, owner); }
+  async saveCreatorWithdrawalAttestation(id: string, owner: string, claimId: string, value: unknown) { return saveSupabaseWithdrawalAttestation(this.sb, id, owner, claimId, value); }
+  async getCreatorWithdrawalAttestation(id: string, owner: string) { return getSupabaseWithdrawalAttestation(this.sb, id, owner); }
 
   async listWithdrawals(limit: number): Promise<WithdrawalRecord[]> {
     const { data } = await this.sb

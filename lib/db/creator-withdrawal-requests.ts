@@ -12,6 +12,24 @@ CREATE TABLE IF NOT EXISTS creator_withdrawal_requests (
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 CREATE INDEX IF NOT EXISTS creator_withdrawal_owner ON creator_withdrawal_requests(owner,created_at DESC,id DESC);
+-- Canonical field sequence, independent of object-key order. A different BurnIntent
+-- fee/expiry must not obtain a second admission for the same encoded TransferSpec.
+CREATE UNIQUE INDEX IF NOT EXISTS creator_withdrawal_spec_once ON creator_withdrawal_requests(json_array(
+  json_extract(data,'$.request.burnIntent.spec.version'),
+  json_extract(data,'$.request.burnIntent.spec.sourceDomain'),
+  json_extract(data,'$.request.burnIntent.spec.destinationDomain'),
+  json_extract(data,'$.request.burnIntent.spec.sourceContract'),
+  json_extract(data,'$.request.burnIntent.spec.destinationContract'),
+  json_extract(data,'$.request.burnIntent.spec.sourceToken'),
+  json_extract(data,'$.request.burnIntent.spec.destinationToken'),
+  json_extract(data,'$.request.burnIntent.spec.sourceDepositor'),
+  json_extract(data,'$.request.burnIntent.spec.destinationRecipient'),
+  json_extract(data,'$.request.burnIntent.spec.sourceSigner'),
+  json_extract(data,'$.request.burnIntent.spec.destinationCaller'),
+  json_extract(data,'$.request.burnIntent.spec.value'),
+  json_extract(data,'$.request.burnIntent.spec.salt'),
+  json_extract(data,'$.request.burnIntent.spec.hookData')
+));
 CREATE TABLE IF NOT EXISTS creator_withdrawal_transfer_attempts (
   id TEXT PRIMARY KEY REFERENCES creator_withdrawal_requests(id),
   claim_id TEXT NOT NULL,

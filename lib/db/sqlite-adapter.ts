@@ -11,6 +11,7 @@ import { claimSqlitePrivateExecution, getSqlitePrivateExecution, PRIVATE_RESEARC
 import { DatabaseSync } from "node:sqlite";
 import { CREATOR_WITHDRAWAL_REQUESTS_SQL, reserveSqliteWithdrawalRequest, getSqliteWithdrawalRequest, claimSqliteWithdrawalTransfer, getSqliteWithdrawalTransferClaim } from "./creator-withdrawal-requests";
 import type { WithdrawalRequestRecord } from "../gateway/withdrawal-request";
+import { CREATOR_WITHDRAWAL_ATTESTATIONS_SQL, saveSqliteWithdrawalAttestation, getSqliteWithdrawalAttestation } from "./creator-withdrawal-attestations";
 import { getSqlitePrivateTreasurySummary } from "./private-treasury-summary";
 import { PRIVATE_TREASURY_RELEASE_SQL, releaseSqlitePrivateTreasury } from "./private-treasury-release";
 import { PRIVATE_RESEARCH_INTERRUPTION_SQL, getSqlitePrivateInterruption, interruptSqlitePrivateResearch } from "./private-research-interruptions";
@@ -331,6 +332,7 @@ ${PRIVATE_CREATOR_CONFIRMATIONS_SQL}
 ${PRIVATE_TREASURY_RELEASE_SQL}
 ${PRIVATE_RESEARCH_INTERRUPTION_SQL}
 ${CREATOR_WITHDRAWAL_REQUESTS_SQL}
+${CREATOR_WITHDRAWAL_ATTESTATIONS_SQL}
 `;
 
 export class SqliteAdapter implements KeryxDB {
@@ -2070,6 +2072,8 @@ export class SqliteAdapter implements KeryxDB {
   async getCreatorWithdrawal(id: string, owner: string) { return getSqliteWithdrawalRequest(this.db, id, owner); }
   async claimCreatorWithdrawalTransfer(id: string, owner: string) { return claimSqliteWithdrawalTransfer(this.db, id, owner); }
   async getCreatorWithdrawalTransferClaim(id: string, owner: string) { return getSqliteWithdrawalTransferClaim(this.db, id, owner); }
+  async saveCreatorWithdrawalAttestation(id: string, owner: string, claimId: string, value: unknown) { return saveSqliteWithdrawalAttestation(this.db, id, owner, claimId, value); }
+  async getCreatorWithdrawalAttestation(id: string, owner: string) { return getSqliteWithdrawalAttestation(this.db, id, owner); }
 
   async listWithdrawals(limit: number): Promise<WithdrawalRecord[]> {
     const rows = this.db

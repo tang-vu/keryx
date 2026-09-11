@@ -9,6 +9,7 @@ import type { PrivateTreasuryRelease } from "./private-treasury-release";
 import type { PrivateResearchInterruption } from "./private-research-interruptions";
 import type { WithdrawalRequestRecord } from "../gateway/withdrawal-request";
 import type { WithdrawalTransferClaim } from "./creator-withdrawal-requests";
+import type { SavedWithdrawalAttestation } from "./creator-withdrawal-attestations";
 import type { PrivateTreasurySummary } from "./private-treasury-summary";
 import type { PrivateCreatorSubmission, PrivateCreatorSubmissionRecord } from "./private-creator-submissions";
 import type { PrivateResearchResult } from "./private-research-results";
@@ -561,6 +562,8 @@ export interface KeryxDB {
   /** Single initial transfer admission; an existing claim is never execution permission. */
   claimCreatorWithdrawalTransfer(id: string, owner: string): Promise<WithdrawalTransferClaim | null>;
   getCreatorWithdrawalTransferClaim(id: string, owner: string): Promise<WithdrawalTransferClaim | null>;
+  saveCreatorWithdrawalAttestation(id: string, owner: string, claimId: string, value: unknown): Promise<SavedWithdrawalAttestation>;
+  getCreatorWithdrawalAttestation(id: string, owner: string): Promise<SavedWithdrawalAttestation | null>;
   /** Recent cash-outs, newest first — each carries a real /tx/-resolvable EVM hash. */
   listWithdrawals(limit: number): Promise<WithdrawalRecord[]>;
 }
