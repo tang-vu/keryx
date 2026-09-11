@@ -30,7 +30,7 @@ import {
 } from "viem";
 import { config } from "@/lib/config";
 
-import { WITHDRAW_TYPES as BURN_INTENT_TYPES } from "./withdraw-protocol";
+import { withdrawTypedData } from "./withdraw-protocol";
 
 /** Wire-safe burn intent (all bigints serialised to decimal strings) sent to /api/withdraw. */
 export interface WireBurnIntent {
@@ -73,23 +73,21 @@ function randomSalt(): Hex {
 }
 
 /**
- * Build a same-chain (Arc → Arc) burn intent for `valueAtomic` USDC to `recipient`, signed by
- * the connected wallet. sourceDepositor/sourceSigner are the signer's own address — Circle only
+ * Prepare an unsigned same-chain (Arc → Arc) burn intent for `valueAtomic` USDC to `recipient`.
+ * sourceDepositor/sourceSigner are the owner's address — Circle only
  * mints against a balance the signer actually owns.
  *
- * @param walletClient - the connected creator wallet (wagmi useWalletClient)
+ * @param owner        - the connected creator wallet address
  * @param valueAtomic  - amount to withdraw in atomic USDC units (6 decimals)
  * @param recipient    - address to receive the minted USDC (defaults to the signer)
  */
-export async function buildAndSignWithdrawIntent(
-  walletClient: WalletClient,
+export function prepareWithdrawIntent(
+  owner: string,
   valueAtomic: bigint,
   recipient?: string,
-): Promise<SignedWithdrawIntent> {
-  const account = walletClient.account;
-  if (!account) throw new Error("wallet has no account");
-  const from = getAddress(account.address);
-  const to = getAddress(recipient ?? account.address);
+): WireBurnIntent {
+  const from = getAddress(owner);
+  const to = getAddress(recipient ?? owner);
   if (valueAtomic <= BigInt(0)) throw new Error("withdraw amount must be > 0");
 
   const domain = config.cctpDomain; // Arc testnet CCTP domain (same source + destination)
@@ -113,18 +111,6 @@ export async function buildAndSignWithdrawIntent(
     salt,
     hookData: "0x" as Hex,
   };
-  const message = { maxBlockHeight: maxUint256, maxFee, spec };
-
-  // domain = { name, version } only (no chainId) → chain-agnostic signature, no gas, no switch.
-  // viem derives EIP712Domain([name, version]) from this domain, identical to the SDK.
-  const signature = await walletClient.signTypedData({
-    account,
-    domain: { name: "GatewayWallet", version: "1" },
-    types: BURN_INTENT_TYPES,
-    primaryType: "BurnIntent",
-    message,
-  });
-
   // Serialise bigints → strings for JSON transport. Equal numeric values ⇒ Circle reconstructs
   // the same EIP-712 digest, so the signature still verifies (the SDK posts strings too).
   const burnIntent: WireBurnIntent = {
@@ -133,5 +119,16 @@ export async function buildAndSignWithdrawIntent(
     spec: { ...spec, value: valueAtomic.toString() },
   };
 
+  return burnIntent;
+}
+
+/** Legacy wrapper. The recovery UI must persist prepareWithdrawIntent's draft before
+ * invoking wallet signing, then save the original signature before transport. */
+export async function buildAndSignWithdrawIntent(walletClient: WalletClient, valueAtomic: bigint,
+  recipient?: string): Promise<SignedWithdrawIntent> {
+  const account = walletClient.account;
+  if (!account) throw new Error("wallet has no account");
+  const burnIntent = prepareWithdrawIntent(account.address, valueAtomic, recipient);
+  const signature = await walletClient.signTypedData({ account, ...withdrawTypedData(burnIntent as Parameters<typeof withdrawTypedData>[0]) });
   return { burnIntent, signature };
 }

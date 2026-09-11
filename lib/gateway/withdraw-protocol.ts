@@ -62,14 +62,11 @@ export function withdrawTypedData(intent: WithdrawRequest["burnIntent"]) {
       spec: { ...intent.spec, value: BigInt(intent.spec.value) } } };
 }
 
-/** Validated request snapshot for later durable admission. This grants no permission
- * to submit, retry, mint or report settlement. ID is the BurnIntent EIP-712 digest,
- * NOT Circle's transfer ID or TransferSpec hash. The caller authenticates policy.owner. */
-export async function verifyWithdrawRequest(value: unknown, selectedPolicy: WithdrawPolicy) {
+/** Unsigned terms and identity only; no submission or signing authority. */
+export function validateWithdrawIntent(value: unknown, selectedPolicy: WithdrawPolicy) {
   try {
-    // Snapshot caller-owned objects before the first asynchronous signature check.
-    const request = withdrawRequestSchema.parse(value), policy = withdrawPolicySchema.parse(selectedPolicy);
-    const { spec } = request.burnIntent;
+    const burnIntent = withdrawRequestSchema.shape.burnIntent.parse(value), policy = withdrawPolicySchema.parse(selectedPolicy);
+    const { spec } = burnIntent;
     const b32 = (value: string) => `0x${"0".repeat(24)}${value.slice(2)}`;
     if (spec.sourceDomain !== policy.domain || spec.destinationDomain !== policy.domain
       || spec.sourceContract !== b32(policy.gatewayWallet) || spec.destinationContract !== b32(policy.gatewayMinter)
@@ -77,10 +74,20 @@ export async function verifyWithdrawRequest(value: unknown, selectedPolicy: With
       || spec.sourceDepositor !== b32(policy.owner) || spec.sourceSigner !== b32(policy.owner)
       || spec.destinationRecipient !== b32(policy.recipient) || spec.destinationCaller !== `0x${"0".repeat(64)}`
       || BigInt(spec.value) > BigInt(policy.maxValueMicros)
-      || BigInt(request.burnIntent.maxFee) > BigInt(policy.maxFeeMicros)) throw new Error();
-    const typed = withdrawTypedData(request.burnIntent);
+      || BigInt(burnIntent.maxFee) > BigInt(policy.maxFeeMicros)) throw new Error();
+    return { id: hashTypedData(withdrawTypedData(burnIntent)), owner: policy.owner, recipient: policy.recipient, burnIntent };
+  } catch { throw new Error("Withdrawal intent unavailable"); }
+}
+
+/** Verify the signed original before admission. ID is the BurnIntent EIP-712 digest,
+ * not Circle's transfer UUID or spec hash. The caller authenticates policy.owner. */
+export async function verifyWithdrawRequest(value: unknown, selectedPolicy: WithdrawPolicy) {
+  try {
+    const request = withdrawRequestSchema.parse(value), policy = withdrawPolicySchema.parse(selectedPolicy);
+    const checked = validateWithdrawIntent(request.burnIntent, policy);
+    const typed = withdrawTypedData(checked.burnIntent);
     const signer = await recoverTypedDataAddress({ ...typed, signature: request.signature });
     if (signer.toLowerCase() !== policy.owner) throw new Error();
-    return { id: hashTypedData(typed), owner: policy.owner, recipient: policy.recipient, request };
+    return { id: checked.id, owner: policy.owner, recipient: policy.recipient, request };
   } catch { throw new Error("Withdrawal authorization unavailable"); }
 }

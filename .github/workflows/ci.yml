@@ -67,6 +67,9 @@ jobs:
       - name: Private browser journal (hermetic, no settlement)
         run: npm run test:browser-private-journal
 
+      - name: Creator withdrawal journal (hermetic, no settlement)
+        run: npm run test:browser-withdrawal-journal
+
       - name: Private browser checkout (hermetic, no settlement)
         run: npm run test:browser-private-checkout
 

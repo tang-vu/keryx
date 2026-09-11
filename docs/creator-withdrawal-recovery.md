@@ -189,6 +189,37 @@ commit `16e6fdd` passed
 [CI run 34563259680](https://github.com/tang-vu/keryx/actions/runs/34563259680), including
 Linux queue CLI tests and production build.
 
+## Browser draft/signature journal
+
+`lib/gateway/withdrawal-browser-journal.ts` now persists an owner-scoped unsigned
+draft before wallet signing, the verified original signature and a single submission
+marker in strict IndexedDB transactions. Its identity/policy validation uses the same
+EIP-712 fields as the backend. `prepareWithdrawIntent` exposes the builder's unsigned
+step; the existing `buildAndSignWithdrawIntent` wrapper retains its behavior for the
+legacy panel. Signature verification remains mandatory for every signed-row read.
+Transactions compare the complete previous row before writing and resolve only after
+commit, so competing tabs cannot both claim transport permission. Unsigned reservations
+are retained after rejected/interrupted prompts, and owner-indexed history is paginated.
+
+Imported originals are permanently recovery-only. Missing/corrupt storage never makes
+an existing original eligible for a local retry; recovery must use authenticated
+server evidence. The journal provides no signing, network, local deletion or export
+operation itself. It stores sensitive authorization material in origin-local IndexedDB,
+which is not a security boundary against same-origin scripts/XSS, browser eviction or
+manual replacement. Server request/spec uniqueness and transfer claims remain the
+financial replay barriers. Finite authorization expiry, active-account rechecks in
+the eventual UI and the full browser/server recovery flow still require integration.
+
+`npm run test:browser-withdrawal-journal` runs Chromium with all HTTP intercepted and
+unfunded local EOA signatures. It checks pre-sign persistence, backend identity agreement,
+two-tab claiming, reload, owner isolation, actual transaction abort, corruption,
+recovery-only imports after database deletion, local pagination and unavailable storage.
+The test is included in CI. The production panel is not yet wired to this journal.
+Local Chromium verification, sixteen protocol/coordinator tests, focused lint and
+TypeScript checking pass. Status-handler commit `fcfe3d9` passed
+[CI run 34563608777](https://github.com/tang-vu/keryx/actions/runs/34563608777), including
+production build.
+
 ## Read-only mint observation
 
 `lib/gateway/withdrawal-mint-observation.ts` revalidates the original request and matched

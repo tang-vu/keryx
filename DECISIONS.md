@@ -1,5 +1,20 @@
 # Keryx — Decision Log
 
+**D-180** - Browser withdrawal journal - *Persist the unsigned draft before the wallet
+prompt, then the original signature before a single cross-tab submission claim.*
+The intent builder now exposes an unsigned preparation step while its legacy wrapper
+preserves the existing signed-wire behavior. The browser journal validates the same
+EIP-712 identity and owner/policy as the server, records drafts and signatures in
+strict IndexedDB transactions and compares the complete prior row before transitions.
+Only the caller whose submission marker commits may transmit; reload and imports
+cannot renew that permission. Imports always remain recovery-only, including after
+local storage loss. Owner-indexed pagination includes unsigned reservations. This is
+local recovery state, not payment/finality evidence or protection against same-origin
+script compromise, browser eviction or operator-driven storage replacement. Server
+single-use claims remain the payment authority. The new journal is not yet connected
+to the production withdrawal panel; deletion/export UX and full browser/server
+acceptance remain open.
+
 **D-179** - Withdrawal status boundary - *Read the original owner's transfer state
 without accepting payment capabilities or exposing selectors in URLs.*
 The server handler accepts a same-origin read-only POST with a strict 1 KiB JSON
