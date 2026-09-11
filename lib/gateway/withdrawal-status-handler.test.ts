@@ -17,6 +17,24 @@ const request = (body: unknown, extra: RequestInit = {}) => new Request("https:/
 });
 const signedOut = () => Response.json({ error: "Sign in to access your account." }, { status: 401, headers: { "Cache-Control": "no-store" } });
 
+it("reads mint history only for the stored owner and reauthenticates after the read", async () => {
+  const f = await creatorWithdrawalFixture(); await db.reserveCreatorWithdrawal(f.record);
+  let revoked = false;
+  const authenticate = async () => revoked ? signedOut() : { db, wallet: f.record.owner };
+  const mint = { wallet: f.record.owner, requestId: f.record.id, recipient: f.record.policy.recipient,
+    amountMicros: f.record.request.burnIntent.spec.value, mintStatus: "prepared" as const, chainFinalityVerified: false as const };
+  const reader = vi.fn(async (original, owner) => { expect(original).toEqual(f.record); expect(owner).toBe(f.record.owner); return mint; });
+  const handler = createWithdrawalStatusHandler(authenticate, reader);
+  expect(await (await handler(request({ id: f.record.id }))).json()).toMatchObject(mint);
+  reader.mockImplementationOnce(async () => { revoked = true; return mint; });
+  const denied = await handler(request({ id: f.record.id }));
+  expect(denied.status).toBe(401); expect(await denied.text()).not.toContain(f.record.id);
+  const calls = reader.mock.calls.length;
+  const foreign = createWithdrawalStatusHandler(async () => ({ db, wallet: `0x${"00".repeat(20)}` }), reader);
+  expect((await foreign(request({ id: f.record.id }))).status).toBe(404);
+  expect(reader).toHaveBeenCalledTimes(calls);
+});
+
 it("returns private owner-scoped transfer progress without giving stored evidence mint authority", async () => {
   const f = await creatorWithdrawalFixture(); await db.reserveCreatorWithdrawal(f.record);
   const claim = (await db.claimCreatorWithdrawalTransfer(f.record.id, f.record.owner))!;

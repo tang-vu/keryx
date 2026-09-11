@@ -3,6 +3,7 @@ import { createWithdrawalRuntimeAdmission } from "./withdrawal-admission-bootstr
 import { createWithdrawalSubmitHandler } from "./withdrawal-submit-handler";
 import { createWithdrawalStatusHandler } from "./withdrawal-status-handler";
 import { requestCircleWithdrawalTransfer } from "./withdrawal-transfer-service";
+import { createWithdrawalMintReader } from "./withdrawal-mint-reader";
 
 /** Server configuration only. Concrete cookie/session, database, relay admission and
  * Circle transport binding; never accept these options from a request body. Routes
@@ -16,6 +17,7 @@ export function createWithdrawalHttpService(options: {
   return {
     submit: createWithdrawalSubmitHandler({ authenticate: accountSessionContext, limits: options.limits,
       admit, transfer: requestCircleWithdrawalTransfer }),
-    status: createWithdrawalStatusHandler(accountSessionContext),
+    status: createWithdrawalStatusHandler(accountSessionContext, options.env.KERYX_WITHDRAWAL_RELAY_DIRECTORY
+      ? createWithdrawalMintReader(options.env.KERYX_WITHDRAWAL_RELAY_DIRECTORY) : undefined),
   };
 }

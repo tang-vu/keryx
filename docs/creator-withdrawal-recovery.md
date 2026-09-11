@@ -373,9 +373,19 @@ gas costs and internal nonce terms. Cancellation withholds the result.
 Real SQLite journal tests exercise each state, original-policy mismatch, finalized
 observation recovery after reopening, projection fields, foreign-owner denial before
 reads and cancellation. Worker observations in these tests are synthetic and validated
-through the existing journal. Protected read-only runtime access, HTTP reauthentication,
-browser status parsing/presentation and idempotent cash-out ledger recording remain
-integration work; the existing status endpoint contract still reports mint not-checked.
+through the existing journal. Protected read-only runtime access, HTTP reauthentication
+and browser status parsing are now connected in the internal service. UI presentation
+and idempotent cash-out ledger recording remain integration work.
+
+`withdrawal-mint-reader.ts` opens only the configured existing protected journal with
+SQLite readOnly and query_only enabled. It verifies file identity and policy around
+opening and requires neither a signer nor RPC access. Configured missing/corrupt history
+fails closed; absent directory configuration retains explicit not-checked status. The
+HTTP handler reads the application original under the authenticated owner before the
+mint journal, then reauthenticates after reading. Native Linux verification confirms
+unchanged database bytes; HTTP tests cover revocation during the read and no journal
+access for foreign requests. Twenty focused tests, Chromium regression, lint and
+TypeScript checks pass locally. Production routes and funded acceptance remain open.
 
 ## Browser HTTP status recovery
 
@@ -384,8 +394,10 @@ endpoint using a fixed relative URL and POST body containing only the original I
 It uses same-origin credentials, no cache/redirects/retries, a five-second total
 deadline and 2 KiB response limit. Delayed headers/body or cancellation fail without
 granting a later response authority. The strict projection must match the retained
-draft's owner, recipient, amount and EIP-712 ID, with `chainFinalityVerified: false`
-and `mintStatus: not-checked`. Extra payload fields and claimed completion are rejected.
+draft's owner, recipient, amount and EIP-712 ID. Unchecked, unqueued, queued and prepared
+states keep `chainFinalityVerified: false`. Finalized-observed requires true finality,
+transaction/block hashes, block number, observation timestamp and operator-selected-RPC
+basis. Extra fields and incomplete or contradictory finality metadata are rejected.
 404 means unavailable evidence, not failed/unsent; 401 requires authentication.
 Server diagnostic messages are not propagated into the UI.
 

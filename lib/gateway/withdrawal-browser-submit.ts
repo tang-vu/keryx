@@ -24,7 +24,9 @@ export async function sendWithdrawalBrowserOriginal(value: WithdrawalRequestReco
       combined.throwIfAborted();
       const body = await readBoundedJson(response, 2048); combined.throwIfAborted();
       if (response.status !== 202) throw new Error();
-      return matchWithdrawalBrowserStatus(draft, body);
+      const progress = matchWithdrawalBrowserStatus(draft, body);
+      if (progress.chainFinalityVerified || progress.mintStatus !== "not-checked") throw new Error();
+      return progress;
     })()]);
   } catch { throw new Error("Withdrawal submission unavailable; recover the original request"); }
   finally { clearTimeout(timer); combined.removeEventListener("abort", rejectAbort); }

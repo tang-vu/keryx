@@ -4,6 +4,7 @@ import { withdrawalIdSchema, withdrawalOwnerSchema } from "./withdrawal-request"
 import { withdrawalTransferProgress, type WithdrawalProgressStore } from "./withdrawal-transfer-service";
 import { checkWithdrawalRateLimit } from "./withdrawal-rate-limit";
 import type { KeryxDB } from "../db/keryx-db";
+import type { createWithdrawalMintReader } from "./withdrawal-mint-reader";
 
 type Context = { wallet: string; db: WithdrawalProgressStore & Pick<KeryxDB, "consumeRateLimit"> };
 type Authenticate = () => Promise<Context | Response>;
@@ -16,7 +17,7 @@ const json = (body: unknown, status = 200) => Response.json(body, { status, head
  * authenticate to live revocable account sessions, never client-provided identity.
  * A read-only POST keeps selectors out of access-log URLs. No payment capability
  * is accepted; stored transfer evidence does not establish mint completion. */
-export function createWithdrawalStatusHandler(authenticate: Authenticate) {
+export function createWithdrawalStatusHandler(authenticate: Authenticate, readMint?: ReturnType<typeof createWithdrawalMintReader>) {
   return async function readStatus(req: Request): Promise<Response> {
     if (req.method !== "POST") return new Response(null, { status: 405, headers: { Allow: "POST", "Cache-Control": "no-store" } });
     try {
@@ -38,13 +39,16 @@ export function createWithdrawalStatusHandler(authenticate: Authenticate) {
     try {
       const wallet = withdrawalOwnerSchema.parse(context.wallet);
       const progress = await withdrawalTransferProgress(context.db, id, wallet);
+      const original = progress && readMint ? await context.db.getCreatorWithdrawal(id, wallet) : null;
+      if (progress && readMint && !original) throw new Error("Withdrawal original unavailable");
+      const mint = original && readMint ? await readMint(original, wallet, req.signal) : null;
       // Revoke/account changes while reading must not release the previous owner's data.
       const fresh = await authenticate();
       if (fresh instanceof Response) return fresh;
       if (withdrawalOwnerSchema.parse(fresh.wallet) !== wallet)
         return json({ error: "Sign in again to access this withdrawal." }, 401);
       if (req.signal.aborted) return json({ error: "Withdrawal status request was cancelled." }, 408);
-      return progress ? json({ wallet, ...progress, mintStatus: "not-checked" })
+      return progress ? json({ wallet, ...progress, mintStatus: "not-checked", ...mint })
         : json({ error: "Withdrawal request unavailable." }, 404);
     } catch { return json({ error: "Withdrawal status is temporarily unavailable." }, 503); }
   };

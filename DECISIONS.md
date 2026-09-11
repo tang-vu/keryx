@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-190** - Mint status integration - *Read protected relay history without signer
+capabilities and reauthenticate before releasing the owner projection.*
+When the server config supplies a relay directory, status opens that existing journal
+read-only, verifies file identity/policy and derives the original-owner mint projection.
+This does not require submission enablement or a private key. Missing configured history
+fails closed; absent configuration retains explicit not-checked status. The HTTP handler
+looks up the original by authenticated wallet before journal access and checks the live
+session after reading. Browser status parsing accepts complete, original-bound finality
+metadata with its operator-selected-RPC basis; preparation remains nonfinal. Initial
+submission responses still cannot establish mint finality. Routes and UI remain unwired;
+cash-out ledger recording is separate work and no paid acceptance is claimed.
+
 **D-189** - Owner mint progress - *Project only validated original journal state and
 distinguish prepared bytes from observed finality.*
 The read-only projection requires the authenticated original owner before any journal

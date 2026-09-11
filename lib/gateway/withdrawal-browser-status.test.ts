@@ -30,6 +30,19 @@ it("posts only the private selector once to the fixed endpoint with no cache or 
   expect(fetcher).toHaveBeenCalledTimes(1);
 });
 
+it("accepts bound mint observations only with complete finality metadata", async () => {
+  const f = await fixture();
+  const observed = { ...f.body, mintStatus: "finalized-observed", chainFinalityVerified: true,
+    transactionHash: `0x${"ab".repeat(32)}`, blockHash: `0x${"cd".repeat(32)}`, blockNumber: "9999",
+    observedAt: new Date().toISOString(), finalityBasis: "operator-selected-rpc" };
+  expect(matchWithdrawalBrowserStatus(f.draft, observed)).toEqual(observed);
+  for (const delta of [{ transactionHash: "transfer-uuid" }, { finalityBasis: "independent-proof" },
+    { mintStatus: "prepared" }, { chainFinalityVerified: false }, { blockNumber: "-1" }, { gasCostWei: "1" }])
+    expect(() => matchWithdrawalBrowserStatus(f.draft, { ...observed, ...delta })).toThrow();
+  for (const mintStatus of ["not-queued", "queued", "prepared"])
+    expect(matchWithdrawalBrowserStatus(f.draft, { ...f.body, mintStatus }).chainFinalityVerified).toBe(false);
+});
+
 it("keeps absence distinct from failure and does not leak server diagnostics", async () => {
   const f = await fixture(), fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher);
   for (const [status, state] of [[401, "authentication-required"], [404, "unavailable"]] as const) {

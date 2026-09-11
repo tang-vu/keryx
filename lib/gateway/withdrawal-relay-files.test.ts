@@ -13,6 +13,7 @@ import { CREATOR_WITHDRAWAL_REQUESTS_SQL, reserveSqliteWithdrawalRequest, claimS
 import { CREATOR_WITHDRAWAL_ATTESTATIONS_SQL, saveSqliteWithdrawalAttestation } from "../db/creator-withdrawal-attestations";
 import { readFileSync } from "node:fs";
 import { withWithdrawalApplicationStore } from "./withdrawal-application-store";
+import { createWithdrawalMintReader } from "./withdrawal-mint-reader";
 
 const linux = it.skipIf(process.platform !== "linux"), directories: string[] = [];
 afterEach(() => { for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }); });
@@ -33,6 +34,16 @@ function fixture() {
 }
 linux("accepts the protected owner-only journal and bounded policy", async () => {
   const f = fixture(); expect(await inspectWithdrawalRelayFiles(f.directory)).toMatchObject({ directory: f.directory, policy: f.policy });
+});
+
+linux("reads owner mint progress without keys, writes or initializing missing history", async () => {
+  const f = fixture(), { record } = await creatorWithdrawalFixture(), path = join(f.directory, "mint.sqlite");
+  const before = readFileSync(path), read = createWithdrawalMintReader(f.directory);
+  expect(await read(record, record.owner, new AbortController().signal)).toMatchObject({ mintStatus: "not-queued", chainFinalityVerified: false });
+  expect(readFileSync(path)).toEqual(before);
+  await expect(read(record, `0x${"00".repeat(20)}`, new AbortController().signal)).rejects.toThrow();
+  rmSync(path); await expect(read(record, record.owner, new AbortController().signal)).rejects.toThrow();
+  expect(existsSync(path)).toBe(false);
 });
 linux("refuses public permissions, symlinks, hard links and unsafe sidecars", async () => {
   const f = fixture(), path = join(f.directory, "mint.sqlite");

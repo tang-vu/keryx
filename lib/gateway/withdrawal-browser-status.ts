@@ -4,10 +4,17 @@ import { withdrawalIdSchema, withdrawalOwnerSchema } from "./withdrawal-request"
 import { readBoundedJson } from "../read-bounded-json";
 
 type Draft = ReturnType<typeof createWithdrawalBrowserDraft>;
-const progressSchema = z.object({ wallet: withdrawalOwnerSchema, requestId: withdrawalIdSchema,
+const progressBase = z.object({ wallet: withdrawalOwnerSchema, requestId: withdrawalIdSchema,
   recipient: withdrawalOwnerSchema, amountMicros: z.string().regex(/^[1-9][0-9]*$/),
-  status: z.enum(["request-stored", "awaiting-transfer-evidence", "attestation-stored"]),
-  chainFinalityVerified: z.literal(false), mintStatus: z.literal("not-checked") }).strict();
+  status: z.enum(["request-stored", "awaiting-transfer-evidence", "attestation-stored"]) });
+const progressSchema = z.union([
+  progressBase.extend({ chainFinalityVerified: z.literal(false),
+    mintStatus: z.enum(["not-checked", "not-queued", "queued", "prepared"]) }).strict(),
+  progressBase.extend({ chainFinalityVerified: z.literal(true), mintStatus: z.literal("finalized-observed"),
+    transactionHash: withdrawalIdSchema, blockHash: withdrawalIdSchema,
+    blockNumber: z.string().regex(/^(0|[1-9][0-9]{0,77})$/), observedAt: z.string().datetime(),
+    finalityBasis: z.literal("operator-selected-rpc") }).strict(),
+]);
 
 export function matchWithdrawalBrowserStatus(selected: Draft, value: unknown) {
   const copied = structuredClone(selected), draft = createWithdrawalBrowserDraft(copied.burnIntent, copied.policy);
