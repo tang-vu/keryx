@@ -11,6 +11,7 @@ import { createWithdrawalMintJournal, type WithdrawalMintJournalPolicy } from ".
 import { WITHDRAWAL_MINTER_ABI } from "./withdrawal-mint-observation";
 import type { WithdrawalMintTerms } from "./withdrawal-mint-transaction";
 import type { createWithdrawalReceiptObserver } from "./withdrawal-receipt-observation";
+import { readWithdrawalMintProgress } from "./withdrawal-mint-progress";
 
 const resources: { databases: DatabaseSync[]; directory: string }[] = [];
 afterEach(() => {
@@ -58,6 +59,34 @@ async function observed(journal: ReturnType<typeof createWithdrawalMintJournal>,
     finalizedBlockHash: `0x${"cd".repeat(32)}` as `0x${string}`, observedAt: new Date().toISOString(),
   } satisfies NonNullable<Awaited<ReturnType<ReturnType<typeof createWithdrawalReceiptObserver>>>>;
 }
+
+it("projects original-owner mint progress without treating preparation as finality or exposing private payloads", async () => {
+  const f = await fixture(), r = await f.request(), signal = new AbortController().signal;
+  const read = () => readWithdrawalMintProgress(f.journal, r.record, r.record.owner, signal);
+  expect(await read()).toMatchObject({ mintStatus: "not-queued", chainFinalityVerified: false });
+  await f.journal.reserve(r.record, r.response, r.terms);
+  expect(await read()).toMatchObject({ mintStatus: "queued", chainFinalityVerified: false });
+  const changedPolicy = structuredClone(r.record);
+  changedPolicy.policy.maxFeeMicros = (BigInt(changedPolicy.policy.maxFeeMicros) + BigInt(1)).toString();
+  await expect(readWithdrawalMintProgress(f.journal, changedPolicy, r.record.owner, signal)).rejects.toThrow("original mismatch");
+  await f.journal.savePrepared(r.record.id, r.raw);
+  expect(await read()).toMatchObject({ mintStatus: "prepared", chainFinalityVerified: false });
+  await f.journal.reconcile(r.record.id, async () => observed(f.journal, r.record.id), signal);
+  const result = await read();
+  expect(result).toMatchObject({ mintStatus: "finalized-observed", chainFinalityVerified: true,
+    transactionHash: keccak256(r.raw), finalityBasis: "operator-selected-rpc" });
+  expect(Object.keys(result).sort()).toEqual(["wallet", "requestId", "recipient", "amountMicros", "mintStatus",
+    "chainFinalityVerified", "transactionHash", "blockNumber", "blockHash", "observedAt", "finalityBasis"].sort());
+  f.close(); expect(await readWithdrawalMintProgress(f.connect().journal, r.record, r.record.owner, signal)).toEqual(result);
+});
+
+it("rejects foreign owners before journal reads and withholds progress after cancellation", async () => {
+  const f = await fixture(), r = await f.request(), getSlot = vi.spyOn(f.journal, "getSlot");
+  await expect(readWithdrawalMintProgress(f.journal, r.record, `0x${"00".repeat(20)}`, new AbortController().signal)).rejects.toThrow();
+  expect(getSlot).not.toHaveBeenCalled();
+  const stop = new AbortController(); getSlot.mockImplementationOnce(async () => { stop.abort(); return null; });
+  await expect(readWithdrawalMintProgress(f.journal, r.record, r.record.owner, stop.signal)).rejects.toThrow();
+});
 
 function child(path: string, input: unknown) {
   return new Promise<string>((resolve, reject) => {

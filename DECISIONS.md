@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-189** - Owner mint progress - *Project only validated original journal state and
+distinguish prepared bytes from observed finality.*
+The read-only projection requires the authenticated original owner before any journal
+read, compares the complete stored request, and relies on the journal's revalidation of
+prepared transactions and immutable worker observations. No slot means not-queued;
+an unobserved slot is queued or prepared, never failed or completed. Finalized-observed
+returns transaction/block identity and the explicit operator-selected-RPC trust basis,
+without signed payloads, attestations, gas costs or internal nonce terms. Cancellation
+withholds results. The HTTP boundary must still reauthenticate before release. This
+projection does not write the cash-out ledger or independently refresh chain finality;
+protected runtime/status wiring and browser presentation remain required.
+
 **D-188** - Withdrawal HTTP composition - *Bind submission and recovery to live
 revocable cookie sessions and concrete server-owned payment dependencies.*
 The service factory uses accountSessionContext directly for the authenticated database,

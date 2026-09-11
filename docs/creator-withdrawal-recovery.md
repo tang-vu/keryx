@@ -359,6 +359,24 @@ no further POST. All HTTP is intercepted; no funded transaction is performed. Lo
 focused tests, Chromium, lint and TypeScript checking pass. The production endpoint
 and withdrawal panel still require runtime integration and live testnet acceptance.
 
+## Owner mint progress projection
+
+`withdrawal-mint-progress.ts` derives private creator progress from the validated
+protected mint journal. It verifies the signed original and authenticated owner before
+journal reads, then matches the full stored request. Missing slots remain not-queued;
+unobserved slots are queued or prepared. Prepared bytes do not establish broadcast,
+inclusion, failure or success. Only a validated recorded worker observation produces
+finalized-observed with transaction/block identity, observation time and the explicit
+operator-selected-RPC finality basis. The allowlist excludes signatures, attestations,
+gas costs and internal nonce terms. Cancellation withholds the result.
+
+Real SQLite journal tests exercise each state, original-policy mismatch, finalized
+observation recovery after reopening, projection fields, foreign-owner denial before
+reads and cancellation. Worker observations in these tests are synthetic and validated
+through the existing journal. Protected read-only runtime access, HTTP reauthentication,
+browser status parsing/presentation and idempotent cash-out ledger recording remain
+integration work; the existing status endpoint contract still reports mint not-checked.
+
 ## Browser HTTP status recovery
 
 `lib/gateway/withdrawal-browser-status.ts` reads the planned authenticated status
