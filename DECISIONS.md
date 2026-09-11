@@ -1,5 +1,13 @@
 # Keryx — Decision Log
 
+**D-219** - Account history without wallet signing - *A live account session can read
+its server history while signing remains gated by the matching connected wallet.*
+The history route binds directly to account authentication and has no configured
+payment service or relay dependency. The account page renders history before the
+wallet connection gate. This enables finding saved server requests after browser
+storage loss, without reconstructing authorizations or claiming settlement. Local
+originals remain necessary for the existing original-bound recovery verifier.
+
 **D-218** - Private history response boundary - *Revalidate the exact account session
 after reading owner-scoped withdrawal metadata.*
 The history handler accepts only a bounded JSON cursor in a same-origin POST, derives

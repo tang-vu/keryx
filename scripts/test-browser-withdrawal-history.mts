@@ -73,5 +73,34 @@ try {
   assert.equal(await page.evaluate(async () => (await indexedDB.databases()).length), 0);
   assert.equal(await page.getByRole("button", { name: /sign|send|withdraw USDC/i }).count(), 0);
   assert.deepEqual(errors, []);
+  // Exercise the actual account wrapper with controlled auth/wallet hooks. The
+  // history must remain available without a signer; sign-out must unmount it.
+  const accountBundle = await build({ stdin: { contents: `
+import {WithdrawalAccount} from './components/keryx/withdrawal-account';
+import {createElement,StrictMode} from 'react'; import {createRoot} from 'react-dom/client';
+const root=createRoot(document.querySelector('main'));
+window.mountAccount=(address,connected)=>{window.testSession=address?{address}:null;window.testAddress=connected;
+root.render(createElement(StrictMode,null,createElement(WithdrawalAccount,{limits:null})));};`,
+    resolveDir: process.cwd(), loader: "ts" }, bundle: true, write: false, platform: "browser", format: "iife",
+    define: { "process.env": "{}" }, plugins: [{ name: "account-hook-fixtures", setup(build) {
+      build.onResolve({ filter: /^(wagmi|next\/link|@\/lib\/hooks\/use-siwe-auth)$/ }, args => ({ path: args.path, namespace: "fixture" }));
+      build.onLoad({ filter: /.*/, namespace: "fixture" }, args => ({ loader: "js", contents: args.path === "wagmi"
+        ? "export const useAccount=()=>({address:window.testAddress});export const useWalletClient=()=>({data:undefined});"
+        : args.path === "next/link" ? "import {createElement} from 'react';export default props=>createElement('a',props);"
+          : "export const useSiweAuth=()=>({session:window.testSession});", resolveDir: process.cwd() }));
+    } }] });
+  await page.goto("https://withdrawal-history.test/"); await page.addScriptTag({ content: accountBundle.outputFiles[0].text });
+  const mountAccount = (selected: string | null, connected?: string) => page.evaluate(({ selected, connected }) =>
+    (window as unknown as { mountAccount: (owner: string | null, wallet?: string) => void }).mountAccount(selected, connected), { selected, connected });
+  mode = "normal"; await mountAccount(owner);
+  await page.getByRole("button", { name: "Load account history", exact: true }).click();
+  await page.getByText(`Request ID: ${first.id}`, { exact: true }).waitFor();
+  await mountAccount(owner, other);
+  assert.equal(await page.getByRole("listitem").count(), 2);
+  assert.equal(await page.getByRole("button", { name: /sign|send|prepare withdrawal/i }).count(), 0);
+  await mountAccount(null);
+  await page.getByRole("link", { name: "Sign in to manage withdrawals" }).waitFor();
+  assert.equal(await page.getByRole("listitem").count(), 0);
+  assert.deepEqual(errors, []);
   console.log("PASS: Chromium private account history, pagination, failure retention, duplicate rejection, session revocation and account switch with empty IndexedDB; synthetic intercepted HTTP, no payment.");
 } finally { await browser.close(); }

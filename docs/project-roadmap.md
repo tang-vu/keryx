@@ -6,7 +6,13 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.52 (confidence for conflicting evidence, updated 2026-09-11)
+**Version:** 0.22.53 (private account withdrawal history, updated 2026-09-11)
+
+Signed-in users can load private server withdrawal history on `/me/withdrawals` even
+without a connected wallet or retained browser drafts. Bounded pages exclude signatures;
+revoked sessions and account switches withhold or clear results. History identifies
+saved requests, not completed transfers. New withdrawal creation remains disabled and
+funded recovery acceptance remains open.
 
 Reported unresolved source disagreements now keep final confidence Low regardless of
 coverage scores. An explained source preference caps confidence at Moderate. Missing

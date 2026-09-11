@@ -692,9 +692,9 @@ id, owner, admission time, amount, maximum fee and recipient. Signatures and att
 are excluded. Corrupt or foreign rows fail the read; a row does not imply that Circle
 accepted a transfer or that a mint settled. SQLite paging/owner checks and intercepted
 real Supabase client query construction are tested. This does not constitute a live
-PostgREST integration test. Authenticated HTTP and browser history remain to be connected.
+PostgREST integration test. Authenticated HTTP and browser history are connected in v0.22.53.
 
-The unmounted `withdrawal-history-handler.ts` now defines the private HTTP boundary:
+`withdrawal-history-handler.ts` defines the private HTTP boundary:
 same-origin POST, a strict JSON cursor capped at 1 KiB, an owner from the live session,
 25-row pages and separate durable limits of 10 reads per wallet / 100 per service per
 minute. After the read, both wallet and session hash must still match. Errors and
@@ -702,10 +702,11 @@ successes use no-store/no-referrer headers; unknown adapter fields are stripped 
 foreign owners, duplicate identities or inconsistent continuation cursors fail closed.
 Eight handler tests cover actual SQLite reads, projection, session revocation/replacement,
 malformed input, cancellation, adapter failures and quota exhaustion. No signing,
-transfer claim or settlement operation is available to this handler. Route binding,
-browser pagination and recovery without a retained local original remain open.
+transfer claim or settlement operation is available to this handler. The Node.js route
+`/api/me/withdrawals/history` binds it directly to revocable account sessions, independently
+of creation flags, relay signing keys and mint journal configuration.
 
-`withdrawal-browser-history.ts` supplies the unmounted browser transport. It requires
+`withdrawal-browser-history.ts` supplies the browser transport. It requires
 only the selected account and a current-account callback, not a wallet signer or local
 draft. A fixed same-origin POST carries a copied cursor in JSON with no referrer,
 redirects, caching or automatic retries. A five-second overall deadline and 16 KiB
@@ -714,9 +715,9 @@ Foreign owners, duplicate rows, repetition of the prior cursor and inconsistent 
 cursors are rejected. A 401 requires authentication; other failures cannot appear as
 an empty page. Six transport tests include stalled headers/body, late cancellation,
 account changes and microsecond cursor preservation. This does not reconstruct a
-signed original, verify settlement independently or mount the account interface.
+signed original or verify settlement independently.
 
-The standalone `WithdrawalHistoryPanel` provides explicit loading, refresh and older
+`WithdrawalHistoryPanel` provides explicit loading, refresh and older
 pages without requiring browser journals. It renders integer USDC amounts, bounded
 fees, recipient, admission time and request ID as server metadata with settlement not
 checked. A failed older page preserves existing rows and the retry cursor; duplicate
@@ -725,8 +726,11 @@ account changes remount the panel and cancel in-flight reads. There are no signi
 submission controls. `scripts/test-browser-withdrawal-history.mts` runs the actual
 React panel in Chromium StrictMode at a mobile viewport with empty IndexedDB and
 intercepted synthetic HTTP, covering pagination, errors, duplication, revocation and
-account switches. It is included in CI. The panel and route are still unmounted;
-live account binding and end-to-end funded acceptance remain open.
+account switches. It is included in CI. The panel is mounted in `/me/withdrawals` for
+signed-in accounts, including when no wallet is connected. Reviewing/signing still
+requires the matching connected wallet. Server metadata does not reconstruct missing
+local signed terms or provide independent settlement evidence. End-to-end funded
+acceptance remains open.
 
 ## Remaining implementation and acceptance
 
