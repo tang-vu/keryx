@@ -80,6 +80,21 @@ npm run typecheck
 The PostgreSQL harness needs Docker; the signal drill needs Linux. These checks use
 isolated synthetic data and must not load production secrets or point at live storage.
 
+Release validation for `3d186b5`: local TypeScript and focused ESLint passed; the full
+Windows unit suite passed 1,347 tests across 205 files. PostgreSQL 17 checks and the
+extended local Linux process drill passed. [CI run 34552699703](https://github.com/tang-vu/keryx/actions/runs/34552699703)
+completed successfully, including the Linux worker/operator drill, browser checks,
+contract checks and Next.js production build. This is release verification, not
+independent customer acceptance or evidence of mainnet settlement.
+
+Production deployment completed on 2026-09-11. `/api/health` reported `operational`
+with commit `3d186b5`; the private operations inspector reported a matching idle worker
+and backed treasury. A protected read-only digest comparison confirmed the original
+owner-operated pilot's intents, payment attempts, execution, result, creator submissions
+and confirmations were unchanged. No live interruption was recorded. Existing reserved
+capacity and the prior release were unchanged. The operator apply path was exercised only
+with isolated synthetic jobs; this deployment does not establish a live paid crash drill.
+
 The actual Linux worker/CLI drill terminates a synthetic prepaid job with SIGKILL, verifies
 the retained claim and lock behavior, then previews/applies interruption in separate
 processes. It passed locally with network guards and unfunded fixture keys. No production
