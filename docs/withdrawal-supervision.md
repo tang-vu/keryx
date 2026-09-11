@@ -88,6 +88,34 @@ activation or funded acceptance has occurred.
 
 ## Shutdown and deployment
 
+### Private journal snapshots
+
+On Linux with Node 24, run `node --import tsx scripts/withdrawal-backup.mts --source
+EXISTING_RELAY_DIRECTORY --destination NEW_PRIVATE_DIRECTORY`. The destination parent
+must already be private and canonical. The command holds the relay/admission lock,
+uses the [Node SQLite backup API](https://nodejs.org/download/release/v24.16.0/docs/api/sqlite.html#sqlitebackupsourceDb-path-options),
+then reopens and checks the copied admissions, slots, signed originals and observations.
+It verifies logical fingerprints and writes a synced database hash manifest. Backup
+includes committed WAL contents; copying only the live main SQLite file is insufficient.
+Existing destinations and pre-existing locks are never replaced or removed. On an
+interruption, retain artifacts and inspect them even if a manifest exists: successful
+return, file durability and external retention are separate facts.
+
+These files contain private signed authorizations. Keep them owner-only and out of
+Git, public storage and product updates. A verified snapshot is not permission to
+roll back nonce history or activate another signer. Before any restore, stop admission
+and signing everywhere, retain all newer originals, reconcile the application journal
+and chain observations, and account for every signature issued after the snapshot.
+Unknown later history must remain unresolved; it cannot be reset to an empty journal.
+An off-host encrypted copy, integrity/restore drill and incident procedure remain open.
+
+Native Linux verification covers a still-open WAL source, a saved synthetic signed
+mint plus a second pending gas admission, exact copied raw bytes and unchanged target
+on duplicate backup. Network access was disabled. This is not a live payment or a
+funded restore/resume drill.
+
+### Drain before deployment
+
 The service uses SIGTERM, control-group shutdown, infinite stop grace, no SIGKILL and
 no process restart. It waits for awaited work to settle before closing its journal.
 An unresponsive dependency requires inspection of the actual process/job; elapsed

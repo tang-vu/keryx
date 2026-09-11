@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-214** - Private withdrawal snapshots - *Back up the logical SQLite database
+under the relay's cooperative lock and verify the original records after reopening.*
+The operator snapshot command uses SQLite backup, including committed WAL contents,
+into a newly created private directory. It validates admissions, nonce slots, saved
+raw transactions and observations, compares source/copy fingerprints, rechecks source
+identity and syncs a hash manifest. Existing targets and retained locks are not removed.
+Cancellation waits for the database copy before closing handles; uncertain artifacts
+remain for inspection. The manifest explicitly does not authorize resuming signing:
+an older snapshot cannot prove that later admissions or signatures never existed.
+Off-host retention, application-journal pairing and restore/chain reconciliation remain
+separate acceptance work. Native Linux verification used synthetic payments with
+network disabled and exercised WAL data, exact raw preservation and duplicate refusal.
+
 **D-213** - Explicit provisioning command - *Default to a read-only preflight and
 require complete operator choices before creating a new journal.*
 The standalone CLI accepts only public address/RPC and integer lifetime gas terms for
