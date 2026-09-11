@@ -179,9 +179,31 @@ the original record and unknown state. Only no-store transfer progress is return
 with mint finality unchecked. Seven tests use actual SQLite request/claim/attestation
 storage for duplicate HTTP calls, configured limits, client-policy/foreign-owner
 denial, limiter refusal, same-wallet session replacement at admission/claim boundaries,
-response loss and request restrictions. Admission, limiter and authentication callbacks
-in these tests are synthetic; real backed admission, durable rate limits and cookie
+response loss and request restrictions. Admission and authentication callbacks
+in these tests are synthetic; real backed admission and cookie
 binding remain required. The handler is not registered as a public Next.js route.
+
+Both submit and status handlers now invoke `withdrawal-rate-limit.ts` directly using
+the authenticated database context. Fixed 60-second limits are 3 submissions per wallet
+and 20 service-wide, with independent status limits of 30 per wallet and 200 service-wide.
+Wallet counters are consumed first, so a rejected wallet does not take another global
+point; a rejected global check still retains the wallet point. No lost response or
+restart resets these counters. Exhaustion returns no-store 429 with Retry-After;
+storage failure or malformed readback returns no-store 503 with no memory fallback.
+The existing SQLite/Supabase atomic counter interface supplies persistence. Missing
+SQLite RETURNING rows now throw rather than producing an allowed decision. Bucket
+keys contain a domain-separated wallet hash, not bearer tokens or raw wallet strings;
+this is pseudonymous operational state, not anonymity. Gas admission and settlement
+remain separate authorities. Status requests may update only these abuse counters,
+never withdrawal payment or submission records.
+
+Twenty-six focused tests pass across withdrawal rate limits, submit/status handlers
+and the existing rate-limit store suite. New cases cover competing SQLite connections,
+reopen recovery, service-wide limits across distinct wallets, committed readback loss,
+missing RETURNING rows, malformed decisions and fixed-window expiry. Submission-boundary
+commit `99d5c1f` passed
+[CI run 34565708497](https://github.com/tang-vu/keryx/actions/runs/34565708497), including
+production build.
 
 Browser-status commit `8134f83` passed
 [CI run 34564636883](https://github.com/tang-vu/keryx/actions/runs/34564636883), including

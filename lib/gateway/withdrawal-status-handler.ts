@@ -2,8 +2,10 @@ import { z } from "zod";
 import { readBoundedRequestJson } from "../read-bounded-request-json";
 import { withdrawalIdSchema, withdrawalOwnerSchema } from "./withdrawal-request";
 import { withdrawalTransferProgress, type WithdrawalProgressStore } from "./withdrawal-transfer-service";
+import { checkWithdrawalRateLimit } from "./withdrawal-rate-limit";
+import type { KeryxDB } from "../db/keryx-db";
 
-type Context = { wallet: string; db: WithdrawalProgressStore };
+type Context = { wallet: string; db: WithdrawalProgressStore & Pick<KeryxDB, "consumeRateLimit"> };
 type Authenticate = () => Promise<Context | Response>;
 const inputSchema = z.object({ id: withdrawalIdSchema }).strict();
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers: {
@@ -26,6 +28,8 @@ export function createWithdrawalStatusHandler(authenticate: Authenticate) {
     try { context = await authenticate(); }
     catch { return json({ error: "Withdrawal status is temporarily unavailable." }, 503); }
     if (context instanceof Response) return context;
+    const limited = await checkWithdrawalRateLimit(context.db, context.wallet, "status");
+    if (limited) return limited;
     let id: string;
     try {
       if (req.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "application/json") throw new Error();

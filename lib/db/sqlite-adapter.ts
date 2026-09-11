@@ -1371,7 +1371,7 @@ export class SqliteAdapter implements KeryxDB {
       .get(bucket, resetAt, now, now, resetAt) as
       | { count: number; reset_at: number }
       | undefined;
-    if (!row) return { allowed: true, msBeforeNext: windowMs };
+    if (!row) throw new Error("Rate-limit counter readback unavailable");
     return {
       allowed: Number(row.count) <= points,
       msBeforeNext: Math.max(0, Number(row.reset_at) - now),

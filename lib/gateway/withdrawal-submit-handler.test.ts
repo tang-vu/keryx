@@ -16,7 +16,7 @@ async function fixture() {
   const f = await creatorWithdrawalFixture(); let session = "original-session";
   const { owner: _owner, recipient: _recipient, ...limits } = f.record.policy; void _owner; void _recipient;
   const options = { limits, authenticate: async () => ({ db, wallet: f.record.owner, currentId: session }),
-    limit: vi.fn(async (): Promise<Response | null> => null), admit: vi.fn(async () => {}), transfer: vi.fn(async () => f.response) };
+    admit: vi.fn(async () => {}), transfer: vi.fn(async () => f.response) };
   return { ...f, options, changeSession: () => { session = "replacement-session"; } };
 }
 
@@ -45,7 +45,7 @@ it("rejects a valid foreign signature and obeys limiter denial without creating 
   const f = await fixture();
   const handler = createWithdrawalSubmitHandler({ ...f.options, authenticate: async () => ({ db, wallet: `0x${"00".repeat(20)}`, currentId: "other" }) });
   expect((await handler(request(f.record.request))).status).toBe(400);
-  f.options.limit.mockResolvedValueOnce(Response.json({ error: "Limited" }, { status: 429 }));
+  vi.spyOn(db, "consumeRateLimit").mockResolvedValueOnce({ allowed: false, msBeforeNext: 60000 });
   const denied = await createWithdrawalSubmitHandler(f.options)(request(f.record.request));
   expect(denied.status).toBe(429); expect(denied.headers.get("cache-control")).toBe("no-store");
   expect(await db.getCreatorWithdrawal(f.record.id, f.record.owner)).toBeNull();

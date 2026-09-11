@@ -2,23 +2,24 @@ import { readBoundedRequestJson } from "../read-bounded-request-json";
 import { createWithdrawalRequest, withdrawalOwnerSchema, type WithdrawalRequestRecord } from "./withdrawal-request";
 import { withdrawPolicySchema, withdrawRequestSchema } from "./withdraw-protocol";
 import { submitWithdrawalTransfer } from "./withdrawal-transfer-service";
+import { checkWithdrawalRateLimit } from "./withdrawal-rate-limit";
+import type { KeryxDB } from "../db/keryx-db";
 
 const limitsSchema = withdrawPolicySchema.omit({ owner: true, recipient: true }).refine(value => value.domain === 26);
-type Store = Parameters<typeof submitWithdrawalTransfer>[0];
+type Store = Parameters<typeof submitWithdrawalTransfer>[0] & Pick<KeryxDB, "consumeRateLimit">;
 type Context = { db: Store; wallet: string; currentId: string };
 type Limits = Omit<WithdrawalRequestRecord["policy"], "owner" | "recipient">;
 const json = (body: unknown, status: number) => Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
 
 /** Server-only boundary, not yet registered as a public route. All dependencies and
  * limits must come from server configuration/live sessions. admit must establish
- * backed durable relay gas admission; limit must enforce server-side request caps. */
+ * backed durable relay gas admission. Request limits use the authenticated store. */
 export function createWithdrawalSubmitHandler(options: {
   authenticate: () => Promise<Context | Response>; limits: Limits;
-  limit: (wallet: string) => Promise<Response | null>;
   admit: (record: WithdrawalRequestRecord, signal: AbortSignal) => Promise<void>;
   transfer: Parameters<typeof submitWithdrawalTransfer>[4];
 }) {
-  const { authenticate, limit, admit, transfer } = options;
+  const { authenticate, admit, transfer } = options;
   const limits = limitsSchema.parse(structuredClone(options.limits));
   return async (req: Request): Promise<Response> => {
     if (req.method !== "POST") return new Response(null, { status: 405, headers: { Allow: "POST", "Cache-Control": "no-store" } });
@@ -30,7 +31,7 @@ export function createWithdrawalSubmitHandler(options: {
     try {
       const context = await authenticate();
       if (context instanceof Response) return context;
-      const owner = withdrawalOwnerSchema.parse(context.wallet), limited = await limit(owner);
+      const owner = withdrawalOwnerSchema.parse(context.wallet), limited = await checkWithdrawalRateLimit(context.db, owner, "submit");
       if (limited) {
         const headers = new Headers(limited.headers); headers.set("Cache-Control", "no-store");
         return new Response(limited.body, { status: limited.status, headers });

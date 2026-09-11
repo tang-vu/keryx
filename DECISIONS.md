@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-184** - Withdrawal request limits - *Use durable wallet and service counters and
+deny storage uncertainty without falling back to process memory.*
+Submission and status handlers now call the durable limiter directly through their
+authenticated database context. Fixed 60-second budgets are 3 submissions per wallet /
+20 across the service, and 30 status reads per wallet / 200 across the service. Wallet
+counters are charged before service counters; denied/lost-readback points are not
+rolled back. Wallet bucket keys use a domain-separated address hash, not raw addresses
+or bearer tokens. Malformed decisions and storage errors return no-store 503; exhausted
+windows return 429 with Retry-After. SQLite missing RETURNING rows now throw instead
+of silently admitting, allowing withdrawal callers to deny uncertainty. Other routes
+retain their existing fallback policy. These counters are abuse controls, not a gas
+budget, settlement ledger or guarantee against coordinated wallet-based denial of service.
+
 **D-183** - Withdrawal submission boundary - *Derive request policy from server limits
 and revalidate the original session around admission and initial Circle submission.*
 The server handler accepts only the signed wire intent, not client policy fields.
