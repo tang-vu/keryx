@@ -26,6 +26,37 @@ invoices and realized costs/profit, stay private. Public formulas and explicitly
 illustrative scenarios remain available at `/economics`. A simulation label alone
 does not make internal operating data suitable for publication.
 
+## Private operator report
+
+Run from the deployed repository on the Linux operator host, loading its environment
+explicitly. Prepare an owner-only parent directory outside the web root and public
+artifact paths, then choose a new destination for each report:
+
+```sh
+install -d -m 700 /root/keryx-private-reports
+node --env-file=.env.local --import tsx --no-warnings scripts/economics-private-report.mts \
+  --directory /root/keryx-private-reports/REPLACE_WITH_NEW_REPORT_NAME
+```
+
+The destination must not exist. The command writes `economics.json` with mode 0600 in
+a mode-0700 directory, verifies the file and syncs it before reporting success. Console
+output contains no operational figures. Do not publish the file or attach it to Canteen
+or GitHub. Failed/partial destinations remain in place and are never overwritten; inspect
+them privately before choosing a different new destination. Windows mode bits are not
+treated as ACL protection, so this command refuses Windows execution.
+
+SQLite reads the existing `data/keryx.sqlite` in read-only mode; it cannot create a
+missing database or run schema/cache migrations. A configured Supabase adapter also
+skips initialization and uses its existing read methods. Missing schemas or configuration
+fail the report rather than being repaired by this command. No signer or payment path
+is called. Supabase reads can use the configured network connection.
+
+Coverage is the legacy `query_runs`, `payment_events` and `a2a_orders` aggregation,
+not every private-job store or an atomic cross-table accounting snapshot. The file
+preserves unpriced usage and explicitly sets provider invoices, fixed operating costs
+and realized profit to unknown. It is not an invoice audit, monthly profit statement
+or mainnet revenue report. Public formulas remain separate at `/economics`.
+
 ## Pricing policy
 
 Policy `testnet-economics-v1` uses DeepSeek prices captured on 2026-08-29 from the

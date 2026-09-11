@@ -340,10 +340,10 @@ ${CREATOR_WITHDRAWAL_ATTESTATIONS_SQL}
 export class SqliteAdapter implements KeryxDB {
   private db: DatabaseSync;
 
-  constructor(file?: string) {
+  constructor(file?: string, options: { readOnly?: boolean } = {}) {
     const dbPath = file ?? path.resolve(process.cwd(), "data", "keryx.sqlite");
-    fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-    this.db = new DatabaseSync(dbPath);
+    if (!options.readOnly) fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+    this.db = new DatabaseSync(dbPath, { readOnly: options.readOnly ?? false });
   }
 
   /** Release the file handle. The long-lived server never calls this; short-lived callers

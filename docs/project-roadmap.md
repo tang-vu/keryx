@@ -6,7 +6,12 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.59 (private operational economics, updated 2026-09-11)
+**Version:** 0.22.60 (private operator reports, updated 2026-09-12)
+
+Operators can export legacy testnet economics into an exclusive owner-only Linux file.
+The command prints no figures, avoids adapter migrations and leaves invoices, fixed
+costs and realized profit unknown. [Private report instructions](./testnet-economics.md#private-operator-report)
+describe the protection and coverage limits; no public economics endpoint is reopened.
 
 Usage-derived cost and shadow-margin telemetry are no longer published through
 `/api/economics` or the status page. The retired endpoint returns a static 410 with

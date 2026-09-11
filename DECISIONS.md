@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-227** - Owner-only economics files - *Retiring a public endpoint must not remove
+the operator's ability to inspect telemetry privately.* The report command creates a
+new 0700 directory under an existing protected Linux parent and writes an exclusive
+0600 file with fsync and read-back verification. It prints no figures and refuses
+existing paths, symlinks and permissive parents; partial locations are retained on
+failure. Only explicit aggregate fields are projected, with invoices, fixed costs and
+realized profit left unknown. Normal adapter initialization is deliberately skipped:
+SQLite opens an existing database read-only, while Supabase uses read methods without
+cache migration. This is legacy testnet telemetry, not complete or atomic business
+accounting. Windows execution needs an ACL implementation rather than POSIX mode bits.
+
 **D-226** - Private operational economics - *A testnet or simulation label is not
 permission to publish internal operating estimates.* The legacy public economics
 endpoint exposed usage-derived cost and shadow-margin totals, and `/status` polled

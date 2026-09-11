@@ -38,8 +38,14 @@ jobs:
       - name: Buyer CLI startup (no wallet or network)
         run: node --import tsx scripts/buyer-agent.mts --help
 
+      - name: Private economics CLI startup (no environment or database)
+        run: node --import tsx scripts/economics-private-report.mts --help
+
       - name: Unit tests (economic invariants)
         run: npm test
+
+      - name: Private economics report (Linux CLI, synthetic database, no network)
+        run: node --import tsx --no-warnings scripts/test-private-economics-report.mts
 
       - name: Private worker Linux shutdown and crash (synthetic payments, network blocked)
         run: node --import tsx scripts/test-private-worker-drain.mts
