@@ -56,6 +56,23 @@ service role only, with no client access or direct service writes. Signed reques
 never appear in the public `/api/withdrawals` feed. Server retention and eventual
 tombstone policy need to preserve replay barriers while respecting the final privacy policy.
 
+## HTTP configuration
+
+`createConfiguredWithdrawalHttpService` requires `KERYX_WITHDRAWAL_HTTP_ENABLED=1`
+independently from the relay enable flag. Operator configuration must also supply
+`KERYX_WITHDRAWAL_MAX_VALUE_MICROS`, `KERYX_WITHDRAWAL_MAX_FEE_MICROS` and
+`KERYX_WITHDRAWAL_GAS_CEILING_WEI`. These are canonical integer units; amount/gas must
+be positive, while a zero fee cap is allowed. Existing dedicated relay/key isolation
+validation still applies. Missing configuration does not silently select spending caps.
+Invalid caps, forced offline mode, another network/domain and credential-bearing RPC
+URLs are rejected before constructing the service. The configuration is copied so
+caller mutation cannot silently change the selected limits.
+
+Three focused tests verify opt-in, exact limit snapshots, zero fees and malformed or
+unsafe configuration. This does not prove funded admission, active worker supervision
+or finite authorization expiry. Public routes remain unregistered and HTTP admission
+has not been activated on production.
+
 ## Initial transfer coordinator
 
 `lib/gateway/withdrawal-transfer-service.ts` now coordinates the original request,

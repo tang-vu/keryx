@@ -1,5 +1,15 @@
 # Keryx — Decision Log
 
+**D-197** - HTTP admission configuration - *Require independent HTTP opt-in and exact
+operator-selected caps before constructing the submission service.*
+The configured service factory requires KERYX_WITHDRAWAL_HTTP_ENABLED=1 in addition
+to the dedicated relay's existing enablement and custody checks. Amount and gas ceilings
+must be positive canonical integers; the vendor fee cap may be zero. Missing, fractional
+or overflowing limits, forced offline mode, another network/domain and credential-bearing
+RPC URLs are rejected. Settings are snapshotted before use. This is configuration
+validation, not proof of journal funding, worker supervision, finite authorization expiry
+or end-to-end readiness. Production route activation remains separate and disabled.
+
 **D-196** - Partial local recovery - *Keep valid originals accessible when another
 saved payload cannot be validated, without repairing or deleting the failed row.*
 Owner-indexed listing validates each row separately and returns an unavailable count.

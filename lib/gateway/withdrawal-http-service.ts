@@ -4,6 +4,13 @@ import { createWithdrawalSubmitHandler } from "./withdrawal-submit-handler";
 import { createWithdrawalStatusHandler } from "./withdrawal-status-handler";
 import { requestCircleWithdrawalTransfer } from "./withdrawal-transfer-service";
 import { createWithdrawalMintReader } from "./withdrawal-mint-reader";
+import { withdrawalHttpConfiguration } from "./withdrawal-http-config";
+
+export function createConfiguredWithdrawalHttpService(env: Parameters<typeof withdrawalHttpConfiguration>[0],
+  chain: Parameters<typeof withdrawalHttpConfiguration>[1]) {
+  const options = withdrawalHttpConfiguration(env, chain);
+  return options ? createWithdrawalHttpService(options) : null;
+}
 
 /** Server configuration only. Concrete cookie/session, database, relay admission and
  * Circle transport binding; never accept these options from a request body. Routes
