@@ -1,5 +1,19 @@
 # Keryx — Decision Log
 
+**D-209** - Operator withdrawal cycle - *Compose bounded queue, relay and reporting
+passes without treating a pending phase as a payment failure.*
+The explicit --cycle CLI mode scans at most 32 pages of 32 rows, runs one existing
+bounded relay pass, then scans cash-out observations. Every later invocation starts
+fresh sweeps to revisit absent evidence. Cursor validation prevents non-progressing
+loops; original journals, cooperative phase locks and mint identities retain authority.
+Queue or relay unavailability does not discard independent completed observations
+that reporting can still record. Cancellation waits for the current phase to settle
+and prevents later phases. Exit 2 signals pending/unavailable work, not failed payment;
+scan counts are not new transactions or revenue. The command requires explicit operator
+database/gas terms and the dedicated enabled testnet runtime. It installs no schedule,
+creates no wallet/journal and never resubmits a Circle transfer. Funded acceptance and
+managed cycle supervision remain open.
+
 **D-208** - Deployment worker heap - *Use one Next worker thread to preserve the
 explicit parent heap, and verify the installed wrapper before every VPS build.*
 Serial generation alone still exhausted the child process heap. A diagnostic using

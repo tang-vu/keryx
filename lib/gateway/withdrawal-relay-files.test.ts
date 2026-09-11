@@ -90,6 +90,35 @@ linux("runs the actual CLI for inspection, schema check and an empty relay pass 
   expect(existsSync(join(f.directory, "private-worker.lock"))).toBe(true);
 }, 90000);
 
+linux("runs a complete empty cycle and revisits an unknown admission without consuming a nonce", async () => {
+  const f = fixture(), path = join(f.directory, "app.sqlite"), execute = promisify(execFile);
+  writeFileSync(path, "", { mode: 0o600 });
+  const app = new DatabaseSync(path);
+  app.exec(CREATOR_WITHDRAWAL_REQUESTS_SQL + CREATOR_WITHDRAWAL_ATTESTATIONS_SQL);
+  app.exec("CREATE TABLE withdrawals(tx_hash TEXT PRIMARY KEY,created_at TEXT,label TEXT,source_name TEXT,wallet TEXT,recipient TEXT,amount_usdc REAL,network TEXT)");
+  app.close();
+  const invoke = (...extra: string[]) => execute(process.execPath, ["--import", "tsx", "scripts/withdrawal-relay.mts", "--cycle",
+    "--application-db", path, "--gas", "300000", "--max-fee-per-gas", "2000000000", "--priority-fee-per-gas", "1000000000",
+    "--gas-budget-wei", "600000000000000", ...extra], { env: f.env, timeout: 30000 });
+  expect(JSON.parse((await invoke()).stdout)).toMatchObject({ state: "finished", queue: { state: "scanned", scanned: 0 },
+    relay: { state: "idle", signed: 0, broadcastAttempts: 0 }, report: { state: "scanned", scanned: 0 } });
+  const original = await creatorWithdrawalFixture(), mint = new DatabaseSync(join(f.directory, "mint.sqlite"));
+  try { await createWithdrawalMintJournal(mint, f.policy).admitGas(original.record, f.policy.lifetimeGasBudgetWei, new AbortController().signal); }
+  finally { mint.close(); }
+  for (let i = 0; i < 2; i++) {
+    const error = await invoke().then(() => { throw new Error("Expected pending exit"); }, value => value);
+    expect(error.code).toBe(2);
+    expect(JSON.parse(error.stdout)).toMatchObject({ queue: { pending: 1 }, relay: { state: "idle", signed: 0, broadcastAttempts: 0 },
+      report: { scanned: 0 } });
+  }
+  const reopened = new DatabaseSync(join(f.directory, "mint.sqlite"));
+  try { const journal = createWithdrawalMintJournal(reopened, f.policy);
+    expect(journal.listRequestIds()).toEqual([]); expect((await journal.getGasAdmission(original.record.id))?.request).toEqual(original.record);
+  } finally { reopened.close(); }
+  await expect(invoke("--limit", "1")).rejects.toThrow("private details omitted");
+  await expect(invoke("--run")).rejects.toThrow("private details omitted");
+}, 120000);
+
 it("keeps CLI help free of runtime configuration", async () => {
   const { stdout } = await promisify(execFile)(process.execPath, ["--import", "tsx", "scripts/withdrawal-relay.mts", "--help"], { timeout: 25000 });
   expect(stdout).toContain("Default: inspect"); expect(stdout).toContain("never creates a wallet/journal");

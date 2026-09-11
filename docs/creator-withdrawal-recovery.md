@@ -299,6 +299,17 @@ Linux runtime checks and production build.
 
 ### Operator queue mode
 
+`npm run withdrawal:relay -- --cycle` now composes queue recovery, one bounded mint
+relay pass and cash-out reporting. It requires the same explicit application database
+and gas arguments listed below, and rejects cursor/limit arguments. Queue and report
+each scan at most 32 pages of 32 rows, covering the journal's 1000-request lifetime
+ceiling; each later cycle starts fresh to revisit unknown evidence and earlier IDs.
+Every phase retains its own existing lock/storage rules. Reporting can still run after
+queue or relay unavailability; cancellation waits for the current phase and skips the
+rest. Exit 2 means pending/unavailable work, never permission to regenerate or retry a
+Circle transfer. Operator scan counts are not new cash-outs or revenue. This mode is
+not yet installed as a scheduled service and has not passed funded relay acceptance.
+
 `npm run withdrawal:relay -- --queue` requires the existing protected relay runtime
 configuration, plus these explicit operator arguments:
 
