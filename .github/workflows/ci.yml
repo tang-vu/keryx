@@ -74,6 +74,9 @@ jobs:
       - name: Creator withdrawal journal (hermetic, no settlement)
         run: npm run test:browser-withdrawal-journal
 
+      - name: Creator account history (intercepted HTTP, no settlement)
+        run: node --import tsx scripts/test-browser-withdrawal-history.mts
+
       - name: Private browser checkout (hermetic, no settlement)
         run: npm run test:browser-private-checkout
 

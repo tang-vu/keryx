@@ -716,6 +716,18 @@ an empty page. Six transport tests include stalled headers/body, late cancellati
 account changes and microsecond cursor preservation. This does not reconstruct a
 signed original, verify settlement independently or mount the account interface.
 
+The standalone `WithdrawalHistoryPanel` provides explicit loading, refresh and older
+pages without requiring browser journals. It renders integer USDC amounts, bounded
+fees, recipient, admission time and request ID as server metadata with settlement not
+checked. A failed older page preserves existing rows and the retry cursor; duplicate
+identities across pages are rejected. Authentication-required responses clear rows;
+account changes remount the panel and cancel in-flight reads. There are no signing or
+submission controls. `scripts/test-browser-withdrawal-history.mts` runs the actual
+React panel in Chromium StrictMode at a mobile viewport with empty IndexedDB and
+intercepted synthetic HTTP, covering pagination, errors, duplication, revocation and
+account switches. It is included in CI. The panel and route are still unmounted;
+live account binding and end-to-end funded acceptance remain open.
+
 ## Remaining implementation and acceptance
 
 ### Private relay journal foundation
