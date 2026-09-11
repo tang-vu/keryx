@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-168** - Relay nonce and gas journal - *Place a dedicated relay key's prepared
+transactions and lifetime gas reservations in one durable local authority.*
+The application request/attestation journal remains in its configured database. A
+separate private SQLite journal belongs to the dedicated relay worker, so SQLite and
+Supabase application deployments use the same nonce authority. All processes holding
+the key must share that file. Explicit initialization pins policy and starting nonce;
+normal reopening and partial-history loss cannot reset it. Immediate transactions
+reserve contiguous nonces and maximum gas cost under immutable lifetime and slot caps.
+Original request, attestation, terms and signed bytes are revalidated on recovery.
+Missing responses never release gas or nonce reservations. No signer, broadcaster or
+production integration is activated yet. Key exclusivity, protected storage/restore,
+chain reconciliation and replacement/cancellation still require runtime enforcement.
+
 **D-167** - Prepared mint identity - *Bind exact signed transaction bytes before any
 storage or broadcast authority can depend on their hash.*
 The validator accepts canonical Arc-testnet EIP-1559 mint transactions only. It rechecks

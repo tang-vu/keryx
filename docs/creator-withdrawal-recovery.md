@@ -82,6 +82,46 @@ signer authority. This helper is not yet connected to the production relay.
 
 ## Remaining implementation and acceptance
 
+### Private relay journal foundation
+
+`lib/gateway/withdrawal-mint-journal.ts` is a separate local SQLite journal for one
+dedicated relay key. This boundary applies whether the application uses SQLite or
+Supabase: all processes controlling this key must share this exact journal. No
+production key or journal has been provisioned by this change, and the HTTP relay
+still uses its original flow.
+
+Connections enforce SQLite `synchronous=FULL`; the journal requires reliable local
+storage and does not claim safety on an unsupported shared/network filesystem.
+Explicit initialization pins the testnet chain, relayer, starting nonce, lifetime
+gas ceiling and maximum slot count. Normal reopening cannot initialize missing
+state. Initialization also refuses a partially missing journal or unrelated database;
+it cannot reconstruct a used key's lost nonce history. An operator must establish
+the starting nonce against the intended chain and verify exclusive key custody.
+
+Slot admission validates and retains the original request, matched attestation and
+exact gas terms. A SQLite immediate transaction checks contiguous nonce history,
+reserves the next nonce and charges the full maximum gas cost against the lifetime
+ceiling. Duplicate admission returns the exact original; a conflicting request,
+changed policy or over-budget allocation fails. Every admitted slot stays charged,
+including slots with no signed bytes. This conservative lifetime ceiling does not
+recycle capacity after receipt, timeout, cancellation or attestation expiry.
+
+Prepared bytes are checked against their stored slot, inserted immutably and read
+back with their derived hash and recovered signer verified again. A lost readback
+leaves the stored original recoverable. The module does not sign or broadcast; a
+future worker must only submit the durably read-back bytes. Ordered private request
+IDs allow restart recovery without relying on an in-memory queue. No stored signature
+or raw transaction belongs in public APIs, application logs or Canteen updates.
+
+Remaining work includes worker locking and key inventory, protected journal storage
+and backup/restore, chain nonce reconciliation, fresh eligibility/gas checks, exact
+receipt/finality evidence, bounded replacement/cancellation, and HTTP/browser integration.
+Successive reserved nonces may queue behind an unresolved earlier slot; the worker
+must recover the original earlier slot, never skip it or reuse its nonce. The journal
+is not proof that a key was never used elsewhere or that a transaction was accepted.
+
+### Signed transaction validation
+
 The signed-byte validator in `lib/gateway/withdrawal-mint-transaction.ts` now binds
 canonical EIP-1559 transaction bytes to the original request and attestation, exact
 relayer, nonce, minter, calldata, zero native value and selected gas terms. It derives
@@ -92,7 +132,7 @@ Gas limits and fee products use integer native wei, with a separate explicit cei
 they are not interpreted as micro-USDC. Seven tests sign locally with unfunded accounts,
 including a high-s payload that recovers the expected sender but must still be rejected.
 
-Its result is `signed-transaction-matched-only`. This validates bytes for eventual
+Its result is `signed-transaction-matched-only`. This validates bytes for the journal's
 durable storage/readback, but does not itself persist them, reserve a nonce, establish
 exclusive key custody, authorize broadcast or demonstrate current chain acceptance.
 Terms must eventually come from the durable operator-owned mint slot, never an HTTP
@@ -114,10 +154,10 @@ at the pinned source revision. Deployed-contract/version matching remains requir
 1. Integrate the read-only minter observation with prepared-transaction checks and
    deployed-version verification, and bind later Circle transfer status to the exact
    original spec. Persisting a response is not confirmation from HTTP success alone.
-2. Establish exclusive, bounded mint signer/nonce authority. The current general funder
-   also signs elsewhere; an isolated nonce counter would not control those other senders.
-   Persist prepared transaction identity before broadcast and retain uncertainty after
-   any lost response.
+2. Integrate the dedicated relay journal with exclusive key custody and bounded
+   signing/broadcast. The current general funder also signs elsewhere; pointing its key
+   at a new journal would not control those other senders. Use the journal's original
+   prepared transaction identity and retain uncertainty after any lost response.
 3. Integrate the relay, session revalidation, bounded input, rate limits and authenticated
    request/status history. Reading status must not sign, repeat the Circle POST or mint.
 4. Implement durable browser request/attempt storage, account-switch isolation, reload
@@ -158,6 +198,14 @@ backend layers are not yet wired into the production creator withdrawal journey.
 Observer and PostgreSQL concurrency fixes through commit `591a03b` passed
 [CI run 34557370494](https://github.com/tang-vu/keryx/actions/runs/34557370494), including
 the expanded PostgreSQL contention drill, browser/contract checks and production build.
+Signed-byte validation commit `24ca021` passed
+[CI run 34557666883](https://github.com/tang-vu/keryx/actions/runs/34557666883), including
+production build. The relay journal adds separate SQLite tests for competing OS
+processes, connection/restart recovery, exact lifetime gas bounds, initialization and
+policy refusal, original prepared-byte recovery after committed-response loss,
+immutable records and corrupt hash readback. These use unfunded synthetic accounts
+and perform no network or settlement operation. All ten journal tests pass locally,
+along with focused lint and TypeScript checking.
 
 The read-only observer adds seven tests using real local signatures and viem's RPC
 encoding over a synthetic transport. They cover exact calldata and caller, rejected
