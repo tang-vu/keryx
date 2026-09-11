@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { assertMintJournalSchema, initializeMintJournalSchema } from "./withdrawal-journal-schema";
 import { attachWithdrawalObservations } from "./withdrawal-journal-observations";
+import { attachWithdrawalGasAdmission, mintGasCommitments } from "./withdrawal-gas-admission";
 import { z } from "zod";
 import { maxUint256, zeroAddress, type Hex } from "viem";
 import { validateWithdrawalRequest, type WithdrawalRequestRecord } from "./withdrawal-request";
@@ -51,6 +52,7 @@ export function createWithdrawalMintJournal(db: DatabaseSync, selected: Withdraw
   }
   async function getSlot(id: string): Promise<Slot | null> {
     checkPolicy();
+    mintGasCommitments(db, policy);
     const row = db.prepare("SELECT * FROM mint_journal_slots WHERE id=?").get(id);
     if (!row) return null;
     const checked = await validateSlot(JSON.parse(String(row.data)));
@@ -73,21 +75,17 @@ export function createWithdrawalMintJournal(db: DatabaseSync, selected: Withdraw
         if (existing.data !== stable(slot)) throw new Error("Mint slot conflict");
         return;
       }
-      const rows = db.prepare("SELECT nonce,max_gas_cost_wei,data FROM mint_journal_slots ORDER BY nonce").all();
+      const rows = db.prepare("SELECT nonce FROM mint_journal_slots ORDER BY nonce").all();
       if (rows.length >= policy.maxSlots || terms.nonce !== policy.initialNonce + rows.length)
         throw new Error("Mint nonce unavailable");
-      let committed = BigInt(0);
-      rows.forEach((row, index) => {
-        if (row.nonce !== policy.initialNonce + index) throw new Error("Mint nonce history unavailable");
-        const original = JSON.parse(String(row.data)) as Slot;
-        const priorTerms = withdrawalMintTermsSchema.parse(original.terms);
-        if (priorTerms.relayer !== policy.relayer || priorTerms.nonce !== row.nonce
-          || original.maxGasCostWei !== row.max_gas_cost_wei
-          || (BigInt(priorTerms.gas) * BigInt(priorTerms.maxFeePerGas)).toString() !== row.max_gas_cost_wei)
-          throw new Error("Mint gas history unavailable");
-        committed += BigInt(uint.parse(row.max_gas_cost_wei));
-      });
-      if (committed + BigInt(slot.maxGasCostWei) > BigInt(policy.lifetimeGasBudgetWei))
+      const { commitments, total } = mintGasCommitments(db, policy);
+      const held = commitments.get(verified.id);
+      if (held && (held.request !== stable(verified) || held.specHash !== attestation.transferSpecHash
+        || BigInt(slot.maxGasCostWei) > held.amount)) throw new Error("Mint admission conflict");
+      if (!held && (commitments.size >= policy.maxSlots
+        || [...commitments.values()].some(item => item.specHash === attestation.transferSpecHash)))
+        throw new Error("Mint admission capacity unavailable");
+      if (!held && total + BigInt(slot.maxGasCostWei) > BigInt(policy.lifetimeGasBudgetWei))
         throw new Error("Mint gas budget unavailable");
       db.prepare(`INSERT INTO mint_journal_slots(id,nonce,max_gas_cost_wei,transfer_id,spec_hash,data)
         VALUES(?,?,?,?,?,?)`).run(verified.id, terms.nonce, slot.maxGasCostWei,
@@ -127,5 +125,6 @@ export function createWithdrawalMintJournal(db: DatabaseSync, selected: Withdraw
     return rows.map(row => String(row.id));
   }
   const core = { reserve, getSlot, savePrepared, getPrepared, listRequestIds };
-  return { ...core, ...attachWithdrawalObservations(db, core, checkPolicy, atomic) };
+  return { ...core, ...attachWithdrawalGasAdmission(db, policy, checkPolicy, atomic),
+    ...attachWithdrawalObservations(db, core, checkPolicy, atomic) };
 }

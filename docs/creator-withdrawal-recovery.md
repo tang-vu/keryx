@@ -69,14 +69,26 @@ despite a subsequent caller disconnect; committed-response readback loss can rec
 through the existing store. HTTP transport disables redirects/retries and bounds the
 whole response by ten seconds and 16 KiB.
 
-This coordinator is not wired into production. Its required admission callback must
-reserve bounded gas durably and idempotently before Circle submission. The current
-relay journal reserves only after an attestation exists; it cannot serve as that
-callback yet. The next integration must reserve gas before the transfer and then bind
-the stored attestation and nonce without charging that same request twice. Unknown
-claims cannot release their gas reservation. Balance-only or no-op admission is not
-sufficient. Tests use synthetic admission callbacks to verify sequencing, not to prove
-this outstanding gas reservation or an integrated paid journey.
+This coordinator is not wired into production. The relay journal now implements
+`admitGas` for its required callback: an immutable original-request gas ceiling is
+stored before Circle submission, without allocating a nonce or needing an attestation.
+`reserve` subsequently binds the stored attestation and nonce under that ceiling.
+Budget and capacity accounting use the union of held requests and legacy nonce slots,
+so attaching a slot never charges twice. A cheaper mint does not release the unused
+ceiling, and unknown claims cannot release their reservation. Both admission and slot
+creation use the same SQLite transaction authority. Protected operator inspection
+reports total committed gas and requests still awaiting an attestation/slot, without
+exposing their signatures or identifiers.
+
+Journal schema version 2 adds immutable admission storage. Version 0/1 upgrades are
+explicit and preserve existing slots, signed bytes and observations; missing version-2
+admission history is rejected. Existing slots continue consuming budget even without
+an admission row. Seven focused tests cover contention, restart, committed-readback
+loss, cancellation, original ceiling/capacity, retained unused gas, version-1 upgrade
+and actual coordinator sequencing with an unknown synthetic vendor response. This is
+a durable accounting cap, not proof of a funded relay balance. Runtime funding and
+key isolation, admission configuration, HTTP integration and live acceptance remain
+required. Balance-only or no-op admission is not sufficient.
 
 Eleven focused coordinator tests pass: concurrent callers, lost claim/vendor/storage
 responses, denied admission, cancellation, immutable request snapshots, invalid and
@@ -84,6 +96,8 @@ oversized evidence, response-body deadline, owner isolation and projection priva
 No test sends a live transfer. Operator bootstrap commit `6a3af61` passed
 [CI run 34561202764](https://github.com/tang-vu/keryx/actions/runs/34561202764), including
 the Linux runtime tests and production build.
+Transfer coordinator commit `c2cb047` passed
+[CI run 34561977865](https://github.com/tang-vu/keryx/actions/runs/34561977865).
 
 ## Read-only mint observation
 
@@ -246,10 +260,11 @@ already described. A lost post-commit readback can recover the original stored r
 None of these operations signs, broadcasts, renews a nonce, releases gas capacity,
 records an application cash-out or implies a refund.
 
-The schema helper pins SQLite `user_version=1`. New journals initialize all four
-tables atomically. The original three-table journal (version 0) requires an explicit
-`upgrade` option, validates the original policy and immutability barriers, and retains
-all existing slots/prepared bytes. A version-1 journal missing observation history is
+The schema helper now pins SQLite `user_version=2`, including gas admissions. New
+journals initialize all five tables atomically. Older version-0/1 journals require
+an explicit `upgrade` option, which validates the original policy and immutability
+barriers and retains existing slots/prepared bytes and observations. A version-1
+journal missing observation history is
 corrupt, not an old journal to silently upgrade. Initialization cannot repair missing
 history. No production relay journal has been created or upgraded by this change.
 

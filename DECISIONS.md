@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-176** - Pre-transfer gas admission - *Reserve one immutable gas ceiling before
+Circle submission, then attach a nonce without charging the request twice.*
+Schema version 2 adds original-request admissions to the same protected SQLite
+journal as nonce slots. Admission needs no attestation or nonce; both allocation
+paths atomically count the union of admissions and legacy slots against the existing
+lifetime gas and request-capacity policy. Later mint terms must fit the original
+ceiling. Unknown outcomes and cheaper/completed mints do not release capacity or gas.
+Explicit version-0/1 upgrades retain original slot and observation history; missing
+current-version tables are not silently recreated. This closes the durable accounting
+dependency of the transfer coordinator, while actual funding, isolated runtime
+provisioning and production HTTP/browser integration remain separate acceptance work.
+
 **D-175** - Initial withdrawal transfer - *Claim once after durable gas admission;
 response loss never authorizes another Circle POST.*
 The server coordinator validates and stores the original owner-signed request before

@@ -234,14 +234,14 @@ it("requires an explicit versioned upgrade and preserves original prepared bytes
   const f = await fixture(), r = await f.request();
   await f.journal.reserve(r.record, r.response, r.terms); await f.journal.savePrepared(r.record.id, r.raw);
   // Reconstruct the original released three-table schema, which had user_version=0.
-  f.db.exec("DROP TABLE mint_journal_observations; PRAGMA user_version=0;");
+  f.db.exec("DROP TABLE mint_journal_observations; DROP TABLE mint_journal_admissions; PRAGMA user_version=0;");
   expect(() => createWithdrawalMintJournal(f.db, f.policy)).toThrow("structure unavailable");
   expect(() => createWithdrawalMintJournal(f.db, { ...f.policy, initialNonce: 1 }, { upgrade: true })).toThrow("policy unavailable");
   expect(f.db.prepare("PRAGMA user_version").get()?.user_version).toBe(0);
   const upgraded = createWithdrawalMintJournal(f.db, f.policy, { upgrade: true });
   expect(await upgraded.getPrepared(r.record.id)).toMatchObject({ serializedTransaction: r.raw });
   expect(await upgraded.getObserved(r.record.id)).toBeNull();
-  expect(f.db.prepare("PRAGMA user_version").get()?.user_version).toBe(1);
+  expect(f.db.prepare("PRAGMA user_version").get()?.user_version).toBe(2);
   f.db.exec("DROP TABLE mint_journal_observations");
   expect(() => createWithdrawalMintJournal(f.db, f.policy, { upgrade: true })).toThrow("initialization unavailable");
 });

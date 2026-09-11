@@ -54,7 +54,8 @@ This command never creates a wallet/journal, renews an authorization or clears a
           if (await journal.getPrepared(id)) prepared++;
           if (await journal.getObserved(id)) observed++;
         }
-        return { status: "inspected", network: config.networkId, slots: ids.length, prepared, observed };
+        return { status: "inspected", network: config.networkId, slots: ids.length, prepared, observed,
+          gasAdmission: journal.gasAdmissionSummary() };
       });
       console.log(JSON.stringify(summary));
     }

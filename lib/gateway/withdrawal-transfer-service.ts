@@ -18,8 +18,9 @@ export async function withdrawalTransferProgress(store: Store, id: string, owner
 }
 
 /** Server coordinator. beforeClaim MUST establish durable, request-idempotent relay
- * gas admission; it is not a boolean liquidity check. No production caller is wired
- * until that admission implementation is available. The callback and transfer
+ * gas admission; it is not a boolean liquidity check. The protected mint journal's
+ * admitGas implements the reservation; runtime funding/custody and HTTP integration
+ * remain required before enabling a production caller. The callback and transfer
  * transport are server-owned dependencies, never client-provided authority. */
 export async function submitWithdrawalTransfer(store: Store, value: WithdrawalRequestRecord, authenticatedOwner: string,
   beforeClaim: (record: WithdrawalRequestRecord, signal: AbortSignal) => Promise<void>,

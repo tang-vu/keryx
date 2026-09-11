@@ -49,7 +49,8 @@ linux("refuses a private journal below a replaceable non-sticky ancestor", async
 linux("runs the actual CLI for inspection, schema check and an empty relay pass without network", async () => {
   const f = fixture(), execute = promisify(execFile);
   const invoke = async (...args: string[]) => execute(process.execPath, ["--import", "tsx", "scripts/withdrawal-relay.mts", ...args], { env: f.env, timeout: 25000 });
-  expect(JSON.parse((await invoke()).stdout)).toMatchObject({ status: "inspected", slots: 0, prepared: 0, observed: 0 });
+  expect(JSON.parse((await invoke()).stdout)).toMatchObject({ status: "inspected", slots: 0, prepared: 0, observed: 0,
+    gasAdmission: { committedRequests: 0, awaitingSlot: 0, committedGasWei: "0", remainingGasBudgetWei: f.policy.lifetimeGasBudgetWei } });
   expect(JSON.parse((await invoke("--upgrade")).stdout)).toMatchObject({ status: "schema-checked" });
   expect(JSON.parse((await invoke("--run")).stdout)).toMatchObject({ state: "idle", signed: 0, broadcastAttempts: 0 });
   writeFileSync(join(f.directory, "private-worker.lock"), "retained synthetic crash lock", { mode: 0o600 });

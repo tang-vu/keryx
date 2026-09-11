@@ -2,7 +2,9 @@ import type { DatabaseSync } from "node:sqlite";
 
 const originalTables = ["mint_journal_policy", "mint_journal_slots", "mint_journal_prepared"];
 const observationTable = "mint_journal_observations";
-const tables = [...originalTables, observationTable];
+const versionOneTables = [...originalTables, observationTable];
+const admissionTable = "mint_journal_admissions";
+const tables = [...versionOneTables, admissionTable];
 const baseSchema = `
 CREATE TABLE mint_journal_policy(id INTEGER PRIMARY KEY CHECK(id=1),data TEXT NOT NULL);
 CREATE TABLE mint_journal_slots(
@@ -17,6 +19,10 @@ CREATE TABLE mint_journal_prepared(
 const observationSchema = `CREATE TABLE mint_journal_observations(
   id TEXT PRIMARY KEY REFERENCES mint_journal_prepared(id),
   data TEXT NOT NULL CHECK(length(data)<=4096)
+);`;
+const admissionSchema = `CREATE TABLE mint_journal_admissions(
+  id TEXT PRIMARY KEY, spec_hash TEXT NOT NULL UNIQUE,
+  max_gas_cost_wei TEXT NOT NULL, data TEXT NOT NULL CHECK(length(data)<=8192)
 );`;
 function protect(db: DatabaseSync, table: string) {
   db.exec(`CREATE TRIGGER ${table}_no_update BEFORE UPDATE ON ${table}
@@ -39,7 +45,7 @@ function checkPolicy(db: DatabaseSync, policy: string) {
 }
 export function assertMintJournalSchema(db: DatabaseSync, policy: string) {
   structure(db, tables);
-  if (db.prepare("PRAGMA user_version").get()?.user_version !== 1) throw new Error("Mint journal version unavailable");
+  if (db.prepare("PRAGMA user_version").get()?.user_version !== 2) throw new Error("Mint journal version unavailable");
   checkPolicy(db, policy);
 }
 export function initializeMintJournalSchema(db: DatabaseSync, policy: string,
@@ -51,13 +57,18 @@ export function initializeMintJournalSchema(db: DatabaseSync, policy: string,
       const existing = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all();
       const version = db.prepare("PRAGMA user_version").get()?.user_version;
       if (existing.length === 0 && version === 0 && options.initialize) {
-        db.exec(baseSchema + observationSchema); tables.forEach(table => protect(db, table));
+        db.exec(baseSchema + observationSchema + admissionSchema); tables.forEach(table => protect(db, table));
         db.prepare("INSERT INTO mint_journal_policy(id,data) VALUES(1,?)").run(policy);
-        db.exec("PRAGMA user_version=1");
+        db.exec("PRAGMA user_version=2");
       } else if (version === 0 && options.upgrade && existing.length === originalTables.length
         && originalTables.every(name => existing.some(row => row.name === name))) {
         structure(db, originalTables); checkPolicy(db, policy);
-        db.exec(observationSchema); protect(db, observationTable); db.exec("PRAGMA user_version=1");
+        db.exec(observationSchema + admissionSchema); protect(db, observationTable); protect(db, admissionTable);
+        db.exec("PRAGMA user_version=2");
+      } else if (version === 1 && options.upgrade && existing.length === versionOneTables.length
+        && versionOneTables.every(name => existing.some(row => row.name === name))) {
+        structure(db, versionOneTables); checkPolicy(db, policy);
+        db.exec(admissionSchema); protect(db, admissionTable); db.exec("PRAGMA user_version=2");
       } else if (existing.length !== tables.length || !tables.every(name => existing.some(row => row.name === name))) {
         throw new Error("Mint journal initialization unavailable");
       }

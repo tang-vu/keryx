@@ -26,6 +26,11 @@ function encodeSpec(record: WithdrawalRequestRecord) {
   ]);
 }
 
+/** Caller must validate the request before using its spec identity as authority. */
+export function withdrawalTransferSpecHash(record: WithdrawalRequestRecord) {
+  return keccak256(encodeSpec(record));
+}
+
 export type WithdrawalAttestation = {
   format: "creator-withdrawal-attestation-v1";
   authority: "request-matched-only";
