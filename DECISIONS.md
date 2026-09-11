@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-211** - Fresh relay journal initialization - *Create an exclusive private directory
+and verify the empty journal without treating missing history as recoverable emptiness.*
+The operator-only provisioner validates a testnet policy with initial nonce zero before
+filesystem writes, requires an existing private canonical parent and creates the new
+directory without an existing-directory fallback. Policy/database files use exclusive
+creation, durable writes and reopen verification. Duplicate, corrupt or partially
+created directories remain untouched; cancellation never removes uncertain artifacts.
+This helper neither generates keys nor proves a key is unused: a newly generated
+dedicated key, custody isolation and live latest/pending nonce checks are separate
+operator prerequisites. It does not enable relay/HTTP, fund a wallet or sign anything.
+
 **D-210** - Withdrawal supervision and deployment - *Pause scheduling before draining
 the cycle, and restore only a previously active timer after web health succeeds.*
 Prepared systemd units run bounded oneshot cycles after prior completion. Expected

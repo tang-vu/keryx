@@ -18,6 +18,7 @@ const policySchema = z.object({ format: z.literal("creator-mint-journal-v1"), ch
   maxSlots: z.number().int().min(1).max(1000),
 }).strict();
 export type WithdrawalMintJournalPolicy = z.infer<typeof policySchema>;
+export function validateWithdrawalMintJournalPolicy(value: unknown) { return policySchema.parse(value); }
 type Slot = { request: WithdrawalRequestRecord; attestation: Awaited<ReturnType<typeof matchWithdrawalAttestation>>;
   terms: WithdrawalMintTerms; maxGasCostWei: string };
 const stable = (value: unknown) => JSON.stringify(value);

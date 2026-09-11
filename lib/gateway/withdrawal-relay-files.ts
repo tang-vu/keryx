@@ -16,6 +16,11 @@ async function inspectDirectory(directory: string) {
   }
   return root;
 }
+/** Existing private parent/directory check for explicit operator provisioning. */
+export async function inspectWithdrawalRelayDirectory(directory: string) {
+  try { return await inspectDirectory(directory); }
+  catch { throw new Error("Protected withdrawal relay directory unavailable"); }
+}
 async function inspectFile(path: string) {
   const stat = await lstat(path);
   if (!stat.isFile() || stat.isSymbolicLink() || stat.uid !== process.getuid!()

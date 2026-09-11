@@ -25,6 +25,15 @@ application database under `/root/keryx/data`. No unit creates or migrates eithe
 Choose the dedicated testnet key, key inventory, journal lifetime limits, fee/gas
 terms, backups and observed initial nonce before activation.
 
+`provisionFreshWithdrawalJournal` is an explicit internal initialization helper for
+a newly generated, never-used key with verified latest/pending nonce zero. It requires
+an existing private canonical parent and creates a fresh child directory exclusively.
+It validates the policy before writes, syncs files/directories and reopens the empty
+SQLite journal for verification. An existing or partial child directory is never
+reused, erased or repaired automatically. Missing history for a previously used key
+must use recovery, not this helper. The function has no key, RPC or enablement capability;
+empty local storage cannot establish key freshness, exclusive custody or gas backing.
+
 The process explicitly loads `.env.local`, optional `.env.private-worker.local`
 (for private treasury inventory), and `.env.withdrawal-relay.local`. Keep these files
 owner-only. The relay file must contain the explicitly enabled isolated relay policy;
