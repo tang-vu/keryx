@@ -47,6 +47,9 @@ jobs:
       - name: Creator withdrawal admission (isolated PostgreSQL, synthetic data)
         run: node --import tsx scripts/test-creator-withdrawal-postgres.mts
 
+      - name: Withdrawal backup and recovered copy (Linux CLI, synthetic data)
+        run: node --import tsx --no-warnings scripts/test-withdrawal-backup-restore.mts
+
       - name: Install Chromium for buyer persistence checks
         run: npx playwright install --with-deps chromium
 

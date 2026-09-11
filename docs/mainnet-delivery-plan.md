@@ -128,6 +128,14 @@ passed checksum, gzip, integrity and required-column checks. Scheduled off-site 
 complete service/key recovery and payment-reconciliation drills remain unverified;
 O1/M5 are still open.
 
+Withdrawal operations update (September 11): the
+[Linux backup/recovered-copy CLI drill](./engineering/withdrawal-backup-copy-drill-2026-09-11.md)
+preserves an exact signed synthetic mint and a second pending gas admission through
+WAL backup, source-path isolation, copying to a new directory and separate-process
+inspection against a retained digest. A modified manifest is rejected. The real
+commands and repeatable CI script exist; off-host retention, application pairing,
+newer-signature reconciliation and funded restore/resume acceptance remain open.
+
 Private recovery evidence update (September 10): a [local buyer/backend integration drill](./engineering/private-checkout-integration-2026-09-10.md)
 connects quote acceptance, EOA signing, durable journals, SQLite payment admission and
 recovery after response loss and database reopen. Both persisted synthetic success and

@@ -128,6 +128,12 @@ required for those copies. Successful inspection returns `verified-backup-copy` 
 No RPC, key, admission, restore or signing operation occurs. Tampered database bytes,
 modified manifests and incorrect expected digests were rejected in native Linux checks.
 
+The [separate-process recovered-copy drill](./engineering/withdrawal-backup-copy-drill-2026-09-11.md)
+also runs both real CLIs, isolates the original source path and checks a new directory
+against a separately retained digest. Run `node --import tsx --no-warnings
+scripts/test-withdrawal-backup-restore.mts` on Linux/Node 24; the test uses temporary
+synthetic journals and never activates a signer. CI includes this repeatable drill.
+
 ### Drain before deployment
 
 The service uses SIGTERM, control-group shutdown, infinite stop grace, no SIGKILL and
