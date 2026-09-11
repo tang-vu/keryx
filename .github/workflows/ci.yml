@@ -105,6 +105,10 @@ jobs:
         run: npm run build
 
       - name: Withdrawal production framework headers (loopback, no authentication or payment)
+        env:
+          # This secret-free CI server must use explicit offline cache semantics.
+          # Real production startup correctly requires CONTENT_MASTER_KEY.
+          KERYX_FORCE_OFFLINE: "1"
         run: node --import tsx scripts/test-withdrawal-framework-headers.mts
 
       - name: Lint (informational)
