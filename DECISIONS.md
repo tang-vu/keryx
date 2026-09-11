@@ -1,5 +1,12 @@
 # Keryx — Decision Log
 
+**D-220** - Framework privacy headers - *Private response policies must survive
+Next.js configured-header precedence.*
+The v0.22.53 live check found the global Referrer-Policy overriding the handler's
+no-referrer value, including on the direct local server port. Withdrawal account/API
+paths now override that global rule in next.config.ts as well. Runtime header checks
+are required; handler unit tests alone do not prove the deployed response policy.
+
 **D-219** - Account history without wallet signing - *A live account session can read
 its server history while signing remains gated by the matching connected wallet.*
 The history route binds directly to account authentication and has no configured
