@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-222** - Direct-answer stopping gate - *A partial coverage score cannot by itself
+justify skipping the remaining selected sources.*
+JSON reasoning previously stopped at 0.4 even though its own guidance called 0.4-0.6
+a partial answer, and discarded the requested supportedAnswer/missingRequestedParts
+fields when deciding to stop. Stopping now requires every target to have coverage at
+least 0.7, a nonempty supported answer, known supporting markers and an explicit empty
+missing-parts list. Missing/malformed assessments continue within existing source and
+spending caps. Coverage values, citation reward thresholds and the explicit offline
+heuristic retain their existing meaning. This is a model-assessment gate, not proof
+that an answer is true or all contradictions were discovered. Agent-loop regression
+covers reading past partial/high-score-with-gap assessments and stopping once complete.
+
 **D-221** - Progress after local-original loss - *Match server progress to server
 history without upgrading the report into independently verified evidence.*
 The new history progress reader uses only the stored request selector and authenticated

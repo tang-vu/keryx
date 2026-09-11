@@ -6,7 +6,13 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.54 (server-reported withdrawal progress, updated 2026-09-11)
+**Version:** 0.22.55 (direct-answer stopping gate, updated 2026-09-11)
+
+JSON reasoning no longer stops on a partial coverage score alone. Every requested
+target must have a direct-answer score, explicit supported answer and no reported
+missing requested parts before selected reads are skipped. Existing spend/source caps
+remain authoritative. This does not independently validate the model assessment or
+change evidence-gated citation rewards.
 
 Account history now includes a read-only progress check for each saved request, without
 requiring a locally retained original. The display distinguishes pending evidence,

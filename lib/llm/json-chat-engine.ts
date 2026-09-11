@@ -8,7 +8,7 @@ import { config } from "../config";
 import { LlmCallLedger } from "./call-ledger";
 import { evidenceContext, EVIDENCE_CONTEXT_GUIDANCE } from "./evidence-context";
 import { buildQuoteOptions, resolveQuoteEvidence } from "./quote-options";
-import { COVERAGE_GUIDANCE, normalizeCoverage } from "./coverage-assessment";
+import { COVERAGE_GUIDANCE, normalizeCoverage, canStopForCoverage } from "./coverage-assessment";
 import { applyEvidenceReview, EVIDENCE_REVIEW_GUIDANCE, MAX_REVIEWED_EVIDENCE } from "./evidence-review";
 import type { Decision } from "../types";
 import type {
@@ -197,7 +197,8 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       config.llmModel,
       "You decide if enough has been read to answer confidently. For EACH sub-claim, estimate its coverage (0.0 = not covered, 1.0 = fully supported) " +
         "and list which source markers cover it. " + COVERAGE_GUIDANCE +
-        "Stopping early saves budget; only continue if a sub-claim has coverage below 0.4. " + EVIDENCE_CONTEXT_GUIDANCE + "Output strict JSON.",
+        "Stop early only when every sub-claim has a direct supported answer, coverage at least 0.7, " +
+        "and no requested part still missing. Do not omit a requested gap merely to reach a stopping score. " + EVIDENCE_CONTEXT_GUIDANCE + "Output strict JSON.",
       JSON.stringify({
         question: input.question,
         subClaims: input.subClaims,
@@ -210,9 +211,12 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     // The claim text is caller-owned state. Preserve the requested order and wording rather than
     // trusting the model to repeat it exactly; a harmless paraphrase must not erase final coverage.
     const perClaim = normalizeCoverage(out.perClaim, input.subClaims, input.gathered);
+    const sufficient = canStopForCoverage(out.perClaim, perClaim);
+    const rationale = typeof out.rationale === "string" ? out.rationale : "";
     return {
-      sufficient: perClaim.length > 0 && perClaim.every((claim) => claim.coverage >= 0.4),
-      rationale: (out.rationale as string) ?? "",
+      sufficient,
+      rationale: sufficient ? rationale : [rationale,
+        "The assessment does not establish a complete supported answer for every requested part."].filter(Boolean).join(" "),
       perClaim: perClaim.length > 0 ? perClaim : undefined,
     };
   }

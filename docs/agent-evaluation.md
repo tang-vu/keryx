@@ -8,6 +8,21 @@ transaction id, or is not explicitly labelled `simulated`.
 
 ## Commands
 
+Since v0.22.55, JSON-engine early stopping requires coverage >= 0.7 for every target,
+a nonempty supported answer, known source markers and an explicit empty list of missing
+requested parts. A high numeric score with a reported gap cannot stop reading. Unknown
+or malformed assessments fail this stopping check without rewriting coverage/reward
+scores. Source and spend caps still bound further reads. The heuristic baseline has
+its own explicit offline policy; it is not evidence of live model sufficiency.
+
+The September 11 regression exercises the actual agent loop with deterministic JSON
+assessments: partial/high-score-with-gap first reads continue, a complete second read
+stops before a third affordable source, and total spend stays within the supplied cap.
+A separate live model diagnostic of the fictional internal-versus-external metrics case
+returned insufficient (0.1 on each target) and correctly explained the absent external
+cohort and measured p95. That single model-only sample is not independent review or
+end-to-end quality acceptance.
+
 ```bash
 npm run eval:agent
 npm run eval:agent -- --case multi-claim-portfolio

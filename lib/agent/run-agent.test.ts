@@ -24,6 +24,7 @@ import { runAgent, type RunInput } from "./run-agent";
 import { collectRun } from "./index";
 import type { ResearchEffects } from "./research-effects";
 import { config } from "../config";
+import { JsonChatEngine } from "../llm/json-chat-engine";
 import { makePayment, type PaymentGateway } from "../payments/payment-gateway";
 import { PaymentPendingError, PaymentSettledError } from "../payments/payment-state";
 import type { AgentDeps } from "./deps";
@@ -321,6 +322,33 @@ async function drive(
 
 const fetchBudget = (budget: number) => budget * (1 - config.citationPoolRatio);
 const citationPool = (budget: number) => budget * config.citationPoolRatio;
+
+it("continues past partial or explicitly incomplete answers, then stops before another affordable read", async () => {
+  for (const first of [{ coverage: 0.4, missingRequestedParts: [] },
+    { coverage: 0.9, missingRequestedParts: ["Measured latency"] }]) {
+    class Assessor extends JsonChatEngine {
+      readonly name = "test-json-assessor";
+      rows: unknown[] = [];
+      protected async chatJson() { return { perClaim: this.rows, rationale: "Synthetic assessment" }; }
+    }
+    const assessor = new Assessor(), engine = fakeEngine({ decide: input => input.candidates.map((source, index) => ({
+      ...buy({ id: source.id, name: source.name, price: source.fetchPrice }), targets: [index % 2],
+    })) });
+    engine.decompose = async () => ["What is the supported result?", "What is the measured latency?"];
+    engine.sufficiency = async input => {
+      assessor.rows = input.subClaims.map(() => ({ supportedAnswer: "The supplied text answers the question.",
+        coveredBy: input.gathered.map(g => g.marker),
+        ...(input.gathered.length < 2 ? first : { coverage: 0.8, missingRequestedParts: [] }) }));
+      return assessor.sufficiency(input);
+    };
+    const gateway = fakeGateway();
+    const { run, steps } = await drive({ question: "What is the supported result and measured latency?", budget: 0.05, researchMode: "deep" },
+      deps(["alpha", "beta", "gamma"].map(id => makeSource({ id })), engine, gateway));
+    expect(gateway.fetchCalls).toHaveLength(2);
+    expect(run.totalSpent).toBeLessThanOrEqual(0.05 + EPS);
+    expect(steps.some(step => step.message.includes("Stopping early"))).toBe(true);
+  }
+});
 
 // ── tests ───────────────────────────────────────────────────────────────────
 

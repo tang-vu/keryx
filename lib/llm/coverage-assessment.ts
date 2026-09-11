@@ -24,3 +24,15 @@ export function normalizeCoverage(value: unknown, claims: string[], gathered: Ga
     return { claim, coverage, coveredBy };
   });
 }
+
+/** Coverage describes support; stopping also requires an explicit answer and no
+ * model-reported requested gap. This is not independent evidence verification. */
+export function canStopForCoverage(value: unknown, normalized: ClaimSufficiency[]): boolean {
+  if (!Array.isArray(value) || normalized.length === 0 || value.length !== normalized.length) return false;
+  return normalized.every((claim, index) => {
+    const row = value[index];
+    return claim.coverage >= 0.7 && claim.coveredBy.length > 0 && row !== null && typeof row === "object"
+      && typeof row.supportedAnswer === "string" && row.supportedAnswer.trim().length > 0
+      && Array.isArray(row.missingRequestedParts) && row.missingRequestedParts.length === 0;
+  });
+}
