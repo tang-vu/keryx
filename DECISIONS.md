@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-196** - Partial local recovery - *Keep valid originals accessible when another
+saved payload cannot be validated, without repairing or deleting the failed row.*
+Owner-indexed listing validates each row separately and returns an unavailable count.
+Pagination advances using the IndexedDB primary key rather than the last valid payload,
+so corruption at a page boundary cannot hide later originals. A mismatched payload ID
+is rejected. Invalid primary-key structure and unavailable storage still fail the scan;
+this does not grant permission to reconstruct or resubmit missing authorizations. The
+panel reports unreadable rows and does not present an entirely unreadable page as an
+empty history. Chromium tests cover mixed validity and a corrupt 25th row followed by
+another page. No signatures, claims or saved rows are modified by listing.
+
 **D-195** - Creator recovery interface - *Keep wallet-scoped recovery separate from
 new withdrawal authorization and clear the view across account changes.*
 The recovery panel lists locally retained originals, checks authenticated status and

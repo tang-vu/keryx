@@ -21,6 +21,7 @@ function OwnerRecovery({ owner }: { owner: string }) {
   const [rows, setRows] = useState<Row[]>([]), [cursor, setCursor] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false), [busy, setBusy] = useState(false), [message, setMessage] = useState("");
   const [statuses, setStatuses] = useState<Record<string, Status>>({});
+  const [unavailableCount, setUnavailableCount] = useState(0);
   const active = useRef<AbortController | null>(null), gate = useRef(false);
   const run = useCallback(async (work: (signal: AbortSignal) => Promise<void>) => {
     const controller = active.current;
@@ -33,6 +34,7 @@ function OwnerRecovery({ owner }: { owner: string }) {
   const load = useCallback(async (signal: AbortSignal, afterId?: string) => {
     const page = await listWithdrawalBrowserJournals(owner, afterId); signal.throwIfAborted();
     setRows(previous => afterId ? [...previous, ...page.requests] : page.requests);
+    setUnavailableCount(previous => afterId ? previous + page.unavailableCount : page.unavailableCount);
     setCursor(page.nextCursor); setLoaded(true);
   }, [owner]);
   useEffect(() => {
@@ -67,7 +69,8 @@ function OwnerRecovery({ owner }: { owner: string }) {
         disabled={busy} onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void importFile(file); }} /></label>
     </div>
     <p role="status" aria-live="polite" className="text-sm">{message || (busy ? "Checking saved withdrawal…" : "")}</p>
-    {loaded && rows.length === 0 && <p>No withdrawal requests saved for this wallet in this browser. Import a recovery file if you have one.</p>}
+    {unavailableCount > 0 && <p role="alert">{unavailableCount} saved request(s) could not be read. Other requests remain available. Keep your recovery files; unreadable records have not been deleted.</p>}
+    {loaded && rows.length === 0 && unavailableCount === 0 && <p>No withdrawal requests saved for this wallet in this browser. Import a recovery file if you have one.</p>}
     <ul className="space-y-3">{rows.map(row => <li key={row.id} className="space-y-2 rounded border p-3">
       <p className="font-medium">{formatUnits(BigInt(row.draft.burnIntent.spec.value), 6)} USDC</p>
       <p className="break-all text-xs">Request {row.id}</p>

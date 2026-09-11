@@ -92,15 +92,25 @@ export async function importWithdrawalBrowserJournal(value: WithdrawalRequestRec
 export async function listWithdrawalBrowserJournals(owner: string, afterId?: string) {
   const wallet = withdrawalOwnerSchema.parse(owner);
   if (afterId !== undefined) withdrawalIdSchema.parse(afterId);
-  const rows = await transaction<unknown[]>("readonly", (store, done) => {
-    const values: unknown[] = [], cursor = store.index("owner").openCursor(IDBKeyRange.only(wallet));
+  const rows = await transaction<{ key: string; value: unknown }[]>("readonly", (store, done) => {
+    const values: { key: string; value: unknown }[] = [], cursor = store.index("owner").openCursor(IDBKeyRange.only(wallet));
     cursor.onsuccess = () => {
       const current = cursor.result;
       if (!current || values.length === 26) { done(values); return; }
-      if (afterId === undefined || String(current.primaryKey) > afterId) values.push(current.value);
+      if (afterId === undefined || String(current.primaryKey) > afterId) values.push({ key: String(current.primaryKey), value: current.value });
       current.continue();
     };
   });
-  const requests = await Promise.all(rows.slice(0, 25).map(value => validateRow(value, wallet)));
-  return { requests, nextCursor: rows.length > 25 ? requests.at(-1)!.id : null };
+  const selected = rows.slice(0, 25);
+  // Cursor authority is the IndexedDB primary key, never a possibly corrupted
+  // payload's id. An unreadable row must not hide other originals or halt paging.
+  for (const item of selected) withdrawalIdSchema.parse(item.key);
+  const checked = await Promise.allSettled(selected.map(async item => {
+    const row = await validateRow(item.value, wallet);
+    if (row.id !== item.key) throw new Error("Withdrawal storage identity mismatch");
+    return row;
+  }));
+  const requests = checked.flatMap(result => result.status === "fulfilled" ? [result.value] : []);
+  return { requests, unavailableCount: checked.length - requests.length,
+    nextCursor: rows.length > 25 ? selected.at(-1)!.key : null };
 }

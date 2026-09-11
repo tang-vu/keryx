@@ -88,6 +88,9 @@ try {
       const get=store.get(${JSON.stringify(unsigned.id)});get.onsuccess=()=>{const row=get.result;row.draft.burnIntent.spec.value='1';store.put(row);};
       tx.oncomplete=()=>{db.close();resolve(true);};tx.onerror=()=>{db.close();reject(new Error('fixture failure'));};};})`);
   await assert.rejects(invoke(second, "readWithdrawalBrowserJournal", unsigned.id));
+  const partial = await first.evaluate(`window.journal.listWithdrawalBrowserJournals(${JSON.stringify(account.address)})`);
+  assert.equal(partial.unavailableCount, 1);
+  assert.ok(partial.requests.some((row: { id: string }) => row.id === original.id), "a corrupt original does not hide valid saved requests");
   // Owner-indexed listing must not expose another wallet's local signed payloads.
   const foreign = await first.evaluate(`window.journal.listWithdrawalBrowserJournals('0x${"00".repeat(20)}')`);
   assert.deepEqual(foreign.requests, []);
@@ -110,6 +113,16 @@ try {
   const ids = await first.evaluate(`(async()=>{const ids=[];let cursor;do{const page=await window.journal.listWithdrawalBrowserJournals(
     ${JSON.stringify(account.address)},cursor);ids.push(...page.requests.map(row=>row.id));cursor=page.nextCursor;}while(cursor);return ids;})()`);
   assert.equal(ids.length, 27); assert.equal(new Set(ids).size, 27);
+  const pageBoundaryId = ids[24];
+  await first.evaluate(`new Promise((resolve,reject)=>{const open=indexedDB.open('keryx-creator-withdrawals-v1',1);
+    open.onsuccess=()=>{const db=open.result,tx=db.transaction('requests','readwrite'),store=tx.objectStore('requests');
+      const get=store.get(${JSON.stringify(pageBoundaryId)});get.onsuccess=()=>{const row=get.result;row.draft.burnIntent.spec.value='1';store.put(row);};
+      tx.oncomplete=()=>{db.close();resolve(true);};tx.onerror=()=>{db.close();reject(new Error('fixture failure'));};};})`);
+  const boundaryPage = await first.evaluate(`window.journal.listWithdrawalBrowserJournals(${JSON.stringify(account.address)})`);
+  assert.equal(boundaryPage.requests.length, 24); assert.equal(boundaryPage.unavailableCount, 1);
+  assert.equal(boundaryPage.nextCursor, pageBoundaryId);
+  const followingPage = await first.evaluate(`window.journal.listWithdrawalBrowserJournals(${JSON.stringify(account.address)},${JSON.stringify(boundaryPage.nextCursor)})`);
+  assert.equal(followingPage.requests.length, 2); assert.equal(followingPage.nextCursor, null);
   const blocked = await fresh();
   await first.evaluate("window.idbDescriptor=Object.getOwnPropertyDescriptor(window,'indexedDB');Object.defineProperty(window,'indexedDB',{value:undefined,configurable:true});");
   await assert.rejects(invoke(first, "reserveWithdrawalBrowserJournal", blocked));

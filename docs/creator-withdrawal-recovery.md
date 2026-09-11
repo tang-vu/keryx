@@ -372,6 +372,15 @@ and changes wallets to confirm owner rows disappear. HTTP remains intercepted. C
 lint and TypeScript checking pass locally. The panel is not mounted in production yet;
 full workspace integration and independent wallet/mobile acceptance remain open.
 
+Local listing now isolates invalid saved payloads: valid originals remain visible and
+an unavailable count explains the unreadable rows without deleting or repairing them.
+Pagination uses the actual IndexedDB primary key, including when the last payload of
+a page is corrupt. Malformed key structure/storage failures still fail closed. The
+panel does not call unreadable history empty. Chromium verifies mixed valid/invalid
+rows and a corrupted 25th record with later originals still accessible. The preceding
+recovery-interface production build completed successfully; no production route was
+added or activated by that build.
+
 ## Browser HTTP submission
 
 `submitWithdrawalBrowserHttpOnce` connects the committed browser flow to
