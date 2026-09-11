@@ -20,8 +20,9 @@ const nextConfig: NextConfig = {
     turbopackFileSystemCacheForBuild: process.env.NEXT_DIST_DIR !== ".next.tmp",
     // Next isolates static workers from the parent's heap flag. On the small VPS,
     // generating eight pages together exhausted the worker's ~480 MiB heap.
-    // Bound temporary deployment builds to one worker and one page at a time.
-    ...(process.env.NEXT_DIST_DIR === ".next.tmp" ? { cpus: 1, staticGenerationMaxConcurrency: 1 } : {}),
+    // A single thread preserves the explicitly configured parent heap; a child
+    // process drops it. Verify this with scripts/check-next-worker-memory.cjs.
+    ...(process.env.NEXT_DIST_DIR === ".next.tmp" ? { cpus: 1, staticGenerationMaxConcurrency: 1, workerThreads: true } : {}),
   },
 
   async headers() {

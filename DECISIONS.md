@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-208** - Deployment worker heap - *Use one Next worker thread to preserve the
+explicit parent heap, and verify the installed wrapper before every VPS build.*
+Serial generation alone still exhausted the child process heap. A diagnostic using
+the actual installed Next Worker on the VPS measured 529 MiB for the isolated child
+and 1584 MiB for the thread, matching the capped parent. Temporary builds now enable
+workerThreads alongside one worker/one page concurrency. The deploy preflight checks
+that the thread retains the bounded parent heap before running the expensive build.
+Normal web runtime and local/CI defaults are unchanged. This uses Node's documented
+worker heap behavior (https://nodejs.org/api/worker_threads.html) and the installed
+Next wrapper; no dependency files are patched. Production build/health remain the
+acceptance gate, and a failed build must not restart a drained private worker.
+
 **D-207** - Bounded deployment prerendering - *Generate one page at a time in one
 worker for temporary VPS builds.*
 The v0.22.51 deployment compiled successfully but failed during static generation at
