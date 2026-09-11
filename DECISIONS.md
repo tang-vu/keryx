@@ -1,5 +1,15 @@
 # Keryx — Decision Log
 
+**D-212** - Fresh relay chain preflight - *Read current account state before treating
+a newly generated key as eligible for an empty journal.*
+The read-only helper checks Arc Testnet identity, a fresh rechecked block, latest and
+pending nonce zero, absence of account code, and native gas backing against an explicit
+integer lifetime ceiling. Repeated pending balance samples use the lowest observed
+value; underfunding is explicit. RPC calls have no automatic retries and the overall
+read has a ten-second cancellation deadline. The observation does not prove exclusive
+custody, absence of off-chain signatures or future funding; provisioning and every
+later admission retain their separate checks. No key, journal or enable flag is changed.
+
 **D-211** - Fresh relay journal initialization - *Create an exclusive private directory
 and verify the empty journal without treating missing history as recoverable emptiness.*
 The operator-only provisioner validates a testnet policy with initial nonce zero before

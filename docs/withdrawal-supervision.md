@@ -34,6 +34,14 @@ reused, erased or repaired automatically. Missing history for a previously used 
 must use recovery, not this helper. The function has no key, RPC or enablement capability;
 empty local storage cannot establish key freshness, exclusive custody or gas backing.
 
+Before initialization, `freshWithdrawalRelayForRpc` can inspect the public relay address
+against an explicit lifetime gas ceiling in native wei (18 decimals, not ERC-20 USDC's
+6 decimals). It checks chain identity, fresh consistent block metadata, latest/pending
+nonce zero, empty account code and sampled balance. `underfunded` must not proceed;
+lookup failures require inspection. Even `funded` is only a point-in-time RPC observation,
+not proof that the key was never shared or used to sign off-chain. This helper does not
+create the journal or enable the service, and later admission must recheck gas backing.
+
 The process explicitly loads `.env.local`, optional `.env.private-worker.local`
 (for private treasury inventory), and `.env.withdrawal-relay.local`. Keep these files
 owner-only. The relay file must contain the explicitly enabled isolated relay policy;
