@@ -295,8 +295,8 @@ Submission consumes the strict cross-tab marker, rechecks the active account, re
 the committed original and only then calls transport. A changed/missing journal or
 post-claim account change cannot fall back to an in-memory request or renew permission.
 All transport outcomes require read-only recovery; an HTTP response is not accepted as
-mint completion. The app-owned transport still needs bounded HTTP/abort wiring, and
-the eventual status view must validate authenticated original mint evidence. The flow
+mint completion. The app-owned transport now has bounded HTTP/abort wiring; the
+eventual status view must validate authenticated original mint evidence. The flow
 does not create drafts automatically or import missing history as fresh requests.
 
 The Chromium drill now also exercises real EOA signature identity through the flow,
@@ -312,6 +312,26 @@ Chromium flow verification, focused lint and TypeScript checking pass locally.
 Journal commit `00e58ab` passed
 [CI run 34564078587](https://github.com/tang-vu/keryx/actions/runs/34564078587), including
 the Chromium withdrawal journal test and production build.
+
+## Browser HTTP submission
+
+`submitWithdrawalBrowserHttpOnce` connects the committed browser flow to
+`withdrawal-browser-submit.ts`. It validates a snapshot of the original signed request
+and rechecks the live account immediately before the fixed `/api/me/withdrawals/submit`
+POST. The body contains only signed wire terms, never client policy authority. Same-origin
+credentials, no caching/redirects/retries, a 30-second whole HTTP deadline and a 2 KiB
+response cap apply. Only HTTP 202 with progress matching the original owner, recipient,
+amount and digest is accepted; the caller still returns recovery-required. HTTP errors,
+body stalls and late responses cannot renew the consumed browser claim or establish
+mint finality. Raw server diagnostics are withheld.
+
+Four focused tests cover exact payload/privacy, invalid signatures, cancellation and
+the pre-send account guard, misbound/oversized/error responses, and stalled headers/body.
+The real Chromium drill races two tabs through this concrete HTTP binding, checks the
+persisted marker at interception, drops the response and verifies subsequent calls send
+no further POST. All HTTP is intercepted; no funded transaction is performed. Local
+focused tests, Chromium, lint and TypeScript checking pass. The production endpoint
+and withdrawal panel still require runtime integration and live testnet acceptance.
 
 ## Browser HTTP status recovery
 

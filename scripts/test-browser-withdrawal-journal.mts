@@ -20,10 +20,19 @@ window.journal=journal;window.fresh=p=>journal.createWithdrawalBrowserDraft(prep
   resolveDir: process.cwd(), loader: "ts" }, bundle: true, write: false, platform: "browser", format: "iife", define: { "process.env": "{}" } });
 const browser = await chromium.launch({ headless: true });
 try {
-  const context = await browser.newContext(); let requests = 0, statusRequests = 0;
+  const context = await browser.newContext(); let requests = 0, statusRequests = 0, submitRequests = 0;
+  let expectedSubmission: WithdrawalRequestRecord | undefined;
   const statusResponses = new Map<string, { status: number; body: unknown }>();
   let changeOwnerDuringStatus: (() => Promise<void>) | undefined;
   await context.route("**/*", async route => {
+    if (route.request().url() === "https://withdrawal-journal.test/api/me/withdrawals/submit") {
+      submitRequests++; assert.equal(route.request().method(), "POST");
+      assert.deepEqual(route.request().postDataJSON(), expectedSubmission?.request);
+      const page = route.request().frame().page();
+      assert.equal((await page.evaluate(`window.journal.readWithdrawalBrowserJournal(${JSON.stringify(expectedSubmission!.id)},
+        ${JSON.stringify(expectedSubmission!.owner)})`)).state, "submission-possible");
+      return route.abort("failed"); // Synthetic loss after the actual browser HTTP boundary.
+    }
     if (route.request().url() === "https://withdrawal-journal.test/api/me/withdrawals/status") {
       statusRequests++; assert.equal(route.request().method(), "POST");
       const body = route.request().postDataJSON(); assert.deepEqual(Object.keys(body), ["id"]);
@@ -154,6 +163,15 @@ try {
   changeOwnerDuringStatus = () => first.evaluate(`window.activeOwner='0x${"00".repeat(20)}'`).then(() => undefined);
   await assert.rejects(recover());
   assert.equal(statusRequests, 3);
+  const httpDraft = await fresh(); await invoke(first, "reserveWithdrawalBrowserJournal", httpDraft);
+  expectedSubmission = await sign(httpDraft); await invoke(first, "saveWithdrawalBrowserSignature", expectedSubmission);
+  const submitHttp = (page: Page) => page.evaluate(`window.flow.submitWithdrawalBrowserHttpOnce(
+    ${JSON.stringify(httpDraft.id)},${JSON.stringify(account.address)},()=>${JSON.stringify(account.address)},new AbortController().signal)`);
+  const httpOutcomes = await Promise.all(pages.map(submitHttp));
+  assert.ok(httpOutcomes.every(value => value.state === "recovery-required"));
+  assert.equal(submitRequests, 1);
+  await submitHttp(first); await submitHttp(second);
+  assert.equal(submitRequests, 1, "lost HTTP response cannot authorize another transmission");
   assert.equal(requests, 3);
-  console.log("PASS: Chromium withdrawal draft/signature journal, cross-tab single claim, reload, owner isolation, abort, corruption and recovery-only import after storage loss; no payment HTTP.");
+  console.log("PASS: Chromium withdrawal journal, signing, cross-tab single HTTP submission, lost-response recovery, owner isolation, abort and recovery-only imports; all HTTP intercepted, no live payment.");
 } finally { await browser.close(); }

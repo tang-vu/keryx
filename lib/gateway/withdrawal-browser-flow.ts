@@ -3,6 +3,7 @@ import { withdrawTypedData } from "./withdraw-protocol";
 import { createWithdrawalRequest, withdrawalOwnerSchema, type WithdrawalRequestRecord } from "./withdrawal-request";
 import { readWithdrawalBrowserJournal, saveWithdrawalBrowserSignature, claimWithdrawalBrowserSubmission } from "./withdrawal-browser-journal";
 import { readWithdrawalBrowserStatus } from "./withdrawal-browser-status";
+import { sendWithdrawalBrowserOriginal } from "./withdrawal-browser-submit";
 
 type ActiveOwner = () => string | null;
 type Transfer = (original: WithdrawalRequestRecord, signal: AbortSignal) => Promise<unknown>;
@@ -57,6 +58,14 @@ export async function submitWithdrawalBrowserOnce(id: string, owner: string, act
   }
   requireActiveOwner(selected, activeOwner, signal);
   return { state: "recovery-required" as const };
+}
+
+/** Production transport binding. The fixed endpoint is not registered until the
+ * server runtime is configured; any HTTP outcome retains the original local claim. */
+export function submitWithdrawalBrowserHttpOnce(id: string, owner: string, activeOwner: ActiveOwner, signal: AbortSignal) {
+  return submitWithdrawalBrowserOnce(id, owner, activeOwner,
+    (original, currentSignal) => sendWithdrawalBrowserOriginal(original, currentSignal,
+      () => requireActiveOwner(original.owner, activeOwner, currentSignal)), signal);
 }
 
 /** Recovery reads only. Missing server evidence never resets a consumed local claim. */

@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-186** - Browser withdrawal submission - *Bind the committed one-attempt flow to
+a fixed same-origin transport and recover every uncertain HTTP outcome.*
+The browser sends only the retained signed wire request to the planned submission
+endpoint. Signature validation snapshots the original; a live account check immediately
+before fetch prevents account changes during asynchronous validation from transmitting.
+Cookies are same-origin, redirects/retries/caching are disabled, and a 30-second total
+HTTP deadline and 2 KiB response cap bound waiting. Only a matching 202 transfer-progress
+projection is accepted by the transport; the flow still requires separate recovery and
+never promotes it to mint finality. Real Chromium cross-tab tests observe the durable
+claim before intercepted HTTP and prove a lost response does not permit a second POST.
+The production endpoint and UI remain unregistered/unwired pending runtime integration.
+
 **D-185** - Withdrawal gas backing - *Observe relay balance against all unresolved
 ceilings before admitting another original request.*
 The backed admission callback shares the protected directory lock with queue/worker
