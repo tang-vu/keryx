@@ -53,6 +53,14 @@ a funded preflight. Keep output private and inspect any partial directory on err
 The CLI does not load environment files or enable services, and never overwrites an
 existing journal. Use recovery for a previously used key even if its current nonce is zero.
 
+Provisioning verification (2026-09-11, implementation `4f92a6c`): the actual CLI passed
+on native Linux using a private `/tmp` parent and a loopback synthetic RPC. Insufficient
+balance left the target directory absent; sufficient synthetic backing initialized and
+reopened the journal; a second funded preflight against fresh block metadata refused
+the existing directory and left SQLite bytes unchanged. No key or live payment was
+used. The same CLI cases are included in the Linux unit suite. This establishes the
+initialization boundary, not funded relay operation or backup/restore acceptance.
+
 The process explicitly loads `.env.local`, optional `.env.private-worker.local`
 (for private treasury inventory), and `.env.withdrawal-relay.local`. Keep these files
 owner-only. The relay file must contain the explicitly enabled isolated relay policy;
