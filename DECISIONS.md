@@ -1,5 +1,15 @@
 # Keryx — Decision Log
 
+**D-207** - Bounded deployment prerendering - *Generate one page at a time in one
+worker for temporary VPS builds.*
+The v0.22.51 deployment compiled successfully but failed during static generation at
+the isolated worker's approximately 480 MiB heap limit. Installed Next code removes
+the parent's max-old-space-size from that worker, so increasing the parent flag alone
+cannot address this failure. Temporary .next.tmp builds now use the documented
+staticGenerationMaxConcurrency=1 and cpus=1 settings to reduce simultaneous page work.
+Normal local/CI settings are unchanged. The failed deploy left the old web build in
+place; successful constrained build and health verification are required before swap.
+
 **D-206** - Account withdrawal page - *Expose recovery through a wallet-matched
 account page while keeping new withdrawals under explicit operator configuration.*
 The dynamic, non-indexed /me/withdrawals page links from My sources and mounts the

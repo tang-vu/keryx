@@ -16,7 +16,13 @@ const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
   // The deploy recreates .next.tmp every time, so its filesystem cache is never reused.
   // Keep normal local/CI cache behavior; skip the wasted write only for that temporary build.
-  experimental: { turbopackFileSystemCacheForBuild: process.env.NEXT_DIST_DIR !== ".next.tmp" },
+  experimental: {
+    turbopackFileSystemCacheForBuild: process.env.NEXT_DIST_DIR !== ".next.tmp",
+    // Next isolates static workers from the parent's heap flag. On the small VPS,
+    // generating eight pages together exhausted the worker's ~480 MiB heap.
+    // Bound temporary deployment builds to one worker and one page at a time.
+    ...(process.env.NEXT_DIST_DIR === ".next.tmp" ? { cpus: 1, staticGenerationMaxConcurrency: 1 } : {}),
+  },
 
   async headers() {
     return [
