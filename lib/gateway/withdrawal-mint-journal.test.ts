@@ -12,6 +12,8 @@ import { WITHDRAWAL_MINTER_ABI } from "./withdrawal-mint-observation";
 import type { WithdrawalMintTerms } from "./withdrawal-mint-transaction";
 import type { createWithdrawalReceiptObserver } from "./withdrawal-receipt-observation";
 import { readWithdrawalMintProgress } from "./withdrawal-mint-progress";
+import { recordObservedWithdrawalCashOut, withdrawalLedgerAmount } from "./withdrawal-cash-out";
+import { recordSqliteWithdrawal } from "../db/withdrawal-records";
 
 const resources: { databases: DatabaseSync[]; directory: string }[] = [];
 afterEach(() => {
@@ -86,6 +88,41 @@ it("rejects foreign owners before journal reads and withholds progress after can
   expect(getSlot).not.toHaveBeenCalled();
   const stop = new AbortController(); getSlot.mockImplementationOnce(async () => { stop.abort(); return null; });
   await expect(readWithdrawalMintProgress(f.journal, r.record, r.record.owner, stop.signal)).rejects.toThrow();
+});
+
+it("preserves micro-USDC precision when converting to the legacy cash-out ledger", () => {
+  expect(withdrawalLedgerAmount("1")).toBe(0.000001);
+  expect(withdrawalLedgerAmount("1234567")).toBe(1.234567);
+  for (const invalid of ["0", "01", "-1", "1.5", "9007199254740992"])
+    expect(() => withdrawalLedgerAmount(invalid)).toThrow("represented exactly");
+});
+
+it("records only an observed original cash-out and recovers a lost ledger response without duplicate rows", async () => {
+  const f = await fixture(), r = await f.request(), signal = new AbortController().signal;
+  const ledger = new DatabaseSync(":memory:");
+  try {
+    ledger.exec("CREATE TABLE withdrawals(tx_hash TEXT PRIMARY KEY,created_at TEXT,label TEXT,source_name TEXT,wallet TEXT,recipient TEXT,amount_usdc REAL,network TEXT)");
+    const store = { getCreatorWithdrawal: vi.fn(async () => r.record),
+      recordWithdrawal: vi.fn(async (value: Parameters<typeof recordSqliteWithdrawal>[1]) => recordSqliteWithdrawal(ledger, value)) };
+    const record = () => recordObservedWithdrawalCashOut(f.journal, store, r.record.id, signal);
+    expect(await record()).toEqual({ state: "not-observed" });
+    await f.journal.reserve(r.record, r.response, r.terms); await f.journal.savePrepared(r.record.id, r.raw);
+    expect(await record()).toEqual({ state: "not-observed" }); expect(store.recordWithdrawal).not.toHaveBeenCalled();
+    await f.journal.reconcile(r.record.id, async () => observed(f.journal, r.record.id), signal);
+    store.recordWithdrawal.mockImplementationOnce(async value => { await recordSqliteWithdrawal(ledger, value); throw new Error("Lost ledger response"); });
+    await expect(record()).rejects.toThrow("Lost ledger response");
+    expect(await record()).toMatchObject({ state: "recorded", transactionHash: keccak256(r.raw) });
+    expect(ledger.prepare("SELECT count(*) n FROM withdrawals").get()?.n).toBe(1);
+    expect(ledger.prepare("SELECT wallet,recipient,amount_usdc,network,label FROM withdrawals").get()).toMatchObject({
+      wallet: r.record.owner, recipient: r.record.policy.recipient, amount_usdc: 0.05, network: "eip155:5042002", label: "Creator withdrawal" });
+    const changed = structuredClone(r.record); changed.policy.maxFeeMicros = (BigInt(changed.policy.maxFeeMicros) + BigInt(1)).toString();
+    store.getCreatorWithdrawal.mockResolvedValueOnce(changed);
+    await expect(record()).rejects.toThrow("original unavailable"); expect(store.recordWithdrawal).toHaveBeenCalledTimes(2);
+    const stopped = new AbortController(); stopped.abort();
+    await expect(recordObservedWithdrawalCashOut(f.journal, store, r.record.id, stopped.signal)).rejects.toThrow();
+    expect(store.recordWithdrawal).toHaveBeenCalledTimes(2);
+    expect(await f.journal.getObserved(r.record.id)).not.toBeNull();
+  } finally { ledger.close(); }
 });
 
 function child(path: string, input: unknown) {

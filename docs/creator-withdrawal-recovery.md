@@ -372,8 +372,19 @@ payment. No payment-event or revenue row is created.
 Focused tests cover actual SQLite persistence, retained metadata, conflicting economics
 and lost-readback recovery. The actual Supabase client is exercised against intercepted
 HTTP for ignore-duplicates, matching readback, missing rows and vendor errors. This is
-not production PostgreSQL acceptance. The validated worker observation still needs to
-be bridged to the cash-out ledger; the writer itself does not establish mint provenance.
+not production PostgreSQL acceptance. The writer itself does not establish mint provenance.
+
+`withdrawal-cash-out.ts` now provides the operator reporting bridge from validated
+journal observations to the matching application original and idempotent ledger writer.
+No observation means no cash-out row. It derives the transaction, recipient, amount and
+first observation timestamp from journal evidence, uses a generic creator label and
+refuses amounts that cannot round-trip every micro-USDC through the legacy number field.
+The bridge has no signing, Circle or broadcast capability. A lost ledger response may
+repeat the same report while the mint observation stays retained. Focused tests use
+real SQLite journal/ledger storage and synthetic worker observations to exercise
+unobserved/prepared states, observed reporting, response-loss recovery, conflicting
+application originals, cancellation and amount precision. Operator scheduling and
+end-to-end funded reconciliation remain open.
 
 ## Owner mint progress projection
 

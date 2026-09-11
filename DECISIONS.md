@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-192** - Observed-mint reporting - *Derive cash-out rows from retained validated
+mint evidence and the matching application original.*
+The operator reporting bridge accepts only a request selector and server-owned journal
+and store capabilities. Missing/unobserved mint history performs no ledger write. A
+validated worker observation must match the complete application original; transaction,
+recipient, amount and observation timestamp come from retained evidence. The legacy
+number-valued ledger is used only when every micro-USDC round-trips exactly and stays
+within safe integer precision. Generic creator labels exclude private source metadata.
+Ledger uncertainty preserves the mint observation and may repeat only the idempotent
+report, never a transfer or broadcast. Runtime scheduling and ledger reconciliation
+remain required; synthetic observation tests do not establish live paid acceptance.
+
 **D-191** - Cash-out record idempotency - *Keep the first transaction row and verify
 its economic identity on every repeated write.*
 SQLite now uses a targeted transaction-hash conflict clause instead of ignoring any
