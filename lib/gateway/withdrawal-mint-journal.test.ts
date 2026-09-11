@@ -188,6 +188,7 @@ it("enforces the slot count even when gas remains and restores full SQLite synch
 it("retains the first observed mint through later checks, unknown RPC and a full close/reopen", async () => {
   const f = await fixture(), r = await f.request();
   await f.journal.reserve(r.record, r.response, r.terms); await f.journal.savePrepared(r.record.id, r.raw);
+  expect(await f.journal.gasBackingSnapshot()).toMatchObject({ outstandingGasWei: "600000000000000" });
   const observation = await observed(f.journal, r.record.id), signal = new AbortController().signal;
   const first = await f.journal.reconcile(r.record.id, async () => observation, signal);
   const next = { ...observation, finalizedBlockNumber: "10001", observedAt: new Date().toISOString() };
@@ -196,7 +197,10 @@ it("retains the first observed mint through later checks, unknown RPC and a full
   f.close(); const reopened = f.connect().journal;
   expect(await reopened.getObserved(r.record.id)).toEqual(first.observation);
   expect(await reopened.getSlot(r.record.id)).toMatchObject({ maxGasCostWei: "600000000000000" });
+  expect(await reopened.gasBackingSnapshot()).toMatchObject({ committedGasWei: "600000000000000",
+    outstandingGasWei: "0", minimumBlockNumber: "9999" });
   const nextSlot = await f.request(1); await reopened.reserve(nextSlot.record, nextSlot.response, nextSlot.terms);
+  expect(await reopened.gasBackingSnapshot()).toMatchObject({ committedGasWei: "1200000000000000", outstandingGasWei: "600000000000000" });
   const overflow = await f.request(2);
   await expect(reopened.reserve(overflow.record, overflow.response, { ...overflow.terms, gas: "100000" })).rejects.toThrow("gas budget");
 });

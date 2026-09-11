@@ -127,6 +127,27 @@ export function createWithdrawalMintJournal(db: DatabaseSync, selected: Withdraw
   }
   const core = { reserve, getSlot, savePrepared, getPrepared, listRequestIds };
   const admission = attachWithdrawalGasAdmission(db, policy, checkPolicy, atomic);
+  const observations = attachWithdrawalObservations(db, core, checkPolicy, atomic);
+  async function gasBackingSnapshot() {
+    checkPolicy();
+    const { commitments, total } = mintGasCommitments(db, policy);
+    let outstanding = total, minimumBlock = BigInt(0);
+    for (const id of listRequestIds()) {
+      const observed = await observations.getObserved(id);
+      if (!observed) continue;
+      const committed = commitments.get(id);
+      if (!committed) throw new Error("Mint backing history unavailable");
+      // This original nonce was observed finalized. Its lifetime budget stays
+      // charged, but no further gas is needed to execute that same transaction.
+      outstanding -= committed.amount;
+      if (BigInt(observed.blockNumber) > minimumBlock) minimumBlock = BigInt(observed.blockNumber);
+    }
+    const current = mintGasCommitments(db, policy);
+    if (current.total !== total || current.commitments.size !== commitments.size || outstanding < BigInt(0))
+      throw new Error("Mint backing snapshot changed");
+    return { relayer: policy.relayer, committedRequests: commitments.size, committedGasWei: total.toString(),
+      outstandingGasWei: outstanding.toString(), minimumBlockNumber: minimumBlock.toString() };
+  }
   async function reserveAdmitted(id: string, response: unknown, selectedTerms: Omit<WithdrawalMintTerms, "nonce">, signal: AbortSignal) {
     const copied = structuredClone(response);
     const terms = withdrawalMintTermsSchema.parse({ ...selectedTerms, nonce: 0 });
@@ -145,6 +166,5 @@ export function createWithdrawalMintJournal(db: DatabaseSync, selected: Withdraw
     terms.nonce = policy.initialNonce + listRequestIds().length;
     return reserve(held.request, attestation, terms, signal);
   }
-  return { ...core, ...admission, reserveAdmitted,
-    ...attachWithdrawalObservations(db, core, checkPolicy, atomic) };
+  return { ...core, ...admission, reserveAdmitted, gasBackingSnapshot, ...observations };
 }

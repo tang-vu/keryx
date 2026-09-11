@@ -20,6 +20,12 @@ supervision, an owner-operated CLI paid pilot and model-call usage accounting ha
 evidence in the mainnet delivery plan and economics documentation. Independent acceptance,
 complete billing, privacy lifecycle and mainnet gates remain open.
 
+Creator withdrawal recovery now has an internal gas-backing admission callback: a fresh
+relay balance must cover every unresolved request before another hold is stored. Lifetime
+limits remain charged after finalized mints. This is tested with synthetic RPC evidence;
+production HTTP/UI integration, funded relay operation and complete recovery acceptance
+remain open in [the recovery implementation](./creator-withdrawal-recovery.md).
+
 **Historical private-workspace baseline (v0.22.34):**
 
 Private history and result viewing are connected on `/research` using live owner

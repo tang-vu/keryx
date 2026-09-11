@@ -1,5 +1,19 @@
 # Keryx — Decision Log
 
+**D-185** - Withdrawal gas backing - *Observe relay balance against all unresolved
+ceilings before admitting another original request.*
+The backed admission callback shares the protected directory lock with queue/worker
+operations. It samples native balance at a fresh Arc-testnet block, rechecks that block
+and chain, and atomically compares the journal commitment count and total before saving
+the hold. Unresolved requests retain their full ceilings. A validated finalized original
+mint removes its ceiling only from future gas backing, never from lifetime expenditure
+or slot limits; the sampled balance block must be at least as recent as those observations.
+An existing nonce slot cannot authorize a new initial Circle call if application claim
+history is missing. Cancellation retains the lock until awaited work settles. This is
+an operator-selected RPC and exclusive-key-custody assumption, not independent consensus
+proof, a future gas-price guarantee or live funding evidence. Production runtime/HTTP
+integration and funded acceptance remain required.
+
 **D-184** - Withdrawal request limits - *Use durable wallet and service counters and
 deny storage uncertainty without falling back to process memory.*
 Submission and status handlers now call the durable limiter directly through their

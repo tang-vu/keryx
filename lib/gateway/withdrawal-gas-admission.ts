@@ -65,13 +65,17 @@ export function attachWithdrawalGasAdmission(db: DatabaseSync, policy: Withdrawa
       throw new Error("Mint admission readback unavailable");
     return checked;
   }
-  async function admitGas(value: WithdrawalRequestRecord, ceiling: string, signal: AbortSignal) {
+  async function admitGas(value: WithdrawalRequestRecord, ceiling: string, signal: AbortSignal,
+    expected?: { committedRequests: number; committedGasWei: string }) {
+    const expectation = expected ? { ...expected } : undefined;
     const copied = structuredClone(value), maxGasCostWei = ceilingSchema.parse(ceiling);
     const request = await validateWithdrawalRequest(copied);
     const admission = { request, maxGasCostWei }, specHash = withdrawalTransferSpecHash(request);
     signal.throwIfAborted();
     atomic(() => {
       const { commitments, total } = mintGasCommitments(db, policy), existing = commitments.get(request.id);
+      if (expectation && (expectation.committedRequests !== commitments.size || expectation.committedGasWei !== total.toString()))
+        throw new Error("Mint backing snapshot changed");
       if (existing) {
         if (existing.request !== stable(request) || existing.specHash !== specHash || existing.amount !== BigInt(maxGasCostWei))
           throw new Error("Mint admission conflict");

@@ -86,9 +86,23 @@ admission history is rejected. Existing slots continue consuming budget even wit
 an admission row. Seven focused tests cover contention, restart, committed-readback
 loss, cancellation, original ceiling/capacity, retained unused gas, version-1 upgrade
 and actual coordinator sequencing with an unknown synthetic vendor response. This is
-a durable accounting cap, not proof of a funded relay balance. Runtime funding and
-key isolation, admission configuration, HTTP integration and live acceptance remain
-required. Balance-only or no-op admission is not sufficient.
+a durable accounting cap, not proof of a funded relay balance.
+
+`withdrawal-backed-admission.ts` now combines that cap with a native balance observation
+under the shared protected directory lock. The snapshot includes every unresolved gas
+ceiling; finalized original mints reduce only outstanding backing, while lifetime gas
+and request limits remain charged. A fresh block must be no older than the stored mint
+observations. Its hash, number, timestamp and chain are rechecked after the balance read.
+The admission transaction then compares the original commitment count and total, rejecting
+competing changes. Existing slots cannot grant fresh pre-transfer admission. A cancelled
+RPC retains the lock until the awaited dependency settles; the concrete HTTP transport
+has bounded cancellation. Tests use synthetic RPC responses and real SQLite journals,
+covering insufficient aggregate backing, duplicate holds, stale/wrong-chain/changed blocks,
+competing writes, cancellation and existing-slot rejection. They are not live funding
+evidence. Runtime funding and exclusive key isolation, admission configuration, HTTP
+integration and live acceptance remain required. Balance-only or no-op admission is not
+sufficient. Historical finality observations retain the existing operator-selected RPC
+trust; the backing snapshot does not independently revalidate historical consensus.
 
 Eleven focused coordinator tests pass: concurrent callers, lost claim/vendor/storage
 responses, denied admission, cancellation, immutable request snapshots, invalid and
