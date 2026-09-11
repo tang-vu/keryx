@@ -6,7 +6,13 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.53 (private account withdrawal history, updated 2026-09-11)
+**Version:** 0.22.54 (server-reported withdrawal progress, updated 2026-09-11)
+
+Account history now includes a read-only progress check for each saved request, without
+requiring a locally retained original. The display distinguishes pending evidence,
+unavailable records and read failures from server-reported mint observations. Observed
+mint links retain the operator-RPC trust label. No signing or replacement request is
+created by these checks; independent settlement and funded relay acceptance remain open.
 
 Signed-in users can load private server withdrawal history on `/me/withdrawals` even
 without a connected wallet or retained browser drafts. Bounded pages exclude signatures;

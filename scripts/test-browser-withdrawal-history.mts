@@ -19,11 +19,31 @@ try {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
   let mode: "normal" | "error" | "revoked" | "duplicate" | "switch" = "normal", calls = 0;
+  let progressMode: "pending" | "error" | "foreign" | "missing" | "observed" | "revoked" | "switch" = "pending";
+  let progressCalls = 0;
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   await context.route("**/*", async route => {
     const req = route.request();
     if (req.url() === "https://withdrawal-history.test/")
       return route.fulfill({ contentType: "text/html", body: "<main></main>" });
+    if (req.url() === "https://withdrawal-history.test/api/me/withdrawals/status") {
+      assert.equal(req.method(), "POST"); assert.equal(req.headers().referer, undefined);
+      assert.deepEqual(req.postDataJSON(), { id: first.id }); progressCalls++;
+      if (progressMode === "switch") {
+        await page.evaluate(address => (window as unknown as { mount: (value: string) => void }).mount(address), other);
+        await page.getByRole("button", { name: "Load account history", exact: true }).waitFor();
+      }
+      const status = progressMode === "error" ? 503 : progressMode === "revoked" ? 401 : progressMode === "missing" ? 404 : 200;
+      const basic = { wallet: owner, requestId: first.id, recipient: progressMode === "foreign" ? other : owner,
+        amountMicros: first.amountMicros, status: "awaiting-transfer-evidence", mintStatus: "not-checked", chainFinalityVerified: false };
+      const result = status !== 200 ? { error: "private progress diagnostic" } : progressMode === "observed"
+        ? { ...basic, status: "attestation-stored", mintStatus: "finalized-observed", chainFinalityVerified: true, transactionHash: `0x${"ab".repeat(32)}`,
+          blockHash: `0x${"cd".repeat(32)}`, blockNumber: "12345", observedAt: "2026-09-11T14:00:00Z", finalityBasis: "operator-selected-rpc" }
+        : basic;
+      return route.fulfill({ status, contentType: "application/json", body: JSON.stringify(result) }).catch(error => {
+        if (progressMode !== "switch") throw error;
+      });
+    }
     assert.equal(req.url(), "https://withdrawal-history.test/api/me/withdrawals/history");
     assert.equal(req.method(), "POST"); assert.equal(req.headers().referer, undefined); calls++;
     const input = req.postDataJSON();
@@ -50,6 +70,25 @@ try {
   await page.getByText(`Request ID: ${first.id}`, { exact: true }).waitFor();
   assert.equal(await page.getByRole("listitem").count(), 2);
   assert.equal(await page.getByText("Requested: 0.05 USDC", { exact: true }).count(), 2);
+  const item = page.getByRole("listitem").filter({ hasText: first.id });
+  await item.getByRole("button", { name: "Check progress" }).click();
+  await item.getByText("Transfer evidence is still pending. Do not create a replacement request to retry it.", { exact: true }).waitFor();
+  for (const next of ["error", "foreign"] as const) {
+    progressMode = next; await item.getByRole("button", { name: "Check progress" }).click();
+    await item.getByText("Progress could not be read. This does not mean the withdrawal failed.", { exact: true }).waitFor();
+    assert.equal(await page.getByText("private progress diagnostic").count(), 0);
+  }
+  progressMode = "missing"; await item.getByRole("button", { name: "Check progress" }).click();
+  await item.getByText("The server could not find this request. Keep its ID and any recovery file; do not treat it as cancelled.", { exact: true }).waitFor();
+  progressMode = "observed"; await item.getByRole("button", { name: "Check progress" }).click();
+  const transaction = item.getByRole("link", { name: "View reported mint transaction" }); await transaction.waitFor();
+  assert.equal(await transaction.getAttribute("href"), `https://testnet.arcscan.app/tx/0x${"ab".repeat(32)}`);
+  await item.getByText("Observation uses the operator's RPC; this browser has not independently verified settlement.", { exact: true }).waitFor();
+  progressMode = "revoked"; await item.getByRole("button", { name: "Check progress" }).click();
+  await page.getByRole("link", { name: "Sign in", exact: true }).waitFor(); assert.equal(await page.getByRole("listitem").count(), 0);
+  await page.getByRole("button", { name: "Load account history", exact: true }).click();
+  await page.getByText(`Request ID: ${first.id}`, { exact: true }).waitFor();
+  assert.equal(await page.getByRole("link", { name: "View reported mint transaction" }).count(), 0);
   mode = "error"; await page.getByRole("button", { name: "Load older requests" }).click();
   await page.getByRole("status").filter({ hasText: "History could not be loaded" }).waitFor();
   assert.equal(await page.getByRole("listitem").count(), 2);
@@ -73,6 +112,12 @@ try {
   assert.equal(await page.evaluate(async () => (await indexedDB.databases()).length), 0);
   assert.equal(await page.getByRole("button", { name: /sign|send|withdraw USDC/i }).count(), 0);
   assert.deepEqual(errors, []);
+  mode = "normal"; await mount(owner);
+  await page.getByRole("button", { name: "Load account history", exact: true }).click();
+  await item.waitFor(); progressMode = "switch";
+  await item.getByRole("button", { name: "Check progress" }).click();
+  await page.getByRole("button", { name: "Load account history", exact: true }).waitFor();
+  assert.equal(await page.getByRole("listitem").count(), 0); assert.equal(progressCalls, 7);
   // Exercise the actual account wrapper with controlled auth/wallet hooks. The
   // history must remain available without a signer; sign-out must unmount it.
   const accountBundle = await build({ stdin: { contents: `
@@ -102,5 +147,5 @@ root.render(createElement(StrictMode,null,createElement(WithdrawalAccount,{limit
   await page.getByRole("link", { name: "Sign in to manage withdrawals" }).waitFor();
   assert.equal(await page.getByRole("listitem").count(), 0);
   assert.deepEqual(errors, []);
-  console.log("PASS: Chromium private account history, pagination, failure retention, duplicate rejection, session revocation and account switch with empty IndexedDB; synthetic intercepted HTTP, no payment.");
+  console.log("PASS: Chromium private account history and server-reported progress, pagination, failure/foreign-report rejection, mint link, session revocation and account switch with empty IndexedDB; synthetic intercepted HTTP, no payment.");
 } finally { await browser.close(); }

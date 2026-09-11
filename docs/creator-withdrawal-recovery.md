@@ -740,7 +740,7 @@ stops that process afterward. This covers framework header precedence that isola
 handler tests cannot prove; authenticated user and funded payment acceptance remain
 separate checks.
 
-`withdrawal-history-status.ts` adds the unmounted read-only progress client for a server
+`withdrawal-history-status.ts` adds the read-only progress client for a server
 history row. It uses the existing authenticated status endpoint and matches owner, ID,
 recipient and integer amount to the selected metadata. Responses remain explicitly
 `server-reported-progress`; even a complete operator-RPC observation is not independent
@@ -748,8 +748,14 @@ chain verification. The original-bound browser verifier retains its separate aut
 The client requires no local draft or signing wallet, caps response bytes and elapsed
 time, rechecks the current account, and distinguishes missing records from authentication
 and transport failures. Five focused tests cover mismatched reports, finality metadata,
-caller mutation, account changes, oversized/stalled responses and cancellation. A history
-row action and its browser acceptance remain to be connected.
+caller mutation, account changes, oversized/stalled responses and cancellation. In
+v0.22.54 each history row has a Check progress action. A session-expired result clears
+all history and progress; account remount cancels reads. Failed/missing reads never
+mean a withdrawal failed or was cancelled. A complete server-reported mint observation
+shows its timestamp and fixed Arc Testnet explorer link with the operator-RPC trust
+limit. Chromium exercises pending/failed/foreign/missing/observed responses, expired
+sessions and account changes during status reads with empty IndexedDB. All test HTTP
+is intercepted and synthetic; this is not funded payment acceptance.
 
 ## Remaining implementation and acceptance
 

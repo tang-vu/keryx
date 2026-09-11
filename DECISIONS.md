@@ -6,8 +6,10 @@ The new history progress reader uses only the stored request selector and authen
 account, matching recipient and amount before returning a server-reported result. It
 does not reconstruct missing signed terms, grant retry authority or replace the existing
 original-bound verifier. Shared progress schemas retain complete operator-RPC metadata
-requirements when the server reports observed finality. The history UI action remains
-unmounted pending browser acceptance.
+requirements when the server reports observed finality. The history UI action is
+mounted in v0.22.54 with intercepted Chromium acceptance. Unknown, missing and failed
+reads do not become cancellation or payment-failure claims; expired sessions clear
+all previously displayed metadata and observations.
 
 **D-220** - Framework privacy headers - *Private response policies must survive
 Next.js configured-header precedence.*
