@@ -6,7 +6,13 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.61 (retired sponsored A2A command, updated 2026-09-12)
+**Version:** 0.22.62 (creator listing authority, updated 2026-09-12)
+
+On-chain listing controls authorize the actual registry creator even when its payout
+wallet is separate. The browser pins creator writes and receipt reads to Arc Testnet,
+blocks mismatched wallets/networks, and does not call a reverted receipt a confirmation.
+[Listing validation and remaining scope](./engineering/creator-listing-2026-09-12.md)
+cover the route and synthetic browser checks, not independent creator acceptance.
 
 The legacy treasury-funded A2A demo now refuses execution and points to the existing
 caller-funded buyer CLI. It no longer reads or replaces JSON wallets, automatically

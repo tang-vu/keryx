@@ -30,25 +30,25 @@ export const dynamic = "force-dynamic";
 const MIN_PRICE_USDC = 0.0001;
 const MAX_PRICE_USDC = 0.05;
 
-async function loadOwned(id: string) {
+async function loadSessionSource(id: string) {
   const session = await getSession();
   if (!session) return { error: NextResponse.json({ error: "unauthenticated" }, { status: 401 }) };
   const db = await getDb();
   const source = await db.getSource(id);
   if (!source) return { error: NextResponse.json({ error: "source not found" }, { status: 404 }) };
-  if (!ownsSource(source, session.address)) {
-    return { error: NextResponse.json({ error: "not your source" }, { status: 403 }) };
-  }
-  return { db, source };
+  return { db, source, session };
 }
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const owned = await loadOwned(id);
+  const owned = await loadSessionSource(id);
   if (owned.error) return owned.error;
-  const { source } = owned;
+  const { source, session } = owned;
 
   if (!source.onchainId) {
+    if (!ownsSource(source, session.address)) {
+      return NextResponse.json({ error: "not your source" }, { status: 403 });
+    }
     return NextResponse.json({
       mode: "offline",
       fetchPrice: source.fetchPrice,
@@ -56,9 +56,9 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     });
   }
 
-  if (!config.registryAddress) {
+  if (!config.registryAddress || config.registryAddress.toLowerCase() !== config.registryReadAddress.toLowerCase()) {
     return NextResponse.json(
-      { error: "This source lives on-chain but registry write mode is off on this deployment." },
+      { error: "Listing management requires matching registry read and write addresses." },
       { status: 409 },
     );
   }
@@ -81,6 +81,12 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     );
   }
 
+  // Registration authority is independent of payout/author wallets. Never let a
+  // stale cache deny the actual creator or authorize a previous payout recipient.
+  if (record.creator.toLowerCase() !== session.address.toLowerCase()) {
+    return NextResponse.json({ error: "only the source creator can manage its listing" }, { status: 403 });
+  }
+
   return NextResponse.json({
     mode: "onchain",
     fetchPrice: Number(record.fetchPriceUsdc6) / 1_000_000,
@@ -101,15 +107,18 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const owned = await loadOwned(id);
+  const owned = await loadSessionSource(id);
   if (owned.error) return owned.error;
-  const { db, source } = owned;
+  const { db, source, session } = owned;
 
   if (source.onchainId) {
     return NextResponse.json(
       { error: "This source lives on-chain — sign the update from your wallet instead." },
       { status: 409 },
     );
+  }
+  if (!ownsSource(source, session.address)) {
+    return NextResponse.json({ error: "not your source" }, { status: 403 });
   }
   if (source.active === false) {
     return NextResponse.json({ error: "This source is delisted." }, { status: 409 });

@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-229** - Listing management follows registry creator authority - *A payout wallet
+is not necessarily the wallet that registered a source.* On-chain listing reads now
+authorize the authenticated session against the live registry creator, rather than
+first excluding creators absent from cached payout/author fields. Missing records,
+RPC errors and differing read/write registries withhold management data. Offline
+recipient ownership is unchanged; on-chain POST remains prohibited. Browser writes
+pin the creator account and Arc Testnet, disable disconnected/wrong-wallet/network
+actions, and read receipts on that same chain. Receipt query success is not transaction
+success: reverted receipts display an error, while successful receipts trigger a
+registry refresh without claiming cache parity. No registry contract, payout allocation
+or global source ownership policy changes. Concurrent full-record updates and broader
+account discovery/recovery still need separate acceptance.
+
 **D-228** - Retire the sponsored A2A demo - *A legacy command must not bypass the
 buyer recovery and spending boundaries.* The old CLI regenerated a JSON wallet on
 any read/parse error, automatically funded it from the server treasury and paid

@@ -1,0 +1,34 @@
+# Creator listing authority, September 12, 2026
+
+The previous listing GET checked cached payout/author membership before reading the
+registry. A registrant with a separate payout wallet consequently received 403 even
+though SourceRegistry grants update/deactivate authority to its stored creator.
+The reproduction called the actual route with a synthetic authenticated creator and
+source; it observed 403 and no registry read. No real source or wallet was changed.
+
+The route now authenticates first, reads the configured registry and compares its
+creator with the session address. Only that creator gets on-chain management terms;
+payout recipients and split authors do not acquire registration authority. Read and
+write registry addresses must match. Missing records or RPC errors withhold terms.
+Offline listing rules remain unchanged, and POST cannot mutate an on-chain source.
+
+The existing browser panel now requires the creator account on Arc Testnet and pins
+both contract calls and receipt reads to that chain. A receipt with reverted status
+is reported as reverted, not as success merely because the RPC query completed.
+Successful receipt feedback prompts a registry refresh, without asserting that the
+indexer already reflects the write. Arc's [official RPC reference](https://docs.arc.io/arc/references/rpc-endpoints),
+checked September 12, still identifies testnet as chain 5042002 and reserves mainnet
+parameters for separate publication. No RPC configuration was changed.
+
+Validation: route tests cover a separate creator/payout, payout and author rejection,
+anonymous access, unavailable/missing registry, differing registry configuration,
+on-chain POST refusal and preserved offline permissions. Chromium runs the actual
+React panel with synthetic API/wallet providers: wrong/disconnected wallet and wrong
+network block both actions; update/deactivate pin account and chain; revert cannot
+produce success feedback. These tests perform no signing or settlement.
+
+This does not establish independent creator onboarding or funded mainnet acceptance.
+Global account source discovery still uses cached payout/author membership. Existing
+contract updates replace the complete record; concurrent edits, fresh-state signing,
+transaction replacement and durable recovery require further work. RPC, authenticated
+session and browser integrity remain trust dependencies.

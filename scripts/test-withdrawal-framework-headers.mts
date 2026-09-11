@@ -31,5 +31,10 @@ try {
   const economics = await fetch(`${base}/api/economics`, { redirect: "error", signal: AbortSignal.timeout(10000) });
   assert.equal(economics.status, 410); assert.equal(economics.headers.get("cache-control"), "no-store");
   assert.deepEqual(await economics.json(), { error: "Operational economics are private.", calculator: "/economics" });
-  console.log("PASS: production Next withdrawal history authentication/private headers and retired operational economics endpoint.");
+  for (const method of ["GET", "POST"]) {
+    const listing = await fetch(`${base}/api/creator/synthetic/listing`, { method, redirect: "error", signal: AbortSignal.timeout(10000) });
+    assert.equal(listing.status, 401);
+    assert.deepEqual(await listing.json(), { error: "unauthenticated" });
+  }
+  console.log("PASS: production Next withdrawal history authentication/private headers, retired economics endpoint, and creator listing authentication.");
 } finally { child.kill(); await exited; }

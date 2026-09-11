@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import { Archive, Banknote, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { arcTestnet } from "viem/chains";
 import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
 import { REGISTRY_ABI } from "@/lib/registry/registry-client";
 
@@ -39,11 +40,12 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
   const [busy, setBusy] = useState(false);
   const [delistArmed, setDelistArmed] = useState(false);
 
-  const { address: connected } = useAccount();
+  const { address: connected, chainId } = useAccount();
   const { writeContractAsync } = useWriteContract();
   const [pendingTx, setPendingTx] = useState<`0x${string}` | undefined>();
-  const { isLoading: isMining, isSuccess: mined } = useWaitForTransactionReceipt({
+  const { isLoading: isMining, isSuccess: mined, data: receipt } = useWaitForTransactionReceipt({
     hash: pendingTx,
+    chainId: arcTestnet.id,
   });
 
   const load = async () => {
@@ -66,15 +68,16 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
 
   // Once the tx mines, give the indexer its ≤4s to project the event, then re-read.
   useEffect(() => {
-    if (!mined) return;
-    toast.success("Confirmed on-chain — the ledger syncs in a few seconds.");
+    if (!mined || !receipt) return;
+    if (receipt.status === "success") toast.success("Transaction confirmed. Refreshing registry state.");
+    else toast.error("Transaction reverted. Listing changes were not confirmed.");
     const t = setTimeout(() => {
       void load();
       setPendingTx(undefined);
     }, 4_500);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mined]);
+  }, [mined, receipt]);
 
   if (!data) return null;
 
@@ -83,17 +86,19 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
   const working = busy || isMining;
   const wrongWallet =
     data.mode === "onchain" &&
-    !!connected &&
-    !!data.creator &&
-    connected.toLowerCase() !== data.creator.toLowerCase();
+    (!connected || !data.creator || connected.toLowerCase() !== data.creator.toLowerCase());
+  const wrongNetwork = data.mode === "onchain" && chainId !== arcTestnet.id;
+  const signingUnavailable = wrongWallet || wrongNetwork;
 
   const savePrice = async () => {
-    if (working || !priceChanged) return;
+    if (working || !priceChanged || signingUnavailable) return;
     setBusy(true);
     try {
       if (data.mode === "onchain" && data.current && data.registryAddress && data.onchainId) {
         toast.loading("Waiting for wallet signature…", { id: "listing-tx" });
         const txHash = await writeContractAsync({
+          account: connected,
+          chainId: arcTestnet.id,
           address: data.registryAddress,
           abi: REGISTRY_ABI,
           functionName: "update",
@@ -128,7 +133,7 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
   };
 
   const delist = async () => {
-    if (working) return;
+    if (working || signingUnavailable) return;
     if (!delistArmed) {
       setDelistArmed(true);
       setTimeout(() => setDelistArmed(false), 6_000);
@@ -140,6 +145,8 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
       if (data.mode === "onchain" && data.registryAddress && data.onchainId) {
         toast.loading("Waiting for wallet signature…", { id: "listing-tx" });
         const txHash = await writeContractAsync({
+          account: connected,
+          chainId: arcTestnet.id,
           address: data.registryAddress,
           abi: REGISTRY_ABI,
           functionName: "deactivate",
@@ -215,7 +222,7 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
             <button
               type="button"
               onClick={() => void savePrice()}
-              disabled={working || !priceChanged}
+              disabled={working || !priceChanged || signingUnavailable}
               className="flex items-center justify-center gap-2 border border-ink bg-seal px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-cream transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
             >
               {working ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
@@ -229,6 +236,11 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
               signature will pass the registry. Switch accounts before signing.
             </p>
           )}
+          {wrongNetwork && (
+            <p className="mt-3 font-mono text-[10px] text-amber-700">
+              Connect your creator wallet on Arc Testnet before changing this listing.
+            </p>
+          )}
 
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
             <p className="max-w-md font-serif text-[12px] text-ink-3">
@@ -238,7 +250,7 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
             <button
               type="button"
               onClick={() => void delist()}
-              disabled={working}
+              disabled={working || signingUnavailable}
               className={
                 "flex items-center gap-1.5 border px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] transition-colors disabled:opacity-60 " +
                 (delistArmed

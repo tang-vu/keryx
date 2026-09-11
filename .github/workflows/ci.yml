@@ -62,6 +62,9 @@ jobs:
       - name: Browser buyer recovery (hermetic, no settlement)
         run: npm run test:browser-buyer
 
+      - name: Creator listing wallet and network checks (synthetic wallet, no signing)
+        run: node --import tsx scripts/test-browser-creator-listing.mts
+
       - name: Browser checkout UI (hermetic, no settlement)
         run: npm run test:browser-checkout
 
