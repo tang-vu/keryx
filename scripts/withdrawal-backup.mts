@@ -20,7 +20,7 @@ remain separate operator requirements.`); return;
     const { backupWithdrawalJournal } = await import("../lib/gateway/withdrawal-backup");
     const result = await backupWithdrawalJournal(values.source, values.destination, stop.signal);
     console.log(JSON.stringify({ state: result.state, directory: result.directory,
-      capturedAt: result.manifest.capturedAt, signingResumeAuthorized: false }));
+      capturedAt: result.manifest.capturedAt, manifestSha256: result.manifestSha256, signingResumeAuthorized: false }));
   } finally { process.off("SIGINT", shutdown); process.off("SIGTERM", shutdown); }
 }
 main().catch(() => {

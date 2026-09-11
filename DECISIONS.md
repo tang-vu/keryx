@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-215** - Backup-copy inspection - *Match an independently retained manifest
+digest before trusting the copied database's own metadata.*
+Successful backup output now includes the manifest SHA-256 for separate private
+retention. The offline inspector requires that expected digest, bounded protected
+files, matching policy/database hash and full journal validation. It hashes the
+database again and rechecks file identity after logical inspection. This detects
+altered copies against a trusted record; it is not a signature, remote retention
+service or proof that no newer authorizations exist. An intact stale snapshot still
+cannot authorize signing. Native Linux checks use synthetic signed data with network
+disabled and cover successful inspection, wrong expected digest and modified files.
+
 **D-214** - Private withdrawal snapshots - *Back up the logical SQLite database
 under the relay's cooperative lock and verify the original records after reopening.*
 The operator snapshot command uses SQLite backup, including committed WAL contents,

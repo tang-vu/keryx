@@ -8,7 +8,7 @@ import { createWithdrawalMintJournal, validateWithdrawalMintJournalPolicy, type 
 import { inspectWithdrawalRelayDirectory, inspectWithdrawalRelayFiles } from "./withdrawal-relay-files";
 
 const tables = ["mint_journal_policy", "mint_journal_slots", "mint_journal_prepared", "mint_journal_observations", "mint_journal_admissions"];
-async function fingerprint(db: DatabaseSync, policy: WithdrawalMintJournalPolicy, signal: AbortSignal) {
+export async function withdrawalJournalFingerprint(db: DatabaseSync, policy: WithdrawalMintJournalPolicy, signal: AbortSignal) {
   const check = db.prepare("PRAGMA integrity_check").all();
   if (check.length !== 1 || check[0].integrity_check !== "ok" || db.prepare("PRAGMA foreign_key_check").all().length) throw new Error();
   const journal = createWithdrawalMintJournal(db, policy);
@@ -52,7 +52,7 @@ export async function backupWithdrawalJournal(source: string, destination: strin
       const policy = validateWithdrawalMintJournalPolicy(files.policy);
       const db = new DatabaseSync(files.databasePath, { readOnly: true });
       try {
-        const before = await fingerprint(db, policy, signal);
+        const before = await withdrawalJournalFingerprint(db, policy, signal);
         await mkdir(destination, { mode: 0o700 });
         await inspectWithdrawalRelayDirectory(destination); signal.throwIfAborted();
         await writeExclusive(join(destination, "policy.json"), JSON.stringify(policy));
@@ -61,9 +61,9 @@ export async function backupWithdrawalJournal(source: string, destination: strin
         await syncPath(target);
         const checked = await inspectWithdrawalRelayFiles(destination);
         const copied = new DatabaseSync(checked.databasePath, { readOnly: true });
-        try { if (await fingerprint(copied, policy, signal) !== before) throw new Error(); }
+        try { if (await withdrawalJournalFingerprint(copied, policy, signal) !== before) throw new Error(); }
         finally { copied.close(); }
-        if (await fingerprint(db, policy, signal) !== before) throw new Error();
+        if (await withdrawalJournalFingerprint(db, policy, signal) !== before) throw new Error();
         if (JSON.stringify(await inspectWithdrawalRelayFiles(initial.directory)) !== JSON.stringify(initial)) throw new Error();
         const hash = createHash("sha256");
         for await (const chunk of createReadStream(target)) { signal.throwIfAborted(); hash.update(chunk); }
@@ -71,9 +71,11 @@ export async function backupWithdrawalJournal(source: string, destination: strin
           databaseSha256: hash.digest("hex"), journalFingerprint: before, policy,
           signingResumeAuthorized: false };
         signal.throwIfAborted();
-        await writeExclusive(join(destination, "manifest.json"), JSON.stringify(manifest));
+        const manifestBytes = JSON.stringify(manifest);
+        await writeExclusive(join(destination, "manifest.json"), manifestBytes);
         await syncPath(destination, true); await syncPath(dirname(destination), true);
-        signal.throwIfAborted(); return { state: "verified-backup" as const, directory: destination, manifest };
+        signal.throwIfAborted(); return { state: "verified-backup" as const, directory: destination, manifest,
+          manifestSha256: createHash("sha256").update(manifestBytes).digest("hex") };
       } finally { db.close(); }
     });
   } catch { throw new Error("Withdrawal backup unavailable. Retain existing files and inspect; never resume signing from an unverified or stale copy."); }

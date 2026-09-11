@@ -114,6 +114,20 @@ mint plus a second pending gas admission, exact copied raw bytes and unchanged t
 on duplicate backup. Network access was disabled. This is not a live payment or a
 funded restore/resume drill.
 
+Retain `manifestSha256` from successful backup output in a separate trusted private
+record. Before using a recovered copy, run `node --import tsx
+scripts/withdrawal-backup-inspect.mts --directory PRIVATE_BACKUP_DIRECTORY
+--manifest-sha256 TRUSTED_RETAINED_DIGEST`. The inspector checks that digest before
+trusting the manifest, then validates protected files, database bytes, policy and
+original journal records. It rechecks database hash and file identity after inspection.
+The digest must not be obtained by simply hashing the untrusted recovered manifest:
+that would establish only self-consistency, not agreement with the retained backup.
+Older backup commands did not output this digest; independent provenance is still
+required for those copies. Successful inspection returns `verified-backup-copy` and
+`signingResumeAuthorized: false`; it does not prove freshness or restore eligibility.
+No RPC, key, admission, restore or signing operation occurs. Tampered database bytes,
+modified manifests and incorrect expected digests were rejected in native Linux checks.
+
 ### Drain before deployment
 
 The service uses SIGTERM, control-group shutdown, infinite stop grace, no SIGKILL and

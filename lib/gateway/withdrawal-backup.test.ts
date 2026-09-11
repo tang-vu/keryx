@@ -8,6 +8,7 @@ import { creatorMintFixture } from "../../scripts/test-fixtures/creator-withdraw
 import { createWithdrawalMintJournal } from "./withdrawal-mint-journal";
 import { provisionFreshWithdrawalJournal } from "./withdrawal-provision";
 import { backupWithdrawalJournal } from "./withdrawal-backup";
+import { inspectWithdrawalBackup } from "./withdrawal-backup-inspect";
 
 const linux = it.skipIf(process.platform !== "linux"), directories: string[] = [];
 afterEach(() => { vi.unstubAllGlobals(); for (const path of directories.splice(0)) rmSync(path, { recursive: true, force: true }); });
@@ -34,6 +35,8 @@ linux("backs up WAL-resident admissions and exact signed originals, verifies reo
     expect(saved.state).toBe("verified-backup"); expect(saved.manifest.signingResumeAuthorized).toBe(false);
     const bytes = readFileSync(join(f.destination, "mint.sqlite"));
     expect(createHash("sha256").update(bytes).digest("hex")).toBe(saved.manifest.databaseSha256);
+    expect(await inspectWithdrawalBackup(f.destination, saved.manifestSha256, f.signal)).toMatchObject({
+      state: "verified-backup-copy", signingResumeAuthorized: false });
     const copied = new DatabaseSync(join(f.destination, "mint.sqlite"), { readOnly: true });
     try {
       const restored = createWithdrawalMintJournal(copied, f.policy);
@@ -45,6 +48,29 @@ linux("backs up WAL-resident admissions and exact signed originals, verifies reo
     expect(readFileSync(join(f.destination, "mint.sqlite"))).toEqual(bytes);
     expect(existsSync(join(f.source, "private-worker.lock"))).toBe(false);
   } finally { db.close(); }
+});
+linux("rejects altered manifests, database bytes and policy even when a copy looks complete", async () => {
+  const f = await fixture(), saved = await backupWithdrawalJournal(f.source, f.destination, f.signal);
+  const manifestPath = join(f.destination, "manifest.json"), databasePath = join(f.destination, "mint.sqlite");
+  const manifest = readFileSync(manifestPath), database = readFileSync(databasePath);
+  await expect(inspectWithdrawalBackup(f.destination, "0".repeat(64), f.signal)).rejects.toThrow();
+  writeFileSync(manifestPath, JSON.stringify({ ...saved.manifest, capturedAt: "2025-01-01T00:00:00.000Z" }));
+  await expect(inspectWithdrawalBackup(f.destination, saved.manifestSha256, f.signal)).rejects.toThrow();
+  writeFileSync(manifestPath, manifest);
+  const altered = Buffer.from(database); altered[altered.length - 1] ^= 1; writeFileSync(databasePath, altered);
+  await expect(inspectWithdrawalBackup(f.destination, saved.manifestSha256, f.signal)).rejects.toThrow();
+  writeFileSync(databasePath, database);
+  const badFingerprint = JSON.stringify({ ...saved.manifest, journalFingerprint: "0".repeat(64) });
+  writeFileSync(manifestPath, badFingerprint);
+  await expect(inspectWithdrawalBackup(f.destination, createHash("sha256").update(badFingerprint).digest("hex"), f.signal)).rejects.toThrow();
+  writeFileSync(manifestPath, manifest);
+  writeFileSync(join(f.destination, "policy.json"), JSON.stringify({ ...saved.manifest.policy, maxSlots: 1 }));
+  await expect(inspectWithdrawalBackup(f.destination, saved.manifestSha256, f.signal)).rejects.toThrow();
+  writeFileSync(join(f.destination, "policy.json"), JSON.stringify(saved.manifest.policy));
+  const stop = new AbortController(); stop.abort();
+  await expect(inspectWithdrawalBackup(f.destination, saved.manifestSha256, stop.signal)).rejects.toThrow();
+  chmodSync(manifestPath, 0o644);
+  await expect(inspectWithdrawalBackup(f.destination, saved.manifestSha256, f.signal)).rejects.toThrow();
 });
 linux("preserves an existing lock and refuses cancelled or unsafe destinations", async () => {
   const f = await fixture();
