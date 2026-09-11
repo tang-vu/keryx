@@ -1,5 +1,6 @@
 /** Bound actual streamed bytes, including requests without Content-Length. */
-export async function readBoundedRequestJson(request: Request): Promise<unknown> {
+export async function readBoundedRequestJson(request: Request, maxBytes = 65536): Promise<unknown> {
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > 65536) throw new Error("Invalid request body limit");
   if (!request.body) throw new Error("Invalid request body");
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
@@ -13,7 +14,7 @@ export async function readBoundedRequestJson(request: Request): Promise<unknown>
       const { value, done } = await Promise.race([reader.read(), deadline]);
       if (done) break;
       size += value.byteLength;
-      if (size > 65536) throw new Error("Invalid request body");
+      if (size > maxBytes) throw new Error("Invalid request body");
       chunks.push(value);
     }
     const bytes = new Uint8Array(size);

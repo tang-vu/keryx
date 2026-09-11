@@ -5,9 +5,11 @@ import { validateWithdrawalRequest, type WithdrawalRequestRecord } from "./withd
 type Store = Pick<KeryxDB, "reserveCreatorWithdrawal" | "getCreatorWithdrawal" | "claimCreatorWithdrawalTransfer"
   | "getCreatorWithdrawalTransferClaim" | "getCreatorWithdrawalAttestation" | "saveCreatorWithdrawalAttestation">;
 type RequestTransfer = (record: WithdrawalRequestRecord, signal: AbortSignal) => Promise<unknown>;
+export type WithdrawalProgressStore = Pick<KeryxDB,
+  "getCreatorWithdrawal" | "getCreatorWithdrawalAttestation" | "getCreatorWithdrawalTransferClaim">;
 
 /** Authenticated owner projection only. Stored attestations are not completed mints. */
-export async function withdrawalTransferProgress(store: Store, id: string, owner: string) {
+export async function withdrawalTransferProgress(store: WithdrawalProgressStore, id: string, owner: string) {
   const record = await store.getCreatorWithdrawal(id, owner);
   if (!record) return null;
   const attestation = await store.getCreatorWithdrawalAttestation(id, owner);

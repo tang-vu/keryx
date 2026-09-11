@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-179** - Withdrawal status boundary - *Read the original owner's transfer state
+without accepting payment capabilities or exposing selectors in URLs.*
+The server handler accepts a same-origin read-only POST with a strict 1 KiB JSON
+selector and five-second streamed-body deadline. A server-owned live-session resolver
+supplies the owner and a read-only store; it is called again before releasing data so
+revocation/account changes deny the previous result. Foreign and absent requests have
+the same unavailable response. The projection excludes signatures, attestations and
+claim tokens, disables caching and labels mint status as not checked. Stored transfer
+evidence alone cannot establish a completed withdrawal. This handler remains unbound
+to a public Next.js route pending the full request/recovery integration; its injected
+authentication tests do not substitute for live-cookie browser acceptance.
+
 **D-178** - Queue operator command - *Read an explicitly selected existing application
 database without initialization while writing only the protected relay journal.*
 The relay CLI gains a mutually exclusive queue mode with explicit operator gas terms,

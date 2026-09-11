@@ -161,6 +161,34 @@ parent refusal. Queue-core commit `3641c09` passed
 [CI run 34562844128](https://github.com/tang-vu/keryx/actions/runs/34562844128), including
 production build. None of this establishes a live funded withdrawal acceptance run.
 
+## Authenticated status handler foundation
+
+`lib/gateway/withdrawal-status-handler.ts` implements the server HTTP boundary for
+reading an original withdrawal. It is not yet registered as a public Next.js route.
+Integration must bind its authentication callback to live revocable account sessions;
+the browser cannot supply owner or store authority. The request uses a same-origin
+POST, no query parameters and a strict `{ id }` JSON body capped at 1 KiB/five seconds.
+The shared streamed JSON reader now accepts a smaller explicit cap while preserving
+its existing 64 KiB default for MCP/private purchases. A stalled stream cancellation
+does not extend the read deadline.
+
+The handler queries only owner-scoped request/claim/attestation reads, then checks
+the live session again before replying. Revocation or a changed wallet withholds
+the previous owner's data. Foreign and missing records share a 404 response, database
+failures use a generic 503, and valid projections are `no-store` with no signature,
+attestation or claim token. `mintStatus: not-checked` prevents stored transfer evidence
+from being represented as completed minting. Reads do not claim, save, sign or POST
+to Circle. Eight new tests cover actual SQLite projections and read-only behavior,
+owner isolation, injected session revocation/account change, request restrictions,
+oversized/stalled input and failure redaction. These are handler-boundary tests;
+production cookie/auth binding and browser recovery still require integration.
+
+The eight handler tests, eleven transfer-coordinator tests and three existing MCP
+body-reader tests pass; focused lint and TypeScript checking pass. Operator command
+commit `16e6fdd` passed
+[CI run 34563259680](https://github.com/tang-vu/keryx/actions/runs/34563259680), including
+Linux queue CLI tests and production build.
+
 ## Read-only mint observation
 
 `lib/gateway/withdrawal-mint-observation.ts` revalidates the original request and matched
