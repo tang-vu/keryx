@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-201** - Withdrawal review and execution UI - *Review the retained original and
+separate wallet signing from its one permitted submission.*
+The panel loads an already-reserved request and displays amount, maximum Circle fee,
+maximum Gateway debit, recipient and finite source-block expiry. It generates no salt
+and cannot reconstruct a missing original. Only a locally created unsigned finite draft
+can sign; only its saved signature can expose Send. Imported/attempted originals are
+recovery-only. Every operation rereads storage before presenting the next action, and
+wallet mismatch unmounts the owner view and cancels pending work. Chromium verifies
+the exact typed-data identity, no HTTP during signing and one intercepted POST followed
+by recovery-only state after response loss. Quote preparation, public route/workspace
+mounting and full funded acceptance remain open.
+
 **D-200** - Submission-time expiry - *Revalidate finite signed terms before gas
 admission and again before the one permitted Circle call.*
 The concrete HTTP service requires explicit maximum-ahead and processing-lag block

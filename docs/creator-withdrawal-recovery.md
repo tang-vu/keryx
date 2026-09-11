@@ -434,6 +434,23 @@ imports the file and confirms the original signature is restored while submissio
 remains prohibited; duplicate import and foreign-account export are rejected. UI file
 controls and independent lost-device acceptance remain open.
 
+## Review and signing interface
+
+`components/keryx/withdrawal-review-panel.tsx` loads only an already-reserved original
+for the matching connected wallet. It displays received USDC, maximum Circle fee,
+maximum Gateway debit, recipient and source-block expiry. It never generates salts,
+substitutes missing requests or signs an imported original. Signing and sending are
+separate user actions. Storage is reread after each operation before showing the next
+button; a consumed submission marker permits recovery only. Unlimited-expiry originals
+do not receive signing/submission controls in this new panel. Wallet mismatch unmounts
+the view and cancels in-flight work.
+
+The real Chromium harness mounts the panel in Strict Mode, verifies the wallet receives
+the exact stored typed-data hash, signs without HTTP, then sends once through the real
+browser transport with an intercepted lost response. The Send control disappears and
+the other tab cannot reclaim the request. The component is not mounted on production;
+fresh quote preparation, public route/workspace wiring and funded acceptance remain open.
+
 ## Recovery interface
 
 `components/keryx/withdrawal-recovery-panel.tsx` provides the English wallet-scoped

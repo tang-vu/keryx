@@ -16,12 +16,16 @@ import {prepareWithdrawIntent} from './lib/gateway/withdraw-intent';
 import * as flow from './lib/gateway/withdrawal-browser-flow';
 import * as recovery from './lib/gateway/withdrawal-recovery-file';
 import {WithdrawalRecoveryPanel} from './components/keryx/withdrawal-recovery-panel';
+import {WithdrawalReviewPanel} from './components/keryx/withdrawal-review-panel';
 import {createElement, StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import {hashTypedData} from 'viem';
 window.flow=flow;window.recovery=recovery;window.hashTypedData=hashTypedData;
 window.mountRecovery=address=>{window.recoveryRoot??=createRoot(document.querySelector('main'));
 window.recoveryRoot.render(createElement(StrictMode,null,createElement(WithdrawalRecoveryPanel,{address})));};
+window.mountReview=(id,address,signature)=>{window.reviewSignCalls=0;window.recoveryRoot??=createRoot(document.querySelector('main'));
+const wallet={account:{address},signTypedData:async typed=>{window.reviewSignCalls++;if(window.hashTypedData(typed)!==id)throw new Error('Changed reviewed terms');return signature;}};
+window.recoveryRoot.render(createElement(StrictMode,null,createElement(WithdrawalReviewPanel,{id,address,wallet})));};
 window.journal=journal;window.fresh=p=>journal.createWithdrawalBrowserDraft(prepareWithdrawIntent(p.owner,50000n),p);`,
   resolveDir: process.cwd(), loader: "ts" }, bundle: true, write: false, platform: "browser", format: "iife", define: { "process.env": "{}" } });
 const browser = await chromium.launch({ headless: true });
@@ -217,5 +221,19 @@ try {
   await first.getByText("No withdrawal requests saved for this wallet in this browser. Import a recovery file if you have one.", { exact: true }).waitFor();
   assert.equal(await first.getByRole("button", { name: "Download private recovery file" }).count(), 0);
   assert.equal(submitRequests, 1, "recovery UI never submits a payment");
+  const reviewDraft = await first.evaluate<ReturnType<typeof createWithdrawalBrowserDraft>>(`window.journal.createWithdrawalBrowserDraft(
+    {...window.fresh(${JSON.stringify(policy)}).burnIntent,maxBlockHeight:'11000'},${JSON.stringify(policy)})`);
+  await invoke(first, "reserveWithdrawalBrowserJournal", reviewDraft);
+  const reviewOriginal = await sign(reviewDraft); expectedSubmission = reviewOriginal;
+  await first.evaluate(`window.mountReview(${JSON.stringify(reviewDraft.id)},${JSON.stringify(account.address)},${JSON.stringify(reviewOriginal.request.signature)})`);
+  await first.getByRole("button", { name: "Sign reviewed withdrawal" }).click();
+  await first.getByRole("button", { name: "Send signed withdrawal" }).waitFor();
+  assert.equal(await first.evaluate("window.reviewSignCalls"), 1);
+  assert.equal(submitRequests, 1, "signing alone never sends HTTP");
+  await first.getByRole("button", { name: "Send signed withdrawal" }).click();
+  await first.getByText("This request is recovery-only. Check its status in withdrawal recovery.", { exact: true }).waitFor();
+  assert.equal(submitRequests, 2);
+  assert.equal(await first.getByRole("button", { name: "Send signed withdrawal" }).count(), 0);
+  assert.equal(await invoke(second, "claimWithdrawalBrowserSubmission", reviewOriginal), false);
   console.log("PASS: Chromium withdrawal journal, signing, cross-tab single HTTP submission, lost-response recovery, owner isolation, abort and recovery-only imports; all HTTP intercepted, no live payment.");
 } finally { await browser.close(); }
