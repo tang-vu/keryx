@@ -141,6 +141,30 @@ be included in public status feeds or logs. Attestation expiry does not expire a
 signed transaction: it can still be mined and consume gas while reverting. Unknown
 prepared transactions therefore cannot free their nonce or gas reservation on timeout.
 
+### Exact receipt matching
+
+`lib/gateway/withdrawal-mint-receipt.ts` validates a viem-normalized successful receipt
+against the original signed transaction and request. Transaction hash, sender, minter,
+gas use and effective gas price must fit the prepared terms. The receipt block cannot
+exceed the matched attestation's expiration height; the exact expiration height remains
+valid under the pinned minter's comparison.
+
+Exactly one `AttestationUsed` event from the intended minter must contain the canonical
+token, recipient, TransferSpec hash, source domain, depositor, signer and integer value.
+Matching compares full ABI bytes, including address/domain padding. Logs must agree
+with the receipt's block/transaction identity, have distinct nonnegative indexes and
+not be removed. Unrelated well-formed logs are allowed. The event definition was
+rechecked against pinned Circle `Mints.sol` on September 11.
+
+The result says `receipt-matched-only` and retains `chainFinalityVerified: false`.
+This helper does not fetch a receipt, establish canonical inclusion/finality, persist
+a withdrawal, release reservations or infer a refund from a reverted/missing receipt.
+RPC observation, canonical-block rechecks and the operator's deployed-code/finality
+policy must precede any completed cash-out projection. Tests use locally signed
+synthetic transactions and receipts; they do not demonstrate a live mint.
+All eight receipt tests pass locally; the combined receipt, signed-transaction and
+journal run passes 25 tests. Focused lint and TypeScript checking also pass.
+
 The request-matching layer in `lib/gateway/withdrawal-attestation.ts` now checks a
 single attestation or a one-entry attestation set against the exact encoded original
 spec, including every routing field, value, salt, empty hook and length. It also checks

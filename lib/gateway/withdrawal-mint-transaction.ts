@@ -53,6 +53,7 @@ export async function matchWithdrawalMintTransaction(selected: WithdrawalRequest
     return { format: "creator-withdrawal-mint-transaction-v1" as const,
       authority: "signed-transaction-matched-only" as const, requestId: record.id,
       transferId: attestation.transferId, transferSpecHash: attestation.transferSpecHash,
+      expirationBlock: attestation.expirationBlock,
       chainId: 5042002 as const, minter: record.policy.gatewayMinter, terms,
       transactionHash: keccak256(serializedTransaction), serializedTransaction,
       maxGasCostWei: (BigInt(terms.gas) * BigInt(terms.maxFeePerGas)).toString() };

@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-169** - Withdrawal receipt evidence - *Require the exact original transaction
+and canonical minter event before accepting receipt-level cash-out evidence.*
+Successful receipt status alone is insufficient. The matcher verifies the signed-byte
+hash, relayer, minter, bounded gas accounting and attestation expiration height. One
+canonical AttestationUsed event must match all routing, ownership and value fields;
+every log must agree with its enclosing receipt identity. This remains receipt-level
+evidence, separate from RPC observation, canonical inclusion, finality and deployed
+code verification. Missing/reverted/malformed evidence cannot release a reservation,
+record a completed withdrawal or imply a refund. Gas uses native wei; creator value
+uses integer micro-USDC.
+
 **D-168** - Relay nonce and gas journal - *Place a dedicated relay key's prepared
 transactions and lifetime gas reservations in one durable local authority.*
 The application request/attestation journal remains in its configured database. A
