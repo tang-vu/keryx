@@ -370,7 +370,7 @@ function clamp01(n: number): number {
 
 /** Defensively validate the model's `conflicts` array — drop malformed entries and cap the
  *  count so a hallucinated list can never spam the trace. Only well-formed disagreements with
- *  at least two stances and a trusted marker survive. */
+ *  at least two stances survive; missing preference remains explicitly unresolved. */
 function parseConflicts(raw: unknown): Conflict[] {
   if (!Array.isArray(raw)) return [];
   const out: Conflict[] = [];
@@ -389,8 +389,8 @@ function parseConflicts(raw: unknown): Conflict[] {
           }))
           .filter((p) => p.marker && p.stance)
       : [];
-    if (!point || !trusted || positions.length < 2) continue;
-    out.push({ point, positions, trusted, reason });
+    if (!point || positions.length < 2) continue;
+    out.push({ point, positions, trusted: trusted || "none", reason });
     if (out.length >= 5) break;
   }
   return out;

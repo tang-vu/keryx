@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-216** - Confidence with conflicting evidence - *A reported disagreement is
+not resolved merely because its coverage score is high.*
+The English diagnostic exposed unresolved same-revision policy conflicts with coverage
+varying from 0.5 to 0.8. Final verdicts now remain Low when the reported preference is
+absent, unknown, unsupported by accepted citations or lacks an explanation. Even an
+explained preference between known sources caps confidence at Moderate: choosing one
+side is not independent corroboration. Missing model preferences remain explicit
+unresolved conflicts, and trace text reports the preference without declaring resolution.
+Citation evidence and reward allocation retain their existing authority; useful
+evidence of a disagreement is not discarded. This applies to reported conflicts only;
+undetected contradictions and early stopping still require broader evaluation.
+
 **D-215** - Backup-copy inspection - *Match an independently retained manifest
 digest before trusting the copied database's own metadata.*
 Successful backup output now includes the manifest SHA-256 for separate private

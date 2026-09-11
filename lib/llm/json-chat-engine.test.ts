@@ -213,3 +213,12 @@ describe("final sufficiency contract", () => {
     ]);
   });
 });
+
+
+it("retains a reported disagreement when the model omits a preferred source", async () => {
+  const engine = new StubEngine({ answer: "The sources conflict.", citedMarkers: [], evidence: [],
+    conflicts: [{ point: "retention", positions: [{ marker: "S1", stance: "seven" }, { marker: "S2", stance: "thirty" }], reason: "No precedence rule" }] });
+  const result = await engine.synthesize({ question: "Which policy applies?", subClaims: ["Which policy applies?"], gathered: [] });
+  expect(result.conflicts).toHaveLength(1);
+  expect(result.conflicts[0].trusted).toBe("none");
+});

@@ -6,7 +6,12 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.51 (account withdrawal recovery page, updated 2026-09-11)
+**Version:** 0.22.52 (confidence for conflicting evidence, updated 2026-09-11)
+
+Reported unresolved source disagreements now keep final confidence Low regardless of
+coverage scores. An explained source preference caps confidence at Moderate. Missing
+preferences remain visible as unresolved; valid citations and rewards are preserved.
+This does not detect every contradiction or change early research stopping decisions.
 
 `/me/withdrawals` now connects authenticated account/wallet matching to the withdrawal
 workspace, with a link from My sources. New requests remain disabled without explicit

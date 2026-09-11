@@ -9,6 +9,7 @@
  * Yields TraceStep events; returns the final QueryRun. Visible agency is the product.
  */
 
+import { researchVerdict } from "./research-verdict";
 import { config } from "../config";
 import type {
   ClaimCoverageRecord,
@@ -968,13 +969,12 @@ export async function* runAgent(
     { relevanceReview: synthesized.evidenceReview });
   }
 
-  // 5b) ADJUDICATE — when the sources disagreed, the synthesizer trusted one over another rather
-  // than averaging them. Surface each resolution so the reasoning behind the answer stays visible.
+  // Surface disagreements and the reported preference, including unresolved cases.
   for (const cf of synthesized.conflicts ?? []) {
     const positions = cf.positions.map((p) => `${p.marker} ${p.stance}`).join("  vs  ");
     yield emit(
       "adjudicate",
-      `⚖️ Sources disagreed on ${cf.point} — ${positions} → trusted ${cf.trusted} (${cf.reason})`,
+      `⚖️ Sources disagreed on ${cf.point} — ${positions} → reported preference: ${cf.trusted || "none"} (${cf.reason})`,
       cf,
     );
   }
@@ -1041,40 +1041,10 @@ export async function* runAgent(
     );
   }
 
-  // 5c) VERDICT — derive how confident the agent is from its own coverage signals (sources
-  // corroborating the answer, sub-claims left thin, disagreements adjudicated). When the evidence
-  // is thin, hedge the answer honestly instead of stating it with false certainty.
-  const conflictsResolved = synthesized.conflicts?.length ?? 0;
-  const adjudicatedNote = conflictsResolved
-    ? `, ${conflictsResolved} disagreement${conflictsResolved === 1 ? "" : "s"} adjudicated`
-    : "";
-  const gaps = claimCoverage.filter(
-    (claim) => claim.coverage < MIN_REWARD_SUPPORT,
-  ).length;
-  const strongClaims = claimCoverage.filter(
-    (claim) => claim.coverage >= 0.7,
-  ).length;
-  const allStrong =
-    claimCoverage.length > 0 && strongClaims === claimCoverage.length;
-  const allGrounded = claimCoverage.length > 0 && gaps === 0;
-  const gapsNote = (n: number) => `${n} sub-claim${n === 1 ? "" : "s"}`;
-  const verdict: Confidence =
-    used.length === 0
-      ? { level: "Low", reason: "no citation passed the evidence gate" }
-      : allStrong && used.length >= 2
-        ? {
-            level: "High",
-            reason: `${used.length} evidence-verified sources ground every sub-claim${adjudicatedNote}`,
-          }
-        : allGrounded
-          ? {
-              level: "Moderate",
-              reason: `${used.length} evidence-verified source${used.length === 1 ? "" : "s"} cover every sub-claim, but corroboration or support strength is limited${adjudicatedNote}`,
-            }
-          : {
-              level: "Low",
-              reason: `${gapsNote(gaps)} remain below the evidence threshold${adjudicatedNote}`,
-            };
+  // Coverage cannot resolve a contradiction or turn a source preference into corroboration.
+  const verdict = researchVerdict({ coverage: claimCoverage,
+    citedMarkers: [...ledger.acceptedMarkers], sourceMarkers: gathered.map(source => source.marker),
+    conflicts: synthesized.conflicts ?? [] });
   runConfidence = verdict;
 
   if (verdict.level === "Low" && used.length > 0) {

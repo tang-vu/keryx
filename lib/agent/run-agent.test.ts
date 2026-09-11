@@ -1423,3 +1423,24 @@ it("retains public collection and its persistence checkpoint when no strategy is
   expect(run.totalSpent).toBeCloseTo(0.027, 6);
   expect(order).toEqual(["boundary", "save"]);
 });
+
+
+it("keeps valid citations while reported disagreement limits the final confidence", async () => {
+  for (const trusted of ["none", "S1"]) {
+    const sources = [makeSource({ id: "alpha" }), makeSource({ id: "beta" })];
+    const engine = fakeEngine({
+      sufficiency: input => ({ sufficient: input.gathered.length >= 2, rationale: "two positions available",
+        perClaim: input.subClaims.map(claim => ({ claim, coverage: 0.95, coveredBy: input.gathered.map(g => g.marker) })) }),
+      synthesize: input => ({ answer: "The sources disagree [S1] [S2].", citedMarkers: input.gathered.map(g => g.marker),
+        evidence: input.gathered.map(g => ({ claimIndex: 0, marker: g.marker, quote: g.text, support: 0.95 })),
+        conflicts: [{ point: "retention", positions: [{ marker: "S1", stance: "seven days" }, { marker: "S2", stance: "thirty days" }],
+          trusted, reason: trusted === "none" ? "No precedence rule" : "More specific wording" }] }),
+    });
+    const gateway = fakeGateway();
+    const { run } = await drive({ question: "Which retention period applies?", budget: 0.04 }, deps(sources, engine, gateway));
+    expect(run.confidence?.level).toBe(trusted === "none" ? "Low" : "Moderate");
+    expect(run.citations).toHaveLength(2);
+    expect(gateway.citationCalls).toHaveLength(2);
+    if (trusted === "none") expect(run.answer).toContain("unresolved");
+  }
+});
