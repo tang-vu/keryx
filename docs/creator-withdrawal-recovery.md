@@ -56,6 +56,35 @@ service role only, with no client access or direct service writes. Signed reques
 never appear in the public `/api/withdrawals` feed. Server retention and eventual
 tombstone policy need to preserve replay barriers while respecting the final privacy policy.
 
+## Initial transfer coordinator
+
+`lib/gateway/withdrawal-transfer-service.ts` now coordinates the original request,
+server-owned durable gas admission, one transfer claim and matched-response storage.
+Only the caller receiving a fresh claim may POST the canonical signed-request array
+to Circle. Existing claims never invoke admission or POST again. Invalid/lost responses
+remain `awaiting-transfer-evidence`; stored attestations remain `attestation-stored`,
+with `chainFinalityVerified: false`. Owner-scoped progress contains no signature,
+attestation or internal claim token. A response already returned by Circle is retained
+despite a subsequent caller disconnect; committed-response readback loss can recover
+through the existing store. HTTP transport disables redirects/retries and bounds the
+whole response by ten seconds and 16 KiB.
+
+This coordinator is not wired into production. Its required admission callback must
+reserve bounded gas durably and idempotently before Circle submission. The current
+relay journal reserves only after an attestation exists; it cannot serve as that
+callback yet. The next integration must reserve gas before the transfer and then bind
+the stored attestation and nonce without charging that same request twice. Unknown
+claims cannot release their gas reservation. Balance-only or no-op admission is not
+sufficient. Tests use synthetic admission callbacks to verify sequencing, not to prove
+this outstanding gas reservation or an integrated paid journey.
+
+Eleven focused coordinator tests pass: concurrent callers, lost claim/vendor/storage
+responses, denied admission, cancellation, immutable request snapshots, invalid and
+oversized evidence, response-body deadline, owner isolation and projection privacy.
+No test sends a live transfer. Operator bootstrap commit `6a3af61` passed
+[CI run 34561202764](https://github.com/tang-vu/keryx/actions/runs/34561202764), including
+the Linux runtime tests and production build.
+
 ## Read-only mint observation
 
 `lib/gateway/withdrawal-mint-observation.ts` revalidates the original request and matched

@@ -1,5 +1,20 @@
 # Keryx — Decision Log
 
+**D-175** - Initial withdrawal transfer - *Claim once after durable gas admission;
+response loss never authorizes another Circle POST.*
+The server coordinator validates and stores the original owner-signed request before
+invoking server-owned, request-idempotent gas admission. Only a freshly inserted,
+read-back application transfer claim permits the vendor call. Existing claims skip
+both admission and submission; malformed, lost or oversized responses retain unknown
+state. A returned matched response is stored even if the caller disconnects, and a
+committed response with lost readback can be recovered without repeating the transfer.
+The transport sends one canonical signed-request array with no redirects or retries
+and bounds headers/body by a ten-second deadline and 16 KiB. Owner-only progress omits
+signatures/attestations and never represents stored evidence as a completed mint.
+The concrete pre-Circle gas reservation and production HTTP integration remain open:
+the current relay journal requires an attestation, so it cannot yet supply this
+admission callback. A no-op or balance-only check is not an acceptable production gate.
+
 **D-174** - Relay operator bootstrap - *Require an explicit dedicated key and protected
 existing journal before enabling the testnet worker command.*
 The CLI defaults to read-only local inspection, with separate explicit run and schema
