@@ -161,6 +161,32 @@ parent refusal. Queue-core commit `3641c09` passed
 [CI run 34562844128](https://github.com/tang-vu/keryx/actions/runs/34562844128), including
 production build. None of this establishes a live funded withdrawal acceptance run.
 
+## Authenticated submission handler foundation
+
+`lib/gateway/withdrawal-submit-handler.ts` now wraps the transfer coordinator in a
+server-owned HTTP boundary. It accepts only the signed wire request, reconstructs
+policy from configured chain/contracts/amount/fee caps and the authenticated owner,
+and supports cash-out to that owner's own wallet. Browser policy fields, foreign
+signatures, excess amounts/fees and noncanonical input fail before gas admission.
+The request uses same-origin POST, no query parameters, an 8 KiB/five-second body
+limit and a required server-side limiter before cryptographic validation.
+
+The exact original session ID and wallet are revalidated after body/limit waits,
+before and after gas admission, immediately before Circle transport and before the
+HTTP response. A changed session after claim storage does not reopen the claim.
+Requests with existing claims remain recovery-only; vendor-response loss preserves
+the original record and unknown state. Only no-store transfer progress is returned
+with mint finality unchecked. Seven tests use actual SQLite request/claim/attestation
+storage for duplicate HTTP calls, configured limits, client-policy/foreign-owner
+denial, limiter refusal, same-wallet session replacement at admission/claim boundaries,
+response loss and request restrictions. Admission, limiter and authentication callbacks
+in these tests are synthetic; real backed admission, durable rate limits and cookie
+binding remain required. The handler is not registered as a public Next.js route.
+
+Browser-status commit `8134f83` passed
+[CI run 34564636883](https://github.com/tang-vu/keryx/actions/runs/34564636883), including
+the Chromium withdrawal recovery checks and production build.
+
 ## Authenticated status handler foundation
 
 `lib/gateway/withdrawal-status-handler.ts` implements the server HTTP boundary for

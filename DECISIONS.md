@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-183** - Withdrawal submission boundary - *Derive request policy from server limits
+and revalidate the original session around admission and initial Circle submission.*
+The server handler accepts only the signed wire intent, not client policy fields.
+Its first supported cash-out path binds depositor/signer/recipient to the authenticated
+wallet, applies operator amount/fee/contract limits and creates the canonical original
+record itself. A required server limiter runs before body/signature processing; streamed
+input is capped at 8 KiB. Same-owner replacement sessions do not inherit an in-flight
+submission. Session checks bracket durable gas admission and precede the vendor call;
+a consumed claim remains retained if revocation occurs after claim storage. Responses
+are no-store transfer progress, never completed-mint evidence. The handler remains
+unregistered until concrete backed admission, rate limiting and production routing
+are connected; injected test callbacks are not live readiness evidence.
+
 **D-182** - Browser withdrawal status - *Bind HTTP transfer progress to the retained
 draft and never translate missing evidence into retry or completion authority.*
 The browser uses one fixed same-origin read-only POST carrying only the request ID,
