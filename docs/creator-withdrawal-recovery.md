@@ -99,8 +99,10 @@ Synthetic response signatures are deliberately
 not presented as Circle authorization. None of these tests sends funds or establishes
 the integrated journey. Foundation commit `2bd3801` also passed
 [CI run 34554723909](https://github.com/tang-vu/keryx/actions/runs/34554723909), including
-the new PostgreSQL check and production build; later codec/spec-identity changes require
-their own release verification.
+the new PostgreSQL check and production build. Attestation persistence and spec-identity
+commit `30d6161` passed [CI run 34555613062](https://github.com/tang-vu/keryx/actions/runs/34555613062),
+including unit tests, PostgreSQL, browser/contract checks and production build. These
+backend layers are not yet wired into the production creator withdrawal journey.
 
 ```sh
 npx vitest run lib/gateway/withdraw-protocol.test.ts lib/db/creator-withdrawal-requests.test.ts lib/gateway/withdrawal-attestation.test.ts
