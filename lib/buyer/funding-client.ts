@@ -3,7 +3,8 @@ import { arcTestnet } from "viem/chains";
 import { BUYER_USDC } from "./protocol";
 import { readGatewayCredit } from "../gateway/read-credit";
 import { fundingTransaction, transactionHashSchema, verifyFundingTransaction, type FundingRecord, type FundingStep } from "./funding-policy";
-import { claimFundingStep, readFundingRecord, saveFundingHash, rejectFundingPrompt, confirmFundingStep } from "./funding-journal";
+import { claimFundingStep, readFundingRecord, saveFundingHash, rejectFundingPrompt, confirmFundingStep, resolveFundingReplacement } from "./funding-journal";
+import { inspectFundingReplacement } from "./funding-replacement";
 
 function userRejected(error: unknown): boolean {
   let value = error;
@@ -71,4 +72,18 @@ export async function recoverFundingStep(id: string, step: FundingStep, chain: P
   if (record[step].status === "possible") await saveFundingHash(id, step, hash);
   await confirmFundingStep(id, step, hash, status);
   return readFundingRecord(id);
+}
+
+/** Explicit replacement lookup only; no wallet signing, nonce search or rebroadcast. */
+export async function recoverFundingReplacement(id: string, step: FundingStep, chain: PublicClient, hash: string, signal?: AbortSignal) {
+  signal?.throwIfAborted();
+  const snapshot = await readFundingRecord(id);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const evidence = await Promise.race([inspectFundingReplacement(snapshot, step, hash, chain),
+      new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error("Replacement lookup timed out; the original remains unresolved")), 10_000); })]);
+    signal?.throwIfAborted();
+    await resolveFundingReplacement(snapshot, step, evidence);
+    return readFundingRecord(id);
+  } finally { clearTimeout(timer); }
 }

@@ -4,13 +4,26 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { usePublicClient, useWalletClient } from "wagmi";
 import { formatUnits, type PublicClient } from "viem";
 import { createFundingRecord, listFundingRecords, cancelFundingRecord } from "@/lib/buyer/funding-journal";
-import { submitFundingStep, recoverFundingStep } from "@/lib/buyer/funding-client";
+import { submitFundingStep, recoverFundingStep, recoverFundingReplacement } from "@/lib/buyer/funding-client";
 import { connectedBuyerWallet } from "@/lib/buyer/connected-wallet";
 import { type FundingRecord, type FundingStep } from "@/lib/buyer/funding-policy";
 import { parseBuyerBudget } from "@/lib/a2a/buyer-workspace";
 import { BUYER_GATEWAY } from "@/lib/buyer/protocol";
 
 const control = "border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40";
+
+function outcomeMessage(record: FundingRecord, step: FundingStep) {
+  const leg = record[step];
+  if (leg.status === "replaced") return "The original transaction was replaced by a different call. This does not confirm the planned deposit. Check wallet activity and Gateway balance before preparing another deposit.";
+  if (leg.status === "reverted") return "The matching transaction reverted. Gas may have been charged; this was not a successful deposit.";
+  if (leg.status !== "confirmed") return "The transaction remains unconfirmed. Check wallet activity; do not send it again.";
+  if (leg.resolution) return step === "deposit"
+    ? "The matching deposit is finalized according to the configured RPC. Check Gateway balance before buying; credit may still be updating."
+    : "The matching approval is finalized according to the configured RPC. Review the deposit separately.";
+  return step === "deposit"
+    ? "Deposit confirmed on chain. Check Gateway balance before buying; Circle credit may still be updating."
+    : "Approval confirmed. Review the deposit step separately.";
+}
 
 export function ResearchFunding({ payer, initialAmount, disabled, onBusy, onChanged }: {
   payer: string; initialAmount: number; disabled: boolean; onBusy: (busy: boolean) => void; onChanged: () => void;
@@ -48,9 +61,7 @@ export function ResearchFunding({ payer, initialAmount, disabled, onBusy, onChan
         const result = await recoverFundingStep(pendingId!, pendingStep!, chain!);
         if (!cancelled) {
           await refresh();
-          setMessage(result[pendingStep!].status === "confirmed"
-            ? (pendingStep === "deposit" ? "Deposit confirmed on chain. Check Gateway balance before buying; Circle credit may still be updating." : "Approval confirmed. Review the deposit step separately.")
-            : "The transaction reverted. Gas may have been charged.");
+          setMessage(outcomeMessage(result, pendingStep!));
         }
       }
       catch { /* Missing/mismatched or unconfirmed evidence never permits another wallet request. */ }
@@ -91,9 +102,19 @@ export function ResearchFunding({ payer, initialAmount, disabled, onBusy, onChan
     void run(async () => {
       const result = await recoverFundingStep(active.id, step, chain, active[step].hash ?? lookupHash.trim());
       if (live.current) {
-        setMessage(result[step].status === "confirmed" ? (step === "deposit" ? "Deposit confirmed on chain. Check Gateway balance before buying; Circle credit may still be updating." : "Approval confirmed. Review the deposit step separately.") : "The transaction reverted. Gas may have been charged; this was not a successful deposit.");
+        setMessage(outcomeMessage(result, step));
         setLookupHash(""); onChanged();
       }
+    });
+  }
+
+  function recoverReplacement(step: FundingStep) {
+    if (!chain || !active) return;
+    void run(async signal => {
+      const result = await recoverFundingReplacement(active.id, step, chain, lookupHash.trim(), signal);
+      if (!live.current) return;
+      setMessage(outcomeMessage(result, step));
+      setLookupHash(""); onChanged();
     });
   }
 
@@ -121,10 +142,13 @@ export function ResearchFunding({ payer, initialAmount, disabled, onBusy, onChan
         <p className="font-mono text-xs">{step === "approval" ? "1. Approve" : "2. Deposit"}: {active[step].status}</p>
         {["ready", "rejected"].includes(active[step].status) && <button type="button" className={`${control} mt-2`} disabled={busy || disabled || (step === "deposit" && active.approval.status !== "confirmed")} onClick={() => send(step)}>{step === "approval" ? "Approve" : "Deposit"} {formatUnits(BigInt(active.amount), 6)} USDC</button>}
         {["possible", "submitted"].includes(active[step].status) && <>
-          {!active[step].hash && <label className="mt-3 grid gap-2 font-serif text-sm">Transaction hash from your wallet<input value={lookupHash} onChange={event => setLookupHash(event.target.value)} autoComplete="off" spellCheck={false} placeholder="0x…" className="min-w-0 border border-line bg-paper p-2 font-mono text-xs" /></label>}
+          <label className="mt-3 grid gap-2 font-serif text-sm">Transaction hash from your wallet<input value={lookupHash} onChange={event => setLookupHash(event.target.value)} autoComplete="off" spellCheck={false} placeholder="0x…" className="min-w-0 border border-line bg-paper p-2 font-mono text-xs" /></label>
           <button type="button" className={`${control} mt-2`} disabled={busy || disabled || (!active[step].hash && !/^0x[a-fA-F0-9]{64}$/.test(lookupHash.trim()))} onClick={() => recover(step)}>Check original transaction</button>
+          <p className="mt-2 font-serif text-xs">If your wallet sped up or cancelled this transaction, enter the replacement hash. This check sends no transaction and requires finalized evidence from the configured RPC.</p>
+          <button type="button" className={`${control} mt-2`} disabled={busy || disabled || !/^0x[a-fA-F0-9]{64}$/.test(lookupHash.trim())} onClick={() => recoverReplacement(step)}>Check replacement transaction</button>
         </>}
         {active[step].hash && <a className="mt-2 block break-all font-mono text-xs underline" href={`https://testnet.arcscan.app/tx/${active[step].hash}`} target="_blank" rel="noreferrer">View transaction on ArcScan</a>}
+        {active[step].originalHash && <a className="mt-2 block break-all font-mono text-xs underline" href={`https://testnet.arcscan.app/tx/${active[step].originalHash}`} target="_blank" rel="noreferrer">Original transaction</a>}
       </div>)}
       {["ready", "rejected"].includes(active.deposit.status) && ["ready", "rejected", "confirmed"].includes(active.approval.status) && <button type="button" className={control} disabled={busy || disabled} onClick={() => {
         void run(async () => { if (!await cancelFundingRecord(active.id)) throw new Error("Funding state changed"); if (live.current) setMessage("Local funding plan cancelled. Any confirmed token approval remains on chain."); });
@@ -135,6 +159,6 @@ export function ResearchFunding({ payer, initialAmount, disabled, onBusy, onChan
     }}>Refresh funding status</button>
     {rows.some(row => row.deposit.status === "confirmed") && <p className="mt-3 font-serif text-sm">A saved deposit is confirmed on chain. Check the current Gateway balance before buying; previous deposits may already have been spent.</p>}
     <p role="status" className="mt-3 font-serif text-sm">{message}</p>
-    <ul className="mt-3 space-y-2">{rows.filter(row => !row.activePayer).slice(0, 5).map(row => <li key={row.id} className="font-mono text-xs">{formatUnits(BigInt(row.amount), 6)} USDC · {row.cancelled ? "plan cancelled" : row.deposit.status === "confirmed" ? "deposit confirmed" : "transaction reverted"}{row.deposit.hash && <> · <a className="underline" href={`https://testnet.arcscan.app/tx/${row.deposit.hash}`} target="_blank" rel="noreferrer">Transaction</a></>}</li>)}</ul>
+    <ul className="mt-3 space-y-2">{rows.filter(row => !row.activePayer).slice(0, 5).map(row => <li key={row.id} className="font-mono text-xs">{formatUnits(BigInt(row.amount), 6)} USDC · {row.cancelled ? "plan cancelled" : row.deposit.status === "confirmed" ? "deposit confirmed" : row.deposit.status === "replaced" || row.approval.status === "replaced" ? "original replaced by a different call; deposit not confirmed" : "transaction reverted"}{(row.deposit.hash ?? row.approval.hash) && <> · <a className="underline" href={`https://testnet.arcscan.app/tx/${row.deposit.hash ?? row.approval.hash}`} target="_blank" rel="noreferrer">Transaction</a></>}{(row.deposit.originalHash ?? row.approval.originalHash) && <> · <a className="underline" href={`https://testnet.arcscan.app/tx/${row.deposit.originalHash ?? row.approval.originalHash}`} target="_blank" rel="noreferrer">Original transaction</a></>}</li>)}</ul>
   </details>;
 }

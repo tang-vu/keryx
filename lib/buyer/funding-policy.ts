@@ -4,10 +4,18 @@ import { addressSchema, BUYER_GATEWAY, BUYER_NETWORK, BUYER_USDC } from "./proto
 
 export const fundingAmountSchema = z.string().regex(/^[1-9]\d{0,6}$/).refine(value => Number(value) <= 1_000_000);
 export const transactionHashSchema = z.string().regex(/^0x[a-fA-F0-9]{64}$/);
-const legSchema = z.object({ status: z.enum(["ready", "possible", "submitted", "confirmed", "reverted", "rejected"]), hash: transactionHashSchema.optional(),
+export const fundingResolutionSchema = z.object({
+  hash: transactionHashSchema, blockHash: transactionHashSchema, blockNumber: z.string().regex(/^\d{1,24}$/),
+  status: z.enum(["confirmed", "reverted", "replaced"]), basis: z.literal("configured-rpc-finalized"),
+}).strict();
+const legSchema = z.object({ status: z.enum(["ready", "possible", "submitted", "confirmed", "reverted", "rejected", "replaced"]), hash: transactionHashSchema.optional(),
+  originalHash: transactionHashSchema.optional(), resolution: fundingResolutionSchema.optional(),
   nonce: z.number().int().nonnegative().safe().optional(), beforeBlock: z.string().regex(/^\d{1,24}$/).optional(),
 }).strict()
-  .refine(value => !["submitted", "confirmed", "reverted"].includes(value.status) || !!value.hash, "Mined/submitted transaction needs a hash")
+  .refine(value => !["submitted", "confirmed", "reverted", "replaced"].includes(value.status) || !!value.hash, "Mined/submitted transaction needs a hash")
+  .refine(value => value.status !== "replaced" || !!value.resolution, "Replacement needs finalized evidence")
+  .refine(value => !value.resolution || (value.resolution.status === value.status && value.resolution.hash.toLowerCase() === value.hash?.toLowerCase()), "Resolution must match the terminal transaction")
+  .refine(value => !value.originalHash || (!!value.resolution && value.originalHash.toLowerCase() !== value.hash?.toLowerCase()), "Original hash requires a distinct resolved transaction")
   .refine(value => !["ready", "possible", "rejected"].includes(value.status) || !value.hash, "Unsubmitted leg cannot contain a hash")
   .refine(value => ["ready", "rejected"].includes(value.status) || (value.nonce !== undefined && value.beforeBlock !== undefined), "Attempt needs a nonce and observed block");
 export const fundingRecordSchema = z.object({
@@ -16,7 +24,7 @@ export const fundingRecordSchema = z.object({
   approval: legSchema, deposit: legSchema, cancelled: z.boolean().default(false), createdAt: z.string().datetime(), updatedAt: z.string().datetime(),
 }).strict().superRefine((row, ctx) => {
   if (row.payer !== row.payer.toLowerCase() || (row.activePayer && row.activePayer !== row.payer)) ctx.addIssue({ code: "custom", message: "Funding wallet key mismatch" });
-  const terminal = row.cancelled || row.deposit.status === "confirmed" || row.deposit.status === "reverted" || row.approval.status === "reverted";
+  const terminal = row.cancelled || row.deposit.status === "confirmed" || row.deposit.status === "reverted" || row.approval.status === "reverted" || row.deposit.status === "replaced" || row.approval.status === "replaced";
   if (terminal === !!row.activePayer) ctx.addIssue({ code: "custom", message: "Funding lock does not match terminal state" });
   if (row.deposit.status !== "ready" && row.approval.status !== "confirmed") ctx.addIssue({ code: "custom", message: "Deposit requires confirmed approval" });
   if (row.cancelled && (!["ready", "rejected"].includes(row.deposit.status) || !["ready", "rejected", "confirmed"].includes(row.approval.status))) ctx.addIssue({ code: "custom", message: "Cannot cancel an uncertain funding transaction" });

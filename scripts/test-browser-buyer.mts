@@ -170,6 +170,35 @@ try {
     return { cancelledWhileUncertain, depositClaimed, unlocked: !first.activePayer, cancelledReady, history: (await api.listFundingRecords(first.payer)).length };
   }, funding.value.id);
   assert.deepEqual(fundingChecks, { cancelledWhileUncertain: false, depositClaimed: true, unlocked: true, cancelledReady: true, history: 2 });
+  const replacementSnapshot = await a.evaluate(async payer => {
+    const api = window.BrowserBuyerTest, row = await api.createFundingRecord(payer, "50000");
+    await api.claimFundingStep(row.id, "approval", 9, "104");
+    await api.saveFundingHash(row.id, "approval", `0x${"3".repeat(64)}`);
+    return api.readFundingRecord(row.id);
+  }, account.address);
+  const replacementResults = await Promise.allSettled(pages.map(page => page.evaluate(async snapshot => {
+    await window.BrowserBuyerTest.resolveFundingReplacement(snapshot, "approval", {
+      hash: `0x${"4".repeat(64)}`, blockHash: `0x${"5".repeat(64)}`, blockNumber: "105", status: "replaced", basis: "configured-rpc-finalized",
+    });
+  }, replacementSnapshot)));
+  assert.equal(replacementResults.filter(result => result.status === "fulfilled").length, 1, "Only one replacement resolution commits across tabs");
+  const resolved = await a.evaluate(id => window.BrowserBuyerTest.readFundingRecord(id), replacementSnapshot.id);
+  assert.equal(resolved.activePayer, undefined); assert.equal(resolved.approval.status, "replaced");
+  assert.equal(resolved.approval.originalHash, `0x${"3".repeat(64)}`);
+  assert.equal(resolved.deposit.status, "ready", "Different replacement never becomes a deposit");
+  const staleRefused = await a.evaluate(async payer => {
+    const api = window.BrowserBuyerTest, row = await api.createFundingRecord(payer, "50000"), hash = `0x${"6".repeat(64)}`;
+    await api.claimFundingStep(row.id, "approval", 10, "106"); await api.saveFundingHash(row.id, "approval", hash);
+    const snapshot = await api.readFundingRecord(row.id);
+    await api.confirmFundingStep(row.id, "approval", hash, "confirmed");
+    let refused = false;
+    try { await api.resolveFundingReplacement(snapshot, "approval", {
+      hash: `0x${"7".repeat(64)}`, blockHash: `0x${"8".repeat(64)}`, blockNumber: "107", status: "replaced", basis: "configured-rpc-finalized",
+    }); } catch { refused = true; }
+    const saved = await api.readFundingRecord(row.id);
+    return refused && saved.approval.hash === hash && saved.approval.status === "confirmed" && !!saved.activePayer;
+  }, account.address);
+  assert(staleRefused, "Late replacement lookup cannot overwrite original confirmation or release its active deposit");
   assert.deepEqual(errors, []);
   console.log("PASS: Chromium cross-tab journals, commit/abort, private recovery, one-shot purchase and funding gates, uncertain cancellation refusal and retained funding history. All HTTP intercepted; no settlement.");
 } finally { await browser.close(); await rm(portableDirectory, { recursive: true, force: true }); }

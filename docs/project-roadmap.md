@@ -6,7 +6,13 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.56 (final assessment in confidence, updated 2026-09-11)
+**Version:** 0.22.57 (funding replacement recovery, updated 2026-09-11)
+
+Funding now accepts an explicit replacement hash from wallet activity, with finalized
+same-payer/nonce evidence and an atomic journal update. Exact-call speedups and changed
+calls have separate outcomes; original hashes remain in history. No signing or retry
+occurs during lookup. [Recovery scope and acceptance](./engineering/funding-replacements-2026-09-11.md)
+retain lost-storage and independent funded wallet acceptance as open work.
 
 Final confidence now respects an insufficient final assessment even when claim scores
 are high and multiple citations pass the evidence gate. Such answers remain Low and

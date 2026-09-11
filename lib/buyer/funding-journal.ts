@@ -1,6 +1,6 @@
 import { browserTransaction, type BrowserStore } from "./browser-storage";
 import { addressSchema, BUYER_NETWORK } from "./protocol";
-import { fundingAmountSchema, fundingRecordSchema, transactionHashSchema, type FundingRecord, type FundingStep } from "./funding-policy";
+import { fundingAmountSchema, fundingRecordSchema, fundingResolutionSchema, transactionHashSchema, type FundingRecord, type FundingStep } from "./funding-policy";
 
 const spec: BrowserStore = { database: "keryx-gateway-funding-v1", store: "funding", keyPath: "id", indexes: [
   { name: "activePayer", keyPath: "activePayer", unique: true }, { name: "payer", keyPath: "payer" }, { name: "createdAt", keyPath: "createdAt" },
@@ -75,3 +75,19 @@ export const cancelFundingRecord = (id: string) => change(id, row => {
   if (!row.activePayer || !["ready", "rejected"].includes(row.deposit.status) || !["ready", "rejected", "confirmed"].includes(row.approval.status)) return null;
   const next = { ...row, cancelled: true }; delete next.activePayer; return next;
 });
+
+/** Commit only against the exact snapshot that was inspected. Never overwrite a
+ * concurrent original confirmation or permit an uncertain attempt to be retried. */
+export async function resolveFundingReplacement(snapshot: FundingRecord, step: FundingStep, evidence: unknown) {
+  fundingRecordSchema.parse(snapshot);
+  const resolution = fundingResolutionSchema.parse(evidence);
+  const changed = await change(snapshot.id, row => {
+    if (JSON.stringify(row) !== JSON.stringify(snapshot) || !row.activePayer || !["possible", "submitted"].includes(row[step].status)) return null;
+    const originalHash = row[step].hash;
+    const next = { ...row, [step]: { ...row[step], status: resolution.status, hash: resolution.hash, resolution,
+      ...(originalHash && originalHash.toLowerCase() !== resolution.hash.toLowerCase() ? { originalHash } : {}) } };
+    if (step === "deposit" || resolution.status !== "confirmed") delete next.activePayer;
+    return next;
+  });
+  if (!changed) throw new Error("Funding state changed during replacement inspection; refresh the saved record");
+}

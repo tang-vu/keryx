@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PublicClient, WalletClient } from "viem";
 import { fundingRecordSchema, fundingTransaction, type FundingRecord } from "./funding-policy";
-const storage = vi.hoisted(() => ({ readFundingRecord: vi.fn(), claimFundingStep: vi.fn(), saveFundingHash: vi.fn(), rejectFundingPrompt: vi.fn(), confirmFundingStep: vi.fn() }));
+const storage = vi.hoisted(() => ({ readFundingRecord: vi.fn(), claimFundingStep: vi.fn(), saveFundingHash: vi.fn(), rejectFundingPrompt: vi.fn(), confirmFundingStep: vi.fn(), resolveFundingReplacement: vi.fn() }));
 const credit = vi.hoisted(() => vi.fn());
+const inspectReplacement = vi.hoisted(() => vi.fn());
 vi.mock("./funding-journal", () => storage);
 vi.mock("../gateway/read-credit", () => ({ readGatewayCredit: credit }));
-import { recoverFundingStep, submitFundingStep } from "./funding-client";
+vi.mock("./funding-replacement", () => ({ inspectFundingReplacement: inspectReplacement }));
+import { recoverFundingStep, recoverFundingReplacement, submitFundingStep } from "./funding-client";
 
 const payer = `0x${"a".repeat(40)}`;
 const hash = `0x${"1".repeat(64)}`;
@@ -38,6 +40,32 @@ function setup() {
 }
 
 describe("explicit one-step funding", () => {
+  it("commits replacement evidence against its original snapshot without wallet requests", async () => {
+    const { input, send } = setup(); row.approval = { status: "possible", nonce: 7, beforeBlock: "100" };
+    const snapshot = structuredClone(row), evidence = { hash, status: "replaced" };
+    inspectReplacement.mockResolvedValue(evidence);
+    await recoverFundingReplacement(row.id, "approval", input.chain, hash);
+    expect(storage.resolveFundingReplacement).toHaveBeenCalledExactlyOnceWith(snapshot, "approval", evidence);
+    expect(send).not.toHaveBeenCalled(); expect(storage.claimFundingStep).not.toHaveBeenCalled();
+  });
+  it("does not commit evidence after the component aborts", async () => {
+    const { input } = setup(), abort = new AbortController();
+    inspectReplacement.mockImplementation(async () => { abort.abort(); return {}; });
+    await expect(recoverFundingReplacement(row.id, "approval", input.chain, hash, abort.signal)).rejects.toThrow();
+    expect(storage.resolveFundingReplacement).not.toHaveBeenCalled();
+  });
+  it("times out without letting a late RPC response mutate the journal", async () => {
+    vi.useFakeTimers();
+    try {
+      const { input } = setup(); let finish!: (value: unknown) => void;
+      inspectReplacement.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+      const result = recoverFundingReplacement(row.id, "approval", input.chain, hash);
+      const assertion = expect(result).rejects.toThrow("timed out");
+      await vi.advanceTimersByTimeAsync(10_001); await assertion;
+      finish({ hash, status: "confirmed" }); await vi.advanceTimersByTimeAsync(1);
+      expect(storage.resolveFundingReplacement).not.toHaveBeenCalled();
+    } finally { vi.useRealTimers(); }
+  });
   it("commits the nonce/boundary before exactly one bounded wallet transaction", async () => {
     const { input, send } = setup();
     send.mockImplementation(async () => { expect(row.approval).toEqual({ status: "possible", nonce: 7, beforeBlock: "100" }); return hash; });

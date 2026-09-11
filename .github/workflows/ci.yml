@@ -59,6 +59,9 @@ jobs:
       - name: Browser checkout UI (hermetic, no settlement)
         run: npm run test:browser-checkout
 
+      - name: Funding replacement recovery (synthetic RPC, no signing)
+        run: node --import tsx scripts/test-browser-funding-replacement.mts
+
       - name: Browser sign-out (hermetic, no signing)
         run: npm run test:browser-auth
 

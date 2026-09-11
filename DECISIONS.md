@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-224** - Explicit funding replacement recovery - *A consumed nonce is not proof
+that the planned deposit executed.* The browser may inspect a wallet-supplied hash
+without signing or rebroadcasting. It requires the original payer/nonce and post-intent
+block boundary, matching transaction/receipt/canonical block identity, an RPC finalized
+head at or beyond that block and Arc testnet identity before and after the lookup.
+Only the exact target/calldata/zero-value call is a confirmed or reverted planned step;
+any other finalized call is recorded as replaced, never as a successful deposit.
+Original hashes are retained. An exact-snapshot IndexedDB transaction prevents stale
+lookups from overwriting concurrent original confirmation or another resolution.
+Timeouts, missing evidence and aborts cannot release the active attempt. This trusts
+the configured RPC's finality report; it is not independent consensus verification.
+Lost browser storage and independent wallet/funded replacement acceptance remain open.
+
 **D-223** - Final sufficiency in confidence - *High coverage and valid citations cannot
 override the final assessment's conclusion that the requested answer is incomplete.*
 The verdict now requires the final sufficiency result explicitly, rather than deriving
