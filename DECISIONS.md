@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-171** - Durable observed mint - *Retain the first worker-observed finalized mint
+and distinguish historical evidence from an unknown latest RPC check.*
+Journal reconciliation invokes the server-owned read-only observer using original
+prepared bytes. Its first matched result is immutable and bound to the original
+request, hash, recipient, value and gas terms on every readback. Later compatible
+anchors do not replace the first observation; conflicting mint facts fail. Missing
+or aborted RPC checks retain historical evidence with an explicit unknown latest
+check. This is protected worker/RPC evidence, not a self-authenticating client proof.
+No reservation is released and no application withdrawal is recorded here. SQLite
+schema version 1 adds observation storage atomically; upgrading the original version-0
+three-table journal is explicit and cannot reconstruct missing version-1 history.
+
 **D-170** - Arc receipt finality - *Verify original transaction inclusion and a
 consistent RPC finalized anchor under Arc's documented committed-block policy.*
 The observer rematches the signed transaction and receipt, verifies exact block/index

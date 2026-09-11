@@ -1,4 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
+import { assertMintJournalSchema, initializeMintJournalSchema } from "./withdrawal-journal-schema";
+import { attachWithdrawalObservations } from "./withdrawal-journal-observations";
 import { z } from "zod";
 import { maxUint256, zeroAddress, type Hex } from "viem";
 import { validateWithdrawalRequest, type WithdrawalRequestRecord } from "./withdrawal-request";
@@ -17,59 +19,19 @@ const policySchema = z.object({ format: z.literal("creator-mint-journal-v1"), ch
 export type WithdrawalMintJournalPolicy = z.infer<typeof policySchema>;
 type Slot = { request: WithdrawalRequestRecord; attestation: Awaited<ReturnType<typeof matchWithdrawalAttestation>>;
   terms: WithdrawalMintTerms; maxGasCostWei: string };
-const schema = `
-CREATE TABLE IF NOT EXISTS mint_journal_policy(id INTEGER PRIMARY KEY CHECK(id=1),data TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS mint_journal_slots(
-  id TEXT PRIMARY KEY, nonce INTEGER NOT NULL UNIQUE, max_gas_cost_wei TEXT NOT NULL,
-  transfer_id TEXT NOT NULL UNIQUE, spec_hash TEXT NOT NULL UNIQUE,
-  data TEXT NOT NULL CHECK(length(data)<=16384)
-);
-CREATE TABLE IF NOT EXISTS mint_journal_prepared(
-  id TEXT PRIMARY KEY REFERENCES mint_journal_slots(id),
-  transaction_hash TEXT NOT NULL UNIQUE, raw TEXT NOT NULL CHECK(length(raw)<=4098)
-);
-`;
 const stable = (value: unknown) => JSON.stringify(value);
 
 /** Private single-relayer signing journal, separate from the application database.
  * All instances controlling this key must share this exact journal. Constructor
- * policy is operator-owned; HTTP clients must never initialize it. No network or
- * key operation exists here. Missing/corrupt journal state must never be recreated
+ * policy is operator-owned; HTTP clients must never initialize it. Reconciliation
+ * invokes a server-owned read-only observer; no key or broadcast operation exists
+ * here. Missing/corrupt journal state must never be recreated
  * automatically for a previously used key. */
 export function createWithdrawalMintJournal(db: DatabaseSync, selected: WithdrawalMintJournalPolicy,
-  options: { initialize?: boolean } = {}) {
+  options: { initialize?: boolean; upgrade?: boolean } = {}) {
   const policy = policySchema.parse(selected);
-  db.exec("PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000; PRAGMA synchronous=FULL;");
-  if (options.initialize) {
-    db.exec("BEGIN IMMEDIATE");
-    try {
-      const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all();
-      if (tables.length === 0) {
-        db.exec(schema);
-        for (const table of ["mint_journal_policy", "mint_journal_slots", "mint_journal_prepared"]) {
-          db.exec(`CREATE TRIGGER ${table}_no_update BEFORE UPDATE ON ${table}
-            BEGIN SELECT RAISE(ABORT,'Mint journal is immutable'); END;
-            CREATE TRIGGER ${table}_no_delete BEFORE DELETE ON ${table}
-            BEGIN SELECT RAISE(ABORT,'Mint journal is immutable'); END;`);
-        }
-        db.prepare("INSERT INTO mint_journal_policy(id,data) VALUES(1,?)").run(stable(policy));
-      } else if (tables.length !== 3 || !["mint_journal_policy", "mint_journal_slots", "mint_journal_prepared"]
-        .every(name => tables.some(row => row.name === name))) throw new Error("Mint journal initialization unavailable");
-      db.exec("COMMIT");
-    } catch (error) { db.exec("ROLLBACK"); throw error; }
-  }
-  const checkPolicy = () => {
-    for (const table of ["mint_journal_policy", "mint_journal_slots", "mint_journal_prepared"]) {
-      const objects = db.prepare("SELECT name,type FROM sqlite_master WHERE name IN (?,?,?)")
-        .all(table, `${table}_no_update`, `${table}_no_delete`);
-      if (!objects.some(row => row.name === table && row.type === "table")
-        || objects.filter(row => row.type === "trigger").length !== 2)
-        throw new Error("Mint journal structure unavailable");
-    }
-    const row = db.prepare("SELECT data FROM mint_journal_policy WHERE id=1").get();
-    if (row?.data !== stable(policy)) throw new Error("Mint journal policy unavailable");
-  };
-  checkPolicy();
+  initializeMintJournalSchema(db, stable(policy), options);
+  const checkPolicy = () => assertMintJournalSchema(db, stable(policy));
   const atomic = <T>(action: () => T): T => {
     db.exec("BEGIN IMMEDIATE");
     try { checkPolicy(); const result = action(); db.exec("COMMIT"); return result; }
@@ -164,5 +126,6 @@ export function createWithdrawalMintJournal(db: DatabaseSync, selected: Withdraw
       throw new Error("Mint nonce history unavailable");
     return rows.map(row => String(row.id));
   }
-  return { reserve, getSlot, savePrepared, getPrepared, listRequestIds };
+  const core = { reserve, getSlot, savePrepared, getPrepared, listRequestIds };
+  return { ...core, ...attachWithdrawalObservations(db, core, checkPolicy, atomic) };
 }

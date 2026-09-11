@@ -10,6 +10,7 @@ import { creatorWithdrawalFixture } from "../../scripts/test-fixtures/creator-wi
 import { createWithdrawalMintJournal, type WithdrawalMintJournalPolicy } from "./withdrawal-mint-journal";
 import { WITHDRAWAL_MINTER_ABI } from "./withdrawal-mint-observation";
 import type { WithdrawalMintTerms } from "./withdrawal-mint-transaction";
+import type { createWithdrawalReceiptObserver } from "./withdrawal-receipt-observation";
 
 const resources: { databases: DatabaseSync[]; directory: string }[] = [];
 afterEach(() => {
@@ -42,6 +43,20 @@ async function fixture() {
   }
   const close = () => { for (const db of databases.splice(0)) db.close(); };
   return { path, policy, connect, request, close, ...connect(true) };
+}
+
+// Synthetic observer output for persistence fault tests. RPC proof is exercised
+// independently by withdrawal-receipt-observation.test.ts with real viem decoding.
+async function observed(journal: ReturnType<typeof createWithdrawalMintJournal>, id: string) {
+  const prepared = (await journal.getPrepared(id))!, slot = (await journal.getSlot(id))!;
+  return { status: "mint-finalized-observed", authority: "arc-testnet-rpc-finality", requestId: id as `0x${string}`,
+    transactionHash: prepared.transactionHash, transferSpecHash: prepared.transferSpecHash, chainId: 5042002,
+    blockNumber: "9999", blockHash: `0x${"ab".repeat(32)}` as `0x${string}`, transactionIndex: 0, logIndex: 0,
+    recipient: slot.request.policy.recipient, amountMicros: slot.request.request.burnIntent.spec.value,
+    gasUsed: "150000", effectiveGasPriceWei: "1500000000", gasCostWei: "225000000000000",
+    chainFinalityVerified: true, finalityBasis: "operator-selected-rpc", finalizedBlockNumber: "10000",
+    finalizedBlockHash: `0x${"cd".repeat(32)}` as `0x${string}`, observedAt: new Date().toISOString(),
+  } satisfies NonNullable<Awaited<ReturnType<ReturnType<typeof createWithdrawalReceiptObserver>>>>;
 }
 
 function child(path: string, input: unknown) {
@@ -168,4 +183,89 @@ it("enforces the slot count even when gas remains and restores full SQLite synch
     await expect(journal.reserve(second.record, second.response, second.terms)).rejects.toThrow("nonce unavailable");
     expect(journal.listRequestIds()).toEqual([first.record.id]);
   } finally { db.close(); }
+});
+
+it("retains the first observed mint through later checks, unknown RPC and a full close/reopen", async () => {
+  const f = await fixture(), r = await f.request();
+  await f.journal.reserve(r.record, r.response, r.terms); await f.journal.savePrepared(r.record.id, r.raw);
+  const observation = await observed(f.journal, r.record.id), signal = new AbortController().signal;
+  const first = await f.journal.reconcile(r.record.id, async () => observation, signal);
+  const next = { ...observation, finalizedBlockNumber: "10001", observedAt: new Date().toISOString() };
+  expect(await f.journal.reconcile(r.record.id, async () => next, signal)).toEqual(first);
+  expect(await f.journal.reconcile(r.record.id, async () => null, signal)).toEqual({ latestCheck: "unknown", observation: first.observation });
+  f.close(); const reopened = f.connect().journal;
+  expect(await reopened.getObserved(r.record.id)).toEqual(first.observation);
+  expect(await reopened.getSlot(r.record.id)).toMatchObject({ maxGasCostWei: "600000000000000" });
+  const nextSlot = await f.request(1); await reopened.reserve(nextSlot.record, nextSlot.response, nextSlot.terms);
+  const overflow = await f.request(2);
+  await expect(reopened.reserve(overflow.record, overflow.response, { ...overflow.terms, gas: "100000" })).rejects.toThrow("gas budget");
+});
+
+it("rejects conflicting or misbound observations without replacing the original", async () => {
+  const f = await fixture(), r = await f.request();
+  await f.journal.reserve(r.record, r.response, r.terms); await f.journal.savePrepared(r.record.id, r.raw);
+  const observation = await observed(f.journal, r.record.id), signal = new AbortController().signal;
+  await f.journal.reconcile(r.record.id, async () => observation, signal);
+  await expect(f.journal.reconcile(r.record.id, async () => ({ ...observation, blockHash: `0x${"ef".repeat(32)}` }), signal)).rejects.toThrow("conflict");
+  await expect(f.journal.reconcile(r.record.id, async () => ({ ...observation, amountMicros: "1" }), signal)).rejects.toThrow("unavailable");
+  await expect(f.journal.reconcile(r.record.id, async () => ({ ...observation, gasCostWei: "1" }), signal)).rejects.toThrow("unavailable");
+  expect(await f.journal.getObserved(r.record.id)).toEqual(observation);
+  expect(() => f.db.exec("DELETE FROM mint_journal_observations")).toThrow("immutable");
+});
+
+it("recovers the original observation after its commit succeeds but readback fails", async () => {
+  const f = await fixture(), r = await f.request();
+  await f.journal.reserve(r.record, r.response, r.terms); await f.journal.savePrepared(r.record.id, r.raw);
+  const observation = await observed(f.journal, r.record.id), prepare = f.db.prepare.bind(f.db);
+  await expect(f.journal.reconcile(r.record.id, async () => {
+    vi.spyOn(f.db, "prepare").mockImplementation(sql => {
+      const statement = prepare(sql);
+      if (sql.startsWith("SELECT data FROM mint_journal_observations"))
+        vi.spyOn(statement, "get").mockImplementationOnce(() => { throw new Error("Synthetic observation readback lost"); });
+      return statement;
+    });
+    return observation;
+  }, new AbortController().signal)).rejects.toThrow("readback lost");
+  vi.restoreAllMocks();
+  expect(await f.connect().journal.getObserved(r.record.id)).toEqual(observation);
+});
+
+it("requires an explicit versioned upgrade and preserves original prepared bytes", async () => {
+  const f = await fixture(), r = await f.request();
+  await f.journal.reserve(r.record, r.response, r.terms); await f.journal.savePrepared(r.record.id, r.raw);
+  // Reconstruct the original released three-table schema, which had user_version=0.
+  f.db.exec("DROP TABLE mint_journal_observations; PRAGMA user_version=0;");
+  expect(() => createWithdrawalMintJournal(f.db, f.policy)).toThrow("structure unavailable");
+  expect(() => createWithdrawalMintJournal(f.db, { ...f.policy, initialNonce: 1 }, { upgrade: true })).toThrow("policy unavailable");
+  expect(f.db.prepare("PRAGMA user_version").get()?.user_version).toBe(0);
+  const upgraded = createWithdrawalMintJournal(f.db, f.policy, { upgrade: true });
+  expect(await upgraded.getPrepared(r.record.id)).toMatchObject({ serializedTransaction: r.raw });
+  expect(await upgraded.getObserved(r.record.id)).toBeNull();
+  expect(f.db.prepare("PRAGMA user_version").get()?.user_version).toBe(1);
+  f.db.exec("DROP TABLE mint_journal_observations");
+  expect(() => createWithdrawalMintJournal(f.db, f.policy, { upgrade: true })).toThrow("initialization unavailable");
+});
+
+it("does not observe unprepared requests or admit an aborted result", async () => {
+  const f = await fixture(), r = await f.request(), callback = vi.fn(async () => null);
+  await f.journal.reserve(r.record, r.response, r.terms);
+  expect(await f.journal.reconcile(r.record.id, callback, new AbortController().signal)).toEqual({ latestCheck: "not-prepared", observation: null });
+  expect(callback).not.toHaveBeenCalled();
+  await f.journal.savePrepared(r.record.id, r.raw);
+  const stop = new AbortController(), observation = await observed(f.journal, r.record.id);
+  expect(await f.journal.reconcile(r.record.id, async () => { stop.abort(); return observation; }, stop.signal))
+    .toEqual({ latestCheck: "unknown", observation: null });
+  expect(await f.journal.getObserved(r.record.id)).toBeNull();
+});
+
+it("revalidates stored observation values and refuses corrupted evidence after reopening", async () => {
+  const f = await fixture(), r = await f.request();
+  await f.journal.reserve(r.record, r.response, r.terms); await f.journal.savePrepared(r.record.id, r.raw);
+  const observation = await observed(f.journal, r.record.id);
+  await f.journal.reconcile(r.record.id, async () => observation, new AbortController().signal);
+  f.db.exec("DROP TRIGGER mint_journal_observations_no_update");
+  f.db.prepare("UPDATE mint_journal_observations SET data=?").run(JSON.stringify({ ...observation, amountMicros: "1" }));
+  f.db.exec("CREATE TRIGGER mint_journal_observations_no_update BEFORE UPDATE ON mint_journal_observations BEGIN SELECT RAISE(ABORT,'Mint journal is immutable'); END;");
+  f.close();
+  await expect(f.connect().journal.getObserved(r.record.id)).rejects.toThrow("Recorded mint observation unavailable");
 });

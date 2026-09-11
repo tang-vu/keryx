@@ -195,8 +195,34 @@ more than five seconds ahead of the local clock, including at completion. Histor
 receipts may be older. Eight tests exercise viem's actual JSON-RPC decoding over a
 synthetic transport, one-block finality, transaction position, inconsistent reads,
 timeouts, caller cancellation and mutation. They send no live transaction. Production
-RPC selection, protected journal persistence of observations and cash-out projection
+RPC selection, protected storage/backup and cash-out projection
 remain part of worker integration; this module is not yet wired to the HTTP relay.
+
+### Stored observation and reconciliation
+
+The relay journal now exposes `reconcile` and `getObserved`. Reconciliation reads its
+original slot and signed bytes, then invokes the server-owned read-only RPC observer.
+No HTTP client may supply a precomputed observation as authority. The first matching
+result is stored immutably in `mint_journal_observations` under that prepared request.
+Stored request/transaction/spec identities, recipient, amount, block/anchor relationship
+and integer gas accounting are revalidated against the original journal on readback.
+
+Subsequent matching checks return the first saved observation, retaining its original
+timestamp and anchor. A later anchor may advance; a changed mint block, amount or gas
+result conflicts and never overwrites history. A null/error/aborted latest RPC check
+returns `latestCheck: unknown` alongside any previously stored observation. Reading
+that history is not a fresh RPC check or an independently verifiable consensus proof.
+Its authority depends on the configured observer, protected journal and RPC trust
+already described. A lost post-commit readback can recover the original stored result.
+None of these operations signs, broadcasts, renews a nonce, releases gas capacity,
+records an application cash-out or implies a refund.
+
+The schema helper pins SQLite `user_version=1`. New journals initialize all four
+tables atomically. The original three-table journal (version 0) requires an explicit
+`upgrade` option, validates the original policy and immutability barriers, and retains
+all existing slots/prepared bytes. A version-1 journal missing observation history is
+corrupt, not an old journal to silently upgrade. Initialization cannot repair missing
+history. No production relay journal has been created or upgraded by this change.
 
 The request-matching layer in `lib/gateway/withdrawal-attestation.ts` now checks a
 single attestation or a one-entry attestation set against the exact encoded original
@@ -261,8 +287,12 @@ production build. The relay journal adds separate SQLite tests for competing OS
 processes, connection/restart recovery, exact lifetime gas bounds, initialization and
 policy refusal, original prepared-byte recovery after committed-response loss,
 immutable records and corrupt hash readback. These use unfunded synthetic accounts
-and perform no network or settlement operation. All ten journal tests pass locally,
-along with focused lint and TypeScript checking.
+and perform no network or settlement operation. All sixteen journal tests pass locally,
+including first-observation persistence, unknown/aborted latest checks, conflicting
+evidence, committed-readback loss, retained gas ceilings, corruption and explicit schema
+upgrade. Focused lint and TypeScript checking pass. RPC observation commit `2104681`
+passed [CI run 34558992243](https://github.com/tang-vu/keryx/actions/runs/34558992243),
+including production build.
 
 The read-only observer adds seven tests using real local signatures and viem's RPC
 encoding over a synthetic transport. They cover exact calldata and caller, rejected
