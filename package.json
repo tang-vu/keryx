@@ -36,6 +36,7 @@
     "private:inspect": "node --import tsx --no-warnings scripts/private-operations-inspect.mts",
     "private:interrupt": "node --import tsx --no-warnings scripts/private-interruption.mts",
     "withdrawal:relay": "node --import tsx --no-warnings scripts/withdrawal-relay.mts",
+    "withdrawal:report": "node --import tsx --no-warnings scripts/withdrawal-report.mts",
     "review:a2a": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/review-a2a-order.mts",
     "mcp": "node --import tsx --no-warnings --env-file-if-exists=.env.local mcp/keryx-mcp-server.mts",
     "web": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/web-client.mts",

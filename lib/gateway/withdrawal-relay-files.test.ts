@@ -36,6 +36,22 @@ linux("accepts the protected owner-only journal and bounded policy", async () =>
   const f = fixture(); expect(await inspectWithdrawalRelayFiles(f.directory)).toMatchObject({ directory: f.directory, policy: f.policy });
 });
 
+linux("runs cash-out reporting against existing files without keys or ledger initialization", async () => {
+  const f = fixture(), path = join(f.directory, "app.sqlite");
+  writeFileSync(path, "", { mode: 0o600 });
+  const db = new DatabaseSync(path);
+  db.exec(CREATOR_WITHDRAWAL_REQUESTS_SQL);
+  db.exec("CREATE TABLE withdrawals(tx_hash TEXT PRIMARY KEY,created_at TEXT,label TEXT,source_name TEXT,wallet TEXT,recipient TEXT,amount_usdc REAL,network TEXT)");
+  db.close();
+  const execute = promisify(execFile), env: NodeJS.ProcessEnv = { NODE_ENV: "test", PATH: process.env.PATH, ESBUILD_BINARY_PATH: process.env.ESBUILD_BINARY_PATH };
+  const invoke = (...args: string[]) => execute(process.execPath, ["--import", "tsx", "scripts/withdrawal-report.mts",
+    "--directory", f.directory, "--application-db", path, ...args], { env, timeout: 25000 });
+  expect(JSON.parse((await invoke()).stdout)).toMatchObject({ state: "scanned", scanned: 0, recorded: 0 });
+  await expect(invoke("--limit", "65")).rejects.toThrow("Private details omitted");
+  rmSync(path); await expect(invoke()).rejects.toThrow("Private details omitted");
+  expect(existsSync(path)).toBe(false);
+}, 90000);
+
 linux("reads owner mint progress without keys, writes or initializing missing history", async () => {
   const f = fixture(), { record } = await creatorWithdrawalFixture(), path = join(f.directory, "mint.sqlite");
   const before = readFileSync(path), read = createWithdrawalMintReader(f.directory);

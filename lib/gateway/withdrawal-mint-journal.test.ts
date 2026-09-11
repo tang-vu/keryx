@@ -14,6 +14,7 @@ import type { createWithdrawalReceiptObserver } from "./withdrawal-receipt-obser
 import { readWithdrawalMintProgress } from "./withdrawal-mint-progress";
 import { recordObservedWithdrawalCashOut, withdrawalLedgerAmount } from "./withdrawal-cash-out";
 import { recordSqliteWithdrawal } from "../db/withdrawal-records";
+import { reportWithdrawalCashOutPage } from "./withdrawal-cash-out-page";
 
 const resources: { databases: DatabaseSync[]; directory: string }[] = [];
 afterEach(() => {
@@ -123,6 +124,23 @@ it("records only an observed original cash-out and recovers a lost ledger respon
     expect(store.recordWithdrawal).toHaveBeenCalledTimes(2);
     expect(await f.journal.getObserved(r.record.id)).not.toBeNull();
   } finally { ledger.close(); }
+});
+
+it("reports bounded pages, isolates a ledger failure and revisits originals on a later sweep", async () => {
+  const f = await fixture(), entries = [await f.request(0), await f.request(1)], signal = new AbortController().signal;
+  for (const r of entries) {
+    await f.journal.reserve(r.record, r.response, r.terms); await f.journal.savePrepared(r.record.id, r.raw);
+    await f.journal.reconcile(r.record.id, async () => observed(f.journal, r.record.id), signal);
+  }
+  const store = { getCreatorWithdrawal: async (id: string) => entries.find(r => r.record.id === id)?.record ?? null,
+    recordWithdrawal: vi.fn(async () => {}) };
+  store.recordWithdrawal.mockRejectedValueOnce(new Error("Synthetic ledger unavailable"));
+  const first = await reportWithdrawalCashOutPage(f.journal, store, signal, { limit: 1 });
+  expect(first).toMatchObject({ state: "limited", scanned: 1, unavailable: 1, recorded: 0 });
+  const next = await reportWithdrawalCashOutPage(f.journal, store, signal, { limit: 1, afterId: first.nextCursor! });
+  expect(next).toMatchObject({ state: "scanned", scanned: 1, recorded: 1, nextCursor: null });
+  expect(await reportWithdrawalCashOutPage(f.journal, store, signal)).toMatchObject({ scanned: 2, recorded: 2, unavailable: 0 });
+  await expect(reportWithdrawalCashOutPage(f.journal, store, signal, { limit: 65 })).rejects.toThrow();
 });
 
 function child(path: string, input: unknown) {

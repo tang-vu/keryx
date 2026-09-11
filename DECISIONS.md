@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-193** - Operator cash-out reconciliation - *Use a bounded reporting-only sweep
+over protected original journals and an explicitly selected application database.*
+The reporting CLI opens the mint journal read-only and exposes only original-request
+reads and idempotent cash-out writes on the existing application store. It needs no
+key, relay enablement or RPC. It refuses missing/uninitialized history, never migrates
+tables, and contains per-request reporting failures so later observations can proceed.
+Private cursors resume bounded pages; later full sweeps revisit earlier unknown/error
+rows. Scan counts include already-recorded cash-outs and must not be promoted as new
+transactions or revenue. The command supplies operator reconciliation, not supervision,
+live mint acceptance or completion of the creator UI.
+
 **D-192** - Observed-mint reporting - *Derive cash-out rows from retained validated
 mint evidence and the matching application original.*
 The operator reporting bridge accepts only a request selector and server-owned journal

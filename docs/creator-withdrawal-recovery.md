@@ -386,6 +386,23 @@ unobserved/prepared states, observed reporting, response-loss recovery, conflict
 application originals, cancellation and amount precision. Operator scheduling and
 end-to-end funded reconciliation remain open.
 
+### Operator reporting command
+
+Run `npm run withdrawal:report -- --directory ABSOLUTE_RELAY_DIR --application-db
+ABSOLUTE_DB` on the protected Linux host. It opens the existing mint journal read-only
+and the explicitly selected application store with only original-request reads and
+cash-out reporting capabilities. No private key, relay enablement, RPC, signing or
+broadcast is needed. Missing files/tables and unsafe permissions are rejected; the
+command never initializes or migrates a database.
+
+Each page defaults to 32 requests, with `--limit` restricted to 1..64. Continue using
+the private `--after-id` cursor, then start later full sweeps without a cursor to revisit
+unknown/error rows. A per-row failure increments unavailable and does not block later
+rows. Exit 2 indicates cancellation or unavailable records, and exit 1 indicates a
+configuration/process failure. Recorded counts are confirmations in this scan, including
+duplicates already in the ledger; they are not new transactions or revenue. The command
+does not install an automatic supervisor or change the production withdrawal route.
+
 ## Owner mint progress projection
 
 `withdrawal-mint-progress.ts` derives private creator progress from the validated
