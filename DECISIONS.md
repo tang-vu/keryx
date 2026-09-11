@@ -1,5 +1,14 @@
 # Keryx — Decision Log
 
+**D-221** - Progress after local-original loss - *Match server progress to server
+history without upgrading the report into independently verified evidence.*
+The new history progress reader uses only the stored request selector and authenticated
+account, matching recipient and amount before returning a server-reported result. It
+does not reconstruct missing signed terms, grant retry authority or replace the existing
+original-bound verifier. Shared progress schemas retain complete operator-RPC metadata
+requirements when the server reports observed finality. The history UI action remains
+unmounted pending browser acceptance.
+
 **D-220** - Framework privacy headers - *Private response policies must survive
 Next.js configured-header precedence.*
 The v0.22.53 live check found the global Referrer-Policy overriding the handler's

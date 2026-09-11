@@ -740,6 +740,17 @@ stops that process afterward. This covers framework header precedence that isola
 handler tests cannot prove; authenticated user and funded payment acceptance remain
 separate checks.
 
+`withdrawal-history-status.ts` adds the unmounted read-only progress client for a server
+history row. It uses the existing authenticated status endpoint and matches owner, ID,
+recipient and integer amount to the selected metadata. Responses remain explicitly
+`server-reported-progress`; even a complete operator-RPC observation is not independent
+chain verification. The original-bound browser verifier retains its separate authority.
+The client requires no local draft or signing wallet, caps response bytes and elapsed
+time, rechecks the current account, and distinguishes missing records from authentication
+and transport failures. Five focused tests cover mismatched reports, finality metadata,
+caller mutation, account changes, oversized/stalled responses and cancellation. A history
+row action and its browser acceptance remain to be connected.
+
 ## Remaining implementation and acceptance
 
 ### Private relay journal foundation

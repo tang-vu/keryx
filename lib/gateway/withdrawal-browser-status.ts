@@ -7,7 +7,7 @@ type Draft = ReturnType<typeof createWithdrawalBrowserDraft>;
 const progressBase = z.object({ wallet: withdrawalOwnerSchema, requestId: withdrawalIdSchema,
   recipient: withdrawalOwnerSchema, amountMicros: z.string().regex(/^[1-9][0-9]*$/),
   status: z.enum(["request-stored", "awaiting-transfer-evidence", "attestation-stored"]) });
-const progressSchema = z.union([
+export const withdrawalServerProgressSchema = z.union([
   progressBase.extend({ chainFinalityVerified: z.literal(false),
     mintStatus: z.enum(["not-checked", "not-queued", "queued", "prepared"]) }).strict(),
   progressBase.extend({ chainFinalityVerified: z.literal(true), mintStatus: z.literal("finalized-observed"),
@@ -18,7 +18,7 @@ const progressSchema = z.union([
 
 export function matchWithdrawalBrowserStatus(selected: Draft, value: unknown) {
   const copied = structuredClone(selected), draft = createWithdrawalBrowserDraft(copied.burnIntent, copied.policy);
-  const progress = progressSchema.parse(value);
+  const progress = withdrawalServerProgressSchema.parse(value);
   if (copied.id !== draft.id || copied.owner.toLowerCase() !== draft.owner || progress.requestId !== draft.id
     || progress.wallet !== draft.owner || progress.recipient !== draft.policy.recipient
     || progress.amountMicros !== draft.burnIntent.spec.value) throw new Error("Withdrawal status does not match the original");
