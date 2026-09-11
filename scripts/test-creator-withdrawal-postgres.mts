@@ -30,7 +30,8 @@ try {
   sql("create role anon; create role authenticated; create role service_role bypassrls;\n"
     + readFileSync("supabase/migrations/0062_creator_withdrawal_requests.sql", "utf8")
     + readFileSync("supabase/migrations/0063_creator_withdrawal_spec_identity.sql", "utf8")
-    + readFileSync("supabase/migrations/0064_creator_withdrawal_attestations.sql", "utf8"));
+    + readFileSync("supabase/migrations/0064_creator_withdrawal_attestations.sql", "utf8")
+    + readFileSync("supabase/migrations/0065_creator_withdrawal_attestation_serialization.sql", "utf8"));
   // DB concurrency fixture only. Signature verification is exercised by adapter tests.
   const reserve = `select public.reserve_creator_withdrawal(${id},${owner},jsonb_build_object(
     'id',${id},'owner',${owner},'network','eip155:5042002','format','creator-withdrawal-request-v1',
@@ -65,6 +66,25 @@ try {
     '77777777-7777-4777-8777-777777777777',${attestation})`;
   await Promise.all([concurrent(save), concurrent(save)]);
   assert.equal(sql("select count(*) from public.creator_withdrawal_attestations").trim(), "1");
+  const saved = sql(`select data,saved_at from public.creator_withdrawal_attestations where id=${id}`).trim();
+  // Each round races first insertion for a new request, rather than merely saving
+  // an already-existing row (which cannot expose the competing-index race).
+  for (let round = 0; round < 8; round++) {
+    const nextId = `'0x${(100 + round).toString(16).padStart(64, "0")}'`;
+    const nextTransfer = `00000000-0000-4000-8000-${String(round).padStart(12, "0")}`;
+    const nextReserve = reserve.replaceAll(id, nextId).replace("synthetic-spec", `synthetic-spec-${round}`);
+    await Promise.all([concurrent(nextReserve), concurrent(nextReserve), concurrent(nextReserve)]);
+    sql(`set role service_role; ${claim("3").replaceAll(id, nextId)};`);
+    const nextSave = save.replaceAll(id, nextId).replaceAll("77777777-7777-4777-8777-777777777777", nextTransfer);
+    await Promise.all([concurrent(nextSave), concurrent(nextSave), concurrent(nextSave)]);
+    assert.equal(sql(`select count(*) from public.creator_withdrawal_attestations where id=${nextId}`).trim(), "1");
+  }
+  assert.equal(sql(`select data,saved_at from public.creator_withdrawal_attestations where id=${id}`).trim(), saved);
+  // A transfer UUID belonging to a different request must still be rejected.
+  const otherId = `'0x${(200).toString(16).padStart(64, "0")}'`;
+  sql(`set role service_role; ${reserve.replaceAll(id, otherId).replace("synthetic-spec", "synthetic-spec-other")}; ${claim("3").replaceAll(id, otherId)};`);
+  assert.throws(() => sql(`set role service_role; ${save.replaceAll(id, otherId)}`), /unique constraint/);
+  assert.equal(sql(`select count(*) from public.creator_withdrawal_attestations where id=${otherId}`).trim(), "0");
   sql(`set role service_role; do $$ begin
     begin update public.creator_withdrawal_requests set owner=owner; raise exception 'request update allowed'; exception when insufficient_privilege then null; end;
     begin delete from public.creator_withdrawal_requests; raise exception 'request delete allowed'; exception when insufficient_privilege then null; end;

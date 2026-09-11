@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-166** - Withdrawal journal concurrency - *Preserve both unique identities while
+making duplicate storage recovery reliable under PostgreSQL contention.*
+CI exposed unique-index races for the same request/spec and request/transfer UUID:
+ON CONFLICT(id) alone does not handle a violation reported by the other unique index.
+Migration 0065 serializes attestation saves on the existing request row. First request
+insertion has no row to lock, so its unique-violation handler accepts only an already
+stored original request ID; strict adapter readback remains mandatory. Different IDs
+reusing a spec or transfer UUID still fail. No row is overwritten, no claim renewed,
+and no network operation is retried by storage recovery. Fresh multi-caller PostgreSQL
+insertion tests cover both paths and preserve original timestamps and permissions.
+
 **D-165** - Withdrawal mint observation - *Check the exact original attestation at a
 rechecked block without granting broadcast authority.*
 The read-only observer recovers the payload signer, checks the intended minter's allowlist

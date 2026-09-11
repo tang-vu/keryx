@@ -42,6 +42,14 @@ revalidated on every read. A lost database response can be recovered by reading/
 the storage operation with the same snapshot, without another Circle POST. This does
 not renew an attestation or grant mint permission. No cash-out ledger row is created.
 
+Migration 0065 fixes competing-index races observed in CI runs 34555965891 and
+34557046444. Same-request attestation saves take a transaction-scoped request row lock
+before insertion; request admission handles a concurrent unique violation only when
+the original ID now exists. The adapter still verifies the exact stored original.
+Different request IDs cannot reuse a spec or transfer UUID. Original rows and timestamps
+remain immutable. The PostgreSQL harness races fresh first insertions across eight
+additional requests with three callers each and checks cross-request UUID rejection.
+
 The SQLite schema and Supabase adapter expose identical backend methods. Both retain
 request and claim identity; PostgreSQL grants journal reads and RPC execution to the
 service role only, with no client access or direct service writes. Signed requests must
