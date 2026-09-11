@@ -310,7 +310,7 @@ CLI tools for admin + dev. Node --experimental-transform-types.
 | `demo-full-cycle.mts` | One-command full cycle (~90s) with on-chain proof (`npm run demo`). |
 | `seed-sources.mts` | Populate DB with demo sources. |
 | `seed-engine.mts` | Volume engine: service verified wanted-claim offers first, then gap retries/generated questions (all budget-guarded). |
-| `a2a-client.mts` / `web-client.mts` | Headless external-path clients: A2A x402 caller + scripted browser-session asker. |
+| `a2a-client.mts` / `web-client.mts` | Retired sponsored A2A command with migration guidance / scripted browser-session asker. Use the independent buyer CLI for new A2A purchases. |
 | `metrics.mts` | Print aggregate traction (settled USDC, top sources, query count). |
 | `withdraw.mts` | Operator-side creator cash-out (reserves Circle's fee before signing). |
 | `check-treasury.mts` | Treasury watchdog: USDC + gas thresholds → ops alert (hourly cron). |

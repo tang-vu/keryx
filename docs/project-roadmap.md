@@ -6,7 +6,13 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.60 (private operator reports, updated 2026-09-12)
+**Version:** 0.22.61 (retired sponsored A2A command, updated 2026-09-12)
+
+The legacy treasury-funded A2A demo now refuses execution and points to the existing
+caller-funded buyer CLI. It no longer reads or replaces JSON wallets, automatically
+funds them, or pays without a durable intent. Existing wallet files and unresolved
+payments remain available for operator reconciliation. Scheduled legacy A2A ticks
+refuse rather than migrating automatically; independent adoption remains unproven.
 
 Operators can export legacy testnet economics into an exclusive owner-only Linux file.
 The command prints no figures, avoids adapter migrations and leaves invoices, fixed

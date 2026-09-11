@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-228** - Retire the sponsored A2A demo - *A legacy command must not bypass the
+buyer recovery and spending boundaries.* The old CLI regenerated a JSON wallet on
+any read/parse error, automatically funded it from the server treasury and paid
+without a durable buyer intent. The entry point now only prints migration guidance
+and refuses execution (except help); npm no longer loads the server environment.
+Existing wallets and unresolved authorizations are untouched. Scheduled legacy A2A
+ticks refuse rather than silently switching identities, funding authority or origin
+classification. New purchases use the existing caller-funded buyer CLI with explicit
+payee, total limit and journal; it cannot recover an old payment by buying again.
+Other engine/web demo paths are outside this change and remain owner automation.
+
 **D-227** - Owner-only economics files - *Retiring a public endpoint must not remove
 the operator's ability to inspect telemetry privately.* The report command creates a
 new 0700 directory under an existing protected Linux parent and writes an exclusive

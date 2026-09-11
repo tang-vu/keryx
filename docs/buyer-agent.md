@@ -103,8 +103,13 @@ Payment evidence and delivery are separate:
 - Hash consistency does not prove factual correctness or independent settlement.
 
 Paste the reported job ID into https://keryx.cc/research for a visual view. The client
-does not put private job IDs into workspace URLs. The old `npm run a2a` remains an
-internal, Keryx-funded demo and is not evidence of independent customer demand.
+does not put private job IDs into workspace URLs. The old `npm run a2a` sponsored
+demo is retired: `--help` prints migration guidance; other invocations exit 1 before
+loading configuration, opening a wallet or contacting the network. Scheduled legacy
+callers therefore refuse that leg; they are not automatically migrated to buyer
+payments. Keep old wallet files and unresolved payment evidence for operator review.
+Those wallet files are not buyer journals, and a new purchase cannot recover an old
+payment. Historical owner-operated demos are not independent customer demand.
 
 Protocol reference: [Circle nanopayments](https://developers.circle.com/gateway/nanopayments).
 The signed domain/types also match the installed batching SDK and Keryx's existing
