@@ -6,6 +6,16 @@ flow. Do not describe this foundation as completed withdrawal recovery.
 
 ## Target journey
 
+The internal `WithdrawalWorkspace` now composes amount entry, preparation, review
+and recovery in one English interface. Amount entry rejects excess decimal precision
+instead of rounding. A returned saved ID opens the retained original, and recovery
+rows can reopen it after the workspace is remounted. Preparing another withdrawal is
+an explicit separate action and does not erase the previous request. Changes to the
+owner or configured limits cancel pending preparation; unavailable creation limits
+retain the recovery panel. Chromium covers the composed flow with intercepted HTTP.
+The component is not yet mounted in production: the public routes and funded relay
+acceptance must be completed first.
+
 A creator reviews the amount, recipient and bounded fees, signs once and retains the
 original request before transport. The server verifies the original owner/session and
 persists the request before claiming the initial Circle call. A lost response, reload

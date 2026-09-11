@@ -13,11 +13,11 @@ const button = "rounded border border-current px-3 py-2 text-sm disabled:opacity
 
 /** Mounted by the completed withdrawal workspace. A wallet change remounts all
  * local state and cancels pending reads; this panel never signs or submits payments. */
-export function WithdrawalRecoveryPanel({ address }: { address: string }) {
+export function WithdrawalRecoveryPanel({ address, onReview }: { address: string; onReview?: (id: string) => void }) {
   const parsed = withdrawalOwnerSchema.safeParse(address);
-  return parsed.success ? <OwnerRecovery key={parsed.data} owner={parsed.data} /> : <p>Connect your wallet to recover withdrawals.</p>;
+  return parsed.success ? <OwnerRecovery key={parsed.data} owner={parsed.data} onReview={onReview} /> : <p>Connect your wallet to recover withdrawals.</p>;
 }
-function OwnerRecovery({ owner }: { owner: string }) {
+function OwnerRecovery({ owner, onReview }: { owner: string; onReview?: (id: string) => void }) {
   const [rows, setRows] = useState<Row[]>([]), [cursor, setCursor] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false), [busy, setBusy] = useState(false), [message, setMessage] = useState("");
   const [statuses, setStatuses] = useState<Record<string, Status>>({});
@@ -76,6 +76,7 @@ function OwnerRecovery({ owner }: { owner: string }) {
       <p className="break-all text-xs">Request {row.id}</p>
       <p className="text-sm">{row.state === "reserved" ? "Unsigned draft" : row.origin === "imported" ? "Imported for recovery only" : "Signed original saved"}</p>
       <div className="flex flex-wrap gap-2">
+        {onReview && <button type="button" className={button} disabled={busy} onClick={() => onReview(row.id)}>Review saved request</button>}
         <button type="button" className={button} disabled={busy} onClick={() => void check(row.id)}>Check status</button>
         <button type="button" className={button} disabled={busy || !row.request} onClick={() => void download(row.id)}>Download private recovery file</button>
       </div>

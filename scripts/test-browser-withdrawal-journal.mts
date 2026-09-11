@@ -18,6 +18,7 @@ import * as recovery from './lib/gateway/withdrawal-recovery-file';
 import * as preparation from './lib/gateway/withdrawal-browser-prepare';
 import {WithdrawalRecoveryPanel} from './components/keryx/withdrawal-recovery-panel';
 import {WithdrawalReviewPanel} from './components/keryx/withdrawal-review-panel';
+import {WithdrawalWorkspace} from './components/keryx/withdrawal-workspace';
 import {createElement, StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import {hashTypedData} from 'viem';
@@ -27,6 +28,11 @@ window.recoveryRoot.render(createElement(StrictMode,null,createElement(Withdrawa
 window.mountReview=(id,address,signature)=>{window.reviewSignCalls=0;window.recoveryRoot??=createRoot(document.querySelector('main'));
 const wallet={account:{address},signTypedData:async typed=>{window.reviewSignCalls++;if(window.hashTypedData(typed)!==id)throw new Error('Changed reviewed terms');return signature;}};
 window.recoveryRoot.render(createElement(StrictMode,null,createElement(WithdrawalReviewPanel,{id,address,wallet})));};
+window.mountWorkspace=(p,signature,enabled=true)=>{window.workspaceSignCalls=0;window.recoveryRoot??=createRoot(document.querySelector('main'));
+const {owner,recipient,...limits}=p;
+const wallet={account:{address:owner},signTypedData:async typed=>{window.workspaceSignCalls++;
+if(window.hashTypedData(typed)!==window.workspaceExpectedId)throw new Error('Changed workspace terms');return signature;}};
+window.recoveryRoot.render(createElement(StrictMode,null,createElement(WithdrawalWorkspace,{address:owner,wallet,limits:enabled?limits:null})));};
 window.journal=journal;window.fresh=p=>journal.createWithdrawalBrowserDraft(prepareWithdrawIntent(p.owner,50000n),p);`,
   resolveDir: process.cwd(), loader: "ts" }, bundle: true, write: false, platform: "browser", format: "iife", define: { "process.env": "{}" } });
 const browser = await chromium.launch({ headless: true });
@@ -34,12 +40,14 @@ try {
   const context = await browser.newContext(); let requests = 0, statusRequests = 0, submitRequests = 0;
   let expectedSubmission: WithdrawalRequestRecord | undefined;
   let preparedResponse: unknown, prepareRequests = 0;
+  let changeOwnerDuringPrepare: (() => Promise<void>) | undefined;
   const statusResponses = new Map<string, { status: number; body: unknown }>();
   let changeOwnerDuringStatus: (() => Promise<void>) | undefined;
   await context.route("**/*", async route => {
     if (route.request().url() === "https://withdrawal-journal.test/api/me/withdrawals/prepare") {
       prepareRequests++; assert.equal(route.request().method(), "POST");
       assert.deepEqual(route.request().postDataJSON(), { amountMicros: "50000" });
+      if (changeOwnerDuringPrepare) await changeOwnerDuringPrepare();
       return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(preparedResponse) });
     }
     if (route.request().url() === "https://withdrawal-journal.test/api/me/withdrawals/submit") {
@@ -250,5 +258,57 @@ try {
   assert.equal(submitRequests, 2);
   assert.equal(await first.getByRole("button", { name: "Send signed withdrawal" }).count(), 0);
   assert.equal(await invoke(second, "claimWithdrawalBrowserSubmission", reviewOriginal), false);
+  const workspaceDraft = await first.evaluate<ReturnType<typeof createWithdrawalBrowserDraft>>(`window.journal.createWithdrawalBrowserDraft(
+    {...window.fresh(${JSON.stringify(policy)}).burnIntent,maxBlockHeight:'11000'},${JSON.stringify(policy)})`);
+  const workspaceOriginal = await sign(workspaceDraft); expectedSubmission = workspaceOriginal;
+  preparedResponse = { wallet: workspaceDraft.owner, draft: workspaceDraft, preparedAt: new Date().toISOString() };
+  const mountWorkspace = (selected = policy, enabled = true) => first.evaluate(`window.workspaceExpectedId=${JSON.stringify(workspaceDraft.id)};
+    window.mountWorkspace(${JSON.stringify(selected)},${JSON.stringify(workspaceOriginal.request.signature)},${JSON.stringify(enabled)})`);
+  await mountWorkspace();
+  for (const invalid of ["0", "0.0000001", "0.050001", "1e-2"]) {
+    await first.getByLabel("Amount to receive (USDC)").fill(invalid);
+    await first.getByRole("button", { name: "Prepare withdrawal", exact: true }).click();
+    await first.getByText("Enter a positive USDC amount within the limit, with at most 6 decimal places.", { exact: true }).waitFor();
+  }
+  assert.equal(prepareRequests, 2, "invalid money input never reaches preparation HTTP");
+  await first.getByLabel("Amount to receive (USDC)").fill("0.05");
+  await first.getByRole("button", { name: "Prepare withdrawal", exact: true }).click();
+  await first.getByRole("button", { name: "Sign reviewed withdrawal" }).waitFor();
+  assert.equal(prepareRequests, 3); assert.equal(await first.evaluate("window.workspaceSignCalls"), 0);
+  assert.equal((await invoke(second, "readWithdrawalBrowserJournal", workspaceDraft.id)).state, "reserved");
+  // Reopen the workspace and select the retained draft rather than preparing again.
+  await first.evaluate(`window.mountRecovery(${JSON.stringify(account.address)})`);
+  await first.getByRole("heading", { name: "Recover a withdrawal" }).waitFor();
+  await mountWorkspace();
+  await first.getByRole("listitem").first().waitFor();
+  let savedItem = first.getByRole("listitem").filter({ hasText: workspaceDraft.id });
+  while (await savedItem.count() === 0) {
+    await first.getByRole("button", { name: "Load more saved requests" }).click();
+    await first.getByRole("button", { name: "Refresh saved requests" }).waitFor({ state: "visible" });
+    await first.waitForFunction(`!Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='Refresh saved requests')?.disabled`);
+    savedItem = first.getByRole("listitem").filter({ hasText: workspaceDraft.id });
+  }
+  await savedItem.getByRole("button", { name: "Review saved request" }).click();
+  await first.getByRole("button", { name: "Sign reviewed withdrawal" }).click();
+  await first.getByRole("button", { name: "Send signed withdrawal" }).click();
+  await first.getByText("This request is recovery-only. Check its status in withdrawal recovery.", { exact: true }).waitFor();
+  assert.equal(prepareRequests, 3); assert.equal(submitRequests, 3);
+  assert.equal(await first.evaluate("window.workspaceSignCalls"), 1);
+  await mountWorkspace(policy, false);
+  await first.getByText("New withdrawals are unavailable. You can still recover saved requests.", { exact: true }).waitFor();
+  assert.equal(await first.getByRole("button", { name: "Prepare withdrawal", exact: true }).count(), 0);
+  const other = { ...policy, owner: `0x${"11".repeat(20)}` as const, recipient: `0x${"11".repeat(20)}` as const };
+  await mountWorkspace();
+  changeOwnerDuringPrepare = async () => {
+    await mountWorkspace(other);
+    await first.getByText(`Recipient: ${other.owner}`, { exact: true }).waitFor();
+  };
+  await first.getByLabel("Amount to receive (USDC)").fill("0.05");
+  await first.getByRole("button", { name: "Prepare withdrawal", exact: true }).click();
+  await first.getByText(`Recipient: ${other.owner}`, { exact: true }).waitFor();
+  await first.getByText("No withdrawal requests saved for this wallet in this browser. Import a recovery file if you have one.", { exact: true }).waitFor();
+  assert.equal(await first.getByRole("button", { name: "Sign reviewed withdrawal" }).count(), 0);
+  assert.equal(await first.getByRole("button", { name: "Send signed withdrawal" }).count(), 0);
+  assert.equal(submitRequests, 3);
   console.log("PASS: Chromium withdrawal journal, signing, cross-tab single HTTP submission, lost-response recovery, owner isolation, abort and recovery-only imports; all HTTP intercepted, no live payment.");
 } finally { await browser.close(); }

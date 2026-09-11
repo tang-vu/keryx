@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-204** - Creator withdrawal workspace - *Keep preparation, stored-original review
+and recovery together while making each new authorization an explicit action.*
+The internal English workspace accepts decimal USDC with at most six fractional
+digits, converts it to integer micro-USDC without rounding and enforces configured
+amount/fee bounds. Preparation does not prompt the wallet. A saved ID opens the
+existing review/sign/send panel, while recovery rows can reopen the retained original
+after remounting without another estimate or salt. Owner or limit changes remount the
+workspace and cancel pending preparation. Missing/invalid creation limits leave only
+recovery; a separate new-request action never deletes earlier originals. Chromium
+checks invalid amounts, prepare/reopen/sign/send, disabled creation and wallet changes
+during preparation. Production mounting, HTTP route integration and funded operational
+acceptance remain required before release.
+
 **D-203** - Browser preparation authority - *Validate the unsigned response against
 locally selected terms and reserve it durably before exposing signing.*
 The browser posts only the selected integer amount to a fixed same-origin endpoint.
