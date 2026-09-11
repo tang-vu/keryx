@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-188** - Withdrawal HTTP composition - *Bind submission and recovery to live
+revocable cookie sessions and concrete server-owned payment dependencies.*
+The service factory uses accountSessionContext directly for the authenticated database,
+wallet and hashed session selector. Submission binds the protected runtime admission
+factory and the fixed Circle transfer transport; status shares the same live owner
+authentication without acquiring payment capabilities. Server-selected testnet network
+and limits remain separate from signed request input. Integration tests issue actual
+signed session cookies and use real SQLite revocation/claims, while intercepting Circle
+HTTP and substituting the separately tested admission boundary. A replacement session
+or revocation during admission/claim storage never grants a vendor retry. Route
+registration, operator provisioning and complete finalized-status/UI integration remain
+open; this composition alone is not live funded acceptance.
+
 **D-187** - Withdrawal admission runtime - *Open and verify the existing protected
 relay journal for each server-owned backed admission.*
 The bootstrap snapshots operator configuration, requires the dedicated enabled testnet

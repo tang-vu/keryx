@@ -109,8 +109,20 @@ factory. It snapshots operator configuration, derives the isolated relay address
 checks protected Linux file ownership and journal policy, opens existing SQLite and
 rechecks its identity before using the backing callback. It neither initializes nor
 upgrades history and retains the connection until admission settles. Missing history,
-key/policy mismatch and disabled runtime deny admission. Endpoint configuration still
-needs to bind this factory to the authenticated submission handler.
+key/policy mismatch and disabled runtime deny admission. The server service factory now
+binds this admission to the authenticated handler; production route configuration remains
+required.
+
+`withdrawal-http-service.ts` composes submission and status with the existing live
+revocable cookie-session context, protected runtime admission and concrete Circle HTTP
+transport. Options are server-owned and the network must be Arc testnet. Four integration
+tests use actual signed cookies and SQLite session/claim persistence with intercepted
+Circle HTTP and a substituted admission boundary. They verify missing/revoked sessions,
+duplicate submission, owner-scoped status, same-wallet cookie replacement during admission,
+revocation after claim storage, recovery without another vendor call, and network rejection.
+The focused tests, lint and TypeScript checks pass locally. Next.js route registration,
+operator configuration and finalized mint status/UI remain open; these checks do not
+constitute live funded acceptance.
 
 Local Windows validation covers disabled/invalid configuration; the native Linux drill
 uses actual SQLite and viem HTTP decoding with synthetic RPC responses to verify
