@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-194** - Portable withdrawal recovery - *Export the retained signed original and
+import it only into recovery-only browser storage.*
+The versioned Arc-testnet envelope is bounded to 16 KiB of UTF-8 and accepts only an
+original signature matching the selected owner. A recoveryOnly marker is mandatory,
+but the storage import itself enforces the consumed submission state regardless of
+file provenance. Export reads and revalidates the saved signed request; unsigned drafts
+are not exported as authorizations. Live account and cancellation checks surround
+asynchronous operations. Existing local rows are not overwritten. The file is private
+signed authorization data, not a public receipt or proof of payment, and neither
+operation sends HTTP. UI download/import controls remain integration work.
+
 **D-193** - Operator cash-out reconciliation - *Use a bounded reporting-only sweep
 over protected original journals and an explicitly selected application database.*
 The reporting CLI opens the mint journal read-only and exposes only original-request

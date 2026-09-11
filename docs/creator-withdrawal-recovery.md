@@ -339,6 +339,23 @@ Journal commit `00e58ab` passed
 [CI run 34564078587](https://github.com/tang-vu/keryx/actions/runs/34564078587), including
 the Chromium withdrawal journal test and production build.
 
+## Portable browser recovery
+
+`withdrawal-recovery-file.ts` exports a validated saved signed original in a versioned
+Arc-testnet envelope, bounded to 16 KiB of UTF-8. It is private authorization data, not
+a public receipt or payment confirmation. Export requires the original active owner
+and refuses unsigned drafts. Parsing revalidates the signature, owner, network and
+strict envelope; added fields cannot grant submission permission. Import uses only the
+recovery-only journal operation and never overwrites an existing row, even after local
+storage loss. Account/cancellation checks bracket asynchronous operations, and neither
+export nor import performs HTTP.
+
+Focused tests cover the strict envelope, owner/signature binding, network mismatch and
+UTF-8 bounds. Real Chromium verification exports the original, deletes local storage,
+imports the file and confirms the original signature is restored while submission
+remains prohibited; duplicate import and foreign-account export are rejected. UI file
+controls and independent lost-device acceptance remain open.
+
 ## Browser HTTP submission
 
 `submitWithdrawalBrowserHttpOnce` connects the committed browser flow to

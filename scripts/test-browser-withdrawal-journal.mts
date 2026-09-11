@@ -14,8 +14,9 @@ const policy: WithdrawPolicy = { owner: account.address, recipient: account.addr
 const bundle = await build({ stdin: { contents: `import * as journal from './lib/gateway/withdrawal-browser-journal';
 import {prepareWithdrawIntent} from './lib/gateway/withdraw-intent';
 import * as flow from './lib/gateway/withdrawal-browser-flow';
+import * as recovery from './lib/gateway/withdrawal-recovery-file';
 import {hashTypedData} from 'viem';
-window.flow=flow;window.hashTypedData=hashTypedData;
+window.flow=flow;window.recovery=recovery;window.hashTypedData=hashTypedData;
 window.journal=journal;window.fresh=p=>journal.createWithdrawalBrowserDraft(prepareWithdrawIntent(p.owner,50000n),p);`,
   resolveDir: process.cwd(), loader: "ts" }, bundle: true, write: false, platform: "browser", format: "iife", define: { "process.env": "{}" } });
 const browser = await chromium.launch({ headless: true });
@@ -86,9 +87,17 @@ try {
   const foreign = await first.evaluate(`window.journal.listWithdrawalBrowserJournals('0x${"00".repeat(20)}')`);
   assert.deepEqual(foreign.requests, []);
   // Missing storage is not automatic permission to replay an imported original.
+  const recoveryText = await first.evaluate<string>(`window.recovery.exportWithdrawalRecoveryFile(${JSON.stringify(original.id)},
+    ${JSON.stringify(account.address)},()=>${JSON.stringify(account.address)},new AbortController().signal)`);
+  assert.deepEqual(JSON.parse(recoveryText).original, original);
+  await assert.rejects(first.evaluate(`window.recovery.exportWithdrawalRecoveryFile(${JSON.stringify(original.id)},
+    ${JSON.stringify(account.address)},()=> '0x${"00".repeat(20)}',new AbortController().signal)`));
   await first.evaluate(`new Promise((resolve,reject)=>{const q=indexedDB.deleteDatabase('keryx-creator-withdrawals-v1');q.onsuccess=()=>resolve(true);q.onerror=()=>reject(new Error('fixture failure'));})`);
   await assert.rejects(invoke(first, "claimWithdrawalBrowserSubmission", original));
-  await invoke(first, "importWithdrawalBrowserJournal", original);
+  await first.evaluate(`window.recovery.importWithdrawalRecoveryFile(${JSON.stringify(recoveryText)},${JSON.stringify(account.address)},
+    ()=>${JSON.stringify(account.address)},new AbortController().signal)`);
+  await assert.rejects(second.evaluate(`window.recovery.importWithdrawalRecoveryFile(${JSON.stringify(recoveryText)},${JSON.stringify(account.address)},
+    ()=>${JSON.stringify(account.address)},new AbortController().signal)`));
   assert.equal(await invoke(first, "claimWithdrawalBrowserSubmission", original), false);
   const recovered: WithdrawalRequestRecord = (await invoke(second, "readWithdrawalBrowserJournal", original.id)).request;
   assert.deepEqual(recovered, original);
