@@ -705,6 +705,17 @@ malformed input, cancellation, adapter failures and quota exhaustion. No signing
 transfer claim or settlement operation is available to this handler. Route binding,
 browser pagination and recovery without a retained local original remain open.
 
+`withdrawal-browser-history.ts` supplies the unmounted browser transport. It requires
+only the selected account and a current-account callback, not a wallet signer or local
+draft. A fixed same-origin POST carries a copied cursor in JSON with no referrer,
+redirects, caching or automatic retries. A five-second overall deadline and 16 KiB
+response cap bound reads; the account is rechecked before releasing server metadata.
+Foreign owners, duplicate rows, repetition of the prior cursor and inconsistent next
+cursors are rejected. A 401 requires authentication; other failures cannot appear as
+an empty page. Six transport tests include stalled headers/body, late cancellation,
+account changes and microsecond cursor preservation. This does not reconstruct a
+signed original, verify settlement independently or mount the account interface.
+
 ## Remaining implementation and acceptance
 
 ### Private relay journal foundation
