@@ -7,6 +7,7 @@ import { createWithdrawalMintReader } from "./withdrawal-mint-reader";
 import { withdrawalHttpConfiguration } from "./withdrawal-http-config";
 import { withdrawalHeightWindowForRpc } from "./withdrawal-height-window";
 import { maxUint256 } from "viem";
+import { createWithdrawalPrepareHandler } from "./withdrawal-prepare-handler";
 
 export function createConfiguredWithdrawalHttpService(env: Parameters<typeof withdrawalHttpConfiguration>[0],
   chain: Parameters<typeof withdrawalHttpConfiguration>[1]) {
@@ -26,6 +27,7 @@ export function createWithdrawalHttpService(options: {
   const admit = createWithdrawalRuntimeAdmission(options.env, options.network, options.rpcUrl, options.ceilingWei);
   const rpcUrl = options.rpcUrl, heightLimits = { ...options.heightLimits };
   return {
+    prepare: createWithdrawalPrepareHandler({ authenticate: accountSessionContext, limits: options.limits, rpcUrl, heightLimits }),
     submit: createWithdrawalSubmitHandler({ authenticate: accountSessionContext, limits: options.limits,
       admit, transfer: requestCircleWithdrawalTransfer, validateTerms: async (original, signal) => {
         const height = BigInt(original.request.burnIntent.maxBlockHeight);

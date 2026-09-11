@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-202** - Authenticated draft preparation - *Derive unsigned terms from the live
+owner and server caps, then recheck their height window before returning a draft.*
+The internal prepare handler accepts only integer amountMicros. Owner/recipient come
+from the revocable session; contract and fee limits come from server configuration.
+It validates the unsigned candidate, reads a fresh height window, estimates through
+Circle and rechecks the window and original session before releasing the draft. It
+creates no signature, gas hold, application request or transfer claim. Durable prepare
+limits are independent from submit/status limits (3 per wallet and 20 service-wide per
+minute), so estimation does not consume the user's submission allowance. The returned
+draft still needs browser validation, durable reservation and explicit review/signing;
+public route activation and funded acceptance remain open.
+
 **D-201** - Withdrawal review and execution UI - *Review the retained original and
 separate wallet signing from its one permitted submission.*
 The panel loads an already-reserved request and displays amount, maximum Circle fee,

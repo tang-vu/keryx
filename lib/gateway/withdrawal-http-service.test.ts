@@ -86,6 +86,43 @@ it("rejects other networks before constructing a submission service", async () =
   const f = await fixture(); expect(() => createWithdrawalHttpService({ ...f.options, network: "eip155:1" })).toThrow();
 });
 
+it("prepares only unsigned owner-bound terms without reserving a request or spending the submit allowance", async () => {
+  const f = await fixture();
+  const fetcher = vi.fn(async (url, init) => {
+    const body = JSON.parse(init.body);
+    if (String(url).endsWith("/estimate")) {
+      expect(Object.keys(body[0])).toEqual(["spec"]);
+      return Response.json([{ burnIntent: { spec: body[0].spec, maxBlockHeight: "11000", maxFee: "1" } }]);
+    }
+    expect(String(url).endsWith("/transfer")).toBe(true); return Response.json(f.response);
+  }); vi.stubGlobal("fetch", fetcher);
+  for (let i = 0; i < 3; i++) {
+    const response = await f.run(() => f.service.prepare(request("prepare", { amountMicros: "50000" })));
+    expect(response.status).toBe(200); expect(response.headers.get("cache-control")).toBe("no-store");
+    const body = await response.json();
+    expect(body.draft).toMatchObject({ owner: f.record.owner, policy: { recipient: f.record.owner },
+      burnIntent: { maxBlockHeight: "11000", maxFee: "1", spec: { value: "50000" } } });
+    expect(body.draft.request).toBeUndefined();
+    expect(await db.getCreatorWithdrawal(body.draft.id, f.record.owner)).toBeNull();
+  }
+  expect((await f.run(() => f.service.prepare(request("prepare", { amountMicros: "50000" })))).status).toBe(429);
+  expect(mocks.admit).not.toHaveBeenCalled(); expect(fetcher).toHaveBeenCalledTimes(3);
+  expect((await f.run(() => f.service.submit(request("submit", f.record.request)))).status).toBe(202);
+});
+
+it("rejects extra preparation fields and withholds estimates after session revocation", async () => {
+  const f = await fixture();
+  const fetcher = vi.fn(async (_url, init) => {
+    await f.revoke();
+    return Response.json([{ burnIntent: { spec: JSON.parse(init.body)[0].spec, maxBlockHeight: "11000", maxFee: "1" } }]);
+  }); vi.stubGlobal("fetch", fetcher);
+  expect((await f.run(() => f.service.prepare(request("prepare", { amountMicros: "50000", recipient: f.record.owner })))).status).toBe(400);
+  expect(fetcher).not.toHaveBeenCalled();
+  const denied = await f.run(() => f.service.prepare(request("prepare", { amountMicros: "50000" })));
+  expect(denied.status).toBe(503); expect(await denied.text()).not.toContain(f.record.owner);
+  expect(mocks.admit).not.toHaveBeenCalled();
+});
+
 it("rejects stale expiry before gas admission and retains a claim when expiry advances before transfer", async () => {
   const early = await fixture(), fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher);
   mocks.height.mockResolvedValue({ minimumBlockHeight: "11001", maximumBlockHeight: "12000" });

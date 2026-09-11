@@ -3,7 +3,7 @@ import type { KeryxDB } from "../db/keryx-db";
 import { withdrawalOwnerSchema } from "./withdrawal-request";
 
 const WINDOW_MS = 60000;
-const budgets = { submit: { wallet: 3, service: 20 }, status: { wallet: 30, service: 200 } } as const;
+const budgets = { prepare: { wallet: 3, service: 20 }, submit: { wallet: 3, service: 20 }, status: { wallet: 30, service: 200 } } as const;
 
 /** Durable authority only, with no in-process fallback. Tier is selected by server
  * code, wallet by live authentication. Counters are not settlement or gas accounting. */

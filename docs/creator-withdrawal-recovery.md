@@ -134,6 +134,24 @@ expiry advancing after claim storage, recovery without another call, and session
 revocation during the final height read. Finite-draft UI preparation, operating cap
 selection and funded end-to-end acceptance remain required before activation.
 
+## Authenticated preparation handler
+
+`withdrawal-prepare-handler.ts` is connected as `prepare` on the internal HTTP service.
+It accepts only a positive integer amountMicros within server limits, with a 1 KiB
+body bound and same-origin POST. Owner and recipient come from the live session.
+After validating the unsigned candidate against server contract/fee policy, it reads
+a fresh height window, calls unsigned Circle estimation, and validates another fresh
+window before returning the canonical draft. Session identity is rechecked around
+asynchronous work. The draft has not been signed, submitted or reserved in the
+application ledger; the browser must validate and persist it before showing signing.
+
+Preparation uses separate durable limits of 3 per wallet / 20 service-wide per minute.
+Tests use real signed cookies and SQLite counters with intercepted estimation HTTP
+and synthetic height observations. They verify unsigned owner-bound output, no request
+reservation or gas admission, independent submission allowance, rejected extra fields
+and withholding after session revocation. Eight HTTP-service tests pass. The review
+component's preceding production build completed successfully; routes remain unregistered.
+
 ## Initial transfer coordinator
 
 `lib/gateway/withdrawal-transfer-service.ts` now coordinates the original request,
