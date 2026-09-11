@@ -49,6 +49,12 @@ existing is insufficient to mark the complete journey accepted.
 
 ## Economics acceptance
 
+Actual operating bills, provider invoices and realized internal profit are private.
+Reconciliation below is an internal acceptance activity, not a public reporting requirement.
+Do not publish those figures on the website, GitHub or Canteen without separate owner
+permission. Public formulas and explicitly illustrative scenarios may remain public;
+missing private cost figures remain unknown and do not block unrelated product work.
+
 1. **Explicit model:** compute service-fee contribution, fixed-package retained reserve,
    variable costs, fixed/acquisition costs and break-even separately. Unknown inputs
    remain unknown. [Business model and calculator](./business-model.md).

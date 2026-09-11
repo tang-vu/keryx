@@ -48,6 +48,30 @@ service role only, with no client access or direct service writes. Signed reques
 never appear in the public `/api/withdrawals` feed. Server retention and eventual
 tombstone policy need to preserve replay barriers while respecting the final privacy policy.
 
+## Read-only mint observation
+
+`lib/gateway/withdrawal-mint-observation.ts` revalidates the original request and matched
+response, recovers the EIP-191 signer of the payload hash, and queries the intended
+minter's signer allowlist. It checks Arc testnet chain identity, nonempty minter code,
+attestation expiry and the exact mint call from the selected relayer at one block.
+It rechecks that block's hash and timestamp and the chain ID before returning an
+`eligible-at-observed-block` observation. This follows the pinned
+[Mints.sol](https://github.com/circlefin/evm-gateway-contracts/blob/fd51093c7a1ba8e50ea2c6029ebf1bdc2bb2b8e8/src/modules/minter/Mints.sol)
+signature and expiry checks.
+
+The observer has a five-second deadline, propagates cancellation to its HTTP transport
+and prevents late completion from returning evidence. Its local freshness policy allows
+blocks at most 60 seconds old and at most five seconds ahead of the local clock.
+RPC failure, cancellation, unexpected output or inconsistent reads return no observation;
+none of these establishes a failed withdrawal or releases funds.
+
+This trusts the operator-selected RPC and local clock. The code hash records observed
+minter bytecode; it does not audit a proxy implementation or match a deployed version
+to the pinned source. An `eth_call` success at that block is neither future permission
+nor finality. No key, nonce reservation, signing, broadcast or database mutation is
+performed. Preparing a transaction still needs fresh checks and exclusive bounded
+signer authority. This helper is not yet connected to the production relay.
+
 ## Remaining implementation and acceptance
 
 The request-matching layer in `lib/gateway/withdrawal-attestation.ts` now checks a
@@ -60,9 +84,9 @@ against Circle's [TransferSpec](https://github.com/circlefin/evm-gateway-contrac
 and [attestation definitions](https://github.com/circlefin/evm-gateway-contracts/blob/fd51093c7a1ba8e50ea2c6029ebf1bdc2bb2b8e8/src/lib/Attestations.sol)
 at the pinned source revision. Deployed-contract/version matching remains required.
 
-1. Authenticate the request-matched attestation against the intended deployed minter,
-   and bind later Circle transfer status to the exact original spec. Persisting a response
-   is not confirmation from HTTP success alone.
+1. Integrate the read-only minter observation with prepared-transaction checks and
+   deployed-version verification, and bind later Circle transfer status to the exact
+   original spec. Persisting a response is not confirmation from HTTP success alone.
 2. Establish exclusive, bounded mint signer/nonce authority. The current general funder
    also signs elsewhere; an isolated nonce counter would not control those other senders.
    Persist prepared transaction identity before broadcast and retain uncertainty after
@@ -104,8 +128,15 @@ commit `30d6161` passed [CI run 34555613062](https://github.com/tang-vu/keryx/ac
 including unit tests, PostgreSQL, browser/contract checks and production build. These
 backend layers are not yet wired into the production creator withdrawal journey.
 
+The read-only observer adds seven tests using real local signatures and viem's RPC
+encoding over a synthetic transport. They cover exact calldata and caller, rejected
+signers, wrong chain, absent code, expired/stale/future blocks, simulated reverts,
+inconsistent block/chain readback, caller mutation, deadline and mid-flight cancellation.
+All 22 focused tests pass. These checks do not authenticate a live Circle response or
+send a transaction.
+
 ```sh
-npx vitest run lib/gateway/withdraw-protocol.test.ts lib/db/creator-withdrawal-requests.test.ts lib/gateway/withdrawal-attestation.test.ts
+npx vitest run lib/gateway/withdraw-protocol.test.ts lib/db/creator-withdrawal-requests.test.ts lib/gateway/withdrawal-attestation.test.ts lib/gateway/withdrawal-mint-observation.test.ts
 node --import tsx scripts/test-creator-withdrawal-postgres.mts
 npm run typecheck
 ```

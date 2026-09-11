@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-165** - Withdrawal mint observation - *Check the exact original attestation at a
+rechecked block without granting broadcast authority.*
+The read-only observer recovers the payload signer, checks the intended minter's allowlist
+and simulates the exact mint call from the selected relayer. Chain identity, code, expiry,
+block freshness and hash readback must agree. A bounded deadline and transport cancellation
+prevent late RPC completion from returning eligibility. Missing evidence stays unknown;
+it never records settlement or releases an obligation. RPC and clock trust remain explicit,
+and observed proxy bytecode is not implementation verification. This is a prerequisite
+for prepared mint transactions, not an alternative to exclusive nonce/gas authority,
+durable signed-transaction identity, exact receipt matching or finality verification.
+The production withdrawal relay remains unchanged until the recovery journey is integrated.
+
 **D-164** - Creator cash-out recovery - *Identify the original signed burn intent and persist
 initial transfer admission before contacting Circle.*
 The recovery journal uses the BurnIntent EIP-712 digest as its request identity, distinct
