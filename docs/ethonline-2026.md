@@ -4,6 +4,27 @@ Event window: September 4–16, 2026. Baseline: `5e83d45` (September 2), the
 repository HEAD inspected on September 5 before any ETHOnline work. This log does
 not assert that a track selection or submission has been completed in ETHGlobal.
 
+## September 12 — current release and submission preparation
+
+Production `b9dfedf` / v0.22.65 adds incremental archive reads and slim winning
+entries, preserving the last complete cache after scan failure. Focused tests,
+the synthetic memory comparison, CI, production pages and a read-only scan of the
+real archive passed. This is not a claim of sustained memory stability.
+
+Recent event work also includes buyer funding/replacement recovery, more conservative
+answer confidence, private operator reporting, creator listing authority and freshness
+checks, and a separate revision-checked registry candidate. Registry V2 is not deployed.
+The individual releases and engineering notes preserve their validation limits.
+
+Prepared [form-aligned submission copy](./ethonline-final-submission.md), current
+production screenshots, logo/cover exports and an architecture illustration. The
+owner requests Top 10 plus Arc partner consideration if Continuity is eligible.
+The official event details now list September 13 at 12:00 EDT as the submission
+deadline and prohibit synthetic voiceovers. Earlier synthetic-narration rehearsal
+artifacts are therefore reference only. A normal-speed picture track and
+[human narration script](./ethonline-human-narration.md) are ready; actual voice
+recording, media upload, track/declaration verification and final submission remain.
+
 ## September 9 — English walkthrough rehearsal
 
 Added `buyer report --state` for feedback without sharing private job responses.

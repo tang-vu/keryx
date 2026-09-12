@@ -1,5 +1,9 @@
 # ETHOnline 2026 submission working draft
 
+**Superseded for form entry:** use [September 12 final form copy](./ethonline-final-submission.md).
+The event's current instructions prohibit TTS/AI voiceovers, so the synthetic narrated
+rehearsal below is reference only; record the [human narration](./ethonline-human-narration.md).
+
 Prepared September 9 from repository history and verified pilot records. This is
 copy for the owner to adapt to the actual submission form, not a submitted entry.
 The currently visible final form fields and limits have not been inspected.
