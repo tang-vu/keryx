@@ -1,5 +1,12 @@
 # ETHOnline demo — human narration required
 
+**Final export prepared September 12:** ten owner-supplied recordings have been
+muxed into `08-keryx-ethonline-FINAL-human-voice.mp4` (2:48.64). The guide below
+retains original picture-track timings; several scenes now hold longer for the voice.
+No generated voice or playback speed changes were added. Listen to the final export
+before uploading; automated speech recognition was not reliable enough to certify
+word-for-word accuracy.
+
 Read this with your own voice over `08-demo-picture-only-NEEDS-HUMAN-VOICE.mp4`.
 Use a computer microphone in a quiet room. Keep the video's normal playback speed.
 Start each section near its timestamp; pause rather than rushing. The picture track

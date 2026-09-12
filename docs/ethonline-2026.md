@@ -4,6 +4,15 @@ Event window: September 4–16, 2026. Baseline: `5e83d45` (September 2), the
 repository HEAD inspected on September 5 before any ETHOnline work. This log does
 not assert that a track selection or submission has been completed in ETHGlobal.
 
+## September 12 — owner-voice video export
+
+Received ten narration recordings from the owner and muxed them with the documented
+September 9 picture track. The final video is 168.64 seconds, H.264 1440 × 1000 with
+AAC audio. Still-frame holds accommodate longer clips without speeding video or
+speech; volume normalization measured a -2.0 dB output peak. Full decoding passed.
+This replaces the silent editing template in the prepared submission kit, not an
+actual ETHGlobal upload. Owner listening review and the final submission remain.
+
 ## September 12 — current release and submission preparation
 
 Production `b9dfedf` / v0.22.65 adds incremental archive reads and slim winning

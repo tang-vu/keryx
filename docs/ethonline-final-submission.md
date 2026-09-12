@@ -62,7 +62,7 @@ claims the repository's actual Arc/Gateway/x402 integration.
 
 OpenAI Codex assisted substantially with implementation, debugging, test generation, documentation and release checks during the event. Areas include the buyer client and recovery journals in lib/buyer, the research workspace components, evidence-quality regressions, creator listing safeguards and archive memory handling. The project owner defined product requirements and constraints, selected priorities, funded testnet wallets and reviewed progress. We do not claim that all submitted code was written manually.
 
-Runtime language models are a separate part of the product: they assist question planning, source selection, synthesis and evidence assessment, while application code enforces payment limits and recovery rules. The submission text and code-based media preparation were also AI-assisted. An older rehearsal used Microsoft David synthetic narration; it is not the final submission video because the event forbids TTS/AI voiceovers. The final video requires a real human voice recording.
+Runtime language models are a separate part of the product: they assist question planning, source selection, synthesis and evidence assessment, while application code enforces payment limits and recovery rules. The submission text and code-based media preparation were also AI-assisted. An older rehearsal used Microsoft David synthetic narration; it is not the final submission video because the event forbids TTS/AI voiceovers. The final export uses ten voice recordings supplied by the project owner, with volume normalization and no speech synthesis or playback speed-up.
 
 ## Judging and prizes
 
@@ -134,14 +134,19 @@ Prepared upload directory: `.artifacts/ethonline-final-2026-09-12/`.
 | Screenshot 3 | `05-screenshot-source-decisions.png` |
 | Screenshot 4 | `06-screenshot-claim-evidence.png` |
 | Optional architecture image | `07-architecture-1600x900.png` |
-| Video editing template — NOT READY TO UPLOAD | `08-demo-picture-only-NEEDS-HUMAN-VOICE.mp4` |
+| Final video — owner voice recordings | `08-keryx-ethonline-FINAL-human-voice.mp4` |
 
 The four screenshots are current production captures, not fabricated UI. Job screenshots
 reopen the existing September 9 pilot with its bearer input masked. The logo reuses the
 existing SVG identity. The cover and architecture are code-rendered illustrations.
-The 157.4-second video picture track preserves the older recorded walkthrough and
-labelled selected CLI stdout at normal playback speed. It has no audio until the
-owner records the [human narration](./ethonline-human-narration.md).
+The final 168.64-second video uses ten voice recordings supplied by the owner.
+It preserves the older walkthrough and labelled selected CLI stdout at normal speed,
+adding 11.28 seconds of still-frame holds so longer speech stays within its scene.
+The MP4 contains H.264 video at 1440 × 1000 and AAC audio; full decoding passed and
+measured peak audio was -2.0 dB. No synthesized voice, music or speed-up was added.
+Automated transcription was low-confidence and is not a claim of word-perfect speech;
+the owner should listen to the export before uploading. The [narration guide](./ethonline-human-narration.md)
+retains the original rehearsal timings; final timings are in the local media provenance.
 
 ## Final checks before submission
 
