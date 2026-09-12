@@ -5,6 +5,7 @@
  */
 
 import { listSupabaseWithdrawalHistory, type WithdrawalHistoryCursor } from "./creator-withdrawal-history";
+import { iterateSupabaseRecentQueries } from "./recent-query-stream";
 import { confirmSupabasePrivateCreator, getSupabasePrivateCreatorConfirmation, type PrivateCreatorConfirmation } from "./private-creator-confirmations";
 import { reserveSupabasePrivateTreasury, getSupabasePrivateTreasury, type PrivateTreasuryPolicy } from "./private-treasury-capacity";
 import { getSupabasePrivateTreasurySummary } from "./private-treasury-summary";
@@ -781,6 +782,10 @@ export class SupabaseAdapter implements KeryxDB {
       .order("created_at", { ascending: false })
       .limit(limit);
     return (data ?? []).map((r) => r.data as QueryRun);
+  }
+
+  iterateRecentQueries(limit: number): AsyncIterable<QueryRun> {
+    return iterateSupabaseRecentQueries(this.sb, limit);
   }
 
   async recordPayment(p: PaymentRecord): Promise<void> {

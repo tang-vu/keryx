@@ -42,12 +42,10 @@ export function cleanText(s: string): string {
 }
 
 /** Pick the better run to represent a question: most citations, then most paid out, then newest. */
-function better(a: QueryRun, b: QueryRun): QueryRun {
-  if (a.citations.length !== b.citations.length)
-    return a.citations.length > b.citations.length ? a : b;
-  if (a.totalToCreators !== b.totalToCreators)
-    return a.totalToCreators > b.totalToCreators ? a : b;
-  return a.createdAt >= b.createdAt ? a : b;
+function betterThanEntry(run: QueryRun, entry: ArchiveEntry): boolean {
+  if (run.citations.length !== entry.citationCount) return run.citations.length > entry.citationCount;
+  if (run.totalToCreators !== entry.toCreators) return run.totalToCreators > entry.toCreators;
+  return run.createdAt > entry.createdAt;
 }
 
 function toEntry(r: QueryRun): ArchiveEntry {
@@ -70,17 +68,29 @@ function toEntry(r: QueryRun): ArchiveEntry {
  * Build the public answer archive from raw runs: real cited answers only,
  * one canonical dispatch per question, newest first.
  */
-export function buildArchive(runs: QueryRun[]): ArchiveEntry[] {
-  const best = new Map<string, QueryRun>();
-  for (const r of runs) {
-    if (!r.answer?.trim()) continue;
-    if (!r.citations?.length) continue;
-    const key = normalizeQuestion(r.question);
-    if (!key) continue;
-    const cur = best.get(key);
-    best.set(key, cur ? better(cur, r) : r);
-  }
-  return [...best.values()].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)).map(toEntry);
+function retainCandidate(best: Map<string, ArchiveEntry>, run: QueryRun) {
+  if (!run.answer?.trim() || !run.citations?.length) return;
+  const key = normalizeQuestion(run.question);
+  if (!key) return;
+  const previous = best.get(key);
+  if (!previous || betterThanEntry(run, previous)) best.set(key, toEntry(run));
+}
+
+function finishArchive(best: Map<string, ArchiveEntry>): ArchiveEntry[] {
+  return [...best.values()].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
+export function buildArchive(runs: Iterable<QueryRun>): ArchiveEntry[] {
+  const best = new Map<string, ArchiveEntry>();
+  for (const run of runs) retainCandidate(best, run);
+  return finishArchive(best);
+}
+
+/** Retain only slim winners; a failed scan never returns a partial archive. */
+export async function buildArchiveStream(runs: AsyncIterable<QueryRun>): Promise<ArchiveEntry[]> {
+  const best = new Map<string, ArchiveEntry>();
+  for await (const run of runs) retainCandidate(best, run);
+  return finishArchive(best);
 }
 
 /** The text an archive card is searchable by: its question and the sources it cited. Built on the

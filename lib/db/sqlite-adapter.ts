@@ -1604,6 +1604,21 @@ export class SqliteAdapter implements KeryxDB {
     return rows.map((r) => JSON.parse(r.data as string) as QueryRun);
   }
 
+  async *iterateRecentQueries(limit: number): AsyncIterable<QueryRun> {
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 2500) throw new Error("Invalid query scan limit");
+    // The live statement holds one SQLite read snapshot; iterator return/throw
+    // closes it. Do not materialize raw JSON strings with .all() here.
+    // Sort only identifiers: without a matching index SQLite would otherwise
+    // materialize every large data value in its temporary sorter before yielding.
+    const rows = this.db.prepare(`SELECT id FROM query_runs ORDER BY created_at DESC, id DESC LIMIT ?`).iterate(limit);
+    const read = this.db.prepare(`SELECT data FROM query_runs WHERE id = ?`);
+    for (const row of rows) {
+      const record = read.get(row.id);
+      if (!record) throw new Error("Query scan row unavailable");
+      yield JSON.parse(record.data as string) as QueryRun;
+    }
+  }
+
   async recordPayment(p: PaymentRecord): Promise<void> {
     this.insertPayment(p, false);
   }

@@ -10,14 +10,13 @@
  *
  * The window is what decides how far back the public corpus reaches. It has to stay comfortably
  * ahead of the run log or the oldest answers silently fall out of the index and the sitemap — the
- * pages keep resolving, but nothing links to them any more and search engines drop them. At the
- * daemon's current pace (~30 runs/day) this covers a little over two months of history beyond the
- * whole log to date. Raising it costs memory during the rebuild, not steady state: a run blob
- * averages ~15KB and only the slim ArchiveEntry (a few hundred bytes) is retained afterwards.
+ * pages keep resolving, but nothing links to them any more and search engines drop them. The
+ * run rate determines the history covered by the window. Read incrementally: raw traces can be much larger than
+ * archive cards. Retain only slim winners, never all raw strings and parsed run graphs.
  */
 
 import { getDb } from "@/lib/db";
-import { buildArchive, type ArchiveEntry } from "@/lib/answers-archive";
+import { buildArchiveStream, type ArchiveEntry } from "@/lib/answers-archive";
 
 /** How many raw runs the archive is built from. See the note above before changing. */
 export const ARCHIVE_WINDOW_RUNS = 2500;
@@ -30,8 +29,7 @@ let building: Promise<ArchiveEntry[]> | null = null;
 
 async function rebuild(): Promise<ArchiveEntry[]> {
   const db = await getDb();
-  const runs = await db.listRecentQueries(ARCHIVE_WINDOW_RUNS);
-  const entries = buildArchive(runs);
+  const entries = await buildArchiveStream(db.iterateRecentQueries(ARCHIVE_WINDOW_RUNS));
   cached = { at: Date.now(), entries };
   return entries;
 }

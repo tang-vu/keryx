@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-232** - Stream the public answer archive - *Raw traces must not all coexist in
+memory merely to build small public cards.* Keep the 2,500-run window and ranking,
+but retain only slim winning entries. SQLite sorts identifiers and reads each payload
+under the active cursor snapshot, avoiding a large payload sorter without a migration.
+Supabase uses bounded keyset pages with quoted cursors and per-request timeouts; its
+HTTP pages are not a single database snapshot. Equal timestamps now use descending
+ID order, where the prior database order was unspecified. Only complete scans replace
+the shared cache; failures keep its previous version and allow retry. Synthetic memory
+and equivalence checks support the change, not a claim that every production heap
+failure has been eliminated. See the archive-memory engineering note.
+
 **D-231** - Separate revision-checked registry candidate - *An off-chain freshness
 read cannot make a pending full-record update atomic.* V2 requires an expected per-source
 revision for every edit and adds a price-only method plus a single-call record/revision

@@ -410,6 +410,8 @@ export interface KeryxDB {
   saveQueryRun(run: QueryRun): Promise<void>;
   getQueryRun(id: string): Promise<QueryRun | null>;
   listRecentQueries(limit: number): Promise<QueryRun[]>;
+  /** Bounded-memory read, newest first with id as timestamp tie-breaker. */
+  iterateRecentQueries(limit: number): AsyncIterable<QueryRun>;
   /** Dispatches asked as follow-ups to `parentId`, oldest first. */
   listFollowUps(parentId: string): Promise<QueryRun[]>;
   /** Dispatches a wallet ran while signed in, newest first. Address match is case-insensitive:

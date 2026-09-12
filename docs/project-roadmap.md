@@ -6,7 +6,14 @@ milestone; older aspirational phase metrics below are historical. The first new 
 is an [explicit business-scenario calculator](./business-model.md), with unknown costs
 kept unknown and no permission to activate mainnet.
 
-**Version:** 0.22.64 (local registry V2 candidate, updated 2026-09-12)
+**Version:** 0.22.65 (incremental answer archive, updated 2026-09-12)
+
+The immediate delivery scope is the hackathon release: archive memory correction,
+demo regression checks and verified deployment. Further mainnet features are deferred.
+The [archive now reads incrementally](./engineering/archive-memory-2026-09-12.md),
+retains slim winners and preserves the previous complete cache after a failed scan.
+Synthetic measurements show lower sampled heap with identical results; sustained
+production memory stability still requires observation.
 
 A [separate V2 contract candidate](./engineering/registry-v2-candidate.md) rejects stale
 revisions inside the EVM and offers price-only updates. Local tests include two queued
