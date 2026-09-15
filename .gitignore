@@ -12,6 +12,7 @@ wallets.json
 
 # next.js
 .next/
+.next.tmp/
 out/
 build/
 dist/
