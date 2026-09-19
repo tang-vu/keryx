@@ -1,9 +1,9 @@
-# dependencies
+﻿# dependencies
 node_modules/
 .pnp
 .pnp.*
 
-# env & secrets — NEVER commit
+# env & secrets â€” NEVER commit
 .env
 .env.local
 .env.*.local
@@ -42,7 +42,7 @@ coverage/
 *.tsbuildinfo
 next-env.d.ts
 
-# AI/agent workflow artifacts — keep out of the public repo
+# AI/agent workflow artifacts â€” keep out of the public repo
 CLAUDE.md
 .claude/
 AGENTS.md
@@ -57,3 +57,6 @@ keryx-extension-v*.zip
 
 # Qwen CLI workspace artifacts
 .qwen/
+
+# AI assistant artifacts
+.devin/
