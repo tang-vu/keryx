@@ -139,28 +139,10 @@ export const config = {
     1_000,
     Math.round(num(process.env.KERYX_LLM_CIRCUIT_MAX_COOLDOWN_MS, 14_400_000)),
   ),
-  // Fraction (0..1) of volume-engine runs that use a non-default catalog model (currently V4 Pro)
-  // rather than the workhorse. Kept low: Pro is slower and the engine's job is steady volume, so
-  // the alternates only add provenance variety.
-  engineAltModelRatio: Math.min(1, Math.max(0, num(process.env.KERYX_ENGINE_ALT_MODEL_RATIO, 0.1))),
-  // Most autonomous volume questions should be answerable from a concrete current source preview.
-  // Keep a bounded exploratory slice so the agent still measures real corpus gaps for /wanted.
-  engineQuestionExplorationRatio: Math.min(
-    1,
-    Math.max(0, num(process.env.KERYX_ENGINE_QUESTION_EXPLORATION_RATIO, 0.1)),
-  ),
-  // Fraction (0..1) of volume-engine runs that re-ask an open demand-board gap instead of a fresh
-  // question. A retry is a normal paid dispatch — same budget, real settlement — so this trades no
-  // traction away; it spends a slice of the engine's questions on holes the corpus was paid for and
-  // missed. Only fires when content has arrived since the gap failed, so the true rate is lower.
-  engineGapRetryRatio: Math.min(1, Math.max(0, num(process.env.KERYX_ENGINE_GAP_RETRY_RATIO, 0.25))),
-
   // ── App ──
   baseUrl: process.env.BASE_URL ?? "http://localhost:3939",
-  // Shared secret Keryx's own headless drivers (web-client, a2a-client) pass as `?bot=` so the
-  // public /api/ask and /api/agent/ask routes tag their self-generated traffic as `engine`
-  // (self-volume) instead of `web`/`a2a`. This keeps the dashboard's external bucket honestly
-  // limited to genuine third-party callers. Unset → no tagging (all entry-path traffic stays web/a2a).
+  // Optional audit tag for manual internal requests sent with `?bot=`. No scheduled caller
+  // uses this key. Unset means requests retain their entry-path origin.
   botKey: process.env.KERYX_BOT_KEY ?? "",
   // Discord application public key (Developer Portal → General Information). When set, the
   // /api/discord/interactions endpoint verifies requests and serves the /ask slash command;
@@ -204,7 +186,7 @@ export const config = {
   ipfsGatewayUrl: process.env.KERYX_IPFS_GATEWAY ?? "https://gateway.pinata.cloud",
 
   // ── Wallets ──
-  // funderKey is Keryx's own TREASURY wallet — used by the volume engine, A2A, and collectRun.
+  // funderKey is Keryx's own TREASURY wallet — used by authorized server-side requests.
   // It is NEVER used for user sessions (those are funded by the user's own browser-held EOA).
   sellerAddress: (process.env.SELLER_ADDRESS ?? "") as `0x${string}` | "",
   // Current and retired private research merchants. Public x402 sellers must never accept them.

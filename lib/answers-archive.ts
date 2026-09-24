@@ -2,8 +2,8 @@
  * Answer-archive selection: turns the raw run log into a public, index-worthy
  * corpus. Two jobs the SEO surface depends on:
  *   1. Keep only real answers — a non-empty answer that actually cited a source.
- *   2. Dedupe by question — the volume engine reruns the same questions, and a
- *      pile of near-identical pages reads as doorway spam to a crawler. We keep
+ *   2. Dedupe by question — repeat questions can create near-identical pages that
+ *      read as doorway spam to a crawler. We keep
  *      one canonical dispatch per question (the richest one) and drop the rest.
  * Pure functions so the page stays lean and the selection logic stays testable.
  */

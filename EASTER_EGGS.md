@@ -28,7 +28,7 @@ per item; none confirmed-won yet.
 
 5. **`arc-canteen` hidden commands.**
    The CLI exposes `status`, `ls`, `history`, `push` — possibly a leaderboard/score mechanic for the
-   hackathon. Generating real traction via `npm run seed -- --push` may rank on a public board.
+   hackathon.
    **TODO:** run `arc-canteen status` after login to see if there's a scoreboard.
 
 ## Notes

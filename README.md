@@ -178,7 +178,7 @@ Example trace (real output):
   cap. Keryx never holds your key or your funds.
 - **The chain decides who gets paid** — before anything signs or settles, every payee is checked
   against the on-chain SourceRegistry, not against Keryx's database. Editing the database cannot
-  reroute a single citation reward, on any path — browser, volume engine, or A2A.
+  reroute a single citation reward, on any path — browser or A2A.
 - **Transparent treasury** — [`/api/treasury`](https://keryx.cc/api/treasury) publishes the
   settlement wallet's chain-abstracted Gateway balance (via Circle App Kit), so anyone can audit
   what backs the payouts.
@@ -278,15 +278,14 @@ npm run ask -- "How do x402 and stablecoins enable autonomous AI agent commerce?
 # 4b. Or the full web app (SIWE auth, session grants, browser co-sign)
 npm run dev          # http://localhost:3939
 
-# 5. Autonomous volume engine · live metrics
-npm run seed -- --count 20
+# 5. Live metrics
 npm run metrics
 ```
 
 | Mode | Reasoning | Payments | When |
 |------|-----------|----------|------|
 | **Offline dev** | heuristic, no LLM key | simulated, labeled | laptop, zero setup |
-| **Server treasury** | Claude / DeepSeek | real Arc testnet (funder wallet) | volume engine, A2A |
+| **Server treasury** | Claude / DeepSeek | real Arc testnet (funder wallet) | paid A2A requests |
 | **User interactive** | Claude / DeepSeek | real Arc testnet (user-funded session EOA) | the web app |
 
 ## Built to stay up
@@ -301,7 +300,6 @@ Keryx runs as a real service, not a demo that dies after the video:
   alerts before settlements can stall; failed settlements alert immediately.
 - **Rotating off-box backups** of the traction datastore, hourly.
 - **CI** — typecheck + the economic-invariant suite on every push.
-- **24/7 volume daemon** — the agent keeps reading, paying, and settling around the clock.
 
 ## Security
 

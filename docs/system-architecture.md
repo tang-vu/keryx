@@ -184,76 +184,26 @@ same amount/payee/body checks around Circle settlement. No offer can redirect pa
 registry ceiling. A missing, invalid, expired, or unavailable offer degrades to list price during
 discovery and fails closed if its stale `offerId` is explicitly presented to the paid route.
 
-### Server-Side Volume Engine (No Browser)
+### Wanted-Claim Offers
 
-```
-/scripts/seed-engine.mts                KERYX SERVER                  ARC + CIRCLE
-───────────────────────               ────────────                   ────────────
+The wanted board still accepts creator offers for a failed claim and records a bounded intent.
+No autonomous worker currently processes those intents or initiates a paid retry. A future
+fulfillment policy needs an explicit product decision before it is reintroduced.
 
-1. npm run seed -- --count 20
-
-2. Load random questions from question bank
-   └─ For each: collectRun() (lib/agent/index.ts:13-27)
-
-3. Selection: no SIWE session → use server treasury
-   ├─ RealGateway selected
-   ├─ Funder key (AGENT_FUNDER_PRIVATE_KEY) funds spend wallet
-   └─ Server-side x402 settlement (not browser co-sign)
-
-4. Agent execution (same brain: lib/agent/run-agent.ts)
-   ├─ Real x402 settlement to sources
-   └─ Real weighted citation payout
-
-5. Store payment_events, metrics → SQLite or Supabase
-   └─ Used by /api/metrics + keryx.cc dashboard
-```
-
-### Wanted-Claim Fulfillment Loop
-
-```
-/wanted feed match → /register                 VOLUME DAEMON                 PAYMENT TRUTH
-──────────────────────────────                 ─────────────                 ─────────────
-stable gap id + matched post
-        │
-        ├─ rebuild live board
-        ├─ require post in ingested RSS
-        ├─ independently match preview to claim
-        ├─ enforce 5 offers / verified wallet / day
-        └─ atomically queue one intent / gap + owner
-                 │
-                 └──────────────▶ atomic lease (active + verified + same owner)
-                                      ├─ retry failed question, treasury ≤ $0.05
-                                      ├─ normal discover/BUY/evidence/x402 path
-                                      └─ classify:
-                                           filled = target evidence ≥ 0.4
-                                                    + settled citation receipt
-                                           unpaid = evidence, no settlement
-                                           missed = evidence still short
-                                           stale  = gap closed before spend
-                                           failed = three execution failures
-```
-
-`/wanted/[gapId]` is a canonical read-only projection of this loop: it rebuilds the same live board,
+`/wanted/[gapId]` is a canonical read-only projection of the current board: it rebuilds the same live board,
 shows the failed dispatch receipt, and scopes the anonymous feed judge to one current claim. A stale
 or filled id cannot continue to registration from the probe, and the social/share URL carries no
 claim text, payout address, budget, or authority.
 
 The intent row is coordination only. Registration and verification never initiate spend; payTo
-still comes from SourceRegistry and the retry uses the same server-side Gateway path as the volume
-engine. Preview matching prevents an unrelated feed item from being attached to a gap. The atomic
-gap-and-owner admission rule prevents one wallet from multiplying a single wanted claim across
-sources or posts, while the daily wallet quota bounds distinct offers. A ten-minute lease is
-reclaimable after a crash and prevents two workers from selecting the same pending offer
-concurrently.
+still comes from SourceRegistry. Preview matching prevents an unrelated feed item from being
+attached to a gap. The atomic gap-and-owner admission rule prevents one wallet from multiplying
+a single wanted claim across sources or posts, while the daily wallet quota bounds distinct offers.
 
-An existing creator can now answer the same brief without relisting a feed. The SIWE owner surface
+An existing creator can answer the same brief without relisting a feed. The SIWE owner surface
 selects the best-matching already-indexed article from its free title/preview and snapshots
-`sourceId + itemId + contentVersion + articleOfferId?`. Before the volume engine spends, it refreshes
-the live registry creator/active state, exact article version, and signed discount revision. Stale
-coordination closes without payment; a transient registry outage remains bounded by the existing
-three-attempt lease. The exact article is put first in the candidate prompt so it cannot be hidden
-by catalog limits, but it receives no forced BUY or value boost. Normal budget, evidence, citation,
-and settlement rules decide the outcome.
+`sourceId + itemId + contentVersion + articleOfferId?`. This records an offer; it does not
+start an automatic question or payment.
 
 ### Creator Registration Flow
 
@@ -581,7 +531,6 @@ keryx.cc (Cloudflare CNAME)
 ├─ VPS Node.js server (pm2)      + SQLite (/var/data/keryx.db — on disk)
 ├─ Cloudflare Tunnel             + SourceRegistry indexer (polls Arc RPC)
 ├─ HTTPS reverse proxy           + Pinata IPFS gateway
-├─ Volume engine (cron or npm run seed)
 └─ Traction metrics (live dashboard)
 ```
 

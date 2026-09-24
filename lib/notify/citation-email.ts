@@ -8,7 +8,7 @@
  *
  * Delivery is via Resend's HTTP API (one POST, no SDK). The feature ships dark: with no
  * KERYX_RESEND_API_KEY + KERYX_EMAIL_FROM the dispatcher no-ops, and the settings panel says so.
- * A per-source rate cap (default 60 min) keeps the volume engine's repeat citations from
+ * A per-source rate cap (default 60 min) keeps repeat citations from
  * flooding an inbox — the earnings page still shows every payout it skipped.
  */
 

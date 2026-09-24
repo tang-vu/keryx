@@ -1,5 +1,12 @@
 # Keryx — Decision Log
 
+**D-237** - Remove self-initiated research drivers - *Usage should come from a caller who
+chooses to ask.* The VPS traction daemon and workstation caller were stopped and removed
+from saved PM2 state. Delete their driver scripts, seed question bank, helper, npm commands,
+and engine-only configuration. Keep the ordinary web, MCP, and paid A2A entry points.
+Creator offers on `/wanted` can still be recorded, but no worker automatically spends to
+retry them. Historical settled records remain intact.
+
 **D-236** - Show one public metrics overview - *Readers need one clear set of
 totals.* Ledger, Proof, and Status show combined query, settled-payment, and
 creator payout figures. Ledger's expandable section contains records; Proof retains

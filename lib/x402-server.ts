@@ -106,7 +106,7 @@ export async function settleThenServe(
   }
 
   // Decode the base64 payment-signature header. Two buyer shapes reach here:
-  //   • SDK buyer (volume engine, GatewayClient.pay) sends the FULL x402 PaymentPayload:
+  //   • SDK buyer (GatewayClient.pay) sends the FULL x402 PaymentPayload:
   //     { x402Version, resource, accepted, payload: { authorization, signature } }.
   //   • Browser co-sign sends only the INNER blob: { signature, authorization }.
   // Typed as any to match the SDK's PaymentPayload (same as the prior JSON.parse result).

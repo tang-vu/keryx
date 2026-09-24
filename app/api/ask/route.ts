@@ -235,11 +235,8 @@ export async function POST(req: NextRequest) {
         }
 
         send("meta", { engine: deps.engine.name, mode: deps.gateway.mode, researchMode });
-        // A request through /api/ask is a genuine human on the site → tag as external "web" usage
-        // (the volume engine never goes through this route; it calls collectRun directly).
-        // Exception: Keryx's own headless web-client drives this same route 24/7 and passes the
-        // shared bot key, so its self-generated volume is tagged `engine` — the external bucket
-        // then counts only genuine third-party askers.
+        // Preserve the execution origin for audit. A manual internal client with the bot key
+        // can be tagged `engine`; ordinary requests through this route are tagged `web`.
         const gen = runAgent(
           {
             question: askQuestion,

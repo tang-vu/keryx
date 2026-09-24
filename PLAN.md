@@ -102,9 +102,8 @@ The scaffold's "agent" is a dumb 1-tx/sec loop over 4 hardcoded URLs. **Zero rea
 - [x] `/register` UI + one-click creator onboarding
 - [x] All backing API routes built & verified (SSE, metrics, payments, sources)
 
-### Phase 6 — Seed / volume engine + traction wiring ✅ (mostly)
-- [x] `scripts/seed-engine.mts` — fires agent over a question bank (budget-guarded) — verified
-- [x] `arc-canteen push` hook (`--push` flag) for traction events
+### Phase 6 — Historical volume experiment (retired)
+- The self-initiated question scripts and their scheduled drivers were removed on 2026-09-24.
 - [x] `circle feedback submit` — submitted 2026-06-17 (ref `39137f41…`)
 
 ### Phase 7 — Real testnet E2E + deploy + submission

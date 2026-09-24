@@ -50,10 +50,10 @@ run in CI.
 ### `lib/demand-*` + `lib/gap-intent-runner.ts`
 `demand-signal.ts` publishes stable semantic claim ids; `demand-intent.ts` validates a feed-match
 handoff against the live board and ingested RSS items; `gap-intent-runner.ts` classifies a targeted
-retry only from reward-qualified evidence plus the settled citation ledger. The volume engine
-atomically leases these offers before its probabilistic retry/new-question path.
-`gap-intent-target.ts` performs the worker-side registry creator, article-version, and signed-offer
-recheck for already-listed exact responses. `/api/wanted/respond` plus
+retry only from reward-qualified evidence plus the settled citation ledger. The autonomous
+lease-and-retry caller was removed; queued offers currently do not trigger research or payment.
+`gap-intent-target.ts` retains registry creator, article-version, and signed-offer
+rechecks for a future explicit retry flow. `/api/wanted/respond` plus
 `existing-article-response-form.tsx` closes the UI/API loop from public demand to exact supply while
 leaving BUY/SKIP with `run-agent.ts`.
 
@@ -93,7 +93,7 @@ Multi-backend payment gateway with common interface. Selects backend at runtime 
 | File | Purpose |
 |------|---------|
 | `payment-gateway.ts` | Interface defining `payFetch()` + `payCitation()`. |
-| `real-gateway.ts` | `RealGateway`: server-funded Circle Gateway path used by volume engine + A2A; keeps signed-submission outcome explicit. |
+| `real-gateway.ts` | `RealGateway`: server-funded Circle Gateway path used by paid A2A requests; keeps signed-submission outcome explicit. |
 | `browser-cosign-gateway.ts` | `BrowserCoSignGateway`: binds the 402 challenge + returned authorization to the reserved source/amount, then submits the browser co-sign. Post-submit uncertainty becomes durable `pending`; a valid receipt on a delivery 5xx remains settled. |
 | `payment-state.ts` | Explicit `settled` / `simulated` / `pending` / `failed` semantics plus typed pending and settled-delivery errors. |
 | `gateway/x402-transfer-reconciliation.ts` | Resolves lost settle responses through documented Circle filters plus bounded cursor traversal; exact nonce/economic-tuple verification, browser/treasury pending classification, signed-expiry telemetry, idempotent settlement, and generation-bound terminal-failure capacity release. |
@@ -309,7 +309,6 @@ CLI tools for admin + dev. Node --experimental-transform-types.
 | `ask.mts` | Run agent once, print reasoning trace. |
 | `demo-full-cycle.mts` | One-command full cycle (~90s) with on-chain proof (`npm run demo`). |
 | `seed-sources.mts` | Populate DB with demo sources. |
-| `seed-engine.mts` | Volume engine: service verified wanted-claim offers first, then gap retries/generated questions (all budget-guarded). |
 | `a2a-client.mts` / `web-client.mts` | Retired sponsored A2A command with migration guidance / scripted browser-session asker. Use the independent buyer CLI for new A2A purchases. |
 | `metrics.mts` | Print aggregate traction (settled USDC, top sources, query count). |
 | `withdraw.mts` | Operator-side creator cash-out (reserves Circle's fee before signing). |

@@ -87,7 +87,7 @@ export async function getPaymentGateway(db: KeryxDB, opts?: GatewayOpts): Promis
     }
   }
 
-  // Treasury path: Keryx's own funder key (volume engine / A2A / collectRun).
+  // Treasury path: Keryx's own funder key for authorized server-side requests.
   if (config.funderKey.length > 0) {
     const { RealGateway } = await import("./real-gateway");
     return new RealGateway();

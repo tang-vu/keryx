@@ -353,7 +353,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async init(): Promise<void> {
-    // WAL + busy timeout so the dev server, volume engine, and CLI can share the file safely.
+    // WAL + busy timeout so the dev server and CLI can share the file safely.
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");
     this.db.exec(SCHEMA);
     this.ensureColumns();
@@ -408,7 +408,7 @@ export class SqliteAdapter implements KeryxDB {
     if (!srcCols.has("onchain_id")) this.db.exec(`ALTER TABLE sources ADD COLUMN onchain_id TEXT`);
     if (!srcCols.has("register_tx")) this.db.exec(`ALTER TABLE sources ADD COLUMN register_tx TEXT`);
     // Feed-ownership gate. DEFAULT 1 grandfathers every pre-existing row (operator-curated seed +
-    // the live VPS traction rows) as verified so the volume engine keeps earning. Only public web
+    // the live VPS traction rows) as verified. Only public web
     // submissions registered after this column exists start unverified (set explicitly to 0).
     if (!srcCols.has("verified"))
       this.db.exec(`ALTER TABLE sources ADD COLUMN verified INTEGER NOT NULL DEFAULT 1`);

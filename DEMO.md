@@ -33,9 +33,7 @@ different buy/skip choices.
   $0.000001-floor rail working, not a missing tx.)
 
 **[2:05–2:35] Traction + onboarding.**
-- Open **/dashboard**: total payments, USDC to creators, creators earning, reader→payer conversion,
-  the live payments feed ticking, the creator leaderboard. Mention the **volume engine** runs the
-  agent continuously to generate real autonomous volume.
+- Open **/dashboard**: total payments, USDC to creators, creators earning, and the live payments feed.
 - Flash **/register**: "Creators onboard in one click — paste an RSS feed, get a wallet, start earning."
 
 **[2:35–2:45] Close.**
@@ -44,7 +42,6 @@ different buy/skip choices.
 ## Pre-flight checklist
 - [ ] `.env.local`: LLM key set, wallet funded, `KERYX_FORCE_OFFLINE=0`
 - [ ] `npm run seed-sources` done; `npm run dev` up on :3939
-- [ ] (optional) `npm run seed -- --count 15` beforehand so the dashboard already shows volume
 - [ ] (optional) `npm run tunnel` for a public URL
 - [ ] One question pre-tested end-to-end; explorer tab open
 

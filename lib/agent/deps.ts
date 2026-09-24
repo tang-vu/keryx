@@ -26,7 +26,7 @@ export interface AgentDeps {
  * opts.gateway — when already constructed by the caller (e.g. the SSE route
  *   with a BrowserCoSignGateway), it is used directly and gateway opts are ignored.
  * opts.gatewayOpts — forwarded to getPaymentGateway() when no pre-built gateway
- *   is supplied (the common case for collectRun / volume engine / A2A).
+ *   is supplied (the common case for collectRun / A2A).
  * opts.model — catalog model id the asker picked; unknown/unset → default engine.
  *   Whatever the pick, the engine crosses configured providers before the heuristic.
  */
