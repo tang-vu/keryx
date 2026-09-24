@@ -9,17 +9,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeftRight,
-  Banknote,
-  Clock3,
   Coins,
-  Gauge,
   Info,
   Receipt,
-  ShieldCheck,
-  Target,
-  ThumbsUp,
   TrendingUp,
-  UserRoundCheck,
 } from "lucide-react";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
@@ -30,13 +23,9 @@ import {
 } from "@/components/keryx/creator-leaderboard";
 import { PaymentsFeed } from "@/components/keryx/payments-feed";
 import { CreatorCashoutsPanel } from "@/components/keryx/creator-cashouts-panel";
-import { EarningsChart } from "@/components/keryx/earnings-chart";
-import { TopicsPanel, type Topic } from "@/components/keryx/topics-panel";
 import { DispatchHistory } from "@/components/keryx/dispatch-history";
 import { fmtUsdc } from "@/components/keryx/phase-style";
-import { ActivationFunnelPanel } from "@/components/keryx/activation-funnel";
 import type {
-  DailyVolume,
   DashboardMetrics,
   PaymentRecord,
   WithdrawalRecord,
@@ -44,25 +33,15 @@ import type {
 
 const POLL_MS = 10_000;
 
-function fmtDuration(ms: number): string {
-  if (ms <= 0) return "—";
-  if (ms < 1_000) return `${ms}ms`;
-  return `${(ms / 1_000).toFixed(ms < 10_000 ? 1 : 0)}s`;
-}
-
 interface MetricsResponse {
   metrics: DashboardMetrics;
   leaderboard: LeaderboardEntry[];
-  topics?: Topic[];
-  dailySettled?: DailyVolume[];
 }
 
 export default function DashboardPage() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [topics, setTopics] = useState<Topic[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
-  const [daily, setDaily] = useState<DailyVolume[]>([]);
   const [withdrawals, setWithdrawals] = useState<WithdrawalRecord[]>([]);
   const [runs, setRuns] = useState<
     {
@@ -91,8 +70,6 @@ export default function DashboardPage() {
           const data = (await mRes.json()) as MetricsResponse;
           setMetrics(data.metrics);
           setLeaderboard(data.leaderboard ?? []);
-          setTopics(data.topics ?? []);
-          setDaily(data.dailySettled ?? []);
         }
         if (pRes.ok) {
           const data = (await pRes.json()) as { payments: PaymentRecord[] };
@@ -150,63 +127,65 @@ export default function DashboardPage() {
           </span>
         </header>
 
-        <section className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <MetricCard
-            label="Total queries"
-            value={String(metrics?.totalQueries ?? 0)}
-            sub="independent + Keryx agents"
-            icon={TrendingUp}
-            accent="neutral"
-            loading={!metrics}
-          />
-          <MetricCard
-            label="Settled payments"
-            value={String(metrics?.totalPayments ?? 0)}
-            sub="verified payment records"
-            icon={Receipt}
-            accent="neutral"
-            loading={!metrics}
-          />
-          <MetricCard
-            label="Settled volume"
-            value={`$${fmtUsdc(metrics?.totalVolumeUsdc)}`}
-            sub="USDC"
-            icon={ArrowLeftRight}
-            accent="amber"
-            loading={!metrics}
-          />
-          <MetricCard
-            label="Creator payouts"
-            value={`$${fmtUsdc(metrics?.totalCreatorPayoutsUsdc)}`}
-            sub={`${metrics?.creatorsEarning ?? 0} creators earning`}
-            icon={Coins}
-            accent="emerald"
-            loading={!metrics}
-          />
-        </section>
+        <section className="mt-6" aria-label="Ledger overview">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <MetricCard
+              label="Total queries"
+              value={String(metrics?.totalQueries ?? 0)}
+              sub="independent + Keryx agents"
+              icon={TrendingUp}
+              accent="neutral"
+              loading={!metrics}
+            />
+            <MetricCard
+              label="Settled payments"
+              value={String(metrics?.totalPayments ?? 0)}
+              sub="verified payment records"
+              icon={Receipt}
+              accent="neutral"
+              loading={!metrics}
+            />
+            <MetricCard
+              label="Settled volume"
+              value={`$${fmtUsdc(metrics?.totalVolumeUsdc)}`}
+              sub="USDC"
+              icon={ArrowLeftRight}
+              accent="amber"
+              loading={!metrics}
+            />
+            <MetricCard
+              label="Creator payouts"
+              value={`$${fmtUsdc(metrics?.totalCreatorPayoutsUsdc)}`}
+              sub={`${metrics?.creatorsEarning ?? 0} creators earning`}
+              icon={Coins}
+              accent="emerald"
+              loading={!metrics}
+            />
+          </div>
 
-        {metrics && <ProvenanceStrip metrics={metrics} />}
-        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-ink-2">
-          Readers and agents ask questions. Keryx buys useful sources and pays
-          creators it cites. The totals above count only payments with
-          settlement proof.
-        </p>
-        {metrics && metrics.pendingPaymentConfirmations > 0 && (
-          <div className="mt-3 border border-amber-600/40 bg-amber-50 px-4 py-3 font-mono text-[11px] text-amber-800">
-            {metrics.pendingPaymentConfirmations} signed authorization
-            {metrics.pendingPaymentConfirmations === 1 ? "" : "s"} ($
-            {fmtUsdc(metrics.pendingPaymentVolumeUsdc)}) await settlement proof.
-            They are excluded from the settled totals above.
-          </div>
-        )}
-        {metrics && metrics.failedPaymentAttempts > 0 && (
-          <div className="mt-3 border border-red-600/40 bg-red-50 px-4 py-3 font-mono text-[11px] text-red-800">
-            {metrics.failedPaymentAttempts} Circle-terminal payment attempt
-            {metrics.failedPaymentAttempts === 1 ? "" : "s"} ($
-            {fmtUsdc(metrics.failedPaymentVolumeUsdc)}) failed and were not
-            charged. These receipts are excluded from the settled totals above.
-          </div>
-        )}
+          {metrics && <ProvenanceStrip metrics={metrics} />}
+          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-ink-2">
+            Readers and agents ask questions. Keryx buys useful sources and pays
+            creators it cites. The totals above count only payments with
+            settlement proof.
+          </p>
+          {metrics && metrics.pendingPaymentConfirmations > 0 && (
+            <div className="mt-3 border border-amber-600/40 bg-amber-50 px-4 py-3 font-mono text-[11px] text-amber-800">
+              {metrics.pendingPaymentConfirmations} signed authorization
+              {metrics.pendingPaymentConfirmations === 1 ? "" : "s"} ($
+              {fmtUsdc(metrics.pendingPaymentVolumeUsdc)}) await settlement proof.
+              They are excluded from the settled totals above.
+            </div>
+          )}
+          {metrics && metrics.failedPaymentAttempts > 0 && (
+            <div className="mt-3 border border-red-600/40 bg-red-50 px-4 py-3 font-mono text-[11px] text-red-800">
+              {metrics.failedPaymentAttempts} Circle-terminal payment attempt
+              {metrics.failedPaymentAttempts === 1 ? "" : "s"} ($
+              {fmtUsdc(metrics.failedPaymentVolumeUsdc)}) failed and were not
+              charged. These receipts are excluded from the settled totals above.
+            </div>
+          )}
+        </section>
         <section className="mt-10" aria-labelledby="recent-activity-title">
           <div className="mb-4">
             <h2
@@ -250,7 +229,7 @@ export default function DashboardPage() {
 
         <details className="group mt-10 border border-line bg-paper-2/30">
           <summary className="cursor-pointer px-5 py-4 font-display text-xl text-ink marker:text-seal">
-            More records and usage details
+            More records
           </summary>
           <div className="border-t border-line px-5 pb-6">
             <p className="mt-4 max-w-3xl text-sm leading-relaxed text-ink-2">
@@ -277,138 +256,6 @@ export default function DashboardPage() {
             {runs.length > 5 && (
               <div className="mt-5">
                 <DispatchHistory runs={runs.slice(5, 15)} />
-              </div>
-            )}
-            {metrics?.activationFunnel && (
-              <ActivationFunnelPanel funnel={metrics.activationFunnel} />
-            )}
-
-            <div className="mb-4 mt-10 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
-              Independent demand &amp; trust
-            </div>
-            <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-              <MetricCard
-                label="Paid independent queries"
-                value={`${metrics?.externalPayingQueries ?? 0} / ${
-                  metrics?.externalQueries ?? 0
-                }`}
-                sub={`${Math.round(
-                  (metrics?.externalReaderToPayerConversion ?? 0) * 100
-                )}% reader-to-payer conversion`}
-                icon={TrendingUp}
-                accent="emerald"
-                loading={!metrics}
-              />
-              {(metrics?.identifiedExternalActors ?? 0) > 0 && (
-                <MetricCard
-                  label="Returning actors"
-                  value={`${metrics?.returningExternalActors ?? 0} / ${
-                    metrics?.identifiedExternalActors ?? 0
-                  }`}
-                  sub={`${Math.round(
-                    (metrics?.returningExternalActorRate ?? 0) * 100
-                  )}% returned`}
-                  icon={UserRoundCheck}
-                  accent="emerald"
-                />
-              )}
-              {(metrics?.externalFeedbackTotal ?? 0) > 0 && (
-                <MetricCard
-                  label="Independent satisfaction"
-                  value={`${Math.round(
-                    (metrics?.externalSatisfactionRate ?? 0) *
-                      (metrics?.externalFeedbackTotal ?? 0)
-                  )} / ${metrics?.externalFeedbackTotal ?? 0}`}
-                  sub={`${Math.round(
-                    (metrics?.externalSatisfactionRate ?? 0) * 100
-                  )}% positive`}
-                  icon={ThumbsUp}
-                  accent="emerald"
-                />
-              )}
-              {(metrics?.externalSettlementAttempts ?? 0) > 0 && (
-                <MetricCard
-                  label="Settlement success"
-                  value={`${metrics?.externalSettledPayments ?? 0} / ${
-                    metrics?.externalSettlementAttempts ?? 0
-                  }`}
-                  sub={`${Math.round(
-                    (metrics?.externalSettlementSuccessRate ?? 0) * 100
-                  )}% independent creator payments`}
-                  icon={Gauge}
-                  accent="emerald"
-                />
-              )}
-              {(metrics?.evidenceClaimSamples ?? 0) > 0 && (
-                <MetricCard
-                  label="Evidence-grounded claims"
-                  value={`${Math.round(
-                    (metrics?.groundedClaimRate ?? 0) * 100
-                  )}%`}
-                  sub={`${metrics?.evidenceClaimSamples ?? 0} claims · ${
-                    metrics?.citationPoolWithheldRuns ?? 0
-                  } pools withheld`}
-                  icon={ShieldCheck}
-                  accent="emerald"
-                />
-              )}
-              {(metrics?.gapIntentOffers ?? 0) > 0 && (
-                <MetricCard
-                  label="Wanted claims filled"
-                  value={`${metrics?.gapIntentFilled ?? 0} / ${
-                    metrics?.gapIntentOffers ?? 0
-                  }`}
-                  sub={`${Math.round(
-                    (metrics?.gapIntentFillRate ?? 0) * 100
-                  )}% filled · ${metrics?.gapIntentPending ?? 0} queued`}
-                  icon={Target}
-                  accent="emerald"
-                />
-              )}
-            </section>
-
-            <div className="mb-4 mt-10 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
-              Economics &amp; operations
-            </div>
-            <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-              <MetricCard
-                label="Cost / independent query"
-                value={`$${fmtUsdc(metrics?.externalAvgCostPerQueryUsdc)}`}
-                sub={`$${fmtUsdc(
-                  metrics?.externalCreatorPayoutsUsdc
-                )} to creators`}
-                icon={Coins}
-                accent="amber"
-                loading={!metrics}
-              />
-              <MetricCard
-                label="Average settled payment"
-                value={`$${fmtUsdc(metrics?.avgPaymentUsdc)}`}
-                sub="USDC"
-                icon={Banknote}
-                accent="neutral"
-                loading={!metrics}
-              />
-              <MetricCard
-                label="Independent p95 latency"
-                value={fmtDuration(metrics?.externalP95DurationMs ?? 0)}
-                sub={`${
-                  metrics?.externalDurationSamples ?? 0
-                } completed samples`}
-                icon={Clock3}
-                accent="neutral"
-                loading={!metrics}
-              />
-            </section>
-
-            {topics.length > 0 ? (
-              <section className="mt-6 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
-                <EarningsChart daily={daily} />
-                <TopicsPanel topics={topics} />
-              </section>
-            ) : (
-              <div className="mt-6">
-                <EarningsChart daily={daily} />
               </div>
             )}
           </div>

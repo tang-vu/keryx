@@ -1,5 +1,14 @@
 # Keryx — Decision Log
 
+**D-235** - Keep Ledger statistics in one overview - *The expandable records
+section still repeated activation, quality, and operations metrics after the
+overview, making the page read as two dashboards.* Ledger now presents its
+settled totals and usage mix together at the top. The expandable section holds
+only additional dispatch, payment, creator, and cash-out records. Detailed
+adoption and evidence measures remain on Public Proof; metric APIs and
+settlement accounting are unchanged. This supersedes the expandable metrics
+part of D-233.
+
 **D-234** - Keep the Ledger's first view scannable - *A settlement reference,
 wallet flow, and transaction hash are useful for verification but obscure the
 payment story in the first viewport.* Recent payments and cash-outs now render
