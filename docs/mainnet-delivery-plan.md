@@ -215,11 +215,12 @@ change, not evidence that earlier renderer stalls are fixed or independent walle
 3. Complete creator and developer onboarding/support journeys, private history and
    economic/quality reporting. Exercise them with independent participants.
 4. Reconcile measured cohort economics; improve research quality and pricing from
-   those results. Keep first-party runs and assumptions visibly separate.
+   those results. Report combined usage and settled payments, retaining each run's
+   origin in the ledger for audit.
 5. Complete security/operational drills and the mainnet configuration/deployment
    candidate. Revalidate vendor support, then present the final launch decision.
 
 Every completed product update is tested, committed, pushed, deployed and health-
-verified according to `AGENTS.md`, with an honest Canteen update. Completion of the
+verified according to `AGENTS.md`. Completion of the
 overall objective requires evidence for every acceptance area above; shipping the
 calculator, a demo, or a green CI run alone is not completion.

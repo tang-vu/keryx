@@ -658,7 +658,8 @@ See `docs/security-threat-model.md` for full matrix.
 
 ### Usage reporting
 - Settled payment events are recorded in `payment_events`.
-- The public Ledger shows combined live aggregates; `/api/metrics` retains usage-origin fields.
+- Ledger, Proof, Status, and public metrics APIs report combined usage and settled payment totals.
+  Each stored run and payment retains its execution origin for audit and operational diagnostics.
 
 ---
 

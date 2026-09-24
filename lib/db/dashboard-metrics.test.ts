@@ -5,7 +5,7 @@ import {
 } from "./dashboard-metrics";
 
 describe("calculateDashboardMetrics", () => {
-  it("keeps internal volume out of the primary external KPIs", () => {
+  it("combines every origin in headline totals", () => {
     const metrics = calculateDashboardMetrics(
       [
         {
@@ -44,14 +44,11 @@ describe("calculateDashboardMetrics", () => {
     );
 
     expect(metrics.totalPayments).toBe(2);
-    expect(metrics.externalQueries).toBe(2);
-    expect(metrics.engineQueries).toBe(1);
-    expect(metrics.externalPayingQueries).toBe(1);
-    expect(metrics.externalReaderToPayerConversion).toBe(0.5);
-    expect(metrics.externalCreatorPayoutsUsdc).toBe(0.01);
-    expect(metrics.externalAvgCostPerQueryUsdc).toBe(0.005);
-    expect(metrics.returningExternalActors).toBe(1);
-    expect(metrics.externalP95DurationMs).toBe(2_000);
+    expect(metrics.totalQueries).toBe(3);
+    expect(metrics.totalVolumeUsdc).toBe(0.03);
+    expect(metrics.totalCreatorPayoutsUsdc).toBe(0.03);
+    expect(metrics.payingQueries).toBe(2);
+    expect(metrics.readerToPayerConversion).toBe(0.666667);
   });
 
   it("reports pending confirmations without promoting them into traction", () => {
@@ -72,7 +69,7 @@ describe("calculateDashboardMetrics", () => {
 
     expect(metrics.totalPayments).toBe(0);
     expect(metrics.totalVolumeUsdc).toBe(0);
-    expect(metrics.externalPayingQueries).toBe(0);
+    expect(metrics.payingQueries).toBe(0);
     expect(metrics.pendingPaymentConfirmations).toBe(1);
     expect(metrics.pendingPaymentVolumeUsdc).toBe(0.004);
   });
@@ -98,7 +95,7 @@ describe("calculateDashboardMetrics", () => {
     expect(metrics.failedPaymentVolumeUsdc).toBe(0.006);
   });
 
-  it("attributes A2A actors only from settled inbound payer evidence", () => {
+  it("counts A2A payments and feedback in the combined totals", () => {
     const metrics = calculateDashboardMetrics(
       [
         {
@@ -146,18 +143,14 @@ describe("calculateDashboardMetrics", () => {
       ],
     );
 
-    expect(metrics.identifiedExternalActors).toBe(1);
-    expect(metrics.returningExternalActors).toBe(1);
-    expect(metrics.returningExternalActorRate).toBe(1);
-    expect(metrics.externalFeedbackTotal).toBe(2);
-    expect(metrics.externalSatisfactionRate).toBe(0.5);
-    expect(metrics.externalHighConfidenceRate).toBe(0.5);
-    expect(metrics.externalSettlementAttempts).toBe(4);
-    expect(metrics.externalSettledPayments).toBe(3);
-    expect(metrics.externalSettlementSuccessRate).toBe(0.75);
+    expect(metrics.totalQueries).toBe(3);
+    expect(metrics.totalPayments).toBe(2);
+    expect(metrics.totalVolumeUsdc).toBe(0.04);
+    expect(metrics.feedbackTotal).toBe(3);
+    expect(metrics.satisfactionRate).toBe(0.666667);
   });
 
-  it("counts Remote MCP as external and attributes only verified key wallets", () => {
+  it("includes Remote MCP in totals and tracks its integration channel", () => {
     const metrics = calculateDashboardMetrics(
       [
         {
@@ -176,34 +169,20 @@ describe("calculateDashboardMetrics", () => {
       ],
     );
 
-    expect(metrics.externalQueries).toBe(3);
-    expect(metrics.engineQueries).toBe(0);
-    expect(metrics.identifiedExternalActors).toBe(1);
-    expect(metrics.returningExternalActors).toBe(1);
-    expect(metrics.externalCreatorPayoutsUsdc).toBe(0.01);
+    expect(metrics.totalQueries).toBe(3);
+    expect(metrics.totalCreatorPayoutsUsdc).toBe(0.01);
     expect(metrics.mcpClientQueries).toEqual([
       { client: "codex", queries: 2, payingQueries: 1 },
       { client: "unknown", queries: 1, payingQueries: 0 },
     ]);
   });
 
-  it("treats legacy unknown origins as internal", () => {
+  it("includes historical runs without an origin in the total", () => {
     const metrics = calculateDashboardMetrics([], [
       { id: "legacy", origin: null, asker: "0xmaybe" },
       { id: "engine", origin: "engine" },
     ]);
-    expect(metrics.externalQueries).toBe(0);
-    expect(metrics.engineQueries).toBe(2);
-  });
-
-  it("does not turn missing historical latency into a zero-millisecond sample", () => {
-    const metrics = calculateDashboardMetrics([], [
-      { id: "historical", origin: "web", durationMs: null },
-      { id: "current", origin: "web", durationMs: 1_250 },
-    ]);
-    expect(metrics.externalDurationSamples).toBe(1);
-    expect(metrics.externalAvgDurationMs).toBe(1_250);
-    expect(metrics.externalP95DurationMs).toBe(1_250);
+    expect(metrics.totalQueries).toBe(2);
   });
 
   it("reports evidence grounding without inventing samples for historical runs", () => {

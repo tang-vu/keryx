@@ -18,7 +18,7 @@
 > path, SourceRegistry payout authority, encrypted paid content, public agent integrations, and a
 > settled-only provenance ledger. The phase checklist below is historical build context; current
 > facts and their verifying systems are composed at **[keryx.cc/proof](https://keryx.cc/proof)**.
-> The active product bottleneck is independently initiated usage and creator adoption, not core rail
+> The active product bottleneck is repeat usage and creator adoption, not core rail
 > construction.
 
 ---

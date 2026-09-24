@@ -189,13 +189,12 @@ export function renderScene(scene, ctx) {
 
   if (scene === "07-proof") {
     const m = metrics.metrics;
-    const t = health.traction;
     return shell("Proof, with its limits attached", `
       <div style="display:grid;grid-template-columns:1.2fr .8fr;gap:28px;height:820px">
         ${browser(media.dashboardTop, "keryx.cc/dashboard", "proof-browser")}
         <div style="display:grid;grid-template-rows:auto 1fr;gap:22px">
           <div class="paper-card" style="padding:28px"><div class="eyebrow">Settled-only snapshot</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:25px"><div class="metric"><strong>${fmt(m.totalPayments)}</strong><span>settled payments</span></div><div class="metric"><strong>${money(m.totalVolumeUsdc, 2)}</strong><span>testnet USDC volume</span></div><div class="metric"><strong>${money(m.totalCreatorPayoutsUsdc, 2)}</strong><span>creator payouts</span></div><div class="metric"><strong>${fmt(m.creatorsEarning)}</strong><span>registry wallets earning</span></div></div></div>
-          <div class="paper-card" style="padding:28px;background:#e9dfca"><div class="eyebrow">Independent demand</div><h3 style="font-family:Georgia,serif;font-size:31px;margin-top:10px">${fmt(t.externalQueries)} queries · ${fmt(t.externalPayments)} payments</h3><p style="font-size:18px;line-height:1.5;margin-top:17px;color:${COLORS.muted}">${fmt(t.returningExternalActors)} of ${fmt(t.identifiedExternalActors)} identified external actors returned. ${fmt(t.externalSettlementAttempts)} of ${fmt(t.externalSettlementAttempts)} measured external settlement attempts succeeded.</p><div class="pill-row" style="margin-top:24px"><span class="tag" style="color:${COLORS.green}">0 pending</span><span class="tag" style="color:${COLORS.green}">0 failed</span><span class="tag" style="color:${COLORS.green}">${fmt(health.registry.parity.issueCount)} registry mismatches</span></div></div>
+          <div class="paper-card" style="padding:28px;background:#e9dfca"><div class="eyebrow">Verification</div><h3 style="font-family:Georgia,serif;font-size:31px;margin-top:10px">Source authority and settled creator rewards</h3><p style="font-size:18px;line-height:1.5;margin-top:17px;color:${COLORS.muted}">The registry matches Arc, Circle backs creator balances, and cash-outs resolve to individual ArcScan transactions.</p><div class="pill-row" style="margin-top:24px"><span class="tag" style="color:${COLORS.green}">${fmt(health.registry.parity.issueCount)} registry mismatches</span></div></div>
         </div>
       </div>`, "07 · traction and verification", `.proof-browser .browser-shot{height:770px;object-fit:cover;object-position:top}`);
   }
@@ -247,7 +246,6 @@ function slide(number, title, body, dark = false) {
 export function renderDeck(ctx) {
   const { media, metrics, health, treasury, capturedAt } = ctx;
   const m = metrics.metrics;
-  const t = health.traction;
   const slides = [];
 
   slides.push(slide(1, "Cover", `
@@ -292,12 +290,12 @@ export function renderDeck(ctx) {
     </div>`));
 
   slides.push(slide(6, "Traction", `
-    <div class="eyebrow">Production traction · Arc testnet</div><h2 style="margin-top:.12in">Settlement scale and independent usage, reported separately</h2>
+    <div class="eyebrow">Production traction · Arc testnet</div><h2 style="margin-top:.12in">Combined usage and settled creator payments</h2>
     <div style="display:grid;grid-template-columns:1.12fr .88fr;gap:.28in;margin-top:.3in">
       ${browser(media.dashboardTop, "keryx.cc/dashboard")}
-      <div><div class="paper-card" style="padding:.25in"><div style="display:grid;grid-template-columns:1fr 1fr;gap:.25in"><div class="metric"><strong>${fmt(m.totalPayments)}</strong><span>settled payments</span></div><div class="metric"><strong>${money(m.totalVolumeUsdc, 2)}</strong><span>testnet volume</span></div><div class="metric"><strong>${money(m.totalCreatorPayoutsUsdc, 2)}</strong><span>creator payouts</span></div><div class="metric"><strong>${fmt(m.creatorsEarning)}</strong><span>wallets earning</span></div></div></div><div class="paper-card" style="padding:.25in;margin-top:.16in;background:#e7ddc7"><div class="eyebrow">Independent demand</div><p style="font:23pt Georgia;margin-top:.13in">${fmt(t.externalQueries)} queries · ${fmt(t.externalPayments)} payments</p><p class="muted" style="font-size:10.5pt;margin-top:.11in">${fmt(t.returningExternalActors)}/${fmt(t.identifiedExternalActors)} identified actors returned · ${fmt(t.externalFeedbackTotal)}/${fmt(t.externalFeedbackTotal)} positive feedback · ${fmt(t.externalSettlementAttempts)}/${fmt(t.externalSettlementAttempts)} measured settlements succeeded.</p></div></div>
+      <div><div class="paper-card" style="padding:.25in"><div style="display:grid;grid-template-columns:1fr 1fr;gap:.25in"><div class="metric"><strong>${fmt(m.totalPayments)}</strong><span>settled payments</span></div><div class="metric"><strong>${money(m.totalVolumeUsdc, 2)}</strong><span>testnet volume</span></div><div class="metric"><strong>${money(m.totalCreatorPayoutsUsdc, 2)}</strong><span>creator payouts</span></div><div class="metric"><strong>${fmt(m.creatorsEarning)}</strong><span>wallets earning</span></div></div></div><div class="paper-card" style="padding:.25in;margin-top:.16in;background:#e7ddc7"><div class="eyebrow">All questions</div><p style="font:23pt Georgia;margin-top:.13in">${fmt(m.totalQueries)} recorded queries</p><p class="muted" style="font-size:10.5pt;margin-top:.11in">All caller channels are included. Payment and payout amounts count settled records only.</p></div></div>
     </div>
-    <div style="font-size:8pt;color:${COLORS.muted};margin-top:.16in">Snapshot ${esc(capturedAt)} · settled-only · pending and simulations excluded · first-party autonomous volume disclosed separately.</div>`));
+    <div style="font-size:8pt;color:${COLORS.muted};margin-top:.16in">Snapshot ${esc(capturedAt)} · payment totals settled-only · pending and simulations excluded.</div>`));
 
   slides.push(slide(7, "Users and GTM", `
     <div class="eyebrow">Users and go-to-market</div><h2 style="margin-top:.12in">A two-sided market distributed through agent-native interfaces</h2>

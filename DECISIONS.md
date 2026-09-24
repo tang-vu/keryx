@@ -3,8 +3,8 @@
 **D-236** - Show one public metrics overview - *Readers need one clear set of
 totals.* Ledger, Proof, and Status show combined query, settled-payment, and
 creator payout figures. Ledger's expandable section contains records; Proof retains
-the build, registry, settlement, and cash-out evidence. Settlement criteria and
-API provenance fields remain unchanged.
+the build, registry, settlement, and cash-out evidence. Public metrics APIs
+return combined totals; stored run and payment origins remain available for audit.
 
 **D-234** - Keep the Ledger's first view scannable - *A settlement reference,
 wallet flow, and transaction hash are useful for verification but obscure the

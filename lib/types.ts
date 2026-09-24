@@ -475,26 +475,6 @@ export interface DashboardMetrics {
   totalQueries: number;
   payingQueries: number; // queries that produced >= 1 payment
   readerToPayerConversion: number; // payingQueries / totalQueries
-  // Historical channel diagnostics. The `engine` aggregate is a residual that also includes
-  // legacy rows without an origin; public headline totals use all rows directly.
-  externalPayments: number;
-  externalVolumeUsdc: number;
-  enginePayments: number;
-  engineVolumeUsdc: number;
-  externalQueries: number;
-  engineQueries: number;
-  externalPayingQueries: number;
-  externalReaderToPayerConversion: number;
-  externalCreatorPayoutsUsdc: number;
-  externalAvgCostPerQueryUsdc: number;
-  identifiedExternalActors: number;
-  returningExternalActors: number;
-  returningExternalActorRate: number;
-  externalDurationSamples: number;
-  externalAvgDurationMs: number;
-  externalP95DurationMs: number;
-  externalConfidenceSamples: number;
-  externalHighConfidenceRate: number;
   /** Runs recorded after the evidence ledger shipped; historical runs are not guessed. */
   evidenceRunSamples: number;
   evidenceClaimSamples: number;
@@ -507,11 +487,6 @@ export interface DashboardMetrics {
   gapIntentFilled: number;
   gapIntentPending: number;
   gapIntentFillRate: number;
-  externalFeedbackTotal: number;
-  externalSatisfactionRate: number;
-  externalSettlementAttempts: number;
-  externalSettledPayments: number;
-  externalSettlementSuccessRate: number;
   /** Operational uncertainty only; excluded from every settled payment and traction total. */
   pendingPaymentConfirmations: number;
   pendingPaymentVolumeUsdc: number;

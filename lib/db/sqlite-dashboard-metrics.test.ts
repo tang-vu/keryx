@@ -81,12 +81,10 @@ describe("SQLite dashboard metrics", () => {
 
     const metrics = await db.metrics();
     expect(metrics.totalPayments).toBe(2);
-    expect(metrics.externalQueries).toBe(2);
-    expect(metrics.externalPayingQueries).toBe(1);
-    expect(metrics.returningExternalActors).toBe(1);
-    expect(metrics.externalDurationSamples).toBe(2);
-    expect(metrics.externalFeedbackTotal).toBe(1);
-    expect(metrics.externalSatisfactionRate).toBe(1);
+    expect(metrics.totalQueries).toBe(3);
+    expect(metrics.payingQueries).toBe(2);
+    expect(metrics.feedbackTotal).toBe(1);
+    expect(metrics.satisfactionRate).toBe(1);
     expect(metrics.pendingPaymentConfirmations).toBe(1);
     expect(metrics.pendingPaymentVolumeUsdc).toBe(0.01);
     const pending = (await db.listPayments(10)).find((row) => row.queryId === "web-pending");
