@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * /status — a plain, honest uptime page. Polls /api/health and shows whether the
+ * /status — uptime and settlement health. Polls /api/health and shows whether the
  * service is live, how long it's been up, the deployed commit, the settlement mode,
  * and headline traction. Read-only and safe to leave open — a tangible "this is a
  * real, running product" signal rather than a one-off hackathon demo.
@@ -47,11 +47,6 @@ interface Health {
     creatorPayoutsUsdc: number;
     creatorsEarning: number;
     totalQueries: number;
-    externalQueries: number;
-    externalPayingQueries: number;
-    returningExternalActors: number;
-    externalSettlementSuccessRate: number;
-    externalSettlementAttempts: number;
   };
 }
 
@@ -153,32 +148,10 @@ export default function StatusPage() {
                   Live traction
                 </div>
                 <dl className="mt-4 grid grid-cols-2 gap-x-8 gap-y-5 font-mono text-[12px]">
+                  <Row k="Total queries" v={health.traction.totalQueries.toLocaleString()} />
                   <Row k="Settled payments" v={health.traction.totalPayments.toLocaleString()} />
                   <Row k="Creator payouts" v={`$${health.traction.creatorPayoutsUsdc.toFixed(4)}`} />
                   <Row k="Creators earning" v={String(health.traction.creatorsEarning)} />
-                  <Row
-                    k="Independent queries"
-                    v={health.traction.externalQueries.toLocaleString()}
-                  />
-                  <Row
-                    k="Independent paid"
-                    v={health.traction.externalPayingQueries.toLocaleString()}
-                  />
-                  <Row
-                    k="Returning actors"
-                    v={health.traction.returningExternalActors.toLocaleString()}
-                  />
-                  <Row
-                    k="Settlement success"
-                    v={
-                      health.traction.externalSettlementAttempts > 0
-                        ? `${Math.round(
-                            health.traction.externalSettlementSuccessRate * 100,
-                          )}%`
-                        : "collecting"
-                    }
-                  />
-                  <Row k="All queries" v={health.traction.totalQueries.toLocaleString()} />
                 </dl>
               </>
             )}

@@ -1,8 +1,8 @@
 # Keryx — Decision Log
 
 **D-236** - Show one public metrics overview - *Readers need one clear set of
-totals.* Ledger and Proof show combined query, settled-payment, and creator
-payout figures. Ledger's expandable section contains records; Proof retains
+totals.* Ledger, Proof, and Status show combined query, settled-payment, and
+creator payout figures. Ledger's expandable section contains records; Proof retains
 the build, registry, settlement, and cash-out evidence. Settlement criteria and
 API provenance fields remain unchanged.
 
@@ -2549,20 +2549,6 @@ when only the HTTP response was lost. Aggregate Gateway balances cannot identify
 authorization settled; Circle's transfer search now exposes the nonce and full tuple needed to do
 so without retaining replayable payment material. Reversible: low (disable the scheduled worker;
 pending rows remain conservatively pending and the original payment path is unchanged).
-
-**D-42** · Dashboard/Positioning · *Lead with the combined settled citation economy; preserve
-demand provenance as a compact breakdown instead of fragmenting the headline.* The ledger's first
-screen now presents total queries, settled payments, settled USDC volume, and creator payouts as one
-economic system. Independent and Keryx-initiated activity remain explicitly separated immediately
-below, and independent conversion, retention, satisfaction, settlement reliability, and grounding
-remain their own trust layer. Empty-sample KPIs are hidden rather than promoted as `0 / 0` or
-`Collecting`; latency and unit economics move to operational detail.
-
-Why: the previous independent-first layout repeated the same usage numbers while burying the
-strongest verified settlement totals below the fold. Combining display hierarchy makes the real
-economy legible without relabeling first-party settlement as independent demand or changing any
-origin bucket, denominator, or settled-only rule from D-20/D-28. Reversible: easy (presentation-only;
-the metrics API and provenance model are unchanged).
 
 **D-41** · Demand market/Agency · *A creator may answer a measured wanted claim with one exact
 article version; the response guarantees candidacy, never purchase or payout.* Existing registry

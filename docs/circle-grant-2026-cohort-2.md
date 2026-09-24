@@ -366,7 +366,7 @@ https://drive.google.com/file/d/1TNHbjz2_CyQwLCUGJNmKAyFlfEgl935f/view?usp=drive
 3. Product — question + budget → visible decisions → paid evidence → cited answer → rewards.
 4. Why now — Arc + USDC + Gateway Nanopayments make sub-cent agent commerce viable.
 5. Architecture — browser session authority, x402/Gateway, SourceRegistry, encrypted content.
-6. Traction — aggregate settlement and external/first-party provenance shown side by side.
+6. Traction — combined settled totals with source-linked proof.
 7. Users and go-to-market — publishers, research/data providers, agent developers, MCP/OpenAI/A2A distribution.
 8. Business model — paid agent/API plans and enterprise integrations; creator rewards remain a pass-through pool.
 9. Six-month milestones — audit, CCTP/Agent Wallets, external pilot, Arc mainnet launch.
