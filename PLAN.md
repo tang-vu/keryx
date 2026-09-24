@@ -2,7 +2,7 @@
 
 > **Active event (2026-09-05):** ETHOnline 2026 continuity work is tracked in
 > [docs/ethonline-2026.md](docs/ethonline-2026.md). The Lepton phases and rubric below
-> remain historical. Current product direction is maintained in `docs/project-roadmap.md`.
+> remain historical. Current product delivery gates are maintained in `docs/mainnet-delivery-plan.md`.
 
 > **Keryx** (κῆρυξ, *herald*): the agent that announces a creator's work — and pays them every time it does.
 >

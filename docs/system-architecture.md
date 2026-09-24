@@ -656,10 +656,9 @@ See `docs/security-threat-model.md` for full matrix.
 }
 ```
 
-### Traction Updates
-- **Hourly**: aggregate metrics pushed to Arc Canteen (keryx product card)
-- **Weekly**: snapshot in `TRACTION.md` (manual + automated via `npm run arc:update`)
-- **Per settlement**: logged to SQLite payment_events for audit trail
+### Usage reporting
+- Settled payment events are recorded in `payment_events`.
+- The public Ledger shows live aggregates and separates independent from Keryx-operated use.
 
 ---
 

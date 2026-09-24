@@ -452,6 +452,5 @@ Files must support `KERYX_FORCE_OFFLINE=1` (no LLM key, no REGISTRY_ADDRESS, no 
 
 ## What's next
 
-See [`project-roadmap.md`](./project-roadmap.md) — security upgrades (Web Crypto non-exportable
-session keys, Lit Protocol key release, on-chain deposit verify, signed author manifests),
-scalability (Redis rate-limit, event-driven indexer), and the mainnet readiness checklist.
+See the [product and mainnet delivery plan](./mainnet-delivery-plan.md) for
+current acceptance gates and the [roadmap](./project-roadmap.md) for priorities.
