@@ -651,16 +651,6 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 - Made promotion atomic and idempotent across SQLite and Supabase, scheduled it every ten minutes,
   and exposed its last verified result on `/api/health` and `/status`.
 
-### The ledger now reads as one settled citation economy (2026-08-08)
-
-- Promoted total queries, verified payments, settled USDC volume, and creator payouts into one
-  headline block instead of splitting the strongest totals below independent-demand cards.
-- Kept independent and Keryx-agent activity visible as a compact provenance breakdown, so combined
-  settlement scale is never misrepresented as third-party traction.
-- Grouped conversion, retention, satisfaction, settlement reliability, and grounding as trust
-  signals; sample-free KPIs stay hidden until they have evidence, while latency and unit economics
-  sit in operational detail.
-
 ### Wanted claims now accept exact articles from creators already in the market (2026-08-08)
 
 - Added a SIWE owner flow on each wanted brief that finds the creator's matching indexed article,
@@ -822,13 +812,6 @@ persisted. The dispatch watchdog and `/status` expose provider failures, circuit
 by cross-provider failover and which engine actually served them. The payment path is unchanged:
 the orchestrator still owns budget enforcement, evidence qualification, payTo validation and
 settlement.
-
-### Independent demand now leads the ledger (2026-07-30)
-The public ledger now presents outside web, MCP, and A2A use as “Independent usage,” with Keryx's
-own volume labeled “First-party agent activity.” Both buckets remain visible in a compact usage-mix
-strip, but the provenance explanation now lives in an accessible tooltip instead of competing with
-the primary KPI. Settlement totals and origin classification are unchanged: Arc proves the
-payments, while the retained split explains who initiated the demand.
 
 ### Browser co-sign sessions are identities again, and every advertised brief stays offerable (2026-07-30)
 The co-sign ask route no longer treats a public wallet address as bearer authentication. Before it

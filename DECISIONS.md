@@ -1,19 +1,9 @@
 # Keryx — Decision Log
 
-**D-236** - Show one combined Ledger total - *The usage-mix strip still made
-readers reconcile first-party and independent counts after the prior cleanup.*
-The Ledger now shows only combined query, settled-payment, volume, and creator
-payout totals. Payment settlement criteria and API provenance fields remain
-unchanged; this supersedes the usage-mix presentation in D-235.
-
-**D-235** - Keep Ledger statistics in one overview - *The expandable records
-section still repeated activation, quality, and operations metrics after the
-overview, making the page read as two dashboards.* Ledger now presents its
-settled totals and usage mix together at the top. The expandable section holds
-only additional dispatch, payment, creator, and cash-out records. Detailed
-adoption and evidence measures remain on Public Proof; metric APIs and
-settlement accounting are unchanged. This supersedes the expandable metrics
-part of D-233.
+**D-236** - Show one Ledger overview - *Readers need one clear set of totals.*
+The Ledger shows combined query, settled-payment, volume, and creator payout
+totals. The expandable section contains records. Settlement criteria and API
+provenance fields remain unchanged.
 
 **D-234** - Keep the Ledger's first view scannable - *A settlement reference,
 wallet flow, and transaction hash are useful for verification but obscure the
@@ -22,14 +12,6 @@ compact source/amount/status rows; the full tables remain available below.
 Public Proof stays at its existing URL and is linked from the Ledger rather than
 occupying a second primary navigation slot. This changes presentation only;
 payment classification, evidence links, and payout totals are untouched.
-
-**D-233** - Group the public Ledger by question, creator, and proof - *A long stream
-of unrelated metrics and tables obscured the core payment story.* The first view now
-keeps the settled totals and usage origin, then shows recent dispatches beside payments
-and leading creators beside withdrawal proof. Full records, activation, quality, and
-operations remain in one expandable section. The agent integration instructions live
-in `/api/docs`, linked from the usage strip. This is presentation only: settlement
-classification, provenance, amounts, and API data are unchanged.
 
 **D-232** - Stream the public answer archive - *Raw traces must not all coexist in
 memory merely to build small public cards.* Keep the 2,500-run window and ranking,
@@ -2841,16 +2823,6 @@ payTo, evidence qualification and integer settlement. Why: production showed 4/6
 a reasoning step to the heuristic while both DeepSeek and MiMo passed live probes; resilience was
 available but the healthy second provider was not in the default failure path. Reversible: medium
 (remove the secondary tiers/telemetry; no database migration or payment-rail change).
-
-**D-28** · Dashboard/Positioning · *Independent demand leads; first-party agent activity remains
-visible as provenance, not as a competing traction claim.*
-The public ledger now calls human and third-party web/MCP/A2A use “Independent usage” and Keryx's
-own runs “First-party agent activity.” The underlying origin buckets and settled-only metrics are
-unchanged. Their distinction stays visible in one compact usage-mix strip, while the definition
-moves behind an accessible tooltip and the aggregate ledger remains below. Why: blockchain
-settlement proves that value moved, but it does not prove who initiated the demand. Keeping that
-provenance preserves credible traction without making defensive disclosure the page's headline.
-Reversible: easy (presentation-only copy and layout).
 
 **D-27** · Browser co-sign/Security · *A persisted session grant is payment state, not bearer
 authentication.*

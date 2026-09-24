@@ -272,7 +272,7 @@ External creator and agent pilot (Weeks 9–18)
 Details (single paragraph, below 2048 characters):
 
 ```text
-Recruit and verify at least 10 independently controlled creator/source wallets; help each publish one payable article or feed and complete one real end-to-end citation payout. Integrate at least five external agent/developer clients through MCP, A2A x402, or the OpenAI-compatible API. Reach 500 independently initiated paid queries and 2,500 external settled payments while keeping first-party load traffic reported separately. Maintain at least 99% settlement success across measured external settlement attempts, with zero unresolved payout-authority mismatches. Acceptance evidence: public provenance-separated dashboard; creator testimonials and case studies; settled-only query/payment records; Arc/Circle parity reports; issue and remediation log.
+Recruit and verify at least 10 independently controlled creator/source wallets; help each publish one payable article or feed and complete one real end-to-end citation payout. Integrate at least five external agent/developer clients through MCP, A2A x402, or the OpenAI-compatible API. Reach 500 independently initiated paid queries and 2,500 external settled payments while keeping first-party load traffic reported separately. Maintain at least 99% settlement success across measured external settlement attempts, with zero unresolved payout-authority mismatches. Acceptance evidence: public proof page with usage provenance; creator testimonials and case studies; settled-only query/payment records; Arc/Circle parity reports; issue and remediation log.
 ```
 
 ### Milestone 4

@@ -658,7 +658,7 @@ See `docs/security-threat-model.md` for full matrix.
 
 ### Usage reporting
 - Settled payment events are recorded in `payment_events`.
-- The public Ledger shows live aggregates and separates independent from Keryx-operated use.
+- The public Ledger shows combined live aggregates; `/api/metrics` retains usage-origin fields.
 
 ---
 

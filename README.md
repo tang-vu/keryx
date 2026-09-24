@@ -213,9 +213,8 @@ labeled `SIMULATED`.
 ## Live numbers
 
 The [live Ledger](https://keryx.cc/dashboard) shows settled Arc testnet USDC,
-creator payouts, recent payments, and the split between independent and
-Keryx-operated use. [Public Proof](https://keryx.cc/proof) links the supporting
-registry, Gateway, and cash-out evidence.
+creator payouts, and recent payments. [Public Proof](https://keryx.cc/proof)
+links the supporting registry, Gateway, and cash-out evidence.
 
 ## Architecture
 
