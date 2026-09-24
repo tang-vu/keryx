@@ -77,8 +77,8 @@ export interface RunInput {
   /** Quick bounds attention/expansion for latency; Deep preserves the full research pass. */
   researchMode?: ResearchMode;
   queryId?: string;
-  /** Who triggered this run — stamped on every payment so traction can separate genuine external
-   *  usage (web, A2A, MCP) from the autonomous volume engine. Defaults to "engine". */
+  /** Execution origin, stamped on the run and its payments. Defaults to "engine" for
+   *  direct internal callers that do not specify a request channel. */
   origin?: PaymentOrigin;
   /** Normalized MCP setup channel. Self-declared telemetry, never caller authority. */
   mcpClient?: McpClientChannel;
@@ -135,7 +135,7 @@ export async function* runAgent(
   const startedAt = Date.now();
   const budget = input.budget ?? config.defaultBudget;
   const queryId = input.queryId ?? crypto.randomUUID();
-  // Stamp every payment from this run with its origin for the honest traction split.
+  // Retain the execution origin on each payment for audit and channel diagnostics.
   const origin: PaymentOrigin = input.origin ?? "engine";
   const trace: TraceStep[] = [];
   const payments: PaymentRecord[] = [];

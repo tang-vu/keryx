@@ -237,10 +237,9 @@ export interface GapIntent {
   updatedAt: string;
 }
 
-/** Where a payment originated. `engine` = Keryx's own autonomous volume engine; `web` = a human
- *  asking through a first-party surface; `a2a` = an external agent calling the paid x402 endpoint;
- *  `mcp` = a remote MCP client. web + a2a + mcp = genuine EXTERNAL usage, kept distinct from
- *  engine-generated volume so traction is reported honestly. Legacy NULL rows count as engine. */
+/** Execution origin for audit and channel-specific behavior. `engine` marks Keryx-initiated
+ *  runs (including the volume driver); `web`, `a2a`, and `mcp` identify request channels.
+ *  A web request may come from a person or a program. Legacy rows may lack an origin. */
 export type PaymentOrigin = "engine" | "web" | "a2a" | "mcp";
 
 /** User-visible research depth. It changes attention/latency policy, never payment authority. */
@@ -476,8 +475,8 @@ export interface DashboardMetrics {
   totalQueries: number;
   payingQueries: number; // queries that produced >= 1 payment
   readerToPayerConversion: number; // payingQueries / totalQueries
-  // Honest traction split: external = web + A2A + MCP (real outside usage); the rest is the
-  // autonomous volume engine. engine = totalPayments - externalPayments.
+  // Historical channel diagnostics. The `engine` aggregate is a residual that also includes
+  // legacy rows without an origin; public headline totals use all rows directly.
   externalPayments: number;
   externalVolumeUsdc: number;
   enginePayments: number;

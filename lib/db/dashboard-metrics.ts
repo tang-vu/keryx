@@ -88,8 +88,8 @@ export function runEvidenceMetrics(data: unknown): RunEvidenceMetrics {
 
 /**
  * One definition shared by SQLite and Supabase. Payment money is settled-only; query metrics use
- * completed query_runs. Legacy NULL origins are deliberately internal until there is evidence
- * otherwise, so the external bucket can never be inflated by missing data.
+ * completed query_runs. The headline totals include every origin. Historical channel metrics
+ * treat legacy NULL origins as unverified rather than attributing them to an outside caller.
  */
 export function calculateDashboardMetrics(
   paymentRows: MetricPaymentRow[],
