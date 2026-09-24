@@ -6,7 +6,7 @@ import { ProofDashboard } from "@/components/keryx/proof-dashboard";
 const BASE = process.env.BASE_URL || "https://keryx.cc";
 const TITLE = "Public proof — Keryx";
 const DESCRIPTION =
-  "Live, source-linked evidence for Keryx's open-source build, Arc registry authority, Circle settlement, creator cash-outs, and independently initiated usage.";
+  "Live evidence for Keryx's open-source build, Arc registry authority, Circle settlement, and creator cash-outs.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -32,11 +32,6 @@ const LAYERS = [
     proves: "Creator balances back the settled ledger, wallet by wallet.",
     limit: "Batched transfers have Circle IDs, not one ArcScan tx per citation.",
   },
-  {
-    source: "Settled-only provenance ledger",
-    proves: "Which demand came from outside users and which came from Keryx's own agents.",
-    limit: "Anonymous queries are never inflated into unique-user claims.",
-  },
 ] as const;
 
 export default function ProofPage() {
@@ -51,12 +46,11 @@ export default function ProofPage() {
           Evidence, with its <em className="italic text-paid">limits attached.</em>
         </h1>
         <p className="mt-5 max-w-[68ch] font-serif text-[17px] leading-[1.6] text-ink-2">
-          No single counter proves Keryx works. Code, authority, settlement and adoption each have a
-          different source of truth. This page composes those sources without treating autonomous
-          first-party volume as outside demand—or a database receipt as on-chain fact.
+          Verify the deployed code, source authority, settled payments, and creator cash-outs
+          through the records behind each claim.
         </p>
 
-        <section className="mt-9 grid gap-3 sm:grid-cols-2">
+        <section className="mt-9 grid gap-3 sm:grid-cols-3">
           {LAYERS.map((layer, index) => (
             <article key={layer.source} className="border border-line bg-paper p-5">
               <div className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-seal">

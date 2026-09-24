@@ -10,7 +10,6 @@ Keryx is a citation-toll reading agent: it discovers sources, explains BUY/SKIP/
 This release ships a live public proof dossier that connects:
 • the exact GitHub commit and CI workflow running in production;
 • settled-only payment and creator-reward metrics;
-• independent usage separated from first-party autonomous traffic;
 • Arc RPC head, registry indexing, and 20/20 SourceRegistry parity;
 • Circle Gateway balance reconciliation; and
 • recent creator cash-outs with ArcScan transaction links.
@@ -20,12 +19,6 @@ Live snapshot — August 13, 2026:
 • $45.154314 testnet USDC volume
 • $39.234314 paid to creator wallets
 • 20 registry wallets earning
-
-Independent usage is reported separately:
-• 142 external queries and 613 external payments
-• 4 identified external actors; all 4 returned
-• 68/68 measured external settlement attempts succeeded
-• 9/9 positive feedback responses
 
 These are Arc testnet figures, not mainnet revenue. Simulated and pending payments are excluded, and the proof page states what each source of evidence cannot prove.
 

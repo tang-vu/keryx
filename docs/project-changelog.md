@@ -604,9 +604,8 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 
 ### Public proof links every claim to the system that can verify it (2026-08-13)
 
-- Added `/proof`, a live evidence dossier that binds the deployed commit to GitHub CI, exposes
-  settled-only citation totals, and keeps independent usage visibly separate from first-party
-  autonomous volume.
+- Added `/proof`, a live evidence dossier that binds the deployed commit to GitHub CI and exposes
+  settled-only citation totals.
 - Composed SourceRegistry parity, Circle wallet-balance parity, and recent ArcScan-resolvable
   creator withdrawals in one place while stating what each layer does—and does not—prove.
 - Retained the Arc RPC head in the registry watchdog summary and exposed only a safe provider label;
@@ -614,8 +613,8 @@ All significant changes, features, and fixes from v0.1 (citation-toll agent) to 
 - Made settlement evidence preserve provider uncertainty: if a Gateway shortfall needs an Arc
   balance read and the RPC does not answer, the public verdict is `unknown`, never a fabricated
   zero balance or false settlement alert.
-- Added a public evidence map for grant/community review plus a CI badge and current, provenance-
-  separated traction snapshot in the repository documentation.
+- Added a public evidence map for grant/community review, a CI badge, and a dated traction
+  snapshot in the repository documentation.
 - Release validation: **661 application tests**, **16 contract tests**, TypeScript, ESLint (no
   errors; pre-existing warnings only), and the full Next.js production build.
 

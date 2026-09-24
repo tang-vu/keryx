@@ -25,5 +25,5 @@ is released only after x402 settlement.
 
 Other Arc builders can fork the standalone primitives or lift the focused modules and threat-model
 tests from the main repository. The live `/proof` dossier links the deployed commit, CI, Arc RPC and
-registry parity, Circle wallet-balance parity, independent-vs-first-party usage, and real creator
+registry parity, Circle wallet-balance parity, and real creator
 withdrawal transactions—along with the limit of what each evidence layer can prove.

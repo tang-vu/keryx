@@ -1,9 +1,10 @@
 # Keryx — Decision Log
 
-**D-236** - Show one Ledger overview - *Readers need one clear set of totals.*
-The Ledger shows combined query, settled-payment, volume, and creator payout
-totals. The expandable section contains records. Settlement criteria and API
-provenance fields remain unchanged.
+**D-236** - Show one public metrics overview - *Readers need one clear set of
+totals.* Ledger and Proof show combined query, settled-payment, and creator
+payout figures. Ledger's expandable section contains records; Proof retains
+the build, registry, settlement, and cash-out evidence. Settlement criteria and
+API provenance fields remain unchanged.
 
 **D-234** - Keep the Ledger's first view scannable - *A settlement reference,
 wallet flow, and transaction hash are useful for verification but obscure the
@@ -2465,21 +2466,19 @@ that a creator payout never settled, contradicting the settled-only reporting in
 changes watchdog classification only; ledger rows, settlement state, payout authority and funds
 are untouched. Reversible: easy (pure reconciliation semantics plus presentation copy).
 
-**D-47** · Public proof/Provenance · *No aggregate is self-proving; publish each claim beside the
-authority that can actually verify it and the limit of that authority.* `/proof` composes five
+**D-47** · Public proof · *No aggregate is self-proving; publish each claim beside the
+authority that can actually verify it and the limit of that authority.* `/proof` composes four
 existing, independent evidence layers without creating a new payment or identity source of truth:
 the runtime commit binds the deployed build to GitHub and CI; Arc RPC plus SourceRegistry establish
 creator, payout, price and split authority; the Circle balance API checks whether creator wallets
-still hold what Keryx's settled ledger says they earned; ArcScan withdrawal hashes prove earnings
-can leave Gateway on-chain; and the origin ledger separates independently initiated demand from
-Keryx's own agents. Anonymous queries remain queries, never inferred unique people, while all money
-figures remain settled-only under D-20/D-28/D-42.
+still hold what Keryx's settled ledger says they earned; and ArcScan withdrawal hashes prove
+earnings can leave Gateway on-chain. Payment and payout totals remain settled-only under D-20/D-42.
 
 The registry watchdog now retains the Arc head block it observed so a public reader can compare the
 RPC head with the index checkpoint. `/api/health` publishes only a coarse RPC provider label; it
 never returns the configured URL because Canteen endpoints contain server credentials. The page
 states what each layer cannot prove—especially that a Circle transfer id is not an Arc transaction
-hash and that real first-party volume is not external adoption. Payment authority, browser custody,
+hash. Payment authority, browser custody,
 spend caps, reconciliation, delivery and settlement state transitions are unchanged. Why: the
 proofs existed across `/status`, `/dashboard`, ArcScan and GitHub, but an outside evaluator could not
 map a headline claim to its verifying system without already understanding Keryx's architecture.
