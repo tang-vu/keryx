@@ -1,19 +1,13 @@
 "use client";
 
 /**
- * Dashboard — traction screen. Polls /api/metrics and /api/payments every ~2s
+ * Dashboard — traction screen. Polls /api/metrics and /api/payments every ~10s
  * and renders metric tiles, the creator leaderboard, and a live payments feed.
  */
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  ArrowLeftRight,
-  Coins,
-  Info,
-  Receipt,
-  TrendingUp,
-} from "lucide-react";
+import { ArrowLeftRight, Coins, Receipt, TrendingUp } from "lucide-react";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { MetricCard } from "@/components/keryx/metric-card";
@@ -132,7 +126,7 @@ export default function DashboardPage() {
             <MetricCard
               label="Total queries"
               value={String(metrics?.totalQueries ?? 0)}
-              sub="independent + Keryx agents"
+              sub="all readers and agents"
               icon={TrendingUp}
               accent="neutral"
               loading={!metrics}
@@ -163,11 +157,10 @@ export default function DashboardPage() {
             />
           </div>
 
-          {metrics && <ProvenanceStrip metrics={metrics} />}
-          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-ink-2">
+          <p className="mt-4 max-w-3xl text-sm leading-relaxed text-ink-2">
             Readers and agents ask questions. Keryx buys useful sources and pays
-            creators it cites. The totals above count only payments with
-            settlement proof.
+            creators it cites. Payment and volume totals include only settled
+            records.
           </p>
           {metrics && metrics.pendingPaymentConfirmations > 0 && (
             <div className="mt-3 border border-amber-600/40 bg-amber-50 px-4 py-3 font-mono text-[11px] text-amber-800">
@@ -262,65 +255,6 @@ export default function DashboardPage() {
         </details>
       </main>
       <SiteFooter />
-    </div>
-  );
-}
-
-/** Keep demand provenance inspectable without fragmenting the settled-economy headline. */
-function ProvenanceStrip({ metrics }: { metrics: DashboardMetrics | null }) {
-  const ext = metrics?.externalPayments ?? 0;
-  const extVol = metrics?.externalVolumeUsdc ?? 0;
-  const eng = metrics?.enginePayments ?? 0;
-  const engVol = metrics?.engineVolumeUsdc ?? 0;
-  return (
-    <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 border border-line bg-paper-2/40 px-4 py-3 font-mono text-[11px] text-ink-2">
-      <span className="group relative inline-flex items-center gap-1 uppercase tracking-[0.12em] text-ink-3">
-        Usage mix
-        <button
-          type="button"
-          aria-label="How Keryx classifies usage"
-          aria-describedby="usage-mix-help"
-          className="rounded-full text-ink-3 transition-colors hover:text-seal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-seal/40"
-        >
-          <Info size={13} aria-hidden="true" />
-        </button>
-        <span
-          id="usage-mix-help"
-          role="tooltip"
-          className="pointer-events-none absolute left-0 top-full z-20 mt-2 w-72 border border-line bg-paper px-3 py-2 font-mono text-[10px] normal-case leading-relaxed tracking-normal text-ink-2 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
-        >
-          Independent usage comes from people and third-party agents through
-          web, MCP, or A2A. First-party activity is initiated by Keryx itself.
-          Settled totals include both.
-        </span>
-      </span>
-      <span className="inline-flex items-center gap-1.5">
-        <span className="h-1.5 w-1.5 rounded-full bg-paid" />
-        Independent:{" "}
-        <span className="font-semibold text-ink">
-          {metrics?.externalQueries ?? 0}
-        </span>{" "}
-        queries · <span className="font-semibold text-ink">{ext}</span> payments
-        · ${fmtUsdc(extVol)}
-      </span>
-      <span className="inline-flex items-center gap-1.5">
-        <span className="h-1.5 w-1.5 rounded-full bg-ink-3" />
-        Keryx agents:{" "}
-        <span className="font-semibold text-ink">
-          {metrics?.engineQueries ?? 0}
-        </span>{" "}
-        queries · <span className="font-semibold text-ink">{eng}</span> payments
-        · ${fmtUsdc(engVol)}
-      </span>
-      <a
-        href="/api/docs"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="ml-auto font-semibold text-seal transition-colors hover:underline"
-        title="Keryx is a paid x402 endpoint — point your agent at it"
-      >
-        Call Keryx from your agent ↗
-      </a>
     </div>
   );
 }

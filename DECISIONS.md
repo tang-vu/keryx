@@ -1,5 +1,11 @@
 # Keryx — Decision Log
 
+**D-236** - Show one combined Ledger total - *The usage-mix strip still made
+readers reconcile first-party and independent counts after the prior cleanup.*
+The Ledger now shows only combined query, settled-payment, volume, and creator
+payout totals. Payment settlement criteria and API provenance fields remain
+unchanged; this supersedes the usage-mix presentation in D-235.
+
 **D-235** - Keep Ledger statistics in one overview - *The expandable records
 section still repeated activation, quality, and operations metrics after the
 overview, making the page read as two dashboards.* Ledger now presents its
