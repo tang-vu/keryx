@@ -1,5 +1,13 @@
 # Keryx — Decision Log
 
+**D-233** - Group the public Ledger by question, creator, and proof - *A long stream
+of unrelated metrics and tables obscured the core payment story.* The first view now
+keeps the settled totals and usage origin, then shows recent dispatches beside payments
+and leading creators beside withdrawal proof. Full records, activation, quality, and
+operations remain in one expandable section. The agent integration instructions live
+in `/api/docs`, linked from the usage strip. This is presentation only: settlement
+classification, provenance, amounts, and API data are unchanged.
+
 **D-232** - Stream the public answer archive - *Raw traces must not all coexist in
 memory merely to build small public cards.* Keep the 2,500-run window and ranking,
 but retain only slim winning entries. SQLite sorts identifiers and reads each payload

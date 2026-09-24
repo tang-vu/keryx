@@ -31,11 +31,15 @@ import { PaymentsFeed } from "@/components/keryx/payments-feed";
 import { CreatorCashoutsPanel } from "@/components/keryx/creator-cashouts-panel";
 import { EarningsChart } from "@/components/keryx/earnings-chart";
 import { TopicsPanel, type Topic } from "@/components/keryx/topics-panel";
-import { A2aCallCard } from "@/components/keryx/a2a-call-card";
 import { DispatchHistory } from "@/components/keryx/dispatch-history";
 import { fmtUsdc } from "@/components/keryx/phase-style";
 import { ActivationFunnelPanel } from "@/components/keryx/activation-funnel";
-import type { DailyVolume, DashboardMetrics, PaymentRecord, WithdrawalRecord } from "@/lib/types";
+import type {
+  DailyVolume,
+  DashboardMetrics,
+  PaymentRecord,
+  WithdrawalRecord,
+} from "@/lib/types";
 
 const POLL_MS = 10_000;
 
@@ -59,7 +63,16 @@ export default function DashboardPage() {
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [daily, setDaily] = useState<DailyVolume[]>([]);
   const [withdrawals, setWithdrawals] = useState<WithdrawalRecord[]>([]);
-  const [runs, setRuns] = useState<{ id: string; question: string; createdAt: string; totalSpent: number; totalToCreators: number; citationCount: number }[]>([]);
+  const [runs, setRuns] = useState<
+    {
+      id: string;
+      question: string;
+      createdAt: string;
+      totalSpent: number;
+      totalToCreators: number;
+      citationCount: number;
+    }[]
+  >([]);
 
   useEffect(() => {
     let alive = true;
@@ -85,7 +98,9 @@ export default function DashboardPage() {
           setPayments(data.payments ?? []);
         }
         if (wRes.ok) {
-          const data = (await wRes.json()) as { withdrawals: WithdrawalRecord[] };
+          const data = (await wRes.json()) as {
+            withdrawals: WithdrawalRecord[];
+          };
           setWithdrawals(data.withdrawals ?? []);
         }
         if (rRes.ok) {
@@ -115,16 +130,16 @@ export default function DashboardPage() {
               The ledger
             </div>
             <h1 className="letterpress mt-2.5 font-display text-[clamp(28px,3.6vw,40px)] font-medium tracking-tight text-ink">
-              The settled citation economy
+              Questions, creator payouts, and proof
             </h1>
             <p className="mt-1.5 text-sm text-ink-2">
-              Real USDC paid for sources Keryx read and cited, finalized through Circle Gateway on
-              Arc.
+              A public record of Keryx queries and settled creator payments in
+              USDC on Arc testnet.
             </p>
           </div>
           <span className="hidden shrink-0 items-center gap-2 rounded-full border border-paid/40 bg-paid/[0.07] px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.1em] text-paid sm:inline-flex">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-paid" />
-            Settling on Arc
+            Arc testnet
           </span>
         </header>
 
@@ -164,155 +179,230 @@ export default function DashboardPage() {
         </section>
 
         {metrics && <ProvenanceStrip metrics={metrics} />}
-        {metrics?.activationFunnel && (
-          <ActivationFunnelPanel funnel={metrics.activationFunnel} />
-        )}
+        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-ink-2">
+          Readers and agents ask questions. Keryx buys useful sources and pays
+          creators it cites. The totals above count only payments with
+          settlement proof.
+        </p>
         {metrics && metrics.pendingPaymentConfirmations > 0 && (
           <div className="mt-3 border border-amber-600/40 bg-amber-50 px-4 py-3 font-mono text-[11px] text-amber-800">
             {metrics.pendingPaymentConfirmations} signed authorization
             {metrics.pendingPaymentConfirmations === 1 ? "" : "s"} ($
-            {fmtUsdc(metrics.pendingPaymentVolumeUsdc)}) await settlement proof. They are excluded
-            from every settled traction total below.
+            {fmtUsdc(metrics.pendingPaymentVolumeUsdc)}) await settlement proof.
+            They are excluded from the settled totals above.
           </div>
         )}
         {metrics && metrics.failedPaymentAttempts > 0 && (
           <div className="mt-3 border border-red-600/40 bg-red-50 px-4 py-3 font-mono text-[11px] text-red-800">
             {metrics.failedPaymentAttempts} Circle-terminal payment attempt
             {metrics.failedPaymentAttempts === 1 ? "" : "s"} ($
-            {fmtUsdc(metrics.failedPaymentVolumeUsdc)}) failed and were not charged. These receipts
-            are excluded from every settled traction total below.
+            {fmtUsdc(metrics.failedPaymentVolumeUsdc)}) failed and were not
+            charged. These receipts are excluded from the settled totals above.
           </div>
         )}
-        <p className="mt-2 max-w-3xl font-mono text-[10px] leading-relaxed text-ink-3">
-          Sub-cent rewards are netted off-chain in the Circle Gateway ledger and finalized on Arc in
-          batches, so the per-payment IDs in the feed are Gateway settlement references, not per-tx
-          EVM hashes (they do not open at <span className="text-ink-2">/tx/</span>). The verifiable
-          on-chain anchor is the batched settlement wallet, linked from the live feed.
-        </p>
-
-        <div className="mb-4 mt-10 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
-          Independent demand &amp; trust
-        </div>
-        <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-          <MetricCard
-            label="Paid independent queries"
-            value={`${metrics?.externalPayingQueries ?? 0} / ${metrics?.externalQueries ?? 0}`}
-            sub={`${Math.round(
-              (metrics?.externalReaderToPayerConversion ?? 0) * 100,
-            )}% reader-to-payer conversion`}
-            icon={TrendingUp}
-            accent="emerald"
-            loading={!metrics}
-          />
-          {(metrics?.identifiedExternalActors ?? 0) > 0 && (
-            <MetricCard
-              label="Returning actors"
-              value={`${metrics?.returningExternalActors ?? 0} / ${metrics?.identifiedExternalActors ?? 0}`}
-              sub={`${Math.round((metrics?.returningExternalActorRate ?? 0) * 100)}% returned`}
-              icon={UserRoundCheck}
-              accent="emerald"
-            />
-          )}
-          {(metrics?.externalFeedbackTotal ?? 0) > 0 && (
-            <MetricCard
-              label="Independent satisfaction"
-              value={`${Math.round(
-                (metrics?.externalSatisfactionRate ?? 0) *
-                  (metrics?.externalFeedbackTotal ?? 0),
-              )} / ${metrics?.externalFeedbackTotal ?? 0}`}
-              sub={`${Math.round((metrics?.externalSatisfactionRate ?? 0) * 100)}% positive`}
-              icon={ThumbsUp}
-              accent="emerald"
-            />
-          )}
-          {(metrics?.externalSettlementAttempts ?? 0) > 0 && (
-            <MetricCard
-              label="Settlement success"
-              value={`${metrics?.externalSettledPayments ?? 0} / ${metrics?.externalSettlementAttempts ?? 0}`}
-              sub={`${Math.round((metrics?.externalSettlementSuccessRate ?? 0) * 100)}% independent creator payments`}
-              icon={Gauge}
-              accent="emerald"
-            />
-          )}
-          {(metrics?.evidenceClaimSamples ?? 0) > 0 && (
-            <MetricCard
-              label="Evidence-grounded claims"
-              value={`${Math.round((metrics?.groundedClaimRate ?? 0) * 100)}%`}
-              sub={`${metrics?.evidenceClaimSamples ?? 0} claims · ${metrics?.citationPoolWithheldRuns ?? 0} pools withheld`}
-              icon={ShieldCheck}
-              accent="emerald"
-            />
-          )}
-          {(metrics?.gapIntentOffers ?? 0) > 0 && (
-            <MetricCard
-              label="Wanted claims filled"
-              value={`${metrics?.gapIntentFilled ?? 0} / ${metrics?.gapIntentOffers ?? 0}`}
-              sub={`${Math.round((metrics?.gapIntentFillRate ?? 0) * 100)}% filled · ${metrics?.gapIntentPending ?? 0} queued`}
-              icon={Target}
-              accent="emerald"
-            />
-          )}
+        <section className="mt-10" aria-labelledby="recent-activity-title">
+          <div className="mb-4">
+            <h2
+              id="recent-activity-title"
+              className="font-display text-2xl font-medium text-ink"
+            >
+              Recent activity
+            </h2>
+            <p className="mt-1 text-sm text-ink-2">
+              Open a question to see its cited answer, or inspect the latest
+              creator payments.
+            </p>
+          </div>
+          <div className="grid gap-5 lg:grid-cols-2">
+            <DispatchHistory runs={runs.slice(0, 5)} />
+            <PaymentsFeed payments={payments.slice(0, 8)} />
+          </div>
         </section>
 
-        <div className="mb-4 mt-10 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
-          Economics &amp; operations
-        </div>
-        <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-          <MetricCard
-            label="Cost / independent query"
-            value={`$${fmtUsdc(metrics?.externalAvgCostPerQueryUsdc)}`}
-            sub={`$${fmtUsdc(metrics?.externalCreatorPayoutsUsdc)} to creators`}
-            icon={Coins}
-            accent="amber"
-            loading={!metrics}
-          />
-          <MetricCard
-            label="Average settled payment"
-            value={`$${fmtUsdc(metrics?.avgPaymentUsdc)}`}
-            sub="USDC"
-            icon={Banknote}
-            accent="neutral"
-            loading={!metrics}
-          />
-          <MetricCard
-            label="Independent p95 latency"
-            value={fmtDuration(metrics?.externalP95DurationMs ?? 0)}
-            sub={`${metrics?.externalDurationSamples ?? 0} completed samples`}
-            icon={Clock3}
-            accent="neutral"
-            loading={!metrics}
-          />
+        <section className="mt-10" aria-labelledby="creator-proof-title">
+          <div className="mb-4">
+            <h2
+              id="creator-proof-title"
+              className="font-display text-2xl font-medium text-ink"
+            >
+              Creators and proof
+            </h2>
+            <p className="mt-1 text-sm text-ink-2">
+              Earnings are settled through Circle Gateway in batches. Cash-outs
+              link to individual Arc transactions.
+            </p>
+          </div>
+          <div className="grid gap-5 lg:grid-cols-2">
+            <CreatorLeaderboard rows={leaderboard.slice(0, 5)} />
+            <CreatorCashoutsPanel withdrawals={withdrawals.slice(0, 5)} />
+          </div>
         </section>
 
-        {topics.length > 0 ? (
-          <section className="mt-6 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
-            <EarningsChart daily={daily} />
-            <TopicsPanel topics={topics} />
-          </section>
-        ) : (
-          <div className="mt-6">
-            <EarningsChart daily={daily} />
+        <details className="group mt-10 border border-line bg-paper-2/30">
+          <summary className="cursor-pointer px-5 py-4 font-display text-xl text-ink marker:text-seal">
+            More records and usage details
+          </summary>
+          <div className="border-t border-line px-5 pb-6">
+            <p className="mt-4 max-w-3xl text-sm leading-relaxed text-ink-2">
+              Individual payments have Circle Gateway settlement references, not
+              individual EVM transaction hashes. The live feed links to the
+              batch settlement wallet; creator cash-outs link to their own Arc
+              transactions.
+            </p>
+            {(leaderboard.length > 5 || payments.length > 8) && (
+              <div className="mt-6 grid gap-5 lg:grid-cols-2">
+                {leaderboard.length > 5 && (
+                  <CreatorLeaderboard rows={leaderboard.slice(5)} />
+                )}
+                {payments.length > 8 && (
+                  <PaymentsFeed payments={payments.slice(8, 25)} />
+                )}
+              </div>
+            )}
+            {withdrawals.length > 5 && (
+              <div className="mt-5">
+                <CreatorCashoutsPanel withdrawals={withdrawals.slice(5)} />
+              </div>
+            )}
+            {runs.length > 5 && (
+              <div className="mt-5">
+                <DispatchHistory runs={runs.slice(5, 15)} />
+              </div>
+            )}
+            {metrics?.activationFunnel && (
+              <ActivationFunnelPanel funnel={metrics.activationFunnel} />
+            )}
+
+            <div className="mb-4 mt-10 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
+              Independent demand &amp; trust
+            </div>
+            <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+              <MetricCard
+                label="Paid independent queries"
+                value={`${metrics?.externalPayingQueries ?? 0} / ${
+                  metrics?.externalQueries ?? 0
+                }`}
+                sub={`${Math.round(
+                  (metrics?.externalReaderToPayerConversion ?? 0) * 100
+                )}% reader-to-payer conversion`}
+                icon={TrendingUp}
+                accent="emerald"
+                loading={!metrics}
+              />
+              {(metrics?.identifiedExternalActors ?? 0) > 0 && (
+                <MetricCard
+                  label="Returning actors"
+                  value={`${metrics?.returningExternalActors ?? 0} / ${
+                    metrics?.identifiedExternalActors ?? 0
+                  }`}
+                  sub={`${Math.round(
+                    (metrics?.returningExternalActorRate ?? 0) * 100
+                  )}% returned`}
+                  icon={UserRoundCheck}
+                  accent="emerald"
+                />
+              )}
+              {(metrics?.externalFeedbackTotal ?? 0) > 0 && (
+                <MetricCard
+                  label="Independent satisfaction"
+                  value={`${Math.round(
+                    (metrics?.externalSatisfactionRate ?? 0) *
+                      (metrics?.externalFeedbackTotal ?? 0)
+                  )} / ${metrics?.externalFeedbackTotal ?? 0}`}
+                  sub={`${Math.round(
+                    (metrics?.externalSatisfactionRate ?? 0) * 100
+                  )}% positive`}
+                  icon={ThumbsUp}
+                  accent="emerald"
+                />
+              )}
+              {(metrics?.externalSettlementAttempts ?? 0) > 0 && (
+                <MetricCard
+                  label="Settlement success"
+                  value={`${metrics?.externalSettledPayments ?? 0} / ${
+                    metrics?.externalSettlementAttempts ?? 0
+                  }`}
+                  sub={`${Math.round(
+                    (metrics?.externalSettlementSuccessRate ?? 0) * 100
+                  )}% independent creator payments`}
+                  icon={Gauge}
+                  accent="emerald"
+                />
+              )}
+              {(metrics?.evidenceClaimSamples ?? 0) > 0 && (
+                <MetricCard
+                  label="Evidence-grounded claims"
+                  value={`${Math.round(
+                    (metrics?.groundedClaimRate ?? 0) * 100
+                  )}%`}
+                  sub={`${metrics?.evidenceClaimSamples ?? 0} claims · ${
+                    metrics?.citationPoolWithheldRuns ?? 0
+                  } pools withheld`}
+                  icon={ShieldCheck}
+                  accent="emerald"
+                />
+              )}
+              {(metrics?.gapIntentOffers ?? 0) > 0 && (
+                <MetricCard
+                  label="Wanted claims filled"
+                  value={`${metrics?.gapIntentFilled ?? 0} / ${
+                    metrics?.gapIntentOffers ?? 0
+                  }`}
+                  sub={`${Math.round(
+                    (metrics?.gapIntentFillRate ?? 0) * 100
+                  )}% filled · ${metrics?.gapIntentPending ?? 0} queued`}
+                  icon={Target}
+                  accent="emerald"
+                />
+              )}
+            </section>
+
+            <div className="mb-4 mt-10 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
+              Economics &amp; operations
+            </div>
+            <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+              <MetricCard
+                label="Cost / independent query"
+                value={`$${fmtUsdc(metrics?.externalAvgCostPerQueryUsdc)}`}
+                sub={`$${fmtUsdc(
+                  metrics?.externalCreatorPayoutsUsdc
+                )} to creators`}
+                icon={Coins}
+                accent="amber"
+                loading={!metrics}
+              />
+              <MetricCard
+                label="Average settled payment"
+                value={`$${fmtUsdc(metrics?.avgPaymentUsdc)}`}
+                sub="USDC"
+                icon={Banknote}
+                accent="neutral"
+                loading={!metrics}
+              />
+              <MetricCard
+                label="Independent p95 latency"
+                value={fmtDuration(metrics?.externalP95DurationMs ?? 0)}
+                sub={`${
+                  metrics?.externalDurationSamples ?? 0
+                } completed samples`}
+                icon={Clock3}
+                accent="neutral"
+                loading={!metrics}
+              />
+            </section>
+
+            {topics.length > 0 ? (
+              <section className="mt-6 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
+                <EarningsChart daily={daily} />
+                <TopicsPanel topics={topics} />
+              </section>
+            ) : (
+              <div className="mt-6">
+                <EarningsChart daily={daily} />
+              </div>
+            )}
           </div>
-        )}
-
-        <section className="mt-6 grid gap-5 lg:grid-cols-[1fr_1.4fr]">
-          <CreatorLeaderboard rows={leaderboard} />
-          <PaymentsFeed payments={payments.slice(0, 25)} />
-        </section>
-
-        {withdrawals.length > 0 ? (
-          <div className="mt-6">
-            <CreatorCashoutsPanel withdrawals={withdrawals} />
-          </div>
-        ) : null}
-
-        {runs.length > 0 && (
-          <div className="mt-6">
-            <DispatchHistory runs={runs.slice(0, 15)} />
-          </div>
-        )}
-
-        <A2aCallCard />
+        </details>
       </main>
       <SiteFooter />
     </div>
@@ -342,21 +432,28 @@ function ProvenanceStrip({ metrics }: { metrics: DashboardMetrics | null }) {
           role="tooltip"
           className="pointer-events-none absolute left-0 top-full z-20 mt-2 w-72 border border-line bg-paper px-3 py-2 font-mono text-[10px] normal-case leading-relaxed tracking-normal text-ink-2 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
         >
-          Independent usage comes from people and third-party agents through web, MCP, or A2A.
-          First-party activity is initiated by Keryx itself. Settled totals include both.
+          Independent usage comes from people and third-party agents through
+          web, MCP, or A2A. First-party activity is initiated by Keryx itself.
+          Settled totals include both.
         </span>
       </span>
       <span className="inline-flex items-center gap-1.5">
         <span className="h-1.5 w-1.5 rounded-full bg-paid" />
         Independent:{" "}
-        <span className="font-semibold text-ink">{metrics?.externalQueries ?? 0}</span> queries ·{" "}
-        <span className="font-semibold text-ink">{ext}</span> payments · ${fmtUsdc(extVol)}
+        <span className="font-semibold text-ink">
+          {metrics?.externalQueries ?? 0}
+        </span>{" "}
+        queries · <span className="font-semibold text-ink">{ext}</span> payments
+        · ${fmtUsdc(extVol)}
       </span>
       <span className="inline-flex items-center gap-1.5">
         <span className="h-1.5 w-1.5 rounded-full bg-ink-3" />
         Keryx agents:{" "}
-        <span className="font-semibold text-ink">{metrics?.engineQueries ?? 0}</span> queries ·{" "}
-        <span className="font-semibold text-ink">{eng}</span> payments · ${fmtUsdc(engVol)}
+        <span className="font-semibold text-ink">
+          {metrics?.engineQueries ?? 0}
+        </span>{" "}
+        queries · <span className="font-semibold text-ink">{eng}</span> payments
+        · ${fmtUsdc(engVol)}
       </span>
       <a
         href="/api/docs"
