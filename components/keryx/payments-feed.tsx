@@ -45,7 +45,13 @@ function timeAgo(iso: string): string {
   return `${Math.round(h / 24)}d`;
 }
 
-export function PaymentsFeed({ payments }: { payments: PaymentRecord[] }) {
+export function PaymentsFeed({
+  payments,
+  compact = false,
+}: {
+  payments: PaymentRecord[];
+  compact?: boolean;
+}) {
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0 pb-4">
@@ -68,93 +74,152 @@ export function PaymentsFeed({ payments }: { payments: PaymentRecord[] }) {
           </span>
         </div>
       </CardHeader>
-      <CardContent className="px-0">
-        <p className="px-6 pb-3 font-mono text-[10px] leading-relaxed text-muted-foreground">
-          Settlement IDs are Circle Gateway references (batched on-chain on Arc), not per-tx EVM
-          hashes — verify via the settlement wallet linked above.
-        </p>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="pl-6">Time</TableHead>
-                <TableHead>Kind</TableHead>
-                <TableHead>Source</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead>Flow</TableHead>
-                <TableHead className="pr-6">Settled</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {payments.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="py-10 text-center text-sm text-muted-foreground"
+      {compact ? (
+        <CardContent className="space-y-2">
+          {payments.length === 0 && (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              No payments yet.
+            </p>
+          )}
+          {payments.map((p, i) => {
+            const status = paymentSettlementStatus(p);
+            return (
+              <div
+                key={p.id ?? `${p.payee}-${i}`}
+                className="flex items-center gap-3 border-b border-line py-2 last:border-0"
+              >
+                <div className="min-w-0 flex-1">
+                  <p
+                    className="truncate text-sm font-medium text-ink"
+                    title={p.sourceName}
                   >
-                    No payments yet — run a query on the Ask page.
-                  </TableCell>
-                </TableRow>
-              )}
-              {payments.map((p, i) => (
-                <TableRow key={p.id ?? `${p.payee}-${i}`}>
-                  <TableCell className="pl-6 font-mono text-xs text-muted-foreground">
-                    {timeAgo(p.createdAt)}
-                  </TableCell>
-                  <TableCell>
-                    <KindBadge kind={p.kind} />
-                  </TableCell>
-                  <TableCell className="max-w-[180px] truncate text-sm font-medium">
                     {p.sourceName}
-                  </TableCell>
-                  <TableCell
-                    className={cn(
-                      "text-right font-mono text-sm font-semibold tabular-nums",
-                      paymentSettlementStatus(p) === "failed" ? "text-red-700" : "text-paid",
-                    )}
-                  >
-                    ${fmtUsdc(p.amountUsdc)}
-                  </TableCell>
-                  <TableCell className="font-mono text-[11px] text-muted-foreground">
-                    {shortAddr(p.payer)} → {shortAddr(p.payee)}
-                  </TableCell>
-                  <TableCell className="pr-6">
-                    {paymentSettlementStatus(p) === "settled" && p.txHash ? (
-                      <span
-                        className="inline-flex items-center gap-1.5 font-mono text-[11px] text-paid"
-                        title={`Circle Gateway settlement ID ${p.txHash} — batched on-chain on Arc (not a per-tx EVM hash)`}
-                      >
-                        <Check className="h-3 w-3" />
-                        batched
-                      </span>
-                    ) : paymentSettlementStatus(p) === "failed" ? (
-                      <span
-                        className="inline-flex items-center gap-1.5 font-mono text-[11px] text-red-700"
-                        title={p.txHash ? `Circle transfer ${p.txHash}` : undefined}
-                      >
-                        <CircleX className="h-3 w-3" />
-                        failed · not charged
-                      </span>
-                    ) : paymentSettlementStatus(p) === "pending" ? (
-                      <span
-                        className="inline-flex items-center gap-1.5 font-mono text-[11px] text-amber-700"
-                        title={p.authorizationId ? `Authorization ${p.authorizationId}` : undefined}
-                      >
-                        <Clock3 className="h-3 w-3" />
-                        pending proof
-                      </span>
-                    ) : (
-                      <span className="text-[11px] text-muted-foreground">
-                        simulated
-                      </span>
-                    )}
-                  </TableCell>
+                  </p>
+                  <p className="mt-0.5 font-mono text-[10px] text-ink-3">
+                    {timeAgo(p.createdAt)} · {p.kind} ·{" "}
+                    {status === "settled"
+                      ? "settled in batch"
+                      : status === "failed"
+                      ? "failed, not charged"
+                      : status === "pending"
+                      ? "pending proof"
+                      : "simulated"}
+                  </p>
+                </div>
+                <span
+                  className={cn(
+                    "shrink-0 font-mono text-sm font-semibold tabular-nums",
+                    status === "failed"
+                      ? "text-red-700"
+                      : status === "pending"
+                      ? "text-amber-700"
+                      : "text-paid"
+                  )}
+                >
+                  ${fmtUsdc(p.amountUsdc)}
+                </span>
+              </div>
+            );
+          })}
+        </CardContent>
+      ) : (
+        <CardContent className="px-0">
+          <p className="px-6 pb-3 font-mono text-[10px] leading-relaxed text-muted-foreground">
+            Settlement IDs are Circle Gateway references (batched on-chain on
+            Arc), not per-tx EVM hashes — verify via the settlement wallet
+            linked above.
+          </p>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="pl-6">Time</TableHead>
+                  <TableHead>Kind</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead>Flow</TableHead>
+                  <TableHead className="pr-6">Settled</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
+              </TableHeader>
+              <TableBody>
+                {payments.length === 0 && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={6}
+                      className="py-10 text-center text-sm text-muted-foreground"
+                    >
+                      No payments yet — run a query on the Ask page.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {payments.map((p, i) => (
+                  <TableRow key={p.id ?? `${p.payee}-${i}`}>
+                    <TableCell className="pl-6 font-mono text-xs text-muted-foreground">
+                      {timeAgo(p.createdAt)}
+                    </TableCell>
+                    <TableCell>
+                      <KindBadge kind={p.kind} />
+                    </TableCell>
+                    <TableCell className="max-w-[180px] truncate text-sm font-medium">
+                      {p.sourceName}
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        "text-right font-mono text-sm font-semibold tabular-nums",
+                        paymentSettlementStatus(p) === "failed"
+                          ? "text-red-700"
+                          : "text-paid"
+                      )}
+                    >
+                      ${fmtUsdc(p.amountUsdc)}
+                    </TableCell>
+                    <TableCell className="font-mono text-[11px] text-muted-foreground">
+                      {shortAddr(p.payer)} → {shortAddr(p.payee)}
+                    </TableCell>
+                    <TableCell className="pr-6">
+                      {paymentSettlementStatus(p) === "settled" && p.txHash ? (
+                        <span
+                          className="inline-flex items-center gap-1.5 font-mono text-[11px] text-paid"
+                          title={`Circle Gateway settlement ID ${p.txHash} — batched on-chain on Arc (not a per-tx EVM hash)`}
+                        >
+                          <Check className="h-3 w-3" />
+                          batched
+                        </span>
+                      ) : paymentSettlementStatus(p) === "failed" ? (
+                        <span
+                          className="inline-flex items-center gap-1.5 font-mono text-[11px] text-red-700"
+                          title={
+                            p.txHash ? `Circle transfer ${p.txHash}` : undefined
+                          }
+                        >
+                          <CircleX className="h-3 w-3" />
+                          failed · not charged
+                        </span>
+                      ) : paymentSettlementStatus(p) === "pending" ? (
+                        <span
+                          className="inline-flex items-center gap-1.5 font-mono text-[11px] text-amber-700"
+                          title={
+                            p.authorizationId
+                              ? `Authorization ${p.authorizationId}`
+                              : undefined
+                          }
+                        >
+                          <Clock3 className="h-3 w-3" />
+                          pending proof
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-muted-foreground">
+                          simulated
+                        </span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      )}
     </Card>
   );
 }
@@ -167,7 +232,7 @@ function KindBadge({ kind }: { kind: PaymentRecord["kind"] }) {
         "inline-flex rounded-md border px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide",
         citation
           ? "border-seal/30 bg-seal/10 text-seal"
-          : "border-ink-3/40 bg-paper-2 text-ink-2",
+          : "border-ink-3/40 bg-paper-2 text-ink-2"
       )}
     >
       {kind}

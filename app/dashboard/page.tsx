@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   ArrowLeftRight,
   Banknote,
@@ -136,6 +137,12 @@ export default function DashboardPage() {
               A public record of Keryx queries and settled creator payments in
               USDC on Arc testnet.
             </p>
+            <Link
+              href="/proof"
+              className="mt-3 inline-block font-mono text-[11px] font-semibold text-seal hover:underline"
+            >
+              How these records are verified →
+            </Link>
           </div>
           <span className="hidden shrink-0 items-center gap-2 rounded-full border border-paid/40 bg-paid/[0.07] px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.1em] text-paid sm:inline-flex">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-paid" />
@@ -215,7 +222,7 @@ export default function DashboardPage() {
           </div>
           <div className="grid gap-5 lg:grid-cols-2">
             <DispatchHistory runs={runs.slice(0, 5)} />
-            <PaymentsFeed payments={payments.slice(0, 8)} />
+            <PaymentsFeed payments={payments.slice(0, 8)} compact />
           </div>
         </section>
 
@@ -234,7 +241,10 @@ export default function DashboardPage() {
           </div>
           <div className="grid gap-5 lg:grid-cols-2">
             <CreatorLeaderboard rows={leaderboard.slice(0, 5)} />
-            <CreatorCashoutsPanel withdrawals={withdrawals.slice(0, 5)} />
+            <CreatorCashoutsPanel
+              withdrawals={withdrawals.slice(0, 5)}
+              compact
+            />
           </div>
         </section>
 

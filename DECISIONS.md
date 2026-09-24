@@ -1,5 +1,13 @@
 # Keryx — Decision Log
 
+**D-234** - Keep the Ledger's first view scannable - *A settlement reference,
+wallet flow, and transaction hash are useful for verification but obscure the
+payment story in the first viewport.* Recent payments and cash-outs now render
+compact source/amount/status rows; the full tables remain available below.
+Public Proof stays at its existing URL and is linked from the Ledger rather than
+occupying a second primary navigation slot. This changes presentation only;
+payment classification, evidence links, and payout totals are untouched.
+
 **D-233** - Group the public Ledger by question, creator, and proof - *A long stream
 of unrelated metrics and tables obscured the core payment story.* The first view now
 keeps the settled totals and usage origin, then shows recent dispatches beside payments

@@ -18,7 +18,6 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { href: "/", label: "Ask" },
   { href: "/dashboard", label: "Ledger" },
-  { href: "/proof", label: "Proof" },
   { href: "/answers", label: "Archive" },
   { href: "/sources", label: "Registry" },
   { href: "/market", label: "Market" },
@@ -67,7 +66,7 @@ export function SiteHeader() {
 
           {/* Desktop nav */}
           <nav className="hidden items-center gap-1.5 md:flex">
-            {NAV.slice(0, 6).map((link) => {
+            {NAV.slice(0, 5).map((link) => {
               const active =
                 link.href === "/"
                   ? pathname === "/"
@@ -80,7 +79,7 @@ export function SiteHeader() {
                     "border-b-[1.5px] px-3 py-2 font-mono text-[11.5px] uppercase tracking-[0.14em] transition-colors",
                     active
                       ? "border-seal text-ink"
-                      : "border-transparent text-ink-3 hover:text-ink",
+                      : "border-transparent text-ink-3 hover:text-ink"
                   )}
                 >
                   {link.label}
@@ -107,11 +106,25 @@ export function SiteHeader() {
               aria-label={menuOpen ? "Close menu" : "Open menu"}
             >
               {menuOpen ? (
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 18 18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                >
                   <path d="M4 4l10 10M14 4L4 14" />
                 </svg>
               ) : (
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 18 18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                >
                   <path d="M2 4h14M2 9h14M2 14h14" />
                 </svg>
               )}
@@ -134,7 +147,7 @@ export function SiteHeader() {
                           "border-l-2 px-4 py-3 font-mono text-[12px] uppercase tracking-[0.12em] transition-colors",
                           active
                             ? "border-seal text-ink"
-                            : "border-transparent text-ink-3 hover:text-ink",
+                            : "border-transparent text-ink-3 hover:text-ink"
                         )}
                       >
                         {link.label}
