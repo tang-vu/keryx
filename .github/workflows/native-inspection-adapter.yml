@@ -1,0 +1,78 @@
+name: Native read-only artifact acceptance
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "rust/**"
+      - "lib/**"
+      - "scripts/create-rust-readonly-manifest.mts"
+      - "scripts/evaluate-rust-readonly.mts"
+      - "scripts/test-rust-native-artifact.mts"
+      - "scripts/rust-native-test-fixture.rs"
+      - "scripts/rust-offline-fallback-guard.mjs"
+      - "scripts/operator.mts"
+      - "package.json"
+      - "package-lock.json"
+      - "docs/native-inspection-evaluation.md"
+      - ".github/workflows/native-inspection-adapter.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "rust/**"
+      - "lib/**"
+      - "scripts/create-rust-readonly-manifest.mts"
+      - "scripts/evaluate-rust-readonly.mts"
+      - "scripts/test-rust-native-artifact.mts"
+      - "scripts/rust-native-test-fixture.rs"
+      - "scripts/rust-offline-fallback-guard.mjs"
+      - "scripts/operator.mts"
+      - "package.json"
+      - "package-lock.json"
+      - "docs/native-inspection-evaluation.md"
+      - ".github/workflows/native-inspection-adapter.yml"
+
+jobs:
+  artifact:
+    name: Copied artifact and subprocess (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rust: 1.98.1-x86_64-unknown-linux-gnu
+            target: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            rust: 1.98.1-x86_64-pc-windows-msvc
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install official Rust toolchain
+        run: rustup toolchain install ${{ matrix.rust }} --profile minimal
+
+      - name: Install JavaScript dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Test artifact verification and transport edge cases
+        run: npx vitest run lib/operator/native-readonly-artifact.test.ts lib/operator/native-readonly-transport.test.ts
+
+      - name: Build read-only artifact from checked-out source
+        run: cargo +${{ matrix.rust }} build --manifest-path rust/Cargo.toml -p keryx-engine --release --locked
+
+      - name: Exercise copied artifact, fault processes and explicit rollback
+        run: node --import tsx scripts/test-rust-native-artifact.mts
+        env:
+          KERYX_NATIVE_TEST_SOURCE_COMMIT: ${{ github.sha }}
+          KERYX_NATIVE_TEST_TARGET: ${{ matrix.target }}
+          KERYX_TEST_RUST_TOOLCHAIN: ${{ matrix.rust }}
