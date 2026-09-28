@@ -1,12 +1,13 @@
 # Keryx at Tameion 2026 — planned direction
 
-**Status (September 28, 2026): plan, not a shipped Operator or desktop release.** Keryx
+**Status (September 28, 2026): initial local CLI alpha available; the full Operator
+and desktop remain planned.** Keryx
 keeps its name, repository, citation-toll reading agent, and existing complete-product
 and [mainnet release gates](./mainnet-delivery-plan.md). The event work must be measured
 against the pre-event repository baseline `2291753cc4fff2135d546227d5aafda287cbed7d`
 (September 25). Baseline users, revenue, and event-period growth are unknown until
 reconstructed from actual evidence. [Decision history](../DECISIONS.md) describes
-implemented architecture; this document proposes work and does not claim a decision shipped.
+implemented architecture; unchecked work in this document remains proposed.
 
 ## Product and customer hypothesis
 
@@ -56,6 +57,13 @@ this two-week scope.
 - [ ] Pilot the specific research outcome with real users; capture feedback, return
   usage, source quality, delivery, pending versus settled payment, and obligations by
   period, network, and owner versus independent origin.
+
+The first local CLI increment now provides these commands for a private paid-research
+task directory (see [Operator task alpha](./operator-task-alpha.md)). It hands deliberate
+purchases to the existing caller-funded buyer command and binds recovery to that
+original task. This is partial progress toward the checkbox: web/desktop and MCP do
+not yet use the Operator task engine, and there is no general business ledger or
+automated spending policy.
 
 An on-chain budget policy wallet is **not implemented**. The current repository uses
 Arc testnet configuration (`eip155:5042002`), a buyer EOA authorization signature,

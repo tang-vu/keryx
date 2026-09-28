@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**D-238** - Start Operator with a private task handoff - *The existing caller-funded buyer
+already has a durable purchase journal and GET-only recovery; a second payment runner would
+create duplicate-spend risk.* A local Operator task records a normalized research request,
+pinned payee and total cap in an exclusive directory. The deliberate existing buyer `buy`
+command writes only to its fixed `buyer/` child; Operator refuses recovery if the journal
+request or recipient differs, or its amount exceeds the task cap. `resume` delegates to buyer GET-only
+recovery and stores a bounded local diagnostic observation. Local `status` and JSON export
+keep payment and delivery as unknown, label observations as stale seller-reported data, and
+make no independent settlement claim. This is an initial CLI lifecycle, not a shared web/
+desktop scheduler or treasury authority. Windows files inherit parent ACLs. Reversible:
+easy (isolated task files and CLI; buyer payment path unchanged).
+
 **D-237** - Remove self-initiated research drivers - *Usage should come from a caller who
 chooses to ask.* The VPS traction daemon and workstation caller were stopped and removed
 from saved PM2 state. Delete their driver scripts, seed question bank, helper, npm commands,
