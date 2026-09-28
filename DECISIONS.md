@@ -1,5 +1,23 @@
 # Keryx — Decision Log
 
+**D-247** - Share complete-file publication between CLI and desktop exports -
+*The desktop's direct write to a new destination could leave a partial Markdown
+brief or status JSON when writing failed.* Move the D-245 TypeScript publisher into
+`lib/operator/private-text-export.ts` and use it for CLI briefs and both desktop
+exports. Keep one publication state machine: private exclusive staging, complete
+write, file sync and checked close, exclusive hard-link publication, then staging
+cleanup. Preserve no-overwrite, unconfirmed publication-call errors and complete
+final files after cleanup failures; never remove the final path as rollback.
+Electron main owns the native save dialog and chosen path; the renderer still sends
+only its opaque task handle. Cancellation returns false, successful publication
+returns true, and every failure reaches the existing UI error surface without a
+success notice. A missing path from an accepted dialog is a failure, not a cancel.
+Fault tests and a packaged Windows smoke test must cover both export formats.
+Trusted private parents, inherited Windows ACLs, Unix mode `0600`, and the D-245
+crash-durability limits remain unchanged. No Rust routing or payment authority moves.
+Reversible: the helper can be replaced while preserving its publication contract;
+existing task, journal and result files need no migration.
+
 **D-246** - Preserve JavaScript string code units in the read-only Rust candidate -
 *Refusing valid v1 strings with lone UTF-16 surrogates leaves existing private tasks
 dependent on the legacy reader.* Supersede D-243's scalar-only candidate model with

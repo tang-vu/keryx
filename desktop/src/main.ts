@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, protocol, session } from "electron
 import { open, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { WorkspaceStore } from "./workspace";
+import { savePrivateExport } from "./private-export";
 
 const APP_ORIGIN = "keryx-app://desktop";
 const allowedAssets = new Set(["index.html", "renderer.js", "style.css"]);
@@ -74,22 +75,14 @@ function registerIpc() {
   handle("task:brief", async (...args) => {
     if (args.length !== 1) throw new Error("Invalid arguments");
     const data = await store.exportBrief(args[0]);
-    const choice = await dialog.showSaveDialog(window, { title: "Export private research brief",
-      defaultPath: "private-research-brief.md", filters: [{ name: "Markdown", extensions: ["md"] }] });
-    if (choice.canceled || !choice.filePath) return false;
-    const file = await open(choice.filePath, "wx", 0o600);
-    try { await file.writeFile(data); await file.sync(); } finally { await file.close(); }
-    return true;
+    return savePrivateExport(() => dialog.showSaveDialog(window, { title: "Export private research brief",
+      defaultPath: "private-research-brief.md", filters: [{ name: "Markdown", extensions: ["md"] }] }), data);
   });
   handle("task:export", async (...args) => {
     if (args.length !== 1) throw new Error("Invalid arguments");
     const data = await store.exportTask(args[0]);
-    const choice = await dialog.showSaveDialog(window, { title: "Export private task status", defaultPath: "operator-task-status.json",
-      filters: [{ name: "JSON", extensions: ["json"] }] });
-    if (choice.canceled || !choice.filePath) return false;
-    const file = await open(choice.filePath, "wx", 0o600);
-    try { await file.writeFile(data); await file.sync(); } finally { await file.close(); }
-    return true;
+    return savePrivateExport(() => dialog.showSaveDialog(window, { title: "Export private task status", defaultPath: "operator-task-status.json",
+      filters: [{ name: "JSON", extensions: ["json"] }] }), data);
   });
   handle("reference:import", async (...args) => {
     if (args.length) throw new Error("Invalid arguments");
