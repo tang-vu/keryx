@@ -15,6 +15,7 @@ on:
       - "scripts/rust-lossless-v1-oracle.mts"
       - "scripts/test-rust-inspection-contract.mts"
       - "scripts/test-rust-tiny-budget.mts"
+      - "scripts/test-rust-task-preparation.mts"
       - "scripts/rust-offline-fallback-guard.mjs"
       - "scripts/operator.mts"
       - "desktop/src/main.ts"
@@ -36,6 +37,7 @@ on:
       - "scripts/rust-lossless-v1-oracle.mts"
       - "scripts/test-rust-inspection-contract.mts"
       - "scripts/test-rust-tiny-budget.mts"
+      - "scripts/test-rust-task-preparation.mts"
       - "scripts/rust-offline-fallback-guard.mjs"
       - "scripts/operator.mts"
       - "desktop/src/main.ts"
@@ -93,6 +95,12 @@ jobs:
 
       - name: Build native read-only CLI
         run: cargo +${{ matrix.rust }} build --manifest-path rust/Cargo.toml -p keryx-engine --release --locked
+
+      - name: Build pure v1 task preparation test bridge
+        run: cargo +${{ matrix.rust }} build --manifest-path rust/Cargo.toml -p keryx-core --example prepare-task-v1 --release --locked
+
+      - name: Compare prepared task bytes and read-only reopening with TypeScript
+        run: node --import tsx scripts/test-rust-task-preparation.mts
 
       - name: Verify positive sub-micro candidate refusal and explicit TypeScript fallback
         run: node --import tsx scripts/test-rust-tiny-budget.mts

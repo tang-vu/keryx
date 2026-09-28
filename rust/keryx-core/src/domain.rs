@@ -59,7 +59,7 @@ pub(crate) fn micros(value: &Value, exact: bool) -> Result<u64> {
     }
     Ok(rounded as u64)
 }
-fn normalized_request(value: &Value) -> Result<Value> {
+pub(crate) fn normalized_request(value: &Value) -> Result<Value> {
     obj_keys(
         value,
         &[
@@ -73,6 +73,14 @@ fn normalized_request(value: &Value) -> Result<Value> {
     let question = js_field(value, "question")?.trim_matches(js_whitespace);
     if question.utf16_len() == 0 || question.utf16_len() > 2000 {
         return Err("invalid question".into());
+    }
+    let raw_budget = field(value, "budget")?
+        .as_f64()
+        .ok_or("invalid creator budget")?;
+    // Zod's positive().max(0.5) applies to the original number, before the
+    // atomic-micro tolerance. Rounded micros alone admits values above 0.5.
+    if !raw_budget.is_finite() || raw_budget <= 0.0 || raw_budget > 0.5 {
+        return Err("invalid creator budget".into());
     }
     let budget = micros(field(value, "budget")?, true)?;
     if budget == 0 {
@@ -360,6 +368,25 @@ mod tests {
         assert!(normalized_request(&request("0.000001")).is_ok());
         assert_eq!(
             normalized_request(&request("0.500001")).unwrap_err(),
+            "invalid creator budget"
+        );
+        assert!(normalized_request(&request("0.5")).is_ok());
+        assert_eq!(
+            normalized_request(&request("0.500000000000001")).unwrap_err(),
+            "invalid creator budget"
+        );
+        let above_limit = request("0.500000000000001");
+        let task = Value::object(vec![
+            ("schema", "keryx-operator-task-v1".into()),
+            ("id", "00000000-0000-4000-8000-000000000001".into()),
+            ("createdAt", "2026-09-29T01:02:03.004Z".into()),
+            ("kind", "paid_research".into()),
+            ("request", above_limit.clone()),
+            ("payee", "0x1111111111111111111111111111111111111111".into()),
+            ("maxTotalMicros", "500001".into()),
+        ]);
+        assert_eq!(
+            parse_task(&task, &above_limit).err().unwrap(),
             "invalid creator budget"
         );
     }

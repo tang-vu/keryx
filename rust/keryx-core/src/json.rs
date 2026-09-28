@@ -85,6 +85,56 @@ pub fn stringify(value: &Value) -> Result<String> {
     emit(value, false, 0)
 }
 
+/// Node JSON.stringify(value, null, 2), without the writer's final newline.
+/// Uses the same lossless string and binary64 spelling as compact stringify.
+pub fn stringify_pretty(value: &Value) -> Result<String> {
+    let mut output = String::new();
+    emit_pretty(value, 0, &mut output)?;
+    Ok(output)
+}
+
+fn emit_pretty(value: &Value, depth: usize, out: &mut String) -> Result<()> {
+    if depth > value::MAX_DEPTH {
+        return Err("JSON output exceeds nesting limit".into());
+    }
+    match value {
+        Value::Array(children) if !children.is_empty() => {
+            out.push('[');
+            for (index, child) in children.iter().enumerate() {
+                if index > 0 {
+                    out.push(',');
+                }
+                out.push('\n');
+                out.push_str(&"  ".repeat(depth + 1));
+                emit_pretty(child, depth + 1, out)?;
+            }
+            out.push('\n');
+            out.push_str(&"  ".repeat(depth));
+            out.push(']');
+        }
+        Value::Object(entries) if !entries.is_empty() => {
+            let mut ordered: Vec<_> = entries.iter().collect();
+            ordered.sort_by_key(|(key, _)| index_key(key).map(|n| (0, n)).unwrap_or((1, 0)));
+            out.push('{');
+            for (index, (key, child)) in ordered.iter().enumerate() {
+                if index > 0 {
+                    out.push(',');
+                }
+                out.push('\n');
+                out.push_str(&"  ".repeat(depth + 1));
+                out.push_str(&js_string(key));
+                out.push_str(": ");
+                emit_pretty(child, depth + 1, out)?;
+            }
+            out.push('\n');
+            out.push_str(&"  ".repeat(depth));
+            out.push('}');
+        }
+        _ => out.push_str(&emit(value, false, depth)?),
+    }
+    Ok(())
+}
+
 /// Keryx canonical-json-v1: recursively sorted keys using JavaScript UTF-16 order.
 pub fn canonical(value: &Value) -> Result<String> {
     emit(value, true, 0)
@@ -203,6 +253,15 @@ mod tests {
                 r#"{{"0":0,"01":1,"10":10,"2":2,"4294967294":4,"4294967295":5,"x":9,"{}":"new"}}"#,
                 '\u{1f600}'
             )
+        );
+    }
+
+    #[test]
+    fn pretty_json_keeps_js_order_and_lossless_surrogates() {
+        let value = parse(r#"{"x":"\ud800","2":{"b":true},"1":["é",null]}"#).unwrap();
+        assert_eq!(
+            stringify_pretty(&value).unwrap(),
+            "{\n  \"1\": [\n    \"é\",\n    null\n  ],\n  \"2\": {\n    \"b\": true\n  },\n  \"x\": \"\\ud800\"\n}"
         );
     }
 
