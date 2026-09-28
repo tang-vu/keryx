@@ -63,16 +63,16 @@ existing TypeScript result writer; no production validation was weakened. On
 [`a5d86bb` in PR #2](https://github.com/tang-vu/keryx/pull/2), the application,
 Ubuntu Rust, Windows MSVC Rust and GitGuardian checks all passed.
 
-The final September 28 Windows x64 release-mode run passed 38 strict synthetic
+The PR #2 September 28 Windows x64 release-mode run passed 38 strict synthetic
 parity/refusal assertions and ran two parser acceptance probes. Its corpus includes
 the JavaScript binary64 integer boundary (`9007199254740992`), the adjacent raw
 integer token (`9007199254740993`), raw `u64` maximum
 (`18446744073709551615`) and decimal number boundaries. The source task tree's
 hash was unchanged. Duplicate JSON keys are accepted by both parsers.
-One valid-input gap remains open for full cutover: TypeScript accepts a
-lone UTF-16 surrogate in JSON while the Rust parser refuses it. The stricter
-refusal avoids a cross-runtime Unicode representation mismatch but needs an
-explicit compatibility decision. A copied native executable ran on the same host
+That run exposed one valid-input gap for full cutover: TypeScript accepts a
+lone UTF-16 surrogate in JSON while the Rust parser refuses it. The candidate
+policy is now explicit below; full v1 compatibility remains a cutover gate.
+A copied native executable ran on the same host
 with a system-only `PATH`; this is neither a clean-machine validation nor a
 Tauri package result.
 
@@ -92,6 +92,90 @@ The empty Node process baseline was 95.6 ms. The Rust release executable was
 Node runtime. These measurements describe same-host CLI launch behavior, not
 domain-computation speed, Electron/Tauri startup, RAM, install footprint or a
 clean-machine package.
+
+## Unicode compatibility policy
+
+[D-243](../DECISIONS.md) retains the candidate's Unicode scalar string model.
+Valid surrogate pairs, literal astral characters and text containing a literal
+backslash followed by `u` are supported. An unpaired high or low UTF-16 surrogate
+in a parsed JSON key or value remains unsupported. That includes nested or
+otherwise unused fields: parsing precedes schema validation and receipt hashing.
+The candidate must refuse without rewriting the task, emitting a partial result
+or creating a brief. It must never replace a code unit with U+FFFD, drop it,
+normalize the text or alter a digest to gain acceptance.
+
+Existing TypeScript readers remain the authority for all accepted v1 inputs.
+If the candidate refuses an existing task, use the same private directory with
+`npm run operator -- status --state PATH`, `result --state PATH`, or
+`brief --state PATH --file NEW_PATH` as appropriate. Those commands do not buy or
+resume a payment; `brief --file` creates only the requested new brief. Preserve the
+original files; do not edit an answer, request or receipt to satisfy the Rust parser.
+A TypeScript refusal still needs inspection; fallback is not a promise to accept
+corrupted data. TypeScript `result` emits JSON that preserves unpaired code units
+as escapes. Its Markdown brief uses Node's UTF-8 encoding, which replaces unpaired
+surrogates with U+FFFD. Such a brief is a human-readable export, not a lossless
+replacement for the JSON result or original receipt.
+
+This decision resolves the candidate's behavior, **not full v1 cutover**. Supporting
+all existing JavaScript strings would require a lossless code-unit representation
+through parsing, sorting, canonicalization, hashing, output and brief encoding.
+Alternatively, a future versioned contract must retain a reviewed legacy-read and
+rollback path. Neither change is implemented here. Do not route production callers
+to the Rust candidate or silently switch runtimes based on a parsing failure.
+
+The D-243 follow-up passed local Windows GNU release validation: six Rust unit
+tests, formatting, Clippy, TypeScript checking, targeted ESLint, and 42 strict
+synthetic harness checks (25 parity and 17 shared refusals), plus nine separately
+counted intentional Unicode incompatibilities. The latter assert TypeScript
+readability, the Rust fallback diagnostic, empty Rust stdout, no refused brief
+file and unchanged source trees. They cover task/request, journal, observation,
+saved answer/key and a TypeScript-written receipt payload with surrogate keys and
+values. Paired escaped astral keys/values remain digest-compatible. The harness
+also asserts the TypeScript Markdown encoding limitation above. Hosted checks and
+PR review for this follow-up must pass before merge; these local results do not
+close the remaining gates below.
+
+## Remaining read-only acceptance work
+
+The following source audit is an acceptance backlog, not a new cutover approval.
+The prior Windows/Linux CI pass proves the covered corpus, not every gate above.
+
+| Gate | Existing evidence | Work still required |
+| --- | --- | --- |
+| CLI contract | The harness compares status/result JSON and generated Markdown, including refusal to overwrite. | Rust `brief --file` returns `file` and `engineProtocol`; TypeScript returns an absolute `saved` path and `private: true`. The harness does not compare this response. Align the supported adapter contract and test relative/absolute paths and exit states. Rust stdout-only brief is a documented extension, not a TypeScript CLI parity claim. |
+| Full v1 input | The numeric, Unicode scalar, request-binding and corruption corpus passes; D-243 defines the candidate's unsupported Unicode case. | Resolve lossless legacy Unicode handling before full v1 cutover. Expand optional/older-record, unknown-version, truncation and canonical-key coverage; never infer universal equivalence from a finite corpus. |
+| File bounds | Readers bound task/request/observation to 8,192 bytes, intent to 65,536, result to 150,000 and receipt to 2,000,000. Oversized result refusal is exercised. | Add exact-limit and limit-plus-one cases for each file type, including valid multibyte JSON and read growth. |
+| Paths and concurrent reads | Ancestor checks, bounded regular-file reads and a buyer-directory symlink/junction refusal test exist. | Prove file, task and ancestor link behavior and concurrent replacement. Path checks followed by a separate open do not pin directory names; Unix file open currently lacks a no-follow flag. Same-size mutation is not detected as a stable snapshot. These are source-level risks, not a demonstrated exploit or an accepted hostile-writer boundary. |
+| Recovery/export | Synthetic source tree hashes remain unchanged by reads; new-file brief export refuses overwrite; TypeScript continues to read v1. | Add explicit restart/disable-candidate/offline rollback drills. Define and inject export write/sync failures: both implementations can leave a partially written new brief, so atomic export is not established. Test export-parent links under the chosen output policy. |
+| Platforms/release | Pinned Rust lockfile, native lint/tests, differential CI on Linux and Windows MSVC; copied native executable runs on the same Windows host. | Record checks and review for each update. Clean-machine packaging and Tauri MSVC/package/IPC/startup/memory acceptance remain separate open gates. |
+
+Prioritize the read snapshot/path boundary and the CLI response mismatch before
+attempting a read-only production switch. Keep synthetic fixtures private and
+separate from actual payment or traction evidence.
+
+## Next domain candidate: local task creation
+
+After the read-only gates pass, evaluate only the immutable v1 task envelope;
+this is a selected next evaluation scope, not permission to switch callers now.
+The current owner is `lib/operator/task.ts::createOperatorTask`. Inputs are an
+untrusted request, a user-supplied independently verified payee and total cap, and
+an explicitly selected private target directory. The core validates those inputs
+and prepares task/request values; a platform adapter owns exclusive creation,
+permissions, bounded encoding and durable writes. UUID and creation time must be
+explicit core inputs or injected capabilities for reproducible parity tests.
+
+Preserve the existing `task.json` and `request.json` v1 schemas and the rule that
+creation never signs, funds or purchases. Existing targets, unsupported input,
+unsafe paths and incomplete writes must have explicit refusal/recovery states.
+Retain incomplete creation for inspection, matching the current TypeScript policy;
+do not add automatic deletion or a format rewrite as recovery. The corpus must
+cover cap/payee/request parity, Rust-created files opened by TypeScript, Unicode
+policy, file bounds, Windows permissions and Unix modes, concurrent creation,
+links, injected crash/write failures, restart and no writes on admission refusal.
+Rollback disables the new writer while TypeScript continues reading the same v1
+files. One writer becomes authoritative only after separate review and a documented
+rollback window. Buyer journals, signing, settlement, resume and research execution
+remain outside this domain.
 
 ## Reproduce locally
 

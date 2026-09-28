@@ -1,5 +1,21 @@
 # Keryx — Decision Log
 
+**D-243** - Keep the Rust reader's Unicode restriction explicit and preserve v1 data -
+*JavaScript strings can contain unpaired UTF-16 surrogates that the candidate's
+Rust `String`/JSON value representation cannot preserve.* Keep the read-only
+candidate restricted to Unicode scalar strings, including valid surrogate pairs,
+and refuse unsupported input with guidance to use the existing TypeScript reader.
+Never replace, drop, normalize or rewrite code units to make a receipt pass:
+request equality, canonical JSON, answer hashes and receipt digests depend on the
+original values. This is a candidate compatibility restriction, not a claim that
+TypeScript-accepted v1 records are corrupt or unsafe. Assert the refusal and the
+unchanged TypeScript fallback with synthetic task, journal, observation, result and
+receipt fixtures. Do not add a second handwritten JSON implementation just to
+extend the candidate. A full v1 cutover still requires lossless compatibility or
+a separately reviewed, versioned input contract with legacy readability and
+rollback; an explicit refusal alone does not pass that gate. Reversible: easy
+while TypeScript remains authoritative and candidate reads never rewrite files.
+
 **D-242** - Evaluate one shared Rust engine through bounded domain cutovers - *A
 single long-term domain implementation across native CLI, desktop and service
 adapters may reduce duplicated authority and improve maintainability, but requires

@@ -50,6 +50,17 @@ For a shareable redacted report, use `npm run buyer -- report --state
 the direct `node --import tsx scripts/operator.mts ...` form; npm may print its own
 headers unless invoked with `--silent`.
 
+The optional [Rust read-only candidate](./rust-engine-migration.md) supports
+Unicode scalar strings but refuses JSON containing an unpaired UTF-16 surrogate.
+The TypeScript commands above remain authoritative for existing v1 directories.
+On a candidate parsing refusal, preserve the files and use TypeScript `status`,
+`result` or `brief` against the same directory. Do not rewrite receipt text or run
+another purchase to make it readable. This candidate restriction does not mean an
+otherwise accepted v1 task is corrupt, and it does not authorize a production
+engine switch. TypeScript `result` preserves those code units as JSON escapes;
+Markdown brief export replaces unpaired surrogates with U+FFFD during UTF-8
+encoding, so keep the original JSON for lossless preservation.
+
 This CLI alpha has one local task type and no CLI listing, scheduling, approvals,
 obligation ledger, web connection, or automatic funds movement. The
 [Windows desktop alpha](./desktop-alpha.md) can list and open these same task

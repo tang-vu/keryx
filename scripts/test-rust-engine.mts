@@ -24,7 +24,9 @@ const payee = `0x${"2".repeat(40)}`;
 const noEnv = { PATH: process.env.PATH ?? "", SystemRoot: process.env.SystemRoot ?? "", WINDIR: process.env.WINDIR ?? "" };
 const benchmarkBundle = process.argv.includes("--bundled-baseline");
 let bundledOperator: string | undefined;
-let checks = 0;
+let parityChecks = 0;
+let refusalChecks = 0;
+let incompatibilityChecks = 0;
 
 function run(kind: "ts" | "rust" | "bundle", command: "status" | "result" | "brief", state: string, file?: string,
   binary = rustExe, environment = noEnv) {
@@ -120,7 +122,7 @@ async function parity(state: string, command: "status" | "result", label: string
   assert.deepEqual(JSON.parse(ts.stdout), expected, `${label}: production TS CLI differs from helper`);
   assert.deepEqual(withoutProtocol(JSON.parse(rust.stdout)), expected, `${label}: Rust ${command} parity`);
   assert.equal(await treeDigest(state), before, `${label}: ${command} modified source tree`);
-  checks++;
+  parityChecks++;
   return { ts: ts.ms, rust: rust.ms };
 }
 
@@ -140,7 +142,7 @@ async function briefParity(state: string, root: string, label: string) {
   const overwrite = run("rust", "brief", state, rustFile);
   assert.notEqual(overwrite.code, 0, `${label}: Rust overwrote existing export`);
   assert.equal(await readFile(rustFile, "utf8"), formatOperatorBrief(result));
-  checks++;
+  parityChecks++;
   return { ts: ts.ms, rust: rust.ms };
 }
 
@@ -151,7 +153,44 @@ async function refusal(state: string, command: "status" | "result", label: strin
   assert.notEqual(ts.code, 0, `${label}: TypeScript accepted malformed input`);
   assert.notEqual(rust.code, 0, `${label}: Rust accepted malformed input`);
   assert.equal(await treeDigest(state), before, `${label}: refusal modified source tree`);
-  checks++;
+  refusalChecks++;
+}
+
+const surrogateFallback = "This Rust candidate cannot represent unpaired UTF-16 surrogates. If this is a TypeScript-readable v1 directory, use the TypeScript Operator status/result/brief commands on the original directory. Do not rewrite files.";
+
+async function surrogateRefusal(state: string, command: "status" | "result" | "brief", label: string, root: string) {
+  const before = await treeDigest(state);
+  const file = command === "brief" ? join(root, `${label}-rust-refused.md`) : undefined;
+  const tsFile = command === "brief" ? join(root, `${label}-ts-readable.md`) : undefined;
+  const ts = run("ts", command, state, tsFile);
+  const rust = run("rust", command, state, file);
+  assert.equal(ts.code, 0, `${label}: TypeScript must read this v1 directory: ${ts.stderr}`);
+  if (command === "result") {
+    assert.equal(JSON.parse(ts.stdout).answer, (await readOperatorResult(state))?.answer,
+      `${label}: TypeScript result changed the saved answer`);
+  }
+  if (tsFile) {
+    const result = await readOperatorResult(state);
+    assert(result);
+    assert.deepEqual(await readFile(tsFile), Buffer.from(formatOperatorBrief(result), "utf8"),
+      `${label}: TypeScript brief bytes differ from its UTF-8 encoding`);
+  }
+  assert.notEqual(rust.code, 0, `${label}: Rust unexpectedly accepted unpaired UTF-16`);
+  assert.equal(rust.stdout, "", `${label}: Rust emitted partial output`);
+  assert.match(rust.stderr, /invalid or unsupported local JSON:/, `${label}: missing parse diagnostic`);
+  assert.ok(rust.stderr.includes(surrogateFallback), `${label}: missing actionable TypeScript fallback`);
+  if (file) await assert.rejects(stat(file), { code: "ENOENT" }, `${label}: Rust created a brief after refusal`);
+  assert.equal(await treeDigest(state), before, `${label}: refusal modified source tree`);
+  incompatibilityChecks++;
+}
+
+async function insertOverwrittenString(path: string, field: string, escapedValue: string) {
+  const original = await readFile(path, "utf8");
+  const needle = `"${field}":`;
+  assert.ok(original.includes(needle), `${path}: missing ${field}`);
+  // JSON.parse keeps the final occurrence. This preserves the TypeScript view
+  // while exercising the Rust parser on a preceding UTF-16-only string.
+  await writeFile(path, original.replace(needle, `${needle}"${escapedValue}", ${needle}`));
 }
 
 async function main() {
@@ -230,7 +269,7 @@ async function main() {
       assert.equal(native.code, 0, `copied standalone ${command} failed: ${native.stderr}`);
       assert.deepEqual(withoutProtocol(JSON.parse(native.stdout)), command === "status"
         ? await operatorTaskStatus(quick.state) : await readOperatorResult(quick.state));
-      checks++;
+      parityChecks++;
     }
 
     const incomplete = await fresh(root, "incomplete");
@@ -334,26 +373,78 @@ async function main() {
     }
     await refusal(astral.state, "status", "2002 UTF-16 code units refused");
 
-    // Strict Rust JSON parsing can reject cases the existing JSON.parse reader accepts.
-    // Record these as explicit compatibility differences, never count them as parity.
-    const parserDifferences: Array<{ probe: string; tsAccepted: boolean; rustAccepted: boolean }> = [];
+    // Paired escapes and literal backslash-u text remain ordinary compatible v1 data.
+    const escapedAstral = await fresh(root, "escaped-astral", "quick", "😀");
+    for (const name of ["task.json", "request.json"]) {
+      const path = join(escapedAstral.state, name);
+      await writeFile(path, (await readFile(path, "utf8")).replace("😀", "\\ud83d\\ude00"));
+    }
+    await parity(escapedAstral.state, "status", "escaped paired astral question");
+    const literalEscape = await fresh(root, "literal-escape", "quick", "\\ud800 is literal text");
+    await parity(literalEscape.state, "status", "escaped backslash-u is literal text");
+    const escapedReceipt = await fresh(root, "escaped-paired-receipt");
+    await journal(escapedReceipt.state, escapedReceipt.request);
+    await complete(escapedReceipt.state, escapedReceipt.request, "Paired astral answer", { unicodeProbe: { "😀": "😀" } });
+    const escapedReceiptSnapshot = JSON.parse(await readFile(join(escapedReceipt.state, "result.json"), "utf8"));
+    const escapedReceiptPath = join(escapedReceipt.state, "buyer", escapedReceiptSnapshot.receiptFile);
+    await writeFile(escapedReceiptPath, (await readFile(escapedReceiptPath, "utf8")).replaceAll("😀", "\\ud83d\\ude00"));
+    await parity(escapedReceipt.state, "result", "escaped paired astral receipt key and value");
+
+    // JSON.parse accepts unpaired UTF-16 escapes, while Rust strings cannot hold
+    // them. These are asserted intentional candidate incompatibilities, not parity.
+    const loneHigh = await fresh(root, "lone-high-question", "quick", "\ud800");
+    await surrogateRefusal(loneHigh.state, "status", "lone high in task question", root);
+    const loneLow = await fresh(root, "lone-low-question", "quick", "\udc00");
+    await surrogateRefusal(loneLow.state, "status", "lone low in task question", root);
+
+    const requestSurrogate = await fresh(root, "lone-request");
+    await insertOverwrittenString(join(requestSurrogate.state, "request.json"), "question", "\\ud800");
+    await surrogateRefusal(requestSurrogate.state, "status", "lone high in request overwritten value", root);
+
+    const journalSurrogate = await fresh(root, "lone-journal");
+    await journal(journalSurrogate.state, journalSurrogate.request);
+    await insertOverwrittenString(join(journalSurrogate.state, "buyer", "intent.json"), "schema", "\\ud800");
+    await surrogateRefusal(journalSurrogate.state, "status", "lone high in journal overwritten value", root);
+
+    const observationSurrogate = await fresh(root, "lone-observation");
+    await journal(observationSurrogate.state, observationSurrogate.request);
+    await complete(observationSurrogate.state, observationSurrogate.request, "Observation answer");
+    await insertOverwrittenString(join(observationSurrogate.state, "last-observation.json"), "schema", "\\udc00");
+    await surrogateRefusal(observationSurrogate.state, "status", "lone low in observation overwritten value", root);
+
+    const snapshotSurrogate = await fresh(root, "lone-snapshot-answer");
+    await journal(snapshotSurrogate.state, snapshotSurrogate.request);
+    await complete(snapshotSurrogate.state, snapshotSurrogate.request, "Answer with \ud800");
+    await surrogateRefusal(snapshotSurrogate.state, "result", "lone high in saved answer", root);
+    assert.equal((await readOperatorResult(snapshotSurrogate.state))?.answer, "Answer with \ud800",
+      "TypeScript saved result lost a UTF-16 code unit");
+    await surrogateRefusal(snapshotSurrogate.state, "brief", "lone high in saved answer brief", root);
+    assert.match(await readFile(join(root, "lone high in saved answer brief-ts-readable.md"), "utf8"), /\uFFFD/,
+      "UTF-8 Markdown cannot preserve the unpaired code unit");
+
+    const snapshotKey = await fresh(root, "lone-snapshot-key");
+    await journal(snapshotKey.state, snapshotKey.request);
+    await complete(snapshotKey.state, snapshotKey.request, "Snapshot key answer");
+    const snapshotPath = join(snapshotKey.state, "result.json");
+    const snapshotText = await readFile(snapshotPath, "utf8");
+    assert.match(snapshotText, /"job": \{/);
+    await writeFile(snapshotPath, snapshotText.replace('"job": {', '"job": { "\\udc00": "ignored",'));
+    await surrogateRefusal(snapshotKey.state, "result", "lone low in ignored snapshot job key", root);
+
+    const receiptSurrogate = await fresh(root, "lone-receipt");
+    await journal(receiptSurrogate.state, receiptSurrogate.request);
+    const surrogateDigest = await complete(receiptSurrogate.state, receiptSurrogate.request,
+      "Receipt answer", { unicodeProbe: { "\ud800": "\udc00" } });
+    const receiptSnapshot = JSON.parse(await readFile(join(receiptSurrogate.state, "result.json"), "utf8"));
+    assert.equal(receiptSnapshot.receiptDigest, surrogateDigest, "surrogate payload changed saved digest");
+    await surrogateRefusal(receiptSurrogate.state, "result", "lone surrogate receipt payload key and value", root);
+
+    // A duplicate with the same final value is accepted by both parsers.
     const duplicate = await fresh(root, "duplicate-key");
     const duplicateTask = (await readFile(join(duplicate.state, "task.json"), "utf8"))
       .replace('"schema": "keryx-operator-task-v1",', '"schema": "keryx-operator-task-v1", "schema": "keryx-operator-task-v1",');
     await writeFile(join(duplicate.state, "task.json"), duplicateTask);
-    const lone = await fresh(root, "lone-surrogate");
-    const loneTask = (await readFile(join(lone.state, "task.json"), "utf8")).replace("What is Arc doing?", "\\ud800");
-    const loneRequest = (await readFile(join(lone.state, "request.json"), "utf8")).replace("What is Arc doing?", "\\ud800");
-    await writeFile(join(lone.state, "task.json"), loneTask);
-    await writeFile(join(lone.state, "request.json"), loneRequest);
-    for (const [probe, state] of [["duplicate JSON key", duplicate.state], ["lone UTF-16 surrogate", lone.state]] as const) {
-      const before = await treeDigest(state);
-      const ts = run("ts", "status", state);
-      const rust = run("rust", "status", state);
-      parserDifferences.push({ probe, tsAccepted: ts.code === 0, rustAccepted: rust.code === 0 });
-      assert.equal(await treeDigest(state), before, `${probe} modified source tree`);
-      checks++;
-    }
+    await parity(duplicate.state, "status", "duplicate JSON key with identical final value");
 
     // Measurements include fresh process startup and installed tsx loader overhead.
     if (benchmarkBundle) {
@@ -392,8 +483,8 @@ async function main() {
     const median = (values: number[]) => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)].toFixed(1);
     const size = (await stat(rustExe)).size;
     console.log(JSON.stringify({ fixtureKind: "synthetic; no settlement evidence",
-      strictChecks: checks - parserDifferences.length, parserProbes: parserDifferences.length,
-      digest, parserDifferences,
+      strictChecks: parityChecks + refusalChecks, parityChecks, refusalChecks,
+      intentionalIncompatibilityChecks: incompatibilityChecks, digest,
       standaloneCopy: "native executable copied to temp and launched on this host with system-only PATH; no clean-VM claim",
       benchmark: { host: `${process.platform}/${process.arch}`, node: process.version, repetitions: 7,
         commands: Object.fromEntries(Object.entries(samples).map(([command, data]) => [command,
