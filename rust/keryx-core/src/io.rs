@@ -62,7 +62,11 @@ fn read_json(path: &Path, max: usize) -> Result<Value> {
         return Err("local file exceeds limit".into());
     }
     let text = std::str::from_utf8(&bytes).map_err(|e| e.to_string())?;
-    serde_json::from_str(text).map_err(|e| format!("invalid local JSON: {e}"))
+    serde_json::from_str(text).map_err(|e| {
+        format!(
+            "invalid or unsupported local JSON: {e}. This Rust candidate cannot represent unpaired UTF-16 surrogates. If this is a TypeScript-readable v1 directory, use the TypeScript Operator status/result/brief commands on the original directory. Do not rewrite files."
+        )
+    })
 }
 
 fn open_regular(path: &Path) -> Result<File> {
