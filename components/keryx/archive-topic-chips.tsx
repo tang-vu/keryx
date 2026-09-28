@@ -28,7 +28,7 @@ export function ArchiveTopicChips({
           ← all
         </Link>
       )}
-      {topics.map((t) =>
+      {topics.slice(0, 5).map((t) =>
         t.slug === activeSlug ? (
           <span key={t.slug} className={`${CHIP} border-ink bg-ink text-paper`}>
             {t.label} {t.count}
@@ -42,6 +42,18 @@ export function ArchiveTopicChips({
             {t.label} <span className="text-ink-3">{t.count}</span>
           </Link>
         ),
+      )}
+      {topics.length > 5 && (
+        <details className="w-full">
+          <summary className={`${CHIP} inline-flex min-h-11 cursor-pointer items-center border-line text-ink-2`}>More topics ({topics.length - 5})</summary>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {topics.slice(5).map((t) => t.slug === activeSlug ? (
+              <span key={t.slug} className={`${CHIP} border-ink bg-ink text-paper`}>{t.label} {t.count}</span>
+            ) : (
+              <Link key={t.slug} href={`/answers/topic/${t.slug}`} className={`${CHIP} border-line text-ink-2 hover:border-seal hover:text-seal`}>{t.label} <span className="text-ink-3">{t.count}</span></Link>
+            ))}
+          </div>
+        </details>
       )}
     </nav>
   );

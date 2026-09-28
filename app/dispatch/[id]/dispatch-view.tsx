@@ -1,13 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
 import type { QueryRun, PaymentRecord } from "@/lib/types";
 import { ReasoningConsole } from "@/components/keryx/reasoning-console";
 import { CreatorsPaidPanel } from "@/components/keryx/creators-paid-panel";
 import { AnswerCard } from "@/components/keryx/answer-card";
 import { ConfidenceBadge } from "@/components/keryx/confidence-badge";
 import { deriveConfidence } from "@/lib/agent/confidence";
-import { paymentSettlementStatus } from "@/lib/payments/payment-state";
 
 export function DispatchView({
   run,
@@ -17,34 +15,7 @@ export function DispatchView({
   payments: PaymentRecord[];
 }) {
   const confidence = deriveConfidence(run);
-  // Prefer the real settlement rows (carry settled / tx) so the permalink shows
-  // on-chain truth. Fall back to a citation reconstruction only for older runs
-  // that predate per-query payment rows.
-  const payouts = useMemo<PaymentRecord[]>(() => {
-    if (payments.length) return payments;
-    if (!run.citations?.length) return [];
-    return run.citations.map((c) => ({
-      kind: "citation" as const,
-      queryId: run.id,
-      sourceId: c.sourceId,
-      sourceName: c.sourceName,
-      payer: "0xAGENT",
-      payee: c.sourceId,
-      amountUsdc: c.reward,
-      weight: c.weight,
-      txHash: null,
-      network: "",
-      settled: false,
-      settlementStatus: "simulated",
-      createdAt: run.createdAt,
-    }));
-  }, [run, payments]);
-
-  // "real" lights up the on-chain settlement link; offline stays honest as simulated.
-  const mode = run.paymentMode ??
-    (payouts.some((payment) => paymentSettlementStatus(payment) !== "simulated")
-      ? "real"
-      : "offline");
+  const mode = run.paymentMode ?? null;
 
   return (
     <>
@@ -63,18 +34,21 @@ export function DispatchView({
         </div>
       </div>
 
-      <h2 className="mb-7 border-b border-ink pb-3.5 font-display text-[clamp(24px,3.2vw,34px)] font-medium tracking-tight text-ink">
-        The dispatch, <em className="italic text-paid">itemised.</em>
-      </h2>
-
-      <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
-        <ReasoningConsole steps={run.trace} streaming={false} budget={run.budget} />
-        <CreatorsPaidPanel payments={payouts} mode={mode} streaming={false} />
+      <div className="grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(280px,330px)]">
+        <AnswerCard run={run} meta={null} payments={payments} />
+        <aside className="lg:sticky lg:top-6" aria-label="Payment evidence">
+          <CreatorsPaidPanel payments={payments} mode={mode} streaming={false} />
+        </aside>
       </div>
 
-      <div className="mt-6">
-        <AnswerCard run={run} meta={null} />
-      </div>
+      <details className="group mt-8 border border-line bg-paper">
+        <summary className="cursor-pointer px-5 py-4 font-mono text-xs uppercase tracking-widest text-ink focus-visible:outline-2 focus-visible:outline-seal">
+          Decision log · {run.trace.length} steps
+        </summary>
+        <div className="border-t border-line p-4">
+          <ReasoningConsole steps={run.trace} streaming={false} budget={run.budget} />
+        </div>
+      </details>
     </>
   );
 }

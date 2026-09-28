@@ -46,7 +46,7 @@ export function ArchiveAnswerRow({ entry }: { entry: ArchiveEntry }) {
           <span>
             {entry.citationCount} source{entry.citationCount !== 1 ? "s" : ""} cited
           </span>
-          <span className="text-paid">${entry.toCreators.toFixed(4)} to creators</span>
+          <span className="text-paid">${entry.toCreators.toFixed(4)} recorded creator rewards</span>
           {entry.sourceNames.length > 0 && (
             <span className="normal-case tracking-normal text-ink-3">
               {entry.sourceNames.slice(0, 4).join(" · ")}

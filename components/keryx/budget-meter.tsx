@@ -9,32 +9,49 @@
  */
 
 import type { TraceStep } from "@/lib/types";
+import { isPaymentRecord, paymentSettlementStatus } from "@/lib/payments/payment-state";
 import { fmtUsdc } from "./phase-style";
 
-/**
- * Sum the USDC actually committed so far from the live trace. Only `fetch` and
- * `settle` steps carry a PaymentRecord (with a numeric `amountUsdc`); CACHE
- * reuse, the funded-wallet notice, skipped buys, and settle errors carry a
- * string or an error object, so they're naturally excluded.
- */
-export function spentFromSteps(steps: TraceStep[]): number {
-  let sum = 0;
+/** Keep ambiguous and offline amounts separate from confirmed Arc settlement. */
+export function stepPaymentTotals(steps: TraceStep[]): {
+  settled: number;
+  pending: number;
+  simulated: number;
+  failed: number;
+  unverified: number;
+} {
+  const totals = { settled: 0, pending: 0, simulated: 0, failed: 0, unverified: 0 };
   for (const s of steps) {
     if (s.phase !== "fetch" && s.phase !== "settle") continue;
-    const amount = (s.detail as { amountUsdc?: unknown } | undefined)?.amountUsdc;
-    if (typeof amount === "number" && isFinite(amount)) sum += amount;
+    if (!isPaymentRecord(s.detail) || !Number.isFinite(s.detail.amountUsdc) || s.detail.amountUsdc <= 0) continue;
+    const status = paymentSettlementStatus(s.detail);
+    if (s.detail.settled !== (status === "settled")) {
+      totals.unverified += s.detail.amountUsdc;
+      continue;
+    }
+    if (status === "settled" && s.detail.settled) totals.settled += s.detail.amountUsdc;
+    else if (status === "pending") totals.pending += s.detail.amountUsdc;
+    else if (status === "simulated" && !s.detail.settled) totals.simulated += s.detail.amountUsdc;
+    else if (status === "failed") totals.failed += s.detail.amountUsdc;
   }
-  return sum;
+  return totals;
+}
+
+/** Confirmed real spend only. Callers must label simulated and pending amounts separately. */
+export function spentFromSteps(steps: TraceStep[]): number {
+  return stepPaymentTotals(steps).settled;
 }
 
 export function BudgetMeter({
   spent,
   budget,
   streaming,
+  pending = 0,
 }: {
   spent: number;
   budget: number;
   streaming: boolean;
+  pending?: number;
 }) {
   if (budget <= 0) return null;
   const pct = Math.max(0, Math.min(100, (spent / budget) * 100));
@@ -58,7 +75,7 @@ export function BudgetMeter({
           />
         )}
         {Math.round(pct)}%
-        {!streaming && spent > 0 && saved > 0 && (
+        {!streaming && pending <= 0 && spent > 0 && saved > 0 && (
           <span className="ml-2 text-paid">${fmtUsdc(saved)} under cap</span>
         )}
       </span>

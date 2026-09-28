@@ -37,6 +37,7 @@ import type { Session } from "@/lib/auth";
 export default function RegisterPage() {
   const { address, isConnected } = useAccount();
   const [sources, setSources] = useState<SourceCardData[]>([]);
+  const [sourcesState, setSourcesState] = useState<"loading" | "ready" | "error">("loading");
   const [session, setSession] = useState<Session | null | undefined>(undefined); // undefined = loading
   // Pre-fill for claiming a pre-registry source on-chain. The form applies initial values on
   // mount only, so bump the key to re-initialise it with each claim.
@@ -45,6 +46,21 @@ export default function RegisterPage() {
   // Single source at a time, or a pasted batch of feeds. Claiming a pre-registry source pre-fills
   // the single form, so a claim always snaps back to that tab.
   const [mode, setMode] = useState<"single" | "bulk">("single");
+  const [draftFeed, setDraftFeed] = useState("");
+  const [feedError, setFeedError] = useState("");
+
+  const prepareFeed = () => {
+    try {
+      const parsed = new URL(draftFeed.trim());
+      if (!["http:", "https:"].includes(parsed.protocol) || !parsed.hostname) throw new Error("Invalid feed URL");
+      setPrefill({ rssUrl: parsed.toString() });
+      setFormKey((key) => key + 1);
+      setMode("single");
+      setFeedError("");
+    } catch {
+      setFeedError("Enter a full http or https RSS feed URL.");
+    }
+  };
 
   // Deep-link prefill: ?url= / ?name= / ?desc= seed the manual fields (the browser extension's
   // "list this page as a paid source"), ?rss= seeds the feed field (the demand board's feed check,
@@ -86,11 +102,13 @@ export default function RegisterPage() {
   const loadSources = useCallback(async () => {
     try {
       const res = await fetch("/api/sources", { cache: "no-store" });
-      if (!res.ok) return;
+      if (!res.ok) throw new Error("Sources unavailable");
       const data = (await res.json()) as { sources: SourceCardData[] };
+      if (!Array.isArray(data.sources)) throw new Error("Invalid sources response");
       setSources(data.sources ?? []);
+      setSourcesState("ready");
     } catch {
-      /* ignore transient errors */
+      setSourcesState("error");
     }
   }, []);
 
@@ -116,11 +134,25 @@ export default function RegisterPage() {
             Set your <em className="italic text-paid">toll.</em>
           </h1>
           <p className="mt-3 max-w-[54ch] text-[18px] leading-relaxed text-ink-2">
-            AI agents already read blogs like yours to answer questions — for
-            free. List a site you control, and every time Keryx cites it the toll
-            settles to you directly. Instant, no middleman, no minimum.
+            List an RSS feed you control to offer articles to Keryx. Set a price per read,
+            prove feed ownership, and receive Arc testnet USDC when a paid read or citation settles.
+          </p>
+          <p className="mt-3 max-w-[65ch] text-sm leading-relaxed text-ink-2">
+            An agent may skip a source after reading its public preview. A paid read and a cited answer
+            are separate payment events. Track sources and earnings in <Link href="/me/sources" className="underline">My sources</Link> or inspect public settlements in <Link href="/dashboard" className="underline">Payments & proof</Link>.
           </p>
         </header>
+
+        <section className="mb-8 max-w-2xl border border-ink bg-paper-2 p-5" aria-labelledby="feed-first-title">
+          <h2 id="feed-first-title" className="font-display text-xl text-ink">Start with your feed URL</h2>
+          <p className="mt-1 text-sm text-ink-2">Check the URL format and carry it into registration. Keryx reads the feed after you sign in; this step does not fetch or verify its contents.</p>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <input type="url" value={draftFeed} onChange={(event) => setDraftFeed(event.target.value)} placeholder="https://your-site.example/feed.xml" aria-label="Your RSS feed URL" className="min-h-11 min-w-0 flex-1 border border-line bg-paper px-3 font-mono text-sm text-ink" />
+            <button type="button" onClick={prepareFeed} className="min-h-11 border border-ink bg-ink px-4 font-mono text-xs text-paper">Prepare feed</button>
+          </div>
+          {feedError && <p role="alert" className="mt-2 text-sm text-seal">{feedError}</p>}
+          {prefill?.rssUrl && !feedError && <p className="mt-2 break-all text-sm text-ink-2">Ready to register: {prefill.rssUrl}. Connect your wallet below to continue.</p>}
+        </section>
 
         <div className="grid gap-10 lg:grid-cols-[minmax(0,440px)_1fr]">
           <div className="lg:sticky lg:top-24 lg:self-start">
@@ -219,10 +251,10 @@ export default function RegisterPage() {
           </div>
 
           <section>
-            <h2 className="mb-4 font-mono text-[12px] uppercase tracking-[0.16em] text-ink-3">
-              Registered sources ({sources.length})
-            </h2>
-            <SourcesList sources={sources} />
+            <h2 className="mb-4 font-mono text-[12px] uppercase tracking-[0.16em] text-ink-3">Registered sources</h2>
+            {sourcesState === "loading" && <p role="status" className="text-sm text-ink-3">Loading registered sources…</p>}
+            {sourcesState === "error" && <p role="status" className="text-sm text-ink-3">Registered sources are unavailable right now. <button type="button" onClick={() => { setSourcesState("loading"); void loadSources(); }} className="underline">Retry</button></p>}
+            {sourcesState === "ready" && <SourcesList sources={sources} />}
           </section>
         </div>
       </main>

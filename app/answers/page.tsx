@@ -1,6 +1,6 @@
 /**
- * /answers — the public answer archive. Every question Keryx has actually
- * answered and paid its sources for, deduped to one canonical dispatch each,
+ * /answers — the public answer archive. Cited answers from Keryx research history,
+ * deduped to one canonical dispatch per question,
  * rendered server-side so search + AI crawlers index a growing corpus that
  * links back into each /dispatch/[id] permalink. This is the organic on-ramp:
  * people find a Keryx answer in search, then ask their own.
@@ -24,9 +24,9 @@ import { safeInlineJson } from "@/lib/safe-json";
 export const revalidate = 600;
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
-const TITLE = "The Archive — every answer Keryx has paid for";
+const TITLE = "The Archive — cited answers from Keryx";
 const DESCRIPTION =
-  "Browse every question Keryx has answered. Each answer is grounded in cited sources and settled with a real USDC micropayment to the writers it quoted — no platform cut, no payout minimum.";
+  "Browse cited answers from Keryx research history. Open a dispatch to inspect its sources, decisions, and payment states, including settled, pending, or simulated rewards.";
 
 export const metadata: Metadata = {
   title: TITLE,

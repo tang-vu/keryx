@@ -1,10 +1,8 @@
 "use client";
 
 /**
- * Ask / Landing — the banknote masthead ("Citations are currency.") with the
- * herald seal, real-traction denomination box, and a guilloché divider. The
- * dispatch order opens an SSE stream and renders the live dispatch: §I the
- * decision, §II the reading, §III the settlement.
+ * Ask / Landing. The question leads the banknote masthead. An SSE stream shows
+ * current research and spend, then the cited answer above expandable evidence.
  *
  * Browser co-sign: SessionGrantPanel detects SIWE auth and renders the grant
  * dialog. When a grant is active, sessionId + getSessionWalletClient are passed
@@ -29,6 +27,8 @@ import type { SessionGrantBinding } from "@/components/keryx/session-grant-panel
 import { OnboardingTour } from "@/components/keryx/onboarding-tour";
 import { ActivityTicker } from "@/components/keryx/activity-ticker";
 import { useAskStream } from "@/lib/hooks/use-ask-stream";
+import { stepPaymentTotals } from "@/components/keryx/budget-meter";
+import { fmtUsdc } from "@/components/keryx/phase-style";
 
 export default function AskPage() {
   // One coarse landing event per tab/day. No stable id is created and credentials are omitted, so
@@ -65,6 +65,7 @@ export default function AskPage() {
   // every payTo it signs for against that source's on-chain authorised wallets.
   // Stored in state (not a ref) so React can track the value properly during render.
   const [sourceIndex, setSourceIndex] = useState<SourceIndex>(new Map());
+  const [evidenceOpen, setEvidenceOpen] = useState(false);
   useEffect(() => {
     fetch("/api/sources")
       .then((r) => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
@@ -93,99 +94,59 @@ export default function AskPage() {
   });
   const streaming = state.status === "streaming";
   const started = state.status !== "idle";
+  const payer = grantBinding.expired ? "expired" : grantBinding.sessionId ? "session" : "treasury";
+  const latestStep = state.steps.at(-1);
+  const paymentTotals = stepPaymentTotals(state.steps);
+  const unsettled = [
+    paymentTotals.pending > 0 ? `$${fmtUsdc(paymentTotals.pending)} pending` : null,
+    paymentTotals.simulated > 0 ? `$${fmtUsdc(paymentTotals.simulated)} simulated` : null,
+    paymentTotals.unverified > 0 ? `$${fmtUsdc(paymentTotals.unverified)} unverified` : null,
+    paymentTotals.failed > 0 ? `$${fmtUsdc(paymentTotals.failed)} failed` : null,
+  ].filter(Boolean).join(" · ");
 
   return (
     <div className="min-h-screen bg-paper-2">
       <SiteHeader />
-      <OnboardingTour />
       <main>
         {!started ? (
           <>
-            {/* HERO NOTE */}
-            <section className="mx-auto max-w-[1180px] px-4 pb-2 pt-12 sm:px-[30px]" data-tour="hero">
+            <section className="mx-auto max-w-[1180px] px-4 pt-2 sm:px-[30px] sm:pt-3" data-tour="hero">
               <div className="border-2 border-ink bg-paper p-1.5">
-                <div className="relative overflow-hidden border border-ink p-[clamp(28px,4.5vw,56px)]">
-                  <div className="pointer-events-none absolute right-[-90px] top-1/2 hidden h-[560px] w-[560px] -translate-y-1/2 opacity-50 lg:block">
+                <div className="relative overflow-hidden border border-ink p-3 sm:p-4 lg:p-5">
+                  <div className="pointer-events-none absolute -right-16 top-1/2 hidden h-[380px] w-[380px] -translate-y-1/2 opacity-35 lg:block">
                     <GlobeWatermark className="h-full w-full" />
                   </div>
-
-                  <div className="relative flex items-center justify-between gap-4 font-mono text-[11px] uppercase tracking-[0.18em] text-ink-3">
-                    <span>For the writers AI reads &nbsp;·&nbsp; paid per citation</span>
-                    <span className="text-ink">Series 2026 — No. 00481</span>
-                  </div>
-
-                  <h1 className="letterpress relative mt-6 font-display text-[clamp(46px,8.2vw,116px)] font-medium leading-[0.92] tracking-[-0.01em]">
-                    Citations are
-                    <br />
-                    <span className="font-semibold italic text-paid">currency.</span>
-                  </h1>
-
-                  <div className="relative mt-9 grid items-end gap-[clamp(28px,4vw,56px)] md:grid-cols-[1.45fr_0.9fr]">
-                    <div>
-                      <p className="max-w-[46ch] font-serif text-[clamp(17px,1.5vw,20px)] leading-[1.55] text-ink-2">
-                        Keryx is a reading agent with a purse. Give it a question
-                        and a budget — it buys the sources worth reading, answers
-                        with citations, and pays every author it quotes, in the
-                        same breath.
+                  <div className="relative grid items-start gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(260px,2fr)] lg:gap-8">
+                    <div className="relative flex min-w-0 flex-col">
+                      <p data-testid="hero-kicker" className="hidden font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3 sm:flex sm:min-h-11 sm:items-center sm:pr-32">
+                        For the writers AI reads · paid per citation
                       </p>
-                      <div className="mt-7 flex flex-wrap gap-3">
-                        <a
-                          href="#dispatch"
-                          className="border border-ink bg-ink px-6 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-paper transition-all hover:-translate-y-0.5 hover:shadow-[0_5px_0_var(--seal)] active:translate-y-0 active:shadow-none"
-                        >
-                          Ask the herald ▸
-                        </a>
-                        <a
-                          href="/register"
-                          className="border border-ink px-6 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-ink transition-colors hover:bg-ink hover:text-paper"
-                        >
-                          Issue a toll
-                        </a>
+                      <div data-testid="hero-guide" className="order-5 mt-2 self-start sm:absolute sm:right-0 sm:top-0 sm:mt-0">
+                        <OnboardingTour />
                       </div>
-                      <p className="mt-3.5 flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-3">
-                        <span className="h-[6px] w-[6px] rounded-full bg-paid" />
-                        Free to try — no wallet, no sign-up
+                      <h1 className="letterpress mt-1 font-display text-[clamp(39px,4vw,54px)] font-medium leading-[0.96] tracking-tight sm:mt-2">
+                        Citations are <span className="font-semibold italic text-paid">currency.</span>
+                      </h1>
+                      <p className="mt-2 max-w-[56ch] font-serif text-[16px] leading-[1.4] text-ink-2 sm:text-[18px]">
+                        Keryx chooses paid sources, shows why, answers with citations, and pays their authors.
                       </p>
+                      <div id="dispatch" className="mt-3 scroll-mt-24">
+                        <AskForm disabled={streaming} onAsk={ask} payer={payer} />
+                      </div>
+                      <div className="order-6 mt-3">
+                        <SessionGrantPanel onBindingChange={handleBindingChange} />
+                      </div>
                     </div>
-
-                    <div className="flex flex-col items-end gap-6">
-                      <HeraldSeal className="h-32 w-32" />
+                    <aside className="relative hidden min-w-0 flex-col items-center justify-center gap-4 border-l border-line pl-6 lg:flex" aria-label="Keryx network activity">
+                      <HeraldSeal className="h-28 w-28" />
                       <HeroStats />
-                    </div>
-                  </div>
-
-                  {/* guilloché divider + microprint */}
-                  <div className="relative mt-9">
-                    <svg
-                      viewBox="0 0 1200 40"
-                      preserveAspectRatio="none"
-                      className="block h-3.5 w-full"
-                    >
-                      <use href="#eng-waveA" fill="none" stroke="var(--ink)" strokeWidth="1" vectorEffect="non-scaling-stroke" opacity="0.55" />
-                      <use href="#eng-waveB" fill="none" stroke="var(--paid)" strokeWidth="1" vectorEffect="non-scaling-stroke" opacity="0.55" />
-                    </svg>
-                    <div className="mt-2 overflow-hidden whitespace-nowrap font-mono text-[8.5px] uppercase tracking-[0.42em] text-faint">
-                      {"keryx · the one sent to carry a message and paid for the carrying · ".repeat(
-                        6,
-                      )}
-                    </div>
+                      <a href="/register" className="font-mono text-[12px] font-semibold uppercase tracking-[0.08em] text-paid underline underline-offset-4 hover:text-ink">Publish a paid source ↗</a>
+                    </aside>
                   </div>
                 </div>
               </div>
             </section>
-
-            {/* LIVE CITATION TICKER — proof-of-life; renders nothing until there's real activity */}
-            <div className="mx-auto max-w-[1180px] px-4 pt-3 sm:px-[30px]">
-              <ActivityTicker />
-            </div>
-
-            {/* DISPATCH ORDER */}
-            <section id="dispatch" className="mx-auto max-w-[1180px] px-4 pt-9 sm:px-[30px]">
-              {/* Non-custodial session grant — shown only when SIWE-authed */}
-              <SessionGrantPanel onBindingChange={handleBindingChange} />
-              <AskForm disabled={streaming} onAsk={ask} />
-              <PayerNote active={!!grantBinding.sessionId && !grantBinding.expired} expired={!!grantBinding.expired} />
-            </section>
+            <div className="mx-auto max-w-[1180px] px-4 pt-3 sm:px-[30px]"><ActivityTicker /></div>
 
             <HowItWorks />
             <ForCreators />
@@ -197,11 +158,9 @@ export default function AskPage() {
             <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.2em] text-seal">
               The reading room
             </div>
-            <div id="dispatch" className="max-w-[860px]">
-              {/* Session grant panel persists across queries — grant stays active */}
-              <SessionGrantPanel onBindingChange={handleBindingChange} />
-              <AskForm disabled={streaming} onAsk={ask} />
-              <PayerNote active={!!grantBinding.sessionId && !grantBinding.expired} expired={!!grantBinding.expired} />
+            <div id="dispatch" className="max-w-[860px] scroll-mt-24">
+              <AskForm disabled={streaming} onAsk={ask} payer={payer} />
+              <div className="mt-3"><SessionGrantPanel onBindingChange={handleBindingChange} /></div>
             </div>
 
             {state.status === "error" &&
@@ -213,50 +172,38 @@ export default function AskPage() {
                 </div>
               ))}
 
-            <h2 className="mb-7 mt-10 border-b border-ink pb-3.5 font-display text-[clamp(24px,3.2vw,34px)] font-medium tracking-tight text-ink">
-              The dispatch, <em className="italic text-paid">itemised.</em>
-            </h2>
-            <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
-              <ReasoningConsole steps={state.steps} streaming={streaming} budget={state.budget} />
-              <CreatorsPaidPanel
-                payments={state.payments}
-                mode={state.meta?.mode ?? null}
-                streaming={streaming}
-              />
-            </div>
             {state.run && (
-              <div className="mt-6">
+              <div className="mt-6" id="answer">
                 <AnswerCard
                   run={state.run}
                   meta={state.meta}
+                  payments={state.payments}
                   permalink={`${window.location.origin}/dispatch/${state.run.id}`}
                 />
               </div>
             )}
+            {streaming && !state.run && (
+              <div className="mt-6 border border-ink bg-paper px-4 py-4 sm:px-6" role="status" aria-live="polite">
+                <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-seal">Research in progress</p>
+                <p className="mt-2 font-serif text-[18px] leading-snug text-ink">{latestStep?.message ?? "Finding sources worth reading…"}</p>
+                <p className="mt-2 font-mono text-[12px] text-ink-2">{state.steps.length} steps · ${fmtUsdc(paymentTotals.settled)} settled of ${fmtUsdc(state.budget)} budget{unsettled && ` · ${unsettled}`}{state.meta?.mode === "offline" && " · offline simulation"}</p>
+              </div>
+            )}
+            <details className="group mt-5 border border-ink bg-paper" onToggle={(event) => setEvidenceOpen(event.currentTarget.open)}>
+              <summary className="cursor-pointer px-4 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.08em] text-ink marker:text-seal hover:bg-paper-2 sm:px-6">
+                Decision log and creator payments · {state.steps.length} steps · ${fmtUsdc(paymentTotals.settled)} settled{unsettled && ` · ${unsettled}`}{state.meta?.mode === "offline" && " · offline simulation"}
+              </summary>
+              {evidenceOpen && (
+                <div className="grid gap-6 border-t border-line p-4 lg:grid-cols-[1.6fr_1fr] sm:p-6">
+                  <ReasoningConsole steps={state.steps} streaming={streaming} budget={state.budget} />
+                  <CreatorsPaidPanel payments={state.payments} mode={state.meta?.mode ?? null} streaming={streaming} />
+                </div>
+              )}
+            </details>
           </section>
         )}
       </main>
     </div>
-  );
-}
-
-/**
- * Who pays for this run. Without an active session grant the agent settles from
- * Keryx's own treasury wallet (so asks work with no wallet — handy for demos);
- * with a grant it settles from the user's funded session. Surfaced so it's never
- * a mystery whose USDC is being spent.
- */
-function PayerNote({ active, expired }: { active: boolean; expired?: boolean }) {
-  const dot = active ? "bg-paid" : expired ? "bg-destructive" : "bg-seal";
-  return (
-    <p className="mt-2.5 flex items-center gap-2 font-mono text-[10px] leading-relaxed tracking-wide text-ink-3">
-      <span className={`h-[6px] w-[6px] rounded-full ${dot}`} />
-      {active
-        ? "Settling from your funded session — your wallet pays, capped at the funded amount."
-        : expired
-          ? "Session expired — recover it above to pay from your wallet (this run won't proceed until you do)."
-          : "Free to try — no wallet needed. This run is settled by Keryx's treasury; activate a session above to pay from your own wallet."}
-    </p>
   );
 }
 

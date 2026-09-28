@@ -74,10 +74,10 @@ export async function generateMetadata({
   const { topic, entries } = await loadTopic(slug);
   if (!topic) return { title: "Topic not found — Keryx", robots: { index: false } };
 
-  const title = `${topic.label} — answers Keryx paid for`;
+  const title = `${topic.label} — cited Keryx answers`;
   const description = `${entries.length} question${
     entries.length !== 1 ? "s" : ""
-  } about ${topic.label} answered by Keryx, each grounded in cited sources and settled with a real USDC micropayment to the writers it quoted.`;
+  } about ${topic.label} answered by Keryx with cited sources. Open a dispatch to inspect its payment states.`;
 
   return {
     title,
@@ -150,12 +150,10 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
           Answers about <em className="italic text-paid">{topic.label}</em>
         </h1>
         <p className="mt-4 max-w-[62ch] font-serif text-[17px] leading-[1.55] text-ink-2">
-          {entries.length} question{entries.length !== 1 ? "s" : ""} on this beat, each answered
-          from sources the herald paid to read —{" "}
-          <span className="text-paid">${toCreators.toFixed(4)}</span> to creators across this topic.
+          {entries.length} cited answer{entries.length !== 1 ? "s" : ""} on this topic.{" "}
+          <span className="text-paid">${toCreators.toFixed(4)}</span> in creator rewards recorded
+          on these runs. Open a dispatch for its settlement state.
         </p>
-
-        <ArchiveTopicChips topics={topics} activeSlug={topic.slug} />
 
         <ArchiveSearch
           terms={shown.map(searchTerm)}
@@ -170,6 +168,8 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
             <ArchiveAnswerRow key={e.id} entry={e} />
           ))}
         </ArchiveSearch>
+
+        <ArchiveTopicChips topics={topics} activeSlug={topic.slug} />
 
         {rest.length > 0 && (
           <p className="mt-8 border-t border-line pt-5 font-serif text-[15px] leading-[1.55] text-ink-2">

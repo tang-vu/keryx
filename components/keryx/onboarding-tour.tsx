@@ -1,193 +1,128 @@
 "use client";
 
-/**
- * Onboarding tour — a 4-step guided walkthrough for first-time visitors (judges).
- * Uses localStorage ("keryx-tour-seen") to show once. Finds target elements
- * via data-tour attributes and positions tooltips with getBoundingClientRect.
- * No external libraries — pure DOM + CSS.
- */
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-
-const TOUR_KEY = "keryx-tour-seen";
-
-interface TourStep {
-  target: string; // data-tour attribute value
-  title: string;
-  body: string;
-}
-
-const STEPS: TourStep[] = [
-  {
-    target: "hero",
-    title: "Welcome to Keryx",
-    body: "Keryx is a reading agent with a purse. It buys sources, answers with citations, and pays every author it quotes — in the same breath.",
-  },
-  {
-    target: "ask-form",
-    title: "Ask a question",
-    body: "Type any question and set a budget. The agent decides which sources are worth reading, reads them, and synthesises a grounded answer.",
-  },
-  {
-    target: "budget",
-    title: "Set a budget",
-    body: "Slide to set how much the agent can spend. Lower = frugal (fewer sources). Higher = thorough (more sources, higher quality). The agent never overspends.",
-  },
-  {
-    target: "dispatch-btn",
-    title: "Dispatch the agent",
-    body: "Hit Dispatch and watch the agent reason live: which sources to buy, which to skip, when to stop. Every cited source pays its creator in real USDC.",
-  },
-];
+const steps = [
+  { target: "hero", title: "Research with a budget", body: "Keryx finds sources, explains what it buys or skips, and cites evidence in its answer." },
+  { target: "ask-form", title: "Ask a question", body: "Enter the research question you want answered. You can inspect decisions as the answer streams." },
+  { target: "budget", title: "Choose a spending cap", body: "Set the most this request may spend. A cap is permission, not a promise to spend it all." },
+  { target: "dispatch-btn", title: "Start research", body: "Submit to see source decisions, payment state, citations, and creator rewards on Arc testnet." },
+] as const;
 
 export function OnboardingTour() {
+  const [active, setActive] = useState(false);
   const [step, setStep] = useState(0);
-  const [visible, setVisible] = useState(false);
   const [rect, setRect] = useState<DOMRect | null>(null);
-  const rafRef = useRef<number>(0);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  const [panelHeight, setPanelHeight] = useState(0);
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
 
-  // Check localStorage on mount — show tour only for first-time visitors
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (localStorage.getItem(TOUR_KEY)) return;
-    // Small delay so the page renders first
-    const t = setTimeout(() => setVisible(true), 800);
-    return () => clearTimeout(t);
+  const close = useCallback(() => {
+    setActive(false);
   }, []);
 
-  // Position tooltip near the target element
   useEffect(() => {
-    if (!visible) return;
-    const update = () => {
-      const el = document.querySelector(`[data-tour="${STEPS[step]?.target}"]`);
-      if (el) {
-        setRect(el.getBoundingClientRect());
+    if (!active) return;
+    const host = document.createElement("div");
+    const triggerElement = trigger.current;
+    host.setAttribute("data-keryx-tour-portal", "");
+    document.body.appendChild(host);
+    const background = Array.from(document.body.children).filter((child) => child !== host && child.tagName !== "SCRIPT");
+    const prior = background.map((element) => ({ element, inert: element.hasAttribute("inert"), ariaHidden: element.getAttribute("aria-hidden") }));
+    for (const element of background) { element.setAttribute("inert", ""); element.setAttribute("aria-hidden", "true"); }
+    const frame = window.requestAnimationFrame(() => setPortalRoot(host));
+    return () => {
+      window.cancelAnimationFrame(frame);
+      for (const { element, inert, ariaHidden } of prior) {
+        if (!inert) element.removeAttribute("inert");
+        if (ariaHidden === null) element.removeAttribute("aria-hidden");
+        else element.setAttribute("aria-hidden", ariaHidden);
+      }
+      host.remove();
+      triggerElement?.focus();
+    };
+  }, [active]);
+
+  useEffect(() => {
+    if (!active) return;
+    if (steps[step].target === "budget") document.dispatchEvent(new CustomEvent("keryx:tour-budget"));
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const findTarget = () => document.querySelector<HTMLElement>(`[data-tour="${steps[step].target}"]`);
+    const scrollTarget = () => {
+      const target = findTarget();
+      if (!target) return;
+      if (window.innerWidth < 640) {
+        window.scrollBy({ top: target.getBoundingClientRect().top - 120, behavior: reduced ? "instant" : "smooth" });
+      } else {
+        target.scrollIntoView({ behavior: reduced ? "instant" : "smooth", block: "center" });
       }
     };
+    const frame = window.requestAnimationFrame(scrollTarget);
+    const update = () => {
+      setRect(findTarget()?.getBoundingClientRect() ?? null);
+      setSize({ width: window.innerWidth, height: window.innerHeight });
+    };
     update();
-    // Re-position on scroll/resize
-    const onEvent = () => {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = requestAnimationFrame(update);
-    };
-    window.addEventListener("scroll", onEvent, true);
-    window.addEventListener("resize", onEvent);
+    const timer = window.setTimeout(update, reduced ? 0 : 450);
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
     return () => {
-      window.removeEventListener("scroll", onEvent, true);
-      window.removeEventListener("resize", onEvent);
-      cancelAnimationFrame(rafRef.current);
+      window.clearTimeout(timer);
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
     };
-  }, [visible, step]);
+  }, [active, step]);
 
-  const dismiss = useCallback(() => {
-    setVisible(false);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(TOUR_KEY, "1");
-    }
-  }, []);
+  useEffect(() => {
+    if (!active || !portalRoot || !panel.current) return;
+    const element = panel.current;
+    const measure = () => setPanelHeight(element.getBoundingClientRect().height);
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    measure();
+    return () => observer.disconnect();
+  }, [active, portalRoot]);
 
-  const next = useCallback(() => {
-    if (step < STEPS.length - 1) {
-      setStep((s) => s + 1);
-    } else {
-      dismiss();
-    }
-  }, [step, dismiss]);
+  useEffect(() => {
+    if (!active || !portalRoot) return;
+    panel.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+      if (event.key !== "Tab" || !panel.current) return;
+      const controls = Array.from(panel.current.querySelectorAll<HTMLButtonElement>("button:not([disabled])"));
+      const first = controls[0];
+      const last = controls.at(-1);
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", keydown);
+    return () => document.removeEventListener("keydown", keydown);
+  }, [active, close, portalRoot]);
 
-  const prev = useCallback(() => {
-    if (step > 0) setStep((s) => s - 1);
-  }, [step]);
-
-  if (!visible || !rect) return null;
-
-  const s = STEPS[step];
-  const isLast = step === STEPS.length - 1;
-
-  // Tooltip position: below the target by default, above if not enough space
-  const spaceBelow = window.innerHeight - rect.bottom;
-  const showAbove = spaceBelow < 200;
-  const top = showAbove ? rect.top - 8 : rect.bottom + 8;
-  const left = Math.max(16, Math.min(rect.left, window.innerWidth - 360));
+  const narrow = size.width < 640;
+  const width = Math.min(340, Math.max(0, size.width - 16));
+  const left = rect ? Math.max(8, Math.min(rect.left, size.width - width - 8)) : 8;
+  const above = rect ? size.height - rect.bottom < panelHeight + 20 && rect.top > panelHeight + 20 : false;
+  const top = rect ? Math.max(8, Math.min(size.height - panelHeight - 8, above ? rect.top - panelHeight - 12 : rect.bottom + 12)) : 8;
 
   return (
     <>
-      {/* Backdrop with spotlight cutout */}
-      <div
-        className="pointer-events-auto fixed inset-0 z-[9998] bg-ink/60 transition-opacity"
-        style={{
-          clipPath: `polygon(
-            0% 0%, 100% 0%, 100% 100%, 0% 100%,
-            0% ${rect.top}px,
-            ${rect.left}px ${rect.top}px,
-            ${rect.left}px ${rect.bottom}px,
-            ${rect.right}px ${rect.bottom}px,
-            ${rect.right}px ${rect.top}px,
-            0% ${rect.top}px
-          )`,
-        }}
-        onClick={dismiss}
-      />
-
-      {/* Target highlight ring */}
-      <div
-        className="pointer-events-none fixed z-[9999] rounded-sm border-2 border-seal shadow-[0_0_0_9999px_transparent]"
-        style={{
-          top: rect.top - 2,
-          left: rect.left - 2,
-          width: rect.width + 4,
-          height: rect.height + 4,
-        }}
-      />
-
-      {/* Tooltip */}
-      <div
-        className="fixed z-[10000] w-[max(280px,min(340px,80vw))] border border-ink bg-paper shadow-lg"
-        style={{
-          top,
-          left,
-          transform: showAbove ? "translateY(-100%)" : undefined,
-        }}
-      >
-        <div className="border-b border-line bg-paper-2 px-4 py-2">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-seal">
-              Step {step + 1} of {STEPS.length}
-            </span>
-            <button
-              type="button"
-              onClick={dismiss}
-              className="font-mono text-[11px] text-ink-3 transition-colors hover:text-ink"
-            >
-              Skip ✕
-            </button>
+      <button ref={trigger} type="button" onClick={() => { setStep(0); setActive(true); }} className="inline-flex min-h-11 items-center border border-ink bg-paper px-4 font-mono text-xs text-ink hover:bg-paper-2 focus-visible:outline-2 focus-visible:outline-seal">How it works</button>
+      {active && portalRoot && createPortal(
+        <>
+          <div className="fixed inset-0 z-[9998] bg-ink/60" aria-hidden="true" onClick={close} />
+          <div ref={panel} role="dialog" aria-modal="true" aria-label="How Keryx works" className="fixed z-[9999] flex max-h-[calc(100dvh-16px)] flex-col overflow-hidden border border-ink bg-paper shadow-xl" style={narrow ? { left: 0, right: 0, bottom: 0, maxHeight: "min(50dvh, 320px)" } : { width, top, left }}>
+            <div className="flex shrink-0 items-center justify-between border-b border-line px-4 py-2"><span className="font-mono text-xs uppercase tracking-wider text-seal">Step {step + 1} of {steps.length}</span><button type="button" onClick={close} aria-label="Close tour" className="min-h-11 min-w-11 text-ink">Close</button></div>
+            <div className="min-h-0 overflow-y-auto px-4 py-4"><h2 className="font-display text-lg text-ink">{steps[step].title}</h2><p className="mt-2 font-serif text-sm leading-relaxed text-ink-2">{steps[step].body}</p></div>
+            <div className="flex shrink-0 justify-between border-t border-line px-4 py-2"><button type="button" disabled={step === 0} onClick={() => setStep(step - 1)} className="min-h-11 px-3 font-mono text-xs disabled:opacity-40">Back</button><button type="button" onClick={() => step === steps.length - 1 ? close() : setStep(step + 1)} className="min-h-11 border border-ink bg-ink px-4 font-mono text-xs text-paper">{step === steps.length - 1 ? "Done" : "Next"}</button></div>
           </div>
-        </div>
-        <div className="px-4 py-3">
-          <p className="font-display text-[15px] font-semibold text-ink">
-            {s.title}
-          </p>
-          <p className="mt-1.5 font-serif text-[13px] leading-[1.5] text-ink-2">
-            {s.body}
-          </p>
-        </div>
-        <div className="flex items-center justify-between border-t border-line px-4 py-2">
-          <button
-            type="button"
-            onClick={prev}
-            disabled={step === 0}
-            className="font-mono text-[11px] text-ink-3 transition-colors hover:text-ink disabled:opacity-30"
-          >
-            ← Back
-          </button>
-          <button
-            type="button"
-            onClick={next}
-            className="border border-ink bg-ink px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-paper transition-colors hover:bg-seal hover:border-seal"
-          >
-            {isLast ? "Got it ✓" : "Next →"}
-          </button>
-        </div>
-      </div>
+        </>
+      , portalRoot)}
     </>
   );
 }

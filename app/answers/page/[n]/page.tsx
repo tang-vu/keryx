@@ -51,7 +51,7 @@ export async function generateMetadata({
   }
   const { slice } = loaded;
   const title = `The Archive — page ${slice.page} of ${slice.totalPages}`;
-  const description = `Older answers from the Keryx archive (page ${slice.page}) — each grounded in cited sources and settled with a real USDC micropayment to the writers it quoted.`;
+  const description = `Older cited answers from Keryx research history (page ${slice.page}). Open a dispatch to inspect its sources, decisions, and payment states.`;
   return {
     title,
     description,

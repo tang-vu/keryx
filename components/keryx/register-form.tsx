@@ -277,7 +277,7 @@ export function RegisterForm({
             className="bg-paper-2 font-mono text-sm"
           />
           <p className="text-xs text-ink-2">
-            One click — we read your feed and register you on-chain. You earn on every citation.
+            Sign with your wallet, then prove feed ownership before this source can earn. A paid read and a cited answer have separate rewards.
           </p>
         </div>
 
@@ -437,7 +437,7 @@ function SuccessCard({
       <div className="flex items-center gap-2 border-b border-ink bg-paid/[0.08] px-6 py-4">
         <PartyPopper className="h-5 w-5 text-paid" />
         <span className="font-display text-lg font-medium text-ink">
-          You&apos;re live, {source.name}
+          {source.verified ? "Source registered" : "Source listed — verify ownership"}: {source.name}
         </span>
       </div>
       <div className="space-y-4 p-6">

@@ -7,11 +7,11 @@
  * fills as tolls/rewards settle so the hard spend cap is visible, not implied.
  */
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { TraceStep } from "@/lib/types";
 import { TraceRow } from "./trace-row";
 import { SectionHeading } from "./banknote";
-import { BudgetMeter, spentFromSteps } from "./budget-meter";
+import { BudgetMeter, stepPaymentTotals } from "./budget-meter";
 import { fmtUsdc } from "./phase-style";
 
 interface ReasoningConsoleProps {
@@ -22,13 +22,34 @@ interface ReasoningConsoleProps {
 }
 
 export function ReasoningConsole({ steps, streaming, budget }: ReasoningConsoleProps) {
-  const endRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const followingRef = useRef(true);
+  const [following, setFollowing] = useState(true);
+
+  const onScroll = useCallback(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const atBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 32;
+    followingRef.current = atBottom;
+    setFollowing(atBottom);
+  }, []);
+
+  const jumpToLatest = useCallback(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    followingRef.current = true;
+    setFollowing(true);
+    container.scrollTop = container.scrollHeight;
+  }, []);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    if (followingRef.current && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
   }, [steps.length, streaming]);
 
-  const spent = spentFromSteps(steps);
+  const paymentTotals = stepPaymentTotals(steps);
+  const spent = paymentTotals.settled;
 
   // Once a run is active the heading shows the live spend / cap; before that it
   // falls back to the deciding pulse or step count.
@@ -37,7 +58,7 @@ export function ReasoningConsole({ steps, streaming, budget }: ReasoningConsoleP
       <span className="inline-flex items-center gap-2">
         {streaming && <ThinkingDots />}
         <span className="tabular-nums tracking-normal">
-          <span className="text-paid">${fmtUsdc(spent)}</span>
+          <span className="text-paid">${fmtUsdc(spent)} settled</span>
           <span className="text-ink-3"> / ${fmtUsdc(budget)}</span>
         </span>
       </span>
@@ -53,9 +74,18 @@ export function ReasoningConsole({ steps, streaming, budget }: ReasoningConsoleP
   return (
     <div className="flex h-full flex-col">
       <SectionHeading numeral="I" label="The decision" right={right} />
-      <BudgetMeter spent={spent} budget={budget} streaming={streaming} />
+      <BudgetMeter spent={spent} budget={budget} streaming={streaming} pending={paymentTotals.pending + paymentTotals.unverified} />
+      {(paymentTotals.pending > 0 || paymentTotals.simulated > 0 || paymentTotals.unverified > 0) && (
+        <p className="mb-3 font-mono text-xs text-ink-2">
+          {paymentTotals.pending > 0 && `$${fmtUsdc(paymentTotals.pending)} confirmation pending`}
+          {paymentTotals.pending > 0 && (paymentTotals.simulated > 0 || paymentTotals.unverified > 0) && " · "}
+          {paymentTotals.simulated > 0 && `$${fmtUsdc(paymentTotals.simulated)} offline simulated`}
+          {paymentTotals.simulated > 0 && paymentTotals.unverified > 0 && " · "}
+          {paymentTotals.unverified > 0 && `$${fmtUsdc(paymentTotals.unverified)} conflicting payment state`}
+        </p>
+      )}
       <div className="flex flex-1 flex-col overflow-hidden border border-ink bg-paper">
-        <div className="max-h-[60vh] min-h-[320px] flex-1 overflow-y-auto px-5 py-2 sm:max-h-[68vh]">
+        <div ref={scrollRef} onScroll={onScroll} aria-label="Decision log" className="max-h-[60vh] min-h-[320px] flex-1 overflow-y-auto overscroll-contain px-5 py-2 sm:max-h-[68vh]">
           <div className="relative">
             {steps.map((step, i) => (
               <TraceRow key={`${step.phase}-${step.ts}-${i}`} step={step} />
@@ -65,10 +95,14 @@ export function ReasoningConsole({ steps, streaming, budget }: ReasoningConsoleP
                 Contacting the herald…
               </p>
             )}
-            <div ref={endRef} />
           </div>
         </div>
       </div>
+      {!following && (
+        <button type="button" onClick={jumpToLatest} className="self-end border border-ink bg-paper px-3 py-1.5 font-mono text-xs text-ink underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-seal">
+          Jump to latest
+        </button>
+      )}
     </div>
   );
 }
@@ -79,7 +113,7 @@ function ThinkingDots() {
       {[0, 1, 2].map((i) => (
         <span
           key={i}
-          className="h-1.5 w-1.5 animate-bounce rounded-full bg-seal"
+          className="h-1.5 w-1.5 rounded-full bg-seal motion-safe:animate-bounce"
           style={{ animationDelay: `${i * 150}ms` }}
         />
       ))}

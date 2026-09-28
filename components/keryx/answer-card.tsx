@@ -7,8 +7,8 @@
  * When a permalink URL is available, a Share button copies it to the clipboard.
  */
 
-import { useState, useCallback, useEffect } from "react";
-import type { QueryRun } from "@/lib/types";
+import { useState, useCallback, useEffect, useRef } from "react";
+import type { QueryRun, PaymentRecord } from "@/lib/types";
 import type { AskMeta } from "@/lib/hooks/use-ask-stream";
 import { AnswerMarkdown } from "./answer-markdown";
 import { ModeBadge } from "./mode-badge";
@@ -17,16 +17,27 @@ import { ConfidenceBadge } from "./confidence-badge";
 import { fmtUsdc } from "./phase-style";
 import { deriveConfidence } from "@/lib/agent/confidence";
 import { cn } from "@/lib/utils";
+import { CitationEvidencePanel } from "./citation-evidence-panel";
 
-export function AnswerCard({ run, meta, permalink }: { run: QueryRun; meta: AskMeta | null; permalink?: string }) {
+export function AnswerCard({ run, meta, permalink, payments = [] }: { run: QueryRun; meta: AskMeta | null; permalink?: string; payments?: PaymentRecord[] }) {
   const [highlight, setHighlight] = useState<string | null>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
+  const openCitation = useCallback((marker: string, trigger: HTMLElement) => {
+    triggerRef.current = trigger;
+    setHighlight(marker);
+  }, []);
+  const closeCitation = useCallback(() => {
+    setHighlight(null);
+    requestAnimationFrame(() => triggerRef.current?.focus({ preventScroll: true }));
+  }, []);
+  const selectedCitation = run.citations.find((citation) => citation.marker === highlight);
   const bought = run.decisions.filter((d) => d.action === "BUY").length;
   const skipped = run.decisions.filter((d) => d.action === "SKIP").length;
   const cached = run.decisions.filter((d) => d.action === "CACHE").length;
   const confidence = deriveConfidence(run);
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-3 duration-500">
+    <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500">
       <SectionHeading numeral="II" label="The reading" right={`${run.citations.length} cited`} />
       {confidence ? (
         <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
@@ -60,7 +71,7 @@ export function AnswerCard({ run, meta, permalink }: { run: QueryRun; meta: AskM
             <AnswerMarkdown
               text={run.answer}
               citations={run.citations}
-              onCitationClick={setHighlight}
+              onCitationClick={openCitation}
             />
           </div>
 
@@ -71,7 +82,7 @@ export function AnswerCard({ run, meta, permalink }: { run: QueryRun; meta: AskM
           {run.citations.length > 0 && (
             <div className="mt-7 border-t border-ink pt-5">
               <p className="mb-3.5 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-3">
-                Footnotes — each one pays its author
+                Cited sources and planned rewards
               </p>
               <ul>
                 {run.citations.map((c) => {
@@ -80,40 +91,41 @@ export function AnswerCard({ run, meta, permalink }: { run: QueryRun; meta: AskM
                     <li
                       key={c.marker}
                       className={cn(
-                        "flex items-center gap-3 border-b border-line py-2.5 transition-colors",
+                        "flex flex-wrap items-start gap-x-3 gap-y-1 border-b border-line py-2.5 transition-colors sm:flex-nowrap",
                         highlight === c.marker && "bg-seal/[0.06]",
                       )}
                     >
                       <span className="w-5 shrink-0 font-display text-[14px] font-semibold text-paid">
                         {c.marker.replace(/\D/g, "") || c.marker}
                       </span>
-                      <span className="min-w-0 flex-1">
+                      <span className="min-w-[12rem] flex-1">
                         {articleUrl ? (
                           <a
                             href={articleUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="block truncate font-serif text-[15px] text-ink underline decoration-line underline-offset-2 hover:decoration-ink"
+                            className="block break-words font-serif text-[15px] text-ink underline decoration-line underline-offset-2 hover:decoration-ink"
                           >
                             {c.itemTitle ?? c.sourceName}
                           </a>
                         ) : (
-                          <span className="block truncate font-serif text-[15px] text-ink">
+                          <span className="block break-words font-serif text-[15px] text-ink">
                             {c.itemTitle ?? c.sourceName}
                           </span>
                         )}
                         {c.itemTitle ? (
-                          <span className="block truncate font-mono text-[10px] uppercase tracking-[0.08em] text-ink-3">
+                          <span className="block break-words font-mono text-[10px] uppercase tracking-[0.08em] text-ink-3">
                             {c.sourceName}
                             {c.itemPublishedAt ? ` · ${c.itemPublishedAt.slice(0, 10)}` : ""}
                           </span>
                         ) : null}
                       </span>
+                      <button type="button" onClick={(event) => openCitation(c.marker, event.currentTarget)} className="font-mono text-xs text-seal underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-seal">Evidence</button>
                       <span className="shrink-0 font-mono text-[11px] text-ink-3">
                         {Math.round(c.weight * 100)}%
                       </span>
-                      <span className="w-16 shrink-0 text-right font-mono text-sm tabular-nums text-paid">
-                        +${fmtUsdc(c.reward)}
+                      <span className="shrink-0 font-mono text-sm tabular-nums text-paid">
+                        ${fmtUsdc(c.reward)} planned
                       </span>
                     </li>
                   );
@@ -132,10 +144,13 @@ export function AnswerCard({ run, meta, permalink }: { run: QueryRun; meta: AskM
           cached={cached}
           engine={run.engine}
           pending={run.pendingPayments ?? 0}
-          meta={meta}
+          mode={run.paymentMode ?? meta?.mode ?? null}
           permalink={permalink}
         />
       </div>
+      {selectedCitation && (
+        <CitationEvidencePanel queryId={run.id} citation={selectedCitation} evidence={run.evidence ?? []} payments={payments} onClose={closeCitation} />
+      )}
     </div>
   );
 }
@@ -303,7 +318,7 @@ interface SummaryStripProps {
   cached: number;
   engine: string;
   pending: number;
-  meta: AskMeta | null;
+  mode: "real" | "offline" | null;
   permalink?: string;
 }
 
@@ -315,11 +330,11 @@ function SummaryStrip({
   cached,
   engine,
   pending,
-  meta,
+  mode,
   permalink,
 }: SummaryStripProps) {
   const [copied, setCopied] = useState(false);
-  const pct = spent > 0 ? Math.round((toCreators / spent) * 100) : pending > 0 ? 0 : 100;
+  const creatorShare = spent > 0 ? `${Math.round((toCreators / spent) * 100)}%` : "—";
 
   const copyPermalink = useCallback(() => {
     if (!permalink) return;
@@ -331,8 +346,8 @@ function SummaryStrip({
 
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-ink bg-paper-2 px-6 py-3.5 text-sm sm:px-9">
-      <Stat label="Spent" value={`$${fmtUsdc(spent)}`} mono />
-      <Stat label="To creators" value={`${pct}%`} accent />
+      <Stat label={mode === "offline" ? "Simulated spend" : mode === "real" ? "Spent" : "Recorded spend"} value={`$${fmtUsdc(spent)}`} mono />
+      <Stat label={mode === "offline" ? "Simulated creator share" : mode === "real" ? "To creators" : "Recorded creator share"} value={creatorShare} accent={spent > 0 && mode === "real"} />
       {pending > 0 && <Stat label="Pending proof" value={`${pending}`} />}
       <Stat
         label="Decisions"
@@ -351,7 +366,7 @@ function SummaryStrip({
         <span className="border border-line bg-card px-2 py-0.5 font-mono text-[11px] text-ink-3">
           {engine}
         </span>
-        <ModeBadge mode={meta?.mode ?? null} />
+        <ModeBadge mode={mode} />
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 /**
  * Atom feed for the public answer archive. Keryx onboards creators by reading
  * their RSS feeds; this is the same door in the other direction — the archive
- * of paid, cited answers becomes a feed any reader, aggregator, or agent can
+ * of cited answers becomes a feed any reader, aggregator, or agent can
  * subscribe to. Pure XML building so the route handler stays a thin shell and
  * the escaping/structure is unit-testable.
  */
@@ -33,7 +33,7 @@ function entryXml(e: ArchiveEntry, base: string): string {
     e.sourceNames.length > 0 ? ` Sources: ${e.sourceNames.slice(0, 6).join(", ")}.` : "";
   const summary =
     `${e.answerSnippet} — ${e.citationCount} source${e.citationCount !== 1 ? "s" : ""} cited, ` +
-    `$${e.toCreators.toFixed(4)} USDC paid to the writers it quoted.${sources}`;
+    `$${e.toCreators.toFixed(4)} in recorded creator rewards; inspect dispatch for settlement state.${sources}`;
   return [
     "  <entry>",
     `    <title>${xmlEscape(e.question)}</title>`,
@@ -57,7 +57,7 @@ export function buildAnswersFeedXml(entries: ArchiveEntry[], base: string): stri
     '<?xml version="1.0" encoding="utf-8"?>',
     '<feed xmlns="http://www.w3.org/2005/Atom">',
     "  <title>Keryx Answer Archive</title>",
-    "  <subtitle>Every question Keryx has answered — each grounded in cited sources and settled with a real USDC micropayment to the writers it quoted.</subtitle>",
+    "  <subtitle>Cited answers from Keryx research history. Each dispatch shows its payment state.</subtitle>",
     `  <id>${xmlEscape(`${base}/answers`)}</id>`,
     `  <link rel="alternate" type="text/html" href="${xmlEscape(`${base}/answers`)}"/>`,
     `  <link rel="self" type="application/atom+xml" href="${xmlEscape(`${base}/answers/feed.xml`)}"/>`,

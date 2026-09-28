@@ -116,6 +116,20 @@ jobs:
       - name: Build (Next.js)
         run: npm run build
 
+      - name: Research reading UX (offline Chromium and responsive layout)
+        env:
+          KERYX_FORCE_OFFLINE: "1"
+          KERYX_UX_SCREENSHOT_DIR: ${{ runner.temp }}/research-ux-screenshots
+        run: npm run test:browser-research-ux
+
+      - name: Research reading UX screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-ux-screenshots
+          path: ${{ runner.temp }}/research-ux-screenshots
+          if-no-files-found: ignore
+
       - name: Withdrawal production framework headers (loopback, no authentication or payment)
         env:
           # This secret-free CI server must use explicit offline cache semantics.
