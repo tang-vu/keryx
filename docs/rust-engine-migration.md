@@ -56,11 +56,12 @@ fixture count, platform, compiler and measured values before drawing a performan
 conclusion. No live wallet, private production data or network service is needed.
 
 Local Rust formatting, Clippy, six unit tests, release build, TypeScript check,
-ESLint and the differential harness passed. The initial PR head passed its web
-and Linux checks; Windows CI found a fixture path alias/casing mismatch. The
-harness now canonicalizes its newly created temporary fixture root with `realpath`
-and asserts the paths used by the existing TypeScript result writer. Hosted CI
-for that fix remains pending; no production validation was weakened.
+ESLint and the differential harness passed. An initial Windows CI run exposed a
+fixture path alias/casing mismatch. The harness now canonicalizes its newly
+created temporary fixture root with `realpath` and asserts the paths used by the
+existing TypeScript result writer; no production validation was weakened. On
+[`a5d86bb` in PR #2](https://github.com/tang-vu/keryx/pull/2), the application,
+Ubuntu Rust, Windows MSVC Rust and GitGuardian checks all passed.
 
 The final September 28 Windows x64 release-mode run passed 38 strict synthetic
 parity/refusal assertions and ran two parser acceptance probes. Its corpus includes
