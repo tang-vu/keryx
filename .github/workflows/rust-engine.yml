@@ -98,6 +98,9 @@ jobs:
       - name: Lint Rust workspace
         run: cargo +${{ matrix.rust }} clippy --manifest-path rust/Cargo.toml --all-targets --locked -- -D warnings
 
+      - name: Lint feature-gated native task publication
+        run: cargo +${{ matrix.rust }} clippy --manifest-path rust/Cargo.toml --all-targets --features publication-evaluation --locked -- -D warnings
+
       - name: Build native read-only CLI
         run: cargo +${{ matrix.rust }} build --manifest-path rust/Cargo.toml -p keryx-engine --release --locked
 

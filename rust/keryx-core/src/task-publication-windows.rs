@@ -2,6 +2,10 @@
 //! full-access ACE. The selected parent also has protected inheritance and an
 //! inheritable ACE, so newly created children cannot inherit broad grants.
 use std::{ffi::c_void, io, os::windows::io::RawHandle};
+#[cfg(any(test, feature = "publication-evaluation"))]
+use windows_sys::Win32::Security::{
+    SetTokenInformation, TokenOwner, TOKEN_ADJUST_DEFAULT, TOKEN_OWNER,
+};
 use windows_sys::Win32::{
     Foundation::{CloseHandle, LocalFree},
     Security::{
@@ -59,6 +63,71 @@ fn current_user_sid() -> io::Result<Vec<usize>> {
         Ok(buffer)
     })();
     unsafe { CloseHandle(token) };
+    result
+}
+
+/// Only test processes select their own user SID as the default owner for new
+/// objects. Elevated Windows runners may otherwise default to Administrators.
+/// This changes no machine policy and is never called by the normal publisher.
+#[cfg(any(test, feature = "publication-evaluation"))]
+pub(super) fn set_evaluation_default_owner() -> io::Result<()> {
+    let current = current_user_sid()?;
+    let user = unsafe { (*(current.as_ptr() as *const TOKEN_USER)).User.Sid };
+    if user.is_null() {
+        return Err(denied("current-user SID is missing"));
+    }
+    let mut token = std::ptr::null_mut();
+    if unsafe {
+        OpenProcessToken(
+            GetCurrentProcess(),
+            TOKEN_QUERY | TOKEN_ADJUST_DEFAULT,
+            &mut token,
+        )
+    } == 0
+    {
+        return Err(io::Error::last_os_error());
+    }
+    let result = (|| {
+        let desired = TOKEN_OWNER { Owner: user };
+        if unsafe {
+            SetTokenInformation(
+                token,
+                TokenOwner,
+                (&desired as *const TOKEN_OWNER).cast(),
+                std::mem::size_of::<TOKEN_OWNER>() as u32,
+            )
+        } == 0
+        {
+            return Err(io::Error::last_os_error());
+        }
+        let mut size = 0;
+        unsafe { GetTokenInformation(token, TokenOwner, std::ptr::null_mut(), 0, &mut size) };
+        if size < std::mem::size_of::<TOKEN_OWNER>() as u32 || size > 65_536 {
+            return Err(denied("cannot verify evaluation token owner"));
+        }
+        let words = (size as usize).div_ceil(std::mem::size_of::<usize>());
+        let mut buffer = vec![0usize; words];
+        if unsafe {
+            GetTokenInformation(
+                token,
+                TokenOwner,
+                buffer.as_mut_ptr().cast(),
+                size,
+                &mut size,
+            )
+        } == 0
+        {
+            return Err(io::Error::last_os_error());
+        }
+        let actual = unsafe { (*(buffer.as_ptr() as *const TOKEN_OWNER)).Owner };
+        if actual.is_null() || unsafe { EqualSid(actual, user) } == 0 {
+            return Err(denied("evaluation token owner is not current user"));
+        }
+        Ok(())
+    })();
+    if unsafe { CloseHandle(token) } == 0 {
+        return Err(io::Error::last_os_error());
+    }
     result
 }
 

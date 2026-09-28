@@ -17,6 +17,15 @@ struct OwnedParent {
 }
 impl OwnedParent {
     fn new(private: bool) -> Self {
+        #[cfg(windows)]
+        {
+            use std::sync::OnceLock;
+            static OWNER_READY: OnceLock<Result<(), String>> = OnceLock::new();
+            OWNER_READY
+                .get_or_init(|| windows::set_evaluation_default_owner().map_err(|e| e.to_string()))
+                .as_ref()
+                .unwrap_or_else(|e| panic!("cannot select evaluation process owner: {e}"));
+        }
         let root = fs::canonicalize(std::env::temp_dir()).unwrap();
         let path = root.join(format!(
             "keryx-publication-test-{}-{}-Việt & one",
@@ -90,6 +99,18 @@ fn windows_acl(path: &Path, private: bool) {
         "{}",
         String::from_utf8_lossy(&granted.stderr)
     );
+    if private {
+        let owned = Command::new("icacls.exe")
+            .arg(path)
+            .args(["/setowner", &format!("*{sid}")])
+            .output()
+            .unwrap();
+        assert!(
+            owned.status.success(),
+            "{}",
+            String::from_utf8_lossy(&owned.stderr)
+        );
+    }
     let protected = Command::new("icacls.exe")
         .arg(path)
         .arg("/inheritance:r")

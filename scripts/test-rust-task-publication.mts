@@ -181,8 +181,11 @@ async function privateParent(root: string) {
   const parent = join(root, "owned-private-parent Ti\u1EBFng Vi\u1EC7t \u{1F9EA} (safe)");
   await mkdir(parent, { mode: 0o700 });
   if (process.platform === "win32") {
-    checkedTool("icacls.exe", [parent, "/grant:r", "*" + currentUserSid() + ":(OI)(CI)F"],
+    const sid = currentUserSid();
+    checkedTool("icacls.exe", [parent, "/grant:r", "*" + sid + ":(OI)(CI)F"],
       "grant the owned private parent only to the current user");
+    checkedTool("icacls.exe", [parent, "/setowner", "*" + sid],
+      "set owned fixture parent to current-user owner");
     checkedTool("icacls.exe", [parent, "/inheritance:r"], "remove inherited fixture ACEs");
     checkedTool("icacls.exe", [parent, "/verify"], "verify private parent ACL");
     aclChecks++;
@@ -196,8 +199,11 @@ async function privateParent(root: string) {
 async function privateParentWithUnsupportedAce(root: string, label: string, ace: string) {
   const parent = join(root, label);
   await mkdir(parent, { mode: 0o700 });
-  checkedTool("icacls.exe", [parent, "/grant:r", "*" + currentUserSid() + ":" + ace],
+  const sid = currentUserSid();
+  checkedTool("icacls.exe", [parent, "/grant:r", "*" + sid + ":" + ace],
     "install unsupported ACE only on owned fixture");
+  checkedTool("icacls.exe", [parent, "/setowner", "*" + sid],
+    "set owned unsupported ACE fixture to current-user owner");
   checkedTool("icacls.exe", [parent, "/inheritance:r"], "protect owned fixture DACL");
   checkedTool("icacls.exe", [parent, "/verify"], "verify owned unsupported ACE fixture");
   return parent;

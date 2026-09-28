@@ -100,6 +100,9 @@ fn run() -> Result<String, PublicationFailure> {
         field(&input, "createdAt")?,
     )
     .map_err(|e| refused("prepare", e))?;
+    #[cfg(windows)]
+    keryx_core::set_publication_evaluation_default_owner()
+        .map_err(|e| refused("evaluation-owner", e))?;
     let selected = PrivateParent::open(Path::new(parent))?;
     let outcome = selected.publish_with_evaluation_hook(child, &prepared, |stage| {
         if let Some((flag, selected)) = fault {

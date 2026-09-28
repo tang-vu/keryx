@@ -40,6 +40,19 @@ only a newly owned synthetic parent using the documented
 and [icacls grant/inheritance controls](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/icacls).
 The publisher itself must validate the resulting handle security.
 
+Windows assigns new objects the creator token's default owner, which can be
+Administrators on an elevated hosted runner. Granting the current user access or
+setting only the selected parent's owner does not determine child/file ownership.
+The synthetic fixtures explicitly set their own parent owner. Native test processes
+and the feature-only evaluator also select their own token user as their process's
+default owner, verify it by reading the token back, and fail if adjustment is denied.
+This changes only those disposable test processes, not machine policy or an existing
+user directory. The normal publisher performs no token adjustment and still refuses
+unsupported owners. Production elevated-token admission remains an open gate.
+See [Windows object ownership](https://learn.microsoft.com/en-us/windows/win32/secauthz/owner-of-a-new-object),
+[token access rights](https://learn.microsoft.com/en-us/windows/win32/secauthz/access-rights-for-access-token-objects)
+and [SetTokenInformation](https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-settokeninformation).
+
 This assumes a trusted kernel, storage stack and selected parent location whose
 owner is cooperating. Parent permissions do not audit every ancestor's security.
 A hostile same-user process or administrator can change ACLs or files;

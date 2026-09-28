@@ -12,11 +12,16 @@ use std::{
 };
 
 #[cfg(unix)]
-use cap_std::fs::{DirBuilder, DirBuilderExtUnix, OpenOptionsExt};
+use cap_std::fs::{DirBuilder, DirBuilderExt, OpenOptionsExt};
 
 #[cfg(windows)]
 #[path = "task-publication-windows.rs"]
 mod windows;
+
+#[cfg(all(windows, feature = "publication-evaluation"))]
+pub fn set_publication_evaluation_default_owner() -> io::Result<()> {
+    windows::set_evaluation_default_owner()
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PublicationState {
