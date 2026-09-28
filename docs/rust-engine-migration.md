@@ -386,6 +386,13 @@ and real-process fault evidence must be recorded before calling that evaluation
 validated; clean-machine installation and a production cutover decision remain
 separate gates.
 
+D-252 extends the native evaluation with separate CI artifact producer and
+consumer jobs. Its [handoff contract](./native-inspection-evaluation.md#independent-artifact-handoff)
+requires exact source/target selection, strict artifact verification, read parity
+and manual TypeScript rollback without rebuilding Rust in the consumer. This is
+an additional delivery test; production caller ownership and clean-machine
+acceptance remain open.
+
 ### Brief publication boundary
 
 [D-245](../DECISIONS.md) makes both CLI adapters stage the complete brief in an

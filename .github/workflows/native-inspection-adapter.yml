@@ -12,6 +12,8 @@ on:
       - "scripts/create-rust-readonly-manifest.mts"
       - "scripts/evaluate-rust-readonly.mts"
       - "scripts/test-rust-native-artifact.mts"
+      - "scripts/test-rust-native-handoff.mts"
+      - "scripts/rust-native-synthetic-fixture.mts"
       - "scripts/rust-native-test-fixture.rs"
       - "scripts/rust-offline-fallback-guard.mjs"
       - "scripts/operator.mts"
@@ -27,6 +29,8 @@ on:
       - "scripts/create-rust-readonly-manifest.mts"
       - "scripts/evaluate-rust-readonly.mts"
       - "scripts/test-rust-native-artifact.mts"
+      - "scripts/test-rust-native-handoff.mts"
+      - "scripts/rust-native-synthetic-fixture.mts"
       - "scripts/rust-native-test-fixture.rs"
       - "scripts/rust-offline-fallback-guard.mjs"
       - "scripts/operator.mts"
@@ -36,8 +40,8 @@ on:
       - ".github/workflows/native-inspection-adapter.yml"
 
 jobs:
-  artifact:
-    name: Copied artifact and subprocess (${{ matrix.os }})
+  artifact_producer:
+    name: Build and stage native artifact (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
@@ -47,9 +51,11 @@ jobs:
           - os: ubuntu-latest
             rust: 1.98.1-x86_64-unknown-linux-gnu
             target: x86_64-unknown-linux-gnu
+            binary: keryx-engine
           - os: windows-latest
             rust: 1.98.1-x86_64-pc-windows-msvc
             target: x86_64-pc-windows-msvc
+            binary: keryx-engine.exe
     steps:
       - uses: actions/checkout@v4
 
@@ -76,3 +82,59 @@ jobs:
           KERYX_NATIVE_TEST_SOURCE_COMMIT: ${{ github.sha }}
           KERYX_NATIVE_TEST_TARGET: ${{ matrix.target }}
           KERYX_TEST_RUST_TOOLCHAIN: ${{ matrix.rust }}
+
+      - name: Stage only the checked-out release binary and fresh manifest
+        run: node --import tsx scripts/test-rust-native-handoff.mts stage
+        env:
+          KERYX_HANDOFF_SHA: ${{ github.sha }}
+          KERYX_HANDOFF_TARGET: ${{ matrix.target }}
+          KERYX_HANDOFF_BINARY: ${{ github.workspace }}/rust/target/release/${{ matrix.binary }}
+          KERYX_HANDOFF_DIR: ${{ runner.temp }}/keryx-native-readonly-staged-${{ matrix.target }}
+
+      # Stable within one run across attempts: rerun-all replaces only this
+      # target's artifact; rerun-failed consumer still finds the earlier upload.
+      - name: Upload the two-file handoff artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-readonly-${{ matrix.target }}-${{ github.sha }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/keryx-native-readonly-staged-${{ matrix.target }}/
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 7
+
+  artifact_consumer:
+    name: Fresh runner native artifact handoff (${{ matrix.os }})
+    needs: artifact_producer
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install JavaScript dependencies without building Rust
+        run: npm ci --no-audit --no-fund
+
+      - name: Download exact same-run target/source artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: native-readonly-${{ matrix.target }}-${{ github.sha }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/keryx-native-readonly-downloaded-${{ matrix.target }}
+
+      - name: Verify downloaded artifact and explicit read-only rollback
+        run: node --import tsx scripts/test-rust-native-handoff.mts consume
+        env:
+          KERYX_HANDOFF_SHA: ${{ github.sha }}
+          KERYX_HANDOFF_TARGET: ${{ matrix.target }}
+          KERYX_HANDOFF_DIR: ${{ runner.temp }}/keryx-native-readonly-downloaded-${{ matrix.target }}

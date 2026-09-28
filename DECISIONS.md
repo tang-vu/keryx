@@ -1,5 +1,27 @@
 # Keryx — Decision Log
 
+**D-252** - Test native artifact handoff on a separate runtime runner -
+*A copied executable in its build job does not prove that the intended artifact
+can be transferred and used without rebuilding it.* Extend D-251 acceptance with
+separate producer and consumer jobs on Windows and Linux. After its tests pass,
+the producer uploads only the canonical executable and a manifest generated from
+that exact checkout/build. The consumer downloads the exact same-run artifact for
+its source commit and target, verifies the two-file inventory, and supplies the
+expected source independently from workflow metadata. It must fail on a missing
+or mismatched artifact; it never installs Rust or rebuilds the candidate.
+
+Restore Linux execute permission only on the selected canonical executable in
+the isolated artifact directory, then enforce the existing strict manifest/hash/
+host/protocol checks. Reuse TypeScript-written synthetic fixtures for exact read
+outputs and guarded manual rollback on unchanged v1 data. Keep fault executables,
+private task files and generated fixtures out of the uploaded artifact. Record the
+actual runner/runtime environment and exercise both platform jobs; passing these
+jobs proves CI transfer and runtime use, not authenticated public distribution,
+an independently clean OS installation, arbitrary Linux compatibility, a signed
+installer or production routing. The existing TypeScript authority is unchanged.
+Reversible: remove the evaluation jobs; no persisted data or runtime migration
+needs rollback. See [native inspection evaluation](docs/native-inspection-evaluation.md).
+
 **D-251** - Evaluate a pinned read-only native artifact through a bounded caller -
 *A compatible CLI alone does not establish safe caller lifecycle or artifact
 rollback.* Add an explicit evaluation CLI and reusable transport for `status`,
