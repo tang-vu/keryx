@@ -43,27 +43,25 @@ export function ArchiveIndexView({
         </a>
       </div>
       <h1 className="font-display text-[clamp(30px,5vw,46px)] font-medium leading-[1.05] tracking-tight text-ink">
-        Every answer, <em className="italic text-paid">paid for.</em>
+        Past answers, <em className="italic text-paid">with sources.</em>
       </h1>
       <p className="mt-4 max-w-[62ch] font-serif text-[17px] leading-[1.55] text-ink-2">
         {totalEntries > 0 ? (
           <>
-            {totalEntries} question{totalEntries !== 1 ? "s" : ""} the herald has answered — each
-            grounded in cited sources and settled with a real micropayment to the writers it quoted.{" "}
-            <span className="text-paid">${totalToCreators.toFixed(4)}</span> paid to creators across
-            this archive.
+            {totalEntries} cited answer{totalEntries !== 1 ? "s" : ""} from Keryx research history.{" "}
+            <span className="text-paid">${totalToCreators.toFixed(4)}</span> in creator rewards recorded
+            on these runs. Individual dispatches show whether payments settled, remain pending, or were simulated.
           </>
         ) : (
-          <>The archive is warming up — no settled dispatches to show yet.</>
+          <>No cited answers are available in the archive yet.</>
         )}
       </p>
-
-      <ArchiveTopicChips topics={topics} />
 
       {slice.items.length > 0 && (
         <ArchiveSearch
           terms={slice.items.map(searchTerm)}
           others={slice.rest.map(toSearchEntry)}
+          filters={<ArchiveTopicChips topics={topics} />}
         >
           {slice.items.map((e) => (
             <ArchiveAnswerRow key={e.id} entry={e} />

@@ -34,8 +34,8 @@
   --panel: #ede3cd;
   --ink: #1b1712;
   --ink-2: #3a342a;
-  --ink-3: #7a6f58; /* dim — labels, secondary */
-  --faint: #a99c80;
+  --ink-3: #605541; /* readable on both paper surfaces */
+  --faint: #675b46;
   --seal: #c0381c; /* vermillion herald's seal */
   --paid: #1c5d45; /* treasury green */
   --paid-2: #2e7c5e;
@@ -119,6 +119,9 @@
   * {
     @apply border-border;
   }
+  html {
+    scroll-padding-top: 5.5rem;
+  }
   body {
     @apply bg-background text-foreground font-serif;
     font-variant-numeric: tabular-nums lining-nums;
@@ -141,8 +144,8 @@
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
-  height: 2px;
-  background: var(--ink);
+  height: 44px;
+  background: linear-gradient(var(--ink), var(--ink)) center / 100% 2px no-repeat;
   outline: none;
   cursor: pointer;
 }
@@ -166,6 +169,10 @@ input[type="range"]::-moz-range-thumb {
 }
 input[type="range"]:focus-visible::-webkit-slider-thumb {
   box-shadow: 0 0 0 1px var(--ink), 0 0 0 4px rgba(192, 56, 28, 0.3);
+}
+input[type="range"]:focus-visible {
+  outline: 2px solid var(--seal);
+  outline-offset: 2px;
 }
 
 /* Treasury-green scrollbar on the paper. */
@@ -247,5 +254,11 @@ input[type="range"]:focus-visible::-webkit-slider-thumb {
   [style*="kxSpin"],
   [style*="kxTape"] {
     animation: none !important;
+  }
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

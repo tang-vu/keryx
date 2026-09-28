@@ -35,16 +35,21 @@ function timeAgo(iso: string): string {
 
 export function ActivityTicker() {
   const [items, setItems] = useState<ActivityItem[]>([]);
+  const [state, setState] = useState<"loading" | "ready" | "empty" | "error">("loading");
+  const [paused, setPaused] = useState(false);
 
   useEffect(() => {
     let alive = true;
     const load = async () => {
       try {
         const res = await fetch("/api/activity", { cache: "no-store" });
+        if (!res.ok) throw new Error("Activity unavailable");
         const data = await res.json();
-        if (alive && Array.isArray(data.activity)) setItems(data.activity);
+        if (data.error) throw new Error("Activity unavailable");
+        if (!Array.isArray(data.activity)) throw new Error("Invalid activity feed");
+        if (alive) { setItems(data.activity); setState(data.activity.length ? "ready" : "empty"); }
       } catch {
-        /* keep the last good list; the ticker must never throw on the landing page */
+        if (alive) { setItems([]); setState("error"); }
       }
     };
     load();
@@ -55,17 +60,17 @@ export function ActivityTicker() {
     };
   }, []);
 
-  if (items.length === 0) return null;
+  if (state !== "ready") return <div className="border-y border-line bg-paper/60 px-4 py-3 font-mono text-xs text-ink-3" role="status">{state === "loading" ? "Loading recent Arc testnet citations…" : state === "empty" ? "No recent settled citations yet." : "Recent citation activity unavailable."}</div>;
 
   // Duplicate the row so the marquee loops seamlessly (translateX -50% lands on the copy).
   const row = [...items, ...items];
 
   return (
-    <div className="group relative overflow-hidden border-y border-line bg-paper/60 py-2">
+    <div className="group relative flex items-center overflow-hidden border-y border-line bg-paper/60 py-2">
       <div
-        className="flex w-max gap-8 whitespace-nowrap pl-8 group-hover:[animation-play-state:paused]"
+        className="flex w-max gap-8 whitespace-nowrap pl-8 group-hover:[animation-play-state:paused] motion-reduce:!animate-none max-sm:!animate-none"
         style={{
-          animation: "kxTape 60s linear infinite",
+          animation: paused ? "none" : "kxTape 60s linear infinite",
           maskImage: "linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent)",
           WebkitMaskImage: "linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent)",
         }}
@@ -85,6 +90,7 @@ export function ActivityTicker() {
           </Link>
         ))}
       </div>
+      <button type="button" onClick={() => setPaused(!paused)} className="ml-auto min-h-11 shrink-0 bg-paper px-3 font-mono text-[10px] uppercase text-ink underline">{paused ? "Play" : "Pause"}</button>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 {
   "name": "keryx",
-  "version": "0.22.65",
+  "version": "0.22.66",
   "private": true,
   "description": "Keryx — a citation-toll reading agent. Pays creators every time their work is cited, in USDC on Arc.",
   "scripts": {
@@ -8,6 +8,7 @@
     "test:browser-withdrawal-journal": "node --import tsx scripts/test-browser-withdrawal-journal.mts",
     "test:rust-engine": "node --import tsx scripts/test-rust-engine.mts",
     "test:browser-private-checkout": "node --import tsx scripts/test-browser-private-checkout.mts",
+    "test:browser-research-ux": "node --import tsx scripts/test-browser-research-ux.mts",
     "dev": "next dev -p 3939",
     "build": "next build",
     "typecheck": "tsc --noEmit",

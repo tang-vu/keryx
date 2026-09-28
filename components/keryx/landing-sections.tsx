@@ -18,19 +18,19 @@ const STEPS: {
     num: "I",
     kicker: "Decide",
     icon: "weighted",
-    body: "Given a budget, Keryx ranks paid sources by relevance and price, then buys only the set worth reading. Whatever it does not need, it returns.",
+    body: "Given a spending cap, Keryx compares public previews and prices, then explains which sources it buys or skips. Unspent budget stays with the buyer.",
   },
   {
     num: "II",
     kicker: "Cite",
     icon: "citation",
-    body: "It reads what it bought and answers — fixing a footnote to every claim, each one traceable to the source it came from.",
+    body: "It reads purchased content and writes an answer with citations to sources that support its claims. It can also say when evidence is thin.",
   },
   {
     num: "III",
     kicker: "Settle",
     icon: "paid",
-    body: "A weighted nanopayment clears to each cited source in USDC on Arc, proportional to its contribution. Sub-second, sub-cent.",
+    body: "Eligible cited creators receive weighted USDC rewards on Arc testnet. The answer and public ledger distinguish settled, pending, and simulated payments.",
   },
 ];
 
@@ -97,18 +97,17 @@ export function ForCreators() {
             <em className="font-semibold italic">Be paid like it.</em>
           </h2>
           <p className="relative mt-6 max-w-[54ch] font-serif text-[clamp(16px,1.5vw,19px)] leading-[1.55] text-paper/85">
-            AI agents already read posts like yours to answer questions for other
-            readers — and you never see a cent. Keryx changes the split: list your
-            blog, and every time it reads and cites you, the toll settles to you
-            directly. No platform cut, no payout schedule, no minimum. The herald
-            always pays.
+            Add an RSS feed you control, choose its access toll, and prove ownership.
+            Keryx can pay for a read when it buys an article, then send a separate
+            weighted reward if that article supports a cited answer. See each payment
+            and its state in the public ledger. Payments currently use Arc testnet USDC.
           </p>
           <div className="relative mt-8 flex flex-wrap gap-3">
             <Link
               href="/register"
               className="border border-paper bg-paper px-6 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-ink transition-all hover:-translate-y-0.5 hover:shadow-[0_5px_0_rgba(15,42,30,0.6)] active:translate-y-0 active:shadow-none"
             >
-              Issue a toll ▸
+              List your feed ▸
             </Link>
             <Link
               href="/dashboard"

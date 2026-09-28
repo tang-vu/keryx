@@ -15,7 +15,7 @@ interface AnswerMarkdownProps {
   text: string;
   citations: Citation[];
   className?: string;
-  onCitationClick?: (marker: string) => void;
+  onCitationClick?: (marker: string, trigger: HTMLButtonElement) => void;
 }
 
 const CITATION_RE = /\[(S\d+)\]/g;
@@ -57,7 +57,7 @@ function renderWithCitations(
   text: string,
   citations: Citation[],
   keyBase: string,
-  onCitationClick?: (marker: string) => void,
+  onCitationClick?: (marker: string, trigger: HTMLButtonElement) => void,
 ): ReactNode[] {
   const nodes: ReactNode[] = [];
   let last = 0;
@@ -74,13 +74,14 @@ function renderWithCitations(
       <button
         key={`${keyBase}-c${idx}`}
         type="button"
-        onClick={() => onCitationClick?.(marker)}
+        onClick={(event) => onCitationClick?.(marker, event.currentTarget)}
         title={
           cite
             ? `${cite.itemTitle ? `${cite.itemTitle} · ${cite.sourceName}` : cite.sourceName} — ${Math.round(cite.weight * 100)}% weight`
             : marker
         }
-        className="mx-0.5 inline-flex -translate-y-1.5 items-center align-baseline font-mono text-[0.62em] font-semibold text-seal transition-opacity hover:opacity-70"
+        aria-label={cite ? `Open evidence for ${cite.itemTitle ?? cite.sourceName}` : `Citation ${marker}`}
+        className="mx-0.5 inline-flex min-h-7 items-center rounded-sm px-1 align-baseline font-mono text-[0.72em] font-semibold text-seal underline decoration-seal/40 underline-offset-2 transition-colors hover:bg-seal/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal"
       >
         [{marker.replace(/\D/g, "") || marker}]
       </button>,
@@ -101,7 +102,7 @@ export function AnswerMarkdown({
 }: AnswerMarkdownProps) {
   const blocks = text.split(/\n{2,}/).filter((b) => b.trim().length > 0);
   return (
-    <div className={cn("space-y-4 font-serif text-[17px] leading-[1.65] text-ink", className)}>
+    <div className={cn("space-y-5 font-serif text-[18px] leading-[1.7] text-ink", className)}>
       {blocks.map((block, bi) => {
         const trimmed = block.trim();
         const heading = /^(#{1,3})\s+(.*)$/.exec(trimmed);

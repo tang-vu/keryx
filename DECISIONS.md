@@ -3140,3 +3140,7 @@ Each query the agent probes the live Circle x402 bazaar (`circle services search
 - DB: ✅ local SQLite on the VPS is the source of truth; Supabase adapter kept behind config (D-08, D-13).
 - Funder wallet: ✅ funded; real settlement is live (`KERYX_FORCE_OFFLINE=0`), 500+ settled payments.
 - Deploy target: ✅ VPS at keryx.cc via Cloudflare Tunnel, not Vercel (D-13).
+
+## Reading UX — 2026-09-28
+
+**Put the question and cited answer first while keeping spending evidence available** - *The previous first screen delayed the question, and a completed answer followed two tall trace panels.* The home masthead now contains the question, visible Quick/Deep choice, and action; budget and AI model are available in an advanced disclosure, with the selected question cap and payer shown at submission. A live summary shows the latest research step and separates settled, pending, and simulated amounts, while the full decision and settlement panels remain expandable. Completed answers lead with citations and payment evidence stays distinguishable by state. This changes presentation only: the existing session grant, browser co-signing, SSE, and payment authority continue to govern spending. The guide is an inline, user-invoked control. Chromium layout and synthetic browser checks are release gates; real mobile hardware, live source previews, and research quality require separate evidence. Reversible: easy (client presentation and tests). See [research reading UX](docs/research-reading-ux.md).

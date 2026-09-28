@@ -1,11 +1,6 @@
 "use client";
 
-/**
- * The dispatch order — the ask, struck as a banknote draft: ink double-frame,
- * an engraved header band, an authorized-budget dial with a Bodoni vermillion
- * denomination, a Bodoni question line, and a tactile letterpress "Dispatch"
- * button. Wires straight into the live agent (onAsk).
- */
+/** Reader question form. A bounded budget and model remain available after the primary ask. */
 
 import { useEffect, useRef, useState } from "react";
 // Pure data module (no env imports), so the picker and the server agree on which id is the default.
@@ -15,6 +10,7 @@ import type { ResearchMode } from "@/lib/types";
 
 interface AskFormProps {
   disabled?: boolean;
+  payer?: "treasury" | "session" | "expired";
   onAsk: (
     question: string,
     budget: number,
@@ -73,13 +69,9 @@ const SUGGESTIONS = [
     label: "How do nanopayments split a reward?",
     q: "How do nanopayments split a citation reward across multiple authors?",
   },
-  {
-    label: "What makes agent spending rational?",
-    q: "What makes an agent's spending decisions rational under a budget?",
-  },
 ];
 
-export function AskForm({ disabled, onAsk }: AskFormProps) {
+export function AskForm({ disabled, onAsk, payer = "treasury" }: AskFormProps) {
   const [question, setQuestion] = useState("");
   const [budget, setBudget] = useState(0.05);
   // Reasoning-model pick, chat-app style. "" = server default (DeepSeek). The picker only
@@ -87,6 +79,12 @@ export function AskForm({ disabled, onAsk }: AskFormProps) {
   const [model, setModel] = useState("");
   const [researchMode, setResearchMode] = useState<ResearchMode>("quick");
   const [models, setModels] = useState<PickerModel[]>([]);
+  const advancedRef = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    const revealBudget = () => { if (advancedRef.current) advancedRef.current.open = true; };
+    document.addEventListener("keryx:tour-budget", revealBudget);
+    return () => document.removeEventListener("keryx:tour-budget", revealBudget);
+  }, []);
   useEffect(() => {
     fetch("/api/models")
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
@@ -129,145 +127,96 @@ export function AskForm({ disabled, onAsk }: AskFormProps) {
 
   return (
     <div data-tour="ask-form">
-      <div className="border-2 border-ink bg-paper p-[5px]">
-        <div className="border border-ink">
-          {/* engraved header band */}
-          <div className="flex items-center justify-between gap-4 border-b border-ink bg-ink px-5 py-3 text-cream">
-            <span className="font-mono text-[10.5px] uppercase tracking-[0.18em]">
-              Dispatch order № 0481
-            </span>
-            <span className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.12em] text-cream/70">
-              <span className="h-[6px] w-[6px] rounded-full bg-paid" />
-              Free to try · paid in USDC on Arc
-            </span>
+      <div className="border border-ink bg-paper-2">
+        <div className="hidden flex-wrap items-center justify-between gap-2 border-b border-ink bg-ink px-4 py-2.5 text-cream sm:flex sm:px-5">
+          <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em]">Ask Keryx</span>
+          <span className="font-mono text-[11px]">USDC on Arc testnet</span>
+        </div>
+        <div className="p-3.5 sm:p-5">
+          <label htmlFor="ask-question" className="block font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-2">
+            What do you want to know?
+          </label>
+          <textarea
+            id="ask-question"
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            onKeyDown={(e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") submit();
+            }}
+            placeholder="Ask a question worth reading for..."
+            rows={2}
+            maxLength={MAX_ASK_QUESTION_CHARS}
+            disabled={disabled}
+            className="mt-2 min-h-[76px] w-full resize-y border border-ink bg-paper px-3 py-2 font-serif text-[17px] leading-snug text-ink outline-none placeholder:text-ink-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50"
+          />
+          <fieldset className="mt-3">
+            <legend className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-2">Research depth</legend>
+            <div className="mt-1.5 grid grid-cols-2 gap-2">
+              {(["quick", "deep"] as const).map((mode) => (
+                <label key={mode} className={`flex min-h-11 cursor-pointer items-center gap-2 border px-3 py-2 font-mono text-[12px] font-semibold capitalize focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-seal ${researchMode === mode ? "border-ink bg-ink text-cream" : "border-line bg-paper text-ink"}`}>
+                  <input type="radio" name="research-depth" value={mode} checked={researchMode === mode}
+                    onChange={() => setResearchMode(mode)} disabled={disabled} className="accent-seal" />
+                  {mode}
+                </label>
+              ))}
+            </div>
+            <p className="mt-1.5 font-serif text-[13px] leading-snug text-ink-2">
+              {researchMode === "quick"
+                ? "Quick: up to 2 focused reads."
+                : "Deep: up to 4 reads, including marketplace discovery and a coverage check."}
+            </p>
+          </fieldset>
+          <div className="mt-2 border-t border-line pt-3">
+            <button type="button" onClick={submit} disabled={disabled || question.trim().length === 0}
+              data-tour="dispatch-btn"
+              className="kx-press min-h-12 w-full border border-ink bg-ink px-5 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] text-cream transition-all hover:bg-paid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:cursor-not-allowed disabled:opacity-50">
+              {disabled ? "Researching..." : "Ask Keryx"}
+            </button>
+            <p className="mt-2 font-mono text-[11px] leading-snug text-ink-2">
+              {payer === "session"
+                ? `Your funded session pays on Arc testnet. Question budget: $${budget.toFixed(3)} USDC; your session cap also applies.`
+                : payer === "expired"
+                  ? "Session expired. Recover it below before another wallet funded question."
+                  : `Free trial: Keryx's treasury pays on Arc testnet. Question budget: up to $${budget.toFixed(3)} USDC.`}
+            </p>
           </div>
-
-          <div className="px-5 py-5 sm:px-6">
-            {/* authorized budget */}
-            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-4">
-              <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-3">
-                Authorized budget
-              </span>
-              <div className="flex items-center gap-3.5">
-                <input
-                  type="range"
-                  min={0.01}
-                  max={0.08}
-                  step={0.005}
-                  value={budget}
-                  disabled={disabled}
-                  onChange={(e) => setBudget(parseFloat(e.target.value))}
-                  className="w-36 sm:w-44"
-                  aria-label="Authorized budget in USDC"
-                  data-tour="budget"
-                />
-                <span className="min-w-[92px] text-right font-display text-[30px] font-bold leading-none tracking-tight tabular-nums text-seal">
-                  ${budget.toFixed(3)}
-                </span>
+          <details ref={advancedRef} className="mt-3 border-t border-line pt-2">
+            <summary className="flex min-h-11 cursor-pointer items-center font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2 marker:text-seal hover:text-ink">
+              Budget and model: ${budget.toFixed(3)} USDC
+            </summary>
+            <div className="pb-2 pt-1">
+              <div className="flex flex-wrap items-center justify-between gap-2" data-tour="budget">
+                <label htmlFor="ask-budget" className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2">Maximum budget</label>
+                <span className="font-display text-[25px] font-semibold tabular-nums text-seal">${budget.toFixed(3)}</span>
               </div>
+              <input id="ask-budget" type="range" min={0.01} max={0.08} step={0.005} value={budget}
+                disabled={disabled} onChange={(e) => setBudget(parseFloat(e.target.value))}
+                className="mt-2 w-full" aria-label="Maximum budget in USDC" />
+              <p className="mt-2 font-serif text-[13px] text-ink-2">The agent cannot spend more than this amount on one question.</p>
+              {models.length > 1 && (
+                <label className="mt-3 flex flex-col gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2">
+                  AI model
+                  <select value={model} disabled={disabled} onChange={(e) => setModel(e.target.value)}
+                    title={models.find((m) => m.id === model)?.note ?? "Default reasoning model"}
+                    className="min-h-11 w-full border border-ink bg-paper px-3 py-2 text-[12px] font-normal normal-case text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal">
+                    <option value="">Default: DeepSeek</option>
+                    {models.filter((m) => m.id !== DEFAULT_MODEL_ID).map((m) => (
+                      <option key={m.id} value={m.id} title={m.note}>{m.label}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
             </div>
-
-            {/* to the herald — */}
-            <div className="mb-2 mt-5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-3">
-              To the herald —
-            </div>
-            <textarea
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              onKeyDown={(e) => {
-                if ((e.metaKey || e.ctrlKey) && e.key === "Enter") submit();
-              }}
-              placeholder="Ask anything worth paying to read…"
-              rows={2}
-              maxLength={MAX_ASK_QUESTION_CHARS}
-              disabled={disabled}
-              className="w-full resize-none border-0 border-b border-ink bg-transparent pb-3 font-display text-[clamp(22px,2.6vw,30px)] font-medium leading-tight text-ink outline-none placeholder:font-normal placeholder:text-faint focus:border-seal"
-            />
-
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
-              <span className="flex items-center gap-2.5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-ink-3">
-                <span className="h-[7px] w-[7px] rounded-full bg-seal" />
-                Drag the budget — watch the decisions change
-              </span>
-              <div className="flex flex-wrap items-center gap-3">
-                <div
-                  className="flex border border-ink"
-                  role="radiogroup"
-                  aria-label="Research depth"
-                >
-                  {(["quick", "deep"] as const).map((mode) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      role="radio"
-                      aria-checked={researchMode === mode}
-                      disabled={disabled}
-                      onClick={() => setResearchMode(mode)}
-                      title={
-                        mode === "quick"
-                          ? "Up to 2 claim-targeted reads; skips the external marketplace and gap-expansion pass"
-                          : "Up to 4 reads with marketplace discovery and a bounded coverage-gap pass"
-                      }
-                      className={`px-2.5 py-2 font-mono text-[10.5px] uppercase tracking-[0.08em] transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                        researchMode === mode
-                          ? "bg-ink text-cream"
-                          : "bg-paper text-ink-3 hover:text-ink"
-                      }`}
-                    >
-                      {mode}
-                    </button>
-                  ))}
-                </div>
-                {models.length > 1 && (
-                  <label className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.1em] text-ink-3">
-                    Counsel
-                    <select
-                      value={model}
-                      disabled={disabled}
-                      onChange={(e) => setModel(e.target.value)}
-                      title={models.find((m) => m.id === model)?.note ?? "Default reasoning model"}
-                      className="max-w-[180px] cursor-pointer border border-ink bg-paper-2 px-2 py-2.5 font-mono text-[11px] uppercase tracking-[0.06em] text-ink outline-none transition-colors hover:border-seal/60 focus:border-seal disabled:cursor-not-allowed disabled:opacity-50"
-                      aria-label="Reasoning model"
-                    >
-                      <option value="">Default · DeepSeek</option>
-                      {models
-                        .filter((m) => m.id !== DEFAULT_MODEL_ID)
-                        .map((m) => (
-                          <option key={m.id} value={m.id} title={m.note}>
-                            {m.label}
-                          </option>
-                        ))}
-                    </select>
-                  </label>
-                )}
-                <button
-                  type="button"
-                  onClick={submit}
-                  disabled={disabled || question.trim().length === 0}
-                  className="kx-press border border-ink bg-ink px-7 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-cream transition-all hover:-translate-y-0.5 hover:shadow-[0_5px_0_var(--seal)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
-                  data-tour="dispatch-btn"
-                >
-                  Dispatch ▸
-                </button>
-              </div>
-            </div>
+          </details>
+          <div className="mt-2 flex flex-wrap gap-2" aria-label="Example questions">
+            {SUGGESTIONS.map((s) => (
+              <button key={s.label} type="button" disabled={disabled} onClick={() => setQuestion(s.q)}
+                className="min-h-11 max-w-full border border-line bg-paper px-3 py-2 text-left font-mono text-[11px] leading-snug text-ink-2 transition-colors hover:border-seal hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50">
+                {s.label}
+              </button>
+            ))}
           </div>
         </div>
-      </div>
-
-      {/* example dispatches */}
-      <div className="mt-3.5 flex flex-wrap gap-2">
-        {SUGGESTIONS.map((s) => (
-          <button
-            key={s.label}
-            type="button"
-            disabled={disabled}
-            onClick={() => setQuestion(s.q)}
-            className="border border-line bg-paper-2 px-3 py-1.5 text-left font-mono text-[11px] text-ink-2 transition-colors hover:border-seal/50 hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {s.label}
-          </button>
-        ))}
       </div>
     </div>
   );

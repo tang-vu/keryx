@@ -15,12 +15,12 @@ type FooterLink = { label: string; href: string; external?: boolean };
 
 // Product surfaces. "API for agents" is the OpenAPI reference (also the A2A entry point).
 const HOUSE: FooterLink[] = [
-  { label: "Ask the herald", href: "/" },
-  { label: "The archive", href: "/answers" },
-  { label: "The registry", href: "/sources" },
-  { label: "The ledger", href: "/dashboard" },
+  { label: "Ask a question", href: "/" },
+  { label: "Past answers", href: "/answers" },
+  { label: "Sources", href: "/sources" },
+  { label: "Payments & proof", href: "/dashboard" },
   { label: "Public proof", href: "/proof" },
-  { label: "Issue a toll", href: "/register" },
+  { label: "For creators", href: "/register" },
   { label: "Playground", href: "/playground" },
   { label: "Paid research", href: "/research" },
   { label: "Business calculator", href: "/economics" },
@@ -92,7 +92,7 @@ export function SiteFooter() {
 
         <div className="mt-10 flex flex-wrap justify-between gap-3 border-t border-ink pt-5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-ink-3">
           <span>© 2026 Keryx — legal tender for attention</span>
-          <span className="text-seal">Creators paid every time a machine cites them</span>
+          <span className="text-seal">Real settlement evidence on Arc testnet</span>
         </div>
       </div>
     </footer>

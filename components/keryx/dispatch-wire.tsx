@@ -1,92 +1,57 @@
 "use client";
 
-/**
- * The dispatch wire — a running tape of recent settlements under the nav, like
- * a treasury ticker. Pulls real payouts from /api/payments; falls back to a
- * representative sample if the wire is quiet.
- */
-
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { PaymentRecord } from "@/lib/types";
+import { paymentSettlementStatus } from "@/lib/payments/payment-state";
 
-interface WireItem {
-  who: string;
-  amt: string;
-}
-
-const FALLBACK: WireItem[] = [
-  { who: "@circle-research", amt: "+$0.018" },
-  { who: "@402.org", amt: "+$0.020" },
-  { who: "@arc-docs", amt: "+$0.011" },
-  { who: "@fieldguide.dev", amt: "+$0.016" },
-  { who: "@stables-weekly", amt: "+$0.009" },
-  { who: "@agent-econ", amt: "+$0.022" },
-  { who: "@circle-research", amt: "+$0.014" },
-  { who: "@arc-docs", amt: "+$0.008" },
-];
-
-function handleize(name: string): string {
-  return (
-    "@" +
-    (name || "source")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 20)
-  );
-}
+type State = "loading" | "ready" | "empty" | "error";
 
 export function DispatchWire() {
-  const [items, setItems] = useState<WireItem[]>(FALLBACK);
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [state, setState] = useState<State>("loading");
+  const requestId = useRef(0);
 
-  useEffect(() => {
-    let alive = true;
-    fetch("/api/payments?limit=12", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (!alive || !d?.payments?.length) return;
-        const real = (d.payments as PaymentRecord[])
-          .filter((p) => (p.amountUsdc ?? 0) > 0)
-          .slice(0, 12)
-          .map((p) => ({
-            who: handleize(p.sourceName),
-            amt: `+$${(p.amountUsdc ?? 0).toFixed(3)}`,
-          }));
-        if (real.length) setItems(real);
-      })
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
+  const load = useCallback(async () => {
+    const id = ++requestId.current;
+    try {
+      const response = await fetch("/api/payments?limit=50", { cache: "no-store" });
+      if (!response.ok) throw new Error("Payment feed unavailable");
+      const body = await response.json();
+      if (!Array.isArray(body.payments)) throw new Error("Invalid payment feed");
+      const settled = (body.payments as PaymentRecord[]).filter((p) =>
+        p.kind === "citation" && p.settled === true && paymentSettlementStatus(p) === "settled" && p.amountUsdc > 0,
+      ).slice(0, 12);
+      if (id !== requestId.current) return;
+      setPayments(settled);
+      setState(settled.length ? "ready" : "empty");
+    } catch {
+      if (id !== requestId.current) return;
+      setPayments([]);
+      setState("error");
+    }
   }, []);
 
-  const run = [...items, ...items];
+  useEffect(() => {
+    const requests = requestId;
+    const initial = window.setTimeout(() => void load(), 0);
+    const timer = window.setInterval(() => void load(), 30_000);
+    return () => { window.clearTimeout(initial); window.clearInterval(timer); requests.current++; };
+  }, [load]);
 
   return (
-    <div className="flex h-10 items-center overflow-hidden border-b border-ink bg-panel">
-      <div className="z-[2] flex h-full flex-none items-center gap-2.5 bg-ink px-4 font-mono text-[10.5px] font-medium uppercase tracking-[0.16em] text-paper">
-        <span className="h-1.5 w-1.5 rounded-full bg-seal" style={{ animation: "kxBlink 1.6s infinite" }} />
-        Dispatch wire
-      </div>
-      <div
-        className="flex w-max"
-        style={{
-          animation: "kxTape 46s linear infinite",
-          maskImage: "linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent)",
-          WebkitMaskImage: "linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent)",
-        }}
-      >
-        {run.map((t, i) => (
-          <div
-            key={i}
-            className="flex items-center gap-2.5 whitespace-nowrap px-5 font-mono text-[11.5px] text-ink-3"
-          >
-            <span className="tracking-[0.1em] text-seal">PAID</span>
-            <span className="text-ink">{t.who}</span>
-            <span className="font-medium text-paid">{t.amt}</span>
+    <div className="flex h-10 items-center border-b border-ink bg-panel">
+      <div className="flex h-10 shrink-0 items-center bg-ink px-2 font-mono text-[10px] uppercase tracking-wider text-paper sm:px-4"><span className="sm:hidden">Arc testnet</span><span className="hidden sm:inline">Arc testnet · settled citations</span></div>
+      <div className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap px-2 font-mono text-[11px] text-ink-2 sm:px-3" aria-live="polite">
+        {state === "loading" && "Loading settlements…"}
+        {state === "empty" && "No recent settled citations."}
+        {state === "error" && "Payment feed unavailable."}
+        {state === "ready" && (
+          <div className="flex w-max gap-6 whitespace-nowrap">
+            {payments.map((p) => <span key={p.id ?? `${p.queryId}-${p.sourceId}-${p.createdAt}`} className="flex items-center gap-2"><span className="text-seal">PAID</span><span>{p.sourceName}</span><span className="text-paid">${p.amountUsdc.toFixed(6)} USDC</span></span>)}
           </div>
-        ))}
+        )}
       </div>
+      {state === "error" && <button type="button" onClick={() => { setState("loading"); void load(); }} className="min-h-11 shrink-0 px-3 font-mono text-[10px] uppercase text-ink underline">Retry</button>}
     </div>
   );
 }

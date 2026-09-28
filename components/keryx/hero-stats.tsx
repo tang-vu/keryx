@@ -1,48 +1,49 @@
 "use client";
 
 /**
- * Hero denomination box — the real settled metrics from /api/metrics, struck in
- * Bodoni and tallied up. Two cells: paid to creators (green) and citations
- * today (ink). Hidden until there is something real to show.
+ * Hero totals from /api/metrics. Displays lifetime settled Arc testnet creator
+ * payouts and payment counts, with explicit loading and unavailable states.
  */
 
 import { useEffect, useState } from "react";
-import { useCountUp } from "@/lib/hooks/use-count-up";
 
 export function HeroStats() {
   const [m, setM] = useState<{ paid: number; cites: number } | null>(null);
+  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
 
   useEffect(() => {
     let alive = true;
     fetch("/api/metrics", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => { if (!r.ok) throw new Error("Metrics unavailable"); return r.json(); })
       .then((d) => {
-        if (!alive || !d?.metrics) return;
+        if (!alive) return;
+        if (!d?.metrics) { setState("error"); return; }
         setM({
           paid: d.metrics.totalCreatorPayoutsUsdc ?? 0,
           cites: d.metrics.totalPayments ?? 0,
         });
+        setState("ready");
       })
-      .catch(() => {});
+      .catch(() => { if (alive) setState("error"); });
     return () => {
       alive = false;
     };
   }, []);
 
-  if (!m || (m.paid <= 0 && m.cites <= 0)) return null;
+  if (state !== "ready" || !m) return <p className="border border-ink px-4 py-3 font-mono text-xs text-ink-3" role="status">{state === "loading" ? "Loading settled Arc testnet totals…" : "Settled totals unavailable."}</p>;
 
   return (
     <div className="flex w-full border border-ink">
       <Cell
         target={m.paid}
         fmt={(n) => `$${n.toFixed(2)}`}
-        label="Paid to creators"
+        label="Paid to creators · lifetime · Arc testnet"
         money
       />
       <Cell
         target={m.cites}
         fmt={(n) => Math.round(n).toLocaleString()}
-        label="Citations today"
+        label="Settled payments · lifetime"
       />
     </div>
   );
@@ -59,7 +60,6 @@ function Cell({
   label: string;
   money?: boolean;
 }) {
-  const v = useCountUp(target);
   return (
     <div className="flex-1 border-r border-ink px-4 py-3.5 last:border-r-0">
       <div
@@ -67,7 +67,7 @@ function Cell({
           money ? "text-paid" : "text-ink"
         }`}
       >
-        {fmt(v)}
+        {fmt(target)}
       </div>
       <div className="mt-1.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-ink-3">
         {label}

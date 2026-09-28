@@ -33,7 +33,7 @@ describe("buildAnswersFeedXml", () => {
     expect(xml).toContain(`href="${BASE}/answers/feed.xml"`);
     expect(xml).toContain(`<link rel="alternate" type="text/html" href="${BASE}/dispatch/abc123"/>`);
     expect(xml).toContain("<title>What is x402?</title>");
-    expect(xml).toContain("$0.0053 USDC paid");
+    expect(xml).toContain("$0.0053 in recorded creator rewards; inspect dispatch for settlement state");
   });
 
   it("escapes markup in questions and snippets", () => {

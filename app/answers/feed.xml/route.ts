@@ -1,7 +1,7 @@
 /**
  * GET /answers/feed.xml — Atom feed of the public answer archive, so readers,
- * aggregators, and other agents can subscribe to new paid answers the moment
- * they settle. Same selection as /answers (real cited answers, one canonical
+ * aggregators, and other agents can subscribe to cited answers.
+ * Same selection as /answers (cited answers, one canonical
  * dispatch per question), same revalidation cadence.
  */
 

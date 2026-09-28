@@ -34,12 +34,15 @@ const OTHERS_SHOWN = 25;
 export function ArchiveSearch({
   terms,
   children,
+  filters,
   others = [],
   placeholder = "Filter these answers…",
 }: {
   /** Lowercase searchable text per card, in the same order as `children`. */
   terms: string[];
   children: ReactNode;
+  /** Server-rendered navigation shown between the search input and result cards. */
+  filters?: ReactNode;
   /** The rest of the archive, searchable but not rendered as cards. */
   others?: ArchiveSearchEntry[];
   placeholder?: string;
@@ -77,6 +80,8 @@ export function ArchiveSearch({
           </span>
         )}
       </label>
+
+      {filters}
 
       <div className="mt-4 flex flex-col gap-4">
         {cards.map((card, i) => (
