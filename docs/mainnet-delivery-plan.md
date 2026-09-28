@@ -11,6 +11,9 @@ weaken quality, security, reliability, maintainability, or the evidence required
 the acceptance gates. A working demo or an easier implementation is not a release
 decision. The [Tameion plan](./tameion-2026.md) applies this rule to its Operator and
 desktop work while this document remains the complete-product and mainnet gate map.
+The [shared Rust engine migration plan](./rust-engine-migration.md) adds domain parity,
+rollback and platform gates. Passing a read-only local slice cannot satisfy signer,
+spend, settlement, recovery or mainnet gates here.
 
 Mainnet readiness and permission to launch are separate. The existing testnet
 restrictions remain until the final owner go/no-go decision. No mainnet keys,

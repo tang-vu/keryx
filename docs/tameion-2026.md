@@ -34,10 +34,15 @@ versioned buyer-visible changes; this plan does not change them.
 
 ## One working system, staged delivery
 
-Long term, Keryx should expose one TypeScript task engine across the web, Windows
-desktop, CLI, and MCP/API. It needs workspace and task memory with provenance and access
-scope, a controlled tool catalog, permissions, durable jobs, and inspectable receipts.
-Extract cohesive shared pieces gradually from the current app; avoid a monolith rewrite.
+Long term, Keryx should expose one task and receipt engine across the web, Windows
+desktop, CLI, and MCP/API. A [staged shared Rust engine](./rust-engine-migration.md)
+is authorized for evidence-based domain cutovers, beginning with read-only local
+Operator status, saved result and brief on existing v1 directories. The current
+TypeScript engine remains the production authority until each migrated domain passes
+its own acceptance and rollback gates. The system also needs workspace and task memory
+with provenance and access scope, a controlled tool catalog, permissions, durable jobs,
+and inspectable receipts. Extract cohesive shared pieces gradually; avoid a monolith
+rewrite or a second payment authority.
 An ERP, payroll, yield engine, multichain launch, and plugin marketplace are outside
 this two-week scope.
 
@@ -46,6 +51,13 @@ with demonstrated security, reliability, maintainability, and product quality fo
 long term. If an outcome cannot pass its checks in time, ship a smaller honest slice
 and keep the remaining work open. Development speed or model quota savings alone do
 not justify a weaker architecture or skipped validation.
+After each logically complete verified update, use a focused feature branch,
+descriptive conventional commit and pushed PR. Pass required CI and review, then
+merge to `main`. Include appropriate tests, reproducible build/CI coverage and
+accurate public documentation or changelog notes. Keep secrets, private runtime
+data, build artifacts and unrelated local changes out of that commit. A merged
+user-visible product update then follows the repository's production deployment,
+health verification and Canteen reporting rules.
 
 - [ ] Design Operator authority: receipt verification, obligations versus available
   funds, category and job limits, approvals, immutable events, reconciliation, and
@@ -76,23 +88,20 @@ partial progress toward the checkboxes: web and MCP do not use the Operator task
 engine; desktop notifications, human approvals, scheduling, and a general business
 ledger are not implemented.
 
-Retain Electron + React for the current release: it already uses the tested TypeScript
-task and receipt engine, with fewer new process and runtime boundaries. This is a
-current-release choice based on the working implementation, not a permanent desktop
-platform commitment or an event-speed shortcut. Tauri 2/Rust remains a candidate for
-an isolated comparative spike; no migration has been chosen. A Tauri shell with a
-Node single executable application could preserve the shared engine, but would add a
-Rust-to-Node lifecycle, protocol, and test surface and would not itself remove the
-current buyer CLI dependency. The feasibility check has no Tauri artifact or comparable
-startup and memory measurements yet, so it does not establish a performance advantage.
-Compare candidates using a standalone Windows artifact that runs without installed
-Node, consistent use of the shared task engine without duplicating financial logic,
-narrow permissions and IPC, preservation of workspace/journal/history, measured
-install footprint, startup time and memory, and restart, offline, and tamper tests.
-Record observed tradeoffs before selecting a platform. Any replacement must pass the
-same payment, security, recovery, and release gates. A running remote job can continue
-on the VPS when the app closes; access to local files still requires an authorized
-local companion online. This is not a claim of general autonomous scheduling.
+Retain Electron + React for the current release while the shared Rust core is evaluated:
+the current shell already uses the tested TypeScript task and receipt engine. A Rust
+domain core could later serve a Tauri desktop directly and web/MCP through a controlled
+service adapter, but those integrations are future gates, not effects of the first
+read-only CLI slice. Compare a standalone Windows artifact that runs without installed
+Node; narrow permissions and IPC; workspace, journal and history preservation; actual
+install footprint, startup time and memory; and restart, offline and tamper behavior.
+The first native GNU build on the development PC verifies core compilation only;
+[Tauri's Windows prerequisites](https://v2.tauri.app/start/prerequisites/) require
+Microsoft C++ Build Tools, a Windows SDK and an MSVC Rust toolchain. No comparable
+desktop artifact or accepted performance advantage exists yet. Any replacement must
+pass the same payment, security, recovery and release gates. A running remote job can
+continue on the VPS when the app closes; local-file access still requires an authorized
+local companion online. This is not general autonomous scheduling.
 
 An on-chain budget policy wallet is **not implemented**. The current repository uses
 Arc testnet configuration (`eip155:5042002`), a buyer EOA authorization signature,

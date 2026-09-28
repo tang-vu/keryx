@@ -334,6 +334,8 @@ The reusable building blocks are MIT-licensed and standalone in
 
 ## Project docs
 
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — branch, pull request, validation and payment-safety workflow
+- [`docs/rust-engine-migration.md`](./docs/rust-engine-migration.md) — staged shared Rust engine and acceptance gates
 - [`docs/openai-compatible-api.md`](./docs/openai-compatible-api.md) — drop-in recipes for OpenAI SDK, LangChain, LlamaIndex, Open WebUI, LibreChat, Continue
 - [`docs/system-architecture.md`](./docs/system-architecture.md) — data/money flow + on-chain components
 - [`docs/security-threat-model.md`](./docs/security-threat-model.md) — threat matrix, audits, residuals

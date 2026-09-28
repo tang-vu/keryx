@@ -1,0 +1,8 @@
+[package]
+name = "keryx-engine"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+keryx-core = { path = "../keryx-core" }
+serde_json = "=1.0.145"

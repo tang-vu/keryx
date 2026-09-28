@@ -6,6 +6,7 @@
   "scripts": {
     "test:browser-private-journal": "node --import tsx scripts/test-browser-private-journal.mts",
     "test:browser-withdrawal-journal": "node --import tsx scripts/test-browser-withdrawal-journal.mts",
+    "test:rust-engine": "node --import tsx scripts/test-rust-engine.mts",
     "test:browser-private-checkout": "node --import tsx scripts/test-browser-private-checkout.mts",
     "dev": "next dev -p 3939",
     "build": "next build",

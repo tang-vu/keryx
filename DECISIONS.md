@@ -1,5 +1,23 @@
 # Keryx — Decision Log
 
+**D-242** - Evaluate one shared Rust engine through bounded domain cutovers - *A
+single long-term domain implementation across native CLI, desktop and service
+adapters may reduce duplicated authority and improve maintainability, but requires
+measured equivalence and a safe transition.* Authorize a pure Rust domain core with
+platform-specific file I/O and a thin native CLI. The first read-only slice opens
+existing v1 Operator task directories for status, saved result and brief. The
+TypeScript implementation is the compatibility oracle during migration and remains
+production authority until a domain passes its explicit parity, corruption, limits,
+no-write, rollback and platform checks. At cutover, one engine must own that domain;
+retire the old duplicate after a documented rollback window. Desktop Tauri would call
+the crate directly; web/MCP would use a versioned service adapter only after its
+security and operations gates. Existing signing, buyer journal admission, spend
+reservation, settlement and recovery retain their current authority until separate
+end-to-end tests and review. Rust implementation alone does not prove speed, safety,
+payment correctness or a desktop migration. Reversible: medium for read-only slices;
+payment and persisted-format cutovers require stronger rollback proof. See
+[`docs/rust-engine-migration.md`](docs/rust-engine-migration.md).
+
 **D-241** - Keep the current Electron shell while evaluating desktop alternatives by evidence -
 *The quality-first choice is the tested architecture that shares one TypeScript task and
 receipt engine with CLI, rather than a speculative framework rewrite during active

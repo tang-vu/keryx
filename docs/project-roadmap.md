@@ -8,6 +8,9 @@ changed; [project-changelog.md](./project-changelog.md) records what shipped.
 The [Tameion 2026 plan](./tameion-2026.md) sets the September 27–October 10 event
 direction and its proposed Operator, Windows desktop, CLI, and pilot work. Its
 checklist is a plan, not release evidence; the acceptance map above remains in force.
+The [staged shared Rust engine migration](./rust-engine-migration.md) records the
+authorized evaluation, current read-only slice and domain cutover gates. It does not
+change the production payment authority or complete a Tauri desktop migration.
 
 ## Current priorities
 
