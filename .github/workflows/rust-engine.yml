@@ -17,11 +17,15 @@ on:
       - "scripts/test-rust-tiny-budget.mts"
       - "scripts/test-rust-task-preparation.mts"
       - "scripts/test-rust-task-publication.mts"
+      - "scripts/test-rust-task-admission.mts"
+      - "scripts/rust-task-publication-fixtures.mts"
       - "scripts/rust-offline-fallback-guard.mjs"
       - "scripts/operator.mts"
       - "desktop/src/main.ts"
       - "desktop/src/private-export.ts"
       - "desktop/src/private-export.test.ts"
+      - "desktop/src/workspace.ts"
+      - "desktop/src/contracts.ts"
       - "lib/**"
       - "package.json"
       - "package-lock.json"
@@ -40,11 +44,15 @@ on:
       - "scripts/test-rust-tiny-budget.mts"
       - "scripts/test-rust-task-preparation.mts"
       - "scripts/test-rust-task-publication.mts"
+      - "scripts/test-rust-task-admission.mts"
+      - "scripts/rust-task-publication-fixtures.mts"
       - "scripts/rust-offline-fallback-guard.mjs"
       - "scripts/operator.mts"
       - "desktop/src/main.ts"
       - "desktop/src/private-export.ts"
       - "desktop/src/private-export.test.ts"
+      - "desktop/src/workspace.ts"
+      - "desktop/src/contracts.ts"
       - "lib/**"
       - "package.json"
       - "package-lock.json"
@@ -115,6 +123,9 @@ jobs:
 
       - name: Exercise synthetic private task publication and TypeScript reopening
         run: node --import tsx scripts/test-rust-task-publication.mts
+
+      - name: Compare actual task callers with native candidate preflight
+        run: node --import tsx scripts/test-rust-task-admission.mts
 
       - name: Verify positive sub-micro candidate refusal and explicit TypeScript fallback
         run: node --import tsx scripts/test-rust-tiny-budget.mts

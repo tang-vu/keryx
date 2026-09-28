@@ -1,8 +1,9 @@
 # Immutable v1 task publication evaluation
 
 This evaluates native filesystem publication after the accepted
-[pure preparation stage](rust-task-preparation-evaluation.md). Local Windows GNU
-validation passed; hosted Linux and Windows MSVC acceptance remains required.
+[pure preparation stage](rust-task-preparation-evaluation.md). The bounded Linux
+and Windows MSVC evaluation passed in [PR #15](https://github.com/tang-vu/keryx/pull/15),
+alongside the local Windows GNU rehearsal.
 Production task creation remains TypeScript;
 the packaged `keryx-engine` CLI retains protocol/status/result/brief. The test-only
 publication adapter cannot buy, sign, fund, create a buyer journal or resume work.
@@ -179,3 +180,33 @@ The `publication-evaluation` feature exposes the bounded test bridge and fault
 hooks. It is not enabled for the packaged read-only CLI or its transferred native
 artifact. The Rust workflow runs the publication corpus and actual-process driver
 on Linux and Windows MSVC alongside the existing read-only acceptance gates.
+
+## Hosted acceptance
+
+At PR #15 head `1f435d31bb8d463a9cfed2e8b5e450a56b33f0ea`, Linux passed 33 core
+and 13 CLI tests; Windows MSVC passed 32 core and 13 CLI tests. Both passed all seven
+focused publication tests and default and feature-enabled Clippy. Application CI
+and the native artifact producer/fresh-consumer checks also passed. Independent automated review
+found no blocker after the observed platform failures were corrected.
+
+| Publication driver observation | Linux | Windows MSVC |
+| --- | ---: | ---: |
+| Native successes | 2 | 2 |
+| Typed refusals | 27 | 30 |
+| Exactly-one-winner concurrency | 1 | 1 |
+| Read-only reopens | 18 | 18 |
+| Link refusals | 2 | 2 |
+| Permission observations | 13 | 15 |
+| Killed-and-reaped checkpoints | 3 | 3 |
+| Typed fault-state checks | 3 | 3 |
+
+Linux exercised directory replacement and identical-byte file replacement and
+detected both. Windows denied held-directory renames with sharing error 32 and
+exercised/detected identical-byte file replacement. Hosted file-symlink cases and
+the Windows driver's junction cases ran. The older strict read-only corpus also
+passed 226 checks on Linux and 232 on Windows, with no skipped export boundaries.
+
+These results close this bounded publication evaluation. They do not close the
+durability and production ownership gates above. The next
+[caller-admission corpus](rust-task-admission-evaluation.md) uses real CLI/desktop
+inputs and a no-write native checkpoint while preserving production TypeScript.
