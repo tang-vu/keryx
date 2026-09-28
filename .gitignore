@@ -17,6 +17,7 @@ out/
 build/
 dist/
 desktop/release/
+rust/target/
 
 # hardhat (generated contract artifacts/cache/typings)
 artifacts/

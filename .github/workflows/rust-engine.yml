@@ -1,0 +1,70 @@
+name: Rust engine candidate
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "rust/**"
+      - "scripts/test-rust-engine.mts"
+      - "scripts/operator.mts"
+      - "lib/**"
+      - "package.json"
+      - "package-lock.json"
+      - "docs/rust-engine-migration.md"
+      - ".github/workflows/rust-engine.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "rust/**"
+      - "scripts/test-rust-engine.mts"
+      - "scripts/operator.mts"
+      - "lib/**"
+      - "package.json"
+      - "package-lock.json"
+      - "docs/rust-engine-migration.md"
+      - ".github/workflows/rust-engine.yml"
+
+jobs:
+  native-parity:
+    name: Native Rust and TypeScript parity (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rust: 1.98.1-x86_64-unknown-linux-gnu
+          - os: windows-latest
+            rust: 1.98.1-x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install official Rust toolchain and check components
+        run: rustup toolchain install ${{ matrix.rust }} --profile minimal --component clippy --component rustfmt
+
+      - name: Install JavaScript test dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Check Rust format
+        run: cargo +${{ matrix.rust }} fmt --manifest-path rust/Cargo.toml --all --check
+
+      - name: Test Rust workspace
+        run: cargo +${{ matrix.rust }} test --manifest-path rust/Cargo.toml --locked
+
+      - name: Lint Rust workspace
+        run: cargo +${{ matrix.rust }} clippy --manifest-path rust/Cargo.toml --all-targets --locked -- -D warnings
+
+      - name: Build native read-only CLI
+        run: cargo +${{ matrix.rust }} build --manifest-path rust/Cargo.toml -p keryx-engine --release --locked
+
+      - name: Compare synthetic Operator fixtures with TypeScript
+        run: npm run test:rust-engine

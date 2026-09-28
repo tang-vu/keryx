@@ -6,8 +6,9 @@
 > below is historical; [complete-product/mainnet gates](docs/mainnet-delivery-plan.md) still apply.
 > Across active plans, prefer demonstrated quality, security, reliability, and maintainability;
 > narrow or stage scope under a deadline instead of lowering acceptance or skipping checks. The
-> current release retains the tested Electron shell; a later platform migration remains open
-> pending the comparison in the Tameion plan.
+> current release retains the tested Electron shell and TypeScript payment authority.
+> A [staged shared Rust engine](docs/rust-engine-migration.md) is authorized for measured
+> parity and controlled domain cutover; no desktop or payment migration is accepted yet.
 
 > **Historical ETHOnline context (2026-09-05):** ETHOnline 2026 continuity work is tracked in
 > [docs/ethonline-2026.md](docs/ethonline-2026.md). The Lepton phases and rubric below
