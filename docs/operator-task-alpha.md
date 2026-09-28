@@ -39,7 +39,10 @@ snapshot is a diagnostic, not independent settlement proof or portable recovery.
 After a completed verified GET recovery, Operator also saves a bounded private
 `result.json` bound to the original task, buyer journal, answer, and archived receipt.
 `result` reopens that answer offline; `brief --file` writes a private Markdown brief
-to a new file and refuses to overwrite an existing one. A later incomplete or failed
+to a new file and refuses to overwrite an existing one. It writes and syncs a
+private sibling staging file before publishing the complete brief through an
+exclusive hard link. The output filesystem must support hard links; an unsupported
+filesystem is refused without falling back to a partial final-file write. A later incomplete or failed
 check leaves the older completed result intact. Offline opening rechecks local bytes
 and task binding; it cannot replay the original HTTPS response or independently prove
 settlement or answer truth. Keep the buyer journal and receipt files with the task.
@@ -49,6 +52,15 @@ For a shareable redacted report, use `npm run buyer -- report --state
 .buyer-jobs/task-1/buyer` and review it before sharing. JSON stdout is clean with
 the direct `node --import tsx scripts/operator.mts ...` form; npm may print its own
 headers unless invoked with `--silent`.
+
+An export error identifies whether the final brief was published and any staging
+file that could not be removed. Write or sync failures do not publish this attempt.
+If the publication call itself fails, the command reports an unconfirmed outcome:
+inspect the named final file as well as any leftover staging file. A
+cleanup failure after publication leaves the complete final brief intact but emits
+no success receipt. Inspect the named files before retrying with a new output path;
+do not delete a pre-existing file to make a retry pass. These guarantees assume a
+trusted private parent and do not promise directory-entry durability after a crash.
 
 The optional [Rust read-only candidate](./rust-engine-migration.md) supports
 Unicode scalar strings but refuses JSON containing an unpaired UTF-16 surrogate.
