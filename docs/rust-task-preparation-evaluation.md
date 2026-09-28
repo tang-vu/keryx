@@ -97,12 +97,17 @@ bytes passed; 8,193 bytes failed. Request-file boundary cases are refusals becau
 the enclosing task exceeds its limit first; they are not successful maximum-size
 pairs. Twenty-five core and 13 CLI tests, formatting, Clippy, release builds,
 TypeScript and scoped ESLint passed. The existing 232 strict read-only comparisons
-and the separate tiny-budget fallback drill also passed. Hosted Linux/MSVC results
-are required separately before closing this stage.
+and the separate tiny-budget fallback drill also passed. The same new preparation
+corpus subsequently passed on both Linux and Windows MSVC in
+[PR #14](https://github.com/tang-vu/keryx/pull/14), head
+`145109ebf31dca24b93e0a202ca027a51b16831c`, together with application CI and both
+platforms' artifact producers and fresh consumers. PR #14 merged as `9019d9d`.
+This closes the bounded preparation stage; native publication remains separate.
 
 ## Remaining task-creation gates
 
-This stage supplies no native filesystem writer. The next isolated adapter must
+This stage supplies no native filesystem writer. The next
+[isolated publication adapter](rust-task-publication-evaluation.md) must
 own a deliberately selected private target, exclusive directory/file creation,
 bounded encoding, permissions, durable writes and explicit incomplete outcomes.
 Retain partial creation for inspection, matching the TypeScript policy; never

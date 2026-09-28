@@ -1,5 +1,33 @@
 # Keryx — Decision Log
 
+**D-254** - Evaluate exclusive native task publication with explicit incomplete outcomes -
+*Correct task bytes do not establish safe filesystem publication.* Build the next
+isolated candidate around D-253's immutable prepared pair and a held, validated
+private-parent directory capability. Reuse no-follow traversal, check owner and
+permissions before exposing private task content, and create one safe child and
+its two files exclusively. Never overwrite an existing target, repair a partial
+task automatically, or delete a directory that this call created after a failure.
+
+Keep the TypeScript writer and payment callers authoritative. The native adapter
+is evaluated through a test-only bridge, with no create command in the packaged
+read-only CLI. Report whether this call created anything, the last confirmed
+publication phase and any retained incomplete or uncertain state. A collision
+does not mean the target is absent. Check file writes, sync and close separately;
+on Linux also sync directory entries. Windows can demonstrate file flushing and
+visible verified files here, while its directory-entry durability remains
+unproven. Do not turn that observation into a durable-success or cutover claim.
+
+Use private synthetic parents for exact-byte/TypeScript reopening, concurrent
+creation, links and permissions, injected I/O faults, process termination and
+restart. Process-kill tests do not prove power-loss persistence. Held handles and
+observed-swap detection work under a trusted OS and private-parent assumption;
+they do not defend against a hostile same-user owner or administrator changing
+ACLs or files. Windows permission and durability policy, production target/payee
+selection and writer admission still require their own evidence and review.
+Reversible: disable the candidate and retain original v1 directories for
+TypeScript inspection; never rewrite or repurchase as rollback. See
+[task publication evaluation](docs/rust-task-publication-evaluation.md).
+
 **D-253** - Prepare immutable v1 task bytes in a pure, separately evaluated core -
 *Read-only artifact acceptance does not establish safe native task creation.*
 After D-251/D-252's platform, transfer and rollback checks, evaluate the validation

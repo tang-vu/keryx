@@ -436,6 +436,9 @@ see [the recorded handoff evidence](native-inspection-evaluation.md#independent-
 D-253 starts with [pure task preparation](rust-task-preparation-evaluation.md):
 validation and exact v1 bytes with explicit identity/time inputs and no filesystem
 writer. That stage does not establish native creation durability or switch callers.
+D-254 evaluates the [separate native publication boundary](rust-task-publication-evaluation.md)
+under a verified private parent, with retained incomplete results and explicit
+platform durability limits. Its acceptance and writer cutover gates remain open.
 
 After the read-only gates pass, evaluate only the immutable v1 task envelope;
 this is a selected next evaluation scope, not permission to switch callers now.

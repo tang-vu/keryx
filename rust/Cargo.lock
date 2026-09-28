@@ -237,12 +237,14 @@ version = "0.1.0"
 dependencies = [
  "cap-fs-ext",
  "cap-std",
+ "libc",
  "rustpython-wtf8",
  "ryu-js",
  "same-file",
  "serde_core",
  "serde_json",
  "sha2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

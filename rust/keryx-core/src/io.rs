@@ -1,64 +1,16 @@
 use crate::brief::brief;
 use crate::domain::{parse_intent, parse_task, valid_time, Intent, Task};
+use crate::fs_boundary::{checked_dir, reparse};
 use crate::json::{parse, Result, Value};
 use crate::result::verify_result;
-#[cfg(windows)]
-use cap_fs_ext::OsMetadataExt;
 use cap_fs_ext::{DirExt, FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
-use cap_std::{
-    ambient_authority,
-    fs::{Dir, OpenOptions},
-};
+use cap_std::fs::{Dir, OpenOptions};
 use same_file::Handle;
 use std::{
     fs,
     io::{Read, Seek, SeekFrom},
     path::{Component, Path},
 };
-
-fn checked_dir(path: &Path) -> Result<Dir> {
-    if path.components().any(|c| matches!(c, Component::ParentDir)) {
-        return Err("directory path contains a parent traversal".into());
-    }
-    // The only ambient open is the filesystem root. Each later component is
-    // resolved relative to a held parent handle, with no link traversal.
-    let root = path.ancestors().last().ok_or("invalid directory path")?;
-    let meta = fs::symlink_metadata(root).map_err(|e| e.to_string())?;
-    if !meta.is_dir() || meta.file_type().is_symlink() || root_reparse(&meta) {
-        return Err("directory root is not a direct directory".into());
-    }
-    let mut dir = Dir::open_ambient_dir(root, ambient_authority()).map_err(|e| e.to_string())?;
-    let relative = path.strip_prefix(root).map_err(|e| e.to_string())?;
-    for component in relative.components() {
-        let Component::Normal(name) = component else {
-            return Err("unsupported directory path component".into());
-        };
-        dir = dir.open_dir_nofollow(name).map_err(|e| e.to_string())?;
-        if reparse(&dir.dir_metadata().map_err(|e| e.to_string())?) {
-            return Err("directory path contains a reparse point".into());
-        }
-    }
-    Ok(dir)
-}
-
-#[cfg(windows)]
-fn root_reparse(meta: &fs::Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    meta.file_attributes() & 0x400 != 0
-}
-#[cfg(not(windows))]
-fn root_reparse(_meta: &fs::Metadata) -> bool {
-    false
-}
-
-#[cfg(windows)]
-fn reparse(meta: &cap_fs_ext::Metadata) -> bool {
-    meta.file_attributes() & 0x400 != 0
-}
-#[cfg(not(windows))]
-fn reparse(_meta: &cap_fs_ext::Metadata) -> bool {
-    false
-}
 
 fn open_regular(dir: &Dir, name: &str) -> Result<Handle> {
     let mut options = OpenOptions::new();
