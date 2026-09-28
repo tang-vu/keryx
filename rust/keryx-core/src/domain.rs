@@ -134,7 +134,60 @@ fn valid_uuid(s: &str) -> bool {
         })
 }
 pub(crate) fn valid_time(s: &str) -> bool {
-    s.ends_with('Z') && chrono::DateTime::parse_from_rfc3339(s).is_ok()
+    // Match the installed Zod v3 `z.string().datetime()` default: four-digit
+    // Gregorian date, uppercase T/Z, minutes, optional seconds and fraction.
+    // The schema keeps the original spelling; it does not normalize the time.
+    let b = s.as_bytes();
+    if b.len() < 17 || b[4] != b'-' || b[7] != b'-' || b[10] != b'T' || b[13] != b':' {
+        return false;
+    }
+    let Some(year) = four_digits(&b[0..4]) else {
+        return false;
+    };
+    let (Some(month), Some(day), Some(hour), Some(minute)) = (
+        two_digits(&b[5..7]),
+        two_digits(&b[8..10]),
+        two_digits(&b[11..13]),
+        two_digits(&b[14..16]),
+    ) else {
+        return false;
+    };
+    let leap = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
+    let days = match month {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 if leap => 29,
+        2 => 28,
+        _ => return false,
+    };
+    if day == 0 || day > days || hour > 23 || minute > 59 {
+        return false;
+    }
+    let tail = &b[16..];
+    if tail == b"Z" {
+        return true;
+    }
+    if tail.len() < 4 || tail[0] != b':' || two_digits(&tail[1..3]).is_none_or(|v| v > 59) {
+        return false;
+    }
+    if tail[3..] == *b"Z" {
+        return true;
+    }
+    tail.len() >= 6
+        && tail[3] == b'.'
+        && tail[4..tail.len() - 1].iter().all(u8::is_ascii_digit)
+        && tail[tail.len() - 1] == b'Z'
+}
+
+fn two_digits(b: &[u8]) -> Option<u8> {
+    (b.len() == 2 && b.iter().all(u8::is_ascii_digit)).then(|| (b[0] - b'0') * 10 + b[1] - b'0')
+}
+
+fn four_digits(b: &[u8]) -> Option<u16> {
+    (b.len() == 4 && b.iter().all(u8::is_ascii_digit)).then(|| {
+        b.iter()
+            .fold(0_u16, |n, digit| n * 10 + u16::from(digit - b'0'))
+    })
 }
 pub struct Task {
     pub id: String,
@@ -301,5 +354,47 @@ mod tests {
     fn javascript_whitespace_boundaries() {
         assert!(js_whitespace('\u{FEFF}'));
         assert!(!js_whitespace('\u{0085}'));
+    }
+    #[test]
+    fn timestamps_match_zod_datetime_default() {
+        for valid in [
+            "2026-09-28T00:00Z",
+            "2026-09-28T23:59:59Z",
+            "2026-09-28T00:00:00.1Z",
+            "2026-09-28T00:00:00.12345678901234567890Z",
+            "0000-02-29T00:00Z",
+            "2000-02-29T00:00Z",
+            "2400-02-29T00:00Z",
+            "2024-02-29T00:00Z",
+        ] {
+            assert!(valid_time(valid), "valid Zod timestamp: {valid:?}");
+        }
+        for invalid in [
+            "2026-09-28T00:00:60Z",
+            "2026-09-28 00:00Z",
+            "2026-09-28t00:00Z",
+            "2026-09-28T00:00z",
+            "2026-09-28T00:00+00:00",
+            "2026-09-28T00:00.1Z",
+            "2026-09-28T00:00:00.Z",
+            "2026-09-28T00:00:00.1+00:00",
+            "2026-09-28T24:00Z",
+            "2026-09-28T23:60Z",
+            "2026-09-31T00:00Z",
+            "2026-02-29T00:00Z",
+            "1900-02-29T00:00Z",
+            "2100-02-29T00:00Z",
+            "9999-02-30T00:00Z",
+            "2026-09-28T00:00Z\n",
+            "2026-09-28T00:00Z\r",
+            "2026-09-28T00:00Z\r\n",
+            "2026-09-28T00:00Z\u{2028}",
+            "2026-09-28T00:00Z\u{2029}",
+            "2026-09-28T00:00Z\0",
+            "２０２６-09-28T00:00Z",
+            "2026-09-28T００:00Z",
+        ] {
+            assert!(!valid_time(invalid), "invalid Zod timestamp: {invalid:?}");
+        }
     }
 }
