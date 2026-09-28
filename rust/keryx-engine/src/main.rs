@@ -1,10 +1,11 @@
 use keryx_core::LocalTask;
 use std::{
     env,
-    fs::OpenOptions,
-    io::Write,
     path::{Component, Path, PathBuf},
 };
+
+#[path = "brief-export.rs"]
+mod brief_export;
 
 // Match Node's path.resolve for CLI output paths without resolving symlinks.
 // Opening this path too matters: a symlink followed by `..` must have the same
@@ -54,18 +55,7 @@ fn run() -> Result<(), String> {
             return Err("--file is only supported for brief".into());
         }
         let path = resolve_output_path(&path)?;
-        let mut options = OpenOptions::new();
-        options.write(true).create_new(true);
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::OpenOptionsExt;
-            options.mode(0o600);
-        }
-        let mut file = options
-            .open(&path)
-            .map_err(|e| format!("cannot create brief: {e}"))?;
-        file.write_all(text.as_bytes()).map_err(|e| e.to_string())?;
-        file.sync_all().map_err(|e| e.to_string())?;
+        brief_export::publish_private_brief(&path, &text)?;
         println!("{}", serde_json::json!({"saved":path,"private":true}));
     } else {
         println!("{text}");

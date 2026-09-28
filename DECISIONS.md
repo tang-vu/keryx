@@ -1,5 +1,28 @@
 # Keryx — Decision Log
 
+**D-245** - Publish completed brief files without overwriting an existing target -
+*Writing directly to a newly created final path can leave a partial brief when a
+write or file sync fails.* Both TypeScript and the Rust candidate stage the complete
+Markdown in an exclusively created private sibling, sync its file contents, then
+publish it with an exclusive hard link to the lexically resolved final path. An
+existing file, directory or symlink target must remain untouched. Unsupported hard
+links cause refusal; there is no direct-write fallback. Write, sync or checked-close
+failure means this attempt has not published the final target. A publication-call
+error is reported as unconfirmed: do not infer absence merely from an error return.
+Errors attempt cleanup of only the owned staging file; never remove an existing
+target or another exporter's winning file. After
+publication, a staging-cleanup error leaves the complete final file intact and
+reports failure without a success receipt; never delete the final pathname as
+rollback because it could now name another writer's file. Diagnostics distinguish
+these states and identify files requiring inspection. Use private trusted output
+parents: this is atomic publication of complete bytes, not protection against a
+hostile parent-directory race or a cross-platform guarantee of directory-entry
+durability after a crash. Unix staging files use mode `0600`; Windows inherits the
+parent ACL. Inject failures through internal test seams, not production environment
+switches. Task/journal/receipt files and payment authority are unchanged. Reversible:
+the old reader still opens original v1 data; preserving no-overwrite and truthful
+failure receipts remains a release requirement.
+
 **D-244** - Anchor candidate local reads to directory handles and reject observed changes -
 *Checking a pathname and then opening it separately can read a different file after
 a concurrent rename or link replacement.* The Rust inspection candidate now

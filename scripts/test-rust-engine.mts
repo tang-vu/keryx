@@ -6,6 +6,7 @@ import { copyFile, lstat, mkdtemp, mkdir, readFile, readdir, readlink, realpath,
 import { tmpdir } from "node:os";
 import { basename, join, resolve, sep } from "node:path";
 import { performance } from "node:perf_hooks";
+import { pathToFileURL } from "node:url";
 import { build, version as esbuildVersion } from "esbuild";
 import { a2aResearchPackage } from "../lib/a2a/research-package-definition.ts";
 import { createBuyerJournal, readBuyerJournal } from "../lib/buyer/journal.ts";
@@ -17,9 +18,12 @@ import { researchReceiptDigest, sha256 } from "../lib/research-receipt-integrity
 import { canonicalJson } from "../lib/canonical-json.ts";
 import { resumeResearch } from "../lib/buyer/client.ts";
 import { padJsonFileToByteLength } from "./rust-file-boundary-fixtures.mts";
+import { defaultCitation, resultFixtures, type ResultFixture } from "./rust-result-acceptance-fixtures.mts";
+import { invalidV1Files, truncatedJson, unsupportedVersion } from "./rust-invalid-v1-fixtures.mts";
 
 const repo = resolve(import.meta.dirname, "..");
 const tsxLoader = import.meta.resolve("tsx");
+const offlineGuard = pathToFileURL(join(repo, "scripts", "rust-offline-fallback-guard.mjs")).href;
 const rustExe = resolve(process.env.KERYX_RUST_ENGINE ?? join(repo, "rust", "target", "release", process.platform === "win32" ? "keryx-engine.exe" : "keryx-engine"));
 const payer = `0x${"1".repeat(40)}`;
 const payee = `0x${"2".repeat(40)}`;
@@ -29,11 +33,16 @@ let bundledOperator: string | undefined;
 let parityChecks = 0;
 let refusalChecks = 0;
 let incompatibilityChecks = 0;
+let offlineFallbackChecks = 0;
+let offlineGuardChecks = 0;
+let exportBoundaryChecks = 0;
+let exportSkippedChecks = 0;
 
 function run(kind: "ts" | "rust" | "bundle", command: "status" | "result" | "brief", state: string, file?: string,
-  binary = rustExe, environment = noEnv, workingDirectory = repo) {
+  binary = rustExe, environment = noEnv, workingDirectory = repo, preloads: string[] = []) {
   const argv = kind === "ts"
-    ? ["--import", tsxLoader, "--no-warnings", join(repo, "scripts", "operator.mts"), command, "--state", state, ...(file ? ["--file", file] : [])]
+    ? [...preloads.flatMap(preload => ["--import", preload]), "--import", tsxLoader, "--no-warnings",
+      join(repo, "scripts", "operator.mts"), command, "--state", state, ...(file ? ["--file", file] : [])]
     : kind === "bundle"
       ? [bundledOperator!, command, "--state", state, ...(file ? ["--file", file] : [])]
       : [command, "--state", state, ...(file ? ["--file", file] : [])];
@@ -79,20 +88,25 @@ async function journal(state: string, request: ReturnType<typeof fresh> extends 
 }
 
 /** Uses the production GET verifier and snapshot writer against synthetic Response objects only. */
-async function complete(state: string, request: Awaited<ReturnType<typeof fresh>>["request"], answer: string, extras: Record<string, unknown> = {}) {
+async function complete(state: string, request: Awaited<ReturnType<typeof fresh>>["request"], answer: string,
+  extras: Record<string, unknown> = {}, fixture?: ResultFixture) {
   // The production snapshot writer requires exact realpath equality. Windows CI
   // TEMP may use an alias/casing that is not the path returned by realpath.
   assert.equal(await realpath(state), resolve(state), "fixture task path is not canonical for the TypeScript snapshot writer");
   assert.equal(await realpath(join(state, "buyer")), join(resolve(state), "buyer"),
     "fixture buyer path is not canonical for the TypeScript snapshot writer");
+  for (const boundField of ["schema", "dispatch", "citations", "settlement"]) {
+    assert.ok(!Object.hasOwn(extras, boundField), `receipt extras cannot replace ${boundField}`);
+  }
   const intent = await readBuyerJournal(join(state, "buyer"));
   const job = { queryId: intent.queryId, status: "completed", answer, researchPackage: a2aResearchPackage(request.researchMode),
     pricing: { totalPriceUsdc: 0.05, serviceFeeUsdc: 0.02, creatorBudgetUsdc: 0.03,
-      settledCreatorSpendUsdc: 0.01, pendingCreatorSpendUsdc: 0.005, unusedCreatorReserveUsdc: 0.015 } };
+      settledCreatorSpendUsdc: 0.01, pendingCreatorSpendUsdc: 0.005, unusedCreatorReserveUsdc: 0.015,
+      ...fixture?.pricing }, ...fixture?.jobFields };
   const payload = { schema: RESEARCH_RECEIPT_SCHEMA,
     dispatch: { id: intent.queryId, question: request.question, answer, answerSha256: sha256(answer),
       budgetUsdc: request.budget, researchMode: request.researchMode },
-    citations: [{ marker: "[1]", sourceName: "Créateur <source> * one" }],
+    ...(fixture?.citations === "omit" ? {} : { citations: fixture?.citations ?? [defaultCitation] }),
     settlement: { mode: "real", ledgerCompleteness: "complete", settledCreatorUsdc: 0.01,
       pendingCreatorUsdc: 0.005, simulatedCreatorUsdc: 0 }, ...extras };
   const digest = researchReceiptDigest(payload);
@@ -106,6 +120,85 @@ async function complete(state: string, request: Awaited<ReturnType<typeof fresh>
   assert.equal(calls, 2);
   assert.equal(result.localResult.state, "saved");
   return digest;
+}
+
+async function resultCorpus(root: string) {
+  for (const fixture of resultFixtures) {
+    const state = await fresh(root, `result-${fixture.label.replaceAll(" ", "-")}`);
+    await journal(state.state, state.request);
+    await complete(state.state, state.request, `Optional v1 ${fixture.label} [1]`, {}, fixture);
+    const snapshot = JSON.parse(await readFile(join(state.state, "result.json"), "utf8"));
+    assert.equal(snapshot.job.pricing.unusedCreatorReserveUsdc,
+      fixture.pricing ? fixture.pricing.unusedCreatorReserveUsdc : 0.015, `${fixture.label}: writer reserve field`);
+    assert.equal(snapshot.job.pricing.accountingComplete, fixture.pricing?.accountingComplete,
+      `${fixture.label}: writer optional accounting field`);
+    for (const field of ["serviceStatus", "serviceReceipt", "claimCoverage", "evidence", "message", "error"] as const) {
+      assert.deepEqual(snapshot.job[field], fixture.jobFields?.[field], `${fixture.label}: writer ${field}`);
+    }
+    assert.deepEqual((await readOperatorResult(state.state))?.citations, fixture.expectedCitations,
+      `${fixture.label}: TypeScript receipt citation selection`);
+    await parity(state.state, "result", fixture.label);
+    await briefParity(state.state, root, fixture.label);
+  }
+}
+
+async function offlineFallback(state: string, root: string, label: string) {
+  const before = await treeDigest(state);
+  const disabledNative = join(root, "candidate-disabled-native.exe");
+  await assert.rejects(stat(disabledNative), { code: "ENOENT" }, `${label}: native candidate is present`);
+  const unavailable = spawnSync(disabledNative, ["status", "--state", state],
+    { cwd: repo, env: noEnv, encoding: "utf8", windowsHide: true });
+  assert.equal((unavailable.error as NodeJS.ErrnoException | undefined)?.code, "ENOENT",
+    `${label}: disabled candidate unexpectedly launched`);
+  const environment = { ...noEnv, KERYX_RUST_ENGINE: disabledNative, KERYX_FORCE_OFFLINE: "1" };
+  const expected = await readOperatorResult(state);
+  assert(expected, `${label}: fallback needs a saved result`);
+  // Each invocation starts a new guarded Node process. The second pass proves
+  // the original v1 directory remains readable after the first process exits.
+  for (let restart = 0; restart < 2; restart++) {
+    for (const command of ["status", "result"] as const) {
+      const cli = run("ts", command, state, undefined, rustExe, environment, repo, [offlineGuard]);
+      assert.equal(cli.code, 0, `${label}: offline ${command} refused: ${cli.stderr}`);
+      assert.match(cli.stderr, /keryx offline fallback guard active/, `${label}: missing network guard`);
+      assert.deepEqual(JSON.parse(cli.stdout), command === "status"
+        ? await operatorTaskStatus(state) : expected, `${label}: offline ${command} changed result`);
+      offlineFallbackChecks++;
+    }
+    const file = join(root, `${label}-offline-brief-${restart}.md`);
+    const brief = run("ts", "brief", state, file, rustExe, environment, repo, [offlineGuard]);
+    assert.equal(brief.code, 0, `${label}: offline brief refused: ${brief.stderr}`);
+    assert.match(brief.stderr, /keryx offline fallback guard active/, `${label}: missing network guard`);
+    assert.deepEqual(JSON.parse(brief.stdout), { saved: resolve(file), private: true }, `${label}: offline brief response`);
+    assert.deepEqual(await readFile(file), Buffer.from(formatOperatorBrief(expected), "utf8"),
+      `${label}: offline brief changed contents`);
+    assert.equal(await treeDigest(state), before, `${label}: offline fallback changed source tree`);
+    offlineFallbackChecks++;
+  }
+}
+
+function assertOfflineGuard() {
+  const probe = `
+    import assert from "node:assert/strict";
+    import { request as httpRequest } from "node:http";
+    import { request as httpsRequest } from "node:https";
+    import { Socket } from "node:net";
+    import { spawnSync as nestedSpawn } from "node:child_process";
+    for (const action of [
+      () => fetch("http://127.0.0.1:1"),
+      () => httpRequest("http://127.0.0.1:1"),
+      () => httpsRequest("https://127.0.0.1:1"),
+      () => new Socket().connect(1, "127.0.0.1"),
+      () => nestedSpawn(process.execPath, ["-e", ""]),
+    ]) assert.throws(action, /offline acceptance forbids network or child process access/);
+    console.log("offline guard denied all five probes before connection or process launch");
+  `;
+  const child = spawnSync(process.execPath, ["--import", offlineGuard, "--input-type=module", "-e", probe],
+    { cwd: repo, env: noEnv, encoding: "utf8", windowsHide: true });
+  if (child.error) throw child.error;
+  assert.equal(child.status, 0, `offline guard self-check failed: ${child.stderr}`);
+  assert.match(child.stderr, /keryx offline fallback guard active/);
+  assert.match(child.stdout, /offline guard denied all five probes/);
+  offlineGuardChecks++;
 }
 
 function withoutProtocol(value: unknown) {
@@ -226,8 +319,149 @@ async function refusal(state: string, command: "status" | "result", label: strin
   const rust = run("rust", command, state);
   assert.notEqual(ts.code, 0, `${label}: TypeScript accepted malformed input`);
   assert.notEqual(rust.code, 0, `${label}: Rust accepted malformed input`);
+  assert.equal(ts.stdout, "", `${label}: TypeScript emitted partial success output`);
+  assert.equal(rust.stdout, "", `${label}: Rust emitted partial success output`);
   assert.equal(await treeDigest(state), before, `${label}: refusal modified source tree`);
   refusalChecks++;
+}
+
+async function exportBoundaryCases(state: string, root: string) {
+  const before = await treeDigest(state);
+  const brief = formatOperatorBrief((await readOperatorResult(state))!);
+  const noStaging = async (parent: string, label: string) => {
+    assert.deepEqual((await readdir(parent)).filter(name => name.startsWith(".keryx-brief-")), [],
+      `${label}: staging file remained`);
+  };
+  const refused = async (file: string, label: string) => {
+    const ts = run("ts", "brief", state, file);
+    const rust = run("rust", "brief", state, file);
+    assert.notEqual(ts.code, 0, `${label}: TypeScript accepted invalid export target`);
+    assert.equal(rust.code, ts.code, `${label}: Rust exit state differs: ${rust.stderr}`);
+    assert.equal(ts.stdout, "", `${label}: TypeScript emitted success response`);
+    assert.equal(rust.stdout, "", `${label}: Rust emitted success response`);
+    assert.equal(await treeDigest(state), before, `${label}: refusal changed source task`);
+    exportBoundaryChecks++;
+  };
+
+  const absentParent = join(root, "absent-export-parent");
+  const absentFile = join(absentParent, "brief.md");
+  await refused(absentFile, "missing export parent");
+  await assert.rejects(stat(absentParent), { code: "ENOENT" });
+  await assert.rejects(stat(absentFile), { code: "ENOENT" });
+  await noStaging(root, "missing export parent");
+
+  const directoryTarget = join(root, "existing-export-directory");
+  await mkdir(directoryTarget);
+  await refused(directoryTarget, "existing directory as export target");
+  assert.ok((await stat(directoryTarget)).isDirectory());
+  assert.deepEqual(await readdir(directoryTarget), []);
+  await noStaging(root, "directory target");
+
+  const symlinkSource = join(root, "existing-link-source.md");
+  const symlinkTarget = join(root, "existing-export-link.md");
+  await writeFile(symlinkSource, "preserve existing linked contents");
+  let linkedTargetCreated = false;
+  try {
+    await symlink(symlinkSource, symlinkTarget, "file");
+    linkedTargetCreated = true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EPERM") throw error;
+    console.error("Existing file-symlink export fixture skipped: host denied symlink creation (EPERM)");
+    exportSkippedChecks++;
+  }
+  if (linkedTargetCreated) {
+    const targetBefore = await readFile(symlinkSource);
+    const linkBefore = await readlink(symlinkTarget);
+    await refused(symlinkTarget, "existing symlink as export target");
+    assert.ok((await lstat(symlinkTarget)).isSymbolicLink());
+    assert.equal(await readlink(symlinkTarget), linkBefore);
+    assert.deepEqual(await readFile(symlinkSource), targetBefore);
+    await noStaging(root, "symlink target");
+  }
+
+  const actualParent = join(root, "export-actual-parent");
+  const linkedParent = join(root, "export-direct-linked-parent");
+  await mkdir(actualParent);
+  await symlink(actualParent, linkedParent, process.platform === "win32" ? "junction" : "dir");
+  const linkedFile = join(linkedParent, "brief via linked parent.md");
+  const expected = { saved: resolve(linkedFile), private: true };
+  const ts = run("ts", "brief", state, linkedFile);
+  assert.equal(ts.code, 0, `linked output parent: TypeScript refused: ${ts.stderr}`);
+  assert.deepEqual(JSON.parse(ts.stdout), expected);
+  assert.equal(await readFile(linkedFile, "utf8"), brief);
+  await rm(linkedFile);
+  const rust = run("rust", "brief", state, linkedFile);
+  assert.equal(rust.code, ts.code, `linked output parent: Rust refused: ${rust.stderr}`);
+  assert.deepEqual(JSON.parse(rust.stdout), JSON.parse(ts.stdout));
+  assert.equal(await readFile(linkedFile, "utf8"), brief);
+  await noStaging(actualParent, "linked output parent");
+  assert.equal(await treeDigest(state), before, "linked output parent changed source task");
+  console.error(`Direct linked output parent ${process.platform === "win32" ? "junction" : "symlink"} exercised successfully`);
+  exportBoundaryChecks++;
+}
+
+async function malformedV1Corpus(root: string) {
+  const fixture = await fresh(root, "malformed-v1-baseline");
+  await journal(fixture.state, fixture.request);
+  await complete(fixture.state, fixture.request, "Stable completed v1 answer [1]");
+  const snapshot = JSON.parse(await readFile(join(fixture.state, "result.json"), "utf8"));
+  const baseline = await treeDigest(fixture.state);
+  for (const entry of invalidV1Files) {
+    const file = join(fixture.state, entry.file === "receipt" ? join("buyer", snapshot.receiptFile) : entry.file);
+    const original = await readFile(file);
+    for (const [kind, mutate] of [
+      ["unsupported version", (text: string) => unsupportedVersion(text, entry.versionPath)],
+      ["truncated JSON", truncatedJson],
+    ] as const) {
+      try {
+        await writeFile(file, mutate(original.toString("utf8")));
+        await refusal(fixture.state, entry.command, `${entry.label}: ${kind}`);
+      } finally { await writeFile(file, original); }
+      assert.equal(await treeDigest(fixture.state), baseline, `${entry.label}: restore changed baseline`);
+    }
+  }
+
+  // Keep the duplicated request value consistent so the version check, rather
+  // than the task/request equality check, is the reason to refuse this input.
+  const taskPath = join(fixture.state, "task.json");
+  const requestPath = join(fixture.state, "request.json");
+  const originalTask = await readFile(taskPath);
+  const originalRequest = await readFile(requestPath);
+  const taskWithUnsupportedRequest = JSON.parse(originalTask.toString("utf8"));
+  taskWithUnsupportedRequest.request.packageVersion = "unsupported-v2";
+  try {
+    await writeFile(taskPath, JSON.stringify(taskWithUnsupportedRequest));
+    await writeFile(requestPath, unsupportedVersion(originalRequest.toString("utf8"), ["packageVersion"]));
+    await refusal(fixture.state, "status", "consistent unsupported request package version");
+  } finally {
+    await writeFile(taskPath, originalTask);
+    await writeFile(requestPath, originalRequest);
+  }
+  assert.equal(await treeDigest(fixture.state), baseline, "consistent request version restore changed baseline");
+
+  // Rebind the snapshot to a newly hashed wrong-schema receipt, so refusal
+  // cannot be explained merely by a stale digest or filename.
+  const snapshotPath = join(fixture.state, "result.json");
+  const originalSnapshot = await readFile(snapshotPath);
+  const receiptPath = join(fixture.state, "buyer", snapshot.receiptFile);
+  const wrongSchemaReceipt = JSON.parse(await readFile(receiptPath, "utf8"));
+  wrongSchemaReceipt.payload.schema = "unsupported-v2";
+  const wrongDigest = researchReceiptDigest(wrongSchemaReceipt.payload);
+  wrongSchemaReceipt.integrity.digest = wrongDigest;
+  const wrongReceiptName = `receipt-${wrongDigest.slice(7)}.json`;
+  const wrongReceiptPath = join(fixture.state, "buyer", wrongReceiptName);
+  assert.notEqual(wrongReceiptPath, receiptPath);
+  try {
+    await writeFile(wrongReceiptPath, JSON.stringify(wrongSchemaReceipt));
+    await writeFile(snapshotPath, JSON.stringify({ ...snapshot, receiptDigest: wrongDigest, receiptFile: wrongReceiptName }));
+    await refusal(fixture.state, "result", "internally consistent unsupported receipt schema");
+  } finally {
+    await writeFile(snapshotPath, originalSnapshot);
+    await rm(wrongReceiptPath, { force: true });
+  }
+  assert.equal(await treeDigest(fixture.state), baseline, "consistent receipt version restore changed baseline");
+  await parity(fixture.state, "status", "restored malformed-input baseline");
+  await parity(fixture.state, "result", "restored malformed-input baseline");
 }
 
 async function fileBoundaryParity(root: string) {
@@ -309,8 +543,13 @@ async function main() {
     await parity(quick.state, "result", "completed quick");
     await briefParity(quick.state, root, "quick");
     await briefPathParity(quick.state, root);
+    await exportBoundaryCases(quick.state, root);
     await statePathParity(quick.state, root);
     await fileBoundaryParity(root);
+    await resultCorpus(root);
+    await malformedV1Corpus(root);
+    assertOfflineGuard();
+    await offlineFallback(quick.state, root, "valid-v1");
 
     const deep = await fresh(root, "deep", "deep", "Việt Nam nghiên cứu Arc — nguồn nào? 😀");
     await journal(deep.state, deep.request);
@@ -522,6 +761,7 @@ async function main() {
     assert.equal((await readOperatorResult(snapshotSurrogate.state))?.answer, "Answer with \ud800",
       "TypeScript saved result lost a UTF-16 code unit");
     await surrogateRefusal(snapshotSurrogate.state, "brief", "lone high in saved answer brief", root);
+    await offlineFallback(snapshotSurrogate.state, root, "surrogate-v1");
     assert.match(await readFile(join(root, "lone high in saved answer brief-ts-readable.md"), "utf8"), /\uFFFD/,
       "UTF-8 Markdown cannot preserve the unpaired code unit");
 
@@ -587,7 +827,8 @@ async function main() {
     const size = (await stat(rustExe)).size;
     console.log(JSON.stringify({ fixtureKind: "synthetic; no settlement evidence",
       strictChecks: parityChecks + refusalChecks, parityChecks, refusalChecks,
-      intentionalIncompatibilityChecks: incompatibilityChecks, digest,
+      intentionalIncompatibilityChecks: incompatibilityChecks, offlineFallbackChecks, offlineGuardChecks,
+      exportBoundaryChecks, exportSkippedChecks, digest,
       standaloneCopy: "native executable copied to temp and launched on this host with system-only PATH; no clean-VM claim",
       benchmark: { host: `${process.platform}/${process.arch}`, node: process.version, repetitions: 7,
         commands: Object.fromEntries(Object.entries(samples).map(([command, data]) => [command,

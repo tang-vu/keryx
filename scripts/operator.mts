@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 import { createOperatorTask, formatOperatorBrief, operatorTaskStatus, readOperatorResult, resumeOperatorTask } from "../lib/operator/task.ts";
 import { parseBuyerBudget } from "../lib/a2a/buyer-workspace.ts";
 import { addressSchema } from "../lib/buyer/protocol.ts";
+import { BriefExportError, publishPrivateBrief } from "./operator-brief-export.mts";
 
 const usage = `Keryx Operator task alpha (Arc testnet)
   npm run operator -- create --request request.json --payee 0x... --max-total 0.10 --state .buyer-jobs/task-1
@@ -75,10 +76,8 @@ async function main() {
     if (!result) throw new Error("No saved completed result; resume the original journal first");
     if (command === "result") console.log(JSON.stringify(result, null, 2));
     else {
-      const file = await open(resolve(options["--file"]), "wx", 0o600);
-      try { await file.writeFile(formatOperatorBrief(result)); await file.sync(); }
-      finally { await file.close(); }
-      console.log(JSON.stringify({ saved: resolve(options["--file"]), private: true }));
+      const exported = await publishPrivateBrief(options["--file"], formatOperatorBrief(result));
+      console.log(JSON.stringify(exported));
     }
     return;
   }
@@ -86,7 +85,8 @@ async function main() {
   console.log(JSON.stringify(status, null, command === "export" ? undefined : 2));
 }
 
-main().catch(() => {
-  console.error("Operator task refused or unavailable. Check the private task directory, request binding, saved result and buyer journal; never repurchase to recover an uncertain payment.");
+main().catch((error: unknown) => {
+  if (error instanceof BriefExportError) console.error(error.message);
+  else console.error("Operator task refused or unavailable. Check the private task directory, request binding, saved result and buyer journal; never repurchase to recover an uncertain payment.");
   process.exitCode = 1;
 });

@@ -187,15 +187,50 @@ these are same-host CLI observations, not desktop or domain-computation results.
 | Gate | Existing evidence | Work still required |
 | --- | --- | --- |
 | CLI contract | `brief --file` now emits the TypeScript contract: absolute `saved` path and `private: true`. The harness compares exact response JSON, Markdown, lexical relative/absolute paths, dot segments, Unicode/spaces, a linked parent followed by `..`, and overwrite refusal with empty stdout and unchanged output. Windows adds drive-relative and drive-rooted cases. | Keep broader adapter compatibility under evaluation. Rust stdout-only brief remains a documented extension, not a TypeScript CLI parity claim. |
-| Full v1 input | The numeric, Unicode scalar, request-binding and corruption corpus passes; D-243 defines the candidate's unsupported Unicode case. | Resolve lossless legacy Unicode handling before full v1 cutover. Expand optional/older-record, unknown-version, truncation and canonical-key coverage; never infer universal equivalence from a finite corpus. |
+| Full v1 input | The corpus includes nullable reserve, optional accounting/service/quality/claim/evidence fields, citation filtering/caps/UTF-16 limits, and schema/truncation mutations across six file classes. Internally consistent unsupported request/receipt versions are tested separately from broken-hash mutations. D-243 still defines the unsupported Unicode case. | Resolve lossless legacy Unicode handling and expand canonical-key/resource-boundary evidence before full v1 cutover; never infer universal equivalence from a finite corpus. |
 | File bounds | Differential fixtures use valid multibyte JSON at the exact limit and limit plus one for task/request/observation (8,192 bytes), intent (65,536), result (150,000) and receipt (2,000,000). Native tests exercise bounded reads and controlled growth. | Preserve byte-based limits when expanding schemas; these cases do not prove every possible concurrent writer schedule. |
 | Paths and concurrent reads | Directory-relative no-follow opens, repeated bounded reads and opened-file identity checks replace the separate pathname check/open. Native tests control growth, same-size writes with restored mtime, entry replacement, held-directory rename, file/task/ancestor links, and Unix FIFO refusal. Windows may prevent a held-directory rename; file-symlink coverage requires creation privileges. | Multi-file transaction snapshots and a hostile same-user writer that restores state between observations remain outside this boundary. Record the exercised platform branches with each release; do not treat a permission-related test skip as exercised coverage. |
-| Recovery/export | Synthetic source tree hashes remain unchanged by reads; new-file brief export refuses overwrite; TypeScript continues to read v1. Output paths follow TypeScript lexical resolution and normal parent-link behavior. | Add explicit restart/disable-candidate/offline rollback drills. Define and inject export write/sync failures: both implementations can leave a partially written new brief, so atomic export is not established. Broaden output-parent link cases beyond lexical `link/..`. |
+| Recovery/export | Fresh TypeScript processes reopen valid and lone-surrogate v1 directories after an explicit unavailable-candidate failure, with network/child-process calls instrumented to fail. D-245 tests write/sync/close, publication and cleanup failures, ambiguous publication, concurrent exporters and existing targets. Source tree hashes remain unchanged. Output paths retain lexical resolution and normal parent-link behavior. | Keep platform evidence with each release. This is explicit TypeScript fallback, not automatic runtime routing or an OS network sandbox. Directory-entry crash durability and hostile parent replacement remain outside the export guarantee. |
 | Platforms/release | Pinned Rust lockfile, native lint/tests, differential CI on Linux and Windows MSVC; copied native executable runs on the same Windows host. | Record checks and review for each update. Clean-machine packaging and Tauri MSVC/package/IPC/startup/memory acceptance remain separate open gates. |
 
-Next, expand the legacy-input corpus and exercise explicit rollback and export
-failure drills before attempting a read-only production switch. Keep synthetic
-fixtures private and separate from actual payment or traction evidence.
+The remaining input-representation and platform gates still precede a read-only
+production switch. Keep synthetic fixtures private and separate from actual payment
+or traction evidence.
+
+### Brief publication boundary
+
+[D-245](../DECISIONS.md) makes both CLI adapters stage the complete brief in an
+exclusive private sibling, sync the file contents, release its handle, then publish
+with [`hard_link`](https://doc.rust-lang.org/stable/std/fs/fn.hard_link.html) /
+[`fsPromises.link`](https://nodejs.org/api/fs.html#fspromiseslinkexistingpath-newpath).
+Publication refuses an existing destination, including a symlink or directory.
+There is no overwrite rename or direct-write fallback on filesystems without hard
+links. TypeScript checks handle close errors; Rust checks `sync_all` and then drops
+the handle, whose close errors are not observable through the standard library.
+
+Write, sync or checked-close failure occurs before publication. A publication-call
+error has an unconfirmed outcome; an error alone does not prove that a filesystem
+made no change. Error cleanup removes only the owned staging name, never the final
+path. After a successful publication call, failure to remove the staging name leaves a
+complete final brief and reports an error with no success JSON. Diagnostics identify
+the publication state and paths requiring inspection; they never include brief
+contents. The final path is never deleted as rollback. The chosen output parent
+must be trusted and private. This gives complete-file publication, not a hostile
+parent-race boundary or cross-platform crash durability for directory entries.
+
+Local Windows GNU validation of this slice passed 106 strict differential checks
+(61 parity and 45 paired refusals), nine separately counted Unicode incompatibility
+checks, 12 guarded TypeScript fallback commands across two process lifecycles,
+one guard self-check and three export-boundary cases. The guard self-check attempts
+fetch, HTTP, HTTPS, socket and child-process actions and requires their refusal.
+The native candidate is explicitly unavailable before the fallback drill; no
+automatic runtime fallback is introduced. The Windows file-symlink setup was
+privilege-blocked locally; directly linked output-parent publication was exercised.
+The CLI crate's 12 native tests and 15 focused TypeScript publisher tests passed,
+along with formatting, Clippy, release build, TypeScript and targeted ESLint.
+The CI matrix runs the TypeScript publisher faults as well as native tests and the
+differential harness on Windows MSVC and Linux. Hosted logs must record exercised
+link cases separately from permission-related skips.
 
 ## Next domain candidate: local task creation
 
