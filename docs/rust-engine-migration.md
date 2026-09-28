@@ -55,9 +55,19 @@ binary size has no directly comparable standalone TypeScript artifact. Report th
 fixture count, platform, compiler and measured values before drawing a performance
 conclusion. No live wallet, private production data or network service is needed.
 
-The September 28 Windows x64 release-mode run passed 35 strict synthetic
-parity/refusal assertions and ran two parser acceptance probes. The source task
-tree's hash was unchanged. Duplicate JSON keys are accepted by both parsers.
+Local Rust formatting, Clippy, six unit tests, release build, TypeScript check,
+ESLint and the differential harness passed. The initial PR head passed its web
+and Linux checks; Windows CI found a fixture path alias/casing mismatch. The
+harness now canonicalizes its newly created temporary fixture root with `realpath`
+and asserts the paths used by the existing TypeScript result writer. Hosted CI
+for that fix remains pending; no production validation was weakened.
+
+The final September 28 Windows x64 release-mode run passed 38 strict synthetic
+parity/refusal assertions and ran two parser acceptance probes. Its corpus includes
+the JavaScript binary64 integer boundary (`9007199254740992`), the adjacent raw
+integer token (`9007199254740993`), raw `u64` maximum
+(`18446744073709551615`) and decimal number boundaries. The source task tree's
+hash was unchanged. Duplicate JSON keys are accepted by both parsers.
 One valid-input gap remains open for full cutover: TypeScript accepts a
 lone UTF-16 surrogate in JSON while the Rust parser refuses it. The stricter
 refusal avoids a cross-runtime Unicode representation mismatch but needs an
@@ -65,20 +75,22 @@ explicit compatibility decision. A copied native executable ran on the same host
 with a system-only `PATH`; this is neither a clean-machine validation nor a
 Tauri package result.
 
-The same run used Node v24.12.0 and Rust 1.98.1 (`x86_64-pc-windows-gnu`). These
-are medians of seven fresh process launches through output, including the
-TypeScript `--import tsx` startup; compilation is excluded:
+The same run used Node v24.12.0 and Rust 1.98.1 (`x86_64-pc-windows-gnu`).
+These are medians of seven fresh process launches through output, excluding
+compilation. The TypeScript column includes `--import tsx`; an optional
+`esbuild` 0.28.2 bundle targets Node 20 and still requires Node:
 
-| Command | TypeScript CLI | Rust CLI |
-| --- | ---: | ---: |
-| `status` | 391.3 ms | 41.5 ms |
-| `result` | 420.9 ms | 42.6 ms |
-| `brief` with new-file export | 422.5 ms | 52.3 ms |
+| Command | TypeScript with tsx | Bundled JavaScript | Rust CLI |
+| --- | ---: | ---: | ---: |
+| `status` | 437.0 ms | 160.7 ms | 46.7 ms |
+| `result` | 468.3 ms | 191.8 ms | 44.2 ms |
+| `brief` with new-file export | 454.4 ms | 189.9 ms | 50.6 ms |
 
-The empty Node process baseline was 86.6 ms. The Rust executable was 1,800,033
-bytes; TypeScript has no comparable standalone artifact. These measurements
-describe the CLI on this host, not domain-computation speed, Electron/Tauri startup,
-RAM, install footprint or a clean-machine package.
+The empty Node process baseline was 95.6 ms. The Rust release executable was
+1,862,916 bytes; the bundled `.mjs` was 169,102 bytes but depends on an installed
+Node runtime. These measurements describe same-host CLI launch behavior, not
+domain-computation speed, Electron/Tauri startup, RAM, install footprint or a
+clean-machine package.
 
 ## Reproduce locally
 
@@ -91,6 +103,8 @@ cargo test --manifest-path rust/Cargo.toml --locked
 cargo clippy --manifest-path rust/Cargo.toml --all-targets --locked -- -D warnings
 cargo build --manifest-path rust/Cargo.toml -p keryx-engine --release --locked
 npm run test:rust-engine
+# Optional local launch comparison with a bundled JavaScript CLI:
+npm run test:rust-engine -- --bundled-baseline
 ```
 
 The release binary is `rust/target/release/keryx-engine.exe` on Windows and

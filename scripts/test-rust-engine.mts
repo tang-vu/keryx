@@ -2,10 +2,11 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { copyFile, lstat, mkdtemp, mkdir, readFile, readdir, readlink, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { copyFile, lstat, mkdtemp, mkdir, readFile, readdir, readlink, realpath, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
+import { build, version as esbuildVersion } from "esbuild";
 import { a2aResearchPackage } from "../lib/a2a/research-package-definition.ts";
 import { createBuyerJournal, readBuyerJournal } from "../lib/buyer/journal.ts";
 import { buyerJobId } from "../lib/buyer/policy.ts";
@@ -21,15 +22,19 @@ const rustExe = resolve(process.env.KERYX_RUST_ENGINE ?? join(repo, "rust", "tar
 const payer = `0x${"1".repeat(40)}`;
 const payee = `0x${"2".repeat(40)}`;
 const noEnv = { PATH: process.env.PATH ?? "", SystemRoot: process.env.SystemRoot ?? "", WINDIR: process.env.WINDIR ?? "" };
+const benchmarkBundle = process.argv.includes("--bundled-baseline");
+let bundledOperator: string | undefined;
 let checks = 0;
 
-function run(kind: "ts" | "rust", command: "status" | "result" | "brief", state: string, file?: string,
+function run(kind: "ts" | "rust" | "bundle", command: "status" | "result" | "brief", state: string, file?: string,
   binary = rustExe, environment = noEnv) {
   const argv = kind === "ts"
     ? ["--import", "tsx", "--no-warnings", join(repo, "scripts", "operator.mts"), command, "--state", state, ...(file ? ["--file", file] : [])]
-    : [command, "--state", state, ...(file ? ["--file", file] : [])];
+    : kind === "bundle"
+      ? [bundledOperator!, command, "--state", state, ...(file ? ["--file", file] : [])]
+      : [command, "--state", state, ...(file ? ["--file", file] : [])];
   const start = performance.now();
-  const p = spawnSync(kind === "ts" ? process.execPath : binary, argv, {
+  const p = spawnSync(kind === "rust" ? binary : process.execPath, argv, {
     cwd: repo, env: environment, encoding: "utf8", maxBuffer: 4_000_000, windowsHide: true,
   });
   if (p.error) throw p.error;
@@ -71,6 +76,11 @@ async function journal(state: string, request: ReturnType<typeof fresh> extends 
 
 /** Uses the production GET verifier and snapshot writer against synthetic Response objects only. */
 async function complete(state: string, request: Awaited<ReturnType<typeof fresh>>["request"], answer: string, extras: Record<string, unknown> = {}) {
+  // The production snapshot writer requires exact realpath equality. Windows CI
+  // TEMP may use an alias/casing that is not the path returned by realpath.
+  assert.equal(await realpath(state), resolve(state), "fixture task path is not canonical for the TypeScript snapshot writer");
+  assert.equal(await realpath(join(state, "buyer")), join(resolve(state), "buyer"),
+    "fixture buyer path is not canonical for the TypeScript snapshot writer");
   const intent = await readBuyerJournal(join(state, "buyer"));
   const job = { queryId: intent.queryId, status: "completed", answer, researchPackage: a2aResearchPackage(request.researchMode),
     pricing: { totalPriceUsdc: 0.05, serviceFeeUsdc: 0.02, creatorBudgetUsdc: 0.03,
@@ -146,7 +156,7 @@ async function refusal(state: string, command: "status" | "result", label: strin
 
 async function main() {
   await stat(rustExe).catch(() => { throw new Error(`Build release Rust binary first: ${rustExe}`); });
-  const root = await mkdtemp(join(tmpdir(), "keryx-rust-parity-"));
+  const root = await realpath(await mkdtemp(join(tmpdir(), "keryx-rust-parity-")));
   try {
     const quick = await fresh(root, "quick");
     await parity(quick.state, "status", "ready quick");
@@ -182,6 +192,32 @@ async function main() {
     await writeFile(lexicalResultFile, lexicalResult);
     await parity(lexical.state, "status", "integer timeout encoded as JSON float");
     await parity(lexical.state, "result", "economic value encoded in exponent notation");
+
+    const binary64 = await fresh(root, "binary64-boundaries");
+    await journal(binary64.state, binary64.request);
+    await complete(binary64.state, binary64.request, "Binary64 boundary receipt", {
+      numericProbe: [9007199254740992, 0.10000000000000002, 1.0000000000000002,
+        1e-7, 1e21, 2.2250738585072014e-308, 5e-324, 1.7976931348623157e308],
+    });
+    await parity(binary64.state, "result", "binary64 integer and decimal boundaries");
+    const binary64Snapshot = JSON.parse(await readFile(join(binary64.state, "result.json"), "utf8"));
+    const binary64ReceiptFile = join(binary64.state, "buyer", binary64Snapshot.receiptFile);
+    const binary64Receipt = await readFile(binary64ReceiptFile, "utf8");
+    assert.match(binary64Receipt, /9007199254740992/);
+    await writeFile(binary64ReceiptFile, binary64Receipt.replace("9007199254740992", "9007199254740993"));
+    await parity(binary64.state, "result", "raw unsafe integer rounds to same JS binary64");
+
+    const u64max = await fresh(root, "u64-max");
+    await journal(u64max.state, u64max.request);
+    await complete(u64max.state, u64max.request, "Unsigned maximum receipt", {
+      numericProbe: Number("18446744073709551615"),
+    });
+    const u64Snapshot = JSON.parse(await readFile(join(u64max.state, "result.json"), "utf8"));
+    const u64ReceiptFile = join(u64max.state, "buyer", u64Snapshot.receiptFile);
+    const u64Receipt = await readFile(u64ReceiptFile, "utf8");
+    assert.match(u64Receipt, /18446744073709552000/);
+    await writeFile(u64ReceiptFile, u64Receipt.replace("18446744073709552000", "18446744073709551615"));
+    await parity(u64max.state, "result", "raw u64 maximum rounds to JS binary64");
 
     const standalone = join(root, process.platform === "win32" ? "standalone-engine.exe" : "standalone-engine");
     await copyFile(rustExe, standalone);
@@ -320,12 +356,24 @@ async function main() {
     }
 
     // Measurements include fresh process startup and installed tsx loader overhead.
-    const samples: Record<string, { ts: number[]; rust: number[] }> = {};
+    if (benchmarkBundle) {
+      bundledOperator = join(root, "operator-bundle.mjs");
+      await build({ entryPoints: [join(repo, "scripts", "operator.mts")], bundle: true,
+        platform: "node", format: "esm", target: "node20", outfile: bundledOperator,
+        logLevel: "silent" });
+      for (const command of ["status", "result"] as const) {
+        const p = run("bundle", command, quick.state);
+        assert.equal(p.code, 0, `bundled JS ${command} failed: ${p.stderr}`);
+        assert.deepEqual(JSON.parse(p.stdout), command === "status"
+          ? await operatorTaskStatus(quick.state) : await readOperatorResult(quick.state));
+      }
+    }
+    const samples: Record<string, { ts: number[]; rust: number[]; bundle: number[] }> = {};
     const beforeBenchmark = await treeDigest(quick.state);
     for (const command of ["status", "result", "brief"] as const) {
-      samples[command] = { ts: [], rust: [] };
+      samples[command] = { ts: [], rust: [], bundle: [] };
       for (let i = 0; i < 7; i++) {
-        for (const kind of ["ts", "rust"] as const) {
+        for (const kind of (benchmarkBundle ? ["ts", "bundle", "rust"] : ["ts", "rust"]) as Array<"ts" | "bundle" | "rust">) {
           const file = command === "brief" ? join(root, `bench-${command}-${kind}-${i}.md`) : undefined;
           const p = run(kind, command, quick.state, file);
           assert.equal(p.code, 0, `${kind} ${command} benchmark invocation failed: ${p.stderr}`);
@@ -349,10 +397,13 @@ async function main() {
       standaloneCopy: "native executable copied to temp and launched on this host with system-only PATH; no clean-VM claim",
       benchmark: { host: `${process.platform}/${process.arch}`, node: process.version, repetitions: 7,
         commands: Object.fromEntries(Object.entries(samples).map(([command, data]) => [command,
-          { tsMsMedian: median(data.ts), rustMsMedian: median(data.rust) }])),
+          { tsMsMedian: median(data.ts), ...(benchmarkBundle ? { bundledJsMsMedian: median(data.bundle) } : {}),
+            rustMsMedian: median(data.rust) }])),
         emptyNodeProcessMsMedian: median(nodeBaseline),
         measure: "fresh process start through output, ms median; brief includes new-file export",
         rustBinaryBytes: size,
+        ...(benchmarkBundle ? { bundledJs: { esbuildVersion, target: "node20", bytes: (await stat(bundledOperator!)).size,
+          note: "bundled CLI still requires Node; startup measures the CLI path, not domain computation" } } : {}),
         tsArtifact: "source plus installed Node and node_modules; no standalone artifact to compare" } }, null, 2));
   } finally { await rm(root, { recursive: true, force: true }); }
 }

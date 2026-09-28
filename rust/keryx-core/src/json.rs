@@ -14,18 +14,9 @@ fn js_number(value: &serde_json::Number) -> Result<String> {
     if !f.is_finite() {
         return Err("non-finite JSON number".into());
     }
-    // JSON.parse in JavaScript converts every number to binary64. Reject integers whose
-    // exactness cannot be established here, instead of silently changing a digest.
-    if let Some(i) = value.as_i64() {
-        if i.unsigned_abs() > 9_007_199_254_740_991 {
-            return Err("unsafe JSON integer".into());
-        }
-    }
-    if let Some(u) = value.as_u64() {
-        if u > 9_007_199_254_740_991 {
-            return Err("unsafe JSON integer".into());
-        }
-    }
+    // JSON.parse represents integers and decimals as binary64. The serde_json
+    // float_roundtrip parser plus this conversion preserves that number model;
+    // ryu-js then emits the ECMAScript spelling used by JSON.stringify.
     Ok(ryu_js::Buffer::new().format_finite(f).to_owned())
 }
 
@@ -96,8 +87,20 @@ mod tests {
         );
     }
     #[test]
-    fn refuses_unsafe_integer() {
-        let v: Value = serde_json::from_str("9007199254740993").unwrap();
-        assert!(canonical(&v).is_err());
+    fn binary64_number_spelling_matches_javascript() {
+        for (input, expected) in [
+            ("9007199254740992", "9007199254740992"),
+            ("9007199254740993", "9007199254740992"),
+            ("18446744073709551615", "18446744073709552000"),
+            ("0.0000001", "1e-7"),
+            ("1e21", "1e+21"),
+            ("1.0000000000000002", "1.0000000000000002"),
+            ("2.2250738585072014e-308", "2.2250738585072014e-308"),
+            ("5e-324", "5e-324"),
+            ("-0.0", "0"),
+        ] {
+            let v: Value = serde_json::from_str(input).unwrap();
+            assert_eq!(canonical(&v).unwrap(), expected, "{input}");
+        }
     }
 }
