@@ -39,7 +39,9 @@ For a shareable redacted report, use `npm run buyer -- report --state
 the direct `node --import tsx scripts/operator.mts ...` form; npm may print its own
 headers unless invoked with `--silent`.
 
-This alpha has one local task type and no listing, scheduling, approvals, obligation
-ledger, web/desktop connection, or automatic funds movement. Its `buyer/` child is
+This CLI alpha has one local task type and no CLI listing, scheduling, approvals,
+obligation ledger, web connection, or automatic funds movement. The
+[Windows desktop alpha](./desktop-alpha.md) can list and open these same task
+directories. Its `buyer/` child is
 the existing buyer journal, so its payment and creator evidence limits remain those
 in the [buyer guide](./buyer-agent.md).

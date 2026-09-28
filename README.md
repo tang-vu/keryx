@@ -17,6 +17,9 @@
 
 ---
 
+Windows local Operator alpha: `npm run desktop:install` then `npm run desktop:start`.
+See the [desktop guide](docs/desktop-alpha.md) for the unpacked app build and limits.
+
 ## The problem
 
 The web's economics assume a human reader: you write, people visit, attention becomes ads,

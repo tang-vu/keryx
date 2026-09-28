@@ -1,0 +1,21 @@
+{
+  "name": "keryx-operator-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/main.cjs",
+  "scripts": {
+    "postinstall": "install-electron",
+    "build": "node build.mjs",
+    "start": "npm run build && electron .",
+    "package:win": "npm run build && electron-packager . KeryxOperator --platform=win32 --arch=x64 --out=release --overwrite --prune=true --ignore=^/src --ignore=^/scripts --ignore=^/node_modules --ignore=^/release --ignore=^/build.mjs --ignore=^/vitest.config.mts --ignore=^/tsconfig.json --ignore=^/package-lock.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@electron/packager": "^19.0.0",
+    "electron": "44.4.5",
+    "esbuild": "^0.28.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.9"
+  }
+}

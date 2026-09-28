@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-239** - Add a local Windows desktop surface over the Operator task engine - *The
+first desktop interface should expose the durable CLI task lifecycle without becoming
+a second buyer or settlement authority.* Electron main alone reads and writes private
+workspace files, validates opaque task handles and task input, and calls the existing
+Operator create/status/GET-only resume functions. A sandboxed React renderer receives
+only narrow operations through a context-isolated bridge; it has no keys, Node access,
+arbitrary path/URL calls, navigation, or network access. User-picked text/Markdown is
+copied into bounded immutable local snapshots with a digest and provenance, but is not
+used as answer evidence yet. Local status/export retain unknown payment and delivery;
+the last seller observation is explicitly time-bound. Desktop dependencies and the
+unpacked Windows artifact remain outside the web server's root install. Reversible:
+easy (isolated desktop package and additive local files; buyer rail unchanged).
+
 **D-238** - Start Operator with a private task handoff - *The existing caller-funded buyer
 already has a durable purchase journal and GET-only recovery; a second payment runner would
 create duplicate-spend risk.* A local Operator task records a normalized research request,

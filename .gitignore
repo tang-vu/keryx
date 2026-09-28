@@ -16,6 +16,7 @@ wallets.json
 out/
 build/
 dist/
+desktop/release/
 
 # hardhat (generated contract artifacts/cache/typings)
 artifacts/

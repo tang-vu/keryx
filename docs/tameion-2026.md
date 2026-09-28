@@ -1,7 +1,7 @@
 # Keryx at Tameion 2026 — planned direction
 
-**Status (September 28, 2026): initial local CLI alpha available; the full Operator
-and desktop remain planned.** Keryx
+**Status (September 28, 2026): local CLI and Windows desktop task alphas available;
+the full Operator remains planned.** Keryx
 keeps its name, repository, citation-toll reading agent, and existing complete-product
 and [mainnet release gates](./mainnet-delivery-plan.md). The event work must be measured
 against the pre-event repository baseline `2291753cc4fff2135d546227d5aafda287cbed7d`
@@ -58,12 +58,14 @@ this two-week scope.
   usage, source quality, delivery, pending versus settled payment, and obligations by
   period, network, and owner versus independent origin.
 
-The first local CLI increment now provides these commands for a private paid-research
-task directory (see [Operator task alpha](./operator-task-alpha.md)). It hands deliberate
-purchases to the existing caller-funded buyer command and binds recovery to that
-original task. This is partial progress toward the checkbox: web/desktop and MCP do
-not yet use the Operator task engine, and there is no general business ledger or
-automated spending policy.
+The local CLI increment provides these commands for a private paid-research task
+directory (see [Operator task alpha](./operator-task-alpha.md)). The
+[Windows desktop alpha](./desktop-alpha.md) now uses the same task engine for task
+creation, listing, status, and GET-only recovery, with local reference snapshots.
+Both hand deliberate purchases to the existing caller-funded buyer command. This is
+partial progress toward the checkboxes: web and MCP do not use the Operator task
+engine; desktop notifications, human approvals, scheduling, and a general business
+ledger are not implemented.
 
 An on-chain budget policy wallet is **not implemented**. The current repository uses
 Arc testnet configuration (`eip155:5042002`), a buyer EOA authorization signature,
