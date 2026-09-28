@@ -1,6 +1,38 @@
 # Keryx — Decision Log
 
 **Reading UX milestone (number pending)** - Put the question and cited answer first while keeping spending evidence available - *The previous first screen delayed the question, and a completed answer followed two tall trace panels.* The home masthead now contains the question, visible Quick/Deep choice, and action; budget and AI model are available in an advanced disclosure, with the selected question cap and payer shown at submission. A live summary shows the latest research step and separates settled, pending, and simulated amounts, while the full decision and settlement panels remain expandable. Completed answers lead with citations and payment evidence stays distinguishable by state. This changes presentation only: the existing session grant, browser co-signing, SSE, and payment authority continue to govern spending. The guide is an inline, user-invoked control. Chromium layout and synthetic browser checks are release gates; real mobile hardware, live source previews, and research quality require separate evidence. Reversible: easy (client presentation and tests). See [research reading UX](docs/research-reading-ux.md).
+**D-244** - Anchor candidate local reads to directory handles and reject observed changes -
+*Checking a pathname and then opening it separately can read a different file after
+a concurrent rename or link replacement.* The Rust inspection candidate now
+walks task directories through held handles, refuses links/reparse points, and opens
+fixed task/buyer children relative to those handles. Use pinned capability-based
+filesystem libraries rather than new application-owned unsafe OS bindings. Bound
+each read, reject non-regular files before consuming content, and detect observed
+entry or content changes during inspection. On Unix, opening a raced FIFO must not
+block waiting for a writer. Tests must control the mutation point rather than rely
+on scheduler timing. This is a file-access boundary, not an atomic transaction over
+all mutable v1 files or a sandbox against a malicious same-user writer that can
+restore data/metadata. Task/receipt binding checks, the explicit Unicode restriction
+and the TypeScript production authority remain in force. A failed inspection emits
+no result and does not rewrite input files or initiate recovery/purchase. Reversible:
+easy while candidate-only; production cutover still requires the remaining parity,
+snapshot, rollback and platform evidence.
+
+**D-243** - Keep the Rust reader's Unicode restriction explicit and preserve v1 data -
+*JavaScript strings can contain unpaired UTF-16 surrogates that the candidate's
+Rust `String`/JSON value representation cannot preserve.* Keep the read-only
+candidate restricted to Unicode scalar strings, including valid surrogate pairs,
+and refuse unsupported input with guidance to use the existing TypeScript reader.
+Never replace, drop, normalize or rewrite code units to make a receipt pass:
+request equality, canonical JSON, answer hashes and receipt digests depend on the
+original values. This is a candidate compatibility restriction, not a claim that
+TypeScript-accepted v1 records are corrupt or unsafe. Assert the refusal and the
+unchanged TypeScript fallback with synthetic task, journal, observation, result and
+receipt fixtures. Do not add a second handwritten JSON implementation just to
+extend the candidate. A full v1 cutover still requires lossless compatibility or
+a separately reviewed, versioned input contract with legacy readability and
+rollback; an explicit refusal alone does not pass that gate. Reversible: easy
+while TypeScript remains authoritative and candidate reads never rewrite files.
 
 **D-242** - Evaluate one shared Rust engine through bounded domain cutovers - *A
 single long-term domain implementation across native CLI, desktop and service
