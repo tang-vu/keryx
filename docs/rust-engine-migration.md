@@ -181,10 +181,89 @@ The Linux/MSVC CI matrix explicitly runs that stress test as well as the native,
 publisher and differential suites; its exercised/skipped branches must be retained
 with the release evidence.
 
+The [PR #7 hosted matrix](https://github.com/tang-vu/keryx/actions/runs/36456432001)
+passed on head `924af8a`: Windows MSVC ran 172 strict checks (118 parity and 54
+paired refusals), and Linux ran 166 (114 and 52). Both separately passed four
+resource refusals, 12 guarded TypeScript fallback commands, one guard self-check,
+18 BOM combinations and four export-boundary cases with zero export skips. Core
+tests were 19 on Windows and 20 on Linux, plus 12 CLI tests per platform and the
+explicit release stress test. Application CI and the
+[recorded automated review](https://github.com/tang-vu/keryx/pull/7#issuecomment-5874990590)
+also passed. Merge `81eec28` preserves TypeScript production authority; this evidence
+closes the covered Unicode defect, not every read-only cutover gate.
+
 ## Remaining read-only acceptance work
 
 The following source audit is an acceptance backlog, not a new cutover approval.
 The prior Windows/Linux CI pass proves the covered corpus, not every gate above.
+
+### Confirmed v1 boundary gaps
+
+Two additional source-level probes remain open acceptance work. The installed
+TypeScript datetime schema accepts UTC minute precision such as
+`2026-09-28T00:00Z`, which the current Rust RFC3339 parser refuses. Conversely,
+Rust accepts leap seconds, a space separator and lowercase `t` that TypeScript
+refuses. The shared candidate validator needs a separate correction and differential
+coverage for task `createdAt`, observation `observedAt` and result `savedAt`, without
+rewriting timestamps or weakening the TypeScript schema.
+
+The TypeScript request schema also admits the positive budget `1e-15`, because its
+floating-point tolerance rounds that value to zero micro-USDC. A synthetic task
+written with `createOperatorTask` remains readable by TypeScript, while Rust refuses
+it as an invalid creator budget; `0.000001` is accepted by both. This is a confirmed
+compatibility boundary, not evidence of a payment or cap bypass. Before admitting a
+new writer, explicitly decide how legacy read compatibility relates to monetary
+admission. Do not silently weaken Rust's nonzero budget rule or tighten a shared
+TypeScript schema that existing readers use. Keep original files and the existing
+TypeScript inspection path available while that policy and its tests remain open.
+
+### Local inspection contract
+
+[D-248](../DECISIONS.md) limits the candidate to **local, nonauthorizing inspection**.
+V1 does not have a directory-wide generation or transaction protocol. A file can
+change after its completed bounded read; a later file can therefore belong to a
+different moment even though both individual reads pass. Bindings reject observed
+task/request/intent/result/receipt inconsistencies. They do not prove that all values
+existed together at one instant, remain current, or came from a trusted writer.
+
+Status verifies its task, request, journal and optional observation. Its result-file
+check uses metadata only and reports `present_unchecked`; it does not verify the
+answer or receipt. An older `observedAt` and seller-reported observation can coexist
+with a newly published result file. Top-level payment and delivery stay `unknown`,
+and the observation explicitly says it may be stale.
+
+Result inspection verifies the locally saved snapshot and its named receipt. If a
+new coherent result is published after the old snapshot was read and the old receipt
+is retained, returning the old answer, digest and `savedAt` is allowed. This is an
+older local result, not evidence of current server state or independent settlement.
+Unkeyed integrity hashes cannot authenticate a consistent set rewritten by a process
+with the same user's file access, or reauthenticate the historical HTTPS digest.
+
+Neither a status stage nor a verified local result may authorize signing, spending,
+repurchase, reconciliation or a mutable writer. Any future caller needing such a
+precondition must use a separately accepted coordination/generation or transaction
+protocol. A failed read preserves the original files; retry only as a fresh local
+inspection after ordinary writes finish. Keep the existing TypeScript reader and
+original journal available without rewriting records or buying again.
+
+Acceptance tests must control the interval between completed file reads, validate
+each starting fixture with the TypeScript writer/reader, distinguish mismatched
+bindings from an allowed older observation/result, and attribute filesystem changes
+only to the test writer. Per-file growth, replacement, no-follow and byte/resource
+checks remain separate required tests. This contract does not pass the still-open
+production adapter, binary delivery/rollback, or desktop cutover gates by itself.
+
+Local Windows GNU validation passed the explicitly invoked TypeScript-generated
+native case, covering five controlled mutations. The observation case starts with
+no result file, then publishes a new observation, result and receipt between reads:
+the in-flight status retains the old observation and sees `present_unchecked`, while
+a fresh inspection sees the newer observation and answer. File byte comparisons
+attribute changes only to the fixture writer. The existing suite also passed 19 core
+and 12 CLI tests, formatting, Clippy, release build, TypeScript and scoped ESLint.
+The differential harness retained 172 strict checks (118 parity and 54 paired
+refusals), four resource refusals, 12 guarded fallback commands and one guard
+self-check. Three local export-boundary cases ran; file-symlink setup was explicitly
+privilege-blocked. Hosted Linux/MSVC results remain a separate release gate.
 
 ### File inspection boundary
 
@@ -237,8 +316,9 @@ these are same-host CLI observations, not desktop or domain-computation results.
 | Recovery/export | Fresh TypeScript processes reopen valid and lone-surrogate v1 directories after an explicit unavailable-candidate failure, with network/child-process calls instrumented to fail. D-245 tests write/sync/close, publication and cleanup failures, ambiguous publication, concurrent exporters and existing targets. Source tree hashes remain unchanged. Output paths retain lexical resolution and normal parent-link behavior. | Keep platform evidence with each release. This is explicit TypeScript fallback, not automatic runtime routing or an OS network sandbox. Directory-entry crash durability and hostile parent replacement remain outside the export guarantee. |
 | Platforms/release | Pinned Rust lockfile, native lint/tests, differential CI on Linux and Windows MSVC; copied native executable runs on the same Windows host. | Record checks and review for each update. Clean-machine packaging and Tauri MSVC/package/IPC/startup/memory acceptance remain separate open gates. |
 
-Broader caller compatibility, a scoped decision on filesystem residuals, and
-artifact delivery/rollback still precede a read-only production switch. Existing
+Broader caller compatibility and artifact delivery/rollback still precede a
+read-only production switch. D-248 scopes the filesystem residuals to local
+inspection; it supplies no transactional precondition for an authorizing caller. Existing
 CLI and Electron callers invoke TypeScript directly; no production native-engine
 router is shipped. Desktop packaging and Tauri acceptance remain separate gates.
 Keep synthetic fixtures private and separate from actual payment or traction evidence.
@@ -310,12 +390,21 @@ the TypeScript compatibility harness. The Rust workspace is `rust/Cargo.toml`.
 ```powershell
 $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
 cargo test --manifest-path rust/Cargo.toml --locked
+node --import tsx scripts/test-rust-inspection-contract.mts
 cargo clippy --manifest-path rust/Cargo.toml --all-targets --locked -- -D warnings
 cargo build --manifest-path rust/Cargo.toml -p keryx-engine --release --locked
 npm run test:rust-engine
 # Optional local launch comparison with a bundled JavaScript CLI:
 npm run test:rust-engine -- --bundled-baseline
 ```
+
+The inter-file driver generates synthetic v1 directories through the TypeScript
+writer, checks both coherent starting states with the TypeScript readers, and runs
+one explicitly selected native test. Normal `cargo test` leaves that fixture-backed
+test ignored; the driver and Linux/MSVC CI step must execute it separately. Its HTTP
+stub accepts exactly the expected job and receipt GETs; it does not access a live
+service. `cargo` must be on the configured path, or set `KERYX_TEST_CARGO` to its
+executable. `KERYX_TEST_RUST_TOOLCHAIN` optionally selects a rustup toolchain.
 
 The release binary is `rust/target/release/keryx-engine.exe` on Windows and
 `rust/target/release/keryx-engine` on Linux. The harness accepts an absolute

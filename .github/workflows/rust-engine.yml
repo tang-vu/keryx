@@ -13,6 +13,7 @@ on:
       - "scripts/rust-result-acceptance-fixtures.mts"
       - "scripts/rust-invalid-v1-fixtures.mts"
       - "scripts/rust-lossless-v1-oracle.mts"
+      - "scripts/test-rust-inspection-contract.mts"
       - "scripts/rust-offline-fallback-guard.mjs"
       - "scripts/operator.mts"
       - "desktop/src/main.ts"
@@ -32,6 +33,7 @@ on:
       - "scripts/rust-result-acceptance-fixtures.mts"
       - "scripts/rust-invalid-v1-fixtures.mts"
       - "scripts/rust-lossless-v1-oracle.mts"
+      - "scripts/test-rust-inspection-contract.mts"
       - "scripts/rust-offline-fallback-guard.mjs"
       - "scripts/operator.mts"
       - "desktop/src/main.ts"
@@ -78,6 +80,11 @@ jobs:
 
       - name: Test Rust workspace
         run: cargo +${{ matrix.rust }} test --manifest-path rust/Cargo.toml --locked -- --show-output
+
+      - name: Exercise deterministic inter-file inspection contract
+        run: node --import tsx scripts/test-rust-inspection-contract.mts
+        env:
+          KERYX_TEST_RUST_TOOLCHAIN: ${{ matrix.rust }}
 
       - name: Lint Rust workspace
         run: cargo +${{ matrix.rust }} clippy --manifest-path rust/Cargo.toml --all-targets --locked -- -D warnings

@@ -1,5 +1,24 @@
 # Keryx — Decision Log
 
+**D-248** - Limit v1 file inspection to local, nonauthorizing observations -
+*Individual files can pass integrity checks while belonging to different moments
+in a mutable directory.* The read-only Rust candidate may report locally bound
+status or a saved result, including an older coherent result. It must refuse the
+inconsistent bindings it observes, retain explicit timestamps and local/seller-
+reported authority labels, and never treat a successful read as a directory-wide
+transaction snapshot. Status keeps payment and delivery unknown; result presence
+is only `present_unchecked`, not receipt verification. A result's unkeyed hashes
+bind the local values but cannot authenticate a same-user writer or reauthenticate
+the historical HTTPS observation. Use these outputs for inspection only, never as
+admission for signing, spending, repurchase, reconciliation or a mutable writer.
+Keep D-244 per-file checks and D-246 resource bounds; deterministic tests must
+exercise changes between completed reads, both rejected mismatches and accepted
+older values. Future authorizing operations need their own coordinated state or
+transaction protocol and failure/rollback evidence. This scopes an evaluation
+contract, not production routing, universal v1 parity or a waiver of the remaining
+adapter, artifact and cutover gates. Reversible: disable the candidate and inspect
+the unchanged v1 files with TypeScript.
+
 **D-247** - Share complete-file publication between CLI and desktop exports -
 *The desktop's direct write to a new destination could leave a partial Markdown
 brief or status JSON when writing failed.* Move the D-245 TypeScript publisher into
