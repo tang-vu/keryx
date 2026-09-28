@@ -127,10 +127,10 @@ export default function AskPage() {
                       <h1 className="letterpress mt-1 font-display text-[clamp(39px,4vw,54px)] font-medium leading-[0.96] tracking-tight sm:mt-2">
                         Citations are <span className="font-semibold italic text-paid">currency.</span>
                       </h1>
-                      <p className="mt-2 max-w-[56ch] font-serif text-[16px] leading-[1.4] text-ink-2 sm:text-[18px]">
-                        Keryx chooses paid sources, shows why, answers with citations, and pays their authors.
+                      <p className="mt-1 max-w-[56ch] font-serif text-[16px] leading-[1.4] text-ink-2 sm:mt-2 sm:text-[18px]">
+                        Keryx buys sources, answers with citations, and pays their authors.
                       </p>
-                      <div id="dispatch" className="mt-3 scroll-mt-24">
+                      <div id="dispatch" className="mt-2 scroll-mt-24 sm:mt-3">
                         <AskForm disabled={streaming} onAsk={ask} payer={payer} />
                       </div>
                       <div className="order-6 mt-3">

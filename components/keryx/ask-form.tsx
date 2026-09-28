@@ -128,7 +128,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury" }: AskFormProps) {
   return (
     <div data-tour="ask-form">
       <div className="border border-ink bg-paper-2">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ink bg-ink px-4 py-2.5 text-cream sm:px-5">
+        <div className="hidden flex-wrap items-center justify-between gap-2 border-b border-ink bg-ink px-4 py-2.5 text-cream sm:flex sm:px-5">
           <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em]">Ask Keryx</span>
           <span className="font-mono text-[11px]">USDC on Arc testnet</span>
         </div>

@@ -59,6 +59,7 @@ try {
       assert.equal(response?.status(), 200, `Home response at ${width}x${height}`);
       const question = page.getByRole("textbox", { name: "What do you want to know?" });
       await question.waitFor();
+      await page.evaluate(() => document.fonts.ready);
       const measurements = await page.evaluate(() => {
         const kicker = document.querySelector('[data-testid="hero-kicker"]');
         const range = document.createRange();
@@ -74,6 +75,7 @@ try {
           heroTop: document.querySelector('[data-tour="hero"]')?.getBoundingClientRect().top,
         };
       });
+      await page.screenshot({ path: join(screenshotDir, `home-${width}x${height}.png`) });
       assert.equal(measurements.docWidth, width, `Horizontal overflow at ${width}x${height}`);
       assert(measurements.input && measurements.cta, `Question and action missing at ${width}x${height}`);
       assert(measurements.input.top >= 0 && measurements.input.top < height,
@@ -95,7 +97,6 @@ try {
           `Guide overlaps the headline at ${width}px`);
       }
       assert.equal(await page.locator('[data-tour="budget"]').isVisible(), false);
-      await page.screenshot({ path: join(screenshotDir, `home-${width}x${height}.png`) });
 
       if (width === 320 || width === 1366) {
         await page.getByText(/Budget and model:/).click();
