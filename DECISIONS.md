@@ -1,6 +1,28 @@
 # Keryx — Decision Log
 
-**D-245** - Put the question and cited answer first while keeping spending evidence available - *The previous first screen delayed the question, and a completed answer followed two tall trace panels.* The home masthead now contains the question, visible Quick/Deep choice, and action; budget and AI model are available in an advanced disclosure, with the selected question cap and payer shown at submission. A live summary shows the latest research step and separates settled, pending, and simulated amounts, while the full decision and settlement panels remain expandable. Completed answers lead with citations and payment evidence stays distinguishable by state. This changes presentation only: the existing session grant, browser co-signing, SSE, and payment authority continue to govern spending. The guide is an inline, user-invoked control. Chromium layout and synthetic browser checks are release gates; real mobile hardware, live source previews, and research quality require separate evidence. Reversible: easy (client presentation and tests). See [research reading UX](docs/research-reading-ux.md).
+**D-245** - Publish completed brief files without overwriting an existing target -
+*Writing directly to a newly created final path can leave a partial brief when a
+write or file sync fails.* Both TypeScript and the Rust candidate stage the complete
+Markdown in an exclusively created private sibling, sync its file contents, then
+publish it with an exclusive hard link to the lexically resolved final path. An
+existing file, directory or symlink target must remain untouched. Unsupported hard
+links cause refusal; there is no direct-write fallback. Write, sync or checked-close
+failure means this attempt has not published the final target. A publication-call
+error is reported as unconfirmed: do not infer absence merely from an error return.
+Errors attempt cleanup of only the owned staging file; never remove an existing
+target or another exporter's winning file. After
+publication, a staging-cleanup error leaves the complete final file intact and
+reports failure without a success receipt; never delete the final pathname as
+rollback because it could now name another writer's file. Diagnostics distinguish
+these states and identify files requiring inspection. Use private trusted output
+parents: this is atomic publication of complete bytes, not protection against a
+hostile parent-directory race or a cross-platform guarantee of directory-entry
+durability after a crash. Unix staging files use mode `0600`; Windows inherits the
+parent ACL. Inject failures through internal test seams, not production environment
+switches. Task/journal/receipt files and payment authority are unchanged. Reversible:
+the old reader still opens original v1 data; preserving no-overwrite and truthful
+failure receipts remains a release requirement.
+
 **D-244** - Anchor candidate local reads to directory handles and reject observed changes -
 *Checking a pathname and then opening it separately can read a different file after
 a concurrent rename or link replacement.* The Rust inspection candidate now
@@ -3118,3 +3140,7 @@ Each query the agent probes the live Circle x402 bazaar (`circle services search
 - DB: ✅ local SQLite on the VPS is the source of truth; Supabase adapter kept behind config (D-08, D-13).
 - Funder wallet: ✅ funded; real settlement is live (`KERYX_FORCE_OFFLINE=0`), 500+ settled payments.
 - Deploy target: ✅ VPS at keryx.cc via Cloudflare Tunnel, not Vercel (D-13).
+
+## Reading UX — 2026-09-28
+
+**Put the question and cited answer first while keeping spending evidence available** - *The previous first screen delayed the question, and a completed answer followed two tall trace panels.* The home masthead now contains the question, visible Quick/Deep choice, and action; budget and AI model are available in an advanced disclosure, with the selected question cap and payer shown at submission. A live summary shows the latest research step and separates settled, pending, and simulated amounts, while the full decision and settlement panels remain expandable. Completed answers lead with citations and payment evidence stays distinguishable by state. This changes presentation only: the existing session grant, browser co-signing, SSE, and payment authority continue to govern spending. The guide is an inline, user-invoked control. Chromium layout and synthetic browser checks are release gates; real mobile hardware, live source previews, and research quality require separate evidence. Reversible: easy (client presentation and tests). See [research reading UX](docs/research-reading-ux.md).

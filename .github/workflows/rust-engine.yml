@@ -10,7 +10,12 @@ on:
       - "rust/**"
       - "scripts/test-rust-engine.mts"
       - "scripts/rust-file-boundary-fixtures.mts"
+      - "scripts/rust-result-acceptance-fixtures.mts"
+      - "scripts/rust-invalid-v1-fixtures.mts"
+      - "scripts/rust-offline-fallback-guard.mjs"
       - "scripts/operator.mts"
+      - "scripts/operator-brief-export.mts"
+      - "scripts/operator-brief-export.test.ts"
       - "lib/**"
       - "package.json"
       - "package-lock.json"
@@ -22,7 +27,12 @@ on:
       - "rust/**"
       - "scripts/test-rust-engine.mts"
       - "scripts/rust-file-boundary-fixtures.mts"
+      - "scripts/rust-result-acceptance-fixtures.mts"
+      - "scripts/rust-invalid-v1-fixtures.mts"
+      - "scripts/rust-offline-fallback-guard.mjs"
       - "scripts/operator.mts"
+      - "scripts/operator-brief-export.mts"
+      - "scripts/operator-brief-export.test.ts"
       - "lib/**"
       - "package.json"
       - "package-lock.json"
@@ -55,6 +65,9 @@ jobs:
 
       - name: Install JavaScript test dependencies
         run: npm ci --no-audit --no-fund
+
+      - name: Test TypeScript brief publication failures
+        run: npx vitest run scripts/operator-brief-export.test.ts
 
       - name: Check Rust format
         run: cargo +${{ matrix.rust }} fmt --manifest-path rust/Cargo.toml --all --check
