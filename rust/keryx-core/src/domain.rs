@@ -75,7 +75,10 @@ fn normalized_request(value: &Value) -> Result<Value> {
         return Err("invalid question".into());
     }
     let budget = micros(field(value, "budget")?, true)?;
-    if budget == 0 || budget > 500_000 {
+    if budget == 0 {
+        return Err("creator budget rounds to zero micro-USDC in this Rust inspection candidate. If this is a TypeScript-readable v1 directory, use the TypeScript Operator status/result/brief commands on the original directory; do not rewrite files or repurchase.".into());
+    }
+    if budget > 500_000 {
         return Err("invalid creator budget".into());
     }
     let mode = str_field(value, "researchMode")?;
@@ -339,6 +342,28 @@ fn decimal_string(s: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn positive_budget_rounding_boundary_keeps_candidate_admission() {
+        fn request(budget: &str) -> Value {
+            crate::json::parse(
+                &format!(
+                    r#"{{"question":"synthetic","budget":{budget},"researchMode":"quick","packageVersion":"1.0.0","responseMode":"async"}}"#
+                ),
+            )
+            .unwrap()
+        }
+
+        let tiny = normalized_request(&request("1e-15")).unwrap_err();
+        assert!(tiny.contains("rounds to zero micro-USDC"));
+        assert!(tiny.contains("TypeScript Operator status/result/brief"));
+        assert!(tiny.contains("do not rewrite files or repurchase"));
+        assert!(normalized_request(&request("0.000001")).is_ok());
+        assert_eq!(
+            normalized_request(&request("0.500001")).unwrap_err(),
+            "invalid creator budget"
+        );
+    }
+
     #[test]
     fn package_fingerprints_match_typescript() {
         assert_eq!(

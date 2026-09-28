@@ -222,15 +222,47 @@ passed. Local file-symlink setup was privilege-blocked; hosted platform checks
 remain required. This resolves the demonstrated datetime discrepancy, not universal
 v1 equivalence or production cutover.
 
+The [PR #10 Linux/MSVC matrix](https://github.com/tang-vu/keryx/actions/runs/36465891970)
+passed 232 strict checks on Windows (136 parity/96 refusals) and 226 on Linux
+(132/94). Both separately ran the inter-file and release stress tests and four
+export-boundary cases with zero skips. Application CI and
+[independent automated review](https://github.com/tang-vu/keryx/pull/10#issuecomment-5876134739)
+passed before merge `0a98965`.
+
 The TypeScript request schema also admits the positive budget `1e-15`, because its
 floating-point tolerance rounds that value to zero micro-USDC. A synthetic task
 written with `createOperatorTask` remains readable by TypeScript, while Rust refuses
 it as an invalid creator budget; `0.000001` is accepted by both. This is a confirmed
-compatibility boundary, not evidence of a payment or cap bypass. Before admitting a
-new writer, explicitly decide how legacy read compatibility relates to monetary
-admission. Do not silently weaken Rust's nonzero budget rule or tighten a shared
-TypeScript schema that existing readers use. Keep original files and the existing
-TypeScript inspection path available while that policy and its tests remain open.
+compatibility boundary, not evidence of a payment or cap bypass. [D-250](../DECISIONS.md)
+preserves the candidate's nonzero integer micro-USDC rule as an intentional refusal
+and adds explicit manual TypeScript inspection guidance. No stored request is
+normalized, and no TypeScript schema or payment rule changes.
+
+The dedicated synthetic driver uses production TypeScript task/journal writers and
+GET recovery verification to save a complete tiny-budget fixture and a one-micro
+control. Its stub accepts only the expected job and receipt GETs. It checks three
+candidate-only refusals separately from three control parity checks: status, result
+and brief. Refusals produce no successful stdout or brief file, and source-tree
+hashes remain unchanged. After an explicit missing-binary check, six fresh guarded
+TypeScript commands reopen the original tiny-budget directory across two runs. A
+guard self-check attempts network and child-process actions and requires refusal;
+this instrumentation is not an OS sandbox. Synthetic receipt fields are fixtures,
+never payment or traction evidence.
+
+Local Windows GNU validation passed all three candidate refusals, three one-micro
+control checks, six guarded fallback commands and the guard self-check. The existing
+CLI corpus retained 232 strict checks (136 parity/96 paired refusals). Twenty-one
+core and 12 CLI native tests, formatting, Clippy, release build, TypeScript and scoped
+ESLint passed. The Linux/MSVC workflow builds the release binary before invoking the
+dedicated driver; its hosted results remain required before release.
+
+For this candidate refusal, preserve the original directory and use the TypeScript
+`status`, `result` or `brief --file NEW_PATH` commands documented above. They do not
+buy or resume payment. TypeScript can still reject corrupted data; do not rewrite
+files or repurchase merely because a native inspection refused them. Before admitting
+a new writer, explicitly decide how legacy reading relates to new monetary admission
+and verify buyer quote/create/recovery boundaries. That policy remains open; neither
+a successful local inspection nor this documented refusal supplies spending authority.
 
 ### Local inspection contract
 
@@ -417,6 +449,7 @@ node --import tsx scripts/test-rust-inspection-contract.mts
 cargo clippy --manifest-path rust/Cargo.toml --all-targets --locked -- -D warnings
 cargo build --manifest-path rust/Cargo.toml -p keryx-engine --release --locked
 npm run test:rust-engine
+node --import tsx scripts/test-rust-tiny-budget.mts
 # Optional local launch comparison with a bundled JavaScript CLI:
 npm run test:rust-engine -- --bundled-baseline
 ```
