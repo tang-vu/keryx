@@ -81,19 +81,26 @@ try {
   await page.getByPlaceholder("What would you like to investigate?").fill("Acceptance test: Arc research question one");
   await page.getByPlaceholder("0x... independently verified").fill("0x1111111111111111111111111111111111111111");
   await page.getByRole("button", { name: "Save task" }).click();
+  await page.getByText("1 research tasks", { exact: true }).waitFor();
   await page.getByText("Acceptance test: Arc research question one", { exact: true }).last().waitFor();
   await page.getByRole("button", { name: "New research task" }).click();
   await page.getByPlaceholder("What would you like to investigate?").fill("Acceptance test: second task");
   await page.getByPlaceholder("0x... independently verified").fill("0x1111111111111111111111111111111111111111");
   await page.getByRole("button", { name: "Save task" }).click();
+  await page.getByText("2 research tasks", { exact: true }).waitFor();
   await page.getByText("Acceptance test: second task", { exact: true }).last().waitFor();
   const savedWorkspace = JSON.parse(await readFile(join(userData, "workspace.json"), "utf8")).path;
-  const directoryNames = await (await import("node:fs/promises")).readdir(savedWorkspace);
-  const selectedTask = (await Promise.all(directoryNames.filter(name => name.startsWith("task-")).map(async name => {
-    const task = JSON.parse(await readFile(join(savedWorkspace, name, "task.json"), "utf8"));
-    return task.request.question === "Acceptance test: second task" ? join(savedWorkspace, name) : null;
-  }))).find(Boolean);
-  if (!selectedTask) throw new Error("Acceptance task was not persisted");
+  const persisted = await page.evaluate(async () => (await window.keryxDesktop.refresh()).tasks
+    .map(task => ({ directoryName: task.directoryName, question: task.question })));
+  const expectedQuestions = ["Acceptance test: Arc research question one", "Acceptance test: second task"];
+  if (persisted.length !== 2 || expectedQuestions.some(question => !persisted.some(task => task.question === question))) {
+    throw new Error("Both acceptance tasks were not visible through persisted workspace refresh");
+  }
+  for (const row of persisted) {
+    const file = JSON.parse(await readFile(join(savedWorkspace, row.directoryName, "task.json"), "utf8"));
+    if (file.request.question !== row.question) throw new Error("Persisted task file differs from workspace view");
+  }
+  const selectedTask = join(savedWorkspace, persisted.find(row => row.question === expectedQuestions[1]).directoryName);
   const intent = await makeTestJournal(selectedTask);
   const firstFixture = completedFixture(intent, "Acceptance test answer one [1]");
   const first = await resumeOperatorTask(selectedTask, buyer => resumeResearch(buyer, fixtureHttp(firstFixture, intent.queryId)));
