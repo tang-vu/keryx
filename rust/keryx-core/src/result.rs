@@ -1,9 +1,10 @@
 use crate::domain::{
-    field, lower_hex, micros, obj_keys, package_fingerprint, str_field, valid_digest, valid_time,
-    Intent, Task,
+    field, js_field, lower_hex, micros, obj_keys, package_fingerprint, str_field, valid_digest,
+    valid_time, Intent, Task,
 };
-use crate::json::{canonical, digest, Result};
-use serde_json::{json, Value};
+use crate::json::{canonical, digest, digest_js, Result, Value};
+#[cfg(test)]
+use serde_json::json;
 
 pub fn verify_result(
     task: &Task,
@@ -46,8 +47,8 @@ pub fn verify_result(
     if str_field(job, "queryId")? != intent.query_id || str_field(job, "status")? != "completed" {
         return Err("wrong completed job".into());
     }
-    let answer = str_field(job, "answer")?;
-    if digest(answer) != str_field(snapshot, "answerSha256")? {
+    let answer = js_field(job, "answer")?;
+    if digest_js(answer) != str_field(snapshot, "answerSha256")? {
         return Err("answer digest mismatch".into());
     }
     let mode = str_field(&task.request, "researchMode")?;
@@ -76,9 +77,9 @@ pub fn verify_result(
     }
     let dispatch = field(payload, "dispatch")?;
     if str_field(dispatch, "id")? != intent.query_id
-        || str_field(dispatch, "question")? != str_field(&task.request, "question")?
-        || str_field(dispatch, "answer")? != answer
-        || str_field(dispatch, "answerSha256")? != digest(answer)
+        || js_field(dispatch, "question")? != js_field(&task.request, "question")?
+        || js_field(dispatch, "answer")? != answer
+        || str_field(dispatch, "answerSha256")? != digest_js(answer)
         || str_field(dispatch, "researchMode")? != mode
         || micros(field(dispatch, "budgetUsdc")?, false)?
             != micros(field(&task.request, "budget")?, true)?
@@ -87,36 +88,41 @@ pub fn verify_result(
     }
     let settlement = field(payload, "settlement")?;
     if str_field(settlement, "mode")? != "real"
-        || !str_field(settlement, "ledgerCompleteness").is_ok()
+        || js_field(settlement, "ledgerCompleteness").is_err()
         || field(settlement, "simulatedCreatorUsdc")?.as_f64() != Some(0.0)
         || !receipt_spend_within(settlement, task)?
     {
         return Err("receipt settlement outside bounds".into());
     }
-    let citations = field(payload, "citations")
-        .ok()
-        .and_then(Value::as_array)
-        .map(|items| {
-            items
-                .iter()
-                .take(64)
-                .filter_map(|item| {
-                    let marker = item.get("marker")?.as_str()?;
-                    let name = item.get("sourceName")?.as_str()?;
-                    if marker.encode_utf16().count() > 64 || name.encode_utf16().count() > 256 {
-                        None
-                    } else {
-                        Some(json!({"marker":marker,"sourceName":name}))
-                    }
-                })
-                .collect::<Vec<_>>()
+    let citation_items = match payload.get("citations") {
+        None => &[][..],
+        Some(value) => value.as_array().ok_or("invalid receipt citations")?,
+    };
+    let citations = citation_items
+        .iter()
+        .take(64)
+        .filter_map(|item| {
+            let marker = item.get("marker")?.as_js_string()?;
+            let name = item.get("sourceName")?.as_js_string()?;
+            if marker.utf16_len() > 64 || name.utf16_len() > 256 {
+                None
+            } else {
+                Some(Value::object(vec![
+                    ("marker", marker.into()),
+                    ("sourceName", name.into()),
+                ]))
+            }
         })
-        .unwrap_or_default();
-    Ok(
-        json!({"savedAt":str_field(snapshot,"savedAt")?,"answer":answer,"question":str_field(&task.request,"question")?,
-        "citations":citations,"paymentAtCheck":payment,"receiptDigest":receipt_digest,
-        "authority":"Local files rechecked against the original task and saved receipt. The original HTTPS digest observation cannot be reauthenticated offline; payment and creator settlement remain seller-reported."}),
-    )
+        .collect::<Vec<_>>();
+    Ok(Value::object(vec![
+        ("savedAt", str_field(snapshot, "savedAt")?.into()),
+        ("answer", answer.into()),
+        ("question", js_field(&task.request, "question")?.into()),
+        ("citations", Value::Array(citations)),
+        ("paymentAtCheck", payment.into()),
+        ("receiptDigest", receipt_digest.into()),
+        ("authority", "Local files rechecked against the original task and saved receipt. The original HTTPS digest observation cannot be reauthenticated offline; payment and creator settlement remain seller-reported.".into()),
+    ]))
 }
 
 fn receipt_spend_within(settlement: &Value, task: &Task) -> Result<bool> {
@@ -164,9 +170,10 @@ fn ratio(value: &Value) -> Result<()> {
     Ok(())
 }
 fn nonnegative_index(value: &Value) -> Result<()> {
-    if !value.as_f64().is_some_and(|n| {
-        n.is_finite() && n >= 0.0 && n.fract() == 0.0 && n <= 9_007_199_254_740_991.0
-    }) {
+    if !value
+        .as_f64()
+        .is_some_and(|n| n.is_finite() && n >= 0.0 && n.fract() == 0.0)
+    {
         return Err("invalid claim index".into());
     }
     Ok(())
@@ -247,15 +254,15 @@ fn validate_job(job: &Value) -> Result<()> {
     if let Some(rows) = job.get("claimCoverage") {
         for item in rows.as_array().ok_or("invalid claim coverage")? {
             nonnegative_index(field(item, "claimIndex")?)?;
-            str_field(item, "claim")?;
+            js_field(item, "claim")?;
             ratio(field(item, "coverage")?)?;
         }
     }
     if let Some(rows) = job.get("evidence") {
         for item in rows.as_array().ok_or("invalid evidence")? {
             nonnegative_index(field(item, "claimIndex")?)?;
-            str_field(item, "sourceName")?;
-            str_field(item, "quote")?;
+            js_field(item, "sourceName")?;
+            js_field(item, "quote")?;
         }
     }
     Ok(())
@@ -265,7 +272,7 @@ fn validate_job(job: &Value) -> Result<()> {
 mod tests {
     use super::*;
     fn fixture() -> (Task, Intent, Value, Value) {
-        let request = json!({"question":"Résumé 😀","budget":0.02,"researchMode":"quick","packageVersion":"1.0.0","responseMode":"async"});
+        let request: Value = json!({"question":"Résumé 😀","budget":0.02,"researchMode":"quick","packageVersion":"1.0.0","responseMode":"async"}).into();
         let task = Task {
             id: "12345678-1234-4234-8234-123456789abc".into(),
             created_at: "2026-09-28T00:00:00.000Z".into(),
@@ -278,18 +285,21 @@ mod tests {
             amount: 30_000,
         };
         let answer = "Evidence\nwith source";
-        let payload = json!({"schema":"urn:keryx:research-receipt:1",
+        let payload: Value = json!({"schema":"urn:keryx:research-receipt:1",
             "dispatch":{"id":intent.query_id,"question":"Résumé 😀","answer":answer,"answerSha256":digest(answer),"budgetUsdc":0.02,"researchMode":"quick"},
             "settlement":{"mode":"real","ledgerCompleteness":"complete","settledCreatorUsdc":0.01,"pendingCreatorUsdc":0.005,"simulatedCreatorUsdc":0},
-            "citations":[{"marker":"[1]","sourceName":"Creator"}]});
+            "citations":[{"marker":"[1]","sourceName":"Creator"}]}).into();
         let rd = digest(&canonical(&payload).unwrap());
-        let receipt = json!({"payload":payload,"integrity":{"algorithm":"sha256","canonicalization":"keryx-json-v1","scope":"payload","digest":rd}});
-        let snapshot = json!({"schema":"keryx-operator-result-v1","taskId":task.id,"buyerJobId":intent.query_id,
+        let receipt = Value::object(vec![
+            ("payload", payload),
+            ("integrity", json!({"algorithm":"sha256","canonicalization":"keryx-json-v1","scope":"payload","digest":rd}).into()),
+        ]);
+        let snapshot: Value = json!({"schema":"keryx-operator-result-v1","taskId":task.id,"buyerJobId":intent.query_id,
             "savedAt":"2026-09-28T01:00:00.000Z","receiptDigest":rd,"receiptFile":format!("receipt-{}.json",&rd[7..]),
             "answerSha256":digest(answer),"packageFingerprint":package_fingerprint("quick").unwrap(),
             "paymentAtCheck":"seller_reported_settled","job":{"queryId":intent.query_id,"status":"completed","answer":answer,
             "pricing":{"serviceFeeUsdc":0.01,"creatorBudgetUsdc":0.02,"totalPriceUsdc":0.03,
-                "settledCreatorSpendUsdc":0.01,"pendingCreatorSpendUsdc":0.005,"unusedCreatorReserveUsdc":0.005}}});
+                "settledCreatorSpendUsdc":0.01,"pendingCreatorSpendUsdc":0.005,"unusedCreatorReserveUsdc":0.005}}}).into();
         (task, intent, snapshot, receipt)
     }
     #[test]
@@ -307,20 +317,70 @@ mod tests {
     fn rejects_corrupt_answer_receipt_binding_and_amounts() {
         let (task, intent, snapshot, receipt) = fixture();
         let mut bad = snapshot.clone();
-        bad["job"]["answer"] = json!("tampered");
+        bad["job"]["answer"] = json!("tampered").into();
         assert!(verify_result(&task, &intent, &bad, &receipt).is_err());
         let mut bad = receipt.clone();
-        bad["payload"]["dispatch"]["question"] = json!("other");
+        bad["payload"]["dispatch"]["question"] = json!("other").into();
         assert!(verify_result(&task, &intent, &snapshot, &bad).is_err());
         let mut bad = snapshot.clone();
-        bad["buyerJobId"] = json!(format!("a2a_{}", "b".repeat(64)));
+        bad["buyerJobId"] = json!(format!("a2a_{}", "b".repeat(64))).into();
         assert!(verify_result(&task, &intent, &bad, &receipt).is_err());
         let mut bad = snapshot.clone();
-        bad["job"]["pricing"]["totalPriceUsdc"] = json!(0.04);
+        bad["job"]["pricing"]["totalPriceUsdc"] = json!(0.04).into();
         assert!(verify_result(&task, &intent, &bad, &receipt).is_err());
         let mut bad = receipt.clone();
-        bad["payload"]["settlement"]["pendingCreatorUsdc"] = json!(0.02);
-        bad["integrity"]["digest"] = json!(digest(&canonical(&bad["payload"]).unwrap()));
+        bad["payload"]["settlement"]["pendingCreatorUsdc"] = json!(0.02).into();
+        bad["integrity"]["digest"] = json!(digest(&canonical(&bad["payload"]).unwrap())).into();
         assert!(verify_result(&task, &intent, &snapshot, &bad).is_err());
+    }
+
+    #[test]
+    fn claim_indices_use_zod_finite_nonnegative_integer_semantics() {
+        let mut job: Value = json!({
+            "queryId": format!("a2a_{}", "a".repeat(64)),
+            "status": "completed",
+            "claimCoverage": [{"claimIndex": 9_007_199_254_740_992.0, "claim": "x", "coverage": 1}],
+            "evidence": [{"claimIndex": 9_007_199_254_740_994.0, "sourceName": "s", "quote": "q"}]
+        })
+        .into();
+        assert!(validate_job(&job).is_ok());
+        for invalid in [f64::INFINITY, -1.0, 0.5] {
+            job["claimCoverage"] = Value::Array(vec![Value::object(vec![
+                ("claimIndex", Value::Number(invalid)),
+                ("claim", "x".into()),
+                ("coverage", Value::Number(1.0)),
+            ])]);
+            assert!(validate_job(&job).is_err(), "{invalid}");
+        }
+    }
+
+    #[test]
+    fn optional_receipt_citations_must_be_an_array_when_present() {
+        fn rebind(snapshot: &mut Value, receipt: &mut Value) {
+            let rd = digest(&canonical(&receipt["payload"]).unwrap());
+            snapshot["receiptDigest"] = rd.clone().into();
+            snapshot["receiptFile"] = format!("receipt-{}.json", &rd[7..]).into();
+            receipt["integrity"]["digest"] = rd.into();
+        }
+        let (task, intent, original_snapshot, original_receipt) = fixture();
+        for invalid in [Value::Null, Value::Number(1.0), Value::object(vec![])] {
+            let mut snapshot = original_snapshot.clone();
+            let mut receipt = original_receipt.clone();
+            receipt["payload"]["citations"] = invalid;
+            rebind(&mut snapshot, &mut receipt);
+            assert!(verify_result(&task, &intent, &snapshot, &receipt).is_err());
+        }
+        let mut snapshot = original_snapshot;
+        let mut receipt = original_receipt;
+        if let Value::Object(fields) = &mut receipt["payload"] {
+            fields.retain(|(key, _)| key != "citations");
+        }
+        rebind(&mut snapshot, &mut receipt);
+        assert!(
+            verify_result(&task, &intent, &snapshot, &receipt).unwrap()["citations"]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
     }
 }

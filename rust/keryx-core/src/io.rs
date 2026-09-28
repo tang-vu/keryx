@@ -1,6 +1,6 @@
 use crate::brief::brief;
 use crate::domain::{parse_intent, parse_task, valid_time, Intent, Task};
-use crate::json::Result;
+use crate::json::{parse, Result, Value};
 use crate::result::verify_result;
 #[cfg(windows)]
 use cap_fs_ext::OsMetadataExt;
@@ -10,7 +10,6 @@ use cap_std::{
     fs::{Dir, OpenOptions},
 };
 use same_file::Handle;
-use serde_json::{json, Value};
 use std::{
     fs,
     io::{Read, Seek, SeekFrom},
@@ -118,11 +117,11 @@ fn read_json_during(dir: &Dir, name: &str, max: usize, after_read: impl FnOnce()
         return Err("local file replaced during inspection".into());
     }
     let text = std::str::from_utf8(&bytes).map_err(|e| e.to_string())?;
-    serde_json::from_str(text).map_err(|e| {
-        format!(
-            "invalid or unsupported local JSON: {e}. This Rust candidate cannot represent unpaired UTF-16 surrogates. If this is a TypeScript-readable v1 directory, use the TypeScript Operator status/result/brief commands on the original directory. Do not rewrite files."
-        )
-    })
+    // Node's default TextDecoder consumes one leading UTF-8 BOM before JSON.parse.
+    let text = text.strip_prefix('\u{feff}').unwrap_or(text);
+    parse(text).map_err(|e| format!(
+        "invalid or unsupported local JSON: {e}. If this is a TypeScript-readable v1 directory, use the TypeScript Operator status/result/brief commands on the original directory. Do not rewrite files."
+    ))
 }
 
 #[cfg(unix)]
@@ -204,15 +203,22 @@ impl LocalTask {
                 "invalid"
             }
         };
-        Ok(
-            json!({"schema":"keryx-operator-task-status-v1","taskId":self.task.id,"createdAt":self.task.created_at,
-            "kind":"paid_research","network":"eip155:5042002","stage":self.stage,
-            "buyerJobId":self.intent.as_ref().map(|i|i.query_id.as_str()),"creatorBudgetMicros":
-                (self.task.request["budget"].as_f64().unwrap()*1_000_000.0).round() as u64,
-            "maxTotalMicros":self.task.cap.to_string(),"payment":"unknown","delivery":"unknown",
-            "lastObservation":observation,"savedResult":saved,
-            "authority":"Local journal state only; use resume for verified remote delivery and reported payment evidence"}),
-        )
+        Ok(Value::object(vec![
+            ("schema", "keryx-operator-task-status-v1".into()),
+            ("taskId", self.task.id.as_str().into()),
+            ("createdAt", self.task.created_at.as_str().into()),
+            ("kind", "paid_research".into()),
+            ("network", "eip155:5042002".into()),
+            ("stage", self.stage.into()),
+            ("buyerJobId", self.intent.as_ref().map(|i| i.query_id.as_str()).into()),
+            ("creatorBudgetMicros", ((self.task.request["budget"].as_f64().unwrap()*1_000_000.0).round() as u64).into()),
+            ("maxTotalMicros", self.task.cap.to_string().into()),
+            ("payment", "unknown".into()),
+            ("delivery", "unknown".into()),
+            ("lastObservation", observation.unwrap_or(Value::Null)),
+            ("savedResult", saved.into()),
+            ("authority", "Local journal state only; use resume for verified remote delivery and reported payment evidence".into()),
+        ]))
     }
 
     fn observation(&self, intent: &Intent) -> Result<Option<Value>> {
@@ -222,8 +228,10 @@ impl LocalTask {
         let v = read_json(&self.dir, "last-observation.json", 8192)?;
         let fields = v.as_object().ok_or("invalid observation")?;
         if fields.len() != 5
-            || fields.keys().any(|k| {
-                !["schema", "taskId", "buyerJobId", "observedAt", "report"].contains(&k.as_str())
+            || fields.iter().any(|(key, _)| {
+                !key.as_str().is_some_and(|key| {
+                    ["schema", "taskId", "buyerJobId", "observedAt", "report"].contains(&key)
+                })
             })
             || !v
                 .get("observedAt")
@@ -266,10 +274,13 @@ impl LocalTask {
         {
             return Err("unsupported observation".into());
         }
-        Ok(Some(
-            json!({"observedAt":v.get("observedAt"),"status":status,"payment":state,"accountingAgreement":accounting,
-            "authority":"Last local GET observation; may be stale. Payment evidence and creator settlement remain seller-reported."}),
-        ))
+        Ok(Some(Value::object(vec![
+            ("observedAt", v.get("observedAt").cloned().unwrap_or(Value::Null)),
+            ("status", status.into()),
+            ("payment", state.into()),
+            ("accountingAgreement", accounting.into()),
+            ("authority", "Last local GET observation; may be stale. Payment evidence and creator settlement remain seller-reported.".into()),
+        ])))
     }
 
     pub fn result(&self) -> Result<Option<Value>> {

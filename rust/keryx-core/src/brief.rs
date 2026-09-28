@@ -1,6 +1,5 @@
-use crate::domain::{field, str_field};
-use crate::json::Result;
-use serde_json::Value;
+use crate::domain::{field, js_field, str_field};
+use crate::json::{Result, Value};
 
 pub fn brief(result: &Value) -> Result<String> {
     let escape = |s: &str| {
@@ -42,7 +41,8 @@ pub fn brief(result: &Value) -> Result<String> {
         x = out;
         x
     };
-    let answer = str_field(result, "answer")?
+    let answer = js_field(result, "answer")?
+        .to_string_lossy()
         .replace("\r\n", "\n")
         .replace('\r', "\n");
     let inert = answer
@@ -50,7 +50,7 @@ pub fn brief(result: &Value) -> Result<String> {
         .map(|line| format!("    {line}"))
         .collect::<Vec<_>>()
         .join("\n");
-    let mut lines=vec!["# Private research brief".into(),"".into(),format!("Question: {}",escape(str_field(result,"question")?)),"".into(),
+    let mut lines=vec!["# Private research brief".into(),"".into(),format!("Question: {}",escape(&js_field(result,"question")?.to_string_lossy())),"".into(),
         format!("Saved local check: {}",str_field(result,"savedAt")?),"".into(),
         "This brief contains private research. Local receipt integrity and task binding were rechecked. The original HTTPS observation cannot be reauthenticated offline. Payment and creator settlement remain seller-reported; this is not independent settlement or factual proof.".into(),
         "".into(),"## Answer".into(),"".into(),inert,"".into()];
@@ -60,8 +60,8 @@ pub fn brief(result: &Value) -> Result<String> {
             for cite in cites {
                 lines.push(format!(
                     "- {} {}",
-                    escape(str_field(cite, "marker")?),
-                    escape(str_field(cite, "sourceName")?)
+                    escape(&js_field(cite, "marker")?.to_string_lossy()),
+                    escape(&js_field(cite, "sourceName")?.to_string_lossy())
                 ));
             }
             lines.push("".into());

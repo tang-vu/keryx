@@ -62,16 +62,17 @@ no success receipt. Inspect the named files before retrying with a new output pa
 do not delete a pre-existing file to make a retry pass. These guarantees assume a
 trusted private parent and do not promise directory-entry durability after a crash.
 
-The optional [Rust read-only candidate](./rust-engine-migration.md) supports
-Unicode scalar strings but refuses JSON containing an unpaired UTF-16 surrogate.
-The TypeScript commands above remain authoritative for existing v1 directories.
-On a candidate parsing refusal, preserve the files and use TypeScript `status`,
-`result` or `brief` against the same directory. Do not rewrite receipt text or run
-another purchase to make it readable. This candidate restriction does not mean an
-otherwise accepted v1 task is corrupt, and it does not authorize a production
-engine switch. TypeScript `result` preserves those code units as JSON escapes;
-Markdown brief export replaces unpaired surrogates with U+FFFD during UTF-8
-encoding, so keep the original JSON for lossless preservation.
+The optional [Rust read-only candidate](./rust-engine-migration.md) preserves
+JavaScript UTF-16 strings, including unpaired surrogates, through JSON output and
+receipt verification. The TypeScript commands above remain authoritative for
+existing v1 directories. The candidate also bounds parser nesting and value count;
+a resource refusal does not mean an otherwise accepted v1 task is corrupt.
+On a candidate refusal, preserve the files and use TypeScript `status`, `result`
+or `brief` against the same directory. Do not rewrite receipt text or run another
+purchase to make it readable. Both result JSON paths preserve lone code units as
+escapes. Markdown brief export replaces them with U+FFFD during UTF-8 encoding,
+so keep the original JSON for lossless preservation. This is candidate compatibility
+work, not a production engine switch.
 
 For supported inputs, the candidate's `brief --file` returns the same JSON contract
 as TypeScript: `{"saved":"ABSOLUTE_PATH","private":true}`. Both resolve the output

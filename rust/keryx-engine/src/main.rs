@@ -1,4 +1,4 @@
-use keryx_core::LocalTask;
+use keryx_core::{stringify, LocalTask};
 use std::{
     env,
     path::{Component, Path, PathBuf},
@@ -44,9 +44,8 @@ fn run() -> Result<(), String> {
     let state = state.ok_or("--state is required")?;
     let task = LocalTask::open(&state)?;
     let text = match command.as_str() {
-        "status" => serde_json::to_string(&task.status()?).map_err(|e| e.to_string())?,
-        "result" => serde_json::to_string(&task.result()?.ok_or("no saved result")?)
-            .map_err(|e| e.to_string())?,
+        "status" => stringify(&task.status()?)?,
+        "result" => stringify(&task.result()?.ok_or("no saved result")?)?,
         "brief" => task.brief()?,
         _ => return Err("unsupported command".into()),
     };

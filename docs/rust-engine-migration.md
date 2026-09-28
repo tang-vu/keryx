@@ -96,14 +96,35 @@ the later handle-based, double-read implementation described below.
 
 ## Unicode compatibility policy
 
-[D-243](../DECISIONS.md) retains the candidate's Unicode scalar string model.
-Valid surrogate pairs, literal astral characters and text containing a literal
-backslash followed by `u` are supported. An unpaired high or low UTF-16 surrogate
-in a parsed JSON key or value remains unsupported. That includes nested or
-otherwise unused fields: parsing precedes schema validation and receipt hashing.
-The candidate must refuse without rewriting the task, emitting a partial result
-or creating a brief. It must never replace a code unit with U+FFFD, drop it,
-normalize the text or alter a digest to gain acceptance.
+[D-246](../DECISIONS.md) supersedes D-243's scalar-only candidate restriction.
+The read-only core now preserves JavaScript UTF-16 code units in keys and values,
+including lone high and low surrogates, nested or unused fields, and duplicate
+escaped-equivalent keys. Valid surrogate pairs and literal astral characters have
+the same value; a literal backslash followed by `u` remains distinct. Duplicate
+keys retain their first insertion position and last value, matching `JSON.parse`.
+Canonical keys sort by UTF-16 units. Ordinary JSON output instead uses JavaScript
+integer-index property order followed by insertion order.
+
+The parser validates bounded UTF-8 input before using pinned `serde_json` RawValue
+grammar validation and its documented byte-string decoding. The maintained
+`rustpython-wtf8` representation carries code units through domain validation,
+request comparison, canonical serialization and result JSON. There is no new
+handwritten JSON grammar or application-owned unsafe decoder. Original private
+files are never normalized or rewritten to make a digest pass.
+
+Numeric overflow is distinct from JSON null. As in JavaScript, a token such as
+`1e400` becomes a nonfinite number; ordinary JSON serialization emits null, while
+Keryx canonical JSON refuses nonfinite values. Existing finite-number and exact
+micro-USDC validation remain in force. Negative zero serializes as zero.
+
+Parser input is capped at 2,000,000 bytes in addition to each file's existing
+smaller limit. Nesting is capped at 128 child edges from the root and the parser
+admits at most 200,000 values, including overwritten duplicate values. These are
+explicit candidate resource limits, not new v1 format restrictions. A command
+that parses a file beyond these limits refuses it with fallback guidance and no
+result output or brief creation, even if TypeScript accepts that file. Status does
+not fully parse saved results or receipts merely to report their presence. A finite
+corpus cannot prove equivalence for every JavaScript input.
 
 Existing TypeScript readers remain the authority for all accepted v1 inputs.
 If the candidate refuses an existing task, use the same private directory with
@@ -112,22 +133,21 @@ If the candidate refuses an existing task, use the same private directory with
 resume a payment; `brief --file` creates only the requested new brief. Preserve the
 original files; do not edit an answer, request or receipt to satisfy the Rust parser.
 A TypeScript refusal still needs inspection; fallback is not a promise to accept
-corrupted data. TypeScript `result` emits JSON that preserves unpaired code units
-as escapes. Its Markdown brief uses Node's UTF-8 encoding, which replaces unpaired
-surrogates with U+FFFD. Such a brief is a human-readable export, not a lossless
-replacement for the JSON result or original receipt.
+corrupted data. Both result JSON paths preserve unpaired code units as escapes.
+Answer SHA-256 and Markdown use Node-compatible UTF-8 encoding, which replaces
+unpaired surrogates with U+FFFD. Canonical receipt JSON retains their escapes before
+hashing. A brief is a human-readable export, not a lossless replacement for the
+JSON result or original receipt.
 
-This decision resolves the candidate's behavior, **not full v1 cutover**. Supporting
-all existing JavaScript strings would require a lossless code-unit representation
-through parsing, sorting, canonicalization, hashing, output and brief encoding.
-Alternatively, a future versioned contract must retain a reviewed legacy-read and
-rollback path. Neither change is implemented here. Do not route production callers
-to the Rust candidate or silently switch runtimes based on a parsing failure.
+This decision changes the candidate's representation, **not production authority**.
+Do not route production callers to the Rust candidate or silently switch runtimes
+based on a parsing failure. Read-only cutover still needs the remaining acceptance
+and release gates below.
 
-The D-243 follow-up passed local Windows GNU release validation: six Rust unit
-tests, formatting, Clippy, TypeScript checking, targeted ESLint, and 42 strict
+Historically, the D-243 follow-up passed local Windows GNU release validation: six
+Rust unit tests, formatting, Clippy, TypeScript checking, targeted ESLint, and 42 strict
 synthetic harness checks (25 parity and 17 shared refusals), plus nine separately
-counted intentional Unicode incompatibilities. The latter assert TypeScript
+counted intentional Unicode incompatibilities. The latter asserted TypeScript
 readability, the Rust fallback diagnostic, empty Rust stdout, no refused brief
 file and unchanged source trees. They cover task/request, journal, observation,
 saved answer/key and a TypeScript-written receipt payload with surrogate keys and
@@ -136,6 +156,30 @@ also asserts the TypeScript Markdown encoding limitation above. [PR #3](https://
 passed hosted application, Linux and Windows Rust checks and automated review;
 the corresponding main workflows also passed. This evidence does not close the
 remaining gates below.
+
+The D-246 Windows GNU release run passed **172 strict differential checks**
+(118 parity and 54 paired refusals), plus four separately counted candidate
+resource-limit refusals with explicit TypeScript reopening. The former nine
+surrogate incompatibilities now require parity. Twelve pinned JSON/canonical/hash
+vectors preserve raw duplicate-key and numeric token spellings in receipt files;
+additional vectors distinguish numeric overflow, answer UTF-8 hashes and malformed
+bytes/escapes. All 18 leading-BOM combinations (six files and three commands)
+passed. Optional claim/evidence text and receipt ledger text preserve code units;
+claim indexes follow the existing finite nonnegative integer schema without a new
+safe-integer cap. Present non-array citations now refuse, while absent citations
+and the existing first-64-before-filter behavior remain compatible.
+
+The run also passed 12 guarded offline fallback commands, one guard self-check
+and three export-boundary cases. File-symlink creation was privilege-blocked on
+the local Windows host; a directly linked output-parent junction was exercised.
+Nineteen core and 12 CLI native tests passed, as did formatting, Clippy, release
+build, TypeScript and targeted ESLint. A separate release stress test used exactly
+2,000,000 bytes at depth 128 with mixed scalar and lone-surrogate text: one local
+observation was 532 ms to parse and 436 ms to canonicalize. This is one stress
+shape on Windows GNU, not a universal maximum-cost bound or desktop benchmark.
+The Linux/MSVC CI matrix explicitly runs that stress test as well as the native,
+publisher and differential suites; its exercised/skipped branches must be retained
+with the release evidence.
 
 ## Remaining read-only acceptance work
 
@@ -187,15 +231,17 @@ these are same-host CLI observations, not desktop or domain-computation results.
 | Gate | Existing evidence | Work still required |
 | --- | --- | --- |
 | CLI contract | `brief --file` now emits the TypeScript contract: absolute `saved` path and `private: true`. The harness compares exact response JSON, Markdown, lexical relative/absolute paths, dot segments, Unicode/spaces, a linked parent followed by `..`, and overwrite refusal with empty stdout and unchanged output. Windows adds drive-relative and drive-rooted cases. | Keep broader adapter compatibility under evaluation. Rust stdout-only brief remains a documented extension, not a TypeScript CLI parity claim. |
-| Full v1 input | The corpus includes nullable reserve, optional accounting/service/quality/claim/evidence fields, citation filtering/caps/UTF-16 limits, and schema/truncation mutations across six file classes. Internally consistent unsupported request/receipt versions are tested separately from broken-hash mutations. D-243 still defines the unsupported Unicode case. | Resolve lossless legacy Unicode handling and expand canonical-key/resource-boundary evidence before full v1 cutover; never infer universal equivalence from a finite corpus. |
+| Full v1 input | The corpus includes nullable reserve, optional accounting/service/quality/claim/evidence fields, citation filtering/caps/UTF-16 limits, and schema/truncation mutations across six file classes. Internally consistent unsupported request/receipt versions are tested separately from broken-hash mutations. D-246 replaces the scalar-only model with lossless code units and explicit parser resource limits. | Record reviewed cross-platform lossless, canonical-key and resource-boundary evidence before read-only cutover; never infer universal equivalence from a finite corpus. |
 | File bounds | Differential fixtures use valid multibyte JSON at the exact limit and limit plus one for task/request/observation (8,192 bytes), intent (65,536), result (150,000) and receipt (2,000,000). Native tests exercise bounded reads and controlled growth. | Preserve byte-based limits when expanding schemas; these cases do not prove every possible concurrent writer schedule. |
 | Paths and concurrent reads | Directory-relative no-follow opens, repeated bounded reads and opened-file identity checks replace the separate pathname check/open. Native tests control growth, same-size writes with restored mtime, entry replacement, held-directory rename, file/task/ancestor links, and Unix FIFO refusal. Windows may prevent a held-directory rename; file-symlink coverage requires creation privileges. | Multi-file transaction snapshots and a hostile same-user writer that restores state between observations remain outside this boundary. Record the exercised platform branches with each release; do not treat a permission-related test skip as exercised coverage. |
 | Recovery/export | Fresh TypeScript processes reopen valid and lone-surrogate v1 directories after an explicit unavailable-candidate failure, with network/child-process calls instrumented to fail. D-245 tests write/sync/close, publication and cleanup failures, ambiguous publication, concurrent exporters and existing targets. Source tree hashes remain unchanged. Output paths retain lexical resolution and normal parent-link behavior. | Keep platform evidence with each release. This is explicit TypeScript fallback, not automatic runtime routing or an OS network sandbox. Directory-entry crash durability and hostile parent replacement remain outside the export guarantee. |
 | Platforms/release | Pinned Rust lockfile, native lint/tests, differential CI on Linux and Windows MSVC; copied native executable runs on the same Windows host. | Record checks and review for each update. Clean-machine packaging and Tauri MSVC/package/IPC/startup/memory acceptance remain separate open gates. |
 
-The remaining input-representation and platform gates still precede a read-only
-production switch. Keep synthetic fixtures private and separate from actual payment
-or traction evidence.
+Broader caller compatibility, a scoped decision on filesystem residuals, and
+artifact delivery/rollback still precede a read-only production switch. Existing
+CLI and Electron callers invoke TypeScript directly; no production native-engine
+router is shipped. Desktop packaging and Tauri acceptance remain separate gates.
+Keep synthetic fixtures private and separate from actual payment or traction evidence.
 
 ### Brief publication boundary
 
