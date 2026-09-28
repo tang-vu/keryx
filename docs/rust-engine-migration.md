@@ -430,6 +430,13 @@ link cases separately from permission-related skips.
 
 ## Next domain candidate: local task creation
 
+The D-251/D-252 read-only platform and artifact drills have passed, including
+the independently downloaded main MSVC artifact on the Windows development PC;
+see [the recorded handoff evidence](native-inspection-evaluation.md#independent-artifact-handoff).
+D-253 starts with [pure task preparation](rust-task-preparation-evaluation.md):
+validation and exact v1 bytes with explicit identity/time inputs and no filesystem
+writer. That stage does not establish native creation durability or switch callers.
+
 After the read-only gates pass, evaluate only the immutable v1 task envelope;
 this is a selected next evaluation scope, not permission to switch callers now.
 The current owner is `lib/operator/task.ts::createOperatorTask`. Inputs are an

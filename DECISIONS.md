@@ -1,5 +1,31 @@
 # Keryx — Decision Log
 
+**D-253** - Prepare immutable v1 task bytes in a pure, separately evaluated core -
+*Read-only artifact acceptance does not establish safe native task creation.*
+After D-251/D-252's platform, transfer and rollback checks, evaluate the validation
+and encoding part of task creation before adding a filesystem writer. Supply the
+request, independently verified payee, integer total cap, UUID and creation time
+explicitly. Reuse the Rust v1 validation and lossless JSON representation; prepare
+ordered task/request values and return exact Node-compatible two-space JSON bytes with a
+terminal newline, refusing either file above 8,192 bytes before any publication.
+The core has no target directory, clock, randomness, network or payment capability.
+
+Correct the existing reader's raw creator-budget upper bound at the same shared
+validation point: a number slightly above `0.5` must be refused even when it rounds
+to 500,000 micro-USDC, matching the TypeScript schema. Keep the documented positive
+value that rounds to zero as an explicit candidate refusal; do not silently change
+legacy TypeScript admission, rewrite records or normalize their budget values.
+The new-writer monetary policy remains a gate before production admission.
+
+Compare prepared bytes with the actual TypeScript writer using that writer's UUID
+and time. Materializing those bytes in a test harness and reopening them with the
+TypeScript reader proves encoding compatibility, not native publication durability.
+Keep the preparation bridge test-only and outside the packaged CLI. Exclusive
+creation, permissions, retained partial writes, crash recovery and writer cutover
+remain separate acceptance work. Reversible: remove the evaluator; existing
+TypeScript task creation, reading and payment authority continue unchanged. See
+[task preparation evaluation](docs/rust-task-preparation-evaluation.md).
+
 **D-252** - Test native artifact handoff on a separate runtime runner -
 *A copied executable in its build job does not prove that the intended artifact
 can be transferred and used without rebuilding it.* Extend D-251 acceptance with

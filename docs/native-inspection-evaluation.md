@@ -211,3 +211,21 @@ nine artifact, 24 process, five parity and three rollback checks. GNU is explici
 declared for this local rehearsal; the hosted Windows matrix remains MSVC. The
 cross-job transfer and later downloaded-MSVC run require their own recorded
 results before completion.
+
+Those transfer gates passed on [main run 36477204555](https://github.com/tang-vu/keryx/actions/runs/36477204555)
+at source `8c9c1735a38a84d7b5c2437fceba416f4825602f`. Both fresh Linux and Windows
+consumer jobs passed, as did that source's application and Rust CI. Each consumer
+exercised four artifact refusals, six parity checks, three guarded TypeScript
+rollback commands and the guard self-check. The PR rehearsal used Node 24.21.0,
+Ubuntu 24 with glibc 2.39 and Windows Server 2025; these are the tested environments,
+not a compatibility promise for other systems.
+
+The exact main-run MSVC artifact (ID `10994098277`) was then downloaded and consumed
+on the development PC from the matching source checkout, with the expected SHA
+obtained independently from Actions metadata. Its `keryx-engine.exe` is 605,184
+bytes, SHA-256 `434ef223fdc6a7619ba747c3089cdec8bfe44842c5fcfe6596dc0e4f56e75287`.
+On Windows 10 Pro 10.0.19045 x64 and Node 24.12.0, it passed the same four/six/three
+checks and guard self-check with the synthetic v1 tree unchanged. No Rust build or
+installation ran in that drill; the downloaded executable and manifest were kept
+outside Git. This closes the bounded transfer/runtime drill, while clean-OS,
+distribution authenticity, Tauri packaging and production routing gates remain.
