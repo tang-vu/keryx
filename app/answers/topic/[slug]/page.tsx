@@ -163,13 +163,12 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
             sources: e.sourceNames.join(" "),
           }))}
           placeholder={`Filter ${topic.label} answers…`}
+          filters={<ArchiveTopicChips topics={topics} activeSlug={topic.slug} />}
         >
           {shown.map((e) => (
             <ArchiveAnswerRow key={e.id} entry={e} />
           ))}
         </ArchiveSearch>
-
-        <ArchiveTopicChips topics={topics} activeSlug={topic.slug} />
 
         {rest.length > 0 && (
           <p className="mt-8 border-t border-line pt-5 font-serif text-[15px] leading-[1.55] text-ink-2">

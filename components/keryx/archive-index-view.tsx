@@ -61,14 +61,13 @@ export function ArchiveIndexView({
         <ArchiveSearch
           terms={slice.items.map(searchTerm)}
           others={slice.rest.map(toSearchEntry)}
+          filters={<ArchiveTopicChips topics={topics} />}
         >
           {slice.items.map((e) => (
             <ArchiveAnswerRow key={e.id} entry={e} />
           ))}
         </ArchiveSearch>
       )}
-
-      <ArchiveTopicChips topics={topics} />
 
       <ArchivePagination page={slice.page} totalPages={slice.totalPages} />
 

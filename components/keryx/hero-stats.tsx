@@ -1,9 +1,8 @@
 "use client";
 
 /**
- * Hero denomination box — the real settled metrics from /api/metrics, struck in
- * Bodoni and tallied up. Two cells: paid to creators (green) and citations
- * today (ink). Hidden until there is something real to show.
+ * Hero totals from /api/metrics. Displays lifetime settled Arc testnet creator
+ * payouts and payment counts, with explicit loading and unavailable states.
  */
 
 import { useEffect, useState } from "react";
