@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { copyFile, lstat, mkdtemp, mkdir, readFile, readdir, readlink, realpath, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { basename, join, resolve, sep } from "node:path";
 import { performance } from "node:perf_hooks";
 import { build, version as esbuildVersion } from "esbuild";
 import { a2aResearchPackage } from "../lib/a2a/research-package-definition.ts";
@@ -16,8 +16,10 @@ import { RESEARCH_RECEIPT_CANONICALIZATION, RESEARCH_RECEIPT_SCHEMA } from "../l
 import { researchReceiptDigest, sha256 } from "../lib/research-receipt-integrity.ts";
 import { canonicalJson } from "../lib/canonical-json.ts";
 import { resumeResearch } from "../lib/buyer/client.ts";
+import { padJsonFileToByteLength } from "./rust-file-boundary-fixtures.mts";
 
 const repo = resolve(import.meta.dirname, "..");
+const tsxLoader = import.meta.resolve("tsx");
 const rustExe = resolve(process.env.KERYX_RUST_ENGINE ?? join(repo, "rust", "target", "release", process.platform === "win32" ? "keryx-engine.exe" : "keryx-engine"));
 const payer = `0x${"1".repeat(40)}`;
 const payee = `0x${"2".repeat(40)}`;
@@ -29,15 +31,15 @@ let refusalChecks = 0;
 let incompatibilityChecks = 0;
 
 function run(kind: "ts" | "rust" | "bundle", command: "status" | "result" | "brief", state: string, file?: string,
-  binary = rustExe, environment = noEnv) {
+  binary = rustExe, environment = noEnv, workingDirectory = repo) {
   const argv = kind === "ts"
-    ? ["--import", "tsx", "--no-warnings", join(repo, "scripts", "operator.mts"), command, "--state", state, ...(file ? ["--file", file] : [])]
+    ? ["--import", tsxLoader, "--no-warnings", join(repo, "scripts", "operator.mts"), command, "--state", state, ...(file ? ["--file", file] : [])]
     : kind === "bundle"
       ? [bundledOperator!, command, "--state", state, ...(file ? ["--file", file] : [])]
       : [command, "--state", state, ...(file ? ["--file", file] : [])];
   const start = performance.now();
   const p = spawnSync(kind === "rust" ? binary : process.execPath, argv, {
-    cwd: repo, env: environment, encoding: "utf8", maxBuffer: 4_000_000, windowsHide: true,
+    cwd: workingDirectory, env: environment, encoding: "utf8", maxBuffer: 4_000_000, windowsHide: true,
   });
   if (p.error) throw p.error;
   return { code: p.status, stdout: p.stdout, stderr: p.stderr, ms: performance.now() - start };
@@ -136,14 +138,86 @@ async function briefParity(state: string, root: string, label: string) {
   const rust = run("rust", "brief", state, rustFile);
   assert.equal(ts.code, 0, `${label}: TypeScript brief refused: ${ts.stderr}`);
   assert.equal(rust.code, 0, `${label}: Rust brief refused: ${rust.stderr}`);
+  assert.deepEqual(JSON.parse(ts.stdout), { saved: resolve(tsFile), private: true }, `${label}: TypeScript export response`);
+  assert.deepEqual(JSON.parse(rust.stdout), { saved: resolve(rustFile), private: true }, `${label}: Rust export response`);
   assert.equal(await readFile(tsFile, "utf8"), formatOperatorBrief(result), `${label}: TS brief`);
   assert.equal(await readFile(rustFile, "utf8"), formatOperatorBrief(result), `${label}: Rust brief`);
+  const stdoutOnly = run("rust", "brief", state);
+  assert.equal(stdoutOnly.code, 0, `${label}: Rust stdout brief refused: ${stdoutOnly.stderr}`);
+  assert.equal(stdoutOnly.stdout, `${formatOperatorBrief(result)}\n`, `${label}: Rust stdout brief extension`);
   assert.equal(await treeDigest(state), before, `${label}: brief modified source tree`);
   const overwrite = run("rust", "brief", state, rustFile);
   assert.notEqual(overwrite.code, 0, `${label}: Rust overwrote existing export`);
   assert.equal(await readFile(rustFile, "utf8"), formatOperatorBrief(result));
   parityChecks++;
   return { ts: ts.ms, rust: rust.ms };
+}
+
+async function briefPathParity(state: string, root: string) {
+  const before = await treeDigest(state);
+  const expectedBrief = formatOperatorBrief((await readOperatorResult(state))!);
+  const linkedParent = join(root, "export-linked-parent");
+  const foreignParent = join(root, "export-foreign-parent", "child");
+  await mkdir(foreignParent, { recursive: true });
+  await symlink(foreignParent, linkedParent, process.platform === "win32" ? "junction" : "dir");
+  const absolute = join(root, "absolute brief.md");
+  const cases = [
+    { label: "relative path", file: "relative brief.md" },
+    { label: "relative dot segments and missing intermediate directory", file: `.${sep}missing${sep}..${sep}dot brief.md` },
+    { label: "spaces and Unicode", file: `.${sep}missing${sep}..${sep}café 😀 brief.md` },
+    { label: "absolute path", file: absolute },
+    { label: "absolute dot segments", file: `${root}${sep}missing${sep}..${sep}absolute dot brief.md` },
+    { label: "linked parent followed by dot dot", file: `export-linked-parent${sep}..${sep}lexical target.md` },
+    ...(process.platform === "win32" ? [
+      { label: "drive-relative path", file: `${root.slice(0, 2)}drive relative brief.md` },
+      { label: "drive-rooted path", file: `${root.slice(2)}${sep}..${sep}${root.split(sep).at(-1)}${sep}drive rooted brief.md` },
+    ] : []),
+  ];
+  for (const { label, file } of cases) {
+    const expectedPath = resolve(root, file);
+    const ts = run("ts", "brief", state, file, rustExe, noEnv, root);
+    assert.equal(ts.code, 0, `${label}: TypeScript brief refused: ${ts.stderr}`);
+    assert.deepEqual(JSON.parse(ts.stdout), { saved: expectedPath, private: true }, `${label}: TypeScript export response`);
+    assert.equal(await readFile(expectedPath, "utf8"), expectedBrief, `${label}: TypeScript brief content`);
+    await rm(expectedPath);
+    const rust = run("rust", "brief", state, file, rustExe, noEnv, root);
+    assert.equal(rust.code, ts.code, `${label}: Rust exit differs: ${rust.stderr}`);
+    assert.deepEqual(JSON.parse(rust.stdout), JSON.parse(ts.stdout), `${label}: exact Rust export response`);
+    assert.equal(await readFile(expectedPath, "utf8"), expectedBrief, `${label}: Rust brief content`);
+    const prior = await readFile(expectedPath);
+    for (const kind of ["ts", "rust"] as const) {
+      const overwrite = run(kind, "brief", state, file, rustExe, noEnv, root);
+      assert.notEqual(overwrite.code, 0, `${label}: ${kind} overwrote an existing export`);
+      assert.equal(overwrite.stdout, "", `${label}: ${kind} emitted success after refusal`);
+      assert.deepEqual(await readFile(expectedPath), prior, `${label}: ${kind} changed existing export`);
+    }
+    refusalChecks++;
+    assert.equal(await treeDigest(state), before, `${label}: export modified source tree`);
+    parityChecks++;
+  }
+}
+
+async function statePathParity(state: string, root: string) {
+  const before = await treeDigest(state);
+  const name = basename(state);
+  const cases = [
+    { label: "relative task path", path: name },
+    ...(process.platform === "win32" ? [{ label: "drive-relative task path", path: `${root.slice(0, 2)}${name}` }] : []),
+  ];
+  for (const { label, path } of cases) {
+    for (const command of ["status", "result"] as const) {
+      const ts = run("ts", command, path, undefined, rustExe, noEnv, root);
+      const rust = run("rust", command, path, undefined, rustExe, noEnv, root);
+      assert.equal(ts.code, 0, `${label}: TypeScript ${command} refused: ${ts.stderr}`);
+      assert.equal(rust.code, ts.code, `${label}: Rust ${command} exit differs: ${rust.stderr}`);
+      assert.deepEqual(JSON.parse(ts.stdout), command === "status"
+        ? await operatorTaskStatus(state) : await readOperatorResult(state), `${label}: TypeScript ${command} response`);
+      assert.deepEqual(withoutProtocol(JSON.parse(rust.stdout)), JSON.parse(ts.stdout),
+        `${label}: Rust ${command} response`);
+      parityChecks++;
+    }
+    assert.equal(await treeDigest(state), before, `${label}: task path read modified source tree`);
+  }
 }
 
 async function refusal(state: string, command: "status" | "result", label: string) {
@@ -154,6 +228,32 @@ async function refusal(state: string, command: "status" | "result", label: strin
   assert.notEqual(rust.code, 0, `${label}: Rust accepted malformed input`);
   assert.equal(await treeDigest(state), before, `${label}: refusal modified source tree`);
   refusalChecks++;
+}
+
+async function fileBoundaryParity(root: string) {
+  const files = [
+    { label: "task", name: "task.json", limit: 8_192, command: "status" },
+    { label: "request", name: "request.json", limit: 8_192, command: "status" },
+    { label: "buyer intent", name: join("buyer", "intent.json"), limit: 65_536, command: "status" },
+    { label: "observation", name: "last-observation.json", limit: 8_192, command: "status" },
+    { label: "saved result", name: "result.json", limit: 150_000, command: "result" },
+    { label: "archived receipt", name: "receipt", limit: 2_000_000, command: "result" },
+  ] as const;
+  for (const { label, name, limit, command } of files) {
+    const fixture = await fresh(root, `bound-${label.replaceAll(" ", "-")}`, "quick", "Boundary café 😀?");
+    await journal(fixture.state, fixture.request);
+    await complete(fixture.state, fixture.request, "Boundary answer café 😀 [1]");
+    const receiptName = name === "receipt"
+      ? JSON.parse(await readFile(join(fixture.state, "result.json"), "utf8")).receiptFile as string
+      : undefined;
+    const file = join(fixture.state, name === "receipt" ? join("buyer", receiptName!) : name);
+    await padJsonFileToByteLength(file, limit);
+    assert.equal((await stat(file)).size, limit, `${label}: exact byte limit fixture`);
+    await parity(fixture.state, command, `${label} exactly ${limit} bytes`);
+    await padJsonFileToByteLength(file, limit + 1);
+    assert.equal((await stat(file)).size, limit + 1, `${label}: over-limit fixture`);
+    await refusal(fixture.state, command, `${label} ${limit + 1} bytes`);
+  }
 }
 
 const surrogateFallback = "This Rust candidate cannot represent unpaired UTF-16 surrogates. If this is a TypeScript-readable v1 directory, use the TypeScript Operator status/result/brief commands on the original directory. Do not rewrite files.";
@@ -208,6 +308,9 @@ async function main() {
     await parity(quick.state, "status", "completed quick");
     await parity(quick.state, "result", "completed quick");
     await briefParity(quick.state, root, "quick");
+    await briefPathParity(quick.state, root);
+    await statePathParity(quick.state, root);
+    await fileBoundaryParity(root);
 
     const deep = await fresh(root, "deep", "deep", "Việt Nam nghiên cứu Arc — nguồn nào? 😀");
     await journal(deep.state, deep.request);

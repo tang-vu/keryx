@@ -2,64 +2,120 @@ use crate::brief::brief;
 use crate::domain::{parse_intent, parse_task, valid_time, Intent, Task};
 use crate::json::Result;
 use crate::result::verify_result;
+#[cfg(windows)]
+use cap_fs_ext::OsMetadataExt;
+use cap_fs_ext::{DirExt, FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
+use cap_std::{
+    ambient_authority,
+    fs::{Dir, OpenOptions},
+};
+use same_file::Handle;
 use serde_json::{json, Value};
 use std::{
-    fs::{self, File, OpenOptions},
-    io::Read,
-    path::{Path, PathBuf},
+    fs,
+    io::{Read, Seek, SeekFrom},
+    path::{Component, Path},
 };
 
-fn checked_dir(path: &Path) -> Result<()> {
-    // Windows canonicalize adds a \\?\ prefix to normal absolute paths, so string
-    // comparison would reject every ordinary task. Inspect each ancestor instead.
-    if path
-        .components()
-        .any(|c| matches!(c, std::path::Component::ParentDir))
-    {
+fn checked_dir(path: &Path) -> Result<Dir> {
+    if path.components().any(|c| matches!(c, Component::ParentDir)) {
         return Err("directory path contains a parent traversal".into());
     }
-    for ancestor in path.ancestors() {
-        let meta = fs::symlink_metadata(ancestor).map_err(|e| e.to_string())?;
-        if meta.file_type().is_symlink() || reparse(&meta) {
+    // The only ambient open is the filesystem root. Each later component is
+    // resolved relative to a held parent handle, with no link traversal.
+    let root = path.ancestors().last().ok_or("invalid directory path")?;
+    let meta = fs::symlink_metadata(root).map_err(|e| e.to_string())?;
+    if !meta.is_dir() || meta.file_type().is_symlink() || root_reparse(&meta) {
+        return Err("directory root is not a direct directory".into());
+    }
+    let mut dir = Dir::open_ambient_dir(root, ambient_authority()).map_err(|e| e.to_string())?;
+    let relative = path.strip_prefix(root).map_err(|e| e.to_string())?;
+    for component in relative.components() {
+        let Component::Normal(name) = component else {
+            return Err("unsupported directory path component".into());
+        };
+        dir = dir.open_dir_nofollow(name).map_err(|e| e.to_string())?;
+        if reparse(&dir.dir_metadata().map_err(|e| e.to_string())?) {
             return Err("directory path contains a reparse point".into());
         }
     }
-    if !fs::symlink_metadata(path)
-        .map_err(|e| e.to_string())?
-        .is_dir()
-    {
-        return Err("task path is not a directory".into());
-    }
-    Ok(())
+    Ok(dir)
 }
 
 #[cfg(windows)]
-fn reparse(meta: &fs::Metadata) -> bool {
+fn root_reparse(meta: &fs::Metadata) -> bool {
     use std::os::windows::fs::MetadataExt;
     meta.file_attributes() & 0x400 != 0
 }
 #[cfg(not(windows))]
-fn reparse(_meta: &fs::Metadata) -> bool {
+fn root_reparse(_meta: &fs::Metadata) -> bool {
     false
 }
 
-fn read_json(path: &Path, max: usize) -> Result<Value> {
-    let meta = fs::symlink_metadata(path).map_err(|e| format!("{}: {e}", path.display()))?;
-    if !meta.is_file() || meta.file_type().is_symlink() || reparse(&meta) || meta.len() > max as u64
-    {
-        return Err("local file must be bounded and regular".into());
+#[cfg(windows)]
+fn reparse(meta: &cap_fs_ext::Metadata) -> bool {
+    meta.file_attributes() & 0x400 != 0
+}
+#[cfg(not(windows))]
+fn reparse(_meta: &cap_fs_ext::Metadata) -> bool {
+    false
+}
+
+fn open_regular(dir: &Dir, name: &str) -> Result<Handle> {
+    let mut options = OpenOptions::new();
+    options.read(true).follow(FollowSymlinks::No).nonblock(true);
+    let file = dir.open_with(name, &options).map_err(|e| e.to_string())?;
+    let meta = file.metadata().map_err(|e| e.to_string())?;
+    if !meta.is_file() || reparse(&meta) {
+        return Err("local file must be regular and direct".into());
     }
-    let file = open_regular(path)?;
-    let opened = file.metadata().map_err(|e| e.to_string())?;
-    if !opened.is_file() || reparse(&opened) || opened.len() > max as u64 {
-        return Err("local file changed or exceeds limit".into());
+    Handle::from_file(file.into_std()).map_err(|e| e.to_string())
+}
+
+fn read_json(dir: &Dir, name: &str, max: usize) -> Result<Value> {
+    read_json_during(dir, name, max, || {})
+}
+
+// The callback gives tests a deterministic point after the bounded read.
+fn read_json_during(dir: &Dir, name: &str, max: usize, after_read: impl FnOnce()) -> Result<Value> {
+    let file = open_regular(dir, name)?;
+    let opened = file.as_file().metadata().map_err(|e| e.to_string())?;
+    let opened_mtime = opened.modified().map_err(|e| e.to_string())?;
+    if opened.len() > max as u64 {
+        return Err("local file exceeds limit".into());
     }
     let mut bytes = Vec::with_capacity(max.min(8192));
-    file.take(max as u64 + 1)
+    file.as_file()
+        .take(max as u64 + 1)
         .read_to_end(&mut bytes)
         .map_err(|e| e.to_string())?;
     if bytes.len() > max {
         return Err("local file exceeds limit".into());
+    }
+    after_read();
+    // Re-read the same opened inode to catch byte changes even when a writer
+    // restores the length and timestamp. This is still not an atomic snapshot.
+    let mut view = file.as_file();
+    view.seek(SeekFrom::Start(0)).map_err(|e| e.to_string())?;
+    let mut again = Vec::with_capacity(bytes.len());
+    view.take(max as u64 + 1)
+        .read_to_end(&mut again)
+        .map_err(|e| e.to_string())?;
+    if again != bytes {
+        return Err("local file changed during inspection".into());
+    }
+    let after = file.as_file().metadata().map_err(|e| e.to_string())?;
+    let after_mtime = after.modified().map_err(|e| e.to_string())?;
+    if after.len() != opened.len()
+        || after_mtime != opened_mtime
+        || metadata_changed(&opened, &after)
+    {
+        return Err("local file changed during inspection".into());
+    }
+    // A rename can leave the first handle readable. Reopen through the held
+    // parent and compare kernel file identities, including on Windows.
+    if open_regular(dir, name)? != file {
+        return Err("local file replaced during inspection".into());
     }
     let text = std::str::from_utf8(&bytes).map_err(|e| e.to_string())?;
     serde_json::from_str(text).map_err(|e| {
@@ -69,20 +125,18 @@ fn read_json(path: &Path, max: usize) -> Result<Value> {
     })
 }
 
-fn open_regular(path: &Path) -> Result<File> {
-    let mut options = OpenOptions::new();
-    options.read(true);
-    #[cfg(windows)]
-    {
-        use std::os::windows::fs::OpenOptionsExt;
-        // Open the reparse point itself so a replacement cannot silently redirect this read.
-        options.custom_flags(0x0020_0000);
-    }
-    options.open(path).map_err(|e| e.to_string())
+#[cfg(unix)]
+fn metadata_changed(before: &fs::Metadata, after: &fs::Metadata) -> bool {
+    use std::os::unix::fs::MetadataExt;
+    before.ctime() != after.ctime() || before.ctime_nsec() != after.ctime_nsec()
+}
+#[cfg(not(unix))]
+fn metadata_changed(_before: &fs::Metadata, _after: &fs::Metadata) -> bool {
+    false
 }
 
-fn present(path: &Path) -> Result<bool> {
-    match fs::symlink_metadata(path) {
+fn present(dir: &Dir, name: &str) -> Result<bool> {
+    match dir.symlink_metadata(name) {
         Ok(_) => Ok(true),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
         Err(e) => Err(e.to_string()),
@@ -90,7 +144,8 @@ fn present(path: &Path) -> Result<bool> {
 }
 
 pub struct LocalTask {
-    dir: PathBuf,
+    dir: Dir,
+    buyer: Option<Dir>,
     task: Task,
     intent: Option<Intent>,
     stage: &'static str,
@@ -98,32 +153,32 @@ pub struct LocalTask {
 
 impl LocalTask {
     pub fn open(path: &Path) -> Result<Self> {
-        let dir = if path.is_absolute() {
-            path.to_path_buf()
-        } else {
-            std::env::current_dir()
-                .map_err(|e| e.to_string())?
-                .join(path)
-        };
-        checked_dir(&dir)?;
+        if path.components().any(|c| matches!(c, Component::ParentDir)) {
+            return Err("directory path contains a parent traversal".into());
+        }
+        let dir = std::path::absolute(path).map_err(|e| e.to_string())?;
+        let dir = checked_dir(&dir)?;
         let task = parse_task(
-            &read_json(&dir.join("task.json"), 8192)?,
-            &read_json(&dir.join("request.json"), 8192)?,
+            &read_json(&dir, "task.json", 8192)?,
+            &read_json(&dir, "request.json", 8192)?,
         )?;
-        let buyer = dir.join("buyer");
-        let (intent, stage) = if !present(&buyer)? {
-            (None, "ready")
+        let (buyer, intent, stage) = if !present(&dir, "buyer")? {
+            (None, None, "ready")
         } else {
-            checked_dir(&buyer)?;
-            if !present(&buyer.join("intent.json"))? {
-                (None, "journal_incomplete")
+            let buyer = dir.open_dir_nofollow("buyer").map_err(|e| e.to_string())?;
+            if reparse(&buyer.dir_metadata().map_err(|e| e.to_string())?) {
+                return Err("buyer path contains a reparse point".into());
+            }
+            if !present(&buyer, "intent.json")? {
+                (Some(buyer), None, "journal_incomplete")
             } else {
-                let intent = parse_intent(&read_json(&buyer.join("intent.json"), 65536)?, &task)?;
-                (Some(intent), "buyer_journaled")
+                let intent = parse_intent(&read_json(&buyer, "intent.json", 65536)?, &task)?;
+                (Some(buyer), Some(intent), "buyer_journaled")
             }
         };
         Ok(Self {
             dir,
+            buyer,
             task,
             intent,
             stage,
@@ -136,11 +191,13 @@ impl LocalTask {
         } else {
             None
         };
-        let saved = if !present(&self.dir.join("result.json"))? {
+        let saved = if !present(&self.dir, "result.json")? {
             "absent"
         } else {
-            let m =
-                fs::symlink_metadata(self.dir.join("result.json")).map_err(|e| e.to_string())?;
+            let m = self
+                .dir
+                .symlink_metadata("result.json")
+                .map_err(|e| e.to_string())?;
             if m.is_file() && !m.file_type().is_symlink() && !reparse(&m) && m.len() <= 150_000 {
                 "present_unchecked"
             } else {
@@ -159,11 +216,10 @@ impl LocalTask {
     }
 
     fn observation(&self, intent: &Intent) -> Result<Option<Value>> {
-        let path = self.dir.join("last-observation.json");
-        if !present(&path)? {
+        if !present(&self.dir, "last-observation.json")? {
             return Ok(None);
         }
-        let v = read_json(&path, 8192)?;
+        let v = read_json(&self.dir, "last-observation.json", 8192)?;
         let fields = v.as_object().ok_or("invalid observation")?;
         if fields.len() != 5
             || fields.keys().any(|k| {
@@ -217,15 +273,14 @@ impl LocalTask {
     }
 
     pub fn result(&self) -> Result<Option<Value>> {
-        let path = self.dir.join("result.json");
-        if !present(&path)? {
+        if !present(&self.dir, "result.json")? {
             return Ok(None);
         }
         let intent = self
             .intent
             .as_ref()
             .ok_or("saved result has no matching buyer journal")?;
-        let snapshot = read_json(&path, 150_000)?;
+        let snapshot = read_json(&self.dir, "result.json", 150_000)?;
         let receipt_file = snapshot
             .get("receiptFile")
             .and_then(Value::as_str)
@@ -240,7 +295,11 @@ impl LocalTask {
         {
             return Err("invalid receipt filename".into());
         }
-        let receipt = read_json(&self.dir.join("buyer").join(receipt_file), 2_000_000)?;
+        let buyer = self
+            .buyer
+            .as_ref()
+            .ok_or("saved result has no buyer directory")?;
+        let receipt = read_json(buyer, receipt_file, 2_000_000)?;
         verify_result(&self.task, intent, &snapshot, &receipt).map(Some)
     }
 
@@ -248,3 +307,7 @@ impl LocalTask {
         brief(&self.result()?.ok_or("no saved result")?)
     }
 }
+
+#[cfg(test)]
+#[path = "io-tests.rs"]
+mod tests;

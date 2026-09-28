@@ -1,5 +1,22 @@
 # Keryx — Decision Log
 
+**D-244** - Anchor candidate local reads to directory handles and reject observed changes -
+*Checking a pathname and then opening it separately can read a different file after
+a concurrent rename or link replacement.* The Rust inspection candidate now
+walks task directories through held handles, refuses links/reparse points, and opens
+fixed task/buyer children relative to those handles. Use pinned capability-based
+filesystem libraries rather than new application-owned unsafe OS bindings. Bound
+each read, reject non-regular files before consuming content, and detect observed
+entry or content changes during inspection. On Unix, opening a raced FIFO must not
+block waiting for a writer. Tests must control the mutation point rather than rely
+on scheduler timing. This is a file-access boundary, not an atomic transaction over
+all mutable v1 files or a sandbox against a malicious same-user writer that can
+restore data/metadata. Task/receipt binding checks, the explicit Unicode restriction
+and the TypeScript production authority remain in force. A failed inspection emits
+no result and does not rewrite input files or initiate recovery/purchase. Reversible:
+easy while candidate-only; production cutover still requires the remaining parity,
+snapshot, rollback and platform evidence.
+
 **D-243** - Keep the Rust reader's Unicode restriction explicit and preserve v1 data -
 *JavaScript strings can contain unpaired UTF-16 surrogates that the candidate's
 Rust `String`/JSON value representation cannot preserve.* Keep the read-only

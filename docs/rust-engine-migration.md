@@ -91,7 +91,8 @@ The empty Node process baseline was 95.6 ms. The Rust release executable was
 1,862,916 bytes; the bundled `.mjs` was 169,102 bytes but depends on an installed
 Node runtime. These measurements describe same-host CLI launch behavior, not
 domain-computation speed, Electron/Tauri startup, RAM, install footprint or a
-clean-machine package.
+clean-machine package. These are historical PR #2 measurements; they do not measure
+the later handle-based, double-read implementation described below.
 
 ## Unicode compatibility policy
 
@@ -131,27 +132,70 @@ readability, the Rust fallback diagnostic, empty Rust stdout, no refused brief
 file and unchanged source trees. They cover task/request, journal, observation,
 saved answer/key and a TypeScript-written receipt payload with surrogate keys and
 values. Paired escaped astral keys/values remain digest-compatible. The harness
-also asserts the TypeScript Markdown encoding limitation above. Hosted checks and
-PR review for this follow-up must pass before merge; these local results do not
-close the remaining gates below.
+also asserts the TypeScript Markdown encoding limitation above. [PR #3](https://github.com/tang-vu/keryx/pull/3)
+passed hosted application, Linux and Windows Rust checks and automated review;
+the corresponding main workflows also passed. This evidence does not close the
+remaining gates below.
 
 ## Remaining read-only acceptance work
 
 The following source audit is an acceptance backlog, not a new cutover approval.
 The prior Windows/Linux CI pass proves the covered corpus, not every gate above.
 
+### File inspection boundary
+
+[D-244](../DECISIONS.md) anchors candidate reads to held directory handles. The
+filesystem root is opened once, then task components and the buyer directory are
+opened without following links. Fixed child filenames are resolved from those
+handles. The implementation uses pinned [`cap-std`](https://docs.rs/cap-std/4.0.3/cap_std/)
+and [`cap-fs-ext`](https://docs.rs/cap-fs-ext/4.0.3/cap_fs_ext/) APIs, with opened-file
+identity comparisons, instead of application-owned unsafe OS bindings.
+
+Each JSON read remains byte-bounded and UTF-8 checked. Two reads from the same
+file handle must agree; metadata and the directory entry's file identity are also
+checked. Observable growth, content changes or entry replacements cause refusal.
+Unix file opens are nonblocking so a FIFO substituted at open cannot wait for a
+writer before the regular-file check. An inspection refusal does not rewrite the
+original files, publish a partial result, or initiate a purchase or recovery.
+
+These checks do **not** establish a transaction snapshot across all v1 files.
+A held directory identifies the opened object: if its name can be replaced, the
+reader stays with that object rather than following the new pathname. V1 has no
+directory-wide generation or writer-coordination protocol. A malicious same-user
+writer that can restore bytes/metadata between observations, hard links, and
+filesystem/mount behavior outside the tested environments remain outside this
+guarantee. Re-run a failed local read after ordinary writes finish; preserve the
+task and buyer journal. Do not interpret these checks as independent settlement
+evidence or full read-only cutover acceptance.
+
+The D-244 local Windows GNU release harness passed 74 strict checks (43 parity,
+31 paired refusals) and nine separately counted intentional Unicode
+incompatibilities. In addition to brief output paths, it verifies ordinary relative
+and Windows drive-relative task paths for `status` and `result`. The six file-size
+fixtures use TypeScript-written valid records and count UTF-8 bytes. Controlled
+native read tests cover growth, same-size edits with restored mtime, entry
+replacement and held-directory rename. On this host, Windows prevented the held
+directory rename; creating a file symlink lacked privilege and was explicitly
+skipped. Hosted platform logs must distinguish that skip from exercised coverage.
+
+This run used Node v24.12.0 and Rust 1.98.1 GNU; the release executable was
+2,073,809 bytes. Seven fresh-process median launch-through-output times were
+443.5/51.2 ms (TypeScript/Rust) for `status`, 475.6/48.7 ms for `result`, and
+486.8/55.8 ms for new-file `brief`. As with the historical measurements above,
+these are same-host CLI observations, not desktop or domain-computation results.
+
 | Gate | Existing evidence | Work still required |
 | --- | --- | --- |
-| CLI contract | The harness compares status/result JSON and generated Markdown, including refusal to overwrite. | Rust `brief --file` returns `file` and `engineProtocol`; TypeScript returns an absolute `saved` path and `private: true`. The harness does not compare this response. Align the supported adapter contract and test relative/absolute paths and exit states. Rust stdout-only brief is a documented extension, not a TypeScript CLI parity claim. |
+| CLI contract | `brief --file` now emits the TypeScript contract: absolute `saved` path and `private: true`. The harness compares exact response JSON, Markdown, lexical relative/absolute paths, dot segments, Unicode/spaces, a linked parent followed by `..`, and overwrite refusal with empty stdout and unchanged output. Windows adds drive-relative and drive-rooted cases. | Keep broader adapter compatibility under evaluation. Rust stdout-only brief remains a documented extension, not a TypeScript CLI parity claim. |
 | Full v1 input | The numeric, Unicode scalar, request-binding and corruption corpus passes; D-243 defines the candidate's unsupported Unicode case. | Resolve lossless legacy Unicode handling before full v1 cutover. Expand optional/older-record, unknown-version, truncation and canonical-key coverage; never infer universal equivalence from a finite corpus. |
-| File bounds | Readers bound task/request/observation to 8,192 bytes, intent to 65,536, result to 150,000 and receipt to 2,000,000. Oversized result refusal is exercised. | Add exact-limit and limit-plus-one cases for each file type, including valid multibyte JSON and read growth. |
-| Paths and concurrent reads | Ancestor checks, bounded regular-file reads and a buyer-directory symlink/junction refusal test exist. | Prove file, task and ancestor link behavior and concurrent replacement. Path checks followed by a separate open do not pin directory names; Unix file open currently lacks a no-follow flag. Same-size mutation is not detected as a stable snapshot. These are source-level risks, not a demonstrated exploit or an accepted hostile-writer boundary. |
-| Recovery/export | Synthetic source tree hashes remain unchanged by reads; new-file brief export refuses overwrite; TypeScript continues to read v1. | Add explicit restart/disable-candidate/offline rollback drills. Define and inject export write/sync failures: both implementations can leave a partially written new brief, so atomic export is not established. Test export-parent links under the chosen output policy. |
+| File bounds | Differential fixtures use valid multibyte JSON at the exact limit and limit plus one for task/request/observation (8,192 bytes), intent (65,536), result (150,000) and receipt (2,000,000). Native tests exercise bounded reads and controlled growth. | Preserve byte-based limits when expanding schemas; these cases do not prove every possible concurrent writer schedule. |
+| Paths and concurrent reads | Directory-relative no-follow opens, repeated bounded reads and opened-file identity checks replace the separate pathname check/open. Native tests control growth, same-size writes with restored mtime, entry replacement, held-directory rename, file/task/ancestor links, and Unix FIFO refusal. Windows may prevent a held-directory rename; file-symlink coverage requires creation privileges. | Multi-file transaction snapshots and a hostile same-user writer that restores state between observations remain outside this boundary. Record the exercised platform branches with each release; do not treat a permission-related test skip as exercised coverage. |
+| Recovery/export | Synthetic source tree hashes remain unchanged by reads; new-file brief export refuses overwrite; TypeScript continues to read v1. Output paths follow TypeScript lexical resolution and normal parent-link behavior. | Add explicit restart/disable-candidate/offline rollback drills. Define and inject export write/sync failures: both implementations can leave a partially written new brief, so atomic export is not established. Broaden output-parent link cases beyond lexical `link/..`. |
 | Platforms/release | Pinned Rust lockfile, native lint/tests, differential CI on Linux and Windows MSVC; copied native executable runs on the same Windows host. | Record checks and review for each update. Clean-machine packaging and Tauri MSVC/package/IPC/startup/memory acceptance remain separate open gates. |
 
-Prioritize the read snapshot/path boundary and the CLI response mismatch before
-attempting a read-only production switch. Keep synthetic fixtures private and
-separate from actual payment or traction evidence.
+Next, expand the legacy-input corpus and exercise explicit rollback and export
+failure drills before attempting a read-only production switch. Keep synthetic
+fixtures private and separate from actual payment or traction evidence.
 
 ## Next domain candidate: local task creation
 
@@ -197,13 +241,21 @@ The release binary is `rust/target/release/keryx-engine.exe` on Windows and
 `KERYX_RUST_ENGINE` override for another build location. CLI commands are
 `keryx-engine status --state PATH`, `keryx-engine result --state PATH`, and
 `keryx-engine brief --state PATH [--file PATH]`. Status and result emit JSON;
-brief emits UTF-8 Markdown to stdout, or creates a new file and emits its path as
-JSON when `--file` is supplied.
+brief emits UTF-8 Markdown to stdout, or creates a new file and emits
+`{"saved":"ABSOLUTE_PATH","private":true}` when `--file` is supplied. The saved
+path and opened target use lexical resolution, matching TypeScript; output-parent
+links can be followed. Unix exports use mode `0600`; Windows inherits the parent
+ACL. `private: true` does not audit the chosen parent or its permissions.
 
 On this Windows development PC, Rust/Cargo 1.98.1 with the
 `x86_64-pc-windows-gnu` host was installed via official `rustup` for user-local
 core work. The official installer download matched its published SHA-256 and a
-native smoke binary ran.
+native smoke binary ran. The new filesystem dependencies also require GNU target
+binutils when building on this host. User-local official MSYS2 MinGW64 binutils
+2.47-3, gettext-runtime 1.0-1, libiconv 1.19-1, zlib 1.3.2-2 and zstd 1.5.7-2 were
+checked against their package-page SHA-256 values and supplied through the build
+process's `PATH`. This is local GNU tooling, not a Windows MSVC or Tauri prerequisite
+substitute; hosted Windows acceptance uses MSVC.
 This does **not** meet the [Tauri 2 Windows prerequisites](https://v2.tauri.app/start/prerequisites/):
 Microsoft C++ Build Tools, a Windows SDK and the MSVC Rust target are required.
 [Rust's Windows MSVC guide](https://rust-lang.github.io/rustup/installation/windows-msvc.html)

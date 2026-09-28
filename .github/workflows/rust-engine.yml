@@ -9,6 +9,7 @@ on:
     paths:
       - "rust/**"
       - "scripts/test-rust-engine.mts"
+      - "scripts/rust-file-boundary-fixtures.mts"
       - "scripts/operator.mts"
       - "lib/**"
       - "package.json"
@@ -20,6 +21,7 @@ on:
     paths:
       - "rust/**"
       - "scripts/test-rust-engine.mts"
+      - "scripts/rust-file-boundary-fixtures.mts"
       - "scripts/operator.mts"
       - "lib/**"
       - "package.json"
@@ -58,7 +60,7 @@ jobs:
         run: cargo +${{ matrix.rust }} fmt --manifest-path rust/Cargo.toml --all --check
 
       - name: Test Rust workspace
-        run: cargo +${{ matrix.rust }} test --manifest-path rust/Cargo.toml --locked
+        run: cargo +${{ matrix.rust }} test --manifest-path rust/Cargo.toml --locked -- --show-output
 
       - name: Lint Rust workspace
         run: cargo +${{ matrix.rust }} clippy --manifest-path rust/Cargo.toml --all-targets --locked -- -D warnings
