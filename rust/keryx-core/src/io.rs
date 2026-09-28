@@ -150,17 +150,32 @@ pub struct LocalTask {
     stage: &'static str,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum InterReadPoint {
+    Task,
+    Request,
+    Observation,
+    Snapshot,
+}
+
 impl LocalTask {
     pub fn open(path: &Path) -> Result<Self> {
+        Self::open_with_hook(path, |_| {})
+    }
+
+    // This private seam lets tests perform a controlled write only after a
+    // complete file read. It does not change the per-file D-244 read checks.
+    fn open_with_hook(path: &Path, mut hook: impl FnMut(InterReadPoint)) -> Result<Self> {
         if path.components().any(|c| matches!(c, Component::ParentDir)) {
             return Err("directory path contains a parent traversal".into());
         }
         let dir = std::path::absolute(path).map_err(|e| e.to_string())?;
         let dir = checked_dir(&dir)?;
-        let task = parse_task(
-            &read_json(&dir, "task.json", 8192)?,
-            &read_json(&dir, "request.json", 8192)?,
-        )?;
+        let task_file = read_json(&dir, "task.json", 8192)?;
+        hook(InterReadPoint::Task);
+        let request_file = read_json(&dir, "request.json", 8192)?;
+        let task = parse_task(&task_file, &request_file)?;
+        hook(InterReadPoint::Request);
         let (buyer, intent, stage) = if !present(&dir, "buyer")? {
             (None, None, "ready")
         } else {
@@ -185,11 +200,16 @@ impl LocalTask {
     }
 
     pub fn status(&self) -> Result<Value> {
+        self.status_with_hook(|_| {})
+    }
+
+    fn status_with_hook(&self, mut hook: impl FnMut(InterReadPoint)) -> Result<Value> {
         let observation = if let Some(intent) = &self.intent {
             self.observation(intent)?
         } else {
             None
         };
+        hook(InterReadPoint::Observation);
         let saved = if !present(&self.dir, "result.json")? {
             "absent"
         } else {
@@ -284,6 +304,10 @@ impl LocalTask {
     }
 
     pub fn result(&self) -> Result<Option<Value>> {
+        self.result_with_hook(|_| {})
+    }
+
+    fn result_with_hook(&self, mut hook: impl FnMut(InterReadPoint)) -> Result<Option<Value>> {
         if !present(&self.dir, "result.json")? {
             return Ok(None);
         }
@@ -292,6 +316,7 @@ impl LocalTask {
             .as_ref()
             .ok_or("saved result has no matching buyer journal")?;
         let snapshot = read_json(&self.dir, "result.json", 150_000)?;
+        hook(InterReadPoint::Snapshot);
         let receipt_file = snapshot
             .get("receiptFile")
             .and_then(Value::as_str)
