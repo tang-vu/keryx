@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { appendFile, chmod, copyFile, lstat, mkdir, mkdtemp, readFile, readdir, rm,
-  stat, writeFile } from "node:fs/promises";
+  realpath, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -39,8 +39,9 @@ let processChecks = 0;
 let parityChecks = 0;
 let rollbackChecks = 0;
 
-function child(executable: string, args: string[], maxBuffer = 4_000_000) {
-  const result = spawnSync(executable, args, { cwd: repo, env: noEnv, windowsHide: true,
+function child(executable: string, args: string[], maxBuffer = 4_000_000,
+  environment: NodeJS.ProcessEnv = noEnv) {
+  const result = spawnSync(executable, args, { cwd: repo, env: environment, windowsHide: true,
     encoding: "utf8", timeout: 30_000, maxBuffer });
   if (result.error) throw new Error(`Subprocess did not finish: ${result.error.message}`);
   return result;
@@ -77,6 +78,11 @@ async function writtenV1(state: string) {
   const authorization = authorizationWithNonce(payer, requirement, `0x${"a".repeat(64)}`);
   await createBuyerJournal(join(state, "buyer"), { schema: "keryx-buyer-intent-v1", request,
     requirement, authorization, queryId: buyerJobId(authorization) });
+  // The production snapshot writer requires exact canonical directory paths.
+  // Windows TEMP can spell the same directory with a different alias/casing.
+  assert.equal(await realpath(state), resolve(state), "fixture task path is not canonical");
+  assert.equal(await realpath(join(state, "buyer")), join(resolve(state), "buyer"),
+    "fixture buyer path is not canonical");
   const intent = await readBuyerJournal(join(state, "buyer"));
   const answer = "Synthetic native artifact answer [1]";
   const job = { queryId: intent.queryId, status: "completed", answer,
@@ -212,7 +218,7 @@ async function main() {
     "binary must come from this checkout's Rust release directory");
   const original = await stat(releaseBinary);
   assert(original.isFile() && original.size > 0, "build the current release binary first");
-  const root = await mkdtemp(join(tmpdir(), "keryx-native-artifact-"));
+  const root = await realpath(await mkdtemp(join(tmpdir(), "keryx-native-artifact-")));
   const active = new Set<{ controller: AbortController; outcome: Promise<Outcome> }>();
   const tracked = (action: (signal: AbortSignal) => Promise<unknown>) => {
     const controller = new AbortController();
@@ -296,7 +302,7 @@ async function main() {
       ...(process.env.KERYX_TEST_RUST_TOOLCHAIN ? [`+${process.env.KERYX_TEST_RUST_TOOLCHAIN}`] : []),
       "--edition=2021", join(repo, "scripts", "rust-native-test-fixture.rs"),
       "-o", compiledFixture,
-    ]);
+    ], 4_000_000, process.env); // Host compiler/linker needs trusted MSVC SDK variables.
     assert.equal(compile.status, 0, compile.stderr);
     await copyFile(compiledFixture, fixtureBinary);
     if (process.platform !== "win32") await chmod(fixtureBinary, 0o755);
