@@ -137,4 +137,77 @@ path, so the drill compiled it in a simple build path and copied it into the
 Unicode/metacharacter runtime path. Both the candidate and fault process ran from
 that runtime path. Local source metadata describes a development worktree;
 the dedicated Linux/MSVC workflow establishes the exact clean checkout-to-build
-record. Hosted results remain required before release.
+record. The [corrected PR #12 artifact run](https://github.com/tang-vu/keryx/actions/runs/36473720660)
+passed all nine artifact, 24 process, five parity and three guarded rollback checks
+plus the guard self-check and eight focused Vitest tests on both platforms. That
+run built the exact PR test checkout `e114e04dcdcd0d363352b82c7e5796a7f105dc48`;
+this is the synthetic merge checkout, distinct from the feature branch head.
+The hosted Windows fixture uses a canonical temporary root before the unchanged
+TypeScript snapshot writer, and only its trusted test compiler inherits the SDK
+build environment. Candidate runtime processes retain their minimal environment.
+
+## Independent artifact handoff
+
+D-252 extends the same-job copy check with separate producer and consumer jobs
+for Windows MSVC and Linux. The producer builds from the exact checkout, passes
+the existing artifact/process drill and generates its manifest immediately from
+that binary. It uploads only the canonical executable and manifest under a name
+bound to the platform, target and source commit. No task data or fault executable
+belongs in that package.
+
+Artifact names include the workflow run ID, target and source commit, and remain
+stable across attempts of that run. After passing its tests, a rerun of the
+producer may overwrite only its own same-run artifact. A consumer-only retry can
+therefore still download the earlier successful producer's artifact. The consumer
+depends on the producer job, so it does not run during replacement. This follows
+the action's [explicit overwrite behavior](https://github.com/actions/upload-artifact/blob/main/README.md#overwriting-an-artifact);
+the CI package is not an immutable public release.
+
+The consumer starts on a separate runner, downloads that exact artifact from the
+same workflow run and installs the Node dependencies needed by the evaluator and
+TypeScript oracle. It has no Rust installation or build step and cannot substitute
+a rebuild when the artifact is unavailable. It checks the exact two-file inventory
+and regular-file types, then supplies the expected source from workflow metadata
+independently of the manifest. Artifact downloads do not preserve executable mode,
+so only the canonical Linux binary receives execute permission in the isolated
+artifact directory. The manifest/hash/host/protocol checks still govern launching
+it. GitHub's transfer digest warning alone is insufficient for this acceptance;
+our verification must fail on a mismatch. These transfer semantics follow the
+[GitHub artifact guide](https://docs.github.com/en/actions/tutorials/store-and-share-data)
+and [official upload action](https://github.com/actions/upload-artifact/blob/main/README.md).
+
+Using fresh synthetic v1 records from the production TypeScript writer, the
+consumer must compare status/result/brief and prove explicit guarded TypeScript
+reopening after native refusal, with the source tree unchanged. Record its actual
+OS, architecture, Node and available runner/glibc metadata alongside the checks.
+The consumer runner may have other tools preinstalled; this is evidence that the
+artifact path needs no Rust build step, not proof of a tool-free or independently
+clean OS. Public artifact authenticity, a signed installer, broader Linux runtime
+support and production cutover remain separate gates. Hosted handoff evidence is
+required before marking this slice complete.
+
+The test driver has explicit `stage` and `consume` phases:
+
+```text
+node --import tsx scripts/test-rust-native-handoff.mts stage
+node --import tsx scripts/test-rust-native-handoff.mts consume
+```
+
+Both require `KERYX_HANDOFF_SHA`, `KERYX_HANDOFF_TARGET` and an absolute
+`KERYX_HANDOFF_DIR`; the SHA must also match the harness checkout. `stage`
+additionally requires `KERYX_HANDOFF_BINARY` to select that checkout's canonical
+release executable and a new staging directory. `consume` uses the downloaded
+two-file directory and never generates a replacement manifest. For a local drill,
+select a successful trusted main push run and its independently recorded head SHA,
+check out that source, and download its exact platform artifact. Do not obtain the
+expected SHA from the manifest. PR runs can build a synthetic merge commit that
+differs from the feature branch head.
+
+Local Windows GNU rehearsal passed four artifact refusals (missing, corrupted,
+wrong-source and explicitly disabled), six transport/evaluator parity checks,
+three guarded TypeScript rollback commands and the guard self-check, with the
+original v1 tree unchanged. The extracted shared fixture retained the D-251 drill's
+nine artifact, 24 process, five parity and three rollback checks. GNU is explicitly
+declared for this local rehearsal; the hosted Windows matrix remains MSVC. The
+cross-job transfer and later downloaded-MSVC run require their own recorded
+results before completion.
