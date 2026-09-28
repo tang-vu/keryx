@@ -1,4 +1,5 @@
 /** Private local task handoff to the existing caller-funded buyer CLI. */
+import { constants } from "node:fs";
 import { open } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { createOperatorTask, formatOperatorBrief, operatorTaskStatus, readOperatorResult, resumeOperatorTask } from "../lib/operator/task.ts";
@@ -24,7 +25,9 @@ The brief is private plaintext and refuses to overwrite an existing file.
 Use a private parent directory; Windows permissions inherit its ACL.`;
 
 async function readRequest(path: string) {
-  const file = await open(path, "r");
+  // On Unix, opening a FIFO for reading can wait forever for a writer. Its
+  // nonblocking open still yields a handle, which the regular-file check rejects.
+  const file = await open(path, process.platform === "win32" ? "r" : constants.O_RDONLY | constants.O_NONBLOCK);
   try {
     if (!(await file.stat()).isFile()) throw new Error("Request must be a regular file");
     const buffer = Buffer.alloc(8193);

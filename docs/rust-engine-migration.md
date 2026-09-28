@@ -439,9 +439,12 @@ writer. That stage does not establish native creation durability or switch calle
 D-254 evaluates the [separate native publication boundary](rust-task-publication-evaluation.md)
 under a verified private parent, with retained incomplete results and explicit
 platform durability limits. Its bounded Linux/MSVC evaluation passed in PR #15;
-Windows entry durability and writer cutover remain open. D-255 now evaluates
-[real CLI and desktop caller admission](rust-task-admission-evaluation.md) without
-changing production callers or monetary policy.
+Windows entry durability and writer cutover remain open. D-255's
+[real CLI and desktop caller admission](rust-task-admission-evaluation.md) passed
+its bounded Linux/MSVC corpus in PR #16 without changing production callers or
+monetary policy. D-256 separately prevents a Unix request FIFO from blocking the
+existing Operator CLI before its regular-file refusal; this keeps TypeScript as
+the production writer.
 
 After the read-only gates pass, evaluate only the immutable v1 task envelope;
 this is a selected next evaluation scope, not permission to switch callers now.
