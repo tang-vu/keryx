@@ -23,18 +23,29 @@ are internal operational data; the former public snapshot is retired in v0.22.59
 Fixed operating costs, billing reconciliation and independent customer cohorts have
 not been verified for this baseline.
 
-Live official documentation checked September 9 lists Arc as testnet-only in
+Historical check, September 9: official documentation then listed Arc as testnet-only in
 [Circle Gateway supported blockchains](https://developers.circle.com/gateway/references/supported-blockchains).
-[Arc RPC documentation](https://docs.arc.io/arc/references/rpc-endpoints) also separates
-testnet parameters from future mainnet parameters. It now publishes `.arc.io` RPC
-hosts; the repository's older `.arc.network` configuration must be explicitly
+[Arc RPC documentation](https://docs.arc.io/arc/references/rpc-endpoints) then separated
+testnet parameters from future mainnet parameters. It published `.arc.io` RPC
+hosts at that check; the repository's older `.arc.network` configuration must be explicitly
 revalidated before a network configuration change. These observations are dependency
 evidence, not an announcement of a mainnet launch date.
 
-Rechecked September 11: the same official Circle table still lists Arc as testnet-only
-for Gateway (domain 26, no mainnet identifier), and Arc's RPC reference still publishes
+Historical recheck, September 11: the same official Circle table still listed Arc as testnet-only
+for Gateway (domain 26, no mainnet identifier), and Arc's RPC reference published
 testnet parameters while reserving mainnet parameters for separate publication. M1
-therefore remains unproven. No mainnet constants or service availability were inferred.
+was therefore unproven then. No mainnet constants or service availability were inferred.
+
+Rechecked September 28: [Arc's current connection guide](https://docs.arc.io/arc/references/connect-to-arc)
+publishes mainnet chain ID `5042`, mainnet RPCs and explorer alongside testnet
+`5042002`. [Circle's current Gateway table](https://developers.circle.com/gateway/references/supported-blockchains)
+lists Arc domain `26` with mainnet name `arc` and testnet name `arcTestnet`; it says
+nanopayments are supported except on Solana. Read-only `eth_chainId` calls to the
+published Blockdaemon, dRPC, and QuickNode Arc mainnet RPCs each returned `0x13b2`
+(`5042`) from the development host; the primary RPC returned HTTP 403 from that host.
+This advances external availability evidence only. Repository code and signer domains
+remain pinned to testnet; mainnet token addresses, deployed contract code, SDK behavior,
+Gateway settlement, and a production release have not been verified. M1 remains open.
 
 ## Product acceptance map
 
@@ -97,7 +108,7 @@ end-to-end research acceptance, independent review or a new confidence guarantee
 
 | Gate | Required evidence | Baseline status |
 | --- | --- | --- |
-| M1 Network/services | Official Arc mainnet chain/token/RPC/explorer values, Gateway nanopayment support, deployed code and SDK support verified against the intended environment | External availability not established; Gateway docs currently say testnet-only |
+| M1 Network/services | Official Arc mainnet chain/token/RPC/explorer values, Gateway nanopayment support, deployed code and SDK support verified against the intended environment | Arc/Circle publish mainnet network and Gateway availability as of September 28; token, deployed code, SDK and end-to-end settlement checks remain open |
 | M2 Authority/isolation | Separate production configuration, deployments and keys; no cross-environment signatures/nonces/DB records; bounded user and treasury funds | Testnet-only implementation; migration design and tests required |
 | M3 Security | Independent review of signer/session authority, contracts, x402/Gateway, registry, encrypted delivery and auth; remediated critical/high findings and documented residuals | Repository tests/threat model exist; independent mainnet review not demonstrated |
 | M4 Settlement/recovery | Lost response, replay/concurrency, Circle/RPC outage, settled-but-undelivered and reconciliation drills; no silent pending-to-failed transitions | Focused tests and owner pilots exist; release-wide drill evidence incomplete |
