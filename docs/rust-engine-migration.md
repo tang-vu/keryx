@@ -378,6 +378,14 @@ CLI and Electron callers invoke TypeScript directly; no production native-engine
 router is shipped. Desktop packaging and Tauri acceptance remain separate gates.
 Keep synthetic fixtures private and separate from actual payment or traction evidence.
 
+D-251 adds an explicitly selected CLI-only
+[native caller evaluation](./native-inspection-evaluation.md). Its trusted artifact
+pin, protocol handshake, bounded process lifecycle and manual rollback drill address
+the caller boundary without changing production routing. Cross-platform artifact
+and real-process fault evidence must be recorded before calling that evaluation
+validated; clean-machine installation and a production cutover decision remain
+separate gates.
+
 ### Brief publication boundary
 
 [D-245](../DECISIONS.md) makes both CLI adapters stage the complete brief in an

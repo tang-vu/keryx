@@ -27,7 +27,16 @@ fn resolve_output_path(path: &Path) -> Result<PathBuf, String> {
 }
 
 fn run() -> Result<(), String> {
-    let mut args = env::args().skip(1);
+    let args = env::args().skip(1).collect::<Vec<_>>();
+    if args.first().is_some_and(|command| command == "protocol") {
+        if args.len() != 1 {
+            return Err("protocol accepts no flags".into());
+        }
+        // This query never opens a task or reads private state.
+        println!("{}", protocol_json());
+        return Ok(());
+    }
+    let mut args = args.into_iter();
     let command = args
         .next()
         .ok_or("usage: keryx-engine status|result|brief --state PATH [--file PATH]")?;
@@ -62,6 +71,10 @@ fn run() -> Result<(), String> {
     Ok(())
 }
 
+fn protocol_json() -> &'static str {
+    r#"{"protocol":"keryx-readonly-cli-v1","engine":"keryx-engine"}"#
+}
+
 fn main() {
     if let Err(error) = run() {
         eprintln!("keryx-engine: {error}");
@@ -71,8 +84,16 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::resolve_output_path;
+    use super::{protocol_json, resolve_output_path};
     use std::path::Path;
+
+    #[test]
+    fn protocol_query_is_two_fixed_fields() {
+        assert_eq!(
+            protocol_json(),
+            r#"{"protocol":"keryx-readonly-cli-v1","engine":"keryx-engine"}"#
+        );
+    }
 
     #[test]
     fn output_path_is_absolute_and_lexically_clean() {

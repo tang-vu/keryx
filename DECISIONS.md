@@ -1,5 +1,34 @@
 # Keryx — Decision Log
 
+**D-251** - Evaluate a pinned read-only native artifact through a bounded caller -
+*A compatible CLI alone does not establish safe caller lifecycle or artifact
+rollback.* Add an explicit evaluation CLI and reusable transport for `status`,
+saved `result` and stdout `brief`. Require a trusted manifest, exact executable
+hash, explicit expected source commit and matching host/target identity, then
+check the versioned no-task `protocol` command before inspection. Build metadata
+comes from the trusted build procedure; hashing an arbitrary executable does not
+prove its source, authenticate an untrusted manifest or prevent a same-user
+replacement between verification and launch. Keep the installation directory and
+manifest provenance trusted.
+
+Launch without a shell, with fixed arguments and a minimal environment. Permit
+one active request per transport instance, cap stdout/stderr bytes and share one
+monotonic process deadline across handshake and command. Artifact verification
+is byte bounded and precedes that deadline. Cancellation and failures must wait
+for confirmed child exit before reuse; if termination remains unconfirmed after
+the grace period, release local handles and permanently disable that instance.
+Validate complete UTF-8 and command response shapes without copying monetary
+domain rules. Preserve exact brief bytes and D-248's local, nonauthorizing meaning.
+
+Actual Windows/Linux subprocess tests and a copied-artifact rollback drill are
+release gates; unit mocks alone cannot prove process cleanup. Fault executables
+are test-only and never part of the artifact. The existing TypeScript Operator
+and Electron remain the production callers. There is no automatic fallback,
+writer, payment recovery or Tauri cutover. Reversible: disable the evaluator and
+explicitly reopen the unchanged v1 directory with the TypeScript reader; never
+rewrite records or repurchase to recover. See
+[native inspection evaluation](docs/native-inspection-evaluation.md).
+
 **D-250** - Preserve the positive micro-USDC candidate boundary with explicit v1 fallback -
 *The existing TypeScript request tolerance accepts positive values such as `1e-15`
 that round to zero micro-USDC; Rust already refuses that creator budget.* Retain
