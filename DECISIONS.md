@@ -1,5 +1,21 @@
 # Keryx — Decision Log
 
+**D-250** - Preserve the positive micro-USDC candidate boundary with explicit v1 fallback -
+*The existing TypeScript request tolerance accepts positive values such as `1e-15`
+that round to zero micro-USDC; Rust already refuses that creator budget.* Retain
+Rust's nonzero integer micro-USDC rule and document this as an intentional,
+separately tested candidate refusal. The diagnostic directs users of a
+TypeScript-readable v1 directory to the existing read/export commands, preserving
+the original records and avoiding repurchase. Do not weaken the candidate rule to
+claim parity, silently normalize a stored request, or tighten a shared TypeScript
+schema that legacy inspection uses. Synthetic production-writer fixtures must prove
+status/result/brief refusal with no success output or brief creation, exact one-micro
+control parity, and explicit guarded TypeScript reopening after the candidate is
+disabled. This is a monetary representation boundary, not a demonstrated payment or
+cap bypass. New TypeScript writer/admission policy remains a separate decision with
+legacy compatibility and buyer quote/create/recovery tests required. D-248 outputs
+remain nonauthorizing; no signing, funding, settlement or production routing changes.
+
 **D-249** - Match the existing v1 timestamp grammar without rewriting records -
 *A general RFC3339 parser both refused valid minute-only v1 timestamps and accepted
 spellings the TypeScript schema rejects.* Validate the read-only candidate's
