@@ -16,6 +16,7 @@ on:
       - "scripts/test-rust-inspection-contract.mts"
       - "scripts/test-rust-tiny-budget.mts"
       - "scripts/test-rust-task-preparation.mts"
+      - "scripts/test-rust-task-publication.mts"
       - "scripts/rust-offline-fallback-guard.mjs"
       - "scripts/operator.mts"
       - "desktop/src/main.ts"
@@ -38,6 +39,7 @@ on:
       - "scripts/test-rust-inspection-contract.mts"
       - "scripts/test-rust-tiny-budget.mts"
       - "scripts/test-rust-task-preparation.mts"
+      - "scripts/test-rust-task-publication.mts"
       - "scripts/rust-offline-fallback-guard.mjs"
       - "scripts/operator.mts"
       - "desktop/src/main.ts"
@@ -85,6 +87,9 @@ jobs:
       - name: Test Rust workspace
         run: cargo +${{ matrix.rust }} test --manifest-path rust/Cargo.toml --locked -- --show-output
 
+      - name: Exercise native task publication fault and mutation corpus
+        run: cargo +${{ matrix.rust }} test --manifest-path rust/Cargo.toml -p keryx-core --features publication-evaluation --locked publication::tests -- --show-output
+
       - name: Exercise deterministic inter-file inspection contract
         run: node --import tsx scripts/test-rust-inspection-contract.mts
         env:
@@ -101,6 +106,12 @@ jobs:
 
       - name: Compare prepared task bytes and read-only reopening with TypeScript
         run: node --import tsx scripts/test-rust-task-preparation.mts
+
+      - name: Build feature-gated native task publication test bridge
+        run: cargo +${{ matrix.rust }} build --manifest-path rust/Cargo.toml -p keryx-core --example publish-task-v1 --features publication-evaluation --release --locked
+
+      - name: Exercise synthetic private task publication and TypeScript reopening
+        run: node --import tsx scripts/test-rust-task-publication.mts
 
       - name: Verify positive sub-micro candidate refusal and explicit TypeScript fallback
         run: node --import tsx scripts/test-rust-tiny-budget.mts
