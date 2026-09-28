@@ -1,5 +1,21 @@
 # Keryx — Decision Log
 
+**D-249** - Match the existing v1 timestamp grammar without rewriting records -
+*A general RFC3339 parser both refused valid minute-only v1 timestamps and accepted
+spellings the TypeScript schema rejects.* Validate the read-only candidate's
+`createdAt`, `observedAt` and `savedAt` against the installed Zod default datetime
+contract: a four-digit Gregorian date, uppercase `T`/`Z`, hours and minutes, optional
+seconds, and an optional nonempty decimal fraction only after seconds. Reject
+offsets, leap seconds, alternate separators and trailing data. Preserve the original
+accepted string, including minute precision and long fractions. A bounded ASCII
+validator with Gregorian leap-year checks replaces the broader Chrono parser; remove
+that now-unused dependency without changing other dependency versions. Differential
+tests must check the live TypeScript oracle, all three fields and commands that do
+not consume a given field. This corrects candidate compatibility only: TypeScript
+schemas, persisted formats, monetary rules and production routing stay unchanged.
+Reversible: disable the candidate and inspect the unchanged v1 directory with the
+existing TypeScript commands.
+
 **D-248** - Limit v1 file inspection to local, nonauthorizing observations -
 *Individual files can pass integrity checks while belonging to different moments
 in a mutable directory.* The read-only Rust candidate may report locally bound

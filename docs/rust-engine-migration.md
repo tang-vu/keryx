@@ -1,6 +1,6 @@
 # Shared Rust engine: staged migration and acceptance
 
-**Status, September 28, 2026:** authorized evaluation and a bounded read-only
+**Status, September 29, 2026:** authorized evaluation and a bounded read-only
 candidate, not a production cutover. The deployed TypeScript buyer, Operator and
 Electron paths remain authoritative. This document defines what evidence is needed
 before any domain changes owner. [D-242](../DECISIONS.md) records the decision.
@@ -197,15 +197,30 @@ closes the covered Unicode defect, not every read-only cutover gate.
 The following source audit is an acceptance backlog, not a new cutover approval.
 The prior Windows/Linux CI pass proves the covered corpus, not every gate above.
 
-### Confirmed v1 boundary gaps
+### Datetime compatibility and monetary boundary
 
-Two additional source-level probes remain open acceptance work. The installed
-TypeScript datetime schema accepts UTC minute precision such as
-`2026-09-28T00:00Z`, which the current Rust RFC3339 parser refuses. Conversely,
-Rust accepts leap seconds, a space separator and lowercase `t` that TypeScript
-refuses. The shared candidate validator needs a separate correction and differential
-coverage for task `createdAt`, observation `observedAt` and result `savedAt`, without
-rewriting timestamps or weakening the TypeScript schema.
+[D-249](../DECISIONS.md) replaces general RFC3339 parsing with the existing v1
+TypeScript datetime grammar. The candidate accepts UTC minute precision such as
+`2026-09-28T00:00Z`, optional seconds and nonempty fractional seconds. Four-digit
+Gregorian dates include year zero and use the century/four-century leap rule.
+Uppercase `T` and `Z` are required; leap seconds, offsets, alternate separators,
+non-ASCII digits and trailing data refuse. Accepted strings retain their original
+spelling and precision in task `createdAt`, observation `observedAt` and result
+`savedAt`; no file is rewritten or timestamp normalized.
+
+Local Windows GNU validation passed 20 core and 12 CLI native tests, formatting,
+Clippy, release build, TypeScript and scoped ESLint. The expanded CLI corpus passed
+232 strict checks (136 parity and 96 paired refusals), including five accepted and
+13 refused datetime vectors independently applied to each of the three fields.
+Each vector first checks the installed Zod oracle. The corpus also preserves the
+read boundaries: an invalid observation does not invalidate a separately saved
+result, and status can still report `present_unchecked` for a result with an invalid
+saved timestamp. Brief success/refusal, original spelling and unchanged source
+trees are checked. Four candidate resource refusals remain counted separately;
+12 guarded fallback commands, one guard self-check and three local export cases
+passed. Local file-symlink setup was privilege-blocked; hosted platform checks
+remain required. This resolves the demonstrated datetime discrepancy, not universal
+v1 equivalence or production cutover.
 
 The TypeScript request schema also admits the positive budget `1e-15`, because its
 floating-point tolerance rounds that value to zero micro-USDC. A synthetic task
@@ -264,6 +279,14 @@ The differential harness retained 172 strict checks (118 parity and 54 paired
 refusals), four resource refusals, 12 guarded fallback commands and one guard
 self-check. Three local export-boundary cases ran; file-symlink setup was explicitly
 privilege-blocked. Hosted Linux/MSVC results remain a separate release gate.
+
+The [PR #9 Linux/MSVC matrix](https://github.com/tang-vu/keryx/actions/runs/36464419380)
+subsequently passed the explicit inter-file case and separate release stress test
+on both platforms. Windows ran 19 ordinary core and 12 CLI tests; Linux ran 20 and
+12. Strict differential counts were 172 (118 parity/54 refusals) and 166 (114/52),
+respectively, with four export-boundary cases and zero skips on each. Application
+CI and the [independent automated review](https://github.com/tang-vu/keryx/pull/9#issuecomment-5875947882)
+passed before merge `4bc4804`. These counts describe that release's covered corpus.
 
 ### File inspection boundary
 

@@ -8,6 +8,7 @@ import { basename, join, resolve, sep } from "node:path";
 import { performance } from "node:perf_hooks";
 import { pathToFileURL } from "node:url";
 import { build, version as esbuildVersion } from "esbuild";
+import { z } from "zod";
 import { a2aResearchPackage } from "../lib/a2a/research-package-definition.ts";
 import { createBuyerJournal, readBuyerJournal } from "../lib/buyer/journal.ts";
 import { buyerJobId } from "../lib/buyer/policy.ts";
@@ -141,6 +142,81 @@ async function resultCorpus(root: string) {
       `${fixture.label}: TypeScript receipt citation selection`);
     await parity(state.state, "result", fixture.label);
     await briefParity(state.state, root, fixture.label);
+  }
+}
+
+async function timestampCorpus(state: string, root: string) {
+  // These fields share Zod's default datetime grammar but cross different
+  // read paths. Mutate one at a time so a refusal identifies its boundary.
+  const fields = [
+    { file: "task.json", key: "createdAt", command: "status" },
+    { file: "last-observation.json", key: "observedAt", command: "status" },
+    { file: "result.json", key: "savedAt", command: "result" },
+  ] as const;
+  const accepted = [
+    ["minute only", "2026-09-28T00:00Z"],
+    ["optional seconds", "2026-09-28T23:59:59Z"],
+    ["long fractional seconds", "2026-09-28T00:00:00.12345678901234567890Z"],
+    ["year zero leap day", "0000-02-29T00:00Z"],
+    ["four-century leap day", "2000-02-29T00:00Z"],
+  ] as const;
+  const rejected = [
+    ["leap second", "2026-09-28T00:00:60Z"],
+    ["space separator", "2026-09-28 00:00Z"],
+    ["lowercase separator", "2026-09-28t00:00Z"],
+    ["lowercase zone", "2026-09-28T00:00z"],
+    ["numeric offset", "2026-09-28T00:00+00:00"],
+    ["fraction without seconds", "2026-09-28T00:00.1Z"],
+    ["empty fraction", "2026-09-28T00:00:00.Z"],
+    ["century non-leap day", "1900-02-29T00:00Z"],
+    ["hour 24", "2026-09-28T24:00Z"],
+    ["final LF", "2026-09-28T00:00Z\n"],
+    ["final CRLF", "2026-09-28T00:00Z\r\n"],
+    ["final line separator", "2026-09-28T00:00Z\u2028"],
+    ["non-ASCII digit", "2026-09-28T００:00Z"],
+  ] as const;
+  for (const { file, key, command } of fields) {
+    const path = join(state, file);
+    const original = await readFile(path);
+    const source = JSON.parse(original.toString("utf8"));
+    try {
+      for (const [label, value] of accepted) {
+        assert.equal(z.string().datetime().safeParse(value).success, true, `${label}: Zod oracle`);
+        await writeFile(path, JSON.stringify({ ...source, [key]: value }));
+        await parity(state, command, `${key}: ${label}`);
+        const response = command === "status" ? await operatorTaskStatus(state) : await readOperatorResult(state);
+        const observed = key === "observedAt" ? (response as Awaited<ReturnType<typeof operatorTaskStatus>>).lastObservation?.observedAt
+          : (response as Record<string, unknown> | null)?.[key];
+        assert.equal(observed, value, `${key}: original timestamp spelling was changed`);
+        if (key === "savedAt" && label === "minute only") {
+          await briefParity(state, root, "timestamp-minute-only");
+        }
+      }
+      for (const [label, value] of rejected) {
+        assert.equal(z.string().datetime().safeParse(value).success, false, `${label}: Zod oracle`);
+        await writeFile(path, JSON.stringify({ ...source, [key]: value }));
+        await refusal(state, command, `${key}: ${label}`);
+        if (label === "leap second") {
+          if (key === "observedAt") await parity(state, "result", "invalid observation does not invalidate saved result");
+          if (key === "savedAt") await parity(state, "status", "invalid saved timestamp remains unchecked in status");
+          if (key === "createdAt") await refusal(state, "result", "invalid task timestamp invalidates result");
+        }
+        if (label === "leap second" && key !== "observedAt") {
+          const target = join(root, `timestamp-rejected-${key}-brief.md`);
+          const before = await treeDigest(state);
+          for (const kind of ["ts", "rust"] as const) {
+            const output = run(kind, "brief", state, target);
+            assert.notEqual(output.code, 0, `${kind} exported brief from invalid ${key}`);
+            assert.equal(output.stdout, "", `${kind} emitted brief success after refusal`);
+            await assert.rejects(stat(target), { code: "ENOENT" });
+          }
+          assert.equal(await treeDigest(state), before, "rejected brief modified source tree");
+          refusalChecks++;
+        }
+      }
+    } finally {
+      await writeFile(path, original);
+    }
   }
 }
 
@@ -800,6 +876,7 @@ async function main() {
     await writeFile(observationFile, JSON.stringify(invalidObservation));
     await refusal(tampered.state, "status", "invalid observation datetime");
     await writeFile(observationFile, originalObservation);
+    await timestampCorpus(tampered.state, root);
     await rm(receiptFile);
     await refusal(tampered.state, "result", "missing archived receipt");
     await writeFile(receiptFile, receipt);
