@@ -20,6 +20,8 @@ import { resumeResearch } from "../lib/buyer/client.ts";
 import { padJsonFileToByteLength } from "./rust-file-boundary-fixtures.mts";
 import { defaultCitation, resultFixtures, type ResultFixture } from "./rust-result-acceptance-fixtures.mts";
 import { invalidV1Files, truncatedJson, unsupportedVersion } from "./rust-invalid-v1-fixtures.mts";
+import { assertNodeLosslessOracle, jsonVectors, nonFiniteVectors, byteVectors,
+  embedRawReceiptProbe } from "./rust-lossless-v1-oracle.mts";
 
 const repo = resolve(import.meta.dirname, "..");
 const tsxLoader = import.meta.resolve("tsx");
@@ -32,7 +34,7 @@ const benchmarkBundle = process.argv.includes("--bundled-baseline");
 let bundledOperator: string | undefined;
 let parityChecks = 0;
 let refusalChecks = 0;
-let incompatibilityChecks = 0;
+let resourceLimitChecks = 0;
 let offlineFallbackChecks = 0;
 let offlineGuardChecks = 0;
 let exportBoundaryChecks = 0;
@@ -233,15 +235,17 @@ async function briefParity(state: string, root: string, label: string) {
   assert.equal(rust.code, 0, `${label}: Rust brief refused: ${rust.stderr}`);
   assert.deepEqual(JSON.parse(ts.stdout), { saved: resolve(tsFile), private: true }, `${label}: TypeScript export response`);
   assert.deepEqual(JSON.parse(rust.stdout), { saved: resolve(rustFile), private: true }, `${label}: Rust export response`);
-  assert.equal(await readFile(tsFile, "utf8"), formatOperatorBrief(result), `${label}: TS brief`);
-  assert.equal(await readFile(rustFile, "utf8"), formatOperatorBrief(result), `${label}: Rust brief`);
+  const expectedBriefBytes = Buffer.from(formatOperatorBrief(result), "utf8");
+  assert.deepEqual(await readFile(tsFile), expectedBriefBytes, `${label}: TS brief`);
+  assert.deepEqual(await readFile(rustFile), expectedBriefBytes, `${label}: Rust brief`);
   const stdoutOnly = run("rust", "brief", state);
   assert.equal(stdoutOnly.code, 0, `${label}: Rust stdout brief refused: ${stdoutOnly.stderr}`);
-  assert.equal(stdoutOnly.stdout, `${formatOperatorBrief(result)}\n`, `${label}: Rust stdout brief extension`);
+  assert.equal(stdoutOnly.stdout, Buffer.from(`${formatOperatorBrief(result)}\n`, "utf8").toString("utf8"),
+    `${label}: Rust stdout brief extension`);
   assert.equal(await treeDigest(state), before, `${label}: brief modified source tree`);
   const overwrite = run("rust", "brief", state, rustFile);
   assert.notEqual(overwrite.code, 0, `${label}: Rust overwrote existing export`);
-  assert.equal(await readFile(rustFile, "utf8"), formatOperatorBrief(result));
+  assert.deepEqual(await readFile(rustFile), expectedBriefBytes);
   parityChecks++;
   return { ts: ts.ms, rust: rust.ms };
 }
@@ -490,32 +494,27 @@ async function fileBoundaryParity(root: string) {
   }
 }
 
-const surrogateFallback = "This Rust candidate cannot represent unpaired UTF-16 surrogates. If this is a TypeScript-readable v1 directory, use the TypeScript Operator status/result/brief commands on the original directory. Do not rewrite files.";
-
-async function surrogateRefusal(state: string, command: "status" | "result" | "brief", label: string, root: string) {
+async function candidateResourceRefusal(state: string, root: string, label: string) {
   const before = await treeDigest(state);
-  const file = command === "brief" ? join(root, `${label}-rust-refused.md`) : undefined;
-  const tsFile = command === "brief" ? join(root, `${label}-ts-readable.md`) : undefined;
-  const ts = run("ts", command, state, tsFile);
-  const rust = run("rust", command, state, file);
-  assert.equal(ts.code, 0, `${label}: TypeScript must read this v1 directory: ${ts.stderr}`);
-  if (command === "result") {
-    assert.equal(JSON.parse(ts.stdout).answer, (await readOperatorResult(state))?.answer,
-      `${label}: TypeScript result changed the saved answer`);
+  for (const command of ["result", "brief"] as const) {
+    const tsFile = command === "brief" ? join(root, `${label}-ts.md`) : undefined;
+    const rustFile = command === "brief" ? join(root, `${label}-rust.md`) : undefined;
+    const ts = run("ts", command, state, tsFile);
+    const rust = run("rust", command, state, rustFile);
+    assert.equal(ts.code, 0, `${label}: TypeScript fallback refused ${command}: ${ts.stderr}`);
+    assert.notEqual(rust.code, 0, `${label}: candidate accepted over-limit ${command}`);
+    assert.equal(rust.stdout, "", `${label}: candidate emitted partial output`);
+    assert.match(rust.stderr, /invalid or unsupported local JSON:/);
+    assert.match(rust.stderr, /TypeScript/, `${label}: missing fallback instruction`);
+    if (command === "result") assert.deepEqual(JSON.parse(ts.stdout), await readOperatorResult(state));
+    else {
+      assert.deepEqual(JSON.parse(ts.stdout), { saved: resolve(tsFile!), private: true });
+      assert.deepEqual(await readFile(tsFile!), Buffer.from(formatOperatorBrief((await readOperatorResult(state))!), "utf8"));
+      await assert.rejects(stat(rustFile!), { code: "ENOENT" });
+    }
+    assert.equal(await treeDigest(state), before, `${label}: read modified source tree`);
+    resourceLimitChecks++;
   }
-  if (tsFile) {
-    const result = await readOperatorResult(state);
-    assert(result);
-    assert.deepEqual(await readFile(tsFile), Buffer.from(formatOperatorBrief(result), "utf8"),
-      `${label}: TypeScript brief bytes differ from its UTF-8 encoding`);
-  }
-  assert.notEqual(rust.code, 0, `${label}: Rust unexpectedly accepted unpaired UTF-16`);
-  assert.equal(rust.stdout, "", `${label}: Rust emitted partial output`);
-  assert.match(rust.stderr, /invalid or unsupported local JSON:/, `${label}: missing parse diagnostic`);
-  assert.ok(rust.stderr.includes(surrogateFallback), `${label}: missing actionable TypeScript fallback`);
-  if (file) await assert.rejects(stat(file), { code: "ENOENT" }, `${label}: Rust created a brief after refusal`);
-  assert.equal(await treeDigest(state), before, `${label}: refusal modified source tree`);
-  incompatibilityChecks++;
 }
 
 async function insertOverwrittenString(path: string, field: string, escapedValue: string) {
@@ -527,8 +526,131 @@ async function insertOverwrittenString(path: string, field: string, escapedValue
   await writeFile(path, original.replace(needle, `${needle}"${escapedValue}", ${needle}`));
 }
 
+async function losslessReceiptCorpus(root: string) {
+  for (const [index, vector] of jsonVectors.entries()) {
+    const fixture = await fresh(root, `lossless-receipt-${index}`);
+    await journal(fixture.state, fixture.request);
+    await complete(fixture.state, fixture.request, `Lossless ${index} [1]`, { rawProbe: JSON.parse(vector.raw) });
+    const snapshot = JSON.parse(await readFile(join(fixture.state, "result.json"), "utf8"));
+    const receiptFile = join(fixture.state, "buyer", snapshot.receiptFile);
+    await embedRawReceiptProbe(receiptFile, "rawProbe", vector.raw);
+    const receipt = JSON.parse(await readFile(receiptFile, "utf8"));
+    assert.equal(researchReceiptDigest(receipt.payload), snapshot.receiptDigest,
+      `${vector.label}: raw receipt changed canonical binding`);
+    assert.equal(canonicalJson(receipt.payload.rawProbe), vector.canonical,
+      `${vector.label}: raw parser changed code units or key order`);
+    await parity(fixture.state, "result", vector.label);
+    await briefParity(fixture.state, root, `lossless-${index}`);
+  }
+  for (const [index, vector] of nonFiniteVectors.entries()) {
+    const fixture = await fresh(root, `nonfinite-receipt-${index}`);
+    await journal(fixture.state, fixture.request);
+    await complete(fixture.state, fixture.request, "Overflow answer", { rawProbe: { n: null } });
+    const snapshot = JSON.parse(await readFile(join(fixture.state, "result.json"), "utf8"));
+    const receiptFile = join(fixture.state, "buyer", snapshot.receiptFile);
+    const raw = await readFile(receiptFile, "utf8");
+    const compact = JSON.stringify(JSON.parse(raw));
+    assert.ok(compact.includes('"rawProbe":{"n":null}'));
+    await writeFile(receiptFile, compact.replace('"rawProbe":{"n":null}', () => `"rawProbe":${vector.raw}`));
+    await refusal(fixture.state, "result", `${vector.label} canonical refusal`);
+  }
+}
+
+async function bomMatrix(root: string) {
+  const fixture = await fresh(root, "bom-file-matrix");
+  await journal(fixture.state, fixture.request);
+  await complete(fixture.state, fixture.request, "BOM answer [1]");
+  const snapshot = JSON.parse(await readFile(join(fixture.state, "result.json"), "utf8"));
+  const files = ["task.json", "request.json", join("buyer", "intent.json"),
+    "last-observation.json", "result.json", join("buyer", snapshot.receiptFile)];
+  const matrix: Record<string, Record<string, number | null>> = {};
+  for (const [index, name] of files.entries()) {
+    const path = join(fixture.state, name);
+    const original = await readFile(path);
+    await writeFile(path, Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), original]));
+    try {
+      const before = await treeDigest(fixture.state);
+      matrix[name] = {};
+      for (const command of ["status", "result", "brief"] as const) {
+        const tsFile = command === "brief" ? join(root, `bom-${index}-ts.md`) : undefined;
+        const rustFile = command === "brief" ? join(root, `bom-${index}-rust.md`) : undefined;
+        const ts = run("ts", command, fixture.state, tsFile);
+        const rust = run("rust", command, fixture.state, rustFile);
+        matrix[name][command] = ts.code;
+        assert.equal(ts.code, 0, `${name}: TypeScript BOM ${command} refused: ${ts.stderr}`);
+        assert.equal(rust.code, ts.code, `${name}: BOM ${command} exit differs: TS ${ts.stderr}; Rust ${rust.stderr}`);
+        if (command === "brief") {
+          assert.deepEqual(JSON.parse(ts.stdout), { saved: resolve(tsFile!), private: true });
+          assert.deepEqual(JSON.parse(rust.stdout), { saved: resolve(rustFile!), private: true });
+          assert.deepEqual(await readFile(rustFile!), await readFile(tsFile!), `${name}: BOM brief bytes`);
+        } else assert.deepEqual(withoutProtocol(JSON.parse(rust.stdout)), JSON.parse(ts.stdout),
+          `${name}: BOM ${command} JSON`);
+        assert.equal(await treeDigest(fixture.state), before, `${name}: BOM ${command} wrote source`);
+        parityChecks++;
+      }
+    } finally { await writeFile(path, original); }
+  }
+  console.log(`BOM matrix ${JSON.stringify(matrix)}`);
+}
+
+async function losslessRefusalCorpus(root: string) {
+  const malformed = await fresh(root, "lossless-malformed-bytes");
+  const taskFile = join(malformed.state, "task.json");
+  const original = await readFile(taskFile);
+  for (const vector of byteVectors.filter(vector => !vector.boundedReaderAccepts)) {
+    // A later valid schema wins if decoding/parsing succeeds. A strict task
+    // schema therefore cannot mask an invalid UTF-8 or JSON escape refusal.
+    await writeFile(taskFile, Buffer.concat([Buffer.from('{"schema":'), vector.bytes,
+      Buffer.from(","), original.subarray(1)]));
+    await refusal(malformed.state, "status", vector.label);
+  }
+  await writeFile(taskFile, original);
+
+  const citations = await fresh(root, "invalid-citation-container");
+  await journal(citations.state, citations.request);
+  await complete(citations.state, citations.request, "Citation answer");
+  const snapshotPath = join(citations.state, "result.json");
+  const snapshot = JSON.parse(await readFile(snapshotPath, "utf8"));
+  const originalSnapshot = await readFile(snapshotPath);
+  const originalReceiptPath = join(citations.state, "buyer", snapshot.receiptFile);
+  const originalReceipt = JSON.parse(await readFile(originalReceiptPath, "utf8"));
+  for (const [label, value] of [["null", null], ["object", {}], ["number", 7]] as const) {
+    const receipt = structuredClone(originalReceipt);
+    receipt.payload.citations = value;
+    const digest = researchReceiptDigest(receipt.payload);
+    receipt.integrity.digest = digest;
+    const name = `receipt-${digest.slice(7)}.json`;
+    const file = join(citations.state, "buyer", name);
+    await writeFile(file, JSON.stringify(receipt));
+    await writeFile(snapshotPath, JSON.stringify({ ...snapshot, receiptDigest: digest, receiptFile: name }));
+    try { await refusal(citations.state, "result", `receipt citations ${label} with valid digest`); }
+    finally { await writeFile(snapshotPath, originalSnapshot); await rm(file, { force: true }); }
+  }
+
+  const depth = await fresh(root, "candidate-depth-limit");
+  await journal(depth.state, depth.request);
+  await complete(depth.state, depth.request, "Depth answer");
+  const depthPath = join(depth.state, "result.json");
+  const depthSnapshot = JSON.parse(await readFile(depthPath, "utf8"));
+  let nested: unknown = 0;
+  for (let index = 0; index < 130; index++) nested = [nested];
+  depthSnapshot.job.ignoredDepthProbe = nested;
+  await writeFile(depthPath, JSON.stringify(depthSnapshot));
+  await candidateResourceRefusal(depth.state, root, "depth-129-plus");
+
+  const nodes = await fresh(root, "candidate-node-limit");
+  await journal(nodes.state, nodes.request);
+  await complete(nodes.state, nodes.request, "Node answer", { rawProbe: { x: 0 } });
+  const nodeSnapshot = JSON.parse(await readFile(join(nodes.state, "result.json"), "utf8"));
+  const nodeReceipt = join(nodes.state, "buyer", nodeSnapshot.receiptFile);
+  await embedRawReceiptProbe(nodeReceipt, "rawProbe", `{${'"x":0,'.repeat(200100)}"x":0}`);
+  assert.ok((await stat(nodeReceipt)).size < 2_000_000, "node fixture must stay under receipt byte limit");
+  await candidateResourceRefusal(nodes.state, root, "syntactic-nodes-over-200000");
+}
+
 async function main() {
   await stat(rustExe).catch(() => { throw new Error(`Build release Rust binary first: ${rustExe}`); });
+  const oracleCounts = assertNodeLosslessOracle();
   const root = await realpath(await mkdtemp(join(tmpdir(), "keryx-rust-parity-")));
   try {
     const quick = await fresh(root, "quick");
@@ -547,6 +669,9 @@ async function main() {
     await statePathParity(quick.state, root);
     await fileBoundaryParity(root);
     await resultCorpus(root);
+    await losslessReceiptCorpus(root);
+    await bomMatrix(root);
+    await losslessRefusalCorpus(root);
     await malformedV1Corpus(root);
     assertOfflineGuard();
     await offlineFallback(quick.state, root, "valid-v1");
@@ -732,37 +857,36 @@ async function main() {
     await writeFile(escapedReceiptPath, (await readFile(escapedReceiptPath, "utf8")).replaceAll("😀", "\\ud83d\\ude00"));
     await parity(escapedReceipt.state, "result", "escaped paired astral receipt key and value");
 
-    // JSON.parse accepts unpaired UTF-16 escapes, while Rust strings cannot hold
-    // them. These are asserted intentional candidate incompatibilities, not parity.
+    // Unpaired UTF-16 code units remain readable v1 data in both engines.
     const loneHigh = await fresh(root, "lone-high-question", "quick", "\ud800");
-    await surrogateRefusal(loneHigh.state, "status", "lone high in task question", root);
+    await parity(loneHigh.state, "status", "lone high in task question");
     const loneLow = await fresh(root, "lone-low-question", "quick", "\udc00");
-    await surrogateRefusal(loneLow.state, "status", "lone low in task question", root);
+    await parity(loneLow.state, "status", "lone low in task question");
 
     const requestSurrogate = await fresh(root, "lone-request");
     await insertOverwrittenString(join(requestSurrogate.state, "request.json"), "question", "\\ud800");
-    await surrogateRefusal(requestSurrogate.state, "status", "lone high in request overwritten value", root);
+    await parity(requestSurrogate.state, "status", "lone high in request overwritten value");
 
     const journalSurrogate = await fresh(root, "lone-journal");
     await journal(journalSurrogate.state, journalSurrogate.request);
     await insertOverwrittenString(join(journalSurrogate.state, "buyer", "intent.json"), "schema", "\\ud800");
-    await surrogateRefusal(journalSurrogate.state, "status", "lone high in journal overwritten value", root);
+    await parity(journalSurrogate.state, "status", "lone high in journal overwritten value");
 
     const observationSurrogate = await fresh(root, "lone-observation");
     await journal(observationSurrogate.state, observationSurrogate.request);
     await complete(observationSurrogate.state, observationSurrogate.request, "Observation answer");
     await insertOverwrittenString(join(observationSurrogate.state, "last-observation.json"), "schema", "\\udc00");
-    await surrogateRefusal(observationSurrogate.state, "status", "lone low in observation overwritten value", root);
+    await parity(observationSurrogate.state, "status", "lone low in observation overwritten value");
 
     const snapshotSurrogate = await fresh(root, "lone-snapshot-answer");
     await journal(snapshotSurrogate.state, snapshotSurrogate.request);
     await complete(snapshotSurrogate.state, snapshotSurrogate.request, "Answer with \ud800");
-    await surrogateRefusal(snapshotSurrogate.state, "result", "lone high in saved answer", root);
+    await parity(snapshotSurrogate.state, "result", "lone high in saved answer");
     assert.equal((await readOperatorResult(snapshotSurrogate.state))?.answer, "Answer with \ud800",
       "TypeScript saved result lost a UTF-16 code unit");
-    await surrogateRefusal(snapshotSurrogate.state, "brief", "lone high in saved answer brief", root);
+    await briefParity(snapshotSurrogate.state, root, "lone high in saved answer brief");
     await offlineFallback(snapshotSurrogate.state, root, "surrogate-v1");
-    assert.match(await readFile(join(root, "lone high in saved answer brief-ts-readable.md"), "utf8"), /\uFFFD/,
+    assert.match(await readFile(join(root, "lone high in saved answer brief-ts.md"), "utf8"), /\uFFFD/,
       "UTF-8 Markdown cannot preserve the unpaired code unit");
 
     const snapshotKey = await fresh(root, "lone-snapshot-key");
@@ -772,7 +896,7 @@ async function main() {
     const snapshotText = await readFile(snapshotPath, "utf8");
     assert.match(snapshotText, /"job": \{/);
     await writeFile(snapshotPath, snapshotText.replace('"job": {', '"job": { "\\udc00": "ignored",'));
-    await surrogateRefusal(snapshotKey.state, "result", "lone low in ignored snapshot job key", root);
+    await parity(snapshotKey.state, "result", "lone low in ignored snapshot job key");
 
     const receiptSurrogate = await fresh(root, "lone-receipt");
     await journal(receiptSurrogate.state, receiptSurrogate.request);
@@ -780,7 +904,28 @@ async function main() {
       "Receipt answer", { unicodeProbe: { "\ud800": "\udc00" } });
     const receiptSnapshot = JSON.parse(await readFile(join(receiptSurrogate.state, "result.json"), "utf8"));
     assert.equal(receiptSnapshot.receiptDigest, surrogateDigest, "surrogate payload changed saved digest");
-    await surrogateRefusal(receiptSurrogate.state, "result", "lone surrogate receipt payload key and value", root);
+    await parity(receiptSurrogate.state, "result", "lone surrogate receipt payload key and value");
+
+    const lowAnswer = await fresh(root, "lone-low-answer");
+    await journal(lowAnswer.state, lowAnswer.request);
+    await complete(lowAnswer.state, lowAnswer.request, "Answer with \udc00");
+    await parity(lowAnswer.state, "result", "lone low in saved answer");
+    await briefParity(lowAnswer.state, root, "lone low in saved answer brief");
+    const ledger = await fresh(root, "lone-ledger-text");
+    await journal(ledger.state, ledger.request);
+    await complete(ledger.state, ledger.request, "Ledger answer");
+    const ledgerSnapshotPath = join(ledger.state, "result.json");
+    const ledgerSnapshot = JSON.parse(await readFile(ledgerSnapshotPath, "utf8"));
+    const ledgerReceipt = JSON.parse(await readFile(join(ledger.state, "buyer", ledgerSnapshot.receiptFile), "utf8"));
+    ledgerReceipt.payload.settlement.ledgerCompleteness = "ledger \ud800 \udc00";
+    const ledgerDigest = researchReceiptDigest(ledgerReceipt.payload);
+    ledgerReceipt.integrity.digest = ledgerDigest;
+    const ledgerReceiptName = `receipt-${ledgerDigest.slice(7)}.json`;
+    await writeFile(join(ledger.state, "buyer", ledgerReceiptName), JSON.stringify(ledgerReceipt));
+    await writeFile(ledgerSnapshotPath, JSON.stringify({ ...ledgerSnapshot,
+      receiptDigest: ledgerDigest, receiptFile: ledgerReceiptName }));
+    await parity(ledger.state, "result", "lone units in receipt settlement ledger completeness");
+    await briefParity(ledger.state, root, "lone ledger text");
 
     // A duplicate with the same final value is accepted by both parsers.
     const duplicate = await fresh(root, "duplicate-key");
@@ -827,7 +972,7 @@ async function main() {
     const size = (await stat(rustExe)).size;
     console.log(JSON.stringify({ fixtureKind: "synthetic; no settlement evidence",
       strictChecks: parityChecks + refusalChecks, parityChecks, refusalChecks,
-      intentionalIncompatibilityChecks: incompatibilityChecks, offlineFallbackChecks, offlineGuardChecks,
+      resourceLimitChecks, oracleCounts, offlineFallbackChecks, offlineGuardChecks,
       exportBoundaryChecks, exportSkippedChecks, digest,
       standaloneCopy: "native executable copied to temp and launched on this host with system-only PATH; no clean-VM claim",
       benchmark: { host: `${process.platform}/${process.arch}`, node: process.version, repetitions: 7,
@@ -843,4 +988,4 @@ async function main() {
   } finally { await rm(root, { recursive: true, force: true }); }
 }
 
-main().catch(error => { console.error(error); process.exitCode = 1; });
+main().catch(error => { console.error(error instanceof Error ? error.stack : String(error)); process.exitCode = 1; });

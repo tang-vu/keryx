@@ -1,5 +1,5 @@
-use crate::json::{canonical, digest, stringify, Result};
-use serde_json::{json, Value};
+use crate::json::{canonical, digest, stringify, JsString, Result, Value};
+use serde_json::json;
 
 const NETWORK: &str = "eip155:5042002";
 const USDC: &str = "0x3600000000000000000000000000000000000000";
@@ -13,9 +13,18 @@ pub(crate) fn str_field<'a>(value: &'a Value, key: &str) -> Result<&'a str> {
         .as_str()
         .ok_or_else(|| format!("invalid {key}"))
 }
+pub(crate) fn js_field<'a>(value: &'a Value, key: &str) -> Result<&'a JsString> {
+    field(value, key)?
+        .as_js_string()
+        .ok_or_else(|| format!("invalid {key}"))
+}
 pub(crate) fn obj_keys(value: &Value, expected: &[&str]) -> Result<()> {
     let obj = value.as_object().ok_or("expected JSON object")?;
-    if obj.len() != expected.len() || obj.keys().any(|k| !expected.contains(&k.as_str())) {
+    if obj.len() != expected.len()
+        || obj
+            .iter()
+            .any(|(key, _)| !key.as_str().is_some_and(|key| expected.contains(&key)))
+    {
         return Err("unsupported object fields".into());
     }
     Ok(())
@@ -61,9 +70,8 @@ fn normalized_request(value: &Value) -> Result<Value> {
             "responseMode",
         ],
     )?;
-    let question = str_field(value, "question")?;
-    let question = question.trim_matches(js_whitespace);
-    if question.is_empty() || question.encode_utf16().count() > 2000 {
+    let question = js_field(value, "question")?.trim_matches(js_whitespace);
+    if question.utf16_len() == 0 || question.utf16_len() > 2000 {
         return Err("invalid question".into());
     }
     let budget = micros(field(value, "budget")?, true)?;
@@ -77,9 +85,13 @@ fn normalized_request(value: &Value) -> Result<Value> {
     {
         return Err("unsupported request".into());
     }
-    Ok(
-        json!({"question":question,"budget":field(value,"budget")?,"researchMode":mode,"packageVersion":"1.0.0","responseMode":"async"}),
-    )
+    Ok(Value::object(vec![
+        ("question", Value::String(question)),
+        ("budget", field(value, "budget")?.clone()),
+        ("researchMode", mode.into()),
+        ("packageVersion", "1.0.0".into()),
+        ("responseMode", "async".into()),
+    ]))
 }
 fn js_whitespace(c: char) -> bool {
     matches!(c, '\u{0009}'..='\u{000D}' | '\u{0020}' | '\u{00A0}' | '\u{1680}' |
@@ -100,7 +112,7 @@ fn package(mode: &str) -> Value {
     json!({"schema":"urn:keryx:a2a-research-package:1","id":id,"version":"1.0.0","researchMode":mode,
         "execution":{"attentionLimit":attention,"reevaluateRounds":rounds},
         "serviceLevel":{"kind":"provisional_slo","targetCompletionMs":target,"startsAt":"accepted_at","remedy":"none"},
-        "quality":{"measurement":"evidence-ledger-v1","groundingThreshold":0.4,"commitment":"best_effort"}})
+        "quality":{"measurement":"evidence-ledger-v1","groundingThreshold":0.4,"commitment":"best_effort"}}).into()
 }
 pub(crate) fn package_fingerprint(mode: &str) -> Result<String> {
     // These fixed package keys have identical UTF-16 and localeCompare ordering.

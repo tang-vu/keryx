@@ -61,6 +61,18 @@ fn exact_utf8_byte_bounds_for_every_v1_file_class() {
 }
 
 #[test]
+fn utf8_decoder_matches_typescript_bom_and_malformed_byte_policy() {
+    let fixture = Fixture::new();
+    let dir = fixture.dir();
+    fs::write(fixture.file("request.json"), b"\xef\xbb\xbf{\"x\":\"ok\"}").unwrap();
+    assert_eq!(read_json(&dir, "request.json", 8192).unwrap()["x"], "ok");
+    fs::write(fixture.file("request.json"), b"\xef\xbb\xbf\xef\xbb\xbf{}").unwrap();
+    assert!(read_json(&dir, "request.json", 8192).is_err());
+    fs::write(fixture.file("request.json"), b"{\"x\":\"\xff\"}").unwrap();
+    assert!(read_json(&dir, "request.json", 8192).is_err());
+}
+
+#[test]
 fn growth_and_same_size_write_during_read_are_rejected() {
     let fixture = Fixture::new();
     let dir = fixture.dir();

@@ -12,6 +12,7 @@ on:
       - "scripts/rust-file-boundary-fixtures.mts"
       - "scripts/rust-result-acceptance-fixtures.mts"
       - "scripts/rust-invalid-v1-fixtures.mts"
+      - "scripts/rust-lossless-v1-oracle.mts"
       - "scripts/rust-offline-fallback-guard.mjs"
       - "scripts/operator.mts"
       - "scripts/operator-brief-export.mts"
@@ -29,6 +30,7 @@ on:
       - "scripts/rust-file-boundary-fixtures.mts"
       - "scripts/rust-result-acceptance-fixtures.mts"
       - "scripts/rust-invalid-v1-fixtures.mts"
+      - "scripts/rust-lossless-v1-oracle.mts"
       - "scripts/rust-offline-fallback-guard.mjs"
       - "scripts/operator.mts"
       - "scripts/operator-brief-export.mts"
@@ -80,6 +82,9 @@ jobs:
 
       - name: Build native read-only CLI
         run: cargo +${{ matrix.rust }} build --manifest-path rust/Cargo.toml -p keryx-engine --release --locked
+
+      - name: Exercise maximum receipt and nesting boundary in release mode
+        run: cargo +${{ matrix.rust }} test --manifest-path rust/Cargo.toml -p keryx-core --release --locked maximum_receipt_bytes_at_depth_limit_with_mixed_surrogates -- --ignored --nocapture
 
       - name: Compare synthetic Operator fixtures with TypeScript
         run: npm run test:rust-engine

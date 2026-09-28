@@ -52,6 +52,21 @@ export const resultFixtures: ResultFixture[] = [
     },
     expectedCitations: [defaultCitation],
   },
+  {
+    label: "lossless optional job text and large claim indices",
+    jobFields: {
+      claimCoverage: [
+        { claimIndex: 9007199254740992, claim: "High \ud800", coverage: 1 },
+        { claimIndex: 9007199254740994, claim: "Low \udc00", coverage: 0 },
+      ],
+      evidence: [
+        { claimIndex: 9007199254740992, sourceName: "High \ud800", quote: "Low \udc00" },
+        { claimIndex: 9007199254740994, sourceName: "Low \udc00", quote: "High \ud800" },
+      ],
+      message: "High \ud800", error: "Low \udc00",
+    },
+    expectedCitations: [defaultCitation],
+  },
   { label: "receipt citations absent", citations: "omit", expectedCitations: [] },
   { label: "receipt citations empty", citations: [], expectedCitations: [] },
   {

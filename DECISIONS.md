@@ -1,5 +1,25 @@
 # Keryx — Decision Log
 
+**D-246** - Preserve JavaScript string code units in the read-only Rust candidate -
+*Refusing valid v1 strings with lone UTF-16 surrogates leaves existing private tasks
+dependent on the legacy reader.* Supersede D-243's scalar-only candidate model with
+a lossless value representation backed by pinned `rustpython-wtf8`. Validate bounded
+file bytes as UTF-8, use `serde_json` RawValue for JSON grammar, and decode strings
+and keys through its documented WTF-8 byte interface. Do not write a second JSON
+grammar or introduce application-owned unsafe decoding. Preserve duplicate-key
+last-wins behavior, UTF-16 canonical key ordering, ordinary JSON property ordering,
+and original code units through request comparison, receipt hashes and result JSON.
+Node-compatible UTF-8 answer hashing and Markdown export replace lone surrogates
+with U+FFFD; that encoding step must never mutate the parsed value or receipt.
+Keep numeric operations distinct: JSON numeric overflow remains nonfinite internally,
+ordinary JSON serialization emits null, canonical hashing refuses it, and monetary
+validation still requires finite exact micro-USDC amounts. Bound parser input,
+nesting and value count; document and test stricter resource refusals and retain
+explicit TypeScript fallback on the original files. This closes only the covered
+representation gap. TypeScript remains production authority; no automatic runtime
+routing, file rewrite, payment migration or desktop cutover follows from this change.
+Reversible: disable the candidate and reopen unchanged v1 directories with TypeScript.
+
 **D-245** - Publish completed brief files without overwriting an existing target -
 *Writing directly to a newly created final path can leave a partial brief when a
 write or file sync fails.* Both TypeScript and the Rust candidate stage the complete
