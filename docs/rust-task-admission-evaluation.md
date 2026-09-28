@@ -1,8 +1,8 @@
 # Task caller admission evaluation
 
-This next bounded evaluation follows the accepted [pure preparation](rust-task-preparation-evaluation.md)
-and [private publication](rust-task-publication-evaluation.md) corpora. Its own
-acceptance evidence is pending. It tests inputs from the actual Operator CLI and
+This bounded evaluation follows the accepted [pure preparation](rust-task-preparation-evaluation.md)
+and [private publication](rust-task-publication-evaluation.md) corpora. Its Linux
+and Windows MSVC acceptance passed in PR #16. It tests inputs from the actual Operator CLI and
 desktop workspace implementation before any production writer migration.
 TypeScript remains the writer, reader and payment authority.
 
@@ -109,6 +109,27 @@ After extracting the shared synthetic fixture helpers, the original publication
 driver retained its Windows counts: two successes, 30 refusals, one concurrency
 drill, 18 reopens, two link refusals, 15 permission observations, three killed/reaped
 checkpoints and three typed fault-state checks. TypeScript checking, scoped ESLint
-and whitespace validation passed. Linux and Windows MSVC execution remain required
-before accepting this caller-input stage; these are synthetic compatibility results,
-not production task creation or payment evidence.
+and whitespace validation passed. These local observations are distinct from the
+hosted acceptance below.
+
+## Hosted acceptance
+
+[PR #16](https://github.com/tang-vu/keryx/pull/16), exact head
+`24832b82880524ca71b3431ab6f0193000a0c5b2`, passed independent automated review,
+[application CI](https://github.com/tang-vu/keryx/actions/runs/36488896331),
+[Linux and Windows MSVC Rust CI](https://github.com/tang-vu/keryx/actions/runs/36488896558)
+and the security check. Both platforms passed all three byte comparisons, three
+no-write checkpoints, five candidate-only refusals, eight caller refusals and two
+guarded legacy restarts.
+
+The original publication driver retained two successes, one concurrency drill,
+18 reopens, two link refusals, three crash checkpoints and three typed fault checks
+on each platform. Linux recorded 27 refusals and 13 permission observations;
+Windows recorded 30 and 15 respectively. Linux reported `unix_synced`; Windows
+still reported `windows_visible_entry_unproven`. Native core/CLI tests passed
+(33/13 Linux, 32/13 Windows), as did seven focused publication tests per platform.
+The native-artifact workflow did not run for this test-only change under its path
+filter; it is not an additional artifact acceptance result.
+
+This closes the stated caller-input evaluation, not production task creation,
+payment evidence or the separate admission, durability and cutover decisions above.

@@ -1,5 +1,25 @@
 # Keryx — Decision Log
 
+**D-256** - Refuse Unix request pipes before the CLI can wait for a writer -
+*The regular-file check happened only after a blocking request-file open.* Open
+Operator CLI request input with `O_RDONLY | O_NONBLOCK` on Unix, then retain the
+existing held-handle file-type check, bounded 8 KiB read, fatal UTF-8 decoding and
+checked close. A FIFO with no writer can now reach the regular-file refusal instead
+of hanging before it. Windows keeps its existing read-open flags; regular files
+and links to regular request files retain their existing behavior. This is not a
+general deadline for arbitrary filesystem I/O or a change to saved-task readers.
+
+Use an actual CLI subprocess over an owned synthetic FIFO, with no writer, and
+require exit 1 without a signal or watchdog timeout, no success receipt, no task
+directory and an unchanged fixture tree. Include ordinary and linked regular-file
+controls, bounded output and a kill/reap deadline; retain the fixture if process
+exit cannot be confirmed. Hosted Linux must exercise the FIFO and link cases.
+Local Windows can validate the ordinary control but a privilege-blocked symlink
+setup is a recorded skip, not link evidence. Task formats, monetary validation,
+payment authority and TypeScript writer ownership do not change. Reversible:
+restore the previous open flags, with the known FIFO hang returning. See
+[Operator task alpha](docs/operator-task-alpha.md).
+
 **D-255** - Exercise real caller inputs before choosing native writer admission -
 *Filesystem publication evidence does not establish compatibility with every CLI
 or desktop input.* Use the actual Operator CLI and workspace creation paths as

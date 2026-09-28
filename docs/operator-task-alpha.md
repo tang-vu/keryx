@@ -13,6 +13,10 @@ buyer journal, and JSON exports private: the buyer job ID is bearer access to th
 result. The commands below do not load `.env.local` or `.env.buyer.local`; only the
 deliberate `buyer buy` command loads the buyer key environment if present.
 
+The request must be a regular UTF-8 JSON file of at most 8 KiB. On Unix, a named
+pipe is refused without waiting for another process to connect as its writer.
+Invalid input is rejected before creating the task directory.
+
 ```sh
 npm run operator -- create --request request.json --payee 0xYOUR_VERIFIED_PAYEE --max-total 0.10 --state .buyer-jobs/task-1
 npm run operator -- status --state .buyer-jobs/task-1
