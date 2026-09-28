@@ -182,6 +182,8 @@ async function privateParent(root: string) {
   await mkdir(parent, { mode: 0o700 });
   if (process.platform === "win32") {
     const sid = currentUserSid();
+    checkedTool("icacls.exe", [parent, "/reset"],
+      "reset ACL on newly owned empty private parent fixture");
     checkedTool("icacls.exe", [parent, "/grant:r", "*" + sid + ":(OI)(CI)F"],
       "grant the owned private parent only to the current user");
     checkedTool("icacls.exe", [parent, "/setowner", "*" + sid],
@@ -200,6 +202,8 @@ async function privateParentWithUnsupportedAce(root: string, label: string, ace:
   const parent = join(root, label);
   await mkdir(parent, { mode: 0o700 });
   const sid = currentUserSid();
+  checkedTool("icacls.exe", [parent, "/reset"],
+    "reset ACL on newly owned empty unsupported-ACE fixture");
   checkedTool("icacls.exe", [parent, "/grant:r", "*" + sid + ":" + ace],
     "install unsupported ACE only on owned fixture");
   checkedTool("icacls.exe", [parent, "/setowner", "*" + sid],

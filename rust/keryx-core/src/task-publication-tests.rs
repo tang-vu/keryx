@@ -89,6 +89,16 @@ fn windows_acl(path: &Path, private: bool) {
     } else {
         "*S-1-1-0:(OI)(CI)F".into()
     };
+    let reset = Command::new("icacls.exe")
+        .arg(path)
+        .arg("/reset")
+        .output()
+        .unwrap();
+    assert!(
+        reset.status.success(),
+        "{}",
+        String::from_utf8_lossy(&reset.stderr)
+    );
     let granted = Command::new("icacls.exe")
         .arg(path)
         .args(["/grant:r", &grant])

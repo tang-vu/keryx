@@ -438,7 +438,22 @@ fn verify_file(dir: &Dir, name: &str, expected: &[u8], identity: &Handle) -> io:
 
 #[cfg(unix)]
 fn sync_dir(dir: &Dir) -> io::Result<()> {
-    let file = dir.try_clone()?.into_std_file();
+    // cap-std may hold directories with O_PATH, which cannot be fsynced.
+    // Open a read-capable descriptor for "." relative to that held directory,
+    // then prove it still names the same object before syncing its entries.
+    let mut options = OpenOptions::new();
+    options.read(true).follow(FollowSymlinks::No);
+    let file = dir.open_with(".", &options)?;
+    if !file.metadata()?.is_dir()
+        || Handle::from_file(file.try_clone()?.into_std())?
+            != Handle::from_file(dir.try_clone()?.into_std_file())?
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "directory sync handle changed identity",
+        ));
+    }
+    let file = file.into_std();
     let result = file.sync_all();
     let close = checked_close(file);
     result.and(close)

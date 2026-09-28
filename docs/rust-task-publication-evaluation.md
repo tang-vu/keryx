@@ -43,7 +43,10 @@ The publisher itself must validate the resulting handle security.
 Windows assigns new objects the creator token's default owner, which can be
 Administrators on an elevated hosted runner. Granting the current user access or
 setting only the selected parent's owner does not determine child/file ownership.
-The synthetic fixtures explicitly set their own parent owner. Native test processes
+The synthetic fixtures reset only their newly owned parent to inherited ACL
+defaults before installing the single explicit user grant and removing inheritance;
+otherwise unrelated explicit grants can survive `icacls /grant:r`. They also set
+their own parent owner. Native test processes
 and the feature-only evaluator also select their own token user as their process's
 default owner, verify it by reading the token back, and fail if adjustment is denied.
 This changes only those disposable test processes, not machine policy or an existing
@@ -82,7 +85,10 @@ that state rather than claiming recovery succeeded.
 Rust's ordinary file drop does not expose close errors, so the writer needs a
 small checked-close wrapper in addition to `sync_all`. On Linux, close errors must
 be reported without retrying a potentially reused descriptor. File sync does not
-sync its parent directory entry. These requirements follow the
+sync its parent directory entry. Directory sync opens a read-capable descriptor
+relative to the held directory and checks its identity; cloning a path-only
+capability handle does not make that handle suitable for `fsync`.
+These requirements follow the
 [Rust File contract](https://doc.rust-lang.org/std/fs/struct.File.html),
 [Linux close semantics](https://man7.org/linux/man-pages/man2/close.2.html) and
 [Linux fsync semantics](https://man7.org/linux/man-pages/man2/fsync.2.html).
