@@ -1,5 +1,28 @@
 # Keryx — Decision Log
 
+**D-255** - Exercise real caller inputs before choosing native writer admission -
+*Filesystem publication evidence does not establish compatibility with every CLI
+or desktop input.* Use the actual Operator CLI and workspace creation paths as
+synthetic oracles, preserving their persisted request/task bytes, UUID and time.
+Compare those bytes with pure native preparation, then exercise the test-only
+publication checkpoint immediately before mkdir on an absent sibling. Require the
+exact injected failure and unchanged tree. That checkpoint is neither a name
+reservation, a collision check nor evidence of successful later publication.
+
+Distinguish caller parsing from candidate policy after normalization. Relative CLI
+paths can resolve to an absolute parent; desktop workspace selection does not
+establish the native candidate's stronger ACL contract. Keep tiny-positive legacy
+CLI admission, desktop decimal refusal and Rust zero-rounded-micro refusal explicit.
+Do not change the shared reader or buyer recovery schema to make the new writer
+appear compatible. No production routing or monetary policy changes in this slice.
+
+Use bounded actual processes, owned synthetic permission/link fixtures, original
+file hashes and fresh guarded TypeScript reopening. Review platform evidence before
+deciding target/owner admission, Windows durability presentation, one-writer ownership
+and a rollback window. Reversible: remove the evaluator while production TypeScript
+continues to use the unchanged v1 records. See
+[task caller admission evaluation](docs/rust-task-admission-evaluation.md).
+
 **D-254** - Evaluate exclusive native task publication with explicit incomplete outcomes -
 *Correct task bytes do not establish safe filesystem publication.* Build the next
 isolated candidate around D-253's immutable prepared pair and a held, validated
