@@ -1,5 +1,29 @@
 # Keryx — Decision Log
 
+**D-241** - Keep the current Electron shell while evaluating desktop alternatives by evidence -
+*The quality-first choice is the tested architecture that shares one TypeScript task and
+receipt engine with CLI, rather than a speculative framework rewrite during active
+delivery.* Electron remains the Windows alpha shell with a sandboxed renderer and
+validated main-process boundary. Tauri/Rust remains a future candidate for a measured
+standalone spike against the same task contract, including security, packaging,
+maintenance, and actual resource use. No memory, size, or speed benefit is claimed
+without a comparable build, and payment logic is not rewritten in Rust. Reversible:
+medium (desktop shell can change around the portable TypeScript task engine).
+
+**D-240** - Persist private completed Operator results only after verified GET recovery -
+*An answer that vanishes when the desktop closes makes the local task lifecycle
+incomplete; status alone cannot recover its content offline.* A bounded, atomically
+replaced `result.json` binds the completed buyer job and archived receipt digest to
+the original task, request, pinned payee, and cap. Offline open rechecks local file
+integrity, the original journal, answer/package/economics binding, and the saved
+receipt; it does not reauthenticate the past HTTPS header or independently prove
+settlement or factual correctness. Older completed snapshots survive interrupted or
+incomplete later checks. CLI and desktop share private result read and Markdown brief
+export, while status keeps top-level payment and delivery unknown. A local save failure
+returns the completed server outcome with an explicit retry message; it never
+authorizes another purchase. Reversible: easy (additive local result file and read
+surface; buyer payment path unchanged).
+
 **D-239** - Add a local Windows desktop surface over the Operator task engine - *The
 first desktop interface should expose the durable CLI task lifecycle without becoming
 a second buyer or settlement authority.* Electron main alone reads and writes private

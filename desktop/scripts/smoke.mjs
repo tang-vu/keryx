@@ -3,6 +3,18 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
+import { execFile as execFileCallback } from "node:child_process";
+import { createBuyerJournal, readBuyerJournal } from "../../lib/buyer/journal.ts";
+import { resumeResearch } from "../../lib/buyer/client.ts";
+import { authorizationWithNonce, BUYER_GATEWAY, BUYER_NETWORK, BUYER_USDC } from "../../lib/buyer/protocol.ts";
+import { buyerJobId } from "../../lib/buyer/policy.ts";
+import { a2aResearchPackage } from "../../lib/a2a/research-package-definition.ts";
+import { RESEARCH_RECEIPT_CANONICALIZATION, RESEARCH_RECEIPT_SCHEMA } from "../../lib/research-receipt-types.ts";
+import { researchReceiptDigest, sha256 } from "../../lib/research-receipt-integrity.ts";
+import { resumeOperatorTask } from "../../lib/operator/task.ts";
+
+const execFile = promisify(execFileCallback);
 
 const desktop = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const packaged = process.argv[2] && process.argv[2] !== "--dev";
@@ -20,6 +32,43 @@ const environment = { ...process.env, KERYX_DESKTOP_TEST_USER_DATA: userData, KE
 delete environment.KERYX_BUYER_PRIVATE_KEY;
 let application;
 let passed = false;
+function completedFixture(intent, answer) {
+  const job = { queryId: intent.queryId, status: "completed", answer,
+    researchPackage: a2aResearchPackage(intent.request.researchMode),
+    pricing: { totalPriceUsdc: 0.05, serviceFeeUsdc: 0.04, creatorBudgetUsdc: 0.01,
+      settledCreatorSpendUsdc: 0.005, pendingCreatorSpendUsdc: 0, unusedCreatorReserveUsdc: 0.005 } };
+  const payload = { schema: RESEARCH_RECEIPT_SCHEMA,
+    dispatch: { id: intent.queryId, question: intent.request.question, answer,
+      answerSha256: sha256(answer), budgetUsdc: intent.request.budget, researchMode: intent.request.researchMode },
+    citations: [{ marker: "[1]", sourceName: "Acceptance test source" }],
+    settlement: { mode: "real", ledgerCompleteness: "complete", settledCreatorUsdc: 0.005,
+      pendingCreatorUsdc: 0, simulatedCreatorUsdc: 0 } };
+  const digest = researchReceiptDigest(payload);
+  return { job, receipt: { payload, integrity: { algorithm: "sha256", canonicalization: RESEARCH_RECEIPT_CANONICALIZATION,
+    scope: "payload", digest } }, digest };
+}
+
+async function makeTestJournal(taskDirectory) {
+  const task = JSON.parse(await readFile(join(taskDirectory, "task.json"), "utf8"));
+  const requirement = { scheme: "exact", network: BUYER_NETWORK, asset: BUYER_USDC,
+    amount: "50000", payTo: task.payee, maxTimeoutSeconds: 604860,
+    extra: { name: "GatewayWalletBatched", version: "1", verifyingContract: BUYER_GATEWAY } };
+  const authorization = authorizationWithNonce("0x1111111111111111111111111111111111111111", requirement, `0x${"a".repeat(64)}`);
+  const buyerDirectory = join(taskDirectory, "buyer");
+  await createBuyerJournal(buyerDirectory, { schema: "keryx-buyer-intent-v1", request: task.request,
+    requirement, authorization, queryId: buyerJobId(authorization) });
+  return readBuyerJournal(buyerDirectory);
+}
+
+function fixtureHttp(fixture, queryId) {
+  return async (url, init) => {
+    if (init?.method && init.method !== "GET") throw new Error("Unexpected non-GET fixture request");
+    if (url === `https://keryx.cc/api/agent/ask?queryId=${queryId}`) return Response.json(fixture.job);
+    if (url === `https://keryx.cc/api/dispatch/${queryId}/receipt`) return Response.json(fixture.receipt,
+      { headers: { "x-keryx-receipt-digest": fixture.digest } });
+    throw new Error("Unexpected fixture URL");
+  };
+}
 try {
   application = await electron.launch({ executablePath: exe, args, cwd: desktop, env: environment, timeout: 30000 });
   console.log("launched");
@@ -38,6 +87,19 @@ try {
   await page.getByPlaceholder("0x... independently verified").fill("0x1111111111111111111111111111111111111111");
   await page.getByRole("button", { name: "Save task" }).click();
   await page.getByText("Acceptance test: second task", { exact: true }).last().waitFor();
+  const savedWorkspace = JSON.parse(await readFile(join(userData, "workspace.json"), "utf8")).path;
+  const directoryNames = await (await import("node:fs/promises")).readdir(savedWorkspace);
+  const selectedTask = (await Promise.all(directoryNames.filter(name => name.startsWith("task-")).map(async name => {
+    const task = JSON.parse(await readFile(join(savedWorkspace, name, "task.json"), "utf8"));
+    return task.request.question === "Acceptance test: second task" ? join(savedWorkspace, name) : null;
+  }))).find(Boolean);
+  if (!selectedTask) throw new Error("Acceptance task was not persisted");
+  const intent = await makeTestJournal(selectedTask);
+  const firstFixture = completedFixture(intent, "Acceptance test answer one [1]");
+  const first = await resumeOperatorTask(selectedTask, buyer => resumeResearch(buyer, fixtureHttp(firstFixture, intent.queryId)));
+  if (first.localResult.state !== "saved") throw new Error("Verified test answer was not saved");
+  await page.getByRole("button", { name: "Refresh" }).click();
+  await page.getByText("Acceptance test answer one [1]").waitFor();
   if (await page.evaluate(() => typeof window.require !== "undefined" || typeof window.process !== "undefined")) {
     throw new Error("Renderer gained Node access");
   }
@@ -51,6 +113,23 @@ try {
   await page.getByRole("button", { name: "Export status JSON" }).click();
   await page.getByText("Private status JSON saved.").waitFor();
   if (JSON.parse(await readFile(exportPath, "utf8")).payment !== "unknown") throw new Error("Export changed payment authority");
+  const briefPath = join(temp, "private-brief.md");
+  await application.evaluate(({ dialog }, destination) => { dialog.showSaveDialog = async () => ({ canceled: false, filePath: destination }); }, briefPath);
+  await page.getByRole("button", { name: "Export private brief" }).click();
+  await page.getByText("Private research brief saved.").waitFor();
+  const brief = await readFile(briefPath, "utf8");
+  if (!brief.includes("Acceptance test answer one") || !brief.includes("Acceptance test source")
+    || brief.includes(intent.queryId)) throw new Error("Private brief omitted answer/citation or leaked job ID");
+  await page.getByRole("button", { name: "Export private brief" }).click();
+  await page.getByText("Could not complete action").waitFor();
+  if (await readFile(briefPath, "utf8") !== brief) throw new Error("Brief export overwrote an existing file");
+  const { stdout: cliResult } = await execFile(process.execPath, ["--import", "tsx", "scripts/operator.mts", "result", "--state", selectedTask],
+    { cwd: resolve(desktop, ".."), env: environment });
+  if (JSON.parse(cliResult).answer !== "Acceptance test answer one [1]") throw new Error("CLI offline result differs");
+  const cliBriefPath = join(temp, "cli-brief.md");
+  await execFile(process.execPath, ["--import", "tsx", "scripts/operator.mts", "brief", "--state", selectedTask, "--file", cliBriefPath],
+    { cwd: resolve(desktop, ".."), env: environment });
+  if (!(await readFile(cliBriefPath, "utf8")).includes("Acceptance test answer one")) throw new Error("CLI brief differs");
   await application.evaluate(({ dialog }, sourcePath) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [sourcePath] }); }, source);
   await page.getByRole("button", { name: "Import file" }).click();
   await page.getByText("reference.md").waitFor();
@@ -67,8 +146,33 @@ try {
   page = await application.firstWindow();
   await page.getByText("2 research tasks").waitFor();
   await page.getByText("reference.md").waitFor();
+  await page.getByText("Acceptance test: second task", { exact: true }).first().click();
+  await page.getByText("Acceptance test answer one [1]").waitFor();
+  const secondFixture = completedFixture(intent, "Acceptance test answer two [1]");
+  await application.evaluate((_electron, fixture) => {
+    globalThis.fetch = async (url, init) => {
+      if (init?.method && init.method !== "GET") throw new Error("Unexpected non-GET fixture request");
+      if (url === `https://keryx.cc/api/agent/ask?queryId=${fixture.queryId}`) return Response.json(fixture.job);
+      if (url === `https://keryx.cc/api/dispatch/${fixture.queryId}/receipt`) return Response.json(fixture.receipt,
+        { headers: { "x-keryx-receipt-digest": fixture.digest } });
+      throw new Error("Unexpected fixture URL");
+    };
+  }, { ...secondFixture, queryId: intent.queryId });
+  await page.getByRole("button", { name: "Check original job" }).click();
+  await page.getByText("Acceptance test answer two [1]").waitFor();
+  if (await page.getByText("Acceptance test answer one [1]").count()) throw new Error("UI retained stale saved answer");
+  await application.evaluate(() => { globalThis.fetch = async () => new Response("{}", { status: 404 }); });
+  await page.getByRole("button", { name: "Check original job" }).click();
+  await page.getByText("PREVIOUS SAVED RESULT", { exact: false }).waitFor();
+  await page.getByText("Acceptance test answer two [1]").waitFor();
+  await writeFile(join(selectedTask, "result.json"), "{malformed");
+  await page.getByRole("button", { name: "Refresh" }).click();
+  await page.getByText("Saved result cannot be opened:", { exact: false }).waitFor();
+  await page.getByText("2 research tasks").waitFor();
   console.log(JSON.stringify({ mode: packaged ? "packaged" : "development", persistedTasks: 2,
-    importedReference: true, relaunch: true, screenshot: screenshotPath }));
+    importedReference: true, verifiedSavedResult: true, offlineReopen: true, briefExport: true,
+    repeatedCheckRefresh: true, previousResultPreserved: true, corruptResultTaskVisible: true,
+    relaunch: true, screenshot: screenshotPath }));
   passed = true;
 } finally {
   if (application) await application.close().catch(() => undefined);

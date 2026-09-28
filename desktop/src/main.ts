@@ -70,6 +70,17 @@ function registerIpc() {
   handle("workspace:refresh", async (...args) => { if (args.length) throw new Error("Invalid arguments"); return store.view(); });
   handle("task:create", async (...args) => { if (args.length !== 1) throw new Error("Invalid arguments"); return store.createTask(args[0]); });
   handle("task:resume", async (...args) => { if (args.length !== 1) throw new Error("Invalid arguments"); return store.resumeTask(args[0]); });
+  handle("task:result", async (...args) => { if (args.length !== 1) throw new Error("Invalid arguments"); return store.readResult(args[0]); });
+  handle("task:brief", async (...args) => {
+    if (args.length !== 1) throw new Error("Invalid arguments");
+    const data = await store.exportBrief(args[0]);
+    const choice = await dialog.showSaveDialog(window, { title: "Export private research brief",
+      defaultPath: "private-research-brief.md", filters: [{ name: "Markdown", extensions: ["md"] }] });
+    if (choice.canceled || !choice.filePath) return false;
+    const file = await open(choice.filePath, "wx", 0o600);
+    try { await file.writeFile(data); await file.sync(); } finally { await file.close(); }
+    return true;
+  });
   handle("task:export", async (...args) => {
     if (args.length !== 1) throw new Error("Invalid arguments");
     const data = await store.exportTask(args[0]);

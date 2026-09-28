@@ -18,7 +18,8 @@
 ---
 
 Windows local Operator alpha: `npm run desktop:install` then `npm run desktop:start`.
-See the [desktop guide](docs/desktop-alpha.md) for the unpacked app build and limits.
+See the [desktop guide](docs/desktop-alpha.md) for the unpacked app build, offline
+saved results, private Markdown briefs, and limits.
 
 ## The problem
 

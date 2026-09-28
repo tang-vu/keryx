@@ -41,13 +41,19 @@ Extract cohesive shared pieces gradually from the current app; avoid a monolith 
 An ERP, payroll, yield engine, multichain launch, and plugin marketplace are outside
 this two-week scope.
 
+The event schedule is a scope constraint, not a lower quality bar. Prefer the design
+with demonstrated security, reliability, maintainability, and product quality for the
+long term. If an outcome cannot pass its checks in time, ship a smaller honest slice
+and keep the remaining work open. Development speed or model quota savings alone do
+not justify a weaker architecture or skipped validation.
+
 - [ ] Design Operator authority: receipt verification, obligations versus available
   funds, category and job limits, approvals, immutable events, reconciliation, and
   exception escalation. Identify the trusted authority for every state change.
 - [ ] Deliver a testnet Operator cycle with real jobs and persisted evidence: receive,
   decide, purchase within bounds, pay cited creators, reconcile, and recover ambiguous
   or interrupted work. Keep failures isolated where a completed answer can survive.
-- [ ] Build a Windows-first Electron + React alpha: permissioned local document import,
+- [ ] Complete the Windows-first desktop experience: permissioned local document import,
   task progress/history, notifications, and human approvals. Keep keys and Node access
   out of the renderer and restrict IPC. Local-file work requires an authorized local
   companion online; remote jobs can continue on the existing VPS while the app is closed.
@@ -62,10 +68,31 @@ The local CLI increment provides these commands for a private paid-research task
 directory (see [Operator task alpha](./operator-task-alpha.md)). The
 [Windows desktop alpha](./desktop-alpha.md) now uses the same task engine for task
 creation, listing, status, and GET-only recovery, with local reference snapshots.
+Completed verified GET recovery now saves a bounded private result that CLI and desktop
+can reopen offline and export as a private Markdown brief; this is local integrity
+and request-binding evidence, not independent settlement proof.
 Both hand deliberate purchases to the existing caller-funded buyer command. This is
 partial progress toward the checkboxes: web and MCP do not use the Operator task
 engine; desktop notifications, human approvals, scheduling, and a general business
 ledger are not implemented.
+
+Retain Electron + React for the current release: it already uses the tested TypeScript
+task and receipt engine, with fewer new process and runtime boundaries. This is a
+current-release choice based on the working implementation, not a permanent desktop
+platform commitment or an event-speed shortcut. Tauri 2/Rust remains a candidate for
+an isolated comparative spike; no migration has been chosen. A Tauri shell with a
+Node single executable application could preserve the shared engine, but would add a
+Rust-to-Node lifecycle, protocol, and test surface and would not itself remove the
+current buyer CLI dependency. The feasibility check has no Tauri artifact or comparable
+startup and memory measurements yet, so it does not establish a performance advantage.
+Compare candidates using a standalone Windows artifact that runs without installed
+Node, consistent use of the shared task engine without duplicating financial logic,
+narrow permissions and IPC, preservation of workspace/journal/history, measured
+install footprint, startup time and memory, and restart, offline, and tamper tests.
+Record observed tradeoffs before selecting a platform. Any replacement must pass the
+same payment, security, recovery, and release gates. A running remote job can continue
+on the VPS when the app closes; access to local files still requires an authorized
+local companion online. This is not a claim of general autonomous scheduling.
 
 An on-chain budget policy wallet is **not implemented**. The current repository uses
 Arc testnet configuration (`eip155:5042002`), a buyer EOA authorization signature,

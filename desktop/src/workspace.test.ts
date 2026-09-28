@@ -38,10 +38,12 @@ it("keeps bounded immutable reference bytes with hash and rejects symlink/oversi
   const source = join(root, "note.md"); const content = Buffer.from("# Provenance\nResearch note\n"); await writeFile(source, content);
   const store = new WorkspaceStore(); await store.select(workspace);
   const imported = await store.importReference(source);
+  const importedAgain = await store.importReference(source);
+  expect(importedAgain.handle).not.toBe(imported.handle);
   expect(imported.sha256).toBe(createHash("sha256").update(content).digest("hex"));
   await writeFile(source, "changed later");
   expect(await readFile(join(workspace, "references", `${imported.handle}.txt`))).toEqual(content);
-  expect((await store.references())[0].name).toBe("note.md");
+  expect((await store.references()).map(ref => ref.name)).toEqual(["note.md", "note.md"]);
   const link = join(root, "link.md");
   try { await symlink(source, link); await expect(store.importReference(link)).rejects.toThrow(); }
   catch (error) { if ((error as NodeJS.ErrnoException).code !== "EPERM") throw error; }

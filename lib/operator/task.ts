@@ -2,10 +2,12 @@ import { randomUUID } from "node:crypto";
 import { mkdir, open, lstat, rename, unlink } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { z } from "zod";
-import { readBuyerJournal, writeBuyerFile } from "../buyer/journal";
+import { buyerIntentSchema, writeBuyerFile } from "../buyer/journal";
 import { resumeResearch } from "../buyer/client";
 import { buildBuyerReport } from "../buyer/report";
 import { addressSchema, buyerRequestSchema, BUYER_NETWORK, type BuyerRequest } from "../buyer/protocol";
+import { inspectSavedOperatorResult, readSavedOperatorResult, saveVerifiedOperatorResult } from "./result";
+export { privateOperatorBrief as formatOperatorBrief } from "./result";
 
 const taskSchema = z.object({
   schema: z.literal("keryx-operator-task-v1"),
@@ -26,18 +28,20 @@ function validateCap(request: BuyerRequest, maxTotalMicros: string) {
   }
 }
 
-async function readBoundedJson(path: string) {
+async function readBoundedJson(path: string, maxBytes = MAX_TASK_FILE_BYTES) {
+  const pathStat = await lstat(path);
+  if (!pathStat.isFile() || pathStat.isSymbolicLink()) throw new Error("Task file must be regular");
   const file = await open(path, "r");
   try {
     if (!(await file.stat()).isFile()) throw new Error("Task file must be regular");
-    const buffer = Buffer.alloc(MAX_TASK_FILE_BYTES + 1);
+    const buffer = Buffer.alloc(maxBytes + 1);
     let length = 0;
     while (length < buffer.length) {
       const { bytesRead } = await file.read(buffer, length, buffer.length - length, null);
       if (!bytesRead) break;
       length += bytesRead;
     }
-    if (length > MAX_TASK_FILE_BYTES) throw new Error("Task file exceeds 8 KB");
+    if (length > maxBytes) throw new Error("Task file exceeds its size limit");
     return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(buffer.subarray(0, length)));
   } finally { await file.close(); }
 }
@@ -82,7 +86,7 @@ async function linkedBuyerState(directory: string, task: Task) {
     throw error;
   }
   let intent;
-  try { intent = await readBuyerJournal(buyer); }
+  try { intent = buyerIntentSchema.parse(await readBoundedJson(join(buyer, "intent.json"), 65_536)); }
   catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       // Distinguish a buyer process that created its directory from a vanished directory.
@@ -104,11 +108,12 @@ export async function operatorTaskStatus(directory: string) {
   const task = await readTask(directory);
   const linked = await linkedBuyerState(directory, task);
   const observation = linked.stage === "buyer_journaled" ? await readObservation(directory, task.id, linked.queryId) : null;
+  const savedResult = await inspectSavedOperatorResult(directory);
   return { schema: "keryx-operator-task-status-v1" as const, taskId: task.id,
     createdAt: task.createdAt, kind: task.kind, network: BUYER_NETWORK, stage: linked.stage,
     buyerJobId: "queryId" in linked ? linked.queryId : null,
     creatorBudgetMicros: Math.round(task.request.budget * 1e6), maxTotalMicros: task.maxTotalMicros,
-    payment: "unknown" as const, delivery: "unknown" as const, lastObservation: observation,
+    payment: "unknown" as const, delivery: "unknown" as const, lastObservation: observation, savedResult,
     authority: "Local journal state only; use resume for verified remote delivery and reported payment evidence" };
 }
 
@@ -152,7 +157,32 @@ export async function resumeOperatorTask(directory: string, recover: typeof resu
   if (linked.stage !== "buyer_journaled") throw new Error("No complete buyer journal; inspect the original task before recovery");
   const result = await recover(linked.buyer);
   const report = buildBuyerReport(result);
-  await saveObservation(directory, task.id, linked.queryId, { schema: report.schema,
-    status: report.status, payment: report.payment, accountingAgreement: report.accountingAgreement });
-  return result;
+  let localResult: { state: "saved" | "save_failed" | "unchanged"; message?: string } = { state: "unchanged" };
+  if (report.status === "completed") {
+    try {
+      await saveVerifiedOperatorResult(directory, { taskId: task.id, request: task.request, buyer: linked.buyer,
+        buyerJobId: linked.queryId }, result);
+      localResult = { state: "saved" };
+    } catch {
+      localResult = { state: "save_failed", message: "Completed remote result could not be saved locally. Keep the original buyer receipt and retry GET-only recovery; do not repurchase." };
+    }
+  }
+  let localObservation: "saved" | "save_failed" = "saved";
+  try {
+    await saveObservation(directory, task.id, linked.queryId, { schema: report.schema,
+      status: report.status, payment: report.payment, accountingAgreement: report.accountingAgreement });
+  } catch { localObservation = "save_failed"; }
+  return { ...result, localResult, localObservation };
+}
+
+/** Private offline read; rechecks saved bytes and original task/journal binding. */
+export async function readOperatorResult(directory: string) {
+  const task = await readTask(directory);
+  const saved = await inspectSavedOperatorResult(directory);
+  if (saved === "absent") return null;
+  if (saved === "invalid") throw new Error("Saved result file is invalid; keep the original buyer receipt for recovery");
+  const linked = await linkedBuyerState(directory, task);
+  if (linked.stage !== "buyer_journaled") throw new Error("Saved result has no matching buyer journal");
+  return readSavedOperatorResult(directory, { taskId: task.id, request: task.request, buyer: linked.buyer,
+    buyerJobId: linked.queryId });
 }

@@ -33,11 +33,19 @@ pinned payee and total cap before buying. Keep the original journal after an unc
 attempt; do not buy again for recovery.
 
 Once a buyer journal exists, **Check original job** uses the shared GET-only Operator
-recovery path. The answer from a completed check is shown as plain text in the current
-window. Its verified receipt remains in the buyer journal. The saved local observation
-may be out of date; the task status and JSON export continue to say payment and delivery
-are unknown. Seller-reported payment evidence is labelled separately. JSON export uses
-a native save dialog and refuses to overwrite an existing file.
+recovery path. A completed verified check saves a bounded private result in the task
+folder. The desktop can reopen its plain-text answer and cited source names offline
+after relaunch, rechecking the original task/journal and archived receipt. It can
+export a private Markdown brief through a native save dialog. The answer may itself
+contain sensitive material; review the brief before sharing. A later incomplete check
+keeps the earlier saved result and labels it as previous. A local save failure shows
+the current answer temporarily and preserves the original buyer receipt.
+
+The saved local observation may be out of date; task status and JSON export continue
+to say payment and delivery are unknown. Offline rechecking verifies local integrity
+and request binding, not the historical HTTPS channel, independent settlement, or
+factual correctness. Seller-reported payment evidence is labelled separately. Both
+private brief and JSON export refuse to overwrite an existing file.
 
 **Import file** accepts a local UTF-8 text or Markdown file up to 256 KiB through a
 native picker. The workspace keeps immutable raw bytes and a SHA-256 digest with the

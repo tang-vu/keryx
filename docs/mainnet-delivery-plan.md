@@ -6,6 +6,12 @@ ETHOnline is an intermediate delivery milestone. Completing its demo does not fi
 this objective. This plan is the maintained acceptance map; old aspirational TVL,
 multi-chain and enterprise checklists are historical, not proof of readiness.
 
+Across active delivery plans, reduce or stage scope when deadlines press; do not
+weaken quality, security, reliability, maintainability, or the evidence required by
+the acceptance gates. A working demo or an easier implementation is not a release
+decision. The [Tameion plan](./tameion-2026.md) applies this rule to its Operator and
+desktop work while this document remains the complete-product and mainnet gate map.
+
 Mainnet readiness and permission to launch are separate. The existing testnet
 restrictions remain until the final owner go/no-go decision. No mainnet keys,
 addresses or service availability will be inferred from testnet configuration.

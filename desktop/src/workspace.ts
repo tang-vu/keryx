@@ -3,7 +3,7 @@ import { lstatSync, realpathSync } from "node:fs";
 import { lstat, mkdir, open, readdir, realpath } from "node:fs/promises";
 import { basename, extname, join, resolve, sep } from "node:path";
 import { z } from "zod";
-import { createOperatorTask, operatorTaskStatus, resumeOperatorTask } from "../../lib/operator/task";
+import { createOperatorTask, formatOperatorBrief, operatorTaskStatus, readOperatorResult, resumeOperatorTask } from "../../lib/operator/task";
 import { addressSchema, buyerRequestSchema } from "../../lib/buyer/protocol";
 import { parseBuyerBudget } from "../../lib/a2a/buyer-workspace";
 import type { CreateInput, ReferenceRow, TaskRow, WorkspaceView } from "./contracts";
@@ -167,14 +167,28 @@ export class WorkspaceStore {
     return this.readTask(this.taskHandles.get(handle)!, path);
   }
 
-  async resumeTask(handle: unknown): Promise<{ task: TaskRow; answer: string | null }> {
+  async resumeTask(handle: unknown): Promise<{ task: TaskRow; answer: string | null; answerTruncated: boolean; localResult: { state: string; message?: string }; localObservation: "saved" | "save_failed" }> {
     if (typeof handle !== "string") throw new Error("Invalid task handle");
     const path = await this.taskPath(handle);
     await this.readTask(this.taskHandles.get(handle)!, path);
     const result = await resumeOperatorTask(path);
     const task = await this.readTask(this.taskHandles.get(handle)!, path);
     const answer = "answer" in result && typeof result.answer === "string" ? result.answer.slice(0, 50_000) : null;
-    return { task, answer };
+    return { task, answer, answerTruncated: "answer" in result && typeof result.answer === "string" && result.answer.length > 50_000,
+      localResult: result.localResult, localObservation: result.localObservation };
+  }
+
+  async readResult(handle: unknown) {
+    if (typeof handle !== "string") throw new Error("Invalid task handle");
+    const path = await this.taskPath(handle);
+    await this.readTask(this.taskHandles.get(handle)!, path);
+    return readOperatorResult(path);
+  }
+
+  async exportBrief(handle: unknown) {
+    const result = await this.readResult(handle);
+    if (!result) throw new Error("No saved completed result; check the original job first");
+    return formatOperatorBrief(result);
   }
 
   async exportTask(handle: unknown): Promise<string> {
@@ -194,7 +208,7 @@ export class WorkspaceStore {
       importedAt: new Date().toISOString(), bytes: bytes.length,
       sha256: createHash("sha256").update(bytes).digest("hex") });
     const library = join(root, "references");
-    await mkdir(library, { mode: 0o700 });
+    await mkdir(library, { mode: 0o700, recursive: true });
     await safeChild(root, "references", "directory");
     const snapshot = await open(join(library, `${handle}.txt`), "wx", 0o600);
     try { await snapshot.writeFile(bytes); await snapshot.sync(); } finally { await snapshot.close(); }

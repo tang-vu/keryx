@@ -7,6 +7,8 @@ const api: DesktopAPI = {
   refresh: () => ipcRenderer.invoke("workspace:refresh"),
   createTask: (input) => ipcRenderer.invoke("task:create", input),
   resumeTask: (handle) => ipcRenderer.invoke("task:resume", handle),
+  readResult: (handle) => ipcRenderer.invoke("task:result", handle),
+  exportBrief: (handle) => ipcRenderer.invoke("task:brief", handle),
   exportTask: (handle) => ipcRenderer.invoke("task:export", handle),
   importReference: () => ipcRenderer.invoke("reference:import"),
 };

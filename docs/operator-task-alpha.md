@@ -19,6 +19,8 @@ npm run operator -- status --state .buyer-jobs/task-1
 npm run buyer -- buy --request .buyer-jobs/task-1/request.json --payee 0xYOUR_VERIFIED_PAYEE --max-total 0.10 --state .buyer-jobs/task-1/buyer
 npm run operator -- resume --state .buyer-jobs/task-1
 npm run operator -- export --json --state .buyer-jobs/task-1
+npm run operator -- result --state .buyer-jobs/task-1
+npm run operator -- brief --state .buyer-jobs/task-1 --file private-brief.md
 ```
 
 Confirm the payee independently as described in [buyer-agent.md](./buyer-agent.md).
@@ -34,6 +36,15 @@ acknowledgement leaves payment uncertain.
 delivery `unknown`; after a successful `resume`, they can show a saved, possibly
 stale observation with a seller-reported payment state and delivery status. That
 snapshot is a diagnostic, not independent settlement proof or portable recovery.
+After a completed verified GET recovery, Operator also saves a bounded private
+`result.json` bound to the original task, buyer journal, answer, and archived receipt.
+`result` reopens that answer offline; `brief --file` writes a private Markdown brief
+to a new file and refuses to overwrite an existing one. A later incomplete or failed
+check leaves the older completed result intact. Offline opening rechecks local bytes
+and task binding; it cannot replay the original HTTPS response or independently prove
+settlement or answer truth. Keep the buyer journal and receipt files with the task.
+If local snapshot saving fails, `resume` still reports the completed remote result
+and an actionable local-save warning. Retry GET-only recovery against the same task.
 For a shareable redacted report, use `npm run buyer -- report --state
 .buyer-jobs/task-1/buyer` and review it before sharing. JSON stdout is clean with
 the direct `node --import tsx scripts/operator.mts ...` form; npm may print its own
