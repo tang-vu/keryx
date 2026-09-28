@@ -45,7 +45,19 @@ The saved local observation may be out of date; task status and JSON export cont
 to say payment and delivery are unknown. Offline rechecking verifies local integrity
 and request binding, not the historical HTTPS channel, independent settlement, or
 factual correctness. Seller-reported payment evidence is labelled separately. Both
-private brief and JSON export refuse to overwrite an existing file.
+private brief and JSON export use the same complete-file publisher as the CLI brief
+command. They write and sync a private sibling staging file, then publish the complete
+file without overwriting an existing destination. A filesystem without hard-link
+support refuses the export. Select a trusted private output folder; Windows exports
+inherit its ACL, and the app does not audit that ACL.
+
+Canceling the save dialog creates no export. A write, sync or close failure does not
+publish this attempt. If the hard-link publication step returns an error, its outcome
+is unconfirmed: inspect the named final path before retrying. A cleanup failure after publication
+leaves the complete final file in place and reports an error. The app identifies any
+staging file requiring inspection and never deletes the final path as rollback.
+These guarantees cover complete-file publication, not directory-entry durability
+after a crash or a hostile process replacing the output parent.
 
 **Import file** accepts a local UTF-8 text or Markdown file up to 256 KiB through a
 native picker. The workspace keeps immutable raw bytes and a SHA-256 digest with the
@@ -60,3 +72,18 @@ Validation commands: `npm --prefix desktop test`, `npm --prefix desktop run type
 `npm run desktop:build`. The Electron smoke harness in `desktop/scripts/smoke.mjs`
 uses temporary workspaces and native-dialog stubs; it never loads `.env.local` or
 `.env.buyer.local`.
+
+For the complete-file publisher and packaged Windows app, run from the repository:
+
+```powershell
+npx vitest run lib/operator/private-text-export.test.ts
+npm run desktop:package
+node --import tsx desktop/scripts/smoke.mjs desktop/release/KeryxOperator-win32-x64/KeryxOperator.exe
+```
+
+The Windows desktop CI workflow runs dependency installation, publisher and desktop
+tests, type checking, packaging and this smoke command. The smoke app stays hidden
+unless an explicit screenshot path is supplied. It checks both export formats,
+cancellation, overwrite refusal without a success notice, offline reopening and
+saved-result recovery using synthetic data. Running the unpacked app on a development
+or CI host is not a clean-machine, signed-installer or auto-update acceptance claim.

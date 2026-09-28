@@ -62,6 +62,10 @@ no success receipt. Inspect the named files before retrying with a new output pa
 do not delete a pre-existing file to make a retry pass. These guarantees assume a
 trusted private parent and do not promise directory-entry durability after a crash.
 
+The TypeScript publisher is shared with the desktop's Markdown and status JSON
+exports. The desktop selects the destination through its native save dialog and
+reports the same publication failure states; it does not maintain a second writer.
+
 The optional [Rust read-only candidate](./rust-engine-migration.md) preserves
 JavaScript UTF-16 strings, including unpaired surrogates, through JSON output and
 receipt verification. The TypeScript commands above remain authoritative for

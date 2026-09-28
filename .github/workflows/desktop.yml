@@ -1,0 +1,52 @@
+name: Operator desktop
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "desktop/**"
+      - "lib/**"
+      - "scripts/operator.mts"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/desktop.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "desktop/**"
+      - "lib/**"
+      - "scripts/operator.mts"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/desktop.yml"
+
+jobs:
+  packaged-smoke:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            desktop/package-lock.json
+      - name: Install root dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Install desktop dependencies
+        run: npm --prefix desktop ci --no-audit --no-fund
+      - name: Test shared private publisher
+        run: npx vitest run lib/operator/private-text-export.test.ts
+      - name: Test desktop workspace and export boundaries
+        run: npm --prefix desktop test
+      - name: Typecheck desktop
+        run: npm --prefix desktop run typecheck
+      - name: Build and package Windows desktop
+        run: npm run desktop:package
+      - name: Exercise packaged Electron with synthetic local task and receipt
+        run: node --import tsx desktop/scripts/smoke.mjs desktop/release/KeryxOperator-win32-x64/KeryxOperator.exe

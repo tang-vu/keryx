@@ -1,5 +1,5 @@
 import { _electron as electron } from "playwright";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,9 +18,9 @@ const execFile = promisify(execFileCallback);
 
 const desktop = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const packaged = process.argv[2] && process.argv[2] !== "--dev";
-const exe = packaged ? process.argv[2] : join(desktop, "node_modules/electron/dist/electron.exe");
+const exe = packaged ? resolve(process.argv[2]) : join(desktop, "node_modules/electron/dist/electron.exe");
 const args = packaged ? [] : [desktop];
-const screenshotPath = process.argv[3] || join(desktop, "release/smoke.png");
+const screenshotPath = process.argv[3] || null;
 const temp = await mkdtemp(join(tmpdir(), "keryx-desktop-smoke-"));
 const parent = join(temp, "parent");
 const userData = join(temp, "user-data");
@@ -112,7 +112,43 @@ try {
   await application.evaluate(({ dialog }, destination) => { dialog.showSaveDialog = async () => ({ canceled: false, filePath: destination }); }, exportPath);
   await page.getByRole("button", { name: "Export status JSON" }).click();
   await page.getByText("Private status JSON saved.").waitFor();
-  if (JSON.parse(await readFile(exportPath, "utf8")).payment !== "unknown") throw new Error("Export changed payment authority");
+  const statusJson = await readFile(exportPath, "utf8");
+  if (JSON.parse(statusJson).payment !== "unknown") throw new Error("Export changed payment authority");
+  await page.getByRole("button", { name: "Export status JSON" }).click();
+  await page.getByText("Could not complete action").waitFor();
+  if (await readFile(exportPath, "utf8") !== statusJson || await page.getByText("Private status JSON saved.").count()) {
+    throw new Error("Repeated status export overwrote an existing file or showed false success");
+  }
+  const canceledPath = join(temp, "canceled.json");
+  await application.evaluate(({ dialog }, destination) => {
+    globalThis.saveDialogEntered = new Promise(entered => {
+      dialog.showSaveDialog = () => new Promise(resolve => {
+        globalThis.releaseSaveCancellation = () => resolve({ canceled: true, filePath: destination });
+        entered();
+      });
+    });
+  }, canceledPath);
+  const statusButton = page.getByRole("button", { name: "Export status JSON" });
+  await statusButton.click();
+  await page.waitForFunction(() => [...document.querySelectorAll("button")]
+    .some(button => button.textContent === "Export status JSON" && button.disabled));
+  await application.evaluate(() => globalThis.saveDialogEntered);
+  await application.evaluate(() => {
+    if (!globalThis.releaseSaveCancellation) throw new Error("Native save dialog was not called");
+    globalThis.releaseSaveCancellation();
+    delete globalThis.releaseSaveCancellation;
+    delete globalThis.saveDialogEntered;
+  });
+  await page.waitForFunction(() => [...document.querySelectorAll("button")]
+    .some(button => button.textContent === "Export status JSON" && !button.disabled));
+  if (await page.getByText("Private status JSON saved.").count() || await page.getByText("Could not complete action").count()) {
+    throw new Error("Canceled status export showed a success or failure notice");
+  }
+  try { await readFile(canceledPath); throw new Error("Canceled status export wrote a file"); }
+  catch (error) { if (error.code !== "ENOENT") throw error; }
+  if ((await readdir(temp)).some(name => name.startsWith(".keryx-brief-"))) {
+    throw new Error("Canceled status export left a staging file");
+  }
   const briefPath = join(temp, "private-brief.md");
   await application.evaluate(({ dialog }, destination) => { dialog.showSaveDialog = async () => ({ canceled: false, filePath: destination }); }, briefPath);
   await page.getByRole("button", { name: "Export private brief" }).click();
@@ -122,7 +158,9 @@ try {
     || brief.includes(intent.queryId)) throw new Error("Private brief omitted answer/citation or leaked job ID");
   await page.getByRole("button", { name: "Export private brief" }).click();
   await page.getByText("Could not complete action").waitFor();
-  if (await readFile(briefPath, "utf8") !== brief) throw new Error("Brief export overwrote an existing file");
+  if (await readFile(briefPath, "utf8") !== brief || await page.getByText("Private research brief saved.").count()) {
+    throw new Error("Repeated brief export overwrote an existing file or showed false success");
+  }
   const { stdout: cliResult } = await execFile(process.execPath, ["--import", "tsx", "scripts/operator.mts", "result", "--state", selectedTask],
     { cwd: resolve(desktop, ".."), env: environment });
   if (JSON.parse(cliResult).answer !== "Acceptance test answer one [1]") throw new Error("CLI offline result differs");
@@ -133,10 +171,12 @@ try {
   await application.evaluate(({ dialog }, sourcePath) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [sourcePath] }); }, source);
   await page.getByRole("button", { name: "Import file" }).click();
   await page.getByText("reference.md").waitFor();
-  await mkdir(resolve(screenshotPath, ".."), { recursive: true });
-  await application.evaluate(({ BrowserWindow }) => { BrowserWindow.getAllWindows()[0].showInactive(); });
-  await page.screenshot({ path: screenshotPath, fullPage: true });
-  await application.evaluate(({ BrowserWindow }) => { BrowserWindow.getAllWindows()[0].hide(); });
+  if (screenshotPath) {
+    await mkdir(resolve(screenshotPath, ".."), { recursive: true });
+    await application.evaluate(({ BrowserWindow }) => { BrowserWindow.getAllWindows()[0].showInactive(); });
+    await page.screenshot({ path: screenshotPath, fullPage: true });
+    await application.evaluate(({ BrowserWindow }) => { BrowserWindow.getAllWindows()[0].hide(); });
+  }
   const state = JSON.parse(await readFile(join(userData, "workspace.json"), "utf8"));
   const workspace = state.path;
   const filenames = await (await import("node:fs/promises")).readdir(workspace);
@@ -171,6 +211,7 @@ try {
   await page.getByText("2 research tasks").waitFor();
   console.log(JSON.stringify({ mode: packaged ? "packaged" : "development", persistedTasks: 2,
     importedReference: true, verifiedSavedResult: true, offlineReopen: true, briefExport: true,
+    statusExport: true, refusedOverwrite: true, canceledExport: true,
     repeatedCheckRefresh: true, previousResultPreserved: true, corruptResultTaskVisible: true,
     relaunch: true, screenshot: screenshotPath }));
   passed = true;

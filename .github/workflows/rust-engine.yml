@@ -15,8 +15,9 @@ on:
       - "scripts/rust-lossless-v1-oracle.mts"
       - "scripts/rust-offline-fallback-guard.mjs"
       - "scripts/operator.mts"
-      - "scripts/operator-brief-export.mts"
-      - "scripts/operator-brief-export.test.ts"
+      - "desktop/src/main.ts"
+      - "desktop/src/private-export.ts"
+      - "desktop/src/private-export.test.ts"
       - "lib/**"
       - "package.json"
       - "package-lock.json"
@@ -33,8 +34,9 @@ on:
       - "scripts/rust-lossless-v1-oracle.mts"
       - "scripts/rust-offline-fallback-guard.mjs"
       - "scripts/operator.mts"
-      - "scripts/operator-brief-export.mts"
-      - "scripts/operator-brief-export.test.ts"
+      - "desktop/src/main.ts"
+      - "desktop/src/private-export.ts"
+      - "desktop/src/private-export.test.ts"
       - "lib/**"
       - "package.json"
       - "package-lock.json"
@@ -68,8 +70,8 @@ jobs:
       - name: Install JavaScript test dependencies
         run: npm ci --no-audit --no-fund
 
-      - name: Test TypeScript brief publication failures
-        run: npx vitest run scripts/operator-brief-export.test.ts
+      - name: Test shared TypeScript private publication failures
+        run: npx vitest run lib/operator/private-text-export.test.ts
 
       - name: Check Rust format
         run: cargo +${{ matrix.rust }} fmt --manifest-path rust/Cargo.toml --all --check
