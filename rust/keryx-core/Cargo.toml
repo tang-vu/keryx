@@ -8,3 +8,6 @@ serde_json = { version = "=1.0.145", features = ["preserve_order", "float_roundt
 sha2 = "=0.10.9"
 ryu-js = "=1.0.3"
 chrono = { version = "=0.4.42", default-features = false, features = ["std"] }
+cap-std = "=4.0.3"
+cap-fs-ext = "=4.0.3"
+same-file = "=1.0.6"

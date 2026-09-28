@@ -61,6 +61,16 @@ engine switch. TypeScript `result` preserves those code units as JSON escapes;
 Markdown brief export replaces unpaired surrogates with U+FFFD during UTF-8
 encoding, so keep the original JSON for lossless preservation.
 
+For supported inputs, the candidate's `brief --file` returns the same JSON contract
+as TypeScript: `{"saved":"ABSOLUTE_PATH","private":true}`. Both resolve the output
+path lexically, create a new file, and refuse overwrite. Unix files use mode `0600`;
+Windows files inherit the parent ACL. Select a private output parent: parent links
+are followed by the export operation, and `private: true` is not an ACL audit.
+The candidate anchors input reads to opened directories and refuses observed file
+changes. Retry after local writes finish if inspection fails. This is not an atomic
+snapshot across every task file, and it does not verify settlement. See the
+[inspection boundary and remaining gates](./rust-engine-migration.md#file-inspection-boundary).
+
 This CLI alpha has one local task type and no CLI listing, scheduling, approvals,
 obligation ledger, web connection, or automatic funds movement. The
 [Windows desktop alpha](./desktop-alpha.md) can list and open these same task

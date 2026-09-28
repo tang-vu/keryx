@@ -1,5 +1,29 @@
 use keryx_core::LocalTask;
-use std::{env, fs::OpenOptions, io::Write, path::PathBuf};
+use std::{
+    env,
+    fs::OpenOptions,
+    io::Write,
+    path::{Component, Path, PathBuf},
+};
+
+// Match Node's path.resolve for CLI output paths without resolving symlinks.
+// Opening this path too matters: a symlink followed by `..` must have the same
+// lexical target that the TypeScript export opens.
+fn resolve_output_path(path: &Path) -> Result<PathBuf, String> {
+    let absolute =
+        std::path::absolute(path).map_err(|e| format!("cannot resolve brief path: {e}"))?;
+    let mut resolved = PathBuf::new();
+    for component in absolute.components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                resolved.pop();
+            }
+            component => resolved.push(component.as_os_str()),
+        }
+    }
+    Ok(resolved)
+}
 
 fn run() -> Result<(), String> {
     let mut args = env::args().skip(1);
@@ -29,6 +53,7 @@ fn run() -> Result<(), String> {
         if command != "brief" {
             return Err("--file is only supported for brief".into());
         }
+        let path = resolve_output_path(&path)?;
         let mut options = OpenOptions::new();
         options.write(true).create_new(true);
         #[cfg(unix)]
@@ -41,18 +66,46 @@ fn run() -> Result<(), String> {
             .map_err(|e| format!("cannot create brief: {e}"))?;
         file.write_all(text.as_bytes()).map_err(|e| e.to_string())?;
         file.sync_all().map_err(|e| e.to_string())?;
-        println!(
-            "{}",
-            serde_json::json!({"file":path,"engineProtocol":"keryx-rust-local-v1"})
-        );
+        println!("{}", serde_json::json!({"saved":path,"private":true}));
     } else {
         println!("{text}");
     }
     Ok(())
 }
+
 fn main() {
     if let Err(error) = run() {
         eprintln!("keryx-engine: {error}");
         std::process::exit(1);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::resolve_output_path;
+    use std::path::Path;
+
+    #[test]
+    fn output_path_is_absolute_and_lexically_clean() {
+        let cwd = std::env::current_dir().unwrap();
+        assert_eq!(resolve_output_path(Path::new(".")).unwrap(), cwd);
+        assert_eq!(
+            resolve_output_path(Path::new("./part/../brief.md")).unwrap(),
+            cwd.join("brief.md")
+        );
+        assert_eq!(
+            resolve_output_path(Path::new("../brief.md")).unwrap(),
+            cwd.parent().unwrap().join("brief.md")
+        );
+        assert_eq!(resolve_output_path(Path::new("./part/../")).unwrap(), cwd);
+    }
+
+    #[test]
+    fn output_path_does_not_walk_above_root() {
+        let root = resolve_output_path(Path::new("/")).unwrap();
+        assert_eq!(
+            resolve_output_path(&root.join("../brief.md")).unwrap(),
+            root.join("brief.md")
+        );
     }
 }
