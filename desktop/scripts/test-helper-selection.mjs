@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join, resolve, sep } from "node:path";
 import { createInterface } from "node:readline";
@@ -25,8 +25,9 @@ async function runCase(label, initialSelection, expectedPath, expectSelectionWri
   const selectionDirectory = join(temporary, label);
   await mkdir(selectionDirectory);
   const selectionFile = join(selectionDirectory, "workspace.json");
+  const initialBytes = initialSelection === undefined ? null : JSON.stringify({ path: initialSelection });
   if (initialSelection !== undefined) {
-    await writeFile(selectionFile, JSON.stringify({ path: initialSelection }));
+    await writeFile(selectionFile, initialBytes);
   }
   const permitted = new Set(["systemroot", "windir", "temp", "tmp", "userprofile", "appdata", "localappdata"]);
   const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => permitted.has(name.toLowerCase())));
@@ -59,15 +60,19 @@ async function runCase(label, initialSelection, expectedPath, expectSelectionWri
       nativeManifest: join(dist, "native", "manifest.json"),
       selectionFile, legacySelectionFile });
     const view = await call("refresh", {});
-    if ((view?.path ?? null) !== expectedPath) {
+    const actualPath = view?.path ? (await realpath(view.path)).toLowerCase() : null;
+    const expectedCanonical = expectedPath ? (await realpath(expectedPath)).toLowerCase() : null;
+    if (actualPath !== expectedCanonical) {
       throw Error(`${label}: selected ${view?.path ?? "none"} instead of ${expectedPath ?? "none"}`);
     }
-    const selected = await readFile(selectionFile, "utf8").then(JSON.parse, () => null);
-    if (expectSelectionWrite && selected?.path !== expectedPath) {
+    const selectedBytes = await readFile(selectionFile, "utf8").catch(() => null);
+    const selected = selectedBytes === null ? null : JSON.parse(selectedBytes);
+    if (expectSelectionWrite && (!selected?.path ||
+      (await realpath(selected.path)).toLowerCase() !== expectedCanonical)) {
       throw Error(`${label}: legacy selection was not copied into new app data`);
     }
-    if (!expectSelectionWrite && selected?.path !== initialSelection) {
-      throw Error(`${label}: existing new selection changed unexpectedly`);
+    if (!expectSelectionWrite && selectedBytes !== initialBytes) {
+      throw Error(`${label}: existing new selection bytes changed unexpectedly`);
     }
   } finally {
     child.stdin.end();

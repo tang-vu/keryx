@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
-import { cp, mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, mkdir, readFile, realpath, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -142,7 +142,11 @@ try {
   await page.getByRole("button", { name: /Create workspace/ }).click();
   await page.getByRole("heading", { name: "Prepare paid research" }).waitFor();
   const view = await page.evaluate(() => window.keryxDesktop.refresh());
-  if (!view?.path?.startsWith(parent + sep)) throw Error("Workspace was created outside synthetic parent");
+  const canonicalParent = (await realpath(parent)).toLowerCase();
+  const canonicalWorkspace = view?.path ? (await realpath(view.path)).toLowerCase() : "";
+  if (!canonicalWorkspace.startsWith(canonicalParent + sep)) {
+    throw Error("Workspace was created outside synthetic parent");
+  }
   await page.getByRole("textbox", { name: "Research question" }).fill("Synthetic Tauri IPC question");
   await page.getByPlaceholder("0x... independently verified").fill("0x1111111111111111111111111111111111111111");
   await page.getByRole("button", { name: /Save task/ }).click();
