@@ -1,5 +1,15 @@
 # Keryx — Decision Log
 
+**D-264** - Pin the Arc testnet payment contract profile - *Independent
+environment overrides for USDC, GatewayWallet and GatewayMinter could create a
+mixed-chain signing or withdrawal configuration while Keryx still advertises
+Arc testnet.* Keep these addresses fixed in `lib/config.ts` and reject conflicting
+overrides at startup; standalone buyer entry points use the same profile. This
+is a testnet safeguard, not mainnet enablement or M2 acceptance. M2 still
+requires RPC chain verification at write boundaries, separate deployment keys
+and databases, network-scoped nonces and receipts, signer/Gateway domain checks,
+and failure and recovery drills before a mainnet release decision.
+
 **D-263** - Make a paid research business cycle the Tameion product focus -
 *A citation-toll answer alone does not show the financial operation Tameion asks
 an agent to run; a general-purpose chat clone would dilute the Arc/USDC workflow
