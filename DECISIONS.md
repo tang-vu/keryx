@@ -11,6 +11,33 @@ use CSS fallback fonts. The files and provenance are recorded in `app/fonts/READ
 Require a fresh production build to validate future font changes. Reversible:
 restore Google font loading if its clean-runner reliability is demonstrated.
 
+**D-261** - Bind browser grant reservations to one epoch and signer; retain
+uncertain signed authorizations - *A revoke/regrant can replace a session row
+between grant inspection and cap reservation, and the browser may keep a bearer
+authorization after the server decides to withhold submission.* Require atomic
+reservation and release against the expected grant epoch, session signer and cap;
+refuse a missing or changed grant without selecting the treasury signer. Once
+the browser has produced a valid signed header, record a withheld authorization
+as pending by its nonce with the original economic tuple and keep its capacity
+reserved. Only exact authoritative Circle terminal failure evidence may release
+that capacity for the same grant epoch; missing search results, local expiry or a
+server decision not to submit are not failure evidence.
+
+A final grant check still races with HTTP submission and cannot prove the
+browser discarded its copy of the bearer header. A pending authorization may
+therefore persist indefinitely if Circle never supplies a definitive outcome;
+operator recovery and support policy must address that uncertainty without
+reusing the nonce or silently freeing the cap. The grant-epoch binding and
+signed-withheld pending behavior merged in `27ed52c` (PR #25), with focused
+regression tests; they are not mainnet acceptance. A ledger-write failure after
+the signed header is produced can still leave a held reservation without a
+durable payment row. Closing that gap, the final grant-check/submission race,
+and indefinitely pending signed-withheld recovery requires further work.
+The separate seller SDK upgrade and explicit testnet facilitator pin merged in
+`a79e882` (PR #26); it does not close these browser-grant risks or approve
+mainnet payment.
+See [mainnet readiness evidence](docs/engineering/mainnet-readiness-2026-09-29.md).
+
 **D-260** - Replace the Windows Electron shell with a bounded Tauri shell and a
 shared Mint desktop surface - *The desktop alpha worked but its dark visual system
 diverged from the web reading product, and packaging Electron was heavier than the
