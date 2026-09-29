@@ -32,6 +32,7 @@ jobs:
           bash scripts/private-worker-deploy.check.sh
           bash scripts/withdrawal-cycle-deploy.check.sh
           node --test scripts/dependency-state.check.mjs
+          node --test scripts/release-ops-preflight.test.mjs
           node scripts/dependency-state.mjs record
           node scripts/dependency-state.mjs check
 
