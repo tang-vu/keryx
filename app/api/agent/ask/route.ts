@@ -5,7 +5,7 @@
  */
 
 import { NextRequest } from "next/server";
-import { collectRun } from "@/lib/agent";
+import { collectRun, getAgentDeps, type AgentDeps } from "@/lib/agent";
 import { config } from "@/lib/config";
 import { getDb } from "@/lib/db";
 import { makePayment } from "@/lib/payments/payment-gateway";
@@ -154,8 +154,8 @@ function pendingResponse(order: A2aOrder, replayed = false, message?: string) {
 }
 
 /** Side-effect-free discovery probe. POST recomputes the exact price from its JSON body. */
-export async function GET(req?: NextRequest) {
-  const queryId = req?.nextUrl.searchParams.get("queryId");
+export async function GET(req: NextRequest) {
+  const queryId = req.nextUrl.searchParams.get("queryId");
   if (queryId) {
     if (!/^a2a_[a-f0-9]{64}$/.test(queryId)) {
       return Response.json({ error: "invalid A2A query id" }, { status: 400 });
@@ -284,6 +284,19 @@ export async function POST(req: NextRequest) {
     model,
   });
 
+  // The treasury gateway is loaded lazily by collectRun. Load and construct it before an
+  // authorization can settle, so a broken server bundle cannot charge for an unstartable job.
+  // Unsigned requests still receive their normal body-dependent 402 challenge.
+  let preparedDeps: AgentDeps | undefined;
+  if (req.headers.has("payment-signature")) {
+    try {
+      preparedDeps = await getAgentDeps({ model });
+    } catch (error) {
+      console.error("[a2a] research dependency preflight failed:", error);
+      return Response.json({ error: "research service unavailable" }, { status: 503 });
+    }
+  }
+
   const isBot = !!config.botKey && req.nextUrl.searchParams.get("bot") === config.botKey;
   return settleThenServe(req, requirements(quote.totalPriceUsdc, treasury), async (settle) => {
     const db = await getDb();
@@ -394,7 +407,7 @@ export async function POST(req: NextRequest) {
 
     let run: Awaited<ReturnType<typeof collectRun>>;
     try {
-      run = await collectRun({
+      const runInput: Parameters<typeof collectRun>[0] = {
         question: parsedQuestion.question,
         budget: quote.creatorBudgetUsdc,
         researchMode,
@@ -413,7 +426,10 @@ export async function POST(req: NextRequest) {
             throw new Error("A2A QueryRun-save boundary could not be journaled");
           }
         },
-      });
+      };
+      run = preparedDeps
+        ? await collectRun(runInput, { deps: preparedDeps })
+        : await collectRun(runInput);
     } catch (error) {
       await db.failA2aOrder(orderId, "research_failed", new Date().toISOString()).catch(() => false);
       throw error;

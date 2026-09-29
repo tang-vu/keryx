@@ -214,8 +214,9 @@ export async function settleThenServe(
     try {
       body = await produce(settleInfo);
     } catch (produceError) {
-      const message = produceError instanceof Error ? produceError.message : String(produceError);
-      console.error(`[x402] paid resource failed after settlement ${opts.endpoint}: ${message}`);
+      // Preserve the stack: minified bundle initialization errors cannot be traced from their
+      // message alone, and this is the only log emitted after a confirmed debit.
+      console.error(`[x402] paid resource failed after settlement ${opts.endpoint}:`, produceError);
       const res = NextResponse.json(
         { error: "paid resource unavailable after settlement" },
         { status: 500 },

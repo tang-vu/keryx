@@ -13,7 +13,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { askKeryx, getStatus, meta } from "./keryx-buyer.mts";
+import { askKeryx, getStatus, meta, recoverKeryx } from "./keryx-buyer.mts";
 
 const server = new McpServer({ name: "keryx", version: "0.1.0" });
 
@@ -23,8 +23,9 @@ server.registerTool(
     title: "Ask Keryx",
     description:
       `Ask Keryx — an autonomous research agent that buys paid sources under a budget, answers with ` +
-      `inline citations, and pays each cited creator in USDC on Arc. Costs ${meta.feeUsdc} USDC per ` +
-      `call, paid from your own funded Arc-testnet wallet (run keryx_wallet_status first to fund it). ` +
+      `inline citations, and pays each cited creator in USDC on Arc. Default deep-mode price is ` +
+      `${meta.feeUsdc} USDC service fee + ${meta.defaultBudgetUsdc} USDC creator budget; the POST body sets the exact price. ` +
+      `Paid from your own funded Arc-testnet wallet (run keryx_wallet_status first to fund it). ` +
       `Use when you want a grounded, source-cited answer AND the creators paid for their work.`,
     inputSchema: {
       question: z.string().min(3).describe("The research question to ask Keryx."),
@@ -32,7 +33,7 @@ server.registerTool(
         .number()
         .positive()
         .optional()
-        .describe("Optional USDC budget Keryx may spend buying sources (default ~0.05)."),
+        .describe("Optional prepaid creator-spend cap in USDC (default 0.05); added to the deep-mode service fee."),
     },
   },
   async ({ question, budget }) => {
@@ -46,13 +47,30 @@ server.registerTool(
       const proof = r.settlementId ? ` (Circle Gateway settlement ${r.settlementId.slice(0, 12)}…, batched on Arc)` : "";
       const text =
         `${r.answer}\n\n` +
-        `— Paid Keryx ${r.amountPaid ?? meta.feeUsdc} USDC${proof}\n` +
+        `— Paid Keryx ${r.amountPaid} USDC${proof}\n` +
         `Keryx paid ${r.creatorsPaid} creator(s) $${r.totalToCreators} downstream:\n${cites}\n` +
         `On-chain proof + live feed: ${meta.baseUrl}/dashboard`;
       return { content: [{ type: "text" as const, text }] };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       return { isError: true, content: [{ type: "text" as const, text: `Keryx call failed: ${msg}` }] };
+    }
+  },
+);
+
+server.registerTool(
+  "keryx_recover",
+  {
+    title: "Recover paid Keryx research",
+    description: "Read the saved payment attempt and poll its query ID without submitting another payment. Use after a paid error or uncertain network outcome.",
+    inputSchema: {},
+  },
+  async () => {
+    try {
+      const recovered = await recoverKeryx();
+      return { content: [{ type: "text" as const, text: JSON.stringify(recovered, null, 2) }] };
+    } catch (e) {
+      return { isError: true, content: [{ type: "text" as const, text: `Recovery failed: ${e instanceof Error ? e.message : String(e)}` }] };
     }
   },
 );

@@ -18,6 +18,7 @@ import { GatewayClient } from "@circle-fin/x402-batching/client";
 import { createPublicClient, erc20Abi, formatUnits, http, parseUnits } from "viem";
 import { arcTestnet } from "viem/chains";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import { payForResearch, readPending, recoverResearch } from "./local-payment.mts";
 
 const USDC = (process.env.KERYX_USDC_ADDRESS ??
   "0x3600000000000000000000000000000000000000") as `0x${string}`;
@@ -26,12 +27,16 @@ const RPC = process.env.KERYX_RPC_URL ?? "https://rpc.testnet.arc.network";
 // reviewed package and deployment; changing an environment variable must never enable spending.
 const CHAIN = "arcTestnet" as const;
 const BASE_URL = (process.env.KERYX_BASE_URL ?? "https://keryx.cc").replace(/\/$/, "");
-const FEE_USDC = Number(process.env.KERYX_A2A_FEE ?? "0.02");
+const DEEP_FEE_USDC = Number(process.env.KERYX_A2A_DEEP_FEE ?? "0.05");
+const DEFAULT_BUDGET_USDC = Number(process.env.KERYX_DEFAULT_BUDGET ?? "0.05");
+const MAX_BUDGET_USDC = Number(process.env.KERYX_A2A_MAX_BUDGET ?? "0.5");
+const MAX_TOTAL_USDC = Number(process.env.KERYX_MAX_TOTAL_USDC ?? "1");
 const DEPOSIT_USDC = process.env.KERYX_GATEWAY_DEPOSIT ?? "0.5";
 const FAUCET = "https://faucet.circle.com";
 const EXPLORER = "https://testnet.arcscan.app";
 const WALLET_FILE =
   process.env.KERYX_WALLET_FILE ?? path.join(os.homedir(), ".keryx", "buyer-wallet.json");
+const JOURNAL_FILE = process.env.KERYX_PAYMENT_JOURNAL ?? path.join(path.dirname(WALLET_FILE), "buyer-payment.json");
 
 /** Load a buyer key from env, else from the persisted wallet file, else generate + persist one. */
 function loadOrCreateKey(): `0x${string}` {
@@ -59,7 +64,8 @@ const pub = createPublicClient({ chain: arcTestnet, transport: http(RPC) });
 export const meta = {
   address: account.address,
   baseUrl: BASE_URL,
-  feeUsdc: FEE_USDC,
+  feeUsdc: DEEP_FEE_USDC,
+  defaultBudgetUsdc: DEFAULT_BUDGET_USDC,
   faucet: FAUCET,
   explorer: EXPLORER,
   walletFile: WALLET_FILE,
@@ -74,7 +80,7 @@ export type WalletStatus = {
   instructions: string;
 };
 
-const fee = parseUnits(String(FEE_USDC), 6);
+const defaultTotal = parseUnits(String(DEEP_FEE_USDC + DEFAULT_BUDGET_USDC), 6);
 const deposit = parseUnits(DEPOSIT_USDC, 6);
 const ONRAMP_URL = `${BASE_URL}/api/faucet/onramp`;
 
@@ -127,11 +133,13 @@ async function readBalances() {
 /** Diagnose the wallet and return precise next-step funding guidance. */
 export async function getStatus(): Promise<WalletStatus> {
   const { gas, erc20, available } = await readBalances();
-  const ready = available >= fee;
+  const pending = readPending(JOURNAL_FILE);
+  const ready = available >= defaultTotal && !pending;
   let instructions: string;
-  if (ready) {
-    const calls = Math.floor(Number(formatUnits(available, 6)) / FEE_USDC);
-    instructions = `Ready — ${formatUnits(available, 6)} USDC in Gateway, ~${calls} Keryx calls.`;
+  if (pending) {
+    instructions = `Payment ${pending.status}: query ${pending.queryId}, amount ${pending.amountUsdc} USDC, settlement ${pending.settlementId ?? "unconfirmed"}. Use keryx_recover before another paid call.`;
+  } else if (ready) {
+    instructions = `Ready for default deep-mode call: ${DEEP_FEE_USDC} USDC fee + ${DEFAULT_BUDGET_USDC} USDC creator budget. Actual quote depends on the POST body.`;
   } else if (erc20 >= deposit && gas > 0n) {
     instructions =
       `You hold ${formatUnits(erc20, 6)} USDC but it isn't in the Gateway yet. ` +
@@ -145,7 +153,7 @@ export async function getStatus(): Promise<WalletStatus> {
       `No testnet USDC yet — just call ask_keryx: it AUTO-FUNDS this wallet once from the Keryx onramp ` +
       `(no Circle faucet needed), then pays the toll from YOUR wallet. If the onramp is tapped out ` +
       `(daily cap), fund ${account.address} at ${FAUCET} (Arc Testnet). ` +
-      `Each call costs ${FEE_USDC} USDC, paid from YOUR wallet — visible live on ${BASE_URL}/dashboard.`;
+      `Default deep-mode call prepays ${DEEP_FEE_USDC + DEFAULT_BUDGET_USDC} USDC (${DEEP_FEE_USDC} fee + ${DEFAULT_BUDGET_USDC} creator budget), paid from YOUR wallet.`;
   }
   return {
     address: account.address,
@@ -158,33 +166,34 @@ export async function getStatus(): Promise<WalletStatus> {
 }
 
 /** Ensure the Gateway balance can cover at least one toll, depositing from the EOA if needed. */
-async function ensureFunded(): Promise<void> {
+async function ensureFunded(required: bigint): Promise<void> {
   const first = await gateway.getBalances();
-  if ((first.gateway.available as bigint) >= fee) return;
+  if ((first.gateway.available as bigint) >= required) return;
 
+  const topUp = required > deposit ? required : deposit;
   let erc20 = (await pub.readContract({
     address: USDC,
     abi: erc20Abi,
     functionName: "balanceOf",
     args: [account.address],
   })) as bigint;
-  if (erc20 < deposit) {
+  if (erc20 < topUp) {
     // Auto-onramp once from Keryx's testnet faucet, then wait for the drip to land.
     await tryOnramp();
-    erc20 = await waitForErc20(deposit);
-    if (erc20 < deposit) {
+    erc20 = await waitForErc20(topUp);
+    if (erc20 < topUp) {
       throw new Error(
         `Insufficient testnet USDC and the Keryx onramp didn't land (already used or daily cap). ` +
           `Fund ${account.address} at ${FAUCET} (Arc Testnet), then retry. ` +
-          `Need ≥ ${DEPOSIT_USDC} USDC (have ${formatUnits(erc20, 6)}).`,
+          `Need ≥ ${formatUnits(topUp, 6)} USDC (have ${formatUnits(erc20, 6)}).`,
       );
     }
   }
 
-  await gateway.deposit(DEPOSIT_USDC);
+  await gateway.deposit(formatUnits(topUp, 6));
   for (let i = 0; i < 30; i++) {
     const b = await gateway.getBalances();
-    if ((b.gateway.available as bigint) >= fee) return;
+    if ((b.gateway.available as bigint) >= required) return;
     await new Promise((r) => setTimeout(r, 3000));
   }
   throw new Error("Gateway deposit didn't confirm in time — check balance and retry.");
@@ -206,16 +215,25 @@ export type KeryxAnswer = {
 
 /** Pay the x402 toll from the user's wallet and return Keryx's cited answer + downstream payouts. */
 export async function askKeryx(question: string, budget?: number): Promise<KeryxAnswer> {
-  await ensureFunded();
-  const r = await gateway.pay<{
+  if (readPending(JOURNAL_FILE)) throw new Error(`Previous payment requires recovery. Use keryx_recover; journal ${JOURNAL_FILE}`);
+  const creatorBudget = Math.min(MAX_BUDGET_USDC, budget ?? DEFAULT_BUDGET_USDC);
+  const estimatedTotal = DEEP_FEE_USDC + creatorBudget;
+  if (estimatedTotal > MAX_TOTAL_USDC) throw new Error(`Estimated total ${estimatedTotal} USDC exceeds KERYX_MAX_TOTAL_USDC`);
+  await ensureFunded(parseUnits(String(estimatedTotal), 6));
+  const r = await payForResearch<{
     answer: string;
     creatorsPaid: number;
     totalToCreators: number;
     citations: KeryxCitation[];
     feePaid: number;
-  }>(`${BASE_URL}/api/agent/ask`, {
-    method: "POST",
-    body: { question, ...(budget ? { budget } : {}) },
+  }>({
+    url: `${BASE_URL}/api/agent/ask`, account, journalFile: JOURNAL_FILE,
+    maxAmountUsdc: MAX_TOTAL_USDC,
+    body: { question, ...(budget !== undefined ? { budget } : {}) },
   });
-  return { ...r.data, settlementId: String(r.transaction), amountPaid: r.formattedAmount };
+  return { ...r.data, settlementId: r.settlementId, amountPaid: r.amountPaid };
+}
+
+export async function recoverKeryx() {
+  return recoverResearch(BASE_URL, JOURNAL_FILE);
 }
