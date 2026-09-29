@@ -129,7 +129,7 @@ export class WorkspaceStore {
     const selectedEntry = lstatSync(this.creationPath);
     if (stat.isSymbolicLink() || !stat.isDirectory() || realpathSync(this.path) !== this.path
       || selectedEntry.isSymbolicLink() || !selectedEntry.isDirectory()
-      || realpathSync(this.creationPath) !== this.path
+      || (this.identity && (selectedEntry.dev !== this.identity.dev || selectedEntry.ino !== this.identity.ino))
       || (this.identity && (stat.dev !== this.identity.dev || stat.ino !== this.identity.ino))) {
       throw new Error("The selected workspace has changed; reopen it before continuing");
     }

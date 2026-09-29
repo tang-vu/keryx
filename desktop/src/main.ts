@@ -10,9 +10,10 @@ declare const KERYX_NATIVE_SOURCE_COMMIT: string;
 const allowedAssets = new Set(["index.html", "renderer.js", "style.css"]);
 protocol.registerSchemesAsPrivileged([{ scheme: "keryx-app", privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 if (process.env.KERYX_DESKTOP_TEST_USER_DATA) app.setPath("userData", process.env.KERYX_DESKTOP_TEST_USER_DATA);
+const nativeDirectory = join(__dirname, "native");
 const store = new WorkspaceStore(createNativeTaskWriter({
-  binaryPath: join(__dirname, "native", process.platform === "win32" ? "keryx-engine.exe" : "keryx-engine"),
-  manifestPath: join(__dirname, "native", "manifest.json"),
+  binaryPath: join(nativeDirectory, process.platform === "win32" ? "keryx-engine.exe" : "keryx-engine"),
+  manifestPath: join(nativeDirectory, "manifest.json"),
   expectedSourceCommit: KERYX_NATIVE_SOURCE_COMMIT,
 }));
 let window: BrowserWindow;
