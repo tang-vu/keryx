@@ -790,7 +790,7 @@ export class SupabaseAdapter implements KeryxDB {
 
   async recordPayment(p: PaymentRecord): Promise<void> {
     const settlementStatus = assertPaymentSettlementState(p);
-    await this.sb.from("payment_events").insert({
+    const { error } = await this.sb.from("payment_events").insert({
       id: p.id ?? crypto.randomUUID(),
       created_at: p.createdAt,
       kind: p.kind,
@@ -818,6 +818,7 @@ export class SupabaseAdapter implements KeryxDB {
       offer_id: p.offerId ?? null,
       list_price_usdc: p.listPriceUsdc ?? null,
     });
+    if (error) throw error;
   }
 
   async recordPaymentOnce(p: PaymentRecord): Promise<boolean> {
