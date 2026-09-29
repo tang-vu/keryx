@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-258** - Complete native publication from actual caller envelopes before routing callers -
+*D-255's injected pre-mkdir checkpoint did not exercise a successful native write.*
+Extend those same real CLI and desktop oracles through exclusive publication to
+fresh private siblings. Require exact persisted bytes and identity, unchanged
+original tasks, collision refusal, native/TypeScript status parity and actual
+desktop discovery/refresh. Fresh guarded TypeScript processes must reopen the
+native-created v1 records with the native executable unavailable. Keep legacy
+admission and refusal cases, explicit synthetic Windows owner adjustment and
+platform completion labels. This test-only increment changes no production caller
+or monetary rule and proves no Windows directory-entry durability. Reversible:
+remove the additional evaluator checks; TypeScript remains authoritative. See
+[caller publication evaluation](docs/rust-task-admission-evaluation.md#full-publication-from-caller-envelopes).
+
 **D-257** - Refuse unsupported Windows creator tokens before native publication -
 *The private-parent check does not establish the owner of a newly created child;
 the previous Windows evaluation selected a compatible owner inside its test process.*

@@ -126,7 +126,7 @@ jobs:
         env:
           KERYX_EXPECT_WINDOWS_TOKEN_MISMATCH: ${{ runner.os == 'Windows' && '1' || '0' }}
 
-      - name: Compare actual task callers with native candidate preflight
+      - name: Compare actual task callers with native admission and full publication
         run: node --import tsx scripts/test-rust-task-admission.mts
 
       - name: Verify positive sub-micro candidate refusal and explicit TypeScript fallback

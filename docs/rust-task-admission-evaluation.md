@@ -6,6 +6,10 @@ and Windows MSVC acceptance passed in PR #16. It tests inputs from the actual Op
 desktop workspace implementation before any production writer migration.
 TypeScript remains the writer, reader and payment authority.
 
+D-258 extends the same caller cases through full native publication and reopening,
+as described below. D-255's recorded hosted results at the end of this document
+remain historical evidence for its original pre-mkdir scope.
+
 ## Real callers as the oracle
 
 Run the existing CLI `create` command and `WorkspaceStore.createTask` against owned
@@ -46,6 +50,51 @@ candidate refusals. Hash the original task files before and after every refusal
 and read-only reopening. Subprocesses require bounded lifetimes and confirmed
 termination; no injected switches enter the packaged native CLI or production callers.
 
+## Full publication from caller envelopes
+
+After the original injected checkpoint, publish the same real caller envelope to
+the absent sibling through the feature-only native publisher. Cover the actual
+relative-path CLI request, the half-USDC CLI boundary and the desktop deep-research
+Unicode request. Require the exact task ID, child name and platform completion
+observation, with no unexpected success fields or diagnostic output. Both native
+files must equal the original caller's persisted bytes; original task contents
+must remain unchanged throughout publication and reopening.
+
+Publication must report `unix_synced` on Linux or
+`windows_visible_entry_unproven` on Windows. Neither observation proves payment
+or delivery. The Windows fixture opts into `--evaluation-current-user-owner`
+explicitly; D-257's separate token corpus establishes ordinary-token and
+impersonation behavior. These fixtures do not establish production eligibility
+for every selected workspace.
+
+Reopen each native-created task using native status, the authoritative TypeScript
+status reader and a newly selected `WorkspaceStore`. Find the desktop row by its
+actual directory name and refresh it using the returned handle. Verify its request
+fields, identity and ready/unknown payment/delivery state. Directory discovery is
+part of this assertion; do not infer desktop compatibility from JSON parsing alone.
+
+Repeat publication against the occupied sibling and require refusal at the actual
+exclusive-mkdir collision with no success output and an unchanged tree. Separately
+launch fresh guarded TypeScript readers with the native executable unavailable.
+They must reopen the native-created v1 files unchanged without network access,
+signing or repurchase. This is offline reopening of a ready task, not a paid-job
+recovery or completed-result drill.
+
+Keep the original byte-parity, injected checkpoint, caller-refusal, candidate-only
+refusal and legacy-reopening counts separate from these new checks. This increment
+adds no production creation command, caller routing, schema change or new monetary
+policy. Production cutover still requires the reviewed caller integration and
+release gates in the [writer policy](rust-writer-admission-policy.md).
+
+The D-258 local Windows GNU run passed three full native publications, three
+preserved collision refusals, three native/TypeScript status comparisons, three
+fresh guarded native-task reopenings and three fresh desktop discoveries with
+handle refresh. The original three byte comparisons, three no-write checkpoints,
+five candidate-only refusals, eight caller refusals and two guarded legacy
+reopenings remained green. The original publication driver also retained its
+D-257 local counts, including all three token checks. These are local observations;
+the same extended corpus must pass hosted Linux and Windows MSVC before acceptance.
+
 ## Preserve legacy admission and recovery
 
 The existing TypeScript request schema can accept a tiny positive budget such as
@@ -61,7 +110,7 @@ must remain inspectable through the original TypeScript path in fresh guarded
 processes, without signing, network access or repurchase. Invalid or corrupted
 records may still be refused; rollback is not automatic repair.
 
-## Acceptance and remaining decisions
+## Original D-255 acceptance and remaining production decisions
 
 Require actual CLI and desktop success/refusal matrices, exact preparation bytes,
 explicitly classified candidate-only differences, no-write tree evidence and
@@ -70,13 +119,14 @@ driver again if shared synthetic fixture setup is extracted, so its ACL, concurr
 fault and crash evidence is preserved. Keep local Windows GNU observations separate
 from hosted acceptance.
 
-Only after this evidence is reviewed can a later proposal decide production target
-selection, supported Windows owner/ACL shapes, elevated-token handling and how to
-present the unproven Windows directory-entry durability. New-task monetary admission
-must be decided separately from legacy reading and existing buyer recovery. A
-production migration still needs one named writer, an explicit rollback window and
-criteria for retiring duplicate domain rules. This test-only corpus changes none
-of those owners and adds no production command.
+D-257 subsequently established the candidate token/parent policy and a
+[production admission proposal](rust-writer-admission-policy.md). Actual production
+target selection, caller refusal presentation and acceptance of the unproven
+Windows directory-entry durability still need review. New-task monetary admission
+remains separate from legacy reading and buyer recovery. The proposed single
+writer, rollback window and retirement of duplicate creation rules take effect
+only through an accepted caller cutover. These test-only corpora change none of
+those production owners and add no production command.
 
 ## Reproduce locally
 
