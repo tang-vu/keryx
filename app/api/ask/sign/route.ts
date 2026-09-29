@@ -20,7 +20,8 @@
 
 import { NextRequest } from "next/server";
 import { getGrant } from "@/lib/payments/session-grants";
-import { resolveSignature } from "@/lib/payments/pending-signatures";
+import { getPendingChallenge, resolveSignature } from "@/lib/payments/pending-signatures";
+import { verifyBrowserSignature } from "@/lib/payments/verify-browser-signature";
 
 export const runtime = "nodejs";
 
@@ -55,6 +56,18 @@ export async function POST(req: NextRequest) {
   const grant = await getGrant(sessionId);
   if (!grant) {
     return Response.json({ error: "no active grant for sessionId" }, { status: 404 });
+  }
+
+  const challenge = getPendingChallenge(sessionId, reqId);
+  if (!challenge) {
+    return Response.json({ error: "reqId not found or already resolved" }, { status: 404 });
+  }
+
+  try {
+    await verifyBrowserSignature(paymentHeader, challenge);
+  } catch {
+    // Keep the live slot available for a valid callback. Never echo a bearer header.
+    return Response.json({ error: "invalid payment authorization" }, { status: 400 });
   }
 
   // Resolve scoped to this sessionId — prevents cross-session promise resolution.

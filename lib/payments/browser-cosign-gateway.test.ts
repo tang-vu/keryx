@@ -151,6 +151,20 @@ describe("BrowserCoSignGateway", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("refuses a dual-payload callback before the paid retry", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(challenge());
+    vi.stubGlobal("fetch", fetchMock);
+    const outer = JSON.parse(Buffer.from(signedHeader(), "base64").toString("utf8"));
+    const header = Buffer.from(JSON.stringify({
+      ...outer,
+      payload: { ...outer, authorization: { ...outer.authorization, nonce: `0x${"99".repeat(32)}` } },
+    })).toString("base64");
+    const gateway = new BrowserCoSignGateway("session", SESSION, vi.fn().mockResolvedValue(header));
+
+    await expect(gateway.payFetch({ source, queryId: "q1" })).rejects.toThrow(/ambiguous/);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("rejects a replacement between gateway construction and reservation", async () => {
     const fetchMock = vi.fn().mockResolvedValue(challenge());
     vi.stubGlobal("fetch", fetchMock);
