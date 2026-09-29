@@ -14,9 +14,10 @@
  * for — an unreachable node must never read as an empty wallet.
  */
 
-import { createPublicClient, erc20Abi, http, type Address } from "viem";
+import { createPublicClient, erc20Abi, type Address } from "viem";
 import { arcTestnet } from "../chains";
 import { config } from "../config";
+import { attestedArcHttp } from "../arc-rpc-attestation";
 
 export async function getOnchainUsdcBalances(
   addresses: string[],
@@ -25,7 +26,7 @@ export async function getOnchainUsdcBalances(
   const out = new Map<string, number | null>(unique.map((a) => [a, null]));
   if (unique.length === 0) return out;
 
-  const client = createPublicClient({ chain: arcTestnet, transport: http(config.rpcUrl) });
+  const client = createPublicClient({ chain: arcTestnet, transport: attestedArcHttp(config.rpcUrl) });
 
   // Sequential on purpose: this only ever runs for the handful of wallets that came up short,
   // and a public testnet RPC is happier with a trickle than with a burst.

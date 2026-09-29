@@ -15,9 +15,10 @@
  * and the hourly cadence means a real defect persists across runs while a race does not.
  */
 
-import { createPublicClient, http, type Address, type Hex } from "viem";
+import { createPublicClient, type Address, type Hex } from "viem";
 import { arcTestnet } from "@/lib/chains";
 import { config } from "@/lib/config";
+import { attestedArcAuthorityHttp } from "@/lib/arc-rpc-attestation";
 import { REGISTRY_ABI, type OnChainRecord } from "./registry-client";
 import type { KeryxDB } from "@/lib/db/keryx-db";
 import type { Source } from "@/lib/types";
@@ -72,7 +73,7 @@ export function chainRegistryReader(): RegistryReader {
   const address = config.registryReadAddress as Address;
   const client = createPublicClient({
     chain: arcTestnet,
-    transport: http(config.rpcUrl, { timeout: 15_000, retryCount: 1 }),
+    transport: attestedArcAuthorityHttp(config.rpcUrl, { timeout: 15_000, retryCount: 1 }),
   });
   return {
     headBlock: () => client.getBlockNumber(),

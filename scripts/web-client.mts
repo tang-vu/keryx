@@ -26,11 +26,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { GatewayClient, type SupportedChainName } from "@circle-fin/x402-batching/client";
-import { createPublicClient, createWalletClient, http, parseEther, keccak256 } from "viem";
+import { createPublicClient, createWalletClient, parseEther, keccak256 } from "viem";
 import { arcTestnet } from "viem/chains";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { SiweMessage } from "siwe";
 import { config } from "../lib/config.ts";
+import { assertArcRpcChain, attestedArcHttp } from "../lib/arc-rpc-attestation.ts";
 import { signPaymentAuthorization, type PaymentRequirementsInput } from "../lib/x402-client-sign.ts";
 
 // ── Tunables ──────────────────────────────────────────────────────────────────
@@ -78,12 +79,12 @@ function saveActiveKey(key: `0x${string}`) {
   fs.writeFileSync(STATE, JSON.stringify({ privateKey: key, address: privateKeyToAccount(key).address, rotatedAt: new Date().toISOString() }, null, 2));
 }
 
-const pub = createPublicClient({ chain: arcTestnet, transport: http(config.rpcUrl) });
+const pub = createPublicClient({ chain: arcTestnet, transport: attestedArcHttp(config.rpcUrl) });
 
 // ── SIWE sign-in for the asker wallet → keryx_session cookie ────────────────────
 async function siweLogin(askerKey: `0x${string}`) {
   const asker = privateKeyToAccount(askerKey);
-  const wallet = createWalletClient({ account: asker, chain: arcTestnet, transport: http(config.rpcUrl) });
+  const wallet = createWalletClient({ account: asker, chain: arcTestnet, transport: attestedArcHttp(config.rpcUrl) });
   const nonceRes = await fetch(`${base}/api/auth/nonce`);
   capture(nonceRes);
   const { nonce } = (await nonceRes.json()) as { nonce: string };
@@ -125,7 +126,7 @@ let askerKey = loadActiveKey();
 async function ensureFundedSession(): Promise<{ sessionId: string; sessAddr: string; cap: number; sessKey: `0x${string}` }> {
   for (let attempt = 0; attempt < 2; attempt++) {
     const asker = privateKeyToAccount(askerKey);
-    const askerWallet = createWalletClient({ account: asker, chain: arcTestnet, transport: http(config.rpcUrl) });
+    const askerWallet = createWalletClient({ account: asker, chain: arcTestnet, transport: attestedArcHttp(config.rpcUrl) });
     await siweLogin(askerKey);
 
     // Derive the deterministic session key + its Gateway client.
@@ -161,6 +162,7 @@ async function ensureFundedSession(): Promise<{ sessionId: string; sessAddr: str
       console.log(`   funding session EOA with ${(SESSION_CAP_USDC + SESSION_GAS_BUFFER).toFixed(4)} USDC…`);
       const fundTx = await askerWallet.sendTransaction({ to: sessAddr, value: parseEther((SESSION_CAP_USDC + SESSION_GAS_BUFFER).toFixed(18)), gas: 21000n });
       await pub.waitForTransactionReceipt({ hash: fundTx });
+      await assertArcRpcChain(config.rpcUrl);
       await gw.deposit(SESSION_CAP_USDC.toString());
       for (let i = 0; i < 30; i++) {
         residual = Number((await gw.getBalances()).gateway.available) / 1e6;
@@ -187,7 +189,7 @@ async function ensureFundedSession(): Promise<{ sessionId: string; sessAddr: str
 
 /** Stream POST /api/ask and co-sign each toll with the session key. */
 async function askAndCoSign(sessionId: string, sessKey: `0x${string}`) {
-  const sessWallet = createWalletClient({ account: privateKeyToAccount(sessKey), chain: arcTestnet, transport: http(config.rpcUrl) });
+  const sessWallet = createWalletClient({ account: privateKeyToAccount(sessKey), chain: arcTestnet, transport: attestedArcHttp(config.rpcUrl) });
   // Identify as Keryx's own headless driver so the route tags this self-generated run `engine`,
   // not `web` — the dashboard's external bucket then reflects only genuine third-party askers.
   const askUrl = config.botKey ? `${base}/api/ask?bot=${encodeURIComponent(config.botKey)}` : `${base}/api/ask`;
@@ -207,6 +209,7 @@ async function askAndCoSign(sessionId: string, sessKey: `0x${string}`) {
     if (event === "sign-request") {
       const { reqId, requirements } = data as { reqId: string; requirements: PaymentRequirementsInput };
       try {
+        await assertArcRpcChain(config.rpcUrl);
         const { header } = await signPaymentAuthorization(sessWallet, requirements);
         await fetch(`${base}/api/ask/sign`, {
           method: "POST",

@@ -19,14 +19,15 @@ import {
   createPublicClient,
   createWalletClient,
   erc20Abi,
-  http,
   parseEther,
   parseUnits,
 } from "viem";
 import { arcTestnet } from "viem/chains";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { config } from "../config";
+import { assertArcRpcChain, attestedArcHttp } from "../arc-rpc-attestation";
 import { ServerPaymentGateway } from "./server-payment-gateway";
+import type { BatchPayloadSigner } from "./server-x402-client";
 
 const GAS_TOPUP = parseEther("0.05"); // native USDC for gas (18 decimals on Arc)
 const GAS_MIN = parseEther("0.01");
@@ -47,18 +48,24 @@ function loadSpendKey(): `0x${string}` {
 export class RealGateway extends ServerPaymentGateway {
   private spendKey = loadSpendKey();
   protected spend = privateKeyToAccount(this.spendKey);
-  protected batchScheme = new BatchEvmScheme(this.spend);
+  private signer = new BatchEvmScheme(this.spend);
+  protected batchScheme: BatchPayloadSigner = {
+    createPaymentPayload: async (version, requirements) => {
+      await assertArcRpcChain(config.rpcUrl);
+      return this.signer.createPaymentPayload(version, requirements);
+    },
+  };
   private gateway = new GatewayClient({
     chain: config.network as SupportedChainName,
     privateKey: this.spendKey,
     rpcUrl: config.rpcUrl,
   });
   private funder = privateKeyToAccount(config.funderKey as `0x${string}`);
-  private publicClient = createPublicClient({ chain: arcTestnet, transport: http(config.rpcUrl) });
+  private publicClient = createPublicClient({ chain: arcTestnet, transport: attestedArcHttp(config.rpcUrl) });
   private funderWallet = createWalletClient({
     account: this.funder,
     chain: arcTestnet,
-    transport: http(config.rpcUrl),
+    transport: attestedArcHttp(config.rpcUrl),
   });
 
   async ensureFunded(budget: number): Promise<{ address: string; depositTx?: string }> {
@@ -97,6 +104,7 @@ export class RealGateway extends ServerPaymentGateway {
       await this.publicClient.waitForTransactionReceipt({ hash: usdcTx, timeout: 90_000 });
     }
 
+    await assertArcRpcChain(config.rpcUrl);
     const dep = await this.gateway.deposit(depositStr);
 
     // Circle's facilitator settles against the OFF-CHAIN Gateway balance, which lags the on-chain

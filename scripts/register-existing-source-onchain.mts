@@ -25,7 +25,6 @@ import {
   createPublicClient,
   createWalletClient,
   formatEther,
-  http,
   parseEther,
   type Hex,
 } from "viem";
@@ -33,6 +32,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { arcTestnet } from "viem/chains";
 import { getDb } from "../lib/db/index.ts";
 import { config } from "../lib/config.ts";
+import { attestedArcHttp } from "../lib/arc-rpc-attestation.ts";
 import {
   REGISTRY_ABI,
   getRegistrySource,
@@ -45,7 +45,7 @@ import type { Author, Source } from "../lib/types.ts";
 /** Enough native USDC for a register() call on Arc, with room to spare. */
 const GAS_FLOOR = parseEther("0.02");
 
-const publicClient = createPublicClient({ chain: arcTestnet, transport: http(config.rpcUrl) });
+const publicClient = createPublicClient({ chain: arcTestnet, transport: attestedArcHttp(config.rpcUrl) });
 
 /**
  * On-chain splits are integer basis points that must sum to exactly 10 000. Rounding each weight
@@ -71,7 +71,7 @@ async function ensureGas(creator: Hex): Promise<void> {
   const funder = createWalletClient({
     account: privateKeyToAccount(config.funderKey as Hex),
     chain: arcTestnet,
-    transport: http(config.rpcUrl),
+    transport: attestedArcHttp(config.rpcUrl),
   });
   const hash = await funder.sendTransaction({
     to: creator,
@@ -120,7 +120,7 @@ async function register(source: Source): Promise<void> {
   const wallet = createWalletClient({
     account: privateKeyToAccount(stored.privateKey as Hex),
     chain: arcTestnet,
-    transport: http(config.rpcUrl),
+    transport: attestedArcHttp(config.rpcUrl),
   });
   const hash = await wallet.writeContract({
     address: config.registryAddress as Hex,
