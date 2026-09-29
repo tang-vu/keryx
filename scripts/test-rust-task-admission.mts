@@ -43,7 +43,8 @@ function run(executable: string, args: string[], input?: string | Buffer,
 function native(executable: string, envelope: object, args: string[] = []) {
   const input = JSON.stringify(envelope);
   assert(Buffer.byteLength(input) <= 16_384, "native bridge envelope must remain bounded");
-  return run(executable, args, input);
+  return run(executable, executable === publishExe && process.platform === "win32"
+    ? ["--evaluation-current-user-owner", ...args] : args, input);
 }
 
 function operator(command: "create" | "status", state: string,

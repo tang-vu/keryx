@@ -47,12 +47,17 @@ setting only the selected parent's owner does not determine child/file ownership
 The synthetic fixtures reset only their newly owned parent to inherited ACL
 defaults before installing the single explicit user grant and removing inheritance;
 otherwise unrelated explicit grants can survive `icacls /grant:r`. They also set
-their own parent owner. Native test processes
-and the feature-only evaluator also select their own token user as their process's
+their own parent owner. Native unit-test processes and explicitly opted-in
+feature-only evaluator processes select their own token user as their process's
 default owner, verify it by reading the token back, and fail if adjustment is denied.
 This changes only those disposable test processes, not machine policy or an existing
-user directory. The normal publisher performs no token adjustment and still refuses
-unsupported owners. Production elevated-token admission remains an open gate.
+user directory. Since D-257 the evaluator defaults to the unadjusted process token;
+the existing synthetic corpora explicitly supply `--evaluation-current-user-owner`
+on Windows. The normal publisher performs no token adjustment. It now refuses a
+thread impersonation token or a mismatched process default owner before mkdir,
+while retaining the post-create handle checks. Separate unadjusted-process and
+impersonation cases exercise this [candidate policy](rust-writer-admission-policy.md).
+Production caller admission remains a separate gate.
 See [Windows object ownership](https://learn.microsoft.com/en-us/windows/win32/secauthz/owner-of-a-new-object),
 [token access rights](https://learn.microsoft.com/en-us/windows/win32/secauthz/access-rights-for-access-token-objects)
 and [SetTokenInformation](https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-settokeninformation).

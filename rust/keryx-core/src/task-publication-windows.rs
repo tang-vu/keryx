@@ -3,22 +3,20 @@
 //! inheritable ACE, so newly created children cannot inherit broad grants.
 use std::{ffi::c_void, io, os::windows::io::RawHandle};
 #[cfg(any(test, feature = "publication-evaluation"))]
-use windows_sys::Win32::Security::{
-    SetTokenInformation, TokenOwner, TOKEN_ADJUST_DEFAULT, TOKEN_OWNER,
-};
+use windows_sys::Win32::Security::{SetTokenInformation, TOKEN_ADJUST_DEFAULT};
 use windows_sys::Win32::{
-    Foundation::{CloseHandle, LocalFree},
+    Foundation::{CloseHandle, GetLastError, LocalFree, ERROR_NO_TOKEN},
     Security::{
         Authorization::{GetSecurityInfo, SE_FILE_OBJECT},
-        EqualSid, GetAce, GetSecurityDescriptorControl, GetTokenInformation, TokenUser,
+        EqualSid, GetAce, GetSecurityDescriptorControl, GetTokenInformation, TokenOwner, TokenUser,
         ACCESS_ALLOWED_ACE, ACL, CONTAINER_INHERIT_ACE, DACL_SECURITY_INFORMATION,
         INHERIT_ONLY_ACE, NO_PROPAGATE_INHERIT_ACE, OBJECT_INHERIT_ACE, OWNER_SECURITY_INFORMATION,
-        SE_DACL_PROTECTED, TOKEN_QUERY, TOKEN_USER,
+        SE_DACL_PROTECTED, TOKEN_OWNER, TOKEN_QUERY, TOKEN_USER,
     },
     Storage::FileSystem::FILE_ALL_ACCESS,
     System::{
         SystemServices::ACCESS_ALLOWED_ACE_TYPE,
-        Threading::{GetCurrentProcess, OpenProcessToken},
+        Threading::{GetCurrentProcess, GetCurrentThread, OpenProcessToken, OpenThreadToken},
     },
 };
 
@@ -64,6 +62,73 @@ fn current_user_sid() -> io::Result<Vec<usize>> {
     })();
     unsafe { CloseHandle(token) };
     result
+}
+
+/// Publication uses the process token only. A thread impersonation token can
+/// determine the owner of a new object, so refuse it before creating anything.
+pub(super) fn admit_publication_token() -> io::Result<()> {
+    let mut thread_token = std::ptr::null_mut();
+    if unsafe { OpenThreadToken(GetCurrentThread(), TOKEN_QUERY, 1, &mut thread_token) } != 0 {
+        let closed = unsafe { CloseHandle(thread_token) };
+        if closed == 0 {
+            return Err(io::Error::last_os_error());
+        }
+        return Err(denied(
+            "thread impersonation is unsupported for task publication",
+        ));
+    }
+    if unsafe { GetLastError() } != ERROR_NO_TOKEN {
+        return Err(io::Error::last_os_error());
+    }
+
+    let mut process_token = std::ptr::null_mut();
+    if unsafe { OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut process_token) } == 0 {
+        return Err(io::Error::last_os_error());
+    }
+    let result = (|| {
+        let user = token_sid(process_token, TokenUser)?;
+        let owner = token_sid(process_token, TokenOwner)?;
+        let user_sid = unsafe { (*(user.as_ptr() as *const TOKEN_USER)).User.Sid };
+        let owner_sid = unsafe { (*(owner.as_ptr() as *const TOKEN_OWNER)).Owner };
+        if user_sid.is_null()
+            || owner_sid.is_null()
+            || unsafe { EqualSid(user_sid, owner_sid) } == 0
+        {
+            return Err(denied("process default owner is not the current user"));
+        }
+        Ok(())
+    })();
+    if unsafe { CloseHandle(process_token) } == 0 {
+        return Err(io::Error::last_os_error());
+    }
+    result
+}
+
+fn token_sid(
+    token: *mut c_void,
+    class: windows_sys::Win32::Security::TOKEN_INFORMATION_CLASS,
+) -> io::Result<Vec<usize>> {
+    let mut size = 0;
+    unsafe { GetTokenInformation(token, class, std::ptr::null_mut(), 0, &mut size) };
+    let minimum = if class == TokenUser {
+        std::mem::size_of::<TOKEN_USER>()
+    } else {
+        std::mem::size_of::<TOKEN_OWNER>()
+    } as u32;
+    if size < minimum || size > 65_536 {
+        return Err(denied("cannot obtain process token SID"));
+    }
+    let words = (size as usize).div_ceil(std::mem::size_of::<usize>());
+    let mut buffer = vec![0usize; words];
+    if unsafe { GetTokenInformation(token, class, buffer.as_mut_ptr().cast(), size, &mut size) }
+        == 0
+    {
+        return Err(io::Error::last_os_error());
+    }
+    if size < minimum || size as usize > buffer.len() * std::mem::size_of::<usize>() {
+        return Err(denied("invalid process token SID extent"));
+    }
+    Ok(buffer)
 }
 
 /// Only test processes select their own user SID as the default owner for new

@@ -37,6 +37,10 @@ let linkChecks = 0;
 let aclChecks = 0;
 let crashChecks = 0;
 let faultChecks = 0;
+let tokenChecks = 0;
+let ordinaryTokenOutcome: "admitted" | "owner_mismatch" | "not_windows" = "not_windows";
+let ordinaryTokenOwnerMatchesUser: boolean | null = null;
+const evaluationOwner = process.platform === "win32" ? ["--evaluation-current-user-owner"] : [];
 
 function run(executable: string, args: string[], input?: string,
   env: NodeJS.ProcessEnv = noEnv): ChildResult {
@@ -50,14 +54,14 @@ function run(executable: string, args: string[], input?: string,
 function publish(envelope: Envelope, args: string[] = []) {
   const input = JSON.stringify(envelope);
   assert(Buffer.byteLength(input) <= 16_384);
-  return run(publisher, args, input);
+  return run(publisher, [...evaluationOwner, ...args], input);
 }
 
 async function publishConcurrent(envelope: Envelope): Promise<ChildResult> {
   const input = JSON.stringify(envelope);
   assert(Buffer.byteLength(input) <= 16_384);
   return new Promise((resolveChild, rejectChild) => {
-    const child = spawn(publisher, [], { cwd: repo, env: noEnv, shell: false,
+    const child = spawn(publisher, evaluationOwner, { cwd: repo, env: noEnv, shell: false,
       windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
     let stdout = "";
     let stderr = "";
@@ -89,7 +93,7 @@ async function crashPausedPublisher(envelope: Envelope,
   assert(Buffer.byteLength(input) <= 16_384);
   const marker = "KERYX_PUBLICATION_PAUSED:" + stage;
   return new Promise<ChildResult>((resolveChild, rejectChild) => {
-    const child = spawn(publisher, ["--pause-after", stage], { cwd: repo, env: noEnv,
+    const child = spawn(publisher, [...evaluationOwner, "--pause-after", stage], { cwd: repo, env: noEnv,
       shell: false, windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
     let stdout = "";
     let stderr = "";
@@ -295,6 +299,48 @@ async function main() {
     const envelope = { ...reference.envelope, child: "native-created" };
     success(publish(envelope), envelope);
     await inspectPublished(root, join(parent, envelope.child), reference);
+    if (process.platform === "win32") {
+      const ordinary = { ...envelope, child: "ordinary-token-publication" };
+      const before = await treeDigest(root);
+      const actual = run(publisher, [], JSON.stringify(ordinary));
+      if (actual.status === 0) {
+        ordinaryTokenOutcome = "admitted";
+        ordinaryTokenOwnerMatchesUser = true;
+        success(actual, ordinary);
+        await inspectPublished(root, join(parent, ordinary.child), reference);
+      } else {
+        const denied = refusal(actual, "unadjusted process token", "refused_unchanged");
+        assert.equal(denied.stage, "token");
+        assert.equal(denied.message, "process default owner is not the current user");
+        ordinaryTokenOutcome = "owner_mismatch";
+        ordinaryTokenOwnerMatchesUser = false;
+        assert.equal(await treeDigest(root), before);
+        await assert.rejects(stat(join(parent, ordinary.child)), { code: "ENOENT" });
+      }
+      if (process.env.KERYX_EXPECT_WINDOWS_TOKEN_MISMATCH === "1") {
+        assert.equal(ordinaryTokenOutcome, "owner_mismatch",
+          "hosted Windows must exercise the actual unadjusted owner mismatch");
+      }
+      tokenChecks++;
+      const impersonated = { ...envelope, child: "impersonated-token-publication" };
+      const impersonatedBefore = await treeDigest(root);
+      const denied = refusal(run(publisher,
+        [...evaluationOwner, "--evaluation-impersonate-self"], JSON.stringify(impersonated)),
+        "impersonated thread token", "refused_unchanged");
+      assert.equal(denied.stage, "token");
+      assert.equal(denied.message, "thread impersonation is unsupported for task publication");
+      assert.equal(await treeDigest(root), impersonatedBefore);
+      await assert.rejects(stat(join(parent, impersonated.child)), { code: "ENOENT" });
+      tokenChecks++;
+      const occupiedBefore = await treeDigest(root);
+      const occupiedDenied = refusal(run(publisher,
+        [...evaluationOwner, "--evaluation-impersonate-self"], JSON.stringify(envelope)),
+        "impersonated token with existing target", "refused_unchanged");
+      assert.equal(occupiedDenied.stage, "token");
+      assert.equal(occupiedDenied.message, "thread impersonation is unsupported for task publication");
+      assert.equal(await treeDigest(root), occupiedBefore);
+      tokenChecks++;
+    }
 
     const existingDir = join(parent, "existing-dir");
     await mkdir(existingDir, { mode: 0o700 });
@@ -402,7 +448,7 @@ async function main() {
     await inspectFaultStates(root, parent, reference);
     console.log(JSON.stringify({ fixtureKind: "owned synthetic private parent; no native production writer",
       successChecks, refusalChecks, concurrencyChecks, reopenChecks, linkChecks, aclChecks,
-      crashChecks, faultChecks,
+      crashChecks, faultChecks, tokenChecks, ordinaryTokenOutcome, ordinaryTokenOwnerMatchesUser,
       platform: process.platform, publicationObservation: process.platform === "win32"
         ? "windows_visible_entry_unproven" : "unix_synced",
       authority: "TypeScript creation and payment remain production; publication is test-only" }));

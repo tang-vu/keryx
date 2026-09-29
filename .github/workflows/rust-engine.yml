@@ -123,6 +123,8 @@ jobs:
 
       - name: Exercise synthetic private task publication and TypeScript reopening
         run: node --import tsx scripts/test-rust-task-publication.mts
+        env:
+          KERYX_EXPECT_WINDOWS_TOKEN_MISMATCH: ${{ runner.os == 'Windows' && '1' || '0' }}
 
       - name: Compare actual task callers with native candidate preflight
         run: node --import tsx scripts/test-rust-task-admission.mts

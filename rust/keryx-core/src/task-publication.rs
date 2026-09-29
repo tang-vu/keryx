@@ -156,6 +156,9 @@ impl PrivateParent {
         }
         self.ensure_current()
             .map_err(|e| PublicationFailure::new(state, "parent", e))?;
+        #[cfg(windows)]
+        windows::admit_publication_token()
+            .map_err(|e| PublicationFailure::new(state, "token", e))?;
         step("before-mkdir")?;
         #[cfg(unix)]
         let created = {
