@@ -4,7 +4,8 @@ import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { rm } from "node:fs/promises";
-import { WorkspaceStore, type DesktopTaskWriter } from "./workspace";
+import { creationError, WorkspaceStore, type DesktopTaskWriter } from "./workspace";
+import { boundErrorMessage, MAX_ERROR_BYTES } from "./helper-protocol";
 
 const roots: string[] = [];
 afterEach(async () => { for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true }); });
@@ -91,9 +92,23 @@ it("retains and names a task whose native success cannot be reopened", async () 
   };
   const store = new WorkspaceStore(incomplete);
   await store.select(workspace);
-  await expect(store.createTask(input)).rejects.toThrow(/Keep .*task-.* for inspection; do not retry/);
+  await expect(store.createTask(input)).rejects.toThrow(
+    /Do not retry at the same location; keep this path for inspection: .*task-/);
   expect((await (await import("node:fs/promises")).readdir(workspace)).filter(name => name.startsWith("task-"))).toHaveLength(1);
 });
+
+it.each(["retained_partial", "complete_unconfirmed", "unknown"] as const)(
+  "keeps the no-retry instruction ahead of a long multi-byte path for %s", (state) => {
+    const path = "D:\\资料\\Keryx\\" + "研究报告-草稿-✓\\".repeat(200) + "task-" + "0".repeat(36);
+    const message = creationError({ state }, path).message;
+    expect(message).toContain(path);
+    const bound = boundErrorMessage(message);
+    expect(Buffer.byteLength(bound, "utf8")).toBeLessThanOrEqual(MAX_ERROR_BYTES);
+    expect(bound).toContain("Creation could not be confirmed");
+    expect(bound).toContain("Do not retry at the same location");
+    expect(bound).toContain("for inspection");
+    expect(bound.indexOf("Do not retry")).toBeLessThan(bound.indexOf("inspection:"));
+  });
 
 it("refuses unavailable trusted writer before creating any task directory", async () => {
   const workspace = await temp();

@@ -103,6 +103,45 @@ test("cleanup error reports published final and retains owned staging file", asy
   expect(await stages(root)).toHaveLength(1);
 });
 
+test("error text keeps outcome and recovery instruction ahead of long multi-byte paths", () => {
+  // Mirror the desktop helper's wire bound: the peer keeps at most the first 2048 UTF-8 bytes
+  // of the decoded error string, so the guidance must precede any interpolated path.
+  const head = (message: string) =>
+    new TextDecoder().decode(new TextEncoder().encode(message).subarray(0, 2048));
+  const parent = "D:\\资料\\Keryx\\" + "研究报告-草稿-✓\\".repeat(200);
+  const final = join(parent, "brief.md");
+  const staging = join(parent, ".keryx-brief-0123456789abcdef.tmp");
+
+  const unconfirmed = new PrivateTextExportError("unconfirmed", "publish final file", final, staging, true,
+    new Error("injected link failure"));
+  expect(unconfirmed.message.indexOf("inspect the final path before retrying"))
+    .toBeLessThan(unconfirmed.message.indexOf("final="));
+  expect(unconfirmed.message.indexOf("Inspect and remove the owned staging file"))
+    .toBeLessThan(unconfirmed.message.indexOf("final="));
+  const unconfirmedHead = head(unconfirmed.message);
+  expect(unconfirmedHead).toContain("inspect the final path before retrying");
+  expect(unconfirmedHead).toContain("Inspect and remove the owned staging file");
+
+  const published = new PrivateTextExportError("published", "remove staging file", final, staging, true,
+    new Error("injected cleanup failure"));
+  expect(published.message.indexOf("Inspect and remove the owned staging file"))
+    .toBeLessThan(published.message.indexOf("final="));
+  const publishedHead = head(published.message);
+  expect(publishedHead).toContain("complete final file was published; staging cleanup failed");
+  expect(publishedHead).toContain("Inspect and remove the owned staging file");
+});
+
+test("cleanup failure names the real staging path after the instruction", async () => {
+  const { root, final } = await fixture();
+  const error = await publishPrivateText(final, "complete", faultFs("unlink")).catch((value: unknown) => value);
+  expect(error).toBeInstanceOf(PrivateTextExportError);
+  const failure = error as PrivateTextExportError;
+  expect(failure.message.indexOf("Inspect and remove the owned staging file"))
+    .toBeLessThan(failure.message.indexOf("staging="));
+  expect(failure.message).toContain(`staging=${JSON.stringify(failure.stagingPath)}`);
+  expect(await stages(root)).toHaveLength(1);
+});
+
 test("two writers yield exactly one complete final and no leftover staging", async () => {
   const { root, final } = await fixture();
   const results = await Promise.allSettled([

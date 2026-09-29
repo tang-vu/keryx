@@ -58,11 +58,13 @@ export interface DesktopTaskWriter {
   createWorkspace(parent: string, child: string): Promise<{ child: string; state: "unix_synced" | "windows_visible_entry_unproven" }>;
 }
 
-function creationError(error: unknown, path: string): Error {
+// The outcome and recovery instruction precede the path so the helper wire bound on error
+// strings can only truncate trailing detail, never the "do not retry" guidance.
+export function creationError(error: unknown, path: string): Error {
   const state = error && typeof error === "object" && "state" in error ? error.state : undefined;
   const stage = error && typeof error === "object" && "stage" in error ? error.stage : undefined;
   if (state === "retained_partial" || state === "complete_unconfirmed" || state === "unknown") {
-    return new Error(`Creation could not be confirmed. Keep ${path} for inspection; do not retry at the same location.`);
+    return new Error(`Creation could not be confirmed. Do not retry at the same location; keep this path for inspection: ${path}`);
   }
   if (state === "refused_unchanged" && stage === "artifact") {
     return new Error("The trusted task writer is missing or its files changed. Reinstall this desktop release before creating new items.");
