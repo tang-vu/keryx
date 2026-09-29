@@ -1061,16 +1061,18 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   /** Reserve atomically, including the cap predicate, so concurrent asks cannot both pass. */
-  async addSessionGrantSpend(sessionId: string, amount: number): Promise<boolean> {
+  async addSessionGrantSpend(sessionId: string, grantEpoch: string, sessAddr: string, amount: number): Promise<boolean> {
     const res = this.db
       .prepare(
         `UPDATE session_grants
             SET spent = ROUND(spent + ?, 6)
           WHERE session_id = ?
+            AND grant_epoch = ?
+            AND LOWER(sess_addr) = LOWER(?)
             AND ROUND(spent + ?, 6) <= cap
             AND expiry > ?`,
       )
-      .run(amount, sessionId, amount, Date.now());
+      .run(amount, sessionId, grantEpoch, sessAddr, amount, Date.now());
     return Number(res.changes) > 0;
   }
 
@@ -1334,14 +1336,14 @@ export class SqliteAdapter implements KeryxDB {
     }
   }
 
-  async releaseSessionGrantSpend(sessionId: string, amount: number): Promise<void> {
+  async releaseSessionGrantSpend(sessionId: string, grantEpoch: string, sessAddr: string, amount: number): Promise<void> {
     this.db
       .prepare(
         `UPDATE session_grants
             SET spent = MAX(0, ROUND(spent - ?, 6))
-          WHERE session_id = ?`,
+          WHERE session_id = ? AND grant_epoch = ? AND LOWER(sess_addr) = LOWER(?)`,
       )
-      .run(amount, sessionId);
+      .run(amount, sessionId, grantEpoch, sessAddr);
   }
 
   async deleteSessionGrant(sessionId: string): Promise<void> {

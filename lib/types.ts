@@ -328,7 +328,7 @@ export interface PaymentRecord extends Partial<SourceItemIdentity> {
   txHash?: string | null;
   network: string;
   settled: boolean; // compatibility/metrics bit: true only with real Circle settlement evidence
-  /** Distinguishes offline simulation from a submitted authorization awaiting proof. Optional so
+  /** Distinguishes offline simulation from a signed authorization awaiting proof. Optional so
    *  archived rows written before this field existed remain readable. */
   settlementStatus?: PaymentSettlementStatus;
   /** EIP-3009 nonce for browser co-sign attempts. Correlation evidence, never a signature. */
@@ -459,9 +459,9 @@ export interface QueryRun {
   paymentMode?: "real" | "offline";
   paymentAttempts?: number;
   settledPayments?: number;
-  /** Signed browser authorizations submitted without a definitive settlement response. */
+  /** Signed browser authorizations without a definitive settlement response. */
   pendingPayments?: number;
-  /** Submitted creator authorizations awaiting Circle confirmation, in exact micro-USDC. */
+  /** Signed creator authorizations awaiting Circle confirmation, in exact micro-USDC. */
   pendingSpendUsdc?: number;
 }
 

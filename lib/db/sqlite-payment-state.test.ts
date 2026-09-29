@@ -114,7 +114,7 @@ describe("SQLite payment settlement state migration", () => {
       txHash: "0xfund",
       grantEpoch: "epoch-live",
     });
-    expect(await db.addSessionGrantSpend(sessionId, 0.006)).toBe(true);
+    expect(await db.addSessionGrantSpend(sessionId, "epoch-live", sessAddr, 0.006)).toBe(true);
     await db.recordPayment({
       id: "x402:failed-live",
       createdAt: "2026-08-04T00:01:00.000Z",
@@ -156,7 +156,7 @@ describe("SQLite payment settlement state migration", () => {
       txHash: "0xfund-old",
       grantEpoch: "epoch-old",
     });
-    expect(await db.addSessionGrantSpend(sessionId, 0.006)).toBe(true);
+    expect(await db.addSessionGrantSpend(sessionId, "epoch-old", sessAddr, 0.006)).toBe(true);
     await db.recordPayment({
       id: "x402:failed-old",
       createdAt: "2026-08-04T00:02:00.000Z",
@@ -183,7 +183,7 @@ describe("SQLite payment settlement state migration", () => {
       txHash: "recovered",
       grantEpoch: "epoch-new",
     });
-    expect(await db.addSessionGrantSpend(sessionId, 0.004)).toBe(true);
+    expect(await db.addSessionGrantSpend(sessionId, "epoch-new", sessAddr, 0.004)).toBe(true);
 
     await expect(
       db.failPendingPayment("x402:failed-old", "failed-old", "circle-failed-old"),

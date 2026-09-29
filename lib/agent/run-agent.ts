@@ -40,6 +40,7 @@ import type { AgentDeps } from "./deps";
 import { resolveResearchEffects } from "./research-effects";
 import { allocateSplit } from "../payments/split-allocation";
 import {
+  PaymentPendingError,
   paymentCountsAsSpent,
   paymentSettlementStatus,
   pendingPaymentFrom,
@@ -663,7 +664,7 @@ export async function* runAgent(
           const ledgerError = await persistPaymentRecord(pending);
           yield emit(
             "fetch",
-            `Signed $${pending.amountUsdc} authorization for ${assetLabel}; confirmation is pending, so it is not counted as spent — skipping this article and continuing.`,
+            `Signed $${pending.amountUsdc} authorization for ${assetLabel}; ${pendingConfirmationMessage(err)}. The amount is not counted as spent; skipping this article and continuing.`,
             pending,
           );
           if (ledgerError) {
@@ -871,7 +872,7 @@ export async function* runAgent(
             spentTolls += asset.priceUsdc;
             yield emit(
               "reevaluate",
-              `Signed $${pending.amountUsdc} authorization for ${assetLabel}; confirmation is pending and the reserved budget stays consumed.`,
+              `Signed $${pending.amountUsdc} authorization for ${assetLabel}; ${pendingConfirmationMessage(err)}. The reserved budget stays consumed.`,
               pending,
             );
             if (ledgerError) {
@@ -1179,7 +1180,7 @@ export async function* runAgent(
           const ledgerError = await persistPaymentRecord(pending);
           yield emit(
             "settle",
-            `Submitted $${pending.amountUsdc} citation authorization → ${author.name}; settlement confirmation is pending and is not counted as paid.`,
+            `Signed $${pending.amountUsdc} citation authorization → ${author.name}; ${pendingConfirmationMessage(err)}. The amount is not counted as paid.`,
             pending,
           );
           if (ledgerError) {
@@ -1294,6 +1295,12 @@ export async function* runAgent(
 
 function short(tx?: string | null): string {
   return tx ? `${tx.slice(0, 10)}…` : "no-tx";
+}
+
+function pendingConfirmationMessage(error: unknown): string {
+  return error instanceof PaymentPendingError && !error.submissionAttempted
+    ? "Keryx withheld submission; external use remains uncertain"
+    : "settlement confirmation is pending";
 }
 
 function fetchPaymentMessage(payment: PaymentRecord, sourceName: string): string {

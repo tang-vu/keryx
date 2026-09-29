@@ -26,15 +26,18 @@ export function paymentCountsAsSpent(
   return status === "settled" || status === "simulated";
 }
 
-/** Thrown only after a signed authorization crossed the submission boundary. The attached record
- * is safe to persist/display and deliberately contains no signature. */
+/** Thrown when a valid bearer authorization exists and settlement remains uncertain. The header
+ * may still be held by the browser even when Keryx withholds submission. The attached record is
+ * safe to persist/display and deliberately contains no signature. */
 export class PaymentPendingError extends Error {
   readonly payment: PaymentRecord;
+  readonly submissionAttempted: boolean;
 
-  constructor(message: string, payment: PaymentRecord) {
+  constructor(message: string, payment: PaymentRecord, submissionAttempted = true) {
     super(message);
     this.name = "PaymentPendingError";
     this.payment = payment;
+    this.submissionAttempted = submissionAttempted;
   }
 }
 

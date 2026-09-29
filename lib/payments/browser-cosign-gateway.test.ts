@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { config } from "../config";
 import type { Source, SourceItem } from "../types";
 import { sourceItemIdentity } from "../sources/source-item-asset";
-import { pendingPaymentFrom, settledPaymentFrom } from "./payment-state";
+import { PaymentPendingError, pendingPaymentFrom, settledPaymentFrom } from "./payment-state";
 
 const grantMocks = vi.hoisted(() => ({
-  isGrantValid: vi.fn(),
+  getGrant: vi.fn(),
   reserveSpend: vi.fn(),
   releaseSpend: vi.fn(),
 }));
@@ -98,7 +98,7 @@ describe("BrowserCoSignGateway", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.unstubAllGlobals();
-    grantMocks.isGrantValid.mockResolvedValue(true);
+    grantMocks.getGrant.mockResolvedValue({ sessAddr: SESSION, grantEpoch: "legacy-test-grant" });
     grantMocks.reserveSpend.mockResolvedValue(true);
     grantMocks.releaseSpend.mockResolvedValue(undefined);
   });
@@ -147,11 +147,69 @@ describe("BrowserCoSignGateway", () => {
     await expect(gateway.payFetch({ source, queryId: "q1" })).rejects.toThrow(
       /signer does not match/i,
     );
-    expect(grantMocks.releaseSpend).toHaveBeenCalledWith("session", source.fetchPrice);
+    expect(grantMocks.releaseSpend).toHaveBeenCalledWith("session", "legacy-test-grant", SESSION, source.fetchPrice);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("rejects a replacement between gateway construction and reservation", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(challenge());
+    vi.stubGlobal("fetch", fetchMock);
+    grantMocks.getGrant.mockResolvedValue({ sessAddr: SESSION, grantEpoch: "replacement" });
+    const requestSignature = vi.fn().mockResolvedValue(signedHeader());
+    const gateway = new BrowserCoSignGateway("session", SESSION, requestSignature);
+
+    await expect(gateway.payFetch({ source, queryId: "q1" })).rejects.toThrow(/grant expired or revoked/);
+    expect(grantMocks.reserveSpend).not.toHaveBeenCalled();
+    expect(requestSignature).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("records a pending nonce when replacement follows signing, without submitting or releasing", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(challenge());
+    vi.stubGlobal("fetch", fetchMock);
+    grantMocks.getGrant
+      .mockResolvedValueOnce({ sessAddr: SESSION, grantEpoch: "legacy-test-grant" })
+      .mockResolvedValueOnce({ sessAddr: SESSION, grantEpoch: "replacement" });
+    const gateway = new BrowserCoSignGateway("session", SESSION, vi.fn().mockResolvedValue(signedHeader()));
+
+    let caught: unknown;
+    try { await gateway.payFetch({ source, queryId: "q1" }); } catch (error) { caught = error; }
+    expect(pendingPaymentFrom(caught)).toMatchObject({
+      authorizationId: NONCE,
+      grantEpoch: "legacy-test-grant",
+      settlementStatus: "pending",
+      settled: false,
+      rationale: expect.stringContaining("withheld submission"),
+    });
+    expect(caught).toBeInstanceOf(PaymentPendingError);
+    expect((caught as PaymentPendingError).submissionAttempted).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(grantMocks.releaseSpend).not.toHaveBeenCalled();
+  });
+
+  it("records a pending nonce when the client aborts after signing", async () => {
+    const abort = new AbortController();
+    const fetchMock = vi.fn().mockResolvedValue(challenge());
+    vi.stubGlobal("fetch", fetchMock);
+    const gateway = new BrowserCoSignGateway("session", SESSION, vi.fn().mockImplementation(async () => {
+      abort.abort();
+      return signedHeader();
+    }), abort.signal);
+
+    let caught: unknown;
+    try { await gateway.payFetch({ source, queryId: "q1" }); } catch (error) { caught = error; }
+    expect(pendingPaymentFrom(caught)).toMatchObject({
+      authorizationId: NONCE,
+      settlementStatus: "pending",
+      rationale: expect.stringContaining("withheld submission"),
+    });
+    expect((caught as PaymentPendingError).submissionAttempted).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(grantMocks.releaseSpend).not.toHaveBeenCalled();
+  });
+
   it("keeps the reservation and returns a durable pending record after a post-submit timeout", async () => {
+    grantMocks.getGrant.mockResolvedValue({ sessAddr: SESSION, grantEpoch: "epoch-pending" });
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(challenge())
@@ -310,7 +368,7 @@ describe("BrowserCoSignGateway", () => {
     });
 
     expect(String(fetchMock.mock.calls[0][0])).toContain(`offer=${offer.id}`);
-    expect(grantMocks.reserveSpend).toHaveBeenCalledWith("session", 0.001);
+    expect(grantMocks.reserveSpend).toHaveBeenCalledWith("session", "legacy-test-grant", SESSION, 0.001);
     expect(result.payment).toMatchObject({
       amountUsdc: 0.001,
       offerId: offer.id,

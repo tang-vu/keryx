@@ -1308,9 +1308,11 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   /** The SQL function reserves only when spent + amount remains under cap. */
-  async addSessionGrantSpend(sessionId: string, amount: number): Promise<boolean> {
+  async addSessionGrantSpend(sessionId: string, grantEpoch: string, sessAddr: string, amount: number): Promise<boolean> {
     const { data, error } = await this.sb.rpc("reserve_session_grant_spend", {
       p_session_id: sessionId,
+      p_grant_epoch: grantEpoch,
+      p_sess_addr: sessAddr,
       p_amount: amount,
       p_now: Date.now(),
     });
@@ -1346,9 +1348,11 @@ export class SupabaseAdapter implements KeryxDB {
     if (error) throw error;
   }
 
-  async releaseSessionGrantSpend(sessionId: string, amount: number): Promise<void> {
+  async releaseSessionGrantSpend(sessionId: string, grantEpoch: string, sessAddr: string, amount: number): Promise<void> {
     const { error } = await this.sb.rpc("release_session_grant_spend", {
       p_session_id: sessionId,
+      p_grant_epoch: grantEpoch,
+      p_sess_addr: sessAddr,
       p_amount: amount,
     });
     if (error) throw error;

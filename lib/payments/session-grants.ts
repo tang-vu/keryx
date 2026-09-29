@@ -45,7 +45,8 @@ export async function getGrant(sessionId: string): Promise<SessionGrant | undefi
   const grant = await db.getSessionGrant(sessionId);
   if (!grant) return undefined;
   if (Date.now() > grant.expiry) {
-    await db.deleteSessionGrant(sessionId);
+    // A replacement may have been upserted after the read; delete only rows still expired.
+    await db.deleteExpiredSessionGrants(Date.now());
     return undefined;
   }
   return grant;
@@ -55,19 +56,26 @@ export async function isGrantValid(sessionId: string): Promise<boolean> {
   return (await getGrant(sessionId)) !== undefined;
 }
 
-/** Record a confirmed spend. False when the grant no longer exists to charge. */
-export async function recordSpend(sessionId: string, amount: number): Promise<boolean> {
+/** Reserve only against the grant generation and signer captured by the gateway. */
+export async function reserveSpend(
+  sessionId: string,
+  grantEpoch: string,
+  sessAddr: string,
+  amount: number,
+): Promise<boolean> {
   const db = await getDb();
-  return db.addSessionGrantSpend(sessionId, amount);
+  return db.addSessionGrantSpend(sessionId, grantEpoch, sessAddr, amount);
 }
 
-/** Reserve cap before asking the browser to create a bearer payment authorization. */
-export const reserveSpend = recordSpend;
-
 /** Release a reservation only while no payment authorization has been submitted. */
-export async function releaseSpend(sessionId: string, amount: number): Promise<void> {
+export async function releaseSpend(
+  sessionId: string,
+  grantEpoch: string,
+  sessAddr: string,
+  amount: number,
+): Promise<void> {
   const db = await getDb();
-  await db.releaseSessionGrantSpend(sessionId, amount);
+  await db.releaseSessionGrantSpend(sessionId, grantEpoch, sessAddr, amount);
 }
 
 export async function dropGrant(sessionId: string): Promise<void> {

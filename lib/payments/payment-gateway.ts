@@ -66,25 +66,28 @@ export interface GatewayOpts {
 }
 
 export async function getPaymentGateway(db: KeryxDB, opts?: GatewayOpts): Promise<PaymentGateway> {
+  if (opts?.requestSignature && !opts.sessionId) {
+    throw new Error("browser signature callback requires a session id");
+  }
   if (process.env.KERYX_FORCE_OFFLINE === "1") {
     const { OfflineGateway } = await import("./offline-gateway");
     return new OfflineGateway(db);
   }
 
   // Browser co-sign path: active session grant + sign callback injected by the SSE route.
-  if (opts?.sessionId && opts?.requestSignature) {
+  if (opts?.sessionId) {
+    if (!opts.requestSignature) throw new Error("browser session requires a signature callback");
     const { getGrant } = await import("./session-grants");
     const grant = await getGrant(opts.sessionId);
-    if (grant) {
-      const { BrowserCoSignGateway } = await import("./browser-cosign-gateway");
-      return new BrowserCoSignGateway(
-        opts.sessionId,
-        grant.sessAddr,
-        opts.requestSignature,
-        opts.abortSignal,
-        grant.grantEpoch,
-      );
-    }
+    if (!grant) throw new Error("browser session grant expired or revoked");
+    const { BrowserCoSignGateway } = await import("./browser-cosign-gateway");
+    return new BrowserCoSignGateway(
+      opts.sessionId,
+      grant.sessAddr,
+      opts.requestSignature,
+      opts.abortSignal,
+      grant.grantEpoch,
+    );
   }
 
   // Treasury path: Keryx's own funder key for authorized server-side requests.
