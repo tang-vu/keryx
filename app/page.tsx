@@ -113,9 +113,6 @@ export default function AskPage() {
             <section className="mx-auto max-w-[1180px] px-4 pt-2 sm:px-[30px] sm:pt-3" data-tour="hero">
               <div className="border-2 border-ink bg-paper p-1.5">
                 <div className="relative overflow-hidden border border-ink p-3 sm:p-4 lg:p-5">
-                  <div className="pointer-events-none absolute -right-16 top-1/2 hidden h-[380px] w-[380px] -translate-y-1/2 opacity-35 lg:block">
-                    <GlobeWatermark className="h-full w-full" />
-                  </div>
                   <div className="relative grid items-start gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(260px,2fr)] lg:gap-8">
                     <div className="relative flex min-w-0 flex-col">
                       <p data-testid="hero-kicker" className="hidden font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3 sm:flex sm:min-h-11 sm:items-center sm:pr-32">
@@ -138,7 +135,12 @@ export default function AskPage() {
                       </div>
                     </div>
                     <aside className="relative hidden min-w-0 flex-col items-center justify-center gap-4 border-l border-line pl-6 lg:flex" aria-label="Keryx network activity">
-                      <HeraldSeal className="h-28 w-28" />
+                      <div className="relative flex aspect-square w-full max-w-[300px] items-center justify-center">
+                        <GlobeWatermark className="absolute inset-0 h-full w-full opacity-35" />
+                        <div className="relative flex h-32 w-32 items-center justify-center rounded-full bg-paper">
+                          <HeraldSeal className="h-28 w-28" />
+                        </div>
+                      </div>
                       <HeroStats />
                       <a href="/register" className="font-mono text-[12px] font-semibold uppercase tracking-[0.08em] text-paid underline underline-offset-4 hover:text-ink">Publish a paid source ↗</a>
                     </aside>
