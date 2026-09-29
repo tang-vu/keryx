@@ -1,5 +1,10 @@
 # Keryx Project Changelog
 
+### Homepage globe alignment (2026-09-29, v0.24.2)
+
+- Keep the complete globe and orbit inside the hero's right column, above the activity totals, with a clear backing for the herald seal.
+- Check 390, 1024, 1182 and 1440px layouts for horizontal overflow and confirm the globe stays clear of the form and totals at desktop widths.
+
 ### Buyer checkout funding readiness (2026-09-29)
 
 - Show the reviewed public or private research price alongside the buyer's current Gateway available USDC and a clear next action.
