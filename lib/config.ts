@@ -1,8 +1,40 @@
 /**
  * Keryx runtime configuration — single source of truth for chain, economics, and providers.
- * Keryx is Arc-testnet-only today. Environment overrides tune the testnet deployment; they are not
- * a mainnet switch because network ids, explorer, Gateway APIs, and browser chain config are pinned.
+ * Keryx is Arc-testnet-only today. Network contract addresses are pinned as one profile;
+ * conflicting environment values fail startup rather than creating a mixed-chain deployment.
  */
+
+const ARC_TESTNET_USDC = "0x3600000000000000000000000000000000000000";
+const ARC_TESTNET_GATEWAY_WALLET = "0x0077777d7EBA4688BDeF3E311b846F25870A19B9";
+const ARC_TESTNET_GATEWAY_MINTER = "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B";
+
+/** Reject network contract overrides until a separately reviewed network profile exists. */
+export function assertArcTestnetConfiguration(env: {
+  KERYX_NETWORK?: string;
+  KERYX_USDC_ADDRESS?: string;
+  KERYX_GATEWAY_WALLET?: string;
+  KERYX_GATEWAY_MINTER?: string;
+}): void {
+  if (env.KERYX_NETWORK !== undefined && env.KERYX_NETWORK !== "arcTestnet") {
+    throw new Error("KERYX_NETWORK must be arcTestnet");
+  }
+  for (const [name, actual, expected] of [
+    ["KERYX_USDC_ADDRESS", env.KERYX_USDC_ADDRESS, ARC_TESTNET_USDC],
+    ["KERYX_GATEWAY_WALLET", env.KERYX_GATEWAY_WALLET, ARC_TESTNET_GATEWAY_WALLET],
+    ["KERYX_GATEWAY_MINTER", env.KERYX_GATEWAY_MINTER, ARC_TESTNET_GATEWAY_MINTER],
+  ] as const) {
+    if (actual !== undefined && actual.toLowerCase() !== expected.toLowerCase()) {
+      throw new Error(`${name} must match the Arc testnet profile`);
+    }
+  }
+}
+
+assertArcTestnetConfiguration({
+  KERYX_NETWORK: process.env.KERYX_NETWORK,
+  KERYX_USDC_ADDRESS: process.env.KERYX_USDC_ADDRESS,
+  KERYX_GATEWAY_WALLET: process.env.KERYX_GATEWAY_WALLET,
+  KERYX_GATEWAY_MINTER: process.env.KERYX_GATEWAY_MINTER,
+});
 
 export const config = {
   // ── Chain (Arc testnet defaults) ──
@@ -14,15 +46,12 @@ export const config = {
   // stays on rpcUrl). Set to an empty string to disable pushes — the indexer then relies
   // on its heartbeat poll alone.
   rpcWsUrl: process.env.KERYX_RPC_WS_URL ?? "wss://rpc.testnet.arc.network",
-  usdcAddress: (process.env.KERYX_USDC_ADDRESS ??
-    "0x3600000000000000000000000000000000000000") as `0x${string}`,
-  gatewayWallet: (process.env.KERYX_GATEWAY_WALLET ??
-    "0x0077777d7EBA4688BDeF3E311b846F25870A19B9") as `0x${string}`,
+  usdcAddress: ARC_TESTNET_USDC as `0x${string}`,
+  gatewayWallet: ARC_TESTNET_GATEWAY_WALLET as `0x${string}`,
   // GatewayMinter contract — mints USDC on the destination chain from a Circle transfer
   // attestation. Used by the creator-withdraw relay to submit gatewayMint(). Testnet value
   // from @circle-fin/x402-batching CHAIN_CONFIGS.arcTestnet.gatewayMinter.
-  gatewayMinter: (process.env.KERYX_GATEWAY_MINTER ??
-    "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B") as `0x${string}`,
+  gatewayMinter: ARC_TESTNET_GATEWAY_MINTER as `0x${string}`,
   explorerUrl: "https://testnet.arcscan.app",
   gatewayBalanceApi: "https://gateway-api-testnet.circle.com/v1/balances",
   cctpDomain: 26,

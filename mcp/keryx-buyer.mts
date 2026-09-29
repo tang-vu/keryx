@@ -7,8 +7,8 @@
  * the Circle faucet), so every call is a genuinely external on-chain USDC payment, visible live on
  * the keryx.cc dashboard.
  *
- * Self-contained: reads only its own KERYX_* env (no dependency on Keryx's server-side treasury keys),
- * so it runs unchanged on any judge's / agent's machine.
+ * Self-contained: uses the pinned testnet payment profile and its own buyer key (never Keryx's
+ * server-side treasury key), so it runs unchanged on any judge's / agent's machine.
  */
 
 import fs from "node:fs";
@@ -19,13 +19,13 @@ import { createPublicClient, erc20Abi, formatUnits, http, parseUnits } from "vie
 import { arcTestnet } from "viem/chains";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { payForResearch, readPending, recoverResearch } from "./local-payment.mts";
+import { config } from "../lib/config.ts";
 
-const USDC = (process.env.KERYX_USDC_ADDRESS ??
-  "0x3600000000000000000000000000000000000000") as `0x${string}`;
-const RPC = process.env.KERYX_RPC_URL ?? "https://rpc.testnet.arc.network";
+const USDC = config.usdcAddress;
+const RPC = config.rpcUrl;
 // The published buyer is intentionally testnet-only. A mainnet release needs a separate,
 // reviewed package and deployment; changing an environment variable must never enable spending.
-const CHAIN = "arcTestnet" as const;
+const CHAIN = config.network;
 const BASE_URL = (process.env.KERYX_BASE_URL ?? "https://keryx.cc").replace(/\/$/, "");
 const DEEP_FEE_USDC = Number(process.env.KERYX_A2A_DEEP_FEE ?? "0.05");
 const DEFAULT_BUDGET_USDC = Number(process.env.KERYX_DEFAULT_BUDGET ?? "0.05");
