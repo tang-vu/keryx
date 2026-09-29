@@ -9,6 +9,7 @@ import { connectedBuyerWallet } from "@/lib/buyer/connected-wallet";
 import { type FundingRecord, type FundingStep } from "@/lib/buyer/funding-policy";
 import { parseBuyerBudget } from "@/lib/a2a/buyer-workspace";
 import { BUYER_GATEWAY } from "@/lib/buyer/protocol";
+import { fundingReadiness, hasUncertainFunding } from "@/lib/buyer/funding-readiness";
 import { ResearchFundingActivity } from "./research-funding-activity";
 
 const control = "border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40";
@@ -26,8 +27,8 @@ function outcomeMessage(record: FundingRecord, step: FundingStep) {
     : "Approval confirmed. Review the deposit step separately.";
 }
 
-export function ResearchFunding({ payer, initialAmount, disabled, onBusy, onChanged }: {
-  payer: string; initialAmount: number; disabled: boolean; onBusy: (busy: boolean) => void; onChanged: () => void;
+export function ResearchFunding({ payer, initialAmount, requiredMicros, creditRevision = 0, disabled, onBusy, onChanged }: {
+  payer: string; initialAmount: number; requiredMicros: string; creditRevision?: number; disabled: boolean; onBusy: (busy: boolean) => void; onChanged: () => void;
 }) {
   const { data: wallet } = useWalletClient();
   const chain = usePublicClient({ chainId: 5042002 }) as PublicClient | undefined;
@@ -36,20 +37,43 @@ export function ResearchFunding({ payer, initialAmount, disabled, onBusy, onChan
   const [rows, setRows] = useState<FundingRecord[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [credit, setCredit] = useState<{ micros: string; revision: number } | null>(null);
+  const [creditChecking, setCreditChecking] = useState(false);
+  const [creditChecked, setCreditChecked] = useState<number | null>(null);
+  const [recordsAvailable, setRecordsAvailable] = useState(false);
   const [lookupHash, setLookupHash] = useState("");
   const operation = useRef<AbortController | null>(null);
+  const creditEpoch = useRef(0);
+  const fundingDetails = useRef<HTMLDetailsElement | null>(null);
   const live = useRef(true);
   const active = rows.find(row => row.activePayer === payer.toLowerCase());
   const refresh = useCallback(async () => {
     const values = await listFundingRecords(payer);
-    if (live.current) setRows(values);
+    if (live.current) { setRows(values); setRecordsAvailable(true); }
   }, [payer]);
+
+  const checkCredit = useCallback(async () => {
+    if (!wallet || !live.current) return;
+    const epoch = ++creditEpoch.current;
+    setCreditChecking(true); setCredit(null);
+    try {
+      const value = await connectedBuyerWallet(wallet, payer).readWallet();
+      if (live.current && epoch === creditEpoch.current) setCredit({ micros: value.gatewayBalanceMicros, revision: creditRevision });
+    } catch {
+      if (live.current && epoch === creditEpoch.current) setMessage("Gateway balance is unavailable. Refresh the balance; do not deposit based on an unknown balance.");
+    } finally { if (live.current && epoch === creditEpoch.current) { setCreditChecked(creditRevision); setCreditChecking(false); } }
+  }, [wallet, payer, creditRevision]);
 
   useEffect(() => {
     live.current = true;
-    void refresh().catch(() => { if (live.current) setMessage("Funding records could not be read. Check browser storage before depositing."); });
+    void refresh().catch(() => { if (live.current) { setRecordsAvailable(false); setMessage("Funding records could not be read. Check browser storage before depositing."); } });
     return () => { live.current = false; operation.current?.abort(); onBusy(false); };
   }, [refresh, onBusy]);
+
+  const currentCredit = credit?.revision === creditRevision ? credit.micros : null;
+  const readiness = fundingReadiness(currentCredit, requiredMicros, rows,
+    (creditChecked === creditRevision && currentCredit === null) || (creditRevision > 0 && creditChecked !== creditRevision));
+  const uncertain = hasUncertainFunding(rows);
 
   const pendingStep = active?.deposit.status === "submitted" ? "deposit" : active?.approval.status === "submitted" ? "approval" : null;
   const pendingId = active?.id;
@@ -62,6 +86,7 @@ export function ResearchFunding({ payer, initialAmount, disabled, onBusy, onChan
         const result = await recoverFundingStep(pendingId!, pendingStep!, chain!);
         if (!cancelled) {
           await refresh();
+          if (result.deposit.status === "confirmed") { creditEpoch.current++; setCredit(null); setCreditChecked(null); setCreditChecking(false); }
           setMessage(outcomeMessage(result, pendingStep!));
         }
       }
@@ -94,7 +119,7 @@ export function ResearchFunding({ payer, initialAmount, disabled, onBusy, onChan
       setMessage(result.state === "submitted" ? "Transaction submitted. Waiting for matching on-chain confirmation."
         : result.state === "rejected" ? "Your wallet rejected the request. You can review and try this step again."
         : "Wallet or storage response is uncertain. Check wallet activity and recover the original transaction hash; do not send it again.");
-      onChanged();
+      creditEpoch.current++; setCredit(null); setCreditChecked(null); setCreditChecking(false); onChanged();
     });
   }
 
@@ -104,7 +129,7 @@ export function ResearchFunding({ payer, initialAmount, disabled, onBusy, onChan
       const result = await recoverFundingStep(active.id, step, chain, active[step].hash ?? lookupHash.trim());
       if (live.current) {
         setMessage(outcomeMessage(result, step));
-        setLookupHash(""); onChanged();
+        setLookupHash(""); creditEpoch.current++; setCredit(null); setCreditChecked(null); setCreditChecking(false); onChanged();
       }
     });
   }
@@ -115,11 +140,25 @@ export function ResearchFunding({ payer, initialAmount, disabled, onBusy, onChan
       const result = await recoverFundingReplacement(active.id, step, chain, lookupHash.trim(), signal);
       if (!live.current) return;
       setMessage(outcomeMessage(result, step));
-      setLookupHash(""); onChanged();
+      setLookupHash(""); creditEpoch.current++; setCredit(null); setCreditChecked(null); setCreditChecking(false); onChanged();
     });
   }
 
-  return <details className="border border-line p-4">
+  return <div className="space-y-3">
+    <section className="border border-line bg-paper p-4" aria-label="Gateway funding readiness">
+      <h4 className="font-display text-xl">Funding readiness</h4>
+      <p className="mt-2 font-mono text-xs">Price: {formatUnits(BigInt(requiredMicros), 6)} USDC · Gateway available: {currentCredit === null ? "unavailable or not checked" : `${formatUnits(BigInt(currentCredit), 6)} USDC`}</p>
+      <p role="status" className="mt-2 font-serif text-sm">{creditChecking && creditChecked !== creditRevision ? "Checking Gateway balance…" : !recordsAvailable ? "Funding history unavailable. Inspect your wallet activity before adding funds." : creditChecked !== creditRevision && readiness !== "deposit-unverified" ? "Check Gateway balance to see whether this price is covered. This read sends no transaction." : readiness === "ready"
+        ? "At the last check, enough Gateway USDC was available for this price. Review the purchase terms, then buy. The purchase checks funds again before signing."
+        : readiness === "deposit-unverified" ? "The latest deposit is confirmed on chain; Gateway credit for this price is not yet verified. Funds may still be updating or may already have been spent. Refresh Gateway balance before buying or adding funds."
+        : readiness === "insufficient" ? `Gateway funds are below this price.${rows[0]?.deposit.status === "confirmed" ? " The latest deposit is confirmed on chain, but current Gateway credit is still below the price; it may already have been spent or credit may not yet be visible." : ""} Check any existing transaction before preparing another deposit. Wallet USDC and gas are separate from Gateway credit.`
+        : "Gateway balance unavailable. Refresh it before buying or adding funds."}</p>
+      {uncertain && <p className="mt-2 font-serif text-sm text-seal">A funding transaction may already have been sent. Inspect the existing transaction below; do not submit it again.</p>}
+      <button type="button" className={`${control} mt-3`} disabled={disabled || busy || creditChecking || !wallet} onClick={() => { void checkCredit(); void refresh().catch(() => { setRecordsAvailable(false); setMessage("Funding records could not be read."); }); }}>Refresh Gateway balance and funding status</button>
+      {recordsAvailable && readiness === "insufficient" && !uncertain && <button type="button" className={`${control} mt-3 ml-2`} onClick={() => { if (fundingDetails.current) fundingDetails.current.open = true; }}>Review deposit options</button>}
+      {recordsAvailable && (readiness === "deposit-unverified" || uncertain) && <button type="button" className={`${control} mt-3 ml-2`} onClick={() => { if (fundingDetails.current) fundingDetails.current.open = true; }}>Inspect existing transaction</button>}
+    </section>
+    <details ref={fundingDetails} className="border border-line p-4">
     <summary className="cursor-pointer font-mono text-xs">Add USDC to Gateway</summary>
     <p className="mt-3 font-serif text-sm">Approve an exact amount, then deposit it into your own Gateway balance. Each transaction needs a wallet confirmation and costs gas. This does not buy research or pay Keryx.</p>
     <p className="mt-2 break-all font-mono text-xs">Arc testnet Gateway: {BUYER_GATEWAY}</p>
@@ -162,5 +201,5 @@ export function ResearchFunding({ payer, initialAmount, disabled, onBusy, onChan
     <p role="status" className="mt-3 font-serif text-sm">{message}</p>
     <ul className="mt-3 space-y-2">{rows.filter(row => !row.activePayer).slice(0, 5).map(row => <li key={row.id} className="font-mono text-xs">{formatUnits(BigInt(row.amount), 6)} USDC · {row.cancelled ? "plan cancelled" : row.deposit.status === "confirmed" ? "deposit confirmed" : row.deposit.status === "replaced" || row.approval.status === "replaced" ? "original replaced by a different call; deposit not confirmed" : "transaction reverted"}{(row.deposit.hash ?? row.approval.hash) && <> · <a className="underline" href={`https://testnet.arcscan.app/tx/${row.deposit.hash ?? row.approval.hash}`} target="_blank" rel="noreferrer">Transaction</a></>}{(row.deposit.originalHash ?? row.approval.originalHash) && <> · <a className="underline" href={`https://testnet.arcscan.app/tx/${row.deposit.originalHash ?? row.approval.originalHash}`} target="_blank" rel="noreferrer">Original transaction</a></>}</li>)}</ul>
     <ResearchFundingActivity key={payer.toLowerCase()} payer={payer} chain={chain} />
-  </details>;
+  </details></div>;
 }

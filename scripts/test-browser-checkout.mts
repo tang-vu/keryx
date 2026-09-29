@@ -132,7 +132,7 @@ try {
     await page.goto("https://keryx.cc/research");
     if (process.env.BUYER_UI_CSS) await page.addStyleTag({ content: await readFile(process.env.BUYER_UI_CSS, "utf8") });
     await page.addScriptTag({ content: bundle.outputFiles[0].text });
-    const balanceButton = page.getByRole("button", { name: "Check Gateway balance", exact: true });
+    const balanceButton = page.getByRole("button", { name: "Refresh Gateway balance and funding status", exact: true });
     await balanceButton.waitFor();
     assert(await balanceButton.isDisabled(), "Credit lookup must wait for the wallet client");
     await page.evaluate(() => { Object.assign(window, { testWalletReady: true }); window.dispatchEvent(new Event("test-wallet-ready")); });
@@ -160,8 +160,8 @@ try {
   await page.getByText("A saved deposit is confirmed on chain.", { exact: false }).waitFor();
   assert.equal(fundingTransactions, 2);
   await page.locator("summary").filter({ hasText: "Add USDC to Gateway" }).click();
-  await page.getByRole("button", { name: "Check Gateway balance", exact: true }).click();
-  await page.getByText("Available: 0.05 USDC", { exact: true }).waitFor();
+  await page.getByRole("button", { name: "Refresh Gateway balance and funding status", exact: true }).click();
+  await page.getByText("At the last check, enough Gateway USDC was available for this price.", { exact: false }).waitFor();
   await page.getByRole("button", { name: "Review 0.05 USDC purchase", exact: true }).click();
   const buy = page.getByRole("button", { name: "Buy research — 0.05 USDC", exact: true });
   assert(await buy.isDisabled());
@@ -177,6 +177,7 @@ try {
   const intent = JSON.parse(recovery);
   assert.equal(intent.request.question, question); assert(!recovery.includes('"signature"'));
   await page.getByText("The submission is uncertain.", { exact: false }).waitFor();
+  await page.getByText("Check Gateway balance to see whether this price is covered.", { exact: false }).waitFor();
   await page.getByText("No order was found.", { exact: false }).waitFor();
   assert.equal(signed, 1); assert.equal(paid, 1); assert(lookups >= 1);
   assert.equal(new URL(page.url()).search, ""); assert(!page.url().includes(intent.queryId));

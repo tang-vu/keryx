@@ -37,6 +37,7 @@ function PrivateCheckout({ payer, merchants }: { payer: string; merchants: Priva
   const [question, setQuestion] = useState(""), [budgetText, setBudgetText] = useState("0.03"), [totalText, setTotalText] = useState("0.05");
   const [mode, setMode] = useState<"quick" | "deep">("quick"), [review, setReview] = useState<Review | null>(null);
   const [accepted, setAccepted] = useState(false), [busy, setBusy] = useState(false), [fundingBusy, setFundingBusy] = useState(false);
+  const [creditRevision, setCreditRevision] = useState(0);
   const [activeId, setActiveId] = useState<string | null>(null), [result, setResult] = useState<PrivateWorkspaceResult | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [message, setMessage] = useState(""), [rows, setRows] = useState<PrivateBrowserJournal[]>([]), [cursor, setCursor] = useState<string | null>(null);
@@ -84,6 +85,7 @@ function PrivateCheckout({ payer, merchants }: { payer: string; merchants: Priva
   }
   function purchase() {
     if (!walletReady || !wallet || !review?.purchasingAvailable || !accepted || !limits || activeId) return;
+    setCreditRevision(value => value + 1);
     setMessage("Checking the reviewed terms and wallet…");
     void work(async signal => {
       const signer = connectedBuyerWallet(wallet, payer, signal);
@@ -142,7 +144,7 @@ function PrivateCheckout({ payer, merchants }: { payer: string; merchants: Priva
       <p className="break-all text-sm">AI provider: {review.quote.request.reasoning.provider} · Model: {review.quote.request.reasoning.wireModel}<br />Endpoint: {review.quote.request.reasoning.endpoint}<br />Fallback: local heuristic. Redirects are prohibited.</p>
       <p className="text-sm">Fixed-price, best-effort research. Unused creator budget is retained, not refunded. A completed job may have insufficient evidence.</p>
       <label className="flex items-start gap-3 text-sm"><input type="checkbox" checked={accepted} disabled={locked || !!activeId || !review.purchasingAvailable} onChange={event => setAccepted(event.target.checked)} />I accept these terms and storing this private question and payment signature in plaintext in this browser. Exported recovery files also contain them.</label>
-      {review.purchasingAvailable && walletReady && <ResearchFunding payer={payer} initialAmount={Number(review.quote.pricing.totalMicros) / 1e6} disabled={busy || !!activeId} onBusy={setFundingBusy} onChanged={fundingChanged} />}
+      {review.purchasingAvailable && walletReady && <ResearchFunding payer={payer} initialAmount={Number(review.quote.pricing.totalMicros) / 1e6} requiredMicros={review.quote.pricing.totalMicros} creditRevision={creditRevision} disabled={busy || !!activeId} onBusy={setFundingBusy} onChanged={fundingChanged} />}
       <button className={control} disabled={locked || !!activeId || !walletReady || !accepted || !review.purchasingAvailable} onClick={purchase}>Buy private research</button>
     </div>}
     {message && <p role="status" className="text-sm">{message}</p>}

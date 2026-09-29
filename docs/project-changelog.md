@@ -1,5 +1,11 @@
 # Keryx Project Changelog
 
+### Buyer checkout funding readiness (2026-09-29)
+
+- Show the reviewed public or private research price alongside the buyer's current Gateway available USDC and a clear next action.
+- Distinguish enough available credit, insufficient credit, an Arc-confirmed deposit whose Gateway credit is not yet verified, and an unavailable balance. An existing uncertain funding transaction directs the buyer to inspect it instead of sending it again.
+- Refresh is read-only. Funding and purchase remain separate explicit actions; purchase still rechecks the quote, wallet and Gateway credit before signing.
+
 ### Windows Operator Tauri shell and Mint design (2026-09-29, v0.24.0)
 
 - Implement a Tauri/WebView2 desktop with a bundled TypeScript helper for existing local inspection, exports and GET-only recovery; keep Rust immutable creation and buyer payment authority unchanged.
