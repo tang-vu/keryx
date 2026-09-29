@@ -37,7 +37,10 @@ export class PrivateTextExportError extends Error {
         : "failed before publishing this attempt";
     const staging = stagingPath ? ` staging=${JSON.stringify(stagingPath)}` : "";
     const leftover = stagingRemains ? " Inspect and remove the owned staging file after checking it." : "";
-    super(`Private export ${state} at ${step}; final=${JSON.stringify(finalPath)}${staging}: ${detail}.${leftover}`);
+    // The outcome and recovery instruction precede the paths and detail: the desktop helper
+    // bounds wire error strings at 2048 UTF-8 bytes, so only trailing path/detail text can be
+    // truncated away — never the recovery guidance.
+    super(`Private export ${state}.${leftover} step=${JSON.stringify(step)}; final=${JSON.stringify(finalPath)}${staging}: ${detail}`);
     this.name = "PrivateTextExportError";
   }
 }

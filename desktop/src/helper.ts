@@ -2,7 +2,8 @@ import { open, writeFile } from "node:fs/promises";
 import { createNativeTaskWriter } from "../../lib/operator/native-task-writer";
 import { publishPrivateText } from "../../lib/operator/private-text-export";
 import { WorkspaceStore } from "./workspace";
-import { encodeResponseFrame, MAX_REQUEST_FRAME, parseRequestFrame, type HelperRequest } from "./helper-protocol";
+import { workspaceCreatedSelectionFailed } from "./helper-errors";
+import { boundErrorMessage, encodeResponseFrame, MAX_REQUEST_FRAME, parseRequestFrame, type HelperRequest } from "./helper-protocol";
 
 declare const KERYX_NATIVE_SOURCE_COMMIT: string;
 
@@ -96,7 +97,7 @@ async function execute(request: HelperRequest): Promise<unknown> {
       keys(arg, ["parent"]);
       const result = await store.create(string(arg.parent, 32767));
       try { await saveSelection(); }
-      catch { throw new Error(`Workspace was created at ${result.path}, but the selection could not be saved. Open that folder again; do not create a replacement yet.`); }
+      catch { throw workspaceCreatedSelectionFailed(result.path); }
       return result;
     }
     case "refresh": keys(arg, []); return store.selectedPath ? store.view() : null;
@@ -127,7 +128,7 @@ async function reply(request: HelperRequest) {
     process.stdout.write(encodeResponseFrame({ id: request.id, ok: true, result }));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Operation failed";
-    process.stdout.write(encodeResponseFrame({ id: request.id, ok: false, error: message.slice(0, 2048) }));
+    process.stdout.write(encodeResponseFrame({ id: request.id, ok: false, error: boundErrorMessage(message) }));
   }
 }
 
