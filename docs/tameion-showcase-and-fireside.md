@@ -7,7 +7,7 @@ Prepared September 25, 2026. Draft for Tang Minh Vu to review; not sent to the o
 - Phần email bên dưới là bản tiếng Anh để chỉnh và gửi Aljosa. Phần luyện nói và ghi chú nguồn không nằm trong email.
 - Xác nhận câu 1 về nền tảng cá nhân; chưa thêm số năm kinh nghiệm, công việc hoặc dự án trước Keryx vì chưa có thông tin xác nhận.
 - Câu 5 là quan điểm được đề xuất để bạn duyệt. Câu 6 có thể bổ sung địa điểm hoặc bỏ vì không bắt buộc.
-- Xác nhận X handle và xem lại video cũ trước khi gửi. Video là bản demo trước đây, không phải demo Keryx Operator đã hoàn thành.
+- X handle đã xác nhận: `@keryxpays` là tài khoản dự án Keryx; `@tangvu_dev` là tài khoản cá nhân của Tang Vu. Xem lại video cũ trước khi gửi. Video là bản demo trước đây, không phải demo Keryx Operator đã hoàn thành.
 - Keryx hiện có nền tảng nghiên cứu và thanh toán trên Arc testnet. Keryx Operator là hướng phát triển cho Tameion; không giới thiệu toàn bộ vòng vận hành đó như tính năng đã hoàn tất.
 - Không đưa số tiền giải thưởng hoặc nội dung trao đổi riêng với người tổ chức vào bản công khai này. Không có số liệu doanh thu, lợi nhuận hoặc khách hàng chưa được xác minh.
 
@@ -77,7 +77,8 @@ Introductions to small research businesses or teams already paying for informati
 - Research workspace: https://keryx.cc/research
 - GitHub: https://github.com/tang-vu/keryx
 - Technical demo: https://youtu.be/De22GVl2KnY
-- X: https://x.com/tangvu_dev
+- Keryx X: https://x.com/keryxpays
+- Tang Vu X: https://x.com/tangvu_dev
 
 The video shows an earlier version of Keryx; the website reflects the current product. The payment flows discussed here use Arc testnet.
 
