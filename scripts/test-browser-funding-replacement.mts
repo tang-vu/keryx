@@ -15,7 +15,7 @@ const bundle = await build({ stdin: { contents: `
     getBlockNumber:async()=>102n,getBlock:async()=>({hash:'${blockHash}',number:101n})};
   const noop=()=>{};
   function Harness(){const [payer,setPayer]=React.useState('${payer}');window.setFundingPayer=setPayer;
-    return React.createElement(ResearchFunding,{payer,initialAmount:0.05,disabled:false,onBusy:noop,onChanged:noop});}
+    return React.createElement(ResearchFunding,{payer,initialAmount:0.05,requiredMicros:'50000',disabled:false,onBusy:noop,onChanged:noop});}
   createRoot(document.getElementById('root')).render(React.createElement(React.StrictMode,null,
     React.createElement(Harness)));
 `, resolveDir: process.cwd(), loader: "tsx" }, bundle: true, platform: "browser", format: "iife", jsx: "automatic", write: false,

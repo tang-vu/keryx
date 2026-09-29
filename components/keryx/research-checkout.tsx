@@ -25,32 +25,21 @@ export function ResearchCheckout({ question, mode, budget, version, total, payee
   const [accepted, setAccepted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [fundingBusy, setFundingBusy] = useState(false);
+  const [creditRevision, setCreditRevision] = useState(0);
   const [message, setMessage] = useState("");
-  const [credit, setCredit] = useState<{ address: string; micros: string } | null>(null);
   const [recovery, setRecovery] = useState<string | null>(null);
   const operation = useRef<AbortController | null>(null);
   const parsed = buyerRequestSchema.safeParse({ question, budget, researchMode: mode, packageVersion: version, responseMode: "async" });
   const amount = String(Math.round(total * 1e6));
   const reviewCurrent = !!review && parsed.success && JSON.stringify(review.request) === JSON.stringify(parsed.data)
     && review.payer === address && review.payee === payee && review.amount === amount && chainId === 5042002;
-  const currentCredit = credit && credit.address === address ? credit.micros : null;
 
   useEffect(() => () => { operation.current?.abort(); }, []);
-
-  async function checkBalance() {
-    if (!wallet || !address || operation.current || fundingBusy) return;
-    const abort = new AbortController(); operation.current = abort; setBusy(true); setMessage("Checking your Gateway balance…");
-    try {
-      const value = await connectedBuyerWallet(wallet, address, abort.signal).readWallet();
-      if (!abort.signal.aborted) { setCredit({ address, micros: value.gatewayBalanceMicros }); setMessage("Gateway balance checked. No payment was made."); }
-    } catch {
-      if (!abort.signal.aborted) { setCredit(null); setMessage("Could not check this wallet on Arc testnet. Retry before adding funds."); }
-    } finally { if (operation.current === abort) operation.current = null; if (!abort.signal.aborted) setBusy(false); }
-  }
 
   async function purchase() {
     if (!wallet || !review || !reviewCurrent || !accepted || operation.current || fundingBusy) return;
     const abort = new AbortController(); operation.current = abort;
+    setCreditRevision(value => value + 1);
     setBusy(true); setRecovery(null); setMessage("Checking the current price and wallet…");
     let preparedId: string | null = null;
     try {
@@ -66,7 +55,7 @@ export function ResearchCheckout({ question, mode, budget, version, total, payee
         },
       });
       if (!abort.signal.aborted) {
-        workspace.select(result.queryId); setReview(null); setAccepted(false); setCredit(null);
+        workspace.select(result.queryId); setReview(null); setAccepted(false);
         setMessage(result.status === "submitted" ? "Purchase acknowledged. Following the original job below. Keep your recovery file."
           : "The submission is uncertain. Keep the recovery file and open this job below; do not pay again to recover it.");
         if (result.evidence && !result.acknowledgementPersisted) setMessage("The seller returned a payment acknowledgement, but it could not be saved locally. Keep this tab and recovery file; use the same job for lookup.");
@@ -92,12 +81,7 @@ export function ResearchCheckout({ question, mode, budget, version, total, payee
       {chainId !== 5042002 ? <button type="button" disabled={busy || switching} className={control} onClick={() => {
         void switchChainAsync({ chainId: 5042002 }).catch(() => setMessage("Network switch was not completed. Choose Arc testnet in your wallet."));
       }}>{switching ? "Switching…" : "Switch to Arc testnet"}</button> : <>
-        <div className="flex flex-wrap items-center gap-3">
-          <button type="button" disabled={busy || fundingBusy || !wallet} className={control} onClick={() => { void checkBalance(); }}>Check Gateway balance</button>
-          <span className="font-mono text-xs">Available: {currentCredit === null ? "not checked" : `${formatUnits(BigInt(currentCredit), 6)} USDC`}</span>
-        </div>
-        {currentCredit !== null && BigInt(currentCredit) < BigInt(amount) && <p className="font-serif text-sm text-seal">Gateway funds are below the package price. Wallet gas balance and Gateway funds are separate. Use the deposit controls below, then check Gateway balance again.</p>}
-        <ResearchFunding key={address} payer={address} initialAmount={total} disabled={busy} onBusy={setFundingBusy} onChanged={() => setCredit(null)} />
+        <ResearchFunding key={address} payer={address} initialAmount={total} requiredMicros={amount} creditRevision={creditRevision} disabled={busy} onBusy={setFundingBusy} onChanged={() => {}} />
         <button type="button" className={control} disabled={busy || !parsed.success || !wallet || BigInt(amount) > BigInt(1_000_000)} onClick={() => {
           if (!parsed.success || !address) return;
           setReview({ request: parsed.data, payer: address, payee, amount }); setAccepted(false); setMessage("");

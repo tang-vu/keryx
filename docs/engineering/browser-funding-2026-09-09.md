@@ -25,6 +25,18 @@ deposit receipt does not imply immediately available Circle credit. Buyers check
 current Gateway balance before purchasing. Cancellation is local and allowed only
 before an uncertain/submitted leg; a confirmed token approval remains on chain.
 
+The buyer checkout now shows a funding readiness card for the displayed package price.
+It reads Gateway available credit and the existing local funding journal. A finalized
+Arc deposit without enough available Gateway credit is labelled "credit not yet
+verified"; it may still be updating or may have been spent. Balance lookup failure
+remains unavailable, never interpreted as insufficient credit or a reason to deposit.
+Submitted or uncertain journal steps point to inspection of the original transaction.
+Only the latest saved confirmed plan is surfaced while balance is unknown; a fresh
+known shortfall remains insufficient even if an older deposit succeeded. Starting a
+purchase invalidates the displayed credit snapshot so a possible debit cannot leave
+the checkout claiming it is still funded. Refresh makes only read calls. The purchase
+path retains its own fresh wallet, quote and balance checks before signing.
+
 ## Verification
 
 - 26 focused funding tests cover amount/identity/network/gas/storage refusal, races,
