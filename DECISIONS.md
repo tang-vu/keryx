@@ -1,5 +1,26 @@
 # Keryx — Decision Log
 
+**D-267** - Verify browser x402 callbacks against the live challenge before acknowledgement -
+*The server previously resolved `/api/ask/sign` with any header for a known live
+request, leaving cryptographic checks to the paid retry.* Capture the original
+server-validated 402 requirements and grant signer in the scoped pending slot
+before sending the SSE sign request. Before acknowledging or resolving a callback,
+require a bounded canonical inner-only header, exact signer/payee/amount and validity bounds,
+and recover the EIP-712 signer using the pinned Arc testnet chain, Circle batching
+name/version and GatewayWallet contract. Reject a nested or extra payload because
+the seller would select it instead of the verified outer fields. An invalid callback leaves the slot
+unresolved for a valid response or its existing timeout. This is an in-process
+testnet guard, not settlement evidence or a multi-instance broker.
+
+The browser still chooses its own nonce after SSE delivery. Signature recovery
+proves that nonce was signed, but cannot compare it with a server-admitted nonce,
+prevent replay, or create the durable payment row needed after a crash. A timeout
+or disconnect can still leave an unindexed signed authorization; this change does
+not fix the reservation-release or recovery policy. M3/M4 remain open pending
+atomic durable nonce admission, state transitions, funded drills and independent
+review. See [browser authorization design](docs/engineering/browser-authorization-durability.md)
+and [dated mainnet evidence](docs/engineering/mainnet-readiness-2026-09-29.md).
+
 **D-266** - Pin browser x402 signing to the Arc testnet session and challenge -
 *The browser previously accepted any parseable `eip155` network and copied the
 challenge's EIP-712 domain into a session-key signature; concurrent SSE requests

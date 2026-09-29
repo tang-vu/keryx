@@ -217,12 +217,16 @@ export async function POST(req: NextRequest) {
             sourceId: string,
             paymentContext?: BrowserPaymentContext,
           ): Promise<string> => {
+            // Arm the scoped slot before SSE delivery so a fast callback cannot race creation.
+            const signed = awaitSignature(capturedSessionId, reqId, {
+              requirements,
+              expectedSigner: grant!.sessAddr,
+            }, abort.signal);
             send("sign-request", {
               reqId, requirements, kind, sourceId, paymentContext,
               capturedGrantSigner: grant?.sessAddr,
             });
-            // Scope the pending slot to this session so a caller can't resolve another session's sign-request.
-            return awaitSignature(capturedSessionId, reqId, abort.signal);
+            return signed;
           };
 
           deps = await getAgentDeps({

@@ -12,15 +12,23 @@
  * multi-instance deploy needs sticky sessions or a shared broker.
  */
 
+import type { PaymentRequirements } from "./x402-payment-evidence";
+
 // Keyed by `sessionId:reqId` so a caller cannot resolve another session's pending promise
 // even if they guess the UUID reqId.
 const pending = new Map<string, PendingSignature>();
 
 interface PendingSignature {
+  challenge: PendingSignatureChallenge;
   resolve: (header: string) => void;
   reject: (reason: Error) => void;
   timer: ReturnType<typeof setTimeout>;
   cleanupAbort: () => void;
+}
+
+export interface PendingSignatureChallenge {
+  requirements: PaymentRequirements;
+  expectedSigner: string;
 }
 
 /** How long the browser has to respond to a sign-request before we give up. */
@@ -38,6 +46,7 @@ function pendingKey(sessionId: string, reqId: string): string {
 export function awaitSignature(
   sessionId: string,
   reqId: string,
+  challenge: PendingSignatureChallenge,
   abortSignal?: AbortSignal,
 ): Promise<string> {
   cancelPending(sessionId, reqId); // clean up any stale entry (shouldn't happen, but be safe)
@@ -59,11 +68,22 @@ export function awaitSignature(
       reject(new Error(`sign-request timed out after ${SIGN_TIMEOUT_MS / 1000}s`));
     }, SIGN_TIMEOUT_MS);
 
-    pending.set(key, { resolve, reject, timer, cleanupAbort });
+    // Keep the original server-validated challenge, independent of callback input.
+    pending.set(key, {
+      challenge: {
+        expectedSigner: challenge.expectedSigner,
+        requirements: { ...challenge.requirements, extra: { ...challenge.requirements.extra } },
+      },
+      resolve, reject, timer, cleanupAbort,
+    });
     abortSignal?.addEventListener("abort", onAbort, { once: true });
     // Abort may have happened just before the listener was attached.
     if (abortSignal?.aborted) onAbort();
   });
+}
+
+export function getPendingChallenge(sessionId: string, reqId: string): PendingSignatureChallenge | undefined {
+  return pending.get(pendingKey(sessionId, reqId))?.challenge;
 }
 
 /**

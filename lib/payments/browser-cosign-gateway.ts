@@ -461,6 +461,12 @@ function parseAndValidateSignedHeader(
   } catch {
     throw new Error("browser returned an invalid payment header");
   }
+  // This gateway sends the header directly to the seller, which prefers a nested `.payload`.
+  // Do not allow a second authorization to bypass the callback's verified inner blob.
+  if (!body || typeof body !== "object" || Array.isArray(body) ||
+      Object.keys(body).sort().join(",") !== "authorization,signature") {
+    throw new Error("browser returned an ambiguous payment header");
+  }
   const auth = body?.authorization;
   if (!auth || typeof body.signature !== "string" || !/^0x[0-9a-f]{130}$/i.test(body.signature)) {
     throw new Error("browser returned an incomplete payment authorization");
