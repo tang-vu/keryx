@@ -56,8 +56,11 @@ See [`docs/remote-mcp.md`](../docs/remote-mcp.md) for API-key variants and the t
 
 | Tool | What it does |
 |------|--------------|
-| `ask_keryx` | Ask a research question (+ optional USDC `budget`). Returns a cited answer and the creators Keryx paid downstream. Costs **0.02 USDC** per call, paid from your wallet. |
+| `ask_keryx` | Ask a research question (+ optional prepaid creator-spend `budget`). Returns a cited answer and the creators Keryx paid downstream. The default deep-mode quote is **0.05 USDC service fee + 0.05 USDC creator budget = 0.10 USDC total**. A 0.03 budget quotes 0.08 total. The exact 402 quote is checked before signing. |
 | `keryx_wallet_status` | Show the wallet this server pays from — address, balances, whether it's ready, and how to fund it. **Run this first.** |
+| `keryx_recover` | Poll the saved query ID after a paid error or uncertain payment outcome, without making another payment. |
+
+The creator budget is prepaid and is a spend cap, not a promise that every cent reaches creators. The server itemizes actual creator spend and unused reserve in its response. A paid request can settle even if research delivery fails. The local buyer saves its authorization nonce, query ID, amount, and any `PAYMENT-RESPONSE` settlement ID in `~/.keryx/buyer-payment.json` (or `KERYX_PAYMENT_JOURNAL`). While that journal exists, `ask_keryx` refuses another payment. Run `keryx_recover` to inspect the server's order; a completed answer clears the journal. An unresolved or failed order needs manual review before another purchase.
 
 ## Local x402 setup (≈3 minutes)
 
@@ -103,6 +106,8 @@ All optional — sane Arc-testnet defaults are built in.
 | `KERYX_BUYER_PRIVATE_KEY` | *(generated)* | Bring your own funded Arc wallet instead of the generated one. |
 | `KERYX_WALLET_FILE` | `~/.keryx/buyer-wallet.json` | Where the generated wallet is persisted. |
 | `KERYX_GATEWAY_DEPOSIT` | `0.5` | USDC moved into Gateway per top-up. |
+| `KERYX_MAX_TOTAL_USDC` | `1` | Maximum accepted body-dependent 402 quote for one local call. |
+| `KERYX_PAYMENT_JOURNAL` | `~/.keryx/buyer-payment.json` | Pending payment and recovery evidence. |
 | `KERYX_RPC_URL` | `https://rpc.testnet.arc.network` | Arc testnet RPC. |
 
 > **Testnet funds only.** Calls settle Arc testnet USDC. The generated wallet holds only what you

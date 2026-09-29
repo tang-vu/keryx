@@ -1,11 +1,7 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it } from "vitest";
-import {
-  isAllowedMcpOrigin,
-  normalizeMcpClient,
-  POST,
-  researchCallCount,
-} from "../../app/mcp/route";
+import { POST } from "../../app/mcp/route";
+import { isAllowedMcpOrigin, normalizeMcpClient, researchCallCount } from "./route-helpers";
 
 const headers = {
   "content-type": "application/json",

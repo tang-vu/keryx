@@ -6,6 +6,12 @@
 - Distinguish enough available credit, insufficient credit, an Arc-confirmed deposit whose Gateway credit is not yet verified, and an unavailable balance. An existing uncertain funding transaction directs the buyer to inspect it instead of sending it again.
 - Refresh is read-only. Funding and purchase remain separate explicit actions; purchase still rechecks the quote, wallet and Gateway credit before signing.
 
+### A2A paid research and stdio MCP recovery (2026-09-29, v0.24.1)
+
+- Preflight signed A2A research dependencies before settlement and log full post-settlement errors; repair Next route exports so production typecheck passes.
+- Update the stdio MCP buyer for body-dependent A2A pricing, a bounded payment journal, and explicit recovery before another paid call.
+- The exact cause of the production minified `e9` initialization error remains unproven. Local tests pass, but a successful paid stdio research call has not been retested.
+
 ### Windows Operator Tauri shell and Mint design (2026-09-29, v0.24.0)
 
 - Implement a Tauri/WebView2 desktop with a bundled TypeScript helper for existing local inspection, exports and GET-only recovery; keep Rust immutable creation and buyer payment authority unchanged.
