@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-262** - Bundle the web's Mint fonts for reproducible builds - *A clean Next.js
+16 Turbopack build failed while resolving `next/font/google` for Bodoni Moda;
+remote font CSS and file responses make that build path dependent on an external
+service.* Use `next/font/local` with checked-in WOFF2 files and SIL Open Font
+License notices for Bodoni Moda, Spectral and Spline Sans Mono. Preserve the
+existing CSS variables, normal and italic faces, weight ranges, and swap display.
+Bundle the Latin subset used by the current web layout; other scripts continue to
+use CSS fallback fonts. The files and provenance are recorded in `app/fonts/README.md`.
+Require a fresh production build to validate future font changes. Reversible:
+restore Google font loading if its clean-runner reliability is demonstrated.
+
 **D-260** - Replace the Windows Electron shell with a bounded Tauri shell and a
 shared Mint desktop surface - *The desktop alpha worked but its dark visual system
 diverged from the web reading product, and packaging Electron was heavier than the
