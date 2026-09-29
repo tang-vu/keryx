@@ -11,11 +11,11 @@ name = "KeryxOperator"
 path = "src/main.rs"
 
 [build-dependencies]
-tauri-build = "=2.7.0"
+tauri-build = { version = "=2.7.0", features = [] }
 sha2 = "=0.10.9"
 
 [dependencies]
-tauri = "=2.12.0"
+tauri = { version = "=2.12.0", features = [] }
 tauri-plugin-dialog = "=2.8.0"
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = "=1.0.151"

@@ -46,9 +46,12 @@ the existing buyer CLI and its documented key environment. Independently verify 
 pinned payee and total cap before buying. Keep the original journal after an uncertain
 attempt; do not buy again for recovery.
 
-The app preserves partial or uncertain creation attempts and identifies the target
-for inspection. It never retries with a different writer. On Windows, successful
-creation establishes visible, flushed and verified files but does not prove
+The app preserves partial or uncertain creation attempts. When the native writer
+returns a typed error, it identifies the generated target for inspection. A helper
+timeout or lost IPC acknowledgement may leave that random target unknown; preserve
+the chosen parent or selected workspace and inspect recent directories before any
+new creation attempt. The app never retries with a different writer. On Windows,
+successful creation establishes visible, flushed and verified files but does not prove
 directory-entry persistence after power loss. A missing or modified native engine
 blocks new creation; reopening old tasks and saved results remains available.
 See [native task creation](./native-task-creation.md) for the complete boundary.

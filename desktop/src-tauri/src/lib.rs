@@ -28,9 +28,41 @@ fn local_app_url(url: &tauri::Url) -> bool {
     let local = (url.scheme() == "http" && url.host_str() == Some("tauri.localhost"))
         || (url.scheme() == "tauri" && url.host_str() == Some("localhost"));
     local
+        && url.port().is_none()
+        && url.username().is_empty()
+        && url.password().is_none()
         && (url.path() == "/" || url.path() == "/index.html")
         && url.query().is_none()
         && url.fragment().is_none()
+}
+
+#[cfg(test)]
+mod local_url_tests {
+    use super::local_app_url;
+
+    #[test]
+    fn allows_only_the_built_in_main_document_origin() {
+        for url in [
+            "http://tauri.localhost/",
+            "http://tauri.localhost/index.html",
+            "tauri://localhost/",
+        ] {
+            assert!(local_app_url(&url.parse().unwrap()), "{url}");
+        }
+        for url in [
+            "http://tauri.localhost:8080/",
+            "http://operator@tauri.localhost/",
+            "http://operator:secret@tauri.localhost/",
+            "http://tauri.localhost.evil/",
+            "https://tauri.localhost/",
+            "http://tauri.localhost/other",
+            "http://tauri.localhost/?next=/",
+            "http://tauri.localhost/#app",
+            "tauri://localhost:42/",
+        ] {
+            assert!(!local_app_url(&url.parse().unwrap()), "{url}");
+        }
+    }
 }
 
 fn check_caller(window: &WebviewWindow) -> Result<(), String> {

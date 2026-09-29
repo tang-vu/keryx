@@ -39,7 +39,8 @@ fn main() {
         .expect("Cannot inspect checkout");
     assert!(
         status.status.success() && status.stdout.is_empty(),
-        "Commit source changes before building desktop release"
+        "Commit source changes before building desktop release. Dirty paths:\n{}",
+        String::from_utf8_lossy(&status.stdout)
     );
     println!("cargo:rustc-env=KERYX_SOURCE_COMMIT={commit}");
     println!(

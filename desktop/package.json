@@ -6,7 +6,7 @@
     "native:build": "node --import tsx ../scripts/build-native-writer.mts",
     "build": "node --import tsx build.mjs",
     "start": "npm run native:build && npm run build && tauri dev",
-    "package:win": "npm run native:build && npm run build && tauri build && node scripts/stage-package.mjs && npm run verify:package",
+    "package:win": "npm run native:build && npm run build && tauri build -- --locked && node scripts/stage-package.mjs && npm run verify:package",
     "verify:package": "node --import tsx scripts/check-package.mjs release/KeryxOperator-win32-x64",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
