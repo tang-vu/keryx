@@ -22,3 +22,8 @@ SIL Open Font License 1.1 text is included alongside it.
 License provenance: [Bodoni Moda](https://github.com/google/fonts/blob/main/ofl/bodonimoda/OFL.txt),
 [Spectral](https://github.com/google/fonts/blob/main/ofl/spectral/OFL.txt), and
 [Spline Sans Mono](https://github.com/google/fonts/blob/main/ofl/splinesansmono/OFL.txt).
+
+Tauri embeds `dist/ui` in its executable and also copies it as a small resource
+mirror. The mirror lets the portable and installed Windows packages use the same
+source/hash checks for local fonts and icon plus CSS local-resource checks.
+The WebView loads the embedded frontend.

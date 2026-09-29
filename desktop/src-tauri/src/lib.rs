@@ -390,7 +390,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(
-            tauri::plugin::Builder::new("local-navigation")
+            tauri::plugin::Builder::<_, ()>::new("local-navigation")
                 .on_navigation(|_webview, url| local_app_url(url))
                 .build(),
         )

@@ -2,8 +2,7 @@ import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { cp, mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { basename, dirname, join, resolve, sep } from "node:path";
-import { fileURLToPath } from "node:url";
+import { basename, dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { chromium } from "playwright";
 import { createBuyerJournal, readBuyerJournal } from "../../lib/buyer/journal.ts";
@@ -17,9 +16,10 @@ import { resumeOperatorTask } from "../../lib/operator/task.ts";
 
 if (process.platform !== "win32" || !process.argv[2]) throw Error("Pass one packaged Windows Tauri executable");
 const exe = resolve(process.argv[2]);
-const repository = resolve(fileURLToPath(new URL("../..", import.meta.url)));
-const screenshotPath = join(repository, ".artifacts", "desktop-smoke", "packaged-tauri.png");
+const screenshotOverride = process.env.KERYX_DESKTOP_SMOKE_SCREENSHOT;
+if (screenshotOverride && !isAbsolute(screenshotOverride)) throw Error("Smoke screenshot destination must be absolute");
 const temporary = await mkdtemp(join(tmpdir(), "keryx-tauri-smoke-"));
+const screenshotPath = screenshotOverride ?? join(temporary, "packaged-tauri.png");
 const parent = join(temporary, "parent");
 const reference = join(temporary, "reference.md");
 const statusPath = join(temporary, "status.json");
@@ -184,7 +184,6 @@ try {
   active = await launch({ openWorkspace: view.path });
   const restored = await active.page.evaluate(() => window.keryxDesktop.refresh());
   if (restored.tasks.length !== 1 || restored.tasks[0].question !== created.question) throw Error("Workspace did not reopen after app restart");
-  await mkdir(join(repository, ".artifacts", "desktop-smoke"), { recursive: true });
   await active.page.screenshot({ path: screenshotPath });
   await stop(active); active = null;
   const tamperedPackage = join(temporary, "tampered-package");
@@ -238,7 +237,7 @@ try {
   passed = true;
   console.log(JSON.stringify({ packagedTauriSmoke: "passed", taskCreation: "persisted_and_reopened",
     offlineReopen: true, tamperedHelperRefused: true, nativeArtifactRefusals: ["tampered", "missing"],
-    exports: ["status", "brief"], screenshot: screenshotPath }));
+    exports: ["status", "brief"], ...(screenshotOverride ? { screenshot: screenshotPath } : {}) }));
 } finally {
   if (active) await stop(active).catch(() => undefined);
   const normalized = resolve(temporary);

@@ -71,7 +71,7 @@ impl Host {
     pub fn start(app: &AppHandle, smoke: Option<&SmokeConfig>) -> Result<Self, String> {
         let source_commit = env!("KERYX_SOURCE_COMMIT");
         let source_path = resource(app, "dist/source-commit.txt")?;
-        let mut source_file =
+        let source_file =
             std::fs::File::open(source_path).map_err(|_| "Packaged source identity is missing")?;
         if source_file
             .metadata()

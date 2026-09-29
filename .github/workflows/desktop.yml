@@ -83,19 +83,21 @@ jobs:
             desktop/src-tauri/target
           key: desktop-msvc-${{ hashFiles('desktop/src-tauri/Cargo.lock') }}
       - name: Build and package Windows desktop
+        id: package
         run: npm run desktop:package
         env:
           RUSTUP_TOOLCHAIN: 1.98.1-x86_64-pc-windows-msvc
       - name: Test Rust host and helper protocol
-        run: cargo +1.98.1-x86_64-pc-windows-msvc test --manifest-path desktop/src-tauri/Cargo.toml --locked
+        run: cargo +1.98.1-x86_64-pc-windows-msvc test --manifest-path desktop/src-tauri/Cargo.toml --release --features tauri/custom-protocol --locked
       - name: Verify packaged helper workspace selection migration
         run: node desktop/scripts/test-helper-selection.mjs desktop/release/KeryxOperator-win32-x64/dist
-      - name: Exercise actual packaged creation as a standard Windows user
+      - name: Exercise portable and installed app as a standard Windows user
         shell: pwsh
         run: ./desktop/scripts/standard-user-smoke.ps1 -Package desktop/release/KeryxOperator-win32-x64
       - name: Verify icon, source identity, native writer and bundled Node
         run: node --import tsx desktop/scripts/check-package.mjs desktop/release/KeryxOperator-win32-x64
       - name: Upload exact packaged desktop for a fresh Windows consumer
+        if: ${{ !cancelled() && steps.package.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
           name: operator-desktop-${{ github.sha }}-${{ github.run_id }}
@@ -129,7 +131,7 @@ jobs:
           KERYX_EXPECTED_SOURCE_COMMIT: ${{ github.sha }}
       - name: Verify downloaded helper workspace selection migration
         run: node desktop/scripts/test-helper-selection.mjs "${{ runner.temp }}/keryx-operator-downloaded/KeryxOperator-win32-x64/dist"
-      - name: Exercise actual downloaded Tauri creation as a standard Windows user
+      - name: Exercise downloaded portable and installed app as a standard Windows user
         shell: pwsh
         run: ./desktop/scripts/standard-user-smoke.ps1 -Package "${{ runner.temp }}/keryx-operator-downloaded/KeryxOperator-win32-x64"
       - name: Verify downloaded package was restored after fault checks

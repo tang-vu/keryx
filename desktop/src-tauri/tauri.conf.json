@@ -32,7 +32,13 @@
       "../dist/helper.cjs": "dist/helper.cjs",
       "../dist/source-commit.txt": "dist/source-commit.txt",
       "../dist/native/": "dist/native/",
-      "../dist/runtime/": "dist/runtime/"
+      "../dist/runtime/": "dist/runtime/",
+      "../dist/ui/": "dist/ui/"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
     }
   }
 }
