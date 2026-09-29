@@ -26,8 +26,9 @@
  * listSources() filters active=true, so deactivated sources are never surfaced to the agent.
  */
 
-import { createPublicClient, http, type Address, type Log } from "viem";
+import { createPublicClient, type Address, type Log } from "viem";
 import { arcTestnet } from "@/lib/chains";
+import { assertArcRpcChain, attestedArcAuthorityHttp } from "@/lib/arc-rpc-attestation";
 import { config } from "@/lib/config";
 import { REGISTRY_ABI, getRegistrySource } from "@/lib/registry/registry-client";
 import { subscribeRegistryLogs } from "./indexer-event-subscription";
@@ -48,7 +49,7 @@ const SYNC_KEY = "lastSyncedBlock";
 function getPublicClient() {
   return createPublicClient({
     chain: arcTestnet,
-    transport: http(config.rpcUrl),
+    transport: attestedArcAuthorityHttp(config.rpcUrl),
   });
 }
 
@@ -87,6 +88,8 @@ export async function syncOnce(db: KeryxDB): Promise<void> {
 
     // applyLogs throws if any RPC call fails — do NOT advance checkpoint on error.
     await applyLogs(logs, db);
+    // Re-attest before the durable cursor moves, including an empty log chunk.
+    await assertArcRpcChain(config.rpcUrl);
     await db.setSyncState(SYNC_KEY, hi.toString());
   }
 }

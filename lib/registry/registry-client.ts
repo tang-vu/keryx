@@ -21,7 +21,6 @@
 
 import {
   createPublicClient,
-  http,
   keccak256,
   toBytes,
   encodeAbiParameters,
@@ -30,6 +29,7 @@ import {
   type Address,
 } from "viem";
 import { arcTestnet } from "@/lib/chains";
+import { attestedArcAuthorityHttp } from "@/lib/arc-rpc-attestation";
 import { config } from "@/lib/config";
 
 // ── ABI (minimal — only what the indexer + client need) ──────────────────────
@@ -183,7 +183,7 @@ export function sourceId(creator: Address, url: string): Hex {
 function getPublicClient(timeoutMs?: number) {
   return createPublicClient({
     chain: arcTestnet,
-    transport: http(config.rpcUrl, timeoutMs ? { timeout: timeoutMs, retryCount: 0 } : undefined),
+    transport: attestedArcAuthorityHttp(config.rpcUrl, timeoutMs ? { timeout: timeoutMs, retryCount: 0 } : undefined),
   });
 }
 

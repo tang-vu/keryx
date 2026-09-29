@@ -1,5 +1,22 @@
 # Keryx — Decision Log
 
+**D-265** - Stage Arc testnet RPC chain attestation at authority boundaries -
+*A viem client labeled Arc testnet does not verify the configured RPC, and a
+custom or tokenized testnet host cannot be judged by its URL.* Check live
+`eth_chainId` before each guarded HTTP RPC request. Check again after registry
+and indexer responses, before their data reaches the cache, and immediately
+before each indexer cursor write. Treat WebSocket registry pushes only as wake
+signals for the guarded HTTP sync. For covered server and CLI SDK signing,
+deposit and withdrawal calls, use a fresh four-second, no-retry preflight. This
+reduces risk but cannot guard the SDK's internal requests. Each guarded request
+adds a chain-ID round trip, authority reads add two, and an unavailable or
+mismatched RPC fails closed.
+
+M2 remains open: SDK-owned writes (including a withdrawal destination RPC outside
+the configured URL), browser and standalone signers, adversarial RPC switch-back,
+and non-atomic cache/cursor writes require separate controls and review. See
+[dated mainnet evidence](docs/engineering/mainnet-readiness-2026-09-29.md).
+
 **D-264** - Pin the Arc testnet payment contract profile - *Independent
 environment overrides for USDC, GatewayWallet and GatewayMinter could create a
 mixed-chain signing or withdrawal configuration while Keryx still advertises

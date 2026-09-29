@@ -28,10 +28,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { GatewayClient, type SupportedChainName } from "@circle-fin/x402-batching/client";
-import { createPublicClient, createWalletClient, http, parseEther } from "viem";
+import { createPublicClient, createWalletClient, parseEther } from "viem";
 import { arcTestnet } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 import { config } from "../lib/config.ts";
+import { assertArcRpcChain, attestedArcHttp } from "../lib/arc-rpc-attestation.ts";
 import { getDb } from "../lib/db/index.ts";
 
 // Instant withdraw mints USDC by having the creator EOA submit a gatewayMint() tx,
@@ -94,8 +95,8 @@ function selectEntries(store: KeyStore, o: Opts): [string, KeyStore[string]][] {
 function gasFunder() {
   if (!config.funderKey) return null;
   const funder = privateKeyToAccount(config.funderKey as `0x${string}`);
-  const publicClient = createPublicClient({ chain: arcTestnet, transport: http(config.rpcUrl) });
-  const wallet = createWalletClient({ account: funder, chain: arcTestnet, transport: http(config.rpcUrl) });
+  const publicClient = createPublicClient({ chain: arcTestnet, transport: attestedArcHttp(config.rpcUrl) });
+  const wallet = createWalletClient({ account: funder, chain: arcTestnet, transport: attestedArcHttp(config.rpcUrl) });
   return { publicClient, wallet };
 }
 
@@ -208,6 +209,7 @@ async function main() {
     }
     try {
       await ensureGas(funder, w.address as `0x${string}`);
+      await assertArcRpcChain(config.rpcUrl);
       const res = await gw.withdraw(amount.toFixed(6), {
         recipient: o.recipient ?? (privateKeyToAccount(w.privateKey as `0x${string}`).address),
         ...(o.maxFee ? { maxFee: o.maxFee } : {}),

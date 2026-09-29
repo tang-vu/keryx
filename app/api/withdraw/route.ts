@@ -16,13 +16,13 @@ import { NextRequest } from "next/server";
 import {
   createWalletClient,
   createPublicClient,
-  http,
   getAddress,
   type Hex,
 } from "viem";
 import { arcTestnet } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 import { config } from "@/lib/config";
+import { assertArcRpcChain, attestedArcHttp } from "@/lib/arc-rpc-attestation";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import type { WireBurnIntent } from "@/lib/gateway/withdraw-intent";
@@ -113,6 +113,7 @@ export async function POST(req: NextRequest) {
 
   try {
     // 1) Relay the signed burn intent to Circle → mint attestation.
+    await assertArcRpcChain(config.rpcUrl);
     const transferRes = await fetch(GATEWAY_TRANSFER_API, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -134,8 +135,8 @@ export async function POST(req: NextRequest) {
     // 2) Treasury submits the on-chain mint (pays gas). destinationCaller = 0x0 ⇒ permissionless,
     //    so a sender other than the depositor is accepted.
     const funder = privateKeyToAccount(config.funderKey as Hex);
-    const walletClient = createWalletClient({ account: funder, chain: arcTestnet, transport: http(config.rpcUrl) });
-    const publicClient = createPublicClient({ chain: arcTestnet, transport: http(config.rpcUrl) });
+    const walletClient = createWalletClient({ account: funder, chain: arcTestnet, transport: attestedArcHttp(config.rpcUrl) });
+    const publicClient = createPublicClient({ chain: arcTestnet, transport: attestedArcHttp(config.rpcUrl) });
 
     const mintTxHash = await walletClient.writeContract({
       address: config.gatewayMinter,

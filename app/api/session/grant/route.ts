@@ -22,12 +22,13 @@
  */
 
 import { NextRequest } from "next/server";
-import { createPublicClient, http, isAddress, parseUnits } from "viem";
+import { createPublicClient, isAddress, parseUnits } from "viem";
 import { arcTestnet } from "viem/chains";
 import { getSession } from "@/lib/auth";
 import { storeGrant, grantExpiry } from "@/lib/payments/session-grants";
 import { getGatewayAvailableAtomic } from "@/lib/gateway/gateway-balance";
 import { config } from "@/lib/config";
+import { attestedArcHttp } from "@/lib/arc-rpc-attestation";
 import { getDb } from "@/lib/db";
 import { recordActivationEvent } from "@/lib/activation";
 
@@ -103,7 +104,7 @@ export async function POST(req: NextRequest) {
     try {
       const publicClient = createPublicClient({
         chain: arcTestnet,
-        transport: http(config.rpcUrl),
+        transport: attestedArcHttp(config.rpcUrl),
       });
       const native = await publicClient.getBalance({ address: sessAddr as `0x${string}` });
       // 10% of the claimed cap: a truly unfunded EOA holds zero, and we don't want to
