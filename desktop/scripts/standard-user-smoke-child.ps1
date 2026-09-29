@@ -209,22 +209,14 @@ function Invoke-BoundedInstaller([string]$Executable, [string[]]$Arguments) {
   } finally { $process.Dispose() }
 }
 $uninstaller = Join-Path $install 'uninstall.exe'
-function Get-Sha256([string]$Path) {
-  $file = [IO.File]::Open($Path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
-  $sha = [Security.Cryptography.SHA256]::Create()
-  try { return [BitConverter]::ToString($sha.ComputeHash($file)).Replace('-', '') }
-  finally { $sha.Dispose(); $file.Dispose() }
-}
 try {
   Invoke-BoundedInstaller $Installer @('/S', "/D=$install")
   $installedExe = Join-Path $install 'KeryxOperator.exe'
   if (-not (Test-Path -LiteralPath $installedExe -PathType Leaf)) {
     throw 'NSIS did not install into the isolated destination'
   }
-  $portableExe = Join-Path $Package 'KeryxOperator.exe'
-  if ((Get-Sha256 $installedExe) -ne (Get-Sha256 $portableExe)) {
-    throw 'NSIS installed executable differs from the staged portable executable'
-  }
+  & $NodePath desktop/scripts/compare-tauri-packages.mjs $Package $install
+  if ($LASTEXITCODE -ne 0) { throw "NSIS package identity check failed: $LASTEXITCODE" }
   & $NodePath --import tsx desktop/scripts/check-package.mjs $install
   if ($LASTEXITCODE -ne 0) { throw "Installed package identity check failed: $LASTEXITCODE" }
   & $NodePath --import tsx desktop/scripts/tauri-smoke.mjs $installedExe

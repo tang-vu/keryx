@@ -64,6 +64,8 @@ jobs:
         run: npm --prefix desktop run typecheck
       - name: Test Windows PE runtime dependency gate
         run: node --test scripts/pe-imports.test.mjs
+      - name: Test Tauri portable and installer identity gate
+        run: node --test desktop/scripts/compare-tauri-packages.test.mjs
       - name: Install browser for hermetic desktop layout checks
         run: npx playwright install chromium
       - name: Verify desktop layout and keyboard behavior

@@ -112,6 +112,10 @@ uses a fake DesktopAPI to check layout, visible keyboard focus, and overflow at
 1240×850 and 760×600; it does not prove packaged IPC or native dialogs. Tauri
 package smoke uses temporary workspaces and native-dialog stubs and does not load
 `.env.local` or `.env.buyer.local`.
+The standard-user installer check compares every bundled resource byte for byte.
+Tauri patches the installed executable's single bundle marker from `UNK` to `NSS`
+and restores the portable executable after bundling; the identity check allows only
+those three marker bytes to differ across the two executables.
 
 For the complete-file publisher and packaged Windows app, run from the repository:
 
