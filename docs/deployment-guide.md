@@ -187,9 +187,13 @@ but not a disk loss).
 - **Pending-authorization age alerts** — the ten-minute reconciler marks one-hour-old unresolved
   x402 authorizations stale and 24-hour-old ones critical. `/api/health` stays HTTP 200 for deploy
   readiness but reports `status: degraded`; `/status` shows the oldest age. The alert is deduplicated
-  by authorization/status. Age never releases capacity: only exact Circle accepted/failed evidence
-  can change the pending row or its grant reservation. A legacy treasury row with no exact expiry
-  may be operator-acknowledged only through the evidence-gated procedure in
+  by authorization/status after webhook delivery succeeds. Missing or failed webhook delivery is
+  logged and retried on the next ten-minute run while the incident remains unresolved; a delivered
+  alert stays quiet until the fingerprint changes or recovery clears it. The reconciler exits 1
+  for an unresolved incident even when alert delivery fails. Age never releases capacity: only exact
+  Circle accepted/failed evidence can change the pending row or its grant reservation. A legacy
+  treasury row with no exact expiry may be operator-acknowledged only through the evidence-gated
+  procedure in
   `docs/pending-reconciliation-acknowledgement.md`; it stays pending and continuously reconciled,
   while browser reservations and Circle mismatches remain impossible to acknowledge away.
 - **Alert channel** — set `KERYX_ALERT_WEBHOOK` in the VPS `.env.local` to a Discord/Slack incoming webhook. Unset → alerts still print to `pm2 logs`, just not delivered out-of-band.
