@@ -23,9 +23,9 @@ export default function MySourcesPage() {
         <div className="mb-8 border-b border-line pb-6">
           <h1 className="font-serif text-2xl text-ink">My sources</h1>
           <p className="mt-1 font-mono text-xs text-ink-3">
-            Every source this wallet owns — payout or author. Set citation email alerts across the
-            whole portfolio here; fine-grained settings (webhook, preview depth, badge, withdraw)
-            live on each source&apos;s page.
+            Review sources where this wallet receives payouts or author shares, and listings it
+            registered on Arc. Citation alerts follow payout or author ownership; listing price
+            and active status follow the registry creator.
           </p>
         </div>
         <MySourcesView />

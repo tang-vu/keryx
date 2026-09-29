@@ -26,16 +26,30 @@ interface OwnedSource {
   webhookConfigured: boolean;
 }
 
+interface CreatorListing {
+  id: string;
+  name: string;
+  active: boolean;
+}
+
 export function MySourcesView() {
   const [loading, setLoading] = useState(true);
   const [signedOut, setSignedOut] = useState(false);
   const [sources, setSources] = useState<OwnedSource[]>([]);
+  const [listings, setListings] = useState<CreatorListing[]>([]);
+  const [listingError, setListingError] = useState(false);
+  const [listingCursor, setListingCursor] = useState<string | null>(null);
+  const [listingUncertain, setListingUncertain] = useState(0);
+  const [loadingMoreListings, setLoadingMoreListings] = useState(false);
   const [deliveryOn, setDeliveryOn] = useState(true);
   const [bulkEmail, setBulkEmail] = useState("");
   const [applying, setApplying] = useState(false);
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
 
   async function load() {
+    setListings([]);
+    setListingCursor(null);
+    setListingUncertain(0);
     try {
       const res = await fetch("/api/me/sources", { cache: "no-store" });
       if (res.status === 401) {
@@ -52,7 +66,43 @@ export function MySourcesView() {
     } catch {
       toast.error("Couldn't load your sources — try again.");
     } finally {
+      try {
+        const res = await fetch("/api/me/listings", { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = (await res.json()) as {
+          listings: CreatorListing[]; nextCursor: string | null; uncertain: number;
+        };
+        setListings(data.listings);
+        setListingCursor(data.nextCursor);
+        setListingUncertain(data.uncertain);
+        setListingError(false);
+      } catch {
+        setListingError(true);
+      }
       setLoading(false);
+    }
+  }
+
+  async function loadMoreListings() {
+    if (!listingCursor || loadingMoreListings) return;
+    setLoadingMoreListings(true);
+    try {
+      const res = await fetch(`/api/me/listings?cursor=${encodeURIComponent(listingCursor)}`, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as {
+        listings: CreatorListing[]; nextCursor: string | null; uncertain: number;
+      };
+      setListings((previous) => [
+        ...previous,
+        ...data.listings.filter((listing) => !previous.some((row) => row.id === listing.id)),
+      ]);
+      setListingCursor(data.nextCursor);
+      setListingUncertain((previous) => previous + data.uncertain);
+      setListingError(false);
+    } catch {
+      setListingError(true);
+    } finally {
+      setLoadingMoreListings(false);
     }
   }
 
@@ -122,7 +172,7 @@ export function MySourcesView() {
       </div>
     );
 
-  if (sources.length === 0)
+  if (sources.length === 0 && listings.length === 0 && !listingError && !listingCursor && listingUncertain === 0)
     return (
       <div className="rounded border border-dashed border-line p-8 text-center">
         <p className="mb-2 font-serif text-sm text-ink-2">
@@ -134,9 +184,48 @@ export function MySourcesView() {
       </div>
     );
 
+  const listingOnly = listings.filter((listing) => !sources.some((source) => source.id === listing.id));
+
   return (
     <div className="flex flex-col gap-6">
+      {(listingOnly.length > 0 || listingError || listingCursor || listingUncertain > 0) && (
+        <section className="border border-line bg-paper p-5">
+          <h2 className="mb-2 font-serif text-lg text-ink">Listings registered by this wallet</h2>
+          <p className="mb-4 font-serif text-[13px] text-ink-2">
+            Manage price and active status here. Citation alerts belong to the payout or author wallet.
+          </p>
+          {listingOnly.length > 0 && (
+            <div className="divide-y divide-line border border-line">
+              {listingOnly.map((listing) => (
+                <div key={listing.id} className="flex items-center justify-between gap-4 px-4 py-3">
+                  <span className="font-serif text-sm text-ink">
+                    {listing.name}{!listing.active && <span className="ml-2 font-mono text-[10px] text-destructive">deactivated</span>}
+                  </span>
+                  <Link href={`/creator/${listing.id}`} className="font-mono text-[11px] text-seal underline underline-offset-2">
+                    Manage listing →
+                  </Link>
+                </div>
+              ))}
+            </div>
+          )}
+          {listingUncertain > 0 && (
+            <p className="mt-3 font-mono text-xs text-ink-3">
+              {listingUncertain} listing(s) could not be verified. Refresh to retry those registry reads.
+            </p>
+          )}
+          {listingError && (
+            <p className="mt-3 font-mono text-xs text-destructive">Couldn&apos;t verify this page of registry listings. Try again.</p>
+          )}
+          {listingCursor && (
+            <button type="button" onClick={() => void loadMoreListings()} disabled={loadingMoreListings}
+              className="mt-4 border border-line px-3 py-2 font-mono text-[11px] text-seal disabled:opacity-60">
+              {loadingMoreListings ? "Checking registry…" : "Check more listings"}
+            </button>
+          )}
+        </section>
+      )}
       {/* Bulk email bar */}
+      {sources.length > 0 && (
       <section className="border border-line bg-paper p-5">
         <h2 className="mb-1 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
           <BellRing className="h-3.5 w-3.5 text-seal" /> Citation email alerts — whole portfolio
@@ -184,7 +273,9 @@ export function MySourcesView() {
         )}
       </section>
 
+      )}
       {/* Source rows */}
+      {sources.length > 0 && (
       <section className="divide-y divide-line border border-line bg-paper">
         {sources.map((s) => (
           <div key={s.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4">
@@ -237,6 +328,7 @@ export function MySourcesView() {
           </div>
         ))}
       </section>
+      )}
     </div>
   );
 }
