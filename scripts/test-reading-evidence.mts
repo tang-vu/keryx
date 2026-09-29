@@ -66,6 +66,8 @@ try {
   await page.addScriptTag({ content: bundle.outputFiles[0].text });
   const citation = page.getByRole("button", { name: /Open evidence for The article/ }).first();
   await citation.waitFor();
+  const citationElement = await citation.elementHandle();
+  assert(citationElement, "citation trigger must exist for focus restoration checks");
   await citation.evaluate(element => element.scrollIntoView({ behavior: "instant" }));
   const before = await page.evaluate(() => scrollY);
   await citation.click();
@@ -85,7 +87,7 @@ try {
   assert(await page.evaluate(() => document.activeElement?.closest('dialog') !== null));
   await page.keyboard.press("Escape");
   await dialog.waitFor({ state: "detached" });
-  assert(await citation.evaluate(element => document.activeElement === element));
+  await page.waitForFunction(element => document.activeElement === element, citationElement, { timeout: 2000 });
   assert.equal(await page.evaluate(() => scrollY), lockedY, `reading position changed after closing: before click ${before}, locked ${lockedY}`);
   await page.getByRole("button", { name: "Open evidence for Legacy article" }).first().click();
   const legacy = page.getByRole("dialog", { name: "Legacy article" });
@@ -135,7 +137,7 @@ try {
     assert(geometry.closeTop >= geometry.top && geometry.closeBottom <= geometry.bottom, `close must stay visible at ${viewport.width}px`);
     await page.getByRole("button", { name: "Close citation evidence" }).click();
     await dialog.waitFor({ state: "detached" });
-    assert(await citation.evaluate(element => document.activeElement === element));
+    await page.waitForFunction(element => document.activeElement === element, citationElement, { timeout: 2000 });
     assert.equal(await page.evaluate(() => scrollY), dialogY, `reading position changed at ${viewport.width}px; before click ${readingY}, locked ${dialogY}`);
   }
 
