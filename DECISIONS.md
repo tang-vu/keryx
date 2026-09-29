@@ -1,5 +1,32 @@
 # Keryx — Decision Log
 
+**D-263** - Make a paid research business cycle the Tameion product focus -
+*A citation-toll answer alone does not show the financial operation Tameion asks
+an agent to run; a general-purpose chat clone would dilute the Arc/USDC workflow
+and be difficult to validate with a real business during the event.* Keep the
+citation-toll reading agent as Keryx's core capability and make its research
+interaction useful for a customer: natural questions, source-backed answers,
+follow-ups, visible source decisions, and a deliverable the customer can reopen.
+For Tameion, center the end-to-end operating cycle behind that service: a real
+customer research task and verified incoming USDC, available funds kept separate
+from source and service obligations, bounded source purchases, evidence-gated
+creator rewards, delivery, reconciliation, and human escalation when policy
+requires it. Use RFB 04 as the closest prompt, not a mandatory track or a claim
+that all of its example features are implemented.
+
+Evaluate the event-period change in both product and genuine business use against
+the pre-event baseline. Report independently initiated customers separately from
+owner-operated pilots, and testnet separately from mainnet. Show decision,
+authorization, settlement, pending/ambiguous and receipt evidence for the complete
+cycle; a simulation or a payment rail demo cannot establish business traction.
+The current application/database spend controls and funded browser session are not
+an on-chain policy wallet. Do not claim contract-enforced category caps, a full
+Operator, mainnet readiness, or autonomous scheduling without their separate
+implementation and release evidence. Existing package terms and the mainnet
+approval gates remain in force. This is product direction and acceptance scope,
+not authorization for a new signer, payment authority, or real-fund launch. See
+[Tameion plan](docs/tameion-2026.md).
+
 **D-262** - Bundle the web's Mint fonts for reproducible builds - *A clean Next.js
 16 Turbopack build failed while resolving `next/font/google` for Bodoni Moda;
 remote font CSS and file responses make that build path dependent on an external
