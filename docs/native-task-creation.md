@@ -4,7 +4,7 @@ The D-259 release integrated immutable v1 task creation into the Operator CLI an
 the then-current Electron desktop. Both callers used one Rust
 preparation/publication implementation. Task inspection, saved results, exports
 and GET-only buyer recovery remained TypeScript operations. Creating a task does
-not sign, buy, load a wallet or contact a server. D-260 stages a Tauri shell with
+not sign, buy, load a wallet or contact a server. D-260 implements a Tauri shell with
 the same creation authority and a packaged TypeScript helper; its separate
 desktop release gates are in [desktop alpha](./desktop-alpha.md).
 

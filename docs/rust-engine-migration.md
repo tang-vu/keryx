@@ -379,9 +379,12 @@ these are same-host CLI observations, not desktop or domain-computation results.
 
 Broader caller compatibility and artifact delivery/rollback still precede a
 read-only production switch. D-248 scopes the filesystem residuals to local
-inspection; it supplies no transactional precondition for an authorizing caller. Existing
-CLI and Electron callers invoke TypeScript directly; no production native-engine
-router is shipped. Desktop packaging and Tauri acceptance remain separate gates.
+inspection; it supplies no transactional precondition for an authorizing caller.
+At that read-only evaluation stage, CLI and Electron callers invoked TypeScript
+directly and no production native-engine router had shipped. D-259 later moved
+immutable creation to Rust; D-260 replaced the Electron shell while keeping
+TypeScript inspection and recovery. Desktop release gates are in
+[desktop alpha](./desktop-alpha.md).
 Keep synthetic fixtures private and separate from actual payment or traction evidence.
 
 D-251 adds an explicitly selected CLI-only
@@ -434,7 +437,11 @@ The CI matrix runs the TypeScript publisher faults as well as native tests and t
 differential harness on Windows MSVC and Linux. Hosted logs must record exercised
 link cases separately from permission-related skips.
 
-## Next domain candidate: local task creation
+## Historical next-domain candidate: local task creation
+
+This section records the D-253–D-257 evaluation before D-259 integrated native
+creation. Its future-tense cutover criteria describe that stage, not the current
+production authority summarized above.
 
 The D-251/D-252 read-only platform and artifact drills have passed, including
 the independently downloaded main MSVC artifact on the Windows development PC;
@@ -459,7 +466,7 @@ future caller cutover; this increment keeps all production callers on TypeScript
 
 After the read-only gates pass, evaluate only the immutable v1 task envelope;
 this is a selected next evaluation scope, not permission to switch callers now.
-The current owner is `lib/operator/task.ts::createOperatorTask`. Inputs are an
+At that stage, the owner was `lib/operator/task.ts::createOperatorTask`. Inputs are an
 untrusted request, a user-supplied independently verified payee and total cap, and
 an explicitly selected private target directory. The core validates those inputs
 and prepares task/request values; a platform adapter owns exclusive creation,
@@ -524,13 +531,14 @@ binutils when building on this host. User-local official MSYS2 MinGW64 binutils
 checked against their package-page SHA-256 values and supplied through the build
 process's `PATH`. This is local GNU tooling, not a Windows MSVC or Tauri prerequisite
 substitute; hosted Windows acceptance uses MSVC.
-This does **not** meet the [Tauri 2 Windows prerequisites](https://v2.tauri.app/start/prerequisites/):
+That GNU-only setup did **not** meet the [Tauri 2 Windows prerequisites](https://v2.tauri.app/start/prerequisites/):
 Microsoft C++ Build Tools, a Windows SDK and the MSVC Rust target are required.
 [Rust's Windows MSVC guide](https://rust-lang.github.io/rustup/installation/windows-msvc.html)
 explains those components; [Microsoft's Visual Studio 2022 requirements](https://learn.microsoft.com/en-us/visualstudio/releases/2022/system-requirements)
-require administrator rights for initial installation. The current session is
-non-admin. Do not claim a Tauri acceptance build until those prerequisites and an
-actual packaged artifact are verified.
+require administrator rights for initial installation. That development session
+was non-admin. D-260 subsequently implemented the separate MSVC/Tauri shell;
+release acceptance requires packaged-artifact, hosted installer and fresh-runner
+checks as described in [desktop alpha](./desktop-alpha.md).
 
 ## Later gates
 
@@ -541,6 +549,7 @@ security, reliability and parity criteria. Keep the TypeScript oracle solely for
 transition tests and a time-bounded rollback path, then retire the duplicate rule
 implementation when the new domain is stable. Data migrations need reversible,
 versioned readers and restore drills; never use an automatic rewrite as the first
-deployment step. A future desktop switch additionally compares the current Electron
-artifact and a real Tauri artifact on the same tasks and machine. Signing, settlement,
-spend and recovery stay separate future gates, irrespective of CLI progress.
+deployment step. D-260's desktop shell switch has separate same-machine
+Electron/Tauri comparison and release gates in [desktop alpha](./desktop-alpha.md).
+Signing, settlement, spend and recovery stay separate future gates, irrespective
+of CLI progress.

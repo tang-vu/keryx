@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { readFile, readdir, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { verifyNativeWriterArtifact } from "../../lib/operator/native-writer-artifact.ts";
+import { assertNoExternalMsvcCrt } from "../../scripts/pe-imports.mjs";
 import { nodeHash } from "./prepare-node-runtime.mjs";
 
 const app = process.argv[2] && resolve(process.argv[2]);
@@ -24,7 +25,10 @@ if ((await readFile(join(resource, "source-commit.txt"), "utf8")).trim() !== sou
 const binary = join(resource, "native", "keryx-engine.exe");
 const manifest = join(resource, "native", "manifest.json");
 await verifyNativeWriterArtifact(binary, manifest, sourceCommit);
+assertNoExternalMsvcCrt(executable, "Packaged Tauri host");
+assertNoExternalMsvcCrt(await readFile(binary), "Packaged native writer");
 const nodeBytes = await readFile(join(resource, "runtime", "node.exe"));
+assertNoExternalMsvcCrt(nodeBytes, "Bundled Node runtime");
 const hash = (data) => createHash("sha256").update(data).digest("hex");
 if (hash(nodeBytes) !== nodeHash || !executable.includes(Buffer.from(nodeHash))) {
   throw new Error("Bundled Node runtime differs from the hash pinned in executable and official release");
