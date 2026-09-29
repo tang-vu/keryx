@@ -12,7 +12,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { config } from "./config";
 import { guardPublicMerchant } from "./payments/public-merchant-guard";
 
-const facilitator = new BatchFacilitatorClient();
+// SDK 3.x defaults to mainnet; Keryx's seller rail remains Arc testnet only.
+const facilitator = new BatchFacilitatorClient({ url: "https://gateway-api-testnet.circle.com" });
 
 export interface PaidOptions {
   priceUsdc: number;

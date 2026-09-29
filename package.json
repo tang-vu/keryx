@@ -78,7 +78,7 @@
     "@anthropic-ai/sdk": "^0.69.0",
     "@circle-fin/adapter-viem-v2": "^1.16.0",
     "@circle-fin/unified-balance-kit": "^1.4.1",
-    "@circle-fin/x402-batching": "^2.0.4",
+    "@circle-fin/x402-batching": "3.5.0",
     "@coral-xyz/anchor": "^0.32.1",
     "@metamask/connect-evm": "^2.1.0",
     "@modelcontextprotocol/sdk": "^1.30.0",

@@ -4,13 +4,16 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { verifyTypedData } from "viem";
 import { authorizationWithNonce, buyerTypedData, BUYER_GATEWAY, BUYER_USDC, BUYER_NETWORK } from "./buyer/protocol";
 
-const { settings, verify, settle, insert } = vi.hoisted(() => ({
+const { settings, verify, settle, insert, facilitatorConfigs } = vi.hoisted(() => ({
   settings: { sellerAddress: `0x${"a".repeat(40)}`, privateResearchReservedPayees: "", networkId: "eip155:5042002",
     usdcAddress: "0x3600000000000000000000000000000000000000", gatewayWallet: "0x0077777d7EBA4688BDeF3E311b846F25870A19B9", maxTimeoutSeconds: 691200 },
-  verify: vi.fn(), settle: vi.fn(), insert: vi.fn(),
+  verify: vi.fn(), settle: vi.fn(), insert: vi.fn(), facilitatorConfigs: [] as unknown[],
 }));
 vi.mock("./config", () => ({ config: settings }));
-vi.mock("@circle-fin/x402-batching/server", () => ({ BatchFacilitatorClient: class { verify = verify; settle = settle; } }));
+vi.mock("@circle-fin/x402-batching/server", () => ({ BatchFacilitatorClient: class {
+  constructor(config: unknown) { facilitatorConfigs.push(config); }
+  verify = verify; settle = settle;
+} }));
 vi.mock("@supabase/supabase-js", () => ({ createClient: () => ({ from: () => ({ insert }) }) }));
 import { challengeResponse, settleThenServe } from "./x402-server";
 import { reservedResearchMerchants } from "./payments/public-merchant-guard";
@@ -34,6 +37,25 @@ beforeEach(() => {
 });
 beforeAll(() => vi.stubEnv("SELLER_ADDRESS", settings.sellerAddress));
 afterAll(() => vi.unstubAllEnvs());
+
+it("pins both seller facilitator clients to Circle testnet", async () => {
+  const { withGateway } = await import("./x402");
+  expect(facilitatorConfigs).toEqual([
+    { url: "https://gateway-api-testnet.circle.com" },
+    { url: "https://gateway-api-testnet.circle.com" },
+  ]);
+  const challenge = challengeResponse(opts);
+  const legacyChallenge = await withGateway(async () => NextResponse.json({}), "0.05", opts.endpoint)(
+    new NextRequest(`https://keryx.test${opts.endpoint}`),
+  );
+  for (const response of [challenge, legacyChallenge]) {
+    expect(response.status).toBe(402);
+    const encoded = response.headers.get("PAYMENT-REQUIRED");
+    expect(encoded).toBeTruthy();
+    const quoted = JSON.parse(Buffer.from(encoded!, "base64").toString("utf-8"));
+    expect(quoted.accepts[0].network).toBe("eip155:5042002");
+  }
+});
 
 it("blocks full and inner signed authorizations across every active public seller resource", async () => {
   const produce = vi.fn(() => ({ ok: true }));
