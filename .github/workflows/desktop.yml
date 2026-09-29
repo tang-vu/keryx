@@ -75,7 +75,8 @@ jobs:
       - name: Check Rust formatting
         run: cargo +1.98.1-x86_64-pc-windows-msvc fmt --manifest-path desktop/src-tauri/Cargo.toml --check
       - name: Cache Rust dependencies and compiled Tauri crates
-        uses: actions/cache@v4
+        id: rust-cache
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/.cargo/registry
@@ -97,14 +98,23 @@ jobs:
       - name: Verify icon, source identity, native writer and bundled Node
         run: node --import tsx desktop/scripts/check-package.mjs desktop/release/KeryxOperator-win32-x64
       - name: Upload exact packaged desktop for a fresh Windows consumer
-        if: ${{ !cancelled() && steps.package.outcome == 'success' }}
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: operator-desktop-${{ github.sha }}-${{ github.run_id }}
           path: desktop/release/
-          if-no-files-found: error
+          if-no-files-found: ignore
           overwrite: true
           retention-days: 7
+      - name: Save Rust dependencies and compiled Tauri crates
+        if: ${{ !cancelled() && steps.rust-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            desktop/src-tauri/target
+          key: desktop-msvc-${{ hashFiles('desktop/src-tauri/Cargo.lock') }}
 
   fresh-package-consumer:
     name: Fresh runner packaged desktop acceptance

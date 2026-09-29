@@ -17,9 +17,43 @@ async function render(size) {
 await mkdir(output, { recursive: true });
 await writeFile(join(output, "icon.png"), await render(512));
 
-// Windows ICO entries can contain PNG images. Include the small taskbar sizes
-// and a 256 px image for Explorer; 0 encodes 256 in the ICO directory.
-const images = await Promise.all(sizes.map(render));
+// Windows' legacy icon APIs expect bitmap frames for taskbar-sized images.
+// Keep only the 256 px Explorer frame as PNG. The XOR pixels and 1-bit AND
+// transparency mask are stored bottom-up, each mask row padded to 32 bits.
+async function bitmapIconFrame(png, size) {
+  const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  if (info.width !== size || info.height !== size || info.channels !== 4) {
+    throw new Error(`Unexpected ${size}px icon frame dimensions`);
+  }
+  const maskStride = Math.ceil(size / 32) * 4;
+  const pixels = Buffer.alloc(size * size * 4);
+  const mask = Buffer.alloc(maskStride * size);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const source = (y * size + x) * 4;
+      const target = ((size - 1 - y) * size + x) * 4;
+      pixels[target] = data[source + 2];
+      pixels[target + 1] = data[source + 1];
+      pixels[target + 2] = data[source];
+      pixels[target + 3] = data[source + 3];
+      if (data[source + 3] === 0) {
+        mask[(size - 1 - y) * maskStride + (x >> 3)] |= 0x80 >> (x & 7);
+      }
+    }
+  }
+  const header = Buffer.alloc(40);
+  header.writeUInt32LE(40, 0);
+  header.writeInt32LE(size, 4);
+  header.writeInt32LE(size * 2, 8);
+  header.writeUInt16LE(1, 12);
+  header.writeUInt16LE(32, 14);
+  header.writeUInt32LE(pixels.length + mask.length, 20);
+  return Buffer.concat([header, pixels, mask]);
+}
+
+const pngs = await Promise.all(sizes.map(render));
+const images = await Promise.all(pngs.map((png, index) =>
+  sizes[index] === 256 ? png : bitmapIconFrame(png, sizes[index])));
 const header = Buffer.alloc(6 + sizes.length * 16);
 header.writeUInt16LE(1, 2);
 header.writeUInt16LE(sizes.length, 4);

@@ -3,7 +3,8 @@
 `icon.png` (512 px) and `icon.ico` (16, 24, 32, 48, 64, 128, and 256 px)
 are generated from the canonical [`app/icon.svg`](../../app/icon.svg) with
 `node desktop/scripts/generate-brand-icon.mjs`. The generator uses the root
-project's pinned `sharp` dependency. The Windows ICO uses PNG image entries.
+project's pinned `sharp` dependency. The Windows ICO uses bitmap and alpha-mask
+entries through 128 px for Windows icon APIs, plus a PNG 256 px entry.
 
 The WOFF2 files are the Google Fonts **Latin** web subsets downloaded from
 the following pinned asset URLs. These fonts are bundled for offline use;
