@@ -3,7 +3,6 @@ import { createServer } from "node:net";
 import { cp, mkdtemp, mkdir, readFile, realpath, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, resolve, sep } from "node:path";
-import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 import { chromium } from "playwright";
 import { createBuyerJournal, readBuyerJournal } from "../../lib/buyer/journal.ts";
@@ -80,8 +79,6 @@ async function launchDiagnostic(child, profile, lastConnectionError) {
   let processes = [];
   let mainWindowHandle = null;
   let diagnosticError = null;
-  let desktopContext = null;
-  let desktopContextError = null;
   try {
     const output = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command",
       "Get-CimInstance Win32_Process | Select-Object Name,ProcessId,ParentProcessId,SessionId | ConvertTo-Json -Compress"],
@@ -105,16 +102,10 @@ async function launchDiagnostic(child, profile, lastConnectionError) {
     { encoding: "utf8", windowsHide: true, timeout: 5000, maxBuffer: 1024 });
     mainWindowHandle = Number(windowOutput.trim());
   } catch (error) { diagnosticError = String(error).slice(0, 300); }
-  try {
-    const output = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-File",
-      fileURLToPath(new URL("./webview-launch-diagnostic.ps1", import.meta.url))],
-    { encoding: "utf8", windowsHide: true, timeout: 5000, maxBuffer: 2048 });
-    desktopContext = JSON.parse(output);
-  } catch (error) { desktopContextError = String(error).slice(0, 300); }
   const profileEntries = await readdir(profile).catch(() => []);
   return { childPid: child.pid, exitCode: child.exitCode, signalCode: child.signalCode,
     lastConnectionError: lastConnectionError?.message?.slice(0, 500) ?? null, mainWindowHandle,
-    processes, profileEntries, diagnosticError, desktopContext, desktopContextError };
+    processes, profileEntries, diagnosticError };
 }
 
 async function launch(config, executable = exe) {

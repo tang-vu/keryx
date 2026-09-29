@@ -41,7 +41,9 @@ Tauri source `bd3e80cfb00327f613b2bdd9fef898b6a4a6d754` with WebView2
 bytes (72.8%), while mean UI readiness rose from 512 to 1,637 ms. After seven
 seconds, summed process-tree working set/private memory was 297.9/213.5 MiB for
 Electron and 368.6/239.6 MiB for Tauri. Working-set sums include shared pages,
-so they are not unique physical RAM; this one-machine result does not prove lower
+so they are not unique physical RAM. Portable folder sizes exclude the separately
+installed/shared WebView2 runtime and do not measure total system install cost.
+This one-machine result does not prove lower
 memory use or faster startup. WebView2 browser processes dominate the Tauri tree
 sample. Profiling remains separate from the release gates and cannot relax the
 desktop's process boundary or change domain authority.

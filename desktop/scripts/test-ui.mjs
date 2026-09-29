@@ -47,8 +47,9 @@ async function openPage(scenario, width, height) {
       refresh: async () => { if (scenario === "startup-error") throw Error("Local helper unavailable"); return initial; },
       chooseWorkspace: async () => view, createWorkspace: async () => view,
       createTask: async () => ({ ...view.tasks[0], publicationState: "windows_visible_entry_unproven" }),
-      resumeTask: async () => { throw Error("Offline UI fixture"); },
-      readResult: async () => result, exportBrief: async () => true, exportTask: async () => true,
+      resumeTask: () => scenario === "pending-resume" ? new Promise(() => {}) : Promise.reject(Error("Offline UI fixture")),
+      readResult: () => scenario === "pending-result" ? new Promise(() => {}) : Promise.resolve(result),
+      exportBrief: async () => true, exportTask: async () => true,
       importReference: async () => view.references[0],
     };
   }, { scenario, view, result });
@@ -98,6 +99,26 @@ try {
   screenshots.push(join(output, "startup-error-760.png"));
   await failed.screenshot({ path: screenshots.at(-1), fullPage: true });
   await failed.close();
+
+  const pendingResult = await openPage("pending-result", 760, 600);
+  const taskButton = pendingResult.getByRole("button", { name: /How does Arc settle/ });
+  await taskButton.click();
+  await pendingResult.getByText("Opening saved result…").waitFor();
+  if (!await taskButton.isDisabled() || !await pendingResult.getByRole("button", { name: "Check original job" }).isDisabled()) {
+    throw Error("Automatic saved-result read leaves task selection or recovery enabled");
+  }
+  await pendingResult.close();
+
+  const pendingResume = await openPage("pending-resume", 760, 600);
+  const resumeTaskButton = pendingResume.getByRole("button", { name: /How does Arc settle/ });
+  await resumeTaskButton.click();
+  await pendingResume.getByText("A cited result grounded in the saved receipt").waitFor();
+  await pendingResume.getByRole("button", { name: "Check original job" }).click();
+  await pendingResume.getByText("Resuming…").waitFor();
+  if (!await resumeTaskButton.isDisabled() || !await pendingResume.getByRole("button", { name: /New research task/ }).isDisabled()) {
+    throw Error("Pending recovery leaves task selection or new-task navigation enabled");
+  }
+  await pendingResume.close();
   console.log(`Desktop UI smoke passed. Screenshots: ${screenshots.join(", ")}`);
 } finally {
   await browser.close();
