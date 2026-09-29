@@ -29,7 +29,8 @@ const ARC_TESTNET_GATEWAY_WALLET = "0x0077777d7EBA4688BDeF3E311b846F25870A19B9";
 
 export const sellerAddress = process.env.SELLER_ADDRESS as `0x${string}`;
 
-const facilitator = new BatchFacilitatorClient();
+// SDK 3.x defaults to mainnet; Keryx's seller rail remains Arc testnet only.
+const facilitator = new BatchFacilitatorClient({ url: "https://gateway-api-testnet.circle.com" });
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
