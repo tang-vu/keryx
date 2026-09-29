@@ -1,5 +1,24 @@
 # Keryx — Decision Log
 
+**D-257** - Refuse unsupported Windows creator tokens before native publication -
+*The private-parent check does not establish the owner of a newly created child;
+the previous Windows evaluation selected a compatible owner inside its test process.*
+At publication time, before exclusive mkdir, require no thread impersonation token
+and a process default owner equal to its token user. Only an explicit no-token
+result establishes the former; lookup failures refuse unchanged. Query normal token
+state without changing it, then retain every created-object owner, ACL and identity
+check. A later token or ACL change may still produce a retained partial result.
+
+Exercise unadjusted and explicitly adjusted disposable processes separately, with
+real impersonation refusal and honest owner-mismatch coverage. Preserve strict
+private-parent admission and the Windows visible-entry-unproven completion state.
+The packaged read-only CLI and TypeScript creation, legacy reading and payment
+paths keep their existing authority. The accompanying target, new-task monetary,
+single-writer and rollback choices are a proposal for a later reviewed caller
+cutover, not permission to route callers now. Reversible: remove the candidate
+increment while preserving all existing v1 records. See
+[writer admission policy](docs/rust-writer-admission-policy.md).
+
 **D-256** - Refuse Unix request pipes before the CLI can wait for a writer -
 *The regular-file check happened only after a blocking request-file open.* Open
 Operator CLI request input with `O_RDONLY | O_NONBLOCK` on Unix, then retain the

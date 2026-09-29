@@ -446,6 +446,11 @@ monetary policy. D-256 separately prevents a Unix request FIFO from blocking the
 existing Operator CLI before its regular-file refusal; this keeps TypeScript as
 the production writer.
 
+D-257 adds [Windows creator-token admission](rust-writer-admission-policy.md)
+before native mkdir and separates unadjusted process evidence from deliberately
+adjusted test fixtures. Its target, monetary and rollback proposal describes a
+future caller cutover; this increment keeps all production callers on TypeScript.
+
 After the read-only gates pass, evaluate only the immutable v1 task envelope;
 this is a selected next evaluation scope, not permission to switch callers now.
 The current owner is `lib/operator/task.ts::createOperatorTask`. Inputs are an
