@@ -1,0 +1,17 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "Keryx Operator commands for the bundled main window only",
+  "windows": ["main"],
+  "permissions": [
+    "allow-choose-workspace",
+    "allow-create-workspace",
+    "allow-refresh",
+    "allow-create-task",
+    "allow-resume-task",
+    "allow-read-result",
+    "allow-export-brief",
+    "allow-export-task",
+    "allow-import-reference"
+  ]
+}

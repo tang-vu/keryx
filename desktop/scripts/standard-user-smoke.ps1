@@ -4,7 +4,21 @@ if ($env:GITHUB_ACTIONS -ne 'true' -or -not $env:RUNNER_TEMP) {
   throw 'Standard-user smoke is confined to the disposable Windows CI runner'
 }
 $repository = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
+$revisionLines = @(& git -C $repository rev-parse HEAD)
+if ($LASTEXITCODE -ne 0 -or $revisionLines.Count -ne 1) {
+  throw 'Cannot independently resolve the CI checkout source revision'
+}
+$expectedSourceCommit = $revisionLines[0].Trim()
+if ($expectedSourceCommit -cnotmatch '^[a-f0-9]{40}$' -or
+    ($env:GITHUB_SHA -and $expectedSourceCommit -cne $env:GITHUB_SHA)) {
+  throw 'Cannot independently resolve the CI checkout source revision'
+}
 $packagePath = [IO.Path]::GetFullPath($Package)
+$releaseRoot = [IO.Path]::GetFullPath((Split-Path -Parent $packagePath))
+$installerDir = Join-Path $releaseRoot 'installer'
+$installers = @(Get-ChildItem -LiteralPath $installerDir -File -Filter '*-setup.exe')
+if ($installers.Count -ne 1) { throw 'Expected exactly one NSIS installer beside the portable package' }
+$installerPath = $installers[0].FullName
 $runnerTemp = [IO.Path]::GetFullPath($env:RUNNER_TEMP)
 $work = [IO.Path]::GetFullPath((Join-Path $runnerTemp ('keryx-standard-smoke-' + [guid]::NewGuid().ToString('N'))))
 if (-not $work.StartsWith($runnerTemp.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase)) {
@@ -26,7 +40,7 @@ try {
   $credential = [pscredential]::new($principal, $password)
   $node = (Get-Command node.exe).Source
   $child = Join-Path $PSScriptRoot 'standard-user-smoke-child.ps1'
-  $arguments = "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$child`" -Package `"$packagePath`" -TempRoot `"$work`" -NodePath `"$node`""
+  $arguments = "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$child`" -Package `"$packagePath`" -Installer `"$installerPath`" -TempRoot `"$work`" -NodePath `"$node`" -ExpectedSourceCommit $expectedSourceCommit"
   $process = Start-Process -FilePath (Get-Command powershell.exe).Source -ArgumentList $arguments `
     -Credential $credential -LoadUserProfile -WorkingDirectory $repository -WindowStyle Hidden `
     -RedirectStandardOutput (Join-Path $work 'stdout.log') -RedirectStandardError (Join-Path $work 'stderr.log') `

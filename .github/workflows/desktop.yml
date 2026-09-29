@@ -8,10 +8,15 @@ on:
     branches: [main]
     paths:
       - "desktop/**"
+      - "shared/**"
+      - "app/icon.svg"
+      - "app/globals.css"
       - "lib/**"
       - "rust/**"
       - "test-support/**"
       - "scripts/build-native-writer.mts"
+      - "scripts/pe-imports.mjs"
+      - "scripts/pe-imports.test.mjs"
       - "scripts/operator.mts"
       - "package.json"
       - "package-lock.json"
@@ -20,10 +25,15 @@ on:
     branches: [main]
     paths:
       - "desktop/**"
+      - "shared/**"
+      - "app/icon.svg"
+      - "app/globals.css"
       - "lib/**"
       - "rust/**"
       - "test-support/**"
       - "scripts/build-native-writer.mts"
+      - "scripts/pe-imports.mjs"
+      - "scripts/pe-imports.test.mjs"
       - "scripts/operator.mts"
       - "package.json"
       - "package-lock.json"
@@ -32,7 +42,7 @@ on:
 jobs:
   packaged-smoke:
     runs-on: windows-latest
-    timeout-minutes: 25
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -52,29 +62,73 @@ jobs:
         run: npm --prefix desktop test
       - name: Typecheck desktop
         run: npm --prefix desktop run typecheck
+      - name: Test Windows PE runtime dependency gate
+        run: node --test scripts/pe-imports.test.mjs
+      - name: Test Tauri portable and installer identity gate
+        run: node --test desktop/scripts/compare-tauri-packages.test.mjs
+      - name: Install browser for hermetic desktop layout checks
+        run: npx playwright install chromium
+      - name: Verify desktop layout and keyboard behavior
+        run: node desktop/scripts/test-ui.mjs
+      - name: Upload desktop layout screenshots for visual triage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: operator-desktop-ui-${{ github.sha }}-${{ github.run_id }}
+          path: .artifacts/desktop-ui/*.png
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Install pinned MSVC Rust toolchain
-        run: rustup toolchain install 1.98.1-x86_64-pc-windows-msvc --profile minimal
+        run: rustup toolchain install 1.98.1-x86_64-pc-windows-msvc --profile minimal --component rustfmt
+      - name: Check Rust formatting
+        run: cargo +1.98.1-x86_64-pc-windows-msvc fmt --manifest-path desktop/src-tauri/Cargo.toml --check
+      - name: Cache Rust dependencies and compiled Tauri crates
+        id: rust-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            desktop/src-tauri/target
+          key: desktop-msvc-${{ hashFiles('desktop/src-tauri/Cargo.lock') }}
       - name: Build and package Windows desktop
+        id: package
         run: npm run desktop:package
         env:
           RUSTUP_TOOLCHAIN: 1.98.1-x86_64-pc-windows-msvc
-      - name: Exercise actual packaged creation as a standard Windows user
+      - name: Test Rust host and helper protocol
+        run: cargo +1.98.1-x86_64-pc-windows-msvc test --manifest-path desktop/src-tauri/Cargo.toml --release --features tauri/custom-protocol --locked
+      - name: Verify packaged helper workspace selection migration
+        run: node desktop/scripts/test-helper-selection.mjs desktop/release/KeryxOperator-win32-x64/dist
+      - name: Exercise portable and installed app as a standard Windows user
         shell: pwsh
         run: ./desktop/scripts/standard-user-smoke.ps1 -Package desktop/release/KeryxOperator-win32-x64
+      - name: Verify icon, source identity, native writer and bundled Node
+        run: node --import tsx desktop/scripts/check-package.mjs desktop/release/KeryxOperator-win32-x64
       - name: Upload exact packaged desktop for a fresh Windows consumer
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: operator-desktop-${{ github.sha }}-${{ github.run_id }}
-          path: desktop/release/KeryxOperator-win32-x64/
-          if-no-files-found: error
+          path: desktop/release/
+          if-no-files-found: ignore
           overwrite: true
           retention-days: 7
+      - name: Save Rust dependencies and compiled Tauri crates
+        if: ${{ !cancelled() && steps.rust-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            desktop/src-tauri/target
+          key: desktop-msvc-${{ hashFiles('desktop/src-tauri/Cargo.lock') }}
 
   fresh-package-consumer:
     name: Fresh runner packaged desktop acceptance
     needs: packaged-smoke
     runs-on: windows-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -90,15 +144,15 @@ jobs:
           name: operator-desktop-${{ github.sha }}-${{ github.run_id }}
           path: ${{ runner.temp }}/keryx-operator-downloaded
       - name: Verify package source, manifest and binary from independent checkout SHA
-        run: node --import tsx desktop/scripts/check-package.mjs "${{ runner.temp }}/keryx-operator-downloaded"
+        run: node --import tsx desktop/scripts/check-package.mjs "${{ runner.temp }}/keryx-operator-downloaded/KeryxOperator-win32-x64"
         env:
           KERYX_EXPECTED_SOURCE_COMMIT: ${{ github.sha }}
-      - name: Exercise actual downloaded Electron creation as a standard Windows user
+      - name: Verify downloaded helper workspace selection migration
+        run: node desktop/scripts/test-helper-selection.mjs "${{ runner.temp }}/keryx-operator-downloaded/KeryxOperator-win32-x64/dist"
+      - name: Exercise downloaded portable and installed app as a standard Windows user
         shell: pwsh
-        run: ./desktop/scripts/standard-user-smoke.ps1 -Package "${{ runner.temp }}/keryx-operator-downloaded"
-      - name: Check packaged missing, hash and protocol refusals with offline legacy reopen
-        run: node --import tsx desktop/scripts/native-refusal-smoke.mjs "${{ runner.temp }}/keryx-operator-downloaded"
+        run: ./desktop/scripts/standard-user-smoke.ps1 -Package "${{ runner.temp }}/keryx-operator-downloaded/KeryxOperator-win32-x64"
       - name: Verify downloaded package was restored after fault checks
-        run: node --import tsx desktop/scripts/check-package.mjs "${{ runner.temp }}/keryx-operator-downloaded"
+        run: node --import tsx desktop/scripts/check-package.mjs "${{ runner.temp }}/keryx-operator-downloaded/KeryxOperator-win32-x64"
         env:
           KERYX_EXPECTED_SOURCE_COMMIT: ${{ github.sha }}

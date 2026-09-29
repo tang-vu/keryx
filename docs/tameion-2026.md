@@ -1,7 +1,8 @@
 # Keryx at Tameion 2026 — planned direction
 
-**Status (September 28, 2026): local CLI and Windows desktop task alphas available;
-the full Operator remains planned.** Keryx
+**Status (September 29, 2026): local CLI and Windows desktop task alphas available;
+the Tauri shell is implemented and subject to its release acceptance gates; the
+full Operator remains planned.** Keryx
 keeps its name, repository, citation-toll reading agent, and existing complete-product
 and [mainnet release gates](./mainnet-delivery-plan.md). The event work must be measured
 against the pre-event repository baseline `2291753cc4fff2135d546227d5aafda287cbed7d`
@@ -88,18 +89,17 @@ partial progress toward the checkboxes: web and MCP do not use the Operator task
 engine; desktop notifications, human approvals, scheduling, and a general business
 ledger are not implemented.
 
-Retain Electron + React for the current release while the shared Rust core is evaluated:
-the current shell already uses the tested TypeScript task and receipt engine. A Rust
-domain core could later serve a Tauri desktop directly and web/MCP through a controlled
-service adapter, but those integrations are future gates, not effects of the first
-read-only CLI slice. Compare a standalone Windows artifact that runs without installed
-Node; narrow permissions and IPC; workspace, journal and history preservation; actual
-install footprint, startup time and memory; and restart, offline and tamper behavior.
-The first native GNU build on the development PC verifies core compilation only;
-[Tauri's Windows prerequisites](https://v2.tauri.app/start/prerequisites/) require
-Microsoft C++ Build Tools, a Windows SDK and an MSVC Rust toolchain. No comparable
-desktop artifact or accepted performance advantage exists yet. Any replacement must
-pass the same payment, security, recovery and release gates. A running remote job can
+The Windows shell replacement uses Tauri/WebView2 with a bounded, packaged Node
+helper for the existing TypeScript inspection, result, export and GET-only recovery
+rules. Immutable task creation still uses the source-pinned Rust engine. This changes
+the window and visual surface, not payment authority or the on-disk task format.
+Measure the standalone package on a fresh runner: IPC permissions, workspace and
+journal preservation, startup and memory, install footprint, offline reopening and
+tamper refusal. A package that runs without a separately installed Node still contains
+a pinned Node runtime; it is not a pure-Rust Operator. The development PC's GNU Rust
+build does not satisfy [Tauri's Windows prerequisites](https://v2.tauri.app/start/prerequisites/)
+or establish an MSVC package. Any shell replacement must pass the same security,
+recovery and release gates. A running remote job can
 continue on the VPS when the app closes; local-file access still requires an authorized
 local companion online. This is not general autonomous scheduling.
 

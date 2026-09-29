@@ -5,9 +5,10 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { build } from "esbuild";
 import { chromium } from "playwright";
 
+const buildDir = path.resolve(process.cwd(), process.env.NEXT_DIST_DIR ?? ".next");
 const cssDir = [
-  path.join(process.cwd(), ".next", "static", "chunks"),
-  path.join(process.cwd(), ".next", "dev", "static", "chunks"),
+  path.join(buildDir, "static", "chunks"),
+  path.join(buildDir, "dev", "static", "chunks"),
 ].find(dir => existsSync(dir) && readdirSync(dir).some(name => name.endsWith(".css")));
 const cssFiles = cssDir
   ? readdirSync(cssDir).filter(name => name.endsWith(".css")).map(name => path.join(cssDir, name))

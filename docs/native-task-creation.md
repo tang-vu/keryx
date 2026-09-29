@@ -1,14 +1,16 @@
 # Native task creation for Operator
 
-This release integrates immutable v1 task creation into the Operator CLI and the
-current Electron desktop. Both callers use one Rust preparation/publication
-implementation. Existing task inspection, saved results, exports and GET-only
-buyer recovery remain TypeScript operations. Creating a task does not sign, buy,
-load a wallet or contact a server.
+The D-259 release integrated immutable v1 task creation into the Operator CLI and
+the then-current Electron desktop. Both callers used one Rust
+preparation/publication implementation. Task inspection, saved results, exports
+and GET-only buyer recovery remained TypeScript operations. Creating a task does
+not sign, buy, load a wallet or contact a server. D-260 implements a Tauri shell with
+the same creation authority and a packaged TypeScript helper; its separate
+desktop release gates are in [desktop alpha](./desktop-alpha.md).
 
-The release is accepted only after the integrated CLI, packaged Electron, Linux
-and Windows checks below pass. This document is the contract for that acceptance;
-an implementation branch alone is not evidence that the release has shipped.
+The D-259 acceptance required the integrated CLI, packaged Electron, Linux and
+Windows checks below. This document records that domain contract; it does not
+establish acceptance of the Tauri shell or any payment migration.
 
 ## New workspace and task admission
 

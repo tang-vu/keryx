@@ -12,7 +12,7 @@ export type SavedResult = NonNullable<Awaited<ReturnType<typeof import("../../li
 export type DesktopAPI = {
   chooseWorkspace(): Promise<WorkspaceView | null>;
   createWorkspace(): Promise<WorkspaceView | null>;
-  refresh(): Promise<WorkspaceView>;
+  refresh(): Promise<WorkspaceView | null>;
   createTask(input: CreateInput): Promise<CreatedTaskRow>;
   resumeTask(handle: string): Promise<{ task: TaskRow; answer: string | null; answerTruncated: boolean; localResult: { state: string; message?: string }; localObservation: "saved" | "save_failed" }>;
   readResult(handle: string): Promise<SavedResult | null>;

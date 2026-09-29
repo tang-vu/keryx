@@ -19,6 +19,8 @@ on:
       - "scripts/rust-offline-fallback-guard.mjs"
       - "scripts/operator.mts"
       - "scripts/build-native-writer.mts"
+      - "scripts/pe-imports.mjs"
+      - "scripts/pe-imports.test.mjs"
       - "scripts/test-native-task-creation.mts"
       - "scripts/run-standard-user-native-test.ps1"
       - "scripts/standard-user-native-child.ps1"
@@ -41,6 +43,8 @@ on:
       - "scripts/rust-offline-fallback-guard.mjs"
       - "scripts/operator.mts"
       - "scripts/build-native-writer.mts"
+      - "scripts/pe-imports.mjs"
+      - "scripts/pe-imports.test.mjs"
       - "scripts/test-native-task-creation.mts"
       - "scripts/run-standard-user-native-test.ps1"
       - "scripts/standard-user-native-child.ps1"
@@ -79,6 +83,9 @@ jobs:
 
       - name: Install JavaScript dependencies
         run: npm ci --no-audit --no-fund
+
+      - name: Test Windows PE runtime dependency gate
+        run: node --test scripts/pe-imports.test.mjs
 
       - name: Test artifact verification and transport edge cases
         run: npx vitest run lib/operator/native-readonly-artifact.test.ts lib/operator/native-readonly-transport.test.ts lib/operator/native-writer-artifact.test.ts lib/operator/native-task-writer.test.ts

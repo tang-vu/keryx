@@ -1,21 +1,21 @@
 {
   "name": "keryx-operator-desktop",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
-  "main": "dist/main.cjs",
   "scripts": {
-    "postinstall": "install-electron",
     "native:build": "node --import tsx ../scripts/build-native-writer.mts",
     "build": "node --import tsx build.mjs",
-    "start": "npm run native:build && npm run build && electron .",
-    "package:win": "npm run native:build && npm run build && electron-packager . KeryxOperator --platform=win32 --arch=x64 --out=release --overwrite --prune=true --no-asar --ignore=^/src --ignore=^/scripts --ignore=^/node_modules --ignore=^/release --ignore=^/build.mjs --ignore=^/vitest.config.mts --ignore=^/tsconfig.json --ignore=^/package-lock.json && npm run verify:package",
+    "start": "npm run native:build && npm run build && tauri dev",
+    "package:win": "npm run native:build && npm run build && tauri build -- --locked && node scripts/stage-package.mjs && npm run verify:package",
     "verify:package": "node --import tsx scripts/check-package.mjs release/KeryxOperator-win32-x64",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
+  "dependencies": {
+    "@tauri-apps/api": "2.12.0"
+  },
   "devDependencies": {
-    "@electron/packager": "^19.0.0",
-    "electron": "44.4.5",
+    "@tauri-apps/cli": "2.12.0",
     "esbuild": "^0.28.1",
     "typescript": "^5.9.3",
     "vitest": "^4.1.9"
