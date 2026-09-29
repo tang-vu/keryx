@@ -75,10 +75,12 @@ async function unusedPort() {
   return port;
 }
 
-async function launchDiagnostic(child, profile, lastConnectionError) {
+async function launchDiagnostic(child, profile, port, lastConnectionError) {
   let processes = [];
   let mainWindowHandle = null;
   let diagnosticError = null;
+  let browserLaunchFlags = [];
+  let browserLaunchFlagsError = null;
   try {
     const output = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command",
       "Get-CimInstance Win32_Process | Select-Object Name,ProcessId,ParentProcessId,SessionId | ConvertTo-Json -Compress"],
@@ -102,10 +104,59 @@ async function launchDiagnostic(child, profile, lastConnectionError) {
     { encoding: "utf8", windowsHide: true, timeout: 5000, maxBuffer: 1024 });
     mainWindowHandle = Number(windowOutput.trim());
   } catch (error) { diagnosticError = String(error).slice(0, 300); }
+  const browserPids = processes.filter(row => row.Name?.toLowerCase() === "msedgewebview2.exe")
+    .map(row => Number(row.ProcessId)).filter(pid => Number.isSafeInteger(pid) && pid > 0);
+  if (browserPids.length) {
+    try {
+      const script = String.raw`
+        $pids = $env:KERYX_DIAG_BROWSER_PIDS.Split(',')
+        $expectedPort = $env:KERYX_DIAG_DEBUG_PORT
+        $expectedProfile = [IO.Path]::GetFullPath($env:KERYX_DIAG_PROFILE)
+        $expectedEbWebView = [IO.Path]::GetFullPath([IO.Path]::Combine($expectedProfile, 'EBWebView'))
+        $flags = foreach ($browserPid in $pids) {
+          $process = Get-CimInstance Win32_Process -Filter "ProcessId = $browserPid" -ErrorAction Stop
+          if (-not $process -or [string]::IsNullOrWhiteSpace($process.CommandLine)) { continue }
+          $line = [string]$process.CommandLine
+          if ($line -match '(?<!\S)--type=') { continue }
+          $portFlag = [regex]::Match($line, '(?<!\S)--remote-debugging-port=(\d+)(?=\s|$)')
+          $profileFlag = [regex]::Match($line, '(?<!\S)--user-data-dir=(?:"([^"]+)"|(\S+))')
+          $profileMatches = $false
+          $profileIsEbWebViewChild = $false
+          if ($profileFlag.Success) {
+            $profileValue = if ($profileFlag.Groups[1].Success) { $profileFlag.Groups[1].Value } else { $profileFlag.Groups[2].Value }
+            try {
+              $actualProfile = [IO.Path]::GetFullPath($profileValue)
+              $profileIsEbWebViewChild = [string]::Equals($actualProfile, $expectedEbWebView, [StringComparison]::OrdinalIgnoreCase)
+              $profileMatches = $profileIsEbWebViewChild -or
+                [string]::Equals($actualProfile, $expectedProfile, [StringComparison]::OrdinalIgnoreCase)
+            }
+            catch { $profileMatches = $false }
+          }
+          [pscustomobject]@{
+            pid = [int]$browserPid
+            remoteDebuggingPortFlagPresent = $portFlag.Success
+            remoteDebuggingPortMatches = $portFlag.Success -and $portFlag.Groups[1].Value -eq $expectedPort
+            userDataFolderFlagPresent = $profileFlag.Success
+            userDataFolderMatches = $profileMatches
+            userDataFolderIsEbWebViewChild = $profileIsEbWebViewChild
+          }
+        }
+        $flags | ConvertTo-Json -Compress`;
+      const output = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script], {
+        encoding: "utf8", windowsHide: true, timeout: 5000, maxBuffer: 4096,
+        env: { ...process.env, KERYX_DIAG_BROWSER_PIDS: browserPids.join(","),
+          KERYX_DIAG_DEBUG_PORT: String(port), KERYX_DIAG_PROFILE: profile },
+      });
+      if (output.trim()) {
+        const parsed = JSON.parse(output);
+        browserLaunchFlags = Array.isArray(parsed) ? parsed : [parsed];
+      }
+    } catch (error) { browserLaunchFlagsError = String(error).slice(0, 300); }
+  }
   const profileEntries = await readdir(profile).catch(() => []);
   return { childPid: child.pid, exitCode: child.exitCode, signalCode: child.signalCode,
     lastConnectionError: lastConnectionError?.message?.slice(0, 500) ?? null, mainWindowHandle,
-    processes, profileEntries, diagnosticError };
+    processes, profileEntries, diagnosticError, browserLaunchFlags, browserLaunchFlagsError };
 }
 
 async function launch(config, executable = exe) {
@@ -134,7 +185,7 @@ async function launch(config, executable = exe) {
       catch (error) { lastConnectionError = error; await delay(250); }
     }
     if (!browser) {
-      const diagnostic = await launchDiagnostic(child, profile, lastConnectionError);
+      const diagnostic = await launchDiagnostic(child, profile, port, lastConnectionError);
       throw Error(`Packaged WebView2 did not expose its test CDP endpoint: ${JSON.stringify(diagnostic)}`);
     }
     let page;
