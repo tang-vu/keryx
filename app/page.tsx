@@ -73,7 +73,7 @@ export default function AskPage() {
         setSourceIndex(buildSourceIndex(data.sources ?? []));
       })
       .catch((err) => {
-        // Non-fatal: without the index, only cap enforcement applies (documented residual).
+        // Without the index, browser co-signing refuses payments until source authority is available.
         console.warn("[keryx] could not fetch the source index for payTo validation:", err);
       });
   }, []);

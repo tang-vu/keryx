@@ -73,25 +73,44 @@ M2 testnet RPC observation and staged patch, checked 2026-09-29: a read-only
 WebSocket endpoints reporting `5042002` (Arc testnet). No endpoint URLs, tokens,
 secrets or RPC response bodies were retained here, and no transaction was sent.
 This is one observation, not continuous attestation or mainnet isolation. The
-unmerged local [D-265](../../DECISIONS.md) patch adds live chain checks before
+merged [D-265](../../DECISIONS.md) testnet patch adds live chain checks before
 configured HTTP RPC operations; registry and indexer authority reads check again
 after each response, before cache mutation, and the indexer checks before cursor
 advance. WebSocket pushes remain wake-only. Covered server and CLI SDK calls
 have a bounded preflight, with an internal switch window and an SDK-selected
 withdrawal destination RPC. Each check costs another RPC round trip; an outage
-blocks the operation. No production runtime behavior of this patch has been
-observed.
+blocks the operation. No post-merge production runtime evidence is recorded
+in this dossier.
 
 SDK writes, browser and standalone signing, adversarial RPC switch-back, and
 cache/cursor atomicity remain open. M2 is not accepted.
+
+M3 staged browser signer change, validated locally 2026-09-30:
+[`lib/x402-client-sign.ts`](../../lib/x402-client-sign.ts) pins `exact`, the
+canonical Arc testnet network and chain ID, USDC, Circle batching EIP-712
+name/version and testnet GatewayWallet contract. The ask SSE carries the
+captured grant signer; the browser requires it, its saved session signer and
+the active wallet account to match before signing. It refuses absent source
+authority or a local cap. [`BrowserSignBudget`](../../lib/hooks/browser-sign-budget.ts)
+reserves integer micro-USDC synchronously per ask before asynchronous source
+checks, preventing concurrent SSE requests from overbooking that local cap.
+Reservations release only before signer invocation and remain held after
+possible signing or POST uncertainty. Focused negative and concurrent tests,
+TypeScript, targeted lint and a production build passed locally; there is no
+funded runtime or independent security-review evidence for this patch.
+The accepted challenge timeout range caps signed `validBefore` at 691,200
+seconds from the browser clock. It does not bind validity to grant expiry or
+revoke an existing signature. Old streams, multiple asks/tabs, durable
+nonce-indexed admission, server verification of the returned EIP-712 signature
+and recovery after a payment-row write failure remain open across M3/M4.
 
 ## Gate evidence and owner action
 
 | Gate | Evidence in this worktree | Owner action to close the gate |
 | --- | --- | --- |
 | M1 Network/services | Official facts and narrow RPC observation above. PR #26 (`a79e882`) upgraded to SDK `3.5.0` and pinned the testnet seller facilitator URL, avoiding its mainnet default. A deployed testnet health check was operational and one live testnet toll reportedly settled. [`lib/config.ts`](../../lib/config.ts), [`lib/chains.ts`](../../lib/chains.ts) and [`hardhat.config.ts`](../../hardhat.config.ts) remain testnet-configured; [`lib/payments/real-gateway.ts`](../../lib/payments/real-gateway.ts) uses `arcTestnet`. | Verify intended mainnet code and identity and evaluate SDK mainnet behavior. A staged Gateway/x402 deposit, authorization, settlement and withdrawal, or Keryx registry deployment, requires separate prior owner authorization and scoped funds/limits; preparing this gate authorizes no mainnet spend. Keep M1 open. |
-| M2 Authority/isolation | [`lib/payments/payment-gateway.ts`](../../lib/payments/payment-gateway.ts) now refuses a missing browser grant rather than selecting treasury; [`lib/payments/session-grants.ts`](../../lib/payments/session-grants.ts) persists epoch-bound grants. [`lib/db/index.ts`](../../lib/db/index.ts) selects the configured adapter. The read-only production RPC observation and unmerged [D-265](../../DECISIONS.md) testnet attestation patch are described above; neither proves production isolation. | Design and test separate mainnet deployment, configuration, secrets and database, with explicit chain and Gateway EIP-712 signing-domain and nonce isolation. Close the SDK, browser, standalone and cursor residuals above; bound treasury/user funds and prohibit activation by an environment override alone. |
-| M3 Security | PR #25 (`27ed52c`) merged atomic grant-epoch/signer reservation and release, refusal when the captured grant disappears, and pending recording for a signed header withheld before submission, with focused regression tests. The final grant check still races with submission. A ledger-write failure after signing can leave held capacity without a durable payment row. | Close the signed-authorization durability gap; analyze the remaining submission race and recovery policy. Obtain independent review of signer/session authority, contracts, x402/Gateway, registry, encrypted delivery and authentication; resolve critical/high findings and record residual risk. |
+| M2 Authority/isolation | [`lib/payments/payment-gateway.ts`](../../lib/payments/payment-gateway.ts) now refuses a missing browser grant rather than selecting treasury; [`lib/payments/session-grants.ts`](../../lib/payments/session-grants.ts) persists epoch-bound grants. [`lib/db/index.ts`](../../lib/db/index.ts) selects the configured adapter. The read-only production RPC observation and merged [D-265](../../DECISIONS.md) testnet attestation patch are described above; neither proves production isolation. | Design and test separate mainnet deployment, configuration, secrets and database, with explicit chain and Gateway EIP-712 signing-domain and nonce isolation. Close the SDK, browser, standalone and cursor residuals above; bound treasury/user funds and prohibit activation by an environment override alone. |
+| M3 Security | PR #25 (`27ed52c`) merged atomic grant-epoch/signer reservation and release, refusal when the captured grant disappears, and pending recording for a signed header withheld before submission. This staged browser signer change has focused local tests. A ledger-write failure after signing can still leave held capacity without a durable payment row; the final grant check still races with submission. | Close the durable nonce admission and server signature-verification gaps. Analyze old-stream and grant-lifetime cancellation, the submission race and recovery policy. Obtain independent review of signer/session authority, contracts, x402/Gateway, registry, encrypted delivery and authentication; resolve critical/high findings and record residual risk. |
 | M4 Settlement/recovery | [`lib/gateway/x402-transfer-reconciliation.ts`](../../lib/gateway/x402-transfer-reconciliation.ts) and [`scripts/reconcile-payments.mts`](../../scripts/reconcile-payments.mts) provide testnet reconciliation. A single post-SDK-upgrade testnet toll reportedly settled, but neither it nor earlier owner-operated [browser](./browser-pilot-2026-09-09.md) and [private paid](./private-paid-pilot-2026-09-10.md) pilots establishes a mainnet recovery drill. A signed-but-withheld authorization can remain pending without terminal Circle evidence, and a failed payment-row write can leave held capacity unindexed. | Run funded, release-candidate drills for response loss, replay/concurrency, Circle/RPC outages, settled-but-undelivered content, reconciliation and creator withdrawal. Define operator recovery/support for indefinitely pending or unindexed signed authorizations; preserve cap and nonce until an authoritative outcome. |
 | M5 Operations | PR #24 (`61ddf06`) merged [`reconciliation-alert`](../../scripts/reconciliation-alert.ts) so failed or thrown out-of-band alert delivery leaves the fingerprint unset and retries next run; focused tests cover this. A [local snapshot restore](./restore-drill-2026-09-09.md) exists, but is narrower than release recovery. | Verify actual alert transport and routing in the release environment. Run full off-host restore, rollback, key rotation, capacity/load, funding-limit and incident-owner drills against the intended release. |
 | M6 Product/data policy | The [buyer/creator/developer acceptance map](../mainnet-delivery-plan.md#product-acceptance-map) records partial journeys. PR #27 (`b04a9f0`) merged a separate [`/me/listings` route](../../app/api/me/listings/route.ts) for registry-owned listing links with public fields; it verifies at most 12 candidates per page through four concurrent live reads with four-second RPC timeouts. The original [`/me/sources` route](../../app/api/me/sources/route.ts) still selects the private alert/earnings portfolio by cached payout/author ownership. Stale nonempty URL metadata can hide valid listings; a large metadata-free corpus requires many pages. [`app/api/source/[id]/route.ts`](../../app/api/source/%5Bid%5D/route.ts) and [`app/api/cite/[id]/route.ts`](../../app/api/cite/%5Bid%5D/route.ts) are testnet product paths. | Complete independent wallet and creator journeys, including a fresh creator pilot; evaluate discovery limits, private access/receipt checks, recovery and support terms, then review privacy, retention, pricing and refunds. |

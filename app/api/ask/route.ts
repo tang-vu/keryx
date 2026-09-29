@@ -217,7 +217,10 @@ export async function POST(req: NextRequest) {
             sourceId: string,
             paymentContext?: BrowserPaymentContext,
           ): Promise<string> => {
-            send("sign-request", { reqId, requirements, kind, sourceId, paymentContext });
+            send("sign-request", {
+              reqId, requirements, kind, sourceId, paymentContext,
+              capturedGrantSigner: grant?.sessAddr,
+            });
             // Scope the pending slot to this session so a caller can't resolve another session's sign-request.
             return awaitSignature(capturedSessionId, reqId, abort.signal);
           };
