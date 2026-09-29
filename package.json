@@ -26,6 +26,7 @@
     "register-onchain": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/register-existing-source-onchain.mts",
     "metrics": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/metrics.mts",
     "preflight": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/preflight.mts",
+    "preflight:ops": "node scripts/release-ops-preflight.mjs",
     "arc:update": "node --import tsx --no-warnings scripts/arc-update.mts",
     "verify:receipt": "node --import tsx --no-warnings scripts/verify-research-receipt.mts",
     "a2a": "node --import tsx --no-warnings scripts/a2a-client.mts",
