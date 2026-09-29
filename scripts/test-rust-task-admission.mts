@@ -1,4 +1,4 @@
-/** Actual Operator callers versus the bounded native v1 preparation/publication candidate. */
+/** Historical TypeScript v1 fixture versus bounded native preparation/publication. */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { lstat, mkdtemp, mkdir, readFile, readdir, realpath, rm, stat, symlink,
@@ -6,7 +6,10 @@ import { lstat, mkdtemp, mkdir, readFile, readdir, realpath, rm, stat, symlink,
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { operatorTaskStatus } from "../lib/operator/task.ts";
-import { WorkspaceStore } from "../desktop/src/workspace.ts";
+import { WorkspaceStore, type DesktopTaskWriter } from "../desktop/src/workspace.ts";
+import { parseBuyerBudget } from "../lib/a2a/buyer-workspace.ts";
+import { addressSchema } from "../lib/buyer/protocol.ts";
+import { createLegacyOperatorTask } from "../test-support/legacy-operator-task.ts";
 import { nonPrivateParent, privateParent, treeDigest } from "./rust-task-publication-fixtures.mts";
 
 const repo = resolve(import.meta.dirname, "..");
@@ -58,15 +61,39 @@ function native(executable: string, envelope: object, args: string[] = []) {
     ? ["--evaluation-current-user-owner", ...args] : args, input);
 }
 
-function operator(command: "create" | "status", state: string,
-  create?: { requestPath: string; cap: string; payee?: string }, guarded = false, disabled?: string) {
+function operator(command: "status", state: string, guarded = false, disabled?: string) {
   return run(process.execPath,
     [...(guarded ? ["--import", offlineGuard] : []), "--import", tsxLoader, "--no-warnings",
-      join(repo, "scripts", "operator.mts"), command, "--state", state,
-      ...(create ? ["--request", create.requestPath, "--payee", create.payee ?? payee,
-        "--max-total", create.cap] : [])], undefined,
+      join(repo, "scripts", "operator.mts"), command, "--state", state], undefined,
     disabled ? { ...noEnv, KERYX_RUST_ENGINE: disabled } : noEnv);
 }
+
+// Historical TypeScript fixture. The production CLI is exercised by the
+// separate native-creation integration corpus, never by this legacy oracle.
+async function legacyCliCreate(state: string, create: { requestPath: string; cap: string; payee?: string }): Promise<Result> {
+  try {
+    const bytes = await readFile(create.requestPath);
+    if (bytes.length > 8192) throw new Error("Request exceeds 8 KB");
+    const request = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+    const selectedPayee = addressSchema.parse(create.payee ?? payee);
+    const total = parseBuyerBudget(create.cap, 1);
+    if (total === null) throw new Error("Invalid total cap");
+    const result = await createLegacyOperatorTask(state, { request, payee: selectedPayee,
+      maxTotalMicros: String(Math.round(total * 1e6)) });
+    return { status: 0, stdout: JSON.stringify(result), stderr: "" };
+  } catch {
+    return { status: 1, stdout: "", stderr: "Legacy fixture refused input" };
+  }
+}
+
+const legacyDesktopWriter: DesktopTaskWriter = {
+  async create(input) {
+    const result = await createLegacyOperatorTask(join(input.parent, input.child), input);
+    return { taskId: result.taskId, child: input.child,
+      state: process.platform === "win32" ? "windows_visible_entry_unproven" : "unix_synced" };
+  },
+  async createWorkspace() { throw new Error("Workspace creation is outside this historical fixture"); },
+};
 
 function verifyOfflineGuard() {
   const probe = `
@@ -118,7 +145,7 @@ async function accepted(state: string, sibling: string, parent: string, disabled
   const envelope = await sourceEnvelope(state, parent, sibling);
   const { parent: _parent, child: _child, ...preparation } = envelope;
   const result = native(prepareExe, preparation);
-  assert.equal(result.status, 0, `native preparation refused actual caller bytes: ${result.stderr}`);
+  assert.equal(result.status, 0, `native preparation refused historical v1 fixture bytes: ${result.stderr}`);
   assert.equal(result.stderr, "");
   const prepared = JSON.parse(result.stdout);
   assert.deepEqual(Object.keys(prepared).sort(), ["requestJson", "taskId", "taskJson"]);
@@ -180,14 +207,14 @@ async function accepted(state: string, sibling: string, parent: string, disabled
   assert.equal(await treeDigest(state), originalTree, "read-only reopening changed original task");
   nativeReopens++;
 
-  const fresh = operator("status", target, undefined, true, disabled);
+  const fresh = operator("status", target, true, disabled);
   assert.equal(fresh.status, 0, fresh.stderr);
   assert.match(fresh.stderr, /keryx offline fallback guard active/);
   assert.deepEqual(JSON.parse(fresh.stdout), reopened);
   assert.equal(await treeDigest(parent), completeTree, "guarded restart changed private parent");
   guardedNativeReopens++;
 
-  const freshWorkspace = new WorkspaceStore();
+  const freshWorkspace = new WorkspaceStore(legacyDesktopWriter);
   await freshWorkspace.select(parent);
   const view = await freshWorkspace.view();
   const matches = view.tasks.filter(row => row.directoryName === sibling);
@@ -211,7 +238,7 @@ async function callerCreateRefusal(parent: string, label: string, requestBytes: 
   await writeFile(requestPath, requestBytes);
   await absent(state);
   const before = await treeDigest(parent);
-  refusal(operator("create", state, { requestPath, cap, payee: selectedPayee }), `CLI ${label}`);
+  refusal(await legacyCliCreate(state, { requestPath, cap, payee: selectedPayee }), `legacy CLI fixture ${label}`);
   await absent(state);
   assert.equal(await treeDigest(parent), before, `CLI ${label} mutated source`);
   callerRefusals++;
@@ -244,22 +271,22 @@ async function main() {
     assert.equal(resolve(repo, relativeState), join(parent, "cli-relative"));
     const one = join(parent, "request-one.json");
     await writeFile(one, JSON.stringify(request("Actual CLI relative path 🧪", 0.000001)) + "\n");
-    const cliRelative = operator("create", relativeState,
+    const cliRelative = await legacyCliCreate(relativeState,
       { requestPath: one, cap: "0.10" });
     assert.equal(cliRelative.status, 0, cliRelative.stderr);
     assert.equal(JSON.parse(cliRelative.stdout).status, "ready");
     assert.equal(JSON.parse(cliRelative.stdout).buyerState,
-      join(resolve(repo, relativeState), "buyer"), "real CLI resolved relative state");
+      join(resolve(repo, relativeState), "buyer"), "legacy fixture resolved relative state");
     await accepted(join(parent, "cli-relative"), "native-relative-publication", parent, disabled);
 
     const half = join(parent, "request-half.json");
     await writeFile(half, JSON.stringify(request("Actual CLI half-USDC boundary", 0.5)) + "\n");
-    const cliAbsolute = operator("create", join(parent, "cli-half"),
+    const cliAbsolute = await legacyCliCreate(join(parent, "cli-half"),
       { requestPath: half, cap: "1" });
     assert.equal(cliAbsolute.status, 0, cliAbsolute.stderr);
     await accepted(join(parent, "cli-half"), "native-half-publication", parent, disabled);
 
-    const desktop = new WorkspaceStore();
+    const desktop = new WorkspaceStore(legacyDesktopWriter);
     await desktop.select(parent);
     const desktopInput = { question: "Desktop Unicode 🧪 Việt \uD800", mode: "deep",
       creatorBudget: "0.05", totalCap: "1", payee };
@@ -272,7 +299,7 @@ async function main() {
     const tinyPath = join(parent, "request-tiny.json");
     const tinyState = join(parent, "legacy-tiny");
     await writeFile(tinyPath, JSON.stringify(request("Legacy tiny positive", 1e-15)) + "\n");
-    const tiny = operator("create", tinyState, { requestPath: tinyPath, cap: "0.10" });
+    const tiny = await legacyCliCreate(tinyState, { requestPath: tinyPath, cap: "0.10" });
     assert.equal(tiny.status, 0, tiny.stderr);
     const tinyEnvelope = await sourceEnvelope(tinyState, parent, "native-tiny-preflight");
     const tinyHash = await treeDigest(parent);
@@ -299,7 +326,7 @@ async function main() {
     assert.equal(legacyStatus.creatorBudgetMicros, 0);
     for (let index = 0; index < 2; index++) {
       const before = await treeDigest(parent);
-      const status = operator("status", tinyState, undefined, true, disabled);
+      const status = operator("status", tinyState, true, disabled);
       assert.equal(status.status, 0, status.stderr);
       assert.match(status.stderr, /keryx offline fallback guard active/);
       assert.deepEqual(JSON.parse(status.stdout), legacyStatus);
@@ -308,7 +335,7 @@ async function main() {
     }
 
     const spaced = join(parent, "CLI name with spaces");
-    const spacedResult = operator("create", spaced, { requestPath: one, cap: "0.10" });
+    const spacedResult = await legacyCliCreate(spaced, { requestPath: one, cap: "0.10" });
     assert.equal(spacedResult.status, 0, spacedResult.stderr);
     const spacedEnvelope = await sourceEnvelope(spaced, parent, "native name with spaces");
     const spacedBefore = await treeDigest(parent);
@@ -321,10 +348,10 @@ async function main() {
     await symlink(parent, linkedParent, process.platform === "win32" ? "junction" : "dir");
     links.push(linkedParent);
     const linkedState = join(linkedParent, "cli-through-link");
-    const linkedCreate = operator("create", linkedState, { requestPath: one, cap: "0.10" });
+    const linkedCreate = await legacyCliCreate(linkedState, { requestPath: one, cap: "0.10" });
     assert.equal(linkedCreate.status, 0, linkedCreate.stderr);
     assert((await stat(join(parent, "cli-through-link"))).isDirectory(),
-      "CLI link traversal must create in the owned target parent");
+      "historical fixture link traversal must create in the owned target parent");
     const linkedEnvelope = await sourceEnvelope(join(parent, "cli-through-link"),
       linkedParent, "native-linked-preflight");
     await absent(join(parent, linkedEnvelope.child));
@@ -337,7 +364,7 @@ async function main() {
     candidateOnly++;
 
     const broad = await nonPrivateParent(root);
-    const broadStore = new WorkspaceStore();
+    const broadStore = new WorkspaceStore(legacyDesktopWriter);
     await broadStore.select(broad);
     const broadRow = await broadStore.createTask(desktopInput);
     const broadEnvelope = await sourceEnvelope(join(broad, broadRow.directoryName), broad,

@@ -1,24 +1,163 @@
 //! Strict supported Windows shape: current-user owner and one current-user
 //! full-access ACE. The selected parent also has protected inheritance and an
 //! inheritable ACE, so newly created children cannot inherit broad grants.
-use std::{ffi::c_void, io, os::windows::io::RawHandle};
+use cap_std::fs::Dir;
+use std::{
+    ffi::c_void,
+    io,
+    os::windows::io::{AsRawHandle, FromRawHandle, RawHandle},
+};
+use windows_sys::Wdk::{
+    Foundation::OBJECT_ATTRIBUTES,
+    Storage::FileSystem::{
+        NtCreateFile, FILE_CREATE, FILE_DIRECTORY_FILE, FILE_SYNCHRONOUS_IO_NONALERT,
+    },
+};
 #[cfg(any(test, feature = "publication-evaluation"))]
 use windows_sys::Win32::Security::{SetTokenInformation, TOKEN_ADJUST_DEFAULT};
 use windows_sys::Win32::{
-    Foundation::{CloseHandle, GetLastError, LocalFree, ERROR_NO_TOKEN},
-    Security::{
-        Authorization::{GetSecurityInfo, SE_FILE_OBJECT},
-        EqualSid, GetAce, GetSecurityDescriptorControl, GetTokenInformation, TokenOwner, TokenUser,
-        ACCESS_ALLOWED_ACE, ACL, CONTAINER_INHERIT_ACE, DACL_SECURITY_INFORMATION,
-        INHERIT_ONLY_ACE, NO_PROPAGATE_INHERIT_ACE, OBJECT_INHERIT_ACE, OWNER_SECURITY_INFORMATION,
-        SE_DACL_PROTECTED, TOKEN_OWNER, TOKEN_QUERY, TOKEN_USER,
+    Foundation::{
+        CloseHandle, GetLastError, LocalFree, RtlNtStatusToDosError, ERROR_NO_TOKEN,
+        OBJ_CASE_INSENSITIVE, UNICODE_STRING,
     },
-    Storage::FileSystem::FILE_ALL_ACCESS,
+    Security::{
+        AddAccessAllowedAceEx,
+        Authorization::{GetSecurityInfo, SE_FILE_OBJECT},
+        EqualSid, GetAce, GetLengthSid, GetSecurityDescriptorControl, GetTokenInformation,
+        InitializeAcl, InitializeSecurityDescriptor, SetSecurityDescriptorControl,
+        SetSecurityDescriptorDacl, SetSecurityDescriptorOwner, TokenOwner, TokenUser,
+        ACCESS_ALLOWED_ACE, ACL, ACL_REVISION, CONTAINER_INHERIT_ACE, DACL_SECURITY_INFORMATION,
+        INHERIT_ONLY_ACE, NO_PROPAGATE_INHERIT_ACE, OBJECT_INHERIT_ACE, OWNER_SECURITY_INFORMATION,
+        SECURITY_DESCRIPTOR, SE_DACL_PROTECTED, TOKEN_OWNER, TOKEN_QUERY, TOKEN_USER,
+    },
+    Storage::FileSystem::{FILE_ALL_ACCESS, FILE_GENERIC_READ},
     System::{
-        SystemServices::ACCESS_ALLOWED_ACE_TYPE,
+        SystemServices::{ACCESS_ALLOWED_ACE_TYPE, SECURITY_DESCRIPTOR_REVISION},
         Threading::{GetCurrentProcess, GetCurrentThread, OpenProcessToken, OpenThreadToken},
+        IO::IO_STATUS_BLOCK,
     },
 };
+
+/// Create relative to the held ancestor with the complete private descriptor
+/// attached to the create operation. No inherited broad grant is ever exposed.
+pub(super) enum WorkspaceCreateError {
+    Before(io::Error),
+    After(io::Error),
+}
+
+pub(super) fn create_private_workspace(
+    parent: &Dir,
+    child: &str,
+) -> Result<Dir, WorkspaceCreateError> {
+    let token = current_user_sid().map_err(WorkspaceCreateError::Before)?;
+    let user = unsafe { (*(token.as_ptr() as *const TOKEN_USER)).User.Sid };
+    if user.is_null() {
+        return Err(WorkspaceCreateError::Before(denied(
+            "current-user SID is missing",
+        )));
+    }
+    let sid_len = unsafe { GetLengthSid(user) } as usize;
+    if !(8..=1024).contains(&sid_len) {
+        return Err(WorkspaceCreateError::Before(denied(
+            "unsupported current-user SID",
+        )));
+    }
+    let acl_len =
+        (std::mem::size_of::<ACL>() + std::mem::size_of::<ACCESS_ALLOWED_ACE>() - 4 + sid_len + 3)
+            & !3;
+    let mut acl_storage = vec![0usize; acl_len.div_ceil(std::mem::size_of::<usize>())];
+    let acl = acl_storage.as_mut_ptr().cast::<ACL>();
+    if unsafe { InitializeAcl(acl, acl_len as u32, ACL_REVISION) } == 0
+        || unsafe {
+            AddAccessAllowedAceEx(
+                acl,
+                ACL_REVISION,
+                OBJECT_INHERIT_ACE | CONTAINER_INHERIT_ACE,
+                FILE_ALL_ACCESS,
+                user,
+            )
+        } == 0
+    {
+        return Err(WorkspaceCreateError::Before(io::Error::last_os_error()));
+    }
+    let mut descriptor = SECURITY_DESCRIPTOR::default();
+    if unsafe {
+        InitializeSecurityDescriptor(
+            (&mut descriptor as *mut SECURITY_DESCRIPTOR).cast(),
+            SECURITY_DESCRIPTOR_REVISION,
+        )
+    } == 0
+        || unsafe {
+            SetSecurityDescriptorDacl(
+                (&mut descriptor as *mut SECURITY_DESCRIPTOR).cast(),
+                1,
+                acl,
+                0,
+            )
+        } == 0
+        || unsafe {
+            SetSecurityDescriptorOwner(
+                (&mut descriptor as *mut SECURITY_DESCRIPTOR).cast(),
+                user,
+                0,
+            )
+        } == 0
+        || unsafe {
+            SetSecurityDescriptorControl(
+                (&mut descriptor as *mut SECURITY_DESCRIPTOR).cast(),
+                SE_DACL_PROTECTED,
+                SE_DACL_PROTECTED,
+            )
+        } == 0
+    {
+        return Err(WorkspaceCreateError::Before(io::Error::last_os_error()));
+    }
+    let mut wide: Vec<u16> = child.encode_utf16().collect();
+    let name = UNICODE_STRING {
+        Length: (wide.len() * 2) as u16,
+        MaximumLength: (wide.len() * 2) as u16,
+        Buffer: wide.as_mut_ptr(),
+    };
+    let attributes = OBJECT_ATTRIBUTES {
+        Length: std::mem::size_of::<OBJECT_ATTRIBUTES>() as u32,
+        RootDirectory: parent.as_raw_handle(),
+        ObjectName: &name,
+        Attributes: OBJ_CASE_INSENSITIVE,
+        SecurityDescriptor: &descriptor,
+        SecurityQualityOfService: std::ptr::null(),
+    };
+    let mut status = IO_STATUS_BLOCK::default();
+    let mut handle = std::ptr::null_mut();
+    let code = unsafe {
+        NtCreateFile(
+            &mut handle,
+            FILE_GENERIC_READ,
+            &attributes,
+            &mut status,
+            std::ptr::null(),
+            0,
+            7,
+            FILE_CREATE,
+            FILE_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT,
+            std::ptr::null(),
+            0,
+        )
+    };
+    if code < 0 {
+        return Err(WorkspaceCreateError::Before(io::Error::from_raw_os_error(
+            unsafe { RtlNtStatusToDosError(code) } as i32,
+        )));
+    }
+    if handle.is_null() {
+        return Err(WorkspaceCreateError::After(denied(
+            "workspace create returned no handle",
+        )));
+    }
+    // Hold the exact created object for owner/ACL and path-identity checks.
+    Ok(Dir::from_std_file(unsafe {
+        std::fs::File::from_raw_handle(handle)
+    }))
+}
 
 fn denied(message: &'static str) -> io::Error {
     io::Error::new(io::ErrorKind::PermissionDenied, message)
@@ -58,9 +197,16 @@ fn current_user_sid() -> io::Result<Vec<usize>> {
         {
             return Err(io::Error::last_os_error());
         }
+        if size < std::mem::size_of::<TOKEN_USER>() as u32
+            || size as usize > buffer.len() * std::mem::size_of::<usize>()
+        {
+            return Err(denied("invalid current-user token SID extent"));
+        }
         Ok(buffer)
     })();
-    unsafe { CloseHandle(token) };
+    if unsafe { CloseHandle(token) } == 0 {
+        return Err(io::Error::last_os_error());
+    }
     result
 }
 

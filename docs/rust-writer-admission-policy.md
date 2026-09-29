@@ -1,5 +1,11 @@
 # Native task writer admission and cutover proposal
 
+**D-259 update:** the [native task creation release](./native-task-creation.md)
+implements the proposal below as one CLI and Electron integration, gated on actual
+platform, package and caller acceptance. That release defines the current creation
+boundary and rollback window. The D-257 observations below remain historical
+evidence; existing v1 readers and payment authority do not migrate with the writer.
+
 **September 29, 2026: candidate hardening and proposed release gates.** D-257
 narrows Windows publication admission before the first filesystem mutation. It
 does not switch Operator CLI or desktop callers. `createOperatorTask` in

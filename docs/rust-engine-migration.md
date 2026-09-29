@@ -1,9 +1,12 @@
 # Shared Rust engine: staged migration and acceptance
 
-**Status, September 29, 2026:** authorized evaluation and a bounded read-only
-candidate, not a production cutover. The deployed TypeScript buyer, Operator and
-Electron paths remain authoritative. This document defines what evidence is needed
-before any domain changes owner. [D-242](../DECISIONS.md) records the decision.
+**Status, September 29, 2026:** the [immutable task creation release](./native-task-creation.md)
+integrates Rust creation into the Operator CLI and current Electron desktop under
+D-259, subject to its integrated release checks. TypeScript continues to own task
+inspection, saved results, exports, buyer recovery and all payment paths. The
+earlier evaluation sections below record historical gates and evidence; they do
+not supersede D-259's creation boundary. [D-242](../DECISIONS.md) records the original
+staged migration decision.
 
 ## Scope and authority
 

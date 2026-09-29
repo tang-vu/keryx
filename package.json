@@ -1,6 +1,6 @@
 {
   "name": "keryx",
-  "version": "0.22.66",
+  "version": "0.23.0",
   "private": true,
   "description": "Keryx — a citation-toll reading agent. Pays creators every time their work is cited, in USDC on Arc.",
   "scripts": {
@@ -31,6 +31,7 @@
     "a2a": "node --import tsx --no-warnings scripts/a2a-client.mts",
     "buyer": "node --import tsx --no-warnings --env-file-if-exists=.env.buyer.local scripts/buyer-agent.mts",
     "operator": "node --import tsx --no-warnings scripts/operator.mts",
+    "native:build": "node --import tsx scripts/build-native-writer.mts",
     "desktop:install": "npm --prefix desktop install",
     "desktop:build": "npm --prefix desktop run build",
     "desktop:start": "npm --prefix desktop start",

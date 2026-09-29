@@ -28,8 +28,13 @@ const source = join(temp, "reference.md");
 await mkdir(parent); await mkdir(userData);
 await writeFile(join(userData, "workspace.json"), Buffer.alloc(4097, 65));
 await writeFile(source, "# Local source\nA bounded immutable reference.\n");
-const environment = { ...process.env, KERYX_DESKTOP_TEST_USER_DATA: userData, KERYX_DESKTOP_SMOKE_HIDDEN: "1" };
-delete environment.KERYX_BUYER_PRIVATE_KEY;
+const environment = Object.fromEntries(Object.entries(process.env).filter(([key]) =>
+  ["systemroot", "windir", "userprofile", "appdata", "localappdata", "temp", "tmp", "comspec", "homedrive", "homepath", "pathext"]
+    .includes(key.toLowerCase())));
+environment.Path = [join(process.env.SystemRoot ?? "C:\\Windows", "System32"), process.env.SystemRoot ?? "C:\\Windows",
+  join(process.env.SystemRoot ?? "C:\\Windows", "System32", "Wbem")].join(";");
+environment.KERYX_DESKTOP_TEST_USER_DATA = userData;
+environment.KERYX_DESKTOP_SMOKE_HIDDEN = "1";
 let application;
 let passed = false;
 function completedFixture(intent, answer) {
@@ -78,10 +83,12 @@ try {
   await application.evaluate(({ dialog }, parentPath) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [parentPath] }); }, parent);
   await page.getByRole("button", { name: "Create workspace" }).click();
   await page.getByText("Prepare paid research").waitFor();
+  await page.getByText("Workspace created and visible. Keep a backup of important local work.").waitFor();
   await page.getByPlaceholder("What would you like to investigate?").fill("Acceptance test: Arc research question one");
   await page.getByPlaceholder("0x... independently verified").fill("0x1111111111111111111111111111111111111111");
   await page.getByRole("button", { name: "Save task" }).click();
   await page.getByText("1 research tasks", { exact: true }).waitFor();
+  await page.getByText("Research task created and visible. Keep a backup of important local work.").waitFor();
   await page.getByText("Acceptance test: Arc research question one", { exact: true }).last().waitFor();
   await page.getByRole("button", { name: "New research task" }).click();
   await page.getByPlaceholder("What would you like to investigate?").fill("Acceptance test: second task");

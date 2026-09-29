@@ -1,5 +1,4 @@
-//! Evaluation-only native publication of an already prepared immutable v1 task.
-//! This module is not wired into the read-only engine CLI or payment paths.
+//! Native publication of immutable v1 tasks and private workspace directories.
 #[cfg(windows)]
 use crate::fs_boundary::reparse;
 use crate::{fs_boundary::checked_dir, prepare::PreparedTaskV1};
@@ -256,6 +255,101 @@ impl PrivateParent {
             return Err("created child changed identity".into());
         }
         private_dir(&fresh, false).map_err(|e| e.to_string())
+    }
+}
+
+/// Create one private workspace under a direct, held ancestor. The ancestor
+/// need not be private because no task content is written until the new child
+/// has passed the same private-parent validation used by task publication.
+pub fn create_private_workspace(
+    parent: &Path,
+    child: &str,
+) -> Result<PublicationComplete, PublicationFailure> {
+    let unchanged = PublicationState::RefusedUnchanged;
+    if !parent.is_absolute()
+        || parent
+            .components()
+            .any(|part| matches!(part, Component::ParentDir))
+    {
+        return Err(PublicationFailure::new(
+            unchanged,
+            "parent",
+            "unsupported workspace parent",
+        ));
+    }
+    if !safe_child(child) {
+        return Err(PublicationFailure::new(
+            unchanged,
+            "child",
+            "unsupported child name",
+        ));
+    }
+    let parent =
+        std::path::absolute(parent).map_err(|e| PublicationFailure::new(unchanged, "parent", e))?;
+    let held = checked_dir(&parent).map_err(|e| PublicationFailure::new(unchanged, "parent", e))?;
+    let current =
+        checked_dir(&parent).map_err(|e| PublicationFailure::new(unchanged, "parent", e))?;
+    if !same_dir(&held, &current).map_err(|e| PublicationFailure::new(unchanged, "parent", e))? {
+        return Err(PublicationFailure::new(
+            unchanged,
+            "parent",
+            "workspace parent changed identity",
+        ));
+    }
+    #[cfg(windows)]
+    windows::admit_publication_token()
+        .map_err(|e| PublicationFailure::new(unchanged, "token", e))?;
+    #[cfg(unix)]
+    {
+        let mut builder = DirBuilder::new();
+        builder.mode(0o700);
+        held.create_dir_with(child, &builder)
+            .map_err(|e| PublicationFailure::new(unchanged, "mkdir", e))?;
+    }
+    let partial = PublicationState::RetainedPartial;
+    #[cfg(windows)]
+    let created = windows::create_private_workspace(&held, child).map_err(|e| match e {
+        windows::WorkspaceCreateError::Before(error) => {
+            PublicationFailure::new(unchanged, "mkdir", error)
+        }
+        windows::WorkspaceCreateError::After(error) => {
+            PublicationFailure::new(partial, "mkdir", error)
+        }
+    })?;
+    #[cfg(unix)]
+    let created = held
+        .open_dir_nofollow(child)
+        .map_err(|e| PublicationFailure::new(partial, "child-open", e))?;
+    private_dir(&created, true)
+        .map_err(|e| PublicationFailure::new(partial, "child-private", e))?;
+    let fresh_parent =
+        checked_dir(&parent).map_err(|e| PublicationFailure::new(partial, "parent-identity", e))?;
+    let fresh_child = held
+        .open_dir_nofollow(child)
+        .map_err(|e| PublicationFailure::new(partial, "child-identity", e))?;
+    if !same_dir(&held, &fresh_parent)
+        .map_err(|e| PublicationFailure::new(partial, "parent-identity", e))?
+        || !same_dir(&created, &fresh_child)
+            .map_err(|e| PublicationFailure::new(partial, "child-identity", e))?
+    {
+        return Err(PublicationFailure::new(
+            partial,
+            "identity",
+            "workspace path changed identity",
+        ));
+    }
+    #[cfg(unix)]
+    {
+        sync_dir(&created).map_err(|e| PublicationFailure::new(partial, "directory-sync", e))?;
+        sync_dir(&held).map_err(|e| PublicationFailure::new(partial, "parent-sync", e))?;
+        Ok(PublicationComplete::UnixSynced)
+    }
+    #[cfg(windows)]
+    {
+        checked_close(created.into_std_file()).map_err(|e| {
+            PublicationFailure::new(PublicationState::CompleteUnconfirmed, "child-close", e)
+        })?;
+        Ok(PublicationComplete::WindowsVisibleEntryUnproven)
     }
 }
 

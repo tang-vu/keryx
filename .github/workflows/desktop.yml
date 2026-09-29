@@ -9,6 +9,9 @@ on:
     paths:
       - "desktop/**"
       - "lib/**"
+      - "rust/**"
+      - "test-support/**"
+      - "scripts/build-native-writer.mts"
       - "scripts/operator.mts"
       - "package.json"
       - "package-lock.json"
@@ -18,6 +21,9 @@ on:
     paths:
       - "desktop/**"
       - "lib/**"
+      - "rust/**"
+      - "test-support/**"
+      - "scripts/build-native-writer.mts"
       - "scripts/operator.mts"
       - "package.json"
       - "package-lock.json"
@@ -46,7 +52,53 @@ jobs:
         run: npm --prefix desktop test
       - name: Typecheck desktop
         run: npm --prefix desktop run typecheck
+      - name: Install pinned MSVC Rust toolchain
+        run: rustup toolchain install 1.98.1-x86_64-pc-windows-msvc --profile minimal
       - name: Build and package Windows desktop
         run: npm run desktop:package
-      - name: Exercise packaged Electron with synthetic local task and receipt
-        run: node --import tsx desktop/scripts/smoke.mjs desktop/release/KeryxOperator-win32-x64/KeryxOperator.exe
+        env:
+          RUSTUP_TOOLCHAIN: 1.98.1-x86_64-pc-windows-msvc
+      - name: Exercise actual packaged creation as a standard Windows user
+        shell: pwsh
+        run: ./desktop/scripts/standard-user-smoke.ps1 -Package desktop/release/KeryxOperator-win32-x64
+      - name: Upload exact packaged desktop for a fresh Windows consumer
+        uses: actions/upload-artifact@v4
+        with:
+          name: operator-desktop-${{ github.sha }}-${{ github.run_id }}
+          path: desktop/release/KeryxOperator-win32-x64/
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 7
+
+  fresh-package-consumer:
+    name: Fresh runner packaged desktop acceptance
+    needs: packaged-smoke
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install JavaScript test dependencies without building native code
+        run: npm ci --no-audit --no-fund
+      - name: Download exact same-run desktop package
+        uses: actions/download-artifact@v4
+        with:
+          name: operator-desktop-${{ github.sha }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/keryx-operator-downloaded
+      - name: Verify package source, manifest and binary from independent checkout SHA
+        run: node --import tsx desktop/scripts/check-package.mjs "${{ runner.temp }}/keryx-operator-downloaded"
+        env:
+          KERYX_EXPECTED_SOURCE_COMMIT: ${{ github.sha }}
+      - name: Exercise actual downloaded Electron creation as a standard Windows user
+        shell: pwsh
+        run: ./desktop/scripts/standard-user-smoke.ps1 -Package "${{ runner.temp }}/keryx-operator-downloaded"
+      - name: Check packaged missing, hash and protocol refusals with offline legacy reopen
+        run: node --import tsx desktop/scripts/native-refusal-smoke.mjs "${{ runner.temp }}/keryx-operator-downloaded"
+      - name: Verify downloaded package was restored after fault checks
+        run: node --import tsx desktop/scripts/check-package.mjs "${{ runner.temp }}/keryx-operator-downloaded"
+        env:
+          KERYX_EXPECTED_SOURCE_COMMIT: ${{ github.sha }}

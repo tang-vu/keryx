@@ -8,6 +8,7 @@ on:
     branches: [main]
     paths:
       - "rust/**"
+      - "test-support/**"
       - "lib/**"
       - "scripts/create-rust-readonly-manifest.mts"
       - "scripts/evaluate-rust-readonly.mts"
@@ -17,6 +18,10 @@ on:
       - "scripts/rust-native-test-fixture.rs"
       - "scripts/rust-offline-fallback-guard.mjs"
       - "scripts/operator.mts"
+      - "scripts/build-native-writer.mts"
+      - "scripts/test-native-task-creation.mts"
+      - "scripts/run-standard-user-native-test.ps1"
+      - "scripts/standard-user-native-child.ps1"
       - "package.json"
       - "package-lock.json"
       - "docs/native-inspection-evaluation.md"
@@ -25,6 +30,7 @@ on:
     branches: [main]
     paths:
       - "rust/**"
+      - "test-support/**"
       - "lib/**"
       - "scripts/create-rust-readonly-manifest.mts"
       - "scripts/evaluate-rust-readonly.mts"
@@ -34,6 +40,10 @@ on:
       - "scripts/rust-native-test-fixture.rs"
       - "scripts/rust-offline-fallback-guard.mjs"
       - "scripts/operator.mts"
+      - "scripts/build-native-writer.mts"
+      - "scripts/test-native-task-creation.mts"
+      - "scripts/run-standard-user-native-test.ps1"
+      - "scripts/standard-user-native-child.ps1"
       - "package.json"
       - "package-lock.json"
       - "docs/native-inspection-evaluation.md"
@@ -71,10 +81,30 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Test artifact verification and transport edge cases
-        run: npx vitest run lib/operator/native-readonly-artifact.test.ts lib/operator/native-readonly-transport.test.ts
+        run: npx vitest run lib/operator/native-readonly-artifact.test.ts lib/operator/native-readonly-transport.test.ts lib/operator/native-writer-artifact.test.ts lib/operator/native-task-writer.test.ts
 
       - name: Build read-only artifact from checked-out source
         run: cargo +${{ matrix.rust }} build --manifest-path rust/Cargo.toml -p keryx-engine --release --locked
+
+      - name: Build trusted writer artifact from exact checked-out source
+        run: npm run native:build
+        env:
+          RUSTUP_TOOLCHAIN: ${{ matrix.rust }}
+
+      - name: Exercise native Operator creation and reopening
+        if: runner.os != 'Windows'
+        run: node --import tsx scripts/test-native-task-creation.mts
+
+      - name: Exercise native Operator creation as a real standard Windows user
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/run-standard-user-native-test.ps1 -TestScript scripts/test-native-task-creation.mts
+
+      - name: Exercise bounded Operator request-file admission with native writer
+        if: runner.os != 'Windows'
+        run: npx vitest run scripts/operator-request-input.test.ts
+        env:
+          KERYX_NATIVE_WRITER_TEST: "1"
 
       - name: Exercise copied artifact, fault processes and explicit rollback
         run: node --import tsx scripts/test-rust-native-artifact.mts
@@ -99,6 +129,16 @@ jobs:
           name: native-readonly-${{ matrix.target }}-${{ github.sha }}-${{ github.run_id }}
           path: ${{ runner.temp }}/keryx-native-readonly-staged-${{ matrix.target }}/
           if-no-files-found: error
+          overwrite: true
+          retention-days: 7
+
+      - name: Upload exact-revision writer binary and manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-writer-${{ matrix.target }}-${{ github.sha }}-${{ github.run_id }}
+          path: .artifacts/native-writer/
+          if-no-files-found: error
+          include-hidden-files: true
           overwrite: true
           retention-days: 7
 

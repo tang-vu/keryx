@@ -1,12 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, open, lstat, rename, unlink } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { open, lstat, rename, unlink } from "node:fs/promises";
+import { basename, dirname, join, resolve } from "node:path";
 import { z } from "zod";
 import { buyerIntentSchema, writeBuyerFile } from "../buyer/journal";
 import { resumeResearch } from "../buyer/client";
 import { buildBuyerReport } from "../buyer/report";
 import { addressSchema, buyerRequestSchema, BUYER_NETWORK, type BuyerRequest } from "../buyer/protocol";
 import { inspectSavedOperatorResult, readSavedOperatorResult, saveVerifiedOperatorResult } from "./result";
+import { type NativeTaskWriter } from "./native-task-writer";
 export { privateOperatorBrief as formatOperatorBrief } from "./result";
 
 const taskSchema = z.object({
@@ -46,27 +47,15 @@ async function readBoundedJson(path: string, maxBytes = MAX_TASK_FILE_BYTES) {
   } finally { await file.close(); }
 }
 
-/** The task directory is exclusive; a partial create is retained for inspection. */
-export async function createOperatorTask(directory: string, input: { request: unknown; payee: string; maxTotalMicros: string }) {
-  const request = buyerRequestSchema.parse(input.request);
-  const payee = addressSchema.parse(input.payee);
-  const maxTotalMicros = z.string().regex(/^[1-9]\d{0,6}$/).parse(input.maxTotalMicros);
-  validateCap(request, maxTotalMicros);
-  const task = taskSchema.parse({ schema: "keryx-operator-task-v1", id: randomUUID(),
-    createdAt: new Date().toISOString(), kind: "paid_research", request, payee, maxTotalMicros });
-  if (Buffer.byteLength(JSON.stringify(request, null, 2) + "\n") > MAX_TASK_FILE_BYTES
-    || Buffer.byteLength(JSON.stringify(task, null, 2) + "\n") > MAX_TASK_FILE_BYTES) {
-    throw new Error("Task request or metadata exceeds 8 KB");
-  }
+/** One native authority creates immutable v1 bytes. Existing readers retain their legacy policy. */
+export async function createOperatorTask(directory: string, input: { request: unknown; payee: string; maxTotalMicros: string },
+  writer: NativeTaskWriter) {
   const target = resolve(directory);
-  await mkdir(target, { mode: 0o700 });
-  if (process.platform !== "win32") {
-    const parent = await open(dirname(target), "r");
-    try { await parent.sync(); } finally { await parent.close(); }
-  }
-  await writeBuyerFile(target, "request.json", request);
-  await writeBuyerFile(target, "task.json", task);
-  return { taskId: task.id, status: "ready" as const, buyerState: join(target, "buyer") };
+  const id = randomUUID();
+  const created = await writer.create({ parent: dirname(target), child: basename(target), request: input.request,
+    payee: input.payee, maxTotalMicros: input.maxTotalMicros, id, createdAt: new Date().toISOString() });
+  return { taskId: created.taskId, status: "ready" as const, buyerState: join(target, "buyer"),
+    publicationState: created.state };
 }
 
 async function readTask(directory: string): Promise<Task> {

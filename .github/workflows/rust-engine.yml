@@ -8,6 +8,7 @@ on:
     branches: [main]
     paths:
       - "rust/**"
+      - "test-support/**"
       - "scripts/test-rust-engine.mts"
       - "scripts/rust-file-boundary-fixtures.mts"
       - "scripts/rust-result-acceptance-fixtures.mts"
@@ -35,6 +36,7 @@ on:
     branches: [main]
     paths:
       - "rust/**"
+      - "test-support/**"
       - "scripts/test-rust-engine.mts"
       - "scripts/rust-file-boundary-fixtures.mts"
       - "scripts/rust-result-acceptance-fixtures.mts"

@@ -13,7 +13,8 @@ import { a2aResearchPackage } from "../lib/a2a/research-package-definition.ts";
 import { createBuyerJournal, readBuyerJournal } from "../lib/buyer/journal.ts";
 import { buyerJobId } from "../lib/buyer/policy.ts";
 import { authorizationWithNonce, BUYER_GATEWAY, BUYER_NETWORK, BUYER_USDC } from "../lib/buyer/protocol.ts";
-import { createOperatorTask, formatOperatorBrief, operatorTaskStatus, readOperatorResult, resumeOperatorTask } from "../lib/operator/task.ts";
+import { formatOperatorBrief, operatorTaskStatus, readOperatorResult, resumeOperatorTask } from "../lib/operator/task.ts";
+import { createLegacyOperatorTask } from "../test-support/legacy-operator-task.ts";
 import { RESEARCH_RECEIPT_CANONICALIZATION, RESEARCH_RECEIPT_SCHEMA } from "../lib/research-receipt-types.ts";
 import { researchReceiptDigest, sha256 } from "../lib/research-receipt-integrity.ts";
 import { canonicalJson } from "../lib/canonical-json.ts";
@@ -77,7 +78,7 @@ async function treeDigest(directory: string): Promise<string> {
 async function fresh(root: string, label: string, mode: "quick" | "deep" = "quick", question = "What is Arc doing?") {
   const state = join(root, label);
   const request = { question, budget: 0.03, researchMode: mode, packageVersion: "1.0.0", responseMode: "async" } as const;
-  await createOperatorTask(state, { request, payee, maxTotalMicros: "100000" });
+  await createLegacyOperatorTask(state, { request, payee, maxTotalMicros: "100000" });
   return { state, request };
 }
 
