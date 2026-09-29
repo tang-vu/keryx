@@ -12,8 +12,9 @@ task and private-workspace creation. A Rust window does not imply that receipt,
 payment, or recovery domains have migrated to Rust.
 
 Expose only named main-window commands, native dialogs, bounded request/response
-frames and timeouts; keep Node, keys, arbitrary filesystem paths and network APIs
-out of the renderer. A timed-out creation or interrupted helper remains uncertain:
+frames and timeouts; keep Node, keys, arbitrary path selection or write authority,
+and network APIs out of the renderer. Workspace paths may be displayed for the
+deliberate buyer CLI handoff. A timed-out creation or interrupted helper remains uncertain:
 do not select a second writer or repeat a possible purchase. Bundle and verify the
 helper, runtime and native-writer artifacts from one clean source commit. Keep v1
 task/journal/result formats and existing CLI readers unchanged so the prior release

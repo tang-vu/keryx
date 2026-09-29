@@ -209,7 +209,7 @@ try {
   const beforeTask = await readFile(join(taskDirectory, "task.json"));
   for (const fault of ["tampered", "missing"]) {
     if (fault === "missing") await rm(nativePath);
-    active = await launch({});
+    active = await launch({}, join(tamperedPackage, basename(exe)));
     const offlineView = await active.page.evaluate(() => window.keryxDesktop.refresh());
     if (offlineView?.path !== view.path || offlineView.tasks.length !== 1) {
       throw Error(`${fault} native writer lost the existing workspace`);
