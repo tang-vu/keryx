@@ -178,6 +178,25 @@ Without this, snapshots are kept locally only (still protects against corruption
 but not a disk loss).
 
 ## Monitoring & alerts
+
+### Read-only release operations inventory
+
+On the deployment host, run `npm run preflight:ops` from `/root/keryx`. It reads
+the current crontab, PM2 PIDs, systemd states and `.env.local` webhook assignment.
+It prints only fixed labels and presence/state summaries; it does not print the
+webhook value, call the webhook, change services, or perform a payment. A missing
+required check exits 1. The withdrawal cycle is currently gated from activation
+as described in [withdrawal supervision](./withdrawal-supervision.md), so an
+absent timer and service are informational by default. If the intended release
+requires a scheduled cycle, run `npm run preflight:ops -- --require-withdrawal-timer`;
+an absent, inactive or incomplete timer/service then fails. A partial installation
+fails in either mode.
+
+This inventory is repeatable configuration evidence, not proof that jobs ran,
+alert delivery works, backups restore, workers are ready for paid work, or M5 is
+accepted. Retain the output with the release review and perform those drills
+separately. Keep `.env.local` private.
+
 - **Treasury watchdog** — `npm run check-treasury` reads the funder wallet's on-chain USDC reserve + native gas and alerts before either runs dry (settlements would otherwise start failing silently). `npm run deploy` installs it as an hourly cron. Thresholds: `KERYX_TREASURY_MIN_USDC` (2) / `KERYX_TREASURY_MIN_GAS` (0.02).
 - **Registry parity watchdog** — `npm run check-registry` enumerates every record on the on-chain SourceRegistry (`sourceIds`) and field-compares payout wallet, author splits, fetch price, and active flag against the DB discovery cache. Payment challenges and browser price checks independently refresh registry authority, while a mismatch still signals indexer drift or a tampered catalog and therefore alerts. `npm run deploy` installs it as an hourly cron (`# keryx-registry`, minute :45); the summary lands in `sync_state.registryParity` and renders on [`/status`](https://keryx.cc/status).
 - **Reasoning-provider watchdog** — `npm run check-llm` asks every credentialed model one real `decompose` question through the same engine transport. The live agent crosses configured providers before the heuristic, with transport deadlines and DB-shared circuits scoped per provider + reasoning step. Failed half-open probes back off from 30 minutes to four hours, and an atomic probe lease prevents the web and volume processes retrying the same unhealthy tier together. The watchdog still reports a broken model even when another provider saved the dispatch. `npm run deploy` installs it as an hourly cron (`# keryx-llm`, minute :15), logging to `data/backups/llm.log`. `/status` separately aggregates the run receipts: failures, circuit skips, cross-provider saves and the engine that actually served each reasoning step.
