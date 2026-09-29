@@ -15,6 +15,8 @@ const prepareExe = resolve(process.env.KERYX_RUST_PREPARE_EXAMPLE
   ?? join(repo, "rust", "target", "release", "examples", `prepare-task-v1${suffix}`));
 const publishExe = resolve(process.env.KERYX_RUST_PUBLISH_EXAMPLE
   ?? join(repo, "rust", "target", "release", "examples", `publish-task-v1${suffix}`));
+const readerExe = resolve(process.env.KERYX_RUST_ENGINE
+  ?? join(repo, "rust", "target", "release", `keryx-engine${suffix}`));
 const tsxLoader = import.meta.resolve("tsx");
 const offlineGuard = pathToFileURL(join(repo, "scripts", "rust-offline-fallback-guard.mjs")).href;
 const noEnv = { PATH: process.env.PATH ?? "", PATHEXT: process.env.PATHEXT ?? "",
@@ -30,13 +32,22 @@ let preMkdirBarriers = 0;
 let candidateOnly = 0;
 let callerRefusals = 0;
 let guardedReopens = 0;
+let fullPublications = 0;
+let collisionRefusals = 0;
+let nativeReopens = 0;
+let guardedNativeReopens = 0;
+let desktopReopens = 0;
+let processExitUncertain = false;
 
 function run(executable: string, args: string[], input?: string | Buffer,
   env: NodeJS.ProcessEnv = noEnv): Result {
   assert(isAbsolute(executable), "acceptance executable must be absolute");
   const result = spawnSync(executable, args, { cwd: repo, env, input, encoding: "utf8",
     timeout: 20_000, maxBuffer: 128_000, windowsHide: true });
-  if (result.error) throw new Error(`Subprocess did not finish: ${result.error.message}`);
+  if (result.error || result.status === null || result.signal) {
+    processExitUncertain = true;
+    throw new Error(`Subprocess exit unconfirmed: ${result.error?.message ?? result.signal ?? "no exit code"}`);
+  }
   return result;
 }
 
@@ -99,8 +110,11 @@ async function sourceEnvelope(state: string, parent: string, child: string): Pro
     maxTotalMicros: task.maxTotalMicros, id: task.id, createdAt: task.createdAt };
 }
 
-async function accepted(state: string, sibling: string, parent: string) {
+async function accepted(state: string, sibling: string, parent: string, disabled: string) {
   assert.deepEqual((await readdir(state)).sort(), ["request.json", "task.json"]);
+  const originalTree = await treeDigest(state);
+  const requestBytes = await readFile(join(state, "request.json"));
+  const taskBytes = await readFile(join(state, "task.json"));
   const envelope = await sourceEnvelope(state, parent, sibling);
   const { parent: _parent, child: _child, ...preparation } = envelope;
   const result = native(prepareExe, preparation);
@@ -109,8 +123,8 @@ async function accepted(state: string, sibling: string, parent: string) {
   const prepared = JSON.parse(result.stdout);
   assert.deepEqual(Object.keys(prepared).sort(), ["requestJson", "taskId", "taskJson"]);
   assert.equal(prepared.taskId, envelope.id);
-  assert.deepEqual(Buffer.from(prepared.requestJson, "utf8"), await readFile(join(state, "request.json")));
-  assert.deepEqual(Buffer.from(prepared.taskJson, "utf8"), await readFile(join(state, "task.json")));
+  assert.deepEqual(Buffer.from(prepared.requestJson, "utf8"), requestBytes);
+  assert.deepEqual(Buffer.from(prepared.taskJson, "utf8"), taskBytes);
   const status = await operatorTaskStatus(state);
   assert.equal(status.stage, "ready");
   assert.equal(status.payment, "unknown");
@@ -129,6 +143,64 @@ async function accepted(state: string, sibling: string, parent: string) {
   await absent(target);
   assert.equal(await treeDigest(parent), before, "pre-mkdir barrier changed source tree");
   preMkdirBarriers++;
+
+  // Use the exact real caller envelope. The checkpoint above did not reserve
+  // this name; exclusive mkdir below determines whether this attempt wins.
+  const created = native(publishExe, envelope);
+  assert.equal(created.status, 0, `native publication refused ${sibling}: ${created.stderr}`);
+  assert.equal(created.stderr, "", "successful publication emitted stderr");
+  const receipt = JSON.parse(created.stdout);
+  assert.deepEqual(Object.keys(receipt).sort(), ["child", "state", "taskId"]);
+  assert.equal(receipt.child, sibling);
+  assert.equal(receipt.taskId, envelope.id);
+  assert.equal(receipt.state, process.platform === "win32"
+    ? "windows_visible_entry_unproven" : "unix_synced");
+  assert.deepEqual((await readdir(target)).sort(), ["request.json", "task.json"]);
+  assert.deepEqual(await readFile(join(target, "request.json")), requestBytes);
+  assert.deepEqual(await readFile(join(target, "task.json")), taskBytes);
+  assert.equal(await treeDigest(state), originalTree, "native publication changed original caller task");
+  fullPublications++;
+
+  const completeTree = await treeDigest(parent);
+  const collision = native(publishExe, envelope);
+  refusal(collision, `native existing target ${sibling}`, "mkdir");
+  assert.equal(await treeDigest(parent), completeTree, "collision changed private parent");
+  collisionRefusals++;
+
+  const reopened = await operatorTaskStatus(target);
+  assert.deepEqual(reopened, status, "TypeScript status changed for byte-identical native task");
+  assert.equal(reopened.stage, "ready");
+  assert.equal(reopened.payment, "unknown");
+  assert.equal(reopened.delivery, "unknown");
+  const rust = run(readerExe, ["status", "--state", target]);
+  assert.equal(rust.status, 0, rust.stderr);
+  assert.equal(rust.stderr, "");
+  assert.deepEqual(JSON.parse(rust.stdout), reopened, "native read-only status differs from TypeScript");
+  assert.equal(await treeDigest(parent), completeTree, "read-only reopening changed private parent");
+  assert.equal(await treeDigest(state), originalTree, "read-only reopening changed original task");
+  nativeReopens++;
+
+  const fresh = operator("status", target, undefined, true, disabled);
+  assert.equal(fresh.status, 0, fresh.stderr);
+  assert.match(fresh.stderr, /keryx offline fallback guard active/);
+  assert.deepEqual(JSON.parse(fresh.stdout), reopened);
+  assert.equal(await treeDigest(parent), completeTree, "guarded restart changed private parent");
+  guardedNativeReopens++;
+
+  const freshWorkspace = new WorkspaceStore();
+  await freshWorkspace.select(parent);
+  const view = await freshWorkspace.view();
+  const matches = view.tasks.filter(row => row.directoryName === sibling);
+  assert.equal(matches.length, 1, "desktop did not discover exactly one native task");
+  const row = matches[0];
+  assert.equal(row.question, (envelope.request as { question: string }).question);
+  assert.equal(row.mode, (envelope.request as { researchMode: string }).researchMode);
+  assert.equal(row.payee, envelope.payee);
+  assert.equal(row.createdAt, envelope.createdAt);
+  assert.deepEqual(row.status, reopened);
+  assert.deepEqual(await freshWorkspace.refreshTask(row.handle), row);
+  assert.equal(await treeDigest(parent), completeTree, "desktop reopening changed private parent");
+  desktopReopens++;
   return envelope;
 }
 
@@ -155,7 +227,7 @@ async function desktopRefusal(store: WorkspaceStore, parent: string, label: stri
 }
 
 async function main() {
-  for (const executable of [prepareExe, publishExe]) assert((await stat(executable)).isFile());
+  for (const executable of [prepareExe, publishExe, readerExe]) assert((await stat(executable)).isFile());
   // A sibling gives the CLI a genuinely relative --state even if OS temp is on another drive.
   const base = await realpath(dirname(repo));
   const root = await realpath(await mkdtemp(join(base, "keryx-task-admission-")));
@@ -163,6 +235,9 @@ async function main() {
   assert(basename(root).startsWith("keryx-task-admission-"));
   const links: string[] = [];
   try {
+    const disabled = join(root, "absent-native-engine" + suffix);
+    await absent(disabled);
+    verifyOfflineGuard();
     const parent = await privateParent(root);
     const relativeState = relative(repo, join(parent, "cli-relative"));
     assert(!isAbsolute(relativeState));
@@ -175,21 +250,22 @@ async function main() {
     assert.equal(JSON.parse(cliRelative.stdout).status, "ready");
     assert.equal(JSON.parse(cliRelative.stdout).buyerState,
       join(resolve(repo, relativeState), "buyer"), "real CLI resolved relative state");
-    await accepted(join(parent, "cli-relative"), "native-relative-preflight", parent);
+    await accepted(join(parent, "cli-relative"), "native-relative-publication", parent, disabled);
 
     const half = join(parent, "request-half.json");
     await writeFile(half, JSON.stringify(request("Actual CLI half-USDC boundary", 0.5)) + "\n");
     const cliAbsolute = operator("create", join(parent, "cli-half"),
       { requestPath: half, cap: "1" });
     assert.equal(cliAbsolute.status, 0, cliAbsolute.stderr);
-    await accepted(join(parent, "cli-half"), "native-half-preflight", parent);
+    await accepted(join(parent, "cli-half"), "native-half-publication", parent, disabled);
 
     const desktop = new WorkspaceStore();
     await desktop.select(parent);
     const desktopInput = { question: "Desktop Unicode 🧪 Việt \uD800", mode: "deep",
       creatorBudget: "0.05", totalCap: "1", payee };
     const row = await desktop.createTask(desktopInput);
-    await accepted(join(parent, row.directoryName), "native-desktop-preflight", parent);
+    await accepted(join(parent, row.directoryName), `task-${row.status.taskId}`, parent,
+      disabled);
 
     // Legacy CLI accepts a positive value that rounds to zero micros. The
     // native candidate refuses it; original files remain readable by TS.
@@ -213,9 +289,6 @@ async function main() {
     assert.equal(await treeDigest(parent), tinyHash);
     candidateOnly++;
 
-    const disabled = join(root, "absent-native-engine" + suffix);
-    await absent(disabled);
-    verifyOfflineGuard();
     const unavailable = spawnSync(disabled, ["status", "--state", tinyState],
       { cwd: repo, env: noEnv, encoding: "utf8", timeout: 20_000,
         maxBuffer: 128_000, windowsHide: true });
@@ -307,21 +380,33 @@ async function main() {
     assert.equal(candidateOnly, 5);
     assert.equal(callerRefusals, 8);
     assert.equal(guardedReopens, 2);
+    assert.equal(fullPublications, 3);
+    assert.equal(collisionRefusals, 3);
+    assert.equal(nativeReopens, 3);
+    assert.equal(guardedNativeReopens, 3);
+    assert.equal(desktopReopens, 3);
     console.log(`Task admission: ${byteParity} exact persisted-byte parity, `
       + `${preMkdirBarriers} no-write pre-mkdir barriers, ${candidateOnly} candidate-only refusals, `
-      + `${callerRefusals} caller refusals, ${guardedReopens} guarded legacy reopenings.`);
+      + `${callerRefusals} caller refusals, ${guardedReopens} guarded legacy reopenings; `
+      + `${fullPublications} full native publications, ${collisionRefusals} preserved collisions, `
+      + `${nativeReopens} native/TypeScript reopens, ${guardedNativeReopens} guarded native-task restarts, `
+      + `${desktopReopens} fresh desktop discovery/refresh.`);
   } finally {
-    for (const link of links.reverse()) {
-      const kind = await lstat(link);
-      assert(kind.isSymbolicLink(), "owned fixture link changed type: " + link);
-      assert((await realpath(link)).startsWith(root + sep),
-        "owned fixture link escaped test root: " + link);
-      await unlink(link);
+    if (processExitUncertain) {
+      console.error(`Retained synthetic fixture after unconfirmed subprocess exit: ${root}`);
+    } else {
+      for (const link of links.reverse()) {
+        const kind = await lstat(link);
+        assert(kind.isSymbolicLink(), "owned fixture link changed type: " + link);
+        assert((await realpath(link)).startsWith(root + sep),
+          "owned fixture link escaped test root: " + link);
+        await unlink(link);
+      }
+      // Delete only the freshly generated, prefix-checked sibling owned by this process.
+      assert.equal(dirname(root), base);
+      assert(basename(root).startsWith("keryx-task-admission-"));
+      await rm(root, { recursive: true, force: true });
     }
-    // Delete only the freshly generated, prefix-checked sibling owned by this process.
-    assert.equal(dirname(root), base);
-    assert(basename(root).startsWith("keryx-task-admission-"));
-    await rm(root, { recursive: true, force: true });
   }
 }
 
