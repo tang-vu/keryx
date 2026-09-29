@@ -3,7 +3,8 @@ param(
   [Parameter(Mandatory = $true)][string]$Installer,
   [Parameter(Mandatory = $true)][string]$TempRoot,
   [Parameter(Mandatory = $true)][string]$NodePath,
-  [Parameter(Mandatory = $true)][string]$ExpectedSourceCommit
+  [Parameter(Mandatory = $true)][string]$ExpectedSourceCommit,
+  [switch]$Reentered
 )
 $ErrorActionPreference = 'Stop'
 if ($ExpectedSourceCommit -cnotmatch '^[a-f0-9]{40}$') { throw 'Missing independent checkout source revision' }
@@ -58,6 +59,56 @@ $env:HOMEDRIVE = [IO.Path]::GetPathRoot($profileRoot).TrimEnd('\')
 $env:HOMEPATH = $profileRoot.Substring($env:HOMEDRIVE.Length)
 $env:USERDOMAIN = $accountParts[0]
 $env:USERNAME = $accountParts[1]
+$env:LOCALAPPDATA = [IO.Path]::GetFullPath((Join-Path $profileRoot 'AppData\Local'))
+$env:APPDATA = [IO.Path]::GetFullPath((Join-Path $profileRoot 'AppData\Roaming'))
+foreach ($folder in @($env:LOCALAPPDATA, $env:APPDATA)) {
+  [void][IO.Directory]::CreateDirectory($folder)
+  $probe = Join-Path $folder ('keryx-smoke-write-' + [guid]::NewGuid().ToString('N'))
+  try { [IO.File]::WriteAllText($probe, '') }
+  finally { if ([IO.File]::Exists($probe)) { [IO.File]::Delete($probe) } }
+}
+if (-not $Reentered) {
+  # The first PowerShell may have cached shell folders from the runner's
+  # inherited environment before this script corrected it. Start exactly one
+  # fresh process under the same standard-user token and corrected environment.
+  $argsForChild = @('-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File',
+    ('"' + $PSCommandPath + '"'), '-Package', ('"' + $Package + '"'),
+    '-Installer', ('"' + $Installer + '"'), '-TempRoot', ('"' + $TempRoot + '"'),
+    '-NodePath', ('"' + $NodePath + '"'), '-ExpectedSourceCommit', $ExpectedSourceCommit, '-Reentered')
+  $start = [Diagnostics.ProcessStartInfo]::new((Get-Command powershell.exe).Source, ($argsForChild -join ' '))
+  $start.WorkingDirectory = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
+  $start.UseShellExecute = $false
+  $start.CreateNoWindow = $true
+  $start.WindowStyle = [Diagnostics.ProcessWindowStyle]::Hidden
+  $start.RedirectStandardOutput = $true
+  $start.RedirectStandardError = $true
+  foreach ($name in @('USERPROFILE', 'HOMEDRIVE', 'HOMEPATH', 'USERDOMAIN', 'USERNAME',
+      'LOCALAPPDATA', 'APPDATA', 'TEMP', 'TMP', 'KERYX_EXPECTED_SOURCE_COMMIT')) {
+    $start.EnvironmentVariables[$name] = [Environment]::GetEnvironmentVariable($name)
+  }
+  $process = [Diagnostics.Process]::Start($start)
+  try {
+    $output = $process.StandardOutput.ReadToEndAsync()
+    $errors = $process.StandardError.ReadToEndAsync()
+    if (-not $process.WaitForExit(600000)) {
+      & taskkill.exe /PID $process.Id /T /F | Out-Null
+      [void]$process.WaitForExit(10000)
+      throw 'Corrected-environment standard-user child timed out'
+    }
+    if (-not $output.Wait(10000) -or -not $errors.Wait(10000)) {
+      throw 'Corrected-environment standard-user output did not close'
+    }
+    $childOutput = $output.Result
+    $childErrors = $errors.Result
+    $childExitCode = $process.ExitCode
+  } finally { $process.Dispose() }
+  if ($childOutput) { Write-Output $childOutput }
+  if ($childExitCode -ne 0) {
+    if ($childErrors) { [Console]::Error.Write($childErrors) }
+    throw "Corrected-environment standard-user child exited $childExitCode"
+  }
+  exit 0
+}
 function Read-KnownFolder([Guid]$FolderId, [uint32]$Flags) {
   $pointer = [IntPtr]::Zero
   $result = [KeryxDesktopContext]::SHGetKnownFolderPath([ref]$FolderId, $Flags, [IntPtr]::Zero, [ref]$pointer)
@@ -74,29 +125,32 @@ function Read-KnownFolder([Guid]$FolderId, [uint32]$Flags) {
     if ($pointer -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::FreeCoTaskMem($pointer) }
   }
 }
-function Get-TargetKnownFolder([Guid]$FolderId, [string]$DefaultChild) {
-  $read = Read-KnownFolder $FolderId 0x4000
-  if ($read.path -and $read.path.StartsWith($profileRoot + '\', [StringComparison]::OrdinalIgnoreCase)) {
-    return [pscustomobject]@{ path = $read.path; fromKnownFolder = $true }
-  }
-  return [pscustomobject]@{ path = [IO.Path]::GetFullPath((Join-Path $profileRoot $DefaultChild)); fromKnownFolder = $false }
-}
 $localFolderId = [Guid]'F1B32785-6FBA-4FCF-9D55-7B8E7F157091'
 $roamingFolderId = [Guid]'3EB685DB-65F9-4CF6-A03A-E3EF65729F3D'
-$localFolder = Get-TargetKnownFolder $localFolderId 'AppData\Local'
-$roamingFolder = Get-TargetKnownFolder $roamingFolderId 'AppData\Roaming'
-$env:LOCALAPPDATA = $localFolder.path
-$env:APPDATA = $roamingFolder.path
-foreach ($folder in @($env:LOCALAPPDATA, $env:APPDATA)) {
-  [void][IO.Directory]::CreateDirectory($folder)
-  $probe = Join-Path $folder ('keryx-smoke-write-' + [guid]::NewGuid().ToString('N'))
-  try { [IO.File]::WriteAllText($probe, '') }
-  finally { if ([IO.File]::Exists($probe)) { [IO.File]::Delete($probe) } }
-}
 $localReadback = Read-KnownFolder $localFolderId 0
 $roamingReadback = Read-KnownFolder $roamingFolderId 0
+function Test-TargetFolder($Readback) {
+  return [bool]($Readback.path -and $Readback.path.StartsWith($profileRoot + '\', [StringComparison]::OrdinalIgnoreCase))
+}
+$localValid = Test-TargetFolder $localReadback
+$roamingValid = Test-TargetFolder $roamingReadback
+if (-not $localValid -or -not $roamingValid) {
+  [pscustomobject]@{
+    phase = 'corrected-environment-known-folder-refusal'
+    accountSid = $identity.User.Value
+    profileRoot = $profileRoot
+    initialEnvironmentWasOutsideProfile = -not ($inheritedLocalAppData -and
+      $inheritedLocalAppData.StartsWith($profileRoot + '\', [StringComparison]::OrdinalIgnoreCase))
+    chosenLocal = $env:LOCALAPPDATA
+    chosenRoaming = $env:APPDATA
+    localReadbackHresult = $localReadback.hresult
+    roamingReadbackHresult = $roamingReadback.hresult
+    localReadbackInsideProfile = $localValid
+    roamingReadbackInsideProfile = $roamingValid
+  } | ConvertTo-Json -Depth 4 -Compress | Write-Output
+}
 foreach ($readback in @($localReadback, $roamingReadback)) {
-  if (-not $readback.path -or -not $readback.path.StartsWith($profileRoot + '\', [StringComparison]::OrdinalIgnoreCase)) {
+  if (-not (Test-TargetFolder $readback)) {
     throw "Windows known folder does not resolve inside the disposable user profile (HRESULT $($readback.hresult))"
   }
 }
@@ -112,12 +166,10 @@ if ($userRuntime -isnot [string]) { $userRuntime = $null }
   windowStation = Get-UserObjectName ([KeryxDesktopContext]::GetProcessWindowStation())
   desktop = Get-UserObjectName ([KeryxDesktopContext]::GetThreadDesktop([KeryxDesktopContext]::GetCurrentThreadId()))
   profileRoot = $profileRoot
-  profileLocalAppData = $localFolder.path
-  profileRoamingAppData = $roamingFolder.path
+  profileLocalAppData = $env:LOCALAPPDATA
+  profileRoamingAppData = $env:APPDATA
   actualLocalAppData = $localReadback.path
   actualRoamingAppData = $roamingReadback.path
-  localFolderFromKnownFolder = $localFolder.fromKnownFolder
-  roamingFolderFromKnownFolder = $roamingFolder.fromKnownFolder
   localKnownFolderReadbackInsideProfile = [bool]$localReadback.path
   roamingKnownFolderReadbackInsideProfile = [bool]$roamingReadback.path
   localKnownFolderReadbackHresult = $localReadback.hresult
