@@ -7,26 +7,28 @@
  * lib/x402-server.ts decodes, wraps into the full x402 PaymentPayload
  * ({ x402Version, resource, accepted, payload }), and passes to BatchFacilitatorClient.
  *
- * Domain and types mirror what the SDK builds in GatewayClient.pay():
- *   - name "GatewayWalletBatched", version "1"
- *   - verifyingContract from the source's 402 PAYMENT-REQUIRED challenge
- *   - TransferWithAuthorization as per EIP-3009
+ * The Arc testnet EIP-712 domain is pinned in this browser module, separately
+ * from the SSE challenge. Types mirror the installed Circle batching SDK.
  *
- * validBefore uses requirements.maxTimeoutSeconds (sourced from the server's
- * 402 challenge). Circle's Gateway facilitator requires remaining validity
- * ≥ 604800s (7 days) at verify time — use config.maxTimeoutSeconds (~8d) as
- * the window so there's margin for signing → network → verify latency.
+ * The challenge's validity window is accepted only within the browser policy.
  *
- * Client-side security validation:
- *   - `payTo` must be a non-empty hex address
- *   - `amount` must be > 0 and ≤ remaining grant cap (checked by caller)
- *   - `reqId` is passed straight through for the server's promise resolution
+ * The caller separately verifies source authority and the grant cap.
  */
 
-import { type WalletClient } from "viem";
+import { isAddress, type WalletClient } from "viem";
+
+// Independent browser policy for the current Arc testnet deployment.
+const ARC_NETWORK = "eip155:5042002";
+const ARC_CHAIN_ID = 5042002;
+const ARC_USDC = "0x3600000000000000000000000000000000000000";
+const ARC_GATEWAY = "0x0077777d7EBA4688BDeF3E311b846F25870A19B9";
+const MIN_TIMEOUT_SECONDS = 604900;
+const MAX_TIMEOUT_SECONDS = 691200;
 
 export interface PaymentRequirementsInput {
+  scheme: string;
   network: string;           // e.g. "eip155:5042002"
+  asset: string;
   amount: string;            // atomic USDC (6 decimals), e.g. "2000"
   payTo: string;             // creator wallet address (0x…)
   maxTimeoutSeconds: number; // from the 402 challenge
@@ -59,27 +61,46 @@ interface AuthorizationFields {
  *
  * Throws if requirements are malformed or signing fails.
  */
+/** Legacy headless caller: keeps the established two-argument API. It uses the
+ * same pinned chain and domain policy, but has no browser grant snapshot to compare. */
 export async function signPaymentAuthorization(
   walletClient: WalletClient,
   requirements: PaymentRequirementsInput,
 ): Promise<SignedPaymentHeader> {
-  const { network, amount, payTo, maxTimeoutSeconds, extra } = requirements;
+  const signer = walletClient.account?.address ?? "";
+  return signBrowserPaymentAuthorization(walletClient, requirements, signer, signer);
+}
+
+/** Browser entry point: both signer expectations must be supplied independently. */
+export async function signBrowserPaymentAuthorization(
+  walletClient: WalletClient,
+  requirements: PaymentRequirementsInput,
+  intendedSessionSigner: string,
+  capturedGrantSigner: string,
+): Promise<SignedPaymentHeader> {
+  const { scheme, network, asset, amount, payTo, maxTimeoutSeconds, extra } = requirements;
 
   // Validate inputs before signing — defence against a compromised/MITM server.
-  if (!payTo || !payTo.startsWith("0x") || payTo.length < 40) {
+  if (scheme !== "exact" || network !== ARC_NETWORK ||
+      typeof asset !== "string" || asset.toLowerCase() !== ARC_USDC.toLowerCase()) {
+    throw new Error("unsupported browser payment scheme, network, or asset");
+  }
+  if (!isAddress(payTo) || /^0x0{40}$/i.test(payTo)) {
     throw new Error("invalid payTo address in payment requirements");
   }
+  if (typeof amount !== "string" || !/^[1-9]\d*$/.test(amount)) {
+    throw new Error("invalid payment amount");
+  }
   const amountBig = BigInt(amount);
-  if (amountBig <= BigInt(0)) {
-    throw new Error("invalid payment amount (must be > 0)");
+  if (!Number.isInteger(maxTimeoutSeconds) || maxTimeoutSeconds < MIN_TIMEOUT_SECONDS ||
+      maxTimeoutSeconds > MAX_TIMEOUT_SECONDS) {
+    throw new Error("unsupported payment authorization lifetime");
   }
-  if (!extra?.verifyingContract || !extra.verifyingContract.startsWith("0x")) {
-    throw new Error("missing or invalid verifyingContract in 402 challenge");
+  if (extra?.name !== "GatewayWalletBatched" || extra.version !== "1" ||
+      !isAddress(extra.verifyingContract) ||
+      extra.verifyingContract.toLowerCase() !== ARC_GATEWAY.toLowerCase()) {
+    throw new Error("unsupported Gateway signing domain");
   }
-
-  // Extract chainId from the network identifier (e.g. "eip155:5042002" → 5042002).
-  const chainId = parseInt(network.split(":")[1] ?? "0", 10);
-  if (!chainId) throw new Error(`unrecognised network: ${network}`);
 
   const now = Math.floor(Date.now() / 1000);
   // validAfter 600s in the past to absorb clock skew between signer and verifier.
@@ -95,16 +116,19 @@ export async function signPaymentAuthorization(
   const nonce = ("0x" + Array.from(nonceBytes).map((b) => b.toString(16).padStart(2, "0")).join("")) as `0x${string}`;
 
   const account = walletClient.account;
-  if (!account) throw new Error("walletClient has no account");
+  if (!account || !isAddress(intendedSessionSigner) || !isAddress(capturedGrantSigner) ||
+      account.address.toLowerCase() !== intendedSessionSigner.toLowerCase() ||
+      account.address.toLowerCase() !== capturedGrantSigner.toLowerCase()) {
+    throw new Error("session signer does not match the local and captured grants");
+  }
   const from = account.address;
 
-  // EIP-712 domain mirrors the SDK: name + version from 402 extra, chainId from network,
-  // verifyingContract from 402 extra. Must match exactly for Circle's facilitator to verify.
+  // The challenge must match these values, but never supplies the values we sign.
   const domain = {
-    name: extra.name,       // "GatewayWalletBatched"
-    version: extra.version, // "1"
-    chainId,
-    verifyingContract: extra.verifyingContract as `0x${string}`,
+    name: "GatewayWalletBatched",
+    version: "1",
+    chainId: ARC_CHAIN_ID,
+    verifyingContract: ARC_GATEWAY as `0x${string}`,
   };
 
   const types = {

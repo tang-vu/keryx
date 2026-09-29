@@ -1,5 +1,28 @@
 # Keryx — Decision Log
 
+**D-266** - Pin browser x402 signing to the Arc testnet session and challenge -
+*The browser previously accepted any parseable `eip155` network and copied the
+challenge's EIP-712 domain into a session-key signature; concurrent SSE requests
+could also pass the same local cap before asynchronous source checks finished.*
+Keep the current browser path testnet-only: require `exact`, the canonical Arc
+testnet network, USDC asset, Circle batching name/version and testnet
+GatewayWallet verifying contract before signing. Compare the active wallet
+account with both the browser's saved session signer and the grant signer
+captured by the ask route. Require source payment authority and reserve exact
+integer micro-USDC against the per-ask local cap synchronously before any
+asynchronous check. Release that local reservation only when signing provably
+has not begun; retain it after signer invocation or an uncertain POST. The
+headless two-argument caller keeps the pinned rail/domain checks but has no
+browser grant snapshot to compare.
+
+This is staged testnet browser hardening, not M3 or M4 acceptance. The timeout
+range caps `validBefore` at signing to at most 691,200 seconds from the browser
+clock, but does not bind it to grant expiry or revoke an existing signature.
+Old streams, multiple asks/tabs, the server's post-signature ledger gap and
+missing durable nonce-indexed admission/signature verification remain separate
+gates. See [browser authorization design](docs/engineering/browser-authorization-durability.md)
+and [dated mainnet evidence](docs/engineering/mainnet-readiness-2026-09-29.md).
+
 **D-265** - Stage Arc testnet RPC chain attestation at authority boundaries -
 *A viem client labeled Arc testnet does not verify the configured RPC, and a
 custom or tokenized testnet host cannot be judged by its URL.* Check live
