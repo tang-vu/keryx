@@ -138,6 +138,7 @@ jobs:
           name: native-writer-${{ matrix.target }}-${{ github.sha }}-${{ github.run_id }}
           path: .artifacts/native-writer/
           if-no-files-found: error
+          include-hidden-files: true
           overwrite: true
           retention-days: 7
 
