@@ -1,9 +1,11 @@
 # Shared Rust engine: staged migration and acceptance
 
 **Status, September 29, 2026:** the [immutable task creation release](./native-task-creation.md)
-integrates Rust creation into the Operator CLI and current Electron desktop under
-D-259, subject to its integrated release checks. TypeScript continues to own task
-inspection, saved results, exports, buyer recovery and all payment paths. The
+integrates Rust creation into the Operator CLI under D-259. D-260 stages a Tauri
+Windows shell with a packaged TypeScript helper for the existing inspection,
+saved-result, export and GET-only recovery rules. The shell switch is subject to
+packaged and fresh-runner release checks; it is not a Rust migration of those
+domains or any payment path. The
 earlier evaluation sections below record historical gates and evidence; they do
 not supersede D-259's creation boundary. [D-242](../DECISIONS.md) records the original
 staged migration decision.
@@ -11,9 +13,10 @@ staged migration decision.
 ## Scope and authority
 
 The intended long-term shape is one Rust domain core for task and receipt rules,
-separate platform I/O, and thin adapters. A native CLI can call the core now. A
-future Tauri desktop should call the same crate directly instead of hosting a second
-Node payment engine. A future web/MCP integration would need a versioned service
+separate platform I/O, and thin adapters. A native CLI can call the core now. The
+Tauri shell is a platform change; it continues to use the bounded packaged TypeScript
+helper for unmigrated Operator domains and does not host a second payment engine.
+A future web/MCP integration would need a versioned service
 adapter with explicit authentication, authorization, lifecycle, resource limits and
 operational ownership. These are architecture targets, not shipped integrations.
 

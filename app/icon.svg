@@ -5,5 +5,5 @@
     <circle cx="80" cy="80" r="58" stroke-width="1.2"/>
     <circle cx="80" cy="80" r="66" stroke-width="8" stroke-dasharray="2.4 7.4"/>
   </g>
-  <text x="80" y="112" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="92" fill="#C0381C">K</text>
+  <path fill="#C0381C" d="M42 48h36v5h-6v23l24-23h-7v-5h29v5h-7L86 78l27 29h7v5H89v-5h7L72 84v23h6v5H42v-5h7V53h-7z"/>
 </svg>

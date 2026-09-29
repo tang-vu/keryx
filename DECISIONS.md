@@ -1,5 +1,29 @@
 # Keryx — Decision Log
 
+**D-260** - Replace the Windows Electron shell with a bounded Tauri shell and a
+shared Mint desktop surface - *The desktop alpha worked but its dark visual system
+diverged from the web reading product, and packaging Electron was heavier than the
+local Operator surface required.* Use Tauri 2 and Windows WebView2 for the local
+window, with an exact-source bundled Node runtime and a bounded stdio helper for
+the existing TypeScript WorkspaceStore. The helper remains the single production
+authority for task inspection, saved results, private exports, and GET-only buyer
+recovery. The source-pinned Rust engine remains the single authority for immutable
+task and private-workspace creation. A Rust window does not imply that receipt,
+payment, or recovery domains have migrated to Rust.
+
+Expose only named main-window commands, native dialogs, bounded request/response
+frames and timeouts; keep Node, keys, arbitrary filesystem paths and network APIs
+out of the renderer. A timed-out creation or interrupted helper remains uncertain:
+do not select a second writer or repeat a possible purchase. Bundle and verify the
+helper, runtime and native-writer artifacts from one clean source commit. Keep v1
+task/journal/result formats and existing CLI readers unchanged so the prior release
+can reopen them during rollback. Align desktop with the web's shared Mint colors,
+local fonts and citation mark; prioritize the question and show pinned payee, caps,
+unknown state and seller-reported observations explicitly. Tauri/WebView2, package,
+fresh-runner, recovery, visual and CI evidence are release gates, not assumed from
+the design. Reversible: distribute the pinned prior Electron build and reopen the
+unchanged local workspaces. See [desktop alpha](docs/desktop-alpha.md).
+
 **D-259** - Ship immutable task creation as one CLI and Electron integration -
 *The preceding evaluators prove pieces of publication but do not give users a
 native task creator.* Integrate the shared Rust preparation/publication domain

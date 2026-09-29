@@ -1,0 +1,17 @@
+/* The Mint palette is shared by the web reading surface and desktop Operator. */
+:root {
+  --paper: #f1e9d7;
+  --paper-2: #e8dec8;
+  --panel: #ede3cd;
+  --ink: #1b1712;
+  --ink-2: #3a342a;
+  --ink-3: #605541;
+  --faint: #675b46;
+  --seal: #c0381c;
+  --paid: #1c5d45;
+  --paid-2: #2e7c5e;
+  --brass: #9a7b2e;
+  --cream: #f3ecdb;
+  --line: rgba(27, 23, 18, 0.22);
+  --line-2: rgba(27, 23, 18, 0.12);
+}

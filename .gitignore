@@ -17,6 +17,8 @@ out/
 build/
 dist/
 desktop/release/
+desktop/src-tauri/target/
+desktop/src-tauri/gen/
 rust/target/
 
 # hardhat (generated contract artifacts/cache/typings)
