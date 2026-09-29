@@ -196,6 +196,8 @@ async function launch(config, executable = exe) {
     }
     if (!page) throw Error("Packaged Keryx WebView2 page did not load");
     await page.waitForFunction(() => !!window.keryxDesktop, { timeout: 15000 });
+    await page.locator(".app-shell").waitFor({ state: "visible", timeout: 15000 });
+    await page.locator(".loading-state").waitFor({ state: "hidden", timeout: 15000 });
     return { child, browser, page };
   } catch (error) {
     await browser?.close().catch(() => undefined);

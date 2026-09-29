@@ -194,9 +194,17 @@ if (-not $install.StartsWith($owned, [StringComparison]::OrdinalIgnoreCase) -or
 }
 if (-not (Test-Path -LiteralPath $Installer -PathType Leaf)) { throw 'NSIS installer is missing' }
 function Invoke-BoundedInstaller([string]$Executable, [string[]]$Arguments) {
-  $process = Start-Process -FilePath $Executable -ArgumentList $Arguments -WindowStyle Hidden -PassThru
+  $start = [Diagnostics.ProcessStartInfo]::new($Executable, ($Arguments -join ' '))
+  $start.UseShellExecute = $false
+  $start.CreateNoWindow = $true
+  $start.WindowStyle = [Diagnostics.ProcessWindowStyle]::Hidden
+  $process = [Diagnostics.Process]::Start($start)
   try {
-    if (-not $process.WaitForExit(180000)) { $process.Kill(); throw 'NSIS process timed out' }
+    if (-not $process.WaitForExit(180000)) {
+      & taskkill.exe /PID $process.Id /T /F | Out-Null
+      [void]$process.WaitForExit(10000)
+      throw 'NSIS process timed out'
+    }
     if ($process.ExitCode -ne 0) { throw "NSIS process exited $($process.ExitCode)" }
   } finally { $process.Dispose() }
 }
