@@ -24,7 +24,7 @@ import { sourceFetchPayTo } from "../registry/source-fetch-payto";
 import { articlePaidPath } from "../offers/resolve-article-offer";
 import { makePayment, type FetchResult, type PaymentGateway } from "./payment-gateway";
 import { PaymentPendingError, PaymentSettledError } from "./payment-state";
-import { isGrantValid, releaseSpend, reserveSpend } from "./session-grants";
+import { getGrant, releaseSpend, reserveSpend } from "./session-grants";
 import {
   assertExpectedRequirements,
   authorizationExpiryIso,
@@ -204,7 +204,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
       throw new Error("client disconnected");
     }
 
-    if (!(await isGrantValid(this.sessionId))) {
+    if (!(await this.hasCapturedGrant())) {
       throw new Error("session grant expired or revoked — aborting spend");
     }
 
@@ -218,8 +218,8 @@ export class BrowserCoSignGateway implements PaymentGateway {
     assertExpectedRequirements(requirements, payee, amount);
 
     // Reserve in one atomic DB operation before a bearer authorization can exist.
-    if (!(await reserveSpend(this.sessionId, amount))) {
-      throw new Error(`session cap would be exceeded (amount=${amount})`);
+    if (!(await reserveSpend(this.sessionId, this.grantEpoch, this.sessAddr, amount))) {
+      throw new Error(`session grant changed or cap would be exceeded (amount=${amount})`);
     }
 
     // Step 2: Ask the browser to sign. The browser validates payTo/amount against
@@ -237,7 +237,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
       );
       signed = parseAndValidateSignedHeader(paymentHeader, requirements, this.sessAddr);
     } catch (err) {
-      await releaseSpend(this.sessionId, amount).catch((releaseErr) => {
+      await releaseSpend(this.sessionId, this.grantEpoch, this.sessAddr, amount).catch((releaseErr) => {
         console.error("[keryx] failed to release unused session reservation:", releaseErr);
       });
       // Timeout or revoke — record a skipped payment rather than crashing the run.
@@ -271,6 +271,28 @@ export class BrowserCoSignGateway implements PaymentGateway {
       settlementStatus: "pending",
       rationale: `Signed x402 authorization submitted; settlement confirmation unavailable (${reason}).`,
     });
+
+    // The browser produced this bearer header and may still possess it. Even if Keryx withholds
+    // submission, another holder could submit it; retain the reservation and reconcile by nonce.
+    let grantCurrent = false;
+    try {
+      if (!this.abortSignal?.aborted) grantCurrent = await this.hasCapturedGrant();
+    } catch {
+      // A storage failure leaves grant authority unknown. Fail closed and retain capacity.
+    }
+    if (!grantCurrent || this.abortSignal?.aborted) {
+      throw new PaymentPendingError(
+        "signed authorization withheld before submission; external use remains uncertain",
+        makePayment({
+          ...basePayment,
+          txHash: null,
+          settled: false,
+          settlementStatus: "pending",
+          rationale: "Signed x402 authorization created, but Keryx withheld submission after the browser grant changed, could not be verified, or the client disconnected. External use remains uncertain.",
+        }),
+        false,
+      );
+    }
 
     let retryRes: Response;
     try {
@@ -357,6 +379,12 @@ export class BrowserCoSignGateway implements PaymentGateway {
     }
 
     return { content, payment };
+  }
+
+  private async hasCapturedGrant(): Promise<boolean> {
+    const grant = await getGrant(this.sessionId);
+    return grant?.grantEpoch === this.grantEpoch &&
+      grant.sessAddr.toLowerCase() === this.sessAddr.toLowerCase();
   }
 
   /**

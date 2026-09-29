@@ -330,10 +330,10 @@ export interface KeryxDB {
   upsertSessionGrant(grant: Omit<SessionGrantRecord, "spent">): Promise<void>;
   /** Fetch a grant. Returns null when absent; expiry is the caller's to interpret. */
   getSessionGrant(sessionId: string): Promise<SessionGrantRecord | null>;
-  /** Atomically reserve against `spent` only when the live grant has enough cap. */
-  addSessionGrantSpend(sessionId: string, amount: number): Promise<boolean>;
-  /** Release a reservation after signing fails before an authorization is submitted. */
-  releaseSessionGrantSpend(sessionId: string, amount: number): Promise<void>;
+  /** Atomically reserve only against the captured grant generation and session signer. */
+  addSessionGrantSpend(sessionId: string, grantEpoch: string, sessAddr: string, amount: number): Promise<boolean>;
+  /** Release only into the grant generation that held the unused reservation. */
+  releaseSessionGrantSpend(sessionId: string, grantEpoch: string, sessAddr: string, amount: number): Promise<void>;
   deleteSessionGrant(sessionId: string): Promise<void>;
   /** Drop every grant that lapsed at or before `now` (unix ms). */
   deleteExpiredSessionGrants(now: number): Promise<void>;

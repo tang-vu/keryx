@@ -21,8 +21,8 @@ const {
   getGrant,
   isGrantValid,
   canSpend,
-  recordSpend,
-  releaseSpend,
+  reserveSpend,
+  releaseSpend: releaseCapturedSpend,
   dropGrant,
   pruneExpiredGrants,
 } = await import("./session-grants");
@@ -38,6 +38,16 @@ function grantFor(cap: number, ttlMs = 60_000) {
     expiry: Date.now() + ttlMs,
     txHash: "0xfund",
   };
+}
+
+async function recordSpend(sessionId: string, amount: number): Promise<boolean> {
+  const grant = await dbRef.current.getSessionGrant(sessionId);
+  return grant ? reserveSpend(sessionId, grant.grantEpoch, grant.sessAddr, amount) : false;
+}
+
+async function releaseSpend(sessionId: string, amount: number): Promise<void> {
+  const grant = await dbRef.current.getSessionGrant(sessionId);
+  if (grant) await releaseCapturedSpend(sessionId, grant.grantEpoch, grant.sessAddr, amount);
 }
 
 beforeAll(async () => {
@@ -162,6 +172,43 @@ describe("cap enforcement", () => {
     expect(await recordSpend(SESSION, 0.006)).toBe(true);
     await releaseSpend(SESSION, 0.006);
     expect((await getGrant(SESSION))?.spent).toBe(0);
+  });
+
+  it("keeps a replacement registered after an expired grant was read", async () => {
+    await storeGrant(SESSION, grantFor(1, -1));
+    const db = dbRef.current;
+    const originalRead = db.getSessionGrant.bind(db);
+    db.getSessionGrant = async (sessionId) => {
+      const expired = await originalRead(sessionId);
+      db.getSessionGrant = originalRead;
+      await storeGrant(SESSION, grantFor(0.5));
+      return expired;
+    };
+    try {
+      expect(await getGrant(SESSION)).toBeUndefined();
+      expect((await originalRead(SESSION))?.cap).toBe(0.5);
+    } finally {
+      db.getSessionGrant = originalRead;
+    }
+  });
+
+  it("does not reserve or release across a replaced epoch, even with the same signer", async () => {
+    const oldEpoch = await storeGrant(SESSION, grantFor(0.01));
+    expect(await reserveSpend(SESSION, oldEpoch, SESS_ADDR, 0.006)).toBe(true);
+    const newEpoch = await storeGrant(SESSION, grantFor(0.01));
+    expect(await reserveSpend(SESSION, newEpoch, SESS_ADDR, 0.004)).toBe(true);
+
+    expect(await reserveSpend(SESSION, oldEpoch, SESS_ADDR, 0.001)).toBe(false);
+    await releaseCapturedSpend(SESSION, oldEpoch, SESS_ADDR, 0.006);
+    expect((await getGrant(SESSION))?.spent).toBe(0.004);
+  });
+
+  it("does not reserve or release through a different session signer", async () => {
+    const epoch = await storeGrant(SESSION, grantFor(0.01));
+    expect(await reserveSpend(SESSION, epoch, "0xOtherSigner", 0.001)).toBe(false);
+    expect(await reserveSpend(SESSION, epoch, SESS_ADDR, 0.004)).toBe(true);
+    await releaseCapturedSpend(SESSION, epoch, "0xOtherSigner", 0.004);
+    expect((await getGrant(SESSION))?.spent).toBe(0.004);
   });
 });
 
