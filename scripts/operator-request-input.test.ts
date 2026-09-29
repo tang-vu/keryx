@@ -6,6 +6,7 @@ import { lstat, mkdtemp, readFile, readdir, readlink, realpath, rm, symlink, unl
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve, sep } from "node:path";
 import { it } from "vitest";
+import { privateParent } from "./rust-task-publication-fixtures.mjs";
 
 const repo = resolve(import.meta.dirname, "..");
 const operator = join(repo, "scripts", "operator.mts");
@@ -90,9 +91,10 @@ async function treeDigest(directory: string): Promise<string> {
   return createHash("sha256").update(entries.join("\n")).digest("hex");
 }
 
-it("rejects a Unix FIFO before blocking while regular and linked requests still create", async () => {
+it.skipIf(process.env.KERYX_NATIVE_WRITER_TEST !== "1")("rejects a Unix FIFO before blocking while regular and linked requests still create", async () => {
   const tempParent = await realpath(tmpdir());
   const root = await realpath(await mkdtemp(join(tempParent, "keryx-operator-request-")));
+  const parent = await privateParent(root);
   assert.equal(dirname(root), tempParent);
   assert(basename(root).startsWith("keryx-operator-request-"));
   const regular = join(root, "request.json");
@@ -101,13 +103,13 @@ it("rejects a Unix FIFO before blocking while regular and linked requests still 
   let preserveFixture = false;
   try {
     await writeFile(regular, JSON.stringify(request) + "\n", { flag: "wx" });
-    const ordinary = await createFromFile(regular, join(root, "ordinary-task"),
+    const ordinary = await createFromFile(regular, join(parent, "ordinary-task"),
       () => { preserveFixture = true; });
     assert.equal(ordinary.timedOut, false, "ordinary request hit CLI watchdog");
     assert.equal(ordinary.code, 0, ordinary.stderr);
     assert.equal(ordinary.stderr, "");
     assert.equal(JSON.parse(ordinary.stdout).status, "ready");
-    assert.deepEqual(JSON.parse(await readFile(join(root, "ordinary-task", "request.json"), "utf8")), request);
+    assert.deepEqual(JSON.parse(await readFile(join(parent, "ordinary-task", "request.json"), "utf8")), request);
 
     try {
       await symlink(regular, linked, "file");
@@ -117,14 +119,14 @@ it("rejects a Unix FIFO before blocking while regular and linked requests still 
       console.log("Windows file-symlink control unavailable (EPERM); Linux CI exercises it");
     }
     if (linkedCreated) {
-      const linkedResult = await createFromFile(linked, join(root, "linked-task"),
+      const linkedResult = await createFromFile(linked, join(parent, "linked-task"),
         () => { preserveFixture = true; });
       assert.equal(linkedResult.timedOut, false, "linked regular request hit CLI watchdog");
       assert.equal(linkedResult.code, 0, linkedResult.stderr);
       assert.equal(linkedResult.stderr, "");
       assert.equal(JSON.parse(linkedResult.stdout).status, "ready");
-      assert.deepEqual(await readFile(join(root, "linked-task", "request.json")),
-        await readFile(join(root, "ordinary-task", "request.json")));
+      assert.deepEqual(await readFile(join(parent, "linked-task", "request.json")),
+        await readFile(join(parent, "ordinary-task", "request.json")));
     }
 
     if (process.platform !== "win32") {
@@ -135,7 +137,7 @@ it("rejects a Unix FIFO before blocking while regular and linked requests still 
       assert.equal(make.status, 0, make.stderr);
       assert((await lstat(fifo)).isFIFO(), "mkfifo did not create a named pipe");
       const before = await treeDigest(root);
-      const state = join(root, "fifo-task");
+      const state = join(parent, "fifo-task");
       await assert.rejects(lstat(state), { code: "ENOENT" });
       const denied = await createFromFile(fifo, state, () => { preserveFixture = true; });
       assert.equal(denied.timedOut, false, "FIFO open waited for an absent writer");

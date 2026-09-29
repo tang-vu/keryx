@@ -1,11 +1,13 @@
 use keryx_core::{stringify, LocalTask};
 use std::{
     env,
+    io::Write,
     path::{Component, Path, PathBuf},
 };
 
 #[path = "brief-export.rs"]
 mod brief_export;
+mod writer;
 
 // Match Node's path.resolve for CLI output paths without resolving symlinks.
 // Opening this path too matters: a symlink followed by `..` must have the same
@@ -76,6 +78,22 @@ fn protocol_json() -> &'static str {
 }
 
 fn main() {
+    let args = env::args().skip(1).collect::<Vec<_>>();
+    if let Some(result) = writer::run(&args) {
+        let success = result.is_ok();
+        let value = result.unwrap_or_else(|error| error);
+        let mut stdout = std::io::stdout().lock();
+        if serde_json::to_writer(&mut stdout, &value).is_err()
+            || stdout.write_all(b"\n").is_err()
+            || stdout.flush().is_err()
+        {
+            std::process::exit(1);
+        }
+        if !success {
+            std::process::exit(1);
+        }
+        return;
+    }
     if let Err(error) = run() {
         eprintln!("keryx-engine: {error}");
         std::process::exit(1);

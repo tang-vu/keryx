@@ -1,14 +1,20 @@
 import { app, BrowserWindow, dialog, ipcMain, protocol, session } from "electron";
 import { open, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { createNativeTaskWriter } from "../../lib/operator/native-task-writer";
 import { WorkspaceStore } from "./workspace";
 import { savePrivateExport } from "./private-export";
 
 const APP_ORIGIN = "keryx-app://desktop";
+declare const KERYX_NATIVE_SOURCE_COMMIT: string;
 const allowedAssets = new Set(["index.html", "renderer.js", "style.css"]);
 protocol.registerSchemesAsPrivileged([{ scheme: "keryx-app", privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 if (process.env.KERYX_DESKTOP_TEST_USER_DATA) app.setPath("userData", process.env.KERYX_DESKTOP_TEST_USER_DATA);
-const store = new WorkspaceStore();
+const store = new WorkspaceStore(createNativeTaskWriter({
+  binaryPath: join(__dirname, "native", process.platform === "win32" ? "keryx-engine.exe" : "keryx-engine"),
+  manifestPath: join(__dirname, "native", "manifest.json"),
+  expectedSourceCommit: KERYX_NATIVE_SOURCE_COMMIT,
+}));
 let window: BrowserWindow;
 
 function validateSender(event: Electron.IpcMainInvokeEvent) {
@@ -65,7 +71,8 @@ function registerIpc() {
     const choice = await dialog.showOpenDialog(window, { title: "Choose a private parent folder", properties: ["openDirectory", "createDirectory"] });
     if (choice.canceled || choice.filePaths.length !== 1) return null;
     const view = await store.create(choice.filePaths[0]);
-    await saveSelection();
+    try { await saveSelection(); }
+    catch { throw new Error(`Workspace was created at ${view.path}, but the selection could not be saved. Open that folder again; do not create a replacement yet.`); }
     return view;
   });
   handle("workspace:refresh", async (...args) => { if (args.length) throw new Error("Invalid arguments"); return store.view(); });

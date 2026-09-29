@@ -1,5 +1,29 @@
 # Keryx — Decision Log
 
+**D-259** - Ship immutable task creation as one CLI and Electron integration -
+*The preceding evaluators prove pieces of publication but do not give users a
+native task creator.* Integrate the shared Rust preparation/publication domain
+through a separate bounded writer protocol, a source-pinned artifact and the actual
+Operator CLI and current Electron package in one release. Preserve the read-only
+protocol and TypeScript inspection/recovery authority. TypeScript callers supply
+identity, time and input; Rust owns new-task admission and immutable publication.
+Never select another writer after refusal, timeout or an uncertain acknowledgement.
+
+Provide a native operation for a **new** private workspace with security established
+at creation. Do not fix existing user ACLs, follow parent links, adjust creator
+tokens or silently elevate. Existing workspaces remain readable; new creation must
+pass the stricter private-parent policy. Keep explicit incomplete outcomes and
+accept Windows visible-file completion with directory-entry power-loss durability
+unproven. Local publication does not establish payment or delivery.
+
+Require integrated Linux/MSVC caller evidence, real packaged Electron IPC and a
+fresh-runner package handoff, independent review and required CI before release.
+Retain a pinned prior release and legacy v1 readers through the documented rollback
+observation window. Test-only TypeScript fixture writers do not provide production
+fallback. This is one domain cutover, not a Tauri, payment, scheduler or web/MCP
+migration. Reversible: stop native creation and use the pinned prior release without
+rewriting tasks or repeating purchases. See [native task creation](docs/native-task-creation.md).
+
 **D-258** - Complete native publication from actual caller envelopes before routing callers -
 *D-255's injected pre-mkdir checkpoint did not exercise a successful native write.*
 Extend those same real CLI and desktop oracles through exclusive publication to

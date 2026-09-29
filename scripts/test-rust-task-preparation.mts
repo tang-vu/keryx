@@ -7,7 +7,8 @@ import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { buyerRequestSchema } from "../lib/buyer/protocol.ts";
-import { createOperatorTask, operatorTaskStatus } from "../lib/operator/task.ts";
+import { operatorTaskStatus } from "../lib/operator/task.ts";
+import { createLegacyOperatorTask } from "../test-support/legacy-operator-task.ts";
 
 const repo = resolve(import.meta.dirname, "..");
 const executable = process.platform === "win32" ? ".exe" : "";
@@ -97,7 +98,7 @@ function assertRefused(result: ReturnType<typeof run>, label: string, diagnostic
 async function accepted(root: string, label: string, input: { request: unknown; payee: string;
   maxTotalMicros: string }, materialize = false) {
   const state = join(root, label);
-  const created = await createOperatorTask(state, input);
+  const created = await createLegacyOperatorTask(state, input);
   const requestBytes = await readFile(join(state, "request.json"));
   const taskBytes = await readFile(join(state, "task.json"));
   assert(requestBytes.length <= 8192 && taskBytes.length <= 8192);
@@ -144,7 +145,7 @@ async function accepted(root: string, label: string, input: { request: unknown; 
 async function pairedRefusal(root: string, label: string, input: { request: unknown; payee: unknown;
   maxTotalMicros: unknown }, id: string, createdAt: string, diagnostic?: RegExp) {
   const state = join(root, label);
-  await assert.rejects(createOperatorTask(state, input as Parameters<typeof createOperatorTask>[1]),
+  await assert.rejects(createLegacyOperatorTask(state, input as Parameters<typeof createLegacyOperatorTask>[1]),
     undefined, `${label} TypeScript unexpectedly accepted invalid input`);
   await assert.rejects(stat(state), { code: "ENOENT" });
   const before = await treeDigest(root);
@@ -186,7 +187,7 @@ function assertOfflineGuard() {
 
 async function historicalOverBudget(root: string) {
   const state = join(root, "raw-budget-over-half");
-  await createOperatorTask(state, { request, payee, maxTotalMicros });
+  await createLegacyOperatorTask(state, { request, payee, maxTotalMicros });
   const taskPath = join(state, "task.json");
   const requestPath = join(state, "request.json");
   const task = JSON.parse(await readFile(taskPath, "utf8"));
@@ -286,7 +287,7 @@ async function main() {
 
     const tiny = { request: { ...request, budget: 1e-15 }, payee, maxTotalMicros };
     const tinyState = join(root, "ts-accepted-tiny");
-    await createOperatorTask(tinyState, tiny);
+    await createLegacyOperatorTask(tinyState, tiny);
     const tinyTask = JSON.parse(await readFile(join(tinyState, "task.json"), "utf8"));
     await candidateOnlyRefusal(root, "positive zero-micro candidate",
       { ...tiny, id: tinyTask.id, createdAt: tinyTask.createdAt }, /zero micro|TypeScript/i);
@@ -308,11 +309,11 @@ async function main() {
     await rawBridgeRefusal(root, "invalid bridge UTF-8", Buffer.from([0xff]));
     await historicalOverBudget(root);
     assertOfflineGuard();
-    console.log(JSON.stringify({ fixtureKind: "TypeScript-created synthetic v1; no native writer or settlement",
+    console.log(JSON.stringify({ fixtureKind: "historical TypeScript-created synthetic v1; no settlement",
       byteParity, pairedRefusals, tinyCandidateRefusals, injectedInputRefusals,
       bridgeFormatRefusals, materializedReopens, historicalReadRefusals,
       offlineGuardSelfCheck: 1, platform: process.platform,
-      authority: "TypeScript creation and payment remain production; Rust preparation is a pure evaluation" }));
+      authority: "This preparation parity fixture is test-only; production creation uses the packaged native writer, while payment remains TypeScript" }));
   } finally {
     // The only recursive removal is the exact directory just created under the OS temp root.
     assert.equal(dirname(root), tempParent);

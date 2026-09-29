@@ -6,7 +6,8 @@ import { lstat, mkdir, mkdtemp, readFile, readdir, realpath, rm, stat, symlink,
 import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
-import { createOperatorTask, operatorTaskStatus } from "../lib/operator/task.ts";
+import { operatorTaskStatus } from "../lib/operator/task.ts";
+import { createLegacyOperatorTask } from "../test-support/legacy-operator-task.ts";
 import { checkedTool, currentUserSid, privateParent, privateParentWithUnsupportedAce,
   treeDigest } from "./rust-task-publication-fixtures.mts";
 
@@ -151,7 +152,7 @@ function success(result: ChildResult, envelope: Envelope) {
 
 async function tsReference(parent: string, label: string) {
   const state = join(parent, label);
-  const result = await createOperatorTask(state, { request, payee, maxTotalMicros });
+  const result = await createLegacyOperatorTask(state, { request, payee, maxTotalMicros });
   const taskBytes = await readFile(join(state, "task.json"));
   const requestBytes = await readFile(join(state, "request.json"));
   const task = JSON.parse(taskBytes.toString("utf8"));
@@ -446,12 +447,12 @@ async function main() {
       await inspectCrashedPublication(root, parent, reference, stage);
     }
     await inspectFaultStates(root, parent, reference);
-    console.log(JSON.stringify({ fixtureKind: "owned synthetic private parent; no native production writer",
+    console.log(JSON.stringify({ fixtureKind: "owned synthetic private parent; evaluation publisher with fault injection",
       successChecks, refusalChecks, concurrencyChecks, reopenChecks, linkChecks, aclChecks,
       crashChecks, faultChecks, tokenChecks, ordinaryTokenOutcome, ordinaryTokenOwnerMatchesUser,
       platform: process.platform, publicationObservation: process.platform === "win32"
         ? "windows_visible_entry_unproven" : "unix_synced",
-      authority: "TypeScript creation and payment remain production; publication is test-only" }));
+      authority: "This publication fault corpus is test-only; production creation uses the packaged native writer, while payment remains TypeScript" }));
   } finally {
     for (const link of links.reverse()) {
       const kind = await lstat(link);

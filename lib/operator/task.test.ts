@@ -1,7 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, dirname, basename } from "node:path";
 import { createBuyerJournal, readBuyerJournal } from "../buyer/journal";
 import { resumeResearch } from "../buyer/client";
 import { a2aResearchPackage } from "../a2a/research-package";
@@ -10,6 +10,7 @@ import { researchReceiptDigest, sha256 } from "../research-receipt-integrity";
 import { authorizationWithNonce, BUYER_GATEWAY, BUYER_NETWORK, BUYER_USDC } from "../buyer/protocol";
 import { buyerJobId } from "../buyer/policy";
 import { createOperatorTask, formatOperatorBrief, operatorTaskStatus, readOperatorResult, resumeOperatorTask } from "./task";
+import { createLegacyOperatorTask } from "../../test-support/legacy-operator-task";
 
 const roots: string[] = [];
 const payer = `0x${"1".repeat(40)}`;
@@ -38,9 +39,20 @@ async function buyerJournal(task: string, overrides: { request?: typeof request;
     requirement, authorization, queryId: buyerJobId(authorization) });
 }
 
+it("delegates task creation to the native writer without a TypeScript write", async () => {
+  const { task } = await fixture();
+  const create = vi.fn(async (input: { id: string; child: string }) => ({ taskId: input.id,
+    child: input.child, state: "unix_synced" as const }));
+  const result = await createOperatorTask(task, { request, payee, maxTotalMicros: "100000" }, { create } as never);
+  expect(create).toHaveBeenCalledWith(expect.objectContaining({ parent: dirname(task), child: basename(task),
+    request, payee, maxTotalMicros: "100000", id: expect.any(String), createdAt: expect.any(String) }));
+  expect(result).toMatchObject({ taskId: create.mock.calls[0][0].id, status: "ready", publicationState: "unix_synced" });
+  await expect(readFile(join(task, "task.json"))).rejects.toMatchObject({ code: "ENOENT" });
+});
+
 it("creates exactly one private task and keeps status/export free of research content and settlement claims", async () => {
   const { task } = await fixture();
-  const attempts = await Promise.allSettled(Array.from({ length: 2 }, () => createOperatorTask(task,
+  const attempts = await Promise.allSettled(Array.from({ length: 2 }, () => createLegacyOperatorTask(task,
     { request, payee, maxTotalMicros: "100000" })));
   expect(attempts.filter(x => x.status === "fulfilled")).toHaveLength(1);
   expect(attempts.filter(x => x.status === "rejected")).toHaveLength(1);
@@ -55,7 +67,7 @@ it("creates exactly one private task and keeps status/export free of research co
 
 it("binds recovery to the exact original request and caps before any GET", async () => {
   const { task } = await fixture();
-  await createOperatorTask(task, { request, payee, maxTotalMicros: "100000" });
+  await createLegacyOperatorTask(task, { request, payee, maxTotalMicros: "100000" });
   await buyerJournal(task);
   const recover = vi.fn(async () => ({ status: "not_found_uncertain" as const,
     payment: { state: "unconfirmed" as const } }));
@@ -75,14 +87,14 @@ it("binds recovery to the exact original request and caps before any GET", async
 it("refuses an oversized serialized task before creating a directory", async () => {
   const { task } = await fixture();
   const oversized = { ...request, question: `Why?${"\u0000".repeat(1400)}` };
-  await expect(createOperatorTask(task, { request: oversized, payee, maxTotalMicros: "100000" })).rejects.toThrow("8 KB");
+  await expect(createLegacyOperatorTask(task, { request: oversized, payee, maxTotalMicros: "100000" })).rejects.toThrow("8 KB");
   await expect(operatorTaskStatus(task)).rejects.toThrow();
 });
 
 it("round trips valid Unicode and rejects a linked buyer symlink", async () => {
   const { root, task } = await fixture();
   const unicode = { ...request, question: "Việt Nam nghiên cứu Arc — nguồn nào?" };
-  await createOperatorTask(task, { request: unicode, payee, maxTotalMicros: "100000" });
+  await createLegacyOperatorTask(task, { request: unicode, payee, maxTotalMicros: "100000" });
   expect(JSON.parse(await readFile(join(task, "request.json"), "utf8"))).toEqual(unicode);
   await mkdir(join(root, "foreign"));
   await symlink(join(root, "foreign"), join(task, "buyer"), process.platform === "win32" ? "junction" : "dir");
@@ -95,7 +107,7 @@ it.each([
   { name: "excess price", override: { amount: "110000" } },
 ])("refuses $name journal without recovery", async ({ override }) => {
   const { task } = await fixture();
-  await createOperatorTask(task, { request, payee, maxTotalMicros: "100000" });
+  await createLegacyOperatorTask(task, { request, payee, maxTotalMicros: "100000" });
   await buyerJournal(task, override);
   const recover = vi.fn();
   await expect(resumeOperatorTask(task, recover as never)).rejects.toThrow("does not match");
@@ -104,7 +116,7 @@ it.each([
 
 it("retains an interrupted buyer directory as incomplete, without inferring failed payment", async () => {
   const { task } = await fixture();
-  await createOperatorTask(task, { request, payee, maxTotalMicros: "100000" });
+  await createLegacyOperatorTask(task, { request, payee, maxTotalMicros: "100000" });
   await mkdir(join(task, "buyer"));
   const status = await operatorTaskStatus(task);
   expect(status.stage).toBe("journal_incomplete");
@@ -135,7 +147,7 @@ async function completedRecovery(task: string, answer: string, citations: unknow
 
 it("saves only a completed verified answer, reopens it offline, and exports a private brief", async () => {
   const { task } = await fixture();
-  await createOperatorTask(task, { request, payee, maxTotalMicros: "100000" }); await buyerJournal(task);
+  await createLegacyOperatorTask(task, { request, payee, maxTotalMicros: "100000" }); await buyerJournal(task);
   const completed = await completedRecovery(task, "Arc answer with [1]", [{ marker: "[1]", sourceName: "Creator source" }]);
   expect(completed.localResult.state).toBe("saved");
   const status = await operatorTaskStatus(task);
@@ -152,7 +164,7 @@ it("saves only a completed verified answer, reopens it offline, and exports a pr
 
 it("rejects edited answer, receipt, task binding, and oversized saved files", async () => {
   const { task } = await fixture();
-  await createOperatorTask(task, { request, payee, maxTotalMicros: "100000" }); await buyerJournal(task);
+  await createLegacyOperatorTask(task, { request, payee, maxTotalMicros: "100000" }); await buyerJournal(task);
   await completedRecovery(task, "Original answer");
   const resultFile = join(task, "result.json");
   const original = await readFile(resultFile, "utf8");
@@ -176,7 +188,7 @@ it("rejects edited answer, receipt, task binding, and oversized saved files", as
 
 it("preserves a previous result across incomplete and failed checks, then replaces it after a later verified check", async () => {
   const { task } = await fixture();
-  await createOperatorTask(task, { request, payee, maxTotalMicros: "100000" }); await buyerJournal(task);
+  await createLegacyOperatorTask(task, { request, payee, maxTotalMicros: "100000" }); await buyerJournal(task);
   await completedRecovery(task, "First answer");
   const prior = await readFile(join(task, "result.json"), "utf8");
   await resumeOperatorTask(task, vi.fn(async () => ({ status: "not_found_uncertain" as const,
@@ -190,7 +202,7 @@ it("preserves a previous result across incomplete and failed checks, then replac
 
 it("does not save a completed result without a verified receipt and preserves an older snapshot", async () => {
   const { task } = await fixture();
-  await createOperatorTask(task, { request, payee, maxTotalMicros: "100000" }); await buyerJournal(task);
+  await createLegacyOperatorTask(task, { request, payee, maxTotalMicros: "100000" }); await buyerJournal(task);
   await completedRecovery(task, "Prior verified answer");
   const before = await readFile(join(task, "result.json"), "utf8");
   const intent = await readBuyerJournal(join(task, "buyer"));

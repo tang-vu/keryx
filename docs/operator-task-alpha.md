@@ -3,29 +3,44 @@
 This first Operator slice is a local Arc-testnet research task handoff. It persists
 one normalized request, a pinned seller payee, and a per-job total cap. It does not
 create a wallet, fund it, sign, submit a purchase, or start a background worker.
-The existing buyer CLI remains the only CLI purchase path.
+The existing buyer CLI remains the only CLI purchase path. Immutable task creation
+uses the shared Rust writer; local inspection and buyer recovery remain TypeScript.
+See the [native creation contract](./native-task-creation.md) for publication outcomes,
+artifact verification and rollback.
 
 Download `request.json` from [/research](https://keryx.cc/research) as described in
-the [buyer guide](./buyer-agent.md). Use a private existing parent such as
-`.buyer-jobs/` (gitignored). A task directory
-must be new. On Windows, its files inherit the parent ACL. Keep the request, task,
+the [buyer guide](./buyer-agent.md). Create a private workspace before creating tasks,
+or select an existing parent that passes the native permission checks. A task
+directory must be new and use a safe ASCII name. Keep the request, task,
 buyer journal, and JSON exports private: the buyer job ID is bearer access to the
 result. The commands below do not load `.env.local` or `.env.buyer.local`; only the
 deliberate `buyer buy` command loads the buyer key environment if present.
 
 The request must be a regular UTF-8 JSON file of at most 8 KiB. On Unix, a named
 pipe is refused without waiting for another process to connect as its writer.
-Invalid input is rejected before creating the task directory.
+Invalid input is rejected before creating the task directory. New creator budgets
+must round to at least one micro-USDC; older task reading keeps its previous rules.
+On Windows, use a normal user session and the workspace creation command to obtain
+a supported private folder. Existing folder permissions are never changed for you.
 
 ```sh
-npm run operator -- create --request request.json --payee 0xYOUR_VERIFIED_PAYEE --max-total 0.10 --state .buyer-jobs/task-1
-npm run operator -- status --state .buyer-jobs/task-1
-npm run buyer -- buy --request .buyer-jobs/task-1/request.json --payee 0xYOUR_VERIFIED_PAYEE --max-total 0.10 --state .buyer-jobs/task-1/buyer
-npm run operator -- resume --state .buyer-jobs/task-1
-npm run operator -- export --json --state .buyer-jobs/task-1
-npm run operator -- result --state .buyer-jobs/task-1
-npm run operator -- brief --state .buyer-jobs/task-1 --file private-brief.md
+npm run native:build
+npm run operator -- workspace --state operator-workspace
+npm run operator -- create --request request.json --payee 0xYOUR_VERIFIED_PAYEE --max-total 0.10 --state operator-workspace/task-1
+npm run operator -- status --state operator-workspace/task-1
+npm run buyer -- buy --request operator-workspace/task-1/request.json --payee 0xYOUR_VERIFIED_PAYEE --max-total 0.10 --state operator-workspace/task-1/buyer
+npm run operator -- resume --state operator-workspace/task-1
+npm run operator -- export --json --state operator-workspace/task-1
+npm run operator -- result --state operator-workspace/task-1
+npm run operator -- brief --state operator-workspace/task-1 --file private-brief.md
 ```
+
+`native:build` needs the supported x64 Rust toolchain and linker on Windows or
+Linux. It builds from a clean checkout and stores the binary and manifest in
+`.artifacts/native-writer/`; generated artifacts stay outside Git. Rebuild after
+changing source revision. `workspace` creates one new directory, so skip that step
+when an existing workspace already satisfies the private-parent policy. It never
+overwrites or changes the permissions of an existing `operator-workspace` directory.
 
 Confirm the payee independently as described in [buyer-agent.md](./buyer-agent.md).
 The `create` output includes the exact buyer arguments for the task. Before spending,
@@ -35,6 +50,13 @@ Run Operator `resume` against the same task. It checks the buyer journal against
 original request, payee, and total cap, then uses the existing GET-only receipt
 verification path. A missing/incomplete journal requires inspection; a 404 or lost
 acknowledgement leaves payment uncertain.
+
+Creation reports its publication state. Windows completion means visible, flushed,
+verified files; directory-entry persistence after power loss remains unproven.
+If creation is partial or uncertain, preserve the named directory and inspect it.
+There is no automatic deletion, repair, retry or fallback to another writer. A
+missing or mismatched native artifact prevents new creation, while `status`,
+`result`, `brief` and GET-only recovery can still use the existing TypeScript path.
 
 `status` and `export --json` read local files only. Both keep top-level payment and
 delivery `unknown`; after a successful `resume`, they can show a saved, possibly
@@ -53,7 +75,7 @@ settlement or answer truth. Keep the buyer journal and receipt files with the ta
 If local snapshot saving fails, `resume` still reports the completed remote result
 and an actionable local-save warning. Retry GET-only recovery against the same task.
 For a shareable redacted report, use `npm run buyer -- report --state
-.buyer-jobs/task-1/buyer` and review it before sharing. JSON stdout is clean with
+operator-workspace/task-1/buyer` and review it before sharing. JSON stdout is clean with
 the direct `node --import tsx scripts/operator.mts ...` form; npm may print its own
 headers unless invoked with `--silent`.
 

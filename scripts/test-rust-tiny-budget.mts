@@ -12,8 +12,9 @@ import { buyerJobId } from "../lib/buyer/policy.ts";
 import { authorizationWithNonce, BUYER_ENDPOINT, BUYER_ORIGIN, BUYER_GATEWAY,
   BUYER_NETWORK, BUYER_USDC } from "../lib/buyer/protocol.ts";
 import { resumeResearch } from "../lib/buyer/client.ts";
-import { createOperatorTask, formatOperatorBrief, operatorTaskStatus, readOperatorResult,
+import { formatOperatorBrief, operatorTaskStatus, readOperatorResult,
   resumeOperatorTask } from "../lib/operator/task.ts";
+import { createLegacyOperatorTask } from "../test-support/legacy-operator-task.ts";
 import { RESEARCH_RECEIPT_CANONICALIZATION, RESEARCH_RECEIPT_SCHEMA } from "../lib/research-receipt-types.ts";
 import { researchReceiptDigest, sha256 } from "../lib/research-receipt-integrity.ts";
 
@@ -66,7 +67,7 @@ async function completedFixture(root: string, label: string, budget: number,
   const state = join(root, label);
   const request = { question: `Synthetic ${label} question`, budget, researchMode: "quick",
     packageVersion: "1.0.0", responseMode: "async" } as const;
-  await createOperatorTask(state, { request, payee, maxTotalMicros: "100000" });
+  await createLegacyOperatorTask(state, { request, payee, maxTotalMicros: "100000" });
   const requirement = { scheme: "exact" as const, network: BUYER_NETWORK as "eip155:5042002",
     asset: BUYER_USDC, amount: amountMicros, payTo: payee, maxTimeoutSeconds: 604860,
     extra: { name: "GatewayWalletBatched" as const, version: "1" as const,

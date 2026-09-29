@@ -1,4 +1,4 @@
-/** Deterministic inter-file read contract, seeded by the production TypeScript writer. */
+/** Deterministic inter-file read contract, seeded by the historical TypeScript v1 writer fixture. */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { cp, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
@@ -10,8 +10,9 @@ import { buyerJobId } from "../lib/buyer/policy.ts";
 import { authorizationWithNonce, BUYER_ENDPOINT, BUYER_ORIGIN, BUYER_GATEWAY,
   BUYER_NETWORK, BUYER_USDC } from "../lib/buyer/protocol.ts";
 import { resumeResearch } from "../lib/buyer/client.ts";
-import { createOperatorTask, formatOperatorBrief, operatorTaskStatus, readOperatorResult,
+import { formatOperatorBrief, operatorTaskStatus, readOperatorResult,
   resumeOperatorTask } from "../lib/operator/task.ts";
+import { createLegacyOperatorTask } from "../test-support/legacy-operator-task.ts";
 import { RESEARCH_RECEIPT_CANONICALIZATION, RESEARCH_RECEIPT_SCHEMA } from "../lib/research-receipt-types.ts";
 import { researchReceiptDigest, sha256 } from "../lib/research-receipt-integrity.ts";
 
@@ -22,7 +23,7 @@ const request = { question: "What is Arc doing?", budget: 0.03, researchMode: "q
   packageVersion: "1.0.0", responseMode: "async" } as const;
 
 async function seed(path: string) {
-  await createOperatorTask(path, { request, payee, maxTotalMicros: "100000" });
+  await createLegacyOperatorTask(path, { request, payee, maxTotalMicros: "100000" });
   const requirement = { scheme: "exact" as const, network: BUYER_NETWORK as "eip155:5042002",
     asset: BUYER_USDC, amount: "50000", payTo: payee, maxTimeoutSeconds: 604860,
     extra: { name: "GatewayWalletBatched" as const, version: "1" as const,

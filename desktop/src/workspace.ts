@@ -3,10 +3,10 @@ import { lstatSync, realpathSync } from "node:fs";
 import { lstat, mkdir, open, readdir, realpath } from "node:fs/promises";
 import { basename, extname, join, resolve, sep } from "node:path";
 import { z } from "zod";
-import { createOperatorTask, formatOperatorBrief, operatorTaskStatus, readOperatorResult, resumeOperatorTask } from "../../lib/operator/task";
+import { formatOperatorBrief, operatorTaskStatus, readOperatorResult, resumeOperatorTask } from "../../lib/operator/task";
 import { addressSchema, buyerRequestSchema } from "../../lib/buyer/protocol";
 import { parseBuyerBudget } from "../../lib/a2a/buyer-workspace";
-import type { CreateInput, ReferenceRow, TaskRow, WorkspaceView } from "./contracts";
+import type { CreateInput, CreatedTaskRow, ReferenceRow, TaskRow, WorkspaceView } from "./contracts";
 
 const handleSchema = z.string().regex(/^ref-[0-9a-f-]{36}$/);
 const createSchema = z.object({ question: z.string(), mode: z.enum(["quick", "deep"]),
@@ -51,19 +51,56 @@ export function parseMicros(value: string, max: number) {
   return String(Math.round(parsed * 1e6));
 }
 
+/** The desktop receives one trusted writer from its main process; readers remain compatible with v1 tasks. */
+export interface DesktopTaskWriter {
+  create(input: { parent: string; child: string; request: unknown; payee: string;
+    maxTotalMicros: string; id: string; createdAt: string }): Promise<{ taskId: string; child: string; state: "unix_synced" | "windows_visible_entry_unproven" }>;
+  createWorkspace(parent: string, child: string): Promise<{ child: string; state: "unix_synced" | "windows_visible_entry_unproven" }>;
+}
+
+function creationError(error: unknown, path: string): Error {
+  const state = error && typeof error === "object" && "state" in error ? error.state : undefined;
+  const stage = error && typeof error === "object" && "stage" in error ? error.stage : undefined;
+  if (state === "retained_partial" || state === "complete_unconfirmed" || state === "unknown") {
+    return new Error(`Creation could not be confirmed. Keep ${path} for inspection; do not retry at the same location.`);
+  }
+  if (state === "refused_unchanged" && stage === "artifact") {
+    return new Error("The trusted task writer is missing or its files changed. Reinstall this desktop release before creating new items.");
+  }
+  if (state === "refused_unchanged" && stage === "protocol") {
+    return new Error("This desktop release cannot use its task writer version. Reinstall the current release before creating new items.");
+  }
+  if (state === "refused_unchanged" && stage === "prepare") {
+    const reason = error && typeof error === "object" && "reason" in error ? error.reason : undefined;
+    return new Error(typeof reason === "string" ? reason : "The task budget or request is outside the accepted range.");
+  }
+  if (state === "refused_unchanged" && stage === "mkdir") {
+    return new Error("A folder with that name already exists or cannot be created. Check the selected location before trying again.");
+  }
+  if (state === "refused_unchanged") {
+    return new Error(`This folder or Windows account cannot safely create a private Operator item here. Choose a folder you own or use a standard Windows account. No new item was created.`);
+  }
+  return new Error(`The trusted task writer is unavailable or could not be verified. Reinstall this desktop release before creating a new item. ${error instanceof Error ? error.message : ""}`.trim());
+}
+
 export class WorkspaceStore {
+  constructor(private readonly writer: DesktopTaskWriter) {}
   private path: string | null = null;
+  private creationPath: string | null = null;
   private identity: { dev: number; ino: number } | null = null;
   private readonly taskHandles = new Map<string, string>();
   private readonly directoryHandles = new Map<string, string>();
 
-  get selectedPath() { return this.path; }
+  get selectedPath() { return this.creationPath; }
 
   async select(path: string) {
     const stat = await lstat(path);
     if (stat.isSymbolicLink() || !stat.isDirectory()) throw new Error("Choose a regular workspace directory");
-    this.path = await realpath(path);
-    const selectedStat = lstatSync(this.path);
+    const lexical = resolve(path);
+    const canonical = await realpath(path);
+    const selectedStat = lstatSync(canonical);
+    this.creationPath = lexical;
+    this.path = canonical;
     this.identity = { dev: selectedStat.dev, ino: selectedStat.ino };
     this.taskHandles.clear();
     this.directoryHandles.clear();
@@ -73,15 +110,26 @@ export class WorkspaceStore {
   async create(parent: string) {
     const stat = await lstat(parent);
     if (stat.isSymbolicLink() || !stat.isDirectory()) throw new Error("Choose a regular parent directory");
-    const target = join(await realpath(parent), `Keryx Operator ${new Date().toISOString().slice(0, 10)} ${randomUUID().slice(0, 8)}`);
-    await mkdir(target, { mode: 0o700 });
-    return this.select(target);
+    const selectedParent = resolve(parent);
+    const child = `Keryx-Operator-${new Date().toISOString().slice(0, 10)}-${randomUUID().slice(0, 8)}`;
+    const target = join(selectedParent, child);
+    let state: "unix_synced" | "windows_visible_entry_unproven";
+    try {
+      const result = await this.writer.createWorkspace(selectedParent, child);
+      if (result.child !== child) throw { state: "complete_unconfirmed" };
+      state = result.state;
+    } catch (error) { throw creationError(error, target); }
+    try { return { ...await this.select(target), creationState: state }; }
+    catch { throw creationError({ state: "complete_unconfirmed" }, target); }
   }
 
   private selected() {
-    if (!this.path) throw new Error("Choose a workspace first");
+    if (!this.path || !this.creationPath) throw new Error("Choose a workspace first");
     const stat = lstatSync(this.path);
+    const selectedEntry = lstatSync(this.creationPath);
     if (stat.isSymbolicLink() || !stat.isDirectory() || realpathSync(this.path) !== this.path
+      || selectedEntry.isSymbolicLink() || !selectedEntry.isDirectory()
+      || realpathSync(this.creationPath) !== this.path
       || (this.identity && (stat.dev !== this.identity.dev || stat.ino !== this.identity.ino))) {
       throw new Error("The selected workspace has changed; reopen it before continuing");
     }
@@ -149,16 +197,26 @@ export class WorkspaceStore {
     return safeChild(this.selected(), directoryName, "directory");
   }
 
-  async createTask(value: unknown): Promise<TaskRow> {
+  async createTask(value: unknown): Promise<CreatedTaskRow> {
     const input = createSchema.parse(value) as CreateInput;
     const creatorBudgetMicros = parseMicros(input.creatorBudget, 0.5);
     const totalMicros = parseMicros(input.totalCap, 1);
     const request = buyerRequestSchema.parse({ question: input.question, budget: Number(creatorBudgetMicros) / 1e6,
       researchMode: input.mode, packageVersion: "1.0.0", responseMode: "async" });
     const directoryName = `task-${randomUUID()}`;
-    const directory = join(this.selected(), directoryName);
-    await createOperatorTask(directory, { request, payee: input.payee, maxTotalMicros: totalMicros });
-    return this.readTask(directoryName, directory);
+    this.selected();
+    const parent = this.creationPath!;
+    const directory = join(parent, directoryName);
+    const id = randomUUID();
+    let state: "unix_synced" | "windows_visible_entry_unproven";
+    try {
+      const result = await this.writer.create({ parent, child: directoryName, request,
+        payee: input.payee, maxTotalMicros: totalMicros, id, createdAt: new Date().toISOString() });
+      if (result.child !== directoryName || result.taskId !== id) throw { state: "complete_unconfirmed" };
+      state = result.state;
+    } catch (error) { throw creationError(error, directory); }
+    try { return { ...await this.readTask(directoryName, directory), publicationState: state }; }
+    catch { throw creationError({ state: "complete_unconfirmed" }, directory); }
   }
 
   async refreshTask(handle: unknown) {

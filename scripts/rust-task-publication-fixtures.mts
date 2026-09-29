@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 import { chmod, lstat, mkdir, readFile, readdir, readlink, stat } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 
-const minimalEnv = { PATH: process.env.PATH ?? "", PATHEXT: process.env.PATHEXT ?? "",
+const minimalEnv = { NODE_ENV: "test" as const, PATH: process.env.PATH ?? "", PATHEXT: process.env.PATHEXT ?? "",
   SystemRoot: process.env.SystemRoot ?? "", WINDIR: process.env.WINDIR ?? "" };
 
 export async function treeDigest(directory: string) {

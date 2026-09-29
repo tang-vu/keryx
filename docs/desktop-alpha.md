@@ -1,11 +1,14 @@
 # Operator desktop alpha (Windows)
 
-The Electron desktop app is a local interface to the same `lib/operator/task.ts` engine
-used by `npm run operator`. It creates and lists private task directories, including
+The Electron desktop app and `npm run operator` use the same Rust implementation
+for immutable task creation. The packaged desktop includes the verified native
+engine; TypeScript continues to provide inspection, exports and GET-only recovery.
+It creates and lists private task directories, including
 tasks created by the CLI. It saves a research question, Quick/Deep mode, pinned seller
 payee, creator budget, and total cap on Arc testnet. Creation does not buy research.
 
-From a Windows checkout with Node 24 and root dependencies installed:
+From a clean Windows x64 checkout with Node 24, root dependencies, and a supported
+Rust toolchain/linker installed (MSVC or GNU):
 
 ```powershell
 npm run desktop:install
@@ -13,24 +16,39 @@ npm run desktop:start
 ```
 
 `desktop:install` installs Electron only in `desktop/`. It is separate from the web
-server's root dependency set. To build a local unpacked Windows x64 app:
+server's root dependency set. Start and package commands build the native writer
+from the exact checkout before bundling it. Commit source changes before a release
+build; a dirty checkout is refused rather than labelled as a different commit.
+To build a local unpacked Windows x64 app:
 
 ```powershell
 npm run desktop:package
 & .\desktop\release\KeryxOperator-win32-x64\KeryxOperator.exe
 ```
 
-Keep the whole generated folder together. This is an unsigned local build without an
-updater or installer. The `release/` directory is ignored by Git.
+Keep the whole generated folder together, including the bundled native engine and
+manifest. Running the package requires neither Cargo nor a separate Node install.
+This is an unsigned local build without an updater or installer. The `release/`
+directory is ignored by Git.
 
-Choose an existing private workspace folder or create a new workspace in a private
-parent. On Windows, workspace files inherit the parent's ACL. Tasks, buyer journals,
+Choose an existing workspace to read its tasks, or create a new private workspace
+under an existing folder. New workspaces receive current-user-only permissions at
+creation. Existing folder permissions are not changed. Creating new tasks requires
+the supported private-parent ACL and creator token; use a normal user session if
+an elevated session is refused. Tasks, buyer journals,
 answers, and exports may contain private questions or bearer job identifiers. The
 desktop app never asks for a key. The only purchase handoff is a PowerShell command
 shown in a task's detail view. Run it deliberately **from the Keryx repository**, with
 the existing buyer CLI and its documented key environment. Independently verify the
 pinned payee and total cap before buying. Keep the original journal after an uncertain
 attempt; do not buy again for recovery.
+
+The app preserves partial or uncertain creation attempts and identifies the target
+for inspection. It never retries with a different writer. On Windows, successful
+creation establishes visible, flushed and verified files but does not prove
+directory-entry persistence after power loss. A missing or modified native engine
+blocks new creation; reopening old tasks and saved results remains available.
+See [native task creation](./native-task-creation.md) for the complete boundary.
 
 Once a buyer journal exists, **Check original job** uses the shared GET-only Operator
 recovery path. A completed verified check saves a bounded private result in the task

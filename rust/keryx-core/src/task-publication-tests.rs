@@ -146,6 +146,40 @@ fn prepared() -> PreparedTaskV1 {
 }
 
 #[test]
+fn broad_ancestor_can_create_one_private_workspace_for_task_publication() {
+    let ancestor = OwnedParent::new(false);
+    let complete = create_private_workspace(&ancestor.path, "workspace_1").unwrap();
+    #[cfg(unix)]
+    assert_eq!(complete, PublicationComplete::UnixSynced);
+    #[cfg(windows)]
+    assert_eq!(complete, PublicationComplete::WindowsVisibleEntryUnproven);
+    let workspace = ancestor.path.join("workspace_1");
+    let parent = PrivateParent::open(&workspace).unwrap();
+    let bytes = prepared();
+    parent.publish("task_1", &bytes).unwrap();
+    assert_eq!(
+        fs::read(workspace.join("task_1/request.json")).unwrap(),
+        bytes.request_json().as_bytes()
+    );
+    assert_eq!(
+        fs::read(workspace.join("task_1/task.json")).unwrap(),
+        bytes.task_json().as_bytes()
+    );
+    let before = fs::read(workspace.join("task_1/task.json")).unwrap();
+    let refusal = create_private_workspace(&ancestor.path, "workspace_1").unwrap_err();
+    assert_eq!(refusal.state, PublicationState::RefusedUnchanged);
+    assert_eq!(refusal.stage, "mkdir");
+    assert_eq!(
+        fs::read(workspace.join("task_1/task.json")).unwrap(),
+        before
+    );
+    assert!(!ancestor.path.join("workspace_2").exists());
+    let bad_name = create_private_workspace(&ancestor.path, "../workspace_2").unwrap_err();
+    assert_eq!(bad_name.state, PublicationState::RefusedUnchanged);
+    assert_eq!(bad_name.stage, "child");
+}
+
+#[test]
 fn private_publication_is_exact_and_existing_target_is_untouched() {
     let temp = OwnedParent::new(true);
     let parent =
