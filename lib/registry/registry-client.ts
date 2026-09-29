@@ -180,10 +180,10 @@ export function sourceId(creator: Address, url: string): Hex {
 
 // ── Public client (read-only, no key) ────────────────────────────────────────
 
-function getPublicClient() {
+function getPublicClient(timeoutMs?: number) {
   return createPublicClient({
     chain: arcTestnet,
-    transport: http(config.rpcUrl),
+    transport: http(config.rpcUrl, timeoutMs ? { timeout: timeoutMs, retryCount: 0 } : undefined),
   });
 }
 
@@ -204,10 +204,13 @@ export type OnChainRecord = {
  * Returns null if the registry is not configured or the source doesn't exist.
  * Throws on RPC errors so the indexer can abort the chunk and retry.
  */
-export async function getRegistrySource(id: Hex): Promise<OnChainRecord | null> {
+export async function getRegistrySource(
+  id: Hex,
+  options: { timeoutMs?: number } = {},
+): Promise<OnChainRecord | null> {
   if (!config.registryReadAddress) return null;
 
-  const client = getPublicClient();
+  const client = getPublicClient(options.timeoutMs);
   // Do NOT catch here — let RPC errors propagate so the indexer knows this chunk
   // failed and does not advance the checkpoint past unprocessed logs.
   const record = await client.readContract({
