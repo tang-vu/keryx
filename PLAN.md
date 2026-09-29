@@ -6,7 +6,8 @@
 > below is historical; [complete-product/mainnet gates](docs/mainnet-delivery-plan.md) still apply.
 > Across active plans, prefer demonstrated quality, security, reliability, and maintainability;
 > narrow or stage scope under a deadline instead of lowering acceptance or skipping checks. A
-> Tauri Windows shell is being validated under D-260. TypeScript remains the
+> Tauri Windows shell is implemented under D-260. Release acceptance requires
+> packaged installer and fresh-runner checks. TypeScript remains the
 > inspection/recovery helper and deployed payment authority until separate domain cutovers.
 > A [staged shared Rust engine](docs/rust-engine-migration.md) is authorized for measured
 > parity and controlled domain cutover; the shell change does not migrate payment.

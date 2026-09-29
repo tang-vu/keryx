@@ -1,8 +1,9 @@
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { cp, mkdtemp, mkdir, readFile, realpath, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 import { chromium } from "playwright";
 import { createBuyerJournal, readBuyerJournal } from "../../lib/buyer/journal.ts";
@@ -75,6 +76,47 @@ async function unusedPort() {
   return port;
 }
 
+async function launchDiagnostic(child, profile, lastConnectionError) {
+  let processes = [];
+  let mainWindowHandle = null;
+  let diagnosticError = null;
+  let desktopContext = null;
+  let desktopContextError = null;
+  try {
+    const output = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command",
+      "Get-CimInstance Win32_Process | Select-Object Name,ProcessId,ParentProcessId,SessionId | ConvertTo-Json -Compress"],
+    { encoding: "utf8", windowsHide: true, timeout: 5000, maxBuffer: 1024 * 1024 });
+    const parsed = JSON.parse(output);
+    const rows = Array.isArray(parsed) ? parsed : [parsed];
+    const selected = new Set([child.pid]);
+    let added = true;
+    while (added) {
+      added = false;
+      for (const row of rows) {
+        if (selected.has(row.ParentProcessId) && !selected.has(row.ProcessId)) {
+          selected.add(row.ProcessId);
+          added = true;
+        }
+      }
+    }
+    processes = rows.filter(row => selected.has(row.ProcessId));
+    const windowOutput = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command",
+      `(Get-Process -Id ${Number(child.pid)} -ErrorAction Stop).MainWindowHandle`],
+    { encoding: "utf8", windowsHide: true, timeout: 5000, maxBuffer: 1024 });
+    mainWindowHandle = Number(windowOutput.trim());
+  } catch (error) { diagnosticError = String(error).slice(0, 300); }
+  try {
+    const output = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-File",
+      fileURLToPath(new URL("./webview-launch-diagnostic.ps1", import.meta.url))],
+    { encoding: "utf8", windowsHide: true, timeout: 5000, maxBuffer: 2048 });
+    desktopContext = JSON.parse(output);
+  } catch (error) { desktopContextError = String(error).slice(0, 300); }
+  const profileEntries = await readdir(profile).catch(() => []);
+  return { childPid: child.pid, exitCode: child.exitCode, signalCode: child.signalCode,
+    lastConnectionError: lastConnectionError?.message?.slice(0, 500) ?? null, mainWindowHandle,
+    processes, profileEntries, diagnosticError, desktopContext, desktopContextError };
+}
+
 async function launch(config, executable = exe) {
   await writeFile(configPath, JSON.stringify({ root: temporary, ...config }));
   const port = await unusedPort();
@@ -83,17 +125,27 @@ async function launch(config, executable = exe) {
   const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => allowed.has(name.toLowerCase())));
   env.KERYX_DESKTOP_SMOKE_CONFIG = configPath;
   env.WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = `--remote-debugging-port=${port} --remote-allow-origins=*`;
-  env.WEBVIEW2_USER_DATA_FOLDER = join(temporary, "webview-data");
+  const profile = join(temporary, "webview-data");
+  env.WEBVIEW2_USER_DATA_FOLDER = profile;
   const child = spawn(executable, [], { env, windowsHide: true, stdio: "ignore" });
+  let spawnError;
+  child.once("error", error => { spawnError = error; });
   let browser;
+  let lastConnectionError;
   try {
     const deadline = Date.now() + 30000;
     while (Date.now() < deadline) {
-      if (child.exitCode !== null) throw Error(`Packaged app exited early (${child.exitCode})`);
+      if (spawnError) throw spawnError;
+      if (child.exitCode !== null || child.signalCode !== null) {
+        throw Error(`Packaged app exited early (${child.exitCode ?? child.signalCode})`);
+      }
       try { browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`, { timeout: 1500 }); break; }
-      catch { await delay(250); }
+      catch (error) { lastConnectionError = error; await delay(250); }
     }
-    if (!browser) throw Error("Packaged WebView2 did not expose its test CDP endpoint");
+    if (!browser) {
+      const diagnostic = await launchDiagnostic(child, profile, lastConnectionError);
+      throw Error(`Packaged WebView2 did not expose its test CDP endpoint: ${JSON.stringify(diagnostic)}`);
+    }
     let page;
     while (Date.now() < deadline && !page) {
       page = browser.contexts().flatMap(context => context.pages())
@@ -120,6 +172,16 @@ async function stop(app) {
   if (app.child.exitCode === null && app.child.signalCode === null) throw Error("Packaged app did not exit");
 }
 
+async function removeAfterWebViewExit(path) {
+  for (let attempt = 0; attempt < 40; attempt++) {
+    try { await rm(path, { recursive: true, force: true }); return; }
+    catch (error) {
+      if (!["EBUSY", "EPERM", "ENOTEMPTY"].includes(error?.code) || attempt === 39) throw error;
+      await delay(250);
+    }
+  }
+}
+
 let active;
 let passed = false;
 try {
@@ -141,6 +203,7 @@ try {
   if (await page.evaluate(() => window.keryxDesktop.refresh()) !== null) throw Error("Fresh app selected an unexpected workspace");
   await page.getByRole("button", { name: /Create workspace/ }).click();
   await page.getByRole("heading", { name: "Prepare paid research" }).waitFor();
+  await page.locator(".activity").waitFor({ state: "hidden" });
   const view = await page.evaluate(() => window.keryxDesktop.refresh());
   const canonicalParent = (await realpath(parent)).toLowerCase();
   const canonicalWorkspace = view?.path ? (await realpath(view.path)).toLowerCase() : "";
@@ -151,6 +214,7 @@ try {
   await page.getByPlaceholder("0x... independently verified").fill("0x1111111111111111111111111111111111111111");
   await page.getByRole("button", { name: /Save task/ }).click();
   await page.getByText("Synthetic Tauri IPC question", { exact: true }).last().waitFor();
+  await page.locator(".activity").waitFor({ state: "hidden" });
   const created = (await page.evaluate(() => window.keryxDesktop.refresh())).tasks[0];
   if (created.question !== "Synthetic Tauri IPC question") throw Error("Task create IPC returned wrong task");
   const taskDirectory = join(view.path, created.directoryName);
@@ -247,6 +311,6 @@ try {
   const normalized = resolve(temporary);
   const tempRoot = resolve(tmpdir());
   if (passed && normalized.startsWith(tempRoot + sep) && basename(normalized).startsWith("keryx-tauri-smoke-")) {
-    await rm(normalized, { recursive: true, force: true });
+    await removeAfterWebViewExit(normalized);
   }
 }

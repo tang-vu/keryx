@@ -38,10 +38,18 @@ const sourceAssets = join(root, "desktop", "assets");
 const ui = join(resource, "ui");
 for (const file of ["icon.png", "fonts/bodoni-moda-latin.woff2", "fonts/spectral-latin-300.woff2",
   "fonts/spectral-latin-400.woff2", "fonts/spectral-latin-500.woff2", "fonts/spectral-latin-600.woff2",
-  "fonts/spline-sans-mono-latin.woff2", ...licenses.map((name) => `fonts/${name}`)]) {
+  "fonts/spline-sans-mono-latin.woff2"]) {
   const source = await readFile(join(sourceAssets, file));
   const bundled = await readFile(join(ui, file));
   if (hash(source) !== hash(bundled)) throw new Error(`Bundled visual asset differs from source: ${file}`);
+}
+for (const license of licenses) {
+  const source = await readFile(join(sourceAssets, "fonts", license), "utf8");
+  const bundled = await readFile(join(ui, "fonts", license), "utf8");
+  // Git's Windows checkout can convert tracked license text from LF to CRLF.
+  if (source.replace(/\r\n/g, "\n") !== bundled.replace(/\r\n/g, "\n")) {
+    throw new Error(`Bundled font license differs from source: ${license}`);
+  }
 }
 const css = await readFile(join(ui, "style.css"), "utf8");
 if (!css.includes("bodoni-moda-latin.woff2") || !css.includes("spectral-latin-400.woff2")

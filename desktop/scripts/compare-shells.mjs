@@ -99,6 +99,16 @@ async function stop(child, browser) {
   if (child.exitCode === null && child.signalCode === null) throw Error("Benchmark app process did not exit");
 }
 
+async function removeAfterWebViewExit(path) {
+  for (let attempt = 0; attempt < 40; attempt++) {
+    try { await rm(path, { recursive: true, force: true }); return; }
+    catch (error) {
+      if (!["EBUSY", "EPERM", "ENOTEMPTY"].includes(error?.code) || attempt === 39) throw error;
+      await delay(250);
+    }
+  }
+}
+
 async function sample(artifact, index) {
   const temporary = await mkdtemp(join(tmpdir(), "keryx-tauri-smoke-benchmark-"));
   const port = await unusedPort();
@@ -139,7 +149,7 @@ async function sample(artifact, index) {
     const normalized = resolve(temporary);
     const tempRoot = resolve(tmpdir());
     if (success && normalized.startsWith(tempRoot + sep) && basename(normalized).startsWith("keryx-tauri-smoke-benchmark-")) {
-      await rm(normalized, { recursive: true, force: true });
+      await removeAfterWebViewExit(normalized);
     }
   }
 }

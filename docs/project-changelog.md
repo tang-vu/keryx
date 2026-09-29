@@ -1,10 +1,10 @@
 # Keryx Project Changelog
 
-### Windows Operator Tauri shell and Mint design (2026-09-29, v0.24.0; release gates pending)
+### Windows Operator Tauri shell and Mint design (2026-09-29, v0.24.0)
 
-- Stage a Tauri/WebView2 desktop with a bundled TypeScript helper for existing local inspection, exports and GET-only recovery; keep Rust immutable creation and buyer payment authority unchanged.
+- Implement a Tauri/WebView2 desktop with a bundled TypeScript helper for existing local inspection, exports and GET-only recovery; keep Rust immutable creation and buyer payment authority unchanged.
 - Align the desktop with the web Mint palette, local type and citation mark; move the question ahead of workspace counts and clarify Quick/Deep, payee, budget, unknown status and seller-reported evidence.
-- Add isolated renderer layout and keyboard checks at 1240×850 and 760×600. Packaged Tauri, fresh-runner and CI acceptance remain required before release.
+- Add isolated renderer layout and keyboard checks at 1240×850 and 760×600, plus local packaged smoke. Release acceptance requires hosted standard-user installation, fresh-runner and CI checks.
 
 ### Restricted private checkout routes (2026-09-10, v0.22.43)
 

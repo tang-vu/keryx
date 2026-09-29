@@ -1,12 +1,13 @@
 # Operator desktop alpha (Windows)
 
-The Windows desktop is moving from Electron to a Tauri 2/WebView2 shell under
+The Windows desktop uses a Tauri 2/WebView2 shell under
 [D-260](../DECISIONS.md). The shell bundles a pinned Node runtime and a bounded
 stdio helper using the existing TypeScript WorkspaceStore for inspection, private
 exports and GET-only recovery. The desktop and `npm run operator` use the same
 source-pinned Rust implementation for immutable task and workspace creation.
 This is a shell and visual change, not a migration of payment or result authority
-to Rust. The Tauri release remains subject to packaged and fresh-runner checks.
+to Rust. Release acceptance requires hosted standard-user installer and
+fresh-runner checks.
 It creates and lists private task directories, including
 tasks created by the CLI. It saves a research question, Quick/Deep mode, pinned seller
 payee, creator budget, and total cap on Arc testnet. Creation does not buy research.
@@ -33,6 +34,17 @@ Keep the whole generated package together, including the bundled TypeScript help
 Node runtime, native engine and manifest. The installed app does not require a
 separate Node installation, but does require WebView2. This alpha has no auto-updater.
 The generated `release/` and Tauri build directories are ignored by Git.
+
+A same-machine, three-launch pre-release comparison used Electron desktop 0.2 and
+Tauri source `bd3e80cfb00327f613b2bdd9fef898b6a4a6d754` with WebView2
+153.0.4234.48. The portable folder shrank from 386,264,152 to 105,143,561
+bytes (72.8%), while mean UI readiness rose from 512 to 1,637 ms. After seven
+seconds, summed process-tree working set/private memory was 297.9/213.5 MiB for
+Electron and 368.6/239.6 MiB for Tauri. Working-set sums include shared pages,
+so they are not unique physical RAM; this one-machine result does not prove lower
+memory use or faster startup. WebView2 browser processes dominate the Tauri tree
+sample. Profiling remains separate from the release gates and cannot relax the
+desktop's process boundary or change domain authority.
 
 Choose an existing workspace to read its tasks, or create a new private workspace
 under an existing folder. New workspaces receive current-user-only permissions at

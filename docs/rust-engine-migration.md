@@ -1,12 +1,12 @@
 # Shared Rust engine: staged migration and acceptance
 
 **Status, September 29, 2026:** the [immutable task creation release](./native-task-creation.md)
-integrates Rust creation into the Operator CLI under D-259. D-260 stages a Tauri
+integrates Rust creation into the Operator CLI under D-259. D-260 implements a Tauri
 Windows shell with a packaged TypeScript helper for the existing inspection,
-saved-result, export and GET-only recovery rules. The shell switch is subject to
-packaged and fresh-runner release checks; it is not a Rust migration of those
-domains or any payment path. The
-earlier evaluation sections below record historical gates and evidence; they do
+saved-result, export and GET-only recovery rules. Release acceptance requires
+hosted installer and fresh-runner checks; the shell is not a Rust migration of those
+domains or any payment path. The earlier evaluation sections below record
+historical gates and evidence; they do
 not supersede D-259's creation boundary. [D-242](../DECISIONS.md) records the original
 staged migration decision.
 

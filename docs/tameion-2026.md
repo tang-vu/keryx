@@ -1,8 +1,8 @@
 # Keryx at Tameion 2026 — planned direction
 
 **Status (September 29, 2026): local CLI and Windows desktop task alphas available;
-a Tauri shell replacement is under release validation and the full Operator remains
-planned.** Keryx
+the Tauri shell is implemented and subject to its release acceptance gates; the
+full Operator remains planned.** Keryx
 keeps its name, repository, citation-toll reading agent, and existing complete-product
 and [mainnet release gates](./mainnet-delivery-plan.md). The event work must be measured
 against the pre-event repository baseline `2291753cc4fff2135d546227d5aafda287cbed7d`
