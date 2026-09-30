@@ -22,7 +22,7 @@ function setup() {
   };
   return { db, stored };
 }
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => { vi.unstubAllEnvs(); vi.useRealTimers(); });
 
 describe("source upkeep boundary", () => {
   it("authenticates before DB initialization and refuses methods, URLs and bodies", async () => {
@@ -97,14 +97,24 @@ describe("source upkeep boundary", () => {
     expect(db.setCached).not.toHaveBeenCalled();
   });
 
-  it("a delayed fetch cannot write after the timed-out job returns", async () => {
+  it("a timed-out paid fetch cannot resume writes even if the wall clock is before its deadline", async () => {
+    vi.useFakeTimers();
     vi.stubEnv("CONTENT_MASTER_KEY", "67".repeat(32));
     const { db, stored } = setup();
+    db.claimSourceUpkeep.mockResolvedValue({ slot: 1, sourceIds: ["one", "two"] });
     let complete!: (feed: IngestedFeed) => void;
-    const result = await runSourceUpkeep(db, { jobMs: 5, ingest: () => new Promise((resolve) => { complete = resolve; }) });
-    expect(result.summary?.failed).toBe(1);
+    let clock = 1000;
+    const pending = runSourceUpkeep(db, { now: () => clock, jobMs: 5,
+      ingest: () => new Promise((resolve) => { complete = resolve; }) });
+    await vi.advanceTimersByTimeAsync(5);
+    const result = await pending;
+    expect(result.summary).toEqual({ attempted: 1, added: 0, failed: 1, skipped: 1 });
+    expect(db.getSource).not.toHaveBeenCalledWith("two");
+    // Timeout is terminal even when a coarse sample or clock adjustment has not
+    // reached the sampled deadline. This reproduced a real CI late-write race.
+    clock = 999;
     complete(feed);
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await vi.advanceTimersByTimeAsync(0);
     expect(stored).toHaveLength(0);
     expect(db.setCached).not.toHaveBeenCalled();
     expect(db.finishSourceUpkeep).toHaveBeenCalledTimes(1);
@@ -149,12 +159,13 @@ it("refuses a changed/deactivated public feed and cannot write after a timed-out
   expect(upsertPublicReference).not.toHaveBeenCalled();
   let resolveFeed!: (value: IngestedFeed) => void;
   const pending = new Promise<IngestedFeed>((resolve) => { resolveFeed = resolve; });
-  const timedOut = await runSourceUpkeep({ ...db, getPublicReference: async () => ({ ...publicReference }), upsertPublicReference },
-    { ingest: async () => pending, jobMs: 5 });
-  expect(timedOut.summary?.failed).toBe(1);
+  vi.useFakeTimers();
+  const job = runSourceUpkeep({ ...db, getPublicReference: async () => ({ ...publicReference }), upsertPublicReference },
+    { ingest: async () => pending, jobMs: 5, now: () => 1000 });
+  await vi.advanceTimersByTimeAsync(5);
+  expect((await job).summary?.failed).toBe(1);
   resolveFeed(feed);
-  await pending;
-  await Promise.resolve();
+  await vi.advanceTimersByTimeAsync(0);
   expect(upsertPublicReference).not.toHaveBeenCalled();
 });
 
