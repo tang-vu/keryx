@@ -5,6 +5,64 @@ own Arc-testnet balance. It is not customer participation, creator revenue, main
 acceptance, or a complete browser UI rehearsal. Production withdrawal HTTP settings,
 relay settings, timers, application data and notifications remain outside this drill.
 
+## Observed result — September 30, 2026
+
+The owner-operated Arc-testnet run passed through the protected, funded withdrawal
+engine at code `93ec99a` (`8488142` adds only the mint-boundary documentation).
+The original 2,000 micro-USDC self-recipient authorization was signed once on the PC.
+One Circle POST retained a matching attestation in the isolated application journal;
+the application response was discarded. One mint broadcast used the journal's retained
+original signed bytes and its RPC response was discarded. Two new Linux processes,
+without loaded signing keys, separately reopened the original journals and each
+reported one cash-out row, zero payment rows and zero Circle POSTs, signatures or
+broadcasts. Repeated reporting retained the same transaction and amount.
+
+The mint is [transaction `0x5cee615d…a4e257`](https://testnet.arcscan.app/tx/0x5cee615d7a5ffac3ae7caf4257343483b8a7c08315b4276a727cea3c14a4e257).
+Its exact `AttestationUsed` event matched 2,000 micro-USDC, the original owner/recipient
+`0xcf1884d16c8b78107e433963fac95b29fed4bd2c`, and original spec hash
+`0xd7ea020eb991d57dfdfde17e53cfa95bfe6571502e611ddd9574acc01543c80e`.
+The included block was `64800290`, hash
+`0xcc1fde12f8d8ec9f095cbb6061cbe2656c9ae125375a61bff7cb710b0bfb805b`;
+the selected Arc RPC reported finalized head `64800343`. This is consistent
+operator-selected RPC inclusion/finality evidence, without independent validator
+signature verification or a guarantee of finality under a compromised RPC.
+
+The mint consumed `141709 × 25000000000 = 3542725000000000` native wei
+(0.003542725 native test USDC), below the 0.009 gas ceiling. The lifetime journal
+retained one committed request/slot and all `9000000000000000` admitted wei, with
+zero remaining lifetime gas budget. Actual gas below the ceiling did not release
+the unused lifetime reservation. The isolated cash-out ledger recorded the 0.002
+test-USDC amount once and introduced no payment/revenue rows.
+
+The single [relay funding transaction](https://testnet.arcscan.app/tx/0x0e4ec11be60a2283b749a41ae4fc3c28051b5d70a03b2af7b63079cf184407d1)
+sent exactly 0.010 native test USDC and consumed 0.000525 native test USDC gas,
+below its 0.00063 bound. The retained withdrawal maximum Circle fee was 3,850
+micro-USDC. The reviewed conservative total allocation, including the earlier source
+payment, remained below 0.020 test USDC. Relay funding includes the mint gas allocation.
+
+Production withdrawal creation and its timer remain disabled. This accepted boundary
+is an owner-operated EOA using its existing buyer balance through the creator engine;
+it does not establish earned creator revenue, independent creator participation, the
+browser workspace/signing journey, backup/host-loss recovery, or mainnet readiness.
+True Circle-response loss before retaining a UUID remains the vendor-evidence gate below.
+
+### Clock incident during provisioning
+
+The first initialization stopped before journal creation: the VPS clock was about
+55 seconds behind both the latest Arc block and independently observed time, so the
+unchanged future-block freshness check rejected the preflight. The target relay
+directory remained absent. `systemd-timesyncd` was active but unsynchronized, with
+zero received NTP packets and repeated UDP timeouts.
+
+The operator corroborated the RTC against independent GitHub and Cloudflare TLS Date
+observations within three seconds, then advanced the system clock once by 54,834 ms.
+No backward adjustment or relaxed freshness bound was used. The read-only funded
+preflight then passed before explicit initialization and signing. New IPv4 NTP pool
+and bounded polling settings were retained, but received packet count remained zero:
+durable time synchronization remains an operational acceptance item. Correct a host
+clock fault before retrying a read-only preflight; never bypass freshness or reset a
+funded key/journal to make initialization succeed.
+
 ## Limits and custody
 
 The September 30 run selects a 2,000 micro-USDC withdrawal back to the same owner,
