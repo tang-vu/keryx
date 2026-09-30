@@ -1371,7 +1371,8 @@ export class SupabaseAdapter implements KeryxDB {
   async browserJournalActive(): Promise<boolean> {
     const { data, error } = await this.sb.from("browser_journal_control").select("active").eq("id", 1).single();
     if (error) throw error;
-    return data.active === true;
+    if (!data || typeof data.active !== "boolean") throw new Error("Invalid browser journal activation state");
+    return data.active;
   }
 
   async activateBrowserJournal(): Promise<void> {
