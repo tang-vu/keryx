@@ -57,3 +57,25 @@ confirmed signer consumption must equal the toll. This is a local database write
 not read-only inspection. Repeated confirmation is idempotent. Pending or rejected
 proof cannot release capacity or create a replacement payment. Never reset or
 delete the journal to get another spending allowance.
+
+## Observed rehearsal: 2026-09-30
+
+Candidate `1127304` completed one operator-controlled 2,000 micro-USDC (0.002 USDC)
+Arc testnet source request against the deployed first-party source. The operator's
+already-funded signer and isolated local journal were used; the production database
+was not modified. Response headers arrived and the harness deliberately discarded
+them. Exactly one paid HTTP request occurred. The original process exited with one
+canonical pending payment, 2,000 retained micro-USDC and zero confirmed consumption.
+
+A new process independently matched Circle's complete original economic tuple.
+Circle reported `received`, with no transaction hash. Explicit isolated confirmation
+applied the terminal CAS to the original payment and nonce: retained consumption
+stayed 2,000 micro-USDC and confirmed consumption became 2,000. Another new process
+opened the journal read-only, verified those original identities and amounts, and
+left its state unchanged. No paid retry, treasury fallback, funding transaction or
+production restart occurred.
+
+This proves the exercised funded response-loss and process-reopen accounting path.
+Circle acceptance is observed; chain finality remains unverified at this recording.
+The rehearsal does not establish real browser UI acceptance, independent customer
+usage, funded withdrawal recovery, power-loss durability or mainnet readiness.

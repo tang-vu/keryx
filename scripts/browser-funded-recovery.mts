@@ -66,7 +66,7 @@ async function main() {
         assert.equal((await db.getSessionGrant("rehearsal"))!.spent, row.amountUsdc);
         assert.equal(await db.browserSignerConfirmedSpendMicro(row.payer), original.priceMicroUsdc);
       }
-      console.log(JSON.stringify({ phase: "read-only-independent-circle-check", nonce: row.authorizationId,
+      console.log(JSON.stringify({ phase: values["confirm-local"] ? "isolated-local-confirmation" : "read-only-independent-circle-check", nonce: row.authorizationId,
         canonicalPaymentId: row.id, amountMicroUsdc: Math.round(row.amountUsdc * 1e6),
         retainedMicroUsdc: Math.round((await db.getSessionGrant("rehearsal"))!.spent * 1e6),
         confirmedMicroUsdc: await db.browserSignerConfirmedSpendMicro(row.payer),
