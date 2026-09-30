@@ -768,10 +768,10 @@ begin
     and (has_function_privilege('anon',p.oid,'EXECUTE') or has_function_privilege('authenticated',p.oid,'EXECUTE')
       or has_function_privilege('service_role',p.oid,'EXECUTE'))) then perform keryx_storage.funding_refuse(); end if;
   if exists(select 1 from pg_class c where c.relnamespace in ('public'::regnamespace,'keryx_storage'::regnamespace)
-      and c.relkind in ('r','p','v','m','f') and (has_table_privilege('keryx_gateway_funding_observer',c.oid,'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
-        or has_any_column_privilege('keryx_gateway_funding_observer',c.oid,'SELECT,INSERT,UPDATE,REFERENCES')))
-    or exists(select 1 from pg_class c where c.relnamespace in ('public'::regnamespace,'keryx_storage'::regnamespace) and c.relkind='S'
-      and has_sequence_privilege('keryx_gateway_funding_observer',c.oid,'USAGE,SELECT,UPDATE')) then perform keryx_storage.funding_refuse(); end if;
+      and case when c.relkind in ('r','p','v','m','f') then (has_table_privilege('keryx_gateway_funding_observer',c.oid,'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+        or has_any_column_privilege('keryx_gateway_funding_observer',c.oid,'SELECT,INSERT,UPDATE,REFERENCES')) else false end)
+    or exists(select 1 from pg_class c where c.relnamespace in ('public'::regnamespace,'keryx_storage'::regnamespace)
+      and case when c.relkind='S' then has_sequence_privilege('keryx_gateway_funding_observer',c.oid,'USAGE,SELECT,UPDATE') else false end) then perform keryx_storage.funding_refuse(); end if;
 end; $$;
 
 alter function keryx_storage.enroll(jsonb,text) rename to enroll_pre_funding;
