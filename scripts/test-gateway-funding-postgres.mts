@@ -192,6 +192,28 @@ try {
   assert.equal((await lostAckLedger.claimBroadcast(operation.operationId, "usdcTransfer", lostSendId)).fresh, false);
   assert.equal((await lostAckLedger.inspectReservation(operation.operationId, "usdcTransfer"))?.prepared?.rawTransaction, usdcRawTransaction);
   lostAckLedger.close();
+  const beforeRollover = await ledger.inspectNamespace(native.sender);
+  const rollover = { ...installation, policy: { ...operation.policy, policyId: randomUUID() }, reviewedSnapshotDigest: sql("select keryx_storage.snapshot_digest()") };
+  sql(`select keryx_storage.install_funding_policy(${expected},${json(rollover)})`);
+  assert.deepEqual(await ledger.inspectNamespace(native.sender), beforeRollover, "a new owner policy UUID cannot reset used exposure or original nonces");
+  for (const changes of [
+    { history: { ...installation.history, documentDigest: "0".repeat(64) } },
+    { finalityPolicyDigest: "0".repeat(64) },
+    { policy: { ...operation.policy, policyId: randomUUID(), lifetimeLimits: { ...operation.policy.lifetimeLimits, nativeWei: "51" } } },
+    { policy: { ...operation.policy, policyId: randomUUID(), spend: privateKeyToAccount(generatePrivateKey()).address.toLowerCase() } },
+  ]) {
+    const unchanged = sql("select keryx_storage.snapshot_digest()");
+    assert.throws(() => sql(`select keryx_storage.install_funding_policy(${expected},${json({ ...installation, policy: { ...operation.policy, policyId: randomUUID() }, ...changes, reviewedSnapshotDigest: unchanged })})`), /Gateway funding ledger refused/);
+    assert.equal(sql("select keryx_storage.snapshot_digest()"), unchanged, "refused policy/history/counterparty drift preserves the whole store");
+  }
+  const usedKeyPolicy = { ...operation.policy, policyId: randomUUID(), funder: privateKeyToAccount(generatePrivateKey()).address.toLowerCase(), spend: privateKeyToAccount(generatePrivateKey()).address.toLowerCase() };
+  sql(`begin;select keryx_storage.enter_operation(${expected},'record_payment');
+    insert into public.payment_events(id,kind,query_id,source_id,payer,payee,amount_usdc,network,settled,settlement_status)
+    values('synthetic-prior-key-authority','fetch','synthetic','synthetic','${usedKeyPolicy.funder}','${usedKeyPolicy.spend}',0.000001,'eip155:5042002',false,'pending');
+    select keryx_storage.leave_operation();commit;`);
+  const priorKeySnapshot = sql("select keryx_storage.snapshot_digest()");
+  assert.throws(() => sql(`select keryx_storage.install_funding_policy(${expected},${json({ ...installation, policy: usedKeyPolicy, reviewedSnapshotDigest: priorKeySnapshot })})`), /Gateway funding ledger refused/);
+  assert.equal(sql("select keryx_storage.snapshot_digest()"), priorKeySnapshot, "known prior key authority cannot be newly owner-attested as empty");
   ledger.close();
   docker(["rm", "-f", "-v", httpName]); httpStarted = false;
   sql("create database funding_logical_clone template postgres");

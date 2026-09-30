@@ -323,9 +323,17 @@ begin
         or original.policy_limits is distinct from p_policy->'lifetimeLimits'
         or original.backend_binding_digest is distinct from p_installation->>'reviewedTargetDigest'
         or original.finality_policy_digest is distinct from p_installation->>'finalityPolicyDigest'
+        or original.history_document_digest is distinct from p_history_document_digest
         or original.max_transaction_gas<>keryx_storage.funding_uint(p_policy->'maxTransactionGas',true)
         or original.max_fee_per_gas<>keryx_storage.funding_uint(p_policy->'maxFeePerGasWei',true) then perform keryx_storage.funding_refuse(); end if;
     else
+      if exists(select 1 from public.payment_events where lower(payer)=selected_sender)
+        or exists(select 1 from public.withdrawals where lower(wallet)=selected_sender)
+        or exists(select 1 from public.session_grants where lower(sess_addr)=selected_sender)
+        or exists(select 1 from public.browser_signer_capacity where lower(signer)=selected_sender)
+        or exists(select 1 from public.private_treasury_pools where lower(signer)=selected_sender) then
+        perform keryx_storage.funding_refuse();
+      end if;
       -- Initial nonce is deliberately zero. A reviewed document is an owner-plane
       -- reference; this SQL cannot prove that the external key was never used.
       insert into public.gateway_funding_namespaces(sender,identity_digest,backend_binding_digest,finality_policy_digest,
