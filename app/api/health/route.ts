@@ -111,6 +111,9 @@ export async function GET() {
           // Rolling deploy compatibility: older summaries lack these additive fields. Their
           // pending rows cannot be assigned an exact expiry or funding path from the summary.
           browserAwaiting: parsed.browserAwaiting ?? 0,
+          exposedAwaiting: parsed.exposedAwaiting ?? 0,
+          signedAwaiting: parsed.signedAwaiting ?? 0,
+          submittedAwaiting: parsed.submittedAwaiting ?? 0,
           treasuryAwaiting: parsed.treasuryAwaiting ?? 0,
           acknowledgedAwaiting: parsed.acknowledgedAwaiting ?? 0,
           unacknowledgedAwaiting:

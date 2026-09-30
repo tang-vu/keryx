@@ -6,26 +6,32 @@ authoritative. This proposal addresses the unindexed signed-authorization gap re
 [D-261](../../DECISIONS.md) and the [M3/M4 release gates](../mainnet-delivery-plan.md#mainnet-release-gates).
 It does not mark either gate complete; see the [dated readiness evidence](./mainnet-readiness-2026-09-29.md).
 
-**Staged implementation (September 30):** D-268 adds an unused, atomic admission
+**Historical substrate (September 30):** D-268 added an unused, atomic admission
 operation and separate `browser_authorization_intents` journal in SQLite and
-PostgreSQL. It is not a payment or reconciliation ledger. The live browser path
-still uses the legacy reservation and browser-chosen nonce; `payment_events` remains
-the authoritative recovery row. This stage deliberately does not expose the new
-nonce to a signer. The proposed single-row `payment_events` design below is the
-target cutover invariant, not the current implementation. The next stage must
-either atomically bridge each prepared intent into `payment_events` before exposure
-or migrate the journal into that table, then add phase, cancellation, signature,
-submission and terminal transitions. It must prove the bridge cannot leave a
-possibly signed intent invisible to existing reconciliation. A rolling deploy
-must prevent old writers from bypassing the new admission path. Grant expiry
-deletion and grant replacement with held capacity remain unresolved and need a
-separate epoch-aware retention policy before cutover. The admission journal's
-immutable triggers and `prepared`-only constraint must be replaced by reviewed
-conditional phase transitions in that stage. The PostgreSQL transaction and
-concurrency behavior still need an integration test against a migrated database;
-the adapter test only proves RPC error propagation.
+PostgreSQL. It was not a payment or reconciliation ledger and was not exposed to
+the browser. Real PostgreSQL acceptance subsequently found and corrected the
+timestamp cast in additive migration `0068`; the immutable `0067` remains intact.
 
-## Current boundary and failure
+**D-272 candidate (September 30):** the live writer now atomically bridges an intent
+and held capacity into authoritative `payment_events` before exposure. The intent
+remains immutable; `payment_events.authorization_phase` owns conditional exposure,
+signature, submission and terminal transitions. Verified signature metadata is
+durable before callback acknowledgement; bearer headers and keys are never stored.
+Signer consumption and original epochs survive replacement, revoke and expiry.
+Recovery uses a cumulative budget and credits only exact, deduplicated confirmed
+consumption against independently observed available balance; pending/unknown holds
+are never available credit. Prepared/cancelled rows are hidden from public feeds.
+
+Schema installation defaults inactive. Protocol-compatible browsers and persistent
+database fences prevent old financial writers after activation, but all old
+in-flight generations must first be drained. See the [cutover/rollback runbook](./browser-authorization-cutover.md).
+Local synthetic fault, real-key callback and process-kill checks exercise recovery;
+required actual PostgreSQL CI and full candidate review remain release acceptance.
+No runtime activation, funded drill, multi-instance retry mechanism or mainnet
+authorization is established by this candidate. Historical missing nonce evidence
+and indefinitely unresolved exposed holds remain explicit risks.
+
+## Historical live boundary and failure before D-272 cutover
 
 `BrowserCoSignGateway` obtains a 402 challenge, calls `reserveSpend`, then emits an SSE
 `sign-request`. The browser generates the EIP-3009 nonce in `lib/x402-client-sign.ts` and
@@ -245,8 +251,8 @@ choice, but it can block use indefinitely. A compromised browser/session key,
 same-user replacement of a funded signer, compromised server, database loss
 outside backed-up recovery, or Circle evidence outside the bounded search window
 also needs the broader M2/M3/M4 threat review. This document makes the unindexed
-window closable in code; it supplies neither that implementation nor mainnet
-authorization.
+window closable in the D-272 candidate; its synthetic acceptance does not establish
+funded recovery or mainnet authorization.
 
 Independent browser pins defend against a malicious or malformed SSE challenge
 under an honest loaded browser build. They do not protect against a server that

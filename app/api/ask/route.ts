@@ -17,6 +17,7 @@
  */
 
 import { NextRequest } from "next/server";
+import { BROWSER_AUTHORIZATION_PROTOCOL } from "@/lib/payments/browser-authorization-protocol";
 import { getSession } from "@/lib/auth";
 import { getAgentDeps } from "@/lib/agent";
 import { runAgent } from "@/lib/agent/run-agent";
@@ -44,6 +45,7 @@ export async function POST(req: NextRequest) {
     question?: unknown;
     budget?: unknown;
     sessionId?: unknown;
+    browserAuthorizationProtocol?: unknown;
     parentId?: unknown;
     model?: unknown;
     mode?: unknown;
@@ -68,6 +70,15 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: "sessionId must be a valid wallet address" }, { status: 400 });
     }
     sessionId = body.sessionId.trim().toLowerCase();
+    if (process.env.KERYX_BROWSER_AUTHORIZATION_PAUSED === "1") {
+      return Response.json({ error: "browser_authorization_paused" }, { status: 503 });
+    }
+    if (body.browserAuthorizationProtocol !== BROWSER_AUTHORIZATION_PROTOCOL) {
+      return Response.json({ error: "browser_authorization_upgrade_required" }, { status: 409 });
+    }
+    if (!(await (await getDb()).browserJournalActive())) {
+      return Response.json({ error: "browser_authorization_cutover_pending" }, { status: 503 });
+    }
   }
 
   // Follow-up: anchor the question to its parent so "how does that compare?" is answerable. Only
@@ -215,16 +226,19 @@ export async function POST(req: NextRequest) {
             requirements: PaymentRequirements,
             kind: "fetch" | "citation",
             sourceId: string,
-            paymentContext?: BrowserPaymentContext,
+            paymentContext: BrowserPaymentContext | undefined,
+            admittedNonce: string,
           ): Promise<string> => {
             // Arm the scoped slot before SSE delivery so a fast callback cannot race creation.
             const signed = awaitSignature(capturedSessionId, reqId, {
               requirements,
               expectedSigner: grant!.sessAddr,
+              expectedNonce: admittedNonce,
             }, abort.signal);
             send("sign-request", {
               reqId, requirements, kind, sourceId, paymentContext,
               capturedGrantSigner: grant?.sessAddr,
+              admittedNonce, browserAuthorizationProtocol: BROWSER_AUTHORIZATION_PROTOCOL,
             });
             return signed;
           };

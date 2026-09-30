@@ -338,6 +338,7 @@ export interface PaymentRecord extends Partial<SourceItemIdentity> {
   settlementStatus?: PaymentSettlementStatus;
   /** EIP-3009 nonce for browser co-sign attempts. Correlation evidence, never a signature. */
   authorizationId?: string;
+  authorizationPhase?: import("./db/browser-authorization-journal").BrowserAuthorizationPhase;
   /** Exact signed EIP-3009 `validBefore`, normalized to ISO-8601. Operational context only:
    *  expiry is not evidence that Circle accepted or failed the transfer. */
   authorizationExpiresAt?: string;

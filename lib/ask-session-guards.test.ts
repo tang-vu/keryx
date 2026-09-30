@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/auth", () => ({ getSession: mocks.getSession }));
+vi.mock("@/lib/db",()=>({getDb:vi.fn(async()=>({browserJournalActive:async()=>true}))}));
 vi.mock("@/lib/payments/session-grants", () => ({ getGrant: mocks.getGrant }));
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: mocks.checkRateLimit,
@@ -26,7 +27,7 @@ function request(budget: number) {
   return new NextRequest("http://localhost/api/ask", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ question: "How does x402 settle?", sessionId: OWNER, budget }),
+    body: JSON.stringify({ question: "How does x402 settle?", sessionId: OWNER, budget, browserAuthorizationProtocol:'durable-v1' }),
   });
 }
 

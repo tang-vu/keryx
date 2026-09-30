@@ -2,15 +2,42 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { config } from "../config";
 import type { Source, SourceItem } from "../types";
 import { sourceItemIdentity } from "../sources/source-item-asset";
-import { PaymentPendingError, pendingPaymentFrom, settledPaymentFrom } from "./payment-state";
+import {
+  PaymentPendingError,
+  pendingPaymentFrom,
+  settledPaymentFrom,
+} from "./payment-state";
+import { prepareBrowserJournal } from "../db/browser-authorization-journal";
 
 const grantMocks = vi.hoisted(() => ({
   getGrant: vi.fn(),
   reserveSpend: vi.fn(),
   releaseSpend: vi.fn(),
+  admitBrowserJournal: vi.fn(),
+  exposeBrowserJournal: vi.fn(),
+  signBrowserJournal: vi.fn(),
+  submitBrowserJournal: vi.fn(),
+  settlePendingPayment: vi.fn(),
+  getBrowserJournal: vi.fn(),
+  cancelPreparedBrowserJournal: vi.fn(),
 }));
 
 vi.mock("./session-grants", () => grantMocks);
+vi.mock("../db", () => ({ getDb: vi.fn(async () => grantMocks) }));
+vi.mock("../notify/alert", () => ({
+  sendAlert: vi.fn().mockResolvedValue(true),
+}));
+// Cryptographic recovery has separate real-key tests; these fixtures exercise transport/content.
+vi.mock("./verify-browser-signature", () => ({
+  verifyBrowserSignature: vi.fn(async (header, challenge) => {
+    const auth = JSON.parse(
+      Buffer.from(header, "base64").toString()
+    ).authorization;
+    if (auth.nonce !== challenge.expectedNonce)
+      throw new Error("nonce mismatch");
+    return auth;
+  }),
+}));
 
 import {
   BrowserCoSignGateway,
@@ -34,7 +61,9 @@ const source: Source = {
   createdAt: "2026-08-04T00:00:00.000Z",
 };
 
-function requirements(over: Partial<PaymentRequirements> = {}): PaymentRequirements {
+function requirements(
+  over: Partial<PaymentRequirements> = {}
+): PaymentRequirements {
   return {
     scheme: "exact",
     network: config.networkId,
@@ -53,7 +82,7 @@ function requirements(over: Partial<PaymentRequirements> = {}): PaymentRequireme
 
 function challenge(req = requirements()): Response {
   const encoded = Buffer.from(
-    JSON.stringify({ x402Version: 2, accepts: [req] }),
+    JSON.stringify({ x402Version: 2, accepts: [req] })
   ).toString("base64");
   return new Response("{}", {
     status: 402,
@@ -61,7 +90,15 @@ function challenge(req = requirements()): Response {
   });
 }
 
-function signedHeader(over: Partial<{ from: string; to: string; value: string; nonce: string; validBefore: string }> = {}): string {
+function signedHeader(
+  over: Partial<{
+    from: string;
+    to: string;
+    value: string;
+    nonce: string;
+    validBefore: string;
+  }> = {}
+): string {
   const now = Math.floor(Date.now() / 1_000);
   return Buffer.from(
     JSON.stringify({
@@ -75,22 +112,25 @@ function signedHeader(over: Partial<{ from: string; to: string; value: string; n
         nonce: NONCE,
         ...over,
       },
-    }),
+    })
   ).toString("base64");
 }
 
-function settledResponse(status = 200, body: Record<string, unknown> = {}): Response {
+function settledResponse(
+  status = 200,
+  body: Record<string, unknown> = {}
+): Response {
   const encoded = Buffer.from(
     JSON.stringify({
       success: true,
       transaction: "circle-settlement-id",
       payer: SESSION,
       network: config.networkId,
-    }),
+    })
   ).toString("base64");
   return Response.json(
     { content: "paid content", ...body },
-    { status, headers: { "PAYMENT-RESPONSE": encoded } },
+    { status, headers: { "PAYMENT-RESPONSE": encoded } }
   );
 }
 
@@ -98,23 +138,114 @@ describe("BrowserCoSignGateway", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.unstubAllGlobals();
-    grantMocks.getGrant.mockResolvedValue({ sessAddr: SESSION, grantEpoch: "legacy-test-grant" });
+    grantMocks.getGrant.mockResolvedValue({
+      sessAddr: SESSION,
+      grantEpoch: "legacy-test-grant",
+    });
     grantMocks.reserveSpend.mockResolvedValue(true);
     grantMocks.releaseSpend.mockResolvedValue(undefined);
+    grantMocks.admitBrowserJournal.mockImplementation(async (input) => {
+      if (
+        !(await grantMocks.reserveSpend(
+          input.sessionId,
+          input.grantEpoch,
+          input.signer,
+          input.payment.amountUsdc
+        ))
+      )
+        return { status: "grant_or_cap_refused" };
+      const journal = prepareBrowserJournal(input);
+      journal.nonce = NONCE;
+      journal.payment.id = `x402:${NONCE}`;
+      journal.payment.authorizationId = NONCE;
+      return { status: "admitted", journal };
+    });
+    grantMocks.exposeBrowserJournal.mockResolvedValue(true);
+    grantMocks.signBrowserJournal.mockResolvedValue(true);
+    grantMocks.submitBrowserJournal.mockResolvedValue(true);
+    grantMocks.settlePendingPayment.mockResolvedValue(true);
+    grantMocks.cancelPreparedBrowserJournal.mockResolvedValue(false);
+    grantMocks.getBrowserJournal.mockResolvedValue(null);
   });
+
+  it.each(["exposed", "submission_attempted"] as const)(
+    "retains a durable pending record when %s commits but its acknowledgement is lost",
+    async (phase) => {
+      const fetchMock = vi.fn().mockResolvedValue(challenge());
+      vi.stubGlobal("fetch", fetchMock);
+      let recovered: import("../db/browser-authorization-journal").BrowserAuthorizationJournal | undefined;
+      grantMocks.admitBrowserJournal.mockImplementation(async (input) => {
+        const journal = prepareBrowserJournal(input);
+        journal.nonce = NONCE;
+        journal.payment.authorizationId = NONCE;
+        journal.payment.id = `x402:${NONCE}`;
+        recovered = {
+          ...journal,
+          phase,
+          payment: { ...journal.payment, authorizationPhase: phase },
+        };
+        return { status: "admitted", journal };
+      });
+      grantMocks.getBrowserJournal.mockImplementation(async () => recovered);
+      (phase === "exposed"
+        ? grantMocks.exposeBrowserJournal
+        : grantMocks.submitBrowserJournal
+      ).mockRejectedValueOnce(new Error("response lost after commit"));
+      const requestSignature = vi.fn().mockResolvedValue(signedHeader());
+      const gateway = new BrowserCoSignGateway(
+        "session",
+        SESSION,
+        requestSignature
+      );
+      let caught;
+      try {
+        await gateway.payFetch({ source, queryId: "q" });
+      } catch (error) {
+        caught = error;
+      }
+      expect(pendingPaymentFrom(caught)).toMatchObject({
+        authorizationId: NONCE,
+        authorizationPhase: phase,
+        settlementStatus: "pending",
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(grantMocks.releaseSpend).not.toHaveBeenCalled();
+      if (phase === "exposed") expect(requestSignature).not.toHaveBeenCalled();
+    }
+  );
 
   it("keeps the citation job identity out of both HTTP requests while retaining local payment attribution", async () => {
     const queryId = "private-job-transport-marker";
-    const fetchMock = vi.fn().mockResolvedValueOnce(challenge()).mockResolvedValueOnce(settledResponse());
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(challenge())
+      .mockResolvedValueOnce(settledResponse());
     vi.stubGlobal("fetch", fetchMock);
-    const gateway = new BrowserCoSignGateway("session", SESSION, vi.fn().mockResolvedValue(signedHeader()));
-    const payment = await gateway.payCitation({ source, author: { name: "Author", walletAddress: PAYEE, splitWeight: 1 },
-      amount: 0.002, weight: 1, queryId, rationale: "Synthetic citation" });
-    expect(payment).toMatchObject({ queryId, kind: "citation", amountUsdc: 0.002 });
+    const gateway = new BrowserCoSignGateway(
+      "session",
+      SESSION,
+      vi.fn().mockResolvedValue(signedHeader())
+    );
+    const payment = await gateway.payCitation({
+      source,
+      author: { name: "Author", walletAddress: PAYEE, splitWeight: 1 },
+      amount: 0.002,
+      weight: 1,
+      queryId,
+      rationale: "Synthetic citation",
+    });
+    expect(payment).toMatchObject({
+      queryId,
+      kind: "citation",
+      amountUsdc: 0.002,
+    });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     for (const [url, options] of fetchMock.mock.calls) {
       const target = new URL(url, "https://synthetic.example");
-      expect([...target.searchParams.keys()].sort()).toEqual(["amount", "author"]);
+      expect([...target.searchParams.keys()].sort()).toEqual([
+        "amount",
+        "author",
+      ]);
       expect(target.searchParams.get("author")).toBe(PAYEE);
       expect(target.searchParams.get("amount")).toBe("0.002000");
       expect(JSON.stringify([url, options])).not.toContain(queryId);
@@ -123,56 +254,87 @@ describe("BrowserCoSignGateway", () => {
   });
 
   it("rejects a challenge whose amount differs from the reserved spend", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(challenge(requirements({ amount: "9000" })));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(challenge(requirements({ amount: "9000" })));
     vi.stubGlobal("fetch", fetchMock);
     const requestSignature = vi.fn().mockResolvedValue(signedHeader());
-    const gateway = new BrowserCoSignGateway("session", SESSION, requestSignature);
+    const gateway = new BrowserCoSignGateway(
+      "session",
+      SESSION,
+      requestSignature
+    );
 
     await expect(gateway.payFetch({ source, queryId: "q1" })).rejects.toThrow(
-      /amount does not match/i,
+      /amount does not match/i
     );
     expect(grantMocks.reserveSpend).not.toHaveBeenCalled();
     expect(requestSignature).not.toHaveBeenCalled();
   });
 
-  it("releases the reservation when the browser returns a mismatched authorization", async () => {
+  it("retains the exposed reservation when the browser returns a mismatched authorization", async () => {
     const fetchMock = vi.fn().mockResolvedValue(challenge());
     vi.stubGlobal("fetch", fetchMock);
     const gateway = new BrowserCoSignGateway(
       "session",
       SESSION,
-      vi.fn().mockResolvedValue(signedHeader({ from: ATTACKER })),
+      vi.fn().mockResolvedValue(signedHeader({ from: ATTACKER }))
     );
 
     await expect(gateway.payFetch({ source, queryId: "q1" })).rejects.toThrow(
-      /signer does not match/i,
+      /exposed authorization remains reserved/i
     );
-    expect(grantMocks.releaseSpend).toHaveBeenCalledWith("session", "legacy-test-grant", SESSION, source.fetchPrice);
+    expect(grantMocks.releaseSpend).not.toHaveBeenCalled();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("refuses a dual-payload callback before the paid retry", async () => {
     const fetchMock = vi.fn().mockResolvedValue(challenge());
     vi.stubGlobal("fetch", fetchMock);
-    const outer = JSON.parse(Buffer.from(signedHeader(), "base64").toString("utf8"));
-    const header = Buffer.from(JSON.stringify({
-      ...outer,
-      payload: { ...outer, authorization: { ...outer.authorization, nonce: `0x${"99".repeat(32)}` } },
-    })).toString("base64");
-    const gateway = new BrowserCoSignGateway("session", SESSION, vi.fn().mockResolvedValue(header));
+    const outer = JSON.parse(
+      Buffer.from(signedHeader(), "base64").toString("utf8")
+    );
+    const header = Buffer.from(
+      JSON.stringify({
+        ...outer,
+        payload: {
+          ...outer,
+          authorization: {
+            ...outer.authorization,
+            nonce: `0x${"99".repeat(32)}`,
+          },
+        },
+      })
+    ).toString("base64");
+    const gateway = new BrowserCoSignGateway(
+      "session",
+      SESSION,
+      vi.fn().mockResolvedValue(header)
+    );
 
-    await expect(gateway.payFetch({ source, queryId: "q1" })).rejects.toThrow(/ambiguous/);
+    await expect(
+      gateway.payFetch({ source, queryId: "q1" })
+    ).rejects.toBeInstanceOf(PaymentPendingError);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("rejects a replacement between gateway construction and reservation", async () => {
     const fetchMock = vi.fn().mockResolvedValue(challenge());
     vi.stubGlobal("fetch", fetchMock);
-    grantMocks.getGrant.mockResolvedValue({ sessAddr: SESSION, grantEpoch: "replacement" });
+    grantMocks.getGrant.mockResolvedValue({
+      sessAddr: SESSION,
+      grantEpoch: "replacement",
+    });
     const requestSignature = vi.fn().mockResolvedValue(signedHeader());
-    const gateway = new BrowserCoSignGateway("session", SESSION, requestSignature);
+    const gateway = new BrowserCoSignGateway(
+      "session",
+      SESSION,
+      requestSignature
+    );
 
-    await expect(gateway.payFetch({ source, queryId: "q1" })).rejects.toThrow(/grant expired or revoked/);
+    await expect(gateway.payFetch({ source, queryId: "q1" })).rejects.toThrow(
+      /grant expired or revoked/
+    );
     expect(grantMocks.reserveSpend).not.toHaveBeenCalled();
     expect(requestSignature).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
@@ -182,12 +344,27 @@ describe("BrowserCoSignGateway", () => {
     const fetchMock = vi.fn().mockResolvedValue(challenge());
     vi.stubGlobal("fetch", fetchMock);
     grantMocks.getGrant
-      .mockResolvedValueOnce({ sessAddr: SESSION, grantEpoch: "legacy-test-grant" })
+      .mockResolvedValueOnce({
+        sessAddr: SESSION,
+        grantEpoch: "legacy-test-grant",
+      })
+      .mockResolvedValueOnce({
+        sessAddr: SESSION,
+        grantEpoch: "legacy-test-grant",
+      })
       .mockResolvedValueOnce({ sessAddr: SESSION, grantEpoch: "replacement" });
-    const gateway = new BrowserCoSignGateway("session", SESSION, vi.fn().mockResolvedValue(signedHeader()));
+    const gateway = new BrowserCoSignGateway(
+      "session",
+      SESSION,
+      vi.fn().mockResolvedValue(signedHeader())
+    );
 
     let caught: unknown;
-    try { await gateway.payFetch({ source, queryId: "q1" }); } catch (error) { caught = error; }
+    try {
+      await gateway.payFetch({ source, queryId: "q1" });
+    } catch (error) {
+      caught = error;
+    }
     expect(pendingPaymentFrom(caught)).toMatchObject({
       authorizationId: NONCE,
       grantEpoch: "legacy-test-grant",
@@ -205,13 +382,22 @@ describe("BrowserCoSignGateway", () => {
     const abort = new AbortController();
     const fetchMock = vi.fn().mockResolvedValue(challenge());
     vi.stubGlobal("fetch", fetchMock);
-    const gateway = new BrowserCoSignGateway("session", SESSION, vi.fn().mockImplementation(async () => {
-      abort.abort();
-      return signedHeader();
-    }), abort.signal);
+    const gateway = new BrowserCoSignGateway(
+      "session",
+      SESSION,
+      vi.fn().mockImplementation(async () => {
+        abort.abort();
+        return signedHeader();
+      }),
+      abort.signal
+    );
 
     let caught: unknown;
-    try { await gateway.payFetch({ source, queryId: "q1" }); } catch (error) { caught = error; }
+    try {
+      await gateway.payFetch({ source, queryId: "q1" });
+    } catch (error) {
+      caught = error;
+    }
     expect(pendingPaymentFrom(caught)).toMatchObject({
       authorizationId: NONCE,
       settlementStatus: "pending",
@@ -223,19 +409,24 @@ describe("BrowserCoSignGateway", () => {
   });
 
   it("keeps the reservation and returns a durable pending record after a post-submit timeout", async () => {
-    grantMocks.getGrant.mockResolvedValue({ sessAddr: SESSION, grantEpoch: "epoch-pending" });
+    grantMocks.getGrant.mockResolvedValue({
+      sessAddr: SESSION,
+      grantEpoch: "epoch-pending",
+    });
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(challenge())
       .mockRejectedValueOnce(new Error("socket reset"));
     vi.stubGlobal("fetch", fetchMock);
-    const validBefore = String(Math.floor(Date.now() / 1_000) + config.maxTimeoutSeconds);
+    const validBefore = String(
+      Math.floor(Date.now() / 1_000) + config.maxTimeoutSeconds
+    );
     const gateway = new BrowserCoSignGateway(
       "session",
       SESSION,
       vi.fn().mockResolvedValue(signedHeader({ validBefore })),
       undefined,
-      "epoch-pending",
+      "epoch-pending"
     );
 
     let caught: unknown;
@@ -250,7 +441,9 @@ describe("BrowserCoSignGateway", () => {
       settled: false,
       settlementStatus: "pending",
       authorizationId: NONCE,
-      authorizationExpiresAt: new Date(Number(validBefore) * 1_000).toISOString(),
+      authorizationExpiresAt: new Date(
+        Number(validBefore) * 1_000
+      ).toISOString(),
       grantEpoch: "epoch-pending",
       amountUsdc: source.fetchPrice,
     });
@@ -267,7 +460,7 @@ describe("BrowserCoSignGateway", () => {
     const gateway = new BrowserCoSignGateway(
       "session",
       SESSION,
-      vi.fn().mockResolvedValue(signedHeader()),
+      vi.fn().mockResolvedValue(signedHeader())
     );
 
     const result = await gateway.payFetch({ source, queryId: "q1" });
@@ -289,7 +482,7 @@ describe("BrowserCoSignGateway", () => {
     const gateway = new BrowserCoSignGateway(
       "session",
       SESSION,
-      vi.fn().mockResolvedValue(signedHeader()),
+      vi.fn().mockResolvedValue(signedHeader())
     );
 
     const result = await gateway.payFetch({ source, queryId: "q1" });
@@ -319,20 +512,24 @@ describe("BrowserCoSignGateway", () => {
       .mockResolvedValueOnce(
         settledResponse(200, {
           item: identity,
-          pricing: { offerId: null, priceUsdc: source.fetchPrice, listPriceUsdc: source.fetchPrice },
-        }),
+          pricing: {
+            offerId: null,
+            priceUsdc: source.fetchPrice,
+            listPriceUsdc: source.fetchPrice,
+          },
+        })
       );
     vi.stubGlobal("fetch", fetchMock);
     const gateway = new BrowserCoSignGateway(
       "session",
       SESSION,
-      vi.fn().mockResolvedValue(signedHeader()),
+      vi.fn().mockResolvedValue(signedHeader())
     );
 
     const result = await gateway.payFetch({ source, item, queryId: "q1" });
 
     expect(String(fetchMock.mock.calls[0][0])).toContain(
-      `version=${encodeURIComponent(identity.contentVersion)}`,
+      `version=${encodeURIComponent(identity.contentVersion)}`
     );
     expect(result.payment).toMatchObject(identity);
   });
@@ -364,13 +561,13 @@ describe("BrowserCoSignGateway", () => {
             priceUsdc: offer.priceUsdc,
             listPriceUsdc: offer.listPriceUsdc,
           },
-        }),
+        })
       );
     vi.stubGlobal("fetch", fetchMock);
     const gateway = new BrowserCoSignGateway(
       "session",
       SESSION,
-      vi.fn().mockResolvedValue(signedHeader({ value: "1000" })),
+      vi.fn().mockResolvedValue(signedHeader({ value: "1000" }))
     );
 
     const result = await gateway.payFetch({
@@ -382,7 +579,12 @@ describe("BrowserCoSignGateway", () => {
     });
 
     expect(String(fetchMock.mock.calls[0][0])).toContain(`offer=${offer.id}`);
-    expect(grantMocks.reserveSpend).toHaveBeenCalledWith("session", "legacy-test-grant", SESSION, 0.001);
+    expect(grantMocks.reserveSpend).toHaveBeenCalledWith(
+      "session",
+      "legacy-test-grant",
+      SESSION,
+      0.001
+    );
     expect(result.payment).toMatchObject({
       amountUsdc: 0.001,
       offerId: offer.id,
@@ -405,13 +607,13 @@ describe("BrowserCoSignGateway", () => {
       .mockResolvedValueOnce(
         settledResponse(200, {
           item: { ...sourceItemIdentity(item), itemId: "different-article" },
-        }),
+        })
       );
     vi.stubGlobal("fetch", fetchMock);
     const gateway = new BrowserCoSignGateway(
       "session",
       SESSION,
-      vi.fn().mockResolvedValue(signedHeader()),
+      vi.fn().mockResolvedValue(signedHeader())
     );
 
     let caught: unknown;
@@ -437,7 +639,7 @@ describe("BrowserCoSignGateway", () => {
     const gateway = new BrowserCoSignGateway(
       "session",
       SESSION,
-      vi.fn().mockResolvedValue(signedHeader()),
+      vi.fn().mockResolvedValue(signedHeader())
     );
 
     let caught: unknown;

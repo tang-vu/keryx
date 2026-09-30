@@ -11,6 +11,10 @@ import { saveSqlitePrivateResult, getSqlitePrivateResult, PRIVATE_RESEARCH_RESUL
 import { PRIVATE_TREASURY_CAPACITY_SQL, reserveSqlitePrivateTreasury, getSqlitePrivateTreasury, type PrivateTreasuryPolicy } from "./private-treasury-capacity";
 import { claimSqlitePrivateExecution, getSqlitePrivateExecution, PRIVATE_RESEARCH_EXECUTIONS_SQL } from "./private-research-executions";
 import { DatabaseSync } from "node:sqlite";
+import { initializeSqliteBrowserJournal, sqliteJournalActive, sqliteJournalTransaction, activateSqliteBrowserJournal,
+  upsertSqliteJournalGrant, admitSqliteBrowserJournal, getSqliteBrowserJournal, transitionSqliteBrowserJournal,
+  signSqliteBrowserJournal, cancelSqlitePreparedJournal, terminalSqliteJournalPayment } from "./sqlite-browser-journal";
+import type { BrowserJournalAdmission, BrowserSignedMetadata } from "./browser-authorization-journal";
 import { claimSqliteSourceUpkeep, finishSqliteSourceUpkeep, type SourceUpkeepClaim, type SourceUpkeepSummary } from "./source-upkeep";
 import { prepareBrowserAuthorizationIntent, type BrowserAuthorizationIntent, type BrowserAdmissionResult } from "./browser-authorization-admission";
 import { recordSqliteWithdrawal } from "./withdrawal-records";
@@ -673,9 +677,9 @@ export class SqliteAdapter implements KeryxDB {
     }
     this.db.exec(
       `CREATE INDEX IF NOT EXISTS a2a_orders_queued
-       ON a2a_orders(created_at) WHERE status='running' AND started_at IS NULL`,
+      ON a2a_orders(created_at) WHERE status='running' AND started_at IS NULL`,
     );
-
+    initializeSqliteBrowserJournal(this.db);
   }
 
   async upsertSource(s: Source): Promise<void> {
@@ -1080,6 +1084,7 @@ export class SqliteAdapter implements KeryxDB {
   // ── session grants ──
 
   async upsertSessionGrant(grant: Omit<SessionGrantRecord, "spent">): Promise<void> {
+    if (sqliteJournalActive(this.db)) return upsertSqliteJournalGrant(this.db, grant);
     this.db
       .prepare(
         `INSERT OR REPLACE INTO session_grants
@@ -1159,6 +1164,96 @@ export class SqliteAdapter implements KeryxDB {
       try { this.db.exec("ROLLBACK"); } catch { /* SQLite already rolled back */ }
       throw error;
     }
+  }
+
+  async browserJournalActive() {
+    return sqliteJournalActive(this.db);
+  }
+  async browserSignerConfirmedSpendMicro(signer: string): Promise<number> {
+    const rows = this.db
+      .prepare(
+        "SELECT * FROM payment_events WHERE lower(payer)=lower(?) AND grant_epoch IS NOT NULL AND settled=1 AND settlement_status='settled' AND network='eip155:5042002'"
+      )
+      .all(signer);
+    const seen = new Map<string, string>();
+    let total = 0;
+    for (const row of rows) {
+      if (
+        !/^0x[0-9a-f]{64}$/i.test(String(row.authorization_id)) ||
+        !String(row.tx_hash ?? "").trim()
+      )
+        continue;
+      if (
+        !/^0x[0-9a-f]{40}$/i.test(signer) ||
+        !/^0x[0-9a-f]{40}$/i.test(String(row.payee))
+      )
+        throw new Error("Invalid historical settled identity");
+      const nonce = String(row.authorization_id).toLowerCase(),
+        tuple = JSON.stringify([
+          String(row.payee).toLowerCase(),
+          row.amount_usdc,
+          row.network,
+          row.grant_epoch,
+          row.source_id,
+          row.query_id,
+          row.kind,
+          row.offer_id,
+        ]);
+      if (seen.has(nonce)) {
+        if (seen.get(nonce) !== tuple)
+          throw new Error("Conflicting historical authorization evidence");
+        continue;
+      }
+      seen.set(nonce, tuple);
+      const amount = Math.round(Number(row.amount_usdc) * 1e6);
+      if (
+        !Number.isSafeInteger(amount) ||
+        amount <= 0 ||
+        Math.abs(Number(row.amount_usdc) * 1e6 - amount) >= 0.000001
+      )
+        throw new Error("Invalid historical settled amount");
+      total += amount;
+      if (!Number.isSafeInteger(total))
+        throw new Error("Historical settled amount exceeds safe capacity");
+    }
+    return total;
+  }
+  async activateBrowserJournal() {
+    activateSqliteBrowserJournal(this.db);
+  }
+  async admitBrowserJournal(input: BrowserJournalAdmission) {
+    return admitSqliteBrowserJournal(this.db, input);
+  }
+  async getBrowserJournal(sessionId: string, requestId: string) {
+    return getSqliteBrowserJournal(this.db, sessionId, requestId);
+  }
+  async exposeBrowserJournal(sessionId: string, requestId: string) {
+    return transitionSqliteBrowserJournal(
+      this.db,
+      sessionId,
+      requestId,
+      "prepared",
+      "exposed"
+    );
+  }
+  async cancelPreparedBrowserJournal(sessionId: string, requestId: string) {
+    return cancelSqlitePreparedJournal(this.db, sessionId, requestId);
+  }
+  async signBrowserJournal(
+    sessionId: string,
+    requestId: string,
+    metadata: BrowserSignedMetadata
+  ) {
+    return signSqliteBrowserJournal(this.db, sessionId, requestId, metadata);
+  }
+  async submitBrowserJournal(sessionId: string, requestId: string) {
+    return transitionSqliteBrowserJournal(
+      this.db,
+      sessionId,
+      requestId,
+      "signed",
+      "submission_attempted"
+    );
   }
 
   async createGapIntent(
@@ -1432,10 +1527,15 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async deleteSessionGrant(sessionId: string): Promise<void> {
+    if (sqliteJournalActive(this.db)) {
+      sqliteJournalTransaction(this.db,()=>{this.db.prepare('UPDATE session_grants SET expiry=0 WHERE session_id=?').run(sessionId);});
+      return;
+    }
     this.db.prepare(`DELETE FROM session_grants WHERE session_id = ?`).run(sessionId);
   }
 
   async deleteExpiredSessionGrants(now: number): Promise<void> {
+    if (sqliteJournalActive(this.db)) return;
     this.db.prepare(`DELETE FROM session_grants WHERE expiry <= ?`).run(now);
   }
 
@@ -2013,7 +2113,7 @@ export class SqliteAdapter implements KeryxDB {
 
   async listPayments(limit: number): Promise<PaymentRecord[]> {
     const rows = this.db
-      .prepare(`SELECT * FROM payment_events ORDER BY created_at DESC LIMIT ?`)
+      .prepare(`SELECT * FROM payment_events WHERE authorization_phase IS NULL OR authorization_phase NOT IN ('prepared','cancelled_unexposed') ORDER BY created_at DESC LIMIT ?`)
       .all(limit);
     return rows.map(rowToPayment);
   }
@@ -2047,6 +2147,7 @@ export class SqliteAdapter implements KeryxDB {
       .prepare(
         `SELECT * FROM payment_events
          WHERE settlement_status='pending' AND settled=0 AND authorization_id IS NOT NULL
+           AND (authorization_phase IS NULL OR authorization_phase NOT IN ('prepared','cancelled_unexposed'))
          ORDER BY created_at ASC LIMIT ?`,
       )
       .all(limit);
@@ -2058,6 +2159,9 @@ export class SqliteAdapter implements KeryxDB {
     authorizationId: string,
     circleTransferId: string,
   ): Promise<boolean> {
+    if (sqliteJournalActive(this.db)) {
+      return terminalSqliteJournalPayment(this.db,id,authorizationId,circleTransferId,false).resolved;
+    }
     const result = this.db
       .prepare(
         `UPDATE payment_events
@@ -2073,6 +2177,9 @@ export class SqliteAdapter implements KeryxDB {
     authorizationId: string,
     circleTransferId: string,
   ): Promise<{ resolved: boolean; reservationReleased: boolean }> {
+    if (sqliteJournalActive(this.db)) {
+      return terminalSqliteJournalPayment(this.db,id,authorizationId,circleTransferId,true);
+    }
     this.db.exec("BEGIN IMMEDIATE");
     try {
       const payment = this.db
@@ -2117,7 +2224,7 @@ export class SqliteAdapter implements KeryxDB {
   async listPaymentsByQuery(queryId: string): Promise<PaymentRecord[]> {
     const rows = this.db
       .prepare(
-        `SELECT * FROM payment_events WHERE query_id=? AND kind='citation' ORDER BY created_at ASC`,
+        `SELECT * FROM payment_events WHERE query_id=? AND kind='citation' AND (authorization_phase IS NULL OR authorization_phase NOT IN ('prepared','cancelled_unexposed')) ORDER BY created_at ASC`,
       )
       .all(queryId);
     return rows.map(rowToPayment);
@@ -2127,7 +2234,7 @@ export class SqliteAdapter implements KeryxDB {
     const rows = this.db
       .prepare(
         `SELECT * FROM payment_events
-         WHERE query_id=? AND kind!='inbound' ORDER BY created_at ASC`,
+         WHERE query_id=? AND kind!='inbound' AND (authorization_phase IS NULL OR authorization_phase NOT IN ('prepared','cancelled_unexposed')) ORDER BY created_at ASC`,
       )
       .all(queryId);
     return rows.map(rowToPayment);
@@ -2136,7 +2243,7 @@ export class SqliteAdapter implements KeryxDB {
   async listPaymentsBySource(sourceId: string): Promise<PaymentRecord[]> {
     const rows = this.db
       .prepare(
-        `SELECT * FROM payment_events WHERE source_id=? AND kind != 'inbound' ORDER BY created_at DESC`,
+        `SELECT * FROM payment_events WHERE source_id=? AND kind != 'inbound' AND (authorization_phase IS NULL OR authorization_phase NOT IN ('prepared','cancelled_unexposed')) ORDER BY created_at DESC`,
       )
       .all(sourceId);
     return rows.map(rowToPayment);
@@ -2655,6 +2762,7 @@ function rowToPayment(r: Record<string, unknown>): PaymentRecord {
       (r.settlement_status as PaymentRecord["settlementStatus"]) ??
       (Boolean(r.settled) ? "settled" : "simulated"),
     authorizationId: (r.authorization_id as string) ?? undefined,
+    authorizationPhase: (r.authorization_phase as PaymentRecord["authorizationPhase"]) ?? undefined,
     authorizationExpiresAt: (r.authorization_expires_at as string) ?? undefined,
     grantEpoch: (r.grant_epoch as string) ?? undefined,
     origin: (r.origin as PaymentRecord["origin"]) ?? undefined,

@@ -334,19 +334,28 @@ export interface KeryxDB {
   releaseOnramp(addressKey: string, dayKey: string, amount: number): Promise<void>;
 
   // ── browser co-sign session grants (no keys, only caps + accounting) ──
-  /** Create or replace the grant for a session id. Resets `spent` — callers re-register with a
-   *  cap read from the live Gateway balance, which already nets out earlier spends. */
+  /** Create or replace the active grant. Journal mode retains cumulative signer spend
+   *  and original epochs; pre-cutover legacy writers retain their historical behavior. */
   upsertSessionGrant(grant: Omit<SessionGrantRecord, "spent">): Promise<void>;
   /** Fetch a grant. Returns null when absent; expiry is the caller's to interpret. */
   getSessionGrant(sessionId: string): Promise<SessionGrantRecord | null>;
   /** Atomically reserve only against the captured grant generation and session signer. */
   addSessionGrantSpend(sessionId: string, grantEpoch: string, sessAddr: string, amount: number): Promise<boolean>;
-  /** Unused until the browser signing and payment-event cutover is separately reviewed. */
+  /** Historical immutable admission substrate; blocked by the active writer fence. */
   admitBrowserAuthorization(input: BrowserAuthorizationIntent): Promise<BrowserAdmissionResult>;
+  browserJournalActive(): Promise<boolean>;
+  browserSignerConfirmedSpendMicro(signer:string): Promise<number>;
+  activateBrowserJournal(): Promise<void>;
+  admitBrowserJournal(input: import("./browser-authorization-journal").BrowserJournalAdmission): Promise<import("./browser-authorization-journal").BrowserJournalAdmissionResult>;
+  getBrowserJournal(sessionId: string, requestId: string): Promise<import("./browser-authorization-journal").BrowserAuthorizationJournal | null>;
+  exposeBrowserJournal(sessionId: string, requestId: string): Promise<boolean>;
+  cancelPreparedBrowserJournal(sessionId: string, requestId: string): Promise<boolean>;
+  signBrowserJournal(sessionId: string, requestId: string, metadata: import("./browser-authorization-journal").BrowserSignedMetadata): Promise<boolean>;
+  submitBrowserJournal(sessionId: string, requestId: string): Promise<boolean>;
   /** Release only into the grant generation that held the unused reservation. */
   releaseSessionGrantSpend(sessionId: string, grantEpoch: string, sessAddr: string, amount: number): Promise<void>;
   deleteSessionGrant(sessionId: string): Promise<void>;
-  /** Drop every grant that lapsed at or before `now` (unix ms). */
+  /** Legacy pruning only; journal mode preserves lapsed financial state. */
   deleteExpiredSessionGrants(now: number): Promise<void>;
 
   // ── rate-limit counters (durable, shared across processes) ──

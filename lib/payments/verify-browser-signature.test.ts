@@ -11,6 +11,7 @@ const now = 1_800_000_000;
 const gateway = "0x0077777d7EBA4688BDeF3E311b846F25870A19B9";
 const challenge: PendingSignatureChallenge = {
   expectedSigner: account.address,
+  expectedNonce: nonce,
   requirements: {
     scheme: "exact", network: "eip155:5042002",
     asset: "0x3600000000000000000000000000000000000000",
@@ -59,7 +60,7 @@ async function signedHeader(options: {
 
 describe("browser sign callback verification", () => {
   it("accepts a signature over the captured signer, challenge tuple and Arc testnet domain", async () => {
-    await expect(verifyBrowserSignature(await signedHeader(), challenge, now)).resolves.toBeUndefined();
+    await expect(verifyBrowserSignature(await signedHeader(), challenge, now)).resolves.toMatchObject({nonce,from:account.address,value:'2000'});
   });
 
   it("rejects a forged signer and alternate chain or Gateway domain", async () => {
@@ -105,8 +106,8 @@ describe("browser sign callback verification", () => {
       .rejects.toThrow(/ambiguous/);
   });
 
-  it("leaves nonce admission open: another valid browser-chosen nonce also verifies", async () => {
+  it("rejects another cryptographically valid nonce outside the admitted request", async () => {
     await expect(verifyBrowserSignature(await signedHeader({ nonce: `0x${"77".repeat(32)}` }), challenge, now))
-      .resolves.toBeUndefined();
+      .rejects.toThrow(/admitted/);
   });
 });

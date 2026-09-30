@@ -8,6 +8,16 @@ export function paymentSettlementStatus(
   return payment.settlementStatus ?? (payment.settled ? "settled" : "simulated");
 }
 
+export function pendingAuthorizationStatusLabel(payment: Pick<PaymentRecord,'authorizationPhase'>): string {
+  switch(payment.authorizationPhase){
+    case 'prepared': return 'reserved, not exposed';
+    case 'exposed': return 'reserved, possibly unsigned';
+    case 'signed': return 'signed, pending proof';
+    case 'submission_attempted': return 'submitted, pending proof';
+    default: return 'pending proof';
+  }
+}
+
 export function assertPaymentSettlementState(
   payment: Pick<PaymentRecord, "settled" | "settlementStatus">,
 ): PaymentSettlementStatus {
@@ -26,9 +36,9 @@ export function paymentCountsAsSpent(
   return status === "settled" || status === "simulated";
 }
 
-/** Thrown when a valid bearer authorization exists and settlement remains uncertain. The header
- * may still be held by the browser even when Keryx withholds submission. The attached record is
- * safe to persist/display and deliberately contains no signature. */
+/** Thrown when an exposed authorization may exist and settlement remains unresolved.
+ * Its phase distinguishes possibly unsigned exposure from verified signature/submission.
+ * The safe record contains no bearer header; missing callbacks never prove no signature exists. */
 export class PaymentPendingError extends Error {
   readonly payment: PaymentRecord;
   readonly submissionAttempted: boolean;

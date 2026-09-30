@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/auth", () => ({ getSession: mocks.getSession }));
+vi.mock("@/lib/db",()=>({getDb:vi.fn(async()=>({browserJournalActive:async()=>true}))}));
 vi.mock("@/lib/payments/session-grants", () => ({ getGrant: mocks.getGrant }));
 
 import { POST } from "@/app/api/ask/route";
@@ -18,7 +19,7 @@ function request(sessionId: string) {
   return new NextRequest("http://localhost/api/ask", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ question: "How does x402 settle?", sessionId }),
+    body: JSON.stringify({ question: "How does x402 settle?", sessionId, browserAuthorizationProtocol:'durable-v1' }),
   });
 }
 
@@ -33,6 +34,13 @@ function rawRequest(body: Record<string, unknown>) {
 describe("browser co-sign ask authentication", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('refuses a literal old ask body before SSE, grant reads, or signature exposure',async()=>{
+    const response=await POST(rawRequest({question:'q',sessionId:OWNER}));
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({error:'browser_authorization_upgrade_required'});
+    expect(mocks.getGrant).not.toHaveBeenCalled();
   });
 
   it("rejects a public session id when there is no SIWE identity", async () => {

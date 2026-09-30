@@ -22,6 +22,7 @@
  */
 
 import { NextRequest } from "next/server";
+import { BrowserGrantRecoveryRefused } from "@/lib/db/browser-authorization-journal";
 import { createPublicClient, isAddress, parseUnits } from "viem";
 import { arcTestnet } from "viem/chains";
 import { getSession } from "@/lib/auth";
@@ -90,11 +91,22 @@ export async function POST(req: NextRequest) {
         { status: 402 },
       );
     }
-    if (availableUsdc < budget) {
+    let verifiedCumulativeCapacity = availableUsdc;
+    try {
+      const db = await getDb();
+      if (await db.browserJournalActive()) {
+        // Budget is cumulative. Only independently evidenced confirmed debits may restore
+        // the consumed portion of that ceiling; pending and unknown holds never get credit.
+        verifiedCumulativeCapacity += (await db.browserSignerConfirmedSpendMicro(sessAddr)) / 1e6;
+      }
+    } catch {
+      return Response.json({ error: "Session recovery accounting is unavailable." }, { status: 503 });
+    }
+    if (verifiedCumulativeCapacity < budget) {
       console.warn(
         `[grant] clamping cap for ${sessAddr}: claimed ${budget} > available ${availableUsdc}`,
       );
-      cap = availableUsdc;
+      cap = verifiedCumulativeCapacity;
     }
   } else if (!recover) {
     // Circle is unreachable. Fall back to proving the EOA was funded at all: on Arc,
@@ -145,13 +157,17 @@ export async function POST(req: NextRequest) {
   // stable within the JWT's 7-day lifetime.
   const sessionId = session.address.toLowerCase();
 
-  await storeGrant(sessionId, {
+  try { await storeGrant(sessionId, {
     sessAddr,
     ownerAddr: session.address,
     cap,
     expiry: grantExpiry(),
     txHash: txHash ?? "recovered", // no new funding tx in recovery mode
-  });
+  }); } catch (error) {
+    return error instanceof BrowserGrantRecoveryRefused
+      ? Response.json({ error: "Session recovery cannot reset retained authorization capacity. Keep the original signer and cumulative cap; unresolved authorizations remain reserved." }, { status: 409 })
+      : Response.json({ error: "Session recovery accounting is unavailable. Try again when durable storage is available." }, { status: 503 });
+  }
 
   if (!recover) {
     try {

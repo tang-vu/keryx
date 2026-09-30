@@ -53,6 +53,9 @@ export interface PendingReconciliationSummary {
   unacknowledgedAwaiting: number;
   /** Unresolved browser-funded rows whose session reservation remains held. */
   browserAwaiting: number;
+  exposedAwaiting?: number;
+  signedAwaiting?: number;
+  submittedAwaiting?: number;
   /** Unresolved server-treasury rows; these do not consume browser grant capacity. */
   treasuryAwaiting: number;
   /** Unresolved rows whose exact signed validBefore has passed. Not failure evidence. */
@@ -272,6 +275,9 @@ export async function reconcilePendingPayments(
     acknowledgedAwaiting: 0,
     unacknowledgedAwaiting: 0,
     browserAwaiting: 0,
+    exposedAwaiting: 0,
+    signedAwaiting: 0,
+    submittedAwaiting: 0,
     treasuryAwaiting: 0,
     expiredAwaiting: 0,
     unknownExpiryAwaiting: 0,
@@ -310,6 +316,15 @@ export async function reconcilePendingPayments(
       }
       if (payment.grantEpoch) summary.browserAwaiting++;
       else summary.treasuryAwaiting++;
+      if (payment.authorizationPhase === "exposed") {
+        summary.exposedAwaiting = (summary.exposedAwaiting ?? 0) + 1;
+      }
+      if (payment.authorizationPhase === "signed") {
+        summary.signedAwaiting = (summary.signedAwaiting ?? 0) + 1;
+      }
+      if (payment.authorizationPhase === "submission_attempted") {
+        summary.submittedAwaiting = (summary.submittedAwaiting ?? 0) + 1;
+      }
       const expiry = payment.authorizationExpiresAt
         ? Date.parse(payment.authorizationExpiresAt)
         : Number.NaN;

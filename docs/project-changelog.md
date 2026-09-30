@@ -22,6 +22,18 @@
   and HTTP failure with exactly one intercepted request. CI now checks native runtime behavior
   alongside the Node unit tests; live scheduled acceptance remains a deployment gate.
 
+### Browser authorization journal and recovery (2026-09-30, candidate)
+
+- Admit a server nonce and authoritative pending payment atomically before signing exposure;
+  persist verified callback metadata before acknowledgement and submission before retry.
+- Retain cumulative signer capacity and original grant epochs through replacement, revoke,
+  expiry, callback loss and restart. Only unexposed cancellation or exact Circle terminal
+  failure releases a reservation. Show possibly unsigned, signed and submitted pending phases.
+- Add database guards against old writers, protocol cutover checks and an explicit testnet
+  activation/paused rollback runbook. Migration alone does not activate browser signing.
+- Exercise synthetic fault injection, process termination and real SQL migrations in required
+  PostgreSQL CI. Funded recovery, independent security review and mainnet gates remain open.
+
 ### Scheduled source upkeep (2026-09-30, v0.24.3)
 
 - Add an isolated Cloudflare Free hourly scheduler for verified source freshness, independent

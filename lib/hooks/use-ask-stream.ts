@@ -15,6 +15,7 @@
  */
 
 import { useCallback, useRef, useState } from "react";
+import { BROWSER_AUTHORIZATION_PROTOCOL } from "@/lib/payments/browser-authorization-protocol";
 import type { WalletClient } from "viem";
 import type { BrowserPaymentContext } from "@/lib/payments/browser-cosign-gateway";
 import type {
@@ -174,14 +175,21 @@ export function useAskStream(opts?: AskStreamOpts) {
       // We do this in the background — no await in the event loop, fire-and-forget promise.
       // `kind` also rides this event: fetches require the exact registry payout wallet,
       // while citation rewards may target any registry-authorised author wallet.
-      const { reqId, requirements, sourceId, kind, paymentContext, capturedGrantSigner } = data as {
+      const { reqId, requirements, sourceId, kind, paymentContext, capturedGrantSigner, admittedNonce, browserAuthorizationProtocol } = data as {
         reqId: string;
         requirements: PaymentRequirementsInput;
         sourceId?: string;
         kind?: "fetch" | "citation";
         paymentContext?: BrowserPaymentContext;
         capturedGrantSigner?: string;
+        admittedNonce?: string;
+        browserAuthorizationProtocol?: string;
       };
+      if (browserAuthorizationProtocol !== BROWSER_AUTHORIZATION_PROTOCOL ||
+          typeof admittedNonce !== "string" || !/^0x[0-9a-f]{64}$/.test(admittedNonce)) {
+        console.warn("[keryx] sign-request refused: durable authorization protocol missing");
+        return;
+      }
       const getWallet = getSessionWalletClient;
 
       if (!sessionId || !getWallet) {
@@ -271,7 +279,7 @@ export function useAskStream(opts?: AskStreamOpts) {
             }
             reservation.markSigningStarted();
             const { header } = await signBrowserPaymentAuthorization(
-              walletClient, requirements, localSession.sessAddr, capturedGrantSigner ?? "",
+              walletClient, requirements, localSession.sessAddr, capturedGrantSigner ?? "", admittedNonce,
             );
             await fetch("/api/ask/sign", {
               method: "POST",
@@ -338,7 +346,7 @@ export function useAskStream(opts?: AskStreamOpts) {
             question,
             budget,
             // Include session id when a browser co-sign grant is active.
-            ...(sessionId ? { sessionId } : {}),
+            ...(sessionId ? { sessionId, browserAuthorizationProtocol: BROWSER_AUTHORIZATION_PROTOCOL } : {}),
             // Follow-up: the server anchors the question to this dispatch's own question.
             ...(parentId ? { parentId } : {}),
             // Reasoning-model pick from the form's picker. Server-validated against the
