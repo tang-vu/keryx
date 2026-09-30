@@ -276,3 +276,19 @@ describe("portable research receipt", () => {
     expect(() => canonicalJson({ amount: Number.NaN })).toThrow(/non-finite/);
   });
 });
+
+
+it("projects accepted public evidence with no invented creator payment or settled status", () => {
+  const original = run();
+  const publicRun = run({ paymentMode: "real", paymentAttempts: 0, settledPayments: 0, totalSpent: 0, totalToCreators: 0,
+    decisions: original.decisions.map((decision) => ({ ...decision, sourceId: "public:publisher", sourceKind: "public-reference", publicDeliveryKind: "excerpt", action: "CACHE", price: 0 })),
+    citations: original.citations.map((citation) => ({ ...citation, sourceId: "public:publisher", sourceKind: "public-reference", publicDeliveryKind: "excerpt", reward: 0 })),
+    evidence: original.evidence?.map((item) => ({ ...item, sourceId: "public:publisher", sourceKind: "public-reference", publicDeliveryKind: "excerpt", qualifiesForAnswer: true, qualifiesForReward: false })),
+  });
+  const receipt = buildResearchReceipt(publicRun, []);
+  expect(receipt.payload.citations[0]).toMatchObject({ sourceKind: "public-reference", publicDeliveryKind: "excerpt", rewardPlannedUsdc: 0 });
+  expect(receipt.payload.claims[0]?.evidence[0]).toMatchObject({ qualifiesForAnswer: true, qualifiesForReward: false, sourceKind: "public-reference" });
+  expect(receipt.payload.settlement.creatorPayments).toEqual([]);
+  expect(receipt.payload.settlement.status).toBe("none");
+  expect(verifyResearchReceipt(receipt).valid).toBe(true);
+});

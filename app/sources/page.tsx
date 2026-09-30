@@ -16,14 +16,15 @@ import { breadcrumbJsonLd } from "@/lib/seo-structured-data";
 import { fmtUsdc } from "@/components/keryx/phase-style";
 import type { Source } from "@/lib/types";
 import { safeInlineJson } from "@/lib/safe-json";
+import type { PublicReference } from "@/lib/public-references/catalog";
 
 // Recompute a few times an hour — new registrations arrive via the indexer.
-export const revalidate = 600;
+export const dynamic = "force-dynamic";
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
-const TITLE = "The Registry — every source Keryx pays";
+const TITLE = "The Registry — paid sources and free public references";
 const DESCRIPTION =
-  "Browse every content source registered with Keryx: price per read, on-chain registration proof, and lifetime citation earnings — settled in USDC on Arc, no platform cut.";
+  "Browse Keryx's creator registry and free public references. Inspect paid-source registration and settled earnings, or follow public references to their publishers.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -64,8 +65,17 @@ async function loadRegistry(): Promise<RegistryEntry[]> {
   }
 }
 
+async function loadPublicReferences(): Promise<PublicReference[]> {
+  try {
+    const db = await getDb();
+    return (await db.listPublicReferences?.() ?? []).filter((reference) => reference.active);
+  } catch {
+    return [];
+  }
+}
+
 export default async function SourcesPage() {
-  const entries = await loadRegistry();
+  const [entries, publicReferences] = await Promise.all([loadRegistry(), loadPublicReferences()]);
   const onchainCount = entries.filter((e) => e.source.onchainId).length;
   const totalPaid = entries.reduce((s, e) => s + e.totalEarnedUsdc, 0);
 
@@ -78,12 +88,12 @@ export default async function SourcesPage() {
       url: `${BASE}/sources`,
       mainEntity: {
         "@type": "ItemList",
-        numberOfItems: entries.length,
-        itemListElement: entries.slice(0, 100).map((e, i) => ({
+        numberOfItems: entries.length + publicReferences.length,
+        itemListElement: [...entries.map((e) => ({ url: `${BASE}/creator/${e.source.id}`, name: e.source.name })),
+          ...publicReferences.map((reference) => ({ url: reference.url, name: reference.name }))].slice(0, 100).map((entry, i) => ({
           "@type": "ListItem",
           position: i + 1,
-          url: `${BASE}/creator/${e.source.id}`,
-          name: e.source.name,
+          ...entry,
         })),
       },
     },
@@ -130,6 +140,28 @@ export default async function SourcesPage() {
             ))}
           </div>
         )}
+
+        <section className="mt-12 border-t border-ink pt-6" aria-labelledby="public-references-title">
+          <h2 id="public-references-title" className="font-display text-2xl text-ink">Free public references</h2>
+          <p className="mt-3 max-w-[62ch] font-serif text-[15px] leading-relaxed text-ink-2">
+            Public RSS feed bodies supplement the creator corpus. Keryx reads only what the feed supplies;
+            an excerpt or abstract may omit parts of the article. Follow the publisher link for the original.
+            These references carry no publisher ownership verification or creator payment.
+          </p>
+          <div className="mt-5 flex flex-col gap-4">
+            {publicReferences.map((reference) => (
+              <article key={reference.id} className="border border-line bg-paper p-5">
+                <a href={reference.url} target="_blank" rel="noopener noreferrer" className="font-serif text-lg text-ink underline decoration-line underline-offset-4 hover:decoration-ink">
+                  {reference.name} ↗
+                </a>
+                <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.08em] text-ink-3">Free public reference · no creator payment</p>
+                <p className="mt-3 font-serif text-[14px] leading-relaxed text-ink-2">{reference.description}</p>
+                <p className="mt-3 font-mono text-[10px] text-ink-3">{reference.items.length} recent feed item{reference.items.length === 1 ? "" : "s"} available</p>
+              </article>
+            ))}
+            {publicReferences.length === 0 && <p className="font-mono text-xs text-ink-3">No public references are available yet.</p>}
+          </div>
+        </section>
 
         <div className="mt-12 border-t border-ink pt-6">
           <Link

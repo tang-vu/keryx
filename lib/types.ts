@@ -108,6 +108,9 @@ export interface SourceItem {
 
 /** Immutable identity for the exact article version the agent evaluated and purchased. */
 export interface SourceItemIdentity {
+  /** Trusted catalog provenance; public references never carry payout authority. */
+  sourceKind?: "public-reference";
+  publicDeliveryKind?: ContentDeliveryKind;
   itemId: string;
   itemTitle: string;
   itemUrl: string;
@@ -185,6 +188,8 @@ export interface EvidenceRecord extends Partial<SourceItemIdentity> {
   sourceName: string;
   quote: string;
   support: number; // 0..1, model-proposed but bounded after the quote is verified
+  /** Exact quote, answer marker and support passed; separate from payment eligibility. */
+  qualifiesForAnswer?: boolean;
   qualifiesForReward: boolean;
 }
 
@@ -193,7 +198,7 @@ export interface ClaimCoverageRecord {
   claimIndex: number;
   claim: string;
   coverage: number; // min(final assessment, strongest validated evidence)
-  coveredBy: string[]; // reward-qualifying source markers only
+  coveredBy: string[]; // answer-supporting owned or public source markers
 }
 
 export type GapIntentStatus =

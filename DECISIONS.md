@@ -1,5 +1,20 @@
 # Keryx — Decision Log
 
+**D-271** - Public RSS references are free answer evidence, separate from creator payout authority -
+*Adding independent and official public feeds must not assign Keryx wallets to publishers
+or imply an ownership agreement.* Store validated, bounded feed snapshots in a separate
+SQLite catalog with no payout/verification fields. Read selected public items through the
+same attention and evidence gates as paid sources, but never route them through paid
+storage, registry terms or gateway calls. Separate answer support from reward eligibility.
+Allocate original citation weights in exact micro-USDC and withhold public shares instead
+of inflating owned rewards. Reserved public IDs fail closed on every toll path. One combined
+hourly upkeep cursor retains the two-feed allowance across both catalogs. Supabase public
+writes remain unsupported until equivalent schema acceptance. The initial four-feed batch
+is explicitly imported after release; Circle RSS is deferred after the checked endpoints
+returned 404. Public collection dates never replace publisher dates. Reversible by
+deactivating public references; historical runs retain their original evidence snapshots.
+See [free public references](docs/public-reference-sources.md).
+
 **D-270** - Cloudflare Free schedules bounded RSS upkeep; the VPS retains content and payment authority -
 *A September 30 production audit found 13 refreshable sources but no active feed-refresh
 schedule; historical volume-daemon references did not keep the source corpus current.*

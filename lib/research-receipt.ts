@@ -100,6 +100,7 @@ function projectEvidence(evidence: EvidenceRecord): ReceiptEvidence {
     sourceName: evidence.sourceName,
     quote: evidence.quote,
     support: evidence.support,
+    ...(evidence.qualifiesForAnswer !== undefined ? { qualifiesForAnswer: evidence.qualifiesForAnswer } : {}),
     qualifiesForReward: evidence.qualifiesForReward,
     ...receiptAsset(evidence),
   };

@@ -49,6 +49,7 @@ export interface ReceiptEvidence extends ReceiptAsset {
   sourceName: string;
   quote: string;
   support: number;
+  qualifiesForAnswer?: boolean;
   qualifiesForReward: boolean;
 }
 

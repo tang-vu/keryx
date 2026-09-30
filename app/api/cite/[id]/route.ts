@@ -1,3 +1,4 @@
+import { isPublicReferenceId } from "@/lib/public-references/catalog";
 /**
  * x402 citation settlement. Dynamic price = the agent-computed weighted reward.
  * payTo is the specified author wallet (validated to belong to the source).
@@ -23,6 +24,7 @@ export async function POST(
   ctx: { params: Promise<{ id: string }> },
 ) {
   const { id } = await ctx.params;
+  if (isPublicReferenceId(id)) return Response.json({ error: "Public references are free and have no payout authority" }, { status: 410 });
   const url = new URL(req.url);
   const author = url.searchParams.get("author");
   const amount = parseFloat(url.searchParams.get("amount") ?? "0");
@@ -30,6 +32,7 @@ export async function POST(
   const db = await getDb();
   const source = await db.getSource(id);
   if (!source) return Response.json({ error: "source not found" }, { status: 404 });
+  if (source.active === false || source.verified === false) return Response.json({ error: "Source is not active on the earning rail" }, { status: 410 });
 
   // payTo must be a real wallet of this source (the source itself or one of its authors)
   const valid =

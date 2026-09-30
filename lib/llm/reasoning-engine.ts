@@ -55,6 +55,7 @@ export interface LlmUsageRecord {
 
 /** A discoverable source the agent may choose to pay for (preview is free). */
 export interface SourceCandidate {
+  sourceKind?: "public-reference";
   id: string;
   /** Registry source behind the asset. Equals id for legacy source-level candidates. */
   sourceId?: string;

@@ -1,3 +1,4 @@
+import { referenceSnapshot, type PublicReference } from "../public-references/catalog";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { KeryxDB } from "../db/keryx-db";
 import type { Source, SourceItem } from "../types";
@@ -117,4 +118,64 @@ describe("source upkeep boundary", () => {
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ error: "Source upkeep unavailable" });
   });
+});
+
+
+const publicReference: PublicReference = { id: "public:one", name: "Public publisher", url: "https://publisher.test",
+  rssUrl: "https://publisher.test/rss", description: "Public", tags: [], active: true, items: [] };
+
+it("refreshes free snapshots without encryption or paid cache/storage and records only aggregate counts", async () => {
+  const { db } = setup();
+  db.claimSourceUpkeep.mockResolvedValue({ slot: 1, sourceIds: ["public:one"] });
+  const upsertPublicReference = vi.fn(async (_reference: PublicReference) => {});
+  const result = await runSourceUpkeep({ ...db, getPublicReference: async () => ({ ...publicReference }), upsertPublicReference },
+    { ingest: async () => ({ ...feed, items: Array.from({ length: 12 }, (_, index) => ({ ...feed.items[0]!, link: `https://publisher.test/${index}` })) }) });
+  expect(result.summary).toEqual({ attempted: 1, added: 10, failed: 0, skipped: 0 });
+  expect(upsertPublicReference.mock.calls[0]![0].items).toHaveLength(10);
+  expect(db.addItems).not.toHaveBeenCalled();
+  expect(db.setCached).not.toHaveBeenCalled();
+  expect(db.getSource).not.toHaveBeenCalled();
+  expect(JSON.stringify(result)).not.toContain("Private article");
+});
+
+it("refuses a changed/deactivated public feed and cannot write after a timed-out fetch resolves", async () => {
+  const { db } = setup();
+  db.claimSourceUpkeep.mockResolvedValue({ slot: 1, sourceIds: ["public:one"] });
+  const upsertPublicReference = vi.fn(async (_reference: PublicReference) => {});
+  let reads = 0;
+  const changed = await runSourceUpkeep({ ...db, getPublicReference: async () => ({ ...publicReference, active: ++reads === 1 }), upsertPublicReference },
+    { ingest: async () => feed });
+  expect(changed.summary?.failed).toBe(1);
+  expect(upsertPublicReference).not.toHaveBeenCalled();
+  let resolveFeed!: (value: IngestedFeed) => void;
+  const pending = new Promise<IngestedFeed>((resolve) => { resolveFeed = resolve; });
+  const timedOut = await runSourceUpkeep({ ...db, getPublicReference: async () => ({ ...publicReference }), upsertPublicReference },
+    { ingest: async () => pending, jobMs: 5 });
+  expect(timedOut.summary?.failed).toBe(1);
+  resolveFeed(feed);
+  await pending;
+  await Promise.resolve();
+  expect(upsertPublicReference).not.toHaveBeenCalled();
+});
+
+it("counts repeated public links as zero additions while replacing the latest snapshot", async () => {
+  const { db } = setup();
+  db.claimSourceUpkeep.mockResolvedValue({ slot: 1, sourceIds: ["public:one"] });
+  const snapshot = referenceSnapshot(publicReference, feed);
+  const upsertPublicReference = vi.fn(async (_reference: PublicReference) => {});
+  const result = await runSourceUpkeep({ ...db, getPublicReference: async () => snapshot, upsertPublicReference }, { ingest: async () => feed });
+  expect(result.summary?.added).toBe(0);
+  expect(upsertPublicReference).toHaveBeenCalledTimes(1);
+});
+
+
+it("preserves last-good public evidence when a refresh has no usable linked body", async () => {
+  const { db } = setup();
+  db.claimSourceUpkeep.mockResolvedValue({ slot: 1, sourceIds: ["public:one"] });
+  const snapshot = referenceSnapshot(publicReference, feed);
+  const upsertPublicReference = vi.fn(async (_reference: PublicReference) => {});
+  const result = await runSourceUpkeep({ ...db, getPublicReference: async () => snapshot, upsertPublicReference },
+    { ingest: async () => ({ ...feed, items: [{ ...feed.items[0]!, content: "", link: "javascript:bad" }] }) });
+  expect(result.summary?.failed).toBe(1);
+  expect(upsertPublicReference).not.toHaveBeenCalled();
 });

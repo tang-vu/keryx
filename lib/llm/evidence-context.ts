@@ -118,7 +118,8 @@ export function evidenceContext(question: string, subClaims: string[], gathered:
   return gathered.map((source) => ({
     marker: source.marker, sourceId: source.sourceId, name: source.sourceName,
     article: source.itemTitle, articleUrl: source.itemUrl, publishedAt: source.itemPublishedAt,
-    deliveryKind: source.contentReceipt?.deliveryKind ?? "unknown",
+    sourceKind: source.sourceKind ?? "creator",
+    deliveryKind: source.publicDeliveryKind ?? source.contentReceipt?.deliveryKind ?? "unknown",
     ...selectEvidencePassages(source.text, question, subClaims),
   }));
 }

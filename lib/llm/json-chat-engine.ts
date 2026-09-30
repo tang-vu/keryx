@@ -116,7 +116,8 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       price: c.fetchPrice,
       cached: c.cached,
       preview: c.preview.slice(0, 600),
-      deliveryKind: c.item?.contentReceipt?.deliveryKind ?? "unknown",
+      sourceKind: c.sourceKind ?? "creator",
+      deliveryKind: c.item?.publicDeliveryKind ?? c.item?.contentReceipt?.deliveryKind ?? "unknown",
       plaintextBytes: c.item?.contentReceipt?.plaintextBytes,
       ...(c.item
         ? {

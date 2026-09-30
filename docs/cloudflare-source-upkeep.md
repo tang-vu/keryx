@@ -2,9 +2,10 @@
 
 Keryx's first Workers use is a small **Free-plan scheduler**, not a migration of
 the application, database, paid content or settlement authority. An hourly Worker
-wakes the existing VPS to refresh up to two active, verified RSS sources. Newly
-ingested articles enter normal discovery and paid delivery through the existing
-encrypted source-item storage boundary.
+wakes the existing VPS to refresh up to two feeds from one combined catalog: active
+verified creator sources and active free public references. Creator articles enter
+paid delivery through encrypted source-item storage; public snapshots remain free
+answer evidence with no payout authority. See [public reference sources](public-reference-sources.md).
 
 The September 30 read-only production audit found 13 eligible feeds and no feed
 refresh cron, timer or running traction daemon. The old `refresh-feeds` script
@@ -40,10 +41,12 @@ time, and a completed sweep does not establish independent usage or settlement.
 - Source eligibility and the stored feed URL are checked again before storage and
   writes. Repeated links within a feed and existing links are deduplicated. Oversize,
   inaccessible or malformed feeds fail individually and the cursor continues.
-- Scheduled items require encryption and use the existing encrypted SQLite backend
+- Scheduled creator items require encryption and use the existing encrypted SQLite backend
   even when Pinata is configured. This job performs no remote pins, LLM requests,
   content purchases, signatures or settlements. Other ingestion keeps its existing
-  IPFS preference. Empty metadata-only items contain no paid body to encrypt.
+  IPFS preference. Empty metadata-only items contain no paid body to encrypt. Public
+  references use a separate free feed snapshot table with no encryption, payment fields
+  or paid delivery path; unusable refreshes preserve their last-good snapshot.
 - Supabase scheduling is unsupported and fails closed until equivalent atomic
   admission is implemented. The registry indexer and payout authority stay on the VPS.
 

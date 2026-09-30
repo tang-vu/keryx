@@ -1,3 +1,4 @@
+import { publicReferenceSchema, type PublicReference } from "../public-references/catalog";
 /**
  * SQLite adapter using Node's built-in `node:sqlite` (no native compile).
  * The offline-dev datastore; the deployed app uses the Supabase adapter instead.
@@ -118,6 +119,9 @@ CREATE TABLE IF NOT EXISTS source_notify_email (
 );
 CREATE TABLE IF NOT EXISTS sync_state (
   key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT
+);
+CREATE TABLE IF NOT EXISTS public_references (
+  id TEXT PRIMARY KEY, active INTEGER NOT NULL, rss_url TEXT NOT NULL, snapshot TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS source_items (
   id TEXT PRIMARY KEY, source_id TEXT, title TEXT, summary TEXT, content TEXT,
@@ -675,6 +679,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async upsertSource(s: Source): Promise<void> {
+    if (s.id.startsWith("public:")) throw new Error("Reserved public-reference source ID");
     // active/verified default to 1 (true) for offline/DB-direct rows that predate the flags.
     const activeInt = s.active === false ? 0 : 1;
     const verifiedInt = s.verified === false ? 0 : 1;
@@ -714,6 +719,20 @@ export class SqliteAdapter implements KeryxDB {
     this.db.prepare(`UPDATE sources SET preview_depth=? WHERE id=?`).run(depth, id);
   }
 
+  async listPublicReferences(): Promise<PublicReference[]> {
+    return this.db.prepare("SELECT snapshot FROM public_references WHERE active=1 ORDER BY id").all()
+      .map((row) => publicReferenceSchema.parse(JSON.parse(String(row.snapshot))));
+  }
+  async getPublicReference(id: string): Promise<PublicReference | null> {
+    const row = this.db.prepare("SELECT snapshot FROM public_references WHERE id=?").get(id);
+    return row ? publicReferenceSchema.parse(JSON.parse(String(row.snapshot))) : null;
+  }
+  async upsertPublicReference(reference: PublicReference): Promise<void> {
+    const value = publicReferenceSchema.parse(reference);
+    this.db.prepare(`INSERT INTO public_references(id,active,rss_url,snapshot) VALUES (?,?,?,?)
+      ON CONFLICT(id) DO UPDATE SET active=excluded.active,rss_url=excluded.rss_url,snapshot=excluded.snapshot`)
+      .run(value.id, Number(value.active), value.rssUrl, JSON.stringify(value));
+  }
   async listSources(): Promise<Source[]> {
     // Filter to active=1 only — deactivated on-chain sources must not be discovered/cited.
     const rows = this.db.prepare(`SELECT * FROM sources WHERE active = 1 ORDER BY created_at`).all();

@@ -31,8 +31,12 @@ export function CitationEvidencePanel({ queryId, citation, evidence, payments, o
   const panelRef = useRef<HTMLDialogElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const articleUrl = safeArticleUrl(citation.itemUrl);
+  const isPublicReference = citation.sourceKind === "public-reference";
+  const publicDelivery = citation.publicDeliveryKind
+    ? ({ full_text: "full text supplied by the feed", excerpt: "excerpt", abstract: "abstract", metadata_only: "metadata only" }[citation.publicDeliveryKind])
+    : "body supplied by the feed";
   const quotes = evidence.filter((item) =>
-    item.marker === citation.marker && item.sourceId === citation.sourceId && item.qualifiesForReward && item.quote.trim().length > 0,
+    item.marker === citation.marker && item.sourceId === citation.sourceId && (item.qualifiesForAnswer ?? item.qualifiesForReward) && item.quote.trim().length > 0,
   );
   const legs = payments.filter((payment) =>
     payment.kind === "citation" && payment.queryId === queryId && payment.sourceId === citation.sourceId &&
@@ -104,6 +108,13 @@ export function CitationEvidencePanel({ queryId, citation, evidence, payments, o
         </h2>
         <p className="mt-2 font-mono text-xs text-ink-3">Publication: {citation.sourceName}</p>
         <p className="mt-1 font-mono text-xs text-ink-3">Author name: not stored in this dispatch</p>
+        {isPublicReference && (
+          <div className="mt-4 border-l-2 border-line pl-4">
+            <p className="font-mono text-xs text-ink-3">Free public reference · no creator payment</p>
+            <p className="mt-2 font-mono text-xs text-ink-3">RSS delivery: {publicDelivery}</p>
+            <p className="mt-2 text-sm text-ink-2">Evidence comes from the public RSS feed body. Keryx has not fetched the full article or verified publisher ownership.</p>
+          </div>
+        )}
         {quotes.length ? (
           <div className="mt-7">
             <h3 className="font-mono text-xs uppercase tracking-widest text-ink-3">Supporting evidence</h3>
@@ -119,7 +130,7 @@ export function CitationEvidencePanel({ queryId, citation, evidence, payments, o
         ) : (
           <p className="mt-7 border-l-2 border-line pl-4 text-sm text-ink-3">No supporting excerpt is stored for this citation.</p>
         )}
-        <div className="mt-7 border-t border-line pt-5">
+        {!isPublicReference && <div className="mt-7 border-t border-line pt-5">
           <h3 className="font-mono text-xs uppercase tracking-widest text-ink-3">Creator reward</h3>
           <p className="mt-2 font-serif text-lg text-ink">{Math.round(citation.weight * 100)}% contribution weight</p>
           <p className="mt-2 text-sm text-ink-2">
@@ -146,7 +157,7 @@ export function CitationEvidencePanel({ queryId, citation, evidence, payments, o
           )}
           <p className="mt-2 font-mono text-xs text-ink-3">Planned citation reward: ${fmtUsdc(citation.reward)}</p>
           {settled.length > 0 && <a href={SETTLEMENT_PROOF} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs text-paid underline">View Circle Gateway settlement wallet on ArcScan ↗</a>}
-        </div>
+        </div>}
         {articleUrl && (
           <a href={articleUrl} target="_blank" rel="noopener noreferrer" className="mt-7 inline-block max-w-full break-all font-mono text-sm text-paid underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-seal">
             Open source article ↗

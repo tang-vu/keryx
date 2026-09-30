@@ -1,10 +1,12 @@
+import { discoverPublicReferences } from "./public-reference-evidence";
+import { isPublicReferenceId } from "../public-references/catalog";
 /**
  * The Keryx agent orchestrator — the brain.
  *
  * Streams a human-readable reasoning trace while it: decomposes the question, discovers candidate
  * sources, DECIDES buy/skip/cache (engine reasons value, code enforces the hard budget), fetches
  * via x402, stops early once it has read enough, synthesizes a cited answer, attributes contribution,
- * and settles a weighted citation reward to every source it actually used. Multi-author = split.
+ * and settles weighted citation rewards to eligible creators. Public references are free evidence.
  *
  * Yields TraceStep events; returns the final QueryRun. Visible agency is the product.
  */
@@ -201,8 +203,8 @@ export async function* runAgent(
   yield emit(
     "decompose",
     researchMode === "quick"
-      ? `Quick mode: at most ${attentionLimit} paid/cached reads, with no marketplace probe or gap-expansion round.`
-      : `Deep mode: up to ${attentionLimit} paid/cached reads plus one bounded gap-expansion pass when needed.`,
+      ? `Quick mode: at most ${attentionLimit} paid/cached/public reads, with no marketplace probe or gap-expansion round.`
+      : `Deep mode: up to ${attentionLimit} paid/cached/public reads plus one bounded gap-expansion pass when needed.`,
     { researchMode, attentionLimit, reevaluateRounds },
   );
 
@@ -212,8 +214,8 @@ export async function* runAgent(
   // cited, or paid. Listing stays permissionless — unverified rows show in the directory, just
   // off the money path. Undefined verified = grandfathered true (curated seed + pre-flag rows).
   const allSources = await db.listSources();
-  const sources = allSources.filter((s) => s.verified !== false);
-  const unverifiedCount = allSources.length - sources.length;
+  const sources = allSources.filter((s) => s.verified !== false && !isPublicReferenceId(s.id));
+  const unverifiedCount = allSources.filter((source) => source.verified === false).length;
   const candidates: SourceCandidate[] = [];
   const assetById = new Map<string, InternalAsset>();
   // Sources whose cached copy still matches what they publish. A copy the source has published
@@ -221,6 +223,11 @@ export async function* runAgent(
   // the first purchase of a source would be the last toll it ever earned, and every later answer
   // would be built from text the source has moved on from. See ./cache-freshness.ts.
   const freshCache = new Set<string>();
+  const { publicReads, publicCandidates } = await discoverPublicReferences(db, input.question, subClaims);
+  for (const candidate of publicCandidates.values()) {
+    candidates.push(candidate);
+    freshCache.add(candidate.id);
+  }
   let signedOfferCount = 0;
   for (const s of sources) {
     const terms = await sourceFetchTerms(s);
@@ -331,7 +338,7 @@ export async function* runAgent(
   }
   yield emit(
     "discover",
-    `Discovered ${candidates.length} verified source(s)${unverifiedCount > 0 ? ` — skipped ${unverifiedCount} unverified (feed ownership unproven, off the money path)` : ""}`,
+    `Discovered ${candidates.length - publicCandidates.size} verified creator source(s) and ${publicCandidates.size} free public reference(s)${unverifiedCount > 0 ? ` — skipped ${unverifiedCount} unverified (feed ownership unproven, off the money path)` : ""}`,
     candidates.map((c) => c.name),
   );
   if (signedOfferCount > 0) {
@@ -407,9 +414,20 @@ export async function* runAgent(
   const proposedAssetIds = new Set<string>();
   const internalProposed = proposed
     .filter((d) => !isExternal(d.sourceId))
-    .flatMap((d) => {
+    .flatMap<Decision>((d) => {
       // Current engines return candidate ids. Accept a registry source id too so an in-flight
       // fallback/custom engine cannot erase all decisions during this additive rollout.
+      const publicCandidate = publicCandidates.get(d.sourceId);
+      if (publicCandidate) {
+        if (proposedAssetIds.has(publicCandidate.id)) return [];
+        proposedAssetIds.add(publicCandidate.id);
+        return [{ ...d, assetId: publicCandidate.id, sourceId: publicCandidate.id,
+          sourceName: publicCandidate.name, price: 0, offerId: undefined, listPrice: undefined,
+          external: false, ...publicCandidate.item,
+          action: d.action === "SKIP" ? "SKIP" as const : "CACHE" as const,
+          rationale: `${d.rationale} - free public feed reference; no purchase or creator reward.`,
+          targets: normalizeClaimTargets(d.targets, subClaims.length) }];
+      }
       const asset = assetById.get(d.sourceId) ?? assetBySourceId.get(d.sourceId);
       if (!asset) return [];
       if (proposedAssetIds.has(asset.candidate.id)) return [];
@@ -419,6 +437,7 @@ export async function* runAgent(
         assetId: asset.candidate.id,
         sourceId: asset.source.id,
         sourceName: asset.candidate.name,
+        sourceKind: undefined, publicDeliveryKind: undefined,
         // The engine judges value; authoritative marketplace terms decide the amount reserved.
         price: asset.priceUsdc,
         targets: normalizeClaimTargets(d.targets, subClaims.length),
@@ -564,9 +583,11 @@ export async function* runAgent(
 
   // Ensure the spend wallet holds a settle-able Gateway balance before any payment
   // (real mode tops up from the funder once; offline is a no-op). Cached sources still earn
-  // citation rewards, so fund whenever any source will be used.
-  if (buys.length > 0) {
+  // citation rewards, so fund only when an owned payable source will be used.
+  let spendWalletReady = false;
+  if (buys.some((decision) => !publicReads.has(decision.assetId ?? decision.sourceId))) {
     const funded = await gateway.ensureFunded(budget);
+    spendWalletReady = true;
     if (gateway.mode === "real") {
       yield emit("fetch", `Agent spend wallet ready: ${funded.address}${funded.depositTx ? ` (topped up ${short(funded.depositTx)})` : " (balance sufficient)"}`);
     }
@@ -576,6 +597,13 @@ export async function* runAgent(
   let lastGaps = 0; // sub-claims with coverage < 0.4 from the most recent sufficiency check
 
   for (const d of buys) {
+    const publicRead = publicReads.get(d.assetId ?? d.sourceId);
+    if (publicRead) {
+      const marker = `S${++markerN}`;
+      gathered.push({ ...publicRead, marker });
+      yield emit("fetch", `Read ${d.sourceName} - free public feed reference, no creator payment - ${marker}`);
+      continue;
+    }
     const asset = assetById.get(d.assetId ?? d.sourceId);
     if (!asset) continue;
     const { source, item, cacheKey } = asset;
@@ -739,7 +767,7 @@ export async function* runAgent(
             id: d.assetId ?? d.sourceId,
             name: d.sourceName,
             price: asset?.priceUsdc ?? 0,
-            preview: asset?.candidate.preview ?? "",
+            preview: asset?.candidate.preview ?? publicCandidates.get(d.sourceId)?.preview ?? "",
           };
         });
 
@@ -787,6 +815,15 @@ export async function* runAgent(
           );
           break;
         }
+        const publicRead = publicReads.get(recId);
+        if (publicRead && !gatheredIds.has(recId)) {
+          const marker = `S${++markerN}`;
+          gathered.push({ ...publicRead, marker });
+          attentionUsed++;
+          gatheredIds.add(recId);
+          yield emit("reevaluate", `Filling gap - free public feed reference ${publicRead.sourceName}, no creator payment - ${marker}`);
+          continue;
+        }
         const asset = assetById.get(recId);
         const source = asset?.source;
         // Guard against an engine recommending a source we already read (duplicate marker +
@@ -799,6 +836,12 @@ export async function* runAgent(
         yield emit("reevaluate", `Filling gap — buying ${assetLabel} ($${asset.priceUsdc})…`);
 
         try {
+          // A public-only initial portfolio does not fund or deposit. Fund only if expansion
+          // now admits an owned source that can charge or receive a citation reward.
+          if (!spendWalletReady) {
+            await gateway.ensureFunded(budget);
+            spendWalletReady = true;
+          }
           paymentAttempts++;
           await input.onCreatorPaymentBoundary?.();
           const { content, payment } = await gateway.payFetch({
@@ -984,7 +1027,7 @@ export async function* runAgent(
   // completes "done" showing a blank answer after real money was spent.
   let answer = synthesized.answer?.trim()
     ? synthesized.answer
-    : `Read and paid for ${gathered.length} source(s) (${gathered.map((g) => g.sourceName).join(", ")}), but couldn't compose a written summary this run. Please try again.`;
+    : `Read ${gathered.length} source(s) (${gathered.map((g) => g.sourceName).join(", ")}), but couldn't compose a written summary this run. Please try again.`;
   const ledger = buildEvidenceLedger({
     subClaims,
     gathered,
@@ -1017,7 +1060,7 @@ export async function* runAgent(
   for (const item of evidence) {
     yield emit(
       "evidence",
-      `${item.qualifiesForReward ? "Verified" : "Below reward gate"} — ${item.marker} supports claim ${item.claimIndex + 1} at ${Math.round(item.support * 100)}%: “${item.quote.slice(0, 140)}${item.quote.length > 140 ? "…" : ""}”`,
+      `${item.sourceKind === "public-reference" && item.qualifiesForAnswer ? "Verified public reference (no creator reward)" : item.qualifiesForReward ? "Verified" : "Below support/reward gate"} — ${item.marker} supports claim ${item.claimIndex + 1} at ${Math.round(item.support * 100)}%: “${item.quote.slice(0, 140)}${item.quote.length > 140 ? "…" : ""}”`,
       item,
     );
   }
@@ -1082,20 +1125,25 @@ export async function* runAgent(
         contentVersion: g.contentVersion,
         itemPublishedAt: g.itemPublishedAt,
         contentReceipt: g.contentReceipt,
+        sourceKind: g.sourceKind,
+        publicDeliveryKind: g.publicDeliveryKind,
         weight: attribution.weight,
-        reward: rewards[index] ?? 0,
+        reward: g.sourceKind === "public-reference" ? 0 : rewards[index] ?? 0,
         rationale: attribution.rationale,
       };
     });
   }
   for (const c of citations) {
-    yield emit("attribute", `${c.sourceName} contributed ${(c.weight * 100).toFixed(0)}% → reward $${c.reward}`, c);
+    yield emit("attribute", c.sourceKind === "public-reference"
+      ? `${c.sourceName} contributed ${(c.weight * 100).toFixed(0)}% - free public reference; reward share withheld`
+      : `${c.sourceName} contributed ${(c.weight * 100).toFixed(0)}% - reward $${c.reward}`, c);
   }
 
   // 7) SETTLE weighted citation rewards (split across authors)
   for (const c of citations) {
-    const source = sourceById.get(c.sourceId)!;
-    if (c.reward <= 0) continue;
+    if (publicReads.has(c.sourceId) || isPublicReferenceId(c.sourceId)) continue;
+    const source = sourceById.get(c.sourceId);
+    if (!source || c.reward <= 0) continue;
     const authors = source.authors.length ? source.authors : [{ name: source.name, walletAddress: source.walletAddress, splitWeight: 1 }];
     // Allocate the reward across authors in integer micro-USDC so the settled legs sum to EXACTLY
     // c.reward — independent rounding per author (round(reward * weight)) would let the legs drift

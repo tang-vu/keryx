@@ -82,11 +82,12 @@ export function AnswerCard({ run, meta, permalink, payments = [] }: { run: Query
           {run.citations.length > 0 && (
             <div className="mt-7 border-t border-ink pt-5">
               <p className="mb-3.5 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-3">
-                Cited sources and planned rewards
+                Cited sources and references
               </p>
               <ul>
                 {run.citations.map((c) => {
                   const articleUrl = safeArticleUrl(c.itemUrl);
+                  const isPublicReference = c.sourceKind === "public-reference";
                   return (
                     <li
                       key={c.marker}
@@ -119,14 +120,20 @@ export function AnswerCard({ run, meta, permalink, payments = [] }: { run: Query
                             {c.itemPublishedAt ? ` · ${c.itemPublishedAt.slice(0, 10)}` : ""}
                           </span>
                         ) : null}
+                        {isPublicReference && (
+                          <span className="mt-1 block font-mono text-[10px] text-ink-3">
+                            Free public reference · no creator payment
+                            {c.publicDeliveryKind ? ` · RSS ${c.publicDeliveryKind === "full_text" ? "feed full text" : c.publicDeliveryKind.replaceAll("_", " ")}` : " · RSS feed body"}
+                          </span>
+                        )}
                       </span>
                       <button type="button" onClick={(event) => openCitation(c.marker, event.currentTarget)} className="font-mono text-xs text-seal underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-seal">Evidence</button>
                       <span className="shrink-0 font-mono text-[11px] text-ink-3">
                         {Math.round(c.weight * 100)}%
                       </span>
-                      <span className="shrink-0 font-mono text-sm tabular-nums text-paid">
+                      {!isPublicReference && <span className="shrink-0 font-mono text-sm tabular-nums text-paid">
                         ${fmtUsdc(c.reward)} planned
-                      </span>
+                      </span>}
                     </li>
                   );
                 })}
@@ -170,14 +177,14 @@ function EvidenceLedger({ run }: { run: QueryRun }) {
   return (
     <div className="mt-7 border-t border-ink pt-5">
       <p className="mb-3.5 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-3">
-        Evidence ledger — quotes verified before rewards
+        Evidence ledger — supporting quotes
       </p>
       <ol className="space-y-3">
         {run.claimCoverage?.map((claim) => {
           const spans = evidence.filter(
             (item) =>
               item.claimIndex === claim.claimIndex &&
-              item.qualifiesForReward,
+              (item.qualifiesForAnswer ?? item.qualifiesForReward),
           );
           return (
             <li
@@ -213,7 +220,7 @@ function EvidenceLedger({ run }: { run: QueryRun }) {
                 </div>
               ) : (
                 <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.08em] text-seal">
-                  No reward-qualifying evidence
+                  No supporting evidence
                 </p>
               )}
             </li>

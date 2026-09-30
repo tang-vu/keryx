@@ -55,9 +55,12 @@ export function claimSqliteSourceUpkeep(db: DatabaseSync, now: number): SourceUp
       db.exec("COMMIT");
       return null;
     }
-    const sources = db.prepare(`SELECT id FROM sources
-      WHERE active=1 AND verified=1 AND length(trim(coalesce(rss_url,'')))>0
-      ORDER BY CASE WHEN id > ? THEN 0 ELSE 1 END, id LIMIT ?`)
+    const sources = db.prepare(`SELECT id FROM (
+      SELECT id FROM sources WHERE active=1 AND verified=1 AND id NOT LIKE 'public:%'
+        AND length(trim(coalesce(rss_url,'')))>0
+      UNION ALL
+      SELECT id FROM public_references WHERE active=1 AND length(trim(rss_url))>0
+    ) ORDER BY CASE WHEN id > ? THEN 0 ELSE 1 END, id LIMIT ?`)
       .all(state?.cursor ?? "", SOURCE_UPKEEP_BATCH) as { id: string }[];
     const sourceIds = sources.map((source) => source.id);
     const next: State = {
