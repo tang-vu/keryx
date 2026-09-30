@@ -102,6 +102,32 @@ describe("SQLite strict identity admission", () => {
     await db.init(); expect(await db.getSource("source")).toBeNull();
     db.close(); await expect(db.getSource("source")).rejects.toThrow(/not initialized/);
   });
+  it("admits readonly reports without init and refuses damaged marker guards without repair", async () => {
+    const {target,identity,db}=await fixture("testnet-offline");
+    const readonly=new SqliteAdapter(target,{expectedIdentity:identity,readOnly:true}); adapters.push(readonly);
+    expect(readonly.getStorageIdentity()).toEqual(identity);
+    expect(await readonly.getSource("absent")).toBeNull();
+    readonly.close(); db.close();
+    const raw=new DatabaseSync(target);
+    raw.exec("DROP TRIGGER storage_identity_no_update; CREATE TRIGGER storage_identity_no_update BEFORE UPDATE ON keryx_storage_identity BEGIN SELECT 1; END"); raw.close();
+    const bytes=readFileSync(target);
+    expect(()=>new SqliteAdapter(target,{expectedIdentity:identity})).toThrow();
+    await expect(enrollSqliteStorage(target,identity,{} as ReviewedStorageEnrollment)).rejects.toThrow();
+    expect(readFileSync(target)).toEqual(bytes);
+  });
+  it("releases native iteration on early break and consumer throw before mutation and close", async () => {
+    const {target,identity}=await fixture("testnet-offline");
+    const checked=openVerifiedSqliteStorage(target,identity);
+    try {
+      checked.db.exec("INSERT INTO source_meta(id) VALUES('first'),('second')");
+      const statement=checked.db.prepare("SELECT * FROM source_meta");
+      for (const row of statement.iterate()) { expect(row.id).toBeTruthy(); break; }
+      checked.db.exec("UPDATE source_meta SET rss_url='after-break'");
+      expect(()=>{for (const row of statement.iterate()) { if(row.id) throw new Error('consumer'); }}).toThrow('consumer');
+      checked.db.exec("UPDATE source_meta SET rss_url='after-throw'");
+      expect(checked.db.prepare("SELECT count(*) AS n FROM source_meta WHERE rss_url='after-throw'").get()?.n).toBe(2);
+    } finally { checked.close(); }
+  });
   it("old raw writers, including already-open connections, cannot mutate any application table", async () => {
     const target = file(), old = new DatabaseSync(target); rawConnections.push(old);
     old.exec("CREATE TABLE source_meta(id TEXT PRIMARY KEY,rss_url TEXT); INSERT INTO source_meta VALUES('keep','original');");
@@ -128,7 +154,7 @@ describe("SQLite mode and row profile", () => {
       checked.db.exec("INSERT INTO payment_events(id,amount_usdc,network,settled,settlement_status) VALUES('sim',0.1,'eip155:5042002',0,'simulated')");
       expect(() => checked.db.exec("INSERT INTO payment_events(id,amount_usdc,network,settled,settlement_status) VALUES('pending',0.1,'eip155:5042002',0,'pending')")).toThrow();
       expect(() => checked.db.exec("INSERT INTO session_grants(session_id,sess_addr,owner_addr,cap,expiry,tx_hash) VALUES('s','a','b',1,1,'t')")).toThrow();
-      expect(() => checked.db.exec("INSERT INTO private_treasury_pools(id) VALUES('p')")).toThrow();
+      expect(() => checked.db.exec("INSERT INTO private_treasury_pools(signer,capacity_micros) VALUES('0x1111111111111111111111111111111111111111',100)")).toThrow(/offline storage/);
       expect(() => checked.db.exec("UPDATE browser_journal_control SET active=1")).toThrow();
       expect(() => checked.db.exec("DELETE FROM browser_journal_control; INSERT INTO browser_journal_control VALUES(1,1)")).toThrow();
     } finally { checked.close(); }
@@ -141,6 +167,8 @@ describe("SQLite mode and row profile", () => {
       expect(() => checked.db.exec("INSERT INTO withdrawals(tx_hash,network) VALUES('foreign','eip155:5042')")).toThrow();
       checked.db.exec("INSERT INTO payment_events(id,amount_usdc,network,settled,settlement_status) VALUES('pending',0.1,'eip155:5042002',0,'pending')");
       expect(() => checked.db.exec("UPDATE payment_events SET network='eip155:5042' WHERE id='pending'")).toThrow();
+      const data=JSON.stringify({requirement:{network:'eip155:5042',asset:'0x3600000000000000000000000000000000000000'}});
+      expect(()=>checked.db.prepare("INSERT INTO private_research_intents(id,payer,data) VALUES(?,?,?)").run(`prv_${'a'.repeat(64)}`,`0x${'1'.repeat(40)}`,data)).toThrow(/serialized authority profile/);
     } finally { checked.close(); }
   });
 });

@@ -29,7 +29,9 @@ export function openVerifiedSqliteStorage(file: string, expected: StorageIdentit
       }
       if (property === "iterate") return function* (...args: unknown[]) {
         assert(); const iterator = Reflect.apply(target.iterate, target, args);
-        for (;;) { assert(); const item = iterator.next(); if (item.done) return; yield item.value; }
+        try {
+          for (;;) { assert(); const item = iterator.next(); if (item.done) return; yield item.value; }
+        } finally { iterator.return?.(); }
       };
       return typeof value === "function" ? value.bind(target) : value;
     } });

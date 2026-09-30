@@ -31,6 +31,7 @@ export function scanFullStorageSnapshot(db: DatabaseSync): StorageSnapshot {
     `CASE WHEN length(CAST(${quote(name)} AS BLOB))<=${STORAGE_SNAPSHOT_LIMITS.fieldBytes} THEN CAST(${quote(name)} AS BLOB) ELSE NULL END AS ${quote(name)}`,
   ]);
   const schema: Record<string, unknown>[] = [];
+  let schemaBytes = 0;
   const decodeText = (value: unknown): string | null => {
     if (value === null) return null;
     if (!(value instanceof Uint8Array)) return refuseStorage("unsupported_value");
@@ -44,6 +45,8 @@ export function scanFullStorageSnapshot(db: DatabaseSync): StorageSnapshot {
       if (Number(row[`${name}_bytes`]) > STORAGE_SNAPSHOT_LIMITS.fieldBytes) refuseStorage("schema_limit");
       object[name] = decodeText(row[name]);
     }
+    schemaBytes += Buffer.byteLength(JSON.stringify(object));
+    if (schemaBytes > STORAGE_SNAPSHOT_LIMITS.encodedBytes) refuseStorage("encoded_byte_limit");
     schema.push(object);
   }
   if (schema.length > STORAGE_SNAPSHOT_LIMITS.schemaObjects) refuseStorage("schema_limit");
@@ -55,7 +58,7 @@ export function scanFullStorageSnapshot(db: DatabaseSync): StorageSnapshot {
   const hash = createHash("sha256");
   const frame = (value: string) => { hash.update(`${Buffer.byteLength(value)}:`); hash.update(value); };
   frame("keryx-full-logical-snapshot-v1"); frame(schemaDigest);
-  let rowCount = 0, totalBytes = 0, encodedBytes = Buffer.byteLength(JSON.stringify(schema)), enrollmentRefusal: string | undefined;
+  let rowCount = 0, totalBytes = 0, encodedBytes = schemaBytes, enrollmentRefusal: string | undefined;
   const tableCounts: Record<string, number> = {}, unknown = new Set<string>();
   const funded = new Set(["session_grants", "browser_authorization_intents", "browser_journal_bindings", "browser_signer_capacity",
     "browser_retained_grants", "a2a_orders", "withdrawals", "creator_withdrawal_requests", "creator_withdrawal_transfer_attempts",

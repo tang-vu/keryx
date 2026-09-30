@@ -114,8 +114,9 @@ export function registerStorageCapability(db: DatabaseSync, identity: Readonly<S
     active() && requested === digest && mode === identity.authorityMode ? 1 : 0);
 }
 function tableNames(db: DatabaseSync): string[] {
-  return (db.prepare("SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all() as { name: string }[])
-    .map(row => row.name).filter(name => name !== STORAGE_IDENTITY_TABLE);
+  const rows = db.prepare("SELECT CASE WHEN length(CAST(name AS BLOB))<=256 THEN name ELSE NULL END AS name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name LIMIT 513").all();
+  if (rows.length > 512 || rows.some(row => typeof row.name !== "string")) refuseStorage("unsupported_schema");
+  return rows.map(row => String(row.name)).filter(name => name !== STORAGE_IDENTITY_TABLE);
 }
 /** All application DML is fenced, including temporary browser journal writer-row operations. */
 export function storageFenceStatements(db: DatabaseSync, identity: Readonly<StorageIdentity>): Record<string, string> {
@@ -141,6 +142,29 @@ export function storageFenceStatements(db: DatabaseSync, identity: Readonly<Stor
         result[name] = `CREATE TRIGGER ${name} BEFORE ${operation} ON payment_events WHEN ${denied} BEGIN SELECT RAISE(ABORT,'storage payment mode mismatch'); END`;
       }
     }
+    if (table === "browser_journal_bindings") {
+      for (const operation of ["INSERT", "UPDATE"]) {
+        const name = `storage_profile_binding_${operation.toLowerCase()}`;
+        const invalid = "CASE WHEN json_valid(NEW.requirements) AND json_valid(NEW.payment_metadata) THEN " +
+          "json_extract(NEW.requirements,'$.network') IS NOT 'eip155:5042002' OR " +
+          "lower(json_extract(NEW.requirements,'$.asset')) IS NOT '0x3600000000000000000000000000000000000000' OR " +
+          "json_extract(NEW.requirements,'$.extra.name') IS NOT 'GatewayWalletBatched' OR " +
+          "json_extract(NEW.requirements,'$.extra.version') IS NOT '1' OR " +
+          "lower(json_extract(NEW.requirements,'$.extra.verifyingContract')) IS NOT '0x0077777d7eba4688bdef3e311b846f25870a19b9' OR " +
+          "json_extract(NEW.payment_metadata,'$.network') IS NOT 'eip155:5042002' ELSE 1 END";
+        result[name] = `CREATE TRIGGER ${name} BEFORE ${operation} ON browser_journal_bindings WHEN ${invalid} BEGIN SELECT RAISE(ABORT,'storage serialized authority profile mismatch'); END`;
+      }
+    }
+    if (["private_research_intents", "private_creator_submissions", "private_creator_confirmations"].includes(table)) {
+      const prefix = table === "private_research_intents" ? "$.requirement" : "$.submission";
+      const domain = table === "private_research_intents" ?
+        ` OR json_extract(NEW.data,'${prefix}.extra.name') IS NOT 'GatewayWalletBatched' OR json_extract(NEW.data,'${prefix}.extra.version') IS NOT '1' OR lower(json_extract(NEW.data,'${prefix}.extra.verifyingContract')) IS NOT '0x0077777d7eba4688bdef3e311b846f25870a19b9'` : "";
+      for (const operation of ["INSERT", "UPDATE"]) {
+        const name = `storage_profile_${table}_${operation.toLowerCase()}`;
+        const invalid = `CASE WHEN json_valid(NEW.data) THEN json_extract(NEW.data,'${prefix}.network') IS NOT 'eip155:5042002' OR lower(json_extract(NEW.data,'${prefix}.asset')) IS NOT '0x3600000000000000000000000000000000000000'${domain} ELSE 1 END`;
+        result[name] = `CREATE TRIGGER ${name} BEFORE ${operation} ON ${quote(table)} WHEN ${invalid} BEGIN SELECT RAISE(ABORT,'storage serialized authority profile mismatch'); END`;
+      }
+    }
     if (identity.authorityMode === "testnet-offline" && (table.startsWith("browser_") && !["browser_journal_control", "browser_journal_writer"].includes(table) ||
         ["session_grants", "withdrawals", "creator_withdrawal_requests", "creator_withdrawal_transfer_attempts", "creator_withdrawal_attestations", "a2a_orders"].includes(table) || table.startsWith("private_"))) {
       for (const operation of ["INSERT", "UPDATE"]) {
@@ -159,16 +183,16 @@ export function storageFenceStatements(db: DatabaseSync, identity: Readonly<Stor
 }
 export function installStorageFences(db: DatabaseSync, identity: Readonly<StorageIdentity>): void {
   for (const [name, sql] of Object.entries(storageFenceStatements(db, identity))) {
-    const existing = db.prepare("SELECT sql FROM sqlite_schema WHERE name=?").get(name);
-    if (existing && existing.sql !== sql) refuseStorage("fence_mismatch");
+    const existing = db.prepare("SELECT type='trigger' AND sql=? AS matches FROM sqlite_schema WHERE name=?").get(sql, name);
+    if (existing && existing.matches !== 1) refuseStorage("fence_mismatch");
     if (!existing) db.exec(sql);
   }
 }
 export function assertStorageFences(db: DatabaseSync, identity: Readonly<StorageIdentity>): void {
   for (const [name, sql] of Object.entries(storageFenceStatements(db, identity))) {
-    if (db.prepare("SELECT sql FROM sqlite_schema WHERE type='trigger' AND name=?").get(name)?.sql !== sql) refuseStorage("fence_missing_or_changed");
+    if (db.prepare("SELECT sql=? AS matches FROM sqlite_schema WHERE type='trigger' AND name=?").get(sql, name)?.matches !== 1) refuseStorage("fence_missing_or_changed");
   }
   for (const [name, sql] of Object.entries(MARKER_GUARDS)) {
-    if (db.prepare("SELECT sql FROM sqlite_schema WHERE type='trigger' AND name=?").get(name)?.sql !== sql) refuseStorage("marker_guard_missing_or_changed");
+    if (db.prepare("SELECT sql=? AS matches FROM sqlite_schema WHERE type='trigger' AND name=?").get(sql, name)?.matches !== 1) refuseStorage("marker_guard_missing_or_changed");
   }
 }

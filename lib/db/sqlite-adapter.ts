@@ -399,6 +399,12 @@ export class SqliteAdapter implements KeryxDB {
       this.heldTarget.verify();
       this.db = db;
       registerStorageCapability(db, this.identity, () => this.capabilityActive && !this.closed);
+      if (this.readOnly) {
+        // Reports get admitted reads without initialization, PRAGMAs, schema or cache mutation.
+        restrictStorageApplicationSql(db);
+        this.ready = true;
+        this.assertReady();
+      }
     } catch (error) {
       try { db?.close(); } finally { this.heldTarget.close(); }
       throw error;
