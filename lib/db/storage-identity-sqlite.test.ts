@@ -127,8 +127,50 @@ describe("SQLite strict identity admission", () => {
     const current=await inspectSqliteEnrollment(target,identity);
     const reordered=Object.fromEntries(Object.entries(current).reverse()) as unknown as typeof current;
     const fresh={...proof,inspection:reordered,unknownClassAttestation:current.unknownClasses};
-    const results=await Promise.all([enrollSqliteStorage(target,identity,fresh),enrollSqliteStorage(target,identity,fresh)]);
-    expect(results.map(result=>result.status).sort()).toEqual(["already_enrolled","enrolled"]);
+    // Await both close acknowledgements before asserting or removing the target.
+    // An unknown acknowledgement is still a failure, never enrollment evidence.
+    const results=await Promise.allSettled([enrollSqliteStorage(target,identity,fresh),enrollSqliteStorage(target,identity,fresh)]);
+    expect(results.map(result=>result.status)).toEqual(["fulfilled","fulfilled"]);
+    const receipts=results.map(result=> { if(result.status!=="fulfilled") throw result.reason; return result.value; });
+    expect(receipts.map(result=>result.status).sort()).toEqual(["already_enrolled","enrolled"]);
+    const checked=openVerifiedSqliteStorage(target,identity); try {
+      expect(checked.db.prepare("SELECT payload FROM source_meta").get()?.payload).toBe("after");
+    } finally { checked.close(); }
+    const installed=await inspectSqliteEnrollment(target,identity);
+    expect(installed.expectedIdentityDigest).toBe(current.expectedIdentityDigest);
+    expect(installed.targetIdentityDigest).toBe(current.targetIdentityDigest);
+    expect(await enrollSqliteStorage(target,identity,fresh)).toMatchObject({status:"already_enrolled",identityDigest:current.expectedIdentityDigest});
+    expect(await inspectSqliteEnrollment(target,identity)).toEqual(installed);
+  });
+  it("waits for an actual initial schema lock before exact enrollment and reaps the child before cleanup", async () => {
+    const target=file(), raw=new DatabaseSync(target);
+    raw.exec("CREATE TABLE source_meta(id INTEGER PRIMARY KEY,payload TEXT); INSERT INTO source_meta VALUES(1,'retained');");
+    const identity=syntheticStorageIdentity("testnet-real"), inspection=await inspectSqliteEnrollment(target,identity);
+    const reviewed:ReviewedStorageEnrollment={format:"keryx-reviewed-storage-enrollment-v1",inspection,provenanceDocumentDigest:identity.provenanceDigest,unknownClassAttestation:inspection.unknownClasses};
+    const moduleUrl=pathToFileURL(join(process.cwd(),"lib/db/storage-identity-provision-core.ts")).href;
+    const script=`import {DatabaseSync} from 'node:sqlite'; import {writeSync} from 'node:fs'; import {provisionStorageInChild} from ${JSON.stringify(moduleUrl)};
+      const prepare=DatabaseSync.prototype.prepare; let first=true;
+      DatabaseSync.prototype.prepare=function(sql){if(first&&sql.includes('sqlite_schema')){first=false;writeSync(1,'POINT\\n');}return prepare.call(this,sql);};
+      try {writeSync(1,'RESULT '+JSON.stringify(provisionStorageInChild(${JSON.stringify({mode:"enroll",file:target,identity,reviewed})}))+'\\n');}
+      catch(error){writeSync(1,'RESULT '+JSON.stringify({refusal:true,code:error.code,errcode:error.errcode})+'\\n');}`;
+    const require=createRequire(import.meta.url);
+    raw.exec("BEGIN EXCLUSIVE");
+    const child=spawn(process.execPath,["--import",pathToFileURL(require.resolve("tsx")).href,"--input-type=module","-e",script],{windowsHide:true,stdio:["ignore","pipe","ignore"]});
+    let output="",release:ReturnType<typeof setTimeout>|undefined,timedOut=false,spawnFailed=false;
+    try {
+      await new Promise<void>(resolve=>{
+        const deadline=setTimeout(()=>{timedOut=true;child.kill("SIGKILL");},5000);
+        child.once("error",()=>{spawnFailed=true;});
+        child.stdout.on("data",bytes=>{output+=bytes.toString();if(output.includes("POINT\n")&&!release) release=setTimeout(()=>raw.exec("ROLLBACK"),100);});
+        child.once("close",()=>{clearTimeout(deadline);resolve();});
+      });
+      expect(timedOut).toBe(false);expect(spawnFailed).toBe(false);
+      expect(output).toContain("POINT\n");
+      const match=output.match(/RESULT (.*)\n/);expect(match).not.toBeNull();
+      expect(JSON.parse(match![1])).toMatchObject({status:"enrolled",identityDigest:inspection.expectedIdentityDigest});
+      expect(raw.prepare("SELECT payload FROM source_meta").get()?.payload).toBe("retained");
+      expect(raw.prepare(`SELECT count(*) AS n FROM ${STORAGE_IDENTITY_TABLE}`).get()?.n).toBe(1);
+    } finally {if(release) clearTimeout(release);try {raw.exec("ROLLBACK");} catch {}raw.close();}
   });
   it("refuses missing expected identity and missing files without creation", async () => {
     const target = file();
