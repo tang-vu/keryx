@@ -16,6 +16,12 @@ and release CI runs; merely adding the script does not establish a passing drill
 Docker is unavailable on the development host, so local PostgreSQL execution is
 not claimed.
 
+The first hosted PostgreSQL run for PR #44 failed on the admission insert:
+`created_at` was JSON text rather than `timestamptz`. Additive migration `0068`
+corrects the cast without rewriting `0067`; the harness also checks exact timestamp
+persistence and malformed-timestamp reservation rollback. Acceptance remains open
+until the corrected candidate passes hosted CI.
+
 ## Release gates
 
 | Gate | Remaining evidence required |

@@ -50,8 +50,9 @@ try {
   await ready();
   // Apply the actual complete migration chain through D-268, including real grants/RLS.
   const migrations = readdirSync("supabase/migrations")
-    .filter(file => /^\d{4}.*\.sql$/.test(file) && Number(file.slice(0, 4)) <= 67).sort();
+    .filter(file => /^\d{4}.*\.sql$/.test(file) && Number(file.slice(0, 4)) <= 68).sort();
   assert(migrations.includes("0067_browser_authorization_admission.sql"));
+  assert(migrations.includes("0068_browser_authorization_timestamp.sql"));
   // Supabase supplies these roles and its realtime publication, not application functions.
   sql("create role anon; create role authenticated; create role service_role bypassrls; create publication supabase_realtime;\n" +
     migrations.map(file => readFileSync(`supabase/migrations/${file}`, "utf8")).join("\n"));
@@ -66,9 +67,13 @@ try {
   assert.deepEqual(outcomes, ["admitted", "admitted", "grant_or_cap_refused"]);
   assert.equal(sql("select spent=0.000002 from public.session_grants where session_id='owner'"), "t");
   assert.equal(sql("select count(*) from public.browser_authorization_intents"), "2");
+  assert.equal(sql(`select bool_and(created_at='2026-09-30T00:00:00Z'::timestamptz)
+    from public.browser_authorization_intents`), "t", "admission must persist the supplied timestamp");
   asService("update public.session_grants set cap=0.000010 where session_id='owner'");
   const original = JSON.parse(sql("select row_to_json(i) from public.browser_authorization_intents i order by nonce limit 1"));
   const before = state();
+  assert.throws(() => asService(admit(9, { created_at: "synthetic-invalid-timestamp" })), /invalid input syntax.*timestamp/);
+  assert.equal(state(), before, "invalid timestamp must roll back spend and intent insert");
   assert.throws(() => asService(admit(10, { request_id: original.request_id })), /unique constraint/);
   assert.equal(state(), before, "duplicate request must roll back spend");
   assert.throws(() => asService(admit(11, { nonce: original.nonce })), /unique constraint/);
