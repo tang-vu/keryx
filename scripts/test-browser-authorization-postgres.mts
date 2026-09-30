@@ -179,6 +179,8 @@ try {
     ('legacy-orphan-settled','fetch','query','synthetic-source','${signer}','${`0x${"2".repeat(40)}`}',0.000001,'eip155:5042002',true,'settled','${nonce(102)}','orphan-epoch','synthetic-settlement'),
     ('legacy-simulated','fetch','query','synthetic-source','${signer}','${`0x${"2".repeat(40)}`}',1,'eip155:5042002',false,'simulated',null,'ignored-epoch',null)`);
   const legacySpent = Number(sql("select spent*1000000 from public.session_grants where session_id='owner'"));
+  asService(`insert into public.session_grants(session_id,sess_addr,owner_addr,cap,spent,expiry,tx_hash,grant_epoch)
+    values('legacy-cap-alias','${signer.toUpperCase().replace("0X", "0x")}','synthetic-owner',0.000001,0,0,'synthetic-unfunded','legacy-alias-epoch')`);
   // Hosted projects may grant service-role DML through default ACLs. Migration
   // restrictions must override those defaults explicitly, not assume a clean cluster.
   sql("alter default privileges in schema public grant all on tables to service_role");
@@ -194,6 +196,11 @@ try {
   asService("select public.activate_browser_journal()");
   asService("select public.activate_browser_journal()");
   assert.equal(sql(`select spent_micro from public.browser_signer_capacity where signer='${signer}'`), String(legacySpent + 2));
+  assert.equal(sql(`select bool_and(g.spent*1000000=c.spent_micro)
+    from public.session_grants g join public.browser_signer_capacity c on lower(g.sess_addr)=c.signer`), "t",
+  "activation must synchronize all current aliases with imported orphan-epoch capacity");
+  assert.equal(sql("select cap=0.000001 and spent>cap from public.session_grants where session_id='legacy-cap-alias'"), "t",
+    "retained consumption may exhaust a smaller alias; activation must preserve its cap");
   assert.equal(sql("select spent_micro from public.browser_retained_grants where grant_epoch='orphan-epoch'"), "2");
   assert.equal(sql("select count(*) from public.browser_retained_grants where grant_epoch='ignored-epoch'"), "0");
   assert.equal(sql("select bool_and(authorization_phase is null) from public.payment_events"), "t", "legacy phases must remain unknown");
