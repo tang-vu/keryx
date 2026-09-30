@@ -42,7 +42,10 @@ export function provisionStorageInChild(request: StorageProvisionRequest): Stora
     if (fstatSync(held.descriptor).size > STORAGE_SNAPSHOT_LIMITS.fileBytes) refuseStorage("file_limit");
     db = new DatabaseSync(request.file, { readOnly: request.mode === "inspect", allowExtension: false });
     held.verify();
-    // Inspect existing marker under a read transaction before connection PRAGMAs
+    // The initial schema read can race another enroller's exclusive COMMIT
+    // lock too. Bound that wait before any read, not only BEGIN IMMEDIATE.
+    db.exec("PRAGMA busy_timeout=1000");
+    // Inspect existing marker under a read transaction before durability settings
     // or an enrollment write lock; exact repeats return without repair or mutation.
     db.exec("BEGIN");
     let present = db.prepare("SELECT 1 FROM sqlite_schema WHERE name=?").get(STORAGE_IDENTITY_TABLE);
@@ -56,7 +59,7 @@ export function provisionStorageInChild(request: StorageProvisionRequest): Stora
       }
     }
     if (request.mode !== "inspect") {
-      db.exec("ROLLBACK; PRAGMA synchronous=FULL; PRAGMA busy_timeout=1000; BEGIN IMMEDIATE");
+      db.exec("ROLLBACK; PRAGMA synchronous=FULL; BEGIN IMMEDIATE");
       // Another owner may have enrolled while we acquired the exclusive write lock.
       present = db.prepare("SELECT 1 FROM sqlite_schema WHERE name=?").get(STORAGE_IDENTITY_TABLE);
       if (present) {
