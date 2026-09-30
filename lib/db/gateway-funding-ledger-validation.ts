@@ -80,7 +80,7 @@ export function validateFundingOwnerInstallation(input: unknown): Readonly<Fundi
 }
 export function validateFundingNamespace(input: unknown, identity: StorageIdentity, backendDigest: string): Readonly<FundingNamespaceSnapshot> {
   const r = fundingRecord(input, ["identityDigest", "chainId", "sender", "peer", "role", "historyDocumentDigest", "backendBindingDigest",
-    "finalityPolicyDigest", "initialNonce", "nextNonce", "limits", "used", "nativeAggregateLimitWei", "nativeAggregateUsedWei"]);
+    "finalityPolicyDigest", "initialNonce", "nextNonce", "nextCryptoNonce", "limits", "used", "nativeAggregateLimitWei", "nativeAggregateUsedWei"]);
   if (r.identityDigest !== storageIdentityDigest(identity) || r.backendBindingDigest !== backendDigest || r.chainId !== "5042002"
     || typeof r.role !== "string" || !["funder", "spend"].includes(r.role) || r.initialNonce !== "0") fundingRefused();
   const limits = fundingExposure(r.limits);
@@ -90,8 +90,10 @@ export function validateFundingNamespace(input: unknown, identity: StorageIdenti
     || r.role === "funder" && (limits.depositMicros !== "0" || used.depositMicros !== "0")
     || r.role === "spend" && (limits.nativeWei !== "0" || limits.usdcMicros !== "0" || used.nativeWei !== "0" || used.usdcMicros !== "0")) fundingRefused();
   const sender = fundingAddress(r.sender), peer = fundingAddress(r.peer); if (sender === peer) fundingRefused();
+  const nextNonce = fundingHighWater(r.nextNonce), nextCryptoNonce = fundingHighWater(r.nextCryptoNonce);
+  if (BigInt(nextCryptoNonce) > BigInt(nextNonce)) fundingRefused();
   return Object.freeze({ identityDigest: r.identityDigest, chainId: "5042002", sender, peer, role: r.role as "funder" | "spend",
     historyDocumentDigest: fundingDigest(r.historyDocumentDigest), backendBindingDigest: backendDigest,
-    finalityPolicyDigest: fundingDigest(r.finalityPolicyDigest), initialNonce: "0", nextNonce: fundingHighWater(r.nextNonce),
+    finalityPolicyDigest: fundingDigest(r.finalityPolicyDigest), initialNonce: "0", nextNonce, nextCryptoNonce,
     limits, used, nativeAggregateLimitWei, nativeAggregateUsedWei });
 }
