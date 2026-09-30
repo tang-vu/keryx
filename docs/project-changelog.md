@@ -1,5 +1,14 @@
 # Keryx Project Changelog
 
+### Worker-native redirect refusal (2026-09-30, v0.24.4)
+
+- Fix the scheduled upkeep call's unsupported `redirect: "error"` value: workerd rejects
+  it before making a request. Use native manual redirects and reject returned 3xx statuses
+  without following their Location or forwarding the credential.
+- Add a hermetic workerd check of the actual built Worker, covering success, redirect refusal
+  and HTTP failure with exactly one intercepted request. CI now checks native runtime behavior
+  alongside the Node unit tests; live scheduled acceptance remains a deployment gate.
+
 ### Scheduled source upkeep (2026-09-30, v0.24.3)
 
 - Add an isolated Cloudflare Free hourly scheduler for verified source freshness, independent
