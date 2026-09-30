@@ -89,6 +89,11 @@ try {
     for each row execute function keryx_storage.write_fence();
     create trigger storage_authority_no_truncate before truncate on public.synthetic_extra
     for each statement execute function keryx_storage.write_fence();`);
+  sql("create type public.synthetic_state as enum ('unbound')");
+  const enumSnapshot = sql("select keryx_storage.snapshot_digest()");
+  sql("alter type public.synthetic_state rename value 'unbound' to 'reviewed'");
+  assert.notEqual(sql("select keryx_storage.snapshot_digest()"),enumSnapshot,"enum label mutation must change full schema CAS");
+  assert.throws(()=>sql(`select keryx_storage.enroll(${expected},'${enumSnapshot}')`),/provenance changed/);
   const snapshot = sql("select keryx_storage.snapshot_digest()");
   sql(`select keryx_storage.enroll(${expected},'${snapshot}')`);
   sql(`select keryx_storage.enroll(${expected},'${snapshot}')`);
