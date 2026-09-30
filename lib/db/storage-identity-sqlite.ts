@@ -3,9 +3,12 @@ import { closeSync, constants, fstatSync, lstatSync, openSync, realpathSync } fr
 import { dirname, isAbsolute, parse, relative, resolve, sep } from "node:path";
 import { DatabaseSync, constants as sqliteConstants } from "node:sqlite";
 import { refuseStorage, storageIdentityDigest, validateStorageIdentity, StorageIdentityRefused, type StorageIdentity } from "./storage-identity";
+import { GATEWAY_FUNDING_TABLES } from "./gateway-funding-ledger-types";
+import { gatewayFundingFenceStatements } from "./gateway-funding-sqlite-schema";
 
 export const STORAGE_IDENTITY_TABLE = "keryx_storage_identity";
 export const STORAGE_APPLICATION_TABLES = Object.freeze([
+  ...GATEWAY_FUNDING_TABLES,
   "sources", "source_meta", "source_notify", "source_notify_email", "source_items", "article_offers", "gap_intents", "cache_items",
   "payment_events", "browser_authorization_intents", "browser_journal_bindings", "browser_journal_control", "browser_journal_writer",
   "browser_retained_grants", "browser_signer_capacity", "query_runs", "a2a_orders", "activation_events", "withdrawals", "api_keys",
@@ -120,7 +123,7 @@ function tableNames(db: DatabaseSync): string[] {
 }
 /** All application DML is fenced, including temporary browser journal writer-row operations. */
 export function storageFenceStatements(db: DatabaseSync, identity: Readonly<StorageIdentity>): Record<string, string> {
-  const result: Record<string, string> = {};
+  const result: Record<string, string> = gatewayFundingFenceStatements(db);
   const digest = storageIdentityDigest(identity);
   for (const table of tableNames(db)) {
     if (!STORAGE_APPLICATION_TABLES.includes(table)) refuseStorage("unsupported_table");

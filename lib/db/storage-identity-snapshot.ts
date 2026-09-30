@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { refuseStorage } from "./storage-identity";
 import { STORAGE_APPLICATION_TABLES, STORAGE_IDENTITY_TABLE } from "./storage-identity-sqlite";
+import { GATEWAY_FUNDING_TABLES } from "./gateway-funding-ledger-types";
 
 export const STORAGE_SNAPSHOT_LIMITS = Object.freeze({ deadlineMs: 15_000, fileBytes: 64 * 1024 * 1024,
   rows: 100_000, fieldBytes: 2 * 1024 * 1024, totalBytes: 128 * 1024 * 1024, encodedBytes: 32 * 1024 * 1024, schemaObjects: 512, columns: 128 });
@@ -60,7 +61,7 @@ export function scanFullStorageSnapshot(db: DatabaseSync): StorageSnapshot {
   frame("keryx-full-logical-snapshot-v1"); frame(schemaDigest);
   let rowCount = 0, totalBytes = 0, encodedBytes = schemaBytes, enrollmentRefusal: string | undefined;
   const tableCounts: Record<string, number> = {}, unknown = new Set<string>();
-  const funded = new Set(["session_grants", "browser_authorization_intents", "browser_journal_bindings", "browser_signer_capacity",
+  const funded = new Set([...GATEWAY_FUNDING_TABLES, "session_grants", "browser_authorization_intents", "browser_journal_bindings", "browser_signer_capacity",
     "browser_retained_grants", "a2a_orders", "withdrawals", "creator_withdrawal_requests", "creator_withdrawal_transfer_attempts",
     "creator_withdrawal_attestations", "private_research_intents", "private_treasury_pools", "private_treasury_reservations",
     "private_research_payment_attempts", "private_creator_submissions", "private_creator_confirmations", "private_treasury_releases",
