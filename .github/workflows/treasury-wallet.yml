@@ -1,0 +1,36 @@
+name: Persistent treasury wallet candidate
+on:
+  pull_request:
+    paths:
+      - "lib/payments/persistent-treasury-wallet*"
+      - "lib/payments/real-gateway*"
+      - "lib/payments/treasury-spend-wallet*"
+      - "lib/payments/payment-gateway.ts"
+      - "lib/payments/server-payment-gateway.ts"
+      - "lib/payments/gateway.ts"
+      - "lib/config.ts"
+      - ".github/workflows/treasury-wallet.yml"
+  workflow_dispatch:
+jobs:
+  treasury-wallet:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.10.0"
+          cache: npm
+      - run: npm ci
+      - name: Actual synthetic wallet refusal and RealGateway regressions
+        run: npx vitest run lib/payments/persistent-treasury-wallet.test.ts lib/payments/real-gateway-funding.test.ts lib/payments/real-gateway-privacy.test.ts lib/payments/treasury-spend-wallet.test.ts
+      - name: Project TypeScript
+        run: npx tsc --noEmit
+      - name: Scoped wallet lint
+        run: npx eslint lib/payments/real-gateway.ts lib/payments/real-gateway-funding.test.ts lib/payments/persistent-treasury-wallet.ts lib/payments/persistent-treasury-wallet.test.ts

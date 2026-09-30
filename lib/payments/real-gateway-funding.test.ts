@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { generatePrivateKey } from "viem/accounts";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { assertGuardedEvmWallet } from "./guarded-evm-authority";
 
 const state = vi.hoisted(() => ({
@@ -8,11 +8,7 @@ const state = vi.hoisted(() => ({
   key: "", balance: vi.fn(), native: vi.fn(), read: vi.fn(), receipt: vi.fn(), chain: vi.fn(), deposit: vi.fn(),
 }));
 vi.mock("../config", () => ({ config: state.config }));
-vi.mock("node:fs", async importOriginal => {
-  const actual = await importOriginal<typeof import("node:fs")>();
-  return { ...actual, default: { ...actual, readFileSync: () => JSON.stringify({ privateKey: state.key }),
-    mkdirSync: () => { throw new Error("Unexpected wallet write"); }, writeFileSync: () => { throw new Error("Unexpected wallet write"); } } };
-});
+vi.mock("./persistent-treasury-wallet", () => ({ loadPersistentTreasuryWallet: () => ({ privateKey: state.key, address: privateKeyToAccount(state.key as `0x${string}`).address }) }));
 vi.mock("../db/runtime-storage-config", () => ({ requireRuntimeStorageMode: vi.fn() }));
 vi.mock("../arc-rpc-attestation", async importOriginal => {
   const actual = await importOriginal<typeof import("../arc-rpc-attestation")>();
