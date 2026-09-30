@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { mkdtempSync, readFileSync, rmSync, existsSync, openSync, closeSync, renameSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, existsSync, openSync, closeSync, renameSync, writeFileSync, fstatSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawn } from "node:child_process";
@@ -13,6 +13,7 @@ import { openVerifiedSqliteStorage } from "./storage-identity-connection";
 import { STORAGE_IDENTITY_TABLE, holdStorageTarget } from "./storage-identity-sqlite";
 import { assertExclusiveCreatedTarget } from "./storage-identity-provision-core";
 import { scanFullStorageSnapshot } from "./storage-identity-snapshot";
+import * as storageSqlite from "./storage-identity-sqlite";
 
 const dirs: string[] = [], adapters: SqliteAdapter[] = [], rawConnections: DatabaseSync[] = [];
 const file = () => { const dir = mkdtempSync(join(tmpdir(), "keryx-storage-identity-")); dirs.push(dir); return join(dir, "store.sqlite"); };
@@ -25,6 +26,29 @@ async function fixture(mode: "testnet-real" | "testnet-offline" = "testnet-real"
 }
 
 describe("SQLite strict identity admission", () => {
+  it("closes the SQLite handle and held descriptor when authorizer admission is unavailable", async () => {
+    const {target,identity}=await fixture("testnet-offline");
+    const originalHold=storageSqlite.holdStorageTarget;
+    let descriptor: number | undefined;
+    const holdSpy=vi.spyOn(storageSqlite,"holdStorageTarget").mockImplementation(path=>{
+      const held=originalHold(path); descriptor=held.descriptor; return held;
+    });
+    const closeSpy=vi.spyOn(DatabaseSync.prototype,"close");
+    const authorizerDescriptor=Object.getOwnPropertyDescriptor(DatabaseSync.prototype,"setAuthorizer")!;
+    Object.defineProperty(DatabaseSync.prototype,"setAuthorizer",{...authorizerDescriptor,value:undefined});
+    try {
+      expect(()=>openVerifiedSqliteStorage(target,identity)).toThrow(/sqlite_authorizer_unavailable/);
+      expect(closeSpy).toHaveBeenCalledOnce();
+      const failedConnection=closeSpy.mock.instances[0];
+      expect(()=>failedConnection.prepare("SELECT 1")).toThrow(/not open/);
+      expect(descriptor).toBeDefined();
+      expect(()=>fstatSync(descriptor!)).toThrow();
+    } finally {
+      Object.defineProperty(DatabaseSync.prototype,"setAuthorizer",authorizerDescriptor);
+      closeSpy.mockRestore(); holdSpy.mockRestore();
+    }
+    const checked=openVerifiedSqliteStorage(target,identity); checked.close();
+  });
   it("refuses an ordinary replacement of the exclusively created empty file, or the platform locks it", () => {
     const target=file(), descriptor=openSync(target,'wx',0o600);
     try {

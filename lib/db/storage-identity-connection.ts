@@ -12,7 +12,10 @@ export function openVerifiedSqliteStorage(file: string, expected: StorageIdentit
     // Connection settings follow identity admission and precede SQL restriction. They are not schema repair.
     db.exec("PRAGMA busy_timeout=5000");
     if (!options.readOnly) db.exec("PRAGMA synchronous=FULL");
+    registerStorageCapability(db, identity, () => !closed);
+    restrictStorageApplicationSql(db);
   } catch (error) {
+    closed = true;
     try { db?.close(); } catch { /* preserve fixed admission refusal */ }
     try { held.close(); } catch { /* preserve fixed admission refusal */ }
     if(error instanceof StorageIdentityRefused) throw error;
@@ -23,8 +26,6 @@ export function openVerifiedSqliteStorage(file: string, expected: StorageIdentit
     if (closed) throw new Error("Verified storage connection closed");
     held.verify(); assertStorageIdentity(native, identity); assertStorageFences(native, identity);
   };
-  registerStorageCapability(native, identity, () => !closed);
-  restrictStorageApplicationSql(native);
   const close = () => { if (!closed) { closed = true; try { native.close(); } finally { held.close(); } } };
   function guardStatement(statement: StatementSync): StatementSync {
     return new Proxy(statement, { get(target, property) {
