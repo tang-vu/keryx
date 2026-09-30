@@ -1,0 +1,15 @@
+{
+  "name": "keryx-ops-monitor",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "wrangler deploy --dry-run --outdir .wrangler/build",
+    "test": "node --test test/*.test.mjs",
+    "test:runtime": "node test-runtime.mjs",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "miniflare": "5.20260926.1-alpha",
+    "wrangler": "4.144.0"
+  }
+}
