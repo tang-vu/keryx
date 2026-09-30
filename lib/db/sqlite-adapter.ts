@@ -11,6 +11,9 @@ import { saveSqlitePrivateResult, getSqlitePrivateResult, PRIVATE_RESEARCH_RESUL
 import { PRIVATE_TREASURY_CAPACITY_SQL, reserveSqlitePrivateTreasury, getSqlitePrivateTreasury, type PrivateTreasuryPolicy } from "./private-treasury-capacity";
 import { claimSqlitePrivateExecution, getSqlitePrivateExecution, PRIVATE_RESEARCH_EXECUTIONS_SQL } from "./private-research-executions";
 import { DatabaseSync } from "node:sqlite";
+import { validateStorageIdentity, type StorageIdentity } from "./storage-identity";
+import { assertStorageIdentity, assertStorageFences, holdStorageTarget, installStorageFences,
+  registerStorageCapability, restrictStorageApplicationSql, type HeldStorageTarget } from "./storage-identity-sqlite";
 import { initializeSqliteBrowserJournal, sqliteJournalActive, sqliteJournalTransaction, activateSqliteBrowserJournal,
   upsertSqliteJournalGrant, admitSqliteBrowserJournal, getSqliteBrowserJournal, transitionSqliteBrowserJournal,
   signSqliteBrowserJournal, cancelSqlitePreparedJournal, terminalSqliteJournalPayment } from "./sqlite-browser-journal";
@@ -374,32 +377,94 @@ ${CREATOR_WITHDRAWAL_ATTESTATIONS_SQL}
 
 export class SqliteAdapter implements KeryxDB {
   private db: DatabaseSync;
+  private readonly identity: Readonly<StorageIdentity>;
+  private readonly heldTarget: HeldStorageTarget;
+  private readonly readOnly: boolean;
+  private ready = false;
+  private capabilityActive = false;
+  private closed = false;
+  private verifiedSchemaVersion: number | undefined;
 
-  constructor(file?: string, options: { readOnly?: boolean } = {}) {
+  constructor(file?: string, options: { readOnly?: boolean; expectedIdentity?: StorageIdentity } = {}) {
+    this.identity = validateStorageIdentity(options.expectedIdentity);
     const dbPath = file ?? path.resolve(process.cwd(), "data", "keryx.sqlite");
-    if (!options.readOnly) fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-    this.db = new DatabaseSync(dbPath, { readOnly: options.readOnly ?? false });
+    this.readOnly = options.readOnly ?? false;
+    this.heldTarget = holdStorageTarget(dbPath);
+    let db: DatabaseSync | undefined;
+    try {
+      db = new DatabaseSync(dbPath, { readOnly: this.readOnly, allowExtension: false });
+      this.heldTarget.verify();
+      assertStorageIdentity(db, this.identity);
+      assertStorageFences(db, this.identity);
+      this.heldTarget.verify();
+      this.db = db;
+      registerStorageCapability(db, this.identity, () => this.capabilityActive && !this.closed);
+    } catch (error) {
+      try { db?.close(); } finally { this.heldTarget.close(); }
+      throw error;
+    }
   }
 
-  /** Release the file handle. The long-lived server never calls this; short-lived callers
-   *  (tests, one-shot scripts) do, so the OS is not left holding the DB open. */
+  /** Identity admission never creates a missing file or enrolls an unlabelled legacy store. */
+  private assertReady(): void {
+    if (!this.ready || this.closed) throw new Error("Storage identity not initialized");
+    this.heldTarget.verify();
+    assertStorageIdentity(this.db, this.identity);
+    const version = Number(this.db.prepare("PRAGMA schema_version").get()?.schema_version);
+    if (version !== this.verifiedSchemaVersion) {
+      assertStorageFences(this.db, this.identity);
+      this.verifiedSchemaVersion = version;
+    }
+  }
+
   close(): void {
-    this.db.close();
+    if (this.closed) return;
+    this.closed = true;
+    this.ready = false;
+    this.capabilityActive = false;
+    try { this.db.close(); } finally { this.heldTarget.close(); }
   }
 
   async init(): Promise<void> {
-    // WAL + busy timeout so the dev server and CLI can share the file safely.
-    this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;");
-    this.db.exec(SCHEMA);
-    this.ensureColumns();
-    // Releases before 2026-08-22 keyed two authenticated routes by the raw `kx_live_...` bearer
-    // value before verification. Remove those legacy counters during every startup so the live DB
-    // and every restored snapshot converge back to the documented hash-only secret invariant.
-    this.db.exec(`DELETE FROM rate_limit_counters WHERE bucket GLOB 'ask:kx_live_*'`);
-    if (cacheEncryptionRequired() && !hasContentKey()) {
-      throw new Error("CONTENT_MASTER_KEY is required for paid-content cache access in real mode");
+    if (this.ready) { this.assertReady(); return; }
+    if (this.closed) throw new Error("Storage identity adapter closed");
+    this.heldTarget.verify();
+    assertStorageIdentity(this.db, this.identity);
+    assertStorageFences(this.db, this.identity);
+    if (this.readOnly) {
+      restrictStorageApplicationSql(this.db);
+      this.ready = true;
+      this.assertReady();
+      return;
     }
-    this.encryptLegacyCacheRows();
+    this.capabilityActive = true;
+    // WAL/connection PRAGMAs are deliberately outside the schema transaction,
+    // but only after exact identity admission. They are not rolled back on init failure.
+    this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;");
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      this.heldTarget.verify();
+      assertStorageIdentity(this.db, this.identity);
+      this.db.exec(SCHEMA);
+      this.ensureColumns();
+      installStorageFences(this.db, this.identity);
+      this.db.exec(`DELETE FROM rate_limit_counters WHERE bucket GLOB 'ask:kx_live_*'`);
+      if (cacheEncryptionRequired(this.identity.authorityMode) && !hasContentKey()) {
+        throw new Error("CONTENT_MASTER_KEY is required for paid-content cache access in real mode");
+      }
+      this.encryptLegacyCacheRows();
+      this.heldTarget.verify();
+      assertStorageFences(this.db, this.identity);
+      this.db.exec("COMMIT");
+      restrictStorageApplicationSql(this.db);
+      this.ready = true;
+      this.assertReady();
+    } catch (error) {
+      this.capabilityActive = false;
+      this.ready = false;
+      try { this.db.exec("ROLLBACK"); } catch { /* already rolled back */ }
+      throw error;
+    }
   }
 
   /** Seal every pre-v1 plaintext cache row in one transaction before the server accepts traffic. */
@@ -412,12 +477,12 @@ export class SqliteAdapter implements KeryxDB {
     const legacy = rows.filter((row) => row.text && !isEncryptedCacheValue(row.text));
     if (legacy.length === 0) return;
     const update = this.db.prepare(`UPDATE cache_items SET text=? WHERE source_id=?`);
-    this.db.exec("BEGIN IMMEDIATE");
+    this.db.exec("SAVEPOINT storage_cache_encryption");
     try {
-      for (const row of legacy) update.run(sealCacheText(row.text!), row.source_id);
-      this.db.exec("COMMIT");
+      for (const row of legacy) update.run(sealCacheText(row.text!, this.identity.authorityMode), row.source_id);
+      this.db.exec("RELEASE storage_cache_encryption");
     } catch (error) {
-      this.db.exec("ROLLBACK");
+      this.db.exec("ROLLBACK TO storage_cache_encryption; RELEASE storage_cache_encryption");
       throw error;
     }
   }
@@ -683,6 +748,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async upsertSource(s: Source): Promise<void> {
+    this.assertReady();
     if (s.id.startsWith("public:")) throw new Error("Reserved public-reference source ID");
     // active/verified default to 1 (true) for offline/DB-direct rows that predate the flags.
     const activeInt = s.active === false ? 0 : 1;
@@ -720,36 +786,43 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async setSourcePreviewDepth(id: string, depth: string): Promise<void> {
+    this.assertReady();
     this.db.prepare(`UPDATE sources SET preview_depth=? WHERE id=?`).run(depth, id);
   }
 
   async listPublicReferences(): Promise<PublicReference[]> {
+    this.assertReady();
     return this.db.prepare("SELECT snapshot FROM public_references WHERE active=1 ORDER BY id").all()
       .map((row) => publicReferenceSchema.parse(JSON.parse(String(row.snapshot))));
   }
   async getPublicReference(id: string): Promise<PublicReference | null> {
+    this.assertReady();
     const row = this.db.prepare("SELECT snapshot FROM public_references WHERE id=?").get(id);
     return row ? publicReferenceSchema.parse(JSON.parse(String(row.snapshot))) : null;
   }
   async upsertPublicReference(reference: PublicReference): Promise<void> {
+    this.assertReady();
     const value = publicReferenceSchema.parse(reference);
     this.db.prepare(`INSERT INTO public_references(id,active,rss_url,snapshot) VALUES (?,?,?,?)
       ON CONFLICT(id) DO UPDATE SET active=excluded.active,rss_url=excluded.rss_url,snapshot=excluded.snapshot`)
       .run(value.id, Number(value.active), value.rssUrl, JSON.stringify(value));
   }
   async listSources(): Promise<Source[]> {
+    this.assertReady();
     // Filter to active=1 only — deactivated on-chain sources must not be discovered/cited.
     const rows = this.db.prepare(`SELECT * FROM sources WHERE active = 1 ORDER BY created_at`).all();
     return rows.map(rowToSource);
   }
 
   async listAllSources(): Promise<Source[]> {
+    this.assertReady();
     // Deactivated rows included — owner history only, never discovery. See the interface note.
     const rows = this.db.prepare(`SELECT * FROM sources ORDER BY created_at`).all();
     return rows.map(rowToSource);
   }
 
   async setSourceMeta(id: string, meta: import("./keryx-db").SourceMeta): Promise<void> {
+    this.assertReady();
     this.db
       .prepare(
         `INSERT OR REPLACE INTO source_meta (id,name,description,url,rss_url,updated_at) VALUES (?,?,?,?,?,?)`,
@@ -758,6 +831,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async getSourceMeta(id: string): Promise<import("./keryx-db").SourceMeta | null> {
+    this.assertReady();
     const row = this.db
       .prepare(`SELECT name,description,url,rss_url FROM source_meta WHERE id=?`)
       .get(id);
@@ -771,6 +845,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async setSourceNotify(id: string, url: string, secret: string): Promise<void> {
+    this.assertReady();
     this.db
       .prepare(
         `INSERT OR REPLACE INTO source_notify (source_id,notify_url,secret,updated_at) VALUES (?,?,?,?)`,
@@ -779,16 +854,19 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async getSourceNotify(id: string): Promise<import("./keryx-db").SourceNotify | null> {
+    this.assertReady();
     const row = this.db.prepare(`SELECT notify_url,secret FROM source_notify WHERE source_id=?`).get(id);
     if (!row) return null;
     return { url: row.notify_url as string, secret: row.secret as string };
   }
 
   async deleteSourceNotify(id: string): Promise<void> {
+    this.assertReady();
     this.db.prepare(`DELETE FROM source_notify WHERE source_id=?`).run(id);
   }
 
   async setSourceNotifyEmail(id: string, email: string, unsubToken: string): Promise<void> {
+    this.assertReady();
     // Fresh save resets last_sent_at — a new address should hear about its next citation promptly.
     this.db
       .prepare(
@@ -798,6 +876,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async getSourceNotifyEmail(id: string): Promise<import("./keryx-db").SourceNotifyEmail | null> {
+    this.assertReady();
     const row = this.db
       .prepare(`SELECT email,unsub_token,last_sent_at FROM source_notify_email WHERE source_id=?`)
       .get(id);
@@ -810,19 +889,23 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async deleteSourceNotifyEmail(id: string): Promise<void> {
+    this.assertReady();
     this.db.prepare(`DELETE FROM source_notify_email WHERE source_id=?`).run(id);
   }
 
   async markSourceNotifyEmailSent(id: string, at: string): Promise<void> {
+    this.assertReady();
     this.db.prepare(`UPDATE source_notify_email SET last_sent_at=? WHERE source_id=?`).run(at, id);
   }
 
   async getSource(id: string): Promise<Source | null> {
+    this.assertReady();
     const row = this.db.prepare(`SELECT * FROM sources WHERE id=?`).get(id);
     return row ? rowToSource(row) : null;
   }
 
   async getSourceByOnchainId(onchainId: string): Promise<Source | null> {
+    this.assertReady();
     const row = this.db
       .prepare(`SELECT * FROM sources WHERE lower(onchain_id) = lower(?) LIMIT 1`)
       .get(onchainId);
@@ -830,6 +913,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async addItems(items: SourceItem[]): Promise<void> {
+    this.assertReady();
     const stmt = this.db.prepare(
       `INSERT OR REPLACE INTO source_items
          (id,source_id,title,summary,content,link,published_at,ipfs_cid,item_key_enc,item_iv,item_auth_tag,
@@ -849,6 +933,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async getItems(sourceId: string): Promise<SourceItem[]> {
+    this.assertReady();
     const rows = this.db
       .prepare(`SELECT * FROM source_items WHERE source_id=? ORDER BY published_at DESC`)
       .all(sourceId);
@@ -877,6 +962,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async getItem(sourceId: string, itemId: string): Promise<SourceItem | null> {
+    this.assertReady();
     const row = this.db
       .prepare(`SELECT * FROM source_items WHERE source_id=? AND id=? LIMIT 1`)
       .get(sourceId, itemId);
@@ -884,6 +970,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async getArticleOffer(sourceId: string, itemId: string): Promise<ArticleOffer | null> {
+    this.assertReady();
     const row = this.db
       .prepare(`SELECT * FROM article_offers WHERE source_id=? AND item_id=? LIMIT 1`)
       .get(sourceId, itemId);
@@ -891,6 +978,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async listArticleOffers(sourceId?: string): Promise<ArticleOffer[]> {
+    this.assertReady();
     const rows = sourceId
       ? this.db
           .prepare(`SELECT * FROM article_offers WHERE source_id=? ORDER BY created_at DESC`)
@@ -900,6 +988,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async setArticleOffer(offer: ArticleOffer): Promise<void> {
+    this.assertReady();
     this.db
       .prepare(
         `INSERT INTO article_offers
@@ -926,6 +1015,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async deleteArticleOffer(sourceId: string, itemId: string): Promise<void> {
+    this.assertReady();
     this.db
       .prepare(`DELETE FROM article_offers WHERE source_id=? AND item_id=?`)
       .run(sourceId, itemId);
@@ -942,6 +1032,7 @@ export class SqliteAdapter implements KeryxDB {
     sinceIso: string,
     untilIso: string,
   ): Promise<Record<string, number>> {
+    this.assertReady();
     if (sourceIds.length === 0) return {};
     const holes = sourceIds.map(() => "?").join(",");
     const rows = this.db
@@ -959,6 +1050,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async newestItemDates(sourceIds: string[]): Promise<Record<string, string>> {
+    this.assertReady();
     if (sourceIds.length === 0) return {};
     const holes = sourceIds.map(() => "?").join(",");
     const rows = this.db
@@ -974,6 +1066,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async isCreatorWallet(addr: string): Promise<boolean> {
+    this.assertReady();
     // Case-insensitive match via LOWER() — wallet addresses from SIWE are checksummed
     // but stored addresses in older rows may vary in case.
     const row = this.db
@@ -983,41 +1076,49 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async createAuthChallenge(hash: string, issuedAt: number, expiresAt: number): Promise<void> {
+    this.assertReady();
     this.db.prepare("DELETE FROM auth_challenges WHERE expires_at <= ?").run(issuedAt);
     this.db.prepare("INSERT INTO auth_challenges (hash, issued_at, expires_at) VALUES (?, ?, ?)").run(hash, issuedAt, expiresAt);
   }
 
   async createWebSession(record: WebSessionRecord): Promise<void> {
+    this.assertReady();
     this.db.prepare("DELETE FROM web_sessions WHERE expires_at <= ?").run(record.issuedAt);
     this.db.prepare("INSERT INTO web_sessions (hash,wallet,issued_at,expires_at) VALUES (?,?,?,?)")
       .run(record.hash, record.wallet.toLowerCase(), record.issuedAt, record.expiresAt);
   }
 
   async getWebSession(hash: string): Promise<WebSessionRecord | null> {
+    this.assertReady();
     const row = this.db.prepare("SELECT hash,wallet,issued_at,expires_at FROM web_sessions WHERE hash = ?").get(hash);
     return row ? { hash: String(row.hash), wallet: String(row.wallet), issuedAt: Number(row.issued_at), expiresAt: Number(row.expires_at) } : null;
   }
 
   async revokeWebSession(hash: string, wallet: string): Promise<void> {
+    this.assertReady();
     this.db.prepare("DELETE FROM web_sessions WHERE hash = ? AND wallet = LOWER(?)").run(hash, wallet);
   }
 
   async listWebSessions(wallet: string, now: number): Promise<WebSessionRecord[]> {
+    this.assertReady();
     return this.db.prepare("SELECT hash,wallet,issued_at,expires_at FROM web_sessions WHERE wallet = LOWER(?) AND issued_at <= ? AND expires_at > ? ORDER BY issued_at DESC, hash ASC LIMIT 101")
       .all(wallet, now, now).map(row => ({ hash: String(row.hash), wallet: String(row.wallet), issuedAt: Number(row.issued_at), expiresAt: Number(row.expires_at) }));
   }
 
   async revokeOtherWebSessions(wallet: string, keepHash: string): Promise<void> {
+    this.assertReady();
     this.db.prepare("DELETE FROM web_sessions WHERE wallet = LOWER(?) AND hash != ?").run(wallet, keepHash);
   }
 
   async consumeAuthChallenge(hash: string, now: number): Promise<boolean> {
+    this.assertReady();
     const result = this.db.prepare("DELETE FROM auth_challenges WHERE hash = ? AND issued_at <= ? AND expires_at > ?")
       .run(hash, now, now);
     return Number(result.changes) === 1;
   }
 
   async upsertUser(addr: string, role: string): Promise<{ user: UserRecord; created: boolean }> {
+    this.assertReady();
     const wallet = addr.toLowerCase();
     const now = new Date().toISOString();
     const existing = (await this.getUser(wallet)) !== null;
@@ -1034,6 +1135,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async getUser(addr: string): Promise<UserRecord | null> {
+    this.assertReady();
     const row = this.db
       .prepare(`SELECT * FROM users WHERE wallet_address = LOWER(?)`)
       .get(addr) as Record<string, unknown> | undefined;
@@ -1041,11 +1143,13 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async getCached(sourceId: string): Promise<string | null> {
+    this.assertReady();
     const row = this.db.prepare(`SELECT text FROM cache_items WHERE source_id=?`).get(sourceId);
     return row ? openCacheText(row.text as string) : null;
   }
 
   async getCachedAt(sourceId: string): Promise<string | null> {
+    this.assertReady();
     const row = this.db
       .prepare(`SELECT updated_at FROM cache_items WHERE source_id=?`)
       .get(sourceId);
@@ -1053,27 +1157,32 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async setCached(sourceId: string, text: string): Promise<void> {
+    this.assertReady();
     this.db
       .prepare(
         `INSERT OR REPLACE INTO cache_items (source_id,text,updated_at) VALUES (?,?,?)`,
       )
-      .run(sourceId, sealCacheText(text), new Date().toISOString());
+      .run(sourceId, sealCacheText(text, this.identity.authorityMode), new Date().toISOString());
   }
 
   async getSyncState(key: string): Promise<string | null> {
+    this.assertReady();
     const row = this.db.prepare(`SELECT value FROM sync_state WHERE key=?`).get(key);
     return row ? (row.value as string) : null;
   }
 
   async claimSourceUpkeep(now: number): Promise<SourceUpkeepClaim | null> {
+    this.assertReady();
     return claimSqliteSourceUpkeep(this.db, now);
   }
 
   async finishSourceUpkeep(claim: SourceUpkeepClaim, summary: SourceUpkeepSummary, now: number): Promise<void> {
+    this.assertReady();
     finishSqliteSourceUpkeep(this.db, claim, summary, now);
   }
 
   async setSyncState(key: string, value: string): Promise<void> {
+    this.assertReady();
     this.db
       .prepare(
         `INSERT OR REPLACE INTO sync_state (key,value,updated_at) VALUES (?,?,?)`,
@@ -1084,6 +1193,7 @@ export class SqliteAdapter implements KeryxDB {
   // ── session grants ──
 
   async upsertSessionGrant(grant: Omit<SessionGrantRecord, "spent">): Promise<void> {
+    this.assertReady();
     if (sqliteJournalActive(this.db)) return upsertSqliteJournalGrant(this.db, grant);
     this.db
       .prepare(
@@ -1103,6 +1213,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async getSessionGrant(sessionId: string): Promise<SessionGrantRecord | null> {
+    this.assertReady();
     const r = this.db
       .prepare(`SELECT * FROM session_grants WHERE session_id = ?`)
       .get(sessionId) as Record<string, unknown> | undefined;
@@ -1121,6 +1232,7 @@ export class SqliteAdapter implements KeryxDB {
 
   /** Reserve atomically, including the cap predicate, so concurrent asks cannot both pass. */
   async addSessionGrantSpend(sessionId: string, grantEpoch: string, sessAddr: string, amount: number): Promise<boolean> {
+    this.assertReady();
     const res = this.db
       .prepare(
         `UPDATE session_grants
@@ -1136,6 +1248,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async admitBrowserAuthorization(input: BrowserAuthorizationIntent): Promise<BrowserAdmissionResult> {
+    this.assertReady();
     const intent = prepareBrowserAuthorizationIntent(input);
     this.db.exec("BEGIN IMMEDIATE");
     try {
@@ -1167,9 +1280,11 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async browserJournalActive() {
+    this.assertReady();
     return sqliteJournalActive(this.db);
   }
   async browserSignerConfirmedSpendMicro(signer: string): Promise<number> {
+    this.assertReady();
     const rows = this.db
       .prepare(
         "SELECT * FROM payment_events WHERE lower(payer)=lower(?) AND grant_epoch IS NOT NULL AND settled=1 AND settlement_status='settled' AND network='eip155:5042002'"
@@ -1219,15 +1334,19 @@ export class SqliteAdapter implements KeryxDB {
     return total;
   }
   async activateBrowserJournal() {
+    this.assertReady();
     activateSqliteBrowserJournal(this.db);
   }
   async admitBrowserJournal(input: BrowserJournalAdmission) {
+    this.assertReady();
     return admitSqliteBrowserJournal(this.db, input);
   }
   async getBrowserJournal(sessionId: string, requestId: string) {
+    this.assertReady();
     return getSqliteBrowserJournal(this.db, sessionId, requestId);
   }
   async exposeBrowserJournal(sessionId: string, requestId: string) {
+    this.assertReady();
     return transitionSqliteBrowserJournal(
       this.db,
       sessionId,
@@ -1237,6 +1356,7 @@ export class SqliteAdapter implements KeryxDB {
     );
   }
   async cancelPreparedBrowserJournal(sessionId: string, requestId: string) {
+    this.assertReady();
     return cancelSqlitePreparedJournal(this.db, sessionId, requestId);
   }
   async signBrowserJournal(
@@ -1244,9 +1364,11 @@ export class SqliteAdapter implements KeryxDB {
     requestId: string,
     metadata: BrowserSignedMetadata
   ) {
+    this.assertReady();
     return signSqliteBrowserJournal(this.db, sessionId, requestId, metadata);
   }
   async submitBrowserJournal(sessionId: string, requestId: string) {
+    this.assertReady();
     return transitionSqliteBrowserJournal(
       this.db,
       sessionId,
@@ -1271,6 +1393,7 @@ export class SqliteAdapter implements KeryxDB {
       | "updatedAt"
     >,
   ): Promise<GapIntent> {
+    this.assertReady();
     const now = new Date().toISOString();
     const owner = input.ownerWallet.toLowerCase();
     this.db.exec("BEGIN IMMEDIATE");
@@ -1323,6 +1446,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async listGapIntents(limit = 200): Promise<GapIntent[]> {
+    this.assertReady();
     const rows = this.db
       .prepare(
         `SELECT * FROM gap_intents
@@ -1339,6 +1463,7 @@ export class SqliteAdapter implements KeryxDB {
     now: number,
     leaseMs: number,
   ): Promise<GapIntent | null> {
+    this.assertReady();
     this.db
       .prepare(
         `UPDATE gap_intents
@@ -1395,6 +1520,7 @@ export class SqliteAdapter implements KeryxDB {
       lastError?: string;
     },
   ): Promise<void> {
+    this.assertReady();
     const update = this.db
       .prepare(
         `UPDATE gap_intents
@@ -1426,6 +1552,7 @@ export class SqliteAdapter implements KeryxDB {
     error: string,
     maxAttempts: number,
   ): Promise<void> {
+    this.assertReady();
     this.db
       .prepare(
         `UPDATE gap_intents
@@ -1444,6 +1571,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async expireGapIntent(id: string, reason: string): Promise<void> {
+    this.assertReady();
     this.db
       .prepare(
         `UPDATE gap_intents
@@ -1463,6 +1591,7 @@ export class SqliteAdapter implements KeryxDB {
     dailyCap: number,
     now: number,
   ): Promise<OnrampReservation> {
+    this.assertReady();
     this.db.exec("BEGIN IMMEDIATE");
     try {
       const claimed = this.db
@@ -1499,6 +1628,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async releaseOnramp(addressKey: string, dayKey: string, amount: number): Promise<void> {
+    this.assertReady();
     this.db.exec("BEGIN IMMEDIATE");
     try {
       this.db.prepare(`DELETE FROM sync_state WHERE key = ?`).run(addressKey);
@@ -1517,6 +1647,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async releaseSessionGrantSpend(sessionId: string, grantEpoch: string, sessAddr: string, amount: number): Promise<void> {
+    this.assertReady();
     this.db
       .prepare(
         `UPDATE session_grants
@@ -1527,6 +1658,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async deleteSessionGrant(sessionId: string): Promise<void> {
+    this.assertReady();
     if (sqliteJournalActive(this.db)) {
       sqliteJournalTransaction(this.db,()=>{this.db.prepare('UPDATE session_grants SET expiry=0 WHERE session_id=?').run(sessionId);});
       return;
@@ -1535,6 +1667,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async deleteExpiredSessionGrants(now: number): Promise<void> {
+    this.assertReady();
     if (sqliteJournalActive(this.db)) return;
     this.db.prepare(`DELETE FROM session_grants WHERE expiry <= ?`).run(now);
   }
@@ -1548,6 +1681,7 @@ export class SqliteAdapter implements KeryxDB {
     windowMs: number,
     now: number,
   ): Promise<RateLimitDecision> {
+    this.assertReady();
     const resetAt = now + windowMs;
     const row = this.db
       .prepare(
@@ -1568,6 +1702,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async deleteExpiredRateLimits(now: number): Promise<void> {
+    this.assertReady();
     this.db.prepare(`DELETE FROM rate_limit_counters WHERE reset_at <= ?`).run(now);
   }
 
@@ -1576,6 +1711,7 @@ export class SqliteAdapter implements KeryxDB {
     now: number,
     probeLeaseMs: number,
   ): Promise<ReasoningCircuitDecision> {
+    this.assertReady();
     this.db.exec("BEGIN IMMEDIATE");
     try {
       const row = this.db
@@ -1617,6 +1753,7 @@ export class SqliteAdapter implements KeryxDB {
     baseCooldownMs: number,
     maxCooldownMs: number,
   ): Promise<ReasoningCircuitRecord> {
+    this.assertReady();
     this.db.exec("BEGIN IMMEDIATE");
     try {
       const row = this.db
@@ -1665,69 +1802,93 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async clearReasoningCircuit(key: string): Promise<void> {
+    this.assertReady();
     this.db.prepare(`DELETE FROM reasoning_circuits WHERE key = ?`).run(key);
   }
 
   async reservePrivateResearchIntent(intent: PrivateResearchIntent) {
+    this.assertReady();
     return reserveSqlitePrivateResearchIntent(this.db, intent);
   }
   async reservePrivateTreasury(id: string, payer: string, policy: PrivateTreasuryPolicy) {
+    this.assertReady();
     return reserveSqlitePrivateTreasury(this.db, id, payer, policy);
   }
-  async getPrivateTreasury(id: string, payer: string) { return getSqlitePrivateTreasury(this.db, id, payer); }
-  async getPrivateTreasurySummary(signer: string) { return getSqlitePrivateTreasurySummary(this.db, signer); }
-  async releasePrivateTreasury(id: string, payer: string, signer: string) { return releaseSqlitePrivateTreasury(this.db, id, payer, signer); }
-  async getPrivateResearchInterruption(id: string, payer: string) { return getSqlitePrivateInterruption(this.db, id, payer); }
-  async interruptPrivateResearch(id: string, payer: string, workerId: string) { return interruptSqlitePrivateResearch(this.db, id, payer, workerId); }
-  async listPrivateWorkerCandidates(signer: string, after?: string) { return listSqlitePrivateWorkerCandidates(this.db, signer, after); }
-  async listPrivateReconciliationCandidates(signer: string, after?: string) { return listSqlitePrivateReconciliationCandidates(this.db, signer, after); }
+  async getPrivateTreasury(id: string, payer: string) {
+    this.assertReady(); return getSqlitePrivateTreasury(this.db, id, payer); }
+  async getPrivateTreasurySummary(signer: string) {
+    this.assertReady(); return getSqlitePrivateTreasurySummary(this.db, signer); }
+  async releasePrivateTreasury(id: string, payer: string, signer: string) {
+    this.assertReady(); return releaseSqlitePrivateTreasury(this.db, id, payer, signer); }
+  async getPrivateResearchInterruption(id: string, payer: string) {
+    this.assertReady(); return getSqlitePrivateInterruption(this.db, id, payer); }
+  async interruptPrivateResearch(id: string, payer: string, workerId: string) {
+    this.assertReady(); return interruptSqlitePrivateResearch(this.db, id, payer, workerId); }
+  async listPrivateWorkerCandidates(signer: string, after?: string) {
+    this.assertReady(); return listSqlitePrivateWorkerCandidates(this.db, signer, after); }
+  async listPrivateReconciliationCandidates(signer: string, after?: string) {
+    this.assertReady(); return listSqlitePrivateReconciliationCandidates(this.db, signer, after); }
 
   async confirmPrivateCreatorSubmission(id: string, payer: string, workerId: string, confirmation: PrivateCreatorConfirmation) {
+    this.assertReady();
     return confirmSqlitePrivateCreator(this.db, id, payer, workerId, confirmation);
   }
   async getPrivateCreatorConfirmation(id: string, payer: string, authorizationId: string) {
+    this.assertReady();
     return getSqlitePrivateCreatorConfirmation(this.db, id, payer, authorizationId);
   }
 
   async admitPrivateCreatorSubmission(id: string, payer: string, workerId: string, data: PrivateCreatorSubmission) {
+    this.assertReady();
     return admitSqlitePrivateCreatorSubmission(this.db, id, payer, workerId, data);
   }
   async listPrivateCreatorSubmissions(id: string, payer: string) {
+    this.assertReady();
     return listSqlitePrivateCreatorSubmissions(this.db, id, payer);
   }
 
   async savePrivateResearchResult(id: string, payer: string, workerId: string, run: QueryRun) {
+    this.assertReady();
     return saveSqlitePrivateResult(this.db, id, payer, workerId, run);
   }
   async getPrivateResearchResult(id: string, payer: string) {
+    this.assertReady();
     return getSqlitePrivateResult(this.db, id, payer);
   }
 
   async claimPrivateResearchExecution(id: string, payer: string) {
+    this.assertReady();
     return claimSqlitePrivateExecution(this.db, id, payer);
   }
   async getPrivateResearchExecution(id: string, payer: string) {
+    this.assertReady();
     return getSqlitePrivateExecution(this.db, id, payer);
   }
 
   async claimPrivatePaymentSubmission(id: string, payer: string) {
+    this.assertReady();
     return claimSqlitePrivatePayment(this.db, id, payer);
   }
   async getPrivatePaymentState(id: string, payer: string) {
+    this.assertReady();
     return getSqlitePrivatePayment(this.db, id, payer);
   }
   async confirmPrivatePayment(id: string, payer: string, confirmation: PrivatePaymentConfirmation) {
+    this.assertReady();
     return confirmSqlitePrivatePayment(this.db, id, payer, confirmation);
   }
 
   async getPrivateResearchIntent(id: string, payer: string) {
+    this.assertReady();
     return getSqlitePrivateResearchIntent(this.db, id, payer);
   }
   async listPrivateResearchHistory(payer: string, before?: PrivateHistoryCursor) {
+    this.assertReady();
     return listSqlitePrivateResearchHistory(this.db, payer, before);
   }
 
   async saveQueryRun(run: QueryRun): Promise<void> {
+    this.assertReady();
     const evidenceTelemetry = runEvidenceMetrics(run);
     const economicsSample = economicsRunSample(run);
     this.db
@@ -1766,6 +1927,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async listFollowUps(parentId: string): Promise<QueryRun[]> {
+    this.assertReady();
     const rows = this.db
       .prepare(`SELECT data FROM query_runs WHERE parent_id=? ORDER BY created_at ASC`)
       .all(parentId);
@@ -1773,6 +1935,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async listQueryRunsByAsker(wallet: string, limit: number): Promise<QueryRun[]> {
+    this.assertReady();
     const rows = this.db
       .prepare(`SELECT data FROM query_runs WHERE asker=? ORDER BY created_at DESC LIMIT ?`)
       .all(wallet.toLowerCase(), limit);
@@ -1780,11 +1943,13 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async getQueryRun(id: string): Promise<QueryRun | null> {
+    this.assertReady();
     const row = this.db.prepare(`SELECT data FROM query_runs WHERE id=?`).get(id);
     return row ? (JSON.parse(row.data as string) as QueryRun) : null;
   }
 
   async listRecentQueries(limit: number): Promise<QueryRun[]> {
+    this.assertReady();
     const rows = this.db
       .prepare(`SELECT data FROM query_runs ORDER BY created_at DESC LIMIT ?`)
       .all(limit);
@@ -1792,6 +1957,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async *iterateRecentQueries(limit: number): AsyncIterable<QueryRun> {
+    this.assertReady();
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 2500) throw new Error("Invalid query scan limit");
     // The live statement holds one SQLite read snapshot; iterator return/throw
     // closes it. Do not materialize raw JSON strings with .all() here.
@@ -1807,10 +1973,12 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async recordPayment(p: PaymentRecord): Promise<void> {
+    this.assertReady();
     this.insertPayment(p, false);
   }
 
   async recordPaymentOnce(p: PaymentRecord): Promise<boolean> {
+    this.assertReady();
     return this.insertPayment(p, true);
   }
 
@@ -1853,6 +2021,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async createA2aOrder(order: A2aOrder): Promise<{ created: boolean; order: A2aOrder }> {
+    this.assertReady();
     const result = this.db
       .prepare(
         `INSERT OR IGNORE INTO a2a_orders
@@ -1894,11 +2063,13 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async getA2aOrder(id: string): Promise<A2aOrder | null> {
+    this.assertReady();
     const row = this.db.prepare(`SELECT * FROM a2a_orders WHERE id=?`).get(id);
     return row ? rowToA2aOrder(row) : null;
   }
 
   async listA2aOrdersByPayer(wallet: string, before?: { createdAt: string; id: string }): Promise<A2aOrder[]> {
+    this.assertReady();
     const rows = before
       ? this.db.prepare("SELECT * FROM a2a_orders WHERE LOWER(payer) = LOWER(?) AND (created_at < ? OR (created_at = ? AND id < ?)) ORDER BY created_at DESC, id DESC LIMIT 26").all(wallet, before.createdAt, before.createdAt, before.id)
       : this.db.prepare("SELECT * FROM a2a_orders WHERE LOWER(payer) = LOWER(?) ORDER BY created_at DESC, id DESC LIMIT 26").all(wallet);
@@ -1906,6 +2077,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async claimNextA2aOrder(workerId: string, startedAt: string): Promise<A2aOrder | null> {
+    this.assertReady();
     const row = this.db
       .prepare(
         `UPDATE a2a_orders SET started_at=?,worker_id=?,updated_at=?
@@ -1921,6 +2093,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async markA2aOrderPaymentStarted(id: string, startedAt: string): Promise<boolean> {
+    this.assertReady();
     const result = this.db
       .prepare(
         `UPDATE a2a_orders
@@ -1933,6 +2106,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async markA2aOrderResultSaving(id: string, startedAt: string): Promise<boolean> {
+    this.assertReady();
     const result = this.db
       .prepare(
         `UPDATE a2a_orders
@@ -1949,6 +2123,7 @@ export class SqliteAdapter implements KeryxDB {
     response: Record<string, unknown>,
     updatedAt: string,
   ): Promise<boolean> {
+    this.assertReady();
     const result = this.db
       .prepare(
         `UPDATE a2a_orders SET status='completed',response_data=?,error_code=NULL,updated_at=?
@@ -1959,6 +2134,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async failA2aOrder(id: string, errorCode: string, updatedAt: string): Promise<boolean> {
+    this.assertReady();
     const result = this.db
       .prepare(
         `UPDATE a2a_orders SET status='failed',error_code=?,updated_at=?
@@ -1969,6 +2145,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async resolveA2aOrder(id: string, update: A2aOrderResolutionUpdate): Promise<boolean> {
+    this.assertReady();
     const resolution = JSON.stringify(update.resolution);
     const evidence = update.resolution.evidence;
     if (update.status === "completed") {
@@ -2095,6 +2272,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async a2aOperationsSnapshot(nowMs: number): Promise<A2aOperationsSnapshot> {
+    this.assertReady();
     const since = new Date(nowMs - 24 * 60 * 60_000).toISOString();
     const rows = this.db
       .prepare(
@@ -2112,6 +2290,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async listPayments(limit: number): Promise<PaymentRecord[]> {
+    this.assertReady();
     const rows = this.db
       .prepare(`SELECT * FROM payment_events WHERE authorization_phase IS NULL OR authorization_phase NOT IN ('prepared','cancelled_unexposed') ORDER BY created_at DESC LIMIT ?`)
       .all(limit);
@@ -2119,6 +2298,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async recordActivationEvent(event: ActivationEvent, day: string): Promise<void> {
+    this.assertReady();
     this.db
       .prepare(
         `INSERT INTO activation_events (day,event,count) VALUES (?,?,1)
@@ -2128,6 +2308,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async activationFunnel(days: number): Promise<ActivationFunnel> {
+    this.assertReady();
     const window = activationWindow(days);
     const counts = emptyActivationCounts();
     const rows = this.db
@@ -2143,6 +2324,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async listPendingPayments(limit: number): Promise<PaymentRecord[]> {
+    this.assertReady();
     const rows = this.db
       .prepare(
         `SELECT * FROM payment_events
@@ -2159,6 +2341,7 @@ export class SqliteAdapter implements KeryxDB {
     authorizationId: string,
     circleTransferId: string,
   ): Promise<boolean> {
+    this.assertReady();
     if (sqliteJournalActive(this.db)) {
       return terminalSqliteJournalPayment(this.db,id,authorizationId,circleTransferId,false).resolved;
     }
@@ -2177,6 +2360,7 @@ export class SqliteAdapter implements KeryxDB {
     authorizationId: string,
     circleTransferId: string,
   ): Promise<{ resolved: boolean; reservationReleased: boolean }> {
+    this.assertReady();
     if (sqliteJournalActive(this.db)) {
       return terminalSqliteJournalPayment(this.db,id,authorizationId,circleTransferId,true);
     }
@@ -2222,6 +2406,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async listPaymentsByQuery(queryId: string): Promise<PaymentRecord[]> {
+    this.assertReady();
     const rows = this.db
       .prepare(
         `SELECT * FROM payment_events WHERE query_id=? AND kind='citation' AND (authorization_phase IS NULL OR authorization_phase NOT IN ('prepared','cancelled_unexposed')) ORDER BY created_at ASC`,
@@ -2231,6 +2416,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async listCreatorPaymentAttemptsByQuery(queryId: string): Promise<PaymentRecord[]> {
+    this.assertReady();
     const rows = this.db
       .prepare(
         `SELECT * FROM payment_events
@@ -2241,6 +2427,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async listPaymentsBySource(sourceId: string): Promise<PaymentRecord[]> {
+    this.assertReady();
     const rows = this.db
       .prepare(
         `SELECT * FROM payment_events WHERE source_id=? AND kind != 'inbound' AND (authorization_phase IS NULL OR authorization_phase NOT IN ('prepared','cancelled_unexposed')) ORDER BY created_at DESC`,
@@ -2250,6 +2437,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async dailySettled(days: number): Promise<DailyVolume[]> {
+    this.assertReady();
     // created_at is an ISO-UTC string; its first 10 chars are the UTC YYYY-MM-DD day.
     const rows = this.db
       .prepare(
@@ -2261,18 +2449,27 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async recordWithdrawal(w: WithdrawalRecord): Promise<void> {
+    this.assertReady();
     await recordSqliteWithdrawal(this.db, w);
   }
 
-  async reserveCreatorWithdrawal(value: WithdrawalRequestRecord) { return reserveSqliteWithdrawalRequest(this.db, value); }
-  async listCreatorWithdrawalHistory(owner: string, cursor?: WithdrawalHistoryCursor, limit = 25) { return listSqliteWithdrawalHistory(this.db, owner, cursor, limit); }
-  async getCreatorWithdrawal(id: string, owner: string) { return getSqliteWithdrawalRequest(this.db, id, owner); }
-  async claimCreatorWithdrawalTransfer(id: string, owner: string) { return claimSqliteWithdrawalTransfer(this.db, id, owner); }
-  async getCreatorWithdrawalTransferClaim(id: string, owner: string) { return getSqliteWithdrawalTransferClaim(this.db, id, owner); }
-  async saveCreatorWithdrawalAttestation(id: string, owner: string, claimId: string, value: unknown) { return saveSqliteWithdrawalAttestation(this.db, id, owner, claimId, value); }
-  async getCreatorWithdrawalAttestation(id: string, owner: string) { return getSqliteWithdrawalAttestation(this.db, id, owner); }
+  async reserveCreatorWithdrawal(value: WithdrawalRequestRecord) {
+    this.assertReady(); return reserveSqliteWithdrawalRequest(this.db, value); }
+  async listCreatorWithdrawalHistory(owner: string, cursor?: WithdrawalHistoryCursor, limit = 25) {
+    this.assertReady(); return listSqliteWithdrawalHistory(this.db, owner, cursor, limit); }
+  async getCreatorWithdrawal(id: string, owner: string) {
+    this.assertReady(); return getSqliteWithdrawalRequest(this.db, id, owner); }
+  async claimCreatorWithdrawalTransfer(id: string, owner: string) {
+    this.assertReady(); return claimSqliteWithdrawalTransfer(this.db, id, owner); }
+  async getCreatorWithdrawalTransferClaim(id: string, owner: string) {
+    this.assertReady(); return getSqliteWithdrawalTransferClaim(this.db, id, owner); }
+  async saveCreatorWithdrawalAttestation(id: string, owner: string, claimId: string, value: unknown) {
+    this.assertReady(); return saveSqliteWithdrawalAttestation(this.db, id, owner, claimId, value); }
+  async getCreatorWithdrawalAttestation(id: string, owner: string) {
+    this.assertReady(); return getSqliteWithdrawalAttestation(this.db, id, owner); }
 
   async listWithdrawals(limit: number): Promise<WithdrawalRecord[]> {
+    this.assertReady();
     const rows = this.db
       .prepare(`SELECT * FROM withdrawals ORDER BY created_at DESC LIMIT ?`)
       .all(limit);
@@ -2280,6 +2477,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async metrics(): Promise<DashboardMetrics> {
+    this.assertReady();
     const payments = this.db
       .prepare(
         `SELECT amount_usdc,source_id,query_id,kind,origin,settled,settlement_status,payer
@@ -2347,6 +2545,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async economics() {
+    this.assertReady();
     const runs = this.db
       .prepare(`SELECT economics_data FROM query_runs WHERE economics_data IS NOT NULL`)
       .all()
@@ -2390,6 +2589,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async settlementLedger(): Promise<LedgerAccount[]> {
+    this.assertReady();
     // Addresses are compared lowercased (the two tables were written by different code paths and
     // disagree on checksum casing) but displayed as the payment ledger recorded them.
     const rows = this.db
@@ -2428,6 +2628,7 @@ export class SqliteAdapter implements KeryxDB {
     scopes?: string,
     sourceIds?: string | null,
   ): Promise<{ rawKey: string; prefix: string; id: string }> {
+    this.assertReady();
     const id = crypto.randomUUID();
     this.db
       .prepare(
@@ -2458,6 +2659,7 @@ export class SqliteAdapter implements KeryxDB {
     scopes: string | null;
     sourceIds: string | null;
   } | null> {
+    this.assertReady();
     const row = this.db
       .prepare(
         `SELECT id,key_hash,wallet,scopes,source_ids FROM api_keys
@@ -2490,6 +2692,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async listApiKeys(wallet: string): Promise<ApiKeyRow[]> {
+    this.assertReady();
     const rows = this.db
       .prepare(`SELECT id,prefix,wallet,label,created_at,last_used_at,revoked_at,scopes,source_ids FROM api_keys WHERE wallet=? ORDER BY created_at DESC`)
       .all(wallet) as Record<string, unknown>[];
@@ -2497,6 +2700,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async revokeApiKey(id: string, wallet: string): Promise<void> {
+    this.assertReady();
     // Only revoke if the key belongs to this wallet (ownership check).
     this.db
       .prepare(`UPDATE api_keys SET revoked_at=? WHERE id=? AND wallet=? AND revoked_at IS NULL`)
@@ -2504,6 +2708,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async incrementUsage(keyId: string): Promise<void> {
+    this.assertReady();
     const day = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
     this.db
       .prepare(
@@ -2514,6 +2719,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async getUsage(keyId: string, days = 30): Promise<ApiKeyUsage[]> {
+    this.assertReady();
     const rows = this.db
       .prepare(
         `SELECT day, call_count FROM api_key_usage WHERE key_id=? ORDER BY day DESC LIMIT ?`,
@@ -2523,6 +2729,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async saveQueryMemory(entry: QueryMemoryEntry): Promise<void> {
+    this.assertReady();
     this.db
       .prepare(
         `INSERT INTO query_memories (id,source_scores,sources_read,topics,created_at) VALUES (?,?,?,?,?)`,
@@ -2537,6 +2744,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async loadQueryMemories(limit: number): Promise<QueryMemoryEntry[]> {
+    this.assertReady();
     const rows = this.db
       .prepare(`SELECT * FROM query_memories ORDER BY created_at DESC LIMIT ?`)
       .all(limit) as {
@@ -2558,6 +2766,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async recordFeedback(queryId: string, rating: "up" | "down", comment?: string): Promise<void> {
+    this.assertReady();
     this.db
       .prepare(
         `INSERT INTO answer_feedback (id,query_id,rating,comment,created_at) VALUES (?,?,?,?,?)`,
@@ -2566,6 +2775,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async getFeedbackStats(queryId?: string): Promise<FeedbackStats> {
+    this.assertReady();
     const row = queryId
       ? (this.db
           .prepare(
@@ -2584,6 +2794,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async creatorLeaderboard(): Promise<CreatorEarnings[]> {
+    this.assertReady();
     const rows = this.db
       .prepare(
         `SELECT source_id, source_name, payee,
