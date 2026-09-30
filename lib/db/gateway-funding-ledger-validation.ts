@@ -20,6 +20,10 @@ export function fundingUint(input: unknown): string {
 export function fundingNonce(input: unknown): string {
   const value = fundingUint(input); if (BigInt(value) > BigInt(Number.MAX_SAFE_INTEGER)) fundingRefused(); return value;
 }
+/** Exhausted high-water sentinel is retained, but cannot prepare a transaction. */
+export function fundingHighWater(input: unknown): string {
+  const value = fundingUint(input); if (BigInt(value) > BigInt(Number.MAX_SAFE_INTEGER) + BigInt(1)) fundingRefused(); return value;
+}
 export function fundingDigest(input: unknown): string {
   if (typeof input !== "string" || !/^[0-9a-f]{64}$/.test(input)) fundingRefused(); return input;
 }
@@ -88,6 +92,6 @@ export function validateFundingNamespace(input: unknown, identity: StorageIdenti
   const sender = fundingAddress(r.sender), peer = fundingAddress(r.peer); if (sender === peer) fundingRefused();
   return Object.freeze({ identityDigest: r.identityDigest, chainId: "5042002", sender, peer, role: r.role as "funder" | "spend",
     historyDocumentDigest: fundingDigest(r.historyDocumentDigest), backendBindingDigest: backendDigest,
-    finalityPolicyDigest: fundingDigest(r.finalityPolicyDigest), initialNonce: "0", nextNonce: fundingNonce(r.nextNonce),
+    finalityPolicyDigest: fundingDigest(r.finalityPolicyDigest), initialNonce: "0", nextNonce: fundingHighWater(r.nextNonce),
     limits, used, nativeAggregateLimitWei, nativeAggregateUsedWei });
 }
