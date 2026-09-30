@@ -152,30 +152,7 @@ again. Preserve all payment grants, reservations, authorizations and research jo
 account-session cleanup is not a payment-state reset. See
 [revocable-session recovery](./engineering/revocable-sessions-2026-09-09.md).
 
-**Off-box copy (survives a dead disk) — one-time setup.** The local snapshots above still sit on the
-same box, so a dead disk loses them too. Copy each snapshot to Cloudflare R2 (free tier, zero egress,
-and you already run Cloudflare). Needs your R2 credentials — the only step that can't be scripted for you:
-
-1. Create an R2 bucket `keryx-backups` and an R2 API token (Cloudflare dashboard → R2 → Manage API
-   Tokens) with **Object Read & Write**. Note the Access Key ID, Secret, and your account's S3
-   endpoint `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`.
-2. Install rclone and register the remote non-interactively (no editor prompt):
-   ```bash
-   ssh keryx-vps 'curl -fsSL https://rclone.org/install.sh | sudo bash'
-   ssh keryx-vps 'rclone config create r2 s3 provider=Cloudflare \
-     access_key_id=<KEY_ID> secret_access_key=<SECRET> \
-     endpoint=https://<ACCOUNT_ID>.r2.cloudflarestorage.com acl=private'
-   ```
-3. Point the backup at it and verify the push:
-   ```bash
-   ssh keryx-vps 'echo "KERYX_BACKUP_REMOTE=r2:keryx-backups" >> /root/keryx/.env.local'
-   ssh keryx-vps 'cd /root/keryx && npm run backup'   # expect: [backup] pushed off-box → r2:keryx-backups
-   ```
-
-The hourly `keryx-backup` cron already loads `.env.local`, so no cron reinstall is needed — the next
-run pushes automatically. Any other rclone remote (S3, Backblaze B2, Google Drive) works identically.
-Without this, snapshots are kept locally only (still protects against corruption / accidental delete,
-but not a disk loss).
+**Encrypted off-box copy** uses a dedicated private Cloudflare R2 Standard bucket and AES-256-GCM. The job uploads at most once per UTC day, retains 24 encrypted snapshots (32 MiB each maximum), reserves a bounded monthly request budget before network operations, and refuses legacy plaintext rclone configuration. Account alerts are notifications, not spending caps; other projects share the free allowance. See [encrypted backup setup, job limits and offline restore drills](encrypted-backups.md).
 
 ## Monitoring & alerts
 

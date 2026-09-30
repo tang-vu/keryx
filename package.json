@@ -52,6 +52,7 @@
     "redeploy": "bash scripts/redeploy-vps.sh",
     "tunnel": "cloudflared tunnel --url http://localhost:3939",
     "backup": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/backup-db.mts",
+    "backup:restore": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/restore-backup.mts",
     "check-treasury": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/check-treasury.mts",
     "check-registry": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/check-registry.mts",
     "check-llm": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/check-llm.mts",
