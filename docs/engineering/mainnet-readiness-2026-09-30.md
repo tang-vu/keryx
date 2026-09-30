@@ -41,6 +41,11 @@ receipt for the reported batch transaction, matching block hash and 13,978
 confirmations at observation. Aggregated calldata was not independently decoded
 to prove this individual nonce; earlier `received` observations below are historical.
 
+Current production readback after the funded rehearsal reported application source
+and `/api/health` commit `0a8853e` (merged PR #55), with web and A2A services online.
+This observed baseline supersedes the earlier `5bf9aea` checkpoint below; final
+current-main deployment remains a separate recorded step after this dossier merges.
+
 ## Earlier September 30 baseline
 
 Production remains Arc testnet. Read-only health inspection reported operational,
@@ -102,14 +107,15 @@ lists Flash cache-hit/cache-miss/output USD per million tokens as
 `0.003 / 0.15 / 0.60` off-peak and `0.006 / 0.30 / 1.20` peak.
 Peak windows are Monday–Friday 01:00–04:00 and 06:00–10:00 UTC, excluding Chinese
 public holidays. The old `deepseek-v4-flash` request name now routes to V4.1 Flash.
-At the inspected production baseline `5bf9aea`, the observer uses the August 29
+Historical pricing checkpoint: at the then-inspected production baseline `5bf9aea`, the observer uses the August 29
 historical rate policy. D-269, implemented in the [PR #46 candidate](https://github.com/tang-vu/keryx/pull/46),
 adds per-call policy/model capture and private observer/report v2. It preserves
 saved v1 artifacts, leaves untagged history and uncertain cache splits unpriced,
 and estimates Flash cost as an off-peak–peak interval without guessing billing
 windows or holidays. Local validation passed 98 focused tests; four Linux-only
 checks await hosted CI, and final-candidate hosted acceptance remains pending.
-This is candidate evidence, not a verified deployment or invoice audit. Bounds
+Those pending-candidate/CI statements describe that historical checkpoint, not the
+current `0a8853e` production readback. No invoice audit is claimed. Bounds
 cover priced runs only; whole-period LLM cost and realized profit remain unknown.
 Invoice reconciliation and the broader economics gate remain open. See the
 [observer contract](../testnet-economics.md). [Cache hits are best-effort](https://api-docs.deepseek.com/guides/kv_cache/).
@@ -120,7 +126,7 @@ Invoice reconciliation and the broader economics gate remain open. See the
 2. Preserve the durable authorization/cash-out recovery invariants and extend funded
    acceptance to independent browser/creator journeys, unknown-UUID Circle response
    recovery and broader outage/restore paths.
-3. Complete candidate acceptance for versioned cost observation and configure/verify Telegram operations alerts.
+3. Complete invoice-backed cost-observation acceptance and the remaining full operations drills; preserve the accepted bounded Telegram/monitor path.
 4. Run the [independent research pilot](../research-pilot-program.md), alongside
    security review and operations drills.
 5. Assemble exact-candidate M1–M8 evidence for the owner's launch decision.
