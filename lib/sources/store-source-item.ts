@@ -11,6 +11,8 @@ import {
 export interface StoreSourceItemOptions {
   /** Publisher uploads and real-settlement deployments never fall back to plaintext. */
   requireEncrypted?: boolean;
+  /** Bounded maintenance can choose the existing encrypted DB backend without remote pinning. */
+  localOnly?: boolean;
   pin?: typeof pinEncrypted;
 }
 
@@ -79,7 +81,7 @@ export async function storeSourceItem(
     itemWrapIv: envelope.wrapIvB64,
     storageMode: "db_encrypted",
   });
-  if (!hasPinata()) return encryptedDbItem();
+  if (options.localOnly || !hasPinata()) return encryptedDbItem();
 
   try {
     const cid = await (options.pin ?? pinEncrypted)(

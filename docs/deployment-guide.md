@@ -156,6 +156,12 @@ account-session cleanup is not a payment-state reset. See
 
 ## Monitoring & alerts
 
+- **Source upkeep** uses an isolated Cloudflare Free hourly trigger and an authenticated,
+  bounded VPS job over verified RSS sources. The existing bulk CLI is separate manual upkeep.
+  See [limits, deployment evidence and rollback](cloudflare-source-upkeep.md); this moves
+  scheduling only, leaving SQLite, paid content and registry/payment authority on the VPS.
+
+
 ### Read-only release operations inventory
 
 On the deployment host, run `npm run preflight:ops` from `/root/keryx`. It reads

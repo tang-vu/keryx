@@ -66,3 +66,7 @@ keryx-extension-v*.zip
 
 # AI assistant artifacts
 .devin/
+
+# Isolated Cloudflare Worker build output and local runtime state
+.cloudflare/
+.wrangler/

@@ -64,7 +64,11 @@ export async function refreshSourceFeed(
   }
 
   const seen = new Set(existing.map((i) => i.link).filter(Boolean));
-  const unseen = feed.items.filter((it) => it.link && !seen.has(it.link));
+  const unseen = feed.items.filter((it) => {
+    if (!it.link || seen.has(it.link)) return false;
+    seen.add(it.link);
+    return true;
+  });
   if (unseen.length > 0) {
     try {
       const stored = await store(

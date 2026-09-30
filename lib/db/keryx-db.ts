@@ -4,6 +4,7 @@
  */
 
 import type { WithdrawalHistoryCursor, WithdrawalHistoryPage } from "./creator-withdrawal-history";
+import type { SourceUpkeepClaim, SourceUpkeepSummary } from "./source-upkeep";
 import type { BrowserAuthorizationIntent, BrowserAdmissionResult } from "./browser-authorization-admission";
 import type { PrivateCreatorConfirmation, PrivateCreatorConfirmationRecord } from "./private-creator-confirmations";
 import type { PrivateTreasuryPolicy, PrivateTreasuryReservation } from "./private-treasury-capacity";
@@ -312,6 +313,9 @@ export interface KeryxDB {
   // ── sync state (registry indexer checkpoint) ──
   /** Get a named sync-state value (e.g. "lastSyncedBlock"). Returns null if not set. */
   getSyncState(key: string): Promise<string | null>;
+  /** SQLite-only scheduled maintenance. Other adapters fail closed until equivalent atomic claims exist. */
+  claimSourceUpkeep?(now: number): Promise<SourceUpkeepClaim | null>;
+  finishSourceUpkeep?(claim: SourceUpkeepClaim, summary: SourceUpkeepSummary, now: number): Promise<void>;
   /** Upsert a named sync-state value. */
   setSyncState(key: string, value: string): Promise<void>;
   /** Atomically reserve one address claim and increment the shared daily faucet total. */
