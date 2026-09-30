@@ -76,7 +76,7 @@ export async function admitSqlitePrivateCreatorSubmission(db: DatabaseSync, id: 
 export async function listSupabasePrivateCreatorSubmissions(db: SupabaseAuthority, id: string, payer: string) {
   const claim = await getSupabasePrivateExecution(db, id, payer);
   if (!claim) return [];
-  const { data, error } = await db.rpc("list_supabase_private_creator_submissions", { p_job_id: id });
+  const { data, error } = await db.rpcResult("list_supabase_private_creator_submissions", { p_job_id: id });
   if (error || !Array.isArray(data)) throw new Error("Private creator storage unavailable");
   return data.map(row => readRow(id, claim.workerId, row));
 }
@@ -85,7 +85,7 @@ export async function admitSupabasePrivateCreatorSubmission(db: SupabaseAuthorit
   const claim = await getSupabasePrivateExecution(db, id, payer);
   if (!claim || claim.workerId !== workerId) throw new Error("Private execution authority unavailable");
   const key = legId(data);
-  const { data: inserted, error } = await db.rpc("admit_private_creator_submission", { p_id: id, p_payer: payer.toLowerCase(),
+  const { data: inserted, error } = await db.rpcResult("admit_private_creator_submission", { p_id: id, p_payer: payer.toLowerCase(),
     p_worker_id: workerId, p_leg_id: key, p_authorization_id: data.submission.authorizationId, p_amount_micros: Number(data.submission.amountMicros), p_data: data });
   if (error || typeof inserted !== "boolean") throw new Error("Private creator admission unavailable");
   if (!inserted) return false;

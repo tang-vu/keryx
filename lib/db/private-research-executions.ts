@@ -46,7 +46,7 @@ export async function claimSqlitePrivateExecution(db: DatabaseSync, id: string, 
 export async function getSupabasePrivateExecution(db: SupabaseAuthority, id: string, payer: string) {
   const payment = await getSupabasePrivatePayment(db, id, payer);
   if (payment?.status !== "settled") return null;
-  const { data, error } = await db.rpc("get_supabase_private_execution", { p_id: id });
+  const { data, error } = await db.rpcResult("get_supabase_private_execution", { p_id: id });
   if (error) throw new Error("Private execution storage unavailable");
   return data ? readClaim(id, data) : null;
 }
@@ -55,7 +55,7 @@ export async function claimSupabasePrivateExecution(db: SupabaseAuthority, id: s
   const payment = await getSupabasePrivatePayment(db, id, payer);
   if (payment?.status !== "settled") throw new Error("Settled private payment unavailable");
   const workerId = randomUUID();
-  const { data, error } = await db.rpc("claim_private_research_execution", {
+  const { data, error } = await db.rpcResult("claim_private_research_execution", {
     p_id: id, p_payer: payment.confirmation.payer, p_worker_id: workerId,
   });
   if (error || typeof data !== "boolean") throw new Error("Private execution claim unavailable");

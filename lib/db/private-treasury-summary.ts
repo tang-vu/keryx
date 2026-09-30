@@ -50,7 +50,7 @@ export async function getSqlitePrivateTreasurySummary(db: DatabaseSync, signer: 
 }
 
 export async function getSupabasePrivateTreasurySummary(db: SupabaseAuthority, signer: string) {
-  const { data, error } = await db.rpc("private_treasury_summary", { p_signer: addressSchema.parse(signer).toLowerCase() });
+  const { data, error } = await db.rpcResult("private_treasury_summary", { p_signer: addressSchema.parse(signer).toLowerCase() });
   if (error || !Array.isArray(data) || data.length > 1) throw new Error("Private treasury summary unavailable");
   return summary(data[0]);
 }

@@ -67,9 +67,9 @@ export async function releaseSupabasePrivateTreasury(db: SupabaseAuthority, id: 
   if (!await getSupabasePrivateResult(db, id, payer) && !await getSupabasePrivateInterruption(db, id, payer)) return null;
   const expected = await releasable(selected, await getSupabasePrivateTreasury(db, id, payer),
     await listSupabasePrivateCreatorSubmissions(db, id, payer));
-  const { data, error } = await db.rpc("release_private_treasury", { p_id: id, p_payer: payer.toLowerCase(), p_signer: selected });
+  const { data, error } = await db.rpcResult("release_private_treasury", { p_id: id, p_payer: payer.toLowerCase(), p_signer: selected });
   if (error || typeof data !== "boolean") throw new Error("Private treasury release unavailable");
-  const saved = await db.rpc("release_supabase_private_treasury", { p_job_id: id });
+  const saved = await db.rpcResult("release_supabase_private_treasury", { p_job_id: id });
   if (saved.error || !saved.data || amount.parse(saved.data.amount_micros) !== expected) throw new Error("Private treasury release accounting mismatch");
   return { amountMicros: expected.toString(), newlyReleased: data };
 }

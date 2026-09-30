@@ -45,14 +45,14 @@ export async function confirmSqlitePrivatePayment(db: DatabaseSync, id: string, 
 export async function getSupabasePrivatePayment(db: SupabaseAuthority, id: string, payer: string) {
   const intent = await getSupabasePrivateResearchIntent(db, id, payer);
   if (!intent) return null;
-  const { data, error } = await db.rpc("get_supabase_private_payment", { p_id: id });
+  const { data, error } = await db.rpcResult("get_supabase_private_payment", { p_id: id });
   if (error) throw new Error("Private payment storage unavailable");
   return data ? privatePaymentState(data, intent) : null;
 }
 export async function claimSupabasePrivatePayment(db: SupabaseAuthority, id: string, payer: string) {
   const intent = await getSupabasePrivateResearchIntent(db, id, payer);
   if (!intent) throw new Error("Private research intent unavailable");
-  const { data, error } = await db.rpc("claim_private_research_payment", { p_id: id, p_payer: intent.submission.payment.authorization.from });
+  const { data, error } = await db.rpcResult("claim_private_research_payment", { p_id: id, p_payer: intent.submission.payment.authorization.from });
   if (error || typeof data !== "boolean") throw new Error("Private payment claim unavailable");
   const state = await getSupabasePrivatePayment(db, id, payer);
   if (!state) throw new Error("Private payment claim unavailable");
@@ -62,7 +62,7 @@ export async function confirmSupabasePrivatePayment(db: SupabaseAuthority, id: s
   const intent = await getSupabasePrivateResearchIntent(db, id, payer);
   if (!intent) throw new Error("Private research intent unavailable");
   const confirmation = privatePaymentConfirmation(value, intent);
-  const { error } = await db.rpc("confirm_private_research_payment", { p_id: id, p_payer: intent.submission.payment.authorization.from, p_confirmation: confirmation });
+  const { error } = await db.rpcResult("confirm_private_research_payment", { p_id: id, p_payer: intent.submission.payment.authorization.from, p_confirmation: confirmation });
   if (error) throw new Error("Private payment storage unavailable");
   return requirePrivatePaymentConfirmation(await getSupabasePrivatePayment(db, id, payer), confirmation);
 }

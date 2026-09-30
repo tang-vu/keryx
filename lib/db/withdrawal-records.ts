@@ -27,9 +27,9 @@ export async function recordSqliteWithdrawal(db: DatabaseSync, value: Withdrawal
 }
 export async function recordSupabaseWithdrawal(sb: SupabaseAuthority, value: WithdrawalRecord) {
   const w = row(value);
-  const { error } = await sb.rpc("record_supabase_withdrawal", { p_row: w });
+  const { error } = await sb.rpcResult("record_supabase_withdrawal", { p_row: w });
   if (error) throw new Error("Withdrawal record write unavailable");
-  const read = await sb.rpc("record_supabase_withdrawal_2", { p_tx_hash: w.tx_hash });
+  const read = await sb.rpcResult("record_supabase_withdrawal_2", { p_tx_hash: w.tx_hash });
   if (read.error) throw new Error("Withdrawal record readback unavailable");
   verify(read.data, w);
 }

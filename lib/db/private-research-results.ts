@@ -72,7 +72,7 @@ export async function getSupabasePrivateResult(db: SupabaseAuthority, id: string
   if (!await getSupabasePrivateExecution(db, id, payer)) return null;
   const intent = await getSupabasePrivateResearchIntent(db, id, payer);
   if (!intent) throw new Error("Private research intent unavailable");
-  const { data, error } = await db.rpc("get_supabase_private_result", { p_id: id });
+  const { data, error } = await db.rpcResult("get_supabase_private_result", { p_id: id });
   if (error) throw new Error("Private result storage unavailable");
   return data ? readResult(data, intent) : null;
 }
@@ -83,7 +83,7 @@ export async function saveSupabasePrivateResult(db: SupabaseAuthority, id: strin
   const intent = await getSupabasePrivateResearchIntent(db, id, payer);
   if (!intent) throw new Error("Private research intent unavailable");
   checkedSnapshot(snapshot, intent);
-  const { error } = await db.rpc("save_private_research_result", {
+  const { error } = await db.rpcResult("save_private_research_result", {
     p_id: id, p_payer: intent.submission.payment.authorization.from, p_worker_id: workerId, p_serialized_run: snapshot,
   });
   if (error) throw new Error("Private result storage unavailable");
