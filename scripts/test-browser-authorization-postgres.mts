@@ -29,7 +29,7 @@ const intent = (id: number, overrides: Record<string, unknown> = {}) => ({
 const admit = (id: number, overrides: Record<string, unknown> = {}) =>
   `select public.admit_browser_authorization('${JSON.stringify(intent(id, overrides)).replaceAll("'", "''")}'::jsonb)`;
 const asService = (input: string) => sql(`set role service_role; ${input};`);
-const state = () => sql(`select spent * 1000000, (select count(*) from public.browser_authorization_intents)
+const state = () => sql(`select trim_scale(spent * 1000000), (select count(*) from public.browser_authorization_intents)
   from public.session_grants where session_id='owner'`);
 async function ready() {
   for (let retry = 0; ; retry++) {
