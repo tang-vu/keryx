@@ -49,6 +49,7 @@ export interface FundingReservationSnapshot {
   readonly cryptoClaimId?: string;
   readonly prepared?: Readonly<SignedGatewayFundingTransaction>;
   readonly broadcastClaimId?: string;
+  readonly terminal?: Readonly<FundingTerminalEvidence>;
 }
 export interface FundingClaimResult {
   /** True ONLY for the newly committed INSERT. Exact repeated claim returns
@@ -119,5 +120,5 @@ export interface GatewayFundingLedger {
 /** Protected observer extension for a later reviewed controlled issuer. Not
  * included in the generic app ledger above; normal service role cannot call. */
 export interface GatewayFundingTerminalObserverStore {
-  appendVerifiedTerminalObservation(value: VerifiedFundingTerminalObservation): Promise<void>;
+  appendVerifiedTerminalObservation(operationId: string, step: GatewayFundingStep, value: VerifiedFundingTerminalObservation): Promise<void>;
 }
