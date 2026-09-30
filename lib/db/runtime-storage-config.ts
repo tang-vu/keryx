@@ -37,7 +37,7 @@ function statIdentity(stat: ReturnType<typeof targetStat>) {
 }
 
 /** No fallback, environment-file loader, target discovery, identity adoption, or enrollment. */
-export function readRuntimeStorageDeployment(env: Readonly<Record<string, string | undefined>> = process.env): Readonly<StorageDeploymentManifest> {
+export function inspectStorageDeploymentManifest(env: Readonly<Record<string, string | undefined>>): Readonly<StorageDeploymentManifest> {
   let descriptor: number | undefined;
   try {
     const target = env.KERYX_STORAGE_MANIFEST;
@@ -58,7 +58,8 @@ export function readRuntimeStorageDeployment(env: Readonly<Record<string, string
     if (bytes > STORAGE_MANIFEST_MAX_BYTES || BigInt(bytes) !== before.size ||
       statIdentity(fstatSync(descriptor, { bigint: true })) !== statIdentity(before) ||
       statIdentity(targetStat(target)) !== statIdentity(before)) refuse();
-    const text = buffer.subarray(0, bytes).toString("utf8").trim();
+    const decoded = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(buffer.subarray(0, bytes));
+    const text = decoded.endsWith("\n") ? decoded.slice(0, -1) : decoded;
     const parsed: unknown = JSON.parse(text);
     // Exact canonical wire format rejects duplicate keys, including conflicting duplicates.
     if (canonicalJson(parsed) !== text) refuse();
@@ -86,6 +87,17 @@ export function readRuntimeStorageDeployment(env: Readonly<Record<string, string
     return Object.freeze({ format: "keryx-storage-deployment-v1", identity, backend });
   } catch { throw new RuntimeStorageRefused(); }
   finally { if (descriptor !== undefined) { try { closeSync(descriptor); } catch {} } }
+}
+
+let runtimeSnapshot: { manifestPath: string; deployment: Readonly<StorageDeploymentManifest> } | undefined;
+
+/** Runtime identity is pinned for this module/process lifetime. Changed configuration refuses; restart under drain. */
+export function readRuntimeStorageDeployment(): Readonly<StorageDeploymentManifest> {
+  const current = inspectStorageDeploymentManifest(process.env);
+  const manifestPath = process.env.KERYX_STORAGE_MANIFEST!;
+  if (!runtimeSnapshot) runtimeSnapshot = { manifestPath, deployment: current };
+  else if (manifestPath !== runtimeSnapshot.manifestPath || canonicalJson(current) !== canonicalJson(runtimeSnapshot.deployment)) refuse();
+  return runtimeSnapshot.deployment;
 }
 
 export function requireRuntimeStorageMode(mode: StorageIdentity["authorityMode"]): void {
