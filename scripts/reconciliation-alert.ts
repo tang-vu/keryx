@@ -9,6 +9,9 @@ type AlertSummary = Pick<
   | "mismatched"
   | "oldestPendingAt"
   | "browserAwaiting"
+  | "exposedAwaiting"
+  | "signedAwaiting"
+  | "submittedAwaiting"
   | "treasuryAwaiting"
   | "acknowledgedAwaiting"
   | "unacknowledgedAwaiting"
@@ -40,6 +43,9 @@ export async function reconcileAlertState(
     oldestPendingAt: summary.oldestPendingAt,
     status: assessment.status,
     browserAwaiting: summary.browserAwaiting,
+    exposedAwaiting: summary.exposedAwaiting,
+    signedAwaiting: summary.signedAwaiting,
+    submittedAwaiting: summary.submittedAwaiting,
     treasuryAwaiting: summary.treasuryAwaiting,
     acknowledgedAwaiting: summary.acknowledgedAwaiting,
     unacknowledgedAwaiting: summary.unacknowledgedAwaiting,
@@ -74,8 +80,11 @@ function awaitingAlert(summary: AlertSummary, ageHours: string): string {
     `${summary.awaiting} authorization(s) still lack definitive Circle evidence; the oldest has remained pending for ${ageHours} hours.`,
   ];
   if (summary.browserAwaiting > 0) details.push(`${summary.browserAwaiting} browser reservation(s) remain held.`);
+  if(summary.exposedAwaiting) details.push(`${summary.exposedAwaiting} exposed authorization(s) may be unsigned or have lost callbacks.`);
+  if(summary.signedAwaiting) details.push(`${summary.signedAwaiting} signed authorization(s) await proof without recorded submission.`);
+  if(summary.submittedAwaiting) details.push(`${summary.submittedAwaiting} submission attempt(s) await proof.`);
   if (summary.treasuryAwaiting > 0) details.push(`${summary.treasuryAwaiting} treasury attempt(s) hold no browser grant capacity.`);
   if (summary.expiredAwaiting > 0) details.push(`${summary.expiredAwaiting} signed validity window(s) have elapsed, but expiry is not Circle failure evidence.`);
-  if (summary.unknownExpiryAwaiting > 0) details.push(`${summary.unknownExpiryAwaiting} legacy row(s) lack an exact signed expiry.`);
+  if (summary.unknownExpiryAwaiting > 0) details.push(`${summary.unknownExpiryAwaiting} possibly unsigned or legacy row(s) lack an exact signed expiry.`);
   return details.join(" ");
 }

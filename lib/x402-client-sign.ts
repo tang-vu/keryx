@@ -68,7 +68,9 @@ export async function signPaymentAuthorization(
   requirements: PaymentRequirementsInput,
 ): Promise<SignedPaymentHeader> {
   const signer = walletClient.account?.address ?? "";
-  return signBrowserPaymentAuthorization(walletClient, requirements, signer, signer);
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  const nonce = "0x" + Array.from(bytes, b => b.toString(16).padStart(2,"0")).join("");
+  return signBrowserPaymentAuthorization(walletClient, requirements, signer, signer, nonce);
 }
 
 /** Browser entry point: both signer expectations must be supplied independently. */
@@ -77,6 +79,7 @@ export async function signBrowserPaymentAuthorization(
   requirements: PaymentRequirementsInput,
   intendedSessionSigner: string,
   capturedGrantSigner: string,
+  admittedNonce: string,
 ): Promise<SignedPaymentHeader> {
   const { scheme, network, asset, amount, payTo, maxTimeoutSeconds, extra } = requirements;
 
@@ -109,11 +112,12 @@ export async function signBrowserPaymentAuthorization(
   // from the challenge (server sets it to ~8d = 691200s for margin).
   const validBefore = BigInt(now + maxTimeoutSeconds);
 
-  // Random 32-byte nonce — single-use, regenerated per signature (EIP-3009 nonces
-  // are single-use on-chain; the facilitator rejects replays).
-  const nonceBytes = new Uint8Array(32);
-  crypto.getRandomValues(nonceBytes);
-  const nonce = ("0x" + Array.from(nonceBytes).map((b) => b.toString(16).padStart(2, "0")).join("")) as `0x${string}`;
+  // The server admitted this single-use nonce before exposure. Browser signing never
+  // substitutes a random nonce; the separate legacy headless entry point owns its nonce.
+  if (typeof admittedNonce !== "string" || !/^0x[0-9a-f]{64}$/.test(admittedNonce)) {
+    throw new Error("missing or invalid admitted browser authorization nonce");
+  }
+  const nonce = admittedNonce as `0x${string}`;
 
   const account = walletClient.account;
   if (!account || !isAddress(intendedSessionSigner) || !isAddress(capturedGrantSigner) ||

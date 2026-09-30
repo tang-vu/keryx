@@ -662,6 +662,72 @@ describe("runAgent — money-safety invariants", () => {
     expect(steps.some((step) => step.message.includes("confirmation is pending"))).toBe(true);
   });
 
+  it.each(["exposed", "submission_attempted"] as const)(
+    "retains query budget after uncertain %s journal transition without inserting a second ledger row",
+    async (phase) => {
+      const sources = [
+        makeSource({ id: "a", fetchPrice: 0.004 }),
+        makeSource({ id: "b", fetchPrice: 0.004 }),
+      ];
+      const engine = fakeEngine({
+        decide: (input) =>
+          input.candidates.map((c) => ({
+            ...buy({ id: c.id, name: c.name, price: c.fetchPrice }),
+            action: c.id === "a" ? "BUY" : "SKIP",
+          })),
+        sufficiency: () => ({
+          sufficient: false,
+          rationale: "no delivered evidence",
+        }),
+        reevaluate: () => ({
+          shouldBuyMore: true,
+          recommendedIds: ["b"],
+          rationale: "try next source",
+        }),
+      });
+      const gateway = fakeGateway();
+      const attempts: string[] = [];
+      gateway.payFetch = async ({ source, queryId }) => {
+        attempts.push(source.id);
+        throw new PaymentPendingError(
+          "journal transition acknowledgement uncertain",
+          makePayment({
+            kind: "fetch",
+            queryId,
+            sourceId: source.id,
+            sourceName: source.name,
+            payer: AGENT,
+            payee: source.walletAddress,
+            amountUsdc: source.fetchPrice,
+            settled: false,
+            settlementStatus: "pending",
+            authorizationId: "known-nonce",
+            authorizationPhase: phase,
+          }),
+          false
+        );
+      };
+      const d = deps(sources, engine, gateway);
+      const { run, steps } = await drive(
+        {
+          question: "q",
+          budget: 0.004 / (1 - config.citationPoolRatio),
+          researchMode: "deep",
+        },
+        d
+      );
+      expect(attempts).toEqual(["a"]);
+      expect(run.pendingSpendUsdc).toBe(0.004);
+      expect(run.totalSpent).toBe(0);
+      expect(run.answer).toBeTruthy();
+      expect(d.db.payments).toEqual([]);
+      if (phase === "exposed")
+        expect(steps.some((s) => s.message.includes("possibly unsigned"))).toBe(
+          true
+        );
+    }
+  );
+
   it("retains a settled toll when content delivery fails and continues without the source", async () => {
     const source = makeSource({ id: "a", fetchPrice: 0.004 });
     const gw = fakeGateway();

@@ -10,18 +10,20 @@
  *   - paymentHeader: base64-encoded {signature, authorization} — the value
  *     that goes straight into the "payment-signature" HTTP header
  *
- * On success, resolves the pending-signature promise held by session-grants.ts
- * so the BrowserCoSignGateway can retry the source immediately.
+ * Persists verified non-bearer metadata before acknowledgement. Only a live,
+ * current captured grant can deliver the header to its in-process gateway.
  *
- * Auth: the sessionId is validated against the active grant. No SIWE cookie
+ * Auth: signature recovery is pinned to the durable session/request challenge. No SIWE cookie
  * required here so the endpoint stays non-blocking during the SSE stream
- * (the cookie jar is httpOnly and already validated at grant-creation time).
+ * (grant creation and ask dispatch bind SIWE; recovery may outlive grant replacement).
  */
 
 import { NextRequest } from "next/server";
 import { getGrant } from "@/lib/payments/session-grants";
-import { getPendingChallenge, resolveSignature } from "@/lib/payments/pending-signatures";
+import { resolveSignature } from "@/lib/payments/pending-signatures";
 import { verifyBrowserSignature } from "@/lib/payments/verify-browser-signature";
+import { getDb } from "@/lib/db";
+import { createHash } from "node:crypto";
 
 export const runtime = "nodejs";
 
@@ -34,7 +36,7 @@ interface SignBody {
 export async function POST(req: NextRequest) {
   let body: SignBody;
   try {
-    body = await req.json() as SignBody;
+    body = (await req.json()) as SignBody;
   } catch {
     return Response.json({ error: "invalid JSON body" }, { status: 400 });
   }
@@ -51,31 +53,81 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "paymentHeader required" }, { status: 400 });
   }
 
-  // Verify the sessionId maps to an active grant so a rogue caller can't resolve
-  // arbitrary pending promises by guessing reqIds.
-  const grant = await getGrant(sessionId);
-  if (!grant) {
-    return Response.json({ error: "no active grant for sessionId" }, { status: 404 });
-  }
-
-  const challenge = getPendingChallenge(sessionId, reqId);
-  if (!challenge) {
-    return Response.json({ error: "reqId not found or already resolved" }, { status: 404 });
-  }
-
+  const db = await getDb();
+  let journal;
   try {
-    await verifyBrowserSignature(paymentHeader, challenge);
+    journal = await db.getBrowserJournal(sessionId, reqId);
+  } catch {
+    return Response.json(
+      { error: "authorization recovery unavailable" },
+      { status: 503 }
+    );
+  }
+  if (!journal)
+    return Response.json(
+      { error: "authorization request not found" },
+      { status: 404 }
+    );
+  if (
+    ![
+      "exposed",
+      "signed",
+      "submission_attempted",
+      "settled",
+      "failed",
+    ].includes(journal.phase)
+  ) {
+    return Response.json(
+      { error: "authorization was not exposed" },
+      { status: 409 }
+    );
+  }
+  let auth;
+  try {
+    auth = await verifyBrowserSignature(paymentHeader, {
+      requirements: journal.requirements,
+      expectedSigner: journal.signer,
+      expectedNonce: journal.nonce,
+    });
   } catch {
     // Keep the live slot available for a valid callback. Never echo a bearer header.
-    return Response.json({ error: "invalid payment authorization" }, { status: 400 });
+    return Response.json(
+      { error: "invalid payment authorization" },
+      { status: 400 }
+    );
   }
-
-  // Resolve scoped to this sessionId — prevents cross-session promise resolution.
-  const resolved = resolveSignature(sessionId, reqId, paymentHeader);
-  if (!resolved) {
-    // reqId not found — either already resolved, timed out, or bad id.
-    return Response.json({ error: "reqId not found or already resolved" }, { status: 404 });
+  try {
+    if (
+      !(await db.signBrowserJournal(sessionId, reqId, {
+        validAfter: auth.validAfter,
+        validBefore: auth.validBefore,
+        headerHash: createHash("sha256").update(paymentHeader).digest("hex"),
+      }))
+    ) {
+      return Response.json(
+        { error: "authorization callback conflicts with durable state" },
+        { status: 409 }
+      );
+    }
+  } catch {
+    return Response.json(
+      { error: "authorization acknowledgement unavailable" },
+      { status: 503 }
+    );
   }
-
-  return Response.json({ ok: true });
+  // Durable acknowledgement can succeed after timeout/restart/replacement. Only the original
+  // live in-process gateway may submit, and only while its captured grant remains current.
+  let delivered = false;
+  try {
+    const grant = await getGrant(sessionId);
+    if (
+      grant?.grantEpoch === journal.grantEpoch &&
+      grant.sessAddr.toLowerCase() === journal.signer.toLowerCase()
+    ) {
+      delivered = resolveSignature(sessionId, reqId, paymentHeader);
+    }
+  } catch {
+    /* already acknowledged durably; no submission authority */
+  }
+  return Response.json({ ok: true, delivered });
 }

@@ -183,6 +183,9 @@ export async function* runAgent(
   }
 
   async function persistPaymentRecord(payment: PaymentRecord): Promise<string | null> {
+    // Journal admission already committed the authoritative row before browser exposure.
+    // Reconciliation/gateway CAS owns its lifecycle; a second INSERT is not recovery.
+    if (payment.authorizationPhase) return null;
     try {
       await effects.recordPayment(payment);
       return null;
@@ -692,7 +695,7 @@ export async function* runAgent(
           const ledgerError = await persistPaymentRecord(pending);
           yield emit(
             "fetch",
-            `Signed $${pending.amountUsdc} authorization for ${assetLabel}; ${pendingConfirmationMessage(err)}. The amount is not counted as spent; skipping this article and continuing.`,
+            `${pendingAuthorizationLabel(pending)} $${pending.amountUsdc} authorization for ${assetLabel}; ${pendingConfirmationMessage(err)}. The amount is reserved, not counted as settled spend; skipping this article and continuing.`,
             pending,
           );
           if (ledgerError) {
@@ -915,7 +918,7 @@ export async function* runAgent(
             spentTolls += asset.priceUsdc;
             yield emit(
               "reevaluate",
-              `Signed $${pending.amountUsdc} authorization for ${assetLabel}; ${pendingConfirmationMessage(err)}. The reserved budget stays consumed.`,
+              `${pendingAuthorizationLabel(pending)} $${pending.amountUsdc} authorization for ${assetLabel}; ${pendingConfirmationMessage(err)}. The reserved budget stays consumed.`,
               pending,
             );
             if (ledgerError) {
@@ -1228,7 +1231,7 @@ export async function* runAgent(
           const ledgerError = await persistPaymentRecord(pending);
           yield emit(
             "settle",
-            `Signed $${pending.amountUsdc} citation authorization → ${author.name}; ${pendingConfirmationMessage(err)}. The amount is not counted as paid.`,
+            `${pendingAuthorizationLabel(pending)} $${pending.amountUsdc} citation authorization → ${author.name}; ${pendingConfirmationMessage(err)}. The amount is not counted as paid.`,
             pending,
           );
           if (ledgerError) {
@@ -1349,6 +1352,13 @@ function pendingConfirmationMessage(error: unknown): string {
   return error instanceof PaymentPendingError && !error.submissionAttempted
     ? "Keryx withheld submission; external use remains uncertain"
     : "settlement confirmation is pending";
+}
+
+function pendingAuthorizationLabel(payment: PaymentRecord): string {
+  if (payment.authorizationPhase === "prepared" || payment.authorizationPhase === "exposed") {
+    return "Reserved, possibly unsigned";
+  }
+  return payment.authorizationPhase === "submission_attempted" ? "Submitted" : "Signed";
 }
 
 function fetchPaymentMessage(payment: PaymentRecord, sourceName: string): string {

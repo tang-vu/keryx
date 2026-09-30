@@ -6,6 +6,7 @@
   "scripts": {
     "import:public-references": "node --import tsx --env-file-if-exists=.env.local scripts/import-public-references.mts",
     "test:browser-private-journal": "node --import tsx scripts/test-browser-private-journal.mts",
+    "browser:journal": "node --import tsx --env-file-if-exists=.env.local scripts/browser-authorization-journal.mts",
     "test:browser-withdrawal-journal": "node --import tsx scripts/test-browser-withdrawal-journal.mts",
     "test:rust-engine": "node --import tsx scripts/test-rust-engine.mts",
     "test:browser-private-checkout": "node --import tsx scripts/test-browser-private-checkout.mts",

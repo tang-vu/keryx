@@ -7,6 +7,7 @@ import {
 } from "./x402-client-sign";
 
 const signer = "0x1111111111111111111111111111111111111111";
+const nonce = `0x${"44".repeat(32)}`;
 const requirement: PaymentRequirementsInput = {
   scheme: "exact",
   network: "eip155:5042002",
@@ -32,15 +33,24 @@ function wallet(address = signer) {
 describe("browser x402 signing policy", () => {
   it("signs the pinned testnet domain for the intended session signer", async () => {
     const { client, signTypedData } = wallet();
-    await signBrowserPaymentAuthorization(client, requirement, signer, signer);
-    expect(signTypedData).toHaveBeenCalledWith(expect.objectContaining({
-      domain: {
-        name: "GatewayWalletBatched",
-        version: "1",
-        chainId: 5042002,
-        verifyingContract: requirement.extra.verifyingContract,
-      },
-    }));
+    const result = await signBrowserPaymentAuthorization(
+      client,
+      requirement,
+      signer,
+      signer,
+      nonce
+    );
+    expect(result.authorization.nonce).toBe(nonce);
+    expect(signTypedData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        domain: {
+          name: "GatewayWalletBatched",
+          version: "1",
+          chainId: 5042002,
+          verifyingContract: requirement.extra.verifyingContract,
+        },
+      })
+    );
   });
 
   it.each([
@@ -55,33 +65,76 @@ describe("browser x402 signing policy", () => {
     ["long lifetime", { maxTimeoutSeconds: 2_592_000 }],
     ["invalid amount", { amount: "2e3" }],
     ["invalid payee", { payTo: "0x12" }],
-    ["missing domain name", { extra: { ...requirement.extra, name: undefined } }],
+    [
+      "missing domain name",
+      { extra: { ...requirement.extra, name: undefined } },
+    ],
     ["wrong domain version", { extra: { ...requirement.extra, version: "2" } }],
-    ["mainnet Gateway", { extra: { ...requirement.extra, verifyingContract: "0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE" } }],
+    [
+      "mainnet Gateway",
+      {
+        extra: {
+          ...requirement.extra,
+          verifyingContract: "0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE",
+        },
+      },
+    ],
   ])("rejects %s before signing", async (_label, changed) => {
     const { client, signTypedData } = wallet();
-    await expect(signBrowserPaymentAuthorization(
-      client, { ...requirement, ...changed } as PaymentRequirementsInput, signer, signer,
-    )).rejects.toThrow();
+    await expect(
+      signBrowserPaymentAuthorization(
+        client,
+        { ...requirement, ...changed } as PaymentRequirementsInput,
+        signer,
+        signer,
+        nonce
+      )
+    ).rejects.toThrow();
     expect(signTypedData).not.toHaveBeenCalled();
   });
 
   it.each([
-    ["different local signer", "0x3333333333333333333333333333333333333333", signer],
-    ["different captured grant", signer, "0x3333333333333333333333333333333333333333"],
+    [
+      "different local signer",
+      "0x3333333333333333333333333333333333333333",
+      signer,
+    ],
+    [
+      "different captured grant",
+      signer,
+      "0x3333333333333333333333333333333333333333",
+    ],
     ["missing captured grant", signer, ""],
-  ])("rejects %s before signing", async (_label, localSigner, capturedSigner) => {
-    const { client, signTypedData } = wallet();
-    await expect(signBrowserPaymentAuthorization(
-      client, requirement, localSigner, capturedSigner,
-    )).rejects.toThrow(/session signer/);
-    expect(signTypedData).not.toHaveBeenCalled();
-  });
+  ])(
+    "rejects %s before signing",
+    async (_label, localSigner, capturedSigner) => {
+      const { client, signTypedData } = wallet();
+      await expect(
+        signBrowserPaymentAuthorization(
+          client,
+          requirement,
+          localSigner,
+          capturedSigner,
+          nonce
+        )
+      ).rejects.toThrow(/session signer/);
+      expect(signTypedData).not.toHaveBeenCalled();
+    }
+  );
 
   it("rejects a wallet account outside the matching local and captured grants", async () => {
-    const { client, signTypedData } = wallet("0x4444444444444444444444444444444444444444");
-    await expect(signBrowserPaymentAuthorization(client, requirement, signer, signer))
-      .rejects.toThrow(/session signer/);
+    const { client, signTypedData } = wallet(
+      "0x4444444444444444444444444444444444444444"
+    );
+    await expect(
+      signBrowserPaymentAuthorization(
+        client,
+        requirement,
+        signer,
+        signer,
+        nonce
+      )
+    ).rejects.toThrow(/session signer/);
     expect(signTypedData).not.toHaveBeenCalled();
   });
 
@@ -90,4 +143,20 @@ describe("browser x402 signing policy", () => {
     await signPaymentAuthorization(client, requirement);
     expect(signTypedData).toHaveBeenCalledOnce();
   });
+  it.each([undefined, "", `0x${"GG".repeat(32)}`, `0x${"ab".repeat(31)}`])(
+    "refuses missing or invalid admitted nonce before signing",
+    async (admitted) => {
+      const { client, signTypedData } = wallet();
+      await expect(
+        signBrowserPaymentAuthorization(
+          client,
+          requirement,
+          signer,
+          signer,
+          admitted as string
+        )
+      ).rejects.toThrow(/nonce/);
+      expect(signTypedData).not.toHaveBeenCalled();
+    }
+  );
 });

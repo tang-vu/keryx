@@ -1,5 +1,27 @@
 # Keryx — Decision Log
 
+**D-272** - Journal browser authorization before exposure and retain signer capacity through recovery -
+*The legacy live path reserved a grant, let the browser choose a nonce, and inserted its
+payment record after signing/submission; timeout or lost callback could release an
+authorization that still existed outside the process.*
+Atomically bridge admission to the authoritative `payment_events` row before SSE,
+then conditionally record exposure, verified signature metadata and submission intent.
+Sign the admitted server nonce exactly. Persist no signature header or key. Only
+confirmed prepared cancellation releases locally; exposed rows remain reserved until
+exact Circle terminal failure. Retain original epochs and cumulative consumption per
+normalized signer across recovery, aliases, expiry and revoke. Budget remains a
+cumulative cap: recovery credits only exact, deduplicated confirmed consumption when
+comparing it with independently observed remaining Circle availability; pending or
+unknown exposure is never available credit.
+Schema installation remains inactive. A testnet-only operator activation requires
+draining/replacing all old writers, protocol-compatible clients and independent
+candidate acceptance. Persistent database fences reject old financial writes;
+rollback preserves the schema and journal with signing paused. Historical missing
+nonces are not reconstructed. Callback recovery acknowledges metadata without an
+autonomous paid retry. Conservative unresolved holds can remain indefinite.
+Synthetic acceptance is neither a funded drill nor M3/M4/mainnet authorization.
+See [cutover and recovery](docs/engineering/browser-authorization-cutover.md).
+
 **D-271** - Public RSS references are free answer evidence, separate from creator payout authority -
 *Adding independent and official public feeds must not assign Keryx wallets to publishers
 or imply an ownership agreement.* Store validated, bounded feed snapshots in a separate

@@ -15,16 +15,32 @@
  */
 
 import { config } from "../config";
-import type { ArticleOfferRef, Author, PaymentRecord, Source, SourceItem, SourceItemIdentity } from "../types";
+import type {
+  ArticleOfferRef,
+  Author,
+  PaymentRecord,
+  Source,
+  SourceItem,
+  SourceItemIdentity,
+} from "../types";
 import {
   matchesSourceItemIdentity,
   sourceItemIdentity,
 } from "../sources/source-item-asset";
 import { sourceFetchPayTo } from "../registry/source-fetch-payto";
 import { articlePaidPath } from "../offers/resolve-article-offer";
-import { makePayment, type FetchResult, type PaymentGateway } from "./payment-gateway";
+import {
+  makePayment,
+  type FetchResult,
+  type PaymentGateway,
+} from "./payment-gateway";
 import { PaymentPendingError, PaymentSettledError } from "./payment-state";
-import { getGrant, releaseSpend, reserveSpend } from "./session-grants";
+import { getGrant } from "./session-grants";
+import { getDb } from "../db";
+import { createHash } from "node:crypto";
+import { verifyBrowserSignature } from "./verify-browser-signature";
+import { sendAlert } from "../notify/alert";
+import type { BrowserAuthorizationJournal } from "../db/browser-authorization-journal";
 import {
   assertExpectedRequirements,
   authorizationExpiryIso,
@@ -82,7 +98,8 @@ export type RequestSignatureFn = (
    *  wallets are deliberately not enumerable from any public endpoint. */
   sourceId: string,
   /** Exact article terms the browser independently checks before signing a fetch. */
-  paymentContext?: BrowserPaymentContext,
+  paymentContext: BrowserPaymentContext | undefined,
+  admittedNonce: string
 ) => Promise<string>;
 
 export class BrowserCoSignGateway implements PaymentGateway {
@@ -97,7 +114,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
     private readonly requestSignature: RequestSignatureFn,
     private readonly abortSignal?: AbortSignal,
     /** Generation of the cap reservation. A later Circle failure may release only this epoch. */
-    private readonly grantEpoch: string = "legacy-test-grant",
+    private readonly grantEpoch: string = "legacy-test-grant"
   ) {}
 
   agentAddress(): string {
@@ -145,7 +162,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
       undefined,
       identity,
       fetchPayee,
-      offer,
+      offer
     );
     return { content, payment };
   }
@@ -167,8 +184,10 @@ export class BrowserCoSignGateway implements PaymentGateway {
     queryId: string;
     rationale: string;
   }): Promise<PaymentRecord> {
-    const url = `${config.baseUrl}/api/cite/${source.id}?author=${encodeURIComponent(
-      author.walletAddress,
+    const url = `${config.baseUrl}/api/cite/${
+      source.id
+    }?author=${encodeURIComponent(
+      author.walletAddress
     )}&amount=${amount.toFixed(6)}`;
     const { payment } = await this.buyWithCoSign(
       url,
@@ -179,7 +198,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
       weight,
       rationale,
       author,
-      item,
+      item
     );
     return payment;
   }
@@ -197,7 +216,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
     author?: Author,
     item?: SourceItemIdentity,
     payeeOverride?: string,
-    offer?: ArticleOfferRef,
+    offer?: ArticleOfferRef
   ): Promise<{ content: string; payment: PaymentRecord }> {
     // Guard: abort if client disconnected or grant revoked.
     if (this.abortSignal?.aborted) {
@@ -214,12 +233,99 @@ export class BrowserCoSignGateway implements PaymentGateway {
     const reqId = crypto.randomUUID();
     const method = kind === "fetch" ? "GET" : "POST";
     const requirements = await this.fetchRequirements(url, method);
-    const payee = payeeOverride ?? author?.walletAddress ?? source.walletAddress;
+    const payee =
+      payeeOverride ?? author?.walletAddress ?? source.walletAddress;
     assertExpectedRequirements(requirements, payee, amount);
 
-    // Reserve in one atomic DB operation before a bearer authorization can exist.
-    if (!(await reserveSpend(this.sessionId, this.grantEpoch, this.sessAddr, amount))) {
-      throw new Error(`session grant changed or cap would be exceeded (amount=${amount})`);
+    const db = await getDb();
+    const admission = await db.admitBrowserJournal({
+      sessionId: this.sessionId,
+      requestId: reqId,
+      queryId,
+      grantEpoch: this.grantEpoch,
+      signer: this.sessAddr,
+      network: "eip155:5042002",
+      token: requirements.asset,
+      gatewayContract: requirements.extra.verifyingContract,
+      sourceId: source.id,
+      offerId: offer?.id ?? null,
+      kind,
+      payee,
+      amountMicroUsdc: Number(requirements.amount),
+      requirements,
+      payment: {
+        kind,
+        queryId,
+        sourceId: source.id,
+        sourceName: source.name,
+        ...item,
+        offerId: offer?.id,
+        listPriceUsdc: offer?.listPriceUsdc,
+        payer: this.sessAddr,
+        payee,
+        amountUsdc: amount,
+        weight,
+        rationale,
+        network: "eip155:5042002",
+        grantEpoch: this.grantEpoch,
+        origin: "web",
+      },
+    });
+    if (admission.status !== "admitted")
+      throw new Error(
+        `browser authorization admission refused (${admission.status})`
+      );
+    const journal = admission.journal;
+    const pendingExposure = () => ({
+      ...journal.payment,
+      authorizationPhase: "exposed" as const,
+    });
+    const recoveredFailure = (
+      message: string,
+      recovered: BrowserAuthorizationJournal | null,
+      fallback: PaymentRecord
+    ): never => {
+      if (recovered?.phase === "settled")
+        throw new PaymentSettledError(message, recovered.payment);
+      if (
+        recovered?.phase === "failed" ||
+        recovered?.phase === "cancelled_unexposed"
+      )
+        throw new Error(
+          "authorization reached a durable terminal state before delivery"
+        );
+      throw new PaymentPendingError(
+        message,
+        recovered?.payment ?? fallback,
+        false
+      );
+    };
+    try {
+      if (this.abortSignal?.aborted || !(await this.hasCapturedGrant())) {
+        await db.cancelPreparedBrowserJournal(this.sessionId, reqId);
+        throw new Error("browser authorization cancelled before exposure");
+      }
+      if (!(await db.exposeBrowserJournal(this.sessionId, reqId)))
+        throw new Error("browser authorization exposure refused");
+    } catch (error) {
+      // Cancellation is CAS-only: it cannot release if exposure may have committed.
+      const cancelled = await db
+        .cancelPreparedBrowserJournal(this.sessionId, reqId)
+        .catch(() => false);
+      if (cancelled) throw error;
+      const recovered = await db
+        .getBrowserJournal(this.sessionId, reqId)
+        .catch(() => null);
+      if (recovered?.phase === "cancelled_unexposed") throw error;
+      void sendAlert(
+        "browser authorization exposure write uncertain",
+        `nonce=${journal.nonce}; phase=${recovered?.phase ?? "unknown"}`
+      ).catch(() => undefined);
+      return recoveredFailure(
+        "authorization exposure acknowledgement unavailable; reservation retained",
+        recovered,
+        pendingExposure()
+      );
     }
 
     // Step 2: Ask the browser to sign. The browser validates payTo/amount against
@@ -234,21 +340,43 @@ export class BrowserCoSignGateway implements PaymentGateway {
         kind,
         source.id,
         kind === "fetch" ? { item, offer } : undefined,
+        journal.nonce
       );
-      signed = parseAndValidateSignedHeader(paymentHeader, requirements, this.sessAddr);
-    } catch (err) {
-      await releaseSpend(this.sessionId, this.grantEpoch, this.sessAddr, amount).catch((releaseErr) => {
-        console.error("[keryx] failed to release unused session reservation:", releaseErr);
+      signed = parseAndValidateSignedHeader(
+        paymentHeader,
+        requirements,
+        this.sessAddr
+      );
+      await verifyBrowserSignature(paymentHeader, {
+        requirements,
+        expectedSigner: this.sessAddr,
+        expectedNonce: journal.nonce,
       });
-      // Timeout or revoke — record a skipped payment rather than crashing the run.
-      const message = err instanceof Error ? err.message : String(err);
-      throw new Error(`sign-request failed (${message}) — skipping ${source.name}`);
+      if (
+        !(await db.signBrowserJournal(this.sessionId, reqId, {
+          validAfter: signed.authorization.validAfter,
+          validBefore: signed.authorization.validBefore,
+          headerHash: createHash("sha256").update(paymentHeader).digest("hex"),
+        }))
+      )
+        throw new Error("durable signed authorization acknowledgement refused");
+    } catch (err) {
+      void err; // Header errors must not leak a bearer through logs or SSE.
+      const recovered = await db
+        .getBrowserJournal(this.sessionId, reqId)
+        .catch(() => null);
+      return recoveredFailure(
+        "exposed authorization remains reserved; signature or callback acknowledgement unavailable",
+        recovered,
+        pendingExposure()
+      );
     }
 
     // Step 3: Retry with the signed header — triggers verify+settle server-side.
     const payer = this.sessAddr;
     const basePayment = {
       id: `x402:${signed.authorization.nonce}`,
+      createdAt: journal.payment.createdAt,
       kind,
       queryId,
       sourceId: source.id,
@@ -261,22 +389,27 @@ export class BrowserCoSignGateway implements PaymentGateway {
       amountUsdc: amount,
       weight,
       authorizationId: signed.authorization.nonce,
-      authorizationExpiresAt: authorizationExpiryIso(signed.authorization.validBefore),
+      authorizationExpiresAt: authorizationExpiryIso(
+        signed.authorization.validBefore
+      ),
       grantEpoch: this.grantEpoch,
-    } as const;
-    const pending = (reason: string) => makePayment({
-      ...basePayment,
-      txHash: null,
-      settled: false,
-      settlementStatus: "pending",
-      rationale: `Signed x402 authorization submitted; settlement confirmation unavailable (${reason}).`,
-    });
+      authorizationPhase: "signed" as PaymentRecord["authorizationPhase"],
+    };
+    const pending = (reason: string) =>
+      makePayment({
+        ...basePayment,
+        txHash: null,
+        settled: false,
+        settlementStatus: "pending",
+        rationale: `Signed x402 authorization submitted; settlement confirmation unavailable (${reason}).`,
+      });
 
     // The browser produced this bearer header and may still possess it. Even if Keryx withholds
     // submission, another holder could submit it; retain the reservation and reconcile by nonce.
     let grantCurrent = false;
     try {
-      if (!this.abortSignal?.aborted) grantCurrent = await this.hasCapturedGrant();
+      if (!this.abortSignal?.aborted)
+        grantCurrent = await this.hasCapturedGrant();
     } catch {
       // A storage failure leaves grant authority unknown. Fail closed and retain capacity.
     }
@@ -288,12 +421,31 @@ export class BrowserCoSignGateway implements PaymentGateway {
           txHash: null,
           settled: false,
           settlementStatus: "pending",
-          rationale: "Signed x402 authorization created, but Keryx withheld submission after the browser grant changed, could not be verified, or the client disconnected. External use remains uncertain.",
+          rationale:
+            "Signed x402 authorization created, but Keryx withheld submission after the browser grant changed, could not be verified, or the client disconnected. External use remains uncertain.",
         }),
-        false,
+        false
       );
     }
 
+    try {
+      if (!(await db.submitBrowserJournal(this.sessionId, reqId)))
+        throw new Error("transition refused");
+    } catch {
+      const recovered = await db
+        .getBrowserJournal(this.sessionId, reqId)
+        .catch(() => null);
+      void sendAlert(
+        "browser authorization submission write uncertain",
+        `nonce=${journal.nonce}; phase=${recovered?.phase ?? "unknown"}`
+      ).catch(() => undefined);
+      return recoveredFailure(
+        "durable submission acknowledgement unavailable",
+        recovered,
+        { ...journal.payment, authorizationPhase: "signed" }
+      );
+    }
+    basePayment.authorizationPhase = "submission_attempted";
     let retryRes: Response;
     try {
       retryRes = await fetch(url, {
@@ -308,7 +460,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
       const reason = errorMessage(err);
       throw new PaymentPendingError(
         `settlement confirmation pending after signed submission (${reason})`,
-        pending(reason),
+        pending(reason)
       );
     }
 
@@ -317,6 +469,42 @@ export class BrowserCoSignGateway implements PaymentGateway {
     // carries PAYMENT-RESPONSE and must remain settled rather than being relabelled pending.
     const paymentResponse = retryRes.headers.get("PAYMENT-RESPONSE");
     const txHash = settlementReference(paymentResponse, payer);
+    if (txHash) {
+      try {
+        if (
+          !(await db.settlePendingPayment(
+            journal.payment.id!,
+            journal.nonce,
+            txHash
+          ))
+        ) {
+          const recovered = await db.getBrowserJournal(this.sessionId, reqId);
+          if (
+            recovered?.phase !== "settled" ||
+            recovered.payment.txHash !== txHash
+          )
+            throw new Error("terminal state conflict");
+        }
+      } catch {
+        void sendAlert(
+          "browser authorization receipt write requires recovery",
+          `nonce=${journal.nonce}; receipt=${txHash}`
+        ).catch(() => undefined);
+        throw new PaymentSettledError(
+          "payment settled; durable confirmation write requires reconciliation",
+          makePayment({
+            ...basePayment,
+            txHash,
+            settled: true,
+            settlementStatus: "settled",
+            authorizationPhase: "settled",
+          })
+        );
+      }
+    }
+    basePayment.authorizationPhase = txHash
+      ? "settled"
+      : "submission_attempted";
 
     if (!retryRes.ok) {
       const reason = `HTTP ${retryRes.status}`;
@@ -329,17 +517,23 @@ export class BrowserCoSignGateway implements PaymentGateway {
             settled: true,
             settlementStatus: "settled",
             rationale: `Circle settlement confirmed, but the paid route returned ${reason}.`,
-          }),
+          })
         );
       }
       throw new PaymentPendingError(
         `settlement confirmation pending after signed submission (${reason})`,
-        pending(reason),
+        pending(reason)
       );
     }
 
-    const bodyJson = await retryRes.json().catch(() => ({})) as Record<string, unknown>;
-    const content = (bodyJson.content as string) ?? (bodyJson.text as string) ?? JSON.stringify(bodyJson);
+    const bodyJson = (await retryRes.json().catch(() => ({}))) as Record<
+      string,
+      unknown
+    >;
+    const content =
+      (bodyJson.content as string) ??
+      (bodyJson.text as string) ??
+      JSON.stringify(bodyJson);
 
     const payment = makePayment({
       ...basePayment,
@@ -347,7 +541,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
       settled: txHash !== null,
       settlementStatus: txHash ? "settled" : "pending",
       rationale: txHash
-        ? (rationale ?? "Browser co-sign toll settled on Arc via x402.")
+        ? rationale ?? "Browser co-sign toll settled on Arc via x402."
         : "Content returned after signed x402 submission, but the settlement response was missing or invalid.",
     });
 
@@ -357,12 +551,12 @@ export class BrowserCoSignGateway implements PaymentGateway {
         payment.rationale = `Circle settlement confirmed, but ${reason}.`;
         throw new PaymentSettledError(
           `payment settled, but ${source.name} returned a different article identity`,
-          payment,
+          payment
         );
       }
       throw new PaymentPendingError(
         `settlement confirmation pending and ${reason}`,
-        payment,
+        payment
       );
     }
 
@@ -372,10 +566,13 @@ export class BrowserCoSignGateway implements PaymentGateway {
         payment.rationale = `Circle settlement confirmed, but ${reason}.`;
         throw new PaymentSettledError(
           `payment settled, but ${source.name} returned different article pricing`,
-          payment,
+          payment
         );
       }
-      throw new PaymentPendingError(`settlement confirmation pending and ${reason}`, payment);
+      throw new PaymentPendingError(
+        `settlement confirmation pending and ${reason}`,
+        payment
+      );
     }
 
     return { content, payment };
@@ -383,15 +580,20 @@ export class BrowserCoSignGateway implements PaymentGateway {
 
   private async hasCapturedGrant(): Promise<boolean> {
     const grant = await getGrant(this.sessionId);
-    return grant?.grantEpoch === this.grantEpoch &&
-      grant.sessAddr.toLowerCase() === this.sessAddr.toLowerCase();
+    return (
+      grant?.grantEpoch === this.grantEpoch &&
+      grant.sessAddr.toLowerCase() === this.sessAddr.toLowerCase()
+    );
   }
 
   /**
    * GET the URL without payment to obtain the 402 challenge.
    * Returns the first matching payment requirements object (Arc / exact scheme).
    */
-  private async fetchRequirements(url: string, method: "GET" | "POST"): Promise<PaymentRequirements> {
+  private async fetchRequirements(
+    url: string,
+    method: "GET" | "POST"
+  ): Promise<PaymentRequirements> {
     const res = await fetch(url, {
       method,
       headers: { Accept: "application/json" },
@@ -409,18 +611,24 @@ export class BrowserCoSignGateway implements PaymentGateway {
 
     let challenge: ChallengeBody;
     try {
-      challenge = JSON.parse(Buffer.from(encoded, "base64").toString("utf-8")) as ChallengeBody;
+      challenge = JSON.parse(
+        Buffer.from(encoded, "base64").toString("utf-8")
+      ) as ChallengeBody;
     } catch {
       throw new Error("could not parse PAYMENT-REQUIRED header");
     }
     if (challenge.x402Version !== 2) {
-      throw new Error(`unsupported x402 challenge version: ${challenge.x402Version}`);
+      throw new Error(
+        `unsupported x402 challenge version: ${challenge.x402Version}`
+      );
     }
 
     const reqs = challenge.accepts ?? [];
     // Prefer the Arc testnet option matching our configured network.
-    const match = reqs.find((r) => r.network === config.networkId && r.scheme === "exact")
-      ?? reqs[0];
+    const match =
+      reqs.find(
+        (r) => r.network === config.networkId && r.scheme === "exact"
+      ) ?? reqs[0];
 
     if (!match) {
       throw new Error(`no usable payment requirements in 402 from ${url}`);
@@ -433,7 +641,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
 function matchesArticlePricing(
   value: unknown,
   expectedPrice: number,
-  offer?: ArticleOfferRef,
+  offer?: ArticleOfferRef
 ): boolean {
   if (!value || typeof value !== "object") return false;
   const pricing = value as {
@@ -444,38 +652,58 @@ function matchesArticlePricing(
   return (
     pricing.offerId === (offer?.id ?? null) &&
     Math.abs(Number(pricing.priceUsdc) - expectedPrice) < 0.0000005 &&
-    (!offer || Math.abs(Number(pricing.listPriceUsdc) - offer.listPriceUsdc) < 0.0000005)
+    (!offer ||
+      Math.abs(Number(pricing.listPriceUsdc) - offer.listPriceUsdc) < 0.0000005)
   );
 }
 
-/** Invalid/mismatched browser data is rejected before submission, while releasing the reservation
- * is still safe. The signature itself is never retained after this check. */
+/** Reject malformed data before submission. Exposure already happened: rejection never
+ * proves that no usable authorization exists and cannot release retained capacity. */
 function parseAndValidateSignedHeader(
   header: string,
   requirements: PaymentRequirements,
-  sessionAddress: string,
+  sessionAddress: string
 ): SignedHeaderBody {
   let body: SignedHeaderBody;
   try {
-    body = JSON.parse(Buffer.from(header, "base64").toString("utf-8")) as SignedHeaderBody;
+    body = JSON.parse(
+      Buffer.from(header, "base64").toString("utf-8")
+    ) as SignedHeaderBody;
   } catch {
     throw new Error("browser returned an invalid payment header");
   }
   // This gateway sends the header directly to the seller, which prefers a nested `.payload`.
   // Do not allow a second authorization to bypass the callback's verified inner blob.
-  if (!body || typeof body !== "object" || Array.isArray(body) ||
-      Object.keys(body).sort().join(",") !== "authorization,signature") {
+  if (
+    !body ||
+    typeof body !== "object" ||
+    Array.isArray(body) ||
+    Object.keys(body).sort().join(",") !== "authorization,signature"
+  ) {
     throw new Error("browser returned an ambiguous payment header");
   }
   const auth = body?.authorization;
-  if (!auth || typeof body.signature !== "string" || !/^0x[0-9a-f]{130}$/i.test(body.signature)) {
+  if (
+    !auth ||
+    typeof body.signature !== "string" ||
+    !/^0x[0-9a-f]{130}$/i.test(body.signature)
+  ) {
     throw new Error("browser returned an incomplete payment authorization");
   }
-  if (!sameAddress(auth.from ?? "", sessionAddress)) throw new Error("payment authorization signer does not match the session");
-  if (!sameAddress(auth.to ?? "", requirements.payTo)) throw new Error("payment authorization payTo does not match the challenge");
-  if (String(auth.value) !== requirements.amount) throw new Error("payment authorization amount does not match the challenge");
-  if (!/^0x[0-9a-f]{64}$/i.test(auth.nonce ?? "")) throw new Error("payment authorization nonce is invalid");
-  if (!/^\d+$/.test(String(auth.validAfter)) || !/^\d+$/.test(String(auth.validBefore))) {
+  if (!sameAddress(auth.from ?? "", sessionAddress))
+    throw new Error("payment authorization signer does not match the session");
+  if (!sameAddress(auth.to ?? "", requirements.payTo))
+    throw new Error("payment authorization payTo does not match the challenge");
+  if (String(auth.value) !== requirements.amount)
+    throw new Error(
+      "payment authorization amount does not match the challenge"
+    );
+  if (!/^0x[0-9a-f]{64}$/i.test(auth.nonce ?? ""))
+    throw new Error("payment authorization nonce is invalid");
+  if (
+    !/^\d+$/.test(String(auth.validAfter)) ||
+    !/^\d+$/.test(String(auth.validBefore))
+  ) {
     throw new Error("payment authorization validity window is invalid");
   }
   const now = BigInt(Math.floor(Date.now() / 1000));
@@ -487,7 +715,9 @@ function parseAndValidateSignedHeader(
     validBefore <= now ||
     validBefore > now + BigInt(requirements.maxTimeoutSeconds + 300)
   ) {
-    throw new Error("payment authorization validity window does not match the challenge");
+    throw new Error(
+      "payment authorization validity window does not match the challenge"
+    );
   }
   return body;
 }

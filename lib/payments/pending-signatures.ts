@@ -29,6 +29,7 @@ interface PendingSignature {
 export interface PendingSignatureChallenge {
   requirements: PaymentRequirements;
   expectedSigner: string;
+  expectedNonce?: string;
 }
 
 /** How long the browser has to respond to a sign-request before we give up. */
@@ -72,6 +73,7 @@ export function awaitSignature(
     pending.set(key, {
       challenge: {
         expectedSigner: challenge.expectedSigner,
+        expectedNonce: challenge.expectedNonce,
         requirements: { ...challenge.requirements, extra: { ...challenge.requirements.extra } },
       },
       resolve, reject, timer, cleanupAbort,

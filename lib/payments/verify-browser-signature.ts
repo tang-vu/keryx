@@ -27,14 +27,13 @@ function sameAddress(left: unknown, right: unknown): boolean {
     isAddress(left) && isAddress(right) && left.toLowerCase() === right.toLowerCase();
 }
 
-/** Verify the signed callback against the original live challenge before its promise is resolved.
- * The browser currently chooses the nonce; this checks its bytes32 shape and signed value, but
- * cannot establish nonce admission or replay safety without the planned durable intent row. */
+/** Verify against the original durable challenge and admitted nonce before metadata acknowledgement.
+ * Legacy standalone verification fixtures may omit the nonce pin; live callbacks always supply it. */
 export async function verifyBrowserSignature(
   header: string,
   challenge: PendingSignatureChallenge,
   nowSeconds = Math.floor(Date.now() / 1000),
-): Promise<void> {
+): Promise<Authorization> {
   const req = challenge.requirements;
   if (req.scheme !== "exact" || req.network !== NETWORK || !sameAddress(req.asset, USDC) ||
       !sameAddress(req.extra?.verifyingContract ?? "", GATEWAY) ||
@@ -80,6 +79,9 @@ export async function verifyBrowserSignature(
       typeof auth.nonce !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(auth.nonce)) {
     throw new Error("signed authorization differs from challenge");
   }
+  if (challenge.expectedNonce && auth.nonce.toLowerCase() !== challenge.expectedNonce.toLowerCase()) {
+    throw new Error("signed nonce differs from admitted authorization");
+  }
   const validAfter = BigInt(auth.validAfter);
   const validBefore = BigInt(auth.validBefore);
   const now = BigInt(nowSeconds);
@@ -119,4 +121,5 @@ export async function verifyBrowserSignature(
   if (!sameAddress(recovered, challenge.expectedSigner)) {
     throw new Error("payment signature does not match captured session signer");
   }
+  return auth;
 }
