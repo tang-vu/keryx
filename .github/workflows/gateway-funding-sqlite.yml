@@ -26,6 +26,6 @@ jobs:
       - name: Check project types
         run: npx tsc --noEmit
       - name: Lint funding and identity boundary
-        run: npx eslint lib/db/gateway-funding-ledger-types.ts lib/db/gateway-funding-ledger-validation.ts lib/db/gateway-funding-sqlite.ts lib/db/gateway-funding-sqlite-native.ts lib/db/gateway-funding-sqlite-owner-child.ts lib/db/gateway-funding-sqlite-schema.ts lib/db/gateway-funding-sqlite-test-child.ts lib/db/gateway-funding-sqlite.test.ts lib/db/storage-identity-sqlite.ts lib/db/storage-identity-snapshot.ts
+        run: npx eslint lib/db/gateway-funding-ledger-types.ts lib/db/gateway-funding-ledger-validation.ts lib/db/gateway-funding-sqlite.ts lib/db/gateway-funding-sqlite-native.ts lib/db/gateway-funding-sqlite-owner-child.ts lib/db/gateway-funding-sqlite-schema.ts lib/db/gateway-funding-sqlite-test-child.ts lib/db/gateway-funding-sqlite-test-receipt.ts lib/db/gateway-funding-sqlite.test.ts lib/db/storage-identity-sqlite.ts lib/db/storage-identity-snapshot.ts
       - name: Native races, crash recovery and provenance (synthetic stores only)
         run: npx vitest run lib/db/gateway-funding-sqlite.test.ts lib/db/storage-identity-sqlite.test.ts lib/db/storage-provenance.test.ts

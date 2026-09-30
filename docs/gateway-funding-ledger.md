@@ -75,10 +75,20 @@ preservation and policy UUID rollover. Project types and scoped lint pass. The d
 [Linux/Windows run 36788150189](https://github.com/tang-vu/keryx/actions/runs/36788150189)
 at `51ab77722d3b16eaf72b0640932956a9663ceb30` passed 48 focused tests on each OS,
 including types and scoped lint. This is a scoped source receipt, not runtime acceptance.
-The active `earlier()` path still walks prior lifetime reservations and revalidates signed originals;
-its work can grow without a per-query bound. This runtime resource gate is OPEN. A proposed
-protected monotonic per-sender crypto barrier would advance only from exact protected terminal
-evidence, without skipping gaps; no such barrier is claimed implemented here.
+The current candidate replaces the lifetime `earlier()` walk with a protected monotonic sender
+`nextCryptoNonce`. A fresh crypto/send claim requires its original nonce to equal that barrier;
+exact past claim replay returns `fresh: false`. Verified immutable terminal insertion and barrier
+advance by exactly one occur in the same native transaction. Neither success nor revert resets
+exposure, reservation highwater or installed immutable policy. Unknown/seen candidates cannot
+advance the barrier. Policy UUID rollover preserves an already advanced barrier. Missing legacy
+fields refuse without backfill. The required exact operation/step/kind observation index makes
+the unresolved lookup a covering indexed search; missing or modified indexes refuse without repair.
+Local synthetic tests cover terminal/next-claim processes racing, actual process kills between
+terminal INSERT and barrier UPDATE, before COMMIT and after COMMIT, and advanced-barrier rollover.
+This closes the candidate's lifetime-history-walk design gap, with source review and exact-head
+Linux/Windows CI still required for this revision. The prior CI receipt above does not cover it.
+The owner child deadline/V8 heap ceiling does not bound native SQLite RSS; filesystem durability,
+in-place rollback and whole-host-clone assumptions remain. This is not runtime acceptance.
 Physical-send crash points, backend parity, trusted issuer deployment, shared-key/funded migration,
 all four runtime funding steps, real solvency and token effects, Circle credit, drained production
 cutover and independent external mainnet acceptance remain OPEN. No funded operation was performed.
