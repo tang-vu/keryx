@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { mkdtempSync, readFileSync, rmSync, existsSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, existsSync, openSync, closeSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawn } from "node:child_process";
@@ -8,9 +8,10 @@ import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import { SqliteAdapter } from "./sqlite-adapter";
 import { syntheticStorageIdentity, provisionSyntheticStorage } from "./storage-identity-fixture";
-import { createSqliteStorage, inspectSqliteEnrollment, enrollSqliteStorage, type ReviewedStorageEnrollment } from "./storage-identity-provision";
+import { createSqliteStorage, inspectSqliteEnrollment, enrollSqliteStorage, backupVerifiedSqliteStorage, type ReviewedStorageEnrollment } from "./storage-identity-provision";
 import { openVerifiedSqliteStorage } from "./storage-identity-connection";
-import { STORAGE_IDENTITY_TABLE } from "./storage-identity-sqlite";
+import { STORAGE_IDENTITY_TABLE, holdStorageTarget } from "./storage-identity-sqlite";
+import { assertExclusiveCreatedTarget } from "./storage-identity-provision-core";
 import { scanFullStorageSnapshot } from "./storage-identity-snapshot";
 
 const dirs: string[] = [], adapters: SqliteAdapter[] = [], rawConnections: DatabaseSync[] = [];
@@ -24,6 +25,34 @@ async function fixture(mode: "testnet-real" | "testnet-offline" = "testnet-real"
 }
 
 describe("SQLite strict identity admission", () => {
+  it("refuses an ordinary replacement of the exclusively created empty file, or the platform locks it", () => {
+    const target=file(), descriptor=openSync(target,'wx',0o600);
+    try {
+      let locked=false;
+      try {renameSync(target,target+'.original');} catch (error) {
+        expect(['EPERM','EACCES','EBUSY']).toContain((error as NodeJS.ErrnoException).code); locked=true;
+      }
+      if(!locked) {
+        writeFileSync(target,'');
+        const replacement=holdStorageTarget(target);
+        try {expect(()=>assertExclusiveCreatedTarget(descriptor,replacement)).toThrow(/target_replaced/);} finally {replacement.close();}
+        expect(readFileSync(target)).toEqual(Buffer.alloc(0));
+      }
+    } finally {closeSync(descriptor);}
+  });
+  it("copies an exact admitted WAL snapshot to exclusive output without signing resume authority", async () => {
+    const {target,identity,db}=await fixture("testnet-real");
+    await db.upsertSessionGrant({sessionId:'owner',sessAddr:`0x${'1'.repeat(40)}`,ownerAddr:'owner',cap:1,expiry:Date.now()+60000,txHash:'synthetic',grantEpoch:'retained'});
+    const original=await db.getSessionGrant('owner');
+    const output=file();
+    const receipt=await backupVerifiedSqliteStorage(target,identity,output);
+    expect(receipt.signingResumeAuthorized).toBe(false);
+    const copy=new SqliteAdapter(output,{expectedIdentity:identity,readOnly:true}); adapters.push(copy);
+    expect(await copy.getSessionGrant('owner')).toEqual(original);
+    expect(await db.getSessionGrant('owner')).toEqual(original);
+    await expect(backupVerifiedSqliteStorage(target,identity,output)).rejects.toThrow();
+    await expect(backupVerifiedSqliteStorage(target,{...identity,authorityMode:'testnet-offline'},file())).rejects.toThrow(/identity_mismatch/);
+  });
   it("refuses malformed raw UTF-8 text without a replacement-character snapshot collision", () => {
     const raw = new DatabaseSync(file()); rawConnections.push(raw);
     raw.exec("CREATE TABLE source_meta(id INTEGER PRIMARY KEY, payload TEXT); INSERT INTO source_meta VALUES(1,CAST(X'FF' AS TEXT));");
@@ -72,7 +101,8 @@ describe("SQLite strict identity admission", () => {
     const changed=new DatabaseSync(target); changed.exec("UPDATE source_meta SET payload='after'"); changed.close();
     await expect(enrollSqliteStorage(target,identity,proof)).rejects.toThrow();
     const current=await inspectSqliteEnrollment(target,identity);
-    const fresh={...proof,inspection:current,unknownClassAttestation:current.unknownClasses};
+    const reordered=Object.fromEntries(Object.entries(current).reverse()) as unknown as typeof current;
+    const fresh={...proof,inspection:reordered,unknownClassAttestation:current.unknownClasses};
     const results=await Promise.all([enrollSqliteStorage(target,identity,fresh),enrollSqliteStorage(target,identity,fresh)]);
     expect(results.map(result=>result.status).sort()).toEqual(["already_enrolled","enrolled"]);
   });

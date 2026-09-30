@@ -6,21 +6,39 @@ import { assertStorageFences, assertStorageIdentity, holdStorageTarget, insertSt
 import { scanFullStorageSnapshot, STORAGE_SNAPSHOT_LIMITS } from "./storage-identity-snapshot";
 import type { ReviewedStorageEnrollment, StorageEnrollmentInspection, StorageProvisionReceipt } from "./storage-identity-provision";
 
+/** The exclusive creation descriptor remains held; matching pathname alone cannot adopt a replacement. */
+export function assertExclusiveCreatedTarget(createdDescriptor: number, held: ReturnType<typeof holdStorageTarget>): void {
+  const created=fstatSync(createdDescriptor,{bigint:true}), admitted=fstatSync(held.descriptor,{bigint:true});
+  if(created.dev!==admitted.dev||created.ino!==admitted.ino||created.birthtimeNs!==admitted.birthtimeNs) refuseStorage("target_replaced");
+}
+
 export interface StorageProvisionRequest {
   mode: "inspect" | "create" | "enroll"; file: string; identity: StorageIdentity; reviewed?: ReviewedStorageEnrollment;
+}
+function canonicalEvidence(value: unknown): string {
+  if (value === null || typeof value === "string" || typeof value === "boolean" || typeof value === "number" && Number.isFinite(value)) return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonicalEvidence).join(",")}]`;
+  if (typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
+    return `{${Object.keys(value).sort().filter(key => (value as Record<string, unknown>)[key] !== undefined).map(key => `${JSON.stringify(key)}:${canonicalEvidence((value as Record<string, unknown>)[key])}`).join(",")}}`;
+  }
+  return refuseStorage("review_required");
 }
 /** Child-only native work: public callers use the killable provision wrapper, never this helper. */
 export function provisionStorageInChild(request: StorageProvisionRequest): StorageEnrollmentInspection | StorageProvisionReceipt {
   const identity = validateStorageIdentity(request.identity), digest = storageIdentityDigest(identity);
+  let createdDescriptor: number | undefined;
   if (!["inspect", "create", "enroll"].includes(request.mode)) refuseStorage("invalid_operation");
   if (request.mode === "create") {
     assertStorageCreationParent(request.file);
-    const descriptor = openSync(request.file, constants.O_CREAT | constants.O_EXCL | constants.O_RDWR | (constants.O_NOFOLLOW ?? 0), 0o600);
-    closeSync(descriptor);
+    createdDescriptor = openSync(request.file, constants.O_CREAT | constants.O_EXCL | constants.O_RDWR | (constants.O_NOFOLLOW ?? 0), 0o600);
   }
-  const held = holdStorageTarget(request.file);
+  let held: ReturnType<typeof holdStorageTarget> | undefined;
   let db: DatabaseSync | undefined;
   try {
+    held = holdStorageTarget(request.file);
+    if (createdDescriptor !== undefined) {
+      assertExclusiveCreatedTarget(createdDescriptor,held);
+    }
     if (fstatSync(held.descriptor).size > STORAGE_SNAPSHOT_LIMITS.fileBytes) refuseStorage("file_limit");
     db = new DatabaseSync(request.file, { readOnly: request.mode === "inspect", allowExtension: false });
     held.verify();
@@ -62,7 +80,7 @@ export function provisionStorageInChild(request: StorageProvisionRequest): Stora
           !Array.isArray(reviewed.unknownClassAttestation) || reviewed.unknownClassAttestation.some(value => typeof value !== "string") ||
           JSON.stringify(reviewed.unknownClassAttestation) !== JSON.stringify(snapshot.unknownClasses)) refuseStorage("review_required");
       // Compare all inspection fields, not selected-authority intake or a claimed network column.
-      if (JSON.stringify(reviewed.inspection) !== JSON.stringify(inspection)) refuseStorage("snapshot_changed");
+      if (canonicalEvidence(reviewed.inspection) !== canonicalEvidence(inspection)) refuseStorage("snapshot_changed");
     }
     registerStorageCapability(db, identity, () => true);
     insertStorageIdentity(db, identity);
@@ -72,6 +90,6 @@ export function provisionStorageInChild(request: StorageProvisionRequest): Stora
     return { format: "keryx-storage-provision-receipt-v1", status: request.mode === "create" ? "created" : "enrolled", identityDigest: digest };
   } finally {
     try { if (db) { try { db.exec("ROLLBACK"); } catch {} db.close(); } }
-    finally { held.close(); }
+    finally { try { held?.close(); } finally { if (createdDescriptor !== undefined) closeSync(createdDescriptor); } }
   }
 }
