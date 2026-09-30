@@ -32,6 +32,7 @@ jobs:
           npm ci --prefix cloudflare/source-upkeep --no-audit --no-fund
           npx tsc -p cloudflare/source-upkeep/tsconfig.json
           npm run build --prefix cloudflare/source-upkeep
+          npm run test:runtime --prefix cloudflare/source-upkeep
 
       - name: Deployment dependency-state checks (no install or network)
         run: |

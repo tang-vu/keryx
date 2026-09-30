@@ -20,6 +20,9 @@ time, and a completed sweep does not establish independent usage or settlement.
 - One fixed POST to `https://keryx.cc/api/internal/source-upkeep`, a 55-second
   client deadline, refused redirects and no retry loop. Cloudflare receives only
   aggregate outcome counts, never feed URLs, article bodies or payment keys.
+  Native `redirect: "manual"` prevents following a 3xx Location; the returned status
+  is refused. workerd does not support the Node-compatible `redirect: "error"`
+  value: the first live attempt exposed this before any outbound request.
 - A dedicated random 32-byte base64url bearer secret authenticates the call. The
   server endpoint rejects query parameters and bodies before opening the database.
   Missing/weak credentials leave it disabled. Rotate both sides to revoke a secret;
@@ -61,6 +64,7 @@ type-check it independently; never deploy the root Next.js project to Workers:
 npm ci --prefix cloudflare/source-upkeep
 npx tsc -p cloudflare/source-upkeep/tsconfig.json
 npm run build --prefix cloudflare/source-upkeep
+npm run test:runtime --prefix cloudflare/source-upkeep
 ```
 
 `cf build` delegates the raw Worker build to Wrangler. The pinned CLI beta can fail
@@ -69,6 +73,11 @@ CI checks the isolated build there. An operator can copy the Linux-produced
 `.cloudflare/output` build output and deploy it with `cf deploy --prebuilt` from
 an authenticated development machine; no broad Cloudflare credential is required
 on the VPS build host.
+
+The runtime smoke executes the actual built Worker in native workerd with synthetic
+credentials and an in-memory outbound fixture. It checks one fixed request, successful
+completion, HTTP failure, and refusal to follow redirects; it never contacts production
+or consumes the hourly journal. Node fetch mocks alone cannot verify native option support.
 
 Put `KERYX_SOURCE_UPKEEP_TOKEN` in the VPS `.env.local` and matching
 `SOURCE_UPKEEP_TOKEN` in a private, access-restricted JSON secrets file outside Git.

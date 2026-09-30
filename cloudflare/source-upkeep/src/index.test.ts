@@ -9,7 +9,7 @@ describe("Free upkeep scheduler", () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(fetcher.mock.calls[0]).toEqual([
       "https://keryx.cc/api/internal/source-upkeep",
-      expect.objectContaining({ method: "POST", redirect: "error", signal: expect.any(AbortSignal) }),
+      expect.objectContaining({ method: "POST", redirect: "manual", signal: expect.any(AbortSignal) }),
     ]);
   });
   it("does not retry HTTP failure or leaked redirect and never logs a response body", async () => {
@@ -19,5 +19,12 @@ describe("Free upkeep scheduler", () => {
     const redirect = vi.fn(async () => { throw new TypeError("Redirect refused"); });
     await expect(triggerSourceUpkeep({ SOURCE_UPKEEP_TOKEN: "a".repeat(43) }, redirect)).rejects.toThrow("Redirect refused");
     expect(redirect).toHaveBeenCalledTimes(1);
+  });
+  it("refuses a returned redirect without following its Location or forwarding credentials", async () => {
+    const fetcher = vi.fn(async () => new Response(null, {
+      status: 302, headers: { Location: "https://other.test" },
+    }));
+    await expect(triggerSourceUpkeep({ SOURCE_UPKEEP_TOKEN: "a".repeat(43) }, fetcher)).rejects.toThrow("HTTP 302");
+    expect(fetcher).toHaveBeenCalledTimes(1);
   });
 });

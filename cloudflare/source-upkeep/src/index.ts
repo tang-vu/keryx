@@ -8,7 +8,9 @@ export async function triggerSourceUpkeep(
   }
   // One fixed request, no retries, response body, URLs from callers or public manual trigger.
   const response = await fetcher(ENDPOINT, {
-    method: "POST", redirect: "error",
+    // workerd accepts only follow/manual. Manual returns 3xx without sending
+    // the credential to its Location; the status check below refuses it.
+    method: "POST", redirect: "manual",
     headers: { Authorization: `Bearer ${env.SOURCE_UPKEEP_TOKEN}` },
     signal: AbortSignal.timeout(55_000),
   });
