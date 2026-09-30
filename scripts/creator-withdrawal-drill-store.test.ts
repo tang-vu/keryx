@@ -9,6 +9,8 @@ import { submitWithdrawalTransfer, withdrawalTransferProgress } from "../lib/gat
 import { SqliteAdapter } from "../lib/db/sqlite-adapter";
 import { saveWithdrawalDrillExclusive } from "./withdrawal-drill-files";
 
+import { syntheticStorageIdentity } from "../lib/db/storage-identity-fixture";
+const identity = syntheticStorageIdentity("testnet-real");
 const directories: string[] = [];
 afterEach(() => {
   vi.unstubAllEnvs(); vi.restoreAllMocks();
@@ -32,16 +34,16 @@ it("initializes actual SQLite before admission/POST and recovers a retained orig
       expect(await store.getCreatorWithdrawalTransferClaim(original.id, original.owner)).not.toBeNull();
       posted++; return fixture.response;
     }, new AbortController().signal);
-  });
+  }, identity);
   expect([admitted, posted]).toEqual([1, 1]);
-  const reopened = new SqliteAdapter(database, { readOnly: true });
+  const reopened = new SqliteAdapter(database, { readOnly: true, expectedIdentity: identity });
   try {
     expect(await reopened.getCreatorWithdrawal(fixture.record.id, fixture.record.owner)).toEqual(fixture.record);
     expect(await withdrawalTransferProgress(reopened, fixture.record.id, fixture.record.owner)).toMatchObject({ status: "attestation-stored" });
     expect((await reopened.listPayments(10)).length).toBe(0);
   } finally { reopened.close(); }
   const duplicate = vi.fn();
-  await expect(withNewWithdrawalDrillStore(database, duplicate)).rejects.toThrow();
+  await expect(withNewWithdrawalDrillStore(database, duplicate, identity)).rejects.toThrow();
   expect(duplicate).not.toHaveBeenCalled();
   expect([admitted, posted]).toEqual([1, 1]);
 });
@@ -57,9 +59,9 @@ it("withholds the operation after schema failure and retains exclusive signing/b
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-withdrawal-smoke-")); directories.push(directory);
   const operation = vi.fn(), database = path.join(directory, "application.sqlite");
   vi.spyOn(SqliteAdapter.prototype, "init").mockRejectedValueOnce(new Error("Schema unavailable"));
-  await expect(withNewWithdrawalDrillStore(database, operation)).rejects.toThrow("Schema unavailable");
+  await expect(withNewWithdrawalDrillStore(database, operation, identity)).rejects.toThrow("Schema unavailable");
   expect(operation).not.toHaveBeenCalled();
-  await expect(withNewWithdrawalDrillStore(database, operation)).rejects.toThrow();
+  await expect(withNewWithdrawalDrillStore(database, operation, identity)).rejects.toThrow();
   for (const name of ["signing-attempt.json", "broadcast-attempt.json"]) {
     const file = path.join(directory, name);
     saveWithdrawalDrillExclusive(file, { original: "first" });

@@ -9,11 +9,11 @@
  * `offline` → reads content from the DB and records simulated payments (settled:false) so the
  *             full reasoning + settlement FLOW runs with no funded wallet. Never the demo path.
  *
- * Selection priority: BrowserCoSign (active grant) → Real (funder key) → Offline.
+ * Selection follows explicit checked storage mode; real treasury operations require a signer.
  */
 
 import { config } from "../config";
-import { readRuntimeStorageDeployment } from "../db/runtime-storage-config";
+import { assertRuntimeStorageAuthority } from "../db/runtime-storage-authority";
 import type {
   ArticleOfferRef,
   Author,
@@ -70,7 +70,7 @@ export async function getPaymentGateway(db: KeryxDB, opts?: GatewayOpts): Promis
   if (opts?.requestSignature && !opts.sessionId) {
     throw new Error("browser signature callback requires a session id");
   }
-  const deployment = readRuntimeStorageDeployment();
+  const deployment = assertRuntimeStorageAuthority(db);
   if (deployment.identity.authorityMode === "testnet-offline") {
     if (opts?.sessionId || opts?.requestSignature) throw new Error("Offline storage cannot authorize browser signing");
     const { OfflineGateway } = await import("./offline-gateway");

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { STORAGE_TESTNET_PROFILE_DIGEST } from "../db/storage-identity";
 import type { KeryxDB } from "../db/keryx-db";
 
 vi.mock("../config", async (importOriginal) => {
@@ -12,13 +13,19 @@ vi.mock("../db/runtime-storage-config", () => ({ readRuntimeStorageDeployment: d
 
 import { getPaymentGateway } from "./payment-gateway";
 
-const db = {} as KeryxDB;
+const identity = { format: "keryx-storage-identity-v1", deploymentId: "11111111-1111-4111-8111-111111111111",
+  storageId: "22222222-2222-4222-8222-222222222222", enrollmentId: "33333333-3333-4333-8333-333333333333",
+  network: "eip155:5042002", authorityMode: "testnet-real", profileDigest: STORAGE_TESTNET_PROFILE_DIGEST,
+  provenanceDigest: "aa".repeat(32), enrolledAt: "2026-10-01T00:00:00.000Z" };
+const storageIdentity = vi.fn(() => identity);
+const db = { getStorageIdentity: storageIdentity } as unknown as KeryxDB;
 const signer = "0x1111111111111111111111111111111111111111";
 
 describe("payment gateway browser authority", () => {
   beforeEach(() => {
     getGrant.mockReset();
-    deployment.mockReset().mockReturnValue({ identity: { authorityMode: "testnet-real" } });
+    deployment.mockReset().mockReturnValue({ identity });
+    storageIdentity.mockReset().mockReturnValue(identity);
     runtimeConfig.funderKey = "";
   });
 
@@ -26,7 +33,8 @@ describe("payment gateway browser authority", () => {
     await expect(getPaymentGateway(db)).rejects.toThrow(/treasury signer/);
   });
   it("selects explicit offline simulation and rejects browser authority on offline storage", async () => {
-    deployment.mockReturnValue({ identity: { authorityMode: "testnet-offline" } });
+    deployment.mockReturnValue({ identity: { ...identity, authorityMode: "testnet-offline" } });
+    storageIdentity.mockReturnValue({ ...identity, authorityMode: "testnet-offline" });
     const gateway = await getPaymentGateway(db); expect(gateway.mode).toBe("offline");
     await expect(getPaymentGateway(db, { sessionId: "owner", requestSignature: vi.fn() })).rejects.toThrow(/Offline storage/);
     expect(getGrant).not.toHaveBeenCalled();

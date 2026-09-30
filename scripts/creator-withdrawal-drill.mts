@@ -28,6 +28,7 @@ import { recordObservedWithdrawalCashOut } from "../lib/gateway/withdrawal-cash-
 import { withPrivateWorkerLock } from "../lib/a2a/private-worker-lock.ts";
 import { SqliteAdapter } from "../lib/db/sqlite-adapter.ts";
 import { withNewWithdrawalDrillStore } from "./creator-withdrawal-drill-store.ts";
+import { inspectStorageDeploymentManifest } from "../lib/db/runtime-storage-config.ts";
 import { withdrawalDrillBuyerKey } from "./withdrawal-drill-buyer-key.ts";
 import { saveWithdrawalDrillExclusive as saveExclusive } from "./withdrawal-drill-files.ts";
 
@@ -70,6 +71,10 @@ async function main() {
   assert.ok(selectedDirectory && path.isAbsolute(selectedDirectory));
   assert.equal(config.networkId, "eip155:5042002");
   assert.equal(config.cctpDomain, 26);
+  const expected = inspectStorageDeploymentManifest(process.env);
+  assert.equal(expected.identity.authorityMode, "testnet-real");
+  assert.ok(expected.backend.kind === "sqlite");
+  assert.equal(expected.backend.databasePath, path.join(selectedDirectory, "application", "keryx.sqlite"));
   assert.ok(!process.env.NEXT_PUBLIC_SUPABASE_URL && !process.env.SUPABASE_SERVICE_ROLE_KEY);
   if (values.prepare) {
     assert.ok(values.owner && values["amount-micros"] && values["fee-cap-micros"]);
@@ -150,7 +155,7 @@ async function main() {
       const retained = await withdrawalTransferProgress(store, original.id, original.owner);
       saveExclusive(path.join(selectedDirectory, "submit-observation.json"), { transferPosts, retained });
       console.log(JSON.stringify({ state: "app-response-discarded", transferPosts, progress: retained }));
-    });
+    }, expected.identity);
     return;
   }
   assert.equal(process.platform, "linux");
@@ -169,7 +174,7 @@ async function main() {
       assert.ok(values.gas && values["max-fee-per-gas"] && values["priority-fee-per-gas"]);
       assert.ok(BigInt(values.gas) <= BigInt(300000) && BigInt(values["max-fee-per-gas"]) <= BigInt(30000000000));
       const attestation = await withWithdrawalApplicationStore(metadata.database,
-        store => store.getCreatorWithdrawalAttestation(original.id, original.owner));
+        store => store.getCreatorWithdrawalAttestation(original.id, original.owner), expected.identity);
       assert.ok(attestation);
       const client = createPublicClient({ transport: withdrawalRpcTransport(config.rpcUrl, signal) });
       assert.equal(await client.getChainId(), 5042002);
@@ -186,7 +191,7 @@ async function main() {
       const queued = await withWithdrawalApplicationStore(metadata.database, store =>
         queueWithdrawalRelayPage(files.directory, journal, store, { relayer: relay.signer.address,
           gas: values.gas!, maxFeePerGas: values["max-fee-per-gas"]!,
-          maxPriorityFeePerGas: values["priority-fee-per-gas"]!, gasBudgetWei: metadata.gasCeilingWei }, signal, { limit: 1 }));
+          maxPriorityFeePerGas: values["priority-fee-per-gas"]!, gasBudgetWei: metadata.gasCeilingWei }, signal, { limit: 1 }), expected.identity);
       assert.equal(queued.unavailable, 0);
       assert.deepEqual(journal.listRequestIds(), [original.id]);
       const dependencies = withdrawalRelayDependenciesForRpc(config.rpcUrl, signal);
@@ -210,8 +215,8 @@ async function main() {
     const result = await withPrivateWorkerLock(files.directory, () => journal.reconcile(original.id,
       withdrawalReceiptObserverForRpc(config.rpcUrl), signal));
     const report = await withWithdrawalCashOutStore(metadata.database, store =>
-      recordObservedWithdrawalCashOut(journal, store, original.id, signal));
-    const store = new SqliteAdapter(metadata.database, { readOnly: true });
+      recordObservedWithdrawalCashOut(journal, store, original.id, signal), expected.identity);
+    const store = new SqliteAdapter(metadata.database, { readOnly: true, expectedIdentity: expected.identity });
     try {
       assert.deepEqual(await store.getCreatorWithdrawal(original.id, original.owner), original);
       assert.equal((await store.listPayments(10)).length, 0);

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+  storage: vi.fn(() => ({ identity: { authorityMode: "testnet-real" } })),
   collectRun: vi.fn(),
   getAgentDeps: vi.fn(),
   getDb: vi.fn(),
@@ -9,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   checkRateLimit: vi.fn(),
 }));
 
+vi.mock("@/lib/db/runtime-storage-config", () => ({ readRuntimeStorageDeployment: mocks.storage }));
 vi.mock("@/lib/config", () => ({
   config: {
     sellerAddress: "0x2222222222222222222222222222222222222222",
@@ -78,6 +80,7 @@ describe("A2A v2 route", () => {
   };
 
   beforeEach(() => {
+  mocks.storage.mockReturnValue({ identity: { authorityMode: "testnet-real" } });
     vi.clearAllMocks();
     vi.stubEnv("KERYX_FORCE_OFFLINE", "0");
     mocks.checkRateLimit.mockResolvedValue(null);
@@ -490,6 +493,7 @@ describe("A2A v2 route", () => {
 
   it("refuses payment before issuing a challenge when the server is forced offline", async () => {
     vi.stubEnv("KERYX_FORCE_OFFLINE", "1");
+    mocks.storage.mockImplementationOnce(() => { throw new Error("Storage deployment configuration unavailable"); });
     const response = await POST(request({ question: "q", budget: 0.05 }));
     expect(response.status).toBe(503);
     expect(mocks.settleThenServe).not.toHaveBeenCalled();
@@ -516,4 +520,13 @@ describe("A2A v2 route", () => {
     expect(mocks.collectRun).toHaveBeenCalledOnce();
     expect(db.failA2aOrder).not.toHaveBeenCalled();
   });
+});
+
+it("refuses offline storage before DB, settlement or research dispatch", async () => {
+  vi.clearAllMocks();
+  mocks.storage.mockReturnValueOnce({ identity: { authorityMode: "testnet-offline" } });
+  const response = await POST(request({ question: "q" }, true));
+  expect(response.status).toBe(503);
+  expect(mocks.getDb).not.toHaveBeenCalled(); expect(mocks.settleThenServe).not.toHaveBeenCalled();
+  expect(mocks.collectRun).not.toHaveBeenCalled();
 });

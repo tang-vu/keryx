@@ -1,5 +1,6 @@
 /** Consistent local snapshots; optional encrypted daily R2 upload with bounded job limits. */
-import { DatabaseSync } from "node:sqlite";
+import { createVerifiedBackupSnapshot } from "./storage-backup-stage.ts";
+import { readRuntimeStorageDeployment } from "../lib/db/runtime-storage-config.ts";
 import fs from "node:fs";
 import path from "node:path";
 import { prunable } from "./backup-rotation.ts";
@@ -8,7 +9,9 @@ import { backupSizeLimits, compressSnapshot, encryptSnapshot, readBackupKey } fr
 import { downloadR2Backup, initializeR2Budget, r2Config, uploadR2Backup } from "./backup-r2.ts";
 
 async function main(): Promise<void> {
-  const dbPath = path.resolve(process.env.KERYX_SQLITE_PATH ?? "data/keryx.sqlite");
+  const deployment = readRuntimeStorageDeployment();
+  if (deployment.backend.kind !== "sqlite") throw new Error("SQLite backup requires an explicit SQLite deployment.");
+  const dbPath = deployment.backend.databasePath;
   const directory = path.join(path.dirname(dbPath), "backups");
   const keep = backupKeep(process.env.KERYX_BACKUP_KEEP);
   const args = process.argv.slice(2);
@@ -26,22 +29,16 @@ async function main(): Promise<void> {
       return;
     }
     if (!fs.existsSync(dbPath)) throw new Error("Database missing.");
+    const reviewMarker = path.join(directory, "snapshot-review-required.json");
+    if (fs.existsSync(reviewMarker)) throw new Error("A prior uncertain snapshot requires operator inspection.");
     const base = `keryx-${new Date().toISOString().replace(/[:.]/g, "-")}.sqlite`;
     const snapshot = path.join(directory, base);
+    let cleanupVerifiedSnapshot = false;
     try {
-      const db = new DatabaseSync(dbPath, { readOnly: true });
-      try {
-        db.exec("PRAGMA busy_timeout = 10000;");
-        db.exec(`VACUUM INTO '${snapshot.replace(/'/g, "''")}'`);
-      } finally { db.close(); }
+      const lineage = await createVerifiedBackupSnapshot(dbPath, deployment.identity, snapshot, reviewMarker);
       fs.chmodSync(snapshot, 0o600);
       if (fs.statSync(snapshot).size > backupSizeLimits.databaseBytes) throw new Error("Snapshot exceeds 256 MiB safety limit.");
-      const check = new DatabaseSync(snapshot, { readOnly: true });
-      try {
-        const integrity = check.prepare("PRAGMA integrity_check").all();
-        if (integrity.length !== 1 || integrity[0].integrity_check !== "ok" ||
-            check.prepare("PRAGMA foreign_key_check").all().length) throw new Error("Snapshot integrity failed.");
-      } finally { check.close(); }
+      fs.writeFileSync(`${snapshot}.lineage.json`, JSON.stringify(lineage), { flag: "wx", mode: 0o600 });
       await compressSnapshot(snapshot, `${snapshot}.gz.partial`);
       fs.renameSync(`${snapshot}.gz.partial`, `${snapshot}.gz`);
       console.log(`[backup] consistent local snapshot ${base}.gz`);
@@ -62,8 +59,9 @@ async function main(): Promise<void> {
         const result = await uploadR2Backup(encrypted, directory, r2Config());
         console.log(result === "uploaded" ? "[backup] encrypted off-host upload succeeded." : "[backup] daily remote attempt already reserved; local snapshot retained.");
       } else console.log("[backup] local-only; off-host upload disabled.");
+      cleanupVerifiedSnapshot = true;
     } finally {
-      for (const temporary of [snapshot, `${snapshot}.gz.partial`, `${snapshot}.enc.partial`]) {
+      for (const temporary of [...(cleanupVerifiedSnapshot ? [snapshot] : []), `${snapshot}.gz.partial`, `${snapshot}.enc.partial`]) {
         if (fs.existsSync(temporary)) fs.unlinkSync(temporary);
       }
     }
@@ -72,6 +70,6 @@ async function main(): Promise<void> {
 
 try { await main(); }
 catch {
-  console.error("[backup] failed. Existing local snapshots retained. Inspect exclusive lock, integrity, encryption/R2 configuration and job budget; never reset the ledger to retry. Legacy KERYX_BACKUP_REMOTE is refused.");
+  console.error("[backup] failed. Existing snapshots and uncertain plaintext copies retained; signing remains unauthorized. Inspect review marker, exclusive lock, integrity and encryption/R2 configuration before another snapshot; never reset the ledger to retry. Legacy KERYX_BACKUP_REMOTE is refused.");
   process.exitCode = 1;
 }

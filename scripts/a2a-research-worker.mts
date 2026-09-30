@@ -8,6 +8,7 @@ import crypto from "node:crypto";
 import os from "node:os";
 import { config } from "../lib/config.ts";
 import { getDb } from "../lib/db/index.ts";
+import { requireRuntimeStorageMode } from "../lib/db/runtime-storage-config.ts";
 import { runNextA2aOrder } from "../lib/a2a/run-order.ts";
 
 const workerId = `${os.hostname()}:${process.pid}:${crypto.randomUUID()}`;
@@ -21,7 +22,8 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
   });
 }
 
-if (!config.sellerAddress || !config.funderKey || process.env.KERYX_FORCE_OFFLINE === "1") {
+requireRuntimeStorageMode("testnet-real");
+if (!config.sellerAddress || !config.funderKey) {
   throw new Error("real A2A treasury is unavailable; refusing to start paid research worker");
 }
 
@@ -33,6 +35,7 @@ await db.setSyncState(
 );
 
 while (!stopping) {
+  requireRuntimeStorageMode("testnet-real");
   try {
     if (recoveryOrderId) {
       const order = await db.getA2aOrder(recoveryOrderId);

@@ -12,7 +12,7 @@
     "test:browser-private-checkout": "node --import tsx scripts/test-browser-private-checkout.mts",
     "test:browser-research-ux": "node --import tsx scripts/test-browser-research-ux.mts",
     "dev": "next dev -p 3939",
-    "build": "next build",
+    "build": "node --import tsx scripts/build-offline-fixture.mts",
     "typecheck": "tsc --noEmit",
     "start": "next start -p 3939",
     "lint": "eslint .",
@@ -148,5 +148,8 @@
     "next": {
       "sharp": "0.35.4"
     }
+  },
+  "engines": {
+    "node": ">=24.10.0"
   }
 }
