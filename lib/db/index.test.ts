@@ -46,7 +46,9 @@ describe.each([false, true])("getDb initialization (Supabase: %s)", (useSupabase
   it("rejects all waiting callers and retries with a fresh adapter after init failure", async () => {
     const gate = deferred(), started = deferred();
     const failure = new Error("initialization failed");
-    const partial = { init: vi.fn(() => { started.resolve(); return gate.promise; }) };
+    const close = vi.fn();
+    const partial = { init: vi.fn(() => { started.resolve(); return gate.promise; }),
+      ...(!useSupabase ? { close } : {}) };
     const ready = { init: vi.fn(async () => {}) };
     const selected = useSupabase ? mocks.supabase : mocks.sqlite;
     mocks.selector.mockReturnValue(useSupabase);
@@ -59,6 +61,7 @@ describe.each([false, true])("getDb initialization (Supabase: %s)", (useSupabase
     gate.reject(failure);
     expect(await outcomes).toEqual([{ status: "rejected", reason: failure }, { status: "rejected", reason: failure }]);
     expect(selected).toHaveBeenCalledTimes(1);
+    expect(close).toHaveBeenCalledTimes(useSupabase ? 0 : 1);
     expect(await getDb()).toBe(ready);
     expect(await getDb()).toBe(ready);
     expect(selected).toHaveBeenCalledTimes(2);
@@ -75,4 +78,17 @@ describe.each([false, true])("getDb initialization (Supabase: %s)", (useSupabase
     await expect(getDb()).rejects.toBe(failure);
     expect(await getDb()).toBe(ready);
   });
+});
+
+it("preserves init failure and allows fresh retry even when SQLite cleanup throws", async () => {
+  const failure = new Error("init failure");
+  const close = vi.fn(() => { throw new Error("close failure"); });
+  const partial = { init: vi.fn(async () => { throw failure; }), close };
+  const ready = { init: vi.fn(async () => {}) };
+  mocks.selector.mockReturnValue(false);
+  mocks.sqlite.mockImplementationOnce(function () { return partial; }).mockImplementation(function () { return ready; });
+  const { getDb } = await import("./index");
+  await expect(getDb()).rejects.toBe(failure);
+  expect(close).toHaveBeenCalledTimes(1);
+  expect(await getDb()).toBe(ready);
 });
