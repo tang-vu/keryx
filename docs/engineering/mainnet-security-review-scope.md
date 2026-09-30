@@ -26,8 +26,9 @@ Before registry lookup, payment typed data must match the exact
 GatewayWalletBatched/version-1/Arc-testnet/Gateway contract domain and
 TransferWithAuthorization schema, including optional viem-generated EIP712Domain.
 The message requires the loaded signer, uint256 positive value, bytes32 nonce and
-bounded current validity consistent with the live browser's 604900?691200-second
-policy. This does not prove durable server admission inside the worker: that nonce
+bounded current validity: at least the SDK's 604800-second remaining
+minimum, with the live browser adding its 100-second buffer, and at most the
+691200-second browser maximum plus 300-second clock-skew allowance. This does not prove durable server admission inside the worker: that nonce
 and per-source binding remain the existing browser/server protocol's authority.
 
 Worker mutation tests cover actual attacker ERC20 calldata, domain/schema/chain,

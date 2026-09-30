@@ -7,10 +7,11 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createWalletClient, custom, erc20Abi, keccak256, parseEther, type Hex } from "viem";
+import { createWalletClient, custom, decodeFunctionData, erc20Abi, keccak256, parseEther, parseTransaction, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { arcTestnet } from "viem/chains";
 import { config } from "../config";
+import { SESSION_DEPOSIT_ABI } from "./session-signing-policy";
 import { depositToGateway } from "./gateway-deposit";
 import type { SignerRequest, SignerResponse } from "./session-signer-protocol";
 
@@ -135,6 +136,13 @@ describe("the worker signs what viem actually hands it", () => {
     const receipts = { waitForTransactionReceipt: vi.fn().mockResolvedValue({ status: "success" }) };
     expect(await depositToGateway(wallet, receipts as never, 0.05)).toBe(TX_HASH);
     expect(sent).toHaveLength(2);
+    const approve = parseTransaction(sent[0]), deposit = parseTransaction(sent[1]);
+    expect(approve.chainId).toBe(5042002); expect(deposit.chainId).toBe(5042002);
+    expect(approve.to?.toLowerCase()).toBe(config.usdcAddress.toLowerCase());
+    expect(deposit.to?.toLowerCase()).toBe(config.gatewayWallet.toLowerCase());
+    expect(deposit.gas).toBe(BigInt(120000));
+    expect(decodeFunctionData({ abi: erc20Abi, data: approve.data! })).toMatchObject({ functionName: "approve", args: [config.gatewayWallet, BigInt(50000)] });
+    expect(decodeFunctionData({ abi: SESSION_DEPOSIT_ABI, data: deposit.data! })).toMatchObject({ functionName: "deposit", args: [config.usdcAddress, BigInt(50000)] });
     expect(receipts.waitForTransactionReceipt).toHaveBeenCalledTimes(2);
   });
 

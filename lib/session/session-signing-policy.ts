@@ -51,8 +51,9 @@ export function validateSessionPayment(payload: TypedDataPayload, signer: string
       typeof message.nonce !== "string" || !/^0x[0-9a-f]{64}$/i.test(message.nonce)) fail("invalid payment message");
   const after = uint(message.validAfter), before = uint(message.validBefore), now = BigInt(nowSeconds);
   // Mirror live browser timing: 600-second backdate, SDK minimum plus buffer,
-  // and the deployed maximum. Small transport/clock skew is bounded to 300 seconds.
-  if (after > now || after < now - BigInt(3600) || before < now + BigInt(604900 - 300) ||
+  // and the deployed maximum. Retain the SDK's full seven-day remaining minimum;
+  // the browser adds its 100-second buffer before the worker call.
+  if (after > now || after < now - BigInt(3600) || before < now + BigInt(604800) ||
       before > now + BigInt(691200 + 300) || before <= after) fail("invalid payment lifetime");
 }
 
