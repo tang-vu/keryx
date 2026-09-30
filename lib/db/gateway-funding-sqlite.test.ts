@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { provisionSyntheticStorage } from "./storage-identity-fixture";
 import { inspectGatewayFundingSqliteOwnerTarget, installGatewayFundingSqliteOwnerAuthorization,
   installGatewayFundingSqliteOwnerPolicy, openGatewayFundingSqliteLedger, openGatewayFundingSqliteTerminalObserver } from "./gateway-funding-sqlite";
-import { fundingAggregate, FUNDING_UINT_MAX } from "./gateway-funding-ledger-validation";
+import { fundingAggregate, FUNDING_UINT_MAX, validateFundingNamespace } from "./gateway-funding-ledger-validation";
 import type { GatewayFundingOperation } from "../payments/gateway-funding-policy";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { keccak256, parseTransaction } from "viem";
@@ -19,6 +19,10 @@ import { createGatewayFundingReceiptObserverForTrustedComposition } from "../pay
 import { GATEWAY_FUNDING_RECEIPT_POLICY_DIGEST } from "../payments/gateway-funding-receipt-policy";
 import type { VerifiedFundingTerminalObservation } from "./gateway-funding-ledger-types";
 import { scanFullStorageSnapshot } from "./storage-identity-snapshot";
+import { registerStorageCapability } from "./storage-identity-sqlite";
+import { syntheticFundingTerminal } from "./gateway-funding-sqlite-test-receipt";
+import { canonicalJson } from "../canonical-json";
+import { GATEWAY_FUNDING_INDEXES } from "./gateway-funding-sqlite-schema";
 
 const directories: string[] = [];
 const children: ChildProcessWithoutNullStreams[] = [];
@@ -52,27 +56,123 @@ async function child(input: object) {
   const process = spawn(globalThis.process.execPath, ["--import", "tsx", fileURLToPath(new URL("./gateway-funding-sqlite-test-child.ts", import.meta.url)), JSON.stringify(input)],
     { env: { NODE_ENV: "test", PATH: globalThis.process.env.PATH, SystemRoot: globalThis.process.env.SystemRoot }, stdio: "pipe" });
   children.push(process); process.once("close", () => closedChildren.add(process)); let text = "";
-  let ready!: () => void, failReady!: (error: Error) => void, failResult!: (error: Error) => void;
+  let ready!: () => void, failReady!: (error: Error) => void, failResult!: (error: Error) => void, point!: () => void, failPoint!: (error: Error) => void;
   let result!: (value: { ok: boolean; result?: { fresh?: boolean; cryptoClaimId?: string }; signatures: number; sends: number }) => void;
   const readyPromise = new Promise<void>((resolve, reject) => { ready = resolve; failReady = reject; });
   const resultPromise = new Promise<{ ok: boolean; result?: { fresh?: boolean; cryptoClaimId?: string }; signatures: number; sends: number }>((resolve, reject) => { result = resolve; failResult = reject; });
   void resultPromise.catch(() => {});
+  const pointPromise = new Promise<void>((resolve, reject) => { point = resolve; failPoint = reject; }); void pointPromise.catch(() => {});
   let received = false, stderrBytes = 0;
   process.stderr.on("data", bytes => { stderrBytes += bytes.length; }); // report count only, never raw child payload/path errors
-  const failure = () => { const error = new Error(`Synthetic ledger child failed (${stderrBytes} diagnostic bytes)`); failReady(error); failResult(error); };
+  const failure = () => { const error = new Error(`Synthetic ledger child failed (${stderrBytes} diagnostic bytes)`); failReady(error); failResult(error); failPoint(error); };
   const deadline = setTimeout(() => { failure(); process.kill("SIGKILL"); }, 15000);
   process.once("error", failure); process.once("exit", () => { clearTimeout(deadline); if (!received) failure(); });
   process.stdout.on("data", bytes => { text += bytes.toString(); if (text.includes("READY\n")) ready();
+    if (text.includes("POINT\n")) point();
     const match = text.match(/RESULT (.*)\n/); if (match && !received) { received = true; clearTimeout(deadline); result(JSON.parse(match[1])); } });
   await readyPromise;
-  return { process, start: () => process.stdin.write("GO\n"), result: resultPromise };
+  return { process, start: () => process.stdin.write("GO\n"), result: resultPromise, point: pointPromise };
 }
 describe("identity-bound SQLite funding ledger", () => {
-  it("preserves lifetime exposure, nonce highwater and claims across owner policy UUID rollover", async () => {
-    const f = await fixture(), ledger = openGatewayFundingSqliteLedger(f.file, f.identity), claimId = randomUUID();
-    await ledger.admitOperation(f.operation.operationId); await ledger.reserveStep(f.operation.operationId, "nativeTransfer", "0");
-    await ledger.claimCrypto(f.operation.operationId, "nativeTransfer", claimId);
+  it.each(["missing", "modified"])("uses an exact covering observation index and refuses %s index without repair", async kind => {
+    const f = await fixture(), db = new DatabaseSync(f.file);
+    try {
+      const plan = db.prepare("EXPLAIN QUERY PLAN SELECT 1 FROM gateway_funding_observations WHERE operation_id=? AND step=? AND kind='unknown' LIMIT 1").all(f.operation.operationId, "nativeTransfer");
+      expect(plan.map(row => row.detail).join(" ")).toContain("SEARCH gateway_funding_observations USING COVERING INDEX gateway_funding_observations_slot_kind (operation_id=? AND step=? AND kind=?)");
+      db.exec("DROP INDEX gateway_funding_observations_slot_kind");
+      if (kind === "modified") db.exec("CREATE INDEX gateway_funding_observations_slot_kind ON gateway_funding_observations(kind,step,operation_id)");
+      const before = db.prepare("SELECT type,name,sql FROM sqlite_schema ORDER BY type,name").all();
+      expect(() => openGatewayFundingSqliteLedger(f.file, f.identity)).toThrow();
+      expect(() => openGatewayFundingSqliteTerminalObserver(f.file, f.identity)).toThrow();
+      await expect(installGatewayFundingSqliteOwnerPolicy(f.file, f.identity, f.installation)).rejects.toThrow();
+      expect(db.prepare("SELECT type,name,sql FROM sqlite_schema ORDER BY type,name").all()).toEqual(before);
+      expect(db.prepare("SELECT sql FROM sqlite_schema WHERE name='gateway_funding_observations_slot_kind'").get()?.sql).not.toBe(GATEWAY_FUNDING_INDEXES.gateway_funding_observations_slot_kind);
+    } finally { db.close(); }
+  });
+  it("serializes protected terminal and a later crypto claim across OS processes without changing reservation highwater or exposure", async () => {
+    const account = privateKeyToAccount(generatePrivateKey()), f = await fixture(account.address.toLowerCase());
+    const second = { ...f.operation, operationId: randomUUID(), ownerAuthorizationId: randomUUID() };
+    await installGatewayFundingSqliteOwnerAuthorization(f.file, f.identity, second);
+    const ledger = openGatewayFundingSqliteLedger(f.file, f.identity), cryptoClaimId = randomUUID(), broadcastClaimId = randomUUID();
+    await ledger.admitOperation(f.operation.operationId); await ledger.admitOperation(second.operationId);
+    const first = await ledger.reserveStep(f.operation.operationId, "nativeTransfer", "0");
+    await ledger.reserveStep(second.operationId, "nativeTransfer", "1");
+    const laterClaim = randomUUID(); await expect(ledger.claimCrypto(second.operationId, "nativeTransfer", laterClaim)).rejects.toThrow();
+    await ledger.claimCrypto(f.operation.operationId, "nativeTransfer", cryptoClaimId);
+    const rawTransaction = await account.signTransaction(parseTransaction(first.transaction.serializedUnsigned));
+    await ledger.savePrepared(f.operation.operationId, "nativeTransfer", cryptoClaimId, { rawTransaction, transactionHash: keccak256(rawTransaction) });
+    await ledger.claimBroadcast(f.operation.operationId, "nativeTransfer", broadcastClaimId);
     const original = await ledger.inspectNamespace(f.policy.funder); ledger.close();
+    const [terminal, claim] = await Promise.all([child({ file: f.file, identity: f.identity, action: "terminal", operationId: f.operation.operationId }),
+      child({ file: f.file, identity: f.identity, action: "claim", operationId: second.operationId, claimId: laterClaim })]); terminal.start(); claim.start();
+    const [terminalResult, claimResult] = await Promise.all([terminal.result, claim.result]); expect(terminalResult.ok).toBe(true);
+    const recovered = openGatewayFundingSqliteLedger(f.file, f.identity);
+    try { expect(await recovered.inspectNamespace(f.policy.funder)).toEqual({ ...original, nextCryptoNonce: "1" });
+      // A loser before terminal CAS owns nothing; explicit post-terminal admission
+      // is distinct from an automatic replay of an exposed crypto/send claim.
+      expect((await recovered.claimCrypto(second.operationId, "nativeTransfer", laterClaim)).fresh).toBe(!claimResult.ok);
+      expect((await recovered.inspectReservation(f.operation.operationId, "nativeTransfer"))?.state).toBe("finalized-success");
+    } finally { recovered.close(); }
+  }, 20000);
+  it.each(["after-terminal-insert", "before-terminal-commit", "after-terminal-commit"])("keeps terminal and nonce barrier atomic after actual kill at %s", async point => {
+    const account = privateKeyToAccount(generatePrivateKey()), f = await fixture(account.address.toLowerCase());
+    const ledger = openGatewayFundingSqliteLedger(f.file, f.identity), cryptoClaimId = randomUUID(), broadcastClaimId = randomUUID();
+    await ledger.admitOperation(f.operation.operationId); const slot = await ledger.reserveStep(f.operation.operationId, "nativeTransfer", "0");
+    await ledger.claimCrypto(f.operation.operationId, "nativeTransfer", cryptoClaimId);
+    const rawTransaction = await account.signTransaction(parseTransaction(slot.transaction.serializedUnsigned));
+    await ledger.savePrepared(f.operation.operationId, "nativeTransfer", cryptoClaimId, { rawTransaction, transactionHash: keccak256(rawTransaction) });
+    await ledger.claimBroadcast(f.operation.operationId, "nativeTransfer", broadcastClaimId);
+    const original = await ledger.inspectNamespace(f.policy.funder); ledger.close();
+    const writer = await child({ file: f.file, identity: f.identity, action: "terminal", operationId: f.operation.operationId, point }); writer.start(); await writer.point;
+    await new Promise<void>(resolve => { writer.process.once("close", () => resolve()); writer.process.kill("SIGKILL"); });
+    const recovered = openGatewayFundingSqliteLedger(f.file, f.identity);
+    try { const namespace = await recovered.inspectNamespace(f.policy.funder), snapshot = await recovered.inspectReservation(f.operation.operationId, "nativeTransfer");
+      const committed = point === "after-terminal-commit";
+      expect(namespace).toEqual({ ...original, nextCryptoNonce: committed ? "1" : "0" });
+      expect(snapshot?.state).toBe(committed ? "finalized-success" : "pending");
+      expect(Boolean(snapshot?.terminal)).toBe(committed);
+      expect(snapshot?.prepared?.rawTransaction).toBe(rawTransaction);
+      expect(snapshot?.cryptoClaimId).toBe(cryptoClaimId); expect(snapshot?.broadcastClaimId).toBe(broadcastClaimId);
+      expect((await recovered.claimCrypto(f.operation.operationId, "nativeTransfer", cryptoClaimId)).fresh).toBe(false);
+    } finally { recovered.close(); }
+  }, 20000);
+  it("refuses missing, future and exhausted barrier corruption without defaulting legacy state", async () => {
+    const f = await fixture(), ledger = openGatewayFundingSqliteLedger(f.file, f.identity);
+    try { const namespace = await ledger.inspectNamespace(f.policy.funder);
+      const missing: Record<string, unknown> = { ...namespace }; delete missing.nextCryptoNonce;
+      expect(() => validateFundingNamespace(missing, f.identity, namespace.backendBindingDigest)).toThrow();
+      expect(() => validateFundingNamespace({ ...namespace, nextCryptoNonce: "1" }, f.identity, namespace.backendBindingDigest)).toThrow();
+      expect(() => validateFundingNamespace({ ...namespace, nextNonce: "9007199254740992", nextCryptoNonce: "9007199254740992" }, f.identity, namespace.backendBindingDigest)).not.toThrow();
+      expect(() => validateFundingNamespace({ ...namespace, nextNonce: "9007199254740993", nextCryptoNonce: "9007199254740993" }, f.identity, namespace.backendBindingDigest)).toThrow();
+      const legacy: Record<string, unknown> = { ...namespace }; delete legacy.nextCryptoNonce;
+      ledger.close();
+      // Trusted fixture construction represents the earlier candidate record
+      // format. This capability is never supplied to production/raw app callers.
+      const oldWriter = new DatabaseSync(f.file);
+      try { registerStorageCapability(oldWriter, f.identity, () => true);
+        oldWriter.function("keryx_funding_capability", (table, verb) => typeof table === "string" && typeof verb === "string" ? 1 : 0);
+        oldWriter.prepare("UPDATE gateway_funding_namespaces SET data=? WHERE sender=?").run(canonicalJson(legacy), f.policy.funder);
+      } finally { oldWriter.close(); }
+      const before = await inspectGatewayFundingSqliteOwnerTarget(f.file, f.identity);
+      expect(() => openGatewayFundingSqliteLedger(f.file, f.identity)).toThrow();
+      await expect(installGatewayFundingSqliteOwnerPolicy(f.file, f.identity, f.installation)).rejects.toThrow();
+      expect(await inspectGatewayFundingSqliteOwnerTarget(f.file, f.identity)).toEqual(before);
+    } finally { ledger.close(); }
+  });
+  it("preserves lifetime exposure, nonce highwater and claims across owner policy UUID rollover", async () => {
+    const account = privateKeyToAccount(generatePrivateKey()), f = await fixture(account.address.toLowerCase());
+    const ledger = openGatewayFundingSqliteLedger(f.file, f.identity), claimId = randomUUID();
+    await ledger.admitOperation(f.operation.operationId); const slot = await ledger.reserveStep(f.operation.operationId, "nativeTransfer", "0");
+    await ledger.claimCrypto(f.operation.operationId, "nativeTransfer", claimId);
+    const rawTransaction = await account.signTransaction(parseTransaction(slot.transaction.serializedUnsigned));
+    await ledger.savePrepared(f.operation.operationId, "nativeTransfer", claimId, { rawTransaction, transactionHash: keccak256(rawTransaction) });
+    await ledger.claimBroadcast(f.operation.operationId, "nativeTransfer", randomUUID());
+    const protectedStore = openGatewayFundingSqliteTerminalObserver(f.file, f.identity);
+    try { const original = await ledger.inspectReservation(f.operation.operationId, "nativeTransfer");
+      await protectedStore.appendVerifiedTerminalObservation(f.operation.operationId, "nativeTransfer", await syntheticFundingTerminal(original!));
+    } finally { protectedStore.close(); }
+    const original = await ledger.inspectNamespace(f.policy.funder); ledger.close();
+    expect(original.nextCryptoNonce).toBe("1");
     const rollover = { ...f.installation, policy: { ...f.policy, policyId: randomUUID() }, ...await inspectGatewayFundingSqliteOwnerTarget(f.file, f.identity) };
     expect(await installGatewayFundingSqliteOwnerPolicy(f.file, f.identity, rollover)).toEqual({ installed: true });
     const snapshot = await inspectGatewayFundingSqliteOwnerTarget(f.file, f.identity);

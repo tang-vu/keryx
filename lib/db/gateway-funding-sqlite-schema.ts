@@ -14,6 +14,9 @@ export const GATEWAY_FUNDING_SCHEMA: Readonly<Record<string, string>> = Object.f
   gateway_funding_broadcast_claims: `CREATE TABLE gateway_funding_broadcast_claims(operation_id TEXT NOT NULL,step TEXT NOT NULL,claim_id TEXT NOT NULL UNIQUE,PRIMARY KEY(operation_id,step))`,
   gateway_funding_observations: `CREATE TABLE gateway_funding_observations(observation_id TEXT PRIMARY KEY,operation_id TEXT NOT NULL,step TEXT NOT NULL,kind TEXT NOT NULL CHECK(kind IN ('unknown','seen','terminal')),data ${DATA})`,
 });
+export const GATEWAY_FUNDING_INDEXES = Object.freeze({
+  gateway_funding_observations_slot_kind: "CREATE INDEX gateway_funding_observations_slot_kind ON gateway_funding_observations(operation_id,step,kind)",
+});
 function fail(): never { throw new Error("Gateway funding ledger schema unavailable"); }
 /** Included in the application's exact identity-fence inventory. Absent ledger
  * is allowed for the existing application, but opening the domain refuses it.
@@ -22,6 +25,9 @@ export function gatewayFundingFenceStatements(db: DatabaseSync, required = false
   const present = db.prepare("SELECT 1 FROM sqlite_schema WHERE type='table' AND name GLOB 'gateway_funding_*' LIMIT 10").all();
   if (!present.length && !required) return {};
   if (present.length !== GATEWAY_FUNDING_TABLES.length) fail();
+  for (const [name, sql] of Object.entries(GATEWAY_FUNDING_INDEXES)) {
+    if (db.prepare("SELECT sql=? AS matches FROM sqlite_schema WHERE type='index' AND name=?").get(sql, name)?.matches !== 1) fail();
+  }
   const result: Record<string, string> = {};
   for (const table of GATEWAY_FUNDING_TABLES) {
     if (db.prepare("SELECT sql=? AS matches FROM sqlite_schema WHERE type='table' AND name=?").get(GATEWAY_FUNDING_SCHEMA[table], table)?.matches !== 1) fail();

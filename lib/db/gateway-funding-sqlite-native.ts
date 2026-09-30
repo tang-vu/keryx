@@ -6,7 +6,7 @@ import { prepareGatewayFundingTransaction, validatePreparedGatewayFundingTransac
 import { storageIdentityDigest, validateStorageIdentity, type StorageIdentity } from "./storage-identity";
 import { assertStorageFences, assertStorageIdentity, holdStorageTarget, installStorageFences, registerStorageCapability, restrictStorageApplicationSql } from "./storage-identity-sqlite";
 import { scanFullStorageSnapshot, STORAGE_SNAPSHOT_LIMITS } from "./storage-identity-snapshot";
-import { assertGatewayFundingSchema, GATEWAY_FUNDING_SCHEMA } from "./gateway-funding-sqlite-schema";
+import { assertGatewayFundingSchema, GATEWAY_FUNDING_SCHEMA, GATEWAY_FUNDING_INDEXES } from "./gateway-funding-sqlite-schema";
 import { FUNDING_ZERO, fundingAggregate, fundingAddress, fundingDigest, fundingJson, fundingNonce, fundingRecord, fundingRefused,
   fundingStep, fundingSum, fundingUint, fundingUuid, readFundingJson, validateFundingNamespace, validateFundingOwnerInstallation } from "./gateway-funding-ledger-validation";
 import type { FundingCandidateObservation, FundingNamespaceSnapshot, FundingOwnerInstallation, FundingReservationSnapshot,
@@ -20,7 +20,7 @@ const WRITES: Record<Scope, readonly string[]> = {
   reserve: ["gateway_funding_reservations:INSERT", "gateway_funding_namespaces:UPDATE"],
   crypto: ["gateway_funding_crypto_claims:INSERT"], prepared: ["gateway_funding_prepared:INSERT"],
   broadcast: ["gateway_funding_broadcast_claims:INSERT"], candidate: ["gateway_funding_observations:INSERT"],
-  terminal: ["gateway_funding_observations:INSERT", "terminal-observer:INSERT"],
+  terminal: ["gateway_funding_observations:INSERT", "gateway_funding_namespaces:UPDATE", "terminal-observer:INSERT"],
 };
 const observers = new WeakMap<GatewayFundingLedger, GatewayFundingTerminalObserverStore>();
 /** Private native context, never returned to app callers. Generic identity-bound
@@ -79,11 +79,11 @@ function namespaceFor(installation: Readonly<FundingOwnerInstallation>, role: "f
     depositMicros: funder ? "0" : policy.lifetimeLimits.depositMicros, gasWei: funder ? installation.funderGasBudgetWei : installation.spendGasBudgetWei });
   return Object.freeze({ identityDigest: storageIdentityDigest(policy.identity), chainId: "5042002", sender: funder ? policy.funder : policy.spend,
     peer: funder ? policy.spend : policy.funder, role, historyDocumentDigest: installation.history.documentDigest,
-    backendBindingDigest: backendDigest, finalityPolicyDigest: installation.finalityPolicyDigest, initialNonce: "0", nextNonce: "0",
+    backendBindingDigest: backendDigest, finalityPolicyDigest: installation.finalityPolicyDigest, initialNonce: "0", nextNonce: "0", nextCryptoNonce: "0",
     limits, used: FUNDING_ZERO, nativeAggregateLimitWei: fundingAggregate(limits), nativeAggregateUsedWei: "0" });
 }
 function namespaceOriginal(namespace: Readonly<FundingNamespaceSnapshot>) {
-  return { ...namespace, used: FUNDING_ZERO, nextNonce: "0", nativeAggregateUsedWei: "0" };
+  return { ...namespace, used: FUNDING_ZERO, nextNonce: "0", nextCryptoNonce: "0", nativeAggregateUsedWei: "0" };
 }
 /** Separate trusted OWNER control-plane entrypoint. Not called by adapter init,
  * application admission, HTTP input or normal DAL. Empty isolated key history is
@@ -97,7 +97,14 @@ export function installGatewayFundingSqliteOwnerPolicy(file: string, identity: S
       const exists = c.db.prepare("SELECT 1 FROM sqlite_schema WHERE name='gateway_funding_policies'").get();
       if (exists) {
         assertGatewayFundingSchema(c.db); const original = c.data("gateway_funding_policies", "policy_id", installation.policy.policyId);
-        if (original) { if (fundingJson(original) !== fundingJson(installation)) fundingRefused(); return Object.freeze({ installed: false }); }
+        if (original) {
+          if (fundingJson(original) !== fundingJson(installation)) fundingRefused();
+          for (const role of ["funder", "spend"] as const) {
+            const expected = namespaceFor(installation, role, c.backendDigest), current = c.namespace(expected.sender);
+            if (fundingJson(namespaceOriginal(current)) !== fundingJson(expected)) fundingRefused();
+          }
+          return Object.freeze({ installed: false });
+        }
       }
       if (scanFullStorageSnapshot(c.db).snapshotDigest !== installation.reviewedSnapshotDigest) fundingRefused();
       if (!exists) {
@@ -109,6 +116,7 @@ export function installGatewayFundingSqliteOwnerPolicy(file: string, identity: S
             && c.db.prepare(`SELECT 1 FROM ${table} WHERE lower(${column}) IN (?,?) LIMIT 1`).get(...keys)) fundingRefused();
         }
         for (const sql of Object.values(GATEWAY_FUNDING_SCHEMA)) c.db.exec(sql);
+        for (const sql of Object.values(GATEWAY_FUNDING_INDEXES)) c.db.exec(sql);
         installStorageFences(c.db, c.identity); assertGatewayFundingSchema(c.db);
       }
       for (const role of ["funder", "spend"] as const) {
@@ -195,7 +203,8 @@ export function openGatewayFundingSqliteLedger(file: string, expected: StorageId
         || r.operationId !== id || r.step !== step || r.transactionHash !== prepared.transactionHash || r.cryptoClaimId !== crypto.claim_id
         || r.broadcastClaimId !== broadcast.claim_id || fundingJson(r.prepared) !== fundingJson(prepared) || r.sender !== value.transaction.sender
         || r.nonce !== value.transaction.nonce || r.chainId !== "5042002" || r.finalityPolicyDigest !== ns.finalityPolicyDigest
-        || r.receiptStatus !== "success" && r.receiptStatus !== "reverted") fundingRefused();
+        || r.receiptStatus !== "success" && r.receiptStatus !== "reverted"
+        || BigInt(ns.nextCryptoNonce) <= BigInt(value.transaction.nonce)) fundingRefused();
       const blockNumber = fundingUint(r.blockNumber), finalizedBlockNumber = fundingUint(r.finalizedBlockNumber);
       const gasUsed = fundingUint(r.gasUsed), effectiveGasPriceWei = fundingUint(r.effectiveGasPriceWei);
       if (BigInt(finalizedBlockNumber) < BigInt(blockNumber) || BigInt(gasUsed) > BigInt(value.transaction.gas)
@@ -212,22 +221,14 @@ export function openGatewayFundingSqliteLedger(file: string, expected: StorageId
       ...(crypto ? { cryptoClaimId: fundingUuid(crypto.claim_id) } : {}), ...(prepared ? { prepared } : {}),
       ...(broadcast ? { broadcastClaimId: fundingUuid(broadcast.claim_id) } : {}) });
   }
-  const earlier = async (sender: string, nonce: string) => {
-    for (const row of c.db.prepare("SELECT operation_id,step FROM gateway_funding_reservations WHERE sender=? AND CAST(nonce AS INTEGER)<?").iterate(sender, Number(nonce))) {
-      const prior = await inspect(fundingUuid(row.operation_id), fundingStep(row.step));
-      if (!prior?.terminal) fundingRefused();
-    }
-  };
   async function claim(id: string, step: GatewayFundingStep, claimId: string, broadcast: boolean) {
     fundingUuid(claimId); const initial = await inspect(id, step); if (!initial) fundingRefused();
-    await earlier(initial.transaction.sender, initial.transaction.nonce);
     const table = broadcast ? "gateway_funding_broadcast_claims" : "gateway_funding_crypto_claims";
     const fresh = c.atomic(broadcast ? "broadcast" : "crypto", () => {
       const current = reservation(id, step); if (!current || fundingJson(current.transaction) !== fundingJson(initial.transaction)) fundingRefused();
       const original = c.db.prepare(`SELECT claim_id FROM ${table} WHERE operation_id=? AND step=?`).get(id, step);
       if (original) { if (original.claim_id !== claimId) fundingRefused(); return false; }
-      // Protected terminal rows are immutable; the preflight validated every
-      // earlier original. The namespace and original slot are rechecked here.
+      if (c.namespace(current.transaction.sender).nextCryptoNonce !== current.transaction.nonce) fundingRefused();
       if (broadcast && (!initial.prepared || !initial.cryptoClaimId)) fundingRefused();
       c.db.prepare(`INSERT INTO ${table}(operation_id,step,claim_id) VALUES(?,?,?)`).run(id, step, claimId); return true;
     });
@@ -310,15 +311,20 @@ export function openGatewayFundingSqliteLedger(file: string, expected: StorageId
       cryptoClaimId: original.cryptoClaimId, broadcastClaimId: original.broadcastClaimId, finalityPolicyDigest }, c.assert);
     c.atomic("terminal", () => {
       const current = reservation(id, step); if (!current || fundingJson(current.transaction) !== fundingJson(original.transaction)) fundingRefused();
-      c.namespace(current.transaction.sender);
+      const namespace = c.namespace(current.transaction.sender);
       const prepared = c.data("gateway_funding_prepared", "transaction_hash", original.prepared!.transactionHash);
       const crypto = c.db.prepare("SELECT claim_id FROM gateway_funding_crypto_claims WHERE operation_id=? AND step=?").get(id, step);
       const broadcast = c.db.prepare("SELECT claim_id FROM gateway_funding_broadcast_claims WHERE operation_id=? AND step=?").get(id, step);
       if (fundingJson(prepared) !== fundingJson(original.prepared) || crypto?.claim_id !== original.cryptoClaimId || broadcast?.claim_id !== original.broadcastClaimId) fundingRefused();
       const observationId = `${id}:${step}:terminal`, previous = c.data("gateway_funding_observations", "observation_id", observationId);
       if (previous) { if (fundingJson(previous) !== fundingJson(evidence)) fundingRefused(); return; }
+      if (namespace.nextCryptoNonce !== current.transaction.nonce) fundingRefused();
       c.db.prepare("INSERT INTO gateway_funding_observations(observation_id,operation_id,step,kind,data) VALUES(?,?,?,'terminal',?)").run(observationId, id, step, fundingJson(evidence));
+      const advanced = { ...namespace, nextCryptoNonce: (BigInt(namespace.nextCryptoNonce) + BigInt(1)).toString() };
+      validateFundingNamespace(advanced, c.identity, c.backendDigest);
+      c.db.prepare("UPDATE gateway_funding_namespaces SET data=? WHERE sender=?").run(fundingJson(advanced), namespace.sender);
     });
+    const saved = await inspect(id, step); if (!saved?.terminal || fundingJson(saved.terminal) !== fundingJson(evidence)) fundingRefused();
   } });
   return ledger;
 }
