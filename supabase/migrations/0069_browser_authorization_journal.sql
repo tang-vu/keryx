@@ -89,7 +89,7 @@ create trigger browser_payment_write_fence before insert or update or delete on 
   for each row execute function public.browser_journal_payment_fence();
 
 create function public.activate_browser_journal() returns void language plpgsql security definer set search_path=pg_catalog,pg_temp as $$
-declare g record;
+declare v_legacy_grant record;
 begin
   perform 1 from public.browser_journal_control where id=1 for update;
   if (select active from public.browser_journal_control where id=1) then return; end if;
@@ -109,8 +109,9 @@ begin
     select grant_epoch,lower(sess_addr) signer from public.session_grants
     union all select grant_epoch,lower(payer) from public.payment_events where grant_epoch is not null and settlement_status in ('pending','settled')
   ) x group by grant_epoch having count(distinct signer)>1) then raise exception 'Legacy epoch signer mismatch'; end if;
-  for g in select * from public.session_grants loop
-    insert into public.browser_retained_grants values(g.grant_epoch,g.session_id,lower(g.sess_addr),(g.spent*1000000)::bigint);
+  for v_legacy_grant in select * from public.session_grants loop
+    insert into public.browser_retained_grants values(v_legacy_grant.grant_epoch,v_legacy_grant.session_id,
+      lower(v_legacy_grant.sess_addr),(v_legacy_grant.spent*1000000)::bigint);
   end loop;
   -- Existing grant spend already includes its payments: use the larger amount per
   -- epoch, then sum epochs. Missing nonce history is never manufactured here.
