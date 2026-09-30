@@ -24,7 +24,8 @@ type DepositWalletClient = Pick<WalletClient, "writeContract" | "account" | "cha
  * a nonce, resend a lost acknowledgement, or retry an uncertain deposit. Caller
  * must retain its attempt/evidence; restart/new-handle deduplication remains an
  * external release gate. On-chain receipt is not Circle off-chain credit proof.
- * Supplied wallet MUST use guardedLocalAccount + guardedEvmTransport: outer
+ * Supplied wallet MUST be a trusted actual viem client using guardedLocalAccount
+ * + guardedEvmHttp (controlled custom transports are test composition only): outer
  * checks alone cannot cover viem's asynchronous nonce/gas/fee preparation. */
 export function createGatewayDepositAttempt(options: {
   address: Address;

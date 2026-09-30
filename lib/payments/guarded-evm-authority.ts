@@ -1,8 +1,14 @@
-import { http, type LocalAccount, type Transport } from "viem";
+import { hashMessage, hashTypedData, http, keccak256, serializeTransaction,
+  type Hex, type LocalAccount, type Transport } from "viem";
+import { hashAuthorization } from "viem/utils";
+import { privateKeyToAccount, sign } from "viem/accounts";
 
 const guardedAccounts = new WeakMap<object, EvmAuthorityGuard>();
 const guardedRequests = new WeakMap<object, EvmAuthorityGuard>();
 
+/** Verifies component provenance, not arbitrary overridden wallet actions.
+ * Callers must supply a trusted actual viem client; cloning/overriding its
+ * writeContract method is outside this check's guarantee. */
 export function assertGuardedEvmWallet(wallet: { account?: unknown; transport?: { request?: unknown } }, guard: EvmAuthorityGuard): void {
   if (!wallet.account || typeof wallet.account !== "object" || guardedAccounts.get(wallet.account) !== guard
     || typeof wallet.transport?.request !== "function" || guardedRequests.get(wallet.transport.request) !== guard) {
@@ -26,18 +32,40 @@ async function admit(guard: EvmAuthorityGuard): Promise<void> {
 /** A new account surface: never spread private-key/HD helpers or raw sign methods.
  * Checks cannot cancel crypto or networking which has already started. This is
  * binding admission, not a transaction/payee/spend-cap policy. */
-export function guardedLocalAccount(account: LocalAccount, guard: EvmAuthorityGuard): LocalAccount {
+export function guardedLocalAccount(privateKey: Hex, guard: EvmAuthorityGuard): LocalAccount {
+  const account = privateKeyToAccount(privateKey);
   const wrapped = Object.freeze({
     address: account.address, publicKey: account.publicKey, source: "custom", type: "local",
-    sign: account.sign && (async parameters => { await admit(guard); guard.assertAuthority(); return account.sign!(parameters); }),
-    signAuthorization: account.signAuthorization && (async parameters => {
-      await admit(guard); guard.assertAuthority(); return account.signAuthorization!(parameters);
-    }),
-    signMessage: async parameters => { await admit(guard); guard.assertAuthority(); return account.signMessage(parameters); },
-    signTransaction: async (transaction, options) => {
-      await admit(guard); guard.assertAuthority(); return account.signTransaction(transaction, options);
+    sign: async ({ hash }) => { await admit(guard); guard.assertAuthority(); return sign({ hash, privateKey, to: "hex" }); },
+    signAuthorization: async parameters => {
+      await admit(guard);
+      const { chainId, nonce } = parameters;
+      const address = parameters.contractAddress ?? parameters.address;
+      const hash = hashAuthorization({ address, chainId, nonce });
+      guard.assertAuthority();
+      const signature = await sign({ hash, privateKey });
+      return { address, chainId, nonce, ...signature };
     },
-    signTypedData: async parameters => { await admit(guard); guard.assertAuthority(); return account.signTypedData(parameters); },
+    signMessage: async ({ message }) => {
+      await admit(guard); const hash = hashMessage(message); guard.assertAuthority();
+      return sign({ hash, privateKey, to: "hex" });
+    },
+    signTransaction: async (transaction, options) => {
+      await admit(guard);
+      const serializer = options?.serializer ?? serializeTransaction;
+      const signable = transaction.type === "eip4844" ? { ...transaction, sidecars: false } : transaction;
+      const serialized = await serializer(signable);
+      const hash = keccak256(serialized);
+      guard.assertAuthority();
+      // Installed viem/accounts sign() invokes synchronous secp256k1.sign
+      // before returning its Promise. No delegate/serializer await lies here.
+      const signature = await sign({ hash, privateKey });
+      return await serializer(transaction, signature);
+    },
+    signTypedData: async parameters => {
+      await admit(guard); const hash = hashTypedData(parameters); guard.assertAuthority();
+      return sign({ hash, privateKey, to: "hex" });
+    },
   } satisfies LocalAccount);
   guardedAccounts.set(wrapped, guard);
   return wrapped;
@@ -53,8 +81,9 @@ const READ_METHODS = new Set([
   "eth_getCode", "eth_getLogs",
 ]);
 
-/** Base must be a controlled transport without hidden retries/fallback senders.
- * Disables viem transport retries; an ambiguous send is not replayed here. */
+/** Controlled custom-transport composition only; cannot enforce the physical
+ * boundary inside arbitrary async delegates. Runtime HTTP clients MUST use
+ * guardedEvmHttp, which also guards physical fetch. No send retries here. */
 export function guardedEvmTransport(base: Transport, guard: EvmAuthorityGuard): Transport {
   return parameters => {
     const inner = base({ ...parameters, retryCount: 0 });
@@ -73,6 +102,19 @@ export function guardedEvmTransport(base: Transport, guard: EvmAuthorityGuard): 
  * attestation/fallback/retry wrapper inside guardedEvmTransport: an inner await
  * would create another pre-forward gap. Chain attestation belongs in guard. */
 export function guardedEvmHttp(url: string, guard: EvmAuthorityGuard,
-  options?: Pick<NonNullable<Parameters<typeof http>[1]>, "timeout">): Transport {
-  return guardedEvmTransport(http(url, { ...options, retryCount: 0, batch: false }), guard);
+  options?: Pick<NonNullable<Parameters<typeof http>[1]>, "timeout" | "onFetchRequest">): Transport {
+  const physicalFetch = globalThis.fetch;
+  // viem awaits onRequest even when absent. This final synchronous wrapper runs
+  // afterwards. No hook or await follows admission before the real fetch call.
+  const fetchFn: typeof fetch = (input, init) => {
+    if (new URL(String(input)).href !== new URL(url).href) throw new Error("Guarded EVM endpoint changed");
+    const body: unknown = typeof init?.body === "string" ? JSON.parse(init.body) : null;
+    if (!body || typeof body !== "object" || Array.isArray(body)
+      || typeof (body as { method?: unknown }).method !== "string") throw new Error("Invalid guarded EVM request");
+    const method = (body as { method: string }).method;
+    if (method === "eth_sendRawTransaction") guard.assertAuthority();
+    else if (!READ_METHODS.has(method)) throw new Error("Unsupported guarded EVM RPC operation");
+    return physicalFetch(input, init);
+  };
+  return guardedEvmTransport(http(url, { ...options, fetchFn, retryCount: 0, batch: false }), guard);
 }

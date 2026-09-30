@@ -1,27 +1,31 @@
-import { createWalletClient, custom, type LocalAccount, type PublicClient, type WalletClient } from "viem";
+import { createWalletClient, custom, type PublicClient, type WalletClient } from "viem";
 import { arcTestnet } from "viem/chains";
-import { expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
+import { generatePrivateKey, sign as cryptoSign } from "viem/accounts";
+vi.mock("viem/accounts", async importOriginal => {
+  const actual = await importOriginal<typeof import("viem/accounts")>();
+  return { ...actual, sign: vi.fn(actual.sign) };
+});
 import { guardedEvmTransport, guardedLocalAccount } from "./guarded-evm-authority";
 import { createGatewayDepositAttempt, GATEWAY_DEPOSIT_USDC, GATEWAY_DEPOSIT_WALLET } from "./gateway-deposit-funding";
 
-const address = "0x1111111111111111111111111111111111111111";
+afterEach(() => vi.restoreAllMocks());
 const hash = `0x${"ab".repeat(32)}` as const;
 function deferred<T>() { let resolve!: (value: T) => void; const promise = new Promise<T>(r => { resolve = r; }); return { promise, resolve }; }
 function fixture(initialAllowance = BigInt(0)) {
   let enabled = true, allowance = initialAllowance;
-  const sign = vi.fn(async () => "0xabcdef" as const);
-  const account = { address, publicKey: "0x00", type: "local", source: "custom", signTransaction: sign,
-    signMessage: sign, signTypedData: sign } as unknown as LocalAccount;
+  vi.mocked(cryptoSign).mockReset();
+  const key = generatePrivateKey(), sign = vi.mocked(cryptoSign);
   const guard = { assertAuthority: () => { if (!enabled) throw new Error("binding changed"); }, attestChain: vi.fn(async () => {}) };
   const send = vi.fn(async () => hash);
-  const wallet = createWalletClient({ account: guardedLocalAccount(account, guard), chain: arcTestnet,
+  const wallet = createWalletClient({ account: guardedLocalAccount(key, guard), chain: arcTestnet,
     transport: guardedEvmTransport(custom({ request: send }), guard) });
   const write = vi.fn(async (parameters: Parameters<typeof wallet.writeContract>[0]) =>
     wallet.writeContract({ ...parameters, gas: parameters.gas ?? BigInt(120000), gasPrice: BigInt(1), nonce: 1, type: "legacy" } as Parameters<typeof wallet.writeContract>[0]));
   const read = vi.fn(async ({ functionName }: { functionName: string }) => functionName === "balanceOf" ? BigInt(100) : allowance);
   const receipt = vi.fn(async () => { allowance = BigInt(100); return { transactionHash: hash, status: "success" as const }; });
   const publicClient = { readContract: read, waitForTransactionReceipt: receipt } as unknown as Pick<PublicClient, "readContract" | "waitForTransactionReceipt">;
-  const options = { address, amountMicros: BigInt(50), maxAmountMicros: BigInt(100), publicClient,
+  const options = { address: wallet.account.address, amountMicros: BigInt(50), maxAmountMicros: BigInt(100), publicClient,
     walletClient: { ...wallet, writeContract: write as unknown as WalletClient["writeContract"] }, guard } satisfies Parameters<typeof createGatewayDepositAttempt>[0];
   return { options, sign, send, write, read, receipt, refuse: () => { enabled = false; } };
 }
