@@ -37,7 +37,7 @@ export interface FundingNamespaceSnapshot {
   readonly nextNonce: string;
   readonly limits: Readonly<FundingExposure>;
   readonly used: Readonly<FundingExposure>;
-  /** Same native currency: transfer value + this sender's worst-case gas.
+  /** Same underlying USDC balance: native wei + ERC20 movement micros * 10^12 + sender gas.
    * Separate USDC/deposit fields are movement caps, never settlement metrics. */
   readonly nativeAggregateLimitWei: string;
   readonly nativeAggregateUsedWei: string;
