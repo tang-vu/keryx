@@ -84,11 +84,18 @@ export async function POST(req: NextRequest) {
   }
   let auth;
   try {
-    auth = await verifyBrowserSignature(paymentHeader, {
-      requirements: journal.requirements,
-      expectedSigner: journal.signer,
-      expectedNonce: journal.nonce,
-    });
+    // Recovery verifies the original challenge window, not the callback arrival time.
+    const admittedSeconds = Math.floor(Date.parse(journal.admittedAt) / 1000);
+    auth = await verifyBrowserSignature(
+      paymentHeader,
+      {
+        requirements: journal.requirements,
+        expectedSigner: journal.signer,
+        expectedNonce: journal.nonce,
+      },
+      admittedSeconds,
+      300
+    );
   } catch {
     // Keep the live slot available for a valid callback. Never echo a bearer header.
     return Response.json(
@@ -120,7 +127,10 @@ export async function POST(req: NextRequest) {
   let delivered = false;
   try {
     const grant = await getGrant(sessionId);
+    const now = BigInt(Math.floor(Date.now() / 1000));
     if (
+      BigInt(auth.validAfter) <= now &&
+      now < BigInt(auth.validBefore) &&
       grant?.grantEpoch === journal.grantEpoch &&
       grant.sessAddr.toLowerCase() === journal.signer.toLowerCase()
     ) {

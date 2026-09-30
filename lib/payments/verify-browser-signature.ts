@@ -28,11 +28,14 @@ function sameAddress(left: unknown, right: unknown): boolean {
 }
 
 /** Verify against the original durable challenge and admitted nonce before metadata acknowledgement.
+ * Recovery may explicitly anchor to admission with bounded initial signing latency.
+ * Submission verification uses current time and zero signing slack by default.
  * Legacy standalone verification fixtures may omit the nonce pin; live callbacks always supply it. */
 export async function verifyBrowserSignature(
   header: string,
   challenge: PendingSignatureChallenge,
   nowSeconds = Math.floor(Date.now() / 1000),
+  originalSigningSlackSeconds: 0 | 300 = 0,
 ): Promise<Authorization> {
   const req = challenge.requirements;
   if (req.scheme !== "exact" || req.network !== NETWORK || !sameAddress(req.asset, USDC) ||
@@ -84,8 +87,12 @@ export async function verifyBrowserSignature(
   }
   const validAfter = BigInt(auth.validAfter);
   const validBefore = BigInt(auth.validBefore);
+  if (!Number.isSafeInteger(nowSeconds) || nowSeconds < 0) {
+    throw new Error("invalid browser challenge timestamp");
+  }
   const now = BigInt(nowSeconds);
-  if (validAfter > now || validAfter < now - BigInt(3600) || validBefore <= now ||
+  if (validAfter > now + BigInt(originalSigningSlackSeconds) ||
+      validAfter < now - BigInt(3600) || validBefore <= now || validBefore <= validAfter ||
       validBefore > now + BigInt(req.maxTimeoutSeconds + 300)) {
     throw new Error("signed authorization validity is outside the challenge bound");
   }

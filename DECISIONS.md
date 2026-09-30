@@ -19,6 +19,12 @@ candidate acceptance. Persistent database fences reject old financial writes;
 rollback preserves the schema and journal with signing paused. Historical missing
 nonces are not reconstructed. Callback recovery acknowledges metadata without an
 autonomous paid retry. Conservative unresolved holds can remain indefinite.
+Signature metadata recovery uses the immutable admission time and original challenge bounds,
+including at most 300 seconds of initial signing latency. Identical callbacks may be
+acknowledged after hours or expiry without resubmission. Expired or not-yet-valid headers
+cannot resolve a live signing slot; delivery also requires the original slot and current
+grant, and the gateway checks current validity again before submitting payment.
+
 Synthetic acceptance is neither a funded drill nor M3/M4/mainnet authorization.
 See [cutover and recovery](docs/engineering/browser-authorization-cutover.md).
 

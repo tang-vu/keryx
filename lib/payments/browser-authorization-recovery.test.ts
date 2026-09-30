@@ -55,7 +55,7 @@ beforeEach(async () => {
     sessAddr: account.address,
     ownerAddr: "owner",
     cap: 0.004,
-    expiry: Date.now() + 60000,
+    expiry: Date.now() + 10 * 86400000,
     txHash: "synthetic",
     grantEpoch: "epoch",
   });
@@ -66,6 +66,7 @@ afterEach(() => {
   for (const suffix of ["", "-wal", "-shm"])
     fs.rmSync(file + suffix, { force: true });
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 function input(requestId: string): BrowserJournalAdmission {
   return {
@@ -96,8 +97,7 @@ function input(requestId: string): BrowserJournalAdmission {
     },
   };
 }
-async function header(nonce: string) {
-  const now = Math.floor(Date.now() / 1000);
+async function header(nonce: string, now = Math.floor(Date.now() / 1000), overrides: Partial<{validAfter: string; validBefore: string}> = {}) {
   const auth = {
     from: account.address,
     to: payee,
@@ -105,6 +105,7 @@ async function header(nonce: string) {
     validAfter: String(now - 600),
     validBefore: String(now + 691200),
     nonce,
+    ...overrides,
   };
   const signature = await account.signTypedData({
     domain: {
@@ -180,7 +181,7 @@ it("does not acknowledge or resolve the live promise when signed metadata persis
       },
       abort.signal
     );
-  const rejected = expect(pending).rejects.toThrow("disconnected");
+  const rejected = pending.catch((error: unknown) => error);
   vi.spyOn(context.db, "signBrowserJournal").mockRejectedValueOnce(
     new Error("storage fault")
   );
@@ -191,7 +192,7 @@ it("does not acknowledge or resolve the live promise when signed metadata persis
     "exposed"
   );
   abort.abort();
-  await rejected;
+  expect(await rejected).toBeInstanceOf(Error);
 });
 it("withholds live submission after replacement while preserving the original valid callback metadata", async () => {
   const admitted = await context.db.admitBrowserJournal(input("r"));
@@ -316,4 +317,57 @@ it("reopens the same submitted journal after paid response loss without releasin
   expect((await context.db.listPendingPayments(10))[0]).toEqual(before);
   expect((await context.db.getSessionGrant("owner"))?.spent).toBe(0.002);
   expect(network).toHaveBeenCalledTimes(2);
+});
+
+
+it("recovers delayed original signing after two hours and acknowledges expired identical replays without delivery", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  const start = Date.now();
+  const admitted = await context.db.admitBrowserJournal(input("late"));
+  if (admitted.status !== "admitted") throw new Error("admission");
+  await context.db.exposeBrowserJournal("owner", "late");
+  const seconds = Math.floor(start / 1000);
+  // Browser authority lookup can delay signing after admission.
+  const signed = await header(admitted.journal.nonce, seconds + 30, {
+    validAfter: String(seconds + 30),
+  });
+  context.db.close();
+  context.db = new SqliteAdapter(file);
+  await context.db.init();
+  vi.setSystemTime(start + 2 * 3600000);
+  expect(await (await callback("late", signed)).json()).toEqual({ ok: true, delivered: false });
+  expect((await context.db.getBrowserJournal("owner", "late"))?.signedValidAfter).toBe(String(seconds + 30));
+  expect((await callback("late", signed)).status).toBe(200);
+
+  vi.setSystemTime(start + 9 * 86400000);
+  const abort = new AbortController();
+  const slot = awaitSignature("owner", "late", {
+    requirements, expectedSigner: account.address, expectedNonce: admitted.journal.nonce,
+  }, abort.signal);
+  const rejected = slot.catch((error: unknown) => error);
+  const paidFetch = vi.fn();
+  vi.stubGlobal("fetch", paidFetch);
+  expect(await (await callback("late", signed)).json()).toEqual({ ok: true, delivered: false });
+  expect(paidFetch).not.toHaveBeenCalled();
+  abort.abort();
+  expect(await rejected).toBeInstanceOf(Error);
+  expect((await callback("late", await header(admitted.journal.nonce, seconds + 30, {
+    validAfter: String(seconds + 30), validBefore: String(seconds + 691229),
+  }))).status).toBe(409);
+  expect((await callback("late", await header(`0x${"99".repeat(32)}`, seconds))).status).toBe(400);
+});
+
+it("refuses authorization windows beyond the bounded original signing latency", async () => {
+  const admitted = await context.db.admitBrowserJournal(input("future"));
+  if (admitted.status !== "admitted") throw new Error("admission");
+  await context.db.exposeBrowserJournal("owner", "future");
+  const seconds = Math.floor(Date.parse(admitted.journal.admittedAt) / 1000);
+  for (const bounds of [
+    { validAfter: String(seconds + 301) },
+    { validBefore: String(seconds + 691501) },
+    { validAfter: String(seconds + 30), validBefore: String(seconds + 20) },
+  ]) {
+    expect((await callback("future", await header(admitted.journal.nonce, seconds, bounds))).status).toBe(400);
+  }
+  expect((await context.db.getBrowserJournal("owner", "future"))?.phase).toBe("exposed");
 });

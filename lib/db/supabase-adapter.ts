@@ -1411,7 +1411,7 @@ export class SupabaseAdapter implements KeryxDB {
     if (!data) return null;
     const { intent, binding, payment } = data;
     return {
-      nonce: intent.nonce, sessionId: intent.session_id, requestId: intent.request_id,
+      nonce: intent.nonce, admittedAt: intent.created_at, sessionId: intent.session_id, requestId: intent.request_id,
       grantEpoch: intent.grant_epoch, signer: intent.signer, requirements: binding.requirements,
       phase: payment.authorization_phase, payment: rowToPayment(payment),
       signedValidAfter: binding.valid_after ?? undefined, signedValidBefore: binding.valid_before ?? undefined,
