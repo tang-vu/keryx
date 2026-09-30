@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "../db/sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import { afterAll, beforeAll, afterEach, expect, it, vi } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
@@ -8,7 +10,7 @@ import { submitWithdrawalTransfer, withdrawalTransferProgress, requestCircleWith
 
 const directory = mkdtempSync(join(tmpdir(), "keryx-transfer-service-")), path = join(directory, "app.sqlite");
 let db: SqliteAdapter, other: SqliteAdapter;
-beforeAll(async () => { db = new SqliteAdapter(path); other = new SqliteAdapter(path); await db.init(); await other.init(); }, 60000);
+beforeAll(async () => { db = await sqliteFixtures.open(path, "testnet-real"); other = await sqliteFixtures.open(path, "testnet-real"); await db.init(); await other.init(); }, 60000);
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.useRealTimers(); });
 afterAll(() => { db.close(); other.close(); rmSync(directory, { recursive: true, force: true }); });
 

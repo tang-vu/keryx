@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import { listSupabaseWithdrawalHistory } from "./creator-withdrawal-history";
 import { randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
@@ -20,8 +22,8 @@ const directory = mkdtempSync(join(tmpdir(), "keryx-creator-withdrawal-"));
 const file = join(directory, "test.sqlite");
 let db: SqliteAdapter, other: SqliteAdapter, raw: DatabaseSync;
 beforeAll(async () => {
-  db = new SqliteAdapter(file); other = new SqliteAdapter(file);
-  await db.init(); await other.init(); raw = new DatabaseSync(file);
+  db = await sqliteFixtures.open(file, "testnet-real"); other = await sqliteFixtures.open(file, "testnet-real");
+  await db.init(); await other.init(); raw = sqliteFixtures.trustedRaw(file);
 }, 60000);
 afterAll(() => { db?.close(); other?.close(); raw?.close(); rmSync(directory, { recursive: true }); });
 async function fixture(account = privateKeyToAccount(generatePrivateKey())) {
@@ -49,7 +51,7 @@ it("persists the exact request and gives only one caller initial transfer author
   const claims = await Promise.all([db.claimCreatorWithdrawalTransfer(record.id, record.owner), other.claimCreatorWithdrawalTransfer(record.id, record.owner)]);
   expect(claims.filter(Boolean)).toHaveLength(1);
   const original = claims.find(Boolean)!;
-  const reopened = new SqliteAdapter(file); await reopened.init();
+  const reopened = await sqliteFixtures.open(file, "testnet-real"); await reopened.init();
   try {
     expect(await reopened.getCreatorWithdrawal(record.id, record.owner)).toEqual(record);
     expect(await reopened.getCreatorWithdrawalTransferClaim(record.id, record.owner)).toEqual(original);
@@ -143,7 +145,7 @@ it("persists only the original request-matched attestation under its transfer cl
   const results = await Promise.all([db, other].map(store => store.saveCreatorWithdrawalAttestation(record.id, record.owner, claim.claimId, response)));
   expect(results[0]).toEqual(results[1]);
   expect(results[0]).toMatchObject({ authority: "request-matched-only", requestId: record.id, transferId: response.transferId });
-  const reopened = new SqliteAdapter(file); await reopened.init();
+  const reopened = await sqliteFixtures.open(file, "testnet-real"); await reopened.init();
   try {
     expect(await reopened.getCreatorWithdrawalAttestation(record.id, record.owner)).toEqual(results[0]);
     expect(await reopened.getCreatorWithdrawalAttestation(record.id, foreign)).toBeNull();

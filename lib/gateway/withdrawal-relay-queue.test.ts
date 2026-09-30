@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "../db/sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import { afterEach, expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
@@ -28,7 +30,7 @@ async function fixture() {
 }
 
 it("recovers a stored coordinator response into one original nonce after reopening", async () => {
-  const f = await fixture(), store = new SqliteAdapter(join(f.directory, "app.sqlite"));
+  const f = await fixture(), store = await sqliteFixtures.open(join(f.directory, "app.sqlite"), "testnet-real");
   cleanups.push(() => store.close()); await store.init();
   const admission = async (record: typeof f.record, signal: AbortSignal) => { await f.journal.admitGas(record, f.terms.gasBudgetWei, signal); };
   const transfer = vi.fn(async () => f.response);

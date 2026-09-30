@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
@@ -26,7 +28,7 @@ const source: Source = {
 };
 
 beforeEach(async () => {
-  db = new SqliteAdapter(dbFile);
+  db = await sqliteFixtures.open(dbFile, "testnet-offline");
   await db.init();
   await db.upsertSource(source);
 });

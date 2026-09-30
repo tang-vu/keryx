@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "../db/sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdtempSync, rmSync, rmdirSync } from "node:fs";
 import { join } from "node:path";
@@ -14,7 +16,7 @@ vi.mock("@/lib/db", () => ({ getDb: mocks.db }));
 vi.mock("@/lib/config", () => ({ config: { jwtSecret: "synthetic-history-secret" } }));
 import { GET } from "@/app/api/me/jobs/route";
 const root = mkdtempSync(join(tmpdir(), "keryx-history-")), file = join(root, "db.sqlite");
-const db = new SqliteAdapter(file); await db.init();
+const db = await sqliteFixtures.open(file, "testnet-real"); await db.init();
 const storage = new AsyncLocalStorage<string | undefined>();
 const wallet = `0x${"a".repeat(40)}`, foreign = `0x${"b".repeat(40)}`;
 const secret = "synthetic-history-secret";

@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "../db/sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import { describe, expect, it, vi } from "vitest";
 import { publicReferenceSchema, referenceSnapshot, type PublicReference } from "./catalog";
 import { importPublicReferenceCatalog } from "./import-catalog";
@@ -23,7 +25,7 @@ describe("separate public catalog authority", () => {
   });
 
   it("stores public snapshots apart from payable sources and refuses paid-ID collisions", async () => {
-    const db = new SqliteAdapter(":memory:");
+    const db = await sqliteFixtures.open(undefined, "testnet-offline");
     try {
       await db.init();
       await db.upsertPublicReference(referenceSnapshot(reference, feed));

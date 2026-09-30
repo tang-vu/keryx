@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import { mkdtempSync, rmSync, rmdirSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -13,8 +15,8 @@ import { listSupabasePrivateResearchHistory } from "./private-research-intents";
 import { privateHistoryPage } from "../a2a/private-history";
 
 const directory = mkdtempSync(join(tmpdir(), "keryx-private-history-")), file = join(directory, "db.sqlite");
-const db = new SqliteAdapter(file); await db.init();
-const raw = new DatabaseSync(file);
+const db = await sqliteFixtures.open(file, "testnet-real"); await db.init();
+const raw = sqliteFixtures.trustedRaw(file);
 afterAll(() => { db.close(); raw.close(); for (const suffix of ["", "-wal", "-shm"]) rmSync(file + suffix, { force: true }); rmdirSync(directory); });
 const owner = privateKeyToAccount(generatePrivateKey()), foreign = privateKeyToAccount(generatePrivateKey());
 const merchants = { privatePayee: `0x${"ab".repeat(20)}`, publicResearchPayee: `0x${"cd".repeat(20)}` };

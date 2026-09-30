@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "../db/sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import { afterEach, expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { mkdtempSync, rmSync } from "node:fs";
@@ -91,7 +93,7 @@ it("upgrades version one explicitly and continues charging its original slots", 
 
 it("holds gas before the coordinator POST and retains it through unknown transfer recovery", async () => {
   const f = await fixture();
-  const store = new SqliteAdapter(join(f.directory, "app.sqlite")); cleanups.push(() => store.close()); await store.init();
+  const store = await sqliteFixtures.open(join(f.directory, "app.sqlite"), "testnet-real"); cleanups.push(() => store.close()); await store.init();
   const admission = async (record: typeof f.record, signal: AbortSignal) => { await f.journal.admitGas(record, f.policy.lifetimeGasBudgetWei, signal); };
   const transfer = vi.fn(async () => {
     expect(await f.connect().journal.getGasAdmission(f.record.id)).not.toBeNull();

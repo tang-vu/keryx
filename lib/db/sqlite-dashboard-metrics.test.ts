@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import { afterAll, describe, expect, it } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
@@ -6,7 +8,8 @@ import { SqliteAdapter } from "./sqlite-adapter";
 import type { PaymentRecord, QueryRun } from "../types";
 
 const dbFile = path.join(os.tmpdir(), `keryx-dashboard-metrics-${process.pid}.sqlite`);
-const db = new SqliteAdapter(dbFile);
+await sqliteFixtures.historicalSimulations(dbFile,[payment("web-2","web",false)]);
+const db = await sqliteFixtures.open(dbFile, "testnet-real");
 await db.init();
 
 afterAll(() => {
@@ -70,7 +73,7 @@ describe("SQLite dashboard metrics", () => {
     await db.saveQueryRun(run("web-2", "web", "0xAlice"));
     await db.saveQueryRun(run("engine-1", "engine"));
     await db.recordPayment(payment("web-1", "web"));
-    await db.recordPayment(payment("web-2", "web", false));
+    // Historical simulation was explicitly reviewed/enrolled before real financial writes.
     await db.recordPayment(payment("engine-1", "engine"));
     await db.recordPayment({
       ...payment("web-pending", "web", false),

@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
@@ -7,7 +9,7 @@ import type { ArticleOffer, Source, SourceItem } from "../types";
 import { SqliteAdapter } from "./sqlite-adapter";
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-offers-"));
-const db = new SqliteAdapter(path.join(dir, "keryx.sqlite"));
+const db = await sqliteFixtures.open(path.join(dir, "keryx.sqlite"), "testnet-real");
 const source: Source = {
   id: "source-1",
   name: "Source",

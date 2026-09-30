@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "../db/sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
 import type { NextRequest } from "next/server";
@@ -48,7 +50,7 @@ beforeEach(async () => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   file = path.join(os.tmpdir(), `keryx-recovery-${crypto.randomUUID()}.sqlite`);
-  context.db = new SqliteAdapter(file);
+  context.db = await sqliteFixtures.open(file, "testnet-real");
   await context.db.init();
   await context.db.upsertSessionGrant({
     sessionId: "owner",
@@ -153,7 +155,7 @@ it("records a cryptographically valid lost callback after restart without paid r
   await context.db.exposeBrowserJournal("owner", "r");
   const signed = await header(admitted.journal.nonce);
   context.db.close();
-  context.db = new SqliteAdapter(file);
+  context.db = await sqliteFixtures.open(file, "testnet-real");
   await context.db.init();
   const response = await callback("r", signed);
   expect(await response.json()).toEqual({ ok: true, delivered: false });
@@ -312,7 +314,7 @@ it("reopens the same submitted journal after paid response loss without releasin
   expect(before.authorizationPhase).toBe("submission_attempted");
   expect(before.authorizationExpiresAt).toBeDefined();
   context.db.close();
-  context.db = new SqliteAdapter(file);
+  context.db = await sqliteFixtures.open(file, "testnet-real");
   await context.db.init();
   expect((await context.db.listPendingPayments(10))[0]).toEqual(before);
   expect((await context.db.getSessionGrant("owner"))?.spent).toBe(0.002);
@@ -332,7 +334,7 @@ it("recovers delayed original signing after two hours and acknowledges expired i
     validAfter: String(seconds + 30),
   });
   context.db.close();
-  context.db = new SqliteAdapter(file);
+  context.db = await sqliteFixtures.open(file, "testnet-real");
   await context.db.init();
   vi.setSystemTime(start + 2 * 3600000);
   expect(await (await callback("late", signed)).json()).toEqual({ ok: true, delivered: false });

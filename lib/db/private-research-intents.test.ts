@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -38,9 +40,9 @@ import { createPrivateReconciliation } from "../a2a/private-reconciliation";
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-private-intents-"));
 const file = path.join(directory, "test.sqlite");
-const db = new SqliteAdapter(file), other = new SqliteAdapter(file);
+const db = await sqliteFixtures.open(file, "testnet-real"), other = await sqliteFixtures.open(file, "testnet-real");
 await db.init(); await other.init();
-const raw = new DatabaseSync(file);
+const raw = sqliteFixtures.trustedRaw(file);
 afterAll(() => {
   db.close(); other.close(); raw.close();
   for (const suffix of ["", "-wal", "-shm"]) fs.rmSync(file + suffix, { force: true });
@@ -94,13 +96,14 @@ it("rejects unverified input and corrupted stored identities without exposing pa
   raw.prepare("INSERT INTO private_research_intents(id,payer,data) VALUES (?,?,?)").run(forgedId, account.address.toLowerCase(), JSON.stringify(intent));
   await expect(db.getPrivateResearchIntent(forgedId, account.address)).rejects.toThrow("owner mismatch");
   const badId = `prv_${"2".repeat(64)}`;
-  raw.prepare("INSERT INTO private_research_intents(id,payer,data) VALUES (?,?,?)").run(badId, account.address.toLowerCase(), "not-json");
+  expect(()=>raw.prepare("INSERT INTO private_research_intents(id,payer,data) VALUES (?,?,?)").run(badId, account.address.toLowerCase(), "not-json")).toThrow(/serialized authority profile/);
+  raw.prepare("INSERT INTO private_research_intents(id,payer,data) VALUES (?,?,?)").run(badId, account.address.toLowerCase(), JSON.stringify({...intent,submission:null}));
   await expect(db.getPrivateResearchIntent(badId, account.address)).rejects.toThrow("Invalid stored private research intent");
 });
 
 it("recovers the exact saved request, salt, authorization and quote after reopening storage", async () => {
   await db.reservePrivateResearchIntent(intent);
-  const reopened = new SqliteAdapter(file);
+  const reopened = await sqliteFixtures.open(file, "testnet-real");
   try {
     await reopened.init();
     expect(await reopened.getPrivateResearchIntent(intent.id, account.address)).toEqual(intent);
@@ -162,7 +165,7 @@ it("grants one durable submission claim across two connections and never reclaim
   const claims = await Promise.all([db.claimPrivatePaymentSubmission(intent.id, account.address), other.claimPrivatePaymentSubmission(intent.id, account.address)]);
   expect(claims.filter(result => result.claimed)).toHaveLength(1);
   expect(claims.every(result => result.state.status === "pending")).toBe(true);
-  const reopened = new SqliteAdapter(file);
+  const reopened = await sqliteFixtures.open(file, "testnet-real");
   vi.useFakeTimers(); vi.setSystemTime(new Date("2040-01-01T00:00:00Z"));
   try {
     await reopened.init();
@@ -261,7 +264,7 @@ it("requires confirmed payment before execution and grants only one worker acros
   expect(accepted).toHaveLength(1);
   expect(accepted[0]).toMatchObject({ id: value.id, workerId: expect.any(String), startedAt: expect.any(String) });
   expect(await db.getPrivateResearchExecution(value.id, merchants.privatePayee)).toBeNull();
-  const reopened = new SqliteAdapter(file);
+  const reopened = await sqliteFixtures.open(file, "testnet-real");
   vi.useFakeTimers(); vi.setSystemTime(new Date("2040-01-01T00:00:00Z"));
   try {
     await reopened.init();
@@ -406,7 +409,7 @@ it("atomically caps treasury allocations across jobs, preserves retries and reje
   await expect(db.reservePrivateTreasury(winner.id, account.address, { ...policy, capacityMicros: "60000" })).rejects.toThrow("policy conflict");
   await expect(db.reservePrivateTreasury(winner.id, account.address, { ...policy, signer: merchants.publicResearchPayee })).rejects.toThrow("reservation conflict");
   await expect(db.reservePrivateTreasury(winner.id, merchants.publicResearchPayee, policy)).rejects.toThrow("unavailable");
-  const reopened = new SqliteAdapter(file);
+  const reopened = await sqliteFixtures.open(file, "testnet-real");
   try {
     await reopened.init();
     expect(await reopened.reservePrivateTreasury(winner.id, account.address, policy)).toBe(true);
@@ -757,7 +760,7 @@ it("reconciles a durable private attempt after reopening using complete Circle p
   const http = vi.fn<typeof fetch>().mockResolvedValueOnce(Response.json({ transfers: [{ ...transfer, nonce: `0x${"5".repeat(64)}` }] },
     { headers: { Link: `<${CIRCLE_X402_TRANSFERS_URL}?pageAfter=synthetic-cursor>; rel="next"` } }))
     .mockResolvedValueOnce(Response.json({ transfers: [transfer] }));
-  const reopened = new SqliteAdapter(file);
+  const reopened = await sqliteFixtures.open(file, "testnet-real");
   try {
     await reopened.init();
     expect(await reconcilePrivateCreatorSubmissions(reopened, value.id, account.address, { search: (payment, signal) => searchCircleTransfer(payment, signal, http) }))
@@ -876,13 +879,14 @@ it("confirms only an admitted matching creator tuple and retains the first recei
   expect(await other.confirmPrivateCreatorSubmission(value.id, account.address, claim.workerId, proof)).toEqual(saved);
   await expect(other.confirmPrivateCreatorSubmission(value.id, account.address, claim.workerId, { ...proof, transaction: "replacement" })).rejects.toThrow("confirmation conflict");
   expect(await db.getPrivateCreatorConfirmation(value.id, merchants.publicResearchPayee, leg.submission.authorizationId)).toBeNull();
-  const reopened = new SqliteAdapter(file);
+  const reopened = await sqliteFixtures.open(file, "testnet-real");
   try { await reopened.init(); expect(await reopened.getPrivateCreatorConfirmation(value.id, account.address, leg.submission.authorizationId)).toEqual(saved); }
   finally { reopened.close(); }
   expect((await db.listPrivateCreatorSubmissions(value.id, account.address)).map(row => row.data.submission.amountMicros)).toEqual(["20000"]);
   expect(await db.admitPrivateCreatorSubmission(value.id, account.address, claim.workerId, leg)).toBe(false);
   for (const table of ["query_runs", "a2a_orders", "payment_events"]) expect(raw.prepare(`SELECT count(*) AS n FROM ${table}`).get()?.n).toBe(0);
-  raw.prepare("UPDATE private_creator_confirmations SET data=? WHERE authorization_id=?").run("{}", leg.submission.authorizationId);
+  expect(()=>raw.prepare("UPDATE private_creator_confirmations SET data=? WHERE authorization_id=?").run("{}", leg.submission.authorizationId)).toThrow(/serialized authority profile/);
+  raw.prepare("UPDATE private_creator_confirmations SET data=? WHERE authorization_id=?").run(JSON.stringify({submission:leg.submission,source:"invalid"}), leg.submission.authorizationId);
   await expect(db.getPrivateCreatorConfirmation(value.id, account.address, leg.submission.authorizationId)).rejects.toThrow("Invalid private creator confirmation state");
 });
 
@@ -935,7 +939,7 @@ it("atomically caps concurrent creator admissions and never readmits an existing
   expect(records).toHaveLength(2);
   expect(records.reduce((sum, row) => sum + Number(row.data.submission.amountMicros), 0)).toBe(30000);
   expect(await db.listPrivateCreatorSubmissions(value.id, merchants.publicResearchPayee)).toEqual([]);
-  const reopened = new SqliteAdapter(file);
+  const reopened = await sqliteFixtures.open(file, "testnet-real");
   vi.useFakeTimers(); vi.setSystemTime(new Date("2040-01-01T00:00:00Z"));
   try {
     await reopened.init();
@@ -1040,7 +1044,7 @@ it("saves the first private result for its exact worker and owner, preserving re
   expect(replies[0]).toMatchObject({ id: value.id, format: "query-run-v1", serializedRun: JSON.stringify(run) });
   await expect(other.savePrivateResearchResult(value.id, account.address, claim.workerId, { ...run, answer: "Replacement" })).rejects.toThrow("result conflict");
   expect(await db.getPrivateResearchResult(value.id, merchants.privatePayee)).toBeNull();
-  const reopened = new SqliteAdapter(file);
+  const reopened = await sqliteFixtures.open(file, "testnet-real");
   try {
     await reopened.init();
     expect(await reopened.getPrivateResearchResult(value.id, account.address)).toEqual(replies[0]);
