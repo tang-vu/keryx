@@ -1,5 +1,6 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { SupabaseAuthority } from "./supabase-authority";
+import { SupabaseAdapter, throwingSupabaseFetch } from "./supabase-adapter";
 import { STORAGE_TESTNET_PROFILE_DIGEST, type StorageIdentity } from "./storage-identity";
 
 /** Synthetic unit-test marker only; SQL enrollment is exercised by Docker CI. */
@@ -20,4 +21,13 @@ export async function testSupabaseAuthority(client: SupabaseClient): Promise<Sup
   const authority = new SupabaseAuthority(markerClient, supabaseTestIdentity);
   await authority.init();
   return authority;
+}
+
+export async function testSupabaseAdapter(): Promise<SupabaseAdapter> {
+  const db = new SupabaseAdapter(supabaseTestIdentity);
+  const client = createClient("https://synthetic-db.example", "synthetic-no-authority", {
+    auth: { persistSession: false }, global: { fetch: throwingSupabaseFetch },
+  });
+  Object.assign(db, { sb: await testSupabaseAuthority(client) });
+  return db;
 }

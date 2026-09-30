@@ -6,6 +6,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { SqliteAdapter } from "./sqlite-adapter";
 import { SupabaseAdapter } from "./supabase-adapter";
+import { supabaseTestIdentity } from "./supabase-authority-test-fixture";
 import type { BrowserAuthorizationIntent } from "./browser-authorization-admission";
 
 const files: string[] = [];
@@ -88,7 +89,7 @@ it("refuses a replaced grant epoch without reserving", async () => {
 it("propagates Supabase RPC error and rejects unknown outcome", async () => {
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://synthetic-db.example");
   vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "synthetic-key-no-authority");
-  const db = new SupabaseAdapter();
+  const db = new SupabaseAdapter(supabaseTestIdentity);
   const failure = new Error("SQL insert failed");
   const rpc = vi.fn().mockResolvedValueOnce({ data: null, error: failure })
     .mockResolvedValueOnce({ data: "unknown", error: null })

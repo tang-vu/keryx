@@ -107,6 +107,8 @@ export async function throwingSupabaseFetch(
 }
 
 export class SupabaseAdapter implements KeryxDB {
+  private initialized = false;
+  private initialization: Promise<void> | null = null;
   private sb: SupabaseAuthority;
 
   constructor(expectedIdentity: StorageIdentity) {
@@ -118,14 +120,24 @@ export class SupabaseAdapter implements KeryxDB {
         global: { fetch: throwingSupabaseFetch },
       },
     );
-    this.sb = new SupabaseAuthority(client, expectedIdentity);
+    this.sb = new SupabaseAuthority(client, expectedIdentity, () => this.initialized);
   }
 
   getStorageIdentity(): Readonly<StorageIdentity> {
     return this.sb.getStorageIdentity();
   }
 
-  async init(): Promise<void> {
+  init(): Promise<void> {
+    if (this.initialization) return this.initialization;
+    this.initialization = this.initialize().catch(error => {
+      this.initialization = null;
+      throw error;
+    });
+    return this.initialization;
+  }
+
+  private async initialize(): Promise<void> {
+    this.initialized = false;
     await this.sb.init();
     // Schema is applied via migrations. Seal legacy plaintext caches before accepting traffic;
     // service-role access is required and migration 0033 removes the old public-read policy.
@@ -133,14 +145,15 @@ export class SupabaseAdapter implements KeryxDB {
       throw new Error("CONTENT_MASTER_KEY is required for paid-content cache access in real mode");
     }
     if (hasContentKey()) {
-      const rows = await this.allRows("cache_items", "source_id,text", "source_id");
+      const rows = await this.allRows("cache_items", "source_id,text", "source_id", true);
       for (const row of rows) {
         const text = typeof row.text === "string" ? row.text : "";
         const sourceId = typeof row.source_id === "string" ? row.source_id : "";
         if (!sourceId || !text || isEncryptedCacheValue(text)) continue;
-        await this.sb.rpc("init", { p_row: { text: sealCacheText(text, this.sb.expectedIdentity.authorityMode) }, p_source_id: sourceId });
+        await this.sb.initializationRpc("init", { p_row: { text: sealCacheText(text, this.sb.expectedIdentity.authorityMode) }, p_source_id: sourceId });
       }
     }
+    this.initialized = true;
   }
 
   /** Supabase projects commonly cap one PostgREST response at 1,000 rows. Metrics are all-time,
@@ -149,6 +162,7 @@ export class SupabaseAdapter implements KeryxDB {
     table: "cache_items" | "payment_events" | "query_runs" | "answer_feedback" | "gap_intents" | "a2a_orders",
     _columns: string,
     _orderBy = "id",
+    initializing = false,
   ): Promise<Record<string, unknown>[]> {
     const pageSize = 1_000;
     const rows: Record<string, unknown>[] = [];
@@ -156,7 +170,9 @@ export class SupabaseAdapter implements KeryxDB {
       query_runs: "scan_query_metrics", answer_feedback: "scan_feedback_metrics",
       gap_intents: "scan_gap_metrics", a2a_orders: "scan_order_economics" } as const;
     for (let from = 0; from < 200_000; from += pageSize) {
-      const { data } = await this.sb.rpc(scans[table], { p_offset: from, p_limit: pageSize });
+      const args = { p_offset: from, p_limit: pageSize };
+      const { data } = await (initializing && table === "cache_items"
+        ? this.sb.initializationRpc("scan_cache_for_encryption", args) : this.sb.rpc(scans[table], args));
       const page = (data ?? []) as unknown as Record<string, unknown>[];
       rows.push(...page);
       if (page.length < pageSize) return rows;
