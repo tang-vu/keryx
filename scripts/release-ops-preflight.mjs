@@ -16,13 +16,23 @@ const cronJobs = [
 
 function result(label, status, detail) { return { label, status, detail }; }
 
+// Source, runtime, loader, environment order and log sink form one approved pinned mode.
+const pinnedBackupCommand = /^cd\s+\/root\/keryx\s+&&\s+\/usr\/bin\/node\s+--import\s+\/root\/keryx\/node_modules\/tsx\/dist\/loader\.mjs\s+--no-warnings\s+--env-file=\.env\.local\s+--env-file=\/root\/\.config\/keryx-backup\.env\s+\/root\/\.local\/share\/keryx-backup\/[0-9a-f]{40}\/scripts\/backup-db\.mts\s+>>\s+\/root\/keryx\/data\/backups\/backup\.log\s+2>&1\s+# keryx-backup$/;
+
+function intendedCommand(tag, command, body) {
+  if (tag === 'backup' && pinnedBackupCommand.test(body)) return true;
+  const log = tag === 'dispatches' ? 'dispatch(?:es)?' : tag;
+  // Keep legacy npm commands and their known optional log redirection. Anchor the whole command
+  // so an extra flag, executable or shell operation cannot masquerade as the expected job.
+  return new RegExp(`^cd\\s+/root/keryx\\s+&&\\s+(?:/(?:[A-Za-z0-9_.-]+/)+)?npm\\s+run\\s+${command}(?:\\s+>>\\s+(?:/root/keryx/data/backups/)?${log}\\.log\\s+2>&1)?\\s+# keryx-${tag}$`).test(body);
+}
+
 export function inspectCron(output) {
   const lines = output.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith('#'));
   return cronJobs.map(([tag, schedule, command]) => {
-    const entries = lines.filter((line) => line.endsWith(`# keryx-${tag}`));
+    const entries = lines.filter((line) => new RegExp(`#\\s*keryx-${tag}\\b`).test(line));
     const matches = entries.length === 1 && entries[0].startsWith(`${schedule} `)
-      && new RegExp(`^cd\\s+/root/keryx\\s+&&\\s+(?:/\\S+/)?npm\\s+run\\s+${command}(?:\\s|$)`)
-        .test(entries[0].slice(schedule.length).trimStart());
+      && intendedCommand(tag, command, entries[0].slice(schedule.length).trimStart());
     return result(`cron:${tag}`, matches ? 'pass' : 'fail', matches ? 'scheduled' : entries.length === 0 ? 'missing' : 'duplicate or unexpected schedule/command');
   });
 }

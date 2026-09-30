@@ -96,6 +96,16 @@ other cron jobs intact; no web restart or payment-path deployment is needed. Rec
 the exact verified source commit in the operational handoff. Hourly local snapshots
 continue, but the durable daily ledger prevents hourly remote uploads.
 
+`npm run preflight:ops` recognizes the hourly `# keryx-backup` entry in its legacy
+npm form or the approved pinned form: `/usr/bin/node`, the absolute app loader
+`/root/keryx/node_modules/tsx/dist/loader.mjs`, `--no-warnings`, the app
+`--env-file=.env.local` followed by `--env-file=/root/.config/keryx-backup.env`, and
+`/root/.local/share/keryx-backup/<40-lowercase-hex-commit>/scripts/backup-db.mts`.
+It requires the app working directory and fixed backup log redirection; duplicate
+entries, extra flags or shell commands and altered paths fail inventory. This is
+a read-only command-shape check, not verification of pinned file contents, backup
+execution, off-host retention or restore acceptance.
+
 ## Offline restore drill
 
 Use a **new separate directory**, never the live data directory:

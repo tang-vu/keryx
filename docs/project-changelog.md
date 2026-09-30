@@ -1,5 +1,11 @@
 # Keryx Project Changelog
 
+### Pinned encrypted backup inventory (2026-09-30)
+
+- Recognize the approved hourly pinned backup command with its fixed Node runtime, app loader, environment order and commit-addressed source path.
+- Keep intended legacy npm schedules supported; reject duplicate entries, unexpected flags, altered paths and extra shell commands. Inventory remains read-only and does not establish restore acceptance.
+- Record the dedicated Telegram probe acknowledgement and owner-confirmed receipt; outside-host outage detection and responder drills remain open.
+
 ### Dedicated Telegram operations alerts (2026-09-30)
 
 - Add a separate operations bot and exact chat configuration, with plain text, bounded delivery and strict Telegram acknowledgement.
