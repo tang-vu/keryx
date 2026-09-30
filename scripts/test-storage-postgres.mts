@@ -3,6 +3,7 @@ import { execFile, execFileSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 import { SupabaseAuthority } from "../lib/db/supabase-authority";
+import { recordSupabaseWithdrawal } from "../lib/db/withdrawal-records";
 import { storageIdentityDigest, STORAGE_TESTNET_PROFILE_DIGEST, type StorageIdentity } from "../lib/db/storage-identity";
 
 // Actual PostgreSQL, synthetic data only. No app environment, credentials, mounts,
@@ -179,6 +180,22 @@ try {
   const wrong = {...identity,storageId:"44444444-4444-4444-8444-444444444444"};
   const rejected = await httpClient.rpc("storage_get_source",{p_expected_identity:wrong,p_id:"source"});
   assert.equal(rejected.error?.code,"P0001");
+  let domainCalls = 0;
+  const wrongClient = createClient("http://synthetic.invalid","synthetic-no-authority",{
+    auth:{persistSession:false},global:{fetch:async(input,init)=>{
+      const body = JSON.parse(String(init?.body ?? "{}"));
+      if(new URL(String(input)).pathname.includes("/storage_")) {
+        domainCalls++; body.p_expected_identity=wrong;
+      }
+      return httpFetch(input,{...init,body:JSON.stringify(body)});
+    }},
+  });
+  const wrongAuthority = new SupabaseAuthority(wrongClient,identity); await wrongAuthority.init();
+  await assert.rejects(recordSupabaseWithdrawal(wrongAuthority,{txHash:`0x${"ab".repeat(32)}`,wallet:signer,
+    recipient:payee,amountUsdc:0.000001,network:"eip155:5042002",createdAt:"2026-10-01T00:00:00.000Z"}),
+    /^Error: Withdrawal record write unavailable$/);
+  assert.equal(domainCalls,1,"SQL refusal must not become readback, fallback or settlement success");
+  assert.equal(sql("select count(*) from public.withdrawals"),"0");
   assert.equal(sql("select count(*) from keryx_storage.writer"),"0");
   console.log("isolated PostgreSQL storage identity, role denial, CAS, concurrency, journal composition and restart: passed");
 } finally {
