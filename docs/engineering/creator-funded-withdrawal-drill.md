@@ -71,7 +71,9 @@ them to repeat a signing, transfer or broadcast step.
    --max-fee-per-gas 30000000000 --priority-fee-per-gas 5000000000`. It estimates real
    mint gas, rejects terms outside the cap, queues the original, persists signed bytes
    and the original hash before one actual broadcast, then deliberately loses the
-   RPC response. This mode is consumed even if eligibility or simulation fails.
+   RPC response. Gas estimation runs before the exclusive mint-pass marker is
+   consumed; a failed estimate leaves the mode unconsumed. After the marker is
+   consumed, any eligibility or simulation failure is recovery-only.
 8. In a new process with no loaded signing keys, run `--recover --directory
    LINUX_ORIGINAL`. It observes only the saved original hash, verifies the exact mint
    receipt/event and operator-selected Arc RPC finality, then idempotently records
