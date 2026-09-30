@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -19,7 +21,7 @@ describe("SQLite content receipts and private cache", () => {
     process.env.CONTENT_MASTER_KEY = "56".repeat(32);
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-content-"));
     const file = path.join(dir, "keryx.sqlite");
-    const db = new SqliteAdapter(file);
+    const db = await sqliteFixtures.open(file, "testnet-real");
     await db.init();
     const source: Source = {
       id: "source-1",
@@ -70,7 +72,7 @@ describe("SQLite content receipts and private cache", () => {
     await expect(db.getCached("article:receipt")).resolves.toBe("post-settlement secret body");
     db.close();
 
-    const raw = new DatabaseSync(file, { readOnly: true });
+    const raw = sqliteFixtures.trustedRaw(file, { readOnly: true });
     const row = raw.prepare("SELECT text FROM cache_items WHERE source_id=?").get("article:receipt");
     expect(String(row?.text)).toMatch(/^enc:v2:/);
     expect(String(row?.text)).not.toContain("post-settlement secret body");
@@ -78,4 +80,3 @@ describe("SQLite content receipts and private cache", () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 });
-

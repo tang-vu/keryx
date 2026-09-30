@@ -1,15 +1,18 @@
 import { DatabaseSync } from "node:sqlite";
 import { expect, it } from "vitest";
 import { getSqlitePrivateTreasurySummary } from "./private-treasury-summary";
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures=sqliteDomainTestFixtures();
 
 it("keeps reserved, committed and confirmed amounts distinct without multiplying joins or mixing signers", async () => {
-  const db = new DatabaseSync(":memory:"), signer = `0x${"a".repeat(40)}`, other = `0x${"b".repeat(40)}`;
+  const fixture=await sqliteFixtures.raw("testnet-real"),db=fixture.db, signer = `0x${"a".repeat(40)}`, other = `0x${"b".repeat(40)}`;
   try {
     db.exec(`CREATE TABLE private_treasury_pools(signer TEXT,capacity_micros INTEGER);
       CREATE TABLE private_treasury_reservations(job_id TEXT,signer TEXT,amount_micros INTEGER);
       CREATE TABLE private_treasury_releases(job_id TEXT,amount_micros INTEGER);
       CREATE TABLE private_creator_submissions(job_id TEXT,authorization_id TEXT,amount_micros INTEGER,data TEXT);
       CREATE TABLE private_creator_confirmations(authorization_id TEXT,data TEXT);`);
+    fixture.fence();
     expect(await getSqlitePrivateTreasurySummary(db, signer)).toBeNull();
     db.prepare("INSERT INTO private_treasury_pools VALUES(?,100000)").run(signer);
     expect(await getSqlitePrivateTreasurySummary(db, signer)).toMatchObject({ allocatedMicros: "0", conservativeBackingMicros: "100000" });
@@ -17,7 +20,7 @@ it("keeps reserved, committed and confirmed amounts distinct without multiplying
       db.prepare("INSERT INTO private_treasury_reservations VALUES(?,?,?)").run(id, owner, amount);
     for (const [id, owner, amount, status] of [["one", signer, 10000, "facilitator"], ["one", signer, 5000, "received"],
       ["two", signer, 7000, "unresolved"], ["two", signer, 8000, "completed"], ["other", other, 40000, "facilitator"]] as const) {
-      const key = `${id}-${amount}`, submission = { amountMicros: String(amount), payer: owner };
+      const key = `${id}-${amount}`, submission = { amountMicros: String(amount), payer: owner,network:"eip155:5042002",asset:"0x3600000000000000000000000000000000000000" };
       db.prepare("INSERT INTO private_creator_submissions VALUES(?,?,?,?)").run(id, key, amount, JSON.stringify({ submission }));
       if (status !== "unresolved") db.prepare("INSERT INTO private_creator_confirmations VALUES(?,?)").run(key,
         JSON.stringify({ submission, source: status === "facilitator" ? "circle-facilitator-success" : "circle-transfer-search", transferStatus: status }));

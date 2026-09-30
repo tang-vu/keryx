@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "../db/sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
@@ -23,7 +25,7 @@ import { POST as submitRoute } from "../../app/api/me/withdrawals/submit/route";
 import { POST as statusRoute } from "../../app/api/me/withdrawals/status/route";
 
 const directory = mkdtempSync(join(tmpdir(), "keryx-withdrawal-http-"));
-const db = new SqliteAdapter(join(directory, "app.sqlite"));
+const db = await sqliteFixtures.open(join(directory, "app.sqlite"), "testnet-real");
 const storage = new AsyncLocalStorage<{ token?: string }>(), secret = "synthetic-withdrawal-session";
 beforeAll(async () => {
   await db.init(); mocks.db.mockResolvedValue(db);

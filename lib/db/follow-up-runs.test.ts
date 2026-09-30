@@ -1,6 +1,8 @@
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 /**
  * A follow-up's link to its parent has to survive the round-trip, because the thread on the
- * permalink is rebuilt from it — and a dropped parent_id would silently turn a threaded dispatch
+ * permalink is rebuilt from it â€” and a dropped parent_id would silently turn a threaded dispatch
  * back into an orphan.
  */
 
@@ -21,7 +23,7 @@ function run(id: string, question: string, parentId?: string): QueryRun {
     subClaims: [],
     decisions: [],
     citations: [],
-    answer: "…",
+    answer: "â€¦",
     totalSpent: 0,
     totalToCreators: 0,
     trace: [],
@@ -35,7 +37,7 @@ let db: SqliteAdapter;
 
 beforeEach(async () => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-followup-"));
-  db = new SqliteAdapter(path.join(dir, "keryx.sqlite"));
+  db = await sqliteFixtures.open(path.join(dir, "keryx.sqlite"), "testnet-offline");
   await db.init();
 });
 
@@ -66,7 +68,7 @@ describe("follow-up threading", () => {
 
   /**
    * The live databases carry real traction and predate parent_id. `CREATE TABLE IF NOT EXISTS` is
-   * a no-op against them, so anything in the schema that names the new column — an index, say —
+   * a no-op against them, so anything in the schema that names the new column â€” an index, say â€”
    * fails at boot on precisely those databases and nowhere else. A fresh-DB test cannot see it.
    */
   it("upgrades a database created before parent_id existed", async () => {
@@ -82,7 +84,8 @@ describe("follow-up threading", () => {
     );
     legacy.close();
 
-    const upgraded = new SqliteAdapter(legacyFile);
+    await sqliteFixtures.enrollLegacy(legacyFile,"testnet-offline");
+    const upgraded = await sqliteFixtures.open(legacyFile,"testnet-offline");
     await expect(upgraded.init()).resolves.not.toThrow();
     try {
       // The pre-existing row survives, and threading works on the upgraded file.
@@ -105,7 +108,7 @@ describe("follow-up threading", () => {
       await db.saveQueryRun(parent);
       await db.saveQueryRun(child);
 
-      // Each keeps its own payout total — threading must not merge or reassign them.
+      // Each keeps its own payout total â€” threading must not merge or reassign them.
       expect((await db.getQueryRun(parent.id))!.totalToCreators).toBe(0.02);
       expect((await db.getQueryRun(child.id))!.totalToCreators).toBe(0.03);
     });

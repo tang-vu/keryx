@@ -1,9 +1,11 @@
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import { randomUUID } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import { createClient } from "@supabase/supabase-js";
 import { writeFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
-import { expect, it, vi, afterEach } from "vitest";
+import { expect, it, vi, beforeEach, afterEach } from "vitest";
 import { privateWorkerScenario } from "../../scripts/test-fixtures/private-worker-scenario.mjs";
 import { resolvePrivateInterruption } from "../a2a/private-interruption-operator";
 import { createPrivateResultSpool } from "../a2a/private-result-spool";
@@ -15,12 +17,16 @@ import { BUYER_NETWORK, BUYER_USDC } from "../buyer/protocol";
 import { SqliteAdapter } from "./sqlite-adapter";
 import type { QueryRun } from "../types";
 import { interruptSupabasePrivateResearch } from "./private-research-interruptions";
+import { assertStorageFences, assertStorageIdentity, registerStorageCapability } from "./storage-identity-sqlite";
 
-afterEach(() => vi.unstubAllGlobals());
+beforeEach(()=>vi.stubEnv("CONTENT_MASTER_KEY","67".repeat(32)));
+afterEach(() => {vi.unstubAllGlobals();vi.unstubAllEnvs();});
 
 it("recovers a lost interruption RPC response and refuses missing or foreign-worker readback", async () => {
   const s = await privateWorkerScenario();
   const raw = new DatabaseSync(join(s.root, "data", "keryx.sqlite"));
+  assertStorageIdentity(raw,s.db.getStorageIdentity());assertStorageFences(raw,s.db.getStorageIdentity());
+  registerStorageCapability(raw,s.db.getStorageIdentity(),()=>true);
   try {
     const id = s.jobs[0], claim = (await s.db.claimPrivateResearchExecution(id, s.payer))!;
     let loseResponse = true, readback: "valid" | "missing" | "foreign" = "valid";
@@ -78,7 +84,7 @@ it("fences interruption once, retains uncertain spend, accepts late confirmation
     expect(await s.db.admitPrivateCreatorSubmission(id, s.payer, claim.workerId, leg)).toBe(true);
     await expect(s.db.interruptPrivateResearch(id, leg.submission.payee, claim.workerId)).rejects.toThrow("authority");
     await expect(s.db.interruptPrivateResearch(id, s.payer, randomUUID())).rejects.toThrow("authority");
-    const other = new SqliteAdapter(join(s.root, "data", "keryx.sqlite")); await other.init();
+    const other = new SqliteAdapter(join(s.root, "data", "keryx.sqlite"),{expectedIdentity:s.db.getStorageIdentity()}); await other.init();
     try {
       const records = await Promise.all([s.db.interruptPrivateResearch(id, s.payer, claim.workerId), other.interruptPrivateResearch(id, s.payer, claim.workerId)]);
       expect(records[0]).toEqual(records[1]);

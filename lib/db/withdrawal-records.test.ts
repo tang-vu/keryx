@@ -3,20 +3,24 @@ import { DatabaseSync } from "node:sqlite";
 import { createClient } from "@supabase/supabase-js";
 import { recordSqliteWithdrawal, recordSupabaseWithdrawal } from "./withdrawal-records";
 import type { WithdrawalRecord } from "../types";
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures=sqliteDomainTestFixtures();
 
 afterEach(() => vi.restoreAllMocks());
 const record: WithdrawalRecord = { txHash: `0x${"ab".repeat(32)}`, wallet: `0x${"cd".repeat(20)}`,
   recipient: `0x${"ef".repeat(20)}`, amountUsdc: 0.05, network: "eip155:5042002",
   label: "Synthetic creator", createdAt: "2026-09-11T00:00:00.000Z" };
 it("keeps the first SQLite cash-out and rejects conflicting economics without creating another row", async () => {
-  const db = new DatabaseSync(":memory:");
+  const fixture=await sqliteFixtures.raw("testnet-real"),db=fixture.db;
   try {
     db.exec("CREATE TABLE withdrawals(tx_hash TEXT PRIMARY KEY,created_at TEXT,label TEXT,source_name TEXT,wallet TEXT,recipient TEXT,amount_usdc REAL,network TEXT)");
+    fixture.fence();
     await recordSqliteWithdrawal(db, record);
     await recordSqliteWithdrawal(db, { ...record, createdAt: "2026-09-12T00:00:00.000Z", label: "Later label" });
     expect(db.prepare("SELECT created_at,label FROM withdrawals").get()).toMatchObject({ created_at: record.createdAt, label: record.label });
-    for (const delta of [{ wallet: record.recipient }, { recipient: record.wallet }, { amountUsdc: 1 }, { network: "eip155:1" }])
+    for (const delta of [{ wallet: record.recipient }, { recipient: record.wallet }, { amountUsdc: 1 }])
       await expect(recordSqliteWithdrawal(db, { ...record, ...delta })).rejects.toThrow("conflicting");
+    await expect(recordSqliteWithdrawal(db,{...record,network:"eip155:1"})).rejects.toThrow("storage authority profile mismatch");
     expect(db.prepare("SELECT count(*) n FROM withdrawals").get()?.n).toBe(1);
     const prepare = db.prepare.bind(db);
     vi.spyOn(db, "prepare").mockImplementation(sql => {

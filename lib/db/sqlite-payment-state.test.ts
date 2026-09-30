@@ -4,9 +4,12 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { SqliteAdapter } from "./sqlite-adapter";
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures=sqliteDomainTestFixtures();
 
 const dbFile = path.join(os.tmpdir(), `keryx-payment-state-${process.pid}.sqlite`);
-const legacy = new DatabaseSync(dbFile);
+const legacyFile=dbFile+'.legacy';
+const legacy = new DatabaseSync(legacyFile);
 legacy.exec(`
   CREATE TABLE payment_events (
     id TEXT PRIMARY KEY, created_at TEXT, kind TEXT, query_id TEXT, source_id TEXT,
@@ -19,16 +22,24 @@ legacy.exec(`
 `);
 legacy.close();
 
-const db = new SqliteAdapter(dbFile);
+const retainedLegacy=fs.readFileSync(legacyFile);
+await sqliteFixtures.historicalSimulations(dbFile,[{id:'sim-old',createdAt:'2026-08-01T00:00:01.000Z',kind:'fetch',queryId:'q2',sourceId:'s1',sourceName:'Source',payer:'payer',payee:'payee',amountUsdc:0.002,network:'eip155:5042002',settled:false}]);
+const db = await sqliteFixtures.open(dbFile,"testnet-real");
 await db.init();
+await db.recordPayment({id:'settled-old',createdAt:'2026-08-01T00:00:00.000Z',kind:'citation',queryId:'q1',sourceId:'s1',sourceName:'Source',payer:'payer',payee:'payee',amountUsdc:0.01,txHash:'circle-id',network:'eip155:5042002',settled:true,settlementStatus:'settled'});
 
 afterAll(() => {
   db.close();
   for (const suffix of ["", "-wal", "-shm"]) fs.rmSync(dbFile + suffix, { force: true });
+  for (const suffix of ["", "-wal", "-shm"]) fs.rmSync(legacyFile + suffix, { force: true });
 });
 
 describe("SQLite payment settlement state migration", () => {
-  it("backfills legacy truth and round-trips a pending authorization", async () => {
+  it("refuses unlabelled legacy settled authority without rewriting or resetting it", async()=>{
+    await expect(sqliteFixtures.enrollLegacy(legacyFile,"testnet-real")).rejects.toThrow(/malformed_authority|unresolved_funded_or_authority_provenance/);
+    expect(fs.readFileSync(legacyFile)).toEqual(retainedLegacy);
+  });
+  it("retains reviewed historical simulation and round-trips current settled and pending evidence", async () => {
     const legacyRows = await db.listPayments(10);
     expect(legacyRows.find((row) => row.id === "settled-old")?.settlementStatus).toBe(
       "settled",

@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "../db/sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 /**
  * The production bug was lifecycle-shaped: every volume tick starts a fresh Node process, so a
  * correct in-memory circuit still forgot the previous timeout. These tests use two adapters over
@@ -22,7 +24,7 @@ let dbFile: string;
 const opened: SqliteAdapter[] = [];
 
 async function openDb(): Promise<SqliteAdapter> {
-  const db = new SqliteAdapter(dbFile);
+  const db = await sqliteFixtures.open(dbFile, "testnet-offline");
   await db.init();
   opened.push(db);
   return db;

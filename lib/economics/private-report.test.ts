@@ -6,6 +6,9 @@ import { DatabaseSync } from "node:sqlite";
 import { calculateTestnetEconomics } from "./testnet-economics";
 import { privateEconomicsReport, writePrivateEconomicsReport } from "./private-report";
 import { capturePricePolicy, FLASH_POLICY } from "./provider-cost-policy";
+import { sqliteDomainTestFixtures } from "../db/sqlite-domain-test-fixture";
+import { syntheticStorageIdentity } from "../db/storage-identity-fixture";
+const sqliteFixtures=sqliteDomainTestFixtures();
 const directories: string[] = [], linux = it.skipIf(process.platform !== "linux");
 afterEach(() => { for (const path of directories.splice(0)) {
   if (dirname(resolve(path)) !== resolve(tmpdir()) || !basename(path).startsWith("keryx-private-economics-")) throw new Error("Unexpected test cleanup target");
@@ -19,13 +22,14 @@ describe("private operator economics", () => {
   it("reads an existing SQLite schema without initialization or creating a missing database", async () => {
     const { SqliteAdapter } = await import("../db/sqlite-adapter"), f = fixture();
     const absent = join(f.parent, "missing", "database.sqlite");
-    expect(() => new SqliteAdapter(absent, { readOnly: true })).toThrow(); expect(existsSync(join(f.parent, "missing"))).toBe(false);
+    expect(() => new SqliteAdapter(absent, { readOnly: true,expectedIdentity:syntheticStorageIdentity("testnet-offline") })).toThrow(); expect(existsSync(join(f.parent, "missing"))).toBe(false);
     const path = join(f.parent, "existing.sqlite"), setup = new DatabaseSync(path);
     setup.exec("CREATE TABLE query_runs(economics_data TEXT); CREATE TABLE payment_events(query_id TEXT,kind TEXT,amount_usdc REAL,settled INTEGER,settlement_status TEXT,grant_epoch TEXT); CREATE TABLE a2a_orders(query_id TEXT,creator_budget_usdc REAL,service_fee_usdc REAL,status TEXT,response_data TEXT);"); setup.close();
-    const before = readFileSync(path), db = new SqliteAdapter(path, { readOnly: true });
+    await sqliteFixtures.enrollLegacy(path,"testnet-offline");
+    const before = readFileSync(path), db = await sqliteFixtures.open(path,"testnet-offline",{readOnly:true});
     try {
       expect((await db.economics()).sampledRuns).toBe(0);
-      await expect(db.init()).rejects.toThrow();
+      await expect(db.init()).resolves.not.toThrow();
     } finally { db.close(); }
     expect(readFileSync(path)).toEqual(before);
   });

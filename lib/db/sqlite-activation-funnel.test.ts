@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import { afterAll, describe, expect, it } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
@@ -5,7 +7,7 @@ import path from "node:path";
 import { SqliteAdapter } from "./sqlite-adapter";
 
 const dbFile = path.join(os.tmpdir(), `keryx-activation-${process.pid}.sqlite`);
-const db = new SqliteAdapter(dbFile);
+const db = await sqliteFixtures.open(dbFile, "testnet-real");
 await db.init();
 
 afterAll(() => {

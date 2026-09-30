@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "./db/sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdtempSync, rmSync, rmdirSync } from "node:fs";
 import { join } from "node:path";
@@ -20,9 +22,9 @@ import { POST as verifyRoute } from "@/app/api/auth/verify/route";
 
 const directory = mkdtempSync(join(tmpdir(), "keryx-auth-route-"));
 const file = join(directory, "db.sqlite");
-const database = new SqliteAdapter(file);
+const database = await sqliteFixtures.open(file, "testnet-offline");
 await database.init();
-const second = new SqliteAdapter(file);
+const second = await sqliteFixtures.open(file, "testnet-offline");
 await second.init();
 const account = privateKeyToAccount(`0x${"1".repeat(64)}`);
 type CookieJar = ReturnType<typeof jar>;

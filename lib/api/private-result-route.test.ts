@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "../db/sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdtempSync, rmSync, rmdirSync } from "node:fs";
 import { join } from "node:path";
@@ -27,7 +29,7 @@ import { POST as quoteRoute } from "@/app/api/me/private-jobs/quote/route";
 import { POST as purchaseRoute } from "@/app/api/agent/private-ask/route";
 
 const root = mkdtempSync(join(tmpdir(), "keryx-private-result-")), file = join(root, "db.sqlite");
-const db = new SqliteAdapter(file); await db.init();
+const db = await sqliteFixtures.open(file, "testnet-real"); await db.init();
 const storage = new AsyncLocalStorage<string | undefined>();
 const secret = "synthetic-private-result-secret";
 // Unfunded ephemeral account signs only synthetic local fixtures, never network payments.

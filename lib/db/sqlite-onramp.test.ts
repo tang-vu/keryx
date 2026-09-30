@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
@@ -8,7 +10,7 @@ const dbFile = path.join(os.tmpdir(), `keryx-onramp-${Date.now()}-${process.pid}
 let db: SqliteAdapter;
 
 beforeEach(async () => {
-  db = new SqliteAdapter(dbFile);
+  db = await sqliteFixtures.open(dbFile, "testnet-real");
   await db.init();
 });
 

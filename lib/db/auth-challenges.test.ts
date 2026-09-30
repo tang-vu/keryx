@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import { mkdtempSync, rmSync, rmdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
@@ -10,7 +12,7 @@ import { authChallengeHash } from "../auth-challenge";
 
 const directory = mkdtempSync(join(tmpdir(), "keryx-auth-db-"));
 const file = join(directory, "db.sqlite");
-const database = new SqliteAdapter(file);
+const database = await sqliteFixtures.open(file, "testnet-offline");
 await database.init();
 afterAll(() => {
   database.close();
@@ -22,7 +24,7 @@ it("persists issued challenges across reopen, preserves an active duplicate and 
   const hash = authChallengeHash("DurableNonce12345");
   await database.createAuthChallenge(hash, 1000, 2000);
   await expect(database.createAuthChallenge(hash, 1001, 3000)).rejects.toThrow();
-  const reopened = new SqliteAdapter(file); await reopened.init();
+  const reopened = await sqliteFixtures.open(file, "testnet-offline"); await reopened.init();
   try {
     expect(await reopened.consumeAuthChallenge(hash, 999)).toBe(false);
     expect(await reopened.consumeAuthChallenge(hash, 1999)).toBe(true);
@@ -33,7 +35,7 @@ it("persists issued challenges across reopen, preserves an active duplicate and 
   expect(await database.consumeAuthChallenge(expired, 2000)).toBe(false);
   const current = authChallengeHash("CurrentNonce12345");
   await database.createAuthChallenge(current, 2000, 3000);
-  const inspection = new DatabaseSync(file);
+  const inspection = sqliteFixtures.trustedRaw(file);
   try {
     const rows = inspection.prepare("SELECT hash FROM auth_challenges").all();
     expect(rows.map(row => row.hash)).not.toContain(expired);
@@ -47,7 +49,7 @@ it("allows exactly one independent process to consume a shared challenge", async
   const hash = authChallengeHash("ConcurrentNonce12345");
   const now = Date.now(); await database.createAuthChallenge(hash, now, now + 300000);
   const code = `import {SqliteAdapter} from ${JSON.stringify(pathToFileURL(resolve("lib/db/sqlite-adapter.ts")).href)};
-    const db = new SqliteAdapter(${JSON.stringify(file)}); await db.init();
+    const db = new SqliteAdapter(${JSON.stringify(file)},{expectedIdentity:${JSON.stringify(database.getStorageIdentity())}}); await db.init();
     process.on('message',async()=>{try {const result=await db.consumeAuthChallenge(${JSON.stringify(hash)},Date.now());db.close();process.send(result,()=>process.exit(0));}catch{process.exit(1);}});
     process.send('ready');`;
   const workers = Array.from({ length: 2 }, () => {

@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "./db/sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdtempSync, rmSync, rmdirSync } from "node:fs";
 import { join } from "node:path";
@@ -18,7 +20,7 @@ import { GET as listSessions, DELETE as revokeOthers } from "@/app/api/auth/sess
 import { DELETE as revokeSelected } from "@/app/api/auth/sessions/[id]/route";
 
 const root = mkdtempSync(join(tmpdir(), "keryx-web-session-")); const file = join(root, "db.sqlite");
-const database = new SqliteAdapter(file); await database.init();
+const database = await sqliteFixtures.open(file, "testnet-offline"); await database.init();
 const storage = new AsyncLocalStorage<ReturnType<typeof cookieJar>>();
 const secret = "synthetic-session-secret", alice = `0x${"a".repeat(40)}`, bob = `0x${"b".repeat(40)}`;
 function cookieJar(token?: string) {
@@ -103,7 +105,7 @@ it("preserves another device and another wallet, including across reopen", async
   await database.revokeWebSession(webSessionHash(claims.jti), bob);
   expect((await lookup(a.token)).status).toBe(200);
   await database.revokeWebSession(webSessionHash(claims.jti), alice);
-  const reopened = new SqliteAdapter(file); await reopened.init();
+  const reopened = await sqliteFixtures.open(file, "testnet-offline"); await reopened.init();
   try {
     expect(await isWebSessionActive(reopened, claims)).toBe(false);
     expect(await isWebSessionActive(reopened, (await parseWebSession(b.token, secret))!)).toBe(true);

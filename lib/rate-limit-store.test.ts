@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "./db/sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 /**
  * The limits here gate treasury-funded runs, so the two things that must hold are: a caller who
  * spent the window stays blocked across a process restart (the whole point of persisting), and a
@@ -23,7 +25,7 @@ let dbFile: string;
 const opened: SqliteAdapter[] = [];
 
 async function openDb(): Promise<SqliteAdapter> {
-  const db = new SqliteAdapter(dbFile);
+  const db = await sqliteFixtures.open(dbFile, "testnet-offline");
   await db.init();
   opened.push(db);
   return db;
@@ -103,7 +105,7 @@ describe("consumePoint", () => {
     expect((await consumePoint("1.2.3.4", "a2aPublic", 1, WINDOW)).allowed).toBe(true);
   });
 
-  it("falls back to the in-process limiter — degraded, not open — when the DB is down", async () => {
+  it("falls back to the in-process limiter â€” degraded, not open â€” when the DB is down", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     getDb.mockRejectedValue(new Error("database is locked"));
 
