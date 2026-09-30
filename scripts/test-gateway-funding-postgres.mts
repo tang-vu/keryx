@@ -22,6 +22,7 @@ const prefix = process.platform === "win32" ? ["-d", "Ubuntu", "--", "docker"] :
 const docker = (args: string[], input?: string) => execFileSync(binary, [...prefix, ...args], { input, encoding: "utf8", timeout: 60_000, stdio: ["pipe", "pipe", "pipe"] });
 const psql = ["exec", "-i", name, "psql", "-h", "127.0.0.1", "-U", "postgres", "-v", "ON_ERROR_STOP=1", "-q", "-t", "-A"];
 const sql = (statement: string) => docker(psql, `set statement_timeout='30s'; set lock_timeout='5s'; ${statement}`).trim();
+const sqlIn = (database: string, statement: string) => docker([...psql, "-d", database], `set statement_timeout='30s'; set lock_timeout='5s'; ${statement}`).trim();
 const service = (statement: string) => sql(`set role service_role; ${statement}`);
 const json = (value: unknown) => `'${JSON.stringify(value).replaceAll("'", "''")}'::jsonb`;
 const identity = syntheticStorageIdentity("testnet-real"), expected = json(identity);
@@ -46,6 +47,7 @@ try {
   assert(ready, "isolated PostgreSQL startup deadline");
   const migrations = readdirSync("supabase/migrations").filter(f => /^\d{4}.*\.sql$/.test(f) && Number(f.slice(0, 4)) <= 75).sort();
   sql("create role anon;create role authenticated;create role service_role bypassrls;create publication supabase_realtime;" + migrations.map(f => readFileSync(`supabase/migrations/${f}`, "utf8")).join("\n"));
+  sql("create database funding_unenrolled template postgres");
   const reviewed = sql("select keryx_storage.snapshot_digest()");
   sql(`select keryx_storage.enroll(${expected},'${reviewed}')`);
   const binding = sql("select keryx_storage.funding_backend_binding()");
@@ -57,6 +59,16 @@ try {
   assert.throws(() => service(`select keryx_storage.install_funding_policy(${expected},${json(installation)})`), /permission denied/);
   sql(`select keryx_storage.install_funding_policy(${expected},${json(installation)})`);
   sql(`select keryx_storage.install_funding_policy(${expected},${json(installation)})`);
+  const originalNamespace = JSON.parse(sql(`select to_jsonb(n) from public.gateway_funding_namespaces n where sender='${operation.policy.funder}'`));
+  // Owner-only synthetic pre-enrollment import fixture. Restored fences must
+  // refuse unexplained legacy ledger state instead of attesting it spendable.
+  sqlIn("funding_unenrolled", `alter table public.gateway_funding_namespaces disable trigger user;
+    insert into public.gateway_funding_namespaces select (jsonb_populate_record(null::public.gateway_funding_namespaces,${json(originalNamespace)})).*;
+    alter table public.gateway_funding_namespaces enable trigger user;`);
+  const importedSnapshot = sqlIn("funding_unenrolled", "select keryx_storage.snapshot_digest()");
+  assert.throws(() => sqlIn("funding_unenrolled", `select keryx_storage.enroll(${expected},'${importedSnapshot}')`), /Gateway funding ledger refused/);
+  assert.equal(sqlIn("funding_unenrolled", "select count(*) from public.gateway_funding_namespaces"), "1");
+  assert.equal(sqlIn("funding_unenrolled", "select count(*) from keryx_storage.identity"), "0");
   sql(`select keryx_storage.install_funding_authorization(${expected},${json(operation)})`);
   sql("grant execute on function public.storage_funding_finalize(jsonb,jsonb) to anon");
   assert.throws(() => service(rpc("admit", `'${operation.operationId}'`)), /Gateway funding ledger refused/, "ACL drift must refuse ordinary admission");
@@ -180,7 +192,15 @@ try {
   assert.equal((await lostAckLedger.claimBroadcast(operation.operationId, "usdcTransfer", lostSendId)).fresh, false);
   assert.equal((await lostAckLedger.inspectReservation(operation.operationId, "usdcTransfer"))?.prepared?.rawTransaction, usdcRawTransaction);
   lostAckLedger.close();
-  ledger.close(); await assert.rejects(() => ledger.inspectOperation(operation.operationId), /Gateway funding ledger refused/);
+  ledger.close();
+  docker(["rm", "-f", "-v", httpName]); httpStarted = false;
+  sql("create database funding_logical_clone template postgres");
+  assert.notEqual(sqlIn("funding_logical_clone", "select keryx_storage.funding_backend_binding()"), binding, "a logical copy gets a distinct native database identity");
+  assert.throws(() => sqlIn("funding_logical_clone", `set role service_role;${rpc("admit", `'${operation.operationId}'`)}`), /Gateway funding ledger refused/);
+  assert.throws(() => sqlIn("funding_logical_clone", `select keryx_storage.install_funding_policy(${expected},${json(installation)})`), /Gateway funding ledger refused/);
+  assert.equal(JSON.parse(sqlIn("funding_logical_clone", `set role service_role;${rpc("inspect_reservation", `'${operation.operationId}'`, "'nativeTransfer'")}`)).prepared.rawTransaction, rawTransaction,
+    "keyless inspection of copied evidence grants no mutation authority");
+  await assert.rejects(() => ledger.inspectOperation(operation.operationId), /Gateway funding ledger refused/);
   console.log("Actual isolated PostgreSQL17 and PostgREST funding candidate acceptance passed; provider truth/physical-clone exclusivity remain open.");
 } finally {
   if (httpStarted) docker(["rm", "-f", "-v", httpName]);

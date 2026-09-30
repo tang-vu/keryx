@@ -683,7 +683,7 @@ where kind in ('finalized-success','finalized-reverted');
 
 create function public.storage_funding_finalize(p_expected_identity jsonb,p_evidence jsonb) returns void
 language plpgsql security definer set search_path=pg_catalog,pg_temp as $$
-declare operation jsonb; snapshot jsonb; key text; original jsonb; n public.gateway_funding_namespaces%rowtype; kind text;
+declare operation jsonb; snapshot jsonb; key text; original jsonb; n public.gateway_funding_namespaces%rowtype; selected_kind text;
 begin
   perform keryx_storage.funding_keys(p_evidence,array['format','identity','identityDigest','operationDigest','operationId','step','transactionHash',
     'cryptoClaimId','broadcastClaimId','prepared','sender','nonce','chainId','receiptStatus','blockNumber','blockHash','gasUsed','effectiveGasPriceWei',
@@ -723,9 +723,9 @@ begin
   if found then
     if original is distinct from p_evidence then perform keryx_storage.funding_refuse(); end if;
   else
-    kind:=case when p_evidence->>'receiptStatus'='success' then 'finalized-success' else 'finalized-reverted' end;
+    selected_kind:=case when p_evidence->>'receiptStatus'='success' then 'finalized-success' else 'finalized-reverted' end;
     insert into public.gateway_funding_observations(observation_id,reservation_id,kind,observation,identity_digest)
-    values(md5(key||':terminal')::uuid,key,kind,p_evidence,keryx_storage.identity_digest(p_expected_identity));
+    values(md5(key||':terminal')::uuid,key,selected_kind,p_evidence,keryx_storage.identity_digest(p_expected_identity));
   end if;
   perform keryx_storage.leave_operation();
 end; $$;
