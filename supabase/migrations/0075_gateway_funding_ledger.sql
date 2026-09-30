@@ -18,6 +18,7 @@ create table public.gateway_funding_namespaces (
   used_deposit numeric(78,0) not null default 0 check(used_deposit>=0),
   used_gas numeric(78,0) not null default 0 check(used_gas>=0),
   next_nonce bigint not null default 0 check(next_nonce between 0 and 9007199254740992),
+  next_crypto_nonce bigint not null default 0 check(next_crypto_nonce between 0 and 9007199254740992 and next_crypto_nonce<=next_nonce),
   history_document_digest text not null check(history_document_digest ~ '^[0-9a-f]{64}$'),
   reviewed_snapshot_digest text not null check(reviewed_snapshot_digest ~ '^[0-9a-f]{64}$')
 );
@@ -229,16 +230,20 @@ begin
   end if;
   if tg_op='UPDATE' then
     if tg_table_name<>'gateway_funding_namespaces' then perform keryx_storage.funding_refuse(); end if;
-    if (to_jsonb(new)-array['used_native','used_usdc','used_deposit','used_gas','next_nonce'])
-      is distinct from (to_jsonb(old)-array['used_native','used_usdc','used_deposit','used_gas','next_nonce'])
+    if (to_jsonb(new)-array['used_native','used_usdc','used_deposit','used_gas','next_nonce','next_crypto_nonce'])
+      is distinct from (to_jsonb(old)-array['used_native','used_usdc','used_deposit','used_gas','next_nonce','next_crypto_nonce'])
       or new.used_native<old.used_native or new.used_usdc<old.used_usdc or new.used_deposit<old.used_deposit or new.used_gas<old.used_gas then
       perform keryx_storage.funding_refuse();
     end if;
     if active_operation='funding_admit' then
-      if new.next_nonce<>old.next_nonce then perform keryx_storage.funding_refuse(); end if;
+      if new.next_nonce<>old.next_nonce or new.next_crypto_nonce<>old.next_crypto_nonce then perform keryx_storage.funding_refuse(); end if;
     elsif active_operation='funding_reserve' then
-      if new.next_nonce<>old.next_nonce+1 or new.used_native<>old.used_native or new.used_usdc<>old.used_usdc
+      if new.next_nonce<>old.next_nonce+1 or new.next_crypto_nonce<>old.next_crypto_nonce or new.used_native<>old.used_native or new.used_usdc<>old.used_usdc
         or new.used_deposit<>old.used_deposit or new.used_gas<>old.used_gas then perform keryx_storage.funding_refuse(); end if;
+    elsif active_operation='funding_finalize' then
+      if new.next_crypto_nonce<>old.next_crypto_nonce+1 or new.next_nonce<>old.next_nonce
+        or new.used_native<>old.used_native or new.used_usdc<>old.used_usdc or new.used_deposit<>old.used_deposit or new.used_gas<>old.used_gas
+      then perform keryx_storage.funding_refuse(); end if;
     else perform keryx_storage.funding_refuse();
     end if;
   end if;
@@ -255,7 +260,7 @@ insert into keryx_storage.operations values
  ('funding_claim_broadcast',array['gateway_funding_broadcast_claims'],true),
  ('funding_append_observation',array['gateway_funding_observations'],true),
  ('funding_inspect','{}',true),
- ('funding_finalize',array['gateway_funding_observations'],true);
+ ('funding_finalize',array['gateway_funding_namespaces','gateway_funding_observations'],true);
 
 do $$ declare t text; begin
   foreach t in array array['gateway_funding_namespaces','gateway_funding_policies','gateway_funding_authorizations',
@@ -403,7 +408,7 @@ begin
   result:=jsonb_build_object('identityDigest',n.identity_digest,'backendBindingDigest',n.backend_binding_digest,
     'finalityPolicyDigest',n.finality_policy_digest,'chainId','5042002','sender',n.sender,
     'peer',case when n.role='funder' then n.spend else n.funder end,'role',n.role,'historyDocumentDigest',n.history_document_digest,
-    'initialNonce','0','nextNonce',n.next_nonce::text,'limits',n.limits,
+    'initialNonce','0','nextNonce',n.next_nonce::text,'nextCryptoNonce',n.next_crypto_nonce::text,'limits',n.limits,
     'used',jsonb_build_object('nativeWei',n.used_native::text,'usdcMicros',n.used_usdc::text,'depositMicros',n.used_deposit::text,'gasWei',n.used_gas::text),
     'nativeAggregateLimitWei',(keryx_storage.funding_uint(n.limits->'nativeWei')
       +(keryx_storage.funding_uint(n.limits->'usdcMicros')+keryx_storage.funding_uint(n.limits->'depositMicros'))*1000000000000
@@ -573,11 +578,15 @@ end; $$;
 create function keryx_storage.funding_claim(p_expected_identity jsonb,p_operation_id text,p_step text,p_claim_id text,p_broadcast boolean) returns jsonb
 language plpgsql security definer set search_path=pg_catalog,pg_temp as $$
 declare operation jsonb; key text:=p_operation_id||':'||p_step; reservation public.gateway_funding_reservations%rowtype;
-  original uuid; fresh boolean:=false; signed_hash text;
+  original uuid; fresh boolean:=false; signed_hash text; selected_sender text; barrier bigint;
 begin
   operation:=keryx_storage.funding_bound_operation(p_expected_identity,p_operation_id);
   perform keryx_storage.funding_uuid(to_jsonb(p_claim_id));
   perform keryx_storage.funding_enter(p_expected_identity,case when p_broadcast then 'funding_claim_broadcast' else 'funding_claim_crypto' end);
+  select sender into selected_sender from public.gateway_funding_reservations where reservation_id=key;
+  if not found then perform keryx_storage.funding_refuse(); end if;
+  -- Namespace then reservation is the common lock order for claim/finalization.
+  select next_crypto_nonce into barrier from public.gateway_funding_namespaces where sender=selected_sender for update;
   select * into reservation from public.gateway_funding_reservations where reservation_id=key for update;
   if not found then perform keryx_storage.funding_refuse(); end if;
   if p_broadcast then
@@ -588,11 +597,9 @@ begin
   if original is not null then
     if original::text is distinct from p_claim_id then perform keryx_storage.funding_refuse(); end if;
   else
-    -- Candidate observations cannot release an earlier sender nonce. Only the
-    -- separately protected observer's immutable terminal record can do so.
-    if exists(select 1 from public.gateway_funding_reservations r where r.sender=reservation.sender and r.nonce<reservation.nonce
-      and not exists(select 1 from public.gateway_funding_observations o where o.reservation_id=r.reservation_id and o.kind in ('finalized-success','finalized-reverted')))
-    then perform keryx_storage.funding_refuse(); end if;
+    -- Constant-work progression: only protected terminal insertion increments
+    -- this monotonic barrier. Gaps/candidate observations never skip a nonce.
+    if barrier is null or reservation.nonce<>barrier then perform keryx_storage.funding_refuse(); end if;
     if p_broadcast then
       select transaction_hash into signed_hash from public.gateway_funding_prepared where reservation_id=key;
       if signed_hash is null then perform keryx_storage.funding_refuse(); end if;
@@ -691,7 +698,7 @@ where kind in ('finalized-success','finalized-reverted');
 
 create function public.storage_funding_finalize(p_expected_identity jsonb,p_evidence jsonb) returns void
 language plpgsql security definer set search_path=pg_catalog,pg_temp as $$
-declare operation jsonb; snapshot jsonb; key text; original jsonb; n public.gateway_funding_namespaces%rowtype; selected_kind text;
+declare operation jsonb; snapshot jsonb; key text; original jsonb; n public.gateway_funding_namespaces%rowtype; selected_kind text; selected_sender text;
 begin
   perform keryx_storage.funding_keys(p_evidence,array['format','identity','identityDigest','operationDigest','operationId','step','transactionHash',
     'cryptoClaimId','broadcastClaimId','prepared','sender','nonce','chainId','receiptStatus','blockNumber','blockHash','gasUsed','effectiveGasPriceWei',
@@ -699,10 +706,12 @@ begin
   operation:=keryx_storage.funding_bound_operation(p_expected_identity,p_evidence->>'operationId');
   perform keryx_storage.funding_enter(p_expected_identity,'funding_finalize');
   key:=(p_evidence->>'operationId')||':'||(p_evidence->>'step');
+  select sender into selected_sender from public.gateway_funding_reservations where reservation_id=key;
+  if not found then perform keryx_storage.funding_refuse(); end if;
+  select * into n from public.gateway_funding_namespaces where sender=selected_sender for update;
   perform 1 from public.gateway_funding_reservations where reservation_id=key for update;
   if not found then perform keryx_storage.funding_refuse(); end if;
   snapshot:=keryx_storage.funding_reservation_snapshot(key);
-  select * into n from public.gateway_funding_namespaces where sender=snapshot#>>'{transaction,sender}';
   if p_evidence->>'format' is distinct from 'gateway-funding-terminal-evidence-v1'
     or p_evidence->'identity' is distinct from p_expected_identity
     or p_evidence->>'identityDigest' is distinct from keryx_storage.identity_digest(p_expected_identity)
@@ -731,9 +740,11 @@ begin
   if found then
     if original is distinct from p_evidence then perform keryx_storage.funding_refuse(); end if;
   else
+    if n.next_crypto_nonce::text is distinct from snapshot#>>'{transaction,nonce}' then perform keryx_storage.funding_refuse(); end if;
     selected_kind:=case when p_evidence->>'receiptStatus'='success' then 'finalized-success' else 'finalized-reverted' end;
     insert into public.gateway_funding_observations(observation_id,reservation_id,kind,observation,identity_digest)
     values(md5(key||':terminal')::uuid,key,selected_kind,p_evidence,keryx_storage.identity_digest(p_expected_identity));
+    update public.gateway_funding_namespaces set next_crypto_nonce=next_crypto_nonce+1 where sender=selected_sender;
   end if;
   perform keryx_storage.leave_operation();
 end; $$;
@@ -768,6 +779,10 @@ begin
   if observer_oid is null or exists(select 1 from pg_auth_members where member=observer_oid or (roleid=observer_oid and admin_option))
     or has_schema_privilege('keryx_gateway_funding_observer','keryx_storage','USAGE,CREATE')
     or has_schema_privilege('keryx_gateway_funding_observer','public','CREATE') then perform keryx_storage.funding_refuse(); end if;
+  if not has_function_privilege('keryx_gateway_funding_observer','public.read_storage_identity()','EXECUTE')
+    or not has_function_privilege('keryx_gateway_funding_observer','public.storage_funding_finalize(jsonb,jsonb)','EXECUTE')
+    or has_function_privilege('anon','public.read_storage_identity()','EXECUTE')
+    or has_function_privilege('authenticated','public.read_storage_identity()','EXECUTE') then perform keryx_storage.funding_refuse(); end if;
   if exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
     where n.nspname in ('public','keryx_storage') and has_function_privilege('keryx_gateway_funding_observer',p.oid,'EXECUTE')
       and p.oid not in ('public.read_storage_identity()'::regprocedure,'public.storage_funding_finalize(jsonb,jsonb)'::regprocedure)) then

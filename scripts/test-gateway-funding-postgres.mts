@@ -7,6 +7,9 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { keccak256, parseTransaction } from "viem";
 import { SupabaseAuthority } from "../lib/db/supabase-authority";
 import { SupabaseGatewayFundingLedger } from "../lib/db/gateway-funding-supabase";
+import { SupabaseGatewayFundingTerminalObserverStore } from "../lib/db/gateway-funding-supabase-observer";
+import { createGatewayFundingReceiptObserverForTrustedComposition } from "../lib/payments/gateway-funding-receipt-observer";
+import { GATEWAY_FUNDING_RECEIPT_POLICY, GATEWAY_FUNDING_RECEIPT_POLICY_DIGEST } from "../lib/payments/gateway-funding-receipt-policy";
 import { syntheticStorageIdentity } from "../lib/db/storage-identity-fixture";
 import { prepareGatewayFundingTransaction } from "../lib/payments/gateway-funding-transaction";
 import { gatewayFundingReplayDigest, validateGatewayFundingOperation } from "../lib/payments/gateway-funding-policy";
@@ -17,6 +20,7 @@ import type { FundingOwnerInstallation, FundingTerminalEvidence } from "../lib/d
 // fails the gate. Each command and owner statement has an external deadline.
 const name = `keryx-funding-pg-${Date.now()}`;
 const httpName = `${name}-http`;
+const observerHttpName = `${name}-observer-http`;
 const binary = process.platform === "win32" ? "wsl.exe" : "docker";
 const prefix = process.platform === "win32" ? ["-d", "Ubuntu", "--", "docker"] : [];
 const docker = (args: string[], input?: string) => execFileSync(binary, [...prefix, ...args], { input, encoding: "utf8", timeout: 60_000, stdio: ["pipe", "pipe", "pipe"] });
@@ -27,9 +31,9 @@ const service = (statement: string) => sql(`set role service_role; ${statement}`
 const json = (value: unknown) => `'${JSON.stringify(value).replaceAll("'", "''")}'::jsonb`;
 const identity = syntheticStorageIdentity("testnet-real"), expected = json(identity);
 const rpc = (method: string, ...args: string[]) => `select public.storage_funding_${method}(${[expected, ...args].join(",")})`;
-const concurrent = (statement: string) => new Promise<string>((resolve, reject) => {
+const concurrent = (statement: string, role: "service_role" | "synthetic_observer" = "service_role") => new Promise<string>((resolve, reject) => {
   const child = execFile(binary, [...prefix, ...psql], { encoding: "utf8", timeout: 40_000 }, (error, out, err) => error ? reject(new Error(err || error.message)) : resolve(out.trim()));
-  child.stdin!.end(`set statement_timeout='30s';set lock_timeout='5s';set role service_role;begin;${statement};select pg_sleep(0.1);commit;`);
+  child.stdin!.end(`set statement_timeout='30s';set lock_timeout='5s';set role ${role};begin;${statement};select pg_sleep(0.1);commit;`);
 });
 const funder = privateKeyToAccount(generatePrivateKey()), spend = privateKeyToAccount(generatePrivateKey());
 const operation = validateGatewayFundingOperation({ format: "gateway-funding-operation-v1", policy: {
@@ -38,7 +42,7 @@ const operation = validateGatewayFundingOperation({ format: "gateway-funding-ope
   operationId: randomUUID(), ownerAuthorizationId: randomUUID(), ownerAuthorizationDigest: "b".repeat(64), minimumAvailableMicros: "100", initialAvailableMicros: "0",
   nativeTransferWei: "50", usdcTransferMicros: "100", approvalMicros: "100", depositMicros: "100", gasLimits: {
     nativeTransfer: "21000", usdcTransfer: "60000", approval: "60000", deposit: "120000" }, maxFeePerGasWei: "10", maxPriorityFeePerGasWei: "1" });
-let started = false, httpStarted = false;
+let started = false, httpStarted = false, observerHttpStarted = false;
 try {
   try { docker(["info", "--format", "{{.ServerVersion}}"]); } catch { throw new Error("Isolated PostgreSQL acceptance requires the existing Docker engine; gate did not run"); }
   docker(["run", "-d", "--name", name, "--network", "none", "--memory", "512m", "--cpus", "1", "-e", "POSTGRES_HOST_AUTH_METHOD=trust", "postgres:17"]); started = true;
@@ -142,7 +146,12 @@ try {
   // SQL binding/ACL only, never verified provider truth or actual settlement.
   sql("create role synthetic_observer login;grant keryx_gateway_funding_observer to synthetic_observer");
   assert.throws(() => sql(`set role synthetic_observer;${rpc("finalize", json({ ...evidence, finalityPolicyDigest: "0".repeat(64) }))}`), /Gateway funding ledger refused/);
+  sql(`set role synthetic_observer;begin;${rpc("finalize", json(evidence))};rollback;`);
+  assert.equal(sql(`select next_crypto_nonce from public.gateway_funding_namespaces where sender='${native.sender}'`), "0", "terminal and barrier roll back together");
+  assert.equal(sql("select count(*) from public.gateway_funding_observations where kind like 'finalized-%'"), "0");
+  await Promise.all([concurrent(rpc("finalize", json(evidence)), "synthetic_observer"), concurrent(rpc("finalize", json(evidence)), "synthetic_observer")]);
   sql(`set role synthetic_observer;${rpc("finalize", json(evidence))}`);
+  assert.equal(sql(`select next_crypto_nonce from public.gateway_funding_namespaces where sender='${native.sender}'`), "1", "exact terminal replay advances the barrier once");
   const followingClaim = randomUUID();
   service(rpc("claim_crypto", `'${operation.operationId}'`, "'usdcTransfer'", `'${followingClaim}'`));
   assert.equal(sql("select count(*) from keryx_storage.writer"), "0");
@@ -153,18 +162,20 @@ try {
   ready = false;
   for (let i = 0; i < 30; i++) { try { docker(["exec", name, "pg_isready", "-h", "127.0.0.1", "-U", "postgres"]); ready = true; break; } catch { await new Promise(r => setTimeout(r, 100)); } }
   assert(ready);
+  assert.equal(sql(`select next_crypto_nonce from public.gateway_funding_namespaces where sender='${native.sender}'`), "1", "SIGKILL retains the protected progression barrier");
   assert.equal(JSON.parse(service(rpc("claim_crypto", `'${operation.operationId}'`, "'usdcTransfer'", `'${followingClaim}'`))).fresh, false);
   sql("create role funding_http login;grant service_role to funding_http");
   docker(["run", "-d", "--name", httpName, "--network", `container:${name}`, "--memory", "256m", "--cpus", "0.5", "-e", "PGRST_DB_URI=postgres://funding_http@127.0.0.1:5432/postgres",
     "-e", "PGRST_DB_ANON_ROLE=service_role", "-e", "PGRST_DB_SCHEMAS=public", "-e", "PGRST_DB_CONFIG=false", "-e", "PGRST_DB_POOL=2", "postgrest/postgrest:v12.2.3"]); httpStarted = true;
-  const httpFetch: typeof fetch = async (input, init) => {
+  const isolatedHttpFetch = (port: 3000 | 3001): typeof fetch => async (input, init) => {
     const path = new URL(String(input)).pathname.replace(/^\/rest\/v1/, "");
     if (!/^\/rpc\/(read_storage_identity|storage_funding_[a-z_]+)$/.test(path)) throw new Error("Unexpected synthetic HTTP operation");
     const output = docker(["run", "--rm", "-i", "--network", `container:${name}`, "--memory", "64m", "--cpus", "0.25", "curlimages/curl:8.12.1", "--max-time", "10", "--silent", "--show-error", "--request", "POST",
-      "--header", "Content-Type: application/json", "--data-binary", "@-", "--write-out", "\n%{http_code}", `http://127.0.0.1:3000${path}`], String(init?.body ?? "{}"));
+      "--header", "Content-Type: application/json", "--data-binary", "@-", "--write-out", "\n%{http_code}", `http://127.0.0.1:${port}${path}`], String(init?.body ?? "{}"));
     const split = output.lastIndexOf("\n"), status = Number(output.slice(split + 1));
     return new Response(status === 204 ? null : output.slice(0, split), { status, headers: { "Content-Type": "application/json" } });
   };
+  const httpFetch = isolatedHttpFetch(3000);
   const authority = new SupabaseAuthority(createClient("http://synthetic.invalid", "synthetic-no-authority", { auth: { persistSession: false }, global: { fetch: httpFetch } }), identity);
   let httpReady = false;
   for (let i = 0; i < 10; i++) { try { await authority.init(); httpReady = true; break; } catch { await new Promise(r => setTimeout(r, 200)); } }
@@ -192,6 +203,68 @@ try {
   assert.equal((await lostAckLedger.claimBroadcast(operation.operationId, "usdcTransfer", lostSendId)).fresh, false);
   assert.equal((await lostAckLedger.inspectReservation(operation.operationId, "usdcTransfer"))?.prepared?.rawTransaction, usdcRawTransaction);
   lostAckLedger.close();
+  // Actual protected adapter composition: generated original signature + PR74
+  // WeakMap issuer provenance + real observer-role PostgREST. Provider responses
+  // below are synthetic; this proves capability composition, not chain truth.
+  const issuerFunder = privateKeyToAccount(generatePrivateKey()), issuerSpend = privateKeyToAccount(generatePrivateKey());
+  const issuerOperation = validateGatewayFundingOperation({ ...operation, operationId: randomUUID(), ownerAuthorizationId: randomUUID(), policy: {
+    ...operation.policy, policyId: randomUUID(), funder: issuerFunder.address.toLowerCase(), spend: issuerSpend.address.toLowerCase() } });
+  sql(`select keryx_storage.install_funding_policy(${expected},${json({ ...installation, policy: issuerOperation.policy,
+    finalityPolicyDigest: GATEWAY_FUNDING_RECEIPT_POLICY_DIGEST, reviewedSnapshotDigest: sql("select keryx_storage.snapshot_digest()") })})`);
+  sql(`select keryx_storage.install_funding_authorization(${expected},${json(issuerOperation)})`);
+  await ledger.admitOperation(issuerOperation.operationId);
+  const issuerReservation = await ledger.reserveStep(issuerOperation.operationId, "nativeTransfer", "0");
+  const issuerCryptoId = randomUUID(), issuerSendId = randomUUID();
+  await ledger.claimCrypto(issuerOperation.operationId, "nativeTransfer", issuerCryptoId);
+  const issuerRaw = await issuerFunder.signTransaction(parseTransaction(issuerReservation.transaction.serializedUnsigned));
+  const issuerPrepared = (await ledger.savePrepared(issuerOperation.operationId, "nativeTransfer", issuerCryptoId,
+    { rawTransaction: issuerRaw, transactionHash: keccak256(issuerRaw) })).prepared!;
+  await ledger.claimBroadcast(issuerOperation.operationId, "nativeTransfer", issuerSendId);
+  const issuerRequest = { operation: issuerOperation, prepared: issuerPrepared, cryptoClaimId: issuerCryptoId, broadcastClaimId: issuerSendId,
+    finalityPolicyDigest: GATEWAY_FUNDING_RECEIPT_POLICY_DIGEST };
+  const observationTime = 1800000000000, inclusionHash = `0x${"3".repeat(64)}`, anchorHash = `0x${"4".repeat(64)}`;
+  const q = (value: string | number) => `0x${BigInt(value).toString(16)}`, signature = parseTransaction(issuerRaw), issuerTx = issuerPrepared.transaction;
+  const syntheticProviderFetch: typeof fetch = async (input, options) => {
+    assert([GATEWAY_FUNDING_RECEIPT_POLICY.primary, GATEWAY_FUNDING_RECEIPT_POLICY.secondary].includes(String(input) as typeof GATEWAY_FUNDING_RECEIPT_POLICY.primary));
+    const body = JSON.parse(options!.body as string); let result: unknown;
+    if (body.method === "eth_chainId") result = q(5042002);
+    else if (body.method === "eth_getTransactionByHash") result = { hash: issuerPrepared.transactionHash, from: issuerTx.sender, to: issuerTx.to, input: issuerTx.data,
+      type: "0x2", chainId: q(issuerTx.chainId), nonce: "0x0", value: q(issuerTx.valueWei), gas: q(issuerTx.gas), maxFeePerGas: q(issuerTx.maxFeePerGasWei),
+      maxPriorityFeePerGas: q(issuerTx.maxPriorityFeePerGasWei), accessList: [], r: signature.r, s: signature.s, yParity: q(signature.yParity!), blockNumber: "0xa", blockHash: inclusionHash, transactionIndex: "0x0" };
+    else if (body.method === "eth_getTransactionReceipt") result = { transactionHash: issuerPrepared.transactionHash, from: issuerTx.sender, to: issuerTx.to,
+      type: "0x2", status: "0x1", gasUsed: "0x100", effectiveGasPrice: "0x1", blockNumber: "0xa", blockHash: inclusionHash, transactionIndex: "0x0" };
+    else if (body.method === "eth_getBlockByNumber") result = body.params[0] === "0xa" ? { number: "0xa", hash: inclusionHash,
+      timestamp: q(observationTime / 1000 - 2), transactions: [issuerPrepared.transactionHash] } : { number: "0xb", hash: anchorHash, timestamp: q(observationTime / 1000 - 1), transactions: [] };
+    else throw new Error("Unexpected synthetic observer method");
+    return new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id, result }), { headers: { "Content-Type": "application/json" } });
+  };
+  const token = await createGatewayFundingReceiptObserverForTrustedComposition(syntheticProviderFetch, () => observationTime)(issuerRequest, () => { ledger.getStorageIdentity(); });
+  assert(token, "controlled synthetic issuer must produce actual opaque provenance");
+  const ordinaryObserverStore = new SupabaseGatewayFundingTerminalObserverStore(ledger, authority);
+  await assert.rejects(() => ordinaryObserverStore.appendVerifiedTerminalObservation(issuerOperation.operationId, "nativeTransfer", token), /Gateway funding observer refused/);
+  assert.equal((await ledger.inspectNamespace(issuerTx.sender)).nextCryptoNonce, "0");
+  sql("create role funding_observer_http login;grant keryx_gateway_funding_observer to funding_observer_http");
+  docker(["run", "-d", "--name", observerHttpName, "--network", `container:${name}`, "--memory", "256m", "--cpus", "0.5",
+    "-e", "PGRST_DB_URI=postgres://funding_observer_http@127.0.0.1:5432/postgres", "-e", "PGRST_DB_ANON_ROLE=keryx_gateway_funding_observer",
+    "-e", "PGRST_DB_SCHEMAS=public", "-e", "PGRST_DB_CONFIG=false", "-e", "PGRST_DB_POOL=2", "-e", "PGRST_SERVER_PORT=3001", "postgrest/postgrest:v12.2.3"]); observerHttpStarted = true;
+  const observerFetch = isolatedHttpFetch(3001); let loseTerminalAck = true;
+  const observerAuthority = new SupabaseAuthority(createClient("http://synthetic.invalid", "synthetic-no-authority", { auth: { persistSession: false }, global: {
+    fetch: async (input, init) => { const response = await observerFetch(input, init);
+      if (loseTerminalAck && String(input).includes("storage_funding_finalize")) { loseTerminalAck = false; throw new Error("Synthetic lost terminal HTTP acknowledgement"); }
+      return response; } } }), identity);
+  let observerReady = false;
+  for (let i = 0; i < 10; i++) { try { await observerAuthority.init(); observerReady = true; break; } catch { await new Promise(r => setTimeout(r, 200)); } }
+  assert(observerReady);
+  const observerStore = new SupabaseGatewayFundingTerminalObserverStore(ledger, observerAuthority);
+  await assert.rejects(() => observerStore.appendVerifiedTerminalObservation(issuerOperation.operationId, "nativeTransfer", {} as typeof token));
+  await assert.rejects(() => observerStore.appendVerifiedTerminalObservation(issuerOperation.operationId, "nativeTransfer", token), /Gateway funding observer refused/);
+  const retainedTerminal = await ledger.inspectReservation(issuerOperation.operationId, "nativeTransfer");
+  assert.equal(retainedTerminal?.state, "finalized-success", "lost terminal ACK retains committed original evidence");
+  assert.equal(retainedTerminal?.terminal?.finalityPolicyDigest, GATEWAY_FUNDING_RECEIPT_POLICY_DIGEST);
+  await observerStore.appendVerifiedTerminalObservation(issuerOperation.operationId, "nativeTransfer", token);
+  assert.equal((await ledger.inspectNamespace(issuerTx.sender)).nextCryptoNonce, "1", "exact protected replay never advances the barrier again");
+  observerStore.close(); ordinaryObserverStore.close();
+  docker(["rm", "-f", "-v", observerHttpName]); observerHttpStarted = false;
   const beforeRollover = await ledger.inspectNamespace(native.sender);
   const rollover = { ...installation, policy: { ...operation.policy, policyId: randomUUID() }, reviewedSnapshotDigest: sql("select keryx_storage.snapshot_digest()") };
   sql(`select keryx_storage.install_funding_policy(${expected},${json(rollover)})`);
@@ -225,6 +298,7 @@ try {
   await assert.rejects(() => ledger.inspectOperation(operation.operationId), /Gateway funding ledger refused/);
   console.log("Actual isolated PostgreSQL17 and PostgREST funding candidate acceptance passed; provider truth/physical-clone exclusivity remain open.");
 } finally {
+  if (observerHttpStarted) docker(["rm", "-f", "-v", observerHttpName]);
   if (httpStarted) docker(["rm", "-f", "-v", httpName]);
   if (started) docker(["rm", "-f", "-v", name]);
 }

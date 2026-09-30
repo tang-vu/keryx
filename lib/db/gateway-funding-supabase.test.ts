@@ -5,8 +5,7 @@ import { keccak256, parseTransaction } from "viem";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { syntheticStorageIdentity } from "./storage-identity-fixture";
 import { SupabaseAuthority } from "./supabase-authority";
-import { SupabaseGatewayFundingLedger, SupabaseGatewayFundingTerminalObserverStore } from "./gateway-funding-supabase";
-import type { GatewayFundingLedger, VerifiedFundingTerminalObservation } from "./gateway-funding-ledger-types";
+import { SupabaseGatewayFundingLedger } from "./gateway-funding-supabase";
 import { prepareGatewayFundingTransaction, type SignedGatewayFundingTransaction } from "../payments/gateway-funding-transaction";
 import { validateGatewayFundingOperation } from "../payments/gateway-funding-policy";
 
@@ -64,17 +63,5 @@ describe("Supabase funding original readback", () => {
     const f = await fixture(); f.ledger.close(); const before = f.calls.mock.calls.length;
     await expect(f.ledger.inspectReservation(f.operation.operationId, "nativeTransfer")).rejects.toThrow("Gateway funding ledger refused");
     expect(f.calls).toHaveBeenCalledTimes(before);
-  });
-  it("protected terminal store refuses a fabricated TypeScript token before any finalization RPC", async () => {
-    const f = await fixture();
-    const ledger = { getStorageIdentity: () => f.operation.policy.identity,
-      inspectReservation: async () => ({ operation: f.operation, transaction: f.transaction, state: "broadcast-claimed", prepared: f.prepared,
-        cryptoClaimId: f.cryptoClaimId, broadcastClaimId: f.broadcastClaimId }),
-      inspectNamespace: async () => ({ finalityPolicyDigest: "e".repeat(64) }) } as unknown as GatewayFundingLedger;
-    const store = new SupabaseGatewayFundingTerminalObserverStore(ledger, f.authority);
-    await expect(store.appendVerifiedTerminalObservation(f.operation.operationId, "nativeTransfer", {} as VerifiedFundingTerminalObservation)).rejects.toThrow("Funding receipt observation refused");
-    expect(f.calls.mock.calls.some(([name]) => name === "storage_funding_finalize")).toBe(false);
-    store.close();
-    await expect(store.appendVerifiedTerminalObservation(f.operation.operationId, "nativeTransfer", {} as VerifiedFundingTerminalObservation)).rejects.toThrow("Gateway funding ledger refused");
   });
 });

@@ -1,10 +1,9 @@
-import type { GatewayFundingLedger, GatewayFundingStep, FundingNamespaceSnapshot, FundingReservationSnapshot, FundingClaimResult, FundingCandidateObservation, VerifiedFundingTerminalObservation } from "./gateway-funding-ledger-types";
+import type { GatewayFundingLedger, GatewayFundingStep, FundingNamespaceSnapshot, FundingReservationSnapshot, FundingClaimResult, FundingCandidateObservation } from "./gateway-funding-ledger-types";
 import { SupabaseAuthority } from "./supabase-authority";
 import { storageIdentityDigest } from "./storage-identity";
 import { validateGatewayFundingOperation, gatewayFundingReplayDigest as gatewayFundingOperationDigest, type GatewayFundingOperation } from "../payments/gateway-funding-policy";
 import { prepareGatewayFundingTransaction, validatePreparedGatewayFundingTransaction, validateSignedGatewayFundingTransaction } from "../payments/gateway-funding-transaction";
 import { fundingRecord, validateFundingNamespace } from "./gateway-funding-ledger-validation";
-import { unsealVerifiedGatewayFundingReceipt } from "../payments/gateway-funding-receipt-observer";
 import { canonicalJson } from "../canonical-json";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -21,36 +20,6 @@ function record(input: unknown): Record<string, unknown> {
   return input as Record<string, unknown>;
 }
 
-/** Separate protected capability, supplied with an explicitly provisioned
- * observer-role client. service_role has no SQL finalization privilege. The
- * locator cannot authorize finality: only the controlled issuer's WeakMap token
- * plus persisted originals can pass this boundary. */
-export class SupabaseGatewayFundingTerminalObserverStore {
-  private closed = false;
-  private readonly identityDigest: string;
-  constructor(private readonly ledger: GatewayFundingLedger, private readonly observer: SupabaseAuthority) {
-    this.identityDigest = storageIdentityDigest(ledger.getStorageIdentity());
-    this.guard();
-  }
-  private guard = (): void => {
-    if (this.closed || storageIdentityDigest(this.ledger.getStorageIdentity()) !== this.identityDigest
-      || storageIdentityDigest(this.observer.getStorageIdentity()) !== this.identityDigest) refuse();
-  };
-  close(): void { this.closed = true; }
-  async appendVerifiedTerminalObservation(operationId: string, selectedStep: GatewayFundingStep, token: VerifiedFundingTerminalObservation): Promise<void> {
-    this.guard(); uuid(operationId); step(selectedStep);
-    const reservation = await this.ledger.inspectReservation(operationId, selectedStep);
-    if (!reservation?.prepared || !reservation.cryptoClaimId || !reservation.broadcastClaimId) refuse();
-    const namespace = await this.ledger.inspectNamespace(reservation.transaction.sender);
-    this.guard();
-    const evidence = unsealVerifiedGatewayFundingReceipt(token, { operation: reservation.operation, prepared: reservation.prepared,
-      cryptoClaimId: reservation.cryptoClaimId, broadcastClaimId: reservation.broadcastClaimId, finalityPolicyDigest: namespace.finalityPolicyDigest }, this.guard);
-    try {
-      const result = await this.observer.rpc("funding_finalize", { p_evidence: evidence });
-      this.guard(); if (result.error) refuse();
-    } catch { refuse(); }
-  }
-}
 function uint(input: unknown): string { if (typeof input !== "string" || !UINT.test(input) || BigInt(input) > MAX) refuse(); return input; }
 function freeze<T>(input: T): Readonly<T> {
   if (input && typeof input === "object") { for (const item of Object.values(input)) freeze(item); Object.freeze(input); }
