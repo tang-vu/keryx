@@ -256,7 +256,8 @@ try {
   assert.equal(asService(journal(221)), "grant_or_cap_refused");
   assert.throws(() => asService(grant("too-small", "owner", signer, 1)), /cannot reset retained/);
   asService(grant("owner-recovered", "owner", signer, 100));
-  assert.equal(sql(`select spent*1000000=spent_micro and spent*1000000=trunc(spent*1000000)
+  assert.equal(sql(`select spent*1000000=spent_micro and spent*1000000=${legacySpent + 4}
+    and spent*1000000=trunc(spent*1000000)
     from public.session_grants join public.browser_signer_capacity on lower(sess_addr)=signer where session_id='owner'`), "t",
     "recovered grant must report exact retained signer consumption");
   const heldIds = [210, 211, 212].filter(id => sql(`select count(*) from public.payment_events where id='x402:${nonce(id)}'`) === "1");
