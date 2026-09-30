@@ -1,3 +1,4 @@
+import { assertRuntimeStorageAuthority } from "../lib/db/runtime-storage-authority.ts";
 /** Operator-controlled Arc testnet rehearsal. No browser UI/customer claim. */
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -150,7 +151,7 @@ async function main() {
             value: BigInt(authorization.value), validAfter: BigInt(authorization.validAfter),
             validBefore: BigInt(authorization.validBefore), nonce: nonce as `0x${string}` } });
         return Buffer.from(JSON.stringify({ authorization, signature })).toString("base64");
-      }, AbortSignal.timeout(60_000), "rehearsal");
+      }, AbortSignal.timeout(60_000), "rehearsal", () => { assertRuntimeStorageAuthority(db); });
     await assert.rejects(gateway.payFetch({ source, queryId: "operator-rehearsal" }), PaymentPendingError);
     assert.deepEqual(transport.summary(), { paidCalls: 1, responseObserved: true });
     const rows = await db.listPayments(10); assert.equal(rows.length, 1);

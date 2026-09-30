@@ -114,7 +114,8 @@ export class BrowserCoSignGateway implements PaymentGateway {
     private readonly requestSignature: RequestSignatureFn,
     private readonly abortSignal?: AbortSignal,
     /** Generation of the cap reservation. A later Circle failure may release only this epoch. */
-    private readonly grantEpoch: string = "legacy-test-grant"
+    private readonly grantEpoch: string = "legacy-test-grant",
+    private readonly authorityCheck?: () => void,
   ) {}
 
   agentAddress(): string {
@@ -334,6 +335,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
     let paymentHeader: string;
     let signed: SignedHeaderBody;
     try {
+      this.authorityCheck?.();
       paymentHeader = await this.requestSignature(
         reqId,
         requirements,
@@ -448,6 +450,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
     basePayment.authorizationPhase = "submission_attempted";
     let retryRes: Response;
     try {
+      this.authorityCheck?.();
       retryRes = await fetch(url, {
         method,
         headers: {

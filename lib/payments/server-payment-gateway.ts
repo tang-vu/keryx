@@ -16,6 +16,7 @@ export abstract class ServerPaymentGateway implements PaymentGateway {
   protected abstract spend: { address: string };
   protected abstract batchScheme: BatchPayloadSigner;
   protected paymentJournal?: (input: PaymentJournalContext) => ReturnType<typeof privateCreatorJournal>;
+  protected paymentAuthorityCheck?: () => void;
   abstract ensureFunded(budget: number): Promise<{ address: string; depositTx?: string }>;
   agentAddress(): string { return this.spend.address; }
 
@@ -56,7 +57,9 @@ export abstract class ServerPaymentGateway implements PaymentGateway {
       expectedAmount: priceUsdc,
       payer: this.spend.address,
       signer: this.batchScheme,
-      beforeSubmit: journal?.beforeSubmit,
+      beforeSubmit: async submission => {
+        this.paymentAuthorityCheck?.(); await journal?.beforeSubmit(submission); this.paymentAuthorityCheck?.();
+      },
     });
     const outcome = journal ? await journal.recordOutcome(observed) : null;
     const attempt = outcome?.attempt ?? observed;
@@ -112,7 +115,9 @@ export abstract class ServerPaymentGateway implements PaymentGateway {
       expectedAmount: amount,
       payer: this.spend.address,
       signer: this.batchScheme,
-      beforeSubmit: journal?.beforeSubmit,
+      beforeSubmit: async submission => {
+        this.paymentAuthorityCheck?.(); await journal?.beforeSubmit(submission); this.paymentAuthorityCheck?.();
+      },
     });
     const outcome = journal ? await journal.recordOutcome(observed) : null;
     const attempt = outcome?.attempt ?? observed;

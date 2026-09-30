@@ -5,6 +5,7 @@
 
 import { readRuntimeStorageDeployment } from "./runtime-storage-config";
 import type { KeryxDB } from "./keryx-db";
+import { assertRuntimeStorageAuthority } from "./runtime-storage-authority";
 
 // Publish only the shared initialization promise, never a partially ready adapter.
 let initialization: Promise<KeryxDB> | null = null;
@@ -20,6 +21,7 @@ export async function getDb(): Promise<KeryxDB> {
         : new (await import("./sqlite-adapter")).SqliteAdapter(deployment.backend.databasePath, { expectedIdentity: deployment.identity });
       try {
         await adapter.init();
+        assertRuntimeStorageAuthority(adapter);
         return adapter;
       } catch (error) {
         // SQLite owns a file handle and exposes close(); Supabase has no adapter
@@ -36,7 +38,9 @@ export async function getDb(): Promise<KeryxDB> {
       throw error;
     });
   }
-  return initialization;
+  const adapter = await initialization;
+  assertRuntimeStorageAuthority(adapter);
+  return adapter;
 }
 
 export type { KeryxDB, CreatorEarnings } from "./keryx-db";

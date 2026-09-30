@@ -5,9 +5,10 @@ vi.mock("./runtime-storage-config", () => ({ readRuntimeStorageDeployment: mocks
 vi.mock("./sqlite-adapter", () => ({ SqliteAdapter: mocks.sqlite }));
 vi.mock("./supabase-adapter", () => ({ SupabaseAdapter: mocks.supabase }));
 
+import { STORAGE_TESTNET_PROFILE_DIGEST } from "./storage-identity";
 const identity = { format: "keryx-storage-identity-v1", deploymentId: "11111111-1111-4111-8111-111111111111",
   storageId: "22222222-2222-4222-8222-222222222222", enrollmentId: "33333333-3333-4333-8333-333333333333",
-  network: "eip155:5042002", authorityMode: "testnet-real", profileDigest: "aa".repeat(32),
+  network: "eip155:5042002", authorityMode: "testnet-real", profileDigest: STORAGE_TESTNET_PROFILE_DIGEST,
   provenanceDigest: "bb".repeat(32), enrolledAt: "2026-10-01T00:00:00.000Z" };
 const deployment = (supabase: boolean) => ({ identity, backend: supabase ? { kind: "supabase", url: "https://synthetic.supabase.co" }
   : { kind: "sqlite", databasePath: "explicit-synthetic.sqlite" } });
@@ -24,7 +25,7 @@ beforeEach(() => { vi.resetModules(); vi.resetAllMocks(); });
 describe.each([false, true])("getDb initialization (Supabase: %s)", (useSupabase) => {
   it("holds every concurrent caller until the single selected adapter is ready", async () => {
     const gate = deferred(), started = deferred();
-    const adapter = { init: vi.fn(() => { started.resolve(); return gate.promise; }) };
+    const adapter = { getStorageIdentity: () => identity, init: vi.fn(() => { started.resolve(); return gate.promise; }) };
     const selected = useSupabase ? mocks.supabase : mocks.sqlite;
     const unused = useSupabase ? mocks.sqlite : mocks.supabase;
     mocks.selector.mockReturnValue(deployment(useSupabase));
@@ -48,7 +49,7 @@ describe.each([false, true])("getDb initialization (Supabase: %s)", (useSupabase
     expect(await Promise.all([first, second, third])).toEqual([adapter, adapter, adapter]);
     expect(await getDb()).toBe(adapter);
     expect(adapter.init).toHaveBeenCalledTimes(1);
-    expect(mocks.selector).toHaveBeenCalledTimes(4);
+    expect(mocks.selector).toHaveBeenCalledTimes(9);
   });
 
   it("rejects all waiting callers and retries with a fresh adapter after init failure", async () => {
@@ -57,7 +58,7 @@ describe.each([false, true])("getDb initialization (Supabase: %s)", (useSupabase
     const close = vi.fn();
     const partial = { init: vi.fn(() => { started.resolve(); return gate.promise; }),
       ...(!useSupabase ? { close } : {}) };
-    const ready = { init: vi.fn(async () => {}) };
+    const ready = { getStorageIdentity: () => identity, init: vi.fn(async () => {}) };
     const selected = useSupabase ? mocks.supabase : mocks.sqlite;
     mocks.selector.mockReturnValue(deployment(useSupabase));
     selected.mockImplementationOnce(function () { return partial; }).mockImplementation(function () { return ready; });
@@ -78,7 +79,7 @@ describe.each([false, true])("getDb initialization (Supabase: %s)", (useSupabase
 
   it("does not cache a constructor failure", async () => {
     const failure = new Error("construction failed");
-    const ready = { init: vi.fn(async () => {}) };
+    const ready = { getStorageIdentity: () => identity, init: vi.fn(async () => {}) };
     const selected = useSupabase ? mocks.supabase : mocks.sqlite;
     mocks.selector.mockReturnValue(deployment(useSupabase));
     selected.mockImplementationOnce(function () { throw failure; }).mockImplementation(function () { return ready; });
@@ -92,7 +93,7 @@ it("preserves init failure and allows fresh retry even when SQLite cleanup throw
   const failure = new Error("init failure");
   const close = vi.fn(() => { throw new Error("close failure"); });
   const partial = { init: vi.fn(async () => { throw failure; }), close };
-  const ready = { init: vi.fn(async () => {}) };
+  const ready = { getStorageIdentity: () => identity, init: vi.fn(async () => {}) };
   mocks.selector.mockReturnValue(deployment(false));
   mocks.sqlite.mockImplementationOnce(function () { return partial; }).mockImplementation(function () { return ready; });
   const { getDb } = await import("./index");
@@ -102,7 +103,7 @@ it("preserves init failure and allows fresh retry even when SQLite cleanup throw
 });
 
 it("refuses changed or unavailable runtime configuration before returning a cached adapter", async () => {
-  const ready = { init: vi.fn(async () => {}), listPayments: vi.fn() };
+  const ready = { getStorageIdentity: () => identity, init: vi.fn(async () => {}), listPayments: vi.fn() };
   mocks.selector.mockReturnValue(deployment(false)); mocks.sqlite.mockImplementation(function () { return ready; });
   const { getDb } = await import("./index"); expect(await getDb()).toBe(ready);
   const refusal = new Error("Storage deployment configuration unavailable");

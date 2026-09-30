@@ -34,6 +34,10 @@ identity and match the complete pinned identity before gateway or private bootst
 Same-mode foreign stores are refused. Real mode with forced offline refuses. Real treasury operations
 without a signer refuse; an authorized browser co-sign operation may remain available without that
 treasury key. Cache encryption follows checked storage mode and requires its own content key in real mode.
+Retained gateway handles recheck the full binding on each public operation and address/mode access;
+factory-created gateways also check near signing and submission/funding boundaries. These checks do
+not cancel an already-started SDK call or retract a signature/broadcast. Operator rollout still requires
+draining active payment operations before changing configuration or stopping the process.
 
 `inspectStorageDeploymentManifest` has a narrower, keyless artifact role: it validates an explicit
 expected manifest and available SQLite ancestors even if the original source has been lost. It does
