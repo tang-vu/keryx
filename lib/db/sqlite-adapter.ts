@@ -10,6 +10,7 @@ import { saveSqlitePrivateResult, getSqlitePrivateResult, PRIVATE_RESEARCH_RESUL
 import { PRIVATE_TREASURY_CAPACITY_SQL, reserveSqlitePrivateTreasury, getSqlitePrivateTreasury, type PrivateTreasuryPolicy } from "./private-treasury-capacity";
 import { claimSqlitePrivateExecution, getSqlitePrivateExecution, PRIVATE_RESEARCH_EXECUTIONS_SQL } from "./private-research-executions";
 import { DatabaseSync } from "node:sqlite";
+import { prepareBrowserAuthorizationIntent, type BrowserAuthorizationIntent, type BrowserAdmissionResult } from "./browser-authorization-admission";
 import { recordSqliteWithdrawal } from "./withdrawal-records";
 import { CREATOR_WITHDRAWAL_REQUESTS_SQL, reserveSqliteWithdrawalRequest, getSqliteWithdrawalRequest, claimSqliteWithdrawalTransfer, getSqliteWithdrawalTransferClaim } from "./creator-withdrawal-requests";
 import type { WithdrawalRequestRecord } from "../gateway/withdrawal-request";
@@ -181,6 +182,31 @@ CREATE TABLE IF NOT EXISTS payment_events (
   item_id TEXT, item_title TEXT, item_url TEXT, content_version TEXT, item_published_at TEXT,
   offer_id TEXT, list_price_usdc REAL
 );
+CREATE TABLE IF NOT EXISTS browser_authorization_intents (
+  nonce TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL,
+  request_id TEXT NOT NULL,
+  query_id TEXT NOT NULL,
+  grant_epoch TEXT NOT NULL,
+  signer TEXT NOT NULL,
+  network TEXT NOT NULL,
+  token TEXT NOT NULL,
+  gateway_contract TEXT NOT NULL,
+  source_id TEXT NOT NULL,
+  offer_id TEXT,
+  kind TEXT NOT NULL,
+  payee TEXT NOT NULL,
+  amount_micro_usdc INTEGER NOT NULL CHECK(amount_micro_usdc > 0),
+  phase TEXT NOT NULL DEFAULT 'prepared' CHECK(phase = 'prepared'),
+  created_at TEXT NOT NULL,
+  UNIQUE(session_id, request_id)
+);
+CREATE TRIGGER IF NOT EXISTS browser_intents_immutable_update
+  BEFORE UPDATE ON browser_authorization_intents
+  BEGIN SELECT RAISE(ABORT, 'browser authorization intent is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS browser_intents_immutable_delete
+  BEFORE DELETE ON browser_authorization_intents
+  BEGIN SELECT RAISE(ABORT, 'browser authorization intent is immutable'); END;
 CREATE TABLE IF NOT EXISTS query_runs (
   id TEXT PRIMARY KEY, created_at TEXT, question TEXT, budget REAL, engine TEXT,
   total_spent REAL, total_to_creators REAL, answer TEXT, data TEXT,
@@ -354,7 +380,7 @@ export class SqliteAdapter implements KeryxDB {
 
   async init(): Promise<void> {
     // WAL + busy timeout so the dev server and CLI can share the file safely.
-    this.db.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");
+    this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;");
     this.db.exec(SCHEMA);
     this.ensureColumns();
     // Releases before 2026-08-22 keyed two authenticated routes by the raw `kx_live_...` bearer
@@ -1074,6 +1100,37 @@ export class SqliteAdapter implements KeryxDB {
       )
       .run(amount, sessionId, grantEpoch, sessAddr, amount, Date.now());
     return Number(res.changes) > 0;
+  }
+
+  async admitBrowserAuthorization(input: BrowserAuthorizationIntent): Promise<BrowserAdmissionResult> {
+    const intent = prepareBrowserAuthorizationIntent(input);
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      const updated = this.db.prepare(`UPDATE session_grants
+        SET spent = (ROUND(spent * 1000000) + ?) / 1000000.0
+        WHERE session_id = ? AND grant_epoch = ? AND LOWER(sess_addr) = LOWER(?)
+          AND expiry > ?
+          AND ABS(cap * 1000000 - ROUND(cap * 1000000)) < 0.000001
+          AND ABS(spent * 1000000 - ROUND(spent * 1000000)) < 0.000001
+          AND ROUND(spent * 1000000) + ? <= ROUND(cap * 1000000)`)
+        .run(intent.amountMicroUsdc, intent.sessionId, intent.grantEpoch, intent.signer, Date.now(), intent.amountMicroUsdc);
+      if (!updated.changes) {
+        this.db.exec("ROLLBACK");
+        return { status: "grant_or_cap_refused" };
+      }
+      this.db.prepare(`INSERT INTO browser_authorization_intents
+        (nonce,session_id,request_id,query_id,grant_epoch,signer,network,token,gateway_contract,
+         source_id,offer_id,kind,payee,amount_micro_usdc,created_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+        .run(intent.nonce, intent.sessionId, intent.requestId, intent.queryId, intent.grantEpoch,
+          intent.signer, intent.network, intent.token, intent.gatewayContract, intent.sourceId,
+          intent.offerId, intent.kind, intent.payee, intent.amountMicroUsdc, intent.createdAt);
+      this.db.exec("COMMIT");
+      return { status: "admitted", intent };
+    } catch (error) {
+      try { this.db.exec("ROLLBACK"); } catch { /* SQLite already rolled back */ }
+      throw error;
+    }
   }
 
   async createGapIntent(
