@@ -1,12 +1,13 @@
 import { sqliteDomainTestFixtures } from "../db/sqlite-domain-test-fixture";
 const sqliteFixtures = sqliteDomainTestFixtures();
 import { AsyncLocalStorage } from "node:async_hooks";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { SqliteAdapter } from "../db/sqlite-adapter";
+import { canonicalJson } from "../canonical-json";
 import { issueWebSession, parseWebSession, webSessionHash } from "../auth-session";
 import { creatorWithdrawalFixture } from "../../scripts/test-fixtures/creator-withdrawal";
 
@@ -29,8 +30,13 @@ const db = await sqliteFixtures.open(join(directory, "app.sqlite"), "testnet-rea
 const storage = new AsyncLocalStorage<{ token?: string }>(), secret = "synthetic-withdrawal-session";
 beforeAll(async () => {
   await db.init(); mocks.db.mockResolvedValue(db);
+  writeFileSync(join(directory, "storage-manifest.json"), canonicalJson({ format: "keryx-storage-deployment-v1", identity: db.getStorageIdentity(), backend: { kind: "sqlite", databasePath: join(directory, "app.sqlite") } }));
   mocks.cookies.mockImplementation(async () => ({ get: () => ({ value: storage.getStore()?.token }) }));
 }, 60000);
+beforeEach(() => {
+  vi.stubEnv("KERYX_STORAGE_MANIFEST", join(directory, "storage-manifest.json"));
+  vi.stubEnv("KERYX_SQLITE_PATH", join(directory, "app.sqlite"));
+});
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); mocks.admit.mockReset(); });
 afterAll(() => { db.close(); rmSync(directory, { recursive: true, force: true }); });
 const request = (kind: string, body: unknown) => new Request(`https://keryx.test/api/me/withdrawals/${kind}`, {
