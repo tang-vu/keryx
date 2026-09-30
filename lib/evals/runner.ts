@@ -5,6 +5,10 @@ import { collectRun } from "../agent";
 import { AGENT_EVAL_CORPUS, corpusFingerprint } from "./corpus";
 import { aggregateMetrics, assertOnlySimulatedPayments, gradeAgentRun } from "./grader";
 import { EVAL_SCHEMA_VERSION, type AgentEvalCase, type EvalReport } from "./types";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { provisionSyntheticStorage } from "../db/storage-identity-fixture";
 
 export async function runAgentEvaluation(options: {
   engine: ReasoningEngine;
@@ -17,7 +21,10 @@ export async function runAgentEvaluation(options: {
   for (let index = 0; index < cases.length; index++) {
     const testCase = cases[index]!;
     options.onCase?.(testCase.id, index, cases.length);
-    const db = new SqliteAdapter(":memory:");
+    const directory = mkdtempSync(join(tmpdir(), "keryx-eval-storage-"));
+    const file = join(directory, "synthetic.sqlite");
+    const identity = await provisionSyntheticStorage(file, "testnet-offline");
+    const db = new SqliteAdapter(file, { expectedIdentity: identity });
     try {
       await db.init();
       for (const entry of testCase.sources) {
@@ -51,6 +58,7 @@ export async function runAgentEvaluation(options: {
       results.push(gradeAgentRun(testCase, { run, payments }));
     } finally {
       db.close();
+      rmSync(directory, { recursive: true, force: true });
     }
   }
 

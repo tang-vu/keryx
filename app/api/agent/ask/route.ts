@@ -8,6 +8,7 @@ import { NextRequest } from "next/server";
 import { collectRun, getAgentDeps, type AgentDeps } from "@/lib/agent";
 import { config } from "@/lib/config";
 import { getDb } from "@/lib/db";
+import { readRuntimeStorageDeployment } from "@/lib/db/runtime-storage-config";
 import { makePayment } from "@/lib/payments/payment-gateway";
 import { settleThenServe, challengeResponse } from "@/lib/x402-server";
 import { a2aDiscovery } from "@/lib/x402-discovery";
@@ -154,7 +155,14 @@ function pendingResponse(order: A2aOrder, replayed = false, message?: string) {
 }
 
 /** Side-effect-free discovery probe. POST recomputes the exact price from its JSON body. */
+function storageUnavailableResponse(): Response | null {
+  try { if (readRuntimeStorageDeployment().identity.authorityMode === "testnet-real") return null; } catch { /* fixed public refusal */ }
+  return Response.json({ error: "real A2A storage is unavailable" }, { status: 503 });
+}
+
 export async function GET(req: NextRequest) {
+  const storageUnavailable = storageUnavailableResponse();
+  if (storageUnavailable) return storageUnavailable;
   const queryId = req.nextUrl.searchParams.get("queryId");
   if (queryId) {
     if (!/^a2a_[a-f0-9]{64}$/.test(queryId)) {
@@ -186,7 +194,7 @@ export async function GET(req: NextRequest) {
     }
     return Response.json(pendingResponse(order));
   }
-  if (!config.sellerAddress || !config.funderKey || process.env.KERYX_FORCE_OFFLINE === "1") {
+  if (!config.sellerAddress || !config.funderKey) {
     return Response.json({ error: "real A2A treasury is unavailable" }, { status: 503 });
   }
   const quote = quoteA2aResearch(undefined, "deep");
@@ -212,6 +220,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const storageUnavailable = storageUnavailableResponse();
+  if (storageUnavailable) return storageUnavailable;
   const authHeader = req.headers.get("authorization");
   const rawKey = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : undefined;
   if (rawKey) {
@@ -228,7 +238,7 @@ export async function POST(req: NextRequest) {
     const limited = await checkRateLimit(clientIp(req), "a2aPublic");
     if (limited) return limited;
   }
-  if (!config.sellerAddress || !config.funderKey || process.env.KERYX_FORCE_OFFLINE === "1") {
+  if (!config.sellerAddress || !config.funderKey) {
     return Response.json({ error: "real A2A treasury is unavailable" }, { status: 503 });
   }
 

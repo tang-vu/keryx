@@ -5,6 +5,9 @@ import { spawnSync } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { decryptBackup, encryptBackup, readBackupKey } from "./backup-encryption";
+import { provisionSyntheticStorage } from "../lib/db/storage-identity-fixture";
+import { SqliteAdapter } from "../lib/db/sqlite-adapter";
+import { canonicalJson } from "../lib/canonical-json";
 
 const temporary: string[] = [];
 afterEach(() => { for (const directory of temporary.splice(0)) fs.rmSync(directory, { recursive: true, force: true }); });
@@ -26,14 +29,17 @@ describe("authenticated backups", () => {
     for (const invalid of [undefined, "", "a".repeat(63), "g".repeat(64)]) expect(() => readBackupKey(invalid)).toThrow();
   });
 
-  it("backs up and restores SQLite in separate CLI processes, preserving source and refusing overwrite/wrong-key", () => {
+  it("backs up and restores SQLite in separate CLI processes, preserving source and refusing overwrite/wrong-key", async () => {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-backup-test-")); temporary.push(directory);
     const source = path.join(directory, "live.sqlite");
-    const db = new DatabaseSync(source);
-    db.exec("CREATE TABLE evidence(id INTEGER PRIMARY KEY, state TEXT); INSERT INTO evidence VALUES(1,'settled');");
-    db.close();
+    const identity = await provisionSyntheticStorage(source, "testnet-offline");
+    const db = new SqliteAdapter(source, { expectedIdentity: identity });
+    await db.init(); db.close();
+    const manifest = path.join(directory, "manifest.json");
+    fs.writeFileSync(manifest, canonicalJson({ format: "keryx-storage-deployment-v1", identity,
+      backend: { kind: "sqlite", databasePath: source } }));
     const before = fs.readFileSync(source);
-    const env = { ...process.env, KERYX_SQLITE_PATH: source, KERYX_BACKUP_ENCRYPTION_KEY: key.toString("hex"),
+    const env = { ...process.env, KERYX_STORAGE_MANIFEST: manifest, KERYX_SQLITE_PATH: source, KERYX_BACKUP_ENCRYPTION_KEY: key.toString("hex"),
       KERYX_BACKUP_KEEP: "2", KERYX_BACKUP_REMOTE: "", KERYX_R2_UPLOAD: "0" };
     const run = (script: string, args: string[] = [], overrides = {}) => spawnSync(process.execPath,
       ["--import", "tsx", "--no-warnings", script, ...args], { cwd: process.cwd(), env: { ...env, ...overrides }, encoding: "utf8", timeout: 30_000 });
@@ -45,7 +51,7 @@ describe("authenticated backups", () => {
     const restored = run("scripts/restore-backup.mts", [envelope, target]);
     expect(restored.status, restored.stderr).toBe(0);
     const restoredDb = new DatabaseSync(path.join(target, "keryx.sqlite"), { readOnly: true });
-    expect(restoredDb.prepare("SELECT state FROM evidence WHERE id=1").get()?.state).toBe("settled"); restoredDb.close();
+    expect(restoredDb.prepare("SELECT COUNT(*) AS count FROM query_runs").get()?.count).toBe(0); restoredDb.close();
     expect(JSON.parse(fs.readFileSync(path.join(target, "restore-receipt.json"), "utf8"))).toMatchObject({
       authenticationVerified: true, integrityVerified: true, signingResumeAuthorized: false, fullServiceRecoveryVerified: false });
     expect(run("scripts/restore-backup.mts", [envelope, target]).status).toBe(1);

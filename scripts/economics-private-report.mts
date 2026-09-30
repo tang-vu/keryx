@@ -1,5 +1,5 @@
 import { parseArgs } from "node:util";
-import { resolve } from "node:path";
+import { readRuntimeStorageDeployment } from "../lib/db/runtime-storage-config";
 import { writePrivateEconomicsReport } from "../lib/economics/private-report";
 
 async function main() {
@@ -11,12 +11,12 @@ async function main() {
   }
   if (!values.directory) throw new Error();
   await writePrivateEconomicsReport(values.directory, async () => {
-    const { config, hasSupabase } = await import("../lib/config");
-    if (config.networkId !== "eip155:5042002") throw new Error();
-    // Never call init(): a report must not migrate data or rewrite paid-content caches.
-    const db = hasSupabase()
-      ? new (await import("../lib/db/supabase-adapter")).SupabaseAdapter()
-      : new (await import("../lib/db/sqlite-adapter")).SqliteAdapter(resolve("data/keryx.sqlite"), { readOnly: true });
+    const deployment = readRuntimeStorageDeployment();
+    // Read-only admission never initializes/migrates tables or content caches.
+    const db = deployment.backend.kind === "supabase"
+      ? new (await import("../lib/db/supabase-adapter")).SupabaseAdapter(deployment.identity)
+      : new (await import("../lib/db/sqlite-adapter")).SqliteAdapter(deployment.backend.databasePath,
+        { readOnly: true, expectedIdentity: deployment.identity });
     try { return await db.economics(); }
     finally { (db as { close?: () => void }).close?.(); }
   });

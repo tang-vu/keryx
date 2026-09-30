@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
@@ -9,12 +9,16 @@ import { privateResearchService } from "../../lib/a2a/private-research-service";
 import { preparePrivateBuyerJournal } from "../../lib/buyer/private-checkout-preparation";
 import { readPrivateBuyerJournal } from "../../lib/buyer/private-journal";
 import { BUYER_NETWORK } from "../../lib/buyer/protocol";
+import { provisionSyntheticStorage } from "../../lib/db/storage-identity-fixture";
 
 /** Unfunded ephemeral identities, synthetic incoming evidence, an empty source corpus.
  * No environment file, existing database or live payment transport is read. */
 export async function privateWorkerScenario() {
   const root = await mkdtemp(join(tmpdir(), "keryx-worker-drain-"));
-  const db = new SqliteAdapter(join(root, "data", "keryx.sqlite"));
+  await mkdir(join(root, "data"));
+  const file = join(root, "data", "keryx.sqlite");
+  const identity = await provisionSyntheticStorage(file, "testnet-real");
+  const db = new SqliteAdapter(file, { expectedIdentity: identity });
   try {
     await db.init();
     const owner = privateKeyToAccount(generatePrivateKey()), treasuryKey = generatePrivateKey(), publicKey = generatePrivateKey();

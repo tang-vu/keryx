@@ -3,6 +3,10 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { verifyTypedData } from "viem";
 import type { KeryxDB } from "../db/keryx-db";
 import { authorizationSchema, buyerTypedData, BUYER_NETWORK, BUYER_USDC, BUYER_GATEWAY } from "../buyer/protocol";
+import { syntheticStorageIdentity } from "../db/storage-identity-fixture";
+const identity = syntheticStorageIdentity("testnet-real");
+const db = { getStorageIdentity: () => identity } as KeryxDB;
+vi.mock("../db/runtime-storage-config", () => ({ readRuntimeStorageDeployment: () => ({ identity }) }));
 const state = vi.hoisted(() => ({ config: { funderKey: "", networkId: "eip155:5042002", cctpDomain: 26,
   sellerAddress: `0x${"1".repeat(40)}`, privateResearchReservedPayees: `0x${"4".repeat(40)}` }, worker: vi.fn(), balance: vi.fn() }));
 vi.mock("../config", () => ({ config: state.config }));
@@ -30,7 +34,7 @@ it("is disabled without configuration and binds the real batching signer to the 
   expect(() => privateWorkerBootstrap({} as KeryxDB)).toThrow("configuration unavailable");
   expect(state.worker).not.toHaveBeenCalled();
   const worker = { tick: vi.fn() }; state.worker.mockReturnValue(worker);
-  const bootstrapped = privateWorkerBootstrap({} as KeryxDB, spool);
+  const bootstrapped = privateWorkerBootstrap(db, spool);
   expect(bootstrapped?.tick).toBe(worker.tick);
   expect(bootstrapped?.configurationId).toMatch(/^[a-f0-9]{64}$/);
   expect(state.balance).not.toHaveBeenCalled();

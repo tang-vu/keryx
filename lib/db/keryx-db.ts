@@ -1,3 +1,4 @@
+import type { StorageIdentity } from "./storage-identity";
 import type { PublicReference } from "../public-references/catalog";
 /**
  * KeryxDB — persistence interface shared by the SQLite (dev) and Supabase (prod) adapters.
@@ -200,6 +201,8 @@ export interface FeedbackStats {
 }
 
 export interface KeryxDB {
+  /** Guarded immutable configured identity; never adopt a marker from the selected store. */
+  getStorageIdentity(): Readonly<StorageIdentity>;
   init(): Promise<void>;
 
   // ── sources & content ──

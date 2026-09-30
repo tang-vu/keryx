@@ -11,6 +11,7 @@ import { ResearchPrivateJobs } from "@/components/keryx/research-private-jobs";
 import { ResearchPrivateCheckout } from "@/components/keryx/research-private-checkout";
 import { privateMerchantPolicySchema } from "@/lib/buyer/private-merchant-policy";
 import { config } from "@/lib/config";
+import { readRuntimeStorageDeployment } from "@/lib/db/runtime-storage-config";
 import { quoteA2aResearch } from "@/lib/a2a/pricing";
 import { parseBuyerBudget } from "@/lib/a2a/buyer-workspace";
 
@@ -30,7 +31,9 @@ export default async function ResearchPage({ searchParams }: {
   const mode = params.mode === "quick" ? "quick" : "deep";
   const validMode = params.mode === undefined || params.mode === "quick" || params.mode === "deep";
   const quote = budget !== null && validMode ? quoteA2aResearch(budget, mode) : null;
-  const available = config.networkId === "eip155:5042002" && !!config.sellerAddress && !!config.funderKey && process.env.KERYX_FORCE_OFFLINE !== "1";
+  let realStorage = false;
+  try { realStorage = readRuntimeStorageDeployment().identity.authorityMode === "testnet-real"; } catch { /* show unavailable */ }
+  const available = config.networkId === "eip155:5042002" && !!config.sellerAddress && !!config.funderKey && realStorage;
   const privatePolicy = privateMerchantPolicySchema.safeParse({ privatePayee: process.env.KERYX_PRIVATE_RESEARCH_PAYEE, publicResearchPayee: config.sellerAddress });
   return (
     <div className="min-h-screen bg-paper-2 text-ink">

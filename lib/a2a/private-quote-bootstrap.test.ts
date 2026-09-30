@@ -1,6 +1,9 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import type { KeryxDB } from "../db/keryx-db";
+import { syntheticStorageIdentity } from "../db/storage-identity-fixture";
+const identity = syntheticStorageIdentity("testnet-real");
+vi.mock("../db/runtime-storage-config", () => ({ readRuntimeStorageDeployment: () => ({ identity }) }));
 const state = vi.hoisted(() => ({ config: { funderKey: "", networkId: "eip155:5042002", sellerAddress: `0x${"1".repeat(40)}`,
   privateResearchReservedPayees: `0x${"4".repeat(40)}` } }));
 vi.mock("../config", () => state);
@@ -9,7 +12,7 @@ afterEach(() => vi.unstubAllEnvs());
 
 it("is off by default and derives configured signer identities without exposing payment operations", () => {
   vi.stubEnv("KERYX_PRIVATE_RESEARCH_ENABLED", "0");
-  const db = {} as KeryxDB;
+  const db = { getStorageIdentity: () => identity } as KeryxDB;
   expect(privateQuoteBootstrap(db)).toBeNull();
   // Ephemeral, unfunded keys; no persisted wallet or signing request.
   const privateKey = generatePrivateKey(); state.config.funderKey = generatePrivateKey();

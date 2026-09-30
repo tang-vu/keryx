@@ -3,6 +3,7 @@ import { z } from "zod";
 import { config } from "../config";
 import type { KeryxDB } from "../db/keryx-db";
 import { privateResearchService } from "./private-research-service";
+import { assertRuntimeStorageAuthority } from "../db/runtime-storage-authority";
 
 /** Quote-only bootstrap. No legacy wallet creation/loading, signature, deposit or payment.
  * Enabling config does not enable private purchase; the HTTP response remains a preview. */
@@ -10,6 +11,7 @@ export function privateQuoteBootstrap(db: KeryxDB) {
   const env = process.env;
   if (env.KERYX_PRIVATE_RESEARCH_ENABLED === undefined || env.KERYX_PRIVATE_RESEARCH_ENABLED === "0") return null;
   try {
+    if (assertRuntimeStorageAuthority(db).identity.authorityMode !== "testnet-real") throw new Error();
     const key = z.string().regex(/^0x[a-fA-F0-9]{64}$/);
     const privateAccount = privateKeyToAccount(key.parse(env.KERYX_PRIVATE_TREASURY_PRIVATE_KEY) as `0x${string}`);
     const publicAccount = privateKeyToAccount(key.parse(config.funderKey) as `0x${string}`);
