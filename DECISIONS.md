@@ -1,5 +1,22 @@
 # Keryx — Decision Log
 
+**D-273** - Rehearse creator withdrawals with retained originals and an isolated funded relay -
+*Funded recovery evidence must exercise the protected admission, original Circle claim,
+saved mint identity and cash-out ledger without enabling production withdrawal creation.*
+Use an explicitly bounded Arc-testnet operator rehearsal, with buyer signing on its
+original PC environment and a fresh dedicated relay key retained only on Linux. Persist
+the unsigned draft before review, one signing attempt before the signature, one Circle
+claim before transport, and exact signed mint bytes/hash before broadcast. Discard the
+application response only after attestation storage and the mint RPC response after one
+actual broadcast. A new keyless process reconciles that same original and idempotently
+records its cash-out; this never becomes another payment or creator-revenue claim.
+Current Circle metadata spells the domain-26 chain `Arc`; accept that spelling and the
+legacy `ARC` while preserving exact testnet/domain/contract/token checks and height caps.
+The documented API cannot recover an original transfer UUID from its spec hash, so a
+Circle response lost before UUID retention remains an explicit vendor-evidence gate.
+Absence, expiry and restart grant no permission to POST or sign another authorization.
+See [funded withdrawal rehearsal](docs/engineering/creator-funded-withdrawal-drill.md).
+
 **D-272** - Journal browser authorization before exposure and retain signer capacity through recovery -
 *The legacy live path reserved a grant, let the browser choose a nonce, and inserted its
 payment record after signing/submission; timeout or lost callback could release an

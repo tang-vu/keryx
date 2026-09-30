@@ -25,6 +25,16 @@ it("bounds the Circle minimum against a fresh consistent source-chain block", as
   const f = fixture(); expect(await f.read()).toMatchObject({ minimumBlockHeight: "11000", maximumBlockHeight: "12000", observedBlockNumber: "10000" });
   expect(f.state.reads).toBe(2);
 });
+it("accepts the current Arc metadata spelling while rejecting foreign chain and network labels", async () => {
+  const live = fixture(); live.domain.chain = "Arc";
+  expect(await live.read()).toMatchObject({ minimumBlockHeight: "11000" });
+  for (const chain of ["arc", "Ethereum", "Arc Mainnet"]) {
+    const f = fixture(); f.domain.chain = chain;
+    await expect(f.read()).rejects.toThrow("obtain fresh terms");
+  }
+  const wrongNetwork = fixture(); wrongNetwork.domain.network = "Mainnet";
+  await expect(wrongNetwork.read()).rejects.toThrow("obtain fresh terms");
+});
 it("rejects stale/conflicting RPC, vendor lag, excessive expiry and mismatched contract/domain metadata", async () => {
   for (const mutate of [
     (f: ReturnType<typeof fixture>) => { f.state.chain = 1; },
