@@ -1,5 +1,6 @@
 import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
 const sqliteFixtures = sqliteDomainTestFixtures();
+import { testSupabaseAuthority } from "./supabase-authority-test-fixture";
 import { randomUUID } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import { createClient } from "@supabase/supabase-js";
@@ -32,7 +33,7 @@ it("recovers a lost interruption RPC response and refuses missing or foreign-wor
     let loseResponse = true, readback: "valid" | "missing" | "foreign" = "valid";
     const allowed = new Set(["private_research_intents", "private_research_payment_attempts",
       "private_research_executions", "private_research_results", "private_research_interruptions"]);
-    const client = createClient("https://synthetic.invalid", "no-authority", { auth: { persistSession: false }, global: { fetch: async (url, options) => {
+    const client = await testSupabaseAuthority(createClient("https://synthetic.invalid", "no-authority", { auth: { persistSession: false }, global: { fetch: async (url, options) => {
       const route = new URL(String(url)), table = route.pathname.split("/").at(-1)!;
       if (route.pathname.endsWith("/rpc/interrupt_private_research")) {
         expect(JSON.parse(String(options?.body))).toEqual({ p_id: id, p_payer: s.payer.toLowerCase(), p_worker_id: claim.workerId });
@@ -48,7 +49,7 @@ it("recovers a lost interruption RPC response and refuses missing or foreign-wor
         return parsed;
       });
       return Response.json(table === "private_research_interruptions" && readback === "missing" ? [] : rows);
-    } } });
+    } } }));
     const interrupt = () => interruptSupabasePrivateResearch(client, id, s.payer, claim.workerId);
     await expect(interrupt()).rejects.toThrow("unavailable");
     const original = await s.db.getPrivateResearchInterruption(id, s.payer);

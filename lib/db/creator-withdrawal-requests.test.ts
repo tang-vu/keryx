@@ -1,5 +1,6 @@
 import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
 const sqliteFixtures = sqliteDomainTestFixtures();
+import { testSupabaseAuthority } from "./supabase-authority-test-fixture";
 import { listSupabaseWithdrawalHistory } from "./creator-withdrawal-history";
 import { randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
@@ -99,7 +100,7 @@ it("denies a new signed fee/expiry authorization for the same underlying transfe
 it("keeps a committed Supabase claim after response loss and rejects wrong claim readback", async () => {
   let target = await fixture(), loseResponse = true, corruptReadback = false;
   const allowed = new Set(["creator_withdrawal_requests", "creator_withdrawal_transfer_attempts"]);
-  const client = createClient("https://synthetic.invalid", "no-authority", { auth: { persistSession: false }, global: { fetch: async (url, options) => {
+  const client = await testSupabaseAuthority(createClient("https://synthetic.invalid", "no-authority", { auth: { persistSession: false }, global: { fetch: async (url, options) => {
     const route = new URL(String(url)), name = route.pathname.split("/").at(-1)!;
     if (route.pathname.includes("/rpc/")) {
       const body = JSON.parse(String(options?.body));
@@ -122,7 +123,7 @@ it("keeps a committed Supabase claim after response loss and rejects wrong claim
       ...(corruptReadback && name === "creator_withdrawal_transfer_attempts" ? { claim_id: randomUUID() } : {}),
     }));
     return Response.json(rows);
-  } } });
+  } } }));
   expect(await reserveSupabaseWithdrawalRequest(client, target)).toEqual(target);
   await expect(claimSupabaseWithdrawalTransfer(client, target.id, target.owner)).rejects.toThrow("unavailable");
   const original = await db.getCreatorWithdrawalTransferClaim(target.id, target.owner);
@@ -164,7 +165,7 @@ it("recovers an attestation storage response loss and rejects corrupted Supabase
   const claim = (await db.claimCreatorWithdrawalTransfer(record.id, record.owner))!;
   let loseResponse = true, corrupt = false;
   const allowed = new Set(["creator_withdrawal_requests", "creator_withdrawal_transfer_attempts", "creator_withdrawal_attestations"]);
-  const client = createClient("https://synthetic.invalid", "no-authority", { auth: { persistSession: false }, global: { fetch: async (url, options) => {
+  const client = await testSupabaseAuthority(createClient("https://synthetic.invalid", "no-authority", { auth: { persistSession: false }, global: { fetch: async (url, options) => {
     const route = new URL(String(url)), name = route.pathname.split("/").at(-1)!;
     if (route.pathname.endsWith("/rpc/save_creator_withdrawal_attestation")) {
       const body = JSON.parse(String(options?.body));
@@ -181,7 +182,7 @@ it("recovers an attestation storage response loss and rejects corrupted Supabase
       ...(corrupt && name === "creator_withdrawal_attestations" ? { transfer_id: randomUUID() } : {}),
     }));
     return Response.json(rows);
-  } } });
+  } } }));
   const save = () => saveSupabaseWithdrawalAttestation(client, record.id, record.owner, claim.claimId, response);
   await expect(save()).rejects.toThrow("unavailable");
   const original = await db.getCreatorWithdrawalAttestation(record.id, record.owner);
@@ -216,13 +217,13 @@ it("lists only the owner's signed requests with stable equal-time pagination and
 it("binds real Supabase query construction to owner, timestamp/id cursor and bounded limit", async () => {
   const record = await fixture(), createdAt = "2026-09-11T01:00:00.123456+00:00";
   let calls = 0, returned = record;
-  const sb = createClient("https://history.invalid", "synthetic-test-key", { global: { fetch: async (input) => {
+  const sb = await testSupabaseAuthority(createClient("https://history.invalid", "synthetic-test-key", { global: { fetch: async (input) => {
     calls++; const url = new URL(String(input));
     expect(url.searchParams.get("owner")).toBe(`eq.${record.owner}`);
     expect(url.searchParams.get("order")).toBe("created_at.desc,id.desc"); expect(url.searchParams.get("limit")).toBe("2");
     expect(url.searchParams.get("or")).toBe(`(created_at.lt.${createdAt},and(created_at.eq.${createdAt},id.lt.${record.id}))`);
     return Response.json([{ id: returned.id, owner: returned.owner, created_at: createdAt, data: returned }]);
-  } } });
+  } } }));
   const cursor = { createdAt, id: record.id };
   const page = await listSupabaseWithdrawalHistory(sb, record.owner, cursor, 1);
   expect(page.requests[0].amountMicros).toBe("50000");
