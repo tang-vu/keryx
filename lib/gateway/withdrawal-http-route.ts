@@ -3,6 +3,7 @@ import { accountSessionContext } from "../account-sessions";
 import { createConfiguredWithdrawalHttpService } from "./withdrawal-http-service";
 import { createWithdrawalStatusHandler } from "./withdrawal-status-handler";
 import { createWithdrawalMintReader } from "./withdrawal-mint-reader";
+import { requireRuntimeStorageMode } from "../db/runtime-storage-config";
 
 type Operation = "prepare" | "submit" | "status";
 
@@ -12,6 +13,7 @@ type Operation = "prepare" | "submit" | "status";
 export async function withdrawalHttpRoute(operation: Operation, request: Request): Promise<Response> {
   let response: Response;
   try {
+    requireRuntimeStorageMode("testnet-real");
     if (config.networkId !== "eip155:5042002" || config.cctpDomain !== 26) throw new Error();
     if (operation === "status") {
       const directory = process.env.KERYX_WITHDRAWAL_RELAY_DIRECTORY;

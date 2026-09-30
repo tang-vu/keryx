@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseAuthority } from "./supabase-authority";
 import { z } from "zod";
 import { privateCreatorSubmissionSchema, listSqlitePrivateCreatorSubmissions, listSupabasePrivateCreatorSubmissions,
   type PrivateCreatorSubmissionRecord } from "./private-creator-submissions";
@@ -74,21 +74,21 @@ export async function confirmSqlitePrivateCreator(db: DatabaseSync, id: string, 
   return requireOriginal(await getSqlitePrivateCreatorConfirmation(db, id, payer, key), confirmation);
 }
 
-export async function getSupabasePrivateCreatorConfirmation(db: SupabaseClient, id: string, payer: string, authorizationId: string) {
+export async function getSupabasePrivateCreatorConfirmation(db: SupabaseAuthority, id: string, payer: string, authorizationId: string) {
   const key = nonce(authorizationId);
   const attempt = (await listSupabasePrivateCreatorSubmissions(db, id, payer)).find(row => row.data.submission.authorizationId === key);
   if (!attempt) return null;
-  const { data, error } = await db.from("private_creator_confirmations").select("data,settled_at").eq("authorization_id", key).maybeSingle();
+  const { data, error } = await db.rpcResult("get_supabase_private_creator_confirmation", { p_authorization_id: key });
   if (error) throw new Error("Private creator confirmation storage unavailable");
   return data ? readRow(data, attempt) : null;
 }
-export async function confirmSupabasePrivateCreator(db: SupabaseClient, id: string, payer: string, workerId: string, value: PrivateCreatorConfirmation) {
+export async function confirmSupabasePrivateCreator(db: SupabaseAuthority, id: string, payer: string, workerId: string, value: PrivateCreatorConfirmation) {
   const confirmation = checked(value);
   const key = confirmation.submission.authorizationId;
   const attempt = (await listSupabasePrivateCreatorSubmissions(db, id, payer)).find(row => row.data.submission.authorizationId === key);
   if (!attempt || attempt.workerId !== workerId) throw new Error("Private creator submission unavailable");
   matched(confirmation, attempt);
-  const { error } = await db.rpc("confirm_private_creator_submission", { p_id: id, p_payer: payer.toLowerCase(), p_worker_id: workerId, p_confirmation: confirmation });
+  const { error } = await db.rpcResult("confirm_private_creator_submission", { p_id: id, p_payer: payer.toLowerCase(), p_worker_id: workerId, p_confirmation: confirmation });
   if (error) throw new Error("Private creator confirmation storage unavailable");
   return requireOriginal(await getSupabasePrivateCreatorConfirmation(db, id, payer, key), confirmation);
 }

@@ -6,9 +6,10 @@ import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { inspectStorageProvenance, STORAGE_PROVENANCE_LIMITS } from "./storage-provenance";
 import { scanStorageProvenance } from "./storage-provenance-scan";
+import { provisionSyntheticStorage } from "./storage-identity-fixture";
 
 const directories: string[] = [];
-afterEach(() => { vi.restoreAllMocks(); for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }); });
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }); });
 function fixture(sql = "") {
   const directory = mkdtempSync(join(tmpdir(), "keryx-provenance-")); directories.push(directory);
   const file = join(directory, "synthetic.sqlite");
@@ -22,8 +23,12 @@ function insertJson(file: string, table: string, column: string, value: unknown)
 }
 describe("keyless SQLite provenance intake", () => {
   it("inspects the actual adapter-created schema with retained journal and persisted private/withdrawal shapes", async () => {
-    const f = fixture("CREATE TABLE synthetic_fixture_marker(value TEXT);"); const { SqliteAdapter } = await import("./sqlite-adapter");
-    const adapter = new SqliteAdapter(f.file); await adapter.init();
+    const directory = mkdtempSync(join(tmpdir(), "keryx-provenance-actual-")); directories.push(directory);
+    const f = { directory, file: join(directory, "synthetic.sqlite") };
+    const identity = await provisionSyntheticStorage(f.file, "testnet-real");
+    vi.stubEnv("CONTENT_MASTER_KEY", "67".repeat(32));
+    const { SqliteAdapter } = await import("./sqlite-adapter");
+    const adapter = new SqliteAdapter(f.file, { expectedIdentity: identity }); await adapter.init();
     const signer = `0x${"22".repeat(20)}`;
     await adapter.upsertSessionGrant({ sessionId: "synthetic-owner", ownerAddr: signer, sessAddr: signer,
       cap: 0.05, expiry: Date.now() + 60000, txHash: "synthetic", grantEpoch: "retained-epoch" });
@@ -36,6 +41,14 @@ describe("keyless SQLite provenance intake", () => {
         payee: requirements.payTo, amountUsdc: 0.002, network: requirements.network, grantEpoch: "retained-epoch" } });
     adapter.close();
     const raw = new DatabaseSync(f.file);
+    // Manufacture a legacy fixture from the actual adapter's application schema
+    // and journal data. Only this fresh synthetic file is stripped of identity
+    // infrastructure, so malformed historical envelopes can be inspected.
+    for (const row of raw.prepare("SELECT name FROM sqlite_schema WHERE type='trigger' AND name LIKE 'storage_%'").all()) {
+      const name = String(row.name); if (!/^storage_[a-z0-9_]+$/.test(name)) throw new Error("Unexpected synthetic trigger");
+      raw.exec(`DROP TRIGGER "${name}"`);
+    }
+    raw.exec("DROP TABLE keryx_storage_identity");
     const privateIntent = { id: `prv_${"ab".repeat(32)}`, requirement: requirements,
       submission: { request: { question: "private synthetic prompt" }, salt: "private-salt", payment: {
         authorization: { from: signer, to: requirements.payTo, value: "2000", nonce: `0x${"ab".repeat(32)}` }, signature: "secret-signature" } } };

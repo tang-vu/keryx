@@ -1,8 +1,8 @@
 name: CI
 
 # Build the Next.js app and run the SourceRegistry contract tests on every push
-# to main and on PRs. No secrets needed: the build degrades gracefully without
-# env (offline mode) and the contract tests run on Hardhat's in-process network.
+# to main and on PRs. No secrets needed: the build explicitly provisions fresh
+# isolated offline storage; contract tests run on Hardhat's in-process network.
 
 on:
   push:
@@ -143,8 +143,7 @@ jobs:
 
       - name: Withdrawal production framework headers (loopback, no authentication or payment)
         env:
-          # This secret-free CI server must use explicit offline cache semantics.
-          # Real production startup correctly requires CONTENT_MASTER_KEY.
+          # The harness provisions explicit fresh offline storage and masks secrets.
           KERYX_FORCE_OFFLINE: "1"
         run: node --import tsx scripts/test-withdrawal-framework-headers.mts
 

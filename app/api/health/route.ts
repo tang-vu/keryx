@@ -9,6 +9,7 @@
  */
 
 import { getDb } from "@/lib/db";
+import { readRuntimeStorageDeployment } from "@/lib/db/runtime-storage-config";
 import { config, llmProvider } from "@/lib/config";
 import { PARITY_STATE_KEY, type ParitySummary } from "@/lib/registry/parity";
 import {
@@ -36,15 +37,13 @@ export const dynamic = "force-dynamic";
 const BOOT_MS = Date.now();
 
 export async function GET() {
-  // Settlement mode mirrors the gateway selector: real treasury settlement needs a
-  // funder key and the offline flag off; otherwise runs settle as simulated.
-  const forceOffline = process.env.KERYX_FORCE_OFFLINE === "1";
+  // Identity mode is independent of treasury key availability.
   const base = {
     name: "keryx",
     commit: process.env.KERYX_COMMIT ?? null,
     uptimeSeconds: Math.floor((Date.now() - BOOT_MS) / 1000),
     reasoning: llmProvider(),
-    settles: !forceOffline && config.funderKey ? "real" : "offline",
+    settles: "unavailable",
     network: config.network,
     // Deliberately a coarse label: tokenized RPC URLs are server credentials and never public.
     rpcProvider: classifyArcRpcProvider(config.rpcUrl),
@@ -52,6 +51,8 @@ export async function GET() {
   };
 
   try {
+    const deployment = readRuntimeStorageDeployment();
+    base.settles = deployment.identity.authorityMode === "testnet-real" ? "real" : "offline";
     const db = await getDb();
     const [m, a2aJobs] = await Promise.all([db.metrics(), db.a2aOperationsSnapshot(Date.now())]);
 

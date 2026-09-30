@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseAuthority } from "./supabase-authority";
 import { z } from "zod";
 import { validateWithdrawalRequest, withdrawalIdSchema, withdrawalOwnerSchema, type WithdrawalRequestRecord } from "../gateway/withdrawal-request";
 
@@ -99,29 +99,29 @@ export async function claimSqliteWithdrawalTransfer(db: DatabaseSync, id: string
   return saved;
 }
 
-export async function getSupabaseWithdrawalRequest(db: SupabaseClient, id: string, owner: string) {
+export async function getSupabaseWithdrawalRequest(db: SupabaseAuthority, id: string, owner: string) {
   const selected = key(id, owner);
-  const { data, error } = await db.from("creator_withdrawal_requests").select("data").eq("id", selected.id).eq("owner", selected.owner).maybeSingle();
+  const { data, error } = await db.rpcResult("get_supabase_withdrawal_request", { p_id: selected.id, p_owner: selected.owner });
   if (error) throw new Error("Withdrawal request storage unavailable");
   return data ? read(data.data, selected.id, selected.owner) : null;
 }
-export async function reserveSupabaseWithdrawalRequest(db: SupabaseClient, value: WithdrawalRequestRecord) {
+export async function reserveSupabaseWithdrawalRequest(db: SupabaseAuthority, value: WithdrawalRequestRecord) {
   const record = await validateWithdrawalRequest(value);
-  const { error } = await db.rpc("reserve_creator_withdrawal", { p_id: record.id, p_owner: record.owner, p_data: record });
+  const { error } = await db.rpcResult("reserve_creator_withdrawal", { p_id: record.id, p_owner: record.owner, p_data: record });
   if (error) throw new Error("Withdrawal request storage unavailable");
   return original(await getSupabaseWithdrawalRequest(db, record.id, record.owner), record);
 }
-export async function getSupabaseWithdrawalTransferClaim(db: SupabaseClient, id: string, owner: string) {
+export async function getSupabaseWithdrawalTransferClaim(db: SupabaseAuthority, id: string, owner: string) {
   if (!await getSupabaseWithdrawalRequest(db, id, owner)) return null;
-  const { data, error } = await db.from("creator_withdrawal_transfer_attempts").select("claim_id,started_at").eq("id", id).maybeSingle();
+  const { data, error } = await db.rpcResult("get_supabase_withdrawal_transfer_claim", { p_id: id });
   if (error) throw new Error("Withdrawal transfer state unavailable");
   return data ? claimRecord(data) : null;
 }
-export async function claimSupabaseWithdrawalTransfer(db: SupabaseClient, id: string, owner: string) {
+export async function claimSupabaseWithdrawalTransfer(db: SupabaseAuthority, id: string, owner: string) {
   const record = await getSupabaseWithdrawalRequest(db, id, owner);
   if (!record) throw new Error("Withdrawal request authority unavailable");
   const claimId = randomUUID();
-  const { data, error } = await db.rpc("claim_creator_withdrawal_transfer", { p_id: record.id, p_owner: record.owner, p_claim_id: claimId });
+  const { data, error } = await db.rpcResult("claim_creator_withdrawal_transfer", { p_id: record.id, p_owner: record.owner, p_claim_id: claimId });
   if (error || typeof data !== "boolean") throw new Error("Withdrawal transfer admission unavailable");
   if (!data) return null;
   const saved = await getSupabaseWithdrawalTransferClaim(db, id, owner);

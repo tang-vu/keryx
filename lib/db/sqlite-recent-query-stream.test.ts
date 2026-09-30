@@ -5,13 +5,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { rmSync } from "node:fs";
 import { SqliteAdapter } from "./sqlite-adapter";
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures=sqliteDomainTestFixtures();
 
 const file = join(tmpdir(), `keryx-archive-stream-${randomUUID()}.sqlite`);
-const writer = new DatabaseSync(file);
+const fixture=await sqliteFixtures.raw("testnet-offline",file), writer=fixture.db;
 writer.exec("PRAGMA journal_mode=WAL; CREATE TABLE query_runs(id TEXT PRIMARY KEY, created_at TEXT, data TEXT)");
+fixture.fence();
 const insert = writer.prepare("INSERT INTO query_runs VALUES(?, ?, ?)");
 for (const id of ["a", "b", "c"]) insert.run(id, "2026-09-01", JSON.stringify({ id }));
-const db = new SqliteAdapter(file, { readOnly: true });
+const db = await sqliteFixtures.open(file,"testnet-offline",{readOnly:true});
 afterAll(() => { db.close(); writer.close(); for (const suffix of ["", "-wal", "-shm"]) rmSync(file + suffix, { force: true }); });
 
 describe("SQLite recent query iterator", () => {

@@ -3,10 +3,12 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { setTimeout as delay } from "node:timers/promises";
+import { offlineRuntimeFixture } from "./offline-runtime-fixture.ts";
 
 const require = createRequire(import.meta.url), port = 3947, base = `http://127.0.0.1:${port}`;
+const fixture = await offlineRuntimeFixture(process.env);
 const child = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "start", "-H", "127.0.0.1", "-p", String(port)], {
-  cwd: process.cwd(), env: process.env, stdio: ["ignore", "pipe", "ignore"], windowsHide: true,
+  cwd: process.cwd(), env: fixture.env, stdio: ["ignore", "pipe", "ignore"], windowsHide: true,
 });
 let ready = false, spawnFailed = false, output = "";
 child.stdout.on("data", chunk => { output = (output + String(chunk)).slice(-4096); ready ||= /Ready in/i.test(output); });
@@ -25,6 +27,14 @@ try {
     assert.ok(response.headers.get("vary")?.includes("Cookie"));
     await response.body?.cancel();
   }
+  // Distinct mode refusal coverage; keep history authentication/header assertions above.
+  for (const operation of ["prepare", "submit", "status"]) {
+    const response = await fetch(`${base}/api/me/withdrawals/${operation}`, { method: "POST", redirect: "error",
+      headers: { origin: base, "content-type": "application/json" }, body: "{}", signal: AbortSignal.timeout(10000) });
+    assert.equal(response.status, 503); assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.equal(response.headers.get("referrer-policy"), "no-referrer");
+    await response.body?.cancel();
+  }
   const page = await fetch(`${base}/me/withdrawals`, { redirect: "error", signal: AbortSignal.timeout(10000) });
   assert.equal(page.status, 200); assert.equal(page.headers.get("referrer-policy"), "no-referrer");
   assert.ok((await page.text()).includes("Account history shows requests saved on the server"));
@@ -37,4 +47,4 @@ try {
     assert.deepEqual(await listing.json(), { error: "unauthenticated" });
   }
   console.log("PASS: production Next withdrawal history authentication/private headers, retired economics endpoint, and creator listing authentication.");
-} finally { child.kill(); await exited; }
+} finally { child.kill(); await exited; await fixture.close(); }

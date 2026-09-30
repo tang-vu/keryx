@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseAuthority } from "./supabase-authority";
 import { z } from "zod";
 import { addressSchema } from "../buyer/protocol";
 import { privateResearchIdSchema } from "../a2a/private-research-intent";
@@ -25,9 +25,9 @@ export async function listSqlitePrivateWorkerCandidates(db: DatabaseSync, signer
   return z.array(candidate).max(25).parse(rows);
 }
 
-export async function listSupabasePrivateWorkerCandidates(db: SupabaseClient, signer: string, after?: string) {
+export async function listSupabasePrivateWorkerCandidates(db: SupabaseAuthority, signer: string, after?: string) {
   const selected = selection(signer, after);
-  const { data, error } = await db.rpc("list_private_worker_candidates", { p_signer: selected.signer, p_after: selected.after });
+  const { data, error } = await db.rpcResult("list_private_worker_candidates", { p_signer: selected.signer, p_after: selected.after });
   if (error) throw new Error("Private worker candidates unavailable");
   return z.array(candidate).max(25).parse(data);
 }
@@ -43,9 +43,9 @@ export async function listSqlitePrivateReconciliationCandidates(db: DatabaseSync
   return z.array(candidate).max(1).parse(rows);
 }
 
-export async function listSupabasePrivateReconciliationCandidates(db: SupabaseClient, signer: string, after?: string) {
+export async function listSupabasePrivateReconciliationCandidates(db: SupabaseAuthority, signer: string, after?: string) {
   const selected = selection(signer, after);
-  const { data, error } = await db.rpc("list_private_reconciliation_candidates", { p_signer: selected.signer, p_after: selected.after });
+  const { data, error } = await db.rpcResult("list_private_reconciliation_candidates", { p_signer: selected.signer, p_after: selected.after });
   if (error) throw new Error("Private reconciliation candidates unavailable");
   return z.array(candidate).max(1).parse(data);
 }

@@ -1,9 +1,12 @@
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
+import { testSupabaseAuthority, supabaseTestIdentity } from "./supabase-authority-test-fixture";
 import { randomUUID } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import { createClient } from "@supabase/supabase-js";
 import { writeFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
-import { expect, it, vi, afterEach } from "vitest";
+import { expect, it, vi, beforeEach, afterEach } from "vitest";
 import { privateWorkerScenario } from "../../scripts/test-fixtures/private-worker-scenario.mjs";
 import { resolvePrivateInterruption } from "../a2a/private-interruption-operator";
 import { createPrivateResultSpool } from "../a2a/private-result-spool";
@@ -15,34 +18,41 @@ import { BUYER_NETWORK, BUYER_USDC } from "../buyer/protocol";
 import { SqliteAdapter } from "./sqlite-adapter";
 import type { QueryRun } from "../types";
 import { interruptSupabasePrivateResearch } from "./private-research-interruptions";
+import { assertStorageFences, assertStorageIdentity, registerStorageCapability } from "./storage-identity-sqlite";
 
-afterEach(() => vi.unstubAllGlobals());
+beforeEach(()=>vi.stubEnv("CONTENT_MASTER_KEY","67".repeat(32)));
+afterEach(() => {vi.unstubAllGlobals();vi.unstubAllEnvs();});
 
 it("recovers a lost interruption RPC response and refuses missing or foreign-worker readback", async () => {
   const s = await privateWorkerScenario();
   const raw = new DatabaseSync(join(s.root, "data", "keryx.sqlite"));
+  assertStorageIdentity(raw,s.db.getStorageIdentity());assertStorageFences(raw,s.db.getStorageIdentity());
+  registerStorageCapability(raw,s.db.getStorageIdentity(),()=>true);
   try {
     const id = s.jobs[0], claim = (await s.db.claimPrivateResearchExecution(id, s.payer))!;
     let loseResponse = true, readback: "valid" | "missing" | "foreign" = "valid";
-    const allowed = new Set(["private_research_intents", "private_research_payment_attempts",
-      "private_research_executions", "private_research_results", "private_research_interruptions"]);
-    const client = createClient("https://synthetic.invalid", "no-authority", { auth: { persistSession: false }, global: { fetch: async (url, options) => {
-      const route = new URL(String(url)), table = route.pathname.split("/").at(-1)!;
-      if (route.pathname.endsWith("/rpc/interrupt_private_research")) {
-        expect(JSON.parse(String(options?.body))).toEqual({ p_id: id, p_payer: s.payer.toLowerCase(), p_worker_id: claim.workerId });
+    const reads: Record<string, string> = { storage_get_supabase_private_research_intent: "private_research_intents", storage_get_supabase_private_payment: "private_research_payment_attempts", storage_get_supabase_private_execution: "private_research_executions", storage_get_supabase_private_result: "private_research_results", storage_get_supabase_private_interruption: "private_research_interruptions" };
+    const client = await testSupabaseAuthority(createClient("https://synthetic.invalid", "no-authority", { auth: { persistSession: false }, global: { fetch: async (url, options) => {
+      const route = new URL(String(url)), name = route.pathname.split("/").at(-1)!;
+      const body = JSON.parse(String(options?.body));
+      expect(options?.method).toBe("POST"); expect(body.p_expected_identity).toEqual(supabaseTestIdentity);
+      if (route.pathname.endsWith("/rpc/storage_interrupt_private_research")) {
+        expect(JSON.parse(String(options?.body))).toEqual({ p_id: id, p_payer: s.payer.toLowerCase(), p_worker_id: claim.workerId, p_expected_identity: supabaseTestIdentity });
         await s.db.interruptPrivateResearch(id, s.payer, claim.workerId);
         if (loseResponse) { loseResponse = false; return new Response("{}", { status: 503 }); }
         return new Response(null, { status: 204 });
       }
-      if (!allowed.has(table) || options?.method !== "GET") throw new Error("Unexpected transport");
+      if (!route.pathname.includes("/rpc/") || !reads[name]) throw new Error("Unexpected transport");
+      expect(body.p_id).toBe(id);
+      const table = reads[name];
       const rows = raw.prepare(`SELECT * FROM ${table} WHERE id=?`).all(id).map(row => {
         const parsed = { ...row };
         for (const key of ["data", "confirmation"]) if (typeof parsed[key] === "string") parsed[key] = JSON.parse(parsed[key]);
         if (table === "private_research_interruptions" && readback === "foreign") parsed.worker_id = randomUUID();
         return parsed;
       });
-      return Response.json(table === "private_research_interruptions" && readback === "missing" ? [] : rows);
-    } } });
+      return Response.json(table === "private_research_interruptions" && readback === "missing" ? null : rows[0] ?? null);
+    } } }));
     const interrupt = () => interruptSupabasePrivateResearch(client, id, s.payer, claim.workerId);
     await expect(interrupt()).rejects.toThrow("unavailable");
     const original = await s.db.getPrivateResearchInterruption(id, s.payer);
@@ -78,7 +88,7 @@ it("fences interruption once, retains uncertain spend, accepts late confirmation
     expect(await s.db.admitPrivateCreatorSubmission(id, s.payer, claim.workerId, leg)).toBe(true);
     await expect(s.db.interruptPrivateResearch(id, leg.submission.payee, claim.workerId)).rejects.toThrow("authority");
     await expect(s.db.interruptPrivateResearch(id, s.payer, randomUUID())).rejects.toThrow("authority");
-    const other = new SqliteAdapter(join(s.root, "data", "keryx.sqlite")); await other.init();
+    const other = new SqliteAdapter(join(s.root, "data", "keryx.sqlite"),{expectedIdentity:s.db.getStorageIdentity()}); await other.init();
     try {
       const records = await Promise.all([s.db.interruptPrivateResearch(id, s.payer, claim.workerId), other.interruptPrivateResearch(id, s.payer, claim.workerId)]);
       expect(records[0]).toEqual(records[1]);

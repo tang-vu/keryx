@@ -1,4 +1,9 @@
 import { referenceSnapshot, type PublicReference } from "../public-references/catalog";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { canonicalJson } from "../canonical-json";
+import { syntheticStorageIdentity } from "../db/storage-identity-fixture";
 /**
  * Economic-invariant tests for the agent orchestrator (run-agent.ts).
  *
@@ -323,6 +328,32 @@ async function drive(
 
 const fetchBudget = (budget: number) => budget * (1 - config.citationPoolRatio);
 const citationPool = (budget: number) => budget * config.citationPoolRatio;
+
+it("keeps a synthesized answer and citation-leg error after the actual retained gateway refuses manifest drift", async () => {
+  vi.resetModules();
+  const directory = mkdtempSync(join(tmpdir(), "keryx-answer-storage-drift-"));
+  try {
+    const file = join(directory, "synthetic.sqlite"), manifest = join(directory, "manifest.json");
+    writeFileSync(file, "synthetic transport fixture");
+    const identity = syntheticStorageIdentity("testnet-offline");
+    const original = { format: "keryx-storage-deployment-v1", identity, backend: { kind: "sqlite", databasePath: file } };
+    writeFileSync(manifest, canonicalJson(original));
+    vi.stubEnv("KERYX_STORAGE_MANIFEST", manifest); vi.stubEnv("KERYX_SQLITE_PATH", file); vi.stubEnv("KERYX_FORCE_OFFLINE", "0");
+    const sources = [makeSource({ id: "drift-source", fetchPrice: 0.004, authors: [{ name: "Synthetic creator", walletAddress: "0xsynthetic-creator", splitWeight: 1 }] })], db = fakeDb(sources);
+    db.getStorageIdentity = () => identity;
+    const { getPaymentGateway } = await import("../payments/payment-gateway");
+    const gateway = await getPaymentGateway(db);
+    const engine = fakeEngine({ synthesize: input => {
+      writeFileSync(manifest, canonicalJson({ ...original, identity: syntheticStorageIdentity("testnet-offline") }));
+      return { answer: "Completed grounded answer [S1].", citedMarkers: input.gathered.map(value => value.marker),
+        evidence: input.gathered.map(value => ({ claimIndex: 0, marker: value.marker, quote: value.text, support: 0.9 })) };
+    } });
+    const { run, steps } = await drive({ question: "q", budget: 0.05 }, { db, gateway, engine });
+    expect(run.answer).toBe("Completed grounded answer [S1]."); expect(run.paymentMode).toBe("offline");
+    expect(run.settledPayments).toBe(0); expect(run.totalToCreators).toBe(0.004);
+    expect(steps.some(step => step.message.includes("Couldn't settle") && step.message.includes("answer stands"))).toBe(true);
+  } finally { vi.unstubAllEnvs(); rmSync(directory, { recursive: true }); }
+});
 
 it("continues past partial or explicitly incomplete answers, then stops before another affordable read", async () => {
   for (const first of [{ coverage: 0.4, missingRequestedParts: [] },

@@ -1,3 +1,6 @@
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
+import { testSupabaseAuthority, supabaseTestIdentity } from "./supabase-authority-test-fixture";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -23,7 +26,7 @@ const requirement = { scheme: "exact", network: BUYER_NETWORK, asset: BUYER_USDC
 let dir: string, file: string, db: SqliteAdapter, other: SqliteAdapter, raw: DatabaseSync;
 beforeAll(async () => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-release-")); file = path.join(dir, "test.sqlite");
-  db = new SqliteAdapter(file); other = new SqliteAdapter(file); await db.init(); await other.init(); raw = new DatabaseSync(file);
+  db = await sqliteFixtures.open(file, "testnet-real"); other = await sqliteFixtures.open(file, "testnet-real"); await db.init(); await other.init(); raw = sqliteFixtures.trustedRaw(file);
 });
 beforeEach(() => { treasury.signer = privateKeyToAccount(generatePrivateKey()).address.toLowerCase(); });
 afterAll(() => { db.close(); other.close(); raw.close(); fs.rmSync(dir, { recursive: true }); });
@@ -64,7 +67,7 @@ it("requires a sealed owned result, keeps expired uncertain spend, releases once
   expect(results.every(row => row?.amountMicros === "13000")).toBe(true);
   expect(await db.getPrivateTreasurySummary(treasury.signer)).toMatchObject({ allocatedMicros: "17000", unallocatedMicros: "33000",
     committedMicros: "17000", unresolvedOrProcessingMicros: "17000", conservativeBackingMicros: "50000" });
-  const reopened = new SqliteAdapter(file); await reopened.init();
+  const reopened = await sqliteFixtures.open(file, "testnet-real"); await reopened.init();
   try {
     expect(await release(job, reopened)).toEqual({ amountMicros: "13000", newlyReleased: false });
     expect(await reopened.reservePrivateTreasury(job.id, owner.address, treasury)).toBe(true);
@@ -115,27 +118,30 @@ it("requires exact Supabase readback and recovers an RPC response loss without a
   const job = await fixture(); await db.reservePrivateTreasury(job.id, owner.address, treasury);
   await db.savePrivateResearchResult(job.id, owner.address, job.worker, job.run);
   let loseResponse = true, corruptReadback = false, rpcCalls = 0;
-  const allowed = new Set(["private_research_intents", "private_research_payment_attempts", "private_research_executions",
-    "private_research_results", "private_treasury_reservations", "private_creator_submissions", "private_treasury_releases"]);
-  const client = createClient("https://synthetic.invalid", "no-authority", { auth: { persistSession: false }, global: { fetch: async (url, options) => {
-    const route = new URL(String(url)), table = route.pathname.split("/").at(-1)!;
-    if (route.pathname.endsWith("/rpc/release_private_treasury")) {
+  const reads: Record<string, string> = { storage_get_supabase_private_research_intent: "private_research_intents", storage_get_supabase_private_payment: "private_research_payment_attempts", storage_get_supabase_private_execution: "private_research_executions", storage_get_supabase_private_result: "private_research_results", storage_get_supabase_private_treasury: "private_treasury_reservations", storage_reserve_supabase_private_treasury: "private_treasury_reservations", storage_list_supabase_private_creator_submissions: "private_creator_submissions", storage_release_supabase_private_treasury: "private_treasury_releases" };
+  const client = await testSupabaseAuthority(createClient("https://synthetic.invalid", "no-authority", { auth: { persistSession: false }, global: { fetch: async (url, options) => {
+    const route = new URL(String(url)), name = route.pathname.split("/").at(-1)!;
+    const body = JSON.parse(String(options?.body));
+    expect(options?.method).toBe("POST"); expect(body.p_expected_identity).toEqual(supabaseTestIdentity);
+    if (route.pathname.endsWith("/rpc/storage_release_private_treasury")) {
       rpcCalls++;
-      expect(JSON.parse(String(options?.body))).toEqual({ p_id: job.id, p_payer: owner.address.toLowerCase(), p_signer: treasury.signer });
+      expect(JSON.parse(String(options?.body))).toEqual({ p_id: job.id, p_payer: owner.address.toLowerCase(), p_signer: treasury.signer, p_expected_identity: supabaseTestIdentity });
       const result = await release(job);
       if (loseResponse) { loseResponse = false; return new Response("{}", { status: 503 }); }
       return Response.json(result?.newlyReleased);
     }
-    if (!allowed.has(table) || options?.method !== "GET") throw new Error("Unexpected transport");
+    if (!route.pathname.includes("/rpc/") || !reads[name]) throw new Error("Unexpected transport");
+    const table = reads[name];
     const column = ["private_treasury_reservations", "private_creator_submissions", "private_treasury_releases"].includes(table) ? "job_id" : "id";
+    expect(body[column === "job_id" ? "p_job_id" : "p_id"]).toBe(job.id);
     const rows = raw.prepare(`SELECT * FROM ${table} WHERE ${column}=?`).all(job.id).map(row => {
       const parsed = { ...row };
       for (const key of ["data", "confirmation"]) if (typeof parsed[key] === "string") parsed[key] = JSON.parse(parsed[key]);
       if (table === "private_treasury_releases" && corruptReadback) parsed.amount_micros = 29999;
       return parsed;
     });
-    return Response.json(rows);
-  } } });
+    return Response.json(table === "private_creator_submissions" ? rows : rows[0] ?? null);
+  } } }));
   await expect(releaseSupabasePrivateTreasury(client, job.id, owner.address, treasury.signer)).rejects.toThrow("unavailable");
   expect(await releaseSupabasePrivateTreasury(client, job.id, owner.address, treasury.signer)).toEqual({ amountMicros: "30000", newlyReleased: false });
   corruptReadback = true;

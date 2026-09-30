@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "../db/sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
@@ -9,7 +11,7 @@ import { checkWithdrawalRateLimit } from "./withdrawal-rate-limit";
 const directory = mkdtempSync(join(tmpdir(), "keryx-withdrawal-limits-")), path = join(directory, "app.sqlite");
 let db: SqliteAdapter, other: SqliteAdapter, tick = 0;
 const owner = `0x${"11".repeat(20)}`;
-beforeAll(async () => { db = new SqliteAdapter(path); await db.init(); other = new SqliteAdapter(path); await other.init(); }, 60000);
+beforeAll(async () => { db = await sqliteFixtures.open(path, "testnet-real"); await db.init(); other = await sqliteFixtures.open(path, "testnet-real"); await other.init(); }, 60000);
 beforeEach(() => { vi.spyOn(Date, "now").mockReturnValue(2_000_000_000_000 + ++tick * 60001); });
 afterEach(() => vi.restoreAllMocks());
 afterAll(() => { db.close(); other.close(); rmSync(directory, { recursive: true, force: true }); });
@@ -21,7 +23,7 @@ it("shares the wallet budget across connections and keeps status recovery indepe
   expect(blocked.status).toBe(429); expect(blocked.headers.get("retry-after")).toBe("60");
   expect(await checkWithdrawalRateLimit(other, owner.toUpperCase().replace("0X", "0x"), "submit")).not.toBeNull();
   expect(await checkWithdrawalRateLimit(other, owner, "status")).toBeNull();
-  other.close(); other = new SqliteAdapter(path); await other.init();
+  other.close(); other = await sqliteFixtures.open(path, "testnet-real"); await other.init();
   expect((await checkWithdrawalRateLimit(other, owner, "submit"))?.status).toBe(429);
 }, 60000);
 

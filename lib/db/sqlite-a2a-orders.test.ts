@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -9,7 +11,7 @@ import type { PaymentRecord } from "../types";
 import { a2aResearchPackage } from "../a2a/research-package";
 
 const dbFile = path.join(os.tmpdir(), `keryx-a2a-orders-${process.pid}.sqlite`);
-const db = new SqliteAdapter(dbFile);
+const db = await sqliteFixtures.open(dbFile, "testnet-real");
 await db.init();
 
 afterAll(() => {
@@ -258,7 +260,7 @@ describe("SQLite A2A order idempotency", () => {
     expect(await db.getA2aOrder(ambiguous.id)).toMatchObject({ status: "running" });
   });
 
-  it("marks legacy running rows started so migration cannot accidentally rerun creator spend", async () => {
+  it("refuses unresolved legacy running authority without rewriting or allowing creator spend", async () => {
     const legacyFile = path.join(os.tmpdir(), `keryx-a2a-legacy-${process.pid}.sqlite`);
     const legacyRaw = new DatabaseSync(legacyFile);
     legacyRaw.exec(`
@@ -281,19 +283,17 @@ describe("SQLite A2A order idempotency", () => {
     `);
     legacyRaw.close();
 
-    const migrated = new SqliteAdapter(legacyFile);
+    const original = fs.readFileSync(legacyFile);
     try {
-      await migrated.init();
-      expect(await migrated.getA2aOrder("a2a_legacy")).toMatchObject({
-        request: null,
-        startedAt: "2026-08-28T00:01:00.000Z",
-        workerId: "legacy",
-      });
-      expect(await migrated.claimNextA2aOrder("worker", "2026-09-01T00:00:00.000Z")).toBeNull();
+      await expect(sqliteFixtures.enrollLegacy(legacyFile, "testnet-real")).rejects.toThrow(/unresolved_funded_or_authority_provenance/);
+      expect(fs.readFileSync(legacyFile)).toEqual(original);
+      const retained = new DatabaseSync(legacyFile, { readOnly: true });
+      try {
+        expect(retained.prepare("SELECT status,transaction_id,authorization_id FROM a2a_orders").get()).toEqual({status:"running",transaction_id:"circle-legacy",authorization_id:"0xlegacy"});
+        expect(retained.prepare("PRAGMA table_info(a2a_orders)").all().some(row=>row.name==="started_at")).toBe(false);
+      } finally { retained.close(); }
     } finally {
-      migrated.close();
-      for (const suffix of ["", "-wal", "-shm"])
-        fs.rmSync(legacyFile + suffix, { force: true });
+      for (const suffix of ["", "-wal", "-shm"]) fs.rmSync(legacyFile + suffix, { force: true });
     }
   });
 });

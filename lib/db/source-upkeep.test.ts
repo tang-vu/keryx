@@ -6,31 +6,35 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import { claimSqliteSourceUpkeep, finishSqliteSourceUpkeep } from "./source-upkeep";
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures=sqliteDomainTestFixtures();
 
 const hour = 3_600_000;
-function setup(file = ":memory:") {
-  const db = new DatabaseSync(file);
+async function setup(file?:string) {
+  const fixture=await sqliteFixtures.raw("testnet-offline",file),db=fixture.db;
   db.exec(`PRAGMA busy_timeout=5000;
     CREATE TABLE IF NOT EXISTS sync_state(key TEXT PRIMARY KEY,value TEXT,updated_at TEXT);
     CREATE TABLE IF NOT EXISTS public_references(id TEXT PRIMARY KEY,active INTEGER,rss_url TEXT);
     CREATE TABLE IF NOT EXISTS sources(id TEXT PRIMARY KEY,active INTEGER,verified INTEGER,rss_url TEXT);`);
-  return db;
+  fixture.fence();return db;
 }
 function add(db: DatabaseSync, id: string, active = 1, verified = 1, feed = "https://publisher.test/rss") {
   db.prepare("INSERT INTO sources VALUES (?,?,?,?)").run(id, active, verified, feed);
 }
 
-describe("atomic scheduled source allowance", () => {
+describe("atomic scheduled source allowance", async () => {
   it("admits only one of two simultaneously started maintenance processes", async () => {
     const directory = mkdtempSync(join(tmpdir(), "keryx-upkeep-race-"));
     const file = join(directory, "ledger.sqlite");
-    const db = setup(file);
+    const db = await setup(file);
     add(db, "a"); add(db, "b");
     db.close();
     const moduleUrl = new URL("./source-upkeep.ts", import.meta.url).href;
     const script = `import {DatabaseSync} from 'node:sqlite';
       import {claimSqliteSourceUpkeep} from ${JSON.stringify(moduleUrl)};
+      import {assertStorageIdentity,assertStorageFences,registerStorageCapability} from ${JSON.stringify(new URL('./storage-identity-sqlite.ts',import.meta.url).href)};
       const db=new DatabaseSync(${JSON.stringify(file)});
+      const expected=${JSON.stringify(sqliteFixtures.identity(file))};assertStorageIdentity(db,expected);assertStorageFences(db,expected);registerStorageCapability(db,expected,()=>true);
       db.exec('PRAGMA busy_timeout=5000');
       console.log(JSON.stringify(claimSqliteSourceUpkeep(db,${hour})));
       db.close();`;
@@ -44,11 +48,11 @@ describe("atomic scheduled source allowance", () => {
     } finally { rmSync(directory, { recursive: true }); }
   });
 
-  it("serializes independent connections, consumes failed slots and resumes a fair cursor after restart", () => {
+  it("serializes independent connections, consumes failed slots and resumes a fair cursor after restart", async () => {
     const directory = mkdtempSync(join(tmpdir(), "keryx-upkeep-"));
     const file = join(directory, "ledger.sqlite");
-    let first = setup(file);
-    const second = setup(file);
+    let first = await setup(file);
+    const second = await setup(file);
     try {
       for (const id of ["a", "b", "c", "d", "e"]) add(first, id);
       add(first, "inactive", 0); add(first, "unverified", 1, 0); add(first, "no-feed", 1, 1, " ");
@@ -57,7 +61,7 @@ describe("atomic scheduled source allowance", () => {
       expect(claimSqliteSourceUpkeep(second, hour + 1)).toBeNull();
       finishSqliteSourceUpkeep(first, claim, { attempted: 2, added: 0, failed: 2, skipped: 0 }, hour + 10);
       expect(claimSqliteSourceUpkeep(second, hour + 20)).toBeNull();
-      first.close(); first = setup(file);
+      first.close(); first = await setup(file);
       expect(claimSqliteSourceUpkeep(first, hour * 2)?.sourceIds).toEqual(["c", "d"]);
       // Interrupted job was already consumed, including after lease expiry.
       expect(claimSqliteSourceUpkeep(second, hour * 2 + 180_000)).toBeNull();
@@ -67,8 +71,8 @@ describe("atomic scheduled source allowance", () => {
     } finally { first.close(); second.close(); rmSync(directory, { recursive: true }); }
   });
 
-  it("prevents overlap across an hour boundary and never applies stale completion", () => {
-    const db = setup();
+  it("prevents overlap across an hour boundary and never applies stale completion", async () => {
+    const db = await setup();
     try {
       add(db, "one");
       const first = claimSqliteSourceUpkeep(db, hour - 1)!;
@@ -83,8 +87,8 @@ describe("atomic scheduled source allowance", () => {
   it.each(["{", "null", "{}", '{"slot":-1,"cursor":"","leaseUntil":0}',
     '{"slot":1,"cursor":"","leaseUntil":"0"}',
     '{"slot":1,"cursor":"","leaseUntil":0,"summary":{"attempted":999}}'])
-    ("fails closed with corrupted persisted budget %s", (value) => {
-      const db = setup();
+    ("fails closed with corrupted persisted budget %s", async (value) => {
+      const db = await setup();
       try {
         add(db, "a");
         db.prepare("INSERT INTO sync_state VALUES ('sourceUpkeep',?,NULL)").run(value);
@@ -95,8 +99,8 @@ describe("atomic scheduled source allowance", () => {
 });
 
 
-it("shares one two-feed allowance and fair cursor across owned and free catalogs", () => {
-  const db = setup();
+it("shares one two-feed allowance and fair cursor across owned and free catalogs", async () => {
+  const db = await setup();
   try {
     add(db, "owned-a"); add(db, "owned-b"); add(db, "public:forged-paid");
     for (const id of ["public:a", "public:b", "public:c"])

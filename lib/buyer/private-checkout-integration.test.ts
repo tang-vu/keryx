@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "../db/sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import { mkdtemp, unlink, rmdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -18,6 +20,7 @@ import { PRIVATE_RESEARCH_RESOURCE } from "./private-request-commitment";
 import { BUYER_NETWORK, BUYER_ORIGIN } from "./protocol";
 import { createPrivateWorker } from "../a2a/private-worker";
 import { createPrivateResultSpool } from "../a2a/private-result-spool";
+import { canonicalJson } from "../canonical-json";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -32,7 +35,7 @@ it.each([
     vi.stubGlobal("fetch", vi.fn(() => { throw new Error("Network forbidden in this integration test"); }));
     const root = await mkdtemp(join(tmpdir(), "keryx-private-integration-"));
     const file = join(root, "data", "keryx.sqlite"), journal = join(root, "journal");
-    let db = new SqliteAdapter(file);
+    let db = await sqliteFixtures.open(file, "testnet-real");
     try {
       await db.init();
       const account = privateKeyToAccount(generatePrivateKey());
@@ -74,7 +77,7 @@ it.each([
       });
       expect(await submitPrivateBuyerJournal(journal, account.address, merchants, "keryx_session=synthetic", send, now))
         .toEqual({ status: "recovery-required", submissionAttempted: true });
-      db.close(); db = new SqliteAdapter(file); await db.init();
+      db.close(); db = await sqliteFixtures.open(file, "testnet-real"); await db.init();
       service = privateResearchService(db, env, context, { facilitator, now: () => now })!;
       expect(await submitPrivateBuyerJournal(journal, account.address, merchants, "keryx_session=synthetic", send, now))
         .toEqual({ status: "recovery-required", submissionAttempted: false });
@@ -126,9 +129,11 @@ it.each([
         const backups = await readdir(backupDirectory); expect(backups).toHaveLength(1);
         const ciphertext = await readFile(join(backupDirectory, backups[0]), "utf8");
         expect(ciphertext).not.toContain(request.question); expect(ciphertext).not.toContain(prepared.id);
-        db.close(); db = new SqliteAdapter(file); await db.init();
+        db.close(); db = await sqliteFixtures.open(file, "testnet-real"); await db.init();
         const guard = join(root, "network-guard.mjs");
         await writeFile(guard, 'globalThis.fetch = () => { throw new Error("Network forbidden in recovery process"); };\n');
+        const manifest=join(root,"storage-manifest.json");
+        await writeFile(manifest,canonicalJson({format:"keryx-storage-deployment-v1",identity:db.getStorageIdentity(),backend:{kind:"sqlite",databasePath:file}}));
         const childEnv: Record<string, string | undefined> = {};
         for (const name of ["SystemRoot", "SYSTEMROOT", "WINDIR", "PATH", "TEMP", "TMP"])
           if (process.env[name]) childEnv[name] = process.env[name];
@@ -136,6 +141,7 @@ it.each([
           pathToFileURL(resolve("node_modules/tsx/dist/loader.mjs")).href, "--import", pathToFileURL(guard).href,
           "--no-warnings", resolve("scripts/private-research-worker.mts"), "--restore", backups[0].replace(/\.json$/, "")],
         { cwd: root, env: { ...childEnv, NODE_ENV: "test", KERYX_PRIVATE_WORKER_ENABLED: "0",
+          KERYX_STORAGE_MANIFEST:manifest, KERYX_SQLITE_PATH:file, CONTENT_MASTER_KEY:"67".repeat(32),
           KERYX_PRIVATE_RESULT_SPOOL_DIRECTORY: backupDirectory, KERYX_PRIVATE_RESULT_SPOOL_KEY: backupKey },
           timeout: 20000, maxBuffer: 4096 });
         expect(result.stdout.trim()).toBe('{"status":"restored"}');
@@ -152,6 +158,7 @@ it.each([
       }
     } finally {
       db.close();
+      await unlink(join(root,"storage-manifest.json")).catch(()=>undefined);
       for (const name of await readdir(join(root, "spool")).catch(() => [])) await unlink(join(root, "spool", name));
       await rmdir(join(root, "spool")).catch(() => undefined);
       for (const name of ["private-intent.json", "private-submission-attempt.json"]) await unlink(join(journal, name)).catch(() => undefined);

@@ -3,9 +3,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import { provisionSyntheticStorage } from "../db/storage-identity-fixture";
+import { canonicalJson } from "../canonical-json";
 import { SqliteAdapter } from "../db/sqlite-adapter";
 const state = vi.hoisted(() => ({ balance: vi.fn(), config: { funderKey: "", networkId: "eip155:5042002", cctpDomain: 26,
   sellerAddress: `0x${"1".repeat(40)}`, privateResearchReservedPayees: `0x${"4".repeat(40)}` } }));
+vi.mock("../db/runtime-storage-config", () => ({ readRuntimeStorageDeployment: () => ({ identity: db.getStorageIdentity() }) }));
 vi.mock("../config", () => ({ config: state.config }));
 vi.mock("../gateway/gateway-balance", () => ({ getGatewayAvailableAtomic: state.balance }));
 import { privatePurchaseBootstrap } from "./private-purchase-bootstrap";
@@ -21,7 +24,11 @@ let buyer: ReturnType<typeof privateKeyToAccount>;
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "keryx-purchase-bootstrap-"));
   vi.stubEnv("CONTENT_MASTER_KEY", "a".repeat(64)); // Synthetic in-memory database key.
-  db = new SqliteAdapter(":memory:"); await db.init();
+  const file = join(root, "application.sqlite"), identity = await provisionSyntheticStorage(file, "testnet-real");
+  db = new SqliteAdapter(file, { expectedIdentity: identity }); await db.init();
+  const manifest = join(root, "manifest.json");
+  await writeFile(manifest, canonicalJson({ format: "keryx-storage-deployment-v1", identity, backend: { kind: "sqlite", databasePath: file } }));
+  vi.stubEnv("KERYX_STORAGE_MANIFEST", manifest); vi.stubEnv("KERYX_SQLITE_PATH", file); vi.stubEnv("KERYX_FORCE_OFFLINE", "0");
   vi.stubGlobal("fetch", vi.fn(() => { throw new Error("External HTTP forbidden"); }));
   state.config.funderKey = generatePrivateKey(); state.config.cctpDomain = 26;
   const key = generatePrivateKey(); signer = privateKeyToAccount(key).address;

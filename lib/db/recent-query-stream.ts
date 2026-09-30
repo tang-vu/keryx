@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseAuthority } from "./supabase-authority";
 import type { QueryRun } from "../types";
 
 const PAGE_SIZE = 32;
@@ -10,19 +10,15 @@ function quoted(value: string): string {
 
 /** Keyset pages avoid offset shifts from newer inserts. Each HTTP read has its
  * own snapshot; concurrent modifications/backdated inserts are not a DB-wide snapshot. */
-export async function* iterateSupabaseRecentQueries(db: SupabaseClient, limit: number): AsyncIterable<QueryRun> {
+export async function* iterateSupabaseRecentQueries(db: SupabaseAuthority, limit: number): AsyncIterable<QueryRun> {
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 2500) throw new Error("Invalid query scan limit");
   let cursor: { createdAt: string; id: string } | undefined;
   const seen = new Set<string>();
   while (seen.size < limit) {
     const count = Math.min(PAGE_SIZE, limit - seen.size);
-    let query = db.from("query_runs").select("id,created_at,data")
-      .order("created_at", { ascending: false }).order("id", { ascending: false }).limit(count);
-    if (cursor) {
-      const time = quoted(cursor.createdAt), id = quoted(cursor.id);
-      query = query.or(`created_at.lt.${time},and(created_at.eq.${time},id.lt.${id})`);
-    }
-    const { data, error } = await query.abortSignal(AbortSignal.timeout(15_000));
+    const { data, error } = await db.rpc("iterate_recent_queries", { p_limit: count,
+      p_before_time: cursor?.createdAt ?? null, p_before_id: cursor?.id ?? null }).abortSignal(AbortSignal.timeout(15_000))
+      .then(result => result, () => { throw new Error("Query scan unavailable"); });
     if (error || !Array.isArray(data) || data.length > count) throw new Error("Query scan unavailable");
     if (data.length === 0) return;
     for (const row of data) {

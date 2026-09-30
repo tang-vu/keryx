@@ -2,11 +2,13 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+  storage: vi.fn(() => ({ identity: { authorityMode: "testnet-real" } })),
   verifyApiKey: vi.fn(),
   checkRateLimit: vi.fn(),
   getDb: vi.fn(),
 }));
 
+vi.mock("@/lib/db/runtime-storage-config", () => ({ readRuntimeStorageDeployment: mocks.storage }));
 vi.mock("@/lib/api-keys", () => ({ verifyApiKey: mocks.verifyApiKey }));
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: mocks.checkRateLimit,
@@ -45,6 +47,7 @@ function request(path: string, body: unknown) {
 
 describe("authenticated ask rate-limit identity", () => {
   beforeEach(() => {
+  mocks.storage.mockReturnValue({ identity: { authorityMode: "testnet-real" } });
     vi.clearAllMocks();
     mocks.verifyApiKey.mockResolvedValue(KEY_CONTEXT);
     mocks.checkRateLimit.mockResolvedValue(

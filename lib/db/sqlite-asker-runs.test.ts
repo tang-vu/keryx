@@ -1,5 +1,7 @@
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 /**
- * Asker attribution on the SQLite adapter — the query behind a wallet's dispatch ledger.
+ * Asker attribution on the SQLite adapter â€” the query behind a wallet's dispatch ledger.
  * Pins the three things a receipts page cannot get wrong: one wallet never sees another's
  * dispatches, unattributed runs (anonymous / engine / A2A) belong to nobody, and address
  * casing never splits a wallet's history in two.
@@ -13,7 +15,7 @@ import { SqliteAdapter } from "./sqlite-adapter";
 import type { QueryRun } from "../types";
 
 const dbFile = path.join(os.tmpdir(), `keryx-asker-runs-test-${process.pid}.sqlite`);
-const db = new SqliteAdapter(dbFile);
+const db = await sqliteFixtures.open(dbFile, "testnet-offline");
 await db.init();
 
 afterAll(() => {
@@ -54,12 +56,12 @@ describe("listQueryRunsByAsker", () => {
     expect(mine[0].askerFunded).toBe(false);
     expect(mine[1].askerFunded).toBe(true);
 
-    // Bob's ledger sees Bob's row only — never Alice's, never the unattributed one.
+    // Bob's ledger sees Bob's row only â€” never Alice's, never the unattributed one.
     expect((await db.listQueryRunsByAsker(BOB, 50)).map((r) => r.id)).toEqual(["r3"]);
   });
 
   it("matches a wallet regardless of address casing on either side", async () => {
-    // Stamped upper-case, queried lower-case (and the reverse) — same wallet, one ledger.
+    // Stamped upper-case, queried lower-case (and the reverse) â€” same wallet, one ledger.
     expect((await db.listQueryRunsByAsker(ALICE.toLowerCase(), 50)).length).toBe(2);
     expect((await db.listQueryRunsByAsker(BOB.toUpperCase(), 50)).length).toBe(1);
   });
@@ -75,11 +77,11 @@ describe("listQueryRunsByAsker", () => {
   /**
    * The live database carries every real dispatch and predates the column. `CREATE TABLE IF NOT
    * EXISTS` is a no-op against it, so the ALTER + index in ensureColumns is the only thing that
-   * makes attribution work there — and a fresh-DB test can never see that path fail.
+   * makes attribution work there â€” and a fresh-DB test can never see that path fail.
    */
   it("upgrades a database created before asker existed", async () => {
     const legacyFile = path.join(os.tmpdir(), `keryx-asker-legacy-${process.pid}.sqlite`);
-    const legacy = new SqliteAdapter(legacyFile);
+    const legacy = await sqliteFixtures.open(legacyFile, "testnet-offline");
     await legacy.init();
     legacy.close();
     // Reopen raw and strip the column, standing in for a database written by the older schema.
@@ -88,7 +90,7 @@ describe("listQueryRunsByAsker", () => {
     raw.exec(`DROP INDEX IF EXISTS query_runs_asker; ALTER TABLE query_runs DROP COLUMN asker`);
     raw.close();
 
-    const upgraded = new SqliteAdapter(legacyFile);
+    const upgraded = await sqliteFixtures.open(legacyFile, "testnet-offline");
     await expect(upgraded.init()).resolves.not.toThrow();
     try {
       await upgraded.saveQueryRun(run("r9", "2026-07-24T14:00:00.000Z", ALICE, true));

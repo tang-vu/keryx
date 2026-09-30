@@ -1,0 +1,23 @@
+name: Storage PostgreSQL candidate
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - "lib/db/storage-identity*"
+      - "lib/db/supabase-*"
+      - "scripts/test-storage-postgres.mts"
+      - ".github/workflows/storage-postgres.yml"
+jobs:
+  storage-postgres:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - name: Actual isolated PostgreSQL acceptance
+        run: node --import tsx scripts/test-storage-postgres.mts

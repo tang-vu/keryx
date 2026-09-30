@@ -11,6 +11,7 @@ import { arcTestnet } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 import { config, hasLlm, llmProvider } from "../lib/config.ts";
 import { getDb } from "../lib/db/index.ts";
+import { readRuntimeStorageDeployment } from "../lib/db/runtime-storage-config.ts";
 
 const ok = (b: boolean) => (b ? "✅" : "❌");
 const line = "─".repeat(56);
@@ -21,14 +22,15 @@ console.log(`\nKeryx — go-live preflight\n${line}`);
 const llm = hasLlm();
 console.log(`${ok(llm)} LLM provider: ${llmProvider()}${llm ? "" : "  → set DEEPSEEK_API_KEY (or ANTHROPIC_API_KEY) in .env.local"}`);
 
-// Offline flag
-const forcedOffline = process.env.KERYX_FORCE_OFFLINE === "1";
-console.log(`${ok(!forcedOffline)} KERYX_FORCE_OFFLINE=${process.env.KERYX_FORCE_OFFLINE ?? "0"}${forcedOffline ? "  → set to 0 to settle for real" : ""}`);
+// Explicit store identity, not key presence or an override flag, defines mode.
+const deployment = readRuntimeStorageDeployment();
+const realMode = deployment.identity.authorityMode === "testnet-real";
+console.log(`${ok(realMode)} Storage authority mode: ${deployment.identity.authorityMode}`);
 
 // Wallet
 let gasOk = false;
 let usdcOk = false;
-if (!config.funderKey) {
+if (!realMode || !config.funderKey) {
   console.log(`❌ Funder wallet: AGENT_FUNDER_PRIVATE_KEY not set (run npm run generate-wallets)`);
 } else {
   const funder = privateKeyToAccount(config.funderKey as `0x${string}`);
@@ -53,7 +55,7 @@ const db = await getDb();
 const sources = await db.listSources();
 console.log(`${ok(sources.length > 0)} Registered sources: ${sources.length}`);
 
-const ready = llm && !forcedOffline && gasOk && usdcOk && sources.length > 0;
+const ready = llm && realMode && gasOk && usdcOk && sources.length > 0;
 console.log(line);
 console.log(ready ? "🟢 READY for real settlement — run: npm run ask -- \"<question>\"" : "🟡 Not ready yet — resolve the ❌ items above.");
 console.log(`   (faucet: https://faucet.circle.com/  ·  fund: ${config.funderKey ? privateKeyToAccount(config.funderKey as `0x${string}`).address : "<funder>"})\n`);

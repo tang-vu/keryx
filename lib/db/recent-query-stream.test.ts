@@ -1,3 +1,4 @@
+import { testSupabaseAuthority } from "./supabase-authority-test-fixture";
 import { describe, expect, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import { iterateSupabaseRecentQueries } from "./recent-query-stream";
@@ -11,53 +12,51 @@ const row = (id: string) => ({ id, created_at: time, data: { id } });
 describe("Supabase recent query scan", () => {
   it("uses ordered bounded keyset requests even when the server caps pages", async () => {
     const ids = ["z", "y", "x", "w"];
-    const requests: URL[] = [];
-    const db = createClient("https://fixture.invalid", "fixture-key", { global: { fetch: async (input, init) => {
+    const requests: { p_limit: number; p_before_time: string | null; p_before_id: string | null }[] = [];
+    const db = await testSupabaseAuthority(createClient("https://fixture.invalid", "fixture-key", { global: { fetch: async (input, init) => {
       expect(init?.signal).toBeDefined();
-      const url = new URL(String(input)); requests.push(url);
-      expect(url.searchParams.get("order")).toBe("created_at.desc,id.desc");
-      expect(url.searchParams.get("select")).toBe("id,created_at,data");
-      const filter = url.searchParams.get("or");
+      expect(new URL(String(input)).pathname).toBe("/rest/v1/rpc/storage_iterate_recent_queries");
+      const body = JSON.parse(String(init?.body)); requests.push(body);
+      const filter = body.p_before_id;
       let eligible = ids;
       if (filter) {
-        const match = filter.match(/id\.lt\."([a-z])"/);
-        expect(match).not.toBeNull();
-        expect(filter).toBe(`(created_at.lt."${time}",and(created_at.eq."${time}",id.lt."${match![1]}"))`);
-        eligible = ids.filter(id => id < match![1]);
+        expect(body.p_before_time).toBe(time);
+        eligible = ids.filter(id => id < filter);
       }
-      const selected = eligible.slice(0, Math.min(2, Number(url.searchParams.get("limit"))));
+      const selected = eligible.slice(0, Math.min(2, body.p_limit));
       if (requests.length === 1) ids.unshift("zz"); // New head must not shift the next page.
       return Response.json(selected.map(row));
-    } } });
+    } } }));
     expect((await collect(iterateSupabaseRecentQueries(db, 10))).map(r => r.id)).toEqual(["z", "y", "x", "w"]);
     expect(requests).toHaveLength(3);
-    expect(requests.every(url => Number(url.searchParams.get("limit")) <= 32)).toBe(true);
+    expect(requests.every(body => body.p_limit <= 32)).toBe(true);
   });
 
-  it("escapes reserved cursor characters through the actual HTTP builder", async () => {
+  it("sends reserved cursor characters as typed JSON without filter interpolation", async () => {
     const id = 'x,"\\()'; let calls = 0;
-    const db = createClient("https://fixture.invalid", "fixture-key", { global: { fetch: async input => {
+    const db = await testSupabaseAuthority(createClient("https://fixture.invalid", "fixture-key", { global: { fetch: async (input, init) => {
       if (++calls === 1) return Response.json([row(id)]);
-      expect(new URL(String(input)).searchParams.get("or")).toBe(`(created_at.lt."${time}",and(created_at.eq."${time}",id.lt."x,\\"\\\\()"))`);
+      expect(new URL(String(input)).pathname).toBe("/rest/v1/rpc/storage_iterate_recent_queries");
+      expect(JSON.parse(String(init?.body))).toMatchObject({ p_before_time: time, p_before_id: id });
       return Response.json([]);
-    } } });
+    } } }));
     expect(await collect(iterateSupabaseRecentQueries(db, 2))).toHaveLength(1);
   });
 
   it.each(["error", "duplicate", "mismatch", "timestamp", "control"])("rejects %s without returning a complete scan", async kind => {
     let calls = 0;
-    const db = createClient("https://fixture.invalid", "fixture-key", { global: { fetch: async () => {
+    const db = await testSupabaseAuthority(createClient("https://fixture.invalid", "fixture-key", { global: { fetch: async () => {
       if (++calls === 1) return Response.json([row("z")]);
       if (kind === "error") return Response.json({ message: "Unavailable" }, { status: 503 });
       const bad = kind === "duplicate" ? row("z") : kind === "mismatch" ? { ...row("y"), data: { id: "other" } }
         : kind === "timestamp" ? { ...row("y"), created_at: "bad" } : row("bad\n");
       return Response.json([bad]);
-    } } });
+    } } }));
     await expect(collect(iterateSupabaseRecentQueries(db, 3))).rejects.toThrow("Query scan");
   });
 
   it.each([0, -1, 2501, 1.5, NaN])("rejects invalid limit %s before access", async limit => {
-    const db = createClient("https://fixture.invalid", "fixture-key", { global: { fetch: async () => { throw new Error("Must not fetch"); } } });
+    const db = await testSupabaseAuthority(createClient("https://fixture.invalid", "fixture-key", { global: { fetch: async () => { throw new Error("Must not fetch"); } } }));
     await expect(collect(iterateSupabaseRecentQueries(db, limit))).rejects.toThrow("Invalid query scan limit");
   });
 });

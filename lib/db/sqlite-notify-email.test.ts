@@ -1,5 +1,7 @@
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 /**
- * Round-trip for the citation email-alert config on the SQLite adapter — the store the email
+ * Round-trip for the citation email-alert config on the SQLite adapter â€” the store the email
  * dispatcher's rate cap depends on. Pins the one subtle behavior: re-saving an address resets
  * `lastSentAt`, so a fresh opt-in never inherits a stale rate window.
  */
@@ -11,7 +13,7 @@ import path from "node:path";
 import { SqliteAdapter } from "./sqlite-adapter";
 
 const dbFile = path.join(os.tmpdir(), `keryx-notify-email-test-${process.pid}.sqlite`);
-const db = new SqliteAdapter(dbFile);
+const db = await sqliteFixtures.open(dbFile, "testnet-offline");
 await db.init();
 
 afterAll(() => {

@@ -3,14 +3,16 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { setTimeout as delay } from "node:timers/promises";
+import { offlineRuntimeFixture } from "./offline-runtime-fixture.ts";
 
 const require = createRequire(import.meta.url);
 const port = 3957;
 const base = process.env.KERYX_UX_BASE_URL ?? process.env.KERYX_TEST_BASE_URL ?? `http://127.0.0.1:${port}`;
 const external = !!(process.env.KERYX_UX_BASE_URL || process.env.KERYX_TEST_BASE_URL);
+const fixture = external ? null : await offlineRuntimeFixture(process.env);
 const server = external ? null : spawn(process.execPath,
   [require.resolve("next/dist/bin/next"), "start", "-H", "127.0.0.1", "-p", String(port)],
-  { cwd: process.cwd(), env: { ...process.env, KERYX_FORCE_OFFLINE: "1" }, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+  { cwd: process.cwd(), env: fixture!.env, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
 let output = "";
 const exited = new Promise<void>(resolve => {
   if (!server) return resolve();
@@ -49,4 +51,5 @@ try {
   await run("scripts/test-reading-ux-browser.mts");
 } finally {
   if (server) { server.kill(); await exited; }
+  await fixture?.close();
 }

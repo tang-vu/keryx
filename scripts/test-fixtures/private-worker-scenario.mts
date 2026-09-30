@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
@@ -9,18 +9,27 @@ import { privateResearchService } from "../../lib/a2a/private-research-service";
 import { preparePrivateBuyerJournal } from "../../lib/buyer/private-checkout-preparation";
 import { readPrivateBuyerJournal } from "../../lib/buyer/private-journal";
 import { BUYER_NETWORK } from "../../lib/buyer/protocol";
+import { provisionSyntheticStorage } from "../../lib/db/storage-identity-fixture";
+import { canonicalJson } from "../../lib/canonical-json";
 
 /** Unfunded ephemeral identities, synthetic incoming evidence, an empty source corpus.
  * No environment file, existing database or live payment transport is read. */
 export async function privateWorkerScenario() {
   const root = await mkdtemp(join(tmpdir(), "keryx-worker-drain-"));
-  const db = new SqliteAdapter(join(root, "data", "keryx.sqlite"));
+  await mkdir(join(root, "data"));
+  const file = join(root, "data", "keryx.sqlite");
+  const identity = await provisionSyntheticStorage(file, "testnet-real");
+  const db = new SqliteAdapter(file, { expectedIdentity: identity });
   try {
     await db.init();
+    const manifest = join(root, "storage-manifest.json");
+    await writeFile(manifest, canonicalJson({ format: "keryx-storage-deployment-v1", identity,
+      backend: { kind: "sqlite", databasePath: file } }), { flag: "wx", mode: 0o600 });
     const owner = privateKeyToAccount(generatePrivateKey()), treasuryKey = generatePrivateKey(), publicKey = generatePrivateKey();
     const treasury = privateKeyToAccount(treasuryKey).address;
     const merchants = { privatePayee: `0x${"ab".repeat(20)}`, publicResearchPayee: `0x${"cd".repeat(20)}` };
     const env = { KERYX_PRIVATE_WORKER_ENABLED: "1", KERYX_PRIVATE_RESEARCH_ENABLED: "1", KERYX_COMMIT: "abcdef0",
+      KERYX_STORAGE_MANIFEST: manifest, KERYX_SQLITE_PATH: file, KERYX_FORCE_OFFLINE: "0",
       CONTENT_MASTER_KEY: randomBytes(32).toString("hex"),
       KERYX_PRIVATE_RESEARCH_PAYEE: merchants.privatePayee, KERYX_PRIVATE_RESEARCH_RESERVED_PAYEES: merchants.privatePayee,
       SELLER_ADDRESS: merchants.publicResearchPayee, AGENT_FUNDER_PRIVATE_KEY: publicKey,

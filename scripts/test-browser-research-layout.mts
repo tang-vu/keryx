@@ -7,9 +7,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { chromium } from "playwright";
+import { offlineRuntimeFixture } from "./offline-runtime-fixture.ts";
 
 const require = createRequire(import.meta.url);
 const externalBase = process.env.KERYX_UX_BASE_URL;
+const fixture = externalBase ? null : await offlineRuntimeFixture(process.env);
 const port = 3957;
 const base = externalBase ?? `http://127.0.0.1:${port}`;
 const screenshotDir = process.env.KERYX_UX_SCREENSHOT_DIR ?? await mkdtemp(join(tmpdir(), "keryx-research-ux-"));
@@ -17,7 +19,7 @@ await mkdir(screenshotDir, { recursive: true });
 
 const child = externalBase ? null : spawn(process.execPath,
   [require.resolve("next/dist/bin/next"), "start", "-H", "127.0.0.1", "-p", String(port)],
-  { cwd: process.cwd(), env: { ...process.env, KERYX_FORCE_OFFLINE: "1" }, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+  { cwd: process.cwd(), env: fixture!.env, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
 let output = "";
 const exited = new Promise<void>(resolve => {
   if (!child) return resolve();
@@ -116,4 +118,5 @@ try {
 } finally {
   await browser.close();
   if (child) { child.kill(); await exited; }
+  await fixture?.close();
 }

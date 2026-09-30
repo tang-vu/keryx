@@ -1,7 +1,9 @@
+import { sqliteDomainTestFixtures } from "../db/sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 /**
  * Grants back the non-custodial cap, so their accounting must outlive the process that made it.
  * These run against a real SQLite file rather than a fake, because the properties worth pinning
- * — atomic increments, micro-USDC rounding, survival across a reopen — live in the SQL.
+ * â€” atomic increments, micro-USDC rounding, survival across a reopen â€” live in the SQL.
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
@@ -51,7 +53,7 @@ async function releaseSpend(sessionId: string, amount: number): Promise<void> {
 }
 
 beforeAll(async () => {
-  dbRef.current = new SqliteAdapter(dbFile);
+  dbRef.current = await sqliteFixtures.open(dbFile, "testnet-real");
   await dbRef.current.init();
 });
 
@@ -218,13 +220,13 @@ describe("surviving a restart", () => {
     await recordSpend(SESSION, 0.03);
 
     // A deploy: the old process dies, a new one opens the same database file.
-    dbRef.current = new SqliteAdapter(dbFile);
+    dbRef.current = await sqliteFixtures.open(dbFile, "testnet-real");
     await dbRef.current.init();
 
     const grant = await getGrant(SESSION);
     expect(grant?.cap).toBe(0.05);
     expect(grant?.spent).toBe(0.03);
-    // The pre-restart spend still counts against the cap — it used to reset to zero.
+    // The pre-restart spend still counts against the cap â€” it used to reset to zero.
     expect(await canSpend(SESSION, 0.03)).toBe(false);
     expect(await canSpend(SESSION, 0.02)).toBe(true);
   });

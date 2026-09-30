@@ -1,5 +1,15 @@
 # Keryx — Decision Log
 
+**D-275** - Bind storage and payment authority to an explicit deployment identity (staged candidate) -
+*Credentials, a missing funder or an offline flag cannot establish a store's origin or authorize a different deployment.* Require a bounded canonical nonsecret manifest with complete expected deployment/storage/enrollment identity, explicit backend target and explicit real/offline testnet mode. Pin the process deployment and refuse changed manifests, missing targets, partial selected backend credentials and full-identity mismatches. Recheck after asynchronous database initialization before publication, at retained gateway operations, and at actual signing/submission boundaries. Operators must drain and stop before changing deployment configuration; checks do not roll back or cancel work already admitted.
+
+Keep gateway mode as stable descriptive metadata so a rejected citation leg does not discard a completed answer. Keep the existing controlled server x402 authorization, nonce, settlement and evidence pipeline. The proposed treasury implementation uses controlled viem cryptography and physical-send boundaries plus the installed Circle SDK's exact pinned approve/deposit ABI; a raw-key SDK deposit cannot provide the required inter-await authority guard. The serializer-to-crypto and HTTP-to-fetch gaps require actual synthetic regression evidence and independent review before acceptance. Single-use in-memory attempts preserve uncertainty within a handle; they do not provide durable or restart-safe funding idempotency.
+
+SQLite admission, guarded raw capabilities and a dedicated read-only snapshot capability remain distinct from provisioning/enrollment and quarantined restore. Supabase requires full expected identity and transactional RPC admission. Legacy funded provenance, independent journal scopes, authenticated backup lineage, durable identity-bound funding records covering all transfers/deposits and restart reconciliation, external review, drained production cutover and all mainnet gates remain OPEN. Local filesystem ownership and trusted host/process integrity remain explicit assumptions. This is a candidate design and implementation under review, not a claim that current production has these fences, that any existing store was enrolled, or that mainnet is enabled.
+
+See [runtime manifest candidate](docs/runtime-storage-manifest.md), [SQLite storage identity](docs/sqlite-storage-identity.md), [PostgreSQL isolation](docs/storage-postgres-isolation.md), [provenance inspection](docs/storage-provenance-inspection.md), and [mainnet delivery gates](docs/mainnet-delivery-plan.md).
+
+
 **D-274** - Enforce canonical session-worker signing semantics -
 *Contract destination alone is not transaction authority: a call to USDC may transfer
 or approve an attacker.* Pin the worker's public Arc-testnet policy independently of

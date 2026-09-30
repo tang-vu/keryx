@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 /**
  * The two item-date queries behind answer freshness, on the real adapter.
  *
@@ -14,7 +16,7 @@ import { SqliteAdapter } from "./sqlite-adapter";
 import type { SourceItem } from "../types";
 
 const dbFile = path.join(os.tmpdir(), `keryx-item-freshness-test-${process.pid}.sqlite`);
-const db = new SqliteAdapter(dbFile);
+const db = await sqliteFixtures.open(dbFile, "testnet-offline");
 await db.init();
 
 afterAll(() => {
@@ -39,7 +41,7 @@ await db.addItems([
   item("a2", "alpha", "2026-07-21T00:00:00.000Z"),
   item("a3", "alpha", "2026-07-22T12:00:00.000Z"),
   item("b1", "beta", "2026-07-23T00:00:00.000Z"),
-  item("b2", "beta"), // undated — cannot prove it is new
+  item("b2", "beta"), // undated â€” cannot prove it is new
   item("b3", "beta", "Wed, 02 Oct 2026 13:00:00 GMT"), // a feed date ingest could not parse
   item("c1", "gamma", "2026-08-01T00:00:00.000Z"), // dated in the future
   item("z1", "zeta", "2026-07-24T00:00:00.000Z"), // never asked about

@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseAuthority } from "./supabase-authority";
 import { z } from "zod";
 import { getSqlitePrivateExecution, getSupabasePrivateExecution } from "./private-research-executions";
 import { getSqlitePrivateResult, getSupabasePrivateResult } from "./private-research-results";
@@ -29,10 +29,10 @@ export async function getSqlitePrivateInterruption(db: DatabaseSync, id: string,
   const row = db.prepare("SELECT worker_id,reason,recorded_at FROM private_research_interruptions WHERE id=?").get(id);
   return row ? record(row, claim.workerId) : null;
 }
-export async function getSupabasePrivateInterruption(db: SupabaseClient, id: string, payer: string) {
+export async function getSupabasePrivateInterruption(db: SupabaseAuthority, id: string, payer: string) {
   const claim = await getSupabasePrivateExecution(db, id, payer);
   if (!claim) return null;
-  const { data, error } = await db.from("private_research_interruptions").select("worker_id,reason,recorded_at").eq("id", id).maybeSingle();
+  const { data, error } = await db.rpcResult("get_supabase_private_interruption", { p_id: id });
   if (error) throw new Error("Private interruption state unavailable");
   return data ? record(data, claim.workerId) : null;
 }
@@ -52,11 +52,11 @@ export async function interruptSqlitePrivateResearch(db: DatabaseSync, id: strin
   if (!saved && !await getSqlitePrivateResult(db, id, payer)) throw new Error("Private interruption unavailable");
   return saved;
 }
-export async function interruptSupabasePrivateResearch(db: SupabaseClient, id: string, payer: string, workerId: string) {
+export async function interruptSupabasePrivateResearch(db: SupabaseAuthority, id: string, payer: string, workerId: string) {
   const claim = await getSupabasePrivateExecution(db, id, payer);
   if (!claim || claim.workerId !== workerId) throw new Error("Private interruption authority unavailable");
   if (await getSupabasePrivateResult(db, id, payer)) return null;
-  const { error } = await db.rpc("interrupt_private_research", { p_id: id, p_payer: payer.toLowerCase(), p_worker_id: workerId });
+  const { error } = await db.rpcResult("interrupt_private_research", { p_id: id, p_payer: payer.toLowerCase(), p_worker_id: workerId });
   if (error) throw new Error("Private interruption unavailable");
   const saved = await getSupabasePrivateInterruption(db, id, payer);
   if (!saved && !await getSupabasePrivateResult(db, id, payer)) throw new Error("Private interruption unavailable");

@@ -1,3 +1,6 @@
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
+import { testSupabaseAuthority, supabaseTestIdentity } from "./supabase-authority-test-fixture";
 import { mkdtempSync, rmSync, rmdirSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -13,8 +16,8 @@ import { listSupabasePrivateResearchHistory } from "./private-research-intents";
 import { privateHistoryPage } from "../a2a/private-history";
 
 const directory = mkdtempSync(join(tmpdir(), "keryx-private-history-")), file = join(directory, "db.sqlite");
-const db = new SqliteAdapter(file); await db.init();
-const raw = new DatabaseSync(file);
+const db = await sqliteFixtures.open(file, "testnet-real"); await db.init();
+const raw = sqliteFixtures.trustedRaw(file);
 afterAll(() => { db.close(); raw.close(); for (const suffix of ["", "-wal", "-shm"]) rmSync(file + suffix, { force: true }); rmdirSync(directory); });
 const owner = privateKeyToAccount(generatePrivateKey()), foreign = privateKeyToAccount(generatePrivateKey());
 const merchants = { privatePayee: `0x${"ab".repeat(20)}`, publicResearchPayee: `0x${"cd".repeat(20)}` };
@@ -56,13 +59,12 @@ it("constrains Supabase queries and rejects corrupt or foreign stored proof and 
   const intent = await insert(owner);
   const row = { id: intent.id, data: intent, created_at: "2026-09-09T00:00:00.123456+00:00" };
   const http = vi.fn<typeof fetch>().mockResolvedValue(Response.json([row]));
-  const client = createClient("https://synthetic.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+  const client = await testSupabaseAuthority(createClient("https://synthetic.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } }));
   const result = await listSupabasePrivateResearchHistory(client, owner.address, { id: intent.id, createdAt: row.created_at });
   expect(result).toEqual([{ intent, createdAt: row.created_at }]);
-  const query = new URL(String(http.mock.calls[0][0])).searchParams;
-  expect(query.get("payer")).toBe(`eq.${owner.address.toLowerCase()}`);
-  expect(query.get("limit")).toBe("26"); expect(query.get("order")).toBe("created_at.desc,id.desc");
-  expect(query.get("or")).toContain(`created_at.eq.${row.created_at},id.lt.${intent.id}`);
+  expect(new URL(String(http.mock.calls[0][0])).pathname).toBe("/rest/v1/rpc/storage_list_private_research_history");
+  expect(JSON.parse(String(http.mock.calls[0][1]?.body))).toEqual({ p_owner: owner.address.toLowerCase(),
+    p_before_time: row.created_at, p_before_id: intent.id, p_expected_identity: supabaseTestIdentity });
   http.mockResolvedValueOnce(Response.json([row]));
   await expect(listSupabasePrivateResearchHistory(client, foreign.address)).rejects.toThrow("owner mismatch");
   http.mockResolvedValueOnce(Response.json([{ ...row, data: { ...intent, id: `prv_${"f".repeat(64)}` } }]));

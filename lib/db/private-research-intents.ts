@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseAuthority } from "./supabase-authority";
 import { z } from "zod";
 import { addressSchema } from "../buyer/protocol";
 import { privateResearchIdSchema, samePrivateResearchIntent, validatePrivateResearchIntent, type PrivateResearchIntent } from "../a2a/private-research-intent";
@@ -41,13 +41,11 @@ export async function listSqlitePrivateResearchHistory(db: DatabaseSync, payer: 
   return Promise.all(rows.map(row => historyRow({ id: row.id, data: row.data, created_at: row.created_at }, owner)));
 }
 
-export async function listSupabasePrivateResearchHistory(db: SupabaseClient, payer: string, before?: PrivateHistoryCursor) {
+export async function listSupabasePrivateResearchHistory(db: SupabaseAuthority, payer: string, before?: PrivateHistoryCursor) {
   const owner = addressSchema.parse(payer).toLowerCase();
   const cursor = before === undefined ? undefined : privateHistoryCursorSchema.parse(before);
-  let query = db.from("private_research_intents").select("id,data,created_at").eq("payer", owner)
-    .order("created_at", { ascending: false }).order("id", { ascending: false }).limit(26);
-  if (cursor) query = query.or(`created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`);
-  const { data, error } = await query;
+  const { data, error } = await db.rpcResult("list_private_research_history", { p_owner: owner,
+    p_before_time: cursor?.createdAt ?? null, p_before_id: cursor?.id ?? null });
   if (error || !Array.isArray(data)) throw new Error("Private research history unavailable");
   return Promise.all(data.map(row => historyRow(row, owner)));
 }
@@ -81,16 +79,16 @@ export async function reserveSqlitePrivateResearchIntent(db: DatabaseSync, value
   return requireOriginal(await getSqlitePrivateResearchIntent(db, intent.id, payer), intent);
 }
 
-export async function getSupabasePrivateResearchIntent(db: SupabaseClient, id: string, payer: string) {
+export async function getSupabasePrivateResearchIntent(db: SupabaseAuthority, id: string, payer: string) {
   const key = lookup(id, payer);
-  const { data, error } = await db.from("private_research_intents").select("data").eq("id", key.id).eq("payer", key.payer).maybeSingle();
+  const { data, error } = await db.rpcResult("get_supabase_private_research_intent", { p_id: key.id, p_payer: key.payer });
   if (error) throw new Error("Private research storage unavailable");
   return data ? checkedRow(data.data, key.id, key.payer) : null;
 }
-export async function reserveSupabasePrivateResearchIntent(db: SupabaseClient, value: PrivateResearchIntent) {
+export async function reserveSupabasePrivateResearchIntent(db: SupabaseAuthority, value: PrivateResearchIntent) {
   const intent = await validatePrivateResearchIntent(value);
   const payer = intent.submission.payment.authorization.from;
-  const { error } = await db.from("private_research_intents").upsert({ id: intent.id, payer, data: intent }, { onConflict: "id", ignoreDuplicates: true });
+  const { error } = await db.rpcResult("reserve_supabase_private_research_intent", { p_row: { id: intent.id, payer, data: intent } });
   if (error) throw new Error("Private research storage unavailable");
   return requireOriginal(await getSupabasePrivateResearchIntent(db, intent.id, payer), intent);
 }

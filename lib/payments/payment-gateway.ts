@@ -4,15 +4,16 @@
  * `real`    → settles on Arc testnet via Circle x402. Two sub-modes:
  *             BrowserCoSignGateway: user funds their own session EOA; browser co-signs each
  *               authorization (non-custodial). Selected when a session grant is active.
- *             RealGateway: Keryx treasury wallet (GatewayClient.pay). Used by the volume
+ *             RealGateway: guarded Keryx treasury wallet and controlled x402 signer. Used by the volume
  *               engine / A2A / collectRun when no browser session is present.
  * `offline` → reads content from the DB and records simulated payments (settled:false) so the
  *             full reasoning + settlement FLOW runs with no funded wallet. Never the demo path.
  *
- * Selection priority: BrowserCoSign (active grant) → Real (funder key) → Offline.
+ * Selection follows explicit checked storage mode; real treasury operations require a signer.
  */
 
 import { config } from "../config";
+import { assertRuntimeStorageAuthority } from "../db/runtime-storage-authority";
 import type {
   ArticleOfferRef,
   Author,
@@ -65,13 +66,27 @@ export interface GatewayOpts {
   abortSignal?: AbortSignal;
 }
 
+function guardedGateway(db: KeryxDB, gateway: PaymentGateway): PaymentGateway {
+  // Descriptive run metadata remains stable after a leg refuses; it grants no spend authority.
+  const mode = gateway.mode;
+  return Object.freeze({
+    mode,
+    ensureFunded: async (budget: number) => { assertRuntimeStorageAuthority(db); return gateway.ensureFunded(budget); },
+    payFetch: async (args: Parameters<PaymentGateway["payFetch"]>[0]) => { assertRuntimeStorageAuthority(db); return gateway.payFetch(args); },
+    payCitation: async (args: Parameters<PaymentGateway["payCitation"]>[0]) => { assertRuntimeStorageAuthority(db); return gateway.payCitation(args); },
+    agentAddress: () => { assertRuntimeStorageAuthority(db); return gateway.agentAddress(); },
+  });
+}
+
 export async function getPaymentGateway(db: KeryxDB, opts?: GatewayOpts): Promise<PaymentGateway> {
   if (opts?.requestSignature && !opts.sessionId) {
     throw new Error("browser signature callback requires a session id");
   }
-  if (process.env.KERYX_FORCE_OFFLINE === "1") {
+  const deployment = assertRuntimeStorageAuthority(db);
+  if (deployment.identity.authorityMode === "testnet-offline") {
+    if (opts?.sessionId || opts?.requestSignature) throw new Error("Offline storage cannot authorize browser signing");
     const { OfflineGateway } = await import("./offline-gateway");
-    return new OfflineGateway(db);
+    return guardedGateway(db, new OfflineGateway(db));
   }
 
   // Browser co-sign path: active session grant + sign callback injected by the SSE route.
@@ -81,23 +96,23 @@ export async function getPaymentGateway(db: KeryxDB, opts?: GatewayOpts): Promis
     const grant = await getGrant(opts.sessionId);
     if (!grant) throw new Error("browser session grant expired or revoked");
     const { BrowserCoSignGateway } = await import("./browser-cosign-gateway");
-    return new BrowserCoSignGateway(
+    return guardedGateway(db, new BrowserCoSignGateway(
       opts.sessionId,
       grant.sessAddr,
       opts.requestSignature,
       opts.abortSignal,
       grant.grantEpoch,
-    );
+      () => { assertRuntimeStorageAuthority(db); },
+    ));
   }
 
   // Treasury path: Keryx's own funder key for authorized server-side requests.
   if (config.funderKey.length > 0) {
     const { RealGateway } = await import("./real-gateway");
-    return new RealGateway();
+    return guardedGateway(db, new RealGateway(() => { assertRuntimeStorageAuthority(db); }));
   }
 
-  const { OfflineGateway } = await import("./offline-gateway");
-  return new OfflineGateway(db);
+  throw new Error("Real storage requires a treasury signer for this operation");
 }
 
 /** Build a PaymentRecord with consistent defaults. */

@@ -1,3 +1,4 @@
+import { assertRuntimeStorageAuthority } from "../lib/db/runtime-storage-authority.ts";
 /** Operator-controlled Arc testnet rehearsal. No browser UI/customer claim. */
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -21,7 +22,6 @@ async function main() {
   if (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_SERVICE_ROLE_KEY)
     throw new Error("Supabase environment is forbidden in this isolated rehearsal");
   process.env.BASE_URL = "https://keryx.cc";
-  process.env.KERYX_FORCE_OFFLINE = "0";
   process.env.KERYX_REGISTRY_READ_ADDRESS = "0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536";
   delete process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS;
   for (const key of Object.keys(process.env))
@@ -29,13 +29,16 @@ async function main() {
   const directory = path.resolve(values.directory);
   if (values.execute && fs.existsSync(directory)) throw new Error("Original rehearsal directory already exists");
   const { SqliteAdapter } = await import("../lib/db/sqlite-adapter.ts");
+  const { readRuntimeStorageDeployment } = await import("../lib/db/runtime-storage-config.ts");
   const { searchCircleTransfer, checkPendingTransfer } = await import("../lib/gateway/x402-transfer-reconciliation.ts");
   const database = path.join(directory, "data", "keryx.sqlite");
   const metadataPath = path.join(directory, "recovery.json");
   if (values.inspect) {
     const original = JSON.parse(fs.readFileSync(metadataPath, "utf8"));
     // Existing original database only. No schema initialization or writer handle.
-    const db = new SqliteAdapter(database, { readOnly: !values["confirm-local"] });
+    const deployment = readRuntimeStorageDeployment();
+    if (deployment.identity.authorityMode !== "testnet-real" || deployment.backend.kind !== "sqlite" || deployment.backend.databasePath !== database) throw new Error("Recovery storage identity mismatch");
+    const db = new SqliteAdapter(database, { readOnly: !values["confirm-local"], expectedIdentity: deployment.identity });
     try {
       const rows = await db.listPayments(10);
       assert.equal(rows.length, 1);
@@ -148,7 +151,7 @@ async function main() {
             value: BigInt(authorization.value), validAfter: BigInt(authorization.validAfter),
             validBefore: BigInt(authorization.validBefore), nonce: nonce as `0x${string}` } });
         return Buffer.from(JSON.stringify({ authorization, signature })).toString("base64");
-      }, AbortSignal.timeout(60_000), "rehearsal");
+      }, AbortSignal.timeout(60_000), "rehearsal", () => { assertRuntimeStorageAuthority(db); });
     await assert.rejects(gateway.payFetch({ source, queryId: "operator-rehearsal" }), PaymentPendingError);
     assert.deepEqual(transport.summary(), { paidCalls: 1, responseObserved: true });
     const rows = await db.listPayments(10); assert.equal(rows.length, 1);

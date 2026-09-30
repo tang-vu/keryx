@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import { afterEach, expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
@@ -6,6 +8,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { SqliteAdapter } from "./sqlite-adapter";
 import { SupabaseAdapter } from "./supabase-adapter";
+import { supabaseTestIdentity } from "./supabase-authority-test-fixture";
 import type { BrowserAuthorizationIntent } from "./browser-authorization-admission";
 
 const files: string[] = [];
@@ -22,7 +25,7 @@ const input = (requestId: string, amountMicroUsdc = 1): BrowserAuthorizationInte
 async function setup(cap = 0.000002) {
   const file = path.join(os.tmpdir(), `keryx-browser-admission-${crypto.randomUUID()}.sqlite`);
   files.push(file);
-  const db = new SqliteAdapter(file);
+  const db = await sqliteFixtures.open(file, "testnet-real");
   adapters.push(db);
   await db.init();
   await db.upsertSessionGrant({ sessionId: "owner", sessAddr: signer, ownerAddr: "owner",
@@ -39,7 +42,7 @@ afterEach(() => {
 
 it("atomically admits exact last micro units across two SQLite connections and survives reopen", async () => {
   const { db, file } = await setup();
-  const second = new SqliteAdapter(file);
+  const second = await sqliteFixtures.open(file, "testnet-real");
   adapters.push(second);
   await second.init();
   const results = await Promise.all([
@@ -52,10 +55,10 @@ it("atomically admits exact last micro units across two SQLite connections and s
   expect((await db.getSessionGrant("owner"))?.spent).toBe(0.000002);
   db.close(); adapters.splice(adapters.indexOf(db), 1);
   second.close(); adapters.splice(adapters.indexOf(second), 1);
-  const reopened = new DatabaseSync(file, { readOnly: true });
+  const reopened = sqliteFixtures.trustedRaw(file, { readOnly: true });
   expect((reopened.prepare("SELECT count(*) AS n FROM browser_authorization_intents").get() as { n: number }).n).toBe(2);
   reopened.close();
-  const writer = new DatabaseSync(file);
+  const writer = sqliteFixtures.trustedRaw(file);
   expect(() => writer.exec("UPDATE browser_authorization_intents SET payee='changed'")).toThrow(/immutable/);
   expect(() => writer.exec("DELETE FROM browser_authorization_intents")).toThrow(/immutable/);
   writer.close();
@@ -68,7 +71,7 @@ it("rolls back reservation on duplicate request, duplicate nonce, and insert fai
   expect((await db.admitBrowserAuthorization(input("r1"))).status).toBe("admitted");
   await expect(db.admitBrowserAuthorization(input("r1"))).rejects.toThrow();
   await expect(db.admitBrowserAuthorization(input("r2"))).rejects.toThrow();
-  const raw = new DatabaseSync(file);
+  const raw = sqliteFixtures.trustedRaw(file);
   raw.exec(`CREATE TRIGGER fail_intent BEFORE INSERT ON browser_authorization_intents
     BEGIN SELECT RAISE(ABORT, 'forced insert failure'); END`);
   raw.close();
@@ -88,7 +91,7 @@ it("refuses a replaced grant epoch without reserving", async () => {
 it("propagates Supabase RPC error and rejects unknown outcome", async () => {
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://synthetic-db.example");
   vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "synthetic-key-no-authority");
-  const db = new SupabaseAdapter();
+  const db = new SupabaseAdapter(supabaseTestIdentity);
   const failure = new Error("SQL insert failed");
   const rpc = vi.fn().mockResolvedValueOnce({ data: null, error: failure })
     .mockResolvedValueOnce({ data: "unknown", error: null })

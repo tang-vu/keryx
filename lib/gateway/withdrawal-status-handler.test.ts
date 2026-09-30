@@ -1,3 +1,5 @@
+import { sqliteDomainTestFixtures } from "../db/sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
@@ -8,7 +10,7 @@ import { createWithdrawalStatusHandler } from "./withdrawal-status-handler";
 
 const directory = mkdtempSync(join(tmpdir(), "keryx-withdrawal-status-"));
 let db: SqliteAdapter;
-beforeAll(async () => { db = new SqliteAdapter(join(directory, "app.sqlite")); await db.init(); }, 60000);
+beforeAll(async () => { db = await sqliteFixtures.open(join(directory, "app.sqlite"), "testnet-real"); await db.init(); }, 60000);
 afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
 afterAll(() => { db.close(); rmSync(directory, { recursive: true, force: true }); });
 const request = (body: unknown, extra: RequestInit = {}) => new Request("https://keryx.test/api/me/withdrawals/status", {

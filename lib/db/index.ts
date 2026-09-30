@@ -1,24 +1,27 @@
 /**
- * DB selector. Supabase adapter when configured (deploy), else local SQLite (offline dev).
+ * DB selector. The explicit checked deployment manifest selects the backend and full identity.
  * Adapters are dynamically imported so the unused one is never bundled.
  */
 
-import { hasSupabase } from "../config";
+import { readRuntimeStorageDeployment } from "./runtime-storage-config";
 import type { KeryxDB } from "./keryx-db";
+import { assertRuntimeStorageAuthority } from "./runtime-storage-authority";
 
 // Publish only the shared initialization promise, never a partially ready adapter.
 let initialization: Promise<KeryxDB> | null = null;
 
 export async function getDb(): Promise<KeryxDB> {
+  // Revalidate the pinned process configuration even when returning a cached adapter.
+  const deployment = readRuntimeStorageDeployment();
   if (!initialization) {
     initialization = (async () => {
       // Select once per attempt, before the first asynchronous import boundary.
-      const useSupabase = hasSupabase();
-      const adapter = useSupabase
-        ? new (await import("./supabase-adapter")).SupabaseAdapter()
-        : new (await import("./sqlite-adapter")).SqliteAdapter();
+      const adapter = deployment.backend.kind === "supabase"
+        ? new (await import("./supabase-adapter")).SupabaseAdapter(deployment.identity)
+        : new (await import("./sqlite-adapter")).SqliteAdapter(deployment.backend.databasePath, { expectedIdentity: deployment.identity });
       try {
         await adapter.init();
+        assertRuntimeStorageAuthority(adapter);
         return adapter;
       } catch (error) {
         // SQLite owns a file handle and exposes close(); Supabase has no adapter
@@ -35,7 +38,9 @@ export async function getDb(): Promise<KeryxDB> {
       throw error;
     });
   }
-  return initialization;
+  const adapter = await initialization;
+  assertRuntimeStorageAuthority(adapter);
+  return adapter;
 }
 
 export type { KeryxDB, CreatorEarnings } from "./keryx-db";

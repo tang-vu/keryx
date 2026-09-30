@@ -7,6 +7,7 @@ import { addressSchema, BUYER_NETWORK } from "../buyer/protocol";
 import { privateRuntimePolicy } from "./private-runtime-policy";
 import { privateResearchService } from "./private-research-service";
 import { inspectPrivateOperations } from "./private-operations-inspection";
+import { assertRuntimeStorageAuthority } from "../db/runtime-storage-authority";
 
 /** Restricted owner-pilot bootstrap, disabled by default. Observations limit
  * admission availability, not payment authority. Durable treasury reservation and
@@ -16,6 +17,7 @@ export async function privatePurchaseBootstrap(db: KeryxDB, signal: AbortSignal,
   const env = { ...process.env };
   if (signal.aborted || env.KERYX_PRIVATE_PURCHASE_ENABLED === undefined || env.KERYX_PRIVATE_PURCHASE_ENABLED === "0") return null;
   try {
+    if (assertRuntimeStorageAuthority(db).identity.authorityMode !== "testnet-real") throw new Error();
     const root = env.KERYX_PRIVATE_RESULT_SPOOL_DIRECTORY, commit = env.KERYX_COMMIT;
     if (env.KERYX_PRIVATE_PURCHASE_ENABLED !== "1" || env.KERYX_PRIVATE_RESEARCH_ENABLED !== "1"
       || config.networkId !== BUYER_NETWORK || config.cctpDomain !== 26
@@ -43,6 +45,7 @@ export async function privatePurchaseBootstrap(db: KeryxDB, signal: AbortSignal,
     return {
       quote: service.quote,
       submit(submission: unknown, authenticatedPayer: string) {
+        if (assertRuntimeStorageAuthority(db).identity.authorityMode !== "testnet-real") return Promise.reject(new Error("Private storage authority unavailable"));
         const payer = addressSchema.safeParse(authenticatedPayer);
         if (!payer.success || !payers.has(payer.data.toLowerCase()))
           return Promise.reject(new Error("Private purchase is unavailable for this account"));

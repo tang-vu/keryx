@@ -22,8 +22,9 @@ import nextConfig from "eslint-config-next";
 const base = Array.isArray(nextConfig) ? nextConfig : [nextConfig];
 
 const config = [
-  // Generated bindings and the design-handoff artifact are not hand-authored source — skip them.
-  { ignores: ["typechain-types/**", ".design-handoff/**", ".artifacts/**"] },
+  // The bounded build uses .next.tmp; exclude that generated output just as
+  // Next's defaults exclude .next. Keep application and script source covered.
+  { ignores: ["typechain-types/**", ".design-handoff/**", ".artifacts/**", ".next.tmp/**"] },
   // Flat-config plugins are scoped to the object that declares them. Patch the Next object that
   // already owns react-hooks instead of adding a detached rules-only object (which ESLint 9.39+
   // rejects as a missing plugin).

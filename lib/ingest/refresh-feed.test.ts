@@ -35,6 +35,9 @@ const feedOf = (...links: string[]): IngestedFeed => ({
 });
 
 const SRC = { id: "src-1", name: "Blog", rssUrl: "https://blog.example/rss.xml" };
+// These feed lifecycle tests inject synthetic storage explicitly. Encryption
+// and manifest admission are covered by their own storage boundary tests.
+const syntheticStore = async (items: SourceItem[]) => items;
 
 describe("refreshSourceFeed", () => {
   it("adds only posts the DB has never seen, keyed by link", async () => {
@@ -43,6 +46,7 @@ describe("refreshSourceFeed", () => {
     ]);
     const out = await refreshSourceFeed(db, SRC, async () =>
       feedOf("https://blog.example/1", "https://blog.example/2"),
+      syntheticStore,
     );
     expect(out).toMatchObject({ added: 1, total: 2 });
     expect(items).toHaveLength(2);
@@ -53,8 +57,8 @@ describe("refreshSourceFeed", () => {
   it("is idempotent — a second pass over the same feed adds nothing", async () => {
     const { db, items } = fakeDb();
     const ingest = async () => feedOf("https://blog.example/1");
-    await refreshSourceFeed(db, SRC, ingest);
-    const second = await refreshSourceFeed(db, SRC, ingest);
+    await refreshSourceFeed(db, SRC, ingest, syntheticStore);
+    const second = await refreshSourceFeed(db, SRC, ingest, syntheticStore);
     expect(second).toMatchObject({ added: 0, total: 1 });
     expect(items).toHaveLength(1);
   });
@@ -138,8 +142,10 @@ describe("refreshAllFeeds", () => {
         crawled.push(url);
         return feedOf("https://blog.example/1");
       },
+      syntheticStore,
     );
     expect(results.map((r) => r.sourceId)).toEqual(["ok"]);
     expect(crawled).toHaveLength(1);
+    expect(results[0].added).toBe(1);
   });
 });

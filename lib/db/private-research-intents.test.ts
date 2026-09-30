@@ -1,3 +1,6 @@
+import { sqliteDomainTestFixtures } from "./sqlite-domain-test-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
+import { testSupabaseAuthority, supabaseTestIdentity } from "./supabase-authority-test-fixture";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -38,9 +41,9 @@ import { createPrivateReconciliation } from "../a2a/private-reconciliation";
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-private-intents-"));
 const file = path.join(directory, "test.sqlite");
-const db = new SqliteAdapter(file), other = new SqliteAdapter(file);
+const db = await sqliteFixtures.open(file, "testnet-real"), other = await sqliteFixtures.open(file, "testnet-real");
 await db.init(); await other.init();
-const raw = new DatabaseSync(file);
+const raw = sqliteFixtures.trustedRaw(file);
 afterAll(() => {
   db.close(); other.close(); raw.close();
   for (const suffix of ["", "-wal", "-shm"]) fs.rmSync(file + suffix, { force: true });
@@ -94,13 +97,14 @@ it("rejects unverified input and corrupted stored identities without exposing pa
   raw.prepare("INSERT INTO private_research_intents(id,payer,data) VALUES (?,?,?)").run(forgedId, account.address.toLowerCase(), JSON.stringify(intent));
   await expect(db.getPrivateResearchIntent(forgedId, account.address)).rejects.toThrow("owner mismatch");
   const badId = `prv_${"2".repeat(64)}`;
-  raw.prepare("INSERT INTO private_research_intents(id,payer,data) VALUES (?,?,?)").run(badId, account.address.toLowerCase(), "not-json");
+  expect(()=>raw.prepare("INSERT INTO private_research_intents(id,payer,data) VALUES (?,?,?)").run(badId, account.address.toLowerCase(), "not-json")).toThrow(/serialized authority profile/);
+  raw.prepare("INSERT INTO private_research_intents(id,payer,data) VALUES (?,?,?)").run(badId, account.address.toLowerCase(), JSON.stringify({...intent,submission:null}));
   await expect(db.getPrivateResearchIntent(badId, account.address)).rejects.toThrow("Invalid stored private research intent");
 });
 
 it("recovers the exact saved request, salt, authorization and quote after reopening storage", async () => {
   await db.reservePrivateResearchIntent(intent);
-  const reopened = new SqliteAdapter(file);
+  const reopened = await sqliteFixtures.open(file, "testnet-real");
   try {
     await reopened.init();
     expect(await reopened.getPrivateResearchIntent(intent.id, account.address)).toEqual(intent);
@@ -117,35 +121,33 @@ it("copies trusted quote inputs before awaiting cryptographic verification", asy
 it("Supabase SDK binds owner reads, ignores duplicate inserts and confirms the original row", async () => {
   const http = vi.fn<typeof fetch>()
     .mockResolvedValueOnce(new Response(null, { status: 201 }))
-    .mockResolvedValueOnce(Response.json([{ data: intent }]));
-  const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+    .mockResolvedValueOnce(Response.json({ data: intent }));
+  const client = await testSupabaseAuthority(createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } }));
   expect(await reserveSupabasePrivateResearchIntent(client, intent)).toEqual(intent);
   const insertUrl = new URL(String(http.mock.calls[0][0]));
-  expect(insertUrl.pathname).toBe("/rest/v1/private_research_intents");
-  expect(insertUrl.searchParams.get("on_conflict")).toBe("id");
+  expect(insertUrl.pathname).toBe("/rest/v1/rpc/storage_reserve_supabase_private_research_intent");
   const insert = http.mock.calls[0][1]!;
   expect(insert.method).toBe("POST");
-  expect(new Headers(insert.headers).get("prefer")).toContain("resolution=ignore-duplicates");
-  expect(JSON.parse(String(insert.body))).toEqual({ id: intent.id, payer: account.address.toLowerCase(), data: intent });
+  expect(JSON.parse(String(insert.body))).toEqual({ p_row: { id: intent.id, payer: account.address.toLowerCase(), data: intent }, p_expected_identity: supabaseTestIdentity });
   const readUrl = new URL(String(http.mock.calls[1][0]));
-  expect(readUrl.searchParams.get("id")).toBe(`eq.${intent.id}`);
-  expect(readUrl.searchParams.get("payer")).toBe(`eq.${account.address.toLowerCase()}`);
-  expect(http.mock.calls[1][1]?.method).toBe("GET");
+  expect(readUrl.pathname).toBe("/rest/v1/rpc/storage_get_supabase_private_research_intent");
+  expect(JSON.parse(String(http.mock.calls[1][1]?.body))).toEqual({ p_id: intent.id, p_payer: account.address.toLowerCase(), p_expected_identity: supabaseTestIdentity });
+  expect(http.mock.calls[1][1]?.method).toBe("POST");
 });
 
 it("Supabase outages and missing or foreign readbacks cannot claim a successful reservation", async () => {
   for (const replies of [
     [new Response("{}", { status: 503 })],
-    [new Response(null, { status: 201 }), Response.json([])],
-    [new Response(null, { status: 201 }), Response.json([{ data: { ...intent, id: `prv_${"3".repeat(64)}` } }])],
+    [new Response(null, { status: 201 }), Response.json(null)],
+    [new Response(null, { status: 201 }), Response.json({ data: { ...intent, id: `prv_${"3".repeat(64)}` } })],
   ]) {
     const http = vi.fn<typeof fetch>();
     for (const reply of replies) http.mockResolvedValueOnce(reply);
-    const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+    const client = await testSupabaseAuthority(createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } }));
     await expect(reserveSupabasePrivateResearchIntent(client, intent)).rejects.toThrow();
   }
   const http = vi.fn<typeof fetch>().mockResolvedValue(new Response("{}", { status: 503 }));
-  const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+  const client = await testSupabaseAuthority(createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } }));
   await expect(getSupabasePrivateResearchIntent(client, intent.id, account.address)).rejects.toThrow("storage unavailable");
 });
 
@@ -162,7 +164,7 @@ it("grants one durable submission claim across two connections and never reclaim
   const claims = await Promise.all([db.claimPrivatePaymentSubmission(intent.id, account.address), other.claimPrivatePaymentSubmission(intent.id, account.address)]);
   expect(claims.filter(result => result.claimed)).toHaveLength(1);
   expect(claims.every(result => result.state.status === "pending")).toBe(true);
-  const reopened = new SqliteAdapter(file);
+  const reopened = await sqliteFixtures.open(file, "testnet-real");
   vi.useFakeTimers(); vi.setSystemTime(new Date("2040-01-01T00:00:00Z"));
   try {
     await reopened.init();
@@ -202,41 +204,41 @@ it("cannot confirm a reservation that never crossed the durable submission bound
 it("Supabase claims through the restricted RPC and requires valid readback before authorizing submission", async () => {
   const pending = { started_at: "2026-09-09T00:00:00.000Z", confirmation: null, settled_at: null };
   const http = vi.fn<typeof fetch>()
-    .mockResolvedValueOnce(Response.json([{ data: intent }]))
+    .mockResolvedValueOnce(Response.json({ data: intent }))
     .mockResolvedValueOnce(Response.json(true))
-    .mockResolvedValueOnce(Response.json([{ data: intent }]))
-    .mockResolvedValueOnce(Response.json([pending]));
-  const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+    .mockResolvedValueOnce(Response.json({ data: intent }))
+    .mockResolvedValueOnce(Response.json(pending));
+  const client = await testSupabaseAuthority(createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } }));
   expect(await claimSupabasePrivatePayment(client, intent.id, account.address)).toMatchObject({ claimed: true, state: { status: "pending" } });
-  expect(String(http.mock.calls[1][0])).toContain("/rpc/claim_private_research_payment");
-  expect(JSON.parse(String(http.mock.calls[1][1]?.body))).toEqual({ p_id: intent.id, p_payer: account.address.toLowerCase() });
+  expect(String(http.mock.calls[1][0])).toContain("/rpc/storage_claim_private_research_payment");
+  expect(JSON.parse(String(http.mock.calls[1][1]?.body))).toEqual({ p_expected_identity: supabaseTestIdentity, p_id: intent.id, p_payer: account.address.toLowerCase() });
   const broken = vi.fn<typeof fetch>()
-    .mockResolvedValueOnce(Response.json([{ data: intent }]))
+    .mockResolvedValueOnce(Response.json({ data: intent }))
     .mockResolvedValueOnce(Response.json(true))
     .mockResolvedValueOnce(new Response("{}", { status: 503 }));
-  const unavailable = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: broken }, auth: { persistSession: false } });
+  const unavailable = await testSupabaseAuthority(createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: broken }, auth: { persistSession: false } }));
   await expect(claimSupabasePrivatePayment(unavailable, intent.id, account.address)).rejects.toThrow();
 });
 
 it("Supabase does not report confirmation from an RPC success without confirmed readback", async () => {
   const http = vi.fn<typeof fetch>()
-    .mockResolvedValueOnce(Response.json([{ data: intent }]))
+    .mockResolvedValueOnce(Response.json({ data: intent }))
     .mockResolvedValueOnce(new Response(null, { status: 204 }))
-    .mockResolvedValueOnce(Response.json([{ data: intent }]))
-    .mockResolvedValueOnce(Response.json([{ started_at: "2026-09-09T00:00:00.000Z", confirmation: null, settled_at: null }]));
-  const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+    .mockResolvedValueOnce(Response.json({ data: intent }))
+    .mockResolvedValueOnce(Response.json({ started_at: "2026-09-09T00:00:00.000Z", confirmation: null, settled_at: null }));
+  const client = await testSupabaseAuthority(createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } }));
   await expect(confirmSupabasePrivatePayment(client, intent.id, account.address, confirmation)).rejects.toThrow("confirmation conflict");
-  expect(String(http.mock.calls[1][0])).toContain("/rpc/confirm_private_research_payment");
+  expect(String(http.mock.calls[1][0])).toContain("/rpc/storage_confirm_private_research_payment");
 });
 
 it("a newly inserted claim cannot authorize submission if readback already shows settlement", async () => {
   const http = vi.fn<typeof fetch>()
-    .mockResolvedValueOnce(Response.json([{ data: intent }]))
+    .mockResolvedValueOnce(Response.json({ data: intent }))
     .mockResolvedValueOnce(Response.json(true))
-    .mockResolvedValueOnce(Response.json([{ data: intent }]))
-    .mockResolvedValueOnce(Response.json([{ started_at: "2026-09-09T00:00:00.000Z", confirmation,
-      settled_at: "2026-09-09T00:00:01.000Z" }]));
-  const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+    .mockResolvedValueOnce(Response.json({ data: intent }))
+    .mockResolvedValueOnce(Response.json({ started_at: "2026-09-09T00:00:00.000Z", confirmation,
+      settled_at: "2026-09-09T00:00:01.000Z" }));
+  const client = await testSupabaseAuthority(createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } }));
   expect(await claimSupabasePrivatePayment(client, intent.id, account.address)).toMatchObject({ claimed: false, state: { status: "settled" } });
 });
 
@@ -261,7 +263,7 @@ it("requires confirmed payment before execution and grants only one worker acros
   expect(accepted).toHaveLength(1);
   expect(accepted[0]).toMatchObject({ id: value.id, workerId: expect.any(String), startedAt: expect.any(String) });
   expect(await db.getPrivateResearchExecution(value.id, merchants.privatePayee)).toBeNull();
-  const reopened = new SqliteAdapter(file);
+  const reopened = await sqliteFixtures.open(file, "testnet-real");
   vi.useFakeTimers(); vi.setSystemTime(new Date("2040-01-01T00:00:00Z"));
   try {
     await reopened.init();
@@ -294,27 +296,29 @@ it("Supabase requires a fresh RPC claim and matching validated readback; lost re
     let workerId = "";
     const http = vi.fn<typeof fetch>(async (url, options) => {
       const route = new URL(String(url)).pathname;
-      if (route.endsWith("/private_research_intents")) return Response.json([{ data: intent }]);
-      if (route.endsWith("/private_research_payment_attempts")) return Response.json([settled]);
-      if (route.endsWith("/rpc/claim_private_research_execution")) {
+      expect(options?.method).toBe("POST");
+      expect(JSON.parse(String(options?.body)).p_expected_identity).toEqual(supabaseTestIdentity);
+      if (route.endsWith("/rpc/storage_get_supabase_private_research_intent")) return Response.json({ data: intent });
+      if (route.endsWith("/rpc/storage_get_supabase_private_payment")) return Response.json(settled);
+      if (route.endsWith("/rpc/storage_claim_private_research_execution")) {
         const body = JSON.parse(String(options?.body));
-        expect(body).toEqual({ p_id: intent.id, p_payer: account.address.toLowerCase(), p_worker_id: expect.any(String) });
+        expect(body).toEqual({ p_expected_identity: supabaseTestIdentity, p_id: intent.id, p_payer: account.address.toLowerCase(), p_worker_id: expect.any(String) });
         workerId = body.p_worker_id;
         return outcome === "lost-rpc" ? new Response("{}", { status: 503 }) : Response.json(outcome !== "duplicate");
       }
-      if (route.endsWith("/private_research_executions")) {
-        expect(new URL(String(url)).searchParams.get("id")).toBe(`eq.${intent.id}`);
+      if (route.endsWith("/rpc/storage_get_supabase_private_execution")) {
+        expect(JSON.parse(String(options?.body)).p_id).toBe(intent.id);
         if (outcome === "lost-readback") return new Response("{}", { status: 503 });
-        return Response.json([{ worker_id: outcome === "wrong-worker" ? "00000000-0000-4000-8000-000000000000" : workerId, started_at: settled.settled_at }]);
+        return Response.json({ worker_id: outcome === "wrong-worker" ? "00000000-0000-4000-8000-000000000000" : workerId, started_at: settled.settled_at });
       }
       throw new Error("Unexpected synthetic request");
     });
-    const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+    const client = await testSupabaseAuthority(createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } }));
     const result = claimSupabasePrivateExecution(client, intent.id, account.address);
     if (outcome === "fresh") expect(await result).toEqual({ id: intent.id, workerId, startedAt: settled.settled_at });
     else if (outcome === "duplicate") expect(await result).toBeNull();
     else await expect(result).rejects.toThrow();
-    expect(http.mock.calls.filter(([url]) => String(url).includes("/rpc/"))).toHaveLength(1);
+    expect(http.mock.calls.filter(([url]) => String(url).endsWith("/rpc/storage_claim_private_research_execution"))).toHaveLength(1);
   }
 });
 
@@ -406,7 +410,7 @@ it("atomically caps treasury allocations across jobs, preserves retries and reje
   await expect(db.reservePrivateTreasury(winner.id, account.address, { ...policy, capacityMicros: "60000" })).rejects.toThrow("policy conflict");
   await expect(db.reservePrivateTreasury(winner.id, account.address, { ...policy, signer: merchants.publicResearchPayee })).rejects.toThrow("reservation conflict");
   await expect(db.reservePrivateTreasury(winner.id, merchants.publicResearchPayee, policy)).rejects.toThrow("unavailable");
-  const reopened = new SqliteAdapter(file);
+  const reopened = await sqliteFixtures.open(file, "testnet-real");
   try {
     await reopened.init();
     expect(await reopened.reservePrivateTreasury(winner.id, account.address, policy)).toBe(true);
@@ -416,14 +420,16 @@ it("atomically caps treasury allocations across jobs, preserves retries and reje
 
 it("requires matching Supabase allocation readback and does not infer success from lost RPC responses", async () => {
   for (const outcome of ["accepted", "denied", "lost", "wrong-signer", "missing"] as const) {
-    const http = vi.fn<typeof fetch>(async url => {
+    const http = vi.fn<typeof fetch>(async (url, options) => {
       const route = new URL(String(url)).pathname;
-      if (route.endsWith("/private_research_intents")) return Response.json([{ data: intent }]);
-      if (route.endsWith("/rpc/reserve_private_treasury")) return outcome === "lost" ? new Response("{}", { status: 503 }) : Response.json(outcome !== "denied");
-      if (route.endsWith("/private_treasury_reservations")) return Response.json(outcome === "missing" ? [] : [{ signer: outcome === "wrong-signer" ? merchants.publicResearchPayee : merchants.privatePayee, amount_micros: 30000 }]);
+      expect(options?.method).toBe("POST");
+      expect(JSON.parse(String(options?.body)).p_expected_identity).toEqual(supabaseTestIdentity);
+      if (route.endsWith("/rpc/storage_get_supabase_private_research_intent")) return Response.json({ data: intent });
+      if (route.endsWith("/rpc/storage_reserve_private_treasury")) return outcome === "lost" ? new Response("{}", { status: 503 }) : Response.json(outcome !== "denied");
+      if (route.endsWith("/rpc/storage_reserve_supabase_private_treasury")) return Response.json(outcome === "missing" ? null : { signer: outcome === "wrong-signer" ? merchants.publicResearchPayee : merchants.privatePayee, amount_micros: 30000 });
       throw new Error("Unexpected synthetic request");
     });
-    const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+    const client = await testSupabaseAuthority(createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } }));
     const result = reserveSupabasePrivateTreasury(client, intent.id, account.address, { signer: merchants.privatePayee, capacityMicros: "50000" });
     if (outcome === "accepted" || outcome === "denied") expect(await result).toBe(outcome === "accepted");
     else await expect(result).rejects.toThrow();
@@ -757,7 +763,7 @@ it("reconciles a durable private attempt after reopening using complete Circle p
   const http = vi.fn<typeof fetch>().mockResolvedValueOnce(Response.json({ transfers: [{ ...transfer, nonce: `0x${"5".repeat(64)}` }] },
     { headers: { Link: `<${CIRCLE_X402_TRANSFERS_URL}?pageAfter=synthetic-cursor>; rel="next"` } }))
     .mockResolvedValueOnce(Response.json({ transfers: [transfer] }));
-  const reopened = new SqliteAdapter(file);
+  const reopened = await sqliteFixtures.open(file, "testnet-real");
   try {
     await reopened.init();
     expect(await reconcilePrivateCreatorSubmissions(reopened, value.id, account.address, { search: (payment, signal) => searchCircleTransfer(payment, signal, http) }))
@@ -876,13 +882,14 @@ it("confirms only an admitted matching creator tuple and retains the first recei
   expect(await other.confirmPrivateCreatorSubmission(value.id, account.address, claim.workerId, proof)).toEqual(saved);
   await expect(other.confirmPrivateCreatorSubmission(value.id, account.address, claim.workerId, { ...proof, transaction: "replacement" })).rejects.toThrow("confirmation conflict");
   expect(await db.getPrivateCreatorConfirmation(value.id, merchants.publicResearchPayee, leg.submission.authorizationId)).toBeNull();
-  const reopened = new SqliteAdapter(file);
+  const reopened = await sqliteFixtures.open(file, "testnet-real");
   try { await reopened.init(); expect(await reopened.getPrivateCreatorConfirmation(value.id, account.address, leg.submission.authorizationId)).toEqual(saved); }
   finally { reopened.close(); }
   expect((await db.listPrivateCreatorSubmissions(value.id, account.address)).map(row => row.data.submission.amountMicros)).toEqual(["20000"]);
   expect(await db.admitPrivateCreatorSubmission(value.id, account.address, claim.workerId, leg)).toBe(false);
   for (const table of ["query_runs", "a2a_orders", "payment_events"]) expect(raw.prepare(`SELECT count(*) AS n FROM ${table}`).get()?.n).toBe(0);
-  raw.prepare("UPDATE private_creator_confirmations SET data=? WHERE authorization_id=?").run("{}", leg.submission.authorizationId);
+  expect(()=>raw.prepare("UPDATE private_creator_confirmations SET data=? WHERE authorization_id=?").run("{}", leg.submission.authorizationId)).toThrow(/serialized authority profile/);
+  raw.prepare("UPDATE private_creator_confirmations SET data=? WHERE authorization_id=?").run(JSON.stringify({submission:leg.submission,source:"invalid"}), leg.submission.authorizationId);
   await expect(db.getPrivateCreatorConfirmation(value.id, account.address, leg.submission.authorizationId)).rejects.toThrow("Invalid private creator confirmation state");
 });
 
@@ -896,28 +903,30 @@ it("Supabase never acknowledges creator confirmation without exact owner-scoped 
   for (const outcome of ["saved", "missing", "conflicting", "rpc-outage", "read-outage"] as const) {
     const http = vi.fn<typeof fetch>(async (url, options) => {
       const route = new URL(String(url)).pathname;
-      if (route.endsWith("/private_research_intents")) return Response.json([{ data: value }]);
-      if (route.endsWith("/private_research_payment_attempts")) return Response.json([{ started_at: date, settled_at: date,
-        confirmation: { ...confirmation, authorizationId: value.submission.payment.authorization.nonce } }]);
-      if (route.endsWith("/private_research_executions")) return Response.json([{ worker_id: claim.workerId, started_at: date }]);
-      if (route.endsWith("/private_creator_submissions")) return Response.json([{ leg_id: stored.legId, worker_id: claim.workerId,
+      expect(options?.method).toBe("POST");
+      expect(JSON.parse(String(options?.body)).p_expected_identity).toEqual(supabaseTestIdentity);
+      if (route.endsWith("/rpc/storage_get_supabase_private_research_intent")) return Response.json({ data: value });
+      if (route.endsWith("/rpc/storage_get_supabase_private_payment")) return Response.json({ started_at: date, settled_at: date,
+        confirmation: { ...confirmation, authorizationId: value.submission.payment.authorization.nonce } });
+      if (route.endsWith("/rpc/storage_get_supabase_private_execution")) return Response.json({ worker_id: claim.workerId, started_at: date });
+      if (route.endsWith("/rpc/storage_list_supabase_private_creator_submissions")) return Response.json([{ leg_id: stored.legId, worker_id: claim.workerId,
         authorization_id: leg.submission.authorizationId, amount_micros: 20000, data: leg, started_at: date }]);
-      if (route.endsWith("/rpc/confirm_private_creator_submission")) {
-        expect(JSON.parse(String(options?.body))).toEqual({ p_id: value.id, p_payer: account.address.toLowerCase(), p_worker_id: claim.workerId, p_confirmation: proof });
+      if (route.endsWith("/rpc/storage_confirm_private_creator_submission")) {
+        expect(JSON.parse(String(options?.body))).toEqual({ p_expected_identity: supabaseTestIdentity, p_id: value.id, p_payer: account.address.toLowerCase(), p_worker_id: claim.workerId, p_confirmation: proof });
         return new Response(null, { status: outcome === "rpc-outage" ? 503 : 204 });
       }
-      if (route.endsWith("/private_creator_confirmations")) {
-        expect(new URL(String(url)).searchParams.get("authorization_id")).toBe(`eq.${leg.submission.authorizationId}`);
+      if (route.endsWith("/rpc/storage_get_supabase_private_creator_confirmation")) {
+        expect(JSON.parse(String(options?.body)).p_authorization_id).toBe(leg.submission.authorizationId);
         if (outcome === "read-outage") return new Response("{}", { status: 503 });
-        return Response.json(outcome === "missing" ? [] : [{ data: outcome === "conflicting" ? { ...proof, transaction: "other-reference" } : proof, settled_at: date }]);
+        return Response.json(outcome === "missing" ? null : { data: outcome === "conflicting" ? { ...proof, transaction: "other-reference" } : proof, settled_at: date });
       }
       throw new Error("Unexpected synthetic request");
     });
-    const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+    const client = await testSupabaseAuthority(createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } }));
     const pending = confirmSupabasePrivateCreator(client, value.id, account.address, claim.workerId, proof);
     if (outcome === "saved") expect(await pending).toEqual({ confirmation: proof, settledAt: date });
     else await expect(pending).rejects.toThrow();
-    expect(http.mock.calls.filter(([url]) => String(url).includes("/rpc/"))).toHaveLength(1);
+    expect(http.mock.calls.filter(([url]) => String(url).endsWith("/rpc/storage_confirm_private_creator_submission"))).toHaveLength(1);
   }
 });
 
@@ -935,7 +944,7 @@ it("atomically caps concurrent creator admissions and never readmits an existing
   expect(records).toHaveLength(2);
   expect(records.reduce((sum, row) => sum + Number(row.data.submission.amountMicros), 0)).toBe(30000);
   expect(await db.listPrivateCreatorSubmissions(value.id, merchants.publicResearchPayee)).toEqual([]);
-  const reopened = new SqliteAdapter(file);
+  const reopened = await sqliteFixtures.open(file, "testnet-real");
   vi.useFakeTimers(); vi.setSystemTime(new Date("2040-01-01T00:00:00Z"));
   try {
     await reopened.init();
@@ -998,27 +1007,29 @@ it("requires exact Supabase admission readback and never treats RPC acknowledgem
     let stored: Record<string, unknown> = {};
     const http = vi.fn<typeof fetch>(async (url, options) => {
       const route = new URL(String(url)).pathname;
-      if (route.endsWith("/private_research_intents")) return Response.json([{ data: intent }]);
-      if (route.endsWith("/private_research_payment_attempts")) return Response.json([{ started_at: date, confirmation, settled_at: date }]);
-      if (route.endsWith("/private_research_executions")) return Response.json([{ worker_id: workerId, started_at: date }]);
-      if (route.endsWith("/rpc/admit_private_creator_submission")) {
+      expect(options?.method).toBe("POST");
+      expect(JSON.parse(String(options?.body)).p_expected_identity).toEqual(supabaseTestIdentity);
+      if (route.endsWith("/rpc/storage_get_supabase_private_research_intent")) return Response.json({ data: intent });
+      if (route.endsWith("/rpc/storage_get_supabase_private_payment")) return Response.json({ started_at: date, confirmation, settled_at: date });
+      if (route.endsWith("/rpc/storage_get_supabase_private_execution")) return Response.json({ worker_id: workerId, started_at: date });
+      if (route.endsWith("/rpc/storage_admit_private_creator_submission")) {
         const body = JSON.parse(String(options?.body));
         expect(body).toMatchObject({ p_id: intent.id, p_payer: account.address.toLowerCase(), p_worker_id: workerId, p_amount_micros: 20000 });
         stored = { leg_id: body.p_leg_id, worker_id: workerId, authorization_id: body.p_authorization_id, amount_micros: body.p_amount_micros, data: body.p_data, started_at: date };
         return Response.json(outcome !== "denied");
       }
-      if (route.endsWith("/private_creator_submissions")) {
-        expect(new URL(String(url)).searchParams.get("job_id")).toBe(`eq.${intent.id}`);
+      if (route.endsWith("/rpc/storage_list_supabase_private_creator_submissions")) {
+        expect(JSON.parse(String(options?.body)).p_job_id).toBe(intent.id);
         if (outcome === "outage") return new Response("{}", { status: 503 });
         return Response.json(outcome === "missing" ? [] : [outcome === "corrupt" ? { ...stored, amount_micros: 1 } : stored]);
       }
       throw new Error("Unexpected synthetic request");
     });
-    const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+    const client = await testSupabaseAuthority(createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } }));
     const pending = admitSupabasePrivateCreatorSubmission(client, intent.id, account.address, workerId, leg);
     if (outcome === "admitted" || outcome === "denied") expect(await pending).toBe(outcome === "admitted");
     else await expect(pending).rejects.toThrow();
-    expect(http.mock.calls.filter(([url]) => String(url).includes("/rpc/"))).toHaveLength(1);
+    expect(http.mock.calls.filter(([url]) => String(url).endsWith("/rpc/storage_admit_private_creator_submission"))).toHaveLength(1);
   }
 });
 
@@ -1040,7 +1051,7 @@ it("saves the first private result for its exact worker and owner, preserving re
   expect(replies[0]).toMatchObject({ id: value.id, format: "query-run-v1", serializedRun: JSON.stringify(run) });
   await expect(other.savePrivateResearchResult(value.id, account.address, claim.workerId, { ...run, answer: "Replacement" })).rejects.toThrow("result conflict");
   expect(await db.getPrivateResearchResult(value.id, merchants.privatePayee)).toBeNull();
-  const reopened = new SqliteAdapter(file);
+  const reopened = await sqliteFixtures.open(file, "testnet-real");
   try {
     await reopened.init();
     expect(await reopened.getPrivateResearchResult(value.id, account.address)).toEqual(replies[0]);
@@ -1073,24 +1084,26 @@ it("Supabase result persistence binds owner and worker and requires the exact or
   for (const outcome of ["saved", "missing", "conflict", "outage"] as const) {
     const http = vi.fn<typeof fetch>(async (url, options) => {
       const route = new URL(String(url)).pathname;
-      if (route.endsWith("/private_research_intents")) return Response.json([{ data: intent }]);
-      if (route.endsWith("/private_research_payment_attempts")) return Response.json([{ started_at: date, confirmation, settled_at: date }]);
-      if (route.endsWith("/private_research_executions")) return Response.json([{ worker_id: workerId, started_at: date }]);
-      if (route.endsWith("/rpc/save_private_research_result")) {
-        expect(JSON.parse(String(options?.body))).toEqual({ p_id: intent.id, p_payer: account.address.toLowerCase(), p_worker_id: workerId, p_serialized_run: JSON.stringify(run) });
+      expect(options?.method).toBe("POST");
+      expect(JSON.parse(String(options?.body)).p_expected_identity).toEqual(supabaseTestIdentity);
+      if (route.endsWith("/rpc/storage_get_supabase_private_research_intent")) return Response.json({ data: intent });
+      if (route.endsWith("/rpc/storage_get_supabase_private_payment")) return Response.json({ started_at: date, confirmation, settled_at: date });
+      if (route.endsWith("/rpc/storage_get_supabase_private_execution")) return Response.json({ worker_id: workerId, started_at: date });
+      if (route.endsWith("/rpc/storage_save_private_research_result")) {
+        expect(JSON.parse(String(options?.body))).toEqual({ p_expected_identity: supabaseTestIdentity, p_id: intent.id, p_payer: account.address.toLowerCase(), p_worker_id: workerId, p_serialized_run: JSON.stringify(run) });
         return new Response(null, { status: 204 });
       }
-      if (route.endsWith("/private_research_results")) {
-        expect(new URL(String(url)).searchParams.get("id")).toBe(`eq.${intent.id}`);
+      if (route.endsWith("/rpc/storage_get_supabase_private_result")) {
+        expect(JSON.parse(String(options?.body)).p_id).toBe(intent.id);
         if (outcome === "outage") return new Response("{}", { status: 503 });
-        return Response.json(outcome === "missing" ? [] : [{ serialized_run: JSON.stringify(outcome === "conflict" ? { ...run, answer: "Conflicting original" } : run), saved_at: date }]);
+        return Response.json(outcome === "missing" ? null : { serialized_run: JSON.stringify(outcome === "conflict" ? { ...run, answer: "Conflicting original" } : run), saved_at: date });
       }
       throw new Error("Unexpected synthetic request");
     });
-    const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+    const client = await testSupabaseAuthority(createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } }));
     const result = saveSupabasePrivateResult(client, intent.id, account.address, workerId, run);
     if (outcome === "saved") expect(await result).toEqual({ id: intent.id, format: "query-run-v1", serializedRun: JSON.stringify(run), savedAt: date });
     else await expect(result).rejects.toThrow();
-    expect(http.mock.calls.filter(([url]) => String(url).includes("/rpc/"))).toHaveLength(1);
+    expect(http.mock.calls.filter(([url]) => String(url).endsWith("/rpc/storage_save_private_research_result"))).toHaveLength(1);
   }
 });
