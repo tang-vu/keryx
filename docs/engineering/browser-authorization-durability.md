@@ -1,10 +1,29 @@
 # Durable browser x402 authorizations: M3/M4 design proposal
 
-**Status:** design for review, 2026-09-29. No code, migration, network switch, or funded
-operation is authorized by this document. The deployed TypeScript testnet path remains
+**Original status (2026-09-29):** design for review. The document itself authorized no
+code, migration, network switch, or funded operation. The deployed TypeScript testnet path remains
 authoritative. This proposal addresses the unindexed signed-authorization gap recorded in
 [D-261](../../DECISIONS.md) and the [M3/M4 release gates](../mainnet-delivery-plan.md#mainnet-release-gates).
 It does not mark either gate complete; see the [dated readiness evidence](./mainnet-readiness-2026-09-29.md).
+
+**Staged implementation (September 30):** D-268 adds an unused, atomic admission
+operation and separate `browser_authorization_intents` journal in SQLite and
+PostgreSQL. It is not a payment or reconciliation ledger. The live browser path
+still uses the legacy reservation and browser-chosen nonce; `payment_events` remains
+the authoritative recovery row. This stage deliberately does not expose the new
+nonce to a signer. The proposed single-row `payment_events` design below is the
+target cutover invariant, not the current implementation. The next stage must
+either atomically bridge each prepared intent into `payment_events` before exposure
+or migrate the journal into that table, then add phase, cancellation, signature,
+submission and terminal transitions. It must prove the bridge cannot leave a
+possibly signed intent invisible to existing reconciliation. A rolling deploy
+must prevent old writers from bypassing the new admission path. Grant expiry
+deletion and grant replacement with held capacity remain unresolved and need a
+separate epoch-aware retention policy before cutover. The admission journal's
+immutable triggers and `prepared`-only constraint must be replaced by reviewed
+conditional phase transitions in that stage. The PostgreSQL transaction and
+concurrency behavior still need an integration test against a migrated database;
+the adapter test only proves RPC error propagation.
 
 ## Current boundary and failure
 

@@ -19,6 +19,7 @@ import { admitSupabasePrivateCreatorSubmission, listSupabasePrivateCreatorSubmis
 import { saveSupabasePrivateResult, getSupabasePrivateResult } from "./private-research-results";
 import { claimSupabasePrivateExecution, getSupabasePrivateExecution } from "./private-research-executions";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { prepareBrowserAuthorizationIntent, type BrowserAuthorizationIntent, type BrowserAdmissionResult } from "./browser-authorization-admission";
 import { recordSupabaseWithdrawal } from "./withdrawal-records";
 import crypto from "node:crypto";
 import type {
@@ -1319,6 +1320,23 @@ export class SupabaseAdapter implements KeryxDB {
     });
     if (error) throw error;
     return data === true;
+  }
+
+  async admitBrowserAuthorization(input: BrowserAuthorizationIntent): Promise<BrowserAdmissionResult> {
+    const intent = prepareBrowserAuthorizationIntent(input);
+    const { data, error } = await this.sb.rpc("admit_browser_authorization", {
+      p_intent: {
+        nonce: intent.nonce, session_id: intent.sessionId, request_id: intent.requestId,
+        query_id: intent.queryId, grant_epoch: intent.grantEpoch, signer: intent.signer,
+        network: intent.network, token: intent.token, gateway_contract: intent.gatewayContract,
+        source_id: intent.sourceId, offer_id: intent.offerId, kind: intent.kind,
+        payee: intent.payee, amount_micro_usdc: intent.amountMicroUsdc, created_at: intent.createdAt,
+      },
+    });
+    if (error) throw error;
+    if (data === "grant_or_cap_refused") return { status: "grant_or_cap_refused" };
+    if (data !== "admitted") throw new Error(`Unexpected browser admission result: ${String(data)}`);
+    return { status: "admitted", intent };
   }
 
   async reserveOnramp(

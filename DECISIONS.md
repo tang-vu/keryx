@@ -1,5 +1,31 @@
 # Keryx — Decision Log
 
+**D-268** - Stage atomic browser authorization admission before signing cutover -
+*The live browser path can sign a nonce before there is a durable nonce-indexed
+intent and cap reservation in one transaction.* Add an unused admission operation
+to both database adapters. It generates a server nonce, validates the Arc testnet
+payment tuple, and commits a `prepared` intent with exact integer micro-USDC cap
+reservation atomically. SQLite uses `BEGIN IMMEDIATE` and WAL with connection-wide
+`synchronous=FULL` because changing it inside the admission transaction is forbidden;
+that raises commit I/O cost for the SQLite adapter but gives the journal the stronger
+WAL durability policy needed for a future signer cutover. A process reopen test only
+checks process-crash persistence, not power-loss durability.
+Supabase uses a service-role-only function with one row update and intent insert in
+one PostgreSQL transaction. Duplicate request or nonce insertion aborts the
+reservation. The grant epoch and signer fence prevents a replaced grant from
+admitting an old request.
+
+The additive `browser_authorization_intents` table is **not** a second payment
+ledger: it is not queried for settlement, reconciliation, metrics, or UI, and no
+browser signing caller invokes the operation yet. `payment_events` remains the
+only payment/recovery authority. This split keeps legacy pending rows and their
+reconciler intact while the later cutover is designed. Before exposing a signature,
+the next stage must bridge each admitted intent into the authoritative payment
+event, implement durable phase/terminal transitions, disable incompatible rolling
+writers, and prove no dual ledger gap. Existing grant expiry deletion and replacement
+can still lose held-cap context; this slice does not change that policy. M3/M4
+remain open. See [browser authorization design](docs/engineering/browser-authorization-durability.md).
+
 **D-267** - Verify browser x402 callbacks against the live challenge before acknowledgement -
 *The server previously resolved `/api/ask/sign` with any header for a known live
 request, leaving cryptographic checks to the paid retry.* Capture the original

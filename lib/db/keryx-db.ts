@@ -4,6 +4,7 @@
  */
 
 import type { WithdrawalHistoryCursor, WithdrawalHistoryPage } from "./creator-withdrawal-history";
+import type { BrowserAuthorizationIntent, BrowserAdmissionResult } from "./browser-authorization-admission";
 import type { PrivateCreatorConfirmation, PrivateCreatorConfirmationRecord } from "./private-creator-confirmations";
 import type { PrivateTreasuryPolicy, PrivateTreasuryReservation } from "./private-treasury-capacity";
 import type { PrivateTreasuryRelease } from "./private-treasury-release";
@@ -332,6 +333,8 @@ export interface KeryxDB {
   getSessionGrant(sessionId: string): Promise<SessionGrantRecord | null>;
   /** Atomically reserve only against the captured grant generation and session signer. */
   addSessionGrantSpend(sessionId: string, grantEpoch: string, sessAddr: string, amount: number): Promise<boolean>;
+  /** Unused until the browser signing and payment-event cutover is separately reviewed. */
+  admitBrowserAuthorization(input: BrowserAuthorizationIntent): Promise<BrowserAdmissionResult>;
   /** Release only into the grant generation that held the unused reservation. */
   releaseSessionGrantSpend(sessionId: string, grantEpoch: string, sessAddr: string, amount: number): Promise<void>;
   deleteSessionGrant(sessionId: string): Promise<void>;
