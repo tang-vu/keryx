@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { execFile, execFileSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
+import { createClient } from "@supabase/supabase-js";
+import { SupabaseAuthority } from "../lib/db/supabase-authority";
 import { storageIdentityDigest, STORAGE_TESTNET_PROFILE_DIGEST, type StorageIdentity } from "../lib/db/storage-identity";
 
 // Actual PostgreSQL, synthetic data only. No app environment, credentials, mounts,
@@ -33,6 +35,8 @@ const concurrent = (statement: string) => new Promise<string>((resolve, reject) 
   child.stdin!.end(`set role service_role; begin; ${statement}; select pg_sleep(0.05); commit;`);
 });
 let started = false;
+const httpName = `${name}-postgrest`;
+let httpStarted = false;
 try {
   docker(["info","--format","{{.ServerVersion}}"]);
   docker(["run","-d","--name",name,"--network","none","--memory","512m","--cpus","1",
@@ -139,5 +143,45 @@ try {
   for(let attempt=0;attempt<30;attempt++){try{docker(["exec",name,"pg_isready","-h","127.0.0.1","-U","postgres"]);break;}catch{await new Promise(r=>setTimeout(r,100));}}
   assert.equal(JSON.parse(service("select public.read_storage_identity()")).storageId,identity.storageId);
   assert.equal(sql("select count(*) from keryx_storage.writer"),"0");
+  // Actual PostgREST + actual supabase-js, inside the same isolated network
+  // namespace. No published ports, app credentials, host mounts or JWT secrets.
+  sql("create role storage_http login; grant service_role to storage_http");
+  docker(["run","-d","--name",httpName,"--network",`container:${name}`,"--memory","256m","--cpus","0.5",
+    "-e","PGRST_DB_URI=postgres://storage_http@127.0.0.1:5432/postgres","-e","PGRST_DB_ANON_ROLE=service_role",
+    "-e","PGRST_DB_SCHEMAS=public","-e","PGRST_DB_CONFIG=false","-e","PGRST_DB_POOL=2",
+    "postgrest/postgrest:v12.2.3"]); httpStarted = true;
+  const httpFetch: typeof fetch = async (input,init) => {
+    const path = new URL(String(input)).pathname.replace(/^\/rest\/v1/,"");
+    if (!/^\/rpc\/(?:read_storage_identity|storage_[a-z0-9_]+)$/.test(path)) throw new Error("Unexpected synthetic HTTP operation");
+    const output = docker(["run","--rm","-i","--network",`container:${name}`,"--memory","64m","--cpus","0.25",
+      "curlimages/curl:8.12.1","--max-time","10","--silent","--show-error","--request","POST",
+      "--header","Content-Type: application/json","--data-binary","@-","--write-out","\n%{http_code}",
+      `http://127.0.0.1:3000${path}`],String(init?.body ?? "{}"));
+    const split = output.lastIndexOf("\n"), status = Number(output.slice(split+1));
+    return new Response(status===204 ? null : output.slice(0,split),{status,headers:{"Content-Type":"application/json"}});
+  };
+  const httpClient = createClient("http://synthetic.invalid","synthetic-no-authority",{
+    auth:{persistSession:false},global:{fetch:httpFetch},
+  });
+  const authority = new SupabaseAuthority(httpClient,identity);
+  let httpReady = false;
+  for(let attempt=0;attempt<10;attempt++) {
+    try { await authority.init(); httpReady=true; break; }
+    catch(error) { if(attempt===9) throw error; await new Promise(resolve=>setTimeout(resolve,200)); }
+  }
+  assert(httpReady,"actual PostgREST did not become ready");
+  assert.equal((await authority.rpc("get_source",{p_id:"source"})).data.wallet_address,payee);
+  assert.equal((await authority.rpc("get_source",{p_id:"absent"})).data,null);
+  assert.deepEqual((await authority.rpc("list_sources",{p_active:true})).data.map((r:{id:string})=>r.id),["source"]);
+  await authority.rpc("create_auth_challenge",{p_hash:"f".repeat(64),p_issued_at:1,p_expires_at:3});
+  assert.equal((await authority.rpc("consume_auth_challenge",{p_hash:"f".repeat(64),p_now:2})).data,true);
+  assert.equal((await authority.rpc("consume_auth_challenge",{p_hash:"f".repeat(64),p_now:2})).data,false);
+  const wrong = {...identity,storageId:"44444444-4444-4444-8444-444444444444"};
+  const rejected = await httpClient.rpc("storage_get_source",{p_expected_identity:wrong,p_id:"source"});
+  assert.equal(rejected.error?.code,"P0001");
+  assert.equal(sql("select count(*) from keryx_storage.writer"),"0");
   console.log("isolated PostgreSQL storage identity, role denial, CAS, concurrency, journal composition and restart: passed");
-} finally { if(started) docker(["rm","-f","-v",name]); }
+} finally {
+  if(httpStarted) docker(["rm","-f","-v",httpName]);
+  if(started) docker(["rm","-f","-v",name]);
+}
