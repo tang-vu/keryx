@@ -21,6 +21,7 @@ import { saveSupabasePrivateResult, getSupabasePrivateResult } from "./private-r
 import { claimSupabasePrivateExecution, getSupabasePrivateExecution } from "./private-research-executions";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { prepareBrowserAuthorizationIntent, type BrowserAuthorizationIntent, type BrowserAdmissionResult } from "./browser-authorization-admission";
+import { prepareBrowserJournal, type BrowserJournalAdmission, type BrowserJournalAdmissionResult, type BrowserAuthorizationJournal, type BrowserSignedMetadata } from "./browser-authorization-journal";
 import { recordSupabaseWithdrawal } from "./withdrawal-records";
 import crypto from "node:crypto";
 import type {
@@ -985,6 +986,7 @@ export class SupabaseAdapter implements KeryxDB {
     const { data } = await this.sb
       .from("payment_events")
       .select("*")
+      .or("authorization_phase.is.null,authorization_phase.not.in.(prepared,cancelled_unexposed)")
       .order("created_at", { ascending: false })
       .limit(limit);
     return (data ?? []).map(rowToPayment);
@@ -1016,6 +1018,7 @@ export class SupabaseAdapter implements KeryxDB {
     const { data, error } = await this.sb
       .from("payment_events")
       .select("*")
+      .or("authorization_phase.is.null,authorization_phase.not.in.(prepared,cancelled_unexposed)")
       .eq("settlement_status", "pending")
       .eq("settled", false)
       .not("authorization_id", "is", null)
@@ -1030,6 +1033,9 @@ export class SupabaseAdapter implements KeryxDB {
     authorizationId: string,
     circleTransferId: string,
   ): Promise<boolean> {
+    if (await this.browserJournalActive()) {
+      return (await this.terminalBrowserJournal(id, authorizationId, circleTransferId, "settled")).resolved;
+    }
     const { data, error } = await this.sb
       .from("payment_events")
       .update({
@@ -1054,6 +1060,9 @@ export class SupabaseAdapter implements KeryxDB {
     authorizationId: string,
     circleTransferId: string,
   ): Promise<{ resolved: boolean; reservationReleased: boolean }> {
+    if (await this.browserJournalActive()) {
+      return this.terminalBrowserJournal(id, authorizationId, circleTransferId, "failed");
+    }
     const { data, error } = await this.sb.rpc("fail_pending_payment", {
       p_id: id,
       p_authorization_id: authorizationId,
@@ -1071,6 +1080,7 @@ export class SupabaseAdapter implements KeryxDB {
     const { data } = await this.sb
       .from("payment_events")
       .select("*")
+      .or("authorization_phase.is.null,authorization_phase.not.in.(prepared,cancelled_unexposed)")
       .eq("query_id", queryId)
       .eq("kind", "citation")
       .order("created_at", { ascending: true });
@@ -1081,6 +1091,7 @@ export class SupabaseAdapter implements KeryxDB {
     const { data, error } = await this.sb
       .from("payment_events")
       .select("*")
+      .or("authorization_phase.is.null,authorization_phase.not.in.(prepared,cancelled_unexposed)")
       .eq("query_id", queryId)
       .neq("kind", "inbound")
       .order("created_at", { ascending: true });
@@ -1092,6 +1103,7 @@ export class SupabaseAdapter implements KeryxDB {
     const { data } = await this.sb
       .from("payment_events")
       .select("*")
+      .or("authorization_phase.is.null,authorization_phase.not.in.(prepared,cancelled_unexposed)")
       .eq("source_id", sourceId)
       .neq("kind", "inbound")
       .order("created_at", { ascending: false });
@@ -1288,7 +1300,7 @@ export class SupabaseAdapter implements KeryxDB {
   // ── session grants ──
 
   async upsertSessionGrant(grant: Omit<SessionGrantRecord, "spent">): Promise<void> {
-    await this.sb.from("session_grants").upsert({
+    const row = {
       session_id: grant.sessionId,
       sess_addr: grant.sessAddr,
       owner_addr: grant.ownerAddr,
@@ -1297,7 +1309,14 @@ export class SupabaseAdapter implements KeryxDB {
       expiry: grant.expiry,
       tx_hash: grant.txHash,
       grant_epoch: grant.grantEpoch,
-    });
+    };
+    if (await this.browserJournalActive()) {
+      const { error } = await this.sb.rpc("upsert_browser_journal_grant", { p_grant: row });
+      if (error) throw error;
+      return;
+    }
+    const { error } = await this.sb.from("session_grants").upsert(row);
+    if (error) throw error;
   }
 
   async getSessionGrant(sessionId: string): Promise<SessionGrantRecord | null> {
@@ -1349,6 +1368,94 @@ export class SupabaseAdapter implements KeryxDB {
     return { status: "admitted", intent };
   }
 
+  async browserJournalActive(): Promise<boolean> {
+    const { data, error } = await this.sb.from("browser_journal_control").select("active").eq("id", 1).single();
+    if (error) throw error;
+    return data.active === true;
+  }
+
+  async activateBrowserJournal(): Promise<void> {
+    const { error } = await this.sb.rpc("activate_browser_journal");
+    if (error) throw error;
+  }
+
+  async browserSignerConfirmedSpendMicro(signer: string): Promise<number> {
+    const { data, error } = await this.sb.rpc("browser_signer_confirmed_spend_micro", { p_signer: signer });
+    if (error) throw error;
+    const amount = Number(data);
+    if (data == null || !Number.isSafeInteger(amount) || amount < 0) throw new Error("Invalid confirmed browser spend");
+    return amount;
+  }
+
+  async admitBrowserJournal(input: BrowserJournalAdmission): Promise<BrowserJournalAdmissionResult> {
+    const journal = prepareBrowserJournal(input);
+    const { data, error } = await this.sb.rpc("admit_browser_journal", {
+      p_intent: {
+        nonce: journal.nonce, session_id: journal.sessionId, request_id: journal.requestId,
+        query_id: input.queryId, grant_epoch: journal.grantEpoch, signer: journal.signer,
+        network: input.network, token: input.token, gateway_contract: input.gatewayContract,
+        source_id: input.sourceId, offer_id: input.offerId, kind: input.kind, payee: input.payee,
+        amount_micro_usdc: input.amountMicroUsdc, created_at: journal.payment.createdAt,
+      }, p_requirements: journal.requirements, p_payment: journal.payment,
+    });
+    if (error) throw error;
+    if (data === "inactive" || data === "grant_or_cap_refused") return { status: data } as const;
+    if (data !== "admitted") throw new Error(`Unexpected browser journal admission: ${String(data)}`);
+    return { status: "admitted", journal } as const;
+  }
+
+  async getBrowserJournal(sessionId: string, requestId: string): Promise<BrowserAuthorizationJournal | null> {
+    const { data, error } = await this.sb.rpc("get_browser_journal", { p_session_id: sessionId, p_request_id: requestId });
+    if (error) throw error;
+    if (!data) return null;
+    const { intent, binding, payment } = data;
+    return {
+      nonce: intent.nonce, sessionId: intent.session_id, requestId: intent.request_id,
+      grantEpoch: intent.grant_epoch, signer: intent.signer, requirements: binding.requirements,
+      phase: payment.authorization_phase, payment: rowToPayment(payment),
+      signedValidAfter: binding.valid_after ?? undefined, signedValidBefore: binding.valid_before ?? undefined,
+      signedHeaderHash: binding.header_hash ?? undefined,
+    };
+  }
+
+  private async transitionBrowserJournal(sessionId: string, requestId: string, from: string, to: string): Promise<boolean> {
+    const { data, error } = await this.sb.rpc("transition_browser_journal", {
+      p_session_id: sessionId, p_request_id: requestId, p_from: from, p_to: to,
+    });
+    if (error) throw error;
+    return data === true;
+  }
+
+  async exposeBrowserJournal(sessionId: string, requestId: string): Promise<boolean> {
+    return this.transitionBrowserJournal(sessionId, requestId, "prepared", "exposed");
+  }
+
+  async submitBrowserJournal(sessionId: string, requestId: string): Promise<boolean> {
+    return this.transitionBrowserJournal(sessionId, requestId, "signed", "submission_attempted");
+  }
+
+  async signBrowserJournal(sessionId: string, requestId: string, metadata: BrowserSignedMetadata): Promise<boolean> {
+    const { data, error } = await this.sb.rpc("sign_browser_journal", {
+      p_session_id: sessionId, p_request_id: requestId, p_metadata: metadata,
+    });
+    if (error) throw error;
+    return data === true;
+  }
+
+  private async terminalBrowserJournal(id: string, nonce: string, transferId: string | null, mode: string) {
+    const { data, error } = await this.sb.rpc("terminal_browser_journal", {
+      p_id: id, p_nonce: nonce, p_transfer_id: transferId, p_mode: mode,
+    });
+    if (error) throw error;
+    return { resolved: data?.resolved === true, reservationReleased: data?.reservation_released === true };
+  }
+
+  async cancelPreparedBrowserJournal(sessionId: string, requestId: string): Promise<boolean> {
+    const journal = await this.getBrowserJournal(sessionId, requestId);
+    if (!journal) return false;
+    return (await this.terminalBrowserJournal(journal.payment.id!, journal.nonce, null, "cancelled_unexposed")).resolved;
+  }
+
   async reserveOnramp(
     addressKey: string,
     dayKey: string,
@@ -1388,11 +1495,19 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async deleteSessionGrant(sessionId: string): Promise<void> {
-    await this.sb.from("session_grants").delete().eq("session_id", sessionId);
+    if (await this.browserJournalActive()) {
+      const { error } = await this.sb.rpc("disable_browser_journal_grant", { p_session_id: sessionId });
+      if (error) throw error;
+      return;
+    }
+    const { error } = await this.sb.from("session_grants").delete().eq("session_id", sessionId);
+    if (error) throw error;
   }
 
   async deleteExpiredSessionGrants(now: number): Promise<void> {
-    await this.sb.from("session_grants").delete().lte("expiry", now);
+    if (await this.browserJournalActive()) return;
+    const { error } = await this.sb.from("session_grants").delete().lte("expiry", now);
+    if (error) throw error;
   }
 
   /** Delegates to a SQL function for the same reason the SQLite adapter uses one statement:
@@ -1802,6 +1917,7 @@ function rowToPayment(r: Record<string, unknown>): PaymentRecord {
       (r.settlement_status as PaymentRecord["settlementStatus"]) ??
       (Boolean(r.settled) ? "settled" : "simulated"),
     authorizationId: (r.authorization_id as string) ?? undefined,
+    authorizationPhase: (r.authorization_phase as PaymentRecord["authorizationPhase"]) ?? undefined,
     authorizationExpiresAt: (r.authorization_expires_at as string) ?? undefined,
     grantEpoch: (r.grant_epoch as string) ?? undefined,
     origin: (r.origin as PaymentRecord["origin"]) ?? undefined,
