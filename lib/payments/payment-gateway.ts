@@ -13,6 +13,7 @@
  */
 
 import { config } from "../config";
+import { readRuntimeStorageDeployment } from "../db/runtime-storage-config";
 import type {
   ArticleOfferRef,
   Author,
@@ -69,7 +70,9 @@ export async function getPaymentGateway(db: KeryxDB, opts?: GatewayOpts): Promis
   if (opts?.requestSignature && !opts.sessionId) {
     throw new Error("browser signature callback requires a session id");
   }
-  if (process.env.KERYX_FORCE_OFFLINE === "1") {
+  const deployment = readRuntimeStorageDeployment();
+  if (deployment.identity.authorityMode === "testnet-offline") {
+    if (opts?.sessionId || opts?.requestSignature) throw new Error("Offline storage cannot authorize browser signing");
     const { OfflineGateway } = await import("./offline-gateway");
     return new OfflineGateway(db);
   }
@@ -96,8 +99,7 @@ export async function getPaymentGateway(db: KeryxDB, opts?: GatewayOpts): Promis
     return new RealGateway();
   }
 
-  const { OfflineGateway } = await import("./offline-gateway");
-  return new OfflineGateway(db);
+  throw new Error("Real storage requires a treasury signer for this operation");
 }
 
 /** Build a PaymentRecord with consistent defaults. */

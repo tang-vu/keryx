@@ -1,4 +1,5 @@
-import { config } from "../config";
+import { readRuntimeStorageDeployment, RuntimeStorageRefused } from "../db/runtime-storage-config";
+import type { StorageIdentity } from "../db/storage-identity";
 import { encryptContent, hasContentKey } from "../ipfs/content-crypto";
 import { hasPinata, pinEncrypted } from "../ipfs/pinata-client";
 import type { SourceItem } from "../types";
@@ -17,11 +18,11 @@ export interface StoreSourceItemOptions {
 }
 
 /** Real deployments require encryption; Pinata availability only chooses ciphertext location. */
-export function realContentStorageRequired(): boolean {
-  return (
-    process.env.KERYX_FORCE_OFFLINE !== "1" &&
-    (process.env.NODE_ENV === "production" || Boolean(config.funderKey))
-  );
+/** Explicit mode comes only from a validated adapter identity; standalone calls require the manifest. */
+export function realContentStorageRequired(authorityMode?: StorageIdentity["authorityMode"]): boolean {
+  const mode = authorityMode ?? readRuntimeStorageDeployment().identity.authorityMode;
+  if (!["testnet-real", "testnet-offline"].includes(mode) || (mode === "testnet-real" && process.env.KERYX_FORCE_OFFLINE === "1")) throw new RuntimeStorageRefused();
+  return mode === "testnet-real";
 }
 
 /**
