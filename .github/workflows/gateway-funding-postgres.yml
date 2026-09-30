@@ -1,0 +1,25 @@
+name: Gateway funding PostgreSQL candidate
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/0075*"
+      - "lib/db/gateway-funding-*"
+      - "lib/payments/gateway-funding-*"
+      - "scripts/test-gateway-funding-postgres.mts"
+      - ".github/workflows/gateway-funding-postgres.yml"
+  workflow_dispatch:
+jobs:
+  gateway-funding-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - name: Actual isolated PostgreSQL17 and PostgREST acceptance
+        run: node --import tsx scripts/test-gateway-funding-postgres.mts
