@@ -28,11 +28,29 @@ export function inspectCron(output) {
 }
 
 export function inspectAlertFile(contents) {
-  const assignments = contents.split(/\r?\n/).filter((line) => /^\s*KERYX_ALERT_WEBHOOK\s*=/.test(line));
-  if (assignments.length !== 1) return result('alert:webhook', 'fail', assignments.length ? 'duplicate assignment' : 'missing assignment');
-  let value = assignments[0].replace(/^\s*KERYX_ALERT_WEBHOOK\s*=\s*/, '').trim();
-  if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) value = value.slice(1, -1).trim();
-  return result('alert:webhook', value && !value.startsWith('#') ? 'pass' : 'fail', value && !value.startsWith('#') ? 'configured (delivery unverified)' : 'empty assignment');
+  const keys = ['KERYX_ALERT_WEBHOOK', 'KERYX_ALERT_TELEGRAM_BOT_TOKEN', 'KERYX_ALERT_TELEGRAM_CHAT_ID'];
+  const values = [];
+  for (const key of keys) {
+    const pattern = new RegExp(`^\\s*(?:export\\s+)?${key}\\s*=`);
+    const assignments = contents.split(/\r?\n/).filter((line) => pattern.test(line));
+    if (assignments.length > 1) return result('alert:delivery', 'fail', 'duplicate alert assignment');
+    let value = assignments.length ? assignments[0].replace(pattern, '').trim() : '';
+    if (/^["']/.test(value)) {
+      const quoted = value.match(/^(["'])(.*?)\1\s*(?:#.*)?$/);
+      if (!quoted) return result('alert:delivery', 'fail', 'invalid quoted alert assignment');
+      value = quoted[2].trim();
+    } else value = value.replace(/(?:^|\s)#.*$/, '').trim();
+    values.push(value);
+  }
+  const [webhook, token, chat] = values;
+  if (Boolean(token) !== Boolean(chat)) return result('alert:delivery', 'fail', 'incomplete Telegram ops pair');
+  if (token && (!/^\d+:[A-Za-z0-9_-]+$/.test(token) ||
+    !(/^-?[1-9]\d*$/.test(chat) || /^@[A-Za-z][A-Za-z0-9_]{4,}$/.test(chat)))) {
+    return result('alert:delivery', 'fail', 'invalid Telegram ops pair');
+  }
+  const channels = [webhook ? 'webhook' : '', token ? 'Telegram ops' : ''].filter(Boolean);
+  return result('alert:delivery', channels.length ? 'pass' : 'fail',
+    channels.length ? `${channels.join(' and ')} configured (delivery unverified)` : 'no alert channel configured');
 }
 
 function inspectPid(name, observation) {
@@ -67,7 +85,7 @@ export function runPreflight({ command, readEnv, requireTimer = false }) {
   const show = (unit) => command('systemctl', ['show', unit, '--property=LoadState,ActiveState,MainPID', '--no-pager']);
   checks.push(...inspectUnits(show('keryx-private-worker.service'), show('keryx-withdrawal-cycle.timer'), show('keryx-withdrawal-cycle.service'), requireTimer));
   try { checks.push(inspectAlertFile(readEnv())); }
-  catch { checks.push(result('alert:webhook', 'fail', 'environment file unreadable')); }
+  catch { checks.push(result('alert:delivery', 'fail', 'environment file unreadable')); }
   return checks;
 }
 

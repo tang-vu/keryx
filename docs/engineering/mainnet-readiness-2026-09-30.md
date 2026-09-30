@@ -19,8 +19,11 @@ not claimed.
 The first hosted PostgreSQL run for PR #44 failed on the admission insert:
 `created_at` was JSON text rather than `timestamptz`. Additive migration `0068`
 corrects the cast without rewriting `0067`; the harness also checks exact timestamp
-persistence and malformed-timestamp reservation rollback. Acceptance remains open
-until the corrected candidate passes hosted CI.
+persistence and malformed-timestamp reservation rollback. Corrected PR #44 candidate
+`abc9847` passed [hosted CI run 36668252786](https://github.com/tang-vu/keryx/actions/runs/36668252786),
+including the real PostgreSQL acceptance harness, application tests and production
+build. This establishes the narrow D-268 admission acceptance; the live signing
+bridge and overall mainnet gates remain open.
 
 ## Release gates
 
@@ -34,6 +37,12 @@ until the corrected candidate passes hosted CI.
 | M6 Customer journeys | Independent buyer/creator/developer acceptance, source rights, visible terms, privacy/retention and refund/support handling. |
 | M7 Economics | Versioned provider pricing, invoice reconciliation and complete failed/retried-call costs; independent repeat paid use and useful research. |
 | M8 Launch | Owner reviews the exact candidate, funded limits and gate evidence, then explicitly authorizes activation/spending. |
+
+The [Telegram operations runbook](../telegram-ops-alerts.md) selects a private
+Keryx ops group and separate bot configuration. Mocked delivery and reconciliation
+checks validate the implementation; no credentials or actual destination have been
+configured, and live delivery/responder acceptance remains unverified. Outside-host
+outage detection and its delivered alert drill are separately required.
 
 Keep [the maintained gate map](../mainnet-delivery-plan.md) authoritative. Close
 individual gates with evidence, rather than treating this snapshot as completion.
@@ -60,7 +69,7 @@ invoice reconciliation remains necessary. [Cache hits are best-effort](https://a
 
 ## Delivery order
 
-1. Verify PostgreSQL admission against actual migrations in hosted CI.
+1. Preserve the passing PostgreSQL admission gate against actual migrations in CI.
 2. Design and implement the atomic live-journal bridge and durable recovery phases;
    prove fault handling before exposing signing from the new journal.
 3. Correct versioned cost observation and prepare/configure Telegram operations alerts.

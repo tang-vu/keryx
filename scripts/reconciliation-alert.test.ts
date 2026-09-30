@@ -36,6 +36,8 @@ function stateStore() {
 
 beforeEach(() => {
   vi.resetModules();
+  vi.stubEnv("KERYX_ALERT_TELEGRAM_BOT_TOKEN", "");
+  vi.stubEnv("KERYX_ALERT_TELEGRAM_CHAT_ID", "");
   vi.spyOn(console, "warn").mockImplementation(() => {});
 });
 
@@ -72,6 +74,28 @@ describe("reconciliation alert delivery state", () => {
     expect(await reconcileAlertState(db, summary, stale, sendAlert)).toBe(true);
     expect(db.writes).toHaveLength(1);
     expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("retains undelivered state until Telegram acknowledges, even if the webhook succeeded", async () => {
+    vi.stubEnv("KERYX_ALERT_WEBHOOK", "https://example.invalid/alert");
+    vi.stubEnv("KERYX_ALERT_TELEGRAM_BOT_TOKEN", "123:synthetic_ops_token");
+    vi.stubEnv("KERYX_ALERT_TELEGRAM_CHAT_ID", "-1001234567890");
+    let telegramAttempts = 0;
+    const http = vi.fn().mockImplementation((url: string) => Promise.resolve(
+      url.startsWith("https://api.telegram.org/")
+        ? Response.json({ ok: ++telegramAttempts > 1 }) : new Response(null, { status: 204 }),
+    ));
+    vi.stubGlobal("fetch", http);
+    const { sendAlert } = await import("../lib/notify/alert");
+    const db = stateStore();
+    expect(await reconcileAlertState(db, summary, stale, sendAlert)).toBe(true);
+    expect(db.fingerprint).toBeNull();
+    expect(db.writes).toEqual([]);
+    expect(await reconcileAlertState(db, summary, stale, sendAlert)).toBe(true);
+    expect(db.writes).toHaveLength(1);
+    expect(http).toHaveBeenCalledTimes(4);
+    expect(await reconcileAlertState(db, summary, stale, sendAlert)).toBe(true);
+    expect(http).toHaveBeenCalledTimes(4);
   });
 
   it("retries after a timed-out webhook request", async () => {
