@@ -1,4 +1,4 @@
-import { advance, initialState, notify, probe, SLOT_MS, validateState } from "./core.mjs";
+import { advance, initialState, notify, probe, probeUnavailable, SLOT_MS, validateState } from "./core.mjs";
 
 function configured(env) {
   return typeof env.MONITOR_DIAGNOSTIC_TOKEN === "string" && /^[A-Za-z0-9_-]{43,128}$/.test(env.MONITOR_DIAGNOSTIC_TOKEN) &&
@@ -26,8 +26,14 @@ function object(env, diagnostic = false) {
 async function emptyBody(request) {
   if (request.body === null) return true;
   const reader = request.body.getReader();
-  try { return (await reader.read()).done; }
-  finally { await reader.cancel().catch(() => {}); }
+  let timer;
+  try {
+    return await Promise.race([
+      reader.read().then(result => result.done),
+      new Promise(resolve => { timer = setTimeout(() => resolve(false), 5_000); }),
+    ]);
+  } catch { return false; }
+  finally { clearTimeout(timer); void reader.cancel().catch(() => {}); }
 }
 
 export default {
@@ -52,29 +58,37 @@ export default {
 };
 
 export class MonitorState {
-  constructor(state, env) { this.state = state; this.env = env; }
+  constructor(state, env) { this.state = state; this.env = env; this.queue = Promise.resolve(); }
   async fetch(request) {
-    // Includes all async storage/network work: overlapping Cron/operator calls cannot race.
-    return this.state.blockConcurrencyWhile(async () => {
+    // Serialize this object's requests without blockConcurrencyWhile's 30s callback
+    // limit. Durable claims/attempt counts survive process loss; the queue only orders I/O.
+    const operation = this.queue.then(async () => {
       try {
         const url = new URL(request.url);
         let state = validateState(await this.state.storage.get("state") ?? initialState());
         if (url.pathname === "/status") return Response.json(state, { headers: { "Cache-Control": "no-store" } });
         if (url.pathname === "/diagnostic") {
-          if (state.consumed) return Response.json({ status: "already_consumed", state });
+          if (state.consumed) {
+            await this.deliver(state, true);
+            return Response.json({ status: "already_consumed", state });
+          }
           // Consume before execution: uncertainty never admits a second fixture run.
           state.consumed = true;
           await this.state.storage.put("state", state);
+          const control = await probe();
+          if (control !== "healthy") return Response.json({ status: "control_failed", reason: control, state }, { status: 503 });
           for (let step = 0; step < 5; step++) {
             const now = Date.now();
-            const fixture = async () => step < 3
-              ? new Response(null, { status: 503 })
-              : Response.json({ name: "keryx", ok: true, db: "ok", status: "operational", time: new Date(now).toISOString() });
-            state = advance(state, await probe(fixture, now), now);
+            const reason = step < 3 ? await probeUnavailable() : await probe();
+            // The unavailable route must be exactly 404; actual health must be ready.
+            if (reason !== (step < 3 ? "http" : "healthy")) {
+              return Response.json({ status: "fixture_failed", step, reason, state }, { status: 503 });
+            }
+            state = advance(state, reason, now);
             await this.state.storage.put("state", state);
             await this.deliver(state, true);
           }
-          return Response.json({ status: "completed", fixture: "http-503-then-healthy", state });
+          return Response.json({ status: "completed", control, fixture: "external-http-404-then-healthy", state });
         }
         if (url.pathname !== "/probe") return new Response(null, { status: 404 });
         const now = Date.now();
@@ -85,7 +99,7 @@ export class MonitorState {
         }
         const slot = Math.floor(sampleTime / SLOT_MS);
         if (slot <= state.slot) return Response.json({ status: "already_claimed" });
-        // Claim before I/O. A crash consumes this sample, never duplicates a notification.
+        // Claim before I/O. A crash consumes the sample; persisted notices retry separately.
         state.slot = slot;
         await this.state.storage.put("state", state);
         // Missed slots break consecutive observations instead of compressing a long outage.
@@ -100,18 +114,24 @@ export class MonitorState {
         return Response.json({ status: "inspection_required" }, { status: 503 });
       }
     });
+    this.queue = operation.then(() => {}, () => {});
+    return operation;
   }
   async deliver(state, diagnostic) {
     for (const notice of state.notices) {
-      if (notice.delivery !== "pending") continue;
+      const now = Date.now();
+      if (["confirmed", "disabled"].includes(notice.delivery) || notice.attempts >= 3 ||
+          (notice.nextAttemptAt !== null && notice.nextAttemptAt > now)) continue;
       if (diagnostic && this.env.DIAGNOSTIC_NOTIFICATIONS_ENABLED !== "true") {
         notice.delivery = "disabled";
         await this.state.storage.put("state", state);
         continue;
       }
-      // Telegram has no sendMessage idempotency key. Persist intent BEFORE sending;
-      // a lost acknowledgement stays attempted/unconfirmed and is never auto-replayed.
+      // Persist bounded retry count/deadline BEFORE I/O. A crash or lost ACK may
+      // repeat a stable notice ID, but never immediately or more than three times.
       notice.delivery = "attempted";
+      notice.attempts++;
+      notice.nextAttemptAt = now + SLOT_MS;
       await this.state.storage.put("state", state);
       notice.delivery = await notify(this.env, notice, diagnostic);
       await this.state.storage.put("state", state);

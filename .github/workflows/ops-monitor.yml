@@ -1,0 +1,28 @@
+name: Outside-host ops monitor
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  isolated-monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: cloudflare/ops-monitor/package-lock.json
+      - name: Install isolated locked tools
+        run: npm ci --prefix cloudflare/ops-monitor --no-audit --no-fund
+      - name: Health classification and durable notification tests
+        run: npm test --prefix cloudflare/ops-monitor
+      - name: Build isolated Worker without provider writes
+        run: npm run build --prefix cloudflare/ops-monitor
+        env:
+          WRANGLER_SEND_METRICS: "false"
+      - name: Native workerd protocol and persistence
+        run: npm run test:runtime --prefix cloudflare/ops-monitor
