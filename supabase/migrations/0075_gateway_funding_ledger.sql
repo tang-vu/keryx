@@ -695,6 +695,10 @@ end $$;
 
 create unique index gateway_funding_terminal_once on public.gateway_funding_observations(reservation_id)
 where kind in ('finalized-success','finalized-reverted');
+-- Bound ordinary readback/count work to this original's at-most-64 candidate
+-- observations plus one terminal slot, rather than lifetime observation rows.
+create index gateway_funding_observations_original on public.gateway_funding_observations
+  (reservation_id,(kind in ('finalized-success','finalized-reverted')) desc,recorded_at desc,observation_id desc);
 
 create function public.storage_funding_finalize(p_expected_identity jsonb,p_evidence jsonb) returns void
 language plpgsql security definer set search_path=pg_catalog,pg_temp as $$
