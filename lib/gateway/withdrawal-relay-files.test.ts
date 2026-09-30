@@ -9,11 +9,16 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { createWithdrawalMintJournal } from "./withdrawal-mint-journal";
 import { inspectWithdrawalRelayFiles } from "./withdrawal-relay-files";
 import { creatorWithdrawalFixture } from "../../scripts/test-fixtures/creator-withdrawal";
-import { CREATOR_WITHDRAWAL_REQUESTS_SQL, reserveSqliteWithdrawalRequest, claimSqliteWithdrawalTransfer } from "../db/creator-withdrawal-requests";
-import { CREATOR_WITHDRAWAL_ATTESTATIONS_SQL, saveSqliteWithdrawalAttestation } from "../db/creator-withdrawal-attestations";
+import { reserveSqliteWithdrawalRequest, claimSqliteWithdrawalTransfer } from "../db/creator-withdrawal-requests";
+import { saveSqliteWithdrawalAttestation } from "../db/creator-withdrawal-attestations";
 import { readFileSync } from "node:fs";
 import { withWithdrawalApplicationStore } from "./withdrawal-application-store";
 import { createWithdrawalMintReader } from "./withdrawal-mint-reader";
+
+import { sqliteDomainTestFixtures } from "../db/sqlite-domain-test-fixture";
+import { canonicalJson } from "../canonical-json";
+import { syntheticStorageIdentity } from "../db/storage-identity-fixture";
+const sqliteFixtures = sqliteDomainTestFixtures();
 
 const linux = it.skipIf(process.platform !== "linux"), directories: string[] = [];
 afterEach(() => { for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }); });
@@ -32,18 +37,24 @@ function fixture() {
     KERYX_WITHDRAWAL_RELAY_ADDRESS: address, AGENT_FUNDER_PRIVATE_KEY: generatePrivateKey(), KERYX_RPC_URL: "https://rpc.synthetic.invalid" });
   return { directory, policy, env };
 }
+async function applicationFixture(f: ReturnType<typeof fixture>) {
+  const path = join(f.directory, "app.sqlite");
+  const adapter = await sqliteFixtures.open(path, "testnet-real"); await adapter.init(); adapter.close();
+  chmodSync(path, 0o600);
+  const identity = sqliteFixtures.identity(path), manifest = join(f.directory, "storage-manifest.json");
+  writeFileSync(manifest, canonicalJson({ format: "keryx-storage-deployment-v1", identity,
+    backend: { kind: "sqlite", databasePath: path } }) + "\n", { mode: 0o600 });
+  f.env.KERYX_STORAGE_MANIFEST = manifest;
+  return { path, identity };
+}
 linux("accepts the protected owner-only journal and bounded policy", async () => {
   const f = fixture(); expect(await inspectWithdrawalRelayFiles(f.directory)).toMatchObject({ directory: f.directory, policy: f.policy });
 });
 
 linux("runs cash-out reporting against existing files without keys or ledger initialization", async () => {
-  const f = fixture(), path = join(f.directory, "app.sqlite");
-  writeFileSync(path, "", { mode: 0o600 });
-  const db = new DatabaseSync(path);
-  db.exec(CREATOR_WITHDRAWAL_REQUESTS_SQL);
-  db.exec("CREATE TABLE withdrawals(tx_hash TEXT PRIMARY KEY,created_at TEXT,label TEXT,source_name TEXT,wallet TEXT,recipient TEXT,amount_usdc REAL,network TEXT)");
-  db.close();
-  const execute = promisify(execFile), env: NodeJS.ProcessEnv = { NODE_ENV: "test", PATH: process.env.PATH, ESBUILD_BINARY_PATH: process.env.ESBUILD_BINARY_PATH };
+  const f = fixture(), { path } = await applicationFixture(f);
+  const execute = promisify(execFile), env: NodeJS.ProcessEnv = { NODE_ENV: "test", PATH: process.env.PATH,
+    ESBUILD_BINARY_PATH: process.env.ESBUILD_BINARY_PATH, KERYX_STORAGE_MANIFEST: f.env.KERYX_STORAGE_MANIFEST };
   const invoke = (...args: string[]) => execute(process.execPath, ["--import", "tsx", "scripts/withdrawal-report.mts",
     "--directory", f.directory, "--application-db", path, ...args], { env, timeout: 25000 });
   expect(JSON.parse((await invoke()).stdout)).toMatchObject({ state: "scanned", scanned: 0, recorded: 0 });
@@ -91,12 +102,7 @@ linux("runs the actual CLI for inspection, schema check and an empty relay pass 
 }, 90000);
 
 linux("runs a complete empty cycle and revisits an unknown admission without consuming a nonce", async () => {
-  const f = fixture(), path = join(f.directory, "app.sqlite"), execute = promisify(execFile);
-  writeFileSync(path, "", { mode: 0o600 });
-  const app = new DatabaseSync(path);
-  app.exec(CREATOR_WITHDRAWAL_REQUESTS_SQL + CREATOR_WITHDRAWAL_ATTESTATIONS_SQL);
-  app.exec("CREATE TABLE withdrawals(tx_hash TEXT PRIMARY KEY,created_at TEXT,label TEXT,source_name TEXT,wallet TEXT,recipient TEXT,amount_usdc REAL,network TEXT)");
-  app.close();
+  const f = fixture(), { path } = await applicationFixture(f), execute = promisify(execFile);
   const invoke = (...extra: string[]) => execute(process.execPath, ["--import", "tsx", "scripts/withdrawal-relay.mts", "--cycle",
     "--application-db", path, "--gas", "300000", "--max-fee-per-gas", "2000000000", "--priority-fee-per-gas", "1000000000",
     "--gas-budget-wei", "600000000000000", ...extra], { env: f.env, timeout: 30000 });
@@ -125,10 +131,9 @@ it("keeps CLI help free of runtime configuration", async () => {
 });
 
 linux("queues an existing application attestation through the real CLI without changing the application database", async () => {
-  const f = fixture(), original = await creatorWithdrawalFixture(), path = join(f.directory, "app.sqlite");
-  const app = new DatabaseSync(path); chmodSync(path, 0o600);
+  const f = fixture(), original = await creatorWithdrawalFixture(), { path, identity } = await applicationFixture(f);
+  const app = sqliteFixtures.trustedRaw(path);
   try {
-    app.exec(CREATOR_WITHDRAWAL_REQUESTS_SQL + CREATOR_WITHDRAWAL_ATTESTATIONS_SQL);
     await reserveSqliteWithdrawalRequest(app, original.record);
     const claim = (await claimSqliteWithdrawalTransfer(app, original.record.id, original.record.owner))!;
     await saveSqliteWithdrawalAttestation(app, original.record.id, original.record.owner, claim.claimId, original.response);
@@ -146,7 +151,7 @@ linux("queues an existing application attestation through the real CLI without c
   await expect(invoke("--limit", "65")).rejects.toThrow("private details omitted");
   await withWithdrawalApplicationStore(path, async store => {
     expect(await store.getCreatorWithdrawalAttestation(original.record.id, `0x${"00".repeat(20)}`)).toBeNull();
-  });
+  }, identity);
   expect(readFileSync(path)).toEqual(before);
   const reopened = new DatabaseSync(join(f.directory, "mint.sqlite"));
   try {
@@ -157,13 +162,13 @@ linux("queues an existing application attestation through the real CLI without c
 }, 90000);
 
 linux("rejects missing, permissive and unrelated application stores without creating or migrating them", async () => {
-  const f = fixture(), missing = join(f.directory, "missing.sqlite"), callback = async () => null;
-  await expect(withWithdrawalApplicationStore(missing, callback)).rejects.toThrow("database unavailable");
+  const f = fixture(), missing = join(f.directory, "missing.sqlite"), callback = async () => null, identity = syntheticStorageIdentity("testnet-real");
+  await expect(withWithdrawalApplicationStore(missing, callback, identity)).rejects.toThrow("database unavailable");
   expect(existsSync(missing)).toBe(false);
   const wrong = join(f.directory, "wrong.sqlite"), db = new DatabaseSync(wrong); db.exec("CREATE TABLE unrelated(id INTEGER)"); db.close();
   chmodSync(wrong, 0o600); const before = readFileSync(wrong);
-  await expect(withWithdrawalApplicationStore(wrong, callback)).rejects.toThrow();
+  await expect(withWithdrawalApplicationStore(wrong, callback, identity)).rejects.toThrow();
   expect(readFileSync(wrong)).toEqual(before);
   chmodSync(wrong, 0o644);
-  await expect(withWithdrawalApplicationStore(wrong, callback)).rejects.toThrow("database unavailable");
+  await expect(withWithdrawalApplicationStore(wrong, callback, identity)).rejects.toThrow("database unavailable");
 });

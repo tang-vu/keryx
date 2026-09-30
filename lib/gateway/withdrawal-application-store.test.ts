@@ -19,7 +19,7 @@ it.runIf(process.platform === "linux")("reads an explicitly identified actual ap
   const f = await fixture(), before = readFileSync(f.file);
   vi.stubEnv("CONTENT_MASTER_KEY", "");
   const init = vi.spyOn(SqliteAdapter.prototype, "init");
-  await expect(withWithdrawalApplicationStore(f.file, async store => store.getCreatorWithdrawalAttestation("missing", "missing"), f.identity)).resolves.toBeNull();
+  await expect(withWithdrawalApplicationStore(f.file, async store => store.getCreatorWithdrawalAttestation(`0x${"0".repeat(64)}`, `0x${"00".repeat(20)}`), f.identity)).resolves.toBeNull();
   expect(init).not.toHaveBeenCalled(); expect(readFileSync(f.file)).toEqual(before); init.mockRestore();
 });
 it("refuses foreign identity and offline mode before exposing read or write callbacks", async () => {
