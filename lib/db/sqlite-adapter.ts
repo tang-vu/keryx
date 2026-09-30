@@ -425,6 +425,11 @@ export class SqliteAdapter implements KeryxDB {
     try { this.db.close(); } finally { this.heldTarget.close(); }
   }
 
+  getStorageIdentity(): Readonly<StorageIdentity> {
+    this.assertReady();
+    return this.identity;
+  }
+
   async init(): Promise<void> {
     if (this.ready) { this.assertReady(); return; }
     if (this.closed) throw new Error("Storage identity adapter closed");
@@ -440,9 +445,9 @@ export class SqliteAdapter implements KeryxDB {
     this.capabilityActive = true;
     // WAL/connection PRAGMAs are deliberately outside the schema transaction,
     // but only after exact identity admission. They are not rolled back on init failure.
-    this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;");
-    this.db.exec("BEGIN IMMEDIATE");
     try {
+      this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;");
+      this.db.exec("BEGIN IMMEDIATE");
       this.heldTarget.verify();
       assertStorageIdentity(this.db, this.identity);
       this.db.exec(SCHEMA);

@@ -3,6 +3,9 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdtempSync, readFileSync, rmSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { spawn } from "node:child_process";
+import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
 import { SqliteAdapter } from "./sqlite-adapter";
 import { syntheticStorageIdentity, provisionSyntheticStorage } from "./storage-identity-fixture";
 import { createSqliteStorage, inspectSqliteEnrollment, enrollSqliteStorage, type ReviewedStorageEnrollment } from "./storage-identity-provision";
@@ -37,6 +40,41 @@ describe("SQLite strict identity admission", () => {
     raw.exec("UPDATE source_meta SET payload=X'31'");
     const blob = scanFullStorageSnapshot(raw).snapshotDigest;
     expect(new Set([first,text,blob]).size).toBe(3);
+  });
+  it("rolls back an enrollment transaction when its actual SQLite writer process crashes", async () => {
+    const target = file(), raw = new DatabaseSync(target);
+    raw.exec("CREATE TABLE source_meta(id INTEGER PRIMARY KEY,payload TEXT); INSERT INTO source_meta VALUES(1,'retained');"); raw.close();
+    const identity = syntheticStorageIdentity("testnet-real");
+    const moduleUrl = pathToFileURL(join(process.cwd(), "lib/db/storage-identity-sqlite.ts")).href;
+    const script = `import {DatabaseSync} from 'node:sqlite'; import {insertStorageIdentity,installStorageFences} from ${JSON.stringify(moduleUrl)};
+      const db=new DatabaseSync(${JSON.stringify(target)}); db.exec('BEGIN IMMEDIATE');
+      insertStorageIdentity(db,${JSON.stringify(identity)}); installStorageFences(db,${JSON.stringify(identity)});
+      process.stdout.write('uncommitted'); setInterval(()=>{},1000);`;
+    const require = createRequire(import.meta.url);
+    const child = spawn(process.execPath, ["--import", pathToFileURL(require.resolve("tsx")).href, "--input-type=module", "-e", script], { windowsHide:true, stdio:["ignore","pipe","ignore"] });
+    await new Promise<void>((resolve,reject) => {
+      const timeout=setTimeout(()=>{child.kill("SIGKILL");reject(new Error("synthetic crash writer did not reach transaction"));},5000);
+      child.once("error",()=>{clearTimeout(timeout);reject(new Error("synthetic writer unavailable"));});
+      child.stdout.once("data",()=>{clearTimeout(timeout); child.kill("SIGKILL");});
+      child.once("close",()=>{clearTimeout(timeout);resolve();});
+    });
+    const reopened=new DatabaseSync(target); rawConnections.push(reopened);
+    expect(reopened.prepare("SELECT payload FROM source_meta").get()?.payload).toBe("retained");
+    expect(reopened.prepare("SELECT name FROM sqlite_schema WHERE name=?").get(STORAGE_IDENTITY_TABLE)).toBeUndefined();
+    expect(reopened.prepare("SELECT count(*) AS n FROM sqlite_schema WHERE type='trigger'").get()?.n).toBe(0);
+  });
+  it("serializes competing exact enrollment and refuses stale full-store evidence without relabeling", async () => {
+    const target=file(), raw=new DatabaseSync(target);
+    raw.exec("CREATE TABLE source_meta(id INTEGER PRIMARY KEY,payload TEXT); INSERT INTO source_meta VALUES(1,'before');"); raw.close();
+    const identity=syntheticStorageIdentity("testnet-real");
+    const inspection=await inspectSqliteEnrollment(target,identity);
+    const proof: ReviewedStorageEnrollment={format:"keryx-reviewed-storage-enrollment-v1",inspection,provenanceDocumentDigest:identity.provenanceDigest,unknownClassAttestation:inspection.unknownClasses};
+    const changed=new DatabaseSync(target); changed.exec("UPDATE source_meta SET payload='after'"); changed.close();
+    await expect(enrollSqliteStorage(target,identity,proof)).rejects.toThrow();
+    const current=await inspectSqliteEnrollment(target,identity);
+    const fresh={...proof,inspection:current,unknownClassAttestation:current.unknownClasses};
+    const results=await Promise.all([enrollSqliteStorage(target,identity,fresh),enrollSqliteStorage(target,identity,fresh)]);
+    expect(results.map(result=>result.status).sort()).toEqual(["already_enrolled","enrolled"]);
   });
   it("refuses missing expected identity and missing files without creation", async () => {
     const target = file();

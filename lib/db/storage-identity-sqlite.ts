@@ -55,7 +55,10 @@ function holdStorageTargetUnchecked(target: string): HeldStorageTarget {
   } catch (error) { closeSync(descriptor); throw error; }
   let closed = false;
   return { target, descriptor, identity: createHash("sha256").update(JSON.stringify([target, original])).digest("hex"),
-    verify() { if (closed || identity() !== original) refuseStorage("target_replaced"); },
+    verify() {
+      try { if (closed || identity() !== original) refuseStorage("target_replaced"); }
+      catch (error) { if (error instanceof StorageIdentityRefused) throw error; refuseStorage("target_unavailable"); }
+    },
     close() { if (!closed) { closed = true; closeSync(descriptor); } } };
 }
 export function holdStorageTarget(target: string): HeldStorageTarget {
@@ -63,6 +66,7 @@ export function holdStorageTarget(target: string): HeldStorageTarget {
   catch (error) { if (error instanceof StorageIdentityRefused) throw error; return refuseStorage("target_unavailable"); }
 }
 export function readStorageIdentity(db: DatabaseSync): Readonly<StorageIdentity> {
+  try {
   const schema = db.prepare("SELECT type FROM sqlite_schema WHERE name=?").get(STORAGE_IDENTITY_TABLE);
   if (!schema) refuseStorage("enrollment_required");
   if (schema.type !== "table") refuseStorage("malformed_marker");
@@ -73,6 +77,10 @@ export function readStorageIdentity(db: DatabaseSync): Readonly<StorageIdentity>
   const canonical = validateStorageIdentity(identity);
   if (rows[0].identity !== JSON.stringify(canonical)) refuseStorage("malformed_marker");
   return canonical;
+  } catch (error) {
+    if (error instanceof StorageIdentityRefused) throw error;
+    return refuseStorage("malformed_marker");
+  }
 }
 export function assertStorageIdentity(db: DatabaseSync, expected: Readonly<StorageIdentity>): void {
   if (storageIdentityDigest(readStorageIdentity(db)) !== storageIdentityDigest(expected)) refuseStorage("identity_mismatch");
