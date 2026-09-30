@@ -236,11 +236,11 @@ identity on every RPC and throws HTTP/SQL refusals rather than returning empty
 results. Its guarded metadata getter returns the configured frozen identity only
 after marker admission. It never adopts a target identity.
 
-Seventeen focused tests pass for the pure identity helper and the real Supabase
+The PG owner reported 43 focused source checks passing for the pure identity helper and the real Supabase
 JavaScript HTTP serialization boundary using a synthetic fetch fixture. They prove
 pre-init refusal, mismatch non-adoption, exact full identity in named RPC arguments,
-immutable configured metadata, and SQL refusal propagation. They do not prove SQL
-installation or PostgreSQL/PostgREST return-shape compatibility.
+immutable configured metadata, and SQL refusal propagation. The synthetic source fixture alone does not prove SQL
+installation or PostgreSQL/PostgREST return-shape compatibility; the separate gates below provide selected real evaluator evidence.
 
 The new `scripts/test-storage-postgres.mts` evaluator replays actual migrations
 inside an isolated PostgreSQL 17 Docker container using synthetic roles and rows.
@@ -248,8 +248,11 @@ It fails when Docker is unavailable. A separate Linux CI workflow runs this
 evaluator. Its authored cases cover marker absence, full identity mismatch, raw
 role and unchecked RPC denial, forged GUC/temp shadowing, snapshot change, immutable
 owner enrollment, cap concurrency, browser journal composition, financial profile
-refusal and restart. PostgreSQL execution has not yet passed; this remains a draft
-candidate. TypeScript/legacy adapter fixtures, complete RPC semantic review, and
+refusal and restart. Actual isolated PostgreSQL review-hardening CI passed on commit 723b625
+([run 36771861508](https://github.com/tang-vu/keryx/actions/runs/36771861508));
+the isolated PostgREST/Supabase-JS shape gate passed on 65ad6f0
+([run 36772112133](https://github.com/tang-vu/keryx/actions/runs/36772112133)).
+These selected synthetic gates leave the unified candidate in draft. TypeScript/legacy adapter fixtures, complete RPC semantic review, and
 additional domain/crash/HTTP parity acceptance remain open. No runtime gate is
 closed, no real project migration is authorized by this document, and no production
 credential or private database was accessed.
