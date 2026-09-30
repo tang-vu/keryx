@@ -24,7 +24,7 @@ not claimed.
 | M2 Environment isolation | Separate mainnet keys, configuration, database and signing domains; no cross-network nonce or authorization reuse. |
 | M3 Security | Independent review of payment, authorization, encrypted delivery and registry paths; remediate findings. |
 | M4 Payment recovery | Atomic intent-to-payment bridge, durable phases, retention after grant expiry/replacement, restart/replay/response-loss drills and withdrawal acceptance. No two-ledger gap. |
-| M5 Operations | Off-host restore, rollback and key-rotation drills; delivered alert evidence; named responder and incident runbook. Alert destination and responder remain unconfirmed. |
+| M5 Operations | Off-host restore, rollback and key-rotation drills; delivered alert evidence; named responder and incident runbook. Telegram bot is the selected channel; concrete destination, delivery and responder acceptance remain unconfirmed. |
 | M6 Customer journeys | Independent buyer/creator/developer acceptance, source rights, visible terms, privacy/retention and refund/support handling. |
 | M7 Economics | Versioned provider pricing, invoice reconciliation and complete failed/retried-call costs; independent repeat paid use and useful research. |
 | M8 Launch | Owner reviews the exact candidate, funded limits and gate evidence, then explicitly authorizes activation/spending. |
@@ -57,7 +57,7 @@ invoice reconciliation remains necessary. [Cache hits are best-effort](https://a
 1. Verify PostgreSQL admission against actual migrations in hosted CI.
 2. Design and implement the atomic live-journal bridge and durable recovery phases;
    prove fault handling before exposing signing from the new journal.
-3. Correct versioned cost observation and configure an owner-selected alert channel.
+3. Correct versioned cost observation and prepare/configure Telegram operations alerts.
 4. Run the [independent research pilot](../research-pilot-program.md), alongside
    security review and operations drills.
 5. Assemble exact-candidate M1–M8 evidence for the owner's launch decision.
