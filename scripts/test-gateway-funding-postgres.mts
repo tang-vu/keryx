@@ -74,6 +74,32 @@ try {
   assert.equal(sqlIn("funding_unenrolled", "select count(*) from public.gateway_funding_namespaces"), "1");
   assert.equal(sqlIn("funding_unenrolled", "select count(*) from keryx_storage.identity"), "0");
   sql(`select keryx_storage.install_funding_authorization(${expected},${json(operation)})`);
+  // Refuse before identity/catalog/lock admission. Timeout is established by
+  // the outer SQL statement/session, never by a funding function SET clause.
+  const beforeDeadlineRefusals = sql("select keryx_storage.snapshot_digest()");
+  for (const timeout of ["0", "30001ms"]) {
+    for (const command of [
+      `select keryx_storage.install_funding_policy(${expected},${json(installation)})`,
+      `select keryx_storage.install_funding_authorization(${expected},${json(operation)})`,
+      rpc("inspect_namespace", `'${operation.policy.funder}'`),
+      rpc("admit", `'${operation.operationId}'`),
+    ]) assert.throws(() => sql(`set statement_timeout='${timeout}';${command}`), /Gateway funding outer statement deadline required/);
+    assert.equal(sql("select keryx_storage.snapshot_digest()"), beforeDeadlineRefusals, "deadline refusal preserves complete store");
+    assert.equal(sql("select count(*) from keryx_storage.writer"), "0", "deadline refusal admits no writer");
+  }
+  // One actual outer statement includes admission and then blocks. Cancellation
+  // must roll back that admission and its writer, rather than leave authority.
+  assert.throws(() => sql(`set statement_timeout='1s';do $$ begin
+    perform public.storage_funding_admit(${expected},'${operation.operationId}');
+    raise notice 'Synthetic funding reached sleep';
+    perform pg_sleep(2);end $$`), error => {
+    assert.match(String(error), /Synthetic funding reached sleep/, "funding mutation completed before the blocked sleep");
+    assert.match(String(error), /canceling statement due to statement timeout/);
+    return true;
+  });
+  assert.equal(sql("select keryx_storage.snapshot_digest()"), beforeDeadlineRefusals, "outer timeout rolls back funding mutation");
+  assert.equal(sql("select count(*) from keryx_storage.writer"), "0");
+
   sql("grant execute on function public.storage_funding_finalize(jsonb,jsonb) to anon");
   assert.throws(() => service(rpc("admit", `'${operation.operationId}'`)), /Gateway funding ledger refused/, "ACL drift must refuse ordinary admission");
   sql("revoke execute on function public.storage_funding_finalize(jsonb,jsonb) from anon");
@@ -145,6 +171,13 @@ try {
   // Synthetic role-boundary fixture: these invented receipt fields demonstrate
   // SQL binding/ACL only, never verified provider truth or actual settlement.
   sql("create role synthetic_observer login;grant keryx_gateway_funding_observer to synthetic_observer");
+  const beforeObserverDeadline = sql("select keryx_storage.snapshot_digest()");
+  for (const timeout of ["0", "30001ms"]) {
+    assert.throws(() => sql(`set statement_timeout='${timeout}';set role synthetic_observer;${rpc("finalize", json(evidence))}`), /Gateway funding outer statement deadline required/);
+    assert.equal(sql("select keryx_storage.snapshot_digest()"), beforeObserverDeadline);
+    assert.equal(sql("select count(*) from keryx_storage.writer"), "0");
+  }
+
   assert.throws(() => sql(`set role synthetic_observer;${rpc("finalize", json({ ...evidence, finalityPolicyDigest: "0".repeat(64) }))}`), /Gateway funding ledger refused/);
   sql(`set role synthetic_observer;begin;${rpc("finalize", json(evidence))};rollback;`);
   assert.equal(sql(`select next_crypto_nonce from public.gateway_funding_namespaces where sender='${native.sender}'`), "0", "terminal and barrier roll back together");
@@ -164,7 +197,7 @@ try {
   assert(ready);
   assert.equal(sql(`select next_crypto_nonce from public.gateway_funding_namespaces where sender='${native.sender}'`), "1", "SIGKILL retains the protected progression barrier");
   assert.equal(JSON.parse(service(rpc("claim_crypto", `'${operation.operationId}'`, "'usdcTransfer'", `'${followingClaim}'`))).fresh, false);
-  sql("create role funding_http login;grant service_role to funding_http");
+  sql("create role funding_http login;alter role funding_http set statement_timeout='10s';grant service_role to funding_http");
   docker(["run", "-d", "--name", httpName, "--network", `container:${name}`, "--memory", "256m", "--cpus", "0.5", "-e", "PGRST_DB_URI=postgres://funding_http@127.0.0.1:5432/postgres",
     "-e", "PGRST_DB_ANON_ROLE=service_role", "-e", "PGRST_DB_SCHEMAS=public", "-e", "PGRST_DB_CONFIG=false", "-e", "PGRST_DB_POOL=2", "postgrest/postgrest:v12.2.3"]); httpStarted = true;
   const isolatedHttpFetch = (port: 3000 | 3001): typeof fetch => async (input, init) => {
@@ -243,7 +276,7 @@ try {
   const ordinaryObserverStore = new SupabaseGatewayFundingTerminalObserverStore(ledger, authority);
   await assert.rejects(() => ordinaryObserverStore.appendVerifiedTerminalObservation(issuerOperation.operationId, "nativeTransfer", token), /Gateway funding observer refused/);
   assert.equal((await ledger.inspectNamespace(issuerTx.sender)).nextCryptoNonce, "0");
-  sql("create role funding_observer_http login;grant keryx_gateway_funding_observer to funding_observer_http");
+  sql("create role funding_observer_http login;alter role funding_observer_http set statement_timeout='10s';grant keryx_gateway_funding_observer to funding_observer_http");
   docker(["run", "-d", "--name", observerHttpName, "--network", `container:${name}`, "--memory", "256m", "--cpus", "0.5",
     "-e", "PGRST_DB_URI=postgres://funding_observer_http@127.0.0.1:5432/postgres", "-e", "PGRST_DB_ANON_ROLE=keryx_gateway_funding_observer",
     "-e", "PGRST_DB_SCHEMAS=public", "-e", "PGRST_DB_CONFIG=false", "-e", "PGRST_DB_POOL=2", "-e", "PGRST_SERVER_PORT=3001", "postgrest/postgrest:v12.2.3"]); observerHttpStarted = true;

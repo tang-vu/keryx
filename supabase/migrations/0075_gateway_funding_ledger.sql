@@ -88,9 +88,22 @@ begin
 exception when others then raise exception 'PostgreSQL native funding binding unavailable';
 end; $$;
 
+-- This must inspect an already active outer statement deadline. A function SET
+-- statement_timeout (or set_config inside this statement) cannot start PostgreSQL's
+-- statement timer. Login/session configuration is an independent deployment gate.
+create function keryx_storage.funding_require_outer_deadline() returns void
+language plpgsql security definer set search_path=pg_catalog,pg_temp as $$
+declare deadline interval := current_setting('statement_timeout')::interval;
+begin
+  if deadline<=interval '0 milliseconds' or deadline>interval '30 seconds' then
+    raise exception 'Gateway funding outer statement deadline required';
+  end if;
+end; $$;
+
 create function keryx_storage.funding_enter(p_expected_identity jsonb,p_operation text) returns void
 language plpgsql security definer set search_path=pg_catalog,pg_temp as $$
 begin
+  perform keryx_storage.funding_require_outer_deadline();
   perform keryx_storage.require_identity(p_expected_identity);
   perform keryx_storage.verify_fences();
   perform keryx_storage.enter_operation(p_expected_identity,p_operation);
@@ -281,6 +294,7 @@ declare selected text; selected_sender text; selected_role text; original public
   p_history_document_digest text:=p_installation#>>'{history,documentDigest}';
   p_reviewed_snapshot_digest text:=p_installation->>'reviewedSnapshotDigest';
 begin
+  perform keryx_storage.funding_require_outer_deadline();
   -- Owner CAS excludes every admitted application transaction until the
   -- installation commits; a shared identity lock alone would allow writers.
   perform pg_advisory_xact_lock(634781904177021::bigint);
@@ -359,6 +373,7 @@ create function keryx_storage.install_funding_authorization(p_expected_identity 
 language plpgsql security definer set search_path=pg_catalog,pg_temp as $$
 declare selected text; original jsonb; stored_policy jsonb;
 begin
+  perform keryx_storage.funding_require_outer_deadline();
   selected:=keryx_storage.require_identity(p_expected_identity);
   perform keryx_storage.validate_funding_operation(p_expected_identity,p_operation);
   select policy into stored_policy from public.gateway_funding_policies where policy_id=(p_operation#>>'{policy,policyId}')::uuid for share;
@@ -381,6 +396,7 @@ create function keryx_storage.funding_bound_operation(p_expected_identity jsonb,
 language plpgsql security definer set search_path=pg_catalog,pg_temp as $$
 declare selected text; original public.gateway_funding_authorizations%rowtype; binding text; n record;
 begin
+  perform keryx_storage.funding_require_outer_deadline();
   selected:=keryx_storage.require_identity(p_expected_identity);
   perform keryx_storage.funding_uuid(to_jsonb(p_operation_id));
   select * into original from public.gateway_funding_authorizations where operation_id=p_operation_id::uuid;
