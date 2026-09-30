@@ -1,6 +1,13 @@
 # Keryx — Decision Log
 
 **D-268** - Stage atomic browser authorization admission before signing cutover -
+*September 30 acceptance correction:* the first real PostgreSQL CI run rejected
+the intent insert because JSON `created_at` text was not explicitly converted to
+`timestamptz`. Migration `0068` replaces the RPC with the explicit cast, preserving
+its invoker permissions and atomic grant reservation. Migration `0067` is retained
+unchanged. The acceptance harness checks the persisted timestamp and malformed
+timestamp rollback; PostgreSQL acceptance requires passing the corrected CI run.
+
 *The live browser path can sign a nonce before there is a durable nonce-indexed
 intent and cap reservation in one transaction.* Add an unused admission operation
 to both database adapters. It generates a server nonce, validates the Arc testnet

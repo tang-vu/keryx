@@ -21,6 +21,13 @@ addresses or service availability will be inferred from testnet configuration.
 
 ## Current baseline and gaps
 
+Latest preparation: [September 30 evidence](./engineering/mainnet-readiness-2026-09-30.md)
+records production testnet commit `5bf9aea`, the unused D-268 admission foundation,
+the remaining live-recovery bridge, current supplier pricing concerns and open
+M1–M8 gates. The [independent pilot runbook](./research-pilot-program.md) defines
+the initial audience and acceptance evidence. Mainnet and profitable repeat use
+remain unproven; older baseline observations below are historical.
+
 Repository baseline: `ddcc520`. The buyer CLI, private journals, receipt verification,
 redacted reports and `/research` preparation/inspection are implemented. Existing
 owner-operated pilots demonstrate testnet payment and recovery on a narrow first-party
