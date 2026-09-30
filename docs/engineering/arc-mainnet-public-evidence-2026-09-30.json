@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-30T16:17:50.559Z",
+  "mode": "read_only",
+  "gate": "M1_PARTIAL",
+  "mainnetReady": false,
+  "sources": [
+    "https://docs.arc.io/arc/references/connect-to-arc",
+    "https://docs.arc.io/arc/references/contract-addresses",
+    "https://developers.circle.com/gateway/references/contract-addresses",
+    "https://developers.circle.com/gateway/references/supported-blockchains",
+    "https://raw.githubusercontent.com/circlefin/skills/master/plugins/circle/skills/use-gateway/SKILL.md"
+  ],
+  "reference": {
+    "chainId": "0x13b2",
+    "network": "eip155:5042",
+    "domain": 26,
+    "usdc": "0x3600000000000000000000000000000000000000",
+    "wallet": "0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE",
+    "minter": "0x2222222d7164433c4C09B0b0D809a9b52C04C205",
+    "decimals": 6
+  },
+  "rpc": [
+    {
+      "endpoint": "https://rpc.mainnet.arc.io",
+      "status": "observed",
+      "evidence": {
+        "chainId": "0x13b2",
+        "block": {
+          "number": "0x16796fe",
+          "hash": "0x6415d9ece88ed990bfb13a1d0f740902c02c82e0e8619456e14ab9313119afc4",
+          "parentHash": "0x8cf89815ffbe3c7fb52dd7f672bd3e0e4497e425efc06ebd8d605199c5d9a8b4",
+          "timestamp": "0x6abd362b"
+        },
+        "contracts": [
+          {
+            "name": "usdc",
+            "address": "0x3600000000000000000000000000000000000000",
+            "bytes": 1798,
+            "sha256": "d06405421b354a12b2f03fcc8aac4b324f274aed5b8ecc5fd62d8fa119067154"
+          },
+          {
+            "name": "wallet",
+            "address": "0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE",
+            "bytes": 163,
+            "sha256": "504d3e0c64674f153002993cf59fef5617890b28866b252520ea494eea8ca878"
+          },
+          {
+            "name": "minter",
+            "address": "0x2222222d7164433c4C09B0b0D809a9b52C04C205",
+            "bytes": 163,
+            "sha256": "504d3e0c64674f153002993cf59fef5617890b28866b252520ea494eea8ca878"
+          }
+        ],
+        "erc20Decimals": 6,
+        "authenticity": "presence_only_not_audited"
+      }
+    },
+    {
+      "endpoint": "https://rpc.blockdaemon.mainnet.arc.io",
+      "status": "observed",
+      "evidence": {
+        "chainId": "0x13b2",
+        "block": {
+          "number": "0x16796fe",
+          "hash": "0x6415d9ece88ed990bfb13a1d0f740902c02c82e0e8619456e14ab9313119afc4",
+          "parentHash": "0x8cf89815ffbe3c7fb52dd7f672bd3e0e4497e425efc06ebd8d605199c5d9a8b4",
+          "timestamp": "0x6abd362b"
+        },
+        "contracts": [
+          {
+            "name": "usdc",
+            "address": "0x3600000000000000000000000000000000000000",
+            "bytes": 1798,
+            "sha256": "d06405421b354a12b2f03fcc8aac4b324f274aed5b8ecc5fd62d8fa119067154"
+          },
+          {
+            "name": "wallet",
+            "address": "0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE",
+            "bytes": 163,
+            "sha256": "504d3e0c64674f153002993cf59fef5617890b28866b252520ea494eea8ca878"
+          },
+          {
+            "name": "minter",
+            "address": "0x2222222d7164433c4C09B0b0D809a9b52C04C205",
+            "bytes": 163,
+            "sha256": "504d3e0c64674f153002993cf59fef5617890b28866b252520ea494eea8ca878"
+          }
+        ],
+        "erc20Decimals": 6,
+        "authenticity": "presence_only_not_audited"
+      }
+    },
+    {
+      "endpoint": "https://rpc.drpc.mainnet.arc.io",
+      "status": "unavailable",
+      "reason": "http_unavailable"
+    },
+    {
+      "endpoint": "https://rpc.quicknode.mainnet.arc.io",
+      "status": "observed",
+      "evidence": {
+        "chainId": "0x13b2",
+        "block": {
+          "number": "0x16796fe",
+          "hash": "0x6415d9ece88ed990bfb13a1d0f740902c02c82e0e8619456e14ab9313119afc4",
+          "parentHash": "0x8cf89815ffbe3c7fb52dd7f672bd3e0e4497e425efc06ebd8d605199c5d9a8b4",
+          "timestamp": "0x6abd362b"
+        },
+        "contracts": [
+          {
+            "name": "usdc",
+            "address": "0x3600000000000000000000000000000000000000",
+            "bytes": 1798,
+            "sha256": "d06405421b354a12b2f03fcc8aac4b324f274aed5b8ecc5fd62d8fa119067154"
+          },
+          {
+            "name": "wallet",
+            "address": "0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE",
+            "bytes": 163,
+            "sha256": "504d3e0c64674f153002993cf59fef5617890b28866b252520ea494eea8ca878"
+          },
+          {
+            "name": "minter",
+            "address": "0x2222222d7164433c4C09B0b0D809a9b52C04C205",
+            "bytes": 163,
+            "sha256": "504d3e0c64674f153002993cf59fef5617890b28866b252520ea494eea8ca878"
+          }
+        ],
+        "erc20Decimals": 6,
+        "authenticity": "presence_only_not_audited"
+      }
+    }
+  ],
+  "gateway": {
+    "endpoint": "https://gateway-api.circle.com/v1/info",
+    "status": "observed",
+    "evidence": {
+      "version": 1,
+      "chain": "Arc",
+      "network": "Mainnet",
+      "domain": 26,
+      "wallet": "0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE",
+      "minter": "0x2222222d7164433c4C09B0b0D809a9b52C04C205",
+      "processedHeight": "23566080",
+      "burnIntentExpirationHeight": "24775681"
+    }
+  },
+  "consistency": {
+    "status": "observed",
+    "evidence": {
+      "number": "0x16796fe",
+      "hash": "0x6415d9ece88ed990bfb13a1d0f740902c02c82e0e8619456e14ab9313119afc4",
+      "parentHash": "0x8cf89815ffbe3c7fb52dd7f672bd3e0e4497e425efc06ebd8d605199c5d9a8b4",
+      "timestamp": "0x6abd362b",
+      "agreeingEndpoints": 3
+    }
+  },
+  "externalEvidenceComplete": false,
+  "remainingGates": [
+    "contract_authenticity_and_audit",
+    "sdk_settlement_acceptance",
+    "registry_authority",
+    "signer_and_spend_isolation",
+    "recovery_and_operations",
+    "owner_go_no_go"
+  ],
+  "sdk": {
+    "package": "@circle-fin/x402-batching",
+    "version": "3.5.0",
+    "inspection": "static_bundled_metadata_only",
+    "mainnetArcMetadataMatches": true,
+    "artifacts": [
+      {
+        "path": "dist/client/index.mjs",
+        "sha256": "3a864e1b50833532b804fa6d8824bd0046e970c0359bd9b5f6aa29a45bbde619"
+      },
+      {
+        "path": "dist/server/index.mjs",
+        "sha256": "1ec1621f67daa359c56de7ab7c8c5bd6e928be6182bacfc28e919f9f8550ce7e"
+      }
+    ],
+    "settlementAccepted": false
+  }
+}
