@@ -33,16 +33,18 @@ bridge and overall mainnet gates remain open.
 | M2 Environment isolation | Separate mainnet keys, configuration, database and signing domains; no cross-network nonce or authorization reuse. |
 | M3 Security | Independent review of payment, authorization, encrypted delivery and registry paths; remediate findings. |
 | M4 Payment recovery | Atomic intent-to-payment bridge, durable phases, retention after grant expiry/replacement, restart/replay/response-loss drills and withdrawal acceptance. No two-ledger gap. |
-| M5 Operations | Off-host restore, rollback and key-rotation drills; delivered alert evidence; named responder and incident runbook. Telegram bot is the selected channel; concrete destination, delivery and responder acceptance remain unconfirmed. |
+| M5 Operations | Off-host restore, rollback and key-rotation drills; outside-host outage detection and alert acceptance; named responder and incident runbook. Dedicated Telegram probe delivery is observed; responder acceptance and incident drills remain open. |
 | M6 Customer journeys | Independent buyer/creator/developer acceptance, source rights, visible terms, privacy/retention and refund/support handling. |
 | M7 Economics | Versioned provider pricing, invoice reconciliation and complete failed/retried-call costs; independent repeat paid use and useful research. |
 | M8 Launch | Owner reviews the exact candidate, funded limits and gate evidence, then explicitly authorizes activation/spending. |
 
 The [Telegram operations runbook](../telegram-ops-alerts.md) selects a private
-Keryx ops group and separate bot configuration. Mocked delivery and reconciliation
-checks validate the implementation; no credentials or actual destination have been
-configured, and live delivery/responder acceptance remains unverified. Outside-host
-outage detection and its delivered alert drill are separately required.
+Keryx ops group and separate bot configuration. The dedicated operations destination
+is now configured: on September 30 an actual `sendAlert` probe received Telegram's
+acknowledgement, and the owner confirmed receipt. Private credentials and destination
+identifiers are omitted. This verifies that probe, not complete incident response.
+Responder acceptance/drills, outside-host outage detection and its delivered alert
+drill remain required; M5 is partial.
 
 Keep [the maintained gate map](../mainnet-delivery-plan.md) authoritative. Close
 individual gates with evidence, rather than treating this snapshot as completion.

@@ -13,6 +13,9 @@ const expectedCron = [
 ].join('\n');
 const observed = (output, ok = true) => ({ output, ok });
 const unit = (load, active = 'inactive', pid = '0') => observed(`LoadState=${load}\nActiveState=${active}\nMainPID=${pid}\n`);
+const release = '8bc7cffeac2d9d90bdb834581d7607ecf4b1cb03';
+const pinnedBackup = `0 * * * * cd /root/keryx && /usr/bin/node --import /root/keryx/node_modules/tsx/dist/loader.mjs --no-warnings --env-file=.env.local --env-file=/root/.config/keryx-backup.env /root/.local/share/keryx-backup/${release}/scripts/backup-db.mts >> /root/keryx/data/backups/backup.log 2>&1 # keryx-backup`;
+const backupCheck = (entry) => inspectCron(entry).find((check) => check.label === 'cron:backup');
 
 test('cron inventory requires exactly one expected active schedule and command', () => {
   assert.ok(inspectCron(expectedCron).every((check) => check.status === 'pass'));
@@ -21,6 +24,52 @@ test('cron inventory requires exactly one expected active schedule and command',
   assert.equal(inspectCron(`${expectedCron}\n${expectedCron.split('\n')[0]}`).find((check) => check.label === 'cron:backup').status, 'fail');
   assert.equal(inspectCron(expectedCron.replace('npm run check-llm', 'npm run check-dispatches')).find((check) => check.label === 'cron:llm').status, 'fail');
   assert.equal(inspectCron(expectedCron.replace('cd /root/keryx && /usr/bin/npm run backup', 'cd /tmp && /usr/bin/npm run backup')).find((check) => check.label === 'cron:backup').status, 'fail');
+});
+
+test('accepts the approved hourly pinned backup and provisioned legacy log paths', () => {
+  const inventory = expectedCron.replace(expectedCron.split('\n')[0], pinnedBackup);
+  assert.ok(inspectCron(inventory).every((check) => check.status === 'pass'));
+  assert.equal(backupCheck(pinnedBackup.replace(release, 'a'.repeat(40))).status, 'pass');
+  const provisioned = expectedCron.replaceAll('>> ', '>> /root/keryx/data/backups/').replace('dispatch.log', 'dispatches.log');
+  assert.ok(inspectCron(provisioned).every((check) => check.status === 'pass'));
+  assert.ok(inspectCron(expectedCron.replaceAll('/usr/bin/npm', 'npm')).every((check) => check.status === 'pass'));
+});
+
+test('rejects altered pinned paths, runtime, environment, flags, schedule and source identity', () => {
+  for (const changed of [
+    pinnedBackup.replace('0 * * * *', '*/10 * * * *'),
+    pinnedBackup.replace('cd /root/keryx', 'cd /tmp'),
+    pinnedBackup.replace('/usr/bin/node', '/tmp/node'),
+    pinnedBackup.replace('/root/keryx/node_modules/tsx/dist/loader.mjs', '/tmp/loader.mjs'),
+    pinnedBackup.replace('--env-file=.env.local', '--env-file=/tmp/.env.local'),
+    pinnedBackup.replace('--env-file=/root/.config/keryx-backup.env', '--env-file=/tmp/backup.env'),
+    pinnedBackup.replace(' --env-file=/root/.config/keryx-backup.env', ''),
+    pinnedBackup.replace('--no-warnings ', ''),
+    pinnedBackup.replace('--no-warnings', '--no-warnings --eval=synthetic'),
+    pinnedBackup.replace(release, release.slice(0, 7)),
+    pinnedBackup.replace(release, release.toUpperCase()),
+    pinnedBackup.replace(release, `${release}/../other`),
+    pinnedBackup.replace('/root/.local/share/keryx-backup/', '/tmp/keryx-backup/'),
+    pinnedBackup.replace('/scripts/backup-db.mts', '/scripts/restore-backup.mts'),
+    pinnedBackup.replace(' >>', ' --init-r2 >>'),
+    pinnedBackup.replace(' >>', ' --download-r2 synthetic >>'),
+    pinnedBackup.replace('/root/keryx/data/backups/backup.log', '/tmp/backup.log'),
+    pinnedBackup.replace(' >>', ' && echo synthetic >>'),
+    pinnedBackup.replace(' # keryx-backup', ' ; echo synthetic # keryx-backup'),
+    pinnedBackup.replace(' # keryx-backup', ' # keryx-backup unexpected'),
+  ]) assert.equal(backupCheck(changed).status, 'fail');
+});
+
+test('rejects duplicate backup modes and arbitrary shell operations in legacy inventory', () => {
+  for (const entries of [
+    `${pinnedBackup}\n${pinnedBackup}`,
+    `${pinnedBackup}\n${expectedCron.split('\n')[0]}`,
+    `${pinnedBackup}\n${pinnedBackup} ; echo synthetic`,
+  ]) assert.equal(backupCheck(entries).status, 'fail');
+  for (const suffix of [' && echo synthetic', ' ; echo synthetic', ' | cat', ' &', ' --unexpected']) {
+    const altered = expectedCron.replaceAll(' # keryx-', `${suffix} # keryx-`);
+    assert.ok(inspectCron(altered).every((check) => check.status === 'fail'));
+  }
 });
 
 test('alert check reports presence only and never returns the value', () => {
