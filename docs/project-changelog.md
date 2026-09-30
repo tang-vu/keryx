@@ -1,5 +1,11 @@
 # Keryx Project Changelog
 
+### Framework and HTTP dependency security patch (2026-09-30)
+
+- Raise Next.js and its ESLint integration floor to 16.3.6 and resolve the matching framework package family to that release for the [Node ImageResponse RCE fix](https://github.com/vercel/next.js/security/advisories/GHSA-vcvr-r3jv-pc5j).
+- Update the existing Axios override to the published 1.20.0 release for the maintainer's [form serialization prototype-pollution](https://github.com/axios/axios/security/advisories/GHSA-x97p-jq2g-jp4f) and [proxy hostname ReDoS](https://github.com/axios/axios/security/advisories/GHSA-mghh-pgcx-3jjj) fixes. Keep payment SDK versions and the production audit gate unchanged.
+- The September 30 production dependency audit has zero high/critical findings; seven low and eighteen moderate findings remain. A passing audit is a dependency gate, not proof that a deployment was exploited or that mainnet is ready.
+
 ### Free public reference evidence (2026-09-30, v0.24.5)
 
 - Add a separate free public RSS catalog and explicit four-feed onboarding command for
