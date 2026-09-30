@@ -3,7 +3,50 @@
 **Decision: not ready for mainnet activation.** This dossier advances preparation;
 it does not authorize mainnet signing, funding or settlement.
 
-## Observed baseline
+## Latest bounded acceptance
+
+The [funded withdrawal rehearsal](creator-funded-withdrawal-drill.md) passed using an
+owner-operated EOA's existing Arc-testnet buyer balance through the creator engine:
+one original 2,000-micro-USDC authorization, one Circle POST and one mint broadcast.
+The application response was discarded after attestation storage, and the mint RPC
+response after signed-byte storage. Two new keyless Linux processes matched the exact
+original mint event/receipt and retained one cash-out row, zero payment rows and zero
+POSTs/signatures/broadcasts. The selected Arc RPC reported inclusion/finality; this
+does not independently verify validator signatures. The original lifetime gas hold
+remained charged. Production withdrawal creation and its timer remain disabled.
+
+The [outside-host monitor](../outside-host-ops-monitor.md) is deployed on Workers Free
+with a dedicated SQLite Durable Object and five-minute Cron. Its real fixed-route
+diagnostic completed a healthy control, three HTTPS 404 observations and two healthy
+observations. Both Telegram drill notices were confirmed on their first attempts;
+the owner confirmed both messages and accepted response ownership. The separate
+production journal was healthy with no incident, and diagnostic notifications were
+disabled afterward. Reviewed monitor head `b31eb56` passed Linux monitor and full CI.
+An actual healthy production Cron sample was separately observed at approximately
+`16:00:41Z`, with status checked at `16:00:43.993Z` and no manual POST after the
+initial `15:53` probe. This verifies scheduled execution as well as configuration.
+This accepts the bounded external detection/alert/responder path, rather than a real
+VPS outage or failover.
+
+An unsynchronized VPS clock initially denied fresh withdrawal provisioning. A one-time
+54,834-ms forward adjustment, corroborated against independent TLS time observations,
+restored the unchanged freshness gates. NTP had received no packets; durable clock
+synchronization remains an operations item. Unknown-UUID Circle response recovery,
+independent creator/browser acceptance, full outage/restore/security evidence and all
+mainnet release gates remain open.
+
+The original 2,000-micro-USDC source payment subsequently reached an exact matched
+Circle `completed` record. Independent Arc RPC inspection verified a successful
+receipt for the reported batch transaction, matching block hash and 13,978
+confirmations at observation. Aggregated calldata was not independently decoded
+to prove this individual nonce; earlier `received` observations below are historical.
+
+Current production readback after the funded rehearsal reported application source
+and `/api/health` commit `0a8853e` (merged PR #55), with web and A2A services online.
+This observed baseline supersedes the earlier `5bf9aea` checkpoint below; final
+current-main deployment remains a separate recorded step after this dossier merges.
+
+## Earlier September 30 baseline
 
 Production remains Arc testnet. Read-only health inspection reported operational,
 database OK and commit `5bf9aea` (PR #43). D-268 provides atomic grant reservation
@@ -32,8 +75,8 @@ bridge and overall mainnet gates remain open.
 | M1 Network and services | Mainnet contract identity, SDK/facilitator compatibility, registry authority and a separately authorized end-to-end settlement drill. |
 | M2 Environment isolation | Separate mainnet keys, configuration, database and signing domains; no cross-network nonce or authorization reuse. |
 | M3 Security | Independent review of payment, authorization, encrypted delivery and registry paths; remediate findings. |
-| M4 Payment recovery | Atomic intent-to-payment bridge, durable phases, retention after grant expiry/replacement, restart/replay/response-loss drills and withdrawal acceptance. No two-ledger gap. |
-| M5 Operations | Off-host restore, rollback and key-rotation drills; outside-host outage detection and alert acceptance; named responder and incident runbook. Dedicated Telegram probe delivery is observed; responder acceptance and incident drills remain open. |
+| M4 Payment recovery | Funded original withdrawal/receipt recovery and idempotent cash-out accounting passed the operator boundary above. Unknown-UUID Circle response loss, independent creator/browser recovery, broader Circle/RPC outage and release-wide recovery/security evidence remain required. No two-ledger gap or inferred terminal failure. |
+| M5 Operations | Fixed-route outside-host detection, both delivered Telegram drill notices, owner response acceptance and one real healthy production Cron sample passed. Real VPS outage/failover, off-host restore/rollback/key rotation, sustained scheduled operation and durable NTP synchronization remain required. |
 | M6 Customer journeys | Independent buyer/creator/developer acceptance, source rights, visible terms, privacy/retention and refund/support handling. |
 | M7 Economics | Versioned provider pricing, invoice reconciliation and complete failed/retried-call costs; independent repeat paid use and useful research. |
 | M8 Launch | Owner reviews the exact candidate, funded limits and gate evidence, then explicitly authorizes activation/spending. |
@@ -43,8 +86,9 @@ Keryx ops group and separate bot configuration. The dedicated operations destina
 is now configured: on September 30 an actual `sendAlert` probe received Telegram's
 acknowledgement, and the owner confirmed receipt. Private credentials and destination
 identifiers are omitted. This verifies that probe, not complete incident response.
-Responder acceptance/drills, outside-host outage detection and its delivered alert
-drill remain required; M5 is partial.
+The later outside-host fixed-route drill above adds both delivered incident notices
+and the owner's response acceptance. Real outage/restoration and durable time
+synchronization remain open; M5 is partial.
 
 Keep [the maintained gate map](../mainnet-delivery-plan.md) authoritative. Close
 individual gates with evidence, rather than treating this snapshot as completion.
@@ -63,14 +107,15 @@ lists Flash cache-hit/cache-miss/output USD per million tokens as
 `0.003 / 0.15 / 0.60` off-peak and `0.006 / 0.30 / 1.20` peak.
 Peak windows are Monday–Friday 01:00–04:00 and 06:00–10:00 UTC, excluding Chinese
 public holidays. The old `deepseek-v4-flash` request name now routes to V4.1 Flash.
-At the inspected production baseline `5bf9aea`, the observer uses the August 29
+Historical pricing checkpoint: at the then-inspected production baseline `5bf9aea`, the observer uses the August 29
 historical rate policy. D-269, implemented in the [PR #46 candidate](https://github.com/tang-vu/keryx/pull/46),
 adds per-call policy/model capture and private observer/report v2. It preserves
 saved v1 artifacts, leaves untagged history and uncertain cache splits unpriced,
 and estimates Flash cost as an off-peak–peak interval without guessing billing
 windows or holidays. Local validation passed 98 focused tests; four Linux-only
 checks await hosted CI, and final-candidate hosted acceptance remains pending.
-This is candidate evidence, not a verified deployment or invoice audit. Bounds
+Those pending-candidate/CI statements describe that historical checkpoint, not the
+current `0a8853e` production readback. No invoice audit is claimed. Bounds
 cover priced runs only; whole-period LLM cost and realized profit remain unknown.
 Invoice reconciliation and the broader economics gate remain open. See the
 [observer contract](../testnet-economics.md). [Cache hits are best-effort](https://api-docs.deepseek.com/guides/kv_cache/).
@@ -78,9 +123,10 @@ Invoice reconciliation and the broader economics gate remain open. See the
 ## Delivery order
 
 1. Preserve the passing PostgreSQL admission gate against actual migrations in CI.
-2. Design and implement the atomic live-journal bridge and durable recovery phases;
-   prove fault handling before exposing signing from the new journal.
-3. Complete candidate acceptance for versioned cost observation and configure/verify Telegram operations alerts.
+2. Preserve the durable authorization/cash-out recovery invariants and extend funded
+   acceptance to independent browser/creator journeys, unknown-UUID Circle response
+   recovery and broader outage/restore paths.
+3. Complete invoice-backed cost-observation acceptance and the remaining full operations drills; preserve the accepted bounded Telegram/monitor path.
 4. Run the [independent research pilot](../research-pilot-program.md), alongside
    security review and operations drills.
 5. Assemble exact-candidate M1–M8 evidence for the owner's launch decision.

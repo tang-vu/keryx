@@ -8,6 +8,39 @@ content, sign, reconcile, settle, restart services or mutate jobs. The existing
 `keryx-source-upkeep` Worker, its hourly minute-7 trigger and two-feed limit remain
 independent.
 
+## Observed acceptance — September 30, 2026
+
+PR [#56](https://github.com/tang-vu/keryx/pull/56), reviewed monitor head `b31eb56`,
+passed [Linux monitor CI](https://github.com/tang-vu/keryx/actions/runs/36739064902)
+and [full repository CI](https://github.com/tang-vu/keryx/actions/runs/36739064692).
+The dedicated `keryx-ops-monitor` Worker was deployed on Workers Free with its
+SQLite-backed Durable Object and `*/5 * * * *` Cron. Existing Workers and the
+source-upkeep minute-7 hourly schedule were preserved; no subscription upgrade occurred.
+
+The actual off-host diagnostic consumed one real healthy control read, three fixed
+HTTPS 404 reads and two real healthy reads. It completed one stable fixture incident,
+with both outage and recovery delivery records `confirmed` on their first attempts.
+The owner confirmed receipt of both Telegram **[DRILL]** messages and accepted the
+alert-response role. The separate production Durable Object was healthy with no
+incident. Diagnostic notifications were disabled afterward in deployed version
+`70f2eee7-8bb6-43f1-a082-3574819be83b`, retaining the consumed fixture state.
+
+Actual scheduled execution was also observed: a sanitized Cloudflare live tail
+reported Cron `*/5 * * * *` at approximately `2026-09-30T16:00:41Z`, outcome `ok`,
+on that production version. With no manual POST since the initial `15:53` probe,
+authenticated status then reported `checkedAt: 2026-09-30T16:00:43.993Z`, `healthy`,
+two successful production observations and no incident. The tail was stopped;
+no additional alert was sent. This verifies a real scheduled sample beyond deployment
+configuration, without establishing sustained availability or punctual delivery.
+
+This accepts the fixed-route external detection/classification, durable incident
+transitions, actual notification delivery and owner response boundary. Real VPS
+outage, transport/DNS failure, failover, service restoration and sustained scheduled
+operation need separate evidence. A later withdrawal provisioning incident also
+exposed an unsynchronized VPS clock: a corroborated one-time forward correction
+restored freshness checks, while durable NTP synchronization remains open. See the
+[funded withdrawal evidence](engineering/creator-funded-withdrawal-drill.md).
+
 ## Readiness and notification contract
 
 - Cron runs every five minutes (`*/5 * * * *`), normally 288 probes per UTC day.
