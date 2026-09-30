@@ -1,3 +1,4 @@
+import { referenceSnapshot, type PublicReference } from "../public-references/catalog";
 /**
  * Economic-invariant tests for the agent orchestrator (run-agent.ts).
  *
@@ -1494,4 +1495,113 @@ it("keeps valid citations while reported disagreement limits the final confidenc
     expect(gateway.citationCalls).toHaveLength(2);
     if (trusted === "none") expect(run.answer).toContain("unresolved");
   }
+});
+
+
+function publicRef(id = "public:free"): PublicReference {
+  return referenceSnapshot({ id, name: "Public publisher", url: "https://public.test", rssUrl: "https://public.test/feed",
+    description: "Free public evidence", tags: ["agents"], active: true, items: [] }, {
+    feedTitle: "Public", feedDescription: "Public", link: "https://public.test",
+    items: [{ title: "Agent research", summary: "Useful agent evidence", content: "Public agents require honest evidence and source attribution.",
+      link: `https://public.test/${id.replace(":", "-")}`, deliveryKind: "excerpt" }],
+  });
+}
+
+describe("public feed references remain off the payment rail", () => {
+  it("grounds public citations after a malicious BUY without gateway, cache or settlement rows", async () => {
+    const gateway = fakeGateway();
+    gateway.ensureFunded = async () => { throw new Error("Free-only research must never fund/deposit"); };
+    const engine = fakeEngine({ decide: (input) => input.candidates.map((candidate) => ({
+      ...buy({ id: candidate.id, name: candidate.name, price: 999 }),
+      sourceKind: undefined, offerId: "forged-paid-offer", external: true,
+    })) });
+    const d = deps([], engine, gateway);
+    d.db.listPublicReferences = async () => [publicRef()];
+    d.db.getCached = async () => { throw new Error("A public read cannot trust forged paid cache data"); };
+    const { run } = await drive({ question: "What evidence do agents need?", budget: 0.03, researchMode: "quick" }, d);
+    expect(run.citations).toHaveLength(1);
+    expect(run.citations[0]).toMatchObject({ sourceId: "public:free", sourceKind: "public-reference", reward: 0, publicDeliveryKind: "excerpt" });
+    expect(run.citations[0].contentReceipt).toBeUndefined();
+    expect(run.citations[0].contentVersion).toMatch(/^sha256:/);
+    expect(run.evidence?.[0]).toMatchObject({ sourceKind: "public-reference", qualifiesForReward: false });
+    expect(run.claimCoverage?.[0]?.coverage).toBe(0.9);
+    expect(run.decisions[0]).toMatchObject({ action: "CACHE", price: 0, external: false, offerId: undefined });
+    expect(run.paymentAttempts).toBe(0);
+    expect(run.totalSpent).toBe(0);
+    expect(d.db.payments).toEqual([]);
+    expect(gateway.fetchCalls).toEqual([]);
+    expect(gateway.citationCalls).toEqual([]);
+  });
+
+  it("retains paid 40%/10% shares and withholds public 50% without reallocating exact micros", async () => {
+    const sources = [makeSource({ id: "owned-a" }), makeSource({ id: "owned-b" })];
+    const gateway = fakeGateway();
+    const engine = fakeEngine({
+      decide: (input) => input.candidates.map((candidate) => ({
+        ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
+        targets: [candidate.id === "owned-a" ? 0 : candidate.id === "owned-b" ? 1 : 2],
+      })),
+      sufficiency: (input) => ({ sufficient: input.gathered.length === 3, rationale: "coverage",
+        perClaim: input.subClaims.map((claim) => ({ claim, coverage: 0.9, coveredBy: input.gathered.map((g) => g.marker) })) }),
+      attribute: (used) => used.map((item) => ({ sourceId: item.sourceId,
+        weight: item.sourceId === "owned-a" ? 0.4 : item.sourceId === "owned-b" ? 0.1 : 0.5, rationale: "measured contribution" })),
+    });
+    engine.decompose = async () => ["owned evidence a", "owned evidence b", "public evidence"];
+    const d = deps(sources, engine, gateway);
+    d.db.listPublicReferences = async () => [publicRef()];
+    const budget = 0.03;
+    const { run } = await drive({ question: "Compare agent evidence", budget, executionLimits: { attentionLimit: 3, reevaluateRounds: 0 } }, d);
+    expect(run.citations).toHaveLength(3);
+    const poolMicros = Math.round(budget * config.citationPoolRatio * 1_000_000);
+    expect(gateway.citationCalls.map((call) => [call.sourceId, Math.round(call.amount * 1_000_000)]))
+      .toEqual([["owned-a", Math.round(poolMicros * 0.4)], ["owned-b", Math.round(poolMicros * 0.1)]]);
+    expect(run.citations.find((citation) => citation.sourceId === "public:free")?.reward).toBe(0);
+    expect(run.totalSpent).toBeLessThanOrEqual(budget);
+    expect(gateway.fetchCalls).toEqual(["owned-a", "owned-b"]);
+  });
+
+  it("shares the attention cap with public reads and cannot promote model SKIP", async () => {
+    const engine = fakeEngine({ decide: (input) => input.candidates.map((candidate, index) => ({
+      ...buy({ id: candidate.id, name: candidate.name, price: 0 }), targets: [index % 2],
+      action: candidate.id === "public:skipped" ? "SKIP" : "BUY",
+    })) });
+    engine.decompose = async () => ["first claim", "second claim"];
+    const gateway = fakeGateway();
+    const d = deps([], engine, gateway);
+    d.db.listPublicReferences = async () => [publicRef("public:one"), publicRef("public:two"), publicRef("public:three"), publicRef("public:skipped")];
+    const { run } = await drive({ question: "Agent evidence", budget: 0.01, researchMode: "quick" }, d);
+    expect(run.evidencePortfolio?.outcome?.readAssetIds.length).toBeLessThanOrEqual(2);
+    expect(run.decisions.find((decision) => decision.sourceId === "public:skipped")?.action).toBe("SKIP");
+    expect(gateway.fetchCalls).toEqual([]);
+    expect(gateway.citationCalls).toEqual([]);
+  });
+});
+
+
+it("defers wallet funding until public-only research expansion admits an owned payable source", async () => {
+  const source = makeSource({ id: "owned-later" });
+  let expansionStarted = false;
+  let fundingCalls = 0;
+  const gateway = fakeGateway();
+  gateway.ensureFunded = async () => {
+    expect(expansionStarted).toBe(true);
+    fundingCalls++;
+    return { address: AGENT };
+  };
+  const engine = fakeEngine({
+    decide: (input) => input.candidates.map((candidate) => ({
+      ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
+      action: candidate.id === "owned-later" ? "SKIP" : "BUY",
+      targets: [candidate.id === "owned-later" ? 1 : 0],
+    })),
+    reevaluate: () => { expansionStarted = true; return { shouldBuyMore: true, recommendedIds: [source.id], rationale: "Owned evidence fills the gap" }; },
+  });
+  engine.decompose = async () => ["public evidence", "owned evidence"];
+  const d = deps([source], engine, gateway);
+  d.db.listPublicReferences = async () => [publicRef()];
+  const { run } = await drive({ question: "Compare agent evidence", budget: 0.03,
+    executionLimits: { attentionLimit: 2, reevaluateRounds: 1 } }, d);
+  expect(fundingCalls).toBe(1);
+  expect(gateway.fetchCalls).toEqual(["owned-later"]);
+  expect(run.citations.find((citation) => citation.sourceId === "public:free")?.reward).toBe(0);
 });

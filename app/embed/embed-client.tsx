@@ -201,7 +201,7 @@ export function EmbedClient() {
           rel="noopener noreferrer"
           className="font-mono text-[9px] uppercase tracking-[0.14em] text-ink-3 hover:text-ink"
         >
-          Powered by Keryx — every citation pays its author ↗
+          Powered by Keryx — paid citations reward verified creators ↗
         </a>
       </footer>
     </div>

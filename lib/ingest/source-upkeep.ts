@@ -1,3 +1,4 @@
+import { isPublicReferenceId, referenceSnapshot } from "../public-references/catalog";
 import { createHash, timingSafeEqual } from "node:crypto";
 import type { KeryxDB } from "../db/keryx-db";
 import type { SourceUpkeepSummary } from "../db/source-upkeep";
@@ -19,7 +20,7 @@ export function sourceUpkeepAuthorized(request: Request, token: string | undefin
 }
 
 type UpkeepDb = Pick<KeryxDB, "getSource" | "getItems" | "addItems" | "setCached" |
-  "claimSourceUpkeep" | "finishSourceUpkeep">;
+  "claimSourceUpkeep" | "finishSourceUpkeep" | "getPublicReference" | "upsertPublicReference">;
 
 /** Node/Next can represent a bodyless POST as an empty stream. Read only enough to
  * prove emptiness, with a separate deadline so an authenticated slow body cannot hold a job. */
@@ -77,6 +78,30 @@ export async function runSourceUpkeep(
   for (const id of claim.sourceIds) {
     if (now() >= deadline) { summary.skipped++; continue; }
     try {
+      if (isPublicReferenceId(id)) {
+        assertLive();
+        const reference = await db.getPublicReference?.(id);
+        if (!reference?.active || !db.upsertPublicReference) { summary.skipped++; continue; }
+        assertLive();
+        summary.attempted++;
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        try {
+          const feed = await Promise.race([
+            (options.ingest ?? boundedIngest)(reference.rssUrl),
+            new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error("Upkeep deadline exceeded")), Math.max(1, deadline - now())); }),
+          ]);
+          assertLive();
+          const live = await db.getPublicReference?.(id);
+          assertLive();
+          if (!live?.active || live.rssUrl !== reference.rssUrl) throw new Error("Reference no longer eligible");
+          const snapshot = referenceSnapshot(live, feed);
+          if (!snapshot.items.length) throw new Error("Public feed has no usable content; preserve last-good snapshot");
+          const seen = new Set(live.items.map((item) => item.link));
+          await db.upsertPublicReference(snapshot);
+          summary.added += snapshot.items.filter((item) => !seen.has(item.link)).length;
+        } finally { clearTimeout(timer); }
+        continue;
+      }
       const source = await eligible(id);
       if (!source) { summary.skipped++; continue; }
       summary.attempted++;

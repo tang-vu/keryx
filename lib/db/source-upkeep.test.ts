@@ -12,6 +12,7 @@ function setup(file = ":memory:") {
   const db = new DatabaseSync(file);
   db.exec(`PRAGMA busy_timeout=5000;
     CREATE TABLE IF NOT EXISTS sync_state(key TEXT PRIMARY KEY,value TEXT,updated_at TEXT);
+    CREATE TABLE IF NOT EXISTS public_references(id TEXT PRIMARY KEY,active INTEGER,rss_url TEXT);
     CREATE TABLE IF NOT EXISTS sources(id TEXT PRIMARY KEY,active INTEGER,verified INTEGER,rss_url TEXT);`);
   return db;
 }
@@ -91,4 +92,23 @@ describe("atomic scheduled source allowance", () => {
         expect(db.prepare("SELECT value FROM sync_state").get()!.value).toBe(value);
       } finally { db.close(); }
     });
+});
+
+
+it("shares one two-feed allowance and fair cursor across owned and free catalogs", () => {
+  const db = setup();
+  try {
+    add(db, "owned-a"); add(db, "owned-b"); add(db, "public:forged-paid");
+    for (const id of ["public:a", "public:b", "public:c"])
+      db.prepare("INSERT INTO public_references VALUES (?,1,?)").run(id, "https://public.test/feed");
+    const visited = new Set<string>();
+    for (let slot = 1; slot <= 3; slot++) {
+      const claim = claimSqliteSourceUpkeep(db, slot * hour)!;
+      expect(claim.sourceIds).toHaveLength(2);
+      claim.sourceIds.forEach((id) => visited.add(id));
+      expect(claim.sourceIds).not.toContain("public:forged-paid");
+      expect(claimSqliteSourceUpkeep(db, slot * hour + 1)).toBeNull();
+    }
+    expect([...visited].sort()).toEqual(["owned-a", "owned-b", "public:a", "public:b", "public:c"]);
+  } finally { db.close(); }
 });

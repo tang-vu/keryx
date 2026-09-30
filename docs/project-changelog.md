@@ -1,5 +1,18 @@
 # Keryx Project Changelog
 
+### Free public reference evidence (2026-09-30, v0.24.5)
+
+- Add a separate free public RSS catalog and explicit four-feed onboarding command for
+  Cloudflare Workers, Chip Huyen, Lilian Weng and Vicki Boykis. No publisher wallet,
+  ownership claim, paid delivery or citation payout is invented; Circle RSS is deferred.
+- Read selected public feed bodies through existing claim, attention and exact-quote gates;
+  show their canonical links, publication dates and public delivery labels in citations
+  and portable receipts. Keep original paid reward shares and withhold public allocations.
+- Preserve one shared two-feed hourly upkeep allowance and cursor for paid and public
+  catalogs. Direct toll endpoints reject reserved public IDs before settlement.
+- Public catalog deployment and explicit import are separate release steps; local validation
+  does not establish live source availability, publisher partnership or traction.
+
 ### Worker-native redirect refusal (2026-09-30, v0.24.4)
 
 - Fix the scheduled upkeep call's unsupported `redirect: "error"` value: workerd rejects

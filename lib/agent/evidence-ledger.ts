@@ -71,12 +71,16 @@ export function buildEvidenceLedger(input: {
     }
 
     const support = clamp01(Number(proposal.support));
+    const qualifiesForAnswer = input.rewardAuthorizationAvailable !== false &&
+      support >= MIN_REWARD_SUPPORT && answerMarkers.has(source.marker) && declared.has(source.marker);
     evidence.push({
       claimIndex,
       claim: input.subClaims[claimIndex]!,
       marker: source.marker,
       sourceId: source.sourceId,
       sourceName: source.sourceName,
+      sourceKind: source.sourceKind,
+      publicDeliveryKind: source.publicDeliveryKind,
       itemId: source.itemId,
       itemTitle: source.itemTitle,
       itemUrl: source.itemUrl,
@@ -85,17 +89,14 @@ export function buildEvidenceLedger(input: {
       contentReceipt: source.contentReceipt,
       quote,
       support,
-      qualifiesForReward:
-        input.rewardAuthorizationAvailable !== false &&
-        support >= MIN_REWARD_SUPPORT &&
-        answerMarkers.has(source.marker) &&
-        declared.has(source.marker),
+      qualifiesForAnswer,
+      qualifiesForReward: qualifiesForAnswer && source.sourceKind !== "public-reference",
     });
   }
 
   const acceptedMarkers = new Set(
     evidence
-      .filter((item) => item.qualifiesForReward)
+      .filter((item) => item.qualifiesForAnswer)
       .map((item) => item.marker),
   );
   const proposedCitationMarkers = new Set([
@@ -113,7 +114,7 @@ export function buildEvidenceLedger(input: {
   const claimCoverage = input.subClaims.map((claim, claimIndex) => {
     const qualifying = evidence.filter(
       (item) =>
-        item.claimIndex === claimIndex && item.qualifiesForReward,
+        item.claimIndex === claimIndex && item.qualifiesForAnswer,
     );
     const strongestEvidence = qualifying.reduce(
       (max, item) => Math.max(max, item.support),

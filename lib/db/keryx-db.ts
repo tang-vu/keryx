@@ -1,3 +1,4 @@
+import type { PublicReference } from "../public-references/catalog";
 /**
  * KeryxDB — persistence interface shared by the SQLite (dev) and Supabase (prod) adapters.
  * All amounts are USDC numbers. Metrics are computed only from real rows.
@@ -203,6 +204,9 @@ export interface KeryxDB {
 
   // ── sources & content ──
   upsertSource(source: Source): Promise<void>;
+  listPublicReferences?(): Promise<PublicReference[]>;
+  getPublicReference?(id: string): Promise<PublicReference | null>;
+  upsertPublicReference?(reference: PublicReference): Promise<void>;
   listSources(): Promise<Source[]>;
   /** Every source row, including ones deactivated on-chain. Discovery must NEVER use this —
    *  it exists for owner-facing history (an audit export of what a wallet earned must still

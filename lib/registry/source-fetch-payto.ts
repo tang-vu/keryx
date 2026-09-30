@@ -17,6 +17,7 @@ export async function sourceFetchTerms(
   source: Source,
   options: { refresh?: boolean } = {},
 ): Promise<SourceFetchTerms> {
+  if (source.id.startsWith("public:")) throw new Error("Public references have no payment terms");
   const fallback = (): SourceFetchTerms => ({
     payTo: source.walletAddress,
     listPriceUsdc: source.fetchPrice,

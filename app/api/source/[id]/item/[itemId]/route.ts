@@ -1,3 +1,4 @@
+import { isPublicReferenceId } from "@/lib/public-references/catalog";
 /** x402-protected immutable article asset. Registry source owns price and payout authority. */
 import { NextRequest } from "next/server";
 
@@ -19,6 +20,7 @@ export async function GET(
   ctx: { params: Promise<{ id: string; itemId: string }> },
 ) {
   const { id, itemId } = await ctx.params;
+  if (isPublicReferenceId(id)) return Response.json({ error: "Public references are free and have no payout authority" }, { status: 410 });
   const db = await getDb();
   const source = await db.getSource(id);
   if (!source) return Response.json({ error: "source not found" }, { status: 404 });

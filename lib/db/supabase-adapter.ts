@@ -1,3 +1,4 @@
+import { publicReferenceSchema, type PublicReference } from "../public-references/catalog";
 /**
  * Supabase adapter (deploy path). Same interface as the SQLite adapter.
  * Metrics/leaderboard aggregate in JS — fine for hackathon volume, no DB functions needed.
@@ -158,6 +159,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async upsertSource(s: Source): Promise<void> {
+    if (s.id.startsWith("public:")) throw new Error("Reserved public-reference source ID");
     // active defaults to true for offline/DB-direct rows that predate the flag.
     await this.sb.from("sources").upsert({
       id: s.id,
@@ -179,6 +181,14 @@ export class SupabaseAdapter implements KeryxDB {
     });
   }
 
+  // No public-reference schema is deployed on Supabase. Public catalog writes fail closed;
+  // the existing creator catalog keeps its established schema and payment authority.
+  async listPublicReferences(): Promise<PublicReference[]> { return []; }
+  async getPublicReference(_id: string): Promise<PublicReference | null> { return null; }
+  async upsertPublicReference(reference: PublicReference): Promise<void> {
+    publicReferenceSchema.parse(reference);
+    throw new Error("Public references require the SQLite adapter");
+  }
   async listSources(): Promise<Source[]> {
     // Filter to active=true only — deactivated on-chain sources must not be discovered/cited.
     const { data } = await this.sb

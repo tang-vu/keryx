@@ -1,3 +1,4 @@
+import { isPublicReferenceId } from "@/lib/public-references/catalog";
 /**
  * x402-protected creator content. Paying the toll (payTo = creator wallet) unlocks the full text.
  * GET /api/source/[id]
@@ -26,6 +27,7 @@ export async function GET(
   ctx: { params: Promise<{ id: string }> },
 ) {
   const { id } = await ctx.params;
+  if (isPublicReferenceId(id)) return Response.json({ error: "Public references are free and have no payout authority" }, { status: 410 });
   const db = await getDb();
   const source = await db.getSource(id);
   if (!source) {
