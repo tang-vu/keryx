@@ -50,6 +50,13 @@ disabled payment/worker features and the fixture manifest/path/mode. Installed N
 cannot replace already-defined masked values. The fixture is removed after the child exits. Build
 does not initialize or migrate selected production storage. Deployment storage admission must be
 validated separately, read-only, before starting production authority.
+`npm run preflight:storage` is that separate metadata check: it accepts no arguments, performs no
+adapter initialization or cache migration, and prints only backend, checked mode and identity digest.
+SQLite uses an already-enrolled read-only adapter; Supabase makes one bounded, no-redirect marker RPC
+through the PG-owned verifier. It can inspect real storage without funding/content keys. Its result
+always states `runtimeReady:false` and `signingResumeAuthorized:false`; deployment/operator lifecycle
+gates and provenance review remain separate. Supply the reviewed manifest through the existing process
+environment; this command does not load an environment file automatically.
 
 Application SQLite requires Node **24.10.0 or newer** for `node:sqlite` authorizer support; missing native
 capabilities refuse. CI already selects Node 24. Root's keyless `node --version` observation on
