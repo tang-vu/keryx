@@ -33,6 +33,37 @@ test('alert check reports presence only and never returns the value', () => {
   }
 });
 
+test('private Telegram pair and optional webhook are configured but never delivery verified', () => {
+  const pair = 'KERYX_ALERT_TELEGRAM_BOT_TOKEN="123:synthetic_secret" # local only\nKERYX_ALERT_TELEGRAM_CHAT_ID=\'-1001234567890\'';
+  for (const contents of [pair, `KERYX_ALERT_WEBHOOK=\n${pair}`, `KERYX_ALERT_WEBHOOK=https://synthetic.example/secret\n${pair}`]) {
+    const check = inspectAlertFile(contents);
+    assert.equal(check.status, 'pass');
+    assert.match(check.detail, /Telegram ops.*delivery unverified/);
+    assert.doesNotMatch(JSON.stringify(check), /synthetic_secret|1001234567890|synthetic.example/);
+  }
+  assert.equal(inspectAlertFile(pair.replace('KERYX_ALERT_TELEGRAM_BOT_TOKEN=', 'export KERYX_ALERT_TELEGRAM_BOT_TOKEN=')).status, 'pass');
+});
+
+test('partial, invalid and duplicate alert config fails even alongside a webhook', () => {
+  const webhook = 'KERYX_ALERT_WEBHOOK=https://synthetic.example/private\n';
+  for (const contents of [
+    'KERYX_ALERT_TELEGRAM_BOT_TOKEN=123:synthetic_secret',
+    'KERYX_ALERT_TELEGRAM_CHAT_ID=-1001234567890',
+    'KERYX_ALERT_TELEGRAM_BOT_TOKEN=123:synthetic_secret\nKERYX_ALERT_TELEGRAM_CHAT_ID="" # missing',
+    'KERYX_ALERT_TELEGRAM_BOT_TOKEN=123:synthetic_secret\nKERYX_ALERT_TELEGRAM_CHAT_ID=0',
+    'KERYX_ALERT_TELEGRAM_BOT_TOKEN=../secret\nKERYX_ALERT_TELEGRAM_CHAT_ID=-1001234567890',
+    'KERYX_ALERT_TELEGRAM_BOT_TOKEN=123:synthetic_secret\nKERYX_ALERT_TELEGRAM_BOT_TOKEN=123:synthetic_secret',
+    'KERYX_ALERT_TELEGRAM_CHAT_ID=\nKERYX_ALERT_TELEGRAM_CHAT_ID=',
+    'KERYX_ALERT_WEBHOOK=second',
+    'KERYX_ALERT_TELEGRAM_BOT_TOKEN="unterminated',
+  ]) {
+    const check = inspectAlertFile(webhook + contents);
+    assert.equal(check.status, 'fail');
+    assert.doesNotMatch(JSON.stringify(check), /synthetic_secret|1001234567890|synthetic.example|unterminated/);
+  }
+  assert.equal(inspectAlertFile('KERYX_ALERT_WEBHOOK=https://synthetic.example/private # comment\nKERYX_ALERT_TELEGRAM_BOT_TOKEN= # disabled\nKERYX_ALERT_TELEGRAM_CHAT_ID=""').status, 'pass');
+});
+
 test('worker is required and absent cycle is informational unless explicitly required', () => {
   const worker = unit('loaded', 'active', '123');
   const absent = unit('not-found');

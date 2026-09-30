@@ -1,5 +1,11 @@
 # Keryx Project Changelog
 
+### Dedicated Telegram operations alerts (2026-09-30)
+
+- Add a separate operations bot and exact chat configuration, with plain text, bounded delivery and strict Telegram acknowledgement.
+- Retain webhook support; all configured channels must acknowledge before reconciliation marks an alert delivered. Preflight detects incomplete or duplicate configuration and labels delivery unverified.
+- Document the selected private Keryx ops group. Mocked checks establish code behavior; destination setup, live receipt, responder drills and mainnet operations acceptance remain open.
+
 ### Homepage globe alignment (2026-09-29, v0.24.2)
 
 - Keep the complete globe and orbit inside the hero's right column, above the activity totals, with a clear backing for the herald seal.

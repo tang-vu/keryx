@@ -215,7 +215,7 @@ separately. Keep `.env.local` private.
   procedure in
   `docs/pending-reconciliation-acknowledgement.md`; it stays pending and continuously reconciled,
   while browser reservations and Circle mismatches remain impossible to acknowledge away.
-- **Alert channel** — set `KERYX_ALERT_WEBHOOK` in the VPS `.env.local` to a Discord/Slack incoming webhook. Unset → alerts still print to `pm2 logs`, just not delivered out-of-band.
+- **Alert channel** — configure a dedicated Telegram operations bot and private "Keryx ops" group using `KERYX_ALERT_TELEGRAM_BOT_TOKEN` and `KERYX_ALERT_TELEGRAM_CHAT_ID`; follow [the setup and delivery acceptance guide](telegram-ops-alerts.md). `KERYX_ALERT_WEBHOOK` remains supported for Discord/Slack. Process logs alone are not delivered alert evidence.
 - **Uptime/health** — point an external monitor (UptimeRobot, etc.) at [`/api/health`](https://keryx.cc/api/health); a same-box check can't catch the box being down.
 
 ## Troubleshooting
