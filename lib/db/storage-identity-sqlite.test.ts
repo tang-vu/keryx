@@ -39,7 +39,7 @@ describe("SQLite strict identity admission", () => {
     try {
       expect(()=>openVerifiedSqliteStorage(target,identity)).toThrow(/sqlite_authorizer_unavailable/);
       expect(closeSpy).toHaveBeenCalledOnce();
-      const failedConnection=closeSpy.mock.instances[0];
+      const failedConnection=closeSpy.mock.instances[0] as DatabaseSync;
       expect(()=>failedConnection.prepare("SELECT 1")).toThrow(/not open/);
       expect(descriptor).toBeDefined();
       expect(()=>fstatSync(descriptor!)).toThrow();
