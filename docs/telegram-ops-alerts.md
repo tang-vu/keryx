@@ -2,7 +2,8 @@
 
 The selected destination is a private **Keryx ops** group with the owner and a
 dedicated operations bot initially. Add the named incident responder when assigned.
-No destination or credentials have been configured or verified by this code update.
+The original notifier implementation did not configure or verify a destination;
+the dated acceptance below records subsequent operations evidence.
 
 Create the separate bot through [BotFather](https://core.telegram.org/bots/tutorial),
 then create the private group and add the bot with permission to send messages.
@@ -36,7 +37,7 @@ Callers must still keep research content and other secrets out of alert details.
 This notifier runs inside Keryx processes. A stopped application or unavailable VPS
 cannot report its own outage through it. Mainnet operations acceptance also requires
 an outside-host health probe delivering to the selected channel, plus its own
-delivery and responder drill; this update does not provide that probe.
+delivery and responder drill; the separately deployed monitor below provides that bounded probe path.
 
 `KERYX_ALERT_WEBHOOK` remains an optional Discord/Slack channel. If both channels
 are configured, both are attempted concurrently and **both must acknowledge** for
@@ -58,5 +59,20 @@ After the owner configures the private group, separately authorize a harmless
 delivery probe and verify receipt in that exact group. Record the candidate commit,
 time, confirmed delivery, responsible responder and response expectation without
 credentials or private chat identifiers. Then test an alert failure and recovery
-with the responder. This implementation uses mocked tests only; no Telegram API
-message, destination check or live incident drill is claimed.
+with the responder. The original implementation checkpoint used mocked tests only. Subsequent live
+evidence is recorded below.
+
+## Observed acceptance - September 30, 2026
+
+The [outside-host monitor acceptance](./outside-host-ops-monitor.md) records the
+separate Workers Free monitor, dedicated durable state and actual production
+five-minute Cron observation. Its authorized fixed-404 HTTPS diagnostic confirmed
+outage and recovery Telegram **[DRILL]** delivery on the first attempt for each.
+The owner confirmed receipt of both messages and accepted alert-response ownership.
+Diagnostics were then disabled; a later scheduled healthy sample was observed
+without another manual POST. Credentials and destination identifiers remain private.
+
+This accepts the tested external delivery/responder boundary. It does not demonstrate
+an actual VPS outage, failover, full restore/rollback/key rotation, sustained
+availability or durable host NTP synchronization. Those operations gates remain open;
+the application notifier behavior above is unchanged.

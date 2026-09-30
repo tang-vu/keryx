@@ -4,6 +4,15 @@ Status, 2026-09-11: in progress. The signed-request, single-admission and matche
 implemented; the production HTTP relay still needs integration with the full recovery
 flow. Do not describe this foundation as completed withdrawal recovery.
 
+September 30 acceptance update: the [funded operator rehearsal](./engineering/creator-funded-withdrawal-drill.md)
+passed the protected engine using an owner-operated EOA's existing buyer balance:
+one retained original, one Circle POST, one mint broadcast, exact receipt matching,
+and two new keyless processes each retaining one cash-out row with no payment rows.
+The lost application response occurred after attestation storage; mint RPC response
+loss occurred after signed transaction storage. Production creation/timer activation,
+independent creator/browser acceptance and Circle response loss before UUID retention
+remain open. A transfer UUID is not chain-finality evidence.
+
 ## Target journey
 
 The internal `WithdrawalWorkspace` now composes amount entry, preparation, review
