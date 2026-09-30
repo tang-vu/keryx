@@ -1,3 +1,4 @@
+import { testSupabaseAuthority } from "./supabase-authority-test-fixture";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -118,7 +119,7 @@ it("Supabase SDK binds owner reads, ignores duplicate inserts and confirms the o
   const http = vi.fn<typeof fetch>()
     .mockResolvedValueOnce(new Response(null, { status: 201 }))
     .mockResolvedValueOnce(Response.json([{ data: intent }]));
-  const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+  const client = await testSupabaseAuthority(createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } }));
   expect(await reserveSupabasePrivateResearchIntent(client, intent)).toEqual(intent);
   const insertUrl = new URL(String(http.mock.calls[0][0]));
   expect(insertUrl.pathname).toBe("/rest/v1/private_research_intents");
@@ -141,11 +142,11 @@ it("Supabase outages and missing or foreign readbacks cannot claim a successful 
   ]) {
     const http = vi.fn<typeof fetch>();
     for (const reply of replies) http.mockResolvedValueOnce(reply);
-    const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+    const client = await testSupabaseAuthority(createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } }));
     await expect(reserveSupabasePrivateResearchIntent(client, intent)).rejects.toThrow();
   }
   const http = vi.fn<typeof fetch>().mockResolvedValue(new Response("{}", { status: 503 }));
-  const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+  const client = await testSupabaseAuthority(createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } }));
   await expect(getSupabasePrivateResearchIntent(client, intent.id, account.address)).rejects.toThrow("storage unavailable");
 });
 
@@ -206,7 +207,7 @@ it("Supabase claims through the restricted RPC and requires valid readback befor
     .mockResolvedValueOnce(Response.json(true))
     .mockResolvedValueOnce(Response.json([{ data: intent }]))
     .mockResolvedValueOnce(Response.json([pending]));
-  const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+  const client = await testSupabaseAuthority(createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } }));
   expect(await claimSupabasePrivatePayment(client, intent.id, account.address)).toMatchObject({ claimed: true, state: { status: "pending" } });
   expect(String(http.mock.calls[1][0])).toContain("/rpc/claim_private_research_payment");
   expect(JSON.parse(String(http.mock.calls[1][1]?.body))).toEqual({ p_id: intent.id, p_payer: account.address.toLowerCase() });
@@ -214,7 +215,7 @@ it("Supabase claims through the restricted RPC and requires valid readback befor
     .mockResolvedValueOnce(Response.json([{ data: intent }]))
     .mockResolvedValueOnce(Response.json(true))
     .mockResolvedValueOnce(new Response("{}", { status: 503 }));
-  const unavailable = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: broken }, auth: { persistSession: false } });
+  const unavailable = await testSupabaseAuthority(createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: broken }, auth: { persistSession: false } }));
   await expect(claimSupabasePrivatePayment(unavailable, intent.id, account.address)).rejects.toThrow();
 });
 
@@ -224,7 +225,7 @@ it("Supabase does not report confirmation from an RPC success without confirmed 
     .mockResolvedValueOnce(new Response(null, { status: 204 }))
     .mockResolvedValueOnce(Response.json([{ data: intent }]))
     .mockResolvedValueOnce(Response.json([{ started_at: "2026-09-09T00:00:00.000Z", confirmation: null, settled_at: null }]));
-  const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+  const client = await testSupabaseAuthority(createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } }));
   await expect(confirmSupabasePrivatePayment(client, intent.id, account.address, confirmation)).rejects.toThrow("confirmation conflict");
   expect(String(http.mock.calls[1][0])).toContain("/rpc/confirm_private_research_payment");
 });
@@ -236,7 +237,7 @@ it("a newly inserted claim cannot authorize submission if readback already shows
     .mockResolvedValueOnce(Response.json([{ data: intent }]))
     .mockResolvedValueOnce(Response.json([{ started_at: "2026-09-09T00:00:00.000Z", confirmation,
       settled_at: "2026-09-09T00:00:01.000Z" }]));
-  const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+  const client = await testSupabaseAuthority(createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } }));
   expect(await claimSupabasePrivatePayment(client, intent.id, account.address)).toMatchObject({ claimed: false, state: { status: "settled" } });
 });
 
@@ -309,7 +310,7 @@ it("Supabase requires a fresh RPC claim and matching validated readback; lost re
       }
       throw new Error("Unexpected synthetic request");
     });
-    const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+    const client = await testSupabaseAuthority(createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } }));
     const result = claimSupabasePrivateExecution(client, intent.id, account.address);
     if (outcome === "fresh") expect(await result).toEqual({ id: intent.id, workerId, startedAt: settled.settled_at });
     else if (outcome === "duplicate") expect(await result).toBeNull();
@@ -423,7 +424,7 @@ it("requires matching Supabase allocation readback and does not infer success fr
       if (route.endsWith("/private_treasury_reservations")) return Response.json(outcome === "missing" ? [] : [{ signer: outcome === "wrong-signer" ? merchants.publicResearchPayee : merchants.privatePayee, amount_micros: 30000 }]);
       throw new Error("Unexpected synthetic request");
     });
-    const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+    const client = await testSupabaseAuthority(createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } }));
     const result = reserveSupabasePrivateTreasury(client, intent.id, account.address, { signer: merchants.privatePayee, capacityMicros: "50000" });
     if (outcome === "accepted" || outcome === "denied") expect(await result).toBe(outcome === "accepted");
     else await expect(result).rejects.toThrow();
@@ -913,7 +914,7 @@ it("Supabase never acknowledges creator confirmation without exact owner-scoped 
       }
       throw new Error("Unexpected synthetic request");
     });
-    const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+    const client = await testSupabaseAuthority(createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } }));
     const pending = confirmSupabasePrivateCreator(client, value.id, account.address, claim.workerId, proof);
     if (outcome === "saved") expect(await pending).toEqual({ confirmation: proof, settledAt: date });
     else await expect(pending).rejects.toThrow();
@@ -1014,7 +1015,7 @@ it("requires exact Supabase admission readback and never treats RPC acknowledgem
       }
       throw new Error("Unexpected synthetic request");
     });
-    const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+    const client = await testSupabaseAuthority(createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } }));
     const pending = admitSupabasePrivateCreatorSubmission(client, intent.id, account.address, workerId, leg);
     if (outcome === "admitted" || outcome === "denied") expect(await pending).toBe(outcome === "admitted");
     else await expect(pending).rejects.toThrow();
@@ -1087,7 +1088,7 @@ it("Supabase result persistence binds owner and worker and requires the exact or
       }
       throw new Error("Unexpected synthetic request");
     });
-    const client = createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+    const client = await testSupabaseAuthority(createClient("https://synthetic-private-storage.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } }));
     const result = saveSupabasePrivateResult(client, intent.id, account.address, workerId, run);
     if (outcome === "saved") expect(await result).toEqual({ id: intent.id, format: "query-run-v1", serializedRun: JSON.stringify(run), savedAt: date });
     else await expect(result).rejects.toThrow();

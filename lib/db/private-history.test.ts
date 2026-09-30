@@ -1,3 +1,4 @@
+import { testSupabaseAuthority } from "./supabase-authority-test-fixture";
 import { mkdtempSync, rmSync, rmdirSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -56,7 +57,7 @@ it("constrains Supabase queries and rejects corrupt or foreign stored proof and 
   const intent = await insert(owner);
   const row = { id: intent.id, data: intent, created_at: "2026-09-09T00:00:00.123456+00:00" };
   const http = vi.fn<typeof fetch>().mockResolvedValue(Response.json([row]));
-  const client = createClient("https://synthetic.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } });
+  const client = await testSupabaseAuthority(createClient("https://synthetic.example", "no-authority", { global: { fetch: http }, auth: { persistSession: false } }));
   const result = await listSupabasePrivateResearchHistory(client, owner.address, { id: intent.id, createdAt: row.created_at });
   expect(result).toEqual([{ intent, createdAt: row.created_at }]);
   const query = new URL(String(http.mock.calls[0][0])).searchParams;

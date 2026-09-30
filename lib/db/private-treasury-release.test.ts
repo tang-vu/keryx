@@ -1,3 +1,4 @@
+import { testSupabaseAuthority } from "./supabase-authority-test-fixture";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -117,7 +118,7 @@ it("requires exact Supabase readback and recovers an RPC response loss without a
   let loseResponse = true, corruptReadback = false, rpcCalls = 0;
   const allowed = new Set(["private_research_intents", "private_research_payment_attempts", "private_research_executions",
     "private_research_results", "private_treasury_reservations", "private_creator_submissions", "private_treasury_releases"]);
-  const client = createClient("https://synthetic.invalid", "no-authority", { auth: { persistSession: false }, global: { fetch: async (url, options) => {
+  const client = await testSupabaseAuthority(createClient("https://synthetic.invalid", "no-authority", { auth: { persistSession: false }, global: { fetch: async (url, options) => {
     const route = new URL(String(url)), table = route.pathname.split("/").at(-1)!;
     if (route.pathname.endsWith("/rpc/release_private_treasury")) {
       rpcCalls++;
@@ -135,7 +136,7 @@ it("requires exact Supabase readback and recovers an RPC response loss without a
       return parsed;
     });
     return Response.json(rows);
-  } } });
+  } } }));
   await expect(releaseSupabasePrivateTreasury(client, job.id, owner.address, treasury.signer)).rejects.toThrow("unavailable");
   expect(await releaseSupabasePrivateTreasury(client, job.id, owner.address, treasury.signer)).toEqual({ amountMicros: "30000", newlyReleased: false });
   corruptReadback = true;
