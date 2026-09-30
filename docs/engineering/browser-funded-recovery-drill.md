@@ -3,8 +3,10 @@
 This operator-controlled harness exercises the deployed TypeScript browser gateway
 against one first-party registered source on Arc testnet. It is not browser UI
 acceptance, an independent customer, creator adoption or traction. It does not
-modify the production database, restart production, deposit, rotate wallets, invoke
-the treasury or send notifications. It requires separate authorization for one
+directly manipulate the production database or inject production faults, restart
+production, deposit, rotate wallets, invoke the treasury or send notifications.
+Its financial journal is isolated; the normal paid seller endpoint may record its
+receipt and content access. It requires separate authorization for one
 testnet payment and an independently observed existing funded signer.
 
 Use a private directory outside Git whose parent has restricted operating-system
@@ -62,8 +64,10 @@ delete the journal to get another spending allowance.
 
 Candidate `1127304` completed one operator-controlled 2,000 micro-USDC (0.002 USDC)
 Arc testnet source request against the deployed first-party source. The operator's
-already-funded signer and isolated local journal were used; the production database
-was not modified. Response headers arrived and the harness deliberately discarded
+already-funded signer and isolated financial journal were used. The harness made no
+direct production database manipulation or production fault injection; the normal
+paid seller endpoint may record its receipt and content access. Response headers
+arrived and the harness deliberately discarded
 them. Exactly one paid HTTP request occurred. The original process exited with one
 canonical pending payment, 2,000 retained micro-USDC and zero confirmed consumption.
 
