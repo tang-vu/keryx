@@ -10,13 +10,20 @@ power-loss durability, multi-instance routing, or mainnet readiness.
 1. Pass the candidate's application, browser, contract, build and actual PostgreSQL
    gates and independent code review. Apply migrations through `0069` without
    activating the journal. Preserve the existing backups and legacy rows.
-2. Set `KERYX_BROWSER_AUTHORIZATION_PAUSED=1` in the application's operator-managed
-   environment and stop admitting browser requests. Drain and replace **every** old
-   web/worker process; close old SSE streams and pending callbacks. An old request
-   that reserved before activation can submit from memory without another database
-   write, so database fences alone cannot make a mixed-generation cutover safe.
-3. Deploy one compatible web instance and compatible workers. Restart with signing
-   still paused. Old browser requests without `durable-v1` are rejected before any
+2. Stop old browser admission with an ingress/browser-route maintenance gate, or
+   stop and drain the old web generation. The old build does **not** implement
+   `KERYX_BROWSER_AUTHORIZATION_PAUSED`; setting that environment flag alone proves
+   neither admission closure nor drain. Replace **every** old web/worker process,
+   close old SSE streams and pending callbacks, and verify every old PID has exited.
+   An old request that reserved before activation can submit from memory without
+   another database write, so database fences alone cannot make a mixed-generation
+   cutover safe.
+3. Deploy one compatible web instance and compatible workers with the journal
+   inactive and `KERYX_BROWSER_AUTHORIZATION_PAUSED=1` in their operator-managed
+   environment. Alternatively, replace the old generation directly with this
+   inactive compatible generation, then verify every old PID has exited and browser
+   admission is closed before activation. The inactive/paused controls apply only
+   to the compatible build. Old browser requests without `durable-v1` are rejected before any
    sign request. Updated browsers require the server's admitted nonce; no random
    fallback is allowed. No browser failure selects the treasury gateway.
 4. Inspect existing grants and pending recovery evidence privately. Activation
