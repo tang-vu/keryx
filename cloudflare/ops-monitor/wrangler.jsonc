@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "keryx-ops-monitor",
+  "main": "src/index.mjs",
+  "compatibility_date": "2026-09-30",
+  "workers_dev": true,
+  "preview_urls": false,
+  "triggers": { "crons": ["*/5 * * * *"] },
+  "durable_objects": {
+    "bindings": [{ "name": "MONITOR", "class_name": "MonitorState" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["MonitorState"] }],
+  "vars": {
+    "DIAGNOSTIC_RUN_ID": "acceptance-20260930",
+    "DIAGNOSTIC_NOTIFICATIONS_ENABLED": "false"
+  },
+  "observability": { "enabled": false }
+}
