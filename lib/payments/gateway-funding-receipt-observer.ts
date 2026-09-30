@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { performance } from "node:perf_hooks";
 import { parseTransaction } from "viem";
 import { canonicalJson } from "../canonical-json";
 import { storageIdentityDigest } from "../db/storage-identity";
@@ -18,6 +19,7 @@ export interface GatewayFundingReceiptRequest {
 }
 const issued = new WeakMap<object,Readonly<FundingTerminalEvidence>>();
 const capturedFetch = globalThis.fetch.bind(globalThis);
+const monotonicNow = performance.now.bind(performance);
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 function refuse(): never { throw new Error("Funding receipt observation refused"); }
 function guard(check:()=>void) { if(typeof check !== "function" || check() !== undefined) refuse(); }
@@ -86,13 +88,24 @@ function included(b:Block,r:ReturnType<typeof receipt>,transactionHash:string) {
 
 /** Trusted host composition only, never request input or arbitrary RPC clients.
  * Production entrypoint below captures fetch and fixed origins. Synthetic tests
- * may explicitly provide controlled fetch/time; host-code compromise is outside
+ * may provide controlled fetch/anchor time and lower-only deadlines; elapsed
+ * time always uses captured native performance.now. Host-code compromise is outside
  * this managed-provider evidence boundary. */
-export function createGatewayFundingReceiptObserverForTrustedComposition(fetchRead:typeof fetch,nowMs:()=>number=Date.now) {
+export function createGatewayFundingReceiptObserverForTrustedComposition(fetchRead:typeof fetch,nowMs:()=>number=Date.now,
+  limits?:Readonly<{totalDeadlineMs:number;requestDeadlineMs:number}>) {
+  let totalDeadlineMs:number=policy.totalDeadlineMs,requestDeadlineMs:number=policy.requestDeadlineMs;
+  if(limits) {
+    const l=object(limits,["totalDeadlineMs","requestDeadlineMs"]);
+    const bounded=(value:unknown,maximum:number)=>{if(typeof value!=="number" || !Number.isSafeInteger(value) || value<=0 || value>maximum)refuse();};
+    bounded(l.totalDeadlineMs,policy.totalDeadlineMs);bounded(l.requestDeadlineMs,policy.requestDeadlineMs);
+    totalDeadlineMs=l.totalDeadlineMs as number;requestDeadlineMs=l.requestDeadlineMs as number;
+  }
   return async(request:GatewayFundingReceiptRequest,assertCurrentAuthority:()=>void):Promise<VerifiedFundingTerminalObservation|null>=>{
     const stop=new AbortController();let expired=false;
-    const timer=setTimeout(()=>{expired=true;stop.abort();},policy.totalDeadlineMs);
-    const live=()=>{if(expired || stop.signal.aborted) refuse();};
+    const started=monotonicNow(),timer=setTimeout(()=>{expired=true;stop.abort();},totalDeadlineMs);
+    const live=()=>{const elapsed=monotonicNow()-started;
+      if(expired || stop.signal.aborted || !Number.isFinite(elapsed) || elapsed<0 || elapsed>=totalDeadlineMs) refuse();};
+    const authority=()=>{live();guard(assertCurrentAuthority);live();};
     const fresh=(b:Block)=>{
       const now=nowMs();if(!Number.isSafeInteger(now) || now<0) refuse();
       const age=BigInt(now)-b.timestamp*BigInt(1000);
@@ -103,21 +116,24 @@ export function createGatewayFundingReceiptObserverForTrustedComposition(fetchRe
     const rpc=async(endpoint:string,method:string,params:unknown[]):Promise<unknown>=>{
       live();if(![policy.primary,policy.secondary].includes(endpoint as typeof policy.primary)
         || !GATEWAY_FUNDING_RECEIPT_RPC_METHODS.includes(method as typeof GATEWAY_FUNDING_RECEIPT_RPC_METHODS[number])) refuse();
-      const signal=AbortSignal.any([stop.signal,AbortSignal.timeout(policy.requestDeadlineMs)]),requestId=++id;
+      const requestStarted=monotonicNow(),signal=AbortSignal.any([stop.signal,AbortSignal.timeout(requestDeadlineMs)]),requestId=++id;
+      const requestLive=()=>{live();const elapsed=monotonicNow()-requestStarted;
+        if(signal.aborted || !Number.isFinite(elapsed) || elapsed<0 || elapsed>=requestDeadlineMs)refuse();};
       const pending=(async()=>{
-        const response=await fetchRead(endpoint,{method:"POST",redirect:"error",credentials:"omit",cache:"no-store",signal,
-          headers:{"Content-Type":"application/json"},body:JSON.stringify({jsonrpc:"2.0",id:requestId,method,params})});
-        live();if(signal.aborted || !response.ok || response.redirected || !response.body) refuse();
+        const init:RequestInit={method:"POST",redirect:"error",credentials:"omit",cache:"no-store",signal,
+          headers:{"Content-Type":"application/json"},body:JSON.stringify({jsonrpc:"2.0",id:requestId,method,params})};
+        requestLive();const response=await fetchRead(endpoint,init);
+        requestLive();if(!response.ok || response.redirected || !response.body) refuse();
         const length=response.headers.get("content-length");
         if(length!==null && (!/^[0-9]{1,12}$/.test(length) || Number(length)>policy.maximumResponseBytes))refuse();
         const reader=response.body.getReader(),chunks:Uint8Array[]=[];let bytes=0;
-        try { while(true) { const next=await reader.read();live();if(signal.aborted) refuse();if(next.done)break;
+        try { while(true) { const next=await reader.read();requestLive();if(next.done)break;
           bytes+=next.value.byteLength;if(bytes>policy.maximumResponseBytes)refuse();chunks.push(next.value); }
         } finally { await reader.cancel().catch(()=>{}); }
         const joined=new Uint8Array(bytes);let offset=0;for(const chunk of chunks){joined.set(chunk,offset);offset+=chunk.length;}
         const result=object(JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(joined)));
         if(result.jsonrpc!=="2.0" || result.id!==requestId || Object.hasOwn(result,"error") || !Object.hasOwn(result,"result"))refuse();
-        return result.result;
+        requestLive();return result.result;
       })();
       // Abort-ignoring test/host transports must not extend the evidence deadline.
       let cancel!:()=>void;const cancelled=new Promise<never>((_,reject)=>{cancel=()=>reject(new Error("Funding receipt unavailable"));});
@@ -127,9 +143,9 @@ export function createGatewayFundingReceiptObserverForTrustedComposition(fetchRe
     };
     const endpoints=[policy.primary,policy.secondary];
     try {
-      guard(assertCurrentAuthority);const copy=input(request),p=copy.prepared,t=p.transaction;
+      authority();const copy=input(request),p=copy.prepared,t=p.transaction;
       await validateSignedGatewayFundingTransaction(copy.operation,t.step,t.nonce,
-        {rawTransaction:p.rawTransaction,transactionHash:p.transactionHash},assertCurrentAuthority);live();
+        {rawTransaction:p.rawTransaction,transactionHash:p.transactionHash},authority);live();
       const chains=await Promise.all(endpoints.map(e=>rpc(e,"eth_chainId",[])));if(chains.some(c=>quantity(c)!==BigInt(policy.chainId)))refuse();
       const samples=await Promise.all(endpoints.map(async e=>{
         const tx=matchTransaction(await rpc(e,"eth_getTransactionByHash",[p.transactionHash]),p);
@@ -158,7 +174,7 @@ export function createGatewayFundingReceiptObserverForTrustedComposition(fetchRe
         if(a.number!==height || a.hash!==anchors[i].hash || a.timestamp!==anchors[i].timestamp)refuse();fresh(a);
         if(quantity(await rpc(e,"eth_chainId",[]))!==BigInt(policy.chainId))refuse();
       }));
-      live();guard(assertCurrentAuthority);
+      authority();
       const r=samples[0].r,identity=copy.operation.policy.identity;
       const evidence:Readonly<FundingTerminalEvidence>=Object.freeze({format:"gateway-funding-terminal-evidence-v1",identity,
         identityDigest:storageIdentityDigest(identity),operationDigest:gatewayFundingReplayDigest(copy.operation),operationId:copy.operation.operationId,
@@ -168,7 +184,7 @@ export function createGatewayFundingReceiptObserverForTrustedComposition(fetchRe
         finalizedBlockNumber:height.toString(),finalizedBlockHash:anchors[0].hash,
         providerEvidenceDigest:digest({policyDigest,providers:endpoints,receipt:r,inclusionHash:samples[0].b.hash,anchorHash:anchors[0].hash,anchorHeight:height.toString()})});
       const token=Object.freeze(Object.create(null)) as VerifiedFundingTerminalObservation;
-      live();guard(assertCurrentAuthority);issued.set(token,evidence);return token;
+      authority();live();issued.set(token,evidence);return token;
     } catch { return null; } finally {clearTimeout(timer);stop.abort();}
   };
 }
