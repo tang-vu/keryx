@@ -1,4 +1,5 @@
-import { config } from "../config";
+import { readRuntimeStorageDeployment, RuntimeStorageRefused } from "../db/runtime-storage-config";
+import type { StorageIdentity } from "../db/storage-identity";
 import {
   decryptContent,
   encryptContent,
@@ -9,11 +10,11 @@ import {
 const ENCRYPTED_PREFIX = "enc:v2:";
 const PLAINTEXT_PREFIX = "plain:v1:";
 
-export function cacheEncryptionRequired(): boolean {
-  return (
-    process.env.KERYX_FORCE_OFFLINE !== "1" &&
-    (process.env.NODE_ENV === "production" || Boolean(config.funderKey))
-  );
+/** Explicit mode comes only from a validated adapter identity; standalone calls require the manifest. */
+export function cacheEncryptionRequired(authorityMode?: StorageIdentity["authorityMode"]): boolean {
+  const mode = authorityMode ?? readRuntimeStorageDeployment().identity.authorityMode;
+  if (!["testnet-real", "testnet-offline"].includes(mode) || (mode === "testnet-real" && process.env.KERYX_FORCE_OFFLINE === "1")) throw new RuntimeStorageRefused();
+  return mode === "testnet-real";
 }
 
 export function isEncryptedCacheValue(value: string): boolean {
@@ -21,13 +22,14 @@ export function isEncryptedCacheValue(value: string): boolean {
 }
 
 /** DB adapters call this before every cache write; callers continue to work with plaintext. */
-export function sealCacheText(text: string): string {
+export function sealCacheText(text: string, authorityMode?: StorageIdentity["authorityMode"]): string {
   if (!text) return text;
+  const encryptedRequired = cacheEncryptionRequired(authorityMode);
   if (hasContentKey()) {
     const envelope = encryptContent(text);
     return ENCRYPTED_PREFIX + Buffer.from(JSON.stringify(envelope), "utf8").toString("base64");
   }
-  if (cacheEncryptionRequired()) {
+  if (encryptedRequired) {
     throw new Error("CONTENT_MASTER_KEY is required for paid-content cache writes in real mode");
   }
   return PLAINTEXT_PREFIX + text;

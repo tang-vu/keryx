@@ -5,7 +5,8 @@ This keyless inspector produces bounded operator intake evidence for one explici
 Run from a trusted checkout with installed dependencies and Node.js 24, using a canonical absolute path to an existing regular SQLite file:
 
 ```powershell
-node --import tsx scripts/inspect-storage-provenance.mts D:/operator-intake/synthetic.sqlite
+$resolved = Resolve-Path -LiteralPath 'D:\operator-intake\synthetic.sqlite'
+node --import tsx scripts/inspect-storage-provenance.mts $resolved.Path
 ```
 
 Use a protected operator workspace. This implementation has only been exercised against synthetic test databases; no production or private database was inspected. Do not copy private stores into the repository or publish reports automatically. The CLI never discovers a default database or reads environment files. Exit 0 means the selected intake completed, 1 means refusal, and 2 means invalid invocation. Neither success nor a matching testnet field authorizes migration or runtime startup.

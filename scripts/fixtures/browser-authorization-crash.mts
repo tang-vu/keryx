@@ -1,14 +1,20 @@
 import { DatabaseSync } from "node:sqlite";
 import { SqliteAdapter } from "../../lib/db/sqlite-adapter";
+import { validateStorageIdentity } from "../../lib/db/storage-identity";
+import { assertStorageFences, assertStorageIdentity, registerStorageCapability } from "../../lib/db/storage-identity-sqlite";
 import type { BrowserJournalAdmission } from "../../lib/db/browser-authorization-journal";
 
 // Synthetic subprocess fixture. Never loads environment files or accesses a provider.
-const [file, boundary, encodedInput] = process.argv.slice(2);
+const [file, boundary, encodedInput, encodedIdentity] = process.argv.slice(2);
 const input = JSON.parse(encodedInput) as BrowserJournalAdmission;
-const db = new SqliteAdapter(file);
+const expectedIdentity = validateStorageIdentity(JSON.parse(encodedIdentity));
+const db = new SqliteAdapter(file, { expectedIdentity });
 await db.init();
 if (boundary === "before_commit") {
   const raw = new DatabaseSync(file);
+  // Test-only crash injection uses the explicitly supplied identity, never a marker-adopted identity.
+  assertStorageIdentity(raw, expectedIdentity); assertStorageFences(raw, expectedIdentity);
+  registerStorageCapability(raw, expectedIdentity, () => true);
   raw.function("crash_boundary", () => {
     process.send?.({ boundary });
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 30_000);

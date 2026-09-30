@@ -1,4 +1,4 @@
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import os from "node:os";
@@ -6,6 +6,8 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { SqliteAdapter } from "./sqlite-adapter";
 import type { BrowserJournalAdmission } from "./browser-authorization-journal";
+import { provisionSyntheticStorage } from "./storage-identity-fixture";
+import { openVerifiedSqliteStorage } from "./storage-identity-connection";
 
 const signer = "0x1111111111111111111111111111111111111111",
   payee = "0x2222222222222222222222222222222222222222";
@@ -69,7 +71,9 @@ async function setup(active = true) {
     `keryx-journal-${crypto.randomUUID()}.sqlite`
   );
   files.push(file);
-  const db = new SqliteAdapter(file);
+  const identity = await provisionSyntheticStorage(file, "testnet-real");
+  vi.stubEnv("CONTENT_MASTER_KEY", "67".repeat(32));
+  const db = new SqliteAdapter(file, { expectedIdentity: identity });
   adapters.push(db);
   await db.init();
   await db.upsertSessionGrant(grant());
@@ -77,6 +81,7 @@ async function setup(active = true) {
   return { db, file };
 }
 afterEach(() => {
+  vi.unstubAllEnvs();
   for (const db of adapters.splice(0)) db.close();
   for (const file of files.splice(0))
     for (const suffix of ["", "-wal", "-shm"])
@@ -98,7 +103,7 @@ it("defaults inactive and refuses mismatched economic tuples before reservation"
 });
 it("atomically bridges the last micro units, persists exposed without expiry, and never cancels exposure", async () => {
   const { db, file } = await setup();
-  const second = new SqliteAdapter(file);
+  const second = new SqliteAdapter(file, { expectedIdentity: db.getStorageIdentity() });
   adapters.push(second);
   await second.init();
   const result = await Promise.all([
@@ -145,7 +150,7 @@ it("fences literal old writers after reopen including reset, release, delete and
     "UPDATE session_grants SET spent=spent+0.000001",
     "INSERT OR REPLACE INTO session_grants SELECT * FROM session_grants",
   ])
-    expect(() => raw.exec(sql)).toThrow("journal writer required");
+    expect(() => raw.exec(sql)).toThrow("no such function: keryx_storage_capability");
   raw.close();
   await expect(
     db.addSessionGrantSpend("owner", "epoch", signer, 0.000001)
@@ -213,12 +218,13 @@ it("refuses old alternate-ID payment inserts, financial edits and delete after a
   const { db, file } = await setup();
   const result = await db.admitBrowserJournal(input("a"));
   if (result.status !== "admitted") throw new Error("admission failed");
-  const raw = new DatabaseSync(file),
+  const connection = openVerifiedSqliteStorage(file, db.getStorageIdentity());
+  const raw = connection.db,
     nonce = result.journal.nonce;
   expect(() =>
     raw
       .prepare(
-        "INSERT INTO payment_events(id,authorization_id) VALUES('duplicate',?)"
+        "INSERT INTO payment_events(id,authorization_id,network,settlement_status) VALUES('duplicate',?,'eip155:5042002','pending')"
       )
       .run(nonce)
   ).toThrow("already admitted");
@@ -398,6 +404,7 @@ it.each([
           file,
           boundary,
           JSON.stringify(input("crash")),
+          JSON.stringify(db.getStorageIdentity()),
         ],
         { cwd: process.cwd(), stdio: ["ignore", "ignore", "pipe", "ipc"] }
       );
@@ -421,7 +428,7 @@ it.each([
         else reject(new Error(stderr));
       });
     });
-    const reopened = new SqliteAdapter(file);
+    const reopened = new SqliteAdapter(file, { expectedIdentity: db.getStorageIdentity() });
     adapters.push(reopened);
     await reopened.init();
     const journal = await reopened.getBrowserJournal("owner", "crash");
