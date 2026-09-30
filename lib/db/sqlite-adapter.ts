@@ -10,6 +10,7 @@ import { saveSqlitePrivateResult, getSqlitePrivateResult, PRIVATE_RESEARCH_RESUL
 import { PRIVATE_TREASURY_CAPACITY_SQL, reserveSqlitePrivateTreasury, getSqlitePrivateTreasury, type PrivateTreasuryPolicy } from "./private-treasury-capacity";
 import { claimSqlitePrivateExecution, getSqlitePrivateExecution, PRIVATE_RESEARCH_EXECUTIONS_SQL } from "./private-research-executions";
 import { DatabaseSync } from "node:sqlite";
+import { claimSqliteSourceUpkeep, finishSqliteSourceUpkeep, type SourceUpkeepClaim, type SourceUpkeepSummary } from "./source-upkeep";
 import { prepareBrowserAuthorizationIntent, type BrowserAuthorizationIntent, type BrowserAdmissionResult } from "./browser-authorization-admission";
 import { recordSqliteWithdrawal } from "./withdrawal-records";
 import { CREATOR_WITHDRAWAL_REQUESTS_SQL, reserveSqliteWithdrawalRequest, getSqliteWithdrawalRequest, claimSqliteWithdrawalTransfer, getSqliteWithdrawalTransferClaim } from "./creator-withdrawal-requests";
@@ -1039,6 +1040,14 @@ export class SqliteAdapter implements KeryxDB {
   async getSyncState(key: string): Promise<string | null> {
     const row = this.db.prepare(`SELECT value FROM sync_state WHERE key=?`).get(key);
     return row ? (row.value as string) : null;
+  }
+
+  async claimSourceUpkeep(now: number): Promise<SourceUpkeepClaim | null> {
+    return claimSqliteSourceUpkeep(this.db, now);
+  }
+
+  async finishSourceUpkeep(claim: SourceUpkeepClaim, summary: SourceUpkeepSummary, now: number): Promise<void> {
+    finishSqliteSourceUpkeep(this.db, claim, summary, now);
   }
 
   async setSyncState(key: string, value: string): Promise<void> {

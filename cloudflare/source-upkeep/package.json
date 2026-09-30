@@ -1,0 +1,13 @@
+{
+  "name": "keryx-source-upkeep",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "cf build",
+    "deploy": "cf deploy"
+  },
+  "devDependencies": {
+    "cf": "1.0.0-beta.5",
+    "wrangler": "4.144.0"
+  }
+}

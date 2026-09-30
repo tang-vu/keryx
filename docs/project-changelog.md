@@ -1,5 +1,16 @@
 # Keryx Project Changelog
 
+### Scheduled source upkeep (2026-09-30, v0.24.3)
+
+- Add an isolated Cloudflare Free hourly scheduler for verified source freshness, independent
+  of the historical volume daemon. The VPS retains URLs, encrypted content and all payment authority.
+- Atomically consume each hour's allowance before fetching up to two sources, advance a durable
+  cursor across failures, enforce feed/job limits and refuse late writes or revoked feed eligibility.
+- Deduplicate repeated feed links and retain scheduled bodies in the existing encrypted DB backend
+  without remote pins. The endpoint returns only aggregate counts and has a dedicated revocable secret.
+- Verify the independent Linux Worker build in CI alongside authentication, admission, restart,
+  encryption and deadline checks. Deployment and live scheduled acceptance are separate release gates.
+
 ### Pinned encrypted backup inventory (2026-09-30)
 
 - Recognize the approved hourly pinned backup command with its fixed Node runtime, app loader, environment order and commit-addressed source path.

@@ -27,6 +27,12 @@ jobs:
       - name: Typecheck (tsc)
         run: npm run typecheck
 
+      - name: Scheduled source upkeep Worker (isolated Free worker, no deployment)
+        run: |
+          npm ci --prefix cloudflare/source-upkeep --no-audit --no-fund
+          npx tsc -p cloudflare/source-upkeep/tsconfig.json
+          npm run build --prefix cloudflare/source-upkeep
+
       - name: Deployment dependency-state checks (no install or network)
         run: |
           bash scripts/private-worker-deploy.check.sh

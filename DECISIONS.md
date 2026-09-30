@@ -1,5 +1,20 @@
 # Keryx — Decision Log
 
+**D-270** - Cloudflare Free schedules bounded RSS upkeep; the VPS retains content and payment authority -
+*A September 30 production audit found 13 refreshable sources but no active feed-refresh
+schedule; historical volume-daemon references did not keep the source corpus current.*
+Use a dedicated hourly Worker to make one authenticated fixed-endpoint maintenance call.
+The VPS atomically consumes an hourly SQLite allowance and durable round-robin cursor
+before fetching at most two verified active feeds, with bounded input, deadlines,
+rechecked eligibility and encrypted local storage. Failures do not retry within the
+hour or starve later feeds. Cloudflare receives counts only; it does not fetch source
+URLs, store paid content, index registry payout authority, sign, spend, or settle.
+No Workers Paid subscription is enabled or required for this increment. This is orchestration and
+source freshness, not a general background-job migration. Supabase admission remains
+unsupported until equivalent atomic claims exist. Removing the isolated cron and
+revoking its dedicated secret rolls it back without altering stored articles or payments.
+See [scheduled source upkeep](docs/cloudflare-source-upkeep.md).
+
 **D-269** - Capture provider price observations per call and keep uncertain costs as intervals -
 *The economics observer applied an August 29 rate table to every matching wire model,
 including untagged history, after the supplier changed prices and Flash routing.*
