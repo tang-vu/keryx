@@ -95,3 +95,11 @@ to restore service. Restore from backups and reconcile existing nonces without
 creating replacements. Missing proof can lock capacity indefinitely; safe finite
 release policy, funded recovery drills and independent security acceptance remain
 open gates.
+
+### Delayed callback recovery
+
+Signature metadata recovery uses the immutable admission time and original challenge bounds,
+including at most 300 seconds of initial signing latency. Identical callbacks may be
+acknowledged after hours or expiry without resubmission. Expired or not-yet-valid headers
+cannot resolve a live signing slot; delivery also requires the original slot and current
+grant, and the gateway checks current validity again before submitting payment.

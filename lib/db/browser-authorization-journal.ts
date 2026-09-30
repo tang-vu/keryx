@@ -15,6 +15,8 @@ export type BrowserAuthorizationPhase =
 /** No signature or bearer header belongs in this durable record. */
 export interface BrowserAuthorizationJournal {
   nonce: string;
+  /** Immutable admission timestamp from the authorization intent. */
+  admittedAt: string;
   sessionId: string;
   requestId: string;
   grantEpoch: string;
@@ -93,6 +95,7 @@ export function prepareBrowserJournal(
   }
   return {
     nonce: intent.nonce,
+    admittedAt: intent.createdAt,
     sessionId: intent.sessionId,
     requestId: intent.requestId,
     grantEpoch: intent.grantEpoch,

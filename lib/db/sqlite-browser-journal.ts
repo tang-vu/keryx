@@ -229,6 +229,7 @@ export function getSqliteBrowserJournal(
     payment.authorizationExpiresAt = row.authorization_expires_at;
   return {
     nonce: String(row.nonce),
+    admittedAt: String(row.created_at),
     sessionId,
     requestId,
     grantEpoch: String(row.grant_epoch),
