@@ -6,19 +6,36 @@
 import { hasSupabase } from "../config";
 import type { KeryxDB } from "./keryx-db";
 
-let instance: KeryxDB | null = null;
+// Publish only the shared initialization promise, never a partially ready adapter.
+let initialization: Promise<KeryxDB> | null = null;
 
 export async function getDb(): Promise<KeryxDB> {
-  if (instance) return instance;
-  if (hasSupabase()) {
-    const { SupabaseAdapter } = await import("./supabase-adapter");
-    instance = new SupabaseAdapter();
-  } else {
-    const { SqliteAdapter } = await import("./sqlite-adapter");
-    instance = new SqliteAdapter();
+  if (!initialization) {
+    initialization = (async () => {
+      // Select once per attempt, before the first asynchronous import boundary.
+      const useSupabase = hasSupabase();
+      const adapter = useSupabase
+        ? new (await import("./supabase-adapter")).SupabaseAdapter()
+        : new (await import("./sqlite-adapter")).SqliteAdapter();
+      try {
+        await adapter.init();
+        return adapter;
+      } catch (error) {
+        // SQLite owns a file handle and exposes close(); Supabase has no adapter
+        // disposal API. Cleanup does not roll back earlier schema/cache writes.
+        if ("close" in adapter && typeof adapter.close === "function") {
+          try { adapter.close(); } catch { /* preserve the initialization failure */ }
+        }
+        throw error;
+      }
+    })().catch((error: unknown) => {
+      // Failed imports, constructors and init are shared failures. A later caller
+      // may retry with a fresh adapter; no rejected or partial instance is cached.
+      initialization = null;
+      throw error;
+    });
   }
-  await instance.init();
-  return instance;
+  return initialization;
 }
 
 export type { KeryxDB, CreatorEarnings } from "./keryx-db";

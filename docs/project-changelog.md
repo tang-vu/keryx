@@ -1,5 +1,16 @@
 # Keryx Project Changelog
 
+### Database readiness and failed-initialization cleanup (2026-10-01)
+
+- Concurrent `getDb()` callers within one process now await one initialization
+  attempt and receive only a ready adapter. A failed attempt is not cached; a
+  later call creates a fresh adapter. SQLite's failed adapter file handle is
+  closed where possible without hiding the original initialization error.
+- Retry is not rollback: earlier SQLite schema/maintenance writes or Supabase
+  row-by-row cache sealing may already persist. Supabase exposes no adapter
+  disposal API. This is process-local readiness, not a cross-process migration lock.
+
+
 ### Framework and HTTP dependency security patch (2026-09-30)
 
 - Raise Next.js and its ESLint integration floor to 16.3.6 and resolve the matching framework package family to that release for the [Node ImageResponse RCE fix](https://github.com/vercel/next.js/security/advisories/GHSA-vcvr-r3jv-pc5j).
