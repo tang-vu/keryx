@@ -64,7 +64,7 @@ export async function getSupabaseWithdrawalAttestation(db: SupabaseAuthority, id
   if (!record) return null;
   const claim = await getSupabaseWithdrawalTransferClaim(db, id, owner);
   if (!claim) return null;
-  const { data, error } = await db.rpc("get_supabase_withdrawal_attestation", { p_id: id });
+  const { data, error } = await db.rpcResult("get_supabase_withdrawal_attestation", { p_id: id });
   if (error) throw new Error("Withdrawal attestation storage unavailable");
   return data ? read(data, record, claim.claimId) : null;
 }
@@ -74,7 +74,7 @@ export async function saveSupabaseWithdrawalAttestation(db: SupabaseAuthority, i
   const record = await getSupabaseWithdrawalRequest(db, id, owner), claim = await getSupabaseWithdrawalTransferClaim(db, id, owner);
   if (!record || !claim || claim.claimId !== claimId) throw new Error("Withdrawal attestation authority unavailable");
   const matched = await matchWithdrawalAttestation(record, snapshot);
-  const { error } = await db.rpc("save_creator_withdrawal_attestation", {
+  const { error } = await db.rpcResult("save_creator_withdrawal_attestation", {
     p_id: id, p_owner: record.owner, p_claim_id: claimId, p_transfer_id: matched.transferId, p_data: matched,
   });
   if (error) throw new Error("Withdrawal attestation storage unavailable");

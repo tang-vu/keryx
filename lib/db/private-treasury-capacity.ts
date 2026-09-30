@@ -23,7 +23,7 @@ export async function getSqlitePrivateTreasury(db: DatabaseSync, id: string, pay
 export async function getSupabasePrivateTreasury(db: SupabaseAuthority, id: string, payer: string) {
   const intent = await getSupabasePrivateResearchIntent(db, id, payer);
   if (!intent) return null;
-  const { data, error } = await db.rpc("get_supabase_private_treasury", { p_job_id: id });
+  const { data, error } = await db.rpcResult("get_supabase_private_treasury", { p_job_id: id });
   if (error) throw new Error("Private treasury reservation unavailable");
   return reservation(data ?? undefined, Math.round(intent.submission.request.budget * 1e6));
 }
@@ -73,11 +73,11 @@ export async function reserveSupabasePrivateTreasury(db: SupabaseAuthority, id: 
   const selected = policy(value);
   const intent = await getSupabasePrivateResearchIntent(db, id, payer);
   if (!intent) throw new Error("Private research intent unavailable");
-  const { error, data } = await db.rpc("reserve_private_treasury", { p_id: id, p_payer: intent.submission.payment.authorization.from,
+  const { error, data } = await db.rpcResult("reserve_private_treasury", { p_id: id, p_payer: intent.submission.payment.authorization.from,
     p_signer: selected.signer, p_capacity: selected.capacityMicros });
   if (error || typeof data !== "boolean") throw new Error("Private treasury reservation unavailable");
   if (!data) return false;
-  const result = await db.rpc("reserve_supabase_private_treasury", { p_job_id: id });
+  const result = await db.rpcResult("reserve_supabase_private_treasury", { p_job_id: id });
   if (result.error || !result.data) throw new Error("Private treasury reservation unavailable");
   return matched(result.data, selected.signer, Math.round(intent.submission.request.budget * 1e6));
 }

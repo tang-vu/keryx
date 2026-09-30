@@ -44,7 +44,7 @@ export async function listSqlitePrivateResearchHistory(db: DatabaseSync, payer: 
 export async function listSupabasePrivateResearchHistory(db: SupabaseAuthority, payer: string, before?: PrivateHistoryCursor) {
   const owner = addressSchema.parse(payer).toLowerCase();
   const cursor = before === undefined ? undefined : privateHistoryCursorSchema.parse(before);
-  const { data, error } = await db.rpc("list_private_research_history", { p_owner: owner,
+  const { data, error } = await db.rpcResult("list_private_research_history", { p_owner: owner,
     p_before_time: cursor?.createdAt ?? null, p_before_id: cursor?.id ?? null });
   if (error || !Array.isArray(data)) throw new Error("Private research history unavailable");
   return Promise.all(data.map(row => historyRow(row, owner)));
@@ -81,14 +81,14 @@ export async function reserveSqlitePrivateResearchIntent(db: DatabaseSync, value
 
 export async function getSupabasePrivateResearchIntent(db: SupabaseAuthority, id: string, payer: string) {
   const key = lookup(id, payer);
-  const { data, error } = await db.rpc("get_supabase_private_research_intent", { p_id: key.id, p_payer: key.payer });
+  const { data, error } = await db.rpcResult("get_supabase_private_research_intent", { p_id: key.id, p_payer: key.payer });
   if (error) throw new Error("Private research storage unavailable");
   return data ? checkedRow(data.data, key.id, key.payer) : null;
 }
 export async function reserveSupabasePrivateResearchIntent(db: SupabaseAuthority, value: PrivateResearchIntent) {
   const intent = await validatePrivateResearchIntent(value);
   const payer = intent.submission.payment.authorization.from;
-  const { error } = await db.rpc("reserve_supabase_private_research_intent", { p_row: { id: intent.id, payer, data: intent } });
+  const { error } = await db.rpcResult("reserve_supabase_private_research_intent", { p_row: { id: intent.id, payer, data: intent } });
   if (error) throw new Error("Private research storage unavailable");
   return requireOriginal(await getSupabasePrivateResearchIntent(db, intent.id, payer), intent);
 }

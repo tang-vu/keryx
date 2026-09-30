@@ -44,7 +44,7 @@ export async function listSqliteWithdrawalHistory(db: DatabaseSync, owner: strin
 
 export async function listSupabaseWithdrawalHistory(db: SupabaseAuthority, owner: string, cursor?: WithdrawalHistoryCursor, limit = 25) {
   const selected = selection(owner, cursor, limit);
-  const { data, error } = await db.rpc("list_creator_withdrawal_history", { p_owner: selected.owner,
+  const { data, error } = await db.rpcResult("list_creator_withdrawal_history", { p_owner: selected.owner,
     p_before_time: selected.cursor?.createdAt ?? null, p_before_id: selected.cursor?.id ?? null,
     p_limit: selected.limit + 1 });
   if (error || !Array.isArray(data)) throw new Error("Withdrawal history storage unavailable");

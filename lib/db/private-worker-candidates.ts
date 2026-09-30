@@ -27,7 +27,7 @@ export async function listSqlitePrivateWorkerCandidates(db: DatabaseSync, signer
 
 export async function listSupabasePrivateWorkerCandidates(db: SupabaseAuthority, signer: string, after?: string) {
   const selected = selection(signer, after);
-  const { data, error } = await db.rpc("list_private_worker_candidates", { p_signer: selected.signer, p_after: selected.after });
+  const { data, error } = await db.rpcResult("list_private_worker_candidates", { p_signer: selected.signer, p_after: selected.after });
   if (error) throw new Error("Private worker candidates unavailable");
   return z.array(candidate).max(25).parse(data);
 }
@@ -45,7 +45,7 @@ export async function listSqlitePrivateReconciliationCandidates(db: DatabaseSync
 
 export async function listSupabasePrivateReconciliationCandidates(db: SupabaseAuthority, signer: string, after?: string) {
   const selected = selection(signer, after);
-  const { data, error } = await db.rpc("list_private_reconciliation_candidates", { p_signer: selected.signer, p_after: selected.after });
+  const { data, error } = await db.rpcResult("list_private_reconciliation_candidates", { p_signer: selected.signer, p_after: selected.after });
   if (error) throw new Error("Private reconciliation candidates unavailable");
   return z.array(candidate).max(1).parse(data);
 }

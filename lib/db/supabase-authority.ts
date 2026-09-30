@@ -35,6 +35,12 @@ export class SupabaseAuthority {
     return this.client.rpc(`storage_${name}`, { ...args, p_expected_identity: this.expectedIdentity }).throwOnError();
   }
 
+  /** Domain helpers inspect failure envelopes to preserve their bounded public
+   * error messages and ambiguous-write recovery. Identity admission still runs. */
+  rpcResult(name: string, args: Record<string, unknown> = {}) {
+    return this.rpc(name, args).then(result => result, (error: unknown) => ({ data: null, error }));
+  }
+
   getStorageIdentity(): Readonly<StorageIdentity> {
     if (!this.ready || !this.adapterReady()) refuseStorage("adapter_not_initialized");
     return this.expectedIdentity;
