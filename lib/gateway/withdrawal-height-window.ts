@@ -6,7 +6,7 @@ import type { WithdrawPolicy } from "./withdraw-protocol";
 
 const uint = z.string().regex(/^(0|[1-9][0-9]{0,77})$/).refine(value => BigInt(value) < maxUint256);
 const contract = z.object({ address: z.string().regex(/^0x[a-fA-F0-9]{40}$/), supportedTokens: z.array(z.string()).max(32) });
-const domainSchema = z.object({ domain: z.literal(26), chain: z.literal("ARC"), network: z.literal("Testnet"),
+const domainSchema = z.object({ domain: z.literal(26), chain: z.enum(["Arc", "ARC"]), network: z.literal("Testnet"),
   processedHeight: uint, burnIntentExpirationHeight: uint, walletContract: contract, minterContract: contract });
 type Limits = { maxAheadBlocks: string; maxProcessingLagBlocks: string };
 type Client = Pick<PublicClient, "getBlock" | "getChainId">;
