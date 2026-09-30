@@ -25,11 +25,18 @@ Actual hosting/domain bills, AI invoices, paid-service expenses and realized ope
 results are owner-private. Do not put those figures in the public website, repository,
 submission material or Canteen updates without the owner's explicit permission. Public
 formulas and illustrative inputs are separate from internal billing evidence. The owner
-has not supplied actual monthly operating costs; unknown values remain unknown. A local
+maintains supplied operating-cost assumptions in the private local handoff; exact
+bills and complete monthly costs remain unverified. Unknown values remain unknown. A local
 export may contain entered costs, so review it before sharing and keep private exports
 outside tracked repository files.
 
 ## Formulas
+
+The initial audience and repeat-use validation are defined in the
+[independent research pilot](./research-pilot-program.md). There is no committed
+independent pilot buyer as of September 30. Current provider list prices differ
+from the observer's historical policy; see the [readiness evidence](./engineering/mainnet-readiness-2026-09-30.md).
+Do not use its historical margin estimate as current operating profit.
 
 Let `N` be paid jobs per month, `F` the service fee per job, `B` the creator budget,
 `C` expected creator spend, `V` variable operating cost per job, and `K` fixed plus

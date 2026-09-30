@@ -54,6 +54,9 @@ jobs:
       - name: Creator withdrawal admission (isolated PostgreSQL, synthetic data)
         run: node --import tsx scripts/test-creator-withdrawal-postgres.mts
 
+      - name: Browser authorization admission (isolated PostgreSQL, synthetic data)
+        run: node --import tsx scripts/test-browser-authorization-postgres.mts
+
       - name: Withdrawal backup and recovered copy (Linux CLI, synthetic data)
         run: node --import tsx --no-warnings scripts/test-withdrawal-backup-restore.mts
 
