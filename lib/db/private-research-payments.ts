@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseAuthority } from "./supabase-authority";
 import { privatePaymentConfirmation, privatePaymentState, requirePrivatePaymentConfirmation, type PrivatePaymentConfirmation } from "../a2a/private-payment-state";
 import { getSqlitePrivateResearchIntent, getSupabasePrivateResearchIntent } from "./private-research-intents";
 
@@ -42,14 +42,14 @@ export async function confirmSqlitePrivatePayment(db: DatabaseSync, id: string, 
   return requirePrivatePaymentConfirmation(await getSqlitePrivatePayment(db, id, payer), confirmation);
 }
 
-export async function getSupabasePrivatePayment(db: SupabaseClient, id: string, payer: string) {
+export async function getSupabasePrivatePayment(db: SupabaseAuthority, id: string, payer: string) {
   const intent = await getSupabasePrivateResearchIntent(db, id, payer);
   if (!intent) return null;
-  const { data, error } = await db.from("private_research_payment_attempts").select("started_at,confirmation,settled_at").eq("id", id).maybeSingle();
+  const { data, error } = await db.rpc("get_supabase_private_payment", { p_id: id });
   if (error) throw new Error("Private payment storage unavailable");
   return data ? privatePaymentState(data, intent) : null;
 }
-export async function claimSupabasePrivatePayment(db: SupabaseClient, id: string, payer: string) {
+export async function claimSupabasePrivatePayment(db: SupabaseAuthority, id: string, payer: string) {
   const intent = await getSupabasePrivateResearchIntent(db, id, payer);
   if (!intent) throw new Error("Private research intent unavailable");
   const { data, error } = await db.rpc("claim_private_research_payment", { p_id: id, p_payer: intent.submission.payment.authorization.from });
@@ -58,7 +58,7 @@ export async function claimSupabasePrivatePayment(db: SupabaseClient, id: string
   if (!state) throw new Error("Private payment claim unavailable");
   return { claimed: data && state.status === "pending", state };
 }
-export async function confirmSupabasePrivatePayment(db: SupabaseClient, id: string, payer: string, value: PrivatePaymentConfirmation) {
+export async function confirmSupabasePrivatePayment(db: SupabaseAuthority, id: string, payer: string, value: PrivatePaymentConfirmation) {
   const intent = await getSupabasePrivateResearchIntent(db, id, payer);
   if (!intent) throw new Error("Private research intent unavailable");
   const confirmation = privatePaymentConfirmation(value, intent);

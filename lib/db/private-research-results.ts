@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseAuthority } from "./supabase-authority";
 import { z } from "zod";
 import type { QueryRun } from "../types";
 import type { PrivateResearchIntent } from "../a2a/private-research-intent";
@@ -68,15 +68,15 @@ export async function saveSqlitePrivateResult(db: DatabaseSync, id: string, paye
   return requireOriginal(await getSqlitePrivateResult(db, id, payer), snapshot);
 }
 
-export async function getSupabasePrivateResult(db: SupabaseClient, id: string, payer: string) {
+export async function getSupabasePrivateResult(db: SupabaseAuthority, id: string, payer: string) {
   if (!await getSupabasePrivateExecution(db, id, payer)) return null;
   const intent = await getSupabasePrivateResearchIntent(db, id, payer);
   if (!intent) throw new Error("Private research intent unavailable");
-  const { data, error } = await db.from("private_research_results").select("serialized_run,saved_at").eq("id", id).maybeSingle();
+  const { data, error } = await db.rpc("get_supabase_private_result", { p_id: id });
   if (error) throw new Error("Private result storage unavailable");
   return data ? readResult(data, intent) : null;
 }
-export async function saveSupabasePrivateResult(db: SupabaseClient, id: string, payer: string, workerId: string, run: QueryRun) {
+export async function saveSupabasePrivateResult(db: SupabaseAuthority, id: string, payer: string, workerId: string, run: QueryRun) {
   const snapshot = snapshotRun(run);
   const claim = await getSupabasePrivateExecution(db, id, payer);
   if (!claim || claim.workerId !== workerId) throw new Error("Private execution authority unavailable");

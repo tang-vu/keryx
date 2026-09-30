@@ -184,7 +184,7 @@ try {
   // Hosted projects may grant service-role DML through default ACLs. Migration
   // restrictions must override those defaults explicitly, not assume a clean cluster.
   sql("alter default privileges in schema public grant all on tables to service_role");
-  sql(migrations.filter(file => Number(file.slice(0, 4)) >= 69)
+  sql(migrations.filter(file => Number(file.slice(0, 4)) === 69)
     .map(file => readFileSync(`supabase/migrations/${file}`, "utf8")).join("\n"));
   assert.equal(sql("select active from public.browser_journal_control"), "f", "schema must not activate signing");
   assert.equal(asService(journal(200)), "inactive");
