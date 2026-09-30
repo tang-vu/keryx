@@ -74,21 +74,32 @@ describe("explicit server storage deployment manifest", () => {
       { ...f.document, identity: { ...identity, network: "eip155:5042" } },
       { ...f.document, identity: { ...identity, profileDigest: "00".repeat(32) } }]) { writeFileSync(f.path, canonicalJson(document)); refused(f.env); }
   });
-  it("rejects forced offline on real identity and invalid flags", () => {
-    const f = fixture(); refused({ ...f.env, KERYX_FORCE_OFFLINE: "1" }); refused({ ...f.env, KERYX_FORCE_OFFLINE: "invalid" });
-    expect(inspectStorageDeploymentManifest({ ...f.env, KERYX_FORCE_OFFLINE: "0" }).identity.authorityMode).toBe("testnet-real");
+  it("keeps keyless lost-source expected artifacts separate from runtime acceptance", async () => {
+    const f = fixture(); rmSync(f.store);
+    expect(inspectStorageDeploymentManifest(f.env).identity.authorityMode).toBe("testnet-real");
+    vi.resetModules(); vi.stubEnv("KERYX_STORAGE_MANIFEST", f.path); vi.stubEnv("KERYX_FORCE_OFFLINE", "0"); vi.stubEnv("KERYX_SQLITE_PATH", f.store);
+    const runtime = await import("./runtime-storage-config");
+    expect(() => runtime.readRuntimeStorageDeployment()).toThrow(runtime.RuntimeStorageRefused);
   });
-  it("refuses SQLite path overrides/missing selected targets", () => {
-    const f = fixture(); refused({ ...f.env, KERYX_SQLITE_PATH: join(f.folder, "other.sqlite") });
-    writeFileSync(f.path, canonicalJson({ ...f.document, backend: { kind: "sqlite", databasePath: join(f.folder, "missing.sqlite") } })); refused(f.env);
-  });
-  it("requires exact Supabase HTTPS origin and selected credential, never falls back", () => {
+  it("runtime refuses real forced-offline and missing/conflicting selected credentials without fallback", async () => {
+    for (const overrides of [{ KERYX_FORCE_OFFLINE: "1" }, { KERYX_FORCE_OFFLINE: "invalid" }, { KERYX_SQLITE_PATH: "other.sqlite" }]) {
+      const f = fixture(); vi.resetModules(); vi.stubEnv("KERYX_STORAGE_MANIFEST", f.path); vi.stubEnv("KERYX_FORCE_OFFLINE", "0"); vi.stubEnv("KERYX_SQLITE_PATH", f.store);
+      for (const [key, value] of Object.entries(overrides)) vi.stubEnv(key, value!);
+      const runtime = await import("./runtime-storage-config"); expect(() => runtime.readRuntimeStorageDeployment()).toThrow(runtime.RuntimeStorageRefused);
+    }
     const f = fixture({ kind: "supabase", url: "https://selected.supabase.co" });
-    refused(f.env); refused({ ...f.env, NEXT_PUBLIC_SUPABASE_URL: "https://selected.supabase.co" });
-    refused({ ...f.env, NEXT_PUBLIC_SUPABASE_URL: "https://other.supabase.co", SUPABASE_SERVICE_ROLE_KEY: "synthetic" });
-    expect(inspectStorageDeploymentManifest({ ...f.env, NEXT_PUBLIC_SUPABASE_URL: "https://selected.supabase.co", SUPABASE_SERVICE_ROLE_KEY: "synthetic" }).backend)
-      .toEqual({ kind: "supabase", url: "https://selected.supabase.co" });
+    // Expected artifacts carry no required runtime credential.
+    expect(inspectStorageDeploymentManifest(f.env).backend.kind).toBe("supabase");
+    for (const [url, key] of [["", ""], ["https://selected.supabase.co", ""], ["https://other.supabase.co", "synthetic"]]) {
+      vi.resetModules(); vi.stubEnv("KERYX_STORAGE_MANIFEST", f.path); vi.stubEnv("KERYX_FORCE_OFFLINE", "0");
+      vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", url); vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", key);
+      const runtime = await import("./runtime-storage-config"); expect(() => runtime.readRuntimeStorageDeployment()).toThrow(runtime.RuntimeStorageRefused);
+    }
   });
-  it.each(["http://selected.supabase.co", "https://selected.supabase.co/", "https://credential:private@selected.supabase.co", "https://selected.supabase.co?token=private"])
+  it("rejects credential-bearing URL fields without printing their value", () => {
+    const url = new URL("https://selected.supabase.co"); url.username = "fixture"; url.password = "fixture";
+    const f = fixture({ kind: "supabase", url: url.href }); refused(f.env);
+  });
+  it.each(["http://selected.supabase.co", "https://selected.supabase.co/", "https://selected.supabase.co?token=private"])
     ("refuses noncanonical or credential-bearing backend URL", url => { const f = fixture({ kind: "supabase", url }); refused({ ...f.env, NEXT_PUBLIC_SUPABASE_URL: url, SUPABASE_SERVICE_ROLE_KEY: "synthetic" }); });
 });

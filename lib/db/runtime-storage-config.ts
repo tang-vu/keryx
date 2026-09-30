@@ -32,6 +32,21 @@ function targetStat(target: string) {
   if (!stat.isFile() || (process.platform === "win32" ? resolved.toLowerCase() !== target.toLowerCase() : resolved !== target)) refuse();
   return stat;
 }
+/** Expected artifact inspection may describe a lost source; it never opens or accepts that store. */
+function declaredSqliteTarget(target: string): void {
+  if (target.length > 2048 || !isAbsolute(target) || resolve(target) !== target || target.includes("\0")) refuse();
+  const root = parse(target).root, parts = relative(root, target).split(sep);
+  let current = root;
+  for (let index = 0; index < parts.length; index++) {
+    current = resolve(current, parts[index]);
+    let stat;
+    try { stat = lstatSync(current); } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") break;
+      refuse();
+    }
+    if (stat.isSymbolicLink() || (index < parts.length - 1 ? !stat.isDirectory() : !stat.isFile())) refuse();
+  }
+}
 function statIdentity(stat: ReturnType<typeof targetStat>) {
   return [stat.dev, stat.ino, stat.birthtimeNs, stat.size, stat.mtimeNs].join(":");
 }
@@ -66,22 +81,18 @@ export function inspectStorageDeploymentManifest(env: Readonly<Record<string, st
     const manifest = exactKeys(parsed, "backend,format,identity");
     if (manifest.format !== "keryx-storage-deployment-v1") refuse();
     const identity = validateStorageIdentity(manifest.identity);
-    if (env.KERYX_FORCE_OFFLINE !== undefined && !["", "0", "1"].includes(env.KERYX_FORCE_OFFLINE)) refuse();
-    if (identity.authorityMode === "testnet-real" && env.KERYX_FORCE_OFFLINE === "1") refuse();
     let backend: StorageBackend;
     const selected = manifest.backend as { kind?: unknown };
     if (selected?.kind === "sqlite") {
       const fields = exactKeys(selected, "databasePath,kind");
       if (typeof fields.databasePath !== "string") refuse();
-      targetStat(fields.databasePath);
-      if (env.KERYX_SQLITE_PATH !== undefined && env.KERYX_SQLITE_PATH !== fields.databasePath) refuse();
+      declaredSqliteTarget(fields.databasePath);
       backend = Object.freeze({ kind: "sqlite", databasePath: fields.databasePath });
     } else if (selected?.kind === "supabase") {
       const fields = exactKeys(selected, "kind,url");
       if (typeof fields.url !== "string" || fields.url.length > 2048) refuse();
       const url = new URL(fields.url);
-      if (url.protocol !== "https:" || url.username || url.password || url.origin !== fields.url ||
-        env.NEXT_PUBLIC_SUPABASE_URL !== fields.url || !env.SUPABASE_SERVICE_ROLE_KEY?.trim()) refuse();
+      if (url.protocol !== "https:" || url.username || url.password || url.origin !== fields.url) refuse();
       backend = Object.freeze({ kind: "supabase", url: fields.url });
     } else refuse();
     return Object.freeze({ format: "keryx-storage-deployment-v1", identity, backend });
@@ -94,6 +105,12 @@ let runtimeSnapshot: { manifestPath: string; deployment: Readonly<StorageDeploym
 /** Runtime identity is pinned for this module/process lifetime. Changed configuration refuses; restart under drain. */
 export function readRuntimeStorageDeployment(): Readonly<StorageDeploymentManifest> {
   const current = inspectStorageDeploymentManifest(process.env);
+  if (process.env.KERYX_FORCE_OFFLINE !== undefined && !["", "0", "1"].includes(process.env.KERYX_FORCE_OFFLINE)) refuse();
+  if (current.identity.authorityMode === "testnet-real" && process.env.KERYX_FORCE_OFFLINE === "1") refuse();
+  if (current.backend.kind === "sqlite") {
+    try { targetStat(current.backend.databasePath); } catch { refuse(); }
+    if (process.env.KERYX_SQLITE_PATH !== undefined && process.env.KERYX_SQLITE_PATH !== current.backend.databasePath) refuse();
+  } else if (process.env.NEXT_PUBLIC_SUPABASE_URL !== current.backend.url || !process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) refuse();
   const manifestPath = process.env.KERYX_STORAGE_MANIFEST!;
   if (!runtimeSnapshot) runtimeSnapshot = { manifestPath, deployment: current };
   else if (manifestPath !== runtimeSnapshot.manifestPath || canonicalJson(current) !== canonicalJson(runtimeSnapshot.deployment)) refuse();
