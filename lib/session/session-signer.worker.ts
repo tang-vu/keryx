@@ -8,8 +8,8 @@
  *
  * So this file decides what is worth signing. It refuses any payee the on-chain registry does not
  * authorise, and any transaction that is not an approve/deposit against the Gateway. Injected
- * script on the page can call in here, but everything it can obtain is a payment to a real creator
- * from a session the user funded on purpose.
+ * script on the page can call in here, but payment signatures remain registry-payee restricted. Repeated permitted
+ * transactions can still burn the funded gas balance; this worker has no lifetime gas ledger.
  *
  * Residual, stated plainly: the key is derived as `keccak256(walletSignature)`, and that signature
  * is produced on the main thread by the user's wallet. Script that is already running at that exact
@@ -21,14 +21,12 @@ import { keccak256 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import type { PrivateKeyAccount, TransactionSerializable, TypedDataDomain } from "viem";
 import { wrapKey, unwrapKey, destroyWrappingKey } from "./session-key-vault";
-import { authorisedPayees, isAllowedTransactionTarget } from "./session-payee-policy";
+import { authorisedPayees } from "./session-payee-policy";
+import { validateSessionPayment, validateSessionTransaction } from "./session-signing-policy";
 import type { DerivedSession, SignerRequest, SignerResponse, TypedDataPayload } from "./session-signer-protocol";
 
 /** The only thing in this file that must never escape it. */
 let account: PrivateKeyAccount | null = null;
-
-/** The x402 authorization the browser is meant to co-sign, and nothing else. */
-const PAYMENT_PRIMARY_TYPE = "TransferWithAuthorization";
 
 function requireAccount(): PrivateKeyAccount {
   if (!account) throw new Error("no session key loaded in the signer");
@@ -57,9 +55,7 @@ async function restore(wrapped: Uint8Array, iv: Uint8Array): Promise<{ address: 
 async function signTypedData(payload: TypedDataPayload): Promise<string> {
   const signer = requireAccount();
 
-  if (payload.primaryType !== PAYMENT_PRIMARY_TYPE) {
-    throw new Error(`the session key signs ${PAYMENT_PRIMARY_TYPE} only, not ${payload.primaryType}`);
-  }
+  validateSessionPayment(payload, signer.address);
 
   const to = payload.message.to;
   if (typeof to !== "string") throw new Error("payment authorization has no payee");
@@ -80,16 +76,7 @@ async function signTypedData(payload: TypedDataPayload): Promise<string> {
 /** Sign an approve or a Gateway deposit. Never a value transfer out of the session EOA. */
 async function signTransaction(transaction: Record<string, unknown>): Promise<string> {
   const signer = requireAccount();
-  const to = transaction.to as string | undefined;
-
-  if (!isAllowedTransactionTarget(to)) {
-    throw new Error(`the session key will not sign a transaction to ${to ?? "a new contract"}`);
-  }
-
-  const from = transaction.from as string | undefined;
-  if (from && from.toLowerCase() !== signer.address.toLowerCase()) {
-    throw new Error(`this session key is ${signer.address}, not ${from}`);
-  }
+  validateSessionTransaction(transaction, signer.address);
 
   // `from` is not part of a serialized transaction; viem's serializer ignores it, but drop it here
   // so the shape handed to the signer is exactly the transaction and nothing else.

@@ -7,9 +7,10 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { keccak256, recoverTypedDataAddress, type Hex } from "viem";
+import { keccak256, recoverTypedDataAddress, encodeFunctionData, erc20Abi, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { config } from "../config";
+import { SESSION_DEPOSIT_ABI } from "./session-signing-policy";
 import type { SignerRequest, SignerRequestBody } from "./session-signer-protocol";
 
 const payees = vi.fn<() => Promise<ReadonlySet<string>>>();
@@ -66,8 +67,8 @@ function paymentTo(to: string) {
       from: EXPECTED.address,
       to,
       value: BigInt(4000),
-      validAfter: BigInt(0),
-      validBefore: BigInt(2 ** 31),
+      validAfter: BigInt(Math.floor(Date.now() / 1000) - 600),
+      validBefore: BigInt(Math.floor(Date.now() / 1000) + 691200),
       nonce: ("0x" + "11".repeat(32)) as Hex,
     } as Record<string, unknown>,
   };
@@ -182,7 +183,79 @@ function transactionTo(to: string | undefined): Record<string, unknown> {
     maxFeePerGas: BigInt(1_000_000_000),
     maxPriorityFeePerGas: BigInt(1_000_000),
     value: BigInt(0),
-    data: "0x" as Hex,
+    data: to?.toLowerCase() === config.gatewayWallet.toLowerCase()
+      ? encodeFunctionData({ abi: SESSION_DEPOSIT_ABI, functionName: "deposit", args: [config.usdcAddress, BigInt(50000)] })
+      : encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [config.gatewayWallet, BigInt(50000)] }),
     type: "eip1559" as const,
   };
 }
+
+describe("hostile transaction mutation never obtains a signature", () => {
+  const approve = (spender: `0x${string}`) => encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [spender, BigInt(50000)] });
+  it.each([
+    ["transfer selector", { data: encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [ATTACKER, BigInt(50000)] }) }],
+    ["attacker spender", { data: approve(ATTACKER) }],
+    ["extra calldata", { data: `${approve(config.gatewayWallet)}00` }],
+    ["truncated calldata", { data: approve(config.gatewayWallet).slice(0, -2) }],
+    ["noncanonical address padding", { data: approve(config.gatewayWallet).replace("095ea7b300", "095ea7b301") }],
+    ["native value", { value: BigInt(1) }],
+    ["wrong chain", { chainId: 5042 }],
+    ["missing chain", { chainId: undefined }],
+    ["wrong sender", { from: ATTACKER }],
+    ["authorizationList", { authorizationList: [] }],
+    ["accessList", { accessList: [] }],
+    ["blob type", { type: "eip4844" }],
+    ["blobs", { blobs: [] }],
+    ["blob fee", { maxFeePerBlobGas: BigInt(1) }],
+    ["unknown field", { customSerializer: "evil" }],
+    ["unsafe nonce", { nonce: Number.MAX_SAFE_INTEGER + 1 }],
+    ["negative gas", { gas: BigInt(-1) }],
+    ["mixed fees", { gasPrice: BigInt(1) }],
+    ["priority exceeds cap", { maxPriorityFeePerGas: BigInt(2_000_000_000) }],
+  ])("rejects %s", async (_label, mutation) => {
+    await expect(send({ type: "signTransaction", transaction: { ...transactionTo(config.usdcAddress), ...mutation } })).rejects.toThrow();
+  });
+
+  it("refuses a Gateway deposit for a different asset", async () => {
+    await expect(send({ type: "signTransaction", transaction: { ...transactionTo(config.gatewayWallet),
+      data: encodeFunctionData({ abi: SESSION_DEPOSIT_ABI, functionName: "deposit", args: [ATTACKER, BigInt(50000)] }) } })).rejects.toThrow(/calldata/);
+  });
+});
+
+describe("typed data authority before payee lookup", () => {
+  it.each([
+    ["chain", { chainId: 5042 }], ["token domain", { verifyingContract: config.usdcAddress }],
+    ["contract", { verifyingContract: ATTACKER }], ["name", { name: "USD Coin" }],
+    ["version", { version: "2" }], ["salt", { salt: "0x" + "00".repeat(32) }],
+  ])("rejects mutated domain %s", async (_label, domain) => {
+    const payload = paymentTo(CREATOR); payload.domain = { ...payload.domain, ...domain };
+    await expect(send({ type: "signTypedData", payload })).rejects.toThrow(/domain/);
+    expect(payees).not.toHaveBeenCalled();
+  });
+  it.each([
+    ["from", { from: ATTACKER }], ["zero value", { value: BigInt(0) }],
+    ["negative", { value: BigInt(-1) }], ["overflow", { value: BigInt(1) << BigInt(256) }],
+    ["unsafe number", { value: Number.MAX_SAFE_INTEGER + 1 }], ["fraction", { value: 0.5 }],
+    ["nonce", { nonce: "0x11" }], ["future after", { validAfter: BigInt(Math.floor(Date.now() / 1000) + 600) }],
+    ["old after", { validAfter: BigInt(0) }], ["unbounded before", { validBefore: BigInt(2 ** 31) }],
+    ["expired", { validBefore: BigInt(0) }], ["short life", { validBefore: BigInt(Math.floor(Date.now() / 1000) + 600) }],
+    ["extra field", { token: config.usdcAddress }],
+  ])("rejects mutated message %s", async (_label, message) => {
+    const payload = paymentTo(CREATOR); payload.message = { ...payload.message, ...message };
+    await expect(send({ type: "signTypedData", payload })).rejects.toThrow();
+    expect(payees).not.toHaveBeenCalled();
+  });
+  it("rejects changed types, field order, domain types and extra schemas", async () => {
+    for (const types of [
+      { TransferWithAuthorization: TYPES.TransferWithAuthorization.map(field => field.name === "value" ? { ...field, type: "uint128" } : field) },
+      { TransferWithAuthorization: [...TYPES.TransferWithAuthorization].reverse() },
+      { ...TYPES, Permit: [] },
+      { ...TYPES, EIP712Domain: [{ name: "name", type: "string" }] },
+      { TransferWithAuthorization: TYPES.TransferWithAuthorization.map(field => ({ ...field, injected: true })) },
+    ]) {
+      const payload = paymentTo(CREATOR); payload.types = types;
+      await expect(send({ type: "signTypedData", payload })).rejects.toThrow(/types/);
+    }
+    expect(payees).not.toHaveBeenCalled();
+  });
+});

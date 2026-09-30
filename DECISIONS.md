@@ -1,5 +1,23 @@
 # Keryx — Decision Log
 
+**D-274** - Enforce canonical session-worker signing semantics -
+*Contract destination alone is not transaction authority: a call to USDC may transfer
+or approve an attacker.* Pin the worker's public Arc-testnet policy independently of
+server configuration. Permit only canonical USDC approve to the pinned Gateway and
+Gateway deposit of pinned USDC, zero native value, exact chain/sender and supported
+integer fee fields. Reject extra calldata, unsupported transaction features and
+arbitrary typed-data schemas/domains before any signature. Gateway batching payments
+retain exact TransferWithAuthorization fields and bounded current validity; the
+worker's registry payee check remains additional to per-source browser checks.
+No server journal, nonce admission or retained-epoch accounting is changed.
+The existing budget plus 0.01 native-USDC funding buffer is not a durable lifetime
+gas ledger: repeated allowed calls can burn funded gas. The one-time wallet
+signature still crosses the page and derivation-time XSS can reproduce the key.
+Internal fixture tests and build validation are remediation evidence, not an
+independent audit, funded drill or M3/mainnet acceptance.
+See [security review scope](docs/engineering/mainnet-security-review-scope.md).
+
+
 **D-273** - Rehearse creator withdrawals with retained originals and an isolated funded relay -
 *Funded recovery evidence must exercise the protected admission, original Circle claim,
 saved mint identity and cash-out ledger without enabling production withdrawal creation.*

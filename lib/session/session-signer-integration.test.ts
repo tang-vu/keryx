@@ -11,6 +11,7 @@ import { createWalletClient, custom, erc20Abi, keccak256, parseEther, type Hex }
 import { privateKeyToAccount } from "viem/accounts";
 import { arcTestnet } from "viem/chains";
 import { config } from "../config";
+import { depositToGateway } from "./gateway-deposit";
 import type { SignerRequest, SignerResponse } from "./session-signer-protocol";
 
 const payees = vi.fn<() => Promise<ReadonlySet<string>>>();
@@ -116,6 +117,34 @@ describe("the worker signs what viem actually hands it", () => {
     expect(hash).toBe(TX_HASH);
   });
 
+  it("drives the actual approve/deposit helper through viem preparation and the worker", async () => {
+    const sent: Hex[] = [];
+    const rpc = custom({ request: async ({ method, params }) => {
+      switch (method) {
+        case "eth_chainId": return "0x4cef52";
+        case "eth_getTransactionCount": return "0x0";
+        case "eth_estimateGas": return "0xea60";
+        case "eth_maxPriorityFeePerGas": return "0xf4240";
+        case "eth_getBlockByNumber": return { baseFeePerGas: "0x3b9aca00" };
+        case "eth_sendRawTransaction": sent.push((params as [Hex])[0]); return TX_HASH;
+        default: throw new Error(`unexpected RPC call: ${method}`);
+      }
+    } });
+    const signer = await connectedSigner();
+    const wallet = createWalletClient({ account: signer.account()!, chain: arcTestnet, transport: rpc });
+    const receipts = { waitForTransactionReceipt: vi.fn().mockResolvedValue({ status: "success" }) };
+    expect(await depositToGateway(wallet, receipts as never, 0.05)).toBe(TX_HASH);
+    expect(sent).toHaveLength(2);
+    expect(receipts.waitForTransactionReceipt).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(["transfer", "approve"] as const)("refuses a valid attacker ERC20 %s through actual writeContract", async (functionName) => {
+    const signer = await connectedSigner();
+    const wallet = createWalletClient({ account: signer.account()!, chain: arcTestnet, transport });
+    await expect(wallet.writeContract({ address: config.usdcAddress, abi: erc20Abi, functionName,
+      args: [ATTACKER, BigInt(50000)], account: signer.account()!, chain: arcTestnet, ...FEES })).rejects.toThrow(/calldata/);
+  });
+
   it("still refuses to move the session balance, through the same path", async () => {
     const signer = await connectedSigner();
     const wallet = createWalletClient({ account: signer.account()!, chain: arcTestnet, transport });
@@ -172,8 +201,8 @@ describe("the worker signs what viem actually hands it", () => {
         from: EXPECTED.address,
         to: CREATOR,
         value: BigInt(4000),
-        validAfter: BigInt(0),
-        validBefore: BigInt(2_147_483_647),
+        validAfter: BigInt(Math.floor(Date.now() / 1000) - 600),
+        validBefore: BigInt(Math.floor(Date.now() / 1000) + 691200),
         nonce: ("0x" + "11".repeat(32)) as Hex,
       },
     });
@@ -203,8 +232,8 @@ describe("the worker signs what viem actually hands it", () => {
           from: EXPECTED.address,
           to: ATTACKER,
           value: BigInt(4000),
-          validAfter: BigInt(0),
-          validBefore: BigInt(2_147_483_647),
+          validAfter: BigInt(Math.floor(Date.now() / 1000) - 600),
+          validBefore: BigInt(Math.floor(Date.now() / 1000) + 691200),
           nonce: ("0x" + "11".repeat(32)) as Hex,
         },
       }),
