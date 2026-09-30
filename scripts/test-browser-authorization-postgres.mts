@@ -256,7 +256,9 @@ try {
   assert.equal(asService(journal(221)), "grant_or_cap_refused");
   assert.throws(() => asService(grant("too-small", "owner", signer, 1)), /cannot reset retained/);
   asService(grant("owner-recovered", "owner", signer, 100));
-  assert.equal(sql(`select spent*1000000 from public.session_grants where session_id='owner'`), String(legacySpent + 4));
+  assert.equal(sql(`select spent*1000000=spent_micro and spent*1000000=trunc(spent*1000000)
+    from public.session_grants join public.browser_signer_capacity on lower(sess_addr)=signer where session_id='owner'`), "t",
+    "recovered grant must report exact retained signer consumption");
   const heldIds = [210, 211, 212].filter(id => sql(`select count(*) from public.payment_events where id='x402:${nonce(id)}'`) === "1");
   assert.equal(asService(terminal(heldIds[0], "cancelled_unexposed", null)).includes('"resolved": true'), true);
   assert.equal(JSON.parse(asService(terminal(heldIds[0], "cancelled_unexposed", null))).resolved, false);
@@ -331,9 +333,10 @@ try {
   }).sort(), ["admitted", "admitted", "grant_or_cap_refused"]);
   assert.equal(sql(`select spent_micro from public.browser_signer_capacity where signer='${otherSigner}'`), "2");
   asService(grant("distinct-replacement", "owner", otherSigner, 100));
-  assert.equal(sql("select spent*1000000 from public.session_grants where session_id='owner'"), "2");
+  assert.equal(sql("select spent*1000000=2 and spent*1000000=trunc(spent*1000000) from public.session_grants where session_id='owner'"), "t");
   asService(grant("original-return", "owner", signer, 100));
-  assert.equal(sql("select spent*1000000 from public.session_grants where session_id='owner'"), settleSpent, "returning signer preserves its old holds");
+  assert.equal(sql(`select spent*1000000=${settleSpent} and spent*1000000=trunc(spent*1000000)
+    from public.session_grants where session_id='owner'`), "t", "returning signer preserves its old holds");
   // No bearer or unrecognized input survives the challenge/metadata projection.
   const sanitized = journalTuple(270, { grant_epoch: "original-return" });
   assert.equal(asService(`select public.admit_browser_journal(${json(sanitized.i)},${json({ ...sanitized.r, paymentHeader: "synthetic-not-a-bearer" })},
