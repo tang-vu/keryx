@@ -29,7 +29,12 @@ async function owner(mode: "inspect" | "policy" | "authorization", file: string,
       child.once("close", code => {
         clearTimeout(deadline);
         if (failed || code !== 0) { reject(new Error("Gateway funding owner acknowledgement unknown; inspect original installation")); return; }
-        try { const result = JSON.parse(output); if (result.refused) throw new Error(); resolve(result); }
+        try {
+          const result = fundingRecord(JSON.parse(output), mode === "inspect" ? ["reviewedTargetDigest", "reviewedSnapshotDigest"] : ["installed"]);
+          if (mode === "inspect") { fundingDigest(result.reviewedTargetDigest); fundingDigest(result.reviewedSnapshotDigest); }
+          else if (typeof result.installed !== "boolean") throw new Error();
+          resolve(result);
+        }
         catch { reject(new Error("Gateway funding owner acknowledgement unknown; inspect original installation")); }
       });
       child.stdin.end(request);
