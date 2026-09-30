@@ -69,3 +69,14 @@ explicitly accept documented residuals. The separate M1/M2/M4?M8 gates and final
 owner go/no-go remain required under the [mainnet delivery plan](../mainnet-delivery-plan.md).
 No test counts or historical green statuses are promoted to current acceptance.
 
+
+## Local candidate validation
+
+September 30 remediation validation passed the four focused worker, viem
+integration, payee-policy and browser-signature suites (72 fixture tests). The
+strengthened real deposit-helper signed-transaction decoding assertions also
+passed in the integration suite. `npx tsc --noEmit`, `npm run lint` and the standard
+`npm run build` passed; lint retained five existing warnings outside this change.
+The build used a local lockfile installation, not a changed bundler configuration.
+Dependency audit remediation is separate; these functional checks do not replace
+that gate or external security acceptance.
