@@ -39,7 +39,8 @@ outage, transport/DNS failure, failover, service restoration and sustained sched
 operation need separate evidence. A later withdrawal provisioning incident also
 exposed an unsynchronized VPS clock: a corroborated one-time forward correction
 restored freshness checks, while durable NTP synchronization remains open. See the
-[funded withdrawal evidence](engineering/creator-funded-withdrawal-drill.md).
+[funded withdrawal evidence](engineering/creator-funded-withdrawal-drill.md) and
+[native VPS time diagnostic](engineering/vps-time-diagnostic-2026-09-30.md).
 
 ## Readiness and notification contract
 
