@@ -1,4 +1,4 @@
-# VPS time diagnostic ? September 30, 2026
+# VPS time diagnostic: September 30, 2026
 
 Status: native KVM PHC capability and a no-control chrony measurement verified;
 durable clock repair remains open. This diagnostic installed no package, activated
