@@ -34,9 +34,15 @@ outside tracked repository files.
 
 The initial audience and repeat-use validation are defined in the
 [independent research pilot](./research-pilot-program.md). There is no committed
-independent pilot buyer as of September 30. Current provider list prices differ
-from the observer's historical policy; see the [readiness evidence](./engineering/mainnet-readiness-2026-09-30.md).
-Do not use its historical margin estimate as current operating profit.
+independent pilot buyer as of September 30. Provider list prices differ from the
+August 29 policy used at inspected production baseline `5bf9aea`. The D-269
+[observer/report v2 candidate](./testnet-economics.md) captures price-policy identity
+per call and reports intervals for priced runs; untagged history remains unpriced.
+Local checks passed, while final-candidate hosted acceptance is pending in the
+[readiness evidence](./engineering/mainnet-readiness-2026-09-30.md). Saved historical
+reports remain intact. Neither historical estimates nor the new candidate's partial
+bounds establish reconciled provider expense, whole-period cost or operating profit;
+deployment and invoice coverage are not claimed here.
 
 Let `N` be paid jobs per month, `F` the service fee per job, `B` the creator budget,
 `C` expected creator spend, `V` variable operating cost per job, and `K` fixed plus

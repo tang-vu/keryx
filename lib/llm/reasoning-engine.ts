@@ -46,8 +46,11 @@ export interface LlmUsageRecord {
   engine: string;
   model: string;
   inputTokens: number;
-  cachedInputTokens: number;
+  /** null means the cache split was missing, invalid or inconsistent, never measured zero. */
+  cachedInputTokens: number | null;
   outputTokens: number;
+  /** Captured per request. Absent on history; report time cannot reconstruct it. */
+  costCapture?: import("../economics/provider-cost-policy").ProviderCostCapture;
 }
 
 /** A discoverable source the agent may choose to pay for (preview is free). */

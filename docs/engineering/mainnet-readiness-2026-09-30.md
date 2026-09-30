@@ -61,18 +61,24 @@ lists Flash cache-hit/cache-miss/output USD per million tokens as
 `0.003 / 0.15 / 0.60` off-peak and `0.006 / 0.30 / 1.20` peak.
 Peak windows are Monday–Friday 01:00–04:00 and 06:00–10:00 UTC, excluding Chinese
 public holidays. The old `deepseek-v4-flash` request name now routes to V4.1 Flash.
-The observer's August 29 policy still uses historical rates. Its margin estimate
-must not establish current profit. Next implementation must preserve historical
-policy identity, capture effective pricing/model identity per call and leave
-unresolvable billing windows unknown; do not silently reprice old usage. Actual
-invoice reconciliation remains necessary. [Cache hits are best-effort](https://api-docs.deepseek.com/guides/kv_cache/).
+At the inspected production baseline `5bf9aea`, the observer uses the August 29
+historical rate policy. D-269, implemented in the [PR #46 candidate](https://github.com/tang-vu/keryx/pull/46),
+adds per-call policy/model capture and private observer/report v2. It preserves
+saved v1 artifacts, leaves untagged history and uncertain cache splits unpriced,
+and estimates Flash cost as an off-peak–peak interval without guessing billing
+windows or holidays. Local validation passed 98 focused tests; four Linux-only
+checks await hosted CI, and final-candidate hosted acceptance remains pending.
+This is candidate evidence, not a verified deployment or invoice audit. Bounds
+cover priced runs only; whole-period LLM cost and realized profit remain unknown.
+Invoice reconciliation and the broader economics gate remain open. See the
+[observer contract](../testnet-economics.md). [Cache hits are best-effort](https://api-docs.deepseek.com/guides/kv_cache/).
 
 ## Delivery order
 
 1. Preserve the passing PostgreSQL admission gate against actual migrations in CI.
 2. Design and implement the atomic live-journal bridge and durable recovery phases;
    prove fault handling before exposing signing from the new journal.
-3. Correct versioned cost observation and prepare/configure Telegram operations alerts.
+3. Complete candidate acceptance for versioned cost observation and configure/verify Telegram operations alerts.
 4. Run the [independent research pilot](../research-pilot-program.md), alongside
    security review and operations drills.
 5. Assemble exact-candidate M1–M8 evidence for the owner's launch decision.

@@ -1,8 +1,9 @@
-import type { LlmUsageRecord } from "../llm/reasoning-engine";
 import type { PaymentSettlementStatus, QueryRun, ResearchMode } from "../types";
 import { config } from "../config";
+import { cloneUsage, usageCostBounds, type CostBounds } from "./provider-cost-policy";
 
-export const ECONOMICS_POLICY = {
+/** Historical scenario identity only. Never applied implicitly to newly generated reports. */
+export const HISTORICAL_ECONOMICS_POLICY_V1 = {
   id: "testnet-economics-v1",
   capturedAt: "2026-08-29",
   pricingSource: "https://api-docs.deepseek.com/quick_start/pricing",
@@ -13,13 +14,7 @@ export const ECONOMICS_POLICY = {
   } satisfies Record<ResearchMode, number>,
 } as const;
 
-interface TokenRates {
-  inputUsdPerMillion: number;
-  cachedInputUsdPerMillion: number;
-  outputUsdPerMillion: number;
-}
-
-const TOKEN_RATES: Record<string, TokenRates> = {
+export const HISTORICAL_TOKEN_RATES_V1 = {
   "deepseek-v4-flash": {
     inputUsdPerMillion: 0.14,
     cachedInputUsdPerMillion: 0.0028,
@@ -30,7 +25,15 @@ const TOKEN_RATES: Record<string, TokenRates> = {
     cachedInputUsdPerMillion: 0.003625,
     outputUsdPerMillion: 0.87,
   },
-};
+} as const;
+
+export const ECONOMICS_POLICY = {
+  ...HISTORICAL_ECONOMICS_POLICY_V1,
+  id: "testnet-economics-v2",
+  capturedAt: "2026-09-30",
+  pricingSource: "https://api-docs.deepseek.com/quick_start/pricing/",
+  costBasis: "immutable-per-call-policy-interval",
+} as const;
 
 export interface EconomicsPaymentRow {
   queryId: string;
@@ -88,7 +91,7 @@ export function economicsRunSample(run: QueryRun): EconomicsRunSample | null {
     id: run.id,
     researchMode: run.researchMode,
     fundingOwner: run.fundingOwner,
-    llmUsage: run.llmUsage,
+    llmUsage: run.llmUsage.map(cloneUsage),
     usageCoverage: completeUsage(run) ? "complete" : "unknown",
     usageCoverageVersion: 2,
   };
@@ -104,10 +107,17 @@ export interface TestnetEconomicsSnapshot {
   providerCalls: number;
   inputTokens: number;
   cachedInputTokens: number;
+  unknownCacheCalls: number;
   outputTokens: number;
-  estimatedLlmCostUsd: number;
-  shadowServiceFeesUsdc: number;
-  shadowGrossMarginUsd: number;
+  /** Partial totals for pricedRuns only; null when there are no eligible runs. */
+  estimatedLlmCostUsdBounds: CostBounds | null;
+  shadowServiceFeesAllSampledUsdc: number;
+  shadowServiceFeesPricedRunsUsdc: number;
+  shadowGrossMarginUsdBounds: CostBounds | null;
+  pricingPolicyIds: string[];
+  costAndMarginScope: "priced-runs-only";
+  /** The store projection omits unsampled history and is not complete billing accounting. */
+  totalLlmCostUpperBoundUsd: null;
   settledInboundRevenueUsdc: number;
   settledA2aV2ServiceFeesUsdc: number;
   prepaidA2aCreatorCapsUsdc: number;
@@ -125,17 +135,10 @@ function round(value: number): number {
   return Math.round(value * 1_000_000) / 1_000_000;
 }
 
-function usageCost(usage: LlmUsageRecord): number | null {
-  if (!usage.engine.startsWith("llm:deepseek:")) return null;
-  const rates = TOKEN_RATES[usage.model];
-  if (!rates) return null;
-  const cached = Math.min(usage.cachedInputTokens, usage.inputTokens);
-  const uncached = Math.max(0, usage.inputTokens - cached);
-  return (
-    uncached * rates.inputUsdPerMillion +
-    cached * rates.cachedInputUsdPerMillion +
-    usage.outputTokens * rates.outputUsdPerMillion
-  ) / 1_000_000;
+/** Display rounding must not narrow an estimate interval, including tiny token costs. */
+function roundBounds(bounds: CostBounds): CostBounds {
+  return { lower: Math.floor(bounds.lower * 1_000_000) / 1_000_000,
+    upper: Math.ceil(bounds.upper * 1_000_000) / 1_000_000 };
 }
 
 function fundingOwner(run: Partial<QueryRun>): QueryRun["fundingOwner"] | "unknown" {
@@ -157,39 +160,50 @@ export function calculateTestnetEconomics(
   const sampled = runs.filter((run) => Array.isArray(run.llmUsage));
   const ownerByQuery = new Map(runs.map((run) => [String(run.id), fundingOwner(run)]));
   let pricedRuns = 0;
-  let estimatedLlmCostUsd = 0;
-  let shadowServiceFeesUsdc = 0;
-  let shadowGrossMarginUsd = 0;
+  const estimatedLlmCostUsdBounds = { lower: 0, upper: 0 };
+  let shadowServiceFeesAllSampledUsdc = 0;
+  let shadowServiceFeesPricedRunsUsdc = 0;
+  const shadowGrossMarginUsdBounds = { lower: 0, upper: 0 };
   let providerCalls = 0;
   let inputTokens = 0;
   let cachedInputTokens = 0;
+  let unknownCacheCalls = 0;
   let outputTokens = 0;
   const unpricedModels = new Set<string>();
+  const pricingPolicyIds = new Set<string>();
 
   for (const run of sampled) {
     const usage = run.llmUsage ?? [];
-    let runCost = 0;
+    const runCost = { lower: 0, upper: 0 };
+    const runPolicies = new Set<string>();
     let complete = (run.usageCoverageVersion === 2 && run.usageCoverage === "complete") ||
       (run.usageCoverage === undefined && completeUsage(run));
     for (const call of usage) {
       providerCalls++;
       inputTokens += call.inputTokens;
-      cachedInputTokens += call.cachedInputTokens;
+      if (call.cachedInputTokens === null || call.cachedInputTokens === undefined) unknownCacheCalls++;
+      else cachedInputTokens += call.cachedInputTokens;
       outputTokens += call.outputTokens;
-      const cost = usageCost(call);
+      const cost = usageCostBounds(call);
       if (cost == null) {
         complete = false;
         unpricedModels.add(call.model);
       } else {
-        runCost += cost;
+        runCost.lower += cost.lower;
+        runCost.upper += cost.upper;
+        runPolicies.add(call.costCapture!.pricing!.id);
       }
     }
     const fee = ECONOMICS_POLICY.serviceFeeUsdc[run.researchMode ?? "deep"];
-    shadowServiceFeesUsdc += fee;
+    shadowServiceFeesAllSampledUsdc += fee;
     if (complete) {
       pricedRuns++;
-      estimatedLlmCostUsd += runCost;
-      shadowGrossMarginUsd += fee - runCost - ECONOMICS_POLICY.infraAllowanceUsdPerRun;
+      shadowServiceFeesPricedRunsUsdc += fee;
+      estimatedLlmCostUsdBounds.lower += runCost.lower;
+      estimatedLlmCostUsdBounds.upper += runCost.upper;
+      shadowGrossMarginUsdBounds.lower += fee - runCost.upper - ECONOMICS_POLICY.infraAllowanceUsdPerRun;
+      shadowGrossMarginUsdBounds.upper += fee - runCost.lower - ECONOMICS_POLICY.infraAllowanceUsdPerRun;
+      for (const id of runPolicies) pricingPolicyIds.add(id);
     }
   }
 
@@ -258,10 +272,15 @@ export function calculateTestnetEconomics(
     providerCalls,
     inputTokens,
     cachedInputTokens,
+    unknownCacheCalls,
     outputTokens,
-    estimatedLlmCostUsd: round(estimatedLlmCostUsd),
-    shadowServiceFeesUsdc: round(shadowServiceFeesUsdc),
-    shadowGrossMarginUsd: round(shadowGrossMarginUsd),
+    estimatedLlmCostUsdBounds: pricedRuns ? roundBounds(estimatedLlmCostUsdBounds) : null,
+    shadowServiceFeesAllSampledUsdc: round(shadowServiceFeesAllSampledUsdc),
+    shadowServiceFeesPricedRunsUsdc: round(shadowServiceFeesPricedRunsUsdc),
+    shadowGrossMarginUsdBounds: pricedRuns ? roundBounds(shadowGrossMarginUsdBounds) : null,
+    pricingPolicyIds: [...pricingPolicyIds].sort(),
+    costAndMarginScope: "priced-runs-only",
+    totalLlmCostUpperBoundUsd: null,
     settledInboundRevenueUsdc: round(settledInboundRevenueUsdc),
     settledA2aV2ServiceFeesUsdc: round(settledA2aV2ServiceFeesUsdc),
     prepaidA2aCreatorCapsUsdc: round(prepaidA2aCreatorCapsUsdc),
@@ -272,6 +291,6 @@ export function calculateTestnetEconomics(
     unknownFundingCreatorSpendUsdc: round(unknownFundingCreatorSpendUsdc),
     pendingCreatorSpendUsdc: round(pendingCreatorSpendUsdc),
     unpricedModels: [...unpricedModels].sort(),
-    note: "Testnet telemetry and hypothetical pricing only. Shadow fees are not charged and are not revenue.",
+    note: "Partial testnet telemetry and hypothetical price intervals only, not reconciled invoices or profit. Billing windows and holidays are not inferred. Shadow fees are not charged and are not revenue.",
   };
 }

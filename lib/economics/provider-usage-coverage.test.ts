@@ -7,7 +7,7 @@ import type { QueryRun } from "../types";
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 it.each(["measured", "missing", "failed"])("accounts for the optional evidence review: %s", async (review) => {
-  const counters = { prompt_tokens: 100, completion_tokens: 10 };
+  const counters = { prompt_tokens: 100, completion_tokens: 10, prompt_tokens_details: { cached_tokens: 0 } };
   const http = vi.fn<typeof fetch>()
     .mockResolvedValueOnce(Response.json({ choices: [{ message: { content: JSON.stringify({
       answer: "The synthetic source describes durable storage [S1].", citedMarkers: ["S1"],
@@ -63,7 +63,7 @@ it.each(["rejected", "truncated"])("keeps %s provider work unpriced after real l
   expect(calculateTestnetEconomics([{
     id: "synthetic-fallback-case", engine: effectiveEngineName(engine),
     reasoningAttempts: attempts, llmUsage: usage, llmCalls: reasoningCalls(engine),
-  }], [])).toMatchObject({ pricedRuns: 0, unpricedRuns: 1, shadowGrossMarginUsd: 0 });
+  }], [])).toMatchObject({ pricedRuns: 0, unpricedRuns: 1, shadowGrossMarginUsdBounds: null });
 });
 
 it.each([
@@ -74,8 +74,9 @@ it.each([
   { name: "string input", usage: { prompt_tokens: "100", completion_tokens: 10 }, priced: 0 },
   { name: "fractional output", usage: { prompt_tokens: 100, completion_tokens: 0.5 }, priced: 0 },
   { name: "excess cached input", usage: { prompt_tokens: 100, completion_tokens: 10, prompt_tokens_details: { cached_tokens: 101 } }, priced: 0 },
-  { name: "complete counters", usage: { prompt_tokens: 100, completion_tokens: 10 }, priced: 1 },
-  { name: "explicit zero counters", usage: { prompt_tokens: 0, completion_tokens: 0 }, priced: 1 },
+  { name: "missing cache split", usage: { prompt_tokens: 100, completion_tokens: 10 }, priced: 0 },
+  { name: "complete counters", usage: { prompt_tokens: 100, completion_tokens: 10, prompt_tokens_details: { cached_tokens: 0 } }, priced: 1 },
+  { name: "explicit zero counters", usage: { prompt_tokens: 0, completion_tokens: 0, prompt_tokens_details: { cached_tokens: 0 } }, priced: 1 },
 ])("keeps $name honest through the actual provider and resilient engine", async ({ usage, priced }) => {
   const http = vi.fn<typeof fetch>().mockResolvedValue(Response.json({
     choices: [{ message: { content: '{"claims":["Synthetic research target"]}' } }], usage,
@@ -93,6 +94,6 @@ it.each([
     reasoningAttempts: attempts, llmUsage: reasoningUsage(engine), llmCalls: reasoningCalls(engine), researchMode: "quick",
   }], []);
   expect(snapshot).toMatchObject({ sampledRuns: 1, pricedRuns: priced, unpricedRuns: 1 - priced });
-  if (!priced) expect(snapshot.shadowGrossMarginUsd).toBe(0);
+  if (!priced) expect(snapshot.shadowGrossMarginUsdBounds).toBeNull();
   expect(http).toHaveBeenCalledTimes(1);
 });

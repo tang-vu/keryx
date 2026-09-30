@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { QueryRun } from "../types";
 import { calculateTestnetEconomics, economicsRunSample } from "./testnet-economics";
+import { capturePricePolicy, FLASH_POLICY } from "./provider-cost-policy";
 
 function run(
   id: string,
@@ -24,6 +25,9 @@ function run(
         inputTokens: 1_000_000,
         cachedInputTokens: 250_000,
         outputTokens: 500_000,
+        costCapture: { provider: model.startsWith("deepseek") ? "deepseek" : "mimo",
+          requestStartedAt: "2026-09-30T01:00:00.000Z", responseReceivedAt: "2026-09-30T01:00:01.000Z",
+          pricing: capturePricePolicy(model.startsWith("deepseek") ? "deepseek" : "mimo", model) },
       },
     ],
   };
@@ -65,10 +69,14 @@ describe("testnet economics", () => {
     expect(snapshot.treasuryCreatorSubsidyUsdc).toBe(0.02);
     expect(snapshot.pendingCreatorSpendUsdc).toBe(0.03);
     expect(snapshot.pricedRuns).toBe(2);
-    // Per run: .75m * .14 + .25m * .0028 + .5m * .28 = $0.2457.
-    expect(snapshot.estimatedLlmCostUsd).toBe(0.4914);
-    expect(snapshot.shadowServiceFeesUsdc).toBe(0.1);
-    expect(snapshot.shadowGrossMarginUsd).toBe(-0.4014);
+    // Per run lower: .75m*.15 + .25m*.003 + .5m*.60 = .41325; peak is twice that.
+    expect(snapshot.estimatedLlmCostUsdBounds).toEqual({ lower: expect.closeTo(0.8265, 5), upper: expect.closeTo(1.653, 5) });
+    expect(snapshot.shadowServiceFeesAllSampledUsdc).toBe(0.1);
+    expect(snapshot.shadowServiceFeesPricedRunsUsdc).toBe(0.1);
+    expect(snapshot.shadowGrossMarginUsdBounds).toEqual({ lower: expect.closeTo(-1.563, 5), upper: expect.closeTo(-0.7365, 5) });
+    expect(snapshot.pricingPolicyIds).toEqual([FLASH_POLICY.id]);
+    expect(snapshot.costAndMarginScope).toBe("priced-runs-only");
+    expect(snapshot.totalLlmCostUpperBoundUsd).toBeNull();
   });
 
   it("keeps historical and unknown-provider costs visibly incomplete", () => {
@@ -81,7 +89,7 @@ describe("testnet economics", () => {
     expect(snapshot.sampledRuns).toBe(1);
     expect(snapshot.pricedRuns).toBe(0);
     expect(snapshot.unpricedRuns).toBe(1);
-    expect(snapshot.estimatedLlmCostUsd).toBe(0);
+    expect(snapshot.estimatedLlmCostUsdBounds).toBeNull();
     expect(snapshot.unpricedModels).toEqual(["mimo-v2.5"]);
     expect(snapshot.unknownFundingCreatorSpendUsdc).toBe(1);
   });
@@ -107,7 +115,7 @@ describe("testnet economics", () => {
       id: "heuristic", engine: "heuristic", reasoningAttempts: [], llmUsage: [], researchMode: "quick",
     }], []);
     expect(snapshot).toMatchObject({ sampledRuns: 1, pricedRuns: 1, providerCalls: 0 });
-    expect(snapshot.shadowGrossMarginUsd).toBe(0.015);
+    expect(snapshot.shadowGrossMarginUsdBounds).toEqual({ lower: 0.015, upper: 0.015 });
   });
 
   it("does not price a failed provider followed by heuristic fallback as free work", () => {
@@ -123,7 +131,7 @@ describe("testnet economics", () => {
     expect(sample.usageCoverage).toBe("unknown");
     expect(sample).not.toHaveProperty("reasoningAttempts");
     expect(calculateTestnetEconomics([JSON.parse(JSON.stringify(sample))], [])).toMatchObject({
-      pricedRuns: 0, unpricedRuns: 1, shadowGrossMarginUsd: 0,
+      pricedRuns: 0, unpricedRuns: 1, shadowGrossMarginUsdBounds: null,
     });
   });
 
@@ -138,7 +146,7 @@ describe("testnet economics", () => {
     const legacy = run("legacy", "treasury");
     delete legacy.reasoningAttempts;
     expect(calculateTestnetEconomics([legacy, { id: "empty", llmUsage: [] }], [])).toMatchObject({
-      sampledRuns: 2, pricedRuns: 0, unpricedRuns: 2, shadowGrossMarginUsd: 0,
+      sampledRuns: 2, pricedRuns: 0, unpricedRuns: 2, shadowGrossMarginUsdBounds: null,
     });
   });
 
@@ -152,7 +160,7 @@ describe("testnet economics", () => {
       startedAt: 1, durationMs: 1, outcome: "served",
     });
     expect(calculateTestnetEconomics([economicsRunSample(skipped as QueryRun)!], [])).toMatchObject({
-      pricedRuns: 1, unpricedRuns: 0, estimatedLlmCostUsd: 0,
+      pricedRuns: 1, unpricedRuns: 0, estimatedLlmCostUsdBounds: { lower: 0, upper: 0 },
     });
   });
 
