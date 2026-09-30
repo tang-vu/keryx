@@ -35,6 +35,9 @@ export interface FundingNamespaceSnapshot {
   readonly finalityPolicyDigest: string;
   readonly initialNonce: "0";
   readonly nextNonce: string;
+  /** Monotonic next original allowed to acquire fresh crypto/send claims.
+   * Only protected terminal insertion advances it; absent legacy fields refuse. */
+  readonly nextCryptoNonce: string;
   readonly limits: Readonly<FundingExposure>;
   readonly used: Readonly<FundingExposure>;
   /** Same underlying USDC balance: native wei + ERC20 movement micros * 10^12 + sender gas.
