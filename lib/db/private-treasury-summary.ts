@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseAuthority } from "./supabase-authority";
 import { z } from "zod";
 import { addressSchema } from "../buyer/protocol";
 
@@ -49,7 +49,7 @@ export async function getSqlitePrivateTreasurySummary(db: DatabaseSync, signer: 
   return summary(row);
 }
 
-export async function getSupabasePrivateTreasurySummary(db: SupabaseClient, signer: string) {
+export async function getSupabasePrivateTreasurySummary(db: SupabaseAuthority, signer: string) {
   const { data, error } = await db.rpc("private_treasury_summary", { p_signer: addressSchema.parse(signer).toLowerCase() });
   if (error || !Array.isArray(data) || data.length > 1) throw new Error("Private treasury summary unavailable");
   return summary(data[0]);

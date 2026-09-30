@@ -1,4 +1,9 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../db/runtime-storage-config", async importOriginal => ({
+  ...await importOriginal<typeof import("../db/runtime-storage-config")>(),
+  readRuntimeStorageDeployment: () => ({ identity: { authorityMode: "testnet-offline" } }),
+}));
 
 import { decryptContent } from "../ipfs/content-crypto";
 import type { SourceItem } from "../types";

@@ -1,0 +1,105 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { canonicalJson } from "../canonical-json";
+import { STORAGE_TESTNET_PROFILE_DIGEST } from "./storage-identity";
+import { inspectStorageDeploymentManifest, RuntimeStorageRefused, STORAGE_MANIFEST_MAX_BYTES } from "./runtime-storage-config";
+
+const folders: string[] = [];
+afterEach(() => { vi.unstubAllEnvs(); for (const folder of folders.splice(0)) rmSync(folder, { recursive: true, force: true }); });
+const identity = { format: "keryx-storage-identity-v1", deploymentId: "11111111-1111-4111-8111-111111111111",
+  storageId: "22222222-2222-4222-8222-222222222222", enrollmentId: "33333333-3333-4333-8333-333333333333",
+  network: "eip155:5042002", authorityMode: "testnet-real", profileDigest: STORAGE_TESTNET_PROFILE_DIGEST,
+  enrolledAt: "2026-10-01T00:00:00.000Z", provenanceDigest: "aa".repeat(32) };
+function fixture(backend?: unknown, selectedIdentity = identity) {
+  const folder = mkdtempSync(join(tmpdir(), "keryx-storage-manifest-")); folders.push(folder);
+  const store = join(folder, "synthetic.sqlite"), path = join(folder, "manifest.json");
+  writeFileSync(store, "synthetic-existing-file");
+  const document = { format: "keryx-storage-deployment-v1", identity: selectedIdentity, backend: backend ?? { kind: "sqlite", databasePath: store } };
+  writeFileSync(path, canonicalJson(document) + "\n");
+  return { folder, path, store, document, env: { KERYX_STORAGE_MANIFEST: path } };
+}
+function refused(env: Record<string, string | undefined>) {
+  try { inspectStorageDeploymentManifest(env); expect.fail("configuration accepted"); }
+  catch (error) { expect(error).toBeInstanceOf(RuntimeStorageRefused); expect((error as Error).message).toBe("Storage deployment configuration unavailable"); }
+}
+describe("explicit server storage deployment manifest", () => {
+  it("rejects malformed UTF-8 and BOM instead of silently replacing wire bytes", () => {
+    const f = fixture(); const wire = Buffer.from(canonicalJson(f.document));
+    writeFileSync(f.path, Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), wire])); refused(f.env);
+    writeFileSync(f.path, Buffer.concat([wire.subarray(0, 10), Buffer.from([0xff]), wire.subarray(10)])); refused(f.env);
+  });
+  it("pins runtime identity/backend and refuses valid live manifest replacement", async () => {
+    const f = fixture(); vi.resetModules(); vi.stubEnv("KERYX_STORAGE_MANIFEST", f.path); vi.stubEnv("KERYX_FORCE_OFFLINE", "0"); vi.stubEnv("KERYX_SQLITE_PATH", f.store);
+    const { readRuntimeStorageDeployment } = await import("./runtime-storage-config");
+    const original = readRuntimeStorageDeployment(); expect(original.identity.authorityMode).toBe("testnet-real");
+    writeFileSync(f.path, canonicalJson({ ...f.document, identity: { ...identity, authorityMode: "testnet-offline" } }));
+    expect(() => readRuntimeStorageDeployment()).toThrow("Storage deployment configuration unavailable");
+    // Pure operator inspection can inspect another explicit manifest without changing runtime authority.
+    expect(inspectStorageDeploymentManifest(f.env).identity.authorityMode).toBe("testnet-offline");
+    writeFileSync(f.path, canonicalJson(f.document)); expect(readRuntimeStorageDeployment()).toBe(original);
+    const other = fixture(); vi.stubEnv("KERYX_STORAGE_MANIFEST", other.path); vi.stubEnv("KERYX_SQLITE_PATH", other.store);
+    expect(() => readRuntimeStorageDeployment()).toThrow("Storage deployment configuration unavailable");
+  });
+  it("retains full exact identity and explicit SQLite target, independent of unrelated credentials/keys", () => {
+    const f = fixture(), before = readFileSync(f.store);
+    const result = inspectStorageDeploymentManifest({ ...f.env, NEXT_PUBLIC_SUPABASE_URL: "https://unrelated.invalid", SUPABASE_SERVICE_ROLE_KEY: "synthetic",
+      FUNDER_PRIVATE_KEY: "synthetic-present", ANTHROPIC_API_KEY: "synthetic-present" });
+    expect(result).toEqual(f.document); expect(Object.isFrozen(result.identity)).toBe(true); expect(Object.isFrozen(result.backend)).toBe(true);
+    expect(readFileSync(f.store)).toEqual(before);
+  });
+  it("allows real read-only configuration without treasury keys", () => { expect(inspectStorageDeploymentManifest(fixture().env).identity.authorityMode).toBe("testnet-real"); });
+  it("uses offline identity independently of absent or present signing/LLM keys", () => {
+    const f = fixture(undefined, { ...identity, authorityMode: "testnet-offline" });
+    expect(inspectStorageDeploymentManifest({ ...f.env, FUNDER_PRIVATE_KEY: "synthetic" }).identity.authorityMode).toBe("testnet-offline");
+  });
+  it("refuses missing/relative/unavailable manifest without target creation", () => {
+    refused({}); refused({ KERYX_STORAGE_MANIFEST: "manifest.json" });
+    const f = fixture(); refused({ KERYX_STORAGE_MANIFEST: join(f.folder, "missing.json") });
+  });
+  it("rejects symlink manifest and symlink ancestors", () => {
+    const f = fixture(); const alias = join(f.folder, "alias");
+    symlinkSync(f.folder, alias, process.platform === "win32" ? "junction" : "dir"); refused({ KERYX_STORAGE_MANIFEST: join(alias, "manifest.json") });
+  });
+  it("bounds bytes before reading oversized documents", () => { const f = fixture(); writeFileSync(f.path, "x".repeat(STORAGE_MANIFEST_MAX_BYTES + 1)); refused(f.env); });
+  it.each(["{bad", "{}", "null", "[]"])("rejects malformed or incomplete document %s", text => { const f = fixture(); writeFileSync(f.path, text); refused(f.env); });
+  it("rejects ambiguous duplicate keys and noncanonical wire JSON", () => {
+    const f = fixture(); writeFileSync(f.path, canonicalJson(f.document).replace('"format":"keryx-storage-deployment-v1"', '"format":"foreign","format":"keryx-storage-deployment-v1"')); refused(f.env);
+    writeFileSync(f.path, JSON.stringify(f.document, null, 2)); refused(f.env);
+  });
+  it("rejects unknown identity/document fields, foreign profile/network and secret-bearing fields", () => {
+    const f = fixture();
+    for (const document of [{ ...f.document, secret: "private-credential" },
+      { ...f.document, identity: { ...identity, network: "eip155:5042" } },
+      { ...f.document, identity: { ...identity, profileDigest: "00".repeat(32) } }]) { writeFileSync(f.path, canonicalJson(document)); refused(f.env); }
+  });
+  it("keeps keyless lost-source expected artifacts separate from runtime acceptance", async () => {
+    const f = fixture(); rmSync(f.store);
+    expect(inspectStorageDeploymentManifest(f.env).identity.authorityMode).toBe("testnet-real");
+    vi.resetModules(); vi.stubEnv("KERYX_STORAGE_MANIFEST", f.path); vi.stubEnv("KERYX_FORCE_OFFLINE", "0"); vi.stubEnv("KERYX_SQLITE_PATH", f.store);
+    const runtime = await import("./runtime-storage-config");
+    expect(() => runtime.readRuntimeStorageDeployment()).toThrow(runtime.RuntimeStorageRefused);
+  });
+  it("runtime refuses real forced-offline and missing/conflicting selected credentials without fallback", async () => {
+    for (const overrides of [{ KERYX_FORCE_OFFLINE: "1" }, { KERYX_FORCE_OFFLINE: "invalid" }, { KERYX_SQLITE_PATH: "other.sqlite" }]) {
+      const f = fixture(); vi.resetModules(); vi.stubEnv("KERYX_STORAGE_MANIFEST", f.path); vi.stubEnv("KERYX_FORCE_OFFLINE", "0"); vi.stubEnv("KERYX_SQLITE_PATH", f.store);
+      for (const [key, value] of Object.entries(overrides)) vi.stubEnv(key, value!);
+      const runtime = await import("./runtime-storage-config"); expect(() => runtime.readRuntimeStorageDeployment()).toThrow(runtime.RuntimeStorageRefused);
+    }
+    const f = fixture({ kind: "supabase", url: "https://selected.supabase.co" });
+    // Expected artifacts carry no required runtime credential.
+    expect(inspectStorageDeploymentManifest(f.env).backend.kind).toBe("supabase");
+    for (const [url, key] of [["", ""], ["https://selected.supabase.co", ""], ["https://other.supabase.co", "synthetic"]]) {
+      vi.resetModules(); vi.stubEnv("KERYX_STORAGE_MANIFEST", f.path); vi.stubEnv("KERYX_FORCE_OFFLINE", "0");
+      vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", url); vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", key);
+      const runtime = await import("./runtime-storage-config"); expect(() => runtime.readRuntimeStorageDeployment()).toThrow(runtime.RuntimeStorageRefused);
+    }
+  });
+  it("rejects credential-bearing URL fields without printing their value", () => {
+    const url = new URL("https://selected.supabase.co"); url.username = "fixture"; url.password = "fixture";
+    const f = fixture({ kind: "supabase", url: url.href }); refused(f.env);
+  });
+  it.each(["http://selected.supabase.co", "https://selected.supabase.co/", "https://selected.supabase.co?token=private"])
+    ("refuses noncanonical or credential-bearing backend URL", url => { const f = fixture({ kind: "supabase", url }); refused({ ...f.env, NEXT_PUBLIC_SUPABASE_URL: url, SUPABASE_SERVICE_ROLE_KEY: "synthetic" }); });
+});

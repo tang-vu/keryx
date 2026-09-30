@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseAuthority } from "./supabase-authority";
 import { z } from "zod";
 import { BUYER_NETWORK, BUYER_USDC, addressSchema } from "../buyer/protocol";
 import { getSqlitePrivateExecution, getSupabasePrivateExecution } from "./private-research-executions";
@@ -73,14 +73,14 @@ export async function admitSqlitePrivateCreatorSubmission(db: DatabaseSync, id: 
   return true;
 }
 
-export async function listSupabasePrivateCreatorSubmissions(db: SupabaseClient, id: string, payer: string) {
+export async function listSupabasePrivateCreatorSubmissions(db: SupabaseAuthority, id: string, payer: string) {
   const claim = await getSupabasePrivateExecution(db, id, payer);
   if (!claim) return [];
-  const { data, error } = await db.from("private_creator_submissions").select("leg_id,worker_id,authorization_id,amount_micros,data,started_at").eq("job_id", id).order("started_at").order("leg_id");
+  const { data, error } = await db.rpc("list_supabase_private_creator_submissions", { p_job_id: id });
   if (error || !Array.isArray(data)) throw new Error("Private creator storage unavailable");
   return data.map(row => readRow(id, claim.workerId, row));
 }
-export async function admitSupabasePrivateCreatorSubmission(db: SupabaseClient, id: string, payer: string, workerId: string, value: PrivateCreatorSubmission) {
+export async function admitSupabasePrivateCreatorSubmission(db: SupabaseAuthority, id: string, payer: string, workerId: string, value: PrivateCreatorSubmission) {
   const data = checked(value);
   const claim = await getSupabasePrivateExecution(db, id, payer);
   if (!claim || claim.workerId !== workerId) throw new Error("Private execution authority unavailable");

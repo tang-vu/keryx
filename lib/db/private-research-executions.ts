@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseAuthority } from "./supabase-authority";
 import { z } from "zod";
 import { getSqlitePrivatePayment, getSupabasePrivatePayment } from "./private-research-payments";
 
@@ -43,15 +43,15 @@ export async function claimSqlitePrivateExecution(db: DatabaseSync, id: string, 
   return claim;
 }
 
-export async function getSupabasePrivateExecution(db: SupabaseClient, id: string, payer: string) {
+export async function getSupabasePrivateExecution(db: SupabaseAuthority, id: string, payer: string) {
   const payment = await getSupabasePrivatePayment(db, id, payer);
   if (payment?.status !== "settled") return null;
-  const { data, error } = await db.from("private_research_executions").select("worker_id,started_at").eq("id", id).maybeSingle();
+  const { data, error } = await db.rpc("get_supabase_private_execution", { p_id: id });
   if (error) throw new Error("Private execution storage unavailable");
   return data ? readClaim(id, data) : null;
 }
 
-export async function claimSupabasePrivateExecution(db: SupabaseClient, id: string, payer: string): Promise<PrivateExecutionClaim | null> {
+export async function claimSupabasePrivateExecution(db: SupabaseAuthority, id: string, payer: string): Promise<PrivateExecutionClaim | null> {
   const payment = await getSupabasePrivatePayment(db, id, payer);
   if (payment?.status !== "settled") throw new Error("Settled private payment unavailable");
   const workerId = randomUUID();

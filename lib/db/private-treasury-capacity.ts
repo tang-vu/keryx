@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseAuthority } from "./supabase-authority";
 import { z } from "zod";
 import { addressSchema } from "../buyer/protocol";
 import { getSqlitePrivateResearchIntent, getSupabasePrivateResearchIntent } from "./private-research-intents";
@@ -20,10 +20,10 @@ export async function getSqlitePrivateTreasury(db: DatabaseSync, id: string, pay
   return reservation(db.prepare("SELECT signer,amount_micros FROM private_treasury_reservations WHERE job_id=?").get(id),
     Math.round(intent.submission.request.budget * 1e6));
 }
-export async function getSupabasePrivateTreasury(db: SupabaseClient, id: string, payer: string) {
+export async function getSupabasePrivateTreasury(db: SupabaseAuthority, id: string, payer: string) {
   const intent = await getSupabasePrivateResearchIntent(db, id, payer);
   if (!intent) return null;
-  const { data, error } = await db.from("private_treasury_reservations").select("signer,amount_micros").eq("job_id", id).maybeSingle();
+  const { data, error } = await db.rpc("get_supabase_private_treasury", { p_job_id: id });
   if (error) throw new Error("Private treasury reservation unavailable");
   return reservation(data ?? undefined, Math.round(intent.submission.request.budget * 1e6));
 }
@@ -69,7 +69,7 @@ export async function reserveSqlitePrivateTreasury(db: DatabaseSync, id: string,
   return matched(db.prepare("SELECT signer,amount_micros FROM private_treasury_reservations WHERE job_id=?").get(id), selected.signer, amount);
 }
 
-export async function reserveSupabasePrivateTreasury(db: SupabaseClient, id: string, payer: string, value: PrivateTreasuryPolicy) {
+export async function reserveSupabasePrivateTreasury(db: SupabaseAuthority, id: string, payer: string, value: PrivateTreasuryPolicy) {
   const selected = policy(value);
   const intent = await getSupabasePrivateResearchIntent(db, id, payer);
   if (!intent) throw new Error("Private research intent unavailable");
@@ -77,7 +77,7 @@ export async function reserveSupabasePrivateTreasury(db: SupabaseClient, id: str
     p_signer: selected.signer, p_capacity: selected.capacityMicros });
   if (error || typeof data !== "boolean") throw new Error("Private treasury reservation unavailable");
   if (!data) return false;
-  const result = await db.from("private_treasury_reservations").select("signer,amount_micros").eq("job_id", id).maybeSingle();
+  const result = await db.rpc("reserve_supabase_private_treasury", { p_job_id: id });
   if (result.error || !result.data) throw new Error("Private treasury reservation unavailable");
   return matched(result.data, selected.signer, Math.round(intent.submission.request.budget * 1e6));
 }

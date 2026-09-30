@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseAuthority } from "./supabase-authority";
 import { z } from "zod";
 import { matchWithdrawalAttestation, type WithdrawalAttestation } from "../gateway/withdrawal-attestation";
 import { getSqliteWithdrawalRequest, getSqliteWithdrawalTransferClaim, getSupabaseWithdrawalRequest, getSupabaseWithdrawalTransferClaim } from "./creator-withdrawal-requests";
@@ -59,16 +59,16 @@ export async function saveSqliteWithdrawalAttestation(db: DatabaseSync, id: stri
     ON CONFLICT(id) DO NOTHING`).run(matched.transferId, JSON.stringify(matched), id, claimId, record.owner);
   return original(await getSqliteWithdrawalAttestation(db, id, owner), matched);
 }
-export async function getSupabaseWithdrawalAttestation(db: SupabaseClient, id: string, owner: string) {
+export async function getSupabaseWithdrawalAttestation(db: SupabaseAuthority, id: string, owner: string) {
   const record = await getSupabaseWithdrawalRequest(db, id, owner);
   if (!record) return null;
   const claim = await getSupabaseWithdrawalTransferClaim(db, id, owner);
   if (!claim) return null;
-  const { data, error } = await db.from("creator_withdrawal_attestations").select("claim_id,transfer_id,data,saved_at").eq("id", id).maybeSingle();
+  const { data, error } = await db.rpc("get_supabase_withdrawal_attestation", { p_id: id });
   if (error) throw new Error("Withdrawal attestation storage unavailable");
   return data ? read(data, record, claim.claimId) : null;
 }
-export async function saveSupabaseWithdrawalAttestation(db: SupabaseClient, id: string, owner: string, claimId: string, value: unknown) {
+export async function saveSupabaseWithdrawalAttestation(db: SupabaseAuthority, id: string, owner: string, claimId: string, value: unknown) {
   let snapshot: unknown;
   try { snapshot = structuredClone(value); } catch { throw new Error("Withdrawal attestation unavailable"); }
   const record = await getSupabaseWithdrawalRequest(db, id, owner), claim = await getSupabaseWithdrawalTransferClaim(db, id, owner);
