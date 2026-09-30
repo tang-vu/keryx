@@ -144,6 +144,40 @@ describe("corroborated managed-testnet funding receipt evidence",()=>{
     const pending=compose((()=>{entered();return new Promise(()=>{});}) as typeof fetch,()=>now)(f.request,()=>{});
     await reached;await vi.advanceTimersByTimeAsync(policy.totalDeadlineMs+1);expect(await pending).toBeNull();
   });
+  it("refuses elapsed total deadline at final issuance guard while timers cannot run",async()=>{
+    const f=await fixture(),p=provider(f);let clocks=0,finalGuard=false,timerDelivered=false;
+    const timer=setTimeout(()=>{timerDelivered=true;},1000);
+    try {
+      const token=await compose(p.fetchRead,()=>{clocks++;return now;},{totalDeadlineMs:1000,requestDeadlineMs:1000})(f.request,()=>{
+        // Sixth freshness read occurs inside final evidence construction, after
+        // both providers and the complete stability pass have been sampled.
+        if(clocks===6){finalGuard=true;Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,1100);expect(timerDelivered).toBe(false);}
+      });
+      expect(finalGuard).toBe(true);expect(p.calls).toHaveLength(22);expect(clocks).toBe(6);expect(token).toBeNull();
+      expect(()=>unseal(token!,f.request,()=>{})).toThrow("refused");
+    }finally{clearTimeout(timer);}
+  },5000);
+  it.each(["transport","body"])("refuses elapsed request deadline during synchronous %s work with timer undelivered",async phase=>{
+    const f=await fixture(),p=provider(f);let reached=false,timerDelivered=false;
+    const timer=setTimeout(()=>{timerDelivered=true;},100);
+    const blockingFetch:typeof fetch=async(input,init)=>{
+      const response=await p.fetchRead(input,init);
+      const block=()=>{if(!reached){reached=true;Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,150);expect(timerDelivered).toBe(false);}};
+      if(phase==="transport")block();
+      else return new Response(new ReadableStream({pull(controller){block();controller.enqueue(new TextEncoder().encode(JSON.stringify({jsonrpc:"2.0",id:JSON.parse(init!.body as string).id,result:q(5042002)})));controller.close();}},{highWaterMark:0}));
+      return response;
+    };
+    try {
+      const token=await compose(blockingFetch,()=>now,{totalDeadlineMs:2000,requestDeadlineMs:100})(f.request,()=>{});
+      expect(reached).toBe(true);expect(token).toBeNull();expect(()=>unseal(token!,f.request,()=>{})).toThrow("refused");
+      expect(p.calls.every(c=>c.method==="eth_chainId")).toBe(true);
+    }finally{clearTimeout(timer);}
+  },5000);
+  it("allows only lower positive safe synthetic deadlines",()=>{
+    for(const limits of [{totalDeadlineMs:0,requestDeadlineMs:1},{totalDeadlineMs:30001,requestDeadlineMs:1},
+      {totalDeadlineMs:1,requestDeadlineMs:5001},{totalDeadlineMs:1.5,requestDeadlineMs:1},{totalDeadlineMs:1,requestDeadlineMs:NaN}])
+      expect(()=>compose(fetch,()=>now,limits)).toThrow("refused");
+  });
   it("copies the immutable request before network awaits and never adopts caller replacement",async()=>{
     const f=await fixture(),original=structuredClone(f.request),p=provider(f,(value)=>{
       (f.request.operation as {operationId:string}).operationId=randomUUID();return value;
