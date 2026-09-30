@@ -68,6 +68,28 @@ async function child(input: object) {
   return { process, start: () => process.stdin.write("GO\n"), result: resultPromise };
 }
 describe("identity-bound SQLite funding ledger", () => {
+  it("preserves lifetime exposure, nonce highwater and claims across owner policy UUID rollover", async () => {
+    const f = await fixture(), ledger = openGatewayFundingSqliteLedger(f.file, f.identity), claimId = randomUUID();
+    await ledger.admitOperation(f.operation.operationId); await ledger.reserveStep(f.operation.operationId, "nativeTransfer", "0");
+    await ledger.claimCrypto(f.operation.operationId, "nativeTransfer", claimId);
+    const original = await ledger.inspectNamespace(f.policy.funder); ledger.close();
+    const rollover = { ...f.installation, policy: { ...f.policy, policyId: randomUUID() }, ...await inspectGatewayFundingSqliteOwnerTarget(f.file, f.identity) };
+    expect(await installGatewayFundingSqliteOwnerPolicy(f.file, f.identity, rollover)).toEqual({ installed: true });
+    const snapshot = await inspectGatewayFundingSqliteOwnerTarget(f.file, f.identity);
+    for (const changes of [
+      { policy: { ...rollover.policy, policyId: randomUUID(), lifetimeLimits: { ...f.policy.lifetimeLimits, nativeWei: "101" } } },
+      { policy: { ...rollover.policy, policyId: randomUUID() }, finalityPolicyDigest: "e".repeat(64) },
+      { policy: { ...rollover.policy, policyId: randomUUID() }, history: { ...rollover.history, documentDigest: "e".repeat(64) } },
+      { policy: { ...rollover.policy, policyId: randomUUID(), spend: `0x${"3".repeat(40)}` } },
+    ]) {
+      await expect(installGatewayFundingSqliteOwnerPolicy(f.file, f.identity, { ...rollover, ...snapshot, ...changes })).rejects.toThrow();
+      expect(await inspectGatewayFundingSqliteOwnerTarget(f.file, f.identity)).toEqual(snapshot);
+    }
+    const recovered = openGatewayFundingSqliteLedger(f.file, f.identity);
+    try { expect(await recovered.inspectNamespace(f.policy.funder)).toEqual(original);
+      expect((await recovered.inspectReservation(f.operation.operationId, "nativeTransfer"))?.cryptoClaimId).toBe(claimId);
+    } finally { recovered.close(); }
+  }, 30000);
   it("includes every funding payload in full-store CAS and refuses populated legacy enrollment", () => {
     const db = new DatabaseSync(":memory:"); // native unfenced legacy intake, never authority fixture
     try { db.exec("CREATE TABLE gateway_funding_prepared(data TEXT); INSERT INTO gateway_funding_prepared VALUES('original signed bytes')");
