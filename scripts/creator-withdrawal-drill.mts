@@ -27,6 +27,9 @@ import { withWithdrawalApplicationStore, withWithdrawalCashOutStore } from "../l
 import { recordObservedWithdrawalCashOut } from "../lib/gateway/withdrawal-cash-out.ts";
 import { withPrivateWorkerLock } from "../lib/a2a/private-worker-lock.ts";
 import { SqliteAdapter } from "../lib/db/sqlite-adapter.ts";
+import { withNewWithdrawalDrillStore } from "./creator-withdrawal-drill-store.ts";
+import { withdrawalDrillBuyerKey } from "./withdrawal-drill-buyer-key.ts";
+import { saveWithdrawalDrillExclusive as saveExclusive } from "./withdrawal-drill-files.ts";
 
 const { values } = parseArgs({ options: {
   prepare: { type: "boolean" }, sign: { type: "boolean" }, submit: { type: "boolean" },
@@ -40,15 +43,6 @@ const { values } = parseArgs({ options: {
 }, strict: true });
 const selectedDirectory = values.directory && path.resolve(values.directory);
 const signal = AbortSignal.timeout(90000);
-function saveExclusive(file: string, data: unknown) {
-  const descriptor = fs.openSync(file, "wx", 0o600);
-  try { fs.writeFileSync(descriptor, JSON.stringify(data)); fs.fsyncSync(descriptor); }
-  finally { fs.closeSync(descriptor); }
-  if (process.platform === "linux") {
-    const folder = fs.openSync(path.dirname(file), "r");
-    try { fs.fsyncSync(folder); } finally { fs.closeSync(folder); }
-  }
-}
 function read(file: string) { return JSON.parse(fs.readFileSync(file, "utf8")); }
 function bounds() {
   if (!values["max-ahead-blocks"] || !values["max-processing-lag-blocks"]) throw new Error("Explicit height limits required");
@@ -71,6 +65,7 @@ function runtime() {
   return { env, relay };
 }
 async function main() {
+  if (process.platform === "linux") process.umask(0o077);
   assert.equal([values.prepare, values.sign, values.submit, values["mint-once"], values.recover].filter(Boolean).length, 1);
   assert.ok(selectedDirectory && path.isAbsolute(selectedDirectory));
   assert.equal(config.networkId, "eip155:5042002");
@@ -98,9 +93,7 @@ async function main() {
   if (values.sign) {
     const draft = read(path.join(selectedDirectory, "draft.json"));
     assert.deepEqual(createWithdrawalBrowserDraft(draft.burnIntent, draft.policy), draft);
-    const key = process.env.BUYER_PRIVATE_KEY;
-    assert.ok(key && /^0x[a-fA-F0-9]{64}$/.test(key));
-    const account = privateKeyToAccount(key as Hex);
+    const account = privateKeyToAccount(withdrawalDrillBuyerKey(process.env));
     assert.equal(account.address.toLowerCase(), draft.owner);
     assert.equal(draft.owner, draft.policy.recipient);
     const height = await withdrawalHeightWindowForRpc(config.rpcUrl, draft.policy, bounds(), signal);
@@ -139,9 +132,7 @@ async function main() {
     saveExclusive(path.join(selectedDirectory, "original.json"), original);
     saveExclusive(path.join(selectedDirectory, "metadata.json"), { requestId: original.id, owner: original.owner,
       relayDirectory: relay.directory, database, gasCeilingWei: values["gas-ceiling-wei"] });
-    const store = new SqliteAdapter(database);
-    fs.chmodSync(database, 0o600);
-    try {
+    await withNewWithdrawalDrillStore(database, async store => {
       let transferPosts = 0;
       const admit = createWithdrawalRuntimeAdmission(env, config.networkId, config.rpcUrl, values["gas-ceiling-wei"]!);
       await submitWithdrawalTransfer(store, original, original.owner, async (record, current) => {
@@ -159,7 +150,7 @@ async function main() {
       const retained = await withdrawalTransferProgress(store, original.id, original.owner);
       saveExclusive(path.join(selectedDirectory, "submit-observation.json"), { transferPosts, retained });
       console.log(JSON.stringify({ state: "app-response-discarded", transferPosts, progress: retained }));
-    } finally { store.close(); }
+    });
     return;
   }
   assert.equal(process.platform, "linux");

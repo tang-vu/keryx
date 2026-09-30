@@ -7,16 +7,13 @@ import { createPublicClient, keccak256, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { withdrawalRpcTransport } from "../lib/gateway/withdrawal-rpc-transport.ts";
 import { verifyFundingDrillOriginal } from "./withdrawal-drill-funding-original.ts";
+import { withdrawalDrillBuyerKey } from "./withdrawal-drill-buyer-key.ts";
+import { saveWithdrawalDrillExclusive as save } from "./withdrawal-drill-files.ts";
 
 const { values } = parseArgs({ options: { prepare: { type: "boolean" }, send: { type: "boolean" },
   recover: { type: "boolean" }, directory: { type: "string" }, recipient: { type: "string" },
   "expected-nonce": { type: "string" }, }, strict: true });
 const client = createPublicClient({ transport: withdrawalRpcTransport("https://rpc.testnet.arc.network", AbortSignal.timeout(30000)) });
-function save(file: string, value: unknown) {
-  const descriptor = fs.openSync(file, "wx", 0o600);
-  try { fs.writeFileSync(descriptor, JSON.stringify(value)); fs.fsyncSync(descriptor); }
-  finally { fs.closeSync(descriptor); }
-}
 async function main() {
   assert.equal([values.prepare, values.send, values.recover].filter(Boolean).length, 1);
   assert.ok(values.directory);
@@ -26,8 +23,7 @@ async function main() {
     assert.ok(values.recipient && /^0x[a-fA-F0-9]{40}$/.test(values.recipient));
     assert.ok(values["expected-nonce"] && /^(0|[1-9][0-9]*)$/.test(values["expected-nonce"]));
     const nonce = Number(values["expected-nonce"]); assert.ok(Number.isSafeInteger(nonce));
-    const key = process.env.BUYER_PRIVATE_KEY; assert.ok(key && /^0x[a-fA-F0-9]{64}$/.test(key));
-    const owner = privateKeyToAccount(key as Hex), recipient = values.recipient.toLowerCase() as Hex;
+    const owner = privateKeyToAccount(withdrawalDrillBuyerKey(process.env)), recipient = values.recipient.toLowerCase() as Hex;
     assert.notEqual(owner.address.toLowerCase(), recipient);
     for (const blockTag of ["latest", "pending"] as const) {
       assert.equal(await client.getTransactionCount({ address: owner.address, blockTag }), nonce);
