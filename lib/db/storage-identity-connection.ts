@@ -1,5 +1,5 @@
 import { DatabaseSync, type StatementSync } from "node:sqlite";
-import { validateStorageIdentity, type StorageIdentity } from "./storage-identity";
+import { StorageIdentityRefused, refuseStorage, validateStorageIdentity, type StorageIdentity } from "./storage-identity";
 import { assertStorageFences, assertStorageIdentity, holdStorageTarget, registerStorageCapability, restrictStorageApplicationSql } from "./storage-identity-sqlite";
 
 /** Guarded application SQL access, not provisioning, migration, or a read-only provenance inspector. */
@@ -12,7 +12,12 @@ export function openVerifiedSqliteStorage(file: string, expected: StorageIdentit
     // Connection settings follow identity admission and precede SQL restriction. They are not schema repair.
     db.exec("PRAGMA busy_timeout=5000");
     if (!options.readOnly) db.exec("PRAGMA synchronous=FULL");
-  } catch (error) { try { db?.close(); } finally { held.close(); } throw error; }
+  } catch (error) {
+    try { db?.close(); } catch { /* preserve fixed admission refusal */ }
+    try { held.close(); } catch { /* preserve fixed admission refusal */ }
+    if(error instanceof StorageIdentityRefused) throw error;
+    return refuseStorage("storage_unavailable");
+  }
   const native = db;
   const assert = () => {
     if (closed) throw new Error("Verified storage connection closed");

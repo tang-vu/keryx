@@ -11,7 +11,7 @@ import { saveSqlitePrivateResult, getSqlitePrivateResult, PRIVATE_RESEARCH_RESUL
 import { PRIVATE_TREASURY_CAPACITY_SQL, reserveSqlitePrivateTreasury, getSqlitePrivateTreasury, type PrivateTreasuryPolicy } from "./private-treasury-capacity";
 import { claimSqlitePrivateExecution, getSqlitePrivateExecution, PRIVATE_RESEARCH_EXECUTIONS_SQL } from "./private-research-executions";
 import { DatabaseSync } from "node:sqlite";
-import { validateStorageIdentity, type StorageIdentity } from "./storage-identity";
+import { StorageIdentityRefused, refuseStorage, validateStorageIdentity, type StorageIdentity } from "./storage-identity";
 import { assertStorageIdentity, assertStorageFences, holdStorageTarget, installStorageFences,
   registerStorageCapability, restrictStorageApplicationSql, type HeldStorageTarget } from "./storage-identity-sqlite";
 import { initializeSqliteBrowserJournal, sqliteJournalActive, sqliteJournalTransaction, activateSqliteBrowserJournal,
@@ -406,8 +406,10 @@ export class SqliteAdapter implements KeryxDB {
         this.assertReady();
       }
     } catch (error) {
-      try { db?.close(); } finally { this.heldTarget.close(); }
-      throw error;
+      try { db?.close(); } catch { /* preserve fixed admission refusal */ }
+      try { this.heldTarget.close(); } catch { /* preserve fixed admission refusal */ }
+      if (error instanceof StorageIdentityRefused) throw error;
+      refuseStorage("storage_unavailable");
     }
   }
 
