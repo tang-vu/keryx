@@ -20,8 +20,16 @@ export async function privateWorkerScenario() {
   const file = join(root, "data", "keryx.sqlite");
   const identity = await provisionSyntheticStorage(file, "testnet-real");
   const db = new SqliteAdapter(file, { expectedIdentity: identity });
+  const contentKey = randomBytes(32).toString("hex");
   try {
-    await db.init();
+    const previousContentKey = process.env.CONTENT_MASTER_KEY;
+    try {
+      process.env.CONTENT_MASTER_KEY = contentKey;
+      await db.init();
+    } finally {
+      if (previousContentKey === undefined) delete process.env.CONTENT_MASTER_KEY;
+      else process.env.CONTENT_MASTER_KEY = previousContentKey;
+    }
     const manifest = join(root, "storage-manifest.json");
     await writeFile(manifest, canonicalJson({ format: "keryx-storage-deployment-v1", identity,
       backend: { kind: "sqlite", databasePath: file } }), { flag: "wx", mode: 0o600 });
@@ -30,7 +38,7 @@ export async function privateWorkerScenario() {
     const merchants = { privatePayee: `0x${"ab".repeat(20)}`, publicResearchPayee: `0x${"cd".repeat(20)}` };
     const env = { KERYX_PRIVATE_WORKER_ENABLED: "1", KERYX_PRIVATE_RESEARCH_ENABLED: "1", KERYX_COMMIT: "abcdef0",
       KERYX_STORAGE_MANIFEST: manifest, KERYX_SQLITE_PATH: file, KERYX_FORCE_OFFLINE: "0",
-      CONTENT_MASTER_KEY: randomBytes(32).toString("hex"),
+      CONTENT_MASTER_KEY: contentKey,
       KERYX_PRIVATE_RESEARCH_PAYEE: merchants.privatePayee, KERYX_PRIVATE_RESEARCH_RESERVED_PAYEES: merchants.privatePayee,
       SELLER_ADDRESS: merchants.publicResearchPayee, AGENT_FUNDER_PRIVATE_KEY: publicKey,
       KERYX_PRIVATE_TREASURY_ADDRESS: treasury, KERYX_PRIVATE_TREASURY_PRIVATE_KEY: treasuryKey,
