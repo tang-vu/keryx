@@ -11,10 +11,11 @@ do $$
 declare original record; arg record; signature text; arguments text; result_type text; body text;
   names text[] := array['acquire_reasoning_circuit','activate_browser_journal','admit_browser_authorization','admit_browser_journal',
     'admit_private_creator_submission','browser_signer_confirmed_spend_micro','claim_creator_withdrawal_transfer',
-    'claim_gap_intent','claim_private_research_execution','claim_private_research_payment','confirm_private_creator_submission',
+    'claim_a2a_order','claim_gap_intent','claim_private_research_execution','claim_private_research_payment','confirm_private_creator_submission',
     'confirm_private_research_payment','consume_auth_challenge','consume_rate_limit','create_auth_challenge','create_gap_intent',
     'create_web_session','disable_browser_journal_grant','fail_gap_intent','fail_pending_payment','get_browser_journal',
-    'increment_activation_event','interrupt_private_research','list_private_reconciliation_candidates','list_private_worker_candidates',
+    'increment_activation_event','interrupt_private_research','list_a2a_orders_for_payer','mark_a2a_payment_started','mark_a2a_result_saving','resolve_a2a_order',
+    'list_private_reconciliation_candidates','list_private_worker_candidates',
     'private_treasury_summary','record_reasoning_circuit_failure','release_onramp','release_private_treasury','release_session_grant_spend',
     'reserve_creator_withdrawal','reserve_onramp','reserve_private_treasury','reserve_session_grant_spend',
     'save_creator_withdrawal_attestation','save_private_research_result','sign_browser_journal','terminal_browser_journal',
@@ -77,7 +78,7 @@ do $$ declare f record; relation_names text[]; definitions text; begin
         where c.relnamespace='public'::regnamespace and c.relkind in ('r','p')
           and definitions ~ ('\m'||c.relname||'\M');
       insert into keryx_storage.operations values(substr(f.proname,9),relation_names,
-        f.proname ~ '(browser|session_grant|private_|creator_withdrawal|supabase_withdrawal|onramp|a2a_order)')
+        f.proname ~ '(browser|session_grant|private_|creator_withdrawal|supabase_withdrawal|onramp|a2a)')
         on conflict(operation) do nothing;
     elsif f.proname='read_storage_identity' then
       execute 'alter function '||f.signature||' set search_path to pg_catalog,pg_temp';
@@ -109,9 +110,21 @@ begin
   elsif tg_table_name='browser_authorization_intents' then
     if lower(row->>'token') is distinct from '0x3600000000000000000000000000000000000000'
       or lower(row->>'gateway_contract') is distinct from '0x0077777d7eba4688bdef3e311b846f25870a19b9' then raise exception 'storage row contract profile refused'; end if;
+  elsif tg_table_name='browser_journal_bindings' then
+    if row#>>'{requirements,network}' is distinct from 'eip155:5042002'
+      or lower(row#>>'{requirements,asset}') is distinct from '0x3600000000000000000000000000000000000000'
+      or row#>>'{requirements,extra,name}' is distinct from 'GatewayWalletBatched'
+      or row#>>'{requirements,extra,version}' is distinct from '1'
+      or lower(row#>>'{requirements,extra,verifyingContract}') is distinct from '0x0077777d7eba4688bdef3e311b846f25870a19b9'
+      or row#>>'{payment_metadata,network}' is distinct from 'eip155:5042002' then raise exception 'storage browser binding profile refused'; end if;
+  elsif tg_table_name in ('private_creator_submissions','private_creator_confirmations') then
+    if row#>>'{data,submission,network}' is distinct from 'eip155:5042002'
+      or lower(row#>>'{data,submission,asset}') is distinct from '0x3600000000000000000000000000000000000000' then raise exception 'storage private creator profile refused'; end if;
   elsif tg_table_name='private_research_intents' then
     if row#>>'{data,requirement,network}' is distinct from 'eip155:5042002'
       or lower(row#>>'{data,requirement,asset}') is distinct from '0x3600000000000000000000000000000000000000'
+      or row#>>'{data,requirement,extra,name}' is distinct from 'GatewayWalletBatched'
+      or row#>>'{data,requirement,extra,version}' is distinct from '1'
       or lower(row#>>'{data,requirement,extra,verifyingContract}') is distinct from '0x0077777d7eba4688bdef3e311b846f25870a19b9' then raise exception 'storage private requirement profile refused'; end if;
   elsif tg_table_name='creator_withdrawal_requests' then
     if row#>>'{data,network}' is distinct from 'eip155:5042002'
@@ -119,6 +132,12 @@ begin
       or lower(row#>>'{data,policy,asset}') is distinct from '0x3600000000000000000000000000000000000000'
       or lower(row#>>'{data,policy,gatewayWallet}') is distinct from '0x0077777d7eba4688bdef3e311b846f25870a19b9'
       or lower(row#>>'{data,policy,gatewayMinter}') is distinct from '0x0022222abe238cc2c7bb1f21003f0a260052475b' then raise exception 'storage withdrawal profile refused'; end if;
+    if row#>>'{data,request,burnIntent,spec,sourceDomain}' is distinct from '26'
+      or row#>>'{data,request,burnIntent,spec,destinationDomain}' is distinct from '26'
+      or lower(row#>>'{data,request,burnIntent,spec,sourceContract}') is distinct from ('0x'||repeat('0',24)||'0077777d7eba4688bdef3e311b846f25870a19b9')
+      or lower(row#>>'{data,request,burnIntent,spec,destinationContract}') is distinct from ('0x'||repeat('0',24)||'0022222abe238cc2c7bb1f21003f0a260052475b')
+      or lower(row#>>'{data,request,burnIntent,spec,sourceToken}') is distinct from ('0x'||repeat('0',24)||'3600000000000000000000000000000000000000')
+      or lower(row#>>'{data,request,burnIntent,spec,destinationToken}') is distinct from ('0x'||repeat('0',24)||'3600000000000000000000000000000000000000') then raise exception 'storage withdrawal burn profile refused'; end if;
   end if;
   return new;
 end; $$;

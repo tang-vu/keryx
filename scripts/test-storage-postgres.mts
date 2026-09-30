@@ -11,7 +11,8 @@ const prefix = process.platform === "win32" ? ["-d", "Ubuntu", "--", "docker"] :
 const docker = (args: string[], input?: string) => execFileSync(binary, [...prefix, ...args],
   { input, encoding: "utf8", timeout: 60_000, stdio: ["pipe", "pipe", "pipe"] });
 const psql = ["exec", "-i", name, "psql", "-h", "127.0.0.1", "-U", "postgres", "-v", "ON_ERROR_STOP=1", "-q", "-t", "-A"];
-const sql = (statement: string) => docker(psql, statement).trim();
+const sql = (statement: string) => docker(psql, "set statement_timeout='30s'; set lock_timeout='5s'; "+statement).trim();
+const sqlIn = (database: string, statement: string) => docker([...psql,"-d",database],"set statement_timeout='30s'; set lock_timeout='5s'; "+statement).trim();
 const service = (statement: string) => sql(`set role service_role; ${statement};`);
 const json = (value: unknown) => `'${JSON.stringify(value).replaceAll("'", "''")}'::jsonb`;
 const identity: StorageIdentity = { format: "keryx-storage-identity-v1", deploymentId: "11111111-1111-4111-8111-111111111111",
@@ -43,11 +44,35 @@ try {
   }
   assert(ready,"isolated PostgreSQL failed to start");
   const migrations = readdirSync("supabase/migrations").filter(f=>/^\d{4}.*\.sql$/.test(f)).sort();
-  sql("create role anon; create role authenticated; create role service_role bypassrls; create publication supabase_realtime;\n"+
-    migrations.map(f=>readFileSync(`supabase/migrations/${f}`,"utf8")).join("\n"));
+  const migrationText = (files: string[]) => files.map(f=>readFileSync(`supabase/migrations/${f}`,"utf8")).join("\n");
+  const historical = migrations.filter(f=>Number(f.slice(0,4))<=69), candidate = migrations.filter(f=>Number(f.slice(0,4))>=70);
+  sql("create role anon; create role authenticated; create role service_role bypassrls; create publication supabase_realtime;\n"+migrationText(historical));
+  const legacyPayment = (id: string,status: string,settled: boolean) => `insert into public.payment_events(id,kind,query_id,source_id,payer,payee,amount_usdc,network,settled,settlement_status)
+    values('${id}','fetch','query','source','${signer}','${payee}',0.000001,'eip155:5042002',${settled},'${status}')`;
+  sql(legacyPayment("historical-simulation","simulated",false));
+  sql("create database storage_pre_cutover template postgres");
+  sql(migrationText(candidate));
+  const legacyCases = [
+    ["pending",legacyPayment("legacy-pending","pending",false)],
+    ["settled",legacyPayment("legacy-settled","settled",true)],
+    ["withdrawal",`insert into public.withdrawals(tx_hash,wallet,recipient,amount_usdc,network) values('synthetic-old','${signer}','${payee}',0.000001,'eip155:5042002')`],
+    ["treasury",`insert into public.private_treasury_pools(signer,capacity_micros) values('${signer}',1)`],
+  ];
+  for (const [label,seed] of legacyCases) {
+    const database = `legacy_${label}`;
+    sql(`create database ${database} template storage_pre_cutover`);
+    sqlIn(database,seed+";"+migrationText(candidate));
+    const original = sqlIn(database,"select jsonb_build_object('payments',(select jsonb_agg(p) from public.payment_events p),'withdrawals',(select jsonb_agg(w) from public.withdrawals w),'pools',(select jsonb_agg(p) from public.private_treasury_pools p))");
+    const digest = sqlIn(database,"select keryx_storage.snapshot_digest()");
+    assert.throws(()=>sqlIn(database,`select keryx_storage.enroll(${expected},'${digest}')`),/legacy .*authority requires separate quarantine/);
+    assert.equal(sqlIn(database,"select jsonb_build_object('payments',(select jsonb_agg(p) from public.payment_events p),'withdrawals',(select jsonb_agg(w) from public.withdrawals w),'pools',(select jsonb_agg(p) from public.private_treasury_pools p))"),original,"legacy refusal must preserve original funded rows");
+    assert.equal(sqlIn(database,"select count(*) from keryx_storage.identity"),"0");
+  }
   assert.equal(service("select public.read_storage_identity()"),"");
   assert.throws(()=>service(rpc("get_source","'source'")),/enrollment_required/);
   assert.equal(sql(`select keryx_storage.identity_digest(${expected})`),storageIdentityDigest(identity));
+  assert.throws(()=>docker(psql,"select keryx_storage.snapshot_digest()"),/bounded owner statement deadline required/);
+  assert.throws(()=>docker(psql,"set statement_timeout='100ms'; select pg_sleep(0.25)"),/statement timeout/);
   const before = sql("select keryx_storage.snapshot_digest()");
   // Native binary bytes, embedded text and exact numeric representations all enter
   // owner CAS. This table is included even though it was not in a selected ledger scan.
