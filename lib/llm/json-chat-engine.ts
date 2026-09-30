@@ -5,6 +5,7 @@
  */
 
 import { config } from "../config";
+import { cloneUsage } from "../economics/provider-cost-policy";
 import { LlmCallLedger } from "./call-ledger";
 import { evidenceContext, EVIDENCE_CONTEXT_GUIDANCE } from "./evidence-context";
 import { buildQuoteOptions, resolveQuoteEvidence } from "./quote-options";
@@ -37,22 +38,23 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   }
 
   get usage(): readonly LlmUsageRecord[] {
-    return [...this.usageRecords];
+    return this.usageRecords.map(cloneUsage);
   }
 
   /** Store only provider counters. Never store prompts, completions, or request identifiers. */
   protected recordUsage(usage: Omit<LlmUsageRecord, "engine">): void {
     const valid = (value: number) => Number.isSafeInteger(value) && value >= 0;
-    if (!valid(usage.inputTokens) || !valid(usage.cachedInputTokens) ||
-      !valid(usage.outputTokens) || usage.cachedInputTokens > usage.inputTokens) return;
-    this.usageRecords.push({
+    if (!valid(usage.inputTokens) || !valid(usage.outputTokens) ||
+      (usage.cachedInputTokens !== null && (!valid(usage.cachedInputTokens) || usage.cachedInputTokens > usage.inputTokens))) return;
+    this.usageRecords.push(cloneUsage({
       engine: this.name,
       callId: this.callLedger.currentId,
       model: usage.model,
       inputTokens: usage.inputTokens,
       cachedInputTokens: usage.cachedInputTokens,
       outputTokens: usage.outputTokens,
-    });
+      ...(usage.costCapture ? { costCapture: usage.costCapture } : {}),
+    }));
   }
 
   /**

@@ -1,5 +1,32 @@
 # Keryx — Decision Log
 
+**D-269** - Capture provider price observations per call and keep uncertain costs as intervals -
+*The economics observer applied an August 29 rate table to every matching wire model,
+including untagged history, after the supplier changed prices and Flash routing.*
+Use a new observer/report v2 with locally captured request/response times, explicit
+configured provider identity, requested wire model and a preserved price-policy
+snapshot. The September 30 Flash observation records its source, date precision,
+documented aliases and off-peak/peak rates; actual tariff effective dates and billing
+window remain unknown. Reports use the full off-peak–peak interval, without inferring
+holidays or supplier billing times. Future observations require new policy IDs;
+historical captures are resolved through their retained registry entry, not the
+current capture selector. Supplier Pro descriptions conflict, so Pro remains unpriced.
+
+Retain August 29 v1 as a historical scenario and preserve saved v1 artifacts.
+Untagged history stays unpriced; report time cannot supply missing per-call evidence.
+Missing or inconsistent compatible-provider cache splits are `null`, while valid
+input/output counters and answers remain usable. Correlated call coverage still
+requires every provider call and rejects failed/incomplete work for pricing.
+
+Cost and hypothetical margin bounds cover priced runs only. Hypothetical fees
+separately identify all-sampled and priced-run cohorts. The whole-period LLM upper
+bound remains unknown because the stored projection omits unsampled history and
+does not prove complete billing coverage. Supplier invoices, fixed costs and realized
+profit remain unreconciled/unknown; the infrastructure allowance is a scenario.
+Keep actual operating observations private. This correction changes no model request,
+payment authority, settlement, database schema or mainnet authorization.
+See [the observer contract](docs/testnet-economics.md).
+
 **D-268** - Stage atomic browser authorization admission before signing cutover -
 *September 30 acceptance correction:* the first real PostgreSQL CI run rejected
 the intent insert because JSON `created_at` text was not explicitly converted to

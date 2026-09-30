@@ -6,6 +6,12 @@
 - Retain webhook support; all configured channels must acknowledge before reconciliation marks an alert delivered. Preflight detects incomplete or duplicate configuration and labels delivery unverified.
 - Document the selected private Keryx ops group. Mocked checks establish code behavior; destination setup, live receipt, responder drills and mainnet operations acceptance remain open.
 
+### Versioned private provider-cost observations (2026-09-30)
+
+- Capture the verified Flash price-policy identity and local call times with new token usage; estimate an off-peak–peak range without guessing billing windows or holidays.
+- Keep untagged history, uncertain cache splits and unsupported pricing unpriced. Preserve saved v1 reports; private report v2 labels cost/margin ranges by priced cohort and leaves invoices, whole-period LLM cost and realized profit unknown.
+- Retain the current provider/model requests and payment authority. This is preparation evidence, not proven profitability or mainnet acceptance.
+
 ### Homepage globe alignment (2026-09-29, v0.24.2)
 
 - Keep the complete globe and orbit inside the hero's right column, above the activity totals, with a clear backing for the herald seal.

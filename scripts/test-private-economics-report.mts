@@ -27,6 +27,13 @@ assert.equal(first.stdout.trim(), "Private economics report saved. No invoice re
 const file = join(root, "report/economics.json"), content = readFileSync(file);
 assert.equal(statSync(file).mode & 0o777, 0o600); assert.equal(statSync(join(root, "report")).mode & 0o777, 0o700);
 assert.equal(JSON.parse(content.toString()).accounting.realizedProfitUsd, null);
+const report = JSON.parse(content.toString());
+assert.equal(report.schema, "keryx-private-economics-v2");
+assert.equal(report.estimates.costAndMarginScope, "priced-runs-only");
+assert.equal(report.estimates.llmCostUsdBounds, null);
+assert.equal(report.estimates.shadowGrossMarginUsdBounds, null);
+assert.equal(report.estimates.totalLlmCostUpperBoundUsd, null);
+assert.deepEqual(report.coverage.pricingPolicyIds, []);
 assert.deepEqual(readFileSync(database), before, "Report must not initialize or mutate the application database");
 const repeated = await run(); assert.equal(repeated.code, 1); assert.equal(repeated.stdout, "");
 assert.deepEqual(readFileSync(file), content);

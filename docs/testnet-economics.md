@@ -7,8 +7,11 @@ read-only: it cannot authorize, settle, retry, release, or relabel a payment.
 
 - `fundingOwner` is stamped by the trusted server execution path as `browser`, `treasury`, or
   `offline`. It is not accepted from a public request body.
-- Each provider response contributes token counters only: engine, wire model, input tokens, cached
-  input tokens, and output tokens. Prompts, completions, provider bodies, and request ids are not
+- Each provider response contributes engine, wire model, input tokens, cached
+  input tokens, and output tokens. New compatible-provider observations also capture local request
+  start/response timestamps, configured provider identity and the immutable observed pricing policy
+  when recognized. These timestamps are not the supplier's billing timestamps. Prompts,
+  completions, provider bodies, credentials and provider request ids are not
   stored. Locally generated random call IDs correlate each usage record with its model call;
   pending, returned and failed calls carry no request content.
 - Settled inbound x402 payments are observed gross receipts on testnet. Settled creator payments
@@ -57,19 +60,58 @@ preserves unpriced usage and explicitly sets provider invoices, fixed operating 
 and realized profit to unknown. It is not an invoice audit, monthly profit statement
 or mainnet revenue report. Public formulas remain separate at `/economics`.
 
+New files use `keryx-private-economics-v2`. They export cost and shadow margin
+**bounds for priced runs only**, unknown-cache coverage and captured policy IDs.
+They do not contain per-call prompts or supplier response bodies. A missing bound
+is `null`, not measured zero. `totalLlmCostUpperBoundUsd` remains `null`: the store
+projection omits unsampled history, and the report cannot establish a finite
+whole-period LLM bill from partial records. Saved v1 reports are never edited,
+reclassified or overwritten; choose a new directory for a v2 report.
+`shadowServiceFeesAllSampledUsdc` covers every sampled run, including unpriced runs;
+`shadowServiceFeesPricedRunsUsdc` covers the same priced cohort as the cost/margin
+bounds. These hypothetical fees are not settled revenue. The export's
+`costAndMarginScope` applies to the bounds, not the separate all-sampled fee total.
+
 ## Pricing policy
 
-Policy `testnet-economics-v1` uses DeepSeek prices captured on 2026-08-29 from the
-[canonical pricing page](https://api-docs.deepseek.com/quick_start/pricing). A model is priced only
-when both its provider identity and exact wire model match the table. MiMo, Anthropic, and unknown
-models remain unpriced until a verified rate is added; their measured tokens still appear.
+Observer `testnet-economics-v2` prices only new usage carrying a recognized
+per-call capture. The policy `deepseek-flash-observed-2026-09-30-v1` preserves
+the [supplier page](https://api-docs.deepseek.com/quick_start/pricing/) checked on
+September 30, with date precision. Its USD per million token rates are:
+
+| Flash input/output | Off-peak lower estimate | Peak upper estimate |
+| --- | --- | --- |
+| Cached input | 0.003 | 0.006 |
+| Uncached input | 0.15 | 0.30 |
+| Output | 0.60 | 1.20 |
+
+The supplier identifies `deepseek-flash`, `deepseek-v4-flash` and
+`deepseek-v4-flash-vision-exp` as names served by DeepSeek V4.1 Flash. Each capture
+preserves the requested wire name and that observed billing family. This update
+does not change the model sent to the provider. Unknown providers/models and Pro
+remain unpriced; conflicting supplier Pro descriptions require separate review.
+
+Both rate endpoints are retained in each capture. The observer always uses the
+off-peak–peak interval instead of guessing the applicable billing hour, holiday
+calendar or supplier processing time. Supplier effective dates remain `null`;
+the verification date is not presented as a tariff effective date. The local
+request timestamps do not prove billing-window selection. Later supplier checks
+need new policy IDs; existing policy entries and recorded captures retain their
+original rates and aliases. Unknown/malformed policy captures remain unpriced.
+
+The August 29 `testnet-economics-v1` policy and rates are retained as a historical
+scenario only. Untagged old usage has no recoverable per-call policy and is now
+unpriced, even if its wire name matches a current alias. Report time, query time
+and old token counts cannot silently supply that missing evidence. Saved v1
+artifacts retain their original meaning; generating a new v2 report does not
+retroactively establish actual historical provider expense.
 
 The shadow service price is deliberately separate from creator pass-through:
 
 - Quick: $0.02 USDC orchestration fee
 - Deep: $0.05 USDC orchestration fee
 - Infrastructure allowance: $0.005 per sampled run
-- Shadow gross margin: service fee − priced LLM cost − infrastructure allowance
+- Shadow gross margin interval: service fee − priced LLM cost interval − infrastructure allowance
 
 The shadow comparison assumes 1 USDC = $1 for planning; it does not measure market depeg risk.
 
@@ -79,10 +121,15 @@ charged by this feature.
 
 ## Reading the snapshot
 
-`pricedRuns` is the only denominator eligible for estimated LLM cost and shadow margin. An empty
+`pricedRuns` is the only denominator eligible for estimated LLM cost and shadow margin
+intervals. Cost lower/upper bounds use the captured lower/upper rates; margin lower
+uses the upper cost and margin upper uses the lower cost. Display rounding expands
+the interval to micro-dollar precision. These are partial sums, not a finite
+whole-period cost ceiling, reconciled invoice or realized profit. The infrastructure
+allowance is a planning assumption rather than a measured bill. An empty
 usage list can be priced at zero tokens only with explicit heuristic execution evidence and no
 failed provider attempts. A missing usage list is historical and unsampled. `unpricedRuns` includes
-unknown rates, failed provider attempts and missing usage coverage. Each actual model call must
+unknown rates/capture, uncertain cache splits, failed provider attempts and missing usage coverage. Each actual model call must
 match exactly one usage record by local ID and engine. A reasoning step may make several calls,
 including a second synthesis evidence review; a caught review error still makes coverage unknown.
 Circuit-open attempts did not call the provider. Failed attempts
@@ -95,9 +142,14 @@ Token totals still describe recorded responses, not all attempted or billable ca
 margin are partial totals for eligible runs only, never a whole-service profit claim.
 
 The compatible-provider transport records usage only with explicit nonnegative safe integer input
-and output counts. Optional cached input defaults to zero only when absent; supplied cached counts
-must be valid and no larger than total input. Empty, partial or malformed usage remains absent,
-without turning an otherwise valid answer into a provider failure. Actual engine regression tests
+and output counts. DeepSeek's [nested cached count and top-level hit/miss counts](https://api-docs.deepseek.com/api/create-chat-completion/)
+must agree when present and remain valid safe integers within total input. One valid
+split representation is sufficient; a valid miss count determines the corresponding
+hit count. An absent, malformed or conflicting split is retained as `cachedInputTokens: null`
+with valid input/output counts, not fabricated zero. `unknownCacheCalls` counts these
+responses, and `cachedInputTokens` totals only known splits. Otherwise-valid answers
+remain usable. Empty, partial or malformed total input/output usage remains absent.
+Actual engine regression tests
 cover this boundary, HTTP rejection and billable truncated responses followed by local fallback.
 
 This is a testnet experiment, not accounting guidance, mainnet readiness, or permission to use real

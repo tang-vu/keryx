@@ -8,6 +8,7 @@
 
 import { config } from "../config";
 import { extractJson, JsonChatEngine } from "./json-chat-engine";
+import { capturePricePolicy } from "../economics/provider-cost-policy";
 
 export interface OpenAICompatibleOpts {
   /** Explicit provider identity; vendor options must not leak to generic compatible hosts. */
@@ -48,6 +49,8 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
     maxTokens = 2048,
   ): Promise<Record<string, unknown>> {
     const wireModel = this.opts.model ?? model;
+    const requestStartedAt = new Date().toISOString();
+    const pricing = capturePricePolicy(this.opts.provider, wireModel);
     const res = await fetch(`${this.opts.baseUrl}/chat/completions`, {
       method: "POST",
       ...(this.opts.redirect ? { redirect: this.opts.redirect } : {}),
@@ -86,21 +89,32 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
         prompt_tokens?: number;
         completion_tokens?: number;
         prompt_tokens_details?: { cached_tokens?: number };
+        prompt_cache_hit_tokens?: number;
+        prompt_cache_miss_tokens?: number;
       };
     };
     const inputTokens = data.usage?.prompt_tokens;
     const outputTokens = data.usage?.completion_tokens;
+    const responseReceivedAt = new Date().toISOString();
     const reportedCached = data.usage?.prompt_tokens_details?.cached_tokens;
-    const cachedInputTokens = reportedCached === undefined ? 0 : reportedCached;
+    const hit = this.opts.provider === "deepseek" ? data.usage?.prompt_cache_hit_tokens : undefined;
+    const miss = this.opts.provider === "deepseek" ? data.usage?.prompt_cache_miss_tokens : undefined;
+    const supplied = [reportedCached, hit, miss].filter(value => value !== undefined);
+    let cachedInputTokens: number | null = null;
+    if (tokenCount(inputTokens) && supplied.length > 0 && supplied.every(value => tokenCount(value) && value <= inputTokens)) {
+      const candidates = [reportedCached, hit, miss === undefined ? undefined : inputTokens - miss]
+        .filter((value): value is number => value !== undefined);
+      if (candidates.every(value => value === candidates[0])) cachedInputTokens = candidates[0];
+    }
     // Missing/malformed counters are unknown cost, not measured zero-token work.
     // Keep the answer usable; economics detects the model call without a usage record.
-    if (tokenCount(inputTokens) && tokenCount(outputTokens) &&
-      tokenCount(cachedInputTokens) && cachedInputTokens <= inputTokens) {
+    if (tokenCount(inputTokens) && tokenCount(outputTokens)) {
       this.recordUsage({
         model: wireModel,
         inputTokens,
         cachedInputTokens,
         outputTokens,
+        costCapture: { provider: this.opts.provider ?? "unknown", requestStartedAt, responseReceivedAt, pricing },
       });
     }
     const choice = data.choices?.[0];
