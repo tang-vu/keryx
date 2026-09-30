@@ -16,6 +16,7 @@ export async function verifyFundingDrillOriginal(value: unknown) {
   if (original.owner === original.recipient || transaction.chainId !== 5042002 || transaction.type !== "eip1559"
     || transaction.to?.toLowerCase() !== original.recipient || transaction.value !== BigInt("10000000000000000")
     || transaction.nonce !== original.nonce || transaction.gas !== BigInt(21000)
+    || (transaction.accessList?.length ?? 0) !== 0
     || transaction.maxFeePerGas !== BigInt(30000000000) || transaction.maxPriorityFeePerGas !== BigInt(5000000000)
     || transaction.data !== undefined && transaction.data !== "0x" || keccak256(serializedTransaction) !== original.transactionHash
     || (await recoverTransactionAddress({ serializedTransaction })).toLowerCase() !== original.owner)

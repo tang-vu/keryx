@@ -21,7 +21,8 @@ it("retains the exact original signed funding identity without any signing or RP
 it("rejects valid signatures with another chain, amount, recipient, gas, fee, nonce or calldata", async () => {
   for (const changed of [{ chainId: 1 }, { value: BigInt("10000000000000001") }, { gas: BigInt(21001) },
     { maxFeePerGas: BigInt(30000000001) }, { maxPriorityFeePerGas: BigInt(5000000001) },
-    { nonce: 16 }, { data: "0x12" }, { to: `0x${"cd".repeat(20)}` }])
+    { nonce: 16 }, { data: "0x12" }, { to: `0x${"cd".repeat(20)}` },
+    { accessList: [{ address: `0x${"cd".repeat(20)}`, storageKeys: [] }] }])
     await expect(verifyFundingDrillOriginal(await fixture(changed))).rejects.toThrow();
 });
 it("rejects changed original metadata, foreign signer and hidden fields", async () => {
