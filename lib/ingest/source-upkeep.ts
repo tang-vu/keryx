@@ -66,7 +66,14 @@ export async function runSourceUpkeep(
   if (!claim) return { status: "already_claimed" };
   const deadline = now() + (options.jobMs ?? SOURCE_UPKEEP_JOB_MS);
   const summary: SourceUpkeepSummary = { attempted: 0, added: 0, failed: 0, skipped: 0 };
-  const assertLive = () => { if (now() >= deadline) throw new Error("Upkeep deadline exceeded"); };
+  // Timer completion is terminal authority, independent of wall-clock resolution
+  // or later backwards clock adjustments. Late ingest continuations share this fence.
+  let timedOut = false;
+  const timeout = () => {
+    timedOut = true;
+    return new Error("Upkeep deadline exceeded");
+  };
+  const assertLive = () => { if (timedOut || now() >= deadline) throw new Error("Upkeep deadline exceeded"); };
   const eligible = async (id: string, feedUrl?: string) => {
     assertLive();
     const source = await db.getSource(id);
@@ -76,7 +83,7 @@ export async function runSourceUpkeep(
     return source;
   };
   for (const id of claim.sourceIds) {
-    if (now() >= deadline) { summary.skipped++; continue; }
+    if (timedOut || now() >= deadline) { summary.skipped++; continue; }
     try {
       if (isPublicReferenceId(id)) {
         assertLive();
@@ -88,7 +95,7 @@ export async function runSourceUpkeep(
         try {
           const feed = await Promise.race([
             (options.ingest ?? boundedIngest)(reference.rssUrl),
-            new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error("Upkeep deadline exceeded")), Math.max(1, deadline - now())); }),
+            new Promise<never>((_, reject) => { timer = setTimeout(() => reject(timeout()), Math.max(1, deadline - now())); }),
           ]);
           assertLive();
           const live = await db.getPublicReference?.(id);
@@ -125,7 +132,7 @@ export async function runSourceUpkeep(
       });
       try {
         const result = await Promise.race([work, new Promise<never>((_, reject) => {
-          timer = setTimeout(() => reject(new Error("Upkeep deadline exceeded")), remaining);
+          timer = setTimeout(() => reject(timeout()), remaining);
         })]);
         if (result.error) summary.failed++;
         else summary.added += result.added;
