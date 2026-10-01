@@ -15,6 +15,10 @@ memory. Starting a new research topic must clear that anchor. Copy or export mus
 retain citations and the observed evidence/payment limitations. Stopping the client
 stream does not establish a refund or the final state of submitted payments.
 
+Stopping and submitting again makes obsolete asynchronous error-body completions
+reachable. Guard client updates by request identity after asynchronous reads, while
+keeping the existing signing-budget identity gate and durable reservation authority.
+
 Use the same chat surface on the home page and `/research`, keeping the existing
 paid-package, recovery and private-job workspace accessible as a secondary section.
 This is a presentation change: package terms, session grants, signing, source-owned

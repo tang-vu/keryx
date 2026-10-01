@@ -86,7 +86,16 @@ try {
     await question.fill("New topic still independent"); await ask.click();
     await page.getByRole("button", { name: "Stop research" }).waitFor();
     assert.equal(calls[3].parentId, undefined);
-    await page.getByText("Keryx · Research in progress").scrollIntoViewIfNeeded();
+    await page.waitForFunction(() => {
+      const current = document.querySelectorAll('[data-testid="research-turn"]');
+      const status = current[current.length - 1]?.querySelector('[role="status"]');
+      if (!status) return false;
+      const box = status.getBoundingClientRect();
+      return box.top >= 66 && box.bottom <= innerHeight;
+    });
+    const stop = await page.getByRole("button", { name: "Stop research" }).boundingBox();
+    assert(stop && stop.y >= 66 && stop.y + stop.height <= page.viewportSize()!.height,
+      "Stop must be naturally visible after submitting research");
     await page.screenshot({ path: join(screenshots, `chat-in-flight-viewport-${width}.png`) });
     await page.screenshot({ path: join(screenshots, `chat-in-flight-${width}.png`), fullPage: true });
     await page.getByRole("button", { name: "Stop research" }).click();
@@ -98,6 +107,31 @@ try {
     await page.waitForTimeout(100);
     assert.equal(await page.getByText("Synthetic report 4", { exact: false }).count(), 0, "Cancelled response must not overwrite a later turn");
     assert.equal(await page.getByTestId("research-turn").count(), 5);
+    // An explicitly synthetic open SSE stream permits a reader to inspect an older
+    // report between steps. Every other fetch continues through the intercepted HTTP.
+    await page.evaluate(() => {
+      const original = window.fetch.bind(window);
+      window.fetch = async (input, init) => {
+        if (input !== "/api/ask") return original(input, init);
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream<Uint8Array>({ start(controller) {
+          controller.enqueue(encoder.encode('event: meta\ndata: {"engine":"fixture","mode":"offline"}\n\n'));
+          (window as unknown as { fixtureStep: () => void }).fixtureStep = () => controller.enqueue(encoder.encode('event: step\ndata: {"phase":"discover","ts":10,"message":"Additional synthetic source step"}\n\n'));
+          init?.signal?.addEventListener("abort", () => controller.error(new DOMException("Stopped fixture", "AbortError")), { once: true });
+        } });
+        return new Response(stream, { headers: { "Content-Type": "text/event-stream" } });
+      };
+    });
+    await question.fill("Inspect earlier reports during streaming"); await ask.click();
+    await page.getByText("Keryx · Research in progress").waitFor();
+    await page.getByTestId("research-turn").first().scrollIntoViewIfNeeded();
+    const inspectedScroll = await page.evaluate(() => scrollY);
+    await page.evaluate(() => (window as unknown as { fixtureStep: () => void }).fixtureStep());
+    await page.waitForFunction(() => document.body.textContent?.includes("Additional synthetic source step"));
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    assert(Math.abs(await page.evaluate(() => scrollY) - inspectedScroll) <= 1,
+      "Streamed steps must not scroll a reader away from an older report");
+    await page.getByRole("button", { name: "Stop research" }).click();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width);
     assert.deepEqual(errors, []);
     if (width === 390) {
@@ -108,7 +142,7 @@ try {
       await page.getByRole("heading", { name: "Give your agent a research budget." }).waitFor();
       assert.equal(new URL(page.url()).hash, "#paid-research");
     }
-    console.log(`PASS ${width}px: two-turn reports, exact follow-up/cap/model, export, new-topic error, stop and late-response isolation; synthetic HTTP only.`);
+    console.log(`PASS ${width}px: natural progress/Stop visibility, older-report scroll retained on steps, two turns, follow-up/settings, export, errors and stop isolation; synthetic requests only.`);
     await context.close();
   }
   console.log(`Chat screenshots: ${screenshots}`);

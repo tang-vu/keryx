@@ -42,6 +42,19 @@ tests, production build and internal review are release gates. Browser fixtures 
 explicit simulations; actual user adoption and physical-device validation require
 separate evidence.
 
+Local Chromium checks of the built candidate kept the source cap before the send
+button. At 320 and 390 pixels wide in a 640-pixel viewport, the input began around
+y=327 and the action occupied y=576–624. At 1366×768, the input began around y=372
+and the action occupied y=621–669. The checked layout dimensions had no horizontal
+overflow. These are browser measurements, not physical-device or usability evidence.
+
+The hermetic chat fixtures cover multiple turns, exact parent/cap/model submission,
+new-topic errors followed by stopped/new requests, late transport responses, report
+exports and expired/paused grants. A separate hook fixture reproduces the interrupted
+401 error-body race and verifies that its old completion cannot replace a newer
+finished request. Existing signing-budget, source payee and fetch-price tests remain
+part of focused validation; no real wallet, search, model or payment call is made.
+
 ## September 28, 2026 milestone
 
 This milestone changes the public reading experience on `/` and the related answer, archive, and creator entry surfaces. It does not change payment authority, grant rules, SSE framing, source selection, or settlement records. The existing browser session and Keryx treasury paths remain distinct, and the displayed payer follows the active or expired grant binding.

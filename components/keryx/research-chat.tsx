@@ -17,6 +17,12 @@ export function ResearchChat({ paidHref = "/research#paid-research" }: { paidHre
   const [anchor, setAnchor] = useState<string | undefined>();
   const sequence = useRef(0);
   const activeTurnRef = useRef<HTMLDivElement>(null);
+  const requestId = request?.id;
+  useEffect(() => {
+    // Scroll once, after the submitted turn exists in the committed DOM.
+    // Streamed steps and readers inspecting older reports never trigger it.
+    if (requestId !== undefined) activeTurnRef.current?.scrollIntoView({ behavior: "instant", block: "start" });
+  }, [requestId]);
   useEffect(() => {
     fetch("/api/sources").then(response => response.ok ? response.json() : Promise.reject(new Error("Source authority unavailable")))
       .then((data: { sources?: Array<{ id?: string; walletAddress?: string; fetchPrice?: number; onchainId?: string }> }) => setSourceIndex(buildSourceIndex(data.sources ?? [])))
@@ -40,8 +46,6 @@ export function ResearchChat({ paidHref = "/research#paid-research" }: { paidHre
     setRequest({ id: ++sequence.current, question, payer: payer === "session" ? "your funded session" : payer === "expired" ? "your expired funded session (recovery required)" : "Keryx treasury" });
     setRootRequest(false);
     void ask(question, budget, rootRequest ? undefined : parentId ?? sharedParent, model, mode);
-    // Only a submitted turn scrolls into view; streamed updates never move a reader.
-    window.setTimeout(() => activeTurnRef.current?.scrollIntoView({ behavior: "instant", block: "start" }), 0);
   };
   const stop = () => {
     if (!request || !streaming) return;
