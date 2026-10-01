@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, expect, it } from "vitest";
 import { chromium, type Browser, type Page } from "playwright";
 import { build } from "esbuild";
 import { createServer, type Server } from "node:http";
@@ -19,6 +19,26 @@ import { verifyBrowserSigningHeader } from "../payments/browser-signing-original
 let browser: Browser;
 let workerJs: string;
 let pageJs: string;
+type Stage = "init" | "context" | "parent-listen" | "signer-listen" | "navigation" | "worker-ready" | "grant" | "query" | "original" | "configure" | "send" | "terminal" | "status-wait" | "snapshot" | "cleanup";
+async function stage<T>(name: Stage, operation: () => T | Promise<T>, watchdog?: number): Promise<T> {
+  const started=performance.now();
+  const emit=(phase:"start"|"end"|"failed")=>fs.writeSync(1,`[separate-origin-fixture] stage=${name} phase=${phase} elapsedMs=${Math.min(600000,Math.max(0,Math.round(performance.now()-started)))}\n`);
+  let timer:ReturnType<typeof setTimeout>|undefined;
+  emit("start");
+  try {
+    const pending=Promise.resolve().then(operation);
+    const result=watchdog===undefined?await pending:await Promise.race([pending,new Promise<never>((_,reject)=>{
+      timer=setTimeout(()=>reject(new Error(`Fixture ${name} deadline`)),watchdog);
+    })]);
+    emit("end");return result;
+  } catch(error){emit("failed");throw error;} finally{clearTimeout(timer);}
+}
+const ownedCleanups=new Set<()=>Promise<void>>();
+afterEach(async()=>{
+  let failed=false;
+  for(const cleanup of [...ownedCleanups])try{await cleanup();}catch{failed=true;}
+  if(failed)throw new Error("Fixture cleanup refused");
+});
 beforeAll(async () => {
   const bundle = async (file: string) =>
     (
@@ -47,8 +67,12 @@ afterAll(async () => {
     disconnected: !browser?.isConnected(),
   });
 });
-async function listen(server: Server) {
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+async function listen(server: Server, cancelled: () => boolean) {
+  if(cancelled())throw new Error("Fixture closed");
+  await new Promise<void>((resolve,reject) => server.listen(0, "127.0.0.1", ()=>{
+    if(cancelled())server.close(()=>reject(new Error("Fixture closed")));
+    else resolve();
+  }));
   const address = server.address();
   if (!address || typeof address === "string")
     throw new Error("Fixture unavailable");
@@ -74,28 +98,39 @@ type Mode =
   | "late-ack"
   | "failed"
   | "settled";
-async function fixture(mode: Mode = "exposed") {
+async function fixture(mode: Mode = "exposed", failAfterInit?: (db: SqliteAdapter, folder: string) => void) {
   const folder = fs.mkdtempSync(
     path.join(os.tmpdir(), "keryx-isolated-signer-")
   );
   const file = path.join(folder, "journal.sqlite");
   const db = new SqliteAdapter(file);
+  let cleanupImpl=async()=>{try{db.close();}finally{fs.rmSync(folder,{recursive:true,force:true});}};
+  let closed=false;
+  const cleanup=async()=>{
+    if(closed)return;
+    closed=true;
+    try{await stage("cleanup",()=>cleanupImpl());}catch{throw new Error("Fixture cleanup refused");}finally{ownedCleanups.delete(cleanup);}
+  };
+  ownedCleanups.add(cleanup);
   try {
-    await db.init();
+    await stage("init",()=>db.init());
+    failAfterInit?.(db,folder);
   } catch {
-    db.close();
-    fs.rmSync(folder, { recursive: true, force: true });
+    await cleanup();
     throw new Error("Fixture unavailable");
   }
+  if(closed)throw new Error("Fixture closed");
   const native = new DatabaseSync(file);
-  const context = await browser
-    .newContext({ serviceWorkers: "block" })
+  cleanupImpl=async()=>{try{native.close();}finally{try{db.close();}finally{fs.rmSync(folder,{recursive:true,force:true});}}};
+  const context = await stage("context",()=>browser
+    .newContext({ serviceWorkers: "block" }))
     .catch(() => {
-      native.close();
-      db.close();
-      fs.rmSync(folder, { recursive: true, force: true });
+      // afterEach still owns cleanup if native context construction rejects.
       throw new Error("Fixture unavailable");
     });
+  if(closed){await context.close();throw new Error("Fixture closed");}
+  const nativeCleanup=cleanupImpl;
+  cleanupImpl=async()=>{try{await context.close();}finally{await nativeCleanup();}};
   const allowed = new Set<string>();
   const requestedOrigins: string[] = [];
   context.on("request", (request) =>
@@ -259,20 +294,28 @@ async function fixture(mode: Mode = "exposed") {
       );
     }
   });
+  const contextCleanup=cleanupImpl;
+  cleanupImpl=async()=>{
+    let failed=false;
+    try{await context.close();}catch{failed=true;}
+    for(const server of [parentServer,signerServer])try{if(server.listening)await close(server);}catch{failed=true;}
+    try{await contextCleanup();}catch{failed=true;}
+    if(failed)throw new Error("Fixture cleanup refused");
+  };
   let parent: Page | undefined, popup: Page | undefined;
   try {
-    parentOrigin = await listen(parentServer);
-    signerOrigin = await listen(signerServer);
+    parentOrigin = await stage("parent-listen",()=>listen(parentServer,()=>closed));
+    signerOrigin = await stage("signer-listen",()=>listen(signerServer,()=>closed));
     allowed.add(parentOrigin);
     allowed.add(signerOrigin);
     parent = await context.newPage();
-    await parent.goto(parentOrigin);
+    await stage("navigation",()=>parent!.goto(parentOrigin));
     const opened = parent.waitForEvent("popup");
     await parent.evaluate("openSigner()");
     popup = await opened;
-    await popup.waitForFunction(
+    await stage("worker-ready",()=>popup!.waitForFunction(
       () => typeof window.fixtureAddress === "string"
-    );
+    ));
     const signer = await popup.evaluate(
       () => window.fixtureAddress! as `0x${string}`
     );
@@ -281,7 +324,7 @@ async function fixture(mode: Mode = "exposed") {
       grantEpoch = crypto.randomUUID(),
       queryId = crypto.randomUUID(),
       requestId = crypto.randomUUID();
-    await db.upsertSessionGrant({
+    await stage("grant",()=>db.upsertSessionGrant({
       sessionId,
       sessAddr: signer,
       ownerAddr: owner.address,
@@ -289,7 +332,7 @@ async function fixture(mode: Mode = "exposed") {
       expiry: Date.now() + 60000,
       txHash: "synthetic",
       grantEpoch,
-    });
+    }));
     await db.activateBrowserJournal();
     native.exec("UPDATE browser_signing_v2_control SET active=1 WHERE id=1");
     const policy: BrowserQueryPolicy = {
@@ -307,7 +350,7 @@ async function fixture(mode: Mode = "exposed") {
       jobLimit: 2,
       expiresAt: Date.now() + 30000,
     };
-    const query = await db.admitBrowserQueryPolicy(
+    const query = await stage("query",async()=>db.admitBrowserQueryPolicy(
       {
         policy,
         signature: await owner.signTypedData(
@@ -315,10 +358,10 @@ async function fixture(mode: Mode = "exposed") {
         ),
       },
       sessionId
-    );
+    ));
     if (query.status !== "admitted") throw new Error("Fixture unavailable");
     const payee = "0x2222222222222222222222222222222222222222";
-    const original = await db.admitBrowserSigningOriginal({
+    const original = await stage("original",()=>db.admitBrowserSigningOriginal({
       queryNamespace: query.namespace,
       queryId,
       journal: {
@@ -360,7 +403,7 @@ async function fixture(mode: Mode = "exposed") {
           grantEpoch,
         },
       },
-    });
+    }));
     if (original.status !== "admitted") throw new Error("Fixture unavailable");
     callbackLocator = { sessionId, requestId };
     if (mode === "cancelled")
@@ -423,10 +466,12 @@ async function fixture(mode: Mode = "exposed") {
       queryId,
       grantEpoch,
     };
-    await popup.evaluate((value) => window.fixtureConfigure(value), binding);
-    await popup.waitForFunction(() => window.fixtureConfigured);
+    await stage("configure",async()=>{
+      await popup!.evaluate((value) => window.fixtureConfigure(value), binding);
+      await popup!.waitForFunction(() => window.fixtureConfigured);
+    });
     const send = async (data: unknown, ports = false) =>
-      parent!.evaluate(
+      stage("send",()=>parent!.evaluate(
         ({ data, origin, ports }) => {
           if (ports) {
             const channel = new MessageChannel();
@@ -440,7 +485,7 @@ async function fixture(mode: Mode = "exposed") {
             ).signerPopup.postMessage(data, origin);
         },
         { data, origin: signerOrigin, ports }
-      );
+      ));
     const state = () =>
       JSON.stringify(
         native
@@ -457,6 +502,21 @@ async function fixture(mode: Mode = "exposed") {
               .all(),
           ])
       );
+    cleanupImpl=async()=>{
+      let failed=false;
+      try{await context.close();}catch{failed=true;}
+      for(const server of [parentServer,signerServer])try{if(server.listening)await close(server);}catch{failed=true;}
+      try{
+        const deadline=performance.now()+10000;
+        while((runningHandlers||inFlightReads)&&performance.now()<deadline)
+          await new Promise(resolve=>setTimeout(resolve,10));
+        expect(requestedOrigins.every(origin=>allowed.has(origin))).toBe(true);
+        expect(runningHandlers).toBe(0);
+        expect(inFlightReads).toBe(0);
+      }catch{failed=true;}
+      try{await nativeCleanup();}catch{failed=true;}
+      if(failed)throw new Error("Fixture cleanup refused");
+    };
     return {
       db,
       parent,
@@ -475,38 +535,40 @@ async function fixture(mode: Mode = "exposed") {
         deliveredHeaders.length > 0 &&
         deliveredHeaders.every((header) => header === retainedHeader),
       async terminal() {
-        await popup!.waitForFunction(
+        await stage("terminal",()=>popup!.waitForFunction(
           () =>
             window.fixtureTelemetry?.attempted && !window.fixtureTelemetry.busy
-        );
+        ),8000);
       },
-      async cleanup() {
-        await context.close();
-        await close(parentServer);
-        await close(signerServer);
-        const deadline = Date.now() + 10000;
-        while ((runningHandlers || inFlightReads) && Date.now() < deadline)
-          await new Promise((resolve) => setTimeout(resolve, 10));
-        native.close();
-        db.close();
-        fs.rmSync(folder, { recursive: true, force: true });
-        expect(requestedOrigins.every((origin) => allowed.has(origin))).toBe(
-          true
-        );
-        expect(runningHandlers).toBe(0);
-        expect(inFlightReads).toBe(0);
-      },
+      cleanup,
     };
   } catch (error) {
-    await context.close();
-    if (parentServer.listening) await close(parentServer);
-    if (signerServer.listening) await close(signerServer);
-    native.close();
-    db.close();
-    fs.rmSync(folder, { recursive: true, force: true });
+    await cleanup();
     throw error;
   }
 }
+
+it("closes partially initialized native fixtures after an injected setup failure",async()=>{
+  let db:SqliteAdapter|undefined,folder:string|undefined;
+  await expect(fixture("exposed",(opened,target)=>{db=opened;folder=target;throw new Error("Synthetic setup failure");})).rejects.toThrow("Fixture unavailable");
+  if(!db||!folder)throw new Error("Fixture unavailable");
+  expect(fs.existsSync(folder)).toBe(false);
+  await expect(db.getSource("source")).rejects.toThrow();
+  expect(ownedCleanups.size).toBe(0);
+});
+it("removes partial native artifacts even when closing the actual handle reports failure",async()=>{
+  let db:SqliteAdapter|undefined,folder:string|undefined;
+  await expect(fixture("exposed",(opened,target)=>{
+    db=opened;folder=target;
+    const close=opened.close.bind(opened);
+    opened.close=()=>{close();throw new Error("Synthetic close failure");};
+    throw new Error("Synthetic setup failure");
+  })).rejects.toThrow("Fixture cleanup refused");
+  if(!db||!folder)throw new Error("Fixture unavailable");
+  expect(fs.existsSync(folder)).toBe(false);
+  await expect(db.getSource("source")).rejects.toThrow();
+  expect(ownedCleanups.size).toBe(0);
+});
 
 it("allowed malicious parent cannot extract or replace terms; actual cross-origin original signs once", async () => {
   const f = await fixture();
@@ -642,11 +704,11 @@ it.each([
     try {
       const before = f.state();
       if (mode === "failed" || mode === "settled") {
-        const snapshot = await f.db.readExposedBrowserSigningSnapshotForSigner(
+        const snapshot = await stage("snapshot",()=>f.db.readExposedBrowserSigningSnapshotForSigner(
           f.signer,
           f.binding.sessionId,
           f.binding.requestId
-        );
+        ));
         expect(snapshot?.active).toBe(true);
         expect(snapshot?.currentGrant?.grantEpoch).toBe(f.binding.grantEpoch);
         expect(snapshot?.journal.phase).toBe(mode);
@@ -689,11 +751,11 @@ it.each(["lost-ack", "truncated-ack", "late-ack"] as const)(
         correlationId: "first",
       });
       await f.terminal();
-      await f.parent.waitForFunction(
+      await stage("status-wait",()=>f.parent.waitForFunction(
         () =>
           (window as unknown as { statuses: { status: string }[] }).statuses
             .length > 0
-      );
+      ),8000);
       expect(
         await f.parent.evaluate(
           () =>
@@ -729,10 +791,10 @@ it.each(["lost-ack", "truncated-ack", "late-ack"] as const)(
         command: "sign-original",
         correlationId: "again",
       });
-      await f.parent.waitForFunction(
+      await stage("status-wait",()=>f.parent.waitForFunction(
         () =>
           (window as unknown as { statuses: unknown[] }).statuses.length >= 2
-      );
+      ),8000);
       expect(
         (await f.popup.evaluate(() => window.fixtureTelemetry!))
           .paymentSignatures
