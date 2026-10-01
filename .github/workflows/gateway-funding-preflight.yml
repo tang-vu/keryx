@@ -1,0 +1,33 @@
+name: Gateway funding preflight candidate
+on:
+  pull_request:
+    paths:
+      - "lib/payments/gateway-funding-preflight*"
+      - "lib/payments/gateway-funding-policy.ts"
+      - "lib/payments/gateway-funding-transaction.ts"
+      - "lib/payments/gateway-funding-receipt-policy.ts"
+      - ".github/workflows/gateway-funding-preflight.yml"
+  workflow_dispatch:
+jobs:
+  gateway-funding-preflight:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.10.0"
+          cache: npm
+      - run: npm ci
+      - name: Actual dual localhost HTTP preflight acceptance
+        run: npx vitest run lib/payments/gateway-funding-preflight.test.ts
+      - name: Project TypeScript
+        run: npx tsc --noEmit
+      - name: Scoped preflight lint
+        run: npx eslint lib/payments/gateway-funding-preflight.ts lib/payments/gateway-funding-preflight.test.ts
