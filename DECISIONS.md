@@ -76,6 +76,13 @@ SQLite composes the admitted native connection with an exact application schema
 profile. PostgreSQL uses fixed identity-checked domain RPCs and protected writer
 capabilities; an enrolled call never executes the legacy raw-client closure.
 Guard computed results, early returns and iterator publication as well as SQL.
+For enrolled browser admission, read source, item and current offer through one
+private fixed protected catalog statement. Native evidence showed separate full
+checks exhausted the existing five-second observation lifetime. Preserve that
+lifetime and all identity, schema, registry, version and admission checks; reduce
+independent catalog reads instead of extending authority freshness. The coherent
+snapshot does not remove the later catalog-to-admission race. Regenerate the
+independent SOURCE profile and verify the complete native workflow before cutover.
 Read-only access denies every reviewed mutator, including methods that update
 usage while checking credentials. Initialization inspects readiness and never
 migrates, repairs or normalizes historical authority.

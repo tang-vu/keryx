@@ -1252,6 +1252,70 @@ end; $$;
 
 
 
+-- Internal source-context catalog, captured before registry IO. One guarded
+-- snapshot improves source/item/offer coherence; admission still rechecks its
+-- original five-second deadline and financial authority after all locks.
+create function public.storage_read_browser_source_catalog(p_expected_identity jsonb,p_source_id text,p_item_id text) returns jsonb
+language plpgsql stable security definer set search_path=pg_catalog,pg_temp as $$
+declare result jsonb; raw_bytes bigint; tags jsonb; authors jsonb;
+begin
+  perform keryx_storage.read_operation(p_expected_identity,'read_browser_source_catalog');
+  if p_source_id is null or p_item_id is null or octet_length(p_source_id) not between 1 and 128
+    or octet_length(p_item_id) not between 1 and 128 then raise exception 'browser source catalog refused'; end if;
+  -- Stored JSONB compression size is not an expanded-size proof. Refuse
+  -- compressed legacy metadata without rewriting it; all text sizes below use
+  -- TOAST raw-length metadata before any row JSON serialization.
+  if exists(select 1 from public.sources s where s.id=p_source_id and
+    (pg_column_compression(s.tags) is not null or pg_column_compression(s.authors) is not null))
+    then raise exception 'browser source catalog compressed metadata refused'; end if;
+  select coalesce(sum(bytes),0) into raw_bytes from (
+    select coalesce(octet_length(s.id),0)::bigint+coalesce(octet_length(s.name),0)::bigint+coalesce(octet_length(s.url),0)::bigint+coalesce(octet_length(s.description),0)::bigint+coalesce(octet_length(s.rss_url),0)::bigint+coalesce(octet_length(s.wallet_address),0)::bigint+coalesce(octet_length(s.ipfs_cid),0)::bigint+coalesce(octet_length(s.onchain_id),0)::bigint+coalesce(octet_length(s.register_tx),0)::bigint+coalesce(octet_length(s.preview_depth),0)::bigint+pg_column_size(s.tags)::bigint+pg_column_size(s.authors)::bigint bytes from public.sources s where s.id=p_source_id
+    union all select coalesce(octet_length(i.id),0)::bigint+coalesce(octet_length(i.source_id),0)::bigint+coalesce(octet_length(i.title),0)::bigint+coalesce(octet_length(i.summary),0)::bigint+coalesce(octet_length(i.content),0)::bigint+coalesce(octet_length(i.link),0)::bigint+coalesce(octet_length(i.published_at),0)::bigint+coalesce(octet_length(i.ipfs_cid),0)::bigint+coalesce(octet_length(i.item_key_enc),0)::bigint+coalesce(octet_length(i.item_iv),0)::bigint+coalesce(octet_length(i.item_auth_tag),0)::bigint+coalesce(octet_length(i.item_wrap_iv),0)::bigint+coalesce(octet_length(i.delivery_kind),0)::bigint+coalesce(octet_length(i.storage_mode),0)::bigint+coalesce(octet_length(i.body_hash),0)::bigint+coalesce(octet_length(i.manifest_id),0)::bigint+coalesce(octet_length(i.manifest_signer),0)::bigint+coalesce(octet_length(i.manifest_nonce),0)::bigint+coalesce(octet_length(i.manifest_signature),0)::bigint from public.source_items i where i.source_id=p_source_id and i.id=p_item_id
+    union all select coalesce(octet_length(o.source_id),0)::bigint+coalesce(octet_length(o.item_id),0)::bigint+coalesce(octet_length(o.id),0)::bigint+coalesce(octet_length(o.content_version),0)::bigint+coalesce(octet_length(o.signer),0)::bigint+coalesce(octet_length(o.nonce),0)::bigint+coalesce(octet_length(o.signature),0)::bigint from public.article_offers o where o.source_id=p_source_id and o.item_id=p_item_id
+  ) sizes;
+  if raw_bytes>2097152 then raise exception 'browser source catalog bound exceeded'; end if;
+  select s.tags,s.authors into tags,authors from public.sources s where s.id=p_source_id;
+  if found then
+    if jsonb_typeof(tags) is distinct from 'array' or jsonb_typeof(authors) is distinct from 'array'
+      then raise exception 'browser source catalog metadata shape refused'; end if;
+    if jsonb_array_length(tags)>64 or jsonb_array_length(authors)>64
+      then raise exception 'browser source catalog metadata shape refused'; end if;
+    if exists(select 1 from jsonb_array_elements(tags) t(value) where jsonb_typeof(value) is distinct from 'string')
+      then raise exception 'browser source catalog metadata shape refused'; end if;
+    if exists(select 1 from jsonb_array_elements(tags) t(value) where octet_length(value#>>'{}')>512)
+      then raise exception 'browser source catalog metadata shape refused'; end if;
+    if exists(select 1 from jsonb_array_elements(authors) a(value) where jsonb_typeof(value) is distinct from 'object')
+      then raise exception 'browser source catalog metadata shape refused'; end if;
+    if exists(select 1 from jsonb_array_elements(authors) a(value) where
+      (select array_agg(key order by key) from jsonb_object_keys(value) key) is distinct from array['name','splitWeight','walletAddress']::text[]
+      or jsonb_typeof(value->'name') is distinct from 'string'
+      or jsonb_typeof(value->'walletAddress') is distinct from 'string'
+      or jsonb_typeof(value->'splitWeight') is distinct from 'number'
+      or not jsonb_path_exists(value,'$ ? (@.splitWeight >= 0 && @.splitWeight <= 1)'))
+      then raise exception 'browser source catalog metadata shape refused'; end if;
+    -- Separate statements: SQL boolean qualifier order is not a type fence.
+    -- Only proven strings reach scalar text extraction.
+    if exists(select 1 from jsonb_array_elements(authors) a(value) where
+      octet_length(value->>'name')>1024 or octet_length(value->>'walletAddress')>256)
+      then raise exception 'browser source catalog metadata shape refused'; end if;
+    if exists(select 1 from public.sources s where s.id=p_source_id and
+      (s.fetch_price<0 or s.fetch_price>9007199254.740991)) then raise exception 'browser source catalog price refused'; end if;
+    -- PG numeric's maximum fractional scale is 16383. Each validated [0,1]
+    -- weight therefore needs at most 16400 output bytes even when its compact
+    -- binary value is tiny. Text escaping is at most six bytes per raw byte;
+    -- fixed framing/scalars (including bounded fetch_price) fit 64KiB.
+    -- Bound SQL intermediate JSON work to 16MiB; returned wire stays <=4MiB.
+    if raw_bytes*6+jsonb_array_length(authors)::bigint*16400+65536>16777216
+      then raise exception 'browser source catalog bound exceeded'; end if;
+  end if;
+  select jsonb_build_object(
+    'source',(select to_jsonb(s) from public.sources s where s.id=p_source_id),
+    'item',(select to_jsonb(i) from public.source_items i where i.source_id=p_source_id and i.id=p_item_id),
+    'offer',(select to_jsonb(o) from public.article_offers o where o.source_id=p_source_id and o.item_id=p_item_id)) into result;
+  if octet_length(result::text)>4194304 then raise exception 'browser source catalog bound exceeded'; end if;
+  return result;
+end; $$;
+
 -- Only these newly installed APIs are granted; do not alter legacy function ACLs.
 do $$ declare f record; begin
   for f in select p.oid::regprocedure as signature from pg_proc p

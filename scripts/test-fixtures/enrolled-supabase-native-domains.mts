@@ -79,6 +79,7 @@ export async function exerciseEnrolledSupabaseNativeDomains(
   db: KeryxDB,
   expectedIdentity: Readonly<StorageIdentity>,
   registry: Readonly<NativeDomainRegistryFixture>,
+  scenario: "header" | "binding" | "capacity" | "terminal" = "header",
 ): Promise<readonly string[]> {
   const stage = (name: string) => process.stdout.write(`STAGE browser-${name}\n`);
   stage('provenance');
@@ -136,8 +137,10 @@ export async function exerciseEnrolledSupabaseNativeDomains(
   const query = await db.admitBrowserQueryPolicy(proof, sessionId);
   assert.equal(query.status, 'admitted');
   if (query.status !== 'admitted') throw new Error('Synthetic query refused');
-  stage('query-replay');
-  assert.deepEqual(await db.admitBrowserQueryPolicy(proof, sessionId), query);
+  if (scenario === 'header') {
+    stage('query-replay');
+    assert.deepEqual(await db.admitBrowserQueryPolicy(proof, sessionId), query);
+  }
   const requestId = randomUUID();
   const input: BrowserSourceOriginalAdmission = { protocol: 'durable-v3', queryNamespace: query.namespace, queryId,
     source: { sourceId, itemId, contentVersion, offerId: null },
@@ -152,9 +155,11 @@ export async function exerciseEnrolledSupabaseNativeDomains(
   assert.equal(admission.status, 'admitted');
   if (admission.status !== 'admitted') throw new Error('Synthetic original refused');
   assert.equal(admission.original.protocol, 'durable-v3');
-  stage('source-replay');
-  assert.deepEqual(await db.admitBrowserSourceSigningOriginal(input), admission);
-  assert.equal(await db.readExposedBrowserSigningSnapshotForSigner(signer.address, sessionId, requestId), null);
+  if (scenario === 'header') {
+    stage('source-replay');
+    assert.deepEqual(await db.admitBrowserSourceSigningOriginal(input), admission);
+    assert.equal(await db.readExposedBrowserSigningSnapshotForSigner(signer.address, sessionId, requestId), null);
+  }
   stage('expose');
   assert.equal(await db.exposeBrowserJournal(sessionId, requestId), true);
   const header = serializeBrowserSigningHeader(admission.original,
@@ -162,51 +167,60 @@ export async function exerciseEnrolledSupabaseNativeDomains(
   await verifyBrowserSigningHeader(admission.original, header);
   stage('canonical-signature');
   assert.equal(await db.signBrowserSigningOriginal(sessionId, requestId, header), true);
-  const snapshot = await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId);
-  assert.ok(snapshot);
-  assert.equal(snapshot.journal.phase, 'signed');
-  assert.equal(snapshot.query.spentMicros, '1000');
-  assert.equal(snapshot.signerSpentMicros, '1000');
-  assert.equal(snapshot.retainedEpochSpentMicros, '1000');
-  assert.deepEqual(snapshot.original, admission.original);
-  assert.equal(await db.signBrowserSigningOriginal(sessionId, requestId, header), true);
-  assert.deepEqual(await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId), snapshot);
-  assert.equal(await db.readExposedBrowserSigningSnapshotForSigner(owner.address, sessionId, requestId), null);
-  assert.equal(await db.browserSignerConfirmedSpendMicro(signer.address), 0);
-  // Exposure is irreversible: cancellation cannot refund an already handed-out nonce.
-  assert.equal(await db.cancelPreparedBrowserJournal(sessionId, requestId), false);
-  assert.equal((await db.getSessionGrant(sessionId))?.spent, 0.001);
+  if (scenario !== 'terminal') {
+    const snapshot = await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId);
+    assert.ok(snapshot);
+    assert.equal(snapshot.journal.phase, 'signed');
+    assert.equal(snapshot.query.spentMicros, '1000');
+    assert.equal(snapshot.signerSpentMicros, '1000');
+    assert.equal(snapshot.retainedEpochSpentMicros, '1000');
+    assert.deepEqual(snapshot.original, admission.original);
+    if (scenario === 'header') {
+      assert.equal(await db.signBrowserSigningOriginal(sessionId, requestId, header), true);
+      assert.deepEqual(await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId), snapshot);
+    } else if (scenario === 'capacity') {
+      assert.equal(await db.browserSignerConfirmedSpendMicro(signer.address), 0);
+      // Exposure is irreversible: cancellation cannot refund a handed-out nonce.
+      assert.equal(await db.cancelPreparedBrowserJournal(sessionId, requestId), false);
+      assert.equal((await db.getSessionGrant(sessionId))?.spent, 0.001);
+    } else if (scenario === 'binding') {
+      assert.equal(await db.readExposedBrowserSigningSnapshotForSigner(owner.address, sessionId, requestId), null);
+      const changed = structuredClone(input);
+      changed.source.contentVersion = 'changed-version';
+      stage('conflict-refusal');
+      const conflicting = await db.admitBrowserSourceSigningOriginal(changed);
+      assert.equal(conflicting.status, 'refused');
+      assert.deepEqual(await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId), snapshot);
+      const foreignHeader = serializeBrowserSigningHeader(admission.original,
+        await owner.signTypedData(browserSigningTypedData(admission.original)));
+      await assert.rejects(() => db.signBrowserSigningOriginal(sessionId, requestId, foreignHeader));
+      assert.deepEqual(await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId), snapshot);
+    }
 
-  const changed = structuredClone(input);
-  changed.source.contentVersion = 'changed-version';
-  stage('conflict-refusal');
-  const conflicting = await db.admitBrowserSourceSigningOriginal(changed);
-  assert.equal(conflicting.status, 'refused');
-  assert.deepEqual(await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId), snapshot);
-  const foreignHeader = serializeBrowserSigningHeader(admission.original,
-    await owner.signTypedData(browserSigningTypedData(admission.original)));
-  await assert.rejects(() => db.signBrowserSigningOriginal(sessionId, requestId, foreignHeader));
-  assert.deepEqual(await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId), snapshot);
+  }
 
   const after = await assertEnrolledSupabaseAuthority(db, 'write');
   assert.equal(canonicalJson(after.identity), canonicalJson(identity));
-  stage('submit');
-  assert.equal(await db.submitBrowserJournal(sessionId, requestId), true);
-  const submitted = await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId);
-  assert.equal(submitted?.journal.phase, 'submission_attempted');
-  assert.ok(admission.journal.payment.id);
-  const wrongNonce = `0x${'99'.repeat(32)}`;
-  stage('terminal');
-  assert.equal((await db.failPendingPayment(admission.journal.payment.id, wrongNonce, 'synthetic-terminal')).resolved, false);
-  assert.deepEqual(await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId), submitted);
-  assert.equal((await db.failPendingPayment(admission.journal.payment.id, admission.journal.nonce, 'synthetic-terminal')).resolved, true);
-  const failed = await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId);
-  assert.equal(failed?.journal.phase, 'failed');
-  assert.equal(failed?.query.spentMicros, '1000');
-  assert.equal(await db.browserSignerConfirmedSpendMicro(signer.address), 0);
-  await db.failPendingPayment(admission.journal.payment.id, admission.journal.nonce, 'synthetic-terminal');
-  assert.deepEqual(await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId), failed);
-  return Object.freeze(['native-browser-v3-header-replay-and-synthetic-failure-callback']);
+  if (scenario === 'terminal') {
+    stage('submit');
+    assert.equal(await db.submitBrowserJournal(sessionId, requestId), true);
+    const submitted = await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId);
+    assert.equal(submitted?.journal.phase, 'submission_attempted');
+    assert.deepEqual(submitted?.original, admission.original);
+    assert.ok(admission.journal.payment.id);
+    const wrongNonce = `0x${'99'.repeat(32)}`;
+    stage('terminal');
+    assert.equal((await db.failPendingPayment(admission.journal.payment.id, wrongNonce, 'synthetic-terminal')).resolved, false);
+    assert.deepEqual(await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId), submitted);
+    assert.equal((await db.failPendingPayment(admission.journal.payment.id, admission.journal.nonce, 'synthetic-terminal')).resolved, true);
+    const failed = await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId);
+    assert.equal(failed?.journal.phase, 'failed');
+    assert.equal(failed?.query.spentMicros, '1000');
+    assert.equal(await db.browserSignerConfirmedSpendMicro(signer.address), 0);
+    await db.failPendingPayment(admission.journal.payment.id, admission.journal.nonce, 'synthetic-terminal');
+    assert.deepEqual(await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId), failed);
+  }
+  return Object.freeze([`native-browser-v3-${scenario}`]);
 }
 
 /** Independent actual-facade auth case; synthetic identities never leave this child. */

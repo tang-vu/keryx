@@ -1534,7 +1534,53 @@ export class SupabaseAdapter implements KeryxDB {
   }
   async admitBrowserQueryPolicy(proof:BrowserQueryPolicyProof,sessionId:string) {return admitSupabaseBrowserQueryPolicy(this.helperRpcClient(),proof,sessionId);}
   async admitBrowserSigningOriginal(input:BrowserOriginalAdmission) {return admitSupabaseBrowserSigningOriginal(this.helperRpcClient(),input);}
-  async admitBrowserSourceSigningOriginal(input:BrowserSourceOriginalAdmission) {return admitSupabaseBrowserSourceSigningOriginal(this.helperRpcClient(),input,createBrowserOriginalSourceAuthority(this));}
+  /** One private, per-attempt catalog snapshot. Loading is lazy so the resolver's
+   * original five-second lifetime starts before this guarded RPC, and exact
+   * historical replay never requires catalog/provider access. */
+  #browserSourceAdmissionCatalog(input: BrowserSourceOriginalAdmission) {
+    const sourceId = input.source.sourceId, itemId = input.source.itemId;
+    let captured: Promise<{ source: Source | null; item: SourceItem | null; offer: ArticleOffer | null }> | undefined;
+    const load = () => captured ??= (async () => {
+      const { data } = await this.domainCall("read_browser_source_catalog", { p_source_id: sourceId, p_item_id: itemId },
+        async (): Promise<{ data: unknown }> => { throw new Error("Enrolled browser source catalog required"); });
+      if (!data || typeof data !== "object" || Array.isArray(data) ||
+        Object.keys(data).sort().join(",") !== "item,offer,source") refuseStorage("invalid_operation");
+      const encoded = canonicalJson(data);
+      if (Buffer.byteLength(encoded, "utf8") > 4 * 1024 * 1024) refuseStorage("invalid_operation");
+      const copy = JSON.parse(encoded) as Record<string, unknown>;
+      const row = (value: unknown): Record<string, unknown> | null => {
+        if (value === null) return null;
+        if (!value || typeof value !== "object" || Array.isArray(value)) refuseStorage("invalid_operation");
+        return value as Record<string, unknown>;
+      };
+      const sourceRow = row(copy.source), itemRow = row(copy.item), offerRow = row(copy.offer);
+      if ((sourceRow && sourceRow.id !== sourceId) ||
+        (itemRow && (itemRow.source_id !== sourceId || itemRow.id !== itemId)) ||
+        (offerRow && (offerRow.source_id !== sourceId || offerRow.item_id !== itemId))) refuseStorage("invalid_operation");
+      const snapshot = { source: sourceRow ? rowToSource(sourceRow) : null,
+        item: itemRow ? rowToSourceItem(itemRow) : null, offer: offerRow ? rowToArticleOffer(offerRow) : null };
+      const freeze = (value: object): void => {
+        for (const child of Object.values(value)) if (child && typeof child === "object") freeze(child);
+        Object.freeze(value);
+      };
+      freeze(snapshot);
+      return snapshot;
+    })();
+    const assertKeys = (source: string, item?: string) => {
+      if (source !== sourceId || (item !== undefined && item !== itemId)) refuseStorage("invalid_operation");
+    };
+    return Object.freeze({
+      getSource: async (source: string) => { assertKeys(source); return (await load()).source; },
+      getItem: async (source: string, item: string) => { assertKeys(source, item); return (await load()).item; },
+      getArticleOffer: async (source: string, item: string) => { assertKeys(source, item); return (await load()).offer; },
+    });
+  }
+
+  async admitBrowserSourceSigningOriginal(input: BrowserSourceOriginalAdmission) {
+    const captured = this.#enrolled ? JSON.parse(canonicalJson(input)) as BrowserSourceOriginalAdmission : input;
+    const catalog = this.#enrolled ? this.#browserSourceAdmissionCatalog(captured) : this;
+    return admitSupabaseBrowserSourceSigningOriginal(this.helperRpcClient(), captured, createBrowserOriginalSourceAuthority(catalog));
+  }
   async readExposedBrowserSigningSnapshotForSigner(signer:string,sessionId:string,requestId:string) {return readExposedSupabaseBrowserSigningSnapshotForSigner(this.helperRpcClient(),signer,sessionId,requestId);}
   async readBrowserSigningSnapshot(owner:string,sessionId:string,requestId:string) {return readSupabaseBrowserSigningSnapshot(this.helperRpcClient(),owner,sessionId,requestId);}
   async signBrowserSigningOriginal(sessionId:string,requestId:string,header:string) {return signSupabaseBrowserSigningOriginal(this.helperRpcClient(),sessionId,requestId,header);}

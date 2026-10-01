@@ -113,16 +113,41 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
       assert.throws(() => sql(`set role ${role};insert into public.sources(id) values('forbidden')`));
       assert.throws(() => sql(`set role ${role};insert into keryx_storage.writer values(1,'${"0".repeat(64)}','upsert_source')`));
       assert.throws(() => sql(`set role ${role};delete from keryx_storage.identity`));
-      if (role !== "service_role") assert.throws(() => sql(`set role ${role};select read_storage_identity()`));
+      if (role !== "service_role") {
+        assert.throws(() => sql(`set role ${role};select read_storage_identity()`));
+        assert.throws(() => sql(`set role ${role};select storage_read_browser_source_catalog(${literal(identity)},'absent','absent')`));
+      }
     }
     assert.equal(snapshot(), enrolled, "ACL refusals leave the whole native snapshot unchanged");
     const foreign = { ...identity, storageId: randomUUID() };
     assert.throws(() => service(`select storage_get_source(${literal(foreign)},'absent')`));
+    assert.throws(() => service(`select storage_read_browser_source_catalog(${literal(foreign)},'absent','absent')`));
+    assert.deepEqual(JSON.parse(service(`select storage_read_browser_source_catalog(${literal(identity)},'absent','absent')`)),
+      { source: null, item: null, offer: null });
     for (const timeout of ["0", "31s"]) {
       assert.throws(() => sql(`set role service_role;set statement_timeout='${timeout}';select storage_get_source(${literal(identity)},'absent')`));
     }
     assert.equal(snapshot(), enrolled);
-    service(`begin read only;select storage_get_source(${literal(identity)},'absent');select storage_verify_runtime_authority(${literal(identity)});commit;`);
+    service(`begin read only;select storage_get_source(${literal(identity)},'absent');select storage_read_browser_source_catalog(${literal(identity)},'absent','absent');select storage_verify_runtime_authority(${literal(identity)});commit;`);
+    for (const test of [
+      { name: "raw-text", field: "name", value: "repeat('x',2097153)", error: "browser source catalog bound exceeded" },
+      { name: "compressed-json", field: "tags", value: "jsonb_build_array(repeat('x',100000))", error: "browser source catalog compressed metadata refused" },
+      { name: "nested-numeric-string-field", field: "authors", value: `'[{"name":{"nested":1e10000},"walletAddress":"0x${"11".repeat(20)}","splitWeight":1}]'::jsonb`,
+        error: "browser source catalog metadata shape refused" },
+      { name: "numeric-expansion", field: "authors", value: `'[{"name":"Fixture","walletAddress":"0x${"11".repeat(20)}","splitWeight":1e10000}]'::jsonb`,
+        error: "browser source catalog metadata shape refused" },
+    ]) {
+      const source = `catalog-negative-${test.name}`;
+      assert.throws(() => sql(`begin;insert into public.sources(id,name,wallet_address) values('${source}','Fixture','0x${"11".repeat(20)}');
+        update public.sources set ${test.field}=${test.value} where id='${source}';
+        set local role service_role;select storage_read_browser_source_catalog(${literal(identity)},'${source}','absent');commit;`),
+      error => {
+        const stderr = (error as { stderr?: unknown }).stderr;
+        return typeof stderr === "string" && stderr.includes(test.error);
+      }, `Actual catalog preflight ${test.name} must reach its exact refusal`);
+      assert.equal(snapshot(), enrolled, "Catalog preflight refusal rolls back the entire owned fixture transaction");
+    }
+    process.stdout.write("PASS actual coherent catalog raw-text/compressed-JSON/nested-numeric/numeric-expansion preflight refusals and rollback\n");
     const readonlyDiagnostics = snapshotWithDiagnostics();
     if (readonlyDiagnostics.whole !== enrolled) {
       for (const component of ["logical", "otherCatalog", "normalizedCatalog"] as const) {
@@ -292,6 +317,9 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
     assert.equal(sql("select count(*) from keryx_storage.writer"), "0");
     registry = await startEnrolledSupabaseNativeRegistry();
     await runChild("domains");
+    await runChild("domain-binding");
+    await runChild("domain-capacity");
+    await runChild("domain-terminal");
     await runChild("domain-auth");
     await runChild("domain-treasury");
     registry.assertHealthy();

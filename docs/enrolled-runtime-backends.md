@@ -104,6 +104,26 @@ This bounds competing verification work within one metrics call; the ordinary
 adapter retains its existing parallel reads. Metrics are not an atomic snapshot
 across the four statements and do not establish payment settlement evidence.
 
+For enrolled browser source admission, use one private, fixed catalog read of
+source, item and current offer in a single protected STABLE statement snapshot.
+Separate guarded reads exhausted the unchanged five-second observation lifetime
+in native acceptance. Begin that lifetime before the coherent read; retain the
+identity/schema check, existing row codecs, content/version and offer validation,
+registry observations and admission expiry checks after SQL locks. Missing or
+foreign records refuse. This improves read coherence without eliminating the
+catalog-to-admission race; authority remains bounded to its recorded observation.
+The coherent reader adds no public database method or caller-selected transport,
+and requires a fresh independent SOURCE profile before native acceptance.
+
+The catalog preflight bounds raw fields to 2 MiB, tag and author arrays to 64
+entries, intermediate JSON to 16 MiB and response bytes to 4 MiB. Shape checks
+precede string decoding, with a separate allowance for numeric weight expansion.
+Compressed legacy JSONB tags/authors refuse because their stored size does not
+prove the expanded bound; legitimate compressed metadata can therefore block
+enrolled source admission. Preserve that data and resolve the limitation before
+cutover if the intended source set requires it. Text content uses its raw byte
+length metadata, and ordinary adapter behavior remains unchanged.
+
 ## Cache format and limits
 
 `enc:v3:` is a distinct enrolled cache envelope. Bind source ID, complete storage

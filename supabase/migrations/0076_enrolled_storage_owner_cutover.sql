@@ -85,6 +85,7 @@ insert into keryx_storage.operations(operation,relations,real_only,read_only) va
   ('get_items',array['source_items']::text[],false,true),
   ('get_query_run',array['query_runs']::text[],false,true),
   ('get_session_grant',array['session_grants']::text[],true,true),
+  ('read_browser_source_catalog',array['sources','source_items','article_offers']::text[],true,true),
   ('get_source',array['sources']::text[],false,true),
   ('get_source_by_onchain_id',array['sources']::text[],false,true),
   ('get_source_meta',array['source_meta']::text[],false,true),

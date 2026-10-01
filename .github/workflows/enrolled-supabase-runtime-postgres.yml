@@ -20,6 +20,12 @@ on:
       - "eslint.config.*"
       - ".github/workflows/enrolled-supabase-runtime-postgres.yml"
   workflow_dispatch:
+    inputs:
+      source_reference_only:
+        description: "Generate reviewed source metadata only; never runtime acceptance"
+        type: boolean
+        required: false
+        default: false
 jobs:
   enrolled-supabase-postgres:
     runs-on: ubuntu-latest
@@ -36,8 +42,13 @@ jobs:
       - name: Focused facade inventory and legacy regressions
         run: npx vitest run lib/db/supabase-adapter.test.ts lib/db/supabase-enrolled-methods.test.ts scripts/helpers/enrolled-postgres-schema-contract.test.ts scripts/test-fixtures/enrolled-supabase-native-https.test.ts
       - name: Actual PG17 reference, owner cutover and native HTTPS factory acceptance
+        if: github.event_name != 'workflow_dispatch' || !inputs.source_reference_only
         run: node --import tsx scripts/test-enrolled-supabase-runtime-postgres.mts --acceptance
+      - name: Reviewed source metadata generation only (not runtime acceptance)
+        if: github.event_name == 'workflow_dispatch' && inputs.source_reference_only
+        run: node --import tsx scripts/test-enrolled-supabase-runtime-postgres.mts
       - name: Retain bounded schema-only source reference
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: enrolled-supabase-source-contract-${{ github.sha }}
