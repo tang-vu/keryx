@@ -1,5 +1,16 @@
 # Keryx Project Changelog
 
+### Creator registration evidence and decision feedback (2026-10-01)
+
+- Distinguish wallet signature, pending confirmation, successful registration event,
+  indexing, failure and unknown outcomes. Confirm the expected registry/source/creator
+  before reporting on-chain success, and observe indexing through the owner-only listing.
+- Replace fixed-delay success with a bounded manual status check. Preserve ownership
+  instructions and one-time webhook details; unknown outcomes do not trigger resubmission.
+  Offline registration stays explicitly labeled.
+- Label creator feedback as BUY/CACHE decisions and answer citations. These counts do
+  not establish settled reads or rewards; payment authority and API count logic are unchanged.
+
 ### YouTube publisher metadata references (2026-10-01)
 
 - Add the audited official Super Simple Songs feed to the unpaid public-reference batch.

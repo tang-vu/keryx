@@ -1,5 +1,28 @@
 # Keryx — Decision Log
 
+**Observe creator registration before reporting success** — *2026-10-01*
+
+Preparing the independent seller pilot exposed a presentation error: receiving a wallet transaction
+hash was reported as successful on-chain registration, with indexing assumed after a
+fixed delay. A returned hash does not prove mined registration. Observe a receipt on the pinned Arc testnet
+client and require a successful `SourceRegistered` event from the expected registry,
+source identity and creator. A successful replacement self-transfer is not registration.
+Reverted, rejected, pending and unknown outcomes remain distinct; unknown submission
+does not authorize automatic resubmission.
+
+After the registration event, check the existing owner-only listing endpoint for the
+same registry, creator and on-chain identity before reporting indexing success. Each
+manual status check is bounded and performs no new registration. Duplicate submission
+and stale completions are guarded. Retain ownership instructions and the one-time webhook
+secret through observation; preserve the explicitly labeled offline path.
+
+Creator feedback counts BUY/CACHE decisions and answer citations, independently of
+settled payment records. Keep the historical API fields and count logic, but correct
+their labels and comments so they cannot stand in for paid reads or citation earnings.
+This changes observation and reporting, not registry, source ownership, payment or
+payout authority. Synthetic browser acceptance is not a live registration, provider
+adoption, independent settlement audit or mainnet authorization.
+
 **YouTube public metadata as bounded free evidence** — *2026-10-01*
 
 The first owner-selected research task is niche/idea exploration for an English-language
