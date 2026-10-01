@@ -9,7 +9,7 @@ import { join, resolve } from "node:path";
 import { canonicalJson } from "../../lib/canonical-json";
 import { STORAGE_TESTNET_PROFILE_DIGEST, type StorageIdentity } from "../../lib/db/storage-identity";
 import { SUPABASE_RUNTIME_CONTRACT } from "../../lib/db/supabase-runtime-contract";
-import { startOwnedSupabaseHttpsBridge } from "./enrolled-supabase-native-https.mts";
+import { startOwnedSupabaseHttpsBridge, waitForOwnedSourceAdmissionEntry } from "./enrolled-supabase-native-https.mts";
 import { startEnrolledSupabaseNativeRegistry } from "./enrolled-supabase-native-domains.mts";
 
 export async function acceptOwnedEnrolledSupabaseRuntime(
@@ -307,8 +307,17 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
             await new Promise<void>(resolveDelay => setTimeout(resolveDelay, 20));
           }
           assert(lockerOutput.includes("READY_GRANT_LOCK"), "Owned grant lock acquired");
+          const sourceAdmissionOperation = "storage_browser_signing_admit_source_original";
+          const admissionsBefore = bridge!.counts.get(sourceAdmissionOperation) ?? 0;
+          const priorAdmissionDeadline = bridge!.getSourceAdmissionDeadlineMs();
           child.stdin!.write("resume\n");
           const waiterDeadline = performance.now() + 15_000;
+          // Do not compete with the guarded catalog observation by launching
+          // synchronous PostgreSQL probes before the actual admission RPC.
+          await waitForOwnedSourceAdmissionEntry(bridge!.counts, admissionsBefore, waiterDeadline, () => childTerminal);
+          const enteredAdmissionDeadline = bridge!.getSourceAdmissionDeadlineMs();
+          assert.ok(enteredAdmissionDeadline !== null && enteredAdmissionDeadline !== priorAdmissionDeadline &&
+            Date.now() < enteredAdmissionDeadline, "Fresh source RPC retains its original current deadline");
           let waited = false;
           while (performance.now() < waiterDeadline) {
             waited = sql("select exists(select 1 from pg_stat_activity a where a.datname=current_database() and a.pid<>pg_backend_pid() and a.wait_event_type='Lock' and a.query like '%storage_browser_signing_admit_source_original%' and exists(select 1 from pg_locks l where l.pid=a.pid and not l.granted))::text") === "true";

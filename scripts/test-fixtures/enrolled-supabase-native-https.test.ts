@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 import { assembleAuthorityBoundSupabaseCore } from "../../lib/db/supabase-adapter";
 import { STORAGE_TESTNET_PROFILE_DIGEST, type StorageIdentity } from "../../lib/db/storage-identity";
 import { SUPABASE_RUNTIME_CONTRACT } from "../../lib/db/supabase-runtime-contract";
-import { readOwnedFixtureRequestBody } from "./enrolled-supabase-native-https.mjs";
+import { readOwnedFixtureRequestBody, waitForOwnedSourceAdmissionEntry } from "./enrolled-supabase-native-https.mjs";
 
 async function listen(server: Server) {
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -19,6 +19,56 @@ async function close(server: Server) {
   server.closeAllConnections();
   await new Promise<void>((resolve) => server.close(() => resolve()));
 }
+
+it("starts lock probes only after actual HTTP source admission entry, before its response", async () => {
+  const operation = "storage_browser_signing_admit_source_original";
+  const counts = new Map<string, number>([[operation, 1]]);
+  let releaseCatalog!: () => void;
+  const catalogHold = new Promise<void>(resolve => { releaseCatalog = resolve; });
+  let releaseAdmission!: () => void;
+  const admissionHold = new Promise<void>(resolve => { releaseAdmission = resolve; });
+  let catalogEntered!: () => void;
+  const catalogReady = new Promise<void>(resolve => { catalogEntered = resolve; });
+  let responded = false;
+  const server = createServer(async (request, response) => {
+    await readOwnedFixtureRequestBody(request);
+    if (request.url === "/catalog") {
+      catalogEntered();
+      await catalogHold;
+    } else {
+      counts.set(operation, 2);
+      await admissionHold;
+      responded = true;
+    }
+    response.end("[]");
+  });
+  const origin = await listen(server);
+  let probes = 0;
+  let terminal = false;
+  const waiting = waitForOwnedSourceAdmissionEntry(counts, 1, performance.now() + 5000, () => terminal)
+    .then(() => { probes++; });
+  void waiting.catch(() => undefined);
+  try {
+    const catalog = fetch(`${origin}/catalog`, { method: "POST", signal: AbortSignal.timeout(5000) });
+    await catalogReady;
+    await new Promise<void>(resolve => setTimeout(resolve, 50));
+    expect(probes).toBe(0);
+    releaseCatalog();
+    await catalog;
+    const admission = fetch(`${origin}/admission`, { method: "POST", signal: AbortSignal.timeout(5000) });
+    await waiting;
+    expect(probes).toBe(1);
+    expect(responded).toBe(false);
+    releaseAdmission();
+    await admission;
+  } finally {
+    terminal = true;
+    releaseCatalog();
+    releaseAdmission();
+    await Promise.allSettled([waiting]);
+    await close(server);
+  }
+});
 
 it("real SDK receives a response delayed beyond the completed request-body deadline", async () => {
   const server = createServer(async (request, response) => {

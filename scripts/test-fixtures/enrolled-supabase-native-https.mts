@@ -9,6 +9,18 @@ import { join, resolve } from "node:path";
 import { once } from "node:events";
 import type { IncomingMessage } from "node:http";
 
+/** Wait for request entry, never for completion; callers may then inspect locks. */
+export async function waitForOwnedSourceAdmissionEntry(
+  counts: ReadonlyMap<string, number>, baseline: number, deadline: number, terminal: () => boolean,
+) {
+  const operation = "storage_browser_signing_admit_source_original";
+  while ((counts.get(operation) ?? 0) === baseline && !terminal() && performance.now() < deadline) {
+    await new Promise<void>(resolveDelay => setTimeout(resolveDelay, 20));
+  }
+  assert.equal(counts.get(operation), baseline + 1,
+    "Actual source admission RPC reaches the held grant fixture");
+}
+
 /** Test-only request phase bound. Response work retains its separate deadlines. */
 export async function readOwnedFixtureRequestBody(request: IncomingMessage, bodyTimeoutMs = 5_000) {
   assert(Number.isSafeInteger(bodyTimeoutMs) && bodyTimeoutMs > 0 && bodyTimeoutMs <= 5_000);
