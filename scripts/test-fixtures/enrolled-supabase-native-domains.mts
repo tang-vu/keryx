@@ -80,6 +80,8 @@ export async function exerciseEnrolledSupabaseNativeDomains(
   expectedIdentity: Readonly<StorageIdentity>,
   registry: Readonly<NativeDomainRegistryFixture>,
 ): Promise<readonly string[]> {
+  const stage = (name: string) => process.stdout.write(`STAGE browser-${name}\n`);
+  stage('provenance');
   const { assertEnrolledSupabaseAuthority } = await import('../../lib/db/enrolled-supabase-adapter.ts');
   const { validateStorageIdentity } = await import('../../lib/db/storage-identity.ts');
   const { canonicalJson } = await import('../../lib/canonical-json.ts');
@@ -108,14 +110,19 @@ export async function exerciseEnrolledSupabaseNativeDomains(
   const token = '0x3600000000000000000000000000000000000000';
   const gateway = '0x0077777d7eba4688bdef3e311b846f25870a19b9';
   const payee = registry.payout.toLowerCase();
+  stage('activate');
   await db.activateBrowserJournal();
+  stage('grant');
   await db.upsertSessionGrant({ sessionId, sessAddr: signer.address, ownerAddr: owner.address,
     cap: 1, expiry: Date.now() + 120000, txHash: 'synthetic-native-unfunded', grantEpoch });
+  stage('source');
   await db.upsertSource({ id: sourceId, name: sourceName, url: sourceUrl, description: 'Synthetic native fixture',
     walletAddress: payee, fetchPrice: 0.001, tags: [], authors: [], createdAt: new Date().toISOString(),
     active: true, verified: true, onchainId: browserSourceRegistryId(registry.creator, sourceUrl) });
+  stage('items');
   await db.addItems([{ id: itemId, sourceId, title: 'Fixture item', summary: 'Preview',
     content: 'Synthetic body', link: 'https://source.example/item' }]);
+  stage('item-read');
   const item = await db.getItem(sourceId, itemId);
   assert.ok(item);
   const contentVersion = sourceItemContentVersion(item);
@@ -125,9 +132,11 @@ export async function exerciseEnrolledSupabaseNativeDomains(
     questionDigest: `0x${'66'.repeat(32)}`, queryCeilingMicros: '2000', lifetimeCeilingMicros: '4000',
     jobLimit: 2, expiresAt: Date.now() + 60000 };
   const proof = { policy, signature: await owner.signTypedData(browserQueryPolicyTypedData(policy)) };
+  stage('query-admission');
   const query = await db.admitBrowserQueryPolicy(proof, sessionId);
   assert.equal(query.status, 'admitted');
   if (query.status !== 'admitted') throw new Error('Synthetic query refused');
+  stage('query-replay');
   assert.deepEqual(await db.admitBrowserQueryPolicy(proof, sessionId), query);
   const requestId = randomUUID();
   const input: BrowserSourceOriginalAdmission = { protocol: 'durable-v3', queryNamespace: query.namespace, queryId,
@@ -138,16 +147,20 @@ export async function exerciseEnrolledSupabaseNativeDomains(
         maxTimeoutSeconds: 691200, extra: { name: 'GatewayWalletBatched', version: '1', verifyingContract: gateway } },
       payment: { kind: 'fetch', queryId, sourceId, sourceName, payer: signer.address, payee,
         amountUsdc: 0.001, network, grantEpoch, itemId, contentVersion } } };
+  stage('source-admission');
   const admission = await db.admitBrowserSourceSigningOriginal(input);
   assert.equal(admission.status, 'admitted');
   if (admission.status !== 'admitted') throw new Error('Synthetic original refused');
   assert.equal(admission.original.protocol, 'durable-v3');
+  stage('source-replay');
   assert.deepEqual(await db.admitBrowserSourceSigningOriginal(input), admission);
   assert.equal(await db.readExposedBrowserSigningSnapshotForSigner(signer.address, sessionId, requestId), null);
+  stage('expose');
   assert.equal(await db.exposeBrowserJournal(sessionId, requestId), true);
   const header = serializeBrowserSigningHeader(admission.original,
     await signer.signTypedData(browserSigningTypedData(admission.original)));
   await verifyBrowserSigningHeader(admission.original, header);
+  stage('canonical-signature');
   assert.equal(await db.signBrowserSigningOriginal(sessionId, requestId, header), true);
   const snapshot = await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId);
   assert.ok(snapshot);
@@ -166,6 +179,7 @@ export async function exerciseEnrolledSupabaseNativeDomains(
 
   const changed = structuredClone(input);
   changed.source.contentVersion = 'changed-version';
+  stage('conflict-refusal');
   const conflicting = await db.admitBrowserSourceSigningOriginal(changed);
   assert.equal(conflicting.status, 'refused');
   assert.deepEqual(await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId), snapshot);
@@ -176,11 +190,13 @@ export async function exerciseEnrolledSupabaseNativeDomains(
 
   const after = await assertEnrolledSupabaseAuthority(db, 'write');
   assert.equal(canonicalJson(after.identity), canonicalJson(identity));
+  stage('submit');
   assert.equal(await db.submitBrowserJournal(sessionId, requestId), true);
   const submitted = await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId);
   assert.equal(submitted?.journal.phase, 'submission_attempted');
   assert.ok(admission.journal.payment.id);
   const wrongNonce = `0x${'99'.repeat(32)}`;
+  stage('terminal');
   assert.equal((await db.failPendingPayment(admission.journal.payment.id, wrongNonce, 'synthetic-terminal')).resolved, false);
   assert.deepEqual(await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId), submitted);
   assert.equal((await db.failPendingPayment(admission.journal.payment.id, admission.journal.nonce, 'synthetic-terminal')).resolved, true);

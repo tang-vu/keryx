@@ -202,7 +202,11 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
       void completion.then(() => { childTerminal = true; });
       let output = "";
       let stage = "startup";
-      const stages = new Set(["startup", "provenance", "readonly", "drift", "source-write", "cache", "auth", "oversize-cache", "create-challenge", "consume-challenge", "reconsume-challenge", "upsert-user", "read-user", "query", "metrics", "creator-leaderboard", "domains", "quota", "close"]);
+      const stages = new Set(["startup", "provenance", "readonly", "drift", "source-write", "cache", "auth", "oversize-cache", "create-challenge", "consume-challenge", "reconsume-challenge", "upsert-user", "read-user", "query", "metrics", "creator-leaderboard", "domains", "quota", "close",
+        "browser-provenance", "browser-activate", "browser-grant", "browser-source", "browser-items",
+        "browser-item-read", "browser-query-admission", "browser-query-replay", "browser-source-admission",
+        "browser-source-replay", "browser-expose", "browser-canonical-signature", "browser-conflict-refusal",
+        "browser-submit", "browser-terminal"]);
       child.stdout!.on("data", (part) => {
         output += part;
         if (output.length > 8192) child.kill();

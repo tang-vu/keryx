@@ -40,7 +40,10 @@ export async function startOwnedSupabaseHttpsBridge(curlContainer: string) {
     "storage_consume_auth_challenge", "storage_upsert_user", "storage_get_user",
     "storage_set_sync_state", "storage_get_sync_state", "storage_save_query_run",
     "storage_scan_payment_metrics", "storage_scan_query_metrics", "storage_scan_feedback_metrics",
-    "storage_scan_gap_metrics", "storage_get_query_run", "storage_list_recent_queries"]);
+    "storage_scan_gap_metrics", "storage_get_query_run", "storage_list_recent_queries",
+    "storage_get_item", "storage_activate_browser_journal", "storage_upsert_browser_journal_grant",
+    "storage_browser_signing_admit_query", "storage_browser_signing_replay_source_original",
+    "storage_browser_signing_admit_source_original"]);
   const timings = new Map<string, { started: number; completed: number; failed: number; totalMs: number; maxMs: number }>();
   const failures = new Map<string, number>();
   const metricShapes = new Map<string, { shape: "array" | "null" | "object" | "scalar" | "invalid"; length: number | null }>();
