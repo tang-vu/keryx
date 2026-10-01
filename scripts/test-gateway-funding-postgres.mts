@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { testPostgresFundingReadiness } from "./gateway-funding-postgres-readiness-fixture.mts";
+import { createRequire } from "node:module";
 import { execFile, execFileSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
 import { randomUUID } from "node:crypto";
@@ -9,7 +10,10 @@ import { keccak256, parseTransaction } from "viem";
 import { SupabaseAuthority } from "../lib/db/supabase-authority";
 import { SupabaseGatewayFundingLedger } from "../lib/db/gateway-funding-supabase";
 import { SupabaseGatewayFundingTerminalObserverStore } from "../lib/db/gateway-funding-supabase-observer";
-import { createGatewayFundingReceiptObserverForTrustedComposition, unsealVerifiedGatewayFundingReceipt } from "../lib/payments/gateway-funding-receipt-observer";
+// Node24.10 splits native .mts ESM and .ts CJS instances under tsx. Mint in
+// the adapter's CJS issuer instance so its private WeakMap remains authoritative.
+const { createGatewayFundingReceiptObserverForTrustedComposition, unsealVerifiedGatewayFundingReceipt } =
+  createRequire(import.meta.url)("../lib/payments/gateway-funding-receipt-observer.ts") as typeof import("../lib/payments/gateway-funding-receipt-observer");
 import { GATEWAY_FUNDING_RECEIPT_POLICY, GATEWAY_FUNDING_RECEIPT_POLICY_DIGEST } from "../lib/payments/gateway-funding-receipt-policy";
 import { syntheticStorageIdentity } from "../lib/db/storage-identity-fixture";
 import { prepareGatewayFundingTransaction } from "../lib/payments/gateway-funding-transaction";
