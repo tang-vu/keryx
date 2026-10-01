@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
+import { ResearchChat } from "@/components/keryx/research-chat";
 import { ResearchRequest } from "@/components/keryx/research-request";
 import { ResearchJob } from "@/components/keryx/research-job";
 import { ResearchWorkspace } from "@/components/keryx/research-workspace";
@@ -17,8 +18,8 @@ import { parseBuyerBudget } from "@/lib/a2a/buyer-workspace";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  title: "Paid research — Keryx",
-  description: "Price a research package, prepare your agent's request, and inspect its evidence and creator settlement.",
+  title: "Research — Keryx",
+  description: "Ask a research question, read a cited report, or prepare a paid agent research package.",
   robots: { index: false, follow: true },
 };
 
@@ -36,10 +37,12 @@ export default async function ResearchPage({ searchParams }: {
   return (
     <div className="min-h-screen bg-paper-2 text-ink">
       <SiteHeader />
-      <main className="mx-auto max-w-[1080px] space-y-10 px-4 py-12 sm:px-[30px]">
-        <header className="border-b border-line pb-8">
+      <main>
+      <ResearchChat paidHref="#paid-research" />
+      <div className="mx-auto max-w-[1080px] space-y-10 px-4 py-12 sm:px-[30px]">
+        <header id="paid-research" className="scroll-mt-24 border-b border-line pb-8">
           <p className="font-mono text-xs uppercase tracking-widest text-seal">Paid research · Arc testnet</p>
-          <h1 className="mt-3 font-display text-5xl">Give your agent a research budget.</h1>
+          <h2 className="mt-3 font-display text-4xl">Give your agent a research budget.</h2>
           <p className="mt-5 max-w-2xl font-serif text-lg text-ink-2">Know the price before your agent pays. Follow the job, read its evidence, and see what reached creators.</p>
           <p className="mt-3 font-serif text-sm text-ink-3">Buy with a funded Gateway wallet, or prepare a request for your own agent. Keep a private recovery file to follow your job after a disconnect.</p>
         </header>
@@ -47,7 +50,7 @@ export default async function ResearchPage({ searchParams }: {
         <ResearchWorkspace>
         <section aria-labelledby="package-heading" className="border border-line bg-paper p-6">
           <h2 id="package-heading" className="font-display text-3xl">1. Price your research</h2>
-          <form action="/research" className="mt-5 flex flex-wrap items-end gap-4">
+          <form action="/research#paid-research" className="mt-5 flex flex-wrap items-end gap-4">
             <label className="grid gap-2 font-mono text-xs">Package
               <select name="mode" defaultValue={mode} className="border border-line bg-paper-2 p-3 text-sm">
                 <option value="quick">Quick</option><option value="deep">Deep</option>
@@ -81,6 +84,7 @@ export default async function ResearchPage({ searchParams }: {
         <ResearchPrivateJobs />
         <ResearchJob />
         <p className="font-serif text-ink-3">New to the API? <Link href="/api/docs" className="underline">Read the API reference</Link>. To try a sponsored question, <Link href="/playground" className="underline">open the playground</Link>.</p>
+      </div>
       </main>
       <SiteFooter />
     </div>

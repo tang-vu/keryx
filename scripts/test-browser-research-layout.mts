@@ -67,6 +67,7 @@ try {
         return {
           input: document.querySelector("textarea")?.getBoundingClientRect().toJSON(),
           cta: document.querySelector('[data-tour="dispatch-btn"]')?.getBoundingClientRect().toJSON(),
+          cap: document.querySelector('[data-testid="composer-source-cap"]')?.getBoundingClientRect().toJSON(),
           guide: document.querySelector('[data-testid="hero-guide"]')?.getBoundingClientRect().toJSON(),
           kickerText: kicker ? range.getBoundingClientRect().toJSON() : null,
           headline: document.querySelector("h1")?.getBoundingClientRect().toJSON(),
@@ -82,6 +83,8 @@ try {
         `Question misses first viewport at ${width}x${height}: ${measurements.input.top}`);
       assert(measurements.cta.top > measurements.input.bottom,
         `Action precedes question at ${width}x${height}`);
+      assert(measurements.cap && measurements.cap.bottom <= measurements.cta.top,
+        `Source cap must be visible before the action at ${width}x${height}`);
       if (width <= 430 && height >= 640) assert(measurements.cta.bottom <= height,
         `Mobile action is cut off in the first viewport at ${width}x${height}: ${measurements.cta.bottom}`);
       if (width >= 1024) assert(measurements.cta.bottom <= height,

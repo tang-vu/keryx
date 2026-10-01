@@ -1,4 +1,61 @@
-# Research reading UX milestone — September 28, 2026
+# Research reading UX
+
+## Chat-first research — October 1, 2026
+
+The owner approved replacing the main reading flow with a question-led conversation
+and a structured cited report. The shared client surface keeps prior turns while
+the page remains open; reloading or leaving the page does not retain the conversation.
+Completed reports remain accessible through their existing dispatch links. Production
+availability requires the reviewed commit, successful CI and verified deployment.
+
+Use the same chat surface on `/` and `/research`. Keep paid-package checkout,
+recovery and private jobs accessible in a secondary section on `/research`, retaining
+their existing prices, terms and authority. Lead the first screen with the composer
+and a few examples rather than requiring a reader to choose a paid package first.
+
+Show each submitted question with its research progress and resulting report. Keep
+prior turns available within the current tab, and make research decisions and source
+evidence expandable. The composer must show the selected source-USDC cap and payer;
+settled, pending, failed, unverified and simulated amounts remain distinct. Public web
+search disclosure and the separation of source USDC from search/model costs remain
+available before submission.
+
+Follow-ups use the existing prior-run anchor. The server carries only the previous
+question, not the paid answer or the complete conversation. State that limit and
+provide a deliberate new-topic action. Client stream cancellation does not prove a
+refund or the final state of an already submitted authorization. Preserve observed
+payment states in stopped turns and do not automatically repeat a request.
+
+Copy and Markdown download retain source links, observed document provenance and
+the evidence/payment states of the actual report. Contradictory settlement fields
+are labeled unverified, and pending or simulated records never become settled merely
+because a report cites their source. Clipboard failure leaves download available.
+
+Each client request has an identity guard. A late response, interrupted error-body
+read or stale stream cannot overwrite a newer request or expire its grant. This does
+not replace the existing signing-budget identity check or alter durable reservations.
+An expired funded session remains expired: its turn does not claim treasury fallback.
+
+Responsive layout, keyboard use, stream errors,
+stopped requests, multiple turns, settings persistence, signing regressions, relevant
+tests, production build and internal review are release gates. Browser fixtures are
+explicit simulations; actual user adoption and physical-device validation require
+separate evidence.
+
+Local Chromium checks of the built candidate kept the source cap before the send
+button. At 320 and 390 pixels wide in a 640-pixel viewport, the input began around
+y=327 and the action occupied y=576–624. At 1366×768, the input began around y=372
+and the action occupied y=621–669. The checked layout dimensions had no horizontal
+overflow. These are browser measurements, not physical-device or usability evidence.
+
+The hermetic chat fixtures cover multiple turns, exact parent/cap/model submission,
+new-topic errors followed by stopped/new requests, late transport responses, report
+exports and expired/paused grants. A separate hook fixture reproduces the interrupted
+401 error-body race and verifies that its old completion cannot replace a newer
+finished request. Existing signing-budget, source payee and fetch-price tests remain
+part of focused validation; no real wallet, search, model or payment call is made.
+
+## September 28, 2026 milestone
 
 This milestone changes the public reading experience on `/` and the related answer, archive, and creator entry surfaces. It does not change payment authority, grant rules, SSE framing, source selection, or settlement records. The existing browser session and Keryx treasury paths remain distinct, and the displayed payer follows the active or expired grant binding.
 

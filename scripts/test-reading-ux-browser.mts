@@ -32,7 +32,7 @@ async function assertInside(page: Page, selector: string) {
 try {
   const loading = await openPage(320, 480, async () => { /* held until page closes */ });
   await loading.getByText("Loading settlements…").waitFor();
-  await assertInside(loading, "header + div");
+  await assertInside(loading, "header.sticky + div");
   await loading.close();
 
   const empty = await openPage(320, 480, async route => route.fulfill({ json: { payments: [] } }));
