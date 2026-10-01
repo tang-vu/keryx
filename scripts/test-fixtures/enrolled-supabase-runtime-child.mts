@@ -11,7 +11,7 @@ const {
   assertEnrolledSupabaseAuthority, closeEnrolledSupabaseAdapter,
 } = requireFixture("../../lib/db/enrolled-supabase-adapter.ts") as typeof import("../../lib/db/enrolled-supabase-adapter");
 const mode = process.argv[2];
-assert(["refused-startup", "read-write", "auth-user", "query-metrics", "readonly", "drift", "domains", "domain-binding", "domain-capacity", "domain-terminal", "domain-auth", "domain-treasury", "quota"].includes(mode));
+assert(["refused-startup", "read-write", "auth-user", "query-metrics", "readonly", "drift", "domains", "domain-binding", "domain-capacity", "domain-terminal", "domain-auth", "domain-intent", "domain-treasury", "quota"].includes(mode));
 const stage = (name: string) => process.stdout.write(`STAGE ${name}\n`);
 stage("startup");
 
@@ -49,10 +49,11 @@ try {
         await db.setCached(winner, "replacement releases wire quota only");
         await db.setCached(refused, body);
         assert.equal(await db.getCached(refused), body);
-      } else if (mode === "domain-auth" || mode === "domain-treasury") {
+      } else if (mode === "domain-auth" || mode === "domain-intent" || mode === "domain-treasury") {
         stage("domains");
         const { exerciseEnrolledSupabaseNativeAuth, exerciseEnrolledSupabaseNativeTreasury } = await import("./enrolled-supabase-native-domains.mts");
-        await (mode === "domain-auth" ? exerciseEnrolledSupabaseNativeAuth : exerciseEnrolledSupabaseNativeTreasury)(db, deployment.identity);
+        if (mode === "domain-auth") await exerciseEnrolledSupabaseNativeAuth(db, deployment.identity);
+        else await exerciseEnrolledSupabaseNativeTreasury(db, deployment.identity, mode === "domain-intent" ? "intent" : "treasury");
       } else if (["domains", "domain-binding", "domain-capacity", "domain-terminal"].includes(mode)) {
         stage("domains");
         const { exerciseEnrolledSupabaseNativeDomains } = await import("./enrolled-supabase-native-domains.mts");

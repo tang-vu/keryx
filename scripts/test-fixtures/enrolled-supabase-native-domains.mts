@@ -318,7 +318,9 @@ export async function exerciseEnrolledSupabaseNativeAuth(db: KeryxDB, expectedId
 }
 
 /** Independent actual-facade treasury case; no browser signing authority is transferred. */
-export async function exerciseEnrolledSupabaseNativeTreasury(db: KeryxDB, expectedIdentity: Readonly<StorageIdentity>) {
+export async function exerciseEnrolledSupabaseNativeTreasury(
+  db: KeryxDB, expectedIdentity: Readonly<StorageIdentity>, scenario: "intent" | "treasury" = "treasury",
+) {
   const { assertEnrolledSupabaseAuthority } = await import('../../lib/db/enrolled-supabase-adapter.ts');
   const { validateStorageIdentity } = await import('../../lib/db/storage-identity.ts');
   const { canonicalJson } = await import('../../lib/canonical-json.ts');
@@ -343,12 +345,21 @@ export async function exerciseEnrolledSupabaseNativeTreasury(db: KeryxDB, expect
     const intent = await preparePrivateResearchIntent({ request: draft.request, salt: draft.salt,
       payment: { authorization: draft.authorization, signature: await owner.signTypedData(buyerTypedData(draft.authorization)) } }, requirement, merchants);
     assert.deepEqual(await db.reservePrivateResearchIntent(intent), intent);
-    assert.deepEqual(await db.reservePrivateResearchIntent(intent), intent);
-    assert.deepEqual(await db.getPrivateResearchIntent(intent.id, owner.address), intent);
-    assert.equal(await db.getPrivateResearchIntent(intent.id, signer.address), null);
+    if (scenario === "intent") {
+      assert.deepEqual(await db.reservePrivateResearchIntent(intent), intent);
+      assert.deepEqual(await db.getPrivateResearchIntent(intent.id, owner.address), intent);
+      assert.equal(await db.getPrivateResearchIntent(intent.id, signer.address), null);
+    }
     return intent;
   }
+  process.stdout.write(`STAGE ${scenario === "intent" ? "private-intents" : "treasury-intents"}\n`);
   const intents = [await privateIntent(), await privateIntent(), await privateIntent()];
+  if (scenario === "intent") {
+    const after = await assertEnrolledSupabaseAuthority(db, 'write');
+    assert.equal(canonicalJson(after.identity), canonicalJson(identity));
+    return Object.freeze(['native-private-intent-replay-and-owner-isolation']);
+  }
+  process.stdout.write('STAGE treasury-capacity\n');
   const treasury = { signer: signer.address, capacityMicros: '60000' };
   assert.equal(await db.reservePrivateTreasury(intents[0].id, owner.address, treasury), true);
   assert.equal(await db.reservePrivateTreasury(intents[0].id, owner.address, treasury), true);

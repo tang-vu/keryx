@@ -238,6 +238,9 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
         "browser-submit", "browser-terminal"]);
       stages.add("browser-creator-offer");
       stages.add("browser-grant-lock-expiry");
+      stages.add("private-intents");
+      stages.add("treasury-intents");
+      stages.add("treasury-capacity");
       child.stdout!.on("data", (part) => {
         output += part;
         if (output.length > 8192) child.kill();
@@ -413,6 +416,7 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
     await runChild("domain-capacity");
     await runChild("domain-terminal");
     await runChild("domain-auth");
+    await runChild("domain-intent");
     await runChild("domain-treasury");
     registry.assertHealthy();
     await registry.close();
