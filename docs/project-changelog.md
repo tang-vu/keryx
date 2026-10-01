@@ -1,5 +1,11 @@
 # Keryx Project Changelog
 
+### Signature globe in research chat (2026-10-01)
+
+- Restore Keryx's globe in the shared home and research chat header, with a compact
+  mobile version and bounded desktop placement. Keep local country assets,
+  reduced-motion support, and the question and spending controls accessible.
+
 ### Chat-first reading interface (2026-10-01)
 
 - Start research through the same question-led conversation on `/` and `/research`.
