@@ -19,7 +19,15 @@ const sql = (s: string) => docker(["exec", "-i", name, "psql", "-h", "127.0.0.1"
 const json = (v: unknown) => `'${JSON.stringify(v).replaceAll("'", "''")}'::jsonb`;
 const digest = () => `0x${randomBytes(32).toString("hex")}` as `0x${string}`;
 const service = (s: string) => sql(`set role service_role;${s}`);
-const start = (index: number, image: string, args: string[]) => { created.push(owned[index]); docker(["run", "-d", "--name", owned[index], ...args, image]); };
+const start = (index: number, image: string, args: string[]) => {
+  if (!created.includes(owned[index])) created.push(owned[index]);
+  docker(["run", "-d", "--name", owned[index], ...args, image]);
+};
+const launchSidecars = () => {
+  start(1, "postgrest/postgrest:v12.2.3", ["--network", `container:${name}`, "--memory", "256m", "-e", "PGRST_DB_URI=postgres://originals_http@127.0.0.1:5432/postgres", "-e", "PGRST_DB_ANON_ROLE=service_role", "-e", "PGRST_DB_SCHEMAS=public", "-e", "PGRST_DB_CONFIG=false", "-e", "PGRST_DB_POOL=4"]);
+  if (!created.includes(owned[2])) created.push(owned[2]);
+  docker(["run", "-d", "--name", owned[2], "--network", `container:${name}`, "--memory", "64m", "--entrypoint", "sh", "curlimages/curl:8.12.1", "-c", "sleep 900"]);
+};
 const readiness = async () => { const end = performance.now() + 10000; while (performance.now() < end) { try {
   execFileSync("docker", ["exec", name, "pg_isready", "-h", "127.0.0.1", "-U", "postgres"], { timeout: 2000, stdio: "ignore" }); return;
 } catch { await new Promise(r => setTimeout(r, 100)); } } throw new Error("Synthetic PG startup deadline"); };
@@ -68,8 +76,7 @@ try {
   assert.equal(service(`select public.admit_browser_journal(${json(legacyIntent)},${json(legacyJournal.requirements)},${json(legacyJournal.payment)})`), "admitted");
   const retainedLegacy = sql(`select to_jsonb(i) from public.browser_authorization_intents i where nonce='${legacyJournal.nonce}'`);
   sql("create role originals_http login;alter role originals_http set statement_timeout='10s';grant service_role to originals_http");
-  start(1, "postgrest/postgrest:v12.2.3", ["--network", `container:${name}`, "--memory", "256m", "-e", "PGRST_DB_URI=postgres://originals_http@127.0.0.1:5432/postgres", "-e", "PGRST_DB_ANON_ROLE=service_role", "-e", "PGRST_DB_SCHEMAS=public", "-e", "PGRST_DB_CONFIG=false", "-e", "PGRST_DB_POOL=4"]);
-  created.push(owned[2]); docker(["run", "-d", "--name", owned[2], "--network", `container:${name}`, "--memory", "64m", "--entrypoint", "sh", "curlimages/curl:8.12.1", "-c", "sleep 900"]);
+  launchSidecars();
   const sb = createClient("http://synthetic.invalid", "synthetic-no-authority", { auth: { persistSession: false }, global: { fetch: http } });
   const policy: BrowserQueryPolicy = { protocol: "durable-v2", service: "https://keryx.cc", owner: owner.address.toLowerCase() as `0x${string}`, signer: signer.address.toLowerCase() as `0x${string}`, policyId: digest(), grantEpoch: epoch,
     requestNonce: digest(), queryId: randomUUID(), questionDigest: digest(), queryCeilingMicros: "2", lifetimeCeilingMicros: "4", jobLimit: 2, expiresAt: Date.now() + 600000 };
@@ -164,9 +171,9 @@ try {
     await unchanged(async () => { assert.throws(() => service(`delete from public.${table}`), /permission denied/); });
   }
   const beforeRestart = snapshot(); docker(["restart", name]); await readiness();
-  // Restart the owned stateless HTTP process too: this acceptance checks durable
-  // readback, rather than automatic reconnection of an untouched stale DB pool.
-  docker(["restart", owned[1]]);
+  // Rejoin both stateless sidecars to the restarted DB's network namespace.
+  // This checks durable readback, not untouched pool/client auto-reconnection.
+  docker(["rm", "-f", owned[2], owned[1]]); launchSidecars();
   let restartedHttpReady = false; const restartDeadline = performance.now() + 10000;
   while (performance.now() < restartDeadline) {
     try {
