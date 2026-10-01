@@ -112,6 +112,12 @@ The question's source-USDC cap and payer remain visible beside the composer; mod
 and budget controls may be secondary, but settled, pending and simulated amounts
 must remain distinguishable.
 
+The rotating globe is the owner's confirmed signature for Keryx. Simplifying the
+chat must preserve that identity: reuse the existing locally bundled globe as a
+bounded decorative header motif on desktop and mobile, leaving text and controls
+clear. Keep reduced-motion behavior and avoid restoring a large masthead that
+pushes the question, cap or send action out of the initial reading flow.
+
 Use the existing previous-run anchor for follow-ups rather than promising full chat
 memory. Starting a new research topic must clear that anchor. Copy or export must
 retain citations and the observed evidence/payment limitations. Stopping the client

@@ -20,6 +20,11 @@ settled, pending, failed, unverified and simulated amounts remain distinct. Publ
 search disclosure and the separation of source USDC from search/model costs remain
 available before submission.
 
+The signature globe remains in the shared chat header on both routes. Reuse its
+locally bundled country outlines and existing reduced-motion behavior, with a
+bounded desktop placement and smaller mobile presentation. It is decorative and
+must not intercept clicks, obscure the guide or text, or displace the composer.
+
 Follow-ups use the existing prior-run anchor. The server carries only the previous
 question, not the paid answer or the complete conversation. State that limit and
 provide a deliberate new-topic action. Client stream cancellation does not prove a

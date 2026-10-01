@@ -15,6 +15,12 @@
 - This is testnet pilot software, not a real participant/settlement result. Live scholarly
   purchase/recovery and broader public/mainnet onboarding remain separate release gates.
 
+### Signature globe in research chat (2026-10-01)
+
+- Restore Keryx's globe in the shared home and research chat header, with a compact
+  mobile version and bounded desktop placement. Keep local country assets,
+  reduced-motion support, and the question and spending controls accessible.
+
 ### DOI and scholarly research (2026-10-01)
 
 - Resolve up to two exact Crossref DOI records from a question; opt into bounded
