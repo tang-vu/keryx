@@ -1696,6 +1696,11 @@ describe("funding uncertainty preserves public research", () => {
       expect(d.db.payments).toEqual([]); expect(run.paymentAttempts).toBe(0); expect(run.pendingPayments).toBe(0);
       expect(run.totalSpent).toBe(0); expect(run.totalSpent).toBeLessThanOrEqual(run.budget);
       expect(run.decisions.find(decision => decision.sourceId === source.id)).toMatchObject({ action: "SKIP", rationale: expect.stringContaining("unknown") });
+      const published = run.trace.filter(step => step.phase === "decide" && (step.detail as Decision)?.sourceId === source.id);
+      expect(published).toHaveLength(1);
+      expect(published[0].message).toMatch(new RegExp(`^${action} `));
+      expect(published[0].detail).toMatchObject({ action, rationale: expect.not.stringContaining("Funding readiness is unknown") });
+      expect(published[0].detail).not.toBe(run.decisions.find(decision => decision.sourceId === source.id));
       expect(run.citations).toHaveLength(1); expect(run.citations[0]).toMatchObject({ sourceId: "public:free", reward: 0 });
       expect(run.evidence?.some(item => item.sourceKind === "public-reference" && item.qualifiesForAnswer)).toBe(true);
       expect(run.answer).toContain("grounded answer [S1]"); expect(run.answer).toContain("wallet funding activity remains unverified");

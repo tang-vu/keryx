@@ -1316,13 +1316,16 @@ export async function* runAgent(
         fundingReadiness: "unknown", automaticPaidAttemptsBlocked: true,
       }));
     }
-    for (const decision of finalDecisions) {
+    for (const [index, decision] of finalDecisions.entries()) {
       const assetId = decision.assetId ?? decision.sourceId;
       if (decision.external || publicReads.has(assetId)
         || (decision.action !== "BUY" && decision.action !== "CACHE" && assetId !== selectedAssetId)) continue;
-      decision.action = "SKIP";
-      decision.rationale = "Funding readiness is unknown; this owned source cannot be read or rewarded in this run.";
-      steps.push(emit(phase, `SKIP ${decision.sourceName}: ${decision.rationale}`));
+      // decide events retain the published planning snapshot. Replace the final
+      // decision instead of mutating the object already streamed and traced.
+      const withheld: Decision = { ...decision, action: "SKIP",
+        rationale: "Funding readiness is unknown; this owned source cannot be read or rewarded in this run." };
+      finalDecisions[index] = withheld;
+      steps.push(emit(phase, `SKIP ${withheld.sourceName}: ${withheld.rationale}`));
     }
     // Keep the query-local fetch reservation intact. A funding error cannot
     // establish no wallet movement, release signer capacity or authorize refunds.
