@@ -20,9 +20,17 @@ describe("approved YouTube publisher metadata", () => {
   it("rejects unapproved feeds and namespace/channel substitution", async () => {
     await expect(ingestYoutubeMetadata(xml, `${SUPER_SIMPLE_FEED_URL}&other=1`)).rejects.toThrow("Unapproved");
     await expect(ingest(xml.replace("http://search.yahoo.com/mrss/", "https://evil.test/"))).rejects.toThrow("namespace");
+    await expect(ingest(xml.replace("xmlns:yt=", "xmlns:alias="))).rejects.toThrow("namespace");
+    await expect(ingest(xml.replace("<entry>", '<entry xmlns:yt="http://www.youtube.com/xml/schemas/2015">'))).rejects.toThrow("namespace");
+    await expect(ingest(xml.replace('xmlns:yt="http://www.youtube.com/xml/schemas/2015"', 'note=\'xmlns:yt="http://www.youtube.com/xml/schemas/2015"\''))).rejects.toThrow("namespace");
     await expect(ingest(xml.replace("<media:group>", '<media:group xmlns:media="https://evil.test/">'))).rejects.toThrow("namespace");
     await expect(ingest(xml.replace("<entry>", '<!DOCTYPE feed [<!ENTITY test "bad">]><entry>'))).rejects.toThrow("declaration");
     await expect(ingest(xml.replace("<yt:channelId>LsooMJoIpl_7ux2jvdPB-Q", "<yt:channelId>wrong"))).rejects.toThrow("channel mismatch");
+  });
+  it("rejects namespace-like attribute names even when rss-parser accepts their lexical prefixes", async () => {
+    const spoof = xml.replaceAll("xmlns", "notxmlns");
+    expect((await new Parser().parseString(spoof)).items).toHaveLength(1);
+    await expect(ingest(spoof)).rejects.toThrow("namespace");
   });
   it("drops mismatched entry identity, unsafe links and noncanonical video URLs", async () => {
     for (const [before, after] of [["<yt:channelId>UCLsooMJoIpl_7ux2jvdPB-Q", "<yt:channelId>wrong"],

@@ -23,16 +23,22 @@ const parser = new Parser<{ "yt:channelId"?: string }, YoutubeItem>({
 export async function ingestYoutubeMetadata(xml: string, feedUrl: string): Promise<IngestedFeed> {
   if (!isApprovedYoutubeFeed(feedUrl) || Buffer.byteLength(xml, "utf8") > 500_000)
     throw new Error("Unapproved or oversized YouTube feed");
-  const declarations = xml.replace(/<!--[\s\S]*?-->/g, "");
+  const declarations = xml.replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, "");
   const root = declarations.match(/<feed\s[^>]*>/)?.[0];
+  const namespaceAttributes = (tag: string) => Array.from(tag.matchAll(
+    /\s([A-Za-z_][\w:.-]*)\s*=\s*(["'])([\s\S]*?)\2/g,
+  )).filter((attribute) => attribute[1] === "xmlns" || attribute[1].startsWith("xmlns:"));
+  const allNamespaces = Array.from(declarations.matchAll(/<[A-Za-z_][^<>]*>/g))
+    .flatMap((tag) => namespaceAttributes(tag[0]));
   if (!root || /<!DOCTYPE|<!ENTITY/i.test(xml) ||
-      (declarations.match(/xmlns(?:\:[\w-]+)?\s*=/g) ?? []).length !== 3)
+      allNamespaces.length !== 3)
     throw new Error("Unexpected YouTube feed namespace or declaration");
+  const rootNamespaces = namespaceAttributes(root);
   // rss-parser identifies prefixed field names; bind them at the root and refuse rebinding.
   for (const [name, value] of [["xmlns", "http://www.w3.org/2005/Atom"],
     ["xmlns:yt", "http://www.youtube.com/xml/schemas/2015"],
     ["xmlns:media", "http://search.yahoo.com/mrss/"]]) {
-    if (!new RegExp(`${name}\\s*=\\s*[\"']${value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[\"']`).test(root))
+    if (!rootNamespaces.some((attribute) => attribute[1] === name && attribute[3] === value))
       throw new Error("Unexpected YouTube feed namespace");
   }
   let feed;
