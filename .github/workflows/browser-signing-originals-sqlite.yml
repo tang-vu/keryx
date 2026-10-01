@@ -1,0 +1,47 @@
+name: Browser signing originals SQLite
+on:
+  pull_request:
+    paths:
+      - "lib/db/browser-signing-originals*"
+      - "lib/db/sqlite-browser-signing-originals*"
+      - "lib/db/sqlite-browser-journal*"
+      - "lib/db/browser-authorization-*"
+      - "lib/db/sqlite-adapter.ts"
+      - "lib/db/keryx-db.ts"
+      - "lib/payments/browser-query-policy*"
+      - "lib/payments/browser-signing-original*"
+      - "lib/payments/browser-authorization-recovery*"
+      - "lib/session/session-signing-policy*"
+      - "lib/canonical-json.ts"
+      - "lib/types.ts"
+      - "lib/payments/x402-payment-evidence.ts"
+      - "tsconfig.json"
+      - "eslint.config.*"
+      - "package*.json"
+      - ".github/workflows/browser-signing-originals-sqlite.yml"
+  workflow_dispatch:
+jobs:
+  browser-signing-originals-sqlite:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.10.0"
+          cache: npm
+      - run: npm ci
+      - name: Install actual Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Focused original admission, canonical header and legacy recovery
+        run: npx vitest run lib/db/sqlite-browser-signing-originals.test.ts lib/payments/browser-query-policy.test.ts lib/payments/browser-signing-original.test.ts lib/db/sqlite-browser-journal.test.ts lib/payments/browser-authorization-recovery.test.ts
+      - name: Project TypeScript
+        run: npx tsc --noEmit
+      - name: Scoped lint
+        run: npx eslint lib/payments/browser-query-policy.ts lib/payments/browser-query-policy.test.ts lib/payments/browser-signing-original.ts lib/payments/browser-signing-original.test.ts lib/db/browser-signing-originals.ts lib/db/sqlite-browser-signing-originals.ts lib/db/sqlite-browser-signing-originals.test.ts lib/db/sqlite-browser-journal.ts lib/db/keryx-db.ts lib/db/sqlite-adapter.ts lib/db/supabase-adapter.ts

@@ -1,4 +1,7 @@
 import { publicReferenceSchema, type PublicReference } from "../public-references/catalog";
+import { admitSupabaseBrowserQueryPolicy,admitSupabaseBrowserSigningOriginal,readSupabaseBrowserSigningSnapshot,signSupabaseBrowserSigningOriginal } from "./supabase-browser-signing-originals";
+import type { BrowserQueryPolicyProof } from "../payments/browser-query-policy";
+import type { BrowserOriginalAdmission } from "./browser-signing-originals";
 /**
  * Supabase adapter (deploy path). Same interface as the SQLite adapter.
  * Metrics/leaderboard aggregate in JS — fine for hackathon volume, no DB functions needed.
@@ -1404,6 +1407,10 @@ export class SupabaseAdapter implements KeryxDB {
     if (data !== "admitted") throw new Error(`Unexpected browser journal admission: ${String(data)}`);
     return { status: "admitted", journal } as const;
   }
+  async admitBrowserQueryPolicy(proof:BrowserQueryPolicyProof,sessionId:string) {return admitSupabaseBrowserQueryPolicy(this.sb,proof,sessionId);}
+  async admitBrowserSigningOriginal(input:BrowserOriginalAdmission) {return admitSupabaseBrowserSigningOriginal(this.sb,input);}
+  async readBrowserSigningSnapshot(owner:string,sessionId:string,requestId:string) {return readSupabaseBrowserSigningSnapshot(this.sb,owner,sessionId,requestId);}
+  async signBrowserSigningOriginal(sessionId:string,requestId:string,header:string) {return signSupabaseBrowserSigningOriginal(this.sb,sessionId,requestId,header);}
 
   async getBrowserJournal(sessionId: string, requestId: string): Promise<BrowserAuthorizationJournal | null> {
     const { data, error } = await this.sb.rpc("get_browser_journal", { p_session_id: sessionId, p_request_id: requestId });

@@ -1,0 +1,46 @@
+name: Browser signing originals PostgreSQL
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/0070_browser_signing_originals.sql"
+      - "supabase/migrations/006[789]*"
+      - "lib/db/browser-signing-originals.ts"
+      - "lib/db/supabase-browser-signing-originals*"
+      - "lib/db/browser-authorization-*"
+      - "lib/db/keryx-db.ts"
+      - "lib/db/supabase-adapter.ts"
+      - "lib/canonical-json.ts"
+      - "lib/types.ts"
+      - "lib/session/session-signing-policy.ts"
+      - "lib/payments/x402-payment-evidence.ts"
+      - "lib/payments/browser-query-policy*"
+      - "lib/payments/browser-signing-original*"
+      - "scripts/test-browser-signing-originals-postgres.mts"
+      - "package*.json"
+      - "tsconfig.json"
+      - "eslint.config.*"
+      - ".github/workflows/browser-signing-originals-postgres.yml"
+  workflow_dispatch:
+jobs:
+  browser-signing-originals-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.10.0"
+          cache: npm
+      - run: npm ci
+      - name: Focused adapter proof and canonical header tests
+        run: npx vitest run lib/db/supabase-browser-signing-originals.test.ts
+      - name: Actual isolated PG17 PostgREST original journal acceptance
+        run: node --import tsx scripts/test-browser-signing-originals-postgres.mts
+      - name: Project TypeScript
+        run: npx tsc --noEmit
+      - name: Scoped fixture TypeScript
+        run: npx tsc --noEmit --skipLibCheck --strict --target ES2022 --module esnext --moduleResolution bundler --allowImportingTsExtensions scripts/test-browser-signing-originals-postgres.mts
+      - name: Scoped lint
+        run: npx eslint lib/db/supabase-browser-signing-originals.ts lib/db/supabase-browser-signing-originals.test.ts scripts/test-browser-signing-originals-postgres.mts
