@@ -9,7 +9,7 @@ import { keccak256, parseTransaction } from "viem";
 import { SupabaseAuthority } from "../lib/db/supabase-authority";
 import { SupabaseGatewayFundingLedger } from "../lib/db/gateway-funding-supabase";
 import { SupabaseGatewayFundingTerminalObserverStore } from "../lib/db/gateway-funding-supabase-observer";
-import { createGatewayFundingReceiptObserverForTrustedComposition } from "../lib/payments/gateway-funding-receipt-observer";
+import { createGatewayFundingReceiptObserverForTrustedComposition, unsealVerifiedGatewayFundingReceipt } from "../lib/payments/gateway-funding-receipt-observer";
 import { GATEWAY_FUNDING_RECEIPT_POLICY, GATEWAY_FUNDING_RECEIPT_POLICY_DIGEST } from "../lib/payments/gateway-funding-receipt-policy";
 import { syntheticStorageIdentity } from "../lib/db/storage-identity-fixture";
 import { prepareGatewayFundingTransaction } from "../lib/payments/gateway-funding-transaction";
@@ -278,6 +278,14 @@ try {
   };
   const token = await createGatewayFundingReceiptObserverForTrustedComposition(syntheticProviderFetchFor(issuerPrepared), () => observationTime)(issuerRequest, () => { ledger.getStorageIdentity(); });
   assert(token, "controlled synthetic issuer must produce actual opaque provenance");
+  const retainedIssuer = await ledger.inspectReservation(issuerOperation.operationId, "nativeTransfer");
+  assert(retainedIssuer?.prepared);
+  const retainedIssuerRequest = { operation: retainedIssuer.operation, prepared: retainedIssuer.prepared,
+    cryptoClaimId: retainedIssuer.cryptoClaimId!, broadcastClaimId: retainedIssuer.broadcastClaimId!,
+    finalityPolicyDigest: (await ledger.inspectNamespace(issuerOperation.policy.funder)).finalityPolicyDigest };
+  assert.deepEqual(retainedIssuerRequest, issuerRequest, "original issuer request equals complete PG readback");
+  unsealVerifiedGatewayFundingReceipt(token, issuerRequest, () => {});
+  unsealVerifiedGatewayFundingReceipt(token, retainedIssuerRequest, () => {});
   const ordinaryObserverStore = new SupabaseGatewayFundingTerminalObserverStore(ledger, authority);
   await assert.rejects(() => ordinaryObserverStore.appendVerifiedTerminalObservation(issuerOperation.operationId, "nativeTransfer", token), /Gateway funding observer refused/);
   assert.equal((await ledger.inspectNamespace(issuerTx.sender)).nextCryptoNonce, "0");
