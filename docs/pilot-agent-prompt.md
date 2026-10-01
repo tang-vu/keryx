@@ -4,8 +4,8 @@ This prompt is for an actual task in the participant's own project. It does not
 authorize paid research, wallet funding, source publication, recording or public posts.
 Start with the existing sponsored remote MCP trial. Sponsorship and testnet use must
 remain explicit. Source availability may make the task unsuitable.
-Broad web research is a release candidate. Verify deployed tool capabilities before
-using it; local implementation and an API key do not establish production availability.
+Verify deployed broad web research capabilities before using them; local implementation
+and an API key do not establish production availability.
 
 Paste into the participant's agent:
 

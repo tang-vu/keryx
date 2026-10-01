@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Broad web research candidate (unreleased, 2026-10-01)
+### Broad web research (2026-10-01)
 
 - Discover public documents through a configured search provider alongside registered
   sources. Search snippets stay previews; selected original HTML, text and PDF reads
@@ -11,9 +11,9 @@
 - Bound discovery, document parsing and portfolio work; deduplicate extracted copies
   and require per-target domain-group support for high grounding confidence.
 - Require Node 22 LTS 22.19+ or Node 24+. Bounded live searches and original HTML/PDF
-  extraction have been observed; production configuration, final CI/review and
-  deployment remain open. The live smoke exceeded its intended document-read cap,
-  and unavailable Google policy pages remain a coverage limitation. This candidate
+  extraction have been observed. Availability requires provider configuration and
+  verified deployment after CI/review. The live smoke exceeded its intended document-read
+  cap, and unavailable Google policy pages remain a coverage limitation. This change
   does not establish customer adoption or mainnet readiness.
 
 ### Creator registration evidence and decision feedback (2026-10-01)

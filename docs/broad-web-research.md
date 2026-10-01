@@ -2,8 +2,9 @@
 
 Authorized October 1, 2026. This document describes the implementation and release
 gates for question-driven web discovery beyond the registered source catalog.
-Release acceptance and production configuration are pending. Bounded live discovery
-and original-document extraction have been observed; these are not evidence of
+Bounded live discovery and original-document extraction have been observed. Verify
+production availability through the deployed health response and an actual run;
+local implementation and a key do not establish it. These checks are not evidence of
 correct answers, independent demand or mainnet readiness.
 
 ## Product outcome
