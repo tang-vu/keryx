@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { testPostgresFundingReadiness } from "./gateway-funding-postgres-readiness-fixture.mts";
 import { execFile, execFileSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
 import { randomUUID } from "node:crypto";
@@ -13,6 +14,7 @@ import { GATEWAY_FUNDING_RECEIPT_POLICY, GATEWAY_FUNDING_RECEIPT_POLICY_DIGEST }
 import { syntheticStorageIdentity } from "../lib/db/storage-identity-fixture";
 import { prepareGatewayFundingTransaction } from "../lib/payments/gateway-funding-transaction";
 import { gatewayFundingReplayDigest, validateGatewayFundingOperation } from "../lib/payments/gateway-funding-policy";
+import type { SignedGatewayFundingTransaction } from "../lib/payments/gateway-funding-transaction";
 import type { FundingOwnerInstallation, FundingTerminalEvidence } from "../lib/db/gateway-funding-ledger-types";
 
 // Synthetic isolated PG17+PostgREST only: no inherited project configuration,
@@ -240,7 +242,7 @@ try {
   // WeakMap issuer provenance + real observer-role PostgREST. Provider responses
   // below are synthetic; this proves capability composition, not chain truth.
   const issuerFunder = privateKeyToAccount(generatePrivateKey()), issuerSpend = privateKeyToAccount(generatePrivateKey());
-  const issuerOperation = validateGatewayFundingOperation({ ...operation, operationId: randomUUID(), ownerAuthorizationId: randomUUID(), policy: {
+  const issuerOperation = validateGatewayFundingOperation({ ...operation, initialAvailableMicros: "90", operationId: randomUUID(), ownerAuthorizationId: randomUUID(), policy: {
     ...operation.policy, policyId: randomUUID(), funder: issuerFunder.address.toLowerCase(), spend: issuerSpend.address.toLowerCase() } });
   sql(`select keryx_storage.install_funding_policy(${expected},${json({ ...installation, policy: issuerOperation.policy,
     finalityPolicyDigest: GATEWAY_FUNDING_RECEIPT_POLICY_DIGEST, reviewedSnapshotDigest: sql("select keryx_storage.snapshot_digest()") })})`);
@@ -256,22 +258,25 @@ try {
   const issuerRequest = { operation: issuerOperation, prepared: issuerPrepared, cryptoClaimId: issuerCryptoId, broadcastClaimId: issuerSendId,
     finalityPolicyDigest: GATEWAY_FUNDING_RECEIPT_POLICY_DIGEST };
   const observationTime = 1800000000000, inclusionHash = `0x${"3".repeat(64)}`, anchorHash = `0x${"4".repeat(64)}`;
-  const q = (value: string | number) => `0x${BigInt(value).toString(16)}`, signature = parseTransaction(issuerRaw), issuerTx = issuerPrepared.transaction;
-  const syntheticProviderFetch: typeof fetch = async (input, options) => {
-    assert([GATEWAY_FUNDING_RECEIPT_POLICY.primary, GATEWAY_FUNDING_RECEIPT_POLICY.secondary].includes(String(input) as typeof GATEWAY_FUNDING_RECEIPT_POLICY.primary));
-    const body = JSON.parse(options!.body as string); let result: unknown;
-    if (body.method === "eth_chainId") result = q(5042002);
-    else if (body.method === "eth_getTransactionByHash") result = { hash: issuerPrepared.transactionHash, from: issuerTx.sender, to: issuerTx.to, input: issuerTx.data,
-      type: "0x2", chainId: q(issuerTx.chainId), nonce: "0x0", value: q(issuerTx.valueWei), gas: q(issuerTx.gas), maxFeePerGas: q(issuerTx.maxFeePerGasWei),
-      maxPriorityFeePerGas: q(issuerTx.maxPriorityFeePerGasWei), accessList: [], r: signature.r, s: signature.s, yParity: q(signature.yParity!), blockNumber: "0xa", blockHash: inclusionHash, transactionIndex: "0x0" };
-    else if (body.method === "eth_getTransactionReceipt") result = { transactionHash: issuerPrepared.transactionHash, from: issuerTx.sender, to: issuerTx.to,
-      type: "0x2", status: "0x1", gasUsed: "0x100", effectiveGasPrice: "0x1", blockNumber: "0xa", blockHash: inclusionHash, transactionIndex: "0x0" };
-    else if (body.method === "eth_getBlockByNumber") result = body.params[0] === "0xa" ? { number: "0xa", hash: inclusionHash,
-      timestamp: q(observationTime / 1000 - 2), transactions: [issuerPrepared.transactionHash] } : { number: "0xb", hash: anchorHash, timestamp: q(observationTime / 1000 - 1), transactions: [] };
-    else throw new Error("Unexpected synthetic observer method");
-    return new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id, result }), { headers: { "Content-Type": "application/json" } });
+  const q = (value: string | number) => `0x${BigInt(value).toString(16)}`, issuerTx = issuerPrepared.transaction;
+  const syntheticProviderFetchFor = (original: Readonly<SignedGatewayFundingTransaction>): typeof fetch => {
+    const signature = parseTransaction(original.rawTransaction), issuerTx = original.transaction, issuerPrepared = original;
+    return async (input, options) => {
+      assert([GATEWAY_FUNDING_RECEIPT_POLICY.primary, GATEWAY_FUNDING_RECEIPT_POLICY.secondary].includes(String(input) as typeof GATEWAY_FUNDING_RECEIPT_POLICY.primary));
+      const body = JSON.parse(options!.body as string); let result: unknown;
+      if (body.method === "eth_chainId") result = q(5042002);
+      else if (body.method === "eth_getTransactionByHash") result = { hash: issuerPrepared.transactionHash, from: issuerTx.sender, to: issuerTx.to, input: issuerTx.data,
+        type: "0x2", chainId: q(issuerTx.chainId), nonce: q(issuerTx.nonce), value: q(issuerTx.valueWei), gas: q(issuerTx.gas), maxFeePerGas: q(issuerTx.maxFeePerGasWei),
+        maxPriorityFeePerGas: q(issuerTx.maxPriorityFeePerGasWei), accessList: [], r: signature.r, s: signature.s, yParity: q(signature.yParity!), blockNumber: "0xa", blockHash: inclusionHash, transactionIndex: "0x0" };
+      else if (body.method === "eth_getTransactionReceipt") result = { transactionHash: issuerPrepared.transactionHash, from: issuerTx.sender, to: issuerTx.to,
+        type: "0x2", status: "0x1", gasUsed: "0x100", effectiveGasPrice: "0x1", blockNumber: "0xa", blockHash: inclusionHash, transactionIndex: "0x0" };
+      else if (body.method === "eth_getBlockByNumber") result = body.params[0] === "0xa" ? { number: "0xa", hash: inclusionHash,
+        timestamp: q(observationTime / 1000 - 2), transactions: [issuerPrepared.transactionHash] } : { number: "0xb", hash: anchorHash, timestamp: q(observationTime / 1000 - 1), transactions: [] };
+      else throw new Error("Unexpected synthetic observer method");
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id, result }), { headers: { "Content-Type": "application/json" } });
+    };
   };
-  const token = await createGatewayFundingReceiptObserverForTrustedComposition(syntheticProviderFetch, () => observationTime)(issuerRequest, () => { ledger.getStorageIdentity(); });
+  const token = await createGatewayFundingReceiptObserverForTrustedComposition(syntheticProviderFetchFor(issuerPrepared), () => observationTime)(issuerRequest, () => { ledger.getStorageIdentity(); });
   assert(token, "controlled synthetic issuer must produce actual opaque provenance");
   const ordinaryObserverStore = new SupabaseGatewayFundingTerminalObserverStore(ledger, authority);
   await assert.rejects(() => ordinaryObserverStore.appendVerifiedTerminalObservation(issuerOperation.operationId, "nativeTransfer", token), /Gateway funding observer refused/);
@@ -296,6 +301,25 @@ try {
   assert.equal(retainedTerminal?.terminal?.finalityPolicyDigest, GATEWAY_FUNDING_RECEIPT_POLICY_DIGEST);
   await observerStore.appendVerifiedTerminalObservation(issuerOperation.operationId, "nativeTransfer", token);
   assert.equal((await ledger.inspectNamespace(issuerTx.sender)).nextCryptoNonce, "1", "exact protected replay never advances the barrier again");
+  await testPostgresFundingReadiness({ ledger, operation: issuerOperation, backendBindingDigest: binding, sql,
+    refusedRoleInspection: async role => {
+      assert.throws(() => sql(`set role ${role};${rpc("inspect_operation", `'${issuerOperation.operationId}'`)}`), /permission denied/);
+    },
+    finalizeDeposit: async () => {
+      const slot = await ledger.reserveStep(issuerOperation.operationId, "deposit", "0");
+      const cryptoId = randomUUID(), sendId = randomUUID();
+      assert.equal((await ledger.claimCrypto(issuerOperation.operationId, "deposit", cryptoId)).fresh, true);
+      const raw = await issuerSpend.signTransaction(parseTransaction(slot.transaction.serializedUnsigned));
+      const original = (await ledger.savePrepared(issuerOperation.operationId, "deposit", cryptoId,
+        { rawTransaction: raw, transactionHash: keccak256(raw) })).prepared!;
+      assert.equal((await ledger.claimBroadcast(issuerOperation.operationId, "deposit", sendId)).fresh, true);
+      const receipt = await createGatewayFundingReceiptObserverForTrustedComposition(syntheticProviderFetchFor(original), () => observationTime)(
+        { operation: issuerOperation, prepared: original, cryptoClaimId: cryptoId, broadcastClaimId: sendId,
+          finalityPolicyDigest: GATEWAY_FUNDING_RECEIPT_POLICY_DIGEST }, () => { ledger.getStorageIdentity(); });
+      assert(receipt); await observerStore.appendVerifiedTerminalObservation(issuerOperation.operationId, "deposit", receipt);
+    },
+    changeNamespace: async () => { await ledger.reserveStep(issuerOperation.operationId, "approval", "1"); },
+  });
   observerStore.close(); ordinaryObserverStore.close();
   docker(["rm", "-f", "-v", observerHttpName]); observerHttpStarted = false;
   const beforeRollover = await ledger.inspectNamespace(native.sender);
