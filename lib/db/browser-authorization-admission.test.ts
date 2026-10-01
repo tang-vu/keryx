@@ -6,7 +6,13 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { SqliteAdapter } from "./sqlite-adapter";
 import { SupabaseAdapter } from "./supabase-adapter";
+import { createClient } from "@supabase/supabase-js";
 import type { BrowserAuthorizationIntent } from "./browser-authorization-admission";
+
+vi.mock("@supabase/supabase-js", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@supabase/supabase-js")>(),
+  createClient: vi.fn(),
+}));
 
 const files: string[] = [];
 const adapters: SqliteAdapter[] = [];
@@ -88,12 +94,12 @@ it("refuses a replaced grant epoch without reserving", async () => {
 it("propagates Supabase RPC error and rejects unknown outcome", async () => {
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://synthetic-db.example");
   vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "synthetic-key-no-authority");
-  const db = new SupabaseAdapter();
   const failure = new Error("SQL insert failed");
   const rpc = vi.fn().mockResolvedValueOnce({ data: null, error: failure })
     .mockResolvedValueOnce({ data: "unknown", error: null })
     .mockResolvedValueOnce({ data: "admitted", error: null });
-  Object.assign(db, { sb: { rpc } });
+  vi.mocked(createClient).mockReturnValue({ rpc } as unknown as ReturnType<typeof createClient>);
+  const db = new SupabaseAdapter();
   await expect(db.admitBrowserAuthorization(input("r1"))).rejects.toBe(failure);
   await expect(db.admitBrowserAuthorization(input("r2"))).rejects.toThrow(/Unexpected browser admission/);
   expect((await db.admitBrowserAuthorization(input("r3"))).status).toBe("admitted");

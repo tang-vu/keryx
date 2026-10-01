@@ -8,6 +8,8 @@ import {
   POSTGRES17_SCHEMA_CONTRACT_QUERY, compileFunctionDeclarationManifest,
   exportPostgres17SchemaContract,
 } from "./helpers/enrolled-postgres-schema-contract.mts";
+import { acceptOwnedEnrolledSupabaseRuntime } from "./test-fixtures/enrolled-supabase-runtime-acceptance.mts";
+import { SUPABASE_RUNTIME_CONTRACT } from "../lib/db/supabase-runtime-contract";
 
 const name = `keryx-enrolled-reference-${randomUUID()}`;
 const owned = new Set<string>();
@@ -29,7 +31,12 @@ let completed = false;
 let failure: unknown;
 try {
   try { docker(["info", "--format", "{{.ServerVersion}}"], undefined, 5_000); engine = true; }
-  catch { throw new Error("Native PostgreSQL container engine unavailable"); }
+  catch (error) {
+    const result = error as { code?: unknown; status?: unknown; signal?: unknown };
+    const category = result.code === "ETIMEDOUT" || result.signal === "SIGTERM" ? "timeout"
+      : result.code === "ENOENT" ? "spawn-unavailable" : "nonzero-exit";
+    throw new Error(`Native PostgreSQL container engine unavailable (${category})`);
+  }
   owned.add(name); // Register before creation, including timeout-after-create.
   docker(["run", "-d", "--name", name, "--network", "none", "--memory", "512m", "--cpus", "1",
     "-e", "POSTGRES_HOST_AUTH_METHOD=trust", "postgres:17-alpine"]);
@@ -52,6 +59,25 @@ try {
     + "alter role authenticator set statement_timeout='10s';alter role service_role set statement_timeout='10s';"
     + "create publication supabase_realtime;\n" + migrations.map((item) => item.sql).join("\n"));
   assert.equal(sql("set statement_timeout='10s';select count(*) from keryx_storage.identity;").trim(), "0");
+  // Actual SQL preflight must reject raw trigger fields before deparsing them.
+  for (const mode of ["args", "qual"] as const) {
+    const oversized = "x".repeat(mode === "args" ? 65_537 : 131_073);
+    const trigger = mode === "args"
+      ? `create trigger synthetic_contract_bound before update on public.sources for each row execute function keryx_storage.write_fence('${oversized}')`
+      : `create trigger synthetic_contract_bound before update on public.sources for each row when(new.id='${oversized}') execute function keryx_storage.write_fence()`;
+    sql(`do $proof$ declare original jsonb; begin
+      original := keryx_storage.catalog_contract();
+      begin
+        execute '${trigger.replaceAll("'", "''")}';
+        perform keryx_storage.catalog_contract();
+        raise exception 'synthetic raw bound unexpectedly accepted';
+      exception when others then
+        if sqlerrm <> 'schema contract raw field bound' then raise; end if;
+      end;
+      if keryx_storage.catalog_contract() <> original then raise exception 'synthetic raw bound rollback changed schema'; end if;
+    end $proof$;`);
+  }
+  process.stdout.write("PASS actual raw trigger args/qual preflight refusal and schema rollback\n");
   const before = exportPostgres17SchemaContract(JSON.parse(sql(POSTGRES17_SCHEMA_CONTRACT_QUERY).trim()));
   // This is only the separately created empty SOURCE reference. The owner
   // installation primitive cannot be invoked by the application service role.
@@ -66,6 +92,12 @@ try {
     beforeDigest: before.sha256, afterDigest: after.sha256 }, null, 2) + "\n");
   // Schema-only hashes are public fixture diagnostics; never keys or table data.
   process.stdout.write(`SOURCE REFERENCE before=${before.sha256} after=${after.sha256}\n`);
+  if (process.argv.includes("--acceptance")) {
+    assert.equal(before.sha256, SUPABASE_RUNTIME_CONTRACT.beforeDigest);
+    assert.equal(after.sha256, SUPABASE_RUNTIME_CONTRACT.afterDigest);
+    await acceptOwnedEnrolledSupabaseRuntime(name, migrations.map((item) => item.sql).join("\n"),
+      (target) => { assert(target === `${name}-http` || target === `${name}-curl`); owned.add(target); });
+  }
   completed = true;
 } catch (error) { failure = error; }
 finally {
@@ -81,4 +113,6 @@ finally {
 }
 if (failure) throw failure;
 assert(completed);
-process.stdout.write("PASS source-reference generation and owned cleanup; runtime acceptance remains pending frozen constants.\n");
+process.stdout.write(process.argv.includes("--acceptance")
+  ? "PASS enrolled native acceptance and owned cleanup.\n"
+  : "PASS source-reference generation and owned cleanup; runtime acceptance remains pending frozen constants.\n");

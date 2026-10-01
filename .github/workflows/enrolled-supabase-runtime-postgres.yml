@@ -34,8 +34,8 @@ jobs:
       - run: npm ci
       - name: Focused facade inventory and legacy regressions
         run: npx vitest run lib/db/supabase-adapter.test.ts lib/db/supabase-enrolled-methods.test.ts scripts/helpers/enrolled-postgres-schema-contract.test.ts
-      - name: Actual PG17 source reference generation (runtime acceptance pending)
-        run: node --import tsx scripts/test-enrolled-supabase-runtime-postgres.mts
+      - name: Actual PG17 reference, owner cutover and native HTTPS factory acceptance
+        run: node --import tsx scripts/test-enrolled-supabase-runtime-postgres.mts --acceptance
       - name: Retain bounded schema-only source reference
         uses: actions/upload-artifact@v4
         with:
@@ -56,4 +56,4 @@ jobs:
           finally { unlinkSync(path); }
           NODE
       - name: Scoped lint
-        run: npx eslint lib/db/supabase-adapter.ts lib/db/supabase-adapter.test.ts lib/db/supabase-authority.ts lib/db/supabase-enrolled-methods.ts lib/db/supabase-enrolled-methods.test.ts lib/db/supabase-runtime-contract.ts scripts/test-enrolled-supabase-runtime-postgres.mts scripts/test-fixtures/enrolled-supabase-*.mts scripts/helpers/enrolled-postgres-schema-contract.mts scripts/helpers/enrolled-postgres-schema-contract.test.ts
+        run: npx eslint lib/db/supabase-adapter.ts lib/db/supabase-adapter.test.ts lib/db/enrolled-supabase-adapter.ts lib/db/supabase-authority.ts lib/db/supabase-enrolled-methods.ts lib/db/supabase-enrolled-methods.test.ts lib/db/supabase-runtime-contract.ts scripts/test-enrolled-supabase-runtime-postgres.mts scripts/test-fixtures/enrolled-supabase-*.mts scripts/helpers/enrolled-postgres-schema-contract.mts scripts/helpers/enrolled-postgres-schema-contract.test.ts
