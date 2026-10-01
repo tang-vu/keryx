@@ -1,4 +1,4 @@
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, onTestFailed, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { mkdtempSync, readFileSync, writeFileSync, rmSync, renameSync, copyFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -144,25 +144,63 @@ it("rejects cloned facades and verified cores as runtime provenance and refuses 
   }
 });
 
+function cacheFailureStages() {
+  const started = performance.now();
+  const stages: { stage: string; elapsedMs: number }[] = [];
+  onTestFailed(() => {
+    console.error("Enrolled cache fixture stages", JSON.stringify(stages));
+  });
+  return (stage: string) => {
+    if (stages.length >= 12) throw new Error("Cache fixture stage bound exceeded");
+    stages.push({ stage, elapsedMs: Math.round(performance.now() - started) });
+  };
+}
+
 it("enforces real cache AEAD on reads and readiness without rewriting bad rows", async () => {
+  const stage = cacheFailureStages();
+  stage("fixture-start");
   const f = await fixture();
+  stage("factory-start");
   const adapter = await f.api.createEnrolledSqliteAdapter();
   f.adapters.push(adapter);
+  stage("cache-roundtrip");
   await adapter.setCached("source", "Synthetic cached body");
   expect(await adapter.getCached("source")).toBe("Synthetic cached body");
+  stage("owner-open");
   const { openVerifiedSqliteStorage } = await import("./storage-identity-connection");
   const owner = openVerifiedSqliteStorage(f.file, f.identity);
   try {
     owner.db.prepare("UPDATE cache_items SET source_id='other' WHERE source_id='source'").run();
     const before = owner.db.prepare("SELECT * FROM cache_items").all();
+    stage("wrong-aad-read");
     await expect(adapter.getCached("other")).rejects.toThrow("unavailable");
+    stage("wrong-aad-readiness");
     await expect(f.api.createEnrolledSqliteAdapter()).rejects.toThrow("unavailable");
     expect(owner.db.prepare("SELECT * FROM cache_items").all()).toEqual(before);
-    owner.db.prepare("UPDATE cache_items SET text='plain:v1:legacy' WHERE source_id='other'").run();
+  } finally { stage("owner-close"); owner.close(); }
+  stage("complete");
+});
+
+it("refuses plaintext real cache readiness without rewriting the retained row", async () => {
+  const stage = cacheFailureStages();
+  stage("fixture-start");
+  const f = await fixture();
+  stage("factory-start");
+  const adapter = await f.api.createEnrolledSqliteAdapter();
+  f.adapters.push(adapter);
+  stage("cache-write");
+  await adapter.setCached("source", "Synthetic cached body");
+  stage("owner-open");
+  const { openVerifiedSqliteStorage } = await import("./storage-identity-connection");
+  const owner = openVerifiedSqliteStorage(f.file, f.identity);
+  try {
+    owner.db.prepare("UPDATE cache_items SET text='plain:v1:legacy' WHERE source_id='source'").run();
     const legacy = owner.db.prepare("SELECT * FROM cache_items").all();
+    stage("plaintext-readiness");
     await expect(f.api.createEnrolledSqliteAdapter()).rejects.toThrow("unavailable");
     expect(owner.db.prepare("SELECT * FROM cache_items").all()).toEqual(legacy);
-  } finally { owner.close(); }
+  } finally { stage("owner-close"); owner.close(); }
+  stage("complete");
 });
 
 it("retains the exact cache row quota atomically and permits replacement without new startup failure", async () => {

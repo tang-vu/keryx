@@ -198,11 +198,19 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
       void completion.then(() => { childTerminal = true; });
       let output = "";
       let stage = "startup";
-      const stages = new Set(["startup", "provenance", "readonly", "drift", "source-write", "cache", "auth", "query", "metrics", "domains", "quota", "close"]);
+      const stages = new Set(["startup", "provenance", "readonly", "drift", "source-write", "cache", "auth", "oversize-cache", "create-challenge", "consume-challenge", "reconsume-challenge", "upsert-user", "read-user", "query", "metrics", "domains", "quota", "close"]);
       child.stdout!.on("data", (part) => {
         output += part;
         if (output.length > 8192) child.kill();
         for (const match of output.matchAll(/^STAGE ([a-z-]+)$/gm)) if (stages.has(match[1]) && match[1] !== "close") stage = match[1];
+      });
+      let diagnostic = "";
+      let errorOutput = "";
+      child.stderr!.on("data", (part) => {
+        errorOutput += part;
+        if (errorOutput.length > 8192) child.kill();
+        const match = errorOutput.match(/^FIXTURE_FAILURE category=(assertion|write-uncertain|storage-refused|type-error|operation-refused) code=(ERR_ASSERTION|[0-9A-Z]{5}|none)$/m);
+        if (match) diagnostic = ` failure=${match[1]} code=${match[2]}`;
       });
       if (mode === "drift") {
         const deadline = performance.now() + 30_000;
@@ -215,7 +223,7 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
       }
       const result = await boundedCompletion;
       if (childTerminal) children.delete(child);
-      assert.equal(result.code, 0, `Native factory fixture mode=${mode} stage=${stage} category=${result.category}`);
+      assert.equal(result.code, 0, `Native factory fixture mode=${mode} stage=${stage} category=${result.category}${diagnostic}`);
       assert(output.includes("PASS"));
     };
     await runChild("refused-startup", "anon");
