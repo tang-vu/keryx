@@ -1,9 +1,53 @@
 # Opt-in scholarly payments
 
-October 1, 2026. This is a proposed staged extension, not an implemented paper-claim
-system or a funded-pilot result. The user supports developing payments to research
-authors who choose to join. DOI discovery does not enroll authors or assign money.
+Updated October 2, 2026. Opt-in enrollment, signed exact-version rights submissions,
+independent operator review and payment admission are implemented for a supervised
+SQLite/browser-journal Arc-testnet pilot. This is software capability, not a funded
+pilot result or mainnet launch. DOI discovery does not enroll authors or assign money.
 The [product acceptance map](mainnet-delivery-plan.md) remains authoritative.
+
+## Implemented pilot and current limits
+
+The creator journey is `/register` → indexed creator-owned registry record → verified
+feed → `/creator/<source-id>` **Begin manuscript enrollment** → existing signed
+full-text uploader → signed rights declaration → detached signed operator review.
+Beginning enrollment immediately persists a sticky draft restriction; missing,
+pending, rejected, suspended, revoked, expired or incompatible rights cannot earn
+through ordinary source, bundle, cache, offer or citation paths. The dedicated
+source holds one exact signed item and one recipient. Stop prior paid runs before
+converting an existing source; it cannot return to legacy earning by deleting rights.
+
+Readers explicitly include reviewed paid manuscripts and use their own funded browser
+session. Before exposing a nonce, the existing journal verifies signatures, permission
+dates and direct fresh registry authority, then atomically checks rights/source/version,
+reserves the grant amount and records the original approval/registry/content snapshot.
+Revocation uses the same SQLite writer serialization. Exposed authorizations retain
+their original snapshot and pending reservation; sellers still require unchanged
+bytes and fresh compatible registry terms. No replacement nonce or refund is invented.
+Individual failures remain isolated from the completed answer.
+
+Four independently approved, currently effective sources bound the pilot's registry
+I/O. Unreviewed drafts and copied DOI claims cannot occupy reviewer-controlled slots
+or block legitimate submissions. Duplicate currently approved DOI/body/location offers
+require reviewer resolution before another approval. DOI syntax is canonicalized;
+it never grants namespace or payout ownership. An already read identical public body
+suppresses its paid offer and duplicate reward; metadata alone does not prove full text.
+Public copies remain free. Registry discounts and multi-author splits are closed.
+
+Public profiles disclose only declared rights status, applicable license, version,
+effective/embargo/expiry dates and safe review summary. Private permission evidence
+and revocation contact stay owner/operator scoped. Research receipts retain nonsecret
+declaration/approval IDs and policy revision alongside ordinary version and settlement
+evidence; approval is not settlement or peer review.
+
+See the [supervised reviewer procedure](scholarly-pilot-review.md) for the explicit
+allowlist, local signing key, evidence standard and sign/apply commands. There is no
+public admin endpoint, developer-role approval or automatic adjudication. The creator
+and reviewer wallets must differ. Supabase, enrolled native backends, treasury and A2A
+scholarly payment admission are unsupported and fail closed; their legacy domains
+are unchanged. Do not migrate scholarly sources without complete persisted rights
+history and a separately reviewed backend gate. A live author/purchase/settlement
+pilot and broader policy/privacy/appeal review remain open release gates.
 
 ## Authority boundaries
 
@@ -41,7 +85,8 @@ grandfathering of curated rows is not a scholarly verification policy.
 `POST /api/creator/[id]/content` requires the live registry creator for registered
 sources, rejects unavailable/stale content authority, verifies the signed full-text
 manifest and stores encrypted content. Uploads refer to an existing ingested item.
-Paper-specific rights attestations and adjudication are not implemented there.
+Paper-specific rights attestations and adjudication use the separate scholarly
+creator endpoint and private reviewer CLI; full-text upload itself grants no approval.
 
 Existing access tolls use `/api/source/[id]`; evidence-qualified citation legs use
 `/api/cite/[id]`. `lib/payments/split-allocation.ts` allocates integer micro-USDC
@@ -55,8 +100,8 @@ merely add wallets to the allowed set.
 retains documented database fallbacks on unavailable/unregistered authority. These
 are residual trust, not scholarly guarantees. New scholarly admissions must not
 inherit the legacy fallback. Fresh registered authority, active state and a matching
-rights approval must be checked before every new payable intent; implementing that
-gate is required before a public paid-scholarly release. The locally tested V2
+rights approval is checked before every new scholarly browser-journal intent. Broader
+public paid-scholarly onboarding remains gated. The locally tested V2
 revision contract is a candidate, not the deployed registry; see
 [registry candidate gates](engineering/registry-v2-candidate.md).
 
@@ -101,10 +146,8 @@ remain closed until participants' agreed shares and registry snapshot binding ar
 validated. A publisher's consent to distribute does not imply consent to bypass its
 payout agreement in favor of the listed authors.
 
-No new automatic claim UI is required for a supervised pilot. Until a persisted
-rights gate is implemented, use a dedicated restricted pilot corpus/instance with
-only reviewed items; pause its new paid runs before handling revocation. Do not
-advertise an enforcement mechanism the current source routes do not have.
+The supervised creator UI and persisted browser gate now implement this narrow
+stage. They do not make DOI claims automatic or establish a completed live pilot.
 
 Acceptance: a reviewer can reproduce the right-to-distribute decision for the exact
 bytes; participant controls enrollment and payout signing; registry projection and
@@ -193,10 +236,11 @@ decentralized key custody is implied.
 
 ## Open release decisions
 
-The rights-evidence standard, reviewer authority and appeal process require a concrete
-policy review before public onboarding. Duplicate public/paid offer arbitration,
-version-scoped suspension enforcement, fresh split snapshots, receipt approval
-references and readmission after revocation require implementation and focused tests.
+The supervised evidence standard and reviewer procedure are implemented for this
+narrow pilot. Broader public onboarding still needs policy/legal, privacy/retention
+and appeal review, broader public/paid version arbitration, multi-author split snapshot
+binding and supported-backend parity. Stage-3 real participant enrollment, purchase,
+settlement and recovery evidence remains unperformed; synthetic tests do not complete it.
 Existing legacy registry fallbacks and mutable V1 update races remain explicit
 residuals. Keep these gates open until evidence exists; reduce pilot scope instead
 of weakening authority, privacy, spend caps or validation.

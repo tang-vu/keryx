@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
     model?: unknown;
     mode?: unknown;
     scholarly?: unknown;
+    paidScholarly?: unknown;
   };
   // Model pick from the UI's picker. Validated inside getAgentDeps → resolveModelChoice:
   // unknown/unconfigured ids silently run the default engine, and every pick has a
@@ -65,6 +66,10 @@ export async function POST(req: NextRequest) {
   if (body.scholarly !== undefined && typeof body.scholarly !== "boolean") {
     return Response.json({ error: "scholarly must be a boolean" }, { status: 400 });
   }
+  if (body.paidScholarly !== undefined && typeof body.paidScholarly !== "boolean")
+    return Response.json({ error: "paidScholarly must be a boolean" }, { status: 400 });
+  if (body.paidScholarly === true && body.sessionId === undefined)
+    return Response.json({ error: "Paid scholarly pilot requires your funded browser session" }, { status: 409 });
 
   // A present session id means "spend my browser-funded grant". Never coerce a malformed value or
   // silently reinterpret an empty one as the anonymous treasury path.
@@ -269,6 +274,7 @@ export async function POST(req: NextRequest) {
             budget: askBudget,
             researchMode,
             scholarly: body.scholarly === true,
+            paidScholarly: body.paidScholarly === true,
             origin: isBot ? "engine" : "web",
             fundingOwner: useBrowserCoSign ? "browser" : "treasury",
           },

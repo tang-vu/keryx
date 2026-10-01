@@ -1,4 +1,5 @@
 import { isPublicReferenceId } from "@/lib/public-references/catalog";
+import { paperPaidGate } from "@/lib/scholarly/paid-gate";
 /** x402-protected immutable article asset. Registry source owns price and payout authority. */
 import { NextRequest } from "next/server";
 
@@ -60,6 +61,10 @@ export async function GET(
   }
   const offer = requestedOfferId ? resolvedOffer : null;
   const priceUsdc = offer?.ref.priceUsdc ?? terms.listPriceUsdc;
+  if (await db.getPaperState?.(source.id) && requestedOfferId)
+    return Response.json({ error: "Scholarly pilot does not support discounted offers" }, { status: 409 });
+  const rightsDenied = await paperPaidGate(db, source, req, { kind: "fetch", item, payee: terms.payTo, amountMicros: Math.round(priceUsdc * 1e6) });
+  if (rightsDenied) return rightsDenied;
   const cacheKey = sourceItemCacheKey(id, item);
   const endpoint = articlePaidPath({
     sourceId: id,

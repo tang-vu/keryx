@@ -1,4 +1,5 @@
 import { installSqliteApplicationSchema } from "./sqlite-application-schema";
+import { installScholarlyRights, beginSqlitePaper, getSqlitePaperState, submitSqlitePaper, reviewSqlitePaper, getSqlitePaperAdmission, admitSqlitePaperJournal } from "./scholarly-rights";
 import type { StorageIdentity } from "./storage-identity";
 import { openEnrolledCacheText, sealEnrolledCacheText } from "../sources/enrolled-content-cache";
 import { publicReferenceSchema, type PublicReference } from "../public-references/catalog";
@@ -154,6 +155,7 @@ export class SqliteAdapter implements KeryxDB {
     // WAL + busy timeout so the dev server and CLI can share the file safely.
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;");
     installSqliteApplicationSchema(this.db);
+    installScholarlyRights(this.db);
     // Releases before 2026-08-22 keyed two authenticated routes by the raw `kx_live_...` bearer
     // value before verification. Remove those legacy counters during every startup so the live DB
     // and every restored snapshot converge back to the documented hash-only secret invariant.
@@ -185,6 +187,8 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async upsertSource(s: Source): Promise<void> {
+    if (s.scholarlyEnrolled && (this.enrolledIdentity || !this.db.prepare("SELECT 1 FROM scholarly_enrollments WHERE source_id=?").get(s.id)))
+      throw new Error("Marked scholarly sources require the original persisted rights history; standalone catalog import is refused");
     if (s.id.startsWith("public:")) throw new Error("Reserved public-reference source ID");
     // active/verified default to 1 (true) for offline/DB-direct rows that predate the flags.
     const activeInt = s.active === false ? 0 : 1;
@@ -750,8 +754,35 @@ export class SqliteAdapter implements KeryxDB {
     activateSqliteBrowserJournal(this.db);
   }
   async admitBrowserJournal(input: BrowserJournalAdmission) {
-    return admitSqliteBrowserJournal(this.db, input);
+    if (this.enrolledIdentity) return admitSqliteBrowserJournal(this.db, input);
+    return admitSqlitePaperJournal(this.db, this, input);
   }
+  async getPaperState(sourceId: string) {
+    if (this.enrolledIdentity) {
+      if ((await this.getSource(sourceId))?.scholarlyEnrolled) throw new Error("Scholarly rights are unsupported on enrolled native storage");
+      return null;
+    }
+    return getSqlitePaperState(this.db, sourceId);
+  }
+  async beginPaperEnrollment(sourceId: string, creator: string) {
+    if (this.enrolledIdentity) throw new Error("Scholarly enrollment is unsupported on enrolled native storage");
+    const source = await this.getSource(sourceId);
+    if (!source) throw new Error("Registered source is required");
+    const { sourceFetchTerms } = await import("../registry/source-fetch-payto");
+    const terms = await sourceFetchTerms(source, { refresh: true });
+    if (terms.authority !== "onchain" || terms.stale || terms.creator.toLowerCase() !== creator.toLowerCase())
+      throw new Error("Fresh registered creator is required");
+    beginSqlitePaper(this.db, sourceId, creator);
+  }
+  async submitPaper(input: import("../scholarly/rights-protocol").SignedPaperDeclaration) {
+    if (this.enrolledIdentity) throw new Error("Scholarly enrollment is unsupported on enrolled native storage");
+    return submitSqlitePaper(this.db, this, input);
+  }
+  async reviewPaper(input: import("../scholarly/rights-protocol").SignedPaperDecision) {
+    if (this.enrolledIdentity) throw new Error("Scholarly review is unsupported on enrolled native storage");
+    return reviewSqlitePaper(this.db, this, input);
+  }
+  async getPaperAdmission(nonce: string) { return this.enrolledIdentity ? null : getSqlitePaperAdmission(this.db, nonce); }
   async admitBrowserQueryPolicy(proof:BrowserQueryPolicyProof,sessionId:string) {return admitSqliteBrowserQueryPolicy(this.db,proof,sessionId);}
   async admitBrowserSigningOriginal(input:BrowserOriginalAdmission) {return admitSqliteBrowserSigningOriginal(this.db,input);}
   async admitBrowserSourceSigningOriginal(input:import("./browser-signing-originals").BrowserSourceOriginalAdmission) {
@@ -2167,6 +2198,7 @@ function rowToApiKey(r: Record<string, unknown>): ApiKeyRow {
 
 function rowToSource(r: Record<string, unknown>): Source {
   return {
+    ...(r.scholarly_enrolled === 1 ? { scholarlyEnrolled: true } : {}),
     id: r.id as string,
     name: r.name as string,
     url: r.url as string,
@@ -2281,6 +2313,8 @@ function rowToGapIntent(r: Record<string, unknown>): GapIntent {
 
 function rowToPayment(r: Record<string, unknown>): PaymentRecord {
   return {
+    ...(r.scholarly_declaration_id ? { scholarlyDeclarationId: String(r.scholarly_declaration_id) } : {}),
+    ...(r.scholarly_approval_id ? { scholarlyApprovalId: String(r.scholarly_approval_id) } : {}),
     id: r.id as string,
     kind: r.kind as PaymentRecord["kind"],
     queryId: r.query_id as string,

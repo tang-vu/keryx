@@ -4,6 +4,8 @@
 
 /** A registered content source = a creator (or multi-author publication) that gets paid per citation. */
 export interface Source {
+  /** Sticky distribution-rights enrollment; unsupported backends must refuse paid activation. */
+  scholarlyEnrolled?: boolean;
   id: string;
   name: string;
   url: string; // homepage / canonical link
@@ -352,6 +354,8 @@ export type PaymentSettlementStatus = "settled" | "simulated" | "pending" | "fai
 
 /** `inbound` = another agent paid Keryx (A2A); fetch/citation = Keryx paid a creator. */
 export interface PaymentRecord extends Partial<SourceItemIdentity> {
+  scholarlyDeclarationId?: string;
+  scholarlyApprovalId?: string;
   id?: string;
   kind: "fetch" | "citation" | "inbound";
   queryId: string;

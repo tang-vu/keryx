@@ -1,4 +1,5 @@
 import { isPublicReferenceId } from "@/lib/public-references/catalog";
+import { paperPaidGate } from "@/lib/scholarly/paid-gate";
 /**
  * x402 citation settlement. Dynamic price = the agent-computed weighted reward.
  * payTo is the specified author wallet (validated to belong to the source).
@@ -77,6 +78,9 @@ export async function POST(
       { status: 400 },
     );
   }
+
+  const rightsDenied = await paperPaidGate(db, source, req, { kind: "citation", payee: payTo, amountMicros: Math.round(amount * 1e6) });
+  if (rightsDenied) return rightsDenied;
 
   return settleThenServe(
     req,

@@ -95,6 +95,19 @@ export async function GET(
       /* an unreadable summary costs the proof row, never the profile */
     }
 
+    let scholarlyRights: { status: string; declarationId?: string; approvalId?: string; license?: string; summary?: string; contentVersion?: string; effectiveAt?: string; embargoUntil?: string; expiresAt?: string } | null = null;
+    try {
+      const state = await db.getPaperState?.(source.id);
+      if (state) {
+        const current = state.review?.decision.declarationId === state.declarationId;
+        scholarlyRights = { status: current ? state.review!.decision.outcome : "submitted", declarationId: state.declarationId,
+          contentVersion: state.submission.declaration.contentVersion,
+          effectiveAt: state.submission.declaration.effectiveAt, embargoUntil: state.submission.declaration.embargoUntil, expiresAt: state.submission.declaration.expiresAt,
+          ...(current ? { approvalId: state.decisionId!, summary: state.review!.decision.publicSummary,
+            license: state.submission.declaration.license } : {}) };
+      } else if (source.scholarlyEnrolled) scholarlyRights = { status: "draft" };
+    } catch { if (source.scholarlyEnrolled) scholarlyRights = { status: "unavailable" }; }
+
     return NextResponse.json({
       source: {
         id: source.id,
@@ -105,6 +118,7 @@ export async function GET(
         verified: source.verified,
       },
       gatewayProof,
+      scholarlyRights,
       stats: {
         totalEarned,
         settledTotal,
