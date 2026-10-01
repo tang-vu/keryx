@@ -1671,3 +1671,111 @@ it("defers wallet funding until public-only research expansion admits an owned p
   expect(gateway.fetchCalls).toEqual(["owned-later"]);
   expect(run.citations.find((citation) => citation.sourceId === "public:free")?.reward).toBe(0);
 });
+
+describe("funding uncertainty preserves public research", () => {
+  it.each([ ["BUY", false], ["BUY", true], ["CACHE", false], ["CACHE", true] ] as const)(
+    "withholds owned %s with publicFirst=%s and persists a supported public answer", async (action, publicFirst) => {
+      const source = makeSource({ id: "owned-unavailable" });
+      const gateway = fakeGateway(), fund = vi.spyOn(gateway, "ensureFunded").mockRejectedValue(new Error("PRIVATE funding diagnostic"));
+      const boundary = vi.fn();
+      const engine = fakeEngine({ decide: input => input.candidates.map(candidate => ({
+        ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice },
+          (candidate.id === "public:free") === publicFirst ? 0.95 : 0.6),
+        action: candidate.id === "public:free" ? "BUY" : action,
+        targets: [candidate.id === "public:free" ? 0 : 1],
+      })) });
+      engine.decompose = async () => ["public evidence", "owned evidence"];
+      const d = deps([source], engine, gateway, action === "CACHE" ? { cachedAt: { [source.id]: new Date().toISOString() } } : {});
+      d.db.listPublicReferences = async () => [publicRef()];
+      const cache = vi.spyOn(d.db, "getCached"), save = vi.fn(); d.db.saveQueryRun = save;
+      const run = await collectRun({ question: "Compare evidence", budget: 0.03, researchMode: "quick",
+        onCreatorPaymentBoundary: boundary }, { deps: d });
+      expect(run.evidencePortfolio?.selectedAssetIds[0]).toBe(publicFirst ? "public:free" : source.id);
+      expect(fund).toHaveBeenCalledTimes(1); expect(boundary).not.toHaveBeenCalled();
+      expect(cache).not.toHaveBeenCalled(); expect(gateway.fetchCalls).toEqual([]); expect(gateway.citationCalls).toEqual([]);
+      expect(d.db.payments).toEqual([]); expect(run.paymentAttempts).toBe(0); expect(run.pendingPayments).toBe(0);
+      expect(run.totalSpent).toBe(0); expect(run.totalSpent).toBeLessThanOrEqual(run.budget);
+      expect(run.decisions.find(decision => decision.sourceId === source.id)).toMatchObject({ action: "SKIP", rationale: expect.stringContaining("unknown") });
+      const published = run.trace.filter(step => step.phase === "decide" && (step.detail as Decision)?.sourceId === source.id);
+      expect(published).toHaveLength(1);
+      expect(published[0].message).toMatch(new RegExp(`^${action} `));
+      expect(published[0].detail).toMatchObject({ action, rationale: expect.not.stringContaining("Funding readiness is unknown") });
+      expect(published[0].detail).not.toBe(run.decisions.find(decision => decision.sourceId === source.id));
+      expect(run.citations).toHaveLength(1); expect(run.citations[0]).toMatchObject({ sourceId: "public:free", reward: 0 });
+      expect(run.evidence?.some(item => item.sourceKind === "public-reference" && item.qualifiesForAnswer)).toBe(true);
+      expect(run.answer).toContain("grounded answer [S1]"); expect(run.answer).toContain("wallet funding activity remains unverified");
+      expect(run.trace.some(step => (step.detail as { fundingReadiness?: string } | undefined)?.fundingReadiness === "unknown")).toBe(true);
+      expect(run.trace.some(step => step.message.startsWith(`SKIP ${source.name}`))).toBe(true);
+      expect(run.trace.at(-1)?.message).toContain("Creator-payment amounts only");
+      expect(JSON.stringify(run)).not.toContain("PRIVATE funding diagnostic"); expect(save).toHaveBeenCalledWith(run);
+      expect(run.evidencePortfolio?.outcome?.readAssetIds).toEqual(["public:free"]);
+    },
+  );
+
+  it.each(["pending", "settled"] as const)("does not turn a %s-looking funding error into a creator record or retry", async status => {
+    const sources = [makeSource({ id: "owned-later-a" }), makeSource({ id: "owned-later-b" })];
+    const gateway = fakeGateway();
+    const payment = makePayment({ kind: "fetch", queryId: "synthetic-funding-error", sourceId: sources[0].id,
+      sourceName: sources[0].name, payer: AGENT, payee: sources[0].walletAddress, amountUsdc: 0.002,
+      settled: status === "settled", settlementStatus: status, ...(status === "settled" ? { txHash: "0xsynthetic" } : {}) });
+    const error = status === "pending" ? new PaymentPendingError("PRIVATE funding state", payment) : new PaymentSettledError("PRIVATE funding state", payment);
+    const fund = vi.spyOn(gateway, "ensureFunded").mockRejectedValue(error), boundary = vi.fn();
+    const reeval = vi.fn((input: ReevaluateInput) => {
+      if (reeval.mock.calls.length === 1) return { shouldBuyMore: true,
+        recommendedIds: [sources[0].id, "public:extra", sources[1].id], rationale: "fill gaps" };
+      expect(input.skippedSources.map(item => item.id)).toEqual(["public:remaining"]);
+      return { shouldBuyMore: true, recommendedIds: [sources[0].id, "public:remaining", sources[1].id], rationale: "remaining free evidence" };
+    });
+    const engine = fakeEngine({ decide: input => input.candidates.map(candidate => ({
+      ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
+      action: candidate.id === "public:free" ? "BUY" : "SKIP",
+    })), reevaluate: reeval });
+    const d = deps(sources, engine, gateway); d.db.listPublicReferences = async () => [publicRef(), publicRef("public:extra"), publicRef("public:remaining")];
+    const { run } = await drive({ question: "Evidence gaps", budget: 0.03,
+      executionLimits: { attentionLimit: 4, reevaluateRounds: 2 }, onCreatorPaymentBoundary: boundary }, d);
+    expect(reeval).toHaveBeenCalledTimes(2); expect(fund).toHaveBeenCalledTimes(1); expect(boundary).not.toHaveBeenCalled();
+    expect(run.citations.map(item => item.sourceId)).toEqual(["public:free", "public:extra", "public:remaining"]);
+    expect(run.decisions.filter(item => item.sourceId.startsWith("owned-")).every(item => item.action === "SKIP")).toBe(true);
+    expect(gateway.fetchCalls).toEqual([]); expect(gateway.citationCalls).toEqual([]); expect(d.db.payments).toEqual([]);
+    expect(run.paymentAttempts).toBe(0); expect(run.settledPayments).toBe(0); expect(run.pendingPayments).toBe(0); expect(run.pendingSpendUsdc).toBe(0);
+    expect(run.answer).toContain("Funding readiness is unknown"); expect(JSON.stringify(run)).not.toContain("PRIVATE funding state");
+  });
+
+  it("retains the fetch reservation while permitting a bounded free public gap read", async () => {
+    const budget = 0.03, source = makeSource({ id: "owned-full-budget", fetchPrice: fetchBudget(budget) });
+    const gateway = fakeGateway(), fund = vi.spyOn(gateway, "ensureFunded").mockRejectedValue(new Error("unknown"));
+    const engine = fakeEngine({ decide: input => input.candidates.map(candidate => ({
+      ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
+      action: candidate.id === "public:extra" ? "SKIP" : "BUY", targets: [candidate.id === source.id ? 1 : 0],
+    })), reevaluate: input => { expect(input.remainingBudget).toBeCloseTo(0, 8);
+      expect(input.skippedSources.map(item => item.id)).toEqual(["public:extra"]);
+      return { shouldBuyMore: true, recommendedIds: [source.id, "public:extra"], rationale: "free gap evidence" }; } });
+    engine.decompose = async () => ["public evidence", "owned evidence"];
+    const d = deps([source], engine, gateway); d.db.listPublicReferences = async () => [publicRef(), publicRef("public:extra")];
+    const { run } = await drive({ question: "Compare evidence", budget, executionLimits: { attentionLimit: 3, reevaluateRounds: 1 } }, d);
+    expect(fund).toHaveBeenCalledTimes(1); expect(run.evidencePortfolio?.selectedBuyUsdc).toBeCloseTo(fetchBudget(budget), 8);
+    expect(run.citations.map(item => item.sourceId)).toEqual(["public:free", "public:extra"]); expect(gateway.fetchCalls).toEqual([]);
+  });
+
+  it("distinguishes an owned-only funding outage from absence of relevant evidence", async () => {
+    const gateway = fakeGateway(); vi.spyOn(gateway, "ensureFunded").mockRejectedValue(new Error("unknown"));
+    const { run } = await drive({ question: "Owned evidence", budget: 0.03 }, deps([makeSource({ id: "owned" })], fakeEngine(), gateway));
+    expect(run.answer).toContain("Funding readiness is unknown"); expect(run.answer).toContain("No supported answer");
+    expect(run.decisions[0].action).toBe("SKIP"); expect(run.citations).toEqual([]); expect(run.paymentAttempts).toBe(0);
+  });
+
+  it.each([false, true])("propagates explicit funding abort during lazyExpansion=%s before more reasoning or persistence", async lazy => {
+    const source = makeSource({ id: "owned" }), gateway = fakeGateway();
+    const aborted = new DOMException("Synthetic user abort", "AbortError"); vi.spyOn(gateway, "ensureFunded").mockRejectedValue(aborted);
+    const engine = fakeEngine({ decide: input => input.candidates.map(candidate => ({
+      ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
+      action: lazy && candidate.id === source.id ? "SKIP" : "BUY",
+    })), reevaluate: () => ({ shouldBuyMore: true, recommendedIds: [source.id], rationale: "owned gap" }) });
+    const synthesize = vi.spyOn(engine, "synthesize"), boundary = vi.fn(), d = deps([source], engine, gateway);
+    d.db.listPublicReferences = async () => [publicRef()]; d.db.saveQueryRun = vi.fn();
+    await expect(collectRun({ question: "Evidence", budget: 0.03, onCreatorPaymentBoundary: boundary,
+      executionLimits: { attentionLimit: 2, reevaluateRounds: 1 } }, { deps: d })).rejects.toBe(aborted);
+    expect(synthesize).not.toHaveBeenCalled(); expect(boundary).not.toHaveBeenCalled(); expect(d.db.saveQueryRun).not.toHaveBeenCalled();
+    expect(gateway.fetchCalls).toEqual([]); expect(gateway.citationCalls).toEqual([]);
+  });
+});

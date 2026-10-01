@@ -1,5 +1,18 @@
 # Keryx Project Changelog
 
+### Public research during funding uncertainty (2026-10-01)
+
+- Preserve a supported answer from free public references when initial or lazy
+  wallet funding fails. Withhold owned purchases, cached owned reads, and creator
+  rewards for that run; do not automatically retry funding.
+- Show and persist funding uncertainty in the trace and final answer. Creator
+  payment totals do not establish the outcome of wallet funding activity, and
+  planned reservations remain retained. Runs without usable public evidence
+  explicitly return no supported answer. User cancellation still propagates.
+- Release requires reviewed source, production build, required CI, and deployed
+  commit verification. This change does not complete funding reconciliation or
+  authorize mainnet spending.
+
 ### Database readiness and failed-initialization cleanup (2026-10-01)
 
 - Concurrent `getDb()` callers within one process now await one initialization

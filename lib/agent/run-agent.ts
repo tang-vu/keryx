@@ -145,6 +145,8 @@ export async function* runAgent(
   let paymentAttempts = 0;
   let settledPayments = 0;
   let pendingPayments = 0;
+  let fundingUnavailable = false;
+  const fundingNotice = "Funding readiness is unknown. Paid source access and creator rewards are withheld for this run; any wallet funding activity remains unverified. Inspect the original funding records before another paid attempt.";
   let finalDecisions: Decision[] = [];
   let citations: Citation[] = [];
   let evidence: EvidenceRecord[] = [];
@@ -589,10 +591,15 @@ export async function* runAgent(
   // citation rewards, so fund only when an owned payable source will be used.
   let spendWalletReady = false;
   if (buys.some((decision) => !publicReads.has(decision.assetId ?? decision.sourceId))) {
-    const funded = await gateway.ensureFunded(budget);
-    spendWalletReady = true;
-    if (gateway.mode === "real") {
-      yield emit("fetch", `Agent spend wallet ready: ${funded.address}${funded.depositTx ? ` (topped up ${short(funded.depositTx)})` : " (balance sufficient)"}`);
+    try {
+      const funded = await gateway.ensureFunded(budget);
+      spendWalletReady = true;
+      if (gateway.mode === "real") {
+        yield emit("fetch", `Agent spend wallet ready: ${funded.address}${funded.depositTx ? ` (topped up ${short(funded.depositTx)})` : " (balance sufficient)"}`);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") throw error;
+      yield* withholdOwnedReads("fetch");
     }
   }
 
@@ -607,6 +614,7 @@ export async function* runAgent(
       yield emit("fetch", `Read ${d.sourceName} - free public feed reference, no creator payment - ${marker}`);
       continue;
     }
+    if (fundingUnavailable) continue;
     const asset = assetById.get(d.assetId ?? d.sourceId);
     if (!asset) continue;
     const { source, item, cacheKey } = asset;
@@ -762,7 +770,8 @@ export async function* runAgent(
             d.action === "SKIP" &&
             !d.external &&
             !isExternal(d.sourceId) &&
-            !gatheredIds.has(d.assetId ?? d.sourceId),
+            !gatheredIds.has(d.assetId ?? d.sourceId) &&
+            (!fundingUnavailable || publicReads.has(d.assetId ?? d.sourceId)),
         )
         .map((d) => {
           const asset = assetById.get(d.assetId ?? d.sourceId);
@@ -774,7 +783,7 @@ export async function* runAgent(
           };
         });
 
-      if (skipped.length === 0 || remainingBudget <= 0) break;
+      if (skipped.length === 0 || (remainingBudget <= 0 && !fundingUnavailable)) break;
 
       const reeval = await engine.reevaluate({
         question: input.question,
@@ -827,6 +836,10 @@ export async function* runAgent(
           yield emit("reevaluate", `Filling gap - free public feed reference ${publicRead.sourceName}, no creator payment - ${marker}`);
           continue;
         }
+        if (fundingUnavailable) {
+          yield* withholdOwnedReads("reevaluate", recId);
+          continue;
+        }
         const asset = assetById.get(recId);
         const source = asset?.source;
         // Guard against an engine recommending a source we already read (duplicate marker +
@@ -836,15 +849,20 @@ export async function* runAgent(
         const marker = `S${++markerN}`;
         const assetLabel = asset.item ? `${source.name} — ${asset.item.title}` : source.name;
         const itemIdentity = asset.candidate.item ?? {};
-        yield emit("reevaluate", `Filling gap — buying ${assetLabel} ($${asset.priceUsdc})…`);
-
-        try {
-          // A public-only initial portfolio does not fund or deposit. Fund only if expansion
-          // now admits an owned source that can charge or receive a citation reward.
-          if (!spendWalletReady) {
+        // Funding errors have their own uncertainty boundary. They are never
+        // interpreted as a creator payment record or permission to retry funding.
+        if (!spendWalletReady) {
+          try {
             await gateway.ensureFunded(budget);
             spendWalletReady = true;
+          } catch (error) {
+            if (error instanceof Error && error.name === "AbortError") throw error;
+            yield* withholdOwnedReads("reevaluate", recId);
+            continue;
           }
+        }
+        yield emit("reevaluate", `Filling gap — buying ${assetLabel} ($${asset.priceUsdc})…`);
+        try {
           paymentAttempts++;
           await input.onCreatorPaymentBoundary?.();
           const { content, payment } = await gateway.payFetch({
@@ -939,7 +957,10 @@ export async function* runAgent(
       claimIndex, claim, coverage: 0, coveredBy: [],
     }));
     return finish(
-      pendingPayments > 0
+      fundingUnavailable
+        ? "No supported answer: paid sources were withheld because funding readiness could not be verified, and no usable public evidence was gathered. " +
+          "Wallet funding effects remain unknown; inspect the original funding records before another paid attempt."
+        : pendingPayments > 0
         ? "No supported answer: source payment confirmation remains pending and no usable content was received. " +
           "Pending amounts stay reserved; any confirmed source payments remain recorded separately. Keep this job for reconciliation before buying again."
         : settledPayments > 0
@@ -1287,7 +1308,31 @@ export async function* runAgent(
   return finish(answer);
 
   // ── helpers ──
+  function withholdOwnedReads(phase: "fetch" | "reevaluate", selectedAssetId?: string): TraceStep[] {
+    const steps: TraceStep[] = [];
+    if (!fundingUnavailable) {
+      fundingUnavailable = true;
+      steps.push(emit(phase, fundingNotice, {
+        fundingReadiness: "unknown", automaticPaidAttemptsBlocked: true,
+      }));
+    }
+    for (const [index, decision] of finalDecisions.entries()) {
+      const assetId = decision.assetId ?? decision.sourceId;
+      if (decision.external || publicReads.has(assetId)
+        || (decision.action !== "BUY" && decision.action !== "CACHE" && assetId !== selectedAssetId)) continue;
+      // decide events retain the published planning snapshot. Replace the final
+      // decision instead of mutating the object already streamed and traced.
+      const withheld: Decision = { ...decision, action: "SKIP",
+        rationale: "Funding readiness is unknown; this owned source cannot be read or rewarded in this run." };
+      finalDecisions[index] = withheld;
+      steps.push(emit(phase, `SKIP ${withheld.sourceName}: ${withheld.rationale}`));
+    }
+    // Keep the query-local fetch reservation intact. A funding error cannot
+    // establish no wallet movement, release signer capacity or authorize refunds.
+    return steps;
+  }
   function finish(answer: string): QueryRun {
+    if (fundingUnavailable) answer = `> ${fundingNotice}\n\n${answer}`;
     const totalSpent = round(
       payments
         .filter(paymentCountsAsSpent)
@@ -1338,7 +1383,7 @@ export async function* runAgent(
     };
     emit(
       "done",
-      `Done. Spent $${totalSpent} across ${payments.length - pendingPayments} confirmed/simulated payment(s) to creators${pendingPayments ? `; ${pendingPayments} authorization(s) await settlement confirmation` : ""}.`,
+      `Done. Spent $${totalSpent} across ${payments.length - pendingPayments} confirmed/simulated payment(s) to creators${pendingPayments ? `; ${pendingPayments} authorization(s) await settlement confirmation` : ""}.${fundingUnavailable ? " Creator-payment amounts only; wallet funding effects remain unknown." : ""}`,
     );
     return run;
   }
