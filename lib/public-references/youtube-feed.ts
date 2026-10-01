@@ -24,12 +24,14 @@ export async function ingestYoutubeMetadata(xml: string, feedUrl: string): Promi
   if (!isApprovedYoutubeFeed(feedUrl) || Buffer.byteLength(xml, "utf8") > 500_000)
     throw new Error("Unapproved or oversized YouTube feed");
   const declarations = xml.replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, "");
-  const root = declarations.match(/<feed\s[^>]*>/)?.[0];
+  // Consume complete quoted attribute values while locating tags: a quoted > is not a tag end.
+  const tags = Array.from(declarations.matchAll(/<[^\s<>!?/]+(?:[^<>"']|"[^"]*"|'[^']*')*>/g), (tag) => tag[0]);
+  const root = tags.find((tag) => /^<feed(?:\s|>)/.test(tag));
   const namespaceAttributes = (tag: string) => Array.from(tag.matchAll(
-    /\s([A-Za-z_][\w:.-]*)\s*=\s*(["'])([\s\S]*?)\2/g,
+    // Consume every name/value unit, including Unicode names, before filtering namespaces.
+    /\s([^\s=<>/"']+)\s*=\s*(["'])([\s\S]*?)\2/g,
   )).filter((attribute) => attribute[1] === "xmlns" || attribute[1].startsWith("xmlns:"));
-  const allNamespaces = Array.from(declarations.matchAll(/<[A-Za-z_][^<>]*>/g))
-    .flatMap((tag) => namespaceAttributes(tag[0]));
+  const allNamespaces = tags.flatMap(namespaceAttributes);
   if (!root || /<!DOCTYPE|<!ENTITY/i.test(xml) ||
       allNamespaces.length !== 3)
     throw new Error("Unexpected YouTube feed namespace or declaration");

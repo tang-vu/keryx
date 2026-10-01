@@ -36,6 +36,17 @@ describe("approved YouTube publisher metadata", () => {
     expect((await new Parser().parseString(quoted)).items).toHaveLength(1);
     await expect(ingest(quoted)).rejects.toThrow("namespace");
   });
+  it("consumes quoted tag delimiters and Unicode attribute values before checking namespaces", async () => {
+    const rebound = xml.replace("<media:group>", '<media:group note=">" xmlns:media="https://evil.test/">');
+    const unicode = xml.replace(/<feed\s[^>]*>/,
+      `<feed 名=" xmlns='http://www.w3.org/2005/Atom' xmlns:yt='http://www.youtube.com/xml/schemas/2015' xmlns:media='http://search.yahoo.com/mrss/'">`);
+    for (const spoof of [rebound, unicode]) {
+      expect((await new Parser().parseString(spoof)).items).toHaveLength(1);
+      await expect(ingest(spoof)).rejects.toThrow("namespace");
+    }
+    // Benign quoted delimiters/Unicode attributes do not themselves invalidate a real binding.
+    expect((await ingest(xml.replace("<media:group>", '<media:group 名=">">'))).items).toHaveLength(1);
+  });
   it("drops mismatched entry identity, unsafe links and noncanonical video URLs", async () => {
     for (const [before, after] of [["<yt:channelId>UCLsooMJoIpl_7ux2jvdPB-Q", "<yt:channelId>wrong"],
       ["<yt:videoId>LuJe0ad1Ygk", "<yt:videoId>bad"], ["yt:video:LuJe0ad1Ygk", "yt:video:wrong"],
