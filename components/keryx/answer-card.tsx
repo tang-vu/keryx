@@ -18,6 +18,8 @@ import { fmtUsdc } from "./phase-style";
 import { deriveConfidence } from "@/lib/agent/confidence";
 import { cn } from "@/lib/utils";
 import { CitationEvidencePanel } from "./citation-evidence-panel";
+import { ResearchCitationExport } from "./research-citation-export";
+import { EvidenceMatrixExport } from "./evidence-matrix-export";
 
 export function AnswerCard({ run, meta, permalink, payments = [] }: { run: QueryRun; meta: AskMeta | null; permalink?: string; payments?: PaymentRecord[] }) {
   const [highlight, setHighlight] = useState<string | null>(null);
@@ -78,6 +80,9 @@ export function AnswerCard({ run, meta, permalink, payments = [] }: { run: Query
           {run.claimCoverage?.length ? (
             <EvidenceLedger run={run} />
           ) : null}
+
+          <EvidenceMatrixExport run={run} />
+          <ResearchCitationExport citations={run.citations} />
 
           {run.citations.length > 0 && (
             <div className="mt-7 border-t border-ink pt-5">

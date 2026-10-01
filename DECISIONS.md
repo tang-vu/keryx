@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-288** - Reuse recorded research for academic and technical/market workflows -
+*The user selected both researcher segments; existing receipts and claim evidence
+were useful but did not provide reference-manager imports or a comparison export.*
+Add browser-local BibTeX/RIS references and a claim-by-cited-source evidence matrix
+with spreadsheet CSV to the shared web reading. Export only already recorded article
+identities and bounded citation-matched excerpts. Omit missing article identities,
+retain distinct versions, and never infer authors, DOI, journal or peer-review status
+from a registered publication or generated answer. Missing excerpts are inspection
+gaps, not truth or conflict verdicts. Keep payment and receipt authority unchanged.
+Scholarly metadata enrichment and account synchronization remain open work, not an
+academic-complete claim. Reversible: remove the browser export surfaces; no stored
+run, payment or receipt format changes. See [researcher exports](docs/researcher-exports.md).
+
 **D-287** — Separate Circle API observations from citation payment authority — *2026-10-01*
 
 A seller response header and a database settled flag cannot independently prove

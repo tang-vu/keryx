@@ -68,6 +68,9 @@ the model reasons about money and shows its work, streamed live to the UI:
 - **Living answer receipts** — archived conclusions never silently change. Keryx flags when an
   exact paid SHA-256/IPFS article version has been superseded, exposes a metadata-only freshness API,
   and itemizes the source/evidence/coverage/settled-payment delta after a reader explicitly re-asks.
+- **Researcher exports** — import recorded cited-article references as BibTeX or RIS into Zotero,
+  and compare claim-level excerpts in a research evidence matrix with spreadsheet CSV.
+  Missing scholarly metadata stays explicit; see [researcher exports](docs/researcher-exports.md).
 - **Portable research receipts** — every permalink exports one deterministic JSON bundle containing
   its answer hash, BUY/SKIP/CACHE decisions, exact article versions, claim evidence and sanitized
   Circle settlement snapshot. Retain its SHA-256 to detect later changes; the self-check does not
