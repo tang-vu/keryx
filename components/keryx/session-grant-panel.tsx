@@ -17,7 +17,7 @@ import { GrantSpendDialog } from "@/components/keryx/grant-spend-dialog";
 import { FaucetPanel } from "@/components/keryx/faucet-panel";
 
 export interface SessionGrantBinding {
-  /** sessionId to include in ask POST body; null when no active grant. */
+  /** Retained sessionId for active, expired or paused grants; never fall back implicitly. */
   sessionId: string | null;
   /** Returns the session WalletClient for auto-signing, or null. */
   getSessionWalletClient: () => WalletClient | null;
@@ -29,6 +29,8 @@ export interface SessionGrantBinding {
   grantCap?: number;
   /** True when a known session has lapsed (TTL) — UI should prompt recovery. */
   expired?: boolean;
+  /** Status could not be confirmed; retain the session and block new questions. */
+  paused?: boolean;
   /** Flip the grant to "expired"; called by the ask stream on a 401 session_expired. */
   markExpired?: () => void;
 }
@@ -68,14 +70,17 @@ export function SessionGrantPanel({ onBindingChange }: Props) {
   useEffect(() => {
     const isActive = state.status === "active";
     const isExpired = state.status === "expired";
+    const isPaused = state.status === "paused";
     // Keep sessionId flowing while expired so an ask still reaches the server and gets
     // a clean 401 session_expired (rather than silently using the treasury). The cap is
-    // only meaningful while active — it gates client-side signing.
+    // only meaningful while active — it gates client-side signing. Unknown status retains
+    // its identity with an explicit paused binding so the consumer blocks new questions.
     const binding: SessionGrantBinding = {
-      sessionId: isActive || isExpired ? state.sessionId : null,
+      sessionId: isActive || isExpired || isPaused ? state.sessionId : null,
       getSessionWalletClient,
       grantCap: isActive ? state.cap : undefined,
       expired: isExpired,
+      paused: isPaused,
       markExpired,
     };
     bindingRef.current = binding;

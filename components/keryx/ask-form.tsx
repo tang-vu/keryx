@@ -10,7 +10,7 @@ import type { ResearchMode } from "@/lib/types";
 
 interface AskFormProps {
   disabled?: boolean;
-  payer?: "treasury" | "session" | "expired";
+  payer?: "treasury" | "session" | "expired" | "paused";
   onAsk: (
     question: string,
     budget: number,
@@ -121,7 +121,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury" }: AskFormProps) {
 
   const submit = () => {
     const q = question.trim();
-    if (!q || disabled) return;
+    if (!q || disabled || payer === "paused") return;
     onAsk(q, budget, parentRef.current, model || undefined, researchMode);
   };
 
@@ -167,7 +167,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury" }: AskFormProps) {
             </p>
           </fieldset>
           <div className="mt-2 border-t border-line pt-3">
-            <button type="button" onClick={submit} disabled={disabled || question.trim().length === 0}
+            <button type="button" onClick={submit} disabled={disabled || payer === "paused" || question.trim().length === 0}
               data-tour="dispatch-btn"
               className="kx-press min-h-12 w-full border border-ink bg-ink px-5 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] text-cream transition-all hover:bg-paid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:cursor-not-allowed disabled:opacity-50">
               {disabled ? "Researching..." : "Ask Keryx"}
@@ -175,6 +175,8 @@ export function AskForm({ disabled, onAsk, payer = "treasury" }: AskFormProps) {
             <p className="mt-2 font-mono text-[11px] leading-snug text-ink-2">
               {payer === "session"
                 ? `Your funded session pays on Arc testnet. Question budget: $${budget.toFixed(3)} USDC; your session cap also applies.`
+                : payer === "paused"
+                  ? "Session status unavailable. Recover your funded session below before another question."
                 : payer === "expired"
                   ? "Session expired. Recover it below before another wallet funded question."
                   : `Free trial: Keryx's treasury pays on Arc testnet. Question budget: up to $${budget.toFixed(3)} USDC.`}

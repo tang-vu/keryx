@@ -1,5 +1,11 @@
 # Keryx — Decision Log
 
+**D-282** — Separate browser elapsed time from server UTC expiry — *2026-10-01*
+
+Browser clock skew must not determine whether a server-prepared unsigned withdrawal or a server-issued login date is usable. Bound withdrawal request age with monotonic elapsed time while retaining the abort, original selected policy and server chain-height checks. Issue dated SIWE challenges from the server, preserve the five-minute single-use challenge and existing session lifetime caps, and leave server JWT/database expiry authoritative. Echo the exact retained grant expiry once; derive an advisory client deadline from bounded server remaining duration minus the full request time. Read-only focus/visibility checks may clamp that deadline or pause the UI, never renew the grant or reset financial capacity.
+
+Browser monotonic clocks and timers can pause during operating-system sleep. These UI bounds do not replace trusted server UTC, chain/vendor expiry or the signer's independent payment lifetime checks. A failed status read retains the key, original nonces and funded balance; an invalid supplied spending session must not become treasury spending. Host synchronization and the remaining payment-signing clock boundary require independent acceptance. No clock mutation, freshness relaxation or mainnet authorization follows from this decision. See [account sessions](docs/engineering/session-management-2026-09-09.md) and [withdrawal recovery](docs/creator-withdrawal-recovery.md).
+
 **D-281** — Bound offline SQLite provenance capacity with actual Linux process containment — *2026-10-01*
 
 Keep the existing 64 MiB intake profile and add an explicit operator-declared offline snapshot profile for larger stores with substantial unselected content. A 512 MiB physical ceiling alone does not contain native SQLite work. Stock Node disables SQLite memory accounting, so reporting `hard_heap_limit` does not demonstrate enforcement. Use a fixed Linux systemd transient child with verified cgroup-v2 memory/swap/task limits, private network, no new privileges, and a service runtime limit instead. Sanitize the manager environment independently of the parent's environment. Refuse the larger mode on unsupported platforms or unavailable containment; do not weaken selected-evidence bounds or spill to disk.

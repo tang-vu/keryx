@@ -1,6 +1,9 @@
 "use client";
 
 import { readGatewayCredit } from "../gateway/read-credit";
+import { createSessionGrantClock } from "../session-grant-time";
+import { watchSessionGrantClock } from "../session-grant-liveness";
+import { readBoundedJson } from "../read-bounded-json";
 
 /**
  * useSessionGrant — manages the browser-side session key lifecycle.
@@ -33,7 +36,7 @@ import { readGatewayCredit } from "../gateway/read-credit";
  *     that signs non-deterministically simply can't recover — it never loses MORE funds.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePublicClient, useWalletClient, useSwitchChain } from "wagmi";
 import { createWalletClient, http, parseEther, type PublicClient, type WalletClient } from "viem";
 import { arcTestnet } from "viem/chains";
@@ -74,6 +77,7 @@ export type GrantStatus =
   | "registering"      // POSTing to /api/session/grant
   | "recovering"       // re-deriving key from a signature to resume a funded session
   | "active"
+  | "paused"           // status unknown; retain funded session and require recovery
   | "expired"          // grant TTL lapsed — funds safe in the Gateway; recover to resume
   | "revoking"
   | "revoked"
@@ -86,6 +90,7 @@ export interface GrantState {
   cap: number;
   spent: number;
   expiresAt: string | null;
+  grantEpoch: string | null;
   error: string | null;
 }
 
@@ -96,6 +101,7 @@ const INITIAL: GrantState = {
   cap: 0,
   spent: 0,
   expiresAt: null,
+  grantEpoch: null,
   error: null,
 };
 
@@ -109,10 +115,15 @@ async function deriveSignature(walletClient: WalletClient): Promise<string> {
 
 export function useSessionGrant() {
   const [state, setState] = useState<GrantState>(INITIAL);
+  const grantClock = useRef<ReturnType<typeof createSessionGrantClock> | null>(null);
+  const registration = useRef(0);
   // Handle on the worker that holds the key. Never the key itself.
   const signerRef = useRef<SessionSigner | null>(null);
 
   const { data: walletClient } = useWalletClient();
+  const currentOwner = walletClient?.account?.address.toLowerCase() ?? null;
+  const ownerRef = useRef(currentOwner);
+  useLayoutEffect(() => { ownerRef.current = currentOwner; }, [currentOwner]);
   const publicClient = usePublicClient();
   const { switchChainAsync } = useSwitchChain();
 
@@ -152,9 +163,14 @@ export function useSessionGrant() {
    * Re-registering also restores a grant the server lost, so a redeploy never strands a session.
    */
   const resumeSession = useCallback(async (sessAddr: string): Promise<boolean> => {
+    const generation = ++registration.current;
+    const owner = ownerRef.current;
+    if (!owner) throw new Error("Session owner unavailable");
     const residualUsdc = Number(await readGatewayCredit(sessAddr)) / 1e6;
+    if (generation !== registration.current || ownerRef.current !== owner) throw new Error("Session registration changed");
     if (residualUsdc <= 0) return false;
 
+    const started = performance.now();
     const res = await fetch("/api/session/grant", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -166,11 +182,15 @@ export function useSessionGrant() {
     }
     // The server re-reads the Gateway itself and clamps the cap to what is really there. Trust its
     // number over the one we read a moment ago — a spend could have landed since.
-    const { sessionId, expiresAt, cap } = (await res.json()) as {
+    const body = await readBoundedJson(res, 8192);
+    const { sessionId, expiresAt, cap } = body as {
       sessionId: string;
       expiresAt: string;
       cap?: number;
     };
+    if (generation !== registration.current || ownerRef.current !== owner) throw new Error("Session registration changed");
+    const clock = createSessionGrantClock(body, { sessionId: owner, sessAddr }, started, performance.now(), kConfig.sessionGrantTtlSeconds * 1000);
+    grantClock.current = clock;
     clearPending(); // credit confirmed → no longer waiting
     setState({
       status: "active",
@@ -179,6 +199,7 @@ export function useSessionGrant() {
       cap: cap ?? residualUsdc,
       spent: 0,
       expiresAt,
+      grantEpoch: clock.grantEpoch,
       error: null,
     });
     return true;
@@ -254,19 +275,25 @@ export function useSessionGrant() {
    * the Gateway balance are untouched — recovery re-registers a fresh grant. Idempotent.
    */
   const markExpired = useCallback(() => {
+    grantClock.current = null;
     setState((s) => (s.status === "active" ? { ...s, status: "expired" } : s));
   }, []);
 
-  // Client-side expiry timer. The server drops the grant at its TTL, but nothing client-side
-  // notices until the next request — which would then silently fall back to the treasury gateway.
+  // Advisory UI timer. The server rejects expired supplied grants; it never switches
+  // a supplied spending session to treasury funding.
   useEffect(() => {
-    if (state.status !== "active" || !state.expiresAt) return;
-    // Always schedule via a timer (clamped to >= 0) so an already-past expiry flips on the next
-    // tick rather than calling setState synchronously inside the effect body.
-    const ms = Math.max(0, new Date(state.expiresAt).getTime() - Date.now());
-    const id = setTimeout(markExpired, ms);
-    return () => clearTimeout(id);
-  }, [state.status, state.expiresAt, markExpired]);
+    if (state.status !== "active") return;
+    const current = grantClock.current;
+    const unavailable = () => {
+      grantClock.current = null;
+      setState(s => s.status === "active" ? { ...s, status: "paused", error: "Session status unavailable. Recover the retained session to continue." } : s);
+    };
+    if (!current || current.ownerAddr !== walletClient?.account?.address.toLowerCase()) {
+      const timer = setTimeout(unavailable, 0); return () => clearTimeout(timer);
+    }
+    return watchSessionGrantClock(current, () => grantClock.current === current && ownerRef.current === current.ownerAddr,
+      markExpired, unavailable);
+  }, [state.status, state.expiresAt, state.sessionId, state.sessAddr, state.grantEpoch, walletClient?.account?.address, markExpired]);
 
   /**
    * Full grant flow: derive key in the worker → fund EOA → deposit to Gateway → register grant.
@@ -357,16 +384,25 @@ export function useSessionGrant() {
    * wallet signs non-deterministically) — we say so, never silently creating an empty session.
    */
   const recoverViaSignature = useCallback(async () => {
+    const retained = state.status === "paused" && state.sessionId ? state : null;
+    const failRecovery = (message: string) => setState(s => retained
+      ? s.sessionId === retained.sessionId && s.grantEpoch === retained.grantEpoch && s.status === "paused"
+        ? { ...s, error: message } : s
+      : { ...s, status: "error", error: message });
     if (!walletClient) {
-      setState((s) => ({ ...s, status: "error", error: "Connect your wallet first" }));
+      failRecovery("Connect your wallet first");
       return;
     }
-    setState({ ...INITIAL, status: "recovering" });
+    const generation = ++registration.current, owner = ownerRef.current;
+    if (!retained) setState({ ...INITIAL, status: "recovering" });
     try {
       const signature = await deriveSignature(walletClient);
+      if (generation !== registration.current || ownerRef.current !== owner) return;
       const { address: sessAddr, wrapped, iv } = await signer().deriveFromSignature(signature);
+      if (generation !== registration.current || ownerRef.current !== owner) return;
       const ok = await resumeSession(sessAddr);
       if (!ok) {
+        if (retained) { failRecovery("No recoverable balance confirmed. Your retained session remains paused."); return; }
         await signer().clear();
         setState({
           ...INITIAL,
@@ -378,13 +414,9 @@ export function useSessionGrant() {
       writeSession({ wrapped, iv }, sessAddr, walletClient.account!.address.toLowerCase());
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      setState((s) => ({
-        ...s,
-        status: "error",
-        error: /reject|denied/i.test(message) ? "Signature rejected" : message,
-      }));
+      failRecovery(/reject|denied/i.test(message) ? "Signature rejected" : message);
     }
-  }, [walletClient, resumeSession, signer]);
+  }, [walletClient, resumeSession, signer, state]);
 
   /**
    * Extend the current session without any wallet interaction. The signer worker still holds the
@@ -452,6 +484,7 @@ export function useSessionGrant() {
    * wallet (GrantSpendDialog), not the session key — which is why burning the key here is safe.
    */
   const revoke = useCallback(async (): Promise<{ residualUsdc: number; sessAddr: string | null }> => {
+    ++registration.current; grantClock.current = null;
     setState((s) => ({ ...s, status: "revoking" }));
     try {
       const res = await fetch("/api/session/revoke", { method: "POST" });

@@ -38,6 +38,10 @@ remain visible. A fresh salt or signature is a new action, never a recovery mech
 
 ## Implemented foundation
 
+Browser preparation bounds the authenticated, non-cached request using `performance.now()` rather than comparing the server's `preparedAt` metadata with the browser's wall clock. It retains the 60-second request-age ceiling, 40-second abort, exact selected-policy and owner checks, and age checks before and after saving the original. A late or interrupted save may remain in recovery; failure never authorizes overwriting it. A response timestamp is validated metadata and does not establish chain freshness.
+
+Monotonic request age avoids manual clock adjustments and ordinary browser/server UTC skew. [MDN documents differences in whether `performance.now()` advances during operating-system sleep](https://developer.mozilla.org/en-US/docs/Web/API/Performance/now#ticking_during_sleep); browser timers can also be delayed. This browser check is not a guaranteed elapsed-real-time expiry across suspension. The server still obtains a fresh chain height window and validates the original finite block expiry before admission and transfer. Trusted server UTC remains necessary for chain-observation freshness and cross-process authentication expiry; this change does not synchronize the host clock.
+
 `lib/gateway/withdraw-protocol.ts` shares EIP-712 types with the browser builder and
 validates an EOA signature against a copied policy and request. It rejects noncanonical
 integer strings, uint256 overflow, nonzero address padding, changed recipients/contracts,

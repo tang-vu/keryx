@@ -48,7 +48,9 @@ async function issue() {
   const cookies = jar();
   const response = await requests.run({ jar: cookies, db: database }, () => nonceRoute(new Request("https://keryx.cc/api/auth/nonce")));
   expect(response.status).toBe(200); expect(response.headers.get("cache-control")).toBe("no-store");
-  const { nonce } = await response.json(); expect(cookies.get("siwe_nonce")?.value).toBe(nonce);
+  const { nonce, issuedAt, challengeExpiresAt, sessionExpiresAt } = await response.json(); expect(cookies.get("siwe_nonce")?.value).toBe(nonce);
+  expect(Date.parse(challengeExpiresAt) - Date.parse(issuedAt)).toBe(AUTH_CHALLENGE_TTL_MS);
+  expect(Date.parse(sessionExpiresAt) - Date.parse(issuedAt)).toBe(7 * 86400_000);
   return nonce as string;
 }
 async function signed(nonce: string, fields: Record<string, unknown> = {}) {

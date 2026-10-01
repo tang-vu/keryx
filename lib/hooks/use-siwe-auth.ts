@@ -1,4 +1,5 @@
 "use client";
+import { parseDatedAuthChallenge } from "../auth-time-policy";
 
 /**
  * useSiweAuth — the canonical wallet sign-in / sign-out flow, shared by the
@@ -96,7 +97,7 @@ export function useSiweAuth() {
     try {
       const nonceRes = await fetch("/api/auth/nonce");
       if (!nonceRes.ok) throw new Error("Failed to get nonce");
-      const { nonce } = (await nonceRes.json()) as { nonce: string };
+      const { nonce, issuedAt, sessionExpiresAt } = parseDatedAuthChallenge(await nonceRes.json());
 
       const message = new SiweMessage({
         domain: window.location.host,
@@ -107,8 +108,8 @@ export function useSiweAuth() {
         version: "1",
         chainId: arcTestnet.id,
         nonce,
-        issuedAt: new Date().toISOString(),
-        expirationTime: new Date(Date.now() + 7 * 86400e3).toISOString(),
+        issuedAt,
+        expirationTime: sessionExpiresAt,
       });
       const prepared = message.prepareMessage();
 

@@ -84,6 +84,8 @@ jobs:
 
       - name: Browser sign-out (hermetic, no signing)
         run: npm run test:browser-auth
+      - name: Browser clock skew (synthetic login, no payment)
+        run: node --import tsx scripts/test-browser-clock-skew.mts
 
       - name: Private history and result UI (hermetic, read-only)
         run: npm run test:browser-private-history
