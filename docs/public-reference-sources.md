@@ -6,11 +6,40 @@ verification, registry registration, access toll, or citation reward. Public ava
 does not establish an agreement with the publisher or authorize Keryx to monetize their
 writing. Existing verified creator sources keep their payment and registry authority.
 
-The initial approved batch contains Cloudflare Workers, Chip Huyen, Lilian Weng and
-Vicki Boykis. Official Circle RSS candidates returned 404 during the September 30
+The approved batch contains Cloudflare Workers, Chip Huyen, Lilian Weng,
+Vicki Boykis and Super Simple Songs. Official Circle RSS candidates returned 404 during the September 30
 endpoint audit and are deferred. No feed wrapper or publisher authorization is invented.
 Publication dates come from the publisher; older foundational articles are not labeled
 recent because they were just collected.
+
+### YouTube publisher metadata
+
+The October 1 audit verified [Super Simple's official channel directory](https://supersimple.com/channels/)
+links to its YouTube channel, whose canonical channel ID and RSS alternate identify
+`UCLsooMJoIpl_7ux2jvdPB-Q`. The feed returned HTTP 200 with 15 entries.
+[Numberblocks' publisher links](https://www.blocksuniverse.tv/blocks-links) also identify
+its official channel, but its feed returned HTTP 500 and onboarding is deferred.
+An audit response is availability evidence for that observation, not a freshness guarantee.
+
+Only the exact approved Super Simple feed URL uses the YouTube adapter. The unchanged
+bounded public fetch transport obtains XML; the adapter validates namespaces, feed and
+entry channel identity, video identity and canonical HTTPS watch links. It admits at
+most ten distinct valid entries, caps descriptions at 10,000 characters and labels
+every body `metadata_only`, including a title-only entry without a description.
+Malformed XML or namespace rebinding fails the feed refresh, preserving the prior
+snapshot. Dates are retained only when parseable; absent dates are omitted, and malformed
+publisher dates can cause the underlying parser to reject the refresh. No media,
+transcript, article or description links are fetched. YouTube RSS
+can contain community statistics; this release discards them and does not validate or
+use them as research evidence.
+
+The material supports attributed observations of publisher titles, descriptions and
+dates, plus clearly tentative creative ideas. It does not establish actual video content,
+age suitability, teaching quality, audience demand, competition, trends, virality,
+CTR, retention or revenue. Discovery still selects one relevant item per reference,
+not a representative channel or market sample. Quotes from a description establish
+what the publisher wrote, not what the video demonstrates. Public availability does
+not grant ownership or permission to republish gated material.
 
 ## Storage and reads
 
@@ -54,17 +83,17 @@ npm run import:public-references -- --apply
 ```
 
 The first command lists the fixed approved batch without network or writes. `--apply`
-fetches each of the four feeds sequentially and idempotently upserts its snapshot.
+fetches each approved feed sequentially and idempotently upserts its snapshot.
 It outputs publisher names, success state and item counts only; any failure sets a
 nonzero exit status while preserving other successful entries. Existing deactivation
 is preserved. This explicit initial onboarding never resets or bypasses the recurring
 hourly journal. `/sources` renders current database state on each request so the imported
-catalog is immediately inspectable; verify all four entries before reporting live success.
+catalog is immediately inspectable; verify all approved entries before reporting live success.
 
 Scheduled upkeep uses one atomic allowance and round-robin cursor across BOTH catalogs:
 at most two feeds and twenty candidates per hour, with the existing 45-second job deadline
 and eligibility/URL recheck before writes. The Worker is unchanged. With thirteen
-verified feeds and four public references, a stable combined pool requires nine hourly
+verified feeds and five public references, a stable combined pool requires nine hourly
 batches to visit each source. The combined bounds remain 48 feed fetches and at most
 480 candidates per day. A failed or interrupted slot stays consumed.
 

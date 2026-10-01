@@ -1,5 +1,30 @@
 # Keryx — Decision Log
 
+**YouTube public metadata as bounded free evidence** — *2026-10-01*
+
+The first owner-selected research task is niche/idea exploration for an English-language
+channel, tentatively for children. Age remains open; the owner requested comparison.
+The registered corpus does not demonstrate YouTube trend coverage. A read-only audit
+followed publisher links to official channel identities: Super Simple's feed returned
+usable Atom metadata; Numberblocks returned an error and remains deferred. A working
+feed proves availability, not independent demand, educational quality or market momentum.
+
+Reuse the existing bounded DNS-pinned public-reference transport and separate free
+snapshots. A dedicated adapter admits only the approved YouTube channel/feed identity
+and canonical video links, then labels publisher titles, dates and descriptions as
+metadata-only evidence. It must not fetch videos, transcripts or linked articles, infer
+their contents, copy media assets, or introduce publisher payout/ownership authority.
+Community statistics are not consumed in this increment; their presence in a raw feed
+does not become an independently validated view count or growth metric.
+
+Public-reference identity, captured versions, existing attention/context bounds and
+reward exclusion remain authoritative. No payment row, creator registration, signer,
+key custody, package terms or mainnet permission changes. Individual feed failures
+remain isolated under existing ingestion rules. Discovery still selects at most one
+item per reference, so this increment supports attributed descriptions of selected
+uploads, not comparative channel research or a viral prediction service. Wider coverage,
+usefulness to the actual creator and observed repeated use remain acceptance work.
+
 **D-284** - Authenticate historical original observation without exposing prepared authorizations - *2026-10-01*
 
 Use a separate, fixed-audience EIP-712 GET proof from the session signer to authenticate a narrowly scoped original observation. Recover the signer before reading, derive its historical owner from retained authority, and validate the original and both owner policies in one coherent backend snapshot. Return originals only when the journal records prior exposure: exposed, signed, submission-attempted or an exposed terminal state. Prepared and cancelled-unexposed records must reveal no nonce or authorization tuple; GET never marks exposure or releases capacity. Keep the trusted owner reader separate from this credential.

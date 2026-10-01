@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { SourceItem } from "../types";
 import { fetchPublicText } from "../net/public-fetch";
 import { ingestRssXml, type IngestedFeed } from "../ingest/rss";
+import { ingestYoutubeMetadata, isApprovedYoutubeFeed } from "./youtube-feed";
 
 const publicUrl = z.string().max(2048).url().refine((value) => {
   const url = new URL(value);
@@ -32,9 +33,10 @@ export interface PublicReferenceDb {
 }
 
 export async function fetchPublicReferenceFeed(url: string): Promise<IngestedFeed> {
-  return ingestRssXml(await fetchPublicText(url, {
+  const xml = await fetchPublicText(url, {
     timeoutMs: 12_000, maxBytes: 500_000, maxHops: 3,
-  }), url, 10);
+  });
+  return isApprovedYoutubeFeed(url) ? ingestYoutubeMetadata(xml, url) : ingestRssXml(xml, url, 10);
 }
 
 export function referenceSnapshot(reference: PublicReference, feed: IngestedFeed): PublicReference {

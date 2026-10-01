@@ -1,5 +1,16 @@
 # Keryx Project Changelog
 
+### YouTube publisher metadata references (2026-10-01)
+
+- Add the audited official Super Simple Songs feed to the unpaid public-reference batch.
+  Feed titles, dates and bounded publisher descriptions carry explicit metadata-only
+  labels; channel/video identity and canonical watch links are checked before admission.
+- Discard community statistics and media. No transcript or video is fetched, no creator
+  ownership or payout is assigned, and Numberblocks remains deferred after a feed failure.
+  One selected item per reference does not establish market demand or a proven niche.
+- Import remains an explicit operator command. Repository acceptance and feed availability
+  observations do not establish production onboarding or a completed research pilot.
+
 ### Research source previews and product pilots (2026-10-01)
 
 - Inspect listed sources and public article previews on `/research` before choosing a
