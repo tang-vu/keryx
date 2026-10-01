@@ -23,6 +23,33 @@ This changes observation and reporting, not registry, source ownership, payment 
 payout authority. Synthetic browser acceptance is not a live registration, provider
 adoption, independent settlement audit or mainnet authorization.
 
+**D-285** — Retain verified source context before exposing a new browser original — *2026-10-01*
+
+A separate signer cannot reproduce the deployed payee and creator-price checks
+from an offer ID or Gateway economic tuple alone. Add an explicit original-format
+union: preserve prior originals and exact callbacks, while new originals require
+complete immutable fetch context verified against a trusted pinned registry
+observation and, for discounts, the actual creator-signed article offer. Derive a
+context digest bound to the nonce, namespace, query, request, epoch and economic
+tuple; atomically retain it with the original and existing reservations. This
+does not change the Gateway signature schema or prove article provenance to Circle.
+
+Historical reads use retained evidence and admission time, never a mutable offer
+join or invented backfill. Current registry/expiry checks belong to a separate
+fresh-sign gate and may refuse without replacing the original. Keep the minimum
+original version monotonic in the existing control/barrier: eventual cutover must
+fence fresh incompatible admission and exposure even after rollback, while
+already exposed historical originals keep exact callback eligibility. Installation
+is inactive; no runtime activation issuer is supplied.
+
+Fresh citation signing in the new lane requires a separately retained pre-payment
+evidence and reward-allocation plan. Current completed QueryRun history cannot
+reconstruct that authority, so missing citation evidence refuses rather than
+becoming a new plan. That necessary next stage and full signer delivery remain
+release requirements. Registry/catalog/service-role trust, signer verification,
+custody/recovery, owner approval, hosting, UTC, external review and M1–M8 remain
+open. See [original source context](docs/browser-original-source-context.md).
+
 **YouTube public metadata as bounded free evidence** — *2026-10-01*
 
 The first owner-selected research task is niche/idea exploration for an English-language

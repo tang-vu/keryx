@@ -1,7 +1,8 @@
 import { publicReferenceSchema, type PublicReference } from "../public-references/catalog";
-import { admitSupabaseBrowserQueryPolicy,admitSupabaseBrowserSigningOriginal,readSupabaseBrowserSigningSnapshot,readExposedSupabaseBrowserSigningSnapshotForSigner,signSupabaseBrowserSigningOriginal } from "./supabase-browser-signing-originals";
+import { admitSupabaseBrowserQueryPolicy,admitSupabaseBrowserSigningOriginal,admitSupabaseBrowserSourceSigningOriginal,readSupabaseBrowserSigningSnapshot,readExposedSupabaseBrowserSigningSnapshotForSigner,signSupabaseBrowserSigningOriginal } from "./supabase-browser-signing-originals";
+import { createBrowserOriginalSourceAuthority } from "../payments/browser-original-source-authority";
 import type { BrowserQueryPolicyProof } from "../payments/browser-query-policy";
-import type { BrowserOriginalAdmission } from "./browser-signing-originals";
+import type { BrowserOriginalAdmission, BrowserSourceOriginalAdmission } from "./browser-signing-originals";
 /**
  * Supabase adapter (deploy path). Same interface as the SQLite adapter.
  * Metrics/leaderboard aggregate in JS — fine for hackathon volume, no DB functions needed.
@@ -1409,6 +1410,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
   async admitBrowserQueryPolicy(proof:BrowserQueryPolicyProof,sessionId:string) {return admitSupabaseBrowserQueryPolicy(this.sb,proof,sessionId);}
   async admitBrowserSigningOriginal(input:BrowserOriginalAdmission) {return admitSupabaseBrowserSigningOriginal(this.sb,input);}
+  async admitBrowserSourceSigningOriginal(input:BrowserSourceOriginalAdmission) {return admitSupabaseBrowserSourceSigningOriginal(this.sb,input,createBrowserOriginalSourceAuthority(this));}
   async readExposedBrowserSigningSnapshotForSigner(signer:string,sessionId:string,requestId:string) {return readExposedSupabaseBrowserSigningSnapshotForSigner(this.sb,signer,sessionId,requestId);}
   async readBrowserSigningSnapshot(owner:string,sessionId:string,requestId:string) {return readSupabaseBrowserSigningSnapshot(this.sb,owner,sessionId,requestId);}
   async signBrowserSigningOriginal(sessionId:string,requestId:string,header:string) {return signSupabaseBrowserSigningOriginal(this.sb,sessionId,requestId,header);}

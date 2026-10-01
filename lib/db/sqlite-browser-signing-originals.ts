@@ -4,7 +4,15 @@ import {
   verifyBrowserQueryPolicy,
   type BrowserQueryPolicyProof,
 } from "../payments/browser-query-policy";
-import { prepareBrowserSigningOriginal } from "../payments/browser-signing-original";
+import {
+  prepareBrowserSigningOriginal,
+  prepareBrowserSourceSigningOriginal,
+} from "../payments/browser-signing-original";
+import {
+  assertVerifiedBrowserOriginalSourceContextCurrent,
+  prepareBrowserSourceSigningAdmission,
+  type VerifiedBrowserOriginalSourceContext,
+} from "../payments/browser-original-source-authority";
 import { prepareBrowserJournal } from "./browser-authorization-journal";
 import {
   admitSqliteBrowserJournalInTransaction,
@@ -17,6 +25,7 @@ import {
   validateBrowserSigningSnapshot,
   type BrowserQueryAdmissionResult,
   type BrowserOriginalAdmission,
+  type BrowserSourceOriginalAdmission,
   type BrowserOriginalAdmissionResult,
   type BrowserSigningSnapshot,
 } from "./browser-signing-originals";
@@ -28,9 +37,9 @@ export function initializeSqliteBrowserSigningOriginals(db: DatabaseSync) {
   db.exec(owns ? "BEGIN IMMEDIATE" : "SAVEPOINT browser_signing_install");
   try {
     db.exec(`CREATE TABLE IF NOT EXISTS browser_signing_v2_control(id INTEGER PRIMARY KEY CHECK(id=1),active INTEGER NOT NULL CHECK(active IN(0,1)));
-    INSERT OR IGNORE INTO browser_signing_v2_control VALUES(1,0);
+    INSERT OR IGNORE INTO browser_signing_v2_control(id,active) VALUES(1,0);
     CREATE TABLE IF NOT EXISTS browser_signing_v2_barrier(id INTEGER PRIMARY KEY CHECK(id=1),ever_active INTEGER NOT NULL CHECK(ever_active IN(0,1)));
-    INSERT OR IGNORE INTO browser_signing_v2_barrier VALUES(1,0);
+    INSERT OR IGNORE INTO browser_signing_v2_barrier(id,ever_active) VALUES(1,0);
     CREATE TRIGGER IF NOT EXISTS browser_signing_v2_sticky AFTER UPDATE OF active ON browser_signing_v2_control WHEN NEW.active=1
       BEGIN UPDATE browser_signing_v2_barrier SET ever_active=1 WHERE id=1; END;
     CREATE TRIGGER IF NOT EXISTS browser_signing_v2_sticky_insert AFTER INSERT ON browser_signing_v2_control WHEN NEW.active=1
@@ -211,16 +220,50 @@ export function admitSqliteBrowserSigningOriginal(
   db: DatabaseSync,
   input: BrowserOriginalAdmission
 ): BrowserOriginalAdmissionResult {
-  const copied = JSON.parse(canonicalJson(input)) as BrowserOriginalAdmission,
-    j = prepareBrowserJournal(copied.journal);
+  return admitOriginal(db, input);
+}
+/** The opaque authority guard is required even for internal backend composition. */
+export function admitSqliteBrowserSourceOriginal(
+  db: DatabaseSync,
+  input: BrowserSourceOriginalAdmission,
+  token: VerifiedBrowserOriginalSourceContext
+): BrowserOriginalAdmissionResult {
+  assertVerifiedBrowserOriginalSourceContextCurrent(token, input);
+  const prepared = prepareBrowserSourceSigningAdmission(input, token);
+  assertVerifiedBrowserOriginalSourceContextCurrent(token, input);
+  return admitOriginal(db, prepared.input, () =>
+    assertVerifiedBrowserOriginalSourceContextCurrent(token, input)
+  );
+}
+function admitOriginal(
+  db: DatabaseSync,
+  input:
+    | BrowserOriginalAdmission
+    | (BrowserSourceOriginalAdmission & {
+        sourceContext: import("../payments/browser-original-source-context").BrowserOriginalSourceContext;
+      }),
+  sourceGuard?: () => void
+): BrowserOriginalAdmissionResult {
+  const copied = JSON.parse(canonicalJson(input)) as BrowserOriginalAdmission;
+  let j = prepareBrowserJournal(copied.journal);
   return sqliteJournalTransaction(db, () => {
+    sourceGuard?.();
+    if ("sourceContext" in input) j = prepareBrowserJournal(copied.journal);
     if (!active(db)) return { status: "inactive" };
     const old = getSqliteBrowserJournal(db, j.sessionId, j.requestId);
     if (old) {
       const o = db
         .prepare("SELECT * FROM browser_signing_originals WHERE nonce=?")
         .get(old.nonce);
-      return o && o.input === canonicalJson(copied)
+      let matches = o?.input === canonicalJson(copied);
+      if (o && "sourceContext" in input) {
+        const stored = JSON.parse(String(o.input));
+        const incoming = JSON.parse(canonicalJson(copied));
+        delete stored.sourceContext;
+        delete incoming.sourceContext;
+        matches = canonicalJson(stored) === canonicalJson(incoming);
+      }
+      return o && matches
         ? {
             status: "admitted",
             journal: old,
@@ -228,6 +271,16 @@ export function admitSqliteBrowserSigningOriginal(
           }
         : { status: "refused" };
     }
+    const sourceInput = "sourceContext" in input ? input : null;
+    const floor = db
+      .prepare("SELECT * FROM browser_signing_v2_control WHERE id=1")
+      .get();
+    if (
+      sourceInput
+        ? floor?.min_original_version !== 3
+        : floor?.min_original_version === 3
+    )
+      return { status: "refused" };
     const q = db
       .prepare(
         "SELECT * FROM browser_signing_queries WHERE query_id=? AND namespace=?"
@@ -257,7 +310,16 @@ export function admitSqliteBrowserSigningOriginal(
       spent + amount > Number(q.ceiling_micro)
     )
       return { status: "refused" };
-    const original = prepareBrowserSigningOriginal(j, copied.queryNamespace);
+    const original = sourceInput
+      ? prepareBrowserSourceSigningOriginal(
+          j,
+          copied.queryNamespace,
+          sourceInput.sourceContext
+        )
+      : prepareBrowserSigningOriginal(j, copied.queryNamespace);
+    sourceGuard?.();
+    if (sourceInput)
+      db.prepare("INSERT INTO browser_signing_v3_writer VALUES(1)").run();
     db.prepare("INSERT INTO browser_signing_v2_writer VALUES(1)").run();
     const admitted = admitSqliteBrowserJournalInTransaction(
       db,
@@ -265,7 +327,11 @@ export function admitSqliteBrowserSigningOriginal(
       j
     );
     db.prepare("DELETE FROM browser_signing_v2_writer").run();
-    if (admitted.status !== "admitted") return { status: "refused" };
+    if (admitted.status !== "admitted") {
+      if (sourceInput)
+        db.prepare("DELETE FROM browser_signing_v3_writer").run();
+      return { status: "refused" };
+    }
     db.prepare("INSERT INTO browser_signing_originals VALUES(?,?,?,?)").run(
       j.nonce,
       copied.queryId,
@@ -275,6 +341,7 @@ export function admitSqliteBrowserSigningOriginal(
     db.prepare(
       "UPDATE browser_signing_queries SET spent_micro=spent_micro+? WHERE query_id=?"
     ).run(amount, copied.queryId);
+    if (sourceInput) db.prepare("DELETE FROM browser_signing_v3_writer").run();
     return { status: "admitted", journal: j, original };
   });
 }

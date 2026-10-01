@@ -5,6 +5,7 @@ import { createServer, type Server } from "node:http";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { performance } from "node:perf_hooks";
 import { DatabaseSync } from "node:sqlite";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { decodeFunctionData, erc20Abi, parseTransaction } from "viem";
@@ -56,6 +57,9 @@ const word = (value: bigint | string | number) => `0x${BigInt(value).toString(16
 const hash = (value: string) => `0x${createHash("sha256").update(value).digest("hex")}`;
 export async function fundingProtocol(f: FundingFixture, hook?: FundingProtocolHook) {
   const calls: FundingProtocolCall[] = [], origins: string[] = [];
+  const knownMethods = ["circle-balances", "eth_chainId", "eth_sendRawTransaction", "eth_getBlockByNumber", "eth_getBalance", "eth_getTransactionCount", "eth_getTransactionByHash", "eth_getTransactionReceipt", "eth_call"];
+  type Failure = "body-limit" | "parse" | "unsupported-method" | "send-original" | "hook" | "response";
+  const diagnostics = new Map<string, { provider: number; method: string; completed: number; failed: number; totalMs: number; maximumMs: number; failures: Partial<Record<Failure, number>> }>();
   const nonces = new Map([[f.operation.policy.funder, BigInt(0)], [f.operation.policy.spend, BigInt(0)]]);
   const balances = new Map([[f.operation.policy.funder, BigInt("1000000000000000000")], [f.operation.policy.spend, BigInt("1000000000000000000")]]);
   let allowance = BigInt(0), availableMicros = BigInt(100), height = 11;
@@ -87,20 +91,34 @@ export async function fundingProtocol(f: FundingFixture, hook?: FundingProtocolH
     return p.transactionHash;
   };
   for (let provider = 0; provider < 2; provider++) {
-    const server = createServer(async (req, res) => { try {
+    const server = createServer(async (req, res) => {
+      const started = performance.now(); let method = "unknown", category: Failure = "parse", recorded = false;
+      const record = (completed: boolean) => {
+        if (recorded) return; recorded = true;
+        const key = `${provider}:${method}`, entry = diagnostics.get(key) ?? { provider, method, completed: 0, failed: 0, totalMs: 0, maximumMs: 0, failures: {} };
+        const elapsed = Math.max(0, Math.round(performance.now() - started));
+        entry.totalMs += elapsed; entry.maximumMs = Math.max(entry.maximumMs, elapsed);
+        if (completed) entry.completed++; else { entry.failed++; entry.failures[category] = (entry.failures[category] ?? 0) + 1; }
+        diagnostics.set(key, entry);
+      };
+      res.once("finish", () => record(true)); res.once("close", () => record(false));
+      try {
       res.setHeader("Connection", "close");
-      let text = ""; for await (const chunk of req) { text += chunk; if (text.length > 8192) throw new Error(); }
+      category = "body-limit"; let text = ""; for await (const chunk of req) { text += chunk; if (text.length > 8192) throw new Error(); }
+      category = "parse";
       const body = JSON.parse(text);
       if (req.url === "/v1/balances") {
+        method = "circle-balances";
         calls.push({ method: "circle-balances", params: [text], provider });
         const fallback = { token: "USDC", balances: [{ depositor: f.operation.policy.spend, domain: 26,
           balance: `${availableMicros / BigInt(1000000)}.${(availableMicros % BigInt(1000000)).toString().padStart(6, "0")}` }] };
-        const value = await hook?.("circle-balances", [text], fallback, provider); res.setHeader("Content-Type", "application/json"); res.end(JSON.stringify(value === undefined ? fallback : value)); return;
+        category = "hook"; const value = await hook?.("circle-balances", [text], fallback, provider); category = "response"; res.setHeader("Content-Type", "application/json"); res.end(JSON.stringify(value === undefined ? fallback : value)); return;
       }
+      category = "unsupported-method"; if (!knownMethods.includes(body.method)) throw new Error("Unexpected synthetic RPC"); method = body.method;
       const call = { method: body.method, params: body.params, provider }; calls.push(call);
       let fallback: unknown;
       if (body.method === "eth_chainId") fallback = "0x4cef52";
-      else if (body.method === "eth_sendRawTransaction") fallback = await send(body.params[0]);
+      else if (body.method === "eth_sendRawTransaction") { category = "send-original"; fallback = await send(body.params[0]); }
       else if (body.method === "eth_getBlockByNumber") fallback = blocks.get(body.params[0] === "finalized" ? q(height) : body.params[0]);
       else if (body.method === "eth_getBalance") fallback = q(balances.get(body.params[0])!);
       else if (body.method === "eth_getTransactionCount") fallback = q(nonces.get(body.params[0])!);
@@ -110,12 +128,14 @@ export async function fundingProtocol(f: FundingFixture, hook?: FundingProtocolH
         const decoded = decodeFunctionData({ abi: erc20Abi, data: body.params[0].data });
         fallback = word(decoded.functionName === "allowance" ? allowance : balances.get(String(decoded.args![0]).toLowerCase())! / (BigInt(10) ** BigInt(12)));
       } else throw new Error("Unexpected synthetic RPC");
-      const value = await hook?.(body.method, body.params, fallback, provider);
+      category = "hook"; const value = await hook?.(body.method, body.params, fallback, provider);
+      category = "response";
       res.setHeader("Content-Type", "application/json"); res.end(JSON.stringify({ jsonrpc: "2.0", id: body.id, result: value === undefined ? fallback : value }));
-    } catch { res.destroy(); } });
+    } catch { record(false); res.destroy(); } });
     servers.push(server); await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
     const address = server.address(); if (!address || typeof address === "string") throw new Error("Synthetic listener unavailable"); origins.push(`http://127.0.0.1:${address.port}/`);
   }
   return { origins: origins as [string, string], calls, circleEndpoint: `${origins[0]}v1/balances`, balances, nonces,
+    diagnostics: () => [...diagnostics.values()].map(value => ({ ...value, failures: { ...value.failures } })),
     setAvailableMicros: (value: bigint) => { availableMicros = value; }, setAllowance: (value: bigint) => { allowance = value; } };
 }
