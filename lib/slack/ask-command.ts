@@ -65,7 +65,7 @@ export function buildAnswerText(run: QueryRun): string {
   parts.push(escapeSlack(truncate(run.answer, ANSWER_MAX)), "");
 
   if (run.citations.length > 0) {
-    parts.push("*Creators paid — weighted USDC citation rewards on Arc testnet*");
+    parts.push("*Citations and planned rewards — weighted USDC citation rewards on Arc testnet*");
     for (const c of run.citations) {
       parts.push(
         escapeSlack(`${c.sourceName} — $${c.reward.toFixed(4)} (weight ${c.weight.toFixed(2)})`),
@@ -76,7 +76,7 @@ export function buildAnswerText(run: QueryRun): string {
 
   const plural = run.citations.length === 1 ? "" : "s";
   parts.push(
-    `${run.citations.length} creator${plural} paid · $${run.totalToCreators.toFixed(4)} to creators`,
+    `${run.citations.length} source${plural} cited · $${run.totalToCreators.toFixed(4)} recorded to creators / ${run.paymentMode ?? "legacy"}`,
     `Full trace: ${config.baseUrl}/dispatch/${run.id}`,
   );
   return truncate(parts.join("\n"), MESSAGE_MAX);

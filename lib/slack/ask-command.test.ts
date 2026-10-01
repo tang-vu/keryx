@@ -119,7 +119,7 @@ describe("message builders", () => {
     expect(text).toContain("*What is x402?*");
     expect(text).toContain("HTTP payment protocol");
     expect(text).toContain("Conzit — $0.0120 (weight 0.60)");
-    expect(text).toContain("2 creators paid");
+    expect(text).toContain("2 sources cited");
     expect(text).toContain("/dispatch/run-1");
   });
 
@@ -140,7 +140,7 @@ describe("message builders", () => {
   it("omits the creators block when nothing was cited, and stays bounded", () => {
     const text = buildAnswerText(fakeRun({ citations: [], answer: "a".repeat(20000) }));
     expect(text).not.toContain("Creators paid");
-    expect(text).toContain("0 creators paid");
+    expect(text).toContain("0 sources cited");
     expect(text.length).toBeLessThanOrEqual(12000);
   });
 

@@ -111,9 +111,8 @@ jobs:
         with:
           name: operator-desktop-${{ github.sha }}-${{ github.run_id }}
           path: desktop/release/
-          if-no-files-found: ignore
-          overwrite: true
-          retention-days: 7
+          if-no-files-found: error
+          retention-days: 30
       - name: Save Rust dependencies and compiled Tauri crates
         if: ${{ !cancelled() && steps.rust-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@v4

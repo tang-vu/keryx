@@ -226,8 +226,7 @@ it.each(retainedAuthoritySeeds)(
   60000
 );
 
-it("revalidates identity and complete fences before returning the transaction boolean", async () => {
-  for (const tamper of ["identity", "fence", "replacement"] as const) {
+it.each(["identity", "fence", "replacement"] as const)("revalidates %s before returning the transaction boolean", async (tamper) => {
     const folder = mkdtempSync(join(tmpdir(), "keryx-storage-transaction-"));
     const file = join(folder, "synthetic.sqlite");
     const adapter = new SqliteAdapter(file);
@@ -278,7 +277,7 @@ it("revalidates identity and complete fences before returning the transaction bo
           );
           expect(readFileSync(file)).toEqual(before);
           expect(verified.db.isTransaction).toBe(false);
-          continue;
+          return;
         }
         renameSync(file, `${file}.retained`);
         new DatabaseSync(file).close();
@@ -300,7 +299,6 @@ it("revalidates identity and complete fences before returning the transaction bo
       }
       rmSync(folder, { recursive: true, force: true });
     }
-  }
 });
 
 it("admits and exposes a v3 original through enrolled storage while retaining every independent writer fence", async () => {

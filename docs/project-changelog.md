@@ -1,5 +1,33 @@
 # Keryx Project Changelog
 
+### Supervised opt-in manuscript payments (2026-10-02)
+
+- Add authenticated sticky draft enrollment and exact-version creator rights signing on
+  creator profiles, reusing registered feed verification and signed encrypted full text.
+- Add private detached operator review artifacts, explicit reviewer allowlist, safe public
+  license/version/status and separate private permission evidence.
+- Require fresh reviewed single-recipient registry terms and atomic browser-journal rights
+  snapshots before new manuscript payments. Recheck cache/delivery/reward gates; preserve
+  exposed originals on suspension/revocation and include approval references in receipts.
+- Add explicit funded-browser manuscript opt-in. Public copies remain free; drafts cannot
+  squat the four reviewer-controlled approval slots or DOI namespace. Discounts, splits,
+  treasury/A2A, Supabase and enrolled native scholarly activation remain closed.
+- This is testnet pilot software, not a real participant/settlement result. Live scholarly
+  purchase/recovery and broader public/mainnet onboarding remain separate release gates.
+
+### Signature globe in research chat (2026-10-01)
+
+- Restore Keryx's globe in the shared home and research chat header, with a compact
+  mobile version and bounded desktop placement. Keep local country assets,
+  reduced-motion support, and the question and spending controls accessible.
+
+### Coordinated research surface contracts (2026-10-01)
+
+- Preserve article/scholarly identity and answer-qualified public evidence across A2A, remote/stdio MCP and OpenAI; reuse recorded reference and evidence exports.
+- Add bounded scholarly/depth options to public remote MCP/OpenAI without changing private package search policy or payment authority.
+- Export receipt-bound BibTeX, RIS and evidence CSV from Operator CLI and desktop through the existing private publisher.
+- Keep unproven distinct paid-creator counts unknown and separate reference/allocation counts. Record [surface parity](surface-parity.md) and coordinated distribution gates.
+
 ### DOI and scholarly research (2026-10-01)
 
 - Resolve up to two exact Crossref DOI records from a question; opt into bounded

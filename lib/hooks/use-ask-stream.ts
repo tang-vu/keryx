@@ -331,6 +331,7 @@ export function useAskStream(opts?: AskStreamOpts) {
       model?: string,
       researchMode: ResearchMode = "quick",
       scholarly = false,
+      paidScholarly = false,
     ) => {
       reset();
       // Reset reservations for this ask before any SSE frame can arrive.
@@ -358,6 +359,7 @@ export function useAskStream(opts?: AskStreamOpts) {
             ...(model ? { model } : {}),
             mode: researchMode,
             ...(scholarly ? { scholarly: true } : {}),
+            ...(paidScholarly ? { paidScholarly: true } : {}),
           }),
           signal: controller.signal,
         });

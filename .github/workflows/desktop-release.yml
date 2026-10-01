@@ -1,0 +1,153 @@
+name: Publish accepted Operator desktop
+
+on:
+  workflow_run:
+    workflows: [CI, Operator desktop]
+    types: [completed]
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing published release tag to receive its accepted desktop package
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: desktop-release-${{ github.event.release.tag_name || inputs.release_tag }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: windows-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Find successful exact-source package acceptance
+        id: accepted
+        uses: actions/github-script@v7
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const automatic = context.eventName === 'workflow_run';
+            let tag = process.env.RELEASE_TAG;
+            if (automatic) {
+              const source = (await github.rest.repos.getContent({ owner, repo, path: 'package.json', ref: context.payload.workflow_run.head_sha })).data;
+              tag = `v${JSON.parse(Buffer.from(source.content, 'base64').toString('utf8')).version}`;
+            }
+            let release;
+            try { release = (await github.rest.repos.getReleaseByTag({ owner, repo, tag })).data; }
+            catch (error) {
+              if (automatic && error.status === 404) { core.info('Release is not published yet; the other completed workflow will retry'); return; }
+              throw error;
+            }
+            if (release.draft) throw new Error('Publish the release before attaching desktop assets');
+            let ref = (await github.rest.git.getRef({ owner, repo, ref: `tags/${tag}` })).data.object;
+            while (ref.type === 'tag') ref = (await github.rest.git.getTag({ owner, repo, tag_sha: ref.sha })).data.object;
+            if (automatic && ref.sha !== context.payload.workflow_run.head_sha) { core.info('Version release belongs to another source; skip'); return; }
+            if (ref.type !== 'commit') throw new Error('Release tag must resolve to a commit');
+            const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
+              owner, repo, workflow_id: 'desktop.yml', head_sha: ref.sha,
+              branch: 'main', event: 'push', status: 'success', per_page: 100,
+            });
+            const run = runs.find(candidate => candidate.head_sha === ref.sha && candidate.conclusion === 'success');
+            if (!run && automatic) { core.info('Desktop acceptance is not complete yet; its completed event will retry'); return; }
+            if (!run) throw new Error(`No successful main desktop acceptance for ${ref.sha}; wait for CI then dispatch this workflow again`);
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, { owner, repo, run_id: run.id, per_page: 100 });
+            for (const name of ['packaged-smoke', 'Fresh runner packaged desktop acceptance']) {
+              if (!jobs.some(job => job.name === name && job.conclusion === 'success')) throw new Error(`Missing successful acceptance job: ${name}`);
+            }
+            const name = `operator-desktop-${ref.sha}-${run.id}`;
+            const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, { owner, repo, run_id: run.id, per_page: 100 });
+            if (!artifacts.some(artifact => artifact.name === name && !artifact.expired)) throw new Error('Accepted desktop artifact is missing or expired; do not substitute another source');
+            const prefix = `KeryxOperator-${ref.sha}`;
+            const expected = [`${prefix}-win32-x64.zip`, `${prefix}-setup.exe`, `${prefix}-release.json`, `${prefix}-SHA256SUMS.txt`];
+            const existing = expected.filter(name => release.assets.some(asset => asset.name === name));
+            if (existing.length && existing.length !== expected.length) throw new Error('Partial exact-source asset set exists; inspect release before recovery, never overwrite');
+            core.setOutput('ready', 'true');
+            core.setOutput('tag', tag);
+            core.setOutput('sha', ref.sha);
+            core.setOutput('run_id', String(run.id));
+            core.setOutput('artifact', name);
+      - uses: actions/download-artifact@v4
+        if: steps.accepted.outputs.ready == 'true'
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.accepted.outputs.run_id }}
+          name: ${{ steps.accepted.outputs.artifact }}
+          path: accepted
+      - name: Prepare immutable release assets from accepted bytes
+        if: steps.accepted.outputs.ready == 'true'
+        shell: pwsh
+        env:
+          EXPECTED_SHA: ${{ steps.accepted.outputs.sha }}
+        run: |
+          $manifest = Get-Content accepted/release.json -Raw | ConvertFrom-Json
+          if ($manifest.sourceCommit -cne $env:EXPECTED_SHA) { throw 'Artifact source does not match release tag' }
+          $source = (Get-Content accepted/KeryxOperator-win32-x64/dist/source-commit.txt -Raw).Trim()
+          if ($source -cne $env:EXPECTED_SHA) { throw 'Bundled helper source does not match release tag' }
+          $actualHash = (Get-FileHash accepted/KeryxOperator-win32-x64/KeryxOperator.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualHash -cne $manifest.portableExeSha256) { throw 'Portable executable does not match accepted manifest' }
+          $installers = @(Get-ChildItem accepted/installer -File -Filter '*-setup.exe')
+          if ($installers.Count -ne 1) { throw 'Expected one accepted installer' }
+          $installerHash = (Get-FileHash -LiteralPath $installers[0].FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($installerHash -cne $manifest.installerSha256) { throw 'Installer does not match accepted manifest' }
+          New-Item -ItemType Directory assets | Out-Null
+          $prefix = "KeryxOperator-$env:EXPECTED_SHA"
+          Compress-Archive -Path accepted/KeryxOperator-win32-x64 -DestinationPath "assets/$prefix-win32-x64.zip"
+          Copy-Item -LiteralPath $installers[0].FullName -Destination "assets/$prefix-setup.exe"
+          Copy-Item accepted/release.json "assets/$prefix-release.json"
+          Get-ChildItem assets -File | ForEach-Object {
+            "$((Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant())  $($_.Name)"
+          } | Set-Content "assets/$prefix-SHA256SUMS.txt" -Encoding utf8
+      - name: Attach accepted package without replacing released assets
+        if: steps.accepted.outputs.ready == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ steps.accepted.outputs.tag }}
+        run: |
+          $prefix = "KeryxOperator-${{ steps.accepted.outputs.sha }}"
+          $release = gh release view $env:RELEASE_TAG --json assets | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect release assets' }
+          $existing = @($release.assets | Where-Object { $_.name.StartsWith("$prefix-") })
+          if ($existing.Count -gt 0) {
+            New-Item -ItemType Directory existing | Out-Null
+            gh release download $env:RELEASE_TAG --pattern "$prefix-*" --dir existing
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot verify published assets' }
+            foreach ($suffix in @('setup.exe', 'release.json')) {
+              $name = "$prefix-$suffix"
+              if ((Get-FileHash "assets/$name").Hash -cne (Get-FileHash "existing/$name").Hash) { throw "Published $name differs from accepted bytes" }
+            }
+            $checksums = Get-Content "existing/$prefix-SHA256SUMS.txt"
+            foreach ($name in @("$prefix-setup.exe", "$prefix-release.json", "$prefix-win32-x64.zip")) {
+              $hash = (Get-FileHash "existing/$name" -Algorithm SHA256).Hash.ToLowerInvariant()
+              if ($checksums -cnotcontains "$hash  $name") { throw "Published checksum mismatch: $name" }
+            }
+            Expand-Archive "existing/$prefix-win32-x64.zip" existing/portable
+            $published = @(Get-ChildItem existing/portable/KeryxOperator-win32-x64 -Recurse -File)
+            $accepted = @(Get-ChildItem accepted/KeryxOperator-win32-x64 -Recurse -File)
+            if ($published.Count -ne $accepted.Count) { throw 'Published portable file count differs' }
+            $publishedRoot = (Resolve-Path existing/portable/KeryxOperator-win32-x64).Path
+            foreach ($file in $published) {
+              $relative = [IO.Path]::GetRelativePath($publishedRoot, $file.FullName)
+              $original = Join-Path accepted/KeryxOperator-win32-x64 $relative
+              if (!(Test-Path -LiteralPath $original -PathType Leaf) -or (Get-FileHash -LiteralPath $file.FullName).Hash -cne (Get-FileHash -LiteralPath $original).Hash) { throw "Published portable differs: $relative" }
+            }
+            Write-Host 'Published assets verified against accepted bytes; no assets replaced'
+            exit 0
+          }
+          $files = @(Get-ChildItem assets -File | ForEach-Object FullName)
+          gh release upload $env:RELEASE_TAG @files
+          if ($LASTEXITCODE -ne 0) { throw 'Asset upload failed; existing assets are never overwritten' }

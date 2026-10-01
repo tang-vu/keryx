@@ -167,8 +167,10 @@ In `~/.continue/config.json`:
   carries `Retry-After`.
 - **Errors** use the OpenAI envelope: `{"error": {"message", "type", "code"}}`. A `kx_live_`-shaped
   but invalid token returns `401`; any other token drops to the free tier.
-- **Every answer pays creators.** The `keryx` extension (or the "Creators paid" footer in the
+- **Citation and payment evidence.** The `keryx` extension (or the "Citations and planned creator rewards" footer in the
   message content) lists each cited source, its weight, and its USDC reward, plus a permalink to the
   full reasoning trace at `/dispatch/<queryId>`.
 - **Not x402 on this path.** OpenAI clients can't sign an x402 header, so the treasury funds the free
   tier exactly as the site's anonymous asker does. For pay-per-call x402, use `POST /api/agent/ask`.
+
+Pass `scholarly: true` and `mode: "quick" | "deep"` through `extra_body` to request bounded public paper discovery and research depth. Invalid types are refused. The `keryx` extension preserves article identity, public answer evidence and `researchExports`; public citations can earn no creator reward. `creatorsPaid` is nullable when distinct settled creators are unknown; allocation counts do not prove settlement.

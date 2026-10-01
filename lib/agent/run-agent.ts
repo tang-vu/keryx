@@ -1,5 +1,6 @@
 import { discoverPublicReferences } from "./public-reference-evidence";
 import { discoverScholarly } from "../scholarly/discovery";
+import { paperCanResearch, paperDuplicatesPublicBody } from "../scholarly/paid-gate";
 import { questionDois } from "../scholarly/doi";
 import { discoverWeb } from "../web-research/discovery";
 import { searxngProvider } from "../web-research/search-provider";
@@ -84,6 +85,8 @@ import {
 export interface RunInput {
   /** Opt in to scholarly metadata search; this never authorizes payment. */
   scholarly?: boolean;
+  /** Explicit opt-in for independently reviewed testnet manuscripts; browser journal only. */
+  paidScholarly?: boolean;
   signal?: AbortSignal;
   /** Trusted manual CLI opt-in only; never populate from public request JSON. */
   allowExternalWeb?: boolean;
@@ -231,7 +234,9 @@ export async function* runAgent(
   // cited, or paid. Listing stays permissionless — unverified rows show in the directory, just
   // off the money path. Undefined verified = grandfathered true (curated seed + pre-flag rows).
   const allSources = await db.listSources();
-  const sources = allSources.filter((s) => s.verified !== false && !isPublicReferenceId(s.id));
+  const eligible = allSources.filter((s) => s.verified !== false && !isPublicReferenceId(s.id));
+  const rights = await Promise.all(eligible.map(s => paperCanResearch(db, s, input.paidScholarly === true && origin === "web")));
+  const sources = eligible.filter((_s, index) => rights[index]);
   const unverifiedCount = allSources.filter((source) => source.verified === false).length;
   const candidates: SourceCandidate[] = [];
   const assetById = new Map<string, InternalAsset>();
@@ -330,6 +335,10 @@ export async function* runAgent(
   }
   let signedOfferCount = 0;
   for (const s of sources) {
+    if (await paperDuplicatesPublicBody(db, s, [...publicReads.values()].map(read => read.text))) {
+      yield emit("discover", `SKIP paid manuscript ${s.name}: identical exact-version body is already available as a free public reference.`);
+      continue;
+    }
     const terms = await sourceFetchTerms(s);
     if (!terms.active) continue;
     const items = await db.getItems(s.id);
@@ -352,7 +361,7 @@ export async function* runAgent(
       const cached = Boolean(await effects.getCachedAt(cacheKey));
       if (cached) freshCache.add(id);
       const summary = previewSummary(item.summary, depth);
-      const resolvedOffer = await resolveValidArticleOffer(db, s, item, terms);
+      const resolvedOffer = s.scholarlyEnrolled ? null : await resolveValidArticleOffer(db, s, item, terms);
       if (target?.articleOfferId && resolvedOffer?.offer.id !== target.articleOfferId) {
         throw new Error("wanted response article offer expired or was replaced before discovery");
       }
@@ -723,6 +732,14 @@ export async function* runAgent(
     const asset = assetById.get(d.assetId ?? d.sourceId);
     if (!asset) continue;
     const { source, item, cacheKey } = asset;
+    if (await paperDuplicatesPublicBody(db, source, gathered.filter(read => read.sourceKind === "public-reference").map(read => read.text))) {
+      yield emit("fetch", `SKIP paid manuscript ${source.name}: identical body was already read publicly, no duplicate access or reward.`);
+      continue;
+    }
+    if (!await paperCanResearch(db, source, input.paidScholarly === true && origin === "web")) {
+      yield emit("fetch", `SKIP ${source.name}: manuscript rights or registry terms changed before this read.`);
+      continue;
+    }
     const itemIdentity = asset.candidate.item ?? {};
     const assetLabel = item ? `${source.name} — ${item.title}` : source.name;
     const marker = `S${++markerN}`;
@@ -959,6 +976,14 @@ export async function* runAgent(
         // Guard against an engine recommending a source we already read (duplicate marker +
         // double payment) or that no longer fits the remaining budget.
         if (!asset || !source || gatheredIds.has(recId) || asset.priceUsdc > remainingBudget + 1e-9) continue;
+        if (await paperDuplicatesPublicBody(db, source, gathered.filter(read => read.sourceKind === "public-reference").map(read => read.text))) {
+          yield emit("reevaluate", `SKIP paid manuscript ${source.name}: identical public body is already evidence, no duplicate payment.`);
+          continue;
+        }
+        if (!await paperCanResearch(db, source, input.paidScholarly === true && origin === "web")) {
+          yield emit("reevaluate", `SKIP ${source.name}: manuscript rights or registry terms changed before this read.`);
+          continue;
+        }
 
         const marker = `S${++markerN}`;
         const assetLabel = asset.item ? `${source.name} — ${asset.item.title}` : source.name;

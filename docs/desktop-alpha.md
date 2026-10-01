@@ -74,7 +74,7 @@ Once a buyer journal exists, **Check original job** uses the shared GET-only Ope
 recovery path. A completed verified check saves a bounded private result in the task
 folder. The desktop can reopen its plain-text answer and cited source names offline
 after relaunch, rechecking the original task/journal and archived receipt. It can
-export a private Markdown brief through a native save dialog. The answer may itself
+export a private Markdown brief, BibTeX, RIS or evidence CSV through native save dialogs, using the recorded article identities and bounded claim excerpts in the checked receipt. The answer may itself
 contain sensitive material; review the brief before sharing. A later incomplete check
 keeps the earlier saved result and labels it as previous. A local save failure shows
 the current answer temporarily and preserves the original buyer receipt.
@@ -131,3 +131,25 @@ Synthetic tests should cover both export formats, cancellation, overwrite refusa
 offline reopening and saved-result recovery. The fresh-runner package handoff,
 MSVC/WebView2 checks, independent review and CI are separate release gates. A
 development-host UI screenshot is not a packaged or clean-machine acceptance claim.
+
+## Publishing accepted packages
+
+The desktop release workflow attaches the exact package already accepted by both
+Windows CI jobs to a published GitHub release whose tag resolves to that source
+commit. It does not rebuild binaries. Publish after Operator desktop CI succeeds;
+if release publication races CI, rerun **Publish accepted Operator desktop** with
+the existing release tag. Accepted artifacts are retained for 30 days. An expired
+artifact needs a new verified release source, not an unverified replacement build.
+
+Assets include the portable ZIP, installer, source manifest and SHA-256 checksums.
+Asset names include the full source commit, and uploads refuse to overwrite existing
+assets. Desktop package version 0.3.1 is independent of the web release version;
+the release tag and manifest establish the shared source identity. The alpha has
+no automatic updater, so installed users must deliberately install a newer package.
+These packaging gates do not authorize mainnet or establish payment readiness.
+
+Replays verify existing manifests, checksums, installer bytes and every portable
+file against the accepted artifact before skipping. A partial asset set refuses
+automatic recovery: inspect the release and retain any already published bytes;
+do not remove or overwrite them to force a retry. Installer hashes are recorded
+in the source manifest for new packages.

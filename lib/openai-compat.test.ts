@@ -82,7 +82,8 @@ describe("buildCompletion", () => {
     expect(out.object).toBe("chat.completion");
     expect(out.choices[0]!.finish_reason).toBe("stop");
     expect(out.choices[0]!.message.content).toContain("Arc is an EVM L1");
-    expect(out.keryx.creatorsPaid).toBe(2);
+    expect(out.keryx.creatorsPaid).toBeNull();
+    expect(out.keryx.creatorRewardAllocations).toBe(2);
     expect(out.keryx.totalToCreators).toBe(0.02);
     expect(out.keryx.dispatchUrl).toContain("/dispatch/q-123");
   });
@@ -114,7 +115,7 @@ describe("keryxMeta", () => {
   it("summarizes citations and totals", () => {
     const m = keryxMeta(makeRun());
     expect(m.citations).toHaveLength(2);
-    expect(m.citations[0]).toEqual({ source: "Latent Space", weight: 0.6, reward: 0.012 });
+    expect(m.citations[0]).toMatchObject({ source: "Latent Space", weight: 0.6, reward: 0.012 });
     expect(m.engine).toBe("llm:deepseek-chat");
   });
 });

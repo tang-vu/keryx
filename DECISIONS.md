@@ -1,5 +1,36 @@
 # Keryx — Decision Log
 
+**Supervised scholarly rights are signed version authority, separate from wallet payment authority** — *2026-10-02*
+
+The owner authorized implementing opt-in research-author payments and creating a separate
+local reviewer wallet. Reuse the creator-controlled registry, SIWE, signed encrypted content,
+browser journal and x402 rails. A dedicated one-item source first receives a sticky draft
+restriction, then an immutable creator declaration and independently allowlisted signed operator
+decision. DOI metadata, author names, feed control and developer roles confer no distribution
+approval or payout authority. Local review keys remain only in ignored operator environment;
+the application host receives a public allowlist and detached artifacts.
+
+Start with the deployed legacy SQLite backend and funded browser journal. Atomically bind
+the effective approval, exact version and fresh single-recipient registry policy to the original
+nonce and cap reservation before exposure. Revocation serializes against new admissions and
+does not replace exposed authorizations, release unknown spend or reverse settlement. Sellers
+reject legacy bundles, arbitrary SDK/treasury admissions and unsupported backends for enrolled
+manuscripts. Preserve unrelated legacy sources and exact enrolled native schema/cutover gates.
+Install scholarly schema only atomically with the first author enrollment, preserving ordinary
+corpus intake compatibility; an actual scholarly corpus remains outside native cutover acceptance.
+Bound the corpus to four effective operator approvals; unreviewed drafts and DOI claims cannot
+squat approval capacity or namespaces. Duplicate effective approved offers need review before
+activation; an actual identical public body prevents duplicate paid access/rewards.
+
+Public license/version/review summaries and receipt approval references exclude private
+permission evidence and contact data. Approval is distinct from settlement and peer review.
+This software release does not claim a live participant or funded scholarly pilot. Broader
+identity, public policy/privacy/appeals, multi-author splits, backend parity and live recovery
+evidence remain open; mainnet and real funds need separate authorization. See
+[paid scholarly papers](docs/paid-scholarly-papers.md) and the
+[review procedure](docs/scholarly-pilot-review.md). Reversible: disable new scholarly research;
+preserve sticky enrollment, signed history and outstanding payment reservations.
+
 **Observed scholarly metadata with separately grounded paper reads** — *2026-10-01*
 
 The owner requested DOI integration and scholarly repositories, then supported
@@ -92,6 +123,12 @@ compact research status and expandable decisions, source evidence and payment tr
 The question's source-USDC cap and payer remain visible beside the composer; model
 and budget controls may be secondary, but settled, pending and simulated amounts
 must remain distinguishable.
+
+The rotating globe is the owner's confirmed signature for Keryx. Simplifying the
+chat must preserve that identity: reuse the existing locally bundled globe as a
+bounded decorative header motif on desktop and mobile, leaving text and controls
+clear. Keep reduced-motion behavior and avoid restoring a large masthead that
+pushes the question, cap or send action out of the initial reading flow.
 
 Use the existing previous-run anchor for follow-ups rather than promising full chat
 memory. Starting a new research topic must clear that anchor. Copy or export must
@@ -4095,3 +4132,13 @@ Each query the agent probes the live Circle x402 bazaar (`circle services search
 ## Encrypted R2 backups - 2026-09-30
 
 **Protect the application SQLite snapshot off-host with authenticated encryption and bounded daily uploads.** The user authorized encrypted R2 backup and an offline restore drill, then accepted per-job limits and account alerts despite residual account-wide billing risk. Other projects share the account, so Cloudflare budget notifications cannot guarantee a zero-dollar invoice. Keep a dedicated private Standard bucket, bucket-scoped S3 credentials and an independently retained random encryption key. A single serialized host writer reserves a conservative request budget durably before every operation, caps daily attempts and object size/count, refuses pagination/retries/multipart, and preserves previous remote backups until a new PUT succeeds. A 30-day lifecycle is a fallback retention bound. Offline restore authenticates before decompression, checks SQLite read-only integrity and produces evidence without starting services or authorizing signing. Withdrawal journals and full payment/service recovery remain separate acceptance gates. See [encrypted backup limits and recovery](docs/encrypted-backups.md). Reversible: disable remote uploads while preserving hourly local snapshots; do not reset the request ledger to retry.
+
+
+## Research transport parity ? 2026-10-01
+
+Use one public recorded-result projection for A2A, remote MCP and OpenAI. Preserve article/version and observed scholarly identity; use the reading UI bounded claim-matched answer-evidence gate rather than payment eligibility. Public references can support answers without rewards. Operator/desktop exports derive from checked task-bound receipts and remain private. No projection enriches records, authorizes payments or changes private search scope. Distinct settled creators cannot be inferred from citation allocations or payment-leg totals: creatorsPaid is nullable and allocations/references get separate names. Consumers must tolerate null. Ship applicable adapters/artifacts together under [surface parity](docs/surface-parity.md).
+
+
+## Stable native inspection versus derived exports ? 2026-10-02
+
+Preserve the established v1 raw result/default brief contract across the TypeScript and evaluated Rust readers. Derived reference/evidence exports are a separate application presentation domain, explicitly read through `readOperatorResearchResult` for non-brief CLI and desktop formats. Both raw and enriched readers share one integrity/task-binding snapshot reader; enrichment uses its exact checked receipt object without a second file read. This prevents transport enrichment from accidentally broadening a staged native domain or requiring duplicate bibliographic generators. Exact native/inter-file assertions remain release gates, with added copied-artifact proof of the raw base, derived formats, receipt digest/authority and unchanged source tree. Native direct-format cutover remains unproven.

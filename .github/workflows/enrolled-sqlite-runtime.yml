@@ -38,6 +38,8 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund
       - name: Native enrolled adapter and authenticated cache
+        env:
+          KERYX_ENROLLED_TEST_DIAGNOSTICS: ${{ runner.os == 'Windows' && '1' || '0' }}
         run: npx vitest run lib/db/enrolled-sqlite-adapter.test.ts lib/sources/enrolled-content-cache.test.ts lib/ipfs/content-crypto.test.ts lib/sources/content-cache.test.ts lib/operator/gateway-funding-composition.test.ts
       - name: Existing guarded storage boundaries
         run: npx vitest run lib/db/storage-browser-schema.test.ts lib/db/storage-provenance.test.ts lib/db/storage-provenance-snapshot.test.ts

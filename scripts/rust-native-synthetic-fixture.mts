@@ -39,7 +39,7 @@ export async function digestTree(directory: string) {
   return createHash("sha256").update(entries.join("\n")).digest("hex");
 }
 
-export async function writtenV1(state: string) {
+export async function writtenV1(state: string, recordedArticle = false) {
   await createLegacyOperatorTask(state, { request, payee, maxTotalMicros: "100000" });
   const requirement = { scheme: "exact" as const, network: BUYER_NETWORK as "eip155:5042002",
     asset: BUYER_USDC, amount: "50000", payTo: payee, maxTimeoutSeconds: 604860,
@@ -63,7 +63,12 @@ export async function writtenV1(state: string) {
   const payload = { schema: RESEARCH_RECEIPT_SCHEMA,
     dispatch: { id: intent.queryId, question: request.question, answer, answerSha256: sha256(answer),
       budgetUsdc: request.budget, researchMode: request.researchMode },
-    citations: [{ marker: "[1]", sourceName: "Synthetic creator" }],
+    citations: [{ marker: "[1]", sourceName: "Synthetic creator", ...(recordedArticle ? {
+      sourceId: "synthetic", itemId: "item", itemTitle: "Observed synthetic article", itemUrl: "https://example.org/article",
+      contentVersion: "v1", weight: 1, rewardPlannedUsdc: 0.01, rationale: "recorded" } : {}) }],
+    ...(recordedArticle ? { claims: [{ claimIndex: 0, claim: "Synthetic claim", evidence: [{ marker: "[1]",
+      sourceId: "synthetic", sourceName: "Synthetic creator", itemId: "item", contentVersion: "v1",
+      quote: "Synthetic bounded excerpt", support: 0.8, qualifiesForAnswer: true, qualifiesForReward: true }] }] } : {}),
     settlement: { mode: "real", ledgerCompleteness: "complete", settledCreatorUsdc: 0.01,
       pendingCreatorUsdc: 0.005, simulatedCreatorUsdc: 0 } };
   const receiptDigest = researchReceiptDigest(payload);

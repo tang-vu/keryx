@@ -246,12 +246,18 @@ export function getSqliteBrowserJournal(
 
 export function admitSqliteBrowserJournal(
   db: DatabaseSync,
-  input: BrowserJournalAdmission
+  input: BrowserJournalAdmission,
+  hooks?: { before(): void; after(journal: BrowserAuthorizationJournal): void; cleanup(): void }
 ): BrowserJournalAdmissionResult {
   const j = prepareBrowserJournal(input);
   return sqliteJournalTransaction(db, () => {
     if (!sqliteJournalActive(db)) return { status: "inactive" };
-    return admitSqliteBrowserJournalInTransaction(db, input, j);
+    hooks?.before();
+    try {
+      const result = admitSqliteBrowserJournalInTransaction(db, input, j);
+      if (result.status === "admitted") hooks?.after(result.journal);
+      return result;
+    } finally { hooks?.cleanup(); }
   });
 }
 

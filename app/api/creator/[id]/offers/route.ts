@@ -23,6 +23,8 @@ async function loadPricingOwner(id: string) {
   const db = await getDb();
   const source = await db.getSource(id);
   if (!source) return { response: Response.json({ error: "source not found" }, { status: 404 }) };
+  if (source.scholarlyEnrolled || await db.getPaperState?.(id))
+    return { response: Response.json({ error: "Scholarly pilot uses reviewed registry list price; discounted offers are unavailable" }, { status: 409 }) };
   const terms = await sourceFetchTerms(source, { refresh: true });
   if (source.onchainId && (terms.authority !== "onchain" || terms.stale)) {
     return {

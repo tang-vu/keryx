@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Keryx — Ask & pay creators",
-  "version": "0.1.0",
-  "description": "Highlight text on any page and ask Keryx — get a cited answer while every source it reads gets paid in USDC. Or list a page you own as a paid source.",
+  "version": "0.1.1",
+  "description": "Highlight text on any page and ask Keryx — get a cited answer with recorded citation allocations and creator payment evidence in USDC. Or list a page you own as a paid source.",
   "action": {
     "default_popup": "popup.html",
     "default_title": "Ask Keryx",
