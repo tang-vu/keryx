@@ -120,3 +120,7 @@ obligation ledger, web connection, or automatic funds movement. The
 directories. Its `buyer/` child is
 the existing buyer journal, so its payment and creator evidence limits remain those
 in the [buyer guide](./buyer-agent.md).
+
+## Recorded reference and evidence exports
+
+After checked recovery, use `brief --format bibtex|ris|evidence-csv --state <task> --file <new destination>` for the same recorded formats as web/API, or omit `--format` for a Markdown brief. Export rechecks local receipt integrity and task binding and uses the existing complete-file publisher. It never purchases, enriches records or verifies settlement independently. Local private files do not imply a private server purchase: the deliberate buyer handoff uses `/api/agent/ask`, whose public web and exact-question DOI discovery can send the question externally when configured. General scholarly opt-in is not part of this versioned paid contract; the isolated private-research endpoint has a separate effects policy.
