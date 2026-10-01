@@ -805,7 +805,7 @@ begin
     total_rows := total_rows + count_rows;
     execute format('select coalesce(sum(octet_length(record_send(r))),0),coalesce(max(octet_length(record_send(r))),0) from %I.%I r',snapshot_table.nspname,snapshot_table.relname) into row_bytes,max_row_bytes;
     total_bytes := total_bytes+row_bytes;
-    if max_row_bytes>case when snapshot_table.nspname='public' and snapshot_table.relname='cache_items' then 2097152+8192 else 1048576 end or total_bytes>67108864 then raise exception 'complete provenance native bytes exceed approved bounds'; end if;
+    if max_row_bytes>(case when snapshot_table.nspname='public' and snapshot_table.relname='cache_items' then 2097152+8192 else 1048576 end) or total_bytes>67108864 then raise exception 'complete provenance native bytes exceed approved bounds'; end if;
     if total_rows>200000 then raise exception 'complete provenance snapshot exceeds approved bounds'; end if;
     execute format($query$select encode(sha256(convert_to(coalesce(string_agg(h,'' order by h),''),'UTF8')),'hex')
       from (select encode(sha256(record_send(r)),'hex') h from %I.%I r) rows$query$,snapshot_table.nspname,snapshot_table.relname) into rows_digest;
