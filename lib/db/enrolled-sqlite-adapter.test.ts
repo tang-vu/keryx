@@ -52,11 +52,18 @@ async function fixture(mode: "testnet-real" | "testnet-offline" = "testnet-real"
   phase("schema:start");
   const native = new DatabaseSync(file);
   try {
+    // Batch the actual fresh schema DDL in one native commit. Browser installers
+    // retain their own savepoints when the caller already owns a transaction.
+    native.exec("BEGIN IMMEDIATE");
     installSqliteApplicationSchema(native);
     if (funding) {
       for (const sql of Object.values(GATEWAY_FUNDING_SCHEMA)) native.exec(sql);
       for (const sql of Object.values(GATEWAY_FUNDING_INDEXES)) native.exec(sql);
     }
+    native.exec("COMMIT");
+  } catch (error) {
+    if (native.isTransaction) native.exec("ROLLBACK");
+    throw error;
   } finally { native.close(); }
   phase("schema:end");
   phase("inspection:start");

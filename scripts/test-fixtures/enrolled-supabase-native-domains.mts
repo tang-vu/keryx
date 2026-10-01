@@ -10,6 +10,7 @@ import { createServer } from 'node:http';
 import { encodeFunctionResult } from 'viem';
 import { REGISTRY_ABI } from '../../lib/registry/registry-abi.ts';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
+import { articleOfferId, articleOfferTypedData } from '../../lib/offers/article-offer-proof.ts';
 import type { Address } from 'viem';
 import type { KeryxDB } from '../../lib/db/keryx-db.ts';
 import type { StorageIdentity } from '../../lib/db/storage-identity.ts';
@@ -20,15 +21,18 @@ export interface NativeDomainRegistryFixture {
   /** Public creator/payout returned by the parent's fixed native registry server. */
   readonly creator: Address;
   readonly payout: Address;
+  readonly rpcUrl?: string;
 }
 
 /** Fixed native HTTP fixture; no application/config imports before parent pinning. */
 export async function startEnrolledSupabaseNativeRegistry() {
-  const creator = privateKeyToAccount(generatePrivateKey()).address;
+  const creatorAccount = privateKeyToAccount(generatePrivateKey());
+  const creator = creatorAccount.address;
   const payout = `0x${'22'.repeat(20)}` as Address;
   const registryContract = `0x${'33'.repeat(20)}` as Address;
   let failed = false;
   const server = createServer(async (request, response) => {
+    const bodyTimer = setTimeout(() => request.destroy(), 5000);
     try {
       assert.equal(request.method, 'POST');
       let body = '';
@@ -36,7 +40,22 @@ export async function startEnrolledSupabaseNativeRegistry() {
         body += chunk.toString();
         assert.ok(Buffer.byteLength(body) <= 16384);
       }
+      clearTimeout(bodyTimer);
       const input = JSON.parse(body);
+      if (request.url === '/fixture/creator-offer') {
+        assert.deepEqual(Object.keys(input).sort(), ['contentVersion', 'itemId', 'sourceId']);
+        for (const value of Object.values(input)) assert.ok(typeof value === 'string' && value.length > 0 && value.length <= 128);
+        const terms = { ...input, priceUsdc6: 500, expiresAt: Math.floor(Date.now() / 1000) + 600,
+          nonce: `0x${createHash('sha256').update(randomUUID()).digest('hex')}` as `0x${string}` };
+        const signature = await creatorAccount.signTypedData(articleOfferTypedData(terms));
+        response.setHeader('content-type', 'application/json');
+        const proof = JSON.stringify({ ...terms, id: articleOfferId(signature), signer: creator.toLowerCase(),
+          signature, createdAt: new Date().toISOString() });
+        assert.ok(Buffer.byteLength(proof) <= 4096);
+        response.end(proof);
+        return;
+      }
+      assert.equal(request.url, '/');
       assert.equal(input.jsonrpc, '2.0');
       assert.ok(Number.isSafeInteger(input.id));
       let result: unknown;
@@ -58,8 +77,12 @@ export async function startEnrolledSupabaseNativeRegistry() {
     } catch {
       failed = true;
       response.writeHead(400).end('fixture-refused');
+    } finally {
+      clearTimeout(bodyTimer);
     }
   });
+  server.requestTimeout = 5000;
+  server.headersTimeout = 5000;
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject);
     server.listen(0, '127.0.0.1', resolve);
@@ -71,6 +94,7 @@ export async function startEnrolledSupabaseNativeRegistry() {
     close: () => new Promise<void>((resolve, reject) => {
       server.close(error => error ? reject(new Error('Native registry cleanup failed')) : resolve());
       server.closeIdleConnections();
+      server.closeAllConnections();
     }),
   });
 }
@@ -127,6 +151,26 @@ export async function exerciseEnrolledSupabaseNativeDomains(
   const item = await db.getItem(sourceId, itemId);
   assert.ok(item);
   const contentVersion = sourceItemContentVersion(item);
+  let offer: import('../../lib/types').ArticleOffer | null = null;
+  if (scenario === 'header') {
+    assert.ok(registry.rpcUrl);
+    const fixtureUrl = new URL(registry.rpcUrl);
+    assert.equal(fixtureUrl.protocol, 'http:');
+    assert.equal(fixtureUrl.hostname, '127.0.0.1');
+    assert.equal(fixtureUrl.pathname, '/');
+    assert.equal(fixtureUrl.username + fixtureUrl.password + fixtureUrl.search + fixtureUrl.hash, '');
+    stage('creator-offer');
+    const response = await fetch(`${registry.rpcUrl}/fixture/creator-offer`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ sourceId, itemId, contentVersion }), signal: AbortSignal.timeout(5000),
+    });
+    assert.equal(response.status, 200);
+    offer = await response.json() as import('../../lib/types').ArticleOffer;
+    assert.equal(offer.signer, registry.creator.toLowerCase());
+    assert.equal(offer.priceUsdc6, 500);
+    await db.setArticleOffer(offer);
+  }
+  const amountMicros = offer ? 500 : 1000;
   const policy: BrowserQueryPolicy = { protocol: 'durable-v2', service: 'https://keryx.cc',
     owner: owner.address, signer: signer.address, grantEpoch, queryId,
     policyId: `0x${'44'.repeat(32)}`, requestNonce: `0x${'55'.repeat(32)}`,
@@ -143,18 +187,26 @@ export async function exerciseEnrolledSupabaseNativeDomains(
   }
   const requestId = randomUUID();
   const input: BrowserSourceOriginalAdmission = { protocol: 'durable-v3', queryNamespace: query.namespace, queryId,
-    source: { sourceId, itemId, contentVersion, offerId: null },
+    source: { sourceId, itemId, contentVersion, offerId: offer?.id ?? null },
     journal: { sessionId, requestId, queryId, grantEpoch, signer: signer.address, network, token,
-      gatewayContract: gateway, sourceId, offerId: null, kind: 'fetch', payee, amountMicroUsdc: 1000,
-      requirements: { scheme: 'exact', network, asset: token, amount: '1000', payTo: payee,
+      gatewayContract: gateway, sourceId, offerId: offer?.id ?? null, kind: 'fetch', payee, amountMicroUsdc: amountMicros,
+      requirements: { scheme: 'exact', network, asset: token, amount: String(amountMicros), payTo: payee,
         maxTimeoutSeconds: 691200, extra: { name: 'GatewayWalletBatched', version: '1', verifyingContract: gateway } },
       payment: { kind: 'fetch', queryId, sourceId, sourceName, payer: signer.address, payee,
-        amountUsdc: 0.001, network, grantEpoch, itemId, contentVersion } } };
+        amountUsdc: amountMicros / 1000000, network, grantEpoch, itemId, contentVersion,
+        ...(offer ? { offerId: offer.id } : {}) } } };
   stage('source-admission');
   const admission = await db.admitBrowserSourceSigningOriginal(input);
   assert.equal(admission.status, 'admitted');
   if (admission.status !== 'admitted') throw new Error('Synthetic original refused');
   assert.equal(admission.original.protocol, 'durable-v3');
+  if (offer) {
+    assert.equal(admission.original.sourceContext.price.mode, 'creator-offer');
+    if (admission.original.sourceContext.price.mode !== 'creator-offer') throw new Error('Synthetic offer context refused');
+    const retainedOffer = admission.original.sourceContext.price.offer;
+    assert.equal(Date.parse(retainedOffer.createdAt), Date.parse(offer.createdAt));
+    assert.deepEqual(retainedOffer, { ...offer, createdAt: retainedOffer.createdAt });
+  }
   if (scenario === 'header') {
     stage('source-replay');
     assert.deepEqual(await db.admitBrowserSourceSigningOriginal(input), admission);
@@ -171,9 +223,9 @@ export async function exerciseEnrolledSupabaseNativeDomains(
     const snapshot = await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId);
     assert.ok(snapshot);
     assert.equal(snapshot.journal.phase, 'signed');
-    assert.equal(snapshot.query.spentMicros, '1000');
-    assert.equal(snapshot.signerSpentMicros, '1000');
-    assert.equal(snapshot.retainedEpochSpentMicros, '1000');
+    assert.equal(snapshot.query.spentMicros, String(amountMicros));
+    assert.equal(snapshot.signerSpentMicros, String(amountMicros));
+    assert.equal(snapshot.retainedEpochSpentMicros, String(amountMicros));
     assert.deepEqual(snapshot.original, admission.original);
     if (scenario === 'header') {
       assert.equal(await db.signBrowserSigningOriginal(sessionId, requestId, header), true);
@@ -182,8 +234,19 @@ export async function exerciseEnrolledSupabaseNativeDomains(
       assert.equal(await db.browserSignerConfirmedSpendMicro(signer.address), 0);
       // Exposure is irreversible: cancellation cannot refund a handed-out nonce.
       assert.equal(await db.cancelPreparedBrowserJournal(sessionId, requestId), false);
-      assert.equal((await db.getSessionGrant(sessionId))?.spent, 0.001);
+      assert.equal((await db.getSessionGrant(sessionId))?.spent, amountMicros / 1000000);
     } else if (scenario === 'binding') {
+      stage('grant-lock-expiry');
+      process.stdout.write('READY synthetic grant lock\n');
+      await new Promise<void>(resolve => process.stdin.once('data', () => resolve()));
+      const freshRequest = structuredClone(input);
+      freshRequest.journal.requestId = randomUUID();
+      assert.ok(Date.now() < policy.expiresAt, 'Original query remains current before grant-lock admission');
+      await assert.rejects(() => db.admitBrowserSourceSigningOriginal(freshRequest));
+      assert.ok(Date.now() < policy.expiresAt, 'Grant-lock refusal must not be query expiry');
+      process.stdout.write('READY synthetic grant refusal\n');
+      await new Promise<void>(resolve => process.stdin.once('data', () => resolve()));
+      assert.deepEqual(await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId), snapshot);
       assert.equal(await db.readExposedBrowserSigningSnapshotForSigner(owner.address, sessionId, requestId), null);
       const changed = structuredClone(input);
       changed.source.contentVersion = 'changed-version';

@@ -208,6 +208,18 @@ function Invoke-BoundedInstaller([string]$Executable, [string[]]$Arguments) {
     if ($process.ExitCode -ne 0) { throw "NSIS process exited $($process.ExitCode)" }
   } finally { $process.Dispose() }
 }
+function Get-LiteralSha256([string]$FilePath) {
+  $stream = $null
+  $algorithm = $null
+  try {
+    $stream = [IO.File]::OpenRead($FilePath)
+    $algorithm = [Security.Cryptography.SHA256]::Create()
+    return [BitConverter]::ToString($algorithm.ComputeHash($stream)).Replace('-', '')
+  } finally {
+    if ($algorithm) { $algorithm.Dispose() }
+    if ($stream) { $stream.Dispose() }
+  }
+}
 $uninstaller = Join-Path $install 'uninstall.exe'
 $externalUninstaller = [IO.Path]::GetFullPath((Join-Path $TempRoot 'isolated-uninstall-copy.exe'))
 if (-not $externalUninstaller.StartsWith($owned, [StringComparison]::OrdinalIgnoreCase) -or
@@ -241,9 +253,9 @@ try {
     try {
       Copy-Item -LiteralPath $resolvedUninstaller -Destination $externalUninstaller -ErrorAction Stop
       $verificationStage = 'source-hash'
-      $sourceHash = (Get-FileHash -LiteralPath $resolvedUninstaller -Algorithm SHA256).Hash
+      $sourceHash = Get-LiteralSha256 $resolvedUninstaller
       $verificationStage = 'copy-hash'
-      $copyHash = (Get-FileHash -LiteralPath $externalUninstaller -Algorithm SHA256).Hash
+      $copyHash = Get-LiteralSha256 $externalUninstaller
       $verificationStage = 'compare'
       if ($sourceHash -cne $copyHash) { throw 'Uninstaller copy mismatch' }
     } catch {

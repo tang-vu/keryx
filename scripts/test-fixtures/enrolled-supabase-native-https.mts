@@ -46,6 +46,8 @@ export async function startOwnedSupabaseHttpsBridge(curlContainer: string) {
     "storage_browser_signing_admit_source_original"]);
   const timings = new Map<string, { started: number; completed: number; failed: number; totalMs: number; maxMs: number }>();
   const failures = new Map<string, number>();
+  // Test-only scheduling observation. Never retain caller tuples or log bodies.
+  let sourceAdmissionDeadlineMs: number | null = null;
   const metricShapes = new Map<string, { shape: "array" | "null" | "object" | "scalar" | "invalid"; length: number | null }>();
   const metricOperations = new Set(["storage_scan_payment_metrics", "storage_scan_query_metrics",
     "storage_scan_feedback_metrics", "storage_scan_gap_metrics"]);
@@ -77,6 +79,13 @@ export async function startOwnedSupabaseHttpsBridge(curlContainer: string) {
           }
           const body = await readOwnedFixtureRequestBody(request);
           const operation = path.slice("/rest/v1/rpc/".length);
+          if (operation === "storage_browser_signing_admit_source_original") {
+            const parsed: unknown = JSON.parse(body.toString("utf8"));
+            const deadline = parsed && typeof parsed === "object" && "p_admission_deadline_ms" in parsed
+              ? parsed.p_admission_deadline_ms : null;
+            assert(typeof deadline === "number" && Number.isSafeInteger(deadline) && deadline > 0);
+            sourceAdmissionDeadlineMs = deadline;
+          }
           diagnosticOperation = diagnosticOperations.has(operation) ? operation : "other";
           startedAt = performance.now();
           const current = timings.get(diagnosticOperation) ?? { started: 0, completed: 0, failed: 0, totalMs: 0, maxMs: 0 };
@@ -167,6 +176,7 @@ export async function startOwnedSupabaseHttpsBridge(curlContainer: string) {
       counts,
       timings,
       failures,
+      getSourceAdmissionDeadlineMs: () => sourceAdmissionDeadlineMs,
       metricShapes,
       close: async () => {
         closed = true;

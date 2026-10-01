@@ -62,6 +62,7 @@ try {
         assert.match(payout ?? "", /^0x[0-9a-fA-F]{40}$/);
         await exerciseEnrolledSupabaseNativeDomains(db, deployment.identity, {
           creator: creator as `0x${string}`, payout: payout as `0x${string}`,
+          rpcUrl: process.env.KERYX_RPC_URL,
         }, mode === "domain-binding" ? "binding" : mode === "domain-capacity" ? "capacity" : mode === "domain-terminal" ? "terminal" : "header");
       } else if (mode === "readonly") {
         stage("readonly");
