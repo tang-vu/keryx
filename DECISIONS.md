@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**D-261** - Reuse recorded research for academic and technical/market workflows -
+*The user selected both researcher segments; existing receipts and claim evidence
+were useful but did not provide reference-manager imports or a comparison export.*
+Add browser-local BibTeX/RIS references and a claim-by-cited-source evidence matrix
+with spreadsheet CSV to the shared web reading. Export only already recorded article
+identities and bounded citation-matched excerpts. Omit missing article identities,
+retain distinct versions, and never infer authors, DOI, journal or peer-review status
+from a registered publication or generated answer. Missing excerpts are inspection
+gaps, not truth or conflict verdicts. Keep payment and receipt authority unchanged.
+Scholarly metadata enrichment and account synchronization remain open work, not an
+academic-complete claim. Reversible: remove the browser export surfaces; no stored
+run, payment or receipt format changes. See [researcher exports](docs/researcher-exports.md).
+
 **D-260** - Replace the Windows Electron shell with a bounded Tauri shell and a
 shared Mint desktop surface - *The desktop alpha worked but its dark visual system
 diverged from the web reading product, and packaging Electron was heavier than the

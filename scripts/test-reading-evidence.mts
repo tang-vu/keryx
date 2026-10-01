@@ -69,6 +69,30 @@ try {
   await citation.waitFor();
   const citationElement = await citation.elementHandle();
   assert(citationElement, "citation trigger must exist for focus restoration checks");
+  await page.getByText("1 citations omitted because an article title or usable article link is unavailable.").waitFor();
+  await page.getByText("Research evidence matrix", { exact: true }).click();
+  for (const [button, filename, expected] of [
+    ["Download BibTeX", "keryx-references.bib", "@misc{keryx"],
+    ["Download RIS (Zotero)", "keryx-references.ris", "TY  - WEB"],
+    ["Download evidence CSV", "keryx-evidence-matrix.csv", '"claim_index","claim","inspection_status"'],
+  ]) {
+    const waiting = page.waitForEvent("download");
+    await page.getByRole("button", { name: button, exact: true }).click();
+    const download = await waiting;
+    assert.equal(download.suggestedFilename(), filename);
+    const stream = await download.createReadStream();
+    assert(stream, "download should provide bytes");
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+    const content = Buffer.concat(chunks).toString("utf8");
+    assert(content.includes(expected), `${filename} must contain its expected format`);
+    assert(!content.includes("author-wallet") && !content.includes("payer"), "exports exclude payment identities");
+    if (filename.endsWith(".ris") || filename.endsWith(".bib")) {
+      assert(content.includes("https://example.org/article"));
+      assert(!content.includes("Legacy article"), "legacy citations must not receive invented article links");
+    }
+  }
+  await page.getByText("Research evidence matrix", { exact: true }).click();
   await citation.evaluate(element => element.scrollIntoView({ behavior: "instant" }));
   const before = await page.evaluate(() => scrollY);
   await citation.click();
