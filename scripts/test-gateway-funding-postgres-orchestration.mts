@@ -138,7 +138,11 @@ try {
       assert(f.protocol.calls.some(c => c.method === "eth_getTransactionReceipt" && c.provider === 0));
       if (mode === "disagreement") assert(f.protocol.calls.some(c => c.method === "eth_getTransactionReceipt" && c.provider === 1));
       const after = await f.snapshot(); assert.equal(after.originals[0]?.prepared?.transactionHash, original.prepared.transactionHash);
-      assert(after.originals.slice(1).every(s => s === null)); assert.equal(after.namespaces[0].used.gasWei, "210000");
+      assert(after.originals.slice(1).every(s => s === null));
+      // Admission conservatively reserves the whole immutable movement/gas plan;
+      // an unknown or reverted first original never refunds unused later legs.
+      assert.deepEqual(after.namespaces[0].used, { nativeWei: "50", usdcMicros: "100", depositMicros: "0", gasWei: "810000" });
+      assert.deepEqual(after.namespaces[1].used, { nativeWei: "0", usdcMicros: "0", depositMicros: "100", gasWei: "1800000" });
       assert.equal(after.namespaces[0].nextCryptoNonce, mode === "reverted" ? "1" : "0");
       if (mode === "reverted") { assert.equal(after.originals[0]?.terminal?.receiptStatus, "reverted"); assert.equal(after.originals[0]?.terminal?.transactionHash, original.prepared.transactionHash); }
       await f.unchanged(async () => { const r = await recover({ ...f.keyless, ledger: readOnly(ledger) }, composition(f.protocol)).runOperation(f.operation.operationId); assert.equal(r.status, result.status); });
