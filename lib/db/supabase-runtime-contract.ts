@@ -1,7 +1,7 @@
-/** Frozen reviewed PG17 SOURCE reference from 58a271, generated on a separate
- * empty synthetic database; never adopted from an enrollment target. */
+/** Strict snapshot_digest-only source/definition projection from separate 58a271
+ * PG17 SOURCE. Fresh native re-export equality is required before enrollment. */
 export const SUPABASE_RUNTIME_CONTRACT = Object.freeze({
   "format": "keryx-postgres17-runtime-contract-v1",
-  "beforeDigest": "d333b6bf8cb836bd92bf7dc4076c61ad889849bf7203eefe4ce156156f040b68",
-  "afterDigest": "10ecd35a057bc9ae7101d1ccaae61901c92404e7a3ada7e5dd955f7c05059117"
+  "beforeDigest": "c64c95ec19b3abf60343e289945e367bfcc81bc14e64238900da7942b1e0c299",
+  "afterDigest": "9ef01f486c8c9704b5fefa43b976cd66804a0c6f0391df91b6926b40c7472643"
 });

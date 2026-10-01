@@ -66,6 +66,14 @@ publish identity. Failed admission leaves the store unchanged. All service-role,
 authenticated, anon and unchecked legacy RPC paths need native acceptance after
 cutover. DB-owner, host and configured HTTPS endpoint trust remain explicit.
 
+The PostgreSQL 17 source profile is bounded and sealed independently of the
+enrollment target. Validate raw trigger field sizes before hex encoding or
+deparsing. Fresh native source exports must match the reviewed PRE/POST digests
+before target acceptance. Snapshot CAS excludes only `pg_class` maintenance
+fields `relpages`, `reltuples`, `relallvisible`, `relfrozenxid` and `relminmxid`;
+it retains OIDs, file mappings, structural metadata, privileges, logical rows
+and sequences. Maintenance alone must not appear as a financial write.
+
 Read-only PostgreSQL operations must actually run in a read-only transaction:
 fixed identity/mode checks and SELECT projections, with no writer-capability row
 or locking query that requires writes. Audit transitive function bodies instead

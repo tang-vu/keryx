@@ -60,6 +60,16 @@ activation or mainnet authorization. Native backend, role, race, recovery and
 deployment evidence remain explicit gates. See
 [enrolled runtime backend acceptance](docs/enrolled-runtime-backends.md).
 
+PostgreSQL snapshot CAS excludes only the relation maintenance fields
+`relpages`, `reltuples`, `relallvisible`, `relfrozenxid` and `relminmxid`.
+Native diagnostics found changes within these fields while logical rows,
+sequences, other catalog records and normalized schema stayed identical around
+a successful READ ONLY transaction. Retain relation OIDs, file mappings,
+structural metadata, privileges and retained data in the CAS. A maintenance
+update must not invalidate an otherwise unchanged financial-state review.
+Frozen profiles come from a separate source reference; a deterministic source
+function edit still requires fresh native PRE/POST equality before enrollment.
+
 **D-288** - Reuse recorded research for academic and technical/market workflows -
 *The user selected both researcher segments; existing receipts and claim evidence
 were useful but did not provide reference-manager imports or a comparison export.*
