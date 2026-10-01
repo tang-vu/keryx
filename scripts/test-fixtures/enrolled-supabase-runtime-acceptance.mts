@@ -167,6 +167,7 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
     const runChild = async (mode: string, role = "service_role") => {
       const childStartedAt = performance.now();
       const timingBefore = new Map(bridge!.timings);
+      const failureBefore = new Map(bridge!.failures);
       const child = execFile(process.execPath, ["--import", "tsx", resolve("scripts/test-fixtures/enrolled-supabase-runtime-child.mts"), mode], {
         timeout: 120_000, maxBuffer: 1024 * 1024,
         env: { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot,
@@ -233,6 +234,10 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
           const completed = timing.completed - (before?.completed ?? 0);
           const started = timing.started - (before?.started ?? 0);
           if (started > 0) console.error(`FIXTURE_RPC_TIMING operation=${operation} started=${started} completed=${completed} failed=${timing.failed - (before?.failed ?? 0)} totalMs=${timing.totalMs - (before?.totalMs ?? 0)} lifetimeMaxMs=${timing.maxMs}`);
+        }
+        for (const [category, count] of bridge!.failures) {
+          const failed = count - (failureBefore.get(category) ?? 0);
+          if (failed > 0) console.error(`FIXTURE_RPC_FAILURE category=${category} count=${failed}`);
         }
       }
       assert.equal(result.code, 0, `Native factory fixture mode=${mode} stage=${stage} category=${result.category}${diagnostic}`);

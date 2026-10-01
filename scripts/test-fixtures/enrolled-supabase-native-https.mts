@@ -19,8 +19,11 @@ export async function startOwnedSupabaseHttpsBridge(curlContainer: string) {
     "storage_verify_runtime_authority", "storage_upsert_source", "storage_get_source",
     "storage_set_cached", "storage_get_cached", "storage_create_auth_challenge",
     "storage_consume_auth_challenge", "storage_upsert_user", "storage_get_user",
-    "storage_set_sync_state", "storage_get_sync_state", "storage_save_query_run"]);
+    "storage_set_sync_state", "storage_get_sync_state", "storage_save_query_run",
+    "storage_scan_payment_metrics", "storage_scan_query_metrics", "storage_scan_feedback_metrics",
+    "storage_scan_gap_metrics", "storage_get_query_run", "storage_list_recent_queries"]);
   const timings = new Map<string, { started: number; completed: number; failed: number; totalMs: number; maxMs: number }>();
+  const failures = new Map<string, number>();
   let closed = false;
   const server = createServer();
   try {
@@ -35,6 +38,7 @@ export async function startOwnedSupabaseHttpsBridge(curlContainer: string) {
         let diagnosticOperation: string | undefined;
         let startedAt = 0;
         let succeeded = false;
+        let failureCategory = "transport-refused";
         try {
           const path = request.url ?? "";
           if (closed || request.method !== "POST" ||
@@ -68,19 +72,39 @@ export async function startOwnedSupabaseHttpsBridge(curlContainer: string) {
               "--data-binary", "@-", "--write-out", "\n%{http_code}",
               `http://127.0.0.1:3000${path.slice("/rest/v1".length)}`],
             { timeout: 20_000, maxBuffer: 11 * 1024 * 1024, encoding: "buffer" },
-            (error, stdout) => error ? reject(new Error("Synthetic bridge unavailable")) : resolveOutput(stdout));
+            (error, stdout) => {
+              if (!error) { resolveOutput(stdout); return; }
+              failureCategory = error.killed ? "process-deadline"
+                : typeof error.code === "number" && Number.isInteger(error.code) && error.code >= 0 && error.code <= 255
+                  ? `process-exit-${error.code}` : "process-unavailable";
+              reject(new Error("Synthetic bridge unavailable"));
+            });
             child.stdin!.end(Buffer.concat(body));
           });
           const split = output.lastIndexOf(10);
           const status = Number(output.subarray(split + 1).toString("ascii"));
           if (split < 0 || !Number.isInteger(status) || status < 200 || status > 599) throw new Error();
           succeeded = status < 400;
+          if (!succeeded) {
+            failureCategory = `http-${status}`;
+            try {
+              const parsed: unknown = JSON.parse(output.subarray(0, split).toString("utf8"));
+              if (parsed && typeof parsed === "object" && "code" in parsed && typeof parsed.code === "string" &&
+                /^[0-9A-Z]{5}$/.test(parsed.code)) failureCategory += `-sqlstate-${parsed.code}`;
+            } catch { /* Never retain provider error messages or response bodies. */ }
+          }
           response.writeHead(status, { "Content-Type": "application/json" }).end(output.subarray(0, split));
         } catch {
           if (!response.headersSent) response.writeHead(503);
           response.end('{"code":"SYNTHETIC_UNAVAILABLE","message":"Synthetic bridge unavailable"}');
         } finally {
           if (diagnosticOperation) {
+            if (!succeeded) {
+              // Strict codes only; a fixed cap prevents diagnostic-cardinality growth.
+              const key = `${diagnosticOperation}:${failureCategory}`;
+              const boundedKey = failures.has(key) || failures.size < 32 ? key : "other:diagnostic-cap";
+              failures.set(boundedKey, (failures.get(boundedKey) ?? 0) + 1);
+            }
             const elapsed = Math.ceil(performance.now() - startedAt);
             const previous = timings.get(diagnosticOperation)!;
             timings.set(diagnosticOperation, { started: previous.started, completed: previous.completed + 1,
@@ -101,6 +125,7 @@ export async function startOwnedSupabaseHttpsBridge(curlContainer: string) {
       certificate: resolve(certificate),
       counts,
       timings,
+      failures,
       close: async () => {
         closed = true;
         server.closeAllConnections();
