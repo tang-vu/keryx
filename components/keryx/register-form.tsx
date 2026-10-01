@@ -243,6 +243,11 @@ export function RegisterForm({
         if (!creator || walletRef.current.address?.toLowerCase() !== creator.toLowerCase() || walletRef.current.chainId !== 5042002 || !publicClient) {
           throw new Error("Connect your signed-in creator wallet on Arc Testnet before signing.");
         }
+        // Initial registration preparation binds payout to the authenticated SIWE session.
+        // A wallet switch does not update that session: never sign its preparation as another creator.
+        if (params.payoutWallet.toLowerCase() !== creator.toLowerCase()) {
+          throw new Error("Sign in again with the connected creator wallet. This prepared registration belongs to another signed-in wallet.");
+        }
         toast.loading("Waiting for wallet signature...", { id: "register-tx" });
 
         walletRequestStarted = true;
@@ -292,7 +297,9 @@ export function RegisterForm({
       setPhase(unknownSubmission ? "unknown" : "failed");
       setStatusMessage(unknownSubmission
         ? "The wallet did not return a transaction hash. Submission is unknown; check your wallet history before taking further action. Do not resubmit this registration."
-        : "Registration was not submitted. The wallet request was rejected or could not be started.");
+        : walletRequestStarted
+          ? "Registration was not submitted. The wallet request was rejected."
+          : err instanceof Error ? err.message : "Registration could not be started.");
       toast.dismiss("register-tx");
       toast.error(err instanceof Error ? err.message : "Registration failed");
     } finally {

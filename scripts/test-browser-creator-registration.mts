@@ -15,6 +15,7 @@ const log = { address: registry, topics: encodeEventTopics({ abi: event, eventNa
   data: encodeAbiParameters([{ type: "string" }], [""]) };
 declare global { interface Window {
   registrationWrites: Record<string, unknown>[]; registrationChain: number; registrationCreated: number;
+  registrationInitialCreator?: string;
   setRegistrationWallet: (address: string) => void;
   registrationWriteError?: "reject" | "unknown";
   finishReceipt: (value: unknown) => void; failReceipt: () => void; registrationMount: (visible: boolean) => void;
@@ -24,8 +25,9 @@ import React from 'react'; import {createRoot} from 'react-dom/client';
 import {RegisterForm} from './components/keryx/register-form';
 import {DecisionFeedbackPanel} from './app/creator/[id]/decision-feedback-panel';
 window.registrationWrites=[];window.registrationCreated=0;window.registrationWriteError=undefined;
-function Harness(){const [address,setAddress]=React.useState('${creator}');window.registrationWallet=address;window.setRegistrationWallet=setAddress;const [visible,setVisible]=React.useState(true);window.registrationMount=setVisible;
-return React.createElement(React.Fragment,null,visible&&React.createElement(RegisterForm,{prefillWalletAddress:'${creator}',onCreated:()=>window.registrationCreated++}),React.createElement(DecisionFeedbackPanel,{creatorId:'feedback'}));}
+const initialCreator=window.registrationInitialCreator||'${creator}';
+function Harness(){const [address,setAddress]=React.useState(initialCreator);window.registrationWallet=address;window.setRegistrationWallet=setAddress;const [visible,setVisible]=React.useState(true);window.registrationMount=setVisible;
+return React.createElement(React.Fragment,null,visible&&React.createElement(RegisterForm,{prefillWalletAddress:initialCreator,onCreated:()=>window.registrationCreated++}),React.createElement(DecisionFeedbackPanel,{creatorId:'feedback'}));}
 createRoot(document.getElementById('root')).render(React.createElement(Harness));
 ` }, bundle: true, platform: "browser", format: "iife", jsx: "automatic", write: false,
   define: { "process.env.NODE_ENV": '"development"' }, plugins: [{ name: "synthetic-registration", setup(b) {
@@ -51,7 +53,7 @@ try {
   if(u.pathname.endsWith("/performance"))return route.fulfill({json:{windowRuns:3,performance:{considered:3,bought:2,reused:1,cited:1,citeThrough:1/3,skipped:0,recentSkips:[],rivalPriceOnSkip:null,price:.016}}});
   return route.fulfill({contentType:"text/html",body:'<meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div>'});
  });
- async function fresh(){await page.goto("https://registration.invalid");await page.addScriptTag({content:bundle.outputFiles[0].text});await page.waitForTimeout(100);if(errors.length)throw new Error(errors.join(" | "));await page.locator("#rss").fill("https://feed.invalid/rss");}
+ async function fresh(initialCreator: string=creator){await page.goto("https://registration.invalid");await page.evaluate(value=>window.registrationInitialCreator=value,initialCreator);await page.addScriptTag({content:bundle.outputFiles[0].text});await page.waitForTimeout(100);if(errors.length)throw new Error(errors.join(" | "));await page.locator("#rss").fill("https://feed.invalid/rss");}
  async function submit(){await page.getByRole("button",{name:/Publish source/}).click();await page.waitForFunction(()=>!!window.finishReceipt);}
  async function receipt(status="success",logs:unknown[]=[log],transactionHash=hash){await page.evaluate(value=>window.finishReceipt(value),{status,logs,transactionHash});}
  await fresh();await page.getByText("2 BUY",{exact:false}).waitFor();assert.equal(await page.getByText(/fresh tolls/).count(),0);
@@ -81,6 +83,12 @@ try {
   await page.getByText("fixture-secret",{exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.registrationCreated),0);
   assert.equal(await page.getByRole("button",{name:"Register another source"}).isDisabled(),failure==="unknown");
  }
+ // A wallet switched BEFORE preparation may match prefill while the SIWE session still owns A.
+ // Server payout A versus connected/prefill B must fail before opening any wallet request.
+ await fresh(registry);await page.getByRole("button",{name:/Publish source/}).click();
+ await page.getByText("Sign in again with the connected creator wallet.",{exact:false}).waitFor();
+ assert.equal((await page.evaluate(()=>window.registrationWrites)).length,0);assert.equal(await page.evaluate(()=>window.registrationCreated),0);
+ await page.getByText("fixture-token",{exact:true}).waitFor();await page.getByText("fixture-secret",{exact:true}).waitFor();
  // A wallet change while preparation is in flight must never sign for the original session.
  await fresh();let releaseWallet!:()=>void;holdPost=new Promise(resolve=>{releaseWallet=resolve});const sawWalletPost=new Promise<void>(resolve=>{observedPost=resolve});
  await page.getByRole("button",{name:/Publish source/}).click();await sawWalletPost;await page.evaluate(value=>window.setRegistrationWallet(value),registry);releaseWallet();holdPost=undefined;observedPost=undefined;
