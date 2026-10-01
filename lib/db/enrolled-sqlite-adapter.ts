@@ -1,5 +1,5 @@
 import { SqliteAdapter } from "./sqlite-adapter";
-import { supportedSqliteApplicationProfiles } from "./sqlite-application-schema";
+import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-profile";
 import { openVerifiedSqliteStorage, assertVerifiedSqliteConnection } from "./storage-identity-connection";
 import { readRuntimeStorageDeployment } from "./runtime-storage-config";
 import { canonicalJson } from "../canonical-json";
@@ -196,7 +196,7 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
       catch (error) { connection.close(); throw error; }
     };
     assert();
-    const core = SqliteAdapter.fromVerifiedConnection(db);
+    const core = SqliteAdapter.assembleConnectionCore(db, deployment.identity, assert);
     const publicNames = Object.getOwnPropertyNames(SqliteAdapter.prototype).filter(name =>
       !["constructor", "encryptLegacyCacheRows", "insertPayment", "init", "close"].includes(name));
     const reviewed = Object.keys(ENROLLED_SQLITE_METHOD_ACCESS);

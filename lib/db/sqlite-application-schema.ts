@@ -1,6 +1,4 @@
 import { DatabaseSync } from "node:sqlite";
-import { sqliteApplicationSchemaProfile } from "./sqlite-application-schema-profile";
-import { GATEWAY_FUNDING_SCHEMA, GATEWAY_FUNDING_INDEXES } from "./gateway-funding-sqlite-schema";
 import { PRIVATE_CREATOR_CONFIRMATIONS_SQL } from "./private-creator-confirmations";
 import { PRIVATE_CREATOR_SUBMISSIONS_SQL } from "./private-creator-submissions";
 import { PRIVATE_RESEARCH_RESULTS_SQL } from "./private-research-results";
@@ -303,22 +301,6 @@ ${CREATOR_WITHDRAWAL_ATTESTATIONS_SQL}
 export function installSqliteApplicationSchema(db: DatabaseSync): void {
  db.exec(SQLITE_APPLICATION_SCHEMA);
  ensureSqliteApplicationColumns(db);
-}
-
-let expectedProfiles: readonly string[] | undefined;
-/** Exact source profile. Only explicit enrollment objects are excluded. Never repairs. */
-export function supportedSqliteApplicationProfiles(): readonly string[] {
-  if (!expectedProfiles) {
-    const reference = new DatabaseSync(":memory:");
-    try {
-      installSqliteApplicationSchema(reference);
-      const application = sqliteApplicationSchemaProfile(reference, new Set());
-      for (const sql of Object.values(GATEWAY_FUNDING_SCHEMA)) reference.exec(sql);
-      for (const sql of Object.values(GATEWAY_FUNDING_INDEXES)) reference.exec(sql);
-      expectedProfiles = Object.freeze([application, sqliteApplicationSchemaProfile(reference, new Set())]);
-    } finally { reference.close(); }
-  }
-  return expectedProfiles;
 }
 
 function ensureSqliteApplicationColumns(db: DatabaseSync): void {

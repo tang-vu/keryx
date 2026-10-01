@@ -1,5 +1,4 @@
 import { installSqliteApplicationSchema } from "./sqlite-application-schema";
-import { assertVerifiedSqliteConnection } from "./storage-identity-connection";
 import type { StorageIdentity } from "./storage-identity";
 import { openEnrolledCacheText, sealEnrolledCacheText } from "../sources/enrolled-content-cache";
 import { publicReferenceSchema, type PublicReference } from "../public-references/catalog";
@@ -102,14 +101,15 @@ export class SqliteAdapter implements KeryxDB {
   private db: DatabaseSync;
   private enrolledMode?: StorageIdentity["authorityMode"];
   private enrolledIdentity?: Readonly<StorageIdentity>;
+  private enrolledGuard?: () => void;
 
-  /** Shares the core without reopening a path. Only an admitted native connection qualifies. */
-  static fromVerifiedConnection(db: DatabaseSync): SqliteAdapter {
-    const identity = assertVerifiedSqliteConnection(db);
+  /** Core assembly only: the caller owns the connection; this issues no runtime provenance. */
+  static assembleConnectionCore(db: DatabaseSync, identity: Readonly<StorageIdentity>, guard: () => void): SqliteAdapter {
     const adapter = Object.create(SqliteAdapter.prototype) as SqliteAdapter;
     adapter.db = db;
     adapter.enrolledMode = identity.authorityMode;
     adapter.enrolledIdentity = identity;
+    adapter.enrolledGuard = guard;
     return adapter;
   }
 
@@ -127,7 +127,7 @@ export class SqliteAdapter implements KeryxDB {
 
   async init(): Promise<void> {
     if (this.enrolledMode) {
-      assertVerifiedSqliteConnection(this.db);
+      this.enrolledGuard!();
       if (this.enrolledMode === "testnet-real" && !hasContentKey())
         throw new Error("Enrolled content cache key unavailable");
       this.db.exec("BEGIN");

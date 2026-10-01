@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - "lib/db/**"
+      - "lib/operator/gateway-funding-composition.test.ts"
       - "lib/sources/enrolled-content-cache*"
       - "lib/sources/content-cache*"
       - "lib/ipfs/content-crypto*"
@@ -37,10 +38,10 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund
       - name: Native enrolled adapter and authenticated cache
-        run: npx vitest run lib/db/enrolled-sqlite-adapter.test.ts lib/sources/enrolled-content-cache.test.ts lib/ipfs/content-crypto.test.ts lib/sources/content-cache.test.ts
+        run: npx vitest run lib/db/enrolled-sqlite-adapter.test.ts lib/sources/enrolled-content-cache.test.ts lib/ipfs/content-crypto.test.ts lib/sources/content-cache.test.ts lib/operator/gateway-funding-composition.test.ts
       - name: Existing guarded storage boundaries
         run: npx vitest run lib/db/storage-browser-schema.test.ts lib/db/storage-provenance.test.ts lib/db/storage-provenance-snapshot.test.ts
       - name: Project TypeScript
         run: npx tsc --noEmit
       - name: Scoped lint
-        run: npx eslint lib/db/sqlite-adapter.ts lib/db/sqlite-application-schema.ts lib/db/sqlite-application-schema-profile.ts lib/db/enrolled-sqlite-adapter.ts lib/db/enrolled-sqlite-adapter.test.ts lib/db/storage-identity-connection.ts lib/ipfs/content-crypto.ts lib/sources/content-cache.ts lib/sources/enrolled-content-cache.ts lib/sources/enrolled-content-cache.test.ts
+        run: npx eslint lib/db/sqlite-adapter.ts lib/db/sqlite-application-schema.ts lib/db/sqlite-application-schema-profile.ts lib/db/enrolled-sqlite-schema-profile.ts lib/db/enrolled-sqlite-adapter.ts lib/db/enrolled-sqlite-adapter.test.ts lib/db/storage-identity-connection.ts lib/db/sqlite-browser-source-context.test.ts lib/operator/gateway-funding-composition.test.ts lib/ipfs/content-crypto.ts lib/sources/content-cache.ts lib/sources/enrolled-content-cache.ts lib/sources/enrolled-content-cache.test.ts

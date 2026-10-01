@@ -138,3 +138,9 @@ RealGateway integration (#79) were not integrated wholesale. Their remaining
 requirements are covered by the release gates above and the current dormant
 funding/mainnet documentation. No production enrollment, custody replacement,
 selector activation or mainnet readiness follows from closing those drafts.
+
+Core assembly is an internal composition seam rather than runtime provenance.
+The closed factory validates the guarded connection before assembly and alone
+issues private facade provenance. An ordinary or fabricated assembled core cannot
+qualify as an enrolled runtime. The legacy adapter import graph must not pull in
+the dormant funding engine or select the pinned runtime manifest.

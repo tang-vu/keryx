@@ -71,6 +71,7 @@ it("uses the exact installed application schema without startup migration and re
   expect(() => f.api.assertEnrolledSqliteAdapter({})).toThrow();
   expect(Reflect.get(adapter, "db")).toBeUndefined();
   expect(Reflect.get(adapter, "fromVerifiedConnection")).toBeUndefined();
+  expect(Reflect.get(adapter, "assembleConnectionCore")).toBeUndefined();
   await adapter.init();
   expect(await adapter.listSources()).toEqual([]);
   expect(await adapter.getSessionGrant("missing")).toBeNull();
@@ -133,7 +134,7 @@ it("rejects cloned facades and verified cores as runtime provenance and refuses 
   const { SqliteAdapter: Core } = await import("./sqlite-adapter");
   const verified = openVerifiedSqliteStorage(f.file, f.identity);
   try {
-    expect(() => f.api.assertEnrolledSqliteAdapter(Core.fromVerifiedConnection(verified.db))).toThrow();
+    expect(() => f.api.assertEnrolledSqliteAdapter(Core.assembleConnectionCore(verified.db, f.identity, () => {}))).toThrow();
   } finally { verified.close(); }
   const before = readFileSync(f.file);
   for (const key of ["", "invalid"]) {
