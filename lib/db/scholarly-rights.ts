@@ -1,4 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
+import { hasScholarlyRights, assertNoOrphanedPaperMarker } from "./scholarly-capability";
+export { hasScholarlyRights } from "./scholarly-capability";
 import type { KeryxDB } from "./keryx-db";
 import type { BrowserJournalAdmission, BrowserAuthorizationJournal } from "./browser-authorization-journal";
 import { admitSqliteBrowserJournal } from "./sqlite-browser-journal";
@@ -24,9 +26,6 @@ CREATE TRIGGER IF NOT EXISTS scholarly_intent_fence BEFORE INSERT ON browser_aut
     AND NOT EXISTS(SELECT 1 FROM scholarly_writer)
   BEGIN SELECT RAISE(ABORT,'scholarly admission required'); END;
 `;
-export function hasScholarlyRights(db: DatabaseSync): boolean {
-  return !!db.prepare("SELECT 1 FROM sqlite_schema WHERE type='table' AND name='scholarly_enrollments'").get();
-}
 export function installScholarlyRights(db: DatabaseSync): void {
   if (!db.prepare("PRAGMA table_info(sources)").all().some(row => row.name === "scholarly_enrolled"))
     db.exec("ALTER TABLE sources ADD COLUMN scholarly_enrolled INTEGER NOT NULL DEFAULT 0 CHECK(scholarly_enrolled IN(0,1))");
@@ -62,8 +61,7 @@ function transaction<T>(db: DatabaseSync, work: () => T): T {
 }
 export function getSqlitePaperState(db: DatabaseSync, sourceId: string): PaperState | null {
   if (!hasScholarlyRights(db)) {
-    const source = db.prepare("SELECT * FROM sources WHERE id=?").get(sourceId);
-    if (source?.scholarly_enrolled === 1) throw new Error("Scholarly history unavailable");
+    assertNoOrphanedPaperMarker(db, sourceId);
     return null;
   }
   if (!db.prepare("SELECT 1 FROM scholarly_enrollments WHERE source_id=?").get(sourceId)) return null;

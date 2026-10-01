@@ -1,5 +1,5 @@
 import { installSqliteApplicationSchema } from "./sqlite-application-schema";
-import { hasScholarlyRights, beginSqlitePaper, getSqlitePaperState, submitSqlitePaper, reviewSqlitePaper, getSqlitePaperAdmission, admitSqlitePaperJournal } from "./scholarly-rights";
+import { hasScholarlyRights, assertNoOrphanedPaperMarker } from "./scholarly-capability";
 import type { StorageIdentity } from "./storage-identity";
 import { openEnrolledCacheText, sealEnrolledCacheText } from "../sources/enrolled-content-cache";
 import { publicReferenceSchema, type PublicReference } from "../public-references/catalog";
@@ -754,6 +754,11 @@ export class SqliteAdapter implements KeryxDB {
   }
   async admitBrowserJournal(input: BrowserJournalAdmission) {
     if (this.enrolledIdentity) return admitSqliteBrowserJournal(this.db, input);
+    if (!hasScholarlyRights(this.db)) {
+      assertNoOrphanedPaperMarker(this.db, input.sourceId);
+      return admitSqliteBrowserJournal(this.db, input);
+    }
+    const { admitSqlitePaperJournal } = await import("./scholarly-rights");
     return admitSqlitePaperJournal(this.db, this, input);
   }
   async getPaperState(sourceId: string) {
@@ -761,6 +766,8 @@ export class SqliteAdapter implements KeryxDB {
       if ((await this.getSource(sourceId))?.scholarlyEnrolled) throw new Error("Scholarly rights are unsupported on enrolled native storage");
       return null;
     }
+    if (!hasScholarlyRights(this.db)) { assertNoOrphanedPaperMarker(this.db, sourceId); return null; }
+    const { getSqlitePaperState } = await import("./scholarly-rights");
     return getSqlitePaperState(this.db, sourceId);
   }
   async beginPaperEnrollment(sourceId: string, creator: string) {
@@ -771,17 +778,24 @@ export class SqliteAdapter implements KeryxDB {
     const terms = await sourceFetchTerms(source, { refresh: true });
     if (terms.authority !== "onchain" || terms.stale || terms.creator.toLowerCase() !== creator.toLowerCase())
       throw new Error("Fresh registered creator is required");
+    const { beginSqlitePaper } = await import("./scholarly-rights");
     beginSqlitePaper(this.db, sourceId, creator);
   }
   async submitPaper(input: import("../scholarly/rights-protocol").SignedPaperDeclaration) {
     if (this.enrolledIdentity) throw new Error("Scholarly enrollment is unsupported on enrolled native storage");
+    const { submitSqlitePaper } = await import("./scholarly-rights");
     return submitSqlitePaper(this.db, this, input);
   }
   async reviewPaper(input: import("../scholarly/rights-protocol").SignedPaperDecision) {
     if (this.enrolledIdentity) throw new Error("Scholarly review is unsupported on enrolled native storage");
+    const { reviewSqlitePaper } = await import("./scholarly-rights");
     return reviewSqlitePaper(this.db, this, input);
   }
-  async getPaperAdmission(nonce: string) { return this.enrolledIdentity ? null : getSqlitePaperAdmission(this.db, nonce); }
+  async getPaperAdmission(nonce: string) {
+    if (this.enrolledIdentity || !hasScholarlyRights(this.db)) return null;
+    const { getSqlitePaperAdmission } = await import("./scholarly-rights");
+    return getSqlitePaperAdmission(this.db, nonce);
+  }
   async admitBrowserQueryPolicy(proof:BrowserQueryPolicyProof,sessionId:string) {return admitSqliteBrowserQueryPolicy(this.db,proof,sessionId);}
   async admitBrowserSigningOriginal(input:BrowserOriginalAdmission) {return admitSqliteBrowserSigningOriginal(this.db,input);}
   async admitBrowserSourceSigningOriginal(input:import("./browser-signing-originals").BrowserSourceOriginalAdmission) {

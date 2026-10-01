@@ -95,6 +95,14 @@ it("installs scholarly capability atomically only when an author enrolls", async
   expect(hasScholarlyRights(f.raw)).toBe(false);
   expect(await f.db.getPaperState(f.source.id)).toBeNull();
   expect(await f.db.getPaperAdmission(nonce())).toBeNull();
+  // A copied retained marker without its capability/history cannot take the lazy legacy path.
+  f.raw.exec("ALTER TABLE sources ADD COLUMN scholarly_enrolled INTEGER NOT NULL DEFAULT 0");
+  f.raw.prepare("UPDATE sources SET scholarly_enrolled=1 WHERE id=?").run(f.source.id);
+  await expect(f.db.getPaperState(f.source.id)).rejects.toThrow("Scholarly history unavailable");
+  await expect(f.db.admitBrowserJournal(f.intent())).rejects.toThrow("Scholarly history unavailable");
+  expect(f.raw.prepare("SELECT count(*) AS n FROM browser_authorization_intents").get()?.n).toBe(0);
+  expect((await f.db.getSessionGrant("owner"))?.spent).toBe(0);
+  f.raw.prepare("UPDATE sources SET scholarly_enrolled=0 WHERE id=?").run(f.source.id);
   await expect(f.db.beginPaperEnrollment("missing", f.author.address)).rejects.toThrow();
   expect(hasScholarlyRights(f.raw)).toBe(false);
   await f.db.beginPaperEnrollment(f.source.id, f.author.address);
