@@ -10,7 +10,7 @@ const {
   assertEnrolledSupabaseAuthority, closeEnrolledSupabaseAdapter,
 } = requireFixture("../../lib/db/enrolled-supabase-adapter.ts") as typeof import("../../lib/db/enrolled-supabase-adapter");
 const mode = process.argv[2];
-assert(["refused-startup", "read-write", "auth-query", "readonly", "drift", "domains", "domain-auth", "domain-treasury", "quota"].includes(mode));
+assert(["refused-startup", "read-write", "auth-user", "query-metrics", "readonly", "drift", "domains", "domain-auth", "domain-treasury", "quota"].includes(mode));
 const stage = (name: string) => process.stdout.write(`STAGE ${name}\n`);
 stage("startup");
 
@@ -104,36 +104,39 @@ try {
           await assert.rejects(db.setCached(source.id, "x".repeat(1024 * 1024 + 1)));
           assert.equal(await db.getCached(source.id), "replacement synthetic body");
         } else {
-          const now = Date.now();
-          stage("create-challenge");
-          await db.createAuthChallenge("a".repeat(64), now, now + 60_000);
-          stage("consume-challenge");
-          assert.equal(await db.consumeAuthChallenge("a".repeat(64), now), true);
-          stage("reconsume-challenge");
-          assert.equal(await db.consumeAuthChallenge("a".repeat(64), now), false);
-          stage("upsert-user");
-          const user = await db.upsertUser(source.walletAddress, "creator");
-          assert.equal(user.created, true);
-          stage("read-user");
-          assert.equal((await db.getUser(source.walletAddress))?.walletAddress, source.walletAddress);
-          stage("query");
-          await db.setSyncState("fixture-sync", "first");
-          assert.equal(await db.getSyncState("fixture-sync"), "first");
-          await db.setSyncState("fixture-sync", "replacement");
-          assert.equal(await db.getSyncState("fixture-sync"), "replacement");
-          const run: QueryRun = {
-            id: "fixture-query", question: "Synthetic?", budget: 0, engine: "fixture",
-            subClaims: [], decisions: [], citations: [], answer: "Synthetic answer",
-            totalSpent: 0, totalToCreators: 0, trace: [], createdAt: source.createdAt,
-          };
-          await db.saveQueryRun(run);
-          assert.equal((await db.getQueryRun(run.id))?.answer, run.answer);
-          const streamed: QueryRun[] = [];
-          for await (const row of db.iterateRecentQueries(2)) streamed.push(row);
-          assert.deepEqual(streamed.map((row) => row.id), [run.id]);
-          stage("metrics");
-          await db.metrics();
-          await db.creatorLeaderboard();
+          if (mode === "auth-user") {
+            const now = Date.now();
+            stage("create-challenge");
+            await db.createAuthChallenge("a".repeat(64), now, now + 60_000);
+            stage("consume-challenge");
+            assert.equal(await db.consumeAuthChallenge("a".repeat(64), now), true);
+            stage("reconsume-challenge");
+            assert.equal(await db.consumeAuthChallenge("a".repeat(64), now), false);
+            stage("upsert-user");
+            const user = await db.upsertUser(source.walletAddress, "creator");
+            assert.equal(user.created, true);
+            stage("read-user");
+            assert.equal((await db.getUser(source.walletAddress))?.walletAddress, source.walletAddress);
+          } else {
+            stage("query");
+            await db.setSyncState("fixture-sync", "first");
+            assert.equal(await db.getSyncState("fixture-sync"), "first");
+            await db.setSyncState("fixture-sync", "replacement");
+            assert.equal(await db.getSyncState("fixture-sync"), "replacement");
+            const run: QueryRun = {
+              id: "fixture-query", question: "Synthetic?", budget: 0, engine: "fixture",
+              subClaims: [], decisions: [], citations: [], answer: "Synthetic answer",
+              totalSpent: 0, totalToCreators: 0, trace: [], createdAt: source.createdAt,
+            };
+            await db.saveQueryRun(run);
+            assert.equal((await db.getQueryRun(run.id))?.answer, run.answer);
+            const streamed: QueryRun[] = [];
+            for await (const row of db.iterateRecentQueries(2)) streamed.push(row);
+            assert.deepEqual(streamed.map((row) => row.id), [run.id]);
+            stage("metrics");
+            await db.metrics();
+            await db.creatorLeaderboard();
+          }
         }
       }
     } finally {

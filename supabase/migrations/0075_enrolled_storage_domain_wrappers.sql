@@ -89,7 +89,6 @@ create function public.storage_verify_runtime_authority(p_expected_identity json
 language plpgsql stable security definer set search_path=pg_catalog,pg_temp as $$
 begin
   perform keryx_storage.read_operation(p_expected_identity,'verify_runtime_authority');
-  perform keryx_storage.verify_fences();
   return jsonb_build_object('format','keryx-enrolled-runtime-authority-v1','ready',true,
     'sourceContractDigest',(select contract_digest from keryx_storage.enrolled_schema where singleton));
 end; $$;

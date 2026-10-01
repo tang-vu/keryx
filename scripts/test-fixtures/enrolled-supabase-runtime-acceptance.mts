@@ -242,7 +242,8 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
     await runChild("refused-startup", "authenticated");
     assert.equal(snapshot(), enrolled);
     await runChild("read-write");
-    await runChild("auth-query");
+    await runChild("auth-user");
+    await runChild("query-metrics");
     const afterWrites = snapshot();
     const writesBefore = bridge.counts.get("storage_set_cached") ?? 0;
     const lastUseBefore = bridge.counts.get("storage_verify_api_key_2") ?? 0;

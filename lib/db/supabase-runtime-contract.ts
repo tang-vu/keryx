@@ -1,7 +1,7 @@
-/** Strict snapshot_digest, storage_upsert_user and storage_set_sync_state source/definition projection from separate 58a271
+/** Strict snapshot_digest, storage_upsert_user, storage_set_sync_state and storage_verify_runtime_authority source/definition projection from separate 58a271
  * PG17 SOURCE. Fresh native re-export equality is required before enrollment. */
 export const SUPABASE_RUNTIME_CONTRACT = Object.freeze({
   "format": "keryx-postgres17-runtime-contract-v1",
-  "beforeDigest": "8ff7b1c87f27152e5ffa0b1abf2aa7bf73c81e0fcedc5a37b02272a61a91b61e",
-  "afterDigest": "4107eccb73e8e4215eb148d267f7eda00d9b771afd30f1d7df805e81d0bca8b5"
+  "beforeDigest": "01a839cec576079bbd11bb45db741a8740de1b72a75e6d89ca15adc93ed9c8e8",
+  "afterDigest": "fff415c0fa8d318353413c6d251d8774dbf1caeb0312e85c695491dbe6a540aa"
 });

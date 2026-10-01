@@ -92,6 +92,12 @@ that complete guarded workflows fit their actual catalog-token and payment
 deadlines. Do not lengthen those deadlines or omit authority checks to make an
 acceptance fixture pass.
 
+The authority-verification RPC checks fences through `read_operation` and
+`require_identity_read`. Omit its former second identical fence invocation:
+the STABLE path uses one SQL statement snapshot and performs no intervening
+writes. Retain the nested fence check, identity/deadline checks, mode policy
+and every separate operation/publication guard; this is no cross-call cache.
+
 ## Cache format and limits
 
 `enc:v3:` is a distinct enrolled cache envelope. Bind source ID, complete storage
