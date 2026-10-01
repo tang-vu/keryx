@@ -27,4 +27,24 @@ describe("enrolled Supabase reviewed surface", () => {
       expect(SUPABASE_ENROLLED_METHODS[name]).toBe("write");
     }
   });
+
+  it("registers every installation-generated domain wrapper with its exact read/write mode", () => {
+    const wrappers = readFileSync(new URL("../../supabase/migrations/0075_enrolled_storage_domain_wrappers.sql", import.meta.url), "utf8");
+    const cutover = readFileSync(new URL("../../supabase/migrations/0076_enrolled_storage_owner_cutover.sql", import.meta.url), "utf8");
+    const list = (name: string) => {
+      const body = wrappers.match(new RegExp(`\\b${name} text\\[\\] := array\\[([\\s\\S]*?)\\];`))?.[1];
+      expect(body).toBeDefined();
+      return [...body!.matchAll(/'([a-z][a-z0-9_]+)'/g)].map((match) => match[1]);
+    };
+    const names = list("names"), readonly = new Set(list("readonly_names"));
+    const entries = [...cutover.matchAll(/^  \('([a-z][a-z0-9_]+)',array\[(.*?)\]::text\[\],(true|false),(true|false)\)[,;]/gm)];
+    expect(names).toHaveLength(54);
+    expect(new Set(entries.map((entry) => entry[1])).size).toBe(entries.length);
+    for (const name of names) {
+      const entry = entries.find((item) => item[1] === name);
+      expect(entry, `missing operation ${name}`).toBeDefined();
+      expect(entry![4] === "true", `mode ${name}`).toBe(readonly.has(name));
+      expect(entry![2]).toMatch(/^'[a-z][a-z0-9_]*'(?:,'[a-z][a-z0-9_]*')*$/);
+    }
+  });
 });
