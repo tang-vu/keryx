@@ -1,3 +1,4 @@
+import { verifyBrowserSigningHeader } from "../payments/browser-signing-original";
 import type { DatabaseSync } from "node:sqlite";
 import type { SessionGrantRecord } from "./keryx-db";
 import {
@@ -250,6 +251,14 @@ export function admitSqliteBrowserJournal(
   const j = prepareBrowserJournal(input);
   return sqliteJournalTransaction(db, () => {
     if (!sqliteJournalActive(db)) return { status: "inactive" };
+    return admitSqliteBrowserJournalInTransaction(db, input, j);
+  });
+}
+
+/** Shared atomic insertion; caller must hold the existing journal writer transaction. */
+export function admitSqliteBrowserJournalInTransaction(db:DatabaseSync,input:BrowserJournalAdmission,j:BrowserAuthorizationJournal):BrowserJournalAdmissionResult {
+    if (!db.isTransaction || !db.prepare("SELECT 1 FROM browser_journal_writer WHERE id=1").get()) throw new Error("Browser journal transaction required");
+    if (!sqliteJournalActive(db)) return {status:"inactive"};
     const signer = j.signer.toLowerCase();
     const g = db
       .prepare(
@@ -330,7 +339,6 @@ export function admitSqliteBrowserJournal(
       "UPDATE session_grants SET spent=? WHERE lower(sess_addr)=?"
     ).run((spent + input.amountMicroUsdc) / 1e6, signer);
     return { status: "admitted", journal: j };
-  });
 }
 
 export function transitionSqliteBrowserJournal(
@@ -353,11 +361,25 @@ export function transitionSqliteBrowserJournal(
   });
 }
 
-export function signSqliteBrowserJournal(
+export async function signSqliteBrowserCanonicalOriginal(db: DatabaseSync, sessionId: string, requestId: string, header: string): Promise<boolean> {
+  const j = getSqliteBrowserJournal(db, sessionId, requestId);
+  if (!j) return false;
+  const row = db.prepare("SELECT original FROM browser_signing_originals WHERE nonce=?").get(j.nonce);
+  if (!row) return false;
+  const metadata = await verifyBrowserSigningHeader(JSON.parse(String(row.original)), header);
+  return signSqliteBrowserJournalCore(db, sessionId, requestId, metadata, true);
+}
+
+export function signSqliteBrowserJournal(db: DatabaseSync, sessionId: string, requestId: string, m: BrowserSignedMetadata): boolean {
+  return signSqliteBrowserJournalCore(db, sessionId, requestId, m, false);
+}
+
+function signSqliteBrowserJournalCore(
   db: DatabaseSync,
   sessionId: string,
   requestId: string,
-  m: BrowserSignedMetadata
+  m: BrowserSignedMetadata,
+  canonicalVerified: boolean
 ): boolean {
   return sqliteJournalTransaction(db, () => {
     const j = getSqliteBrowserJournal(db, sessionId, requestId);
@@ -372,6 +394,8 @@ export function signSqliteBrowserJournal(
       ].includes(j.phase)
     )
       return false;
+    const v2Installed = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='browser_signing_originals'").get();
+    if (v2Installed && db.prepare("SELECT 1 FROM browser_signing_originals WHERE nonce=?").get(j.nonce) && !canonicalVerified) return false;
     if (j.signedHeaderHash)
       return (
         j.signedHeaderHash === m.headerHash &&
@@ -379,6 +403,14 @@ export function signSqliteBrowserJournal(
         j.signedValidBefore === m.validBefore
       );
     if (j.phase !== "exposed") return false;
+    const installed = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='browser_signing_originals'").get();
+    if (installed) {
+      const row = db.prepare("SELECT original FROM browser_signing_originals WHERE nonce=?").get(j.nonce);
+      if (row) {
+        const original = JSON.parse(String(row.original));
+        if (m.validAfter!==original.authorization.validAfter || m.validBefore!==original.authorization.validBefore) return false;
+      }
+    }
     const expiry = new Date(Number(m.validBefore) * 1000).toISOString();
     db.prepare(
       "UPDATE browser_journal_bindings SET valid_after=?,valid_before=?,header_hash=? WHERE nonce=? AND header_hash IS NULL"

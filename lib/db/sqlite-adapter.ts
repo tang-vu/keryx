@@ -15,6 +15,9 @@ import { initializeSqliteBrowserJournal, sqliteJournalActive, sqliteJournalTrans
   upsertSqliteJournalGrant, admitSqliteBrowserJournal, getSqliteBrowserJournal, transitionSqliteBrowserJournal,
   signSqliteBrowserJournal, cancelSqlitePreparedJournal, terminalSqliteJournalPayment } from "./sqlite-browser-journal";
 import type { BrowserJournalAdmission, BrowserSignedMetadata } from "./browser-authorization-journal";
+import { initializeSqliteBrowserSigningOriginals,admitSqliteBrowserQueryPolicy,admitSqliteBrowserSigningOriginal,readSqliteBrowserSigningSnapshot,signSqliteBrowserSigningOriginal } from "./sqlite-browser-signing-originals";
+import type { BrowserQueryPolicyProof } from "../payments/browser-query-policy";
+import type { BrowserOriginalAdmission } from "./browser-signing-originals";
 import { claimSqliteSourceUpkeep, finishSqliteSourceUpkeep, type SourceUpkeepClaim, type SourceUpkeepSummary } from "./source-upkeep";
 import { prepareBrowserAuthorizationIntent, type BrowserAuthorizationIntent, type BrowserAdmissionResult } from "./browser-authorization-admission";
 import { recordSqliteWithdrawal } from "./withdrawal-records";
@@ -680,6 +683,7 @@ export class SqliteAdapter implements KeryxDB {
       ON a2a_orders(created_at) WHERE status='running' AND started_at IS NULL`,
     );
     initializeSqliteBrowserJournal(this.db);
+    initializeSqliteBrowserSigningOriginals(this.db);
   }
 
   async upsertSource(s: Source): Promise<void> {
@@ -1224,6 +1228,10 @@ export class SqliteAdapter implements KeryxDB {
   async admitBrowserJournal(input: BrowserJournalAdmission) {
     return admitSqliteBrowserJournal(this.db, input);
   }
+  async admitBrowserQueryPolicy(proof:BrowserQueryPolicyProof,sessionId:string) {return admitSqliteBrowserQueryPolicy(this.db,proof,sessionId);}
+  async admitBrowserSigningOriginal(input:BrowserOriginalAdmission) {return admitSqliteBrowserSigningOriginal(this.db,input);}
+  async readBrowserSigningSnapshot(owner:string,sessionId:string,requestId:string) {return readSqliteBrowserSigningSnapshot(this.db,owner,sessionId,requestId);}
+  async signBrowserSigningOriginal(sessionId:string,requestId:string,header:string) {return signSqliteBrowserSigningOriginal(this.db,sessionId,requestId,header);}
   async getBrowserJournal(sessionId: string, requestId: string) {
     return getSqliteBrowserJournal(this.db, sessionId, requestId);
   }

@@ -344,6 +344,10 @@ export interface KeryxDB {
   /** Historical immutable admission substrate; blocked by the active writer fence. */
   admitBrowserAuthorization(input: BrowserAuthorizationIntent): Promise<BrowserAdmissionResult>;
   browserJournalActive(): Promise<boolean>;
+  admitBrowserQueryPolicy(proof:import("../payments/browser-query-policy").BrowserQueryPolicyProof,sessionId:string):Promise<import("./browser-signing-originals").BrowserQueryAdmissionResult>;
+  admitBrowserSigningOriginal(input:import("./browser-signing-originals").BrowserOriginalAdmission):Promise<import("./browser-signing-originals").BrowserOriginalAdmissionResult>;
+  readBrowserSigningSnapshot(owner:string,sessionId:string,requestId:string):Promise<import("./browser-signing-originals").BrowserSigningSnapshot|null>;
+  signBrowserSigningOriginal(sessionId:string,requestId:string,header:string):Promise<boolean>;
   browserSignerConfirmedSpendMicro(signer:string): Promise<number>;
   activateBrowserJournal(): Promise<void>;
   admitBrowserJournal(input: import("./browser-authorization-journal").BrowserJournalAdmission): Promise<import("./browser-authorization-journal").BrowserJournalAdmissionResult>;
