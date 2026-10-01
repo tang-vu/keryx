@@ -116,6 +116,22 @@ export async function startOwnedSupabaseHttpsBridge(curlContainer: string) {
               const parsed: unknown = JSON.parse(output.subarray(0, split).toString("utf8"));
               if (parsed && typeof parsed === "object" && "code" in parsed && typeof parsed.code === "string" &&
                 /^[0-9A-Z]{5}$/.test(parsed.code)) failureCategory += `-sqlstate-${parsed.code}`;
+              if (operation === "storage_browser_signing_admit_source_original" && parsed && typeof parsed === "object" &&
+                "code" in parsed && parsed.code === "P0001" && "message" in parsed) {
+                const sourceRefusals = new Map<unknown, string>([
+                  ["browser source observation expired", "observation-expired"],
+                  ["browser source context refused", "context-refused"],
+                  ["browser source list price refused", "list-price-refused"],
+                  ["browser source offer refused", "offer-refused"],
+                  ["browser source price mode refused", "price-mode-refused"],
+                  ["browser source endpoint refused", "endpoint-refused"],
+                  ["browser signing journal differs", "journal-differs"],
+                  ["browser signing original differs", "original-differs"],
+                  ["browser signing original refused", "original-refused"],
+                  ["browser signing original conflict", "original-conflict"],
+                ]);
+                failureCategory += `-source-${sourceRefusals.get(parsed.message) ?? "unclassified"}`;
+              }
             } catch { /* Never retain provider error messages or response bodies. */ }
           }
           response.writeHead(status, { "Content-Type": "application/json" }).end(output.subarray(0, split));
