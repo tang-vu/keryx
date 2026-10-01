@@ -215,6 +215,21 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
     registry.assertHealthy();
     await registry.close();
     registry = undefined;
+    const beforeMissingCounter = snapshot();
+    sql(`do $missing$ begin
+      begin
+        delete from keryx_storage.cache_quota;
+        set local role service_role;
+        perform public.storage_set_cached(${literal(identity)},${literal(retainedCacheRow)});
+        raise exception 'synthetic missing quota unexpectedly accepted';
+      exception when others then
+        if sqlerrm <> 'storage cache quota refused' then raise; end if;
+      end;
+    end $missing$;`);
+    assert.equal(snapshot(), beforeMissingCounter,
+      "Missing quota counter refusal rolls back the whole financial/cache snapshot");
+    assert.equal(sql("select count(*) from keryx_storage.writer"), "0");
+    process.stdout.write("PASS native missing quota refusal, full rollback and private capability cleanup\n");
     await runChild("drift");
     assert.equal(sql("select count(*) from keryx_storage.writer"), "0");
     process.stdout.write("PASS native HTTPS closed factory, role/identity/deadline/read-only/provenance/drift gates\n");
