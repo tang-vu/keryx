@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import type { Citation, EvidenceRecord, PaymentRecord } from "@/lib/types";
 import { paymentSettlementStatus } from "@/lib/payments/payment-state";
 import { fmtUsdc } from "./phase-style";
+import { ScholarlyMetadataDetails } from "./scholarly-metadata";
 
 interface Props {
   queryId: string;
@@ -107,7 +108,7 @@ export function CitationEvidencePanel({ queryId, citation, evidence, payments, o
           {citation.itemTitle ?? citation.sourceName}
         </h2>
         <p className="mt-2 font-mono text-xs text-ink-3">Publication: {citation.sourceName}</p>
-        <p className="mt-1 font-mono text-xs text-ink-3">Author name: not stored in this dispatch</p>
+        {citation.scholarly ? <ScholarlyMetadataDetails metadata={citation.scholarly} /> : <p className="mt-1 font-mono text-xs text-ink-3">Author name: not stored in this dispatch</p>}
         {isPublicReference && (
           <div className="mt-4 border-l-2 border-line pl-4">
             <p className="font-mono text-xs text-ink-3">Free public reference · no creator payment</p>

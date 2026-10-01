@@ -11,6 +11,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import type { QueryRun, PaymentRecord } from "@/lib/types";
 import type { AskMeta } from "@/lib/hooks/use-ask-stream";
 import { AnswerMarkdown } from "./answer-markdown";
+import { ScholarlyMetadataDetails } from "./scholarly-metadata";
 import { ModeBadge } from "./mode-badge";
 import { SectionHeading } from "./banknote";
 import { ConfidenceBadge } from "./confidence-badge";
@@ -131,6 +132,7 @@ export function AnswerCard({ run, meta, permalink, payments = [] }: { run: Query
                             {c.webProvenance ? ` · extracted ${c.webProvenance.extraction} text${c.webProvenance.truncated ? " (bounded excerpt)" : ""}` : c.publicDeliveryKind ? ` · RSS ${c.publicDeliveryKind === "full_text" ? "feed full text" : c.publicDeliveryKind.replaceAll("_", " ")}` : " · RSS feed body"}
                           </span>
                         )}
+                        {c.scholarly && <ScholarlyMetadataDetails metadata={c.scholarly} />}
                       </span>
                       <button type="button" onClick={(event) => openCitation(c.marker, event.currentTarget)} className="font-mono text-xs text-seal underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-seal">Evidence</button>
                       <span className="shrink-0 font-mono text-[11px] text-ink-3">

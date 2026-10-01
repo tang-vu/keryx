@@ -17,7 +17,7 @@ export function cacheEncryptionRequired(): boolean {
 }
 
 export function isEncryptedCacheValue(value: string): boolean {
-  return value.startsWith(ENCRYPTED_PREFIX);
+  return value.startsWith(ENCRYPTED_PREFIX) || value.startsWith("enc:v3:");
 }
 
 /** DB adapters call this before every cache write; callers continue to work with plaintext. */
@@ -36,6 +36,7 @@ export function sealCacheText(text: string): string {
 /** Reads v2 encrypted rows plus legacy/raw rows so deploy-time migration is backward compatible. */
 export function openCacheText(value: string | null | undefined): string | null {
   if (!value) return value ?? null;
+  if (value.startsWith("enc:v3:")) throw new Error("Enrolled cache requires its storage-bound reader");
   if (value.startsWith(PLAINTEXT_PREFIX)) return value.slice(PLAINTEXT_PREFIX.length);
   if (!value.startsWith(ENCRYPTED_PREFIX)) return value;
   if (!hasContentKey()) throw new Error("CONTENT_MASTER_KEY is unavailable for encrypted cache read");

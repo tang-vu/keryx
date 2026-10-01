@@ -24,7 +24,7 @@ import {
   serializeBrowserSigningHeader,
 } from "../payments/browser-signing-original";
 import {
-  admitSqliteBrowserSourceSigningOriginal,
+  admitSqliteBrowserSourceSigningOriginal as nativeAdmitBrowserSourceSigningOriginal,
   initializeSqliteBrowserSourceContext,
 } from "./sqlite-browser-source-context";
 import type { BrowserSourceOriginalAdmission } from "./browser-signing-originals";
@@ -68,38 +68,73 @@ async function fixtureDeadline<T>(
     clearTimeout(timer);
   }
 }
-const fixtures: {
-  db: SqliteAdapter;
-  native: DatabaseSync;
-  server: Server;
+type SetupStage = "constructor" | "init" | "grant" | "activation" | "source" | "items" | "query-sign" | "query-admit" | "server-listen" | "authority-resolve" | "original-admit";
+async function setupStage<T>(stage: SetupStage, operation: () => T | Promise<T>): Promise<T> {
+  const started = performance.now();
+  const emit = (phase: "start" | "end" | "failed") => fs.writeSync(1,
+    `[source-context-fixture] stage=${stage} phase=${phase} elapsedMs=${Math.min(600000, Math.max(0, Math.round(performance.now() - started)))}\n`);
+  emit("start");
+  try { const value = await operation(); emit("end"); return value; }
+  catch (error) { emit("failed"); throw error; }
+}
+function admitSqliteBrowserSourceSigningOriginal(...args: Parameters<typeof nativeAdmitBrowserSourceSigningOriginal>) {
+  return setupStage("original-admit", () => nativeAdmitBrowserSourceSigningOriginal(...args));
+}
+type FixtureResources = {
+  db?: SqliteAdapter;
+  native?: DatabaseSync;
+  server?: Server;
   folder: string;
-}[] = [];
-afterEach(async () => {
+  closed: boolean;
+};
+const fixtures: FixtureResources[] = [];
+async function closeFixture(f: FixtureResources) {
+  f.closed = true;
+  let failed = false;
   try {
-    for (const cleanup of pendingFixtureCleanup.splice(0)) await cleanup();
+    f.server?.closeAllConnections();
+    if (f.server?.listening) await new Promise<void>((resolve, reject) =>
+      f.server!.close((error) => (error ? reject(error) : resolve())));
+  } catch { failed = true; }
+  try { f.native?.close(); } catch { failed = true; }
+  try { f.db?.close(); } catch { failed = true; }
+  try { fs.rmSync(f.folder, { recursive: true, force: true }); } catch { failed = true; }
+  if (failed) throw new Error("Fixture cleanup refused");
+}
+afterEach(async () => {
+  let failed = false;
+  try {
+    for (const cleanup of pendingFixtureCleanup.splice(0)) {
+      try { await cleanup(); } catch { failed = true; }
+    }
   } finally {
     for (const f of fixtures.splice(0)) {
-      f.server.closeAllConnections();
-      if (f.server.listening)
-        await new Promise<void>((resolve, reject) =>
-          f.server.close((error) => (error ? reject(error) : resolve()))
-        );
-      f.native.close();
-      f.db.close();
-      fs.rmSync(f.folder, { recursive: true, force: true });
+      try { await closeFixture(f); } catch { failed = true; }
     }
   }
+  if (failed) throw new Error("Fixture cleanup refused");
 });
-async function setup() {
+async function setup(failStage?: "grant") {
   const folder = fs.mkdtempSync(
     path.join(os.tmpdir(), "keryx-source-context-")
   );
+  const resources: FixtureResources = { folder, closed: false };
+  fixtures.push(resources);
+  const checked = async <T>(stage: SetupStage, operation: () => T | Promise<T>) => {
+    if (resources.closed) throw new Error("Fixture closed");
+    const result = await setupStage(stage, () => {
+      if (stage === failStage) throw new Error("Injected fixture setup failure");
+      return operation();
+    });
+    if (resources.closed) throw new Error("Fixture closed");
+    return result;
+  };
   const file = path.join(folder, "synthetic.sqlite");
-  const db = new SqliteAdapter(file);
-  await db.init();
+  const db = await checked("constructor", () => resources.db = new SqliteAdapter(file));
+  await checked("init", () => db.init());
   const epoch = crypto.randomUUID();
   const sessionId = owner.address.toLowerCase();
-  await db.upsertSessionGrant({
+  await checked("grant", () => db.upsertSessionGrant({
     sessionId,
     sessAddr: signer.address,
     ownerAddr: owner.address,
@@ -107,11 +142,10 @@ async function setup() {
     expiry: Date.now() + 120000,
     txHash: "synthetic",
     grantEpoch: epoch,
-  });
-  await db.activateBrowserJournal();
-  const native = new DatabaseSync(file);
-  const server = createServer();
-  fixtures.push({ db, native, server, folder });
+  }));
+  await checked("activation", () => db.activateBrowserJournal());
+  const native = resources.native = new DatabaseSync(file);
+  const server = resources.server = createServer();
   native.exec(
     "PRAGMA busy_timeout=5000; UPDATE browser_signing_v2_control SET active=1 WHERE id=1"
   );
@@ -140,8 +174,8 @@ async function setup() {
     content: "Synthetic body",
     link: "https://source.example/item",
   };
-  await db.upsertSource(source);
-  await db.addItems([item]);
+  await checked("source", () => db.upsertSource(source));
+  await checked("items", () => db.addItems([item]));
   const policy: BrowserQueryPolicy = {
     protocol: "durable-v2",
     service: "https://keryx.cc",
@@ -157,13 +191,14 @@ async function setup() {
     jobLimit: 2,
     expiresAt: Date.now() + 60000,
   };
-  const query = await db.admitBrowserQueryPolicy(
+  const querySignature = await checked("query-sign", () => owner.signTypedData(browserQueryPolicyTypedData(policy)));
+  const query = await checked("query-admit", () => db.admitBrowserQueryPolicy(
     {
       policy,
-      signature: await owner.signTypedData(browserQueryPolicyTypedData(policy)),
+      signature: querySignature,
     },
     sessionId
-  );
+  ));
   if (query.status !== "admitted") throw new Error("Synthetic query refused");
   const version = sourceItemContentVersion(item);
   const input: BrowserSourceOriginalAdmission = {
@@ -275,8 +310,14 @@ async function setup() {
     response.writeHead(200, { "Content-Type": "application/json" });
     response.end(JSON.stringify({ jsonrpc: "2.0", id: payload.id, result }));
   });
-  server.listen(0, "127.0.0.1");
-  await once(server, "listening");
+  await checked("server-listen", async () => {
+    server.listen(0, "127.0.0.1");
+    await once(server, "listening");
+    if (resources.closed) {
+      server.closeAllConnections();
+      await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+    }
+  });
   const address = server.address();
   if (!address || typeof address === "string")
     throw new Error("Fixture unavailable");
@@ -303,7 +344,7 @@ async function setup() {
     db,
     native,
     input,
-    authority,
+    authority: { resolve: (input: BrowserSourceOriginalAdmission) => checked("authority-resolve", () => authority.resolve(input)) },
     rpc,
     snapshot,
     rpcCalls: () => rpcCalls,
@@ -343,6 +384,20 @@ async function discounted(
   input.journal.payment.listPriceUsdc = 0.001;
   return input;
 }
+it("owns and closes native resources when setup fails before grant installation", async () => {
+  await expect(setup("grant")).rejects.toThrow("Injected fixture setup failure");
+  const resource = fixtures.pop();
+  if (!resource?.db) throw new Error("Fixture unavailable");
+  const db = resource.db;
+  const folder = resource.folder;
+  expect(fs.existsSync(folder)).toBe(true);
+  expect(resource.native).toBeUndefined();
+  expect(resource.server).toBeUndefined();
+  await closeFixture(resource);
+  expect(resource.closed).toBe(true);
+  expect(fs.existsSync(folder)).toBe(false);
+  await expect(db.getSource("source")).rejects.toThrow();
+});
 it("installs floor2, refuses premature v3, then atomically retains original/context with exact header callback and historical replay", async () => {
   const f = await setup();
   const before = f.snapshot();

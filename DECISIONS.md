@@ -1,5 +1,65 @@
 # Keryx — Decision Log
 
+**Observed scholarly metadata with separately grounded paper reads** — *2026-10-01*
+
+The owner requested DOI integration and scholarly repositories, then supported
+developing payments for research authors who choose to join. Ship the bounded
+public discovery/read slice first: exact Crossref DOI matching, opt-in Crossref
+bibliographic/arXiv search, and provider metadata snapshots bound to selected
+original reads. Prefer exact versioned arXiv PDFs; retain byte/page/text caps and
+make a separately counted abstract-page fallback explicit. Metadata-only previews
+cannot qualify as paper evidence, author control, distribution rights or payees.
+Journal type does not establish peer review; preprint and read limits remain visible.
+For grounding confidence, observed shared-DOI work links conservatively merge existing
+publisher groups without discarding exact versions or treating distinct works on one
+domain as independent publishers. Metadata links can only reduce apparent diversity;
+missing DOI is not guessed, and grouping does not prove scientific independence.
+
+Preserve supplied structured Crossref author names, repository versions, observation
+time and read scope in citations, receipts and browser BibTeX/RIS. Never infer DOI,
+authors, journal or rights from a model answer or silently enrich archived runs.
+Reuse public document transport, literal evidence and creator payment gates. Private
+jobs and unattended engines make no new scholarly calls. Process-local vendor
+pacing and shared operation/read caps fail gracefully without queues or retries.
+
+The author-earnings direction needs independent identity, version-specific rights,
+coauthor consent and payout acceptance gates before opt-in registration can earn.
+Existing feed control and DOI metadata cannot substitute for them. The staged
+[paid scholarly paper plan](docs/paid-scholarly-papers.md) remains proposed; this
+release adds no author-claim payment flow. Reversible: remove discovery and display;
+optional observed metadata remains readable without changing payment authority.
+See [scholarly research](docs/scholarly-research.md).
+
+**D-289** — Admit the complete application backend before issuing private delivery evidence — *2026-10-01*
+
+A verified connection or a caller-supplied adapter does not establish which
+deployment owns the retained payment original. Add closed runtime factories that
+derive the pinned deployment manifest themselves and publish the complete reviewed
+database interface only after actual identity and schema readiness checks. Keep
+provenance private to the factory; an object shape, copied facade or ordinary
+adapter cannot qualify. The existing deployed selector remains authoritative until
+a separately verified domain cutover.
+
+Share existing adapter business logic instead of copying its method surface.
+SQLite composes the admitted native connection with an exact application schema
+profile. PostgreSQL uses fixed identity-checked domain RPCs and protected writer
+capabilities; an enrolled call never executes the legacy raw-client closure.
+Guard computed results, early returns and iterator publication as well as SQL.
+Read-only access denies every reviewed mutator, including methods that update
+usage while checking credentials. Initialization inspects readiness and never
+migrates, repairs or normalizes historical authority.
+
+Use a distinct authenticated cache envelope bound to source, complete storage
+identity and format, including both wrapped key and body. Preserve the legacy
+envelope semantics. Cache bounds must survive atomic writes and restart, and
+cache membership supplies no paid-read or article-version provenance. A guard
+failure after a committed write requires reconciliation; it cannot imply rollback.
+
+This is staged source work, not enrollment, private delivery issuance, selector
+activation or mainnet authorization. Native backend, role, race, recovery and
+deployment evidence remain explicit gates. See
+[enrolled runtime backend acceptance](docs/enrolled-runtime-backends.md).
+
 **D-288** - Reuse recorded research for academic and technical/market workflows -
 *The user selected both researcher segments; existing receipts and claim evidence
 were useful but did not provide reference-manager imports or a comparison export.*

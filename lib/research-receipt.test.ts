@@ -15,6 +15,18 @@ it("roundtrips immutable public web provenance through a portable receipt", () =
   expect(exported.payload.citations[0].webProvenance).toEqual(provenance); expect(verifyResearchReceipt(exported).valid).toBe(true);
 });
 
+it("retains a deep immutable scholarly metadata snapshot and exact abstract-only scope without payout authority", () => {
+  const original = run(); const scholarly = { provider: "crossref" as const, recordUrl: "https://api.crossref.org/works/10.1234%2Fpaper", retrievedAt: "2026-10-01T00:00:00Z",
+    title: "Observed paper", authors: ["Ada Lovelace"], authorNames: [{ given: "Ada", family: "Lovelace" }], doi: "10.1234/paper", workType: "journal-article" as const,
+    peerReview: "unknown" as const, evidenceScope: "publisher-page" as const };
+  original.citations[0] = { ...original.citations[0], sourceKind: "public-reference", scholarly, reward: 0 };
+  const receipt = buildResearchReceipt(original, []), exported = JSON.parse(JSON.stringify(receipt));
+  expect(exported.payload.citations[0].scholarly).toEqual(scholarly); expect(verifyResearchReceipt(exported).valid).toBe(true);
+  scholarly.authors[0] = "Later changed name"; scholarly.authorNames[0].family = "Changed";
+  expect(receipt.payload.citations[0].scholarly?.authors[0]).toBe("Ada Lovelace");
+  expect(receipt.payload.citations[0].scholarly?.authorNames?.[0].family).toBe("Lovelace");
+});
+
 function run(overrides: Partial<QueryRun> = {}): QueryRun {
   return {
     id: "dispatch-1",

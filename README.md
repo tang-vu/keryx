@@ -70,7 +70,13 @@ the model reasons about money and shows its work, streamed live to the UI:
   and itemizes the source/evidence/coverage/settled-payment delta after a reader explicitly re-asks.
 - **Researcher exports** — import recorded cited-article references as BibTeX or RIS into Zotero,
   and compare claim-level excerpts in a research evidence matrix with spreadsheet CSV.
-  Missing scholarly metadata stays explicit; see [researcher exports](docs/researcher-exports.md).
+  Observed scholarly records include supplied authors/DOI/journal metadata and read limits;
+  missing fields stay explicit. See [researcher exports](docs/researcher-exports.md).
+- **DOI and scholarly discovery** — resolve up to two exact Crossref DOIs from a question,
+  or opt into Crossref/arXiv searches. Read selected original publisher pages and bounded
+  versioned arXiv PDFs, with explicit abstract-only fallback. Metadata and public papers
+  carry no creator payout authority. See [scholarly research](docs/scholarly-research.md)
+  and the separate [proposed author opt-in payment plan](docs/paid-scholarly-papers.md).
 - **Portable research receipts** — every permalink exports one deterministic JSON bundle containing
   its answer hash, BUY/SKIP/CACHE decisions, exact article versions, claim evidence and sanitized
   Circle settlement snapshot. Retain its SHA-256 to detect later changes; the self-check does not

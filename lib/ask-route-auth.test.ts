@@ -36,6 +36,12 @@ describe("browser co-sign ask authentication", () => {
     vi.clearAllMocks();
   });
 
+  it("rejects nonboolean scholarly flags before grant lookup or streaming", async () => {
+    const response = await POST(rawRequest({ question: "Explain a paper", scholarly: "true", sessionId: OWNER }));
+    expect(response.status).toBe(400); expect(await response.json()).toEqual({ error: "scholarly must be a boolean" });
+    expect(mocks.getGrant).not.toHaveBeenCalled();
+  });
+
   it('refuses a literal old ask body before SSE, grant reads, or signature exposure',async()=>{
     const response=await POST(rawRequest({question:'q',sessionId:OWNER}));
     expect(response.status).toBe(409);

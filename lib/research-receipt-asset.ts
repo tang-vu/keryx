@@ -4,6 +4,16 @@ import type { ReceiptAsset } from "./research-receipt-types";
 export function receiptAsset(value: Partial<SourceItemIdentity>): ReceiptAsset {
   return {
     ...(value.webProvenance ? { webProvenance: { ...value.webProvenance } } : {}),
+    ...(value.scholarly ? { scholarly: {
+      provider: value.scholarly.provider, recordUrl: value.scholarly.recordUrl, retrievedAt: value.scholarly.retrievedAt,
+      title: value.scholarly.title, authors: [...value.scholarly.authors],
+      authorCount: value.scholarly.authorCount, authorsTruncated: value.scholarly.authorsTruncated,
+      ...(value.scholarly.authorNames ? { authorNames: value.scholarly.authorNames.map(name => ({ given: name.given, family: name.family, literal: name.literal })) } : {}),
+      doi: value.scholarly.doi, arxivId: value.scholarly.arxivId, workType: value.scholarly.workType,
+      journal: value.scholarly.journal, publishedDate: value.scholarly.publishedDate, volume: value.scholarly.volume,
+      issue: value.scholarly.issue, pages: value.scholarly.pages, peerReview: value.scholarly.peerReview,
+      evidenceScope: value.scholarly.evidenceScope,
+    } } : {}),
     ...(value.sourceKind === "public-reference" ? { sourceKind: value.sourceKind, publicDeliveryKind: value.publicDeliveryKind } : {}),
     ...(value.itemId ? { itemId: value.itemId } : {}),
     ...(value.itemTitle ? { itemTitle: value.itemTitle } : {}),

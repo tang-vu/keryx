@@ -6,6 +6,19 @@
   mobile version and bounded desktop placement. Keep local country assets,
   reduced-motion support, and the question and spending controls accessible.
 
+### DOI and scholarly research (2026-10-01)
+
+- Resolve up to two exact Crossref DOI records from a question; opt into bounded
+  Crossref bibliographic and arXiv paper search from the public composer.
+- Read selected original publisher pages or exact versioned arXiv PDFs within
+  existing limits; surface failures and explicitly counted abstract-only fallback.
+- Preserve observed author/DOI/journal metadata, repository version and read scope
+  through citations, evidence, receipts and BibTeX/RIS without guessing peer review.
+- Keep public scholarly evidence outside creator payout authority. Author opt-in
+  payments have a separate proposed rights/identity/economic plan, not a new shipped
+  author-claim flow. Live bounded PDF/abstract extraction was observed; oversized
+  PDFs, publisher availability and accuracy remain limitations.
+
 ### Chat-first reading interface (2026-10-01)
 
 - Start research through the same question-led conversation on `/` and `/research`.

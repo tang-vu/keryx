@@ -7,9 +7,12 @@ on screen; they make no enrichment request or payment and do not upload to a ref
 ## References for papers and reference managers
 
 Under **Reference export**, download BibTeX (`.bib`) or RIS (`.ris`). Import either file
-into Zotero through **File → Import**. RIS records use the web-page type; BibTeX uses
-`@misc`. The files contain only recorded article titles, article links, available publication
-dates and a provenance note identifying the source and recorded content version.
+into Zotero through **File → Import**. Ordinary web records use RIS `WEB` and BibTeX
+`@misc`. The files contain recorded article titles, links, available publication dates
+and a provenance note identifying the source and recorded content version.
+Bound-to-read [scholarly metadata](scholarly-research.md) also includes supplied authors,
+DOI, journal, volume, issue and pages. Journal records use `JOUR` / `@article`; preprints
+use `UNPB` / `@misc`, with exact arXiv versions and explicit read limitations.
 
 Only cited articles appear, not every discovered or purchased source. A citation without
 a usable HTTP(S) article link or title is omitted and the reading displays the omitted count.
@@ -18,8 +21,10 @@ identities are collapsed within a file; different item identities or content ver
 
 Review the imported metadata before citing it in a paper. Registered publication names are not
 necessarily article authors. These exports do not infer authors, DOI, journal, peer-review status,
-volume or pages, and do not perform a literature search or Zotero account synchronization.
-DOI resolution and scholarly metadata enrichment remain future work.
+volume or pages. Metadata comes only from an observed provider snapshot tied to that
+run's read document; older archives are not silently enriched. Provider publication
+type does not prove peer review or author distribution rights. The export itself
+does not search for literature or synchronize a Zotero account.
 
 ## Evidence for technical and market research
 
