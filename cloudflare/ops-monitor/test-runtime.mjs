@@ -11,7 +11,6 @@ const outbound = [];
 let healthStatus = 200;
 let unavailableStatus = 404;
 let telegramMode = "confirmed";
-let scheduledTime = Math.floor(Date.now() / 300_000) * 300_000;
 let runtime;
 
 function createRuntime(notifications = "true", runId = "runtime-acceptance") {
@@ -105,7 +104,10 @@ try {
   assert.equal(untouched.consumed, false);
   // Redirect cannot escape fixed production health URL. Parallel/redelivered Cron slots claim once.
   healthStatus = 302;
-  await Promise.all([cron(scheduledTime), cron(scheduledTime)]);
+  // Capture just before dispatch: a module-load slot boundary can become stale during setup.
+  const scheduledTime = Date.now();
+  const cronResponses = await Promise.all([cron(scheduledTime), cron(scheduledTime)]);
+  assert.deepEqual(cronResponses.map(response => response.status), [200, 200]);
   assert.equal(outbound.filter(n => n.method === "GET").length, 7);
   assert.equal((await (await call("/status")).json()).failures, 1);
   assert.equal((await cron(scheduledTime - 300_000)).status, 503);
