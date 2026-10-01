@@ -5,6 +5,7 @@ import { createRequire } from "node:module";
 import type { QueryRun, Source } from "../../lib/types";
 
 const requireFixture = createRequire(import.meta.url);
+const { StorageIdentityRefused } = requireFixture("../../lib/db/storage-identity.ts") as typeof import("../../lib/db/storage-identity");
 const {
   createEnrolledSupabaseAdapter, createReadonlyEnrolledSupabaseAdapter,
   assertEnrolledSupabaseAuthority, closeEnrolledSupabaseAdapter,
@@ -135,6 +136,7 @@ try {
             assert.deepEqual(streamed.map((row) => row.id), [run.id]);
             stage("metrics");
             await db.metrics();
+            stage("creator-leaderboard");
             await db.creatorLeaderboard();
           }
         }
@@ -151,10 +153,13 @@ try {
   const record = error as { name?: unknown; code?: unknown };
   const category = error instanceof assert.AssertionError ? "assertion"
     : record.name === "EnrolledSupabaseWriteOutcomeUnknown" ? "write-uncertain"
-    : record.name === "StorageIdentityRefused" ? "storage-refused"
+    : error instanceof StorageIdentityRefused ? "storage-refused"
     : error instanceof TypeError ? "type-error" : "operation-refused";
   const code = record.code === "ERR_ASSERTION" ? "ERR_ASSERTION"
     : typeof record.code === "string" && /^[0-9A-Z]{5}$/.test(record.code) ? record.code : "none";
-  process.stderr.write(`FIXTURE_FAILURE category=${category} code=${code}\n`);
+  const reasons = new Set(["invalid_operation", "identity_unavailable", "identity_mismatch",
+    "adapter_not_initialized", "readonly_operation", "cache_migration_required"]);
+  const reason = error instanceof StorageIdentityRefused && reasons.has(error.reason) ? error.reason : "none";
+  process.stderr.write(`FIXTURE_FAILURE category=${category} code=${code} reason=${reason}\n`);
   process.exitCode = 1;
 }

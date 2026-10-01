@@ -7,6 +7,25 @@ import { createServer } from "node:https";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { once } from "node:events";
+import type { IncomingMessage } from "node:http";
+
+/** Test-only request phase bound. Response work retains its separate deadlines. */
+export async function readOwnedFixtureRequestBody(request: IncomingMessage, bodyTimeoutMs = 5_000) {
+  assert(Number.isSafeInteger(bodyTimeoutMs) && bodyTimeoutMs > 0 && bodyTimeoutMs <= 5_000);
+  const body: Buffer[] = [];
+  let bytes = 0;
+  request.setTimeout(bodyTimeoutMs, () => request.destroy());
+  for await (const part of request) {
+    const chunk = Buffer.from(part);
+    bytes += chunk.length;
+    if (bytes > 4 * 1024 * 1024) throw new Error("Synthetic bridge request bound");
+    body.push(chunk);
+  }
+  // IncomingMessage.setTimeout installs a socket timer: leaving it active also
+  // kills a fully received request while SQL response work is still running.
+  request.setTimeout(0);
+  return Buffer.concat(body);
+}
 
 export async function startOwnedSupabaseHttpsBridge(curlContainer: string) {
   assert(/^keryx-enrolled-reference-[a-f0-9-]+-curl$/.test(curlContainer));
@@ -53,15 +72,7 @@ export async function startOwnedSupabaseHttpsBridge(curlContainer: string) {
           if (typeof authorization !== "string" || !/^Bearer [A-Za-z0-9_.-]{1,2048}$/.test(authorization)) {
             response.writeHead(401).end(); return;
           }
-          const body: Buffer[] = [];
-          let bytes = 0;
-          request.setTimeout(5_000, () => request.destroy());
-          for await (const part of request) {
-            const chunk = Buffer.from(part);
-            bytes += chunk.length;
-            if (bytes > 4 * 1024 * 1024) throw new Error("Synthetic bridge request bound");
-            body.push(chunk);
-          }
+          const body = await readOwnedFixtureRequestBody(request);
           const operation = path.slice("/rest/v1/rpc/".length);
           diagnosticOperation = diagnosticOperations.has(operation) ? operation : "other";
           startedAt = performance.now();
@@ -82,7 +93,7 @@ export async function startOwnedSupabaseHttpsBridge(curlContainer: string) {
                   ? `process-exit-${error.code}` : "process-unavailable";
               reject(new Error("Synthetic bridge unavailable"));
             });
-            child.stdin!.end(Buffer.concat(body));
+            child.stdin!.end(body);
           });
           const split = output.lastIndexOf(10);
           const status = Number(output.subarray(split + 1).toString("ascii"));

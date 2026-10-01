@@ -202,7 +202,7 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
       void completion.then(() => { childTerminal = true; });
       let output = "";
       let stage = "startup";
-      const stages = new Set(["startup", "provenance", "readonly", "drift", "source-write", "cache", "auth", "oversize-cache", "create-challenge", "consume-challenge", "reconsume-challenge", "upsert-user", "read-user", "query", "metrics", "domains", "quota", "close"]);
+      const stages = new Set(["startup", "provenance", "readonly", "drift", "source-write", "cache", "auth", "oversize-cache", "create-challenge", "consume-challenge", "reconsume-challenge", "upsert-user", "read-user", "query", "metrics", "creator-leaderboard", "domains", "quota", "close"]);
       child.stdout!.on("data", (part) => {
         output += part;
         if (output.length > 8192) child.kill();
@@ -213,8 +213,8 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
       child.stderr!.on("data", (part) => {
         errorOutput += part;
         if (errorOutput.length > 8192) child.kill();
-        const match = errorOutput.match(/^FIXTURE_FAILURE category=(assertion|write-uncertain|storage-refused|type-error|operation-refused) code=(ERR_ASSERTION|[0-9A-Z]{5}|none)$/m);
-        if (match) diagnostic = ` failure=${match[1]} code=${match[2]}`;
+        const match = errorOutput.match(/^FIXTURE_FAILURE category=(assertion|write-uncertain|storage-refused|type-error|operation-refused) code=(ERR_ASSERTION|[0-9A-Z]{5}|none) reason=(invalid_operation|identity_unavailable|identity_mismatch|adapter_not_initialized|readonly_operation|cache_migration_required|none)$/m);
+        if (match) diagnostic = ` failure=${match[1]} code=${match[2]} reason=${match[3]}`;
       });
       if (mode === "drift") {
         const deadline = performance.now() + 30_000;
