@@ -1,5 +1,22 @@
 # Keryx Project Changelog
 
+### Chat-first reading interface (2026-10-01)
+
+- Start research through the same question-led conversation on `/` and `/research`.
+  Keep prior turns while the page is open, show cited reports before expandable
+  decision/payment details, and preserve the existing paid-package and recovery
+  workspace as a secondary section.
+- Show the source-USDC cap before sending, keep budget/model controls available,
+  and distinguish the payer and settled, pending, failed, unverified and simulated
+  amounts. Public search disclosure and separate search/model costs remain visible.
+- Copy or download Markdown reports with citations, document provenance and
+  evidence/payment states. Follow-ups carry the previous question only; starting
+  new research clears that anchor. Conversation history does not survive reload.
+- Isolate stale client responses from newer requests. Stopping preserves observed
+  evidence and does not imply a refund; expired sessions retain the existing refusal
+  rather than silently switching payers. Signing and backend payment authority are
+  unchanged. Browser fixtures are simulations, not independent traction.
+
 ### Broad web research (2026-10-01)
 
 - Discover public documents through a configured search provider alongside registered
