@@ -1,3 +1,4 @@
+import { exportsFromCheckedReceipt } from "../research/receipt-exports";
 import { open, lstat, realpath, rename, unlink } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -92,7 +93,7 @@ async function validateSnapshot(directory: string, context: Context, raw: unknow
   if (verification.digest !== snapshot.receiptDigest) throw new Error("Saved receipt digest differs");
   return { savedAt: snapshot.savedAt, answer: snapshot.job.answer, question: intent.request.question,
     citations: citationsFromReceipt(receipt), paymentAtCheck: snapshot.paymentAtCheck,
-    receiptDigest: snapshot.receiptDigest,
+    receiptDigest: snapshot.receiptDigest, researchExports: exportsFromCheckedReceipt(receipt),
     authority: "Local files rechecked against the original task and saved receipt. The original HTTPS digest observation cannot be reauthenticated offline; payment and creator settlement remain seller-reported." };
 }
 
@@ -158,5 +159,21 @@ export function privateOperatorBrief(result: NonNullable<Awaited<ReturnType<type
     for (const citation of result.citations) lines.push(`- ${markdownText(citation.marker)} ${markdownText(citation.sourceName)}`);
     lines.push("");
   }
+  if (result.researchExports) {
+    lines.push("## Recorded research exports", "", "These recorded references and bounded excerpts do not prove settlement or factual accuracy. Missing article metadata is omitted; no online enrichment was performed.", "");
+    for (const [name, content] of [["BibTeX", result.researchExports.bibtex.content], ["RIS", result.researchExports.ris.content], ["Evidence CSV", result.researchExports.evidenceCsv]]) {
+      lines.push(`### ${name}`, "", content ? inertAnswer(content) : "No usable recorded article identity.", "");
+    }
+  }
   return lines.join("\n");
+}
+
+export const operatorResearchExportFormat = z.enum(["brief", "bibtex", "ris", "evidence-csv"]);
+export type OperatorResearchExportFormat = z.infer<typeof operatorResearchExportFormat>;
+
+export function formatOperatorResearchExport(result: NonNullable<Awaited<ReturnType<typeof readSavedOperatorResult>>>, format: unknown = "brief") {
+  const selected = operatorResearchExportFormat.parse(format);
+  if (selected === "brief") return privateOperatorBrief(result);
+  if (selected === "evidence-csv") return result.researchExports.evidenceCsv;
+  return result.researchExports[selected].content;
 }

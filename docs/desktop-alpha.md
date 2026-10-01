@@ -74,7 +74,7 @@ Once a buyer journal exists, **Check original job** uses the shared GET-only Ope
 recovery path. A completed verified check saves a bounded private result in the task
 folder. The desktop can reopen its plain-text answer and cited source names offline
 after relaunch, rechecking the original task/journal and archived receipt. It can
-export a private Markdown brief through a native save dialog. The answer may itself
+export a private Markdown brief, BibTeX, RIS or evidence CSV through native save dialogs, using the recorded article identities and bounded claim excerpts in the checked receipt. The answer may itself
 contain sensitive material; review the brief before sharing. A later incomplete check
 keeps the earlier saved result and labels it as previous. A local save failure shows
 the current answer temporarily and preserves the original buyer receipt.

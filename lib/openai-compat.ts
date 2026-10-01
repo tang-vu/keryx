@@ -1,3 +1,4 @@
+import { surfaceResearch } from "./research/surface-result";
 /**
  * OpenAI Chat Completions ↔ Keryx mappers (pure, side-effect free).
  *
@@ -30,6 +31,8 @@ export interface ChatCompletionRequest {
   messages?: ChatMessage[];
   stream?: boolean;
   budget?: number;
+  scholarly?: boolean;
+  mode?: "quick" | "deep";
 }
 
 /** Flatten a message's content to plain text (handles the string form and the vision array form). */
@@ -69,23 +72,7 @@ export function lastUserQuestion(messages: ChatMessage[] | undefined): string {
 export function keryxMeta(run: QueryRun) {
   return {
     queryId: run.id,
-    citations: run.citations.map((c) => ({
-      source: c.sourceName,
-      weight: c.weight,
-      reward: c.reward,
-    })),
-    evidence: (run.evidence ?? [])
-      .filter((item) => item.qualifiesForReward)
-      .map((item) => ({
-        claimIndex: item.claimIndex,
-        claim: item.claim,
-        source: item.sourceName,
-        marker: item.marker,
-        quote: item.quote,
-        support: item.support,
-      })),
-    claimCoverage: run.claimCoverage ?? [],
-    creatorsPaid: run.citations.length,
+    ...surfaceResearch(run),
     totalToCreators: run.totalToCreators,
     engine: run.engine,
     dispatchUrl: `${config.baseUrl}/dispatch/${run.id}`,
@@ -100,7 +87,7 @@ function citationsFooter(run: QueryRun): string {
     (c) => `- ${c.sourceName} — $${c.reward.toFixed(4)} (weight ${c.weight.toFixed(2)})`,
   );
   return (
-    `\n\n---\n**Creators paid** — weighted USDC citation rewards on Arc testnet:\n` +
+    `\n\n---\n**Citations and planned creator rewards** — weighted USDC citation rewards on Arc testnet:\n` +
     lines.join("\n") +
     `\n\nTotal to creators: $${run.totalToCreators.toFixed(4)} · ` +
     `dispatch: ${config.baseUrl}/dispatch/${run.id}`

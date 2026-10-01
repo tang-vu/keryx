@@ -95,6 +95,8 @@ export async function POST(req: NextRequest) {
   }
 
   const body = (await req.json().catch(() => ({}))) as ChatCompletionRequest;
+  if (body.scholarly !== undefined && typeof body.scholarly !== "boolean") return openaiError("scholarly must be a boolean", 400, "invalid_request");
+  if (body.mode !== undefined && body.mode !== "quick" && body.mode !== "deep") return openaiError("mode must be quick or deep", 400, "invalid_request");
   const parsedQuestion = parseAskQuestion(lastUserQuestion(body.messages));
   if (!parsedQuestion.success) {
     return openaiError(parsedQuestion.error, 400, "invalid_request");
@@ -128,7 +130,7 @@ export async function POST(req: NextRequest) {
 
   // ── Non-streaming: run to completion, return one ChatCompletion object. ──
   if (!body.stream) {
-    const run = await collectRun({ question, budget, queryId, origin, model: modelChoice?.id });
+    const run = await collectRun({ question, budget, queryId, origin, model: modelChoice?.id, scholarly: body.scholarly === true, researchMode: body.mode ?? "deep" });
     return Response.json(buildCompletion(run, modelName), { headers: CORS });
   }
 
@@ -149,7 +151,7 @@ export async function POST(req: NextRequest) {
         // Stream each trace step as an o1-style reasoning delta. Clients that don't support
         // reasoning_content ignore it and still receive the answer content below.
         const run = await collectRun(
-          { question, budget, queryId, origin, model: modelChoice?.id },
+          { question, budget, queryId, origin, model: modelChoice?.id, scholarly: body.scholarly === true, researchMode: body.mode ?? "deep" },
           { onStep: (s) => send(buildChunk(id, modelName, { reasoning_content: traceLine(s) })) },
         );
         send(buildChunk(id, modelName, { content: buildAnswerContent(run) }));

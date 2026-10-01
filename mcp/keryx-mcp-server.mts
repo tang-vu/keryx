@@ -49,9 +49,9 @@ server.registerTool(
       const text =
         `${r.answer}\n\n` +
         `— Paid Keryx ${r.amountPaid} USDC${proof}\n` +
-        `Keryx paid ${r.creatorsPaid} creator(s) $${r.totalToCreators} downstream:\n${cites}\n` +
+        `Recorded creator total: $${r.totalToCreators}; citation allocations (not individual settlement proof):\n${cites}\n` +
         `On-chain proof + live feed: ${meta.baseUrl}/dashboard`;
-      return { content: [{ type: "text" as const, text }] };
+      return { content: [{ type: "text" as const, text }], structuredContent: { ...r } };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       return { isError: true, content: [{ type: "text" as const, text: `Keryx call failed: ${msg}` }] };

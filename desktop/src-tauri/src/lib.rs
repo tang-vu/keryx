@@ -302,6 +302,7 @@ async fn export(
     title: &'static str,
     file_name: &'static str,
     extension: &'static str,
+    format: Option<String>,
 ) -> Result<String, String> {
     check_caller(&window)?;
     if !handle_is_valid(&handle) {
@@ -317,7 +318,11 @@ async fn export(
     helper_call(
         &host,
         action,
-        json_payload(serde_json::json!({ "handle": handle, "path": path })),
+        json_payload(if let Some(format) = format {
+            serde_json::json!({ "handle": handle, "path": path, "format": format })
+        } else {
+            serde_json::json!({ "handle": handle, "path": path })
+        }),
         Duration::from_secs(45),
     )
     .await
@@ -329,16 +334,26 @@ async fn export_brief(
     host: State<'_, HostState>,
     smoke: State<'_, SmokeState>,
     handle: String,
+    format: Option<String>,
 ) -> Result<String, String> {
+    let selected = format.as_deref().unwrap_or("brief");
+    let (name, extension) = match selected {
+        "brief" => ("private-research-brief.md", "md"),
+        "bibtex" => ("private-references.bib", "bib"),
+        "ris" => ("private-references.ris", "ris"),
+        "evidence-csv" => ("private-evidence.csv", "csv"),
+        _ => return Err("Unsupported private export format".into()),
+    };
     export(
         window,
         host,
         smoke,
         handle,
         "export_brief",
-        "Export private research brief",
-        "private-research-brief.md",
-        "md",
+        "Export private research",
+        name,
+        extension,
+        Some(selected.to_string()),
     )
     .await
 }
@@ -359,6 +374,7 @@ async fn export_task(
         "Export private task status",
         "operator-task-status.json",
         "json",
+        None,
     )
     .await
 }

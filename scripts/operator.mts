@@ -2,7 +2,7 @@
 import { constants } from "node:fs";
 import { open } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
-import { createOperatorTask, formatOperatorBrief, operatorTaskStatus, readOperatorResult, resumeOperatorTask } from "../lib/operator/task.ts";
+import { createOperatorTask, formatOperatorResearchExport, operatorTaskStatus, readOperatorResult, resumeOperatorTask } from "../lib/operator/task.ts";
 import { parseBuyerBudget } from "../lib/a2a/buyer-workspace.ts";
 import { addressSchema } from "../lib/buyer/protocol.ts";
 import { PrivateTextExportError, publishPrivateText } from "../lib/operator/private-text-export.ts";
@@ -18,6 +18,8 @@ const usage = `Keryx Operator task alpha (Arc testnet)
   npm run operator -- export --json --state operator-workspace/task-1
   npm run operator -- result --state operator-workspace/task-1
   npm run operator -- brief --state operator-workspace/task-1 --file private-brief.md
+  npm run operator -- brief --state operator-workspace/task-1 --format bibtex --file private-references.bib
+  Formats: brief (default), bibtex, ris, evidence-csv
 
 Build the trusted writer from a clean checkout with npm run native:build.
 Workspace creates a new private directory; create adds one immutable private task.
@@ -56,7 +58,7 @@ async function main() {
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--json" && command === "export" && !options["--json"]) { options["--json"] = "true"; continue; }
     if (!["--state", ...(command === "create" ? ["--request", "--payee", "--max-total"] : []),
-      ...(command === "brief" ? ["--file"] : [])].includes(args[i])
+      ...(command === "brief" ? ["--file", "--format"] : [])].includes(args[i])
       || options[args[i]] || !args[i + 1] || args[i + 1].startsWith("--")) throw new Error("Invalid or duplicate option; use --help");
     options[args[i]] = args[++i];
   }
@@ -91,7 +93,7 @@ async function main() {
     if (!result) throw new Error("No saved completed result; resume the original journal first");
     if (command === "result") console.log(JSON.stringify(result, null, 2));
     else {
-      const exported = await publishPrivateText(options["--file"], formatOperatorBrief(result));
+      const exported = await publishPrivateText(options["--file"], formatOperatorResearchExport(result, options["--format"] ?? "brief"));
       console.log(JSON.stringify(exported));
     }
     return;

@@ -1,3 +1,6 @@
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { resolve } from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -218,3 +221,24 @@ it("does not save a completed result without a verified receipt and preserves an
   expect(await readFile(join(task, "result.json"), "utf8")).toBe(before);
   expect((await readOperatorResult(task))?.answer).toBe("Prior verified answer");
 });
+
+it("CLI exports each requested format to --file and preserves overwrite refusal", async () => {
+  const { task, root } = await fixture();
+  await createLegacyOperatorTask(task, { request, payee, maxTotalMicros: "100000" });
+  await buyerJournal(task);
+  await completedRecovery(task, "Saved answer", [{ marker: "S1", sourceId: "source", sourceName: "Creator",
+    itemTitle: "Recorded article", itemUrl: "https://example.org/article", itemId: "item", contentVersion: "v1",
+    weight: 1, rewardPlannedUsdc: 0.01, rationale: "read" }]);
+  const execute = promisify(execFile);
+  const command = ["--import", "tsx", resolve("scripts/operator.mts"), "brief", "--state", task];
+  for (const [format, expected] of [["brief", "# Private research brief"], ["bibtex", "@misc"], ["ris", "TY  - WEB"], ["evidence-csv", "claim_index"]]) {
+    const target = join(root, `requested-${format}.txt`);
+    const args = [...command, "--file", target, ...(format === "brief" ? [] : ["--format", format])];
+    await execute(process.execPath, args);
+    expect(await readFile(target, "utf8")).toContain(expected);
+    await expect(execute(process.execPath, args)).rejects.toThrow();
+  }
+  const invalid = join(root, "invalid.txt");
+  await expect(execute(process.execPath, [...command, "--file", invalid, "--format", "invalid"])).rejects.toThrow();
+  await expect(readFile(invalid)).rejects.toMatchObject({ code: "ENOENT" });
+}, 30000);

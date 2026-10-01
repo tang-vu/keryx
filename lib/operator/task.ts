@@ -8,7 +8,7 @@ import { buildBuyerReport } from "../buyer/report";
 import { addressSchema, buyerRequestSchema, BUYER_NETWORK, type BuyerRequest } from "../buyer/protocol";
 import { inspectSavedOperatorResult, readSavedOperatorResult, saveVerifiedOperatorResult } from "./result";
 import { type NativeTaskWriter } from "./native-task-writer";
-export { privateOperatorBrief as formatOperatorBrief } from "./result";
+export { privateOperatorBrief as formatOperatorBrief, formatOperatorResearchExport } from "./result";
 
 const taskSchema = z.object({
   schema: z.literal("keryx-operator-task-v1"),

@@ -13,7 +13,7 @@ const api: DesktopAPI = {
   createTask: (input) => call("create_task", { input: JSON.stringify(input) }),
   resumeTask: (handle) => call("resume_task", { handle }),
   readResult: (handle) => call("read_result", { handle }),
-  exportBrief: (handle) => call("export_brief", { handle }),
+  exportBrief: (handle, format = "brief") => call("export_brief", { handle, format }),
   exportTask: (handle) => call("export_task", { handle }),
   importReference: () => call("import_reference"),
 };

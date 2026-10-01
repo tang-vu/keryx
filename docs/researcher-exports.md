@@ -45,3 +45,11 @@ claim or evidence ledger; the interface labels those missing records explicitly.
 Neither references nor the matrix are settlement evidence. For the complete question, answer,
 decisions, evidence and classified creator payment states, retain the separate
 [portable research receipt](research-receipts.md).
+
+## Other supported surfaces
+
+Remote MCP `research`, OpenAI responses in the `keryx` extension, and paid A2A results expose the same recorded `researchExports` (`bibtex`, `ris`, `evidenceCsv`) and article identity. The caller-funded stdio MCP returns the result as structured content as well as text. No export initiates another research request.
+
+The Operator CLI can reopen a checked saved receipt with `result`, or publish a new private file with `brief --format bibtex|ris|evidence-csv --state <task> --file <destination>`; omit `--format` for a Markdown brief. The desktop offers BibTeX, RIS and evidence CSV through native save dialogs. Each rechecks receipt integrity and original task binding, keeps payment seller-reported, and refuses an existing destination. Older receipts can have no usable article identity or claim ledger. Public scholarly discovery is not enabled for private Operator tasks by these exports.
+
+Transport correction: `creatorsPaid` is null when the response cannot prove a distinct settled creator count. `creatorRewardAllocations` counts non-public sources with positive planned citation rewards; `creatorsReferenced` counts distinct cited source identities. Neither count is settlement evidence. Clients must accept the nullable field.

@@ -105,8 +105,8 @@ async function execute(request: HelperRequest): Promise<unknown> {
     case "resume_task": keys(arg, ["handle"]); return store.resumeTask(string(arg.handle, 64));
     case "read_result": keys(arg, ["handle"]); return store.readResult(string(arg.handle, 64));
     case "export_brief": {
-      keys(arg, ["handle", "path"]);
-      const text = await store.exportBrief(string(arg.handle, 64));
+      keys(arg, ["handle", "path", "format"]);
+      const text = await store.exportBrief(string(arg.handle, 64), arg.format ?? "brief");
       await publishPrivateText(string(arg.path, 32767), text);
       return true;
     }
