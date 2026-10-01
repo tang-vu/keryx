@@ -53,12 +53,12 @@ describe("remote MCP server", () => {
 
     const result = await client.callTool({
       name: "research",
-      arguments: { question: "What changed?", budget: 99 },
+      arguments: { question: "What changed?", budget: 99, scholarly: true, mode: "quick" },
     });
 
     expect(runner).toHaveBeenCalledWith(
       expect.objectContaining({
-        budget: 0.03,
+        budget: 0.03, scholarly: true, researchMode: "quick",
         origin: "mcp",
         asker: "0xAbC",
         mcpClient: "codex",

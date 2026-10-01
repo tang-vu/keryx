@@ -116,7 +116,7 @@ export function buildAnswerMessage(run: QueryRun) {
       (c) => `${c.sourceName} — $${c.reward.toFixed(4)} (weight ${c.weight.toFixed(2)})`,
     );
     fields.push({
-      name: "Creators paid — weighted USDC citation rewards on Arc testnet",
+      name: "Citations and planned rewards — weighted USDC citation rewards on Arc testnet",
       value: truncate(lines.join("\n"), 1024),
     });
   }
@@ -130,8 +130,8 @@ export function buildAnswerMessage(run: QueryRun) {
         fields,
         footer: {
           text:
-            `Keryx · ${run.citations.length} creator${run.citations.length === 1 ? "" : "s"} paid` +
-            ` · $${run.totalToCreators.toFixed(4)} to creators · full trace at the title link`,
+            `Keryx · ${run.citations.length} source${run.citations.length === 1 ? "" : "s"} cited` +
+            ` · $${run.totalToCreators.toFixed(4)} recorded to creators (${run.paymentMode ?? "legacy"}) · full trace at the title link`,
         },
       },
     ],

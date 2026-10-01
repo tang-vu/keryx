@@ -203,9 +203,10 @@ export type KeryxCitation = { source: string; reward: number; weight?: number };
 export type KeryxAnswer = {
   answer: string;
   citations: KeryxCitation[];
-  creatorsPaid: number;
+  creatorsPaid: number | null;
   totalToCreators: number;
   feePaid: number;
+  researchExports?: { bibtex: { content: string; count: number; omitted: number }; ris: { content: string; count: number; omitted: number }; evidenceCsv: string };
   // Circle Gateway settlement id (a batched-settlement UUID, NOT an EVM tx hash — it does not
   // resolve at an explorer /tx/ route). The on-chain proof is the batched settlement on the
   // treasury wallet, surfaced on the dashboard; per-tx EVM hashes come only from creator cash-outs.
@@ -222,7 +223,7 @@ export async function askKeryx(question: string, budget?: number): Promise<Keryx
   await ensureFunded(parseUnits(String(estimatedTotal), 6));
   const r = await payForResearch<{
     answer: string;
-    creatorsPaid: number;
+    creatorsPaid: number | null;
     totalToCreators: number;
     citations: KeryxCitation[];
     feePaid: number;

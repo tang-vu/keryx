@@ -36,6 +36,9 @@ test("an accepted dialog without a destination reports failure, not cancellation
 
 test.each([
   ["private-brief.md", "# Private research brief\n"],
+  ["references.bib", "@misc{record}\n"],
+  ["references.ris", "TY  - WEB\r\nER  - \r\n"],
+  ["evidence.csv", "\"claim_index\",\"claim\"\r\n"],
   ["operator-task-status.json", "{\"payment\":\"unknown\"}\n"],
 ])("%s succeeds only after complete bytes are published", async (name, text) => {
   const { root, path } = await target(name);

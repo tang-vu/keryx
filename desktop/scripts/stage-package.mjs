@@ -34,4 +34,5 @@ await writeFile(join(release, "release.json"), JSON.stringify({
   portable: "KeryxOperator-win32-x64/KeryxOperator.exe",
   portableExeSha256: createHash("sha256").update(exe).digest("hex"),
   installer: `installer/${installers[0]}`,
+  installerSha256: createHash("sha256").update(await readFile(join(release, "installer", installers[0]))).digest("hex"),
 }, null, 2) + "\n");

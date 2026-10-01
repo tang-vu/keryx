@@ -1,3 +1,4 @@
+import { surfaceResearch } from "../research/surface-result";
 import { a2aReceiptEconomics, type A2aQuote } from "./pricing";
 import type { A2aOrder } from "./order";
 import type { QueryRun } from "../types";
@@ -46,14 +47,7 @@ export function a2aResponseFromRun(
     status: "completed",
     queryId: run.id,
     answer: run.answer,
-    citations: run.citations.map((citation) => ({
-      source: citation.sourceName,
-      weight: citation.weight,
-      reward: citation.reward,
-    })),
-    evidence: (run.evidence ?? []).filter((item) => item.qualifiesForReward),
-    claimCoverage: run.claimCoverage ?? [],
-    creatorsPaid: run.citations.length,
+    ...surfaceResearch(run),
     totalToCreators: run.totalToCreators,
     feePaid: quote.serviceFeeUsdc,
     totalPricePaid: quote.totalPriceUsdc,
