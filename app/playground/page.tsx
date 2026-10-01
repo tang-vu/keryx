@@ -108,7 +108,7 @@ export default function PlaygroundPage() {
           if (!line || line === "[DONE]") continue;
           let obj: {
             choices?: { delta?: { reasoning_content?: string; content?: string } }[];
-            keryx?: { citations?: Paid[] };
+            keryx?: { citations?: Paid[]; paymentMode?: string };
           };
           try {
             obj = JSON.parse(line);
