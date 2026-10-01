@@ -249,6 +249,9 @@ begin
   ) raw_metadata)>16384 then raise exception 'schema contract count bound'; end if;
   with fields as (
     select octet_length(d.adbin::text) bytes from pg_attrdef d join pg_class c on c.oid=d.adrelid join pg_namespace n on n.oid=c.relnamespace where n.nspname in ('public','keryx_storage')
+    -- Budget encoded trigger arguments at TWO bytes per raw byte, without first
+    -- allocating hex text. Qualifier nodes are measured before any deparsing.
+    union all select 2::bigint*octet_length(t.tgargs)::bigint+octet_length(coalesce(t.tgqual::text,''))::bigint from pg_trigger t join pg_class c on c.oid=t.tgrelid join pg_namespace n on n.oid=c.relnamespace where n.nspname in ('public','keryx_storage')
     union all select octet_length(coalesce(x.conbin::text,'')) from pg_constraint x join pg_namespace n on n.oid=x.connamespace where n.nspname in ('public','keryx_storage')
     union all select octet_length(coalesce(c.reloptions::text,''))+octet_length(coalesce(c.relacl::text,'')) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname in ('public','keryx_storage')
     union all select octet_length(coalesce(p.polqual::text,''))+octet_length(coalesce(p.polwithcheck::text,'')) from pg_policy p join pg_class c on c.oid=p.polrelid join pg_namespace n on n.oid=c.relnamespace where n.nspname in ('public','keryx_storage')

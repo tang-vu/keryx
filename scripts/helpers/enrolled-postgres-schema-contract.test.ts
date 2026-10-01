@@ -51,6 +51,21 @@ describe('source-owned PostgreSQL17 schema export',()=>{
     expect(POSTGRES17_SCHEMA_CONTRACT_BODY).toContain('from keryx_storage.operations');
     expect(POSTGRES17_SCHEMA_CONTRACT_BODY).not.toContain('daticulocale');
   });
+  it('budgets raw trigger arguments at hex size and qualifier nodes before descriptor allocation',()=>{
+    const preflight=POSTGRES17_SCHEMA_CONTRACT_BODY.slice(0,POSTGRES17_SCHEMA_CONTRACT_BODY.indexOf('with entries as'));
+    // Inspect the complete emitted raw-field gate, not a separate JS surrogate:
+    // changing to raw byte length, int multiplication, or post-encode measurement
+    // must fail even though the eventual output exporter would also reject it.
+    expect(preflight).toMatch(/2::bigint\*octet_length\(t\.tgargs\)::bigint\+octet_length\(coalesce\(t\.tgqual::text,''\)\)::bigint from pg_trigger t join pg_class c on c\.oid=t\.tgrelid join pg_namespace n on n\.oid=c\.relnamespace where n\.nspname in \('public','keryx_storage'\)/u);
+    expect(preflight).toContain('max(fields.bytes),0)<=131072');
+    expect(preflight).toContain('bytes>8388608');
+    expect(preflight).not.toMatch(/encode\(|pg_get_expr\(|pg_get_triggerdef\(/u);
+    const metadata=contract();
+    metadata.sections.triggers=[{args:'ab'.repeat(65537),when:null}];
+    expect(()=>exportPostgres17SchemaContract(metadata)).toThrow();
+    metadata.sections.triggers=[{args:'',when:'q'.repeat(131073)}];
+    expect(()=>exportPostgres17SchemaContract(metadata)).toThrow();
+  });
 });
 
 describe('reviewed source function declaration manifest',()=>{
