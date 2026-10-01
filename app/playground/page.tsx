@@ -63,6 +63,7 @@ export default function PlaygroundPage() {
   const [running, setRunning] = useState(false);
   const [thinking, setThinking] = useState("");
   const [answer, setAnswer] = useState("");
+  const [paymentMode, setPaymentMode] = useState("legacy");
   const [paid, setPaid] = useState<Paid[]>([]);
   const [error, setError] = useState("");
 
@@ -71,7 +72,7 @@ export default function PlaygroundPage() {
     setRunning(true);
     setThinking("");
     setAnswer("");
-    setPaid([]);
+    setPaid([]); setPaymentMode("legacy");
     setError("");
     try {
       const res = await fetch("/api/v1/chat/completions", {
@@ -123,7 +124,7 @@ export default function PlaygroundPage() {
             ans += delta.content;
             setAnswer(ans);
           }
-          if (obj.keryx?.citations) setPaid(obj.keryx.citations);
+          if (obj.keryx?.citations) { setPaid(obj.keryx.citations); setPaymentMode(obj.keryx.paymentMode ?? "legacy"); }
         }
       }
     } catch (e) {
@@ -208,7 +209,7 @@ export default function PlaygroundPage() {
 
         {paid.length > 0 && (
           <div className="mb-8 rounded border border-seal/30 bg-paper p-4">
-            <p className="mb-2 font-serif text-sm text-ink">Creators paid (USDC on Arc)</p>
+            <p className="mb-2 font-serif text-sm text-ink">Citations and planned rewards (USDC on Arc, {paymentMode})</p>
             <ul className="space-y-1">
               {paid.map((c, i) => (
                 <li key={i} className="flex justify-between font-mono text-xs text-ink-2">

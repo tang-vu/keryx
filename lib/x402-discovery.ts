@@ -113,7 +113,7 @@ export const a2aDiscovery = {
         },
         description: "Sources the answer actually cites — each one was paid",
       },
-      creatorsPaid: { type: "integer", description: "Number of cited sources paid downstream" },
+      creatorsPaid: { type: ["integer", "null"], description: "Distinct settled creators; null when unavailable. Citation allocations are not settlement evidence." },
       totalToCreators: { type: "number", description: "Total USDC settled to creators for this answer" },
       feePaid: { type: "number", description: "Fixed orchestration fee" },
       totalPricePaid: { type: "number", description: "All-in x402 package price" },
