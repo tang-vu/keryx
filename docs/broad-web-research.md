@@ -63,6 +63,11 @@ memory. Multiple server processes multiply the concurrency bound. Keep these
 residual limits explicit and verify the actual traced worker assets in a production
 build. Runtime dependencies require Node 22 LTS at least 22.19, or Node 24 and
 newer; CI and the observed production runtime use Node 24.
+Use the project's pinned npm 11.19.0 installer. Older npm optional-peer resolution
+produced incompatible lockfile closures in clean CI; do not regenerate the lock
+with an older installer or upgrade payment dependencies to work around it. CI pins
+Node 24.21.0 with its matching npm. Production Node 24.16 may remain in place, but
+its installer must pass the npm 11.19.0 gate before deployment.
 
 ## Evidence and uncertainty
 

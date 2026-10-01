@@ -20,6 +20,12 @@ silently weakening evidence or monetary gates.
 HTML/text and contained PDF text extraction are staged implementation requirements;
 unconfigured search or an HTML-only stage does not complete the authorized outcome.
 Provider provisioning and actual broad-search smoke evidence remain release gates.
+Pin the reproducible installer to npm 11.19.0 and CI Node 24.21.0. Clean npm 11.6
+and 11.19 resolved incompatible optional-peer closures; an older-resolver lock also
+upgraded an x402 dependency and failed the newer installer. Retain the existing
+payment dependency versions and require matching installer tooling on production
+before installation. Production Node 24.16 and minimum supported Node 22.19 do not
+need to change for this installer correction.
 Do not add a search subscription, spend real funds, activate mainnet, leak private
 research or claim customer demand from technical fixtures. See
 [broad web research](docs/broad-web-research.md) and

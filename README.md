@@ -267,6 +267,7 @@ labeled `SIMULATED` — a mock is never presented as settled.
 
 ```bash
 # 1. Install (Node 22 LTS v22.19.0+ or Node 24+; CI and production use Node 24)
+npm install --global npm@11.19.0
 npm install
 
 # 2. Configure (optional — runs offline with zero keys)
