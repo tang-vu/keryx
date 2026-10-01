@@ -26,8 +26,10 @@ bounded public fetch transport obtains XML; the adapter validates namespaces, fe
 entry channel identity, video identity and canonical HTTPS watch links. It admits at
 most ten distinct valid entries, caps descriptions at 10,000 characters and labels
 every body `metadata_only`, including a title-only entry without a description.
-Malformed XML/dates or namespace rebinding fail the feed refresh, preserving the prior
-snapshot. No media, transcript, article or description links are fetched. YouTube RSS
+Malformed XML or namespace rebinding fails the feed refresh, preserving the prior
+snapshot. Dates are retained only when parseable; absent dates are omitted, and malformed
+publisher dates can cause the underlying parser to reject the refresh. No media,
+transcript, article or description links are fetched. YouTube RSS
 can contain community statistics; this release discards them and does not validate or
 use them as research evidence.
 
