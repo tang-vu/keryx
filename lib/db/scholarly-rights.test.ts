@@ -20,6 +20,7 @@ import { projectReceiptSettlement } from "../research-receipt-settlement";
 import type { QueryRun } from "../types";
 import { verifyPaperDeclaration } from "../scholarly/rights-authority";
 import { admitSqliteBrowserJournal } from "./sqlite-browser-journal";
+import { hasScholarlyRights } from "./scholarly-rights";
 
 const { readRegistry } = vi.hoisted(() => ({ readRegistry: vi.fn() }));
 vi.mock("../registry/registry-client", () => ({ getRegistrySource: readRegistry }));
@@ -88,6 +89,19 @@ async function fixture() {
   async function approve() { await db.submitPaper(submission); await db.reviewPaper(await decision("approved")); }
   return { db, raw, file, resource, source, item, author, reviewer, submission, declared, record, signer, intent, decision, approve };
 }
+
+it("installs scholarly capability atomically only when an author enrolls", async () => {
+  const f = await fixture();
+  expect(hasScholarlyRights(f.raw)).toBe(false);
+  expect(await f.db.getPaperState(f.source.id)).toBeNull();
+  expect(await f.db.getPaperAdmission(nonce())).toBeNull();
+  await expect(f.db.beginPaperEnrollment("missing", f.author.address)).rejects.toThrow();
+  expect(hasScholarlyRights(f.raw)).toBe(false);
+  await f.db.beginPaperEnrollment(f.source.id, f.author.address);
+  expect(hasScholarlyRights(f.raw)).toBe(true);
+  expect((await f.db.getSource(f.source.id))?.scholarlyEnrolled).toBe(true);
+  expect(await f.db.getPaperState(f.source.id)).toBeNull();
+});
 
 it("persists signed submission, blocks pending earning, retains sticky enrollment and unrelated caches", async () => {
   const f = await fixture(); await f.db.setCached("other", "unrelated");

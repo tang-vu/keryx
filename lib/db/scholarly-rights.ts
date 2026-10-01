@@ -24,6 +24,9 @@ CREATE TRIGGER IF NOT EXISTS scholarly_intent_fence BEFORE INSERT ON browser_aut
     AND NOT EXISTS(SELECT 1 FROM scholarly_writer)
   BEGIN SELECT RAISE(ABORT,'scholarly admission required'); END;
 `;
+export function hasScholarlyRights(db: DatabaseSync): boolean {
+  return !!db.prepare("SELECT 1 FROM sqlite_schema WHERE type='table' AND name='scholarly_enrollments'").get();
+}
 export function installScholarlyRights(db: DatabaseSync): void {
   if (!db.prepare("PRAGMA table_info(sources)").all().some(row => row.name === "scholarly_enrolled"))
     db.exec("ALTER TABLE sources ADD COLUMN scholarly_enrolled INTEGER NOT NULL DEFAULT 0 CHECK(scholarly_enrolled IN(0,1))");
@@ -58,6 +61,11 @@ function transaction<T>(db: DatabaseSync, work: () => T): T {
   catch (error) { db.exec("ROLLBACK"); throw error; }
 }
 export function getSqlitePaperState(db: DatabaseSync, sourceId: string): PaperState | null {
+  if (!hasScholarlyRights(db)) {
+    const source = db.prepare("SELECT * FROM sources WHERE id=?").get(sourceId);
+    if (source?.scholarly_enrolled === 1) throw new Error("Scholarly history unavailable");
+    return null;
+  }
   if (!db.prepare("SELECT 1 FROM scholarly_enrollments WHERE source_id=?").get(sourceId)) return null;
   const row = db.prepare("SELECT id,data FROM scholarly_declarations WHERE source_id=? ORDER BY seq DESC LIMIT 1").get(sourceId);
   if (!row) return null; // Sticky source marker represents a draft; it never grants legacy earning.
@@ -69,6 +77,7 @@ export function getSqlitePaperState(db: DatabaseSync, sourceId: string): PaperSt
 export function beginSqlitePaper(db: DatabaseSync, sourceId: string, creator: string): void {
   transaction(db, () => {
     if (!db.prepare("SELECT 1 FROM sources WHERE id=?").get(sourceId)) throw new Error("Source disappeared before enrollment");
+    installScholarlyRights(db);
     const existing = db.prepare("SELECT creator FROM scholarly_enrollments WHERE source_id=?").get(sourceId);
     if (existing) { if (existing.creator !== creator.toLowerCase()) throw new Error("Scholarly creator differs"); return; }
     db.prepare("INSERT INTO scholarly_enrollments VALUES(?,?,?)").run(sourceId, creator.toLowerCase(), new Date().toISOString());
@@ -91,6 +100,7 @@ export async function submitSqlitePaper(db: DatabaseSync, catalog: KeryxDB, valu
   const id = paperArtifactId(submission);
   return transaction(db, () => {
     if (before !== catalogSnapshot(db, d.sourceId)) throw new Error("Source changed during rights submission");
+    installScholarlyRights(db);
     const enrolled = db.prepare("SELECT creator FROM scholarly_enrollments WHERE source_id=?").get(source.id);
     if (enrolled && enrolled.creator !== d.creator) throw new Error("Scholarly creator cannot change without independent migration review");
     const existing = db.prepare("SELECT id FROM scholarly_declarations WHERE source_id=? AND nonce=?").get(source.id, d.nonce);
@@ -168,6 +178,7 @@ export interface PaperAdmission {
   registry: string; onchainId: string; creator: string; priceMicros: string;
 }
 export function getSqlitePaperAdmission(db: DatabaseSync, nonce: string): PaperAdmission | null {
+  if (!hasScholarlyRights(db)) return null;
   const row = db.prepare(`SELECT s.snapshot,b.signer,b.payee,b.amount_micro_usdc,b.source_id,b.kind,p.authorization_phase
     FROM scholarly_admissions s JOIN browser_authorization_intents b ON b.nonce=s.nonce
     JOIN payment_events p ON p.authorization_id=b.nonce AND lower(p.payer)=lower(b.signer) WHERE s.nonce=?`).get(nonce);

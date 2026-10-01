@@ -5,6 +5,12 @@ October 2, 2026. This procedure governs the implemented Arc-testnet pilot in
 review, not legal advice, peer review, identity certification or a settlement claim.
 Broader public/mainnet onboarding and a live funded scholarly pilot remain unaccepted.
 
+Ordinary SQLite startup preserves the pinned enrolled/native schema. The first
+authenticated scholarly enrollment installs its capability tables, retained source
+marker and journal fences in the same writer transaction. A corpus with this
+capability cannot enter enrolled/native storage until a separately reviewed parity
+migration; unrelated ordinary corpora retain their existing intake compatibility.
+
 Reproduce software checks with `npx vitest run lib/db/scholarly-rights.test.ts
 lib/api/scholarly-rights-route.test.ts`, `npm run test:browser-scholarly-rights`
 and `npm run test:browser-research-ux`. The dedicated creator browser fixture also

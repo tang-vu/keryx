@@ -1,5 +1,5 @@
 import { installSqliteApplicationSchema } from "./sqlite-application-schema";
-import { installScholarlyRights, beginSqlitePaper, getSqlitePaperState, submitSqlitePaper, reviewSqlitePaper, getSqlitePaperAdmission, admitSqlitePaperJournal } from "./scholarly-rights";
+import { hasScholarlyRights, beginSqlitePaper, getSqlitePaperState, submitSqlitePaper, reviewSqlitePaper, getSqlitePaperAdmission, admitSqlitePaperJournal } from "./scholarly-rights";
 import type { StorageIdentity } from "./storage-identity";
 import { openEnrolledCacheText, sealEnrolledCacheText } from "../sources/enrolled-content-cache";
 import { publicReferenceSchema, type PublicReference } from "../public-references/catalog";
@@ -155,7 +155,6 @@ export class SqliteAdapter implements KeryxDB {
     // WAL + busy timeout so the dev server and CLI can share the file safely.
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;");
     installSqliteApplicationSchema(this.db);
-    installScholarlyRights(this.db);
     // Releases before 2026-08-22 keyed two authenticated routes by the raw `kx_live_...` bearer
     // value before verification. Remove those legacy counters during every startup so the live DB
     // and every restored snapshot converge back to the documented hash-only secret invariant.
@@ -187,7 +186,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async upsertSource(s: Source): Promise<void> {
-    if (s.scholarlyEnrolled && (this.enrolledIdentity || !this.db.prepare("SELECT 1 FROM scholarly_enrollments WHERE source_id=?").get(s.id)))
+    if (s.scholarlyEnrolled && (this.enrolledIdentity || !hasScholarlyRights(this.db) || !this.db.prepare("SELECT 1 FROM scholarly_enrollments WHERE source_id=?").get(s.id)))
       throw new Error("Marked scholarly sources require the original persisted rights history; standalone catalog import is refused");
     if (s.id.startsWith("public:")) throw new Error("Reserved public-reference source ID");
     // active/verified default to 1 (true) for offline/DB-direct rows that predate the flags.

@@ -16,6 +16,8 @@ nonce and cap reservation before exposure. Revocation serializes against new adm
 does not replace exposed authorizations, release unknown spend or reverse settlement. Sellers
 reject legacy bundles, arbitrary SDK/treasury admissions and unsupported backends for enrolled
 manuscripts. Preserve unrelated legacy sources and exact enrolled native schema/cutover gates.
+Install scholarly schema only atomically with the first author enrollment, preserving ordinary
+corpus intake compatibility; an actual scholarly corpus remains outside native cutover acceptance.
 Bound the corpus to four effective operator approvals; unreviewed drafts and DOI claims cannot
 squat approval capacity or namespaces. Duplicate effective approved offers need review before
 activation; an actual identical public body prevents duplicate paid access/rewards.
