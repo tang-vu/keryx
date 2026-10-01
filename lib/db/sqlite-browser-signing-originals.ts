@@ -284,11 +284,59 @@ export async function readSqliteBrowserSigningSnapshot(
   sessionId: string,
   requestId: string
 ): Promise<BrowserSigningSnapshot | null> {
+  return readSnapshot(db, sessionId, requestId, { owner });
+}
+export async function readExposedSqliteBrowserSigningSnapshotForSigner(
+  db: DatabaseSync,
+  signer: string,
+  sessionId: string,
+  requestId: string
+): Promise<BrowserSigningSnapshot | null> {
+  if (!/^0x[0-9a-fA-F]{40}$/.test(signer))
+    throw new Error("Browser signing snapshot refused");
+  const snapshot = await readSnapshot(db, sessionId, requestId, {
+    signer: signer.toLowerCase(),
+  });
+  if (
+    snapshot &&
+    (snapshot.namespace.signer !== signer.toLowerCase() ||
+      snapshot.original.authorization.from !== signer.toLowerCase() ||
+      snapshot.journal.signer.toLowerCase() !== signer.toLowerCase() ||
+      snapshot.journal.sessionId !== sessionId ||
+      snapshot.journal.requestId !== requestId ||
+      ![
+        "exposed",
+        "signed",
+        "submission_attempted",
+        "settled",
+        "failed",
+      ].includes(snapshot.journal.phase))
+  )
+    throw new Error("Browser signing snapshot refused");
+  return snapshot;
+}
+async function readSnapshot(
+  db: DatabaseSync,
+  sessionId: string,
+  requestId: string,
+  identity: { owner: string } | { signer: string }
+): Promise<BrowserSigningSnapshot | null> {
   let snapshot: BrowserSigningSnapshot | null = null;
   db.exec("BEGIN");
   try {
     const journal = getSqliteBrowserJournal(db, sessionId, requestId);
-    if (journal) {
+    if (
+      journal &&
+      (!("signer" in identity) ||
+        (journal.signer.toLowerCase() === identity.signer &&
+          [
+            "exposed",
+            "signed",
+            "submission_attempted",
+            "settled",
+            "failed",
+          ].includes(journal.phase)))
+    ) {
       const o = db
         .prepare("SELECT * FROM browser_signing_originals WHERE nonce=?")
         .get(journal.nonce);
@@ -318,7 +366,7 @@ export async function readSqliteBrowserSigningSnapshot(
           !n ||
           !s ||
           !e ||
-          n.owner !== owner.toLowerCase() ||
+          ("owner" in identity && n.owner !== identity.owner.toLowerCase()) ||
           q.session_id !== sessionId
         )
           throw new Error("Browser signing snapshot refused");
@@ -357,7 +405,12 @@ export async function readSqliteBrowserSigningSnapshot(
     db.exec("ROLLBACK");
     throw error;
   }
-  return snapshot ? validateBrowserSigningSnapshot(snapshot, owner) : null;
+  return snapshot
+    ? validateBrowserSigningSnapshot(
+        snapshot,
+        "owner" in identity ? identity.owner : snapshot.namespace.owner
+      )
+    : null;
 }
 export async function signSqliteBrowserSigningOriginal(
   db: DatabaseSync,

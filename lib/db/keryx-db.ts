@@ -346,6 +346,7 @@ export interface KeryxDB {
   browserJournalActive(): Promise<boolean>;
   admitBrowserQueryPolicy(proof:import("../payments/browser-query-policy").BrowserQueryPolicyProof,sessionId:string):Promise<import("./browser-signing-originals").BrowserQueryAdmissionResult>;
   admitBrowserSigningOriginal(input:import("./browser-signing-originals").BrowserOriginalAdmission):Promise<import("./browser-signing-originals").BrowserOriginalAdmissionResult>;
+  readExposedBrowserSigningSnapshotForSigner(signer:string,sessionId:string,requestId:string):Promise<import("./browser-signing-originals").BrowserSigningSnapshot|null>;
   readBrowserSigningSnapshot(owner:string,sessionId:string,requestId:string):Promise<import("./browser-signing-originals").BrowserSigningSnapshot|null>;
   signBrowserSigningOriginal(sessionId:string,requestId:string,header:string):Promise<boolean>;
   browserSignerConfirmedSpendMicro(signer:string): Promise<number>;
