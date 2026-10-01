@@ -44,6 +44,30 @@ const signer = privateKeyToAccount(generatePrivateKey());
 const creator = privateKeyToAccount(generatePrivateKey());
 const payout = "0x2222222222222222222222222222222222222222";
 const contract = "0x3333333333333333333333333333333333333333";
+const pendingFixtureCleanup: (() => Promise<void>)[] = [];
+async function fixtureDeadline<T>(
+  pending: Promise<T>,
+  limit: number,
+  stage: string
+): Promise<T> {
+  const started = performance.now();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      pending,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(
+            `Fixture ${stage} deadline after ${Math.round(performance.now() - started)}ms`
+          )),
+          limit
+        );
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 const fixtures: {
   db: SqliteAdapter;
   native: DatabaseSync;
@@ -51,15 +75,19 @@ const fixtures: {
   folder: string;
 }[] = [];
 afterEach(async () => {
-  for (const f of fixtures.splice(0)) {
-    f.server.closeAllConnections();
-    if (f.server.listening)
-      await new Promise<void>((resolve, reject) =>
-        f.server.close((error) => (error ? reject(error) : resolve()))
-      );
-    f.native.close();
-    f.db.close();
-    fs.rmSync(f.folder, { recursive: true, force: true });
+  try {
+    for (const cleanup of pendingFixtureCleanup.splice(0)) await cleanup();
+  } finally {
+    for (const f of fixtures.splice(0)) {
+      f.server.closeAllConnections();
+      if (f.server.listening)
+        await new Promise<void>((resolve, reject) =>
+          f.server.close((error) => (error ? reject(error) : resolve()))
+        );
+      f.native.close();
+      f.db.close();
+      fs.rmSync(f.folder, { recursive: true, force: true });
+    }
   }
 });
 async function setup() {
@@ -698,7 +726,7 @@ it("retains the first context when exact concurrent request compositions observe
       ?.spent_micro
   ).toBe(1000);
 });
-it("bounds callers while retaining all eight hung catalog slots and performs no late RPC or financial writes", async () => {
+it("drains held catalog work in afterEach after an injected fixture deadline failure", async () => {
   const f = await setup();
   let release: () => void = () => {};
   const held = new Promise<void>((resolve) => {
@@ -719,21 +747,77 @@ it("bounds callers while retaining all eight hung catalog slots and performs no 
     contract
   );
   const before = f.snapshot();
+  pendingFixtureCleanup.push(async () => {
+    release();
+    await fixtureDeadline(collected, 1000, "injected failure drain");
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    await expect(authority.resolve(f.input)).rejects.toThrow("refused");
+    expect(catalogReads).toBe(9);
+    expect(f.rpcCalls()).toBe(0);
+    expect(f.snapshot()).toBe(before);
+  });
+  const collected = Promise.allSettled(
+    Array.from({ length: 8 }, () => authority.resolve(f.input))
+  );
+  await expect(fixtureDeadline(collected, 1, "injected failure")).rejects.toThrow(
+    "Fixture injected failure deadline after"
+  );
+  expect(catalogReads).toBe(8);
+  expect(f.rpcCalls()).toBe(0);
+  expect(f.snapshot()).toBe(before);
+  // Deliberately leave release to afterEach, rather than an in-test finally.
+});
+it("bounds callers while retaining all eight hung catalog slots and performs no late RPC or financial writes", async () => {
+  const f = await setup();
+  let release: () => void = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let catalogReads = 0;
+  const catalogTasks: Promise<null>[] = [];
+  const cleanup = async () => {
+    release();
+    await fixtureDeadline((async () => {
+      await Promise.allSettled(catalogTasks);
+      // Drain post-catalog refusal and retained-slot finally before closing DBs.
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    })(), 1000, "catalog drain");
+  };
+  // An outer test timeout does not cancel its await or reach its finally.
+  pendingFixtureCleanup.push(cleanup);
+  const authority = createSyntheticBrowserOriginalSourceAuthority(
+    {
+      getSource: () => {
+        catalogReads++;
+        const pending = held.then(() => null);
+        catalogTasks.push(pending);
+        return pending;
+      },
+      getItem: (source, item) => f.db.getItem(source, item),
+      getArticleOffer: (source, item) => f.db.getArticleOffer(source, item),
+    },
+    f.rpcUrl,
+    contract
+  );
+  const before = f.snapshot();
   const attempts = Array.from({ length: 8 }, () => authority.resolve(f.input));
   const collected = Promise.allSettled(attempts);
+  const boundedCollection = fixtureDeadline(collected, 8000, "caller collection");
   try {
     await expect(authority.resolve(f.input)).rejects.toThrow("refused");
     expect(
-      (await collected).every((result) => result.status === "rejected")
+      (await boundedCollection).every((result) => result.status === "rejected")
     ).toBe(true);
     await expect(authority.resolve(f.input)).rejects.toThrow("refused");
     expect(catalogReads).toBe(8);
     expect(f.rpcCalls()).toBe(0);
     expect(f.snapshot()).toBe(before);
   } finally {
-    release();
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await cleanup();
   }
+  // The same authority can start real work only after all retained slots drain.
+  await expect(authority.resolve(f.input)).rejects.toThrow("refused");
+  expect(catalogReads).toBe(9);
   expect(f.rpcCalls()).toBe(0);
   expect(f.snapshot()).toBe(before);
 }, 15000);

@@ -9,9 +9,20 @@ const input = JSON.parse(process.argv[2]) as { file: string; identity: StorageId
   action: "admit" | "reserve" | "claim" | "prepared" | "terminal" | "inspect"; operationId: string; claimId?: string; hold?: boolean;
   point?: "after-terminal-insert" | "before-terminal-commit" | "after-terminal-commit";
   signed?: { rawTransaction: string; transactionHash: string } };
-process.stdout.write("READY\n");
+function admission() {
+  try { return openGatewayFundingSqliteLedger(input.file, input.identity, { readOnly: input.action === "inspect" }); }
+  catch {
+    process.stdout.write('FAILURE {"stage":"admission","category":"refused"}\n');
+    process.exitCode = 1; process.stdin.destroy();
+    return undefined;
+  }
+}
+// Reservation races start only after both native connections are admitted.
+// Other modes retain their original GO/admission and deliberate crash barriers.
+const reservedLedger = input.action === "reserve" ? admission() : undefined;
+if (input.action !== "reserve" || reservedLedger) process.stdout.write("READY\n");
 process.stdin.once("data", async () => {
-  const ledger = openGatewayFundingSqliteLedger(input.file, input.identity, { readOnly: input.action === "inspect" });
+  const ledger = reservedLedger ?? admission(); if (!ledger) return;
   let protectedStore: ReturnType<typeof openGatewayFundingSqliteTerminalObserver> | undefined;
   try {
     if (input.action === "terminal") {

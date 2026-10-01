@@ -205,6 +205,30 @@ must be rehearsed with this change, not assumed compatible from a successful uni
 
 ## Implementation ownership and acceptance
 
+The SQLite enrollment inventory includes the browser signing v2 controls,
+barrier and writer, retained namespaces, queries and originals, and v3 writer.
+These tables receive the same identity-bound storage fences as the rest of the
+application; their existing protocol and immutable-original guards still apply.
+An unknown application table continues to refuse enrollment rather than gain an
+implicit exemption. The verified connection exposes a guarded, read-only
+transaction-state property so the existing browser admission helpers can check
+their transaction without receiving native registration or extension access.
+
+Supported schema is not historical authority provenance. Nonempty browser
+signing writer markers, namespaces, queries or originals must refuse legacy
+enrollment; an unknown-metadata attestation cannot waive those states. Control
+and barrier rows need a bounded initial-state check rather than blanket metadata
+classification. Preserve unknown or previously activated history for its separate
+recovery review instead of clearing it during enrollment.
+
+This compatibility boundary does not enroll a running deployment, initialize
+schema through a guarded connection, or make `getDb()` and ordinary adapters
+use the verified connection. Their runtime integration, exclusive deployment
+history and cutover acceptance remain required. A browser journal retains only
+the payment-header hash; a future controlled paid-delivery producer also needs
+a private canonical-callback handoff, rather than reconstructing a bearer
+header from the database.
+
 Stage the work with concrete ownership; merge/deploy only a usable, reviewed boundary,
 not a disabled marker that appears to close M2. No generic mainnet profile is added.
 

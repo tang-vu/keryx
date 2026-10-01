@@ -62,6 +62,7 @@ export function scanFullStorageSnapshot(db: DatabaseSync): StorageSnapshot {
   let rowCount = 0, totalBytes = 0, encodedBytes = schemaBytes, enrollmentRefusal: string | undefined;
   const tableCounts: Record<string, number> = {}, unknown = new Set<string>();
   const funded = new Set([...GATEWAY_FUNDING_TABLES, "session_grants", "browser_authorization_intents", "browser_journal_bindings", "browser_signer_capacity",
+    "browser_signing_v2_writer", "browser_signing_v3_writer", "browser_signing_namespaces", "browser_signing_queries", "browser_signing_originals",
     "browser_retained_grants", "a2a_orders", "withdrawals", "creator_withdrawal_requests", "creator_withdrawal_transfer_attempts",
     "creator_withdrawal_attestations", "private_research_intents", "private_treasury_pools", "private_treasury_reservations",
     "private_research_payment_attempts", "private_creator_submissions", "private_creator_confirmations", "private_treasury_releases",
@@ -123,11 +124,20 @@ export function scanFullStorageSnapshot(db: DatabaseSync): StorageSnapshot {
       }
       if (table === "browser_journal_control" && (values.id !== BigInt(1) || ![BigInt(0), BigInt(1)].includes(values.active as bigint))) refuseStorage("malformed_authority");
       if (table === "browser_journal_writer") enrollmentRefusal = "unresolved_funded_or_authority_provenance";
+      if (table === "browser_signing_v2_control" || table === "browser_signing_v2_barrier") {
+        const state = table === "browser_signing_v2_control" ? "active" : "ever_active";
+        const expectedColumns = ["id", state, "min_original_version"].sort().join(",");
+        if (columns.map(column => column.name).sort().join(",") !== expectedColumns ||
+            values.id !== BigInt(1) || values[state] !== BigInt(0) || values.min_original_version !== BigInt(2))
+          enrollmentRefusal = "unresolved_funded_or_authority_provenance";
+      }
     }
     tableCounts[table] = count;
     if (count && funded.has(table)) enrollmentRefusal = "unresolved_funded_or_authority_provenance";
+    if (["browser_signing_v2_control", "browser_signing_v2_barrier"].includes(table) && count !== 1)
+      enrollmentRefusal = "unresolved_funded_or_authority_provenance";
     if (table !== "sqlite_sequence" && !STORAGE_APPLICATION_TABLES.includes(table)) enrollmentRefusal = "unsupported_table";
-    if (count && !funded.has(table) && !["payment_events", "browser_journal_control", "sqlite_sequence"].includes(table)) unknown.add(`legacy_metadata:${table}`);
+    if (count && !funded.has(table) && !["payment_events", "browser_journal_control", "browser_signing_v2_control", "browser_signing_v2_barrier", "sqlite_sequence"].includes(table)) unknown.add(`legacy_metadata:${table}`);
     frame(table); frame(JSON.stringify(names));
     for (const row of rows.sort()) frame(row);
   }

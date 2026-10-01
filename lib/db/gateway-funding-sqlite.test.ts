@@ -62,18 +62,38 @@ async function child(input: object) {
   const resultPromise = new Promise<{ ok: boolean; result?: { fresh?: boolean; cryptoClaimId?: string }; signatures: number; sends: number }>((resolve, reject) => { result = resolve; failResult = reject; });
   void resultPromise.catch(() => {});
   const pointPromise = new Promise<void>((resolve, reject) => { point = resolve; failPoint = reject; }); void pointPromise.catch(() => {});
-  let received = false, stderrBytes = 0;
+  let received = false, stderrBytes = 0, stage = "unknown", category = "unknown";
   process.stderr.on("data", bytes => { stderrBytes += bytes.length; }); // report count only, never raw child payload/path errors
-  const failure = () => { const error = new Error(`Synthetic ledger child failed (${stderrBytes} diagnostic bytes)`); failReady(error); failResult(error); failPoint(error); };
-  const deadline = setTimeout(() => { failure(); process.kill("SIGKILL"); }, 15000);
-  process.once("error", failure); process.once("exit", () => { clearTimeout(deadline); if (!received) failure(); });
+  const failure = (status: number | null = null, signal: string | null = null) => {
+    const safeSignal = signal === null ? "none" : ["SIGKILL", "SIGTERM", "SIGABRT", "SIGSEGV"].includes(signal) ? signal : "other";
+    const error = new Error(`Synthetic ledger child failed stage=${stage} category=${category} status=${status ?? "none"} signal=${safeSignal} (${stderrBytes} diagnostic bytes)`);
+    failReady(error); failResult(error); failPoint(error);
+  };
+  const deadline = setTimeout(() => { stage = "deadline"; failure(); process.kill("SIGKILL"); }, 15000);
+  process.once("error", () => { category = "spawn"; failure(); }); process.once("exit", (code, signal) => { clearTimeout(deadline); if (!received) failure(code, signal); });
   process.stdout.on("data", bytes => { text += bytes.toString(); if (text.includes("READY\n")) ready();
     if (text.includes("POINT\n")) point();
+    if (text.includes('FAILURE {"stage":"admission","category":"refused"}\n')) { stage = "admission"; category = "refused"; failure(); }
     const match = text.match(/RESULT (.*)\n/); if (match && !received) { received = true; clearTimeout(deadline); result(JSON.parse(match[1])); } });
   await readyPromise;
   return { process, start: () => process.stdin.write("GO\n"), result: resultPromise, point: pointPromise };
 }
 describe("identity-bound SQLite funding ledger", () => {
+  it("reports native admission failure under an exclusive lock without treating it as a reservation loser", async () => {
+    const f = await fixture(), ledger = openGatewayFundingSqliteLedger(f.file, f.identity);
+    await ledger.admitOperation(f.operation.operationId); ledger.close();
+    const native = new DatabaseSync(f.file);
+    try {
+      const before = scanFullStorageSnapshot(native);
+      native.exec("BEGIN EXCLUSIVE");
+      // An explicit exclusive lock demonstrates admission failure. It is not
+      // claimed equivalent to the production reservation's BEGIN IMMEDIATE.
+      await expect(child({ file: f.file, identity: f.identity, action: "reserve", operationId: f.operation.operationId }))
+        .rejects.toThrow("stage=admission category=refused");
+      native.exec("ROLLBACK");
+      expect(scanFullStorageSnapshot(native)).toEqual(before);
+    } finally { if (native.isTransaction) native.exec("ROLLBACK"); native.close(); }
+  }, 20000);
   it.each(["missing", "modified"])("uses an exact covering observation index and refuses %s index without repair", async kind => {
     const f = await fixture(), db = new DatabaseSync(f.file);
     try {
