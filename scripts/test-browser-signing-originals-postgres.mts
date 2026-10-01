@@ -163,9 +163,19 @@ try {
   for (const table of ["browser_signing_v2_control", "browser_signing_v2_writer", "browser_signing_v2_barrier", "browser_signing_namespaces", "browser_signing_policies", "browser_signing_queries", "browser_signing_originals"]) {
     await unchanged(async () => { assert.throws(() => service(`delete from public.${table}`), /permission denied/); });
   }
-  const beforeRestart = snapshot(); docker(["restart", name]); await readiness(); await new Promise(r => setTimeout(r, 1000));
+  const beforeRestart = snapshot(); docker(["restart", name]); await readiness();
+  // Restart the owned stateless HTTP process too: this acceptance checks durable
+  // readback, rather than automatic reconnection of an untouched stale DB pool.
+  docker(["restart", owned[1]]);
+  let restartedHttpReady = false; const restartDeadline = performance.now() + 10000;
+  while (performance.now() < restartDeadline) {
+    try {
+      const observed = await readSupabaseBrowserSigningSnapshot(sb, policy.owner, input.journal.sessionId, input.journal.requestId);
+      if (observed !== null) { restartedHttpReady = true; break; }
+    } catch { await new Promise(r => setTimeout(r, 100)); }
+  }
+  assert(restartedHttpReady, "Synthetic PostgREST restart readiness deadline");
   assert.equal(snapshot(), beforeRestart); await unchanged(async () => { const recovered = await readSupabaseBrowserSigningSnapshot(sb, policy.owner, input.journal.sessionId, input.journal.requestId); assert.deepEqual(recovered?.original, saved.original); });
-  console.log("PASS actual role ACL/direct-write refusal/restart coherent readback; synthetic only");
 } finally {
   if (engine) {
     let failures = 0; const existing = docker(["ps", "-a", "--format", "{{.Names}}"]).trim().split("\n");
@@ -173,3 +183,4 @@ try {
     assert.deepEqual(docker(["ps", "-a", "--format", "{{.Names}}"]).trim().split("\n").filter(n => owned.includes(n)), []); assert.equal(failures, 0);
   }
 }
+console.log("PASS actual role ACL/direct-write refusal/DB+HTTP restart coherent readback/owned cleanup; synthetic only");
