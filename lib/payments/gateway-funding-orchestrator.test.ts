@@ -37,17 +37,23 @@ describe("immutable operator funding operation with actual SQLite, viem and nati
     expect(elapsed).toBeGreaterThanOrEqual(9500); expect(elapsed).toBeLessThan(12000);
     expect(signing.calls).toBe(1); expect(signing.accounts).toBe(accounts); expect(writes(rpc)).toHaveLength(1); expect(f.snapshot()).toEqual(snapshot);
   }, 60000);
-  it("counts pre-discovery time and bounds an existing-original keyed invocation by the shorter keyless deadline", async () => {
+  it("counts pre-discovery time and bounds a held post-discovery original backend read response", async () => {
     const f = await fundingFixture(); let blocked = false, released = false;
-    const rpc = await fundingProtocol(f, async method => {
-      if (method === "eth_getTransactionReceipt") { blocked = true; await new Promise(resolve => setTimeout(resolve, 15000)); released = true; }
-    });
+    const rpc = await fundingProtocol(f);
     expect((await createGatewayFundingExecutorForTrustedSyntheticComposition(f.options, rpc.origins).executeStep(f.operation.operationId, "nativeTransfer")).status).toBe("broadcast-acknowledged");
     const snapshot = f.snapshot(), accounts = signing.accounts;
-    let inspected = false;
+    let inspected = false, originalReads = 0;
     const ledger = { ...f.ledger, inspectOperation: async (...args: Parameters<typeof f.ledger.inspectOperation>) => {
       if (!inspected) { inspected = true; await new Promise(resolve => setTimeout(resolve, 2000)); }
       return f.ledger.inspectOperation(...args);
+    }, inspectReservation: async (...args: Parameters<typeof f.ledger.inspectReservation>) => {
+      const saved = await f.ledger.inspectReservation(...args);
+      // Initial inventory and per-leg read complete normally. Hold only the
+      // genuine native backend read response inside keyless receipt recovery.
+      if (args[1] === "nativeTransfer" && ++originalReads === 3) {
+        blocked = true; await new Promise(resolve => setTimeout(resolve, 15000)); released = true;
+      }
+      return saved;
     } } as GatewayFundingLedger;
     const start = performance.now();
     const answer = await execute({ ...options(f), ledger }, composition(rpc), {
@@ -55,7 +61,8 @@ describe("immutable operator funding operation with actual SQLite, viem and nati
     }).runOperation(f.operation.operationId);
     const elapsed = performance.now() - start;
     expect(inspected).toBe(true); expect(blocked).toBe(true); expect(released).toBe(false);
-    expect(answer.status).toBe("reconciliation-required"); expect(elapsed).toBeGreaterThanOrEqual(9500); expect(elapsed).toBeLessThan(12000);
+    expect(answer.status).toBe("reconciliation-required"); expect(answer.stage).toBe("original-receipt");
+    expect(elapsed).toBeGreaterThanOrEqual(9500); expect(elapsed).toBeLessThan(12000);
     expect(signing.calls).toBe(1); expect(signing.accounts).toBe(accounts); expect(writes(rpc)).toHaveLength(1);
     expect(f.snapshot()).toEqual(snapshot);
   }, 60000);
