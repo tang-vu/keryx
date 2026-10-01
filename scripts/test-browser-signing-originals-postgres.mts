@@ -64,6 +64,7 @@ const launchSidecars = () => {
 const readiness = async () => { const end = performance.now() + 10000; while (performance.now() < end) { try {
   execFileSync("docker", ["exec", name, "pg_isready", "-h", "127.0.0.1", "-U", "postgres"], { timeout: 2000, stdio: "ignore" }); return;
 } catch { await new Promise(r => setTimeout(r, 100)); } } throw new Error("Synthetic PG startup deadline"); };
+let sourceRollbackReceipts = 0;
 const http: typeof fetch = async (input, init) => {
   const path = new URL(String(input)).pathname.replace(/^\/rest\/v1/, ""); assert(/^\/rpc\/(browser_signing_[a-z_]+|sign_browser_journal)$/.test(path));
   const output = await new Promise<string>((resolve, reject) => {
@@ -76,6 +77,7 @@ const http: typeof fetch = async (input, init) => {
     let code = "unknown", message = "unavailable";
     try {
       const error = JSON.parse(body) as { code?: unknown; message?: unknown };
+      if (path === "/rpc/browser_signing_admit_source_original" && error.code === "P0001" && error.message === "synthetic source rollback") sourceRollbackReceipts++;
       if (typeof error.code === "string" && /^[A-Z0-9]{5}$/.test(error.code)) code = error.code;
       if (typeof error.message === "string") message = error.message
         .replace(/0x[0-9a-f]+/gi, "[hex]").replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi, "[uuid]")
@@ -311,18 +313,21 @@ try {
   const sourceHeader = serializeBrowserSigningHeader(sourceSaved.original, await signer.signTypedData(browserSigningTypedData(sourceSaved.original)));
   assert.equal(await signSupabaseBrowserSigningOriginal(sb, "synthetic-owner", sourceSaved.journal.requestId, sourceHeader), true);
   assert((counts.get("eth_call") ?? 0) >= 1 && (counts.get("eth_getBlockByNumber") ?? 0) >= 2 && (counts.get("eth_chainId") ?? 0) >= 6); assert.deepEqual(rpcFailures, []);
+  const nextSource = { ...publicInput, journal: { ...publicInput.journal, requestId: randomUUID() } }, token = await authority.resolve(nextSource), nextPrepared = prepareBrowserSourceSigningAdmission(nextSource, token);
+  await unchanged(async () => { const result = await sb.rpc("browser_signing_admit_source_original", { p_input: nextPrepared.input, p_journal: nextPrepared.journal, p_admission_deadline_ms: nextPrepared.admissionDeadlineMs, p_original: { ...nextPrepared.original, sourceContextDigest: digest() } }); assert(result.error); });
+  sql(`create function public.synthetic_source_failure() returns trigger language plpgsql as $$begin raise exception 'synthetic source rollback'; end$$;create trigger synthetic_source_failure before insert on public.browser_signing_originals for each row execute function public.synthetic_source_failure()`);
+  await unchanged(async () => {
+    const before = sourceRollbackReceipts;
+    await assert.rejects(() => admitSupabaseBrowserSourceSigningOriginal(sb, nextSource, authority));
+    assert.equal(sourceRollbackReceipts, before + 1, "actual late source trigger must cause the refusal");
+  });
+  sql("drop trigger synthetic_source_failure on public.browser_signing_originals;drop function public.synthetic_source_failure()");
   const noAuthority = { async resolve(): Promise<never> { throw new Error("Historical replay must not contact current authority"); } };
   service("select public.disable_browser_journal_grant('synthetic-owner')");
   await unchanged(async () => { const replay = await admitSupabaseBrowserSourceSigningOriginal(sb, publicInput, noAuthority); assert(replay.status === "admitted"); assert.deepEqual(replay.original, sourceSaved.original); });
   await unchanged(async () => { assert.equal((await admitSupabaseBrowserSourceSigningOriginal(sb, { ...publicInput, source: { ...publicInput.source, contentVersion: "foreign" } }, noAuthority)).status, "refused"); });
   await unchanged(async () => { await assert.rejects(() => admitSupabaseBrowserSourceSigningOriginal(sb, { ...publicInput, journal: { ...publicInput.journal, kind: "citation" } }, noAuthority)); });
   await unchanged(async () => { assert.throws(() => sql(`update public.browser_signing_originals set original=jsonb_set(original,'{sourceContext,registry,payoutWallet}','"${owner.address.toLowerCase()}"') where nonce='${sourceSaved.journal.nonce}'`), /immutable/); });
-  grant(sourceEpoch);
-  const nextSource = { ...publicInput, journal: { ...publicInput.journal, requestId: randomUUID() } }, token = await authority.resolve(nextSource), nextPrepared = prepareBrowserSourceSigningAdmission(nextSource, token);
-  await unchanged(async () => { const result = await sb.rpc("browser_signing_admit_source_original", { p_input: nextPrepared.input, p_journal: nextPrepared.journal, p_admission_deadline_ms: nextPrepared.admissionDeadlineMs, p_original: { ...nextPrepared.original, sourceContextDigest: digest() } }); assert(result.error); });
-  sql(`create function public.synthetic_source_failure() returns trigger language plpgsql as $$begin raise exception 'synthetic source rollback'; end$$;create trigger synthetic_source_failure before insert on public.browser_signing_originals for each row execute function public.synthetic_source_failure()`);
-  await unchanged(async () => { await assert.rejects(() => admitSupabaseBrowserSourceSigningOriginal(sb, nextSource, authority)); });
-  sql("drop trigger synthetic_source_failure on public.browser_signing_originals;drop function public.synthetic_source_failure()");
   const offerEpoch = randomUUID(); grant(offerEpoch, 0.001);
   const offerPolicy = { ...sourcePolicy, policyId: digest(), requestNonce: digest(), queryId: randomUUID(), grantEpoch: offerEpoch, queryCeilingMicros: "250", lifetimeCeilingMicros: "500", jobLimit: 4 };
   assert.equal((await admitSupabaseBrowserQueryPolicy(sb, { policy: offerPolicy, signature: await owner.signTypedData(browserQueryPolicyTypedData(offerPolicy)) }, "synthetic-owner")).status, "admitted");
