@@ -103,6 +103,36 @@ describe("keyless SQLite provenance intake", () => {
     const f = fixture(); const db = new DatabaseSync(f.file); db.prepare("INSERT INTO payment_events VALUES(?,'pending',0.002)").run(network); db.close();
     expect(await inspectStorageProvenance(f.file)).toMatchObject({ status: "refused", reason: "foreign_authority", snapshotComplete: false });
   });
+  it("accepts only the exact withdrawal alias and preserves its distinct authority digest", async () => {
+    const reports = [];
+    for (const network of ["eip155:5042002", "arcTestnet"]) {
+      const f = fixture("CREATE TABLE withdrawals(network TEXT,amount_usdc REAL);");
+      const db = new DatabaseSync(f.file); db.prepare("INSERT INTO withdrawals VALUES(?,0.002)").run(network); db.close();
+      const before = readFileSync(f.file), report = await inspectStorageProvenance(f.file);
+      expect(report).toMatchObject({ status: "intake_only", snapshotComplete: true, origin: "unknown_legacy",
+        enrollmentAuthorized: false, modeIdentityAccepted: false });
+      expect(readFileSync(f.file)).toEqual(before); expect(readdirSync(f.directory)).toEqual(["synthetic.sqlite"]);
+      reports.push(report);
+    }
+    expect(reports[0].evidence?.schemaSha256).toBe(reports[1].evidence?.schemaSha256);
+    expect(reports[0].evidence?.selectedAuthoritySha256).not.toBe(reports[1].evidence?.selectedAuthoritySha256);
+    expect(reports[1].evidence?.classifications.withdrawal_testnet_alias_not_origin_proof).toBe(1);
+    expect(reports[0].evidence?.classifications.withdrawal_testnet_alias_not_origin_proof).toBeUndefined();
+  });
+  it.each(["eip155:1", "arcMainnet", "arctestnet", "ArcTestnet", "arcTestnet ", " arcTestnet"])("refuses withdrawal alias near-match or foreign network %s", async network => {
+    const f = fixture("CREATE TABLE withdrawals(network TEXT);");
+    const db = new DatabaseSync(f.file); db.prepare("INSERT INTO withdrawals VALUES(?)").run(network); db.close();
+    expect(await inspectStorageProvenance(f.file)).toMatchObject({ status: "refused", reason: "foreign_authority", snapshotComplete: false });
+  });
+  it("keeps the withdrawal alias refused in other tables and nested JSON authorities", async () => {
+    const f = fixture("CREATE TABLE payment_events(network TEXT); INSERT INTO payment_events VALUES('arcTestnet');");
+    expect(await inspectStorageProvenance(f.file)).toMatchObject({ status: "refused", reason: "foreign_authority" });
+    for (const value of [{ network: "arcTestnet" }, { requirement: { network: "arcTestnet" } }, { accepts: [{ network: "arcTestnet" }] }]) {
+      const g = fixture("CREATE TABLE creator_withdrawal_requests(data TEXT);");
+      insertJson(g.file, "creator_withdrawal_requests", "data", value);
+      expect(await inspectStorageProvenance(g.file)).toMatchObject({ status: "refused", reason: "foreign_authority" });
+    }
+  });
   it("inspects serialized requirements without disclosing bearer/private payloads", async () => {
     const f = fixture("CREATE TABLE browser_journal_bindings(requirements TEXT);");
     insertJson(f.file, "browser_journal_bindings", "requirements", { ...requirements, bearerHeader: "secret-payment-header", question: "private prompt" });
