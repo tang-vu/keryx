@@ -1,0 +1,38 @@
+name: Gateway funding PostgreSQL candidate
+on:
+  pull_request:
+    paths:
+      - "scripts/test-fixtures/funding-postgres/**"
+      - "lib/db/**"
+      - "lib/operator/gateway-funding-*"
+      - "scripts/funding-inspect*.mts"
+      - "lib/canonical-json.ts"
+      - "package*.json"
+      - "tsconfig.json"
+      - "eslint.config.*"
+      - "lib/payments/gateway-funding-*"
+      - "scripts/test-gateway-funding-postgres.mts"
+      - "scripts/gateway-funding-postgres-readiness-fixture.mts"
+      - ".github/workflows/gateway-funding-postgres.yml"
+  workflow_dispatch:
+jobs:
+  gateway-funding-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.10.0"
+          cache: npm
+      - run: npm ci
+      - name: Actual isolated PostgreSQL17 and PostgREST funding and current readiness acceptance
+        run: node --import tsx scripts/test-gateway-funding-postgres.mts
+      - name: Project TypeScript
+        run: npx tsc --noEmit
+      - name: Scoped fixture TypeScript
+        run: npx tsc --noEmit --skipLibCheck --strict --target ES2022 --module esnext --moduleResolution bundler --allowImportingTsExtensions scripts/test-gateway-funding-postgres.mts scripts/gateway-funding-postgres-readiness-fixture.mts
+      - name: Scoped lint
+        run: npx eslint lib/payments/gateway-funding-readiness.ts scripts/test-gateway-funding-postgres.mts scripts/gateway-funding-postgres-readiness-fixture.mts

@@ -1,5 +1,24 @@
 # Keryx — Decision Log
 
+**D-280** - Integrate funding source while retaining deployed storage authority -
+*The reviewed staged funding implementation depended on a strict application
+storage cutover whose trusted legacy enrollment and production drain gates are
+still open.* Gather its unused policy, canonical transactions, corroborated
+receipts, preflight/readiness, one-shot executor, bounded orchestrator and
+keyless inspection with isolated journal helpers in a main-based source release.
+Existing application adapters, DB selector and RealGateway retain their deployed
+behavior. Candidate PostgreSQL authority SQL lives only in isolated test fixtures,
+outside deployment migration discovery.
+
+The Operator composition is explicitly disabled and refuses before caller
+binding inspection, dynamic executor import or key loading. No environment flag
+creates authority, and this release supplies no activation issuer. A separately
+reviewed issuer and enrolled binding, trusted key/history intake, paused/drained
+cutover, both-backend acceptance and identity-aware restore/rollback remain
+required before runtime prefunding integration. Synthetic fixture evidence does
+not authorize production enrollment, funding or mainnet. See
+[dormant funding release](docs/gateway-funding-dormant-release.md).
+
 **D-279** - Preserve public research while funding readiness is unknown -
 *An initial mixed public/owned portfolio previously lost all usable public evidence when wallet funding threw before gathering.* Treat an initial or lazy funding failure as query-local uncertainty: withhold owned BUY/CACHE reads and creator rewards, retain planned fetch reservations, and continue bounded free public evidence gathering and synthesis. Do not retry funding during the run or convert funding exceptions into creator payment records. Future gap selection considers only eligible public references after the failure.
 
