@@ -108,6 +108,8 @@ export interface SourceItem {
 
 /** Immutable identity for the exact article version the agent evaluated and purchased. */
 export interface SourceItemIdentity {
+  /** Observed provider metadata; never creator identity or payout authority. */
+  scholarly?: ScholarlyMetadata;
   webProvenance?: {
     retrievedAt: string;
     publisherGroup: string;
@@ -124,6 +126,30 @@ export interface SourceItemIdentity {
   contentVersion: string;
   itemPublishedAt?: string;
   contentReceipt?: ContentReceiptRef;
+}
+
+export interface ScholarlyMetadata {
+  provider: "crossref" | "arxiv";
+  recordUrl: string;
+  retrievedAt: string;
+  title: string;
+  authors: string[];
+  /** Count of contributor entries supplied by the provider, not verified authorship. */
+  authorCount?: number;
+  authorsTruncated?: boolean;
+  /** Optional exact provider name parts; never guess surnames from a full name. */
+  authorNames?: Array<{ given?: string; family?: string; literal?: string }>;
+  doi?: string;
+  arxivId?: string;
+  workType: "journal-article" | "preprint" | "other";
+  journal?: string;
+  publishedDate?: string;
+  volume?: string;
+  issue?: string;
+  pages?: string;
+  /** Provider type does not prove peer review. */
+  peerReview: "unknown";
+  evidenceScope?: "paper-text" | "abstract-page" | "publisher-page";
 }
 
 /**

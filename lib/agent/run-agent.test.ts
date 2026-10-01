@@ -1,4 +1,5 @@
 import { referenceSnapshot, type PublicReference } from "../public-references/catalog";
+import { scholarlyCandidate } from "../scholarly/discovery";
 /**
  * Economic-invariant tests for the agent orchestrator (run-agent.ts).
  *
@@ -323,6 +324,71 @@ async function drive(
 
 const fetchBudget = (budget: number) => budget * (1 - config.citationPoolRatio);
 const citationPool = (budget: number) => budget * config.citationPoolRatio;
+
+const paper = (arxivId = "1706.03762v7") => scholarlyCandidate({ provider: "arxiv", recordUrl: "https://export.arxiv.org/api/query?id_list=" + arxivId,
+  retrievedAt: "2026-10-01T00:00:00Z", title: "Observed paper " + arxivId, authors: ["Observed Author"], arxivId, workType: "preprint", peerReview: "unknown" });
+function injectPapers(d: AgentDeps, ids = ["1706.03762v7"]) {
+  const candidates = new Map(ids.map(id => { const candidate = paper(id); return [candidate.id, candidate]; }));
+  d.discoverScholarly = vi.fn(async () => ({ candidates, succeeded: 1, unavailable: 0, requestedDois: 0, resolvedDois: 0 }));
+}
+it("reads exact versioned scholarly PDFs, preserves observed metadata, and never funds or pays paper authors", async () => {
+  const d = deps([], fakeEngine(), fakeGateway()); injectPapers(d);
+  const funded = vi.spyOn(d.gateway, "ensureFunded");
+  d.readWebArticle = vi.fn(async (url: string) => ({ text: "The versioned paper actually contains this evidence.", title: "pdf hostname", finalUrl: url, kind: "pdf" as const, truncated: true }));
+  const { run } = await drive({ question: "Transformer attention", scholarly: true, origin: "web" }, d);
+  expect(d.discoverScholarly).toHaveBeenCalledWith("Transformer attention", true, expect.any(AbortSignal));
+  expect(run.citations[0]).toMatchObject({ sourceKind: "public-reference", reward: 0, itemUrl: "https://arxiv.org/pdf/1706.03762v7",
+    scholarly: { arxivId: "1706.03762v7", evidenceScope: "paper-text", workType: "preprint", peerReview: "unknown" }, webProvenance: { truncated: true } });
+  expect(run.evidence?.[0]).toMatchObject({ qualifiesForReward: false, scholarly: { evidenceScope: "paper-text" } });
+  expect(funded).not.toHaveBeenCalled(); expect((d.gateway as FakeGateway).fetchCalls).toEqual([]); expect((d.gateway as FakeGateway).citationCalls).toEqual([]); expect(run.totalSpent).toBe(0);
+});
+it("counts PDF and explicit abstract fallback as separate read attempts under the aggregate quick cap", async () => {
+  const d = deps([], fakeEngine({ decide: input => input.candidates.map((candidate, index) => ({ ...buy({ id: candidate.id, name: candidate.name, price: 0 }), targets: [index] })) }), fakeGateway());
+  d.engine.decompose = async () => ["first claim", "second claim", "third claim"];
+  injectPapers(d, ["1706.03762v7", "1706.03763v1", "1706.03764v1"]);
+  d.readWebArticle = vi.fn(async (url: string) => { if (url.includes("/pdf/")) throw new Error("full paper unavailable");
+    return { text: `Abstract evidence at ${url}.`, title: "Abstract", finalUrl: url, kind: "html" as const, truncated: false }; });
+  const { run, steps } = await drive({ question: "Transformer attention", scholarly: true, origin: "web", researchMode: "quick", executionLimits: { attentionLimit: 3, reevaluateRounds: 0 } }, d);
+  expect(d.readWebArticle).toHaveBeenCalledTimes(4); expect(run.citations).toHaveLength(2);
+  for (const citation of run.citations) expect(citation).toMatchObject({ publicDeliveryKind: "abstract", scholarly: { evidenceScope: "abstract-page" } });
+  expect(steps.filter(step => step.message.includes("only the abstract page was read"))).toHaveLength(2);
+  expect(steps.some(step => step.message.includes("web-operation-limit"))).toBe(true);
+});
+it("refuses changed arXiv versions or non-PDF paper responses instead of attaching old bibliographic provenance", async () => {
+  for (const wrong of [{ finalUrl: "https://arxiv.org/pdf/1706.03762v8", kind: "pdf" as const }, { finalUrl: "https://arxiv.org/pdf/1706.03762v7", kind: "html" as const }]) {
+    const d = deps([], fakeEngine(), fakeGateway()); injectPapers(d);
+    d.readWebArticle = vi.fn(async () => ({ text: "This is another document.", title: "Wrong version", truncated: false, ...wrong }));
+    const { run } = await drive({ question: "Attention", scholarly: true, origin: "web" }, d);
+    expect(run.citations).toEqual([]); expect(run.evidence ?? []).toEqual([]);
+  }
+});
+it("does not admit scholarly discovery metadata when original content cannot be read", async () => {
+  const d = deps([], fakeEngine(), fakeGateway()); injectPapers(d);
+  d.readWebArticle = vi.fn(async () => { throw new Error("paywall internal"); });
+  const { run, steps } = await drive({ question: "Attention", scholarly: true, origin: "web" }, d);
+  expect(run.citations).toEqual([]); expect(JSON.stringify(steps)).not.toContain("paywall internal");
+});
+it("treats HTML at the unchanged PDF URL as unavailable PDF and explicitly reads the abstract fallback", async () => {
+  const d = deps([], fakeEngine(), fakeGateway()); injectPapers(d);
+  d.readWebArticle = vi.fn(async (url: string) => ({ text: url.includes("/pdf/") ? "Publisher challenge" : "Original abstract evidence.", title: "Page", finalUrl: url, kind: "html" as const, truncated: false }));
+  const { run, steps } = await drive({ question: "Attention", scholarly: true, origin: "web" }, d);
+  expect(d.readWebArticle).toHaveBeenCalledTimes(2);
+  expect(run.citations[0]).toMatchObject({ itemUrl: "https://arxiv.org/abs/1706.03762v7", scholarly: { evidenceScope: "abstract-page" } });
+  expect(steps.some(step => step.message.includes("paper PDF unavailable (pdf-extraction-unavailable)"))).toBe(true);
+  expect(run.evidence?.[0].quote).not.toContain("Publisher challenge");
+});
+it("withholds scholarly opt-in and DOI queries from private jobs and unattended engine runs", async () => {
+  const d = deps([], fakeEngine(), fakeGateway()); injectPapers(d);
+  await drive({ question: "10.1234/exact", scholarly: true }, d); expect(d.discoverScholarly).not.toHaveBeenCalled();
+  const queryId = `prv_${"7".repeat(64)}`; d.effects = isolatedTestEffects(queryId);
+  await drive({ question: "10.1234/exact", scholarly: true, queryId, allowExternalWeb: true }, d); expect(d.discoverScholarly).not.toHaveBeenCalled();
+});
+it("automatically resolves a question DOI without opting into general scholarly search", async () => {
+  const d = deps([], fakeEngine(), fakeGateway()); injectPapers(d);
+  d.readWebArticle = async url => ({ text: "Observed original paper evidence.", title: "Paper", finalUrl: url, kind: "pdf", truncated: false });
+  await drive({ question: "Explain 10.1234/exact", origin: "web" }, d);
+  expect(d.discoverScholarly).toHaveBeenCalledWith("Explain 10.1234/exact", false, expect.any(AbortSignal));
+});
 
 it("reads selected original web content without funding, rejects snippet evidence and preserves fetched provenance", async () => {
   const d = deps([], fakeEngine(), fakeGateway());
