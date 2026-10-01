@@ -6,6 +6,27 @@ document does not activate a selector, enroll a store, authorize a payment or
 close M2/mainnet readiness. PostgreSQL implementation and acceptance are a
 separate staged change; SQLite acceptance cannot prove that backend usable.
 
+## Supported surfaces and release boundary
+
+This backend candidate is dormant across all supported surfaces. The public
+`KeryxDB` contract and deployed selector remain shared; production enrollment and
+caller cutover require a separate coordinated release.
+
+| Surface | Authority retained by this change | Remaining release gate |
+| --- | --- | --- |
+| Web and HTTP API | Ordinary adapters selected by `getDb()` | Reviewed deployment enrollment, complete caller inventory and cutover |
+| Remote MCP | Existing server research path and `getDb()` | Same server cutover; retain authentication, budgets and settlement evidence |
+| CLI and stdio MCP | Existing buyer transport and private journal; server storage stays behind the API | Review local worker callers and server cutover before selecting an enrolled factory |
+| Desktop | Existing Operator composition and packaged native engine | Separate storage enrollment and domain cutover; native and installer acceptance do not activate Supabase |
+| Extension | Existing authenticated web/API transport | Server cutover and browser authorization acceptance |
+| Telegram, Discord and Slack bots | Existing guarded server research path | Server cutover with each bot's authentication and result-evidence checks |
+
+Factory imports remain confined to acceptance fixtures and internal composition.
+The dormant import-graph gate checks ordinary application reachability. Desktop
+smoke changes verify packaging and uninstall behavior only. No public API,
+package or installer version change, production deployment, synchronized
+distribution or funded settlement is claimed by this candidate's acceptance.
+
 ## Runtime admission
 
 The closed factories read `KERYX_STORAGE_MANIFEST` through the existing bounded

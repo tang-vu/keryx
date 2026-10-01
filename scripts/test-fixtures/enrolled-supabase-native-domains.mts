@@ -124,8 +124,10 @@ export async function exerciseEnrolledSupabaseNativeDomains(
   const queryId = randomUUID();
   const sourceId = `native-source-${randomUUID()}`;
   const itemId = `native-item-${randomUUID()}`;
-  const sourceUrl = 'https://source.example/';
-  const sourceName = 'Native synthetic source';
+  // All scenarios retain their rows in one native store. A new source ID alone
+  // cannot avoid the unique registry ID derived from creator and canonical URL.
+  const sourceUrl = `https://source.example/${sourceId}/`;
+  const sourceName = `Native synthetic source ${sourceId}`;
   const { browserSourceRegistryId } = await import('../../lib/payments/browser-original-source-context.ts');
   const { sourceItemContentVersion } = await import('../../lib/sources/source-item-asset.ts');
   const { browserQueryPolicyTypedData } = await import('../../lib/payments/browser-query-policy.ts');
@@ -146,7 +148,7 @@ export async function exerciseEnrolledSupabaseNativeDomains(
     active: true, verified: true, onchainId: browserSourceRegistryId(registry.creator, sourceUrl) });
   stage('items');
   await db.addItems([{ id: itemId, sourceId, title: 'Fixture item', summary: 'Preview',
-    content: 'Synthetic body', link: 'https://source.example/item' }]);
+    content: 'Synthetic body', link: `${sourceUrl}item` }]);
   stage('item-read');
   const item = await db.getItem(sourceId, itemId);
   assert.ok(item);
