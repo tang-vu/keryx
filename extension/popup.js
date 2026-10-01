@@ -88,7 +88,7 @@ function renderPaid(meta) {
   if (!meta) return;
   const citations = Array.isArray(meta.citations) ? meta.citations : [];
   if (citations.length === 0) {
-    els.status.textContent = "done · no paid sources cited";
+    els.status.textContent = "done · no sources cited";
     return;
   }
   for (const c of citations) {
@@ -105,7 +105,7 @@ function renderPaid(meta) {
   els.paidTotalUsd.textContent = `$${Number(meta.totalToCreators || 0).toFixed(4)}`;
   if (meta.dispatchUrl) els.dispatchLink.href = meta.dispatchUrl;
   show(els.paidPanel);
-  els.status.textContent = "done";
+  els.status.textContent = `done / ${meta.paymentMode || "legacy"} / planned rewards are not settlement proof`;
 }
 
 /** Apply one streamed chat.completion.chunk to the UI. */

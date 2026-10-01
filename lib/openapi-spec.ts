@@ -159,7 +159,7 @@ export const openapiSpec = {
               groundedClaims: { type: "integer" },
               groundedClaimRate: { type: ["number", "null"] },
               qualifyingEvidence: { type: "integer" },
-              rewardedCitations: { type: "integer" },
+              rewardedCitations: { type: "integer", description: "Creator citations with positive planned allocation; not a settled creator count." },
               confidence: { type: ["object", "null"] },
             },
           },
@@ -293,7 +293,7 @@ export const openapiSpec = {
               },
             },
           },
-          creatorsPaid: { type: "integer" },
+          creatorsPaid: { type: ["integer", "null"], description: "Distinct settled creators; null when unavailable. Citation allocations are not settlement evidence." },
           totalToCreators: { type: "number" },
           feePaid: { type: "number" },
           totalPricePaid: { type: "number" },
@@ -334,6 +334,8 @@ export const openapiSpec = {
             description: "When true, stream reasoning as `reasoning_content` deltas, then the answer.",
             example: false,
           },
+          scholarly: { type: "boolean", default: false, description: "Opt into bounded Crossref/arXiv discovery; sends the public question to those providers." },
+          mode: { type: "string", enum: ["quick", "deep"], default: "deep" },
           budget: {
             type: "number",
             description:
@@ -367,10 +369,10 @@ export const openapiSpec = {
           },
           keryx: {
             type: "object",
-            description: "Vendor extension — the creators Keryx paid for this answer.",
+            description: "Vendor extension with recorded citations, planned allocations and classified payment metadata.",
             properties: {
               queryId: { type: "string" },
-              creatorsPaid: { type: "integer" },
+              creatorsPaid: { type: ["integer", "null"], description: "Distinct settled creators; null when unavailable. Citation allocations are not settlement evidence." },
               totalToCreators: { type: "number" },
               dispatchUrl: { type: "string" },
               evidence: { type: "array", items: { type: "object" } },

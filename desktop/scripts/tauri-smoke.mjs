@@ -1,6 +1,6 @@
 import { execFileSync, spawn } from "node:child_process";
 import { createServer } from "node:net";
-import { cp, mkdtemp, mkdir, readFile, realpath, readdir, rm, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, mkdir, readFile, realpath, readdir, rm, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -36,7 +36,9 @@ function fixture(answer, intent) {
   const payload = { schema: RESEARCH_RECEIPT_SCHEMA,
     dispatch: { id: intent.queryId, question: intent.request.question, answer,
       answerSha256: sha256(answer), budgetUsdc: intent.request.budget, researchMode: intent.request.researchMode },
-    citations: [{ marker: "[1]", sourceName: "Synthetic acceptance source" }],
+    citations: [{ marker: "[1]", sourceId: "synthetic", sourceName: "Synthetic acceptance source",
+      itemId: "article", itemTitle: "Synthetic article", itemUrl: "https://example.org/article", contentVersion: "v1", weight: 1, rewardPlannedUsdc: 0.005, rationale: "read" }],
+    claims: [{ claimIndex: 0, claim: "Synthetic claim", evidence: [{ marker: "[1]", sourceId: "synthetic", sourceName: "Synthetic acceptance source", itemId: "article", contentVersion: "v1", quote: "Synthetic bounded evidence", support: 0.8, qualifiesForAnswer: true, qualifiesForReward: true }] }],
     settlement: { mode: "real", ledgerCompleteness: "complete", settledCreatorUsdc: 0.005,
       pendingCreatorUsdc: 0, simulatedCreatorUsdc: 0 } };
   const digest = researchReceiptDigest(payload);
@@ -284,6 +286,19 @@ try {
     try { await window.keryxDesktop.exportTask(handle); return false; } catch { return true; }
   }, created.handle);
   if (!overwriteRejected) throw Error("Status export overwrote an existing destination");
+  for (const [format, expected] of [["bibtex", "@misc"], ["ris", "TY  - WEB"], ["evidence-csv", "Synthetic bounded evidence"]]) {
+    await unlink(briefPath);
+    if (!await page.evaluate(({ handle, format }) => window.keryxDesktop.exportBrief(handle, format), { handle: created.handle, format })) throw Error(`${format} export canceled`);
+    if (!(await readFile(briefPath, "utf8")).includes(expected)) throw Error(`${format} lost checked receipt content`);
+    const refused = await page.evaluate(async ({ handle, format }) => {
+      try { await window.keryxDesktop.exportBrief(handle, format); return false; } catch { return true; }
+    }, { handle: created.handle, format });
+    if (!refused) throw Error(`${format} overwrote existing export`);
+  }
+  const invalidFormatRefused = await page.evaluate(async handle => {
+    try { await window.keryxDesktop.exportBrief(handle, "invalid"); return false; } catch { return true; }
+  }, created.handle);
+  if (!invalidFormatRefused) throw Error("Unknown export format accepted");
   const genericDenied = await page.evaluate(async () => {
     try { await window.__TAURI_INTERNALS__.invoke("plugin:shell|execute", { command: "cmd" }); return false; }
     catch { return true; }
@@ -296,6 +311,9 @@ try {
   active = await launch({ openWorkspace: view.path });
   const restored = await active.page.evaluate(() => window.keryxDesktop.refresh());
   if (restored.tasks.length !== 1 || restored.tasks[0].question !== created.question) throw Error("Workspace did not reopen after app restart");
+  for (const format of ["brief", "bibtex", "ris", "evidence-csv"]) {
+    if (await active.page.evaluate(({ handle, format }) => window.keryxDesktop.exportBrief(handle, format), { handle: created.handle, format })) throw Error(`${format} cancellation wrote an export`);
+  }
   await active.page.screenshot({ path: screenshotPath });
   await stop(active); active = null;
   const tamperedPackage = join(temporary, "tampered-package");

@@ -168,7 +168,7 @@ describe("response builders", () => {
     expect(embed.description).toContain("HTTP payment protocol");
     expect(embed.url).toContain("/dispatch/run-1");
     expect(embed.fields[0]!.value).toContain("Conzit — $0.0120 (weight 0.60)");
-    expect(embed.footer.text).toContain("2 creators paid");
+    expect(embed.footer.text).toContain("2 sources cited");
   });
 
   it("omits the creators field when nothing was cited, and truncates a huge answer", () => {

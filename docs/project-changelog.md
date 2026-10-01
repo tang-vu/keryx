@@ -21,6 +21,13 @@
   mobile version and bounded desktop placement. Keep local country assets,
   reduced-motion support, and the question and spending controls accessible.
 
+### Coordinated research surface contracts (2026-10-01)
+
+- Preserve article/scholarly identity and answer-qualified public evidence across A2A, remote/stdio MCP and OpenAI; reuse recorded reference and evidence exports.
+- Add bounded scholarly/depth options to public remote MCP/OpenAI without changing private package search policy or payment authority.
+- Export receipt-bound BibTeX, RIS and evidence CSV from Operator CLI and desktop through the existing private publisher.
+- Keep unproven distinct paid-creator counts unknown and separate reference/allocation counts. Record [surface parity](surface-parity.md) and coordinated distribution gates.
+
 ### DOI and scholarly research (2026-10-01)
 
 - Resolve up to two exact Crossref DOI records from a question; opt into bounded

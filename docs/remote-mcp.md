@@ -32,7 +32,7 @@ the `/mcp` route and registry `remotes` entry; existing `mcp` rows remain readab
 
 ## Tools
 
-- `research(question, budget?, model?)` — runs budgeted creator-paid research and returns both text
+- `research(question, budget?, model?, mode?, scholarly?)` — runs budgeted creator-paid research and returns both text
   and structured answer/citation/settlement metadata.
 - `keryx_status()` — reports the active caller tier and budget cap without starting a dispatch.
 
@@ -87,3 +87,5 @@ Authorization: Bearer kx_live_…
 
 Only keys with the `ask` scope can run as an authenticated caller. The key raises rate/budget caps
 and attributes the run; it does not custody funds or become a payment authority.
+
+`mode` accepts `quick` or `deep` (default). `scholarly: true` opts into bounded Crossref/arXiv discovery and sends the question to those services. Structured results retain article/version metadata, answer-qualified public evidence, and recorded BibTeX/RIS/evidence CSV exports. Planned citation allocations are separate from settlement; `creatorsPaid` remains null when the distinct settled count is unavailable.

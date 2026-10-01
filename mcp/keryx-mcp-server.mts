@@ -10,12 +10,14 @@
  * Transport: stdio. Configure it in any MCP client (Claude Code/Desktop, etc.) — see mcp/README.md.
  */
 
+import packageInfo from "./package.json" with { type: "json" };
+
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { askKeryx, getStatus, meta, recoverKeryx } from "./keryx-buyer.mts";
 
-const server = new McpServer({ name: "keryx", version: "0.1.0" });
+const server = new McpServer({ name: "keryx", version: packageInfo.version });
 
 server.registerTool(
   "ask_keryx",
@@ -49,9 +51,9 @@ server.registerTool(
       const text =
         `${r.answer}\n\n` +
         `— Paid Keryx ${r.amountPaid} USDC${proof}\n` +
-        `Keryx paid ${r.creatorsPaid} creator(s) $${r.totalToCreators} downstream:\n${cites}\n` +
+        `Recorded creator total: $${r.totalToCreators}; citation allocations (not individual settlement proof):\n${cites}\n` +
         `On-chain proof + live feed: ${meta.baseUrl}/dashboard`;
-      return { content: [{ type: "text" as const, text }] };
+      return { content: [{ type: "text" as const, text }], structuredContent: { ...r } };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       return { isError: true, content: [{ type: "text" as const, text: `Keryx call failed: ${msg}` }] };
