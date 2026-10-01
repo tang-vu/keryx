@@ -10,6 +10,10 @@ original reads. Prefer exact versioned arXiv PDFs; retain byte/page/text caps an
 make a separately counted abstract-page fallback explicit. Metadata-only previews
 cannot qualify as paper evidence, author control, distribution rights or payees.
 Journal type does not establish peer review; preprint and read limits remain visible.
+For grounding confidence, observed shared-DOI work links conservatively merge existing
+publisher groups without discarding exact versions or treating distinct works on one
+domain as independent publishers. Metadata links can only reduce apparent diversity;
+missing DOI is not guessed, and grouping does not prove scientific independence.
 
 Preserve supplied structured Crossref author names, repository versions, observation
 time and read scope in citations, receipts and browser BibTeX/RIS. Never infer DOI,

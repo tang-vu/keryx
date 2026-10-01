@@ -44,6 +44,11 @@ cannot establish details absent from the supplied abstract passages.
 
 Only content actually extracted passes to synthesis and literal quote matching.
 That establishes source grounding, not factual truth or independent corroboration.
+For grounding confidence, conservatively merge publisher domain groups when admitted
+scholarly reads share an observed normalized DOI. This prevents repository/publisher
+versions of one work from supplying two groups. Distinct versions remain inspectable
+citations and exports; missing DOIs are not guessed. Domain/work grouping remains a
+proxy, not proof that different papers provide independent scientific corroboration.
 Scholarly references remain `public-reference` assets with no creator rewards.
 Metadata never changes registered payout wallets, source ownership, signing or caps.
 Author opt-in payments are a separate [proposed staged plan](paid-scholarly-papers.md).
