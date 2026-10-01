@@ -4096,3 +4096,8 @@ Each query the agent probes the live Circle x402 bazaar (`circle services search
 ## Research transport parity ? 2026-10-01
 
 Use one public recorded-result projection for A2A, remote MCP and OpenAI. Preserve article/version and observed scholarly identity; use the reading UI bounded claim-matched answer-evidence gate rather than payment eligibility. Public references can support answers without rewards. Operator/desktop exports derive from checked task-bound receipts and remain private. No projection enriches records, authorizes payments or changes private search scope. Distinct settled creators cannot be inferred from citation allocations or payment-leg totals: creatorsPaid is nullable and allocations/references get separate names. Consumers must tolerate null. Ship applicable adapters/artifacts together under [surface parity](docs/surface-parity.md).
+
+
+## Stable native inspection versus derived exports ? 2026-10-02
+
+Preserve the established v1 raw result/default brief contract across the TypeScript and evaluated Rust readers. Derived reference/evidence exports are a separate application presentation domain, explicitly read through `readOperatorResearchResult` for non-brief CLI and desktop formats. Both raw and enriched readers share one integrity/task-binding snapshot reader; enrichment uses its exact checked receipt object without a second file read. This prevents transport enrichment from accidentally broadening a staged native domain or requiring duplicate bibliographic generators. Exact native/inter-file assertions remain release gates, with added copied-artifact proof of the raw base, derived formats, receipt digest/authority and unchanged source tree. Native direct-format cutover remains unproven.

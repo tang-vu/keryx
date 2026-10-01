@@ -2,7 +2,7 @@
 import { constants } from "node:fs";
 import { open } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
-import { createOperatorTask, formatOperatorResearchExport, operatorTaskStatus, readOperatorResult, resumeOperatorTask } from "../lib/operator/task.ts";
+import { createOperatorTask, formatOperatorResearchExport, operatorTaskStatus, readOperatorResult, readOperatorResearchResult, resumeOperatorTask } from "../lib/operator/task.ts";
 import { parseBuyerBudget } from "../lib/a2a/buyer-workspace.ts";
 import { addressSchema } from "../lib/buyer/protocol.ts";
 import { PrivateTextExportError, publishPrivateText } from "../lib/operator/private-text-export.ts";
@@ -89,11 +89,14 @@ async function main() {
     return;
   }
   if (command === "result" || command === "brief") {
-    const result = await readOperatorResult(options["--state"]);
+    const format = options["--format"] ?? "brief";
+    const result = command === "brief" && format !== "brief"
+      ? await readOperatorResearchResult(options["--state"])
+      : await readOperatorResult(options["--state"]);
     if (!result) throw new Error("No saved completed result; resume the original journal first");
     if (command === "result") console.log(JSON.stringify(result, null, 2));
     else {
-      const exported = await publishPrivateText(options["--file"], formatOperatorResearchExport(result, options["--format"] ?? "brief"));
+      const exported = await publishPrivateText(options["--file"], formatOperatorResearchExport(result, format));
       console.log(JSON.stringify(exported));
     }
     return;

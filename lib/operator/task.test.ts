@@ -12,7 +12,7 @@ import { RESEARCH_RECEIPT_CANONICALIZATION, RESEARCH_RECEIPT_SCHEMA } from "../r
 import { researchReceiptDigest, sha256 } from "../research-receipt-integrity";
 import { authorizationWithNonce, BUYER_GATEWAY, BUYER_NETWORK, BUYER_USDC } from "../buyer/protocol";
 import { buyerJobId } from "../buyer/policy";
-import { createOperatorTask, formatOperatorBrief, operatorTaskStatus, readOperatorResult, resumeOperatorTask } from "./task";
+import { createOperatorTask, formatOperatorBrief, operatorTaskStatus, readOperatorResult, readOperatorResearchResult, resumeOperatorTask } from "./task";
 import { createLegacyOperatorTask } from "../../test-support/legacy-operator-task";
 
 const roots: string[] = [];
@@ -229,6 +229,14 @@ it("CLI exports each requested format to --file and preserves overwrite refusal"
   await completedRecovery(task, "Saved answer", [{ marker: "S1", sourceId: "source", sourceName: "Creator",
     itemTitle: "Recorded article", itemUrl: "https://example.org/article", itemId: "item", contentVersion: "v1",
     weight: 1, rewardPlannedUsdc: 0.01, rationale: "read" }]);
+  const raw = await readOperatorResult(task);
+  const enriched = await readOperatorResearchResult(task);
+  expect(raw).not.toHaveProperty("researchExports");
+  expect(formatOperatorBrief(raw!)).not.toContain("## Recorded research exports");
+  expect(enriched).toEqual({ ...raw, researchExports: enriched!.researchExports });
+  expect(enriched!.researchExports.bibtex.count).toBe(1);
+  expect(enriched!.authority).toBe(raw!.authority);
+  expect(enriched!.receiptDigest).toBe(raw!.receiptDigest);
   const execute = promisify(execFile);
   const command = ["--import", "tsx", resolve("scripts/operator.mts"), "brief", "--state", task];
   for (const [format, expected] of [["brief", "# Private research brief"], ["bibtex", "@misc"], ["ris", "TY  - WEB"], ["evidence-csv", "claim_index"]]) {
@@ -241,4 +249,8 @@ it("CLI exports each requested format to --file and preserves overwrite refusal"
   const invalid = join(root, "invalid.txt");
   await expect(execute(process.execPath, [...command, "--file", invalid, "--format", "invalid"])).rejects.toThrow();
   await expect(readFile(invalid)).rejects.toMatchObject({ code: "ENOENT" });
+  const snapshot = JSON.parse(await readFile(join(task, "result.json"), "utf8"));
+  await writeFile(join(task, "buyer", snapshot.receiptFile), "{}");
+  await expect(readOperatorResult(task)).rejects.toThrow();
+  await expect(readOperatorResearchResult(task)).rejects.toThrow();
 }, 30000);

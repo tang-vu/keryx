@@ -3,7 +3,7 @@ import { lstatSync, realpathSync } from "node:fs";
 import { lstat, mkdir, open, readdir, realpath } from "node:fs/promises";
 import { basename, extname, join, resolve, sep } from "node:path";
 import { z } from "zod";
-import { formatOperatorResearchExport, operatorTaskStatus, readOperatorResult, resumeOperatorTask } from "../../lib/operator/task";
+import { formatOperatorResearchExport, operatorTaskStatus, readOperatorResult, readOperatorResearchResult, resumeOperatorTask } from "../../lib/operator/task";
 import { addressSchema, buyerRequestSchema } from "../../lib/buyer/protocol";
 import { parseBuyerBudget } from "../../lib/a2a/buyer-workspace";
 import type { CreateInput, CreatedTaskRow, ReferenceRow, TaskRow, WorkspaceView } from "./contracts";
@@ -246,7 +246,10 @@ export class WorkspaceStore {
   }
 
   async exportBrief(handle: unknown, format: unknown = "brief") {
-    const result = await this.readResult(handle);
+    if (typeof handle !== "string") throw new Error("Invalid task handle");
+    const path = await this.taskPath(handle);
+    await this.readTask(this.taskHandles.get(handle)!, path);
+    const result = format === "brief" ? await readOperatorResult(path) : await readOperatorResearchResult(path);
     if (!result) throw new Error("No saved completed result; check the original job first");
     return formatOperatorResearchExport(result, format);
   }

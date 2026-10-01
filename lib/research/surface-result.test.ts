@@ -20,6 +20,19 @@ export function fixture(): QueryRun {
 }
 
 describe("research surface parity", () => {
+  it("does not obstruct saved-run recovery or fabricate a missing claim ledger", () => {
+    const run = fixture();
+    delete (run as Partial<QueryRun>).subClaims;
+    run.evidence = undefined;
+    run.claimCoverage = undefined;
+    const result = a2aResponseFromRun(run, quoteA2aResearch(0.03, "deep"));
+    expect(result.subClaims).toEqual([]);
+    expect(result.evidence).toEqual([]);
+    expect(result.answer).toBe(run.answer);
+    expect(result.researchExports.evidenceCsv).not.toContain("Recorded claim");
+    expect(result.researchExports.bibtex.count).toBe(1);
+    expect(result.creatorsPaid).toBeNull();
+  });
   it("retains public article identity, answer evidence and reusable exports on all transports", () => {
     const run = fixture();
     for (const result of [surfaceResearch(run), remoteResearchResult(run), keryxMeta(run),

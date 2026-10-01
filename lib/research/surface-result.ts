@@ -28,6 +28,6 @@ export function surfaceResearch(run: QueryRun) {
     creatorsReferenced: new Set(run.citations.map(c => c.sourceId)).size,
     creatorRewardAllocations: new Set(run.citations.filter(c => c.sourceKind !== "public-reference" && c.reward > 0).map(c => c.sourceId)).size,
     paymentMode: run.paymentMode ?? "legacy", pendingSpendUsdc: run.pendingSpendUsdc ?? null,
-    subClaims: [...run.subClaims], claimCoverage: run.claimCoverage ?? [],
+    subClaims: Array.isArray(run.subClaims) ? [...run.subClaims] : [], claimCoverage: run.claimCoverage ?? [],
     researchExports: researchExports(run) };
 }

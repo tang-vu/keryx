@@ -91,18 +91,32 @@ async function validateSnapshot(directory: string, context: Context, raw: unknow
   }
   const verification = verifyBuyerReceipt(receipt, snapshot.receiptDigest, intent, snapshot.job.answer);
   if (verification.digest !== snapshot.receiptDigest) throw new Error("Saved receipt digest differs");
-  return { savedAt: snapshot.savedAt, answer: snapshot.job.answer, question: intent.request.question,
+  const result = { savedAt: snapshot.savedAt, answer: snapshot.job.answer, question: intent.request.question,
     citations: citationsFromReceipt(receipt), paymentAtCheck: snapshot.paymentAtCheck,
-    receiptDigest: snapshot.receiptDigest, researchExports: exportsFromCheckedReceipt(receipt),
+    receiptDigest: snapshot.receiptDigest,
     authority: "Local files rechecked against the original task and saved receipt. The original HTTPS digest observation cannot be reauthenticated offline; payment and creator settlement remain seller-reported." };
+  return { result, receipt };
 }
 
-export async function readSavedOperatorResult(directory: string, context: Context) {
+async function readCheckedSnapshot(directory: string, context: Context) {
   const task = await checkedDirectories(directory, context.buyer);
   let text: string;
   try { text = await boundedRegular(join(task, "result.json"), MAX_SNAPSHOT_BYTES); }
   catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return null; throw error; }
   return validateSnapshot(task, context, JSON.parse(text));
+}
+
+/** Stable v1 inspection domain shared with the evaluated native reader. */
+export async function readSavedOperatorResult(directory: string, context: Context) {
+  const checked = await readCheckedSnapshot(directory, context);
+  return checked?.result ?? null;
+}
+
+/** Application export projection; uses the exact receipt bytes checked above, never a reread.
+ * This TypeScript-owned presentation domain does not change native inspection authority. */
+export async function readSavedOperatorResearchResult(directory: string, context: Context) {
+  const checked = await readCheckedSnapshot(directory, context);
+  return checked ? { ...checked.result, researchExports: exportsFromCheckedReceipt(checked.receipt) } : null;
 }
 
 export async function inspectSavedOperatorResult(directory: string) {
@@ -159,21 +173,16 @@ export function privateOperatorBrief(result: NonNullable<Awaited<ReturnType<type
     for (const citation of result.citations) lines.push(`- ${markdownText(citation.marker)} ${markdownText(citation.sourceName)}`);
     lines.push("");
   }
-  if (result.researchExports) {
-    lines.push("## Recorded research exports", "", "These recorded references and bounded excerpts do not prove settlement or factual accuracy. Missing article metadata is omitted; no online enrichment was performed.", "");
-    for (const [name, content] of [["BibTeX", result.researchExports.bibtex.content], ["RIS", result.researchExports.ris.content], ["Evidence CSV", result.researchExports.evidenceCsv]]) {
-      lines.push(`### ${name}`, "", content ? inertAnswer(content) : "No usable recorded article identity.", "");
-    }
-  }
   return lines.join("\n");
 }
 
 export const operatorResearchExportFormat = z.enum(["brief", "bibtex", "ris", "evidence-csv"]);
 export type OperatorResearchExportFormat = z.infer<typeof operatorResearchExportFormat>;
 
-export function formatOperatorResearchExport(result: NonNullable<Awaited<ReturnType<typeof readSavedOperatorResult>>>, format: unknown = "brief") {
+export function formatOperatorResearchExport(result: NonNullable<Awaited<ReturnType<typeof readSavedOperatorResult>>> | NonNullable<Awaited<ReturnType<typeof readSavedOperatorResearchResult>>>, format: unknown = "brief") {
   const selected = operatorResearchExportFormat.parse(format);
   if (selected === "brief") return privateOperatorBrief(result);
+  if (!("researchExports" in result)) throw new Error("Research export requires the checked application projection");
   if (selected === "evidence-csv") return result.researchExports.evidenceCsv;
   return result.researchExports[selected].content;
 }
