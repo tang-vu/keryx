@@ -25,7 +25,8 @@ it.each(["available", "unavailable", "changed-policy", "lost-response"] as const
   let submissions = 0, signedOut = false;
   const http = vi.fn(async (url: string, init?: RequestInit) => {
     expect(init?.redirect).toBe("error");
-    if (url.endsWith("/api/auth/nonce")) return Response.json({ nonce: "syntheticNonce12345" });
+    if (url.endsWith("/api/auth/nonce")) return Response.json({ nonce: "syntheticNonce12345", issuedAt: "2026-10-01T00:00:00.000Z",
+      challengeExpiresAt: "2026-10-01T00:05:00.000Z", sessionExpiresAt: "2026-10-08T00:00:00.000Z" });
     if (url.endsWith("/api/auth/verify")) return Response.json({ ok: true }, { headers: { "set-cookie": "keryx_session=synthetic.cookie; HttpOnly" } });
     if (url.endsWith("/api/auth/signout")) { signedOut = true; return Response.json({ ok: true }); }
     expect(init?.headers).toMatchObject({ cookie: "keryx_session=synthetic.cookie" });

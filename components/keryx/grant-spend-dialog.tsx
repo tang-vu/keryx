@@ -114,11 +114,13 @@ export function GrantSpendDialog({
         </div>
       )}
 
-      {grantState.status === "expired" && (
+      {(grantState.status === "expired" || grantState.status === "paused") && (
         <div className="mb-2 border border-seal/40 bg-paper px-3 py-2">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-mono text-[11px] leading-relaxed text-ink-2">
-              Session expired — your USDC is safe in the Gateway.
+              {grantState.status === "paused"
+                ? "Session status unavailable. Recover your funded session to continue."
+                : "Session expired — your USDC is safe in the Gateway."}
             </span>
             {/* The signer worker outlives the grant in this tab, so resuming is one
                 API call — no signature. Signature recovery stays as the fallback. */}

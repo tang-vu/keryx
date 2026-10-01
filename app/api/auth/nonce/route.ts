@@ -11,6 +11,7 @@ import { createHash } from "node:crypto";
 import { getDb } from "@/lib/db";
 import { config } from "@/lib/config";
 import { AUTH_CHALLENGE_TTL_MS, authChallengeHash, authJson } from "@/lib/auth-challenge";
+import { WEB_SESSION_TTL_MS } from "@/lib/auth-time-policy";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -35,5 +36,7 @@ export async function GET(req: Request) {
     path: "/",
   });
 
-  return authJson({ nonce });
+  return authJson({ nonce, issuedAt: new Date(issuedAt).toISOString(),
+    challengeExpiresAt: new Date(issuedAt + AUTH_CHALLENGE_TTL_MS).toISOString(),
+    sessionExpiresAt: new Date(issuedAt + WEB_SESSION_TTL_MS).toISOString() });
 }

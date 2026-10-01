@@ -32,8 +32,28 @@ import { config } from "@/lib/config";
 import { attestedArcHttp } from "@/lib/arc-rpc-attestation";
 import { getDb } from "@/lib/db";
 import { recordActivationEvent } from "@/lib/activation";
+import { accountSessionContext } from "@/lib/account-sessions";
 
 export const runtime = "nodejs";
+
+/** Read current owner authority only. No renewal, housekeeping or capacity writes. */
+export async function GET(req: NextRequest) {
+  const headers = { "Cache-Control": "no-store" };
+  if (req.nextUrl.search) return Response.json({ error: "No grant selector is accepted" }, { status: 400, headers });
+  try {
+    const ttlMs = config.sessionGrantTtlSeconds * 1000;
+    if (!Number.isSafeInteger(ttlMs) || ttlMs <= 0) throw new Error();
+    const context = await accountSessionContext();
+    if (context instanceof Response) return context;
+    const row = await context.db.getSessionGrant(context.wallet), now = Date.now();
+    if (!row || row.sessionId !== context.wallet || row.ownerAddr.toLowerCase() !== context.wallet ||
+      !Number.isSafeInteger(row.expiry) || row.expiry <= now)
+      return Response.json({ active: false }, { headers });
+    return Response.json({ active: true, sessionId: row.sessionId, ownerAddr: row.ownerAddr, sessAddr: row.sessAddr,
+      grantEpoch: row.grantEpoch, expiresAt: new Date(row.expiry).toISOString(), serverNow: new Date(now).toISOString(),
+      remainingMs: row.expiry - now, ttlMs }, { headers });
+  } catch { return Response.json({ error: "Session status unavailable" }, { status: 503, headers }); }
+}
 
 interface GrantBody {
   sessAddr?: string;
@@ -157,11 +177,16 @@ export async function POST(req: NextRequest) {
   // stable within the JWT's 7-day lifetime.
   const sessionId = session.address.toLowerCase();
 
-  try { await storeGrant(sessionId, {
+  const expiry = grantExpiry();
+  const ttlMs = config.sessionGrantTtlSeconds * 1000;
+  if (!Number.isSafeInteger(ttlMs) || ttlMs <= 0 || !Number.isSafeInteger(expiry) || expiry <= Date.now())
+    return Response.json({ error: "Session expiry configuration unavailable" }, { status: 503 });
+  let grantEpoch: string;
+  try { grantEpoch = await storeGrant(sessionId, {
     sessAddr,
     ownerAddr: session.address,
     cap,
-    expiry: grantExpiry(),
+    expiry,
     txHash: txHash ?? "recovered", // no new funding tx in recovery mode
   }); } catch (error) {
     return error instanceof BrowserGrantRecoveryRefused
@@ -177,12 +202,17 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  const now = Date.now();
   return Response.json({
     ok: true,
     sessionId,
     sessAddr,
+    ownerAddr: session.address.toLowerCase(),
+    grantEpoch,
     cap,
     // Echo expiry so the browser can show the remaining TTL.
-    expiresAt: new Date(grantExpiry()).toISOString(),
-  });
+    expiresAt: new Date(expiry).toISOString(),
+    serverNow: new Date(now).toISOString(), remainingMs: Math.max(0, expiry - now),
+    ttlMs,
+  }, { headers: { "Cache-Control": "no-store" } });
 }

@@ -94,7 +94,7 @@ export default function AskPage() {
   });
   const streaming = state.status === "streaming";
   const started = state.status !== "idle";
-  const payer = grantBinding.expired ? "expired" : grantBinding.sessionId ? "session" : "treasury";
+  const payer = grantBinding.paused ? "paused" : grantBinding.expired ? "expired" : grantBinding.sessionId ? "session" : "treasury";
   const latestStep = state.steps.at(-1);
   const paymentTotals = stepPaymentTotals(state.steps);
   const unsettled = [

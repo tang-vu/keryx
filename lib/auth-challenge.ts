@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 
-export const AUTH_CHALLENGE_TTL_MS = 300_000;
+export { AUTH_CHALLENGE_TTL_MS } from "./auth-time-policy";
 export const authNonceSchema = z.string().regex(/^[a-zA-Z0-9]{8,64}$/);
 export const authChallengeHash = (nonce: string) => createHash("sha256")
   .update(`keryx-siwe-v1:${authNonceSchema.parse(nonce)}`).digest("hex");

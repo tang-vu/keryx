@@ -2,10 +2,11 @@ import { createHash, randomBytes } from "node:crypto";
 import { jwtVerify, SignJWT } from "jose";
 import { z } from "zod";
 import type { KeryxDB, WebSessionRecord } from "./db/keryx-db";
+import { WEB_SESSION_TTL_MS } from "./auth-time-policy";
+export { WEB_SESSION_TTL_MS } from "./auth-time-policy";
 
 const ISSUER = "keryx-web";
 const AUDIENCE = "keryx-account";
-export const WEB_SESSION_TTL_MS = 7 * 86400_000;
 const claimsSchema = z.object({
   jti: z.string().regex(/^[a-f0-9]{64}$/),
   address: z.string().regex(/^0x[a-fA-F0-9]{40}$/),

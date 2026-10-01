@@ -1,5 +1,6 @@
 import { SiweMessage } from "siwe";
 import { z } from "zod";
+import { canonicalTime, parseDatedAuthChallenge, PRIVATE_LOGIN_TTL_MS } from "../auth-time-policy";
 import { BUYER_ORIGIN, addressSchema } from "./protocol";
 import { buyerFetch, type BuyerFetch } from "./transport";
 import { readBoundedJson } from "../read-bounded-json";
@@ -10,17 +11,17 @@ type SignInAccount = { address: string; signMessage: (input: { message: string }
  * Cookie stays in memory and the operation resolves only after confirmed sign-out. A lost login
  * response can leave an unknown server session until its short SIWE expiry; do not claim otherwise. */
 export async function withPrivateBuyerSession<T>(account: SignInAccount, operation: (cookie: string) => Promise<T>,
-  http: BuyerFetch = buyerFetch, now = Date.now()) {
+  http: BuyerFetch = buyerFetch) {
   const address = addressSchema.parse(account.address);
-  if (!Number.isSafeInteger(now) || now < 0 || now > 8_640_000_000_000_000 - 900000) throw new Error("Invalid private sign-in time");
   const sign = account.signMessage.bind(account);
   let cookie: string | undefined;
   try {
     const challenge = await http(`${BUYER_ORIGIN}/api/auth/nonce`, { method: "GET", redirect: "error", cache: "no-store", signal: AbortSignal.timeout(30000) });
     if (challenge.status !== 200) { await challenge.body?.cancel(); throw new Error(); }
-    const { nonce } = z.object({ nonce: z.string().regex(/^[a-zA-Z0-9]{8,64}$/) }).parse(await readBoundedJson(challenge, 4096));
+    const { nonce, issuedAt } = parseDatedAuthChallenge(await readBoundedJson(challenge, 4096));
     const message = new SiweMessage({ domain: "keryx.cc", address, statement: "Sign in to Keryx. Citations are currency.", uri: BUYER_ORIGIN,
-      version: "1", chainId: 5042002, nonce, issuedAt: new Date(now).toISOString(), expirationTime: new Date(now+900000).toISOString() }).prepareMessage();
+      version: "1", chainId: 5042002, nonce, issuedAt,
+      expirationTime: new Date(canonicalTime(issuedAt) + PRIVATE_LOGIN_TTL_MS).toISOString() }).prepareMessage();
     const signature = await sign({ message });
     const auth = await http(`${BUYER_ORIGIN}/api/auth/verify`, { method: "POST", redirect: "error", cache: "no-store",
       headers: { origin: BUYER_ORIGIN, "content-type": "application/json", cookie: `siwe_nonce=${nonce}` },
