@@ -21,7 +21,12 @@ addresses or service availability will be inferred from testnet configuration.
 
 ## Current baseline and gaps
 
-Latest preparation: [September 30 evidence](./engineering/mainnet-readiness-2026-09-30.md)
+Latest preparation: [October 1 evidence](./engineering/mainnet-readiness-2026-10-01.md)
+pins deployed testnet source `368b278`, its canonical dependency lock and exact
+integrated CI. It records public funding fallback, default-closed funding source,
+actual isolated PostgreSQL four-leg acceptance and Linux provenance containment,
+with their limits. It does not establish runtime enrollment or mainnet readiness.
+The [September 30 evidence](./engineering/mainnet-readiness-2026-09-30.md)
 retains the earlier `5bf9aea` admission-foundation checkpoint and adds the funded
 original-withdrawal recovery and outside-host alert/responder acceptance below.
 These advance bounded testnet evidence; M1–M8 remain open. The

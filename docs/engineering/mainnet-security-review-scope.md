@@ -1,17 +1,35 @@
 # Mainnet security review scope
 
-Internal source review dated September 30, 2026, pinned to
-`d9d296919b55c53f37a10e182d7724c5ce0a5050`. This refresh follows D-272
-(browser journal) and D-273 (withdrawal rehearsal). It does not certify a
-mainnet candidate, inspect deployed secrets, run funded actions or close M3. The remediation candidate receives
-focused tests, TypeScript, lint and production build validation. No mainnet signer/profile activation is inferred.
+Current internal scope delta dated October 1, 2026, pinned to deployed testnet
+source `368b27895336da8fee37c360fec21ebf4866e1e5`. The
+[October 1 dossier](mainnet-readiness-2026-10-01.md) records its tree, canonical
+lockfile digest, exact CI and deployment observation. This is an internal evidence
+review, not an independent audit or accepted mainnet configuration. It neither
+inspects deployed secrets nor authorizes funded actions or closes M3.
+
+The September 30 signer-policy review at
+`d9d296919b55c53f37a10e182d7724c5ce0a5050` remains historical context for the
+remediation section and validation below. Its controls are now part of the source
+pin above; historical test counts are not fresh release-wide acceptance.
 
 The threat model now distinguishes implemented controls from historical checks.
-The deployed testnet journal activation is recorded separately in the
-[cutover runbook](browser-authorization-cutover.md). A source pin alone cannot
+The [cutover runbook](browser-authorization-cutover.md) records activation
+procedures, not a dated private runtime activation receipt. A source pin alone cannot
 prove deployment drain, database activation, backup durability or runtime routing.
 
-## Signer policy remediation candidate
+## October 1 review delta
+
+| Boundary | Current source/evidence | External review and activation still required |
+| --- | --- | --- |
+| Funding uncertainty and metrics | D279 `lib/agent/run-agent.ts` and tests; `lib/db/dashboard-metrics.ts` and tests preserve public evidence, paid-leg fences, planned reservations and unknown historical rewards. | Trace initial/lazy failure and cancellation without assuming zero wallet movement, refunded capacity or settled creator rewards. |
+| Dormant funding authority | `lib/db/gateway-funding-*`, `lib/payments/gateway-funding-*`; fixture-only SQL under `scripts/test-fixtures/funding-postgres`. Four-leg PG acceptance uses actual PG17/PostgREST and synthetic native providers. | Trusted enrollment/issuer, isolated or complete shared-key history, lifetime nonce/cap ownership, global clone exclusivity, protected backend roles and strict application-storage cutover. Existing RealGateway/application callers retain their behavior. |
+| Default-closed activation | `lib/operator/gateway-funding-composition.ts` refuses before caller binding, execution import or keys. | A reviewed activation issuer is absent. Import regressions are supporting tests rather than complete call-graph proof or runtime cutover authority. |
+| Preflight, originals and recovery | Canonical signed transactions, short monotonic preflight/readiness, retained irreversible claims, original-only keyless reconciliation and protected terminal/barrier writes. | Managed providers are not independent consensus; success is not token-effect/credit attribution. Already-admitted work can complete after caller uncertainty. No external exactly-once claim or capacity refund. |
+| Keyless inspection | `scripts/funding-inspect.mts`, its child and `lib/operator/gateway-funding-inspection.ts` use explicit manifests, bounded minimal environment and report no signing-resume authority. | Read-only snapshots cannot adopt legacy storage, prove restored-state exclusivity or authorize another signature. Optional availability is independently observed, not attributed credit. |
+| Provenance resource boundaries | `lib/db/storage-provenance-containment.ts`, child/scan/snapshot modules, `scripts/inspect-storage-provenance.mts` and hosted Linux capacity fixtures. | Default 64 MiB file/query/time bounds are not demonstrated native-heap enforcement. Explicit 512 MiB mode requires verified 256 MiB cgroup charged-memory containment before open and cleanup before report. This is not exact RSS, origin, full-store CAS, enrollment or protection against hostile root. |
+| Failed DB initialization | `lib/db/index.ts` shares initialization and does not publish failed adapters; SQLite cleanup and regression tests. | Retry does not roll back partial writes or provide cross-process initialization exclusion. |
+
+## September 30 signer-policy remediation
 
 Internal review found that the old session worker checked contract destination
 and optional sender, then signed arbitrary calldata. Page script with an initialized
