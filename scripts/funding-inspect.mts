@@ -9,7 +9,7 @@ const started = performance.now();
 try {
   const { values, tokens } = parseArgs({ options: { help: { type: "boolean" }, "storage-manifest": { type: "string" }, "operation-manifest": { type: "string" }, "current-availability": { type: "boolean" } }, strict: true, allowPositionals: false, tokens: true });
   const seen = new Set<string>(); for (const token of tokens) { if (token.kind === "option") { if (seen.has(token.name)) throw new Error(); seen.add(token.name); } }
-  if (values.help) process.stdout.write("Usage: npm run funding:inspect -- --storage-manifest <absolute-canonical-file> --operation-manifest <absolute-canonical-file> [--current-availability]\nReadonly original-state inspection; current Circle availability is opt-in, never credit attribution or signing permission.\n");
+  if (values.help) process.stdout.write("Usage: node --import tsx scripts/funding-inspect.mts --storage-manifest <absolute-canonical-file> --operation-manifest <absolute-canonical-file> [--current-availability]\nReadonly original-state inspection; current Circle availability is opt-in, never credit attribution or signing permission.\n");
   else {
     if (!values["storage-manifest"] || !values["operation-manifest"]) throw new Error();
     const request = JSON.stringify({ storageManifestPath: values["storage-manifest"], operationManifestPath: values["operation-manifest"], currentAvailability: values["current-availability"] ?? false });
