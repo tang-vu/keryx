@@ -29,7 +29,20 @@ const http: typeof fetch = async (input, init) => {
     const child = execFile("docker", ["exec", "-i", owned[2], "curl", "--max-time", "10", "--silent", "--show-error", "--request", "POST", "--header", "Content-Type: application/json",
       "--data-binary", "@-", "--write-out", "\n%{http_code}", `http://127.0.0.1:3000${path}`], { encoding: "utf8", timeout: 15000 }, (error, out) => error ? reject(new Error("Synthetic PostgREST unavailable")) : resolve(out));
     child.stdin!.end(String(init?.body ?? "{}"));
-  }); const index = output.lastIndexOf("\n"), status = Number(output.slice(index + 1)); return new Response(output.slice(0, index), { status, headers: { "Content-Type": "application/json" } });
+  }); const index = output.lastIndexOf("\n"), status = Number(output.slice(index + 1)), body = output.slice(0, index);
+  if (status >= 400) {
+    // Fixture-only diagnostics: never print request bodies, proofs or headers.
+    let code = "unknown", message = "unavailable";
+    try {
+      const error = JSON.parse(body) as { code?: unknown; message?: unknown };
+      if (typeof error.code === "string" && /^[A-Z0-9]{5}$/.test(error.code)) code = error.code;
+      if (typeof error.message === "string") message = error.message
+        .replace(/0x[0-9a-f]+/gi, "[hex]").replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi, "[uuid]")
+        .replace(/"[^"\n]*"|'[^'\n]*'/g, "[quoted]").replace(/[\r\n\t]/g, " ").slice(0, 240);
+    } catch { /* Non-JSON response remains redacted. */ }
+    console.error(`Synthetic PostgREST ${path}: SQLSTATE=${code}; ${message}`);
+  }
+  return new Response(body, { status, headers: { "Content-Type": "application/json" } });
 };
 try {
   try { docker(["info", "--format", "{{.ServerVersion}}"]); engine = true; } catch { throw new Error("Actual browser originals PG acceptance requires Docker; gate did not run"); }
