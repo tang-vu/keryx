@@ -49,6 +49,7 @@ function projectEvidencePortfolio(
 ): ReceiptEvidencePortfolio {
   return {
     policy: portfolio.policy,
+    ...(portfolio.selectionMethod ? { selectionMethod: portfolio.selectionMethod, evaluatedStates: portfolio.evaluatedStates } : {}),
     eligibleCandidates: portfolio.eligibleCandidates,
     attentionLimit: portfolio.attentionLimit,
     fetchBudgetUsdc: micros(portfolio.fetchBudgetUsdc),

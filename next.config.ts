@@ -57,10 +57,16 @@ const nextConfig: NextConfig = {
   // it would bloat the server build (and the 1GB-RAM VPS build step). Load these
   // from node_modules at runtime instead.
   serverExternalPackages: [
+    "jsdom",
+    "@mozilla/readability",
+    "pdfjs-dist",
     "@circle-fin/unified-balance-kit",
     "@solana/web3.js",
     "@coral-xyz/anchor",
   ],
+  outputFileTracingIncludes: {
+    "/*": ["./lib/web-research/*-worker.mjs", "./node_modules/@mozilla/readability/**", "./node_modules/pdfjs-dist/legacy/build/*.mjs", "./node_modules/pdfjs-dist/package.json"],
+  },
 };
 
 export default nextConfig;

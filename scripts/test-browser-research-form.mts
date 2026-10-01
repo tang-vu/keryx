@@ -74,6 +74,7 @@ try {
   assert.equal(call[4], "deep");
   await page.locator("#payer-session").click();
   await page.getByText(/Your funded session pays/).waitFor();
+  await page.getByText(/your question is sent to our search provider/).waitFor();
   await page.locator("#payer-expired").click();
   await page.getByText(/Session expired/).waitFor();
   const shared = await context.newPage();

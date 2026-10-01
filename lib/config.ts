@@ -129,6 +129,9 @@ export const config = {
   // settle on other chains (Base/ETH/… mainnet), not Keryx's Arc rail, so they are DISCOVERY-ONLY:
   // evaluated and logged, never purchased (the orchestrator enforces this, mirroring the budget cap).
   externalDiscovery: (process.env.KERYX_EXTERNAL_DISCOVERY ?? "1") !== "0",
+  webSearchUrl: process.env.KERYX_WEB_SEARCH_URL ?? "",
+  webSearchProvider: process.env.KERYX_WEB_SEARCH_PROVIDER ?? "",
+  tavilyApiKey: process.env.TAVILY_API_KEY ?? "",
   // Max external endpoints surfaced per query (top by topical relevance).
   externalDiscoveryLimit: Math.round(num(process.env.KERYX_EXTERNAL_DISCOVERY_LIMIT, 5)),
   // Semantic discovery: use embedding cosine similarity instead of keyword-overlap for

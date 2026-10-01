@@ -108,6 +108,13 @@ export interface SourceItem {
 
 /** Immutable identity for the exact article version the agent evaluated and purchased. */
 export interface SourceItemIdentity {
+  webProvenance?: {
+    retrievedAt: string;
+    publisherGroup: string;
+    normalizedBodyHash: string;
+    extraction: "html" | "text" | "pdf";
+    truncated: boolean;
+  };
   /** Trusted catalog provenance; public references never carry payout authority. */
   sourceKind?: "public-reference";
   publicDeliveryKind?: ContentDeliveryKind;
@@ -269,6 +276,8 @@ export interface PreviewCoverage {
  * This is a preview-derived attention/spend plan, never evidence or payment authority.
  */
 export interface EvidencePortfolio {
+  selectionMethod?: "bounded-heuristic" | "exhaustive";
+  evaluatedStates?: number;
   policy: "claim-coverage-v1";
   eligibleCandidates: number;
   attentionLimit: number;

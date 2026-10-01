@@ -55,6 +55,13 @@ describe("isPublicAddress", () => {
     expect(isPublicAddress("not-an-ip")).toBe(false);
     expect(isPublicAddress("")).toBe(false);
   });
+  it("refuses IANA non-global, documentation, benchmark and unsupported transition space", () => {
+    for (const address of ["198.18.0.1", "198.19.255.254", "192.0.2.1", "198.51.100.10", "203.0.113.1", "192.0.0.9", "192.88.99.1",
+      "2001:db8::1", "2001::1", "2001:1::1", "2002:7f00:1::1", "64:ff9b:1::1", "100::1", "3fff::1", "5f00::1"])
+      expect(isPublicAddress(address), address).toBe(false);
+    for (const address of ["198.17.255.254", "198.20.0.1", "8.8.8.8", "2606:4700:4700::1111"])
+      expect(isPublicAddress(address), address).toBe(true);
+  });
 });
 
 describe("assertPublicUrl", () => {

@@ -3,6 +3,7 @@ import type { ReceiptAsset } from "./research-receipt-types";
 
 export function receiptAsset(value: Partial<SourceItemIdentity>): ReceiptAsset {
   return {
+    ...(value.webProvenance ? { webProvenance: { ...value.webProvenance } } : {}),
     ...(value.sourceKind === "public-reference" ? { sourceKind: value.sourceKind, publicDeliveryKind: value.publicDeliveryKind } : {}),
     ...(value.itemId ? { itemId: value.itemId } : {}),
     ...(value.itemTitle ? { itemTitle: value.itemTitle } : {}),

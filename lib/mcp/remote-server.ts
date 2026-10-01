@@ -79,7 +79,7 @@ export function createRemoteMcpServer(
     name: "keryx",
     version: "0.2.0",
     description:
-      "Budgeted research over creator sources with citation rewards settled in USDC on Arc.",
+      "Budgeted research over creator sources with citation rewards on Arc testnet. Anonymous research is sponsored by Keryx's treasury.",
   });
 
   server.registerTool(
@@ -88,7 +88,7 @@ export function createRemoteMcpServer(
       title: "Research with Keryx",
       description:
         "Research a question under a USDC creator-payment budget. Keryx selects sources, pays " +
-        "access tolls and weighted citation rewards, then returns a grounded answer and receipt.",
+        "access tolls and weighted citation rewards on Arc testnet, then returns a grounded answer and receipt. This remote surface uses Keryx's treasury; anonymous research is sponsored, not caller-funded usage. Public research may send your question to our search provider. The source USDC budget is separate from model and search operating costs.",
       inputSchema: {
         question: z.string().trim().min(3).max(4_000).describe("Research question."),
         budget: z

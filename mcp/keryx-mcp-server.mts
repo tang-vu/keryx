@@ -26,6 +26,7 @@ server.registerTool(
       `inline citations, and pays each cited creator in USDC on Arc. Default deep-mode price is ` +
       `${meta.feeUsdc} USDC service fee + ${meta.defaultBudgetUsdc} USDC creator budget; the POST body sets the exact price. ` +
       `Paid from your own funded Arc-testnet wallet (run keryx_wallet_status first to fund it). ` +
+      `Public research may send your question to Keryx's search provider. The source USDC budget is separate from model and search operating costs. ` +
       `Use when you want a grounded, source-cited answer AND the creators paid for their work.`,
     inputSchema: {
       question: z.string().min(3).describe("The research question to ask Keryx."),

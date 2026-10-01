@@ -27,6 +27,13 @@ function decision(
 }
 
 describe("claim-aware evidence portfolio", () => {
+  it("bounds broad-catalog work deterministically without enlarging money or attention caps", () => {
+    const rows = Array.from({ length: 48 }, (_, index) => decision(String(index), "BUY", 0.8, 0.001, [index % 8]));
+    const input = { decisions: rows, claimCount: 8, attentionLimit: 8, fetchBudgetUsdc: 0.005 };
+    const result = selectEvidencePortfolio(input), reversed = selectEvidencePortfolio({ ...input, decisions: [...rows].reverse() });
+    expect(result).toEqual(reversed); expect(result.selectionMethod).toBe("bounded-heuristic"); expect(result.evaluatedStates).toBeLessThanOrEqual(20000);
+    expect(result.selectedBuyUsdc).toBeLessThanOrEqual(0.005); expect(result.selectedAssetIds.length).toBeLessThanOrEqual(8);
+  });
   it("does not let a CACHE entry's list price crowd out the strongest exact evidence", () => {
     const result = selectEvidencePortfolio({
       decisions: [

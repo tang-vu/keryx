@@ -210,6 +210,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury" }: AskFormProps) {
               )}
             </div>
           </details>
+          <p className="mt-2 text-xs text-ink-3">Research may search the public web; your question is sent to our search provider. The USDC source budget is separate from model and search operating costs.</p>
           <div className="mt-2 flex flex-wrap gap-2" aria-label="Example questions">
             {SUGGESTIONS.map((s) => (
               <button key={s.label} type="button" disabled={disabled} onClick={() => setQuestion(s.q)}

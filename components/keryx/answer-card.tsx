@@ -41,7 +41,7 @@ export function AnswerCard({ run, meta, permalink, payments = [] }: { run: Query
       <SectionHeading numeral="II" label="The reading" right={`${run.citations.length} cited`} />
       {confidence ? (
         <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
-          <ConfidenceBadge confidence={confidence} showReason />
+          <ConfidenceBadge confidence={confidence} showReason sourceGrounding={run.citations.some(citation => Boolean(citation.webProvenance))} />
           <span className="border border-line bg-paper-2 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-3">
             {(run.researchMode ?? meta?.researchMode ?? "deep")} research
           </span>
@@ -123,7 +123,7 @@ export function AnswerCard({ run, meta, permalink, payments = [] }: { run: Query
                         {isPublicReference && (
                           <span className="mt-1 block font-mono text-[10px] text-ink-3">
                             Free public reference · no creator payment
-                            {c.publicDeliveryKind ? ` · RSS ${c.publicDeliveryKind === "full_text" ? "feed full text" : c.publicDeliveryKind.replaceAll("_", " ")}` : " · RSS feed body"}
+                            {c.webProvenance ? ` · extracted ${c.webProvenance.extraction} text${c.webProvenance.truncated ? " (bounded excerpt)" : ""}` : c.publicDeliveryKind ? ` · RSS ${c.publicDeliveryKind === "full_text" ? "feed full text" : c.publicDeliveryKind.replaceAll("_", " ")}` : " · RSS feed body"}
                           </span>
                         )}
                       </span>

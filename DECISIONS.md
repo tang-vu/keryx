@@ -1,5 +1,36 @@
 # Keryx — Decision Log
 
+**Question-driven broad web research with observed document evidence** — *2026-10-01*
+
+The owner authorized expanding research beyond Keryx's small registered/public-feed
+catalog. Discover documents through an operator-configured search provider, read
+selected original content under deterministic limits, and retain claim-linked evidence
+from the actual extracted text. Search snippets are previews, not read documents.
+Public web evidence remains free of creator payout authority; paid source decisions,
+ownership, signing, budgets and settlement retain their existing safeguards.
+
+Require document identity/version and observation provenance through synthesis,
+receipts and UI. Exclude identical extracted bodies and avoid treating multiple
+same-publisher URLs as independent corroboration. A registrable domain is a concentration proxy,
+and a literal matching quote proves source grounding rather than universal truth.
+Keep conflicting evidence, unsupported claims, extraction limits and provider failures
+visible. Bound discovery, extraction, cancellation and portfolio computation without
+silently weakening evidence or monetary gates.
+
+HTML/text and contained PDF text extraction are staged implementation requirements;
+unconfigured search or an HTML-only stage does not complete the authorized outcome.
+Provider provisioning and actual broad-search smoke evidence remain release gates.
+Pin the reproducible installer to npm 11.19.0 and CI Node 24.21.0. Clean npm 11.6
+and 11.19 resolved incompatible optional-peer closures; an older-resolver lock also
+upgraded an x402 dependency and failed the newer installer. Retain the existing
+payment dependency versions and require matching installer tooling on production
+before installation. Production Node 24.16 and minimum supported Node 22.19 do not
+need to change for this installer correction.
+Do not add a search subscription, spend real funds, activate mainnet, leak private
+research or claim customer demand from technical fixtures. See
+[broad web research](docs/broad-web-research.md) and
+[product validation](docs/product-validation.md).
+
 **Observe creator registration before reporting success** — *2026-10-01*
 
 Preparing the independent seller pilot exposed a presentation error: receiving a wallet transaction

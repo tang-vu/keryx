@@ -111,8 +111,8 @@ export function CitationEvidencePanel({ queryId, citation, evidence, payments, o
         {isPublicReference && (
           <div className="mt-4 border-l-2 border-line pl-4">
             <p className="font-mono text-xs text-ink-3">Free public reference · no creator payment</p>
-            <p className="mt-2 font-mono text-xs text-ink-3">RSS delivery: {publicDelivery}</p>
-            <p className="mt-2 text-sm text-ink-2">Evidence comes from the public RSS feed body. Keryx has not fetched the full article or verified publisher ownership.</p>
+            <p className="mt-2 font-mono text-xs text-ink-3">{citation.webProvenance ? `Original page: extracted ${citation.webProvenance.extraction} text${citation.webProvenance.truncated ? " (bounded excerpt)" : ""}; retrieved ${citation.webProvenance.retrievedAt}` : `RSS delivery: ${publicDelivery}`}</p>
+            <p className="mt-2 text-sm text-ink-2">{citation.webProvenance ? `Quotes match text extracted from the original public document. This establishes source grounding, not factual verification or guaranteed complete content. Publisher group ${citation.webProvenance.publisherGroup} uses a registrable-domain proxy; it does not prove ownership or independent corroboration.` : "Evidence comes from the public RSS feed body. Keryx has not fetched the full article or verified publisher ownership."}</p>
           </div>
         )}
         {quotes.length ? (
