@@ -184,6 +184,10 @@ export function scanStorageProvenance(target: string, limits: ProvenanceLimits, 
                 extra.version !== "1" || !extra.verifyingContract) refuse("malformed_authority");
             }
             projection[name] = inspectEnvelope(parsed, count);
+          } else if (table === "withdrawals" && name === "network" && value === "arcTestnet") {
+            // Existing withdrawal producers persist this exact display label. Retain its
+            // representation in the digest; accepting it neither proves origin nor settlement.
+            projection[name] = value; count("withdrawal_testnet_alias_not_origin_proof");
           } else if (["network", "token", "gateway_contract"].includes(name)) {
             projection[name] = inspectEnvelope({ [name]: value }, count)[name];
           } else if (["cap", "spent", "amount_usdc", "spent_micro", "amount_micro_usdc"].includes(name)) {

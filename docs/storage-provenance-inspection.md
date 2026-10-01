@@ -8,7 +8,7 @@ Run from a trusted checkout with installed dependencies and Node.js 24, using a 
 node --import tsx scripts/inspect-storage-provenance.mts D:/operator-intake/synthetic.sqlite
 ```
 
-Use a protected operator workspace. This implementation has only been exercised against synthetic test databases; no production or private database was inspected. Do not copy private stores into the repository or publish reports automatically. The CLI never discovers a default database or reads environment files. Exit 0 means the selected intake completed, 1 means refusal, and 2 means invalid invocation. Neither success nor a matching testnet field authorizes migration or runtime startup.
+Use a protected operator workspace. Synthetic acceptance is supplemented by the bounded protected-backup inspection recorded below. Do not copy private stores into the repository or publish reports automatically. The CLI never discovers a default database or reads environment files. Exit 0 means the selected intake completed, 1 means refusal, and 2 means invalid invocation. Neither success nor a matching testnet field authorizes migration or runtime startup.
 
 ## Explicit offline snapshot intake
 
@@ -19,7 +19,7 @@ The default invocation still refuses main files over 64 MiB. For a separately re
 node --import tsx scripts/inspect-storage-provenance.mts --offline-snapshot /protected/operator-intake/reviewed-snapshot.sqlite
 ```
 
-This flag is the operator's declaration of trusted offline input, not proof that the file is offline or has a known origin. The inspector does not create backups, copy a live store, checkpoint WAL, change journal modes, or establish backup provenance. Producing and reviewing a finalized rollback-journal snapshot is a separate operator backup/review operation; the inspector never creates it. A detached WAL main file is refused even if its sidecars were removed; never remove sidecars to make a live store pass. No private production intake has been performed for this mode.
+This flag is the operator's declaration of trusted offline input, not proof that the file is offline or has a known origin. The inspector does not create backups, copy a live store, checkpoint WAL, change journal modes, or establish backup provenance. Producing and reviewing a finalized rollback-journal snapshot is a separate operator backup/review operation; the inspector never creates it. A detached WAL main file is refused even if its sidecars were removed; never remove sidecars to make a live store pass.
 
 The offline profile permits at most 512 MiB of physical main-file bytes so substantial unselected content need not prevent bounded selected-authority intake. All existing row, field, selected-byte, schema, output, and independent 10-second child deadline limits remain fixed. It reads exactly a 100-byte SQLite header to validate page geometry and finalized rollback-journal format. It checks the held descriptor and pathname for size and modification-time changes before and after scanning and refuses `-wal`, `-shm`, and `-journal` presence before opening and after closing SQLite. It does not use SQLite `immutable` mode. Filesystem timestamps and these checks cannot prove exclusive ownership or eliminate a malicious owner's swap-and-restore race.
 
@@ -34,6 +34,16 @@ The parent retains its independent 10-second query envelope, starting after cano
 Successful reports explicitly include `inspectionMode: offline_snapshot` while retaining `unknown_legacy`, no enrollment authorization, and no accepted mode identity. Digests still describe only bounded selected observations. Larger capacity does not establish origin, settlement authenticity, signature validity, or mainnet readiness. The CLI accepts the flag only before one target argument and rejects unknown flags, duplicates, trailing arguments, and missing targets. Programmatic callers may only lower the chosen profile's fixed ceilings; the default profile cannot use the larger ceiling or offline memory controls.
 
 SQLite's [PRAGMA documentation](https://www.sqlite.org/pragma.html) describes the connection controls; its [file format specification](https://www.sqlite.org/fileformat.html#the_database_header) defines header page geometry. The [kernel cgroup-v2 documentation](https://docs.kernel.org/admin-guide/cgroup-v2.html) defines memory and swap accounting. The page cache setting is a suggested cache bound, not a native-memory or total-RSS ceiling.
+
+### Protected backup inspection — 2026-10-01
+
+An authorized operator restored one existing encrypted production backup into a new protected workspace on the original host. The existing restore helper verified authentication and database integrity. The bounded offline inspector then refused `foreign_authority`; it did not complete intake or emit authority evidence. Private before/after verification confirmed unchanged snapshot bytes for that operation.
+
+A separate bounded, read-only diagnostic reproduced the first refusal at a recognized financial network field, rather than unrelated JSON metadata. It preserved the scanner's comparisons and resource limits, verified cleanup of its captured transient unit, and confirmed unchanged snapshot metadata and no sidecars. This diagnostic did not repeat the full-byte verification. No private values, identifiers, counts, digests, paths, or reports are published here.
+
+The refusal establishes a mismatch with the inspector's fixed testnet observations. Existing withdrawal producers use both a configured network label and a canonical network identifier, so a strict string mismatch alone does not establish a different chain. The diagnostic did not disclose the stored value or determine which producer wrote it. It does not establish the stored network's identity, authentic settlement, malicious data, or backup origin. Origin remains unknown; enrollment, mode acceptance, migration, and signing resume remain unauthorized by this inspection. No live database was opened by these inspection operations.
+
+The subsequent compatibility correction accepts only the exact legacy label `arcTestnet` in the top-level `withdrawals.network` column. Canonical `eip155:5042002` remains accepted there; other tables and serialized network authorities remain canonical and strict. The alias retains its original representation in the selected-authority digest and receives the fixed classification `withdrawal_testnet_alias_not_origin_proof`. Case variants, surrounding whitespace, and other labels are refused. This correction was verified with synthetic fixtures; the protected backup was not reinspected after it.
 
 ## Evidence and scope
 
