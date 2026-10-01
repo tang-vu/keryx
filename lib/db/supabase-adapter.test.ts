@@ -7,6 +7,7 @@ import { makePayment } from "../payments/payment-gateway";
 import { createClient } from "@supabase/supabase-js";
 import { STORAGE_TESTNET_PROFILE_DIGEST } from "./storage-identity";
 import type { StorageDeploymentManifest } from "./runtime-storage-config";
+import { SUPABASE_RUNTIME_CONTRACT } from "./supabase-runtime-contract";
 
 vi.mock("@supabase/supabase-js", async (importOriginal) => ({
   ...await importOriginal<typeof import("@supabase/supabase-js")>(),
@@ -108,5 +109,21 @@ describe("closed enrolled Supabase construction", () => {
     expect(() => closeEnrolledSupabaseAdapter(adapter)).toThrow();
     expect(rpc).not.toHaveBeenCalled();
     expect(createClient).not.toHaveBeenCalled();
+    const failure = new Error("synthetic enrolled user write failure");
+    rpc.mockImplementation((name: string) => {
+      const result = name === "read_storage_identity" ? { data: deployment.identity, error: null }
+        : name === "storage_inspect_runtime_readiness" ? { data: {
+          format: "keryx-enrolled-runtime-readiness-v1", ready: true,
+          sourceContractDigest: SUPABASE_RUNTIME_CONTRACT.afterDigest,
+          cacheRows: [], cacheRowCount: 0, cacheWireBytes: 0,
+        }, error: null }
+          : name === "storage_upsert_user" ? { data: null, error: failure }
+            : { data: null, error: null };
+      const promise = Promise.resolve(result);
+      return Object.assign(promise, { throwOnError: () => promise });
+    });
+    await adapter.init();
+    await expect(adapter.upsertUser("0x1111111111111111111111111111111111111111", "creator")).rejects.toBe(failure);
+    expect(rpc.mock.calls.filter(([name]) => name === "storage_get_user")).toHaveLength(1);
   });
 });

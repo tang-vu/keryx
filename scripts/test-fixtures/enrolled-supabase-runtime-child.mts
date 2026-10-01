@@ -111,6 +111,10 @@ try {
         stage("read-user");
         assert.equal((await db.getUser(source.walletAddress))?.walletAddress, source.walletAddress);
         stage("query");
+        await db.setSyncState("fixture-sync", "first");
+        assert.equal(await db.getSyncState("fixture-sync"), "first");
+        await db.setSyncState("fixture-sync", "replacement");
+        assert.equal(await db.getSyncState("fixture-sync"), "replacement");
         const run: QueryRun = {
           id: "fixture-query", question: "Synthetic?", budget: 0, engine: "fixture",
           subClaims: [], decisions: [], citations: [], answer: "Synthetic answer",

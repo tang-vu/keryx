@@ -182,6 +182,7 @@ export class SupabaseAdapter implements KeryxDB {
       ? await this.#enrolled.authority.initializationRpc("init", args)
       : await this.#enrolled.authority.rpcResult(operation, args);
     this.assertEntry(operation === "init");
+    if (result.error) throw result.error;
     return result as T;
   }
 

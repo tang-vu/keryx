@@ -567,7 +567,7 @@ begin
   if p_row is null or jsonb_typeof(p_row) not in ('object','array') or (jsonb_typeof(p_row)='array' and jsonb_array_length(p_row)>1000) then raise exception 'bounded domain row input required'; end if;
   perform keryx_storage.enter_operation(p_expected_identity,'upsert_user');
 
-  insert into public."users"("wallet_address","role","display_handle","first_seen_at","last_seen_at") select "wallet_address","role","display_handle","first_seen_at","last_seen_at" from jsonb_populate_recordset(null::public."users",case when jsonb_typeof(p_row)='array' then p_row else jsonb_build_array(p_row) end) on conflict("id") do update set "wallet_address"=excluded."wallet_address","role"=excluded."role","display_handle"=excluded."display_handle","first_seen_at"=excluded."first_seen_at","last_seen_at"=excluded."last_seen_at"; result := null;
+  insert into public."users"("wallet_address","role","display_handle","first_seen_at","last_seen_at") select "wallet_address","role","display_handle","first_seen_at","last_seen_at" from jsonb_populate_recordset(null::public."users",case when jsonb_typeof(p_row)='array' then p_row else jsonb_build_array(p_row) end) on conflict("wallet_address") do update set "role"=excluded."role","display_handle"=excluded."display_handle","first_seen_at"=excluded."first_seen_at","last_seen_at"=excluded."last_seen_at"; result := null;
   perform keryx_storage.leave_operation();
   return result;
 end;
@@ -932,7 +932,7 @@ begin
   if p_row is null or jsonb_typeof(p_row) not in ('object','array') or (jsonb_typeof(p_row)='array' and jsonb_array_length(p_row)>1000) then raise exception 'bounded domain row input required'; end if;
   perform keryx_storage.enter_operation(p_expected_identity,'set_sync_state');
 
-  insert into public."sync_state"("key","value","updated_at") select "key","value","updated_at" from jsonb_populate_recordset(null::public."sync_state",case when jsonb_typeof(p_row)='array' then p_row else jsonb_build_array(p_row) end) on conflict("id") do update set "key"=excluded."key","value"=excluded."value","updated_at"=excluded."updated_at"; result := null;
+  insert into public."sync_state"("key","value","updated_at") select "key","value","updated_at" from jsonb_populate_recordset(null::public."sync_state",case when jsonb_typeof(p_row)='array' then p_row else jsonb_build_array(p_row) end) on conflict("key") do update set "value"=excluded."value","updated_at"=excluded."updated_at"; result := null;
   perform keryx_storage.leave_operation();
   return result;
 end;

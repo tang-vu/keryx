@@ -58,6 +58,9 @@ bounded, identity-checked RPCs. Fixed arguments are evaluated once; legacy query
 closures execute only in the legacy lane. An error or missing enrolled RPC never
 falls back to raw table access. Private transaction writer capabilities compose
 with existing browser, session and treasury guards, rather than replacing them.
+An enrolled RPC error must refuse the operation before legacy fallback result
+construction. An error cannot become an empty read or a synthesized successful
+write; retained database evidence must establish the resulting state.
 
 Dormant installation must preserve existing legacy privileges until explicit
 owner cutover. Cutover must atomically verify the reviewed snapshot and actual
