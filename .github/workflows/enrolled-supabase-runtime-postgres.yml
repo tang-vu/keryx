@@ -13,6 +13,7 @@ on:
       - "lib/types.ts"
       - "scripts/test-enrolled-supabase-runtime-postgres.mts"
       - "scripts/test-fixtures/enrolled-supabase-*.mts"
+      - "scripts/test-fixtures/enrolled-supabase-native-https.test.ts"
       - "scripts/helpers/enrolled-postgres-schema-contract*"
       - "package*.json"
       - "tsconfig.json"
