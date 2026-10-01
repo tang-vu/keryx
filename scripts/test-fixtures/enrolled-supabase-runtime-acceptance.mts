@@ -31,6 +31,34 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
   `set statement_timeout='10s';set lock_timeout='5s';${statement}`).trim();
   const literal = (value: unknown) => `'${JSON.stringify(value).replaceAll("'", "''")}'::jsonb`;
   const service = (statement: string) => sql(`set role service_role;${statement}`);
+  const snapshotWithDiagnostics = () => {
+    const relations = JSON.parse(sql("select coalesce(jsonb_agg(jsonb_build_object('schema',n.nspname,'name',c.relname) order by n.nspname,c.relname),'[]'::jsonb) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname in ('public','keryx_storage') and c.relkind in ('r','p','S')")) as { schema: string; name: string }[];
+    assert(relations.length <= 512);
+    const logical = relations.map(relation => {
+      assert(/^(public|keryx_storage)$/.test(relation.schema) && /^[a-z_][a-z0-9_]{0,62}$/.test(relation.name));
+      const name = `${relation.schema}.${relation.name}`;
+      return `select '${name}' name,encode(sha256(convert_to(coalesce(string_agg(h,'' order by h),''),'UTF8')),'hex') hash from (select encode(sha256(record_send(r)),'hex') h from "${relation.schema}"."${relation.name}" r) records`;
+    }).join(" union all ");
+    // Reuse the exact reviewed owner's catalog hash expression, excluding only
+    // the relation branch being diagnosed separately. No target contract adoption.
+    const assignment = migrationSql.indexOf(" into catalog_digest from (");
+    const statementStart = migrationSql.lastIndexOf("  select ", assignment);
+    const statementEnd = migrationSql.indexOf("  ) pieces;", assignment);
+    assert(assignment > 0 && statementStart > 0 && statementEnd > assignment);
+    const catalog = migrationSql.slice(statementStart, statementEnd + "  ) pieces".length)
+      .replace(" into catalog_digest", "")
+      .split("\n").filter(line => !line.trimStart().startsWith("union all select 'relation:'")).join("\n");
+    return JSON.parse(sql(`select jsonb_build_object(
+      'whole',keryx_storage.snapshot_digest(),
+      'logical',(select jsonb_object_agg(name,hash) from (${logical}) rows),
+      'otherCatalog',(${catalog}),
+      'normalizedCatalog',encode(sha256(convert_to(public.browser_signing_source_canonical(keryx_storage.catalog_contract()),'UTF8')),'hex'),
+      'relations',(select jsonb_object_agg(n.nspname||'.'||c.relname,jsonb_build_object(
+        'raw',encode(sha256(convert_to(c::text,'UTF8')),'hex'),
+        'structural',encode(sha256(convert_to((to_jsonb(c)-array['relpages','reltuples','relallvisible','relfrozenxid','relminmxid'])::text,'UTF8')),'hex'),
+        'maintenance',encode(sha256(convert_to(jsonb_build_array(c.relpages,c.reltuples,c.relallvisible,c.relfrozenxid::text,c.relminmxid::text)::text,'UTF8')),'hex')))
+        from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname in ('public','keryx_storage')))`)) as Record<string, unknown>;
+  };
   const jwt = (role: string) => {
     const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
     const body = `${encode({ alg: "HS256", typ: "JWT" })}.${encode({ role, exp: Math.floor(Date.now() / 1000) + 3600 })}`;
@@ -79,7 +107,8 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
     sql(`select keryx_storage.enroll(${literal(identity)},'${before}')`);
     assert.deepEqual(JSON.parse(service("select read_storage_identity()")), identity);
     assert.equal(sql("select keryx_storage.require_source_contract('after')"), SUPABASE_RUNTIME_CONTRACT.afterDigest);
-    const enrolled = snapshot();
+    const enrolledDiagnostics = snapshotWithDiagnostics();
+    const enrolled = enrolledDiagnostics.whole;
     for (const role of ["anon", "authenticated", "service_role"]) {
       assert.throws(() => sql(`set role ${role};insert into public.sources(id) values('forbidden')`));
       assert.throws(() => sql(`set role ${role};insert into keryx_storage.writer values(1,'${"0".repeat(64)}','upsert_source')`));
@@ -94,7 +123,24 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
     }
     assert.equal(snapshot(), enrolled);
     service(`begin read only;select storage_get_source(${literal(identity)},'absent');select storage_verify_runtime_authority(${literal(identity)});commit;`);
-    assert.equal(snapshot(), enrolled, "native read-only authority calls allocate no capabilities or state");
+    const readonlyDiagnostics = snapshotWithDiagnostics();
+    if (readonlyDiagnostics.whole !== enrolled) {
+      for (const component of ["logical", "otherCatalog", "normalizedCatalog"] as const) {
+        if (canonicalJson(readonlyDiagnostics[component]) !== canonicalJson(enrolledDiagnostics[component])) {
+          process.stdout.write(`DIAGNOSTIC read-only changed component=${component}\n`);
+        }
+      }
+      const beforeRelations = enrolledDiagnostics.relations as Record<string, Record<string, string>>;
+      const afterRelations = readonlyDiagnostics.relations as Record<string, Record<string, string>>;
+      for (const name of Object.keys(beforeRelations).sort()) {
+        if (beforeRelations[name].raw !== afterRelations[name]?.raw) {
+          const category = beforeRelations[name].structural === afterRelations[name]?.structural
+            ? "maintenance-only" : "structural";
+          process.stdout.write(`DIAGNOSTIC read-only relation=${name} category=${category}\n`);
+        }
+      }
+    }
+    assert.equal(readonlyDiagnostics.whole, enrolled, "native read-only authority calls allocate no capabilities or state");
     ownContainer(http);
     docker(["run", "-d", "--name", http, "--network", `container:${postgresContainer}`, "--memory", "256m",
       "-e", `PGRST_DB_URI=postgres://authenticator@127.0.0.1:5432/${database}`,
