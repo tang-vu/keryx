@@ -14,9 +14,11 @@ where useful; do not build two broad products or a marketplace before validating
 Existing Operator/desktop work remains staged; this experiment adds no new expansion.
 
 The owner selected the first research niche on October 1: choosing YouTube video
-topics and developing useful production briefs. Channel subject, language, format and
-reference channels remain to be supplied. This is a test hypothesis, not a demonstrated
-market or a promise of virality. Use the [YouTube pilot](./youtube-research-pilot.md).
+topics and developing useful production briefs for an English-language channel,
+tentatively for children, with no reference channel supplied. Age remains unselected;
+the owner requested a comparison before choosing. Format and production capabilities
+remain open. This is an unvalidated hypothesis, not a demonstrated market or a promise
+of virality. Use the [YouTube pilot](./youtube-research-pilot.md).
 Inspect the current corpus before promising coverage. Do not invent paid
 expertise, use demo/seed articles as independent publisher adoption, or sell access to
 third-party public content without appropriate rights and terms.
