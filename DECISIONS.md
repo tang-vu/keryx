@@ -1,5 +1,27 @@
 # Keryx — Decision Log
 
+**D-287** — Separate Circle API observations from citation payment authority — *2026-10-01*
+
+A seller response header and a database settled flag cannot independently prove
+that the buyer's exact authorization settled. Add a dormant read-only observer
+that obtains the coherent retained original from the installed backend, verifies
+its owner query proof, and compares a bounded native Circle API response with
+the exact nonce and economic tuple. A header UUID remains a lookup hint. Bind
+the opaque result to that original and runtime adapter; do not invent an
+enrolled storage identity or independent ledger proof.
+
+Retain all provider statuses honestly and label the basis as Circle API, with
+chain finality unverified. Bound total requests, streams, pagination and
+concurrency. Token lifetime begins at the actual matching observation; later
+backend reads cannot refresh it, and a caller timeout cannot release a slot
+while underlying work remains. This does not change payment journals or caps.
+
+The future buyer-owned provenance issuer must combine actual delivery with
+approved settlement evidence and private artifact publication. External creators
+must not need to share a seller artifact key or internal callback. Citation
+eligibility, current private access and mainnet/finality policy remain separate
+owner-approved gates. See [Circle observation scope](docs/browser-x402-observation.md).
+
 **Question-driven broad web research with observed document evidence** — *2026-10-01*
 
 The owner authorized expanding research beyond Keryx's small registered/public-feed
