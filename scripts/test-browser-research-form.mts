@@ -76,7 +76,7 @@ try {
   await page.getByText(/Your funded session pays/).waitFor();
   await page.getByText(/your question is sent to our search provider/).waitFor();
   await page.locator("#payer-expired").click();
-  await page.getByText(/Session expired/).waitFor();
+  await page.getByText(/Session expired\. Recover/).waitFor();
   const shared = await context.newPage();
   await shared.goto("https://research-form.test/?q=Shared%20question&budget=0.04&model=other&mode=deep&run=1");
   await shared.addScriptTag({ content: bundle.outputFiles[0].text });

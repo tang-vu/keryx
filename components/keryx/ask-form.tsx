@@ -10,6 +10,9 @@ import type { ResearchMode } from "@/lib/types";
 
 interface AskFormProps {
   disabled?: boolean;
+  parentId?: string | null;
+  conversation?: boolean;
+  clearOnSubmit?: boolean;
   payer?: "treasury" | "session" | "expired" | "paused";
   onAsk: (
     question: string,
@@ -62,16 +65,16 @@ function readSharedAsk(): {
 
 const SUGGESTIONS = [
   {
-    label: "How do x402 + stablecoins enable agent commerce?",
-    q: "How do x402 and stablecoins enable autonomous AI agent commerce?",
+    label: "Compare SQLite WAL and rollback journals",
+    q: "Compare SQLite WAL and rollback journals for a small web application. What are the concurrency and operational tradeoffs?",
   },
   {
-    label: "How do nanopayments split a reward?",
-    q: "How do nanopayments split a citation reward across multiple authors?",
+    label: "Research children's educational video ideas",
+    q: "Compare English-language educational YouTube topic ideas for children ages 6–9. Distinguish evidence from assumptions and explain the limits of claims about audience demand.",
   },
 ];
 
-export function AskForm({ disabled, onAsk, payer = "treasury" }: AskFormProps) {
+export function AskForm({ disabled, onAsk, payer = "treasury", parentId, conversation = false, clearOnSubmit = false }: AskFormProps) {
   const [question, setQuestion] = useState("");
   const [budget, setBudget] = useState(0.05);
   // Reasoning-model pick, chat-app style. "" = server default (DeepSeek). The picker only
@@ -113,6 +116,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury" }: AskFormProps) {
       // Treasury free-trial rate limits still apply, so this can't be turned into a spend amplifier.
       if (q && run && !disabled) {
         onAsk(q, b ?? 0.05, parent ?? undefined, m ?? undefined, mode);
+        if (clearOnSubmit) setQuestion("");
       }
     }, 0);
     return () => window.clearTimeout(timer);
@@ -122,7 +126,8 @@ export function AskForm({ disabled, onAsk, payer = "treasury" }: AskFormProps) {
   const submit = () => {
     const q = question.trim();
     if (!q || disabled || payer === "paused") return;
-    onAsk(q, budget, parentRef.current, model || undefined, researchMode);
+    onAsk(q, budget, parentId === undefined ? parentRef.current : parentId ?? undefined, model || undefined, researchMode);
+    if (clearOnSubmit) setQuestion("");
   };
 
   return (
@@ -141,7 +146,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury" }: AskFormProps) {
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             onKeyDown={(e) => {
-              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") submit();
+              if (!e.nativeEvent.isComposing && (e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); submit(); }
             }}
             placeholder="Ask a question worth reading for..."
             rows={2}
@@ -149,6 +154,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury" }: AskFormProps) {
             disabled={disabled}
             className="mt-2 min-h-[76px] w-full resize-y border border-ink bg-paper px-3 py-2 font-serif text-[17px] leading-snug text-ink outline-none placeholder:text-ink-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50"
           />
+          <p className="mt-1 text-xs text-ink-3">Enter for a new line · Ctrl/⌘ + Enter to ask</p>
           <fieldset className="mt-3">
             <legend className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-2">Research depth</legend>
             <div className="mt-1.5 grid grid-cols-2 gap-2">
@@ -167,6 +173,9 @@ export function AskForm({ disabled, onAsk, payer = "treasury" }: AskFormProps) {
             </p>
           </fieldset>
           <div className="mt-2 border-t border-line pt-3">
+            <p className="mb-2 font-mono text-[11px] leading-snug text-ink-2" data-testid="composer-source-cap">
+              Source cap: {budget.toFixed(3)} USDC · {payer === "treasury" ? "Keryx pays" : payer === "session" ? "Your session" : payer === "expired" ? "Session expired" : "Session paused"}
+            </p>
             <button type="button" onClick={submit} disabled={disabled || payer === "paused" || question.trim().length === 0}
               data-tour="dispatch-btn"
               className="kx-press min-h-12 w-full border border-ink bg-ink px-5 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] text-cream transition-all hover:bg-paid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:cursor-not-allowed disabled:opacity-50">
@@ -211,14 +220,14 @@ export function AskForm({ disabled, onAsk, payer = "treasury" }: AskFormProps) {
             </div>
           </details>
           <p className="mt-2 text-xs text-ink-3">Research may search the public web; your question is sent to our search provider. The USDC source budget is separate from model and search operating costs.</p>
-          <div className="mt-2 flex flex-wrap gap-2" aria-label="Example questions">
+          {!conversation && <div className="mt-2 flex flex-wrap gap-2" aria-label="Example questions">
             {SUGGESTIONS.map((s) => (
               <button key={s.label} type="button" disabled={disabled} onClick={() => setQuestion(s.q)}
                 className="min-h-11 max-w-full border border-line bg-paper px-3 py-2 text-left font-mono text-[11px] leading-snug text-ink-2 transition-colors hover:border-seal hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50">
                 {s.label}
               </button>
             ))}
-          </div>
+          </div>}
         </div>
       </div>
     </div>

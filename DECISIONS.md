@@ -13,6 +13,33 @@ Scholarly metadata enrichment and account synchronization remain open work, not 
 academic-complete claim. Reversible: remove the browser export surfaces; no stored
 run, payment or receipt format changes. See [researcher exports](docs/researcher-exports.md).
 
+**Chat-first research with visible spending and inspectable evidence** — *2026-10-01*
+
+The owner approved making a conversation the primary research interface. Lead with
+the question and a few starting examples, then present the structured cited report
+in the conversation. Keep previous turns available during the tab session, with a
+compact research status and expandable decisions, source evidence and payment trace.
+The question's source-USDC cap and payer remain visible beside the composer; model
+and budget controls may be secondary, but settled, pending and simulated amounts
+must remain distinguishable.
+
+Use the existing previous-run anchor for follow-ups rather than promising full chat
+memory. Starting a new research topic must clear that anchor. Copy or export must
+retain citations and the observed evidence/payment limitations. Stopping the client
+stream does not establish a refund or the final state of submitted payments.
+
+Stopping and submitting again makes obsolete asynchronous error-body completions
+reachable. Guard client updates by request identity after asynchronous reads, while
+keeping the existing signing-budget identity gate and durable reservation authority.
+
+Use the same chat surface on the home page and `/research`, keeping the existing
+paid-package, recovery and private-job workspace accessible as a secondary section.
+This is a presentation change: package terms, session grants, signing, source-owned
+payout authority and backend evidence gates remain authoritative. Responsive and
+synthetic browser behavior, relevant tests, production build, review and deployment
+are implementation gates; the approved direction alone does not establish delivery
+or improved user adoption. See [research reading UX](docs/research-reading-ux.md).
+
 **D-287** — Separate Circle API observations from citation payment authority — *2026-10-01*
 
 A seller response header and a database settled flag cannot independently prove

@@ -336,6 +336,9 @@ export function useAskStream(opts?: AskStreamOpts) {
       signBudgetRef.current = new BrowserSignBudget(grantCap);
       const controller = new AbortController();
       abortRef.current = controller;
+      // Reset/Stop can start another ask while an old body or reader rejects.
+      // Its callbacks must not change the new turn or process old signing frames.
+      const isCurrent = () => abortRef.current === controller && !controller.signal.aborted;
       setState({ ...INITIAL, status: "streaming", budget });
 
       try {
@@ -356,11 +359,13 @@ export function useAskStream(opts?: AskStreamOpts) {
           }),
           signal: controller.signal,
         });
+        if (!isCurrent()) return;
 
         if (!res.ok || !res.body) {
           // Read the error body once (as text), then try JSON — so we can react to a
           // structured session_expired without consuming the stream body twice.
           const bodyText = await res.text().catch(() => "");
+          if (!isCurrent()) return;
           let errCode: string | undefined;
           let errMsg = bodyText;
           let retryAfter: number | null = null;
@@ -409,6 +414,7 @@ export function useAskStream(opts?: AskStreamOpts) {
 
         while (!streamDone) {
           const { done, value } = await reader.read();
+          if (!isCurrent()) return;
           if (done) {
             streamDone = true;
             break;
@@ -427,6 +433,7 @@ export function useAskStream(opts?: AskStreamOpts) {
 
         // Flush any trailing frame.
         const tail = parseFrame(buffer);
+        if (!isCurrent()) return;
         if (tail) handleEvent(tail.event, tail.data);
 
         setState((s) => {
@@ -444,6 +451,7 @@ export function useAskStream(opts?: AskStreamOpts) {
               };
         });
       } catch (err) {
+        if (!isCurrent()) return;
         if ((err as Error)?.name === "AbortError") return;
         setState((s) => ({
           ...s,
