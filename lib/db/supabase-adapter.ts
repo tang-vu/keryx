@@ -1,5 +1,5 @@
 import { publicReferenceSchema, type PublicReference } from "../public-references/catalog";
-import { admitSupabaseBrowserQueryPolicy,admitSupabaseBrowserSigningOriginal,readSupabaseBrowserSigningSnapshot,signSupabaseBrowserSigningOriginal } from "./supabase-browser-signing-originals";
+import { admitSupabaseBrowserQueryPolicy,admitSupabaseBrowserSigningOriginal,readSupabaseBrowserSigningSnapshot,readExposedSupabaseBrowserSigningSnapshotForSigner,signSupabaseBrowserSigningOriginal } from "./supabase-browser-signing-originals";
 import type { BrowserQueryPolicyProof } from "../payments/browser-query-policy";
 import type { BrowserOriginalAdmission } from "./browser-signing-originals";
 /**
@@ -1409,6 +1409,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
   async admitBrowserQueryPolicy(proof:BrowserQueryPolicyProof,sessionId:string) {return admitSupabaseBrowserQueryPolicy(this.sb,proof,sessionId);}
   async admitBrowserSigningOriginal(input:BrowserOriginalAdmission) {return admitSupabaseBrowserSigningOriginal(this.sb,input);}
+  async readExposedBrowserSigningSnapshotForSigner(signer:string,sessionId:string,requestId:string) {return readExposedSupabaseBrowserSigningSnapshotForSigner(this.sb,signer,sessionId,requestId);}
   async readBrowserSigningSnapshot(owner:string,sessionId:string,requestId:string) {return readSupabaseBrowserSigningSnapshot(this.sb,owner,sessionId,requestId);}
   async signBrowserSigningOriginal(sessionId:string,requestId:string,header:string) {return signSupabaseBrowserSigningOriginal(this.sb,sessionId,requestId,header);}
 

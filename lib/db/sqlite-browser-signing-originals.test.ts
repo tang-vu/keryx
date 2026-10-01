@@ -637,3 +637,94 @@ it("refuses expired owner proofs and ceilings beyond original grant without allo
     native.prepare("SELECT COUNT(*) AS n FROM browser_signing_queries").get()?.n
   ).toBe(0);
 });
+
+it("signer observation denies prepared and cancelled bytes while owner inspection remains unchanged", async () => {
+  const { db, native, file } = await setup(),
+    q = await query(db),
+    input = leg(q.namespace, q.queryId);
+  await db.admitBrowserSigningOriginal(input);
+  for (const cancel of [false, true]) {
+    if (cancel)
+      await db.cancelPreparedBrowserJournal(ownerId, input.journal.requestId);
+    native.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+    const bytes = fs.readFileSync(file),
+      before = JSON.stringify(
+        native.prepare("SELECT * FROM payment_events").all()
+      );
+    expect(
+      await db.readExposedBrowserSigningSnapshotForSigner(
+        signer.address,
+        ownerId,
+        input.journal.requestId
+      )
+    ).toBe(null);
+    const owned = await db.readBrowserSigningSnapshot(
+      ownerId,
+      ownerId,
+      input.journal.requestId
+    );
+    expect(owned !== null).toBe(true);
+    expect(owned?.journal.phase).toBe(
+      cancel ? "cancelled_unexposed" : "prepared"
+    );
+    expect(fs.readFileSync(file).equals(bytes)).toBe(true);
+    expect(
+      JSON.stringify(native.prepare("SELECT * FROM payment_events").all()) ===
+        before
+    ).toBe(true);
+  }
+});
+it.each(["failed", "settled"])(
+  "signer observation preserves exposed historical %s reads after revocation without mutations",
+  async (status) => {
+    const { db, native } = await setup(),
+      q = await query(db),
+      input = leg(q.namespace, q.queryId),
+      admitted = await db.admitBrowserSigningOriginal(input);
+    if (admitted.status !== "admitted") throw new Error("Fixture refused");
+    await db.exposeBrowserJournal(ownerId, input.journal.requestId);
+    expect(
+      (
+        await db.readExposedBrowserSigningSnapshotForSigner(
+          signer.address,
+          ownerId,
+          input.journal.requestId
+        )
+      )?.journal.phase
+    ).toBe("exposed");
+    await db.deleteSessionGrant(ownerId);
+    if (status === "failed")
+      await db.failPendingPayment(
+        admitted.journal.payment.id!,
+        admitted.journal.nonce,
+        "synthetic-terminal"
+      );
+    else
+      await db.settlePendingPayment(
+        admitted.journal.payment.id!,
+        admitted.journal.nonce,
+        "synthetic-terminal"
+      );
+    const before = JSON.stringify(
+      native.prepare("SELECT * FROM payment_events").all()
+    );
+    const snapshot = await db.readExposedBrowserSigningSnapshotForSigner(
+      signer.address,
+      ownerId,
+      input.journal.requestId
+    );
+    expect(snapshot?.journal.phase).toBe(status);
+    expect(snapshot?.currentGrant?.expiry).toBe(0);
+    expect(
+      await db.readExposedBrowserSigningSnapshotForSigner(
+        owner.address,
+        ownerId,
+        input.journal.requestId
+      )
+    ).toBe(null);
+    expect(
+      JSON.stringify(native.prepare("SELECT * FROM payment_events").all()) ===
+        before
+    ).toBe(true);
+  }
+);

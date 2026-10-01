@@ -53,3 +53,16 @@ export async function readSupabaseBrowserSigningSnapshot(sb: SupabaseClient, own
   if (error) refuse(); if (data === null) return null;
   return validateBrowserSigningSnapshot(object(data) as unknown as BrowserSigningSnapshot, owner);
 }
+/** Observation only: recovered signer identity does not admit or sign a leg. */
+export async function readExposedSupabaseBrowserSigningSnapshotForSigner(sb: SupabaseClient, recoveredSigner: string, sessionId: string, requestId: string): Promise<BrowserSigningSnapshot | null> {
+  if (typeof recoveredSigner !== "string" || !/^0x[0-9a-fA-F]{40}$/.test(recoveredSigner) || !sessionId || !requestId) refuse();
+  const signer = recoveredSigner.toLowerCase();
+  const { data, error } = await sb.rpc("browser_signing_exposed_snapshot_for_signer", { p_signer: signer, p_session_id: sessionId, p_request_id: requestId });
+  if (error) refuse(); if (data === null) return null;
+  const retained = JSON.parse(canonicalJson(object(data))) as BrowserSigningSnapshot;
+  const snapshot = await validateBrowserSigningSnapshot(retained, retained.namespace.owner);
+  if (snapshot.namespace.signer !== signer || snapshot.journal.signer.toLowerCase() !== signer
+    || snapshot.original.authorization.from !== signer || snapshot.journal.sessionId !== sessionId || snapshot.journal.requestId !== requestId
+    || !["exposed", "signed", "submission_attempted", "settled", "failed"].includes(snapshot.journal.phase)) refuse();
+  return snapshot;
+}

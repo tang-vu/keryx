@@ -122,6 +122,7 @@ export interface BrowserSigningOriginalsBackend {
   admitBrowserSigningOriginal(
     input: BrowserOriginalAdmission
   ): Promise<BrowserOriginalAdmissionResult>;
+  readExposedBrowserSigningSnapshotForSigner(signer:string,sessionId:string,requestId:string):Promise<import("./browser-signing-originals").BrowserSigningSnapshot|null>;
   readBrowserSigningSnapshot(
     owner: string,
     sessionId: string,

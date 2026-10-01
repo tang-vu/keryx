@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - "supabase/migrations/0070_browser_signing_originals.sql"
+      - "supabase/migrations/0071_browser_original_observation.sql"
       - "supabase/migrations/006[789]*"
       - "lib/db/browser-signing-originals.ts"
       - "lib/db/supabase-browser-signing-originals*"

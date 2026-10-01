@@ -15,7 +15,7 @@ import { initializeSqliteBrowserJournal, sqliteJournalActive, sqliteJournalTrans
   upsertSqliteJournalGrant, admitSqliteBrowserJournal, getSqliteBrowserJournal, transitionSqliteBrowserJournal,
   signSqliteBrowserJournal, cancelSqlitePreparedJournal, terminalSqliteJournalPayment } from "./sqlite-browser-journal";
 import type { BrowserJournalAdmission, BrowserSignedMetadata } from "./browser-authorization-journal";
-import { initializeSqliteBrowserSigningOriginals,admitSqliteBrowserQueryPolicy,admitSqliteBrowserSigningOriginal,readSqliteBrowserSigningSnapshot,signSqliteBrowserSigningOriginal } from "./sqlite-browser-signing-originals";
+import { initializeSqliteBrowserSigningOriginals,admitSqliteBrowserQueryPolicy,admitSqliteBrowserSigningOriginal,readSqliteBrowserSigningSnapshot,readExposedSqliteBrowserSigningSnapshotForSigner,signSqliteBrowserSigningOriginal } from "./sqlite-browser-signing-originals";
 import type { BrowserQueryPolicyProof } from "../payments/browser-query-policy";
 import type { BrowserOriginalAdmission } from "./browser-signing-originals";
 import { claimSqliteSourceUpkeep, finishSqliteSourceUpkeep, type SourceUpkeepClaim, type SourceUpkeepSummary } from "./source-upkeep";
@@ -1230,6 +1230,7 @@ export class SqliteAdapter implements KeryxDB {
   }
   async admitBrowserQueryPolicy(proof:BrowserQueryPolicyProof,sessionId:string) {return admitSqliteBrowserQueryPolicy(this.db,proof,sessionId);}
   async admitBrowserSigningOriginal(input:BrowserOriginalAdmission) {return admitSqliteBrowserSigningOriginal(this.db,input);}
+  async readExposedBrowserSigningSnapshotForSigner(signer:string,sessionId:string,requestId:string) {return readExposedSqliteBrowserSigningSnapshotForSigner(this.db,signer,sessionId,requestId);}
   async readBrowserSigningSnapshot(owner:string,sessionId:string,requestId:string) {return readSqliteBrowserSigningSnapshot(this.db,owner,sessionId,requestId);}
   async signBrowserSigningOriginal(sessionId:string,requestId:string,header:string) {return signSqliteBrowserSigningOriginal(this.db,sessionId,requestId,header);}
   async getBrowserJournal(sessionId: string, requestId: string) {

@@ -1,5 +1,13 @@
 # Keryx — Decision Log
 
+**D-284** - Authenticate historical original observation without exposing prepared authorizations - *2026-10-01*
+
+Use a separate, fixed-audience EIP-712 GET proof from the session signer to authenticate a narrowly scoped original observation. Recover the signer before reading, derive its historical owner from retained authority, and validate the original and both owner policies in one coherent backend snapshot. Return originals only when the journal records prior exposure: exposed, signed, submission-attempted or an exposed terminal state. Prepared and cancelled-unexposed records must reveal no nonce or authorization tuple; GET never marks exposure or releases capacity. Keep the trusted owner reader separate from this credential.
+
+Bind the proof to the exact method, path, session, request and fresh challenge with a five-second server window. Bound the complete client exchange using monotonic and wall elapsed time, recheck proof expiry after the backend read, and retain concurrency slots until timed-out backend work actually settles. Captured proof replay within its short window remains possible. A historical signer key may authenticate already exposed history after grant replacement or revocation; that privacy policy needs production review. Observation is historical evidence, never permission to sign or a revocation barrier.
+
+This source stage installs reusable helpers and protected backend reads only. It adds no public route, live worker integration, custody issuer, activation or production deployment. Pinned HTTPS and clock echoes do not establish independent asset integrity, key custody, absolute UTC accuracy or exclusive restored authority. Real origin/mobile acceptance, funded recovery and independent security review remain release gates; mainnet authorization is unchanged. See [original observation](docs/browser-original-observation.md).
+
 **Product validation: research outcomes and information-selling infrastructure** — *2026-10-01*
 
 The owner authorized a focused evaluation of both directions beyond bounty preparation.
