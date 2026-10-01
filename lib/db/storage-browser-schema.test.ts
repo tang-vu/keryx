@@ -17,6 +17,7 @@ import {
 } from "./storage-identity-provision";
 import { STORAGE_APPLICATION_TABLES } from "./storage-identity-sqlite";
 import { openVerifiedSqliteStorage } from "./storage-identity-connection";
+import { scanFullStorageSnapshot } from "./storage-identity-snapshot";
 import { createServer } from "node:http";
 import { once } from "node:events";
 import { encodeFunctionResult } from "viem";
@@ -125,6 +126,105 @@ it("enrolls the actual full application schema and covers every installed table"
     rmSync(folder, { recursive: true, force: true });
   }
 });
+
+const retainedAuthoritySeeds = [
+  "INSERT INTO browser_signing_v2_writer VALUES(1)",
+  "INSERT INTO browser_signing_v3_writer VALUES(1)",
+  "INSERT INTO browser_signing_namespaces(namespace,owner,signer,service,network,ceiling_micro,job_limit,allocated_micro,jobs,proof) VALUES('namespace','owner','signer','https://keryx.cc','eip155:5042002',1,1,0,0,'{}')",
+  "INSERT INTO browser_signing_queries(query_id,namespace,policy_id,request_nonce,session_id,grant_epoch,proof,proof_digest,ceiling_micro,spent_micro) VALUES('query','namespace','policy','nonce','session','epoch','{}','digest',1,0)",
+  "INSERT INTO browser_signing_originals(nonce,query_id,original,input) VALUES('nonce','query','{\"protocol\":\"durable-v2\"}','{}')",
+  "UPDATE browser_signing_v2_control SET active=1 WHERE id=1",
+  "UPDATE browser_signing_v2_barrier SET ever_active=1 WHERE id=1",
+  "UPDATE browser_signing_v2_control SET min_original_version=3 WHERE id=1",
+  "UPDATE browser_signing_v2_barrier SET min_original_version=3 WHERE id=1",
+  "DELETE FROM browser_signing_v2_control",
+  "DROP TRIGGER browser_signing_v2_barrier_retained; DELETE FROM browser_signing_v2_barrier",
+  "DROP TABLE browser_signing_v2_control; CREATE TABLE browser_signing_v2_control(id INTEGER,active TEXT,min_original_version INTEGER); INSERT INTO browser_signing_v2_control VALUES(1,'0',2)",
+  "DROP TABLE browser_signing_v2_barrier; CREATE TABLE browser_signing_v2_barrier(id INTEGER,ever_active INTEGER,min_original_version INTEGER); INSERT INTO browser_signing_v2_barrier VALUES(1,0,2),(2,0,2)",
+];
+it.each(retainedAuthoritySeeds)(
+  "refuses retained authority without mutation: %s",
+  async (seed) => {
+    const folder = mkdtempSync(join(tmpdir(), "keryx-storage-retained-"));
+    const file = join(folder, "synthetic.sqlite");
+    const adapter = new SqliteAdapter(file);
+    let raw: DatabaseSync | undefined;
+    try {
+      await adapter.init();
+      adapter.close();
+      raw = new DatabaseSync(file);
+      const isolatedTable = seed.startsWith(
+        "INSERT INTO browser_signing_queries"
+      )
+        ? "browser_signing_queries"
+        : seed.startsWith("INSERT INTO browser_signing_originals")
+        ? "browser_signing_originals"
+        : null;
+      if (isolatedTable) {
+        // Scan the actual installed table definition in isolation so a funded
+        // parent/grant cannot accidentally supply the refusal under test.
+        const installedSql = String(
+          raw
+            .prepare(
+              "SELECT sql FROM sqlite_schema WHERE type='table' AND name=?"
+            )
+            .get(isolatedTable)?.sql
+        );
+        raw.close();
+        rmSync(file);
+        raw = new DatabaseSync(file, { enableForeignKeyConstraints: false });
+        raw.exec(installedSql);
+      }
+      // Privileged synthetic pre-enrollment history: never alter production guards.
+      raw.exec(seed);
+      raw.exec("BEGIN");
+      const before = scanFullStorageSnapshot(raw);
+      raw.exec("ROLLBACK");
+      raw.close();
+      raw = undefined;
+      const bytes = readFileSync(file);
+      const identity = syntheticStorageIdentity("testnet-real");
+      const inspection = await inspectSqliteEnrollment(file, identity);
+      expect(inspection.enrollmentRefusal).toBe(
+        "unresolved_funded_or_authority_provenance"
+      );
+      expect(
+        inspection.unknownClasses.some((value) =>
+          value.startsWith("legacy_metadata:browser_signing_")
+        )
+      ).toBe(false);
+      await expect(
+        enrollSqliteStorage(file, identity, {
+          format: "keryx-reviewed-storage-enrollment-v1",
+          inspection,
+          provenanceDocumentDigest: identity.provenanceDigest,
+          unknownClassAttestation: inspection.unknownClasses,
+        })
+      ).rejects.toThrow("unresolved_funded_or_authority_provenance");
+      expect(readFileSync(file)).toEqual(bytes);
+      raw = new DatabaseSync(file);
+      raw.exec("BEGIN");
+      expect(scanFullStorageSnapshot(raw)).toEqual(before);
+      expect(
+        raw
+          .prepare(
+            "SELECT name FROM sqlite_schema WHERE name='keryx_storage_identity'"
+          )
+          .get()
+      ).toBeUndefined();
+      raw.exec("ROLLBACK");
+    } finally {
+      raw?.close();
+      try {
+        adapter.close();
+      } catch {
+        /* already closed */
+      }
+      rmSync(folder, { recursive: true, force: true });
+    }
+  },
+  60000
+);
 
 it("revalidates identity and complete fences before returning the transaction boolean", async () => {
   for (const tamper of ["identity", "fence", "replacement"] as const) {

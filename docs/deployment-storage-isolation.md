@@ -214,6 +214,13 @@ implicit exemption. The verified connection exposes a guarded, read-only
 transaction-state property so the existing browser admission helpers can check
 their transaction without receiving native registration or extension access.
 
+Supported schema is not historical authority provenance. Nonempty browser
+signing writer markers, namespaces, queries or originals must refuse legacy
+enrollment; an unknown-metadata attestation cannot waive those states. Control
+and barrier rows need a bounded initial-state check rather than blanket metadata
+classification. Preserve unknown or previously activated history for its separate
+recovery review instead of clearing it during enrollment.
+
 This compatibility boundary does not enroll a running deployment, initialize
 schema through a guarded connection, or make `getDb()` and ordinary adapters
 use the verified connection. Their runtime integration, exclusive deployment
