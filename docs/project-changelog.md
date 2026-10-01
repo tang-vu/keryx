@@ -1,5 +1,16 @@
 # Keryx Project Changelog
 
+### Research source previews and product pilots (2026-10-01)
+
+- Inspect listed sources and public article previews on `/research` before choosing a
+  paid package. Search covers loaded names, descriptions and tags; pagination is bounded
+  and preview failures remain visible. Browsing does not buy content or select job sources.
+- Keep missing evidence, title-only previews, unverified listings and legacy flag limits
+  explicit. Metadata is not a promise of answer coverage or live payout eligibility.
+- Document separate independent research and seller experiments. The first owner-selected
+  research niche is YouTube idea/production briefs; suitable corpus and user demand remain
+  to be validated. No trend-data integration or guaranteed viral outcome is introduced.
+
 ### Withheld citation-pool telemetry (2026-10-01)
 
 - Count positive planned creator rewards separately from free public citations.

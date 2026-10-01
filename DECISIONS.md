@@ -1,5 +1,22 @@
 # Keryx — Decision Log
 
+**Product validation: research outcomes and information-selling infrastructure** — *2026-10-01*
+
+The owner authorized a focused evaluation of both directions beyond bounty preparation.
+Research must demonstrate a useful outcome for an independent participant; infrastructure
+must demonstrate an independently maintained seller integration and genuine buyer use.
+Neither code capability nor owner-generated testnet volume establishes demand. Start with
+small experiments over existing rails rather than a broad marketplace or new payment
+authority. A narrow research application can serve as a reference client, but each side
+needs its own evidence before becoming the primary business direction.
+
+Expose public source previews before a non-refundable research purchase so a participant
+can judge apparent relevance. This is metadata browsing, not an answerability verdict,
+ownership attestation, payable-source guarantee or automatic purchase. Keep source rights,
+sponsorship, testnet use and payment uncertainty explicit. Existing Operator work and
+mainnet gates remain staged; no price, authority, funds or launch permission changes.
+See [product validation](docs/product-validation.md) for experiments and direction gates.
+
 **D-282** — Separate browser elapsed time from server UTC expiry — *2026-10-01*
 
 Browser clock skew must not determine whether a server-prepared unsigned withdrawal or a server-issued login date is usable. Bound withdrawal request age with monotonic elapsed time while retaining the abort, original selected policy and server chain-height checks. Issue dated SIWE challenges from the server, preserve the five-minute single-use challenge and existing session lifetime caps, and leave server JWT/database expiry authoritative. Echo the exact retained grant expiry once; derive an advisory client deadline from bounded server remaining duration minus the full request time. Read-only focus/visibility checks may clamp that deadline or pause the UI, never renew the grant or reset financial capacity.

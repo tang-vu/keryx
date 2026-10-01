@@ -12,6 +12,13 @@ implemented architecture; unchecked work in this document remains proposed.
 
 ## Product and customer hypothesis
 
+**October 1 validation increment:** The owner authorized testing specialized research
+outcomes and information-selling infrastructure beyond bounty preparation. The
+[product validation plan](./product-validation.md) defines independent researcher and
+seller experiments, evidence limits and selection gates. This does not establish demand,
+replace payment authority or authorize a mainnet launch. Use existing rails and inspect
+source suitability before asking a participant to purchase research.
+
 **Agreed product direction (September 29):** Present Keryx as an agent-operated
 paid research service. A customer should be able to ask naturally, inspect the
 sources and purchase decisions, follow up, and reopen a useful cited deliverable.
