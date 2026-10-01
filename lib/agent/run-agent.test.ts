@@ -324,6 +324,58 @@ async function drive(
 const fetchBudget = (budget: number) => budget * (1 - config.citationPoolRatio);
 const citationPool = (budget: number) => budget * config.citationPoolRatio;
 
+it("reads selected original web content without funding, rejects snippet evidence and preserves fetched provenance", async () => {
+  const d = deps([], fakeEngine(), fakeGateway());
+  const fund = vi.spyOn(d.gateway, "ensureFunded");
+  d.webSearch = { search: vi.fn(async () => [{ title: "Original page", url: "https://publisher.example/article", snippet: "search-only claim never read" }]) };
+  d.readWebArticle = vi.fn(async () => ({ text: "Exact original evidence from the public page.", title: "Original article", finalUrl: "https://publisher.example/final", kind: "html" as const, truncated: false }));
+  const { run, steps } = await drive({ question: "Research the original", budget: 0.05, origin: "web" }, d);
+  expect(fund).not.toHaveBeenCalled(); expect((d.gateway as FakeGateway).fetchCalls).toHaveLength(0); expect((d.gateway as FakeGateway).citationCalls).toHaveLength(0); expect(run.totalSpent).toBe(0);
+  expect(run.citations).toHaveLength(1); expect(run.citations[0]).toMatchObject({ itemUrl: "https://publisher.example/final", reward: 0, webProvenance: { extraction: "html" } });
+  expect(run.evidence?.[0]).toMatchObject({ quote: "Exact original evidence from the public page.", qualifiesForReward: false, webProvenance: { extraction: "html" } });
+  expect(steps.some(step => step.message.includes("not a cache hit"))).toBe(true);
+});
+it("never promotes an unread search snippet into evidence and contains page-read failures", async () => {
+  const d = deps([], fakeEngine(), fakeGateway());
+  d.webSearch = { search: async () => [{ title: "snippet", url: "https://publisher.example/article", snippet: "invented evidence" }] };
+  d.readWebArticle = vi.fn(async () => { throw new Error("internal secret response"); });
+  const { run, steps } = await drive({ question: "Unanswerable original question", origin: "web" }, d);
+  expect(run.citations).toHaveLength(0); expect(run.evidence ?? []).toHaveLength(0); expect((d.gateway as FakeGateway).fetchCalls).toHaveLength(0); expect((d.gateway as FakeGateway).citationCalls).toHaveLength(0);
+  expect(JSON.stringify(steps)).not.toContain("internal secret response");
+});
+it("does not send private questions to external web providers even if a provider is available", async () => {
+  const d = deps([], fakeEngine(), fakeGateway()), queryId = `prv_${"9".repeat(64)}`;
+  d.effects = isolatedTestEffects(queryId); const search = vi.fn(async () => []); d.webSearch = { search };
+  const { steps } = await drive({ question: "Private secret question", queryId }, d);
+  expect(search).not.toHaveBeenCalled(); expect(steps.some(step => step.message.includes("withheld for private"))).toBe(true);
+});
+it("retains free original web decisions when owned-source funding becomes unknown", async () => {
+  const d = deps([makeSource({ id: "owned" })], fakeEngine(), fakeGateway());
+  d.gateway.ensureFunded = async () => { throw new Error("funding unavailable"); };
+  d.webSearch = { search: async () => [{ title: "public", url: "https://publisher.example/article", snippet: "public preview" }] };
+  d.readWebArticle = async url => ({ text: "Original public evidence survives unavailable owned funding.", title: "Original", finalUrl: url, kind: "html", truncated: false });
+  const { run } = await drive({ question: "Mixed research with unavailable funding", origin: "web" }, d);
+  expect(run.decisions.find(decision => decision.sourceKind === "public-reference")?.action).toBe("CACHE");
+  expect(run.citations).toHaveLength(1); expect(run.citations[0].sourceKind).toBe("public-reference");
+  expect((d.gateway as FakeGateway).fetchCalls).toHaveLength(0); expect((d.gateway as FakeGateway).citationCalls).toHaveLength(0);
+});
+it("excludes normalized copies and does not spend model decision time from the web read allowance", async () => {
+  const d = deps([], fakeEngine(), fakeGateway());
+  const decide = d.engine.decide.bind(d.engine);
+  d.engine.decide = async input => { const decisions = await decide(input); vi.spyOn(Date, "now").mockReturnValue(Date.now() + 60000); return decisions; };
+  d.webSearch = { search: async () => [{ title: "a", url: "https://a.example/article", snippet: "relevant" }, { title: "b", url: "https://b.example/article", snippet: "relevant" }] };
+  d.readWebArticle = vi.fn(async url => ({ text: "Same original page evidence.", title: "Original", finalUrl: url, kind: "html" as const, truncated: false }));
+  try { const { run } = await drive({ question: "Research duplicate evidence", origin: "web" }, d); expect(d.readWebArticle).toHaveBeenCalledTimes(2); expect(run.citations).toHaveLength(1); }
+  finally { vi.restoreAllMocks(); }
+});
+it("blocks unattended external search but allows explicit trusted manual CLI opt-in", async () => {
+  const d = deps([], fakeEngine(), fakeGateway()); const search = vi.fn(async () => []); d.webSearch = { search };
+  await drive({ question: "Unattended engine question" }, d); expect(search).not.toHaveBeenCalled();
+  await drive({ question: "Manual CLI question", origin: "engine", allowExternalWeb: true }, d); expect(search).toHaveBeenCalled();
+  const privateId = `prv_${"8".repeat(64)}`; d.effects = isolatedTestEffects(privateId); search.mockClear();
+  await drive({ question: "Private question", queryId: privateId, allowExternalWeb: true }, d); expect(search).not.toHaveBeenCalled();
+});
+
 it("continues past partial or explicitly incomplete answers, then stops before another affordable read", async () => {
   for (const first of [{ coverage: 0.4, missingRequestedParts: [] },
     { coverage: 0.9, missingRequestedParts: ["Measured latency"] }]) {
@@ -1532,7 +1584,7 @@ it("keeps earned citation rewards while an incomplete final assessment lowers co
     const gateway = fakeGateway();
     const { run } = await drive({ question: "What throughput and latency were measured?", budget: 0.04 },
       deps([makeSource({ id: "alpha" }), makeSource({ id: "beta" })], engine, gateway));
-    expect(run.confidence?.level).toBe(sufficient ? "High" : "Low");
+    expect(run.confidence?.level).toBe(sufficient ? "Moderate" : "Low");
     expect(run.citations).toHaveLength(2); expect(gateway.citationCalls).toHaveLength(2);
     totals.push(run.totalSpent);
     if (!sufficient) {

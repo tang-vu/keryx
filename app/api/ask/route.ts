@@ -261,6 +261,7 @@ export async function POST(req: NextRequest) {
         const gen = runAgent(
           {
             question: askQuestion,
+            signal: abort.signal,
             budget: askBudget,
             researchMode,
             origin: isBot ? "engine" : "web",

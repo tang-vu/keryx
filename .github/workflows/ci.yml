@@ -131,6 +131,9 @@ jobs:
       - name: Build (Next.js)
         run: npm run build
 
+      - name: Bounded document readers (assembled production trace, no network)
+        run: node scripts/test-web-readers-traced.mjs
+
       - name: Research reading UX (offline Chromium and responsive layout)
         env:
           KERYX_FORCE_OFFLINE: "1"

@@ -7,6 +7,14 @@ import {
 } from "./research-receipt";
 import type { PaymentRecord, QueryRun } from "./types";
 
+it("roundtrips immutable public web provenance through a portable receipt", () => {
+  const original = run(); const provenance = { retrievedAt: "2026-10-01T00:00:00Z", publisherGroup: "publisher.example", normalizedBodyHash: "a".repeat(64), extraction: "pdf" as const, truncated: true };
+  original.citations[0] = { ...original.citations[0], sourceKind: "public-reference", webProvenance: provenance, reward: 0 };
+  const receipt = buildResearchReceipt(original, []);
+  const exported = JSON.parse(JSON.stringify(receipt));
+  expect(exported.payload.citations[0].webProvenance).toEqual(provenance); expect(verifyResearchReceipt(exported).valid).toBe(true);
+});
+
 function run(overrides: Partial<QueryRun> = {}): QueryRun {
   return {
     id: "dispatch-1",

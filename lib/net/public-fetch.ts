@@ -16,10 +16,10 @@
  *    location is checked the same way — a public host that 302s to the metadata endpoint is the
  *    obvious way around a check that only looks at what was typed.
  *
- * Residual, stated rather than papered over: the name is resolved here and again by the socket, so
- * a record that changes between the two (DNS rebinding) is not stopped by this. Closing it means
- * pinning the resolved address and carrying the Host header by hand — worth it if this ever guards
- * something that writes, and overkill for reading an RSS file into a page that renders no HTML.
+ * The socket is pinned to a vetted address at every hop, preventing a second DNS lookup from
+ * rebinding onto a private service. The special-use policy is a conservative static snapshot;
+ * it excludes some globally reachable protocol exceptions and unsupported transition space.
+ * An aborted DNS wait stops this request, although the underlying system resolver may finish later.
  */
 
 import { lookup } from "node:dns/promises";
@@ -30,13 +30,16 @@ export interface FetchLimits {
   timeoutMs?: number;
   maxBytes?: number;
   maxHops?: number;
+  signal?: AbortSignal;
+  httpsOnly?: boolean;
+  allowedContentTypes?: string[];
 }
 
 export interface PublicRequestLimits {
   timeoutMs?: number;
 }
 
-const DEFAULTS = { timeoutMs: 10_000, maxBytes: 2_000_000, maxHops: 3 } satisfies Required<FetchLimits>;
+const DEFAULTS = { timeoutMs: 10_000, maxBytes: 2_000_000, maxHops: 3 };
 
 /** Why a URL was refused. Phrased for the person who pasted it. */
 export class UnsafeTargetError extends Error {}
@@ -100,25 +103,16 @@ export function isPublicAddress(address: string): boolean {
   const family = isIP(address);
   const addr = address;
   if (family === 4) {
-    const [a, b] = addr.split(".").map(Number) as [number, number, number, number];
-    if (a === 0 || a === 10 || a === 127) return false;
-    if (a === 172 && b >= 16 && b <= 31) return false;
-    if (a === 192 && b === 168) return false;
-    if (a === 169 && b === 254) return false; // link-local — cloud metadata
-    if (a === 100 && b >= 64 && b <= 127) return false; // carrier-grade NAT
-    if (a >= 224) return false; // multicast + reserved
-    return true;
+    return !NON_PUBLIC_IPV4.some(([network, prefix]) => ipv4Prefix(addr, network, prefix));
   }
   if (family === 6) {
     const embedded = embeddedIpv4(addr);
     if (embedded) return isPublicAddress(embedded);
     const parts = ipv6Hextets(addr);
     if (!parts) return false;
-    if ((parts[0]! & 0xfe00) === 0xfc00) return false; // unique-local fc00::/7
-    if ((parts[0]! & 0xffc0) === 0xfe80) return false; // link-local fe80::/10
-    if ((parts[0]! & 0xffc0) === 0xfec0) return false; // deprecated site-local fec0::/10
-    if ((parts[0]! & 0xff00) === 0xff00) return false; // multicast ff00::/8
-    return true;
+    // Only native global-unicast space. Refuse translation, transition and special ranges
+    // conservatively, including the globally reachable exceptions inside 2001::/23.
+    return ipv6Prefix(parts, "2000::", 3) && !NON_PUBLIC_IPV6.some(([network, prefix]) => ipv6Prefix(parts, network, prefix));
   }
   return false;
 }
@@ -133,7 +127,8 @@ export async function assertPublicUrl(raw: string): Promise<URL> {
   return (await resolvePublicUrl(raw)).url;
 }
 
-async function resolvePublicUrl(raw: string): Promise<{ url: URL; addresses: string[] }> {
+async function resolvePublicUrl(raw: string, signal?: AbortSignal): Promise<{ url: URL; addresses: string[] }> {
+  if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");
   let url: URL;
   try {
     url = new URL(raw);
@@ -150,7 +145,8 @@ async function resolvePublicUrl(raw: string): Promise<{ url: URL; addresses: str
   const host = url.hostname.replace(/^\[|\]$/g, ""); // an IPv6 literal arrives bracketed
   const addresses = isIP(host)
     ? [host]
-    : (await lookup(host, { all: true }).catch(() => {
+    : (await abortable(lookup(host, { all: true }), signal).catch((error) => {
+        if (signal?.aborted) throw error;
         throw new UnsafeTargetError("that host does not resolve");
       })).map((r) => r.address);
 
@@ -197,14 +193,49 @@ function pinnedAgent(address: string): Agent {
  * the body away.
  */
 export async function fetchPublicText(raw: string, limits: FetchLimits = {}): Promise<string> {
+  return (await fetchPublicDocument(raw, limits)).text;
+}
+
+// Snapshot of IANA special-use boundaries, reviewed 2026-10-01. Conservative exclusions are
+// deliberate: protocol-assignment exceptions in 192.0.0/24 and 2001::/23 are not supported.
+const NON_PUBLIC_IPV4: Array<[string, number]> = [
+  ["0.0.0.0", 8], ["10.0.0.0", 8], ["100.64.0.0", 10], ["127.0.0.0", 8],
+  ["169.254.0.0", 16], ["172.16.0.0", 12], ["192.0.0.0", 24], ["192.0.2.0", 24],
+  ["192.88.99.0", 24], ["192.168.0.0", 16], ["198.18.0.0", 15], ["198.51.100.0", 24],
+  ["203.0.113.0", 24], ["224.0.0.0", 4], ["240.0.0.0", 4],
+];
+const NON_PUBLIC_IPV6: Array<[string, number]> = [["2001::", 23], ["2001:db8::", 32], ["2002::", 16], ["3fff::", 20]];
+function ipv4Prefix(address: string, network: string, prefix: number): boolean {
+  const integer = (value: string) => value.split(".").reduce((sum, octet) => (sum * 256 + Number(octet)) >>> 0, 0);
+  return integer(address) >>> (32 - prefix) === integer(network) >>> (32 - prefix);
+}
+function ipv6Prefix(parts: number[], network: string, prefix: number): boolean {
+  const target = ipv6Hextets(network)!;
+  for (let index = 0; index < 8 && prefix > 0; index++, prefix -= 16) {
+    const mask = prefix >= 16 ? 0xffff : (0xffff << (16 - prefix)) & 0xffff;
+    if ((parts[index]! & mask) !== (target[index]! & mask)) return false;
+  }
+  return true;
+}
+
+export async function fetchPublicDocument(raw: string, limits: FetchLimits = {}): Promise<{ text: string; finalUrl: string; contentType: string }> {
+  const value = await fetchPublicBytes(raw, limits);
+  return { ...value, text: new TextDecoder().decode(value.bytes) };
+}
+
+export async function fetchPublicBytes(raw: string, limits: FetchLimits = {}): Promise<{ bytes: Uint8Array; finalUrl: string; contentType: string }> {
   const { timeoutMs, maxBytes, maxHops } = { ...DEFAULTS, ...limits };
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  const onAbort = () => ctrl.abort();
+  limits.signal?.addEventListener("abort", onAbort, { once: true });
+  if (limits.signal?.aborted) ctrl.abort();
 
   try {
     let target = raw;
     for (let hop = 0; hop <= maxHops; hop++) {
-      const { url, addresses } = await resolvePublicUrl(target);
+      const { url, addresses } = await resolvePublicUrl(target, ctrl.signal);
+      if (limits.httpsOnly && url.protocol !== "https:") throw new UnsafeTargetError("only HTTPS articles can be read");
       const dispatcher = pinnedAgent(addresses[0]!);
       try {
         const res = await undiciFetch(url, {
@@ -222,7 +253,12 @@ export async function fetchPublicText(raw: string, limits: FetchLimits = {}): Pr
           continue;
         }
         if (!res.ok) throw new UnsafeTargetError(`the feed answered ${res.status}`);
-        return await readCapped(res as unknown as Response, maxBytes);
+        const contentType = (res.headers.get("content-type") ?? "").split(";", 1)[0]!.trim().toLowerCase();
+        if (limits.allowedContentTypes && !limits.allowedContentTypes.includes(contentType)) {
+          await res.body?.cancel();
+          throw new UnsafeTargetError("unsupported document type");
+        }
+        return { bytes: await readCappedBytes(res as unknown as Response, maxBytes), finalUrl: url.href, contentType };
       } finally {
         await dispatcher.close();
       }
@@ -230,6 +266,7 @@ export async function fetchPublicText(raw: string, limits: FetchLimits = {}): Pr
     throw new UnsafeTargetError("that address redirects too many times");
   } finally {
     clearTimeout(timer);
+    limits.signal?.removeEventListener("abort", onAbort);
   }
 }
 
@@ -267,8 +304,11 @@ export async function fetchPublicUrl(
 
 /** Drain a response body up to `maxBytes`, refusing anything larger. */
 async function readCapped(res: Response, maxBytes: number): Promise<string> {
+  return new TextDecoder().decode(await readCappedBytes(res, maxBytes));
+}
+async function readCappedBytes(res: Response, maxBytes: number): Promise<Uint8Array> {
   const reader = res.body?.getReader();
-  if (!reader) return "";
+  if (!reader) return new Uint8Array();
   const chunks: Uint8Array[] = [];
   let total = 0;
   for (;;) {
@@ -281,7 +321,7 @@ async function readCapped(res: Response, maxBytes: number): Promise<string> {
     }
     chunks.push(value);
   }
-  return new TextDecoder().decode(concat(chunks, total));
+  return concat(chunks, total);
 }
 
 function concat(chunks: Uint8Array[], total: number): Uint8Array {
@@ -292,4 +332,14 @@ function concat(chunks: Uint8Array[], total: number): Uint8Array {
     at += c.byteLength;
   }
   return out;
+}
+
+function abortable<T>(operation: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return operation;
+  if (signal.aborted) { void operation.catch(() => {}); return Promise.reject(new DOMException("Cancelled", "AbortError")); }
+  return new Promise((resolve, reject) => {
+    const onAbort = () => reject(new DOMException("Cancelled", "AbortError"));
+    signal.addEventListener("abort", onAbort, { once: true });
+    operation.then(resolve, reject).finally(() => signal.removeEventListener("abort", onAbort));
+  });
 }

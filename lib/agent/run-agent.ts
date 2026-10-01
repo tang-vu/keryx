@@ -1,4 +1,9 @@
 import { discoverPublicReferences } from "./public-reference-evidence";
+import { discoverWeb } from "../web-research/discovery";
+import { searxngProvider } from "../web-research/search-provider";
+import { tavilyProvider } from "../web-research/tavily-provider";
+import { articleFailureCode, gatheredArticle, readArticle } from "../web-research/article-reader";
+import { bodyIdentity } from "../web-research/url-identity";
 import { isPublicReferenceId } from "../public-references/catalog";
 /**
  * The Keryx agent orchestrator — the brain.
@@ -75,6 +80,9 @@ import {
 } from "./evidence-portfolio";
 
 export interface RunInput {
+  signal?: AbortSignal;
+  /** Trusted manual CLI opt-in only; never populate from public request JSON. */
+  allowExternalWeb?: boolean;
   question: string;
   budget?: number;
   /** Quick bounds attention/expansion for latency; Deep preserves the full research pass. */
@@ -229,6 +237,49 @@ export async function* runAgent(
   // would be built from text the source has moved on from. See ./cache-freshness.ts.
   const freshCache = new Set<string>();
   const { publicReads, publicCandidates } = await discoverPublicReferences(db, input.question, subClaims);
+  const webCandidates = new Map<string, SourceCandidate>();
+  let webRemainingMs = input.researchMode === "quick" ? 30000 : 55000;
+  let webAttempts = 0;
+  const webSignal = () => AbortSignal.any([input.signal ?? new AbortController().signal,
+    AbortSignal.timeout(Math.max(1, webRemainingMs))]);
+  if (effects.scope.kind === "job") {
+    yield emit("discover", "External web search withheld for private research; no question is sent to a search provider.");
+  } else if (origin === "engine" && input.allowExternalWeb !== true) {
+    yield emit("discover", "External web search withheld for unattended engine research; manual CLI research can explicitly opt in.");
+  } else if (deps.webSearch || config.webSearchProvider) {
+    const operationStarted = Date.now();
+    try {
+      const configured = deps.webSearch ?? (config.webSearchProvider === "searxng" ? searxngProvider(config.webSearchUrl)
+        : config.webSearchProvider === "tavily" ? tavilyProvider(config.tavilyApiKey) : null);
+      if (!configured) throw new Error("Search provider is unconfigured");
+      const discovered = await discoverWeb(configured, input.question,
+        subClaims, input.researchMode === "quick", webSignal());
+      for (const [id, candidate] of discovered.candidates) { webCandidates.set(id, candidate); publicCandidates.set(id, candidate); }
+      yield emit("discover", `Web search: ${discovered.attemptedQueries}/${discovered.queries} planned queries attempted, ${discovered.succeededQueries} succeeded, ${webCandidates.size} public page previews, ${discovered.failedQueries} unavailable queries${discovered.cancelled ? "; search deadline or cancellation reached" : ""}${discovered.truncatedQueries ? "; query text bounded at 500 characters" : ""}. Snippets are discovery only. Public reads spend no USDC; model and service operating costs remain separate.`);
+    } catch { yield emit("discover", "Web search unavailable; continuing with the available catalog. No web evidence was established."); }
+    finally { webRemainingMs -= Date.now() - operationStarted; }
+    if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
+  } else yield emit("discover", "Broad web search is not configured; this run uses the available catalog only.");
+  const seenWebBodies = new Set<string>();
+  const seenWebUrls = new Set<string>();
+  let lastWebFailure = "unavailable";
+  async function fetchWeb(id: string): Promise<GatheredContent | null> {
+    lastWebFailure = "web-operation-limit";
+    const candidate = webCandidates.get(id);
+    if (!candidate?.item?.itemUrl || webAttempts >= (input.researchMode === "quick" ? 4 : 8) || webRemainingMs <= 0) return null;
+    webAttempts++;
+    const operationStarted = Date.now();
+    try {
+      const article = await (deps.readWebArticle ?? readArticle)(candidate.item.itemUrl, webSignal());
+      const identity = bodyIdentity(article.text);
+      lastWebFailure = "empty-or-duplicate-body";
+      if (!article.text.trim() || seenWebBodies.has(identity) || seenWebUrls.has(article.finalUrl) || publicReads.size && [...publicReads.values()].some(read => bodyIdentity(read.text) === identity)) return null;
+      seenWebBodies.add(identity);
+      seenWebUrls.add(article.finalUrl);
+      return gatheredArticle(id, article);
+    } catch (error) { lastWebFailure = articleFailureCode(error); return null; }
+    finally { webRemainingMs -= Date.now() - operationStarted; }
+  }
   for (const candidate of publicCandidates.values()) {
     candidates.push(candidate);
     freshCache.add(candidate.id);
@@ -430,7 +481,7 @@ export async function* runAgent(
           sourceName: publicCandidate.name, price: 0, offerId: undefined, listPrice: undefined,
           external: false, ...publicCandidate.item,
           action: d.action === "SKIP" ? "SKIP" as const : "CACHE" as const,
-          rationale: `${d.rationale} - free public feed reference; no purchase or creator reward.`,
+          rationale: `${d.rationale} - free public ${webCandidates.has(publicCandidate.id) ? "original-page READ selection (not a cache hit)" : "feed reference"}; no purchase or creator reward.`,
           targets: normalizeClaimTargets(d.targets, subClaims.length) }];
       }
       const asset = assetById.get(d.sourceId) ?? assetBySourceId.get(d.sourceId);
@@ -464,7 +515,7 @@ export async function* runAgent(
     // other purchase: converting it later at fetch time would settle a toll the fetch budget never
     // accounted for. If the budget can't cover it, the guard below turns it into a SKIP.
     const d =
-      r.action === "CACHE" && !freshCache.has(r.assetId ?? r.sourceId)
+      r.action === "CACHE" && !freshCache.has(r.assetId ?? r.sourceId) && !webCandidates.has(r.assetId ?? r.sourceId)
         ? {
             ...r,
             action: "BUY" as const,
@@ -560,7 +611,7 @@ export async function* runAgent(
   const selectedBought = finalDecisions.filter((decision) => decision.action === "BUY").length;
   yield emit(
     "coverage",
-    `Claim-aware portfolio selected ${evidencePortfolio.selectedAssetIds.length}/${evidencePortfolio.eligibleCandidates} positive proposal(s): ${selectedCached} cached + ${selectedBought} fresh, predicting ${evidencePortfolio.predictedCoveredClaims}/${subClaims.length} claim(s) above the evidence floor with $${evidencePortfolio.selectedBuyUsdc.toFixed(6)}/$${fetchBudget.toFixed(6)} fetch USDC reserved.`,
+    `Claim-aware portfolio (${evidencePortfolio.selectionMethod}; bounded selection, not a claim of global optimality) selected ${evidencePortfolio.selectedAssetIds.length}/${evidencePortfolio.eligibleCandidates} positive proposal(s): ${selectedCached} free/cache selections + ${selectedBought} paid fresh selections, predicting ${evidencePortfolio.predictedCoveredClaims}/${subClaims.length} claim(s) above the evidence floor with $${evidencePortfolio.selectedBuyUsdc.toFixed(6)}/$${fetchBudget.toFixed(6)} fetch USDC reserved.`,
     evidencePortfolio,
   );
   const coveragePct = Math.round(previewCoverage.ratio * 100);
@@ -590,7 +641,7 @@ export async function* runAgent(
   // (real mode tops up from the funder once; offline is a no-op). Cached sources still earn
   // citation rewards, so fund only when an owned payable source will be used.
   let spendWalletReady = false;
-  if (buys.some((decision) => !publicReads.has(decision.assetId ?? decision.sourceId))) {
+  if (buys.some((decision) => !publicCandidates.has(decision.assetId ?? decision.sourceId))) {
     try {
       const funded = await gateway.ensureFunded(budget);
       spendWalletReady = true;
@@ -607,6 +658,15 @@ export async function* runAgent(
   let lastGaps = 0; // sub-claims with coverage < 0.4 from the most recent sufficiency check
 
   for (const d of buys) {
+    if (webCandidates.has(d.assetId ?? d.sourceId)) {
+      yield emit("fetch", `READ ${d.sourceName} - selected original public page, 0 USDC; not a cache hit.`);
+      const read = await fetchWeb(d.assetId ?? d.sourceId);
+      if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
+      if (read) { const marker = `S${++markerN}`; gathered.push({ ...read, marker });
+        yield emit("fetch", `Read extracted public text from ${read.itemUrl} - ${marker}; quote matching establishes source grounding, not fact verification.`); }
+      else yield emit("fetch", `Public page unavailable (${lastWebFailure}); no evidence admitted. Continuing research.`);
+      continue;
+    }
     const publicRead = publicReads.get(d.assetId ?? d.sourceId);
     if (publicRead) {
       const marker = `S${++markerN}`;
@@ -771,7 +831,7 @@ export async function* runAgent(
             !d.external &&
             !isExternal(d.sourceId) &&
             !gatheredIds.has(d.assetId ?? d.sourceId) &&
-            (!fundingUnavailable || publicReads.has(d.assetId ?? d.sourceId)),
+            (!fundingUnavailable || publicReads.has(d.assetId ?? d.sourceId) || webCandidates.has(d.assetId ?? d.sourceId)),
         )
         .map((d) => {
           const asset = assetById.get(d.assetId ?? d.sourceId);
@@ -826,6 +886,14 @@ export async function* runAgent(
             `Attention budget reached ${attentionLimit} source(s); stopping gap expansion.`,
           );
           break;
+        }
+        if (webCandidates.has(recId) && !gatheredIds.has(recId)) {
+          const read = await fetchWeb(recId);
+          if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
+          if (read) { const marker = `S${++markerN}`; gathered.push({ ...read, marker }); attentionUsed++; gatheredIds.add(recId);
+            yield emit("reevaluate", `READ original public page ${read.itemUrl}, 0 USDC - ${marker}`); }
+          else yield emit("reevaluate", `Public gap read unavailable (${lastWebFailure}); claim remains unknown.`);
+          continue;
         }
         const publicRead = publicReads.get(recId);
         if (publicRead && !gatheredIds.has(recId)) {
@@ -1111,6 +1179,7 @@ export async function* runAgent(
 
   // Coverage cannot resolve a contradiction or turn a source preference into corroboration.
   const verdict = researchVerdict({ coverage: claimCoverage,
+    sources: gathered,
     citedMarkers: [...ledger.acceptedMarkers], sourceMarkers: gathered.map(source => source.marker),
     conflicts: synthesized.conflicts ?? [], finalAssessmentSufficient: finalSufficiency.sufficient });
   runConfidence = verdict;
@@ -1151,6 +1220,7 @@ export async function* runAgent(
         contentReceipt: g.contentReceipt,
         sourceKind: g.sourceKind,
         publicDeliveryKind: g.publicDeliveryKind,
+        webProvenance: g.webProvenance,
         weight: attribution.weight,
         reward: g.sourceKind === "public-reference" ? 0 : rewards[index] ?? 0,
         rationale: attribution.rationale,
@@ -1318,7 +1388,7 @@ export async function* runAgent(
     }
     for (const [index, decision] of finalDecisions.entries()) {
       const assetId = decision.assetId ?? decision.sourceId;
-      if (decision.external || publicReads.has(assetId)
+      if (decision.external || publicCandidates.has(assetId)
         || (decision.action !== "BUY" && decision.action !== "CACHE" && assetId !== selectedAssetId)) continue;
       // decide events retain the published planning snapshot. Replace the final
       // decision instead of mutating the object already streamed and traced.

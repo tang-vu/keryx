@@ -138,7 +138,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       config.llmModel,
       "You are a frugal research agent deciding which paid sources to buy under a budget. " +
         "For EACH candidate choose action BUY (pay the toll, high value), CACHE (already cached & still useful, reuse free), or SKIP (not worth it). " +
-        "Weigh expected value against price; prefer cheaper sufficient sources; avoid redundancy. " +
+        "Weigh expected value against price; prefer cheaper sufficient sources; avoid redundancy. Public web candidates are free original-page READ selections: legacy CACHE action selects a read, never claims a cache hit. Search snippets are unverified previews, not evidence. " +
         "The subClaims list contains indexed research targets. For every BUY or CACHE, targets MUST contain at least one of their zero-based claimIndex integers " +
         "that the source's preview can help investigate (for example targets:[0,2]). Use only indexes from this request. " +
         "Explain the connection in the rationale. If no target is supported by the preview, choose SKIP with targets:[]. " +

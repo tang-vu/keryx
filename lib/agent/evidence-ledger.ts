@@ -81,6 +81,7 @@ export function buildEvidenceLedger(input: {
       sourceName: source.sourceName,
       sourceKind: source.sourceKind,
       publicDeliveryKind: source.publicDeliveryKind,
+      webProvenance: source.webProvenance,
       itemId: source.itemId,
       itemTitle: source.itemTitle,
       itemUrl: source.itemUrl,

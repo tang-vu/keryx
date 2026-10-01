@@ -7,6 +7,15 @@ does not waive the existing security, payment, or mainnet release gates.
 
 ## Decision to make
 
+The owner subsequently authorized [broad web research](./broad-web-research.md) on
+October 1: questions should discover relevant public documents beyond the small
+fixed catalog, with selective original-content reading and observed claim evidence.
+This expands the research capability; it does not establish all-domain correctness
+or independent demand. The YouTube task remains an initial usefulness experiment,
+and the independent seller experiment remains open. Do not restrict web discovery
+to that first topic or declare broad research delivered before provider and document
+reading acceptance passes.
+
 Research sells a useful completed outcome. Infrastructure sells the ability for an
 independent information provider to sell and deliver its own information to agents.
 Keep one payment authority. Use a narrow research application as a reference client

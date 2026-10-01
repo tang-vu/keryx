@@ -1,7 +1,9 @@
 import { expect, it } from "vitest";
 import { researchVerdict } from "./research-verdict";
 const base = { coverage: [{ claimIndex: 0, claim: "Which retention period applies?", coverage: 1, coveredBy: ["S1", "S2"] }],
-  citedMarkers: ["S1", "S2"], sourceMarkers: ["S1", "S2"], finalAssessmentSufficient: true };
+  citedMarkers: ["S1", "S2"], sourceMarkers: ["S1", "S2"], finalAssessmentSufficient: true,
+  sources: [{ marker: "S1", sourceId: "a", sourceName: "a", text: "First distinct body", itemUrl: "https://a.example/a" },
+    { marker: "S2", sourceId: "b", sourceName: "b", text: "Second distinct body", itemUrl: "https://b.example/b" }] };
 const conflict = { point: "retention", positions: [{ marker: "S1", stance: "seven days" }, { marker: "S2", stance: "thirty days" }],
   trusted: "none", reason: "No precedence rule" };
 it("does not promote an unresolved conflict with perfect coverage and two citations", () => {
@@ -25,4 +27,10 @@ it("requires the final sufficiency conclusion even with perfect scores and multi
   expect(researchVerdict({ ...base, conflicts: [], finalAssessmentSufficient: false }))
     .toEqual({ level: "Low", reason: "the final assessment does not establish a complete supported answer for every requested part" });
   expect(researchVerdict({ ...base, conflicts: [{ ...conflict, trusted: "S1" }], finalAssessmentSufficient: false }).level).toBe("Low");
+});
+it("requires separate nonduplicate publisher groups for every claim before High", () => {
+  expect(researchVerdict({ ...base, conflicts: [], coverage: [{ ...base.coverage[0], coveredBy: ["S1"] }, { ...base.coverage[0], claimIndex: 1, coveredBy: ["S2"] }] }).level).toBe("Moderate");
+  expect(researchVerdict({ ...base, conflicts: [], sources: base.sources.map(source => ({ ...source, itemUrl: `https://${source.sourceId}.same.example/a` })) }).level).toBe("Moderate");
+  expect(researchVerdict({ ...base, conflicts: [], sources: base.sources.map(source => ({ ...source, text: "same  body" })) }).level).toBe("Moderate");
+  expect(researchVerdict({ ...base, conflicts: [], sources: undefined }).level).toBe("Moderate");
 });

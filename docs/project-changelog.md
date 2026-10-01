@@ -1,5 +1,21 @@
 # Keryx Project Changelog
 
+### Broad web research candidate (unreleased, 2026-10-01)
+
+- Discover public documents through a configured search provider alongside registered
+  sources. Search snippets stay previews; selected original HTML, text and PDF reads
+  carry observed URL, extraction limits, retrieval time and immutable body provenance.
+- Keep public reads outside creator payout authority. Show unavailable search/read
+  states, separate source USDC from service costs, and withhold external search for
+  private research. Literal quote matching establishes grounding rather than truth.
+- Bound discovery, document parsing and portfolio work; deduplicate extracted copies
+  and require per-target domain-group support for high grounding confidence.
+- Require Node 22 LTS 22.19+ or Node 24+. Bounded live searches and original HTML/PDF
+  extraction have been observed; production configuration, final CI/review and
+  deployment remain open. The live smoke exceeded its intended document-read cap,
+  and unavailable Google policy pages remain a coverage limitation. This candidate
+  does not establish customer adoption or mainnet readiness.
+
 ### Creator registration evidence and decision feedback (2026-10-01)
 
 - Distinguish wallet signature, pending confirmation, successful registration event,

@@ -20,6 +20,8 @@ export interface ReceiptDecision extends ReceiptAsset {
 }
 
 export interface ReceiptEvidencePortfolio {
+  selectionMethod?: "bounded-heuristic" | "exhaustive";
+  evaluatedStates?: number;
   policy: "claim-coverage-v1";
   eligibleCandidates: number;
   attentionLimit: number;
