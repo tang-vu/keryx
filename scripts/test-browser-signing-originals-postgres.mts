@@ -11,7 +11,7 @@ import { createClient } from "@supabase/supabase-js";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { decodeFunctionData, encodeFunctionResult, toHex } from "viem";
 import { REGISTRY_ABI } from "../lib/registry/registry-abi";
-import { browserSourceRegistryId } from "../lib/payments/browser-original-source-context";
+import { browserSourceRegistryId, browserSourceContextDigest } from "../lib/payments/browser-original-source-context";
 import { sourceItemContentVersion } from "../lib/sources/source-item-asset";
 import { articleOfferTypedData, articleOfferId } from "../lib/offers/article-offer-proof";
 import { prepareBrowserSourceSigningOriginal } from "../lib/payments/browser-signing-original";
@@ -353,9 +353,14 @@ try {
   await unchanged(async () => { await assert.rejects(() => admitSupabaseBrowserSourceSigningOriginal(sb, wrongInput, authority)); });
   sql(`update public.article_offers set id='${offerId}',signature='${offerSignature}' where source_id='synthetic-source'`);
   const tamperInput = { ...offerInput, journal: { ...offerInput.journal, requestId: randomUUID() } }, offerToken = await authority.resolve(tamperInput), offerPrepared = prepareBrowserSourceSigningAdmission(tamperInput, offerToken);
-  const tamperedContext = { ...offerPrepared.original.sourceContext, registry: { ...offerPrepared.original.sourceContext.registry, payoutWallet: owner.address.toLowerCase() } };
-  const tamperedOriginal = prepareBrowserSourceSigningOriginal(offerPrepared.journal, verified.namespace, tamperedContext);
-  await unchanged(async () => { const result = await sb.rpc("browser_signing_admit_source_original", { p_input: { ...offerPrepared.input, sourceContext: tamperedContext }, p_journal: offerPrepared.journal, p_original: tamperedOriginal, p_admission_deadline_ms: offerPrepared.admissionDeadlineMs }); assert(result.error); });
+  const { sourceContext: savedContext, sourceContextDigest: savedDigest, ...bareOriginal } = offerPrepared.original;
+  assert.equal(savedDigest, browserSourceContextDigest(bareOriginal, savedContext));
+  const tamperedContext = { ...savedContext, registry: { ...savedContext.registry, payoutWallet: owner.address.toLowerCase() } };
+  assert.throws(() => prepareBrowserSourceSigningOriginal(offerPrepared.journal, verified.namespace, tamperedContext), /Browser source context refused/);
+  // Deliberately untrusted payload: bypass the fixture builder to reach SQL's
+  // independent economic binding check, while preserving a valid digest.
+  const tamperedOriginal = { ...bareOriginal, sourceContext: tamperedContext, sourceContextDigest: browserSourceContextDigest(bareOriginal, tamperedContext) };
+  await unchanged(async () => { const result = await sb.rpc("browser_signing_admit_source_original", { p_input: { ...offerPrepared.input, sourceContext: tamperedContext }, p_journal: offerPrepared.journal, p_original: tamperedOriginal, p_admission_deadline_ms: offerPrepared.admissionDeadlineMs }); assert(result.error); assert.equal(result.error.code, "P0001"); assert.equal(result.error.message, "browser source context refused"); });
   const expiringTerms = { ...offerTerms, nonce: digest(), expiresAt: Math.floor(Date.now() / 1000) + 4 }, expiringSignature = await owner.signTypedData(articleOfferTypedData(expiringTerms)), expiringId = articleOfferId(expiringSignature);
   sql(`update public.article_offers set id='${expiringId}',nonce='${expiringTerms.nonce}',signature='${expiringSignature}',expires_at=${expiringTerms.expiresAt} where source_id='synthetic-source'`);
   const expiringInput = { ...offerInput, source: { ...offerInput.source, offerId: expiringId }, journal: { ...offerInput.journal, requestId: randomUUID(), offerId: expiringId, payment: { ...offerInput.journal.payment, offerId: expiringId } } };
