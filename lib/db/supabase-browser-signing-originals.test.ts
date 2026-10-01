@@ -6,7 +6,7 @@ import { browserQueryPolicyTypedData, verifyBrowserQueryPolicy, type BrowserQuer
 import { browserSigningTypedData, prepareBrowserSigningOriginal, serializeBrowserSigningHeader } from "../payments/browser-signing-original";
 import { prepareBrowserJournal } from "./browser-authorization-journal";
 import type { BrowserOriginalAdmission, BrowserSigningSnapshot } from "./browser-signing-originals";
-import { admitSupabaseBrowserQueryPolicy, admitSupabaseBrowserSigningOriginal, readSupabaseBrowserSigningSnapshot, signSupabaseBrowserSigningOriginal } from "./supabase-browser-signing-originals";
+import { admitSupabaseBrowserQueryPolicy, admitSupabaseBrowserSigningOriginal, readSupabaseBrowserSigningSnapshot, readExposedSupabaseBrowserSigningSnapshotForSigner, signSupabaseBrowserSigningOriginal } from "./supabase-browser-signing-originals";
 
 async function fixture() {
   const owner = privateKeyToAccount(generatePrivateKey()), signer = privateKeyToAccount(generatePrivateKey());
@@ -30,6 +30,32 @@ async function fixture() {
   return { owner, signer, proof, input, original, snapshot, rpc, sb };
 }
 describe("privileged Supabase browser originals composition", () => {
+  it.each(["exposed", "signed", "submission_attempted", "settled", "failed"] as const)("observes retained %s originals by independently matched signer without adopting a current grant", async phase => {
+    const f = await fixture(); f.snapshot.journal.phase = phase; f.snapshot.journal.payment.authorizationPhase = phase;
+    f.rpc.mockResolvedValue({ data: f.snapshot, error: null });
+    const observed = await readExposedSupabaseBrowserSigningSnapshotForSigner(f.sb, f.signer.address, "synthetic-owner", "synthetic-request");
+    expect(observed?.original).toEqual(f.original); expect(observed?.currentGrant).toBeNull(); expect(Object.isFrozen(observed)).toBe(true);
+    expect(f.rpc).toHaveBeenCalledExactlyOnceWith("browser_signing_exposed_snapshot_for_signer", { p_signer: f.signer.address.toLowerCase(), p_session_id: "synthetic-owner", p_request_id: "synthetic-request" });
+  });
+  it("returns no bytes for null refusal and rejects prepared/cancelled/foreign/cross-request responses", async () => {
+    const f = await fixture(); expect(await readExposedSupabaseBrowserSigningSnapshotForSigner(f.sb, f.signer.address, "synthetic-owner", "synthetic-request")).toBeNull();
+    for (const phase of ["prepared", "cancelled_unexposed"] as const) {
+      f.snapshot.journal.phase = phase; f.rpc.mockResolvedValue({ data: f.snapshot, error: null });
+      await expect(readExposedSupabaseBrowserSigningSnapshotForSigner(f.sb, f.signer.address, "synthetic-owner", "synthetic-request")).rejects.toThrow();
+    }
+    f.snapshot.journal.phase = "exposed";
+    await expect(readExposedSupabaseBrowserSigningSnapshotForSigner(f.sb, f.owner.address, "synthetic-owner", "synthetic-request")).rejects.toThrow();
+    await expect(readExposedSupabaseBrowserSigningSnapshotForSigner(f.sb, f.signer.address, "foreign-session", "synthetic-request")).rejects.toThrow();
+    await expect(readExposedSupabaseBrowserSigningSnapshotForSigner(f.sb, f.signer.address, "synthetic-owner", "foreign-request")).rejects.toThrow();
+  });
+  it("captures exposed readback before async proof recovery and refuses corrupted owner proof", async () => {
+    const f = await fixture(); f.snapshot.journal.phase = "exposed"; f.rpc.mockResolvedValue({ data: f.snapshot, error: null });
+    const pending = readExposedSupabaseBrowserSigningSnapshotForSigner(f.sb, f.signer.address, "synthetic-owner", "synthetic-request");
+    await Promise.resolve(); f.snapshot.journal.phase = "prepared";
+    expect((await pending)?.journal.phase).toBe("exposed");
+    f.snapshot.journal.phase = "exposed"; f.snapshot.policy = { ...f.proof, signature: await f.signer.signTypedData(browserQueryPolicyTypedData(f.proof.policy)) };
+    await expect(readExposedSupabaseBrowserSigningSnapshotForSigner(f.sb, f.signer.address, "synthetic-owner", "synthetic-request")).rejects.toThrow();
+  });
   it("verifies actual owner proof before sending policy to the restricted RPC", async () => {
     const f = await fixture(); f.rpc.mockResolvedValue({ data: { status: "admitted", namespace: f.input.queryNamespace, queryId: f.input.queryId }, error: null });
     expect((await admitSupabaseBrowserQueryPolicy(f.sb, f.proof, "synthetic-owner")).status).toBe("admitted");

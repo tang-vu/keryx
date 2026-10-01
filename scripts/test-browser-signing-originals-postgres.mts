@@ -10,7 +10,7 @@ import { browserQueryPolicyTypedData, verifyBrowserQueryPolicy, type BrowserQuer
 import { browserSigningTypedData, serializeBrowserSigningHeader } from "../lib/payments/browser-signing-original";
 import { prepareBrowserJournal } from "../lib/db/browser-authorization-journal";
 import type { BrowserOriginalAdmission } from "../lib/db/browser-signing-originals";
-import { admitSupabaseBrowserQueryPolicy, admitSupabaseBrowserSigningOriginal, readSupabaseBrowserSigningSnapshot, signSupabaseBrowserSigningOriginal } from "../lib/db/supabase-browser-signing-originals";
+import { admitSupabaseBrowserQueryPolicy, admitSupabaseBrowserSigningOriginal, readSupabaseBrowserSigningSnapshot, readExposedSupabaseBrowserSigningSnapshotForSigner, signSupabaseBrowserSigningOriginal } from "../lib/db/supabase-browser-signing-originals";
 
 const name = `keryx-browser-originals-${randomUUID()}`, owned = [name, `${name}-http`, `${name}-curl`], created: string[] = [];
 let engine = false;
@@ -55,10 +55,12 @@ const http: typeof fetch = async (input, init) => {
 try {
   try { docker(["info", "--format", "{{.ServerVersion}}"]); engine = true; } catch { throw new Error("Actual browser originals PG acceptance requires Docker; gate did not run"); }
   start(0, "postgres:17", ["--network", "none", "--memory", "512m", "--cpus", "1", "-e", "POSTGRES_HOST_AUTH_METHOD=trust"]); await readiness();
-  const migrations = readdirSync("supabase/migrations").filter(f => /^\d{4}.*\.sql$/.test(f) && Number(f.slice(0, 4)) <= 70).sort();
+  const migrations = readdirSync("supabase/migrations").filter(f => /^\d{4}.*\.sql$/.test(f) && Number(f.slice(0, 4)) <= 71).sort();
   assert(migrations.includes("0070_browser_signing_originals.sql"));
+  assert(migrations.includes("0071_browser_original_observation.sql"));
   sql("create role anon;create role authenticated;create role service_role bypassrls;create publication supabase_realtime;" + migrations.map(f => readFileSync(`supabase/migrations/${f}`, "utf8")).join("\n"));
   assert.equal(sql("select active from public.browser_signing_v2_control"), "f", "installed migration remains inactive");
+  assert.equal(sql("select provolatile='s' and prosecdef and not exists(select 1 from aclexplode(proacl) a where a.grantee=0 and a.privilege_type='EXECUTE') from pg_proc where oid='public.browser_signing_exposed_snapshot_for_signer(text,text,text)'::regprocedure"), "t", "STABLE protected observation has no PUBLIC execute privilege");
   const owner = privateKeyToAccount(generatePrivateKey()), signer = privateKeyToAccount(generatePrivateKey()), epoch = randomUUID();
   const grant = (grantEpoch: string) => service(`select public.upsert_browser_journal_grant(${json({ session_id: "synthetic-owner", owner_addr: owner.address.toLowerCase(), sess_addr: signer.address.toLowerCase(), cap: 0.000010, expiry: Date.now() + 3600000, tx_hash: "synthetic-unfunded", grant_epoch: grantEpoch })})`);
   service("select public.activate_browser_journal()"); grant(epoch);
@@ -115,8 +117,19 @@ try {
   await unchanged(async () => { assert.equal((await admitSupabaseBrowserQueryPolicy(sb, proof, "synthetic-owner")).status, "admitted"); assert.equal((await admitSupabaseBrowserSigningOriginal(sb, input)).status, "admitted"); });
   await unchanged(async () => { await assert.rejects(() => admitSupabaseBrowserSigningOriginal(sb, { ...input, journal: { ...input.journal, payee: `0x${"5".repeat(40)}` } })); });
   const saved = await readSupabaseBrowserSigningSnapshot(sb, policy.owner, input.journal.sessionId, input.journal.requestId); assert(saved);
+  const observe = (requestId = input.journal.requestId, recoveredSigner = signer.address) => readExposedSupabaseBrowserSigningSnapshotForSigner(sb, recoveredSigner, input.journal.sessionId, requestId);
+  await unchanged(async () => {
+    assert.equal(await observe(), null, "prepared tuple never leaves signer reader");
+    assert.equal(service(`select public.browser_signing_exposed_snapshot_for_signer('${signer.address}','synthetic-owner','${input.journal.requestId}') is null`), "t");
+    assert.equal(await observe("absent-request"), null);
+  });
   await unchanged(async () => { assert.equal(await readSupabaseBrowserSigningSnapshot(sb, signer.address, input.journal.sessionId, input.journal.requestId), null); });
   service(`select public.transition_browser_journal('synthetic-owner','${input.journal.requestId}','prepared','exposed')`);
+  await unchanged(async () => {
+    assert.deepEqual((await observe())?.original, saved.original);
+    assert.equal(await observe(input.journal.requestId, owner.address), null, "owner address is not signer authority");
+    assert.equal(service(`select public.browser_signing_exposed_snapshot_for_signer('${owner.address}','synthetic-owner','${input.journal.requestId}') is null`), "t");
+  });
   await unchanged(async () => { assert.throws(() => service(`select public.sign_browser_journal('synthetic-owner','${input.journal.requestId}',${json({ validAfter: saved.original.authorization.validAfter, validBefore: saved.original.authorization.validBefore, headerHash: "f".repeat(64) })})`), /canonical callback required/); });
   await unchanged(async () => { assert.throws(() => service(`select public.browser_signing_record_signature('synthetic-owner','${input.journal.requestId}',${json({ validAfter: saved.original.authorization.validAfter, validBefore: String(BigInt(saved.original.authorization.validBefore) + 1n), headerHash: "f".repeat(64) })})`), /original validity differs/); });
   const header = serializeBrowserSigningHeader(saved.original, await signer.signTypedData(browserSigningTypedData(saved.original)));
@@ -134,6 +147,7 @@ try {
   sql("update public.browser_journal_control set active=true where id=1");
   console.log("PASS actual journal composition/races/caps/immutable original/header/legacy callback");
   const replacementEpoch = randomUUID(); grant(replacementEpoch);
+  await unchanged(async () => { assert.equal((await observe())?.journal.grantEpoch, epoch); assert.equal((await observe())?.currentGrant?.grantEpoch, replacementEpoch); });
   await unchanged(async () => { assert.equal((await admitSupabaseBrowserQueryPolicy(sb, proof, "synthetic-owner")).status, "admitted"); assert.equal((await admitSupabaseBrowserSigningOriginal(sb, makeInput(verified.namespace, policy.queryId))).status, "refused"); });
   const secondPolicy = { ...policy, policyId: digest(), requestNonce: digest(), queryId: randomUUID(), grantEpoch: replacementEpoch, queryCeilingMicros: "1", lifetimeCeilingMicros: "5" };
   const secondProof = { policy: secondPolicy, signature: await owner.signTypedData(browserQueryPolicyTypedData(secondPolicy)) };
@@ -161,10 +175,20 @@ try {
   await unchanged(async () => { assert.equal((await admitSupabaseBrowserQueryPolicy(sb, { policy: third, signature: await owner.signTypedData(browserQueryPolicyTypedData(third)) }, "synthetic-owner")).status, "refused"); });
   const cancelled = competing.find(r => r.status === "admitted"); assert(cancelled?.status === "admitted");
   service(`select public.terminal_browser_journal('x402:${cancelled.journal.nonce}','${cancelled.journal.nonce}',null,'cancelled_unexposed')`);
+  await unchanged(async () => {
+    assert.equal(await observe(cancelled.journal.requestId), null);
+    assert.equal(service(`select public.browser_signing_exposed_snapshot_for_signer('${signer.address}','synthetic-owner','${cancelled.journal.requestId}') is null`), "t");
+  });
+  service(`select public.disable_browser_journal_grant('synthetic-owner')`);
+  await unchanged(async () => { assert.deepEqual((await observe())?.original, saved.original); });
+  service(`select public.terminal_browser_journal('x402:${saved.journal.nonce}','${saved.journal.nonce}','synthetic-terminal-proof','failed')`);
+  await unchanged(async () => { const terminal = await observe(); assert.equal(terminal?.journal.phase, "failed"); assert.deepEqual(terminal?.original, saved.original); });
+  console.log("PASS signer-only exposed/historical failed observation; prepared/cancelled/foreign return null; whole state unchanged by reads");
   assert.equal(sql("select spent_micro from public.browser_signing_queries where query_id='" + policy.queryId + "'"), "2"); assert.equal(sql("select allocated_micro||':'||jobs from public.browser_signing_namespaces"), "3:2");
   console.log("PASS policy/epoch aliases retain lifetime query allocation/jobs/spent without release");
   for (const role of ["anon", "authenticated"] as const) for (const rpc of [`select public.browser_signing_admit_query(${json(verified)},'synthetic-owner')`, `select public.browser_signing_admit_original('{}','{}','{}')`,
-    `select public.browser_signing_record_signature('synthetic-owner','${input.journal.requestId}','{}')`, `select public.browser_signing_header_original('synthetic-owner','${input.journal.requestId}')`, `select public.browser_signing_snapshot('${policy.owner}','synthetic-owner','${input.journal.requestId}')`]) {
+    `select public.browser_signing_record_signature('synthetic-owner','${input.journal.requestId}','{}')`, `select public.browser_signing_header_original('synthetic-owner','${input.journal.requestId}')`, `select public.browser_signing_snapshot('${policy.owner}','synthetic-owner','${input.journal.requestId}')`,
+    `select public.browser_signing_exposed_snapshot_for_signer('${signer.address}','synthetic-owner','${input.journal.requestId}')`]) {
     await unchanged(async () => { assert.throws(() => sql(`set role ${role};${rpc}`), /permission denied/); });
   }
   for (const table of ["browser_signing_v2_control", "browser_signing_v2_writer", "browser_signing_v2_barrier", "browser_signing_namespaces", "browser_signing_policies", "browser_signing_queries", "browser_signing_originals"]) {
