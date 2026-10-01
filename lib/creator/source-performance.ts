@@ -9,18 +9,18 @@
  * to find their own name. This module does that reading and reports it per source.
  *
  * What it deliberately does NOT do:
- *  - **No coaching.** It reports what the agent decided and what it paid for instead; it never tells
+ *  - **No coaching.** It reports what the agent decided and the alternatives it chose; it never tells
  *    a creator to drop their price. The two dials (price, preview depth) are theirs, and the honest
  *    input to that choice is the comparison, not our advice.
  *  - **No invented denominators.** A source is only "considered" in runs whose decisions actually
  *    name it. Runs from before it was registered are silent, not zero.
- *  - **Same-run comparison only.** The price the agent paid elsewhere is drawn from the very runs
+ *  - **Same-run comparison only.** The listed price of the alternatives it chose is drawn from the very runs
  *    where this source was skipped — the same question, the same budget, the same minute. Comparing
  *    against an all-time average would mix cheap runs with rich ones and read as a slur.
  *
- * `BUY` and `CACHE` are kept apart because they mean different things to the person being paid: BUY
- * is a fresh toll settled to their wallet, CACHE is "still worth reading, already have it" — chosen,
- * but no new fetch payment (a citation reward can still follow).
+ * `BUY` and `CACHE` count recorded choices: BUY requests a fresh read, CACHE chooses cached
+ * content. These tallies do not inspect paid-delivery or settlement evidence. Answer citations
+ * are counted independently; they do not establish a settled citation reward.
  */
 
 import type { Decision, QueryRun } from "../types";
@@ -42,10 +42,10 @@ export interface SkipNote {
 export interface SourcePerformance {
   /** Dispatches whose decisions name this source — the denominator for everything below. */
   considered: number;
-  bought: number; // BUY — a fetch toll settled
-  reused: number; // CACHE — chosen, served from cache, no new toll
+  bought: number; // Recorded BUY decisions; not a count of settled tolls.
+  reused: number; // Recorded CACHE decisions; delivery is not verified.
   skipped: number;
-  /** Dispatches that ended up citing it (a citation reward followed). */
+  /** Dispatches whose answers cite this source; no reward settlement is implied. */
   cited: number;
   /** cited / (bought + reused) — of the times it was chosen, how often it made the answer. */
   citeThrough: number | null;
@@ -71,7 +71,7 @@ function median(values: number[]): number | null {
 /**
  * Median listed price across the sources one run chose — the bar a skipped source was held to.
  *
- * BUY *and* CACHE count. A cache hit settles no fresh toll, but it is still the agent electing to
+ * BUY *and* CACHE decisions count. A cache choice asks for no fresh toll, but it is still the agent electing to
  * read that source at that listed price, and on a mature corpus most reads are cache hits: counting
  * only BUY would leave this null on the majority of runs and silently delete the comparison. The
  * wording that renders it therefore says "chose", never "paid".

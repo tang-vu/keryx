@@ -65,10 +65,16 @@ onboarding is not demonstrated by this experiment. Never promise that capability
    compatible feed. Review its price, public preview and rights before publishing.
 3. Inspect the actual resulting listing and preview. Distinguish discovery from a
    successfully registered payout authority and an eligible paid item.
+   Require a successful receipt with the expected registry/source/creator registration
+   event, then an owner-only listing with the same identity. Pending or unknown states
+   remain unresolved; a hash or elapsed indexing delay is insufficient. Feed ownership
+   and active payout terms are separate gates.
 4. An independent buyer requests a relevant task. Use a sponsored trial only with
    sponsorship clearly labeled; do not call it independent paid demand.
 5. Inspect access, delivery, actual citations, rewards and pending/settled states.
    A registered source is not guaranteed to be bought or cited.
+   Creator feedback BUY/CACHE counts are decisions, and answer citation counts are
+   attribution observations. Verify settled payment evidence separately for earnings.
 6. Ask whether the provider will maintain the integration and what operational work
    it removes. A fork, star or one assisted installation is not production adoption.
 
