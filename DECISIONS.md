@@ -31,6 +31,27 @@ research or claim customer demand from technical fixtures. See
 [broad web research](docs/broad-web-research.md) and
 [product validation](docs/product-validation.md).
 
+**D-286** — Require separate owner approval for citation rules — *2026-10-01*
+
+The retained browser query-policy signature covers a question digest and spend
+limits, not the citation pool, allocation, evidence validator or issuer. Keep
+that v2 signature unchanged and add a separate versioned EIP-712 supplement
+bound to its exact verified query policy. Require the owner to approve the actual
+run budget, rational pool ratio, nearest-half-up micro-USDC rounding, maximum
+pool, algorithm and trust-policy digests, nonce and expiry. Verification must
+recover both owner proofs, reject mismatched trusted expectations and preserve
+the existing run-budget basis. A pool exceeding the signed maximum refuses;
+public and unproven shares remain withheld without redistribution.
+
+The dormant policy primitive is only an approval verifier. Current grant access,
+controlled paid-read provenance, encrypted private evidence, semantic issuer
+trust, immutable pre-payment plans, unique author legs and atomic reservation
+admission remain separate requirements. Quote occurrence and a content manifest
+do not prove semantic support or paid delivery. Historical signer metadata
+access does not imply permission to read the owner's question or paid bodies.
+No route, signer, version floor, custody or mainnet cutover follows from this
+change. See [citation policy and remaining gates](docs/browser-citation-policy.md).
+
 **Observe creator registration before reporting success** — *2026-10-01*
 
 Preparing the independent seller pilot exposed a presentation error: receiving a wallet transaction
