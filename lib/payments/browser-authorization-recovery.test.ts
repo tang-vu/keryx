@@ -4,6 +4,7 @@ import type { NextRequest } from "next/server";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { performance } from "node:perf_hooks";
 import { SqliteAdapter } from "../db/sqlite-adapter";
 import { BrowserCoSignGateway } from "./browser-cosign-gateway";
 import { PaymentPendingError } from "./payment-state";
@@ -44,13 +45,25 @@ const source = {
   createdAt: new Date().toISOString(),
 };
 let file: string;
-beforeEach(async () => {
-  vi.restoreAllMocks();
-  vi.unstubAllGlobals();
-  file = path.join(os.tmpdir(), `keryx-recovery-${crypto.randomUUID()}.sqlite`);
-  context.db = new SqliteAdapter(file);
-  await context.db.init();
-  await context.db.upsertSessionGrant({
+type RecoveryFixture = { file: string; db?: SqliteAdapter };
+let currentFixture: RecoveryFixture | undefined;
+function reopenFixture(fixture: RecoveryFixture): SqliteAdapter {
+  // A failed construction must not leave cleanup pointing at the prior handle.
+  fixture.db = undefined;
+  return fixture.db = new SqliteAdapter(fixture.file);
+}
+async function initializeFixture(fixture: RecoveryFixture): Promise<SqliteAdapter> {
+  const started = performance.now();
+  const stage = (name: "constructor" | "init" | "grant" | "activation", phase: "start" | "end" | "failed") =>
+    fs.writeSync(1, `Recovery fixture stage=${name} phase=${phase} elapsedMs=${Math.min(999999, Math.max(0, Math.round(performance.now() - started)))}\n`);
+  let active: "constructor" | "init" | "grant" | "activation" = "constructor";
+  try {
+    stage(active, "start");
+    const db = reopenFixture(fixture);
+    stage(active, "end"); active = "init"; stage(active, "start");
+    await db.init();
+    stage(active, "end"); active = "grant"; stage(active, "start");
+    await db.upsertSessionGrant({
     sessionId: "owner",
     sessAddr: account.address,
     ownerAddr: "owner",
@@ -58,15 +71,60 @@ beforeEach(async () => {
     expiry: Date.now() + 10 * 86400000,
     txHash: "synthetic",
     grantEpoch: "epoch",
-  });
-  await context.db.activateBrowserJournal();
+    });
+    stage(active, "end"); active = "activation"; stage(active, "start");
+    await db.activateBrowserJournal();
+    stage(active, "end"); return db;
+  } catch (error) { stage(active, "failed"); throw error; }
+}
+function cleanupFixture(fixture?: RecoveryFixture): void {
+  try {
+    if (fixture) {
+      try { fixture.db?.close(); }
+      finally {
+        fixture.db = undefined;
+        for (const suffix of ["", "-wal", "-shm"])
+          fs.rmSync(fixture.file + suffix, { force: true });
+      }
+    }
+  } finally { vi.unstubAllGlobals(); vi.useRealTimers(); }
+}
+beforeEach(async () => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+  file = path.join(os.tmpdir(), `keryx-recovery-${crypto.randomUUID()}.sqlite`);
+  currentFixture = { file };
+  context.db = await initializeFixture(currentFixture);
 });
 afterEach(() => {
-  context.db.close();
-  for (const suffix of ["", "-wal", "-shm"])
-    fs.rmSync(file + suffix, { force: true });
-  vi.unstubAllGlobals();
-  vi.useRealTimers();
+  const owned = currentFixture;
+  currentFixture = undefined;
+  cleanupFixture(owned);
+});
+it("releases the current native fixture after injected setup failure and restores globals and timers", async () => {
+  const injected: RecoveryFixture = { file: path.join(os.tmpdir(), `keryx-recovery-${crypto.randomUUID()}.sqlite`) };
+  vi.spyOn(SqliteAdapter.prototype, "upsertSessionGrant").mockRejectedValueOnce(new Error("Injected fixture setup failure"));
+  let owned: SqliteAdapter | undefined;
+  try {
+    await expect(initializeFixture(injected)).rejects.toThrow("Injected fixture setup failure");
+    owned = injected.db;
+    expect(owned).toBeDefined();
+    vi.stubGlobal("__keryxRecoveryCleanupProbe", true);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(0);
+  } finally {
+    if (owned) {
+      const close = owned.close.bind(owned);
+      vi.spyOn(owned, "close").mockImplementationOnce(() => { close(); throw new Error("Injected fixture cleanup failure"); });
+      expect(() => cleanupFixture(injected)).toThrow("Injected fixture cleanup failure");
+    } else cleanupFixture(injected);
+  }
+  expect(fs.existsSync(injected.file)).toBe(false);
+  await expect(owned!.listSources()).rejects.toThrow();
+  expect(Reflect.has(globalThis, "__keryxRecoveryCleanupProbe")).toBe(false);
+  expect(Date.now()).toBeGreaterThan(0);
+  // The independently owned live fixture was not mistaken for the failed one.
+  expect(await context.db.browserJournalActive()).toBe(true);
 });
 function input(requestId: string): BrowserJournalAdmission {
   return {
@@ -153,7 +211,7 @@ it("records a cryptographically valid lost callback after restart without paid r
   await context.db.exposeBrowserJournal("owner", "r");
   const signed = await header(admitted.journal.nonce);
   context.db.close();
-  context.db = new SqliteAdapter(file);
+  context.db = reopenFixture(currentFixture!);
   await context.db.init();
   const response = await callback("r", signed);
   expect(await response.json()).toEqual({ ok: true, delivered: false });
@@ -312,7 +370,7 @@ it("reopens the same submitted journal after paid response loss without releasin
   expect(before.authorizationPhase).toBe("submission_attempted");
   expect(before.authorizationExpiresAt).toBeDefined();
   context.db.close();
-  context.db = new SqliteAdapter(file);
+  context.db = reopenFixture(currentFixture!);
   await context.db.init();
   expect((await context.db.listPendingPayments(10))[0]).toEqual(before);
   expect((await context.db.getSessionGrant("owner"))?.spent).toBe(0.002);
@@ -332,7 +390,7 @@ it("recovers delayed original signing after two hours and acknowledges expired i
     validAfter: String(seconds + 30),
   });
   context.db.close();
-  context.db = new SqliteAdapter(file);
+  context.db = reopenFixture(currentFixture!);
   await context.db.init();
   vi.setSystemTime(start + 2 * 3600000);
   expect(await (await callback("late", signed)).json()).toEqual({ ok: true, delivered: false });
