@@ -75,8 +75,8 @@ The official explorer's public API returned a source-verification record for the
 `verified_at=2026-07-17T21:44:11.260415Z`, compiler
 `v0.8.29+commit.ab55807c`, EVM `cancun`, optimizer enabled/runs 150,
 `viaIR=true`, and IPFS metadata bytecode hash. Its returned deployed bytecode
-matched the pinned RPC SHA-256 and length. These are explorer assertions, not an
-independent local recompilation.
+matched the pinned RPC SHA-256 and length. These initial verification flags were
+explorer assertions; the later local recompilation below is separate evidence.
 
 A bounded source comparison then fetched the 29 explorer-provided `src/` files
 (the top-level Wallet plus its `src/` dependencies) once each at the pinned
@@ -89,8 +89,9 @@ Against `5b5446f5c622901acaea6a875b022425eecb0c13`, 21 matched, four differed
 (`src/modules/wallet/ContractSignersAllowlist.sol`, `src/modules/wallet/Batches.sol`,
 `src/lib/BatchedDelta.sol`, `src/modules/wallet/ContractSignatureSigners.sol`).
 This establishes a concrete gap against those published audit commits. It does
-not prove an absence of later audits. Dependency source outside `src/` was not
-compared, and no compilation or formal semantic diff was performed.
+not prove an absence of later audits. That source-only comparison did not cover
+dependencies, compilation or a formal semantic diff. The later build below adds
+runtime reproduction, not an audit or semantic-difference assessment.
 
 The [Minter implementation API](https://explorer.arc.io/api/v2/smart-contracts/0x30b6d05cb9b89e73732dbf7d47c028a67346eb3b)
 returned creation/deployed bytecode, creation status, implementations/proxy type
@@ -100,6 +101,54 @@ This response did not establish verified Minter source; absence of those fields
 is not proof that no verification exists elsewhere. Browser-tool explorer pages
 were inaccessible and a Node fetch encountered a Cloudflare challenge; bounded
 PowerShell GETs yielded the JSON records. No challenge bypass was attempted.
+
+## Independent Wallet build reproduction
+
+At `2026-10-01T08:12:45.850Z`, one bounded, credential-free GET of the same
+[Wallet verification record](https://explorer.arc.io/api/v2/smart-contracts/0xd15002e19d75f6abe69e46b2a94cc7c0cc5857de)
+provided all 59 source files: 29 `src/` and 30 dependency files. Their individual
+content digests, exact remappings and settings were retained in a local public
+build bundle. No source-comparison GETs or RPC probes were repeated.
+
+The native Windows compiler was downloaded from the
+[official Solidity distribution](https://binaries.soliditylang.org/windows-amd64/list.json)
+and SHA-256 checked against its published index before execution. Exact version:
+`0.8.29+commit.ab55807c.Windows.msvc`. Compilation used self-contained Standard JSON,
+disabled import callbacks and a minimal child environment. It did not load
+repository environment files, run repository scripts or perform network requests.
+Settings were copied from the verification record: Cancun, optimizer enabled with
+150 runs, `viaIR=true`, IPFS bytecode metadata, empty libraries and exact remappings.
+
+| Artifact | Bytes | SHA-256 |
+| --- | ---: | --- |
+| Verified compiler binary | — | `0786ed6d289e3ca23c0aa183e574c6ed08dbee34abdd9e0d2762f4bb137d253d` |
+| Standard JSON input | — | `ed88f98f27141fa1fb6f7d5e40da7699e1e715691789308b0fad5758804934ed` |
+| Standard JSON output | — | `78ea9c33c5577c7cd93517e983846b784f22715efadd56fc76baa92dbb43deb3` |
+| Creation bytecode, full equality | 23,065 | `003ed0d1789ddab12419f98d4b80159ae94fedd04c4c64f95c8ab08d9cbe2a60` |
+| Runtime after declared immutable substitution, full equality | 22,818 | `f975d7da31da8c4822acba46773c0db323eee99a7667b620d841ed605b2f901e` |
+
+The raw compiler runtime has zeros at the immutable positions. Compiler AST and
+source identify OpenZeppelin's `__self = address(this)` at AST ID 2025. Filling
+only the two compiler-declared 32-byte slots at offsets 3708 and 4382 with the
+left-padded implementation address produces equality of **every runtime byte**,
+including metadata. There are no link references, external libraries, compiler
+warnings or errors. Two builds produced identical output. This is a source-derived
+immutable substitution, not an independent local EVM constructor execution.
+
+The retained harness rejects unequal creation/runtime bytes, unexpected links,
+libraries or immutable inventory, invalid AST, nonzero placeholders and invalid
+offsets. A later validation-only pass checked the saved artifacts and receipt
+without another compile, download or network request. The owner-held ignored
+`plans/mainnet-wallet-build-identity/` bundle contains the input/output, source
+inventory, verified compiler, harness and receipt; it contains public artifacts.
+Its receipt SHA-256 is
+`6ca072f130059f7ddb1d6d6d46b5f37f0cc945867a1b426b92a4280cb35af8bf`.
+
+The matched explorer runtime hash equals the earlier pinned RPC observation.
+No fresh RPC was performed, so this does not attest the current proxy target or
+finality. Dependency contents are pinned, but their upstream commits, audit
+coverage, Minter build identity and owner/controller authority remain unproven.
+This advances Wallet build reproducibility only; M1 remains open.
 
 ## Published audits and missing deployment link
 
@@ -134,10 +183,12 @@ Circle index. This remains an explicit documentation gap.
 
 ## Release verification still required
 
-1. Obtain or reproduce a complete deployed-source/build manifest for both pinned
-   implementations: full source commit, dependency commits, compiler/toolchain,
-   split compilation settings, metadata, libraries and creation/runtime artifacts.
-   Compare runtime bytes independently, including constructor/immutable handling.
+1. Complete the deployed-source/build manifest for both implementations. Wallet
+   source/dependency bytes, exact compiler/settings and full creation/runtime
+   reproduction are now recorded above; upstream dependency commits, independent
+   constructor execution and the Minter build remain open. Preserve source commit,
+   split compilation settings, metadata, libraries and immutable handling in the
+   final release attestation.
 2. Map every deployed source/build difference to an audit-covered release or a
    published follow-up review. Latest `master`, identical proxy runtime, published
    common proxy addresses and source-verification flags each fail this gate alone.
