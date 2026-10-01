@@ -10,12 +10,14 @@
  * Transport: stdio. Configure it in any MCP client (Claude Code/Desktop, etc.) — see mcp/README.md.
  */
 
+import packageInfo from "./package.json" with { type: "json" };
+
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { askKeryx, getStatus, meta, recoverKeryx } from "./keryx-buyer.mts";
 
-const server = new McpServer({ name: "keryx", version: "0.1.0" });
+const server = new McpServer({ name: "keryx", version: packageInfo.version });
 
 server.registerTool(
   "ask_keryx",
