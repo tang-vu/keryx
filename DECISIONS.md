@@ -1,5 +1,11 @@
 # Keryx — Decision Log
 
+**D-281** — Bound offline SQLite provenance capacity with actual Linux process containment — *2026-10-01*
+
+Keep the existing 64 MiB intake profile and add an explicit operator-declared offline snapshot profile for larger stores with substantial unselected content. A 512 MiB physical ceiling alone does not contain native SQLite work. Stock Node disables SQLite memory accounting, so reporting `hard_heap_limit` does not demonstrate enforcement. Use a fixed Linux systemd transient child with verified cgroup-v2 memory/swap/task limits, private network, no new privileges, and a service runtime limit instead. Sanitize the manager environment independently of the parent's environment. Refuse the larger mode on unsupported platforms or unavailable containment; do not weaken selected-evidence bounds or spill to disk.
+
+Before target open, verify the actual child unit/cgroup. Retain the canonical file descriptor, finalized rollback-journal header geometry, size/mtime checks, and sidecar refusal; return no report until the captured transient unit is cleaned up. The operator declaration does not prove offline ownership, historical origin, settlement authenticity, or enrollment authority. Preserve `unknown_legacy` and all M2/mainnet gates. Dedicated hosted Linux acceptance must prove realistic synthetic capacity, actual native-memory OOM refusal, unchanged bytes/evidence, and cleanup; Windows boundary tests do not replace that evidence. No production snapshot, intake, migration, or enrollment is authorized by this change. See [provenance intake](docs/storage-provenance-inspection.md).
+
 **D-280** - Integrate funding source while retaining deployed storage authority -
 *The reviewed staged funding implementation depended on a strict application
 storage cutover whose trusted legacy enrollment and production drain gates are

@@ -10,6 +10,31 @@ node --import tsx scripts/inspect-storage-provenance.mts D:/operator-intake/synt
 
 Use a protected operator workspace. This implementation has only been exercised against synthetic test databases; no production or private database was inspected. Do not copy private stores into the repository or publish reports automatically. The CLI never discovers a default database or reads environment files. Exit 0 means the selected intake completed, 1 means refusal, and 2 means invalid invocation. Neither success nor a matching testnet field authorizes migration or runtime startup.
 
+## Explicit offline snapshot intake
+
+The default invocation still refuses main files over 64 MiB. For a separately reviewed, finalized offline snapshot in a protected operator directory, explicitly select:
+
+```bash
+# Run in an explicitly privileged Linux operator context; the tool does not invoke sudo.
+node --import tsx scripts/inspect-storage-provenance.mts --offline-snapshot /protected/operator-intake/reviewed-snapshot.sqlite
+```
+
+This flag is the operator's declaration of trusted offline input, not proof that the file is offline or has a known origin. The inspector does not create backups, copy a live store, checkpoint WAL, change journal modes, or establish backup provenance. Producing and reviewing a finalized rollback-journal snapshot is a separate operator backup/review operation; the inspector never creates it. A detached WAL main file is refused even if its sidecars were removed; never remove sidecars to make a live store pass. No private production intake has been performed for this mode.
+
+The offline profile permits at most 512 MiB of physical main-file bytes so substantial unselected content need not prevent bounded selected-authority intake. All existing row, field, selected-byte, schema, output, and independent 10-second child deadline limits remain fixed. It reads exactly a 100-byte SQLite header to validate page geometry and finalized rollback-journal format. It checks the held descriptor and pathname for size and modification-time changes before and after scanning and refuses `-wal`, `-shm`, and `-journal` presence before opening and after closing SQLite. It does not use SQLite `immutable` mode. Filesystem timestamps and these checks cannot prove exclusive ownership or eliminate a malicious owner's swap-and-restore race.
+
+The larger mode requires a privileged Linux operator invocation with systemd and cgroup v2. It launches only a fresh UUID-named transient system-manager service through fixed `/usr/bin/systemd-run`, with `MemoryMax=256M`, `MemorySwapMax=0`, `TasksMax=32`, `RuntimeMaxSec=10`, `KillMode=control-group`, `NoNewPrivileges=yes`, and `PrivateNetwork=yes`. There is no shell, auto-sudo, service installation, override command, environment opt-in, or production mode change. The service command uses fixed `/usr/bin/env -i` to discard the manager's inherited environment, then the canonical current Node executable, resolved tsx loader, and repository child. V8 old space is separately limited to 128 MiB. Before opening the target, the child verifies its exact `/system.slice/<captured-unit>` cgroup-v2 membership, kernel memory/swap/task limits, NoNewPrivs, and a network namespace different from PID 1. Missing or unsupported containment refuses.
+
+The 256 MiB cgroup limit applies to charged memory, including native SQLite work and relevant page-cache/kernel charges. It is not a mathematically exact RSS ceiling: kernel accounting, reclaim, and temporary overshoot have documented caveats. This is a trusted operator tool, not protection against an adversarial root owner who can change cgroups or the reviewed code. It additionally verifies a 1 MiB suggested SQLite page cache, in-memory temporary storage, disabled cache spill and memory mapping, untrusted schema, and query-only mode. Unsupported settings refuse. A complex schema or query can therefore refuse even below 512 MiB; no temporary disk spill is enabled to make a scan pass. Managed native-memory OOM returns `native_resource_limit`, without private bytes, raw exceptions, or completed evidence.
+
+The parent retains its independent 10-second query envelope, starting after canonical launcher path checks and process spawn. Before returning any report, it inspects, kills, stops, and resets only its captured UUID service and checks that the unit and cgroup are gone. Each fixed systemctl operation has a two-second timeout; cleanup can add up to ten seconds beyond the query envelope. Missing cleanup confirmation refuses `containment_cleanup_unavailable`. The service's own runtime limit and control-group kill provide a fallback if the parent exits; neither is a strict overall ten-second response guarantee. No unrelated service is targeted.
+
+**SQLite heap-limit readback is not containment:** local Node 24.12.0 exposes `DEFAULT_MEMSTATUS=0`, and an independent synthetic allocation confirmed that a reported 4 KiB heap limit did not prevent a 2 MiB allocation. Stock Node's [SQLite build configuration](https://github.com/nodejs/node/blob/main/deps/sqlite/sqlite.gyp) also disables accounting. SQLite documents the [conditions under which heap limits are not enforced](https://www.sqlite.org/c3ref/hard_heap_limit64.html). The Linux profile therefore uses verified kernel containment. Windows and other platforms explicitly refuse `native_limits_unavailable` for the larger mode; their default 64 MiB inspector remains available. Local Windows validation does not establish Linux capacity acceptance.
+
+Successful reports explicitly include `inspectionMode: offline_snapshot` while retaining `unknown_legacy`, no enrollment authorization, and no accepted mode identity. Digests still describe only bounded selected observations. Larger capacity does not establish origin, settlement authenticity, signature validity, or mainnet readiness. The CLI accepts the flag only before one target argument and rejects unknown flags, duplicates, trailing arguments, and missing targets. Programmatic callers may only lower the chosen profile's fixed ceilings; the default profile cannot use the larger ceiling or offline memory controls.
+
+SQLite's [PRAGMA documentation](https://www.sqlite.org/pragma.html) describes the connection controls; its [file format specification](https://www.sqlite.org/fileformat.html#the_database_header) defines header page geometry. The [kernel cgroup-v2 documentation](https://docs.kernel.org/admin-guide/cgroup-v2.html) defines memory and swap accounting. The page cache setting is a suggested cache bound, not a native-memory or total-RSS ceiling.
+
 ## Evidence and scope
 
 The inspector imports no normal adapter, `getDb`, runtime configuration, signer, SDK, or network client. It opens SQLite read-only with extensions disabled and a held read-only file descriptor, begins one read transaction, and closes it with rollback. It performs no initialization, migrations, enrollment, cache population, integrity repair, or journal activation. It never decrypts content. No plaintext content, prompts, signatures, bearer headers, wallet addresses, nonces, grant epochs, auth hashes, paths, or exception messages appear in the report.
@@ -33,6 +58,8 @@ The output contains schema and selected-authority SHA-256 digests, coarse select
 | Columns per inspected table | 128 |
 | Child report stdout | 64 KiB |
 
+The explicit offline profile changes only the main-file ceiling to 512 MiB and adds the memory/filesystem controls described above. It does not increase the selected-evidence bounds in this table.
+
 The helper accepts only lower bounds; CLI bounds are fixed. Table and column names come from trusted literals. Allowlisted views, virtual tables, and generated columns are refused before selecting authority. Schema names/DDL and selected values use size-aware SQL projections so oversized values are not returned to JavaScript before refusal. Metadata is iterated with a column limit. Unselected payload blobs are not fetched. SQLite can still read pages or perform native work internally; these are output/allocation bounds, not a precise native-memory ceiling. Main-file limits do not bound a WAL file's physical size.
 
 Synchronous SQLite cannot be interrupted by JavaScript elapsed checks. The public [inspector](../lib/db/storage-provenance.ts) runs the cooperative internal scanner in a separate process and kills that process at the independent deadline, returning no completed evidence. Process launch/termination and event-loop scheduling can add latency; this is a query-work containment deadline, not a real-time response guarantee. The child receives explicit arguments and a minimal environment (`NODE_ENV=production`, plus Windows `SystemRoot`), with no inherited secrets, `NODE_OPTIONS`, or environment-file loader. Child stderr is discarded, and errors use fixed reason codes.
@@ -47,9 +74,12 @@ Focused tests use actual SQLite files for read-only preservation, WAL snapshots,
 
 ```powershell
 npx vitest run lib/db/storage-provenance.test.ts
+npx vitest run lib/db/storage-provenance-snapshot.test.ts
 npx tsc --noEmit
 npx tsc --noEmit --strict --skipLibCheck --target ES2022 --module ESNext --moduleResolution bundler --allowImportingTsExtensions scripts/inspect-storage-provenance.mts
 npx eslint lib/db/storage-provenance*.ts scripts/inspect-storage-provenance.mts
 ```
 
 Reusable identity contracts, explicit legacy enrollment/provenance, application fences before initialization and authority reads, SQLite/Supabase parity, concurrency/restart/restore behavior, operator rollout, and recovery-compatible namespace migration all remain separate M2 gates. This tool does not change the current production mode or payment journals and supplies no mainnet activation mechanism.
+
+Unit tests cover direct uncontained refusal before target open, Windows refusal, invalid headers, detached WAL headers, sidecar rejection and size/mtime changes, fixed ceilings, and exact CLI parsing. The dedicated hosted Linux job pins Node 24.10.0, matching the repository's funding acceptance jobs, and runs `scripts/test-storage-provenance-capacity.mts` under an explicit privileged invocation. It must demonstrate a synthetic 170 MiB unselected blob, default refusal, selected-authority/schema digest equivalence, unchanged main bytes and no new sidecars, retained authority/allocation/deadline refusals, an actual native-pressure OOM kill with no evidence, and cleanup of captured transient services. Failure of systemd/cgroup support fails that job rather than skipping acceptance. These synthetic checks do not authorize a production snapshot or intake.

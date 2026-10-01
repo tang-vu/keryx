@@ -2,7 +2,8 @@ import { createHash } from "node:crypto";
 import { closeSync, constants, existsSync, fstatSync, lstatSync, openSync, realpathSync } from "node:fs";
 import { isAbsolute, parse, relative, resolve, sep } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import type { ProvenanceLimits, StorageProvenanceReport } from "./storage-provenance";
+import { validatedProvenanceLimits, type ProvenanceLimits, type ProvenanceMode, type StorageProvenanceReport } from "./storage-provenance";
+import { checkSnapshotUnchanged, configureSnapshotConnection, validateSnapshotHeader, verifySnapshotContainment } from "./storage-provenance-snapshot";
 
 // Independent public testnet observations; they are never a runtime profile or an origin proof.
 const NETWORK = "eip155:5042002";
@@ -29,7 +30,8 @@ const TABLES = {
 type Row = Record<string, unknown>;
 const JSON_FIELDS = new Set(["requirements", "data", "request_data", "confirmation"]);
 const SAFE_REASONS = new Set(["absolute_target_required", "unsafe_target", "target_replaced", "file_limit", "schema_limit", "schema_refused",
-  "row_limit", "field_limit", "byte_limit", "deadline_exceeded", "foreign_authority", "malformed_authority"]);
+  "row_limit", "field_limit", "byte_limit", "deadline_exceeded", "foreign_authority", "malformed_authority",
+  "snapshot_sidecar", "snapshot_header", "snapshot_changed", "native_limits_unavailable", "invalid_limits"]);
 function refuse(reason: string): never { throw new Error(reason); }
 function targetIdentity(target: string, maximum: number) {
   if (!isAbsolute(target) || target !== resolve(target) || target.includes("\0")) refuse("absolute_target_required");
@@ -102,7 +104,7 @@ function inspectEnvelope(value: unknown, count: (name: string) => void, depth = 
 }
 
 /** Internal cooperative scanner. Call inspectStorageProvenance for the independent deadline. */
-export function scanStorageProvenance(target: string, limits: ProvenanceLimits): StorageProvenanceReport {
+export function scanStorageProvenance(target: string, limits: ProvenanceLimits, mode: ProvenanceMode = "standard", unit?: string): StorageProvenanceReport {
   const report: StorageProvenanceReport = { format: "keryx-storage-provenance-intake-v1", backend: "sqlite", status: "intake_only",
     origin: "unknown_legacy", enrollmentAuthorized: false, modeIdentityAccepted: false, snapshotComplete: false };
   let db: DatabaseSync | undefined;
@@ -110,14 +112,29 @@ export function scanStorageProvenance(target: string, limits: ProvenanceLimits):
   const start = Date.now();
   const checkTime = () => { if (Date.now() - start > limits.deadlineMs) refuse("deadline_exceeded"); };
   try {
+    const validated = validatedProvenanceLimits(limits, mode);
+    if (!validated) refuse("invalid_limits");
+    limits = validated;
+    const offline = mode === "offline_snapshot";
+    if (offline) report.inspectionMode = "offline_snapshot";
+    if (offline) verifySnapshotContainment(unit);
     const identity = targetIdentity(target, limits.fileBytes);
     descriptor = openSync(target, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
     const opened = fstatSync(descriptor, { bigint: true });
     if (!opened.isFile() || opened.dev.toString() !== identity.dev || opened.ino.toString() !== identity.ino || opened.birthtimeNs.toString() !== identity.birth) refuse("target_replaced");
+    const checkSnapshot = () => {
+      if (!offline) return;
+      checkSnapshotUnchanged(target, descriptor!, opened.size, opened.mtimeNs);
+    };
+    if (offline) {
+      checkSnapshot(); validateSnapshotHeader(descriptor);
+    }
     const sidecars = { walBefore: existsSync(`${target}-wal`), shmBefore: existsSync(`${target}-shm`), walAfter: false, shmAfter: false };
     // SQLite may read/create WAL shared-memory coordination files; never open the main store writable.
     db = new DatabaseSync(target, { readOnly: true, allowExtension: false });
+    if (offline) configureSnapshotConnection(db, limits);
     if (JSON.stringify(identity) !== JSON.stringify(targetIdentity(target, limits.fileBytes))) refuse("target_replaced");
+    checkSnapshot();
     db.exec("BEGIN;");
     const schemaHash = createHash("sha256"), authorityHash = createHash("sha256");
     const classifications: Record<string, number> = { unknown_legacy_origin: 1 };
@@ -195,6 +212,7 @@ export function scanStorageProvenance(target: string, limits: ProvenanceLimits):
     }
     if (JSON.stringify(identity) !== JSON.stringify(targetIdentity(target, limits.fileBytes))) refuse("target_replaced");
     db.exec("ROLLBACK"); db.close(); db = undefined;
+    checkSnapshot();
     sidecars.walAfter = existsSync(`${target}-wal`); sidecars.shmAfter = existsSync(`${target}-shm`);
     report.snapshotComplete = true;
     report.evidence = { schemaSha256: schemaHash.digest("hex"), selectedAuthoritySha256: authorityHash.digest("hex"),
@@ -202,7 +220,9 @@ export function scanStorageProvenance(target: string, limits: ProvenanceLimits):
     return report;
   } catch (error) {
     report.status = "refused";
-    report.reason = error instanceof Error && SAFE_REASONS.has(error.message) ? error.message : "inspection_unavailable";
+    report.reason = error instanceof Error && SAFE_REASONS.has(error.message) ? error.message :
+      mode === "offline_snapshot" && error instanceof Error && "errcode" in error && error.errcode === 7
+        ? "native_resource_limit" : "inspection_unavailable";
     return report;
   } finally { if (db) { try { db.exec("ROLLBACK"); } catch {} try { db.close(); } catch {} } if (descriptor !== undefined) { try { closeSync(descriptor); } catch {} } }
 }
