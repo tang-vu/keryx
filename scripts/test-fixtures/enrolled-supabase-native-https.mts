@@ -15,6 +15,12 @@ export async function startOwnedSupabaseHttpsBridge(curlContainer: string) {
   const key = join(directory, "synthetic-key.pem");
   const pending = new Set<Promise<void>>();
   const counts = new Map<string, number>();
+  const diagnosticOperations = new Set(["read_storage_identity", "storage_inspect_runtime_readiness",
+    "storage_verify_runtime_authority", "storage_upsert_source", "storage_get_source",
+    "storage_set_cached", "storage_get_cached", "storage_create_auth_challenge",
+    "storage_consume_auth_challenge", "storage_upsert_user", "storage_get_user",
+    "storage_set_sync_state", "storage_get_sync_state", "storage_save_query_run"]);
+  const timings = new Map<string, { started: number; completed: number; failed: number; totalMs: number; maxMs: number }>();
   let closed = false;
   const server = createServer();
   try {
@@ -26,6 +32,9 @@ export async function startOwnedSupabaseHttpsBridge(curlContainer: string) {
     server.setSecureContext({ key: readFileSync(key), cert: readFileSync(certificate) });
     server.on("request", (request, response) => {
       const work = (async () => {
+        let diagnosticOperation: string | undefined;
+        let startedAt = 0;
+        let succeeded = false;
         try {
           const path = request.url ?? "";
           if (closed || request.method !== "POST" ||
@@ -47,6 +56,10 @@ export async function startOwnedSupabaseHttpsBridge(curlContainer: string) {
             body.push(chunk);
           }
           const operation = path.slice("/rest/v1/rpc/".length);
+          diagnosticOperation = diagnosticOperations.has(operation) ? operation : "other";
+          startedAt = performance.now();
+          const current = timings.get(diagnosticOperation) ?? { started: 0, completed: 0, failed: 0, totalMs: 0, maxMs: 0 };
+          timings.set(diagnosticOperation, { ...current, started: current.started + 1 });
           counts.set(operation, (counts.get(operation) ?? 0) + 1);
           const output = await new Promise<Buffer>((resolveOutput, reject) => {
             const child = execFile("docker", ["exec", "-i", curlContainer,
@@ -61,10 +74,19 @@ export async function startOwnedSupabaseHttpsBridge(curlContainer: string) {
           const split = output.lastIndexOf(10);
           const status = Number(output.subarray(split + 1).toString("ascii"));
           if (split < 0 || !Number.isInteger(status) || status < 200 || status > 599) throw new Error();
+          succeeded = status < 400;
           response.writeHead(status, { "Content-Type": "application/json" }).end(output.subarray(0, split));
         } catch {
           if (!response.headersSent) response.writeHead(503);
           response.end('{"code":"SYNTHETIC_UNAVAILABLE","message":"Synthetic bridge unavailable"}');
+        } finally {
+          if (diagnosticOperation) {
+            const elapsed = Math.ceil(performance.now() - startedAt);
+            const previous = timings.get(diagnosticOperation)!;
+            timings.set(diagnosticOperation, { started: previous.started, completed: previous.completed + 1,
+              failed: previous.failed + (succeeded ? 0 : 1), totalMs: previous.totalMs + elapsed,
+              maxMs: Math.max(previous.maxMs, elapsed) });
+          }
         }
       })();
       pending.add(work);
@@ -78,6 +100,7 @@ export async function startOwnedSupabaseHttpsBridge(curlContainer: string) {
       origin: `https://127.0.0.1:${address.port}`,
       certificate: resolve(certificate),
       counts,
+      timings,
       close: async () => {
         closed = true;
         server.closeAllConnections();
