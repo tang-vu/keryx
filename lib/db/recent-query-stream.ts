@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { QueryRun } from "../types";
+import { callSupabaseDomain } from "./supabase-authority";
 
 const PAGE_SIZE = 32;
 /** PostgREST quoted filter value: control characters are not valid cursor data. */
@@ -16,13 +17,17 @@ export async function* iterateSupabaseRecentQueries(db: SupabaseClient, limit: n
   const seen = new Set<string>();
   while (seen.size < limit) {
     const count = Math.min(PAGE_SIZE, limit - seen.size);
-    let query = db.from("query_runs").select("id,created_at,data")
+    const { data, error } = await callSupabaseDomain(db, "iterate_recent_queries", {
+      p_before_time: cursor?.createdAt ?? null, p_before_id: cursor?.id ?? null, p_limit: count,
+    }, () => {
+      let query = db.from("query_runs").select("id,created_at,data")
       .order("created_at", { ascending: false }).order("id", { ascending: false }).limit(count);
     if (cursor) {
       const time = quoted(cursor.createdAt), id = quoted(cursor.id);
       query = query.or(`created_at.lt.${time},and(created_at.eq.${time},id.lt.${id})`);
     }
-    const { data, error } = await query.abortSignal(AbortSignal.timeout(15_000));
+      return query.abortSignal(AbortSignal.timeout(15_000));
+    });
     if (error || !Array.isArray(data) || data.length > count) throw new Error("Query scan unavailable");
     if (data.length === 0) return;
     for (const row of data) {

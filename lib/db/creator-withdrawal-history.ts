@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { callSupabaseDomain } from "./supabase-authority";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { validateWithdrawalRequest, withdrawalIdSchema, withdrawalOwnerSchema } from "../gateway/withdrawal-request";
@@ -44,14 +45,19 @@ export async function listSqliteWithdrawalHistory(db: DatabaseSync, owner: strin
 
 export async function listSupabaseWithdrawalHistory(db: SupabaseClient, owner: string, cursor?: WithdrawalHistoryCursor, limit = 25) {
   const selected = selection(owner, cursor, limit);
-  let query = db.from("creator_withdrawal_requests").select("id,owner,created_at,data").eq("owner", selected.owner)
+  const { data, error } = await callSupabaseDomain(db, "list_creator_withdrawal_history", {
+    p_owner: selected.owner, p_before_time: selected.cursor?.createdAt ?? null,
+    p_before_id: selected.cursor?.id ?? null, p_limit: selected.limit + 1,
+  }, () => {
+    let query = db.from("creator_withdrawal_requests").select("id,owner,created_at,data").eq("owner", selected.owner)
     .order("created_at", { ascending: false }).order("id", { ascending: false }).limit(selected.limit + 1);
   if (selected.cursor) {
     // Strict datetime and hex schemas exclude PostgREST filter syntax injection.
     const { createdAt, id } = selected.cursor;
     query = query.or(`created_at.lt.${createdAt},and(created_at.eq.${createdAt},id.lt.${id})`);
   }
-  const { data, error } = await query;
+    return query;
+  });
   if (error || !Array.isArray(data)) throw new Error("Withdrawal history storage unavailable");
   return project(data, selected.owner, selected.limit);
 }

@@ -1,0 +1,59 @@
+name: Enrolled Supabase PostgreSQL
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - "lib/db/**"
+      - "lib/payments/browser-original-source-*"
+      - "lib/payments/browser-signing-original*"
+      - "lib/payments/browser-query-policy*"
+      - "lib/sources/enrolled-content-cache*"
+      - "lib/ipfs/content-crypto*"
+      - "lib/canonical-json.ts"
+      - "lib/types.ts"
+      - "scripts/test-enrolled-supabase-runtime-postgres.mts"
+      - "scripts/test-fixtures/enrolled-supabase-*.mts"
+      - "scripts/helpers/enrolled-postgres-schema-contract*"
+      - "package*.json"
+      - "tsconfig.json"
+      - "eslint.config.*"
+      - ".github/workflows/enrolled-supabase-runtime-postgres.yml"
+  workflow_dispatch:
+jobs:
+  enrolled-supabase-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.21.0"
+          cache: npm
+      - run: npm ci
+      - name: Focused facade inventory and legacy regressions
+        run: npx vitest run lib/db/supabase-adapter.test.ts lib/db/supabase-enrolled-methods.test.ts scripts/helpers/enrolled-postgres-schema-contract.test.ts
+      - name: Actual PG17 source reference generation (runtime acceptance pending)
+        run: node --import tsx scripts/test-enrolled-supabase-runtime-postgres.mts
+      - name: Retain bounded schema-only source reference
+        uses: actions/upload-artifact@v4
+        with:
+          name: enrolled-supabase-source-contract-${{ github.sha }}
+          path: artifacts/enrolled-supabase-contract/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Project TypeScript
+        run: npx tsc --noEmit
+      - name: Scoped evaluator TypeScript
+        run: |
+          node --input-type=module <<'NODE'
+          import { writeFileSync, unlinkSync } from 'node:fs';
+          import { spawnSync } from 'node:child_process';
+          const path = '.enrolled-supabase-native-typecheck.json';
+          writeFileSync(path, JSON.stringify({ extends: './tsconfig.json', compilerOptions: { target: 'ES2022', incremental: false, allowImportingTsExtensions: true }, include: ['scripts/test-enrolled-supabase-runtime-postgres.mts', 'scripts/test-fixtures/enrolled-supabase-*.mts', 'scripts/helpers/enrolled-postgres-schema-contract.mts'], exclude: ['node_modules'] }));
+          try { process.exitCode = spawnSync('npx', ['tsc', '--project', path], { stdio: 'inherit' }).status ?? 1; }
+          finally { unlinkSync(path); }
+          NODE
+      - name: Scoped lint
+        run: npx eslint lib/db/supabase-adapter.ts lib/db/supabase-adapter.test.ts lib/db/supabase-authority.ts lib/db/supabase-enrolled-methods.ts lib/db/supabase-enrolled-methods.test.ts lib/db/supabase-runtime-contract.ts scripts/test-enrolled-supabase-runtime-postgres.mts scripts/test-fixtures/enrolled-supabase-*.mts scripts/helpers/enrolled-postgres-schema-contract.mts scripts/helpers/enrolled-postgres-schema-contract.test.ts

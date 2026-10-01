@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { callSupabaseDomain } from "./supabase-authority";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { addressSchema } from "../buyer/protocol";
@@ -69,7 +70,8 @@ export async function releaseSupabasePrivateTreasury(db: SupabaseClient, id: str
     await listSupabasePrivateCreatorSubmissions(db, id, payer));
   const { data, error } = await db.rpc("release_private_treasury", { p_id: id, p_payer: payer.toLowerCase(), p_signer: selected });
   if (error || typeof data !== "boolean") throw new Error("Private treasury release unavailable");
-  const saved = await db.from("private_treasury_releases").select("amount_micros").eq("job_id", id).maybeSingle();
+  const saved = await callSupabaseDomain(db, "release_supabase_private_treasury", { p_job_id: id },
+    args => db.from("private_treasury_releases").select("amount_micros").eq("job_id", args.p_job_id).maybeSingle());
   if (saved.error || !saved.data || amount.parse(saved.data.amount_micros) !== expected) throw new Error("Private treasury release accounting mismatch");
   return { amountMicros: expected.toString(), newlyReleased: data };
 }

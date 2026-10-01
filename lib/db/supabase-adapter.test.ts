@@ -1,8 +1,18 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SupabaseAdapter, throwingSupabaseFetch } from "./supabase-adapter";
+import {
+  SupabaseAdapter, throwingSupabaseFetch, assertEnrolledSupabaseAuthority,
+  closeEnrolledSupabaseAdapter, createEnrolledSupabaseAdapter,
+  createReadonlyEnrolledSupabaseAdapter,
+} from "./supabase-adapter";
 import { makePayment } from "../payments/payment-gateway";
+import { createClient } from "@supabase/supabase-js";
 
-afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
+vi.mock("@supabase/supabase-js", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@supabase/supabase-js")>(),
+  createClient: vi.fn(),
+}));
+
+afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.clearAllMocks(); });
 
 describe("throwingSupabaseFetch", () => {
   it("returns successful responses unchanged", async () => {
@@ -28,11 +38,11 @@ describe("SupabaseAdapter.recordPayment", () => {
   it("rejects a payment insert when Supabase returns an error result", async () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://synthetic-db.example");
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "synthetic-key-no-authority");
-    const db = new SupabaseAdapter();
     const failure = new Error("synthetic payment insert failure");
     const insert = vi.fn().mockResolvedValue({ data: null, error: failure });
     const from = vi.fn().mockReturnValue({ insert });
-    Object.assign(db, { sb: { from } });
+    vi.mocked(createClient).mockReturnValue({ from } as unknown as ReturnType<typeof createClient>);
+    const db = new SupabaseAdapter();
 
     await expect(db.recordPayment(makePayment({
       id: "synthetic-payment",
@@ -49,5 +59,29 @@ describe("SupabaseAdapter.recordPayment", () => {
     }))).rejects.toBe(failure);
     expect(from).toHaveBeenCalledWith("payment_events");
     expect(insert).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("closed enrolled Supabase construction", () => {
+  it("rejects caller construction capabilities before creating a client", () => {
+    expect(() => new SupabaseAdapter(Object.freeze({}))).toThrow();
+    expect(createClient).not.toHaveBeenCalled();
+  });
+
+  it.each([createEnrolledSupabaseAdapter, createReadonlyEnrolledSupabaseAdapter])(
+    "rejects JavaScript argument overrides before deployment configuration or client construction",
+    async (factory) => {
+      await expect(Reflect.apply(factory, undefined, [{ backend: "synthetic" }])).rejects.toThrow();
+      expect(createClient).not.toHaveBeenCalled();
+    },
+  );
+
+  it("does not grant runtime authority to JSON, casts or copied methods", async () => {
+    const fake = { listSources: async () => [], init: async () => {} };
+    await expect(assertEnrolledSupabaseAuthority(fake)).rejects.toThrow();
+    await expect(assertEnrolledSupabaseAuthority(JSON.parse(JSON.stringify(fake)))).rejects.toThrow();
+    await expect(Reflect.apply(assertEnrolledSupabaseAuthority, undefined, [fake, "admin"])).rejects.toThrow();
+    expect(() => closeEnrolledSupabaseAdapter(fake)).toThrow();
+    expect(createClient).not.toHaveBeenCalled();
   });
 });

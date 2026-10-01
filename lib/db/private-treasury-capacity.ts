@@ -1,3 +1,4 @@
+import { callSupabaseDomain } from "./supabase-authority";
 import type { DatabaseSync } from "node:sqlite";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
@@ -23,7 +24,7 @@ export async function getSqlitePrivateTreasury(db: DatabaseSync, id: string, pay
 export async function getSupabasePrivateTreasury(db: SupabaseClient, id: string, payer: string) {
   const intent = await getSupabasePrivateResearchIntent(db, id, payer);
   if (!intent) return null;
-  const { data, error } = await db.from("private_treasury_reservations").select("signer,amount_micros").eq("job_id", id).maybeSingle();
+  const { data, error } = await callSupabaseDomain(db, "get_supabase_private_treasury", { p_job_id: id }, (_args) => db.from("private_treasury_reservations").select("signer,amount_micros").eq("job_id", _args.p_job_id).maybeSingle());
   if (error) throw new Error("Private treasury reservation unavailable");
   return reservation(data ?? undefined, Math.round(intent.submission.request.budget * 1e6));
 }
@@ -77,7 +78,7 @@ export async function reserveSupabasePrivateTreasury(db: SupabaseClient, id: str
     p_signer: selected.signer, p_capacity: selected.capacityMicros });
   if (error || typeof data !== "boolean") throw new Error("Private treasury reservation unavailable");
   if (!data) return false;
-  const result = await db.from("private_treasury_reservations").select("signer,amount_micros").eq("job_id", id).maybeSingle();
+  const result = await callSupabaseDomain(db, "reserve_supabase_private_treasury", { p_job_id: id }, (_args) => db.from("private_treasury_reservations").select("signer,amount_micros").eq("job_id", _args.p_job_id).maybeSingle());
   if (result.error || !result.data) throw new Error("Private treasury reservation unavailable");
   return matched(result.data, selected.signer, Math.round(intent.submission.request.budget * 1e6));
 }

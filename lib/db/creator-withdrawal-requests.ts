@@ -1,3 +1,4 @@
+import { callSupabaseDomain } from "./supabase-authority";
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -101,7 +102,7 @@ export async function claimSqliteWithdrawalTransfer(db: DatabaseSync, id: string
 
 export async function getSupabaseWithdrawalRequest(db: SupabaseClient, id: string, owner: string) {
   const selected = key(id, owner);
-  const { data, error } = await db.from("creator_withdrawal_requests").select("data").eq("id", selected.id).eq("owner", selected.owner).maybeSingle();
+  const { data, error } = await callSupabaseDomain(db, "get_supabase_withdrawal_request", { p_id: selected.id, p_owner: selected.owner }, (_args) => db.from("creator_withdrawal_requests").select("data").eq("id", _args.p_id).eq("owner", _args.p_owner).maybeSingle());
   if (error) throw new Error("Withdrawal request storage unavailable");
   return data ? read(data.data, selected.id, selected.owner) : null;
 }
@@ -113,7 +114,7 @@ export async function reserveSupabaseWithdrawalRequest(db: SupabaseClient, value
 }
 export async function getSupabaseWithdrawalTransferClaim(db: SupabaseClient, id: string, owner: string) {
   if (!await getSupabaseWithdrawalRequest(db, id, owner)) return null;
-  const { data, error } = await db.from("creator_withdrawal_transfer_attempts").select("claim_id,started_at").eq("id", id).maybeSingle();
+  const { data, error } = await callSupabaseDomain(db, "get_supabase_withdrawal_transfer_claim", { p_id: id }, (_args) => db.from("creator_withdrawal_transfer_attempts").select("claim_id,started_at").eq("id", _args.p_id).maybeSingle());
   if (error) throw new Error("Withdrawal transfer state unavailable");
   return data ? claimRecord(data) : null;
 }
