@@ -10,6 +10,8 @@ on:
       - "lib/db/keryx-db.ts"
       - "lib/payments/browser-original-observation*"
       - "lib/session/browser-original-observation*"
+      - "lib/session/separate-origin-original-signer.integration.test.ts"
+      - "lib/session/fixtures/separate-origin-original-signer*"
       - "lib/payments/browser-query-policy*"
       - "lib/payments/browser-signing-original*"
       - "lib/payments/browser-authorization-recovery*"
@@ -43,7 +45,9 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Focused originals, exposed observation and legacy recovery
         run: npx vitest run lib/db/sqlite-browser-signing-originals.test.ts lib/payments/browser-query-policy.test.ts lib/payments/browser-signing-original.test.ts lib/db/sqlite-browser-journal.test.ts lib/payments/browser-authorization-recovery.test.ts lib/payments/browser-original-observation-protocol.test.ts lib/payments/browser-original-observation-server.test.ts lib/session/browser-original-observation-client.test.ts
+      - name: Separate-origin malicious-parent signer fixture
+        run: npx vitest run lib/session/separate-origin-original-signer.integration.test.ts
       - name: Project TypeScript
         run: npx tsc --noEmit
       - name: Scoped lint
-        run: npx eslint lib/payments/browser-query-policy.ts lib/payments/browser-query-policy.test.ts lib/payments/browser-signing-original.ts lib/payments/browser-signing-original.test.ts lib/db/browser-signing-originals.ts lib/db/sqlite-browser-signing-originals.ts lib/db/sqlite-browser-signing-originals.test.ts lib/db/sqlite-browser-journal.ts lib/db/keryx-db.ts lib/db/sqlite-adapter.ts lib/db/supabase-adapter.ts lib/payments/browser-original-observation-protocol.ts lib/payments/browser-original-observation-protocol.test.ts lib/payments/browser-original-observation-server.ts lib/payments/browser-original-observation-server.test.ts lib/payments/browser-original-observation.test-fixture.ts lib/session/browser-original-observation-client.ts lib/session/browser-original-observation-client.test.ts
+        run: npx eslint lib/payments/browser-query-policy.ts lib/payments/browser-query-policy.test.ts lib/payments/browser-signing-original.ts lib/payments/browser-signing-original.test.ts lib/db/browser-signing-originals.ts lib/db/sqlite-browser-signing-originals.ts lib/db/sqlite-browser-signing-originals.test.ts lib/db/sqlite-browser-journal.ts lib/db/keryx-db.ts lib/db/sqlite-adapter.ts lib/db/supabase-adapter.ts lib/payments/browser-original-observation-protocol.ts lib/payments/browser-original-observation-protocol.test.ts lib/payments/browser-original-observation-server.ts lib/payments/browser-original-observation-server.test.ts lib/payments/browser-original-observation.test-fixture.ts lib/session/browser-original-observation-client.ts lib/session/browser-original-observation-client.test.ts lib/session/separate-origin-original-signer.integration.test.ts lib/session/fixtures/separate-origin-original-signer.worker.ts lib/session/fixtures/separate-origin-original-signer-page.ts
