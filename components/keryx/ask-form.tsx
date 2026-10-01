@@ -20,6 +20,7 @@ interface AskFormProps {
     parentId?: string,
     model?: string,
     researchMode?: ResearchMode,
+    scholarly?: boolean,
   ) => void;
 }
 
@@ -81,6 +82,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
   // renders when the server offers more than one model; every pick falls back server-side.
   const [model, setModel] = useState("");
   const [researchMode, setResearchMode] = useState<ResearchMode>("quick");
+  const [scholarly, setScholarly] = useState(false);
   const [models, setModels] = useState<PickerModel[]>([]);
   const advancedRef = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
@@ -126,7 +128,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
   const submit = () => {
     const q = question.trim();
     if (!q || disabled || payer === "paused") return;
-    onAsk(q, budget, parentId === undefined ? parentRef.current : parentId ?? undefined, model || undefined, researchMode);
+    onAsk(q, budget, parentId === undefined ? parentRef.current : parentId ?? undefined, model || undefined, researchMode, scholarly);
     if (clearOnSubmit) setQuestion("");
   };
 
@@ -191,6 +193,11 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
                   : `Free trial: Keryx's treasury pays on Arc testnet. Question budget: up to $${budget.toFixed(3)} USDC.`}
             </p>
           </div>
+          <label className="mt-3 flex min-h-11 cursor-pointer items-center gap-2 font-mono text-xs text-ink">
+            <input type="checkbox" checked={scholarly} disabled={disabled} onChange={event => setScholarly(event.target.checked)} />
+            Search scholarly papers (Crossref and arXiv)
+          </label>
+          <p className="text-xs text-ink-3">Sends your question to scholarly repositories. DOI lookup works when a DOI is in the question. Public papers cost no source USDC; unavailable papers and abstract-only reads stay visible.</p>
           <details ref={advancedRef} className="mt-3 border-t border-line pt-2">
             <summary className="flex min-h-11 cursor-pointer items-center font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2 marker:text-seal hover:text-ink">
               Budget and model: ${budget.toFixed(3)} USDC

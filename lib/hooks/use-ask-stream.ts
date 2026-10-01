@@ -330,6 +330,7 @@ export function useAskStream(opts?: AskStreamOpts) {
       parentId?: string,
       model?: string,
       researchMode: ResearchMode = "quick",
+      scholarly = false,
     ) => {
       reset();
       // Reset reservations for this ask before any SSE frame can arrive.
@@ -356,6 +357,7 @@ export function useAskStream(opts?: AskStreamOpts) {
             // catalog; unknown/unset runs the default, and every pick falls back on error.
             ...(model ? { model } : {}),
             mode: researchMode,
+            ...(scholarly ? { scholarly: true } : {}),
           }),
           signal: controller.signal,
         });

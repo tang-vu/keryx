@@ -1,8 +1,10 @@
 import { discoverPublicReferences } from "./public-reference-evidence";
+import { discoverScholarly } from "../scholarly/discovery";
+import { questionDois } from "../scholarly/doi";
 import { discoverWeb } from "../web-research/discovery";
 import { searxngProvider } from "../web-research/search-provider";
 import { tavilyProvider } from "../web-research/tavily-provider";
-import { articleFailureCode, gatheredArticle, readArticle } from "../web-research/article-reader";
+import { ArticleReadError, articleFailureCode, gatheredArticle, readArticle } from "../web-research/article-reader";
 import { bodyIdentity } from "../web-research/url-identity";
 import { isPublicReferenceId } from "../public-references/catalog";
 /**
@@ -80,6 +82,8 @@ import {
 } from "./evidence-portfolio";
 
 export interface RunInput {
+  /** Opt in to scholarly metadata search; this never authorizes payment. */
+  scholarly?: boolean;
   signal?: AbortSignal;
   /** Trusted manual CLI opt-in only; never populate from public request JSON. */
   allowExternalWeb?: boolean;
@@ -242,6 +246,17 @@ export async function* runAgent(
   let webAttempts = 0;
   const webSignal = () => AbortSignal.any([input.signal ?? new AbortController().signal,
     AbortSignal.timeout(Math.max(1, webRemainingMs))]);
+  if ((input.scholarly || questionDois(input.question).length) && effects.scope.kind === "public"
+    && (origin !== "engine" || input.allowExternalWeb === true) && webRemainingMs > 0) {
+    const operationStarted = Date.now();
+    try {
+      const discovered = await (deps.discoverScholarly ?? discoverScholarly)(input.question, input.scholarly === true, webSignal());
+      for (const [id, candidate] of discovered.candidates) { webCandidates.set(id, candidate); publicCandidates.set(id, candidate); }
+      yield emit("discover", `Scholarly discovery: ${discovered.succeeded} provider requests succeeded, ${discovered.unavailable} unavailable; ${discovered.candidates.size} bibliographic previews. DOI lookup resolved ${discovered.resolvedDois}/${discovered.requestedDois} detected identifiers (up to two DOI lookups per run). Metadata is not paper evidence. arXiv is preprint material; peer review is unknown. Selected originals must be read; no creator payout.`);
+    } catch { yield emit("discover", "Scholarly discovery unavailable; continuing with other sources. No paper evidence established."); }
+    finally { webRemainingMs -= Date.now() - operationStarted; }
+    if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
+  }
   if (effects.scope.kind === "job") {
     yield emit("discover", "External web search withheld for private research; no question is sent to a search provider.");
   } else if (origin === "engine" && input.allowExternalWeb !== true) {
@@ -255,14 +270,15 @@ export async function* runAgent(
       const discovered = await discoverWeb(configured, input.question,
         subClaims, input.researchMode === "quick", webSignal());
       for (const [id, candidate] of discovered.candidates) { webCandidates.set(id, candidate); publicCandidates.set(id, candidate); }
-      yield emit("discover", `Web search: ${discovered.attemptedQueries}/${discovered.queries} planned queries attempted, ${discovered.succeededQueries} succeeded, ${webCandidates.size} public page previews, ${discovered.failedQueries} unavailable queries${discovered.cancelled ? "; search deadline or cancellation reached" : ""}${discovered.truncatedQueries ? "; query text bounded at 500 characters" : ""}. Snippets are discovery only. Public reads spend no USDC; model and service operating costs remain separate.`);
+      yield emit("discover", `Web search: ${discovered.attemptedQueries}/${discovered.queries} planned queries attempted, ${discovered.succeededQueries} succeeded, ${discovered.candidates.size} public page previews, ${discovered.failedQueries} unavailable queries${discovered.cancelled ? "; search deadline or cancellation reached" : ""}${discovered.truncatedQueries ? "; query text bounded at 500 characters" : ""}. Snippets are discovery only. Public reads spend no USDC; model and service operating costs remain separate.`);
     } catch { yield emit("discover", "Web search unavailable; continuing with the available catalog. No web evidence was established."); }
     finally { webRemainingMs -= Date.now() - operationStarted; }
     if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
-  } else yield emit("discover", "Broad web search is not configured; this run uses the available catalog only.");
+  } else yield emit("discover", "Broad web search is not configured; other discovery channels remain available.");
   const seenWebBodies = new Set<string>();
   const seenWebUrls = new Set<string>();
   let lastWebFailure = "unavailable";
+  const scholarlyReadFailures: string[] = [];
   async function fetchWeb(id: string): Promise<GatheredContent | null> {
     lastWebFailure = "web-operation-limit";
     const candidate = webCandidates.get(id);
@@ -270,13 +286,41 @@ export async function* runAgent(
     webAttempts++;
     const operationStarted = Date.now();
     try {
-      const article = await (deps.readWebArticle ?? readArticle)(candidate.item.itemUrl, webSignal());
+      const metadata = candidate.item.scholarly;
+      let abstractFallback = false;
+      let article;
+      try {
+        article = await (deps.readWebArticle ?? readArticle)(candidate.item.itemUrl, webSignal());
+        if (metadata?.provider === "arxiv" && article.finalUrl === candidate.item.itemUrl && article.kind !== "pdf") throw new ArticleReadError("pdf-extraction-unavailable");
+      }
+      catch (error) {
+        if (metadata?.provider !== "arxiv") throw error;
+        scholarlyReadFailures.push(`arXiv ${metadata.arxivId}: paper PDF unavailable (${articleFailureCode(error)}).`);
+        if (webAttempts >= (input.researchMode === "quick" ? 4 : 8) || webRemainingMs - (Date.now() - operationStarted) <= 0 || input.signal?.aborted) throw error;
+        webAttempts++;
+        abstractFallback = true;
+        article = await (deps.readWebArticle ?? readArticle)(`https://arxiv.org/abs/${metadata.arxivId}`,
+          AbortSignal.any([input.signal ?? new AbortController().signal, AbortSignal.timeout(Math.max(1, webRemainingMs - (Date.now() - operationStarted)))]));
+      }
+      // A provider's versioned repository identity must survive document redirects.
+      if (metadata?.provider === "arxiv") {
+        const expected = `https://arxiv.org/${abstractFallback ? "abs" : "pdf"}/${metadata.arxivId}`;
+        if (article.finalUrl !== expected || (!abstractFallback && article.kind !== "pdf")) throw new Error("arXiv document identity changed");
+      }
       const identity = bodyIdentity(article.text);
       lastWebFailure = "empty-or-duplicate-body";
       if (!article.text.trim() || seenWebBodies.has(identity) || seenWebUrls.has(article.finalUrl) || publicReads.size && [...publicReads.values()].some(read => bodyIdentity(read.text) === identity)) return null;
       seenWebBodies.add(identity);
       seenWebUrls.add(article.finalUrl);
-      return gatheredArticle(id, article);
+      const gathered = gatheredArticle(id, article);
+      if (metadata) {
+        gathered.scholarly = { ...metadata, evidenceScope: metadata.provider === "arxiv" ? abstractFallback ? "abstract-page" : "paper-text" : "publisher-page" };
+        gathered.itemTitle = metadata.title;
+        gathered.itemPublishedAt = metadata.publishedDate?.length === 10 ? metadata.publishedDate : undefined;
+        gathered.publicDeliveryKind = abstractFallback ? "abstract" : "excerpt";
+        if (abstractFallback) scholarlyReadFailures.push(`arXiv ${metadata.arxivId}: only the abstract page was read; full-paper evidence is unavailable.`);
+      }
+      return gathered;
     } catch (error) { lastWebFailure = articleFailureCode(error); return null; }
     finally { webRemainingMs -= Date.now() - operationStarted; }
   }
@@ -661,6 +705,7 @@ export async function* runAgent(
     if (webCandidates.has(d.assetId ?? d.sourceId)) {
       yield emit("fetch", `READ ${d.sourceName} - selected original public page, 0 USDC; not a cache hit.`);
       const read = await fetchWeb(d.assetId ?? d.sourceId);
+      for (const message of scholarlyReadFailures.splice(0)) yield emit("fetch", message);
       if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
       if (read) { const marker = `S${++markerN}`; gathered.push({ ...read, marker });
         yield emit("fetch", `Read extracted public text from ${read.itemUrl} - ${marker}; quote matching establishes source grounding, not fact verification.`); }
@@ -889,6 +934,7 @@ export async function* runAgent(
         }
         if (webCandidates.has(recId) && !gatheredIds.has(recId)) {
           const read = await fetchWeb(recId);
+          for (const message of scholarlyReadFailures.splice(0)) yield emit("reevaluate", message);
           if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
           if (read) { const marker = `S${++markerN}`; gathered.push({ ...read, marker }); attentionUsed++; gatheredIds.add(recId);
             yield emit("reevaluate", `READ original public page ${read.itemUrl}, 0 USDC - ${marker}`); }
@@ -1221,6 +1267,7 @@ export async function* runAgent(
         sourceKind: g.sourceKind,
         publicDeliveryKind: g.publicDeliveryKind,
         webProvenance: g.webProvenance,
+        scholarly: g.scholarly,
         weight: attribution.weight,
         reward: g.sourceKind === "public-reference" ? 0 : rewards[index] ?? 0,
         rationale: attribution.rationale,

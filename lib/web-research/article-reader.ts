@@ -1,4 +1,4 @@
-import { fetchPublicBytes } from "../net/public-fetch";
+import { fetchPublicBytes, UnsafeTargetError } from "../net/public-fetch";
 import { extractPdfText } from "./pdf-reader";
 import { extractHtml } from "./html-reader";
 import { bodyIdentity, canonicalUrl, digest, publisherGroup } from "./url-identity";
@@ -23,7 +23,9 @@ export function extractArticle(text: string, finalUrl: string, contentType: stri
 export const readArticle: ArticleReader = async (url, signal) => {
   if (!canonicalUrl(url)) throw new ArticleReadError("invalid-url");
   const fetched = await fetchPublicBytes(url, { maxBytes: 2 * 1024 * 1024, timeoutMs: 8000, maxHops: 3, signal,
-    httpsOnly: true, allowedContentTypes: ["text/html", "application/xhtml+xml", "text/plain", "application/pdf"] }).catch(() => { throw new ArticleReadError(signal?.aborted ? "cancelled" : "transport-unavailable"); });
+    httpsOnly: true, allowedContentTypes: ["text/html", "application/xhtml+xml", "text/plain", "application/pdf"] }).catch(error => {
+      throw new ArticleReadError(signal?.aborted ? "cancelled" : error instanceof UnsafeTargetError && error.message === "that file is too large to read" ? "article-byte-limit" : "transport-unavailable");
+    });
     if (fetched.contentType === "application/pdf") {
       const result = await extractPdfText(fetched.bytes, { signal, maxPages: 20, maxChars: 60000, timeoutMs: 5000 }).catch(() => { throw new ArticleReadError(signal?.aborted ? "cancelled" : "pdf-extraction-unavailable"); });
       return { text: result.text, title: new URL(fetched.finalUrl).hostname, finalUrl: fetched.finalUrl, kind: "pdf", truncated: result.truncated };

@@ -1,4 +1,4 @@
-import type { Citation } from "./types";
+import type { Citation, ScholarlyMetadata } from "./types";
 
 export type CitationExportFormat = "bibtex" | "ris";
 
@@ -9,6 +9,7 @@ interface Reference {
   source: string;
   date?: string;
   note: string;
+  scholarly?: ScholarlyMetadata;
 }
 
 // Keep every value on one line: RIS interprets new lines as new fields/records.
@@ -62,8 +63,9 @@ function references(citations: readonly Citation[]) {
     const baseKey = citationKey(identity);
     const keyCount = (keys.get(baseKey) ?? 0) + 1;
     keys.set(baseKey, keyCount);
-    entries.push({ key: keyCount === 1 ? baseKey : `${baseKey}_${keyCount}`, title, url, source, date: publicationDate(citation.itemPublishedAt),
-      note: `Cited by Keryx [${text(citation.marker)}]. Source: ${source}.${itemId ? ` Item: ${itemId}.` : ""}${version ? ` Content version: ${version}.` : ""} Bibliographic metadata is limited to the recorded article identity.` });
+    const scholarly = citation.scholarly?.evidenceScope ? citation.scholarly : undefined;
+    entries.push({ key: keyCount === 1 ? baseKey : `${baseKey}_${keyCount}`, title, url, source, date: publicationDate(citation.itemPublishedAt), scholarly,
+      note: text(`Cited by Keryx [${text(citation.marker)}]. Source: ${source}.${itemId ? ` Item: ${itemId}.` : ""}${version ? ` Content version: ${version}.` : ""} ${scholarly ? `Bibliographic metadata from ${scholarly.provider}, observed ${text(scholarly.retrievedAt)} (${text(scholarly.recordUrl)}). Read scope: ${scholarly.evidenceScope}. ${scholarly.workType === "preprint" ? "Preprint. " : ""}Peer review unknown; metadata does not verify author rights.${scholarly.authorCount !== undefined && scholarly.authors.length < scholarly.authorCount ? ` Incomplete contributor list: ${scholarly.authors.length}/${scholarly.authorCount} provider entries recorded${scholarly.authorsTruncated ? "; capped at 50" : ""}.` : ""}` : "Bibliographic metadata is limited to the recorded article identity."}`) });
   }
   return { entries, omitted };
 }
@@ -80,18 +82,36 @@ function bibtexText(value: string): string {
 export function buildCitationExport(citations: readonly Citation[], format: CitationExportFormat) {
   const { entries, omitted } = references(citations);
   const content = entries.map((entry) => {
+    const metadata = entry.scholarly;
+    const year = metadata?.publishedDate?.match(/^\d{4}(?:-\d{2})?(?:-\d{2})?$/)?.[0].slice(0, 4) ?? entry.date?.slice(0, 4);
     if (format === "ris") return [
-      "TY  - WEB", `TI  - ${entry.title}`, `UR  - ${entry.url}`,
-      ...(entry.source ? [`T2  - ${entry.source}`] : []),
-      ...(entry.date ? [`PY  - ${entry.date.replaceAll("-", "/")}`] : []),
+      `TY  - ${metadata?.workType === "journal-article" ? "JOUR" : metadata?.workType === "preprint" ? "UNPB" : "WEB"}`, `TI  - ${entry.title}`, `UR  - ${entry.url}`,
+      ...(metadata ? metadata.authors.map((author, index) => {
+        const name = metadata.authorNames?.[index];
+        return `AU  - ${name?.family ? `${text(name.family)}${name.given ? `, ${text(name.given)}` : ""}` : text(author)}`;
+      }) : []),
+      ...(metadata?.doi ? [`DO  - ${text(metadata.doi)}`] : []),
+      ...(metadata?.arxivId ? [`AN  - arXiv:${text(metadata.arxivId)}`] : []),
+      ...(metadata?.journal ? [`JO  - ${text(metadata.journal)}`] : entry.source ? [`T2  - ${entry.source}`] : []),
+      ...(metadata?.volume ? [`VL  - ${text(metadata.volume)}`] : []),
+      ...(metadata?.issue ? [`IS  - ${text(metadata.issue)}`] : []),
+      ...(metadata?.pages ? [`SP  - ${text(metadata.pages)}`] : []),
+      ...(metadata?.publishedDate ? [`PY  - ${text(metadata.publishedDate).replaceAll("-", "/")}`] : entry.date ? [`PY  - ${entry.date.replaceAll("-", "/")}`] : []),
       `N1  - ${entry.note}`, "ER  - ",
     ].join("\r\n");
     const fields = [
       ["title", `{${bibtexText(entry.title)}}`], ["url", bibtexText(entry.url)],
-      ...(entry.date ? [["year", entry.date.slice(0, 4)]] : []),
+      ...(year ? [["year", year]] : []),
+      ...(metadata?.authors.length ? [["author", metadata.authors.map((author, index) => {
+        const name = metadata.authorNames?.[index];
+        return name?.family ? `{${bibtexText(text(name.family))}}${name.given ? `, {${bibtexText(text(name.given))}}` : ""}` : `{${bibtexText(text(author))}}`;
+      }).join(" and ")]] : []),
+      ...(metadata?.doi ? [["doi", bibtexText(text(metadata.doi))]] : []),
+      ...(metadata?.arxivId ? [["eprint", bibtexText(text(metadata.arxivId))], ["archivePrefix", "arXiv"]] : []),
+      ...(["journal", "volume", "issue", "pages"] as const).flatMap(field => metadata?.[field] ? [[field === "issue" ? "number" : field, bibtexText(text(metadata[field]!))]] : []),
       ["note", bibtexText(entry.note)],
     ];
-    return `@misc{${entry.key},\n${fields.map(([key, value]) => `  ${key} = {${value}}`).join(",\n")}\n}`;
+    return `@${metadata?.workType === "journal-article" ? "article" : "misc"}{${entry.key},\n${fields.map(([key, value]) => `  ${key} = {${value}}`).join(",\n")}\n}`;
   }).join(format === "ris" ? "\r\n\r\n" : "\n\n");
   return { content: content ? content + (format === "ris" ? "\r\n" : "\n") : "", count: entries.length, omitted };
 }

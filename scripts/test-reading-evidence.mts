@@ -29,10 +29,12 @@ import { DispatchView } from './app/dispatch/[id]/dispatch-view';
 const citation = {marker:'S1', sourceId:'source-1', sourceName:'Research Journal', itemId:'article-1', itemTitle:'The article: an unusually long title about measured evidence and a disputed claim across several research teams', itemUrl:'https://example.org/article', weight:1, reward:0.003, rationale:'evidence'};
 const missing = {marker:'S2',sourceId:'source-2',sourceName:'Older Archive',itemTitle:'Legacy article',weight:0, reward:0, rationale:'legacy'};
 const web = {marker:'S3',sourceId:'public:web:fixture',sourceName:'publisher.example',itemTitle:'Original public document',itemUrl:'https://publisher.example/final',contentVersion:'a'.repeat(64),sourceKind:'public-reference',publicDeliveryKind:'excerpt',weight:0,reward:0,rationale:'public evidence',webProvenance:{retrievedAt:'2026-10-01T00:00:00Z',publisherGroup:'publisher.example',normalizedBodyHash:'b'.repeat(64),extraction:'pdf',truncated:true}};
+const scholarly = {...web, marker:'S4', sourceId:'public:scholarly:fixture',sourceName:'arxiv.org',itemTitle:'Observed scholarly preprint',itemUrl:'https://arxiv.org/abs/1706.03762v7',publicDeliveryKind:'abstract',webProvenance:{...web.webProvenance,extraction:'html',publisherGroup:'arxiv.org',truncated:false},scholarly:{provider:'arxiv',recordUrl:'https://export.arxiv.org/api/query?id_list=1706.03762v7',retrievedAt:'2026-10-01T00:00:00Z',title:'Observed scholarly preprint',authors:['Observed Author'],arxivId:'1706.03762v7',workType:'preprint',peerReview:'unknown',evidenceScope:'abstract-page'}};
 const trace = Array.from({length:40},(_,i)=>({phase:'discover',ts:i,message:'Step '+i}));
 const run = {id:'synthetic',question:'What happened to a particularly long research question that needs a careful cited explanation?',budget:0.01,engine:'fixture',subClaims:[],decisions:[],citations:[citation,missing],answer:Array.from({length:8},(_,i)=>'A grounded finding [S1]. The archive also appears [S2]. '+('Evidence should be read in context. '.repeat(5))).join(String.fromCharCode(10,10)),totalSpent:0.002,totalToCreators:0.002,trace,createdAt:'2026-09-28T00:00:00Z',paymentMode:'real',evidence:Array.from({length:12},(_,i)=>({claimIndex:i,claim:'A grounded finding',marker:'S1',sourceId:'source-1',sourceName:'Research Journal',quote:i===0?'The measured result was positive.':('A long excerpt of measured evidence, exactly as stored in the run. '.repeat(4)),support:0.8,qualifiesForReward:true}))};
 const payment = (itemId,status,amount) => ({kind:'citation',queryId:'synthetic',sourceId:'source-1',sourceName:'Research Journal',itemId,payer:'payer',payee:'author-wallet',amountUsdc:amount,network:'Arc',settled:status==='settled',settlementStatus:status,createdAt:run.createdAt});
 run.confidence={level:'Moderate',reason:'Observed source grounding only'};run.citations.push(web);run.answer+=' Original public evidence [S3].';run.evidence.push({claimIndex:12,claim:'Original public evidence',marker:'S3',sourceId:web.sourceId,sourceName:web.sourceName,quote:'The original public document explicitly states this finding.',support:0.8,qualifiesForAnswer:true,qualifiesForReward:false,...web});
+run.citations.push(scholarly);run.answer+=' Abstract-scoped finding [S4].';run.evidence.push({claimIndex:13,claim:'Abstract-scoped finding',quote:'This is the observed abstract passage.',support:0.8,qualifiesForAnswer:true,qualifiesForReward:false,...scholarly});
 const payments = [payment('article-1','settled',0.001),payment('article-1','pending',0.002),payment('article-1','simulated',0.008),payment('other-article','settled',0.4),{...payment('article-1','settled',0.3),queryId:'other-run'},{...payment('article-1','simulated',0.006),settled:true}];
 function App(){const [steps,setSteps]=React.useState(trace);window.addStep=()=>setSteps(s=>[...s,{phase:'discover',ts:s.length,message:'Step '+s.length}]);return <><div style={{height:900}}>Reading fixture</div><DispatchView run={run} payments={payments}/><ReasoningConsole steps={steps} streaming={true} budget={0.01}/></>};
 createRoot(document.getElementById('root')).render(<App/>);
@@ -93,6 +95,8 @@ try {
       assert(content.includes("https://example.org/article"));
       assert(content.includes("https://publisher.example/final"), "public no-reward citations remain exportable");
       assert(!content.includes("Legacy article"), "legacy citations must not receive invented article links");
+      assert(content.includes("1706.03762v7") && content.includes("Observed Author"));
+      assert(content.includes("Read scope: abstract-page. Preprint. Peer review unknown"));
     }
     if (filename.endsWith(".csv")) assert(content.includes("The original public document explicitly states this finding."), "answer-qualified public evidence remains inspectable without payout authority");
   }
@@ -134,6 +138,14 @@ try {
   assert.doesNotMatch(await publicEvidence.innerText(), /RSS delivery/);
   assert.equal(await publicEvidence.locator('a[href="https://publisher.example/final"]').count(), 1);
   await page.keyboard.press("Escape"); await publicEvidence.waitFor({ state: "detached" });
+  await page.getByRole("button", { name: "Open evidence for Observed scholarly preprint" }).first().click();
+  const paperEvidence = page.getByRole("dialog", { name: "Observed scholarly preprint" });
+  await paperEvidence.waitFor();
+  assert.match(await paperEvidence.innerText(), /Preprint · peer review unknown/);
+  assert.match(await paperEvidence.innerText(), /abstract page only; full paper unavailable/);
+  assert.match(await paperEvidence.innerText(), /Authors \(arxiv\): Observed Author/);
+  assert.doesNotMatch(await paperEvidence.innerText(), /Author name: not stored/);
+  await page.keyboard.press("Escape"); await paperEvidence.waitFor({ state: "detached" });
 
   for (const viewport of [
     { width: 320, height: 640 }, { width: 390, height: 800 },

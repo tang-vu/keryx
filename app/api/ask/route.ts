@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
     parentId?: unknown;
     model?: unknown;
     mode?: unknown;
+    scholarly?: unknown;
   };
   // Model pick from the UI's picker. Validated inside getAgentDeps → resolveModelChoice:
   // unknown/unconfigured ids silently run the default engine, and every pick has a
@@ -61,6 +62,9 @@ export async function POST(req: NextRequest) {
   }
   const question = parsedQuestion.question;
   const researchMode: ResearchMode = parseResearchMode(body.mode);
+  if (body.scholarly !== undefined && typeof body.scholarly !== "boolean") {
+    return Response.json({ error: "scholarly must be a boolean" }, { status: 400 });
+  }
 
   // A present session id means "spend my browser-funded grant". Never coerce a malformed value or
   // silently reinterpret an empty one as the anonymous treasury path.
@@ -264,6 +268,7 @@ export async function POST(req: NextRequest) {
             signal: abort.signal,
             budget: askBudget,
             researchMode,
+            scholarly: body.scholarly === true,
             origin: isBot ? "engine" : "web",
             fundingOwner: useBrowserCoSign ? "browser" : "treasury",
           },

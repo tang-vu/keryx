@@ -16,6 +16,7 @@ export function researchReportMarkdown(run: QueryRun, meta: AskMeta | null, paym
     lines.push(`${citation.marker}: ${citation.itemTitle ?? citation.sourceName}${url ? ` — ${url}` : ""}`);
     if (citation.contentVersion) lines.push(`Document version: ${citation.contentVersion}`);
     if (citation.webProvenance) lines.push(`Observed provenance: ${JSON.stringify(citation.webProvenance)}`);
+    if (citation.scholarly) lines.push(`Observed scholarly metadata and read scope (peer review unknown): ${JSON.stringify(citation.scholarly)}`);
   }
   lines.push("", "## Evidence and limitations", "");
   for (const evidence of run.evidence ?? []) lines.push(`${evidence.marker} · ${evidence.claim}`, `Quote: ${evidence.quote}`, `Answer support admitted: ${evidence.qualifiesForAnswer === true}. Reward eligible: ${evidence.qualifiesForReward}.`, "");

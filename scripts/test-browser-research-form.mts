@@ -58,6 +58,9 @@ try {
   assert(textOrder.budget & 4);
 
   await question.fill("  How are citations rewarded?  ");
+  const scholarly = page.getByRole("checkbox", { name: "Search scholarly papers (Crossref and arXiv)" });
+  assert.equal(await scholarly.isChecked(), false);
+  await scholarly.check();
   await page.locator('input[name="research-depth"][value="deep"]').check();
   await page.getByText(/Budget and model:/).click();
   await page.getByLabel("Maximum budget in USDC").fill("0.06");
@@ -72,6 +75,7 @@ try {
   assert.equal(call[2] ?? null, null);
   assert.equal(call[3], "other");
   assert.equal(call[4], "deep");
+  assert.equal(call[5], true);
   await page.locator("#payer-session").click();
   await page.getByText(/Your funded session pays/).waitFor();
   await page.getByText(/your question is sent to our search provider/).waitFor();
