@@ -49,6 +49,9 @@ jobs:
       - name: Private economics CLI startup (no environment or database)
         run: node --import tsx scripts/economics-private-report.mts --help
 
+      - name: Install Chromium for unit and browser checks
+        run: npx playwright install --with-deps chromium
+
       - name: Unit tests (economic invariants)
         run: npm test
 
@@ -66,9 +69,6 @@ jobs:
 
       - name: Withdrawal backup and recovered copy (Linux CLI, synthetic data)
         run: node --import tsx --no-warnings scripts/test-withdrawal-backup-restore.mts
-
-      - name: Install Chromium for buyer persistence checks
-        run: npx playwright install --with-deps chromium
 
       - name: Browser buyer recovery (hermetic, no settlement)
         run: npm run test:browser-buyer
