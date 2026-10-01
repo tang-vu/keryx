@@ -45,6 +45,7 @@ try {
     }
     assert(ready, `Local production server did not start: ${output}`);
   }
+  await run("scripts/test-research-evidence-browser.mts");
   await run("scripts/test-browser-research-layout.mts");
   await run("scripts/test-reading-ux-browser.mts");
 } finally {

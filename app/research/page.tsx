@@ -9,6 +9,7 @@ import { ResearchSavedJobs } from "@/components/keryx/research-saved-jobs";
 import { ResearchAccountJobs } from "@/components/keryx/research-account-jobs";
 import { ResearchPrivateJobs } from "@/components/keryx/research-private-jobs";
 import { ResearchPrivateCheckout } from "@/components/keryx/research-private-checkout";
+import { ResearchEvidenceBrowser } from "@/components/keryx/research-evidence-browser";
 import { privateMerchantPolicySchema } from "@/lib/buyer/private-merchant-policy";
 import { config } from "@/lib/config";
 import { quoteA2aResearch } from "@/lib/a2a/pricing";
@@ -42,6 +43,7 @@ export default async function ResearchPage({ searchParams }: {
           <p className="mt-5 max-w-2xl font-serif text-lg text-ink-2">Know the price before your agent pays. Follow the job, read its evidence, and see what reached creators.</p>
           <p className="mt-3 font-serif text-sm text-ink-3">Buy with a funded Gateway wallet, or prepare a request for your own agent. Keep a private recovery file to follow your job after a disconnect.</p>
         </header>
+        <ResearchEvidenceBrowser />
         <ResearchWorkspace>
         <section aria-labelledby="package-heading" className="border border-line bg-paper p-6">
           <h2 id="package-heading" className="font-display text-3xl">1. Price your research</h2>
