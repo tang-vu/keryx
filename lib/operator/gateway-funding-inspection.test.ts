@@ -68,10 +68,20 @@ let f: Awaited<ReturnType<typeof fixture>>, missing: typeof f;
 const require = createRequire(import.meta.url), tsx = pathToFileURL(require.resolve("tsx")).href;
 async function subprocess(args: string[], input?: unknown, splitAt?: number) {
   const child = spawn(process.execPath, ["--import", tsx, ...args], { windowsHide: true, stdio: "pipe", env: process.platform === "win32" ? { NODE_ENV: "production", SystemRoot: process.env.SystemRoot } : { NODE_ENV: "production" } });
-  return await new Promise<{ code: number | null; stdout: string; stderr: string }>(resolve => {
-    let stdout = "", stderr = ""; const deadline = setTimeout(() => child.kill("SIGKILL"), 35000);
+  return await new Promise<{ code: number | null; stdout: string; stderr: string; diagnostic: string }>(resolve => {
+    let stdout = "", stderr = "", timedOut = false, errorCode = "none";
+    const deadline = setTimeout(() => { timedOut = true; child.kill("SIGKILL"); }, 35000);
+    child.once("error", error => {
+      const code = (error as NodeJS.ErrnoException).code;
+      errorCode = ["ENOENT", "EACCES", "EPERM", "ENOMEM", "EAGAIN"].includes(code ?? "") ? code! : "other";
+    });
     child.stdout.on("data", chunk => { stdout += chunk.toString(); }); child.stderr.on("data", chunk => { stderr += chunk.toString(); });
-    child.once("close", code => { clearTimeout(deadline); resolve({ code, stdout, stderr }); });
+    child.once("close", (code, signal) => {
+      clearTimeout(deadline);
+      const safeSignal = signal === null ? "none" : ["SIGKILL", "SIGTERM", "SIGABRT", "SIGSEGV", "SIGILL", "SIGBUS"].includes(signal) ? signal : "other";
+      const diagnostic = `phase=child-close status=${typeof code === "number" ? code : "none"} signal=${safeSignal} error=${errorCode} deadline=${timedOut}`;
+      resolve({ code, stdout, stderr, diagnostic });
+    });
     const wire = input ? Buffer.from(JSON.stringify(input)) : undefined;
     if (wire && splitAt !== undefined) { child.stdin.write(wire.subarray(0, splitAt)); setTimeout(() => child.stdin.end(wire.subarray(splitAt)), 100); }
     else child.stdin.end(wire);
@@ -111,7 +121,7 @@ describe("explicit keyless funding inspection command", () => {
     const moduleUrl = new URL("./gateway-funding-inspection.ts", import.meta.url).href;
     const probe = await subprocess(["--input-type=module", "-e", `import {inspectGatewayFundingSqliteOperationForTrustedSyntheticComposition as inspect} from ${JSON.stringify(moduleUrl)};process.stdout.write(typeof inspect);`]);
     if (probe.code !== 0) {
-      expect(probe.code).toBe(1); expect(probe.stderr.includes("does not provide an export named")).toBe(true);
+      expect(probe.code, `phase=named-export-probe ${probe.diagnostic}`).toBe(1); expect(probe.stderr.includes("does not provide an export named"), `phase=named-export-fallback ${probe.diagnostic}`).toBe(true);
       console.info("Synthetic fixture static named export unavailable; normalized dynamic export required");
     } else { expect(probe.code).toBe(0); expect(probe.stdout).toBe("function"); }
     const bytes = readFileSync(f.file), snapshot = f.snapshot();
