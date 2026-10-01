@@ -1,0 +1,48 @@
+name: Gateway readonly funding inspection candidate
+
+on:
+  pull_request:
+    paths:
+      - 'lib/operator/gateway-funding-inspection*'
+      - 'lib/payments/gateway-funding-operation-locator.ts'
+      - 'lib/payments/gateway-funding-readiness*'
+      - 'lib/payments/gateway-funding-policy*'
+      - 'lib/payments/gateway-funding-receipt*'
+      - 'lib/gateway/available-balance*'
+      - 'lib/db/gateway-funding-*'
+      - 'lib/db/storage-identity*'
+      - 'lib/db/runtime-storage-config*'
+      - 'scripts/funding-inspect*'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/gateway-funding-inspection.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspection-native-boundaries:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.10.0'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Check project types
+        run: npx tsc --noEmit
+      - name: Check operational script types
+        run: npx tsc --noEmit --strict --module esnext --moduleResolution bundler --target es2022 --lib es2022,dom,dom.iterable --skipLibCheck --esModuleInterop --allowImportingTsExtensions --jsx react-jsx --types node scripts/funding-inspect.mts scripts/funding-inspect-child.mts
+      - name: Lint readonly inspection sources and native fixtures
+        run: npx eslint lib/operator/gateway-funding-inspection.ts lib/operator/gateway-funding-inspection.test.ts lib/payments/gateway-funding-operation-locator.ts scripts/funding-inspect.mts scripts/funding-inspect-child.mts
+      - name: Native readonly CLI and localhost availability boundaries (synthetic only)
+        run: npx vitest run lib/operator/gateway-funding-inspection.test.ts
+
