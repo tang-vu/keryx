@@ -251,6 +251,22 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
         const match = errorOutput.match(/^FIXTURE_FAILURE category=(assertion|write-uncertain|storage-refused|type-error|operation-refused) code=(ERR_ASSERTION|[0-9A-Z]{5}|none) reason=(invalid_operation|identity_unavailable|identity_mismatch|adapter_not_initialized|readonly_operation|cache_migration_required|none)$/m);
         if (match) diagnostic = ` failure=${match[1]} code=${match[2]} reason=${match[3]}`;
       });
+      const emitChildDiagnostics = () => {
+        console.error(`FIXTURE_CHILD_ELAPSED mode=${mode} elapsedMs=${Math.ceil(performance.now() - childStartedAt)}`);
+        for (const [operation, timing] of bridge!.timings) {
+          const before = timingBefore.get(operation);
+          const completed = timing.completed - (before?.completed ?? 0);
+          const started = timing.started - (before?.started ?? 0);
+          if (started > 0) console.error(`FIXTURE_RPC_TIMING operation=${operation} started=${started} completed=${completed} failed=${timing.failed - (before?.failed ?? 0)} totalMs=${timing.totalMs - (before?.totalMs ?? 0)} lifetimeMaxMs=${timing.maxMs}`);
+        }
+        for (const [category, count] of bridge!.failures) {
+          const failed = count - (failureBefore.get(category) ?? 0);
+          if (failed > 0) console.error(`FIXTURE_RPC_FAILURE category=${category} count=${failed}`);
+        }
+        for (const [operation, shape] of bridge!.metricShapes) {
+          console.error(`FIXTURE_METRIC_SHAPE operation=${operation} shape=${shape.shape} length=${shape.length ?? "none"}`);
+        }
+      };
       if (mode === "drift") {
         const deadline = performance.now() + 30_000;
         while (!output.includes("READY synthetic schema drift") && !childTerminal && performance.now() < deadline) {
@@ -265,7 +281,13 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
         while (!output.includes("READY synthetic grant lock") && !childTerminal && performance.now() < deadline) {
           await new Promise<void>(resolveDelay => setTimeout(resolveDelay, 20));
         }
-        assert(output.includes("READY synthetic grant lock"), "Native binding lock handshake");
+        if (!output.includes("READY synthetic grant lock")) {
+          if (!childTerminal) child.kill("SIGKILL");
+          const failed = await boundedCompletion;
+          if (childTerminal) children.delete(child);
+          emitChildDiagnostics();
+          assert.fail(`Native binding lock handshake mode=${mode} stage=${stage} category=${failed.category}${diagnostic}`);
+        }
         const beforeLockAdmission = snapshot();
         const refusalKey = "storage_browser_signing_admit_source_original:http-400-sqlstate-P0001-source-observation-expired";
         const refusedBefore = bridge!.failures.get(refusalKey) ?? 0;
@@ -320,22 +342,7 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
       }
       const result = await boundedCompletion;
       if (childTerminal) children.delete(child);
-      if (result.code !== 0) {
-        console.error(`FIXTURE_CHILD_ELAPSED mode=${mode} elapsedMs=${Math.ceil(performance.now() - childStartedAt)}`);
-        for (const [operation, timing] of bridge!.timings) {
-          const before = timingBefore.get(operation);
-          const completed = timing.completed - (before?.completed ?? 0);
-          const started = timing.started - (before?.started ?? 0);
-          if (started > 0) console.error(`FIXTURE_RPC_TIMING operation=${operation} started=${started} completed=${completed} failed=${timing.failed - (before?.failed ?? 0)} totalMs=${timing.totalMs - (before?.totalMs ?? 0)} lifetimeMaxMs=${timing.maxMs}`);
-        }
-        for (const [category, count] of bridge!.failures) {
-          const failed = count - (failureBefore.get(category) ?? 0);
-          if (failed > 0) console.error(`FIXTURE_RPC_FAILURE category=${category} count=${failed}`);
-        }
-        for (const [operation, shape] of bridge!.metricShapes) {
-          console.error(`FIXTURE_METRIC_SHAPE operation=${operation} shape=${shape.shape} length=${shape.length ?? "none"}`);
-        }
-      }
+      if (result.code !== 0) emitChildDiagnostics();
       assert.equal(result.code, 0, `Native factory fixture mode=${mode} stage=${stage} category=${result.category}${diagnostic}`);
       assert(output.includes("PASS"));
     };
