@@ -1271,18 +1271,23 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async metrics(): Promise<DashboardMetrics> {
-    const [paymentRows, runRows, feedbackRows, gapIntentRows] = await Promise.all([
-      this.allRows(
+    const reads = [
+      () => this.allRows(
         "payment_events",
         "amount_usdc,source_id,query_id,kind,origin,settled,settlement_status,payer",
       ),
-      this.allRows(
+      () => this.allRows(
         "query_runs",
         "id,origin,asker,duration_ms,payment_mode,payment_attempts,settled_payments,confidence_level,mcp_client,evidence_claim_count,grounded_claim_count,rewarded_citation_count",
       ),
-      this.allRows("answer_feedback", "query_id,rating"),
-      this.allRows("gap_intents", "id,status"),
-    ]);
+      () => this.allRows("answer_feedback", "query_id,rating"),
+      () => this.allRows("gap_intents", "id,status"),
+    ];
+    // Each enrolled scan verifies the full source contract within its own outer
+    // statement deadline. Avoid making those checks compete with one another.
+    const [paymentRows, runRows, feedbackRows, gapIntentRows] = this.#enrolled
+      ? [await reads[0](), await reads[1](), await reads[2](), await reads[3]()]
+      : await Promise.all(reads.map(read => read()));
     return calculateDashboardMetrics(
       paymentRows.map((p) => ({
         amountUsdc: Number(p.amount_usdc),

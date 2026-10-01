@@ -98,6 +98,12 @@ the STABLE path uses one SQL statement snapshot and performs no intervening
 writes. Retain the nested fence check, identity/deadline checks, mode policy
 and every separate operation/publication guard; this is no cross-call cache.
 
+Enrolled dashboard metrics read the four fixed metric scans sequentially. Each
+scan retains its full authority verification, pagination and statement deadline.
+This bounds competing verification work within one metrics call; the ordinary
+adapter retains its existing parallel reads. Metrics are not an atomic snapshot
+across the four statements and do not establish payment settlement evidence.
+
 ## Cache format and limits
 
 `enc:v3:` is a distinct enrolled cache envelope. Bind source ID, complete storage
