@@ -46,6 +46,7 @@ export function openVerifiedSqliteStorage(file: string, expected: StorageIdentit
     if (property === "close") return close;
     if (property === "prepare") return (sql: string) => { assert(); return guardStatement(target.prepare(sql)); };
     if (property === "exec") return (sql: string) => { assert(); target.exec(sql); };
+    if (property === "isTransaction") { assert(); return target.isTransaction; }
     // Do not expose registration/extension/changeset entrypoints as an app capability.
     throw new Error("Unsupported verified storage operation");
   } });
