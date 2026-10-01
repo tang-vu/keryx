@@ -21,7 +21,7 @@ try {
       process.stdout.write("COMMITTED\n");await new Promise(()=>{});
     }} as GatewayFundingLedger : ledger;
     const answer=await createGatewayFundingExecutorForTrustedSyntheticComposition({...binding,ledger:wrapped,
-      funderPrivateKey:input.funderPrivateKey,spendPrivateKey:input.spendPrivateKey},input.endpoint).executeStep(input.operationId,"nativeTransfer");
+      funderPrivateKey:input.funderPrivateKey,spendPrivateKey:input.spendPrivateKey},input.origins).executeStep(input.operationId,"nativeTransfer");
     process.stdout.write(`RESULT ${JSON.stringify(answer)}\n`);ledger.close();
   }
 }catch{process.stdout.write("REFUSED\n");process.exitCode=2;}

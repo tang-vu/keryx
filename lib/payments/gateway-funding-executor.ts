@@ -10,6 +10,8 @@ import { gatewayFundingReplayDigest,validateGatewayFundingOperation,type Gateway
 import { prepareGatewayFundingTransaction,validatePreparedGatewayFundingTransaction,validateSignedGatewayFundingTransaction } from "./gateway-funding-transaction";
 import { observeGatewayFundingReceipt,unsealVerifiedGatewayFundingReceipt,type GatewayFundingReceiptRequest } from "./gateway-funding-receipt-observer";
 import { GATEWAY_FUNDING_RECEIPT_POLICY,GATEWAY_FUNDING_RECEIPT_POLICY_DIGEST } from "./gateway-funding-receipt-policy";
+import { observeGatewayFundingPreflight,createGatewayFundingPreflightForTrustedSyntheticComposition,
+  unsealVerifiedGatewayFundingPreflight,type GatewayFundingPreflightRequest } from "./gateway-funding-preflight";
 
 const physicalFetch=globalThis.fetch.bind(globalThis);
 const monotonicNow=performance.now.bind(performance);
@@ -46,8 +48,8 @@ export interface GatewayFundingReconcilerOptions extends GatewayFundingExecutorB
   readonly terminalStore:GatewayFundingTerminalObserverStore;
 }
 export interface GatewayFundingExecutionResult {
-  /** Execution/acknowledgement only. No Circle availability, allowance,
-   * combined native/ERC20 solvency or four-step orchestration readiness. */
+  /** Execution/acknowledgement with mandatory bounded preflight only.
+   * No Circle availability or complete operation readiness is implied. */
   readonly status:"broadcast-acknowledged"|"reconciliation-required"|"execution-success"|"execution-reverted"|"missing-reservation";
   readonly stage:string;
   readonly transactionHash?:string;
@@ -128,7 +130,7 @@ async function rpc(endpoint:string,method:"eth_chainId"|"eth_sendRawTransaction"
   const value=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes));
   if(!value || value.jsonrpc!=="2.0" || value.id!==1 || Object.hasOwn(value,"error") || typeof value.result!=="string")refuse();requestLive();return value.result as string;
 }
-function executor(options:GatewayFundingExecutorOptions,endpoint:string,deadlineMs=DEADLINE_MS) {
+function executor(options:GatewayFundingExecutorOptions,endpoint:string,observePreflight:typeof observeGatewayFundingPreflight,deadlineMs=DEADLINE_MS) {
   optionsShape(options,["funderPrivateKey","spendPrivateKey"]);
   for(const key of [options.funderPrivateKey,options.spendPrivateKey])if(typeof key!=="string" || !/^0x[0-9a-f]{64}$/.test(key))refuse();
   const b=binding(options),funderKey=options.funderPrivateKey,spendKey=options.spendPrivateKey;
@@ -144,6 +146,20 @@ function executor(options:GatewayFundingExecutorOptions,endpoint:string,deadline
         const {op,namespaces}=await life.bounded(b.admit(operationId,life.live));
         if(op.policy.funder!==funder || op.policy.spend!==spend)refuse();
         if(await life.bounded(b.ledger.inspectReservation(operationId,step)))return result("reconciliation-required","existing-original");
+        const selected=STEPS.filter(s=>s!=="nativeTransfer" && s!=="usdcTransfer"
+          || BigInt(s==="nativeTransfer" ? op.nativeTransferWei : op.usdcTransferMicros)>BigInt(0));
+        if(!selected.includes(step))refuse();
+        for(const prior of selected.slice(0,selected.indexOf(step))) {
+          const old=await life.bounded(b.ledger.inspectReservation(operationId,prior));
+          if(!old)refuse();const original=saved(old,op,prior,old.transaction.nonce),t=original.terminal;
+          if(original.state!=="finalized-success" || !original.prepared || !original.cryptoClaimId || !original.broadcastClaimId
+            || t?.format!=="gateway-funding-terminal-evidence-v1" || t.receiptStatus!=="success" || t.operationId!==operationId || t.step!==prior
+            || t.operationDigest!==gatewayFundingReplayDigest(op) || t.identityDigest!==storageIdentityDigest(op.policy.identity)
+            || canonicalJson(t.identity)!==canonicalJson(op.policy.identity) || t.transactionHash!==original.prepared.transactionHash
+            || t.cryptoClaimId!==original.cryptoClaimId || t.broadcastClaimId!==original.broadcastClaimId
+            || t.chainId!=="5042002" || t.sender!==original.transaction.sender || t.nonce!==original.transaction.nonce
+            || t.finalityPolicyDigest!==options.finalityPolicyDigest || canonicalJson(t.prepared)!==canonicalJson(original.prepared))refuse();
+        }
         const role=step==="nativeTransfer" || step==="usdcTransfer" ? 0 : 1,nonce=namespaces[role].nextNonce;
         if(nonce!==namespaces[role].nextCryptoNonce)refuse(); // no new gap beyond unresolved original
         const original=prepareGatewayFundingTransaction(op,step,nonce);
@@ -160,8 +176,18 @@ function executor(options:GatewayFundingExecutorOptions,endpoint:string,deadline
           || readback.cryptoClaimId!==cryptoClaimId || readback.prepared || readback.broadcastClaimId)refuse();
         stage="chain-before-crypto";
         if(await life.bounded(rpc(endpoint,"eth_chainId",[],life.live,life.stop.signal))!=="0x4cef52")refuse();
+        const preflightRequest=async():Promise<GatewayFundingPreflightRequest>=>{
+          const current=await life.bounded(b.admit(operationId,life.live,true));
+          if(canonicalJson(current.op)!==canonicalJson(op))refuse();
+          return {operation:op,transaction:original,expectedIdentity:options.expectedIdentity,backendBindingDigest:options.expectedBackendBindingDigest,
+            expectedNextCryptoNonces:{funder:current.namespaces[0].nextCryptoNonce,spend:current.namespaces[1].nextCryptoNonce}};
+        };
+        stage="preflight-before-crypto";const cryptoRequest=await preflightRequest(),cryptoToken=await life.bounded(observePreflight(cryptoRequest,life.live));
+        if(!cryptoToken)refuse();
+        const cryptoExact=saved(await life.bounded(b.ledger.inspectReservation(operationId,step)),op,step,nonce);
+        if(cryptoExact.state!=="crypto-claimed" || cryptoExact.cryptoClaimId!==cryptoClaimId || cryptoExact.prepared || cryptoExact.broadcastClaimId)refuse();
         const unsigned=parseTransaction(original.serializedUnsigned),hash=keccak256(original.serializedUnsigned);
-        stage="crypto";life.live();
+        stage="crypto";unsealVerifiedGatewayFundingPreflight(cryptoToken,cryptoRequest,life.live);
         // Installed viem sign invokes synchronous secp256k1 before returning its
         // Promise. No custom serializer, signer callback or await before crypto.
         const signature=await sign({hash,privateKey:role===0 ? funderKey : spendKey});
@@ -183,7 +209,13 @@ function executor(options:GatewayFundingExecutorOptions,endpoint:string,deadline
         stage="chain-before-send";
         if(await life.bounded(rpc(endpoint,"eth_chainId",[],life.live,life.stop.signal))!=="0x4cef52")refuse();
         await life.bounded(validateSignedGatewayFundingTransaction(op,step,nonce,{rawTransaction,transactionHash:localHash},life.live));
-        stage="physical-send";const acknowledged=await life.bounded(rpc(endpoint,"eth_sendRawTransaction",[prepared.rawTransaction],life.live,life.stop.signal));
+        stage="preflight-before-send";const sendRequest=await preflightRequest(),sendToken=await life.bounded(observePreflight(sendRequest,life.live));
+        if(!sendToken)refuse();
+        const sendExact=saved(await life.bounded(b.ledger.inspectReservation(operationId,step)),op,step,nonce);
+        if(!["broadcast-claimed","pending"].includes(sendExact.state) || sendExact.cryptoClaimId!==cryptoClaimId
+          || sendExact.broadcastClaimId!==broadcastClaimId || canonicalJson(sendExact.prepared)!==canonicalJson(prepared) || sendExact.terminal)refuse();
+        const sendLive=()=>{unsealVerifiedGatewayFundingPreflight(sendToken,sendRequest,life.live);};
+        stage="physical-send";const acknowledged=await life.bounded(rpc(endpoint,"eth_sendRawTransaction",[prepared.rawTransaction],sendLive,life.stop.signal));
         if(acknowledged!==prepared.transactionHash)refuse();return result("broadcast-acknowledged",stage,transactionHash);
       }catch{return result("reconciliation-required",stage,transactionHash);}finally{life.close();}
     })();attempts.set(key,attempt);return attempt;
@@ -191,14 +223,17 @@ function executor(options:GatewayFundingExecutorOptions,endpoint:string,deadline
   return Object.freeze({executeStep});
 }
 export function createGatewayFundingExecutor(options:GatewayFundingExecutorOptions) {
-  try{return executor(options,GATEWAY_FUNDING_RECEIPT_POLICY.primary);}catch{return refuse();}
+  try{return executor(options,GATEWAY_FUNDING_RECEIPT_POLICY.primary,observeGatewayFundingPreflight);}catch{return refuse();}
 }
 /** Explicit synthetic host composition: native local HTTP capture, never a
  * production endpoint override or arbitrary signer/fetch delegate. */
-export function createGatewayFundingExecutorForTrustedSyntheticComposition(options:GatewayFundingExecutorOptions,endpoint:string,limits?:Readonly<{totalDeadlineMs:number}>) {
-  try{const url=new URL(endpoint);if(url.protocol!=="http:" || url.hostname!=="127.0.0.1" || url.username || url.password || url.pathname!=="/" || url.search || url.hash)refuse();
+export function createGatewayFundingExecutorForTrustedSyntheticComposition(options:GatewayFundingExecutorOptions,origins:readonly[string,string],limits?:Readonly<{totalDeadlineMs:number}>) {
+  try{if(!Array.isArray(origins) || origins.length!==2)refuse();
+    const urls=origins.map(endpoint=>{const url=new URL(endpoint);if(url.protocol!=="http:" || url.hostname!=="127.0.0.1" || !url.port || url.username || url.password || url.pathname!=="/" || url.search || url.hash)refuse();return url.href;});
+    if(urls[0]===urls[1])refuse();
     if(limits){record(limits,["totalDeadlineMs"]);if(!Number.isSafeInteger(limits.totalDeadlineMs) || limits.totalDeadlineMs<=0 || limits.totalDeadlineMs>DEADLINE_MS)refuse();}
-    return executor(options,url.href,limits?.totalDeadlineMs ?? DEADLINE_MS);}catch{return refuse();}
+    const preflight=createGatewayFundingPreflightForTrustedSyntheticComposition(Object.freeze(urls) as unknown as readonly[string,string]);
+    return executor(options,urls[0],preflight,limits?.totalDeadlineMs ?? DEADLINE_MS);}catch{return refuse();}
 }
 function reconciler(options:GatewayFundingReconcilerOptions,observe:typeof observeGatewayFundingReceipt) {
   optionsShape(options,["terminalStore"]);

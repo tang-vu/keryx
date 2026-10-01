@@ -205,6 +205,62 @@ must be isolated. RPC pending nonce alone is not legacy provenance. A clone with
 identity is not global exclusivity. Restores remain quarantined/non-authorizing until original
 nonce, exposure and history are reconciled and the authoritative store/key location is reviewed.
 
+## Bounded prefunding and buyer readiness (D-278 staged direction)
+
+The current buyer route declares `maxDuration = 120`. Four funding transactions and repeated
+finality checks belong in a separately invoked trusted Operator composition with a 300-second
+monotonic outer deadline. Buyer `ensureFunded` integration will check fresh current readiness
+within at most 30 seconds; it will not automatically fund a research request. This split is an
+accepted implementation direction. It is not yet production behavior or cutover acceptance.
+
+The controlled executor must require a five-second opaque preflight token before native signing
+and again after the durable send claim, immediately before physical fetch. Read evidence binds
+the full storage identity, backend, immutable operation, exact transaction and both retained
+nonce barriers. Fixed dual managed testnet providers must agree on balances and allowance at a
+repeated common finalized anchor, while pending nonces match both retained barriers before and
+after sampling. Check remaining funder movements and gas, anticipated receiver solvency, and
+actual fixed Gateway allowance before deposit. Native 18-decimal and ERC20 6-decimal USDC are
+views of one balance; converting micro-USDC by `10^12` does not create additional funds. The
+[official Arc explanation](https://www.arc.io/blog/usdc-for-every-action-how-arc-simplifies-building-onchain)
+documents that shared balance. Provider agreement is a trust assumption, not independent consensus.
+
+In a fresh invocation, each selected earlier original must have protected finalized success
+before the next leg can sign. Zero-amount transfers may be omitted only without an existing
+reservation; admitted gas caps stay retained. Receipt polling is read-only, at most three full
+observations per leg with one-second spacing and a 40-second phase bound inside the outer
+deadline. No automatic send retry, nonce replacement or signing resume follows uncertainty.
+If any of the four slots exists when the invocation starts, that whole invocation is keyless
+recovery only. Later calls must perform fresh recovery/readiness, not reuse a cached ready result.
+
+Initial mode discovery has a separate guarded 30-second bound from the exact original invocation
+start, covering operation, namespace, admission and slot reads before freshness is known. Once
+any retained slot is found, lower and reschedule the whole caller deadline to that same original
+30-second bound, including a first call on a new keyed factory. Fresh execution retains its
+previously captured 300-second outer bound; it cannot extend or revive an expired discovery guard.
+
+Deadlines bound the caller and fence new signing, submission and dependent-leg authority. They
+cannot cancel a database commit atomically once a protected controller call has been admitted.
+That call may finish recording its validated immutable original terminal fact and atomic sender
+barrier advance after the caller has returned uncertain. Keep the original exposure and history;
+later callers use fresh keyless readback. This permits completion of an admitted observation,
+not new funding or signing resume. Do not promise zero database writes after a caller deadline.
+
+Readiness observes Circle's `balance` field, not pending or withdrawing funds. The installed
+Circle SDK's balance reader and the [Circle maintained balance route](https://github.com/circlefin/arc-nanopayments/blob/master/app/api/gateway/balance/route.ts)
+use the exact depositor/domain request. Require the backend-validated successful original
+deposit and enough current available micro-USDC for the installed minimum. Do not infer
+`initialAvailable + deposit`, transaction-attributed credit, or future solvency. A five-second
+opaque token binds the operation and backend snapshot; async unseal reloads it and the final
+synchronous consumer check rejects elapsed or changed authority. Concurrent debit, insufficient
+availability or outage leaves readiness unknown and cannot start another funding operation.
+
+Preflight/readiness and orchestration are separate candidates under implementation and review.
+Their generated-key, localhost HTTP and native-store fixtures do not establish funded production
+provenance or permission. Trusted owner issuance, complete existing-key history or reviewed
+isolated unused keys, restore quarantine, global exclusivity, both-backend acceptance, exact-head
+CI and independent mainnet review remain open. No real funding, mainnet, production enrollment,
+or deployment is authorized by this design.
+
 ## Required actual synthetic acceptance
 
 | Scenario | Required result |

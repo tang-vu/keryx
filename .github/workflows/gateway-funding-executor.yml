@@ -27,13 +27,17 @@ permissions:
   contents: read
 
 jobs:
-  native-executor:
+  native-funding:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        include:
+          - {os: ubuntu-latest, component: executor, timeout: 15}
+          - {os: windows-latest, component: executor, timeout: 15}
+          - {os: ubuntu-latest, component: orchestrator, timeout: 25}
+          - {os: windows-latest, component: orchestrator, timeout: 25}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: ${{ matrix.timeout }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -42,10 +46,10 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Native SQLite, local HTTP, installed viem and child crash proofs
-        run: npx vitest run lib/payments/gateway-funding-executor.test.ts
+        run: npx vitest run lib/payments/gateway-funding-${{ matrix.component }}.test.ts
       - name: Project TypeScript
         run: npx tsc --noEmit
       - name: Dedicated subprocess TypeScript
         run: npx tsc --noEmit --skipLibCheck --strict --target es2017 --lib dom,dom.iterable,esnext --module esnext --moduleResolution bundler --esModuleInterop --allowImportingTsExtensions lib/payments/gateway-funding-executor-child.mts
-      - name: Executor lint
-        run: npx eslint lib/payments/gateway-funding-executor.ts lib/payments/gateway-funding-executor.test.ts lib/payments/gateway-funding-executor-child.mts
+      - name: Funding component lint
+        run: npx eslint lib/payments/gateway-funding-executor.ts lib/payments/gateway-funding-executor.test.ts lib/payments/gateway-funding-executor-child.mts lib/payments/gateway-funding-orchestrator.ts lib/payments/gateway-funding-orchestrator.test.ts lib/payments/gateway-funding-test-fixture.ts
