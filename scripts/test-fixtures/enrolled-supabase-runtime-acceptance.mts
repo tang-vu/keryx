@@ -267,78 +267,90 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
           console.error(`FIXTURE_METRIC_SHAPE operation=${operation} shape=${shape.shape} length=${shape.length ?? "none"}`);
         }
       };
-      if (mode === "drift") {
-        const deadline = performance.now() + 30_000;
-        while (!output.includes("READY synthetic schema drift") && !childTerminal && performance.now() < deadline) {
-          await new Promise<void>((resolveDelay) => setTimeout(resolveDelay, 20));
+      try {
+        if (mode === "drift") {
+          const deadline = performance.now() + 30_000;
+          while (!output.includes("READY synthetic schema drift") && !childTerminal && performance.now() < deadline) {
+            await new Promise<void>((resolveDelay) => setTimeout(resolveDelay, 20));
+          }
+          assert(output.includes("READY synthetic schema drift"), `Native factory fixture mode=${mode} stage=${stage} category=handshake-refused`);
+          sql("alter function public.storage_get_source(jsonb,text) set cost 101");
+          child.stdin!.end("resume\n");
         }
-        assert(output.includes("READY synthetic schema drift"), `Native factory fixture mode=${mode} stage=${stage} category=handshake-refused`);
-        sql("alter function public.storage_get_source(jsonb,text) set cost 101");
-        child.stdin!.end("resume\n");
-      }
-      if (mode === "domain-binding") {
-        const deadline = performance.now() + 100_000;
-        while (!output.includes("READY synthetic grant lock") && !childTerminal && performance.now() < deadline) {
-          await new Promise<void>(resolveDelay => setTimeout(resolveDelay, 20));
+        if (mode === "domain-binding") {
+          const deadline = performance.now() + 100_000;
+          while (!output.includes("READY synthetic grant lock") && !childTerminal && performance.now() < deadline) {
+            await new Promise<void>(resolveDelay => setTimeout(resolveDelay, 20));
+          }
+          if (!output.includes("READY synthetic grant lock")) {
+            if (!childTerminal) child.kill("SIGKILL");
+            const failed = await boundedCompletion;
+            if (childTerminal) children.delete(child);
+            assert.fail(`Native binding lock handshake mode=${mode} stage=${stage} category=${failed.category}${diagnostic}`);
+          }
+          const beforeLockAdmission = snapshot();
+          const refusalKey = "storage_browser_signing_admit_source_original:http-400-sqlstate-P0001-source-observation-expired";
+          const refusedBefore = bridge!.failures.get(refusalKey) ?? 0;
+          const locker = execFile("docker", ["exec", "-i", postgresContainer, "psql", "-U", "postgres",
+            "--dbname", database, "-v", "ON_ERROR_STOP=1", "-q", "-t", "-A"],
+          { timeout: 30_000, maxBuffer: 4096 });
+          const lockerDone = new Promise<{ code: number | null; category: string }>(resolveDone => {
+            locker.once("error", () => { if (!locker.pid) resolveDone({ code: null, category: "spawn-error" }); });
+            locker.once("close", code => resolveDone({ code, category: code === 0 ? "success" : "lock-fixture-failed" }));
+          });
+          children.set(locker, lockerDone);
+          let lockerOutput = "";
+          locker.stdout!.on("data", part => { lockerOutput += part; if (lockerOutput.length > 4096) locker.kill(); });
+          locker.stdin!.write("set statement_timeout='10s';begin;select 1 from public.session_grants for update;\\echo READY_GRANT_LOCK\n");
+          const lockReadyDeadline = performance.now() + 5000;
+          while (!lockerOutput.includes("READY_GRANT_LOCK") && performance.now() < lockReadyDeadline) {
+            await new Promise<void>(resolveDelay => setTimeout(resolveDelay, 20));
+          }
+          assert(lockerOutput.includes("READY_GRANT_LOCK"), "Owned grant lock acquired");
+          child.stdin!.write("resume\n");
+          const waiterDeadline = performance.now() + 15_000;
+          let waited = false;
+          while (performance.now() < waiterDeadline) {
+            waited = sql("select exists(select 1 from pg_stat_activity a where a.datname=current_database() and a.pid<>pg_backend_pid() and a.wait_event_type='Lock' and a.query like '%storage_browser_signing_admit_source_original%' and exists(select 1 from pg_locks l where l.pid=a.pid and not l.granted))::text") === "true";
+            if (waited) break;
+            await new Promise<void>(resolveDelay => setTimeout(resolveDelay, 20));
+          }
+          assert(waited, "Actual protected source admission must wait on held grant lock");
+          const waiterAt = performance.now();
+          const admissionDeadline = bridge!.getSourceAdmissionDeadlineMs();
+          assert.ok(admissionDeadline !== null && Number.isSafeInteger(admissionDeadline));
+          const remaining = admissionDeadline + 25 - Date.now();
+          assert.ok(remaining > 0 && remaining < 5000, "Actual token deadline remains within bounded grant wait");
+          await new Promise<void>(resolveDelay => setTimeout(resolveDelay, remaining));
+          assert.ok(Date.now() > admissionDeadline, "Release occurs after original source-token deadline");
+          assert.ok(performance.now() - waiterAt < 5000, "Grant waiter stays within unchanged lock budget");
+          locker.stdin!.end("rollback;\n");
+          assert.equal((await lockerDone).code, 0);
+          children.delete(locker);
+          const refusalDeadline = performance.now() + 15_000;
+          while ((bridge!.failures.get(refusalKey) ?? 0) === refusedBefore && !childTerminal && performance.now() < refusalDeadline) {
+            await new Promise<void>(resolveDelay => setTimeout(resolveDelay, 20));
+          }
+          assert.equal(bridge!.failures.get(refusalKey), refusedBefore + 1, "Actual after-lock source deadline refusal");
+          const refusalReadyDeadline = performance.now() + 5000;
+          while (!output.includes("READY synthetic grant refusal") && !childTerminal && performance.now() < refusalReadyDeadline) {
+            await new Promise<void>(resolveDelay => setTimeout(resolveDelay, 20));
+          }
+          assert(output.includes("READY synthetic grant refusal"), "Child pauses after exact grant refusal");
+          assert.equal(snapshot(), beforeLockAdmission, "Expired after-lock admission preserves whole native database");
+          child.stdin!.end("verified\n");
         }
-        if (!output.includes("READY synthetic grant lock")) {
-          if (!childTerminal) child.kill("SIGKILL");
-          const failed = await boundedCompletion;
-          if (childTerminal) children.delete(child);
-          emitChildDiagnostics();
-          assert.fail(`Native binding lock handshake mode=${mode} stage=${stage} category=${failed.category}${diagnostic}`);
-        }
-        const beforeLockAdmission = snapshot();
-        const refusalKey = "storage_browser_signing_admit_source_original:http-400-sqlstate-P0001-source-observation-expired";
-        const refusedBefore = bridge!.failures.get(refusalKey) ?? 0;
-        const locker = execFile("docker", ["exec", "-i", postgresContainer, "psql", "-U", "postgres",
-          "--dbname", database, "-v", "ON_ERROR_STOP=1", "-q", "-t", "-A"],
-        { timeout: 30_000, maxBuffer: 4096 });
-        const lockerDone = new Promise<{ code: number | null; category: string }>(resolveDone => {
-          locker.once("error", () => { if (!locker.pid) resolveDone({ code: null, category: "spawn-error" }); });
-          locker.once("close", code => resolveDone({ code, category: code === 0 ? "success" : "lock-fixture-failed" }));
-        });
-        children.set(locker, lockerDone);
-        let lockerOutput = "";
-        locker.stdout!.on("data", part => { lockerOutput += part; if (lockerOutput.length > 4096) locker.kill(); });
-        locker.stdin!.write("set statement_timeout='10s';begin;select 1 from public.session_grants for update;\\echo READY_GRANT_LOCK\n");
-        const lockReadyDeadline = performance.now() + 5000;
-        while (!lockerOutput.includes("READY_GRANT_LOCK") && performance.now() < lockReadyDeadline) {
-          await new Promise<void>(resolveDelay => setTimeout(resolveDelay, 20));
-        }
-        assert(lockerOutput.includes("READY_GRANT_LOCK"), "Owned grant lock acquired");
-        child.stdin!.write("resume\n");
-        const waiterDeadline = performance.now() + 15_000;
-        let waited = false;
-        while (performance.now() < waiterDeadline) {
-          waited = sql("select exists(select 1 from pg_stat_activity a where a.datname=current_database() and a.pid<>pg_backend_pid() and a.wait_event_type='Lock' and a.query like '%storage_browser_signing_admit_source_original%' and exists(select 1 from pg_locks l where l.pid=a.pid and not l.granted))::text") === "true";
-          if (waited) break;
-          await new Promise<void>(resolveDelay => setTimeout(resolveDelay, 20));
-        }
-        assert(waited, "Actual protected source admission must wait on held grant lock");
-        const waiterAt = performance.now();
+      } catch (error) {
+        // Parent assertions must retain the same redacted evidence as child
+        // failures, including assertions reached after the first READY signal.
+        if (!childTerminal) child.kill("SIGKILL");
+        const failed = await boundedCompletion;
+        if (childTerminal) children.delete(child);
+        emitChildDiagnostics();
         const admissionDeadline = bridge!.getSourceAdmissionDeadlineMs();
-        assert.ok(admissionDeadline !== null && Number.isSafeInteger(admissionDeadline));
-        const remaining = admissionDeadline + 25 - Date.now();
-        assert.ok(remaining > 0 && remaining < 5000, "Actual token deadline remains within bounded grant wait");
-        await new Promise<void>(resolveDelay => setTimeout(resolveDelay, remaining));
-        assert.ok(Date.now() > admissionDeadline, "Release occurs after original source-token deadline");
-        assert.ok(performance.now() - waiterAt < 5000, "Grant waiter stays within unchanged lock budget");
-        locker.stdin!.end("rollback;\n");
-        assert.equal((await lockerDone).code, 0);
-        children.delete(locker);
-        const refusalDeadline = performance.now() + 15_000;
-        while ((bridge!.failures.get(refusalKey) ?? 0) === refusedBefore && !childTerminal && performance.now() < refusalDeadline) {
-          await new Promise<void>(resolveDelay => setTimeout(resolveDelay, 20));
-        }
-        assert.equal(bridge!.failures.get(refusalKey), refusedBefore + 1, "Actual after-lock source deadline refusal");
-        const refusalReadyDeadline = performance.now() + 5000;
-        while (!output.includes("READY synthetic grant refusal") && !childTerminal && performance.now() < refusalReadyDeadline) {
-          await new Promise<void>(resolveDelay => setTimeout(resolveDelay, 20));
-        }
-        assert(output.includes("READY synthetic grant refusal"), "Child pauses after exact grant refusal");
-        assert.equal(snapshot(), beforeLockAdmission, "Expired after-lock admission preserves whole native database");
-        child.stdin!.end("verified\n");
+        console.error(`FIXTURE_PARENT_FAILURE mode=${mode} stage=${stage} category=${failed.category}${diagnostic}`);
+        console.error(`FIXTURE_ADMISSION_DEADLINE recorded=${admissionDeadline !== null} current=${admissionDeadline !== null && Date.now() < admissionDeadline}`);
+        throw error;
       }
       const result = await boundedCompletion;
       if (childTerminal) children.delete(child);
