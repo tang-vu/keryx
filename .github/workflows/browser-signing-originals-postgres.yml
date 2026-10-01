@@ -4,6 +4,7 @@ on:
     paths:
       - "supabase/migrations/0070_browser_signing_originals.sql"
       - "supabase/migrations/0071_browser_original_observation.sql"
+      - "supabase/migrations/0072_browser_source_context.sql"
       - "supabase/migrations/006[789]*"
       - "lib/db/browser-signing-originals.ts"
       - "lib/db/supabase-browser-signing-originals*"
@@ -16,6 +17,14 @@ on:
       - "lib/payments/x402-payment-evidence.ts"
       - "lib/payments/browser-query-policy*"
       - "lib/payments/browser-signing-original*"
+      - "lib/payments/browser-original-source-*"
+      - "lib/offers/article-offer-proof.ts"
+      - "lib/offers/article-offer.ts"
+      - "lib/sources/source-item-asset.ts"
+      - "lib/registry/registry-client.ts"
+      - "lib/arc-rpc-attestation.ts"
+      - "lib/config.ts"
+      - "lib/chains.ts"
       - "scripts/test-browser-signing-originals-postgres.mts"
       - "package*.json"
       - "tsconfig.json"
@@ -42,6 +51,14 @@ jobs:
       - name: Project TypeScript
         run: npx tsc --noEmit
       - name: Scoped fixture TypeScript
-        run: npx tsc --noEmit --skipLibCheck --strict --target ES2022 --module esnext --moduleResolution bundler --allowImportingTsExtensions scripts/test-browser-signing-originals-postgres.mts
+        run: |
+          node --input-type=module <<'NODE'
+          import { writeFileSync, unlinkSync } from 'node:fs';
+          import { spawnSync } from 'node:child_process';
+          const path = '.browser-signing-postgres-typecheck.json';
+          writeFileSync(path, JSON.stringify({ extends: './tsconfig.json', compilerOptions: { target: 'ES2022', incremental: false, allowImportingTsExtensions: true }, include: ['scripts/test-browser-signing-originals-postgres.mts'], exclude: ['node_modules'] }));
+          try { process.exitCode = spawnSync('npx', ['tsc', '--project', path], { stdio: 'inherit' }).status ?? 1; }
+          finally { unlinkSync(path); }
+          NODE
       - name: Scoped lint
-        run: npx eslint lib/db/supabase-browser-signing-originals.ts lib/db/supabase-browser-signing-originals.test.ts scripts/test-browser-signing-originals-postgres.mts
+        run: npx eslint lib/db/supabase-browser-signing-originals.ts lib/db/supabase-browser-signing-originals.test.ts lib/db/supabase-adapter.ts scripts/test-browser-signing-originals-postgres.mts lib/offers/article-offer.ts lib/offers/article-offer-proof.ts

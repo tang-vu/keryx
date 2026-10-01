@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { recoverTypedDataAddress, type Hex } from "viem";
 import { canonicalJson } from "../canonical-json";
+import {
+  browserOriginalSourceContextSchema,
+  browserSourceContextDigest,
+  verifyRetainedBrowserOriginalSourceContext,
+  type BrowserOriginalSourceContext,
+} from "./browser-original-source-context";
 import type { BrowserAuthorizationJournal } from "../db/browser-authorization-journal";
 import {
   SESSION_CHAIN_ID,
@@ -12,7 +18,7 @@ const decimal = z
   .regex(/^(0|[1-9][0-9]*)$/)
   .max(78);
 const address = z.string().regex(/^0x[0-9a-f]{40}$/);
-export const browserSigningOriginalSchema = z
+export const browserSigningOriginalV2Schema = z
   .object({
     protocol: z.literal("durable-v2"),
     admittedAt: z.string().datetime(),
@@ -40,17 +46,28 @@ export const browserSigningOriginalSchema = z
       .strict(),
   })
   .strict();
+export const browserSigningOriginalV3Schema = browserSigningOriginalV2Schema
+  .extend({
+    protocol: z.literal("durable-v3"),
+    sourceContext: browserOriginalSourceContextSchema,
+    sourceContextDigest: z.string().regex(/^0x[0-9a-f]{64}$/),
+  })
+  .strict();
+export const browserSigningOriginalSchema = z.discriminatedUnion("protocol", [
+  browserSigningOriginalV2Schema,
+  browserSigningOriginalV3Schema,
+]);
 export type BrowserSigningOriginal = z.infer<
   typeof browserSigningOriginalSchema
 >;
 export function prepareBrowserSigningOriginal(
   journal: BrowserAuthorizationJournal,
   namespace: string
-): BrowserSigningOriginal {
+): z.infer<typeof browserSigningOriginalV2Schema> {
   const seconds = Math.floor(Date.parse(journal.admittedAt) / 1000);
   if (!Number.isSafeInteger(seconds) || seconds < 600)
     throw new Error("Invalid original admission time");
-  return browserSigningOriginalSchema.parse({
+  return browserSigningOriginalV2Schema.parse({
     protocol: "durable-v2",
     admittedAt: journal.admittedAt,
     namespace,
@@ -72,6 +89,55 @@ export function prepareBrowserSigningOriginal(
       nonce: journal.nonce,
     },
   });
+}
+export function prepareBrowserSourceSigningOriginal(
+  journal: BrowserAuthorizationJournal,
+  namespace: string,
+  sourceContext: BrowserOriginalSourceContext
+): z.infer<typeof browserSigningOriginalV3Schema> {
+  const bare = {
+    ...prepareBrowserSigningOriginal(journal, namespace),
+    protocol: "durable-v3" as const,
+  };
+  const captured = browserOriginalSourceContextSchema.parse(sourceContext);
+  const seconds = Math.floor(Date.parse(journal.admittedAt) / 1000);
+  if (
+    journal.payment.kind !== "fetch" ||
+    journal.payment.sourceId !== captured.source.sourceId ||
+    journal.payment.itemId !== captured.item.itemId ||
+    journal.payment.contentVersion !== captured.item.contentVersion ||
+    (journal.payment.offerId ?? null) !==
+      (captured.price.mode === "creator-offer"
+        ? captured.price.offer.id
+        : null) ||
+    bare.authorization.to !== captured.registry.payoutWallet ||
+    bare.authorization.value !== captured.price.amountMicros ||
+    BigInt(captured.registry.blockTimestamp) > BigInt(seconds) ||
+    (captured.price.mode === "creator-offer" &&
+      captured.price.offer.expiresAt <= seconds)
+  )
+    throw new Error("Browser source context refused");
+  return browserSigningOriginalV3Schema.parse({
+    ...bare,
+    sourceContext: captured,
+    sourceContextDigest: browserSourceContextDigest(bare, captured),
+  });
+}
+export async function verifyBrowserSigningOriginalSource(
+  value: BrowserSigningOriginal,
+  journal?: BrowserAuthorizationJournal
+): Promise<void> {
+  const original = browserSigningOriginalSchema.parse(value);
+  if (original.protocol === "durable-v3") {
+    const { sourceContext, sourceContextDigest, ...bare } = original;
+    if (browserSourceContextDigest(bare, sourceContext) !== sourceContextDigest)
+      throw new Error("Browser source context refused");
+    await verifyRetainedBrowserOriginalSourceContext(
+      sourceContext,
+      original,
+      journal
+    );
+  }
 }
 export function browserSigningTypedData(value: BrowserSigningOriginal) {
   const original = browserSigningOriginalSchema.parse(value),
@@ -124,6 +190,7 @@ export async function verifyBrowserSigningHeader(
   header: string
 ) {
   const original = browserSigningOriginalSchema.parse(value);
+  await verifyBrowserSigningOriginalSource(original);
   if (header.length > 8192 || !/^[A-Za-z0-9+/]+={0,2}$/.test(header))
     throw new Error("Original header refused");
   const decoded = atob(header);
@@ -131,7 +198,7 @@ export async function verifyBrowserSigningHeader(
   const body = z
     .object({
       signature: z.string().regex(/^0x[0-9a-f]{130}$/),
-      authorization: browserSigningOriginalSchema.shape.authorization,
+      authorization: browserSigningOriginalV2Schema.shape.authorization,
     })
     .strict()
     .parse(

@@ -2,9 +2,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { canonicalJson } from "../canonical-json";
 import { verifyBrowserQueryPolicy, type BrowserQueryPolicyProof } from "../payments/browser-query-policy";
 import { prepareBrowserSigningOriginal, verifyBrowserSigningHeader, type BrowserSigningOriginal } from "../payments/browser-signing-original";
+import { prepareBrowserSourceSigningAdmission, assertVerifiedBrowserOriginalSourceContextCurrent, type BrowserOriginalSourceAuthority } from "../payments/browser-original-source-authority";
 import { prepareBrowserJournal } from "./browser-authorization-journal";
 import { validateBrowserSigningSnapshot, type BrowserOriginalAdmission, type BrowserOriginalAdmissionResult,
-  type BrowserQueryAdmissionResult, type BrowserSigningSnapshot } from "./browser-signing-originals";
+  type BrowserQueryAdmissionResult, type BrowserSigningSnapshot, type BrowserSourceOriginalAdmission } from "./browser-signing-originals";
 
 function refuse(): never { throw new Error("Browser signing original backend refused"); }
 function object(value: unknown): Record<string, unknown> {
@@ -37,6 +38,39 @@ export async function admitSupabaseBrowserSigningOriginal(sb: SupabaseClient, in
     || canonicalJson(snapshot.journal.requirements) !== canonicalJson(input.journal.requirements)
     || Object.entries(input.journal.payment).some(([key, value]) => canonicalJson((snapshot.journal.payment as unknown as Record<string, unknown>)[key]) !== canonicalJson(value))
     || canonicalJson(snapshot.original) !== canonicalJson(prepareBrowserSigningOriginal(snapshot.journal, input.queryNamespace))) refuse();
+  return { status: "admitted", journal: snapshot.journal, original: snapshot.original };
+}
+export async function admitSupabaseBrowserSourceSigningOriginal(sb: SupabaseClient, input: BrowserSourceOriginalAdmission, authority: BrowserOriginalSourceAuthority): Promise<BrowserOriginalAdmissionResult> {
+  input = JSON.parse(canonicalJson(input)) as BrowserSourceOriginalAdmission;
+  function freeze(value: object): void { for (const child of Object.values(value)) if (child && typeof child === "object") freeze(child); Object.freeze(value); }
+  freeze(input);
+  if (input.protocol !== "durable-v3" || input.journal.kind !== "fetch") refuse();
+  const replay = await sb.rpc("browser_signing_replay_source_original", { p_input: input });
+  if (replay.error) refuse(); const prior = object(replay.data);
+  let result: Record<string, unknown>;
+  if (prior.status === "admitted") result = prior;
+  else if (prior.status === "inactive") return { status: "inactive" };
+  else if (prior.status === "refused") return { status: "refused" };
+  else if (prior.status === "missing") {
+    const token = await authority.resolve(input);
+    const prepared = prepareBrowserSourceSigningAdmission(input, token);
+    const args = { p_input: prepared.input, p_journal: prepared.journal, p_original: prepared.original };
+    assertVerifiedBrowserOriginalSourceContextCurrent(token, input);
+    const admission = await sb.rpc("browser_signing_admit_source_original", args);
+    if (admission.error) refuse(); result = object(admission.data);
+  } else refuse();
+  if (result.status === "inactive" || result.status === "refused") return { status: result.status };
+  if (result.status !== "admitted") refuse();
+  const retained = JSON.parse(canonicalJson(result.snapshot)) as BrowserSigningSnapshot;
+  const snapshot = await validateBrowserSigningSnapshot(retained, retained.namespace.owner);
+  if (snapshot.original.protocol !== "durable-v3" || snapshot.query.namespace !== input.queryNamespace || snapshot.query.queryId !== input.queryId
+    || snapshot.journal.sessionId !== input.journal.sessionId || snapshot.journal.requestId !== input.journal.requestId
+    || snapshot.journal.grantEpoch !== input.journal.grantEpoch || snapshot.journal.signer.toLowerCase() !== input.journal.signer.toLowerCase()
+    || canonicalJson(snapshot.journal.requirements) !== canonicalJson(input.journal.requirements)
+    || Object.entries(input.journal.payment).some(([key, value]) => canonicalJson((snapshot.journal.payment as unknown as Record<string, unknown>)[key]) !== canonicalJson(value))
+    || snapshot.original.sourceContext.source.sourceId !== input.source.sourceId || snapshot.original.sourceContext.item.itemId !== input.source.itemId
+    || snapshot.original.sourceContext.item.contentVersion !== input.source.contentVersion
+    || (snapshot.original.sourceContext.price.mode === "creator-offer" ? snapshot.original.sourceContext.price.offer.id : null) !== input.source.offerId) refuse();
   return { status: "admitted", journal: snapshot.journal, original: snapshot.original };
 }
 export async function signSupabaseBrowserSigningOriginal(sb: SupabaseClient, sessionId: string, requestId: string, header: string): Promise<boolean> {

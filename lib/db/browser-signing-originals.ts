@@ -8,7 +8,11 @@ import {
   type BrowserQueryPolicyProof,
 } from "../payments/browser-query-policy";
 import { canonicalJson } from "../canonical-json";
-import { prepareBrowserSigningOriginal } from "../payments/browser-signing-original";
+import {
+  prepareBrowserSigningOriginal,
+  prepareBrowserSourceSigningOriginal,
+  verifyBrowserSigningOriginalSource,
+} from "../payments/browser-signing-original";
 import type { BrowserSigningOriginal } from "../payments/browser-signing-original";
 export type BrowserQueryAdmissionResult =
   | { status: "admitted"; namespace: string; queryId: string }
@@ -17,6 +21,16 @@ export interface BrowserOriginalAdmission {
   queryNamespace: string;
   queryId: string;
   journal: BrowserJournalAdmission;
+}
+export interface BrowserSourceOriginalAdmission
+  extends BrowserOriginalAdmission {
+  protocol: "durable-v3";
+  source: {
+    sourceId: string;
+    itemId: string;
+    contentVersion: string;
+    offerId: string | null;
+  };
 }
 export type BrowserOriginalAdmissionResult =
   | {
@@ -64,6 +78,7 @@ export async function validateBrowserSigningSnapshot(
     n = snapshot.namespace,
     q = snapshot.query;
   const ceiling = await verifyBrowserQueryPolicy(n.ceilingProof);
+  await verifyBrowserSigningOriginalSource(snapshot.original, snapshot.journal);
   const validInteger = (value: string) =>
     typeof value === "string" &&
     /^(0|[1-9][0-9]*)$/.test(value) &&
@@ -102,7 +117,13 @@ export async function validateBrowserSigningSnapshot(
     n.jobs > n.jobLimit ||
     canonicalJson(snapshot.original) !==
       canonicalJson(
-        prepareBrowserSigningOriginal(snapshot.journal, n.namespace)
+        snapshot.original.protocol === "durable-v3"
+          ? prepareBrowserSourceSigningOriginal(
+              snapshot.journal,
+              n.namespace,
+              snapshot.original.sourceContext
+            )
+          : prepareBrowserSigningOriginal(snapshot.journal, n.namespace)
       )
   )
     throw new Error("Browser original snapshot refused");
@@ -122,7 +143,13 @@ export interface BrowserSigningOriginalsBackend {
   admitBrowserSigningOriginal(
     input: BrowserOriginalAdmission
   ): Promise<BrowserOriginalAdmissionResult>;
-  readExposedBrowserSigningSnapshotForSigner(signer:string,sessionId:string,requestId:string):Promise<import("./browser-signing-originals").BrowserSigningSnapshot|null>;
+  readExposedBrowserSigningSnapshotForSigner(
+    signer: string,
+    sessionId: string,
+    requestId: string
+  ): Promise<
+    import("./browser-signing-originals").BrowserSigningSnapshot | null
+  >;
   readBrowserSigningSnapshot(
     owner: string,
     sessionId: string,

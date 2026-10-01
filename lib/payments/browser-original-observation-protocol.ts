@@ -6,7 +6,7 @@ import {
   type Hex,
 } from "viem";
 import { canonicalJson } from "../canonical-json";
-import { browserSigningOriginalSchema } from "./browser-signing-original";
+import { browserSigningOriginalSchema, verifyBrowserSigningOriginalSource } from "./browser-signing-original";
 import {
   browserQueryPolicySchema,
   verifyBrowserQueryPolicy,
@@ -341,6 +341,7 @@ export async function validateOriginalObservation(
     q = s.query,
     o = s.original,
     j = s.journal;
+  await verifyBrowserSigningOriginalSource(o);
   if (
     response.challenge !== r.challenge ||
     response.requestDigest !== observationRequestDigest(r) ||

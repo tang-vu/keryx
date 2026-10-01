@@ -3,10 +3,12 @@ import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { browserQueryPolicyTypedData, verifyBrowserQueryPolicy, type BrowserQueryPolicy } from "../payments/browser-query-policy";
-import { browserSigningTypedData, prepareBrowserSigningOriginal, serializeBrowserSigningHeader } from "../payments/browser-signing-original";
+import { browserSigningTypedData, prepareBrowserSigningOriginal, prepareBrowserSourceSigningOriginal, serializeBrowserSigningHeader } from "../payments/browser-signing-original";
+import { browserSourceContextPath, browserSourceRegistryId, type BrowserOriginalSourceContext } from "../payments/browser-original-source-context";
+import type { BrowserOriginalSourceAuthority, VerifiedBrowserOriginalSourceContext } from "../payments/browser-original-source-authority";
 import { prepareBrowserJournal } from "./browser-authorization-journal";
-import type { BrowserOriginalAdmission, BrowserSigningSnapshot } from "./browser-signing-originals";
-import { admitSupabaseBrowserQueryPolicy, admitSupabaseBrowserSigningOriginal, readSupabaseBrowserSigningSnapshot, readExposedSupabaseBrowserSigningSnapshotForSigner, signSupabaseBrowserSigningOriginal } from "./supabase-browser-signing-originals";
+import type { BrowserOriginalAdmission, BrowserSigningSnapshot, BrowserSourceOriginalAdmission } from "./browser-signing-originals";
+import { admitSupabaseBrowserQueryPolicy, admitSupabaseBrowserSigningOriginal, admitSupabaseBrowserSourceSigningOriginal, readSupabaseBrowserSigningSnapshot, readExposedSupabaseBrowserSigningSnapshotForSigner, signSupabaseBrowserSigningOriginal } from "./supabase-browser-signing-originals";
 
 async function fixture() {
   const owner = privateKeyToAccount(generatePrivateKey()), signer = privateKeyToAccount(generatePrivateKey());
@@ -30,6 +32,52 @@ async function fixture() {
   return { owner, signer, proof, input, original, snapshot, rpc, sb };
 }
 describe("privileged Supabase browser originals composition", () => {
+  async function sourceFixture() {
+    const f = await fixture();
+    const source = { sourceId: "synthetic-source", itemId: "synthetic-item", contentVersion: "v1:immutable", offerId: null };
+    f.input.journal.payment.itemId = source.itemId; f.input.journal.payment.contentVersion = source.contentVersion;
+    f.snapshot.journal.payment.itemId = source.itemId; f.snapshot.journal.payment.contentVersion = source.contentVersion;
+    const context: BrowserOriginalSourceContext = { version: "source-context-v1", service: "https://keryx.cc", kind: "fetch",
+      source: { sourceId: source.sourceId, canonicalUrl: "https://synthetic.invalid/source", registryId: browserSourceRegistryId(f.proof.policy.owner, "https://synthetic.invalid/source") },
+      item: { itemId: source.itemId, contentVersion: source.contentVersion }, endpoint: { method: "GET", path: "/" },
+      registry: { network: "eip155:5042002", contract: `0x${"5".repeat(40)}`, blockNumber: "1", blockHash: `0x${"8".repeat(64)}`, blockTimestamp: "1",
+        creator: f.proof.policy.owner, payoutWallet: f.input.journal.payee, listPriceMicros: "1", active: true }, price: { mode: "list", amountMicros: "1" } };
+    context.endpoint.path = browserSourceContextPath(context);
+    f.snapshot.original = prepareBrowserSourceSigningOriginal(f.snapshot.journal, f.input.queryNamespace, context);
+    const input: BrowserSourceOriginalAdmission = { ...f.input, protocol: "durable-v3", source };
+    const resolve = vi.fn().mockRejectedValue(new Error("No current authority during historical replay"));
+    return { ...f, input, resolve, authority: { resolve } as BrowserOriginalSourceAuthority };
+  }
+  it("replays a retained v3 context without resolving current registry authority or adopting another original", async () => {
+    const f = await sourceFixture(); f.rpc.mockResolvedValue({ data: { status: "admitted", snapshot: f.snapshot }, error: null });
+    const answer = await admitSupabaseBrowserSourceSigningOriginal(f.sb, f.input, f.authority);
+    expect(answer.status).toBe("admitted"); if (answer.status === "admitted") expect(answer.original).toEqual(f.snapshot.original);
+    expect(f.resolve).not.toHaveBeenCalled(); expect(f.rpc).toHaveBeenCalledExactlyOnceWith("browser_signing_replay_source_original", { p_input: f.input });
+  });
+  it("refuses an inactive missing-original lane before source authority or provider resolution", async () => {
+    const f = await sourceFixture(); f.rpc.mockResolvedValue({ data: { status: "inactive" }, error: null });
+    expect(await admitSupabaseBrowserSourceSigningOriginal(f.sb, f.input, f.authority)).toEqual({ status: "inactive" });
+    expect(f.resolve).not.toHaveBeenCalled(); expect(f.rpc).toHaveBeenCalledTimes(1);
+  });
+  it("refuses changed source identity, economics, v2 replay or forged source token before atomic RPC", async () => {
+    const f = await sourceFixture(); f.rpc.mockResolvedValue({ data: { status: "admitted", snapshot: f.snapshot }, error: null });
+    for (const input of [{ ...f.input, source: { ...f.input.source, itemId: "foreign" } },
+      { ...f.input, journal: { ...f.input.journal, payee: f.owner.address.toLowerCase(), requirements: { ...f.input.journal.requirements, payTo: f.owner.address.toLowerCase() } } }])
+      await expect(admitSupabaseBrowserSourceSigningOriginal(f.sb, input, f.authority)).rejects.toThrow();
+    f.rpc.mockResolvedValue({ data: { status: "admitted", snapshot: { ...f.snapshot, original: prepareBrowserSigningOriginal(f.snapshot.journal, f.input.queryNamespace) } }, error: null });
+    await expect(admitSupabaseBrowserSourceSigningOriginal(f.sb, f.input, f.authority)).rejects.toThrow();
+    f.rpc.mockResolvedValue({ data: { status: "missing" }, error: null }); f.resolve.mockResolvedValue({} as VerifiedBrowserOriginalSourceContext);
+    await expect(admitSupabaseBrowserSourceSigningOriginal(f.sb, f.input, f.authority)).rejects.toThrow();
+    expect(f.rpc.mock.calls.every(call => call[0] === "browser_signing_replay_source_original")).toBe(true);
+  });
+  it("captures immutable v3 caller input and rejects citation before source resolution or backend mutation", async () => {
+    const f = await sourceFixture(); f.rpc.mockResolvedValue({ data: { status: "missing" }, error: null });
+    f.resolve.mockImplementation(async input => { expect(Object.isFrozen(input.source)).toBe(true); input.journal.payee = "mutated"; });
+    await expect(admitSupabaseBrowserSourceSigningOriginal(f.sb, f.input, f.authority)).rejects.toThrow();
+    const before = f.rpc.mock.calls.length;
+    await expect(admitSupabaseBrowserSourceSigningOriginal(f.sb, { ...f.input, journal: { ...f.input.journal, kind: "citation" } }, f.authority)).rejects.toThrow();
+    expect(f.rpc).toHaveBeenCalledTimes(before);
+  });
   it.each(["exposed", "signed", "submission_attempted", "settled", "failed"] as const)("observes retained %s originals by independently matched signer without adopting a current grant", async phase => {
     const f = await fixture(); f.snapshot.journal.phase = phase; f.snapshot.journal.payment.authorizationPhase = phase;
     f.rpc.mockResolvedValue({ data: f.snapshot, error: null });
