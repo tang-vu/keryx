@@ -237,12 +237,25 @@ try {
         -not $resolvedUninstaller.StartsWith($owned, [StringComparison]::OrdinalIgnoreCase)) {
       throw 'Invalid isolated installed uninstaller source'
     }
+    $verificationStage = 'copy'
     try {
       Copy-Item -LiteralPath $resolvedUninstaller -Destination $externalUninstaller -ErrorAction Stop
+      $verificationStage = 'source-hash'
       $sourceHash = (Get-FileHash -LiteralPath $resolvedUninstaller -Algorithm SHA256).Hash
+      $verificationStage = 'copy-hash'
       $copyHash = (Get-FileHash -LiteralPath $externalUninstaller -Algorithm SHA256).Hash
+      $verificationStage = 'compare'
       if ($sourceHash -cne $copyHash) { throw 'Uninstaller copy mismatch' }
-    } catch { throw 'Isolated external uninstaller copy verification failed' }
+    } catch {
+      $exceptionType = $_.Exception.GetType().FullName
+      if ($exceptionType.Length -gt 128 -or $exceptionType -cnotmatch '^[A-Za-z0-9_.+`]+$') {
+        $exceptionType = 'unclassified'
+      }
+      @{ isolatedUninstallerVerification = 'failed'; stage = $verificationStage;
+        exceptionType = $exceptionType; hresult = [int]$_.Exception.HResult } |
+        ConvertTo-Json -Compress | Write-Output
+      throw 'Isolated external uninstaller copy verification failed'
+    }
     Invoke-BoundedInstaller $externalUninstaller @('/S', "_?=$install")
     Remove-Item -LiteralPath $externalUninstaller -Force -ErrorAction Stop
   }
