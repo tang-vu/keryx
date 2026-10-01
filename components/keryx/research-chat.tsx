@@ -7,6 +7,7 @@ import { AskForm } from "./ask-form";
 import { OnboardingTour } from "./onboarding-tour";
 import { SessionGrantPanel, type SessionGrantBinding } from "./session-grant-panel";
 import { ResearchTurn, type ResearchTurnData } from "./research-turn";
+import { GlobeWatermark } from "./globe-watermark";
 
 export function ResearchChat({ paidHref = "/research#paid-research" }: { paidHref?: string }) {
   const [grantBinding, setGrantBinding] = useState<SessionGrantBinding>({ sessionId: null, getSessionWalletClient: () => null });
@@ -55,13 +56,16 @@ export function ResearchChat({ paidHref = "/research#paid-research" }: { paidHre
   };
   const hasTurns = history.length > 0 || request !== null;
   return <section className="mx-auto max-w-[960px] px-4 pb-8 pt-4 sm:px-[30px] sm:pt-6" data-tour="hero" aria-label="Research conversation">
-    <header className="mb-4">
+    <header className="relative mb-4 sm:min-h-[140px]">
+      <div aria-hidden="true" data-testid="chat-globe" className="pointer-events-none absolute right-0 top-[52px] h-[70px] w-[70px] opacity-60 sm:top-0 sm:h-[140px] sm:w-[140px]">
+        <GlobeWatermark className="h-[140px] w-[140px] origin-top-left scale-50 sm:scale-100" />
+      </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p data-testid="hero-kicker" className="font-mono text-[11px] uppercase tracking-wide text-seal">Research with Keryx</p>
-        <div data-testid="hero-guide"><OnboardingTour /></div>
+        <div data-testid="hero-guide" className="sm:mr-[156px]"><OnboardingTour /></div>
       </div>
       <h1 className="mt-2 font-display text-[clamp(32px,5vw,46px)] leading-tight">Ask Keryx</h1>
-      <p className="mt-2 max-w-[64ch] font-serif text-base text-ink-2">Research a question. Read a cited report. Follow the source budget.</p>
+      <p className="mt-2 max-w-[calc(100%_-_84px)] font-serif text-base text-ink-2 sm:max-w-[64ch]">Research with citations and visible spending.</p>
     </header>
     {hasTurns && <div className="space-y-8 py-4" aria-label="Conversation turns">
       {history.map(turn => <ResearchTurn key={turn.id} turn={turn} />)}
