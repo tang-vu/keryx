@@ -35,13 +35,14 @@ export interface EncryptedEnvelope {
  * Encrypt plaintext content and return the envelope.
  * Throws if CONTENT_MASTER_KEY is not set (caller must check hasPinata() first).
  */
-export function encryptContent(plaintext: string): EncryptedEnvelope {
+export function encryptContent(plaintext: string, aad?: Uint8Array): EncryptedEnvelope {
   const masterKey = getMasterKey();
   const itemKey = randomBytes(KEY_LEN);
   const iv = randomBytes(IV_LEN);
 
   // Encrypt the content with the per-item key.
-  const cipher = createCipheriv(ALGO, itemKey, iv);
+  const cipher = createCipheriv(ALGO, itemKey, iv, { authTagLength: 16 });
+  if (aad) cipher.setAAD(aad);
   const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
   const authTag = cipher.getAuthTag();
 
@@ -49,7 +50,8 @@ export function encryptContent(plaintext: string): EncryptedEnvelope {
   // key, even when every plaintext item key is random: nonce reuse breaks GCM confidentiality and
   // authentication. Older envelopes omitted this field and are read with their historical zero IV.
   const wrapIv = randomBytes(IV_LEN);
-  const wrapCipher = createCipheriv(ALGO, masterKey, wrapIv);
+  const wrapCipher = createCipheriv(ALGO, masterKey, wrapIv, { authTagLength: 16 });
+  if (aad) wrapCipher.setAAD(aad);
   const wrappedKey = Buffer.concat([wrapCipher.update(itemKey), wrapCipher.final()]);
   // Append the wrap auth tag so we can verify integrity on unwrap.
   const wrapTag = wrapCipher.getAuthTag();
@@ -75,6 +77,7 @@ export function decryptContent(
   ivB64: string,
   authTagB64: string,
   wrapIvB64?: string,
+  aad?: Uint8Array,
 ): string {
   const masterKey = getMasterKey();
   const cipherBuf = Buffer.from(cipherB64, "base64");
@@ -91,14 +94,17 @@ export function decryptContent(
     ? Buffer.from(wrapIvB64, "base64")
     : Buffer.alloc(IV_LEN, 0);
   if (wrapIv.length !== IV_LEN) throw new Error("invalid content key-wrap nonce");
-  const unwrapper = createDecipheriv(ALGO, masterKey, wrapIv);
+  const unwrapper = createDecipheriv(ALGO, masterKey, wrapIv, aad ? { authTagLength: 16 } : undefined);
+  if (aad) unwrapper.setAAD(aad);
   unwrapper.setAuthTag(wrapTag);
   const itemKey = Buffer.concat([unwrapper.update(wrappedKey), unwrapper.final()]);
 
   // Decrypt the content.
-  const decipher = createDecipheriv(ALGO, itemKey, iv);
+  const decipher = createDecipheriv(ALGO, itemKey, iv, aad ? { authTagLength: 16 } : undefined);
+  if (aad) decipher.setAAD(aad);
   decipher.setAuthTag(authTag);
-  return Buffer.concat([decipher.update(cipherBuf), decipher.final()]).toString("utf8");
+  const plaintext = Buffer.concat([decipher.update(cipherBuf), decipher.final()]);
+  return aad ? new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(plaintext) : plaintext.toString("utf8");
 }
 
 /** True when CONTENT_MASTER_KEY is a valid 64-hex-char (32-byte) string. */

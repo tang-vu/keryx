@@ -26,6 +26,36 @@ release adds no author-claim payment flow. Reversible: remove discovery and disp
 optional observed metadata remains readable without changing payment authority.
 See [scholarly research](docs/scholarly-research.md).
 
+**D-289** — Admit the complete application backend before issuing private delivery evidence — *2026-10-01*
+
+A verified connection or a caller-supplied adapter does not establish which
+deployment owns the retained payment original. Add closed runtime factories that
+derive the pinned deployment manifest themselves and publish the complete reviewed
+database interface only after actual identity and schema readiness checks. Keep
+provenance private to the factory; an object shape, copied facade or ordinary
+adapter cannot qualify. The existing deployed selector remains authoritative until
+a separately verified domain cutover.
+
+Share existing adapter business logic instead of copying its method surface.
+SQLite composes the admitted native connection with an exact application schema
+profile. PostgreSQL uses fixed identity-checked domain RPCs and protected writer
+capabilities; an enrolled call never executes the legacy raw-client closure.
+Guard computed results, early returns and iterator publication as well as SQL.
+Read-only access denies every reviewed mutator, including methods that update
+usage while checking credentials. Initialization inspects readiness and never
+migrates, repairs or normalizes historical authority.
+
+Use a distinct authenticated cache envelope bound to source, complete storage
+identity and format, including both wrapped key and body. Preserve the legacy
+envelope semantics. Cache bounds must survive atomic writes and restart, and
+cache membership supplies no paid-read or article-version provenance. A guard
+failure after a committed write requires reconciliation; it cannot imply rollback.
+
+This is staged source work, not enrollment, private delivery issuance, selector
+activation or mainnet authorization. Native backend, role, race, recovery and
+deployment evidence remain explicit gates. See
+[enrolled runtime backend acceptance](docs/enrolled-runtime-backends.md).
+
 **D-288** - Reuse recorded research for academic and technical/market workflows -
 *The user selected both researcher segments; existing receipts and claim evidence
 were useful but did not provide reference-manager imports or a comparison export.*

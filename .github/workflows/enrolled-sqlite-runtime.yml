@@ -1,0 +1,47 @@
+name: Enrolled SQLite runtime
+on:
+  pull_request:
+    paths:
+      - "lib/db/**"
+      - "lib/operator/gateway-funding-composition.test.ts"
+      - "lib/sources/enrolled-content-cache*"
+      - "lib/sources/content-cache*"
+      - "lib/ipfs/content-crypto*"
+      - "lib/payments/browser-original-source*"
+      - "lib/payments/browser-signing-original*"
+      - "lib/payments/browser-query-policy*"
+      - "lib/offers/article-offer*"
+      - "lib/registry/registry-abi.ts"
+      - "lib/config.ts"
+      - "lib/canonical-json.ts"
+      - "lib/types.ts"
+      - "package*.json"
+      - "tsconfig.json"
+      - "eslint.config.*"
+      - ".github/workflows/enrolled-sqlite-runtime.yml"
+  workflow_dispatch:
+jobs:
+  enrolled-sqlite-runtime:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.21.0"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Native enrolled adapter and authenticated cache
+        run: npx vitest run lib/db/enrolled-sqlite-adapter.test.ts lib/sources/enrolled-content-cache.test.ts lib/ipfs/content-crypto.test.ts lib/sources/content-cache.test.ts lib/operator/gateway-funding-composition.test.ts
+      - name: Existing guarded storage boundaries
+        run: npx vitest run lib/db/storage-browser-schema.test.ts lib/db/storage-provenance.test.ts lib/db/storage-provenance-snapshot.test.ts
+      - name: Project TypeScript
+        run: npx tsc --noEmit
+      - name: Scoped lint
+        run: npx eslint lib/db/sqlite-adapter.ts lib/db/sqlite-application-schema.ts lib/db/sqlite-application-schema-profile.ts lib/db/enrolled-sqlite-schema-profile.ts lib/db/enrolled-sqlite-adapter.ts lib/db/enrolled-sqlite-adapter.test.ts lib/db/storage-identity-connection.ts lib/db/sqlite-browser-source-context.test.ts lib/operator/gateway-funding-composition.test.ts lib/ipfs/content-crypto.ts lib/sources/content-cache.ts lib/sources/enrolled-content-cache.ts lib/sources/enrolled-content-cache.test.ts
