@@ -1,8 +1,19 @@
 import { describe, expect, it } from "vitest";
+import type { Citation } from "../types";
 import {
   calculateDashboardMetrics,
   runEvidenceMetrics,
 } from "./dashboard-metrics";
+
+const citation = (overrides: Partial<Citation> = {}): Citation => ({
+  marker: "S1",
+  sourceId: "owned",
+  sourceName: "Synthetic owned source",
+  weight: 1,
+  reward: 0.002,
+  rationale: "Synthetic supported contribution",
+  ...overrides,
+});
 
 describe("calculateDashboardMetrics", () => {
   it("combines every origin in headline totals", () => {
@@ -213,7 +224,7 @@ describe("calculateDashboardMetrics", () => {
   it("derives additive evidence telemetry from QueryRun JSON", () => {
     expect(
       runEvidenceMetrics({
-        citations: [{ sourceId: "s1" }],
+        citations: [citation({ sourceId: "s1" })],
         claimCoverage: [
           { claimIndex: 0, claim: "a", coverage: 0.8, coveredBy: ["S1"] },
           { claimIndex: 1, claim: "b", coverage: 0.1, coveredBy: [] },
@@ -225,6 +236,74 @@ describe("calculateDashboardMetrics", () => {
       rewardedCitationCount: 1,
     });
     expect(runEvidenceMetrics("{}").evidenceClaimCount).toBeNull();
+  });
+
+  it.each([
+    {
+      name: "funding-unknown public fallback",
+      citations: [citation({ sourceId: "public:free", sourceKind: "public-reference", reward: 0 })],
+      count: 0, withheld: 1,
+    },
+    {
+      name: "positive planned creator reward",
+      citations: [citation()], count: 1, withheld: 0,
+    },
+    {
+      name: "mixed public and planned creator rewards",
+      citations: [citation(), citation({ sourceId: "public:free", sourceKind: "public-reference", reward: 0 })],
+      count: 1, withheld: 0,
+    },
+    {
+      name: "known-zero creator reward",
+      citations: [citation({ reward: 0 })], count: 0, withheld: 1,
+    },
+    { name: "actual empty citation pool", citations: [], count: 0, withheld: 1 },
+    {
+      name: "public identity with malformed positive reward",
+      citations: [citation({ sourceKind: "public-reference" }), citation({ sourceId: "public:reserved" })],
+      count: 0, withheld: 1,
+    },
+  ])("reports withheld pools honestly for $name without manufacturing settlement", ({ citations, count, withheld }) => {
+    const run = {
+      id: "synthetic",
+      citations,
+      claimCoverage: [{ claimIndex: 0, claim: "Supported claim", coverage: 0.8, coveredBy: ["S1"] }],
+      totalSpent: 0,
+      trace: [{ phase: "fetch", message: "Funding readiness is unknown", detail: { fundingReadiness: "unknown" } }],
+    };
+    const sample = runEvidenceMetrics(JSON.stringify(run));
+    expect(sample).toEqual({
+      evidenceClaimCount: 1,
+      groundedClaimCount: 1,
+      rewardedCitationCount: count,
+    });
+    const metrics = calculateDashboardMetrics([], [{ id: run.id, ...sample }]);
+    expect(metrics.citationPoolWithheldRuns).toBe(withheld);
+    expect(metrics.totalPayments).toBe(0);
+    expect(metrics.totalVolumeUsdc).toBe(0);
+    expect(metrics.totalCreatorPayoutsUsdc).toBe(0);
+  });
+
+  it.each([
+    undefined, null, {}, [null], [{ sourceId: "legacy" }],
+    [citation({ reward: NaN })], [citation({ reward: -1 })],
+    [citation(), { sourceId: "legacy" }],
+  ].map(citations => ({ citations })))("keeps absent or malformed historical reward evidence unknown: $citations", ({ citations }) => {
+    const sample = runEvidenceMetrics({ citations, claimCoverage: [{ coverage: 0.8 }] });
+    expect(sample.rewardedCitationCount).toBeNull();
+    expect(calculateDashboardMetrics([], [{ id: "legacy", ...sample }]).citationPoolWithheldRuns).toBe(0);
+  });
+
+  it("does not fabricate evidence samples for historical runs without claim coverage", () => {
+    const sample = runEvidenceMetrics({ citations: [citation()] });
+    expect(sample).toEqual({
+      evidenceClaimCount: null,
+      groundedClaimCount: null,
+      rewardedCitationCount: null,
+    });
+    const metrics = calculateDashboardMetrics([], [{ id: "legacy", ...sample }]);
+    expect(metrics.evidenceRunSamples).toBe(0);
+    expect(metrics.citationPoolWithheldRuns).toBe(0);
   });
 
   it("reports the wanted-claim fulfillment funnel separately from query traction", () => {
