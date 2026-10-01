@@ -82,7 +82,9 @@ const cli = (which = f, extra: string[] = []) => subprocess([cliPath, "--storage
 const options = (which = f) => ({ storageManifestPath: which.storageManifestPath, operationManifestPath: which.operationManifestPath, currentAvailability: false });
 async function syntheticAvailability() {
   const moduleUrl = new URL("./gateway-funding-inspection.ts", import.meta.url).href;
-  const script = `import {inspectGatewayFundingSqliteOperationForTrustedSyntheticComposition as inspect} from ${JSON.stringify(moduleUrl)};
+  const script = `const loaded=await import(${JSON.stringify(moduleUrl)});
+    const inspect=loaded.inspectGatewayFundingSqliteOperationForTrustedSyntheticComposition??loaded.default?.inspectGatewayFundingSqliteOperationForTrustedSyntheticComposition;
+    if(typeof inspect!=='function')throw new Error('Synthetic inspection module unavailable');
     let wire='';for await(const chunk of process.stdin)wire+=chunk.toString();const request=JSON.parse(wire);
     try{process.stdout.write(JSON.stringify(await inspect(request.options,request.endpoint)));}catch{process.stderr.write('Funding inspection unavailable; private details omitted');process.exitCode=1;}`;
   return await subprocess(["--input-type=module", "-e", script], { options: { ...options(), currentAvailability: true }, endpoint });
@@ -106,6 +108,12 @@ describe("explicit keyless funding inspection command", () => {
     expect(readFileSync(missing.file)).toEqual(bytes); expect(missing.snapshot()).toEqual(snapshot);
   });
   it("uses explicit trusted synthetic native subprocess availability, never a production CLI endpoint override", async () => {
+    const moduleUrl = new URL("./gateway-funding-inspection.ts", import.meta.url).href;
+    const probe = await subprocess(["--input-type=module", "-e", `import {inspectGatewayFundingSqliteOperationForTrustedSyntheticComposition as inspect} from ${JSON.stringify(moduleUrl)};process.stdout.write(typeof inspect);`]);
+    if (probe.code !== 0) {
+      expect(probe.code).toBe(1); expect(probe.stderr.includes("does not provide an export named")).toBe(true);
+      console.info("Synthetic fixture static named export unavailable; normalized dynamic export required");
+    } else { expect(probe.code).toBe(0); expect(probe.stdout).toBe("function"); }
     const bytes = readFileSync(f.file), snapshot = f.snapshot();
     for (const available of ["0.000100", "0.000099"]) {
       responseValue = { token: "USDC", balances: [{ depositor: f.operation.policy.spend, domain: 26, balance: available }] };
