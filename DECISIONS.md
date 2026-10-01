@@ -1,5 +1,12 @@
 # Keryx — Decision Log
 
+**D-279** - Preserve public research while funding readiness is unknown -
+*An initial mixed public/owned portfolio previously lost all usable public evidence when wallet funding threw before gathering.* Treat an initial or lazy funding failure as query-local uncertainty: withhold owned BUY/CACHE reads and creator rewards, retain planned fetch reservations, and continue bounded free public evidence gathering and synthesis. Do not retry funding during the run or convert funding exceptions into creator payment records. Future gap selection considers only eligible public references after the failure.
+
+Persist the uncertainty in the existing trace and final answer, and distinguish measured creator payments from unknown wallet funding effects in the completion message. Keep the planned portfolio as historical planning and report the actual evidence outcome. If no usable public evidence remains, return an explicit unsupported answer rather than inventing support. Explicit AbortError cancellation still propagates before further reasoning or persistence.
+
+This improves degraded query behavior; it does not establish zero wallet movement, release signer capacity, reconcile an original deposit, or authorize another paid attempt. Funding recovery and mainnet acceptance remain separate gates. Reversible: revert this query policy without modifying retained payment history.
+
 **D-274** - Enforce canonical session-worker signing semantics -
 *Contract destination alone is not transaction authority: a call to USDC may transfer
 or approve an attacker.* Pin the worker's public Arc-testnet policy independently of
