@@ -277,7 +277,7 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
             await new Promise<void>((resolveDelay) => setTimeout(resolveDelay, 20));
           }
           assert(output.includes("READY synthetic schema drift"), `Native factory fixture mode=${mode} stage=${stage} category=handshake-refused`);
-          sql("alter function public.storage_get_source(jsonb,text) set cost 101");
+          sql("alter function public.storage_get_source(jsonb,text) cost 101");
           child.stdin!.end("resume\n");
         }
         if (mode === "domain-binding") {
