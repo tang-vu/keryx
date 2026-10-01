@@ -5,6 +5,7 @@ import { discoverPublicReferences } from "../agent/public-reference-evidence";
 import { evidenceContext } from "../llm/evidence-context";
 import { SqliteAdapter } from "../db/sqlite-adapter";
 import type { Source } from "../types";
+import { APPROVED_PUBLIC_REFERENCES } from "./approved-catalog";
 
 const reference: PublicReference = { id: "public:test", name: "Public", url: "https://public.test/",
   rssUrl: "https://public.test/feed", description: "Public feed", tags: ["agents"], active: true, items: [] };
@@ -40,14 +41,14 @@ describe("separate public catalog authority", () => {
       upsertPublicReference: vi.fn(async (value: PublicReference) => { stored.set(value.id, value); }) };
     const ingest = vi.fn(async (url: string) => { if (url.includes("huyenchip")) throw new Error("Unavailable"); return feed; });
     const result = await importPublicReferenceCatalog(db, ingest);
-    expect(result).toHaveLength(4);
-    expect(result.filter((entry) => entry.ok)).toHaveLength(3);
-    expect(ingest).toHaveBeenCalledTimes(4);
+    expect(result).toHaveLength(APPROVED_PUBLIC_REFERENCES.length);
+    expect(result.filter((entry) => entry.ok)).toHaveLength(APPROVED_PUBLIC_REFERENCES.length - 1);
+    expect(ingest).toHaveBeenCalledTimes(APPROVED_PUBLIC_REFERENCES.length);
     const cloudflare = stored.get("public:cloudflare-workers")!;
     stored.set(cloudflare.id, { ...cloudflare, active: false });
     await importPublicReferenceCatalog(db, ingest);
     expect(stored.get(cloudflare.id)?.active).toBe(false);
-    expect(stored.size).toBe(3);
+    expect(stored.size).toBe(APPROVED_PUBLIC_REFERENCES.length - 1);
   });
 
   it("binds immutable public evidence to selected body/link/date while using existing bounded context", async () => {

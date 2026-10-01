@@ -1,7 +1,12 @@
 import { publicReferenceSchema, type PublicReference } from "./catalog";
+import { SUPER_SIMPLE_CHANNEL_ID, SUPER_SIMPLE_FEED_URL } from "./youtube-feed";
 
 /** Operator-approved public feeds. Approval to reference does not prove publisher ownership. */
 export const APPROVED_PUBLIC_REFERENCES: PublicReference[] = [
+  { id: "public:super-simple-songs", name: "Super Simple Songs - Kids Songs",
+    url: `https://www.youtube.com/channel/${SUPER_SIMPLE_CHANNEL_ID}`, rssUrl: SUPER_SIMPLE_FEED_URL,
+    description: "Official publisher video titles, dates and descriptions only; no video review, market demand, age-fit or learning-quality assessment.",
+    tags: ["YouTube", "children", "English", "songs", "creator research"] },
   { id: "public:cloudflare-workers", name: "Cloudflare Workers", url: "https://blog.cloudflare.com/tag/workers/",
     rssUrl: "https://blog.cloudflare.com/tag/workers/rss/", description: "Official Cloudflare Workers engineering and product publications.",
     tags: ["Cloudflare", "Workers", "agents", "infrastructure"] },
