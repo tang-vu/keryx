@@ -1,3 +1,5 @@
+import { buildResearchReceipt } from "../research-receipt";
+import { exportsFromCheckedReceipt } from "./receipt-exports";
 import { describe, expect, it } from "vitest";
 import { a2aResponseFromRun } from "../a2a/result";
 import { quoteA2aResearch } from "../a2a/pricing";
@@ -31,6 +33,14 @@ describe("research surface parity", () => {
       expect(result.creatorRewardAllocations).toBe(0);
       expect(result.creatorsReferenced).toBe(1);
     }
+  });
+
+  it("matches actual receipt-derived scholarly exports without enrichment", () => {
+    const run = fixture();
+    run.citations[0].scholarly = { provider: "crossref", recordUrl: "https://api.crossref.org/works/10.1234/example", retrievedAt: run.createdAt, title: "Observed paper", authors: ["Recorded Author"], workType: "journal-article", peerReview: "unknown", doi: "10.1234/example", evidenceScope: "publisher-page" };
+    const receipt = buildResearchReceipt(run, []);
+    expect(exportsFromCheckedReceipt(receipt)).toEqual(surfaceResearch(run).researchExports);
+    expect(exportsFromCheckedReceipt(receipt).bibtex.content).toContain("10.1234/example");
   });
 
   it("refuses mismatched and unbounded excerpts and strips unexpected internal fields", () => {
