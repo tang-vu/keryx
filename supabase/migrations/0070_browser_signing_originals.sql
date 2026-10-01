@@ -139,7 +139,7 @@ end $$;
 create function public.browser_signing_snapshot(p_owner text,p_session_id text,p_request_id text) returns jsonb
 language sql security definer set search_path=pg_catalog,pg_temp as $$
  select jsonb_build_object('original',o.original,'journal',o.journal||jsonb_strip_nulls(jsonb_build_object('phase',p.authorization_phase,
-  'payment',o.journal->'payment'||jsonb_build_object('authorizationPhase',p.authorization_phase,'settled',p.settled,'settlementStatus',p.settlement_status,'txHash',p.tx_hash),
+  'payment',(o.journal->'payment')||jsonb_build_object('authorizationPhase',p.authorization_phase,'settled',p.settled,'settlementStatus',p.settlement_status,'txHash',p.tx_hash),
   'signedValidAfter',b.valid_after,'signedValidBefore',b.valid_before,'signedHeaderHash',b.header_hash)),
  'currentGrant',case when g.session_id is null then null else jsonb_build_object('sessionId',g.session_id,'sessAddr',g.sess_addr,'ownerAddr',g.owner_addr,'cap',g.cap,'spent',g.spent,'expiry',g.expiry,'txHash',g.tx_hash,'grantEpoch',g.grant_epoch) end,
  'policy',jsonb_build_object('policy',pol.verified->'policy','signature',pol.verified->>'signature'),
@@ -184,7 +184,7 @@ begin
   or lower(a->>'signer') is distinct from n.signer or lower(p_journal->>'signer') is distinct from n.signer
   or p_journal->'requirements' is distinct from a->'requirements' or p_journal->>'phase' is distinct from 'prepared'
   or p_journal#>>'{payment,queryId}' is distinct from qid
-  or (p_journal->'payment'-array['id','createdAt','settled','settlementStatus','authorizationId','authorizationPhase']) is distinct from a->'payment'
+  or ((p_journal->'payment')-array['id','createdAt','settled','settlementStatus','authorizationId','authorizationPhase']) is distinct from a->'payment'
   then raise exception 'browser signing journal differs'; end if;
  amount:=(a->>'amountMicroUsdc')::bigint; seconds:=floor(extract(epoch from (p_journal->>'admittedAt')::timestamptz))::bigint;
  if amount<1 or amount>9007199254740991 or seconds<600 then raise exception 'browser signing original refused'; end if;
