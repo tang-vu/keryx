@@ -140,8 +140,12 @@ describe("immutable operator funding operation with actual SQLite, viem and nati
       if (method === "eth_sendRawTransaction") { const slot = await f.ledger.inspectReservation(f.operation.operationId, reverted); if (slot?.prepared?.rawTransaction === params[0]) txHash = slot.prepared.transactionHash; }
       if (method === "eth_getTransactionReceipt" && params[0] === txHash) return { ...fallback as object, status: "0x0" };
     });
-    const answer = await execute(options(f), composition(rpc)).runOperation(f.operation.operationId); expect(answer.status, answer.stage).toBe("execution-reverted"); expect(answer.step).toBe(reverted);
-    const index = STEPS.indexOf(reverted), saved = await originals(f); expect(saved[index]?.state).toBe("finalized-reverted");
+    const answer = await execute(options(f), composition(rpc)).runOperation(f.operation.operationId);
+    const index = STEPS.indexOf(reverted), saved = await originals(f);
+    const diagnostic = answer.status === "execution-reverted" ? answer.stage : JSON.stringify({ stage: answer.stage, step: answer.step,
+      states: saved.map(original => original?.state ?? "absent"), originalSendCount: writes(rpc).length, protocol: rpc.diagnostics() });
+    expect(answer.status, diagnostic).toBe("execution-reverted"); expect(answer.step).toBe(reverted);
+    expect(saved[index]?.state).toBe("finalized-reverted");
     expect(saved.slice(index + 1).every(s => s === null)).toBe(true); expect(writes(rpc)).toHaveLength(index + 1); expect(signing.calls).toBe(index + 1);
     expect(rpc.calls.filter(c => c.method === "circle-balances")).toHaveLength(0);
     expect((await recover(f.keyless, composition(rpc)).runOperation(f.operation.operationId)).status).toBe("execution-reverted"); expect(writes(rpc)).toHaveLength(index + 1);
