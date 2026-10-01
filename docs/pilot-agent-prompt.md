@@ -4,6 +4,8 @@ This prompt is for an actual task in the participant's own project. It does not
 authorize paid research, wallet funding, source publication, recording or public posts.
 Start with the existing sponsored remote MCP trial. Sponsorship and testnet use must
 remain explicit. Source availability may make the task unsuitable.
+Broad web research is a release candidate. Verify deployed tool capabilities before
+using it; local implementation and an API key do not establish production availability.
 
 Paste into the participant's agent:
 
@@ -17,8 +19,11 @@ information or proprietary business context. Show me the sanitized question firs
 
 Before research, record privately my current way of doing this task and what a useful
 result must contain. Open https://keryx.cc/research and inspect the available source
-list and free previews, using /sources if needed. Metadata is a relevance hint, not
-proof of adequate coverage. If sources appear unsuitable, explain the mismatch and
+list and free previews, using /sources if needed. Check whether the deployed tools
+offer broad web discovery; a run that reports unconfigured search uses the catalog
+only. Public research questions may be sent to the configured external search provider.
+Metadata and search snippets are relevance hints, not document evidence. If neither
+the catalog nor available discovery appears suitable, explain the mismatch and
 let me decide whether a sponsored exploratory trial is still worthwhile. Do not
 purchase a package or manufacture a Keryx-related question to fit the corpus.
 
@@ -34,6 +39,9 @@ to mainnet, retry indefinitely or silently use another service as if it were Ker
 Evaluate the answer against my intended deliverable. Identify supported conclusions,
 missing/conflicting evidence and factual or source problems. Do not infer factual
 correctness from a model confidence or coverage score. Preserve unsupported results.
+Check that important citations refer to actually extracted original text. Record
+unavailable pages, PDF/text truncation, duplicate publishers and unsupported video
+claims. Do not claim viral potential from titles, descriptions or publication dates.
 
 Draft a decision note or implementation checklist in my private workspace with source
 links and limitations. Show me what I must verify. Do not modify application code
