@@ -239,6 +239,9 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
           const failed = count - (failureBefore.get(category) ?? 0);
           if (failed > 0) console.error(`FIXTURE_RPC_FAILURE category=${category} count=${failed}`);
         }
+        for (const [operation, shape] of bridge!.metricShapes) {
+          console.error(`FIXTURE_METRIC_SHAPE operation=${operation} shape=${shape.shape} length=${shape.length ?? "none"}`);
+        }
       }
       assert.equal(result.code, 0, `Native factory fixture mode=${mode} stage=${stage} category=${result.category}${diagnostic}`);
       assert(output.includes("PASS"));

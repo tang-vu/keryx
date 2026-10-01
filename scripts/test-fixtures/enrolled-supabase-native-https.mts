@@ -24,6 +24,9 @@ export async function startOwnedSupabaseHttpsBridge(curlContainer: string) {
     "storage_scan_gap_metrics", "storage_get_query_run", "storage_list_recent_queries"]);
   const timings = new Map<string, { started: number; completed: number; failed: number; totalMs: number; maxMs: number }>();
   const failures = new Map<string, number>();
+  const metricShapes = new Map<string, { shape: "array" | "null" | "object" | "scalar" | "invalid"; length: number | null }>();
+  const metricOperations = new Set(["storage_scan_payment_metrics", "storage_scan_query_metrics",
+    "storage_scan_feedback_metrics", "storage_scan_gap_metrics"]);
   let closed = false;
   const server = createServer();
   try {
@@ -85,6 +88,14 @@ export async function startOwnedSupabaseHttpsBridge(curlContainer: string) {
           const status = Number(output.subarray(split + 1).toString("ascii"));
           if (split < 0 || !Number.isInteger(status) || status < 200 || status > 599) throw new Error();
           succeeded = status < 400;
+          if (succeeded && metricOperations.has(operation)) {
+            try {
+              const parsed: unknown = JSON.parse(output.subarray(0, split).toString("utf8"));
+              metricShapes.set(operation, { shape: Array.isArray(parsed) ? "array" : parsed === null ? "null"
+                : typeof parsed === "object" ? "object" : "scalar",
+              length: Array.isArray(parsed) ? Math.min(parsed.length, 1001) : null });
+            } catch { metricShapes.set(operation, { shape: "invalid", length: null }); }
+          }
           if (!succeeded) {
             failureCategory = `http-${status}`;
             try {
@@ -126,6 +137,7 @@ export async function startOwnedSupabaseHttpsBridge(curlContainer: string) {
       counts,
       timings,
       failures,
+      metricShapes,
       close: async () => {
         closed = true;
         server.closeAllConnections();
