@@ -1,5 +1,13 @@
 # Keryx Project Changelog
 
+### Withheld citation-pool telemetry (2026-10-01)
+
+- Count positive planned creator rewards separately from free public citations.
+  Public-only answers now correctly count as runs with a withheld citation pool.
+- Keep missing or malformed historical reward amounts unknown; do not backfill
+  old records or infer a fully withheld pool from missing evidence. Settled
+  payment and creator payout totals continue to use payment records.
+
 ### Public research during funding uncertainty (2026-10-01)
 
 - Preserve a supported answer from free public references when initial or lazy

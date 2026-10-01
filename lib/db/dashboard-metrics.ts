@@ -67,14 +67,22 @@ export function runEvidenceMetrics(data: unknown): RunEvidenceMetrics {
       rewardedCitationCount: null,
     };
   }
+  // Planned creator rewards are distinct from public citations and settled payments.
+  // Missing legacy amounts cannot establish either a positive reward or a fully withheld pool.
+  const creatorCitations = Array.isArray(run.citations)
+    ? run.citations.filter(citation => citation?.sourceKind !== "public-reference"
+      && !(typeof citation?.sourceId === "string" && citation.sourceId.startsWith("public:")))
+    : null;
+  const knownRewards = creatorCitations?.every(citation => typeof citation?.reward === "number"
+    && Number.isFinite(citation.reward) && citation.reward >= 0);
   return {
     evidenceClaimCount: run.claimCoverage.length,
     groundedClaimCount: run.claimCoverage.filter(
       (claim) => claim.coverage >= 0.4,
     ).length,
-    rewardedCitationCount: Array.isArray(run.citations)
-      ? run.citations.length
-      : 0,
+    rewardedCitationCount: creatorCitations && knownRewards
+      ? creatorCitations.filter(citation => citation.reward > 0).length
+      : null,
   };
 }
 
@@ -141,7 +149,7 @@ export function calculateDashboardMetrics(
     citationPoolWithheldRuns: evidenceRuns.filter(
       (run) =>
         Number(run.evidenceClaimCount ?? 0) > 0 &&
-        Number(run.rewardedCitationCount ?? 0) === 0,
+        run.rewardedCitationCount === 0,
     ).length,
     gapIntentOffers: gapIntentRows.length,
     gapIntentFilled: gapIntentRows.filter((intent) => intent.status === "filled").length,
