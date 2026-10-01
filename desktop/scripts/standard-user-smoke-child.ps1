@@ -208,7 +208,25 @@ function Invoke-BoundedInstaller([string]$Executable, [string[]]$Arguments) {
     if ($process.ExitCode -ne 0) { throw "NSIS process exited $($process.ExitCode)" }
   } finally { $process.Dispose() }
 }
+function Get-LiteralSha256([string]$FilePath) {
+  $stream = $null
+  $algorithm = $null
+  try {
+    $stream = [IO.File]::OpenRead($FilePath)
+    $algorithm = [Security.Cryptography.SHA256]::Create()
+    return [BitConverter]::ToString($algorithm.ComputeHash($stream)).Replace('-', '')
+  } finally {
+    if ($algorithm) { $algorithm.Dispose() }
+    if ($stream) { $stream.Dispose() }
+  }
+}
 $uninstaller = Join-Path $install 'uninstall.exe'
+$externalUninstaller = [IO.Path]::GetFullPath((Join-Path $TempRoot 'isolated-uninstall-copy.exe'))
+if (-not $externalUninstaller.StartsWith($owned, [StringComparison]::OrdinalIgnoreCase) -or
+    $externalUninstaller.StartsWith($install.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase) -or
+    $externalUninstaller.Contains(' ') -or (Test-Path -LiteralPath $externalUninstaller)) {
+  throw 'Invalid isolated external uninstaller destination'
+}
 try {
   Invoke-BoundedInstaller $Installer @('/S', "/D=$install")
   $installedExe = Join-Path $install 'KeryxOperator.exe'
@@ -223,8 +241,35 @@ try {
   if ($LASTEXITCODE -ne 0) { throw "Installed package smoke failed: $LASTEXITCODE" }
 } finally {
   if (Test-Path -LiteralPath $uninstaller -PathType Leaf) {
-    # Let NSIS self-copy to temp so it can remove its own installed executable.
-    Invoke-BoundedInstaller $uninstaller @('/S')
+    # NSIS's default self-copy exits its launcher before the actual uninstall.
+    # Run an exact external copy with _?= LAST so the bounded wait observes the
+    # actual uninstaller, which can still delete its installed executable.
+    $resolvedUninstaller = [IO.Path]::GetFullPath($uninstaller)
+    if (-not $resolvedUninstaller.StartsWith($install.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase) -or
+        -not $resolvedUninstaller.StartsWith($owned, [StringComparison]::OrdinalIgnoreCase)) {
+      throw 'Invalid isolated installed uninstaller source'
+    }
+    $verificationStage = 'copy'
+    try {
+      Copy-Item -LiteralPath $resolvedUninstaller -Destination $externalUninstaller -ErrorAction Stop
+      $verificationStage = 'source-hash'
+      $sourceHash = Get-LiteralSha256 $resolvedUninstaller
+      $verificationStage = 'copy-hash'
+      $copyHash = Get-LiteralSha256 $externalUninstaller
+      $verificationStage = 'compare'
+      if ($sourceHash -cne $copyHash) { throw 'Uninstaller copy mismatch' }
+    } catch {
+      $exceptionType = $_.Exception.GetType().FullName
+      if ($exceptionType.Length -gt 128 -or $exceptionType -cnotmatch '^[A-Za-z0-9_.+`]+$') {
+        $exceptionType = 'unclassified'
+      }
+      @{ isolatedUninstallerVerification = 'failed'; stage = $verificationStage;
+        exceptionType = $exceptionType; hresult = [int]$_.Exception.HResult } |
+        ConvertTo-Json -Compress | Write-Output
+      throw 'Isolated external uninstaller copy verification failed'
+    }
+    Invoke-BoundedInstaller $externalUninstaller @('/S', "_?=$install")
+    Remove-Item -LiteralPath $externalUninstaller -Force -ErrorAction Stop
   }
 }
 function Get-InstalledEntries {
@@ -238,6 +283,14 @@ for ($attempt = 0; $attempt -lt 120; $attempt++) {
   Start-Sleep -Milliseconds 250
 }
 if ($remaining.Count -gt 0) {
+  $categories = @($remaining | Select-Object -First 32 | ForEach-Object {
+    if ([IO.Path]::GetFileName($_) -ceq 'KeryxOperator.exe') { 'installed-executable' }
+    elseif ([IO.Path]::GetFileName($_) -ceq 'uninstall.exe') { 'installed-uninstaller' }
+    elseif (Test-Path -LiteralPath $_ -PathType Container) { 'directory' }
+    else { 'other-file' }
+  })
+  @{ isolatedUninstallFailure = 'remaining-entries'; sampledEntries = $categories } |
+    ConvertTo-Json -Compress | Write-Output
   throw 'Isolated NSIS uninstall left installed files'
 }
 Write-Output 'Portable and isolated current-user NSIS acceptance passed'

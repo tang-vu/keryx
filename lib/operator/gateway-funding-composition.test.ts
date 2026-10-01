@@ -30,7 +30,7 @@ function runtimeImports(source: string, file: string): string[] {
   return imports;
 }
 
-const dormantRuntime = /(?:^|\/)(?:gateway-funding-[^/]+|enrolled-sqlite-adapter|enrolled-sqlite-schema-profile|runtime-storage-config|storage-identity-(?:connection|sqlite|provision))\.(?:ts|tsx|mts)$/;
+const dormantRuntime = /(?:^|\/)(?:gateway-funding-[^/]+|enrolled-sqlite-adapter|enrolled-supabase-adapter|enrolled-sqlite-schema-profile|runtime-storage-config|storage-identity-(?:connection|sqlite|provision))\.(?:ts|tsx|mts)$/;
 
 function assertDormantGraph(roots: string[], read: (file: string) => string,
   resolveImport: (file: string, specifier: string) => string | null): Set<string> {
@@ -79,7 +79,7 @@ describe("dormant Operator funding release", () => {
       return target ? name(target) : null;
     };
     const visited = assertDormantGraph(roots, file => readFileSync(join(cwd, file), "utf8"), resolveImport);
-    const closedModules = new Set(["lib/db/enrolled-sqlite-adapter.ts", "lib/db/enrolled-sqlite-schema-profile.ts"]);
+    const closedModules = new Set(["lib/db/enrolled-sqlite-adapter.ts", "lib/db/enrolled-supabase-adapter.ts", "lib/db/enrolled-sqlite-schema-profile.ts"]);
     for (const file of [...files(join(cwd, "lib")), ...files(join(cwd, "scripts"))]) {
       const importer = name(file);
       if (/(?:\.test\.|-fixture\.|\/fixtures\/|^scripts\/test-)/.test(importer)) continue;
@@ -107,5 +107,30 @@ describe("dormant Operator funding release", () => {
     expect(() => assertDormantGraph(["app/entry.ts"], file => sources[file], (file, specifier) =>
       posix.resolve("/", posix.dirname(file), specifier).slice(1) + ".ts")).toThrow("Dormant runtime reachable");
     expect(runtimeImports("import type { Authority } from './helper'; type Other = import('./helper').Authority;", "types.ts")).toEqual([]);
+  });
+
+  it.each(["export { createEnrolledSupabaseAdapter } from '../lib/db/enrolled-supabase-adapter';",
+    "void import('../lib/db/enrolled-supabase-adapter');",
+    "export { readRuntimeStorageDeployment } from '../lib/db/runtime-storage-config';"])(
+    "rejects transitive PostgreSQL factory or manifest selection: %s", edge => {
+      const sources: Record<string, string> = {
+        "app/entry.ts": "import './helper';",
+        "app/helper.ts": edge,
+      };
+      expect(() => assertDormantGraph(["app/entry.ts"], file => sources[file], (file, specifier) =>
+        posix.resolve("/", posix.dirname(file), specifier).slice(1) + ".ts"))
+        .toThrow("Dormant runtime reachable");
+    });
+
+  it("permits only descriptive PostgreSQL type and pure-core bridges in the application graph", () => {
+    const sources: Record<string, string> = {
+      "app/entry.ts": "import './helper';",
+      "app/helper.ts": "import type { Authority } from '../lib/db/enrolled-supabase-adapter'; export { SupabaseAdapter } from '../lib/db/supabase-adapter';",
+      "lib/db/supabase-adapter.ts": "import type { StorageDeploymentManifest } from './runtime-storage-config'; export { canonicalJson } from '../canonical-json';",
+      "lib/canonical-json.ts": "export const canonicalJson = JSON.stringify;",
+    };
+    const visited = assertDormantGraph(["app/entry.ts"], file => sources[file], (file, specifier) =>
+      posix.resolve("/", posix.dirname(file), specifier).slice(1) + ".ts");
+    expect([...visited]).toEqual(["app/entry.ts", "app/helper.ts", "lib/db/supabase-adapter.ts", "lib/canonical-json.ts"]);
   });
 });

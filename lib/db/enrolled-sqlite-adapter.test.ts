@@ -1,4 +1,4 @@
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, onTestFailed, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { mkdtempSync, readFileSync, writeFileSync, rmSync, renameSync, copyFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -52,11 +52,18 @@ async function fixture(mode: "testnet-real" | "testnet-offline" = "testnet-real"
   phase("schema:start");
   const native = new DatabaseSync(file);
   try {
+    // Batch the actual fresh schema DDL in one native commit. Browser installers
+    // retain their own savepoints when the caller already owns a transaction.
+    native.exec("BEGIN IMMEDIATE");
     installSqliteApplicationSchema(native);
     if (funding) {
       for (const sql of Object.values(GATEWAY_FUNDING_SCHEMA)) native.exec(sql);
       for (const sql of Object.values(GATEWAY_FUNDING_INDEXES)) native.exec(sql);
     }
+    native.exec("COMMIT");
+  } catch (error) {
+    if (native.isTransaction) native.exec("ROLLBACK");
+    throw error;
   } finally { native.close(); }
   phase("schema:end");
   phase("inspection:start");
@@ -168,25 +175,63 @@ it("rejects cloned facades and verified cores as runtime provenance and refuses 
   }
 });
 
+function fixtureFailureStages() {
+  const started = performance.now();
+  const stages: { stage: string; elapsedMs: number }[] = [];
+  onTestFailed(() => {
+    console.error("Enrolled adapter fixture stages", JSON.stringify(stages));
+  });
+  return (stage: string) => {
+    if (stages.length >= 12) throw new Error("Adapter fixture stage bound exceeded");
+    stages.push({ stage, elapsedMs: Math.round(performance.now() - started) });
+  };
+}
+
 it("enforces real cache AEAD on reads and readiness without rewriting bad rows", async () => {
+  const stage = fixtureFailureStages();
+  stage("fixture-start");
   const f = await fixture();
+  stage("factory-start");
   const adapter = await f.api.createEnrolledSqliteAdapter();
   f.adapters.push(adapter);
+  stage("cache-roundtrip");
   await adapter.setCached("source", "Synthetic cached body");
   expect(await adapter.getCached("source")).toBe("Synthetic cached body");
+  stage("owner-open");
   const { openVerifiedSqliteStorage } = await import("./storage-identity-connection");
   const owner = openVerifiedSqliteStorage(f.file, f.identity);
   try {
     owner.db.prepare("UPDATE cache_items SET source_id='other' WHERE source_id='source'").run();
     const before = owner.db.prepare("SELECT * FROM cache_items").all();
+    stage("wrong-aad-read");
     await expect(adapter.getCached("other")).rejects.toThrow("unavailable");
+    stage("wrong-aad-readiness");
     await expect(f.api.createEnrolledSqliteAdapter()).rejects.toThrow("unavailable");
     expect(owner.db.prepare("SELECT * FROM cache_items").all()).toEqual(before);
-    owner.db.prepare("UPDATE cache_items SET text='plain:v1:legacy' WHERE source_id='other'").run();
+  } finally { stage("owner-close"); owner.close(); }
+  stage("complete");
+});
+
+it("refuses plaintext real cache readiness without rewriting the retained row", async () => {
+  const stage = fixtureFailureStages();
+  stage("fixture-start");
+  const f = await fixture();
+  stage("factory-start");
+  const adapter = await f.api.createEnrolledSqliteAdapter();
+  f.adapters.push(adapter);
+  stage("cache-write");
+  await adapter.setCached("source", "Synthetic cached body");
+  stage("owner-open");
+  const { openVerifiedSqliteStorage } = await import("./storage-identity-connection");
+  const owner = openVerifiedSqliteStorage(f.file, f.identity);
+  try {
+    owner.db.prepare("UPDATE cache_items SET text='plain:v1:legacy' WHERE source_id='source'").run();
     const legacy = owner.db.prepare("SELECT * FROM cache_items").all();
+    stage("plaintext-readiness");
     await expect(f.api.createEnrolledSqliteAdapter()).rejects.toThrow("unavailable");
     expect(owner.db.prepare("SELECT * FROM cache_items").all()).toEqual(legacy);
-  } finally { owner.close(); }
+  } finally { stage("owner-close"); owner.close(); }
+  stage("complete");
 });
 
 it("retains the exact cache row quota atomically and permits replacement without new startup failure", async () => {
@@ -346,27 +391,49 @@ it("guards actual stale statements and native iterators with captured runtime co
 });
 
 it("composes the exact complete installed funding domain without granting its separate writer authority", async () => {
+  const stage = fixtureFailureStages();
+  stage("fixture-start");
   const f = await fixture("testnet-real", true);
+  stage("factory-start");
   const adapter = await f.api.createEnrolledSqliteAdapter();
   f.adapters.push(adapter);
+  stage("application-roundtrip");
   await adapter.setSyncState("full-domain", "retained");
   expect(await adapter.getSyncState("full-domain")).toBe("retained");
   const { openVerifiedSqliteStorage } = await import("./storage-identity-connection");
+  stage("owner-open");
   const owner = openVerifiedSqliteStorage(f.file, f.identity);
   try {
+    stage("funding-read-and-writer-refusal");
     expect(owner.db.prepare("SELECT count(*) AS n FROM gateway_funding_operations").get()?.n).toBe(0);
     expect(() => owner.db.prepare("INSERT INTO gateway_funding_namespaces(sender,data) VALUES('synthetic','{}')").run()).toThrow("no such function: keryx_funding_capability");
-  } finally { owner.close(); }
+  } finally { stage("owner-close"); owner.close(); }
+  stage("complete");
+});
+
+it("refuses a tampered complete funding index without rewriting data or retaining a failed-open handle", async () => {
+  const stage = fixtureFailureStages();
+  stage("fixture-start");
+  const f = await fixture("testnet-real", true);
+  stage("factory-start");
+  const adapter = await f.api.createEnrolledSqliteAdapter();
+  f.adapters.push(adapter);
+  stage("application-seed");
+  await adapter.setSyncState("full-domain", "retained");
+  stage("index-tamper");
   const raw = new DatabaseSync(f.file);
   try { raw.exec("DROP INDEX gateway_funding_observations_slot_kind"); }
   finally { raw.close(); }
   const before = readFileSync(f.file);
+  stage("existing-adapter-refusal");
   expect(() => adapter.listSources()).toThrow();
+  stage("readiness-refusal");
   await expect(f.api.createEnrolledSqliteAdapter()).rejects.toThrow();
   expect(readFileSync(f.file)).toEqual(before);
   renameSync(f.file, f.file + ".closed");
   renameSync(f.file + ".closed", f.file);
   expect(readFileSync(f.file)).toEqual(before);
+  stage("complete");
 });
 
 it("refuses an oversized raw cache value inserted after readiness before publishing its body", async () => {

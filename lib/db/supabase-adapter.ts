@@ -1,4 +1,10 @@
 import { publicReferenceSchema, type PublicReference } from "../public-references/catalog";
+import type { StorageDeploymentManifest } from "./runtime-storage-config";
+import { SupabaseAuthority } from "./supabase-authority";
+import { canonicalJson } from "../canonical-json";
+import { refuseStorage } from "./storage-identity";
+import { SUPABASE_RUNTIME_CONTRACT } from "./supabase-runtime-contract";
+import { openEnrolledCacheText, sealEnrolledCacheText } from "../sources/enrolled-content-cache";
 import { admitSupabaseBrowserQueryPolicy,admitSupabaseBrowserSigningOriginal,admitSupabaseBrowserSourceSigningOriginal,readSupabaseBrowserSigningSnapshot,readExposedSupabaseBrowserSigningSnapshotForSigner,signSupabaseBrowserSigningOriginal } from "./supabase-browser-signing-originals";
 import { createBrowserOriginalSourceAuthority } from "../payments/browser-original-source-authority";
 import type { BrowserQueryPolicyProof } from "../payments/browser-query-policy";
@@ -108,11 +114,39 @@ export async function throwingSupabaseFetch(
   );
 }
 
-export class SupabaseAdapter implements KeryxDB {
-  private sb: SupabaseClient;
+// An arbitrary object or TypeScript cast cannot select the enrolled constructor.
+// This map is only an internal core assembly capability, never installed facade provenance.
+type EnrolledConstruction = Readonly<{
+  client: SupabaseClient;
+  deployment: Readonly<StorageDeploymentManifest>;
+  readDeployment: () => Readonly<StorageDeploymentManifest>;
+}>;
+const enrolledConstructions = new WeakMap<object, EnrolledConstruction>();
+const enrolledEntryGuards = new WeakMap<object, { verify: () => Promise<void>; close: () => void }>();
+/** Internal shared-code assembly only. Arbitrary clients or guards assembled here
+ * confer NO installed runtime provenance. Only the separate zero-argument factory
+ * owns the private facade WeakMap checked by paid authority consumers. */
+export function assembleAuthorityBoundSupabaseCore(
+  client: SupabaseClient, deployment: Readonly<StorageDeploymentManifest>,
+  readDeployment: () => Readonly<StorageDeploymentManifest>,
+): { adapter: SupabaseAdapter; hooks: { verify: () => Promise<void>; close: () => void } } {
+  const capability = Object.freeze({});
+  enrolledConstructions.set(capability, Object.freeze({ client, deployment, readDeployment }));
+  const adapter = new SupabaseAdapter(capability);
+  return { adapter, hooks: enrolledEntryGuards.get(adapter)! };
+}
 
-  constructor() {
-    this.sb = createClient(
+export class SupabaseAdapter implements KeryxDB {
+  #sb: SupabaseClient;
+  #enrolled?: { deployment: Readonly<StorageDeploymentManifest>; authority: SupabaseAuthority;
+    readDeployment: () => Readonly<StorageDeploymentManifest>; ready: boolean };
+
+  constructor(capability?: object) {
+    const construction = capability === undefined ? undefined : enrolledConstructions.get(capability);
+    const deployment = construction?.deployment;
+    if (capability !== undefined && !construction) refuseStorage("invalid_operation");
+    if (deployment && deployment.backend.kind !== "supabase") refuseStorage("identity_mismatch");
+    this.#sb = construction?.client ?? createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
       {
@@ -120,9 +154,78 @@ export class SupabaseAdapter implements KeryxDB {
         global: { fetch: throwingSupabaseFetch },
       },
     );
+    if (deployment) this.#enrolled = { deployment, ready: false, readDeployment: construction!.readDeployment,
+      authority: new SupabaseAuthority(this.#sb, deployment.identity, () => { this.assertEntry(); return this.#enrolled?.ready === true; }) };
+    if (deployment) enrolledEntryGuards.set(this, { verify: async () => {
+      this.assertEntry();
+      const { data, error } = await this.#enrolled!.authority.rpcResult("verify_runtime_authority", {});
+      if (error || !data || data.format !== "keryx-enrolled-runtime-authority-v1" || data.ready !== true ||
+        !/^[0-9a-f]{64}$/.test(SUPABASE_RUNTIME_CONTRACT.afterDigest) ||
+        data.sourceContractDigest !== SUPABASE_RUNTIME_CONTRACT.afterDigest) refuseStorage("identity_unavailable");
+      this.assertEntry();
+    }, close: () => { this.#enrolled!.ready = false; } });
+  }
+
+  private assertEntry(initializing = false): void {
+    const lane = this.#enrolled;
+    if (!lane) return;
+    if (canonicalJson(lane.readDeployment()) !== canonicalJson(lane.deployment)) refuseStorage("identity_mismatch");
+    if (!initializing && !lane.ready) refuseStorage("adapter_not_initialized");
+  }
+
+  /** Fixed operation/arguments are written at each call site. The enrolled lane
+   * never executes the legacy closure, including on errors or missing RPCs. */
+  private async domainCall<T, A extends Record<string, unknown>>(operation: string, args: A, legacy: (args: A) => PromiseLike<T>): Promise<T> {
+    if (!this.#enrolled) return legacy(args);
+    this.assertEntry(operation === "init");
+    const result = operation === "init"
+      ? await this.#enrolled.authority.initializationRpc("init", args)
+      : await this.#enrolled.authority.rpcResult(operation, args);
+    this.assertEntry(operation === "init");
+    if (result.error) throw result.error;
+    return result as T;
+  }
+
+  private domainRpc(name: string, args: Record<string, unknown> = {}) {
+    if (!this.#enrolled) return this.#sb.rpc(name, args);
+    this.assertEntry();
+    return this.#enrolled.authority.rpcResult(name, args).then(result => {
+      this.assertEntry();
+      return result;
+    });
+  }
+
+  private helperRpcClient(): SupabaseClient {
+    if (!this.#enrolled) return this.#sb;
+    this.assertEntry();
+    // Existing RPC-only domain validators see only the checked RPC operation.
+    // Table-backed helpers must have explicit named calls before using this port.
+    return this.#enrolled.authority.domainClient();
   }
 
   async init(): Promise<void> {
+    this.assertEntry(true);
+    if (this.#enrolled) {
+      await this.#enrolled.authority.init();
+      const identity = this.#enrolled.deployment.identity;
+      if (identity.authorityMode === "testnet-real" && !hasContentKey()) refuseStorage("cache_migration_required");
+      const { data, error } = await this.#enrolled.authority.initializationRpc("inspect_runtime_readiness", {});
+      if (error || !data || data.format !== "keryx-enrolled-runtime-readiness-v1" || data.ready !== true) refuseStorage("adapter_not_initialized");
+      if (!/^[0-9a-f]{64}$/.test(SUPABASE_RUNTIME_CONTRACT.afterDigest) ||
+        data.sourceContractDigest !== SUPABASE_RUNTIME_CONTRACT.afterDigest) refuseStorage("adapter_not_initialized");
+      if (!Array.isArray(data.cacheRows) || data.cacheRows.length > 512) refuseStorage("cache_migration_required");
+      let wireBytes = 0;
+      for (const row of data.cacheRows) {
+        if (!row || typeof row.sourceId !== "string" || typeof row.text !== "string") refuseStorage("cache_migration_required");
+        wireBytes += Buffer.byteLength(row.text, "utf8");
+        if (wireBytes > 8 * 1024 * 1024) refuseStorage("cache_migration_required");
+        openEnrolledCacheText(row.text, row.sourceId, identity);
+      }
+      if (data.cacheRowCount !== data.cacheRows.length || data.cacheWireBytes !== wireBytes) refuseStorage("cache_migration_required");
+      this.assertEntry(true);
+      this.#enrolled.ready = true;
+      return;
+    }
     // Schema is applied via migrations. Seal legacy plaintext caches before accepting traffic;
     // service-role access is required and migration 0033 removes the old public-read policy.
     if (cacheEncryptionRequired() && !hasContentKey()) {
@@ -134,10 +237,10 @@ export class SupabaseAdapter implements KeryxDB {
         const text = typeof row.text === "string" ? row.text : "";
         const sourceId = typeof row.source_id === "string" ? row.source_id : "";
         if (!sourceId || !text || isEncryptedCacheValue(text)) continue;
-        await this.sb
+        await this.domainCall("init", { p_row: { text: sealCacheText(text) }, p_source_id: sourceId }, (_args) => this.#sb
           .from("cache_items")
-          .update({ text: sealCacheText(text) })
-          .eq("source_id", sourceId);
+          .update(_args.p_row)
+          .eq("source_id", _args.p_source_id));
       }
     }
   }
@@ -152,7 +255,18 @@ export class SupabaseAdapter implements KeryxDB {
     const pageSize = 1_000;
     const rows: Record<string, unknown>[] = [];
     for (let from = 0; ; from += pageSize) {
-      const { data } = await this.sb
+      if (this.#enrolled) {
+        const operation = ({ payment_events: "scan_payment_metrics", query_runs: "scan_query_metrics",
+          answer_feedback: "scan_feedback_metrics", gap_intents: "scan_gap_metrics",
+          a2a_orders: "scan_order_economics" } as Record<string, string>)[table];
+        if (!operation || from > 200_000) refuseStorage("invalid_operation");
+        const { data, error } = await this.#enrolled.authority.rpcResult(operation, { p_offset: from, p_limit: pageSize });
+        if (error || !Array.isArray(data) || data.length > pageSize) refuseStorage("invalid_operation");
+        rows.push(...data);
+        if (data.length < pageSize) return rows;
+        continue;
+      }
+      const { data } = await this.#sb
         .from(table)
         .select(columns)
         .order(orderBy, { ascending: true })
@@ -167,7 +281,7 @@ export class SupabaseAdapter implements KeryxDB {
     if (s.scholarlyEnrolled) throw new Error("Scholarly enrolled sources cannot migrate to the unsupported Supabase backend");
     if (s.id.startsWith("public:")) throw new Error("Reserved public-reference source ID");
     // active defaults to true for offline/DB-direct rows that predate the flag.
-    await this.sb.from("sources").upsert({
+    await this.domainCall("upsert_source", { p_row: {
       id: s.id,
       name: s.name,
       url: s.url,
@@ -184,7 +298,7 @@ export class SupabaseAdapter implements KeryxDB {
       preview_depth: s.previewDepth ?? null,
       onchain_id: s.onchainId ?? null,
       register_tx: s.registerTx ?? null,
-    });
+    } }, (_args) => this.#sb.from("sources").upsert(_args.p_row));
   }
 
   // No public-reference schema is deployed on Supabase. Public catalog writes fail closed;
@@ -197,37 +311,37 @@ export class SupabaseAdapter implements KeryxDB {
   }
   async listSources(): Promise<Source[]> {
     // Filter to active=true only — deactivated on-chain sources must not be discovered/cited.
-    const { data } = await this.sb
+    const { data } = await this.domainCall("list_sources", { p_active: true }, (_args) => this.#sb
       .from("sources")
       .select("*")
-      .eq("active", true)
-      .order("created_at");
+      .eq("active", _args.p_active)
+      .order("created_at"));
     return (data ?? []).map(rowToSource);
   }
 
   async listAllSources(): Promise<Source[]> {
     // Deactivated rows included — owner history only, never discovery. See the interface note.
-    const { data } = await this.sb.from("sources").select("*").order("created_at");
+    const { data } = await this.domainCall("list_all_sources", {  }, (_args) => this.#sb.from("sources").select("*").order("created_at"));
     return (data ?? []).map(rowToSource);
   }
 
   async setSourceMeta(id: string, meta: import("./keryx-db").SourceMeta): Promise<void> {
-    await this.sb.from("source_meta").upsert({
+    await this.domainCall("set_source_meta", { p_row: {
       id,
       name: meta.name,
       description: meta.description,
       url: meta.url,
       rss_url: meta.rssUrl ?? null,
       updated_at: new Date().toISOString(),
-    });
+    } }, (_args) => this.#sb.from("source_meta").upsert(_args.p_row));
   }
 
   async getSourceMeta(id: string): Promise<import("./keryx-db").SourceMeta | null> {
-    const { data } = await this.sb
+    const { data } = await this.domainCall("get_source_meta", { p_id: id }, (_args) => this.#sb
       .from("source_meta")
       .select("name,description,url,rss_url")
-      .eq("id", id)
-      .maybeSingle();
+      .eq("id", _args.p_id)
+      .maybeSingle());
     if (!data) return null;
     return {
       name: (data.name as string) ?? "",
@@ -238,45 +352,45 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async setSourceNotify(id: string, url: string, secret: string): Promise<void> {
-    await this.sb.from("source_notify").upsert({
+    await this.domainCall("set_source_notify", { p_row: {
       source_id: id,
       notify_url: url,
       secret,
       updated_at: new Date().toISOString(),
-    });
+    } }, (_args) => this.#sb.from("source_notify").upsert(_args.p_row));
   }
 
   async getSourceNotify(id: string): Promise<import("./keryx-db").SourceNotify | null> {
-    const { data } = await this.sb
+    const { data } = await this.domainCall("get_source_notify", { p_source_id: id }, (_args) => this.#sb
       .from("source_notify")
       .select("notify_url,secret")
-      .eq("source_id", id)
-      .maybeSingle();
+      .eq("source_id", _args.p_source_id)
+      .maybeSingle());
     if (!data) return null;
     return { url: (data.notify_url as string) ?? "", secret: (data.secret as string) ?? "" };
   }
 
   async deleteSourceNotify(id: string): Promise<void> {
-    await this.sb.from("source_notify").delete().eq("source_id", id);
+    await this.domainCall("delete_source_notify", { p_source_id: id }, (_args) => this.#sb.from("source_notify").delete().eq("source_id", _args.p_source_id));
   }
 
   async setSourceNotifyEmail(id: string, email: string, unsubToken: string): Promise<void> {
     // Fresh save resets last_sent_at — a new address should hear about its next citation promptly.
-    await this.sb.from("source_notify_email").upsert({
+    await this.domainCall("set_source_notify_email", { p_row: {
       source_id: id,
       email,
       unsub_token: unsubToken,
       last_sent_at: null,
       updated_at: new Date().toISOString(),
-    });
+    } }, (_args) => this.#sb.from("source_notify_email").upsert(_args.p_row));
   }
 
   async getSourceNotifyEmail(id: string): Promise<import("./keryx-db").SourceNotifyEmail | null> {
-    const { data } = await this.sb
+    const { data } = await this.domainCall("get_source_notify_email", { p_source_id: id }, (_args) => this.#sb
       .from("source_notify_email")
       .select("email,unsub_token,last_sent_at")
-      .eq("source_id", id)
-      .maybeSingle();
+      .eq("source_id", _args.p_source_id)
+      .maybeSingle());
     if (!data) return null;
     return {
       email: (data.email as string) ?? "",
@@ -286,35 +400,34 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async deleteSourceNotifyEmail(id: string): Promise<void> {
-    await this.sb.from("source_notify_email").delete().eq("source_id", id);
+    await this.domainCall("delete_source_notify_email", { p_source_id: id }, (_args) => this.#sb.from("source_notify_email").delete().eq("source_id", _args.p_source_id));
   }
 
   async markSourceNotifyEmailSent(id: string, at: string): Promise<void> {
-    await this.sb.from("source_notify_email").update({ last_sent_at: at }).eq("source_id", id);
+    await this.domainCall("mark_source_notify_email_sent", { p_row: { last_sent_at: at }, p_source_id: id }, (_args) => this.#sb.from("source_notify_email").update(_args.p_row).eq("source_id", _args.p_source_id));
   }
 
   async setSourcePreviewDepth(id: string, depth: string): Promise<void> {
-    await this.sb.from("sources").update({ preview_depth: depth }).eq("id", id);
+    await this.domainCall("set_source_preview_depth", { p_row: { preview_depth: depth }, p_id: id }, (_args) => this.#sb.from("sources").update(_args.p_row).eq("id", _args.p_id));
   }
 
   async getSource(id: string): Promise<Source | null> {
-    const { data } = await this.sb.from("sources").select("*").eq("id", id).maybeSingle();
+    const { data } = await this.domainCall("get_source", { p_id: id }, (_args) => this.#sb.from("sources").select("*").eq("id", _args.p_id).maybeSingle());
     return data ? rowToSource(data) : null;
   }
 
   async getSourceByOnchainId(onchainId: string): Promise<Source | null> {
-    const { data } = await this.sb
+    const { data } = await this.domainCall("get_source_by_onchain_id", { p_onchain_id: onchainId }, (_args) => this.#sb
       .from("sources")
       .select("*")
-      .ilike("onchain_id", onchainId)
-      .maybeSingle();
+      .ilike("onchain_id", _args.p_onchain_id)
+      .maybeSingle());
     return data ? rowToSource(data) : null;
   }
 
   async addItems(items: SourceItem[]): Promise<void> {
     if (!items.length) return;
-    await this.sb.from("source_items").upsert(
-      items.map((i) => ({
+    await this.domainCall("add_items", { p_row: items.map((i) => ({
         id: i.id,
         source_id: i.sourceId,
         title: i.title,
@@ -336,16 +449,17 @@ export class SupabaseAdapter implements KeryxDB {
         manifest_nonce: i.manifest?.nonce ?? null,
         manifest_signature: i.manifest?.signature ?? null,
         manifest_created_at: i.manifest?.createdAt ?? null,
-      })),
-    );
+      })) }, (_args) => this.#sb.from("source_items").upsert(
+      _args.p_row,
+    ));
   }
 
   async getItems(sourceId: string): Promise<SourceItem[]> {
-    const { data } = await this.sb
+    const { data } = await this.domainCall("get_items", { p_source_id: sourceId }, (_args) => this.#sb
       .from("source_items")
       .select("*")
-      .eq("source_id", sourceId)
-      .order("published_at", { ascending: false });
+      .eq("source_id", _args.p_source_id)
+      .order("published_at", { ascending: false }));
     return (data ?? []).map((r) => ({
       id: r.id,
       sourceId: r.source_id,
@@ -368,35 +482,36 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async getItem(sourceId: string, itemId: string): Promise<SourceItem | null> {
-    const { data } = await this.sb
+    const { data } = await this.domainCall("get_item", { p_source_id: sourceId, p_id: itemId }, (_args) => this.#sb
       .from("source_items")
       .select("*")
-      .eq("source_id", sourceId)
-      .eq("id", itemId)
-      .maybeSingle();
+      .eq("source_id", _args.p_source_id)
+      .eq("id", _args.p_id)
+      .maybeSingle());
     return data ? rowToSourceItem(data) : null;
   }
 
   async getArticleOffer(sourceId: string, itemId: string): Promise<ArticleOffer | null> {
-    const { data } = await this.sb
+    const { data } = await this.domainCall("get_article_offer", { p_source_id: sourceId, p_item_id: itemId }, (_args) => this.#sb
       .from("article_offers")
       .select("*")
-      .eq("source_id", sourceId)
-      .eq("item_id", itemId)
-      .maybeSingle();
+      .eq("source_id", _args.p_source_id)
+      .eq("item_id", _args.p_item_id)
+      .maybeSingle());
     return data ? rowToArticleOffer(data) : null;
   }
 
   async listArticleOffers(sourceId?: string): Promise<ArticleOffer[]> {
-    let query = this.sb.from("article_offers").select("*");
-    if (sourceId) query = query.eq("source_id", sourceId);
-    const { data } = await query.order("created_at", { ascending: false });
+    const { data } = await this.domainCall("list_article_offers", { p_source_id: sourceId || null }, () => {
+      let query = this.#sb.from("article_offers").select("*");
+      if (sourceId) query = query.eq("source_id", sourceId);
+      return query.order("created_at", { ascending: false });
+    });
     return (data ?? []).map(rowToArticleOffer);
   }
 
   async setArticleOffer(offer: ArticleOffer): Promise<void> {
-    const { error } = await this.sb.from("article_offers").upsert(
-      {
+    const { error } = await this.domainCall("set_article_offer", { p_row: {
         source_id: offer.sourceId,
         item_id: offer.itemId,
         id: offer.id,
@@ -407,18 +522,19 @@ export class SupabaseAdapter implements KeryxDB {
         nonce: offer.nonce,
         signature: offer.signature,
         created_at: offer.createdAt,
-      },
+      } }, (_args) => this.#sb.from("article_offers").upsert(
+      _args.p_row,
       { onConflict: "source_id,item_id" },
-    );
+    ));
     if (error) throw error;
   }
 
   async deleteArticleOffer(sourceId: string, itemId: string): Promise<void> {
-    const { error } = await this.sb
+    const { error } = await this.domainCall("delete_article_offer", { p_source_id: sourceId, p_item_id: itemId }, (_args) => this.#sb
       .from("article_offers")
       .delete()
-      .eq("source_id", sourceId)
-      .eq("item_id", itemId);
+      .eq("source_id", _args.p_source_id)
+      .eq("item_id", _args.p_item_id));
     if (error) throw error;
   }
 
@@ -434,12 +550,12 @@ export class SupabaseAdapter implements KeryxDB {
     untilIso: string,
   ): Promise<Record<string, number>> {
     if (sourceIds.length === 0) return {};
-    const { data } = await this.sb
+    const { data } = await this.domainCall("count_items_published_between", { p_source_id: sourceIds, p_published_at: sinceIso, p_published_at_2: untilIso }, (_args) => this.#sb
       .from("source_items")
       .select("source_id")
-      .in("source_id", sourceIds)
-      .gt("published_at", sinceIso)
-      .lte("published_at", untilIso);
+      .in("source_id", _args.p_source_id)
+      .gt("published_at", _args.p_published_at)
+      .lte("published_at", _args.p_published_at_2));
     const counts: Record<string, number> = {};
     for (const r of data ?? []) counts[r.source_id] = (counts[r.source_id] ?? 0) + 1;
     return counts;
@@ -449,12 +565,12 @@ export class SupabaseAdapter implements KeryxDB {
     if (sourceIds.length === 0) return {};
     // `not is null` matters here: Postgres sorts NULLs first on a descending order, so without it
     // the first row per source could be an undated one and every source would look dateless.
-    const { data } = await this.sb
+    const { data } = await this.domainCall("newest_item_dates", { p_source_id: sourceIds }, (_args) => this.#sb
       .from("source_items")
       .select("source_id, published_at")
-      .in("source_id", sourceIds)
+      .in("source_id", _args.p_source_id)
       .not("published_at", "is", null)
-      .order("published_at", { ascending: false });
+      .order("published_at", { ascending: false }));
     const newest: Record<string, string> = {};
     for (const r of data ?? []) if (!newest[r.source_id]) newest[r.source_id] = r.published_at;
     return newest;
@@ -475,7 +591,7 @@ export class SupabaseAdapter implements KeryxDB {
       | "updatedAt"
     >,
   ): Promise<GapIntent> {
-    const { data, error } = await this.sb.rpc("create_gap_intent", {
+    const { data, error } = await this.domainRpc("create_gap_intent", {
       p_id: crypto.randomUUID(),
       p_gap_id: input.gapId,
       p_claim: input.claim,
@@ -495,16 +611,16 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async listGapIntents(limit = 200): Promise<GapIntent[]> {
-    const { data } = await this.sb
+    const { data } = await this.domainCall("list_gap_intents", { p_limit: Math.max(1, Math.min(Math.trunc(limit), 1_000)) }, (_args) => this.#sb
       .from("gap_intents")
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(Math.max(1, Math.min(Math.trunc(limit), 1_000)));
+      .limit(_args.p_limit));
     return (data ?? []).map(rowToGapIntent);
   }
 
   async claimGapIntent(now: number, leaseMs: number): Promise<GapIntent | null> {
-    const { data } = await this.sb.rpc("claim_gap_intent", {
+    const { data } = await this.domainRpc("claim_gap_intent", {
       p_now: now,
       p_lease_ms: Math.max(1_000, leaseMs),
     });
@@ -522,9 +638,7 @@ export class SupabaseAdapter implements KeryxDB {
       lastError?: string;
     },
   ): Promise<void> {
-    const { data } = await this.sb
-      .from("gap_intents")
-      .update({
+    const { data } = await this.domainCall("finish_gap_intent", { p_row: {
         status: result.status,
         retry_run_id: result.retryRunId,
         coverage: result.coverage,
@@ -532,16 +646,18 @@ export class SupabaseAdapter implements KeryxDB {
         last_error: result.lastError ?? null,
         lease_expires_at: null,
         updated_at: new Date().toISOString(),
-      })
-      .eq("id", id)
-      .eq("status", "running")
+      }, p_id: id, p_status: "running" }, (_args) => this.#sb
+      .from("gap_intents")
+      .update(_args.p_row)
+      .eq("id", _args.p_id)
+      .eq("status", _args.p_status)
       .select("id")
-      .maybeSingle();
+      .maybeSingle());
     if (!data) throw new Error(`gap intent ${id} is no longer leased`);
   }
 
   async failGapIntent(id: string, error: string, maxAttempts: number): Promise<void> {
-    await this.sb.rpc("fail_gap_intent", {
+    await this.domainRpc("fail_gap_intent", {
       p_id: id,
       p_error: error.slice(0, 500),
       p_max_attempts: Math.max(1, Math.trunc(maxAttempts)),
@@ -549,68 +665,68 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async expireGapIntent(id: string, reason: string): Promise<void> {
-    await this.sb
-      .from("gap_intents")
-      .update({
+    await this.domainCall("expire_gap_intent", { p_row: {
         status: "stale",
         last_error: reason.slice(0, 500),
         lease_expires_at: null,
         updated_at: new Date().toISOString(),
-      })
-      .eq("id", id)
-      .eq("status", "running");
+      }, p_id: id, p_status: "running" }, (_args) => this.#sb
+      .from("gap_intents")
+      .update(_args.p_row)
+      .eq("id", _args.p_id)
+      .eq("status", _args.p_status));
   }
 
   async isCreatorWallet(addr: string): Promise<boolean> {
     // ilike performs case-insensitive comparison in Postgres — avoids LOWER() on
     // the indexed wallet_address column, which would prevent index use.
-    const { data } = await this.sb
+    const { data } = await this.domainCall("is_creator_wallet", { p_wallet_address: addr, p_limit: 1 }, (_args) => this.#sb
       .from("sources")
       .select("id")
-      .ilike("wallet_address", addr)
-      .limit(1)
-      .maybeSingle();
+      .ilike("wallet_address", _args.p_wallet_address)
+      .limit(_args.p_limit)
+      .maybeSingle());
     return data !== null;
   }
 
   async createAuthChallenge(hash: string, issuedAt: number, expiresAt: number): Promise<void> {
-    const { error } = await this.sb.rpc("create_auth_challenge", { p_hash: hash, p_issued_at: issuedAt, p_expires_at: expiresAt });
+    const { error } = await this.domainRpc("create_auth_challenge", { p_hash: hash, p_issued_at: issuedAt, p_expires_at: expiresAt });
     if (error) throw error;
   }
 
   async createWebSession(record: WebSessionRecord): Promise<void> {
-    const { error } = await this.sb.rpc("create_web_session", {
+    const { error } = await this.domainRpc("create_web_session", {
       p_hash: record.hash, p_wallet: record.wallet.toLowerCase(), p_issued_at: record.issuedAt, p_expires_at: record.expiresAt,
     });
     if (error) throw error;
   }
 
   async getWebSession(hash: string): Promise<WebSessionRecord | null> {
-    const { data, error } = await this.sb.from("web_sessions").select("hash,wallet,issued_at,expires_at").eq("hash", hash).maybeSingle();
+    const { data, error } = await this.domainCall("get_web_session", { p_hash: hash }, (_args) => this.#sb.from("web_sessions").select("hash,wallet,issued_at,expires_at").eq("hash", _args.p_hash).maybeSingle());
     if (error) throw error;
     return data ? { hash: data.hash, wallet: data.wallet, issuedAt: Number(data.issued_at), expiresAt: Number(data.expires_at) } : null;
   }
 
   async revokeWebSession(hash: string, wallet: string): Promise<void> {
-    const { error } = await this.sb.from("web_sessions").delete().eq("hash", hash).eq("wallet", wallet.toLowerCase());
+    const { error } = await this.domainCall("revoke_web_session", { p_hash: hash, p_wallet: wallet.toLowerCase() }, (_args) => this.#sb.from("web_sessions").delete().eq("hash", _args.p_hash).eq("wallet", _args.p_wallet));
     if (error) throw error;
   }
 
   async listWebSessions(wallet: string, now: number): Promise<WebSessionRecord[]> {
-    const { data, error } = await this.sb.from("web_sessions").select("hash,wallet,issued_at,expires_at")
-      .eq("wallet", wallet.toLowerCase()).lte("issued_at", now).gt("expires_at", now)
-      .order("issued_at", { ascending: false }).order("hash", { ascending: true }).limit(101);
+    const { data, error } = await this.domainCall("list_web_sessions", { p_wallet: wallet.toLowerCase(), p_issued_at: now, p_expires_at: now, p_limit: 101 }, (_args) => this.#sb.from("web_sessions").select("hash,wallet,issued_at,expires_at")
+      .eq("wallet", _args.p_wallet).lte("issued_at", _args.p_expires_at).gt("expires_at", _args.p_expires_at)
+      .order("issued_at", { ascending: false }).order("hash", { ascending: true }).limit(_args.p_limit));
     if (error) throw error;
     return (data ?? []).map(row => ({ hash: row.hash, wallet: row.wallet, issuedAt: Number(row.issued_at), expiresAt: Number(row.expires_at) }));
   }
 
   async revokeOtherWebSessions(wallet: string, keepHash: string): Promise<void> {
-    const { error } = await this.sb.from("web_sessions").delete().eq("wallet", wallet.toLowerCase()).neq("hash", keepHash);
+    const { error } = await this.domainCall("revoke_other_web_sessions", { p_wallet: wallet.toLowerCase(), p_hash: keepHash }, (_args) => this.#sb.from("web_sessions").delete().eq("wallet", _args.p_wallet).neq("hash", _args.p_hash));
     if (error) throw error;
   }
 
   async consumeAuthChallenge(hash: string, now: number): Promise<boolean> {
-    const { data, error } = await this.sb.rpc("consume_auth_challenge", { p_hash: hash, p_now: now });
+    const { data, error } = await this.domainRpc("consume_auth_challenge", { p_hash: hash, p_now: now });
     if (error || typeof data !== "boolean") throw error ?? new Error("Invalid challenge-consumption result");
     return data;
   }
@@ -620,13 +736,13 @@ export class SupabaseAdapter implements KeryxDB {
     const now = new Date().toISOString();
     const existing = await this.getUser(wallet);
     // Preserve first_seen_at across sign-ins: set it only when the row is new.
-    await this.sb.from("users").upsert({
+    await this.domainCall("upsert_user", { p_row: {
       wallet_address: wallet,
       role,
       display_handle: shortAddress(addr),
       first_seen_at: existing?.firstSeenAt ?? now,
       last_seen_at: now,
-    });
+    } }, (_args) => this.#sb.from("users").upsert(_args.p_row));
     const user = (await this.getUser(wallet)) ?? {
       walletAddress: wallet,
       role,
@@ -638,11 +754,11 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async getUser(addr: string): Promise<UserRecord | null> {
-    const { data } = await this.sb
+    const { data } = await this.domainCall("get_user", { p_wallet_address: addr }, (_args) => this.#sb
       .from("users")
       .select("*")
-      .ilike("wallet_address", addr)
-      .maybeSingle();
+      .ilike("wallet_address", _args.p_wallet_address)
+      .maybeSingle());
     if (!data) return null;
     return {
       walletAddress: data.wallet_address as string,
@@ -654,95 +770,97 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async getCached(sourceId: string): Promise<string | null> {
-    const { data } = await this.sb
+    if (this.#enrolled?.deployment.identity.authorityMode === "testnet-real" && !hasContentKey()) refuseStorage("cache_key_unavailable");
+    const { data } = await this.domainCall("get_cached", { p_source_id: sourceId }, (_args) => this.#sb
       .from("cache_items")
       .select("text")
-      .eq("source_id", sourceId)
-      .maybeSingle();
+      .eq("source_id", _args.p_source_id)
+      .maybeSingle());
+    if (this.#enrolled) return openEnrolledCacheText(data?.text, sourceId, this.#enrolled.deployment.identity);
     return data?.text ? openCacheText(data.text) : null;
   }
 
   async getCachedAt(sourceId: string): Promise<string | null> {
-    const { data } = await this.sb
+    const { data } = await this.domainCall("get_cached_at", { p_source_id: sourceId }, (_args) => this.#sb
       .from("cache_items")
       .select("updated_at")
-      .eq("source_id", sourceId)
-      .maybeSingle();
+      .eq("source_id", _args.p_source_id)
+      .maybeSingle());
     return (data?.updated_at as string | undefined) ?? null;
   }
 
   async setCached(sourceId: string, text: string): Promise<void> {
-    await this.sb
-      .from("cache_items")
-      .upsert({
+    await this.domainCall("set_cached", { p_row: {
         source_id: sourceId,
-        text: sealCacheText(text),
+        text: this.#enrolled ? sealEnrolledCacheText(text, sourceId, this.#enrolled.deployment.identity) : sealCacheText(text),
         updated_at: new Date().toISOString(),
-      });
+      } }, (_args) => this.#sb
+      .from("cache_items")
+      .upsert(_args.p_row));
   }
 
   async reservePrivateResearchIntent(intent: PrivateResearchIntent) {
-    return reserveSupabasePrivateResearchIntent(this.sb, intent);
+    return reserveSupabasePrivateResearchIntent(this.helperRpcClient(), intent);
   }
   async reservePrivateTreasury(id: string, payer: string, policy: PrivateTreasuryPolicy) {
-    return reserveSupabasePrivateTreasury(this.sb, id, payer, policy);
+    return reserveSupabasePrivateTreasury(this.helperRpcClient(), id, payer, policy);
   }
-  async getPrivateTreasury(id: string, payer: string) { return getSupabasePrivateTreasury(this.sb, id, payer); }
-  async getPrivateTreasurySummary(signer: string) { return getSupabasePrivateTreasurySummary(this.sb, signer); }
-  async releasePrivateTreasury(id: string, payer: string, signer: string) { return releaseSupabasePrivateTreasury(this.sb, id, payer, signer); }
-  async getPrivateResearchInterruption(id: string, payer: string) { return getSupabasePrivateInterruption(this.sb, id, payer); }
-  async interruptPrivateResearch(id: string, payer: string, workerId: string) { return interruptSupabasePrivateResearch(this.sb, id, payer, workerId); }
-  async listPrivateWorkerCandidates(signer: string, after?: string) { return listSupabasePrivateWorkerCandidates(this.sb, signer, after); }
-  async listPrivateReconciliationCandidates(signer: string, after?: string) { return listSupabasePrivateReconciliationCandidates(this.sb, signer, after); }
+  async getPrivateTreasury(id: string, payer: string) { return getSupabasePrivateTreasury(this.helperRpcClient(), id, payer); }
+  async getPrivateTreasurySummary(signer: string) { return getSupabasePrivateTreasurySummary(this.helperRpcClient(), signer); }
+  async releasePrivateTreasury(id: string, payer: string, signer: string) { return releaseSupabasePrivateTreasury(this.helperRpcClient(), id, payer, signer); }
+  async getPrivateResearchInterruption(id: string, payer: string) { return getSupabasePrivateInterruption(this.helperRpcClient(), id, payer); }
+  async interruptPrivateResearch(id: string, payer: string, workerId: string) { return interruptSupabasePrivateResearch(this.helperRpcClient(), id, payer, workerId); }
+  async listPrivateWorkerCandidates(signer: string, after?: string) { return listSupabasePrivateWorkerCandidates(this.helperRpcClient(), signer, after); }
+  async listPrivateReconciliationCandidates(signer: string, after?: string) { return listSupabasePrivateReconciliationCandidates(this.helperRpcClient(), signer, after); }
 
   async confirmPrivateCreatorSubmission(id: string, payer: string, workerId: string, confirmation: PrivateCreatorConfirmation) {
-    return confirmSupabasePrivateCreator(this.sb, id, payer, workerId, confirmation);
+    return confirmSupabasePrivateCreator(this.helperRpcClient(), id, payer, workerId, confirmation);
   }
   async getPrivateCreatorConfirmation(id: string, payer: string, authorizationId: string) {
-    return getSupabasePrivateCreatorConfirmation(this.sb, id, payer, authorizationId);
+    return getSupabasePrivateCreatorConfirmation(this.helperRpcClient(), id, payer, authorizationId);
   }
 
   async admitPrivateCreatorSubmission(id: string, payer: string, workerId: string, data: PrivateCreatorSubmission) {
-    return admitSupabasePrivateCreatorSubmission(this.sb, id, payer, workerId, data);
+    return admitSupabasePrivateCreatorSubmission(this.helperRpcClient(), id, payer, workerId, data);
   }
   async listPrivateCreatorSubmissions(id: string, payer: string) {
-    return listSupabasePrivateCreatorSubmissions(this.sb, id, payer);
+    return listSupabasePrivateCreatorSubmissions(this.helperRpcClient(), id, payer);
   }
 
   async savePrivateResearchResult(id: string, payer: string, workerId: string, run: QueryRun) {
-    return saveSupabasePrivateResult(this.sb, id, payer, workerId, run);
+    return saveSupabasePrivateResult(this.helperRpcClient(), id, payer, workerId, run);
   }
   async getPrivateResearchResult(id: string, payer: string) {
-    return getSupabasePrivateResult(this.sb, id, payer);
+    return getSupabasePrivateResult(this.helperRpcClient(), id, payer);
   }
 
   async claimPrivateResearchExecution(id: string, payer: string) {
-    return claimSupabasePrivateExecution(this.sb, id, payer);
+    return claimSupabasePrivateExecution(this.helperRpcClient(), id, payer);
   }
   async getPrivateResearchExecution(id: string, payer: string) {
-    return getSupabasePrivateExecution(this.sb, id, payer);
+    return getSupabasePrivateExecution(this.helperRpcClient(), id, payer);
   }
 
   async claimPrivatePaymentSubmission(id: string, payer: string) {
-    return claimSupabasePrivatePayment(this.sb, id, payer);
+    return claimSupabasePrivatePayment(this.helperRpcClient(), id, payer);
   }
   async getPrivatePaymentState(id: string, payer: string) {
-    return getSupabasePrivatePayment(this.sb, id, payer);
+    return getSupabasePrivatePayment(this.helperRpcClient(), id, payer);
   }
   async confirmPrivatePayment(id: string, payer: string, confirmation: PrivatePaymentConfirmation) {
-    return confirmSupabasePrivatePayment(this.sb, id, payer, confirmation);
+    return confirmSupabasePrivatePayment(this.helperRpcClient(), id, payer, confirmation);
   }
 
   async getPrivateResearchIntent(id: string, payer: string) {
-    return getSupabasePrivateResearchIntent(this.sb, id, payer);
+    return getSupabasePrivateResearchIntent(this.helperRpcClient(), id, payer);
   }
   async listPrivateResearchHistory(payer: string, before?: PrivateHistoryCursor) {
-    return listSupabasePrivateResearchHistory(this.sb, payer, before);
+    return listSupabasePrivateResearchHistory(this.helperRpcClient(), payer, before);
   }
 
   async saveQueryRun(run: QueryRun): Promise<void> {
     const evidenceTelemetry = runEvidenceMetrics(run);
-    await this.sb.from("query_runs").upsert({
+    await this.domainCall("save_query_run", { p_row: {
       id: run.id,
       created_at: run.createdAt,
       question: run.question,
@@ -765,49 +883,49 @@ export class SupabaseAdapter implements KeryxDB {
       grounded_claim_count: evidenceTelemetry.groundedClaimCount,
       rewarded_citation_count: evidenceTelemetry.rewardedCitationCount,
       economics_data: economicsRunSample(run),
-    });
+    } }, (_args) => this.#sb.from("query_runs").upsert(_args.p_row));
   }
 
   async listFollowUps(parentId: string): Promise<QueryRun[]> {
-    const { data } = await this.sb
+    const { data } = await this.domainCall("list_follow_ups", { p_parent_id: parentId }, (_args) => this.#sb
       .from("query_runs")
       .select("data")
-      .eq("parent_id", parentId)
-      .order("created_at", { ascending: true });
+      .eq("parent_id", _args.p_parent_id)
+      .order("created_at", { ascending: true }));
     return (data ?? []).map((r) => r.data as QueryRun);
   }
 
   async listQueryRunsByAsker(wallet: string, limit: number): Promise<QueryRun[]> {
-    const { data } = await this.sb
+    const { data } = await this.domainCall("list_query_runs_by_asker", { p_asker: wallet.toLowerCase(), p_limit: limit }, (_args) => this.#sb
       .from("query_runs")
       .select("data")
-      .eq("asker", wallet.toLowerCase())
+      .eq("asker", _args.p_asker)
       .order("created_at", { ascending: false })
-      .limit(limit);
+      .limit(_args.p_limit));
     return (data ?? []).map((r) => r.data as QueryRun);
   }
 
   async getQueryRun(id: string): Promise<QueryRun | null> {
-    const { data } = await this.sb.from("query_runs").select("data").eq("id", id).maybeSingle();
+    const { data } = await this.domainCall("get_query_run", { p_id: id }, (_args) => this.#sb.from("query_runs").select("data").eq("id", _args.p_id).maybeSingle());
     return (data?.data as QueryRun) ?? null;
   }
 
   async listRecentQueries(limit: number): Promise<QueryRun[]> {
-    const { data } = await this.sb
+    const { data } = await this.domainCall("list_recent_queries", { p_limit: limit }, (_args) => this.#sb
       .from("query_runs")
       .select("data")
       .order("created_at", { ascending: false })
-      .limit(limit);
+      .limit(_args.p_limit));
     return (data ?? []).map((r) => r.data as QueryRun);
   }
 
   iterateRecentQueries(limit: number): AsyncIterable<QueryRun> {
-    return iterateSupabaseRecentQueries(this.sb, limit);
+    return iterateSupabaseRecentQueries(this.helperRpcClient(), limit);
   }
 
   async recordPayment(p: PaymentRecord): Promise<void> {
     const settlementStatus = assertPaymentSettlementState(p);
-    const { error } = await this.sb.from("payment_events").insert({
+    const { error } = await this.domainCall("record_payment", { p_row: {
       id: p.id ?? crypto.randomUUID(),
       created_at: p.createdAt,
       kind: p.kind,
@@ -834,17 +952,14 @@ export class SupabaseAdapter implements KeryxDB {
       item_published_at: p.itemPublishedAt ?? null,
       offer_id: p.offerId ?? null,
       list_price_usdc: p.listPriceUsdc ?? null,
-    });
+    } }, (_args) => this.#sb.from("payment_events").insert(_args.p_row));
     if (error) throw error;
   }
 
   async recordPaymentOnce(p: PaymentRecord): Promise<boolean> {
     if (!p.id) throw new Error("recordPaymentOnce requires a deterministic payment id");
     const settlementStatus = assertPaymentSettlementState(p);
-    const { data, error } = await this.sb
-      .from("payment_events")
-      .upsert(
-        {
+    const { data, error } = await this.domainCall("record_payment_once", { p_row: {
           id: p.id,
           created_at: p.createdAt,
           kind: p.kind,
@@ -864,40 +979,43 @@ export class SupabaseAdapter implements KeryxDB {
           authorization_expires_at: p.authorizationExpiresAt ?? null,
           grant_epoch: p.grantEpoch ?? null,
           origin: p.origin ?? "engine",
-        },
+        } }, (_args) => this.#sb
+      .from("payment_events")
+      .upsert(
+        _args.p_row,
         { onConflict: "id", ignoreDuplicates: true },
       )
-      .select("id");
+      .select("id"));
     if (error) throw error;
     return (data ?? []).length === 1;
   }
 
   async createA2aOrder(order: A2aOrder): Promise<{ created: boolean; order: A2aOrder }> {
     const row = a2aOrderToRow(order);
-    const { data, error } = await this.sb.from("a2a_orders").insert(row).select("*").maybeSingle();
+    const { data, error } = await this.domainCall("create_a2a_order", { p_row: row }, (_args) => this.#sb.from("a2a_orders").insert(_args.p_row).select("*").maybeSingle());
     if (!error && data) return { created: true, order: rowToA2aOrder(data) };
     if (error?.code !== "23505") throw error ?? new Error("A2A order insert returned no row");
-    const { data: existing, error: readError } = await this.sb
+    const { data: existing, error: readError } = await this.domainCall("create_a2a_order_2", { p_id: order.id }, (_args) => this.#sb
       .from("a2a_orders")
       .select("*")
-      .eq("id", order.id)
-      .maybeSingle();
+      .eq("id", _args.p_id)
+      .maybeSingle());
     if (readError || !existing) throw readError ?? new Error("A2A order conflict could not be read");
     return { created: false, order: rowToA2aOrder(existing) };
   }
 
   async getA2aOrder(id: string): Promise<A2aOrder | null> {
-    const { data, error } = await this.sb
+    const { data, error } = await this.domainCall("get_a2a_order", { p_id: id }, (_args) => this.#sb
       .from("a2a_orders")
       .select("*")
-      .eq("id", id)
-      .maybeSingle();
+      .eq("id", _args.p_id)
+      .maybeSingle());
     if (error) throw error;
     return data ? rowToA2aOrder(data) : null;
   }
 
   async listA2aOrdersByPayer(wallet: string, before?: { createdAt: string; id: string }): Promise<A2aOrder[]> {
-    const { data, error } = await this.sb.rpc("list_a2a_orders_for_payer", {
+    const { data, error } = await this.domainRpc("list_a2a_orders_for_payer", {
       p_wallet: wallet.toLowerCase(), p_before_created_at: before?.createdAt ?? null, p_before_id: before?.id ?? null,
     });
     if (error) throw error;
@@ -905,7 +1023,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async claimNextA2aOrder(workerId: string, startedAt: string): Promise<A2aOrder | null> {
-    const { data, error } = await this.sb.rpc("claim_a2a_order", {
+    const { data, error } = await this.domainRpc("claim_a2a_order", {
       p_worker_id: workerId,
       p_started_at: startedAt,
     });
@@ -915,7 +1033,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async markA2aOrderPaymentStarted(id: string, startedAt: string): Promise<boolean> {
-    const { data, error } = await this.sb.rpc("mark_a2a_payment_started", {
+    const { data, error } = await this.domainRpc("mark_a2a_payment_started", {
       p_id: id,
       p_started_at: startedAt,
     });
@@ -924,7 +1042,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async markA2aOrderResultSaving(id: string, startedAt: string): Promise<boolean> {
-    const { data, error } = await this.sb.rpc("mark_a2a_result_saving", {
+    const { data, error } = await this.domainRpc("mark_a2a_result_saving", {
       p_id: id,
       p_started_at: startedAt,
     });
@@ -937,29 +1055,29 @@ export class SupabaseAdapter implements KeryxDB {
     response: Record<string, unknown>,
     updatedAt: string,
   ): Promise<boolean> {
-    const { data, error } = await this.sb
+    const { data, error } = await this.domainCall("complete_a2a_order", { p_row: { status: "completed", response_data: response, error_code: null, updated_at: updatedAt }, p_id: id, p_status: "running" }, (_args) => this.#sb
       .from("a2a_orders")
-      .update({ status: "completed", response_data: response, error_code: null, updated_at: updatedAt })
-      .eq("id", id)
-      .eq("status", "running")
-      .select("id");
+      .update(_args.p_row)
+      .eq("id", _args.p_id)
+      .eq("status", _args.p_status)
+      .select("id"));
     if (error) throw error;
     return (data ?? []).length === 1;
   }
 
   async failA2aOrder(id: string, errorCode: string, updatedAt: string): Promise<boolean> {
-    const { data, error } = await this.sb
+    const { data, error } = await this.domainCall("fail_a2a_order", { p_row: { status: "failed", error_code: errorCode, updated_at: updatedAt }, p_id: id, p_status: "running" }, (_args) => this.#sb
       .from("a2a_orders")
-      .update({ status: "failed", error_code: errorCode, updated_at: updatedAt })
-      .eq("id", id)
-      .eq("status", "running")
-      .select("id");
+      .update(_args.p_row)
+      .eq("id", _args.p_id)
+      .eq("status", _args.p_status)
+      .select("id"));
     if (error) throw error;
     return (data ?? []).length === 1;
   }
 
   async resolveA2aOrder(id: string, update: A2aOrderResolutionUpdate): Promise<boolean> {
-    const { data, error } = await this.sb.rpc("resolve_a2a_order", {
+    const { data, error } = await this.domainRpc("resolve_a2a_order", {
       p_id: id,
       p_outcome: update.status,
       p_response: update.status === "completed" ? update.response : null,
@@ -973,10 +1091,10 @@ export class SupabaseAdapter implements KeryxDB {
 
   async a2aOperationsSnapshot(nowMs: number): Promise<A2aOperationsSnapshot> {
     const since = new Date(nowMs - 24 * 60 * 60_000).toISOString();
-    const { data, error } = await this.sb
+    const { data, error } = await this.domainCall("a2a_operations_snapshot", { p_since: since }, () => this.#sb
       .from("a2a_orders")
       .select("status,created_at,updated_at,started_at")
-      .or(`status.eq.running,updated_at.gte.${since}`);
+      .or(`status.eq.running,updated_at.gte.${since}`));
     if (error) throw error;
     const rows = (data ?? []).map((row) => ({
       status: row.status as A2aOrder["status"],
@@ -988,17 +1106,17 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async listPayments(limit: number): Promise<PaymentRecord[]> {
-    const { data } = await this.sb
+    const { data } = await this.domainCall("list_payments", { p_limit: limit }, (_args) => this.#sb
       .from("payment_events")
       .select("*")
       .or("authorization_phase.is.null,authorization_phase.not.in.(prepared,cancelled_unexposed)")
       .order("created_at", { ascending: false })
-      .limit(limit);
+      .limit(_args.p_limit));
     return (data ?? []).map(rowToPayment);
   }
 
   async recordActivationEvent(event: ActivationEvent, day: string): Promise<void> {
-    const { data } = await this.sb.rpc("increment_activation_event", {
+    const { data } = await this.domainRpc("increment_activation_event", {
       p_day: day,
       p_event: event,
     });
@@ -1008,10 +1126,10 @@ export class SupabaseAdapter implements KeryxDB {
   async activationFunnel(days: number): Promise<ActivationFunnel> {
     const window = activationWindow(days);
     const counts = emptyActivationCounts();
-    const { data } = await this.sb
+    const { data } = await this.domainCall("activation_funnel", { p_day: window.sinceDay }, (_args) => this.#sb
       .from("activation_events")
       .select("event,count")
-      .gte("day", window.sinceDay);
+      .gte("day", _args.p_day));
     for (const row of data ?? []) {
       const event = row.event as ActivationEvent;
       if (Object.hasOwn(counts, event)) counts[event] += Number(row.count);
@@ -1020,15 +1138,15 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async listPendingPayments(limit: number): Promise<PaymentRecord[]> {
-    const { data, error } = await this.sb
+    const { data, error } = await this.domainCall("list_pending_payments", { p_settlement_status: "pending", p_settled: false, p_limit: limit }, (_args) => this.#sb
       .from("payment_events")
       .select("*")
       .or("authorization_phase.is.null,authorization_phase.not.in.(prepared,cancelled_unexposed)")
-      .eq("settlement_status", "pending")
-      .eq("settled", false)
+      .eq("settlement_status", _args.p_settlement_status)
+      .eq("settled", _args.p_settled)
       .not("authorization_id", "is", null)
       .order("created_at", { ascending: true })
-      .limit(limit);
+      .limit(_args.p_limit));
     if (error) throw error;
     return (data ?? []).map(rowToPayment);
   }
@@ -1041,18 +1159,18 @@ export class SupabaseAdapter implements KeryxDB {
     if (await this.browserJournalActive()) {
       return (await this.terminalBrowserJournal(id, authorizationId, circleTransferId, "settled")).resolved;
     }
-    const { data, error } = await this.sb
-      .from("payment_events")
-      .update({
+    const { data, error } = await this.domainCall("settle_pending_payment", { p_row: {
         settled: true,
         settlement_status: "settled",
         tx_hash: circleTransferId,
-      })
-      .eq("id", id)
-      .eq("authorization_id", authorizationId)
-      .eq("settled", false)
-      .eq("settlement_status", "pending")
-      .select("id");
+      }, p_id: id, p_authorization_id: authorizationId, p_settled: false, p_settlement_status: "pending" }, (_args) => this.#sb
+      .from("payment_events")
+      .update(_args.p_row)
+      .eq("id", _args.p_id)
+      .eq("authorization_id", _args.p_authorization_id)
+      .eq("settled", _args.p_settled)
+      .eq("settlement_status", _args.p_settlement_status)
+      .select("id"));
     if (error) throw error;
     if ((data?.length ?? 0) > 1) {
       throw new Error(`pending payment compare-and-set updated multiple rows for ${id}`);
@@ -1068,7 +1186,7 @@ export class SupabaseAdapter implements KeryxDB {
     if (await this.browserJournalActive()) {
       return this.terminalBrowserJournal(id, authorizationId, circleTransferId, "failed");
     }
-    const { data, error } = await this.sb.rpc("fail_pending_payment", {
+    const { data, error } = await this.domainRpc("fail_pending_payment", {
       p_id: id,
       p_authorization_id: authorizationId,
       p_circle_transfer_id: circleTransferId,
@@ -1082,47 +1200,47 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async listPaymentsByQuery(queryId: string): Promise<PaymentRecord[]> {
-    const { data } = await this.sb
+    const { data } = await this.domainCall("list_payments_by_query", { p_query_id: queryId, p_kind: "citation" }, (_args) => this.#sb
       .from("payment_events")
       .select("*")
       .or("authorization_phase.is.null,authorization_phase.not.in.(prepared,cancelled_unexposed)")
-      .eq("query_id", queryId)
-      .eq("kind", "citation")
-      .order("created_at", { ascending: true });
+      .eq("query_id", _args.p_query_id)
+      .eq("kind", _args.p_kind)
+      .order("created_at", { ascending: true }));
     return (data ?? []).map(rowToPayment);
   }
 
   async listCreatorPaymentAttemptsByQuery(queryId: string): Promise<PaymentRecord[]> {
-    const { data, error } = await this.sb
+    const { data, error } = await this.domainCall("list_creator_payment_attempts_by_query", { p_query_id: queryId, p_kind: "inbound" }, (_args) => this.#sb
       .from("payment_events")
       .select("*")
       .or("authorization_phase.is.null,authorization_phase.not.in.(prepared,cancelled_unexposed)")
-      .eq("query_id", queryId)
-      .neq("kind", "inbound")
-      .order("created_at", { ascending: true });
+      .eq("query_id", _args.p_query_id)
+      .neq("kind", _args.p_kind)
+      .order("created_at", { ascending: true }));
     if (error) throw error;
     return (data ?? []).map(rowToPayment);
   }
 
   async listPaymentsBySource(sourceId: string): Promise<PaymentRecord[]> {
-    const { data } = await this.sb
+    const { data } = await this.domainCall("list_payments_by_source", { p_source_id: sourceId, p_kind: "inbound" }, (_args) => this.#sb
       .from("payment_events")
       .select("*")
       .or("authorization_phase.is.null,authorization_phase.not.in.(prepared,cancelled_unexposed)")
-      .eq("source_id", sourceId)
-      .neq("kind", "inbound")
-      .order("created_at", { ascending: false });
+      .eq("source_id", _args.p_source_id)
+      .neq("kind", _args.p_kind)
+      .order("created_at", { ascending: false }));
     return (data ?? []).map(rowToPayment);
   }
 
   async dailySettled(days: number): Promise<DailyVolume[]> {
     // Bound the scan to the window: only settled rows on/after the oldest day shown.
     const cutoff = new Date(Date.now() - (days - 1) * 86400000).toISOString().slice(0, 10);
-    const { data } = await this.sb
+    const { data } = await this.domainCall("daily_settled", { p_settled: true, p_created_at: cutoff }, (_args) => this.#sb
       .from("payment_events")
       .select("created_at, amount_usdc")
-      .eq("settled", true)
-      .gte("created_at", cutoff);
+      .eq("settled", _args.p_settled)
+      .gte("created_at", _args.p_created_at));
     const tally = new Map<string, number>();
     for (const r of data ?? []) {
       const day = String(r.created_at).slice(0, 10);
@@ -1132,39 +1250,44 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async recordWithdrawal(w: WithdrawalRecord): Promise<void> {
-    await recordSupabaseWithdrawal(this.sb, w);
+    await recordSupabaseWithdrawal(this.helperRpcClient(), w);
   }
 
-  async reserveCreatorWithdrawal(value: WithdrawalRequestRecord) { return reserveSupabaseWithdrawalRequest(this.sb, value); }
-  async listCreatorWithdrawalHistory(owner: string, cursor?: WithdrawalHistoryCursor, limit = 25) { return listSupabaseWithdrawalHistory(this.sb, owner, cursor, limit); }
-  async getCreatorWithdrawal(id: string, owner: string) { return getSupabaseWithdrawalRequest(this.sb, id, owner); }
-  async claimCreatorWithdrawalTransfer(id: string, owner: string) { return claimSupabaseWithdrawalTransfer(this.sb, id, owner); }
-  async getCreatorWithdrawalTransferClaim(id: string, owner: string) { return getSupabaseWithdrawalTransferClaim(this.sb, id, owner); }
-  async saveCreatorWithdrawalAttestation(id: string, owner: string, claimId: string, value: unknown) { return saveSupabaseWithdrawalAttestation(this.sb, id, owner, claimId, value); }
-  async getCreatorWithdrawalAttestation(id: string, owner: string) { return getSupabaseWithdrawalAttestation(this.sb, id, owner); }
+  async reserveCreatorWithdrawal(value: WithdrawalRequestRecord) { return reserveSupabaseWithdrawalRequest(this.helperRpcClient(), value); }
+  async listCreatorWithdrawalHistory(owner: string, cursor?: WithdrawalHistoryCursor, limit = 25) { return listSupabaseWithdrawalHistory(this.helperRpcClient(), owner, cursor, limit); }
+  async getCreatorWithdrawal(id: string, owner: string) { return getSupabaseWithdrawalRequest(this.helperRpcClient(), id, owner); }
+  async claimCreatorWithdrawalTransfer(id: string, owner: string) { return claimSupabaseWithdrawalTransfer(this.helperRpcClient(), id, owner); }
+  async getCreatorWithdrawalTransferClaim(id: string, owner: string) { return getSupabaseWithdrawalTransferClaim(this.helperRpcClient(), id, owner); }
+  async saveCreatorWithdrawalAttestation(id: string, owner: string, claimId: string, value: unknown) { return saveSupabaseWithdrawalAttestation(this.helperRpcClient(), id, owner, claimId, value); }
+  async getCreatorWithdrawalAttestation(id: string, owner: string) { return getSupabaseWithdrawalAttestation(this.helperRpcClient(), id, owner); }
 
   async listWithdrawals(limit: number): Promise<WithdrawalRecord[]> {
-    const { data } = await this.sb
+    const { data } = await this.domainCall("list_withdrawals", { p_limit: limit }, (_args) => this.#sb
       .from("withdrawals")
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(limit);
+      .limit(_args.p_limit));
     return (data ?? []).map(rowToWithdrawal);
   }
 
   async metrics(): Promise<DashboardMetrics> {
-    const [paymentRows, runRows, feedbackRows, gapIntentRows] = await Promise.all([
-      this.allRows(
+    const reads = [
+      () => this.allRows(
         "payment_events",
         "amount_usdc,source_id,query_id,kind,origin,settled,settlement_status,payer",
       ),
-      this.allRows(
+      () => this.allRows(
         "query_runs",
         "id,origin,asker,duration_ms,payment_mode,payment_attempts,settled_payments,confidence_level,mcp_client,evidence_claim_count,grounded_claim_count,rewarded_citation_count",
       ),
-      this.allRows("answer_feedback", "query_id,rating"),
-      this.allRows("gap_intents", "id,status"),
-    ]);
+      () => this.allRows("answer_feedback", "query_id,rating"),
+      () => this.allRows("gap_intents", "id,status"),
+    ];
+    // Each enrolled scan verifies the full source contract within its own outer
+    // statement deadline. Avoid making those checks compete with one another.
+    const [paymentRows, runRows, feedbackRows, gapIntentRows] = this.#enrolled
+      ? [await reads[0](), await reads[1](), await reads[2](), await reads[3]()]
+      : await Promise.all(reads.map(read => read()));
     return calculateDashboardMetrics(
       paymentRows.map((p) => ({
         amountUsdc: Number(p.amount_usdc),
@@ -1251,8 +1374,8 @@ export class SupabaseAdapter implements KeryxDB {
 
   async settlementLedger(): Promise<LedgerAccount[]> {
     const [{ data: pays }, { data: outs }] = await Promise.all([
-      this.sb.from("payment_events").select("payee,source_name,amount_usdc,kind,settled"),
-      this.sb.from("withdrawals").select("wallet,amount_usdc"),
+      this.domainCall("settlement_ledger", {}, () => this.#sb.from("payment_events").select("payee,source_name,amount_usdc,kind,settled")),
+      this.domainCall("settlement_ledger_2", {}, () => this.#sb.from("withdrawals").select("wallet,amount_usdc")),
     ]);
 
     // Keyed lowercased: the two tables were written by different code paths and disagree on
@@ -1288,18 +1411,18 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async getSyncState(key: string): Promise<string | null> {
-    const { data } = await this.sb
+    const { data } = await this.domainCall("get_sync_state", { p_key: key }, (_args) => this.#sb
       .from("sync_state")
       .select("value")
-      .eq("key", key)
-      .maybeSingle();
+      .eq("key", _args.p_key)
+      .maybeSingle());
     return data?.value ?? null;
   }
 
   async setSyncState(key: string, value: string): Promise<void> {
-    await this.sb
+    await this.domainCall("set_sync_state", { p_row: { key, value, updated_at: new Date().toISOString() } }, (_args) => this.#sb
       .from("sync_state")
-      .upsert({ key, value, updated_at: new Date().toISOString() });
+      .upsert(_args.p_row));
   }
 
   // ── session grants ──
@@ -1316,20 +1439,20 @@ export class SupabaseAdapter implements KeryxDB {
       grant_epoch: grant.grantEpoch,
     };
     if (await this.browserJournalActive()) {
-      const { error } = await this.sb.rpc("upsert_browser_journal_grant", { p_grant: row });
+      const { error } = await this.domainRpc("upsert_browser_journal_grant", { p_grant: row });
       if (error) throw error;
       return;
     }
-    const { error } = await this.sb.from("session_grants").upsert(row);
+    const { error } = await this.domainCall("upsert_session_grant", { p_row: row }, (_args) => this.#sb.from("session_grants").upsert(_args.p_row));
     if (error) throw error;
   }
 
   async getSessionGrant(sessionId: string): Promise<SessionGrantRecord | null> {
-    const { data } = await this.sb
+    const { data } = await this.domainCall("get_session_grant", { p_session_id: sessionId }, (_args) => this.#sb
       .from("session_grants")
       .select("*")
-      .eq("session_id", sessionId)
-      .maybeSingle();
+      .eq("session_id", _args.p_session_id)
+      .maybeSingle());
     if (!data) return null;
     return {
       sessionId: data.session_id,
@@ -1345,7 +1468,7 @@ export class SupabaseAdapter implements KeryxDB {
 
   /** The SQL function reserves only when spent + amount remains under cap. */
   async addSessionGrantSpend(sessionId: string, grantEpoch: string, sessAddr: string, amount: number): Promise<boolean> {
-    const { data, error } = await this.sb.rpc("reserve_session_grant_spend", {
+    const { data, error } = await this.domainRpc("reserve_session_grant_spend", {
       p_session_id: sessionId,
       p_grant_epoch: grantEpoch,
       p_sess_addr: sessAddr,
@@ -1358,7 +1481,7 @@ export class SupabaseAdapter implements KeryxDB {
 
   async admitBrowserAuthorization(input: BrowserAuthorizationIntent): Promise<BrowserAdmissionResult> {
     const intent = prepareBrowserAuthorizationIntent(input);
-    const { data, error } = await this.sb.rpc("admit_browser_authorization", {
+    const { data, error } = await this.domainRpc("admit_browser_authorization", {
       p_intent: {
         nonce: intent.nonce, session_id: intent.sessionId, request_id: intent.requestId,
         query_id: intent.queryId, grant_epoch: intent.grantEpoch, signer: intent.signer,
@@ -1374,19 +1497,19 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async browserJournalActive(): Promise<boolean> {
-    const { data, error } = await this.sb.from("browser_journal_control").select("active").eq("id", 1).single();
+    const { data, error } = await this.domainCall("browser_journal_active", { p_id: 1 }, (_args) => this.#sb.from("browser_journal_control").select("active").eq("id", _args.p_id).single());
     if (error) throw error;
     if (!data || typeof data.active !== "boolean") throw new Error("Invalid browser journal activation state");
     return data.active;
   }
 
   async activateBrowserJournal(): Promise<void> {
-    const { error } = await this.sb.rpc("activate_browser_journal");
+    const { error } = await this.domainRpc("activate_browser_journal");
     if (error) throw error;
   }
 
   async browserSignerConfirmedSpendMicro(signer: string): Promise<number> {
-    const { data, error } = await this.sb.rpc("browser_signer_confirmed_spend_micro", { p_signer: signer });
+    const { data, error } = await this.domainRpc("browser_signer_confirmed_spend_micro", { p_signer: signer });
     if (error) throw error;
     const amount = Number(data);
     if (data == null || !Number.isSafeInteger(amount) || amount < 0) throw new Error("Invalid confirmed browser spend");
@@ -1395,7 +1518,7 @@ export class SupabaseAdapter implements KeryxDB {
 
   async admitBrowserJournal(input: BrowserJournalAdmission): Promise<BrowserJournalAdmissionResult> {
     const journal = prepareBrowserJournal(input);
-    const { data, error } = await this.sb.rpc("admit_browser_journal", {
+    const { data, error } = await this.domainRpc("admit_browser_journal", {
       p_intent: {
         nonce: journal.nonce, session_id: journal.sessionId, request_id: journal.requestId,
         query_id: input.queryId, grant_epoch: journal.grantEpoch, signer: journal.signer,
@@ -1409,15 +1532,61 @@ export class SupabaseAdapter implements KeryxDB {
     if (data !== "admitted") throw new Error(`Unexpected browser journal admission: ${String(data)}`);
     return { status: "admitted", journal } as const;
   }
-  async admitBrowserQueryPolicy(proof:BrowserQueryPolicyProof,sessionId:string) {return admitSupabaseBrowserQueryPolicy(this.sb,proof,sessionId);}
-  async admitBrowserSigningOriginal(input:BrowserOriginalAdmission) {return admitSupabaseBrowserSigningOriginal(this.sb,input);}
-  async admitBrowserSourceSigningOriginal(input:BrowserSourceOriginalAdmission) {return admitSupabaseBrowserSourceSigningOriginal(this.sb,input,createBrowserOriginalSourceAuthority(this));}
-  async readExposedBrowserSigningSnapshotForSigner(signer:string,sessionId:string,requestId:string) {return readExposedSupabaseBrowserSigningSnapshotForSigner(this.sb,signer,sessionId,requestId);}
-  async readBrowserSigningSnapshot(owner:string,sessionId:string,requestId:string) {return readSupabaseBrowserSigningSnapshot(this.sb,owner,sessionId,requestId);}
-  async signBrowserSigningOriginal(sessionId:string,requestId:string,header:string) {return signSupabaseBrowserSigningOriginal(this.sb,sessionId,requestId,header);}
+  async admitBrowserQueryPolicy(proof:BrowserQueryPolicyProof,sessionId:string) {return admitSupabaseBrowserQueryPolicy(this.helperRpcClient(),proof,sessionId);}
+  async admitBrowserSigningOriginal(input:BrowserOriginalAdmission) {return admitSupabaseBrowserSigningOriginal(this.helperRpcClient(),input);}
+  /** One private, per-attempt catalog snapshot. Loading is lazy so the resolver's
+   * original five-second lifetime starts before this guarded RPC, and exact
+   * historical replay never requires catalog/provider access. */
+  #browserSourceAdmissionCatalog(input: BrowserSourceOriginalAdmission) {
+    const sourceId = input.source.sourceId, itemId = input.source.itemId;
+    let captured: Promise<{ source: Source | null; item: SourceItem | null; offer: ArticleOffer | null }> | undefined;
+    const load = () => captured ??= (async () => {
+      const { data } = await this.domainCall("read_browser_source_catalog", { p_source_id: sourceId, p_item_id: itemId },
+        async (): Promise<{ data: unknown }> => { throw new Error("Enrolled browser source catalog required"); });
+      if (!data || typeof data !== "object" || Array.isArray(data) ||
+        Object.keys(data).sort().join(",") !== "item,offer,source") refuseStorage("invalid_operation");
+      const encoded = canonicalJson(data);
+      if (Buffer.byteLength(encoded, "utf8") > 4 * 1024 * 1024) refuseStorage("invalid_operation");
+      const copy = JSON.parse(encoded) as Record<string, unknown>;
+      const row = (value: unknown): Record<string, unknown> | null => {
+        if (value === null) return null;
+        if (!value || typeof value !== "object" || Array.isArray(value)) refuseStorage("invalid_operation");
+        return value as Record<string, unknown>;
+      };
+      const sourceRow = row(copy.source), itemRow = row(copy.item), offerRow = row(copy.offer);
+      if ((sourceRow && sourceRow.id !== sourceId) ||
+        (itemRow && (itemRow.source_id !== sourceId || itemRow.id !== itemId)) ||
+        (offerRow && (offerRow.source_id !== sourceId || offerRow.item_id !== itemId))) refuseStorage("invalid_operation");
+      const snapshot = { source: sourceRow ? rowToSource(sourceRow) : null,
+        item: itemRow ? rowToSourceItem(itemRow) : null, offer: offerRow ? rowToArticleOffer(offerRow) : null };
+      const freeze = (value: object): void => {
+        for (const child of Object.values(value)) if (child && typeof child === "object") freeze(child);
+        Object.freeze(value);
+      };
+      freeze(snapshot);
+      return snapshot;
+    })();
+    const assertKeys = (source: string, item?: string) => {
+      if (source !== sourceId || (item !== undefined && item !== itemId)) refuseStorage("invalid_operation");
+    };
+    return Object.freeze({
+      getSource: async (source: string) => { assertKeys(source); return (await load()).source; },
+      getItem: async (source: string, item: string) => { assertKeys(source, item); return (await load()).item; },
+      getArticleOffer: async (source: string, item: string) => { assertKeys(source, item); return (await load()).offer; },
+    });
+  }
+
+  async admitBrowserSourceSigningOriginal(input: BrowserSourceOriginalAdmission) {
+    const captured = this.#enrolled ? JSON.parse(canonicalJson(input)) as BrowserSourceOriginalAdmission : input;
+    const catalog = this.#enrolled ? this.#browserSourceAdmissionCatalog(captured) : this;
+    return admitSupabaseBrowserSourceSigningOriginal(this.helperRpcClient(), captured, createBrowserOriginalSourceAuthority(catalog));
+  }
+  async readExposedBrowserSigningSnapshotForSigner(signer:string,sessionId:string,requestId:string) {return readExposedSupabaseBrowserSigningSnapshotForSigner(this.helperRpcClient(),signer,sessionId,requestId);}
+  async readBrowserSigningSnapshot(owner:string,sessionId:string,requestId:string) {return readSupabaseBrowserSigningSnapshot(this.helperRpcClient(),owner,sessionId,requestId);}
+  async signBrowserSigningOriginal(sessionId:string,requestId:string,header:string) {return signSupabaseBrowserSigningOriginal(this.helperRpcClient(),sessionId,requestId,header);}
 
   async getBrowserJournal(sessionId: string, requestId: string): Promise<BrowserAuthorizationJournal | null> {
-    const { data, error } = await this.sb.rpc("get_browser_journal", { p_session_id: sessionId, p_request_id: requestId });
+    const { data, error } = await this.domainRpc("get_browser_journal", { p_session_id: sessionId, p_request_id: requestId });
     if (error) throw error;
     if (!data) return null;
     const { intent, binding, payment } = data;
@@ -1431,7 +1600,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   private async transitionBrowserJournal(sessionId: string, requestId: string, from: string, to: string): Promise<boolean> {
-    const { data, error } = await this.sb.rpc("transition_browser_journal", {
+    const { data, error } = await this.domainRpc("transition_browser_journal", {
       p_session_id: sessionId, p_request_id: requestId, p_from: from, p_to: to,
     });
     if (error) throw error;
@@ -1447,7 +1616,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async signBrowserJournal(sessionId: string, requestId: string, metadata: BrowserSignedMetadata): Promise<boolean> {
-    const { data, error } = await this.sb.rpc("sign_browser_journal", {
+    const { data, error } = await this.domainRpc("sign_browser_journal", {
       p_session_id: sessionId, p_request_id: requestId, p_metadata: metadata,
     });
     if (error) throw error;
@@ -1455,7 +1624,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   private async terminalBrowserJournal(id: string, nonce: string, transferId: string | null, mode: string) {
-    const { data, error } = await this.sb.rpc("terminal_browser_journal", {
+    const { data, error } = await this.domainRpc("terminal_browser_journal", {
       p_id: id, p_nonce: nonce, p_transfer_id: transferId, p_mode: mode,
     });
     if (error) throw error;
@@ -1475,7 +1644,7 @@ export class SupabaseAdapter implements KeryxDB {
     dailyCap: number,
     now: number,
   ): Promise<OnrampReservation> {
-    const { data, error } = await this.sb.rpc("reserve_onramp", {
+    const { data, error } = await this.domainRpc("reserve_onramp", {
       p_address_key: addressKey,
       p_day_key: dayKey,
       p_amount: amount,
@@ -1488,7 +1657,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async releaseOnramp(addressKey: string, dayKey: string, amount: number): Promise<void> {
-    const { error } = await this.sb.rpc("release_onramp", {
+    const { error } = await this.domainRpc("release_onramp", {
       p_address_key: addressKey,
       p_day_key: dayKey,
       p_amount: amount,
@@ -1497,7 +1666,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async releaseSessionGrantSpend(sessionId: string, grantEpoch: string, sessAddr: string, amount: number): Promise<void> {
-    const { error } = await this.sb.rpc("release_session_grant_spend", {
+    const { error } = await this.domainRpc("release_session_grant_spend", {
       p_session_id: sessionId,
       p_grant_epoch: grantEpoch,
       p_sess_addr: sessAddr,
@@ -1508,17 +1677,17 @@ export class SupabaseAdapter implements KeryxDB {
 
   async deleteSessionGrant(sessionId: string): Promise<void> {
     if (await this.browserJournalActive()) {
-      const { error } = await this.sb.rpc("disable_browser_journal_grant", { p_session_id: sessionId });
+      const { error } = await this.domainRpc("disable_browser_journal_grant", { p_session_id: sessionId });
       if (error) throw error;
       return;
     }
-    const { error } = await this.sb.from("session_grants").delete().eq("session_id", sessionId);
+    const { error } = await this.domainCall("delete_session_grant", { p_session_id: sessionId }, (_args) => this.#sb.from("session_grants").delete().eq("session_id", _args.p_session_id));
     if (error) throw error;
   }
 
   async deleteExpiredSessionGrants(now: number): Promise<void> {
     if (await this.browserJournalActive()) return;
-    const { error } = await this.sb.from("session_grants").delete().lte("expiry", now);
+    const { error } = await this.domainCall("delete_expired_session_grants", { p_expiry: now }, (_args) => this.#sb.from("session_grants").delete().lte("expiry", _args.p_expiry));
     if (error) throw error;
   }
 
@@ -1530,7 +1699,7 @@ export class SupabaseAdapter implements KeryxDB {
     windowMs: number,
     now: number,
   ): Promise<RateLimitDecision> {
-    const { data, error } = await this.sb.rpc("consume_rate_limit", {
+    const { data, error } = await this.domainRpc("consume_rate_limit", {
       p_bucket: bucket,
       p_points: points,
       p_window_ms: windowMs,
@@ -1547,7 +1716,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async deleteExpiredRateLimits(now: number): Promise<void> {
-    await this.sb.from("rate_limit_counters").delete().lte("reset_at", now);
+    await this.domainCall("delete_expired_rate_limits", { p_reset_at: now }, (_args) => this.#sb.from("rate_limit_counters").delete().lte("reset_at", _args.p_reset_at));
   }
 
   async acquireReasoningCircuit(
@@ -1555,7 +1724,7 @@ export class SupabaseAdapter implements KeryxDB {
     now: number,
     probeLeaseMs: number,
   ): Promise<ReasoningCircuitDecision> {
-    const { data, error } = await this.sb.rpc("acquire_reasoning_circuit", {
+    const { data, error } = await this.domainRpc("acquire_reasoning_circuit", {
       p_key: key,
       p_now: now,
       p_probe_ms: probeLeaseMs,
@@ -1576,7 +1745,7 @@ export class SupabaseAdapter implements KeryxDB {
     baseCooldownMs: number,
     maxCooldownMs: number,
   ): Promise<ReasoningCircuitRecord> {
-    const { data, error } = await this.sb.rpc("record_reasoning_circuit_failure", {
+    const { data, error } = await this.domainRpc("record_reasoning_circuit_failure", {
       p_key: key,
       p_transient: transient,
       p_now: now,
@@ -1598,7 +1767,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async clearReasoningCircuit(key: string): Promise<void> {
-    const { error } = await this.sb.from("reasoning_circuits").delete().eq("key", key);
+    const { error } = await this.domainCall("clear_reasoning_circuit", { p_key: key }, (_args) => this.#sb.from("reasoning_circuits").delete().eq("key", _args.p_key));
     if (error) throw error;
   }
 
@@ -1613,7 +1782,7 @@ export class SupabaseAdapter implements KeryxDB {
     sourceIds?: string | null,
   ): Promise<{ rawKey: string; prefix: string; id: string }> {
     const id = crypto.randomUUID();
-    await this.sb.from("api_keys").insert({
+    await this.domainCall("mint_api_key", { p_row: {
       id,
       prefix,
       key_hash: keyHash,
@@ -1622,7 +1791,7 @@ export class SupabaseAdapter implements KeryxDB {
       created_at: new Date().toISOString(),
       scopes: scopes ?? null,
       source_ids: sourceIds ?? null,
-    });
+    } }, (_args) => this.#sb.from("api_keys").insert(_args.p_row));
     return { rawKey: "", prefix, id };
   }
 
@@ -1635,12 +1804,12 @@ export class SupabaseAdapter implements KeryxDB {
     scopes: string | null;
     sourceIds: string | null;
   } | null> {
-    const { data } = await this.sb
+    const { data } = await this.domainCall("verify_api_key", { p_prefix: prefix }, (_args) => this.#sb
       .from("api_keys")
       .select("id,key_hash,wallet,scopes,source_ids")
-      .eq("prefix", prefix)
+      .eq("prefix", _args.p_prefix)
       .is("revoked_at", null)
-      .maybeSingle();
+      .maybeSingle());
     if (!data) return null;
 
     const storedHash = data.key_hash as string;
@@ -1652,10 +1821,10 @@ export class SupabaseAdapter implements KeryxDB {
     if (!match) return null;
 
     // Fire-and-forget last_used_at update.
-    void this.sb
+    void this.domainCall("verify_api_key_2", { p_row: { last_used_at: new Date().toISOString() }, p_id: data.id as string }, (_args) => this.#sb
       .from("api_keys")
-      .update({ last_used_at: new Date().toISOString() })
-      .eq("id", data.id as string);
+      .update(_args.p_row)
+      .eq("id", _args.p_id));
 
     return {
       walletAddress: data.wallet as string,
@@ -1666,11 +1835,11 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async listApiKeys(wallet: string): Promise<ApiKeyRow[]> {
-    const { data } = await this.sb
+    const { data } = await this.domainCall("list_api_keys", { p_wallet: wallet }, (_args) => this.#sb
       .from("api_keys")
       .select("id,prefix,wallet,label,created_at,last_used_at,revoked_at,scopes,source_ids")
-      .eq("wallet", wallet)
-      .order("created_at", { ascending: false });
+      .eq("wallet", _args.p_wallet)
+      .order("created_at", { ascending: false }));
     return (data ?? []).map((r) => ({
       id: r.id as string,
       prefix: r.prefix as string,
@@ -1685,45 +1854,45 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async revokeApiKey(id: string, wallet: string): Promise<void> {
-    await this.sb
+    await this.domainCall("revoke_api_key", { p_row: { revoked_at: new Date().toISOString() }, p_id: id, p_wallet: wallet }, (_args) => this.#sb
       .from("api_keys")
-      .update({ revoked_at: new Date().toISOString() })
-      .eq("id", id)
-      .eq("wallet", wallet)
-      .is("revoked_at", null);
+      .update(_args.p_row)
+      .eq("id", _args.p_id)
+      .eq("wallet", _args.p_wallet)
+      .is("revoked_at", null));
   }
 
   async incrementUsage(keyId: string): Promise<void> {
     const day = new Date().toISOString().slice(0, 10);
-    await this.sb.rpc("upsert_api_key_usage", { p_key_id: keyId, p_day: day });
+    await this.domainRpc("upsert_api_key_usage", { p_key_id: keyId, p_day: day });
   }
 
   async getUsage(keyId: string, days = 30): Promise<ApiKeyUsage[]> {
-    const { data } = await this.sb
+    const { data } = await this.domainCall("get_usage", { p_key_id: keyId, p_limit: days }, (_args) => this.#sb
       .from("api_key_usage")
       .select("day,call_count")
-      .eq("key_id", keyId)
+      .eq("key_id", _args.p_key_id)
       .order("day", { ascending: false })
-      .limit(days);
+      .limit(_args.p_limit));
     return (data ?? []).map((r) => ({ day: r.day as string, count: r.call_count as number }));
   }
 
   async saveQueryMemory(entry: QueryMemoryEntry): Promise<void> {
-    await this.sb.from("query_memories").insert({
+    await this.domainCall("save_query_memory", { p_row: {
       id: entry.id,
       source_scores: entry.sourceScores, // JSONB column auto-serializes
       sources_read: entry.sourcesRead ?? null,
       topics: entry.topics,
       created_at: entry.createdAt,
-    });
+    } }, (_args) => this.#sb.from("query_memories").insert(_args.p_row));
   }
 
   async loadQueryMemories(limit: number): Promise<QueryMemoryEntry[]> {
-    const { data } = await this.sb
+    const { data } = await this.domainCall("load_query_memories", { p_limit: limit }, (_args) => this.#sb
       .from("query_memories")
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(limit);
+      .limit(_args.p_limit));
     return (data ?? []).map((r) => ({
       id: r.id,
       sourceScores: r.source_scores, // JSONB auto-deserializes
@@ -1736,17 +1905,23 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async recordFeedback(queryId: string, rating: "up" | "down", comment?: string): Promise<void> {
-    await this.sb.from("answer_feedback").insert({
+    await this.domainCall("record_feedback", { p_row: {
       id: crypto.randomUUID(),
       query_id: queryId,
       rating,
       comment: comment ?? null,
       created_at: new Date().toISOString(),
-    });
+    } }, (_args) => this.#sb.from("answer_feedback").insert(_args.p_row));
   }
 
   async getFeedbackStats(queryId?: string): Promise<FeedbackStats> {
-    let query = this.sb.from("answer_feedback").select("rating");
+    if (this.#enrolled) {
+      const { data, error } = await this.#enrolled.authority.rpcResult("get_feedback_stats", { p_query_id: queryId || null });
+      if (error || !data || ![data.total, data.up, data.down].every(Number.isSafeInteger)
+        || data.total < 0 || data.up < 0 || data.down < 0 || data.up + data.down !== data.total) refuseStorage("invalid_operation");
+      return { total: data.total, up: data.up, down: data.down, rate: data.total > 0 ? round(data.up / data.total) : 0 };
+    }
+    let query = this.#sb.from("answer_feedback").select("rating");
     if (queryId) query = query.eq("query_id", queryId);
     const { data } = await query;
     const rows = data ?? [];

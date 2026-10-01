@@ -1,3 +1,4 @@
+import { callSupabaseDomain } from "./supabase-authority";
 import type { DatabaseSync } from "node:sqlite";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { WithdrawalRecord } from "../types";
@@ -27,9 +28,9 @@ export async function recordSqliteWithdrawal(db: DatabaseSync, value: Withdrawal
 }
 export async function recordSupabaseWithdrawal(sb: SupabaseClient, value: WithdrawalRecord) {
   const w = row(value);
-  const { error } = await sb.from("withdrawals").upsert(w, { onConflict: "tx_hash", ignoreDuplicates: true });
+  const { error } = await callSupabaseDomain(sb, "record_supabase_withdrawal", { p_row: w }, (_args) => sb.from("withdrawals").upsert(_args.p_row, { onConflict: "tx_hash", ignoreDuplicates: true }));
   if (error) throw new Error("Withdrawal record write unavailable");
-  const read = await sb.from("withdrawals").select("*").eq("tx_hash", w.tx_hash).maybeSingle();
+  const read = await callSupabaseDomain(sb, "record_supabase_withdrawal_2", { p_tx_hash: w.tx_hash }, (_args) => sb.from("withdrawals").select("*").eq("tx_hash", _args.p_tx_hash).maybeSingle());
   if (read.error) throw new Error("Withdrawal record readback unavailable");
   verify(read.data, w);
 }

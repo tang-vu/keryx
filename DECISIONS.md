@@ -76,6 +76,13 @@ SQLite composes the admitted native connection with an exact application schema
 profile. PostgreSQL uses fixed identity-checked domain RPCs and protected writer
 capabilities; an enrolled call never executes the legacy raw-client closure.
 Guard computed results, early returns and iterator publication as well as SQL.
+For enrolled browser admission, read source, item and current offer through one
+private fixed protected catalog statement. Native evidence showed separate full
+checks exhausted the existing five-second observation lifetime. Preserve that
+lifetime and all identity, schema, registry, version and admission checks; reduce
+independent catalog reads instead of extending authority freshness. The coherent
+snapshot does not remove the later catalog-to-admission race. Regenerate the
+independent SOURCE profile and verify the complete native workflow before cutover.
 Read-only access denies every reviewed mutator, including methods that update
 usage while checking credentials. Initialization inspects readiness and never
 migrates, repairs or normalizes historical authority.
@@ -90,6 +97,16 @@ This is staged source work, not enrollment, private delivery issuance, selector
 activation or mainnet authorization. Native backend, role, race, recovery and
 deployment evidence remain explicit gates. See
 [enrolled runtime backend acceptance](docs/enrolled-runtime-backends.md).
+
+PostgreSQL snapshot CAS excludes only the relation maintenance fields
+`relpages`, `reltuples`, `relallvisible`, `relfrozenxid` and `relminmxid`.
+Native diagnostics found changes within these fields while logical rows,
+sequences, other catalog records and normalized schema stayed identical around
+a successful READ ONLY transaction. Retain relation OIDs, file mappings,
+structural metadata, privileges and retained data in the CAS. A maintenance
+update must not invalidate an otherwise unchanged financial-state review.
+Frozen profiles come from a separate source reference; a deterministic source
+function edit still requires fresh native PRE/POST equality before enrollment.
 
 **D-288** - Reuse recorded research for academic and technical/market workflows -
 *The user selected both researcher segments; existing receipts and claim evidence

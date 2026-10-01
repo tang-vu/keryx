@@ -1,3 +1,4 @@
+import { callSupabaseDomain } from "./supabase-authority";
 import type { DatabaseSync } from "node:sqlite";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
@@ -64,7 +65,7 @@ export async function getSupabaseWithdrawalAttestation(db: SupabaseClient, id: s
   if (!record) return null;
   const claim = await getSupabaseWithdrawalTransferClaim(db, id, owner);
   if (!claim) return null;
-  const { data, error } = await db.from("creator_withdrawal_attestations").select("claim_id,transfer_id,data,saved_at").eq("id", id).maybeSingle();
+  const { data, error } = await callSupabaseDomain(db, "get_supabase_withdrawal_attestation", { p_id: id }, (_args) => db.from("creator_withdrawal_attestations").select("claim_id,transfer_id,data,saved_at").eq("id", _args.p_id).maybeSingle());
   if (error) throw new Error("Withdrawal attestation storage unavailable");
   return data ? read(data, record, claim.claimId) : null;
 }

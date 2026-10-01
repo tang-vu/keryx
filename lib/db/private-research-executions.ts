@@ -1,3 +1,4 @@
+import { callSupabaseDomain } from "./supabase-authority";
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -46,7 +47,7 @@ export async function claimSqlitePrivateExecution(db: DatabaseSync, id: string, 
 export async function getSupabasePrivateExecution(db: SupabaseClient, id: string, payer: string) {
   const payment = await getSupabasePrivatePayment(db, id, payer);
   if (payment?.status !== "settled") return null;
-  const { data, error } = await db.from("private_research_executions").select("worker_id,started_at").eq("id", id).maybeSingle();
+  const { data, error } = await callSupabaseDomain(db, "get_supabase_private_execution", { p_id: id }, (_args) => db.from("private_research_executions").select("worker_id,started_at").eq("id", _args.p_id).maybeSingle());
   if (error) throw new Error("Private execution storage unavailable");
   return data ? readClaim(id, data) : null;
 }

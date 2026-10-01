@@ -6,6 +6,27 @@ document does not activate a selector, enroll a store, authorize a payment or
 close M2/mainnet readiness. PostgreSQL implementation and acceptance are a
 separate staged change; SQLite acceptance cannot prove that backend usable.
 
+## Supported surfaces and release boundary
+
+This backend candidate is dormant across all supported surfaces. The public
+`KeryxDB` contract and deployed selector remain shared; production enrollment and
+caller cutover require a separate coordinated release.
+
+| Surface | Authority retained by this change | Remaining release gate |
+| --- | --- | --- |
+| Web and HTTP API | Ordinary adapters selected by `getDb()` | Reviewed deployment enrollment, complete caller inventory and cutover |
+| Remote MCP | Existing server research path and `getDb()` | Same server cutover; retain authentication, budgets and settlement evidence |
+| CLI and stdio MCP | Existing buyer transport and private journal; server storage stays behind the API | Review local worker callers and server cutover before selecting an enrolled factory |
+| Desktop | Existing Operator composition and packaged native engine | Separate storage enrollment and domain cutover; native and installer acceptance do not activate Supabase |
+| Extension | Existing authenticated web/API transport | Server cutover and browser authorization acceptance |
+| Telegram, Discord and Slack bots | Existing guarded server research path | Server cutover with each bot's authentication and result-evidence checks |
+
+Factory imports remain confined to acceptance fixtures and internal composition.
+The dormant import-graph gate checks ordinary application reachability. Desktop
+smoke changes verify packaging and uninstall behavior only. No public API,
+package or installer version change, production deployment, synchronized
+distribution or funded settlement is claimed by this candidate's acceptance.
+
 ## Runtime admission
 
 The closed factories read `KERYX_STORAGE_MANIFEST` through the existing bounded
@@ -58,6 +79,9 @@ bounded, identity-checked RPCs. Fixed arguments are evaluated once; legacy query
 closures execute only in the legacy lane. An error or missing enrolled RPC never
 falls back to raw table access. Private transaction writer capabilities compose
 with existing browser, session and treasury guards, rather than replacing them.
+An enrolled RPC error must refuse the operation before legacy fallback result
+construction. An error cannot become an empty read or a synthesized successful
+write; retained database evidence must establish the resulting state.
 
 Dormant installation must preserve existing legacy privileges until explicit
 owner cutover. Cutover must atomically verify the reviewed snapshot and actual
@@ -66,12 +90,60 @@ publish identity. Failed admission leaves the store unchanged. All service-role,
 authenticated, anon and unchecked legacy RPC paths need native acceptance after
 cutover. DB-owner, host and configured HTTPS endpoint trust remain explicit.
 
+The PostgreSQL 17 source profile is bounded and sealed independently of the
+enrollment target. Validate raw trigger field sizes before hex encoding or
+deparsing. Fresh native source exports must match the reviewed PRE/POST digests
+before target acceptance. Snapshot CAS excludes only `pg_class` maintenance
+fields `relpages`, `reltuples`, `relallvisible`, `relfrozenxid` and `relminmxid`;
+it retains OIDs, file mappings, structural metadata, privileges, logical rows
+and sequences. Maintenance alone must not appear as a financial write.
+
 Read-only PostgreSQL operations must actually run in a read-only transaction:
 fixed identity/mode checks and SELECT projections, with no writer-capability row
 or locking query that requires writes. Audit transitive function bodies instead
 of guessing from names. Write operations retain their locked identity and private
 capabilities. The actual outer SQL statement deadline must be bounded before lock
 work; a function-local timeout declaration is insufficient evidence.
+
+Native acceptance runs cohesive independent cases under unchanged child and
+parent deadlines; every case retains startup, operation and publication guards.
+Measured guard cost in the resource-bounded PostgreSQL fixture is an operational
+cutover gate, not a deployed latency measurement. Before caller activation, prove
+that complete guarded workflows fit their actual catalog-token and payment
+deadlines. Do not lengthen those deadlines or omit authority checks to make an
+acceptance fixture pass.
+
+The authority-verification RPC checks fences through `read_operation` and
+`require_identity_read`. Omit its former second identical fence invocation:
+the STABLE path uses one SQL statement snapshot and performs no intervening
+writes. Retain the nested fence check, identity/deadline checks, mode policy
+and every separate operation/publication guard; this is no cross-call cache.
+
+Enrolled dashboard metrics read the four fixed metric scans sequentially. Each
+scan retains its full authority verification, pagination and statement deadline.
+This bounds competing verification work within one metrics call; the ordinary
+adapter retains its existing parallel reads. Metrics are not an atomic snapshot
+across the four statements and do not establish payment settlement evidence.
+
+For enrolled browser source admission, use one private, fixed catalog read of
+source, item and current offer in a single protected STABLE statement snapshot.
+Separate guarded reads exhausted the unchanged five-second observation lifetime
+in native acceptance. Begin that lifetime before the coherent read; retain the
+identity/schema check, existing row codecs, content/version and offer validation,
+registry observations and admission expiry checks after SQL locks. Missing or
+foreign records refuse. This improves read coherence without eliminating the
+catalog-to-admission race; authority remains bounded to its recorded observation.
+The coherent reader adds no public database method or caller-selected transport,
+and requires a fresh independent SOURCE profile before native acceptance.
+
+The catalog preflight bounds raw fields to 2 MiB, tag and author arrays to 64
+entries, intermediate JSON to 16 MiB and response bytes to 4 MiB. Shape checks
+precede string decoding, with a separate allowance for numeric weight expansion.
+Compressed legacy JSONB tags/authors refuse because their stored size does not
+prove the expanded bound; legitimate compressed metadata can therefore block
+enrolled source admission. Preserve that data and resolve the limitation before
+cutover if the intended source set requires it. Text content uses its raw byte
+length metadata, and ordinary adapter behavior remains unchanged.
 
 ## Cache format and limits
 
