@@ -54,7 +54,7 @@ export async function admitSupabaseBrowserSourceSigningOriginal(sb: SupabaseClie
   else if (prior.status === "missing") {
     const token = await authority.resolve(input);
     const prepared = prepareBrowserSourceSigningAdmission(input, token);
-    const args = { p_input: prepared.input, p_journal: prepared.journal, p_original: prepared.original };
+    const args = { p_input: prepared.input, p_journal: prepared.journal, p_original: prepared.original, p_admission_deadline_ms: prepared.admissionDeadlineMs };
     assertVerifiedBrowserOriginalSourceContextCurrent(token, input);
     const admission = await sb.rpc("browser_signing_admit_source_original", args);
     if (admission.error) refuse(); result = object(admission.data);

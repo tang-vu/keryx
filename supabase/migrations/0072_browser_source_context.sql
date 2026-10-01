@@ -191,9 +191,14 @@ begin
  path:='/api/source/'||(c#>>'{source,sourceId}')||'/item/'||public.browser_signing_source_urlencode(c#>>'{item,itemId}',true)||'?version='||public.browser_signing_source_urlencode(c#>>'{item,contentVersion}',false);
  if price->>'mode'='creator-offer' then path:=path||'&offer='||(price#>>'{offer,id}')||'&listPriceUsdc6='||(r->>'listPriceMicros'); end if;
  if c#>>'{endpoint,path}' is distinct from path then raise exception 'browser source endpoint refused'; end if;
+ -- Additionally bound the prepared timestamp to five seconds. Recheck its
+ -- age after database lock waits; the separate original-token deadline is authoritative.
+ if (p_journal->>'admittedAt')::timestamptz>clock_timestamp()
+  or clock_timestamp()-(p_journal->>'admittedAt')::timestamptz>=interval '5 seconds'
+  then raise exception 'browser source observation expired'; end if;
 end $$;
 revoke all on function public.browser_signing_source_canonical(jsonb),public.browser_signing_source_urlencode(text,boolean),public.browser_signing_source_context_check(jsonb,jsonb,jsonb) from public,anon,authenticated,service_role;
-create function public.browser_signing_admit_source_original(p_input jsonb,p_journal jsonb,p_original jsonb) returns jsonb
+create function public.browser_signing_admit_source_original(p_input jsonb,p_journal jsonb,p_original jsonb,p_admission_deadline_ms bigint) returns jsonb
 language plpgsql security definer set search_path=pg_catalog,pg_temp as $$
 declare ns text:=p_input->>'queryNamespace'; qid text:=p_input->>'queryId'; a jsonb:=p_input->'journal';
  q public.browser_signing_queries%rowtype; n public.browser_signing_namespaces%rowtype; old public.browser_signing_originals%rowtype;
@@ -210,12 +215,22 @@ begin
  if (select active from public.browser_signing_v2_control where id=1) is distinct from true
   or (select active from public.browser_journal_control where id=1) is distinct from true then return jsonb_build_object('status','inactive'); end if;
  perform public.browser_signing_source_context_check(p_input,p_journal,p_original);
+ if p_admission_deadline_ms is null or p_admission_deadline_ms<1 or p_admission_deadline_ms>9007199254740991
+  or extract(epoch from clock_timestamp())*1000>=p_admission_deadline_ms
+  or p_admission_deadline_ms>extract(epoch from clock_timestamp())*1000+5000
+  then raise exception 'browser source observation expired'; end if;
  select * into q from public.browser_signing_queries where namespace=ns and query_id=qid for update;
  if not found then return jsonb_build_object('status','refused'); end if;
  select * into n from public.browser_signing_namespaces where namespace=ns for update;
  select verified->'policy' into p from public.browser_signing_policies where namespace=ns and policy_id=q.policy_id;
  select * into g from public.session_grants where session_id=a->>'sessionId' for update;
- if not found or q.session_id is distinct from a->>'sessionId' or g.grant_epoch is distinct from p->>'grantEpoch'
+ if not found then return jsonb_build_object('status','refused'); end if;
+ perform public.browser_signing_source_context_check(p_input,p_journal,p_original);
+ if p_admission_deadline_ms is null or p_admission_deadline_ms<1 or p_admission_deadline_ms>9007199254740991
+  or extract(epoch from clock_timestamp())*1000>=p_admission_deadline_ms
+  or p_admission_deadline_ms>extract(epoch from clock_timestamp())*1000+5000
+  then raise exception 'browser source observation expired'; end if;
+ if q.session_id is distinct from a->>'sessionId' or g.grant_epoch is distinct from p->>'grantEpoch'
   or a->>'grantEpoch' is distinct from p->>'grantEpoch' or lower(g.owner_addr) is distinct from n.owner or lower(g.sess_addr) is distinct from n.signer
   or g.expiry<=(extract(epoch from clock_timestamp())*1000)::bigint or (p->>'expiresAt')::bigint<=(extract(epoch from clock_timestamp())*1000)::bigint then return jsonb_build_object('status','refused'); end if;
  if a->>'queryId' is distinct from qid or p_journal->>'sessionId' is distinct from a->>'sessionId'
@@ -242,11 +257,15 @@ begin
  -- Existing grant/signer capacity locks may have waited. Refuse an offer that
  -- expired while waiting and roll back the complete underlying admission.
  perform public.browser_signing_source_context_check(p_input,p_journal,p_original);
+ if p_admission_deadline_ms is null or p_admission_deadline_ms<1 or p_admission_deadline_ms>9007199254740991
+  or extract(epoch from clock_timestamp())*1000>=p_admission_deadline_ms
+  or p_admission_deadline_ms>extract(epoch from clock_timestamp())*1000+5000
+  then raise exception 'browser source observation expired'; end if;
  insert into public.browser_signing_originals values(p_journal->>'nonce',ns,qid,p_input,p_journal,p_original,a->>'sessionId',a->>'requestId');
  update public.browser_signing_queries set spent_micro=spent_micro+amount where namespace=ns and query_id=qid;
  delete from public.browser_signing_v3_writer where transaction_id=txid_current();
  return jsonb_build_object('status','admitted','snapshot',public.browser_signing_snapshot(n.owner,a->>'sessionId',a->>'requestId'));
 end $$;
 
-revoke all on function public.browser_signing_admit_source_original(jsonb,jsonb,jsonb) from public,anon,authenticated,service_role;
-grant execute on function public.browser_signing_admit_source_original(jsonb,jsonb,jsonb) to service_role;
+revoke all on function public.browser_signing_admit_source_original(jsonb,jsonb,jsonb,bigint) from public,anon,authenticated,service_role;
+grant execute on function public.browser_signing_admit_source_original(jsonb,jsonb,jsonb,bigint) to service_role;

@@ -6,9 +6,12 @@ import { canonicalJson } from "../canonical-json";
 import { arcTestnet } from "../chains";
 import { config } from "../config";
 import { attestedArcAuthorityHttp } from "../arc-rpc-attestation";
-import { REGISTRY_ABI } from "../registry/registry-client";
+import { REGISTRY_ABI } from "../registry/registry-abi";
 import { sourceItemContentVersion } from "../sources/source-item-asset";
-import { ObservationElapsedGuard } from "./browser-original-observation-protocol";
+import {
+  ObservationElapsedGuard,
+  observationUtcNow,
+} from "./browser-original-observation-protocol";
 import {
   browserOriginalSourceContextSchema,
   browserSourceContextPath,
@@ -34,6 +37,7 @@ const tokens = new WeakMap<
     input: string;
     context: BrowserOriginalSourceContext;
     life: ObservationElapsedGuard;
+    admissionDeadlineMs: number;
   }
 >();
 const refused = () => {
@@ -87,6 +91,8 @@ function create(
       value: BrowserSourceOriginalAdmission
     ): Promise<VerifiedBrowserOriginalSourceContext> {
       if (pendingResolutions >= 8) return refused();
+      const admissionDeadlineMs = observationUtcNow() + 5000;
+      if (!Number.isSafeInteger(admissionDeadlineMs)) return refused();
       const life = new ObservationElapsedGuard(5000);
       pendingResolutions++;
       const pending = (async () => {
@@ -214,7 +220,12 @@ function create(
           const token = Object.freeze(
             {}
           ) as VerifiedBrowserOriginalSourceContext;
-          tokens.set(token, { input: binding, context: retained, life });
+          tokens.set(token, {
+            input: binding,
+            context: retained,
+            life,
+            admissionDeadlineMs,
+          });
           return token;
         } catch {
           life.close();
@@ -268,6 +279,7 @@ export function prepareBrowserSourceSigningAdmission(
       input: { ...captured, sourceContext: context },
       journal,
       original,
+      admissionDeadlineMs: record.admissionDeadlineMs,
     })
   ) as {
     input: BrowserSourceOriginalAdmission & {
@@ -275,6 +287,7 @@ export function prepareBrowserSourceSigningAdmission(
     };
     journal: typeof journal;
     original: typeof original;
+    admissionDeadlineMs: number;
   };
   function freeze(value: object): void {
     for (const child of Object.values(value))

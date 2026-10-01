@@ -37,6 +37,14 @@ precede the database transaction; context, original and existing reservations
 then commit atomically. This does not make blockchain reads atomic with SQL or
 remove RPC, catalog-mapping and backend service-role trust.
 
+The resolver has one five-second lifetime beginning before catalog and RPC work.
+Preparation cannot renew it. PostgreSQL receives a separate trusted ephemeral
+deadline and checks it after row and capacity locks, before committing fresh
+authority. That deadline is absent from durable context and history. Application
+and database UTC agreement remains an assumption; the caller also retains its
+monotonic final guard. Expiry refuses the complete admission without releasing
+an existing hold.
+
 Retained context is immutable. Same-original replay cannot change context,
 refresh validity, select another offer, reset query limits or add capacity.
 Observation projects only retained evidence in the existing coherent exposed-only

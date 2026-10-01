@@ -22,6 +22,7 @@ on:
       - "lib/offers/article-offer.ts"
       - "lib/sources/source-item-asset.ts"
       - "lib/registry/registry-client.ts"
+      - "lib/registry/registry-abi.ts"
       - "lib/arc-rpc-attestation.ts"
       - "lib/config.ts"
       - "lib/chains.ts"

@@ -4,13 +4,13 @@ import assert from "node:assert/strict";
 import { execFile, execFileSync, type ChildProcess } from "node:child_process";
 import { createServer, type Server } from "node:http";
 import { once } from "node:events";
+import { createRequire } from "node:module";
 import { readFileSync, readdirSync } from "node:fs";
 import { randomBytes, randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { decodeFunctionData, encodeFunctionResult, toHex } from "viem";
-import { REGISTRY_ABI } from "../lib/registry/registry-client";
-import { createSyntheticBrowserOriginalSourceAuthority, prepareBrowserSourceSigningAdmission, assertVerifiedBrowserOriginalSourceContextCurrent } from "../lib/payments/browser-original-source-authority";
+import { REGISTRY_ABI } from "../lib/registry/registry-abi";
 import { browserSourceRegistryId } from "../lib/payments/browser-original-source-context";
 import { sourceItemContentVersion } from "../lib/sources/source-item-asset";
 import { articleOfferTypedData, articleOfferId } from "../lib/offers/article-offer-proof";
@@ -20,7 +20,15 @@ import { browserQueryPolicyTypedData, verifyBrowserQueryPolicy, type BrowserQuer
 import { browserSigningTypedData, serializeBrowserSigningHeader } from "../lib/payments/browser-signing-original";
 import { prepareBrowserJournal } from "../lib/db/browser-authorization-journal";
 import type { BrowserOriginalAdmission, BrowserSourceOriginalAdmission } from "../lib/db/browser-signing-originals";
-import { admitSupabaseBrowserQueryPolicy, admitSupabaseBrowserSigningOriginal, admitSupabaseBrowserSourceSigningOriginal, readSupabaseBrowserSigningSnapshot, readExposedSupabaseBrowserSigningSnapshotForSigner, signSupabaseBrowserSigningOriginal } from "../lib/db/supabase-browser-signing-originals";
+// Node24.10 tsx ESM/CJS imports can create distinct private WeakMaps. Keep
+// the synthetic issuer and actual adapter on one explicitly loaded graph.
+const fixtureRequire = createRequire(import.meta.url);
+const authorityModule = fixtureRequire("../lib/payments/browser-original-source-authority.ts") as typeof import("../lib/payments/browser-original-source-authority");
+const { createSyntheticBrowserOriginalSourceAuthority, prepareBrowserSourceSigningAdmission, assertVerifiedBrowserOriginalSourceContextCurrent } = authorityModule;
+const adapterModule = fixtureRequire("../lib/db/supabase-browser-signing-originals.ts") as typeof import("../lib/db/supabase-browser-signing-originals");
+const { admitSupabaseBrowserQueryPolicy, admitSupabaseBrowserSigningOriginal, admitSupabaseBrowserSourceSigningOriginal, readSupabaseBrowserSigningSnapshot, readExposedSupabaseBrowserSigningSnapshotForSigner, signSupabaseBrowserSigningOriginal } = adapterModule;
+assert.equal(authorityModule, fixtureRequire("../lib/payments/browser-original-source-authority.ts"));
+assert.equal(adapterModule, fixtureRequire("../lib/db/supabase-browser-signing-originals.ts"));
 
 const name = `keryx-browser-originals-${randomUUID()}`, owned = [name, `${name}-http`, `${name}-curl`], created: string[] = [];
 let engine = false;
@@ -311,7 +319,7 @@ try {
   await unchanged(async () => { assert.throws(() => sql(`update public.browser_signing_originals set original=jsonb_set(original,'{sourceContext,registry,payoutWallet}','"${owner.address.toLowerCase()}"') where nonce='${sourceSaved.journal.nonce}'`), /immutable/); });
   grant(sourceEpoch);
   const nextSource = { ...publicInput, journal: { ...publicInput.journal, requestId: randomUUID() } }, token = await authority.resolve(nextSource), nextPrepared = prepareBrowserSourceSigningAdmission(nextSource, token);
-  await unchanged(async () => { const result = await sb.rpc("browser_signing_admit_source_original", { p_input: nextPrepared.input, p_journal: nextPrepared.journal, p_original: { ...nextPrepared.original, sourceContextDigest: digest() } }); assert(result.error); });
+  await unchanged(async () => { const result = await sb.rpc("browser_signing_admit_source_original", { p_input: nextPrepared.input, p_journal: nextPrepared.journal, p_admission_deadline_ms: nextPrepared.admissionDeadlineMs, p_original: { ...nextPrepared.original, sourceContextDigest: digest() } }); assert(result.error); });
   sql(`create function public.synthetic_source_failure() returns trigger language plpgsql as $$begin raise exception 'synthetic source rollback'; end$$;create trigger synthetic_source_failure before insert on public.browser_signing_originals for each row execute function public.synthetic_source_failure()`);
   await unchanged(async () => { await assert.rejects(() => admitSupabaseBrowserSourceSigningOriginal(sb, nextSource, authority)); });
   sql("drop trigger synthetic_source_failure on public.browser_signing_originals;drop function public.synthetic_source_failure()");
@@ -342,29 +350,54 @@ try {
   const tamperInput = { ...offerInput, journal: { ...offerInput.journal, requestId: randomUUID() } }, offerToken = await authority.resolve(tamperInput), offerPrepared = prepareBrowserSourceSigningAdmission(tamperInput, offerToken);
   const tamperedContext = { ...offerPrepared.original.sourceContext, registry: { ...offerPrepared.original.sourceContext.registry, payoutWallet: owner.address.toLowerCase() } };
   const tamperedOriginal = prepareBrowserSourceSigningOriginal(offerPrepared.journal, verified.namespace, tamperedContext);
-  await unchanged(async () => { const result = await sb.rpc("browser_signing_admit_source_original", { p_input: { ...offerPrepared.input, sourceContext: tamperedContext }, p_journal: offerPrepared.journal, p_original: tamperedOriginal }); assert(result.error); });
+  await unchanged(async () => { const result = await sb.rpc("browser_signing_admit_source_original", { p_input: { ...offerPrepared.input, sourceContext: tamperedContext }, p_journal: offerPrepared.journal, p_original: tamperedOriginal, p_admission_deadline_ms: offerPrepared.admissionDeadlineMs }); assert(result.error); });
   const expiringTerms = { ...offerTerms, nonce: digest(), expiresAt: Math.floor(Date.now() / 1000) + 4 }, expiringSignature = await owner.signTypedData(articleOfferTypedData(expiringTerms)), expiringId = articleOfferId(expiringSignature);
   sql(`update public.article_offers set id='${expiringId}',nonce='${expiringTerms.nonce}',signature='${expiringSignature}',expires_at=${expiringTerms.expiresAt} where source_id='synthetic-source'`);
   const expiringInput = { ...offerInput, source: { ...offerInput.source, offerId: expiringId }, journal: { ...offerInput.journal, requestId: randomUUID(), offerId: expiringId, payment: { ...offerInput.journal.payment, offerId: expiringId } } };
   const expiringToken = await authority.resolve(expiringInput), expiringPrepared = prepareBrowserSourceSigningAdmission(expiringInput, expiringToken);
-  const capacityLock = await transaction(`begin;select signer from public.browser_signer_capacity where signer='${signer.address.toLowerCase()}' for update`);
+  const grantLock = await transaction(`begin;select session_id from public.session_grants where session_id='synthetic-owner' for update`);
   await unchanged(async () => {
     assertVerifiedBrowserOriginalSourceContextCurrent(expiringToken, expiringInput);
-    const pending = sb.rpc("browser_signing_admit_source_original", { p_input: expiringPrepared.input, p_journal: expiringPrepared.journal, p_original: expiringPrepared.original }).then(value => value);
+    const pending = sb.rpc("browser_signing_admit_source_original", { p_input: expiringPrepared.input, p_journal: expiringPrepared.journal, p_original: expiringPrepared.original, p_admission_deadline_ms: expiringPrepared.admissionDeadlineMs }).then(value => value);
     const waitDeadline = performance.now() + 2000; let blocked = false;
     while (performance.now() < waitDeadline) {
       if (sql("select exists(select 1 from pg_stat_activity where datname='postgres' and wait_event_type='Lock' and query like '%browser_signing_admit_source_original%')") === "t") { blocked = true; break; }
       await new Promise(r => setTimeout(r, 20));
     }
-    assert(blocked, "actual source operation must reach the held capacity lock before expiry");
+    assert(blocked, "actual source operation must reach the held grant lock before expiry");
     const expiryDeadline = performance.now() + 6000;
     while (Number(sql("select floor(extract(epoch from clock_timestamp()))")) < expiringTerms.expiresAt && performance.now() < expiryDeadline) await new Promise(r => setTimeout(r, 100));
     assert(Number(sql("select floor(extract(epoch from clock_timestamp()))")) >= expiringTerms.expiresAt);
-    await capacityLock.close(); const answer = await pending;
-    assert(answer.error && answer.error.message === "browser source offer refused", "fresh offer expiry after capacity lock must atomically refuse");
+    await grantLock.close(); const answer = await pending;
+    assert(answer.error && answer.error.message === "browser source offer refused", "fresh offer expiry after grant lock must atomically refuse");
   });
   sql(`update public.article_offers set id='${offerId}',nonce='${offerTerms.nonce}',signature='${offerSignature}',expires_at=${offerTerms.expiresAt} where source_id='synthetic-source'`);
-  console.log("PASS actual capacity-lock wait reaches offer expiry; journal/original/query/signer reservations all roll back");
+  console.log("PASS actual grant-lock wait reaches offer expiry; journal/original/query/signer reservations all roll back");
+  const delayedAuthority = createSyntheticBrowserOriginalSourceAuthority({ ...catalog, async getSource(id: string) {
+    await new Promise(r => setTimeout(r, 2000)); return catalog.getSource(id);
+  } }, `http://127.0.0.1:${address.port}`, registry);
+  const delayedInput = { ...offerInput, journal: { ...offerInput.journal, requestId: randomUUID() } };
+  const delayedToken = await delayedAuthority.resolve(delayedInput), delayedPrepared = prepareBrowserSourceSigningAdmission(delayedInput, delayedToken);
+  const deadlineGrantLock = await transaction("begin;select session_id from public.session_grants where session_id='synthetic-owner' for update");
+  await unchanged(async () => {
+    assertVerifiedBrowserOriginalSourceContextCurrent(delayedToken, delayedInput);
+    const pending = sb.rpc("browser_signing_admit_source_original", { p_input: delayedPrepared.input, p_journal: delayedPrepared.journal,
+      p_original: delayedPrepared.original, p_admission_deadline_ms: delayedPrepared.admissionDeadlineMs }).then(value => value);
+    const waitDeadline = performance.now() + 2000; let blocked = false;
+    while (performance.now() < waitDeadline) {
+      if (sql("select exists(select 1 from pg_stat_activity where datname='postgres' and wait_event_type='Lock' and query like '%browser_signing_admit_source_original%')") === "t") { blocked = true; break; }
+      await new Promise(r => setTimeout(r, 20));
+    }
+    assert(blocked, "delayed resolution must reach the actual held grant row");
+    const finishDeadline = performance.now() + 6000;
+    while (Number(sql("select extract(epoch from clock_timestamp())*1000")) < delayedPrepared.admissionDeadlineMs && performance.now() < finishDeadline) await new Promise(r => setTimeout(r, 30));
+    const dbNow = Number(sql("select extract(epoch from clock_timestamp())*1000"));
+    assert(dbNow >= delayedPrepared.admissionDeadlineMs);
+    assert(dbNow - Date.parse(delayedPrepared.journal.admittedAt) < 5000, "prepared timestamp alone would still admit this operation");
+    await deadlineGrantLock.close(); const answer = await pending;
+    assert(answer.error && answer.error.message === "browser source observation expired");
+  });
+  console.log("PASS actual delayed resolution plus grant-lock wait cannot reset original five-second authority budget; whole state unchanged");
   console.log("PASS actual creator EIP712 offer/PG exact context+digest coherent roundtrip/canonical callback/wrong creator proof+bound-context refusal");
   // A second database exists only inside this UUID-owned ephemeral container.
   // Its first activation goes directly from an empty floor2 barrier to floor3.
@@ -396,7 +429,7 @@ try {
     `select public.browser_signing_exposed_snapshot_for_signer('${signer.address}','synthetic-owner','${input.journal.requestId}')`]) {
     await unchanged(async () => { assert.throws(() => sql(`set role ${role};${rpc}`), /permission denied/); });
   }
-  for (const role of ["anon", "authenticated"] as const) for (const rpc of ["select public.browser_signing_replay_source_original('{}')", "select public.browser_signing_admit_source_original('{}','{}','{}')"]) await unchanged(async () => { assert.throws(() => sql(`set role ${role};${rpc}`), /permission denied/); });
+  for (const role of ["anon", "authenticated"] as const) for (const rpc of ["select public.browser_signing_replay_source_original('{}')", "select public.browser_signing_admit_source_original('{}','{}','{}',1)"]) await unchanged(async () => { assert.throws(() => sql(`set role ${role};${rpc}`), /permission denied/); });
   for (const privateCall of ["select public.browser_signing_original_floor_for_write()", "select public.browser_signing_v2_admission_internal('{}','{}','{}')", "select public.browser_signing_source_context_check('{}','{}','{}')"]) await unchanged(async () => { assert.throws(() => service(privateCall), /permission denied/); });
   for (const table of ["browser_signing_v2_control", "browser_signing_v2_writer", "browser_signing_v3_writer", "browser_signing_v2_barrier", "browser_signing_namespaces", "browser_signing_policies", "browser_signing_queries", "browser_signing_originals"]) {
     await unchanged(async () => { assert.throws(() => service(`delete from public.${table}`), /permission denied/); });
