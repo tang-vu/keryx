@@ -21,22 +21,35 @@ import { browserSourceRegistryId } from "../payments/browser-original-source-con
 import type { BrowserSourceOriginalAdmission } from "./browser-signing-originals";
 import type { BrowserQueryPolicy } from "../payments/browser-query-policy";
 
-const fixtures: { folder: string; adapters: SqliteAdapter[] }[] = [];
+function fixtureDiagnostics(label?: string) {
+  const started = performance.now();
+  return (phase: string) => {
+    if (label && process.env.KERYX_ENROLLED_TEST_DIAGNOSTICS === "1")
+      console.error(JSON.stringify({ fixtureTiming: label, phase, elapsedMs: Math.round(performance.now() - started),
+        rssMiB: Math.round(process.memoryUsage().rss / 1048576) }));
+  };
+}
+const fixtures: { folder: string; adapters: SqliteAdapter[]; phase: (name: string) => void }[] = [];
 afterEach(() => {
   for (const fixture of fixtures.splice(0)) {
+    fixture.phase("cleanup:start");
     for (const adapter of fixture.adapters) adapter.close();
     rmSync(fixture.folder, { recursive: true, force: true });
+    fixture.phase("cleanup:end");
   }
   vi.unstubAllEnvs();
 });
-async function fixture(mode: "testnet-real" | "testnet-offline" = "testnet-real", funding = false) {
+async function fixture(mode: "testnet-real" | "testnet-offline" = "testnet-real", funding = false, diagnosticLabel?: string) {
+  const phase = fixtureDiagnostics(diagnosticLabel);
+  phase("fixture:start");
   vi.resetModules();
   const folder = mkdtempSync(join(tmpdir(), "keryx-enrolled-adapter-"));
   const file = join(folder, "synthetic.sqlite");
   const manifestPath = join(folder, "deployment.json");
   const identity = syntheticStorageIdentity(mode);
   const adapters: SqliteAdapter[] = [];
-  fixtures.push({ folder, adapters });
+  fixtures.push({ folder, adapters, phase });
+  phase("schema:start");
   const native = new DatabaseSync(file);
   try {
     installSqliteApplicationSchema(native);
@@ -45,12 +58,17 @@ async function fixture(mode: "testnet-real" | "testnet-offline" = "testnet-real"
       for (const sql of Object.values(GATEWAY_FUNDING_INDEXES)) native.exec(sql);
     }
   } finally { native.close(); }
+  phase("schema:end");
+  phase("inspection:start");
   const inspection = await inspectSqliteEnrollment(file, identity);
+  phase("inspection:end");
+  phase("enrollment:start");
   await enrollSqliteStorage(file, identity, {
     format: "keryx-reviewed-storage-enrollment-v1", inspection,
     provenanceDocumentDigest: identity.provenanceDigest,
     unknownClassAttestation: inspection.unknownClasses,
   });
+  phase("enrollment:end");
   const manifest = { format: "keryx-storage-deployment-v1", identity,
     backend: { kind: "sqlite", databasePath: file } };
   writeFileSync(manifestPath, canonicalJson(manifest));
@@ -58,20 +76,25 @@ async function fixture(mode: "testnet-real" | "testnet-offline" = "testnet-real"
   vi.stubEnv("KERYX_SQLITE_PATH", file);
   vi.stubEnv("KERYX_FORCE_OFFLINE", mode === "testnet-offline" ? "1" : "0");
   vi.stubEnv("CONTENT_MASTER_KEY", randomBytes(32).toString("hex"));
+  phase("import:start");
   const api = await import("./enrolled-sqlite-adapter");
-  return { file, manifestPath, manifest, identity, adapters, api };
+  phase("import:end");
+  return { file, manifestPath, manifest, identity, adapters, api, phase };
 }
 
 it("uses the exact installed application schema without startup migration and retains enrolled provenance", async () => {
-  const f = await fixture();
+  const f = await fixture("testnet-real", false, "exact-schema");
   const before = readFileSync(f.file);
+  f.phase("open:start");
   const adapter = await f.api.createEnrolledSqliteAdapter();
+  f.phase("open:end");
   f.adapters.push(adapter);
   expect(f.api.assertEnrolledSqliteAdapter(adapter)).toEqual(f.identity);
   expect(() => f.api.assertEnrolledSqliteAdapter({})).toThrow();
   expect(Reflect.get(adapter, "db")).toBeUndefined();
   expect(Reflect.get(adapter, "fromVerifiedConnection")).toBeUndefined();
   expect(Reflect.get(adapter, "assembleConnectionCore")).toBeUndefined();
+  f.phase("guard:start");
   await adapter.init();
   expect(await adapter.listSources()).toEqual([]);
   expect(await adapter.getSessionGrant("missing")).toBeNull();
@@ -83,6 +106,7 @@ it("uses the exact installed application schema without startup migration and re
     expect(() => raw.prepare("UPDATE sync_state SET value='bypass' WHERE key='native'").run()).toThrow();
     expect(raw.prepare("SELECT value FROM sync_state WHERE key='native'").get()?.value).toBe("retained");
   } finally { raw.close(); }
+  f.phase("guard:end");
 });
 
 it("refuses every explicitly reviewed readonly mutator before invocation, including reads that write usage", async () => {
@@ -226,9 +250,12 @@ it("refuses post-write async publication after manifest drift without claiming t
 });
 
 it("uses native authentication, immutable private intent and exact private treasury helpers through the same enrolled core", async () => {
-  const f = await fixture();
+  const f = await fixture("testnet-real", false, "native-private-authority");
+  f.phase("open:start");
   const adapter = await f.api.createEnrolledSqliteAdapter();
+  f.phase("open:end");
   f.adapters.push(adapter);
+  f.phase("guard:start");
   const payer = privateKeyToAccount(generatePrivateKey());
   const challenge = createHash("sha256").update("synthetic-challenge").digest("hex");
   await adapter.createAuthChallenge(challenge, Date.now(), Date.now() + 60000);
@@ -259,6 +286,7 @@ it("uses native authentication, immutable private intent and exact private treas
     expect(raw.prepare("SELECT count(*) AS n FROM private_treasury_reservations").get()?.n).toBe(1);
     expect(() => raw.prepare("DELETE FROM private_research_intents WHERE id=?").run(intent.id)).toThrow();
   } finally { raw.close(); }
+  f.phase("guard:end");
 });
 
 it("refuses Supabase selection without SQLite fallback and refuses foreign identity before application mutation", async () => {
@@ -342,17 +370,25 @@ it("composes the exact complete installed funding domain without granting its se
 });
 
 it("refuses an oversized raw cache value inserted after readiness before publishing its body", async () => {
-  const f = await fixture();
+  const f = await fixture("testnet-real", false, "oversized-cache");
+  f.phase("open:start");
   const adapter = await f.api.createEnrolledSqliteAdapter();
+  f.phase("open:end");
   f.adapters.push(adapter);
   const { openVerifiedSqliteStorage } = await import("./storage-identity-connection");
+  f.phase("owner-open:start");
   const owner = openVerifiedSqliteStorage(f.file, f.identity);
+  f.phase("owner-open:end");
   try {
+    f.phase("oversized-write:start");
     owner.db.prepare("INSERT INTO cache_items(source_id,text) VALUES('oversized',?)").run("x".repeat(2 * 1024 * 1024 + 1));
     const before = owner.db.prepare("SELECT length(CAST(text AS BLOB)) AS bytes FROM cache_items WHERE source_id='oversized'").get();
+    f.phase("oversized-write:end");
+    f.phase("guard:start");
     await expect(adapter.getCached("oversized")).rejects.toThrow("unavailable");
     expect(owner.db.prepare("SELECT length(CAST(text AS BLOB)) AS bytes FROM cache_items WHERE source_id='oversized'").get()).toEqual(before);
-  } finally { owner.close(); }
+    f.phase("guard:end");
+  } finally { f.phase("owner-close:start"); owner.close(); f.phase("owner-close:end"); }
 });
 
 it("uses explicit offline cache without a content key and preserves the offline financial fence", async () => {

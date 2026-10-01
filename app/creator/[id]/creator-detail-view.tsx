@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { ListingControlsPanel } from "./listing-controls-panel";
 import { ArticleOffersPanel } from "./article-offers-panel";
 import { ArticleContentPanel } from "./article-content-panel";
+import { ScholarlyRightsPanel } from "./scholarly-rights-panel";
 import { NotifyWebhookPanel } from "./notify-webhook-panel";
 import { NotifyEmailPanel } from "./notify-email-panel";
 import { PreviewDepthPanel } from "./preview-depth-panel";
@@ -17,6 +18,7 @@ import { DecisionFeedbackPanel } from "./decision-feedback-panel";
 import { GatewayProofPanel, type GatewayProof } from "./gateway-proof-panel";
 
 interface CreatorData {
+  scholarlyRights?: { status: string; declarationId?: string; approvalId?: string; license?: string; summary?: string; contentVersion?: string; effectiveAt?: string; embargoUntil?: string; expiresAt?: string } | null;
   source: {
     id: string;
     name: string;
@@ -135,6 +137,14 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
       {/* Public: the earnings above, checked against Circle's own books. Sits directly under the
           tiles it corroborates — the proof is worth little a scroll away from the claim. */}
       <GatewayProofPanel proof={gatewayProof} />
+      {data.scholarlyRights && <section className="mb-6 rounded border border-line p-4 text-sm [overflow-wrap:anywhere]" aria-label="Public scholarly rights status">
+        <p>Declared manuscript rights: <strong>{data.scholarlyRights.status}</strong> (Arc testnet pilot). New paid reads independently check effective rights and fresh registry authority.</p>
+        {data.scholarlyRights.summary && <p className="mt-2">{data.scholarlyRights.summary}</p>}
+        {data.scholarlyRights.license && <p className="mt-2">Applicable license: {data.scholarlyRights.license}</p>}
+        {data.scholarlyRights.contentVersion && <p className="mt-2 break-all font-mono text-xs">Declared version: {data.scholarlyRights.contentVersion}</p>}
+        {data.scholarlyRights.expiresAt && <p className="mt-2 text-xs">Declared permission: {data.scholarlyRights.effectiveAt} to {data.scholarlyRights.expiresAt}; embargo ends {data.scholarlyRights.embargoUntil}.</p>}
+        <p className="mt-2 text-xs text-ink-3">This approval record is separate from peer review, current payable status, wallet payment authority and actual settlement. Current permission and terms are checked at purchase.</p>
+      </section>}
 
       {/* Public: why the agent buys or passes on this source, in its own words. Sits above the
           price dial because it is the input to using that dial. */}
@@ -144,6 +154,7 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
       <ListingControlsPanel creatorId={creatorId} />
 
       {/* Owner-only: publisher-signed full text, encrypted before durable storage */}
+      <ScholarlyRightsPanel creatorId={creatorId} />
       <ArticleContentPanel creatorId={creatorId} />
 
       {/* Owner-only: signed, version-bound article discounts */}

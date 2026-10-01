@@ -200,6 +200,12 @@ export interface FeedbackStats {
 }
 
 export interface KeryxDB {
+  /** Supervised SQLite scholarly pilot capability; absent on unsupported backends. */
+  getPaperState?(sourceId: string): Promise<import("../scholarly/rights-protocol").PaperState | null>;
+  beginPaperEnrollment?(sourceId: string, creator: string): Promise<void>;
+  submitPaper?(submission: import("../scholarly/rights-protocol").SignedPaperDeclaration): Promise<import("../scholarly/rights-protocol").PaperState>;
+  reviewPaper?(review: import("../scholarly/rights-protocol").SignedPaperDecision): Promise<import("../scholarly/rights-protocol").PaperState>;
+  getPaperAdmission?(nonce: string): Promise<import("./scholarly-rights").PaperAdmission | null>;
   init(): Promise<void>;
 
   // ── sources & content ──

@@ -1,5 +1,36 @@
 # Keryx — Decision Log
 
+**Supervised scholarly rights are signed version authority, separate from wallet payment authority** — *2026-10-02*
+
+The owner authorized implementing opt-in research-author payments and creating a separate
+local reviewer wallet. Reuse the creator-controlled registry, SIWE, signed encrypted content,
+browser journal and x402 rails. A dedicated one-item source first receives a sticky draft
+restriction, then an immutable creator declaration and independently allowlisted signed operator
+decision. DOI metadata, author names, feed control and developer roles confer no distribution
+approval or payout authority. Local review keys remain only in ignored operator environment;
+the application host receives a public allowlist and detached artifacts.
+
+Start with the deployed legacy SQLite backend and funded browser journal. Atomically bind
+the effective approval, exact version and fresh single-recipient registry policy to the original
+nonce and cap reservation before exposure. Revocation serializes against new admissions and
+does not replace exposed authorizations, release unknown spend or reverse settlement. Sellers
+reject legacy bundles, arbitrary SDK/treasury admissions and unsupported backends for enrolled
+manuscripts. Preserve unrelated legacy sources and exact enrolled native schema/cutover gates.
+Install scholarly schema only atomically with the first author enrollment, preserving ordinary
+corpus intake compatibility; an actual scholarly corpus remains outside native cutover acceptance.
+Bound the corpus to four effective operator approvals; unreviewed drafts and DOI claims cannot
+squat approval capacity or namespaces. Duplicate effective approved offers need review before
+activation; an actual identical public body prevents duplicate paid access/rewards.
+
+Public license/version/review summaries and receipt approval references exclude private
+permission evidence and contact data. Approval is distinct from settlement and peer review.
+This software release does not claim a live participant or funded scholarly pilot. Broader
+identity, public policy/privacy/appeals, multi-author splits, backend parity and live recovery
+evidence remain open; mainnet and real funds need separate authorization. See
+[paid scholarly papers](docs/paid-scholarly-papers.md) and the
+[review procedure](docs/scholarly-pilot-review.md). Reversible: disable new scholarly research;
+preserve sticky enrollment, signed history and outstanding payment reservations.
+
 **Observed scholarly metadata with separately grounded paper reads** — *2026-10-01*
 
 The owner requested DOI integration and scholarly repositories, then supported

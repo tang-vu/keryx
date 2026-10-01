@@ -28,9 +28,9 @@ import {
   type Hex,
   type Address,
 } from "viem";
-import { arcTestnet } from "@/lib/chains";
-import { attestedArcAuthorityHttp } from "@/lib/arc-rpc-attestation";
-import { config } from "@/lib/config";
+import { arcTestnet } from "../chains";
+import { attestedArcAuthorityHttp } from "../arc-rpc-attestation";
+import { config } from "../config";
 
 // ── ABI (minimal — only what the indexer + client need) ──────────────────────
 

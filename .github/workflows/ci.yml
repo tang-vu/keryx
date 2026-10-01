@@ -78,6 +78,9 @@ jobs:
           node --import tsx scripts/test-browser-creator-listing.mts
           node --import tsx scripts/test-browser-creator-registration.mts
 
+      - name: Scholarly creator rights (hermetic wallet and HTTP, no settlement)
+        run: npm run test:browser-scholarly-rights
+
       - name: Browser checkout UI (hermetic, no settlement)
         run: npm run test:browser-checkout
 

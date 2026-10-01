@@ -76,6 +76,8 @@ export interface ReceiptCitation extends ReceiptAsset {
 export type ReceiptPaymentStatus = "settled" | "pending" | "failed" | "simulated";
 
 export interface ReceiptCreatorPayment extends ReceiptAsset {
+  /** Reviewed permission reference, never proof that settlement occurred. */
+  scholarlyRights?: { declarationId: string; approvalId: string; policy: "supervised-testnet-v1" };
   kind: "fetch" | "citation";
   sourceId: string;
   sourceName: string;

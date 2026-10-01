@@ -1,4 +1,5 @@
 import { isPublicReferenceId } from "@/lib/public-references/catalog";
+import { paperPaidGate } from "@/lib/scholarly/paid-gate";
 /**
  * x402-protected creator content. Paying the toll (payTo = creator wallet) unlocks the full text.
  * GET /api/source/[id]
@@ -34,6 +35,9 @@ export async function GET(
     return Response.json({ error: "source not found" }, { status: 404 });
   }
   const terms = await sourceFetchTerms(source, { refresh: true });
+  const rightsDenied = await paperPaidGate(db, source, req, { kind: "fetch", payee: terms.payTo,
+    amountMicros: Math.round(terms.listPriceUsdc * 1e6), bundle: true });
+  if (rightsDenied) return rightsDenied;
   if (!terms.active || source.active === false || source.verified === false) {
     return Response.json({ error: "source is not active on the earning rail" }, { status: 410 });
   }

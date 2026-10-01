@@ -27,6 +27,10 @@ function projectCreatorPayment(payment: PaymentRecord): ReceiptCreatorPayment | 
       ? { circleTransferId: payment.txHash }
       : {}),
     createdAt: payment.createdAt,
+    ...(payment.scholarlyDeclarationId && payment.scholarlyApprovalId ? { scholarlyRights: {
+      declarationId: payment.scholarlyDeclarationId, approvalId: payment.scholarlyApprovalId,
+      policy: "supervised-testnet-v1" as const,
+    } } : {}),
     ...receiptAsset(payment),
   };
 }
