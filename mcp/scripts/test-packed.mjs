@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn, execFileSync } from "node:child_process";
-import { mkdtemp, writeFile, readdir, rm } from "node:fs/promises";
+import { mkdtemp, writeFile, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createInterface } from "node:readline";
@@ -40,6 +40,8 @@ try {
   });
   const initialized = await request(1, "initialize", { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "clean-package-acceptance", version: "1" } });
   assert.equal(initialized.serverInfo.name, "keryx");
+  const installedPackage = JSON.parse(await readFile(join(workspace, "node_modules/keryx-mcp/package.json"), "utf8"));
+  assert.equal(initialized.serverInfo.version, installedPackage.version, "MCP server must announce its installed package version");
   child.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n");
   const listed = await request(2, "tools/list", {});
   for (const name of ["ask_keryx", "keryx_wallet_status", "keryx_recover"]) assert(listed.tools.some(tool => tool.name === name), `Missing ${name}`);
