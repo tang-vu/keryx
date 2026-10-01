@@ -84,6 +84,14 @@ of guessing from names. Write operations retain their locked identity and privat
 capabilities. The actual outer SQL statement deadline must be bounded before lock
 work; a function-local timeout declaration is insufficient evidence.
 
+Native acceptance runs cohesive independent cases under unchanged child and
+parent deadlines; every case retains startup, operation and publication guards.
+Measured guard cost in the resource-bounded PostgreSQL fixture is an operational
+cutover gate, not a deployed latency measurement. Before caller activation, prove
+that complete guarded workflows fit their actual catalog-token and payment
+deadlines. Do not lengthen those deadlines or omit authority checks to make an
+acceptance fixture pass.
+
 ## Cache format and limits
 
 `enc:v3:` is a distinct enrolled cache envelope. Bind source ID, complete storage

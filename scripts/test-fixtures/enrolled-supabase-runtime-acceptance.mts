@@ -242,6 +242,7 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
     await runChild("refused-startup", "authenticated");
     assert.equal(snapshot(), enrolled);
     await runChild("read-write");
+    await runChild("auth-query");
     const afterWrites = snapshot();
     const writesBefore = bridge.counts.get("storage_set_cached") ?? 0;
     const lastUseBefore = bridge.counts.get("storage_verify_api_key_2") ?? 0;
@@ -278,6 +279,8 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
     assert.equal(sql("select count(*) from keryx_storage.writer"), "0");
     registry = await startEnrolledSupabaseNativeRegistry();
     await runChild("domains");
+    await runChild("domain-auth");
+    await runChild("domain-treasury");
     registry.assertHealthy();
     await registry.close();
     registry = undefined;

@@ -174,6 +174,35 @@ export async function exerciseEnrolledSupabaseNativeDomains(
   await assert.rejects(() => db.signBrowserSigningOriginal(sessionId, requestId, foreignHeader));
   assert.deepEqual(await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId), snapshot);
 
+  const after = await assertEnrolledSupabaseAuthority(db, 'write');
+  assert.equal(canonicalJson(after.identity), canonicalJson(identity));
+  assert.equal(await db.submitBrowserJournal(sessionId, requestId), true);
+  const submitted = await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId);
+  assert.equal(submitted?.journal.phase, 'submission_attempted');
+  assert.ok(admission.journal.payment.id);
+  const wrongNonce = `0x${'99'.repeat(32)}`;
+  assert.equal((await db.failPendingPayment(admission.journal.payment.id, wrongNonce, 'synthetic-terminal')).resolved, false);
+  assert.deepEqual(await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId), submitted);
+  assert.equal((await db.failPendingPayment(admission.journal.payment.id, admission.journal.nonce, 'synthetic-terminal')).resolved, true);
+  const failed = await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId);
+  assert.equal(failed?.journal.phase, 'failed');
+  assert.equal(failed?.query.spentMicros, '1000');
+  assert.equal(await db.browserSignerConfirmedSpendMicro(signer.address), 0);
+  await db.failPendingPayment(admission.journal.payment.id, admission.journal.nonce, 'synthetic-terminal');
+  assert.deepEqual(await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId), failed);
+  return Object.freeze(['native-browser-v3-header-replay-and-synthetic-failure-callback']);
+}
+
+/** Independent actual-facade auth case; synthetic identities never leave this child. */
+export async function exerciseEnrolledSupabaseNativeAuth(db: KeryxDB, expectedIdentity: Readonly<StorageIdentity>) {
+  const { assertEnrolledSupabaseAuthority } = await import('../../lib/db/enrolled-supabase-adapter.ts');
+  const { validateStorageIdentity } = await import('../../lib/db/storage-identity.ts');
+  const { canonicalJson } = await import('../../lib/canonical-json.ts');
+  const identity = validateStorageIdentity(expectedIdentity);
+  assert.equal(identity.authorityMode, 'testnet-real');
+  assert.equal(canonicalJson((await assertEnrolledSupabaseAuthority(db, 'write')).identity), canonicalJson(identity));
+  const owner = privateKeyToAccount(generatePrivateKey());
+  const signer = privateKeyToAccount(generatePrivateKey());
   const now = Date.now();
   const challenge = createHash('sha256').update(randomUUID()).digest('hex');
   await db.createAuthChallenge(challenge, now, now + 60000);
@@ -188,6 +217,24 @@ export async function exerciseEnrolledSupabaseNativeDomains(
   await db.revokeWebSession(sessionHash, owner.address);
   assert.equal(await db.getWebSession(sessionHash), null);
 
+  const after = await assertEnrolledSupabaseAuthority(db, 'write');
+  assert.equal(canonicalJson(after.identity), canonicalJson(identity));
+  return Object.freeze(['native-auth-challenge-session']);
+}
+
+/** Independent actual-facade treasury case; no browser signing authority is transferred. */
+export async function exerciseEnrolledSupabaseNativeTreasury(db: KeryxDB, expectedIdentity: Readonly<StorageIdentity>) {
+  const { assertEnrolledSupabaseAuthority } = await import('../../lib/db/enrolled-supabase-adapter.ts');
+  const { validateStorageIdentity } = await import('../../lib/db/storage-identity.ts');
+  const { canonicalJson } = await import('../../lib/canonical-json.ts');
+  const identity = validateStorageIdentity(expectedIdentity);
+  assert.equal(identity.authorityMode, 'testnet-real');
+  assert.equal(canonicalJson((await assertEnrolledSupabaseAuthority(db, 'write')).identity), canonicalJson(identity));
+  const owner = privateKeyToAccount(generatePrivateKey());
+  const signer = privateKeyToAccount(generatePrivateKey());
+  const network = 'eip155:5042002';
+  const token = '0x3600000000000000000000000000000000000000';
+  const gateway = '0x0077777d7eba4688bdef3e311b846f25870a19b9';
   const { createPrivateAuthorization } = await import('../../lib/buyer/private-request-commitment.ts');
   const { preparePrivateResearchIntent } = await import('../../lib/a2a/private-research-intent.ts');
   const { buyerTypedData } = await import('../../lib/buyer/protocol.ts');
@@ -219,20 +266,5 @@ export async function exerciseEnrolledSupabaseNativeDomains(
     conservativeBackingMicros: '60000', observation: 'database-recorded', chainFinalityVerified: false });
   const after = await assertEnrolledSupabaseAuthority(db, 'write');
   assert.equal(canonicalJson(after.identity), canonicalJson(identity));
-  assert.equal(await db.submitBrowserJournal(sessionId, requestId), true);
-  const submitted = await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId);
-  assert.equal(submitted?.journal.phase, 'submission_attempted');
-  assert.ok(admission.journal.payment.id);
-  const wrongNonce = `0x${'99'.repeat(32)}`;
-  assert.equal((await db.failPendingPayment(admission.journal.payment.id, wrongNonce, 'synthetic-terminal')).resolved, false);
-  assert.deepEqual(await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId), submitted);
-  assert.equal((await db.failPendingPayment(admission.journal.payment.id, admission.journal.nonce, 'synthetic-terminal')).resolved, true);
-  const failed = await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId);
-  assert.equal(failed?.journal.phase, 'failed');
-  assert.equal(failed?.query.spentMicros, '1000');
-  assert.equal(await db.browserSignerConfirmedSpendMicro(signer.address), 0);
-  await db.failPendingPayment(admission.journal.payment.id, admission.journal.nonce, 'synthetic-terminal');
-  assert.deepEqual(await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId), failed);
-  return Object.freeze(['native-browser-v3-header-replay-and-synthetic-failure-callback', 'native-auth-challenge-session',
-    'native-private-intent-and-treasury-cap-race']);
+  return Object.freeze(['native-private-intent-and-treasury-cap-race']);
 }
