@@ -31,6 +31,10 @@ describe("approved YouTube publisher metadata", () => {
     const spoof = xml.replaceAll("xmlns", "notxmlns");
     expect((await new Parser().parseString(spoof)).items).toHaveLength(1);
     await expect(ingest(spoof)).rejects.toThrow("namespace");
+    const quoted = xml.replace(/<feed\s[^>]*>/,
+      `<feed foo=" xmlns='http://www.w3.org/2005/Atom' xmlns:yt='http://www.youtube.com/xml/schemas/2015' xmlns:media='http://search.yahoo.com/mrss/'">`);
+    expect((await new Parser().parseString(quoted)).items).toHaveLength(1);
+    await expect(ingest(quoted)).rejects.toThrow("namespace");
   });
   it("drops mismatched entry identity, unsafe links and noncanonical video URLs", async () => {
     for (const [before, after] of [["<yt:channelId>UCLsooMJoIpl_7ux2jvdPB-Q", "<yt:channelId>wrong"],
