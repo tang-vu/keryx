@@ -1,9 +1,20 @@
 # Independent security review handoff
 
-Status: prepared handoff, September 30, 2026. No independent audit is claimed.
+Status: prepared handoff, October 1, 2026. No independent audit is claimed.
 This packet supports [M3 in the maintained gate map](./mainnet-delivery-plan.md).
 
 ## Candidate and reviewer
+
+The current **testnet source baseline** is
+[`368b27895336da8fee37c360fec21ebf4866e1e5`](https://github.com/tang-vu/keryx/tree/368b27895336da8fee37c360fec21ebf4866e1e5).
+Its Git tree is `71521da3033bf65cd605bc5e5e0a3f9887912434`.
+The canonical `package-lock.json` Git blob is
+`8b01faec101b8d19f297d78a7fa51d63247c370d` (924,616 bytes), SHA-256
+`75e861dd3c4971407e23df336b0c8236c2d4f0ba4f41323b74d3471de166aadb`.
+Hash the Git blob bytes: a Windows checkout with converted line endings can have
+a different file digest. This pin identifies source, not a mainnet configuration
+or permission to activate it. The [October 1 dossier](./engineering/mainnet-readiness-2026-10-01.md)
+records observed deployment, exact CI, dormant components and remaining gates.
 
 The release owner records an immutable candidate commit SHA, repository URL,
 lockfile digest, deployed commit (if different), relevant configuration shape and
@@ -26,10 +37,13 @@ concurrency behavior, secret handling, accounting and migration compatibility.
 
 Use the candidate's documented `npm test`, `npx tsc --noEmit`, `npm run lint`,
 `npm run build` and `npm run test:contracts` gates with its required Node version.
-Record actual command results and candidate-pinned CI links. Existing passing
-[full CI](https://github.com/tang-vu/keryx/actions/runs/36739064692) and
-[Linux monitor CI](https://github.com/tang-vu/keryx/actions/runs/36739064902)
-are historical supporting evidence; rerun required gates for the selected candidate.
+Record actual command results and candidate-pinned CI links. The source baseline passed
+[integrated application CI](https://github.com/tang-vu/keryx/actions/runs/36806703681),
+[Linux provenance-capacity acceptance](https://github.com/tang-vu/keryx/actions/runs/36806703712),
+and [monitor CI](https://github.com/tang-vu/keryx/actions/runs/36806703692).
+The dossier separates these exact-source results from unchanged-component evidence
+on earlier PR heads. A reviewer reproduces the gates for the candidate being
+accepted; historical green checks do not establish current runtime authority.
 The [funded withdrawal runbook](./engineering/creator-funded-withdrawal-drill.md)
 and [outside-host acceptance](./outside-host-ops-monitor.md) state tested boundaries
 and remaining unknown-UUID, clock and full-operations gaps.
