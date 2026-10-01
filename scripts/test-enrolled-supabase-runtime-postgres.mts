@@ -15,7 +15,7 @@ let engine = false;
 const docker = (args: string[], input?: string, timeout = 30_000) => execFileSync("docker", args, {
   input, encoding: "utf8", timeout, maxBuffer: 12 * 1024 * 1024, stdio: ["pipe", "pipe", "pipe"],
 });
-const sql = (statement: string) => docker(["exec", "-i", name, "psql", "-U", "postgres",
+const sql = (statement: string) => docker(["exec", "-i", name, "psql", "-h", "127.0.0.1", "-U", "postgres",
   "--dbname", "postgres", "-v", "ON_ERROR_STOP=1", "-q", "-t", "-A"], statement);
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 const migrations = readdirSync("supabase/migrations").filter((path) => /^\d{4}_[a-z0-9_]+\.sql$/.test(path)
@@ -36,10 +36,17 @@ try {
   const startupDeadline = performance.now() + 30_000;
   let ready = false;
   while (performance.now() < startupDeadline) {
-    try { docker(["exec", name, "pg_isready", "-U", "postgres"], undefined, 2_000); ready = true; break; }
+    try { docker(["exec", name, "pg_isready", "-h", "127.0.0.1", "-U", "postgres"], undefined, 2_000); ready = true; break; }
     catch { await delay(100); }
   }
-  if (!ready) throw new Error("Synthetic reference startup deadline");
+  if (!ready) {
+    let state = "unavailable";
+    try {
+      const raw = docker(["inspect", "--format", "{{.State.Status}} {{.State.OOMKilled}} {{.State.ExitCode}}", name], undefined, 2_000).trim();
+      if (/^(created|running|paused|restarting|removing|exited|dead) (true|false) -?\d{1,3}$/.test(raw)) state = raw;
+    } catch { /* Fixed diagnostic only; preserve startup failure. */ }
+    throw new Error(`Synthetic reference startup deadline (${state})`);
+  }
   sql("set statement_timeout='30s';create role anon;create role authenticated;create role service_role bypassrls;"
     + "create role authenticator login noinherit;grant anon,authenticated,service_role to authenticator;"
     + "alter role authenticator set statement_timeout='10s';alter role service_role set statement_timeout='10s';"
