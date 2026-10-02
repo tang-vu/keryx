@@ -241,3 +241,40 @@ and successful authorized workflow as npm publication evidence. Retain the immut
 GitHub release tarball plus source commit/hash manifest as a supported distribution
 channel. Its `npmRegistryPublished` flag must match observed publication. Do not claim
 that installer, tarball and npm versions are synchronized from source numbers alone.
+
+## Owner wallet registry deployment handoff
+
+The owner uses their existing personal wallet. Public deployer:
+`0xca5b29b4f8bfbbd027ddc8516914a262f7ef6478`. No personal private key, recovery
+phrase or hardware-wallet secret is imported into Keryx, Remix or chat.
+
+From the exact clean reviewed release, prepare a fresh public folder:
+
+```text
+npm run mainnet:unsigned-setup -- workspace <public-deployer-address> <full-release-commit> <fresh-absolute-output-directory>
+npm run mainnet:unsigned-setup -- verify-compiled <public-compiler-output-json> <full-release-commit>
+```
+
+Import the folder into [Remix](https://remix.ethereum.org). Keep the exact
+`contracts/source-registry.sol` path, Solidity `0.8.24+commit.e11b9ed9`, optimizer
+enabled with 200 runs, and Paris EVM. The exported compiler result must match
+reviewed creation bytecode, deployed runtime, ABI, source hash and compiler settings
+before proceeding. The helper accepts standard solc output or Remix's exported
+contract artifact; it never connects a wallet, signs or broadcasts. Existing or
+redirected output directories and symlink/junction parents refuse.
+
+Use Remix's Browser Extension or WalletConnect environment with the existing
+wallet. Both require an explicit wallet approval; see the [official connected-wallet
+workflow](https://remix-ide.readthedocs.io/en/latest/run.html). Verify account, chain
+5042, creation data and value zero against `registry-review.json`. A read-only
+chain/nonce/balance/gas observation supplies a separate time-bound proposed fee
+ceiling for owner review. Native gas and ERC20 balances are two encodings of the
+same user-facing USDC asset, not two funding pots. No deployment transaction can
+run from the currently observed zero balance.
+
+Stop before wallet approval until the exact native-USDC funding and maximum
+deployment charge are reviewed. After owner signing, retain transaction and final
+receipt, attest chain 5042 and exact deployed runtime, then pin the fresh registry
+in the coordinated release. Normal creator `/register` and bulk feed registration
+use each creator's connected wallet afterward. Source/feed rights and mainnet
+receipts remain required; old testnet catalog or payout caches are never relabelled.

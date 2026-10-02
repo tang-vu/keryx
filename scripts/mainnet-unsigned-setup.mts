@@ -93,12 +93,17 @@ export function validateRegistryArtifact(input: unknown, currentSource: string):
   return artifact;
 }
 
+/** Same bounded fixed source/fixture reader for deployment and offline compiler review. */
+export async function loadReviewedRegistryArtifact() {
+  return validateRegistryArtifact(
+    await readUnsignedSetupJson(fileURLToPath(new URL("./fixtures/mainnet-source-registry.json", import.meta.url)), 65_536),
+    (await readBoundedRegularBytes(fileURLToPath(new URL("../contracts/source-registry.sol", import.meta.url)), 16_384)).toString("utf8"));
+}
+
 /** Fixed locally compiled v1 contract: no constructor, proxy, admin, external link or funds. */
 export async function prepareUnsignedRegistryDeployment(deployer: string, releaseCommit: string) {
   address.parse(deployer); z.string().regex(/^[0-9a-f]{40}$/).parse(releaseCommit);
-  const artifact = validateRegistryArtifact(
-    await readUnsignedSetupJson(fileURLToPath(new URL("./fixtures/mainnet-source-registry.json", import.meta.url)), 65_536),
-    (await readBoundedRegularBytes(fileURLToPath(new URL("../contracts/source-registry.sol", import.meta.url)), 16_384)).toString("utf8"));
+  const artifact = await loadReviewedRegistryArtifact();
   return { format: "keryx-mainnet-unsigned-setup-v2", operation: "deploy", networkId: network.networkId, releaseCommit,
     ...notice, provenance: { contract: "SourceRegistry", sourceName: "contracts/source-registry.sol", compiler: artifact.compiler,
       sourceSha256Lf: artifact.sourceSha256Lf, compilerInputSha256: sha256(canonicalJson(artifact.compilerInput)),
@@ -107,10 +112,10 @@ export async function prepareUnsignedRegistryDeployment(deployer: string, releas
     deployedBytecode: artifact.deployedBytecode, abi: artifact.abi, transactions: [tx(deployer, null, artifact.bytecode)] };
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+async function unsignedSetupMain() {
   const args = process.argv.slice(2);
   if (!args.length || (args.length === 1 && args[0] === "--help")) {
-    console.log("Offline unsigned mainnet setup; never signs or broadcasts.\nUsage:\n  npm run mainnet:unsigned-setup -- deploy <public-deployer-address> <full-release-commit>\n  npm run mainnet:unsigned-setup -- prepare <public-operation-json> <fresh-registry-address> <full-release-commit>\nPublic operation fields only. ERC20 amounts are integer micro-USDC; native setup gas, fees, nonce, fresh chain/source/custody evidence and funds authorization are separate.");
+    console.log("Offline unsigned mainnet setup; never signs or broadcasts.\nUsage:\n  npm run mainnet:unsigned-setup -- deploy <public-deployer-address> <full-release-commit>\n  npm run mainnet:unsigned-setup -- workspace <public-deployer-address> <full-release-commit> <fresh-absolute-output-directory>\n  npm run mainnet:unsigned-setup -- verify-compiled <public-compiler-output-json> <full-release-commit>\n  npm run mainnet:unsigned-setup -- prepare <public-operation-json> <fresh-registry-address> <full-release-commit>\nPublic operation fields only. ERC20 amounts are integer micro-USDC; native setup gas, fees, nonce, fresh chain/source/custody evidence and funds authorization are separate.");
   } else {
     try {
       let result;
@@ -118,9 +123,21 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
         assertReviewedRelease(args[2]); result = await prepareUnsignedRegistryDeployment(args[1], args[2]);
       } else if (args[0] === "prepare" && args.length === 4) {
         assertReviewedRelease(args[3]); result = prepareUnsignedMainnetOperation(args[3], args[2], await readUnsignedSetupJson(args[1]));
+      } else if (args[0] === "workspace" && args.length === 4) {
+        assertReviewedRelease(args[2]);
+        const { registryWorkspaceFiles, writeRegistryWorkspace } = await import("./helpers/mainnet-registry-workspace.mjs");
+        result = await writeRegistryWorkspace(args[3], await registryWorkspaceFiles(args[1], args[2]));
+      } else if (args[0] === "verify-compiled" && args.length === 3) {
+        assertReviewedRelease(args[2]);
+        const { verifyCompiledRegistry } = await import("./helpers/mainnet-registry-workspace.mjs");
+        result = await verifyCompiledRegistry(await readUnsignedSetupJson(args[1], 262_144));
       }
       if (!result) throw new Error("setup refused");
       console.log(JSON.stringify(result, null, 2));
     } catch { console.error("Unsigned setup unavailable or refused; no private detail retained."); process.exitCode = 2; }
   }
 }
+
+// Complete module evaluation before the workspace helper imports these pure exports.
+// The CLI owns errors internally; no top-level await cycle or library-side execution.
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) void unsignedSetupMain();
