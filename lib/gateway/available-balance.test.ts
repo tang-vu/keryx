@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { gatewayAvailableAtomic } from "./available-balance";
 import { readGatewayCredit } from "./read-credit";
-vi.mock("../config", () => ({ config: { cctpDomain: 26 } }));
+vi.mock("../config", () => ({ config: { cctpDomain: 26, networkId: "eip155:5042002" } }));
 import { getGatewayAvailableAtomic } from "./gateway-balance";
 
 const payer = `0x${"a".repeat(40)}`;

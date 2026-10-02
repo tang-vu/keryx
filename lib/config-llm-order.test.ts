@@ -6,7 +6,7 @@ afterEach(() => vi.unstubAllEnvs());
 describe("llmProviderOrder", () => {
   it("keeps the historical order when no valid override is present", () => {
     vi.stubEnv("KERYX_LLM_PROVIDER_ORDER", "unknown,also-unknown");
-    expect(llmProviderOrder()).toEqual(["anthropic", "deepseek", "mimo"]);
+    expect(llmProviderOrder()).toEqual(["anthropic", "deepseek", "mimo", "cloudflare"]);
   });
 
   it("deduplicates an explicit ordered allowlist", () => {

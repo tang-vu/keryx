@@ -24,6 +24,7 @@ import {
   a2aOrderId,
   a2aRequestHash,
   sameA2aOrder,
+  legacyA2aRequestHash,
   type A2aOrder,
 } from "@/lib/a2a/order";
 import {
@@ -36,6 +37,7 @@ import {
   verifiedA2aResponseFromRun,
 } from "@/lib/a2a/operator-resolution";
 import type { KeryxDB } from "@/lib/db/keryx-db";
+import { authorizationSchema, decodeHeader } from "@/lib/buyer/protocol";
 import {
   A2A_RESEARCH_PACKAGE_VERSION,
   acceptsA2aPackageVersion,
@@ -67,6 +69,7 @@ async function currentCompletedResponse(db: KeryxDB, order: A2aOrder) {
     ...(order.response ?? {}),
     totalToCreators: economics.totalToCreators,
     pricing: economics.pricing,
+    ...(economics.funding ? { funding: economics.funding } : {}),
   };
 }
 
@@ -87,6 +90,7 @@ async function currentFailedResponse(db: KeryxDB, order: A2aOrder, replayed = fa
     status: "failed",
     queryId: order.queryId,
     error: order.errorCode ?? "research_failed",
+    ...(economics.funding ? { funding: economics.funding } : {}),
     pricing: accountingComplete
       ? { ...economics.pricing, accountingComplete: true }
       : {
@@ -133,6 +137,7 @@ function pendingResponse(order: A2aOrder, replayed = false, message?: string) {
     status,
     queryId: order.queryId,
     pollUrl: `/api/agent/ask?queryId=${encodeURIComponent(order.queryId)}`,
+    ...(order.request?.monthlyId ? { funding: quoteFromA2aOrder(order).funding } : {}),
     ...(researchPackage
       ? {
           researchPackage,
@@ -298,7 +303,25 @@ export async function POST(req: NextRequest) {
   }
 
   const isBot = !!config.botKey && req.nextUrl.searchParams.get("bot") === config.botKey;
-  return settleThenServe(req, requirements(quote.totalPriceUsdc, treasury), async (settle) => {
+  let admissionHash = requestHash;
+  // Existing pre-package paid orders keep their original durable debit binding.
+  // This only selects the hash after proving the exact old request economics;
+  // Circle still verifies the signature before any claim or settlement.
+  const signatureHeader = req.headers.get("payment-signature");
+  if (signatureHeader) {
+    try {
+      const raw = decodeHeader(signatureHeader) as { payload?: unknown };
+      const authorization = authorizationSchema.parse(((raw.payload ?? raw) as { authorization?: unknown }).authorization);
+      const previous = await (await getDb()).getA2aOrder(a2aOrderId({ network: config.networkId,
+        payer: authorization.from, payee: treasury, authorizationId: authorization.nonce }));
+      const oldHash = legacyA2aRequestHash({ question: parsedQuestion.question,
+        creatorBudgetUsdc: quote.creatorBudgetUsdc, serviceFeeUsdc: quote.serviceFeeUsdc, researchMode, model });
+      if (previous?.researchPackage === null && previous.requestHash === oldHash
+        && Math.round(previous.amountUsdc * 1e6) === Math.round(quote.totalPriceUsdc * 1e6)) admissionHash = oldHash;
+    } catch { /* The seller helper rejects malformed or unauthenticated envelopes. */ }
+  }
+  return settleThenServe(req, { ...requirements(quote.totalPriceUsdc, treasury),
+    purchasePurpose: "a2a", purchaseRequestHash: admissionHash }, async (settle) => {
     const db = await getDb();
     const authorizationId = settle.authorizationId ?? `transaction:${settle.transaction}`;
     if (!settle.transaction) {

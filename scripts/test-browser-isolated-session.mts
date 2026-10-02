@@ -35,7 +35,7 @@ self.onmessage = async ({data:r}) => { try { let result;
     default:throw new Error('unknown fixture operation');
   } self.postMessage({id:r.id,ok:true,result});
 }catch(error){self.postMessage({id:r.id,ok:false,error:error.message});} };
-` }, bundle: true, write: false, platform: "browser", format: "iife" });
+` }, bundle: true, write: false, platform: "browser", define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" }, format: "iife" });
   bundles.set(`/worker-${name}.js`, bundle.outputFiles[0].text);
 }
 type Fixture = { call(name: string, type: string, args?: Record<string, unknown>): Promise<unknown> };

@@ -1,5 +1,29 @@
 # Keryx Project Changelog
 
+### Research Monthly pilot (2026-10-02, v0.25.0)
+
+- Add one Arc-testnet plan: four manual Deep requests over 30 days, 10% below four equivalent separate packages. Pin creator caps and take the discount from service allocation; disclose exact micro-USDC rounding.
+- Activate only from confirmed settlement. Admit each request and job atomically, retain failed/pending slots, and recover the original request without duplicate execution. No automatic renewal or scheduler.
+- Bind all public seller debit nonces to immutable purpose, request/resource, payee and amount before settlement, preventing cross-product replay. Retain ambiguous claims and historical evidence.
+- Add web checkout/status/recovery, shared API, caller-wallet Monthly CLI, OpenAPI, and read-only Monthly discovery in both MCP transports. Label job/history/receipts as prepaid allocations. Desktop, extension, bots and private research preserve documented handoff/product boundaries.
+- Require focused payment/concurrency/recovery checks, hermetic browser evidence, real PostgreSQL concurrent CI, independent review and deployed commit/schema verification before pilot activation. See [Monthly release gates](research-monthly.md).
+- Restore guarded Arc funding compatibility when unsigned RPC fills omit `from`: bind absence to the captured signer while preserving explicit sender refusal, exact signed-byte validation and no broadcast retry. Retain original funding journals; no new custody or mainnet authority.
+### 2026-10-02 - Preserve recovered sessions during stale revocation
+
+- Bind strict browser requests to their initial session ID, epoch and signer;
+  older missing-payload callers require refresh and recovery. Atomically revoke
+  only that expected tuple. Delayed requests and concurrent recovery
+  returns a conflict without deleting its replacement. Journal mode retains
+  exposed authorizations, historical spend and cumulative signer capacity.
+- Pause browser signing while revocation is uncertain. Conflicts, outages and
+  malformed success responses retain encrypted custody for deliberate recovery;
+  delayed old completions cannot erase a newer registration.
+- Cover the actual session API, shared SQLite/PostgreSQL and enrolled adapters,
+  plus the real browser hook/worker/IndexedDB path. Native PostgreSQL catalog
+  equality and installed HTTPS-facade acceptance remain release checks. These
+  synthetic checks confer no mainnet activation or funded settlement evidence.
+  See [session revocation](session-grant-revocation.md).
+
 ### 2026-10-02 - Bounded mainnet pilot candidate preparation
 
 - Add an explicit-file, keyless pilot preflight with exact release-commit digest,

@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { SqliteAdapter } from "./sqlite-adapter";
+import { installSqliteApplicationSchema } from "./sqlite-application-schema";
 import { syntheticStorageIdentity } from "./storage-identity-fixture";
 import {
   inspectSqliteEnrollment,
@@ -43,15 +43,23 @@ import {
 import type { BrowserSourceOriginalAdmission } from "./browser-signing-originals";
 import type { Source, SourceItem } from "../types";
 
-it("enrolls the actual full application schema and covers every installed table", async () => {
+/** The reviewed enrolled domain intentionally excludes ordinary-only Monthly authority. */
+function installEnrollmentFixtureSchema(file: string) {
+  const native = new DatabaseSync(file);
+  try {
+    native.exec("BEGIN IMMEDIATE");
+    installSqliteApplicationSchema(native);
+    native.exec("COMMIT");
+  } catch (error) {
+    if (native.isTransaction) native.exec("ROLLBACK");
+    throw error;
+  } finally { native.close(); }
+}
+
+it("enrolls the reviewed full application schema and covers every installed table", async () => {
   const folder = mkdtempSync(join(tmpdir(), "keryx-storage-browser-schema-"));
   const file = join(folder, "synthetic.sqlite");
-  const adapter = new SqliteAdapter(file);
-  try {
-    await adapter.init();
-  } finally {
-    adapter.close();
-  }
+  installEnrollmentFixtureSchema(file);
   try {
     const native = new DatabaseSync(file);
     const tables = native
@@ -147,11 +155,9 @@ it.each(retainedAuthoritySeeds)(
   async (seed) => {
     const folder = mkdtempSync(join(tmpdir(), "keryx-storage-retained-"));
     const file = join(folder, "synthetic.sqlite");
-    const adapter = new SqliteAdapter(file);
     let raw: DatabaseSync | undefined;
     try {
-      await adapter.init();
-      adapter.close();
+      installEnrollmentFixtureSchema(file);
       raw = new DatabaseSync(file);
       const isolatedTable = seed.startsWith(
         "INSERT INTO browser_signing_queries"
@@ -215,11 +221,6 @@ it.each(retainedAuthoritySeeds)(
       raw.exec("ROLLBACK");
     } finally {
       raw?.close();
-      try {
-        adapter.close();
-      } catch {
-        /* already closed */
-      }
       rmSync(folder, { recursive: true, force: true });
     }
   },
@@ -229,12 +230,10 @@ it.each(retainedAuthoritySeeds)(
 it.each(["identity", "fence", "replacement"] as const)("revalidates %s before returning the transaction boolean", async (tamper) => {
     const folder = mkdtempSync(join(tmpdir(), "keryx-storage-transaction-"));
     const file = join(folder, "synthetic.sqlite");
-    const adapter = new SqliteAdapter(file);
     let verified: ReturnType<typeof openVerifiedSqliteStorage> | undefined;
     let raw: DatabaseSync | undefined;
     try {
-      await adapter.init();
-      adapter.close();
+      installEnrollmentFixtureSchema(file);
       const identity = syntheticStorageIdentity("testnet-real");
       const inspection = await inspectSqliteEnrollment(file, identity);
       await enrollSqliteStorage(file, identity, {
@@ -292,11 +291,6 @@ it.each(["identity", "fence", "replacement"] as const)("revalidates %s before re
     } finally {
       raw?.close();
       verified?.close();
-      try {
-        adapter.close();
-      } catch {
-        /* already closed */
-      }
       rmSync(folder, { recursive: true, force: true });
     }
 });
@@ -337,7 +331,6 @@ it("admits and exposes a v3 original through enrolled storage while retaining ev
     content: "Synthetic body",
     link: "https://source.example/item",
   };
-  const adapter = new SqliteAdapter(file);
   const server = createServer(async (request, response) => {
     const chunks: Buffer[] = [];
     for await (const chunk of request) chunks.push(Buffer.from(chunk));
@@ -370,8 +363,7 @@ it("admits and exposes a v3 original through enrolled storage while retaining ev
   let verified: ReturnType<typeof openVerifiedSqliteStorage> | undefined;
   let raw: DatabaseSync | undefined;
   try {
-    await adapter.init();
-    adapter.close();
+    installEnrollmentFixtureSchema(file);
     const inspection = await inspectSqliteEnrollment(file, identity);
     await enrollSqliteStorage(file, identity, {
       format: "keryx-reviewed-storage-enrollment-v1",
@@ -543,11 +535,6 @@ it("admits and exposes a v3 original through enrolled storage while retaining ev
   } finally {
     raw?.close();
     verified?.close();
-    try {
-      adapter.close();
-    } catch {
-      /* already closed */
-    }
     server.closeAllConnections();
     if (server.listening)
       await new Promise<void>((resolve, reject) =>

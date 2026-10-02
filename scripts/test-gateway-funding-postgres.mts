@@ -1,3 +1,4 @@
+import { normalizeFundingSnapshotMigration } from "./helpers/postgres-snapshot-diagnostics.mts";
 import assert from "node:assert/strict";
 import { testPostgresFundingReadiness } from "./gateway-funding-postgres-readiness-fixture.mts";
 import { createRequire } from "node:module";
@@ -61,7 +62,7 @@ try {
   const candidates = readdirSync("scripts/test-fixtures/funding-postgres").filter(f => /^007[0-5].*\.sql$/.test(f)).sort();
   assert.equal(candidates.length, 6, "complete quarantined authority fixture closure");
   const migrations = [...historical.map(f => `supabase/migrations/${f}`), ...candidates.map(f => `scripts/test-fixtures/funding-postgres/${f}`)];
-  sql("create role anon;create role authenticated;create role service_role bypassrls;create publication supabase_realtime;" + migrations.map(f => readFileSync(f, "utf8")).join("\n"));
+  sql("create role anon;create role authenticated;create role service_role bypassrls;create publication supabase_realtime;" + migrations.map(f => normalizeFundingSnapshotMigration(readFileSync(f, "utf8"))).join("\n"));
   sql("create database funding_unenrolled template postgres");
   const reviewed = sql("select keryx_storage.snapshot_digest()");
   sql(`select keryx_storage.enroll(${expected},'${reviewed}')`);

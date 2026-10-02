@@ -25,7 +25,7 @@ const bundle = await build({
   write: false,
   platform: "browser",
   format: "iife",
-  define: { "process.env.NODE_ENV": '"production"' },
+  define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"production"' },
 });
 
 const browser = await chromium.launch({ headless: true });

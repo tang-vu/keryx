@@ -1,6 +1,6 @@
 {
   "name": "keryx",
-  "version": "0.24.8",
+  "version": "0.25.0",
   "private": true,
   "engines": {
     "node": "^22.19.0 || >=24.0.0",
@@ -8,6 +8,7 @@
   },
   "description": "Keryx — a citation-toll reading agent. Pays creators every time their work is cited, in USDC on Arc.",
   "scripts": {
+    "eval:cloudflare": "node --import tsx --env-file-if-exists=.env.cloudflare.local scripts/eval-cloudflare.mts",
     "test:browser-isolated-session": "node --import tsx scripts/test-browser-isolated-session.mts",
     "test:built-empty-evidence": "node scripts/test-built-empty-evidence.cjs",
     "test:browser-scholarly-rights": "node --import tsx scripts/test-browser-scholarly-rights.mts",
@@ -42,6 +43,7 @@
     "verify:receipt": "node --import tsx --no-warnings scripts/verify-research-receipt.mts",
     "a2a": "node --import tsx --no-warnings scripts/a2a-client.mts",
     "buyer": "node --import tsx --no-warnings --env-file-if-exists=.env.buyer.local scripts/buyer-agent.mts",
+    "monthly": "node --import tsx --no-warnings --env-file-if-exists=.env.buyer.local scripts/research-monthly.mts",
     "operator": "node --import tsx --no-warnings scripts/operator.mts",
     "native:build": "node --import tsx scripts/build-native-writer.mts",
     "desktop:install": "npm --prefix desktop install",
@@ -83,6 +85,7 @@
     "economics:private-report": "node --import tsx --no-warnings scripts/economics-private-report.mts",
     "test:browser-buyer": "node --import tsx scripts/test-browser-buyer.mts",
     "test:browser-checkout": "node --import tsx scripts/test-browser-checkout.mts",
+    "test:browser-monthly": "node --import tsx scripts/test-browser-monthly.mts",
     "test:browser-auth": "node --import tsx scripts/test-browser-auth.mts",
     "test:browser-private-history": "node --import tsx scripts/test-browser-private-history.mts",
     "test:business-calculator": "node --import tsx scripts/test-business-calculator.mts"

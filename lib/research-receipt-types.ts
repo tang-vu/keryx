@@ -126,6 +126,7 @@ export interface ReceiptSettlement {
 }
 
 export interface ResearchReceiptPayload {
+  funding?: { type: "research-monthly-prepaid"; monthlyId: string; allocationUsdc: number; newInboundPayment: false };
   schema: typeof RESEARCH_RECEIPT_SCHEMA;
   dispatch: {
     id: string;

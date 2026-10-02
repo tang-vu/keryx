@@ -20,7 +20,7 @@ vi.mock("@/lib/a2a/private-purchase-bootstrap", () => ({ privatePurchaseBootstra
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: mocks.limit }));
 vi.mock("next/headers", () => ({ cookies: mocks.cookies }));
 vi.mock("@/lib/db", () => ({ getDb: mocks.db }));
-vi.mock("@/lib/config", () => ({ config: { jwtSecret: "synthetic-private-result-secret" } }));
+vi.mock("@/lib/config", async () => ({ config: { jwtSecret: "synthetic-private-result-secret", profile: (await import("../arc-network-profile")).ARC_TESTNET_PROFILE, } }));
 import { POST } from "@/app/api/me/private-jobs/result/route";
 import { POST as history } from "@/app/api/me/private-jobs/history/route";
 import { POST as quoteRoute } from "@/app/api/me/private-jobs/quote/route";

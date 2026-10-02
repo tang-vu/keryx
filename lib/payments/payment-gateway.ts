@@ -101,6 +101,8 @@ export async function getPaymentGateway(db: KeryxDB, opts?: GatewayOpts): Promis
     return new RealGateway();
   }
 
+  if (config.profile.name === "arc") throw new Error("Mainnet treasury payment authority is unavailable");
+
   const { OfflineGateway } = await import("./offline-gateway");
   return new OfflineGateway(db);
 }

@@ -16,6 +16,7 @@ import type { BrowserOriginalAdmission, BrowserSourceOriginalAdmission } from ".
  */
 
 import { listSupabaseWithdrawalHistory, type WithdrawalHistoryCursor } from "./creator-withdrawal-history";
+import { claimSupabaseResearchPurchase, createSupabaseResearchMonthly, getSupabaseResearchMonthly, redeemSupabaseResearchMonthly, type MonthlyPurchase, type MonthlyRedemptionInput, type ResearchPurchaseClaim } from "./research-monthly";
 import { iterateSupabaseRecentQueries } from "./recent-query-stream";
 import { confirmSupabasePrivateCreator, getSupabasePrivateCreatorConfirmation, type PrivateCreatorConfirmation } from "./private-creator-confirmations";
 import { reserveSupabasePrivateTreasury, getSupabasePrivateTreasury, type PrivateTreasuryPolicy } from "./private-treasury-capacity";
@@ -989,6 +990,14 @@ export class SupabaseAdapter implements KeryxDB {
     if (error) throw error;
     return (data ?? []).length === 1;
   }
+
+  private assertOrdinaryResearchAuthority(): void {
+    if (this.#enrolled) refuseStorage("invalid_operation");
+  }
+  async claimResearchPurchase(input: ResearchPurchaseClaim): Promise<void> { this.assertOrdinaryResearchAuthority(); return claimSupabaseResearchPurchase(this.#sb, input); }
+  async createResearchMonthly(purchase: MonthlyPurchase) { this.assertOrdinaryResearchAuthority(); return createSupabaseResearchMonthly(this.#sb, purchase); }
+  async getResearchMonthly(id: string) { this.assertOrdinaryResearchAuthority(); return getSupabaseResearchMonthly(this.#sb, id); }
+  async redeemResearchMonthly(input: MonthlyRedemptionInput) { this.assertOrdinaryResearchAuthority(); return redeemSupabaseResearchMonthly(this.#sb, input, rowToA2aOrder); }
 
   async createA2aOrder(order: A2aOrder): Promise<{ created: boolean; order: A2aOrder }> {
     const row = a2aOrderToRow(order);

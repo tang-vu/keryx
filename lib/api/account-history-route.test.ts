@@ -11,7 +11,7 @@ import { encodeHistoryCursor } from "../a2a/account-history";
 const mocks = vi.hoisted(() => ({ cookies: vi.fn(), db: vi.fn() }));
 vi.mock("next/headers", () => ({ cookies: mocks.cookies }));
 vi.mock("@/lib/db", () => ({ getDb: mocks.db }));
-vi.mock("@/lib/config", () => ({ config: { jwtSecret: "synthetic-history-secret" } }));
+vi.mock("@/lib/config", async () => ({ config: { jwtSecret: "synthetic-history-secret", profile: (await import("../arc-network-profile")).ARC_TESTNET_PROFILE, } }));
 import { GET } from "@/app/api/me/jobs/route";
 const root = mkdtempSync(join(tmpdir(), "keryx-history-")), file = join(root, "db.sqlite");
 const db = new SqliteAdapter(file); await db.init();
@@ -20,7 +20,7 @@ const wallet = `0x${"a".repeat(40)}`, foreign = `0x${"b".repeat(40)}`;
 const secret = "synthetic-history-secret";
 function order(index: number, payer = wallet): A2aOrder {
   const id = `a2a_${index.toString(16).padStart(64, "0")}`;
-  return { id, queryId: id, authorizationId: "synthetic-authorization-private", requestHash: "synthetic-request-hash", payer, payee: foreign,
+  return { id, queryId: id, authorizationId: `synthetic-authorization-private-${index}`, requestHash: "synthetic-request-hash", payer, payee: foreign,
     amountUsdc: 0.05, creatorBudgetUsdc: 0.03, serviceFeeUsdc: 0.02, researchMode: "deep", researchPackage: null,
     status: "running", transaction: "synthetic-transaction", request: { question: `Owner question ${index}`, origin: "a2a" },
     startedAt: null, workerId: "synthetic-private-worker", executionJournalVersion: 1, paymentStartedAt: null, resultSavingAt: null,

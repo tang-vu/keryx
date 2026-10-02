@@ -27,7 +27,7 @@ function assertRedaction(reports: string[]) {
   expect(reports).toHaveLength(1);
   expect(reports[0]).not.toMatch(/synthetic-auth-token|private-path|example\.invalid|https?:|synthetic-cli/);
   const report = JSON.parse(reports[0]);
-  expect(report).toMatchObject({ stage: "clean-consumer-install", deadlineMs: 120000, preferOffline: true,
+  expect(report).toMatchObject({ stage: "clean-consumer-install", deadlineMs: process.platform === "win32" ? 300000 : 120000, preferOffline: true,
     lastCompletedPhase: "reify:unpack", completedPhases: { "idealTree:init": 17, "reify:unpack": 23 } });
   expect(report.stdoutBytes).toBeGreaterThan(0); expect(report.stderrBytes).toBeGreaterThan(0);
   expect(report.elapsedMs).toBeGreaterThanOrEqual(0);
@@ -45,13 +45,13 @@ it("classifies a real nonzero install exit and throws only a fixed sanitized mes
     .toThrow(/^Clean consumer dependency install failed \(exit\); sanitized timing summary above$/);
   expect(assertRedaction(f.reports)).toMatchObject({ category: "exit", status: 23, signal: null });
 });
-it("classifies an actual child timeout while the production invocation retains 120s and one attempt", () => {
+it("classifies an actual child timeout while the production invocation retains its platform deadline and one attempt", () => {
   const f = fixture("wait"); let calls = 0;
   const execute = (command: string, args: string[], options: SpawnSyncOptions) => {
     calls++;
     expect(command).toBe(process.execPath);
     expect(args).toEqual([f.cli, "install", "--ignore-scripts", "--no-audit", "--no-fund", "--prefer-offline", "--timing", "synthetic.tgz"]);
-    expect(options).toMatchObject({ cwd: f.directory, stdio: "pipe", timeout: 120000 });
+    expect(options).toMatchObject({ cwd: f.directory, stdio: "pipe", timeout: process.platform === "win32" ? 300000 : 120000 });
     // Only this synthetic test adapter reduces its sleep deadline; the helper has no deadline override.
     return spawnSync(command, args, { ...options, timeout: 3000 });
   };

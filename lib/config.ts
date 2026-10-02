@@ -136,6 +136,14 @@ export const config = {
     Math.max(0, num(process.env.KERYX_MIN_CACHE_EXPECTED_VALUE, 0.45)),
   ),
 
+  // Original public reads have no toll and no pre-read evidence. Keep their preview
+  // ranking floor aligned with the heuristic's positive selection threshold; cached
+  // creator/feed content retains the stricter reuse gate above. Neither proves coverage.
+  minPublicReadExpectedValue: Math.min(
+    1,
+    Math.max(0, num(process.env.KERYX_MIN_PUBLIC_READ_EXPECTED_VALUE, 0.12)),
+  ),
+
   // ── Open x402 marketplace discovery ──
   // When on, the agent probes the live Circle x402 service bazaar (`circle services search`) during
   // discovery and reasons over real external endpoints alongside its registered creators. These
@@ -155,7 +163,7 @@ export const config = {
   embeddingModel: process.env.KERYX_EMBEDDING_MODEL ?? "text-embedding-3-small",
 
   // ── LLM ──
-  // Provider priority: Anthropic > DeepSeek > MiMo > offline heuristic. Every configured real
+  // Provider priority: Anthropic > DeepSeek > MiMo > enabled Cloudflare > offline heuristic.
   // provider becomes a fallback tier before the deterministic heuristic.
   anthropicKey: process.env.ANTHROPIC_API_KEY ?? "",
   deepseekKey: process.env.DEEPSEEK_API_KEY ?? process.env.OPENAI_API_KEY ?? "",
@@ -167,6 +175,11 @@ export const config = {
   // The base URL carries /v1 (DeepSeek's does not); the engine appends /chat/completions to it.
   mimoKey: process.env.MIMO_API_KEY ?? "",
   mimoBaseUrl: process.env.KERYX_MIMO_BASE_URL ?? "https://api.xiaomimimo.com/v1",
+  // Cloudflare is an explicitly enabled experimental third provider; credentials alone do not
+  // authorize sending public research to another processor. Private reasoning has its own policy.
+  cloudflareEnabled: process.env.KERYX_CLOUDFLARE_ENABLED === "true",
+  cloudflareAccountId: process.env.CLOUDFLARE_ACCOUNT_ID ?? "",
+  cloudflareKey: process.env.CLOUDFLARE_API_TOKEN ?? "",
   // Transport timeouts abort the provider request. Circuit state is stored in the shared DB so
   // the Next server and fresh one-shot volume workers inherit the same provider-step health.
   llmTimeoutMs: Math.max(1_000, Math.round(num(process.env.KERYX_LLM_TIMEOUT_MS, 60_000))),
@@ -272,7 +285,7 @@ export const config = {
   deployerKey: (process.env.DEPLOYER_PRIVATE_KEY ?? "") as `0x${string}` | "",
 } as const;
 
-export type LlmProvider = "anthropic" | "deepseek" | "mimo" | "heuristic";
+export type LlmProvider = "anthropic" | "deepseek" | "mimo" | "cloudflare" | "heuristic";
 
 type RealLlmProvider = Exclude<LlmProvider, "heuristic">;
 
@@ -282,12 +295,12 @@ type RealLlmProvider = Exclude<LlmProvider, "heuristic">;
  * unconfigured transport or remove the deterministic final fallback.
  */
 export function llmProviderOrder(): RealLlmProvider[] {
-  const fallback: RealLlmProvider[] = ["anthropic", "deepseek", "mimo"];
+  const fallback: RealLlmProvider[] = ["anthropic", "deepseek", "mimo", "cloudflare"];
   const requested = (process.env.KERYX_LLM_PROVIDER_ORDER ?? "")
     .split(",")
     .map((provider) => provider.trim().toLowerCase())
     .filter((provider): provider is RealLlmProvider =>
-      provider === "anthropic" || provider === "deepseek" || provider === "mimo",
+      provider === "anthropic" || provider === "deepseek" || provider === "mimo" || provider === "cloudflare",
     );
   return requested.length > 0 ? [...new Set(requested)] : fallback;
 }
@@ -298,6 +311,7 @@ export function llmProvider(): LlmProvider {
     if (provider === "anthropic" && config.anthropicKey.length > 0) return provider;
     if (provider === "deepseek" && config.deepseekKey.length > 0) return provider;
     if (provider === "mimo" && config.mimoKey.length > 0) return provider;
+    if (provider === "cloudflare" && config.cloudflareEnabled && /^[a-f0-9]{32}$/.test(config.cloudflareAccountId) && config.cloudflareKey.length > 0) return provider;
   }
   return "heuristic";
 }

@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/privacy" },
 };
 
-const UPDATED = "September 10, 2026";
+const UPDATED = "October 2, 2026";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -168,7 +168,12 @@ export default function PrivacyPage() {
         <Section title="Third parties we rely on">
           <p>
             The configured reasoning provider processes question text to produce answers under its
-            API terms. Circle and
+            API terms. When enabled, the experimental Cloudflare Workers AI fallback can process
+            public research questions and source excerpts after other providers fail, or when you
+            select its model. Cloudflare states that Workers AI customer content is not used to train
+            models without consent; see its{" "}
+            <a href="https://developers.cloudflare.com/workers-ai/platform/data-usage/" className="text-seal underline underline-offset-2">Workers AI data usage policy</a>.
+            Private research continues to use only the provider disclosed at checkout. Circle and
             the Arc network process the on-chain payments. Pinata pins the encrypted IPFS content
             creators upload. Their processing is governed by their respective service terms.
           </p>

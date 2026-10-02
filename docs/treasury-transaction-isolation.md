@@ -18,6 +18,14 @@ retry. It validates the RPC fill before translation, then parses the signed raw
 transaction and recovers its sender before broadcast. The local signer cannot
 change chain or recipient because a provider returns a different tuple.
 
+Arc's unsigned fill serialization can omit `from`. Only an absent field binds
+to the originally captured local signer address; explicit null, malformed or
+different senders still refuse. This compatibility rule does not trust an RPC
+to choose a signer: the final signed bytes must independently recover that same
+account before broadcast, and all chain, tuple, access-list and sticky refusal
+checks remain in force. It neither authorizes another funding attempt after
+uncertainty nor replaces the retained original journal.
+
 `RealGateway` routes native gas funding, USDC transfer, bounded exact-amount
 approval and `deposit(address,uint256)` through that boundary. The deposit ABI
 and 120000 gas match the pinned batching SDK's testnet deposit operation. Gateway

@@ -26,6 +26,7 @@ import { runAgent, type RunInput } from "./run-agent";
 import { collectRun } from "./index";
 import type { ResearchEffects } from "./research-effects";
 import { config } from "../config";
+import { HeuristicEngine } from "../llm/heuristic-engine";
 import { JsonChatEngine } from "../llm/json-chat-engine";
 import { makePayment, type PaymentGateway } from "../payments/payment-gateway";
 import { PaymentPendingError, PaymentSettledError } from "../payments/payment-state";
@@ -377,11 +378,11 @@ it("treats HTML at the unchanged PDF URL as unavailable PDF and explicitly reads
   expect(steps.some(step => step.message.includes("paper PDF unavailable (pdf-extraction-unavailable)"))).toBe(true);
   expect(run.evidence?.[0].quote).not.toContain("Publisher challenge");
 });
-it("withholds scholarly opt-in and DOI queries from private jobs and unattended engine runs", async () => {
+it("withholds scholarly opt-in, DOI and explicit arXiv queries from private jobs and unattended engine runs", async () => {
   const d = deps([], fakeEngine(), fakeGateway()); injectPapers(d);
-  await drive({ question: "10.1234/exact", scholarly: true }, d); expect(d.discoverScholarly).not.toHaveBeenCalled();
+  await drive({ question: "10.1234/exact arXiv 2607.13716v1", scholarly: true }, d); expect(d.discoverScholarly).not.toHaveBeenCalled();
   const queryId = `prv_${"7".repeat(64)}`; d.effects = isolatedTestEffects(queryId);
-  await drive({ question: "10.1234/exact", scholarly: true, queryId, allowExternalWeb: true }, d); expect(d.discoverScholarly).not.toHaveBeenCalled();
+  await drive({ question: "10.1234/exact arXiv 2607.13716v1", scholarly: true, queryId, allowExternalWeb: true }, d); expect(d.discoverScholarly).not.toHaveBeenCalled();
 });
 it("automatically resolves a question DOI without opting into general scholarly search", async () => {
   const d = deps([], fakeEngine(), fakeGateway()); injectPapers(d);
@@ -1434,10 +1435,10 @@ describe("runAgent — article-level economics", () => {
     expect(run.citations.length).toBeGreaterThan(0); // a cached read still earns a citation reward
   });
 
-  it("skips low-value cached content because free bytes still consume attention", async () => {
+  it.each([0.08, 0.119, 0.12, 0.2])("skips low-value cached content at EV %s because free bytes still consume attention", async expectedValue => {
     const source = makeSource({ id: "a", fetchPrice: 0.004 });
     const engine = fakeEngine({
-      decide: () => [{ ...cacheDecision("a"), expectedValue: 0.2 }],
+      decide: () => [{ ...cacheDecision("a"), expectedValue }],
     });
     const d = deps([source], engine, fakeGateway(), {
       cachedAt: cache("a"),
@@ -1446,7 +1447,7 @@ describe("runAgent — article-level economics", () => {
     const { run } = await drive({ question: "q", budget: 0.05 }, d);
 
     expect(run.decisions[0]).toMatchObject({ action: "SKIP" });
-    expect(run.decisions[0]?.rationale).toContain("attention gate");
+    expect(run.decisions[0]?.rationale).toContain(expectedValue < 0.12 ? "spend floor" : "attention gate");
     expect(run.citations).toEqual([]);
   });
 
@@ -1895,5 +1896,58 @@ describe("funding uncertainty preserves public research", () => {
       executionLimits: { attentionLimit: 2, reevaluateRounds: 1 } }, { deps: d })).rejects.toBe(aborted);
     expect(synthesize).not.toHaveBeenCalled(); expect(boundary).not.toHaveBeenCalled(); expect(d.db.saveQueryRun).not.toHaveBeenCalled();
     expect(gateway.fetchCalls).toEqual([]); expect(gateway.citationCalls).toEqual([]);
+  });
+});
+
+
+describe("original public attention gate regression (#128)", () => {
+  const question = "Compare original research on binding human approval to the exact action executed by stateful AI agents across proposal, approval, delay, execution and recovery. Seek Weng et al. arXiv 2606.02668v1, AgentSpec, and CAVA arXiv 2607.13716v1, plus directly relevant TOCTOU or stale-authorization work. Distinguish original paper text, abstract-only reads and metadata previews; compare action/argument binding, runtime state changes, expiry/replay and audit evidence. State coverage gaps rather than infer novelty.";
+  it("uses the actual heuristic fallback on the representative multi-dimension question", async () => {
+    const fallback = new HeuristicEngine();
+    const engine = fakeEngine({ decide: undefined }); engine.decide = input => fallback.decide(input);
+    engine.decompose = async () => [
+      "What do Weng et al. arXiv 2606.02668v1, AgentSpec, and CAVA arXiv 2607.13716v1 each propose for binding human approval to the exact action executed by stateful AI agents across proposal, approval, delay, execution, and recovery?",
+      "How do these sources and directly relevant TOCTOU or stale-authorization work compare on action/argument binding and runtime state changes?",
+      "How do they compare on expiry/replay handling and audit evidence?",
+      "What coverage gaps exist across these sources, distinguishing original paper text, abstract-only reads, and metadata previews?",
+    ];
+    const d = deps([], engine, fakeGateway());
+    const candidate = scholarlyCandidate({ ...paper("2607.13716v1").item!.scholarly!, title: "CAVA: Canonical Action Verification and Attestation for Runtime Governance of Agentic AI Systems" });
+    d.discoverScholarly = async () => ({ candidates: new Map([[candidate.id, candidate]]), succeeded: 1, unavailable: 0, requestedDois: 0, resolvedDois: 0 });
+    d.readWebArticle = vi.fn(async url => ({ text: "Synthetic CAVA source evidence for the regression, not a real paper passage.", title: "Paper", finalUrl: url, kind: "pdf" as const, truncated: true }));
+    const { run } = await drive({ question, origin: "web", researchMode: "deep" }, d);
+    expect(run.decisions[0].expectedValue).toBeGreaterThanOrEqual(0.12); expect(run.decisions[0].expectedValue).toBeLessThan(0.45);
+    expect(run.decisions[0].targets.length).toBeGreaterThan(0); expect(d.readWebArticle).toHaveBeenCalledTimes(1);
+    expect(run.citations).toHaveLength(1); expect(run.totalSpent).toBe(0);
+  });
+  it.each([0.119, 0.12, 0.133, 0.183])("keeps raw preview EV %s and bounded positive-proposal admission", async expectedValue => {
+    const gateway = fakeGateway();
+    const d = deps([], fakeEngine({ decide: input => input.candidates.map(candidate => ({ ...buy({ id: candidate.id, name: candidate.name, price: 0 }, expectedValue), targets: [0] })) }), gateway);
+    injectPapers(d, ["2607.13716v1"]);
+    d.readWebArticle = vi.fn(async url => ({ text: "Synthetic original evidence binds approval to the exact action.", title: "Paper", finalUrl: url, kind: "pdf" as const, truncated: false }));
+    const { run } = await drive({ question, origin: "web", researchMode: "deep" }, d);
+    expect(run.decisions[0].expectedValue).toBe(expectedValue);
+    expect(d.readWebArticle).toHaveBeenCalledTimes(expectedValue >= 0.12 ? 1 : 0);
+    expect(run.citations).toHaveLength(expectedValue >= 0.12 ? 1 : 0);
+    expect(gateway.fetchCalls).toEqual([]); expect(gateway.citationCalls).toEqual([]); expect(run.totalSpent).toBe(0);
+    expect(run.answer).not.toBe("");
+    if (expectedValue < 0.12) { expect(run.answer).toContain("attention gate"); expect(run.answer).toContain("larger source budget does not resolve"); }
+  });
+  it("cannot promote a model SKIP or a positive selection lacking a claim target", async () => {
+    for (const invalid of [{ action: "SKIP" as const, targets: [0] }, { action: "BUY" as const, targets: [] }]) {
+      const d = deps([], fakeEngine({ decide: input => input.candidates.map(candidate => ({ ...buy({ id: candidate.id, name: candidate.name, price: 0 }, 0.9), ...invalid })) }), fakeGateway());
+      injectPapers(d); d.readWebArticle = vi.fn();
+      const { run } = await drive({ question, origin: "web" }, d);
+      expect(d.readWebArticle).not.toHaveBeenCalled(); expect(run.citations).toEqual([]);
+    }
+  });
+  it("explains actual bounded original read failures without exposing transport internals", async () => {
+    const d = deps([], fakeEngine(), fakeGateway()); injectPapers(d);
+    d.readWebArticle = vi.fn(async () => { throw new Error("private internal transport details"); });
+    const { run } = await drive({ question, origin: "web" }, d);
+    expect(d.readWebArticle).toHaveBeenCalledTimes(2); expect(run.answer).toContain("Selected public originals");
+    expect(run.answer).toContain("transport-unavailable"); expect(run.answer).not.toContain("private internal");
+    expect(run.answer).toContain("Metadata previews are not read evidence"); expect(run.answer).not.toBe("");
+    expect(run.citations).toEqual([]); expect(run.totalSpent).toBe(0);
   });
 });

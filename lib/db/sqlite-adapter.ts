@@ -1,4 +1,4 @@
-import { installSqliteApplicationSchema } from "./sqlite-application-schema";
+import { installOrdinarySqliteApplicationSchema } from "./sqlite-application-schema";
 import { sqliteSessionFundingAccounting } from "./session-funding-accounting";
 import { sqliteCreatorOwnerAccounting, admitSqliteCreatorOwnerWithdrawal, readSqliteCreatorOwnerCompletion, completeSqliteCreatorOwnerWithdrawal } from "./creator-owner-withdrawal-journal";
 import type { CreatorOwnerWithdrawalAccounting, CreatorOwnerWithdrawalCompletion } from "../gateway/creator-owner-withdrawal-protocol";
@@ -22,6 +22,7 @@ import { publicReferenceSchema, type PublicReference } from "../public-reference
  */
 
 import { listSqliteWithdrawalHistory, type WithdrawalHistoryCursor } from "./creator-withdrawal-history";
+import { assertOrdinarySqliteResearchAuthority, claimSqliteResearchPurchase, createSqliteResearchMonthly, getSqliteResearchMonthly, redeemSqliteResearchMonthly, type MonthlyPurchase, type MonthlyRedemptionInput, type ResearchPurchaseClaim } from "./research-monthly";
 import { confirmSqlitePrivateCreator, getSqlitePrivateCreatorConfirmation, type PrivateCreatorConfirmation } from "./private-creator-confirmations";
 import { admitSqlitePrivateCreatorSubmission, listSqlitePrivateCreatorSubmissions, type PrivateCreatorSubmission } from "./private-creator-submissions";
 import { saveSqlitePrivateResult, getSqlitePrivateResult } from "./private-research-results";
@@ -168,8 +169,9 @@ export class SqliteAdapter implements KeryxDB {
       return;
     }
     // WAL + busy timeout so the dev server and CLI can share the file safely.
+    assertOrdinarySqliteResearchAuthority(this.db);
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;");
-    installSqliteApplicationSchema(this.db);
+    installOrdinarySqliteApplicationSchema(this.db);
     // Releases before 2026-08-22 keyed two authenticated routes by the raw `kx_live_...` bearer
     // value before verification. Remove those legacy counters during every startup so the live DB
     // and every restored snapshot converge back to the documented hash-only secret invariant.
@@ -1557,6 +1559,14 @@ export class SqliteAdapter implements KeryxDB {
       );
     return result.changes === 1;
   }
+
+  private assertOrdinaryResearchAuthority(): void {
+    if (this.enrolledMode) throw new Error("Research purchase authority is unavailable in enrolled storage");
+  }
+  async claimResearchPurchase(input: ResearchPurchaseClaim): Promise<void> { this.assertOrdinaryResearchAuthority(); claimSqliteResearchPurchase(this.db, input); }
+  async createResearchMonthly(purchase: MonthlyPurchase) { this.assertOrdinaryResearchAuthority(); return createSqliteResearchMonthly(this.db, purchase); }
+  async getResearchMonthly(id: string) { this.assertOrdinaryResearchAuthority(); return getSqliteResearchMonthly(this.db, id); }
+  async redeemResearchMonthly(input: MonthlyRedemptionInput) { this.assertOrdinaryResearchAuthority(); return redeemSqliteResearchMonthly(this.db, input, rowToA2aOrder); }
 
   async createA2aOrder(order: A2aOrder): Promise<{ created: boolean; order: A2aOrder }> {
     const result = this.db
