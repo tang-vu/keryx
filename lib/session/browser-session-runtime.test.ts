@@ -106,3 +106,13 @@ it("enforces a question's integer sum independently of a larger lifetime grant",
   await expect(runtime.authorizePayment(f.challenge.reqId, { ...scope, budgetMicroUsdc: "500000" })).rejects.toThrow("retained capacity");
   expect(f.consumed.size).toBe(2);
 });
+
+it("accepts a same-epoch retained spend increase while keeping immutable consent checks", async () => {
+  const f = await fixture(), originalSource = f.dependencies.readSource;
+  f.dependencies.readSource = async () => { f.grant.spentMicroUsdc = "500"; return originalSource(); };
+  const key = { ...f.key, signPayment: async (...args: Parameters<typeof f.key.signPayment>) => {
+    const signature = await f.key.signPayment(...args); f.grant.spentMicroUsdc = "1500"; return signature;
+  } };
+  expect((await createBrowserSessionRuntime(key, f.dependencies).authorizePayment(f.challenge.reqId, f.question)).paymentHeader).toBeTruthy();
+  expect(f.consumed.size).toBe(1);
+});

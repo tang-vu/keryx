@@ -75,6 +75,10 @@ export function createBrowserSessionRuntime(key: SessionRuntimeKey, dependencies
         signature: response.sessionSignature as Hex })).toLowerCase() !== response.sessAddr) refuse();
     return { response, consent };
   }
+  function grantPolicy(bound: Awaited<ReturnType<typeof bindGrant>>) {
+    return canonicalJson({ consent: bound.consent, ownerSignature: bound.response.ownerSignature,
+      sessionSignature: bound.response.sessionSignature });
+  }
   return Object.freeze({
     bindGrant,
     lock() { generation += 1; key.lock(); },
@@ -109,7 +113,7 @@ export function createBrowserSessionRuntime(key: SessionRuntimeKey, dependencies
       } else if (challenge.paymentContext) refuse();
       await dependencies.reserve(key.context.storageNamespace, bound.consent.grantEpoch, challenge.expectedNonce,
         BigInt(requirements.amount), BigInt(bound.consent.capMicroUsdc), scope);
-      if (canonicalJson(await bindGrant()) !== canonicalJson(bound) || expectedGeneration !== generation) refuse();
+      if (grantPolicy(await bindGrant()) !== grantPolicy(bound) || expectedGeneration !== generation) refuse();
       const now = Math.floor(Date.now()/1000), authorization = { from: bound.response.sessAddr as Hex,
         to: requirements.payTo as Hex, value: requirements.amount, validAfter: String(now-600),
         validBefore: String(now+requirements.maxTimeoutSeconds), nonce: challenge.expectedNonce as Hex };
@@ -118,7 +122,7 @@ export function createBrowserSessionRuntime(key: SessionRuntimeKey, dependencies
         { name: "from", type: "address" }, { name: "to", type: "address" }, { name: "value", type: "uint256" },
         { name: "validAfter", type: "uint256" }, { name: "validBefore", type: "uint256" }, { name: "nonce", type: "bytes32" } ] },
         primaryType: "TransferWithAuthorization", message: authorization });
-      if (expectedGeneration !== generation || canonicalJson(await bindGrant()) !== canonicalJson(bound)) refuse();
+      if (expectedGeneration !== generation || grantPolicy(await bindGrant()) !== grantPolicy(bound)) refuse();
       return { paymentHeader: btoa(JSON.stringify({ authorization, signature })) };
     },
   });
