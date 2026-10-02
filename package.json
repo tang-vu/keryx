@@ -37,6 +37,7 @@
     "metrics": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/metrics.mts",
     "preflight": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/preflight.mts",
     "preflight:mainnet-pilot": "node --import tsx --no-warnings scripts/preflight-mainnet-pilot.mts",
+    "mainnet:unsigned-setup": "node --import tsx --no-warnings scripts/mainnet-pilot-unsigned-setup.mts",
     "preflight:ops": "node scripts/release-ops-preflight.mjs",
     "arc:update": "node --import tsx --no-warnings scripts/arc-update.mts",
     "verify:receipt": "node --import tsx --no-warnings scripts/verify-research-receipt.mts",

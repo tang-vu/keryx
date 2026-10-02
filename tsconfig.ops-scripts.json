@@ -9,6 +9,7 @@
     "scripts/check-llm.mts",
     "scripts/check-dispatches.mts",
     "scripts/preflight-mainnet-pilot.mts",
+    "scripts/mainnet-pilot-unsigned-setup.mts",
     "scripts/inspect-arc-mainnet.mts"
   ]
 }
