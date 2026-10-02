@@ -994,6 +994,12 @@ export class SupabaseAdapter implements KeryxDB {
   private assertOrdinaryResearchAuthority(): void {
     if (this.#enrolled) refuseStorage("invalid_operation");
   }
+  async assertResearchPurchaseAuthority(network: string): Promise<void> {
+    this.assertOrdinaryResearchAuthority();
+    if (network !== "eip155:5042002") throw new Error("Mainnet research Supabase authority is staged");
+    const { error } = await this.#sb.from("research_purchase_authorizations").select("network").limit(0);
+    if (error) throw new Error("Research purchase schema unavailable");
+  }
   async claimResearchPurchase(input: ResearchPurchaseClaim): Promise<void> { this.assertOrdinaryResearchAuthority(); return claimSupabaseResearchPurchase(this.#sb, input); }
   async createResearchMonthly(purchase: MonthlyPurchase) { this.assertOrdinaryResearchAuthority(); return createSupabaseResearchMonthly(this.#sb, purchase); }
   async getResearchMonthly(id: string) { this.assertOrdinaryResearchAuthority(); return getSupabaseResearchMonthly(this.#sb, id); }
@@ -1448,7 +1454,7 @@ export class SupabaseAdapter implements KeryxDB {
   async admitHostedTreasuryPolicy(_policy:import("../payments/hosted-treasury-policy").HostedTreasuryPolicy,_role:"public"|"private"):Promise<string> {
     throw new Error("Native PostgreSQL hosted authority is not admitted");
   }
-  async hostedTreasuryAccounting(_signer:string):Promise<import("./hosted-treasury-journal").HostedTreasuryAccounting> {
+  async hostedTreasuryAccounting(_signer:string,_role?:"public"|"private"):Promise<import("./hosted-treasury-journal").HostedTreasuryAccounting> {
     throw new Error("Native PostgreSQL hosted authority is not admitted");
   }
   async admitHostedAuthorization(_input:import("./hosted-treasury-journal").HostedAuthorizationAdmission):Promise<string> {

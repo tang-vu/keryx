@@ -22,7 +22,7 @@ import { publicReferenceSchema, type PublicReference } from "../public-reference
  */
 
 import { listSqliteWithdrawalHistory, type WithdrawalHistoryCursor } from "./creator-withdrawal-history";
-import { assertOrdinarySqliteResearchAuthority, claimSqliteResearchPurchase, createSqliteResearchMonthly, getSqliteResearchMonthly, redeemSqliteResearchMonthly, type MonthlyPurchase, type MonthlyRedemptionInput, type ResearchPurchaseClaim } from "./research-monthly";
+import { assertSqliteResearchAuthority, assertOrdinarySqliteResearchAuthority, claimSqliteResearchPurchase, createSqliteResearchMonthly, getSqliteResearchMonthly, redeemSqliteResearchMonthly, type MonthlyPurchase, type MonthlyRedemptionInput, type ResearchPurchaseClaim } from "./research-monthly";
 import { confirmSqlitePrivateCreator, getSqlitePrivateCreatorConfirmation, type PrivateCreatorConfirmation } from "./private-creator-confirmations";
 import { admitSqlitePrivateCreatorSubmission, listSqlitePrivateCreatorSubmissions, type PrivateCreatorSubmission } from "./private-creator-submissions";
 import { saveSqlitePrivateResult, getSqlitePrivateResult } from "./private-research-results";
@@ -649,9 +649,9 @@ export class SqliteAdapter implements KeryxDB {
     if (this.enrolledMode !== "mainnet-real") throw new Error("Hosted authority requires admitted mainnet storage");
     return admitSqliteHostedPolicy(this.db, policy, this.enrolledIdentity!,role);
   }
-  async hostedTreasuryAccounting(signer: string) {
+  async hostedTreasuryAccounting(signer: string,role?:"public"|"private") {
     if (this.enrolledMode !== "mainnet-real") throw new Error("Hosted authority requires admitted mainnet storage");
-    return sqliteHostedAccounting(this.db, signer);
+    return sqliteHostedAccounting(this.db, signer,role);
   }
   async admitHostedAuthorization(input: HostedAuthorizationAdmission) {
     if (this.enrolledMode !== "mainnet-real") throw new Error("Hosted authority requires admitted mainnet storage");
@@ -1561,12 +1561,17 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   private assertOrdinaryResearchAuthority(): void {
-    if (this.enrolledMode) throw new Error("Research purchase authority is unavailable in enrolled storage");
+    if (this.enrolledMode && this.enrolledMode !== "mainnet-real") throw new Error("Research purchase authority is unavailable in enrolled storage");
   }
-  async claimResearchPurchase(input: ResearchPurchaseClaim): Promise<void> { this.assertOrdinaryResearchAuthority(); claimSqliteResearchPurchase(this.db, input); }
-  async createResearchMonthly(purchase: MonthlyPurchase) { this.assertOrdinaryResearchAuthority(); return createSqliteResearchMonthly(this.db, purchase); }
-  async getResearchMonthly(id: string) { this.assertOrdinaryResearchAuthority(); return getSqliteResearchMonthly(this.db, id); }
-  async redeemResearchMonthly(input: MonthlyRedemptionInput) { this.assertOrdinaryResearchAuthority(); return redeemSqliteResearchMonthly(this.db, input, rowToA2aOrder); }
+  async assertResearchPurchaseAuthority(network: string): Promise<void> {
+    this.assertOrdinaryResearchAuthority();
+    if (network !== this.paymentProfile.networkId) throw new Error("Research purchase profile mismatch");
+    assertSqliteResearchAuthority(this.db,this.paymentProfile,true);
+  }
+  async claimResearchPurchase(input: ResearchPurchaseClaim): Promise<void> { this.assertOrdinaryResearchAuthority(); claimSqliteResearchPurchase(this.db, input,this.paymentProfile); }
+  async createResearchMonthly(purchase: MonthlyPurchase) { this.assertOrdinaryResearchAuthority(); return createSqliteResearchMonthly(this.db, purchase,this.paymentProfile); }
+  async getResearchMonthly(id: string) { this.assertOrdinaryResearchAuthority(); return getSqliteResearchMonthly(this.db, id,this.paymentProfile); }
+  async redeemResearchMonthly(input: MonthlyRedemptionInput) { this.assertOrdinaryResearchAuthority(); return redeemSqliteResearchMonthly(this.db, input, rowToA2aOrder,this.paymentProfile); }
 
   async createA2aOrder(order: A2aOrder): Promise<{ created: boolean; order: A2aOrder }> {
     const result = this.db

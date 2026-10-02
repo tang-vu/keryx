@@ -52,6 +52,8 @@ export interface A2aOrderRequest {
   question: string;
   /** A prepaid allocation, not another inbound settlement or an EIP-3009 nonce. */
   monthlyId?: string;
+  /** Original selected rail; required for fresh mainnet prepaid redemption. */
+  network?: string;
   model?: string;
   origin: "a2a" | "engine";
 }

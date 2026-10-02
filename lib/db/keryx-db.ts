@@ -375,7 +375,7 @@ export interface KeryxDB {
   authorizeSessionWithdrawal(id:string,owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation|null>;
   cancelSessionWithdrawal(id:string,owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalCancellation|null>;
   admitHostedTreasuryPolicy(policy:import("../payments/hosted-treasury-policy").HostedTreasuryPolicy,role:"public"|"private"):Promise<string>;
-  hostedTreasuryAccounting(signer:string):Promise<import("./hosted-treasury-journal").HostedTreasuryAccounting>;
+  hostedTreasuryAccounting(signer:string,role?:"public"|"private"):Promise<import("./hosted-treasury-journal").HostedTreasuryAccounting>;
   admitHostedAuthorization(input:import("./hosted-treasury-journal").HostedAuthorizationAdmission):Promise<string>;
   submitHostedAuthorization(signer:string,submission:Readonly<import("../payments/server-x402-client").ServerX402Submission>,headerHash:string):Promise<void>;
   confirmHostedAuthorization(signer:string,nonce:string,transaction:string):Promise<void>;
@@ -584,6 +584,8 @@ export interface KeryxDB {
   // Durable A2A authorization state: one settled inbound authorization may run creators once.
   /** Ordinary TypeScript SQLite/Supabase authority only; enrolled/native storage refuses this domain.
    * Immutable admission of a verified signed debit before settlement; never grants delivery. */
+  /** Read-only proof of actual purchase writer capability before offering a paid quote. */
+  assertResearchPurchaseAuthority(network: string): Promise<void>;
   claimResearchPurchase(input: ResearchPurchaseClaim): Promise<void>;
   createResearchMonthly(purchase: MonthlyPurchase): Promise<{ created: boolean; purchase: MonthlyPurchase }>;
   getResearchMonthly(id: string): Promise<{ purchase: MonthlyPurchase; redemptions: MonthlyRedemption[] } | null>;

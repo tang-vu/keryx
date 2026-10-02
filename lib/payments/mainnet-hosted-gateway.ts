@@ -1,4 +1,4 @@
-import { privateKeyToAccount } from "viem/accounts";
+import { privateKeyToAccount, privateKeyToAddress } from "viem/accounts";
 import type { PrivateKeyAccount } from "viem";
 import { config } from "../config";
 import type { KeryxDB } from "../db/keryx-db";
@@ -26,19 +26,22 @@ export function mainnetHostedPolicy(db: KeryxDB, role: "public" | "private" = "p
     throw new Error("Hosted origin unavailable");
   return configuredHostedTreasuryPolicy(identity, url.origin, role);
 }
-/** Unsigned pre-purchase projection. It proves current sealed policy and known
- * capacity, never reserves/signs or claims that a configured secret is valid custody. */
+/** Pre-purchase custody/capacity check. Public-address derivation verifies the
+ * dedicated key against sealed policy; no signing, reservation, funding or transaction. */
 export async function assertMainnetHostedResearchReady(db:KeryxDB,budgetMicros:string) {
   if(!/^[1-9][0-9]{0,15}$/.test(budgetMicros) || BigInt(budgetMicros)>BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("Hosted budget unavailable");
   const policy=mainnetHostedPolicy(db),budget=BigInt(budgetMicros);
   if(budget>BigInt(policy.queryCapMicroUsdc) || !/^0x[0-9a-fA-F]{64}$/.test(process.env.KERYX_MAINNET_TREASURY_PRIVATE_KEY??""))
     throw new Error("Hosted operating configuration unavailable");
-  const before=await db.hostedTreasuryAccounting(policy.signer);
+  try {
+    if(privateKeyToAddress(process.env.KERYX_MAINNET_TREASURY_PRIVATE_KEY as `0x${string}`).toLowerCase()!==policy.signer) throw new Error();
+  } catch { throw new Error("Dedicated hosted mainnet custody unavailable"); }
+  const before=await db.hostedTreasuryAccounting(policy.signer,"public");
   await assertArcRpcChain(config.rpcUrl,ARC_MAINNET_PROFILE);
   const available=await getGatewayAvailableAtomic(policy.signer,ARC_MAINNET_PROFILE);
   if(available===null || BigInt(before.retainedMicroUsdc)+budget>BigInt(policy.lifetimeCapMicroUsdc) ||
     BigInt(before.retainedMicroUsdc)-BigInt(before.confirmedMicroUsdc)+budget>available ||
-    canonicalJson(before)!==canonicalJson(await db.hostedTreasuryAccounting(policy.signer))) throw new Error("Hosted current capacity unavailable");
+    canonicalJson(before)!==canonicalJson(await db.hostedTreasuryAccounting(policy.signer,"public"))) throw new Error("Hosted current capacity unavailable");
   if(canonicalJson(mainnetHostedPolicy(db))!==canonicalJson(policy)) throw new Error("Hosted policy changed");
 }
 /** Only an enrolled application DB and protected reviewed policy can reach the
@@ -100,7 +103,7 @@ class MainnetHostedGateway extends ServerPaymentGateway {
     const queryBudgetMicroUsdc = this.budget;
     return createPinnedArcBatchSigner(this.account, config.rpcUrl, ARC_MAINNET_PROFILE, config.maxTimeoutSeconds, async payload => {
       this.assertPolicy();
-      const before = await this.db.hostedTreasuryAccounting(this.policy.signer);
+      const before = await this.db.hostedTreasuryAccounting(this.policy.signer,this.role);
       const available = await getGatewayAvailableAtomic(this.policy.signer, ARC_MAINNET_PROFILE);
       if (available === null) throw new Error("Hosted prefunded balance unavailable");
       this.assertPolicy();

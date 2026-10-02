@@ -279,3 +279,9 @@ for Arc domain 26, Mainnet metadata and the pinned wallet/minter addresses. This
 transport prerequisite. Native normal session recovery and owner-wallet creator
 cashout are now implemented. The optional creator gas-relay operator remains staged;
 ordinary creators explicitly submit their own reviewed mint and gas.
+
+## Fresh research purchase storage
+
+The fresh sealed mainnet SQLite application schema now includes canonical research purchase claims and Monthly v2 entitlements. Seller admission claims an exact original network/payer/nonce/payee/purpose/request/amount before vendor settlement. Monthly requires its server-issued original challenge to be consumed before a settled entitlement is stored; its four allocations are committed atomically with the immutable original order. Mainnet entitlements bind network, USDC and Gateway explicitly. Historical ordinary testnet data is never relabelled, and enrolled testnet storage retains its refusal for this new domain. Optional Supabase mainnet purchase authority remains staged.
+
+`assertResearchPurchaseAuthority(network)` proves actual native writer capability before quote/payment; a read-only handle cannot advertise checkout readiness. `assertMainnetHostedResearchReady` additionally derives the configured dedicated key's public address and compares it to sealed policy, checks historical custody role and current capacity without signing/funding. Capacity observation does not reserve four future research runs or guarantee later operator prefunding. Client/checkout composition and the actual combined paid/cited browser journey remain separate acceptance evidence.
