@@ -2,7 +2,7 @@ import { parseArgs } from "node:util";
 import { privateKeyToAccount } from "viem/accounts";
 import { recoverPrivateBuyerWorkflow } from "../lib/buyer/private-recovery-workflow.ts";
 
-const help = `Private research recovery (Arc testnet)
+const help = `Private research recovery (trusted configured Arc network)
 
 npm run buyer:private:recover -- --state ./private-job --private-payee 0x... --public-payee 0x... [--output ./private-result.json]
 

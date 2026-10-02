@@ -16,7 +16,7 @@ const observation = z.object({ observedAt: z.string(),
   accountingAgreement: z.enum(["matches", "differs", "unavailable"]), authority: z.string() }).strict();
 const statusResponse = z.object({
   schema: z.literal("keryx-operator-task-status-v1"), taskId: z.string(), createdAt: z.string(),
-  kind: z.literal("paid_research"), network: z.literal("eip155:5042002"),
+  kind: z.literal("paid_research"), network: z.enum(["eip155:5042002", "eip155:5042"]),
   stage: z.enum(["ready", "journal_incomplete", "buyer_journaled"]),
   buyerJobId: z.string().nullable(),
   creatorBudgetMicros: z.number().refine(value => Number.isFinite(value) && Number.isInteger(value)),

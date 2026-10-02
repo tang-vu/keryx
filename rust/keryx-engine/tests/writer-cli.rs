@@ -160,4 +160,26 @@ fn real_process_token_controls_workspace_and_task_creation() {
     assert!(!ok);
     assert_refusal(&collision, "workspace-create", "mkdir");
     assert_eq!(fs::read(parent.join("task_1/task.json")).unwrap(), before);
+    let mut mainnet: Value = serde_json::from_str(&input).unwrap();
+    mainnet["child"] = json!("mainnet_task");
+    mainnet["network"] = json!("eip155:5042");
+    let (ok, created_mainnet) = call("create", &[], &mainnet.to_string());
+    assert!(ok, "mainnet preparation refused: {created_mainnet}");
+    let saved: Value =
+        serde_json::from_slice(&fs::read(parent.join("mainnet_task/task.json")).unwrap()).unwrap();
+    assert_eq!(saved["schema"], "keryx-operator-task-v2");
+    assert_eq!(saved["network"], "eip155:5042");
+    let (ok, inspected) = call(
+        "status",
+        &["--state", parent.join("mainnet_task").to_str().unwrap()],
+        "",
+    );
+    assert!(ok, "mainnet readonly inspection refused: {inspected}");
+    assert_eq!(inspected["network"], "eip155:5042");
+    mainnet["child"] = json!("wrong_network");
+    mainnet["network"] = json!("eip155:1");
+    let (ok, refused) = call("create", &[], &mainnet.to_string());
+    assert!(!ok);
+    assert_refusal(&refused, "create", "prepare");
+    assert!(!parent.join("wrong_network").exists());
 }

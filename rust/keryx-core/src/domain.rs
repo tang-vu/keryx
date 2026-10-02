@@ -206,6 +206,7 @@ pub struct Task {
     pub request: Value,
     pub payee: String,
     pub cap: u64,
+    pub network: String,
 }
 pub struct Intent {
     pub query_id: String,
@@ -213,22 +214,27 @@ pub struct Intent {
 }
 
 pub fn parse_task(task: &Value, request: &Value) -> Result<Task> {
-    obj_keys(
-        task,
-        &[
-            "schema",
-            "id",
-            "createdAt",
-            "kind",
-            "request",
-            "payee",
-            "maxTotalMicros",
-        ],
-    )?;
-    if str_field(task, "schema")? != "keryx-operator-task-v1"
-        || str_field(task, "kind")? != "paid_research"
-    {
-        return Err("unsupported task schema".into());
+    let schema = str_field(task, "schema")?;
+    let network = match schema {
+        "keryx-operator-task-v1" => NETWORK,
+        "keryx-operator-task-v2" => str_field(task, "network")?,
+        _ => return Err("unsupported task schema".into()),
+    };
+    let mut keys = vec![
+        "schema",
+        "id",
+        "createdAt",
+        "kind",
+        "request",
+        "payee",
+        "maxTotalMicros",
+    ];
+    if schema == "keryx-operator-task-v2" {
+        keys.push("network");
+    }
+    obj_keys(task, &keys)?;
+    if ![NETWORK, "eip155:5042"].contains(&network) || str_field(task, "kind")? != "paid_research" {
+        return Err("unsupported task network or kind".into());
     }
     let id = str_field(task, "id")?;
     let created = str_field(task, "createdAt")?;
@@ -253,6 +259,7 @@ pub fn parse_task(task: &Value, request: &Value) -> Result<Task> {
         request: req,
         payee: payee.into(),
         cap,
+        network: network.into(),
     })
 }
 pub fn parse_intent(intent: &Value, task: &Task) -> Result<Intent> {
@@ -291,7 +298,7 @@ pub fn parse_intent(intent: &Value, task: &Task) -> Result<Intent> {
         .as_f64()
         .ok_or("invalid timeout")?;
     if str_field(req, "scheme")? != "exact"
-        || str_field(req, "network")? != NETWORK
+        || str_field(req, "network")? != task.network
         || !str_field(req, "asset")?.eq_ignore_ascii_case(USDC)
         || !address(pay_to)
         || !timeout.is_finite()
@@ -299,7 +306,13 @@ pub fn parse_intent(intent: &Value, task: &Task) -> Result<Intent> {
         || !(604_860.0..=691_200.0).contains(&timeout)
         || str_field(extra, "name")? != "GatewayWalletBatched"
         || str_field(extra, "version")? != "1"
-        || !str_field(extra, "verifyingContract")?.eq_ignore_ascii_case(GATEWAY)
+        || !str_field(extra, "verifyingContract")?.eq_ignore_ascii_case(
+            if task.network == NETWORK {
+                GATEWAY
+            } else {
+                "0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE"
+            },
+        )
     {
         return Err("unsupported payment requirement".into());
     }
@@ -329,7 +342,8 @@ pub fn parse_intent(intent: &Value, task: &Task) -> Result<Intent> {
         return Err("invalid authorization".into());
     }
     let preimage = format!(
-        "keryx-a2a-v2|{NETWORK}|{}|{}|{}",
+        "keryx-a2a-v2|{}|{}|{}|{}",
+        task.network,
         payer.to_ascii_lowercase(),
         to.to_ascii_lowercase(),
         nonce.to_ascii_lowercase()
@@ -448,5 +462,57 @@ mod tests {
         ] {
             assert!(!valid_time(invalid), "invalid Zod timestamp: {invalid:?}");
         }
+    }
+}
+
+#[cfg(test)]
+mod mainnet_task_tests {
+    use super::*;
+    #[test]
+    fn retained_mainnet_task_binds_gateway_and_job_identity() {
+        let payee = "0x1111111111111111111111111111111111111111";
+        let payer = "0x2222222222222222222222222222222222222222";
+        let nonce = format!("0x{}", "a".repeat(64));
+        let request: Value = json!({"question":"synthetic", "budget":0.01, "researchMode":"quick", "packageVersion":"1.0.0", "responseMode":"async"}).into();
+        let prepared = crate::prepare_task_for_network(
+            &request,
+            payee,
+            "100000",
+            "00000000-0000-4000-8000-000000000001",
+            "2026-09-29T01:02:03.004Z",
+            "eip155:5042",
+        )
+        .unwrap();
+        let task_bytes = crate::parse_json(prepared.task_json()).unwrap();
+        assert_eq!(
+            str_field(&task_bytes, "schema").unwrap(),
+            "keryx-operator-task-v2"
+        );
+        let task = parse_task(&task_bytes, &request).unwrap();
+        assert_eq!(task.network, "eip155:5042");
+        let query = format!(
+            "a2a_{}",
+            digest(&format!("keryx-a2a-v2|eip155:5042|{payer}|{payee}|{nonce}"))
+                .trim_start_matches("sha256:")
+        );
+        let mut intent = json!({"schema":"keryx-buyer-intent-v1", "request": {"question":"synthetic", "budget":0.01, "researchMode":"quick", "packageVersion":"1.0.0", "responseMode":"async"},
+            "requirement":{"scheme":"exact", "network":"eip155:5042", "asset":USDC, "amount":"30000", "payTo":payee, "maxTimeoutSeconds":691200,
+                "extra":{"name":"GatewayWalletBatched","version":"1","verifyingContract":"0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE"}},
+            "authorization":{"from":payer,"to":payee,"value":"30000","validAfter":"1","validBefore":"2","nonce":nonce}, "queryId":query});
+        assert!(parse_intent(&intent.clone().into(), &task).is_ok());
+        intent["requirement"]["network"] = json!(NETWORK);
+        assert!(parse_intent(&intent.clone().into(), &task).is_err());
+        intent["requirement"]["network"] = json!("eip155:5042");
+        intent["requirement"]["extra"]["verifyingContract"] = json!(GATEWAY);
+        assert!(parse_intent(&intent.into(), &task).is_err());
+        assert!(crate::prepare_task_for_network(
+            &request,
+            payee,
+            "100000",
+            "00000000-0000-4000-8000-000000000001",
+            "2026-09-29T01:02:03.004Z",
+            "eip155:1"
+        )
+        .is_err());
     }
 }

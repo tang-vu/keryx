@@ -2,15 +2,16 @@ import { randomUUID } from "node:crypto";
 import { open, lstat, rename, unlink } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { z } from "zod";
-import { buyerIntentSchema, writeBuyerFile } from "../buyer/journal";
+import { buyerIntentSchemaForProfile, writeBuyerFile } from "../buyer/journal";
 import { resumeResearch } from "../buyer/client";
 import { buildBuyerReport } from "../buyer/report";
+import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "../arc-network-profile";
 import { addressSchema, buyerRequestSchema, BUYER_NETWORK, type BuyerRequest } from "../buyer/protocol";
 import { inspectSavedOperatorResult, readSavedOperatorResult, readSavedOperatorResearchResult, saveVerifiedOperatorResult } from "./result";
 import { type NativeTaskWriter } from "./native-task-writer";
 export { privateOperatorBrief as formatOperatorBrief, formatOperatorResearchExport } from "./result";
 
-const taskSchema = z.object({
+const legacyTaskSchema = z.object({
   schema: z.literal("keryx-operator-task-v1"),
   id: z.string().uuid(),
   createdAt: z.string().datetime(),
@@ -19,13 +20,15 @@ const taskSchema = z.object({
   payee: addressSchema,
   maxTotalMicros: z.string().regex(/^[1-9]\d{0,6}$/),
 }).strict();
+const taskSchema = z.union([legacyTaskSchema, legacyTaskSchema.extend({ schema: z.literal("keryx-operator-task-v2"), network: z.enum(["eip155:5042", "eip155:5042002"]) })]);
 type Task = z.infer<typeof taskSchema>;
+const taskNetwork = (task: Task) => task.schema === "keryx-operator-task-v2" ? task.network : "eip155:5042002";
 const MAX_TASK_FILE_BYTES = 8192;
 
 function validateCap(request: BuyerRequest, maxTotalMicros: string) {
   const micros = BigInt(maxTotalMicros);
   if (micros > BigInt(1_000_000) || micros <= BigInt(Math.round(request.budget * 1e6))) {
-    throw new Error("Total cap must exceed the creator budget and be at most 1 testnet USDC");
+    throw new Error("Total cap must exceed the creator budget and be at most 1 USDC");
   }
 }
 
@@ -53,7 +56,7 @@ export async function createOperatorTask(directory: string, input: { request: un
   const target = resolve(directory);
   const id = randomUUID();
   const created = await writer.create({ parent: dirname(target), child: basename(target), request: input.request,
-    payee: input.payee, maxTotalMicros: input.maxTotalMicros, id, createdAt: new Date().toISOString() });
+    payee: input.payee, maxTotalMicros: input.maxTotalMicros, id, createdAt: new Date().toISOString(), network: BUYER_NETWORK });
   return { taskId: created.taskId, status: "ready" as const, buyerState: join(target, "buyer"),
     publicationState: created.state };
 }
@@ -75,7 +78,7 @@ async function linkedBuyerState(directory: string, task: Task) {
     throw error;
   }
   let intent;
-  try { intent = buyerIntentSchema.parse(await readBoundedJson(join(buyer, "intent.json"), 65_536)); }
+  try { intent = buyerIntentSchemaForProfile(taskNetwork(task) === "eip155:5042" ? ARC_MAINNET_PROFILE : ARC_TESTNET_PROFILE).parse(await readBoundedJson(join(buyer, "intent.json"), 65_536)); }
   catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       // Distinguish a buyer process that created its directory from a vanished directory.
@@ -85,6 +88,7 @@ async function linkedBuyerState(directory: string, task: Task) {
     throw error;
   }
   if (JSON.stringify(intent.request) !== JSON.stringify(task.request)
+    || intent.requirement.network !== taskNetwork(task)
     || intent.requirement.payTo.toLowerCase() !== task.payee.toLowerCase()
     || BigInt(intent.requirement.amount) > BigInt(task.maxTotalMicros)) {
     throw new Error("Buyer journal does not match the original task request and limits");
@@ -99,7 +103,7 @@ export async function operatorTaskStatus(directory: string) {
   const observation = linked.stage === "buyer_journaled" ? await readObservation(directory, task.id, linked.queryId) : null;
   const savedResult = await inspectSavedOperatorResult(directory);
   return { schema: "keryx-operator-task-status-v1" as const, taskId: task.id,
-    createdAt: task.createdAt, kind: task.kind, network: BUYER_NETWORK, stage: linked.stage,
+    createdAt: task.createdAt, kind: task.kind, network: taskNetwork(task), stage: linked.stage,
     buyerJobId: "queryId" in linked ? linked.queryId : null,
     creatorBudgetMicros: Math.round(task.request.budget * 1e6), maxTotalMicros: task.maxTotalMicros,
     payment: "unknown" as const, delivery: "unknown" as const, lastObservation: observation, savedResult,
@@ -142,6 +146,7 @@ async function saveObservation(directory: string, taskId: string, buyerJobId: st
 /** Recovery delegates to the existing GET-only buyer path after exact task binding. */
 export async function resumeOperatorTask(directory: string, recover: typeof resumeResearch = resumeResearch) {
   const task = await readTask(directory);
+  if (taskNetwork(task) !== BUYER_NETWORK) throw new Error("Task belongs to a different network; preserve its original files and recover with its original configuration");
   const linked = await linkedBuyerState(directory, task);
   if (linked.stage !== "buyer_journaled") throw new Error("No complete buyer journal; inspect the original task before recovery");
   const result = await recover(linked.buyer);
@@ -150,7 +155,7 @@ export async function resumeOperatorTask(directory: string, recover: typeof resu
   if (report.status === "completed") {
     try {
       await saveVerifiedOperatorResult(directory, { taskId: task.id, request: task.request, buyer: linked.buyer,
-        buyerJobId: linked.queryId }, result);
+        buyerJobId: linked.queryId, network: taskNetwork(task) }, result);
       localResult = { state: "saved" };
     } catch {
       localResult = { state: "save_failed", message: "Completed remote result could not be saved locally. Keep the original buyer receipt and retry GET-only recovery; do not repurchase." };
@@ -172,7 +177,7 @@ async function savedResultContext(directory: string) {
   if (saved === "invalid") throw new Error("Saved result file is invalid; keep the original buyer receipt for recovery");
   const linked = await linkedBuyerState(directory, task);
   if (linked.stage !== "buyer_journaled") throw new Error("Saved result has no matching buyer journal");
-  return { taskId: task.id, request: task.request, buyer: linked.buyer, buyerJobId: linked.queryId };
+  return { taskId: task.id, request: task.request, buyer: linked.buyer, buyerJobId: linked.queryId, network: taskNetwork(task) };
 }
 
 export async function readOperatorResult(directory: string) {

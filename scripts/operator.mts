@@ -10,7 +10,7 @@ import { NativeTaskWriterError, repositoryNativeTaskWriter } from "../lib/operat
 
 const writer = () => repositoryNativeTaskWriter(resolve(import.meta.dirname, ".."));
 
-const usage = `Keryx Operator task alpha (Arc testnet)
+const usage = `Keryx Operator task alpha (trusted configured Arc network)
   npm run operator -- workspace --state operator-workspace
   npm run operator -- create --request request.json --payee 0x... --max-total 0.10 --state operator-workspace/task-1
   npm run operator -- status --state operator-workspace/task-1

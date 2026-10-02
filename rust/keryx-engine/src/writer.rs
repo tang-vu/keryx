@@ -1,5 +1,6 @@
 use keryx_core::{
-    create_private_workspace, parse_json, prepare_task_v1, PrivateParent, PublicationFailure, Value,
+    create_private_workspace, parse_json, prepare_task_for_network, PrivateParent,
+    PublicationFailure, Value,
 };
 use serde_json::{json, Value as Json};
 use std::{
@@ -80,10 +81,15 @@ fn bounded_input(operation: &str, fields: &[&str]) -> Result<Value, Json> {
     let text = std::str::from_utf8(&bytes).map_err(|_| input_error(operation))?;
     let value = parse_json(text).map_err(|_| input_error(operation))?;
     let entries = value.as_object().ok_or_else(|| input_error(operation))?;
-    if entries.len() != fields.len()
-        || entries
+    let selected_network = operation == "create"
+        && entries
             .iter()
-            .any(|(key, _)| !key.as_str().is_some_and(|key| fields.contains(&key)))
+            .any(|(key, _)| key.as_str() == Some("network"));
+    if entries.len() != fields.len() + usize::from(selected_network)
+        || entries.iter().any(|(key, _)| {
+            !key.as_str()
+                .is_some_and(|key| fields.contains(&key) || (selected_network && key == "network"))
+        })
     {
         return Err(input_error(operation));
     }
@@ -103,12 +109,17 @@ fn create() -> Result<Json, Json> {
     let parent = field(&input, "parent", operation)?;
     let child = field(&input, "child", operation)?;
     let request = input.get("request").ok_or_else(|| input_error(operation))?;
-    let prepared = prepare_task_v1(
+    let prepared = prepare_task_for_network(
         request,
         field(&input, "payee", operation)?,
         field(&input, "maxTotalMicros", operation)?,
         field(&input, "id", operation)?,
         field(&input, "createdAt", operation)?,
+        if input.get("network").is_some() {
+            field(&input, "network", operation)?
+        } else {
+            "eip155:5042002"
+        },
     )
     .map_err(|error| preparation_error(&error))?;
     let parent = PrivateParent::open(Path::new(parent))

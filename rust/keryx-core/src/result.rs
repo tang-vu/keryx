@@ -278,6 +278,7 @@ mod tests {
             created_at: "2026-09-28T00:00:00.000Z".into(),
             request,
             payee: "0x1111111111111111111111111111111111111111".into(),
+            network: "eip155:5042002".into(),
             cap: 30_000,
         };
         let intent = Intent {

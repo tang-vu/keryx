@@ -153,3 +153,25 @@ file against the accepted artifact before skipping. A partial asset set refuses
 automatic recovery: inspect the release and retain any already published bytes;
 do not remove or overwrite them to force a retry. Installer hashes are recorded
 in the source manifest for new packages.
+
+
+## Network-scoped tasks (0.4.0 source candidate)
+
+New preparation explicitly selects Arc Testnet/Mainnet and saves the rail before
+buyer handoff. Mainnet uses task v2 with `network: eip155:5042`; legacy v1 files
+remain testnet originals. Both stay in one workspace without relabelling. Creating
+a task never signs, funds or purchases. The PowerShell handoff sets BOTH
+`KERYX_NETWORK` and `NEXT_PUBLIC_KERYX_NETWORK` to that saved task's rail. Confirm
+the trusted seller, caller custody and ordinary total cap separately.
+
+Original-job GET recovery checks the helper's trusted selected rail against the
+saved task before contacting a server. Launch the app with BOTH labels set to
+`arc` for mainnet recovery, or both `arcTestnet` for testnet; both unset retains
+testnet. A mismatch refuses and preserves the original files. Local status/exports
+validate retained journal domains by the stored rail. Do not attach an old testnet
+journal to a new mainnet task. The desktop remains a local workspace and deliberate
+CLI handoff; no wallet signer or autonomous scheduler is added.
+
+The source version is not a published installer claim. Exact native Windows
+package/manifest, standard-user mixed-history handoff/recovery and published asset
+checksums remain coordinated release gates.

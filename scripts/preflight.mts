@@ -1,13 +1,14 @@
 /**
- * preflight — go-live readiness check for REAL Arc-testnet settlement.
+ * preflight — go-live readiness check for the selected trusted Arc network.
  * Reports: LLM provider, funder wallet gas (native USDC) + spendable USDC (ERC-20),
  * offline flag, and registered source count. Tells you exactly what's left before going live.
  *
  * Usage: npm run preflight
  */
 
-import { createPublicClient, http, erc20Abi, formatUnits, formatEther } from "viem";
-import { arcTestnet } from "viem/chains";
+import { createPublicClient, erc20Abi, formatUnits, formatEther } from "viem";
+import { chainForProfile } from "../lib/chains.ts";
+import { attestedArcHttp } from "../lib/arc-rpc-attestation.ts";
 import { privateKeyToAccount } from "viem/accounts";
 import { config, hasLlm, llmProvider } from "../lib/config.ts";
 import { getDb } from "../lib/db/index.ts";
@@ -29,20 +30,20 @@ console.log(`${ok(!forcedOffline)} KERYX_FORCE_OFFLINE=${process.env.KERYX_FORCE
 let gasOk = false;
 let usdcOk = false;
 if (!config.funderKey) {
-  console.log(`❌ Funder wallet: AGENT_FUNDER_PRIVATE_KEY not set (run npm run generate-wallets)`);
+  console.log(`❌ Funder wallet: AGENT_FUNDER_PRIVATE_KEY not set (owner-provisioned custody required)`);
 } else {
   const funder = privateKeyToAccount(config.funderKey as `0x${string}`);
-  const pc = createPublicClient({ chain: arcTestnet, transport: http(config.rpcUrl) });
+  const pc = createPublicClient({ chain: chainForProfile(config.profile), transport: attestedArcHttp(config.rpcUrl) });
   try {
     const [native, usdc] = await Promise.all([
       pc.getBalance({ address: funder.address }),
       pc.readContract({ address: config.usdcAddress, abi: erc20Abi, functionName: "balanceOf", args: [funder.address] }),
     ]);
-    gasOk = native > 0n;
-    usdcOk = usdc > 0n;
+    gasOk = native > BigInt(0);
+    usdcOk = usdc > BigInt(0);
     console.log(`   Funder wallet: ${funder.address}`);
-    console.log(`${ok(gasOk)} Gas (native USDC, 18dp): ${formatEther(native)}${gasOk ? "" : "  → fund at faucet.circle.com (Arc Testnet)"}`);
-    console.log(`${ok(usdcOk)} Spendable USDC (ERC-20, 6dp): ${formatUnits(usdc, 6)}${usdcOk ? "" : "  → fund at faucet.circle.com (Arc Testnet)"}`);
+    console.log(`${ok(gasOk)} Gas (native USDC, 18dp): ${formatEther(native)}${gasOk ? "" : "  → provide owner-authorized ERC20 USDC and native gas on the selected network"}`);
+    console.log(`${ok(usdcOk)} Spendable USDC (ERC-20, 6dp): ${formatUnits(usdc, 6)}${usdcOk ? "" : "  → provide owner-authorized ERC20 USDC and native gas on the selected network"}`);
   } catch (e) {
     console.log(`❌ Could not reach Arc RPC (${config.rpcUrl}): ${e instanceof Error ? e.message : String(e)}`);
   }
@@ -55,6 +56,6 @@ console.log(`${ok(sources.length > 0)} Registered sources: ${sources.length}`);
 
 const ready = llm && !forcedOffline && gasOk && usdcOk && sources.length > 0;
 console.log(line);
-console.log(ready ? "🟢 READY for real settlement — run: npm run ask -- \"<question>\"" : "🟡 Not ready yet — resolve the ❌ items above.");
-console.log(`   (faucet: https://faucet.circle.com/  ·  fund: ${config.funderKey ? privateKeyToAccount(config.funderKey as `0x${string}`).address : "<funder>"})\n`);
+console.log(ready ? "Local checks pass; registry/funded acceptance and release authorization remain separate gates." : "Local configuration is not ready; resolve the failed items above.");
+console.log(`   Selected network: ${config.profile.label} (${config.networkId})\n`);
 process.exit(0);

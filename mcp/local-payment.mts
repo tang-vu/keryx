@@ -4,14 +4,17 @@ import path from "node:path";
 import type { PrivateKeyAccount } from "viem/accounts";
 import { z } from "zod";
 import { createPinnedArcBatchSigner } from "../lib/payments/pinned-arc-batch-signer.ts";
-import { config } from "../lib/config.ts";
 import { readBoundedJson } from "../lib/read-bounded-json.ts";
+import { assertCallerJournalNetwork, assertCallerTransport, CallerJournalNetworkMismatch, callerProfile, callerConfig } from "./network-policy.mts";
 
-const NETWORK = "eip155:5042002";
-const USDC = "0x3600000000000000000000000000000000000000";
-const GATEWAY = "0x0077777d7EBA4688BDeF3E311b846F25870A19B9";
+const NETWORK = callerProfile.networkId;
+const USDC = callerProfile.usdcAddress;
+const GATEWAY = callerProfile.gatewayWallet;
 
 export type PendingPayment = {
+  schema?: "keryx-mcp-payment-v2";
+  network?: "eip155:5042002" | "eip155:5042";
+  origin?: string;
   queryId: string;
   authorizationId: string;
   amountUsdc: string;
@@ -25,12 +28,19 @@ export function readPending(file: string): PendingPayment | null {
   try {
     const stat = fs.lstatSync(file);
     if (!stat.isFile() || stat.nlink !== 1 || stat.size > 8192) throw new Error();
-    return z.object({ queryId: z.string().regex(/^a2a_[0-9a-f]{64}$/), authorizationId: z.string().regex(/^0x[0-9a-f]{64}$/i),
+    const record = z.object({ schema: z.literal("keryx-mcp-payment-v2").optional(), network: z.enum(["eip155:5042002", "eip155:5042"]).optional(),
+      origin: z.string().url().optional(), queryId: z.string().regex(/^a2a_[0-9a-f]{64}$/), authorizationId: z.string().regex(/^0x[0-9a-f]{64}$/i),
       amountUsdc: z.string().regex(/^(?:0|[1-9]\d*)(?:\.\d{1,6})?$/), status: z.enum(["submitted", "settled", "unconfirmed"]),
       settlementId: z.string().min(1).max(256).optional(), paymentResponse: z.string().max(4096).optional(),
       httpStatus: z.number().int().min(100).max(599).optional() }).strict().parse(JSON.parse(fs.readFileSync(file, "utf8")));
+    if (record.schema ? !record.network || !record.origin || new URL(record.origin).origin !== record.origin
+      : record.network !== undefined || record.origin !== undefined) throw new Error();
+    assertCallerJournalNetwork(record.network);
+    if (record.origin) assertCallerTransport(record.origin);
+    return record;
   }
   catch (error) {
+    if (error instanceof CallerJournalNetworkMismatch) throw error;
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw new Error("Payment journal unavailable; preserve the original file for owner recovery");
   }
@@ -81,13 +91,14 @@ export async function payForResearch<T>(input: {
   expectedPayee: string; expectedAmountMicros: string;
   journalFile: string; maxAmountUsdc: number; rpcUrl?: string; fetchImpl?: typeof fetch;
 }): Promise<{ data: T; settlementId: string; amountPaid: string }> {
+  const origin = assertCallerTransport(input.url);
   fs.mkdirSync(path.dirname(input.journalFile), { recursive: true });
   const lock = `${input.journalFile}.lock`;
   try { fs.mkdirSync(lock); } catch { throw new Error("Payment admission is held; inspect the original journal and lock before another purchase"); }
   try {
   const prior = readPending(input.journalFile);
   if (prior) throw new Error(`A previous payment may have settled. Recover query ${prior.queryId} before paying again; journal: ${input.journalFile}`);
-  if (!Number.isFinite(input.maxAmountUsdc) || input.maxAmountUsdc <= 0 || input.maxAmountUsdc > 1) throw new Error("Payment total limit must be at most 1 testnet USDC");
+  if (!Number.isFinite(input.maxAmountUsdc) || input.maxAmountUsdc <= 0 || input.maxAmountUsdc > 1) throw new Error("Payment total limit must be at most 1 USDC");
   const request = JSON.stringify(input.body);
   const fetchImpl = input.fetchImpl ?? fetch;
   const headers = { "content-type": "application/json", accept: "application/json" };
@@ -100,7 +111,7 @@ export async function payForResearch<T>(input: {
   };
   if (challenge.x402Version !== 2) throw new Error("Unsupported x402 version");
   const terms = challenge.accepts?.find((item) => item.network === NETWORK && item.scheme === "exact");
-  if (!terms || terms.asset.toLowerCase() !== USDC || terms.extra?.name !== "GatewayWalletBatched"
+  if (!terms || terms.asset.toLowerCase() !== USDC.toLowerCase() || terms.extra?.name !== "GatewayWalletBatched"
     || terms.extra.version !== "1" || String(terms.extra.verifyingContract).toLowerCase() !== GATEWAY.toLowerCase()
     || !/^0x[0-9a-f]{40}$/i.test(terms.payTo) || !/^[1-9]\d*$/.test(terms.amount)) {
     throw new Error("Quote contains unsupported payment requirements");
@@ -113,11 +124,12 @@ export async function payForResearch<T>(input: {
   if (micros > BigInt(Math.round(input.maxAmountUsdc * 1_000_000))) {
     throw new Error(`Quote ${Number(micros) / 1_000_000} USDC exceeds the permitted total ${input.maxAmountUsdc} USDC`);
   }
-  if (terms.maxTimeoutSeconds !== config.maxTimeoutSeconds) throw new Error("Quote has an unexpected authorization lifetime");
-  const signed = await createPinnedArcBatchSigner(input.account, input.rpcUrl ?? config.rpcUrl).createPaymentPayload(2,
+  if (terms.maxTimeoutSeconds !== callerConfig.maxTimeoutSeconds) throw new Error("Quote has an unexpected authorization lifetime");
+  const signed = await createPinnedArcBatchSigner(input.account, input.rpcUrl ?? callerConfig.rpcUrl).createPaymentPayload(2,
     { ...terms, extra: { name: "GatewayWalletBatched", version: "1", verifyingContract: GATEWAY } });
   const authorization = (signed.payload as { authorization: { nonce: string } }).authorization;
   const payment: PendingPayment = {
+    schema: "keryx-mcp-payment-v2", network: NETWORK, origin,
     queryId: queryId(input.account.address, terms.payTo, authorization.nonce),
     authorizationId: authorization.nonce,
     amountUsdc: (Number(micros) / 1_000_000).toString(), status: "submitted",
@@ -160,8 +172,11 @@ export async function payForResearch<T>(input: {
 export async function recoverResearch<T>(baseUrl: string, journalFile: string, fetchImpl: typeof fetch = fetch): Promise<{
   payment: PendingPayment; data: T | null; httpStatus: number;
 }> {
+  const origin = assertCallerTransport(baseUrl);
   const payment = readPending(journalFile);
   if (!payment) throw new Error("No payment recovery journal exists");
+  if (payment.origin && origin !== payment.origin)
+    throw new Error("Recovery origin differs from the original payment; preserve the journal and select its original server");
   const lock = `${journalFile}.lock`;
   let ownsLock = false;
   try { fs.mkdirSync(lock); ownsLock = true; } catch { /* Read-only inspection of an active/crashed original attempt remains available. */ }
@@ -173,6 +188,7 @@ export async function recoverResearch<T>(baseUrl: string, journalFile: string, f
     throw new Error("Recovery response query identity mismatched; original payment journal retained");
   const current = readPending(journalFile);
   if (ownsLock && current?.queryId === payment.queryId && current.authorizationId === payment.authorizationId
+    && current.network === payment.network && current.origin === payment.origin
     && response.ok && data && (data as { status?: string }).status === "completed") clearPending(journalFile);
   return { payment, data, httpStatus: response.status,
     ...(!ownsLock ? { instructions: "Original result inspected without changing the held journal. Stop all buyer processes; owner must inspect the original payment before removing a stale crash lock" } : {}) };

@@ -85,7 +85,8 @@
     "test:browser-checkout": "node --import tsx scripts/test-browser-checkout.mts",
     "test:browser-auth": "node --import tsx scripts/test-browser-auth.mts",
     "test:browser-private-history": "node --import tsx scripts/test-browser-private-history.mts",
-    "test:business-calculator": "node --import tsx scripts/test-business-calculator.mts"
+    "test:business-calculator": "node --import tsx scripts/test-business-calculator.mts",
+    "mainnet:unsigned-setup": "node --import tsx --no-warnings scripts/mainnet-unsigned-setup.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.69.0",

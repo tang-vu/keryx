@@ -9,6 +9,13 @@
     "scripts/check-llm.mts",
     "scripts/check-dispatches.mts",
     "scripts/preflight-mainnet-pilot.mts",
-    "scripts/inspect-arc-mainnet.mts"
+    "scripts/inspect-arc-mainnet.mts",
+    "scripts/mainnet-unsigned-setup.mts",
+    "scripts/preflight.mts",
+    "scripts/check-treasury.mts",
+    "scripts/buyer-agent.mts",
+    "scripts/private-buyer-checkout.mts",
+    "scripts/private-buyer-recover.mts",
+    "scripts/operator.mts"
   ]
 }

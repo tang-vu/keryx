@@ -3,14 +3,15 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { createPublicClient, encodeFunctionData, erc20Abi, type Hex, type PrivateKeyAccount } from "viem";
-import { arcTestnet } from "../lib/chains.ts";
+import { assertCallerJournalNetwork, CallerJournalNetworkMismatch, callerChain, callerProfile } from "./network-policy.mts";
 import { attestedArcAuthorityHttp } from "../lib/arc-rpc-attestation.ts";
 import { getGatewayAvailableAtomic } from "../lib/gateway/gateway-balance.ts";
 import { ARC_GATEWAY_DEPOSIT_ABI, GuardedArcSubmissionUnknownError, sendGuardedArcTransaction } from "../lib/payments/guarded-arc-transaction.ts";
 
-const USDC = "0x3600000000000000000000000000000000000000" as const;
-const GATEWAY = "0x0077777d7EBA4688BDeF3E311b846F25870A19B9" as const;
-const recordSchema = z.object({ schema: z.literal("keryx-mcp-funding-v1"), id: z.string().uuid(),
+const USDC = callerProfile.usdcAddress;
+const GATEWAY = callerProfile.gatewayWallet;
+const recordSchema = z.object({ schema: z.enum(["keryx-mcp-funding-v1", "keryx-mcp-funding-v2"]),
+  network: z.enum(["eip155:5042002", "eip155:5042"]).optional(), id: z.string().uuid(),
   payer: z.string().regex(/^0x[0-9a-f]{40}$/), amountMicros: z.string().regex(/^[1-9]\d{0,6}$/),
   requiredMicros: z.string().regex(/^[1-9]\d{0,6}$/), phase: z.enum(["approval", "deposit", "credit"]),
   status: z.enum(["pending", "completed", "reverted"]), transactionHash: z.string().regex(/^0x[0-9a-f]{64}$/i).optional(),
@@ -22,8 +23,12 @@ export function readFunding(file: string): LocalFundingRecord | null {
   try {
     const stat = fs.lstatSync(file);
     if (!stat.isFile() || stat.nlink !== 1 || stat.size > 4096) unavailable();
-    return recordSchema.parse(JSON.parse(fs.readFileSync(file, "utf8")));
+    const record = recordSchema.parse(JSON.parse(fs.readFileSync(file, "utf8")));
+    if (record.schema === "keryx-mcp-funding-v2" ? !record.network : record.network !== undefined) unavailable();
+    assertCallerJournalNetwork(record.network);
+    return record;
   } catch (error) {
+    if (error instanceof CallerJournalNetworkMismatch) throw error;
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
     return unavailable();
   }
@@ -47,7 +52,7 @@ function save(file: string, input: LocalFundingRecord): void {
 }
 
 function clients(rpcUrl: string) {
-  return createPublicClient({ chain: arcTestnet, transport: attestedArcAuthorityHttp(rpcUrl, { retryCount: 0, timeout: 4_000 }) });
+  return createPublicClient({ chain: callerChain, transport: attestedArcAuthorityHttp(rpcUrl, { retryCount: 0, timeout: 4_000 }) });
 }
 function operation(record: LocalFundingRecord) {
   const approval = record.phase === "approval";
@@ -63,7 +68,7 @@ async function confirm(record: LocalFundingRecord, rpcUrl: string, wait = true) 
     const [tx, receipt] = await Promise.all([pub.getTransaction({ hash }), wait
       ? pub.waitForTransactionReceipt({ hash, timeout: 90_000 }) : pub.getTransactionReceipt({ hash })]);
     const expected = operation(record);
-    if (tx.hash.toLowerCase() !== hash.toLowerCase() || tx.chainId !== 5042002
+    if (tx.hash.toLowerCase() !== hash.toLowerCase() || tx.chainId !== callerProfile.chainId
       || tx.from.toLowerCase() !== record.payer || tx.to?.toLowerCase() !== expected.to.toLowerCase()
       || tx.input.toLowerCase() !== expected.data.toLowerCase() || tx.value !== BigInt(0)
       || receipt.transactionHash.toLowerCase() !== hash.toLowerCase()) throw new Error();
@@ -115,14 +120,14 @@ export async function ensureLocalFunding(input: { account: PrivateKeyAccount; rp
   if (available === null) throw new Error("Gateway credit unavailable; no deposit authorized");
   if (available >= input.required) return;
   const amount = input.required > input.deposit ? input.required : input.deposit;
-  if (amount <= BigInt(0) || amount > BigInt(1_000_000) || input.required <= BigInt(0)) throw new Error("Funding limit is at most 1 testnet USDC");
+  if (amount <= BigInt(0) || amount > BigInt(1_000_000) || input.required <= BigInt(0)) throw new Error("Funding limit is at most 1 USDC");
   const pub = clients(input.rpcUrl);
   const [balance, gas, allowance] = await Promise.all([
     pub.readContract({ address: USDC, abi: erc20Abi, functionName: "balanceOf", args: [input.account.address] }),
     pub.getBalance({ address: input.account.address }),
     pub.readContract({ address: USDC, abi: erc20Abi, functionName: "allowance", args: [input.account.address, GATEWAY] }),
   ]);
-  if (balance < amount || gas <= BigInt(0)) throw new Error("Fund the configured caller wallet with Arc testnet USDC and gas before asking; no treasury fallback");
+  if (balance < amount || gas <= BigInt(0)) throw new Error(`Fund the configured caller wallet with ${callerProfile.label} USDC and gas before asking; no treasury fallback`);
   fs.mkdirSync(path.dirname(input.file), { recursive: true });
   const lock = `${input.file}.lock`;
   try { fs.mkdirSync(lock); } catch { throw new Error("Local funding admission is held; preserve the journal and lock for owner recovery"); }
@@ -136,7 +141,7 @@ export async function ensureLocalFunding(input: { account: PrivateKeyAccount; rp
       const archived = fs.openSync(archive, fs.constants.O_RDWR);
       try { fs.fsyncSync(archived); } finally { fs.closeSync(archived); }
     }
-    let record: LocalFundingRecord = { schema: "keryx-mcp-funding-v1", id: randomUUID(), payer: input.account.address.toLowerCase(),
+    let record: LocalFundingRecord = { schema: "keryx-mcp-funding-v2", network: callerProfile.networkId, id: randomUUID(), payer: input.account.address.toLowerCase(),
       amountMicros: amount.toString(), requiredMicros: input.required.toString(), phase: allowance < amount ? "approval" : "deposit", status: "pending" };
     save(input.file, record);
     async function send() {

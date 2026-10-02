@@ -11,8 +11,6 @@ const supported = new Set([
 ]);
 if ([...args].some((arg) => !supported.has(arg)))
   throw new Error("Unsupported journal command argument");
-if (config.networkId !== "eip155:5042002")
-  throw new Error("Browser journal cutover is authorized for Arc testnet only");
 const db = await getDb();
 if (args.has("--activate")) {
   if (!args.has("--confirm-old-writers-drained")) {
@@ -23,14 +21,14 @@ if (args.has("--activate")) {
   await db.activateBrowserJournal();
 }
 console.log(
-  JSON.stringify({ browserJournalActive: await db.browserJournalActive() })
+  JSON.stringify({ network: config.networkId, browserJournalActive: await db.browserJournalActive() })
 );
 if (args.has("--pending")) {
   const rows = await db.listPendingPayments(100);
   console.log(
     JSON.stringify(
       rows
-        .filter((row) => row.grantEpoch)
+        .filter((row) => row.grantEpoch && row.network === config.networkId)
         .map((row) => ({
           nonce: row.authorizationId,
           phase: row.authorizationPhase ?? "legacy_unknown",

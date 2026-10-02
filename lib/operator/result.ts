@@ -5,9 +5,10 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { a2aResearchPackageForVersion } from "../a2a/research-package-definition";
 import { buyerJobSchema } from "../a2a/buyer-workspace";
-import { buyerIntentSchema, writeBuyerFile } from "../buyer/journal";
+import { buyerIntentSchemaForProfile, writeBuyerFile } from "../buyer/journal";
 import { verifyBuyerJob, verifyBuyerReceipt } from "../buyer/verify-result";
 import type { BuyerRequest } from "../buyer/protocol";
+import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "../arc-network-profile";
 import { sha256 } from "../research-receipt-integrity";
 
 const DIGEST = /^sha256:[a-f0-9]{64}$/;
@@ -21,7 +22,7 @@ const snapshotSchema = z.object({
 }).strict();
 const MAX_SNAPSHOT_BYTES = 150_000;
 const MAX_RECEIPT_BYTES = 2_000_000;
-type Context = { taskId: string; request: BuyerRequest; buyer: string; buyerJobId: string };
+type Context = { taskId: string; request: BuyerRequest; buyer: string; buyerJobId: string; network?: "eip155:5042" | "eip155:5042002" };
 
 async function boundedRegular(path: string, max: number) {
   const stat = await lstat(path);
@@ -56,7 +57,7 @@ async function checkedDirectories(directory: string, buyer: string) {
 
 async function contextIntent(context: Context) {
   const intentPath = join(context.buyer, "intent.json");
-  const intent = buyerIntentSchema.parse(JSON.parse(await boundedRegular(intentPath, 65_536)));
+  const intent = buyerIntentSchemaForProfile(context.network === "eip155:5042" ? ARC_MAINNET_PROFILE : ARC_TESTNET_PROFILE).parse(JSON.parse(await boundedRegular(intentPath, 65_536)));
   if (intent.queryId !== context.buyerJobId || JSON.stringify(intent.request) !== JSON.stringify(context.request)) {
     throw new Error("Local result no longer matches the buyer journal");
   }
