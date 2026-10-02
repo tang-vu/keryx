@@ -1,5 +1,12 @@
 # Keryx Project Changelog
 
+
+### 2026-10-02 - Caller-driven operations monitoring
+
+- Empty completed-query windows show idle after removal of self-initiated research. Public-only zero-spend answers count as completed, while failed/pending real payment legs remain actionable. Missing scheduled output requires an explicitly configured expectation; the flag creates no automation.
+- Reasoning probes share the runtime catalog constructor, retaining DeepSeek V4 bounded-JSON thinking control. Existing timeouts, truncation rejection and provider failover remain in place. Later healthy probes do not erase earlier transient failures.
+- Web status and API share additive activity/expectation fields. CLI watchdogs and server runtime picks share the constructor; desktop, extensions and bots consume the hosted service, while caller-funded stdio MCP transport is unchanged. No installer/MCP package change or republishing claim. Failed synchronous requests before receipt persistence remain outside completed-query monitoring; A2A and settlement checks are separate.
+
 ### Preserve existing treasury wallet custody (2026-10-02)
 
 - Refuse missing, unreadable, malformed or inconsistent persistent treasury wallet
@@ -760,6 +767,8 @@
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
 
 ---
+
+
 
 ## Unreleased
 

@@ -1,6 +1,6 @@
 {
   "name": "keryx",
-  "version": "0.24.7",
+  "version": "0.24.8",
   "private": true,
   "engines": {
     "node": "^22.19.0 || >=24.0.0",
@@ -19,7 +19,7 @@
     "test:browser-research-ux": "node --import tsx scripts/test-browser-research-ux.mts",
     "dev": "next dev -p 3939",
     "build": "next build",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit --project tsconfig.ops-scripts.json",
     "start": "next start -p 3939",
     "lint": "eslint .",
     "test": "vitest run",

@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**D-292** - Operations - *Caller-driven research can be idle; provider probes must use runtime transport policy.*
+D-237 removed continuous self-generated research, so completed-query inactivity no longer
+asserts a scheduler failure. Preserve explicit expected-dispatch monitoring only for an
+independently configured schedule; the flag grants neither scheduling nor spend authority.
+Keep reasoning anomalies and failed/pending real payment legs actionable, count completed
+zero-spend answers, and label completed receipts rather than settlement. A shared catalog
+constructor prevents watchdog probes losing DeepSeek vendor options while runtime picks
+retain them. Failed synchronous requests before a receipt remain an explicit telemetry gap;
+A2A worker/queue and settlement checks keep their independent responsibilities. Reversible:
+easy (monitoring and shared construction only; no payment authority or scheduler changes).
+
 **D-290** — Preserve treasury custody rather than replacing unavailable keys — *2026-10-02*
 
 The reachable server gateway previously caught every wallet read/parse error and
