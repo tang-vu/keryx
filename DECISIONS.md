@@ -16,7 +16,10 @@ token from an unavailable feed/index, retain safe retry and idempotent verified 
 and suppress delayed results after identity changes. Atomically set only verified state
 when source ID, payout and effective feed still match after the network read; never restore
 a stale registry snapshot. No duplicate source, registry write
-or registration gas. See [creator recovery](docs/creator-onboarding-recovery.md).
+or registration gas. Both synthetic compiled network profiles exercise the same recovery
+flow without weakening selected-chain SIWE, registry receipt or mainnet custody/storage
+admission gates. An offline mainnet registration response remains refused. See
+[creator recovery](docs/creator-onboarding-recovery.md).
 
 **D-298** - Keep synthetic evidence provenance separate from settlement - *2026-10-03*
 
@@ -31,9 +34,11 @@ After original receipt integrity checks, derived local exports may recognize onl
 title/URL/body-hash fingerprints from the checked corpus manifest. Missing strong
 fingerprints require a fresh projected receipt; original bytes and digests stay unchanged.
 
-Ordinary SQLite schema startup and Supabase migration 0079 carry the candidate backfill;
-existing enrolled schema-77 profiles cannot be expanded silently. Fresh schema/catalog/
-read-profile acceptance is required before staged enrolled Supabase activation. Production
+Ordinary SQLite schema startup and Supabase migration 0079 carry the candidate backfill.
+The public selected-mainnet path requires sealed enrolled SQLite admission; existing stores
+need explicit paused migration and fresh matching enrollment. Existing enrolled Supabase
+schema-77 profiles cannot be expanded silently: fresh schema/catalog/read-profile acceptance
+is required before staged Supabase activation. See [backend acceptance](docs/enrolled-runtime-backends.md). Production
 migration, receipt projection readback and exact-source client distribution remain release
 gates. Synthetic acceptance establishes neither independent usage nor settled traction.
 See [synthetic evidence provenance](docs/synthetic-evidence-provenance.md).

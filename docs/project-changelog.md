@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Coordinated research and creator recovery candidate (2026-10-03, v0.25.2)
+### Coordinated research and creator recovery candidate (2026-10-03, v0.26.1)
 
 - Replace rejected factual drafts with qualified literal evidence and explicit target
   gaps; retain fully qualified answers. Expand bounded per-paper targets and contiguous
@@ -24,7 +24,10 @@
   while payout/feed identity matches, preserving concurrent registry changes. Bound actual
   escaped sign-in URLs with explicit prefill recovery instead of truncation or draft loss.
   No duplicate registration or gas.
-- Reserve application 0.25.2, caller MCP 0.3.3 and desktop 0.3.3 with unchanged dependency
+- Preserve the merged selected-network wallet, custody and sealed mainnet storage gates.
+  Run creator sign-in/receipt browser checks under both synthetic compiled profiles,
+  including wrong-chain SIWE/RPC refusal and mainnet offline-registration refusal.
+- Reserve application 0.26.1, caller MCP 0.4.1 and desktop 0.4.1 with unchanged dependency
   closures. Desktop rebuilds shared receipt/export helpers; hosted API projections flow
   through remote/stdio MCP, CLI, extension and bots under their existing roles. Extension
   0.1.1 and remote MCP protocol 0.2.0 retain their identities; creator administration stays

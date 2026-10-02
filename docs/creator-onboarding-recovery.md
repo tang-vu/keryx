@@ -70,11 +70,15 @@ before claiming production delivery. No independent user adoption or new settlem
 established by the tests below.
 
 `node --import tsx scripts/test-browser-creator-onboarding.mts` runs actual React pages,
-forms, auth hooks and verification panels in Chromium. Synthetic wallet/auth/API fixtures
-intercept every HTTP request and forbid registry writes. It covers fresh asker and returning
+forms, auth hooks and verification panels in Chromium under both independently compiled
+network profiles. Synthetic wallet/auth/API fixtures intercept every HTTP request and use
+only in-memory registry receipts. It covers fresh asker and returning
 creator forward flows, prepared-feed reload, Wanted request payload, failed sign-in,
 wallet/session mismatch, unsafe return targets, persisted proof after reload and in another
 browser, missing-token/network/index retries, success and delayed old-owner responses.
+Wrong-chain sign-in is disabled, SIWE messages carry the selected chain, and registration
+uses the selected registry/RPC/explorer. The registration harness separately refuses a
+wrong-chain public client and an offline mainnet response; receipt/event/index gates remain.
 Unit tests cover strict return parsing, bounded fail-closed feed checking, payout-only
 inspection and verification, author rejection, existing-ID persistence and idempotency.
 These checks create no real listing, account, wallet, signature, payment or feed modification.

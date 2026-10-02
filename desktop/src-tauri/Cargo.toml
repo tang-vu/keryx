@@ -1,6 +1,6 @@
 [package]
 name = "keryx-operator"
-version = "0.4.0"
+version = "0.4.1"
 description = "Keryx Operator private desktop alpha"
 edition = "2021"
 rust-version = "1.88"
