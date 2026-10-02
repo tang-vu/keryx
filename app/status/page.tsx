@@ -96,11 +96,11 @@ export default function StatusPage() {
         const r = await fetch("/api/treasury", { cache: "no-store" });
         if (alive) {
           if (r.ok) setTreasury((await r.json()) as Treasury);
-          else setTreasury(current => current?.observation ? null : current);
+          else setTreasury(null);
         }
       } catch {
         // Never leave a formerly known mainnet observation displayed as current after a failed read.
-        if (alive) setTreasury(current => current?.observation ? null : current);
+        if (alive) setTreasury(null);
       }
     };
     poll();

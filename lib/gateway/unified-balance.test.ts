@@ -5,7 +5,7 @@ import { canonicalJson } from "../canonical-json";
 import { hostedTreasuryPolicyDigest, type HostedTreasuryPolicy } from "../payments/hosted-treasury-policy";
 
 const state = vi.hoisted(() => ({ profile: undefined as ArcNetworkProfile | undefined, baseUrl: "https://keryx.cc",
-  readFile: vi.fn(), kit: vi.fn(), context: vi.fn(), storage: vi.fn(), identity: vi.fn(), accounting: vi.fn() }));
+  readFile: vi.fn(), kit: vi.fn(), context: vi.fn(), storage: vi.fn(), identity: vi.fn(), accounting: vi.fn(), close: vi.fn() }));
 vi.mock("../config", () => ({ config: { get profile() { return state.profile; }, get baseUrl() { return state.baseUrl; } } }));
 vi.mock("node:fs", () => ({ default: { readFileSync: state.readFile } }));
 vi.mock("@circle-fin/unified-balance-kit", () => ({ getBalances: state.kit, createUnifiedBalanceKitContext: state.context }));
@@ -32,7 +32,7 @@ beforeEach(async () => {
     origin: state.baseUrl, signer: publicAddress, lifetimeCapMicroUsdc: "5000000", queryCapMicroUsdc: "500000",
     expiresAtSeconds: Math.floor(Date.now() / 1000) + 3600 };
   configure(policy); state.identity.mockImplementation(() => identity);
-  state.storage.mockResolvedValue({ hostedTreasuryAccounting: state.accounting }); state.accounting.mockResolvedValue({});
+  state.storage.mockResolvedValue({ hostedTreasuryAccounting: state.accounting, close: state.close }); state.accounting.mockResolvedValue({});
   state.readFile.mockReturnValue(JSON.stringify({ address: legacyAddress }));
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
@@ -46,6 +46,7 @@ it("observes only the admitted mainnet public address without reading the legacy
     body: JSON.stringify({ token: "USDC", sources: [{ depositor: publicAddress, domain: 26 }] }), redirect: "error", cache: "no-store" }));
   expect(state.accounting).toHaveBeenCalledWith(publicAddress, "public");
   expect(state.identity).toHaveBeenCalledWith(expect.any(Object), "read");
+  expect(state.close).toHaveBeenCalledExactlyOnceWith();
   await expect(getAgentUnifiedBalance()).rejects.toThrow("Legacy treasury observation refused");
   expect(state.readFile).not.toHaveBeenCalled(); expect(state.context).not.toHaveBeenCalled(); expect(state.kit).not.toHaveBeenCalled();
 });
@@ -54,10 +55,12 @@ it.each([[row("0"), "0"], [row("5", legacyAddress), null], [row("5", publicAddre
   vi.stubGlobal("fetch", vi.fn(async () => Response.json(value)));
   const { getMainnetTreasuryObservation } = await import("./unified-balance");
   expect((await getMainnetTreasuryObservation()).availableUsdc).toBe(expected);
+  expect(state.close).toHaveBeenCalledExactlyOnceWith();
 });
 it("returns unknown for a transport outage rather than zero", async () => {
   vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("network unavailable"); }));
   expect((await (await import("./unified-balance")).getMainnetTreasuryObservation()).availableUsdc).toBeNull();
+  expect(state.close).toHaveBeenCalledExactlyOnceWith();
 });
 it.each(["testnet", "private-role", "missing-policy", "expired-policy", "wrong-origin", "unavailable-store"])("refuses %s before Circle observation", async reason => {
   const http = vi.fn(); vi.stubGlobal("fetch", http);
@@ -69,6 +72,7 @@ it.each(["testnet", "private-role", "missing-policy", "expired-policy", "wrong-o
   if (reason === "unavailable-store") state.storage.mockRejectedValue(new Error("unavailable"));
   await expect((await import("./unified-balance")).getMainnetTreasuryObservation()).rejects.toThrow();
   expect(http).not.toHaveBeenCalled(); expect(state.readFile).not.toHaveBeenCalled();
+  expect(state.close).toHaveBeenCalledTimes(reason === "unavailable-store" ? 0 : 1);
 });
 it.each(["rotation", "expiry", "identity"])("does not publish a balance if %s changes while the read awaits", async reason => {
   vi.stubGlobal("fetch", vi.fn(async () => {
@@ -78,6 +82,7 @@ it.each(["rotation", "expiry", "identity"])("does not publish a balance if %s ch
     return Response.json(row());
   }));
   await expect((await import("./unified-balance")).getMainnetTreasuryObservation()).rejects.toThrow();
+  expect(state.close).toHaveBeenCalledExactlyOnceWith();
 });
 it("keeps the legacy testnet kit address/chains/shape unchanged", async () => {
   state.profile = (await import("../arc-network-profile")).ARC_TESTNET_PROFILE; vi.stubEnv("KERYX_NETWORK", "arcTestnet"); vi.stubEnv("NEXT_PUBLIC_KERYX_NETWORK", "arcTestnet");

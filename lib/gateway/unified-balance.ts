@@ -6,7 +6,7 @@
  * way — one call returns the confirmed + pending USDC across every Gateway chain —
  * using the official @circle-fin/unified-balance-kit by address on testnet.
  * Mainnet observes only its reviewed public policy's address through the selected
- * Circle Gateway balance API; neither path constructs a signer or loads custody.
+ * Circle Gateway balance API without loading custody; neither path constructs a signer.
  */
 
 import fs from "node:fs";
@@ -50,24 +50,29 @@ export async function getMainnetTreasuryObservation(): Promise<MainnetTreasuryOb
   if (config.profile !== ARC_MAINNET_PROFILE) throw new Error("Mainnet treasury observation refused");
   const db = await createReadonlyApplicationStorage();
   if (!db) throw new Error("Mainnet treasury observation unavailable");
-  const baseUrl = config.baseUrl, origin = new URL(baseUrl);
-  if (origin.protocol !== "https:" || origin.pathname !== "/" || origin.search || origin.hash || origin.username || origin.password)
-    throw new Error("Mainnet treasury origin refused");
-  const readPolicy = () => configuredHostedTreasuryPolicy(applicationSqliteIdentity(db, "read"), origin.origin, "public");
-  const policy = readPolicy(), digest = hostedTreasuryPolicyDigest(policy);
-  // This read detects historical cross-role custody conflicts; it is not policy admission or readiness.
-  await db.hostedTreasuryAccounting(policy.signer, "public");
-  const amount = await getGatewayAvailableAtomic(policy.signer, ARC_MAINNET_PROFILE);
-  if (config.profile !== ARC_MAINNET_PROFILE || config.baseUrl !== baseUrl ||
-      hostedTreasuryPolicyDigest(readPolicy()) !== digest)
-    throw new Error("Mainnet treasury observation changed");
-  await db.hostedTreasuryAccounting(policy.signer, "public");
-  // Revalidate once more after the final awaited role check (including expiry).
-  if (config.profile !== ARC_MAINNET_PROFILE || config.baseUrl !== baseUrl || hostedTreasuryPolicyDigest(readPolicy()) !== digest)
-    throw new Error("Mainnet treasury observation changed");
-  return { network: ARC_MAINNET_PROFILE.networkId, address: policy.signer, policyDigest: digest,
-    storageIdentityDigest: policy.storageIdentityDigest, availableUsdc: amount === null ? null : formatUnits(amount, 6),
-    fetchedAt: new Date().toISOString(), paymentReadiness: "not-probed" };
+  try {
+    const baseUrl = config.baseUrl, origin = new URL(baseUrl);
+    if (origin.protocol !== "https:" || origin.pathname !== "/" || origin.search || origin.hash || origin.username || origin.password)
+      throw new Error("Mainnet treasury origin refused");
+    const readPolicy = () => configuredHostedTreasuryPolicy(applicationSqliteIdentity(db, "read"), origin.origin, "public");
+    const policy = readPolicy(), digest = hostedTreasuryPolicyDigest(policy);
+    // This read detects historical cross-role custody conflicts; it is not policy admission or readiness.
+    await db.hostedTreasuryAccounting(policy.signer, "public");
+    const amount = await getGatewayAvailableAtomic(policy.signer, ARC_MAINNET_PROFILE);
+    if (config.profile !== ARC_MAINNET_PROFILE || config.baseUrl !== baseUrl ||
+        hostedTreasuryPolicyDigest(readPolicy()) !== digest)
+      throw new Error("Mainnet treasury observation changed");
+    await db.hostedTreasuryAccounting(policy.signer, "public");
+    // Revalidate once more after the final awaited role check (including expiry).
+    if (config.profile !== ARC_MAINNET_PROFILE || config.baseUrl !== baseUrl || hostedTreasuryPolicyDigest(readPolicy()) !== digest)
+      throw new Error("Mainnet treasury observation changed");
+    return { network: ARC_MAINNET_PROFILE.networkId, address: policy.signer, policyDigest: digest,
+      storageIdentityDigest: policy.storageIdentityDigest, availableUsdc: amount === null ? null : formatUnits(amount, 6),
+      fetchedAt: new Date().toISOString(), paymentReadiness: "not-probed" };
+  } finally {
+    // Each uncached observation owns this read-only facade, including policy/vendor refusal paths.
+    (db as { close?: () => void }).close?.();
+  }
 }
 
 /** The persistent spend wallet is created by RealGateway; only its address is read here. */
