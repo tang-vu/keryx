@@ -34,6 +34,12 @@ existing owner recovery procedure. Do not delete a corrupt file, generate anothe
 key or move an unverified backup into place to make startup pass. Missing state can
 represent a funded wallet whose access has been lost.
 
+Local web/demo wallets also retain their existing identity. The web CLI's explicit
+legacy variant may additionally contain one canonical ISO `rotatedAt` timestamp;
+the dedicated loader preserves those bytes without allowing rotation. The server
+treasury format still rejects that third field. An exhausted balance is a funding
+or owner recovery decision, never permission to replace a wallet and lose history.
+
 A genuinely new isolated testnet deployment needs separate deliberate owner
 provisioning of that exact legacy document, private host permissions and a retained
 backup/address record before any treasury call. This release supplies no creation

@@ -23,7 +23,7 @@
 
 import {
   createPublicClient,
-  createWalletClient,
+  encodeFunctionData,
   formatEther,
   parseEther,
   type Hex,
@@ -41,11 +41,21 @@ import {
 } from "../lib/registry/registry-client.ts";
 import { findWallet } from "../lib/sources/wallet-store.ts";
 import type { Author, Source } from "../lib/types.ts";
+import { GuardedArcSubmissionUnknownError, sendGuardedArcTransaction } from "../lib/payments/guarded-arc-transaction.ts";
 
 /** Enough native USDC for a register() call on Arc, with room to spare. */
 const GAS_FLOOR = parseEther("0.02");
 
 const publicClient = createPublicClient({ chain: arcTestnet, transport: attestedArcHttp(config.rpcUrl) });
+async function confirmed(hash: Hex, timeout: number) {
+  let receipt;
+  try { receipt = await publicClient.waitForTransactionReceipt({ hash, timeout }); }
+  catch { throw new GuardedArcSubmissionUnknownError(hash); }
+  if (typeof receipt.transactionHash !== "string" || receipt.transactionHash.toLowerCase() !== hash.toLowerCase()) throw new GuardedArcSubmissionUnknownError(hash);
+  if (receipt.status === "reverted") throw new Error(`Transaction reverted (${hash}); inspect the original hash before any manual retry.`);
+  if (receipt.status !== "success") throw new GuardedArcSubmissionUnknownError(hash);
+  return receipt;
+}
 
 /**
  * On-chain splits are integer basis points that must sum to exactly 10 000. Rounding each weight
@@ -68,17 +78,11 @@ async function ensureGas(creator: Hex): Promise<void> {
   if (balance >= GAS_FLOOR) return;
 
   if (!config.funderKey) throw new Error(`${creator} has no gas and no funder key is configured`);
-  const funder = createWalletClient({
-    account: privateKeyToAccount(config.funderKey as Hex),
-    chain: arcTestnet,
-    transport: attestedArcHttp(config.rpcUrl),
+  const hash = await sendGuardedArcTransaction({
+    account: privateKeyToAccount(config.funderKey as Hex), rpcUrl: config.rpcUrl,
+    transaction: { to: creator, value: GAS_FLOOR - balance, gas: BigInt(21000) },
   });
-  const hash = await funder.sendTransaction({
-    to: creator,
-    value: GAS_FLOOR - balance,
-    gas: BigInt(21000),
-  });
-  await publicClient.waitForTransactionReceipt({ hash, timeout: 90_000 });
+  await confirmed(hash, 90_000);
   console.log(`  funded ${creator} with ${formatEther(GAS_FLOOR - balance)} USDC for gas`);
 }
 
@@ -117,13 +121,9 @@ async function register(source: Source): Promise<void> {
 
   await ensureGas(creator);
 
-  const wallet = createWalletClient({
-    account: privateKeyToAccount(stored.privateKey as Hex),
-    chain: arcTestnet,
-    transport: attestedArcHttp(config.rpcUrl),
-  });
-  const hash = await wallet.writeContract({
-    address: config.registryAddress as Hex,
+  const hash = await sendGuardedArcTransaction({
+    account: privateKeyToAccount(stored.privateKey as Hex), rpcUrl: config.rpcUrl,
+    transaction: { to: config.registryAddress as Hex, data: encodeFunctionData({
     abi: REGISTRY_ABI,
     functionName: "register",
     args: [
@@ -134,9 +134,9 @@ async function register(source: Source): Promise<void> {
       source.ipfsCid ?? "",
       source.tags.join(","),
     ],
+    }) },
   });
-  const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 120_000 });
-  if (receipt.status !== "success") throw new Error(`register() reverted (${hash})`);
+  const receipt = await confirmed(hash, 120_000);
 
   await db.upsertSource({ ...source, onchainId: id, registerTx: hash });
   console.log(`  registered in block ${receipt.blockNumber} — ${hash}`);
@@ -164,7 +164,9 @@ async function main() {
     try {
       await register(source);
     } catch (err) {
-      console.error(`  FAILED: ${err instanceof Error ? err.message : String(err)}`);
+      console.error(err instanceof GuardedArcSubmissionUnknownError
+        ? `  Transaction outcome unknown (${err.transactionHash}); inspect the original hash before any manual retry.`
+        : `  FAILED: ${err instanceof Error ? err.message : "Registration failed"}`);
     }
   }
 }

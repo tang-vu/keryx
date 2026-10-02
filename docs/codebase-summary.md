@@ -323,7 +323,9 @@ CLI tools for admin + dev. Node --experimental-transform-types.
 | `verify-research-receipt.mts` | Recompute a downloaded/file-or-URL receipt digest; no keys or network writes. |
 
 ### `mcp/`
-`keryx-mcp` — MCP server published on npm + the official MCP registry (`npx -y keryx-mcp@latest`).
+`keryx-mcp` — caller-funded MCP package with maintained source at 0.3.0. The older
+npm/MCP Registry pointer remains 0.1.1 until authenticated publication; use the
+[verified tarball distribution](mcp-distribution.md) and current owner setup.
 Exposes Keryx as a paid-research tool to any MCP client; buyer-side settlement via `keryx-buyer.mts`.
 
 ---

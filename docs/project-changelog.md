@@ -11,6 +11,24 @@
 - Add Linux/Windows synthetic constructor and independent-process acceptance.
   Mainnet, funding, storage enrollment and launch gates remain open.
 
+### Pin treasury signing to reviewed testnet operations (2026-10-02)
+
+- Validate actual RPC-prepared and signed transactions against the exact testnet
+  chain, recipient, calldata and value. Remove SDK private-key deposit delegation
+  from the server gateway and supported maintenance/demo scripts.
+- Constrain batching typed signatures independently; preserve original hashes and
+  unknown funding outcomes, exact receipt identity and one attempt per gateway.
+- Require an explicit treasure-hunt payee and retire the unrestricted legacy live
+  withdrawal command and code-golf SDK sample; modern durable creator withdrawal keeps its own policy.
+  See [transaction isolation](treasury-transaction-isolation.md).
+- Add both-platform synthetic signing/CLI checks and explicit MTS typechecking.
+  This closes reproduced signing bypasses, not the remaining mainnet launch gates.
+- Prepare application 0.24.7 and caller-funded MCP 0.3.0 with exact-source tarball
+  provenance. npm remains 0.1.1 until authenticated publication is separately verified.
+- Require existing owner-provisioned stdio MCP custody and explicit trusted merchant
+  policy; preserve the original payment journal across lost responses and new-process
+  GET-only recovery. Keyless status does not create a wallet or grant payment authority.
+
 ### Supervised opt-in manuscript payments (2026-10-02)
 
 - Add authenticated sticky draft enrollment and exact-version creator rights signing on

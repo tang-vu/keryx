@@ -16,6 +16,16 @@ function sameFile(a: fs.BigIntStats, b: fs.BigIntStats): boolean {
 /** Load only an existing legacy wallet. Never create, repair, replace or log it.
  * Host ACLs and protection from a malicious local owner remain deployment duties. */
 export function loadPersistentTreasuryWallet(file: string): Readonly<{ privateKey: Hex; address: Hex }> {
+  return loadExistingWallet(file, false);
+}
+
+/** The web CLI historically recorded one ISO rotatedAt metadata field. Preserve
+ * that exact legacy variant without granting rotation or relaxing treasury files. */
+export function loadPersistentWebClientWallet(file: string): Readonly<{ privateKey: Hex; address: Hex; rotatedAt?: string }> {
+  return loadExistingWallet(file, true);
+}
+
+function loadExistingWallet(file: string, allowRotatedAt: boolean): Readonly<{ privateKey: Hex; address: Hex; rotatedAt?: string }> {
   let descriptor: number | undefined;
   const bytes = Buffer.alloc(MAX_BYTES + 1);
   try {
@@ -36,17 +46,22 @@ export function loadPersistentTreasuryWallet(file: string): Readonly<{ privateKe
       || !sameFile(opened, fs.fstatSync(descriptor, { bigint: true }))
       || !sameFile(opened, fs.lstatSync(file, { bigint: true }))) refuse();
     const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes.subarray(0, length));
-    // Literal legacy fields in either order. JSON.parse alone permits duplicate
-    // keys; escaped/foreign fields do not extend the custody format implicitly.
-    const shape = /^\s*\{\s*"(privateKey|address)"\s*:\s*"(0x[0-9a-fA-F]+)"\s*,\s*"(privateKey|address)"\s*:\s*"(0x[0-9a-fA-F]+)"\s*\}\s*$/.exec(text);
-    if (!shape || shape[1] === shape[3]) refuse();
-    const value = JSON.parse(text) as { privateKey: unknown; address: unknown };
+    // Literal bounded legacy fields only. JSON.parse alone permits duplicates.
+    // Escaped keys/values and foreign metadata never extend custody implicitly.
+    const shape = /^\s*\{\s*"(?:privateKey|address|rotatedAt)"\s*:\s*"[^"\\\u0000-\u001f]*"\s*(?:,\s*"(?:privateKey|address|rotatedAt)"\s*:\s*"[^"\\\u0000-\u001f]*"\s*){1,2}\}\s*$/.test(text);
+    const fields = Array.from(text.matchAll(/"(privateKey|address|rotatedAt)"\s*:/g), match => match[1]);
+    if (!shape || new Set(fields).size !== fields.length
+      || !fields.includes("privateKey") || !fields.includes("address")
+      || (!allowRotatedAt && fields.includes("rotatedAt"))) refuse();
+    const value = JSON.parse(text) as { privateKey: unknown; address: unknown; rotatedAt?: unknown };
     if (typeof value.privateKey !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(value.privateKey)
       || typeof value.address !== "string" || !isAddress(value.address)) refuse();
     const privateKey = value.privateKey as Hex;
     const address = privateKeyToAccount(privateKey).address;
     if (address.toLowerCase() !== value.address.toLowerCase()) refuse();
-    return Object.freeze({ privateKey, address });
+    if (value.rotatedAt !== undefined && (typeof value.rotatedAt !== "string"
+      || new Date(value.rotatedAt).toISOString() !== value.rotatedAt)) refuse();
+    return Object.freeze({ privateKey, address, ...(typeof value.rotatedAt === "string" ? { rotatedAt: value.rotatedAt } : {}) });
   } catch { return refuse(); }
   finally {
     bytes.fill(0);

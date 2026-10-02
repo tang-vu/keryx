@@ -1,11 +1,11 @@
 # Independent security review handoff
 
-Status: prepared handoff, October 1, 2026. No independent audit is claimed.
+Status: prepared handoff, updated October 2, 2026. No independent audit is claimed.
 This packet supports [M3 in the maintained gate map](./mainnet-delivery-plan.md).
 
 ## Candidate and reviewer
 
-The current **testnet source baseline** is
+The historical October 1 **testnet source baseline** is
 [`368b27895336da8fee37c360fec21ebf4866e1e5`](https://github.com/tang-vu/keryx/tree/368b27895336da8fee37c360fec21ebf4866e1e5).
 Its Git tree is `71521da3033bf65cd605bc5e5e0a3f9887912434`.
 The canonical `package-lock.json` Git blob is
@@ -15,6 +15,11 @@ Hash the Git blob bytes: a Windows checkout with converted line endings can have
 a different file digest. This pin identifies source, not a mainnet configuration
 or permission to activate it. The [October 1 dossier](./engineering/mainnet-readiness-2026-10-01.md)
 records observed deployment, exact CI, dormant components and remaining gates.
+
+The [October 2 preparation delta](mainnet-delivery-plan.md#october-2-preparation)
+adds the treasury custody/signing and caller-funded MCP boundary below. Pin the
+actual accepted feature/release SHA and dependency closures before external
+review; the older baseline does not identify this candidate or its deployment.
 
 The release owner records an immutable candidate commit SHA, repository URL,
 lockfile digest, deployed commit (if different), relevant configuration shape and
@@ -34,6 +39,24 @@ matching and ambiguous settlement; creator withdrawal journal, original mint and
 keyless receipt recovery; SourceRegistry payout authority/contracts; encrypted
 paid-content delivery, receipts and IPFS boundaries. Include failure/restart and
 concurrency behavior, secret handling, accounting and migration compatibility.
+
+For the October 2 delta, independently reproduce the actual-SDK provider-fill
+foreign-chain signing case with synthetic keys, then review
+`lib/payments/guarded-arc-transaction.ts` and `pinned-arc-batch-signer.ts` against
+their focused regressions. Trace exact prepared/raw tuple and recovered sender,
+bounded typed-data snapshots across awaits, one raw submission and original-hash
+uncertainty. Review missing/corrupt custody refusal without replacement, including
+the explicit historical web-wallet metadata variant. Inspect receipt hash/status
+handling and same-instance funding reuse; these do not supply durable shared
+nonce/gas/cap or restored-key authority.
+
+Include the stdio MCP merchant-policy/setup migration, existing-key admission,
+durable payment-journal reservation/races and response-loss recovery, plus the
+clean 0.3.0 package and exact dependency closure. Inspect supported maintenance
+callers and keyless retirement of unrestricted live withdrawal/code-golf samples.
+The [transaction isolation inventory](treasury-transaction-isolation.md) records
+surface roles and remaining gates. Internal implementation and peer review are
+regression evidence, not independent M3 acceptance or permission for mainnet.
 
 Use the candidate's documented `npm test`, `npx tsc --noEmit`, `npm run lint`,
 `npm run build` and `npm run test:contracts` gates with its required Node version.

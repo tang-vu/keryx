@@ -4,8 +4,8 @@
  *
  * Exposes Keryx's paid autonomous-research endpoint as MCP tools. The calling agent asks a question;
  * this server pays the x402 toll from the user's own Arc-testnet wallet, Keryx researches across paid
- * sources and answers with citations, then pays every creator it cites downstream. Each call is a real
- * on-chain USDC payment on Arc — and shows up live on the keryx.cc dashboard as external traction.
+ * sources and answers with citations, then pays creators downstream. Settlement receipts and
+ * pending outcomes remain distinct; local testnet calls do not establish external traction.
  *
  * Transport: stdio. Configure it in any MCP client (Claude Code/Desktop, etc.) — see mcp/README.md.
  */
@@ -112,4 +112,4 @@ server.registerTool(
 const transport = new StdioServerTransport();
 await server.connect(transport);
 // stdout is the MCP protocol channel — all human-facing logging must go to stderr.
-console.error(`Keryx MCP server ready · paying from ${meta.address} → ${meta.baseUrl}`);
+console.error(`Keryx MCP server ready · ${meta.address} · ${meta.baseUrl}`);

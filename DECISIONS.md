@@ -18,6 +18,25 @@ Synthetic native/process evidence and independent release review remain required
 Reversible only through a reviewed custody migration; restoring automatic key
 replacement is not a supported rollback. See [treasury custody](docs/treasury-wallet-custody.md).
 
+**D-291** — Bind the actual signed treasury operation independently of RPC preparation — *2026-10-02*
+
+A synthetic actual-SDK reproduction demonstrated a foreign-chain transaction
+signed after a successful testnet preflight. Freeze the caller's exact operation,
+validate the provider's fill and prepared signature input, then verify the raw
+sender/tuple before a single broadcast. Keep private keys out of SDK transaction
+delegation; independently restrict SDK batching typed-data callbacks. Reuse the
+current balance reader and exact approve/deposit operations rather than activate
+the dormant funding or storage stack.
+
+Retain post-submit and missing/mismatched receipt uncertainty with the original
+hash. A funding instance keeps its first same-budget outcome, including failure;
+it cannot silently retry or change caps. This is not durable global nonce/spend
+admission or restored-key authority. Supported local transaction scripts share
+the guard, treasure-hunt needs an explicit payee and unrestricted legacy live
+withdrawal is retired in favor of the separately authorized durable workflow.
+Native synthetic checks, review, release and independent M2/M4 acceptance remain
+distinct. See [treasury transaction isolation](docs/treasury-transaction-isolation.md).
+
 **Supervised scholarly rights are signed version authority, separate from wallet payment authority** — *2026-10-02*
 
 The owner authorized implementing opt-in research-author payments and creating a separate

@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "incremental": false
+  },
+  "include": [
+    "scripts/code-golf-agent.mts",
+    "scripts/test-pay.mts",
+    "scripts/demo-full-cycle.mts",
+    "scripts/web-client.mts",
+    "scripts/treasure-hunt.mts",
+    "scripts/withdraw.mts",
+    "scripts/register-existing-source-onchain.mts"
+  ]
+}

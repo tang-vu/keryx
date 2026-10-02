@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { loadPersistentTreasuryWallet } from "./persistent-treasury-wallet";
+import { loadPersistentTreasuryWallet, loadPersistentWebClientWallet } from "./persistent-treasury-wallet";
 
 const directories: string[] = [];
 function fixture() {
@@ -17,6 +17,27 @@ function fixture() {
 afterEach(() => { vi.restoreAllMocks(); for (const directory of directories.splice(0)) fs.rmSync(directory, { recursive: true, force: true }); });
 
 describe("existing persistent treasury identity", () => {
+  it("preserves only the web CLI's explicit ISO rotation metadata variant", () => {
+    const f = fixture(), rotatedAt = "2026-10-01T02:03:04.567Z";
+    const bytes = JSON.stringify({ rotatedAt, privateKey: f.privateKey, address: f.address }, null, 2);
+    fs.writeFileSync(f.file, bytes);
+    expect(loadPersistentWebClientWallet(f.file)).toEqual({ privateKey: f.privateKey, address: f.address, rotatedAt });
+    expect(() => loadPersistentTreasuryWallet(f.file)).toThrow("owner recovery required");
+    expect(fs.readFileSync(f.file, "utf8")).toBe(bytes);
+  });
+  it.each(["not-a-date", "2026-10-01", "2026-10-01T02:03:04Z", "2026-02-30T02:03:04.567Z"])("refuses unsupported web rotation metadata %s", rotatedAt => {
+    const f = fixture(); fs.writeFileSync(f.file, JSON.stringify({ privateKey: f.privateKey, address: f.address, rotatedAt }));
+    expect(() => loadPersistentWebClientWallet(f.file)).toThrow("owner recovery required");
+  });
+  it("refuses duplicate and escaped web metadata without modifying custody", () => {
+    const f = fixture();
+    for (const metadata of ['"rotatedAt":"2026-10-01T02:03:04.567Z","rotatedAt":"2026-10-01T02:03:04.567Z"', '"rotated\\u0041t":"2026-10-01T02:03:04.567Z"']) {
+      const bytes = `{\"privateKey\":\"${f.privateKey}\",\"address\":\"${f.address}\",${metadata}}`;
+      fs.writeFileSync(f.file, bytes);
+      expect(() => loadPersistentWebClientWallet(f.file)).toThrow("owner recovery required");
+      expect(fs.readFileSync(f.file, "utf8")).toBe(bytes);
+    }
+  });
   it.each(["legacy", "reordered", "lowercase"])("preserves valid synthetic %s bytes and derives matching identity", format => {
     const f = fixture();
     const document = format === "reordered" ? { address: f.address, privateKey: f.privateKey }

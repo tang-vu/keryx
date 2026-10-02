@@ -62,6 +62,6 @@ it("actual RealGateway retains the existing valid legacy address without rewriti
   const { RealGateway } = await import("./real-gateway");
   expect(new RealGateway().agentAddress()).toBe(address);
   expect(fs.readFileSync(file, "utf8")).toBe(bytes);
-  expect(effects.batch).toHaveBeenCalledOnce(); expect(effects.gateway).toHaveBeenCalledOnce();
+  expect(effects.batch).not.toHaveBeenCalled(); expect(effects.gateway).not.toHaveBeenCalled();
   expect(effects.chain).not.toHaveBeenCalled(); expect(fetch).not.toHaveBeenCalled();
 });

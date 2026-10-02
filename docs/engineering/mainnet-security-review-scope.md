@@ -90,6 +90,16 @@ No test counts or historical green statuses are promoted to current acceptance.
 
 ## Local candidate validation
 
+October 2 delta: [treasury transaction isolation](../treasury-transaction-isolation.md)
+documents a synthetic actual-SDK/RPC-fill foreign-chain signing reproduction and
+the local prepared/raw tuple, typed-data snapshot, original-hash and strict
+existing-custody remedies. Include current MCP merchant policy, journal admission
+and race/recovery, package 0.3.0 closure and maintenance caller boundaries in the
+external review. Focused regression and internal peer review do not establish
+independent audit, durable shared funding authority or production cutover. Exact
+candidate CI/build/package evidence must be pinned separately before acceptance;
+the historical September 30 counts below do not cover these changes.
+
 September 30 remediation validation passed the four focused worker, viem
 integration, payee-policy and browser-signature suites (72 fixture tests). The
 strengthened real deposit-helper signed-transaction decoding assertions also

@@ -21,7 +21,10 @@ addresses or service availability will be inferred from testnet configuration.
 
 ## Current baseline and gaps
 
-Latest preparation: [October 1 evidence](./engineering/mainnet-readiness-2026-10-01.md)
+Current [October 2 preparation](#october-2-preparation) records guarded backend
+acceptance and the focused treasury custody/signing fixes with their remaining
+release and cutover gates. The historical
+[October 1 evidence](./engineering/mainnet-readiness-2026-10-01.md)
 pins deployed testnet source `368b278`, its canonical dependency lock and exact
 integrated CI. It records public funding fallback, default-closed funding source,
 actual isolated PostgreSQL four-leg acceptance and Linux provenance containment,
@@ -173,6 +176,8 @@ prevent independent product, measurement or reliability work from continuing.
 
 ## Delivery sequence
 
+### October 2 preparation
+
 October 2 preparation baseline: `241c721f1c1930dabb97cec0260d3220c2b5e87c`
 includes the reviewed guarded SQLite and PostgreSQL backend implementations from
 [PR107](https://github.com/tang-vu/keryx/pull/107) and
@@ -189,6 +194,37 @@ legacy identity. Synthetic constructor/process evidence does not establish
 exclusive key history, funded recovery, external security acceptance or M2 closure.
 Its exact-head review, CI and deployed health verification remain release gates;
 this dated preparation note does not claim deployment.
+
+[Treasury transaction isolation](treasury-transaction-isolation.md) also addresses
+a reproduced provider-preparation signing bypass across the server gateway,
+caller-funded stdio MCP and local maintenance/demo callers, and retires the
+unrestricted legacy live withdrawal lane. Existing owner-provisioned custody and
+an explicit trusted merchant policy are prerequisites for the breaking MCP 0.3.0
+setup; [distribution acceptance](mcp-distribution.md) remains separate from npm
+publication. Synthetic keys prove refusal and retained uncertainty; they do not prove
+durable cross-process funding admission, custody history, funded settlement or
+independent audit. M2/M4 and the owner launch decision remain open.
+
+Read-only production observation, October 2 at approximately 01:43 UTC: public
+health reported `94cb7cc`, operational/database OK and `arcTestnet`.
+`timedatectl` reported NTP enabled and synchronized; `chrony.service` was loaded,
+active and enabled, with a KVM stratum-1 reference, zero reported system offset
+and normal leap status. This advances current enabled-provider evidence. It does
+not independently corroborate external NTP, exercise reboot/failover, change
+service configuration or close M5 recovery/operations acceptance. This deployment
+observation precedes the treasury-fix candidate and does not claim that fix is live.
+
+Credential-free availability recheck, October 2 at `01:54:53.680Z`, used the
+existing [read-only Arc probe](arc-mainnet-readonly-probe.md). All four RPCs
+reported chain `5042` and agreed at block `0x16b3a88`, hash
+`0xd4adcacc1b8bc7003ac73790e3237a52a5ce0770b706b14aa15de24f70d943cc`;
+USDC reported six decimals, observed proxy/code digests matched the prior evidence
+and static SDK 3.5 metadata matched. The report retained `M1_PARTIAL`,
+`mainnetReady: false` and `settlementAccepted: false`. Output was observed in the
+operator session, not retained as a new artifact file. This proves neither audit
+identity, private registry deployment nor settlement, and accessed no wallet key
+or signer. Official Arc/Circle network references were also rechecked that day;
+the deployed signing profile remains testnet.
 
 [Creator cash-out recovery](./creator-withdrawal-recovery.md) has a shared signed-request
 identity and a private immutable single-admission journal in SQLite/PostgreSQL. The
