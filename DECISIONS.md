@@ -4513,3 +4513,14 @@ boundary, not a restriction on ordinary public wallets or registered article pub
 Keep Monthly's four manually requested Deep research allocations and thirty-day term. Fresh sealed mainnet SQLite installs a canonical original-network purchase claim and v2 entitlement schema, with no historical backfill or testnet catalog adoption. Every seller claims its immutable original authorization before Circle settlement. Monthly adds single-use issued challenge consumption, an exact network/USDC/Gateway entitlement and atomic four-slot redemption; replay cannot change the quote, package, recipient, transaction or original request. Historical ordinary testnet records remain on their original rail; existing enrolled testnet storage refuses this newer domain. Mainnet Supabase remains staged until independently generated native schema evidence exists.
 
 Require actual native purchase writer capability before quoting or accepting a prepaid purchase. The hosted readiness check derives only the dedicated key's public address, compares it to the reviewed sealed policy, refuses historical public/private role reassignment and checks retained accounting/current known capacity. It neither signs, reserves nor funds, and is not a promise of future operating capacity. Actual execution still admits each full original through the hosted journal before signing. Preserve original uncertainty, cumulative signer caps and owner-operated prefunding. Normal mainnet wallet/API/CLI/MCP access has no invitation restriction or special small pilot ceiling.
+
+## Immutable release version alignment - 2026-10-02
+
+A concurrent isolated application-storage runtime merged after product source `080bc5d`
+was already accepted as application `0.25.0`, MCP `0.3.1` and desktop `0.3.1`. Preserve those immutable
+artifacts and publish the new runtime under application `0.25.1`, MCP `0.3.2` and desktop `0.3.2`.
+Version metadata changes only the owned root package records, not dependency
+versions or payment/signature domains. Verify each new source, installer and registry
+archive independently; a shared version alone does not establish matching delivery.
+Arc testnet authority remains the production/default lane; no mainnet activation
+or funded-operation permission follows from storage capability or version bumps.
