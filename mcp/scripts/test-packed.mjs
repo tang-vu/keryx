@@ -1,9 +1,10 @@
 ﻿import assert from "node:assert/strict";
-import { spawn, execFileSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { mkdtemp, writeFile, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createInterface } from "node:readline";
+import { installPackedConsumer } from "./packed-consumer-install.mjs";
 
 const tarball = resolve(process.argv[2]);
 const npmCli = process.env.npm_execpath ?? process.argv[3];
@@ -31,7 +32,7 @@ async function stopChild(child) {
 }
 try {
   await writeFile(join(workspace, "package.json"), JSON.stringify({ private: true, type: "module" }));
-  execFileSync(process.execPath, [npmCli, "install", "--ignore-scripts", "--no-audit", "--no-fund", tarball], { cwd: workspace, stdio: "pipe", timeout: 120000 });
+  installPackedConsumer(npmCli, tarball, workspace);
   const installedPackage = JSON.parse(await readFile(join(workspace, "node_modules/keryx-mcp/package.json"), "utf8"));
   assert.equal(installedPackage.version, "0.3.0");
   const dependencies = {};
