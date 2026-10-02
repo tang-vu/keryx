@@ -1,5 +1,61 @@
 # Keryx — Decision Log
 
+**D-299** - Resume creator drafts and persisted feed proof - *2026-10-03*
+
+Preserve public registration context in a canonical URL rather than ephemeral component
+state or a stored signed authorization. Permit only normalized relative registration
+returns through sign-in, bind the draft to the wallet that starts the flow, and require
+connected-wallet/current-session agreement before registration. Explicit continuation
+restores RSS, Wanted match and supported extension fields for first-time asker accounts
+as well as returning creators. Authentication never automatically publishes a source.
+
+Reopen feed proof from the persisted source in My sources and Manage through the shared
+verification panel. Only its persisted payout wallet may inspect/verify it; author-share
+membership conveys notification management, not proof authority. Distinguish a missing
+token from an unavailable feed/index, retain safe retry and idempotent verified responses,
+and suppress delayed results after identity changes. Atomically set only verified state
+when source ID, payout and effective feed still match after the network read; never restore
+a stale registry snapshot. No duplicate source, registry write
+or registration gas. See [creator recovery](docs/creator-onboarding-recovery.md).
+
+**D-298** - Keep synthetic evidence provenance separate from settlement - *2026-10-03*
+
+Use trusted sticky `synthetic-demo` source/item provenance for illustrative seeds, with
+exact seed identity/content matching in the backfill. Do not infer factual support from
+an authentic receipt or a real payment. Bounded metadata-only historical projections
+demote synthetic factual evidence and coverage while preserving immutable archived answer
+bytes, payment evidence and ciphertext; public answers and exports disclose that retained
+prose is illustrative. New factual synthesis excludes those records. Source and preview
+consumers carry the same additive marker, without changing payout authority.
+After original receipt integrity checks, derived local exports may recognize only exact
+title/URL/body-hash fingerprints from the checked corpus manifest. Missing strong
+fingerprints require a fresh projected receipt; original bytes and digests stay unchanged.
+
+Ordinary SQLite schema startup and Supabase migration 0079 carry the candidate backfill;
+existing enrolled schema-77 profiles cannot be expanded silently. Fresh schema/catalog/
+read-profile acceptance is required before staged enrolled Supabase activation. Production
+migration, receipt projection readback and exact-source client distribution remain release
+gates. Synthetic acceptance establishes neither independent usage nor settled traction.
+See [synthetic evidence provenance](docs/synthetic-evidence-provenance.md).
+
+**D-297** - Publish factual answers from qualified evidence, not citation cleanup - *2026-10-03*
+
+A rejected factual draft cannot remain apparently supported merely because its citation
+marker was removed. Conservatively replace such a draft with qualified literal ledger
+excerpts and explicit target gaps; retain fully qualified drafts. Answer qualification is
+separate from creator-reward eligibility. Exact paper requests have bounded per-paper
+method/evaluation/limitation targets, source-specific version ranking and contiguous
+sentence/quote windows; no joins manufacture supporting context. Empty and partial English/
+Vietnamese answers use recorded search/read/gating diagnostics and task-relevant recovery,
+without promising that more source USDC repairs free original reads.
+
+Permit bounded zero-price Deep gap expansion when the monetary fetch allowance reaches
+zero, preserving attention, deadline, cache and paid-price bounds. Reject malformed web/
+OpenAI request shapes with their HTTP 400 validation contracts before research starts.
+Live useful comparisons, complete-paper coverage, actual report/reference exports and
+independent payment evidence remain acceptance gates. See
+[issue 128 investigation](docs/engineering/research-attention-2026-10-02.md).
+
 **Owner-managed creator cash-out batch** — *2026-10-02*
 
 The user confirmed both comprehensive creator cash-out testing and withdrawing

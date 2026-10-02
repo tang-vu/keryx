@@ -148,7 +148,7 @@ artifact needs a new verified release source, not an unverified replacement buil
 
 Assets include the portable ZIP, installer, source manifest and SHA-256 checksums.
 Asset names include the full source commit, and uploads refuse to overwrite existing
-assets. Desktop package version 0.3.2 is independent of the web release version;
+assets. Desktop candidate package version 0.3.3 is independent of the web release version;
 the release tag and manifest establish the shared source identity. The alpha has
 no automatic updater, so installed users must deliberately install a newer package.
 These packaging gates do not authorize mainnet or establish payment readiness.
@@ -180,3 +180,16 @@ CLI handoff; no wallet signer or autonomous scheduler is added.
 The source version is not a published installer claim. Exact native Windows
 package/manifest, standard-user mixed-history handoff/recovery and published asset
 checksums remain coordinated release gates.
+
+### October 3 coordinated research repair candidate
+
+Desktop 0.3.3 rebuilds the TypeScript receipt/result helper so integrity-checked saved
+research exports demote trusted synthetic demo evidence while retaining recorded money
+state when provenance is present in the checked receipt or its exact title/URL/body-hash
+triple matches the checked static corpus manifest after original digest verification.
+Missing strong fingerprints require a refreshed hosted receipt. Derived exports never
+rewrite saved receipt bytes or digests. Hosted archived prose remains visibly illustrative;
+no native Rust domain cutover or new desktop payment authority is inferred. Web registration
+and feed proof remain deliberate hosted SIWE handoffs. Exact-source installer hashes,
+packaged exports and fresh standard-user acceptance remain required before distribution
+is reported synchronized with application 0.25.2.

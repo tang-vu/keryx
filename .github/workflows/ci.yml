@@ -78,6 +78,9 @@ jobs:
       - name: Browser authorization admission (isolated PostgreSQL, synthetic data)
         run: node --import tsx scripts/test-browser-authorization-postgres.mts
 
+      - name: Synthetic research provenance (isolated PostgreSQL 17, synthetic data)
+        run: node --import tsx scripts/test-synthetic-provenance-postgres.mts
+
       - name: Withdrawal backup and recovered copy (Linux CLI, synthetic data)
         run: node --import tsx --no-warnings scripts/test-withdrawal-backup-restore.mts
 
@@ -88,6 +91,7 @@ jobs:
         run: |
           node --import tsx scripts/test-browser-creator-listing.mts
           node --import tsx scripts/test-browser-creator-registration.mts
+          node --import tsx scripts/test-browser-creator-onboarding.mts
 
       - name: Scholarly creator rights (hermetic wallet and HTTP, no settlement)
         run: npm run test:browser-scholarly-rights
