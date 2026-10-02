@@ -1,3 +1,4 @@
+import { emptyPublicEvidenceDetail } from "./empty-public-evidence";
 import { discoverPublicReferences } from "./public-reference-evidence";
 import { discoverScholarly } from "../scholarly/discovery";
 import { paperCanResearch, paperDuplicatesPublicBody } from "../scholarly/paid-gate";
@@ -56,6 +57,7 @@ import {
   pendingPaymentFrom,
   settledPaymentFrom,
 } from "../payments/payment-state";
+import { questionArxivIds } from "../scholarly/arxiv";
 import { normalizePreviewDepth, previewSummary } from "../sources/preview-depth";
 import { isCacheFresh, newestPublishedAt } from "./cache-freshness";
 import {
@@ -251,13 +253,13 @@ export async function* runAgent(
   let webAttempts = 0;
   const webSignal = () => AbortSignal.any([input.signal ?? new AbortController().signal,
     AbortSignal.timeout(Math.max(1, webRemainingMs))]);
-  if ((input.scholarly || questionDois(input.question).length) && effects.scope.kind === "public"
+  if ((input.scholarly || questionDois(input.question).length || questionArxivIds(input.question).length) && effects.scope.kind === "public"
     && (origin !== "engine" || input.allowExternalWeb === true) && webRemainingMs > 0) {
     const operationStarted = Date.now();
     try {
       const discovered = await (deps.discoverScholarly ?? discoverScholarly)(input.question, input.scholarly === true, webSignal());
       for (const [id, candidate] of discovered.candidates) { webCandidates.set(id, candidate); publicCandidates.set(id, candidate); }
-      yield emit("discover", `Scholarly discovery: ${discovered.succeeded} provider requests succeeded, ${discovered.unavailable} unavailable; ${discovered.candidates.size} bibliographic previews. DOI lookup resolved ${discovered.resolvedDois}/${discovered.requestedDois} detected identifiers (up to two DOI lookups per run). Metadata is not paper evidence. arXiv is preprint material; peer review is unknown. Selected originals must be read; no creator payout.`);
+      yield emit("discover", `Scholarly discovery: ${discovered.succeeded} provider requests succeeded, ${discovered.unavailable} unavailable; ${discovered.candidates.size} bibliographic previews. DOI lookup resolved ${discovered.resolvedDois}/${discovered.requestedDois} detected identifiers (up to two DOI lookups per run). Explicit versioned arXiv targets use a bounded exact lookup (up to two), rather than keyword search. Metadata is not paper evidence. arXiv is preprint material; peer review is unknown. Selected originals must be read; no creator payout.`);
     } catch { yield emit("discover", "Scholarly discovery unavailable; continuing with other sources. No paper evidence established."); }
     finally { webRemainingMs -= Date.now() - operationStarted; }
     if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
@@ -284,10 +286,14 @@ export async function* runAgent(
   const seenWebUrls = new Set<string>();
   let lastWebFailure = "unavailable";
   const scholarlyReadFailures: string[] = [];
+  const publicReadOutcomes: Array<{ name: string; code: string }> = [];
   async function fetchWeb(id: string): Promise<GatheredContent | null> {
     lastWebFailure = "web-operation-limit";
     const candidate = webCandidates.get(id);
-    if (!candidate?.item?.itemUrl || webAttempts >= (input.researchMode === "quick" ? 4 : 8) || webRemainingMs <= 0) return null;
+    if (!candidate?.item?.itemUrl || webAttempts >= (input.researchMode === "quick" ? 4 : 8) || webRemainingMs <= 0) {
+      publicReadOutcomes.push({ name: candidate?.name ?? "Public source", code: lastWebFailure });
+      return null;
+    }
     webAttempts++;
     const operationStarted = Date.now();
     try {
@@ -310,11 +316,14 @@ export async function* runAgent(
       // A provider's versioned repository identity must survive document redirects.
       if (metadata?.provider === "arxiv") {
         const expected = `https://arxiv.org/${abstractFallback ? "abs" : "pdf"}/${metadata.arxivId}`;
-        if (article.finalUrl !== expected || (!abstractFallback && article.kind !== "pdf")) throw new Error("arXiv document identity changed");
+        if (article.finalUrl !== expected || (!abstractFallback && article.kind !== "pdf")) throw new ArticleReadError("document-identity-changed");
       }
       const identity = bodyIdentity(article.text);
       lastWebFailure = "empty-or-duplicate-body";
-      if (!article.text.trim() || seenWebBodies.has(identity) || seenWebUrls.has(article.finalUrl) || publicReads.size && [...publicReads.values()].some(read => bodyIdentity(read.text) === identity)) return null;
+      if (!article.text.trim() || seenWebBodies.has(identity) || seenWebUrls.has(article.finalUrl) || publicReads.size && [...publicReads.values()].some(read => bodyIdentity(read.text) === identity)) {
+        publicReadOutcomes.push({ name: candidate.name, code: lastWebFailure });
+        return null;
+      }
       seenWebBodies.add(identity);
       seenWebUrls.add(article.finalUrl);
       const gathered = gatheredArticle(id, article);
@@ -326,7 +335,7 @@ export async function* runAgent(
         if (abstractFallback) scholarlyReadFailures.push(`arXiv ${metadata.arxivId}: only the abstract page was read; full-paper evidence is unavailable.`);
       }
       return gathered;
-    } catch (error) { lastWebFailure = articleFailureCode(error); return null; }
+    } catch (error) { lastWebFailure = articleFailureCode(error); publicReadOutcomes.push({ name: candidate.name, code: lastWebFailure }); return null; }
     finally { webRemainingMs -= Date.now() - operationStarted; }
   }
   for (const candidate of publicCandidates.values()) {
@@ -584,14 +593,16 @@ export async function* runAgent(
       });
       continue;
     }
+    const originalPublicRead = webCandidates.has(d.assetId ?? d.sourceId);
+    const attentionFloor = originalPublicRead ? config.minPublicReadExpectedValue : config.minCacheExpectedValue;
     if (
       d.action === "CACHE" &&
-      ((d.targets?.length ?? 0) === 0 || d.expectedValue < config.minCacheExpectedValue)
+      ((d.targets?.length ?? 0) === 0 || d.expectedValue < attentionFloor)
     ) {
       preparedDecisions.push({
         ...d,
         action: "SKIP",
-        rationale: `${d.rationale} — cached bytes are free, but this read does not clear the attention gate (EV ${d.expectedValue.toFixed(2)}, minimum ${config.minCacheExpectedValue.toFixed(2)}, with a required claim target).`,
+        rationale: `${d.rationale} — ${originalPublicRead ? "the original public READ" : "cached content"} is free, but this read does not clear the attention gate (EV ${d.expectedValue.toFixed(2)}, minimum ${attentionFloor.toFixed(2)}, with a required claim target).`,
       });
       continue;
     }
@@ -1108,8 +1119,8 @@ export async function* runAgent(
           : fetchFailures > 0
             ? "No supported answer: source reads failed and no source payment was confirmed. Review this job's payment records before starting another paid job."
             : "No supported answer: no source passed the relevance and evidence checks within this run's limits. " +
-              "The planning questions and SKIP reasons show how the request was interpreted. " +
-              "Clarify the subject or intended meaning before starting another paid job. This does not establish that no relevant evidence exists.",
+              emptyPublicEvidenceDetail(publicReadOutcomes, finalDecisions.filter(decision =>
+                webCandidates.has(decision.assetId ?? decision.sourceId) && decision.action === "SKIP")),
     );
   }
 
