@@ -1,9 +1,12 @@
-# Invited Arc mainnet pilot candidate
+# Historical invited Arc mainnet pilot candidate
 
-The owner requested preparation on October 2 for an October 3 bounded mainnet
-pilot. Expedite by reducing audience and feature scope. No concrete funded budget
-or launch authorization has been granted. Full product acceptance, sustained
-economics and independent repeat-use evidence remain separate from this pilot.
+This proposal was superseded on October 2, 2026 when the owner explicitly
+requested full public mainnet Keryx on the existing domain. The command/schema
+below remains historical isolation/preflight evidence, not a current audience,
+funding cap, launch-approval or runtime activation policy. Current scope and gates
+are in [runtime domains](mainnet-runtime-domains.md) and
+[operations](mainnet-operations.md). Public launch direction is authorized;
+concrete wallet transactions and operating funding inputs are reviewed separately.
 
 `npm run preflight:mainnet-pilot -- --candidate <explicit-json-file>` validates a
 reviewable proposal. Add `--live` to reuse the existing fixed-endpoint

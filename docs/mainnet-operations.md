@@ -31,7 +31,7 @@ Mainnet has no inferred WebSocket URL: the indexer uses its HTTP polling path.
 | --- | --- | --- |
 | Web research, login, wallet funding and session worker | Owner-authenticated session co-signing through the normal `/api/ask`, `/api/ask/sign` and `/api/session/grant` routes | Fresh owner/origin/network custody; separately signed grant consent; original nonce/cap reservations, uncertain settlement retention and cashout acceptance. Testnet session keys/ciphers are retained for recovery, never reused as mainnet grants. |
 | Creator web, source API and citation API | Creator-signed fresh registry registration; source-owned payout and exact weighted citation rewards | Fresh registry receipt/runtime/source verification, feed/content rights, fresh source cache/encryption and actual reward/withdrawal receipts. No testnet cache becomes mainnet payout authority. |
-| Research Monthly | Ordinary prepaid research and immutable slot redemption through web, API, CLI and remote/stdio MCP | Current main adds Monthly0078; its selected-rail purchase admission and fresh-state integration must be composed with the final backend. Historical enrolled adapters deliberately refuse this domain. Never relabel a testnet Monthly debit or remaining slots as mainnet. |
+| Research Monthly | Ordinary prepaid research and immutable slot redemption through web, API, CLI and remote/stdio MCP | Fresh sealed SQLite uses identity/profile-bound v2 purchases, submitted original claims and actual selected receipt network. Native handler/client acceptance covers checkout and original redemption recovery; optional PostgreSQL remains staged. Historical enrolled testnet adapters refuse this domain. Never relabel a testnet Monthly debit or remaining slots as mainnet. |
 | Public paid A2A and private buyer checkout | Existing caller-funded inbound toll and durable job/recovery contracts | Shared selected-profile challenge and signature binding, fresh orders/journals, exact original GET recovery and private checkout/logout acceptance. |
 | Buyer CLI, private CLI and Operator CLI | Deliberate caller-funded purchase, then inspection/recovery/export of original jobs | Both network labels; existing owner price/fee caps remain. New private state directory for mainnet. Historical testnet jobs remain identifiable and recoverable with their original profile; no ledger relabelling. |
 | Local stdio MCP | Caller-owned wallet, exact inbound x402 toll, bounded approval/deposit and original-attempt recovery | Source candidate `keryx-mcp` 0.4.0. Default mainnet custody/journals live under `~/.keryx/arc`; testnet stays under `~/.keryx`. v2 journals bind network and payment origin; legacy unlabelled/v1 files mean testnet. Packed installed stdio acceptance covers both profiles, actual SDK signature verification, response-loss fencing and new-process keyless recovery; network responses are synthetic. npm publication is separately verified. |
@@ -133,7 +133,8 @@ Selected-profile source, offline bytecode/calldata preparation and local synthet
 journal checks are preparation evidence. Real fresh registry deployment, catalog
 authority, owner-funded acceptance, coordinated host cutover and exact distributed
 package/installer publication remain open. The last verified production preparation
-deployment was `0cddd01981ea4a5d5f10aaaa4633d6555edc0922`, operational on Arc testnet;
+deployment was `7714533ced82a55ff6fb1ddb90a72717465aa54c`, independently verified
+on October 2 at 13:13 UTC, operational on Arc testnet;
 it does not establish the current release's deployment. Current published versions
 must be read back at release time rather than inferred from this matrix.
 
@@ -266,8 +267,10 @@ before proceeding. The helper accepts standard solc output or Remix's exported
 contract artifact; it never connects a wallet, signs or broadcasts. Existing or
 redirected output directories and symlink/junction parents refuse.
 
-Use Remix's Browser Extension or WalletConnect environment with the existing
-wallet. Both require an explicit wallet approval; see the [official connected-wallet
+Use Browser Extension for the existing OKX Wallet extension, or WalletConnect
+for OKX mobile, preserving hardware-wallet confirmation where applicable. Run the
+verifier from a checkout of the exact pushed frozen source SHA in the packet; the
+public workspace contains compiler inputs, not the executable Keryx verifier. Both require an explicit wallet approval; see the [official connected-wallet
 workflow](https://remix-ide.readthedocs.io/en/latest/run.html). Verify account, chain
 5042, creation data and value zero against `registry-review.json`. A read-only
 chain/nonce/balance/gas observation supplies a separate time-bound proposed fee
