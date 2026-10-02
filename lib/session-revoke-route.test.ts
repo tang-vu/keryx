@@ -80,3 +80,10 @@ it("unauthenticated revocation leaves authority unchanged", async () => {
   state.session = null; expect((await POST(request())).status).toBe(401);
   expect((await state.db.getSessionGrant(owner))?.grantEpoch).toBe("old");
 });
+it("unconfirmed database revocation returns a private unavailable response without deleting authority", async () => {
+  vi.spyOn(state.db, "revokeSessionGrant").mockRejectedValueOnce(new Error("synthetic failure must not be disclosed"));
+  const response = await POST(request());
+  expect(response.status).toBe(503); expect(response.headers.get("Cache-Control")).toBe("no-store");
+  expect(await response.json()).toEqual({ error: "revocation_unavailable" });
+  expect((await state.db.getSessionGrant(owner))?.grantEpoch).toBe("old");
+});

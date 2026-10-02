@@ -7,6 +7,8 @@ replaced that grant, the old request returns `409 session_changed`; the replacem
 remains usable. The browser preserves its encrypted custody and wrapping key,
 shows a paused state, and requires deliberate recovery before signing again.
 Unavailable or malformed responses have the same conservative custody behavior.
+Clients retained across awaited payee/price checks also refuse signing dispatch
+when paused or superseded; recovery requires a fresh registration-bound client.
 A confirmed revocation may clear local custody. Its awaited completion cannot
 erase ciphertext or overwrite state published by a newer recovery operation.
 

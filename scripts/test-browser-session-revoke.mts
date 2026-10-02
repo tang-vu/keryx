@@ -36,7 +36,7 @@ createRoot(document.getElementById('root')).render(<Probe/>);window.fixtureStore
 const browser = await chromium.launch({headless:true});
 try {
   const context=await browser.newContext(); let mode="conflict", epoch=0, signer="";
-  await context.addInitScript(`const NativeWorker=window.Worker;window.Worker=class extends NativeWorker{constructor(...args){super(...args);this.addEventListener('message',event=>{if(event.data.id===-1)window.clearDeletionReady=true;});}};window.__name=fn=>fn;`);
+  await context.addInitScript(`window.signDispatches=0;const NativeWorker=window.Worker;window.Worker=class extends NativeWorker{constructor(...args){super(...args);this.addEventListener('message',event=>{if(event.data.id===-1)window.clearDeletionReady=true;});}postMessage(message,...rest){if(message.type==='signTypedData'||message.type==='signTransaction')window.signDispatches++;return super.postMessage(message,...rest);}};window.__name=fn=>fn;`);
   await context.route("**/*",async route=>{
     const req=route.request(),url=new URL(req.url());assert.equal(url.origin,origin,"No live transport allowed");
     if(url.pathname==="/")return route.fulfill({contentType:"text/html",body:'<div id="root"></div><script src="/renderer.js"></script>'});
@@ -59,13 +59,28 @@ try {
   await page.waitForFunction(()=>JSON.parse(document.getElementById('state')!.textContent!).status==='active');
   const saved=await page.evaluate(()=>JSON.stringify((window as unknown as {fixtureStored:()=>unknown}).fixtureStored()));
   for(const failure of ["conflict","outage","malformed"]){
+    await page.evaluate(() => {
+      const fixture = window as unknown as { fixtureGrant: { getSessionWalletClient: () => unknown }; cachedSessionClient: unknown };
+      fixture.cachedSessionClient = fixture.fixtureGrant.getSessionWalletClient();
+    });
     mode=failure;await page.getByRole("button",{name:"Revoke",exact:true}).click();
     await page.waitForFunction(()=>JSON.parse(document.getElementById('state')!.textContent!).status==='paused');
     assert.equal(await page.evaluate(()=>JSON.stringify((window as unknown as {fixtureStored:()=>unknown}).fixtureStored())),saved,failure);
     assert.equal(await page.evaluate(()=>(window as unknown as {fixtureGrant:{getSessionWalletClient:()=>unknown}}).fixtureGrant.getSessionWalletClient()),null,"Unconfirmed revoke blocks signing");
+    const attemptCached = async () => page.evaluate(async () => {
+      const fixture = window as unknown as { cachedSessionClient: { account: { signTypedData: (args: unknown) => Promise<unknown>; signTransaction: (args: unknown) => Promise<unknown> } }; signDispatches: number };
+      const failures: string[] = [];
+      for (const attempt of [() => fixture.cachedSessionClient.account.signTypedData({}), () => fixture.cachedSessionClient.account.signTransaction({})]) {
+        try { await attempt(); failures.push("unexpected success"); } catch (error) { failures.push((error as Error).message); }
+      }
+      return { failures, dispatches: fixture.signDispatches };
+    });
+    const blocked = await attemptCached();
+    assert.deepEqual(blocked, { failures: Array(2).fill("Session signing paused or registration changed"), dispatches: 0 });
     // Native worker restore from the original ciphertext must still decrypt with retained IDB key.
     await page.getByRole("button",{name:"Restore retained session"}).click();
     await page.waitForFunction(()=>JSON.parse(document.getElementById('state')!.textContent!).status==='active');
+    assert.deepEqual(await attemptCached(), blocked, "Recovery does not revive the captured old generation client");
   }
   mode="success";await page.getByRole("button",{name:"Revoke",exact:true}).click();
   await page.waitForFunction(()=>(window as unknown as {clearDeletionReady:boolean}).clearDeletionReady===true);

@@ -19,6 +19,7 @@ export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   const headers = { "Cache-Control": "no-store" };
+  try {
   const session = await getSession();
   if (!session) {
     return Response.json({ error: "unauthenticated" }, { status: 401, headers });
@@ -53,4 +54,8 @@ export async function POST(req: NextRequest) {
     // back to the user's wallet. We echo the amounts for convenience.
     residualUsdc: Math.max(0, grant.cap - grant.spent),
   }, { headers });
+  } catch {
+    // A lost database acknowledgement cannot authorize local custody deletion.
+    return Response.json({ error: "revocation_unavailable" }, { status: 503, headers });
+  }
 }

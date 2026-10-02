@@ -143,7 +143,18 @@ export function useSessionGrant() {
     if (signingPaused.current) return null;
     const account = signerRef.current?.account();
     if (!account) return null;
-    return createWalletClient({ account, chain: arcTestnet, transport: http(kConfig.rpcUrl) });
+    const generation = registration.current;
+    const assertCurrent = () => {
+      if (signingPaused.current || registration.current !== generation ||
+          signerRef.current?.sessionAddress !== account.address)
+        throw new Error("Session signing paused or registration changed");
+    };
+    // A caller may retain this client across awaited payee/price checks. Fence
+    // the actual dispatch as well as client lookup before a bearer signature.
+    return createWalletClient({ account: { ...account,
+      signTypedData: async args => { assertCurrent(); return account.signTypedData(args); },
+      signTransaction: async (args, options) => { assertCurrent(); return account.signTransaction(args, options); },
+    }, chain: arcTestnet, transport: http(kConfig.rpcUrl) });
   }, []);
 
   /**
