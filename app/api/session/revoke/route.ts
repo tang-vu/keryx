@@ -13,14 +13,15 @@
 
 import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
-import { dropGrant, getGrant } from "@/lib/payments/session-grants";
+import { revokeGrant, getGrant } from "@/lib/payments/session-grants";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  const headers = { "Cache-Control": "no-store" };
   const session = await getSession();
   if (!session) {
-    return Response.json({ error: "unauthenticated" }, { status: 401 });
+    return Response.json({ error: "unauthenticated" }, { status: 401, headers });
   }
 
   const sessionId = session.address.toLowerCase();
@@ -28,15 +29,18 @@ export async function POST(req: NextRequest) {
 
   // Idempotent: if there's no grant, return success — already revoked.
   if (!grant) {
-    return Response.json({ ok: true, alreadyRevoked: true });
+    return Response.json({ ok: true, alreadyRevoked: true }, { headers });
   }
 
   // Safety: confirm the authenticated address owns the grant.
   if (grant.ownerAddr.toLowerCase() !== sessionId) {
-    return Response.json({ error: "forbidden" }, { status: 403 });
+    return Response.json({ error: "forbidden" }, { status: 403, headers });
   }
 
-  await dropGrant(sessionId);
+  if (!(await revokeGrant(grant))) {
+    return Response.json({ error: "session_changed", message: "Your spending session changed. Review the current session before revoking it." },
+      { status: 409, headers });
+  }
 
   // Suppress unused-param lint — req is required by Next.js route handler signature.
   void req;
@@ -48,5 +52,5 @@ export async function POST(req: NextRequest) {
     // Browser should withdraw (grant.cap - grant.spent) USDC from the Gateway
     // back to the user's wallet. We echo the amounts for convenience.
     residualUsdc: Math.max(0, grant.cap - grant.spent),
-  });
+  }, { headers });
 }

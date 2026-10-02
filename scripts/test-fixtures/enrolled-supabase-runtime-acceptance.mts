@@ -122,6 +122,7 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
     assert.equal(snapshot(), enrolled, "ACL refusals leave the whole native snapshot unchanged");
     const foreign = { ...identity, storageId: randomUUID() };
     assert.throws(() => service(`select storage_get_source(${literal(foreign)},'absent')`));
+    assert.throws(() => service(`select storage_revoke_session_grant(${literal(foreign)},'absent','absent','absent')`));
     assert.throws(() => service(`select storage_read_browser_source_catalog(${literal(foreign)},'absent','absent')`));
     assert.deepEqual(JSON.parse(service(`select storage_read_browser_source_catalog(${literal(identity)},'absent','absent')`)),
       { source: null, item: null, offer: null });

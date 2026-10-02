@@ -188,6 +188,12 @@ try {
     .map(file => readFileSync(`supabase/migrations/${file}`, "utf8")).join("\n"));
   assert.equal(sql("select active from public.browser_journal_control"), "f", "schema must not activate signing");
   assert.equal(asService(journal(200)), "inactive");
+  asService(`insert into public.session_grants(session_id,sess_addr,owner_addr,cap,spent,expiry,tx_hash,grant_epoch)
+    values('revoke-legacy','${signer}','synthetic-owner',0.0001,0,${Date.now()+60000},'synthetic-unfunded','legacy-current')`);
+  assert.equal(asService(`select public.revoke_session_grant('revoke-legacy','legacy-old','${signer}')`), "f");
+  assert.equal(sql("select grant_epoch from public.session_grants where session_id='revoke-legacy'"), "legacy-current");
+  assert.equal(asService(`select public.revoke_session_grant('revoke-legacy','legacy-current','${signer}')`), "t");
+  assert.equal(sql("select count(*) from public.session_grants where session_id='revoke-legacy'"), "0");
   asService("update public.session_grants set spent=spent+0.0000001 where session_id='owner'");
   assert.throws(() => asService("select public.activate_browser_journal()"), /exact capacity audit/);
   assert.equal(sql("select active from public.browser_journal_control"), "f");
@@ -374,6 +380,32 @@ try {
     set role service_role; select public.browser_signer_confirmed_spend_micro('${signer}'); commit`), /Conflicting confirmed authorization identity/);
   assert.equal(asService(`select public.browser_signer_confirmed_spend_micro('${signer}')`), "2");
   assert.equal(sql("select count(*) from public.browser_journal_writer"), "0");
+  // Actual concurrent replacement holds its row while old revocation waits, then
+  // commits a new generation. PostgreSQL rechecks the CAS against that new row.
+  asService(grant("revoke-original", "revoke-owner"));
+  assert.equal(asService(journal(290, { session_id: "revoke-owner", grant_epoch: "revoke-original" })), "admitted");
+  assert.equal(asService(transition(290, "prepared", "exposed", "revoke-owner")), "t");
+  const financialBefore = sql(`select jsonb_build_object('journal',public.get_browser_journal('revoke-owner','request-290'),
+    'capacity',(select spent_micro from public.browser_signer_capacity where signer='${signer}'),
+    'retained',(select spent_micro from public.browser_retained_grants where grant_epoch='revoke-original'))`);
+  const replacement = concurrent(`set local application_name='keryx-generation-replacement'; ${grant("revoke-replacement", "revoke-owner")}; select pg_sleep(2)`);
+  let replacementHeld = false;
+  for (let attempt=0; attempt<40 && !replacementHeld; attempt++) {
+    replacementHeld = sql("select exists(select 1 from pg_stat_activity where application_name='keryx-generation-replacement' and wait_event='PgSleep')") === "t";
+    if (!replacementHeld) await new Promise(resolve => setTimeout(resolve,50));
+  }
+  assert(replacementHeld, "Actual replacement transaction reached its held-row boundary");
+  const oldRevoke = concurrent(`select public.revoke_session_grant('revoke-owner','revoke-original','${signer}')`);
+  await replacement;
+  assert.equal(await oldRevoke, "f");
+  assert.equal(sql("select grant_epoch from public.session_grants where session_id='revoke-owner'"), "revoke-replacement");
+  assert.equal(asService(`select public.revoke_session_grant('revoke-owner','revoke-replacement','${signer}')`), "t");
+  assert.equal(sql("select expiry from public.session_grants where session_id='revoke-owner'"), "0");
+  assert.equal(sql(`select jsonb_build_object('journal',public.get_browser_journal('revoke-owner','request-290'),
+    'capacity',(select spent_micro from public.browser_signer_capacity where signer='${signer}'),
+    'retained',(select spent_micro from public.browser_retained_grants where grant_epoch='revoke-original'))`), financialBefore);
+  assert.equal(sql("select count(*) from public.browser_journal_writer"), "0");
+  console.log("PASS: actual PG17 generation revoke contention, original exposed journal/cap retention and legacy CAS");
   const snapshot = journalState();
   docker(["restart", name]);
   await ready();

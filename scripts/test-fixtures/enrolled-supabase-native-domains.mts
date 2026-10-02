@@ -312,9 +312,22 @@ export async function exerciseEnrolledSupabaseNativeAuth(db: KeryxDB, expectedId
   await db.revokeWebSession(sessionHash, owner.address);
   assert.equal(await db.getWebSession(sessionHash), null);
 
+  // Actual installed facade and HTTPS/RPC, preserving the captured generation.
+  const sessionId = owner.address.toLowerCase(), oldEpoch = randomUUID(), replacementEpoch = randomUUID();
+  await db.activateBrowserJournal();
+  const grant = { sessionId, sessAddr: signer.address, ownerAddr: owner.address, cap: 0.001,
+    expiry: Date.now()+60000, txHash: 'synthetic-unfunded', grantEpoch: oldEpoch };
+  await db.upsertSessionGrant(grant);
+  await db.upsertSessionGrant({ ...grant, grantEpoch: replacementEpoch });
+  const replacementGrant = await db.getSessionGrant(sessionId);
+  assert.equal(await db.revokeSessionGrant(sessionId, oldEpoch, signer.address), false);
+  assert.deepEqual(await db.getSessionGrant(sessionId), replacementGrant);
+  assert.equal(await db.revokeSessionGrant(sessionId, replacementEpoch, signer.address), true);
+  assert.equal((await db.getSessionGrant(sessionId))?.expiry, 0);
+
   const after = await assertEnrolledSupabaseAuthority(db, 'write');
   assert.equal(canonicalJson(after.identity), canonicalJson(identity));
-  return Object.freeze(['native-auth-challenge-session']);
+  return Object.freeze(['native-auth-challenge-session', 'native-session-generation-revoke']);
 }
 
 /** Independent actual-facade treasury case; no browser signing authority is transferred. */

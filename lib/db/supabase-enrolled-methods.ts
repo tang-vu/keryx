@@ -137,6 +137,7 @@ export const SUPABASE_ENROLLED_METHODS = Object.freeze({
   releaseOnramp: "write",
   releaseSessionGrantSpend: "write",
   deleteSessionGrant: "write",
+  revokeSessionGrant: "write",
   deleteExpiredSessionGrants: "write",
   consumeRateLimit: "write",
   deleteExpiredRateLimits: "write",

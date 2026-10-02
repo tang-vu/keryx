@@ -117,6 +117,7 @@ export function useSessionGrant() {
   const [state, setState] = useState<GrantState>(INITIAL);
   const grantClock = useRef<ReturnType<typeof createSessionGrantClock> | null>(null);
   const registration = useRef(0);
+  const signingPaused = useRef(false);
   // Handle on the worker that holds the key. Never the key itself.
   const signerRef = useRef<SessionSigner | null>(null);
 
@@ -139,6 +140,7 @@ export function useSessionGrant() {
 
   /** A viem wallet client whose signing happens inside the worker. Null when no key is loaded. */
   const getSessionWalletClient = useCallback((): WalletClient | null => {
+    if (signingPaused.current) return null;
     const account = signerRef.current?.account();
     if (!account) return null;
     return createWalletClient({ account, chain: arcTestnet, transport: http(kConfig.rpcUrl) });
@@ -191,6 +193,7 @@ export function useSessionGrant() {
     if (generation !== registration.current || ownerRef.current !== owner) throw new Error("Session registration changed");
     const clock = createSessionGrantClock(body, { sessionId: owner, sessAddr }, started, performance.now(), kConfig.sessionGrantTtlSeconds * 1000);
     grantClock.current = clock;
+    signingPaused.current = false;
     clearPending(); // credit confirmed → no longer waiting
     setState({
       status: "active",
@@ -484,24 +487,31 @@ export function useSessionGrant() {
    * wallet (GrantSpendDialog), not the session key — which is why burning the key here is safe.
    */
   const revoke = useCallback(async (): Promise<{ residualUsdc: number; sessAddr: string | null }> => {
-    ++registration.current; grantClock.current = null;
+    const generation = ++registration.current; grantClock.current = null; signingPaused.current = true;
     setState((s) => ({ ...s, status: "revoking" }));
     try {
-      const res = await fetch("/api/session/revoke", { method: "POST" });
-      const data = await res.json().catch(() => ({})) as { residualUsdc?: number };
+      const res = await fetch("/api/session/revoke", { method: "POST", credentials: "same-origin", cache: "no-store", redirect: "error" });
+      const data = await readBoundedJson(res, 8192) as { ok?: boolean; alreadyRevoked?: boolean; sessAddr?: string; residualUsdc?: number };
+      if (!res.ok || data?.ok !== true || (data.alreadyRevoked !== true &&
+          (data.sessAddr?.toLowerCase() !== state.sessAddr?.toLowerCase() ||
+           typeof data.residualUsdc !== "number" || !Number.isFinite(data.residualUsdc) || data.residualUsdc < 0)))
+        throw new Error(res.status === 409 ? "Your spending session changed. Recover the retained session before revoking again."
+          : "Revocation could not be confirmed. Recover the retained session before spending again.");
+      if (generation !== registration.current) return { residualUsdc: 0, sessAddr: state.sessAddr };
       const residualUsdc = data.residualUsdc ?? 0;
       const sessAddr = state.sessAddr;
 
       // Drop the key from the worker and destroy the wrapping key, so the ciphertext this tab (or
       // any other) still holds becomes permanently unreadable.
       await signer().clear();
+      if (generation !== registration.current) return { residualUsdc: 0, sessAddr: state.sessAddr };
       clearSession();
 
       setState({ ...INITIAL, status: "revoked" });
       return { residualUsdc, sessAddr };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      setState((s) => ({ ...s, status: "error", error: message }));
+      if (generation === registration.current) setState((s) => ({ ...s, status: "paused", error: message }));
       return { residualUsdc: 0, sessAddr: state.sessAddr };
     }
   }, [state.sessAddr, signer]);

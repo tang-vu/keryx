@@ -1114,6 +1114,17 @@ export class SqliteAdapter implements KeryxDB {
     this.db.prepare(`DELETE FROM session_grants WHERE session_id = ?`).run(sessionId);
   }
 
+  async revokeSessionGrant(sessionId: string, grantEpoch: string, sessAddr: string): Promise<boolean> {
+    if (sqliteJournalActive(this.db)) {
+      return sqliteJournalTransaction(this.db, () => this.db.prepare(
+        'UPDATE session_grants SET expiry=0 WHERE session_id=? AND grant_epoch=? AND lower(sess_addr)=lower(?)'
+      ).run(sessionId, grantEpoch, sessAddr).changes === 1);
+    }
+    return this.db.prepare(
+      'DELETE FROM session_grants WHERE session_id=? AND grant_epoch=? AND lower(sess_addr)=lower(?)'
+    ).run(sessionId, grantEpoch, sessAddr).changes === 1;
+  }
+
   async deleteExpiredSessionGrants(now: number): Promise<void> {
     if (sqliteJournalActive(this.db)) return;
     this.db.prepare(`DELETE FROM session_grants WHERE expiry <= ?`).run(now);
