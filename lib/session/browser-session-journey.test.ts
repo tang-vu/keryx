@@ -25,7 +25,7 @@ afterEach(async () => {
 /** Production composition is intact: native sealed DB, JWT/row auth, normal handlers, SSE,
  * runAgent, BrowserCoSignGateway, paid encrypted seller and actual browser worker/IndexedDB.
  * Only Next's request cookie accessor and external RPC/Circle transport are synthetic. */
-it.each([false, true])("completes a normal mainnet cited answer with citation failure=%s", async failCitation => {
+it.each([false, true, "liveness"] as const)("completes a normal mainnet cited answer with citation failure=%s", async failCitation => {
   vi.resetModules();
   const folder = mkdtempSync(join(tmpdir(), "keryx-browser-mainnet-journey-")), databasePath = join(folder, "fresh.sqlite");
   cleanup.push(() => rmSync(folder, { recursive: true, force: true }));
@@ -151,8 +151,12 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
     import React from 'react'; import {createRoot} from 'react-dom/client';
     import {useMainnetSessionGrant} from './lib/hooks/use-mainnet-session-grant';
     import {SessionCashoutPanel} from './components/keryx/session-cashout-panel';
+    import {getSessionSigner} from './lib/session/session-signer-client';
     import {listFundingRecords} from './lib/buyer/funding-journal';window.fundingRecords=listFundingRecords;
     window.sentFunding=[];
+    window.workerOperations=[];const OriginalWorker=window.Worker;
+    window.Worker=class extends OriginalWorker{postMessage(message){window.workerOperations.push(message.type);super.postMessage(message)}};
+    window.retainedSignerAddress=()=>getSessionSigner().sessionAddress;
     window.fundingChain={getChainId:async()=>5042,readContract:async()=>2000000n,getBalance:async()=>2000000000000000000n,
       estimateGas:async({to})=>to?.toLowerCase()==='${profile.gatewayMinter.toLowerCase()}'?300000n:21000n,estimateFeesPerGas:async()=>({maxFeePerGas:1n,maxPriorityFeePerGas:1n}),
       getTransactionCount:async()=>window.sentFunding.length,getBlockNumber:async()=>BigInt(100+window.sentFunding.length*2),
@@ -221,15 +225,18 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
     return `0x${(tx.nonce+1).toString(16).padStart(64,"0")}`;
   });
   let holdGrant = false, holdRevoke = false, releaseHeld: (() => void) | undefined, held = false;
+  let failStatusLookup=false,holdAskChallenge=false;
   await context.route("**/*", async route => {
     const req = route.request(), url = req.url();
     if (url === `${origin}/`) return route.fulfill({ contentType: "text/html", body: '<div id="root"></div><script type="module" src="/hook.js"></script>' });
     if (url === `${origin}/hook.js`) return route.fulfill({ contentType: "application/javascript", body: hook.outputFiles[0].text });
     if (url === `${origin}/worker.js` || url === `${origin}/mainnet-session-signer.worker.ts`) return route.fulfill({ contentType: "application/javascript", body: worker.outputFiles[0].text });
     if (url.startsWith(profile.rpcUrl)) { const response = await rpc({ body: req.postData() }); return route.fulfill({ status: response.status, body: await response.text(), contentType: "application/json" }); }
+    if(failStatusLookup&&url===`${origin}/api/session/grant`&&req.method()==="GET")return route.fulfill({status:503,contentType:"application/json",body:"{}"});
     expect(url.startsWith(origin)).toBe(true);
     const receivedToken = req.headers().cookie?.split(";").map(s => s.trim()).find(s => s.startsWith("keryx_session="))?.slice("keryx_session=".length);
     if (holdRevoke && url === `${origin}/api/session/revoke`) { holdRevoke = false; held = true; await new Promise<void>(resolve => { releaseHeld = resolve; }); }
+    if(holdAskChallenge&&url===`${origin}/api/ask/challenge`){holdAskChallenge=false;held=true;await new Promise<void>(resolve=>{releaseHeld=resolve})}
     if (url === `${origin}/api/session/grant/challenge` && duringNextGrantChallenge) {
       const settle = duringNextGrantChallenge; duringNextGrantChallenge = undefined; await settle();
     }
@@ -276,6 +283,32 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
     }
   }
   expect(done).not.toBeNull(); return { done: done!, signs };
+  }
+  if(failCitation==="liveness"){
+    await page.evaluate(()=>{const fixture=window as unknown as {normalGrant:{authorizeSessionPayment:unknown};cachedAuthorize:unknown};fixture.cachedAuthorize=fixture.normalGrant.authorizeSessionPayment});
+    failStatusLookup=true;await page.evaluate(()=>window.dispatchEvent(new Event("focus")));
+    await expect.poll(async()=>(await hookState()).status).toBe("paused");
+    const invokeCached=()=>page.evaluate(async()=>{try{await (window as unknown as {cachedAuthorize(reqId:string,question:object):Promise<string>}).cachedAuthorize("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",{id:"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",budgetMicroUsdc:"10000"});return true}catch{return false}});
+    expect(await invokeCached()).toBe(false);
+    expect(await page.evaluate(()=>(window as unknown as {workerOperations:string[]}).workerOperations.filter(v=>v==="authorizePayment").length)).toBe(0);
+    expect(await page.evaluate(()=>(window as unknown as {retainedSignerAddress():string|null}).retainedSignerAddress())).toBeNull();
+    failStatusLookup=false;
+    await page.evaluate(()=>(window as unknown as {normalGrant:{tryRecover():Promise<boolean>}}).normalGrant.tryRecover());
+    await expect.poll(async()=>(await hookState()).status).toBe("active");
+    expect(await invokeCached()).toBe(false); // Same owner/epoch restored under a fresh local registration.
+    const response=await dispatch(`${origin}/api/ask`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:"How do durable reservations protect payment nonces?",budget:0.01,sessionId:owner.address,browserAuthorizationProtocol:"durable-v1",mode:"quick",scholarly:false})},token);
+    expect(response.status).toBe(200);const reader=response.body!.getReader(),decoder=new TextDecoder();let packet="",reqId:string|null=null;
+    while(!reqId){const next=await reader.read();if(next.done)throw new Error("Expected original live challenge");packet+=decoder.decode(next.value,{stream:true});
+      while(packet.includes("\n\n")){const end=packet.indexOf("\n\n"),event=packet.slice(0,end);packet=packet.slice(end+2);
+        if(/^event: sign-request$/m.test(event))reqId=JSON.parse(/^data: (.+)$/m.exec(event)![1]).reqId}}
+    held=false;holdAskChallenge=true;
+    const pending=page.evaluate(async reqId=>{try{return await (window as unknown as {normalGrant:{authorizeSessionPayment(reqId:string,question:object):Promise<string>}}).normalGrant.authorizeSessionPayment(reqId!,{id:crypto.randomUUID(),budgetMicroUsdc:"10000"})}catch{return null}},reqId);
+    await expect.poll(()=>held).toBe(true);failStatusLookup=true;await page.evaluate(()=>window.dispatchEvent(new Event("focus")));
+    await expect.poll(async()=>(await hookState()).status).toBe("paused");releaseHeld!();
+    expect(await pending).toBeNull();expect(settledNonces.size).toBe(0);
+    expect(await page.evaluate(()=>(window as unknown as {workerOperations:string[]}).workerOperations.filter(v=>v==="authorizePayment").length)).toBe(1);
+    const {cancelPending}=await import("../payments/pending-signatures");cancelPending(owner.address.toLowerCase(),reqId!);await reader.cancel();
+    return;
   }
   const { done, signs } = await completeResearch("How do durable reservations protect payment nonces?", 0.01, identity.enrollmentId);
   expect(done).not.toBeNull(); expect(done!.answer).toContain("[S1]"); expect(done!.answer).toContain("nonce"); expect(done!.citations.length).toBeGreaterThan(0);

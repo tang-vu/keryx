@@ -4417,3 +4417,15 @@ owner transaction/event/finality evidence and independent browser RPC verificati
 old salts, nonces, question budgets and lifetime exposure so the same retained signer can
 renew, fund and research afterward. Actual React/native-handler/Chromium and emitted Next
 worker checks use synthetic external transport and confer no launch or live-funds authority.
+
+## Paused normal browser payment registration - 2026-10-02
+
+Unavailable status and expiry invalidate the local published registration, clock and
+consent, and lock heap custody without deleting funded recovery. A cached authorization
+callback must bind its originating published generation and current owner/signer/clock
+both before worker dispatch and before header publication. Explicit recovery publishes
+a fresh generation even when the server owner and epoch are unchanged. This prevents
+paused UI state from silently retaining usable payment authority during worker awaits.
+Actual React/production-worker/native-handler acceptance proves zero cached dispatch
+while paused and no returned header or settlement after a lookup fails during an
+original live challenge await.
