@@ -4340,3 +4340,15 @@ independent recovery of the actual signed sender remain mandatory before broadca
 Do not infer that a missing journal hash authorizes another attempt: retain original
 funding evidence and require owner recovery of any uncertain admission. See
 [treasury transaction isolation](docs/treasury-transaction-isolation.md).
+
+
+## Immutable release version alignment - 2026-10-02
+
+A concurrent isolated application-storage runtime merged after product source `080bc5d`
+was already accepted as application `0.25.0`, MCP `0.3.1` and desktop `0.3.1`. Preserve those immutable
+artifacts and publish the new runtime under application `0.25.1`, MCP `0.3.2` and desktop `0.3.2`.
+Version metadata changes only the owned root package records, not dependency
+versions or payment/signature domains. Verify each new source, installer and registry
+archive independently; a shared version alone does not establish matching delivery.
+Arc testnet authority remains the production/default lane; no mainnet activation
+or funded-operation permission follows from storage capability or version bumps.

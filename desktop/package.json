@@ -1,6 +1,6 @@
 {
   "name": "keryx-operator-desktop",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "private": true,
   "scripts": {
     "native:build": "node --import tsx ../scripts/build-native-writer.mts",

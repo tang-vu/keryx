@@ -1,4 +1,4 @@
-﻿# Keryx MCP
+# Keryx MCP
 
 Keryx buys selected sources under a budget and returns a cited answer with creator-payment state.
 The local stdio buyer pays the inbound x402 toll from a configured caller wallet on Arc testnet.
@@ -7,7 +7,7 @@ Testnet calls and owner-operated tests do not establish external traction or mai
 
 ## Research Monthly
 
-Stdio 0.3.1 and the remote service expose read-only `research_monthly` discovery.
+Stdio 0.3.2 and the remote service expose read-only `research_monthly` discovery.
 The four-request, 30-day Arc-testnet pilot uses manual renewal and a 10% total-price
 discount with unchanged creator caps. Failed and pending jobs retain slots.
 Buy/redeem through the caller-wallet [web checkout](https://keryx.cc/research#monthly)
@@ -39,11 +39,11 @@ Builds use the repository's pinned npm 11.19.0 installer. Critical consumer depe
 pinned to Circle x402 batching 3.5.0 and viem 2.55.19.
 
 The verified release tarball can be installed directly. npm registry availability is a separate
-publication step: do not assume `npx keryx-mcp@latest` contains these safeguards. Until 0.3.0 is
+publication step: do not assume `npx keryx-mcp@latest` contains these safeguards. Until 0.3.2 is
 published and read back, npm's older version remains unchanged.
 
 ```bash
-npm install /absolute/path/keryx-mcp-0.3.0.tgz
+npm install /absolute/path/keryx-mcp-0.3.2.tgz
 ```
 
 Configure your MCP client to run `node /absolute/path/node_modules/keryx-mcp/dist/keryx-mcp.mjs`.
@@ -114,4 +114,4 @@ After the independent MCP install, also run `npm exec -- tsc --noEmit -p mcp/tsc
 from the repository root. This checks MCP and imported shared source against the MCP package's
 installed viem/Circle declarations, matching the single external dependency closure used by the
 bundled consumer. Run the packed acceptance with
-`node mcp/scripts/test-packed.mjs /absolute/path/keryx-mcp-0.3.0.tgz /absolute/path/to/pinned/npm-cli.js`.
+`node mcp/scripts/test-packed.mjs /absolute/path/keryx-mcp-0.3.2.tgz /absolute/path/to/pinned/npm-cli.js`.
