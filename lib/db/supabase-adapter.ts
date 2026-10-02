@@ -1433,6 +1433,9 @@ export class SupabaseAdapter implements KeryxDB {
   async browserSignerRetainedSpendMicro(_signer: string): Promise<number> {
     throw new Error("Native PostgreSQL owner-consent migration is not admitted");
   }
+  async sessionFundingAccounting(_signer: string, _after?: string): Promise<import("./session-funding-accounting").SessionFundingAccounting> {
+    throw new Error("Native PostgreSQL session funding accounting is not admitted");
+  }
   async consumeSessionGrantConsent(_consent: import("../payments/session-grant-consent").SessionGrantConsent, _signature: string, _sessionSignature: string): Promise<void> {
     throw new Error("Native PostgreSQL owner-consent migration is not admitted");
   }

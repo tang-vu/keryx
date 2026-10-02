@@ -88,6 +88,22 @@ malformed or duplicate rows remain unknown instead of displaying zero; a row
 from another request chunk cannot overwrite its result. This read does not
 authorize funding or release a payment hold.
 
+The mainnet funding client may opt into authenticated
+`GET /api/session/credit?address={signer}&accounting=original-v1` (with optional
+`grantEpoch` for retained ownership and `after` for a canonical baseline timestamp).
+Alongside the known balance, it returns `observedAt`,
+`accountingAuthority:"original-admitted-settled-v1"`, actual
+`confirmedSpentMicroUsdc`, `retainedSpentMicroUsdc` and
+`postBaselineConfirmedDebitMicroUsdc`. Existing history requires the authenticated
+owner's retained dual public proof. Fresh zero history is checked from native
+tables; no read initializes a journal or assumes missing authority means zero.
+Accounting must remain stable around the Circle read. The offset contains only
+confirmed original authorizations admitted strictly after the supplied baseline.
+A pre-baseline debit whose confirmation arrives late cannot acknowledge an absent
+deposit. Unknown holds, elapsed time and empty vendor searches never provide credit.
+Ambiguous older deposit acknowledgment still requires original deposit provenance
+or conservative recovery; this projection does not resolve every vendor delay.
+
 Mainnet source fetch and citation terms require a fresh active on-chain creator-owned
 URL identity; cached testnet rows or an RPC outage cannot supply fallback payout
 authority. The mainnet bindings retain the exact encrypted item identity and complete

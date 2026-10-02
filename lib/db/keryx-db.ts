@@ -361,6 +361,7 @@ export interface KeryxDB {
   signBrowserSigningOriginal(sessionId:string,requestId:string,header:string):Promise<boolean>;
   browserSignerConfirmedSpendMicro(signer:string): Promise<number>;
   browserSignerRetainedSpendMicro(signer:string): Promise<number>;
+  sessionFundingAccounting(signer:string,after?:string): Promise<import("./session-funding-accounting").SessionFundingAccounting>;
   activateBrowserJournal(): Promise<void>;
   admitBrowserJournal(input: import("./browser-authorization-journal").BrowserJournalAdmission): Promise<import("./browser-authorization-journal").BrowserJournalAdmissionResult>;
   getBrowserJournal(sessionId: string, requestId: string): Promise<import("./browser-authorization-journal").BrowserAuthorizationJournal | null>;

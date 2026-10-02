@@ -61,6 +61,7 @@ export const ENROLLED_SQLITE_METHOD_ACCESS = Object.freeze({
   browserJournalActive: "read",
   browserSignerConfirmedSpendMicro: "read",
   browserSignerRetainedSpendMicro: "read",
+  sessionFundingAccounting: "read",
   activateBrowserJournal: "write",
   admitBrowserJournal: "write",
   getPaperState: "read",
