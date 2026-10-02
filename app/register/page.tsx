@@ -34,7 +34,7 @@ import {
   type SourceCardData,
 } from "@/components/keryx/sources-list";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
-import { registrationDraft, registrationTarget, type RegistrationDraft } from "@/lib/registration-return";
+import { registrationConnectHref, registrationDraft, registrationTarget, type RegistrationDraft } from "@/lib/registration-return";
 
 export default function RegisterPage() {
   const { address, isConnected } = useAccount();
@@ -50,12 +50,14 @@ export default function RegisterPage() {
   const [mode, setMode] = useState<"single" | "bulk">("single");
   const [draftFeed, setDraftFeed] = useState("");
   const [feedError, setFeedError] = useState("");
+  const [draftContextError, setDraftContextError] = useState("");
   const [draftOwner, setDraftOwner] = useState<string | undefined>();
 
   const saveDraft = (draft: RegistrationDraft) => {
     const target = registrationTarget(draft);
     window.history.replaceState(window.history.state, "", target);
     setDraftOwner(draft.owner);
+    setDraftContextError("");
     setPrefill(draft);
     setDraftFeed(draft.rssUrl ?? "");
     setFormKey((key) => key + 1);
@@ -83,13 +85,17 @@ export default function RegisterPage() {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const params = new URLSearchParams(window.location.search);
-      const draft = registrationDraft(params);
-      setDraftOwner(draft.owner);
-      if (!draft.url && !draft.name && !draft.rssUrl) return;
-      setPrefill(draft);
-      setDraftFeed(draft.rssUrl ?? "");
-      setFormKey((k) => k + 1);
-      setMode("single");
+      try {
+        const draft = registrationDraft(params);
+        setDraftOwner(draft.owner);
+        if (!draft.url && !draft.name && !draft.rssUrl) return;
+        setPrefill(draft);
+        setDraftFeed(draft.rssUrl ?? "");
+        setFormKey((k) => k + 1);
+        setMode("single");
+      } catch (error) {
+        setDraftContextError(error instanceof Error ? error.message : "This registration draft cannot be restored.");
+      }
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);
@@ -117,8 +123,9 @@ export default function RegisterPage() {
   // makes it a creator). No creator-role precondition.
   const accountMatches = !!session && !!address && isConnected && session.address.toLowerCase() === address.toLowerCase();
   const ownerMatches = !draftOwner || draftOwner === address?.toLowerCase();
-  const canRegister = accountMatches && ownerMatches;
-  const connectHref = `/connect?returnTo=${encodeURIComponent(registrationTarget({ ...prefill, owner: draftOwner ?? address?.toLowerCase() }))}`;
+  const canRegister = accountMatches && ownerMatches && !draftContextError;
+  const connectHref = draftContextError ? null : registrationConnectHref({ ...prefill, owner: draftOwner ?? address?.toLowerCase() });
+  const feedOnlyDraft = { rssUrl: prefill?.rssUrl, gapId: prefill?.gapId, matchedItemLink: prefill?.matchedItemLink, owner: draftOwner ?? address?.toLowerCase() };
 
   return (
     <div className="min-h-screen bg-paper">
@@ -159,7 +166,7 @@ export default function RegisterPage() {
               <AuthPlaceholder message="Checking session…" />
             )}
 
-            {session === null && !isConnected && (
+            {session === null && !isConnected && connectHref && (
               <AuthGate
                 heading="Connect your wallet first"
                 body="You need to connect and sign in with your creator wallet before registering a source."
@@ -168,7 +175,7 @@ export default function RegisterPage() {
               />
             )}
 
-            {session === null && isConnected && (
+            {session === null && isConnected && connectHref && (
               <AuthGate
                 heading="Sign in to continue"
                 body="Connect your wallet to Keryx to register a source. Your wallet address becomes your payout address."
@@ -177,7 +184,12 @@ export default function RegisterPage() {
               />
             )}
 
-            {session && !accountMatches && <AuthGate heading="Confirm your payout wallet" body="Connect the wallet matching your signed-in account, or sign in with the connected wallet before continuing." cta="Review sign-in" href={connectHref} />}
+            {!canRegister && !connectHref && <div role="alert" className="space-y-3 border border-seal p-5 text-sm">
+              <p>{draftContextError || "This draft is too large to carry through sign-in safely. Shorten optional prefilled fields or URLs, or explicitly start a new draft. No draft fields were truncated or submitted."}</p>
+              {!draftContextError && prefill?.rssUrl && registrationConnectHref(feedOnlyDraft) && <button type="button" onClick={() => saveDraft(feedOnlyDraft)} className="underline">Keep feed and Wanted match; remove optional prefill</button>}
+              <p><a href="/register" className="underline">Start a new draft</a></p>
+            </div>}
+            {session && !accountMatches && connectHref && <AuthGate heading="Confirm your payout wallet" body="Connect the wallet matching your signed-in account, or sign in with the connected wallet before continuing." cta="Review sign-in" href={connectHref} />}
             {session && accountMatches && !ownerMatches && <div role="alert" className="border border-line p-5 text-sm">This draft was prepared for {draftOwner}. Switch back to that wallet, or <a className="underline" href="/register">start a new registration draft</a>.</div>}
             {canRegister && (
               <>

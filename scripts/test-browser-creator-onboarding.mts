@@ -63,6 +63,17 @@ try {
       return route.fulfill({contentType:'text/html',body:html});
     });
     const page = await context.newPage();page.on('pageerror',e=>errors.push(e.message));
+    const largeDescription = String.fromCharCode(0x4e2d).repeat(2000);
+    await page.goto(`https://creator.test/register?${new URLSearchParams({ rss, gap, post, name: 'Publisher', desc: largeDescription })}`);
+    await page.getByText(/This draft is too large to carry through sign-in safely/).waitFor();
+    assert.equal(await page.getByRole('link',{name:'Sign in ▸',exact:true}).count(),0);
+    await page.getByRole('button',{name:'Keep feed and Wanted match; remove optional prefill'}).click();
+    const boundedLink = page.getByRole('link',{name:'Sign in ▸',exact:true});await boundedLink.waitFor();
+    assert((await boundedLink.getAttribute('href'))!.length <= 6000);
+    assert.equal(new URL(page.url()).searchParams.get('rss'),rss);
+    assert.equal(new URL(page.url()).searchParams.get('gap'),gap);
+    assert.equal(new URL(page.url()).searchParams.get('post'),post);
+    assert.equal(new URL(page.url()).searchParams.get('desc'),null);
     await page.goto('https://creator.test/register');
     await page.waitForTimeout(300);assert.deepEqual(errors,[]);
     await page.getByRole('textbox',{name:'Your RSS feed URL'}).fill(rss);

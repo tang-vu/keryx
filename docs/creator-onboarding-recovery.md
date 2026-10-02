@@ -9,7 +9,12 @@ nor proves control of it.
 The registration gate passes this draft as `/connect?returnTo=...`. Return targets accept
 only the relative `/register` path and recognized, normalized draft fields. Absolute and
 scheme-relative URLs, path escape, backslashes, raw control characters and fragments are
-rejected. Feed/post URLs allow HTTP(S), without embedded credentials. A directly opened
+rejected. Feed/post URLs allow HTTP(S), without embedded credentials and up to 2,048
+normalized characters. The actual nested connect URL is capped at 6,000 characters,
+reserving space for the later wallet binding. Multibyte or heavily escaped fields are
+preserved intact or explicitly refused before connecting. The user can deliberately
+remove optional prefill while keeping the feed/Wanted match, shorten URLs or start a new
+draft. Names and descriptions are never silently truncated. A directly opened
 `/connect` retains its normal asker/creator navigation.
 
 A connected wallet binds the draft's public `owner` marker once. Reload and sign-in failure
