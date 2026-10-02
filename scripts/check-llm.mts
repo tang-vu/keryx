@@ -49,7 +49,7 @@ async function main(): Promise<void> {
       ? [
           {
             id: "anthropic-default" as const,
-            label: "Anthropic default",
+            label: "Anthropic default" as const,
             provider: "anthropic" as const,
             model: config.llmModel,
             note: "Configured Anthropic default",
