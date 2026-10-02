@@ -79,6 +79,7 @@ export function sourceItemContentVersion(item: SourceItem): string {
 
 export function sourceItemIdentity(item: SourceItem): SourceItemIdentity {
   return {
+    ...(item.evidenceProvenance ? { evidenceProvenance: item.evidenceProvenance } : {}),
     itemId: item.id,
     itemTitle: item.title,
     itemUrl: item.link,

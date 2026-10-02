@@ -3,6 +3,7 @@ import type { ReceiptAsset } from "./research-receipt-types";
 
 export function receiptAsset(value: Partial<SourceItemIdentity>): ReceiptAsset {
   return {
+    ...(value.evidenceProvenance === "synthetic-demo" ? { evidenceProvenance: value.evidenceProvenance } : {}),
     ...(value.webProvenance ? { webProvenance: { ...value.webProvenance } } : {}),
     ...(value.scholarly ? { scholarly: {
       provider: value.scholarly.provider, recordUrl: value.scholarly.recordUrl, retrievedAt: value.scholarly.retrievedAt,

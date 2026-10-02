@@ -1,3 +1,4 @@
+import { backfillSqliteSeedProvenance } from "../sources/seed-provenance";
 import { DatabaseSync } from "node:sqlite";
 import { PRIVATE_CREATOR_CONFIRMATIONS_SQL } from "./private-creator-confirmations";
 import { PRIVATE_CREATOR_SUBMISSIONS_SQL } from "./private-creator-submissions";
@@ -24,7 +25,8 @@ CREATE TABLE IF NOT EXISTS sources (
   onchain_id TEXT,
   register_tx TEXT,
   verified INTEGER NOT NULL DEFAULT 1,
-  preview_depth TEXT
+  preview_depth TEXT,
+  evidence_provenance TEXT CHECK(evidence_provenance IS NULL OR evidence_provenance='synthetic-demo')
 );
 CREATE TABLE IF NOT EXISTS source_meta (
   id TEXT PRIMARY KEY,
@@ -59,7 +61,8 @@ CREATE TABLE IF NOT EXISTS source_items (
   ipfs_cid TEXT, item_key_enc TEXT, item_iv TEXT, item_auth_tag TEXT, item_wrap_iv TEXT,
   delivery_kind TEXT, storage_mode TEXT, plaintext_bytes INTEGER, body_hash TEXT,
   manifest_id TEXT, manifest_signer TEXT, manifest_nonce TEXT, manifest_signature TEXT,
-  manifest_created_at TEXT
+  manifest_created_at TEXT,
+  evidence_provenance TEXT CHECK(evidence_provenance IS NULL OR evidence_provenance='synthetic-demo')
 );
 -- Every read of this table is "one source, newest first" — discovery, the freshness counts, and the
 -- ingest dedupe pass. Safe to declare beside the table: both columns are original, so this is not a
@@ -330,6 +333,7 @@ function ensureSqliteApplicationColumns(db: DatabaseSync): void {
     if (!srcCols.has("verified"))
       db.exec(`ALTER TABLE sources ADD COLUMN verified INTEGER NOT NULL DEFAULT 1`);
     // Preview depth: NULL grandfathers every existing row as "full" (rowToSource maps it).
+    if (!srcCols.has("evidence_provenance")) db.exec(`ALTER TABLE sources ADD COLUMN evidence_provenance TEXT CHECK(evidence_provenance IS NULL OR evidence_provenance='synthetic-demo')`);
     if (!srcCols.has("preview_depth")) db.exec(`ALTER TABLE sources ADD COLUMN preview_depth TEXT`);
 
     // source_meta.rss_url: the feed an on-chain registrant listed. The indexer has nowhere else to
@@ -515,6 +519,22 @@ function ensureSqliteApplicationColumns(db: DatabaseSync): void {
     if (!itemCols.has("manifest_nonce")) db.exec(`ALTER TABLE source_items ADD COLUMN manifest_nonce TEXT`);
     if (!itemCols.has("manifest_signature")) db.exec(`ALTER TABLE source_items ADD COLUMN manifest_signature TEXT`);
     if (!itemCols.has("manifest_created_at")) db.exec(`ALTER TABLE source_items ADD COLUMN manifest_created_at TEXT`);
+
+    if (!itemCols.has("evidence_provenance")) db.exec(`ALTER TABLE source_items ADD COLUMN evidence_provenance TEXT CHECK(evidence_provenance IS NULL OR evidence_provenance='synthetic-demo')`);
+    backfillSqliteSeedProvenance(db);
+    for (const table of ["sources", "source_items"]) {
+      db.exec(`CREATE TRIGGER IF NOT EXISTS ${table}_preserve_demo_insert BEFORE INSERT ON ${table}
+        WHEN EXISTS (SELECT 1 FROM ${table} WHERE id=NEW.id AND evidence_provenance='synthetic-demo')
+          AND NEW.evidence_provenance IS NOT 'synthetic-demo'
+        BEGIN SELECT RAISE(ABORT,'Synthetic evidence provenance is immutable'); END;
+        CREATE TRIGGER IF NOT EXISTS ${table}_preserve_demo_update BEFORE UPDATE ON ${table}
+        WHEN OLD.evidence_provenance='synthetic-demo' AND NEW.evidence_provenance IS NOT 'synthetic-demo'
+        BEGIN SELECT RAISE(ABORT,'Synthetic evidence provenance is immutable'); END;`);
+    }
+
+    db.exec(`CREATE TRIGGER IF NOT EXISTS source_items_inherit_demo AFTER INSERT ON source_items
+      WHEN NEW.evidence_provenance IS NULL AND EXISTS (SELECT 1 FROM sources WHERE id=NEW.source_id AND evidence_provenance='synthetic-demo')
+      BEGIN UPDATE source_items SET evidence_provenance='synthetic-demo' WHERE id=NEW.id; END;`);
 
     // Exact wanted-response identity. Legacy rows remain NULL and retain their generic retry.
     const gapCols = new Set(

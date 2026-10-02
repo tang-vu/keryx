@@ -31,6 +31,7 @@ export async function GET(
   return Response.json({
     id: source.id,
     name: source.name,
+    evidenceProvenance: source.evidenceProvenance,
     description: source.description,
     fetchPrice: terms.listPriceUsdc,
     tags: source.tags,

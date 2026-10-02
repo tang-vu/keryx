@@ -12,6 +12,7 @@ import { fmtUsdc, shortAddr } from "./phase-style";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
 export interface SourceCardData {
+  evidenceProvenance?: "synthetic-demo";
   id: string;
   name: string;
   url?: string;
@@ -51,6 +52,7 @@ export function SourcesList({ sources }: { sources: SourceCardData[] }) {
             </span>
           </div>
 
+          {s.evidenceProvenance === "synthetic-demo" && <p className="mt-2 text-sm text-seal">Synthetic demo source ? illustrative only</p>}
           {s.verified === false && (
             <p
               title="Feed ownership not yet proven — listed but the agent won't read, cite, or pay it until verified."

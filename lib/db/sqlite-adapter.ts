@@ -1,3 +1,4 @@
+import { projectRecordedEvidenceProvenanceList, projectRecordedEvidenceProvenance, type EvidenceProvenanceLookup } from "../research/evidence-provenance";
 import { installOrdinarySqliteApplicationSchema } from "./sqlite-application-schema";
 import { sqliteSessionFundingAccounting } from "./session-funding-accounting";
 import { sqliteCreatorOwnerAccounting, admitSqliteCreatorOwnerWithdrawal, readSqliteCreatorOwnerCompletion, completeSqliteCreatorOwnerWithdrawal } from "./creator-owner-withdrawal-journal";
@@ -211,14 +212,15 @@ export class SqliteAdapter implements KeryxDB {
     const verifiedInt = s.verified === false ? 0 : 1;
     this.db
       .prepare(
-        `INSERT INTO sources (id,name,url,description,rss_url,wallet_address,fetch_price,tags,authors,created_at,ipfs_cid,active,onchain_id,register_tx,verified,preview_depth)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        `INSERT INTO sources (id,name,url,description,rss_url,wallet_address,fetch_price,tags,authors,created_at,ipfs_cid,active,onchain_id,register_tx,verified,preview_depth,evidence_provenance)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,COALESCE((SELECT evidence_provenance FROM sources WHERE id=?),?))
          ON CONFLICT(id) DO UPDATE SET name=excluded.name,url=excluded.url,description=excluded.description,
            rss_url=excluded.rss_url,wallet_address=excluded.wallet_address,fetch_price=excluded.fetch_price,
            tags=excluded.tags,authors=excluded.authors,ipfs_cid=excluded.ipfs_cid,active=excluded.active,
            onchain_id=COALESCE(excluded.onchain_id,sources.onchain_id),
            register_tx=COALESCE(excluded.register_tx,sources.register_tx),
            verified=excluded.verified,
+           evidence_provenance=COALESCE(sources.evidence_provenance,excluded.evidence_provenance),
            preview_depth=COALESCE(excluded.preview_depth,sources.preview_depth)`,
       )
       .run(
@@ -238,7 +240,16 @@ export class SqliteAdapter implements KeryxDB {
         s.registerTx ?? null,
         verifiedInt,
         s.previewDepth ?? null,
+        s.id, s.evidenceProvenance ?? null,
       );
+  }
+
+  async verifySourceIfUnchanged(input: { sourceId: string; walletAddress: string; feedUrl: string }): Promise<boolean> {
+    if (!input.sourceId || input.sourceId.length > 256 || !/^0x[0-9a-f]{40}$/i.test(input.walletAddress) || !input.feedUrl || input.feedUrl.length > 4096)
+      throw new Error("Invalid source verification identity");
+    const result = this.db.prepare(`UPDATE sources SET verified=1 WHERE id=? AND lower(wallet_address)=?
+      AND COALESCE(NULLIF(rss_url,''),url)=?`).run(input.sourceId, input.walletAddress.toLowerCase(), input.feedUrl);
+    return result.changes === 1;
   }
 
   async setSourcePreviewDepth(id: string, depth: string): Promise<void> {
@@ -356,8 +367,8 @@ export class SqliteAdapter implements KeryxDB {
       `INSERT OR REPLACE INTO source_items
          (id,source_id,title,summary,content,link,published_at,ipfs_cid,item_key_enc,item_iv,item_auth_tag,
           item_wrap_iv,delivery_kind,storage_mode,plaintext_bytes,body_hash,manifest_id,manifest_signer,
-          manifest_nonce,manifest_signature,manifest_created_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          manifest_nonce,manifest_signature,manifest_created_at,evidence_provenance)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,COALESCE((SELECT evidence_provenance FROM source_items WHERE id=?),?,(SELECT evidence_provenance FROM sources WHERE id=?)))`,
     );
     for (const i of items)
       stmt.run(
@@ -367,6 +378,7 @@ export class SqliteAdapter implements KeryxDB {
         i.plaintextBytes ?? null, i.bodyHash ?? null, i.manifest?.id ?? null,
         i.manifest?.signer ?? null, i.manifest?.nonce ?? null, i.manifest?.signature ?? null,
         i.manifest?.createdAt ?? null,
+        i.id, i.evidenceProvenance ?? null, i.sourceId,
       );
   }
 
@@ -375,6 +387,7 @@ export class SqliteAdapter implements KeryxDB {
       .prepare(`SELECT * FROM source_items WHERE source_id=? ORDER BY published_at DESC`)
       .all(sourceId);
     return rows.map((r) => ({
+      evidenceProvenance: r.evidence_provenance === "synthetic-demo" ? "synthetic-demo" : undefined,
       id: r.id as string,
       sourceId: r.source_id as string,
       title: r.title as string,
@@ -1473,30 +1486,43 @@ export class SqliteAdapter implements KeryxDB {
       );
   }
 
+  private async readEvidenceProvenance(lookup: EvidenceProvenanceLookup): Promise<ReadonlySet<string>> {
+    const flags = new Set<string>();
+    for (const [table, ids] of [["sources", lookup.sourceIds], ["source_items", lookup.itemIds]] as const) {
+      for (let offset = 0; offset < ids.length; offset += 500) {
+        const batch = ids.slice(offset, offset + 500);
+        if (batch.some(id => id.length > 256)) throw new Error("Invalid provenance lookup identity");
+        const rows = this.db.prepare(`SELECT id${table === "source_items" ? ",source_id" : ""} FROM ${table} WHERE evidence_provenance='synthetic-demo' AND id IN (${batch.map(() => "?").join(",")})`).all(...batch);
+        for (const row of rows) flags.add(table === "sources" ? `source:${row.id}` : `item:${row.source_id}:${row.id}`);
+      }
+    }
+    return flags;
+  }
+
   async listFollowUps(parentId: string): Promise<QueryRun[]> {
     const rows = this.db
       .prepare(`SELECT data FROM query_runs WHERE parent_id=? ORDER BY created_at ASC`)
       .all(parentId);
-    return rows.map((r) => JSON.parse(r.data as string) as QueryRun);
+    return projectRecordedEvidenceProvenanceList(lookup => this.readEvidenceProvenance(lookup), rows.map((r) => JSON.parse(r.data as string) as QueryRun));
   }
 
   async listQueryRunsByAsker(wallet: string, limit: number): Promise<QueryRun[]> {
     const rows = this.db
       .prepare(`SELECT data FROM query_runs WHERE asker=? ORDER BY created_at DESC LIMIT ?`)
       .all(wallet.toLowerCase(), limit);
-    return rows.map((r) => JSON.parse(r.data as string) as QueryRun);
+    return projectRecordedEvidenceProvenanceList(lookup => this.readEvidenceProvenance(lookup), rows.map((r) => JSON.parse(r.data as string) as QueryRun));
   }
 
   async getQueryRun(id: string): Promise<QueryRun | null> {
     const row = this.db.prepare(`SELECT data FROM query_runs WHERE id=?`).get(id);
-    return row ? (JSON.parse(row.data as string) as QueryRun) : null;
+    return row ? projectRecordedEvidenceProvenance(lookup => this.readEvidenceProvenance(lookup), JSON.parse(row.data as string) as QueryRun) : null;
   }
 
   async listRecentQueries(limit: number): Promise<QueryRun[]> {
     const rows = this.db
       .prepare(`SELECT data FROM query_runs ORDER BY created_at DESC LIMIT ?`)
       .all(limit);
-    return rows.map((r) => JSON.parse(r.data as string) as QueryRun);
+    return projectRecordedEvidenceProvenanceList(lookup => this.readEvidenceProvenance(lookup), rows.map((r) => JSON.parse(r.data as string) as QueryRun));
   }
 
   async *iterateRecentQueries(limit: number): AsyncIterable<QueryRun> {
@@ -1510,7 +1536,7 @@ export class SqliteAdapter implements KeryxDB {
     for (const row of rows) {
       const record = read.get(row.id);
       if (!record) throw new Error("Query scan row unavailable");
-      yield JSON.parse(record.data as string) as QueryRun;
+      yield await projectRecordedEvidenceProvenance(lookup => this.readEvidenceProvenance(lookup), JSON.parse(record.data as string) as QueryRun);
     }
   }
 
@@ -2369,6 +2395,7 @@ function rowToApiKey(r: Record<string, unknown>): ApiKeyRow {
 function rowToSource(r: Record<string, unknown>): Source {
   return {
     ...(r.scholarly_enrolled === 1 ? { scholarlyEnrolled: true } : {}),
+    evidenceProvenance: r.evidence_provenance === "synthetic-demo" ? "synthetic-demo" : undefined,
     id: r.id as string,
     name: r.name as string,
     url: r.url as string,
@@ -2393,6 +2420,7 @@ function rowToSource(r: Record<string, unknown>): Source {
 
 function rowToSourceItem(r: Record<string, unknown>): SourceItem {
   return {
+    evidenceProvenance: r.evidence_provenance === "synthetic-demo" ? "synthetic-demo" : undefined,
     id: r.id as string,
     sourceId: r.source_id as string,
     title: r.title as string,

@@ -1,3 +1,4 @@
+import { questionArxivIds } from "../scholarly/arxiv";
 /**
  * Deterministic evidence gate between model prose and creator money.
  *
@@ -45,6 +46,8 @@ export function buildEvidenceLedger(input: {
   finalAssessment?: ClaimSufficiency[];
   /** Fail closed when the final assessment transport failed after paid reads completed. */
   rewardAuthorizationAvailable?: boolean;
+  /** Explicit offline illustration only; public factual projection still demotes these records. */
+  allowIllustrativeDemo?: boolean;
 }): EvidenceLedger {
   const byMarker = new Map(input.gathered.map((g) => [g.marker, g]));
   const answerMarkers = extractAnswerMarkers(input.answer);
@@ -70,8 +73,15 @@ export function buildEvidenceLedger(input: {
       continue;
     }
 
+    const exactTargets = questionArxivIds(input.subClaims[claimIndex]!);
+    const observedArxivId = questionArxivIds(source.itemUrl ?? "")[0] ?? (source.scholarly?.provider === "arxiv" ? source.scholarly.arxivId : undefined);
+    const officialArxivRead = /^https:\/\/arxiv\.org\/(?:pdf|abs)\//i.test(source.itemUrl ?? "");
+    if (exactTargets.length && ((observedArxivId && !exactTargets.includes(observedArxivId)) || (officialArxivRead && !questionArxivIds(source.itemUrl ?? "").length))) {
+      droppedEvidence++;
+      continue;
+    }
     const support = clamp01(Number(proposal.support));
-    const qualifiesForAnswer = input.rewardAuthorizationAvailable !== false &&
+    const qualifiesForAnswer = (source.evidenceProvenance !== "synthetic-demo" || input.allowIllustrativeDemo === true) && input.rewardAuthorizationAvailable !== false &&
       support >= MIN_REWARD_SUPPORT && answerMarkers.has(source.marker) && declared.has(source.marker);
     evidence.push({
       claimIndex,
@@ -79,6 +89,7 @@ export function buildEvidenceLedger(input: {
       marker: source.marker,
       sourceId: source.sourceId,
       sourceName: source.sourceName,
+      evidenceProvenance: source.evidenceProvenance,
       sourceKind: source.sourceKind,
       publicDeliveryKind: source.publicDeliveryKind,
       webProvenance: source.webProvenance,

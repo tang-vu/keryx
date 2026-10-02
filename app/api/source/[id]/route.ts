@@ -56,7 +56,7 @@ export async function GET(
       // Check cache for already-decrypted content (avoids repeat IPFS fetch + decrypt).
       const cached = await db.getCached(id);
       if (cached) {
-        return { content: cached, name: source.name, items: items.length };
+        return { content: cached, name: source.name, items: items.length, evidenceProvenance: source.evidenceProvenance ?? (items.some(item => item.evidenceProvenance === "synthetic-demo") ? "synthetic-demo" : undefined) };
       }
 
       const resolved = await Promise.all(
@@ -76,7 +76,7 @@ export async function GET(
       // Cache the decrypted content so subsequent reads skip IPFS fetch.
       await db.setCached(id, content);
 
-      return { content, name: source.name, items: items.length };
+      return { content, name: source.name, items: items.length, evidenceProvenance: source.evidenceProvenance ?? (items.some(item => item.evidenceProvenance === "synthetic-demo") ? "synthetic-demo" : undefined) };
     },
   );
 }

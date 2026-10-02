@@ -1030,7 +1030,8 @@ describe("runAgent — money-safety invariants", () => {
       d,
     );
 
-    expect(run.answer).toContain("grounded answer");
+    expect(run.answer).toContain("draft is withheld");
+    expect(run.answer).not.toContain("grounded answer");
     expect(run.citations).toEqual([]);
     expect(run.confidence?.level).toBe("Low");
     expect(gw.citationCalls).toEqual([]);
@@ -1043,7 +1044,7 @@ describe("runAgent — money-safety invariants", () => {
     ).toBe(true);
   });
 
-  it("surfaces relevance review failure while preserving the draft and withholding rewards", async () => {
+  it("surfaces relevance review failure while withholding unsupported prose and rewards", async () => {
     const source = makeSource({ id: "a", fetchPrice: 0.004 });
     const engine = fakeEngine({ synthesize: (input) => ({
       answer: "The completed draft [S1].", citedMarkers: ["S1"], evidenceReview: "unavailable",
@@ -1051,7 +1052,8 @@ describe("runAgent — money-safety invariants", () => {
     }) });
     const gw = fakeGateway();
     const { run, steps } = await drive({ question: "q", budget: 0.05 }, deps([source], engine, gw));
-    expect(run.answer).toContain("completed draft");
+    expect(run.answer).toContain("draft is withheld");
+    expect(run.answer).not.toContain("completed draft");
     expect(run.citations).toEqual([]);
     expect(gw.citationCalls).toEqual([]);
     expect(steps.some((step) => step.phase === "evidence" && /relevance review unavailable/i.test(step.message))).toBe(true);
@@ -1950,4 +1952,73 @@ describe("original public attention gate regression (#128)", () => {
     expect(run.answer).toContain("Metadata previews are not read evidence"); expect(run.answer).not.toBe("");
     expect(run.citations).toEqual([]); expect(run.totalSpent).toBe(0);
   });
+});
+
+
+describe("research issue trust regressions", () => {
+  it("fills a free Deep gap after a successful paid read exhausts exactly the fetch allocation", async () => {
+    const source = makeSource({ id: "paid-first", fetchPrice: fetchBudget(0.03) });
+    const gateway = fakeGateway();
+    const reeval = vi.fn((input: ReevaluateInput) => {
+      expect(input.remainingBudget).toBeCloseTo(0, 8);
+      expect(input.skippedSources.map(candidate => [candidate.id, candidate.price])).toEqual([["public:free", 0]]);
+      return { shouldBuyMore: true, recommendedIds: ["public:free", "paid-again"], rationale: "free gap read" };
+    });
+    const other = makeSource({ id: "paid-again", fetchPrice: 0.001 });
+    const engine = fakeEngine({
+      decide: input => input.candidates.map(candidate => ({ ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
+        action: candidate.id === source.id ? "BUY" : "SKIP" })),
+      sufficiency: () => ({ sufficient: false, rationale: "remaining gap", perClaim: [{ claim: "the sub-claim", coverage: 0.2, coveredBy: [] }] }),
+      reevaluate: reeval,
+    });
+    const d = deps([source, other], engine, gateway); d.db.listPublicReferences = async () => [publicRef()];
+    const { run } = await drive({ question: "Evidence gaps", budget: 0.03, researchMode: "deep",
+      executionLimits: { attentionLimit: 2, reevaluateRounds: 1 } }, d);
+    expect(reeval).toHaveBeenCalledTimes(1); expect(gateway.fetchCalls).toEqual([source.id]);
+    expect(run.evidence?.map(item => item.sourceId)).toContain("public:free");
+    expect(d.db.payments.filter(payment => payment.kind === "fetch").reduce((sum, payment) => sum + payment.amountUsdc, 0)).toBeCloseTo(fetchBudget(0.03), 8);
+  });
+  it("excludes a persisted synthetic benchmark and a mixed source's synthetic item from ordinary real research", async () => {
+    const source = makeSource({ id: "renamed-publication", name: "Production research", evidenceProvenance: "synthetic-demo" });
+    const mixed = makeSource({ id: "mixed-publication", name: "Unrelated name" });
+    const item: SourceItem = { id: "11203a0e-e458-421d-9722-a6a243f1f779", sourceId: mixed.id,
+      title: "Measuring x402 settlement latency on Arc", summary: "Synthetic latency fixture", link: "https://real-domain.test/article",
+      content: "We measured median 178ms, p95 240ms", evidenceProvenance: "synthetic-demo" };
+    const gateway = fakeGateway(), engine = fakeEngine();
+    const d = deps([source, mixed], engine, gateway, { items: { [mixed.id]: [item] } });
+    const { run } = await drive({ question: "What empirical Arc settlement latency was measured?" }, d);
+    expect(gateway.fetchCalls).toEqual([]); expect(gateway.citationCalls).toEqual([]);
+    expect(run.citations).toEqual([]); expect(run.answer).not.toContain("178ms"); expect(run.answer).not.toContain("240ms");
+    expect(run.claimCoverage?.every(claim => claim.coverage === 0)).toBe(true);
+  });
+  it("retains explicitly offline demo citations and simulated rewards with illustrative labels and zero factual coverage", async () => {
+    const source = makeSource({ id: "demo", evidenceProvenance: "synthetic-demo" });
+    const item: SourceItem = { id: "fixture-demo", sourceId: source.id, title: "Authored benchmark pair", summary: "Illustrative benchmark",
+      link: "https://fixture.test/article", content: "Illustrative measured median 178ms, p95 240ms; conflicting scenario is 900ms.", evidenceProvenance: "synthetic-demo" };
+    const gateway = { ...fakeGateway(), mode: "offline" as const };
+    const originalFetch = gateway.payFetch.bind(gateway), originalCitation = gateway.payCitation.bind(gateway);
+    gateway.payFetch = async request => { const result = await originalFetch(request); return { ...result, payment: { ...result.payment, settled: false, settlementStatus: "simulated", txHash: null } }; };
+    gateway.payCitation = async request => ({ ...await originalCitation(request), settled: false, settlementStatus: "simulated", txHash: null });
+    const engine = fakeEngine({ synthesize: input => ({ answer: `${input.gathered[0].text} [S1]`, citedMarkers: ["S1"],
+      evidence: [{ claimIndex: 0, marker: "S1", quote: input.gathered[0].text, support: 0.9 }] }) });
+    const d = deps([source], engine, gateway, { items: { [source.id]: [item] } });
+    const { run } = await drive({ question: "Illustrate demo settlements", budget: 0.03 }, d);
+    expect(run.answer).toContain("Illustrative demo content"); expect(run.answer).toContain("178ms"); expect(run.answer).toContain("900ms");
+    expect(run.citations[0]?.evidenceProvenance).toBe("synthetic-demo"); expect(gateway.citationCalls.length).toBeGreaterThan(0);
+    expect(run.claimCoverage?.[0].coverage).toBe(0); expect(run.evidence?.[0].qualifiesForAnswer).toBe(false);
+    expect(run.paymentMode).toBe("offline"); expect(d.db.payments.every(payment => payment.settlementStatus === "simulated")).toBe(true);
+  });
+});
+
+
+it("retains a fully qualified paid draft and the exact existing citation allocation", async () => {
+  const source = makeSource({ id: "qualified-paid", fetchPrice: 0.004 });
+  const engine = fakeEngine({ synthesize: input => ({ answer: "Qualified paid draft [S1].", citedMarkers: ["S1"],
+    evidence: [{ claimIndex: 0, marker: "S1", quote: input.gathered[0].text, support: 0.9 }] }) });
+  const gateway = fakeGateway(), d = deps([source], engine, gateway);
+  const { run } = await drive({ question: "Qualified paid question", budget: 0.03 }, d);
+  expect(run.answer).toBe("Qualified paid draft [S1].");
+  expect(run.citations).toHaveLength(1); expect(run.citations[0].reward).toBeCloseTo(0.03 * config.citationPoolRatio, 8);
+  expect(d.db.payments.map(payment => [payment.kind, payment.amountUsdc])).toEqual([["fetch", 0.004], ["citation", 0.03 * config.citationPoolRatio]]);
+  expect(run.totalSpent).toBeCloseTo(0.004 + 0.03 * config.citationPoolRatio, 8);
 });

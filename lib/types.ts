@@ -4,6 +4,8 @@
 
 /** A registered content source = a creator (or multi-author publication) that gets paid per citation. */
 export interface Source {
+  /** Trusted catalog classification; settlement never establishes factual authenticity. */
+  evidenceProvenance?: "synthetic-demo";
   /** Sticky distribution-rights enrollment; unsupported backends must refuse paid activation. */
   scholarlyEnrolled?: boolean;
   id: string;
@@ -86,6 +88,7 @@ export interface ContentReceiptRef {
 
 /** A content item belonging to a source (ingested from RSS). Preview is free; content is paid. */
 export interface SourceItem {
+  evidenceProvenance?: "synthetic-demo";
   id: string;
   sourceId: string;
   title: string;
@@ -110,6 +113,7 @@ export interface SourceItem {
 
 /** Immutable identity for the exact article version the agent evaluated and purchased. */
 export interface SourceItemIdentity {
+  evidenceProvenance?: "synthetic-demo";
   /** Observed provider metadata; never creator identity or payout authority. */
   scholarly?: ScholarlyMetadata;
   webProvenance?: {

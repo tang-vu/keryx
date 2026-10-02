@@ -1,5 +1,6 @@
 import { ARC_TESTNET_PROFILE } from "../arc-network-profile";
 import { storagePaymentProfile } from "./storage-identity";
+import { projectRecordedEvidenceProvenanceList, projectRecordedEvidenceProvenance, type EvidenceProvenanceLookup } from "../research/evidence-provenance";
 import { publicReferenceSchema, type PublicReference } from "../public-references/catalog";
 import type { StorageDeploymentManifest } from "./runtime-storage-config";
 import { SupabaseAuthority } from "./supabase-authority";
@@ -299,9 +300,19 @@ export class SupabaseAdapter implements KeryxDB {
       active: s.active !== false, // treat undefined as true
       verified: s.verified !== false, // treat undefined as true (grandfather curated/seed rows)
       preview_depth: s.previewDepth ?? null,
+      evidence_provenance: s.evidenceProvenance ?? null,
       onchain_id: s.onchainId ?? null,
       register_tx: s.registerTx ?? null,
     } }, (_args) => this.#sb.from("sources").upsert(_args.p_row));
+  }
+
+  async verifySourceIfUnchanged(input: { sourceId: string; walletAddress: string; feedUrl: string }): Promise<boolean> {
+    if (!input.sourceId || input.sourceId.length > 256 || !/^0x[0-9a-f]{40}$/i.test(input.walletAddress) || !input.feedUrl || input.feedUrl.length > 4096)
+      throw new Error("Invalid source verification identity");
+    const { data, error } = await this.domainCall("verify_source_if_unchanged", { p_source_id: input.sourceId,
+      p_wallet_address: input.walletAddress.toLowerCase(), p_feed_url: input.feedUrl }, args => this.#sb.rpc("verify_source_if_unchanged", args));
+    if (error || typeof data !== "boolean") throw new Error("Source verification update unavailable");
+    return data;
   }
 
   // No public-reference schema is deployed on Supabase. Public catalog writes fail closed;
@@ -452,6 +463,7 @@ export class SupabaseAdapter implements KeryxDB {
         manifest_nonce: i.manifest?.nonce ?? null,
         manifest_signature: i.manifest?.signature ?? null,
         manifest_created_at: i.manifest?.createdAt ?? null,
+        evidence_provenance: i.evidenceProvenance ?? null,
       })) }, (_args) => this.#sb.from("source_items").upsert(
       _args.p_row,
     ));
@@ -464,6 +476,7 @@ export class SupabaseAdapter implements KeryxDB {
       .eq("source_id", _args.p_source_id)
       .order("published_at", { ascending: false }));
     return (data ?? []).map((r) => ({
+      evidenceProvenance: r.evidence_provenance === "synthetic-demo" ? "synthetic-demo" : undefined,
       id: r.id,
       sourceId: r.source_id,
       title: r.title,
@@ -889,13 +902,31 @@ export class SupabaseAdapter implements KeryxDB {
     } }, (_args) => this.#sb.from("query_runs").upsert(_args.p_row));
   }
 
+  private async readEvidenceProvenance(lookup: EvidenceProvenanceLookup): Promise<ReadonlySet<string>> {
+    const flags = new Set<string>();
+    for (let offset = 0; offset < Math.max(lookup.sourceIds.length, lookup.itemIds.length); offset += 500) {
+      const p_source_ids = lookup.sourceIds.slice(offset, offset + 500), p_item_ids = lookup.itemIds.slice(offset, offset + 500);
+      if ([...p_source_ids, ...p_item_ids].some(id => id.length > 256)) throw new Error("Invalid provenance lookup identity");
+      const { data, error } = await this.domainCall("read_evidence_provenance", { p_source_ids, p_item_ids }, async args => {
+        const [sources, items] = await Promise.all([
+          args.p_source_ids.length ? this.#sb.from("sources").select("id").eq("evidence_provenance", "synthetic-demo").in("id", args.p_source_ids) : Promise.resolve({ data: [], error: null }),
+          args.p_item_ids.length ? this.#sb.from("source_items").select("id,source_id").eq("evidence_provenance", "synthetic-demo").in("id", args.p_item_ids) : Promise.resolve({ data: [], error: null }),
+        ]);
+        return { data: sources.error || items.error ? null : [...(sources.data ?? []).map(row => `source:${row.id}`), ...(items.data ?? []).map(row => `item:${row.source_id}:${row.id}`)], error: sources.error ?? items.error };
+      });
+      if (error || !Array.isArray(data) || data.length > 1000 || data.some(value => typeof value !== "string")) throw new Error("Evidence provenance unavailable");
+      for (const flag of data) flags.add(flag);
+    }
+    return flags;
+  }
+
   async listFollowUps(parentId: string): Promise<QueryRun[]> {
     const { data } = await this.domainCall("list_follow_ups", { p_parent_id: parentId }, (_args) => this.#sb
       .from("query_runs")
       .select("data")
       .eq("parent_id", _args.p_parent_id)
       .order("created_at", { ascending: true }));
-    return (data ?? []).map((r) => r.data as QueryRun);
+    return projectRecordedEvidenceProvenanceList(lookup => this.readEvidenceProvenance(lookup), (data ?? []).map((r) => r.data as QueryRun));
   }
 
   async listQueryRunsByAsker(wallet: string, limit: number): Promise<QueryRun[]> {
@@ -905,12 +936,12 @@ export class SupabaseAdapter implements KeryxDB {
       .eq("asker", _args.p_asker)
       .order("created_at", { ascending: false })
       .limit(_args.p_limit));
-    return (data ?? []).map((r) => r.data as QueryRun);
+    return projectRecordedEvidenceProvenanceList(lookup => this.readEvidenceProvenance(lookup), (data ?? []).map((r) => r.data as QueryRun));
   }
 
   async getQueryRun(id: string): Promise<QueryRun | null> {
     const { data } = await this.domainCall("get_query_run", { p_id: id }, (_args) => this.#sb.from("query_runs").select("data").eq("id", _args.p_id).maybeSingle());
-    return (data?.data as QueryRun) ?? null;
+    return data?.data ? projectRecordedEvidenceProvenance(lookup => this.readEvidenceProvenance(lookup), data.data as QueryRun) : null;
   }
 
   async listRecentQueries(limit: number): Promise<QueryRun[]> {
@@ -919,11 +950,11 @@ export class SupabaseAdapter implements KeryxDB {
       .select("data")
       .order("created_at", { ascending: false })
       .limit(_args.p_limit));
-    return (data ?? []).map((r) => r.data as QueryRun);
+    return projectRecordedEvidenceProvenanceList(lookup => this.readEvidenceProvenance(lookup), (data ?? []).map((r) => r.data as QueryRun));
   }
 
-  iterateRecentQueries(limit: number): AsyncIterable<QueryRun> {
-    return iterateSupabaseRecentQueries(this.helperRpcClient(), limit);
+  async *iterateRecentQueries(limit: number): AsyncIterable<QueryRun> {
+    for await (const run of iterateSupabaseRecentQueries(this.helperRpcClient(), limit)) yield await projectRecordedEvidenceProvenance(lookup => this.readEvidenceProvenance(lookup), run);
   }
 
   async recordPayment(p: PaymentRecord): Promise<void> {
@@ -2055,6 +2086,7 @@ export class SupabaseAdapter implements KeryxDB {
 
 function rowToSource(r: Record<string, unknown>): Source {
   return {
+    evidenceProvenance: r.evidence_provenance === "synthetic-demo" ? "synthetic-demo" : undefined,
     id: r.id as string,
     name: r.name as string,
     url: r.url as string,
@@ -2079,6 +2111,7 @@ function rowToSource(r: Record<string, unknown>): Source {
 
 function rowToSourceItem(r: Record<string, unknown>): SourceItem {
   return {
+    evidenceProvenance: r.evidence_provenance === "synthetic-demo" ? "synthetic-demo" : undefined,
     id: r.id as string,
     sourceId: r.source_id as string,
     title: r.title as string,

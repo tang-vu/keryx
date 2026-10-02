@@ -16,6 +16,7 @@
  * tier exactly as the site's anonymous asker does, and creators are still really paid on-chain.
  */
 
+import { isRequestObject } from "@/lib/request-object";
 import { NextRequest } from "next/server";
 import { collectRun } from "@/lib/agent";
 import { resolveModelChoice } from "@/lib/llm";
@@ -27,6 +28,7 @@ import { checkRateLimit, clientIp } from "@/lib/rate-limit";
 import {
   type ChatCompletionRequest,
   lastUserQuestion,
+  validChatMessages,
   buildCompletion,
   buildAnswerContent,
   buildChunk,
@@ -61,6 +63,10 @@ export function OPTIONS() {
 }
 
 export async function POST(req: NextRequest) {
+  const parsedBody: unknown = await req.json().catch(() => null);
+  if (!isRequestObject(parsedBody)) return openaiError("request body must be a JSON object", 400, "invalid_request");
+  if (!validChatMessages(parsedBody.messages)) return openaiError("messages must be a non-empty array of message objects with valid content", 400, "invalid_request");
+  const body = parsedBody as unknown as ChatCompletionRequest;
   const authHeader = req.headers.get("authorization");
   const rawKey = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : undefined;
 
@@ -94,7 +100,6 @@ export async function POST(req: NextRequest) {
     if (limited) return limited;
   }
 
-  const body = (await req.json().catch(() => ({}))) as ChatCompletionRequest;
   if (body.scholarly !== undefined && typeof body.scholarly !== "boolean") return openaiError("scholarly must be a boolean", 400, "invalid_request");
   if (body.mode !== undefined && body.mode !== "quick" && body.mode !== "deep") return openaiError("mode must be quick or deep", 400, "invalid_request");
   const parsedQuestion = parseAskQuestion(lastUserQuestion(body.messages));

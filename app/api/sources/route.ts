@@ -59,6 +59,7 @@ function toPublicSource(s: Source) {
     // The register page needs it back to pre-fill a claim for a pre-registry row.
     rssUrl: s.rssUrl,
     description: s.description,
+    evidenceProvenance: s.evidenceProvenance,
     tags: s.tags,
     fetchPrice: s.fetchPrice,
     walletAddress: s.walletAddress,

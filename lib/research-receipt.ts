@@ -1,3 +1,4 @@
+import { demoteSyntheticEvidence } from "./research/evidence-provenance";
 /**
  * Portable, integrity-checkable projection of one completed Keryx dispatch.
  *
@@ -127,6 +128,7 @@ function projectClaims(run: QueryRun): ReceiptClaim[] {
 }
 
 export function buildResearchReceipt(run: QueryRun, payments: PaymentRecord[], funding?: ResearchReceiptPayload["funding"]): ResearchReceipt {
+  run = demoteSyntheticEvidence(run);
   const confidence = deriveConfidence(run);
   const payload: ResearchReceiptPayload = {
     schema: RESEARCH_RECEIPT_SCHEMA,
@@ -158,7 +160,12 @@ export function buildResearchReceipt(run: QueryRun, payments: PaymentRecord[], f
       rationale: citation.rationale,
       ...receiptAsset(citation),
     })),
-    settlement: projectReceiptSettlement(run, payments),
+    settlement: projectReceiptSettlement(run, payments.map(payment => {
+      const classified = [...run.citations, ...run.decisions, ...(run.evidence ?? [])].some(reference =>
+        reference.evidenceProvenance === "synthetic-demo" && reference.sourceId === payment.sourceId &&
+        (!reference.itemId || reference.itemId === payment.itemId));
+      return classified ? { ...payment, evidenceProvenance: "synthetic-demo" as const } : payment;
+    })),
     limits: [
       "The SHA-256 detects payload changes when its original digest is retained separately; the self-check alone is not a Keryx or creator signature.",
       "Only creator payment rows carrying Circle settlement evidence appear in settled totals.",

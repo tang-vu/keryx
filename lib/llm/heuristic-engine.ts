@@ -1,3 +1,4 @@
+import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
 /**
  * HeuristicEngine — deterministic, offline reasoning. No API key required.
  *
@@ -60,7 +61,8 @@ export class HeuristicEngine implements ReasoningEngine {
       .split(/\?|;|\band\b|\bvs\.?\b|,/i)
       .map((p) => p.trim())
       .filter((p) => tokenize(p).size >= 2);
-    const claims = parts.length > 1 ? parts.slice(0, 4) : [question.trim()];
+    if (parts.length > MAX_RESEARCH_TARGETS) throw new Error(`Research request exceeds ${MAX_RESEARCH_TARGETS} bounded targets; narrow the requested scope.`);
+    const claims = parts.length > 1 ? parts : [question.trim()];
     return claims.map((c) => (c.endsWith("?") ? c : c + "?").replace(/\?+$/, "?"));
   }
 
@@ -150,7 +152,7 @@ export class HeuristicEngine implements ReasoningEngine {
     });
 
     const gaps = claims.filter((c) => c.coverage < 0.4);
-    if (gaps.length === 0 || input.skippedSources.length === 0 || input.remainingBudget <= 0) {
+    if (gaps.length === 0 || input.skippedSources.length === 0) {
       return {
         claims,
         shouldBuyMore: false,
@@ -173,11 +175,11 @@ export class HeuristicEngine implements ReasoningEngine {
         price: s.price,
         score: overlap(gapTokens, tokenize(`${s.name} ${s.preview}`)),
       }))
-      .filter((s) => s.score > 0.05 && s.price <= input.remainingBudget)
-      .sort((a, b) => b.score / b.price - a.score / a.price);
+      .filter((s) => s.score > 0.05 && (s.price === 0 || s.price <= input.remainingBudget))
+      .sort((a, b) => b.score / Math.max(b.price, 0.000001) - a.score / Math.max(a.price, 0.000001));
 
     // Pick affordable sources greedily
-    let budget = input.remainingBudget;
+    let budget = Math.max(0, input.remainingBudget);
     const picked: string[] = [];
     for (const s of ranked) {
       if (s.price > budget) continue;

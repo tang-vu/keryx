@@ -1,5 +1,7 @@
 "use client";
 
+import { demoteSyntheticEvidence } from "@/lib/research/evidence-provenance";
+
 /**
  * §II · The reading — the grounded answer set as a printed page: Spectral body
  * with footnote citation markers, a footnotes apparatus where each one pays its
@@ -23,6 +25,7 @@ import { ResearchCitationExport } from "./research-citation-export";
 import { EvidenceMatrixExport } from "./evidence-matrix-export";
 
 export function AnswerCard({ run, meta, permalink, payments = [] }: { run: QueryRun; meta: AskMeta | null; permalink?: string; payments?: PaymentRecord[] }) {
+  run = demoteSyntheticEvidence(run);
   const [highlight, setHighlight] = useState<string | null>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
   const openCitation = useCallback((marker: string, trigger: HTMLElement) => {
@@ -126,6 +129,7 @@ export function AnswerCard({ run, meta, permalink, payments = [] }: { run: Query
                             {c.itemPublishedAt ? ` · ${c.itemPublishedAt.slice(0, 10)}` : ""}
                           </span>
                         ) : null}
+                        {c.evidenceProvenance === "synthetic-demo" && <span className="block text-sm text-seal">Synthetic demo content ? illustrative only</span>}
                         {isPublicReference && (
                           <span className="mt-1 block font-mono text-[10px] text-ink-3">
                             Free public reference · no creator payment

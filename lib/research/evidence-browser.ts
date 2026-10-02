@@ -9,6 +9,7 @@ const sourceSchema = z.object({
   description: z.string().max(10_000),
   tags: z.array(z.string().max(1000)).max(100),
   verified: z.boolean().optional(),
+  evidenceProvenance: z.literal("synthetic-demo").optional(),
 });
 export type EvidenceSource = z.infer<typeof sourceSchema>;
 export const evidencePageSchema = z.object({
@@ -24,6 +25,7 @@ export const evidencePreviewSchema = z.object({
     title: z.string().max(10_000),
     summary: z.string().max(100_000).optional(),
     itemPublishedAt: z.string().max(100).optional(),
+    evidenceProvenance: z.literal("synthetic-demo").optional(),
   })).max(5),
 });
 export type EvidencePreview = z.infer<typeof evidencePreviewSchema>;

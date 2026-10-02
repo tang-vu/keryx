@@ -1,3 +1,5 @@
+import { demoteSyntheticEvidence } from "./research/evidence-provenance";
+import { isRequestObject } from "./request-object";
 import { surfaceResearch } from "./research/surface-result";
 /**
  * OpenAI Chat Completions ↔ Keryx mappers (pure, side-effect free).
@@ -35,6 +37,15 @@ export interface ChatCompletionRequest {
   mode?: "quick" | "deep";
 }
 
+/** Validate every entry, including earlier turns that are not used as the question. */
+export function validChatMessages(value: unknown): value is ChatMessage[] {
+  return Array.isArray(value) && value.length > 0 && value.every(message =>
+    isRequestObject(message) && typeof message.role === "string" &&
+    (typeof message.content === "string" || message.content === null ||
+      Array.isArray(message.content) && message.content.every(part => isRequestObject(part) &&
+        typeof part.type === "string" && (part.type !== "text" || typeof part.text === "string"))));
+}
+
 /** Flatten a message's content to plain text (handles the string form and the vision array form). */
 function contentText(content: ChatMessage["content"]): string {
   if (typeof content === "string") return content;
@@ -53,7 +64,7 @@ function contentText(content: ChatMessage["content"]): string {
  * replayed — Keryx answers the current ask from paid sources, not from conversation memory.
  */
 export function lastUserQuestion(messages: ChatMessage[] | undefined): string {
-  if (!Array.isArray(messages) || messages.length === 0) return "";
+  if (!validChatMessages(messages)) return "";
   for (let i = messages.length - 1; i >= 0; i--) {
     if (messages[i]!.role === "user") {
       const t = contentText(messages[i]!.content);
@@ -96,6 +107,7 @@ function citationsFooter(run: QueryRun): string {
 
 /** Assistant message body = the grounded answer plus the creators-paid footer. */
 export function buildAnswerContent(run: QueryRun): string {
+  run = demoteSyntheticEvidence(run);
   return run.answer + citationsFooter(run);
 }
 

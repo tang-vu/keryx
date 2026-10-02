@@ -1,3 +1,4 @@
+import { demoteSyntheticEvidence } from "../research/evidence-provenance";
 import { surfaceResearch } from "../research/surface-result";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
@@ -19,6 +20,7 @@ export interface RemoteMcpAccess {
 type ResearchRunner = typeof collectRun;
 
 export function remoteResearchResult(run: QueryRun) {
+  run = demoteSyntheticEvidence(run);
   return {
     queryId: run.id,
     answer: run.answer,

@@ -16,6 +16,7 @@
  * the existing behavior is fully preserved.
  */
 
+import { isRequestObject } from "@/lib/request-object";
 import { NextRequest } from "next/server";
 import { BROWSER_AUTHORIZATION_PROTOCOL } from "@/lib/payments/browser-authorization-protocol";
 import { getSession } from "@/lib/auth";
@@ -41,17 +42,10 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
-  const body = (await req.json().catch(() => ({}))) as {
-    question?: unknown;
-    budget?: unknown;
-    sessionId?: unknown;
-    browserAuthorizationProtocol?: unknown;
-    parentId?: unknown;
-    model?: unknown;
-    mode?: unknown;
-    scholarly?: unknown;
-    paidScholarly?: unknown;
-  };
+  const body: unknown = await req.json().catch(() => null);
+  if (!isRequestObject(body)) {
+    return Response.json({ error: "request body must be a JSON object" }, { status: 400 });
+  }
   // Model pick from the UI's picker. Validated inside getAgentDeps → resolveModelChoice:
   // unknown/unconfigured ids silently run the default engine, and every pick has a
   // Configured-provider → heuristic fallback chain, so a crafted value can never fail an ask.
