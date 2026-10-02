@@ -61,6 +61,9 @@ jobs:
       - name: Install Chromium for unit and browser checks
         run: npx playwright install --with-deps chromium
 
+      - name: Synthetic research provenance (isolated PostgreSQL 17, synthetic data)
+        run: node --import tsx scripts/test-synthetic-provenance-postgres.mts
+
       - name: Unit tests (economic invariants)
         run: npm test
 
@@ -77,9 +80,6 @@ jobs:
         run: node --import tsx scripts/test-research-monthly-postgres.mts
       - name: Browser authorization admission (isolated PostgreSQL, synthetic data)
         run: node --import tsx scripts/test-browser-authorization-postgres.mts
-
-      - name: Synthetic research provenance (isolated PostgreSQL 17, synthetic data)
-        run: node --import tsx scripts/test-synthetic-provenance-postgres.mts
 
       - name: Withdrawal backup and recovered copy (Linux CLI, synthetic data)
         run: node --import tsx --no-warnings scripts/test-withdrawal-backup-restore.mts
