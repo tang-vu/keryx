@@ -2,7 +2,9 @@
 
 ### 2026-10-02 - Preserve recovered sessions during stale revocation
 
-- Atomically revoke only the captured grant epoch and signer. Concurrent recovery
+- Bind strict browser requests to their initial session ID, epoch and signer;
+  older missing-payload callers require refresh and recovery. Atomically revoke
+  only that expected tuple. Delayed requests and concurrent recovery
   returns a conflict without deleting its replacement. Journal mode retains
   exposed authorizations, historical spend and cumulative signer capacity.
 - Pause browser signing while revocation is uncertain. Conflicts, outages and

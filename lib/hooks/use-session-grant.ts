@@ -4,6 +4,7 @@ import { readGatewayCredit } from "../gateway/read-credit";
 import { createSessionGrantClock } from "../session-grant-time";
 import { watchSessionGrantClock } from "../session-grant-liveness";
 import { readBoundedJson } from "../read-bounded-json";
+import { sessionRevokeRequestSchema } from "../session-revoke-request";
 
 /**
  * useSessionGrant — manages the browser-side session key lifecycle.
@@ -498,10 +499,14 @@ export function useSessionGrant() {
    * wallet (GrantSpendDialog), not the session key — which is why burning the key here is safe.
    */
   const revoke = useCallback(async (): Promise<{ residualUsdc: number; sessAddr: string | null }> => {
+    const expected = { sessionId: state.sessionId, grantEpoch: state.grantEpoch, sessAddr: state.sessAddr };
     const generation = ++registration.current; grantClock.current = null; signingPaused.current = true;
     setState((s) => ({ ...s, status: "revoking" }));
     try {
-      const res = await fetch("/api/session/revoke", { method: "POST", credentials: "same-origin", cache: "no-store", redirect: "error" });
+      const parsed = sessionRevokeRequestSchema.safeParse(expected);
+      if (!parsed.success) throw new Error("Session identity unavailable. Recover the retained session before revoking again.");
+      const res = await fetch("/api/session/revoke", { method: "POST", credentials: "same-origin", cache: "no-store", redirect: "error",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify(parsed.data) });
       const data = await readBoundedJson(res, 8192) as { ok?: boolean; alreadyRevoked?: boolean; sessAddr?: string; residualUsdc?: number };
       if (!res.ok || data?.ok !== true || (data.alreadyRevoked !== true &&
           (data.sessAddr?.toLowerCase() !== state.sessAddr?.toLowerCase() ||
@@ -525,7 +530,7 @@ export function useSessionGrant() {
       if (generation === registration.current) setState((s) => ({ ...s, status: "paused", error: message }));
       return { residualUsdc: 0, sessAddr: state.sessAddr };
     }
-  }, [state.sessAddr, signer]);
+  }, [state.sessionId, state.grantEpoch, state.sessAddr, signer]);
 
   return {
     state,

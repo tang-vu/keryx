@@ -26,7 +26,8 @@ function admission(): BrowserJournalAdmission {
     payment: { kind: "fetch", queryId: "synthetic-query", sourceId: "synthetic-source", sourceName: "Synthetic",
       payer: signer, payee, amountUsdc: 0.002, network: requirements.network, grantEpoch: "old" } };
 }
-const request = () => new NextRequest("https://synthetic.example/api/session/revoke", { method: "POST" });
+const request = (body: unknown = { sessionId: owner, grantEpoch: "old", sessAddr: signer }) =>
+  new NextRequest("https://synthetic.example/api/session/revoke", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 beforeEach(async () => {
   folder = mkdtempSync(join(tmpdir(), "keryx-revoke-generation-"));
   state.db = new SqliteAdapter(join(folder, "state.sqlite")); await state.db.init();
@@ -53,6 +54,41 @@ it.each([false, true])("old revoke cannot remove a concurrent recovered epoch (j
   expect((await getGrant(owner))?.grantEpoch).toBe("replacement");
   if (active) { expect(await state.db.getBrowserJournal(owner, "original")).toEqual(originalJournal);
     expect(replacement?.spent).toBe(0.002); }
+});
+it.each([false, true])("old request arriving after recovery cannot adopt the current epoch (journal=%s)", async active => {
+  if (active) { await state.db.activateBrowserJournal(); await state.db.admitBrowserJournal(admission()); await state.db.exposeBrowserJournal(owner, "original"); }
+  const delayed = request();
+  const original = active ? await state.db.getBrowserJournal(owner, "original") : null;
+  await second.upsertSessionGrant(grant("replacement"));
+  const replacement = await second.getSessionGrant(owner);
+  const response = await POST(delayed);
+  expect(response.status).toBe(409); expect(response.headers.get("Cache-Control")).toBe("no-store");
+  expect(await second.getSessionGrant(owner)).toEqual(replacement);
+  if (active) { expect(await state.db.getBrowserJournal(owner, "original")).toEqual(original); expect(replacement?.spent).toBe(0.002); }
+});
+it("missing payload requires refresh and retains the grant", async () => {
+  const response = await POST(new NextRequest("https://synthetic.example/api/session/revoke", { method: "POST" }));
+  expect(response.status).toBe(428); expect(await response.json()).toMatchObject({ error: "session_upgrade_required" });
+  expect((await state.db.getSessionGrant(owner))?.grantEpoch).toBe("old");
+});
+it.each([null, [], {}, { sessionId: owner, sessAddr: signer },
+  { sessionId: owner, grantEpoch: "", sessAddr: signer }, { sessionId: owner, grantEpoch: "x".repeat(129), sessAddr: signer },
+  { sessionId: owner, grantEpoch: "old", sessAddr: "invalid" }, { sessionId: owner, grantEpoch: "old", sessAddr: signer, unknown: true }])("malformed captured identity is refused without mutation (%j)", async body => {
+  expect((await POST(request(body))).status).toBe(400);
+  expect((await state.db.getSessionGrant(owner))?.grantEpoch).toBe("old");
+});
+it("foreign expected owner is refused without disclosing or revoking its authority", async () => {
+  expect((await POST(request({ sessionId: payee, grantEpoch: "old", sessAddr: signer }))).status).toBe(403);
+  expect((await state.db.getSessionGrant(owner))?.grantEpoch).toBe("old");
+});
+it.each(["{", " ".repeat(2049)])("invalid or oversized actual request bytes refuse without mutation", async body => {
+  const response = await POST(new NextRequest("https://synthetic.example/api/session/revoke", { method: "POST", headers: { "Content-Type": "application/json" }, body }));
+  expect(response.status).toBe(400); expect(response.headers.get("Cache-Control")).toBe("no-store");
+  expect((await state.db.getSessionGrant(owner))?.grantEpoch).toBe("old");
+});
+it("a different expected signer cannot adopt the current grant", async () => {
+  expect((await POST(request({ sessionId: owner, grantEpoch: "old", sessAddr: payee }))).status).toBe(409);
+  expect((await state.db.getSessionGrant(owner))?.grantEpoch).toBe("old");
 });
 
 it("matching revoke disables admission and preserves original exposed debit through replacement and reopen", async () => {

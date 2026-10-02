@@ -1,8 +1,13 @@
 # Session grant revocation and recovery
 
 The browser pauses payment signing before asking the server to revoke its session.
-The server authenticates the owner, captures the current grant, then atomically
-matches its session ID, grant epoch and signer when disabling it. If recovery has
+Its strict JSON payload contains the session ID, grant epoch and signer captured
+at browser request initiation. The server authenticates that owner and atomically
+matches the expected tuple when disabling it. A delayed request never adopts
+a replacement found after recovery. Missing payload returns `428
+session_upgrade_required`; refresh and deliberate recovery are required. Invalid
+or foreign identities refuse without mutation. A valid tuple retains no-current-
+grant idempotency. If recovery has
 replaced that grant, the old request returns `409 session_changed`; the replacement
 remains usable. The browser preserves its encrypted custody and wrapping key,
 shows a paused state, and requires deliberate recovery before signing again.

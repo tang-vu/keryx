@@ -27,7 +27,7 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
   const masterKey = randomBytes(32).toString("hex");
   const docker = (args: string[], input?: string, timeout = 30_000) => execFileSync("docker", args,
     { input, encoding: "utf8", timeout, maxBuffer: 12 * 1024 * 1024, stdio: ["pipe", "pipe", "pipe"] });
-  const sql = (statement: string) => docker(["exec", "-i", postgresContainer, "psql", "-U", "postgres",
+  const sql = (statement: string) => docker(["exec", "-i", postgresContainer, "psql", "-h", "127.0.0.1", "-U", "postgres",
     "--dbname", database, "-v", "ON_ERROR_STOP=1", "-q", "-t", "-A"],
   `set statement_timeout='10s';set lock_timeout='5s';${statement}`).trim();
   const literal = (value: unknown) => `'${JSON.stringify(value).replaceAll("'", "''")}'::jsonb`;
@@ -108,19 +108,20 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
     // Actual enrollment and migration guard in different PostgreSQL sessions.
     // Refresh waits for publication, then refuses without changing its snapshot.
     const concurrentOwnerSql = (statement: string, hold = false) => {
-      const child = execFile("docker", ["exec", "-i", postgresContainer, "psql", "-U", "postgres",
+      const child = execFile("docker", ["exec", "-i", postgresContainer, "psql", "-h", "127.0.0.1", "-U", "postgres",
         "--dbname", database, "-v", "ON_ERROR_STOP=1", "-q", "-t", "-A"],
       { encoding: "utf8", timeout: 20_000, maxBuffer: 12 * 1024 * 1024 });
+      let completed: { ok: boolean; output: string; diagnostic: string } | undefined;
       const result = new Promise<{ ok: boolean; output: string; diagnostic: string }>(resolve => {
         let output = "", diagnostic = "";
         child.stdout?.on("data", value => { output += value; });
         child.stderr?.on("data", value => { diagnostic += value; });
-        child.on("error", () => resolve({ ok: false, output, diagnostic: "owner-process-error" }));
-        child.on("close", code => resolve({ ok: code === 0, output: output.trim(), diagnostic }));
+        child.on("error", () => { completed = { ok: false, output, diagnostic: "owner-process-error" }; resolve(completed); });
+        child.on("close", code => { completed = { ok: code === 0, output: output.trim(), diagnostic }; resolve(completed); });
       });
       child.stdin?.write(`set statement_timeout='15s';${statement}\n`);
       if (!hold) child.stdin?.end();
-      return { child, result };
+      return { child, result, completed: () => completed };
     };
     const enrollment = concurrentOwnerSql(`begin;set local application_name='keryx-revoke-enrollment';
       select keryx_storage.enroll(${literal(identity)},'${before}');
@@ -129,7 +130,17 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
     try {
       const deadline = performance.now() + 10_000;
       while (sql("select exists(select 1 from pg_stat_activity where datname=current_database() and application_name='keryx-revoke-enrollment' and state='idle in transaction')") !== "t") {
-        assert(performance.now() < deadline, "Actual enrollment reached its precommit boundary");
+        const exited = enrollment.completed();
+        if (exited) {
+          // This owned empty fixture contains no custody. Print only one bounded
+          // ERROR line, never PostgreSQL's repeated statement/body diagnostics.
+          const diagnostic = exited.diagnostic.split("\n").find(line => /^ERROR:/.test(line))?.slice(0, 240) ?? "owner process exited";
+          throw new Error(`Actual enrollment exited before publication: ${diagnostic}`);
+        }
+        if (performance.now() >= deadline) {
+          const state = sql("select coalesce(jsonb_agg(jsonb_build_object('state',state,'waitType',wait_event_type,'wait',wait_event))::text,'[]') from pg_stat_activity where datname=current_database() and application_name='keryx-revoke-enrollment'");
+          throw new Error(`Actual enrollment precommit boundary unavailable: ${state}`);
+        }
         await new Promise(resolve => setTimeout(resolve, 50));
       }
       const migrationStart = migrationSql.indexOf("-- Generation-aware session revocation.");

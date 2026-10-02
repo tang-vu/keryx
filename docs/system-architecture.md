@@ -634,7 +634,7 @@ See `docs/security-threat-model.md` for full matrix.
 | GET `/api/metrics` | public | Aggregate traction |
 | POST `/api/session/grant` | JWT | Create session grant |
 | GET `/api/session/credit` | JWT | Check grant balance |
-| POST `/api/session/revoke` | JWT | Withdraw residual, revoke grant |
+| POST `/api/session/revoke` | JWT | Strict captured `{sessionId, grantEpoch, sessAddr}` JSON; atomic revoke,409 replacement conflict,428 older-client refresh; residual is advisory |
 | GET `/api/faucet` | public | Testnet USDC drip (2h cooldown per address) |
 | GET `/api/docs` | public | OpenAPI spec (Scalar UI) |
 | GET/POST/DELETE `/mcp` | public or ask-scoped API key | Stateless MCP Streamable HTTP; `research` is budget-clamped and rate-limited |

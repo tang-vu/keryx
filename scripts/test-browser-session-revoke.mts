@@ -49,6 +49,8 @@ try {
         grantEpoch:`epoch-${epoch}`,expiresAt:new Date(now+60000).toISOString(),serverNow:new Date(now).toISOString(),remainingMs:60000,ttlMs:60000}});
     }
     assert.equal(url.pathname,"/api/session/revoke");assert.equal(req.method(),"POST");
+    assert.equal(req.headers()["content-type"], "application/json");
+    assert.deepEqual(req.postDataJSON(), { sessionId: owner, grantEpoch: `epoch-${epoch}`, sessAddr: signer.toLowerCase() }, "Revoke binds identity captured when browser initiates request");
     if(mode==="conflict")return route.fulfill({status:409,json:{error:"session_changed"}});
     if(mode==="outage")return route.fulfill({status:503,json:{error:"unavailable"}});
     if(mode==="malformed")return route.fulfill({json:{ok:false}});
