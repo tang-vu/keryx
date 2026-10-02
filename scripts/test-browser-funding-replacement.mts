@@ -19,7 +19,7 @@ const bundle = await build({ stdin: { contents: `
   createRoot(document.getElementById('root')).render(React.createElement(React.StrictMode,null,
     React.createElement(Harness)));
 `, resolveDir: process.cwd(), loader: "tsx" }, bundle: true, platform: "browser", format: "iife", jsx: "automatic", write: false,
-  define: { "process.env.NODE_ENV": '"development"' }, plugins: [{ name: "wallet-free", setup(b) {
+  define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"development"' }, plugins: [{ name: "wallet-free", setup(b) {
     b.onResolve({ filter: /^wagmi$/ }, () => ({ path: "wagmi", namespace: "fixture" }));
     b.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({ contents: "export const useWalletClient=()=>({});export const usePublicClient=()=>window.fundingChain;" }));
   } }] });
