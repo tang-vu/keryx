@@ -16,6 +16,7 @@ export interface A2aQuote {
   serviceFeeUsdc: number;
   totalPriceUsdc: number;
   refundable: false;
+  funding?: { type: "research-monthly-prepaid"; monthlyId: string; allocationUsdc: number; newInboundPayment: false };
 }
 
 function positiveMicros(value: number): number {

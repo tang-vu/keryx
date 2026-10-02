@@ -18,6 +18,8 @@ export function quoteFromA2aOrder(order: A2aOrder): A2aQuote {
     serviceFeeUsdc: order.serviceFeeUsdc,
     totalPriceUsdc: order.amountUsdc,
     refundable: false,
+    ...(order.request?.monthlyId ? { funding: { type: "research-monthly-prepaid" as const,
+      monthlyId: order.request.monthlyId, allocationUsdc: order.amountUsdc, newInboundPayment: false as const } } : {}),
   };
 }
 
@@ -53,6 +55,7 @@ export function a2aResponseFromRun(
     totalPricePaid: quote.totalPriceUsdc,
     pricing: a2aReceiptEconomics(quote, run.totalToCreators, run.pendingSpendUsdc ?? 0),
     engine: run.engine,
+    ...(quote.funding ? { funding: quote.funding } : {}),
     ...packageReceipt,
   } satisfies Record<string, unknown>;
 }
@@ -63,6 +66,7 @@ export function currentA2aEconomics(order: A2aOrder, attempts: PaymentRecord[]) 
   const pending = evidence.pendingCreatorMicros / 1e6;
   return {
     totalToCreators: settled,
+    ...(order.request?.monthlyId ? { funding: quoteFromA2aOrder(order).funding } : {}),
     pricing: a2aReceiptEconomics(quoteFromA2aOrder(order), settled, pending),
     creatorPayments: {
       attempts: evidence.creatorAttempts,

@@ -49,7 +49,7 @@ describe("remote MCP server", () => {
     await server.connect(serverTransport);
     await client.connect(clientTransport);
     const tools = await client.listTools();
-    expect(tools.tools.map((tool) => tool.name)).toEqual(["research", "keryx_status"]);
+    expect(tools.tools.map((tool) => tool.name)).toEqual(["research", "keryx_status", "research_monthly"]);
 
     const result = await client.callTool({
       name: "research",

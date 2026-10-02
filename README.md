@@ -21,6 +21,11 @@ Windows local Operator alpha: `npm run desktop:install` then `npm run desktop:st
 See the [desktop guide](docs/desktop-alpha.md) for the unpacked app build, offline
 saved results, private Markdown briefs, and limits.
 
+[Research Monthly](docs/research-monthly.md): one Arc-testnet pilot for four Deep
+requests over 30 days, 10% below four separate packages with unchanged creator
+caps. Manual renewal; no scheduling or unlimited use. Failed/pending jobs use a
+slot. Web/API own the entitlement; Monthly CLI and MCP handoffs share that contract.
+
 ## The problem
 
 The web's economics assume a human reader: you write, people visit, attention becomes ads,

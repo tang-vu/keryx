@@ -10,6 +10,8 @@ export const buyerJobSchema = z.object({
   answer: z.string().optional(),
   message: z.string().optional(),
   error: z.string().optional(),
+  funding: z.object({ type: z.literal("research-monthly-prepaid"), monthlyId: z.string(),
+    allocationUsdc: amount, newInboundPayment: z.literal(false) }).optional(),
   pricing: z.object({
     serviceFeeUsdc: amount,
     creatorBudgetUsdc: amount,

@@ -34,7 +34,8 @@ try {
   await writeFile(join(workspace, "package.json"), JSON.stringify({ private: true, type: "module" }));
   installPackedConsumer(npmCli, tarball, workspace);
   const installedPackage = JSON.parse(await readFile(join(workspace, "node_modules/keryx-mcp/package.json"), "utf8"));
-  assert.equal(installedPackage.version, "0.3.0");
+  const expectedPackage = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+  assert.equal(installedPackage.version, expectedPackage.version);
   const dependencies = {};
   for (const name of ["@circle-fin/x402-batching", "viem", "@modelcontextprotocol/sdk", "zod"]) {
     dependencies[name] = JSON.parse(await readFile(join(workspace, "node_modules", name, "package.json"), "utf8")).version;
@@ -115,7 +116,7 @@ globalThis.fetch=async(input,init)=>{
       child.stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n");
     });
     const initialized = await request("initialize", { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "clean-package-acceptance", version: "1" } });
-    assert.equal(initialized.serverInfo.version, "0.3.0");
+    assert.equal(initialized.serverInfo.version, expectedPackage.version);
     child.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n");
     const listed = await request("tools/list", {});
     for (const name of ["ask_keryx", "keryx_wallet_status", "keryx_recover"]) assert(listed.tools.some(tool => tool.name === name));

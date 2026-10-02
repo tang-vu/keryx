@@ -7,6 +7,7 @@ const usdc = (value: number | null | undefined) => value == null ? "Unknown" : `
 export function ResearchJobDetails({ job, onDownloadReceipt }: { job: BuyerJob; onDownloadReceipt?: () => void }) {
   return (
     <div className="mt-5 space-y-6">
+      {job.funding && <p className="font-serif text-sm">This job uses a {usdc(job.funding.allocationUsdc)} allocation from prepaid Research Monthly. It creates no new inbound payment. Failed or pending execution keeps its request slot.</p>}
       {(job.message || job.error) && <p className="border-l-2 border-seal pl-4 font-serif">{job.message ?? job.error}</p>}
       {job.status === "review_required" && <p className="font-serif">Operator review is required. Automatic polling has stopped. Refresh this job after review; do not submit a new payment to recover it.</p>}
       {job.status === "completed" && job.serviceReceipt?.quality?.status === "measured" && job.serviceReceipt.quality.groundedClaimRate === 0 && <p role="status" className="border-l-2 border-seal pl-4 font-serif">No supported answer. The job finished, but none of its research targets reached the evidence threshold. Review the interpretation and evidence before buying again. The fixed package remains paid; unused creator reserve is not a refund.</p>}
