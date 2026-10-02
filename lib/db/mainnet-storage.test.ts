@@ -157,7 +157,9 @@ it("serves the normal owner consent and exact live admitted item challenge throu
   const messages = await import("../payments/session-grant-consent");
   const signature = await owner.signMessage({ message: messages.createSessionGrantConsentMessage(consent, config.profile) });
   const sessionSignature = await session.signMessage({ message: messages.createSessionGrantSignerProofMessage(consent, config.profile) });
-  expect((await grantRoute.POST(request("/api/session/grant", { consent, signature, sessionSignature }))).status).toBe(200);
+  const granted = await grantRoute.POST(request("/api/session/grant", { consent, signature, sessionSignature }));
+  expect(granted.status).toBe(200);
+  expect(await granted.json()).toMatchObject({ cap: 0.5, capMicroUsdc: "500000", spentMicroUsdc: "0" });
   expect((await grantRoute.POST(request("/api/session/grant", { consent, signature, sessionSignature }))).status).toBe(409);
   const status = await (await grantRoute.GET(new NextRequest("https://keryx.cc/api/session/grant"))).json();
   expect(status).toMatchObject({ active: true, sessionId: wallet, ownerAddr: wallet, sessAddr: signer, network: "eip155:5042",
@@ -198,7 +200,8 @@ it("serves the normal owner consent and exact live admitted item challenge throu
   const renewedSignature = await owner.signMessage({ message: messages.createSessionGrantConsentMessage(renewal.consent, config.profile) });
   const renewedSessionSignature = await session.signMessage({ message: messages.createSessionGrantSignerProofMessage(renewal.consent, config.profile) });
   const renewed = await grantRoute.POST(request("/api/session/grant", { consent: renewal.consent, signature: renewedSignature, sessionSignature: renewedSessionSignature }));
-  expect(renewed.status).toBe(200); expect((await renewed.json()).spentMicroUsdc).toBe("500000");
+  expect(renewed.status).toBe(200);
+  expect(await renewed.json()).toMatchObject({ cap: 1, capMicroUsdc: "1000000", spentMicroUsdc: "500000" });
   const unknownId = randomUUID(), unknown = await adapter.admitBrowserJournal({ sessionId: wallet, requestId: unknownId, queryId,
     grantEpoch: renewal.consent.grantEpoch, signer, network: config.profile.networkId, token: config.profile.usdcAddress,
     gatewayContract: config.profile.gatewayWallet, sourceId: "synthetic-source", offerId: null, kind: "fetch", payee,

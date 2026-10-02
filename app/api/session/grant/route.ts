@@ -97,6 +97,7 @@ export async function POST(req: NextRequest) {
       if (!current || current.grantEpoch !== consent.grantEpoch) throw new Error("Grant replaced before acknowledgement");
       return Response.json({ ok: true, sessionId: consent.ownerAddr, sessAddr: consent.sessAddr,
         ownerAddr: consent.ownerAddr, grantEpoch: consent.grantEpoch, cap: Number(consent.capMicroUsdc) / 1e6,
+        capMicroUsdc: consent.capMicroUsdc,
         spentMicroUsdc: String(Math.round(current.spent * 1e6)),
         expiresAt: new Date(Number(consent.expirySeconds) * 1000).toISOString(), serverNow: new Date(now).toISOString(),
         remainingMs: Number(consent.expirySeconds) * 1000 - now, ttlMs: config.sessionGrantTtlSeconds * 1000 }, { headers });
