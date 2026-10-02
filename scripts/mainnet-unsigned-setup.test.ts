@@ -15,7 +15,7 @@ it("prepares ordinary creator registration without invitation lists or pilot pri
   const result = prepareUnsignedMainnetOperation(release, registry, { ...source, fetchPriceMicros: "1000000" });
   const transaction = result.transactions[0]; expect(transaction).toMatchObject({ chainId: 5042, from: creator, to: registry, valueNativeAtomic: "0" });
   expect(decodeFunctionData({ abi: parseAbi(["function register(bytes32,address,(address wallet,uint16 basisPoints)[],uint64,string,string)"]), data: transaction.data }).args?.[3]).toBe(BigInt(1_000_000));
-  expect(result).toMatchObject({ unsignedOnly: true, broadcast: false, launchAuthorized: false });
+  expect(result).toMatchObject({ unsignedOnly: true, broadcast: false, publicMainnetDirectionAuthorized: true, transactionFundingAuthorized: false });
   expect(() => prepareUnsignedMainnetOperation(release, registry, { ...source, fetchPriceMicros: "0" })).not.toThrow();
 });
 it("uses exact uint64 price and the contract's 20-author limit with integer splits", () => {

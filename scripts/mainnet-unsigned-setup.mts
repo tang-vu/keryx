@@ -23,7 +23,7 @@ const fundingSchema = z.object({ kind: z.literal("fund"), owner: address, sessio
   amountMicros: z.string().regex(/^[1-9][0-9]{0,76}$/).refine(value => BigInt(value) < BigInt(2) ** BigInt(256)) }).strict();
 const sha256 = (value: string) => createHash("sha256").update(value).digest("hex");
 const tx = (from: string, to: string | null, data: Hex) => ({ chainId: network.chainId, from, to, data, valueNativeAtomic: "0" });
-const notice = { unsignedOnly: true, broadcast: false, launchAuthorized: false,
+const notice = { unsignedOnly: true, broadcast: false, publicMainnetDirectionAuthorized: true, transactionFundingAuthorized: false,
   gas: { nativeDecimals: 18, estimate: null, includedInResearchCap: false,
     requirement: "Owner must separately review native USDC setup gas, nonce, fees, allowance, balances and chain authority before signing." } } as const;
 

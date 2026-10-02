@@ -9,7 +9,7 @@ const result=z.object({retryAuthorized:z.literal(false),statusAuthority:z.litera
   journal:z.object({requestId:z.string().uuid(),sessionId:address,grantEpoch:z.string().uuid(),signer:address,nonce:z.string().regex(/^0x[0-9a-f]{64}$/),phase:z.string().max(64),
     requirements:z.object({scheme:z.literal("exact"),network:z.literal(profile.networkId),asset:address,amount:z.string().regex(/^[1-9]\d{0,15}$/),
       payTo:address,maxTimeoutSeconds:z.number().int().min(604900).max(691200),extra:z.object({name:z.literal("GatewayWalletBatched"),version:z.literal("1"),verifyingContract:address})}),
-    payment:z.object({authorizationId:z.string(),network:z.literal(profile.networkId),settled:z.boolean(),settlementStatus:z.string().nullable().optional(),
+    payment:z.object({authorizationId:z.string(),payer:address,payee:address,network:z.literal(profile.networkId),settled:z.boolean(),settlementStatus:z.string().nullable().optional(),
       amountUsdc:z.number().finite().nonnegative(),txHash:z.string().max(256).nullable().optional()})})});
 /** Expired/revoked grants remain readable, but never regain signing authority. */
 export async function inspectHeadlessOriginal(input:unknown,expected:{context:BrowserSessionCustodyContext;signer:string;
@@ -19,6 +19,7 @@ export async function inspectHeadlessOriginal(input:unknown,expected:{context:Br
   if(expected.context.profile!==profile||journal.requestId!==expected.reqId||journal.nonce!==expected.nonce||journal.grantEpoch!==expected.epoch||
     journal.sessionId!==expected.context.owner||journal.signer!==expected.signer.toLowerCase()||journal.payment.authorizationId!==expected.nonce||
     journal.requirements.asset!==profile.usdcAddress.toLowerCase()||journal.requirements.extra.verifyingContract!==profile.gatewayWallet.toLowerCase()||
+    journal.payment.payer!==journal.signer||journal.payment.payee!==journal.requirements.payTo||
     journal.requirements.amount!==expected.amount||Math.round(journal.payment.amountUsdc*1e6)!==Number(expected.amount)||
     consent.ownerAddr!==expected.context.owner||consent.sessAddr!==journal.signer||consent.origin!==expected.context.origin||
     consent.grantEpoch!==expected.epoch||consent.capMicroUsdc!==expected.cap||

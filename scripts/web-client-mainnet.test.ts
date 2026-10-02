@@ -54,7 +54,7 @@ function fixture(lost=false){
     }
     if(url.pathname.startsWith("/api/session/authorizations/"))return json({journal:{requestId:reqId,sessionId:context.owner,grantEpoch:epoch,signer:consent.sessAddr,nonce,phase:"signed",
       requirements:{scheme:"exact",network:profile.networkId,asset:profile.usdcAddress,amount:"1000",payTo:payout,maxTimeoutSeconds:604900,
-        extra:{name:"GatewayWalletBatched",version:"1",verifyingContract:profile.gatewayWallet}},payment:{authorizationId:nonce,network:profile.networkId,settled:false,settlementStatus:"pending",amountUsdc:0.001,txHash:null}},
+        extra:{name:"GatewayWalletBatched",version:"1",verifyingContract:profile.gatewayWallet}},payment:{authorizationId:nonce,payer:String(consent.sessAddr),payee:payout,network:profile.networkId,settled:false,settlementStatus:"pending",amountUsdc:0.001,txHash:null}},
       authorization:{consent,ownerSignature:proof.ownerSignature,sessionSignature:proof.sessionSignature},settlementConfirmed:false,statusAuthority:"retained-journal-only",retryAuthorized:false});
     throw new Error("Unexpected hermetic endpoint");
   };

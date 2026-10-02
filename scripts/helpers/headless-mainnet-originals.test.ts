@@ -14,7 +14,7 @@ async function fixture(){
   const response={journal:{requestId:reqId,sessionId:context.owner,grantEpoch:epoch,signer:session.address.toLowerCase(),nonce,phase:"settled",
     requirements:{scheme:"exact",network:profile.networkId,asset:profile.usdcAddress,amount:"1000",payTo:owner.address,maxTimeoutSeconds:604900,
       extra:{name:"GatewayWalletBatched",version:"1",verifyingContract:profile.gatewayWallet}},
-    payment:{authorizationId:nonce,network:profile.networkId,settled:true,settlementStatus:"settled",amountUsdc:0.001,txHash:"synthetic-recorded-proof-not-live-settlement"}},
+    payment:{authorizationId:nonce,payer:session.address.toLowerCase(),payee:owner.address.toLowerCase(),network:profile.networkId,settled:true,settlementStatus:"settled",amountUsdc:0.001,txHash:"synthetic-recorded-proof-not-live-settlement"}},
     authorization:{consent,ownerSignature:await owner.signMessage({message:createSessionGrantConsentMessage(consent,profile)}),
       sessionSignature:await session.signMessage({message:createSessionGrantSignerProofMessage(consent,profile)})},
     settlementConfirmed:true,statusAuthority:"retained-journal-only",retryAuthorized:false};
@@ -27,7 +27,7 @@ it("keeps signed but unconfirmed originals uncertain",async()=>{
   const f=await fixture();f.response.journal.phase="signed";f.response.journal.payment.settled=false;f.response.journal.payment.settlementStatus="pending";
   f.response.settlementConfirmed=false;expect(await inspectHeadlessOriginal(f.response,f.expected)).toMatchObject({settlementConfirmed:false,retryAuthorized:false});
 });
-it.each(["network","nonce","epoch","amount","missing-proof","grant-cap","retry"])("refuses original %s mismatch before releasing the local hold",async kind=>{
+it.each(["network","nonce","epoch","amount","missing-proof","grant-cap","payer","payee","retry"])("refuses original %s mismatch before releasing the local hold",async kind=>{
   const f=await fixture();
   if(kind==="network")f.response.journal.payment.network="eip155:5042002" as typeof profile.networkId;
   if(kind==="nonce")f.response.journal.nonce=`0x${"44".repeat(32)}`;
@@ -35,6 +35,8 @@ it.each(["network","nonce","epoch","amount","missing-proof","grant-cap","retry"]
   if(kind==="amount")f.response.journal.requirements.amount="999";
   if(kind==="missing-proof")f.response.journal.payment.txHash="";
   if(kind==="grant-cap")f.response.authorization.consent.capMicroUsdc="9000";
+  if(kind==="payer")f.response.journal.payment.payer=f.expected.context.owner;
+  if(kind==="payee")f.response.journal.payment.payee=f.expected.signer.toLowerCase();
   if(kind==="retry")f.response.retryAuthorized=true;
   await expect(inspectHeadlessOriginal(f.response,f.expected)).rejects.toThrow();
 });
