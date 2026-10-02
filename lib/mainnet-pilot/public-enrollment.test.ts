@@ -38,7 +38,7 @@ describe("complete reviewed browser enrollment", () => {
       ...Object.keys(input.limits).map(key => ({ limits: { ...input.limits, [key]: input.limits[key as keyof typeof input.limits] - 1 } })),
     ];
     for (const change of changes) await expect(verifyPublicMainnetEnrollment({ ...input, ...change }, expected,
-      change.origin ?? input.origin)).rejects.toThrow();
+      "origin" in change && typeof change.origin === "string" ? change.origin : input.origin)).rejects.toThrow();
     expect((await verifyPublicMainnetEnrollment(input, expected, input.origin)).enrollmentDigest).toBe(expected);
   });
 
