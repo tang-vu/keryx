@@ -56,6 +56,12 @@ identity. Fresh source-contract capture, profile review and enrollment migration
 gates before activating that optional lane against the changed schema; mismatch must
 refuse. The deployed ordinary TypeScript path remains authoritative.
 
+Enrolled SQLite uses the exact installed source schema, including provenance columns
+and sticky triggers. Existing enrolled stores with the prior schema require an explicit
+reviewed migration/re-enrollment; runtime startup never repairs them. Its audited
+facade treats source verification CAS as a write, refuses it in readonly mode and keeps
+the metadata-only provenance lookup private behind guarded historical read methods.
+
 ## Historical and transport behavior
 
 Historical reads use a request-local, metadata-only lookup, deduplicated across each
