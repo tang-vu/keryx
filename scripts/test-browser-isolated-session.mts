@@ -109,7 +109,8 @@ try {
   const aborted=createIsolatedSessionContext({...input,epoch:"aborted-write"});
   const abortedSignature=await owner.signMessage({message:aborted.derivationMessage});
   await call(first,"aborted","abortNextWrite");await assert.rejects(call(first,"aborted","derive",{signature:abortedSignature}));
-  await assert.rejects(call(first,"aborted","sign",{payload}));await call(first,"aborted","derive",{signature:abortedSignature});
+  await assert.rejects(call(first,"aborted","sign",{payload}), /isolated session key unavailable/);
+  await call(first,"aborted","derive",{signature:abortedSignature});
   await call(first,"main","clear");await assert.rejects(restore(first,"main",derived[0]));
   const foreign=await context.newPage();await mount(foreign,"https://foreign-session.test");await assert.rejects(call(foreign,"main","derive",{signature}));
   assert.ok(requests<=16,"bounded to fixture documents and workers");
