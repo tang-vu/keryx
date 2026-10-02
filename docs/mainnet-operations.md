@@ -310,3 +310,43 @@ account; another connected account cannot recover it. Never paste a key into cha
 or export custody to Keryx/Remix for this handoff. Preserve protected local custody
 and journals if the original account is unavailable. A delegated headless session
 uses the separate original session-cashout protocol, not this EOA route.
+
+
+## Hosted operating policy review inputs
+
+Public sponsored research/A2A/remote MCP/bots and private research use separate
+existing dedicated operator signers. They do not use the owner's personal registry
+deployer or inherit a legacy testnet key. Prepare these public policy declarations
+only after the final fresh sealed SQLite identity exists:
+
+```json
+{
+  "format": "keryx-hosted-treasury-policy-v1",
+  "network": "eip155:5042",
+  "storageIdentityDigest": "<SHA256 of exact fresh sealed full identity>",
+  "origin": "https://keryx.cc",
+  "signer": "<lowercase public dedicated operator signer>",
+  "lifetimeCapMicroUsdc": "<owner-reviewed positive integer micro-USDC>",
+  "queryCapMicroUsdc": "<owner-reviewed positive integer <= lifetime cap>",
+  "expiresAtSeconds": "<owner-reviewed Unix seconds; JSON integer>"
+}
+```
+
+The JSON above is a field template, not a valid admitted policy or proposed spending
+amount. The canonical artifact must use integer expiry and its exact canonical JSON
+SHA256. Public values use `KERYX_MAINNET_TREASURY_POLICY_JSON` and
+`KERYX_MAINNET_TREASURY_POLICY_DIGEST`; private values use
+`KERYX_MAINNET_PRIVATE_TREASURY_POLICY_JSON` and
+`KERYX_MAINNET_PRIVATE_TREASURY_POLICY_DIGEST`. Protect the separately named private
+key environment fields; the actual loader compares their derived public addresses
+to the admitted policy only after native authority checks. Do not place a key in
+this declaration, README, command argument or chat. Public/private signers must
+differ; policy renewal never resets original lifetime/query exposure.
+
+Owner review must state each signer, exact prefunding deposit, lifetime/query caps,
+expiry and native transaction fee ceilings. Offline `prepare` can emit exact
+approve/depositFor calldata for each public signer and owner amount, but these are
+not funding authorization. Operator operating funds are a separate budget purpose
+from SourceRegistry deployment gas, using the same USDC asset. Missing operating
+inputs keep the affected sponsor/private roles unavailable before buyer payment;
+caller-owned ordinary payments do not gain treasury authority from a policy file.
