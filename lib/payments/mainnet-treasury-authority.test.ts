@@ -9,7 +9,7 @@ function mainnet() {
 it("refuses unfunded mainnet treasury requests without inventing offline settlement", async () => {
   mainnet(); vi.stubEnv("AGENT_FUNDER_PRIVATE_KEY", ""); vi.stubEnv("KERYX_FUNDER_PRIVATE_KEY", "");
   const { getPaymentGateway } = await import("./payment-gateway");
-  await expect(getPaymentGateway({} as KeryxDB)).rejects.toThrow("Mainnet treasury payment authority is unavailable");
+  await expect(getPaymentGateway({} as KeryxDB)).rejects.toThrow("Enrolled SQLite adapter unavailable");
 });
 it("refuses accidental legacy treasury keys before opening the persistent wallet or constructing a signer", async () => {
   mainnet(); vi.stubEnv("AGENT_FUNDER_PRIVATE_KEY", `0x${"11".repeat(32)}`);
@@ -18,6 +18,6 @@ it("refuses accidental legacy treasury keys before opening the persistent wallet
   const { RealGateway } = await import("./real-gateway");
   expect(() => new RealGateway()).toThrow("Mainnet treasury authority requires reviewed funding and custody admission");
   const { getPaymentGateway } = await import("./payment-gateway");
-  await expect(getPaymentGateway({} as KeryxDB)).rejects.toThrow("Mainnet treasury authority requires reviewed funding and custody admission");
+  await expect(getPaymentGateway({} as KeryxDB)).rejects.toThrow("Enrolled SQLite adapter unavailable");
   expect(load).not.toHaveBeenCalled();
 });

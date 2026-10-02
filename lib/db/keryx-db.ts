@@ -369,6 +369,11 @@ export interface KeryxDB {
   getSessionWithdrawalSigningPhase(id:string,owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalSigningPhase|null>;
   authorizeSessionWithdrawal(id:string,owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation|null>;
   cancelSessionWithdrawal(id:string,owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalCancellation|null>;
+  admitHostedTreasuryPolicy(policy:import("../payments/hosted-treasury-policy").HostedTreasuryPolicy):Promise<string>;
+  hostedTreasuryAccounting(signer:string):Promise<import("./hosted-treasury-journal").HostedTreasuryAccounting>;
+  admitHostedAuthorization(input:import("./hosted-treasury-journal").HostedAuthorizationAdmission):Promise<string>;
+  submitHostedAuthorization(signer:string,submission:Readonly<import("../payments/server-x402-client").ServerX402Submission>,headerHash:string):Promise<void>;
+  confirmHostedAuthorization(signer:string,nonce:string,transaction:string):Promise<void>;
   getSessionWithdrawalCompletion(id:string,owner:string):Promise<import("../gateway/session-withdrawal-completion").SessionWithdrawalCompletion|null>;
   completeSessionWithdrawal(id:string,owner:string,outcome:import("../gateway/session-withdrawal-completion").SessionWithdrawalCompletion):Promise<import("../gateway/session-withdrawal-completion").SessionWithdrawalCompletion>;
   listSessionWithdrawalPayments(signer:string,afterNonce?:string,limit?:number):Promise<{payments:import("./browser-authorization-journal").BrowserAuthorizationJournal[];nextCursor:string|null}>;

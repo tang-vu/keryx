@@ -155,7 +155,9 @@ GET, authorize and cancel return the same original preparation plus `signingPhas
 cancellation acknowledgement when applicable. A worker releases its local barrier
 only for matching cancellation and no local crypto exposure. Uncertain authorize,
 signed or submitted originals stay held; a timeout or empty vendor lookup is no proof
-of cancellation. Payment lifetime counters and nonces remain retained throughout.
+of cancellation. This is the trusted normal-client never-exposed protocol; it does
+not cancel an already signed on-chain intent or erase a key held elsewhere. Payment
+lifetime counters and nonces remain retained throughout.
 Preparation verifies the authenticated owner's retained public delegation and
 signer-possession proof independently of the active grant. It reads fresh selected
 chain/Circle fee and finite height terms and preserves an immutable original burn.
@@ -188,8 +190,42 @@ Preparing a new withdrawal requires operator-selected integer
 `NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS` and
 `KERYX_WITHDRAWAL_MAX_PROCESSING_LAG_BLOCKS`. These do not initialize a gas relay,
 private key or automatic funding path. Original status remains readable if new
-preparation policy is unavailable. Creator owner-wallet cashout and the admitted
-prefunded hosted treasury adapter remain the next applicable public-role slices.
+preparation policy is unavailable. Creator owner-wallet cashout remains a separate
+applicable public-role slice.
+
+## Prefunded hosted mainnet payments
+
+Normal treasury requests select `createMainnetHostedGateway` on mainnet. An actual
+enrolled SQLite facade and a reviewed canonical policy are required before the
+separately named key can be read. The policy binds the complete storage identity
+digest, HTTPS origin, dedicated signer, cumulative lifetime ceiling, per-query
+ceiling and expiry. `KERYX_MAINNET_TREASURY_POLICY_JSON` must be canonical and its
+SHA-256 must equal `KERYX_MAINNET_TREASURY_POLICY_DIGEST`. The dedicated
+`KERYX_MAINNET_TREASURY_PRIVATE_KEY` must match that signer. Private execution uses
+the corresponding `KERYX_MAINNET_PRIVATE_TREASURY_*` policy/key and a distinct signer.
+Absent admission or known prefunding refuses real payment; it never chooses the
+testnet key loader, creates custody, deposits funds, or enters the staged funding
+executor. The owner chooses operating budgets and prefunds Gateway explicitly.
+
+The installed SDK's validated full typed authorization is atomically reserved before
+crypto. Native admission compares retained/confirmed accounting across the fresh
+Circle read, enforces signer lifetime and original query ceilings, and retains the
+exact nonce, source, recipient, amount, network, contracts and validity. The header
+hash and submission marker commit before paid HTTP. A second connection cannot spend
+the same remaining cap or resubmit an original nonce. Renewing the policy expiry does
+not reset signer or query totals. Unknown response, timeout or an empty ledger search
+does not release exposure. Existing original-network reconciliation owns public
+payment outcomes. Private execution reuses its original incoming settlement,
+single-use worker claim, creator submission and confirmation journal; those creator
+legs never enter public payment rows. Normal private mainnet purchase admission has
+no payer invitation list; product budgets, authenticated ownership, worker health,
+distinct merchant authority and known treasury capacity still apply.
+
+Native synthetic evidence covers actual selected SDK signatures, pre-crypto native
+reservation, pre-HTTP submission persistence, concurrent lifetime-cap refusal,
+unknown submission retention, policy renewal and private ledger isolation. It does
+not establish real vendor settlement or activate an operating policy. Optional
+Supabase hosted authority remains explicitly refused pending native schema acceptance.
 
 ## Remaining acceptance
 

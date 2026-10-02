@@ -7,6 +7,8 @@ import { addressSchema, BUYER_NETWORK } from "../buyer/protocol";
 import { privateRuntimePolicy } from "./private-runtime-policy";
 import { privateResearchService } from "./private-research-service";
 import { inspectPrivateOperations } from "./private-operations-inspection";
+import { mainnetHostedPolicy } from "../payments/mainnet-hosted-gateway";
+import { ARC_MAINNET_PROFILE } from "../arc-network-profile";
 
 /** Restricted owner-pilot bootstrap, disabled by default. Observations limit
  * admission availability, not payment authority. Durable treasury reservation and
@@ -21,15 +23,18 @@ export async function privatePurchaseBootstrap(db: KeryxDB, signal: AbortSignal,
       || config.networkId !== BUYER_NETWORK || config.cctpDomain !== 26
       || env.KERYX_PRIVATE_RESEARCH_RESERVED_PAYEES !== config.privateResearchReservedPayees
       || !root || !isAbsolute(root) || !commit || !/^[a-f0-9]{7,40}$/.test(commit)) throw new Error();
-    const payers = new Set(z.array(addressSchema).min(1).max(16).parse(
+    const mainnet = config.networkId === ARC_MAINNET_PROFILE.networkId;
+    const payers = mainnet ? null : new Set(z.array(addressSchema).min(1).max(16).parse(
       z.string().max(1024).parse(env.KERYX_PRIVATE_PURCHASE_PAYERS).split(",").map(value => value.trim()),
     ).map(value => value.toLowerCase()));
     if (authenticatedPayer !== undefined) {
       const payer = addressSchema.safeParse(authenticatedPayer);
-      if (!payer.success || !payers.has(payer.data.toLowerCase())) return null;
+      if (!payer.success || payers && !payers.has(payer.data.toLowerCase())) return null;
     }
     const key = z.string().regex(/^0x[a-fA-F0-9]{64}$/);
-    const context = { network: config.networkId, publicSeller: config.sellerAddress,
+    const context = mainnet ? { network: config.networkId, publicSeller: config.sellerAddress,
+      publicTreasurySigners: [mainnetHostedPolicy(db).signer], privateTreasurySigner: mainnetHostedPolicy(db, "private").signer } : {
+      network: config.networkId, publicSeller: config.sellerAddress,
       publicTreasurySigners: [privateKeyToAccount(key.parse(config.funderKey) as `0x${string}`).address],
       privateTreasurySigner: privateKeyToAccount(key.parse(env.KERYX_PRIVATE_TREASURY_PRIVATE_KEY) as `0x${string}`).address };
     const policy = privateRuntimePolicy(env, context);
@@ -44,7 +49,7 @@ export async function privatePurchaseBootstrap(db: KeryxDB, signal: AbortSignal,
       quote: service.quote,
       submit(submission: unknown, authenticatedPayer: string) {
         const payer = addressSchema.safeParse(authenticatedPayer);
-        if (!payer.success || !payers.has(payer.data.toLowerCase()))
+        if (!payer.success || payers && !payers.has(payer.data.toLowerCase()))
           return Promise.reject(new Error("Private purchase is unavailable for this account"));
         return service.submit(submission, payer.data);
       },

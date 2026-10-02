@@ -17,6 +17,7 @@ export const STORAGE_APPLICATION_TABLES = Object.freeze([
   "api_key_usage", "users", "answer_feedback", "query_memories", "session_grants", "rate_limit_counters", "reasoning_circuits",
   "auth_challenges", "web_sessions", "session_grant_consents", "session_withdrawal_preparations", "session_withdrawal_completions",
   "session_withdrawal_exposures", "session_withdrawal_cancellations", "private_research_intents", "private_treasury_pools", "private_treasury_reservations",
+  "hosted_treasury_policies", "hosted_treasury_authorizations",
   "private_research_payment_attempts", "private_research_executions", "private_research_results", "private_creator_submissions",
   "private_creator_confirmations", "private_treasury_releases", "private_research_interruptions", "creator_withdrawal_requests",
   "creator_withdrawal_transfer_attempts", "creator_withdrawal_attestations", "public_references", "sync_state",

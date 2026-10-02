@@ -1,5 +1,8 @@
 import { installSqliteApplicationSchema } from "./sqlite-application-schema";
 import { sqliteSessionFundingAccounting } from "./session-funding-accounting";
+import { admitSqliteHostedPolicy, sqliteHostedAccounting, admitSqliteHostedAuthorization, submitSqliteHostedAuthorization,
+ confirmSqliteHostedAuthorization, terminalSqliteHostedAuthorization, type HostedAuthorizationAdmission } from "./hosted-treasury-journal";
+import type { HostedTreasuryPolicy } from "../payments/hosted-treasury-policy";
 import { sqliteSessionWithdrawalAccounting, reserveSqliteSessionWithdrawal, readSqliteSessionWithdrawal, pendingSqliteSessionWithdrawal, listSqliteSessionWithdrawalPayments,
   readSqliteSessionWithdrawalCompletion, completeSqliteSessionWithdrawal, readSqliteSessionWithdrawalPhase,
   exposeSqliteSessionWithdrawal, cancelSqliteSessionWithdrawal } from "./session-withdrawal-journal";
@@ -637,6 +640,26 @@ export class SqliteAdapter implements KeryxDB {
   async sessionFundingAccounting(signer: string, after?: string) {
     if (this.enrolledMode !== "mainnet-real") throw new Error("Session funding accounting requires admitted mainnet storage");
     return sqliteSessionFundingAccounting(this.db, signer, after);
+  }
+  async admitHostedTreasuryPolicy(policy: HostedTreasuryPolicy) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Hosted authority requires admitted mainnet storage");
+    return admitSqliteHostedPolicy(this.db, policy, this.enrolledIdentity!);
+  }
+  async hostedTreasuryAccounting(signer: string) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Hosted authority requires admitted mainnet storage");
+    return sqliteHostedAccounting(this.db, signer);
+  }
+  async admitHostedAuthorization(input: HostedAuthorizationAdmission) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Hosted authority requires admitted mainnet storage");
+    return admitSqliteHostedAuthorization(this.db, input, this.enrolledIdentity!);
+  }
+  async submitHostedAuthorization(signer: string, submission: Readonly<import("../payments/server-x402-client").ServerX402Submission>, headerHash: string) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Hosted authority requires admitted mainnet storage");
+    return submitSqliteHostedAuthorization(this.db, signer, submission, headerHash);
+  }
+  async confirmHostedAuthorization(signer: string, nonce: string, transaction: string) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Hosted authority requires admitted mainnet storage");
+    return confirmSqliteHostedAuthorization(this.db, signer, nonce, transaction);
   }
   async sessionWithdrawalAccounting(signer: string) {
     if (this.enrolledMode !== "mainnet-real") throw new Error("Session withdrawal requires admitted mainnet storage");
@@ -1824,6 +1847,10 @@ export class SqliteAdapter implements KeryxDB {
     authorizationId: string,
     circleTransferId: string,
   ): Promise<boolean> {
+    if (this.enrolledMode === "mainnet-real") {
+      const hosted = terminalSqliteHostedAuthorization(this.db, id, authorizationId, circleTransferId, false);
+      if (hosted) return hosted.resolved;
+    }
     if (sqliteJournalActive(this.db)) {
       return terminalSqliteJournalPayment(this.db,id,authorizationId,circleTransferId,false).resolved;
     }
@@ -1842,6 +1869,10 @@ export class SqliteAdapter implements KeryxDB {
     authorizationId: string,
     circleTransferId: string,
   ): Promise<{ resolved: boolean; reservationReleased: boolean }> {
+    if (this.enrolledMode === "mainnet-real") {
+      const hosted = terminalSqliteHostedAuthorization(this.db, id, authorizationId, circleTransferId, true);
+      if (hosted) return hosted;
+    }
     if (sqliteJournalActive(this.db)) {
       return terminalSqliteJournalPayment(this.db,id,authorizationId,circleTransferId,true);
     }

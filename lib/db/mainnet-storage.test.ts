@@ -63,6 +63,103 @@ it("uses a fresh native mainnet namespace and atomically retains its own nonce/c
   } finally { native.close(); }
 }, 30000);
 
+it("admits hosted SDK originals before crypto and vendor exposure and retains lifetime caps across policy renewal", async () => {
+  const { adapter, file, identity } = await fixture();
+  const actualAccounts = await import("viem/accounts");
+  const account = actualAccounts.privateKeyToAccount(`0x${"77".repeat(32)}`), signer = account.address.toLowerCase(), payee = `0x${"33".repeat(20)}`;
+  const { storageIdentityDigest } = await import("./storage-identity"), policies = await import("../payments/hosted-treasury-policy");
+  const policy = { format: "keryx-hosted-treasury-policy-v1" as const, network: "eip155:5042" as const,
+    storageIdentityDigest: storageIdentityDigest(identity), origin: "https://keryx.cc", signer,
+    lifetimeCapMicroUsdc: "4000", queryCapMicroUsdc: "2000", expiresAtSeconds: Math.floor(Date.now()/1000)+3600 };
+  const selectPolicy = (value: typeof policy) => {
+    vi.stubEnv("KERYX_MAINNET_TREASURY_POLICY_JSON", canonicalJson(value));
+    vi.stubEnv("KERYX_MAINNET_TREASURY_POLICY_DIGEST", policies.hostedTreasuryPolicyDigest(value));
+  };
+  const native = new DatabaseSync(file); cleanup.push(()=>native.close());
+  const events: string[] = [];
+  vi.doMock("viem/accounts", () => ({ ...actualAccounts, privateKeyToAccount: (key: `0x${string}`) => {
+    const real=actualAccounts.privateKeyToAccount(key);
+    return { ...real, signTypedData: async (typed: Parameters<typeof real.signTypedData>[0]) => {
+      const nonce=String(typed.message!.nonce).toLowerCase();
+      expect(native.prepare("SELECT submitted,header_hash FROM hosted_treasury_authorizations WHERE nonce=?").get(nonce)).toEqual({ submitted:0,header_hash:null });
+      const original=JSON.parse(String(native.prepare("SELECT original FROM hosted_treasury_authorizations WHERE nonce=?").get(nonce)!.original));
+      expect(native.prepare("SELECT authorization_id FROM payment_events WHERE id=?").get('x402:'+nonce)?.authorization_id).toBe(original.context.privateJob ? undefined : nonce);
+      events.push("reserved-before-crypto"); return real.signTypedData(typed);
+    } };
+  } })); cleanup.push(()=>vi.doUnmock("viem/accounts"));
+  vi.doMock("../registry/source-fetch-payto",()=>({ sourceFetchPayTo:async()=>payee })); cleanup.push(()=>vi.doUnmock("../registry/source-fetch-payto"));
+  const profile=(await import("../config")).config.profile, source={id:"source",name:"Source",fetchPrice:0.002} as unknown as import("../types").Source;
+  let loseResponse=false, paidCalls=0;
+  vi.stubGlobal("fetch",vi.fn(async(url:RequestInfo|URL,init?:RequestInit)=>{
+    const target=String(url);
+    if(target.endsWith("/v1/balances")) return Response.json({token:"USDC",balances:[{depositor:JSON.parse(String(init?.body)).sources[0].depositor,domain:26,balance:"1"}]});
+    if(target===profile.rpcUrl || target===profile.rpcUrl+'/') { const rpc=JSON.parse(String(init?.body)); expect(rpc.method).toBe("eth_chainId"); return Response.json({jsonrpc:"2.0",id:rpc.id,result:"0x13b2"}); }
+    if(target.startsWith("https://keryx.cc/api/source/")) {
+      const header=(init?.headers as Record<string,string>)["Payment-Signature"];
+      if(!header) return new Response(null,{status:402,headers:{"PAYMENT-REQUIRED":Buffer.from(JSON.stringify({x402Version:2,accepts:[{
+        scheme:"exact",network:profile.networkId,asset:profile.usdcAddress,amount:"2000",payTo:payee,maxTimeoutSeconds:691200,
+        extra:{name:"GatewayWalletBatched",version:"1",verifyingContract:profile.gatewayWallet}}]})).toString("base64")}});
+      const payload=JSON.parse(Buffer.from(header,"base64").toString()),nonce=payload.payload.authorization.nonce;
+      expect(native.prepare("SELECT submitted,header_hash FROM hosted_treasury_authorizations WHERE nonce=?").get(nonce)).toMatchObject({submitted:1,header_hash:expect.stringMatching(/^0x[0-9a-f]{64}$/)});
+      events.push("submitted-before-http"); paidCalls++;
+      if(loseResponse) throw new Error("synthetic response loss");
+      return Response.json({content:"Actual synthetic paid body"},{headers:{"PAYMENT-RESPONSE":Buffer.from(JSON.stringify({success:true,transaction:"synthetic-settlement",payer:payload.payload.authorization.from,network:profile.networkId})).toString("base64")}});
+    }
+    throw new Error("Unexpected synthetic hosted transport");
+  }));
+  selectPolicy(policy); vi.stubEnv("KERYX_MAINNET_TREASURY_PRIVATE_KEY",`0x${"77".repeat(32)}`);
+  vi.stubEnv("AGENT_FUNDER_PRIVATE_KEY",`0x${"11".repeat(32)}`); // Accidental legacy key never selects custody.
+  const factory=await import("../payments/payment-gateway"), gateway=await factory.getPaymentGateway(adapter);
+  await gateway.ensureFunded(0.002);
+  const first=await gateway.payFetch({source:source as unknown as import("../types").Source,queryId:randomUUID()});
+  expect(first.content).toBe("Actual synthetic paid body"); expect(first.payment.settled).toBe(true);
+  expect(events).toEqual(["reserved-before-crypto","submitted-before-http"]);
+  expect(await adapter.hostedTreasuryAccounting(signer)).toEqual({retainedMicroUsdc:"2000",confirmedMicroUsdc:"2000"});
+  // The next scope has a new reviewed expiry, but the SAME lifetime signer
+  // reservation persists. Unknown vendor exposure cannot replenish its capacity.
+  selectPolicy({...policy,expiresAtSeconds:policy.expiresAtSeconds+1}); loseResponse=true;
+  const other=await (await import("./enrolled-sqlite-adapter")).createEnrolledSqliteAdapter(); cleanup.push(()=>other.close());
+  const renewed=await factory.getPaymentGateway(adapter), concurrent=await factory.getPaymentGateway(other);
+  await renewed.ensureFunded(0.002); await concurrent.ensureFunded(0.002);
+  const raced=await Promise.allSettled([renewed.payFetch({source,queryId:randomUUID()}),concurrent.payFetch({source,queryId:randomUUID()})]);
+  expect(raced.map(result=>result.status)).toEqual(["rejected","rejected"]);
+  expect(raced.filter(result=>result.status==='rejected' && result.reason.message.includes('settlement confirmation pending'))).toHaveLength(1);
+  expect(raced.filter(result=>result.status==='rejected' && result.reason.message.includes('local signing policy'))).toHaveLength(1);
+  expect(paidCalls).toBe(2); expect(await adapter.hostedTreasuryAccounting(signer)).toEqual({retainedMicroUsdc:"4000",confirmedMicroUsdc:"2000"});
+  const exhausted=await factory.getPaymentGateway(adapter); await expect(exhausted.ensureFunded(0.002)).rejects.toThrow("prefunding");
+  expect(paidCalls).toBe(2);
+  expect(await other.hostedTreasuryAccounting(signer)).toEqual({retainedMicroUsdc:"4000",confirmedMicroUsdc:"2000"});
+  const original=native.prepare("SELECT nonce,header_hash,original FROM hosted_treasury_authorizations ORDER BY rowid DESC LIMIT 1").get()!;
+  const m=JSON.parse(String(original.original)).payload.message;
+  await expect(other.submitHostedAuthorization(signer,{authorizationId:String(original.nonce),payer:signer,payee,
+    amountMicros:String(m.value),network:profile.networkId,asset:profile.usdcAddress.toLowerCase(),
+    authorizationExpiresAt:new Date(Number(m.validBefore)*1000).toISOString()},String(original.header_hash))).rejects.toThrow("do not resubmit");
+  // Private jobs reuse their actual owner-verified intent, incoming settlement and
+  // single-use execution claim. Creator metadata remains in the private ledger.
+  const buyer=actualAccounts.privateKeyToAccount(`0x${"11".repeat(32)}`), privateAccount=actualAccounts.privateKeyToAccount(`0x${"88".repeat(32)}`);
+  const merchants={privatePayee:`0x${"aa".repeat(20)}`,publicResearchPayee:`0x${"bb".repeat(20)}`};
+  const requirement={scheme:"exact",network:profile.networkId,asset:profile.usdcAddress,amount:"50000",payTo:merchants.privatePayee,maxTimeoutSeconds:691200,
+    extra:{name:"GatewayWalletBatched",version:"1",verifyingContract:profile.gatewayWallet}};
+  const input={question:"Synthetic private authority marker",budget:0.03,researchMode:"quick",packageVersion:"1.0.0",responseMode:"async",access:"payer-private-v1",model:null};
+  const fresh=await (await import("../buyer/private-request-commitment")).createPrivateAuthorization(input,requirement,buyer.address,merchants);
+  const signature=await buyer.signTypedData((await import("../buyer/protocol")).buyerTypedData(fresh.authorization));
+  const intent=await (await import("../a2a/private-research-intent")).preparePrivateResearchIntent({request:fresh.request,salt:fresh.salt,payment:{authorization:fresh.authorization,signature}},requirement,merchants);
+  await adapter.reservePrivateResearchIntent(intent); await adapter.claimPrivatePaymentSubmission(intent.id,buyer.address);
+  await adapter.confirmPrivatePayment(intent.id,buyer.address,{source:"circle-facilitator-success",transaction:"synthetic-incoming-settlement",network:profile.networkId,
+    payer:buyer.address,payee:merchants.privatePayee,amountMicros:"50000",authorizationId:fresh.authorization.nonce});
+  const claim=await adapter.claimPrivateResearchExecution(intent.id,buyer.address); expect(claim).not.toBeNull();
+  const privatePolicy={...policy,signer:privateAccount.address.toLowerCase(),lifetimeCapMicroUsdc:"100000",queryCapMicroUsdc:"30000"};
+  vi.stubEnv("KERYX_MAINNET_PRIVATE_TREASURY_POLICY_JSON",canonicalJson(privatePolicy));
+  vi.stubEnv("KERYX_MAINNET_PRIVATE_TREASURY_POLICY_DIGEST",policies.hostedTreasuryPolicyDigest(privatePolicy));
+  vi.stubEnv("KERYX_MAINNET_PRIVATE_TREASURY_PRIVATE_KEY",`0x${"88".repeat(32)}`); loseResponse=false;
+  const privateGateway=await (await import("../payments/mainnet-hosted-gateway")).createMainnetHostedGateway(adapter,{role:"private",
+    job:{id:intent.id,owner:buyer.address.toLowerCase(),workerId:claim!.workerId}});
+  await privateGateway.ensureFunded(0.03); const privateResult=await privateGateway.payFetch({source,queryId:intent.id}); expect(privateResult.payment.settled).toBe(true);
+  expect(native.prepare("SELECT count(*) AS n FROM payment_events WHERE payer=?").get(privatePolicy.signer)?.n).toBe(0);
+  expect((await adapter.listPrivateCreatorSubmissions(intent.id,buyer.address)).length).toBe(1);
+  expect(await adapter.hostedTreasuryAccounting(privatePolicy.signer)).toEqual({retainedMicroUsdc:"2000",confirmedMicroUsdc:"2000"});
+},60000);
+
 it("recovers expired owner custody through normal withdrawal handlers while preserving unknown holds and one original burn", async () => {
   const { adapter } = await fixture();
   const { privateKeyToAccount } = await import("viem/accounts"), { NextRequest, } = await import("next/server");
