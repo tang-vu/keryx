@@ -13,9 +13,12 @@
 import { config } from "../config";
 import { readBoundedJson } from "../read-bounded-json";
 import { gatewayAvailableAtomic } from "./available-balance";
+import { gatewayNetworkProfile } from "./gateway-network";
 
-// Verified from @circle-fin/x402-batching/dist/client/index.js:638-672.
-const GATEWAY_BALANCE_API = "https://gateway-api-testnet.circle.com/v1/balances";
+// Capture trusted deployment selection once. Arc uses domain 26 on both rails, so
+// the response's domain alone cannot distinguish testnet funds from mainnet funds.
+const profile = gatewayNetworkProfile(config.networkId);
+const GATEWAY_BALANCE_API = `${profile.gatewayApiUrl}/v1/balances`;
 
 export async function getGatewayAvailableAtomic(address: string): Promise<bigint | null> {
   if (!/^0x[a-fA-F0-9]{40}$/.test(address)) return null;
@@ -25,14 +28,14 @@ export async function getGatewayAvailableAtomic(address: string): Promise<bigint
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         token: "USDC",
-        sources: [{ depositor: address, domain: config.cctpDomain }],
+        sources: [{ depositor: address, domain: profile.cctpDomain }],
       }),
       signal: AbortSignal.timeout(15_000),
       redirect: "error",
       cache: "no-store",
     });
     if (!upstream.ok) { await upstream.body?.cancel(); return null; }
-    return gatewayAvailableAtomic(await readBoundedJson(upstream), address, config.cctpDomain);
+    return gatewayAvailableAtomic(await readBoundedJson(upstream), address, profile.cctpDomain);
   } catch {
     return null;
   }
@@ -71,9 +74,11 @@ export async function getGatewayHeldUsdc(addresses: string[]): Promise<Map<strin
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           token: "USDC",
-          sources: chunk.map((depositor) => ({ depositor, domain: config.cctpDomain })),
+          sources: chunk.map((depositor) => ({ depositor, domain: profile.cctpDomain })),
         }),
         signal: AbortSignal.timeout(20_000),
+        redirect: "error",
+        cache: "no-store",
       });
       if (!upstream.ok) continue; // chunk stays unknown
 
