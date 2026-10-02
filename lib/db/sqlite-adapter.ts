@@ -1,4 +1,6 @@
 import { installSqliteApplicationSchema } from "./sqlite-application-schema";
+import { issueSqliteSessionGrantConsent, consumeSqliteSessionGrantConsent, readSqliteSessionGrantConsent } from "./session-grant-consents";
+import type { SessionGrantConsent } from "../payments/session-grant-consent";
 import { hasScholarlyRights, assertNoOrphanedPaperMarker } from "./scholarly-capability";
 import { storagePaymentProfile, type StorageIdentity } from "./storage-identity";
 import { ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
@@ -616,6 +618,25 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   // ── session grants ──
+
+  async issueSessionGrantConsent(consent: SessionGrantConsent): Promise<void> {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Owner-signed consent requires admitted mainnet storage");
+    issueSqliteSessionGrantConsent(this.db, consent, this.paymentProfile);
+  }
+  async browserSignerRetainedSpendMicro(signer: string): Promise<number> {
+    if (!sqliteJournalActive(this.db) || !/^0x[0-9a-f]{40}$/i.test(signer)) throw new Error("Retained signer capacity unavailable");
+    const spent = Number(this.db.prepare("SELECT spent_micro FROM browser_signer_capacity WHERE signer=?").get(signer.toLowerCase())?.spent_micro ?? 0);
+    if (!Number.isSafeInteger(spent) || spent < 0) throw new Error("Retained signer capacity unavailable");
+    return spent;
+  }
+  async consumeSessionGrantConsent(consent: SessionGrantConsent, signature: string, sessionSignature: string): Promise<void> {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Owner-signed consent requires admitted mainnet storage");
+    consumeSqliteSessionGrantConsent(this.db, consent, signature, sessionSignature, this.paymentProfile);
+  }
+  async getSessionGrantConsent(owner: string, epoch: string) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Owner-signed consent requires admitted mainnet storage");
+    return readSqliteSessionGrantConsent(this.db, owner, epoch, this.paymentProfile);
+  }
 
   async upsertSessionGrant(grant: Omit<SessionGrantRecord, "spent">): Promise<void> {
     if (sqliteJournalActive(this.db)) return upsertSqliteJournalGrant(this.db, grant);

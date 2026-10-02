@@ -92,7 +92,7 @@ export async function allowedPayTo(
 
   const key = onchainId.toLowerCase();
   const hit = cache.get(key);
-  if (!options.refresh && hit && Date.now() - hit.readAt < TTL_MS) {
+  if (config.profile.name !== "arc" && !options.refresh && hit && Date.now() - hit.readAt < TTL_MS) {
     return {
       status: "onchain",
       wallets: hit.wallets,
@@ -131,7 +131,7 @@ export async function allowedPayTo(
     const error = err instanceof Error ? err.message : String(err);
     // A previously-read set is far better than no check at all: authors change on a
     // human timescale, RPC nodes fail on a network one.
-    if (hit) {
+    if (hit && config.profile.name !== "arc") {
       return {
         status: "onchain",
         wallets: hit.wallets,

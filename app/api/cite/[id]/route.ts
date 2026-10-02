@@ -16,6 +16,7 @@ import { getDb } from "@/lib/db";
 import { config } from "@/lib/config";
 import { settleThenServe } from "@/lib/x402-server";
 import { allowedPayTo, isAllowed } from "@/lib/registry/payto-guard";
+import { sourceFetchTerms } from "@/lib/registry/source-fetch-payto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,11 +41,19 @@ export async function POST(
     author &&
     (author.toLowerCase() === source.walletAddress.toLowerCase() ||
       source.authors.some((a) => a.walletAddress.toLowerCase() === author.toLowerCase()));
-  const payTo = valid ? (author as string) : source.walletAddress;
+  let payTo = valid ? (author as string) : source.walletAddress;
+  if (config.profile.name === "arc") {
+    try {
+      const terms = await sourceFetchTerms(source, { refresh: true });
+      if (!terms.active || !terms.citationWallets) throw new Error();
+      payTo = author ?? terms.payTo;
+      if (!isAllowed(terms.citationWallets, payTo)) return Response.json({ error: "payTo is not authorised for this source on-chain" }, { status: 403 });
+    } catch { return Response.json({ error: "Current mainnet creator authority is unavailable" }, { status: 503 }); }
+  }
 
   // Second, independent check against the chain. The DB agreed that `payTo` belongs to
   // this source; the registry decides whether the DB is telling the truth.
-  if (source.onchainId) {
+  if (source.onchainId && config.profile.name !== "arc") {
     const allowlist = await allowedPayTo(source.onchainId);
     if (allowlist.status === "onchain") {
       if (!isAllowed(allowlist.wallets, payTo)) {

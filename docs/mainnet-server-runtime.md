@@ -46,6 +46,38 @@ is separate from the secret session-key derivation signature. Parsing is structu
 validation; server admission and worker checks must independently enforce approved TTL,
 known funding, current owner authority and retained consumption.
 
+The normal mainnet API uses authenticated `POST /api/session/grant/challenge`
+with `{sessAddr,budgetMicros,recover?}` and returns `{consent,funding}`. `budgetMicros`
+means desired current funded capacity. The server chooses the entropy-backed epoch
+and proposes a cumulative cap of confirmed lifetime debits plus the smaller of desired
+current capacity and known mainnet Circle availability. The public funding projection
+contains `availableMicroUsdc`, `confirmedSpentMicroUsdc`, `retainedSpentMicroUsdc` and
+`proposedRemainingMicroUsdc`, all canonical nonnegative integer strings. Retained spend
+includes pending/unknown holds; those are never credited as confirmed or released by
+renewal. Accounting must remain stable across the balance read. Expiry is limited to the configured
+TTL (at most 86,400 seconds). Its issued challenge expires after 90 seconds.
+`POST /api/session/grant` accepts `{consent,signature,sessionSignature}`: the owner's
+public delegation and a separate exact-grant public proof of session-key possession.
+Both proofs are verified before one atomic consumption/upsert. Another owner cannot
+claim a publicly known funded signer without that signer's exact proof. Replays cannot
+recreate epochs or reset retained capacity. Historical proofs remain after expiry.
+
+`GET /api/session/grant` returns the current tuple, network, origin, canonical
+`capMicroUsdc`, nested `consent`, `ownerSignature` and `sessionSignature` plus expiry
+metadata and actual retained `spentMicroUsdc` (also returned by grant POST).
+`POST /api/ask/challenge` accepts only `{reqId}` from the authenticated
+owner and returns its live exposed original journal tuple, requirements, nonce and
+full persisted item/offer context. It cannot construct authority from an SSE packet
+or callback fields. SQLite normal handler acceptance covers these endpoints;
+PostgreSQL owner-consent methods refuse until their native migration is admitted.
+
+Mainnet source fetch and citation terms require a fresh active on-chain creator-owned
+URL identity; cached testnet rows or an RPC outage cannot supply fallback payout
+authority. The mainnet bindings retain the exact encrypted item identity and complete
+signed offer context. Selected RPC checks attest both before and after authority
+reads, and local SDK signing/transaction boundaries validate the actual mainnet
+domain independently of a returned challenge.
+
 The caller buyer protocol captures the public deployment profile before reading any
 challenge. Its existing request/amount limits remain normal caller policy, with no
 invitation list or pilot-wide ceilings. A foreign challenge cannot choose the chain.

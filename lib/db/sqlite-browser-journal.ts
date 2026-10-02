@@ -171,9 +171,11 @@ export function activateSqliteBrowserJournal(db: DatabaseSync, profile: ArcNetwo
 
 export function upsertSqliteJournalGrant(
   db: DatabaseSync,
-  grant: Omit<SessionGrantRecord, "spent">
+  grant: Omit<SessionGrantRecord, "spent">,
+  before?: () => void
 ): void {
   sqliteJournalTransaction(db, () => {
+    before?.();
     const signer = grant.sessAddr.toLowerCase(),
       cap = micro(grant.cap);
     const spent = Number(
@@ -239,6 +241,7 @@ export function getSqliteBrowserJournal(
     phase: row.authorization_phase as BrowserAuthorizationJournal["phase"],
     requirements: JSON.parse(String(row.requirements)),
     payment,
+    ...(row.payment_context ? { paymentContext: JSON.parse(String(row.payment_context)) } : {}),
     signedValidAfter: row.valid_after as string | undefined,
     signedValidBefore: row.valid_before as string | undefined,
     signedHeaderHash: row.header_hash as string | undefined,
@@ -257,6 +260,10 @@ export function admitSqliteBrowserJournal(
     hooks?.before();
     try {
       const result = admitSqliteBrowserJournalInTransaction(db, input, j);
+      if (result.status === "admitted" && j.paymentContext) {
+        db.prepare("UPDATE browser_journal_bindings SET payment_context=? WHERE nonce=?")
+          .run(JSON.stringify(j.paymentContext), j.nonce);
+      }
       if (result.status === "admitted") hooks?.after(result.journal);
       return result;
     } finally { hooks?.cleanup(); }

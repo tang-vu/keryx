@@ -33,6 +33,8 @@ import { attestedArcHttp } from "@/lib/arc-rpc-attestation";
 import { getDb } from "@/lib/db";
 import { recordActivationEvent } from "@/lib/activation";
 import { accountSessionContext } from "@/lib/account-sessions";
+import { consumeMainnetSessionGrant, mainnetGrantPolicy, requireMainnetGrantOrigin } from "@/lib/payments/mainnet-session-grants";
+import { readBoundedJson } from "@/lib/read-bounded-json";
 
 export const runtime = "nodejs";
 
@@ -49,6 +51,18 @@ export async function GET(req: NextRequest) {
     if (!row || row.sessionId !== context.wallet || row.ownerAddr.toLowerCase() !== context.wallet ||
       !Number.isSafeInteger(row.expiry) || row.expiry <= now)
       return Response.json({ active: false }, { headers });
+    if (config.profile.name === "arc") {
+      const proof = await context.db.getSessionGrantConsent(context.wallet, row.grantEpoch), policy = mainnetGrantPolicy();
+      if (!proof || proof.consent.sessAddr !== row.sessAddr.toLowerCase() || proof.consent.origin !== policy.origin ||
+        Number(proof.consent.capMicroUsdc) !== Math.round(row.cap * 1e6) || Number(proof.consent.expirySeconds) * 1000 !== row.expiry)
+        throw new Error("Owner consent unavailable");
+      return Response.json({ active: true, sessionId: row.sessionId, ownerAddr: row.ownerAddr, sessAddr: row.sessAddr,
+        grantEpoch: row.grantEpoch, network: config.profile.networkId, origin: policy.origin,
+        capMicroUsdc: proof.consent.capMicroUsdc, consent: proof.consent, ownerSignature: proof.ownerSignature, sessionSignature: proof.sessionSignature,
+        spentMicroUsdc: String(Math.round(row.spent * 1e6)),
+        expiresAt: new Date(row.expiry).toISOString(), serverNow: new Date(now).toISOString(),
+        remainingMs: row.expiry - now, ttlMs }, { headers });
+    }
     return Response.json({ active: true, sessionId: row.sessionId, ownerAddr: row.ownerAddr, sessAddr: row.sessAddr,
       grantEpoch: row.grantEpoch, expiresAt: new Date(row.expiry).toISOString(), serverNow: new Date(now).toISOString(),
       remainingMs: row.expiry - now, ttlMs }, { headers });
@@ -70,6 +84,23 @@ export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session) {
     return Response.json({ error: "unauthenticated" }, { status: 401 });
+  }
+  if (config.profile.name === "arc") {
+    const headers = { "Cache-Control": "no-store" };
+    try { requireMainnetGrantOrigin(req); } catch { return Response.json({ error: "Grant deployment or origin refused" }, { status: 403, headers }); }
+    let input;
+    try { input = await readBoundedJson(new Response(req.body), 8192); }
+    catch { return Response.json({ error: "Invalid owner consent body" }, { status: 400, headers }); }
+    try {
+      const db = await getDb(), consent = await consumeMainnetSessionGrant(db, session.address, input), now = Date.now();
+      const current = await db.getSessionGrant(consent.ownerAddr);
+      if (!current || current.grantEpoch !== consent.grantEpoch) throw new Error("Grant replaced before acknowledgement");
+      return Response.json({ ok: true, sessionId: consent.ownerAddr, sessAddr: consent.sessAddr,
+        ownerAddr: consent.ownerAddr, grantEpoch: consent.grantEpoch, cap: Number(consent.capMicroUsdc) / 1e6,
+        spentMicroUsdc: String(Math.round(current.spent * 1e6)),
+        expiresAt: new Date(Number(consent.expirySeconds) * 1000).toISOString(), serverNow: new Date(now).toISOString(),
+        remainingMs: Number(consent.expirySeconds) * 1000 - now, ttlMs: config.sessionGrantTtlSeconds * 1000 }, { headers });
+    } catch { return Response.json({ error: "Owner consent is invalid, expired, unavailable or already consumed" }, { status: 409, headers }); }
   }
 
   let body: GrantBody;

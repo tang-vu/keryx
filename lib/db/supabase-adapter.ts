@@ -1427,6 +1427,19 @@ export class SupabaseAdapter implements KeryxDB {
 
   // ── session grants ──
 
+  async issueSessionGrantConsent(_consent: import("../payments/session-grant-consent").SessionGrantConsent): Promise<void> {
+    throw new Error("Native PostgreSQL owner-consent migration is not admitted");
+  }
+  async browserSignerRetainedSpendMicro(_signer: string): Promise<number> {
+    throw new Error("Native PostgreSQL owner-consent migration is not admitted");
+  }
+  async consumeSessionGrantConsent(_consent: import("../payments/session-grant-consent").SessionGrantConsent, _signature: string, _sessionSignature: string): Promise<void> {
+    throw new Error("Native PostgreSQL owner-consent migration is not admitted");
+  }
+  async getSessionGrantConsent(_owner: string, _epoch: string): Promise<import("./session-grant-consents").SessionGrantConsentRecord | null> {
+    throw new Error("Native PostgreSQL owner-consent migration is not admitted");
+  }
+
   async upsertSessionGrant(grant: Omit<SessionGrantRecord, "spent">): Promise<void> {
     const row = {
       session_id: grant.sessionId,

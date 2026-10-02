@@ -88,7 +88,9 @@ export async function provisionStorageInChild(request: StorageProvisionRequest):
       if (canonicalEvidence(reviewed.inspection) !== canonicalEvidence(inspection)) refuseStorage("snapshot_changed");
     }
     registerStorageCapability(db, identity, () => true);
-    if (identity.authorityMode === "mainnet-real") (await import("./sqlite-application-schema")).installSqliteApplicationSchema(db);
+    if (identity.authorityMode === "mainnet-real") {
+      (await import("./mainnet-application-schema")).installMainnetApplicationSchema(db);
+    }
     insertStorageIdentity(db, identity);
     installStorageFences(db, identity);
     assertStorageFences(db, identity);
