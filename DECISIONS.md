@@ -4245,3 +4245,35 @@ Preserve the established v1 raw result/default brief contract across the TypeScr
 ## Empty evidence production completion - 2026-10-02
 
 Initialize the shared orchestrator's Low confidence fallback before its early returns. Next's production optimizer coalesced an uninitialized confidence binding with a later verdict, causing no-source and failed-original-read paths to throw despite passing source tests. Protect actual compiled behavior with a hermetic post-build regression in CI. Result/payment/export contracts remain unchanged across shared consumers. See [production empty-evidence regression](docs/engineering/empty-evidence-production-2026-10-02.md).
+
+## Build-pinned invited mainnet browser authority - 2026-10-02
+
+Use one strict public enrollment contract for the isolated server and dedicated
+browser worker. The final digest binds all participants/sources, registry/network,
+origin, exact source commit, integer bounds and custody epoch/expiry; a draft candidate
+digest is only a preparation label. Compile reviewed public pins after the source
+commit, never accept a page/request policy or network selector, and keep the default
+browser and live server candidate closed without their independent enrollment gates.
+
+Separate private key derivation from server-issued single-use owner delegation. Fetch
+original cookie-authenticated challenges inside the worker, attest fresh registry
+reads independently, and bind narrow encrypted full-text item versions/receipts to
+exact source-owned payout and registry price. Offers, IPFS, alternate spending
+surfaces, automatic funding and withdrawal are outside this candidate. Reserve each
+nonce and conservative signed capacity atomically in a retained cross-tab local
+ledger before signing, with server authority rechecked after signing. This supplements
+the durable server admission ledger without claiming local browser storage resists XSS.
+
+Revoke the server generation before local custody deletion and retain all exposed or
+uncertain authorization capacity. Neither revocation nor storage deletion refunds
+Gateway funds or erases another worker's live key. Require a concrete owner-reviewed
+unspent-balance recovery decision before external prefunding and any live launch.
+See [browser candidate boundaries](docs/mainnet-runtime-domains.md).
+
+Keep creator setup and external prefunding as an offline owner-review workflow:
+unsigned stdout-only SourceRegistry deployment/registration and exact bounded
+USDC approval/`depositFor` requests, without key loading, signing, broadcast or
+launch authority. Validate fixed reviewed compiler input and ABI/bytecode fixture
+against current-source/compiler provenance. Registry deployment native gas remains
+separate from research allocation; printing a transaction request is not settlement
+or evidence that a mainnet registry exists.

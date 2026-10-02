@@ -101,6 +101,9 @@ jobs:
       - name: Isolated session worker and IndexedDB (synthetic, no funds)
         run: npm run test:browser-isolated-session
 
+      - name: Invited mainnet renderer and signer (intercepted HTTP, synthetic only)
+        run: npm run test:browser-mainnet-pilot
+
       - name: Private browser journal (hermetic, no settlement)
         run: npm run test:browser-private-journal
 

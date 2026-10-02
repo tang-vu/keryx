@@ -111,3 +111,90 @@ All HTTP is intercepted to fixed fixture documents/scripts, and every owner/key/
 is synthetic. CI repeats this bounded component acceptance. A production worker,
 candidate enrollment, private session history and the mainnet server/payment/registry
 journey remain separate gates; this fixture is not a runnable public mainnet pilot.
+
+## Build-pinned invited browser candidate
+
+The next source slice adds `/mainnet-pilot` and a dedicated worker. Existing web,
+desktop, CLI, MCP, API, extension, bot, treasury and funding flows keep their current
+testnet roles. Only the isolated invited browser route and its authenticated pilot
+API contract are intended for this candidate; a default build without reviewed
+public enrollment pins refuses initialization. The isolated server's live factory
+also remains closed. Source capability and synthetic acceptance do not authorize
+mainnet deployment, owner funding or real settlement.
+
+`public-enrollment.ts` is the shared browser/server schema. Its final SHA-256 digest
+covers the complete canonical artifact: source commit, HTTPS origin, static mainnet
+RPC/contracts/token/decimals, registry, every source/creator/payout/invited buyer,
+retained testnet signers, integer limits, custody epoch and expiry. The draft
+`candidateDigest` is a preparation label. The final digest binds key derivation,
+delegation, durable server identity and signing challenges. No page message can
+select a network, replace the artifact or supply authorized payees.
+
+After committing and reviewing all source, prepare a public proposal with that exact
+release commit in ignored `.artifacts/mainnet-pilot/`, then run:
+
+```powershell
+npm run mainnet:browser-enrollment -- --input .artifacts/mainnet-pilot/proposal.json --output .artifacts/mainnet-pilot/enrollment.json
+```
+
+The offline builder requires clean tracked and nonignored untracked source, bounded
+regular input, exact current source SHA, future expiry, and new output names beneath
+the checked real artifact directory. It emits canonical public JSON and a companion
+`.public.env` containing the two `NEXT_PUBLIC_KERYX_MAINNET_ENROLLMENT_*` build pins.
+Generate these after the final reviewed source commit to avoid a self-referential
+commit hash. Build in a fresh isolated process with those public pins; changing a
+host or policy requires a new reviewed artifact and browser bundle. These files
+contain no wallet key, server cookie, derivation signature or launch authorization.
+
+The browser requests a separate server-issued, short-lived, single-use owner
+delegation challenge. Its readable wallet signature covers the final enrollment,
+origin/network, owner, fresh signer, server grant epoch, funded cap and expiry.
+The private derivation signature is never sent to the server. Server grant admission
+must verify the exact signature and fresh actual Gateway funded capacity atomically;
+an HTTP-only same-origin cookie binds subsequent calls to that admitted generation.
+Restore reuses encrypted tab custody and checks the current cookie grant again.
+
+An SSE event is only a notification. The worker reads the original admitted challenge
+itself and checks owner/signer/epoch, final digest, approved source, original nonce,
+integer amount and static mainnet domain. It independently attests the fixed mainnet
+RPC before and after reads and rechecks a pinned registry block hash. Registry
+unavailability, a changed block or an unapproved participant refuses signing without
+a testnet/cache/off-chain fallback. Article fetches require the exact immutable
+item/version/full-text `db_encrypted` receipt from an authenticated metadata-only
+preview, equal registry/preview/request price and source-owned payout. Offers,
+publisher manifests, IPFS and other paid delivery kinds are excluded. Citation
+payments use the current approved registry authors/payouts and per-payment bound.
+
+A separate native IndexedDB authorization ledger reserves cumulative signed capacity
+and each nonce atomically across workers before signing. It retains reservations on
+any failure and survives key deletion, reload and replacement server grant epochs.
+The worker rechecks current cookie authority before and after cryptographic signing.
+The server still owns global ask allocation, nonce admission, settlement and durable
+recovery; local signed capacity is an additional bound, not evidence of payment.
+Deleting browser storage through developer tools or compromised same-origin script
+can damage this additional local bound. It does not remove durable server records;
+the previously documented custody/XSS residual still applies.
+
+Sign-out first revokes the server grant/cookie, then destroys this tab's key and
+ciphertext. A failed revocation pauses the UI and retains custody for recovery.
+Revocation prevents new admitted work; it cannot claw back already exposed signed
+authorizations, delete another live worker's heap key, or withdraw/refund Gateway
+funds. The authorization ledger and server journals remain retained. Funding must
+be an explicit external owner operation to a fresh isolated session, for example
+reviewed `depositFor(USDC, sessionSigner, amount)`; this worker cannot sign a funding
+transaction or cash-out. A concrete unspent-balance recovery/custody decision remains
+mandatory before any real funded launch. Registry deployment gas is separate from
+the proposed research allocation and is not represented as paid creator revenue.
+
+The renderer labels maximum allocation and retained capacity separately from actual
+settlement, keeps answers when one co-sign leg refuses, and preserves bounded public
+trace/receipt/request references through tab reload. `npm run test:browser-mainnet-pilot`
+uses the actual renderer and dedicated worker with native Chromium cryptography and
+IndexedDB. All wallet owners, cookie/server responses, registry transport and research
+payments are synthetic, with every HTTP request intercepted. It verifies real EOA
+signatures, reload, wrong authority/item/price/receipt/chain/block refusal, cross-tab
+single-use/cap races and other-tab revocation during delayed signing. Integration
+against the actual isolated server handler, packaged Next worker behavior, live registry
+identity, funding/reconciliation/backup/kill-switch evidence and the owner's final
+enrollment/funds decision remain launch gates. No distribution or installer claims
+follow from this browser-only acceptance.
