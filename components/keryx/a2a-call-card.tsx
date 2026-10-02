@@ -12,6 +12,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Check, Copy, Terminal } from "lucide-react";
+import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
 const ORIGIN = "https://keryx.cc";
 
@@ -41,7 +42,7 @@ export function A2aCallCard() {
           Call Keryx from your own agent
         </h2>
         <span className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-ink-3">
-          POST /api/agent/ask · dynamic fixed price · Arc eip155:5042002
+          POST /api/agent/ask · dynamic fixed price · {browserPaymentProfile().networkId}
         </span>
       </div>
 

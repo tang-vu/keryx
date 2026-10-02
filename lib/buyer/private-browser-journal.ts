@@ -6,8 +6,9 @@ import { privateResearchIdSchema } from "../a2a/private-research-intent";
 import { privateBrowserDraftSchema, validatePrivateBrowserDraft, privateDraftFromIntent } from "./private-browser-draft";
 import { validatePrivateBuyerIntent, type PrivateBuyerIntent } from "./private-buyer-intent";
 import type { PrivateMerchantPolicy } from "./private-merchant-policy";
+import { browserPaymentProfile } from "../browser-payment-profile";
 
-const spec = { database: "keryx-private-buyer-jobs-v1", store: "jobs", keyPath: "id",
+const spec = { database: browserPaymentProfile().testnet ? "keryx-private-buyer-jobs-v1" : `keryx-private-buyer-jobs-v2-${browserPaymentProfile().networkId}`, store: "jobs", keyPath: "id",
   indexes: [{ name: "payer", keyPath: "payer" }] };
 const recordSchema = z.object({
   schema: z.literal("keryx-private-browser-job-v1"), id: privateResearchIdSchema,

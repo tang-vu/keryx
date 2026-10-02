@@ -1,12 +1,13 @@
 import { isAddress, recoverTypedDataAddress } from "viem";
 import type { PendingSignatureChallenge } from "./pending-signatures";
-import { ARC_TESTNET_PROFILE } from "../arc-network-profile";
+import { paymentRuntimeConfig } from "../payment-runtime-config";
 
 // This route serves Arc testnet only. These values are independent of the returned header.
-const NETWORK = ARC_TESTNET_PROFILE.networkId;
-const USDC = ARC_TESTNET_PROFILE.usdcAddress;
-const GATEWAY = ARC_TESTNET_PROFILE.gatewayWallet;
-const CHAIN_ID = ARC_TESTNET_PROFILE.chainId;
+const profile = paymentRuntimeConfig().profile;
+const NETWORK = profile.networkId;
+const USDC = profile.usdcAddress;
+const GATEWAY = profile.gatewayWallet;
+const CHAIN_ID = profile.chainId;
 const MIN_TIMEOUT = 604900;
 const MAX_TIMEOUT = 691200;
 

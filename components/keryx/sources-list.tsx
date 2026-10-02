@@ -9,6 +9,7 @@ import { Wallet, ShieldCheck, ShieldAlert } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { fmtUsdc, shortAddr } from "./phase-style";
+import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
 export interface SourceCardData {
   id: string;
@@ -82,7 +83,7 @@ export function SourcesList({ sources }: { sources: SourceCardData[] }) {
               </p>
               {s.registerTx && (
                 <a
-                  href={`https://testnet.arcscan.app/tx/${s.registerTx}`}
+                  href={`${browserPaymentProfile().explorerUrl}/tx/${s.registerTx}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   title="Registered on-chain — view the register() transaction on ArcScan"

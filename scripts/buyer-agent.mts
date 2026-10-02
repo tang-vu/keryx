@@ -1,4 +1,4 @@
-/** Independent, caller-funded Arc-testnet buyer. No Keryx server config or treasury access. */
+/** Independent, caller-funded selected-network buyer. No Keryx server config or treasury access. */
 import { readFile } from "node:fs/promises";
 import { privateKeyToAccount } from "viem/accounts";
 import { buyResearch, quoteBuyer, resumeResearch } from "../lib/buyer/client.ts";
@@ -8,7 +8,7 @@ import { addressSchema, BuyerRefusal, buyerRequestSchema, buyerTypedData } from 
 import { parseBuyerBudget } from "../lib/a2a/buyer-workspace.ts";
 
 const [command, ...args] = process.argv.slice(2);
-const usage = `Keryx buyer agent (Arc testnet only)
+const usage = `Keryx buyer agent (trusted configured Arc network)
   npm run buyer -- quote --request request.json --payee 0x... --max-total 0.10
   npm run buyer -- buy --request request.json --payee 0x... --max-total 0.10 --state ./job-1
   npm run buyer -- resume --state ./job-1 [--watch]
@@ -80,7 +80,7 @@ async function main() {
   const maxTotalMicros = String(Math.round(maxTotal * 1e6));
   if (command === "quote") {
     const requirement = await quoteBuyer(request, payee, maxTotalMicros);
-    console.log(JSON.stringify({ decision: "BUY_ELIGIBLE", paid: false, reason: "Challenge matches the pinned recipient, Arc testnet, USDC, signing domain and total limit", totalMicros: requirement.amount, creatorCapMicros: Math.round(request.budget * 1e6), serviceFeeMicros: Number(requirement.amount) - Math.round(request.budget * 1e6), package: `${request.researchMode}@${request.packageVersion}` }, null, 2));
+    console.log(JSON.stringify({ decision: "BUY_ELIGIBLE", paid: false, reason: "Challenge matches the pinned recipient, the configured Arc network, USDC, signing domain and total limit", totalMicros: requirement.amount, creatorCapMicros: Math.round(request.budget * 1e6), serviceFeeMicros: Number(requirement.amount) - Math.round(request.budget * 1e6), package: `${request.researchMode}@${request.packageVersion}` }, null, 2));
     return;
   }
   const key = process.env.KERYX_BUYER_PRIVATE_KEY;

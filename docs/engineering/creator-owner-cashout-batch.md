@@ -5,6 +5,11 @@ immutable, reviewed list of wallets whose original keys the owner controls. It
 does not activate public withdrawal creation or a timer. Testnet cash-outs move
 existing balances; they are not new creator payments or independent adoption.
 
+This batch and its separately provisioned custodial relay remain testnet-only.
+Ordinary mainnet creator cashout uses the owner's connected wallet and authenticated
+owner-withdrawal API, including original mint recovery/finality; adopting this
+operator tool grants no mainnet relay authority and imports no testnet custody.
+
 The October 2 scope authorizes up to 23 eligible wallets and an absolute
 55,000,000 micro-USDC debit ceiling on Arc testnet only. The current reviewed
 selected snapshot is 54,994,260 micro-USDC, with quoted fee reservations of

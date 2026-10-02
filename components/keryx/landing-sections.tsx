@@ -7,6 +7,7 @@
 import Link from "next/link";
 import { MintIcon, type MintIconName } from "./mint-icons";
 import { cn } from "@/lib/utils";
+import { currentArcLabel } from "@/lib/arc-network-display";
 
 const STEPS: {
   num: string;
@@ -30,7 +31,7 @@ const STEPS: {
     num: "III",
     kicker: "Settle",
     icon: "paid",
-    body: "Eligible cited creators receive weighted USDC rewards on Arc testnet. The answer and public ledger distinguish settled, pending, and simulated payments.",
+    body: `Eligible cited creators receive weighted USDC rewards on ${currentArcLabel}. The answer and public ledger distinguish settled, pending, and simulated payments.`,
   },
 ];
 
@@ -100,7 +101,7 @@ export function ForCreators() {
             Add an RSS feed you control, choose its access toll, and prove ownership.
             Keryx can pay for a read when it buys an article, then send a separate
             weighted reward if that article supports a cited answer. See each payment
-            and its state in the public ledger. Payments currently use Arc testnet USDC.
+            and its state in the public ledger. Payments use {currentArcLabel} USDC.
           </p>
           <div className="relative mt-8 flex flex-wrap gap-3">
             <Link

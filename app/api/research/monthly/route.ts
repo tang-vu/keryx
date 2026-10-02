@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import { addressSchema, authorizationSchema } from "@/lib/buyer/protocol";
 import { config } from "@/lib/config";
 import { getDb } from "@/lib/db";
-import { quoteResearchMonthly } from "@/lib/monthly/quote";
+import { monthlyAdmissionQuote, monthlyConfigured, assertMonthlyExecutionReady } from "@/lib/monthly/readiness";
 import { monthlyIdSchema, MONTHLY_PATH, monthlyQuoteSchema, monthlyRedeemSchema } from "@/lib/monthly/protocol";
 import { monthlyPaymentAuthorization, monthlyQuestionDigest, redeemMonthly, verifyMonthlyProof } from "@/lib/monthly/service";
 import { monthlyPurchaseId } from "@/lib/db/research-monthly";
@@ -15,15 +15,13 @@ import { makePayment } from "@/lib/payments/payment-gateway";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const response = (value: unknown, status = 200) => Response.json(value, { status, headers: { "Cache-Control": "no-store" } });
-function enabled() { return process.env.KERYX_MONTHLY_ENABLED === "1" && config.networkId === "eip155:5042002" && !!config.sellerAddress && !!config.funderKey && process.env.KERYX_FORCE_OFFLINE !== "1"; }
 
 export async function GET(req: NextRequest) {
   const limited = await checkRateLimit(clientIp(req), "a2aPublic"); if (limited) return limited;
   try {
     if (req.nextUrl.searchParams.get("quote") === "1") {
-      if (!enabled()) return response({ error: "Monthly pilot unavailable" }, 503);
-      await (await getDb()).getResearchMonthly(`monthly_${"0".repeat(64)}`);
-      return response({ quote: quoteResearchMonthly() });
+      try { return response({ quote: await monthlyAdmissionQuote(await getDb()) }); }
+      catch { return response({ error: "Monthly unavailable" }, 503); }
     }
     const monthlyId = monthlyIdSchema.parse(req.nextUrl.searchParams.get("id"));
     const proof = JSON.parse(req.headers.get("x-keryx-monthly-proof") ?? "null");
@@ -36,14 +34,16 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const limited = await checkRateLimit(clientIp(req), "a2aPublic"); if (limited) return limited;
-  if (!enabled()) return response({ error: "Monthly pilot unavailable" }, 503);
+  if (!monthlyConfigured()) return response({ error: "Monthly unavailable" }, 503);
   try {
     const accepted = monthlyQuoteSchema.parse(await req.json());
-    const quote = quoteResearchMonthly();
+    const db = await getDb();
+    let quote;
+    try { quote = await monthlyAdmissionQuote(db); }
+    catch { return response({ error: "Monthly custody or payment authority unavailable" }, 503); }
     if (accepted.quoteId !== quote.quoteId || JSON.stringify(accepted) !== JSON.stringify(quote)) return response({ error: "Price changed; review again" }, 409);
     const signed = req.headers.get("payment-signature");
     const authorization = signed ? await monthlyPaymentAuthorization(signed, quote.payee, quote.totalMicros) : null;
-    const db = await getDb();
     const issued = authorization ?? authorizationSchema.parse({ from: addressSchema.parse(req.headers.get("x-keryx-monthly-payer")),
       to: quote.payee, value: String(quote.totalMicros), nonce: `0x${randomBytes(32).toString("hex")}`,
       validAfter: String(Math.floor(Date.now() / 1000) - 600), validBefore: String(Math.floor(Date.now() / 1000) + config.maxTimeoutSeconds) });
@@ -54,13 +54,15 @@ export async function POST(req: NextRequest) {
     const result = await settleThenServe(req, { priceUsdc: quote.totalMicros / 1e6, payTo: quote.payee, endpoint: MONTHLY_PATH,
       purchasePurpose: "monthly", purchaseRequestHash: quote.quoteId,
       description: "Research Monthly: four Deep requests, 30 days, manual renewal" }, async settle => {
-      if (!authorization || !settle.transaction || settle.payer.toLowerCase() !== authorization.from.toLowerCase()
+      if (!authorization || settle.network !== config.profile.networkId || !settle.transaction || settle.payer.toLowerCase() !== authorization.from.toLowerCase()
         || settle.authorizationId !== authorization.nonce || Math.round(settle.amountUsdc * 1e6) !== quote.totalMicros) throw new Error("Monthly settlement mismatch");
       const db = await getDb();
       const id = monthlyPurchaseId({ network: config.networkId, payer: settle.payer, payee: quote.payee, authorizationId: authorization.nonce });
       const existing = await db.getResearchMonthly(id);
       const createdAt = existing?.purchase.createdAt ?? new Date().toISOString();
       const result = await db.createResearchMonthly({ id, payer: settle.payer, payee: quote.payee, authorizationId: authorization.nonce,
+        ...(!config.profile.testnet ? { format: "keryx-research-monthly-purchase-v2" as const,
+          network: config.profile.networkId, asset: config.profile.usdcAddress.toLowerCase(), gatewayContract: config.profile.gatewayWallet.toLowerCase() } : {}),
         quoteId: quote.quoteId,
         transaction: settle.transaction, createdAt, expiresAt: new Date(Date.parse(createdAt) + 30 * 86400_000).toISOString(),
         creatorBudgetMicros: quote.creatorBudgetMicros, serviceFeeMicros: quote.serviceFeeMicros, totalMicros: quote.totalMicros,
@@ -81,12 +83,16 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   const limited = await checkRateLimit(clientIp(req), "a2aPublic"); if (limited) return limited;
-  if (!enabled()) return response({ error: "Monthly admission unavailable; saved jobs remain recoverable" }, 503);
   try {
     const input = monthlyRedeemSchema.parse(await req.json());
     const payer = await verifyMonthlyProof("redeem", { monthlyId: input.monthlyId, requestId: input.requestId, questionDigest: monthlyQuestionDigest(input.question) }, input.proof);
     const db = await getDb(); const record = await db.getResearchMonthly(input.monthlyId);
     if (!record || record.purchase.payer.toLowerCase() !== payer.toLowerCase()) return response({ error: "Monthly plan not found" }, 404);
+    if (!record.redemptions.some(value => value.requestId === input.requestId)) {
+      if (!monthlyConfigured()) return response({ error: "Monthly admission unavailable; original jobs remain recoverable" }, 503);
+      try { await assertMonthlyExecutionReady(db, record.purchase.creatorBudgetMicros); }
+      catch { return response({ error: "Monthly current execution capacity unavailable; no slot consumed" }, 503); }
+    }
     const result = await redeemMonthly(db, record.purchase, { ...input, payer });
     return response({ queryId: result.order.id, status: result.order.status, replayed: !result.created,
       location: `/api/agent/ask?queryId=${result.order.id}` }, result.created ? 202 : 200);

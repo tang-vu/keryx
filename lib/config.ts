@@ -4,8 +4,9 @@
  * conflicting environment values fail startup rather than creating a mixed-chain deployment.
  */
 
-import { configuredPaymentProfile, configuredRegistryAddress } from "./arc-network-profile";
+import { configuredRegistryAddress } from "./arc-network-profile";
 import { browserPaymentProfile } from "./browser-payment-profile";
+import { assertPaymentRuntimeConfiguration, paymentAuthorizationLifetime } from "./payment-runtime-config";
 
 /** Reject network contract overrides until a separately reviewed network profile exists. */
 export function assertArcConfiguration(env: {
@@ -19,21 +20,12 @@ export function assertArcConfiguration(env: {
   KERYX_REGISTRY_READ_ADDRESS?: string;
   NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS?: string;
   KERYX_FORCE_OFFLINE?: string;
+  KERYX_MAX_TIMEOUT_SECONDS?: string;
 }): void {
-  const profile = configuredPaymentProfile(env.KERYX_NETWORK, env.NEXT_PUBLIC_KERYX_NETWORK);
-  if (!profile.testnet && env.KERYX_FORCE_OFFLINE === "1") throw new Error("mainnet profile cannot enable offline payment bypass");
+  const profile = assertPaymentRuntimeConfiguration(env);
   configuredRegistryAddress(profile, env.KERYX_REGISTRY_ADDRESS, env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS);
   if (env.KERYX_REGISTRY_READ_ADDRESS !== undefined || env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS !== undefined)
     configuredRegistryAddress(profile, env.KERYX_REGISTRY_READ_ADDRESS, env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS);
-  for (const [name, actual, expected] of [
-    ["KERYX_USDC_ADDRESS", env.KERYX_USDC_ADDRESS, profile.usdcAddress],
-    ["KERYX_GATEWAY_WALLET", env.KERYX_GATEWAY_WALLET, profile.gatewayWallet],
-    ["KERYX_GATEWAY_MINTER", env.KERYX_GATEWAY_MINTER, profile.gatewayMinter],
-  ] as const) {
-    if (actual !== undefined && actual.toLowerCase() !== expected.toLowerCase()) {
-      throw new Error(`${name} must match the ${profile.label} profile`);
-    }
-  }
 }
 
 /** Compatibility export; new integrations should use the network-neutral name. */
@@ -51,6 +43,7 @@ if (typeof process !== "undefined" && process.release?.name === "node") assertAr
   KERYX_REGISTRY_READ_ADDRESS: process.env.KERYX_REGISTRY_READ_ADDRESS,
   NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS: process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS,
   KERYX_FORCE_OFFLINE: process.env.KERYX_FORCE_OFFLINE,
+  KERYX_MAX_TIMEOUT_SECONDS: process.env.KERYX_MAX_TIMEOUT_SECONDS,
 });
 const profile = browserPaymentProfile();
 
@@ -87,7 +80,7 @@ export const config = {
   // retains margin above the floor. Keryx independently bounds local payment signing to its
   // reviewed seven-to-eight-day policy, with a small validation skew allowance. Historical
   // upstream acceptance of longer windows does not authorize a longer Keryx signing lifetime.
-  maxTimeoutSeconds: Math.round(num(process.env.KERYX_MAX_TIMEOUT_SECONDS, 691200)),
+  maxTimeoutSeconds: paymentAuthorizationLifetime(profile, process.env.KERYX_MAX_TIMEOUT_SECONDS),
   // Gateway spend-wallet top-up. Circle's facilitator won't settle against tiny balances, so the
   // agent keeps a healthy reusable Gateway balance and tops up when it drops below the threshold.
   gatewayDepositUsdc: process.env.KERYX_GATEWAY_DEPOSIT ?? "1",

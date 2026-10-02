@@ -1,4 +1,5 @@
 import { decodeFunctionData, encodeFunctionData, type Hex, type PublicClient } from "viem";
+import { browserPaymentProfile } from "../browser-payment-profile";
 import { addressSchema, BUYER_GATEWAY, BUYER_USDC } from "./protocol";
 import { GATEWAY_DEPOSIT_ABI, transactionHashSchema } from "./funding-policy";
 
@@ -8,7 +9,7 @@ export async function inspectPastGatewayDeposit(payer: string, hash: string, cha
   addressSchema.parse(payer); transactionHashSchema.parse(hash); signal?.throwIfAborted();
   let timer: ReturnType<typeof setTimeout> | undefined;
   async function inspect() {
-    if (await chain.getChainId() !== 5042002) throw new Error("Choose Arc testnet RPC");
+    if (await chain.getChainId() !== browserPaymentProfile().chainId) throw new Error("Choose the selected Arc RPC");
     const [tx, receipt] = await Promise.all([chain.getTransaction({ hash: hash as Hex }), chain.getTransactionReceipt({ hash: hash as Hex })]);
     const same = (a: string | null, b: string) => a?.toLowerCase() === b.toLowerCase();
     if (!same(tx.hash, hash) || !same(receipt.transactionHash, hash) || !same(tx.from, payer)
@@ -24,7 +25,7 @@ export async function inspectPastGatewayDeposit(payer: string, hash: string, cha
       || (finalized.number === receipt.blockNumber && !same(finalized.hash, receipt.blockHash))
       || !["success", "reverted"].includes(receipt.status)) throw new Error("Finalized deposit evidence is unavailable");
     transactionHashSchema.parse(receipt.blockHash);
-    if (await chain.getChainId() !== 5042002) throw new Error("RPC network changed during inspection");
+    if (await chain.getChainId() !== browserPaymentProfile().chainId) throw new Error("RPC network changed during inspection");
     return { payer: payer.toLowerCase(), hash, amountMicros: amount.toString(), blockNumber: receipt.blockNumber.toString(),
       blockHash: receipt.blockHash, status: receipt.status, basis: "configured-rpc-finalized" as const };
   }

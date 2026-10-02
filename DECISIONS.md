@@ -1,18 +1,5 @@
 # Keryx — Decision Log
 
-**Showcase extraction maintenance** - *2026-10-02*
-
-Maintain the standalone Arc primitives alongside relevant upstream changes as a small,
-independently reviewed and versioned extraction. Require durable host journal contracts,
-exact payment identity and retained uncertain outcomes; do not port application custody,
-recovery services or unfinished mainnet authority wholesale. Pin a concrete upstream anchor,
-verify its install/tests/package independently, then update the root gitlink and docs.
-This preserves a useful forkable library without implying synchronized app/MCP/installer
-runtime distribution. Maintenance is authorized session work, not an autonomous scheduler
-or artificial activity. The 0.3 release has synthetic acceptance; funded, durability,
-custody, reconciliation and finality gates remain explicit. See
-[maintenance and surface boundaries](docs/arc-primitives-maintenance.md).
-
 **Owner-managed creator cash-out batch** — *2026-10-02*
 
 The user confirmed both comprehensive creator cash-out testing and withdrawing
@@ -46,6 +33,85 @@ No production HTTP/timer or browser/desktop/MCP/extension/bot cash-out authority
 is enabled by this operator delivery. Source tests/review/CI and actual funded
 evidence remain separate acceptance gates; legacy browser/API migration is a
 separate demonstrated risk and follow-up.
+
+## Selected public treasury observation — 2026-10-03
+
+The installed Unified Balance Kit defines Arc testnet only. Mainnet `/api/treasury`
+therefore reads the public role's configured policy and actual sealed SQLite identity
+through the read-only application boundary, checks historical role separation, and
+requests that exact address/domain from the selected Circle Gateway balance API.
+It never reads the retained testnet wallet, loads a custody key or admits spending.
+The current policy/identity is revalidated after asynchronous reads, and mainnet
+does not reuse a last-good cache when policy or Circle observation is unavailable.
+Available USDC is distinct from kit confirmed/pending-deposit totals; an unanswered
+or mismatched Circle row is unknown, while an explicit matching zero is zero.
+Public balance and health observations do not establish hosted payment readiness.
+The status page consumes this public observation; CLI/MCP/desktop/extension callers
+have no treasury-endpoint consumer and retain their independently bounded payment
+and original-network recovery contracts. The historical Circle grant-media script
+explicitly requires the testnet App Kit response and refuses a mainnet response;
+its archived screenshots and traction are not relabeled as mainnet proof.
+
+## Full public mainnet storage and recovery — 2026-10-02
+
+An unsigned session withdrawal has a retained pre-crypto exposure transition. The
+normal worker must acquire the server marker before signing; submit requires it.
+Owner cancellation is atomic only before that marker, signed request and transfer
+claim, retains the cancelled original salt, and cannot revive that request. Local
+worker cancellation also requires no local cryptographic exposure. Uncertain or
+signed originals never release by time or empty vendor lookup. This lets an owner
+decline an unsigned withdrawal without retiring the stable funded signer.
+
+The owner requested the normal public product on mainnet, superseding the invited
+pilot proposal. The current production backend is SQLite, so the public release
+targets a fresh sealed mainnet SQLite namespace on the existing deployment while
+retaining testnet state and custody separately. Optional Supabase mainnet remains
+closed until its independently source-generated PostgreSQL schema and concurrent
+writer acceptance pass; it does not block the ordinary SQLite release.
+
+Session cashout authenticates retained owner and signer proofs after payment
+expiry or revocation. An unsigned original preparation reserves capacity and
+pauses new payment admission in one native transaction. That transaction compares
+confirmed lifetime debits as well as pending holds, including changes after the
+last quote read. Signed burns and matched attestations reuse the existing creator
+withdrawal journal. Unknown outcomes retain the original request and liabilities;
+only an exact owner mint with canonical selected-chain receipt/finality evidence
+releases the withdrawal barrier. Original nonces and lifetime payment consumption
+remain, so the stable signer can fund and renew rather than being retired.
+
+Ordinary creator cashout uses its connected owner wallet for burn consent and the
+mint transaction's gas; a custodial relay is a separate optional operator role.
+Its signed original admission compares all retained local liabilities and confirmed
+debits atomically with the fresh quote. Recovery never repeats a vendor burn, and
+only an exact observed owner mint releases that original withdrawal hold.
+Hosted mainnet payments use an independently sealed, owner-prefunded treasury
+identity and bounded normal product budgets, with no legacy key loader or automatic
+funding executor. A reviewed canonical policy binds the native storage identity,
+origin, dedicated signer, lifetime cap, per-query cap and expiry. Sealed native
+history permanently separates public and private signer roles across rotation.
+Expiry ends new admission, not already signed vendor authority. SQLite commits the
+complete original typed authorization before SDK signing and its header hash and
+submission marker before any paid HTTP call. Policy renewal retains cumulative
+signer exposure; unknown outcomes never restore it. Public and private hosted
+signers remain separate, and private creator confirmations retain their existing
+private journals without leaking payments into the public ledger. Native synthetic
+acceptance exercises the installed SDK, concurrent capacity and response loss;
+owner-selected operating policy and prefunding remain release decisions. No
+funding, activation, deployment, autonomous scheduling or XSS-proof custody follows
+from this preparation. See [full server migration](docs/mainnet-server-runtime.md).
+
+**Showcase extraction maintenance** - *2026-10-02*
+
+Maintain the standalone Arc primitives alongside relevant upstream changes as a small,
+independently reviewed and versioned extraction. Require durable host journal contracts,
+exact payment identity and retained uncertain outcomes; do not port application custody,
+recovery services or unfinished mainnet authority wholesale. Pin a concrete upstream anchor,
+verify its install/tests/package independently, then update the root gitlink and docs.
+This preserves a useful forkable library without implying synchronized app/MCP/installer
+runtime distribution. Maintenance is authorized session work, not an autonomous scheduler
+or artificial activity. The 0.3 release has synthetic acceptance; funded, durability,
+custody, reconciliation and finality gates remain explicit. See
+[maintenance and surface boundaries](docs/arc-primitives-maintenance.md).
 
 **D-296** - Pilot one bounded Research Monthly plan - *On 2026-10-02 the user
 confirmed four requests/month at 10% below buying four separately.* Use four Deep
@@ -107,6 +173,53 @@ plan for this deployment and do not upgrade billing automatically. Use a restric
 never deploy an interactive CLI OAuth/refresh token. See [provider setup and evidence](docs/cloudflare-workers-ai.md).
 Reversible: disable the provider and remove it from the public allowlist; historical usage retains
 its immutable tariff policy. No payment authority, mainnet activation or background scheduler changes.
+## Full public mainnet storage and recovery — 2026-10-02
+
+An unsigned session withdrawal has a retained pre-crypto exposure transition. The
+normal worker must acquire the server marker before signing; submit requires it.
+Owner cancellation is atomic only before that marker, signed request and transfer
+claim, retains the cancelled original salt, and cannot revive that request. Local
+worker cancellation also requires no local cryptographic exposure. Uncertain or
+signed originals never release by time or empty vendor lookup. This lets an owner
+decline an unsigned withdrawal without retiring the stable funded signer.
+
+The owner requested the normal public product on mainnet, superseding the invited
+pilot proposal. The current production backend is SQLite, so the public release
+targets a fresh sealed mainnet SQLite namespace on the existing deployment while
+retaining testnet state and custody separately. Optional Supabase mainnet remains
+closed until its independently source-generated PostgreSQL schema and concurrent
+writer acceptance pass; it does not block the ordinary SQLite release.
+
+Session cashout authenticates retained owner and signer proofs after payment
+expiry or revocation. An unsigned original preparation reserves capacity and
+pauses new payment admission in one native transaction. That transaction compares
+confirmed lifetime debits as well as pending holds, including changes after the
+last quote read. Signed burns and matched attestations reuse the existing creator
+withdrawal journal. Unknown outcomes retain the original request and liabilities;
+only an exact owner mint with canonical selected-chain receipt/finality evidence
+releases the withdrawal barrier. Original nonces and lifetime payment consumption
+remain, so the stable signer can fund and renew rather than being retired.
+
+Ordinary creator cashout uses its connected owner wallet for burn consent and the
+mint transaction's gas; a custodial relay is a separate optional operator role.
+Its signed original admission compares all retained local liabilities and confirmed
+debits atomically with the fresh quote. Recovery never repeats a vendor burn, and
+only an exact observed owner mint releases that original withdrawal hold.
+Hosted mainnet payments use an independently sealed, owner-prefunded treasury
+identity and bounded normal product budgets, with no legacy key loader or automatic
+funding executor. A reviewed canonical policy binds the native storage identity,
+origin, dedicated signer, lifetime cap, per-query cap and expiry. Sealed native
+history permanently separates public and private signer roles across rotation.
+Expiry ends new admission, not already signed vendor authority. SQLite commits the
+complete original typed authorization before SDK signing and its header hash and
+submission marker before any paid HTTP call. Policy renewal retains cumulative
+signer exposure; unknown outcomes never restore it. Public and private hosted
+signers remain separate, and private creator confirmations retain their existing
+private journals without leaking payments into the public ledger. Native synthetic
+acceptance exercises the installed SDK, concurrent capacity and response loss;
+owner-selected operating policy and prefunding remain release decisions. No
+funding, activation, deployment, autonomous scheduling or XSS-proof custody follows
+from this preparation. See [full server migration](docs/mainnet-server-runtime.md).
 
 **D-294** — Browser custody — *An isolated candidate session authenticates its exact identity before derivation* — *2026-10-02*
 
@@ -4377,6 +4490,92 @@ registry/content authority, bounded nonce/cap allocation, settlement/recovery an
 withdrawal/operational evidence before the final owner launch decision. See the
 [corrected mainnet delivery plan](docs/mainnet-delivery-plan.md).
 
+## Normal public mainnet authority and retained custody - 2026-10-02
+
+Use trusted startup network twins across normal web, API, CLI/MCP, bots and adapters;
+retain existing testnet defaults until the coordinated owner cutover. Legacy unlabelled
+task/journal originals remain testnet and cannot be automatically relabelled. Mainnet
+callers use fresh rail/origin-scoped state, including `~/.keryx/arc`. Source candidate
+versions do not claim published packages, installers or synchronized deployment.
+
+Normal browser grants require both readable owner consent and a separate session-key
+possession proof over the exact one-use grant epoch, owner, signer, network, origin,
+cumulative cap and expiry. A publicly observable funded signer address alone lets a
+foreign owner hold another signer's global capacity before signing; verify both proofs
+before admission. The secret derivation signature stays local. Renewal/top-up reviews
+an absolute lifetime signer cap backed by confirmed debit plus fresh current capacity;
+previous spend, nonce exposure and unknown signed liabilities never reset by epoch.
+
+Keep the original mainnet signer encrypted in owner/network/origin-scoped IndexedDB
+before funding. Logout locks and retains custody; expiry closes payments but does not
+erase withdrawal access. Recovery depends on that browser's wrapping key and ciphertext:
+lost/wiped storage is not guaranteed recoverable by repeating `personal_sign` elsewhere.
+Same-origin script can obtain the nonexportable AES CryptoKey handle and decrypt available
+ciphertext, and sees the initial wallet derivation signature. Worker isolation is neither
+an XSS-proof vault nor an on-chain cap; compromised origin/browser/signer endangers funds.
+
+Owner-reviewed funding uses exact ERC-20 approval plus `depositFor`, with native gas
+separate and the existing uncertainty/replacement journal retained. Offline registry
+preparation emits only source/compiler-bound curated SourceRegistry ABI/bytecode and
+unsigned deploy/register/exact-approve/depositFor requests for owner review. It has no
+wallet/key, broadcast, funding or launch authority. Preserve old proposal evidence as
+superseded rather than rebranding it as the public release. See
+[normal mainnet browser custody](docs/mainnet-browser-custody.md).
+
+## Original mainnet funding credit and bounded top-up consent - 2026-10-02
+
+Keep the existing owner funding transaction journal and its cross-tab lock until original
+Circle credit is evidenced. Concurrent research can legitimately reduce current availability
+below the saved balance plus deposit. Permit only authenticated, original settled debits
+admitted strictly after the saved balance observation to offset that threshold. Later
+confirmation of older pending debits, raw lifetime total changes and unknown holds cannot
+prove deposit credit. Bind the projection to the original network, signer and observation;
+retain uncertainty instead of repeating an owner deposit.
+
+Adding funds retains an exact absolute ceiling of previous owner consent plus the chosen
+deposit. A settlement between credit reconciliation and the grant proposal cannot enlarge
+that ceiling: refresh current capacity against new confirmed spend at most three times,
+then refuse before owner signing if it cannot be honored. Preserve the acknowledged deposit.
+Retain every public historical grant selector for original-proof recovery after logout or
+replacement; selectors alone confer no authority. Synthetic actual React/native-handler
+acceptance exercises both concurrent settlement intervals with one approval/deposit pair.
+
+## Retained owner-only browser session cashout - 2026-10-02
+
+Use the ordinary authenticated withdrawal journal and retained dual owner/session proofs
+for a narrowly bounded burn to the original owner, even after payment expiry or logout.
+The browser independently binds its custody origin, amount/fee review, static mainnet
+contracts and finite compiled block window. Lifetime signed spending is not outstanding
+liability: only exact original settled nonce/economic evidence distinguishes historical
+debit; missing and unknown authorizations remain held. A strict-durability cross-tab
+IndexedDB transaction fences payment admission before reserving the withdrawal barrier.
+
+Persist possible exposure before the server authorization marker and burn cryptography.
+Lost authorization/transfer responses remain original recovery operations. Cancel only
+never-exposed originals, retain cancelled identities, and never release uncertainty by
+timeout. Fresh Circle balance/processing data uses a fixed same-origin relay and trusts
+the application server and vendor JSON; independent RPC checks do not convert that into
+vendor cryptographic evidence.
+
+The connected owner separately submits reviewed mint calldata and gas. Persist the exact
+nonce/calldata/fee attempt before prompting the wallet; rejection or a lost response does
+not authorize a second mint. Release only the completed withdrawal barrier after original
+owner transaction/event/finality evidence and independent browser RPC verification. Keep
+old salts, nonces, question budgets and lifetime exposure so the same retained signer can
+renew, fund and research afterward. Actual React/native-handler/Chromium and emitted Next
+worker checks use synthetic external transport and confer no launch or live-funds authority.
+
+## Paused normal browser payment registration - 2026-10-02
+
+Unavailable status and expiry invalidate the local published registration, clock and
+consent, and lock heap custody without deleting funded recovery. A cached authorization
+callback must bind its originating published generation and current owner/signer/clock
+both before worker dispatch and before header publication. Explicit recovery publishes
+a fresh generation even when the server owner and epoch are unchanged. This prevents
+paused UI state from silently retaining usable payment authority during worker awaits.
+Actual React/production-worker/native-handler acceptance proves zero cached dispatch
+while paused and no returned header or settlement after a lookup fails during an
+original live challenge await.
 ## Guarded Arc unsigned fill compatibility - 2026-10-02
 
 Bind only an absent unsigned `eth_fillTransaction` sender to the originally captured
@@ -4388,6 +4587,45 @@ Do not infer that a missing journal hash authorizes another attempt: retain orig
 funding evidence and require owner recovery of any uncertain admission. See
 [treasury transaction isolation](docs/treasury-transaction-isolation.md).
 
+## Ordinary mainnet creator owner-wallet cashout - 2026-10-02
+
+The full public mainnet scope includes ordinary creator earnings withdrawal. Use the
+creator's own wallet for the finite BurnIntent and the separately reviewed minter
+transaction with native gas; no treasury relay, key loading or automatic transfer retry.
+Persist the exact reviewed amount, fee, original signature and one submission claim
+before delivery. Mainnet creator custody/recovery records live in a fresh network
+namespace and never relabel retained testnet originals. Session and creator flows share
+one focused owner-mint authority helper, which binds the original burn/attestation,
+static contracts, current owner/network and gas terms. Claim its original nonce and
+calldata before the wallet prompt; retain any returned hash even after an owner change.
+Reload permits original status/finality recovery, not another mint. Verified finality
+requires the original raw owner transaction, receipt/event and independent selected RPC
+finalized-block evidence. Actual React/native-handler/Chromium checks use synthetic
+external transport and do not authorize launch or live funds. See
+[browser custody](docs/mainnet-browser-custody.md).
+
+## Public network display and experimental rights boundary - 2026-10-02
+
+Public deployment labels, registry references and normal creator wallet actions use
+the independently compiled canonical profile. Financial receipt links use the
+original recorded network, never the current deployment. Retained unlabelled legacy
+receipts remain testnet; unknown explicit networks have no invented explorer link.
+Gateway contract references are references, not proof of individual Circle settlement
+IDs. Creator update/deactivate commands also pin the mainnet registry locally before
+opening a wallet prompt. Read-only withdrawal history matches the complete original
+creator status and retains its server-reported finality label.
+
+Keep the experimental scholarly rights protocol staged on testnet until a separate
+rights/payment domain migration is reviewed. Preserve its existing testnet messages
+and archived evidence; close paid manuscript opt-in and rights enrollment on mainnet
+with a product explanation before payment. This is an intentional experimental role
+boundary, not a restriction on ordinary public wallets or registered article publishing.
+
+## Fresh mainnet research purchase and Monthly authority - 2026-10-02
+
+Keep Monthly's four manually requested Deep research allocations and thirty-day term. Fresh sealed mainnet SQLite installs a canonical original-network purchase claim and v2 entitlement schema, with no historical backfill or testnet catalog adoption. Every seller claims its immutable original authorization before Circle settlement. Monthly adds single-use issued challenge consumption, an exact network/USDC/Gateway entitlement and atomic four-slot redemption; replay cannot change the quote, package, recipient, transaction or original request. Historical ordinary testnet records remain on their original rail; existing enrolled testnet storage refuses this newer domain. Mainnet Supabase remains staged until independently generated native schema evidence exists.
+
+Require actual native purchase writer capability before quoting or accepting a prepaid purchase. The hosted readiness check derives only the dedicated key's public address, compares it to the reviewed sealed policy, refuses historical public/private role reassignment and checks retained accounting/current known capacity. It neither signs, reserves nor funds, and is not a promise of future operating capacity. Actual execution still admits each full original through the hosted journal before signing. Preserve original uncertainty, cumulative signer caps and owner-operated prefunding. Normal mainnet wallet/API/CLI/MCP access has no invitation restriction or special small pilot ceiling.
 
 ## Immutable release version alignment - 2026-10-02
 
@@ -4399,3 +4637,20 @@ versions or payment/signature domains. Verify each new source, installer and reg
 archive independently; a shared version alone does not establish matching delivery.
 Arc testnet authority remains the production/default lane; no mainnet activation
 or funded-operation permission follows from storage capability or version bumps.
+## Mainnet hosted purchase admission and explicit experimental boundaries - 2026-10-02
+
+Ordinary A2A and private purchase admission use the actual freshly sealed application identity, dedicated reviewed role policy and key-to-signer public-address comparison before any incoming authorization can settle. Public/private retained exposure and known capacity limit each original creator budget; absent legacy testnet keys do not disable accepted mainnet roles. Private quote preview remains separate from authenticated purchasing availability, and private execution has no payer invitation list. Actual execution still reserves its exact full original before crypto and persists submission before paid HTTP. Synthetic native HTTP/SDK acceptance proves this composition without authorizing mainnet funds.
+
+Health must distinguish the selected real caller-funded rail from hosted authority whose operating availability has not been probed. Read-only payout monitoring preserves each explicit canonical original profile and treats unavailable or inexact balances as unknown. Keep the experimental scholarly-rights v1 domain explicitly unavailable on mainnet before storage or signing rather than relabelling its testnet protocol. This boundary does not restrict ordinary creator registration, content or cashout. Optional PostgreSQL remains staged while the public release targets fresh sealed SQLite.
+
+## Retained headless session cashout and explicit migration - 2026-10-02
+
+Headless session cashout reuses the restricted browser withdrawal policy and shared unsigned owner mint preparation. It retains the original funded ciphertext, exact authorization tuples, nonce history, question budgets and lifetime consumption. An explicit v2-to-v3 migration excludes older writers; ordinary commands refuse unmigrated state rather than silently adopting or replacing custody. Native tests exercise an actual archived v2 writer before migration and its refusal afterward.
+
+Local exposure and server authorization precede burn cryptography, and an atomic local delivery claim precedes transfer HTTP. Lost authorization/submission responses remain original recovery, never permission for a second burn. Before an unsigned owner mint packet is displayed, its nonce, calldata, gas and fee ceilings are retained; a manually supplied owner transaction hash is committed before completion HTTP. Only evidenced original cancellation/completion removes the relevant barrier. The CLI has no owner transaction signing or broadcast authority. Own-EOA MCP balances retain the separate same-owner SIWE withdrawal handoff; delegated session support does not imply key-only MCP cashout. These native synthetic checks do not prove live settlement or distributed cloned-state exclusion.
+
+## Read-only storage selection and compiled browser fixtures - 2026-10-02
+
+Private economics reporting selects its reviewed read-only adapter through the same source-owned application storage boundary. It must not initialize the ordinary database, acquire writer authority or silently fall back from an unavailable mainnet identity. Keep the dormant funding/enrollment import guard unchanged; resolve `.mjs` imports to their authored `.mts` sources so the guard examines the actual transitive graph.
+
+Hermetic browser fixtures compile explicit public profile/registry pins as Next does, rather than installing a Node `process` global or accepting request-selected authority. Historical testnet signing, clock and malicious-parent assertions retain their original rail and limits. Faithful gateway/route fixtures provide inherited methods, canonical profiles and the required native authority interface; successful setup must not remove nonce, privacy or durable-issuance assertions. The desktop question remains visible in the first reading area with the original layout/keyboard acceptance thresholds.

@@ -2,11 +2,18 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAccount, useSignMessage } from "wagmi";
 import { paperDeclarationMessage, paperDeclarationSchema, type PaperDeclaration, type PaperState } from "@/lib/scholarly/rights-protocol";
+import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
 type Data = { state: PaperState | null; enrolled: boolean; ready: boolean; items: number; active: boolean; verified: boolean;
   binding: Pick<PaperDeclaration, "protocol" | "network" | "deploymentOrigin" | "sourceId" | "itemId" | "registry" | "onchainId" | "creator" | "recipient" | "priceMicros" | "canonicalUrl" | "contentVersion" | "bodyHash" | "plaintextBytes" | "manifestId"> | null };
 const date = (days: number) => new Date(Date.now() + days * 86400_000).toISOString().slice(0, 10);
-export function ScholarlyRightsPanel({ creatorId }: { creatorId: string }) {
+export function ScholarlyRightsPanel({creatorId}:{creatorId:string}){
+  return browserPaymentProfile().testnet?<TestnetScholarlyRightsPanel creatorId={creatorId}/>:<section className="mt-6 rounded-xl border border-line p-4" aria-label="Scholarly manuscript opt-in">
+    <h2 className="font-display text-xl">Research manuscript rights</h2>
+    <p className="mt-2 text-sm">The experimental manuscript distribution-rights protocol is currently testnet only. Paid manuscript enrollment is closed on mainnet until its independent rights and payment migration passes review. Ordinary registered article publishing remains available.</p>
+  </section>;
+}
+function TestnetScholarlyRightsPanel({ creatorId }: { creatorId: string }) {
   const [data, setData] = useState<Data | null>(null), [working, setWorking] = useState(false), [message, setMessage] = useState("");
   const [unavailable, setUnavailable] = useState("Loading creator rights status…");
   const { address } = useAccount(), { signMessageAsync } = useSignMessage();

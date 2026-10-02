@@ -18,6 +18,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import Link from "next/link";
+import { currentArcLabel } from "@/lib/arc-network-display";
 import { ShieldCheck, Wallet } from "lucide-react";
 import { SiteHeader } from "@/components/keryx/site-header";
 import {
@@ -135,7 +136,7 @@ export default function RegisterPage() {
           </h1>
           <p className="mt-3 max-w-[54ch] text-[18px] leading-relaxed text-ink-2">
             List an RSS feed you control to offer articles to Keryx. Set a price per read,
-            prove feed ownership, and receive Arc testnet USDC when a paid read or citation settles.
+            prove feed ownership, and receive {currentArcLabel} USDC when a paid read or citation settles.
           </p>
           <p className="mt-3 max-w-[65ch] text-sm leading-relaxed text-ink-2">
             An agent may skip a source after reading its public preview. A paid read and a cited answer

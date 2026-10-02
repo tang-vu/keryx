@@ -19,11 +19,12 @@ const expectedState = process.platform === "win32" ? "windows_visible_entry_unpr
 const root = await mkdtemp(join(tmpdir(), "keryx-native-creation-"));
 let outcomeUncertain = false;
 
-function cli(args: string[], cwd: string) {
+function cli(args: string[], cwd: string, network?: "arc" | "arcTestnet") {
   const run = spawnSync(process.execPath, ["--import", tsxLoader, join(repo, "scripts", "operator.mts"), ...args],
     { cwd, encoding: "utf8", timeout: 20_000, maxBuffer: 128_000, windowsHide: true,
       env: { PATH: process.env.PATH, PATHEXT: process.env.PATHEXT, SystemRoot: process.env.SystemRoot,
-        WINDIR: process.env.WINDIR, GIT_CONFIG_GLOBAL: process.env.GIT_CONFIG_GLOBAL } });
+        WINDIR: process.env.WINDIR, GIT_CONFIG_GLOBAL: process.env.GIT_CONFIG_GLOBAL,
+        ...(network ? { KERYX_NETWORK: network, NEXT_PUBLIC_KERYX_NETWORK: network } : {}) } });
   if (run.error || run.signal || run.status === null) { outcomeUncertain = true; throw new Error("Operator exit unconfirmed"); }
   return run;
 }
@@ -80,9 +81,29 @@ try {
   const nextView = await new WorkspaceStore(repositoryNativeTaskWriter(repo)).select(workspace);
   assert.equal(nextView.tasks.length, 2);
   assert.equal(await treeDigest(workspace), afterDesktop);
+  // Actual TypeScript CLI -> attested native writer and desktop -> same writer,
+  // without any registry declaration or payment authority. Mixed originals retain
+  // their own rail when inspected under the default testnet process.
+  const mainnetPath = join(workspace, "mainnet-cli");
+  const mainnetCli = cli(["create", "--request", requestPath, "--payee", payee,
+    "--max-total", "0.10", "--state", mainnetPath], root, "arc");
+  assert.equal(mainnetCli.status, 0, mainnetCli.stderr);
+  const mainnetTask = JSON.parse(await readFile(join(mainnetPath, "task.json"), "utf8"));
+  assert.equal(mainnetTask.schema, "keryx-operator-task-v2");
+  assert.equal(mainnetTask.network, "eip155:5042");
+  assert.equal((await operatorTaskStatus(mainnetPath)).network, "eip155:5042");
+  const beforeWrongRail = await treeDigest(workspace);
+  assert.equal(cli(["resume", "--state", mainnetPath], root).status, 1);
+  assert.equal(await treeDigest(workspace), beforeWrongRail, "wrong-rail recovery preserves all original bytes");
+  const mainnetDesktop = await reopened.createTask({ question: "Mainnet desktop native publication", mode: "quick",
+    creatorBudget: "0.03", payee, totalCap: "0.10", network: "arc" });
+  assert.equal(mainnetDesktop.status.network, "eip155:5042");
+  const mixed = await new WorkspaceStore(repositoryNativeTaskWriter(repo)).select(workspace);
+  assert.equal(mixed.tasks.length, 4);
+  assert.equal(mixed.tasks.filter(row => row.status.network === "eip155:5042").length, 2);
   console.log(JSON.stringify({ schema: "keryx-native-task-creation-test-v1", platform: process.platform,
     workspace: 1, cliCreate: 1, collisionRefusals: 1, nativeReopens: 1, tsReopens: 1,
-    desktopCreates: 1, desktopReopens: 2, publicationState: expectedState }));
+    desktopCreates: 2, desktopReopens: 4, mainnetCliCreates: 1, wrongRailRecoveryRefusals: 1, publicationState: expectedState }));
 } catch (error) {
   if (error && typeof error === "object" && "state" in error
     && ["unknown", "retained_partial", "complete_unconfirmed"].includes(String(error.state))) outcomeUncertain = true;

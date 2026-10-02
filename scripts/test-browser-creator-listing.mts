@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { build } from "esbuild";
 import { chromium } from "playwright";
+import { ARC_MAINNET_PROFILE,ARC_TESTNET_PROFILE,type ArcNetworkProfile } from "../lib/arc-network-profile";
 const creator = `0x${"a".repeat(40)}`, payout = `0x${"b".repeat(40)}`, registry = `0x${"d".repeat(40)}`;
 declare global { interface Window {
   setListingWallet: (value: { address?: string; chainId?: number }) => void;
@@ -10,6 +11,7 @@ declare global { interface Window {
   setListingReceipt: (value: { status: "success" | "reverted" }) => void;
   listingToasts: { kind: string; message: string }[];
 } }
+async function exercise(profile:ArcNetworkProfile){
 const bundle = await build({ stdin: { contents: `
 import React from 'react'; import {createRoot} from 'react-dom/client';
 import {ListingControlsPanel} from './app/creator/[id]/listing-controls-panel';
@@ -20,8 +22,8 @@ function Harness(){const [wallet,setWallet]=React.useState({address:'${creator}'
   return React.createElement(ListingControlsPanel,{creatorId:'synthetic'});}
 createRoot(document.getElementById('root')).render(React.createElement(Harness));
 `, resolveDir: process.cwd(), loader: "tsx" }, bundle: true, platform: "browser", format: "iife", jsx: "automatic", write: false,
-  define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"development"' }, plugins: [{ name: "synthetic-wallet", setup(b) {
-    b.onResolve({ filter: /^wagmi$|^sonner$|^@\/lib\/registry\/registry-client$/ }, a => ({ path: a.path, namespace: "fixture" }));
+  define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": JSON.stringify(profile.name), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": JSON.stringify(registry), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"development"' }, plugins: [{ name: "synthetic-wallet", setup(b) {
+    b.onResolve({ filter: /^wagmi$|^sonner$/ }, a => ({ path: a.path, namespace: "fixture" }));
     b.onLoad({ filter: /.*/, namespace: "fixture" }, a => ({ contents: a.path === "wagmi" ? `
 export const useAccount=()=>window.listingWallet;
 export const useWriteContract=()=>({writeContractAsync:async args=>{
@@ -33,7 +35,8 @@ export const useWaitForTransactionReceipt=({chainId})=>{window.listingReceiptCha
 const browser = await chromium.launch({ headless: true });
 try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  let currentPayout = payout, unavailable = false;
+  let currentPayout = payout, currentRegistry=registry, unavailable = false;
+  const setWallet=(value:{address?:string;chainId?:number})=>page.evaluate(w=>window.setListingWallet(w),value);
   let hold: Promise<void> | undefined, observed: (() => void) | undefined;
   const errors: string[] = []; page.on("pageerror", e => errors.push(e.message));
   await page.route("**/*", async route => {
@@ -43,7 +46,7 @@ try {
       observed?.(); await hold;
       if (unavailable) return route.fulfill({ status: 503, json: { error: "synthetic outage" } });
       return route.fulfill({ json: {
-      mode: "onchain", fetchPrice: 0.002, active: true, creator, registryAddress: registry,
+      mode: "onchain", fetchPrice: 0.002, active: true, creator, registryAddress: currentRegistry,
       onchainId: `0x${"1".repeat(64)}`, current: { payoutWallet: currentPayout, authors: [{ wallet: payout, basisPoints: 10000 }], fetchPriceUsdc6: "2000", contentCid: "synthetic", tags: "research" },
     } }); }
     return route.fulfill({ contentType: "text/html", body: '<meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div>' });
@@ -53,20 +56,20 @@ try {
   const delist = page.getByRole("button", { name: "Delist source", exact: true });
   await save.waitFor(); await page.getByRole("slider").focus(); await page.keyboard.press("ArrowRight");
   assert(await save.isDisabled()); assert(await delist.isDisabled());
-  await page.getByText("Connect your creator wallet on Arc Testnet before changing this listing.", { exact: true }).waitFor();
-  for (const wallet of [{ address: payout, chainId: 5042002 }, { chainId: 5042002 }]) {
-    await page.evaluate(w => window.setListingWallet(w), wallet);
+  await page.getByText(`Connect your creator wallet on ${profile.testnet?profile.label:"Arc mainnet"} before changing this listing.`, { exact: true }).waitFor();
+  for (const wallet of [{ address: payout, chainId: profile.chainId }, { chainId: profile.chainId }]) {
+    await setWallet(wallet);
     assert(await save.isDisabled()); assert(await delist.isDisabled());
   }
   assert.equal((await page.evaluate(() => window.listingWrites)).length, 0);
-  await page.evaluate(address => window.setListingWallet({ address, chainId: 5042002 }), creator);
+  await setWallet({address:creator,chainId:profile.chainId});
   await save.click(); await page.waitForFunction(() => window.listingWrites.length === 1);
   await delist.click(); await page.getByRole("button", { name: "Click again to confirm", exact: false }).click();
   await page.waitForFunction(() => window.listingWrites.length === 2);
   const writes = await page.evaluate(() => window.listingWrites);
-  assert.deepEqual(writes.map(x => [x.account, x.chainId, x.functionName]), [[creator, 5042002, "update"], [creator, 5042002, "deactivate"]]);
+  assert.deepEqual(writes.map(x => [x.account, x.chainId, x.functionName]), [[creator, profile.chainId, "update"], [creator, profile.chainId, "deactivate"]]);
   assert.equal(writes[0].args[1], payout); assert.equal(writes[0].args[3], "3000");
-  assert.equal(await page.evaluate(() => window.listingReceiptChain), 5042002);
+  assert.equal(await page.evaluate(() => window.listingReceiptChain), profile.chainId);
   await page.evaluate(() => window.setListingReceipt({ status: "reverted" }));
   await page.waitForFunction(() => window.listingToasts.some(x => x.kind === "error" && x.message.includes("Transaction reverted")));
   assert.equal((await page.evaluate(() => window.listingToasts.filter(x => x.kind === "success"))).length, 0);
@@ -78,7 +81,7 @@ try {
     await page.goto("https://listing.invalid"); await page.addScriptTag({ content: bundle.outputFiles[0].text });
     for (const path of process.env.CREATOR_UI_CSS?.split("|") ?? []) await page.addStyleTag({ path });
     await save.waitFor();
-    await page.evaluate(address => window.setListingWallet({ address, chainId: 5042002 }), creator);
+    await setWallet({address:creator,chainId:profile.chainId});
     await page.getByRole("slider").focus(); await page.keyboard.press("ArrowRight");
   }
   await freshPage(); currentPayout = `0x${"c".repeat(40)}`;
@@ -104,11 +107,18 @@ try {
   hold = new Promise<void>(resolve => { release = resolve; });
   const requested = new Promise<void>(resolve => { observed = resolve; });
   await save.click(); await requested;
-  await page.evaluate(address => window.setListingWallet({ address, chainId: 5042002 }), payout);
+  await setWallet({address:payout,chainId:profile.chainId});
   await page.getByText("Switch accounts before signing.", { exact: false }).waitFor();
   release(); hold = undefined; observed = undefined;
   await page.waitForFunction(() => window.listingToasts.some(x => x.kind === "error" && x.message.includes("Wallet or source changed")));
   assert.equal((await page.evaluate(() => window.listingWrites)).length, 0);
+  if(!profile.testnet){
+    await freshPage();currentRegistry=`0x${"e".repeat(40)}`;
+    await save.click();await page.waitForFunction(()=>window.listingToasts.some(x=>x.kind==="error"&&x.message.includes("Wallet or source changed")));
+    assert.equal((await page.evaluate(()=>window.listingWrites)).length,0,"Foreign server registry must never reach a mainnet wallet");
+  }
   assert.deepEqual(errors, []);
-  console.log("PASS: creator listing pins wallet/network, distinguishes revert, refuses stale payout and unavailable authority, and stops after wallet changes during refresh. Synthetic wallet; no signing or settlement.");
+  console.log(`PASS ${profile.name}: creator listing pins wallet/network/registry, distinguishes revert, refuses stale payout and unavailable authority, and stops after wallet changes during refresh. Synthetic wallet; no signing or settlement.`);
 } finally { await browser.close(); }
+}
+for(const profile of [ARC_TESTNET_PROFILE,ARC_MAINNET_PROFILE])await exercise(profile);

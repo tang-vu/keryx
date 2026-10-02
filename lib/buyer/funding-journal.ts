@@ -1,17 +1,22 @@
 import { browserTransaction, type BrowserStore } from "./browser-storage";
 import { addressSchema, BUYER_NETWORK } from "./protocol";
 import { fundingAmountSchema, fundingRecordSchema, fundingResolutionSchema, transactionHashSchema, type FundingRecord, type FundingStep } from "./funding-policy";
+import { browserPaymentProfile } from "../browser-payment-profile";
+import { hasOriginalSessionDepositCredit } from "../session/session-funding-credit";
 
-const spec: BrowserStore = { database: "keryx-gateway-funding-v1", store: "funding", keyPath: "id", indexes: [
+const spec: BrowserStore = { database: browserPaymentProfile().testnet ? "keryx-gateway-funding-v1" : `keryx-gateway-funding-v2-${browserPaymentProfile().networkId}`, store: "funding", keyPath: "id", indexes: [
   { name: "activePayer", keyPath: "activePayer", unique: true }, { name: "payer", keyPath: "payer" }, { name: "createdAt", keyPath: "createdAt" },
 ] };
 const transact = <T>(mode: IDBTransactionMode, work: Parameters<typeof browserTransaction<T>>[2]) => browserTransaction<T>(spec, mode, work);
 
-export async function createFundingRecord(payer: string, amount: string): Promise<FundingRecord> {
+export async function createFundingRecord(payer: string, amount: string, depositor?: string, gatewayCreditBefore?: string, gatewayCreditObservedAt?: string): Promise<FundingRecord> {
   payer = addressSchema.parse(payer).toLowerCase(); fundingAmountSchema.parse(amount);
   const now = new Date().toISOString();
   const record = fundingRecordSchema.parse({ schema: "keryx-gateway-funding-v1", id: crypto.randomUUID(), payer, activePayer: payer,
-    network: BUYER_NETWORK, amount, approval: { status: "ready" }, deposit: { status: "ready" }, createdAt: now, updatedAt: now });
+    network: BUYER_NETWORK, amount, ...(depositor ? { depositor: addressSchema.parse(depositor).toLowerCase() } : {}),
+    ...(gatewayCreditBefore === undefined ? {} : { gatewayCreditBefore, gatewayCreditAcknowledged: false }),
+    ...(gatewayCreditObservedAt === undefined ? {} : { gatewayCreditObservedAt }),
+    approval: { status: "ready" }, deposit: { status: "ready" }, createdAt: now, updatedAt: now });
   // The unique activePayer index serializes new deposits across tabs, including ready prompts.
   await transact<void>("readwrite", (store, done) => { store.add(record).onsuccess = () => done(undefined); });
   const saved = await readFundingRecord(record.id);
@@ -65,7 +70,7 @@ export async function confirmFundingStep(id: string, step: FundingStep, hash: st
   const changed = await change(id, row => {
     if (row[step].status !== "submitted" || row[step].hash?.toLowerCase() !== hash.toLowerCase()) return null;
     const next = { ...row, [step]: { ...row[step], status, hash } };
-    if (status === "reverted" || step === "deposit") delete next.activePayer;
+    if (status === "reverted" || (step === "deposit" && !(row.depositor && row.gatewayCreditBefore !== undefined && !row.gatewayCreditAcknowledged))) delete next.activePayer;
     return next;
   });
   if (!changed) throw new Error("Funding confirmation no longer matches the active attempt");
@@ -74,6 +79,14 @@ export async function confirmFundingStep(id: string, step: FundingStep, hash: st
 export const cancelFundingRecord = (id: string) => change(id, row => {
   if (!row.activePayer || !["ready", "rejected"].includes(row.deposit.status) || !["ready", "rejected", "confirmed"].includes(row.approval.status)) return null;
   const next = { ...row, cancelled: true }; delete next.activePayer; return next;
+});
+
+/** The funding lock survives on-chain confirmation until independently known Circle credit
+ * includes this original deposit. Credit lag must never reopen an automatic deposit prompt. */
+export const acknowledgeSessionFundingCredit = (id: string, knownAvailableMicros: bigint, projection?: unknown) => change(id, row => {
+  if (!row.depositor || row.gatewayCreditBefore === undefined || row.deposit.status !== "confirmed" ||
+    row.gatewayCreditAcknowledged || !hasOriginalSessionDepositCredit(row, knownAvailableMicros, projection)) return null;
+  const next = { ...row, gatewayCreditAcknowledged: true }; delete next.activePayer; return next;
 });
 
 /** Commit only against the exact snapshot that was inspected. Never overwrite a
@@ -86,7 +99,7 @@ export async function resolveFundingReplacement(snapshot: FundingRecord, step: F
     const originalHash = row[step].hash;
     const next = { ...row, [step]: { ...row[step], status: resolution.status, hash: resolution.hash, resolution,
       ...(originalHash && originalHash.toLowerCase() !== resolution.hash.toLowerCase() ? { originalHash } : {}) } };
-    if (step === "deposit" || resolution.status !== "confirmed") delete next.activePayer;
+    if (resolution.status !== "confirmed" || (step === "deposit" && !(row.depositor && row.gatewayCreditBefore !== undefined && !row.gatewayCreditAcknowledged))) delete next.activePayer;
     return next;
   });
   if (!changed) throw new Error("Funding state changed during replacement inspection; refresh the saved record");

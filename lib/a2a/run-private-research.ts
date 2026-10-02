@@ -9,6 +9,8 @@ import { addressSchema } from "../buyer/protocol";
 import { privateReasoningPolicyInput } from "../buyer/private-reasoning-policy";
 import { privateReasoningEngine, type PrivateReasoningConfig } from "../llm/private-engine";
 import type { PrivateResultSpool } from "./private-result-spool";
+import { config } from "../config";
+import type { PaymentGateway } from "../payments/payment-gateway";
 
 /** Backend executor. Caller authenticates payer; this module never accepts an unsigned question or job policy. */
 export async function runPrivateResearch(db: KeryxDB, id: string, payer: string, options: {
@@ -17,9 +19,12 @@ export async function runPrivateResearch(db: KeryxDB, id: string, payer: string,
   engineForModel?: (model: string | null) => ReasoningEngine;
   privateProvider?: PrivateReasoningConfig;
   resultSpool?: PrivateResultSpool;
+  gatewayFactory?: (job: { id: string; owner: string; workerId: string }) => Promise<PaymentGateway>;
 }) {
   const { signer, getGatewayBalance, engineForModel, resultSpool } = options;
   const requestedSignerAddress = options.signerAddress;
+  const gatewayFactory = options.gatewayFactory;
+  if (config.networkId === "eip155:5042" && !gatewayFactory) throw new Error("Mainnet private execution requires admitted hosted authority");
   // Snapshot credentials and routing before storage awaits; never accept a caller-supplied
   // disclosure as evidence of which transport will actually run.
   const privateProvider = options.privateProvider === undefined ? undefined : { ...options.privateProvider };
@@ -46,8 +51,9 @@ export async function runPrivateResearch(db: KeryxDB, id: string, payer: string,
   const engine = built?.engine ?? engineForModel!(request.model);
   const claim = await db.claimPrivateResearchExecution(id, payer);
   if (!claim) return { status: "already-claimed" as const };
-  const gateway = new PrivateServerGateway({ signerAddress, signer, getGatewayBalance,
-    db, job: { id, owner: payer, workerId: claim.workerId } });
+  const job = { id, owner: payer, workerId: claim.workerId };
+  const gateway = gatewayFactory ? await gatewayFactory(job) : new PrivateServerGateway({ signerAddress, signer, getGatewayBalance, db, job });
+  if (gateway.agentAddress().toLowerCase() !== signerAddress.toLowerCase()) throw new Error("Private execution signer changed");
   const { effects, diagnostics } = await privateResearchEffects(db, { id, payer, workerId: claim.workerId }, resultSpool);
   const run = await collectRun({ queryId: id, question: request.question, budget: request.budget, researchMode: request.researchMode,
     model: request.model ?? undefined, executionLimits: { ...contract.execution }, asker: intent.submission.payment.authorization.from,

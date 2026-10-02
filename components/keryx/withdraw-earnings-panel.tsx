@@ -2,13 +2,14 @@
 
 /**
  * WithdrawEarningsPanel — lets a connected creator pull their accrued Circle Gateway balance
- * back on-chain into their own wallet, in one signature, gasless.
+ * back on-chain into their own wallet on the configured network.
  *
- * Flow: read the Gateway available balance for the connected address → creator signs a burn
+ * Legacy testnet flow: read the Gateway available balance → creator signs a burn
  * intent (no gas, no network switch) → POST /api/withdraw relays it to Circle and the Keryx
  * treasury submits the mint → the real EVM mint tx is shown (and appears in Creator cash-outs).
  *
- * Styled to match The Mint aesthetic (banknote frame, mono labels).
+ * Mainnet uses the ordinary owner-wallet burn and mint workflow below, with
+ * retained recovery records and an explicitly reviewed owner gas transaction.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -19,8 +20,13 @@ import { buildAndSignWithdrawIntent } from "@/lib/gateway/withdraw-intent";
 import { config } from "@/lib/config";
 import { fmtUsdc } from "./phase-style";
 import { readGatewayCredit } from "@/lib/gateway/read-credit";
+import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+import { CreatorOwnerWithdrawalPanel } from "./creator-owner-withdrawal-panel";
 
 export function WithdrawEarningsPanel({ address }: { address: string }) {
+  return browserPaymentProfile().testnet ? <TestnetWithdrawEarningsPanel address={address}/> : <CreatorOwnerWithdrawalPanel address={address}/>;
+}
+function TestnetWithdrawEarningsPanel({ address }: { address: string }) {
   const { data: walletClient } = useWalletClient();
   const [balance, setBalance] = useState<{ address: string; available: bigint | null; error: boolean } | null>(null);
   const balanceRead = useRef({ value: 0 });

@@ -4,6 +4,7 @@ import { createWithdrawalRequest, withdrawalOwnerSchema, type WithdrawalRequestR
 import { readWithdrawalBrowserJournal, saveWithdrawalBrowserSignature, claimWithdrawalBrowserSubmission } from "./withdrawal-browser-journal";
 import { readWithdrawalBrowserStatus } from "./withdrawal-browser-status";
 import { sendWithdrawalBrowserOriginal } from "./withdrawal-browser-submit";
+import { browserPaymentProfile } from "../browser-payment-profile";
 
 type ActiveOwner = () => string | null;
 type Transfer = (original: WithdrawalRequestRecord, signal: AbortSignal) => Promise<unknown>;
@@ -26,7 +27,7 @@ export async function signWithdrawalBrowserDraft(id: string, owner: string,
   const signature = await wallet.signTypedData({ account, ...withdrawTypedData(structuredClone(row.draft.burnIntent)) });
   // Retain a returned valid signature even if cancellation/account change occurred
   // during the wallet prompt. It belongs to the original owner and is never sent here.
-  const original = await createWithdrawalRequest({ burnIntent: row.draft.burnIntent, signature }, row.draft.policy);
+  const original = await createWithdrawalRequest({ burnIntent: row.draft.burnIntent, signature }, row.draft.policy, browserPaymentProfile());
   const saved = await saveWithdrawalBrowserSignature(original, selected);
   requireActiveOwner(selected, activeOwner, signal);
   return saved;

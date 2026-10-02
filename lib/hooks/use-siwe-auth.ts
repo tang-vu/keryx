@@ -18,7 +18,7 @@ import { parseDatedAuthChallenge } from "../auth-time-policy";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAccount, useSignMessage } from "wagmi";
 import { SiweMessage } from "siwe";
-import { arcTestnet } from "@/lib/chains";
+import { arcChain } from "@/lib/chains";
 
 export type AuthState = "idle" | "signing" | "verifying" | "signing-out";
 export interface AuthSession {
@@ -106,7 +106,7 @@ export function useSiweAuth() {
         statement: "Sign in to Keryx. Citations are currency.",
         uri: window.location.origin,
         version: "1",
-        chainId: arcTestnet.id,
+        chainId: arcChain.id,
         nonce,
         issuedAt,
         expirationTime: sessionExpiresAt,

@@ -83,6 +83,7 @@ h1, h2, p { margin-top: 0; }
 .field input::placeholder, .field textarea::placeholder { color: var(--faint); opacity: 1; }
 .field small { font: 11px/1.4 Spectral, Georgia, serif; color: var(--ink-3); }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; margin-top: 15px; }
+.network-field { margin-top: 15px; }
 .payee-field { margin-top: 15px; }
 .mode-field { margin: 15px 0 0; padding: 0; border: 0; min-width: 0; }
 .mode-field legend { margin-bottom: 7px; color: var(--ink-2); }

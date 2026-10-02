@@ -5,7 +5,7 @@
  * capped live feed, which only holds the most recent rows and collapses older days to ~zero.
  */
 
-import type { DailyVolume } from "@/lib/types";
+import type { DailyVolume } from "../types";
 
 export function fillDailySeries(rows: DailyVolume[], days: number): DailyVolume[] {
   const byDay = new Map(rows.map((r) => [r.day, r.usdc]));

@@ -21,7 +21,6 @@ import { SiweMessage } from "siwe";
 import { cookies } from "next/headers";
 import { getDb } from "@/lib/db";
 import { config } from "@/lib/config";
-import { arcTestnet } from "@/lib/chains";
 import { isDevWallet, type Role } from "@/lib/auth";
 import { recordActivationEvent } from "@/lib/activation";
 import { authChallengeHash, authJson, authNonceSchema, readSignInBody } from "@/lib/auth-challenge";
@@ -91,7 +90,7 @@ export async function POST(req: Request) {
   }
 
   // Bind the session to Arc testnet — blocks replay of a signature scoped to another chain.
-  if (siwe.chainId !== arcTestnet.id) {
+  if (siwe.chainId !== config.profile.chainId) {
     return authJson({ error: "wrong chain" }, 401);
   }
 

@@ -2,6 +2,7 @@ import type { WalletClient } from "viem";
 import { readGatewayCredit } from "../gateway/read-credit";
 import { addressSchema, buyerTypedData, type BuyerAuthorization } from "./protocol";
 import type { BrowserBuyerWallet } from "./browser-client";
+import { browserPaymentProfile } from "../browser-payment-profile";
 
 /** Read provider state, not the account/chain captured when a React hook last rendered. */
 export function connectedBuyerWallet(wallet: WalletClient, expectedAddress: string, signal?: AbortSignal) {
@@ -10,8 +11,8 @@ export function connectedBuyerWallet(wallet: WalletClient, expectedAddress: stri
     signal?.throwIfAborted();
     const [addresses, chainId] = await Promise.all([wallet.getAddresses(), wallet.getChainId()]);
     signal?.throwIfAborted();
-    if (addresses[0]?.toLowerCase() !== payer.toLowerCase() || chainId !== 5042002) {
-      throw new Error("Choose the reviewed wallet on Arc testnet before buying");
+    if (addresses[0]?.toLowerCase() !== payer.toLowerCase() || chainId !== browserPaymentProfile().chainId) {
+      throw new Error(`Choose the reviewed wallet on ${browserPaymentProfile().label} before buying`);
     }
   }
   return {
@@ -19,7 +20,7 @@ export function connectedBuyerWallet(wallet: WalletClient, expectedAddress: stri
       await checkIdentity();
       const available = await readGatewayCredit(payer, signal);
       await checkIdentity();
-      return { address: payer, chainId: 5042002, gatewayBalanceMicros: available.toString() };
+      return { address: payer, chainId: browserPaymentProfile().chainId, gatewayBalanceMicros: available.toString() };
     },
     async sign(authorization: BuyerAuthorization) {
       await checkIdentity();

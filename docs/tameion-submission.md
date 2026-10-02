@@ -71,8 +71,10 @@ retain their exact release evidence before claiming synchronized delivery.
 
 ## Public addresses
 
-Only public API/configuration values are reproduced. All rows are **Arc testnet,
-eip155:5042002**. Pending mainnet identities are deliberately not deployment evidence.
+Only public API/configuration values are reproduced. All rows are the recorded **Arc testnet,
+eip155:5042002** proof baseline. These addresses remain historical evidence; the live
+health/treasury/quote links reflect the currently selected deployed runtime and may
+later show separately verified mainnet identities. Pending mainnet identities are deliberately not deployment evidence.
 Creator `payTo` and session addresses vary per source/user and must be captured for
 the actual workflow rather than inferred from this table.
 

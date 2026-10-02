@@ -1,6 +1,7 @@
+import { ARC_MAINNET_PROFILE } from "../arc-network-profile";
 import { describe, expect, it } from "vitest";
 import type { QueryRun } from "../types";
-import { calculateTestnetEconomics, economicsRunSample } from "./testnet-economics";
+import { calculateEconomics, calculateTestnetEconomics, economicsRunSample } from "./testnet-economics";
 import { capturePricePolicy, FLASH_POLICY } from "./provider-cost-policy";
 
 function run(
@@ -191,4 +192,16 @@ describe("testnet economics", () => {
       treasuryCreatorSubsidyUsdc: 0,
     });
   });
+});
+
+it("mainnet observer retains exact settlement distinctions and refuses original-network or evidence gaps", () => {
+  const row = { queryId: "synthetic", kind: "inbound" as const, amountUsdc: 0.05, settled: true,
+    settlementStatus: "settled" as const, network: "eip155:5042", txHash: "synthetic-provider-evidence-not-live" };
+  const snapshot = calculateEconomics(ARC_MAINNET_PROFILE, [], [row, { ...row, settled: false, settlementStatus: "pending" },
+    { ...row, settlementStatus: "simulated" }]);
+  expect(snapshot.network).toBe("eip155:5042"); expect(snapshot.label).toBe("mainnet-observatory");
+  expect(snapshot.settledInboundRevenueUsdc).toBe(0.05); expect(snapshot.policy.id).toBe("mainnet-economics-v1");
+  expect(() => calculateEconomics(ARC_MAINNET_PROFILE, [], [{ ...row, network: "eip155:5042002" }])).toThrow(/original-network/);
+  expect(() => calculateEconomics(ARC_MAINNET_PROFILE, [], [{ ...row, network: undefined }])).toThrow(/original-network/);
+  expect(() => calculateEconomics(ARC_MAINNET_PROFILE, [], [{ ...row, txHash: null }])).toThrow(/evidence/);
 });

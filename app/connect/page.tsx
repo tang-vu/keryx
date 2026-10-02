@@ -7,8 +7,8 @@
  *
  * Flow:
  *   1. Not connected → show EIP-6963 wallet picker (all discovered wallets)
- *   2. Connected on wrong chain → show "Switch to Arc Testnet" banner
- *   3. Connected on Arc Testnet, not signed in → show "Sign In" button (SIWE)
+ *   2. Connected on wrong chain → show the configured network switch banner
+ *   3. Connected on the configured chain, not signed in → show SIWE sign-in
  *   4. Signed in → show address + role badge + "Sign out" / link to register
  *
  * The sign-in flow itself lives in the shared useSiweAuth hook (also used by the

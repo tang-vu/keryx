@@ -1,12 +1,5 @@
 # Keryx Project Changelog
 
-### Standalone Arc primitives refresh (2026-10-02, library 0.3.0)
-
-- Update the Showcase extraction and root gitlink to standalone `fea33574e106a91013e52fad9e99bd4db9df1206`, independently reviewed against Keryx anchor `2c59c07`. Add exact micro-USDC allocation, durable seller/relay admission boundaries, retained uncertain outcomes, atomic reservation examples and ordered registry log identities.
-- Require finite-height withdrawal terms, recovered signer/approved recipient, exact attestation binding, gas caps and persisted raw mint transaction identity. Preserve confirmed debit evidence if delivery or storage acknowledgement fails. The original registry contract is unchanged; upstream v2 remains outside this extraction.
-- Add reproducible pinned dependency/CI gates, generated ESM/types, 81 synthetic tests, a no-network demo and clean packed-consumer acceptance. Document breaking migration, provenance, Showcase pitch and ongoing maintenance alongside relevant upstream changes.
-- Root changes are documentation and submodule synchronization only: no payment-runtime behavior, app/MCP/installer version or mainnet activation change. Funded, durability/custody/recovery and finality acceptance remain explicit host gates. See [maintenance](arc-primitives-maintenance.md).
-
 ### Bounded owner creator cash-out operations (2026-10-02, pending acceptance)
 
 - Add an explicit testnet-only operator plan, portable original-owner signer,
@@ -25,11 +18,55 @@
   Public browser creation/timers and desktop/MCP/extensions/bots gain no authority.
   Funded results and deployed versions require separate actual acceptance evidence.
 
+### Public mainnet-support candidate (2026-10-02, v0.26.0)
+
+- Observe the reviewed mainnet public treasury through its sealed storage/policy and selected Circle Gateway available balance. Preserve the historical testnet App Kit view; never reuse its wallet/chains or stale balance on mainnet, and display unavailable Circle amounts as unknown rather than zero. Balance observation is separate from funded payment readiness.
+- Use fresh application 0.26.0 and MCP/desktop 0.4.0 candidate identities for the coordinated selected-network release. Preserve immutable earlier app 0.25.1/MCP/desktop 0.3.2 artifacts and their actual publication evidence.
+- Compose normal public browser research, owner-funded retained sessions, dual consent/possession proofs, cumulative and per-question caps, and owner-wallet session/creator cashout. Synthetic normal-handler/Chromium checks include encrypted purchases and citations, uncertain-response recovery, exact owner mint finality and research resumed with the same signer. Historical receipts retain their original network.
+- Support selected-network Monthly checkout with fresh native SQLite authority, actual dedicated custody and exact original redemption recovery. Native handler/SDK acceptance exercises a 1.98-USDC mainnet quote without the historical testnet ceiling; four manual requests remain current-capacity admission, not escrow or an automatic schedule.
+- Add retained headless session cashout with explicit funded-state migration, old-writer exclusion, original authorization/transfer recovery and an unsigned owner-wallet mint handoff. Native tests retain the original nonce, terms and owner hash through completion; the CLI never signs or broadcasts an owner transaction.
+- Keep experimental scholarly rights, optional Supabase mainnet authority and Rust financial cutover explicitly staged. Ordinary public access has no invited-wallet restriction. Final composition review and coordinated distribution acceptance remain separate gates.
+- This release identity describes code support, not mainnet activation. Exact final CI/review, deployed health, published integrity and real funded authority/receipt gates remain separate; installer GUI entry acceptance is not inferred from bundle checks.
+
+### Standalone Arc primitives refresh (2026-10-02, library 0.3.0)
+
+- Update the Showcase extraction and root gitlink to standalone `fea33574e106a91013e52fad9e99bd4db9df1206`, independently reviewed against Keryx anchor `2c59c07`. Add exact micro-USDC allocation, durable seller/relay admission boundaries, retained uncertain outcomes, atomic reservation examples and ordered registry log identities.
+- Require finite-height withdrawal terms, recovered signer/approved recipient, exact attestation binding, gas caps and persisted raw mint transaction identity. Preserve confirmed debit evidence if delivery or storage acknowledgement fails. The original registry contract is unchanged; upstream v2 remains outside this extraction.
+- Add reproducible pinned dependency/CI gates, generated ESM/types, 81 synthetic tests, a no-network demo and clean packed-consumer acceptance. Document breaking migration, provenance, Showcase pitch and ongoing maintenance alongside relevant upstream changes.
+- Root changes are documentation and submodule synchronization only: no payment-runtime behavior, app/MCP/installer version or mainnet activation change. Funded, durability/custody/recovery and finality acceptance remain explicit host gates. See [maintenance](arc-primitives-maintenance.md).
+
 ### Isolated-storage release alignment (2026-10-02, v0.25.1)
 
 - Give the runtime after isolated Arc application-storage support fresh app 0.25.1, MCP 0.3.2 and desktop 0.3.2 versions. Existing v0.25.0/0.3.1 artifacts remain immutable at their accepted source; different runtime bytes must not reuse those versions across channels.
 - Align manifests, root package lock metadata, native desktop package metadata and current distribution guidance. Preserve dependency closures, Arc testnet defaults and Monthly terms; this version alignment grants no mainnet activation or funds.
 - Require exact-source production health, clean packed MCP signing/recovery, fresh installer acceptance and published artifact/registry integrity readback before synchronized-delivery claims.
+
+### 2026-10-02 - Selected-network Monthly checkout preparation
+
+Historical source checkpoint, before the native authority composition recorded above:
+
+- Select the trusted Arc profile for Monthly wallet checks, proof domains and exact quotes. Preserve testnet recovery keys; isolate mainnet recovery by payer, network and HTTPS origin, and refuse foreign-network request files.
+- Retain uncertain purchases across reload, snapshot original redemption identity before asynchronous signing, bound HTTPS response intake, and prevent overlapping wallet actions. The real funding UI accepts the reviewed 1.8-USDC mainnet quote without the historical testnet ceiling.
+- Verify actual React/Chromium/IndexedDB journeys on both networks with synthetic wallet/HTTP evidence. Mainnet API admission remains closed pending fresh sealed SQLite Monthly authority and actual dedicated treasury custody acceptance; no mainnet settlement or publication is claimed.
+
+### 2026-10-02 - Full mainnet operations and distributed-client preparation
+
+- Prepare ordinary caller-funded MCP and CLI payment/funding journals for trusted
+  Arc network selection, preserving original testnet history and refusing cross
+  network recovery. Mainnet purchase and recovery require HTTPS before funding,
+  signing or paid requests. Existing exact amount caps and uncertain exposure stay
+  enforced.
+- Add offline unsigned registry deployment, creator registration and owner session
+  funding preparation with checked compiler/source provenance. Prepare desktop
+  task records and native read-only recovery for both networks; candidate MCP and
+  desktop sources are version 0.4.0, with no publication or installer claim.
+- Project private economics from the sealed storage network: retain historical
+  testnet v2 reports and add explicit mainnet v3 ledger observations. Shadow fees,
+  invoices and profit remain distinct; synthetic tests do not prove live settlement.
+- Document the full web, CLI, remote/stdio MCP, desktop, extension, bot and hosted
+  service cutover roles. Real registry receipts, owner-approved funding, remaining
+  normal headless integration, coordinated deployment and distribution gates remain
+  open. Earlier invited-pilot proposals are superseded by full public mainnet scope.
 
 ### Research Monthly pilot (2026-10-02, v0.25.0)
 
@@ -2417,3 +2454,11 @@ No changes required. `KERYX_FORCE_OFFLINE=1` still works end-to-end:
 - **Security:** `docs/security-threat-model.md`
 - **Architecture:** `docs/system-architecture.md`
 - **Codebase:** `docs/codebase-summary.md`
+
+
+### October 2, 2026 ? selected mainnet Monthly candidate and owner deployment workspace
+
+- Fresh sealed SQLite Monthly admission uses actual selected-profile writer and dedicated-key/public-address/capacity checks before checkout. Actual facilitator network receipts and submitted original claims bind the v2 purchase; exact redemption returns its original job after new admission closes. Per-run capacity is not escrow or a guarantee for four future jobs.
+- The composed native handler/client fixture uses real local wallet signatures, SQLite and the installed Circle client with synthetic RPC/Circle HTTP; it does not establish real funded settlement.
+- The offline registry workspace pins reviewed source/compiler/settings/creation/runtime/ABI and provides an existing OKX Wallet ? Remix handoff without exporting owner custody. Public launch direction is authorized; concrete gas/USDC transactions remain unsigned and reviewed separately.
+- Full-public-mainnet surface documentation supersedes invited-pilot restrictions, preserves original-network recovery and records scholarly rights, optional Supabase and Rust finance as staged domains. Source versions do not assert deployment/publication synchronization.

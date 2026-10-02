@@ -3,6 +3,7 @@ import type { PaymentRequirements } from "../payments/x402-payment-evidence";
 import type { BrowserAuthorizationIntent } from "./browser-authorization-admission";
 import { prepareBrowserAuthorizationIntent } from "./browser-authorization-admission";
 import { ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
+import { matchesSourceItemIdentity } from "../sources/source-item-asset";
 
 export type BrowserAuthorizationPhase =
   | "prepared"
@@ -25,12 +26,14 @@ export interface BrowserAuthorizationJournal {
   requirements: PaymentRequirements;
   phase: BrowserAuthorizationPhase;
   payment: PaymentRecord;
+  paymentContext?: import("../payments/browser-cosign-gateway").BrowserPaymentContext;
   signedValidAfter?: string;
   signedValidBefore?: string;
   signedHeaderHash?: string;
 }
 
 export interface BrowserJournalAdmission extends BrowserAuthorizationIntent {
+  paymentContext?: import("../payments/browser-cosign-gateway").BrowserPaymentContext;
   requirements: PaymentRequirements;
   payment: Omit<
     PaymentRecord,
@@ -70,6 +73,10 @@ export function prepareBrowserJournal(
   const p = input.payment,
     r = input.requirements;
   const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+  if (input.paymentContext?.item && !matchesSourceItemIdentity(p, input.paymentContext.item))
+    throw new Error("Browser journal item differs from original context");
+  if (input.paymentContext?.offer && (input.paymentContext.offer.id !== p.offerId || input.paymentContext.offer.priceUsdc !== p.amountUsdc ||
+    input.paymentContext.offer.listPriceUsdc !== p.listPriceUsdc)) throw new Error("Browser journal offer differs from original context");
   if (
     p.kind !== intent.kind ||
     p.queryId !== intent.queryId ||
@@ -104,6 +111,7 @@ export function prepareBrowserJournal(
     signer: intent.signer,
     phase: "prepared",
     requirements: structuredClone(r),
+    ...(input.paymentContext ? { paymentContext: structuredClone(input.paymentContext) } : {}),
     payment: {
       ...structuredClone(p),
       id: `x402:${intent.nonce}`,

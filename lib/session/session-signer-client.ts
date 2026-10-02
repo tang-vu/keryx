@@ -3,10 +3,10 @@
 /**
  * Main-thread handle on the signer worker.
  *
- * It presents the worker as an ordinary viem account, so every existing call site — the Gateway
- * approve/deposit writes, the x402 `signTypedData` — keeps working while the private key moves out
- * of the page's reach. viem asks the account to sign; the account asks the worker; the worker
- * decides. Nothing here can read the key, which is the point: this file is the part an XSS owns.
+ * Testnet retains its legacy viem account interface. Mainnet exposes specific authenticated
+ * journal operations and owner consent proofs. Worker admission is not an XSS-proof vault:
+ * same-origin code can access the stored wrapping key/ciphertext and initial derivation
+ * signature. See docs/mainnet-browser-custody.md for the custody trust boundary.
  */
 
 import { toAccount } from "viem/accounts";
@@ -19,6 +19,9 @@ import type {
   TypedDataPayload,
 } from "./session-signer-protocol";
 import type { WrappedKey } from "./session-key-vault";
+import { browserPaymentProfile } from "../browser-payment-profile";
+import type { BrowserSessionOperation, BrowserQuestionBudget } from "./browser-session-runtime";
+import type { BrowserSessionWithdrawalReview } from "./browser-session-withdrawal-runtime";
 
 type Pending = { resolve: (value: unknown) => void; reject: (reason: Error) => void };
 
@@ -65,6 +68,9 @@ export function toCloneableTransaction(transaction: Record<string, unknown>): Re
 
 /** Kept in its own function so the bundler can see the worker entry statically. */
 function createSignerWorker(): Worker {
+  if (!browserPaymentProfile().testnet) {
+    return new Worker(new URL("./mainnet-session-signer.worker.ts", import.meta.url), { type: "module" });
+  }
   return new Worker(new URL("./session-signer.worker.ts", import.meta.url), { type: "module" });
 }
 
@@ -91,7 +97,7 @@ export class SessionSigner {
     });
   }
 
-  private call<T>(request: SignerRequestBody): Promise<T> {
+  private call<T>(request: SignerRequestBody | BrowserSessionOperation): Promise<T> {
     const id = ++this.seq;
     return new Promise<T>((resolve, reject) => {
       this.pending.set(id, { resolve: resolve as (v: unknown) => void, reject });
@@ -101,6 +107,7 @@ export class SessionSigner {
 
   /** Hand the wallet signature straight to the worker; the key is derived on the other side. */
   async deriveFromSignature(signature: string): Promise<DerivedSession> {
+    if (!browserPaymentProfile().testnet) throw new Error("Initialize retained mainnet custody before deriving");
     const session = await this.call<DerivedSession>({ type: "deriveFromSignature", signature });
     this.address = session.address;
     return session;
@@ -108,6 +115,7 @@ export class SessionSigner {
 
   /** Rehydrate from tab-scoped ciphertext after a reload. */
   async restore(blob: WrappedKey): Promise<`0x${string}`> {
+    if (!browserPaymentProfile().testnet) throw new Error("Restore the retained mainnet signer by owner");
     const { address } = await this.call<{ address: `0x${string}` }>({
       type: "restore",
       wrapped: blob.wrapped,
@@ -115,6 +123,42 @@ export class SessionSigner {
     });
     this.address = address;
     return address;
+  }
+
+  async initializeOwner(owner: string): Promise<{ derivationMessage: string; storageNamespace: string }> {
+    return this.call({ type: "initializeOwner", owner });
+  }
+
+  async deriveRetained(signature: `0x${string}`): Promise<`0x${string}`> {
+    const result = await this.call<{ address: `0x${string}` }>({ type: "deriveFromSignature", signature });
+    this.address = result.address; return result.address;
+  }
+
+  async restoreRetained(owner: string): Promise<`0x${string}`> {
+    await this.initializeOwner(owner);
+    const result = await this.call<{ address: `0x${string}` }>({ type: "restoreRetained" });
+    this.address = result.address; return result.address;
+  }
+
+  async authorizePayment(reqId: string, question: BrowserQuestionBudget): Promise<string> {
+    return (await this.call<{ paymentHeader: string }>({ type: "authorizePayment", reqId, question })).paymentHeader;
+  }
+  async signWithdrawal(requestId: string, review: BrowserSessionWithdrawalReview) {
+    if (browserPaymentProfile().testnet) throw new Error("Use the original testnet cashout flow");
+    return this.call<{ requestId: string; signature: `0x${string}` }>({ type: "signWithdrawal", requestId, review });
+  }
+  async cancelUnexposedWithdrawal(requestId: string) {
+    if (browserPaymentProfile().testnet) throw new Error("Use the original testnet cashout flow");
+    return this.call<{ requestId: string; cancelledUnexposed: true }>({ type: "cancelUnexposedWithdrawal", requestId });
+  }
+  async reconcileWithdrawal(requestId: string) {
+    if (browserPaymentProfile().testnet) throw new Error("Use the original testnet cashout flow");
+    return this.call<{ requestId: string; completed: boolean; status: string }>({ type: "reconcileWithdrawal", requestId });
+  }
+
+  bindGrant(): Promise<unknown> { return this.call({ type: "bindGrant" }); }
+  signGrantConsentProof(consent: unknown, ownerSignature: `0x${string}`): Promise<`0x${string}`> {
+    return this.call({ type: "signGrantConsentProof", consent, ownerSignature });
   }
 
   /** Null until a key is loaded. */
@@ -133,22 +177,27 @@ export class SessionSigner {
       signMessage: async () => {
         throw new Error("the session key does not sign arbitrary messages");
       },
-      signTransaction: async (transaction) =>
-        this.call<`0x${string}`>({
+      signTransaction: async (transaction) => {
+        if (!browserPaymentProfile().testnet) throw new Error("Mainnet session transaction signing refused");
+        return this.call<`0x${string}`>({
           type: "signTransaction",
           transaction: toCloneableTransaction(transaction as unknown as Record<string, unknown>),
-        }),
-      signTypedData: async (payload) =>
-        this.call<`0x${string}`>({
+        });
+      },
+      signTypedData: async (payload) => {
+        if (!browserPaymentProfile().testnet) throw new Error("Mainnet payments require an authenticated journal challenge");
+        return this.call<`0x${string}`>({
           type: "signTypedData",
           payload: payload as unknown as TypedDataPayload,
-        }),
+        });
+      },
     });
   }
 
-  /** Forget the key and burn the wrapping key, so persisted ciphertext dies with it. */
+  /** Mainnet locks heap custody and retains funded recovery; legacy testnet destroys its vault. */
   async clear(): Promise<void> {
     this.address = null;
+    if (!browserPaymentProfile().testnet) { await this.call<null>({ type: "lock" }); return; }
     await this.call<null>({ type: "clear" }).catch(() => {
       /* the worker may already be gone — nothing left to protect */
     });
@@ -156,6 +205,7 @@ export class SessionSigner {
 
   terminate(): void {
     this.worker.terminate();
+    for (const slot of this.pending.values()) slot.reject(new Error("Session signer terminated"));
     this.pending.clear();
   }
 }

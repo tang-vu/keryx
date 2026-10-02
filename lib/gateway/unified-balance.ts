@@ -1,15 +1,22 @@
 /**
- * Agent treasury view through Circle App Kit (Unified Balance Kit).
+ * Read-only public treasury observation on the selected Arc runtime.
  *
  * The settlement (spend) wallet keeps a reusable Gateway balance that every
  * citation payment draws from. This module reads that balance the chain-abstracted
  * way — one call returns the confirmed + pending USDC across every Gateway chain —
- * using the official @circle-fin/unified-balance-kit by address (read-only: the
- * web process never touches the private key).
+ * using the official @circle-fin/unified-balance-kit by address on testnet.
+ * Mainnet observes only its reviewed public policy's address through the selected
+ * Circle Gateway balance API without loading custody; neither path constructs a signer.
  */
 
 import fs from "node:fs";
 import path from "node:path";
+import { formatUnits } from "viem";
+import { config } from "../config";
+import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "../arc-network-profile";
+import { createReadonlyApplicationStorage, applicationSqliteIdentity } from "../db/application-storage";
+import { configuredHostedTreasuryPolicy, hostedTreasuryPolicyDigest } from "../payments/hosted-treasury-policy";
+import { getGatewayAvailableAtomic } from "./gateway-balance";
 import {
   createUnifiedBalanceKitContext,
   getBalances,
@@ -27,6 +34,47 @@ export interface UnifiedBalanceSummary {
   fetchedAt: string;
 }
 
+export interface MainnetTreasuryObservation {
+  network: "eip155:5042";
+  address: string;
+  policyDigest: string;
+  storageIdentityDigest: string;
+  availableUsdc: string | null;
+  fetchedAt: string;
+  /** A balance read grants no spending authority and does not probe custody or payment readiness. */
+  paymentReadiness: "not-probed";
+}
+
+/** Address-only observation of the reviewed public role. Never loads a key or admits a policy. */
+export async function getMainnetTreasuryObservation(): Promise<MainnetTreasuryObservation> {
+  if (config.profile !== ARC_MAINNET_PROFILE) throw new Error("Mainnet treasury observation refused");
+  const db = await createReadonlyApplicationStorage();
+  if (!db) throw new Error("Mainnet treasury observation unavailable");
+  try {
+    const baseUrl = config.baseUrl, origin = new URL(baseUrl);
+    if (origin.protocol !== "https:" || origin.pathname !== "/" || origin.search || origin.hash || origin.username || origin.password)
+      throw new Error("Mainnet treasury origin refused");
+    const readPolicy = () => configuredHostedTreasuryPolicy(applicationSqliteIdentity(db, "read"), origin.origin, "public");
+    const policy = readPolicy(), digest = hostedTreasuryPolicyDigest(policy);
+    // This read detects historical cross-role custody conflicts; it is not policy admission or readiness.
+    await db.hostedTreasuryAccounting(policy.signer, "public");
+    const amount = await getGatewayAvailableAtomic(policy.signer, ARC_MAINNET_PROFILE);
+    if (config.profile !== ARC_MAINNET_PROFILE || config.baseUrl !== baseUrl ||
+        hostedTreasuryPolicyDigest(readPolicy()) !== digest)
+      throw new Error("Mainnet treasury observation changed");
+    await db.hostedTreasuryAccounting(policy.signer, "public");
+    // Revalidate once more after the final awaited role check (including expiry).
+    if (config.profile !== ARC_MAINNET_PROFILE || config.baseUrl !== baseUrl || hostedTreasuryPolicyDigest(readPolicy()) !== digest)
+      throw new Error("Mainnet treasury observation changed");
+    return { network: ARC_MAINNET_PROFILE.networkId, address: policy.signer, policyDigest: digest,
+      storageIdentityDigest: policy.storageIdentityDigest, availableUsdc: amount === null ? null : formatUnits(amount, 6),
+      fetchedAt: new Date().toISOString(), paymentReadiness: "not-probed" };
+  } finally {
+    // Each uncached observation owns this read-only facade, including policy/vendor refusal paths.
+    (db as { close?: () => void }).close?.();
+  }
+}
+
 /** The persistent spend wallet is created by RealGateway; only its address is read here. */
 function spendWalletAddress(): string | null {
   try {
@@ -41,6 +89,8 @@ function spendWalletAddress(): string | null {
 
 /** Chain-abstracted Gateway balance of the settlement wallet, or null when none exists. */
 export async function getAgentUnifiedBalance(): Promise<UnifiedBalanceSummary | null> {
+  // The installed kit has no Arc mainnet definition. Never reuse its testnet wallet/chains on mainnet.
+  if (config.profile !== ARC_TESTNET_PROFILE) throw new Error("Legacy treasury observation refused");
   const address = spendWalletAddress();
   if (!address) return null;
 

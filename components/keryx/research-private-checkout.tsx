@@ -1,4 +1,5 @@
 "use client";
+import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -24,7 +25,7 @@ export function ResearchPrivateCheckout({ merchants }: { merchants: PrivateMerch
   const { session } = useSiweAuth();
   return <section aria-labelledby="private-checkout-heading" className="border border-line bg-paper p-6">
     <h2 id="private-checkout-heading" className="font-display text-3xl">Buy private research</h2>
-    <p className="mt-3 font-serif text-sm text-ink-2">Restricted Arc testnet pilot. Only the paying account can open the result. Keryx and the disclosed AI provider process your question; this is not end-to-end encryption.</p>
+    <p className="mt-3 font-serif text-sm text-ink-2">{browserPaymentProfile().label} private research. Only the paying account can open the result. Keryx and the disclosed AI provider process your question; this is not end-to-end encryption.</p>
     {session === undefined ? <p className="mt-4" role="status">Checking sign-in…</p> : session
       ? <PrivateCheckout key={session.address.toLowerCase()} payer={session.address.toLowerCase()} merchants={merchants} />
       : <Link href="/connect" className="mt-4 inline-block underline">Sign in to buy private research</Link>}
@@ -46,7 +47,7 @@ function PrivateCheckout({ payer, merchants }: { payer: string; merchants: Priva
   const limits = budget !== null && total !== null && total > budget ? {
     maxTotalMicros: String(Math.round(total * 1e6)), maxServiceFeeMicros: String(Math.round(total * 1e6) - Math.round(budget * 1e6)),
   } : null;
-  const walletReady = !!wallet && address?.toLowerCase() === payer && chainId === 5042002;
+  const walletReady = !!wallet && address?.toLowerCase() === payer && chainId === browserPaymentProfile().chainId;
   const locked = busy || fundingBusy;
   const refreshLocal = useCallback(async (after: string | null = null) => {
     const page = await listPrivateBrowserJournals(payer, merchants, after);
@@ -125,9 +126,9 @@ function PrivateCheckout({ payer, merchants }: { payer: string; merchants: Priva
   }
   return <div className="mt-5 space-y-5">
     <p className="break-all font-mono text-xs">Paying account: {payer}</p>
-    {!walletReady && <div className="flex flex-wrap items-center gap-3"><WalletPicker isBusy={locked} onConnected={() => setMessage("Wallet connected. Use the signed-in paying account on Arc testnet.")} />
-      <p className="font-serif text-sm">Connect this paying account on Arc testnet to buy. Recovery only needs account sign-in.</p>
-      {address?.toLowerCase() === payer && chainId !== 5042002 && <button className={control} disabled={locked || switching} onClick={() => void switchChainAsync({ chainId: 5042002 }).catch(() => setMessage("Switch to Arc testnet in your wallet."))}>Switch to Arc testnet</button>}
+    {!walletReady && <div className="flex flex-wrap items-center gap-3"><WalletPicker isBusy={locked} onConnected={() => setMessage(`Wallet connected. Use the signed-in paying account on ${browserPaymentProfile().label}.`)} />
+      <p className="font-serif text-sm">Connect this paying account on {browserPaymentProfile().label} to buy. Recovery only needs account sign-in.</p>
+      {address?.toLowerCase() === payer && chainId !== browserPaymentProfile().chainId && <button className={control} disabled={locked || switching} onClick={() => void switchChainAsync({ chainId: browserPaymentProfile().chainId }).catch(() => setMessage(`Switch to ${browserPaymentProfile().label} in your wallet.`))}>Switch to {browserPaymentProfile().label}</button>}
     </div>}
     <div className="grid gap-4 sm:grid-cols-3">
       <label className="grid gap-2 text-sm sm:col-span-3">Private research question<textarea className="min-h-24 border border-line bg-paper-2 p-3" value={question} maxLength={2000} disabled={locked || !!activeId} onChange={event => { setQuestion(event.target.value); clearReview(); }} /></label>

@@ -11,8 +11,9 @@
  *       KERYX_ALERT_WEBHOOK — Discord/Slack webhook for the alert (optional; logs regardless)
  */
 
-import { createPublicClient, erc20Abi, formatEther, http } from "viem";
-import { arcTestnet } from "viem/chains";
+import { createPublicClient, erc20Abi, formatEther } from "viem";
+import { chainForProfile } from "../lib/chains.ts";
+import { attestedArcHttp } from "../lib/arc-rpc-attestation.ts";
 import { privateKeyToAccount } from "viem/accounts";
 import { config } from "../lib/config.ts";
 import { sendAlert } from "../lib/notify/alert.ts";
@@ -32,8 +33,8 @@ async function main(): Promise<void> {
   const funder = privateKeyToAccount(config.funderKey as `0x${string}`);
   // Bound the RPC so a hung/unreachable node fails the cron fast instead of piling up hung jobs.
   const client = createPublicClient({
-    chain: arcTestnet,
-    transport: http(config.rpcUrl, { timeout: 15_000, retryCount: 1 }),
+    chain: chainForProfile(config.profile),
+    transport: attestedArcHttp(config.rpcUrl, { timeout: 15_000, retryCount: 1 }),
   });
 
   const [gasWei, usdc6] = await Promise.all([

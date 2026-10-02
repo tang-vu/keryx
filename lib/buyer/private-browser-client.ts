@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { browserPaymentProfile } from "../browser-payment-profile";
 import { addressSchema, type BuyerAuthorization } from "./protocol";
 import { privateMerchantPolicySchema, type PrivateMerchantPolicy } from "./private-merchant-policy";
 import { acceptPrivateQuote } from "./private-quote";
@@ -12,7 +13,7 @@ import { canonicalJson } from "../canonical-json";
 import { readBoundedJson } from "../read-bounded-json";
 import type { BuyerFetch } from "./transport";
 
-const walletSchema = z.object({ address: addressSchema, chainId: z.literal(5042002),
+const walletSchema = z.object({ address: addressSchema, chainId: z.literal(browserPaymentProfile().chainId),
   gatewayBalanceMicros: z.string().regex(/^(0|[1-9]\d{0,30})$/) }).strict();
 const responseSchema = z.object({ id: z.string(), paymentStatus: z.enum([
   "pending", "settled", "verification-rejected", "capacity-unavailable", "confirmation-unpersisted",

@@ -1,13 +1,15 @@
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { privateKeyToAccount } from "viem/accounts";
 import { buyerTypedData } from "@/lib/buyer/protocol";
 
-const state = vi.hoisted(() => ({ claims: new Map<string, string>(), claim: vi.fn(), settle: vi.fn(), settings: {
+const state = vi.hoisted(() => ({ claims: new Map<string, string>(), claim: vi.fn(), authority: vi.fn(), settle: vi.fn(), settings: {
   networkId: "eip155:5042002", sellerAddress: `0x${"b".repeat(40)}`, funderKey: "synthetic", defaultBudget: .05,
   a2aMaxBudget: .5, a2aFeeUsdc: .02, a2aDeepFeeUsdc: .05, maxTimeoutSeconds: 691200 } }));
-vi.mock("@/lib/config", () => ({ config: state.settings }));
-vi.mock("@/lib/db", () => ({ getDb: async () => ({ claimResearchPurchase: state.claim }) }));
+vi.mock("@/lib/config", async () => ({ config: { ...state.settings,
+  profile: (await import("@/lib/arc-network-profile")).ARC_TESTNET_PROFILE } }));
+vi.mock("@/lib/db", () => ({ getDb: async () => ({ claimResearchPurchase: state.claim,
+  assertResearchPurchaseAuthority: state.authority }) }));
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: async () => null, clientIp: () => "synthetic" }));
 vi.mock("@/lib/x402-server", () => ({ settleThenServe: state.settle }));
 import { POST } from "../../app/api/research/monthly/route";
@@ -16,6 +18,7 @@ import { quoteResearchMonthly } from "@/lib/monthly/quote";
 const owner = privateKeyToAccount(`0x${"1".repeat(64)}`);
 beforeEach(() => {
   vi.stubEnv("KERYX_MONTHLY_ENABLED", "1"); state.claims.clear(); state.claim.mockReset(); state.settle.mockReset();
+  state.authority.mockReset().mockResolvedValue(undefined);
   state.claim.mockImplementation(async (claim: { authorizationId: string; requireExisting: boolean; issued: unknown }) => {
     const { requireExisting, ...binding } = claim; const expected = JSON.stringify(binding);
     if (requireExisting && state.claims.get(claim.authorizationId) !== expected) throw new Error("Unissued or changed authorization");
@@ -23,6 +26,7 @@ beforeEach(() => {
   });
   state.settle.mockResolvedValue(new Response("{}", { status: 402 }));
 });
+afterEach(() => vi.unstubAllEnvs());
 function request(signature?: string, payer = owner.address, expiresAt = String(Math.floor(Date.now()/1000)+600)) {
   return new NextRequest("https://keryx.cc/api/research/monthly", { method: "POST", headers: {
     "content-type": "application/json", "x-keryx-monthly-payer": payer, "x-keryx-monthly-expires": expiresAt, ...(signature ? { "payment-signature": signature } : {}) },
@@ -40,6 +44,7 @@ it("rejects an unlogged historical settled authorization before any Circle helpe
 });
 it("durably binds a fresh server nonce before challenge exposure and accepts only that exact contract", async () => {
   const challenge = await POST(request()); expect(challenge.status).toBe(402);
+  expect(state.authority).toHaveBeenCalledWith("eip155:5042002");
   const authorization = JSON.parse(challenge.headers.get("x-keryx-monthly-authorization")!);
   expect(state.claims.has(authorization.nonce)).toBe(true);
   expect(Number(authorization.validBefore)-Number(authorization.validAfter)).toBe(691800);

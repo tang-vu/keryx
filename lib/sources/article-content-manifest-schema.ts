@@ -1,8 +1,9 @@
 import { keccak256, type Hex } from "viem";
 
 import type { ContentDeliveryKind } from "../types";
+import { paymentRuntimeConfig } from "../payment-runtime-config";
 
-export const ARTICLE_CONTENT_MANIFEST_CHAIN_ID = 5_042_002;
+export const ARTICLE_CONTENT_MANIFEST_CHAIN_ID = paymentRuntimeConfig().chainId;
 
 export const ARTICLE_CONTENT_MANIFEST_DOMAIN = {
   name: "Keryx Article Content",

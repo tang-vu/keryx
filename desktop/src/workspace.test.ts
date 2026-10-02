@@ -13,11 +13,11 @@ async function temp() { const path = await mkdtemp(join(tmpdir(), "keryx-desktop
 const input = { question: "What changed in Arc research this week?", mode: "quick" as const,
   creatorBudget: "0.01", totalCap: "0.10", payee: "0x1111111111111111111111111111111111111111" };
 const writer: DesktopTaskWriter = {
-  async create({ parent, child, request, payee, maxTotalMicros, id, createdAt }) {
+  async create({ parent, child, request, payee, maxTotalMicros, id, createdAt, network }) {
     const target = join(parent, child);
     await mkdir(target);
     await writeFile(join(target, "request.json"), JSON.stringify(request) + "\n");
-    await writeFile(join(target, "task.json"), JSON.stringify({ schema: "keryx-operator-task-v1", id,
+    await writeFile(join(target, "task.json"), JSON.stringify({ schema: network === "eip155:5042" ? "keryx-operator-task-v2" : "keryx-operator-task-v1", ...(network === "eip155:5042" ? { network } : {}), id,
       createdAt, kind: "paid_research", request, payee, maxTotalMicros }) + "\n");
     return { taskId: id, child, state: "windows_visible_entry_unproven" };
   },
@@ -148,4 +148,15 @@ it("passes selected lexical parents to native admission so linked ancestors stay
   await expect(store.create(join(alias, "workspace"))).rejects.toThrow(/No new item was created/);
   expect(workspaceParent).toBe(join(alias, "workspace"));
   expect((await (await import("node:fs/promises")).readdir(real))).toEqual(["workspace"]);
+});
+
+it("preserves legacy testnet and new mainnet task identities side by side without payments", async () => {
+  const workspace = await temp(), store = new WorkspaceStore(writer); await store.select(workspace);
+  const old = await store.createTask(input), current = await store.createTask({ ...input, network: "arc" });
+  expect(old.status.network).toBe("eip155:5042002"); expect(current.status.network).toBe("eip155:5042");
+  const reopened = new WorkspaceStore(writer); const view = await reopened.select(workspace);
+  expect(view.tasks.map(task => task.status.network).sort()).toEqual(["eip155:5042", "eip155:5042002"]);
+  await expect(reopened.resumeTask(view.tasks.find(task => task.status.network === "eip155:5042")!.handle)).rejects.toThrow(/different network/);
+  const bytes = JSON.parse(await readFile(join(workspace, current.directoryName, "task.json"), "utf8"));
+  expect(bytes).toMatchObject({ schema: "keryx-operator-task-v2", network: "eip155:5042" });
 });

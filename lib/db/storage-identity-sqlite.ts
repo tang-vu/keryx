@@ -15,7 +15,10 @@ export const STORAGE_APPLICATION_TABLES = Object.freeze([
   "browser_signing_v2_control", "browser_signing_v2_barrier", "browser_signing_v2_writer",
   "browser_signing_namespaces", "browser_signing_queries", "browser_signing_originals", "browser_signing_v3_writer",
   "api_key_usage", "users", "answer_feedback", "query_memories", "session_grants", "rate_limit_counters", "reasoning_circuits",
-  "auth_challenges", "web_sessions", "private_research_intents", "private_treasury_pools", "private_treasury_reservations",
+  "auth_challenges", "web_sessions", "session_grant_consents", "session_withdrawal_preparations", "session_withdrawal_completions",
+  "session_withdrawal_exposures", "session_withdrawal_cancellations", "private_research_intents", "private_treasury_pools", "private_treasury_reservations",
+  "hosted_treasury_policies", "hosted_treasury_authorizations",
+  "creator_owner_withdrawal_completions", "research_purchase_authorizations", "research_monthly", "research_monthly_redemptions",
   "private_research_payment_attempts", "private_research_executions", "private_research_results", "private_creator_submissions",
   "private_creator_confirmations", "private_treasury_releases", "private_research_interruptions", "creator_withdrawal_requests",
   "creator_withdrawal_transfer_attempts", "creator_withdrawal_attestations", "public_references", "sync_state",
@@ -130,7 +133,7 @@ export function storageFenceStatements(db: DatabaseSync, identity: Readonly<Stor
   const profile = storagePaymentProfile(identity);
   const network = profile.networkId, token = profile.usdcAddress.toLowerCase(), gateway = profile.gatewayWallet.toLowerCase();
   for (const table of tableNames(db)) {
-    if (!STORAGE_APPLICATION_TABLES.includes(table)) refuseStorage("unsupported_table");
+    if (!STORAGE_APPLICATION_TABLES.includes(table) || identity.authorityMode !== "mainnet-real" && ["research_purchase_authorizations","research_monthly","research_monthly_redemptions"].includes(table)) refuseStorage("unsupported_table");
     for (const operation of ["INSERT", "UPDATE", "DELETE"]) {
       const name = `storage_fence_${createHash("sha256").update(table).digest("hex").slice(0, 16)}_${operation.toLowerCase()}`;
       result[name] = `CREATE TRIGGER ${name} BEFORE ${operation} ON ${quote(table)} WHEN keryx_storage_capability('${digest}','${identity.authorityMode}') IS NOT 1 BEGIN SELECT RAISE(ABORT,'storage writer identity required'); END`;
@@ -141,6 +144,16 @@ export function storageFenceStatements(db: DatabaseSync, identity: Readonly<Stor
         const extra = table === "browser_authorization_intents" ? ` OR lower(NEW.token) IS NOT '${token}' OR lower(NEW.gateway_contract) IS NOT '${gateway}'` : "";
         result[name] = `CREATE TRIGGER ${name} BEFORE ${operation} ON ${quote(table)} WHEN NEW.network IS NOT '${network}'${extra} BEGIN SELECT RAISE(ABORT,'storage authority profile mismatch'); END`;
       }
+    }
+    if (identity.authorityMode === "mainnet-real" && table === "research_purchase_authorizations") {
+      for (const operation of ["INSERT", "UPDATE"]) {
+        const name = `storage_profile_research_claim_${operation.toLowerCase()}`;
+        result[name] = `CREATE TRIGGER ${name} BEFORE ${operation} ON research_purchase_authorizations WHEN NEW.network IS NOT '${network}' OR lower(NEW.asset) IS NOT '${token}' BEGIN SELECT RAISE(ABORT,'original research profile mismatch'); END`;
+      }
+    }
+    if (identity.authorityMode === "mainnet-real" && table === "research_monthly") {
+      const invalid = `CASE WHEN json_valid(NEW.data) THEN json_extract(NEW.data,'$.format') IS NOT 'keryx-research-monthly-purchase-v2' OR json_extract(NEW.data,'$.network') IS NOT '${network}' OR lower(json_extract(NEW.data,'$.asset')) IS NOT '${token}' OR lower(json_extract(NEW.data,'$.gatewayContract')) IS NOT '${gateway}' ELSE 1 END`;
+      result.storage_profile_monthly_insert = `CREATE TRIGGER storage_profile_monthly_insert BEFORE INSERT ON research_monthly WHEN ${invalid} BEGIN SELECT RAISE(ABORT,'original Monthly profile mismatch'); END`;
     }
     if (table === "payment_events") {
       for (const operation of ["INSERT", "UPDATE"]) {

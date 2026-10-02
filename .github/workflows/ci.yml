@@ -122,6 +122,9 @@ jobs:
       - name: Isolated session worker and IndexedDB (synthetic, no funds)
         run: npm run test:browser-isolated-session
 
+      - name: Normal mainnet production worker and CSP (synthetic, no funds)
+        run: npm run test:browser-mainnet-normal-built
+
       - name: Private browser journal (hermetic, no settlement)
         run: npm run test:browser-private-journal
 

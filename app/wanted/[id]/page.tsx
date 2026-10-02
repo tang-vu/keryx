@@ -7,6 +7,7 @@ import { ExistingArticleResponseForm } from "@/components/keryx/existing-article
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { WantedShareButton } from "@/components/keryx/wanted-share-button";
+import { currentArcLabel } from "@/lib/arc-network-display";
 import {
   findWantedBrief,
   loadWantedBoard,
@@ -143,7 +144,7 @@ export default async function WantedClaimPage({ params }: PageProps) {
               <p className="mt-2 max-w-[66ch] font-serif text-[15.5px] leading-[1.6] text-ink-2">
                 Offer a post only after Keryx judges its public RSS preview relevant. Once the
                 source is registered, indexed, and ownership-verified, Keryx sponsors one bounded
-                retry with at most $0.05 on Arc testnet. A payout happens only when the paid full
+                retry with at most $0.05 on {currentArcLabel}. A payout happens only when the paid full
                 text supplies qualifying evidence, the agent cites it, and Circle settlement
                 succeeds.
               </p>

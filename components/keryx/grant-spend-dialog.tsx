@@ -18,6 +18,7 @@ import { useEffect, useState } from "react";
 import type { GrantState } from "@/lib/hooks/use-session-grant";
 import { SessionActiveCard } from "@/components/keryx/session-active-card";
 import { UsdcPresetChips } from "@/components/keryx/usdc-preset-chips";
+import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
 interface Props {
   grantState: GrantState;
@@ -34,7 +35,7 @@ interface Props {
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  switching:  "Switch to Arc Testnet in your wallet…",
+  switching:  `Switch to ${browserPaymentProfile().label} in your wallet…`,
   generating: "Generating session key…",
   funding:    "Waiting for USDC transfer…",
   depositing: "Depositing to Gateway…",
@@ -88,13 +89,20 @@ export function GrantSpendDialog({
             {STATUS_LABEL[grantState.status] ?? "Working…"}
           </span>
         </div>
+        {grantState.status === "registering" && grantState.consentReview && <p className="mt-2 text-xs text-ink-2">
+          Review owner consent: cumulative cap ${grantState.consentReview.cumulativeCapUsdc.toFixed(6)};
+          confirmed lifetime debit ${grantState.consentReview.confirmedSpentUsdc.toFixed(6)};
+          retained spend and signed holds ${grantState.consentReview.retainedSpentUsdc.toFixed(6)};
+          proposed remaining capacity ${grantState.consentReview.remainingCapacityUsdc.toFixed(6)}.
+          Current Gateway availability is ${grantState.consentReview.availableUsdc.toFixed(6)}. Unknown authorizations remain held.
+        </p>}
         {grantState.status === "confirming" && (
           // Reassure: the deposit is on-chain and safe; activation is hands-off and
           // survives a reload, so the user can relax or keep browsing.
           <p className="mt-2 font-serif text-[12.5px] leading-snug text-ink-2">
-            Your deposit is settling through Circle Gateway (usually under a minute).
+            {browserPaymentProfile().testnet ? <>Your deposit is settling through Circle Gateway (usually under a minute).
             The session activates on its own — you can keep this page open or even
-            reload; it picks up automatically. Your funds are safe on-chain.
+            reload; it picks up automatically. Your funds are safe on-chain.</> : <>Your transaction is confirmed on-chain. Gateway credit is still being checked. Review the owner consent signature when credit becomes available. Reload recovery retains the original signer; do not deposit again to resolve an uncertain transaction.</>}
           </p>
         )}
       </div>
@@ -108,7 +116,7 @@ export function GrantSpendDialog({
         Non-custodial session
       </div>
 
-      {grantState.status === "error" && grantState.error && (
+      {(grantState.status === "error" || grantState.status === "paused") && grantState.error && (
         <div className="mb-2 border border-destructive/40 bg-destructive/10 px-3 py-2 font-mono text-[11px] text-destructive">
           {grantState.error}
         </div>
@@ -142,7 +150,8 @@ export function GrantSpendDialog({
           <p className="mt-1.5 font-mono text-[9px] leading-relaxed text-faint">
             {resumeFailed
               ? "Could not resume from this tab — use “Recover funded session” below (one signature, no gas)."
-              : "One click, no signature — or recover with a signature on any device."}
+              : browserPaymentProfile().testnet ? "One click, no signature — or recover with a signature on any device."
+                : "Resume retained custody on this browser and review a new owner consent signature. Expired grants cannot authorize payments."}
           </p>
         </div>
       )}
@@ -193,8 +202,8 @@ export function GrantSpendDialog({
       </div>
 
       <p className="mt-2 font-mono text-[9px] leading-relaxed tracking-wide text-faint">
-        One MetaMask tx to fund · auto-signs per source · funds never lost: sign again on
-        any device to recover or withdraw
+        {browserPaymentProfile().testnet ? <>One MetaMask tx to fund · auto-signs per source · funds never lost: sign again on
+        any device to recover or withdraw</> : <>Owner wallet approves the exact USDC amount and deposits for your session, then signs a separate spending consent. Native gas is extra. Recovery uses encrypted storage on this browser: logout retains it, but deleting browser data or losing this device can lose access. Repeating a wallet signature on another device is not a guaranteed backup.</>}
       </p>
     </div>
   );

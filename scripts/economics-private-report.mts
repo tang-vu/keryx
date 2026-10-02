@@ -10,16 +10,17 @@ async function main() {
     return;
   }
   if (!values.directory) throw new Error();
+  const { config, hasSupabase } = await import("../lib/config");
+  const profile = config.profile;
   await writePrivateEconomicsReport(values.directory, async () => {
-    const { config, hasSupabase } = await import("../lib/config");
-    if (config.networkId !== "eip155:5042002") throw new Error();
     // Never call init(): a report must not migrate data or rewrite paid-content caches.
-    const db = hasSupabase()
-      ? new (await import("../lib/db/supabase-adapter")).SupabaseAdapter()
-      : new (await import("../lib/db/sqlite-adapter")).SqliteAdapter(resolve("data/keryx.sqlite"), { readOnly: true });
+    const enrolled = await (await import("../lib/db/application-storage")).createReadonlyApplicationStorage();
+    const db = enrolled ?? (hasSupabase()
+        ? new (await import("../lib/db/supabase-adapter")).SupabaseAdapter()
+        : new (await import("../lib/db/sqlite-adapter")).SqliteAdapter(resolve("data/keryx.sqlite"), { readOnly: true }));
     try { return await db.economics(); }
     finally { (db as { close?: () => void }).close?.(); }
-  });
+  }, profile);
   console.log("Private economics report saved. No invoice reconciliation or realized profit asserted.");
 }
 main().catch(() => { console.error("Private economics export unavailable. Check the protected destination and operator configuration. Retain any existing files; private details omitted."); process.exitCode = 1; });

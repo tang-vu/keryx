@@ -143,6 +143,7 @@ async function register(source: Source): Promise<void> {
 }
 
 async function main() {
+  if (config.networkId !== "eip155:5042002") throw new Error("Historical cached-source backfill is testnet-only; mainnet requires fresh creator-signed registration and verified catalog import");
   const args = process.argv.slice(2);
   if (!config.registryAddress) throw new Error("KERYX_REGISTRY_ADDRESS is not set");
 

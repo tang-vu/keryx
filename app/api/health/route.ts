@@ -36,8 +36,9 @@ export const dynamic = "force-dynamic";
 const BOOT_MS = Date.now();
 
 export async function GET() {
-  // Settlement mode mirrors the gateway selector: real treasury settlement needs a
-  // funder key and the offline flag off; otherwise runs settle as simulated.
+  // Mainnet browser settlement is caller-funded, independent of hosted custody.
+  // Hosted payment admission is checked per request against its sealed policy.
+  // Testnet preserves its historical explicit simulation/default behavior.
   const forceOffline = process.env.KERYX_FORCE_OFFLINE === "1";
   const base = {
     name: "keryx",
@@ -47,7 +48,8 @@ export async function GET() {
     webResearch: { provider: config.webSearchProvider === "tavily" || config.webSearchProvider === "searxng" ? config.webSearchProvider : "unconfigured",
       configured: config.webSearchProvider === "tavily" ? !!config.tavilyApiKey : config.webSearchProvider === "searxng" && !!config.webSearchUrl,
       availability: "not-probed", privateExternalSearch: "disabled", unattendedExternalSearch: "disabled" },
-    settles: !forceOffline && config.funderKey ? "real" : "offline",
+    settles: config.network === "arc" ? "real" : !forceOffline && config.funderKey ? "real" : "offline",
+    ...(config.network === "arc" ? { paymentAuthority: { caller: "owner-consent", hosted: "sealed-policy-admission", availability: "not-probed" } } : {}),
     network: config.network,
     // Deliberately a coarse label: tokenized RPC URLs are server credentials and never public.
     rpcProvider: classifyArcRpcProvider(config.rpcUrl),

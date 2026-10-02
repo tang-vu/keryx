@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { formatUnits, type PublicClient } from "viem";
 import { inspectPastGatewayDeposit, type PastGatewayDeposit } from "@/lib/buyer/funding-activity";
+import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
 /** Parent keys this panel by payer so an account switch discards old observations. */
 export function ResearchFundingActivity({ payer, chain }: { payer: string; chain?: PublicClient }) {
@@ -29,7 +30,7 @@ export function ResearchFundingActivity({ payer, chain }: { payer: string; chain
     {observed && <div role="status" className="space-y-2 font-serif text-sm">
       <p>{observed.status === "success" ? "Successful" : "Reverted"} deposit call for {formatUnits(BigInt(observed.amountMicros), 6)} USDC, finalized according to the configured RPC.</p>
       <p>{observed.status === "success" ? "This is a past deposit, not your current available balance. Funds may already have been spent or withdrawn; Circle credit may also still be updating." : "This call did not complete the deposit. Gas may have been charged."}</p>
-      <a className="break-all font-mono text-xs underline" href={`https://testnet.arcscan.app/tx/${observed.hash}`} target="_blank" rel="noreferrer">View deposit transaction on ArcScan</a>
+      <a className="break-all font-mono text-xs underline" href={`${browserPaymentProfile().explorerUrl}/tx/${observed.hash}`} target="_blank" rel="noreferrer">View original deposit transaction</a>
     </div>}
     <p className="font-serif text-xs text-ink-3">A missing record here does not rule out another pending transaction. This check cannot recover a transaction hash lost from both the browser and wallet activity.</p>
   </section>;

@@ -1,11 +1,12 @@
 "use client";
 
 /**
- * Hero totals from /api/metrics. Displays lifetime settled Arc testnet creator
+ * Hero totals from /api/metrics. Displays the deployment's lifetime settled creator
  * payouts and payment counts, with explicit loading and unavailable states.
  */
 
 import { useEffect, useState } from "react";
+import { currentArcLabel } from "@/lib/arc-network-display";
 
 export function HeroStats() {
   const [m, setM] = useState<{ paid: number; cites: number } | null>(null);
@@ -30,14 +31,14 @@ export function HeroStats() {
     };
   }, []);
 
-  if (state !== "ready" || !m) return <p className="border border-ink px-4 py-3 font-mono text-xs text-ink-3" role="status">{state === "loading" ? "Loading settled Arc testnet totals…" : "Settled totals unavailable."}</p>;
+  if (state !== "ready" || !m) return <p className="border border-ink px-4 py-3 font-mono text-xs text-ink-3" role="status">{state === "loading" ? `Loading settled ${currentArcLabel} totals…` : "Settled totals unavailable."}</p>;
 
   return (
     <div className="flex w-full border border-ink">
       <Cell
         target={m.paid}
         fmt={(n) => `$${n.toFixed(2)}`}
-        label="Paid to creators · lifetime · Arc testnet"
+        label={`Paid to creators · lifetime · ${currentArcLabel}`}
         money
       />
       <Cell

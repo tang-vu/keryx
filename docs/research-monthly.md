@@ -1,10 +1,11 @@
-# Research Monthly pilot
+# Research Monthly
 
 The user confirmed one bounded Monthly plan on 2026-10-02: four research requests
 per month, priced 10% below four equivalent separate purchases. The pilot uses
 four Deep v1.0.0 requests in a 30-day term from the confirmed purchase, with manual
-renewal and no autonomous schedule. This is Arc testnet; it is not a mainnet or
-card recurring-billing launch.
+renewal and no autonomous schedule. Its initial release used Arc testnet. The
+owner subsequently directed full public mainnet Keryx; that includes Monthly under
+the same manual-renewal terms. Card recurring billing remains outside this product.
 
 The current default creator cap and Deep service fee determine the quote. The
 entire discount comes from the service allocation. Creator caps, source tolls and
@@ -37,6 +38,27 @@ for Monthly and a standalone job or a paid source/citation. Historical recorded
 nonces without sufficient resource binding fail closed. Ambiguous settlement
 retains the claim; it does not release it or activate a plan.
 
+## Selected-network release candidate
+
+Checkout and proof domains use the trusted deployment profile, never a received
+quote or recovery file. The historical one-USDC Monthly ceiling remains testnet
+only; mainnet quotes retain exact integer allocation and the ordinary reviewed
+creator/job limits. Mainnet browser recovery keys include network, Keryx HTTPS
+origin and payer. Existing testnet keys stay unchanged and are never relabelled.
+Mainnet request files require the versioned network envelope; legacy plain request
+files remain recoverable on testnet. An unresolved debit survives reload and blocks
+another purchase until the original plan is recovered. Status and recovery do not
+submit another payment.
+
+The candidate UI has actual React/Chromium/IndexedDB evidence on both profiles,
+including a 1.8-USDC mainnet quote rendered by the real funding component, exact
+synthetic EOA signing, foreign-file refusal and lost-acknowledgement recovery.
+Intercepted HTTP and synthetic signatures do not prove mainnet settlement.
+Mainnet API and page admission remain closed until the backend's fresh sealed
+SQLite Monthly domain and exact dedicated custody readiness have native acceptance.
+Legacy migration 0078 is an ordinary testnet path; copying its rows into a fresh
+mainnet store is not migration. Optional Supabase mainnet remains staged separately.
+
 ## Surfaces and boundaries
 
 - Web `/research`: purchase, status, manual redemption and recovery files.
@@ -64,26 +86,28 @@ The ten-minute challenge admission window is separate from Circle's configured
 multi-day signature validity. First submission is marked durably before the external
 call; uncertainty survives the challenge expiry, and recovery never replaces a debit.
 
-Monthly and the shared debit-admission writer remain ordinary TypeScript
-SQLite/Supabase authority. Both enrolled backend inventories explicitly refuse
-these methods, including read-only factories and internally assembled cores.
-The ordinary SQLite installer composes Monthly separately from the reviewed
-enrolled schema/profile; runtime never upgrades an enrolled store. Migration
-0078 refuses an already enrolled PostgreSQL owner, and its RPCs recheck that
-boundary. An enrolled/native Monthly domain needs reviewed identity-scoped
-contracts, fences, schema fingerprints and independent acceptance before cutover.
+The original testnet release uses ordinary TypeScript SQLite/Supabase authority.
+Fresh sealed mainnet SQLite now has separately admitted identity/profile-bound
+Monthly v2 contracts. Legacy unlabelled purchases and old enrolled testnet writers
+are refused on mainnet. Mainnet purchases require the exact submitted issued claim,
+selected USDC/Gateway identity and actual facilitator network receipt. Immutable
+native slot/order admission binds the original payer, version, request and network.
+The legacy 0078 PostgreSQL migration does not enroll a mainnet database; optional
+Supabase mainnet support remains staged/fail-closed and is not a SQLite launch gate.
 
-Production currently selects SQLite. Initialization installs the additive tables,
-immutable debit claims and historical nonce backfill. Verify the actual schema,
-claims and atomic admission on that database before activation. For Supabase,
-install migration 0078 and verify service-role-only tables/functions and the
-real multi-session PostgreSQL CI evaluator; local PGlite execution verifies SQL
-and parity but does not prove concurrent PostgreSQL sessions. Stop/drain old
-web and worker generations that lack shared admission before setting
-`KERYX_MONTHLY_ENABLED=1`. Deploy claim-aware code to all public settlement writers.
-Require focused nonce-replay/concurrency/economic/authorization tests, existing
-source/citation/A2A regressions, type checking, lint and production build, independent
-payment review, required CI and deployed commit health evidence.
+Before quote/checkout, the actual native writer and reviewed dedicated public key's
+address, historical role, query/lifetime caps and current selected Gateway capacity
+must pass. This checks the **one-run creator cap**, not the total prepaid price.
+It does **not reserve or escrow all four future runs**, guarantee future operator
+prefunding or promise four successful reports. New redemptions refuse without
+consuming a slot if current execution capacity is unavailable. Once an original
+job is admitted, exact replay returns it despite later disabled admission; terminal
+failed/uncertain jobs retain their slots and use ordinary original job recovery.
+
+Production mainnet requires a fresh sealed SQLite deployment, preserved testnet
+originals, drained old writers, reviewed custody/policy/funding inputs and final
+composed native/SDK/API acceptance. All receipts and metrics must distinguish
+synthetic tests, seller-reported evidence and actual real confirmed settlement.
 
 Disable `KERYX_MONTHLY_ENABLED` to stop new purchases/redemptions while retaining
 signed status and job/receipt recovery. Do not delete plans, consumed slots or
@@ -93,3 +117,8 @@ Desktop and extension installers retain their web handoff; no installer format c
 The initial product release uses stdio MCP 0.3.1. The subsequent isolated-storage
 release alignment uses 0.3.2 and requires its separate tested, verified publication.
 Immutable earlier release artifacts retain their original source and checksums.
+
+The initial Monthly stdio package candidate was 0.3.1; the coordinated mainnet
+client candidate is 0.4.0. Neither source version proves publication. Verify the
+actual npm/immutable release artifact and installed consumer before reporting
+synchronized delivery.

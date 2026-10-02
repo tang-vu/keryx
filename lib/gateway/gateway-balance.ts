@@ -10,20 +10,23 @@
  * an unfunded address is a rejection, an unreachable Circle is not.
  */
 
-import { config } from "../config";
+import { paymentRuntimeConfig } from "../payment-runtime-config";
+import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
 import { readBoundedJson } from "../read-bounded-json";
-import { gatewayAvailableAtomic } from "./available-balance";
-import { gatewayNetworkProfile } from "./gateway-network";
+import { gatewayAvailableAtomic, gatewayHeldUsdcByChunk } from "./available-balance";
 
-// Capture trusted deployment selection once. Arc uses domain 26 on both rails, so
-// the response's domain alone cannot distinguish testnet funds from mainnet funds.
-const profile = gatewayNetworkProfile(config.networkId);
-const GATEWAY_BALANCE_API = `${profile.gatewayApiUrl}/v1/balances`;
+// Verified from @circle-fin/x402-batching/dist/client/index.js:638-672.
+const runtimeProfile = paymentRuntimeConfig().profile;
+function balanceProfile(profile: ArcNetworkProfile) {
+  if (profile !== ARC_MAINNET_PROFILE && profile !== ARC_TESTNET_PROFILE) throw new Error("Gateway balance profile refused");
+  return profile;
+}
 
-export async function getGatewayAvailableAtomic(address: string): Promise<bigint | null> {
+export async function getGatewayAvailableAtomic(address: string, trustedProfile: ArcNetworkProfile = runtimeProfile): Promise<bigint | null> {
+  const profile = balanceProfile(trustedProfile);
   if (!/^0x[a-fA-F0-9]{40}$/.test(address)) return null;
   try {
-    const upstream = await fetch(GATEWAY_BALANCE_API, {
+    const upstream = await fetch(`${profile.gatewayApiUrl}/v1/balances`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -62,14 +65,15 @@ const BATCH = 20;
  *
  * A failed chunk marks only its own addresses unknown, so one bad request cannot blank the sweep.
  */
-export async function getGatewayHeldUsdc(addresses: string[]): Promise<Map<string, number | null>> {
+export async function getGatewayHeldUsdc(addresses: string[], trustedProfile: ArcNetworkProfile = runtimeProfile): Promise<Map<string, number | null>> {
+  const profile = balanceProfile(trustedProfile);
   const unique = [...new Set(addresses.map((a) => a.toLowerCase()))];
   const out = new Map<string, number | null>(unique.map((a) => [a, null]));
 
   for (let i = 0; i < unique.length; i += BATCH) {
     const chunk = unique.slice(i, i + BATCH);
     try {
-      const upstream = await fetch(GATEWAY_BALANCE_API, {
+      const upstream = await fetch(`${profile.gatewayApiUrl}/v1/balances`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -77,21 +81,12 @@ export async function getGatewayHeldUsdc(addresses: string[]): Promise<Map<strin
           sources: chunk.map((depositor) => ({ depositor, domain: profile.cctpDomain })),
         }),
         signal: AbortSignal.timeout(20_000),
-        redirect: "error",
-        cache: "no-store",
+        redirect: "error", cache: "no-store",
       });
-      if (!upstream.ok) continue; // chunk stays unknown
+      if (!upstream.ok) { await upstream.body?.cancel(); continue; } // chunk stays unknown
 
-      const data = (await upstream.json()) as {
-        balances?: Array<{ depositor?: string; balance?: string; pendingBatch?: string }>;
-      };
-      for (const b of data.balances ?? []) {
-        const key = b.depositor?.toLowerCase();
-        // Key off the echoed depositor rather than array position: an answer that dropped or
-        // reordered an entry would otherwise attach one creator's balance to another's claim.
-        if (!key || !out.has(key)) continue;
-        out.set(key, Number(b.balance ?? 0) + Number(b.pendingBatch ?? 0));
-      }
+      const held = gatewayHeldUsdcByChunk(await readBoundedJson(upstream), chunk, profile.cctpDomain);
+      for (const [key, value] of held) out.set(key, value);
     } catch {
       /* timeout or transport error — the chunk's addresses stay unknown */
     }

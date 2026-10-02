@@ -19,7 +19,7 @@ import type { PrivateCreatorSubmission, PrivateCreatorSubmissionRecord } from ".
 import type { PrivateResearchResult } from "./private-research-results";
 import type { PrivateExecutionClaim } from "./private-research-executions";
 import type { LedgerAccount } from "../gateway/settlement-parity";
-import type { TestnetEconomicsSnapshot } from "../economics/testnet-economics";
+import type { EconomicsSnapshot } from "../economics/testnet-economics";
 import type { A2aOrder, A2aOrderResolutionUpdate } from "../a2a/order";
 import type { MonthlyPurchase, MonthlyRedemption, MonthlyRedemptionInput, ResearchPurchaseClaim } from "./research-monthly";
 import type { PrivateResearchIntent } from "../a2a/private-research-intent";
@@ -344,6 +344,9 @@ export interface KeryxDB {
   /** Create or replace the active grant. Journal mode retains cumulative signer spend
    *  and original epochs; pre-cutover legacy writers retain their historical behavior. */
   upsertSessionGrant(grant: Omit<SessionGrantRecord, "spent">): Promise<void>;
+  issueSessionGrantConsent(consent: import("../payments/session-grant-consent").SessionGrantConsent): Promise<void>;
+  consumeSessionGrantConsent(consent: import("../payments/session-grant-consent").SessionGrantConsent, signature: string, sessionSignature: string): Promise<void>;
+  getSessionGrantConsent(owner: string, epoch: string): Promise<import("./session-grant-consents").SessionGrantConsentRecord | null>;
   /** Fetch a grant. Returns null when absent; expiry is the caller's to interpret. */
   getSessionGrant(sessionId: string): Promise<SessionGrantRecord | null>;
   /** Atomically reserve only against the captured grant generation and session signer. */
@@ -358,6 +361,27 @@ export interface KeryxDB {
   readBrowserSigningSnapshot(owner:string,sessionId:string,requestId:string):Promise<import("./browser-signing-originals").BrowserSigningSnapshot|null>;
   signBrowserSigningOriginal(sessionId:string,requestId:string,header:string):Promise<boolean>;
   browserSignerConfirmedSpendMicro(signer:string): Promise<number>;
+  browserSignerRetainedSpendMicro(signer:string): Promise<number>;
+  sessionFundingAccounting(signer:string,after?:string): Promise<import("./session-funding-accounting").SessionFundingAccounting>;
+  sessionWithdrawalAccounting(signer:string): Promise<{heldPaymentMicroUsdc:string;heldWithdrawalMicroUsdc:string;confirmedSpentMicroUsdc:string}>;
+  creatorOwnerWithdrawalAccounting(owner:string):Promise<import("../gateway/creator-owner-withdrawal-protocol").CreatorOwnerWithdrawalAccounting>;
+  admitCreatorOwnerWithdrawal(record:WithdrawalRequestRecord,accounting:import("../gateway/creator-owner-withdrawal-protocol").CreatorOwnerWithdrawalAccounting,availableMicroUsdc:string):Promise<WithdrawalRequestRecord>;
+  getCreatorOwnerWithdrawalCompletion(id:string,owner:string):Promise<import("../gateway/creator-owner-withdrawal-protocol").CreatorOwnerWithdrawalCompletion|null>;
+  completeCreatorOwnerWithdrawal(completion:import("../gateway/creator-owner-withdrawal-protocol").CreatorOwnerWithdrawalCompletion):Promise<import("../gateway/creator-owner-withdrawal-protocol").CreatorOwnerWithdrawalCompletion>;
+  reserveSessionWithdrawal(preparation:import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation>;
+  getSessionWithdrawal(id:string,owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation|null>;
+  pendingSessionWithdrawal(owner:string,signer:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation|null>;
+  getSessionWithdrawalSigningPhase(id:string,owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalSigningPhase|null>;
+  authorizeSessionWithdrawal(id:string,owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation|null>;
+  cancelSessionWithdrawal(id:string,owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalCancellation|null>;
+  admitHostedTreasuryPolicy(policy:import("../payments/hosted-treasury-policy").HostedTreasuryPolicy,role:"public"|"private"):Promise<string>;
+  hostedTreasuryAccounting(signer:string,role?:"public"|"private"):Promise<import("./hosted-treasury-journal").HostedTreasuryAccounting>;
+  admitHostedAuthorization(input:import("./hosted-treasury-journal").HostedAuthorizationAdmission):Promise<string>;
+  submitHostedAuthorization(signer:string,submission:Readonly<import("../payments/server-x402-client").ServerX402Submission>,headerHash:string):Promise<void>;
+  confirmHostedAuthorization(signer:string,nonce:string,transaction:string):Promise<void>;
+  getSessionWithdrawalCompletion(id:string,owner:string):Promise<import("../gateway/session-withdrawal-completion").SessionWithdrawalCompletion|null>;
+  completeSessionWithdrawal(id:string,owner:string,outcome:import("../gateway/session-withdrawal-completion").SessionWithdrawalCompletion):Promise<import("../gateway/session-withdrawal-completion").SessionWithdrawalCompletion>;
+  listSessionWithdrawalPayments(signer:string,afterNonce?:string,limit?:number):Promise<{payments:import("./browser-authorization-journal").BrowserAuthorizationJournal[];nextCursor:string|null}>;
   activateBrowserJournal(): Promise<void>;
   admitBrowserJournal(input: import("./browser-authorization-journal").BrowserJournalAdmission): Promise<import("./browser-authorization-journal").BrowserJournalAdmissionResult>;
   getBrowserJournal(sessionId: string, requestId: string): Promise<import("./browser-authorization-journal").BrowserAuthorizationJournal | null>;
@@ -452,8 +476,8 @@ export interface KeryxDB {
   /** Dispatches a wallet ran while signed in, newest first. Address match is case-insensitive:
    *  runs are stamped lowercased, but callers hand over whatever casing the session carries. */
   listQueryRunsByAsker(wallet: string, limit: number): Promise<QueryRun[]>;
-  /** Testnet-only observed costs/subsidies and hypothetical service pricing. Never settlement. */
-  economics(): Promise<TestnetEconomicsSnapshot>;
+  /** Selected-rail recorded settlement observations and usage estimates. Not reconciled profit. */
+  economics(): Promise<EconomicsSnapshot>;
 
   // ── privacy-preserving activation telemetry ──
   /** Atomically increment one aggregate UTC-day counter. No actor, wallet, IP, or cookie. */
@@ -560,6 +584,8 @@ export interface KeryxDB {
   // Durable A2A authorization state: one settled inbound authorization may run creators once.
   /** Ordinary TypeScript SQLite/Supabase authority only; enrolled/native storage refuses this domain.
    * Immutable admission of a verified signed debit before settlement; never grants delivery. */
+  /** Read-only proof of actual purchase writer capability before offering a paid quote. */
+  assertResearchPurchaseAuthority(network: string): Promise<void>;
   claimResearchPurchase(input: ResearchPurchaseClaim): Promise<void>;
   createResearchMonthly(purchase: MonthlyPurchase): Promise<{ created: boolean; purchase: MonthlyPurchase }>;
   getResearchMonthly(id: string): Promise<{ purchase: MonthlyPurchase; redemptions: MonthlyRedemption[] } | null>;

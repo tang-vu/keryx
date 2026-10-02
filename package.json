@@ -1,6 +1,6 @@
 {
   "name": "keryx",
-  "version": "0.25.1",
+  "version": "0.26.0",
   "private": true,
   "engines": {
     "node": "^22.19.0 || >=24.0.0",
@@ -91,7 +91,10 @@
     "test:browser-monthly": "node --import tsx scripts/test-browser-monthly.mts",
     "test:browser-auth": "node --import tsx scripts/test-browser-auth.mts",
     "test:browser-private-history": "node --import tsx scripts/test-browser-private-history.mts",
-    "test:business-calculator": "node --import tsx scripts/test-business-calculator.mts"
+    "test:business-calculator": "node --import tsx scripts/test-business-calculator.mts",
+    "test:browser-mainnet-normal": "node --import tsx scripts/test-browser-mainnet-normal.mts",
+    "test:browser-mainnet-normal-built": "node --import tsx scripts/test-browser-mainnet-normal-built.mts",
+    "mainnet:unsigned-setup": "node --import tsx --no-warnings scripts/mainnet-unsigned-setup.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.69.0",

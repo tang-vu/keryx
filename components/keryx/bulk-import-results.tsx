@@ -8,6 +8,7 @@
 
 import { CheckCircle2, Loader2, XCircle, ShieldCheck, Copy, ExternalLink, PenLine } from "lucide-react";
 import { toast } from "sonner";
+import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
 export type BulkPhase =
   | "ready"      // ingested, awaiting the creator's on-chain signature
@@ -78,7 +79,7 @@ export function BulkImportResults({
             </div>
             {f.txHash && (
               <a
-                href={`https://testnet.arcscan.app/tx/${f.txHash}`}
+                href={`${browserPaymentProfile().explorerUrl}/tx/${f.txHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 title="View on ArcScan"

@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { currentArcLabel } from "@/lib/arc-network-display";
 
 const steps = [
   { target: "hero", title: "Research with a budget", body: "Keryx finds sources, explains what it buys or skips, and cites evidence in its answer." },
   { target: "ask-form", title: "Ask a question", body: "Enter the research question you want answered. You can inspect decisions as the answer streams." },
   { target: "budget", title: "Choose a spending cap", body: "Set the most this request may spend. A cap is permission, not a promise to spend it all." },
-  { target: "dispatch-btn", title: "Start research", body: "Submit to see source decisions, payment state, citations, and creator rewards on Arc testnet." },
+  { target: "dispatch-btn", title: "Start research", body: `Submit to see source decisions, payment state, citations, and creator rewards on ${currentArcLabel}.` },
 ] as const;
 
 export function OnboardingTour() {

@@ -48,6 +48,48 @@ funded session identities remain retained; never silently import them as mainnet
 Full-product adoption/profitability evidence remains separate from financial migration
 and cannot be inferred from synthetic mainnet checks.
 
+The [normal browser custody checkpoint](./mainnet-browser-custody.md) documents retained original
+same-device recovery, owner funding, dual consent/possession proofs, cumulative signed capacity,
+and actual Chromium/Next worker evidence. Synthetic normal authenticated research composition
+now completes encrypted purchases and citations, retaining a completed answer on one reward-leg
+failure. Actual React owner funding checks cover concurrent debit reconciliation and an immutable
+top-up consent ceiling through normal handlers. The ordinary owner-only cashout component now
+passes synthetic worker/normal-handler acceptance through lost-transfer recovery, owner mint,
+independent finality and renewed research with the same retained signer. Independent live
+wallet/funding/cashout acceptance, final coordinated SQL/operational evidence and owner cutover remain release
+gates; this source checkpoint does not activate mainnet.
+
+The ordinary creator browser path prepares an explicitly reviewed amount/fee,
+retains its owner-signed original and one transfer attempt, and uses a separate owner
+wallet mint with native gas. Mainnet journals are separate from retained testnet
+records. Actual React/normal-handler/Chromium acceptance includes lost transfer,
+reload, original mint-hash recovery and independent finality checks with synthetic
+external transport. These checks do not close the live-wallet/funding or coordinated
+deployment acceptance gates.
+
+The headless session caller reuses the same restricted withdrawal and unsigned
+owner mint preparation policy. Explicit state migration retains the original funded
+ciphertext, nonces, question budgets and lifetime consumption while excluding old
+writers. Native acceptance covers expired/revoked custody, lost authorization and
+transfer responses, retained manual owner mint hashes and original completion.
+The CLI does not sign or broadcast the owner's mint transaction. Ordinary own-EOA
+MCP/CLI balances use the documented same-owner SIWE withdrawal handoff instead;
+key-only MCP cashout is not implied by delegated session support.
+
+Normal public labels and contract references follow the compiled deployment profile;
+receipt, citation and withdrawal explorer links follow each original record's network.
+Unlabelled legacy receipt data remains testnet, and unknown explicit networks are never
+relabelled. Circle settlement IDs are not presented as per-transaction EVM hashes.
+Creator listing updates/deactivation and receipt monitoring use the selected chain;
+mainnet browser signing also requires the independently compiled registry pin.
+
+The experimental scholarly manuscript distribution-rights protocol remains staged on
+testnet. Its testnet declaration/review messages and archived facts are preserved.
+Mainnet paid manuscript opt-in and creator rights enrollment are closed with a visible
+explanation before payment; ordinary registered article publishing remains available.
+Public mainnet access has no invited-wallet cohort restriction. This boundary does not
+silently claim a migrated experimental rights protocol.
+
 ## Current baseline and gaps
 
 Current [October 2 preparation](#october-2-preparation) records guarded backend

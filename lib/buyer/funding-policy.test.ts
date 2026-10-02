@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { decodeFunctionData, erc20Abi } from "viem";
-import { fundingRecordSchema, fundingTransaction, verifyFundingTransaction, GATEWAY_DEPOSIT_ABI } from "./funding-policy";
+import { decodeFunctionData, erc20Abi, getAddress } from "viem";
+import { fundingRecordSchema, fundingTransaction, verifyFundingTransaction, GATEWAY_DEPOSIT_ABI, GATEWAY_DEPOSIT_FOR_ABI } from "./funding-policy";
 import { BUYER_GATEWAY, BUYER_USDC } from "./protocol";
 
 const payer = `0x${"a".repeat(40)}`;
@@ -13,6 +13,21 @@ const tx = { hash, from: payer, to: plan.to, input: plan.data, value: BigInt(0),
 const receipt = { transactionHash: hash, blockHash: tx.blockHash, blockNumber: BigInt(101), status: "success" as const };
 
 describe("funding proof and bounds", () => {
+  it("retains the owner funding lock through confirmed deposit until Circle credit is acknowledged", () => {
+    const deposit = { ...record.approval, status: "confirmed" as const, hash, nonce: 8, beforeBlock: "100" };
+    const session = { ...record, depositor: `0x${"b".repeat(40)}`, gatewayCreditBefore: "700", gatewayCreditAcknowledged: false,
+      approval: { ...record.approval, status: "confirmed" as const, hash }, deposit };
+    expect(fundingRecordSchema.safeParse(session).success).toBe(true);
+    expect(fundingRecordSchema.safeParse({ ...session, activePayer: undefined }).success).toBe(false);
+    expect(fundingRecordSchema.safeParse({ ...session, gatewayCreditAcknowledged: true }).success).toBe(false);
+    expect(fundingRecordSchema.safeParse({ ...session, gatewayCreditAcknowledged: true, activePayer: undefined }).success).toBe(true);
+  });
+  it("binds exact owner-funded depositFor to the retained session instead of changing its signer custody", () => {
+    const depositor = `0x${"b".repeat(40)}` as `0x${string}`;
+    const deposit = fundingTransaction({ ...record, depositor }, "deposit");
+    expect(decodeFunctionData({ abi: GATEWAY_DEPOSIT_FOR_ABI, data: deposit.data })).toMatchObject({ functionName: "depositFor", args: [BUYER_USDC, getAddress(depositor), BigInt(50000)] });
+    expect(deposit.from).toBe(payer); expect(deposit.to).toBe(BUYER_GATEWAY); expect(deposit.value).toBe(BigInt(0));
+  });
   it("approves only the exact amount and deposits to the sender's own Gateway account", () => {
     expect(plan.to).toBe(BUYER_USDC);
     expect(decodeFunctionData({ abi: erc20Abi, data: plan.data })).toMatchObject({ functionName: "approve", args: [BUYER_GATEWAY, BigInt(50000)] });

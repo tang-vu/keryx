@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { encodeFunctionData, erc20Abi, keccak256, parseTransaction, recoverTransactionAddress, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { ARC_MAINNET_PROFILE } from "../arc-network-profile";
 import { ARC_GATEWAY_DEPOSIT_ABI, GuardedArcSubmissionUnknownError, sendGuardedArcTransaction, type IntendedArcTransaction } from "./guarded-arc-transaction";
 
 const USDC = "0x3600000000000000000000000000000000000000" as const;
@@ -46,6 +47,13 @@ function fixture(mutateFill?: (tx: Record<string, unknown>) => void, chain?: () 
 afterEach(() => vi.unstubAllGlobals());
 
 describe("caller-bound local Arc transactions", () => {
+  it("signs and submits only the exact mainnet transaction under an independently selected profile", async () => {
+    const f = fixture(tx => { tx.chainId = "0x13b2"; }, () => "0x13b2");
+    const transaction = { to: ARC_MAINNET_PROFILE.gatewayWallet, value: BigInt(1), gas: BigInt(21000) };
+    await sendGuardedArcTransaction({ account: f.account, rpcUrl: "https://synthetic.invalid", transaction, profile: ARC_MAINNET_PROFILE });
+    expect(f.sign).toHaveBeenCalledOnce(); expect(f.submitted).toHaveLength(1);
+    expect(parseTransaction(f.submitted[0])).toMatchObject({ chainId: 5042, to: transaction.to.toLowerCase(), value: BigInt(1) });
+  });
   it.each(operations)("signs and submits the exact %s with the installed viem preparation path", async (_name, transaction) => {
     const f = fixture();
     const hash = await sendGuardedArcTransaction({ account: f.account, rpcUrl: "https://synthetic.invalid", transaction });

@@ -6,6 +6,7 @@ import { PaperGrain } from "@/components/keryx/paper-grain";
 import { InkBleedCursor } from "@/components/keryx/ink-bleed-cursor";
 import { MintEngravings } from "@/components/keryx/mint-engravings";
 import { safeInlineJson } from "@/lib/safe-json";
+import { currentArcLabel } from "@/lib/arc-network-display";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -18,7 +19,7 @@ const defaultUrl =
 
 const TITLE = "Keryx — citations are currency";
 const DESCRIPTION =
-  "Keryx researches questions using cited evidence, pays verified creators for qualifying paid citations, and includes free public references with no publisher payout. List your writing, prove feed ownership, and earn USDC rewards on Arc testnet.";
+  `Keryx researches questions using cited evidence, pays verified creators for qualifying paid citations, and includes free public references with no publisher payout. List your writing, prove feed ownership, and earn USDC rewards on ${currentArcLabel}.`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),

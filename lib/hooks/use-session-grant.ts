@@ -6,35 +6,14 @@ import { watchSessionGrantClock } from "../session-grant-liveness";
 import { readBoundedJson } from "../read-bounded-json";
 import { sessionRevokeRequestSchema } from "../session-revoke-request";
 
-/**
- * useSessionGrant — manages the browser-side session key lifecycle.
- *
- * Flow:
- *   1. generateAndFund()  — the user's wallet signs a fixed message; the signature goes straight to
- *      the signer worker, which derives the session key and never gives it back. The user then
- *      sends one MetaMask tx to fund the session EOA, the worker signs its approve + Gateway
- *      deposit, and the browser POSTs to /api/session/grant to register it server-side.
- *   2. The key lives only inside the worker. The tab holds AES-GCM ciphertext whose wrapping key is
- *      a non-exportable CryptoKey in IndexedDB, so a reload can rehydrate the worker without ever
- *      materialising a key on the main thread.
- *   3. revoke()           — drops the server grant and prepares on-chain Gateway withdraw data.
- *      The caller (GrantSpendDialog) performs the actual withdraw from the user's own wallet.
- *
- * Key derivation (funds are never lost):
- *   The session key is NOT random — it is derived deterministically from a signature of a fixed
- *   message by the user's main wallet: sk = keccak256(sign(DERIVE_MESSAGE)). Same wallet + same
- *   message → same key on ANY device/browser. A closed tab, a sign-out, or a different machine
- *   never orphans the funded session EOA. recoverViaSignature() does exactly this.
- *
- * SECURITY:
- *   - The private key NEVER leaves the browser, and no longer leaves the worker. The server sees
- *     only the derived public address.
- *   - What the worker will sign is bounded by the on-chain registry, not by this file. Script that
- *     owns the page can ask for a signature; it cannot choose the payee or sweep the session EOA.
- *   - Residual: the wallet signature that derives the key is produced on the main thread. Script
- *     running at that instant can derive the key itself. The window is one call at setup.
- *   - Determinism relies on RFC-6979 deterministic ECDSA (MetaMask/Rabby/Ledger/Coinbase). A wallet
- *     that signs non-deterministically simply can't recover — it never loses MORE funds.
+/** Build-selected session lifecycle. The implementation below preserves historical testnet
+ * derivation/funding behavior; mainnet uses useMainnetSessionGrant and retained original
+ * same-browser custody. It funds via owner approve/depositFor and admits dual-proof consent.
+ * No repeated personal_sign recovery guarantee applies across wallets or devices. Logout and
+ * expiry lock mainnet payments without deleting funded recovery or exposed authorizations.
+ * Same-origin script can use IndexedDB's wrapping CryptoKey to decrypt stored ciphertext and
+ * observes initial derivation signatures. Worker isolation is not an XSS-proof vault or
+ * on-chain spending cap. See docs/mainnet-browser-custody.md for custody and recovery limits.
  */
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -53,6 +32,8 @@ import {
   readSession,
   writeSession,
 } from "@/lib/session/session-storage";
+import { browserPaymentProfile } from "../browser-payment-profile";
+import { useMainnetSessionGrant } from "./use-mainnet-session-grant";
 
 // Extra native USDC sent to the session EOA on top of the funded budget so it can pay gas for its
 // own approve + Gateway-deposit txs (Arc gas is tiny). Leftover stays in the session EOA and is
@@ -93,6 +74,8 @@ export interface GrantState {
   expiresAt: string | null;
   grantEpoch: string | null;
   error: string | null;
+  consentReview?: { cumulativeCapUsdc: number; confirmedSpentUsdc: number; retainedSpentUsdc: number;
+    remainingCapacityUsdc: number; availableUsdc: number };
 }
 
 const INITIAL: GrantState = {
@@ -114,7 +97,7 @@ async function deriveSignature(walletClient: WalletClient): Promise<string> {
   });
 }
 
-export function useSessionGrant() {
+function useTestnetSessionGrant() {
   const [state, setState] = useState<GrantState>(INITIAL);
   const grantClock = useRef<ReturnType<typeof createSessionGrantClock> | null>(null);
   const registration = useRef(0);
@@ -542,5 +525,10 @@ export function useSessionGrant() {
     revoke,
     getSessionWalletClient,
     markExpired,
+    authorizeSessionPayment: undefined,
   };
 }
+
+// Immutable build selection; hook identity cannot change between renders or from requests.
+const useConfiguredSessionGrant = browserPaymentProfile().testnet ? useTestnetSessionGrant : useMainnetSessionGrant;
+export function useSessionGrant() { return useConfiguredSessionGrant(); }

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { build } from "esbuild";
 import { chromium } from "playwright";
 
-const bundle = await build({
+async function fixtureBundle(network: "arcTestnet" | "arc") { return build({
   stdin: {
     contents: `
       import React, { useState } from 'react';
@@ -25,8 +25,9 @@ const bundle = await build({
   write: false,
   platform: "browser",
   format: "iife",
-  define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"production"' },
-});
+  define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": JSON.stringify(network), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"production"' },
+}); }
+const bundle = await fixtureBundle("arcTestnet");
 
 const browser = await chromium.launch({ headless: true });
 try {
@@ -77,7 +78,8 @@ try {
   assert.equal(call[4], "deep");
   assert.equal(call[5], true);
   assert.equal(call[6], false);
-  const paidScholarly = page.getByRole("checkbox", { name: "Include reviewed paid manuscripts (Arc testnet pilot)" });
+  const paidManuscriptLabel = "Include reviewed paid manuscripts (experimental testnet rights protocol)";
+  const paidScholarly = page.getByRole("checkbox", { name: paidManuscriptLabel });
   assert.equal(await paidScholarly.isDisabled(), true);
   await page.locator("#payer-session").click();
   await page.getByText(/Your funded session pays/).waitFor();
@@ -99,6 +101,16 @@ try {
   assert.equal(sharedCall[1], 0.04);
   assert.equal(sharedCall[3], "other");
   assert.equal(sharedCall[4], "deep");
+  // Public mainnet research never admits the experimental testnet rights role.
+  const mainnet = await context.newPage();mainnet.on("pageerror", error => errors.push(error.message));
+  await mainnet.goto("https://research-form.test/");
+  await mainnet.addScriptTag({ content: (await fixtureBundle("arc")).outputFiles[0].text });
+  await mainnet.locator("#payer-session").click();
+  assert.equal(await mainnet.getByRole("checkbox", { name: paidManuscriptLabel }).isDisabled(), true);
+  await mainnet.getByText("Paid manuscript rights are not yet available on mainnet. Ordinary registered articles remain available.", { exact: true }).waitFor();
+  await mainnet.getByLabel("What do you want to know?").fill("Read ordinary mainnet sources");
+  await mainnet.getByRole("button", { name: "Ask Keryx" }).click();
+  assert.equal(await mainnet.evaluate(() => (window as unknown as { calls: unknown[][] }).calls[0][6]), false);
   assert.deepEqual(errors, []);
   console.log("PASS: question priority, two examples, advanced budget/model, Quick/Deep and payer labels with exact submit arguments. All HTTP intercepted.");
 } finally {

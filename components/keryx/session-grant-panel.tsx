@@ -15,12 +15,15 @@ import type { WalletClient } from "viem";
 import { useSessionGrant } from "@/lib/hooks/use-session-grant";
 import { GrantSpendDialog } from "@/components/keryx/grant-spend-dialog";
 import { FaucetPanel } from "@/components/keryx/faucet-panel";
+import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+import { SessionCashoutPanel } from "./session-cashout-panel";
 
 export interface SessionGrantBinding {
   /** Retained sessionId for active, expired or paused grants; never fall back implicitly. */
   sessionId: string | null;
   /** Returns the session WalletClient for auto-signing, or null. */
   getSessionWalletClient: () => WalletClient | null;
+  authorizeSessionPayment?: (reqId: string, question: import("@/lib/session/browser-session-runtime").BrowserQuestionBudget) => Promise<string>;
   /**
    * The funded grant cap in USDC, or undefined when no grant is active.
    * Passed into useAskStream so the browser enforces its own spend ceiling
@@ -42,7 +45,7 @@ interface Props {
 
 export function SessionGrantPanel({ onBindingChange }: Props) {
   const [authed, setAuthed] = useState(false);
-  const { state, tryRecover, recoverViaSignature, generateAndFund, topUp, extend, revoke, getSessionWalletClient, markExpired } =
+  const { state, tryRecover, recoverViaSignature, generateAndFund, topUp, extend, revoke, getSessionWalletClient, markExpired, authorizeSessionPayment } =
     useSessionGrant();
   // Stable ref so onBindingChange closures always read the latest binding.
   const bindingRef = useRef<SessionGrantBinding>({ sessionId: null, getSessionWalletClient });
@@ -70,7 +73,7 @@ export function SessionGrantPanel({ onBindingChange }: Props) {
   useEffect(() => {
     const isActive = state.status === "active";
     const isExpired = state.status === "expired";
-    const isPaused = state.status === "paused";
+    const isPaused = state.status === "paused" || (!browserPaymentProfile().testnet && !!state.sessionId && !isActive && !isExpired);
     // Keep sessionId flowing while expired so an ask still reaches the server and gets
     // a clean 401 session_expired (rather than silently using the treasury). The cap is
     // only meaningful while active — it gates client-side signing. Unknown status retains
@@ -78,6 +81,7 @@ export function SessionGrantPanel({ onBindingChange }: Props) {
     const binding: SessionGrantBinding = {
       sessionId: isActive || isExpired || isPaused ? state.sessionId : null,
       getSessionWalletClient,
+      authorizeSessionPayment,
       grantCap: isActive ? state.cap : undefined,
       expired: isExpired,
       paused: isPaused,
@@ -85,14 +89,14 @@ export function SessionGrantPanel({ onBindingChange }: Props) {
     };
     bindingRef.current = binding;
     onBindingChange(binding);
-  }, [state.status, state.sessionId, state.cap, getSessionWalletClient, markExpired, onBindingChange]);
+  }, [state.status, state.sessionId, state.cap, getSessionWalletClient, markExpired, authorizeSessionPayment, onBindingChange]);
 
   if (!authed) return null;
 
   return (
     <div className="space-y-2">
       {/* Faucet drip panel — shown when session grant is idle/revoked (user may need USDC first) */}
-      {(state.status === "idle" || state.status === "revoked" || state.status === "error") && (
+      {browserPaymentProfile().testnet && (state.status === "idle" || state.status === "revoked" || state.status === "error") && (
         <FaucetPanel />
       )}
       <GrantSpendDialog
@@ -104,6 +108,7 @@ export function SessionGrantPanel({ onBindingChange }: Props) {
         onTryRecover={tryRecover}
         onRecoverViaSignature={recoverViaSignature}
       />
+      {!browserPaymentProfile().testnet && <SessionCashoutPanel sessAddr={state.sessAddr}/>}
     </div>
   );
 }

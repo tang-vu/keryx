@@ -10,7 +10,7 @@ import type { CreateInput, CreatedTaskRow, ReferenceRow, TaskRow, WorkspaceView 
 
 const handleSchema = z.string().regex(/^ref-[0-9a-f-]{36}$/);
 const createSchema = z.object({ question: z.string(), mode: z.enum(["quick", "deep"]),
-  creatorBudget: z.string().max(24), payee: addressSchema, totalCap: z.string().max(24) }).strict();
+  creatorBudget: z.string().max(24), payee: addressSchema, totalCap: z.string().max(24), network: z.enum(["arc", "arcTestnet"]).optional() }).strict();
 const referenceSchema = z.object({ schema: z.literal("keryx-local-reference-v1"), handle: handleSchema,
   name: z.string().min(1).max(255), importedAt: z.string().datetime(), bytes: z.number().int().min(1).max(262144),
   sha256: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
@@ -54,7 +54,7 @@ export function parseMicros(value: string, max: number) {
 /** The desktop receives one trusted writer from its main process; readers remain compatible with v1 tasks. */
 export interface DesktopTaskWriter {
   create(input: { parent: string; child: string; request: unknown; payee: string;
-    maxTotalMicros: string; id: string; createdAt: string }): Promise<{ taskId: string; child: string; state: "unix_synced" | "windows_visible_entry_unproven" }>;
+    maxTotalMicros: string; id: string; createdAt: string; network?: "eip155:5042" | "eip155:5042002" }): Promise<{ taskId: string; child: string; state: "unix_synced" | "windows_visible_entry_unproven" }>;
   createWorkspace(parent: string, child: string): Promise<{ child: string; state: "unix_synced" | "windows_visible_entry_unproven" }>;
 }
 
@@ -201,6 +201,7 @@ export class WorkspaceStore {
 
   async createTask(value: unknown): Promise<CreatedTaskRow> {
     const input = createSchema.parse(value) as CreateInput;
+    const network = input.network === "arc" ? "eip155:5042" : "eip155:5042002";
     const creatorBudgetMicros = parseMicros(input.creatorBudget, 0.5);
     const totalMicros = parseMicros(input.totalCap, 1);
     const request = buyerRequestSchema.parse({ question: input.question, budget: Number(creatorBudgetMicros) / 1e6,
@@ -213,11 +214,13 @@ export class WorkspaceStore {
     let state: "unix_synced" | "windows_visible_entry_unproven";
     try {
       const result = await this.writer.create({ parent, child: directoryName, request,
-        payee: input.payee, maxTotalMicros: totalMicros, id, createdAt: new Date().toISOString() });
+        payee: input.payee, maxTotalMicros: totalMicros, id, createdAt: new Date().toISOString(), network });
       if (result.child !== directoryName || result.taskId !== id) throw { state: "complete_unconfirmed" };
       state = result.state;
     } catch (error) { throw creationError(error, directory); }
-    try { return { ...await this.readTask(directoryName, directory), publicationState: state }; }
+    try { const task = await this.readTask(directoryName, directory);
+      if (task.status.network !== network) throw new Error("Task network does not match selected preparation");
+      return { ...task, publicationState: state }; }
     catch { throw creationError({ state: "complete_unconfirmed" }, directory); }
   }
 

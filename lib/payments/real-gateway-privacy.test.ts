@@ -11,7 +11,9 @@ it("omits the job from treasury transport but retains it in successful and uncer
   const source: Source = { id: "source", name: "Source", url: "https://example.test", description: "Synthetic", walletAddress: payee,
     fetchPrice: 0.002, tags: [], authors: [], createdAt: "2026-09-09T00:00:00.000Z" };
   // Exercise the actual method without constructing/loading/funding a treasury wallet.
-  const context = { spend: { address: payer }, batchScheme: {} } as unknown as RealGateway;
+  const context = Object.assign(Object.create(RealGateway.prototype), {
+    spend: { address: payer }, batchScheme: {},
+  }) as RealGateway;
   for (const state of ["delivered", "pending", "settled-undelivered"] as const) {
     transport.mockResolvedValueOnce({ delivered: state === "delivered", settlementStatus: state === "pending" ? "pending" : "settled",
       transaction: state === "pending" ? null : "synthetic-reference", authorizationId: `0x${"33".repeat(32)}`,

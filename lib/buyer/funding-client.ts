@@ -1,5 +1,6 @@
 import { erc20Abi, type PublicClient, type WalletClient, type Hex } from "viem";
-import { arcTestnet } from "viem/chains";
+import { arcChain } from "../chains";
+import { browserPaymentProfile } from "../browser-payment-profile";
 import { BUYER_USDC } from "./protocol";
 import { readGatewayCredit } from "../gateway/read-credit";
 import { fundingTransaction, transactionHashSchema, verifyFundingTransaction, type FundingRecord, type FundingStep } from "./funding-policy";
@@ -19,7 +20,7 @@ async function checkIdentity(wallet: WalletClient, chain: PublicClient, payer: s
   signal?.throwIfAborted();
   const [addresses, walletChain, rpcChain] = await Promise.all([wallet.getAddresses(), wallet.getChainId(), chain.getChainId()]);
   signal?.throwIfAborted();
-  if (addresses[0]?.toLowerCase() !== payer.toLowerCase() || walletChain !== 5042002 || rpcChain !== 5042002) throw new Error("Funding requires the selected wallet and RPC on Arc testnet");
+  if (addresses[0]?.toLowerCase() !== payer.toLowerCase() || walletChain !== arcChain.id || rpcChain !== arcChain.id) throw new Error(`Funding requires the selected wallet and RPC on ${browserPaymentProfile().label}`);
 }
 
 /** Exactly one explicit approval OR deposit prompt. Never automatically starts the next step. */
@@ -31,7 +32,7 @@ export async function submitFundingStep(input: { id: string; step: FundingStep; 
   const tx = fundingTransaction(record, step);
   await checkIdentity(wallet, chain, record.payer, signal);
   // Unknown Gateway credit must not encourage additional deposits.
-  await readGatewayCredit(record.payer, signal);
+  await readGatewayCredit(record.depositor ?? record.payer, signal);
   const [tokens, native, estimate, fees, nonce, head] = await Promise.all([
     chain.readContract({ address: BUYER_USDC, abi: erc20Abi, functionName: "balanceOf", args: [tx.from] }),
     chain.getBalance({ address: tx.from }), chain.estimateGas({ account: tx.from, to: tx.to, data: tx.data, value: tx.value }),
@@ -46,7 +47,7 @@ export async function submitFundingStep(input: { id: string; step: FundingStep; 
   let hash: Hex;
   try {
     signal?.throwIfAborted();
-    hash = await wallet.sendTransaction({ account: tx.from, chain: arcTestnet, to: tx.to, data: tx.data, value: tx.value, nonce, gas,
+    hash = await wallet.sendTransaction({ account: tx.from, chain: arcChain, to: tx.to, data: tx.data, value: tx.value, nonce, gas,
       maxFeePerGas: fees.maxFeePerGas, maxPriorityFeePerGas: fees.maxPriorityFeePerGas });
     transactionHashSchema.parse(hash);
   } catch (error) {
@@ -65,10 +66,10 @@ export async function recoverFundingStep(id: string, step: FundingStep, chain: P
   if (!["possible", "submitted"].includes(record[step].status)) return record;
   const hash = transactionHashSchema.parse(suppliedHash ?? record[step].hash) as Hex;
   if (record[step].hash && record[step].hash?.toLowerCase() !== hash.toLowerCase()) throw new Error("Recovery hash differs from the saved transaction");
-  if (await chain.getChainId() !== 5042002) throw new Error("Funding recovery requires Arc testnet RPC");
+  if (await chain.getChainId() !== arcChain.id) throw new Error("Funding recovery requires the selected Arc RPC");
   const [tx, receipt, head] = await Promise.all([chain.getTransaction({ hash }), chain.getTransactionReceipt({ hash }), chain.getBlockNumber()]);
   const status = verifyFundingTransaction(record, step, hash, tx, receipt, head);
-  if (await chain.getChainId() !== 5042002) throw new Error("Funding RPC network changed during recovery");
+  if (await chain.getChainId() !== arcChain.id) throw new Error("Funding RPC network changed during recovery");
   if (record[step].status === "possible") await saveFundingHash(id, step, hash);
   await confirmFundingStep(id, step, hash, status);
   return readFundingRecord(id);

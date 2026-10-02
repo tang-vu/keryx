@@ -31,7 +31,7 @@ export function ResearchJobDetails({ job, onDownloadReceipt }: { job: BuyerJob; 
         {job.evidence?.filter((item) => item.claimIndex === claim.claimIndex).map((item, i) => <blockquote key={i} className="mt-3 border-l border-line pl-3 font-serif text-sm"><p>“{item.quote}”</p><cite>{item.sourceName}</cite></blockquote>)}
       </li>)}</ol></div>}
       {job.status === "completed" && (onDownloadReceipt ? <button type="button" onClick={onDownloadReceipt} className="inline-block border border-ink px-4 py-3 font-mono text-xs">Download verified receipt</button> : <a href={`/api/dispatch/${job.queryId}/receipt`} referrerPolicy="no-referrer" className="inline-block border border-ink px-4 py-3 font-mono text-xs">Open portable receipt JSON</a>)}
-      <p className="font-serif text-xs text-ink-3">Arc testnet USDC. Evidence coverage measures grounding; it does not certify factual correctness. This view displays server-reported settlement; downloading a receipt does not independently verify it.</p>
+      <p className="font-serif text-xs text-ink-3">USDC; retain the original receipt network. Evidence coverage measures grounding; it does not certify factual correctness. This view displays server-reported settlement; downloading a receipt does not independently verify it.</p>
     </div>
   );
 }

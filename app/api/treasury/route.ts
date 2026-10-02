@@ -1,13 +1,17 @@
 /**
  * GET /api/treasury → the agent settlement wallet's chain-abstracted Gateway
- * balance, fetched via Circle App Kit (Unified Balance Kit). Public + read-only:
- * anyone can audit how much USDC currently backs citation payouts.
+ * balance. Testnet uses Circle App Kit; mainnet reports selected-domain available
+ * USDC for the sealed public policy, with unknown distinct from zero. Public and
+ * read-only; this observation is not spending authority or payment readiness.
  */
 
 import {
   getAgentUnifiedBalance,
+  getMainnetTreasuryObservation,
   type UnifiedBalanceSummary,
 } from "@/lib/gateway/unified-balance";
+import { config } from "@/lib/config";
+import { ARC_MAINNET_PROFILE } from "@/lib/arc-network-profile";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,6 +22,18 @@ const TTL_MS = 60_000;
 let cache: { at: number; data: UnifiedBalanceSummary | null } | null = null;
 
 export async function GET() {
+  if (config.profile === ARC_MAINNET_PROFILE) {
+    // Always validate the current sealed public policy; never serve a stale/rotated treasury.
+    try {
+      const observation = await getMainnetTreasuryObservation();
+      return Response.json({ available: observation.availableUsdc !== null, via: "circle-gateway-api",
+        unifiedBalance: null, observation }, { headers: { "Cache-Control": "no-store" } });
+    } catch {
+      return Response.json({ available: false, via: "circle-gateway-api", unifiedBalance: null,
+        observation: null, error: "Mainnet public treasury observation unavailable" },
+        { status: 503, headers: { "Cache-Control": "no-store" } });
+    }
+  }
   if (!cache || Date.now() - cache.at >= TTL_MS) {
     try {
       cache = { at: Date.now(), data: await getAgentUnifiedBalance() };

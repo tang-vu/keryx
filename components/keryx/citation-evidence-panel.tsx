@@ -6,6 +6,8 @@ import type { Citation, EvidenceRecord, PaymentRecord } from "@/lib/types";
 import { paymentSettlementStatus } from "@/lib/payments/payment-state";
 import { fmtUsdc } from "./phase-style";
 import { ScholarlyMetadataDetails } from "./scholarly-metadata";
+import { recordedArcLabel,recordedArcTransactionUrl } from "@/lib/arc-network-display";
+import { GatewayContractReferences } from "./gateway-contract-references";
 
 interface Props {
   queryId: string;
@@ -24,9 +26,6 @@ function safeArticleUrl(value?: string): string | undefined {
     return undefined;
   }
 }
-
-const SETTLEMENT_WALLET = process.env.NEXT_PUBLIC_KERYX_SETTLEMENT_WALLET || "0x0077777d7EBA4688BDeF3E311b846F25870A19B9";
-const SETTLEMENT_PROOF = `https://testnet.arcscan.app/address/${SETTLEMENT_WALLET}`;
 
 export function CitationEvidencePanel({ queryId, citation, evidence, payments, onClose }: Props) {
   const panelRef = useRef<HTMLDialogElement>(null);
@@ -146,10 +145,10 @@ export function CitationEvidencePanel({ queryId, citation, evidence, payments, o
             <ul className="mt-3 space-y-1 font-mono text-xs text-ink-3">
               {legs.map((payment, index) => (
                 <li key={payment.id ?? `${payment.payee}-${index}`} className="break-all">
-                  {payment.settled !== (paymentSettlementStatus(payment) === "settled") ? "unverified" : paymentSettlementStatus(payment)} · ${fmtUsdc(payment.amountUsdc)} USDC on Arc testnet · recipient {payment.payee}
+                  {payment.settled !== (paymentSettlementStatus(payment) === "settled") ? "unverified" : paymentSettlementStatus(payment)} · ${fmtUsdc(payment.amountUsdc)} USDC on {recordedArcLabel(payment.network)} · recipient {payment.payee}
                   {payment.txHash && settled.includes(payment) && (
                     /^0x[0-9a-fA-F]{64}$/.test(payment.txHash) ? (
-                      <a href={`https://testnet.arcscan.app/tx/${payment.txHash}`} target="_blank" rel="noopener noreferrer" className="ml-1 underline">View transaction ↗</a>
+                      <a href={recordedArcTransactionUrl(payment.network,payment.txHash)} target="_blank" rel="noopener noreferrer" className="ml-1 underline">View transaction ↗</a>
                     ) : <span className="ml-1">· Circle settlement ID {payment.txHash}</span>
                   )}
                 </li>
@@ -157,7 +156,7 @@ export function CitationEvidencePanel({ queryId, citation, evidence, payments, o
             </ul>
           )}
           <p className="mt-2 font-mono text-xs text-ink-3">Planned citation reward: ${fmtUsdc(citation.reward)}</p>
-          {settled.length > 0 && <a href={SETTLEMENT_PROOF} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs text-paid underline">View Circle Gateway settlement wallet on ArcScan ↗</a>}
+          <GatewayContractReferences records={settled} className="mt-2 mr-3 inline-block text-xs text-paid underline"/>
         </div>}
         {articleUrl && (
           <a href={articleUrl} target="_blank" rel="noopener noreferrer" className="mt-7 inline-block max-w-full break-all font-mono text-sm text-paid underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-seal">
