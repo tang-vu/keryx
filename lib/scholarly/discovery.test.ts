@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { normalizeDoi, questionDois } from "./doi";
 import { crossrefLookup, crossrefRecord } from "./crossref";
-import { parseArxiv, arxivSearch } from "./arxiv";
+import { parseArxiv, arxivSearch, questionArxivIds } from "./arxiv";
 import { discoverScholarly } from "./discovery";
 
 const time = "2026-10-01T00:00:00Z";
@@ -83,5 +83,26 @@ describe("scholarly discovery boundaries", () => {
   it("contains rate-limit, timeout and malformed provider failures without inventing absence or sources", async () => {
     const result = await discoverScholarly("attention", true, undefined, async url => { if (url.includes("crossref")) throw new Error("429 internal secret"); return "malformed"; });
     expect(result).toMatchObject({ succeeded: 0, unavailable: 2 }); expect(result.candidates.size).toBe(0);
+  });
+});
+
+
+describe("explicit versioned arXiv intent", () => {
+  it("accepts punctuation and PDF URLs, deduplicates and bounds two modern versions", () => {
+    expect(questionArxivIds("arXiv 2606.02668v1. https://arxiv.org/pdf/2607.13716v1.pdf; arXiv:2606.02668v1 and arXiv 2503.18666v3")).toEqual(["2606.02668v1", "2607.13716v1"]);
+    for (const text of ["arXiv 2606.02668", "arXiv 2606.02668v0", "arXiv 2606.02668v1evil", "arXiv 2606.02668v1.other", "arXiv 2606.02668v1.pdfx", "id_list=2606.02668v1"]) expect(questionArxivIds(text)).toEqual([]);
+  });
+  it("refuses cancelled exact intent before any outbound metadata request", async () => {
+    const controller = new AbortController(); controller.abort(); const fetcher = vi.fn();
+    const result = await discoverScholarly("Read arXiv 2606.02668v1", false, controller.signal, fetcher);
+    expect(fetcher).not.toHaveBeenCalled(); expect(result.candidates.size).toBe(0);
+  });
+  it("resolves exact targets without a checkbox or keyword search and rejects another version", async () => {
+    const fetcher = vi.fn(async (_url: string) => atom);
+    const result = await discoverScholarly("Explain arXiv 1706.03762v7.", false, undefined, fetcher);
+    expect(result.candidates.size).toBe(1); expect(fetcher).toHaveBeenCalledTimes(1);
+    const url = new URL(fetcher.mock.calls[0][0]);
+    expect(url.searchParams.get("id_list")).toBe("1706.03762v7"); expect(url.searchParams.has("search_query")).toBe(false);
+    expect(await arxivSearch("Explain arXiv 1706.03762v8", undefined, fetcher)).toEqual([]);
   });
 });
