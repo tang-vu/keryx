@@ -22,7 +22,10 @@ const bundle = await build({ stdin: { contents: `
     signMessage:async value=>window.syntheticSignMessage(value.message),signTypedData:async value=>window.syntheticSignTyped(value.message)};
   createRoot(document.getElementById('root')).render(React.createElement(ResearchMonthly,{quote:${JSON.stringify(quote)}}));`,
   resolveDir: process.cwd(), loader: "tsx" }, bundle: true, platform: "browser", format: "iife", jsx: "automatic", write: false, metafile: true,
-  define: { "process.env.NODE_ENV": '"production"' }, plugins: [{ name: "hermetic-monthly", setup(b) {
+  define: { "process.env.NODE_ENV": '"production"',
+    "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"',
+    "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined",
+    "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" }, plugins: [{ name: "hermetic-monthly", setup(b) {
     b.onResolve({ filter: /^(wagmi|next\/image)$/ }, args => ({ path: args.path, namespace: "synthetic" }));
     b.onResolve({ filter: /research-funding|wallet-picker|gateway\/read-credit/ }, args => ({ path: args.path, namespace: "synthetic" }));
     b.onLoad({ filter: /.*/, namespace: "synthetic" }, args => ({ contents:
