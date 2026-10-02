@@ -46,6 +46,7 @@ jobs:
         run: |
           npm install --global npm@11.19.0 --no-audit --no-fund
           npm ci --no-audit --no-fund
+          npm --prefix mcp ci --ignore-scripts --no-audit --no-fund
       - name: Verify committed package and requested version
         env:
           EXPECTED_VERSION: ${{ inputs.version }}
@@ -77,9 +78,14 @@ jobs:
           assert.equal(pack.version, pkg.version);
           const paths = pack.files.map(file => file.path);
           for (const required of ['package.json', 'README.md', 'dist/keryx-mcp.mjs']) assert(paths.includes(required), required);
-          assert(paths.every(path => ['package.json', 'README.md', 'LICENSE', 'LICENSE.md'].includes(path) || path === 'dist/keryx-mcp.mjs'), 'Unexpected archive file');
+          assert.equal(paths.length, 3);
+          assert(paths.every(path => ['package.json', 'README.md', 'dist/keryx-mcp.mjs'].includes(path)), 'Unexpected archive file');
           NODE
           sha256sum release/*.tgz > release/SHA256SUMS
+      - name: Verify exact packaged consumer with synthetic signing and recovery
+        run: |
+          package=$(node --input-type=module -e 'import fs from "node:fs"; const [pack] = JSON.parse(fs.readFileSync("release/pack.json", "utf8")); console.log("release/" + pack.filename);')
+          node mcp/scripts/test-packed.mjs "$package" "$(npm root -g)/npm/bin/npm-cli.js"
       - uses: actions/upload-artifact@v4
         with:
           name: npm-release

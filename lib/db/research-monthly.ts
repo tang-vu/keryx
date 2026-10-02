@@ -176,7 +176,7 @@ export function initializeSqliteResearchMonthly(db: DatabaseSync) {
 }
 
 /** No Monthly/native domain cutover is authorized, even through an ordinary/raw handle. */
-function assertOrdinarySqliteResearchAuthority(db: DatabaseSync) {
+export function assertOrdinarySqliteResearchAuthority(db: DatabaseSync) {
   if (db.prepare("SELECT 1 FROM sqlite_schema WHERE name='keryx_storage_identity'").get())
     throw new Error("Research purchase authority is unavailable in enrolled storage");
 }

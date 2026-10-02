@@ -34,7 +34,8 @@ try {
   await writeFile(join(workspace, "package.json"), JSON.stringify({ private: true, type: "module" }));
   installPackedConsumer(npmCli, tarball, workspace);
   const installedPackage = JSON.parse(await readFile(join(workspace, "node_modules/keryx-mcp/package.json"), "utf8"));
-  assert.equal(installedPackage.version, "0.3.0");
+  const expectedPackage = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+  assert.equal(installedPackage.version, expectedPackage.version);
   const dependencies = {};
   for (const name of ["@circle-fin/x402-batching", "viem", "@modelcontextprotocol/sdk", "zod"]) {
     dependencies[name] = JSON.parse(await readFile(join(workspace, "node_modules", name, "package.json"), "utf8")).version;

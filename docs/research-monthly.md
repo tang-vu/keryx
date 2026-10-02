@@ -81,4 +81,5 @@ Disable `KERYX_MONTHLY_ENABLED` to stop new purchases/redemptions while retainin
 signed status and job/receipt recovery. Do not delete plans, consumed slots or
 claims. Rollback must retain the claim-aware public seller version: an older seller
 that bypasses admission is not a safe rollback while any admitted nonce exists.
-Package/installer delivery is unchanged because local surfaces deliberately hand off.
+Desktop and extension installers retain their web handoff; no installer format changes.
+The stdio MCP package changes to 0.3.1 and requires its separate tested, verified publication.

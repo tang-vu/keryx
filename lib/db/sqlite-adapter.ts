@@ -9,7 +9,7 @@ import { publicReferenceSchema, type PublicReference } from "../public-reference
  */
 
 import { listSqliteWithdrawalHistory, type WithdrawalHistoryCursor } from "./creator-withdrawal-history";
-import { claimSqliteResearchPurchase, createSqliteResearchMonthly, getSqliteResearchMonthly, redeemSqliteResearchMonthly, type MonthlyPurchase, type MonthlyRedemptionInput, type ResearchPurchaseClaim } from "./research-monthly";
+import { assertOrdinarySqliteResearchAuthority, claimSqliteResearchPurchase, createSqliteResearchMonthly, getSqliteResearchMonthly, redeemSqliteResearchMonthly, type MonthlyPurchase, type MonthlyRedemptionInput, type ResearchPurchaseClaim } from "./research-monthly";
 import { confirmSqlitePrivateCreator, getSqlitePrivateCreatorConfirmation, type PrivateCreatorConfirmation } from "./private-creator-confirmations";
 import { admitSqlitePrivateCreatorSubmission, listSqlitePrivateCreatorSubmissions, type PrivateCreatorSubmission } from "./private-creator-submissions";
 import { saveSqlitePrivateResult, getSqlitePrivateResult } from "./private-research-results";
@@ -154,6 +154,7 @@ export class SqliteAdapter implements KeryxDB {
       return;
     }
     // WAL + busy timeout so the dev server and CLI can share the file safely.
+    assertOrdinarySqliteResearchAuthority(this.db);
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;");
     installOrdinarySqliteApplicationSchema(this.db);
     // Releases before 2026-08-22 keyed two authenticated routes by the raw `kx_live_...` bearer

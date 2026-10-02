@@ -6,6 +6,8 @@ import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { SqliteAdapter } from "./sqlite-adapter";
 import { SupabaseAdapter, assembleAuthorityBoundSupabaseCore } from "./supabase-adapter";
 import { syntheticStorageIdentity } from "./storage-identity-fixture";
+import { installOrdinarySqliteApplicationSchema } from "./sqlite-application-schema";
+import { inspectSqliteEnrollment, enrollSqliteStorage } from "./storage-identity-provision";
 import { initializeSqliteResearchMonthly, monthlyOrderId, monthlyOrderToRow, monthlyPurchaseId, MONTHLY_TERM_MS, type MonthlyPurchase, type ResearchPurchaseClaim } from "./research-monthly";
 import { a2aOrderId, a2aRequestHash, type A2aOrder } from "../a2a/order";
 import { a2aResearchPackage } from "../a2a/research-package";
@@ -182,6 +184,33 @@ it("refuses an ordinary/raw handle pointed at an enrolled SQLite marker without 
   try {
     raw.exec("CREATE TABLE keryx_storage_identity(singleton INTEGER,identity TEXT)");
     expect(()=>initializeSqliteResearchMonthly(raw)).toThrow("unavailable in enrolled storage");
+    expect(()=>installOrdinarySqliteApplicationSchema(raw)).toThrow("unavailable in enrolled storage");
     expect(raw.prepare("SELECT count(*) AS n FROM sqlite_schema WHERE name LIKE 'research_%'").get()?.n).toBe(0);
+    expect(raw.prepare("SELECT name FROM sqlite_schema WHERE type='table'").all()).toEqual([{name:"keryx_storage_identity"}]);
   } finally {raw.close();}
+});
+
+it("refuses ordinary adapter initialization before PRAGMAs or schema mutation on an enrolled marker",async()=>{
+  const file=path.join(os.tmpdir(),`keryx-monthly-marker-${process.pid}.sqlite`);
+  const raw=new DatabaseSync(file);raw.exec("CREATE TABLE keryx_storage_identity(singleton INTEGER,identity TEXT)");raw.close();
+  const bytes=fs.readFileSync(file),adapter=new SqliteAdapter(file);
+  try {
+    await expect(adapter.init()).rejects.toThrow("unavailable in enrolled storage");
+    expect(fs.readFileSync(file)).toEqual(bytes);
+    expect(fs.existsSync(`${file}-wal`)).toBe(false);
+  } finally {adapter.close();for(const suffix of ["","-wal","-shm"])fs.rmSync(file+suffix,{force:true});}
+});
+
+it("retains strict enrollment refusal for an ordinary Monthly-bearing database without mutation",async()=>{
+  const file=path.join(os.tmpdir(),`keryx-monthly-unenrolled-${process.pid}.sqlite`),adapter=new SqliteAdapter(file);
+  try {
+    await adapter.init();adapter.close();
+    const bytes=fs.readFileSync(file),identity=syntheticStorageIdentity("testnet-real");
+    const inspection=await inspectSqliteEnrollment(file,identity);
+    await expect(enrollSqliteStorage(file,identity,{format:"keryx-reviewed-storage-enrollment-v1",inspection,
+      provenanceDocumentDigest:identity.provenanceDigest,unknownClassAttestation:inspection.unknownClasses})).rejects.toThrow("unsupported_table");
+    expect(fs.readFileSync(file)).toEqual(bytes);
+    const raw=new DatabaseSync(file,{readOnly:true});
+    try {expect(raw.prepare("SELECT name FROM sqlite_schema WHERE name='keryx_storage_identity'").get()).toBeUndefined();}finally{raw.close();}
+  } finally {try{adapter.close();}catch{}for(const suffix of ["","-wal","-shm"])fs.rmSync(file+suffix,{force:true});}
 });

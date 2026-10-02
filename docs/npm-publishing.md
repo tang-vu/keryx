@@ -2,8 +2,8 @@
 
 Use npm Trusted Publishing with GitHub Actions, rather than a local npm login or
 a stored publish token. The public npm package is built from the committed `mcp/`
-source using the root `package-lock.json` and pinned build tooling. The root app
-is private and is never published.
+source using the root build tooling and the pinned `mcp/package-lock.json`
+dependency closure. The root app is private and is never published.
 
 The user confirmed this OIDC publishing preference on 2026-10-02.
 The owner also confirmed saving the exact trusted-publisher connection that day.
@@ -43,14 +43,24 @@ in a separate job without OIDC publishing permission.
 
 The manual workflow checks the current main commit and its successful push CI,
 uses a GitHub-hosted runner with Node `24.21.0` and npm `11.19.0`, installs with
-root `npm ci`, builds the MCP bundle, checks its syntax and hermetic MCP discovery,
-and verifies the package
-name, version, repository, and archive contents. It uploads the archive plus
+root `npm ci` and `npm --prefix mcp ci --ignore-scripts`, builds the MCP bundle,
+checks its syntax and hermetic MCP discovery, and verifies the package name,
+version, repository, and exact three-file archive contents. Before uploading,
+`mcp/scripts/test-packed.mjs` installs that exact tarball into a clean consumer and
+tests synthetic signing, payment-response loss, and recovery with live network
+requests blocked. Dependency installation can fetch npm package bytes; synthetic
+payment acceptance never sends funds. It uploads the archive plus
 integrity metadata as a retained release artifact. The publish job checks its
 SHA-256 checksum and publishes that exact archive with provenance, then checks
 the registry version and tarball integrity. It does not rebuild during publish.
 
-There is no automatic PR, tag, or push publication. npm versions are immutable:
+There is no automatic PR, tag, or push publication to npm. The existing
+`mcp-release.yml` workflow separately provides an exact-source, acceptance-tested
+GitHub release tarball and source manifest when its release and CI gates pass.
+That fallback explicitly records `npmRegistryPublished: false`; a GitHub asset
+does not establish successful npm OIDC authentication or registry publication.
+
+npm versions are immutable:
 for a later release, commit a new version and repeat the reviewed process. A
 failed post-publish verification may still mean npm accepted the version; inspect
 the registry and workflow logs before retrying. Verify the published package and
