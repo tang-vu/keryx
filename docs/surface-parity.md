@@ -36,7 +36,7 @@ mainnet funding/settlement or synchronized hosted/package/installer delivery.
 
 Observed before this update: production health matched `59757f8`; latest GitHub application release was v0.24.5 without desktop assets, while desktop 0.3.0 assets were attached to v0.24.0. npm `keryx-mcp` was 0.1.1. These are pre-release observations, not acceptance of the new update. Final distribution evidence must be recorded after release; missing npm credentials must remain explicit.
 
-Candidate versions: application 0.24.7, desktop 0.3.1, caller MCP release tarball 0.3.0 (server identity derives from package), extension ZIP 0.1.1. Remote MCP retains its separate protocol identity 0.2.0. npm latest was independently observed as 0.3.2 on October 2 at 13:56 UTC; 0.4.0 publication/integrity and Chrome Web Store submission remain unverified. These are release candidates until exact artifact/deployment checks complete.
+Candidate versions: application 0.24.7, desktop 0.3.1, caller MCP release tarball 0.3.0 (server identity derives from package), extension ZIP 0.1.1. Remote MCP retains its separate protocol identity 0.2.0. npm latest was independently observed as 0.3.2 on October 2 at 13:56 UTC; 0.4.1 publication/integrity and Chrome Web Store submission remain unverified. These are release candidates until exact artifact/deployment checks complete.
 
 
 ### Fresh isolated-storage alignment, 2026-10-02
@@ -48,4 +48,44 @@ MCP protocol `0.2.0` keep their separate identities and documented web/service r
 Registry publication, exact-source installer acceptance, deployment health and
 artifact hashes remain gates; repository version metadata is not delivery evidence.
 
-Current coordinated source candidate versions: application 0.26.0, desktop 0.4.0, caller MCP release tarball 0.4.0 (server identity derives from package), extension ZIP 0.1.1. Remote MCP retains its separate protocol identity 0.2.0. npm latest was independently observed as 0.3.2 on October 2 at 13:56 UTC; 0.4.0 publication/integrity and Chrome Web Store submission remain unverified. These are release candidates until exact artifact/deployment checks complete.
+Current coordinated source candidate versions: application 0.26.1, desktop 0.4.1, caller MCP release tarball 0.4.1 (server identity derives from package), extension ZIP 0.1.1. Remote MCP retains its separate protocol identity 0.2.0. npm latest was independently observed as 0.3.2 on October 2 at 13:56 UTC; 0.4.1 publication/integrity and Chrome Web Store submission remain unverified. These are release candidates until exact artifact/deployment checks complete.
+
+
+### Coordinated research/creator repair candidate, 2026-10-03
+
+Application 0.26.1 contains the shared factual-answer finalizer, bounded free expansion,
+malformed-request validation and trusted synthetic-evidence projection. These additive
+source/evidence/receipt/export fields flow through web SSE/history and API, public A2A,
+remote MCP/OpenAI, caller CLI/stdio structured results, and receipt-based Operator exports.
+Archived answer bytes and recorded money remain intact; synthetic content cannot count as
+factual coverage. The private/unattended discovery boundaries and payment contracts remain.
+
+Desktop 0.4.1 packages `lib/operator/result.ts` through its TypeScript helper and shared
+`research/receipt-exports`/surface result code, so saved receipt exports need rebuilt and
+accepted installers. After original receipt digest verification, derived exports accept a
+trusted provenance marker or the checked manifest's exact title/URL/body-hash fingerprint.
+Missing strong fingerprints require a refreshed hosted receipt; original bytes/digests
+remain unchanged. Caller MCP 0.4.1 is a fresh coordinated package candidate with updated
+contract-facing guidance; it forwards hosted structured results under its existing caller
+custody and recovery role. It does not become a publisher, independently reauthenticate
+historical facts or gain a new signer. Existing exact-source 0.3.2 artifacts remain immutable.
+Extension 0.1.1 and remote MCP protocol 0.2.0 retain their separate identities; thin bot and
+extension clients hand off full hosted dispatch/registration views rather than duplicating
+owner proof or exporting new private publisher authority.
+
+Prepared feed/Wanted sign-in and returning feed verification are web/browser SIWE roles.
+My sources and Manage inspect the persisted payout; other split recipients cannot verify.
+Reader desktop/CLI/MCP/bots gain no creator transaction or feed-proof authority. The
+extension's existing hosted registration link retains its supported manual draft fields.
+
+The candidate schema 0079 preserves encrypted rows and payment evidence, with exact-match
+seed provenance backfill and an isolated PostgreSQL 17 CI gate. Selected mainnet requires
+sealed enrolled SQLite admission; existing stores need explicit paused migration and fresh
+matching enrollment. Existing enrolled Supabase schema-77 profiles remain pinned; fresh
+catalog/schema/read-profile acceptance must precede staged Supabase activation. See
+[backend acceptance](enrolled-runtime-backends.md). Deployment must verify the real store migration and retained receipt
+projection, then `/api/health` against the pushed commit. Full integrated CI/default build,
+independent review, complete useful research outputs, exact-source packed MCP recovery and
+npm integrity/provenance, installer export/standard-user checks and asset hashes are required
+before synchronized-delivery claims. Candidate version metadata satisfies none of those
+observations by itself.

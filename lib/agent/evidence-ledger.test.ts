@@ -221,3 +221,31 @@ it("separates public answer support from reward eligibility and rejects weak/non
     expect(ledger.claimCoverage[0]?.coveredBy).toEqual(support >= 0.4 && cited ? ["S1"] : []);
   }
 });
+
+
+it("refuses exact-version cross-paper target evidence even when the quote and support pass", () => {
+  const source: GatheredContent = { ...gathered[0], scholarly: { provider: "arxiv", arxivId: "2501.12345v1", recordUrl: "https://export.arxiv.org", retrievedAt: "2026-10-02", title: "Paper", authors: [], workType: "preprint", peerReview: "unknown" } };
+  const subClaims = ["Methods in arXiv:2501.12345v1", "Evaluation in arXiv:2502.54321v2"];
+  const ledger = buildEvidenceLedger({ subClaims, gathered: [source], answer: "Methods and evaluation [S1].", declaredMarkers: ["S1"],
+    proposedEvidence: [evidence({ claimIndex: 0 }), evidence({ claimIndex: 1 })],
+    finalAssessment: subClaims.map(claim => ({ claim, coverage: 0.9, coveredBy: ["S1"] })) });
+  expect(ledger.evidence).toHaveLength(1); expect(ledger.droppedEvidence).toBe(1);
+  expect(ledger.claimCoverage[0].coverage).toBe(0.8); expect(ledger.claimCoverage[1]).toMatchObject({ coverage: 0, coveredBy: [] });
+});
+
+
+it.each(["https://arxiv.org/pdf/2502.54321v2", "https://arxiv.org/abs/2501.12345v2", "https://arxiv.org/abs/2501.12345"])("refuses other/unknown original version from observed URL %s without provider metadata", itemUrl => {
+  const ledger = buildEvidenceLedger({ subClaims: ["Methods of arXiv:2501.12345v1"], gathered: [{ ...gathered[0], itemUrl }],
+    answer: "Original methods [S1].", declaredMarkers: ["S1"], proposedEvidence: [evidence()],
+    finalAssessment: [{ claim: "Methods of arXiv:2501.12345v1", coverage: 0.9, coveredBy: ["S1"] }] });
+  expect(ledger.evidence).toEqual([]); expect(ledger.claimCoverage[0].coverage).toBe(0);
+});
+
+it("binds bare versioned target IDs to the observed read even if metadata names the requested paper", () => {
+  const claim = "Methods of 2501.12345v1";
+  const ledger = buildEvidenceLedger({ subClaims: [claim], gathered: [{ ...gathered[0], itemUrl: "https://arxiv.org/pdf/2502.54321v2",
+    scholarly: { provider: "arxiv", arxivId: "2501.12345v1", recordUrl: "https://export.arxiv.org", retrievedAt: "2026-10-02", title: "Paper", authors: [], workType: "preprint", peerReview: "unknown" } }],
+    answer: "Methods [S1].", declaredMarkers: ["S1"], proposedEvidence: [evidence()],
+    finalAssessment: [{ claim, coverage: 0.9, coveredBy: ["S1"] }] });
+  expect(ledger.evidence).toEqual([]); expect(ledger.claimCoverage[0].coverage).toBe(0);
+});

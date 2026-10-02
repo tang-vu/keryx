@@ -88,7 +88,7 @@ export function ResearchEvidenceBrowser() {
           <label htmlFor="evidence-source-select" className="mt-3 block font-mono text-xs">Choose a source to inspect</label>
           <select id="evidence-source-select" value={selectedId} onChange={(event) => chooseSource(event.target.value)} className="mt-2 w-full border border-line bg-paper-2 p-3 text-sm">
             <option value="">Select a listed source</option>
-            {matches.map((source) => <option key={source.id} value={source.id}>{source.name}{source.verified === false ? " — ownership unverified" : ""}</option>)}
+            {matches.map((source) => <option key={source.id} value={source.id}>{source.name}{source.evidenceProvenance === "synthetic-demo" ? " ? synthetic demo" : ""}{source.verified === false ? " — ownership unverified" : ""}</option>)}
           </select>
         </>}
         {listState === "ready" && sources.length === 0 && <p className="mt-3 text-sm text-ink-2">No creator sources are currently listed. Free references may still be available in the registry.</p>}
@@ -101,6 +101,7 @@ export function ResearchEvidenceBrowser() {
         {selected && <>
           <h3 className="font-serif text-lg">{selected.name}</h3>
           <p className="mt-2 text-sm text-ink-2">{selected.description}</p>
+          {selected.evidenceProvenance === "synthetic-demo" && <p className="mt-2 text-sm text-seal">Synthetic demo content: illustrative only; excluded from factual production research.</p>}
           {selected.verified === false && <p className="mt-2 text-sm text-seal">Ownership unverified: this listing is excluded from the research agent&apos;s creator reading and payment path.</p>}
           <p className="mt-2 text-xs text-ink-3">Listing flags can include legacy defaults. An unflagged listing is not independent proof of ownership, live delivery or payout authority.</p>
           {previewState === "loading" && <p role="status" className="mt-3 text-sm">Loading public preview…</p>}
@@ -111,6 +112,7 @@ export function ResearchEvidenceBrowser() {
             <ul className="mt-2 max-h-64 space-y-3 overflow-y-auto">
               {visiblePreview.preview.map((item) => <li key={item.itemId} className="border-t border-line pt-2">
                 <p className="font-serif text-sm">{item.title}</p>
+                {item.evidenceProvenance === "synthetic-demo" && <p className="text-xs text-seal">Synthetic demo article ? illustrative only</p>}
                 {item.itemPublishedAt && <p className="mt-1 font-mono text-xs text-ink-3">Publisher date: {item.itemPublishedAt}</p>}
                 {visiblePreview.previewDepth !== "locked" && item.summary && <p className="mt-1 whitespace-pre-wrap font-serif text-xs text-ink-2">{item.summary}</p>}
               </li>)}

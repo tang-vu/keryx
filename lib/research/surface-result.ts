@@ -1,3 +1,4 @@
+import { demoteSyntheticEvidence } from "./evidence-provenance";
 import { receiptAsset } from "../research-receipt-asset";
 import { buildCitationExport } from "../research-citation-export";
 import type { Citation, QueryRun } from "../types";
@@ -16,6 +17,7 @@ export function researchExports(run: EvidenceMatrixInput) {
 }
 
 export function surfaceResearch(run: QueryRun) {
+  run = demoteSyntheticEvidence(run);
   // Reuse the reading UI's exact claim/article/version and bounded-excerpt gate.
   const evidence = buildEvidenceMatrix(run).flatMap(row => row.evidence).map(item => ({
     claimIndex: item.claimIndex, claim: item.claim, marker: item.marker,

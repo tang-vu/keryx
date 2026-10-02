@@ -16,7 +16,7 @@
  */
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Loader2, Rss, Wallet, PartyPopper, ExternalLink, ShieldCheck, ShieldAlert, Copy, Webhook } from "lucide-react";
+import { Loader2, Rss, Wallet, PartyPopper, ExternalLink, ShieldCheck, Copy, Webhook } from "lucide-react";
 import { toast } from "sonner";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ import { fmtUsdc } from "./phase-style";
 import { confirmsIndex, confirmsRegistration, registrationId, registrationTitles, walletRequestWasRejected, type RegistrationIdentity, type RegistrationPhase } from "@/lib/sources/registration-status";
 import { REGISTRY_ABI } from "@/lib/registry/registry-abi";
 import { browserPaymentProfile, browserRegistryAddress } from "@/lib/browser-payment-profile";
+import { FeedVerificationPanel } from "./feed-verification-panel";
 
 interface CreatedSource {
   id: string;
@@ -541,7 +542,7 @@ function SuccessCard({
           </button>
         )}
         {needsVerify && (
-          <VerifyPanel source={source} verification={verification} onVerified={onVerified} enabled={phase === "offline" || phase === "indexed"} />
+          verification.canVerify ? <FeedVerificationPanel key={source.id} source={source} onVerified={onVerified} enabled={phase === "offline" || phase === "indexed"} /> : <p className="text-sm">{verification.instructions}</p>
         )}
         {notify && <NotifySecretPanel notify={notify} />}
         {gapIntent && <GapIntentPanel intent={gapIntent} />}
@@ -648,105 +649,6 @@ function NotifySecretPanel({ notify }: { notify: { url: string; secret: string }
       <p className="font-mono text-[10px] text-ink-3">
         Verify: <code>sha256=hex(hmac_sha256(secret, rawBody))</code>
       </p>
-    </div>
-  );
-}
-
-/**
- * Feed-ownership proof step. The agent won't read, cite, or pay a source until its owner proves
- * they control the feed — by placing the shown token (which carries this source's payout wallet)
- * anywhere in the feed, then clicking Verify. Stops anyone earning off a feed they don't own.
- */
-function VerifyPanel({
-  source,
-  verification,
-  onVerified,
-  enabled,
-}: {
-  source: CreatedSource;
-  verification: Verification;
-  enabled: boolean;
-  onVerified: () => void;
-}) {
-  const [checking, setChecking] = useState(false);
-  const [done, setDone] = useState(false);
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(verification.token);
-      toast.success("Token copied — paste it into your feed.");
-    } catch {
-      toast.error("Couldn't copy — select and copy the token manually.");
-    }
-  };
-
-  const verify = async () => {
-    if (checking || !enabled) return;
-    setChecking(true);
-    try {
-      const res = await fetch("/api/sources/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sourceId: source.id }),
-      });
-      const data = (await res.json()) as { verified?: boolean; message?: string; error?: string };
-      if (!res.ok) throw new Error(data.error ?? "Verification failed");
-      if (data.verified) {
-        setDone(true);
-        toast.success("Feed ownership verified — your source can now earn.");
-        onVerified();
-      } else {
-        toast.error(data.message ?? "Token not found in the feed yet.");
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Verification failed");
-    } finally {
-      setChecking(false);
-    }
-  };
-
-  if (done) {
-    return (
-      <div className="flex items-center gap-2 rounded-md border border-paid/40 bg-paid/[0.08] px-3 py-2.5 text-sm text-ink">
-        <ShieldCheck className="h-4 w-4 text-paid" />
-        Feed ownership verified — your source is on the money path.
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3 rounded-md border border-amber-500/40 bg-amber-500/[0.07] p-4">
-      <div className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-amber-700">
-        <ShieldAlert className="h-3.5 w-3.5" />
-        Verify feed ownership to earn
-      </div>
-      <p className="text-xs text-ink-2">{verification.instructions}</p>
-      {verification.canVerify && (
-        <>
-          <div className="flex items-center gap-2">
-            <code className="flex-1 break-all rounded border border-line bg-paper px-2.5 py-1.5 font-mono text-xs text-ink">
-              {verification.token}
-            </code>
-            <button
-              type="button"
-              onClick={copy}
-              title="Copy token"
-              className="shrink-0 rounded-md border border-line px-2 py-1.5 text-ink transition-colors hover:bg-paper-2"
-            >
-              <Copy className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <button
-            type="button"
-            onClick={verify}
-            disabled={checking || !enabled}
-            className="flex w-full items-center justify-center gap-2 border border-ink bg-paper-2 px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-ink transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
-          >
-            {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-            {checking ? "Checking feed…" : "Verify ownership ▸"}
-          </button>
-        </>
-      )}
     </div>
   );
 }

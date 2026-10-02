@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 import { JsonChatEngine } from "./json-chat-engine";
 import type { DecideInput } from "./reasoning-engine";
 import { ResilientEngine, reasoningAttempts } from "./resilient-engine";
+import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
 
 /** A test engine that returns whatever JSON the case wants, and records the ceiling it was given. */
 class StubEngine extends JsonChatEngine {
@@ -34,6 +35,36 @@ class StubEngine extends JsonChatEngine {
     return this.budgetFor(items);
   }
 }
+
+describe("bounded independent research targets", () => {
+  it("preserves all six requested paper-by-dimension targets and exact versions", async () => {
+    const ids = ["2606.02668v1", "2607.13716v1"];
+    const dimensions = ["methods", "evaluation setup", "limitations"];
+    const claims = ids.flatMap(id => dimensions.map(dimension => `What ${dimension} are described in arXiv:${id}?`));
+    const engine = new StubEngine({ constraints: ["Cite exact versions"], claims });
+    const result = await engine.decompose("Compare the methods, evaluation setup and limitations of arXiv:2606.02668v1 and arXiv:2607.13716v1.");
+    expect(result).toEqual(claims);
+    expect(result).toHaveLength(6);
+    expect(result.filter(claim => claim.includes("limitations"))).toHaveLength(2);
+  });
+
+  it("requests independently inspectable source-specific dimensions in the planning prompt", async () => {
+    let system = "";
+    class CaptureEngine extends JsonChatEngine {
+      readonly name = "capture";
+      protected async chatJson(_model: string, prompt: string) { system = prompt; return { claims: ["What methods?"] }; }
+    }
+    await new CaptureEngine().decompose("Compare two papers");
+    expect(system).toContain(`1-${MAX_RESEARCH_TARGETS}`);
+    expect(system).toContain("six targets");
+    expect(system).toContain("evidence from only one paper");
+  });
+
+  it("refuses excessive model targets rather than silently deleting a requested dimension", async () => {
+    const claims = Array.from({ length: MAX_RESEARCH_TARGETS + 1 }, (_, index) => `What is distinct target ${index}?`);
+    await expect(new StubEngine({ claims }).decompose("An oversized comparison")).rejects.toThrow(/exceeded 8 targets/);
+  });
+});
 
 function decideInput(candidateCount: number): DecideInput {
   return {

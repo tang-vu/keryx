@@ -14,8 +14,17 @@ describe("research planning response boundaries", () => {
       expect(await new PlanningFixture(output).decompose(question)).toEqual([question]);
     },
   );
-  it("keeps distinct usable targets in order and bounds their number", async () => {
-    const engine = new PlanningFixture({ claims: [" A? ", "A?", false, "B?", "C?", "D?", "E?"] });
-    expect(await engine.decompose("question")).toEqual(["A?", "B?", "C?", "D?"]);
+  it("preserves eight distinct usable targets in order without counting duplicates or invalid entries", async () => {
+    const targets = ["How are jobs journaled?", "How are jobs recovered?", "How are payments authorized?",
+      "How are citations verified?", "How are users authenticated?", "How is private data protected?",
+      "How are results exported?", "How are releases deployed?"];
+    const engine = new PlanningFixture({ claims: [` ${targets[0]} `, targets[0], false, ...targets.slice(1), null, " "] });
+    expect(await engine.decompose("Investigate the eight requested capabilities.")).toEqual(targets);
+  });
+  it("refuses nine distinct usable targets rather than silently discarding requested scope", async () => {
+    const targets = ["Journaling?", "Recovery?", "Payment authorization?", "Citation verification?", "Authentication?",
+      "Privacy?", "Exports?", "Deployment?", "Source ownership?"];
+    const engine = new PlanningFixture({ claims: [...targets, targets[0], false, " "] });
+    await expect(engine.decompose("Investigate all nine requested capabilities.")).rejects.toThrow("exceeded 8 targets");
   });
 });

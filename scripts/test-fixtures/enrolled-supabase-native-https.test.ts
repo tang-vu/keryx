@@ -204,7 +204,10 @@ it("enrolled metrics completes all guarded scans without overlapping bounded bac
     expect(await adapter.metrics()).toEqual({
       totalPayments: 0, totalVolumeUsdc: 0, totalCreatorPayoutsUsdc: 0, creatorsEarning: 0,
       avgPaymentUsdc: 0, totalQueries: 1, payingQueries: 0, readerToPayerConversion: 0,
-      evidenceRunSamples: 0, evidenceClaimSamples: 0, groundedClaimRate: 0, citationPoolWithheldRuns: 0,
+      evidenceRunSamples: 0, evidenceClaimSamples: 0, groundedClaimRate: null,
+      evidenceQuality: { status: "unavailable", basis: "recorded-unreassessed",
+        explanation: "Stored historical evidence counters have not been reassessed against current source provenance; aggregate factual grounding is unavailable." },
+      citationPoolWithheldRuns: 0,
       gapIntentOffers: 1, gapIntentFilled: 1, gapIntentPending: 0, gapIntentFillRate: 1,
       feedbackTotal: 1, satisfactionRate: 1, pendingPaymentConfirmations: 0, pendingPaymentVolumeUsdc: 0,
       failedPaymentAttempts: 0, failedPaymentVolumeUsdc: 0, mcpClientQueries: [],

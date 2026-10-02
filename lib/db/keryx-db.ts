@@ -211,6 +211,8 @@ export interface KeryxDB {
 
   // ── sources & content ──
   upsertSource(source: Source): Promise<void>;
+  /** Atomic ownership proof update bound to the observed payout and effective feed. */
+  verifySourceIfUnchanged(input: { sourceId: string; walletAddress: string; feedUrl: string }): Promise<boolean>;
   listPublicReferences?(): Promise<PublicReference[]>;
   getPublicReference?(id: string): Promise<PublicReference | null>;
   upsertPublicReference?(reference: PublicReference): Promise<void>;

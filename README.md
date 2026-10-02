@@ -165,6 +165,8 @@ Example trace (real output):
   existing owner-provisioned custody, a trusted merchant policy and supported Node.
   Use [verified package distribution](docs/mcp-distribution.md); npm and its registry
   pointer need separate verification; public npm version discovery returned 0.3.2 on October 2.
+  The 0.4.1 coordinated research repair candidate requires new packed acceptance and
+  publication verification; the dated observation does not establish that candidate release.
   Do not use the older npm release for the new custody/signing boundary.
 - **Discord slash command** — [install the Keryx app](https://discord.com/oauth2/authorize?client_id=1527619548809924678)
   in any server and type `/ask`: the reply embed carries the grounded answer, every creator paid,

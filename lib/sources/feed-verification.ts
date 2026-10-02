@@ -13,39 +13,28 @@
  * proves control of a DIFFERENT wallet, which the verifier rejects via the ownership check.
  */
 
+import { verificationToken } from "./feed-verification-token";
+export { verificationToken } from "./feed-verification-token";
+
 import { fetchPublicText } from "../net/public-fetch";
 
 const FETCH_TIMEOUT_MS = 15_000;
 // Cap the scanned body so a hostile feed URL can't stream an unbounded response into memory.
 const MAX_FEED_BYTES = 5_000_000;
 
-/**
- * The exact line a creator places anywhere in their feed to prove control of `wallet`.
- * Lowercased so the on-feed token and the stored payout wallet compare case-insensitively.
- */
-export function verificationToken(wallet: string): string {
-  return `keryx-verify:${wallet.toLowerCase()}`;
+export type FeedTokenCheck = "present" | "missing" | "unavailable";
+
+/** Bounded public fetch; distinguish absence from a failed read without exposing network internals. */
+export async function checkFeedToken(feedUrl: string, wallet: string): Promise<FeedTokenCheck> {
+  const url = feedUrl?.trim();
+  if (!url) return "unavailable";
+  try {
+    const raw = await fetchPublicText(url, { timeoutMs: FETCH_TIMEOUT_MS, maxBytes: MAX_FEED_BYTES, maxHops: 3 });
+    return raw.toLowerCase().includes(verificationToken(wallet)) ? "present" : "missing";
+  } catch { return "unavailable"; }
 }
 
-/**
- * Fetch the raw feed and report whether it contains the verification token for `wallet`.
- * Scans the whole raw document case-insensitively, so the token survives in any field
- * (feed <description>, an <item>, a <category>, an HTML comment…). Any network/parse/HTTP
- * failure resolves to false — verification fails closed, never throws.
- */
+/** Registration retains the original fail-closed boolean contract. */
 export async function feedContainsToken(feedUrl: string, wallet: string): Promise<boolean> {
-  const url = feedUrl?.trim();
-  if (!url) return false;
-  const token = verificationToken(wallet);
-
-  try {
-    const raw = await fetchPublicText(url, {
-      timeoutMs: FETCH_TIMEOUT_MS,
-      maxBytes: MAX_FEED_BYTES,
-      maxHops: 3,
-    });
-    return raw.toLowerCase().includes(token);
-  } catch {
-    return false;
-  }
+  return await checkFeedToken(feedUrl, wallet) === "present";
 }

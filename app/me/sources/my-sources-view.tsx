@@ -12,6 +12,7 @@ import Link from "next/link";
 import { BellRing, Loader2, Mail, RefreshCw, Webhook } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { FeedVerificationPanel, type VerificationSource } from "@/components/keryx/feed-verification-panel";
 import { fmtUsdc } from "@/components/keryx/phase-style";
 
 interface OwnedSource {
@@ -20,6 +21,7 @@ interface OwnedSource {
   active: boolean;
   verified: boolean;
   hasFeed: boolean;
+  verificationSource?: VerificationSource | null;
   earnedUsdc: number;
   citationCount: number;
   email: string | null;
@@ -325,6 +327,7 @@ export function MySourcesView() {
             >
               Manage →
             </Link>
+            {!s.verified && s.verificationSource && <div className="w-full pt-3"><FeedVerificationPanel key={`${s.id}:${s.verificationSource.walletAddress}`} source={s.verificationSource} onVerified={() => { setSources((previous) => previous.map((row) => row.id === s.id ? { ...row, verified: true } : row)); }} /></div>}
           </div>
         ))}
       </section>

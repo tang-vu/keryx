@@ -5,6 +5,7 @@ import { evidenceContext, selectEvidencePassages } from "./evidence-context";
 import { JsonChatEngine } from "./json-chat-engine";
 import { buildEvidenceLedger } from "../agent/evidence-ledger";
 import type { GatheredContent } from "./reasoning-engine";
+import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
 
 const question = "What does the HTTP 402 response contain and how does an agent retry?";
 const claims = ["What payment requirements are returned by HTTP 402?", "How does an agent sign and retry?"];
@@ -80,6 +81,38 @@ describe("bounded evidence context", () => {
     const result = selectEvidencePassages(text, "orchard pruning and solar battery storage", ["orchard pruning", "solar battery storage"]);
     expect(result.passages.some((p) => p.text.includes("orchard pruning"))).toBe(true);
     expect(result.passages.some((p) => p.text.includes("Solar battery storage"))).toBe(true);
+  });
+
+  it("retains late fifth and sixth dimensions within the unchanged 2000-character source budget", () => {
+    const dimensions = ["alpha methods", "beta methods", "gamma evaluation", "delta evaluation", "epsilon limitations", "zeta limitations"];
+    const facts = dimensions.map(dimension => `The synthetic ${dimension} dimension has explicit source text.`);
+    const text = "Introduction. ".repeat(100) + facts.map(fact => fact + " Background. ".repeat(110)).join("\n");
+    const result = selectEvidencePassages(text, "Compare methods, evaluation setup and limitations", dimensions);
+    for (const fact of facts) expect(result.passages.some(p => p.text.includes(fact))).toBe(true);
+    expect(result.passages.reduce((sum, p) => sum + p.text.length, 0)).toBeLessThanOrEqual(2000);
+    for (const passage of result.passages) expect(passage.text).toBe(text.slice(passage.start, passage.end));
+  });
+
+  it("focuses exact arXiv context on its own version without dropping generic or unversioned targets", () => {
+    const ownFact = "The alpha mechanism observes the action boundary and renders the approval.";
+    const genericFact = "The limitations include incomplete coverage of runtime state changes.";
+    const unversionedFact = "The evaluation includes a synthetic benchmark corpus.";
+    const wrongVersionFact = "The unrelatedtopic details describe another synthetic protocol.";
+    const text = "Introduction. ".repeat(100) + ownFact + " Background. ".repeat(100) + wrongVersionFact + " Background. ".repeat(100) + genericFact + " Background. ".repeat(100) + unversionedFact;
+    const scholarly = { provider: "arxiv" as const, recordUrl: "https://export.arxiv.org/api/query?id_list=2606.02668v1",
+      retrievedAt: "2026-10-02T00:00:00Z", title: "Synthetic fixture", authors: [], arxivId: "2606.02668v1", workType: "preprint" as const, peerReview: "unknown" as const };
+    const result = evidenceContext("Compare papers", ["What alpha mechanism does arXiv:2606.02668v1 use?",
+      "What unrelatedtopic details does arXiv:2606.02668v2 describe?", "What limitations concern runtime state changes?", "What evaluation benchmark does arXiv:2606.02668 use?"],
+    [{ ...gathered[0], text, scholarly }])[0];
+    expect(result.scholarly?.arxivId).toBe("2606.02668v1");
+    for (const fact of [ownFact, genericFact, unversionedFact]) expect(result.passages.some(p => p.text.includes(fact))).toBe(true);
+    expect(result.passages.some(p => p.text.includes(wrongVersionFact))).toBe(false);
+    expect(result.passages.reduce((sum, p) => sum + p.text.length, 0)).toBeLessThanOrEqual(2000);
+  });
+
+  it("refuses excess target input instead of dropping late dimensions", () => {
+    expect(() => selectEvidencePassages(longText, "Compare", Array.from({ length: MAX_RESEARCH_TARGETS + 1 }, (_, index) => `Target ${index}`)))
+      .toThrow(/exceeded 8 research targets/);
   });
 
   it.each([390, 590, 790, 1190, 1590, 1990, 2390])("keeps a complete relevant sentence near a window edge at %i", (offset) => {

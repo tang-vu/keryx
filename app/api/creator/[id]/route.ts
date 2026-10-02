@@ -115,6 +115,7 @@ export async function GET(
         description: source.description,
         walletAddress: source.walletAddress,
         fetchPrice: source.fetchPrice,
+        evidenceProvenance: source.evidenceProvenance,
         verified: source.verified,
       },
       gatewayProof,

@@ -13,6 +13,7 @@ import type { CreateSourceInput } from "./create-source";
 
 export const SEED_SOURCES: CreateSourceInput[] = [
   {
+    evidenceProvenance: "synthetic-demo",
     name: "Stablecoin Ledger",
     url: "",
     description:
@@ -37,6 +38,7 @@ export const SEED_SOURCES: CreateSourceInput[] = [
     ],
   },
   {
+    evidenceProvenance: "synthetic-demo",
     name: "Agent Economy Weekly",
     url: "",
     description:
@@ -61,6 +63,7 @@ export const SEED_SOURCES: CreateSourceInput[] = [
     ],
   },
   {
+    evidenceProvenance: "synthetic-demo",
     name: "Onchain Micropayments Digest",
     url: "",
     description:
@@ -89,6 +92,7 @@ export const SEED_SOURCES: CreateSourceInput[] = [
     ],
   },
   {
+    evidenceProvenance: "synthetic-demo",
     name: "Distributed Systems Notes",
     url: "",
     description:
@@ -106,6 +110,7 @@ export const SEED_SOURCES: CreateSourceInput[] = [
     ],
   },
   {
+    evidenceProvenance: "synthetic-demo",
     name: "Garden & Soil Monthly",
     url: "",
     description: "Practical organic gardening: composting, raised beds, and seasonal planting.",
@@ -122,6 +127,7 @@ export const SEED_SOURCES: CreateSourceInput[] = [
     ],
   },
   {
+    evidenceProvenance: "synthetic-demo",
     name: "Retro Game Hardware",
     url: "",
     description: "Restoring and modding vintage consoles and arcade boards.",
@@ -143,6 +149,7 @@ export const SEED_SOURCES: CreateSourceInput[] = [
   // paid full content, so the agent discovers it during synthesis and must trust one over the
   // other (the Arc-specific, measured source should win).
   {
+    evidenceProvenance: "synthetic-demo",
     name: "Arc Settlement Benchmarks",
     url: "",
     description:
@@ -160,6 +167,7 @@ export const SEED_SOURCES: CreateSourceInput[] = [
     ],
   },
   {
+    evidenceProvenance: "synthetic-demo",
     name: "Web Payments Review",
     url: "",
     description: "Cross-protocol commentary on how long on-chain payments take to settle.",

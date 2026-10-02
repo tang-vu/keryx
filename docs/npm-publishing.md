@@ -38,7 +38,7 @@ in a separate job without OIDC publishing permission.
 3. Run **Publish MCP to npm** from `main`, entering the committed package version:
 
    ```sh
-   gh workflow run publish-mcp.yml --ref main -f version=0.3.2
+   gh workflow run publish-mcp.yml --ref main -f version=0.4.1
    ```
 
 The manual workflow checks the current main commit and its successful push CI,

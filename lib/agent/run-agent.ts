@@ -1,4 +1,6 @@
-import { emptyPublicEvidenceDetail } from "./empty-public-evidence";
+import { demoteSyntheticEvidence } from "../research/evidence-provenance";
+import { emptyEvidenceAnswer } from "./empty-public-evidence";
+import { finalizeGroundedAnswer } from "./answer-grounding";
 import { discoverPublicReferences } from "./public-reference-evidence";
 import { discoverScholarly } from "../scholarly/discovery";
 import { paperCanResearch, paperDuplicatesPublicBody } from "../scholarly/paid-gate";
@@ -58,6 +60,7 @@ import {
   settledPaymentFrom,
 } from "../payments/payment-state";
 import { questionArxivIds } from "../scholarly/arxiv";
+import { hasKnownSeedFingerprint } from "../research/seed-evidence-fingerprints";
 import { normalizePreviewDepth, previewSummary } from "../sources/preview-depth";
 import { isCacheFresh, newestPublishedAt } from "./cache-freshness";
 import {
@@ -72,7 +75,6 @@ import { resolveValidArticleOffer } from "../offers/resolve-article-offer";
 import {
   buildEvidenceLedger,
   MIN_REWARD_SUPPORT,
-  removeUnsupportedCitationMarkers,
 } from "./evidence-ledger";
 import {
   buildPreviewCoverage,
@@ -236,7 +238,7 @@ export async function* runAgent(
   // cited, or paid. Listing stays permissionless — unverified rows show in the directory, just
   // off the money path. Undefined verified = grandfathered true (curated seed + pre-flag rows).
   const allSources = await db.listSources();
-  const eligible = allSources.filter((s) => s.verified !== false && !isPublicReferenceId(s.id));
+  const eligible = allSources.filter((s) => s.verified !== false && !isPublicReferenceId(s.id) && (gateway.mode === "offline" || s.evidenceProvenance !== "synthetic-demo"));
   const rights = await Promise.all(eligible.map(s => paperCanResearch(db, s, input.paidScholarly === true && origin === "web")));
   const sources = eligible.filter((_s, index) => rights[index]);
   const unverifiedCount = allSources.filter((source) => source.verified === false).length;
@@ -249,6 +251,7 @@ export async function* runAgent(
   const freshCache = new Set<string>();
   const { publicReads, publicCandidates } = await discoverPublicReferences(db, input.question, subClaims);
   const webCandidates = new Map<string, SourceCandidate>();
+  let webDiscovery: { status: "completed" | "unavailable" | "not-configured" | "withheld"; attemptedQueries?: number; succeededQueries?: number; failedQueries?: number } = { status: "not-configured" };
   let webRemainingMs = input.researchMode === "quick" ? 30000 : 55000;
   let webAttempts = 0;
   const webSignal = () => AbortSignal.any([input.signal ?? new AbortController().signal,
@@ -265,8 +268,10 @@ export async function* runAgent(
     if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
   }
   if (effects.scope.kind === "job") {
+    webDiscovery = { status: "withheld" };
     yield emit("discover", "External web search withheld for private research; no question is sent to a search provider.");
   } else if (origin === "engine" && input.allowExternalWeb !== true) {
+    webDiscovery = { status: "withheld" };
     yield emit("discover", "External web search withheld for unattended engine research; manual CLI research can explicitly opt in.");
   } else if (deps.webSearch || config.webSearchProvider) {
     const operationStarted = Date.now();
@@ -276,9 +281,10 @@ export async function* runAgent(
       if (!configured) throw new Error("Search provider is unconfigured");
       const discovered = await discoverWeb(configured, input.question,
         subClaims, input.researchMode === "quick", webSignal());
+      webDiscovery = { status: "completed", attemptedQueries: discovered.attemptedQueries, succeededQueries: discovered.succeededQueries, failedQueries: discovered.failedQueries };
       for (const [id, candidate] of discovered.candidates) { webCandidates.set(id, candidate); publicCandidates.set(id, candidate); }
       yield emit("discover", `Web search: ${discovered.attemptedQueries}/${discovered.queries} planned queries attempted, ${discovered.succeededQueries} succeeded, ${discovered.candidates.size} public page previews, ${discovered.failedQueries} unavailable queries${discovered.cancelled ? "; search deadline or cancellation reached" : ""}${discovered.truncatedQueries ? "; query text bounded at 500 characters" : ""}. Snippets are discovery only. Public reads spend no USDC; model and service operating costs remain separate.`);
-    } catch { yield emit("discover", "Web search unavailable; continuing with the available catalog. No web evidence was established."); }
+    } catch { webDiscovery = { status: "unavailable" }; yield emit("discover", "Web search unavailable; continuing with the available catalog. No web evidence was established."); }
     finally { webRemainingMs -= Date.now() - operationStarted; }
     if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
   } else yield emit("discover", "Broad web search is not configured; other discovery channels remain available.");
@@ -355,7 +361,10 @@ export async function* runAgent(
       continue;
     }
     if (!terms.active) continue;
-    const items = await db.getItems(s.id);
+    const catalogItems = (await db.getItems(s.id)).map(item => hasKnownSeedFingerprint(item.title, item.link, item.bodyHash)
+      ? { ...item, evidenceProvenance: "synthetic-demo" as const } : item);
+    const items = catalogItems.filter(item => gateway.mode === "offline" || item.evidenceProvenance !== "synthetic-demo");
+    if (catalogItems.length > 0 && items.length === 0) continue;
     // Honor the creator's preview-depth: the agent scores on exactly what a paying reader would see
     // for free. Article selection never inspects paid full text.
     const depth = normalizePreviewDepth(s.previewDepth);
@@ -370,7 +379,7 @@ export async function* runAgent(
 
     if (item) {
       const id = sourceItemAssetId(item.id);
-      const identity = sourceItemIdentity(item);
+      const identity = sourceItemIdentity({ ...item, evidenceProvenance: item.evidenceProvenance ?? s.evidenceProvenance });
       const cacheKey = sourceItemCacheKey(s.id, item);
       const cached = Boolean(await effects.getCachedAt(cacheKey));
       if (cached) freshCache.add(id);
@@ -492,7 +501,7 @@ export async function* runAgent(
   if (candidates.length === 0) {
     evidenceMeasured = true;
     claimCoverage = subClaims.map((claim, claimIndex) => ({ claimIndex, claim, coverage: 0, coveredBy: [] }));
-    return finish("No supported answer: no eligible sources were available to read for this run.");
+    return finish(emptyEvidenceAnswer({ question: input.question, outcomes: publicReadOutcomes, skipped: [], discovery: webDiscovery, fundingUnavailable: false, pendingPayments: 0, settledPayments: 0, fetchFailures: 0 }));
   }
 
   // 3) DECIDE (engine proposes value; code enforces budget AND the Arc-rail constraint)
@@ -756,7 +765,7 @@ export async function* runAgent(
       yield emit("fetch", `SKIP ${source.name}: manuscript rights or registry terms changed before this read.`);
       continue;
     }
-    const itemIdentity = asset.candidate.item ?? {};
+    const itemIdentity = { ...asset.candidate.item, evidenceProvenance: asset.candidate.item?.evidenceProvenance ?? source.evidenceProvenance };
     const assetLabel = item ? `${source.name} — ${item.title}` : source.name;
     const marker = `S${++markerN}`;
     if (d.action === "CACHE") {
@@ -895,6 +904,7 @@ export async function* runAgent(
     yield emit("reevaluate", `All sub-claims already well-covered (sufficiency passed with 0 gaps) — skipping re-evaluation to save latency.`);
   } else if (gathered.length > 0 && reevaluateRounds > 0) {
     for (let round = 0; round < reevaluateRounds; round++) {
+      if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
       if (attentionUsed >= attentionLimit) {
         yield emit(
           "reevaluate",
@@ -916,12 +926,12 @@ export async function* runAgent(
           return {
             id: d.assetId ?? d.sourceId,
             name: d.sourceName,
-            price: asset?.priceUsdc ?? 0,
+            price: asset?.priceUsdc ?? (publicCandidates.has(d.assetId ?? d.sourceId) ? 0 : Infinity),
             preview: asset?.candidate.preview ?? publicCandidates.get(d.sourceId)?.preview ?? "",
           };
-        });
+        }).filter(candidate => candidate.price === 0 || candidate.price <= remainingBudget);
 
-      if (skipped.length === 0 || (remainingBudget <= 0 && !fundingUnavailable)) break;
+      if (skipped.length === 0) break;
 
       const reeval = await engine.reevaluate({
         question: input.question,
@@ -958,6 +968,7 @@ export async function* runAgent(
 
       // Buy additional sources the engine recommended to fill coverage gaps
       for (const recId of reeval.recommendedIds) {
+        if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
         if (attentionUsed >= attentionLimit) {
           yield emit(
             "reevaluate",
@@ -991,7 +1002,7 @@ export async function* runAgent(
         const source = asset?.source;
         // Guard against an engine recommending a source we already read (duplicate marker +
         // double payment) or that no longer fits the remaining budget.
-        if (!asset || !source || gatheredIds.has(recId) || asset.priceUsdc > remainingBudget + 1e-9) continue;
+        if (!asset || !source || gatheredIds.has(recId) || (remainingBudget <= 0 && asset.priceUsdc > 0) || asset.priceUsdc > remainingBudget + 1e-9) continue;
         if (await paperDuplicatesPublicBody(db, source, gathered.filter(read => read.sourceKind === "public-reference").map(read => read.text))) {
           yield emit("reevaluate", `SKIP paid manuscript ${source.name}: identical public body is already evidence, no duplicate payment.`);
           continue;
@@ -1003,7 +1014,7 @@ export async function* runAgent(
 
         const marker = `S${++markerN}`;
         const assetLabel = asset.item ? `${source.name} — ${asset.item.title}` : source.name;
-        const itemIdentity = asset.candidate.item ?? {};
+        const itemIdentity = { ...asset.candidate.item, evidenceProvenance: asset.candidate.item?.evidenceProvenance ?? source.evidenceProvenance };
         // Funding errors have their own uncertainty boundary. They are never
         // interpreted as a creator payment record or permission to retry funding.
         if (!spendWalletReady) {
@@ -1111,22 +1122,9 @@ export async function* runAgent(
     claimCoverage = subClaims.map((claim, claimIndex) => ({
       claimIndex, claim, coverage: 0, coveredBy: [],
     }));
-    return finish(
-      fundingUnavailable
-        ? "No supported answer: paid sources were withheld because funding readiness could not be verified, and no usable public evidence was gathered. " +
-          "Wallet funding effects remain unknown; inspect the original funding records before another paid attempt."
-        : pendingPayments > 0
-        ? "No supported answer: source payment confirmation remains pending and no usable content was received. " +
-          "Pending amounts stay reserved; any confirmed source payments remain recorded separately. Keep this job for reconciliation before buying again."
-        : settledPayments > 0
-          ? "No supported answer: source payments settled, but no usable content was received. " +
-            "Confirmed payments remain recorded. Keep this job for review before buying again."
-          : fetchFailures > 0
-            ? "No supported answer: source reads failed and no source payment was confirmed. Review this job's payment records before starting another paid job."
-            : "No supported answer: no source passed the relevance and evidence checks within this run's limits. " +
-              emptyPublicEvidenceDetail(publicReadOutcomes, finalDecisions.filter(decision =>
-                webCandidates.has(decision.assetId ?? decision.sourceId) && decision.action === "SKIP")),
-    );
+    return finish(emptyEvidenceAnswer({ question: input.question, outcomes: publicReadOutcomes,
+      skipped: finalDecisions.filter(decision => webCandidates.has(decision.assetId ?? decision.sourceId) && decision.action === "SKIP"),
+      discovery: webDiscovery, fundingUnavailable, pendingPayments, settledPayments, fetchFailures }));
   }
 
   // 4c) FINAL COVERAGE — always reassess after every cache read and re-evaluation purchase.
@@ -1215,6 +1213,7 @@ export async function* runAgent(
     proposedEvidence: synthesized.evidence ?? [],
     finalAssessment: finalSufficiency.perClaim,
     rewardAuthorizationAvailable: finalAssessmentAvailable,
+    allowIllustrativeDemo: gateway.mode === "offline",
   });
   evidence = ledger.evidence;
   claimCoverage = ledger.claimCoverage;
@@ -1228,10 +1227,7 @@ export async function* runAgent(
     });
   }
   evidenceMeasured = true;
-  answer = removeUnsupportedCitationMarkers(
-    answer,
-    ledger.acceptedMarkers,
-  );
+  answer = finalizeGroundedAnswer({ question: input.question, answer, ledger });
   const used = gathered.filter((g) =>
     ledger.acceptedMarkers.has(g.marker),
   );
@@ -1304,6 +1300,7 @@ export async function* runAgent(
         itemUrl: g.itemUrl,
         contentVersion: g.contentVersion,
         itemPublishedAt: g.itemPublishedAt,
+        evidenceProvenance: g.evidenceProvenance,
         contentReceipt: g.contentReceipt,
         sourceKind: g.sourceKind,
         publicDeliveryKind: g.publicDeliveryKind,
@@ -1543,7 +1540,7 @@ export async function* runAgent(
       "done",
       `Done. Spent $${totalSpent} across ${payments.length - pendingPayments} confirmed/simulated payment(s) to creators${pendingPayments ? `; ${pendingPayments} authorization(s) await settlement confirmation` : ""}.${fundingUnavailable ? " Creator-payment amounts only; wallet funding effects remain unknown." : ""}`,
     );
-    return run;
+    return demoteSyntheticEvidence(run);
   }
 }
 

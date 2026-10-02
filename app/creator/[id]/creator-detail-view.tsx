@@ -1,5 +1,6 @@
 "use client";
 
+import { OwnerFeedVerification } from "@/components/keryx/owner-feed-verification";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BadgeCheck, Banknote, Calendar, CircleX, Clock3, Hash, Wallet } from "lucide-react";
@@ -24,6 +25,7 @@ interface CreatorData {
     name: string;
     description: string;
     walletAddress: string;
+    evidenceProvenance?: "synthetic-demo";
     fetchPrice: number;
     verified: boolean;
   };
@@ -104,6 +106,8 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
         </div>
       </div>
 
+      {source.evidenceProvenance === "synthetic-demo" && <p className="mb-6 border border-seal/40 bg-seal/5 p-3 text-sm">Synthetic demo content. Illustrative; not factual research evidence.</p>}
+
       {/* Stat tiles */}
       <section className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile
@@ -149,6 +153,8 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
       {/* Public: why the agent buys or passes on this source, in its own words. Sits above the
           price dial because it is the input to using that dial. */}
       <DecisionFeedbackPanel creatorId={creatorId} />
+
+      <OwnerFeedVerification sourceId={creatorId} onVerified={() => setData(previous => previous ? { ...previous, source: { ...previous.source, verified: true } } : previous)} />
 
       {/* Owner-only: price-per-read dial + permanent delist (renders nothing for non-owners) */}
       <ListingControlsPanel creatorId={creatorId} />

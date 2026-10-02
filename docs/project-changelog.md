@@ -1,5 +1,45 @@
 # Keryx Project Changelog
 
+### Coordinated research and creator recovery candidate (2026-10-03, v0.26.1)
+
+- Replace rejected factual drafts with qualified literal evidence and explicit target
+  gaps; retain fully qualified answers. Expand bounded per-paper targets and contiguous
+  evidence windows, preserve exact arXiv version intent and give task-relevant English/
+  Vietnamese empty/partial-answer recovery. Support qualification and payment state
+  remain separate.
+- Keep free Deep gap reads available at zero remaining source-access USDC within the
+  existing attention/deadline limits. Reject malformed web/OpenAI JSON and message shapes
+  with HTTP 400 before invoking research; keep the OpenAI error envelope.
+- Mark trusted illustrative seed content `synthetic-demo` across source, item, evidence,
+  preview, answer and export projections. Demote historical factual coverage with a
+  prominent illustrative notice while retaining authentic archived bytes, encrypted
+  content and recorded real settlement. Derived integrity-checked local exports accept
+  exact checked corpus fingerprints without rewriting original receipt digests. Add
+  exact-match SQLite/Supabase 0079 backfill and an isolated PostgreSQL 17 CI gate;
+  staged enrolled profiles require fresh admission.
+- Preserve prepared RSS and Wanted `rss/gap/post` context through wallet sign-in for
+  first-time and returning creators. Reopen deterministic ownership tokens from existing
+  sources in My sources/Manage, with payout-only server authority, safe feed/index retry,
+  idempotency and delayed-session response guards. Atomically set only verified state
+  while payout/feed identity matches, preserving concurrent registry changes. Bound actual
+  escaped sign-in URLs with explicit prefill recovery instead of truncation or draft loss.
+  No duplicate registration or gas.
+- Preserve the merged selected-network wallet, custody and sealed mainnet storage gates.
+  Run creator sign-in/receipt browser checks under both synthetic compiled profiles,
+  including wrong-chain SIWE/RPC refusal and mainnet offline-registration refusal.
+- Reserve application 0.26.1, caller MCP 0.4.1 and desktop 0.4.1 with unchanged dependency
+  closures. Desktop rebuilds shared receipt/export helpers; hosted API projections flow
+  through remote/stdio MCP, CLI, extension and bots under their existing roles. Extension
+  0.1.1 and remote MCP protocol 0.2.0 retain their identities; creator administration stays
+  browser SIWE. See [surface audit](surface-parity.md) and
+  [creator recovery](creator-onboarding-recovery.md).
+- Focused synthetic checks and hermetic creator Chromium coverage are recorded by their
+  domain changes. Full integrated tests, default production build, required CI/review,
+  live useful two-paper outputs, production schema/health readback, packed MCP publication
+  and fresh installer acceptance remain gates. Candidate metadata is not a deployed or
+  synchronized-delivery claim. No new paid research, external adoption, funds, mainnet or
+  scheduler activation is claimed by this candidate.
+
 ### Bounded owner creator cash-out operations (2026-10-02, pending acceptance)
 
 - Add an explicit testnet-only operator plan, portable original-owner signer,

@@ -5,6 +5,7 @@
  */
 
 import { config } from "../config";
+import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
 import { cloneUsage } from "../economics/provider-cost-policy";
 import { LlmCallLedger } from "./call-ledger";
 import { evidenceContext, EVIDENCE_CONTEXT_GUIDANCE } from "./evidence-context";
@@ -86,10 +87,13 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     const out = await this.measuredChatJson(
       config.llmModel,
       "You plan research for Keryx, a reading agent that pays content access tolls and distributes USDC creator rewards according to cited contributions. " +
-        "Break the user's question into 1-4 concise questions to investigate, NOT proposed answers or assertions of fact. " +
+        `Break the user's question into 1-${MAX_RESEARCH_TARGETS} concise questions to investigate, NOT proposed answers or assertions of fact. ` +
         "Preserve the user's terminology and scope. Explicit user context takes precedence over Keryx's product context; questions can concern any subject. " +
         "Separate information needs from instructions about sources, citations, format, or style. Carry relevant source/scope constraints into the substantive questions; do not turn those instructions into extra research targets. " +
-        "Each target must ask for a distinct requested fact or explanation. Do not add an umbrella question that repeats the other targets, or split one fact into paraphrases to fill the 1-4 range. " +
+        "Each target must ask for a distinct requested fact or explanation. Do not add an umbrella question that repeats the other targets, or split one fact into paraphrases to fill the range. " +
+        "For a comparison, preserve every requested dimension for each specific source as a separately inspectable target. " +
+        "For example, comparing two exact papers' methods, evaluation setup and limitations requires six targets: each dimension for each paper, retaining its exact version. " +
+        "Do not omit limitations or combine both papers into one target that evidence from only one paper could appear to cover. " +
         "First list source, language and presentation instructions in constraints. Then list separately answerable information needs in claims, including when the input is not English. Keep these two JSON keys in English; their string values can use the user's language. " +
         "A constraint is not a claim. Attach source restrictions to the relevant claim, but leave output language/style in constraints. For example, salt tolerance and coastal erosion are two claims; evidence of erosion reduction belongs to the existing erosion claim. " +
         "For example, 'How is a job journaled and recovered? Use the engineering documentation' asks about journaling and recovery as documented there, not a third question about what the documentation says. " +
@@ -103,7 +107,8 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     const claims = Array.isArray(out.claims)
       ? out.claims.filter((claim): claim is string => typeof claim === "string" && claim.trim().length > 0 && claim.length <= 600).map((claim) => claim.trim())
       : [];
-    const unique = [...new Set(claims)].slice(0, 4);
+    const unique = [...new Set(claims)];
+    if (unique.length > MAX_RESEARCH_TARGETS) throw new Error(`Research planning exceeded ${MAX_RESEARCH_TARGETS} targets; requested scope must not be silently discarded`);
     return unique.length ? unique : [question];
   }
 

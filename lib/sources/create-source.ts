@@ -18,6 +18,8 @@ import { getOrCreateWallet } from "./wallet-store";
 import { storeSourceItems } from "./store-source-item";
 
 export interface CreateSourceInput {
+  /** Internal operator classification; public registration never accepts this field. */
+  evidenceProvenance?: "synthetic-demo";
   name: string;
   url: string;
   description: string;
@@ -64,6 +66,7 @@ export async function createSource(
 
   const source: Source = {
     id,
+    evidenceProvenance: input.evidenceProvenance,
     name: input.name,
     url: input.url,
     description: input.description,
@@ -82,7 +85,7 @@ export async function createSource(
   // production storage dependency must not leave a half-registered publication with no articles.
   const items: SourceItem[] = input.items?.length
     ? await storeSourceItems(
-      input.items.map((it) => ({ ...it, id: crypto.randomUUID(), sourceId: id })),
+      input.items.map((it) => ({ ...it, evidenceProvenance: input.evidenceProvenance ?? it.evidenceProvenance, id: crypto.randomUUID(), sourceId: id })),
     )
     : [];
 

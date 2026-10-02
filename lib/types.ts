@@ -4,6 +4,8 @@
 
 /** A registered content source = a creator (or multi-author publication) that gets paid per citation. */
 export interface Source {
+  /** Trusted catalog classification; settlement never establishes factual authenticity. */
+  evidenceProvenance?: "synthetic-demo";
   /** Sticky distribution-rights enrollment; unsupported backends must refuse paid activation. */
   scholarlyEnrolled?: boolean;
   id: string;
@@ -86,6 +88,7 @@ export interface ContentReceiptRef {
 
 /** A content item belonging to a source (ingested from RSS). Preview is free; content is paid. */
 export interface SourceItem {
+  evidenceProvenance?: "synthetic-demo";
   id: string;
   sourceId: string;
   title: string;
@@ -110,6 +113,7 @@ export interface SourceItem {
 
 /** Immutable identity for the exact article version the agent evaluated and purchased. */
 export interface SourceItemIdentity {
+  evidenceProvenance?: "synthetic-demo";
   /** Observed provider metadata; never creator identity or payout authority. */
   scholarly?: ScholarlyMetadata;
   webProvenance?: {
@@ -510,7 +514,13 @@ export interface QueryRun {
   pendingSpendUsdc?: number;
 }
 
-/** Aggregate metrics for the traction dashboard. Computed only from real, settled rows in prod. */
+export interface DashboardEvidenceQuality {
+  status: "unavailable";
+  basis: "recorded-unreassessed";
+  explanation: string;
+}
+
+/** Aggregate dashboard telemetry. Payment totals use settled rows; evidence counters are recorded history. */
 export interface DashboardMetrics {
   totalPayments: number;
   totalVolumeUsdc: number;
@@ -520,11 +530,13 @@ export interface DashboardMetrics {
   totalQueries: number;
   payingQueries: number; // queries that produced >= 1 payment
   readerToPayerConversion: number; // payingQueries / totalQueries
-  /** Runs recorded after the evidence ledger shipped; historical runs are not guessed. */
+  /** Recorded evidence-counter samples; not reassessed against current source provenance. */
   evidenceRunSamples: number;
   evidenceClaimSamples: number;
-  groundedClaimRate: number;
-  /** Measured runs where no citation passed the reward gate. */
+  /** Aggregate factual grounding is unavailable until provenance-aware historical reassessment. */
+  groundedClaimRate: number | null;
+  evidenceQuality: DashboardEvidenceQuality;
+  /** Recorded runs with a known-zero planned creator citation pool; not a current factual quality measure. */
   citationPoolWithheldRuns: number;
   /** Creator offers queued from /wanted, including terminal outcomes. */
   gapIntentOffers: number;

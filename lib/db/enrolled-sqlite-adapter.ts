@@ -8,6 +8,7 @@ import type { StorageIdentity } from "./storage-identity";
 /** Explicit behavior inventory, including verifyApiKey's last-used write. New methods require review. */
 export const ENROLLED_SQLITE_METHOD_ACCESS = Object.freeze({
   upsertSource: "write",
+  verifySourceIfUnchanged: "write",
   setSourcePreviewDepth: "write",
   listPublicReferences: "read",
   getPublicReference: "read",
@@ -233,7 +234,7 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
     assert();
     const core = SqliteAdapter.assembleConnectionCore(db, deployment.identity, assert);
     const publicNames = Object.getOwnPropertyNames(SqliteAdapter.prototype).filter(name =>
-      !["constructor", "encryptLegacyCacheRows", "insertPayment", "assertOrdinaryResearchAuthority", "init", "close"].includes(name));
+      !["constructor", "encryptLegacyCacheRows", "insertPayment", "assertOrdinaryResearchAuthority", "readEvidenceProvenance", "init", "close"].includes(name));
     const reviewed = Object.keys(ENROLLED_SQLITE_METHOD_ACCESS);
     if (canonicalJson(publicNames.sort()) !== canonicalJson(reviewed.sort()))
       throw new Error("Enrolled SQLite method inventory requires review");

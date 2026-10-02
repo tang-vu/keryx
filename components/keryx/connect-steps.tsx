@@ -152,10 +152,14 @@ export function SignedInStep({
   session,
   onSignOut,
   busy = false,
+  returnTo = null,
+  returnBlocked = false,
 }: {
   session: { address: string; role: string };
   onSignOut: () => void;
   busy?: boolean;
+  returnTo?: string | null;
+  returnBlocked?: boolean;
 }) {
   return (
     <div className="space-y-5">
@@ -169,7 +173,11 @@ export function SignedInStep({
         </div>
       </div>
 
-      {session.role === "creator" || session.role === "dev" ? (
+      {returnBlocked ? (
+        <p role="alert" className="text-sm text-seal">This registration draft belongs to the wallet that started sign-in. Switch back to that wallet or <Link href="/register" className="underline">start a new draft</Link>.</p>
+      ) : returnTo ? (
+        <Link href={returnTo} className="flex w-full justify-center border border-ink bg-seal px-4 py-3.5 font-mono text-xs text-cream">Resume source registration</Link>
+      ) : session.role === "creator" || session.role === "dev" ? (
         <Link
           href="/register"
           className="flex w-full items-center justify-center gap-2 border border-ink bg-seal px-4 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-cream transition-all hover:-translate-y-0.5 hover:shadow-[0_5px_0_var(--ink)] active:translate-y-0 active:shadow-none"

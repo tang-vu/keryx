@@ -1,3 +1,4 @@
+import { demoteSyntheticEvidence } from "../research/evidence-provenance";
 import { surfaceResearch } from "../research/surface-result";
 import { a2aReceiptEconomics, type A2aQuote } from "./pricing";
 import type { A2aOrder } from "./order";
@@ -28,6 +29,7 @@ export function a2aResponseFromRun(
   quote: A2aQuote,
   timing?: { acceptedAt: string; startedAt: string | null; baseUrl?: string },
 ) {
+  run = demoteSyntheticEvidence(run);
   if (run.paymentMode !== "real") {
     throw new Error("paid A2A research did not use the real treasury gateway");
   }

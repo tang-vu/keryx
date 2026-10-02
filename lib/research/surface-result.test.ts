@@ -67,3 +67,20 @@ describe("research surface parity", () => {
     expect(JSON.stringify(result)).not.toMatch(/secret|gated body|privateKey/);
   });
 });
+
+
+it("demotes synthetic evidence across A2A, remote MCP, OpenAI and receipt exports", () => {
+  const run = fixture(); run.citations[0].evidenceProvenance = "synthetic-demo";
+  run.evidence![0].evidenceProvenance = "synthetic-demo";
+  run.answer = "Synthetic empirical benchmark median 178ms p95 240ms [P1].";
+  run.claimCoverage = [{ claimIndex: 0, claim: "Recorded claim", coverage: 0.8, coveredBy: ["P1"] }];
+  for (const result of [remoteResearchResult(run), a2aResponseFromRun(run, quoteA2aResearch(0.03, "deep"))]) {
+    expect(result.answer).toContain("Illustrative demo content");
+    expect(result.citations[0].evidenceProvenance).toBe("synthetic-demo");
+    expect(result.evidence[0].qualifiesForAnswer).toBe(false);
+    expect(result.claimCoverage[0]).toMatchObject({ coverage: 0, coveredBy: [] });
+    expect(result.paymentMode).toBe("real");
+  }
+  expect(keryxMeta(run).evidence[0].qualifiesForAnswer).toBe(false);
+  expect(keryxMeta(run).researchExports.bibtex.content).toContain("ILLUSTRATIVE SYNTHETIC DEMO");
+});

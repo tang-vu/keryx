@@ -7,7 +7,7 @@ import {
 } from "./demand-intent";
 import { buildDemand } from "./demand-signal";
 import type { QueryRun, SourceItem } from "./types";
-import { WANTED_DETAIL_LIMIT } from "./wanted-limits";
+import { WANTED_DETAIL_LIMIT, WANTED_MAX_CLAIMS_PER_RUN } from "./wanted-limits";
 
 const CLAIM = "CCTP burns and mints USDC across domains.";
 const failed: QueryRun = {
@@ -111,13 +111,13 @@ describe("resolveGapOffer", () => {
       return out;
     };
     const rankedClaim = (runIndex: number, claimIndex: number) =>
-      `Missing evidence for uniquetopic${alpha(runIndex * 4 + claimIndex)} protocol`;
-    const higherRanked = Array.from({ length: 120 }, (_, runIndex) => ({
+      `Missing evidence for uniquetopic${alpha(runIndex * WANTED_MAX_CLAIMS_PER_RUN + claimIndex)} protocol`;
+    const higherRanked = Array.from({ length: 220 }, (_, runIndex) => ({
       ...failed,
       id: `higher-${runIndex}`,
       question: `Higher-ranked question ${runIndex}`,
-      subClaims: Array.from({ length: 4 }, (_, claimIndex) => rankedClaim(runIndex, claimIndex)),
-      claimCoverage: Array.from({ length: 4 }, (_, claimIndex) => {
+      subClaims: Array.from({ length: WANTED_MAX_CLAIMS_PER_RUN }, (_, claimIndex) => rankedClaim(runIndex, claimIndex)),
+      claimCoverage: Array.from({ length: WANTED_MAX_CLAIMS_PER_RUN }, (_, claimIndex) => {
         const claim = rankedClaim(runIndex, claimIndex);
         return { claimIndex, claim, coverage: 0, coveredBy: [] };
       }),
@@ -126,7 +126,7 @@ describe("resolveGapOffer", () => {
     const runs = [...higherRanked, failed];
 
     expect(buildDemand(runs, { limit: WANTED_DETAIL_LIMIT }).findIndex((item) => item.id === gap.id))
-      .toBeGreaterThanOrEqual(400);
+      .toBeGreaterThanOrEqual(1600);
     await expect(resolveGapOffer(dbWithRuns(runs), gap.id, post.link, [post])).resolves.toMatchObject({
       gapId: gap.id,
       sourceItemLink: post.link,

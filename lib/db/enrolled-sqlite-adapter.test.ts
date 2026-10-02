@@ -137,6 +137,41 @@ it("refuses every explicitly reviewed readonly mutator before invocation, includ
   expect(readFileSync(f.file)).toEqual(before);
 });
 
+it("guards verified-only source CAS and projects item provenance without exposing internal metadata lookup", async () => {
+  const f = await fixture();
+  const adapter = await f.api.createEnrolledSqliteAdapter();
+  f.adapters.push(adapter);
+  const wallet = `0x${"aB".repeat(20)}`, feed = "https://publisher.test/feed";
+  const source = { id: "mixed", name: "Mixed publisher", url: "https://publisher.test/", rssUrl: feed,
+    description: "Fixture", walletAddress: wallet, fetchPrice: 0.019, active: false, verified: false,
+    tags: [], authors: [], createdAt: new Date().toISOString() };
+  await adapter.upsertSource(source);
+  await adapter.addItems([{ id: "demo", sourceId: source.id, title: "Synthetic item", summary: "Demo",
+    content: "Unread ciphertext", link: "https://publisher.test/demo", evidenceProvenance: "synthetic-demo" }]);
+  expect(f.api.ENROLLED_SQLITE_METHOD_ACCESS.verifySourceIfUnchanged).toBe("write");
+  expect(Reflect.get(adapter, "readEvidenceProvenance")).toBeUndefined();
+  expect(await adapter.verifySourceIfUnchanged({ sourceId: source.id, walletAddress: wallet.toLowerCase(), feedUrl: feed })).toBe(true);
+  expect(await adapter.getSource(source.id)).toMatchObject({ verified: true, active: false, fetchPrice: 0.019, authors: [] });
+  expect(await adapter.verifySourceIfUnchanged({ sourceId: source.id, walletAddress: wallet, feedUrl: "https://changed.test/feed" })).toBe(false);
+  const run: QueryRun = { id: crypto.randomUUID(), question: "Synthetic question", budget: 0.02,
+    engine: "fixture", subClaims: [], decisions: [], citations: [{ marker: "S1", sourceId: source.id,
+      sourceName: source.name, itemId: "demo", weight: 1, reward: 0.003, rationale: "Historical fixture" }],
+    answer: "Historical illustrative fact [S1]", totalSpent: 0.003, totalToCreators: 0.003, trace: [], createdAt: new Date().toISOString() };
+  await adapter.saveQueryRun(run);
+  const readonly = await f.api.createReadonlyEnrolledSqliteAdapter();
+  f.adapters.push(readonly);
+  const before = readFileSync(f.file);
+  expect(() => readonly.verifySourceIfUnchanged({ sourceId: source.id, walletAddress: wallet, feedUrl: feed })).toThrow("mutation refused");
+  const projected = await readonly.getQueryRun(run.id);
+  expect(projected?.citations[0].evidenceProvenance).toBe("synthetic-demo");
+  expect(projected?.answer).toContain("Illustrative demo content");
+  expect(projected?.totalSpent).toBe(run.totalSpent);
+  expect(readFileSync(f.file)).toEqual(before);
+  writeFileSync(f.manifestPath, canonicalJson({ ...f.manifest, identity: { ...f.identity, storageId: crypto.randomUUID() } }));
+  expect(() => adapter.verifySourceIfUnchanged({ sourceId: source.id, walletAddress: wallet, feedUrl: feed })).toThrow();
+  expect(readFileSync(f.file)).toEqual(before);
+});
+
 it("refuses schema drift rather than repairing it and keeps close usable after manifest drift", async () => {
   const f = await fixture();
   const adapter = await f.api.createEnrolledSqliteAdapter();

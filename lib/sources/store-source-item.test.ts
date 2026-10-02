@@ -4,6 +4,7 @@ import { decryptContent } from "../ipfs/content-crypto";
 import type { SourceItem } from "../types";
 import { contentBodyHash, contentBytes } from "./content-receipt";
 import { storeSourceItem } from "./store-source-item";
+import { SEED_SOURCES } from "./seed-data";
 
 const ORIGINAL_PINATA = process.env.PINATA_JWT;
 const ORIGINAL_KEY = process.env.CONTENT_MASTER_KEY;
@@ -26,6 +27,18 @@ afterEach(() => {
 });
 
 describe("shared source-item storage boundary", () => {
+  it("classifies an unmarked exact seed copy from its computed body hash before encryption", async () => {
+    process.env.CONTENT_MASTER_KEY = "67".repeat(32);
+    delete process.env.PINATA_JWT;
+    const seed = SEED_SOURCES[0].items![0];
+    const uploaded = { ...seed, id: "new-copy", sourceId: "new-publication", evidenceProvenance: undefined };
+    const stored = await storeSourceItem(uploaded, { requireEncrypted: true });
+    expect(stored.evidenceProvenance).toBe("synthetic-demo");
+    expect(stored.storageMode).toBe("db_encrypted");
+    const different = await storeSourceItem({ ...uploaded, content: `${seed.content} New independently authored body.` }, { requireEncrypted: true });
+    expect(different.evidenceProvenance).toBeUndefined();
+    expect(different.bodyHash).not.toBe(stored.bodyHash);
+  });
   it("pins ciphertext, clears DB plaintext, and records a decryptable v2 envelope", async () => {
     process.env.PINATA_JWT = "test-token";
     process.env.CONTENT_MASTER_KEY = "67".repeat(32);

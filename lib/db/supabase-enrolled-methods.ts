@@ -6,6 +6,7 @@ export const SUPABASE_ENROLLED_METHODS = Object.freeze({
   iterateRecentQueries: "read",
   init: "read",
   upsertSource: "write",
+  verifySourceIfUnchanged: "write",
   listPublicReferences: "read",
   getPublicReference: "read",
   upsertPublicReference: "write",

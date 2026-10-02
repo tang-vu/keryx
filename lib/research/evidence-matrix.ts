@@ -4,7 +4,7 @@ export type EvidenceMatrixInput = Pick<QueryRun, "subClaims" | "citations" | "ev
 export interface EvidenceMatrixRow {
   claimIndex: number;
   claim: string;
-  status: "Recorded excerpt" | "No inspectable excerpt recorded" | "Evidence ledger unavailable";
+  status: "Illustrative demo excerpt" | "Recorded excerpt" | "No inspectable excerpt recorded" | "Evidence ledger unavailable";
   evidence: EvidenceRecord[];
 }
 
@@ -27,12 +27,12 @@ export function buildEvidenceMatrix(run: EvidenceMatrixInput): EvidenceMatrixRow
   }
   return [...claims].sort(([a], [b]) => a - b).map(([claimIndex, claim]) => {
     const evidence = (run.evidence ?? []).filter((item) =>
-      item.claimIndex === claimIndex && item.claim === claim && (item.qualifiesForAnswer ?? item.qualifiesForReward) &&
+      item.claimIndex === claimIndex && item.claim === claim && ((item.qualifiesForAnswer ?? item.qualifiesForReward) || item.evidenceProvenance === "synthetic-demo") &&
       item.quote.trim().length > 0 && item.quote.length <= 240 &&
       run.citations.some((citation) => citation.marker === item.marker && citation.sourceId === item.sourceId &&
         citation.itemId === item.itemId && citation.contentVersion === item.contentVersion),
     );
-    return { claimIndex, claim, evidence, status: evidence.length ? "Recorded excerpt" :
+    return { claimIndex, claim, evidence, status: evidence.length ? evidence.every(item => item.evidenceProvenance === "synthetic-demo") ? "Illustrative demo excerpt" : "Recorded excerpt" :
       run.evidence === undefined ? "Evidence ledger unavailable" : "No inspectable excerpt recorded" };
   });
 }
@@ -46,12 +46,12 @@ export function evidenceCsvCell(value: string | number): string {
 
 export function evidenceMatrixCsv(run: EvidenceMatrixInput): string {
   const rows: (string | number)[][] = [["claim_index", "claim", "inspection_status", "source_marker", "source_id",
-    "publication", "article_title", "article_url", "published_at", "item_id", "content_version", "exact_excerpt"]];
+    "publication", "article_title", "article_url", "published_at", "item_id", "content_version", "exact_excerpt", "evidence_provenance"]];
   for (const row of buildEvidenceMatrix(run)) {
-    if (!row.evidence.length) rows.push([row.claimIndex, row.claim, row.status, "", "", "", "", "", "", "", "", ""]);
+    if (!row.evidence.length) rows.push([row.claimIndex, row.claim, row.status, "", "", "", "", "", "", "", "", "", ""]);
     for (const item of row.evidence) rows.push([row.claimIndex, row.claim, row.status, item.marker, item.sourceId,
       item.sourceName, item.itemTitle ?? "Not recorded", item.itemUrl ?? "Not recorded",
-      item.itemPublishedAt ?? "Not recorded", item.itemId ?? "Not recorded", item.contentVersion ?? "Not recorded", item.quote]);
+      item.itemPublishedAt ?? "Not recorded", item.itemId ?? "Not recorded", item.contentVersion ?? "Not recorded", item.quote, item.evidenceProvenance === "synthetic-demo" ? "Synthetic demo; illustrative only, not factual evidence" : "Not classified as synthetic"]);
   }
   return rows.map((row) => row.map(evidenceCsvCell).join(",")).join("\r\n") + "\r\n";
 }

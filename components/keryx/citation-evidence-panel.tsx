@@ -108,6 +108,7 @@ export function CitationEvidencePanel({ queryId, citation, evidence, payments, o
         </h2>
         <p className="mt-2 font-mono text-xs text-ink-3">Publication: {citation.sourceName}</p>
         {citation.scholarly ? <ScholarlyMetadataDetails metadata={citation.scholarly} /> : <p className="mt-1 font-mono text-xs text-ink-3">Author name: not stored in this dispatch</p>}
+        {citation.evidenceProvenance === "synthetic-demo" && <p className="mt-4 border-l-2 border-seal pl-4 text-sm text-seal">Synthetic demo content. Measurements and excerpts are illustrative, not factual evidence. Any real settled payments remain recorded below.</p>}
         {isPublicReference && (
           <div className="mt-4 border-l-2 border-line pl-4">
             <p className="font-mono text-xs text-ink-3">Free public reference · no creator payment</p>
