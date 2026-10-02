@@ -6,7 +6,7 @@
 
 import { configuredRegistryAddress } from "./arc-network-profile";
 import { browserPaymentProfile } from "./browser-payment-profile";
-import { assertPaymentRuntimeConfiguration } from "./payment-runtime-config";
+import { assertPaymentRuntimeConfiguration, paymentAuthorizationLifetime } from "./payment-runtime-config";
 
 /** Reject network contract overrides until a separately reviewed network profile exists. */
 export function assertArcConfiguration(env: {
@@ -20,6 +20,7 @@ export function assertArcConfiguration(env: {
   KERYX_REGISTRY_READ_ADDRESS?: string;
   NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS?: string;
   KERYX_FORCE_OFFLINE?: string;
+  KERYX_MAX_TIMEOUT_SECONDS?: string;
 }): void {
   const profile = assertPaymentRuntimeConfiguration(env);
   configuredRegistryAddress(profile, env.KERYX_REGISTRY_ADDRESS, env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS);
@@ -42,6 +43,7 @@ if (typeof process !== "undefined" && process.release?.name === "node") assertAr
   KERYX_REGISTRY_READ_ADDRESS: process.env.KERYX_REGISTRY_READ_ADDRESS,
   NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS: process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS,
   KERYX_FORCE_OFFLINE: process.env.KERYX_FORCE_OFFLINE,
+  KERYX_MAX_TIMEOUT_SECONDS: process.env.KERYX_MAX_TIMEOUT_SECONDS,
 });
 const profile = browserPaymentProfile();
 
@@ -78,7 +80,7 @@ export const config = {
   // retains margin above the floor. Keryx independently bounds local payment signing to its
   // reviewed seven-to-eight-day policy, with a small validation skew allowance. Historical
   // upstream acceptance of longer windows does not authorize a longer Keryx signing lifetime.
-  maxTimeoutSeconds: Math.round(num(process.env.KERYX_MAX_TIMEOUT_SECONDS, 691200)),
+  maxTimeoutSeconds: paymentAuthorizationLifetime(profile, process.env.KERYX_MAX_TIMEOUT_SECONDS),
   // Gateway spend-wallet top-up. Circle's facilitator won't settle against tiny balances, so the
   // agent keeps a healthy reusable Gateway balance and tops up when it drops below the threshold.
   gatewayDepositUsdc: process.env.KERYX_GATEWAY_DEPOSIT ?? "1",

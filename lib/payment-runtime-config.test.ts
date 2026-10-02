@@ -9,4 +9,5 @@ it("pins payment-only mainnet callers without requiring a content registry", () 
   expect(assertPaymentRuntimeConfiguration({})).toBe(ARC_TESTNET_PROFILE);
   expect(() => assertPaymentRuntimeConfiguration({KERYX_NETWORK:"arc"})).toThrow("must match");
   expect(() => assertPaymentRuntimeConfiguration({KERYX_NETWORK:"arc",NEXT_PUBLIC_KERYX_NETWORK:"arc",KERYX_GATEWAY_WALLET:ARC_TESTNET_PROFILE.gatewayWallet})).toThrow("must match");
+  expect(() => assertPaymentRuntimeConfiguration({KERYX_NETWORK:"arc",NEXT_PUBLIC_KERYX_NETWORK:"arc",KERYX_MAX_TIMEOUT_SECONDS:"999999999"})).toThrow("lifetime");
 });
