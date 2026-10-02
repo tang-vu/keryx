@@ -52,11 +52,15 @@ export const ENROLLED_SQLITE_METHOD_ACCESS = Object.freeze({
   finishSourceUpkeep: "write",
   setSyncState: "write",
   upsertSessionGrant: "write",
+  issueSessionGrantConsent: "write",
+  consumeSessionGrantConsent: "write",
+  getSessionGrantConsent: "read",
   getSessionGrant: "read",
   addSessionGrantSpend: "write",
   admitBrowserAuthorization: "write",
   browserJournalActive: "read",
   browserSignerConfirmedSpendMicro: "read",
+  browserSignerRetainedSpendMicro: "read",
   activateBrowserJournal: "write",
   admitBrowserJournal: "write",
   getPaperState: "read",
@@ -193,7 +197,7 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
       throw new Error("Enrolled SQLite deployment changed");
   };
   const connection = openVerifiedSqliteStorage(deployment.backend.databasePath, deployment.identity,
-    { readOnly, runtimeGuard, applicationProfiles: supportedSqliteApplicationProfiles() });
+    { readOnly, runtimeGuard, applicationProfiles: supportedSqliteApplicationProfiles(deployment.identity.authorityMode === "mainnet-real") });
   try {
     const db = connection.db;
     const assert = () => {

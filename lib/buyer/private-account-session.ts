@@ -4,6 +4,7 @@ import { canonicalTime, parseDatedAuthChallenge, PRIVATE_LOGIN_TTL_MS } from "..
 import { BUYER_ORIGIN, addressSchema } from "./protocol";
 import { buyerFetch, type BuyerFetch } from "./transport";
 import { readBoundedJson } from "../read-bounded-json";
+import { paymentRuntimeConfig } from "../payment-runtime-config";
 
 type SignInAccount = { address: string; signMessage: (input: { message: string }) => Promise<string> };
 
@@ -13,6 +14,7 @@ type SignInAccount = { address: string; signMessage: (input: { message: string }
 export async function withPrivateBuyerSession<T>(account: SignInAccount, operation: (cookie: string) => Promise<T>,
   http: BuyerFetch = buyerFetch) {
   const address = addressSchema.parse(account.address);
+  const profile = paymentRuntimeConfig().profile;
   const sign = account.signMessage.bind(account);
   let cookie: string | undefined;
   try {
@@ -20,7 +22,7 @@ export async function withPrivateBuyerSession<T>(account: SignInAccount, operati
     if (challenge.status !== 200) { await challenge.body?.cancel(); throw new Error(); }
     const { nonce, issuedAt } = parseDatedAuthChallenge(await readBoundedJson(challenge, 4096));
     const message = new SiweMessage({ domain: "keryx.cc", address, statement: "Sign in to Keryx. Citations are currency.", uri: BUYER_ORIGIN,
-      version: "1", chainId: 5042002, nonce, issuedAt,
+      version: "1", chainId: profile.chainId, nonce, issuedAt,
       expirationTime: new Date(canonicalTime(issuedAt) + PRIVATE_LOGIN_TTL_MS).toISOString() }).prepareMessage();
     const signature = await sign({ message });
     const auth = await http(`${BUYER_ORIGIN}/api/auth/verify`, { method: "POST", redirect: "error", cache: "no-store",

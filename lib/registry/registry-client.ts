@@ -28,7 +28,7 @@ import {
   type Hex,
   type Address,
 } from "viem";
-import { arcTestnet } from "../chains";
+import { chainForProfile } from "../chains";
 import { attestedArcAuthorityHttp } from "../arc-rpc-attestation";
 import { config } from "../config";
 
@@ -67,8 +67,8 @@ export function sourceId(creator: Address, url: string): Hex {
 
 function getPublicClient(timeoutMs?: number) {
   return createPublicClient({
-    chain: arcTestnet,
-    transport: attestedArcAuthorityHttp(config.rpcUrl, timeoutMs ? { timeout: timeoutMs, retryCount: 0 } : undefined),
+    chain: chainForProfile(config.profile),
+    transport: attestedArcAuthorityHttp(config.rpcUrl, timeoutMs ? { timeout: timeoutMs, retryCount: 0 } : undefined, config.profile),
   });
 }
 

@@ -31,6 +31,12 @@ const GAS_TOPUP = parseEther("0.05"); // native USDC for gas (18 decimals on Arc
 const GAS_MIN = parseEther("0.01");
 const STORE = path.resolve(process.cwd(), "data", "spend-wallet.json");
 
+/** The application storage cutover does not activate the separate treasury/funding custody domain. */
+function loadSpendKey(): `0x${string}` {
+  if (config.profile.name === "arc") throw new Error("Mainnet treasury authority requires reviewed funding and custody admission");
+  return loadPersistentTreasuryWallet(STORE).privateKey;
+}
+
 function exactMicroUsdc(value: number, message: string): bigint {
   const decimal = Number.isFinite(value) && value >= 0
     ? /^(0|[1-9][0-9]*)(?:\.([0-9]{1,6}))?$/.exec(String(value)) : null;
@@ -48,7 +54,7 @@ export class TreasuryGatewayCreditUnknownError extends Error {
 }
 
 export class RealGateway extends ServerPaymentGateway {
-  private spendKey = loadPersistentTreasuryWallet(STORE).privateKey;
+  private spendKey = loadSpendKey();
   protected spend = privateKeyToAccount(this.spendKey);
   protected batchScheme: BatchPayloadSigner = createPinnedArcBatchSigner(this.spend, config.rpcUrl);
   private funder = privateKeyToAccount(config.funderKey as `0x${string}`);

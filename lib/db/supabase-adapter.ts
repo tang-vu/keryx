@@ -208,7 +208,7 @@ export class SupabaseAdapter implements KeryxDB {
     if (this.#enrolled) {
       await this.#enrolled.authority.init();
       const identity = this.#enrolled.deployment.identity;
-      if (identity.authorityMode === "testnet-real" && !hasContentKey()) refuseStorage("cache_migration_required");
+      if (identity.authorityMode !== "testnet-offline" && !hasContentKey()) refuseStorage("cache_migration_required");
       const { data, error } = await this.#enrolled.authority.initializationRpc("inspect_runtime_readiness", {});
       if (error || !data || data.format !== "keryx-enrolled-runtime-readiness-v1" || data.ready !== true) refuseStorage("adapter_not_initialized");
       if (!/^[0-9a-f]{64}$/.test(SUPABASE_RUNTIME_CONTRACT.afterDigest) ||
@@ -770,7 +770,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async getCached(sourceId: string): Promise<string | null> {
-    if (this.#enrolled?.deployment.identity.authorityMode === "testnet-real" && !hasContentKey()) refuseStorage("cache_key_unavailable");
+    if (this.#enrolled && this.#enrolled.deployment.identity.authorityMode !== "testnet-offline" && !hasContentKey()) refuseStorage("cache_key_unavailable");
     const { data } = await this.domainCall("get_cached", { p_source_id: sourceId }, (_args) => this.#sb
       .from("cache_items")
       .select("text")
@@ -1426,6 +1426,19 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   // ── session grants ──
+
+  async issueSessionGrantConsent(_consent: import("../payments/session-grant-consent").SessionGrantConsent): Promise<void> {
+    throw new Error("Native PostgreSQL owner-consent migration is not admitted");
+  }
+  async browserSignerRetainedSpendMicro(_signer: string): Promise<number> {
+    throw new Error("Native PostgreSQL owner-consent migration is not admitted");
+  }
+  async consumeSessionGrantConsent(_consent: import("../payments/session-grant-consent").SessionGrantConsent, _signature: string, _sessionSignature: string): Promise<void> {
+    throw new Error("Native PostgreSQL owner-consent migration is not admitted");
+  }
+  async getSessionGrantConsent(_owner: string, _epoch: string): Promise<import("./session-grant-consents").SessionGrantConsentRecord | null> {
+    throw new Error("Native PostgreSQL owner-consent migration is not admitted");
+  }
 
   async upsertSessionGrant(grant: Omit<SessionGrantRecord, "spent">): Promise<void> {
     const row = {

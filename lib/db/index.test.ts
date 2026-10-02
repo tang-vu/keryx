@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ selector: vi.fn(), sqlite: vi.fn(), supabase: vi.fn() }));
-vi.mock("../config", () => ({ hasSupabase: mocks.selector }));
+vi.mock("../config", async () => ({ hasSupabase: mocks.selector,
+  config: { profile: (await import("../arc-network-profile")).ARC_TESTNET_PROFILE } }));
 vi.mock("./sqlite-adapter", () => ({ SqliteAdapter: mocks.sqlite }));
 vi.mock("./supabase-adapter", () => ({ SupabaseAdapter: mocks.supabase }));
+vi.mock("./application-storage", () => ({ createApplicationStorage: async () => undefined }));
 
 function deferred() {
   let resolve!: () => void;

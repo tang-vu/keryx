@@ -1,4 +1,5 @@
 import { verifyBrowserSigningHeader } from "../payments/browser-signing-original";
+import { ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
 import type { DatabaseSync } from "node:sqlite";
 import type { SessionGrantRecord } from "./keryx-db";
 import {
@@ -97,7 +98,7 @@ function micro(value: number): number {
   return result;
 }
 
-export function activateSqliteBrowserJournal(db: DatabaseSync): void {
+export function activateSqliteBrowserJournal(db: DatabaseSync, profile: ArcNetworkProfile = ARC_TESTNET_PROFILE): void {
   sqliteJournalTransaction(db, () => {
     if (sqliteJournalActive(db)) return;
     const epochs = new Map<
@@ -125,7 +126,7 @@ export function activateSqliteBrowserJournal(db: DatabaseSync): void {
       )
       .all()) {
       if (
-        p.network !== "eip155:5042002" ||
+        p.network !== profile.networkId ||
         !/^0x[0-9a-f]{40}$/i.test(String(p.payer))
       )
         throw new BrowserGrantRecoveryRefused();
@@ -170,9 +171,11 @@ export function activateSqliteBrowserJournal(db: DatabaseSync): void {
 
 export function upsertSqliteJournalGrant(
   db: DatabaseSync,
-  grant: Omit<SessionGrantRecord, "spent">
+  grant: Omit<SessionGrantRecord, "spent">,
+  before?: () => void
 ): void {
   sqliteJournalTransaction(db, () => {
+    before?.();
     const signer = grant.sessAddr.toLowerCase(),
       cap = micro(grant.cap);
     const spent = Number(
@@ -238,6 +241,7 @@ export function getSqliteBrowserJournal(
     phase: row.authorization_phase as BrowserAuthorizationJournal["phase"],
     requirements: JSON.parse(String(row.requirements)),
     payment,
+    ...(row.payment_context ? { paymentContext: JSON.parse(String(row.payment_context)) } : {}),
     signedValidAfter: row.valid_after as string | undefined,
     signedValidBefore: row.valid_before as string | undefined,
     signedHeaderHash: row.header_hash as string | undefined,
@@ -247,14 +251,19 @@ export function getSqliteBrowserJournal(
 export function admitSqliteBrowserJournal(
   db: DatabaseSync,
   input: BrowserJournalAdmission,
-  hooks?: { before(): void; after(journal: BrowserAuthorizationJournal): void; cleanup(): void }
+  hooks?: { before(): void; after(journal: BrowserAuthorizationJournal): void; cleanup(): void },
+  profile: ArcNetworkProfile = ARC_TESTNET_PROFILE
 ): BrowserJournalAdmissionResult {
-  const j = prepareBrowserJournal(input);
+  const j = prepareBrowserJournal(input, profile);
   return sqliteJournalTransaction(db, () => {
     if (!sqliteJournalActive(db)) return { status: "inactive" };
     hooks?.before();
     try {
       const result = admitSqliteBrowserJournalInTransaction(db, input, j);
+      if (result.status === "admitted" && j.paymentContext) {
+        db.prepare("UPDATE browser_journal_bindings SET payment_context=? WHERE nonce=?")
+          .run(JSON.stringify(j.paymentContext), j.nonce);
+      }
       if (result.status === "admitted") hooks?.after(result.journal);
       return result;
     } finally { hooks?.cleanup(); }

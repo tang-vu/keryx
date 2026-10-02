@@ -1,11 +1,14 @@
 import { z } from "zod";
 import { AskQuestionSchema } from "../ask-input";
+import { browserPaymentProfile } from "../browser-payment-profile";
+import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
 
 export const BUYER_ORIGIN = "https://keryx.cc";
 export const BUYER_ENDPOINT = `${BUYER_ORIGIN}/api/agent/ask`;
-export const BUYER_NETWORK = "eip155:5042002";
-export const BUYER_USDC = "0x3600000000000000000000000000000000000000";
-export const BUYER_GATEWAY = "0x0077777d7EBA4688BDeF3E311b846F25870A19B9";
+export const BUYER_PROFILE = browserPaymentProfile();
+export const BUYER_NETWORK = BUYER_PROFILE.networkId;
+export const BUYER_USDC = BUYER_PROFILE.usdcAddress;
+export const BUYER_GATEWAY = BUYER_PROFILE.gatewayWallet;
 export class BuyerRefusal extends Error {}
 export const addressSchema = z.string().regex(/^0x[a-fA-F0-9]{40}$/).refine((v) => !/^0x0{40}$/.test(v));
 const atomic = z.string().regex(/^[1-9]\d{0,6}$/);
@@ -17,16 +20,20 @@ export const buyerRequestSchema = z.object({
   responseMode: z.literal("async"),
 }).strict();
 export type BuyerRequest = z.infer<typeof buyerRequestSchema>;
-export const requirementSchema = z.object({
-  scheme: z.literal("exact"), network: z.literal(BUYER_NETWORK),
-  asset: addressSchema.refine((v) => v.toLowerCase() === BUYER_USDC.toLowerCase()),
+export function buyerRequirementSchemaForProfile(profile: ArcNetworkProfile) {
+  if (profile !== ARC_MAINNET_PROFILE && profile !== ARC_TESTNET_PROFILE) throw new Error("Unknown buyer profile");
+  return z.object({
+  scheme: z.literal("exact"), network: z.literal(profile.networkId),
+  asset: addressSchema.refine((v) => v.toLowerCase() === profile.usdcAddress.toLowerCase()),
   amount: atomic, payTo: addressSchema,
   maxTimeoutSeconds: z.number().int().min(604860).max(691200),
   extra: z.object({
     name: z.literal("GatewayWalletBatched"), version: z.literal("1"),
-    verifyingContract: addressSchema.refine((v) => v.toLowerCase() === BUYER_GATEWAY.toLowerCase()),
+    verifyingContract: addressSchema.refine((v) => v.toLowerCase() === profile.gatewayWallet.toLowerCase()),
   }).strict(),
 }).strict();
+}
+export const requirementSchema = buyerRequirementSchemaForProfile(BUYER_PROFILE);
 export type BuyerRequirement = z.infer<typeof requirementSchema>;
 
 export function decodeHeader(value: string | null): unknown {
@@ -39,7 +46,7 @@ export function chooseRequirement(header: string | null, request: BuyerRequest, 
   request = buyerRequestSchema.parse(request);
   addressSchema.parse(payee);
   const limit = BigInt(atomic.parse(maxTotalMicros));
-  if (limit > BigInt(1_000_000)) throw new Error("Buyer limit is at most 1 testnet USDC per job");
+  if (limit > BigInt(1_000_000)) throw new Error("Buyer limit is at most 1 USDC per job");
   const challenge = z.object({
     x402Version: z.literal(2), resource: z.object({ url: z.string() }),
     accepts: z.array(z.unknown()).min(1).max(16),
@@ -62,13 +69,15 @@ export const authorizationSchema = z.object({
 export type BuyerAuthorization = z.infer<typeof authorizationSchema>;
 
 /** Structural envelope only. Each runtime must also recompute and check the job ID. */
-export const buyerIntentEnvelopeSchema = z.object({
+export function buyerIntentEnvelopeSchemaForProfile(profile: ArcNetworkProfile) { return z.object({
   schema: z.literal("keryx-buyer-intent-v1"),
   request: buyerRequestSchema,
-  requirement: requirementSchema,
+  requirement: buyerRequirementSchemaForProfile(profile),
   authorization: authorizationSchema,
   queryId: z.string(),
 }).strict();
+}
+export const buyerIntentEnvelopeSchema = buyerIntentEnvelopeSchemaForProfile(BUYER_PROFILE);
 export type BuyerIntentEnvelope = z.infer<typeof buyerIntentEnvelopeSchema>;
 
 export function authorizationWithNonce(payer: string, requirement: BuyerRequirement, nonce: string, now = Date.now()): BuyerAuthorization {
@@ -82,10 +91,10 @@ export function authorizationWithNonce(payer: string, requirement: BuyerRequirem
   });
 }
 
-/** Mirrors Circle batching's EIP-3009 domain, pinned to Arc testnet by policy. */
+/** Mirrors Circle batching's EIP-3009 domain, pinned independently of the received challenge. */
 export function buyerTypedData(a: BuyerAuthorization) {
   return {
-    domain: { name: "GatewayWalletBatched", version: "1", chainId: 5042002, verifyingContract: BUYER_GATEWAY as `0x${string}` },
+    domain: { name: "GatewayWalletBatched", version: "1", chainId: BUYER_PROFILE.chainId, verifyingContract: BUYER_GATEWAY as `0x${string}` },
     types: { TransferWithAuthorization: [
       { name: "from", type: "address" }, { name: "to", type: "address" },
       { name: "value", type: "uint256" }, { name: "validAfter", type: "uint256" },

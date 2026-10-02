@@ -343,6 +343,9 @@ export interface KeryxDB {
   /** Create or replace the active grant. Journal mode retains cumulative signer spend
    *  and original epochs; pre-cutover legacy writers retain their historical behavior. */
   upsertSessionGrant(grant: Omit<SessionGrantRecord, "spent">): Promise<void>;
+  issueSessionGrantConsent(consent: import("../payments/session-grant-consent").SessionGrantConsent): Promise<void>;
+  consumeSessionGrantConsent(consent: import("../payments/session-grant-consent").SessionGrantConsent, signature: string, sessionSignature: string): Promise<void>;
+  getSessionGrantConsent(owner: string, epoch: string): Promise<import("./session-grant-consents").SessionGrantConsentRecord | null>;
   /** Fetch a grant. Returns null when absent; expiry is the caller's to interpret. */
   getSessionGrant(sessionId: string): Promise<SessionGrantRecord | null>;
   /** Atomically reserve only against the captured grant generation and session signer. */
@@ -357,6 +360,7 @@ export interface KeryxDB {
   readBrowserSigningSnapshot(owner:string,sessionId:string,requestId:string):Promise<import("./browser-signing-originals").BrowserSigningSnapshot|null>;
   signBrowserSigningOriginal(sessionId:string,requestId:string,header:string):Promise<boolean>;
   browserSignerConfirmedSpendMicro(signer:string): Promise<number>;
+  browserSignerRetainedSpendMicro(signer:string): Promise<number>;
   activateBrowserJournal(): Promise<void>;
   admitBrowserJournal(input: import("./browser-authorization-journal").BrowserJournalAdmission): Promise<import("./browser-authorization-journal").BrowserJournalAdmissionResult>;
   getBrowserJournal(sessionId: string, requestId: string): Promise<import("./browser-authorization-journal").BrowserAuthorizationJournal | null>;

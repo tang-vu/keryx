@@ -24,10 +24,12 @@ function canonicalEvidence(value: unknown): string {
   return refuseStorage("review_required");
 }
 /** Child-only native work: public callers use the killable provision wrapper, never this helper. */
-export function provisionStorageInChild(request: StorageProvisionRequest): StorageEnrollmentInspection | StorageProvisionReceipt {
+export async function provisionStorageInChild(request: StorageProvisionRequest): Promise<StorageEnrollmentInspection | StorageProvisionReceipt> {
   const identity = validateStorageIdentity(request.identity), digest = storageIdentityDigest(identity);
   let createdDescriptor: number | undefined;
   if (!["inspect", "create", "enroll"].includes(request.mode)) refuseStorage("invalid_operation");
+  // The mainnet namespace starts empty. An existing testnet store is never adopted or relabelled.
+  if (identity.authorityMode === "mainnet-real" && request.mode === "enroll") refuseStorage("mainnet_fresh_storage_required");
   if (request.mode === "create") {
     assertStorageCreationParent(request.file);
     createdDescriptor = openSync(request.file, constants.O_CREAT | constants.O_EXCL | constants.O_RDWR | (constants.O_NOFOLLOW ?? 0), 0o600);
@@ -86,6 +88,9 @@ export function provisionStorageInChild(request: StorageProvisionRequest): Stora
       if (canonicalEvidence(reviewed.inspection) !== canonicalEvidence(inspection)) refuseStorage("snapshot_changed");
     }
     registerStorageCapability(db, identity, () => true);
+    if (identity.authorityMode === "mainnet-real") {
+      (await import("./mainnet-application-schema")).installMainnetApplicationSchema(db);
+    }
     insertStorageIdentity(db, identity);
     installStorageFences(db, identity);
     assertStorageFences(db, identity);
