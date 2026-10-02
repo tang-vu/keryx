@@ -107,7 +107,7 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
     assert.equal(snapshot(), before);
     // Actual enrollment and migration guard in different PostgreSQL sessions.
     // Refresh waits for publication, then refuses without changing its snapshot.
-    const concurrentOwnerSql = (statement: string) => {
+    const concurrentOwnerSql = (statement: string, hold = false) => {
       const child = execFile("docker", ["exec", "-i", postgresContainer, "psql", "-U", "postgres",
         "--dbname", database, "-v", "ON_ERROR_STOP=1", "-q", "-t", "-A"],
       { encoding: "utf8", timeout: 20_000, maxBuffer: 12 * 1024 * 1024 });
@@ -118,16 +118,17 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
         child.on("error", () => resolve({ ok: false, output, diagnostic: "owner-process-error" }));
         child.on("close", code => resolve({ ok: code === 0, output: output.trim(), diagnostic }));
       });
-      child.stdin?.end(`set statement_timeout='15s';${statement}`);
+      child.stdin?.write(`set statement_timeout='15s';${statement}\n`);
+      if (!hold) child.stdin?.end();
       return { child, result };
     };
     const enrollment = concurrentOwnerSql(`begin;set local application_name='keryx-revoke-enrollment';
       select keryx_storage.enroll(${literal(identity)},'${before}');
-      select keryx_storage.snapshot_digest();select pg_sleep(3);commit;`);
+      select keryx_storage.snapshot_digest();`, true);
     let refresh: ReturnType<typeof concurrentOwnerSql> | undefined;
     try {
       const deadline = performance.now() + 10_000;
-      while (sql("select exists(select 1 from pg_stat_activity where datname=current_database() and application_name='keryx-revoke-enrollment' and wait_event='PgSleep')") !== "t") {
+      while (sql("select exists(select 1 from pg_stat_activity where datname=current_database() and application_name='keryx-revoke-enrollment' and state='idle in transaction')") !== "t") {
         assert(performance.now() < deadline, "Actual enrollment reached its precommit boundary");
         await new Promise(resolve => setTimeout(resolve, 50));
       }
@@ -138,6 +139,9 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
         assert(performance.now() < deadline, "Source refresher waits on enrollment's canonical first mutex");
         await new Promise(resolve => setTimeout(resolve, 50));
       }
+      // Explicit release only after the contender is proven blocked. No timing
+      // window depends on a sleep long enough for a loaded CI runner.
+      enrollment.child.stdin?.end("commit;\n");
       const enrolledResult = await enrollment.result;
       assert(enrolledResult.ok, "Actual concurrent owner enrollment succeeded");
       assert.match(enrolledResult.output, /^[0-9a-f]{64}$/);
