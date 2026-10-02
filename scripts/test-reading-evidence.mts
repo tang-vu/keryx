@@ -47,7 +47,9 @@ createRoot(document.getElementById('root')).render(<App/>);
   format: "iife",
   jsx: "automatic",
   write: false,
-  define: { "process.env.NODE_ENV": '"development"', "process.env.NEXT_PUBLIC_KERYX_SETTLEMENT_WALLET": '""' },
+  define: { "process.env.NODE_ENV": '"development"', "process.env.NEXT_PUBLIC_KERYX_SETTLEMENT_WALLET": '""',
+    "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined",
+    "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" },
   plugins: [{ name: "alias", setup(api) {
     api.onResolve({ filter: /^@\// }, ({ path: importPath }) => {
       const target = path.join(process.cwd(), importPath.slice(2));
@@ -69,6 +71,7 @@ try {
   await page.goto("https://reading.invalid");
   await page.addStyleTag({ content: stylesheet });
   await page.addScriptTag({ content: bundle.outputFiles[0].text });
+  assert.deepEqual(errors, [], "Reading fixture must boot with its compiled historical testnet profile");
   const citation = page.getByRole("button", { name: /Open evidence for The article/ }).first();
   await citation.waitFor();
   const citationElement = await citation.elementHandle();
