@@ -96,7 +96,7 @@ it("fails closed on invalid configuration or public/private merchant collision",
 it("keeps public merchant quotes and confirmed delivery operational", async () => {
   expect(challengeResponse(opts).status).toBe(402);
   verify.mockResolvedValue({ isValid: true, payer: account.address });
-  settle.mockResolvedValue({ success: true, payer: account.address, transaction: "synthetic-reference" });
+  settle.mockResolvedValue({ success: true, payer: account.address, transaction: "synthetic-reference", network: BUYER_NETWORK });
   const publicAuthorization = { ...authorization, to: opts.payTo };
   const publicSignature = await account.signTypedData(buyerTypedData(publicAuthorization));
   expect((await settleThenServe(request({ authorization: publicAuthorization, signature: publicSignature }), opts, () => ({ delivered: true }))).status).toBe(200);
