@@ -5,6 +5,12 @@ surfaces. This supersedes the invited-pilot release proposal. The default deploy
 remains Arc testnet; preparing or selecting a profile does not authorize a production
 cutover, funding, or spending.
 
+The actual public deployment uses SQLite. Its full ordinary mainnet release targets
+a fresh sealed SQLite namespace while retaining legacy testnet custody and history
+separately. Supabase mainnet is an optional staged backend, explicitly closed until
+independent source-generated native PostgreSQL acceptance; it is not a gate on the
+ordinary SQLite public release.
+
 ## Application storage boundary
 
 The normal `getDb()` selector calls `lib/db/application-storage.ts`. Matched server and
@@ -56,6 +62,10 @@ contains `availableMicroUsdc`, `confirmedSpentMicroUsdc`, `retainedSpentMicroUsd
 includes pending/unknown holds; those are never credited as confirmed or released by
 renewal. Accounting must remain stable across the balance read. Expiry is limited to the configured
 TTL (at most 86,400 seconds). Its issued challenge expires after 90 seconds.
+The authenticated challenge route admits at most six requests per actor per minute
+through the existing durable rate limiter before any Circle lookup or issued epoch.
+Unavailable limiter state refuses; this operational abuse bound adds no pilot list
+or funding/spending authority.
 `POST /api/session/grant` accepts `{consent,signature,sessionSignature}`: the owner's
 public delegation and a separate exact-grant public proof of session-key possession.
 Both proofs are verified before one atomic consumption/upsert. Another owner cannot
@@ -128,6 +138,45 @@ the legacy persistent wallet or constructing signers. Completing normal treasury
 private, A2A and hosted sponsor roles still requires reviewed mainnet custody and
 funding admission; this temporary refusal is not the final full-surface deliverable.
 Paid-content cache encryption is required for mainnet independently of a treasury key.
+
+## Session cashout and original outcomes
+
+The normal SQLite session endpoints are `POST /api/session/withdraw/prepare`
+with `{sessAddr,grantEpoch,amountMicros}`, `POST /api/session/withdraw/submit`
+with `{requestId,signature}`, and `GET /api/session/withdraw/{requestId}`.
+Preparation verifies the authenticated owner's retained public delegation and
+signer-possession proof independently of the active grant. It reads fresh selected
+chain/Circle fee and finite height terms and preserves an immutable original burn.
+The prepared balance binds available funds, confirmed lifetime debits, held payment
+liabilities, held withdrawals and exact fee. One `BEGIN IMMEDIATE` checks all those
+native counters before committing the withdrawal barrier and pausing grants.
+An admission and settlement between the quote and transaction therefore refuses.
+
+The signed request, one transfer claim and matched attestation use the existing
+`creator_withdrawal_*` journal. Repeated requests recover the original salt, fee,
+network and request ID. Response loss, expiry, revocation or missing search evidence
+cannot permit another burn or release unknown liabilities. Authenticated
+`GET /api/session/withdraw/payments?sessAddr={signer}&grantEpoch={epoch}` exposes
+bounded original liability pages with optional `afterNonce` and `retryAuthorized:false`;
+it cannot resubmit those authorizations.
+
+The owner wallet reviews and submits the exact selected mainnet mint calldata and
+its own gas. `POST /api/session/withdraw/complete` accepts only
+`{requestId,transactionHash}`. The server reads the actual signed owner transaction,
+matches the original attestation, mint recipient, value, event and canonical finalized
+receipt through the selected RPC, and retains that exact completion. It never accepts
+a client claim of finality or signs/broadcasts a mint. Completion releases only the
+withdrawal barrier; lifetime payment counters and all unknown payment holds remain.
+The same stable signer can then receive a new explicit owner grant and resume research.
+The worker must independently verify this original outcome before releasing its local
+barrier. Native synthetic handler evidence is not funded vendor acceptance.
+
+Preparing a new withdrawal requires operator-selected integer
+`KERYX_WITHDRAWAL_MAX_FEE_MICROS`, `KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS` and
+`KERYX_WITHDRAWAL_MAX_PROCESSING_LAG_BLOCKS`. These do not initialize a gas relay,
+private key or automatic funding path. Original status remains readable if new
+preparation policy is unavailable. Creator owner-wallet cashout and the admitted
+prefunded hosted treasury adapter remain the next applicable public-role slices.
 
 ## Remaining acceptance
 

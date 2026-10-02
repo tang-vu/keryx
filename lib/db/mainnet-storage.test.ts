@@ -62,6 +62,160 @@ it("uses a fresh native mainnet namespace and atomically retains its own nonce/c
     expect(native.prepare("SELECT spent_micro FROM browser_signer_capacity WHERE signer=?").get(signer)?.spent_micro).toBe(1000);
   } finally { native.close(); }
 }, 30000);
+
+it("recovers expired owner custody through normal withdrawal handlers while preserving unknown holds and one original burn", async () => {
+  const { adapter } = await fixture();
+  const { privateKeyToAccount } = await import("viem/accounts"), { NextRequest, } = await import("next/server");
+  const { pad, toHex, parseTransaction, keccak256, encodeAbiParameters, encodeEventTopics, encodeFunctionData } = await import("viem");
+  const owner = privateKeyToAccount(`0x${"11".repeat(32)}`), session = privateKeyToAccount(`0x${"22".repeat(32)}`);
+  const wallet = owner.address.toLowerCase(), signer = session.address.toLowerCase(), profile = (await import("../config")).config.profile;
+  let authenticatedWallet = wallet, transferCalls = 0, availableBalance = "1", mintTransaction: Record<string, unknown> | null = null,
+    mintReceipt: Record<string, unknown> | null = null, injectedDebit = false;
+  const observedSeconds = Math.floor(Date.now() / 1000), mintHash = `0x${"ab".repeat(32)}`, finalHash = `0x${"cd".repeat(32)}`;
+  let authenticationDb = adapter;
+  vi.doMock("../account-sessions", () => ({ accountSessionContext: async () => ({ db: authenticationDb, wallet: authenticatedWallet }) }));
+  cleanup.push(() => vi.doUnmock("../account-sessions"));
+  vi.stubEnv("KERYX_WITHDRAWAL_MAX_FEE_MICROS", "1000"); vi.stubEnv("KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS", "100");
+  vi.stubEnv("KERYX_WITHDRAWAL_MAX_PROCESSING_LAG_BLOCKS", "10");
+  vi.stubGlobal("fetch", vi.fn(async (url: string | URL | Request, init: RequestInit) => {
+    const target = String(url);
+    if (target.endsWith("/v1/balances")) return Response.json({ token: "USDC", balances: [{ depositor: signer, domain: 26, balance: availableBalance }] });
+    if (target.endsWith("/v1/info")) return Response.json({ domains: [{ domain: 26, chain: "Arc", network: "Mainnet", processedHeight: "10000",
+      burnIntentExpirationHeight: "10010", walletContract: { address: profile.gatewayWallet, supportedTokens: ["USDC"] },
+      minterContract: { address: profile.gatewayMinter, supportedTokens: ["USDC"] } }] });
+    if (target.endsWith("/v1/estimate")) return Response.json([{ burnIntent: { spec: JSON.parse(String(init.body))[0].spec, maxBlockHeight: "10010", maxFee: "1000" } }]);
+    if (target.endsWith("/v1/transfer")) { transferCalls++; throw new Error("Synthetic lost response; private vendor detail"); }
+    if (target === profile.rpcUrl || target === `${profile.rpcUrl}/`) {
+      const rpc = JSON.parse(String(init.body));
+      const tag = rpc.params?.[0];
+      const result = rpc.method === "eth_chainId" ? toHex(profile.chainId) :
+        rpc.method === "eth_getTransactionByHash" ? mintTransaction : rpc.method === "eth_getTransactionReceipt" ? mintReceipt :
+        rpc.method === "eth_getCode" ? "0x60006000" : rpc.method === "eth_call" ? (rpc.params[0].data.length === 74 ? `0x${"0".repeat(63)}1` : "0x") :
+        rpc.method === "eth_getBlockByNumber" ? { number: toHex(mintTransaction ? (tag === "0x2711" ? 10001 : 10002) : 10000),
+          timestamp: toHex(observedSeconds), hash: mintTransaction ? (tag === "0x2711" ? mintHash : finalHash) : `0x${"66".repeat(32)}`,
+          transactions: mintTransaction && tag === "0x2711" ? [mintTransaction.hash] : [] } : undefined;
+      if (result === undefined) throw new Error("Unexpected synthetic RPC");
+      return Response.json({ jsonrpc: "2.0", id: rpc.id, result });
+    }
+    throw new Error("Unexpected synthetic transport");
+  }));
+  const grants = await import("../payments/mainnet-session-grants"), messages = await import("../payments/session-grant-consent");
+  const { consent } = await grants.issueMainnetSessionGrant(adapter, wallet, { sessAddr: signer, budgetMicros: "1000000" });
+  await grants.consumeMainnetSessionGrant(adapter, wallet, { consent,
+    signature: await owner.signMessage({ message: messages.createSessionGrantConsentMessage(consent, profile) }),
+    sessionSignature: await session.signMessage({ message: messages.createSessionGrantSignerProofMessage(consent, profile) }) });
+  const payee = `0x${"33".repeat(20)}`, queryId = randomUUID(), reqId = randomUUID();
+  const paymentInput: BrowserJournalAdmission = { sessionId: wallet, requestId: reqId, queryId, grantEpoch: consent.grantEpoch, signer,
+    network: profile.networkId, token: profile.usdcAddress, gatewayContract: profile.gatewayWallet, sourceId: "synthetic-source",
+    offerId: null, kind: "fetch", payee, amountMicroUsdc: 100000,
+    requirements: { scheme: "exact", network: profile.networkId, asset: profile.usdcAddress, payTo: payee, amount: "100000",
+      maxTimeoutSeconds: 604900, extra: { name: "GatewayWalletBatched", version: "1", verifyingContract: profile.gatewayWallet } },
+    payment: { queryId, sourceId: "synthetic-source", sourceName: "Source", kind: "fetch", payer: signer, payee,
+      amountUsdc: 0.1, network: profile.networkId, grantEpoch: consent.grantEpoch } };
+  const admitted = await adapter.admitBrowserJournal(paymentInput); expect(admitted.status).toBe("admitted");
+  await adapter.exposeBrowserJournal(wallet, reqId);
+  const other = await (await import("./enrolled-sqlite-adapter")).createEnrolledSqliteAdapter(); cleanup.push(() => other.close());
+  const prepare = await import("../../app/api/session/withdraw/prepare/route"), submit = await import("../../app/api/session/withdraw/submit/route");
+  const status = await import("../../app/api/session/withdraw/[requestId]/route"), history = await import("../../app/api/session/withdraw/payments/route");
+  const request = (path: string, body: unknown) => new NextRequest(`https://keryx.cc${path}`, { method: "POST",
+    headers: { Origin: "https://keryx.cc", "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  // Unknown exposed liabilities cannot become withdrawal capacity after revoke.
+  expect((await prepare.POST(request("/api/session/withdraw/prepare", { sessAddr: signer, grantEpoch: consent.grantEpoch, amountMicros: "900000" }))).status).toBe(503);
+  // Quote and final service read complete first. Another native connection then
+  // admits and settles a debit before reserve's BEGIN IMMEDIATE: held is unchanged,
+  // but the captured confirmed counter must refuse the stale available balance.
+  authenticationDb = new Proxy(Object.assign(Object.create(null), adapter) as typeof adapter, { get(target, key) {
+    if (key !== "reserveSessionWithdrawal") return Reflect.get(target, key);
+    return async (packet: Parameters<typeof adapter.reserveSessionWithdrawal>[0]) => {
+      injectedDebit = true;
+      const extra = await other.admitBrowserJournal({ ...paymentInput, requestId: randomUUID(), amountMicroUsdc: 1000,
+        requirements: { ...paymentInput.requirements, amount: "1000" }, payment: { ...paymentInput.payment, amountUsdc: 0.001 } });
+      if (extra.status !== "admitted") throw new Error("Synthetic debit refused");
+      await other.exposeBrowserJournal(wallet, extra.journal.requestId);
+      expect(await other.settlePendingPayment(extra.journal.payment.id!, extra.journal.nonce, "synthetic-confirmed-concurrent-debit")).toBe(true);
+      return target.reserveSessionWithdrawal(packet);
+    };
+  } });
+  expect((await prepare.POST(request("/api/session/withdraw/prepare", { sessAddr: signer, grantEpoch: consent.grantEpoch, amountMicros: "800000" }))).status).toBe(503);
+  expect(injectedDebit).toBe(true); expect(await adapter.pendingSessionWithdrawal(wallet, signer)).toBeNull();
+  expect((await adapter.getSessionGrant(wallet))?.expiry).toBeGreaterThan(Date.now());
+  authenticationDb = adapter; availableBalance = "0.999";
+  await adapter.revokeSessionGrant(wallet, consent.grantEpoch, signer);
+  const prepared = await prepare.POST(request("/api/session/withdraw/prepare", { sessAddr: signer, grantEpoch: consent.grantEpoch, amountMicros: "800000" }));
+  expect(prepared.status).toBe(200); const p = await prepared.json();
+  expect(p).toMatchObject({ ownerAddr: wallet, sessAddr: signer, network: profile.networkId,
+    balance: { heldPaymentMicroUsdc: "100000", maxFeeMicroUsdc: "1000" },
+    burnIntent: { spec: { destinationRecipient: pad(wallet as `0x${string}`, { size: 32 }), value: "800000" } } });
+  // A concurrent connection cannot revive payment permission or replace the burn.
+  const concurrent = await Promise.allSettled([
+    other.upsertSessionGrant({ sessionId: wallet, ownerAddr: wallet, sessAddr: signer, grantEpoch: randomUUID(), cap: 2,
+      expiry: Date.now() + 60000, txHash: "synthetic-no-funds" }),
+    adapter.reserveSessionWithdrawal(p),
+    other.reserveSessionWithdrawal({ ...p, requestId: `0x${"aa".repeat(32)}` }),
+  ]);
+  expect(concurrent.map(result => result.status)).toEqual(["rejected", "fulfilled", "rejected"]);
+  const repeat = await prepare.POST(request("/api/session/withdraw/prepare", { sessAddr: signer, grantEpoch: consent.grantEpoch, amountMicros: "700000" }));
+  expect(await repeat.json()).toEqual(p);
+  const signature = await session.signTypedData((await import("../gateway/withdraw-protocol")).withdrawTypedData(p.burnIntent));
+  const body = { requestId: p.requestId, signature };
+  const sent = await submit.POST(request("/api/session/withdraw/submit", body)); expect(sent.status).toBe(200);
+  expect(await sent.json()).toMatchObject({ preparation: p, progress: { status: "awaiting-transfer-evidence", retryAuthorized: false }, mint: null, completion: null });
+  expect((await submit.POST(request("/api/session/withdraw/submit", body))).status).toBe(200); expect(transferCalls).toBe(1);
+  expect((await adapter.getCreatorWithdrawal(p.requestId, signer))?.request.burnIntent).toEqual(p.burnIntent);
+  const liabilities = await history.GET(new NextRequest(`https://keryx.cc/api/session/withdraw/payments?sessAddr=${signer}&grantEpoch=${consent.grantEpoch}`));
+  const historyBody = await liabilities.json(); expect(historyBody).toMatchObject({ nextCursor: null, retryAuthorized: false });
+  expect(historyBody.payments.map((payment: {phase:string}) => payment.phase).sort()).toEqual(["exposed", "settled"]);
+  expect((await adapter.sessionWithdrawalAccounting(signer)).heldPaymentMicroUsdc).toBe("100000");
+  authenticatedWallet = payee;
+  expect((await status.GET(new NextRequest(`https://keryx.cc/api/session/withdraw/${p.requestId}`), { params: Promise.resolve({ requestId: p.requestId }) })).status).toBe(404);
+  expect((await submit.POST(request("/api/session/withdraw/submit", body))).status).toBe(404);
+  authenticatedWallet = wallet;
+  const record = (await adapter.getCreatorWithdrawal(p.requestId, signer))!, claim = (await adapter.getCreatorWithdrawalTransferClaim(p.requestId, signer))!;
+  const spec = record.request.burnIntent.spec, attester = privateKeyToAccount(`0x${"44".repeat(32)}`);
+  const encodedSpec = "ca85def7000000010000001a0000001a" + [spec.sourceContract, spec.destinationContract, spec.sourceToken,
+    spec.destinationToken, spec.sourceDepositor, spec.destinationRecipient, spec.sourceSigner, spec.destinationCaller].map(v => v.slice(2)).join("") +
+    BigInt(spec.value).toString(16).padStart(64, "0") + spec.salt.slice(2) + "00000000";
+  const attestation = `0xff6fb334${BigInt(10020).toString(16).padStart(64, "0")}00000154${encodedSpec}` as `0x${string}`;
+  const vendorResponse = { transferId: randomUUID(), attestation, expirationBlock: "10020",
+    signature: await attester.signMessage({ message: { raw: keccak256(attestation) } }) };
+  // Recovery obtains the original matched attestation, with no second transfer.
+  await adapter.saveCreatorWithdrawalAttestation(p.requestId, signer, claim.claimId, vendorResponse);
+  const { WITHDRAWAL_MINTER_ABI } = await import("../gateway/withdrawal-mint-observation");
+  const data = encodeFunctionData({ abi: WITHDRAWAL_MINTER_ABI, functionName: "gatewayMint", args: [attestation, vendorResponse.signature] });
+  const raw = await owner.signTransaction({ type: "eip1559", chainId: profile.chainId, nonce: 0, gas: BigInt(300000),
+    maxFeePerGas: BigInt(2000000000), maxPriorityFeePerGas: BigInt(1000000000), to: p.policy.gatewayMinter, value: BigInt(0), data });
+  const t = parseTransaction(raw), txHash = keccak256(raw);
+  mintTransaction = { type: "0x2", chainId: toHex(profile.chainId), nonce: "0x0", gas: toHex(300000), maxFeePerGas: toHex(2000000000),
+    maxPriorityFeePerGas: toHex(1000000000), to: p.policy.gatewayMinter, from: wallet, value: "0x0", input: data,
+    accessList: [], r: t.r, s: t.s, yParity: toHex(t.yParity!), hash: txHash, blockHash: mintHash, blockNumber: toHex(10001), transactionIndex: "0x0" };
+  const { WITHDRAWAL_MINT_EVENT } = await import("../gateway/withdrawal-mint-receipt");
+  const specHash = (await import("../gateway/withdrawal-attestation")).withdrawalTransferSpecHash(record);
+  mintReceipt = { transactionHash: txHash, blockHash: mintHash, blockNumber: toHex(10001), transactionIndex: "0x0", from: wallet,
+    to: p.policy.gatewayMinter, status: "0x1", type: "0x2", gasUsed: toHex(150000), cumulativeGasUsed: toHex(150000),
+    effectiveGasPrice: toHex(1500000000), logs: [{ transactionHash: txHash, blockHash: mintHash, blockNumber: toHex(10001),
+      transactionIndex: "0x0", logIndex: "0x0", address: p.policy.gatewayMinter, removed: false,
+      topics: encodeEventTopics({ abi: WITHDRAWAL_MINT_EVENT, eventName: "AttestationUsed", args: { token: p.policy.asset, recipient: wallet as `0x${string}`, transferSpecHash: specHash } }),
+      data: encodeAbiParameters([{ type: "uint32" }, { type: "bytes32" }, { type: "bytes32" }, { type: "uint256" }], [26, spec.sourceDepositor, spec.sourceSigner, BigInt(spec.value)]) }] };
+  const final = await import("../../app/api/session/withdraw/complete/route");
+  expect((await final.POST(request("/api/session/withdraw/complete", { requestId: p.requestId, transactionHash: `0x${"ff".repeat(32)}` }))).status).toBe(503);
+  expect(await adapter.getSessionWithdrawalCompletion(p.requestId, wallet)).toBeNull();
+  const completed = await final.POST(request("/api/session/withdraw/complete", { requestId: p.requestId, transactionHash: txHash }));
+  expect(completed.status).toBe(200);
+  expect(await completed.json()).toMatchObject({ progress: { status: "mint-finalized-observed", chainFinalityVerified: true },
+    completion: { requestId: p.requestId, serializedTransaction: raw, observation: { transactionHash: txHash, chainId: profile.chainId } } });
+  expect(await adapter.pendingSessionWithdrawal(wallet, signer)).toBeNull();
+  expect((await adapter.sessionWithdrawalAccounting(signer)).heldPaymentMicroUsdc).toBe("100000");
+  availableBalance = "0.198";
+  const renewed = await grants.issueMainnetSessionGrant(adapter, wallet, { sessAddr: signer, budgetMicros: "198000" });
+  await grants.consumeMainnetSessionGrant(adapter, wallet, { consent: renewed.consent,
+    signature: await owner.signMessage({ message: messages.createSessionGrantConsentMessage(renewed.consent, profile) }),
+    sessionSignature: await session.signMessage({ message: messages.createSessionGrantSignerProofMessage(renewed.consent, profile) }) });
+  expect((await adapter.getSessionGrant(wallet))?.spent).toBe(0.101);
+  expect((await other.admitBrowserJournal({ ...paymentInput, requestId: randomUUID(), grantEpoch: renewed.consent.grantEpoch,
+    amountMicroUsdc: 1000, requirements: { ...paymentInput.requirements, amount: "1000" }, payment: { ...paymentInput.payment,
+      grantEpoch: renewed.consent.grantEpoch, amountUsdc: 0.001 } })).status).toBe("admitted");
+  expect(transferCalls).toBe(1);
+}, 60000);
 it("consumes an exact owner-signed funded consent once across two native connections and retains proof after expiry", async () => {
   const { adapter, file } = await fixture();
   const { config } = await import("../config");

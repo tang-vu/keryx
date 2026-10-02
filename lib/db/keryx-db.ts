@@ -362,6 +362,13 @@ export interface KeryxDB {
   browserSignerConfirmedSpendMicro(signer:string): Promise<number>;
   browserSignerRetainedSpendMicro(signer:string): Promise<number>;
   sessionFundingAccounting(signer:string,after?:string): Promise<import("./session-funding-accounting").SessionFundingAccounting>;
+  sessionWithdrawalAccounting(signer:string): Promise<{heldPaymentMicroUsdc:string;heldWithdrawalMicroUsdc:string;confirmedSpentMicroUsdc:string}>;
+  reserveSessionWithdrawal(preparation:import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation>;
+  getSessionWithdrawal(id:string,owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation|null>;
+  pendingSessionWithdrawal(owner:string,signer:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation|null>;
+  getSessionWithdrawalCompletion(id:string,owner:string):Promise<import("../gateway/session-withdrawal-completion").SessionWithdrawalCompletion|null>;
+  completeSessionWithdrawal(id:string,owner:string,outcome:import("../gateway/session-withdrawal-completion").SessionWithdrawalCompletion):Promise<import("../gateway/session-withdrawal-completion").SessionWithdrawalCompletion>;
+  listSessionWithdrawalPayments(signer:string,afterNonce?:string,limit?:number):Promise<{payments:import("./browser-authorization-journal").BrowserAuthorizationJournal[];nextCursor:string|null}>;
   activateBrowserJournal(): Promise<void>;
   admitBrowserJournal(input: import("./browser-authorization-journal").BrowserJournalAdmission): Promise<import("./browser-authorization-journal").BrowserJournalAdmissionResult>;
   getBrowserJournal(sessionId: string, requestId: string): Promise<import("./browser-authorization-journal").BrowserAuthorizationJournal | null>;

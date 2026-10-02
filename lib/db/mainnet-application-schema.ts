@@ -1,10 +1,12 @@
 import type { DatabaseSync } from "node:sqlite";
 import { installSqliteApplicationSchema } from "./sqlite-application-schema";
 import { SESSION_GRANT_CONSENTS_SQL } from "./session-grant-consents";
+import { SESSION_WITHDRAWAL_PREPARATIONS_SQL } from "./session-withdrawal-journal";
 /** Fresh mainnet namespace only. Existing deployed stores require a separately reviewed migration. */
 export function installMainnetApplicationSchema(db: DatabaseSync): void {
   installSqliteApplicationSchema(db);
   db.exec(SESSION_GRANT_CONSENTS_SQL);
+  db.exec(SESSION_WITHDRAWAL_PREPARATIONS_SQL);
   db.exec("ALTER TABLE browser_journal_bindings ADD COLUMN payment_context TEXT CHECK(payment_context IS NULL OR json_valid(payment_context))");
   db.exec(`CREATE TRIGGER mainnet_browser_binding_immutable BEFORE UPDATE ON browser_journal_bindings
     WHEN NEW.nonce IS NOT OLD.nonce OR NEW.requirements IS NOT OLD.requirements OR NEW.payment_metadata IS NOT OLD.payment_metadata

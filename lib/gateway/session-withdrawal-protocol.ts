@@ -20,7 +20,8 @@ export const sessionWithdrawalPreparationSchema = z.object({
     ownerSignature: signature, sessionSignature: signature }).strict(),
   burnIntent: withdrawRequestSchema.shape.burnIntent, policy: withdrawPolicySchema,
   balance: z.object({ availableMicroUsdc: sessionWithdrawalMicros, heldPaymentMicroUsdc: sessionWithdrawalMicros,
-    heldWithdrawalMicroUsdc: sessionWithdrawalMicros, maxFeeMicroUsdc: sessionWithdrawalMicros }).strict(),
+    heldWithdrawalMicroUsdc: sessionWithdrawalMicros, confirmedSpentMicroUsdc: sessionWithdrawalMicros,
+    maxFeeMicroUsdc: sessionWithdrawalMicros }).strict(),
   height: z.object({ minimumBlockHeight: uint, maximumBlockHeight: uint, observedBlockNumber: uint,
     observedBlockHash: hash, observedAt: z.string().datetime() }).strict(),
 }).strict();

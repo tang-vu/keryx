@@ -7,8 +7,8 @@ const uint = z.string().regex(/^(0|[1-9][0-9]{0,77})$/)
   .pipe(z.string().refine(value => BigInt(value) <= maxUint256));
 const hash = z.string().regex(/^0x[a-f0-9]{64}$/).transform(value => value as Hex);
 const index = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
-const schema = z.object({ status: z.literal("mint-finalized-observed"), authority: z.literal("arc-testnet-rpc-finality"),
-  requestId: hash, transactionHash: hash, transferSpecHash: hash, chainId: z.literal(5042002),
+const schema = z.object({ status: z.literal("mint-finalized-observed"), authority: z.enum(["arc-testnet-rpc-finality", "arc-mainnet-rpc-finality"]),
+  requestId: hash, transactionHash: hash, transferSpecHash: hash, chainId: z.union([z.literal(5042002), z.literal(5042)]),
   blockNumber: uint, blockHash: hash, transactionIndex: index, logIndex: index,
   recipient: z.string().regex(/^0x[a-f0-9]{40}$/), amountMicros: uint,
   gasUsed: uint.refine(value => BigInt(value) > BigInt(0)), effectiveGasPriceWei: uint, gasCostWei: uint,
@@ -23,7 +23,9 @@ export function validateRecordedMintObservation(value: unknown, request: Withdra
   prepared: Awaited<ReturnType<typeof matchWithdrawalMintTransaction>>) {
   try {
     const observation = schema.parse(value);
-    if (observation.requestId !== request.id || observation.requestId !== prepared.requestId
+    if (observation.chainId !== prepared.chainId ||
+      observation.authority !== (prepared.chainId === 5042002 ? "arc-testnet-rpc-finality" : "arc-mainnet-rpc-finality") ||
+      observation.requestId !== request.id || observation.requestId !== prepared.requestId
       || observation.transactionHash !== prepared.transactionHash || observation.transferSpecHash !== prepared.transferSpecHash
       || observation.recipient !== request.policy.recipient || observation.amountMicros !== request.request.burnIntent.spec.value
       || BigInt(observation.gasUsed) > BigInt(prepared.terms.gas)

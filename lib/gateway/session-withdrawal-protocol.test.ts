@@ -22,7 +22,7 @@ export async function sessionWithdrawalFixture(): Promise<SessionWithdrawalPrepa
     burnIntent, policy: withdrawPolicySchema.parse({ owner: consent.sessAddr, recipient: consent.ownerAddr,
       domain: profile.cctpDomain, gatewayWallet: profile.gatewayWallet, gatewayMinter: profile.gatewayMinter,
       asset: profile.usdcAddress, maxValueMicros: "500000", maxFeeMicros: "1000" }),
-    balance: { availableMicroUsdc: "1000000", heldPaymentMicroUsdc: "100000", heldWithdrawalMicroUsdc: "0", maxFeeMicroUsdc: "1000" },
+    balance: { availableMicroUsdc: "1000000", heldPaymentMicroUsdc: "100000", heldWithdrawalMicroUsdc: "0", confirmedSpentMicroUsdc: "0", maxFeeMicroUsdc: "1000" },
     height: { minimumBlockHeight: "1100", maximumBlockHeight: "1200", observedBlockNumber: "1000",
       observedBlockHash: `0x${"55".repeat(32)}`, observedAt: new Date().toISOString() } };
 }
