@@ -25,7 +25,7 @@ afterEach(async () => {
 /** Production composition is intact: native sealed DB, JWT/row auth, normal handlers, SSE,
  * runAgent, BrowserCoSignGateway, paid encrypted seller and actual browser worker/IndexedDB.
  * Only Next's request cookie accessor and external RPC/Circle transport are synthetic. */
-it.each([false, true, "liveness"] as const)("completes a normal mainnet cited answer with citation failure=%s", async failCitation => {
+it.each([false, true, "liveness", "creator"] as const)("completes a normal mainnet browser journey (%s)", async failCitation => {
   vi.resetModules();
   const folder = mkdtempSync(join(tmpdir(), "keryx-browser-mainnet-journey-")), databasePath = join(folder, "fresh.sqlite");
   cleanup.push(() => rmSync(folder, { recursive: true, force: true }));
@@ -39,7 +39,7 @@ it.each([false, true, "liveness"] as const)("completes a normal mainnet cited an
   for (const [name, value] of Object.entries({ KERYX_NETWORK: "arc", NEXT_PUBLIC_KERYX_NETWORK: "arc", KERYX_FORCE_OFFLINE: "0",
     KERYX_STORAGE_MANIFEST: manifest, KERYX_SQLITE_PATH: databasePath, CONTENT_MASTER_KEY: randomBytes(32).toString("hex"),
     KERYX_REGISTRY_ADDRESS: registry, NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS: registry, BASE_URL: origin, JWT_SECRET: randomBytes(32).toString("hex"),
-    KERYX_WITHDRAWAL_MAX_FEE_MICROS:"1000", KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS:"300", NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS:"300",
+    KERYX_WITHDRAWAL_MAX_VALUE_MICROS:"1000000", KERYX_WITHDRAWAL_MAX_FEE_MICROS:"1000", KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS:"300", NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS:"300",
     KERYX_WITHDRAWAL_MAX_PROCESSING_LAG_BLOCKS:"20" })) vi.stubEnv(name, value);
   const owner = privateKeyToAccount(`0x${"11".repeat(32)}`), creator = privateKeyToAccount(`0x${"22".repeat(32)}`);
   const cookies = new AsyncLocalStorage<string | undefined>();
@@ -82,6 +82,8 @@ it.each([false, true, "liveness"] as const)("completes a normal mainnet cited an
     withdrawStatus=await import("../../app/api/session/withdraw/[requestId]/route"),withdrawPayments=await import("../../app/api/session/withdraw/payments/route"),
     withdrawComplete=await import("../../app/api/session/withdraw/complete/route");
   const seller = await import("../../app/api/source/[id]/item/[itemId]/route"), cite = await import("../../app/api/cite/[id]/route");
+  const creatorPrepare=await import("../../app/api/me/withdrawals/prepare/route"),creatorSubmit=await import("../../app/api/me/withdrawals/submit/route"),
+    creatorStatus=await import("../../app/api/me/withdrawals/status/route"),creatorComplete=await import("../../app/api/me/withdrawals/complete/route");
   async function dispatch(url: string, init: RequestInit = {}, cookie?: string): Promise<Response> {
     const headers = new Headers(init.headers);
     if (!headers.has("host")) headers.set("host", "keryx.cc");
@@ -89,6 +91,10 @@ it.each([false, true, "liveness"] as const)("completes a normal mainnet cited an
     const req = new NextRequest(url, { ...init, signal: init.signal ?? undefined, headers });
     return cookies.run(cookie, async () => {
       const path = req.nextUrl.pathname;
+      if(path==="/api/me/withdrawals/prepare")return creatorPrepare.POST(req);
+      if(path==="/api/me/withdrawals/submit")return creatorSubmit.POST(req);
+      if(path==="/api/me/withdrawals/status")return creatorStatus.POST(req);
+      if(path==="/api/me/withdrawals/complete")return creatorComplete.POST(req);
       if (path === "/api/session/grant/challenge") return grantChallenge.POST(req);
       if (path === "/api/session/grant") return init.method === "POST" ? grant.POST(req) : grant.GET(req);
       if (path === "/api/session/credit") return credit.GET(req);
@@ -134,8 +140,9 @@ it.each([false, true, "liveness"] as const)("completes a normal mainnet cited an
     if (target.startsWith(profile.rpcUrl)) return rpc(init);
     if (target === config.gatewayBalanceApi) {
       const requested = JSON.parse(String(init.body));
-      sessionAddress ||= requested.sources[0].depositor.toLowerCase();
-      return Response.json({ token: "USDC", balances: [{ depositor: sessionAddress, domain: profile.cctpDomain, balance: (Number(BigInt(1_000_000)+depositCredit-circleDebit)/1e6).toFixed(6) }] });
+      const depositor=requested.sources[0].depositor.toLowerCase();
+      if(failCitation!=="creator")sessionAddress ||= depositor;
+      return Response.json({ token: "USDC", balances: [{ depositor, domain: profile.cctpDomain, balance: (Number(BigInt(1_000_000)+depositCredit-circleDebit)/1e6).toFixed(6) }] });
     }
     if(target===`${profile.gatewayApiUrl}/v1/info`)return Response.json({domains:[{domain:26,chain:"Arc",network:"Mainnet",processedHeight:"100",burnIntentExpirationHeight:"110",
       walletContract:{address:profile.gatewayWallet,supportedTokens:["USDC"]},minterContract:{address:profile.gatewayMinter,supportedTokens:["USDC"]}}]});
@@ -151,6 +158,8 @@ it.each([false, true, "liveness"] as const)("completes a normal mainnet cited an
     import React from 'react'; import {createRoot} from 'react-dom/client';
     import {useMainnetSessionGrant} from './lib/hooks/use-mainnet-session-grant';
     import {SessionCashoutPanel} from './components/keryx/session-cashout-panel';
+    import {CreatorOwnerWithdrawalPanel} from './components/keryx/creator-owner-withdrawal-panel';
+    import * as creatorJournals from './lib/gateway/withdrawal-browser-journal';window.creatorJournals=creatorJournals;
     import {getSessionSigner} from './lib/session/session-signer-client';
     import {listFundingRecords} from './lib/buyer/funding-journal';window.fundingRecords=listFundingRecords;
     window.sentFunding=[];
@@ -163,11 +172,12 @@ it.each([false, true, "liveness"] as const)("completes a normal mainnet cited an
       getTransaction:async({hash})=>{const tx=window.sentFunding.find(tx=>tx.hash===hash);return {...tx,value:BigInt(tx.value),blockNumber:BigInt(tx.blockNumber)}},
       getTransactionReceipt:async({hash})=>{const tx=window.sentFunding.find(tx=>tx.hash===hash);return {transactionHash:hash,blockHash:tx.blockHash,blockNumber:BigInt(tx.blockNumber),status:'success'}}};
     window.wallet={account:{address:'${owner.address}'},getChainId:async()=>5042,getAddresses:async()=>['${owner.address}'],signMessage:async({message})=>window.ownerPersonalSign(message),
+      signTypedData:async(fields)=>window.ownerBurnSign(JSON.parse(JSON.stringify(fields,(_,v)=>typeof v==='bigint'?v.toString():v))),
       sendTransaction:async(tx)=>{const hash=await window.ownerFundingSubmit({from:typeof tx.account==='string'?tx.account:tx.account.address,to:tx.to,data:tx.data,value:tx.value.toString(),nonce:tx.nonce,
       gas:tx.gas?.toString(),maxFeePerGas:tx.maxFeePerGas?.toString(),maxPriorityFeePerGas:tx.maxPriorityFeePerGas?.toString()});
       window.sentFunding.push({hash,from:tx.account,to:tx.to,input:tx.data,value:tx.value.toString(),nonce:tx.nonce,blockHash:'${blockHash}',blockNumber:String(101+tx.nonce*2)});return hash;}};
     function Probe(){const grant=useMainnetSessionGrant(); window.normalGrant=grant;return <><output id="state">{JSON.stringify(grant.state)}</output><SessionCashoutPanel sessAddr={grant.state.sessAddr}/></>}
-    createRoot(document.getElementById('root')).render(<Probe/>);
+    createRoot(document.getElementById('root')).render(${failCitation==="creator"?`<CreatorOwnerWithdrawalPanel address="${owner.address}"/>`:"<Probe/>"});
   ` }, bundle: true, write: false, platform: "browser", format: "esm",
     define: { "process.env.NODE_ENV": '"production"', "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arc"',
       "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": JSON.stringify(registry), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined",
@@ -180,6 +190,10 @@ it.each([false, true, "liveness"] as const)("completes a normal mainnet cited an
   const context = await browser.newContext(); await context.addCookies([{ name: "keryx_session", value: token, url: origin, secure: true, httpOnly: true, sameSite: "Strict" }]);
   const ownerMessages: string[] = [];
   await context.exposeFunction("ownerPersonalSign", (message: string) => { ownerMessages.push(message); return owner.signMessage({ message }); });
+  let creatorBurnSigns=0;
+  await context.exposeFunction("ownerBurnSign", async (fields: ReturnType<typeof import("../gateway/withdraw-protocol").withdrawTypedData>) => {
+    creatorBurnSigns++;return owner.signTypedData(fields);
+  });
   let duringApproval: (() => Promise<void>) | undefined;
   let duringNextGrantChallenge: (() => Promise<void>) | undefined;
   let afterDeposit: (() => Promise<void>) | undefined;
@@ -189,9 +203,9 @@ it.each([false, true, "liveness"] as const)("completes a normal mainnet cited an
   let originalCashoutId="";
   await context.exposeFunction("ownerFundingSubmit", async (tx: { from: string; to: string; data: Hex; value: string; nonce: number;gas?:string;maxFeePerGas?:string;maxPriorityFeePerGas?:string }) => {
     expect(tx.from.toLowerCase()).toBe(owner.address.toLowerCase()); expect(tx.value).toBe("0");
-    if(tx.nonce===2){
+    if(tx.nonce===2||failCitation==="creator"){
       expect(tx.to.toLowerCase()).toBe(profile.gatewayMinter.toLowerCase());
-      const localRecord=(await db.getCreatorWithdrawal(originalCashoutId,sessionAddress))!;
+      const localRecord=(await db.getCreatorWithdrawal(originalCashoutId,failCitation==="creator"?owner.address.toLowerCase():sessionAddress))!;
       const {WITHDRAWAL_MINTER_ABI}=await import("../gateway/withdrawal-mint-observation");
       expect(decodeFunctionData({abi:WITHDRAWAL_MINTER_ABI,data:tx.data}).functionName).toBe("gatewayMint");
       const raw=await owner.signTransaction({type:"eip1559",chainId:profile.chainId,nonce:tx.nonce,gas:BigInt(tx.gas!),
@@ -250,6 +264,69 @@ it.each([false, true, "liveness"] as const)("completes a normal mainnet cited an
     return route.fulfill({ status: response.status, body: await response.text(), headers: Object.fromEntries(response.headers) });
   });
   const page = await context.newPage();await page.goto(origin);
+  if(failCitation==="creator"){
+    const {ARC_TESTNET_PROFILE}=await import("../arc-network-profile");
+    const {prepareWithdrawIntentForProfile}=await import("../gateway/withdraw-intent-core"),{withdrawTypedData}=await import("../gateway/withdraw-protocol");
+    const {createWithdrawalRequest}=await import("../gateway/withdrawal-request");
+    const legacyIntent={...prepareWithdrawIntentForProfile(ARC_TESTNET_PROFILE,owner.address,"100000",owner.address,"1000"),maxBlockHeight:"110"};
+    const legacy=await createWithdrawalRequest({burnIntent:legacyIntent,signature:await owner.signTypedData(withdrawTypedData(legacyIntent))},
+      {owner:owner.address,recipient:owner.address,domain:26,asset:ARC_TESTNET_PROFILE.usdcAddress,gatewayWallet:ARC_TESTNET_PROFILE.gatewayWallet,
+        gatewayMinter:ARC_TESTNET_PROFILE.gatewayMinter,maxValueMicros:"100000",maxFeeMicros:"1000"},ARC_TESTNET_PROFILE);
+    const legacyBundle=await build({stdin:{contents:"import * as journal from './lib/gateway/withdrawal-browser-journal';window.legacyJournal=journal;",resolveDir:process.cwd()},
+      bundle:true,platform:"browser",write:false,define:{"process.env.NEXT_PUBLIC_KERYX_NETWORK":'"arcTestnet"',
+        "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS":"undefined","process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS":"undefined"}});
+    await page.addScriptTag({content:legacyBundle.outputFiles[0].text});
+    await page.evaluate(async record=>(window as unknown as {legacyJournal:{importWithdrawalBrowserJournal(record:unknown,owner:string):Promise<unknown>}}).legacyJournal.importWithdrawalBrowserJournal(record,record.owner),legacy);
+    expect(await page.evaluate(async id=>{const fixture=window as unknown as {wallet:{account:{address:string}};creatorJournals:{readWithdrawalBrowserJournal(id:string,owner:string):Promise<unknown>}};
+      try{await fixture.creatorJournals.readWithdrawalBrowserJournal(id,fixture.wallet.account.address);return true}catch{return false}},legacy.id)).toBe(false);
+    const status=()=>page.getByRole("status",{name:"Creator withdrawal status"}).textContent();
+    await page.getByLabel("Creator withdrawal amount").fill("0.1");
+    await page.getByLabel("Creator withdrawal maximum fee").fill("0.000999");
+    await page.getByRole("button",{name:"Prepare creator withdrawal",exact:true}).click();
+    await expect.poll(status).toContain("differs from your review");
+    expect(creatorBurnSigns).toBe(0);expect(transferCalls).toBe(0);
+    await page.getByLabel("Creator withdrawal maximum fee").fill("0.001");
+    await page.getByRole("button",{name:"Prepare creator withdrawal",exact:true}).click();
+    await expect.poll(()=>page.getByLabel("Original creator withdrawal request").inputValue()).toMatch(/^0x[0-9a-f]{64}$/);
+    originalCashoutId=await page.getByLabel("Original creator withdrawal request").inputValue();
+    await page.getByLabel("Creator withdrawal amount").fill("0.2");
+    await page.getByRole("button",{name:"Sign reviewed creator burn",exact:true}).click();
+    await expect.poll(status).toContain("review differs");expect(creatorBurnSigns).toBe(0);
+    await page.getByLabel("Creator withdrawal amount").fill("0.1");
+    await page.getByRole("button",{name:"Sign reviewed creator burn",exact:true}).click();
+    await expect.poll(status).toContain("Original burn signature saved");expect(creatorBurnSigns).toBe(1);
+    await page.getByRole("button",{name:"Send signed creator burn",exact:true}).click();
+    await expect.poll(status,{timeout:20000}).toContain("Original transfer attempt retained");
+    expect(transferCalls).toBe(1);
+    await page.reload();await page.getByLabel("Saved creator withdrawals").selectOption(originalCashoutId);
+    await page.getByRole("button",{name:"Read creator recovery",exact:true}).click();
+    await expect.poll(status,{timeout:20000}).toContain("awaiting-transfer-evidence");
+    expect(await page.getByRole("button",{name:"Send signed creator burn",exact:true}).isDisabled()).toBe(true);
+    const record=(await db.getCreatorWithdrawal(originalCashoutId,owner.address.toLowerCase()))!;
+    const claim=(await db.getCreatorWithdrawalTransferClaim(originalCashoutId,owner.address.toLowerCase()))!;
+    const spec=record.request.burnIntent.spec,attester=privateKeyToAccount(`0x${"44".repeat(32)}`);
+    const encodedSpec="ca85def7000000010000001a0000001a"+[spec.sourceContract,spec.destinationContract,spec.sourceToken,spec.destinationToken,
+      spec.sourceDepositor,spec.destinationRecipient,spec.sourceSigner,spec.destinationCaller].map(v=>v.slice(2)).join("")+BigInt(spec.value).toString(16).padStart(64,"0")+spec.salt.slice(2)+"00000000";
+    const attestation=`0xff6fb334${BigInt(120).toString(16).padStart(64,"0")}00000154${encodedSpec}` as Hex;
+    await db.saveCreatorWithdrawalAttestation(originalCashoutId,owner.address.toLowerCase(),claim.claimId,
+      {transferId:randomUUID(),attestation,expirationBlock:"120",signature:await attester.signMessage({message:{raw:keccak256(attestation)}})});
+    await page.getByRole("button",{name:"Review creator mint and gas",exact:true}).click();
+    await expect.poll(status,{timeout:20000}).toContain("Owner mint submitted");
+    const originalHash=await page.getByLabel("Original creator mint hash").inputValue();expect(originalHash).toMatch(/^0x[0-9a-f]{64}$/);
+    await page.reload();await page.getByLabel("Saved creator withdrawals").selectOption(originalCashoutId);
+    expect(await page.getByLabel("Original creator mint hash").inputValue()).toBe(originalHash);
+    await page.getByRole("button",{name:"Read creator recovery",exact:true}).click();
+    await expect.poll(status,{timeout:20000}).toContain("attestation-stored");
+    expect(await page.getByRole("button",{name:"Review creator mint and gas",exact:true}).isDisabled()).toBe(true);
+    await page.getByRole("button",{name:"Verify creator mint finality",exact:true}).click();
+    await expect.poll(status,{timeout:20000}).toBe("Original owner mint finality verified");
+    expect(transferCalls).toBe(1);expect(creatorBurnSigns).toBe(1);
+    expect((await db.getCreatorOwnerWithdrawalCompletion(originalCashoutId,owner.address.toLowerCase()))?.observation.transactionHash).toBe(originalHash);
+    expect(record.network).toBe(profile.networkId);expect(record.format).toBe("creator-withdrawal-request-v2");
+    expect(await page.evaluate(async()=> (await indexedDB.databases()).map(entry=>entry.name))).toEqual(expect.arrayContaining(["keryx-creator-withdrawals-v1","keryx-creator-withdrawals-v2-arc"]));
+    expect(await page.evaluate(()=>[...document.body.querySelectorAll("input")].some(input=>input.value.length===132))).toBe(false);
+    return;
+  }
   await page.waitForFunction(() => !!(window as unknown as { normalGrant?: unknown }).normalGrant);
   await page.evaluate(() => (window as unknown as { normalGrant: { generateAndFund(budget: number): Promise<void> } }).normalGrant.generateAndFund(0.05));
   const hookState = async () => JSON.parse((await page.locator("#state").textContent())!);

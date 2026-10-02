@@ -3,12 +3,20 @@ import { browserTransaction } from "../buyer/browser-storage";
 import { canonicalJson } from "../canonical-json";
 import { validateWithdrawIntent, withdrawPolicySchema, withdrawRequestSchema, type WithdrawPolicy } from "./withdraw-protocol";
 import { validateWithdrawalRequest, withdrawalIdSchema, withdrawalOwnerSchema, type WithdrawalRequestRecord } from "./withdrawal-request";
+import { browserPaymentProfile } from "../browser-payment-profile";
+import { assertWithdrawalNetworkPolicy } from "./withdrawal-network";
+import type { OwnerWalletMintAttempt } from "./withdrawal-owner-wallet-mint";
 
-const spec = { database: "keryx-creator-withdrawals-v1", store: "requests", keyPath: "id", indexes: [{ name: "owner", keyPath: "owner" }] };
+const profile = browserPaymentProfile();
+const spec = { database: profile.testnet ? "keryx-creator-withdrawals-v1" : "keryx-creator-withdrawals-v2-arc", store: "requests", keyPath: "id", indexes: [{ name: "owner", keyPath: "owner" }] };
+const unsignedInteger = z.string().regex(/^(0|[1-9]\d{0,77})$/);
+const mintSchema=z.object({to:withdrawalOwnerSchema,data:z.string().regex(/^0x(?:[0-9a-fA-F]{2})+$/).max(8194),value:z.literal("0"),
+  nonce:z.number().int().nonnegative().safe(),gas:unsignedInteger,maxFeePerGas:unsignedInteger,maxPriorityFeePerGas:unsignedInteger,hash:withdrawalIdSchema.optional()}).strict();
 const draftSchema = z.object({ id: withdrawalIdSchema, owner: withdrawalOwnerSchema, policy: withdrawPolicySchema,
   burnIntent: withdrawRequestSchema.shape.burnIntent }).strict();
 const rowSchema = z.object({ format: z.literal("creator-withdrawal-browser-v1"), id: withdrawalIdSchema, owner: withdrawalOwnerSchema,
   draft: draftSchema, request: z.unknown().optional(), state: z.enum(["reserved", "signed", "submission-possible"]),
+  mint: mintSchema.optional(),
   origin: z.enum(["created", "imported"]), createdAt: z.string().datetime() }).strict();
 type Draft = z.infer<typeof draftSchema>;
 type Row = Omit<z.infer<typeof rowSchema>, "request"> & { request?: WithdrawalRequestRecord };
@@ -16,6 +24,7 @@ const transaction = <T>(mode: IDBTransactionMode, work: Parameters<typeof browse
 
 export function createWithdrawalBrowserDraft(value: unknown, selected: WithdrawPolicy): Draft {
   const policy = withdrawPolicySchema.parse(selected), checked = validateWithdrawIntent(value, policy);
+  assertWithdrawalNetworkPolicy(policy, profile);
   if (policy.domain !== 26) throw new Error("Withdrawal network unavailable");
   return { id: checked.id, owner: checked.owner, policy, burnIntent: checked.burnIntent };
 }
@@ -25,13 +34,30 @@ async function validateRow(value: unknown, owner: string): Promise<Row> {
   if (row.owner !== wallet || row.id !== draft.id || draft.owner !== wallet || canonicalJson(row.draft) !== canonicalJson(draft)
     || (row.origin === "imported" && row.state !== "submission-possible")) throw new Error("Withdrawal browser journal unavailable");
   if (row.state === "reserved") {
-    if (row.request !== undefined) throw new Error("Withdrawal browser journal unavailable");
+    if (row.request !== undefined || row.mint !== undefined) throw new Error("Withdrawal browser journal unavailable");
     return { ...row, draft, request: undefined };
   }
   const request = await validateWithdrawalRequest(row.request);
+  if(request.network!==profile.networkId)throw new Error("Original withdrawal network differs");
+  if(row.mint&&(profile.testnet||row.state!=="submission-possible"||row.mint.to!==profile.gatewayMinter.toLowerCase()||
+    BigInt(row.mint.gas)<=BigInt(0)||BigInt(row.mint.maxFeePerGas)<=BigInt(0)||BigInt(row.mint.maxPriorityFeePerGas)>BigInt(row.mint.maxFeePerGas)))
+    throw new Error("Original owner mint journal differs");
   if (canonicalJson(createWithdrawalBrowserDraft(request.request.burnIntent, request.policy)) !== canonicalJson(draft))
     throw new Error("Withdrawal signature changed the original draft");
   return { ...row, draft, request };
+}
+/** Persist owner gas terms before its wallet prompt. Never reset a possibly delivered mint. */
+export async function claimWithdrawalBrowserOwnerMint(id:string,owner:string,attempt:OwnerWalletMintAttempt){
+  const previous=await readWithdrawalBrowserJournal(id,owner),mint=mintSchema.parse(attempt);
+  if(profile.testnet||!previous.request||previous.state!=="submission-possible"||previous.mint||mint.hash||
+    mint.to!==profile.gatewayMinter.toLowerCase())return false;
+  const next=await validateRow({...previous,mint},owner);
+  return replace(previous,next);
+}
+export async function retainWithdrawalBrowserOwnerMintHash(id:string,owner:string,hash:string){
+  const previous=await readWithdrawalBrowserJournal(id,owner),selected=withdrawalIdSchema.parse(hash);
+  if(!previous.mint||previous.mint.hash&&previous.mint.hash!==selected)throw new Error("Original owner mint response differs");
+  if(!await replace(previous,{...previous,mint:{...previous.mint,hash:selected}}))throw new Error("Original owner mint changed");
 }
 export async function readWithdrawalBrowserJournal(id: string, owner: string) {
   withdrawalIdSchema.parse(id);

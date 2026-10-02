@@ -4474,6 +4474,23 @@ Do not infer that a missing journal hash authorizes another attempt: retain orig
 funding evidence and require owner recovery of any uncertain admission. See
 [treasury transaction isolation](docs/treasury-transaction-isolation.md).
 
+## Ordinary mainnet creator owner-wallet cashout - 2026-10-02
+
+The full public mainnet scope includes ordinary creator earnings withdrawal. Use the
+creator's own wallet for the finite BurnIntent and the separately reviewed minter
+transaction with native gas; no treasury relay, key loading or automatic transfer retry.
+Persist the exact reviewed amount, fee, original signature and one submission claim
+before delivery. Mainnet creator custody/recovery records live in a fresh network
+namespace and never relabel retained testnet originals. Session and creator flows share
+one focused owner-mint authority helper, which binds the original burn/attestation,
+static contracts, current owner/network and gas terms. Claim its original nonce and
+calldata before the wallet prompt; retain any returned hash even after an owner change.
+Reload permits original status/finality recovery, not another mint. Verified finality
+requires the original raw owner transaction, receipt/event and independent selected RPC
+finalized-block evidence. Actual React/native-handler/Chromium checks use synthetic
+external transport and do not authorize launch or live funds. See
+[browser custody](docs/mainnet-browser-custody.md).
+
 ## Fresh mainnet research purchase and Monthly authority - 2026-10-02
 
 Keep Monthly's four manually requested Deep research allocations and thirty-day term. Fresh sealed mainnet SQLite installs a canonical original-network purchase claim and v2 entitlement schema, with no historical backfill or testnet catalog adoption. Every seller claims its immutable original authorization before Circle settlement. Monthly adds single-use issued challenge consumption, an exact network/USDC/Gateway entitlement and atomic four-slot redemption; replay cannot change the quote, package, recipient, transaction or original request. Historical ordinary testnet records remain on their original rail; existing enrolled testnet storage refuses this newer domain. Mainnet Supabase remains staged until independently generated native schema evidence exists.

@@ -1,11 +1,11 @@
 import { canonicalJson } from "../canonical-json";
 import type { BrowserSessionAuthorizationBinding } from "./browser-session-runtime";
 import type { SessionWithdrawalPreparation } from "../gateway/session-withdrawal-protocol";
+import type { OwnerWalletMintAttempt } from "../gateway/withdrawal-owner-wallet-mint";
 
 export type LocalSessionAuthorization = { nonce: string; epoch: string; amount: string;
   original?: BrowserSessionAuthorizationBinding; requirementsDigest?: string };
-export type BrowserSessionOwnerMint = { to: string; data: string; value: "0"; nonce: number;
-  gas: string; maxFeePerGas: string; maxPriorityFeePerGas: string; hash?: string };
+export type BrowserSessionOwnerMint = OwnerWalletMintAttempt;
 export type BrowserWithdrawalReservation = { preparation: SessionWithdrawalPreparation; exposed?: true; signature?: string;
   completion?: unknown; cancelled?: true; submissionPossible?: true; mint?: BrowserSessionOwnerMint };
 

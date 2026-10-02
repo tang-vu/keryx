@@ -2,8 +2,7 @@ import { createPublicClient, type Hex } from "viem";
 import { ARC_MAINNET_PROFILE as profile } from "../arc-network-profile";
 import { chainForProfile } from "../chains";
 import { withdrawalRpcTransport } from "../gateway/withdrawal-rpc-transport";
-import { withdrawalReceiptObserverForRpc } from "../gateway/withdrawal-receipt-observation";
-import { canonicalJson } from "../canonical-json";
+import { observeWithdrawalOwnerWalletCompletion } from "../gateway/withdrawal-owner-wallet-mint";
 import type { SessionWithdrawalPreparation } from "../gateway/session-withdrawal-protocol";
 import type { SessionWithdrawalCompletion } from "../gateway/session-withdrawal-completion";
 import { browserSessionCashoutMaxAheadBlocks } from "./browser-session-cashout-policy";
@@ -30,12 +29,5 @@ export async function readBrowserSessionWithdrawalChain(preparation: SessionWith
   signal.throwIfAborted();
 }
 export async function observeBrowserSessionWithdrawalCompletion(outcome: SessionWithdrawalCompletion) {
-  const observed = await withdrawalReceiptObserverForRpc(profile.rpcUrl)(outcome.record, outcome.attestation,
-    outcome.serializedTransaction, outcome.terms, AbortSignal.timeout(12000));
-  if (!observed) throw new Error("Original withdrawal finality unavailable");
-  // A newer finalized block/time is allowed; original inclusion/event/economic evidence is immutable.
-  const { finalizedBlockNumber: _number, finalizedBlockHash: _hash, observedAt: _at, ...original } = outcome.observation;
-  const { finalizedBlockNumber: _newNumber, finalizedBlockHash: _newHash, observedAt: _newAt, ...current } = observed;
-  if (canonicalJson(original) !== canonicalJson(current)) throw new Error("Original withdrawal finality differs");
-  return observed;
+  return observeWithdrawalOwnerWalletCompletion(outcome);
 }

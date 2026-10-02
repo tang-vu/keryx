@@ -59,6 +59,14 @@ independent finality and renewed research with the same retained signer. Indepen
 wallet/funding/cashout acceptance, final coordinated SQL/operational evidence and owner cutover remain release
 gates; this source checkpoint does not activate mainnet.
 
+The ordinary creator browser path prepares an explicitly reviewed amount/fee,
+retains its owner-signed original and one transfer attempt, and uses a separate owner
+wallet mint with native gas. Mainnet journals are separate from retained testnet
+records. Actual React/normal-handler/Chromium acceptance includes lost transfer,
+reload, original mint-hash recovery and independent finality checks with synthetic
+external transport. These checks do not close the live-wallet/funding or coordinated
+deployment acceptance gates.
+
 ## Current baseline and gaps
 
 Current [October 2 preparation](#october-2-preparation) records guarded backend
