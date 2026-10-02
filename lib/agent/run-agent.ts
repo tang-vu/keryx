@@ -60,6 +60,7 @@ import {
   settledPaymentFrom,
 } from "../payments/payment-state";
 import { questionArxivIds } from "../scholarly/arxiv";
+import { hasKnownSeedFingerprint } from "../research/seed-evidence-fingerprints";
 import { normalizePreviewDepth, previewSummary } from "../sources/preview-depth";
 import { isCacheFresh, newestPublishedAt } from "./cache-freshness";
 import {
@@ -360,7 +361,8 @@ export async function* runAgent(
       continue;
     }
     if (!terms.active) continue;
-    const catalogItems = await db.getItems(s.id);
+    const catalogItems = (await db.getItems(s.id)).map(item => hasKnownSeedFingerprint(item.title, item.link, item.bodyHash)
+      ? { ...item, evidenceProvenance: "synthetic-demo" as const } : item);
     const items = catalogItems.filter(item => gateway.mode === "offline" || item.evidenceProvenance !== "synthetic-demo");
     if (catalogItems.length > 0 && items.length === 0) continue;
     // Honor the creator's preview-depth: the agent scores on exactly what a paying reader would see

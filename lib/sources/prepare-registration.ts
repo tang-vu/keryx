@@ -99,7 +99,11 @@ export async function prepareSourceRegistration(
         fetchPrice: body.fetchPrice ? Number(body.fetchPrice) : undefined,
         walletAddress: sessionWallet,
         authors: (body.authors as CreateSourceInput["authors"]) || undefined,
-        items: (body.items as CreateSourceInput["items"]) || [],
+        items: ((body.items as CreateSourceInput["items"]) || []).map(({ evidenceProvenance, ...item }) => {
+          // Only trusted seed/operator writers may classify item provenance.
+          void evidenceProvenance;
+          return item;
+        }),
       };
     } else {
       return { status: 400, payload: { error: "provide rssUrl, or name + description" } };

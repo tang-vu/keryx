@@ -240,3 +240,12 @@ it.each(["https://arxiv.org/pdf/2502.54321v2", "https://arxiv.org/abs/2501.12345
     finalAssessment: [{ claim: "Methods of arXiv:2501.12345v1", coverage: 0.9, coveredBy: ["S1"] }] });
   expect(ledger.evidence).toEqual([]); expect(ledger.claimCoverage[0].coverage).toBe(0);
 });
+
+it("binds bare versioned target IDs to the observed read even if metadata names the requested paper", () => {
+  const claim = "Methods of 2501.12345v1";
+  const ledger = buildEvidenceLedger({ subClaims: [claim], gathered: [{ ...gathered[0], itemUrl: "https://arxiv.org/pdf/2502.54321v2",
+    scholarly: { provider: "arxiv", arxivId: "2501.12345v1", recordUrl: "https://export.arxiv.org", retrievedAt: "2026-10-02", title: "Paper", authors: [], workType: "preprint", peerReview: "unknown" } }],
+    answer: "Methods [S1].", declaredMarkers: ["S1"], proposedEvidence: [evidence()],
+    finalAssessment: [{ claim, coverage: 0.9, coveredBy: ["S1"] }] });
+  expect(ledger.evidence).toEqual([]); expect(ledger.claimCoverage[0].coverage).toBe(0);
+});

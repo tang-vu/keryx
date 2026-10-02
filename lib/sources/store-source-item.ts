@@ -2,6 +2,7 @@ import { config } from "../config";
 import { encryptContent, hasContentKey } from "../ipfs/content-crypto";
 import { hasPinata, pinEncrypted } from "../ipfs/pinata-client";
 import type { SourceItem } from "../types";
+import { hasKnownSeedFingerprint } from "../research/seed-evidence-fingerprints";
 import {
   contentBodyHash,
   contentBytes,
@@ -48,6 +49,7 @@ export async function storeSourceItem(
   const bodyHash = hasContent ? contentBodyHash(content) : item.bodyHash;
   const base: SourceItem = {
     ...item,
+    ...(hasKnownSeedFingerprint(item.title, item.link, bodyHash) ? { evidenceProvenance: "synthetic-demo" } : {}),
     content,
     deliveryKind,
     plaintextBytes,

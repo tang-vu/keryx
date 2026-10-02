@@ -1,12 +1,10 @@
-import { SEED_EVIDENCE_FINGERPRINTS } from "./seed-evidence-fingerprints";
+import { hasKnownSeedFingerprint } from "./seed-evidence-fingerprints";
 import type { QueryRun, SourceItemIdentity } from "../types";
 
 export const SYNTHETIC_EVIDENCE_NOTICE = "Illustrative demo content: synthetic sources and measurements are not factual research evidence. Source provenance and payment status are separate; inspect the receipt for settled, pending or simulated payments. Settlement does not authenticate a source's claims.";
 
 export function hasKnownSyntheticFingerprint(identity: Partial<SourceItemIdentity>): boolean {
-  return !!identity.contentReceipt?.bodyHash && SEED_EVIDENCE_FINGERPRINTS.some(fingerprint =>
-    fingerprint.itemTitle === identity.itemTitle && fingerprint.itemUrl === identity.itemUrl &&
-    fingerprint.bodyHash === identity.contentReceipt?.bodyHash);
+  return hasKnownSeedFingerprint(identity.itemTitle, identity.itemUrl, identity.contentReceipt?.bodyHash);
 }
 
 /** Public read projection; retain the archived prose and money, demote its factual authority. */

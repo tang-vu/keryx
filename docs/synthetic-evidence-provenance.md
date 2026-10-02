@@ -12,6 +12,11 @@ publications before model selection, caching, paid reads or evidence qualificati
 Display names, IDs, URLs, ownership verification and real settlement are not factual
 eligibility authority.
 
+Storage computes plaintext hashes before encryption and classifies exact known seed
+copies even when public uploads carry no provenance flag. Research admission and the
+evidence ledger also reject the checked title/URL/body-hash fingerprint before factual
+qualification or citation rewards; they do not wait for a later startup backfill.
+
 Explicit offline research may exercise the authored demo pair and simulated citation
 rewards. Its answer and citations identify illustrative content. Final factual coverage
 and evidence qualification exclude synthetic excerpts even when demonstration payments
@@ -69,6 +74,13 @@ their thin consumer role and show/link the labeled answer rather than interpreti
 settlement as authenticity. Creator directory, detail and preview metadata expose the
 same classification. Direct paid demonstration content remains accessible with its
 provenance metadata; access is not factual qualification.
+
+Exact arXiv target coverage is bound to the observed article URL: `gatheredArticle`
+stores the reader's final redirect URL as `itemUrl`. The arXiv provider path refuses
+redirects to another or unversioned paper and requires the expected PDF or explicit
+abstract fallback URL before attaching provider metadata. The evidence ledger checks
+that final identity against versioned targets, including bare versioned IDs retained by
+decomposition. Discovery metadata cannot override a conflicting observed original URL.
 
 ## Validation
 

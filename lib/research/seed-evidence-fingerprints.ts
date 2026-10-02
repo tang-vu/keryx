@@ -1,4 +1,9 @@
-/** Checked corpus fingerprints for protective historical demotion; never payment authority. */
+/** Checked corpus fingerprints for protective exclusion/demotion; never payment authority. */
+export function hasKnownSeedFingerprint(title?: string, url?: string, bodyHash?: string): boolean {
+  return !!bodyHash && SEED_EVIDENCE_FINGERPRINTS.some(fingerprint =>
+    fingerprint.itemTitle === title && fingerprint.itemUrl === url && fingerprint.bodyHash === bodyHash);
+}
+
 export const SEED_EVIDENCE_FINGERPRINTS = [
   {
     "itemTitle": "Why USDC settles instantly onchain",

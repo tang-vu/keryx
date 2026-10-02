@@ -2,6 +2,8 @@ import Parser from "rss-parser";
 import type { ScholarlyMetadata } from "../types";
 import { cleanText, fetchMetadata, type MetadataFetch } from "./provider";
 import { normalizeDoi } from "./doi";
+import { questionArxivIds } from "./arxiv-identity";
+export { questionArxivIds } from "./arxiv-identity";
 
 const parser = new Parser<Record<string, never>, { id?: string; paperAuthors?: Array<{ name?: string[] }>; paperDoi?: string }>({
   customFields: { item: [["author", "paperAuthors", { keepArray: true }], ["arxiv:doi", "paperDoi"]] },
@@ -27,12 +29,6 @@ export async function parseArxiv(xml: string, retrievedAt: string): Promise<Scho
       authorsTruncated: contributors.length > 50, arxivId,
       doi: normalizeDoi(item.paperDoi ?? ""), workType: "preprint" as const, publishedDate: date, peerReview: "unknown" as const }];
   });
-}
-
-/** Bounded explicit version intent; never infer a version or accept API operators. */
-export function questionArxivIds(question: string): string[] {
-  return [...new Set([...question.matchAll(/(?:\barxiv\s*:?\s*|https:\/\/arxiv\.org\/(?:abs|pdf)\/)(\d{4}\.\d{4,5}v[1-9]\d*)(?:\.pdf)?(?![\w]|\.[\w])/gi)]
-    .map(match => match[1].toLowerCase()))].slice(0, 2);
 }
 
 export async function arxivSearch(question: string, signal?: AbortSignal, fetcher: MetadataFetch = fetchMetadata) {

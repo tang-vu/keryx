@@ -1,5 +1,7 @@
 import { referenceSnapshot, type PublicReference } from "../public-references/catalog";
 import { scholarlyCandidate } from "../scholarly/discovery";
+import { SEED_SOURCES } from "../sources/seed-data";
+import { contentBodyHash } from "../sources/content-receipt";
 /**
  * Economic-invariant tests for the agent orchestrator (run-agent.ts).
  *
@@ -1956,6 +1958,15 @@ describe("original public attention gate regression (#128)", () => {
 
 
 describe("research issue trust regressions", () => {
+  it("excludes a new unmarked exact seed copy before any read or citation payment", async () => {
+    const source = makeSource({ id: "new-source", name: "Fresh publisher" });
+    const seed = SEED_SOURCES[0].items![0];
+    const item: SourceItem = { ...seed, id: "new-item", sourceId: source.id, evidenceProvenance: undefined, bodyHash: contentBodyHash(seed.content) };
+    const gateway = fakeGateway(), d = deps([source], fakeEngine(), gateway, { items: { [source.id]: [item] } });
+    const { run } = await drive({ question: "Use original empirical research" }, d);
+    expect(gateway.fetchCalls).toEqual([]); expect(gateway.citationCalls).toEqual([]);
+    expect(run.citations).toEqual([]); expect(d.db.payments).toEqual([]);
+  });
   it("fills a free Deep gap after a successful paid read exhausts exactly the fetch allocation", async () => {
     const source = makeSource({ id: "paid-first", fetchPrice: fetchBudget(0.03) });
     const gateway = fakeGateway();
