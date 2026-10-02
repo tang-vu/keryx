@@ -388,16 +388,38 @@ try {
   const financialBefore = sql(`select jsonb_build_object('journal',public.get_browser_journal('revoke-owner','request-290'),
     'capacity',(select spent_micro from public.browser_signer_capacity where signer='${signer}'),
     'retained',(select spent_micro from public.browser_retained_grants where grant_epoch='revoke-original'))`);
-  const replacement = concurrent(`set local application_name='keryx-generation-replacement'; ${grant("revoke-replacement", "revoke-owner")}; select pg_sleep(2)`);
-  let replacementHeld = false;
-  for (let attempt=0; attempt<40 && !replacementHeld; attempt++) {
-    replacementHeld = sql("select exists(select 1 from pg_stat_activity where application_name='keryx-generation-replacement' and wait_event='PgSleep')") === "t";
-    if (!replacementHeld) await new Promise(resolve => setTimeout(resolve,50));
+  const startTransaction = (application: string, statement: string, held = false) => {
+    const child = execFile(binary, [...prefix, ...psql], { encoding: "utf8", timeout: 20_000 });
+    const completion = new Promise<{ ok: boolean; output: string }>(resolve => {
+      let output = "";
+      child.stdout?.on("data", value => { output += value; });
+      child.on("error", () => resolve({ ok: false, output }));
+      child.on("close", code => resolve({ ok: code === 0, output: output.trim() }));
+    });
+    child.stdin!.write(`set statement_timeout='15s';set role service_role;begin;set local application_name='${application}';${statement};\n`);
+    if (!held) child.stdin!.end("commit;\n");
+    return { child, completion };
+  };
+  const replacement = startTransaction("keryx-generation-replacement", grant("revoke-replacement", "revoke-owner"), true);
+  let oldRevoke: ReturnType<typeof startTransaction> | undefined;
+  try {
+    const deadline = performance.now() + 10_000;
+    const waitFor = async (predicate: string, message: string) => {
+      while (sql(`select exists(select 1 from pg_stat_activity where ${predicate})`) !== "t") {
+        assert(performance.now() < deadline, message);
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+    };
+    await waitFor("application_name='keryx-generation-replacement' and state='idle in transaction'", "Actual replacement reached its held-row boundary");
+    oldRevoke = startTransaction("keryx-generation-revoke", `select public.revoke_session_grant('revoke-owner','revoke-original','${signer}')`);
+    await waitFor("application_name='keryx-generation-revoke' and wait_event_type='Lock'", "Old revocation actually waits for concurrent replacement");
+    replacement.child.stdin!.end("commit;\n");
+    assert((await replacement.completion).ok);
+    const revoked = await oldRevoke.completion;
+    assert(revoked.ok); assert.equal(revoked.output, "f");
+  } finally {
+    replacement.child.kill(); oldRevoke?.child.kill();
   }
-  assert(replacementHeld, "Actual replacement transaction reached its held-row boundary");
-  const oldRevoke = concurrent(`select public.revoke_session_grant('revoke-owner','revoke-original','${signer}')`);
-  await replacement;
-  assert.equal(await oldRevoke, "f");
   assert.equal(sql("select grant_epoch from public.session_grants where session_id='revoke-owner'"), "revoke-replacement");
   assert.equal(asService(`select public.revoke_session_grant('revoke-owner','revoke-replacement','${signer}')`), "t");
   assert.equal(sql("select expiry from public.session_grants where session_id='revoke-owner'"), "0");
