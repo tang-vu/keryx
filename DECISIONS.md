@@ -13,6 +13,33 @@ or artificial activity. The 0.3 release has synthetic acceptance; funded, durabi
 custody, reconciliation and finality gates remain explicit. See
 [maintenance and surface boundaries](docs/arc-primitives-maintenance.md).
 
+**Owner-managed creator cash-out batch** — *2026-10-02*
+
+The user confirmed both comprehensive creator cash-out testing and withdrawing
+the eligible Arc-testnet balances whose original keys the owner controls. Keep
+this operator scope separate from public browser creation: use the existing
+durable request/admission/attestation/mint engine, an externally reviewed immutable
+plan digest, original owner/self-recipient signatures, a fresh isolated relay and
+one exclusive broadcast marker per original. Retain uncertainty independently;
+no missing response, expiry or balance drift permits another signature, salt,
+Circle POST or raw broadcast. Shared nonce uncertainty can hold later legs.
+
+The reviewed absolute scope is 23 owners and 55,000,000 micro-USDC, with the exact
+inspected plan at 54,959,260 micro-USDC and a 3,900 per-owner fee cap. Native funding
+is exactly 0.21 test USDC with at most 0.00063 funding gas, including a 0.207
+immutable relay lifetime ceiling. Preserve the older 0.010 rehearsal and its
+exhausted journal. PC keys remain in original custody; transfer only retained
+signed requests and public plans. Actual Windows ACL/ancestor checks replace no
+source ACLs and do not infer protection from POSIX bits. Reserve the quoted fee
+maximum when selecting value and measure actual residuals; a quote cannot promise
+an empty balance or creator revenue. Receipt-matched reporting writes only the
+cash-out ledger. See [owner cash-out operations](docs/engineering/creator-owner-cashout-batch.md).
+
+No production HTTP/timer or browser/desktop/MCP/extension/bot cash-out authority
+is enabled by this operator delivery. Source tests/review/CI and actual funded
+evidence remain separate acceptance gates; legacy browser/API migration is a
+separate demonstrated risk and follow-up.
+
 **D-296** - Pilot one bounded Research Monthly plan - *On 2026-10-02 the user
 confirmed four requests/month at 10% below buying four separately.* Use four Deep
 v1 requests over 30 days from confirmed Arc-testnet purchase, with manual renewal

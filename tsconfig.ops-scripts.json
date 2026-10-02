@@ -11,6 +11,9 @@
     "scripts/check-llm.mts",
     "scripts/check-dispatches.mts",
     "scripts/preflight-mainnet-pilot.mts",
-    "scripts/inspect-arc-mainnet.mts"
+    "scripts/inspect-arc-mainnet.mts",
+    "scripts/creator-cashout-batch.mts",
+    "scripts/creator-cashout-batch-sign.mts",
+    "scripts/creator-cashout-batch-funding.mts"
   ]
 }
