@@ -111,13 +111,18 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
       const child = execFile("docker", ["exec", "-i", postgresContainer, "psql", "-h", "127.0.0.1", "-U", "postgres",
         "--dbname", database, "-v", "ON_ERROR_STOP=1", "-q", "-t", "-A"],
       { encoding: "utf8", timeout: 20_000, maxBuffer: 12 * 1024 * 1024 });
-      let completed: { ok: boolean; output: string; diagnostic: string } | undefined;
-      const result = new Promise<{ ok: boolean; output: string; diagnostic: string }>(resolve => {
+      let inputError: string | null = null;
+      // ON_ERROR_STOP can close psql before the rejected migration's remaining
+      // frozen catalog bytes are consumed. Preserve that process's SQL refusal;
+      // no successful owner operation may ignore a failed input stream.
+      child.stdin?.on("error", (error: NodeJS.ErrnoException) => { inputError = error.code ?? "unknown"; });
+      let completed: { ok: boolean; exitCode: number | null; output: string; diagnostic: string; inputError: string | null } | undefined;
+      const result = new Promise<{ ok: boolean; exitCode: number | null; output: string; diagnostic: string; inputError: string | null }>(resolve => {
         let output = "", diagnostic = "";
         child.stdout?.on("data", value => { output += value; });
         child.stderr?.on("data", value => { diagnostic += value; });
-        child.on("error", () => { completed = { ok: false, output, diagnostic: "owner-process-error" }; resolve(completed); });
-        child.on("close", code => { completed = { ok: code === 0, output: output.trim(), diagnostic }; resolve(completed); });
+        child.on("error", () => { completed = { ok: false, exitCode: null, output, diagnostic: "owner-process-error", inputError }; resolve(completed); });
+        child.on("close", code => { completed = { ok: code === 0 && !inputError, exitCode: code, output: output.trim(), diagnostic, inputError }; resolve(completed); });
       });
       child.stdin?.write(`set statement_timeout='15s';${statement}\n`);
       if (!hold) child.stdin?.end();
@@ -158,7 +163,9 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
       assert.match(enrolledResult.output, /^[0-9a-f]{64}$/);
       const refused = await refresh.result;
       assert(!refused.ok);
-      assert.match(refused.diagnostic, /enrolled storage requires reviewed generation migration/);
+      assert(refused.exitCode !== null && refused.exitCode !== 0, "Actual PostgreSQL refusal must exit nonzero");
+      assert(refused.inputError === null || refused.inputError === "EPIPE", "Only expected SQL-refusal input closure is acceptable");
+      assert.match(refused.diagnostic, /^ERROR:\s+enrolled storage requires reviewed generation migration\s*$/m);
       assert.equal(snapshot(), enrolledResult.output, "Refused catalog refresh retains the complete committed enrolled snapshot");
       process.stdout.write("PASS actual enrollment/source-refresh exclusion, postcommit refusal and whole snapshot retention\n");
     } finally {
