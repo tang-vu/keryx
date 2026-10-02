@@ -144,6 +144,18 @@ Paid-content cache encryption is required for mainnet independently of a treasur
 The normal SQLite session endpoints are `POST /api/session/withdraw/prepare`
 with `{sessAddr,grantEpoch,amountMicros}`, `POST /api/session/withdraw/submit`
 with `{requestId,signature}`, and `GET /api/session/withdraw/{requestId}`.
+The owner reviews the amount and fee ceiling before preparation. The worker reserves
+its local barrier and calls `POST /api/session/withdraw/authorize` with `{requestId}`
+before any burn signature. That immutable exposure marker is required by submit.
+`POST /api/session/withdraw/cancel` accepts the same selector only while no exposure,
+signed request or transfer claim exists. It atomically retains `cancelled_unexposed`
+and permits a new reviewed preparation; the old ID cannot sign, submit or reactivate.
+GET, authorize and cancel return the same original preparation plus `signingPhase`
+(`prepared`, `exposed`, `cancelled_unexposed`, `completed`) and an exact original
+cancellation acknowledgement when applicable. A worker releases its local barrier
+only for matching cancellation and no local crypto exposure. Uncertain authorize,
+signed or submitted originals stay held; a timeout or empty vendor lookup is no proof
+of cancellation. Payment lifetime counters and nonces remain retained throughout.
 Preparation verifies the authenticated owner's retained public delegation and
 signer-possession proof independently of the active grant. It reads fresh selected
 chain/Circle fee and finite height terms and preserves an immutable original burn.
@@ -172,7 +184,8 @@ The worker must independently verify this original outcome before releasing its 
 barrier. Native synthetic handler evidence is not funded vendor acceptance.
 
 Preparing a new withdrawal requires operator-selected integer
-`KERYX_WITHDRAWAL_MAX_FEE_MICROS`, `KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS` and
+`KERYX_WITHDRAWAL_MAX_FEE_MICROS`, matched `KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS` /
+`NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS` and
 `KERYX_WITHDRAWAL_MAX_PROCESSING_LAG_BLOCKS`. These do not initialize a gas relay,
 private key or automatic funding path. Original status remains readable if new
 preparation policy is unavailable. Creator owner-wallet cashout and the admitted

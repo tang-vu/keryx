@@ -13,6 +13,13 @@ const uint = z.string().regex(/^(0|[1-9][0-9]{0,77})$/).refine(value => BigInt(v
 export const sessionWithdrawalPrepareInput = z.object({ sessAddr: address, grantEpoch: z.string().uuid(),
   amountMicros: sessionWithdrawalMicros.refine(value => BigInt(value) > BigInt(0)) }).strict();
 export const sessionWithdrawalSubmitInput = z.object({ requestId: hash, signature }).strict();
+export const sessionWithdrawalOriginalInput = z.object({ requestId: hash }).strict();
+export type SessionWithdrawalSigningPhase = "prepared" | "exposed" | "cancelled_unexposed" | "completed";
+export const sessionWithdrawalCancellationSchema = z.object({
+  format: z.literal("keryx-session-withdrawal-cancellation-v1"), network: z.literal("eip155:5042"),
+  requestId: hash, ownerAddr: address, sessAddr: address, reason: z.literal("cancelled-unexposed"),
+}).strict();
+export type SessionWithdrawalCancellation = z.infer<typeof sessionWithdrawalCancellationSchema>;
 export const sessionWithdrawalPreparationSchema = z.object({
   format: z.literal("keryx-session-withdrawal-preparation-v1"), network: z.literal("eip155:5042"),
   requestId: hash, ownerAddr: address, sessAddr: address, grantEpoch: z.string().uuid(),

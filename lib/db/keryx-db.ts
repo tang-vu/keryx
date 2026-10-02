@@ -366,6 +366,9 @@ export interface KeryxDB {
   reserveSessionWithdrawal(preparation:import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation>;
   getSessionWithdrawal(id:string,owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation|null>;
   pendingSessionWithdrawal(owner:string,signer:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation|null>;
+  getSessionWithdrawalSigningPhase(id:string,owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalSigningPhase|null>;
+  authorizeSessionWithdrawal(id:string,owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation|null>;
+  cancelSessionWithdrawal(id:string,owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalCancellation|null>;
   getSessionWithdrawalCompletion(id:string,owner:string):Promise<import("../gateway/session-withdrawal-completion").SessionWithdrawalCompletion|null>;
   completeSessionWithdrawal(id:string,owner:string,outcome:import("../gateway/session-withdrawal-completion").SessionWithdrawalCompletion):Promise<import("../gateway/session-withdrawal-completion").SessionWithdrawalCompletion>;
   listSessionWithdrawalPayments(signer:string,afterNonce?:string,limit?:number):Promise<{payments:import("./browser-authorization-journal").BrowserAuthorizationJournal[];nextCursor:string|null}>;

@@ -41,6 +41,14 @@ Reversible: disable the provider and remove it from the public allowlist; histor
 its immutable tariff policy. No payment authority, mainnet activation or background scheduler changes.
 ## Full public mainnet storage and recovery — 2026-10-02
 
+An unsigned session withdrawal has a retained pre-crypto exposure transition. The
+normal worker must acquire the server marker before signing; submit requires it.
+Owner cancellation is atomic only before that marker, signed request and transfer
+claim, retains the cancelled original salt, and cannot revive that request. Local
+worker cancellation also requires no local cryptographic exposure. Uncertain or
+signed originals never release by time or empty vendor lookup. This lets an owner
+decline an unsigned withdrawal without retiring the stable funded signer.
+
 The owner requested the normal public product on mainnet, superseding the invited
 pilot proposal. The current production backend is SQLite, so the public release
 targets a fresh sealed mainnet SQLite namespace on the existing deployment while
