@@ -79,7 +79,7 @@ async function child(input: object) {
   return { process, start: () => process.stdin.write("GO\n"), result: resultPromise, point: pointPromise };
 }
 describe("identity-bound SQLite funding ledger", () => {
-  it("reports native admission failure under an exclusive lock without treating it as a reservation loser", async () => {
+  it.each(["admit", "reserve"] as const)("reports %s native admission failure before READY/GO under an exclusive lock without treating it as an operation loser", async action => {
     const f = await fixture(), ledger = openGatewayFundingSqliteLedger(f.file, f.identity);
     await ledger.admitOperation(f.operation.operationId); ledger.close();
     const native = new DatabaseSync(f.file);
@@ -88,7 +88,7 @@ describe("identity-bound SQLite funding ledger", () => {
       native.exec("BEGIN EXCLUSIVE");
       // An explicit exclusive lock demonstrates admission failure. It is not
       // claimed equivalent to the production reservation's BEGIN IMMEDIATE.
-      await expect(child({ file: f.file, identity: f.identity, action: "reserve", operationId: f.operation.operationId }))
+      await expect(child({ file: f.file, identity: f.identity, action, operationId: f.operation.operationId }))
         .rejects.toThrow("stage=admission category=refused");
       native.exec("ROLLBACK");
       expect(scanFullStorageSnapshot(native)).toEqual(before);
