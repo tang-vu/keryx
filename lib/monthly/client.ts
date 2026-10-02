@@ -1,7 +1,7 @@
 import { recoverTypedDataAddress, type Hex } from "viem";
 import { z } from "zod";
 import { browserBuyerJobId, encodeBrowserPayment } from "../buyer/browser-policy";
-import { buyerTypedData, BUYER_ORIGIN, decodeHeader, requirementSchema, authorizationSchema, type BuyerAuthorization } from "../buyer/protocol";
+import { buyerTypedData, BUYER_ORIGIN, BUYER_PROFILE, BUYER_NETWORK, decodeHeader, requirementSchema, authorizationSchema, type BuyerAuthorization } from "../buyer/protocol";
 import { browserSha256 } from "../browser-receipt-integrity";
 import { MONTHLY_PATH, monthlyMessage, monthlyQuoteSchema, type MonthlyQuote } from "./protocol";
 
@@ -13,7 +13,7 @@ type Http = typeof fetch;
 
 export async function fetchMonthlyQuote(http: Http = fetch): Promise<MonthlyQuote> {
   const res = await http(`${endpoint}?quote=1`, { cache: "no-store" });
-  if (!res.ok) throw new Error("Monthly pilot unavailable");
+  if (!res.ok) throw new Error("Monthly unavailable");
   return monthlyQuoteSchema.parse((await res.json()).quote);
 }
 
@@ -39,7 +39,7 @@ export async function buyMonthly(input: { quote: MonthlyQuote; payer: string;
   if (![endpoint, MONTHLY_PATH].includes(challenge.resource.url) || requirement.payTo.toLowerCase() !== quote.payee.toLowerCase()
     || requirement.amount !== String(quote.totalMicros)) throw new Error("Monthly payment challenge mismatch");
   const check = async () => { const wallet = await input.readWallet();
-    if (wallet.address.toLowerCase() !== input.payer.toLowerCase() || wallet.chainId !== 5042002 || BigInt(wallet.gatewayBalanceMicros) < BigInt(requirement.amount)) throw new Error("Check the reviewed wallet and Gateway funds"); };
+    if (wallet.address.toLowerCase() !== input.payer.toLowerCase() || wallet.chainId !== BUYER_PROFILE.chainId || BigInt(wallet.gatewayBalanceMicros) < BigInt(requirement.amount)) throw new Error("Check the reviewed wallet and Gateway funds"); };
   await check();
   const monthlyId = (await browserBuyerJobId(authorization)).replace(/^a2a_/, "monthly_");
   const intent: MonthlyIntent = { schema: "keryx-monthly-intent-v1", monthlyId, quote, authorization, challengeExpiresAt };
@@ -53,7 +53,7 @@ export async function buyMonthly(input: { quote: MonthlyQuote; payer: string;
   // After this durable boundary every transport/storage failure is uncertain. Never retry a debit.
   try {
     const paid = await http(endpoint, { method: "POST", headers: { "content-type": "application/json", "payment-signature": encodeBrowserPayment({ signature, authorization }), "x-keryx-monthly-expires": challengeExpiresAt }, body: JSON.stringify(quote) });
-    const evidence = z.object({ success: z.literal(true), transaction: z.string().min(1), payer: z.string(), network: z.literal("eip155:5042002") }).parse(decodeHeader(paid.headers.get("payment-response")));
+    const evidence = z.object({ success: z.literal(true), transaction: z.string().min(1), payer: z.string(), network: z.literal(BUYER_NETWORK) }).parse(decodeHeader(paid.headers.get("payment-response")));
     const body = await paid.json();
     if (!paid.ok || evidence.payer.toLowerCase() !== input.payer.toLowerCase() || body.monthlyId !== monthlyId
       || body.purchase?.transaction !== evidence.transaction || body.purchase?.totalMicros !== quote.totalMicros

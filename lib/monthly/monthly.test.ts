@@ -1,3 +1,4 @@
+import { ARC_TESTNET_PROFILE } from "../arc-network-profile";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
 import { quoteResearchMonthly } from "./quote";
@@ -8,7 +9,7 @@ import { authorizationWithNonce, buyerTypedData } from "../buyer/protocol";
 
 const { settings } = vi.hoisted(() => ({ settings: { defaultBudget: .05, a2aMaxBudget: .5, a2aFeeUsdc: .02,
   a2aDeepFeeUsdc: .05, sellerAddress: `0x${"b".repeat(40)}`, networkId: "eip155:5042002" } }));
-vi.mock("../config", () => ({ config: settings }));
+vi.mock("../config", () => ({ config: { ...settings, get defaultBudget() { return settings.defaultBudget; }, get a2aDeepFeeUsdc() { return settings.a2aDeepFeeUsdc; }, profile: ARC_TESTNET_PROFILE } }));
 const buyer = privateKeyToAccount(`0x${"1".repeat(64)}`);
 const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64");
 const requirement = { scheme: "exact", network: "eip155:5042002", asset: "0x3600000000000000000000000000000000000000",
