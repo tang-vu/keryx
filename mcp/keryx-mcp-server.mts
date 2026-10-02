@@ -3,9 +3,9 @@
  * Keryx MCP server — add Keryx to any agent in one line.
  *
  * Exposes Keryx's paid autonomous-research endpoint as MCP tools. The calling agent asks a question;
- * this server pays the x402 toll from the user's own Arc-testnet wallet, Keryx researches across paid
+ * this server pays the x402 toll from the user's own deployment-selected Arc wallet, Keryx researches across paid
  * sources and answers with citations, then pays creators downstream. Settlement receipts and
- * pending outcomes remain distinct; local testnet calls do not establish external traction.
+ * pending outcomes remain distinct; self-operated calls do not establish external traction.
  *
  * Transport: stdio. Configure it in any MCP client (Claude Code/Desktop, etc.) — see mcp/README.md.
  */
@@ -30,7 +30,7 @@ server.registerTool(
       `Ask Keryx — an autonomous research agent that buys paid sources under a budget, answers with ` +
       `inline citations, and pays each cited creator in USDC on Arc. Default deep-mode price is ` +
       `${meta.feeUsdc} USDC service fee + ${meta.defaultBudgetUsdc} USDC creator budget; the POST body sets the exact price. ` +
-      `Paid from your own funded Arc-testnet wallet (run keryx_wallet_status first to fund it). ` +
+      `Paid from your own funded ${meta.networkLabel} wallet (${meta.network}; run keryx_wallet_status first). ` +
       `Public research may send your question to Keryx's search provider. The source USDC budget is separate from model and search operating costs. ` +
       `Use when you want a grounded, source-cited answer AND the creators paid for their work.`,
     inputSchema: {
@@ -86,8 +86,9 @@ server.registerTool(
   {
     title: "Keryx wallet status",
     description:
-      "Show the Arc-testnet wallet the Keryx MCP server pays from: address, balances, whether it's " +
-      "ready, and exactly how to fund it via the Circle faucet. Run this before ask_keryx.",
+      `Show the configured ${meta.networkLabel} wallet (${meta.network}) the Keryx MCP server pays from: address, balances and readiness. ` +
+      (meta.faucet ? "Testnet funds are available through the Circle faucet. " : "Mainnet funds and native setup gas must come from the owner. ") +
+      "Run this before ask_keryx.",
     inputSchema: {},
   },
   async () => {

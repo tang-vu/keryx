@@ -104,7 +104,7 @@ import {
   runEvidenceMetrics,
 } from "./dashboard-metrics";
 import {
-  calculateTestnetEconomics,
+  calculateEconomics,
   economicsRunSample,
   type EconomicsRunSample,
 } from "../economics/testnet-economics";
@@ -2081,6 +2081,8 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async economics() {
+    const identity = this.enrolledIdentity;
+    const profile = identity ? storagePaymentProfile(identity) : ARC_TESTNET_PROFILE;
     const runs = this.db
       .prepare(`SELECT economics_data FROM query_runs WHERE economics_data IS NOT NULL`)
       .all()
@@ -2094,11 +2096,12 @@ export class SqliteAdapter implements KeryxDB {
       });
     const payments = this.db
       .prepare(
-        `SELECT query_id,kind,amount_usdc,settled,settlement_status,grant_epoch FROM payment_events`,
+        `SELECT query_id,kind,amount_usdc,settled,settlement_status,grant_epoch${profile.testnet ? "" : ",network,tx_hash"} FROM payment_events`,
       )
       .all()
       .map((row) => ({
         queryId: String(row.query_id ?? ""),
+        ...(!profile.testnet ? { network: String(row.network), txHash: typeof row.tx_hash === "string" ? row.tx_hash : null } : {}),
         kind: row.kind as "fetch" | "citation" | "inbound",
         amountUsdc: Number(row.amount_usdc),
         settled: Number(row.settled) === 1,
@@ -2120,7 +2123,7 @@ export class SqliteAdapter implements KeryxDB {
           ? (JSON.parse(String(row.response_data)) as Record<string, unknown>)
           : null,
       }));
-    return calculateTestnetEconomics(runs, payments, new Date(), a2aOrders);
+    return calculateEconomics(profile, runs, payments, new Date(), a2aOrders);
   }
 
   async settlementLedger(): Promise<LedgerAccount[]> {

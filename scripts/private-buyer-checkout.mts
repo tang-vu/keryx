@@ -3,7 +3,7 @@ import { open } from "node:fs/promises";
 import { privateKeyToAccount } from "viem/accounts";
 import { checkoutPrivateBuyer } from "../lib/buyer/private-checkout-workflow";
 
-const help = `Private research checkout (Arc testnet)
+const help = `Private research checkout (trusted configured Arc network)
 
 npm run buyer:private:checkout -- --request ./private-request.json --state ./new-private-job --private-payee 0x... --public-payee 0x... --max-total-micros 50000 --max-fee-micros 20000
 

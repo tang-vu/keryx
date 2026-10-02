@@ -57,6 +57,17 @@ beforeEach(() => {
 });
 
 describe("settleThenServe bazaar discovery passthrough", () => {
+  it("never delivers or relabels an absent or foreign receipt network", async () => {
+    for (const network of [undefined, "eip155:5042", "eip155:5042002:other"]) {
+      verifyMock.mockResolvedValue(VALID);
+      settleMock.mockResolvedValue({ ...SETTLED, network });
+      const produce = vi.fn();
+      const res = await settleThenServe(paidRequest(), baseOpts, produce);
+      expect(res.status).toBe(503);
+      expect(produce).not.toHaveBeenCalled();
+      expect(res.headers.get("PAYMENT-RESPONSE")).toBeNull();
+    }
+  });
   it("admits exact purpose before settlement and refuses a cross-product claim", async () => {
     verifyMock.mockResolvedValue(VALID); settleMock.mockResolvedValue(SETTLED);
     claimMock.mockRejectedValue(new Error("authorization already bound to Monthly"));

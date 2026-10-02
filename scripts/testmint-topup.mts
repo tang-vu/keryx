@@ -20,6 +20,8 @@ import { wrapFetchWithPayment, x402Client } from "@x402/fetch";
 import { ExactEvmScheme, toClientEvmSigner } from "@x402/evm";
 import { config } from "../lib/config.ts";
 
+if (config.networkId !== "eip155:5042002") throw new Error("TestMint supplies Arc testnet only; mainnet setup cannot use this faucet");
+
 const API = "https://testmint.myproceeds.xyz";
 const TIERS = new Set([1, 5, 10]);
 

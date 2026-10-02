@@ -37,6 +37,29 @@ pub fn prepare_task_v1(
     id: &str,
     created_at: &str,
 ) -> Result<PreparedTaskV1> {
+    prepare_task_for_network(
+        request,
+        payee,
+        max_total_micros,
+        id,
+        created_at,
+        "eip155:5042002",
+    )
+}
+
+/// Explicit rail for new task preparation. Legacy v1 bytes remain testnet-only;
+/// mainnet v2 persists its network before any purchase can be handed off.
+pub fn prepare_task_for_network(
+    request: &Value,
+    payee: &str,
+    max_total_micros: &str,
+    id: &str,
+    created_at: &str,
+    network: &str,
+) -> Result<PreparedTaskV1> {
+    if !["eip155:5042002", "eip155:5042"].contains(&network) {
+        return Err("unsupported task network".into());
+    }
     // The accepted v1 datetime grammar permits an arbitrarily long fraction,
     // and this public API can receive oversized invalid strings directly.
     // No scalar this large can fit the task file, so reject before cloning.
@@ -47,15 +70,27 @@ pub fn prepare_task_v1(
         return Err("task request or metadata exceeds 8 KB".into());
     }
     let request = normalized_request(request)?;
-    let task = Value::object(vec![
-        ("schema", "keryx-operator-task-v1".into()),
+    let mut fields = vec![
+        (
+            "schema",
+            if network == "eip155:5042" {
+                "keryx-operator-task-v2"
+            } else {
+                "keryx-operator-task-v1"
+            }
+            .into(),
+        ),
         ("id", id.into()),
         ("createdAt", created_at.into()),
         ("kind", "paid_research".into()),
         ("request", request.clone()),
         ("payee", payee.into()),
         ("maxTotalMicros", max_total_micros.into()),
-    ]);
+    ];
+    if network == "eip155:5042" {
+        fields.push(("network", network.into()));
+    }
+    let task = Value::object(fields);
     // Reuse the same identity, address, cap, and request binding validator as
     // read-only inspection instead of maintaining a second admission policy.
     let parsed = parse_task(&task, &request)?;

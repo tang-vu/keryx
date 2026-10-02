@@ -114,3 +114,19 @@ Historical TypeScript fixture writers are test oracles, not a runtime fallback.
 Tauri, payment authority, scheduling, approvals and web/MCP runtime migration are
 outside this immutable-task domain release. See the
 [shared engine migration plan](./rust-engine-migration.md) for those separate gates.
+
+
+## Network-scoped mainnet preparation (October 2 source candidate)
+
+The native writer accepts an optional canonical `network` for new local preparation.
+An absent value or selected testnet retains the exact historical v1 bytes. Mainnet
+emits v2 with its immutable network field. The fixed native artifact pin remains
+its authority; no signing or RPC is added. Existing publication/private-directory
+checks remain. Native read-only status and journal validation use the stored rail,
+including the exact Gateway domain and job-ID preimage; unknown rails are refused.
+TypeScript original-job recovery separately requires the current caller rail to match.
+Changing app configuration never relabels an old testnet task.
+
+Windows native workspace/CLI tests cover mainnet creation/status, unknown-network
+refusal without publication and retained v1 tests. This does not establish funded
+mainnet settlement, a new Windows installer or a Rust payment-engine cutover.

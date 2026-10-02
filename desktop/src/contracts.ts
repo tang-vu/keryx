@@ -7,7 +7,7 @@ export type CreatedTaskRow = TaskRow & { publicationState: CreationState };
 export type ReferenceRow = { handle: string; name: string; importedAt: string; bytes: number; sha256: string };
 export type WorkspaceView = { name: string; path: string; tasks: TaskRow[]; references: ReferenceRow[]; invalidDirectories: number;
   creationState?: CreationState };
-export type CreateInput = { question: string; mode: "quick" | "deep"; creatorBudget: string; payee: string; totalCap: string };
+export type CreateInput = { question: string; mode: "quick" | "deep"; creatorBudget: string; payee: string; totalCap: string; network?: "arc" | "arcTestnet" };
 export type SavedResult = NonNullable<Awaited<ReturnType<typeof import("../../lib/operator/task").readOperatorResult>>>;
 export type DesktopAPI = {
   chooseWorkspace(): Promise<WorkspaceView | null>;

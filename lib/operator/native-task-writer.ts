@@ -24,7 +24,7 @@ const REAP_GRACE_MS = 2_000;
 export type NativeWriterConfig = { binaryPath: string; manifestPath: string; expectedSourceCommit: string;
   deadlineMs?: number };
 export type NativeCreateInput = { parent: string; child: string; request: unknown; payee: string;
-  maxTotalMicros: string; id: string; createdAt: string };
+  maxTotalMicros: string; id: string; createdAt: string; network?: "eip155:5042" | "eip155:5042002" };
 export type NativeCreateResult = { taskId: string; child: string; state: z.infer<typeof state> };
 export type NativeWorkspaceResult = { child: string; state: z.infer<typeof state> };
 

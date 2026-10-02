@@ -19,7 +19,7 @@ import type { PrivateCreatorSubmission, PrivateCreatorSubmissionRecord } from ".
 import type { PrivateResearchResult } from "./private-research-results";
 import type { PrivateExecutionClaim } from "./private-research-executions";
 import type { LedgerAccount } from "../gateway/settlement-parity";
-import type { TestnetEconomicsSnapshot } from "../economics/testnet-economics";
+import type { EconomicsSnapshot } from "../economics/testnet-economics";
 import type { A2aOrder, A2aOrderResolutionUpdate } from "../a2a/order";
 import type { MonthlyPurchase, MonthlyRedemption, MonthlyRedemptionInput, ResearchPurchaseClaim } from "./research-monthly";
 import type { PrivateResearchIntent } from "../a2a/private-research-intent";
@@ -476,8 +476,8 @@ export interface KeryxDB {
   /** Dispatches a wallet ran while signed in, newest first. Address match is case-insensitive:
    *  runs are stamped lowercased, but callers hand over whatever casing the session carries. */
   listQueryRunsByAsker(wallet: string, limit: number): Promise<QueryRun[]>;
-  /** Testnet-only observed costs/subsidies and hypothetical service pricing. Never settlement. */
-  economics(): Promise<TestnetEconomicsSnapshot>;
+  /** Selected-rail recorded settlement observations and usage estimates. Not reconciled profit. */
+  economics(): Promise<EconomicsSnapshot>;
 
   // ── privacy-preserving activation telemetry ──
   /** Atomically increment one aggregate UTC-day counter. No actor, wallet, IP, or cookie. */

@@ -1,9 +1,10 @@
+import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "../arc-network-profile";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { DatabaseSync } from "node:sqlite";
-import { calculateTestnetEconomics } from "./testnet-economics";
+import { calculateEconomics, calculateTestnetEconomics } from "./testnet-economics";
 import { privateEconomicsReport, writePrivateEconomicsReport } from "./private-report";
 import { capturePricePolicy, FLASH_POLICY } from "./provider-cost-policy";
 const directories: string[] = [], linux = it.skipIf(process.platform !== "linux");
@@ -16,6 +17,19 @@ function fixture() {
   return { parent, directory: join(parent, "report"), load: vi.fn(async () => calculateTestnetEconomics([], [], new Date("2026-09-12T00:00:00Z"), [])) };
 }
 describe("private operator economics", () => {
+  it("keeps mainnet reports explicit and refuses relabelling a retained testnet snapshot", () => {
+    const testnet = calculateTestnetEconomics([], []);
+    expect(privateEconomicsReport(testnet).schema).toBe("keryx-private-economics-v2");
+    expect(() => privateEconomicsReport(testnet, ARC_MAINNET_PROFILE)).toThrow(/network/);
+    const mainnet = calculateEconomics(ARC_MAINNET_PROFILE, [], []);
+    const report = privateEconomicsReport(mainnet, ARC_MAINNET_PROFILE);
+    expect(report.schema).toBe("keryx-private-economics-v3");
+    expect(report).toHaveProperty("network", "eip155:5042");
+    expect(report).toHaveProperty("ledger"); expect(report).not.toHaveProperty("testnetLedger");
+    expect(report.accounting.realizedProfitUsd).toBeNull();
+    expect(() => privateEconomicsReport(mainnet, ARC_TESTNET_PROFILE)).toThrow(/network/);
+  });
+
   it("reads an existing SQLite schema without initialization or creating a missing database", async () => {
     const { SqliteAdapter } = await import("../db/sqlite-adapter"), f = fixture();
     const absent = join(f.parent, "missing", "database.sqlite");
@@ -27,6 +41,29 @@ describe("private operator economics", () => {
       expect((await db.economics()).sampledRuns).toBe(0);
       await expect(db.init()).rejects.toThrow();
     } finally { db.close(); }
+    expect(readFileSync(path)).toEqual(before);
+  });
+  it("uses native readonly adapter identity for a mainnet projection without relabelling legacy or changing bytes", async () => {
+    const { SqliteAdapter } = await import("../db/sqlite-adapter");
+    const { validateStorageIdentity, STORAGE_MAINNET_PROFILE_DIGEST } = await import("../db/storage-identity");
+    const f = fixture(), path = join(f.parent, "mainnet-projection.sqlite"), setup = new DatabaseSync(path);
+    setup.exec(`CREATE TABLE query_runs(economics_data TEXT);
+      CREATE TABLE payment_events(query_id TEXT,kind TEXT,amount_usdc REAL,settled INTEGER,settlement_status TEXT,grant_epoch TEXT,network TEXT,tx_hash TEXT);
+      CREATE TABLE a2a_orders(query_id TEXT,creator_budget_usdc REAL,service_fee_usdc REAL,status TEXT,response_data TEXT);
+      INSERT INTO payment_events VALUES('synthetic','inbound',0.05,1,'settled',NULL,'eip155:5042','synthetic-not-live-evidence');`);
+    setup.close(); const before = readFileSync(path);
+    const identity = validateStorageIdentity({ format: "keryx-mainnet-storage-identity-v1", network: "eip155:5042", authorityMode: "mainnet-real",
+      deploymentId: "8e6833f4-fcde-4241-a6a6-bd6071567296", storageId: "9e6833f4-fcde-4241-a6a6-bd6071567296",
+      enrollmentId: "ae6833f4-fcde-4241-a6a6-bd6071567296", enrolledAt: "2026-10-02T00:00:00.000Z",
+      profileDigest: STORAGE_MAINNET_PROFILE_DIGEST, provenanceDigest: "a".repeat(64) });
+    // This low-level synthetic core tests projection only. It is not an installed
+    // enrolled facade, registry admission, funded settlement or public authority.
+    const core = SqliteAdapter.assembleConnectionCore(new DatabaseSync(path, { readOnly: true }), identity, () => {});
+    try {
+      const snapshot = await core.economics(); expect(snapshot.network).toBe("eip155:5042");
+      expect(snapshot.settledInboundRevenueUsdc).toBe(0.05);
+      expect(privateEconomicsReport(snapshot, ARC_MAINNET_PROFILE)).toHaveProperty("ledger.settledInboundUsdc", 0.05);
+    } finally { core.close(); }
     expect(readFileSync(path)).toEqual(before);
   });
   it("keeps accounting unknown and excludes unexpected source fields", () => {

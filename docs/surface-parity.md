@@ -20,14 +20,13 @@ Audited research baseline `59757f8`; release branch rebased on `0417cee` (chat g
 
 ## Release checklist
 
-October 2 pilot preparation adds a local, explicit-file read-only operator command
-only. The [candidate surface audit](mainnet-pilot-candidate.md#pilot-scope-across-supported-surfaces)
-records the intended invited browser role and source/citation dependencies;
-caller-CLI/sponsored/treasury/A2A/MCP/extension/bot/desktop/worker mainnet spending is excluded.
-No supported adapter acquires a new mainnet signer or payment authority from this
-slice. Hosted deployment, npm publication and desktop installer versions are not
-claimed synchronized by candidate acceptance; existing artifacts keep their
-testnet contracts until separately reviewed and observed release acceptance.
+October 2 direction supersedes the earlier invited-browser proposal: migrate normal
+public mainnet Keryx on the existing domain across all applicable surfaces. The
+[current full-mainnet operational matrix](mainnet-operations.md) records each role,
+selected profile, fresh-state boundary and release evidence. Dormant pilot helpers
+and superseded proposals remain historical evidence; their invite lists and tiny
+caps are not the ordinary product policy. Source implementation does not establish
+mainnet funding/settlement or synchronized hosted/package/installer delivery.
 
 1. Compare current main/history with all supported adapters and documented capabilities. For each changed contract identify producer, consumers, legacy behavior, private/public scope and payment authority.
 2. Update every applicable surface together; record intentional exclusions and remaining work rather than silently omitting them. Exercise actual transport/CLI/IPC behavior, not just a helper mirror.
@@ -37,7 +36,7 @@ testnet contracts until separately reviewed and observed release acceptance.
 
 Observed before this update: production health matched `59757f8`; latest GitHub application release was v0.24.5 without desktop assets, while desktop 0.3.0 assets were attached to v0.24.0. npm `keryx-mcp` was 0.1.1. These are pre-release observations, not acceptance of the new update. Final distribution evidence must be recorded after release; missing npm credentials must remain explicit.
 
-Candidate versions: application 0.24.7, desktop 0.3.1, caller MCP release tarball 0.3.0 (server identity derives from package), extension ZIP 0.1.1. Remote MCP retains its separate protocol identity 0.2.0. npm remains 0.1.1 until authenticated publication; Chrome Web Store submission is unverified. These are release candidates until exact artifact/deployment checks complete.
+Candidate versions: application 0.24.7, desktop 0.3.1, caller MCP release tarball 0.3.0 (server identity derives from package), extension ZIP 0.1.1. Remote MCP retains its separate protocol identity 0.2.0. npm latest was independently observed as 0.3.2 on October 2 at 13:56 UTC; 0.4.0 publication/integrity and Chrome Web Store submission remain unverified. These are release candidates until exact artifact/deployment checks complete.
 
 
 ### Fresh isolated-storage alignment, 2026-10-02
@@ -48,3 +47,5 @@ application `0.25.1`, desktop `0.3.2` and caller MCP `0.3.2` candidates. Extensi
 MCP protocol `0.2.0` keep their separate identities and documented web/service roles.
 Registry publication, exact-source installer acceptance, deployment health and
 artifact hashes remain gates; repository version metadata is not delivery evidence.
+
+Current coordinated source candidate versions: application 0.26.0, desktop 0.4.0, caller MCP release tarball 0.4.0 (server identity derives from package), extension ZIP 0.1.1. Remote MCP retains its separate protocol identity 0.2.0. npm latest was independently observed as 0.3.2 on October 2 at 13:56 UTC; 0.4.0 publication/integrity and Chrome Web Store submission remain unverified. These are release candidates until exact artifact/deployment checks complete.

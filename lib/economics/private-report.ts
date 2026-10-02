@@ -1,11 +1,12 @@
 import { constants } from "node:fs";
+import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
 import { mkdir, open } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
-import type { TestnetEconomicsSnapshot } from "./testnet-economics";
+import type { EconomicsSnapshot } from "./testnet-economics";
 // Reuse the filesystem-only Linux operator boundary; this opens no relay or signer.
 import { inspectWithdrawalRelayDirectory } from "../gateway/withdrawal-relay-files";
 
-export function privateEconomicsReport(s: TestnetEconomicsSnapshot) {
+function legacyPrivateEconomicsReport(s: EconomicsSnapshot) {
   return {
     schema: "keryx-private-economics-v2", visibility: "operator-only", generatedAt: s.generatedAt,
     scope: "Legacy testnet query_runs, payment_events and a2a_orders aggregates. Not complete business accounting or an atomic cross-table snapshot.",
@@ -31,15 +32,31 @@ export function privateEconomicsReport(s: TestnetEconomicsSnapshot) {
   };
 }
 
+/** Caller supplies its trusted selected profile; a snapshot cannot relabel itself. */
+export function privateEconomicsReport(s: EconomicsSnapshot, profile: ArcNetworkProfile = ARC_TESTNET_PROFILE) {
+  if (profile !== ARC_TESTNET_PROFILE && profile !== ARC_MAINNET_PROFILE ||
+    (profile.testnet ? s.label !== "testnet-observatory" || s.network !== undefined && s.network !== profile.networkId
+      : s.label !== "mainnet-observatory" || s.network !== profile.networkId))
+    throw new Error("Economics snapshot network refused");
+  const historical = legacyPrivateEconomicsReport(s);
+  if (profile.testnet) return historical;
+  const { testnetLedger, ...common } = historical;
+  return { ...common, schema: "keryx-private-economics-v3", network: profile.networkId,
+    scope: "Fresh identity-bound mainnet query_runs, payment_events and a2a_orders aggregates. Not complete business accounting or an atomic cross-table snapshot.",
+    ledger: testnetLedger,
+    limitations: "Partial usage estimates and recorded mainnet settlement observations are not reconciled invoices or realized profit. Missing costs remain unknown." };
+}
+
 /** Explicit new directory under an existing owner-only Linux parent. No stdout,
  * overwrites or cleanup of retained partial output on failure. */
-export async function writePrivateEconomicsReport(directory: string, load: () => Promise<TestnetEconomicsSnapshot>) {
+export async function writePrivateEconomicsReport(directory: string, load: () => Promise<EconomicsSnapshot>,
+  profile: ArcNetworkProfile = ARC_TESTNET_PROFILE) {
   try {
     if (!isAbsolute(directory) || resolve(directory) !== directory) throw new Error();
     const parent = await inspectWithdrawalRelayDirectory(dirname(directory));
     await mkdir(directory, { mode: 0o700 });
     await inspectWithdrawalRelayDirectory(directory);
-    const bytes = Buffer.from(JSON.stringify(privateEconomicsReport(await load()), null, 2));
+    const bytes = Buffer.from(JSON.stringify(privateEconomicsReport(await load(), profile), null, 2));
     if (bytes.length > 65_536) throw new Error();
     const file = await open(join(directory, "economics.json"), constants.O_RDWR | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
     try {

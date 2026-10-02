@@ -180,7 +180,7 @@ impl LocalTask {
             ("taskId", self.task.id.as_str().into()),
             ("createdAt", self.task.created_at.as_str().into()),
             ("kind", "paid_research".into()),
-            ("network", "eip155:5042002".into()),
+            ("network", self.task.network.as_str().into()),
             ("stage", self.stage.into()),
             ("buyerJobId", self.intent.as_ref().map(|i| i.query_id.as_str()).into()),
             ("creatorBudgetMicros", ((self.task.request["budget"].as_f64().unwrap()*1_000_000.0).round() as u64).into()),

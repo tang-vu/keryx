@@ -1,14 +1,15 @@
+import { ARC_TESTNET_PROFILE } from "../arc-network-profile";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
 import { quoteResearchMonthly } from "./quote";
-import { monthlyMessage } from "./protocol";
+import { monthlyMessage, monthlyRedemptionJobId } from "./protocol";
 import { monthlyPaymentAuthorization, monthlyQuestionDigest, verifyMonthlyProof } from "./service";
-import { buyMonthly } from "./client";
+import { buyMonthly, submitMonthly } from "./client";
 import { authorizationWithNonce, buyerTypedData } from "../buyer/protocol";
 
 const { settings } = vi.hoisted(() => ({ settings: { defaultBudget: .05, a2aMaxBudget: .5, a2aFeeUsdc: .02,
   a2aDeepFeeUsdc: .05, sellerAddress: `0x${"b".repeat(40)}`, networkId: "eip155:5042002" } }));
-vi.mock("../config", () => ({ config: settings }));
+vi.mock("../config", () => ({ config: { ...settings, get defaultBudget() { return settings.defaultBudget; }, get a2aDeepFeeUsdc() { return settings.a2aDeepFeeUsdc; }, profile: ARC_TESTNET_PROFILE } }));
 const buyer = privateKeyToAccount(`0x${"1".repeat(64)}`);
 const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64");
 const requirement = { scheme: "exact", network: "eip155:5042002", asset: "0x3600000000000000000000000000000000000000",
@@ -88,4 +89,29 @@ describe("Monthly economics and proof authority", () => {
     expect(prepare).not.toHaveBeenCalled(); expect(sign).not.toHaveBeenCalled(); expect(claim).not.toHaveBeenCalled();
     expect(http).toHaveBeenCalledTimes(1);
   });
+});
+
+
+it("redeem snapshots the exact original question and ID before asynchronous proof work", async () => {
+  const original = { monthlyId: `monthly_${"a".repeat(64)}`, requestId: "00000000-0000-4000-8000-000000000001",
+    question: "What evidence supports this finding?", payer: buyer.address };
+  const mutable = { ...original };
+  const http = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ queryId: await monthlyRedemptionJobId(original.monthlyId,original.requestId) }));
+  const pending = submitMonthly(mutable, message => buyer.signMessage({ message }), http);
+  mutable.question = "A changed question";
+  mutable.requestId = "00000000-0000-4000-8000-000000000002";
+  await pending;
+  const init = http.mock.calls[0][1]!;
+  expect(init.redirect).toBe("error"); expect(init.signal).toBeInstanceOf(AbortSignal);
+  const body = JSON.parse(String(init.body));
+  expect(body).toMatchObject({ monthlyId: original.monthlyId, question: original.question, requestId: original.requestId });
+  await expect(verifyMonthlyProof("redeem", { monthlyId: original.monthlyId, requestId: original.requestId,
+    questionDigest: monthlyQuestionDigest(original.question) }, body.proof)).resolves.toBe(buyer.address);
+});
+
+it("retains the original request when a server returns a different shaped job identity", async () => {
+  const original={monthlyId:`monthly_${"a".repeat(64)}`,requestId:"00000000-0000-4000-8000-000000000001",question:"Original question",payer:buyer.address};
+  const http=vi.fn<typeof fetch>().mockResolvedValue(Response.json({queryId:`a2a_${"c".repeat(64)}`}));
+  await expect(submitMonthly(original,message=>buyer.signMessage({message}),http)).rejects.toThrow("Original Monthly job binding refused");
+  expect(http).toHaveBeenCalledTimes(1);
 });
