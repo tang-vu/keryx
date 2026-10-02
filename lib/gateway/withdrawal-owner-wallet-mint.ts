@@ -27,18 +27,14 @@ export async function observeWithdrawalOwnerWalletCompletion(outcome: {record:Wi
   return observed;
 }
 
-/** Shared session/creator owner gas authority. Only a verified original mainnet burn
- * and matching attestation can reach the fixed minter. Delivery is durably claimed
- * before the wallet prompt; uncertainty is original recovery, never retry authority. */
-export async function submitWithdrawalOwnerWalletMint(input: { record: WithdrawalRequestRecord; attestation: unknown;
-  wallet: WalletClient; rpc: PublicClient; assertCurrent(): void;
-  claimMint(terms: OwnerWalletMintAttempt): Promise<boolean>; retainMintHash(hash: string): Promise<void> }) {
-  const record=await validateWithdrawalRequest(structuredClone(input.record));input.assertCurrent();
-  const owner=record.policy.recipient,account=input.wallet.account;
-  if(record.network!==profile.networkId)throw new Error("Original owner mint network differs");
-  const check=async()=>{input.assertCurrent();if(!account||account.address.toLowerCase()!==owner||
-    await input.wallet.getChainId()!==profile.chainId||await input.rpc.getChainId()!==profile.chainId||
-    (await input.wallet.getAddresses())[0]?.toLowerCase()!==owner)throw new Error("Select the original owner on Arc mainnet");input.assertCurrent()};
+/** The same reviewed original/fee preparation for a connected owner wallet or an
+ * unsigned handoff. Callers must retain the exact nonce and terms before delivery. */
+export async function prepareWithdrawalOwnerWalletMint(input: { record: WithdrawalRequestRecord; attestation: unknown;
+  owner: string; rpc: PublicClient; assertCurrent(): void | Promise<void> }): Promise<OwnerWalletMintAttempt> {
+  const record=await validateWithdrawalRequest(structuredClone(input.record));await input.assertCurrent();
+  const owner=record.policy.recipient;
+  if(record.network!==profile.networkId||input.owner.toLowerCase()!==owner)throw new Error("Original owner mint network differs");
+  const check=async()=>{await input.assertCurrent();if(await input.rpc.getChainId()!==profile.chainId)throw new Error("Select the original owner on Arc mainnet");await input.assertCurrent()};
   await check();
   const matched=await matchWithdrawalAttestation(record,structuredClone(input.attestation));
   const observation=await withdrawalMintObserverForRpc(profile.rpcUrl)(record,matched,owner,AbortSignal.timeout(12000));
@@ -52,12 +48,27 @@ export async function submitWithdrawalOwnerWalletMint(input: { record: Withdrawa
   if(!Number.isSafeInteger(nonce)||nonce<0||gas<=BigInt(0)||!fees.maxFeePerGas||fees.maxPriorityFeePerGas===undefined||
     fees.maxPriorityFeePerGas<BigInt(0)||fees.maxPriorityFeePerGas>fees.maxFeePerGas||balance<gas*fees.maxFeePerGas)
     throw new Error("Review known owner gas and fee availability before minting");
-  const mint:OwnerWalletMintAttempt={to:profile.gatewayMinter.toLowerCase(),data,value:"0",nonce,gas:gas.toString(),
+  return {to:profile.gatewayMinter.toLowerCase(),data,value:"0",nonce,gas:gas.toString(),
     maxFeePerGas:fees.maxFeePerGas.toString(),maxPriorityFeePerGas:fees.maxPriorityFeePerGas.toString()};
+}
+
+/** Shared session/creator owner gas authority. Delivery is durably claimed before
+ * the wallet prompt; uncertainty is original recovery, never retry authority. */
+export async function submitWithdrawalOwnerWalletMint(input: { record: WithdrawalRequestRecord; attestation: unknown;
+  wallet: WalletClient; rpc: PublicClient; assertCurrent(): void;
+  claimMint(terms: OwnerWalletMintAttempt): Promise<boolean>; retainMintHash(hash: string): Promise<void> }) {
+  const record=await validateWithdrawalRequest(structuredClone(input.record));input.assertCurrent();
+  const owner=record.policy.recipient,account=input.wallet.account;
+  if(record.network!==profile.networkId)throw new Error("Original owner mint network differs");
+  const check=async()=>{input.assertCurrent();if(!account||account.address.toLowerCase()!==owner||
+    await input.wallet.getChainId()!==profile.chainId||await input.rpc.getChainId()!==profile.chainId||
+    (await input.wallet.getAddresses())[0]?.toLowerCase()!==owner)throw new Error("Select the original owner on Arc mainnet");input.assertCurrent()};
+  await check();
+  const mint=await prepareWithdrawalOwnerWalletMint({...input,record,owner,assertCurrent:check});
   if(!await input.claimMint(mint))throw new Error("Original owner mint is already claimed");await check();
   let hash:Hex;
-  try{hash=await input.wallet.sendTransaction({account:account!,chain:chainForProfile(profile),to:profile.gatewayMinter,data,value:BigInt(0),
-    nonce,gas,maxFeePerGas:fees.maxFeePerGas,maxPriorityFeePerGas:fees.maxPriorityFeePerGas});}
+  try{hash=await input.wallet.sendTransaction({account:account!,chain:chainForProfile(profile),to:profile.gatewayMinter,data:mint.data as Hex,value:BigInt(0),
+    nonce:mint.nonce,gas:BigInt(mint.gas),maxFeePerGas:BigInt(mint.maxFeePerGas),maxPriorityFeePerGas:BigInt(mint.maxPriorityFeePerGas)});}
   catch{throw new Error("Owner mint response unavailable. Retained nonce and calldata require recovery; do not mint again.")}
   await input.retainMintHash(hash.toLowerCase());await check();
   return {requestId:record.id,transactionHash:hash};
