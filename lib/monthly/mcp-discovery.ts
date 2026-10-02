@@ -1,7 +1,14 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { MonthlyQuote } from "./protocol";
 
-export function registerMonthlyDiscovery(server: McpServer, quote: () => Promise<MonthlyQuote | null>) {
+// Root and packaged stdio install independent pinned SDK copies. Share only this
+// capability, rather than a nominal SDK class whose private fields differ by copy.
+interface DiscoveryRegistrar {
+  registerTool(name: string, options: { title: string; description: string; inputSchema: Record<string, never>;
+    annotations: { readOnlyHint: boolean; destructiveHint: boolean; idempotentHint: boolean; openWorldHint: boolean } },
+  handler: () => Promise<{ content: { type: "text"; text: string }[] }>): unknown;
+}
+
+export function registerMonthlyDiscovery(server: DiscoveryRegistrar, quote: () => Promise<MonthlyQuote | null>) {
   server.registerTool("research_monthly", { title: "Research Monthly pilot",
     description: "Read the four-request, 30-day Arc-testnet Monthly quote and handoff. Never buys or redeems a plan.", inputSchema: {},
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true } }, async () => {
