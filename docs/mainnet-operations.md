@@ -230,11 +230,14 @@ normal withdrawal policy when that shared client domain is frozen.
 
 ## Package publication boundary
 
-A current registry read still reports `keryx-mcp` npm latest 0.1.1; source version
-numbers alone do not prove publication. Current main's publishing workflow uses
+The October 2 13:56 UTC registry read reports `keryx-mcp` npm latest 0.3.2,
+independently published before this 0.4.0 source candidate; source version numbers
+alone do not prove publication. Current main's publishing workflow uses
 npm Trusted Publishing through GitHub OIDC and environment `npm`; local npm login
 or a token secret is not required by that workflow. An earlier relative tarball
-path failure is corrected by PR132, with actual publication still separately verified.
+path failure is corrected by PR132, and that independent publication propagated successfully. The corrected workflow
+now waits for public registry readback; the final 0.4.0 candidate still needs its
+own exact tarball/integrity/clean-consumer evidence.
 
 Use the reviewed exact tarball, clean-consumer checks, registry integrity comparison
 and successful authorized workflow as npm publication evidence. Retain the immutable

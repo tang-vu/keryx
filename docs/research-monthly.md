@@ -86,26 +86,28 @@ The ten-minute challenge admission window is separate from Circle's configured
 multi-day signature validity. First submission is marked durably before the external
 call; uncertainty survives the challenge expiry, and recovery never replaces a debit.
 
-Monthly and the shared debit-admission writer remain ordinary TypeScript
-SQLite/Supabase authority. Both enrolled backend inventories explicitly refuse
-these methods, including read-only factories and internally assembled cores.
-The ordinary SQLite installer composes Monthly separately from the reviewed
-enrolled schema/profile; runtime never upgrades an enrolled store. Migration
-0078 refuses an already enrolled PostgreSQL owner, and its RPCs recheck that
-boundary. An enrolled/native Monthly domain needs reviewed identity-scoped
-contracts, fences, schema fingerprints and independent acceptance before cutover.
+The original testnet release uses ordinary TypeScript SQLite/Supabase authority.
+Fresh sealed mainnet SQLite now has separately admitted identity/profile-bound
+Monthly v2 contracts. Legacy unlabelled purchases and old enrolled testnet writers
+are refused on mainnet. Mainnet purchases require the exact submitted issued claim,
+selected USDC/Gateway identity and actual facilitator network receipt. Immutable
+native slot/order admission binds the original payer, version, request and network.
+The legacy 0078 PostgreSQL migration does not enroll a mainnet database; optional
+Supabase mainnet support remains staged/fail-closed and is not a SQLite launch gate.
 
-Production currently selects SQLite. Initialization installs the additive tables,
-immutable debit claims and historical nonce backfill. Verify the actual schema,
-claims and atomic admission on that database before activation. For Supabase,
-install migration 0078 and verify service-role-only tables/functions and the
-real multi-session PostgreSQL CI evaluator; local PGlite execution verifies SQL
-and parity but does not prove concurrent PostgreSQL sessions. Stop/drain old
-web and worker generations that lack shared admission before setting
-`KERYX_MONTHLY_ENABLED=1`. Deploy claim-aware code to all public settlement writers.
-Require focused nonce-replay/concurrency/economic/authorization tests, existing
-source/citation/A2A regressions, type checking, lint and production build, independent
-payment review, required CI and deployed commit health evidence.
+Before quote/checkout, the actual native writer and reviewed dedicated public key's
+address, historical role, query/lifetime caps and current selected Gateway capacity
+must pass. This checks the **one-run creator cap**, not the total prepaid price.
+It does **not reserve or escrow all four future runs**, guarantee future operator
+prefunding or promise four successful reports. New redemptions refuse without
+consuming a slot if current execution capacity is unavailable. Once an original
+job is admitted, exact replay returns it despite later disabled admission; terminal
+failed/uncertain jobs retain their slots and use ordinary original job recovery.
+
+Production mainnet requires a fresh sealed SQLite deployment, preserved testnet
+originals, drained old writers, reviewed custody/policy/funding inputs and final
+composed native/SDK/API acceptance. All receipts and metrics must distinguish
+synthetic tests, seller-reported evidence and actual real confirmed settlement.
 
 Disable `KERYX_MONTHLY_ENABLED` to stop new purchases/redemptions while retaining
 signed status and job/receipt recovery. Do not delete plans, consumed slots or

@@ -5,6 +5,7 @@ import { monthlyOrderId, type MonthlyPurchase } from "../db/research-monthly";
 import { a2aRequestHash, type A2aOrder } from "../a2a/order";
 import { monthlyMessage, monthlyProofSchema } from "./protocol";
 import { authorizationSchema, buyerTypedData, decodeHeader } from "../buyer/protocol";
+import { config } from "../config";
 
 export function monthlyQuestionDigest(question: string) { return createHash("sha256").update(question).digest("hex"); }
 
@@ -37,7 +38,8 @@ export async function redeemMonthly(db: KeryxDB, purchase: MonthlyPurchase, inpu
   const order: A2aOrder = { id: orderId, queryId: orderId, authorizationId: `${purchase.authorizationId}:monthly:${input.requestId}`,
     requestHash, payer: input.payer, payee: purchase.payee, amountUsdc: purchase.totalMicros / 4 / 1e6,
     creatorBudgetUsdc, serviceFeeUsdc, researchMode: "deep", researchPackage: purchase.researchPackage,
-    status: "running", transaction: purchase.transaction, request: { question: input.question, origin: "a2a", monthlyId: purchase.id },
+    status: "running", transaction: purchase.transaction, request: { question: input.question, origin: "a2a", monthlyId: purchase.id,
+      ...(!config.profile.testnet ? { network: config.profile.networkId } : {}) },
     startedAt: null, workerId: null, executionJournalVersion: 1, paymentStartedAt: null, resultSavingAt: null,
     response: null, errorCode: null, resolution: null, createdAt: now, updatedAt: now };
   return db.redeemResearchMonthly({ monthlyId: purchase.id, payer: input.payer, requestId: input.requestId, now, order });

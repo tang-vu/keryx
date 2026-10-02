@@ -2411,3 +2411,11 @@ No changes required. `KERYX_FORCE_OFFLINE=1` still works end-to-end:
 - **Security:** `docs/security-threat-model.md`
 - **Architecture:** `docs/system-architecture.md`
 - **Codebase:** `docs/codebase-summary.md`
+
+
+### October 2, 2026 ? selected mainnet Monthly candidate and owner deployment workspace
+
+- Fresh sealed SQLite Monthly admission uses actual selected-profile writer and dedicated-key/public-address/capacity checks before checkout. Actual facilitator network receipts and submitted original claims bind the v2 purchase; exact redemption returns its original job after new admission closes. Per-run capacity is not escrow or a guarantee for four future jobs.
+- The composed native handler/client fixture uses real local wallet signatures, SQLite and the installed Circle client with synthetic RPC/Circle HTTP; it does not establish real funded settlement.
+- The offline registry workspace pins reviewed source/compiler/settings/creation/runtime/ABI and provides an existing OKX Wallet ? Remix handoff without exporting owner custody. Public launch direction is authorized; concrete gas/USDC transactions remain unsigned and reviewed separately.
+- Full-public-mainnet surface documentation supersedes invited-pilot restrictions, preserves original-network recovery and records scholarly rights, optional Supabase and Rust finance as staged domains. Source versions do not assert deployment/publication synchronization.

@@ -15,9 +15,10 @@ import { privateMerchantPolicySchema } from "@/lib/buyer/private-merchant-policy
 import { config } from "@/lib/config";
 import { quoteA2aResearch } from "@/lib/a2a/pricing";
 import { parseBuyerBudget } from "@/lib/a2a/buyer-workspace";
-import { quoteResearchMonthly } from "@/lib/monthly/quote";
+import { monthlyAdmissionQuote } from "@/lib/monthly/readiness";
 import { ResearchMonthly } from "@/components/keryx/research-monthly";
 import { getDb } from "@/lib/db";
+import { assertMainnetHostedResearchReady } from "@/lib/payments/mainnet-hosted-gateway";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -35,12 +36,16 @@ export default async function ResearchPage({ searchParams }: {
   const mode = params.mode === "quick" ? "quick" : "deep";
   const validMode = params.mode === undefined || params.mode === "quick" || params.mode === "deep";
   const quote = budget !== null && validMode ? quoteA2aResearch(budget, mode) : null;
-  const available = config.networkId === "eip155:5042002" && !!config.sellerAddress && !!config.funderKey && process.env.KERYX_FORCE_OFFLINE !== "1";
+  const available = await (async () => { try {
+    if (!config.sellerAddress || process.env.KERYX_FORCE_OFFLINE === "1") return false;
+    if (config.profile.testnet) return !!config.funderKey;
+    if (!quote) return false;
+    await assertMainnetHostedResearchReady(await getDb(), String(Math.round(quote.creatorBudgetUsdc * 1e6)));
+    return true;
+  } catch { return false; } })();
   const privatePolicy = privateMerchantPolicySchema.safeParse({ privatePayee: process.env.KERYX_PRIVATE_RESEARCH_PAYEE, publicResearchPayee: config.sellerAddress });
   const monthlyQuote = await (async () => { try {
-    if (!available || process.env.KERYX_MONTHLY_ENABLED !== "1") return null;
-    await (await getDb()).getResearchMonthly(`monthly_${"0".repeat(64)}`);
-    return quoteResearchMonthly();
+    return await monthlyAdmissionQuote(await getDb());
   } catch { return null; } })();
   return (
     <div className="min-h-screen bg-paper-2 text-ink">
@@ -49,7 +54,7 @@ export default async function ResearchPage({ searchParams }: {
       <ResearchChat paidHref="#paid-research" />
       <div className="mx-auto max-w-[1080px] space-y-10 px-4 py-12 sm:px-[30px]">
         <header id="paid-research" className="scroll-mt-24 border-b border-line pb-8">
-          <p className="font-mono text-xs uppercase tracking-widest text-seal">Paid research · Arc testnet</p>
+          <p className="font-mono text-xs uppercase tracking-widest text-seal">Paid research · {config.profile.label}</p>
           <h2 className="mt-3 font-display text-4xl">Give your agent a research budget.</h2>
           <p className="mt-5 max-w-2xl font-serif text-lg text-ink-2">Know the price before your agent pays. Follow the job, read its evidence, and see what reached creators.</p>
           <p className="mt-3 font-serif text-sm text-ink-3">Buy with a funded Gateway wallet, or prepare a request for your own agent. Keep a private recovery file to follow your job after a disconnect.</p>
@@ -81,14 +86,14 @@ export default async function ResearchPage({ searchParams }: {
             {available ? <>
               <p className="mt-4 break-all font-mono text-xs">Payment network: {config.networkId}<br />Keryx payee: {config.sellerAddress}</p>
               <ResearchRequest key={`${mode}:${quote.creatorBudgetUsdc}`} mode={mode} budget={quote.creatorBudgetUsdc} version={quote.researchPackage.version} total={quote.totalPriceUsdc} payee={config.sellerAddress} />
-            </> : <p role="status" className="mt-4 text-seal">Paid testnet research is currently unavailable. Job lookup remains available below.</p>}
+            </> : <p role="status" className="mt-4 text-seal">Paid research on {config.profile.label} is currently unavailable. Job lookup remains available below.</p>}
           </>}
         </section>
         <ResearchSavedJobs />
         </ResearchWorkspace>
         <ResearchAccountJobs />
         {monthlyQuote && <ResearchMonthly quote={monthlyQuote} />}
-        {config.networkId === "eip155:5042002" && process.env.KERYX_PRIVATE_RESEARCH_ENABLED === "1" && privatePolicy.success
+        {process.env.KERYX_PRIVATE_RESEARCH_ENABLED === "1" && privatePolicy.success
           && <ResearchPrivateCheckout merchants={privatePolicy.data} />}
         <ResearchPrivateJobs />
         <ResearchJob />

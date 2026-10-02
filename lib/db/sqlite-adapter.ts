@@ -1,5 +1,3 @@
-import { ARC_TESTNET_PROFILE } from "../arc-network-profile";
-import { storagePaymentProfile } from "./storage-identity";
 import { installOrdinarySqliteApplicationSchema } from "./sqlite-application-schema";
 import { sqliteSessionFundingAccounting } from "./session-funding-accounting";
 import { sqliteCreatorOwnerAccounting, admitSqliteCreatorOwnerWithdrawal, readSqliteCreatorOwnerCompletion, completeSqliteCreatorOwnerWithdrawal } from "./creator-owner-withdrawal-journal";
