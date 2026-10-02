@@ -1,4 +1,5 @@
 import { installSqliteApplicationSchema } from "./sqlite-application-schema";
+import { sqliteSessionFundingAccounting } from "./session-funding-accounting";
 import { issueSqliteSessionGrantConsent, consumeSqliteSessionGrantConsent, readSqliteSessionGrantConsent } from "./session-grant-consents";
 import type { SessionGrantConsent } from "../payments/session-grant-consent";
 import { hasScholarlyRights, assertNoOrphanedPaperMarker } from "./scholarly-capability";
@@ -629,6 +630,10 @@ export class SqliteAdapter implements KeryxDB {
     if (!Number.isSafeInteger(spent) || spent < 0) throw new Error("Retained signer capacity unavailable");
     return spent;
   }
+  async sessionFundingAccounting(signer: string, after?: string) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Session funding accounting requires admitted mainnet storage");
+    return sqliteSessionFundingAccounting(this.db, signer, after);
+  }
   async consumeSessionGrantConsent(consent: SessionGrantConsent, signature: string, sessionSignature: string): Promise<void> {
     if (this.enrolledMode !== "mainnet-real") throw new Error("Owner-signed consent requires admitted mainnet storage");
     consumeSqliteSessionGrantConsent(this.db, consent, signature, sessionSignature, this.paymentProfile);
@@ -725,6 +730,7 @@ export class SqliteAdapter implements KeryxDB {
     return sqliteJournalActive(this.db);
   }
   async browserSignerConfirmedSpendMicro(signer: string): Promise<number> {
+    if (this.enrolledMode === "mainnet-real") return Number(sqliteSessionFundingAccounting(this.db, signer.toLowerCase()).confirmedSpentMicroUsdc);
     const rows = this.db
       .prepare(
         "SELECT * FROM payment_events WHERE lower(payer)=lower(?) AND grant_epoch IS NOT NULL AND settled=1 AND settlement_status='settled' AND network=?"

@@ -143,11 +143,17 @@ it("serves the normal owner consent and exact live admitted item challenge throu
   const { privateKeyToAccount } = await import("viem/accounts"), { NextRequest } = await import("next/server");
   const owner = privateKeyToAccount(`0x${"11".repeat(32)}`), session = privateKeyToAccount(`0x${"22".repeat(32)}`);
   const wallet = owner.address.toLowerCase(), signer = session.address.toLowerCase();
-  vi.doMock("../account-sessions", () => ({ accountSessionContext: async () => ({ db: adapter, wallet }) }));
+  let authenticatedWallet = wallet;
+  vi.doMock("../account-sessions", () => ({ accountSessionContext: async () => ({ db: adapter, wallet: authenticatedWallet }) }));
   vi.doMock("../auth", () => ({ getSession: async () => ({ address: wallet }) }));
   cleanup.push(() => { vi.doUnmock("../account-sessions"); vi.doUnmock("../auth"); });
   vi.stubGlobal("fetch", vi.fn(async () => Response.json({ token: "USDC", balances: [{ depositor: signer, domain: 26, balance: "1" }] })));
   const challengeRoute = await import("../../app/api/session/grant/challenge/route"), grantRoute = await import("../../app/api/session/grant/route");
+  const creditRoute = await import("../../app/api/session/credit/route");
+  const credit = (after?: string, grantEpoch?: string) => creditRoute.GET(new NextRequest(`https://keryx.cc/api/session/credit?address=${signer}&accounting=original-v1${after ? `&after=${encodeURIComponent(after)}` : ""}${grantEpoch ? `&grantEpoch=${grantEpoch}` : ""}`));
+  const freshCredit = await (await credit()).json();
+  expect(freshCredit).toMatchObject({ status: "known", available: "1000000", hasAuthorityHistory: false,
+    confirmedSpentMicroUsdc: "0", retainedSpentMicroUsdc: "0", postBaselineConfirmedDebitMicroUsdc: "0" });
   const request = (path: string, body: unknown, origin = "https://keryx.cc") => new NextRequest(`https://keryx.cc${path}`, {
     method: "POST", headers: { Origin: origin, "Content-Type": "application/json" }, body: JSON.stringify(body) });
   expect((await challengeRoute.POST(request("/api/session/grant/challenge", { sessAddr: signer, budgetMicros: "500000" }, "https://foreign.example"))).status).toBe(403);
@@ -193,6 +199,11 @@ it("serves the normal owner consent and exact live admitted item challenge throu
   // Synthetic terminal evidence updates native accounting; no live facilitator or funds.
   expect(await adapter.settlePendingPayment(admission.journal.payment.id!, admission.journal.nonce, "synthetic-confirmed-transfer")).toBe(true);
   vi.stubGlobal("fetch", vi.fn(async () => Response.json({ token: "USDC", balances: [{ depositor: signer, domain: 26, balance: "0.5" }] })));
+  // A prior debit that confirms after its admission timestamp cannot manufacture
+  // deposit credit against a later/equal balance baseline.
+  expect(await (await credit(admission.journal.admittedAt)).json()).toMatchObject({ status: "known", available: "500000",
+    confirmedSpentMicroUsdc: "500000", retainedSpentMicroUsdc: "500000", postBaselineConfirmedDebitMicroUsdc: "0" });
+  expect(await (await credit("2000-01-01T00:00:00.000Z")).json()).toMatchObject({ postBaselineConfirmedDebitMicroUsdc: "500000" });
   const renewal = await (await challengeRoute.POST(request("/api/session/grant/challenge", { sessAddr: signer, budgetMicros: "500000", recover: true }))).json();
   expect(renewal.consent.capMicroUsdc).toBe("1000000");
   expect(renewal.funding).toEqual({ availableMicroUsdc: "500000", confirmedSpentMicroUsdc: "500000",
@@ -215,6 +226,21 @@ it("serves the normal owner consent and exact live admitted item challenge throu
     retainedSpentMicroUsdc: "600000", proposedRemainingMicroUsdc: "400000" });
   expect((await (await grantRoute.GET(new NextRequest("https://keryx.cc/api/session/grant"))).json()).spentMicroUsdc).toBe("600000");
   expect((await adapter.getBrowserJournal(wallet, unknownId))!.phase).toBe("exposed");
+  expect(await (await credit("2000-01-01T00:00:00.000Z")).json()).toMatchObject({ confirmedSpentMicroUsdc: "500000",
+    retainedSpentMicroUsdc: "600000", postBaselineConfirmedDebitMicroUsdc: "500000" });
   expect((await grantRoute.POST(request("/api/session/grant", { consent, signature, sessionSignature }))).status).toBe(409);
   expect((await adapter.getSessionGrant(wallet))!.grantEpoch).toBe(renewal.consent.grantEpoch);
+  const recovery = await import("../../app/api/session/authorizations/[reqId]/route");
+  const read = (id: string) => recovery.GET(new NextRequest(`https://keryx.cc/api/session/authorizations/${id}`),
+    { params: Promise.resolve({ reqId: id }) });
+  expect(await (await read(reqId)).json()).toMatchObject({ settlementConfirmed: true, retryAuthorized: false,
+    journal: { nonce: admission.journal.nonce, grantEpoch: consent.grantEpoch, phase: "settled", payment: { txHash: "synthetic-confirmed-transfer" } } });
+  await adapter.revokeSessionGrant(wallet, renewal.consent.grantEpoch, signer);
+  const unresolved = await read(unknownId);
+  expect(unresolved.status).toBe(200);
+  expect(await unresolved.json()).toMatchObject({ settlementConfirmed: false, retryAuthorized: false,
+    journal: { phase: "exposed", nonce: unknown.status === "admitted" ? unknown.journal.nonce : "" } });
+  authenticatedWallet = payee;
+  expect((await read(reqId)).status).toBe(404);
+  expect((await credit(undefined, renewal.consent.grantEpoch)).status).toBe(503);
 }, 30000);

@@ -125,6 +125,7 @@ export const SUPABASE_ENROLLED_METHODS = Object.freeze({
   activateBrowserJournal: "write",
   browserSignerConfirmedSpendMicro: "read",
   browserSignerRetainedSpendMicro: "read",
+  sessionFundingAccounting: "read",
   admitBrowserJournal: "write",
   admitBrowserQueryPolicy: "write",
   admitBrowserSigningOriginal: "write",
