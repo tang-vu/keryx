@@ -7,17 +7,24 @@ existing balances; they are not new creator payments or independent adoption.
 
 The October 2 scope authorizes up to 23 eligible wallets and an absolute
 55,000,000 micro-USDC debit ceiling on Arc testnet only. The current reviewed
-snapshot is 54,959,260 micro-USDC, with quoted fee reservations of 88,550 and
-54,870,710 micro-USDC of potential mint value. Those are an unsigned plan, not
-settled figures. The controlled stale wallet with 2,000 micro-USDC cannot cover
+selected snapshot is 54,994,260 micro-USDC, with quoted fee reservations of
+88,550 and 54,905,710 micro-USDC of potential mint value if those quotes persist.
+Those are an unsigned plan, not settled figures. The controlled stale wallet
+with 2,000 micro-USDC cannot cover
 the fee and is excluded. A current payout address without an inventoried key
 remains outside custody; a matching source label cannot authorize it.
 
 Each request pays the original owner. The signed amount plus the quoted maximum
-fee equals that owner's reviewed available balance. Unsigned estimation runs at
-most five times to reach this exact fixed point. Circle may charge less than its
+fee equals that owner's immutable selected snapshot debit. Unsigned estimation
+runs at most five times to reach this exact fixed point. Circle may charge less than its
 quoted maximum, and later credits may accrue. Keyless recovery reports the fresh
 residual separately; no zero-balance or exact fee claim follows from a quote.
+Both preparation balance observations and the pre-signing balance check must be
+known and at least the selected debit. Later credits, or a drop from an earlier
+surplus that remains sufficient, do not change the selected amount, fee, policy or
+plan digest. Unknown balances or balances below the selected debit refuse before
+signing. Credits are never added automatically; retained originals and uncertain
+markers still forbid renewed signing.
 
 ## Authority and retained originals
 
@@ -27,7 +34,7 @@ The input manifest is public JSON:
 {
   "format": "creator-cashout-batch-manifest-v1",
   "network": "eip155:5042002",
-  "maxTotalDebitMicros": "54959260",
+  "maxTotalDebitMicros": "54994260",
   "maxFeeMicros": "3900",
   "owners": [
     { "owner": "0x...", "availableMicros": "...", "label": "Original label", "sourceName": "Original source" }

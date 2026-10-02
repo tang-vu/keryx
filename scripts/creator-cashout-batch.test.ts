@@ -88,7 +88,7 @@ it("prepares with complete fresh RPC observation metadata through the real stric
   expect(fetcher.mock.calls.map(([url]) => url)).toEqual(["https://gateway-api-testnet.circle.com/v1/info",
     "https://gateway-api-testnet.circle.com/v1/estimate", "https://gateway-api-testnet.circle.com/v1/estimate"]);
 });
-it("rejects changed balances, excess fees, unlimited expiry and unstable quote convergence before signing", async () => {
+it("rejects insufficient balances, excess fees, unlimited expiry and unstable quote convergence before signing", async () => {
   const f = manifest(), height = async () => ({ minimumBlockHeight: "10500", maximumBlockHeight: "12000" });
   const balance = async () => BigInt("53850");
   for (const fee of ["3901", "99999"]) await expect(prepareCreatorBatchPlan(f.value, contracts, { balance, height,
@@ -100,6 +100,26 @@ it("rejects changed balances, excess fees, unlimited expiry and unstable quote c
   await expect(prepareCreatorBatchPlan(f.value, contracts, { balance, height,
     estimate: async candidate => ({ ...candidate, maxBlockHeight: "11000", maxFee: ++index % 2 ? "3850" : "3800" }) })).rejects.toThrow();
   expect(index).toBe(5);
+});
+it("keeps selected debit and policy unchanged when preparation observes later credits or a smaller surplus", async () => {
+  const f = await planned();
+  const balance = vi.fn<() => Promise<bigint | null>>().mockResolvedValueOnce(BigInt("63850")).mockResolvedValueOnce(BigInt("54850"));
+  const plan = await prepareCreatorBatchPlan(f.value, contracts, { balance, height: f.height, estimate: f.estimate });
+  expect(balance).toHaveBeenCalledTimes(2);
+  expect(plan.manifest).toEqual(f.plan.manifest); expect(plan.drafts[0].policy).toEqual(f.plan.drafts[0].policy);
+  expect(plan.manifest.maxTotalDebitMicros).toBe("53850");
+  expect(plan.drafts[0].burnIntent).toMatchObject({ maxFee: "3850", spec: { value: "50000" } });
+});
+it("refuses unknown or below-selected balance at either preparation observation", async () => {
+  const f = await planned();
+  for (const unavailable of [null, BigInt("53849")]) for (const position of [0, 1]) {
+    const balance = vi.fn<() => Promise<bigint | null>>().mockResolvedValueOnce(position === 0 ? unavailable : BigInt("63850"))
+      .mockResolvedValueOnce(unavailable);
+    const estimate = vi.fn(candidate => f.estimate(candidate));
+    await expect(prepareCreatorBatchPlan(f.value, contracts, { balance, height: f.height, estimate })).rejects.toThrow();
+    expect(balance).toHaveBeenCalledTimes(position + 1);
+    expect(estimate).toHaveBeenCalledTimes(position === 0 ? 0 : 2);
+  }
 });
 it("prepares all 23 reviewed owners without widening any individual or total capacity", async () => {
   const owners = Array.from({ length: 23 }, (_, index) => ({ owner: privateKeyToAccount(generatePrivateKey()).address,
@@ -141,6 +161,31 @@ it("signs one unfunded original, verifies durable readback and never signs it ag
   expect((await signCreatorBatchOriginals(directory, f.plan, undefined, dependencies, signal()))[0].state).toBe("original-retained");
   expect(dependencies.key).not.toHaveBeenCalled(); expect(f.balance).not.toHaveBeenCalled();
 });
+it("signs only the selected original despite later credits and never renews it", async () => {
+  const f = await planned(), directory = privateDirectory(), digest = creatorBatchPlanDigest(f.plan), draft = f.plan.drafts[0];
+  const key = vi.fn(() => f.key), balance = vi.fn<() => Promise<bigint | null>>().mockResolvedValue(BigInt("63850"));
+  const deps = { key, balance, height: f.height };
+  expect((await signCreatorBatchOriginals(directory, f.plan, undefined, deps, signal()))[0].state).toBe("signed-original-retained");
+  const original = await retainedCreatorBatchOriginal(directory, draft);
+  expect(original.policy).toEqual(draft.policy); expect(original.request.burnIntent).toEqual(draft.burnIntent);
+  expect(original.request.burnIntent).toMatchObject({ maxFee: "3850", spec: { value: "50000" } });
+  expect(creatorBatchPlanDigest(f.plan)).toBe(digest);
+  key.mockClear(); balance.mockClear(); balance.mockResolvedValue(null);
+  expect((await signCreatorBatchOriginals(directory, f.plan, undefined, deps, signal()))[0].state).toBe("original-retained");
+  expect(key).not.toHaveBeenCalled(); expect(balance).not.toHaveBeenCalled();
+  expect(await retainedCreatorBatchOriginal(directory, draft)).toEqual(original);
+});
+it("refuses unknown or below-selected signing balance before creating a marker or original", async () => {
+  const f = await planned(), directory = privateDirectory(), draft = f.plan.drafts[0], height = vi.fn(() => f.height());
+  for (const available of [null, BigInt("53849")]) {
+    const results = await signCreatorBatchOriginals(directory, f.plan, undefined,
+      { key: () => f.key, balance: async () => available, height }, signal());
+    expect(results[0].state).toBe("unavailable-original-retained");
+    expect(existsSync(join(directory, `sign-attempt-${draft.id}.json`))).toBe(false);
+    expect(existsSync(join(directory, `original-${draft.id}.json`))).toBe(false);
+  }
+  expect(height).not.toHaveBeenCalled();
+});
 it("retains interrupted signing marker, rejects foreign keys/drift and never manufactures an original", async () => {
   const f = await planned(), directory = privateDirectory(), id = f.plan.drafts[0].id;
   writeFileSync(join(directory, `sign-attempt-${id}.json`), JSON.stringify({ requestId: id }), { mode: 0o600 });
@@ -148,9 +193,12 @@ it("retains interrupted signing marker, rejects foreign keys/drift and never man
   expect((await signCreatorBatchOriginals(directory, f.plan, undefined, deps, signal()))[0].state).toBe("unavailable-original-retained");
   expect(existsSync(join(directory, `original-${id}.json`))).toBe(false);
   expect(JSON.parse(readFileSync(join(directory, `sign-attempt-${id}.json`), "utf8"))).toEqual({ requestId: id });
+  expect((await signCreatorBatchOriginals(directory, f.plan, undefined, { ...deps, balance: async () => BigInt("63850") }, signal()))[0].state).toBe("unavailable-original-retained");
+  expect(existsSync(join(directory, `original-${id}.json`))).toBe(false);
+  expect(JSON.parse(readFileSync(join(directory, `sign-attempt-${id}.json`), "utf8"))).toEqual({ requestId: id });
   const other = privateDirectory();
   expect((await signCreatorBatchOriginals(other, f.plan, undefined, { ...deps, key: () => generatePrivateKey() }, signal()))[0].state).toBe("unavailable-original-retained");
-  expect((await signCreatorBatchOriginals(other, f.plan, undefined, { ...deps, balance: async () => BigInt("53851") }, signal()))[0].state).toBe("unavailable-original-retained");
+  expect((await signCreatorBatchOriginals(other, f.plan, undefined, { ...deps, balance: async () => BigInt("53849") }, signal()))[0].state).toBe("unavailable-original-retained");
   expect(existsSync(join(other, `sign-attempt-${id}.json`))).toBe(false);
 });
 it("retains a one-broadcast marker on response loss and rejects later replay or foreign raw bytes", async () => {

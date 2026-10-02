@@ -32,7 +32,8 @@ export async function signCreatorBatchOriginals(directory: string, input: unknow
       const account = privateKeyToAccount(dependencies.key(draft.owner));
       assert.equal(account.address.toLowerCase(), draft.owner);
       const row = plan.manifest.owners.find(row => row.owner === draft.owner)!;
-      assert.equal(await dependencies.balance(draft.owner), BigInt(row.availableMicros));
+      const available = await dependencies.balance(draft.owner);
+      assert.ok(available !== null && available >= BigInt(row.availableMicros));
       const height = await dependencies.height(draft);
       assert.ok(BigInt(draft.burnIntent.maxBlockHeight) >= BigInt(height.minimumBlockHeight)
         && BigInt(draft.burnIntent.maxBlockHeight) <= BigInt(height.maximumBlockHeight));

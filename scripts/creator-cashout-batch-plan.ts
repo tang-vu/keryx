@@ -42,8 +42,10 @@ export async function prepareCreatorBatchPlan(input: unknown,
   const drafts: WithdrawalBrowserDraft[] = [];
   for (const row of manifest.owners) {
     const available = BigInt(row.availableMicros), feeCap = BigInt(manifest.maxFeeMicros);
-    if (available <= feeCap || await dependencies.balance(row.owner) !== available)
-      throw new Error("Reviewed creator balance unavailable or changed");
+    if (available <= feeCap) throw new Error("Selected creator debit unavailable");
+    const initialBalance = await dependencies.balance(row.owner);
+    if (initialBalance === null || initialBalance < available)
+      throw new Error("Selected creator debit unavailable");
     const policy: WithdrawPolicy = { ...contracts, owner: row.owner, recipient: row.owner,
       maxValueMicros: row.availableMicros, maxFeeMicros: manifest.maxFeeMicros };
     const height = await dependencies.height(policy);
@@ -66,7 +68,9 @@ export async function prepareCreatorBatchPlan(input: unknown,
       if (next <= BigInt("0")) throw new Error("Batch quote unavailable");
       value = next;
     }
-    if (!accepted || await dependencies.balance(row.owner) !== available) throw new Error("Stable batch quote unavailable");
+    if (!accepted) throw new Error("Stable batch quote unavailable");
+    const finalBalance = await dependencies.balance(row.owner);
+    if (finalBalance === null || finalBalance < available) throw new Error("Stable batch quote unavailable");
     drafts.push(createWithdrawalBrowserDraft(accepted, policy));
   }
   return validateCreatorBatchPlan({ format: "creator-cashout-batch-plan-v1", manifest, drafts });

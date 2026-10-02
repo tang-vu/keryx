@@ -25,8 +25,8 @@ no missing response, expiry or balance drift permits another signature, salt,
 Circle POST or raw broadcast. Shared nonce uncertainty can hold later legs.
 
 The reviewed absolute scope is 23 owners and 55,000,000 micro-USDC, with the exact
-inspected plan at 54,959,260 micro-USDC and a 3,900 per-owner fee cap. Native funding
-is exactly 0.21 test USDC with at most 0.00063 funding gas, including a 0.207
+current selected snapshot at 54,994,260 micro-USDC and a 3,900 per-owner fee cap.
+Native funding is exactly 0.21 test USDC with at most 0.00063 funding gas, including a 0.207
 immutable relay lifetime ceiling. Preserve the older 0.010 rehearsal and its
 exhausted journal. PC keys remain in original custody; transfer only retained
 signed requests and public plans. Actual Windows ACL/ancestor checks replace no
@@ -34,6 +34,13 @@ source ACLs and do not infer protection from POSIX bits. Reserve the quoted fee
 maximum when selecting value and measure actual residuals; a quote cannot promise
 an empty balance or creator revenue. Receipt-matched reporting writes only the
 cash-out ledger. See [owner cash-out operations](docs/engineering/creator-owner-cashout-batch.md).
+
+Treat each reviewed snapshot balance as an immutable selected debit. Preparation
+and pre-signing require a known live balance at least that debit; later credits
+or a smaller sufficient surplus never enlarge the value, fee, policy or retained
+plan digest. Refuse unknown/below-selected balances before signing and report
+new credits as residual. Earlier unsigned snapshots remain historical evidence;
+they do not authorize replacing a retained original or uncertain marker.
 
 No production HTTP/timer or browser/desktop/MCP/extension/bot cash-out authority
 is enabled by this operator delivery. Source tests/review/CI and actual funded

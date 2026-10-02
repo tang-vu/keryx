@@ -20,6 +20,8 @@
   exclusive one-send retention and keyless receipt recovery. Historical rehearsal
   limits remain unchanged.
 - Report residual balances and cash-outs separately from creator payments.
+  Preparation/signing check solvency against the immutable selected debit;
+  later credits remain residual and never enlarge a reviewed request.
   Public browser creation/timers and desktop/MCP/extensions/bots gain no authority.
   Funded results and deployed versions require separate actual acceptance evidence.
 
