@@ -32,7 +32,10 @@ registration or require registration gas.
 
 `GET /api/sources/verify?sourceId=...` inspects the existing source for a SIWE-authenticated
 payout owner. `POST /api/sources/verify` accepts `{ sourceId }` and rechecks that same
-persisted payout identity. Split authors and other payment recipients retain their existing
+persisted payout identity. After the asynchronous feed read, an atomic verified-only
+update compares the original source ID, payout and effective feed. Identity changes or
+deletion return HTTP 409 `source_changed` with inspection/retry guidance. Registry price,
+active state and authors are preserved, even when updated during the check. Split authors and other payment recipients retain their existing
 notification-management role but do not gain feed verification permission. The portfolio
 API supplies `verificationSource` only for a payout owner's RSS source; it is `null` for
 an author-share recipient. Inspection and verification have no API-key authorization path.

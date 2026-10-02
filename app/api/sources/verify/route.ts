@@ -71,7 +71,11 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  await db.upsertSource({ ...source, verified: true });
+  // Feed fetching is asynchronous: never restore the stale payout/registry snapshot.
+  const unchanged = await db.verifySourceIfUnchanged({ sourceId: source.id, walletAddress: source.walletAddress, feedUrl });
+  if (!unchanged) {
+    return Response.json({ verified: false, code: "source_changed", error: "This source changed during the feed check. Refresh its management view and review the current payout wallet and feed before retrying. Do not register it again." }, { status: 409 });
+  }
   await recordActivationEvent(db, "creator_verification_completed");
   return Response.json({ verified: true });
 }
