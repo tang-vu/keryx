@@ -59,6 +59,10 @@ export async function GET() {
         // Whether the row can be feed-refreshed at all — drives the button, not security
         // (the refresh route re-checks ownership and the feed itself).
         hasFeed: Boolean(s.rssUrl?.trim()),
+        // A split recipient can manage notifications, but only the payout owner verifies.
+        verificationSource: s.rssUrl?.trim() && s.walletAddress.toLowerCase() === wallet.toLowerCase()
+          ? { id: s.id, walletAddress: s.walletAddress, rssUrl: s.rssUrl, verified: s.verified === true }
+          : null,
         earnedUsdc: earned?.totalEarnedUsdc ?? 0,
         citationCount: earned?.citationCount ?? 0,
         email: emailNotify?.email ?? null,

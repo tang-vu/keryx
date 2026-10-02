@@ -16,7 +16,7 @@
 import { NextRequest } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { feedContainsToken, verificationToken } from "@/lib/sources/feed-verification";
+import { checkFeedToken, verificationToken } from "@/lib/sources/feed-verification";
 import { recordActivationEvent } from "@/lib/activation";
 
 export const runtime = "nodejs";
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   const db = await getDb();
   const source = await db.getSource(sourceId);
   if (!source) {
-    return Response.json({ error: "source not found" }, { status: 404 });
+    return Response.json({ error: "source not found", code: "source_not_indexed", message: "This source is not available in the index. Check again later; do not register it again." }, { status: 404 });
   }
 
   // Only the wallet that receives this source's payouts may verify it.
@@ -58,10 +58,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const present = await feedContainsToken(feedUrl, source.walletAddress);
-  if (!present) {
+  const check = await checkFeedToken(feedUrl, source.walletAddress);
+  if (check === "unavailable") {
+    return Response.json({ verified: false, code: "feed_unavailable", error: "The feed could not be read. Check its availability and retry; ownership has not been verified." }, { status: 502 });
+  }
+  if (check === "missing") {
     return Response.json({
       verified: false,
+      code: "token_not_found",
       token: verificationToken(source.walletAddress),
       message: "Verification token not found in the feed yet. Add the exact line, let the feed publish, then retry.",
     });
@@ -70,4 +74,16 @@ export async function POST(req: NextRequest) {
   await db.upsertSource({ ...source, verified: true });
   await recordActivationEvent(db, "creator_verification_completed");
   return Response.json({ verified: true });
+}
+
+/** Returning owner inspection uses the persisted payout, never a client-selected token. */
+export async function GET(req: NextRequest) {
+  const session = await getSession();
+  if (!session) return Response.json({ error: "unauthenticated" }, { status: 401 });
+  const sourceId = req.nextUrl.searchParams.get("sourceId")?.trim();
+  if (!sourceId) return Response.json({ error: "sourceId required" }, { status: 400 });
+  const source = await (await getDb()).getSource(sourceId);
+  if (!source) return Response.json({ error: "source not found", code: "source_not_indexed" }, { status: 404 });
+  if (source.walletAddress.toLowerCase() !== session.address.toLowerCase()) return Response.json({ error: "not the source's payout wallet" }, { status: 403 });
+  return Response.json({ source: { id: source.id, walletAddress: source.walletAddress, rssUrl: source.rssUrl || null, verified: source.verified === true } }, { headers: { "Cache-Control": "no-store" } });
 }

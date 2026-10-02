@@ -15,7 +15,7 @@
  * header wallet menu); this page only renders the step UI around it.
  */
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useDisconnect } from "wagmi";
 import { toast } from "sonner";
 import { SiteHeader } from "@/components/keryx/site-header";
@@ -27,12 +27,30 @@ import {
 } from "@/components/keryx/connect-steps";
 import { useArcChainGuard } from "@/lib/hooks/use-arc-chain-guard";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
+import { registrationDraft, registrationTarget, safeRegistrationReturn, registrationOwnerMatches } from "@/lib/registration-return";
 import { AccountSessions } from "@/components/keryx/account-sessions";
 
 export default function ConnectPage() {
   const { disconnect, disconnectAsync } = useDisconnect();
   const chainGuard = useArcChainGuard();
   const { address, isConnected, session, authState, signIn, signOut } = useSiweAuth();
+
+  const [returnTo, setReturnTo] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const target = safeRegistrationReturn(new URLSearchParams(window.location.search).get("returnTo"));
+      if (!target) { setReturnTo(null); return; }
+      const draft = registrationDraft(new URL(target, window.location.origin).searchParams);
+      // Bind once to the wallet that starts this flow, retaining it across reloads and switches.
+      if (address && !draft.owner) draft.owner = address.toLowerCase();
+      const bound = registrationTarget(draft);
+      const params = new URLSearchParams({ returnTo: bound });
+      window.history.replaceState(window.history.state, "", `/connect?${params}`);
+      setReturnTo(bound);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [address]);
+  const identityMatches = !!address && !!session && address.toLowerCase() === session.address.toLowerCase();
 
   const handleSignIn = useCallback(async () => {
     try {
@@ -91,7 +109,7 @@ export default function ConnectPage() {
 
             {!isConnected && <ConnectStep isBusy={authState !== "idle"} />}
 
-            {isConnected && !session && (
+            {isConnected && !identityMatches && (
               <SignInStep
                 address={address!}
                 onSignIn={handleSignIn}
@@ -101,8 +119,9 @@ export default function ConnectPage() {
               />
             )}
 
-            {isConnected && session && (
-              <SignedInStep session={session} onSignOut={handleSignOut} busy={authState !== "idle"} />
+            {isConnected && session && identityMatches && returnTo === undefined && <p role="status" className="text-sm">Checking sign-in return context...</p>}
+            {isConnected && session && identityMatches && returnTo !== undefined && (
+              <SignedInStep session={session} onSignOut={handleSignOut} busy={authState !== "idle"} returnTo={returnTo} returnBlocked={!!returnTo && !registrationOwnerMatches(returnTo, session.address)} />
             )}
           </div>
         </div>

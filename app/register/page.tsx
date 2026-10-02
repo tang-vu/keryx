@@ -33,13 +33,14 @@ import {
   SourcesList,
   type SourceCardData,
 } from "@/components/keryx/sources-list";
-import type { Session } from "@/lib/auth";
+import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
+import { registrationDraft, registrationTarget, type RegistrationDraft } from "@/lib/registration-return";
 
 export default function RegisterPage() {
   const { address, isConnected } = useAccount();
+  const { session } = useSiweAuth();
   const [sources, setSources] = useState<SourceCardData[]>([]);
   const [sourcesState, setSourcesState] = useState<"loading" | "ready" | "error">("loading");
-  const [session, setSession] = useState<Session | null | undefined>(undefined); // undefined = loading
   // Pre-fill for claiming a pre-registry source on-chain. The form applies initial values on
   // mount only, so bump the key to re-initialise it with each claim.
   const [prefill, setPrefill] = useState<RegisterPrefill | null>(null);
@@ -49,14 +50,26 @@ export default function RegisterPage() {
   const [mode, setMode] = useState<"single" | "bulk">("single");
   const [draftFeed, setDraftFeed] = useState("");
   const [feedError, setFeedError] = useState("");
+  const [draftOwner, setDraftOwner] = useState<string | undefined>();
+
+  const saveDraft = (draft: RegistrationDraft) => {
+    const target = registrationTarget(draft);
+    window.history.replaceState(window.history.state, "", target);
+    setDraftOwner(draft.owner);
+    setPrefill(draft);
+    setDraftFeed(draft.rssUrl ?? "");
+    setFormKey((key) => key + 1);
+    setMode("single");
+  };
 
   const prepareFeed = () => {
     try {
       const parsed = new URL(draftFeed.trim());
       if (!["http:", "https:"].includes(parsed.protocol) || !parsed.hostname) throw new Error("Invalid feed URL");
-      setPrefill({ rssUrl: parsed.toString() });
-      setFormKey((key) => key + 1);
-      setMode("single");
+      if (parsed.username || parsed.password) throw new Error("Invalid feed URL");
+      const rssUrl = registrationDraft(new URLSearchParams({ rss: parsed.toString() })).rssUrl;
+      if (!rssUrl) throw new Error("Invalid feed URL");
+      saveDraft({ rssUrl, ...(rssUrl === prefill?.rssUrl ? { gapId: prefill.gapId, matchedItemLink: prefill.matchedItemLink } : {}), ...(address ? { owner: address.toLowerCase() } : {}) });
       setFeedError("");
     } catch {
       setFeedError("Enter a full http or https RSS feed URL.");
@@ -70,34 +83,15 @@ export default function RegisterPage() {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const params = new URLSearchParams(window.location.search);
-      const url = params.get("url")?.trim();
-      const name = params.get("name")?.trim();
-      const description = params.get("desc")?.trim();
-      const rssUrl = params.get("rss")?.trim();
-      const gapId = params.get("gap")?.trim();
-      const matchedItemLink = params.get("post")?.trim();
-      if (!url && !name && !rssUrl) return;
-      setPrefill({
-        ...(url ? { url } : {}),
-        ...(name ? { name } : {}),
-        ...(description ? { description } : {}),
-        ...(rssUrl ? { rssUrl } : {}),
-        ...(gapId && matchedItemLink ? { gapId, matchedItemLink } : {}),
-      });
+      const draft = registrationDraft(params);
+      setDraftOwner(draft.owner);
+      if (!draft.url && !draft.name && !draft.rssUrl) return;
+      setPrefill(draft);
+      setDraftFeed(draft.rssUrl ?? "");
       setFormKey((k) => k + 1);
       setMode("single");
     }, 0);
     return () => window.clearTimeout(timer);
-  }, []);
-
-  // Check whether we already have a valid session cookie on mount.
-  useEffect(() => {
-    fetch("/api/auth/session")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data: { session: Session } | null) => {
-        setSession(data?.session ?? null);
-      })
-      .catch(() => setSession(null));
   }, []);
 
   const loadSources = useCallback(async () => {
@@ -121,7 +115,10 @@ export default function RegisterPage() {
 
   // Permissionless: any signed-in wallet may list its first source (which then
   // makes it a creator). No creator-role precondition.
-  const canRegister = !!session;
+  const accountMatches = !!session && !!address && isConnected && session.address.toLowerCase() === address.toLowerCase();
+  const ownerMatches = !draftOwner || draftOwner === address?.toLowerCase();
+  const canRegister = accountMatches && ownerMatches;
+  const connectHref = `/connect?returnTo=${encodeURIComponent(registrationTarget({ ...prefill, owner: draftOwner ?? address?.toLowerCase() }))}`;
 
   return (
     <div className="min-h-screen bg-paper">
@@ -167,7 +164,7 @@ export default function RegisterPage() {
                 heading="Connect your wallet first"
                 body="You need to connect and sign in with your creator wallet before registering a source."
                 cta="Connect wallet ▸"
-                href="/connect"
+                href={connectHref}
               />
             )}
 
@@ -176,10 +173,12 @@ export default function RegisterPage() {
                 heading="Sign in to continue"
                 body="Connect your wallet to Keryx to register a source. Your wallet address becomes your payout address."
                 cta="Sign in ▸"
-                href="/connect"
+                href={connectHref}
               />
             )}
 
+            {session && !accountMatches && <AuthGate heading="Confirm your payout wallet" body="Connect the wallet matching your signed-in account, or sign in with the connected wallet before continuing." cta="Review sign-in" href={connectHref} />}
+            {session && accountMatches && !ownerMatches && <div role="alert" className="border border-line p-5 text-sm">This draft was prepared for {draftOwner}. Switch back to that wallet, or <a className="underline" href="/register">start a new registration draft</a>.</div>}
             {canRegister && (
               <>
                 {/* Show which wallet will be used as the payout address */}
@@ -239,7 +238,7 @@ export default function RegisterPage() {
                 </div>
                 {mode === "single" ? (
                   <RegisterForm
-                    key={formKey}
+                    key={`${formKey}:${session?.address.toLowerCase()}`}
                     onCreated={loadSources}
                     prefillWalletAddress={address}
                     prefill={prefill ?? undefined}
