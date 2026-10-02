@@ -14,7 +14,9 @@ export interface IsolatedWrappedKey {
   iv: Uint8Array;
 }
 
-/** Namespaced IndexedDB contains only a non-exportable wrapping key. */
+/** Namespaced IndexedDB contains only a non-exportable wrapping key. Same-origin script can
+ * still obtain its handle and decrypt available ciphertext; this is not an XSS boundary.
+ */
 export function indexedDbWrappingKeyStore(): WrappingKeyStore {
   async function database(namespace: string): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {

@@ -91,3 +91,11 @@ local per-payment checks cannot substitute for durable spend authority. An appli
 must not pass an unverified request's payee list or candidate context into this factory.
 No mainnet release, spending authorization or real settlement evidence follows from
 these synthetic checks.
+
+Custody residual: non-exportability prevents exporting the AES wrapping-key bytes;
+it does not prevent compromised same-origin script from retrieving the CryptoKey
+handle from IndexedDB and decrypting a ciphertext blob it can obtain. Worker heap
+isolation and these namespaces are not a same-origin XSS security boundary. Script
+running when the wallet derivation signature is produced can also derive the session
+key itself. Any tiny funded pilot must explicitly review and accept those bounds;
+separate-origin signer enrollment is a future independent architecture/release gate.
