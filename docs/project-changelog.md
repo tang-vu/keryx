@@ -1,5 +1,17 @@
 # Keryx Project Changelog
 
+### 2026-10-02 - Bounded mainnet pilot candidate preparation
+
+- Add an explicit-file, keyless pilot preflight with exact release-commit digest,
+  distinct declared network origins/state/environment, invited buyer/creator
+  address isolation and proposed integer micro-USDC caps. Optional live checking
+  reuses fixed public Arc/Circle observations. Valid proposal means no signing,
+  funding, mainnet runtime activation or launch authorization.
+- Record invited browser pilot intent and all excluded spending surfaces. Existing
+  production, packages and installers retain their testnet roles; no distribution
+  or mainnet acceptance claim. Financial release gates remain open independently
+  of complete-product economics/adoption requirements.
+
 
 ### 2026-10-02 - Caller-driven operations monitoring
 

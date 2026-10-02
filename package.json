@@ -9,6 +9,7 @@
   "description": "Keryx — a citation-toll reading agent. Pays creators every time their work is cited, in USDC on Arc.",
   "scripts": {
     "test:browser-isolated-session": "node --import tsx scripts/test-browser-isolated-session.mts",
+    "test:built-empty-evidence": "node scripts/test-built-empty-evidence.cjs",
     "test:browser-scholarly-rights": "node --import tsx scripts/test-browser-scholarly-rights.mts",
     "scholarly:review": "node --import tsx --env-file-if-exists=.env.local scripts/scholarly-review.mts",
     "import:public-references": "node --import tsx --env-file-if-exists=.env.local scripts/import-public-references.mts",
@@ -35,6 +36,7 @@
     "register-onchain": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/register-existing-source-onchain.mts",
     "metrics": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/metrics.mts",
     "preflight": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/preflight.mts",
+    "preflight:mainnet-pilot": "node --import tsx --no-warnings scripts/preflight-mainnet-pilot.mts",
     "preflight:ops": "node scripts/release-ops-preflight.mjs",
     "arc:update": "node --import tsx --no-warnings scripts/arc-update.mts",
     "verify:receipt": "node --import tsx --no-warnings scripts/verify-research-receipt.mts",

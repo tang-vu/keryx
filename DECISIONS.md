@@ -4241,3 +4241,7 @@ Use one public recorded-result projection for A2A, remote MCP and OpenAI. Preser
 ## Stable native inspection versus derived exports ? 2026-10-02
 
 Preserve the established v1 raw result/default brief contract across the TypeScript and evaluated Rust readers. Derived reference/evidence exports are a separate application presentation domain, explicitly read through `readOperatorResearchResult` for non-brief CLI and desktop formats. Both raw and enriched readers share one integrity/task-binding snapshot reader; enrichment uses its exact checked receipt object without a second file read. This prevents transport enrichment from accidentally broadening a staged native domain or requiring duplicate bibliographic generators. Exact native/inter-file assertions remain release gates, with added copied-artifact proof of the raw base, derived formats, receipt digest/authority and unchanged source tree. Native direct-format cutover remains unproven.
+
+## Empty evidence production completion - 2026-10-02
+
+Initialize the shared orchestrator's Low confidence fallback before its early returns. Next's production optimizer coalesced an uninitialized confidence binding with a later verdict, causing no-source and failed-original-read paths to throw despite passing source tests. Protect actual compiled behavior with a hermetic post-build regression in CI. Result/payment/export contracts remain unchanged across shared consumers. See [production empty-evidence regression](docs/engineering/empty-evidence-production-2026-10-02.md).
