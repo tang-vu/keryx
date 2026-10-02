@@ -98,9 +98,10 @@ quota degradation and private-provider isolation.
 
 Web and public API reasoning use the shared catalog and engine chain, including `/api/models`,
 SSE asks and OpenAI-compatible model IDs. Hosted remote MCP, public A2A and bots inherit the
-server chain. The local research CLI and repository stdio MCP use the same shared engine when
-their process is configured. Operator/desktop/extension and distributed caller-funded MCP
-clients retain their existing request/payment roles; they do not receive server credentials or
+server chain. The local research CLI uses the shared engine when its process is configured.
+Repository stdio MCP and distributed MCP remain caller-funded clients of the hosted service;
+they inherit its provider chain rather than running a local reasoning engine. Operator,
+desktop and extension retain their existing request/payment roles; none receive server credentials or
 new signing authority. Private workers retain their separate approved provider policy.
 
 This is app/server release 0.24.9. Standalone MCP 0.3.0, Operator 0.3.1 and extension 0.1.1
