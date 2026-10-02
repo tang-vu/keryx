@@ -50,6 +50,8 @@ export type A2aOrderResolutionUpdate =
 
 export interface A2aOrderRequest {
   question: string;
+  /** A prepaid allocation, not another inbound settlement or an EIP-3009 nonce. */
+  monthlyId?: string;
   model?: string;
   origin: "a2a" | "engine";
 }

@@ -7,6 +7,7 @@
 
 import { getDb } from "@/lib/db";
 import { buildResearchReceipt } from "@/lib/research-receipt";
+import { quoteFromA2aOrder } from "@/lib/a2a/result";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,7 +25,8 @@ export async function GET(
     if (!run) return Response.json({ error: "not found" }, { status: 404 });
 
     const payments = await db.listCreatorPaymentAttemptsByQuery(id);
-    const receipt = buildResearchReceipt(run, payments);
+    const order = id.startsWith("a2a_") ? await db.getA2aOrder(id) : null;
+    const receipt = buildResearchReceipt(run, payments, order ? quoteFromA2aOrder(order).funding : undefined);
     const headers = new Headers({
       "Cache-Control": "no-store",
       "X-Keryx-Receipt-Digest": receipt.integrity.digest,

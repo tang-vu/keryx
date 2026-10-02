@@ -62,11 +62,27 @@ describe("caller-bound local Arc transactions", () => {
     expect(f.methods.at(-1)).toBe("eth_sendRawTransaction");
   });
 
+  it.each(operations)("binds omitted unsigned from to the configured signer for %s", async (_name, transaction) => {
+    const f = fixture(tx => { delete tx.from; });
+    const hash = await sendGuardedArcTransaction({ account: f.account, rpcUrl: "https://synthetic.invalid", transaction });
+    expect(f.sign).toHaveBeenCalledOnce(); expect(f.submitted).toHaveLength(1);
+    const parsed = parseTransaction(f.submitted[0]);
+    expect(parsed).toMatchObject({ chainId: 5042002, to: transaction.to.toLowerCase() });
+    expect(parsed.value ?? BigInt(0)).toBe(transaction.value ?? BigInt(0));
+    expect(parsed.data ?? "0x").toBe(transaction.data ?? "0x");
+    expect(await recoverTransactionAddress({ serializedTransaction: f.submitted[0] as Parameters<typeof recoverTransactionAddress>[0]["serializedTransaction"] })).toBe(f.account.address);
+    expect(hash).toBe(keccak256(f.submitted[0]));
+  });
+
   it.each([
     ["mainnet prepared chain", (tx: Record<string, unknown>) => { tx.chainId = "0x13b2"; }],
     ["wrong payee", (tx: Record<string, unknown>) => { tx.to = ATTACKER; }],
     ["inflated native value", (tx: Record<string, unknown>) => { tx.value = "0x33"; }],
     ["wrong sender", (tx: Record<string, unknown>) => { tx.from = ATTACKER; }],
+    ["explicit null sender", (tx: Record<string, unknown>) => { tx.from = null; }],
+    ["malformed sender", (tx: Record<string, unknown>) => { tx.from = "invalid"; }],
+    ["omitted sender and wrong payee", (tx: Record<string, unknown>) => { delete tx.from; tx.to = ATTACKER; }],
+    ["omitted sender and access list", (tx: Record<string, unknown>) => { delete tx.from; tx.accessList = [{ address: ATTACKER, storageKeys: [] }]; }],
     ["changed calldata", (tx: Record<string, unknown>) => { tx.input = "0xdeadbeef"; }],
     ["authorization list", (tx: Record<string, unknown>) => { tx.authorizationList = []; }],
     ["access list", (tx: Record<string, unknown>) => { tx.accessList = [{ address: ATTACKER, storageKeys: [] }]; }],
@@ -84,30 +100,30 @@ describe("caller-bound local Arc transactions", () => {
     expect(f.sign).not.toHaveBeenCalled(); expect(f.submitted).toEqual([]);
   });
 
-  it("refuses a live chain switch before the key is invoked", async () => {
+  it.each([false, true])("refuses a live chain switch before the key is invoked (omitted from=%s)", async omitted => {
     let reads = 0;
-    const f = fixture(undefined, () => ++reads === 1 ? "0x4cef52" : "0x13b2");
+    const f = fixture(tx => { if (omitted) delete tx.from; }, () => ++reads === 1 ? "0x4cef52" : "0x13b2");
     await expect(sendGuardedArcTransaction({ account: f.account, rpcUrl: "https://synthetic.invalid", transaction: operations[0][1] })).rejects.toThrow("refused");
     expect(f.sign).not.toHaveBeenCalled(); expect(f.submitted).toEqual([]);
   });
 
-  it("refuses a chain switch at raw submission after a valid signature", async () => {
+  it.each([false, true])("refuses a chain switch at raw submission after a valid signature (omitted from=%s)", async omitted => {
     let reads = 0;
-    const f = fixture(undefined, () => ++reads < 3 ? "0x4cef52" : "0x13b2");
+    const f = fixture(tx => { if (omitted) delete tx.from; }, () => ++reads < 3 ? "0x4cef52" : "0x13b2");
     await expect(sendGuardedArcTransaction({ account: f.account, rpcUrl: "https://synthetic.invalid", transaction: operations[0][1] })).rejects.toThrow("refused");
     expect(f.sign).toHaveBeenCalledOnce(); expect(f.submitted).toEqual([]);
   });
 
-  it("rejects a mutated signature tuple before raw submission", async () => {
-    const f = fixture();
+  it.each([false, true])("rejects a mutated signature tuple before raw submission (omitted from=%s)", async omitted => {
+    const f = fixture(tx => { if (omitted) delete tx.from; });
     const badSigner = privateKeyToAccount(`0x${"44".repeat(32)}`);
     f.sign.mockImplementation(tx => badSigner.signTransaction(tx));
     await expect(sendGuardedArcTransaction({ account: f.account, rpcUrl: "https://synthetic.invalid", transaction: operations[0][1] })).rejects.toThrow("refused");
     expect(f.sign).toHaveBeenCalledOnce(); expect(f.submitted).toEqual([]);
   });
 
-  it("preserves the original hash and uncertainty after response loss, without retry or bearer diagnostics", async () => {
-    const f = fixture();
+  it.each([false, true])("preserves the original hash and uncertainty after response loss (omitted from=%s)", async omitted => {
+    const f = fixture(tx => { if (omitted) delete tx.from; });
     const fetcher = f.fetcher.getMockImplementation()!;
     f.fetcher.mockImplementation(async (url, init) => {
       const request = JSON.parse(String(init?.body)) as { method: string };

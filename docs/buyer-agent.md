@@ -1,5 +1,11 @@
 # Independent buyer agent — Arc testnet
 
+For the four-request prepaid pilot, use [Research Monthly](research-monthly.md).
+`npm run monthly -- quote --payee 0x...` reads its price; buy in the reviewed web
+checkout, then use `status --id` or `redeem --request` with the original downloaded
+request file. These commands use the caller's wallet; status never submits a
+payment and exact redemption recovery never consumes a second slot.
+
 The buyer client purchases Keryx Quick/Deep research using the caller's own funded
 Gateway balance. It imports no Keryx server configuration and cannot access the
 Keryx funder. Requires Node 24 (recommended), this repository and `npm install`.

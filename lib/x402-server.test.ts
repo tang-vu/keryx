@@ -8,10 +8,12 @@
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const { verifyMock, settleMock } = vi.hoisted(() => ({
+const { verifyMock, settleMock, claimMock } = vi.hoisted(() => ({
   verifyMock: vi.fn(),
   settleMock: vi.fn(),
+  claimMock: vi.fn(),
 }));
+vi.mock("./db", () => ({ getDb: async () => ({ claimResearchPurchase: claimMock }) }));
 
 vi.mock("@circle-fin/x402-batching/server", () => ({
   BatchFacilitatorClient: class {
@@ -37,7 +39,7 @@ function paidRequest(): NextRequest {
     x402Version: 2,
     resource: { url: "/api/agent/ask", description: "test", mimeType: "application/json" },
     accepted: { scheme: "exact" },
-    payload: { authorization: { from: "0xbuyer", nonce: "0xnonce" }, signature: "0xsig" },
+    payload: { authorization: { from: "0xbuyer", to: baseOpts.payTo, value: "20000", nonce: "0xnonce" }, signature: "0xsig" },
   };
   return new NextRequest("http://localhost/api/agent/ask", {
     method: "POST",
@@ -51,9 +53,23 @@ const SETTLED = { success: true, transaction: "0xtx", payer: "0xbuyer" };
 beforeEach(() => {
   verifyMock.mockReset();
   settleMock.mockReset();
+  claimMock.mockReset(); claimMock.mockResolvedValue(undefined);
 });
 
 describe("settleThenServe bazaar discovery passthrough", () => {
+  it("admits exact purpose before settlement and refuses a cross-product claim", async () => {
+    verifyMock.mockResolvedValue(VALID); settleMock.mockResolvedValue(SETTLED);
+    claimMock.mockRejectedValue(new Error("authorization already bound to Monthly"));
+    const res = await settleThenServe(paidRequest(), { ...baseOpts, purchasePurpose: "a2a", purchaseRequestHash: "a".repeat(64) }, () => ({ ok: true }));
+    expect(res.status).toBe(500); expect(settleMock).not.toHaveBeenCalled();
+    expect(claimMock).toHaveBeenCalledWith(expect.objectContaining({ purpose: "a2a", requestHash: "a".repeat(64), amountMicros: 20000 }));
+    expect(verifyMock.mock.invocationCallOrder[0]).toBeLessThan(claimMock.mock.invocationCallOrder[0]);
+  });
+  it("refuses settlement while durable admission is unavailable", async () => {
+    verifyMock.mockResolvedValue(VALID); claimMock.mockRejectedValue(new Error("database unavailable"));
+    const res = await settleThenServe(paidRequest(), baseOpts, () => ({ ok: true }));
+    expect(res.status).toBe(500); expect(settleMock).not.toHaveBeenCalled();
+  });
   it("without discovery: forwards the buyer payload untouched", async () => {
     verifyMock.mockResolvedValue(VALID);
     settleMock.mockResolvedValue(SETTLED);
@@ -79,7 +95,7 @@ describe("settleThenServe bazaar discovery passthrough", () => {
     expect(settleMock.mock.calls[0][0].extensions).toEqual({ bazaar: { info: DISCOVERY } });
     // The signed inner payload is untouched by the merge.
     expect(settleMock.mock.calls[0][0].payload).toEqual({
-      authorization: { from: "0xbuyer", nonce: "0xnonce" },
+      authorization: { from: "0xbuyer", to: baseOpts.payTo, value: "20000", nonce: "0xnonce" },
       signature: "0xsig",
     });
     expect(await res.json()).toMatchObject({ authorizationId: "0xnonce" });

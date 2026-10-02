@@ -80,6 +80,10 @@ export const SUPABASE_ENROLLED_METHODS = Object.freeze({
   listRecentQueries: "read",
   recordPayment: "write",
   recordPaymentOnce: "write",
+  claimResearchPurchase: "unsupported",
+  createResearchMonthly: "unsupported",
+  getResearchMonthly: "unsupported",
+  redeemResearchMonthly: "unsupported",
   createA2aOrder: "write",
   getA2aOrder: "read",
   listA2aOrdersByPayer: "read",
@@ -155,4 +159,4 @@ export const SUPABASE_ENROLLED_METHODS = Object.freeze({
   recordFeedback: "write",
   getFeedbackStats: "read",
   creatorLeaderboard: "read",
-} satisfies Record<RequiredDBMethod, "read" | "write"> & Partial<Record<keyof KeryxDB, "read" | "write">>);
+} satisfies Record<RequiredDBMethod, "read" | "write" | "unsupported"> & Partial<Record<keyof KeryxDB, "read" | "write" | "unsupported">>);
