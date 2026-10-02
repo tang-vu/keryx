@@ -33,6 +33,9 @@ const challengeSchema = z.object({ sessionId: addr, reqId: z.string().uuid(), gr
   paymentContext: z.object({ item: z.record(z.string(), z.unknown()).optional(), offer: z.record(z.string(), z.unknown()).optional() }).strict().optional(),
 });
 const sourceIndexSchema = z.array(z.object({ id: z.string(), onchainId: z.string().regex(/^0x[0-9a-f]{64}$/).optional() })).max(1000);
+const itemSchema = z.object({ itemId: z.string().min(1).max(1024), contentVersion: z.string().min(1).max(256) }).passthrough();
+const previewSchema = z.object({ sourceId: z.string(), item: itemSchema, payTo: addr,
+  listPriceMicroUsdc: z.string().regex(/^(0|[1-9]\d{0,15})$/) }).strict();
 export type BrowserSessionOperation =
   | { type: "initializeOwner"; owner: string }
   | { type: "deriveFromSignature"; signature: Hex }
@@ -88,6 +91,15 @@ export function createBrowserSessionRuntime(key: SessionRuntimeKey, dependencies
       if (!authority.active || !authority.onchain || (challenge.kind === "fetch"
         ? payTo !== authority.fetchPayTo.toLowerCase() : !authority.wallets.has(payTo))) refuse();
       if (challenge.kind === "fetch") {
+        if (challenge.paymentContext?.item) {
+          const item = itemSchema.parse(challenge.paymentContext.item);
+          const path = `/api/source/${encodeURIComponent(challenge.sourceId)}/item/${encodeURIComponent(item.itemId)}/preview?version=${encodeURIComponent(item.contentVersion)}`;
+          const preview = previewSchema.parse(await dependencies.json(path));
+          const listPrice = Math.round(authority.listPriceUsdc * 1e6);
+          if (!Number.isSafeInteger(listPrice) || listPrice < 0 || preview.sourceId !== challenge.sourceId ||
+            preview.payTo !== authority.fetchPayTo.toLowerCase() || preview.listPriceMicroUsdc !== String(listPrice) ||
+            canonicalJson(preview.item) !== canonicalJson(item)) refuse();
+        }
         const price = await validateBrowserFetchPrice({ sourceId: challenge.sourceId, amountUsdc6: requirements.amount,
           authority, context: challenge.paymentContext as BrowserPaymentContext });
         if (!price.allowed) refuse();

@@ -33,7 +33,7 @@ export async function readBrowserMainnetSource(registryId: string): Promise<Sour
     const creator = record.creator.toLowerCase(), payout = record.payoutWallet.toLowerCase();
     const nonzero = (a: string) => /^0x[0-9a-f]{40}$/.test(a) && !/^0x0{40}$/.test(a);
     if (controller.signal.aborted || recheck.hash !== block.hash || !record.active || !nonzero(creator) || !nonzero(payout) ||
-      record.fetchPriceUsdc6 > BigInt(Number.MAX_SAFE_INTEGER) || record.authors.length < 1 || record.authors.length > 5 ||
+      record.fetchPriceUsdc6 > BigInt(Number.MAX_SAFE_INTEGER) || record.authors.length < 1 || record.authors.length > 20 ||
       new Set(record.authors.map(a => a.wallet.toLowerCase())).size !== record.authors.length ||
       record.authors.reduce((sum, a) => sum + a.basisPoints, 0) !== 10000 ||
       record.authors.some(a => a.basisPoints <= 0 || !nonzero(a.wallet.toLowerCase()))) refuse();

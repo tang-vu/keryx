@@ -81,6 +81,11 @@ try {
       return route.fulfill({ json: grant });
     }
     if (url.pathname === "/api/sources") return route.fulfill({ json: { sources: [{ id: sourceId, onchainId: registryId }] } });
+    if (url.pathname === `/api/source/${sourceId}/item/article/preview`) {
+      assert.equal(url.searchParams.get("version"), `sha256:${"77".repeat(32)}`);
+      return route.fulfill({ json: { sourceId, item: { itemId: "article", itemTitle: "A reviewed mainnet article", itemUrl: "https://creator.test/article",
+        contentVersion: `sha256:${"77".repeat(32)}` }, payTo: payout, listPriceMicroUsdc: price.toString() } });
+    }
     assert.equal(url.pathname, "/api/ask/challenge"); assert.deepEqual(request.postDataJSON(), { reqId });
     return route.fulfill({ json: { sessionId: owner.address.toLowerCase(), reqId, grantEpoch: epoch,
       sessAddr: grant!.sessAddr, sourceId, kind: "fetch", expectedNonce: `0x${nonceIndex.toString(16).padStart(64,"0")}`,

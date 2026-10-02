@@ -28,9 +28,11 @@ async function fixture() {
     paymentContext:{item:{itemId:"article",itemTitle:"Actual reviewed article",itemUrl:"https://source.test/article",contentVersion:`sha256:${"44".repeat(32)}`}} };
   const consumed = new Set<string>(); let total = BigInt(0), revoked = false;
   const dependencies = {
-    async json(path:string) { if (revoked) throw new Error("revoked"); if(path === "/api/session/grant") return structuredClone(provedGrant);
+    async json(path:string): Promise<unknown> { if (revoked) throw new Error("revoked"); if(path === "/api/session/grant") return structuredClone(provedGrant);
       if(path === "/api/ask/challenge") return structuredClone(challenge);
-      if(path === "/api/sources") return {sources:[{id:"publication",onchainId:`0x${"55".repeat(32)}`} ]}; throw new Error(path); },
+      if(path === "/api/sources") return {sources:[{id:"publication",onchainId:`0x${"55".repeat(32)}`} ]};
+      if(path.includes("/item/article/preview?")) return {sourceId: "publication", item: structuredClone(challenge.paymentContext.item), payTo: payout, listPriceMicroUsdc: "1000"};
+      throw new Error(path); },
     async readSource() { return {fetchPayTo:payout,creator:payout,wallets:new Set([payout]),listPriceUsdc:0.001,onchain:true,active:true}; },
     async reserve(_n:string,_e:string,nonce:string,value:bigint,cap:bigint) { if(consumed.has(nonce)||total+value>cap) throw new Error("retained capacity"); consumed.add(nonce); total+=value; },
   };
@@ -70,4 +72,13 @@ it("retains capacity but suppresses header publication when another tab revokes 
   const operation=createBrowserSessionRuntime(delayed,f.dependencies).authorizePayment(f.challenge.reqId);
   await started;f.revoke();release();await expect(operation).rejects.toThrow("revoked");
   expect(f.consumed.size).toBe(1);
+});
+it("refuses changed item identity, receipt or independently priced metadata before signing", async () => {
+  for (const patch of [{ item: { itemId: "article", contentVersion: `sha256:${"99".repeat(32)}` } },
+    { listPriceMicroUsdc: "999" }, { payTo: `0x${"99".repeat(20)}` }]) {
+    const f = await fixture(), original = f.dependencies.json;
+    f.dependencies.json = async path => { const body = await original(path); return path.includes("/preview?") ? { ...(body as Record<string, unknown>), ...patch } : body; };
+    await expect(createBrowserSessionRuntime(f.key, f.dependencies).authorizePayment(f.challenge.reqId)).rejects.toThrow();
+    expect(f.consumed.size).toBe(0);
+  }
 });

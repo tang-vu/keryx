@@ -6,6 +6,8 @@
   },
   "include": [
     "scripts/test-browser-isolated-session.mts",
+    "scripts/test-browser-mainnet-normal.mts",
+    "scripts/test-browser-mainnet-normal-built.mts",
     "scripts/check-llm.mts",
     "scripts/check-dispatches.mts",
     "scripts/preflight-mainnet-pilot.mts",

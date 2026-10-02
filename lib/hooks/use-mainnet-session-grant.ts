@@ -109,41 +109,49 @@ export function useMainnetSessionGrant() {
     } catch { return false; }
   }, [signer, publishGrant, owner]);
   const generateAndFund = useCallback(async (budgetUsdc: number, addFunds = false) => {
+    let expectedGeneration = ++generation.current;
+    const expectedOwner = ownerRef.current;
+    const assertCurrent = () => { if (generation.current !== expectedGeneration || ownerRef.current !== expectedOwner) throw new Error("Session funding changed; retain the original transaction for recovery"); };
+    const requestConsent = async (sessAddr: string, budget: string) => {
+      assertCurrent(); expectedGeneration = generation.current+1;
+      return consentGrant(sessAddr, budget);
+    };
     try {
       const micros = amount(budgetUsdc);
-      if (!wallet || !rpc || !ownerRef.current) throw new Error("Connect and authenticate the owner wallet first");
-      const expectedOwner = ownerRef.current;
+      if (!wallet || !rpc || !expectedOwner) throw new Error("Connect and authenticate the owner wallet first");
       setState(s => ({ ...s, status: "switching", error: null })); await ensureArc();
+      assertCurrent();
       const context = await signer().initializeOwner(expectedOwner);
       let sessAddr: Hex;
       try { sessAddr = await signer().restoreRetained(expectedOwner); }
       catch {
         setState(s => ({ ...s, status: "generating" }));
         const signature = await wallet.signMessage({ account: wallet.account!, message: context.derivationMessage });
-        if (ownerRef.current !== expectedOwner) throw new Error("Session owner changed");
+        assertCurrent();
         sessAddr = await signer().deriveRetained(signature);
       }
-      setState(s => ({ ...s, sessAddr, sessionId: expectedOwner }));
+      assertCurrent(); setState(s => ({ ...s, sessAddr, sessionId: expectedOwner }));
       // Refuse unknown Gateway funds before asking the owner to deposit more.
       const available = await readGatewayCredit(sessAddr);
       await reconcileOwnerSessionCredit(expectedOwner as Hex, sessAddr, available);
-      if (!addFunds && available >= BigInt(micros)) { await consentGrant(sessAddr, micros); return; }
+      assertCurrent();
+      if (!addFunds && available >= BigInt(micros)) { await requestConsent(sessAddr, micros); return; }
       const funding = await fundOwnerGatewaySession({ owner: expectedOwner as Hex, signer: sessAddr, amountMicros: micros, knownAvailableMicros: available,
-        wallet, rpc: rpc as PublicClient,
+        wallet, rpc: rpc as PublicClient, assertCurrent,
         onPhase: phase => setState(s => ({ ...s, status: phase.startsWith("deposit") ? "depositing" : "funding" })) });
       setState(s => ({ ...s, status: "confirming" }));
       // Circle credit can lag on-chain confirmation; bounded polling never repeats a deposit.
       for (let attempt=0; attempt<40; attempt++) {
-        if (ownerRef.current !== expectedOwner) throw new Error("Session owner changed");
+        assertCurrent();
         const knownAvailable = await readGatewayCredit(sessAddr);
         if (funding.gatewayCreditBefore !== undefined && knownAvailable >= BigInt(funding.gatewayCreditBefore)+BigInt(funding.amount)) {
           await acknowledgeSessionFundingCredit(funding.id, knownAvailable);
-          await consentGrant(sessAddr, knownAvailable.toString()); return;
+          await requestConsent(sessAddr, knownAvailable.toString()); return;
         }
         await new Promise(resolve => setTimeout(resolve, 3000));
       }
       throw new Error("Deposit is confirmed on-chain. Gateway credit is pending; recover the retained session later without depositing again.");
-    } catch (err) { failure(err); }
+    } catch (err) { if (generation.current === expectedGeneration && ownerRef.current === expectedOwner) failure(err); }
   }, [wallet, rpc, ensureArc, signer, consentGrant, failure]);
   const recoverViaSignature = useCallback(async () => {
     try {

@@ -20,7 +20,7 @@ export async function reconcileOwnerSessionCredit(owner: Address, signer: Addres
  */
 export async function fundOwnerGatewaySession(input: { owner: Address; signer: Address; amountMicros: string;
   knownAvailableMicros: bigint;
-  wallet: WalletClient; rpc: PublicClient; onPhase?(phase: OwnerFundingPhase): void }) {
+  wallet: WalletClient; rpc: PublicClient; assertCurrent?(): void; onPhase?(phase: OwnerFundingPhase): void }) {
   if (browserPaymentProfile() !== profile || input.owner.toLowerCase() === input.signer.toLowerCase()) throw new Error("Mainnet session funding terms unavailable");
   const rows = await listFundingRecords(input.owner);
   let record = rows.find(row => row.activePayer === input.owner.toLowerCase());
@@ -29,6 +29,7 @@ export async function fundOwnerGatewaySession(input: { owner: Address; signer: A
   record ??= await createFundingRecord(input.owner, input.amountMicros, input.signer, input.knownAvailableMicros.toString());
   async function confirm(step: FundingStep, current: FundingRecord) {
     for (let attempt=0; attempt<30; attempt++) {
+      input.assertCurrent?.();
       let checked: FundingRecord | null = null;
       try { checked = await recoverFundingStep(current.id, step, input.rpc); }
       catch { /* Keep original nonce/hash and refuse another signing prompt. */ }
@@ -39,6 +40,7 @@ export async function fundOwnerGatewaySession(input: { owner: Address; signer: A
     throw new Error("Funding confirmation is unresolved. Inspect the retained original transaction; do not send it again.");
   }
   for (const step of ["approval", "deposit"] as const) {
+    input.assertCurrent?.();
     if (record[step].status === "confirmed") continue;
     if (["ready", "rejected"].includes(record[step].status)) {
       input.onPhase?.(step === "approval" ? "approval-awaiting" : "deposit-awaiting");
@@ -47,6 +49,7 @@ export async function fundOwnerGatewaySession(input: { owner: Address; signer: A
     } else if (record[step].status !== "submitted") throw new Error("Funding needs recovery of its original transaction before another deposit");
     input.onPhase?.(step === "approval" ? "approval-submitted" : "deposit-submitted");
     record = await confirm(step, record);
+    input.assertCurrent?.();
     input.onPhase?.(step === "approval" ? "approved" : "deposited");
   }
   return record;
