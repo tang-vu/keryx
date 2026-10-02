@@ -2,6 +2,7 @@ import { BatchEvmScheme } from "@circle-fin/x402-batching/client";
 import type { PrivateKeyAccount } from "viem";
 import { assertArcRpcChain } from "../arc-rpc-attestation";
 import { config } from "../config";
+import { ARC_TESTNET_PROFILE } from "../arc-network-profile";
 import { validateSessionPayment } from "../session/session-signing-policy";
 import type { TypedDataPayload } from "../session/session-signer-protocol";
 import type { BatchPayloadSigner } from "./server-x402-client";
@@ -17,13 +18,13 @@ export function createPinnedArcBatchSigner(account: PrivateKeyAccount, rpcUrl: s
       try {
         const expected = Object.freeze({ ...requirements, extra: Object.freeze({ ...requirements.extra }) });
         const preparedAt = Math.floor(Date.now() / 1000);
-        if (version !== 2 || expected.scheme !== "exact" || expected.network !== "eip155:5042002"
-          || !sameAddress(expected.asset, "0x3600000000000000000000000000000000000000")
+        if (version !== 2 || expected.scheme !== "exact" || expected.network !== ARC_TESTNET_PROFILE.networkId
+          || !sameAddress(expected.asset, ARC_TESTNET_PROFILE.usdcAddress)
           || typeof expected.amount !== "string" || !/^[1-9]\d{0,77}$/.test(expected.amount)
           || BigInt(expected.amount) >= BigInt(2) ** BigInt(256)
           || expected.maxTimeoutSeconds !== config.maxTimeoutSeconds
           || expected.extra.name !== "GatewayWalletBatched" || expected.extra.version !== "1"
-          || !sameAddress(expected.extra.verifyingContract, "0x0077777d7EBA4688BDeF3E311b846F25870A19B9")) throw new Error();
+          || !sameAddress(expected.extra.verifyingContract, ARC_TESTNET_PROFILE.gatewayWallet)) throw new Error();
         const sdk = new BatchEvmScheme({
           address: payer,
           async signTypedData(payload) {

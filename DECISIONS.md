@@ -1,5 +1,24 @@
 # Keryx — Decision Log
 
+**D-293** — Mainnet preparation — *Public dual-network pins do not confer runtime authority* — *2026-10-02*
+
+Centralize immutable Arc testnet and mainnet public profiles without an environment-
+controlled browser signing policy. The deployed testnet configuration, browser header,
+worker policy, server verifier, seller and reconciler retain explicit testnet selection;
+the payment-runtime selector refuses mainnet until dependent domains pass their own
+cutover. A mainnet reference is useful for candidate/preflight preparation, but official
+addresses and observed code presence cannot authorize spending, import testnet payout
+authority, enroll a database or reuse a browser session key.
+
+The narrow intended migration is an isolated invited browser-funded `/api/ask` pilot.
+Externally pre-funded sessions can stage it without activating automatic funding or
+treasury-sponsored MCP, A2A, bots or autonomous work. Network-bound session identity,
+durable journal/environment isolation, creator registry authority, SDK settlement and
+recovery still require code, adversarial checks, operational evidence and a concrete
+owner launch decision. See [runtime domain gates](docs/mainnet-runtime-domains.md).
+Reversible: easy for static pins; real network cutover requires separate reviewed
+migration and rollback evidence. This slice does not claim mainnet readiness.
+
 **D-292** - Operations - *Caller-driven research can be idle; provider probes must use runtime transport policy.*
 D-237 removed continuous self-generated research, so completed-query inactivity no longer
 asserts a scheduler failure. Preserve explicit expected-dispatch monitoring only for an

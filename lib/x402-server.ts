@@ -10,10 +10,11 @@
 import { BatchFacilitatorClient } from "@circle-fin/x402-batching/server";
 import { NextRequest, NextResponse } from "next/server";
 import { config } from "./config";
+import { ARC_TESTNET_PROFILE } from "./arc-network-profile";
 import { guardPublicMerchant } from "./payments/public-merchant-guard";
 
 // SDK 3.x defaults to mainnet; Keryx's seller rail remains Arc testnet only.
-const facilitator = new BatchFacilitatorClient({ url: "https://gateway-api-testnet.circle.com" });
+const facilitator = new BatchFacilitatorClient({ url: ARC_TESTNET_PROFILE.gatewayApiUrl });
 
 export interface PaidOptions {
   priceUsdc: number;

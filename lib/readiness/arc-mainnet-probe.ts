@@ -1,12 +1,13 @@
 import { createHash } from "node:crypto";
+import { ARC_MAINNET_PROFILE } from "../arc-network-profile";
 
 // Public reference pins only. Never consumed by application payment configuration.
 export const ARC_MAINNET_REFERENCE = Object.freeze({
-  chainId: "0x13b2", network: "eip155:5042", domain: 26,
-  usdc: "0x3600000000000000000000000000000000000000",
-  wallet: "0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE",
-  minter: "0x2222222d7164433c4C09B0b0D809a9b52C04C205",
-  decimals: 6,
+  chainId: ARC_MAINNET_PROFILE.chainIdHex, network: ARC_MAINNET_PROFILE.networkId, domain: ARC_MAINNET_PROFILE.cctpDomain,
+  usdc: ARC_MAINNET_PROFILE.usdcAddress,
+  wallet: ARC_MAINNET_PROFILE.gatewayWallet,
+  minter: ARC_MAINNET_PROFILE.gatewayMinter,
+  decimals: ARC_MAINNET_PROFILE.erc20Decimals,
 });
 export const PUBLIC_RPC_ENDPOINTS = Object.freeze([
   "https://rpc.mainnet.arc.io", "https://rpc.blockdaemon.mainnet.arc.io",

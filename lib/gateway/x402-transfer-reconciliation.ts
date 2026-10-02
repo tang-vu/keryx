@@ -1,5 +1,6 @@
 import type { KeryxDB } from "../db/keryx-db";
 import type { PaymentRecord } from "../types";
+import { ARC_TESTNET_PROFILE } from "../arc-network-profile";
 import {
   isAcknowledgedLegacyTreasuryPending,
   type PendingReconciliationAcknowledgement,
@@ -7,7 +8,7 @@ import {
 
 export const PENDING_RECONCILIATION_STATE_KEY = "pendingPaymentReconciliation";
 export const CIRCLE_X402_TRANSFERS_URL =
-  "https://gateway-api-testnet.circle.com/v1/x402/transfers";
+  `${ARC_TESTNET_PROFILE.gatewayApiUrl}/v1/x402/transfers`;
 
 const TRANSFER_SEARCH_LOOKBACK_MS = 24 * 60 * 60 * 1_000;
 const TRANSFER_SEARCH_PAGE_SIZE = 50;

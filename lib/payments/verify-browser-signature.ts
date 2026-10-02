@@ -1,11 +1,12 @@
 import { isAddress, recoverTypedDataAddress } from "viem";
 import type { PendingSignatureChallenge } from "./pending-signatures";
+import { ARC_TESTNET_PROFILE } from "../arc-network-profile";
 
 // This route serves Arc testnet only. These values are independent of the returned header.
-const NETWORK = "eip155:5042002";
-const USDC = "0x3600000000000000000000000000000000000000";
-const GATEWAY = "0x0077777d7EBA4688BDeF3E311b846F25870A19B9";
-const CHAIN_ID = 5042002;
+const NETWORK = ARC_TESTNET_PROFILE.networkId;
+const USDC = ARC_TESTNET_PROFILE.usdcAddress;
+const GATEWAY = ARC_TESTNET_PROFILE.gatewayWallet;
+const CHAIN_ID = ARC_TESTNET_PROFILE.chainId;
 const MIN_TIMEOUT = 604900;
 const MAX_TIMEOUT = 691200;
 
