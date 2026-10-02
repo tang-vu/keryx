@@ -118,6 +118,11 @@ performed by preparing this pack.
 Use one record per genuine task. Store sensitive details privately with consent;
 put only approved public identifiers and redacted proof links here. Do not paste
 private handoff notes, customer questions/documents or keys into the public repo.
+Keep raw signed payment headers, authorizations and bearer signatures private,
+along with full private receipts and journals. Public fields below must contain
+opaque or sanitized reference IDs and deliberately redacted evidence links, never
+reusable credentials or complete signed payloads. Participant consent does not
+turn payment authorization material into safe public evidence.
 
 | Field | Value to supply |
 | --- | --- |

@@ -239,6 +239,21 @@ links the supporting registry, Gateway, and cash-out evidence.
 
 ## Architecture
 
+Public deployment addresses observed October 2, 2026 from
+[/api/health](https://keryx.cc/api/health), [/api/treasury](https://keryx.cc/api/treasury)
+and the [Monthly quote](https://keryx.cc/api/research/monthly?quote=1).
+All rows are **Arc testnet (`eip155:5042002`)**; they are not mainnet deployment claims.
+
+| Role | Full public address | Explorer |
+| --- | --- | --- |
+| SourceRegistry | `0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536` | [Arc testnet](https://testnet.arcscan.app/address/0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536) |
+| Settlement treasury balance identity | `0x29028Fe1122E17Fe7863A22701e863FE4DaE1aFB` | [Arc testnet](https://testnet.arcscan.app/address/0x29028Fe1122E17Fe7863A22701e863FE4DaE1aFB) |
+| Research Monthly merchant/payee | `0xC5965E3175Ef063FaeB8BCd3abe2d25b5D27D586` | [Arc testnet](https://testnet.arcscan.app/address/0xC5965E3175Ef063FaeB8BCd3abe2d25b5D27D586) |
+
+Creator and user session addresses vary by workflow. The
+[submission pack](docs/tameion-submission.md#public-addresses) also records public
+USDC and Gateway contract references and the evidence required for actual payments.
+
 ```
 BROWSER (Web App)                    IPFS + Arc Smart Contracts              Circle Gateway + Arc Testnet
 ─────────────────                    ─────────────────────────               ──────────────────────────────
@@ -369,7 +384,6 @@ The reusable building blocks are MIT-licensed and standalone in
 - [`TRACTION.md`](./TRACTION.md) — live usage and settlement links
 - [`FEEDBACK.md`](./FEEDBACK.md) — Circle/Arc dev-tool feedback we filed while building
 - [`DECISIONS.md`](./DECISIONS.md) — architecture decision log
-- [`CLAUDE.md`](./CLAUDE.md) — contributor orientation
 
 ## Origin & where it's going
 
