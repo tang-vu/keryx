@@ -8,6 +8,7 @@ import type { BrowserPaymentContext } from "../payments/browser-cosign-gateway";
 import type { SourcePaymentAuthority } from "../payments/client-payto-allowlist";
 import type { BrowserSessionCustodyContext } from "./browser-session-custody";
 import type { TypedDataPayload } from "./session-signer-protocol";
+import type { BrowserSessionWithdrawalReview } from "./browser-session-withdrawal-runtime";
 
 /** Shared browser/headless admission. Implementations retain custody and reserve exposure;
  * this interface offers only the specific payment primitive consumed by this policy. */
@@ -25,13 +26,15 @@ const nonnegative = z.string().regex(/^(0|[1-9]\d{0,15})$/).refine(n => BigInt(n
 const grantSchema = z.object({ active: z.literal(true), sessionId: addr, ownerAddr: addr, sessAddr: addr,
   grantEpoch: z.string().uuid(), network: z.literal(profile.networkId), origin: z.string(), capMicroUsdc: positive, spentMicroUsdc: nonnegative,
   consent: z.unknown(), ownerSignature: z.string().regex(/^0x[0-9a-fA-F]{130}$/), sessionSignature: z.string().regex(/^0x[0-9a-fA-F]{130}$/) });
+const requirementsSchema = z.object({ scheme: z.literal("exact"), network: z.literal(profile.networkId), amount: positive, payTo: addr,
+    asset: addr.refine(a => a === profile.usdcAddress.toLowerCase()), maxTimeoutSeconds: z.number().int().min(604900).max(691200),
+    extra: z.object({ name: z.literal("GatewayWalletBatched"), version: z.literal("1"),
+      verifyingContract: addr.refine(a => a === profile.gatewayWallet.toLowerCase()) }).strict() }).strict();
+export function parseBrowserSessionPaymentRequirements(value: unknown) { return requirementsSchema.parse(value); }
 const challengeSchema = z.object({ sessionId: addr, reqId: z.string().uuid(), grantEpoch: z.string().uuid(), sessAddr: addr,
   sourceId: z.string().min(1).max(128), kind: z.enum(["fetch", "citation"]),
   expectedNonce: z.string().regex(/^0x[0-9a-f]{64}$/), browserAuthorizationProtocol: z.literal("durable-v1"),
-  requirements: z.object({ scheme: z.literal("exact"), network: z.literal(profile.networkId), amount: positive, payTo: addr,
-    asset: addr.refine(a => a === profile.usdcAddress.toLowerCase()), maxTimeoutSeconds: z.number().int().min(604900).max(691200),
-    extra: z.object({ name: z.literal("GatewayWalletBatched"), version: z.literal("1"),
-      verifyingContract: addr.refine(a => a === profile.gatewayWallet.toLowerCase()) }).strict() }).strict(),
+  requirements: requirementsSchema,
   paymentContext: z.object({ item: z.record(z.string(), z.unknown()).optional(), offer: z.record(z.string(), z.unknown()).optional() }).strict().optional(),
 });
 export type BrowserSessionAuthorizationBinding = z.infer<typeof challengeSchema>;
@@ -46,6 +49,9 @@ export type BrowserSessionOperation =
   | { type: "authorizePayment"; reqId: string; question: BrowserQuestionBudget }
   | { type: "bindGrant" }
   | { type: "signGrantConsentProof"; consent: unknown; ownerSignature: Hex }
+  | { type: "signWithdrawal"; requestId: string; review: BrowserSessionWithdrawalReview }
+  | { type: "cancelUnexposedWithdrawal"; requestId: string }
+  | { type: "reconcileWithdrawal"; requestId: string }
   | { type: "lock" };
 
 /** The page can notify a reqId; only current cookie authority, signed owner consent and a fresh
