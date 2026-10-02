@@ -1,14 +1,21 @@
+import type { BrowserSessionAuthorizationBinding } from "./browser-session-runtime";
+import { canonicalJson } from "../canonical-json";
 /** Cross-tab reservation is retained before cryptography. No failure, logout or timeout releases
  * it. The owner signs an absolute lifetime signer cap. A new epoch never resets accumulated
  * exposure, and no epoch can reuse an already reserved authorization nonce.
  */
 export async function reserveBrowserSessionAuthorization(namespace: string, epoch: string, nonce: string,
-  amount: bigint, cap: bigint, question?: { id: string; budgetMicroUsdc: string }): Promise<void> {
+  amount: bigint, cap: bigint, question?: { id: string; budgetMicroUsdc: string }, original?: BrowserSessionAuthorizationBinding): Promise<void> {
   if (!/^[0-9a-f-]{36}$/.test(epoch) || !/^0x[0-9a-f]{64}$/.test(nonce) || amount <= BigInt(0) || cap <= BigInt(0) ||
     cap > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("Session reservation refused");
   const scope = question ? { ...question } : undefined;
   if (scope && (!/^[0-9a-f-]{36}$/.test(scope.id) || !/^[1-9]\d{0,15}$/.test(scope.budgetMicroUsdc) ||
     BigInt(scope.budgetMicroUsdc) > BigInt(Number.MAX_SAFE_INTEGER))) throw new Error("Question reservation refused");
+  const binding = original ? structuredClone(original) : undefined;
+  if (binding && (binding.expectedNonce !== nonce || binding.grantEpoch !== epoch || binding.requirements.amount !== amount.toString()))
+    throw new Error("Original reservation differs");
+  const digest = binding ? Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonicalJson(binding.requirements)))),
+    byte => byte.toString(16).padStart(2, "0")).join("") : undefined;
   const db = await new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(`${namespace}-authorizations`, 1);
     request.onupgradeneeded = () => { request.result.createObjectStore("nonces"); request.result.createObjectStore("grants"); };
@@ -33,7 +40,7 @@ export async function reserveBrowserSessionAuthorization(namespace: string, epoc
             BigInt(previousQuestion?.total ?? "0")+amount > BigInt(scope.budgetMicroUsdc)))) {
           reason = "Session nonce reused or consent capacity exhausted"; tx.abort(); return;
         }
-        nonces.add({ epoch, amount: amount.toString() }, nonce);
+        nonces.add({ epoch, amount: amount.toString(), ...(binding ? { original: binding, requirementsDigest: digest } : {}) }, nonce);
         grants.put({ cap: cap.toString() }, epoch);
         grants.put({ total: (BigInt(previous?.total ?? "0") + amount).toString() }, "signed-total");
         if (scope) grants.put({ cap: scope.budgetMicroUsdc,

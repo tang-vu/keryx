@@ -34,6 +34,7 @@ const challengeSchema = z.object({ sessionId: addr, reqId: z.string().uuid(), gr
       verifyingContract: addr.refine(a => a === profile.gatewayWallet.toLowerCase()) }).strict() }).strict(),
   paymentContext: z.object({ item: z.record(z.string(), z.unknown()).optional(), offer: z.record(z.string(), z.unknown()).optional() }).strict().optional(),
 });
+export type BrowserSessionAuthorizationBinding = z.infer<typeof challengeSchema>;
 const sourceIndexSchema = z.array(z.object({ id: z.string(), onchainId: z.string().regex(/^0x[0-9a-f]{64}$/).optional() })).max(1000);
 const itemSchema = z.object({ itemId: z.string().min(1).max(1024), contentVersion: z.string().min(1).max(256) }).passthrough();
 const previewSchema = z.object({ sourceId: z.string(), item: itemSchema, payTo: addr,
@@ -53,7 +54,8 @@ export type BrowserSessionOperation =
 export function createBrowserSessionRuntime(key: SessionRuntimeKey, dependencies: {
   json(path: string, method?: string, body?: unknown): Promise<unknown>;
   readSource(registryId: string): Promise<SourcePaymentAuthority>;
-  reserve(namespace: string, epoch: string, nonce: string, amount: bigint, cap: bigint, question: BrowserQuestionBudget): Promise<void>;
+  reserve(namespace: string, epoch: string, nonce: string, amount: bigint, cap: bigint, question: BrowserQuestionBudget,
+    original: BrowserSessionAuthorizationBinding): Promise<void>;
 }) {
   if (key.context.profile !== profile) throw new Error("Browser session profile refused");
   const refuse = (): never => { throw new Error("Browser payment authorization refused"); };
@@ -112,7 +114,7 @@ export function createBrowserSessionRuntime(key: SessionRuntimeKey, dependencies
         if (!price.allowed) refuse();
       } else if (challenge.paymentContext) refuse();
       await dependencies.reserve(key.context.storageNamespace, bound.consent.grantEpoch, challenge.expectedNonce,
-        BigInt(requirements.amount), BigInt(bound.consent.capMicroUsdc), scope);
+        BigInt(requirements.amount), BigInt(bound.consent.capMicroUsdc), scope, structuredClone(challenge));
       if (grantPolicy(await bindGrant()) !== grantPolicy(bound) || expectedGeneration !== generation) refuse();
       const now = Math.floor(Date.now()/1000), authorization = { from: bound.response.sessAddr as Hex,
         to: requirements.payTo as Hex, value: requirements.amount, validAfter: String(now-600),
