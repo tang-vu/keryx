@@ -11,7 +11,7 @@ const bundle = await build({ stdin: { contents: `
   function Probe(){const auth=useSiweAuth();return <section><output data-testid="probe">{auth.session?'authenticated':'signed out'}</output><button onClick={()=>{void auth.refresh();}}>Refresh probe</button></section>}
   createRoot(document.getElementById('root')).render(<><WalletMenu/><Probe/></>);
 `, loader: "tsx", resolveDir: process.cwd() }, bundle: true, write: false, platform: "browser", format: "iife",
-  define: { "process.env.NODE_ENV": '"production"' }, plugins: [{ name: "synthetic-auth", setup(b) {
+  define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"production"' }, plugins: [{ name: "synthetic-auth", setup(b) {
     b.onResolve({ filter: /^(wagmi|next\/link|next\/image|sonner)$/ }, args => ({ path: args.path, namespace: "synthetic" }));
     b.onLoad({ filter: /.*/, namespace: "synthetic" }, args => ({ loader: "jsx", resolveDir: process.cwd(), contents:
       args.path === "wagmi" ? `export const useAccount=()=>({address:'${account}',isConnected:true,status:'connected'});export const useSignMessage=()=>({signMessageAsync:()=>{throw Error('Signing forbidden')}});export const useDisconnect=()=>({disconnectAsync:async()=>{window.disconnects++}});export const useConnect=()=>({connectors:[],connect:()=>{},isPending:false});`

@@ -18,7 +18,7 @@ const fixture = await build({ stdin: { contents: `
  <button onClick={()=>{void auth.signIn();}}>Sign in</button><output id="tick">{tick}</output></>}
  createRoot(document.getElementById('root')).render(<Probe/>);
 `, loader: "tsx", resolveDir: process.cwd() }, bundle: true, write: false, platform: "browser", format: "iife",
-  define: { "process.env.NODE_ENV": '"production"' }, plugins: [{ name: "synthetic-clock-boundaries", setup(b) {
+  define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"production"' }, plugins: [{ name: "synthetic-clock-boundaries", setup(b) {
     b.onResolve({ filter: /^(wagmi)$/ }, args => ({ path: args.path, namespace: "synthetic" }));
     b.onResolve({ filter: /^@\/lib\/config$/ }, args => ({ path: args.path, namespace: "synthetic" }));
     b.onResolve({ filter: /^@\/components\/keryx\/(grant-spend-dialog|faucet-panel)$/ }, args => ({ path: args.path, namespace: "synthetic" }));

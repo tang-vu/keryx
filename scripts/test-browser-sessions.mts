@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { build } from "esbuild";
 import { chromium } from "playwright";
 
-const bundle = await build({ stdin: { contents: `import React from 'react';import{createRoot}from'react-dom/client';import{AccountSessions}from'./components/keryx/account-sessions';createRoot(document.getElementById('root')).render(<AccountSessions/>);`, loader: "tsx", resolveDir: process.cwd() }, bundle: true, write: false, platform: "browser", format: "iife", define: { "process.env.NODE_ENV": '"production"' } });
+const bundle = await build({ stdin: { contents: `import React from 'react';import{createRoot}from'react-dom/client';import{AccountSessions}from'./components/keryx/account-sessions';createRoot(document.getElementById('root')).render(<AccountSessions/>);`, loader: "tsx", resolveDir: process.cwd() }, bundle: true, write: false, platform: "browser", format: "iife", define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"production"' } });
 const browser = await chromium.launch({ headless: true });
 try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
