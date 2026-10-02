@@ -3,8 +3,10 @@
 October 2, 2026: the owner requests full ordinary mainnet Keryx on `keryx.cc`,
 including supported clients and creator payments. Earlier invited-pilot proposals
 are superseded. Their tests remain isolation evidence, not mainnet settlement.
-No concrete funded operating budget or production mainnet activation is approved.
-Production remains Arc testnet until the coordinated release and owner funds gates pass.
+The owner has authorized the full public mainnet direction. Concrete registry
+deployment, native setup gas and ERC20 funding amounts or wallet transactions remain
+unspecified and unperformed. Production remains Arc testnet until the coordinated
+release and those concrete funding/receipt gates pass.
 
 ## Trusted deployment selection
 
@@ -29,6 +31,7 @@ Mainnet has no inferred WebSocket URL: the indexer uses its HTTP polling path.
 | --- | --- | --- |
 | Web research, login, wallet funding and session worker | Owner-authenticated session co-signing through the normal `/api/ask`, `/api/ask/sign` and `/api/session/grant` routes | Fresh owner/origin/network custody; separately signed grant consent; original nonce/cap reservations, uncertain settlement retention and cashout acceptance. Testnet session keys/ciphers are retained for recovery, never reused as mainnet grants. |
 | Creator web, source API and citation API | Creator-signed fresh registry registration; source-owned payout and exact weighted citation rewards | Fresh registry receipt/runtime/source verification, feed/content rights, fresh source cache/encryption and actual reward/withdrawal receipts. No testnet cache becomes mainnet payout authority. |
+| Research Monthly | Ordinary prepaid research and immutable slot redemption through web, API, CLI and remote/stdio MCP | Current main adds Monthly0078; its selected-rail purchase admission and fresh-state integration must be composed with the final backend. Historical enrolled adapters deliberately refuse this domain. Never relabel a testnet Monthly debit or remaining slots as mainnet. |
 | Public paid A2A and private buyer checkout | Existing caller-funded inbound toll and durable job/recovery contracts | Shared selected-profile challenge and signature binding, fresh orders/journals, exact original GET recovery and private checkout/logout acceptance. |
 | Buyer CLI, private CLI and Operator CLI | Deliberate caller-funded purchase, then inspection/recovery/export of original jobs | Both network labels; existing owner price/fee caps remain. New private state directory for mainnet. Historical testnet jobs remain identifiable and recoverable with their original profile; no ledger relabelling. |
 | Local stdio MCP | Caller-owned wallet, exact inbound x402 toll, bounded approval/deposit and original-attempt recovery | Source candidate `keryx-mcp` 0.4.0. Default mainnet custody/journals live under `~/.keryx/arc`; testnet stays under `~/.keryx`. v2 journals bind network and payment origin; legacy unlabelled/v1 files mean testnet. Packed installed stdio acceptance covers both profiles, actual SDK signature verification, response-loss fencing and new-process keyless recovery; network responses are synthetic. npm publication is separately verified. |
@@ -206,3 +209,32 @@ a separate 10-minute deadline. A payment-leg refusal or lost sign acknowledgment
 retains its original exposure and encrypted header, emits a fixed concise stderr
 notice, and continues to the completed answer. It never signs that original again
 or clears uncertainty. Malformed SSE/protocol data still fails the run.
+
+
+## Cashout deployment policy
+
+The normal mainnet cashout worker captures
+`NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS` at build time. Its server admission
+requires the identical positive integer in `KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS`.
+Choose this exact block window from reviewed current chain/expiry evidence and the
+owner's withdrawal policy before deploying cashout; this runbook supplies no guessed
+Arc block-rate limit. Missing or mismatched values close cashout only. Changing the
+public value requires rebuilding the worker and checking the effective server twin.
+
+A prepared unsigned withdrawal remains cancellable only before native exposure,
+signed-request admission or claim. Native authorization marks exposure before
+cryptography. Any exposed, signed, submitted or unknown original remains retained
+and holds its financial barrier until exact observed completion; a timeout does
+not cancel it. Final headless cashout consumes the same independently checked
+normal withdrawal policy when that shared client domain is frozen.
+
+## Package publication boundary
+
+Read-only publication checks found `keryx-mcp` npm latest 0.1.1; this release's 0.4.0
+source candidate is not yet published. The local npm identity is unauthenticated,
+and GitHub Actions exposes no configured publishing-secret names. Use the reviewed
+immutable GitHub release tarball plus source commit/hash manifest as the supported
+fallback after final exact-head CI, and verify a downloaded clean install and stdio
+mainnet flow. The public manifest must retain `npmRegistryPublished:false` until
+npm publication is separately observed. Do not claim that installer, tarball and
+npm versions are synchronized from source version numbers alone.
