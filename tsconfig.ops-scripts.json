@@ -16,6 +16,7 @@
     "scripts/buyer-agent.mts",
     "scripts/private-buyer-checkout.mts",
     "scripts/private-buyer-recover.mts",
-    "scripts/operator.mts"
+    "scripts/operator.mts",
+    "scripts/economics-private-report.mts"
   ]
 }

@@ -133,3 +133,21 @@ package/installer publication remain open. The last verified production preparat
 deployment was `0cddd01981ea4a5d5f10aaaa4633d6555edc0922`, operational on Arc testnet;
 it does not establish the current release's deployment. Current published versions
 must be read back at release time rather than inferred from this matrix.
+
+## Private economics across retained networks
+
+The private economics command selects the sealed storage identity, with an
+explicit read-only enrolled adapter for mainnet. It never initializes storage or
+falls back to `data/keryx.sqlite` for mainnet. Recorded mainnet payment rows must
+carry their original network and settled rows their recorded settlement evidence;
+a report refuses conflicting rows instead of relabelling them. Mainnet exports
+use `keryx-private-economics-v3`, an explicit network and `ledger` aggregates.
+Historical testnet exports retain their exact v2 shape and `testnetLedger` field.
+
+Usage price intervals and hypothetical service fees remain estimates. Recorded
+settlement observations are not reconciled invoices or realized profit. Native
+SQLite read-only projection tests use synthetic evidence and preserve file bytes;
+they do not establish enrolled mainnet admission, funded settlement or native
+Supabase acceptance. The coordinated server storage migration must land before
+mainnet report acceptance, and the protected Linux publisher still needs its
+release-platform checks.

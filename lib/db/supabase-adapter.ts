@@ -1,3 +1,5 @@
+import { ARC_TESTNET_PROFILE } from "../arc-network-profile";
+import { storagePaymentProfile } from "./storage-identity";
 import { publicReferenceSchema, type PublicReference } from "../public-references/catalog";
 import type { StorageDeploymentManifest } from "./runtime-storage-config";
 import { SupabaseAuthority } from "./supabase-authority";
@@ -89,7 +91,7 @@ import {
   runEvidenceMetrics,
 } from "./dashboard-metrics";
 import {
-  calculateTestnetEconomics,
+  calculateEconomics,
   economicsRunSample,
   type EconomicsRunSample,
 } from "../economics/testnet-economics";
@@ -1336,24 +1338,28 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async economics() {
+    const identity = this.#enrolled?.deployment.identity;
+    const profile = identity ? storagePaymentProfile(identity) : ARC_TESTNET_PROFILE;
     const [runRows, paymentRows, a2aOrderRows] = await Promise.all([
       this.allRows("query_runs", "id,economics_data"),
       this.allRows(
         "payment_events",
-        "query_id,kind,amount_usdc,settled,settlement_status,grant_epoch",
+        `query_id,kind,amount_usdc,settled,settlement_status,grant_epoch${profile.testnet ? "" : ",network,tx_hash"}`,
       ),
       this.allRows(
         "a2a_orders",
         "query_id,creator_budget_usdc,service_fee_usdc,status,response_data",
       ),
     ]);
-    return calculateTestnetEconomics(
+    return calculateEconomics(
+      profile,
       runRows.flatMap((row) => {
         const sample = row.economics_data as EconomicsRunSample | null;
         return sample ? [sample] : [];
       }),
       paymentRows.map((row) => ({
         queryId: String(row.query_id ?? ""),
+        ...(!profile.testnet ? { network: String(row.network), txHash: typeof row.tx_hash === "string" ? row.tx_hash : null } : {}),
         kind: row.kind as "fetch" | "citation" | "inbound",
         amountUsdc: Number(row.amount_usdc),
         settled: Boolean(row.settled),

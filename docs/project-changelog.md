@@ -1,5 +1,24 @@
 # Keryx Project Changelog
 
+### 2026-10-02 - Full mainnet operations and distributed-client preparation
+
+- Prepare ordinary caller-funded MCP and CLI payment/funding journals for trusted
+  Arc network selection, preserving original testnet history and refusing cross
+  network recovery. Mainnet purchase and recovery require HTTPS before funding,
+  signing or paid requests. Existing exact amount caps and uncertain exposure stay
+  enforced.
+- Add offline unsigned registry deployment, creator registration and owner session
+  funding preparation with checked compiler/source provenance. Prepare desktop
+  task records and native read-only recovery for both networks; candidate MCP and
+  desktop sources are version 0.4.0, with no publication or installer claim.
+- Project private economics from the sealed storage network: retain historical
+  testnet v2 reports and add explicit mainnet v3 ledger observations. Shadow fees,
+  invoices and profit remain distinct; synthetic tests do not prove live settlement.
+- Document the full web, CLI, remote/stdio MCP, desktop, extension, bot and hosted
+  service cutover roles. Real registry receipts, owner-approved funding, remaining
+  normal headless integration, coordinated deployment and distribution gates remain
+  open. Earlier invited-pilot proposals are superseded by full public mainnet scope.
+
 ### 2026-10-02 - Bounded mainnet pilot candidate preparation
 
 - Add an explicit-file, keyless pilot preflight with exact release-commit digest,

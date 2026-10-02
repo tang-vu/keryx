@@ -1,5 +1,6 @@
 import type { PaymentSettlementStatus, QueryRun, ResearchMode } from "../types";
 import { config } from "../config";
+import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
 import { cloneUsage, usageCostBounds, type CostBounds } from "./provider-cost-policy";
 
 /** Historical scenario identity only. Never applied implicitly to newly generated reports. */
@@ -35,7 +36,11 @@ export const ECONOMICS_POLICY = {
   costBasis: "immutable-per-call-policy-interval",
 } as const;
 
+export const MAINNET_ECONOMICS_POLICY = { ...ECONOMICS_POLICY, id: "mainnet-economics-v1" } as const;
+
 export interface EconomicsPaymentRow {
+  network?: string;
+  txHash?: string | null;
   queryId: string;
   kind: "fetch" | "citation" | "inbound";
   amountUsdc: number;
@@ -97,9 +102,10 @@ export function economicsRunSample(run: QueryRun): EconomicsRunSample | null {
   };
 }
 
-export interface TestnetEconomicsSnapshot {
-  label: "testnet-observatory";
-  policy: typeof ECONOMICS_POLICY;
+export interface EconomicsSnapshot {
+  label: "testnet-observatory" | "mainnet-observatory";
+  network?: "eip155:5042002" | "eip155:5042";
+  policy: typeof ECONOMICS_POLICY | typeof MAINNET_ECONOMICS_POLICY;
   generatedAt: string;
   sampledRuns: number;
   pricedRuns: number;
@@ -131,6 +137,11 @@ export interface TestnetEconomicsSnapshot {
   note: string;
 }
 
+export interface TestnetEconomicsSnapshot extends EconomicsSnapshot {
+  label: "testnet-observatory";
+  policy: typeof ECONOMICS_POLICY;
+}
+
 function round(value: number): number {
   return Math.round(value * 1_000_000) / 1_000_000;
 }
@@ -157,6 +168,22 @@ export function calculateTestnetEconomics(
   now = new Date(),
   a2aOrders: EconomicsA2aOrderRow[] = [],
 ): TestnetEconomicsSnapshot {
+  return calculateEconomics(ARC_TESTNET_PROFILE, runs, payments, now, a2aOrders) as TestnetEconomicsSnapshot;
+}
+
+export function calculateEconomics(
+  profile: ArcNetworkProfile,
+  runs: (Partial<QueryRun> & Pick<EconomicsRunSample, "usageCoverage" | "usageCoverageVersion">)[],
+  payments: EconomicsPaymentRow[],
+  now = new Date(),
+  a2aOrders: EconomicsA2aOrderRow[] = [],
+): EconomicsSnapshot {
+  if (profile !== ARC_MAINNET_PROFILE && profile !== ARC_TESTNET_PROFILE) throw new Error("Economics profile refused");
+  if (!profile.testnet && payments.some(payment => payment.network !== profile.networkId ||
+    (payment.settled && payment.settlementStatus === "settled" &&
+      (typeof payment.txHash !== "string" || !payment.txHash.trim()))))
+    throw new Error("Mainnet economics requires original-network rows and recorded settlement evidence");
+  const policy = profile.testnet ? ECONOMICS_POLICY : MAINNET_ECONOMICS_POLICY;
   const sampled = runs.filter((run) => Array.isArray(run.llmUsage));
   const ownerByQuery = new Map(runs.map((run) => [String(run.id), fundingOwner(run)]));
   let pricedRuns = 0;
@@ -194,15 +221,15 @@ export function calculateTestnetEconomics(
         runPolicies.add(call.costCapture!.pricing!.id);
       }
     }
-    const fee = ECONOMICS_POLICY.serviceFeeUsdc[run.researchMode ?? "deep"];
+    const fee = policy.serviceFeeUsdc[run.researchMode ?? "deep"];
     shadowServiceFeesAllSampledUsdc += fee;
     if (complete) {
       pricedRuns++;
       shadowServiceFeesPricedRunsUsdc += fee;
       estimatedLlmCostUsdBounds.lower += runCost.lower;
       estimatedLlmCostUsdBounds.upper += runCost.upper;
-      shadowGrossMarginUsdBounds.lower += fee - runCost.upper - ECONOMICS_POLICY.infraAllowanceUsdPerRun;
-      shadowGrossMarginUsdBounds.upper += fee - runCost.lower - ECONOMICS_POLICY.infraAllowanceUsdPerRun;
+      shadowGrossMarginUsdBounds.lower += fee - runCost.upper - policy.infraAllowanceUsdPerRun;
+      shadowGrossMarginUsdBounds.upper += fee - runCost.lower - policy.infraAllowanceUsdPerRun;
       for (const id of runPolicies) pricingPolicyIds.add(id);
     }
   }
@@ -263,8 +290,9 @@ export function calculateTestnetEconomics(
   }
 
   return {
-    label: "testnet-observatory",
-    policy: ECONOMICS_POLICY,
+    label: profile.testnet ? "testnet-observatory" : "mainnet-observatory",
+    ...(!profile.testnet ? { network: profile.networkId } : {}),
+    policy,
     generatedAt: now.toISOString(),
     sampledRuns: sampled.length,
     pricedRuns,
@@ -291,6 +319,6 @@ export function calculateTestnetEconomics(
     unknownFundingCreatorSpendUsdc: round(unknownFundingCreatorSpendUsdc),
     pendingCreatorSpendUsdc: round(pendingCreatorSpendUsdc),
     unpricedModels: [...unpricedModels].sort(),
-    note: "Partial testnet telemetry and hypothetical price intervals only, not reconciled invoices or profit. Billing windows and holidays are not inferred. Shadow fees are not charged and are not revenue.",
+    note: `Partial ${profile.testnet ? "testnet" : "mainnet"} telemetry and hypothetical price intervals only, not reconciled invoices or profit. Billing windows and holidays are not inferred. Shadow fees are not charged and are not revenue.`,
   };
 }
