@@ -4,8 +4,9 @@
  * conflicting environment values fail startup rather than creating a mixed-chain deployment.
  */
 
-import { configuredPaymentProfile, configuredRegistryAddress } from "./arc-network-profile";
+import { configuredRegistryAddress } from "./arc-network-profile";
 import { browserPaymentProfile } from "./browser-payment-profile";
+import { assertPaymentRuntimeConfiguration } from "./payment-runtime-config";
 
 /** Reject network contract overrides until a separately reviewed network profile exists. */
 export function assertArcConfiguration(env: {
@@ -20,20 +21,10 @@ export function assertArcConfiguration(env: {
   NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS?: string;
   KERYX_FORCE_OFFLINE?: string;
 }): void {
-  const profile = configuredPaymentProfile(env.KERYX_NETWORK, env.NEXT_PUBLIC_KERYX_NETWORK);
-  if (!profile.testnet && env.KERYX_FORCE_OFFLINE === "1") throw new Error("mainnet profile cannot enable offline payment bypass");
+  const profile = assertPaymentRuntimeConfiguration(env);
   configuredRegistryAddress(profile, env.KERYX_REGISTRY_ADDRESS, env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS);
   if (env.KERYX_REGISTRY_READ_ADDRESS !== undefined || env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS !== undefined)
     configuredRegistryAddress(profile, env.KERYX_REGISTRY_READ_ADDRESS, env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS);
-  for (const [name, actual, expected] of [
-    ["KERYX_USDC_ADDRESS", env.KERYX_USDC_ADDRESS, profile.usdcAddress],
-    ["KERYX_GATEWAY_WALLET", env.KERYX_GATEWAY_WALLET, profile.gatewayWallet],
-    ["KERYX_GATEWAY_MINTER", env.KERYX_GATEWAY_MINTER, profile.gatewayMinter],
-  ] as const) {
-    if (actual !== undefined && actual.toLowerCase() !== expected.toLowerCase()) {
-      throw new Error(`${name} must match the ${profile.label} profile`);
-    }
-  }
 }
 
 /** Compatibility export; new integrations should use the network-neutral name. */
