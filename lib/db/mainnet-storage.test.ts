@@ -143,7 +143,8 @@ it("serves the normal owner consent and exact live admitted item challenge throu
   const { privateKeyToAccount } = await import("viem/accounts"), { NextRequest } = await import("next/server");
   const owner = privateKeyToAccount(`0x${"11".repeat(32)}`), session = privateKeyToAccount(`0x${"22".repeat(32)}`);
   const wallet = owner.address.toLowerCase(), signer = session.address.toLowerCase();
-  vi.doMock("../account-sessions", () => ({ accountSessionContext: async () => ({ db: adapter, wallet }) }));
+  let authenticatedWallet = wallet;
+  vi.doMock("../account-sessions", () => ({ accountSessionContext: async () => ({ db: adapter, wallet: authenticatedWallet }) }));
   vi.doMock("../auth", () => ({ getSession: async () => ({ address: wallet }) }));
   cleanup.push(() => { vi.doUnmock("../account-sessions"); vi.doUnmock("../auth"); });
   vi.stubGlobal("fetch", vi.fn(async () => Response.json({ token: "USDC", balances: [{ depositor: signer, domain: 26, balance: "1" }] })));
@@ -217,4 +218,16 @@ it("serves the normal owner consent and exact live admitted item challenge throu
   expect((await adapter.getBrowserJournal(wallet, unknownId))!.phase).toBe("exposed");
   expect((await grantRoute.POST(request("/api/session/grant", { consent, signature, sessionSignature }))).status).toBe(409);
   expect((await adapter.getSessionGrant(wallet))!.grantEpoch).toBe(renewal.consent.grantEpoch);
+  const recovery = await import("../../app/api/session/authorizations/[reqId]/route");
+  const read = (id: string) => recovery.GET(new NextRequest(`https://keryx.cc/api/session/authorizations/${id}`),
+    { params: Promise.resolve({ reqId: id }) });
+  expect(await (await read(reqId)).json()).toMatchObject({ settlementConfirmed: true, retryAuthorized: false,
+    journal: { nonce: admission.journal.nonce, grantEpoch: consent.grantEpoch, phase: "settled", payment: { txHash: "synthetic-confirmed-transfer" } } });
+  await adapter.revokeSessionGrant(wallet, renewal.consent.grantEpoch, signer);
+  const unresolved = await read(unknownId);
+  expect(unresolved.status).toBe(200);
+  expect(await unresolved.json()).toMatchObject({ settlementConfirmed: false, retryAuthorized: false,
+    journal: { phase: "exposed", nonce: unknown.status === "admitted" ? unknown.journal.nonce : "" } });
+  authenticatedWallet = payee;
+  expect((await read(reqId)).status).toBe(404);
 }, 30000);

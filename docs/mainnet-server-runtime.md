@@ -71,6 +71,23 @@ full persisted item/offer context. It cannot construct authority from an SSE pac
 or callback fields. SQLite normal handler acceptance covers these endpoints;
 PostgreSQL owner-consent methods refuse until their native migration is admitted.
 
+`GET /api/session/authorizations/{reqId}` is an authenticated, owner-scoped
+read of the original durable authorization, including after expiry, replacement
+or revocation. It returns `{journal,authorization,settlementConfirmed,
+statusAuthority:"retained-journal-only",retryAuthorized:false}`. The retained
+public owner consent and signer-possession proofs bind the original epoch and
+signer; the response contains no payment bearer header or custody material.
+Confirmed settlement requires the original settled journal phase and actual
+recorded transaction evidence. An unresolved record remains held: reading it
+cannot create a retry, replacement nonce or payment permission. Foreign owners
+receive no original record.
+
+The held-balance monitor accepts only exact current-chunk depositor/domain rows
+with both canonical finite, nonnegative six-decimal balance fields. Missing,
+malformed or duplicate rows remain unknown instead of displaying zero; a row
+from another request chunk cannot overwrite its result. This read does not
+authorize funding or release a payment hold.
+
 Mainnet source fetch and citation terms require a fresh active on-chain creator-owned
 URL identity; cached testnet rows or an RPC outage cannot supply fallback payout
 authority. The mainnet bindings retain the exact encrypted item identity and complete
