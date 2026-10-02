@@ -43,6 +43,11 @@ jobs:
           node --input-type=module -e 'import fs from "node:fs"; const [pack]=JSON.parse(fs.readFileSync(process.argv[1])); for(const file of pack.files) { if (!["package.json","README.md","dist/keryx-mcp.mjs"].includes(file.path)) throw Error("Unexpected package path: "+file.path); } if(pack.files.length!==3) throw Error("Expected exactly package manifest, README and bundle");' "$RUNNER_TEMP/keryx-mcp-pack.json"
       - name: Clean installed MCP synthetic signing and new-process recovery
         shell: bash
+        # Keep the fresh consumer on the runner's managed scratch volume instead
+        # of the Windows user-profile temp directory; retain the 120s install gate.
+        env:
+          TEMP: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
         run: |
           package=$(node --input-type=module -e 'import fs from "node:fs"; const [pack]=JSON.parse(fs.readFileSync(process.argv[1])); console.log(pack.filename);' "$RUNNER_TEMP/keryx-mcp-pack.json")
           node mcp/scripts/test-packed.mjs "$RUNNER_TEMP/$package" "$(npm root -g)/npm/bin/npm-cli.js"
