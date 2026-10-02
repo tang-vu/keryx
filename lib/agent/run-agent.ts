@@ -169,9 +169,9 @@ export async function* runAgent(
   let previewCoverage: PreviewCoverage | undefined;
   let evidencePortfolio: EvidencePortfolio | undefined;
   let evidenceMeasured = false;
-  // Set once the verdict is computed; read by finish(). A `let` (not the closure-captured const)
-  // so the early-return paths, which never reach the verdict step, still produce a valid run.
-  let runConfidence: Confidence | undefined;
+  // Initialize before any early return. The production optimizer can otherwise merge an
+  // uninitialized binding with the later verdict declaration, stranding finish() in its TDZ.
+  let runConfidence: Confidence = { level: "Low", reason: "no source was read for this question" };
 
   const fetchBudget = budget * (1 - config.citationPoolRatio);
   const citationPool = budget * config.citationPoolRatio;
@@ -1521,7 +1521,7 @@ export async function* runAgent(
       ...(input.retryOf ? { retryOf: input.retryOf } : {}),
       // Early returns (no sources, no purchase) never reach the verdict step — nothing was read,
       // so the honest label is Low rather than an absent field the surfaces would have to guess at.
-      confidence: runConfidence ?? { level: "Low", reason: "no source was read for this question" },
+      confidence: runConfidence,
     };
     emit(
       "done",
