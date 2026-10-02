@@ -6,6 +6,8 @@ import { createIsolatedSessionVault, type IsolatedWrappedKey, type WrappingKeySt
 import { createSessionSigningPolicy } from "./session-signing-policy";
 import type { TypedDataPayload } from "./session-signer-protocol";
 import { parseSessionGrantConsent, createSessionGrantConsentMessage, createSessionGrantSignerProofMessage } from "../payments/session-grant-consent";
+import { verifySessionWithdrawalPreparation } from "../gateway/session-withdrawal-protocol";
+import { withdrawTypedData } from "../gateway/withdraw-protocol";
 
 export interface RetainedSessionStore {
   read(namespace: string): Promise<IsolatedWrappedKey | null>;
@@ -108,6 +110,18 @@ export function createBrowserSessionKey(origin: string, owner: string, dependenc
         BigInt(consent.expirySeconds) <= BigInt(now) || BigInt(consent.expirySeconds) > BigInt(now+86400) ||
         (await recoverMessageAddress({ message: createSessionGrantConsentMessage(consent, ARC_MAINNET_PROFILE), signature: ownerSignature })).toLowerCase() !== context.owner) refused();
       const signature = await captured!.signMessage({ message: createSessionGrantSignerProofMessage(consent, ARC_MAINNET_PROFILE) });
+      if (generation !== expected || account !== captured) refused();
+      return signature;
+    },
+    /** Internal restricted primitive. The worker separately admits the original request ID,
+     * fresh balance/height and retained local exposure barrier before calling this method. */
+    async signWithdrawalPreparation(value: unknown) {
+      const snapshot = structuredClone(value), captured = account, expected = generation;
+      if (!captured || busy) refused();
+      const prepared = await verifySessionWithdrawalPreparation(snapshot);
+      if (prepared.ownerAddr !== context.owner || prepared.sessAddr !== captured!.address.toLowerCase() ||
+        prepared.authorization.consent.origin !== context.origin) refused();
+      const signature = await captured!.signTypedData(withdrawTypedData(prepared.burnIntent));
       if (generation !== expected || account !== captured) refused();
       return signature;
     },

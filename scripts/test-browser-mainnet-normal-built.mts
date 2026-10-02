@@ -8,7 +8,8 @@ const root = process.cwd(), tsconfig = resolve(root, "tsconfig.json"), original 
 const dist = `.artifacts/next-mainnet-normal-${process.pid}`;
 const environment: NodeJS.ProcessEnv = { ...process.env, KERYX_NETWORK: "arc", NEXT_PUBLIC_KERYX_NETWORK: "arc", KERYX_FORCE_OFFLINE: "0",
   KERYX_REGISTRY_ADDRESS: "0x3333333333333333333333333333333333333333",
-  NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS: "0x3333333333333333333333333333333333333333", NEXT_DIST_DIR: dist };
+  NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS: "0x3333333333333333333333333333333333333333", NEXT_DIST_DIR: dist,
+  KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS:"300",NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS:"300" };
 delete environment.KERYX_REGISTRY_READ_ADDRESS; delete environment.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS;
 async function run(command: string, args: string[]) {
   await new Promise<void>((done, fail) => {

@@ -4392,3 +4392,28 @@ then refuse before owner signing if it cannot be honored. Preserve the acknowled
 Retain every public historical grant selector for original-proof recovery after logout or
 replacement; selectors alone confer no authority. Synthetic actual React/native-handler
 acceptance exercises both concurrent settlement intervals with one approval/deposit pair.
+
+## Retained owner-only browser session cashout - 2026-10-02
+
+Use the ordinary authenticated withdrawal journal and retained dual owner/session proofs
+for a narrowly bounded burn to the original owner, even after payment expiry or logout.
+The browser independently binds its custody origin, amount/fee review, static mainnet
+contracts and finite compiled block window. Lifetime signed spending is not outstanding
+liability: only exact original settled nonce/economic evidence distinguishes historical
+debit; missing and unknown authorizations remain held. A strict-durability cross-tab
+IndexedDB transaction fences payment admission before reserving the withdrawal barrier.
+
+Persist possible exposure before the server authorization marker and burn cryptography.
+Lost authorization/transfer responses remain original recovery operations. Cancel only
+never-exposed originals, retain cancelled identities, and never release uncertainty by
+timeout. Fresh Circle balance/processing data uses a fixed same-origin relay and trusts
+the application server and vendor JSON; independent RPC checks do not convert that into
+vendor cryptographic evidence.
+
+The connected owner separately submits reviewed mint calldata and gas. Persist the exact
+nonce/calldata/fee attempt before prompting the wallet; rejection or a lost response does
+not authorize a second mint. Release only the completed withdrawal barrier after original
+owner transaction/event/finality evidence and independent browser RPC verification. Keep
+old salts, nonces, question budgets and lifetime exposure so the same retained signer can
+renew, fund and research afterward. Actual React/native-handler/Chromium and emitted Next
+worker checks use synthetic external transport and confer no launch or live-funds authority.

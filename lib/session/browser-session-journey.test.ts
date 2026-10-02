@@ -6,7 +6,8 @@ import { join } from "node:path";
 import { randomBytes, randomUUID } from "node:crypto";
 import { build } from "esbuild";
 import { chromium } from "playwright";
-import { decodeFunctionData, encodeFunctionResult, erc20Abi, type Hex } from "viem";
+import { decodeFunctionData, encodeFunctionResult, erc20Abi, toHex, keccak256, parseTransaction,
+  encodeFunctionData, encodeAbiParameters, encodeEventTopics, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { ARC_MAINNET_PROFILE as profile } from "../arc-network-profile";
 import { canonicalJson } from "../canonical-json";
@@ -37,7 +38,9 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
   const origin = "https://keryx.cc", registry = `0x${"33".repeat(20)}` as Hex;
   for (const [name, value] of Object.entries({ KERYX_NETWORK: "arc", NEXT_PUBLIC_KERYX_NETWORK: "arc", KERYX_FORCE_OFFLINE: "0",
     KERYX_STORAGE_MANIFEST: manifest, KERYX_SQLITE_PATH: databasePath, CONTENT_MASTER_KEY: randomBytes(32).toString("hex"),
-    KERYX_REGISTRY_ADDRESS: registry, NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS: registry, BASE_URL: origin, JWT_SECRET: randomBytes(32).toString("hex") })) vi.stubEnv(name, value);
+    KERYX_REGISTRY_ADDRESS: registry, NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS: registry, BASE_URL: origin, JWT_SECRET: randomBytes(32).toString("hex"),
+    KERYX_WITHDRAWAL_MAX_FEE_MICROS:"1000", KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS:"300", NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS:"300",
+    KERYX_WITHDRAWAL_MAX_PROCESSING_LAG_BLOCKS:"20" })) vi.stubEnv(name, value);
   const owner = privateKeyToAccount(`0x${"11".repeat(32)}`), creator = privateKeyToAccount(`0x${"22".repeat(32)}`);
   const cookies = new AsyncLocalStorage<string | undefined>();
   vi.doMock("next/headers", () => ({ cookies: async () => ({ get: (name: string) => name === "keryx_session" && cookies.getStore() ? { value: cookies.getStore() } : undefined }) }));
@@ -74,6 +77,10 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
   const challenge = await import("../../app/api/ask/challenge/route"), sign = await import("../../app/api/ask/sign/route"), ask = await import("../../app/api/ask/route");
   const sourceIndex = await import("../../app/api/sources/route"), preview = await import("../../app/api/source/[id]/item/[itemId]/preview/route");
   const credit = await import("../../app/api/session/credit/route"), revoke = await import("../../app/api/session/revoke/route");
+  const withdrawPrepare=await import("../../app/api/session/withdraw/prepare/route"),withdrawAuthorize=await import("../../app/api/session/withdraw/authorize/route"),
+    withdrawCancel=await import("../../app/api/session/withdraw/cancel/route"),withdrawSubmit=await import("../../app/api/session/withdraw/submit/route"),
+    withdrawStatus=await import("../../app/api/session/withdraw/[requestId]/route"),withdrawPayments=await import("../../app/api/session/withdraw/payments/route"),
+    withdrawComplete=await import("../../app/api/session/withdraw/complete/route");
   const seller = await import("../../app/api/source/[id]/item/[itemId]/route"), cite = await import("../../app/api/cite/[id]/route");
   async function dispatch(url: string, init: RequestInit = {}, cookie?: string): Promise<Response> {
     const headers = new Headers(init.headers);
@@ -86,6 +93,13 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
       if (path === "/api/session/grant") return init.method === "POST" ? grant.POST(req) : grant.GET(req);
       if (path === "/api/session/credit") return credit.GET(req);
       if (path === "/api/session/revoke") return revoke.POST(req);
+      if(path==="/api/session/withdraw/prepare")return withdrawPrepare.POST(req);
+      if(path==="/api/session/withdraw/authorize")return withdrawAuthorize.POST(req);
+      if(path==="/api/session/withdraw/cancel")return withdrawCancel.POST(req);
+      if(path==="/api/session/withdraw/submit")return withdrawSubmit.POST(req);
+      if(path==="/api/session/withdraw/complete")return withdrawComplete.POST(req);
+      if(path==="/api/session/withdraw/payments")return withdrawPayments.GET(req);
+      if(/^\/api\/session\/withdraw\/0x[0-9a-f]{64}$/.test(path))return withdrawStatus.GET(req,{params:Promise.resolve({requestId:path.split("/").at(-1)!})});
       if (path === "/api/ask/challenge") return challenge.POST(req);
       if (path === "/api/ask/sign") return sign.POST(req);
       if (path === "/api/ask") return ask.POST(req);
@@ -98,12 +112,20 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
     });
   }
   const blockHash = `0x${"66".repeat(32)}`;
+  let blockTimestamp=Math.floor(Date.now()/1000);
+  let mintTransaction: Record<string,unknown>|null=null,mintReceipt:Record<string,unknown>|null=null,transferCalls=0;
+  const mintHash=`0x${"ab".repeat(32)}`,finalHash=`0x${"cd".repeat(32)}`;
   async function rpc(input: RequestInit) {
-    const request = JSON.parse(String(input.body)) as { id: number; method: string };
+    const request = JSON.parse(String(input.body)) as { id: number; method: string; params?: Array<{to?:string;data?:string}|string> };
+    const tag=request.params?.[0];
     const result = request.method === "eth_chainId" ? profile.chainIdHex : request.method === "eth_getBlockByNumber"
-      ? { number: "0x64", hash: blockHash, timestamp: "0x64", transactions: [], gasLimit: "0x1000000", gasUsed: "0x0", baseFeePerGas: "0x1" }
-      : request.method === "eth_call" ? encodeFunctionResult({ abi: REGISTRY_ABI, functionName: "get", result: {
-        creator: creator.address, payoutWallet: creator.address, authors: [{ wallet: creator.address, basisPoints: 10000 }], fetchPriceUsdc6: BigInt(1000), contentCid: "", tags: "", active: true } }) : null;
+      ? { number: toHex(mintTransaction?(tag==="0x65"?101:102):100),hash:mintTransaction?(tag==="0x65"?mintHash:finalHash):blockHash,
+        timestamp:toHex(blockTimestamp),transactions:mintTransaction&&tag==="0x65"?[mintTransaction.hash]:[],gasLimit:"0x1000000",gasUsed:"0x0",baseFeePerGas:"0x1" }
+      :request.method==="eth_getCode"?"0x60006000":request.method==="eth_getTransactionByHash"?mintTransaction:
+        request.method==="eth_getTransactionReceipt"?mintReceipt:
+      request.method === "eth_call" ? (typeof tag==="object"&&tag.to?.toLowerCase()===profile.gatewayMinter.toLowerCase()
+        ?(tag.data?.length===74?`0x${"0".repeat(63)}1`:"0x"):encodeFunctionResult({ abi: REGISTRY_ABI, functionName: "get", result: {
+        creator: creator.address, payoutWallet: creator.address, authors: [{ wallet: creator.address, basisPoints: 10000 }], fetchPriceUsdc6: BigInt(1000), contentCid: "", tags: "", active: true } })) : null;
     if (result === null) throw new Error(`Unexpected synthetic RPC method ${request.method}`);
     return Response.json({ jsonrpc: "2.0", id: request.id, result });
   }
@@ -115,29 +137,37 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
       sessionAddress ||= requested.sources[0].depositor.toLowerCase();
       return Response.json({ token: "USDC", balances: [{ depositor: sessionAddress, domain: profile.cctpDomain, balance: (Number(BigInt(1_000_000)+depositCredit-circleDebit)/1e6).toFixed(6) }] });
     }
+    if(target===`${profile.gatewayApiUrl}/v1/info`)return Response.json({domains:[{domain:26,chain:"Arc",network:"Mainnet",processedHeight:"100",burnIntentExpirationHeight:"110",
+      walletContract:{address:profile.gatewayWallet,supportedTokens:["USDC"]},minterContract:{address:profile.gatewayMinter,supportedTokens:["USDC"]}}]});
+    if(target===`${profile.gatewayApiUrl}/v1/estimate`)return Response.json([{burnIntent:{spec:JSON.parse(String(init.body))[0].spec,maxBlockHeight:"110",maxFee:"1000"}}]);
+    if(target===`${profile.gatewayApiUrl}/v1/transfer`){transferCalls++;throw new Error("Synthetic original transfer response lost");}
     if (target.startsWith(origin)) return dispatch(target, init);
     throw new Error("Unexpected external network refused");
   });
   const worker = await build({ entryPoints: ["lib/session/mainnet-session-signer.worker.ts"], platform: "browser", bundle: true, write: false,
-    define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arc"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": JSON.stringify(registry), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" } });
+    define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arc"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": JSON.stringify(registry), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined",
+      "process.env.NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS":'"300"' } });
   const hook = await build({ stdin: { loader: "tsx", resolveDir: process.cwd(), contents: `
     import React from 'react'; import {createRoot} from 'react-dom/client';
     import {useMainnetSessionGrant} from './lib/hooks/use-mainnet-session-grant';
+    import {SessionCashoutPanel} from './components/keryx/session-cashout-panel';
     import {listFundingRecords} from './lib/buyer/funding-journal';window.fundingRecords=listFundingRecords;
     window.sentFunding=[];
     window.fundingChain={getChainId:async()=>5042,readContract:async()=>2000000n,getBalance:async()=>2000000000000000000n,
-      estimateGas:async()=>21000n,estimateFeesPerGas:async()=>({maxFeePerGas:1n,maxPriorityFeePerGas:1n}),
+      estimateGas:async({to})=>to?.toLowerCase()==='${profile.gatewayMinter.toLowerCase()}'?300000n:21000n,estimateFeesPerGas:async()=>({maxFeePerGas:1n,maxPriorityFeePerGas:1n}),
       getTransactionCount:async()=>window.sentFunding.length,getBlockNumber:async()=>BigInt(100+window.sentFunding.length*2),
       getTransaction:async({hash})=>{const tx=window.sentFunding.find(tx=>tx.hash===hash);return {...tx,value:BigInt(tx.value),blockNumber:BigInt(tx.blockNumber)}},
       getTransactionReceipt:async({hash})=>{const tx=window.sentFunding.find(tx=>tx.hash===hash);return {transactionHash:hash,blockHash:tx.blockHash,blockNumber:BigInt(tx.blockNumber),status:'success'}}};
     window.wallet={account:{address:'${owner.address}'},getChainId:async()=>5042,getAddresses:async()=>['${owner.address}'],signMessage:async({message})=>window.ownerPersonalSign(message),
-      sendTransaction:async(tx)=>{const hash=await window.ownerFundingSubmit({from:tx.account,to:tx.to,data:tx.data,value:tx.value.toString(),nonce:tx.nonce});
+      sendTransaction:async(tx)=>{const hash=await window.ownerFundingSubmit({from:typeof tx.account==='string'?tx.account:tx.account.address,to:tx.to,data:tx.data,value:tx.value.toString(),nonce:tx.nonce,
+      gas:tx.gas?.toString(),maxFeePerGas:tx.maxFeePerGas?.toString(),maxPriorityFeePerGas:tx.maxPriorityFeePerGas?.toString()});
       window.sentFunding.push({hash,from:tx.account,to:tx.to,input:tx.data,value:tx.value.toString(),nonce:tx.nonce,blockHash:'${blockHash}',blockNumber:String(101+tx.nonce*2)});return hash;}};
-    function Probe(){const grant=useMainnetSessionGrant(); window.normalGrant=grant;return <output id="state">{JSON.stringify(grant.state)}</output>}
+    function Probe(){const grant=useMainnetSessionGrant(); window.normalGrant=grant;return <><output id="state">{JSON.stringify(grant.state)}</output><SessionCashoutPanel sessAddr={grant.state.sessAddr}/></>}
     createRoot(document.getElementById('root')).render(<Probe/>);
   ` }, bundle: true, write: false, platform: "browser", format: "esm",
     define: { "process.env.NODE_ENV": '"production"', "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arc"',
-      "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": JSON.stringify(registry), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" },
+      "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": JSON.stringify(registry), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined",
+      "process.env.NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS":'"300"' },
     plugins: [{ name: "synthetic-owner-wallet", setup(builder) {
       builder.onResolve({ filter: /^wagmi$/ }, () => ({ path: "wagmi", namespace: "synthetic" }));
       builder.onLoad({ filter: /.*/, namespace: "synthetic" }, () => ({ contents: "export const useWalletClient=()=>({data:window.wallet});export const usePublicClient=()=>window.fundingChain;export const useSwitchChain=()=>({switchChainAsync:async()=>{}});" }));
@@ -149,10 +179,32 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
   let duringApproval: (() => Promise<void>) | undefined;
   let duringNextGrantChallenge: (() => Promise<void>) | undefined;
   let afterDeposit: (() => Promise<void>) | undefined;
+  let startAfterDeposit: (() => void) | undefined, laterSignatureReady: Promise<void> | undefined;
   const fundingProposals: Array<{ requested: string; cap: string }> = [];
   const { GATEWAY_DEPOSIT_FOR_ABI } = await import("../buyer/funding-policy");
-  await context.exposeFunction("ownerFundingSubmit", async (tx: { from: string; to: string; data: Hex; value: string; nonce: number }) => {
+  let originalCashoutId="";
+  await context.exposeFunction("ownerFundingSubmit", async (tx: { from: string; to: string; data: Hex; value: string; nonce: number;gas?:string;maxFeePerGas?:string;maxPriorityFeePerGas?:string }) => {
     expect(tx.from.toLowerCase()).toBe(owner.address.toLowerCase()); expect(tx.value).toBe("0");
+    if(tx.nonce===2){
+      expect(tx.to.toLowerCase()).toBe(profile.gatewayMinter.toLowerCase());
+      const localRecord=(await db.getCreatorWithdrawal(originalCashoutId,sessionAddress))!;
+      const {WITHDRAWAL_MINTER_ABI}=await import("../gateway/withdrawal-mint-observation");
+      expect(decodeFunctionData({abi:WITHDRAWAL_MINTER_ABI,data:tx.data}).functionName).toBe("gatewayMint");
+      const raw=await owner.signTransaction({type:"eip1559",chainId:profile.chainId,nonce:tx.nonce,gas:BigInt(tx.gas!),
+        maxFeePerGas:BigInt(tx.maxFeePerGas!),maxPriorityFeePerGas:BigInt(tx.maxPriorityFeePerGas!),to:profile.gatewayMinter,value:BigInt(0),data:tx.data});
+      const parsed=parseTransaction(raw),txHash=keccak256(raw);
+      mintTransaction={type:"0x2",chainId:toHex(profile.chainId),nonce:toHex(tx.nonce),gas:toHex(BigInt(tx.gas!)),maxFeePerGas:toHex(BigInt(tx.maxFeePerGas!)),
+        maxPriorityFeePerGas:toHex(BigInt(tx.maxPriorityFeePerGas!)),to:profile.gatewayMinter,from:owner.address.toLowerCase(),value:"0x0",input:tx.data,accessList:[],r:parsed.r,s:parsed.s,
+        yParity:toHex(parsed.yParity!),hash:txHash,blockHash:mintHash,blockNumber:"0x65",transactionIndex:"0x0"};
+      const {WITHDRAWAL_MINT_EVENT}=await import("../gateway/withdrawal-mint-receipt"),{withdrawalTransferSpecHash}=await import("../gateway/withdrawal-attestation");
+      const spec=localRecord.request.burnIntent.spec;
+      mintReceipt={transactionHash:txHash,blockHash:mintHash,blockNumber:"0x65",transactionIndex:"0x0",from:owner.address.toLowerCase(),to:profile.gatewayMinter,
+        status:"0x1",type:"0x2",gasUsed:toHex(150000),cumulativeGasUsed:toHex(150000),effectiveGasPrice:toHex(BigInt(tx.maxFeePerGas!)),logs:[{
+          transactionHash:txHash,blockHash:mintHash,blockNumber:"0x65",transactionIndex:"0x0",logIndex:"0x0",address:profile.gatewayMinter,removed:false,
+          topics:encodeEventTopics({abi:WITHDRAWAL_MINT_EVENT,eventName:"AttestationUsed",args:{token:profile.usdcAddress,recipient:owner.address,transferSpecHash:withdrawalTransferSpecHash(localRecord)}}),
+          data:encodeAbiParameters([{type:"uint32"},{type:"bytes32"},{type:"bytes32"},{type:"uint256"}],[26,spec.sourceDepositor,spec.sourceSigner,BigInt(spec.value)])}]};
+      return txHash;
+    }
     if (tx.nonce === 0) {
       expect(tx.to.toLowerCase()).toBe(profile.usdcAddress.toLowerCase());
       expect(decodeFunctionData({ abi: erc20Abi, data: tx.data })).toMatchObject({ functionName: "approve", args: [profile.gatewayWallet, BigInt(50000)] });
@@ -163,6 +215,7 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
       expect(decoded.functionName).toBe("depositFor");
       expect(String(decoded.args![1]).toLowerCase()).toBe(sessionAddress); expect(decoded.args![2]).toBe(BigInt(50000));
       depositCredit += BigInt(50000);
+      startAfterDeposit?.();
       duringNextGrantChallenge = afterDeposit;
     }
     return `0x${(tx.nonce+1).toString(16).padStart(64,"0")}`;
@@ -181,6 +234,7 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
       const settle = duringNextGrantChallenge; duringNextGrantChallenge = undefined; await settle();
     }
     const response = await dispatch(url, { method: req.method(), body: req.postData() ?? undefined, headers: req.headers() }, receivedToken);
+    if (laterSignatureReady && url.includes("/api/session/credit?") && new URL(url).searchParams.has("after")) await laterSignatureReady;
     if (afterDeposit && url === `${origin}/api/session/grant/challenge` && response.ok) {
       const proposal = await response.clone().json();
       fundingProposals.push({ requested: JSON.parse(req.postData()!).budgetMicros, cap: proposal.consent.capMicroUsdc });
@@ -188,7 +242,7 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
     if (holdGrant && req.method() === "GET" && url === `${origin}/api/session/grant`) { holdGrant = false; held = true; await new Promise<void>(resolve => { releaseHeld = resolve; }); }
     return route.fulfill({ status: response.status, body: await response.text(), headers: Object.fromEntries(response.headers) });
   });
-  const page = await context.newPage(); await page.goto(origin);
+  const page = await context.newPage();await page.goto(origin);
   await page.waitForFunction(() => !!(window as unknown as { normalGrant?: unknown }).normalGrant);
   await page.evaluate(() => (window as unknown as { normalGrant: { generateAndFund(budget: number): Promise<void> } }).normalGrant.generateAndFund(0.05));
   const hookState = async () => JSON.parse((await page.locator("#state").textContent())!);
@@ -203,7 +257,7 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
   await call("initializeOwner", { owner: owner.address });
   expect((await call("restoreRetained") as { address: string }).address.toLowerCase()).toBe(sessionAddress);
   const { createSessionGrantConsentMessage } = await import("../payments/session-grant-consent");
-  async function completeResearch(question: string, budget: number, questionId: string) {
+  async function completeResearch(question: string, budget: number, questionId: string, beforeSubmit?: () => Promise<void>) {
   const response = await dispatch(`${origin}/api/ask`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question, budget, sessionId: owner.address, browserAuthorizationProtocol: "durable-v1", mode: "quick", scholarly: false }) }, token);
   expect(response.status).toBe(200); const reader = response.body!.getReader(), decoder = new TextDecoder(); let buffer = "", done: QueryRun | null = null, signs = 0;
   for (;;) {
@@ -214,6 +268,7 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
       if (event === "error") throw new Error(JSON.stringify(data));
       if (event === "sign-request") {
         signs++; const { paymentHeader } = await call("authorizePayment", { reqId: data.reqId, question: { id: questionId, budgetMicroUsdc: String(Math.round(budget*1e6)) } }) as { paymentHeader: string };
+        await beforeSubmit?.();
         const status = await page.evaluate(async ({ reqId, paymentHeader, sessionId }) => (await fetch("/api/ask/sign", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId, reqId, paymentHeader }) })).status, { reqId: data.reqId, paymentHeader, sessionId: owner.address.toLowerCase() });
         expect(status).toBe(200);
       }
@@ -274,14 +329,15 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
       const concurrent = await completeResearch("How do durable payment reservations preserve nonce protection?", 0.01, randomUUID());
       expect(concurrent.done.answer).toContain("[S1]"); expect(circleDebit).toBeGreaterThan(debitBefore);
     };
-    afterDeposit = async () => {
-      const debitBefore = circleDebit;
-      const later = await completeResearch("How do durable payment reservations preserve nonce protection?", 0.01, randomUUID());
-      expect(later.done.answer).toContain("[S1]"); expect(circleDebit).toBeGreaterThan(debitBefore);
-    };
+    let resumeLater!: () => void, signalReady!: () => void, later: Promise<{done: QueryRun; signs: number}>;
+    const resume=new Promise<void>(resolve=>{resumeLater=resolve});
+    laterSignatureReady=new Promise<void>(resolve=>{signalReady=resolve});
+    startAfterDeposit=()=>{later=completeResearch("How do durable payment reservations preserve nonce protection?",0.01,randomUUID(),async()=>{signalReady();await resume});};
+    afterDeposit=async()=>{const debitBefore=circleDebit;resumeLater();const result=await later;
+      expect(result.done.answer).toContain("[S1]");expect(circleDebit).toBeGreaterThan(debitBefore);};
     const messagesBeforeFunding = ownerMessages.length;
     await page.evaluate(() => (window as unknown as { normalGrant: { topUp(amount: number): Promise<void> } }).normalGrant.topUp(0.05));
-    expect((await hookState()).status).toBe("active");
+    const toppedUp=await hookState();expect(toppedUp.status,JSON.stringify(toppedUp)).toBe("active");
     expect(Math.round((await hookState()).cap*1e6)).toBe(Math.round(originalCap*1e6)+50000);
     const target = BigInt(Math.round(originalCap*1e6)+50000);
     expect(fundingProposals).toHaveLength(2);
@@ -293,6 +349,47 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
     expect(fundingRows).toHaveLength(1); expect(fundingRows[0].gatewayCreditAcknowledged).toBe(true);
     expect(fundingRows[0].activePayer).toBeUndefined(); expect(fundingRows[0].gatewayCreditObservedAt).toBeDefined();
     expect(await page.evaluate(() => (window as unknown as { sentFunding: unknown[] }).sentFunding.length)).toBe(2);
+    const retainedEpoch=(await hookState()).grantEpoch;
+    await page.evaluate(()=>(window as unknown as {normalGrant:{revoke():Promise<unknown>}}).normalGrant.revoke());
+    await call("lock");await call("restoreRetained");blockTimestamp=Math.floor(Date.now()/1000);
+    const prepareCashout=async()=>{
+      const response=await dispatch(`${origin}/api/session/withdraw/prepare`,{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({sessAddr:sessionAddress,grantEpoch:retainedEpoch,amountMicros:"100000"})},token);
+      expect(response.status).toBe(200);return response.json();
+    };
+    const abandoned=await prepareCashout();
+    expect(await call("cancelUnexposedWithdrawal",{requestId:abandoned.requestId})).toMatchObject({cancelledUnexposed:true});
+    const prepared=await prepareCashout();expect(prepared.requestId).not.toBe(abandoned.requestId);
+    originalCashoutId=prepared.requestId;
+    await expect(call("signWithdrawal",{requestId:prepared.requestId,review:{amountMicroUsdc:"100001",maxFeeMicroUsdc:"1000"}})).rejects.toThrow();
+    await page.getByRole("button",{name:"Withdraw retained session funds",exact:true}).click();
+    await page.getByLabel("Session withdrawal amount").fill("0.1");await page.getByLabel("Session withdrawal maximum fee").fill("0.001");
+    await page.getByRole("button",{name:"Prepare reviewed amount and fee ceiling",exact:true}).click();
+    await expect.poll(()=>page.getByLabel("Original session withdrawal request").inputValue()).toBe(prepared.requestId);
+    await page.getByRole("button",{name:"Sign and submit original burn",exact:true}).click();
+    await expect.poll(async()=>({status:await page.locator('p[role="status"]').textContent(),error:await page.locator('[role="alert"]').count()?await page.locator('[role="alert"]').textContent():null}),{timeout:20000}).toEqual({status:"transfer submitted; original recovery required",error:null});
+    await expect(call("cancelUnexposedWithdrawal",{requestId:prepared.requestId})).rejects.toThrow();
+    expect(transferCalls).toBe(1);
+    expect(await call("reconcileWithdrawal",{requestId:prepared.requestId})).toMatchObject({completed:false});
+    const record=(await db.getCreatorWithdrawal(prepared.requestId,sessionAddress))!,claim=(await db.getCreatorWithdrawalTransferClaim(prepared.requestId,sessionAddress))!;
+    const spec=record.request.burnIntent.spec,attester=privateKeyToAccount(`0x${"44".repeat(32)}`);
+    const encodedSpec="ca85def7000000010000001a0000001a"+[spec.sourceContract,spec.destinationContract,spec.sourceToken,spec.destinationToken,
+      spec.sourceDepositor,spec.destinationRecipient,spec.sourceSigner,spec.destinationCaller].map(v=>v.slice(2)).join("")+
+      BigInt(spec.value).toString(16).padStart(64,"0")+spec.salt.slice(2)+"00000000";
+    const attestation=`0xff6fb334${BigInt(120).toString(16).padStart(64,"0")}00000154${encodedSpec}` as Hex;
+    const vendor={transferId:randomUUID(),attestation,expirationBlock:"120",signature:await attester.signMessage({message:{raw:keccak256(attestation)}})};
+    await db.saveCreatorWithdrawalAttestation(prepared.requestId,sessionAddress,claim.claimId,vendor);
+    await page.getByRole("button",{name:"Review owner wallet mint and gas",exact:true}).click();
+    await expect.poll(()=>page.locator('p[role="status"]').textContent(),{timeout:20000}).toBe("owner mint submitted; finality pending");
+    expect(await page.getByLabel("Original session mint hash").inputValue()).toMatch(/^0x[0-9a-f]{64}$/);
+    await page.getByRole("button",{name:"Verify original mint finality",exact:true}).click();
+    await expect.poll(()=>page.locator('p[role="status"]').textContent(),{timeout:20000}).toBe("completed with original mainnet mint finality");
+    expect(await call("reconcileWithdrawal",{requestId:prepared.requestId})).toMatchObject({completed:true,status:"mint-finalized-observed"});
+    expect(transferCalls).toBe(1);
+    await page.evaluate(()=>(window as unknown as {normalGrant:{recoverViaSignature():Promise<boolean>}}).normalGrant.recoverViaSignature());
+    expect((await hookState()).status).toBe("active");
+    const afterCashout=await completeResearch("How do durable payment reservations preserve nonce protection?",0.01,randomUUID());
+    expect(afterCashout.done.answer).toContain("[S1]");
   }
   await call("lock"); expect((await call("restoreRetained") as { address: string }).address.toLowerCase()).toBe(sessionAddress);
-}, 90000);
+}, 120000);

@@ -21,6 +21,7 @@ import type {
 import type { WrappedKey } from "./session-key-vault";
 import { browserPaymentProfile } from "../browser-payment-profile";
 import type { BrowserSessionOperation, BrowserQuestionBudget } from "./browser-session-runtime";
+import type { BrowserSessionWithdrawalReview } from "./browser-session-withdrawal-runtime";
 
 type Pending = { resolve: (value: unknown) => void; reject: (reason: Error) => void };
 
@@ -141,6 +142,18 @@ export class SessionSigner {
 
   async authorizePayment(reqId: string, question: BrowserQuestionBudget): Promise<string> {
     return (await this.call<{ paymentHeader: string }>({ type: "authorizePayment", reqId, question })).paymentHeader;
+  }
+  async signWithdrawal(requestId: string, review: BrowserSessionWithdrawalReview) {
+    if (browserPaymentProfile().testnet) throw new Error("Use the original testnet cashout flow");
+    return this.call<{ requestId: string; signature: `0x${string}` }>({ type: "signWithdrawal", requestId, review });
+  }
+  async cancelUnexposedWithdrawal(requestId: string) {
+    if (browserPaymentProfile().testnet) throw new Error("Use the original testnet cashout flow");
+    return this.call<{ requestId: string; cancelledUnexposed: true }>({ type: "cancelUnexposedWithdrawal", requestId });
+  }
+  async reconcileWithdrawal(requestId: string) {
+    if (browserPaymentProfile().testnet) throw new Error("Use the original testnet cashout flow");
+    return this.call<{ requestId: string; completed: boolean; status: string }>({ type: "reconcileWithdrawal", requestId });
   }
 
   bindGrant(): Promise<unknown> { return this.call({ type: "bindGrant" }); }

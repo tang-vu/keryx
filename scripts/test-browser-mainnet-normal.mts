@@ -2,11 +2,14 @@
 import assert from "node:assert/strict";
 import { build } from "esbuild";
 import { chromium, type Page } from "playwright";
-import { encodeFunctionResult, recoverTypedDataAddress, type Hex } from "viem";
+import { encodeFunctionResult, recoverTypedDataAddress, concatHex, keccak256,hashTypedData,type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { ARC_MAINNET_PROFILE as profile } from "../lib/arc-network-profile";
 import { browserSessionCustodyContext } from "../lib/session/browser-session-custody";
-import { createSessionGrantConsentMessage } from "../lib/payments/session-grant-consent";
+import { createSessionGrantConsentMessage,createSessionGrantSignerProofMessage } from "../lib/payments/session-grant-consent";
+import {prepareWithdrawIntentForProfile} from "../lib/gateway/withdraw-intent-core";
+import {withdrawTypedData,withdrawPolicySchema} from "../lib/gateway/withdraw-protocol";
+import type {SessionWithdrawalPreparation} from "../lib/gateway/session-withdrawal-protocol";
 import { REGISTRY_ABI } from "../lib/registry/registry-abi";
 import { contentSecurityPolicy } from "../lib/security-headers";
 import { readFileSync, readdirSync } from "node:fs";
@@ -23,7 +26,8 @@ const nextDist = distArgument >= 0 ? resolve(process.argv[distArgument+1]) : nul
 const bundled = nextDist ? null : await build({ entryPoints: ["lib/session/mainnet-session-signer.worker.ts"], bundle: true, write: false,
   platform: "browser", format: "iife", define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": JSON.stringify("arc"),
     "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": JSON.stringify(registry),
-    "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" } });
+    "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined",
+    "process.env.NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS":'"300"' } });
 let workerUrl = "/normal-worker.js", csp = contentSecurityPolicy(true);
 const packagedFiles = new Map<string,string>();
 if (nextDist) {
@@ -55,6 +59,9 @@ let nonceIndex = 1, payout = creator.address, price = BigInt(1000), nextGrantRea
 let requestedAmount = "1000";
 const reqId = "00000000-0000-4000-8000-000000000002";
 let epoch = "00000000-0000-4000-8000-000000000001";
+let preparation:SessionWithdrawalPreparation|null=null,withdrawalPhase="prepared";
+const withdrawalStatus=()=>({preparation,signingPhase:withdrawalPhase,cancellation:null,
+  progress:{status:"prepared",retryAuthorized:false,chainFinalityVerified:false},attestation:null,mint:null,completion:null});
 const browser = await chromium.launch({ headless: true });
 try {
   const context = await browser.newContext();
@@ -63,9 +70,9 @@ try {
     requests++; const request = route.request(), url = new URL(request.url());
     if (url.origin === new URL(profile.rpcUrl).origin) {
       assert.equal(request.method(), "POST"); const body = request.postDataJSON() as { id: number; method: string; params: unknown[] };
-      assert.ok(["eth_chainId", "eth_getBlockByNumber", "eth_call"].includes(body.method));
+      assert.ok(["eth_chainId", "eth_getBlockByNumber", "eth_call","eth_getCode"].includes(body.method));
       if (body.method === "eth_call") assert.equal((body.params[0] as {to:string}).to.toLowerCase(), registry.toLowerCase());
-      const result = body.method === "eth_chainId" ? rpcChain : body.method === "eth_getBlockByNumber" ? block :
+      const result = body.method === "eth_chainId" ? rpcChain : body.method === "eth_getBlockByNumber" ? block :body.method==="eth_getCode"?"0x60006000":
         encodeFunctionResult({ abi: REGISTRY_ABI, functionName: "get", result: { creator: creator.address, payoutWallet: payout,
           authors: [{ wallet: creator.address, basisPoints: 10000 }], fetchPriceUsdc6: price, contentCid: "", tags: "", active: true } });
       return route.fulfill({ json: { jsonrpc: "2.0", id: body.id, result } });
@@ -75,8 +82,14 @@ try {
     if(packagedFiles.has(url.pathname)) return route.fulfill({contentType:"application/javascript",headers:{"content-security-policy":csp},body:packagedFiles.get(url.pathname)!});
     if (url.pathname === "/normal-worker.js") return route.fulfill({ contentType: "application/javascript",
       headers: { "content-security-policy": csp }, body: bundled!.outputFiles[0].text });
+    if(url.pathname==="/api/session/credit")return route.fulfill({json:{status:"known",network:profile.networkId,address:url.searchParams.get("address")?.toLowerCase(),available:"1000000"}});
     assert.ok(request.headers().cookie?.includes("siwe_session=synthetic-cookie"), "Worker must use cookie authentication");
     if (!authenticated) return route.fulfill({ status: 403, json: { error: "unavailable" } });
+    if(url.pathname==="/api/session/withdraw/payments")return route.fulfill({json:{network:profile.networkId,sessAddr:preparation!.sessAddr,retryAuthorized:false,payments:[],nextCursor:null}});
+    if(url.pathname==="/api/session/withdraw/authorize"){
+      assert.deepEqual(request.postDataJSON(),{requestId:preparation!.requestId});withdrawalPhase="exposed";return route.fulfill({json:withdrawalStatus()});
+    }
+    if(url.pathname===`/api/session/withdraw/${preparation?.requestId}`)return route.fulfill({json:withdrawalStatus()});
     if (url.pathname === "/api/session/grant") {
       nextGrantReads++; if (!grant) return route.fulfill({ status: 403, json: { error: "unavailable" } });
       return route.fulfill({ json: grant });
@@ -170,6 +183,22 @@ try {
   const other=privateKeyToAccount(`0x${"88".repeat(32)}`);
   await assert.rejects(call(first,"signGrantConsentProof",{consent:{...consent,ownerAddr:other.address.toLowerCase()},ownerSignature}));
   await assert.rejects(call(first,"signTransaction",{transaction:{}}));await assert.rejects(call(first,"signTypedData",{payload:{}}));
+  const expired={...consent,expirySeconds:"1"},fixtureAccount=privateKeyToAccount(keccak256(concatHex([custody.digest,signature])));
+  const burnIntent={...prepareWithdrawIntentForProfile(profile,expired.sessAddr,"100000",expired.ownerAddr,"1000"),maxBlockHeight:"110"};
+  preparation={format:"keryx-session-withdrawal-preparation-v1",network:profile.networkId,requestId:hashTypedData(withdrawTypedData(burnIntent)),
+    ownerAddr:expired.ownerAddr,sessAddr:expired.sessAddr,grantEpoch:expired.grantEpoch,
+    authorization:{consent:expired,ownerSignature:await owner.signMessage({message:createSessionGrantConsentMessage(expired,profile)}),
+      sessionSignature:await fixtureAccount.signMessage({message:createSessionGrantSignerProofMessage(expired,profile)})},burnIntent,
+    policy:withdrawPolicySchema.parse({owner:expired.sessAddr,recipient:expired.ownerAddr,domain:profile.cctpDomain,gatewayWallet:profile.gatewayWallet,
+      gatewayMinter:profile.gatewayMinter,asset:profile.usdcAddress,maxValueMicros:"100000",maxFeeMicros:"1000"}),
+    balance:{availableMicroUsdc:"1000000",heldPaymentMicroUsdc:"13000",heldWithdrawalMicroUsdc:"0",confirmedSpentMicroUsdc:"0",maxFeeMicroUsdc:"1000"},
+    height:{minimumBlockHeight:"110",maximumBlockHeight:"400",observedBlockNumber:"100",observedBlockHash:blockHash,observedAt:new Date().toISOString()}};
+  await call(first,"lock");await call(first,"restoreRetained");
+  await assert.rejects(call(first,"signGrantConsentProof",{consent:expired,ownerSignature:preparation.authorization.ownerSignature}),"Expired payment permission stays closed");
+  const cashout=await call(first,"signWithdrawal",{requestId:preparation.requestId,review:{amountMicroUsdc:"100000",maxFeeMicroUsdc:"1000"}}) as {signature:Hex};
+  assert.equal((await recoverTypedDataAddress({...withdrawTypedData(burnIntent),signature:cashout.signature})).toLowerCase(),expired.sessAddr);
+  nonceIndex=8;await assert.rejects(call(second,"authorizePayment",{reqId,question:{id:"00000000-0000-4000-8000-000000000011",budgetMicroUsdc:"10000"}}),"Retained withdrawal barrier blocks other tabs");
+  assert.equal(withdrawalPhase,"exposed");
   console.log(JSON.stringify({status:"passed",realChromium:true,realIndexedDB:true,worker:nextDist?"Next production packaged":"production source",requests,
-    authenticatedChallenge:true,ownerAndSessionProof:true,nonceAndCapRetained:true,logoutRecovery:true,liveFunds:false}));
+    authenticatedChallenge:true,ownerAndSessionProof:true,nonceAndCapRetained:true,logoutRecovery:true,expiredOwnerCashout:true,liveFunds:false}));
 } finally { await browser.close(); }

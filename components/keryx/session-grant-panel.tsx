@@ -16,6 +16,7 @@ import { useSessionGrant } from "@/lib/hooks/use-session-grant";
 import { GrantSpendDialog } from "@/components/keryx/grant-spend-dialog";
 import { FaucetPanel } from "@/components/keryx/faucet-panel";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+import { SessionCashoutPanel } from "./session-cashout-panel";
 
 export interface SessionGrantBinding {
   /** Retained sessionId for active, expired or paused grants; never fall back implicitly. */
@@ -107,6 +108,7 @@ export function SessionGrantPanel({ onBindingChange }: Props) {
         onTryRecover={tryRecover}
         onRecoverViaSignature={recoverViaSignature}
       />
+      {!browserPaymentProfile().testnet && <SessionCashoutPanel sessAddr={state.sessAddr}/>}
     </div>
   );
 }

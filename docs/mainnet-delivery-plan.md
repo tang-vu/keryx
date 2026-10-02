@@ -53,8 +53,10 @@ same-device recovery, owner funding, dual consent/possession proofs, cumulative 
 and actual Chromium/Next worker evidence. Synthetic normal authenticated research composition
 now completes encrypted purchases and citations, retaining a completed answer on one reward-leg
 failure. Actual React owner funding checks cover concurrent debit reconciliation and an immutable
-top-up consent ceiling through normal handlers. Independent live wallet acceptance, owner-only
-session cashout, final coordinated SQL/operational evidence and owner cutover remain release
+top-up consent ceiling through normal handlers. The ordinary owner-only cashout component now
+passes synthetic worker/normal-handler acceptance through lost-transfer recovery, owner mint,
+independent finality and renewed research with the same retained signer. Independent live
+wallet/funding/cashout acceptance, final coordinated SQL/operational evidence and owner cutover remain release
 gates; this source checkpoint does not activate mainnet.
 
 ## Current baseline and gaps
