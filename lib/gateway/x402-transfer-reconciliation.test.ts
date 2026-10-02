@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "../arc-network-profile";
 import type { PaymentRecord } from "../types";
 import {
   checkPendingTransfer,
@@ -25,6 +26,8 @@ const payment = (overrides: Partial<PaymentRecord> = {}): PaymentRecord => ({
   ...overrides,
 });
 const TREASURY = payment().payer;
+beforeEach(() => vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("unexpected real network request"); })));
+afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.resetModules(); });
 
 const transfer = (
   overrides: Partial<CircleX402Transfer> = {},
@@ -45,6 +48,107 @@ const transfer = (
 });
 
 describe("pending x402 transfer reconciliation", () => {
+  it.each([ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE])("reconciles retained $name originals across opposite configuration and restart", async profile => {
+    vi.stubEnv("KERYX_NETWORK", profile.testnet ? "arc" : "arcTestnet");
+    vi.stubEnv("NEXT_PUBLIC_KERYX_NETWORK", profile.testnet ? "arc" : "arcTestnet");
+    const original = payment({ network: profile.networkId, grantEpoch: "retained-epoch" });
+    const exact = transfer({ sendingNetwork: original.network, recipientNetwork: original.network });
+    for (let restart = 0; restart < 2; restart++) {
+      vi.resetModules();
+      const reconciliation = await import("./x402-transfer-reconciliation");
+      const http = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+        const url = new URL(String(input));
+        expect(url.origin).toBe(profile.gatewayApiUrl);
+        expect(url.pathname).toBe("/v1/x402/transfers");
+        expect(url.searchParams.get("network")).toBe(original.network);
+        expect(init).toMatchObject({ redirect: "error", cache: "no-store" });
+        if (!url.searchParams.has("pageAfter")) {
+          const next = new URL(url);
+          next.searchParams.set("pageAfter", "original-next");
+          return Response.json({ transfers: [] }, { headers: { Link: `<${next}>; rel="next"` } });
+        }
+        return Response.json({ transfers: [exact] });
+      });
+      vi.stubGlobal("fetch", http);
+      const settlePendingPayment = vi.fn(async () => true);
+      const failPendingPayment = vi.fn(async () => ({ resolved: true, reservationReleased: true }));
+      const summary = await reconciliation.reconcilePendingPayments({
+        listPendingPayments: async () => [original], settlePendingPayment, failPendingPayment,
+        setSyncState: vi.fn(async () => undefined),
+      });
+      expect(summary).toMatchObject({ promoted: 1, failed: 0, releasedReservations: 0 });
+      expect(settlePendingPayment).toHaveBeenCalledWith(original.id, original.authorizationId, exact.id);
+      expect(failPendingPayment).not.toHaveBeenCalled();
+      expect(http).toHaveBeenCalledTimes(2);
+    }
+  });
+
+  it.each([ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE])("keeps an empty complete $name search pending without release", async profile => {
+    const http = vi.fn(async () => Response.json({ transfers: [] }));
+    vi.stubGlobal("fetch", http);
+    const settlePendingPayment = vi.fn(async () => false);
+    const failPendingPayment = vi.fn(async () => ({ resolved: false, reservationReleased: false }));
+    const summary = await reconcilePendingPayments({
+      listPendingPayments: async () => [payment({ network: profile.networkId, grantEpoch: "original-epoch" })],
+      settlePendingPayment, failPendingPayment, setSyncState: vi.fn(async () => undefined),
+    });
+    expect(summary).toMatchObject({ awaiting: 1, browserAwaiting: 1, promoted: 0, failed: 0, releasedReservations: 0 });
+    expect(settlePendingPayment).not.toHaveBeenCalled();
+    expect(failPendingPayment).not.toHaveBeenCalled();
+  });
+
+  it.each(["eip155:1", "arc", "arcTestnet", "eip155:5042 ", ""])("refuses unknown original network %s even with an exact-looking failed row", async network => {
+    const original = payment({ network });
+    const http = vi.fn();
+    await expect(searchCircleTransfer(original, undefined, http)).rejects.toThrow(/unsupported Gateway payment network/);
+    expect(http).not.toHaveBeenCalled();
+    expect(checkPendingTransfer(original, [transfer({ status: "failed", sendingNetwork: network, recipientNetwork: network })]))
+      .toMatchObject({ verdict: "mismatch" });
+  });
+
+  it.each([ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE])("refuses foreign rail and malformed $name cursors before any ledger mutation", async profile => {
+    const opposite = profile.testnet ? ARC_MAINNET_PROFILE : ARC_TESTNET_PROFILE;
+    const selected = `${profile.gatewayApiUrl}/v1/x402/transfers`;
+    const links = [
+      `<${opposite.gatewayApiUrl}/v1/x402/transfers?pageAfter=foreign>; rel="next"`,
+      `<${profile.gatewayApiUrl}/v1/balances?pageAfter=foreign>; rel="next"`,
+      `<${selected}?pageAfter=next#fragment>; rel="next"`,
+      `<${selected}?pageAfter=next&pageAfter=other>; rel="next"`,
+      `<${selected}>; rel="next"`,
+      `<${selected}?pageAfter=next>; rel="next", <${selected}?pageAfter=other>; rel="next"`,
+      `<${selected}?pageAfter=next>; rel="next`,
+    ];
+    for (const link of links) {
+      const exact = transfer({ sendingNetwork: profile.networkId, recipientNetwork: profile.networkId });
+      const http = vi.fn(async () => Response.json({ transfers: [exact] }, { headers: { Link: link } }));
+      vi.stubGlobal("fetch", http);
+      const settlePendingPayment = vi.fn(async () => true);
+      const failPendingPayment = vi.fn(async () => ({ resolved: true, reservationReleased: true }));
+      await expect(reconcilePendingPayments({
+        listPendingPayments: async () => [payment({ network: profile.networkId, grantEpoch: "original-epoch" })],
+        settlePendingPayment, failPendingPayment, setSyncState: vi.fn(async () => undefined),
+      })).rejects.toThrow(/link|cursor/);
+      expect(http).toHaveBeenCalledOnce();
+      expect(settlePendingPayment).not.toHaveBeenCalled();
+      expect(failPendingPayment).not.toHaveBeenCalled();
+    }
+  });
+
+  it.each([ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE])("binds every $name transfer field and refuses duplicates or inexact amounts", profile => {
+    const original = payment({ network: profile.networkId });
+    const exact = transfer({ sendingNetwork: profile.networkId, recipientNetwork: profile.networkId });
+    expect(checkPendingTransfer(original, [exact])).toMatchObject({ verdict: "settled" });
+    for (const patch of [
+      { fromAddress: `0x${"3".repeat(40)}` }, { toAddress: `0x${"3".repeat(40)}` },
+      { token: "OTHER" }, { sendingNetwork: "eip155:1" }, { recipientNetwork: "eip155:1" },
+      { amount: "4000" }, { amount: "4001.0" },
+    ]) expect(checkPendingTransfer(original, [{ ...exact, ...patch }])).toMatchObject({ verdict: "mismatch" });
+    expect(checkPendingTransfer(original, [{ ...exact, nonce: "other" }])).toMatchObject({ verdict: "awaiting" });
+    expect(checkPendingTransfer(original, [exact, exact])).toMatchObject({ verdict: "mismatch" });
+    expect(checkPendingTransfer({ ...original, amountUsdc: 0.0000001 }, [exact])).toMatchObject({ verdict: "mismatch" });
+    expect(checkPendingTransfer({ ...original, amountUsdc: Number.MAX_SAFE_INTEGER }, [exact])).toMatchObject({ verdict: "mismatch" });
+  });
+
   it("accepts an exact Circle transfer in every non-failed lifecycle state", () => {
     for (const status of ["received", "batched", "confirmed", "completed"] as const) {
       expect(checkPendingTransfer(payment(), [transfer({ status })])).toMatchObject({
@@ -113,6 +217,29 @@ describe("pending x402 transfer reconciliation", () => {
       transfer({ id: "newer", nonce: "0xdef" }),
       transfer(),
     ]);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    '; rel="next"; type="application/json"',
+    '; title="payment, continued"; rel="next alternate"',
+    '; rel=next; title="escaped \\"quote\\""',
+  ])("accepts standard Link parameters without trusting replacement search filters %s", async parameters => {
+    const fetchImpl = vi.fn(async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      expect(url.searchParams.get("from")).toBe(payment().payer);
+      expect(url.searchParams.get("network")).toBe(payment().network);
+      if (!url.searchParams.has("pageAfter")) {
+        const next = new URL(url);
+        next.searchParams.set("pageAfter", "cursor,2");
+        next.searchParams.set("from", "untrusted-payer");
+        next.searchParams.set("network", "eip155:5042");
+        return Response.json({ transfers: [] }, { headers: { Link: `<${next}>${parameters}, <${url}>; rel="prev"` } });
+      }
+      expect(url.searchParams.get("pageAfter")).toBe("cursor,2");
+      return Response.json({ transfers: [transfer()] });
+    });
+    await expect(searchCircleTransfer(payment(), undefined, fetchImpl)).resolves.toEqual([transfer()]);
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 

@@ -123,6 +123,14 @@ export const config = {
     Math.max(0, num(process.env.KERYX_MIN_CACHE_EXPECTED_VALUE, 0.45)),
   ),
 
+  // Original public reads have no toll and no pre-read evidence. Keep their preview
+  // ranking floor aligned with the heuristic's positive selection threshold; cached
+  // creator/feed content retains the stricter reuse gate above. Neither proves coverage.
+  minPublicReadExpectedValue: Math.min(
+    1,
+    Math.max(0, num(process.env.KERYX_MIN_PUBLIC_READ_EXPECTED_VALUE, 0.12)),
+  ),
+
   // ── Open x402 marketplace discovery ──
   // When on, the agent probes the live Circle x402 service bazaar (`circle services search`) during
   // discovery and reasons over real external endpoints alongside its registered creators. These

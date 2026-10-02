@@ -21,6 +21,22 @@ unlimited plan or private-research entitlement. Web/API are authority; local and
 MCP surfaces use explicit shared API or handoff boundaries. Disabling admission
 preserves recovery; old claim-bypassing seller rollback is forbidden. See
 [Research Monthly](docs/research-monthly.md).
+**Original public research admission** - *2026-10-02*
+
+Treat free original-document selection as bounded preview ranking, distinct from
+cached creator/feed reuse. A heuristic positive topical proposal around EV .13
+must not be reinterpreted as a cached-content proposal requiring .45 before any
+read. Use the existing positive-preview .12 floor for public originals, preserving
+raw ranking scores, positive proposals, claim targets and portfolio/read bounds.
+Do not uplift model scores or promote SKIP. Only extracted, version-bound content
+can qualify for answer evidence; public originals confer no payout authority.
+Resolve at most two explicit modern versioned arXiv targets with exact provider
+version matching. Missing provider/read availability stays visible. Empty answers
+use recorded failure details and targeted next steps, never an invented claim that
+more source USDC repairs a free gate. See [issue #128 evidence and remaining gates](docs/engineering/research-attention-2026-10-02.md).
+Reversible: restore the public ranking floor; retained receipts and read provenance
+remain unchanged. Live useful research and separately authorized payment evidence
+are acceptance gates, not inferred from synthetic checks or public paper availability.
 
 **D-295** — Reasoning — *Cloudflare Workers AI is an explicitly enabled experimental third provider* — *2026-10-02*
 

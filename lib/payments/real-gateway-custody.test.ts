@@ -20,7 +20,7 @@ vi.mock("viem/accounts", async importOriginal => {
   } };
 });
 vi.mock("../arc-rpc-attestation", () => ({ assertArcRpcChain: effects.chain, attestedArcHttp: vi.fn() }));
-vi.mock("../config", () => ({ config: { funderKey: `0x${"22".repeat(32)}`, network: "arcTestnet" } }));
+vi.mock("../config", () => ({ config: { funderKey: `0x${"22".repeat(32)}`, network: "arcTestnet", networkId: "eip155:5042002" } }));
 
 let directory: string;
 beforeEach(() => {

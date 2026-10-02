@@ -29,7 +29,22 @@ export async function parseArxiv(xml: string, retrievedAt: string): Promise<Scho
   });
 }
 
+/** Bounded explicit version intent; never infer a version or accept API operators. */
+export function questionArxivIds(question: string): string[] {
+  return [...new Set([...question.matchAll(/(?:\barxiv\s*:?\s*|https:\/\/arxiv\.org\/(?:abs|pdf)\/)(\d{4}\.\d{4,5}v[1-9]\d*)(?:\.pdf)?(?![\w]|\.[\w])/gi)]
+    .map(match => match[1].toLowerCase()))].slice(0, 2);
+}
+
 export async function arxivSearch(question: string, signal?: AbortSignal, fetcher: MetadataFetch = fetchMetadata) {
+  const ids = questionArxivIds(question);
+  if (ids.length) {
+    const url = new URL("https://export.arxiv.org/api/query");
+    url.searchParams.set("id_list", ids.join(","));
+    url.searchParams.set("max_results", "2");
+    const records = await parseArxiv(await fetcher(url.href, signal), new Date().toISOString());
+    // A provider response cannot replace a requested version with latest or another work.
+    return records.filter(record => ids.includes(record.arxivId!));
+  }
   // Literal quoted words: question text cannot add API operators or URL parameters.
   const ignored = new Set("a an the how what why when where which who does do did is are was were can could should would will of to in on for and or with from about show explain compare describe evidence research paper papers study studies effect effects approach approaches system systems use using reduce".split(" "));
   const words = [...new Set(question.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [])]
