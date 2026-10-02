@@ -208,7 +208,7 @@ export class SupabaseAdapter implements KeryxDB {
     if (this.#enrolled) {
       await this.#enrolled.authority.init();
       const identity = this.#enrolled.deployment.identity;
-      if (identity.authorityMode === "testnet-real" && !hasContentKey()) refuseStorage("cache_migration_required");
+      if (identity.authorityMode !== "testnet-offline" && !hasContentKey()) refuseStorage("cache_migration_required");
       const { data, error } = await this.#enrolled.authority.initializationRpc("inspect_runtime_readiness", {});
       if (error || !data || data.format !== "keryx-enrolled-runtime-readiness-v1" || data.ready !== true) refuseStorage("adapter_not_initialized");
       if (!/^[0-9a-f]{64}$/.test(SUPABASE_RUNTIME_CONTRACT.afterDigest) ||
@@ -770,7 +770,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async getCached(sourceId: string): Promise<string | null> {
-    if (this.#enrolled?.deployment.identity.authorityMode === "testnet-real" && !hasContentKey()) refuseStorage("cache_key_unavailable");
+    if (this.#enrolled && this.#enrolled.deployment.identity.authorityMode !== "testnet-offline" && !hasContentKey()) refuseStorage("cache_key_unavailable");
     const { data } = await this.domainCall("get_cached", { p_source_id: sourceId }, (_args) => this.#sb
       .from("cache_items")
       .select("text")

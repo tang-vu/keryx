@@ -11,8 +11,9 @@ const PLAINTEXT_PREFIX = "plain:v1:";
 
 export function cacheEncryptionRequired(): boolean {
   return (
-    process.env.KERYX_FORCE_OFFLINE !== "1" &&
+    config.profile.name === "arc" || (process.env.KERYX_FORCE_OFFLINE !== "1" &&
     (process.env.NODE_ENV === "production" || Boolean(config.funderKey))
+    )
   );
 }
 

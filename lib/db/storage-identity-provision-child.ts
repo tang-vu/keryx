@@ -10,7 +10,7 @@ try {
     request += chunk.toString("utf8");
   }
   const parsed = JSON.parse(request);
-  const result = parsed.mode === "backup" ? await backupStorageInChild(parsed) : provisionStorageInChild(parsed as StorageProvisionRequest);
+  const result = parsed.mode === "backup" ? await backupStorageInChild(parsed) : await provisionStorageInChild(parsed as StorageProvisionRequest);
   process.stdout.write(JSON.stringify(result));
 } catch (error) {
   process.stdout.write(JSON.stringify({ refusal: error instanceof StorageIdentityRefused ? error.reason : "operation_unavailable" }));

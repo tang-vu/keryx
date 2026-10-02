@@ -1,6 +1,7 @@
 import { installSqliteApplicationSchema } from "./sqlite-application-schema";
 import { hasScholarlyRights, assertNoOrphanedPaperMarker } from "./scholarly-capability";
-import type { StorageIdentity } from "./storage-identity";
+import { storagePaymentProfile, type StorageIdentity } from "./storage-identity";
+import { ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
 import { openEnrolledCacheText, sealEnrolledCacheText } from "../sources/enrolled-content-cache";
 import { publicReferenceSchema, type PublicReference } from "../public-references/catalog";
 /**
@@ -103,6 +104,7 @@ export class SqliteAdapter implements KeryxDB {
   private enrolledMode?: StorageIdentity["authorityMode"];
   private enrolledIdentity?: Readonly<StorageIdentity>;
   private enrolledGuard?: () => void;
+  private paymentProfile: ArcNetworkProfile = ARC_TESTNET_PROFILE;
 
   /** Core assembly only: the caller owns the connection; this issues no runtime provenance. */
   static assembleConnectionCore(db: DatabaseSync, identity: Readonly<StorageIdentity>, guard: () => void): SqliteAdapter {
@@ -111,6 +113,7 @@ export class SqliteAdapter implements KeryxDB {
     adapter.enrolledMode = identity.authorityMode;
     adapter.enrolledIdentity = identity;
     adapter.enrolledGuard = guard;
+    adapter.paymentProfile = storagePaymentProfile(identity);
     return adapter;
   }
 
@@ -129,7 +132,7 @@ export class SqliteAdapter implements KeryxDB {
   async init(): Promise<void> {
     if (this.enrolledMode) {
       this.enrolledGuard!();
-      if (this.enrolledMode === "testnet-real" && !hasContentKey())
+      if (this.enrolledMode !== "testnet-offline" && !hasContentKey())
         throw new Error("Enrolled content cache key unavailable");
       this.db.exec("BEGIN");
       try {
@@ -667,7 +670,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async admitBrowserAuthorization(input: BrowserAuthorizationIntent): Promise<BrowserAdmissionResult> {
-    const intent = prepareBrowserAuthorizationIntent(input);
+    const intent = prepareBrowserAuthorizationIntent(input, this.paymentProfile);
     this.db.exec("BEGIN IMMEDIATE");
     try {
       const updated = this.db.prepare(`UPDATE session_grants
@@ -703,9 +706,9 @@ export class SqliteAdapter implements KeryxDB {
   async browserSignerConfirmedSpendMicro(signer: string): Promise<number> {
     const rows = this.db
       .prepare(
-        "SELECT * FROM payment_events WHERE lower(payer)=lower(?) AND grant_epoch IS NOT NULL AND settled=1 AND settlement_status='settled' AND network='eip155:5042002'"
+        "SELECT * FROM payment_events WHERE lower(payer)=lower(?) AND grant_epoch IS NOT NULL AND settled=1 AND settlement_status='settled' AND network=?"
       )
-      .all(signer);
+      .all(signer, this.paymentProfile.networkId);
     const seen = new Map<string, string>();
     let total = 0;
     for (const row of rows) {
@@ -750,10 +753,10 @@ export class SqliteAdapter implements KeryxDB {
     return total;
   }
   async activateBrowserJournal() {
-    activateSqliteBrowserJournal(this.db);
+    activateSqliteBrowserJournal(this.db, this.paymentProfile);
   }
   async admitBrowserJournal(input: BrowserJournalAdmission) {
-    if (this.enrolledIdentity) return admitSqliteBrowserJournal(this.db, input);
+    if (this.enrolledIdentity) return admitSqliteBrowserJournal(this.db, input, undefined, this.paymentProfile);
     if (!hasScholarlyRights(this.db)) {
       assertNoOrphanedPaperMarker(this.db, input.sourceId);
       return admitSqliteBrowserJournal(this.db, input);

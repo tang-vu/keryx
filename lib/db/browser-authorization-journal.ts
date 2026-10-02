@@ -2,6 +2,7 @@ import type { PaymentRecord } from "../types";
 import type { PaymentRequirements } from "../payments/x402-payment-evidence";
 import type { BrowserAuthorizationIntent } from "./browser-authorization-admission";
 import { prepareBrowserAuthorizationIntent } from "./browser-authorization-admission";
+import { ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
 
 export type BrowserAuthorizationPhase =
   | "prepared"
@@ -62,9 +63,10 @@ export class BrowserGrantRecoveryRefused extends Error {
 }
 
 export function prepareBrowserJournal(
-  input: BrowserJournalAdmission
+  input: BrowserJournalAdmission,
+  profile: ArcNetworkProfile = ARC_TESTNET_PROFILE
 ): BrowserAuthorizationJournal {
-  const intent = prepareBrowserAuthorizationIntent(input);
+  const intent = prepareBrowserAuthorizationIntent(input, profile);
   const p = input.payment,
     r = input.requirements;
   const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
