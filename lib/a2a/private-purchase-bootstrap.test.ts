@@ -6,7 +6,9 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { SqliteAdapter } from "../db/sqlite-adapter";
 const state = vi.hoisted(() => ({ balance: vi.fn(), config: { funderKey: "", networkId: "eip155:5042002", cctpDomain: 26,
   sellerAddress: `0x${"1".repeat(40)}`, privateResearchReservedPayees: `0x${"4".repeat(40)}` } }));
-vi.mock("../config", () => ({ config: state.config }));
+vi.mock("../config", async () => ({ config: Object.assign(state.config, {
+  profile: (await import("../arc-network-profile")).ARC_TESTNET_PROFILE,
+}) }));
 vi.mock("../gateway/gateway-balance", () => ({ getGatewayAvailableAtomic: state.balance }));
 import { privatePurchaseBootstrap } from "./private-purchase-bootstrap";
 import { privateRuntimePolicy } from "./private-runtime-policy";

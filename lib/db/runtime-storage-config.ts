@@ -59,7 +59,7 @@ export function inspectStorageDeploymentManifest(env: Readonly<Record<string, st
     if (!target) refuse();
     const before = targetStat(target);
     if (before.size < BigInt(1) || before.size > BigInt(STORAGE_MANIFEST_MAX_BYTES)) refuse();
-    descriptor = openSync(target, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    descriptor = openSync(target, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
     const opened = fstatSync(descriptor, { bigint: true });
     if (statIdentity(before) !== statIdentity(opened)) refuse();
     // Fixed allocation; refuse growth without fetching arbitrary unbounded values.
@@ -106,7 +106,7 @@ let runtimeSnapshot: { manifestPath: string; deployment: Readonly<StorageDeploym
 export function readRuntimeStorageDeployment(): Readonly<StorageDeploymentManifest> {
   const current = inspectStorageDeploymentManifest(process.env);
   if (process.env.KERYX_FORCE_OFFLINE !== undefined && !["", "0", "1"].includes(process.env.KERYX_FORCE_OFFLINE)) refuse();
-  if (current.identity.authorityMode === "testnet-real" && process.env.KERYX_FORCE_OFFLINE === "1") refuse();
+  if (current.identity.authorityMode !== "testnet-offline" && process.env.KERYX_FORCE_OFFLINE === "1") refuse();
   if (current.backend.kind === "sqlite") {
     try { targetStat(current.backend.databasePath); } catch { refuse(); }
     if (process.env.KERYX_SQLITE_PATH !== undefined && process.env.KERYX_SQLITE_PATH !== current.backend.databasePath) refuse();

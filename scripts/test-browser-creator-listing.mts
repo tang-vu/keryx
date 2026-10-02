@@ -20,7 +20,7 @@ function Harness(){const [wallet,setWallet]=React.useState({address:'${creator}'
   return React.createElement(ListingControlsPanel,{creatorId:'synthetic'});}
 createRoot(document.getElementById('root')).render(React.createElement(Harness));
 `, resolveDir: process.cwd(), loader: "tsx" }, bundle: true, platform: "browser", format: "iife", jsx: "automatic", write: false,
-  define: { "process.env.NODE_ENV": '"development"' }, plugins: [{ name: "synthetic-wallet", setup(b) {
+  define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"development"' }, plugins: [{ name: "synthetic-wallet", setup(b) {
     b.onResolve({ filter: /^wagmi$|^sonner$|^@\/lib\/registry\/registry-client$/ }, a => ({ path: a.path, namespace: "fixture" }));
     b.onLoad({ filter: /.*/, namespace: "fixture" }, a => ({ contents: a.path === "wagmi" ? `
 export const useAccount=()=>window.listingWallet;

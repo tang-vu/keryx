@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { build } from "esbuild";
 import { chromium } from "playwright";
-const bundle = await build({ stdin: { contents: `import * as commitment from './lib/buyer/private-request-commitment';window.commitment=commitment;`, resolveDir: process.cwd(), loader: "ts" }, bundle: true, write: false, platform: "browser", format: "iife" });
+const bundle = await build({ stdin: { contents: `import * as commitment from './lib/buyer/private-request-commitment';window.commitment=commitment;`, resolveDir: process.cwd(), loader: "ts" }, bundle: true, write: false, platform: "browser", define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" }, format: "iife" });
 const browser = await chromium.launch({ headless: true });
 try {
   const page = await browser.newPage(); let requests = 0;

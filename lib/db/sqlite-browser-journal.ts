@@ -1,4 +1,5 @@
 import { verifyBrowserSigningHeader } from "../payments/browser-signing-original";
+import { ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
 import type { DatabaseSync } from "node:sqlite";
 import type { SessionGrantRecord } from "./keryx-db";
 import {
@@ -97,7 +98,7 @@ function micro(value: number): number {
   return result;
 }
 
-export function activateSqliteBrowserJournal(db: DatabaseSync): void {
+export function activateSqliteBrowserJournal(db: DatabaseSync, profile: ArcNetworkProfile = ARC_TESTNET_PROFILE): void {
   sqliteJournalTransaction(db, () => {
     if (sqliteJournalActive(db)) return;
     const epochs = new Map<
@@ -125,7 +126,7 @@ export function activateSqliteBrowserJournal(db: DatabaseSync): void {
       )
       .all()) {
       if (
-        p.network !== "eip155:5042002" ||
+        p.network !== profile.networkId ||
         !/^0x[0-9a-f]{40}$/i.test(String(p.payer))
       )
         throw new BrowserGrantRecoveryRefused();
@@ -247,9 +248,10 @@ export function getSqliteBrowserJournal(
 export function admitSqliteBrowserJournal(
   db: DatabaseSync,
   input: BrowserJournalAdmission,
-  hooks?: { before(): void; after(journal: BrowserAuthorizationJournal): void; cleanup(): void }
+  hooks?: { before(): void; after(journal: BrowserAuthorizationJournal): void; cleanup(): void },
+  profile: ArcNetworkProfile = ARC_TESTNET_PROFILE
 ): BrowserJournalAdmissionResult {
-  const j = prepareBrowserJournal(input);
+  const j = prepareBrowserJournal(input, profile);
   return sqliteJournalTransaction(db, () => {
     if (!sqliteJournalActive(db)) return { status: "inactive" };
     hooks?.before();

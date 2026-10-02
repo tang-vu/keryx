@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
 
 /** An unused admission journal. It is not settlement evidence or a payment event. */
 export interface BrowserAuthorizationIntent {
@@ -7,7 +8,7 @@ export interface BrowserAuthorizationIntent {
   queryId: string;
   grantEpoch: string;
   signer: string;
-  network: "eip155:5042002";
+  network: "eip155:5042002" | "eip155:5042";
   token: string;
   gatewayContract: string;
   sourceId: string;
@@ -27,12 +28,13 @@ export type BrowserAdmissionResult =
   | { status: "grant_or_cap_refused" };
 
 const address = /^0x[0-9a-fA-F]{40}$/;
-export function prepareBrowserAuthorizationIntent(input: BrowserAuthorizationIntent): AdmittedBrowserAuthorization {
+export function prepareBrowserAuthorizationIntent(input: BrowserAuthorizationIntent, profile: ArcNetworkProfile = ARC_TESTNET_PROFILE): AdmittedBrowserAuthorization {
+  if (profile !== ARC_TESTNET_PROFILE && profile !== ARC_MAINNET_PROFILE) throw new Error("Unreviewed browser payment profile");
   if (!input.sessionId || !input.requestId || !input.queryId || !input.grantEpoch || !input.sourceId ||
       !address.test(input.signer) || !address.test(input.payee) ||
-      input.network !== "eip155:5042002" ||
-      input.token.toLowerCase() !== "0x3600000000000000000000000000000000000000" ||
-      input.gatewayContract.toLowerCase() !== "0x0077777d7eba4688bdef3e311b846f25870a19b9" ||
+      input.network !== profile.networkId ||
+      input.token.toLowerCase() !== profile.usdcAddress.toLowerCase() ||
+      input.gatewayContract.toLowerCase() !== profile.gatewayWallet.toLowerCase() ||
       !["fetch", "citation"].includes(input.kind) ||
       !Number.isSafeInteger(input.amountMicroUsdc) || input.amountMicroUsdc <= 0) {
     throw new Error("Invalid browser authorization intent");

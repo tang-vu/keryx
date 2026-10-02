@@ -24,7 +24,7 @@ window.fetch=async()=>{
 };
 function Probe(){const {state,ask,reset}=useAskStream();window.probe={ask,reset};return <pre id="state">{JSON.stringify(state)}</pre>}
 createRoot(document.getElementById('root')).render(<Probe/>);
-` }, bundle: true, write: false, platform: "browser", format: "iife", external: ["@/lib/x402-client-sign", "@/lib/payments/client-payto-allowlist", "@/lib/payments/browser-fetch-price-policy"], define: { "process.env.NODE_ENV": '"production"' } });
+` }, bundle: true, write: false, platform: "browser", format: "iife", external: ["@/lib/x402-client-sign", "@/lib/payments/client-payto-allowlist", "@/lib/payments/browser-fetch-price-policy"], define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"production"' } });
 const browser = await chromium.launch({ headless: true });
 try {
   const page = await browser.newPage();

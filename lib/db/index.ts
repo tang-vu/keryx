@@ -14,9 +14,10 @@ export async function getDb(): Promise<KeryxDB> {
     initialization = (async () => {
       // Select once per attempt, before the first asynchronous import boundary.
       const useSupabase = hasSupabase();
-      const adapter = useSupabase
+      const admitted = await (await import("./application-storage")).createApplicationStorage();
+      const adapter = admitted ?? (useSupabase
         ? new (await import("./supabase-adapter")).SupabaseAdapter()
-        : new (await import("./sqlite-adapter")).SqliteAdapter();
+        : new (await import("./sqlite-adapter")).SqliteAdapter());
       try {
         await adapter.init();
         return adapter;

@@ -8,7 +8,8 @@ const state = vi.hoisted(() => ({
   deposit: "1",
   minimum: 0.1,
 }));
-vi.mock("../config", () => ({ config: { funderKey: state.funderKey, rpcUrl: "https://synthetic.invalid", network: "arcTestnet",
+vi.mock("../config", async () => ({ config: { funderKey: state.funderKey, rpcUrl: "https://synthetic.invalid", network: "arcTestnet",
+  profile: (await import("../arc-network-profile")).ARC_TESTNET_PROFILE,
   usdcAddress: "0x3600000000000000000000000000000000000000", gatewayWallet: "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
   get gatewayMinAvailableUsdc() { return state.minimum; }, get gatewayDepositUsdc() { return state.deposit; } } }));
 vi.mock("./persistent-treasury-wallet", () => ({ loadPersistentTreasuryWallet: () => ({ privateKey: state.spendKey }) }));

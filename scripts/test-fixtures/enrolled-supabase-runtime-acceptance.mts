@@ -377,7 +377,8 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
             locker.once("close", code => resolveDone({ code, category: code === 0 ? "success" : "lock-fixture-failed" }));
           });
           children.set(locker, lockerDone);
-          let lockerOutput = "";
+          let lockerOutput = "", lockerError = "";
+          locker.stderr!.on("data", part => { lockerError += part; if (lockerError.length > 4096) locker.kill(); });
           locker.stdout!.on("data", part => { lockerOutput += part; if (lockerOutput.length > 4096) locker.kill(); });
           locker.stdin!.write("set statement_timeout='10s';begin;select 1 from public.session_grants for update;\\echo READY_GRANT_LOCK\n");
           const lockReadyDeadline = performance.now() + 5000;
@@ -393,24 +394,50 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
           // Do not compete with the guarded catalog observation by launching
           // synchronous PostgreSQL probes before the actual admission RPC.
           await waitForOwnedSourceAdmissionEntry(bridge!.counts, admissionsBefore, waiterDeadline, () => childTerminal);
+          const enteredAdmissionAt = performance.now();
           const enteredAdmissionDeadline = bridge!.getSourceAdmissionDeadlineMs();
           assert.ok(enteredAdmissionDeadline !== null && enteredAdmissionDeadline !== priorAdmissionDeadline &&
             Date.now() < enteredAdmissionDeadline, "Fresh source RPC retains its original current deadline");
-          let waited = false;
-          while (performance.now() < waiterDeadline) {
-            waited = sql("select exists(select 1 from pg_stat_activity a where a.datname=current_database() and a.pid<>pg_backend_pid() and a.wait_event_type='Lock' and a.query like '%storage_browser_signing_admit_source_original%' and exists(select 1 from pg_locks l where l.pid=a.pid and not l.granted))::text") === "true";
-            if (waited) break;
+          // Observe from the already-open locker backend. Starting repeated
+          // synchronous docker/psql processes here can return after the token
+          // deadline even when PostgreSQL observed the actual waiter earlier.
+          locker.stdin!.write(`do $fixture_waiter$ begin
+            loop
+              perform pg_stat_clear_snapshot();
+              if exists(select 1 from pg_stat_activity a where a.datname=current_database()
+                and a.pid<>pg_backend_pid() and a.wait_event_type='Lock'
+                and a.query like '%storage_browser_signing_admit_source_original%'
+                and exists(select 1 from pg_locks l where l.pid=a.pid and not l.granted)) then
+                raise notice 'GRANT_WAITER %',jsonb_build_object('waited',true,
+                  'observedAt',floor(extract(epoch from clock_timestamp())*1000)::bigint);
+                exit;
+              end if;
+              if extract(epoch from clock_timestamp())*1000>=${enteredAdmissionDeadline} then
+                raise notice 'GRANT_WAITER %',jsonb_build_object('waited',false,
+                  'observedAt',floor(extract(epoch from clock_timestamp())*1000)::bigint);
+                exit;
+              end if;
+              perform pg_sleep(0.02);
+            end loop;
+          end $fixture_waiter$;\n`);
+          while (!lockerError.includes("GRANT_WAITER ") && !childTerminal && performance.now() < waiterDeadline) {
             await new Promise<void>(resolveDelay => setTimeout(resolveDelay, 20));
           }
-          assert(waited, "Actual protected source admission must wait on held grant lock");
-          const waiterAt = performance.now();
+          const nativeObservation = /GRANT_WAITER (\{[^\r\n]+\})/.exec(lockerError);
+          assert(nativeObservation, "Actual protected source admission must be observed on the owned locker connection");
+          const observation = JSON.parse(nativeObservation[1]) as { waited: unknown; observedAt: unknown };
+          assert.equal(observation.waited, true, "Actual protected source admission must wait on held grant lock");
+          assert.ok(typeof observation.observedAt === "number" && Number.isSafeInteger(observation.observedAt) &&
+            observation.observedAt < enteredAdmissionDeadline!, "Native grant waiter was observed before its original deadline");
           const admissionDeadline = bridge!.getSourceAdmissionDeadlineMs();
+          assert.equal(admissionDeadline, enteredAdmissionDeadline, "Original source-token deadline remains immutable");
           assert.ok(admissionDeadline !== null && Number.isSafeInteger(admissionDeadline));
           const remaining = admissionDeadline + 25 - Date.now();
-          assert.ok(remaining > 0 && remaining < 5000, "Actual token deadline remains within bounded grant wait");
-          await new Promise<void>(resolveDelay => setTimeout(resolveDelay, remaining));
+          assert.ok(remaining < 5000, "Actual token deadline remains within bounded grant wait");
+          if (remaining > 0) await new Promise<void>(resolveDelay => setTimeout(resolveDelay, remaining));
           assert.ok(Date.now() > admissionDeadline, "Release occurs after original source-token deadline");
-          assert.ok(performance.now() - waiterAt < 5000, "Grant waiter stays within unchanged lock budget");
+          assert.ok(performance.now() - enteredAdmissionAt < 5000, "Grant waiter stays within unchanged lock budget");
+          console.log(`PASS native grant waiter observed before original deadline observationLeadMs=${admissionDeadline - Number(observation.observedAt)} releaseLagMs=${Date.now() - admissionDeadline}`);
           locker.stdin!.end("rollback;\n");
           assert.equal((await lockerDone).code, 0);
           children.delete(locker);

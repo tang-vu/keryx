@@ -70,6 +70,7 @@ export async function getPaymentGateway(db: KeryxDB, opts?: GatewayOpts): Promis
     throw new Error("browser signature callback requires a session id");
   }
   if (process.env.KERYX_FORCE_OFFLINE === "1") {
+    if (config.profile.name === "arc") throw new Error("Mainnet payments cannot select offline simulation");
     const { OfflineGateway } = await import("./offline-gateway");
     return new OfflineGateway(db);
   }
@@ -95,6 +96,8 @@ export async function getPaymentGateway(db: KeryxDB, opts?: GatewayOpts): Promis
     const { RealGateway } = await import("./real-gateway");
     return new RealGateway();
   }
+
+  if (config.profile.name === "arc") throw new Error("Mainnet treasury payment authority is unavailable");
 
   const { OfflineGateway } = await import("./offline-gateway");
   return new OfflineGateway(db);
