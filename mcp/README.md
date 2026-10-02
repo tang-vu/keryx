@@ -5,6 +5,15 @@ The local stdio buyer pays the inbound x402 toll from a configured caller wallet
 A Circle settlement identifier is batching evidence, not an individual EVM transaction hash.
 Testnet calls and owner-operated tests do not establish external traction or mainnet readiness.
 
+## Research Monthly
+
+Stdio 0.3.1 and the remote service expose read-only `research_monthly` discovery.
+The four-request, 30-day Arc-testnet pilot uses manual renewal and a 10% total-price
+discount with unchanged creator caps. Failed and pending jobs retain slots.
+Buy/redeem through the caller-wallet [web checkout](https://keryx.cc/research#monthly)
+or shared API/Monthly CLI; existing MCP research tools remain separate jobs.
+See the [Monthly guide](../docs/research-monthly.md).
+
 ## Remote MCP
 
 The separately operated, treasury-funded remote service is `https://keryx.cc/mcp`.

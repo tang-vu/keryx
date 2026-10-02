@@ -18,6 +18,9 @@ import { z } from "zod";
 import { askKeryx, getStatus, meta, recoverKeryx } from "./keryx-buyer.mts";
 
 const server = new McpServer({ name: "keryx", version: packageInfo.version });
+import { registerMonthlyDiscovery } from "../lib/monthly/mcp-discovery.ts";
+import { fetchMonthlyQuote } from "../lib/monthly/client.ts";
+registerMonthlyDiscovery(server, fetchMonthlyQuote);
 
 server.registerTool(
   "ask_keryx",

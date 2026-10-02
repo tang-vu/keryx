@@ -3,6 +3,22 @@ import { SupabaseAdapter } from "./supabase-adapter";
 
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
+it.each([true, false])("uses the captured-generation revocation RPC and its boolean CAS result (%s)", async result => {
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://synthetic-db.example");
+  vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "synthetic-key-no-authority");
+  const http = vi.fn<typeof fetch>().mockResolvedValueOnce(Response.json(result)); vi.stubGlobal("fetch", http);
+  expect(await new SupabaseAdapter().revokeSessionGrant("owner", "old", "0xSigner")).toBe(result);
+  expect(String(http.mock.calls[0][0])).toContain("/rpc/revoke_session_grant");
+  expect(JSON.parse(String(http.mock.calls[0][1]?.body))).toEqual({ p_session_id: "owner", p_grant_epoch: "old", p_sess_addr: "0xSigner" });
+});
+
+it.each([null, {}, "true"])("refuses malformed revocation acknowledgements", async result => {
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://synthetic-db.example");
+  vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "synthetic-key-no-authority");
+  vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockResolvedValueOnce(Response.json(result)));
+  await expect(new SupabaseAdapter().revokeSessionGrant("owner", "old", "0xSigner")).rejects.toThrow("acknowledgement");
+});
+
 it("passes captured grant identity through both atomic spend RPCs", async () => {
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://synthetic-db.example");
   vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "synthetic-key-no-authority");

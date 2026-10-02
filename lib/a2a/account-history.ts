@@ -25,5 +25,6 @@ export function accountHistoryItem(order: A2aOrder, now: number) {
     status, createdAt: order.createdAt, updatedAt: order.updatedAt,
     mode: order.researchMode,
     packagePriceUsdc: Number.isFinite(order.amountUsdc) && order.amountUsdc >= 0 ? order.amountUsdc : null,
+    ...(order.request?.monthlyId ? { funding: "research-monthly-prepaid" as const } : {}),
   };
 }

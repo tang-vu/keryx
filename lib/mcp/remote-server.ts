@@ -5,6 +5,8 @@ import { collectRun } from "../agent";
 import { config } from "../config";
 import { resolveModelChoice } from "../llm";
 import type { McpClientChannel, QueryRun } from "../types";
+import { registerMonthlyDiscovery } from "../monthly/mcp-discovery";
+import { quoteResearchMonthly } from "../monthly/quote";
 
 export interface RemoteMcpAccess {
   budgetCap: number;
@@ -153,5 +155,6 @@ export function createRemoteMcpServer(
     }),
   );
 
+  registerMonthlyDiscovery(server, async () => process.env.KERYX_MONTHLY_ENABLED === "1" ? quoteResearchMonthly() : null);
   return server;
 }

@@ -13,6 +13,7 @@ import { PRIVATE_TREASURY_RELEASE_SQL } from "./private-treasury-release";
 import { PRIVATE_RESEARCH_INTERRUPTION_SQL } from "./private-research-interruptions";
 import { PRIVATE_RESEARCH_PAYMENTS_SQL } from "./private-research-payments";
 import { PRIVATE_RESEARCH_INTENTS_SQL } from "./private-research-intents";
+import { assertOrdinarySqliteResearchAuthority, initializeSqliteResearchMonthly } from "./research-monthly";
 
 export const SQLITE_APPLICATION_SCHEMA = `
 CREATE TABLE IF NOT EXISTS sources (
@@ -301,6 +302,13 @@ ${CREATOR_WITHDRAWAL_ATTESTATIONS_SQL}
 export function installSqliteApplicationSchema(db: DatabaseSync): void {
  db.exec(SQLITE_APPLICATION_SCHEMA);
  ensureSqliteApplicationColumns(db);
+}
+
+/** Deployed TypeScript authority. Monthly has no enrolled/native domain cutover. */
+export function installOrdinarySqliteApplicationSchema(db: DatabaseSync): void {
+  assertOrdinarySqliteResearchAuthority(db);
+  installSqliteApplicationSchema(db);
+  initializeSqliteResearchMonthly(db);
 }
 
 function ensureSqliteApplicationColumns(db: DatabaseSync): void {

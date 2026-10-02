@@ -81,7 +81,8 @@ export async function getGatewayHeldUsdc(addresses: string[], trustedProfile: Ar
           sources: chunk.map((depositor) => ({ depositor, domain: profile.cctpDomain })),
         }),
         signal: AbortSignal.timeout(20_000),
-        redirect: "error", cache: "no-store",
+        redirect: "error",
+        cache: "no-store",
       });
       if (!upstream.ok) { await upstream.body?.cancel(); continue; } // chunk stays unknown
 

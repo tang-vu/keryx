@@ -1,6 +1,6 @@
 import { ARC_TESTNET_PROFILE } from "../arc-network-profile";
 import { storagePaymentProfile } from "./storage-identity";
-import { installSqliteApplicationSchema } from "./sqlite-application-schema";
+import { installOrdinarySqliteApplicationSchema } from "./sqlite-application-schema";
 import { hasScholarlyRights, assertNoOrphanedPaperMarker } from "./scholarly-capability";
 import type { StorageIdentity } from "./storage-identity";
 import { openEnrolledCacheText, sealEnrolledCacheText } from "../sources/enrolled-content-cache";
@@ -11,6 +11,7 @@ import { publicReferenceSchema, type PublicReference } from "../public-reference
  */
 
 import { listSqliteWithdrawalHistory, type WithdrawalHistoryCursor } from "./creator-withdrawal-history";
+import { assertOrdinarySqliteResearchAuthority, claimSqliteResearchPurchase, createSqliteResearchMonthly, getSqliteResearchMonthly, redeemSqliteResearchMonthly, type MonthlyPurchase, type MonthlyRedemptionInput, type ResearchPurchaseClaim } from "./research-monthly";
 import { confirmSqlitePrivateCreator, getSqlitePrivateCreatorConfirmation, type PrivateCreatorConfirmation } from "./private-creator-confirmations";
 import { admitSqlitePrivateCreatorSubmission, listSqlitePrivateCreatorSubmissions, type PrivateCreatorSubmission } from "./private-creator-submissions";
 import { saveSqlitePrivateResult, getSqlitePrivateResult } from "./private-research-results";
@@ -155,8 +156,9 @@ export class SqliteAdapter implements KeryxDB {
       return;
     }
     // WAL + busy timeout so the dev server and CLI can share the file safely.
+    assertOrdinarySqliteResearchAuthority(this.db);
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;");
-    installSqliteApplicationSchema(this.db);
+    installOrdinarySqliteApplicationSchema(this.db);
     // Releases before 2026-08-22 keyed two authenticated routes by the raw `kx_live_...` bearer
     // value before verification. Remove those legacy counters during every startup so the live DB
     // and every restored snapshot converge back to the documented hash-only secret invariant.
@@ -1116,6 +1118,17 @@ export class SqliteAdapter implements KeryxDB {
     this.db.prepare(`DELETE FROM session_grants WHERE session_id = ?`).run(sessionId);
   }
 
+  async revokeSessionGrant(sessionId: string, grantEpoch: string, sessAddr: string): Promise<boolean> {
+    if (sqliteJournalActive(this.db)) {
+      return sqliteJournalTransaction(this.db, () => this.db.prepare(
+        'UPDATE session_grants SET expiry=0 WHERE session_id=? AND grant_epoch=? AND lower(sess_addr)=lower(?)'
+      ).run(sessionId, grantEpoch, sessAddr).changes === 1);
+    }
+    return this.db.prepare(
+      'DELETE FROM session_grants WHERE session_id=? AND grant_epoch=? AND lower(sess_addr)=lower(?)'
+    ).run(sessionId, grantEpoch, sessAddr).changes === 1;
+  }
+
   async deleteExpiredSessionGrants(now: number): Promise<void> {
     if (sqliteJournalActive(this.db)) return;
     this.db.prepare(`DELETE FROM session_grants WHERE expiry <= ?`).run(now);
@@ -1433,6 +1446,14 @@ export class SqliteAdapter implements KeryxDB {
       );
     return result.changes === 1;
   }
+
+  private assertOrdinaryResearchAuthority(): void {
+    if (this.enrolledMode) throw new Error("Research purchase authority is unavailable in enrolled storage");
+  }
+  async claimResearchPurchase(input: ResearchPurchaseClaim): Promise<void> { this.assertOrdinaryResearchAuthority(); claimSqliteResearchPurchase(this.db, input); }
+  async createResearchMonthly(purchase: MonthlyPurchase) { this.assertOrdinaryResearchAuthority(); return createSqliteResearchMonthly(this.db, purchase); }
+  async getResearchMonthly(id: string) { this.assertOrdinaryResearchAuthority(); return getSqliteResearchMonthly(this.db, id); }
+  async redeemResearchMonthly(input: MonthlyRedemptionInput) { this.assertOrdinaryResearchAuthority(); return redeemSqliteResearchMonthly(this.db, input, rowToA2aOrder); }
 
   async createA2aOrder(order: A2aOrder): Promise<{ created: boolean; order: A2aOrder }> {
     const result = this.db

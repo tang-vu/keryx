@@ -126,10 +126,11 @@ function projectClaims(run: QueryRun): ReceiptClaim[] {
   });
 }
 
-export function buildResearchReceipt(run: QueryRun, payments: PaymentRecord[]): ResearchReceipt {
+export function buildResearchReceipt(run: QueryRun, payments: PaymentRecord[], funding?: ResearchReceiptPayload["funding"]): ResearchReceipt {
   const confidence = deriveConfidence(run);
   const payload: ResearchReceiptPayload = {
     schema: RESEARCH_RECEIPT_SCHEMA,
+    ...(funding ? { funding } : {}),
     dispatch: {
       id: run.id,
       question: run.question,

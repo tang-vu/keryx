@@ -1,5 +1,66 @@
 # Keryx — Decision Log
 
+**D-296** - Pilot one bounded Research Monthly plan - *On 2026-10-02 the user
+confirmed four requests/month at 10% below buying four separately.* Use four Deep
+v1 requests over 30 days from confirmed Arc-testnet purchase, with manual renewal
+and a creator cap pinned at purchase. Absorb the total-price discount in Keryx's
+service allocation and round upward to equal integer micro-USDC allocations;
+refuse configurations that consume creator reserves. This does not establish
+profitability. Confirmed settlement activates the entitlement; atomic slot/order
+admission and exact request replay prevent duplicate downstream spend. Failed or
+pending jobs retain their slots, so promise requests rather than successful reports.
+Bind every public seller debit before settlement by network, asset, payer and nonce,
+with exact purpose, payee, amount and request/resource data. Monthly additionally
+requires a server-random nonce issued durably for that exact purchase before signing,
+excluding historical external seller debits that were never recorded locally.
+Its short challenge admission expiry does not shorten Circle's multi-day signature
+validity; the durable submitted boundary retains uncertainty beyond challenge expiry.
+Ambiguous claims stay
+retained; one debit cannot buy two products. No mainnet, recurring debit, scheduler,
+unlimited plan or private-research entitlement. Web/API are authority; local and
+MCP surfaces use explicit shared API or handoff boundaries. Disabling admission
+preserves recovery; old claim-bypassing seller rollback is forbidden. See
+[Research Monthly](docs/research-monthly.md).
+**Original public research admission** - *2026-10-02*
+
+Treat free original-document selection as bounded preview ranking, distinct from
+cached creator/feed reuse. A heuristic positive topical proposal around EV .13
+must not be reinterpreted as a cached-content proposal requiring .45 before any
+read. Use the existing positive-preview .12 floor for public originals, preserving
+raw ranking scores, positive proposals, claim targets and portfolio/read bounds.
+Do not uplift model scores or promote SKIP. Only extracted, version-bound content
+can qualify for answer evidence; public originals confer no payout authority.
+Resolve at most two explicit modern versioned arXiv targets with exact provider
+version matching. Missing provider/read availability stays visible. Empty answers
+use recorded failure details and targeted next steps, never an invented claim that
+more source USDC repairs a free gate. See [issue #128 evidence and remaining gates](docs/engineering/research-attention-2026-10-02.md).
+Reversible: restore the public ranking floor; retained receipts and read provenance
+remain unchanged. Live useful research and separately authorized payment evidence
+are acceptance gates, not inferred from synthetic checks or public paper availability.
+
+**D-295** — Reasoning — *Cloudflare Workers AI is an explicitly enabled experimental third provider* — *2026-10-02*
+
+Add account-restricted Workers AI inference through the existing OpenAI-compatible transport,
+shared model catalog, timeout, durable provider/step circuit and usage ledger. DeepSeek remains
+the default; Cloudflare follows DeepSeek and MiMo in the public fallback chain. Credentials alone
+do not enable a new processor. The operator must explicitly enable it and include it in any
+configured provider allowlist. The buyer-approved private policy remains restricted to its
+existing providers and never inherits this public fallback.
+
+Choose Llama 3.3 70B FP8 fast for bounded experimental use after direct English and Vietnamese
+synthetic smoke checks. Refuse UTF-8 input bytes plus requested output above 23,000 before HTTP,
+leaving framing headroom below the documented 24,000-token context. Do not truncate evidence.
+Redirects are prohibited; quota exhaustion, invalid/truncated JSON and provider errors remain
+visible failures handled by the existing bounded resilience policy. A healthy primary sends no
+Cloudflare requests. This is not broad quality parity or promotion to primary.
+
+Capture the observed gross token tariff with each request; free Neuron allowances, remaining
+quota and billed invoices are unknown, never inferred as zero. Keep the existing free account
+plan for this deployment and do not upgrade billing automatically. Use a restricted API token,
+never deploy an interactive CLI OAuth/refresh token. See [provider setup and evidence](docs/cloudflare-workers-ai.md).
+Reversible: disable the provider and remove it from the public allowlist; historical usage retains
+its immutable tariff policy. No payment authority, mainnet activation or background scheduler changes.
+
 **D-294** — Browser custody — *An isolated candidate session authenticates its exact identity before derivation* — *2026-10-02*
 
 Provide dormant browser-worker building blocks that verify the intended wallet's
@@ -4268,3 +4329,14 @@ Require coordinated durable state identity, ordinary owner consent, observed fun
 registry/content authority, bounded nonce/cap allocation, settlement/recovery and
 withdrawal/operational evidence before the final owner launch decision. See the
 [corrected mainnet delivery plan](docs/mainnet-delivery-plan.md).
+
+## Guarded Arc unsigned fill compatibility - 2026-10-02
+
+Bind only an absent unsigned `eth_fillTransaction` sender to the originally captured
+local account. Arc's unsigned transaction serialization omits `from`, so requiring
+that field stranded reviewed funding operations before signing. Explicit null,
+malformed or mismatched senders still refuse; exact chain/tuple validation and
+independent recovery of the actual signed sender remain mandatory before broadcast.
+Do not infer that a missing journal hash authorizes another attempt: retain original
+funding evidence and require owner recovery of any uncertain admission. See
+[treasury transaction isolation](docs/treasury-transaction-isolation.md).

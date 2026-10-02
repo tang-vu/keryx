@@ -10,6 +10,7 @@ const { settings, verify, settle, insert, facilitatorConfigs } = vi.hoisted(() =
   verify: vi.fn(), settle: vi.fn(), insert: vi.fn(), facilitatorConfigs: [] as unknown[],
 }));
 vi.mock("./config", () => ({ config: settings }));
+vi.mock("./db", () => ({ getDb: async () => ({ claimResearchPurchase: async () => {} }) }));
 vi.mock("@circle-fin/x402-batching/server", () => ({ BatchFacilitatorClient: class {
   constructor(config: unknown) { facilitatorConfigs.push(config); }
   verify = verify; settle = settle;

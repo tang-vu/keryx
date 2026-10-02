@@ -65,8 +65,12 @@ function checkedTransaction(input: Record<string, unknown>, expected: Readonly<I
 
 function checkedFill(result: unknown, expected: Readonly<IntendedArcTransaction>, sender: string, profile: ArcNetworkProfile): void {
   const tx = (result as { tx?: Record<string, unknown> } | null)?.tx;
+  // Arc's unsigned fill serialization omits from. Bind only that absence to the
+  // captured local account; explicit sender values still must match. The final
+  // signed bytes are independently recovered and checked before broadcast.
+  const filledSender = tx?.from === undefined ? sender : tx.from;
   if (!tx || rpcUint(tx.chainId) !== BigInt(profile.chainId) || !sameHex(tx.to, expected.to)
-    || !sameHex(tx.from, sender) || !sameHex(tx.input ?? tx.data ?? "0x", expected.data ?? "0x")
+    || !sameHex(filledSender, sender) || !sameHex(tx.input ?? tx.data ?? "0x", expected.data ?? "0x")
     || (tx.input !== undefined && tx.data !== undefined && !sameHex(tx.input, String(tx.data)))
     || rpcUint(tx.value ?? "0x0") !== (expected.value ?? BigInt(0))
     || ["authorizationList", "blobs", "blobVersionedHashes", "maxFeePerBlobGas", "feePayer", "feePayerSignature"].some(key => tx[key] !== undefined)

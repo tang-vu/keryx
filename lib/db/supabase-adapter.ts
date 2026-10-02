@@ -18,6 +18,7 @@ import type { BrowserOriginalAdmission, BrowserSourceOriginalAdmission } from ".
  */
 
 import { listSupabaseWithdrawalHistory, type WithdrawalHistoryCursor } from "./creator-withdrawal-history";
+import { claimSupabaseResearchPurchase, createSupabaseResearchMonthly, getSupabaseResearchMonthly, redeemSupabaseResearchMonthly, type MonthlyPurchase, type MonthlyRedemptionInput, type ResearchPurchaseClaim } from "./research-monthly";
 import { iterateSupabaseRecentQueries } from "./recent-query-stream";
 import { confirmSupabasePrivateCreator, getSupabasePrivateCreatorConfirmation, type PrivateCreatorConfirmation } from "./private-creator-confirmations";
 import { reserveSupabasePrivateTreasury, getSupabasePrivateTreasury, type PrivateTreasuryPolicy } from "./private-treasury-capacity";
@@ -992,6 +993,14 @@ export class SupabaseAdapter implements KeryxDB {
     return (data ?? []).length === 1;
   }
 
+  private assertOrdinaryResearchAuthority(): void {
+    if (this.#enrolled) refuseStorage("invalid_operation");
+  }
+  async claimResearchPurchase(input: ResearchPurchaseClaim): Promise<void> { this.assertOrdinaryResearchAuthority(); return claimSupabaseResearchPurchase(this.#sb, input); }
+  async createResearchMonthly(purchase: MonthlyPurchase) { this.assertOrdinaryResearchAuthority(); return createSupabaseResearchMonthly(this.#sb, purchase); }
+  async getResearchMonthly(id: string) { this.assertOrdinaryResearchAuthority(); return getSupabaseResearchMonthly(this.#sb, id); }
+  async redeemResearchMonthly(input: MonthlyRedemptionInput) { this.assertOrdinaryResearchAuthority(); return redeemSupabaseResearchMonthly(this.#sb, input, rowToA2aOrder); }
+
   async createA2aOrder(order: A2aOrder): Promise<{ created: boolean; order: A2aOrder }> {
     const row = a2aOrderToRow(order);
     const { data, error } = await this.domainCall("create_a2a_order", { p_row: row }, (_args) => this.#sb.from("a2a_orders").insert(_args.p_row).select("*").maybeSingle());
@@ -1695,6 +1704,15 @@ export class SupabaseAdapter implements KeryxDB {
     if (await this.browserJournalActive()) return;
     const { error } = await this.domainCall("delete_expired_session_grants", { p_expiry: now }, (_args) => this.#sb.from("session_grants").delete().lte("expiry", _args.p_expiry));
     if (error) throw error;
+  }
+
+  async revokeSessionGrant(sessionId: string, grantEpoch: string, sessAddr: string): Promise<boolean> {
+    const { data, error } = await this.domainRpc("revoke_session_grant", {
+      p_session_id: sessionId, p_grant_epoch: grantEpoch, p_sess_addr: sessAddr,
+    });
+    if (error) throw error;
+    if (typeof data !== "boolean") throw new Error("Session revocation acknowledgement unavailable");
+    return data;
   }
 
   /** Delegates to a SQL function for the same reason the SQLite adapter uses one statement:
