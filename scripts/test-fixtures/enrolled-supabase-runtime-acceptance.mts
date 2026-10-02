@@ -105,7 +105,51 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
     const before = snapshot();
     assert.throws(() => service(`select keryx_storage.enroll(${literal(identity)},'${before}')`));
     assert.equal(snapshot(), before);
-    sql(`select keryx_storage.enroll(${literal(identity)},'${before}')`);
+    // Actual enrollment and migration guard in different PostgreSQL sessions.
+    // Refresh waits for publication, then refuses without changing its snapshot.
+    const concurrentOwnerSql = (statement: string) => {
+      const child = execFile("docker", ["exec", "-i", postgresContainer, "psql", "-U", "postgres",
+        "--dbname", database, "-v", "ON_ERROR_STOP=1", "-q", "-t", "-A"],
+      { encoding: "utf8", timeout: 20_000, maxBuffer: 12 * 1024 * 1024 });
+      const result = new Promise<{ ok: boolean; output: string; diagnostic: string }>(resolve => {
+        let output = "", diagnostic = "";
+        child.stdout?.on("data", value => { output += value; });
+        child.stderr?.on("data", value => { diagnostic += value; });
+        child.on("error", () => resolve({ ok: false, output, diagnostic: "owner-process-error" }));
+        child.on("close", code => resolve({ ok: code === 0, output: output.trim(), diagnostic }));
+      });
+      child.stdin?.end(`set statement_timeout='15s';${statement}`);
+      return { child, result };
+    };
+    const enrollment = concurrentOwnerSql(`begin;set local application_name='keryx-revoke-enrollment';
+      select keryx_storage.enroll(${literal(identity)},'${before}');
+      select keryx_storage.snapshot_digest();select pg_sleep(3);commit;`);
+    let refresh: ReturnType<typeof concurrentOwnerSql> | undefined;
+    try {
+      const deadline = performance.now() + 10_000;
+      while (sql("select exists(select 1 from pg_stat_activity where datname=current_database() and application_name='keryx-revoke-enrollment' and wait_event='PgSleep')") !== "t") {
+        assert(performance.now() < deadline, "Actual enrollment reached its precommit boundary");
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      const migrationStart = migrationSql.indexOf("-- Generation-aware session revocation.");
+      assert(migrationStart > 0, "Actual generation migration must be supplied");
+      refresh = concurrentOwnerSql("set application_name='keryx-revoke-refresher';" + migrationSql.slice(migrationStart));
+      while (sql("select exists(select 1 from pg_stat_activity a join pg_locks l on l.pid=a.pid where a.datname=current_database() and a.application_name='keryx-revoke-refresher' and l.locktype='advisory' and not l.granted)") !== "t") {
+        assert(performance.now() < deadline, "Source refresher waits on enrollment's canonical first mutex");
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      const enrolledResult = await enrollment.result;
+      assert(enrolledResult.ok, "Actual concurrent owner enrollment succeeded");
+      assert.match(enrolledResult.output, /^[0-9a-f]{64}$/);
+      const refused = await refresh.result;
+      assert(!refused.ok);
+      assert.match(refused.diagnostic, /enrolled storage requires reviewed generation migration/);
+      assert.equal(snapshot(), enrolledResult.output, "Refused catalog refresh retains the complete committed enrolled snapshot");
+      process.stdout.write("PASS actual enrollment/source-refresh exclusion, postcommit refusal and whole snapshot retention\n");
+    } finally {
+      enrollment.child.kill();
+      refresh?.child.kill();
+    }
     assert.deepEqual(JSON.parse(service("select read_storage_identity()")), identity);
     assert.equal(sql("select keryx_storage.require_source_contract('after')"), SUPABASE_RUNTIME_CONTRACT.afterDigest);
     const enrolledDiagnostics = snapshotWithDiagnostics();

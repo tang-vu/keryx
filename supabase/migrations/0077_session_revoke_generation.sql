@@ -1,6 +1,12 @@
 -- Generation-aware session revocation. Refresh the dormant source contract only
 -- from a separately generated empty PG17 reference, never from a runtime target.
 begin;
+-- Match enrollment's first lock, then its identity inspection order. Retain
+-- table locks through the whole catalog refresh, including protection against
+-- direct owner INSERTs that do not use the enrollment advisory mutex.
+select pg_advisory_xact_lock(634781904177021::bigint);
+lock table keryx_storage.identity in share row exclusive mode;
+lock table keryx_storage.enrolled_schema in share row exclusive mode;
 do $$ begin
   if exists(select 1 from keryx_storage.identity) or exists(select 1 from keryx_storage.enrolled_schema) then
     raise exception 'enrolled storage requires reviewed generation migration';

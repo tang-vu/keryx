@@ -30,6 +30,8 @@ independent Actions run `36989009554`; release requires the existing native
 acceptance to reproduce both catalogs exactly before target enrollment. The
 owner migration replaces only dormant constants inside one transaction and
 restores the identical immutable triggers before inserting the reviewed rows.
+It takes enrollment's advisory mutex first, then locks the identity and enrolled
+schema tables before its empty check, retaining exclusion through the refresh.
 The migration refuses an already enrolled target before changing its catalog:
 upgrading such a deployment requires a separately reviewed generation migration,
 drain, original-state recovery and fresh enrollment. No migration relabels existing
