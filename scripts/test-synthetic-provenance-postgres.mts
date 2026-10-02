@@ -1,15 +1,15 @@
 /** Hermetic actual-migration acceptance. Owned disposable PostgreSQL; no app env or provider IO. */
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
 import { SEED_SOURCES } from "../lib/sources/seed-data.ts";
 import { contentBodyHash } from "../lib/sources/content-receipt.ts";
 
 const name = `keryx-demo-provenance-${randomUUID()}`;
-const docker = (args: string[], input?: string) => execFileSync("docker", args, { input, encoding: "utf8", timeout: 30_000,
+const docker = (args: string[], input?: string, timeout = 30_000) => execFileSync("docker", args, { input, encoding: "utf8", timeout,
   maxBuffer: 16 * 1024 * 1024, stdio: ["pipe", "pipe", "pipe"] });
-const sql = (statement: string) => docker(["exec", "-i", name, "psql", "-U", "postgres", "-v", "ON_ERROR_STOP=1", "-q", "-t", "-A"], statement);
+const sql = (statement: string, timeout?: number) => docker(["exec", "-i", name, "psql", "-h", "127.0.0.1", "-U", "postgres", "-v", "ON_ERROR_STOP=1", "-q", "-t", "-A"], statement, timeout);
 const literal = (value: string) => `'${value.replaceAll("'", "''")}'`;
 let created = false;
 try {
@@ -18,8 +18,16 @@ try {
   docker(["run", "-d", "--name", name, "--network", "none", "--memory", "512m", "--cpus", "1", "-e", "POSTGRES_HOST_AUTH_METHOD=trust", "postgres:17-alpine"]);
   const deadline = Date.now() + 30_000;
   while (true) {
-    try { docker(["exec", name, "pg_isready", "-U", "postgres"]); break; }
-    catch { if (Date.now() > deadline) throw new Error("Owned PostgreSQL startup timed out"); await new Promise(resolve => setTimeout(resolve, 100)); }
+    try {
+      // The image's temporary initialization server listens only on a Unix socket.
+      // Require the final TCP server, then prove the same transport can execute SQL.
+      docker(["exec", name, "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-t", "1"], undefined, 3_000);
+      assert.equal(sql("select 1;", 3_000).trim(), "1");
+      break;
+    } catch (cause) {
+      if (Date.now() >= deadline) throw new Error("Owned PostgreSQL final TCP startup timed out", { cause });
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
   }
   const migrations = readdirSync("supabase/migrations").filter(file => /^\d{4}.*\.sql$/.test(file) && Number(file.slice(0, 4)) <= 79).sort();
   sql("create role anon; create role authenticated; create role service_role bypassrls; create publication supabase_realtime;\n" +
@@ -58,6 +66,12 @@ try {
   assert.equal(sql("select has_function_privilege('anon','public.verify_source_if_unchanged(text,text,text)','execute')").trim(), "f");
   assert.throws(() => sql("select public.storage_verify_source_if_unchanged('{}'::jsonb,'cas','0x1111111111111111111111111111111111111111','https://changed.test/rss');"), /storage identity refused/);
   console.log("PASS PostgreSQL17 actual migrations: encrypted/plaintext corpus backfill, near-match refusal, mixed source exclusion, sticky/inherited trusted provenance, unchanged custody and real settled record, bounded metadata-only RPC and unchanged identity/permission fences.");
+} catch (error) {
+  if (created) {
+    const logs = spawnSync("docker", ["logs", "--tail", "100", name], { encoding: "utf8", timeout: 10_000, maxBuffer: 1024 * 1024 });
+    console.error("Owned disposable PostgreSQL diagnostics:\n", logs.stdout ?? "", logs.stderr ?? "", logs.error?.message ?? "");
+  }
+  throw error;
 } finally {
   if (created) { docker(["rm", "-f", name]); assert.equal(docker(["ps", "-a", "--filter", `name=^/${name}$`, "--format", "{{.Names}}"] ).trim(), ""); }
 }
