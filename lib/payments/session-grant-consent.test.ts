@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { recoverMessageAddress } from "viem";
 import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "../arc-network-profile";
-import { createSessionGrantConsentMessage, parseSessionGrantConsent } from "./session-grant-consent";
+import { createSessionGrantConsentMessage, createSessionGrantSignerProofMessage, parseSessionGrantConsent } from "./session-grant-consent";
 
 const fields = { format: "keryx-session-grant-consent-v1", network: "eip155:5042", origin: "https://keryx.example",
   ownerAddr: "0x1111111111111111111111111111111111111111", sessAddr: "0x2222222222222222222222222222222222222222",
@@ -27,4 +27,14 @@ it("refuses malformed, foreign or widened grants without imposing invited-pilot 
     { ownerAddr: fields.sessAddr }, { capMicroUsdc: "01" }, { capMicroUsdc: "9007199254740992" }, { privateKey: "forbidden" }])
     expect(() => parseSessionGrantConsent({ ...fields, ...changed }, ARC_MAINNET_PROFILE)).toThrow();
   expect(() => parseSessionGrantConsent(fields, { ...ARC_MAINNET_PROFILE })).toThrow();
+});
+it("separates public signer possession from owner delegation and binds its exact one-use grant", async () => {
+  const session = privateKeyToAccount(generatePrivateKey()), grant = { ...fields, sessAddr: session.address.toLowerCase() };
+  const proof = createSessionGrantSignerProofMessage(grant, ARC_MAINNET_PROFILE), signature = await session.signMessage({ message: proof });
+  expect(proof).not.toBe(createSessionGrantConsentMessage(grant, ARC_MAINNET_PROFILE));
+  expect((await recoverMessageAddress({ message: proof, signature })).toLowerCase()).toBe(grant.sessAddr);
+  for (const mutation of [{ ownerAddr: "0x3333333333333333333333333333333333333333" }, { origin: "https://other.example" },
+    { grantEpoch: "a8dedce2-d568-4bb5-8da1-560588ce5eb6" }, { capMicroUsdc: "100000001" }, { expirySeconds: "1800000001" }])
+    expect((await recoverMessageAddress({ message: createSessionGrantSignerProofMessage({ ...grant, ...mutation }, ARC_MAINNET_PROFILE), signature }))
+      .toLowerCase()).not.toBe(grant.sessAddr);
 });
