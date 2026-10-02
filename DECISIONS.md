@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**Showcase extraction maintenance** - *2026-10-02*
+
+Maintain the standalone Arc primitives alongside relevant upstream changes as a small,
+independently reviewed and versioned extraction. Require durable host journal contracts,
+exact payment identity and retained uncertain outcomes; do not port application custody,
+recovery services or unfinished mainnet authority wholesale. Pin a concrete upstream anchor,
+verify its install/tests/package independently, then update the root gitlink and docs.
+This preserves a useful forkable library without implying synchronized app/MCP/installer
+runtime distribution. Maintenance is authorized session work, not an autonomous scheduler
+or artificial activity. The 0.3 release has synthetic acceptance; funded, durability,
+custody, reconciliation and finality gates remain explicit. See
+[maintenance and surface boundaries](docs/arc-primitives-maintenance.md).
+
 **D-296** - Pilot one bounded Research Monthly plan - *On 2026-10-02 the user
 confirmed four requests/month at 10% below buying four separately.* Use four Deep
 v1 requests over 30 days from confirmed Arc-testnet purchase, with manual renewal
