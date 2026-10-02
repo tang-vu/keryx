@@ -7,7 +7,7 @@ Testnet calls and owner-operated tests do not establish external traction or mai
 
 ## Research Monthly
 
-Stdio 0.3.1 and the remote service expose read-only `research_monthly` discovery.
+Stdio 0.3.2 and the remote service expose read-only `research_monthly` discovery.
 The four-request, 30-day Arc-testnet pilot uses manual renewal and a 10% total-price
 discount with unchanged creator caps. Failed and pending jobs retain slots.
 Buy/redeem through the caller-wallet [web checkout](https://keryx.cc/research#monthly)

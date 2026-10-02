@@ -38,3 +38,13 @@ testnet contracts until separately reviewed and observed release acceptance.
 Observed before this update: production health matched `59757f8`; latest GitHub application release was v0.24.5 without desktop assets, while desktop 0.3.0 assets were attached to v0.24.0. npm `keryx-mcp` was 0.1.1. These are pre-release observations, not acceptance of the new update. Final distribution evidence must be recorded after release; missing npm credentials must remain explicit.
 
 Candidate versions: application 0.24.7, desktop 0.3.1, caller MCP release tarball 0.3.0 (server identity derives from package), extension ZIP 0.1.1. Remote MCP retains its separate protocol identity 0.2.0. npm remains 0.1.1 until authenticated publication; Chrome Web Store submission is unverified. These are release candidates until exact artifact/deployment checks complete.
+
+
+### Fresh isolated-storage alignment, 2026-10-02
+
+The accepted product080bc5d retains immutable GitHub v0.25.0, desktop0.3.1 and
+MCP source-fallback0.3.1 artifacts. Runtime changes merged afterward require fresh
+app0.25.1, desktop0.3.2 and caller MCP0.3.2 candidates. Extension0.1.1 and remote
+MCP protocol0.2.0 keep their separate identities and documented web/service roles.
+Registry publication, exact-source installer acceptance, deployment health and
+artifact hashes remain gates; repository version metadata is not delivery evidence.

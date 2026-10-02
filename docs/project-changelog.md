@@ -1,5 +1,11 @@
 # Keryx Project Changelog
 
+### Isolated-storage release alignment (2026-10-02, v0.25.1)
+
+- Give the runtime after isolated Arc application-storage support fresh app 0.25.1, MCP 0.3.2 and desktop 0.3.2 versions. Existing v0.25.0/0.3.1 artifacts remain immutable at their accepted source; different runtime bytes must not reuse those versions across channels.
+- Align manifests, root package lock metadata, native desktop package metadata and current distribution guidance. Preserve dependency closures, Arc testnet defaults and Monthly terms; this version alignment grants no mainnet activation or funds.
+- Require exact-source production health, clean packed MCP signing/recovery, fresh installer acceptance and published artifact/registry integrity readback before synchronized-delivery claims.
+
 ### Research Monthly pilot (2026-10-02, v0.25.0)
 
 - Add one Arc-testnet plan: four manual Deep requests over 30 days, 10% below four equivalent separate packages. Pin creator caps and take the discount from service allocation; disclose exact micro-USDC rounding.
