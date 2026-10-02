@@ -65,3 +65,14 @@ Actual React funding acceptance submits only exact owner approval and depositFor
 The actual React cashout journey now exercises normal prepare/authorize/submit/status/complete handlers with a fresh sealed SQLite deployment, Chromium worker/IndexedDB and synthetic external Circle/RPC transport. It cancels a never-exposed original, retains a lost transfer response without another transfer, submits an actual owner-signed serialized mint transaction through the ordinary component, verifies original mint finality and resumes cited research with the same signer. Focused checks cover expired custody, wrong origin/recipient, cross-tab admission races, retained uncertain liabilities and lifetime-cap preservation. The actual Next-emitted worker and generated CSP also exercise the narrow expired-custody cashout path with matching synthetic build pins.
 
 The full release still needs independent live wallet/funding/cashout acceptance, fresh sealed production mainnet state/registry, final coordinated SQL/operational evidence and the owner's launch/funds decision. These synthetic transport checks do not establish live settlement or authorize mainnet activation.
+
+October 2 composed browser graph `70f202348f000c5a86cf16f3dfe99d58d31c6bb7`
+passed the canonical npm 11.19.0 / Next 16.3.6 production build (48 static pages)
+with synthetic matching mainnet profile, registry and withdrawal-window pins.
+`npm run test:browser-mainnet-normal-built` then exercised the actual emitted
+Turbopack worker/bootstrap/chunks under the generated CSP: 271 requests with real
+Chromium and IndexedDB, authenticated challenges, dual owner/session proofs,
+retained nonce/cap state, logout recovery and expired-owner cashout. The wrapper
+restored the source TypeScript configuration. This records the assembled browser
+graph; subsequent script-only headless acceptance and whole-release CI/review
+remain separate. No live funds or production mainnet activation were used.
