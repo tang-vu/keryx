@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { ARC_MAINNET_PROFILE } from "../arc-network-profile";
+import { paymentRuntimeConfig } from "../payment-runtime-config";
 import type { KeryxDB } from "../db/keryx-db";
 import { BUYER_NETWORK, BUYER_USDC, BUYER_GATEWAY, buyerRequestSchema, type BuyerRequest } from "../buyer/protocol";
 import { privateRequestSchema } from "../buyer/private-request-commitment";
@@ -20,7 +22,7 @@ export function privateResearchService(db: KeryxDB, env: Parameters<typeof priva
     const amount = (BigInt(Math.round(request.budget * 1e6)) + BigInt(policy!.serviceFeeMicros)).toString();
     return createPrivateQuote(request, { provider: policy!.provider, merchants: policy!.merchants,
       requirement: { scheme: "exact", network: BUYER_NETWORK, asset: BUYER_USDC, amount, payTo: policy!.merchants.privatePayee,
-        maxTimeoutSeconds: 604860, extra: { name: "GatewayWalletBatched", version: "1", verifyingContract: BUYER_GATEWAY } } });
+        maxTimeoutSeconds: BUYER_NETWORK === ARC_MAINNET_PROFILE.networkId ? paymentRuntimeConfig().maxTimeoutSeconds : 604860, extra: { name: "GatewayWalletBatched", version: "1", verifyingContract: BUYER_GATEWAY } } });
   }
   return {
     quote,

@@ -1,5 +1,5 @@
 /**
- * A2A Paid Research v2. The caller prepays a fixed all-in testnet package whose exact x402 price
+ * A2A Paid Research v2. The caller prepays a fixed all-in selected-network package whose exact x402 price
  * is the orchestration fee plus its bounded creator-spend cap. A durable authorization-keyed order
  * ensures one settled inbound authorization can launch downstream creator payments only once.
  */
@@ -8,6 +8,8 @@ import { NextRequest } from "next/server";
 import { collectRun, getAgentDeps, type AgentDeps } from "@/lib/agent";
 import { config } from "@/lib/config";
 import { getDb } from "@/lib/db";
+import { ARC_MAINNET_PROFILE } from "@/lib/arc-network-profile";
+import { assertMainnetHostedResearchReady } from "@/lib/payments/mainnet-hosted-gateway";
 import { makePayment } from "@/lib/payments/payment-gateway";
 import { settleThenServe, challengeResponse } from "@/lib/x402-server";
 import { a2aDiscovery } from "@/lib/x402-discovery";
@@ -60,6 +62,12 @@ function requirements(priceUsdc: number, payTo = config.sellerAddress ?? "") {
     description: "Keryx autonomous research — fixed fee + creator-spend cap",
     discovery: a2aDiscovery as unknown as Record<string, unknown>,
   };
+}
+
+async function mainnetA2aReady(budget: number) {
+  const db = await getDb();
+  await db.assertResearchPurchaseAuthority(config.networkId);
+  await assertMainnetHostedResearchReady(db, String(Math.round(budget * 1e6)));
 }
 
 async function currentCompletedResponse(db: KeryxDB, order: A2aOrder) {
@@ -191,10 +199,15 @@ export async function GET(req: NextRequest) {
     }
     return Response.json(pendingResponse(order));
   }
-  if (!config.sellerAddress || !config.funderKey || process.env.KERYX_FORCE_OFFLINE === "1") {
+  if (!config.sellerAddress || (config.networkId !== ARC_MAINNET_PROFILE.networkId && !config.funderKey) || process.env.KERYX_FORCE_OFFLINE === "1") {
     return Response.json({ error: "real A2A treasury is unavailable" }, { status: 503 });
   }
   const quote = quoteA2aResearch(undefined, "deep");
+  if(config.networkId===ARC_MAINNET_PROFILE.networkId) {
+    const limited=await checkRateLimit(clientIp(req),"a2aPublic");if(limited)return limited;
+    try { await mainnetA2aReady(quote.creatorBudgetUsdc); }
+    catch { return Response.json({error:"real A2A treasury is unavailable"},{status:503,headers:{"Cache-Control":"no-store"}}); }
+  }
   return challengeResponse(requirements(quote.totalPriceUsdc), {
     service: "Keryx — agent-to-agent research endpoint",
     method: "POST",
@@ -233,7 +246,7 @@ export async function POST(req: NextRequest) {
     const limited = await checkRateLimit(clientIp(req), "a2aPublic");
     if (limited) return limited;
   }
-  if (!config.sellerAddress || !config.funderKey || process.env.KERYX_FORCE_OFFLINE === "1") {
+  if (!config.sellerAddress || (config.networkId !== ARC_MAINNET_PROFILE.networkId && !config.funderKey) || process.env.KERYX_FORCE_OFFLINE === "1") {
     return Response.json({ error: "real A2A treasury is unavailable" }, { status: 503 });
   }
 
@@ -289,6 +302,10 @@ export async function POST(req: NextRequest) {
     model,
   });
 
+  if(config.networkId===ARC_MAINNET_PROFILE.networkId) {
+    try { await mainnetA2aReady(quote.creatorBudgetUsdc); }
+    catch { return Response.json({error:"research service unavailable"},{status:503,headers:{"Cache-Control":"no-store"}}); }
+  }
   // The treasury gateway is loaded lazily by collectRun. Load and construct it before an
   // authorization can settle, so a broken server bundle cannot charge for an unstartable job.
   // Unsigned requests still receive their normal body-dependent 402 challenge.

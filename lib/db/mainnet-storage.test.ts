@@ -642,3 +642,103 @@ it("admits original mainnet research claims and atomically allocates four immuta
   expect(native.prepare("SELECT network,product FROM research_purchase_authorizations WHERE authorization_id=?").get(authorizationId)).toEqual({network,product:"monthly"});
   expect(()=>native.prepare("DELETE FROM research_monthly_redemptions").run()).toThrow();
 },30000);
+
+
+it("accepts normal public mainnet A2A through actual seller admission without a legacy funder key",async()=> {
+  const seller=`0x${"33".repeat(20)}`;
+  vi.stubEnv("SELLER_ADDRESS",seller);vi.stubEnv("AGENT_FUNDER_PRIVATE_KEY","");vi.stubEnv("BUYER_PRIVATE_KEY","");
+  const {adapter,file,identity}=await fixture();
+  const {privateKeyToAccount}=await import("viem/accounts"),buyer=privateKeyToAccount(`0x${"11".repeat(32)}`),treasury=privateKeyToAccount(`0x${"77".repeat(32)}`);
+  const {storageIdentityDigest}=await import("./storage-identity"),{hostedTreasuryPolicyDigest}=await import("../payments/hosted-treasury-policy");
+  const policy={format:"keryx-hosted-treasury-policy-v1" as const,network:"eip155:5042" as const,storageIdentityDigest:storageIdentityDigest(identity),origin:"https://keryx.cc",
+    signer:treasury.address.toLowerCase(),lifetimeCapMicroUsdc:"1000000",queryCapMicroUsdc:"100000",expiresAtSeconds:Math.floor(Date.now()/1000)+3600};
+  vi.stubEnv("KERYX_MAINNET_TREASURY_POLICY_JSON",canonicalJson(policy));vi.stubEnv("KERYX_MAINNET_TREASURY_POLICY_DIGEST",hostedTreasuryPolicyDigest(policy));
+  const native=new DatabaseSync(file);cleanup.push(()=>native.close());let originalNonce:string|undefined;const paidCalls:string[]=[];
+  vi.stubGlobal("fetch",vi.fn(async(url:RequestInfo|URL,init?:RequestInit)=>{
+    const target=String(url),body=JSON.parse(String(init?.body));
+    if(target.endsWith("/v1/balances")) return Response.json({token:"USDC",balances:[{depositor:policy.signer,domain:26,balance:"1"}]});
+    if(target===ARC_MAINNET_PROFILE.rpcUrl || target===ARC_MAINNET_PROFILE.rpcUrl+'/') return Response.json({jsonrpc:"2.0",id:body.id,result:"0x13b2"});
+    if(target.startsWith(ARC_MAINNET_PROFILE.gatewayApiUrl) && target.endsWith("/verify")) {paidCalls.push("verify");return Response.json({isValid:true,payer:buyer.address});}
+    if(target.startsWith(ARC_MAINNET_PROFILE.gatewayApiUrl) && target.endsWith("/settle")) {
+      expect(native.prepare("SELECT network,product FROM research_purchase_authorizations WHERE authorization_id=?").get(originalNonce!)).toEqual({network:ARC_MAINNET_PROFILE.networkId,product:"a2a"});
+      paidCalls.push("settle");return Response.json({success:true,payer:buyer.address,network:ARC_MAINNET_PROFILE.networkId,transaction:"synthetic-public-a2a-settlement"});
+    }
+    throw new Error("Unexpected synthetic public A2A transport");
+  }));
+  const {NextRequest}=await import("next/server"),route=await import("../../app/api/agent/ask/route");
+  const request=(header?:string)=>new NextRequest("https://keryx.cc/api/agent/ask",{method:"POST",headers:{"content-type":"application/json",...(header?{"payment-signature":header}:{})},
+    body:JSON.stringify({question:"Review immutable selected network evidence",budget:0.05,researchMode:"deep",responseMode:"async"})});
+  vi.stubEnv("KERYX_MAINNET_TREASURY_PRIVATE_KEY",`0x${"44".repeat(32)}`);
+  const refused=await route.POST(request());expect(refused.status).toBe(503);expect(globalThis.fetch).not.toHaveBeenCalled();
+  expect(native.prepare("SELECT count(*) AS n FROM research_purchase_authorizations").get()?.n).toBe(0);
+  vi.stubEnv("KERYX_MAINNET_TREASURY_PRIVATE_KEY",`0x${"77".repeat(32)}`);
+  await (await import("../payments/mainnet-hosted-gateway")).assertMainnetHostedResearchReady(adapter,"50000");
+  const challenge=await route.POST(request());expect(challenge.status,await challenge.clone().text()).toBe(402);
+  const requirement=JSON.parse(Buffer.from(challenge.headers.get("PAYMENT-REQUIRED")!,"base64").toString()).accepts[0];
+  expect(requirement.network).toBe(ARC_MAINNET_PROFILE.networkId);expect(requirement.payTo).toBe(seller);
+  const protocol=await import("../buyer/protocol");originalNonce=`0x${"ad".repeat(32)}`;
+  const authorization=protocol.authorizationWithNonce(buyer.address,requirement,originalNonce),signature=await buyer.signTypedData(protocol.buyerTypedData(authorization));
+  const paid=await route.POST(request(Buffer.from(JSON.stringify({authorization,signature})).toString("base64")));
+  expect(paid.status).toBe(202);expect(paidCalls).toEqual(["verify","settle"]);
+  const result=await paid.json();expect(result.status).toBe("queued");
+  const order=await adapter.getA2aOrder(result.queryId);
+  expect(order).toMatchObject({payer:buyer.address,payee:seller,transaction:"synthetic-public-a2a-settlement",request:{network:ARC_MAINNET_PROFILE.networkId},startedAt:null});
+  expect(native.prepare("SELECT count(*) AS n FROM hosted_treasury_authorizations").get()?.n).toBe(0);
+  const health=await (await import("../../app/api/health/route")).GET();expect(health.status).toBe(200);
+  expect(await health.json()).toMatchObject({network:"arc",settles:"real",paymentAuthority:{caller:"owner-consent",hosted:"sealed-policy-admission",availability:"not-probed"}});
+},30000);
+
+
+it("quotes and admits normal private mainnet research with independently checked dedicated custody and retained original settlement",async()=> {
+  const {privateKeyToAccount}=await import("viem/accounts"),buyer=privateKeyToAccount(`0x${"11".repeat(32)}`),publicAccount=privateKeyToAccount(`0x${"77".repeat(32)}`),privateAccount=privateKeyToAccount(`0x${"88".repeat(32)}`);
+  const seller=`0x${"33".repeat(20)}`,privatePayee=`0x${"aa".repeat(20)}`;
+  vi.stubEnv("SELLER_ADDRESS",seller);vi.stubEnv("KERYX_PRIVATE_RESEARCH_RESERVED_PAYEES",privatePayee);vi.stubEnv("AGENT_FUNDER_PRIVATE_KEY","");vi.stubEnv("BUYER_PRIVATE_KEY","");
+  const {adapter,file,identity}=await fixture(),root=mkdtempSync(join(tmpdir(),"keryx-native-mainnet-private-"));cleanup.push(()=>rmSync(root,{recursive:true,force:true}));
+  const {storageIdentityDigest}=await import("./storage-identity"),{hostedTreasuryPolicyDigest}=await import("../payments/hosted-treasury-policy");
+  const policy={format:"keryx-hosted-treasury-policy-v1" as const,network:"eip155:5042" as const,storageIdentityDigest:storageIdentityDigest(identity),origin:"https://keryx.cc",
+    signer:publicAccount.address.toLowerCase(),lifetimeCapMicroUsdc:"1000000",queryCapMicroUsdc:"100000",expiresAtSeconds:Math.floor(Date.now()/1000)+3600};
+  const privatePolicy={...policy,signer:privateAccount.address.toLowerCase()};
+  vi.stubEnv("KERYX_MAINNET_TREASURY_POLICY_JSON",canonicalJson(policy));vi.stubEnv("KERYX_MAINNET_TREASURY_POLICY_DIGEST",hostedTreasuryPolicyDigest(policy));
+  vi.stubEnv("KERYX_MAINNET_PRIVATE_TREASURY_POLICY_JSON",canonicalJson(privatePolicy));vi.stubEnv("KERYX_MAINNET_PRIVATE_TREASURY_POLICY_DIGEST",hostedTreasuryPolicyDigest(privatePolicy));
+  const commit="ab".repeat(20),env={KERYX_PRIVATE_RESEARCH_ENABLED:"1",KERYX_PRIVATE_PURCHASE_ENABLED:"1",KERYX_PRIVATE_TREASURY_ADDRESS:privatePolicy.signer,
+    KERYX_PRIVATE_TREASURY_CAPACITY_MICROS:"100000",KERYX_PRIVATE_RESEARCH_PAYEE:privatePayee,KERYX_PRIVATE_SERVICE_FEE_MICROS:"20000",KERYX_PRIVATE_MODEL_ID:"deepseek-flash",
+    KERYX_PRIVATE_PROVIDER:"deepseek",KERYX_PRIVATE_PROVIDER_BASE_URL:"https://synthetic.example/v1",KERYX_PRIVATE_PROVIDER_API_KEY:"synthetic-private-provider-no-funds",
+    KERYX_PRIVATE_APPROVED_ENDPOINTS:'["https://synthetic.example/v1/chat/completions"]',KERYX_PRIVATE_RESULT_SPOOL_DIRECTORY:root,KERYX_COMMIT:commit};
+  for(const [name,value] of Object.entries(env))vi.stubEnv(name,value);
+  const context={network:ARC_MAINNET_PROFILE.networkId,publicSeller:seller,publicTreasurySigners:[policy.signer],privateTreasurySigner:privatePolicy.signer};
+  const runtimePolicy=(await import("../a2a/private-runtime-policy")).privateRuntimePolicy(process.env,context)!;
+  const configurationId=(await import("../a2a/private-worker-configuration")).privateWorkerConfigurationId(runtimePolicy);
+  await (await import("../a2a/private-worker-status")).privateWorkerStatusWriter(root,commit,configurationId)("idle");
+  const calls:string[]=[];let originalId:string|undefined;const native=new DatabaseSync(file);cleanup.push(()=>native.close());
+  vi.stubGlobal("fetch",vi.fn(async(url:RequestInfo|URL,init?:RequestInit)=>{
+    const target=String(url),body=JSON.parse(String(init?.body));
+    if(target.endsWith("/v1/balances")) return Response.json({token:"USDC",balances:[{depositor:body.sources[0].depositor,domain:26,balance:"1"}]});
+    if(target===ARC_MAINNET_PROFILE.rpcUrl || target===ARC_MAINNET_PROFILE.rpcUrl+'/')return Response.json({jsonrpc:"2.0",id:body.id,result:"0x13b2"});
+    if(target.startsWith(ARC_MAINNET_PROFILE.gatewayApiUrl) && target.endsWith("/verify")){calls.push("verify");expect(String(init?.body)).not.toContain("Private original source marker");return Response.json({isValid:true,payer:buyer.address});}
+    if(target.startsWith(ARC_MAINNET_PROFILE.gatewayApiUrl) && target.endsWith("/settle")){
+      expect(await adapter.getPrivatePaymentState(originalId!,buyer.address)).toMatchObject({status:"pending"});
+      calls.push("settle");return Response.json({success:true,payer:buyer.address,network:ARC_MAINNET_PROFILE.networkId,transaction:"synthetic-private-mainnet-settlement"});
+    }
+    throw new Error("Unexpected synthetic private mainnet transport");
+  }));
+  const input={question:"Private original source marker",budget:0.03,researchMode:"quick",packageVersion:"1.0.0",responseMode:"async"};
+  const quote=(await import("../a2a/private-quote-bootstrap")).privateQuoteBootstrap(adapter)!.quote(input);
+  expect(quote.requirement.network).toBe(ARC_MAINNET_PROFILE.networkId);expect(quote.requirement.maxTimeoutSeconds).toBe(691200);expect(globalThis.fetch).not.toHaveBeenCalled();
+  const bootstrap=(await import("../a2a/private-purchase-bootstrap")).privatePurchaseBootstrap,signal=new AbortController().signal;
+  vi.stubEnv("KERYX_MAINNET_PRIVATE_TREASURY_PRIVATE_KEY",`0x${"44".repeat(32)}`);
+  expect(await bootstrap(adapter,signal,buyer.address)).toBeNull();expect(globalThis.fetch).not.toHaveBeenCalled();
+  expect(await adapter.getPrivateTreasurySummary(privatePolicy.signer)).toBeNull();
+  vi.stubEnv("KERYX_MAINNET_PRIVATE_TREASURY_PRIVATE_KEY",`0x${"88".repeat(32)}`);
+  const service=await bootstrap(adapter,signal,buyer.address);expect(service).not.toBeNull();
+  const {createPrivateAuthorization}=await import("../buyer/private-request-commitment"),protocol=await import("../buyer/protocol");
+  const fresh=await createPrivateAuthorization(quote.request,quote.requirement,buyer.address,{privatePayee,publicResearchPayee:seller});
+  const signature=await buyer.signTypedData(protocol.buyerTypedData(fresh.authorization));
+  const submission={request:fresh.request,salt:fresh.salt,payment:{authorization:fresh.authorization,signature}};
+  originalId=(await (await import("../a2a/private-research-intent")).preparePrivateResearchIntent(submission,quote.requirement,{privatePayee,publicResearchPayee:seller})).id;
+  const result=await service!.submit(submission,buyer.address);expect(result.response).toEqual({id:originalId,paymentStatus:"settled"});
+  expect(calls).toEqual(["verify","settle"]);
+  expect((await service!.submit(submission,buyer.address)).response).toEqual(result.response);expect(calls).toEqual(["verify","settle"]);
+  expect(await adapter.getPrivatePaymentState(originalId,buyer.address)).toMatchObject({status:"settled",confirmation:{network:ARC_MAINNET_PROFILE.networkId,transaction:"synthetic-private-mainnet-settlement"}});
+  expect(await adapter.getPrivateTreasurySummary(privatePolicy.signer)).toMatchObject({allocatedMicros:"30000",unallocatedMicros:"70000"});
+  expect(native.prepare("SELECT count(*) AS n FROM payment_events").get()?.n).toBe(0);
+},60000);

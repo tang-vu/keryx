@@ -1,3 +1,4 @@
+import { ARC_MAINNET_PROFILE } from "@/lib/arc-network-profile";
 import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
@@ -10,6 +11,8 @@ import { readBoundedRequestJson } from "@/lib/read-bounded-request-json";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 async function owner(id: string) {
+  // The experimental scholarly rights v1 protocol has only testnet acceptance.
+  if(config.networkId===ARC_MAINNET_PROFILE.networkId) return {response:Response.json({error:"Scholarly rights are unavailable on mainnet pending domain acceptance",network:config.networkId},{status:503,headers:{"Cache-Control":"no-store"}})};
   const session = await getSession();
   if (!session) return { response: Response.json({ error: "Sign in with your creator wallet" }, { status: 401 }) };
   const db = await getDb();

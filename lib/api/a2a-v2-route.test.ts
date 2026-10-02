@@ -9,8 +9,9 @@ const mocks = vi.hoisted(() => ({
   checkRateLimit: vi.fn(),
 }));
 
-vi.mock("@/lib/config", () => ({
+vi.mock("@/lib/config", async () => ({
   config: {
+    profile: (await import("../arc-network-profile")).ARC_TESTNET_PROFILE,
     sellerAddress: "0x2222222222222222222222222222222222222222",
     networkId: "eip155:5042002",
     a2aFeeUsdc: 0.02,

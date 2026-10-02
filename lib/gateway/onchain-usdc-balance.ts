@@ -15,29 +15,35 @@
  */
 
 import { createPublicClient, erc20Abi, type Address } from "viem";
-import { arcTestnet } from "../chains";
-import { config } from "../config";
-import { attestedArcHttp } from "../arc-rpc-attestation";
+import { chainForProfile } from "../chains";
+import { paymentRuntimeConfig } from "../payment-runtime-config";
+import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
+import { attestedArcHttp, attestedArcAuthorityHttp } from "../arc-rpc-attestation";
 
 export async function getOnchainUsdcBalances(
-  addresses: string[],
+  addresses: string[], profile:ArcNetworkProfile=paymentRuntimeConfig().profile,
 ): Promise<Map<string, number | null>> {
+  if(profile!==ARC_MAINNET_PROFILE && profile!==ARC_TESTNET_PROFILE) throw new Error("Untrusted payout read profile");
   const unique = [...new Set(addresses.map((a) => a.toLowerCase()))];
   const out = new Map<string, number | null>(unique.map((a) => [a, null]));
   if (unique.length === 0) return out;
 
-  const client = createPublicClient({ chain: arcTestnet, transport: attestedArcHttp(config.rpcUrl) });
+  const selected=paymentRuntimeConfig();
+  const rpc=profile===selected.profile?selected.rpcUrl:profile.rpcUrl;
+  const transport = profile===ARC_MAINNET_PROFILE ? attestedArcAuthorityHttp(rpc,{retryCount:0,timeout:4000},profile) : attestedArcHttp(rpc,undefined,profile);
+  const client = createPublicClient({ chain: chainForProfile(profile), transport });
 
   // Sequential on purpose: this only ever runs for the handful of wallets that came up short,
-  // and a public testnet RPC is happier with a trickle than with a burst.
+  // and a public RPC is happier with a trickle than with a burst.
   for (const address of unique) {
     try {
       const raw = await client.readContract({
-        address: config.usdcAddress,
+        address: profile.usdcAddress,
         abi: erc20Abi,
         functionName: "balanceOf",
         args: [address as Address],
       });
+      if(raw < BigInt(0) || raw > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("Payout balance cannot be represented exactly");
       out.set(address, Number(raw) / 1e6); // ERC-20 USDC on Arc is 6 decimals
     } catch {
       /* leave null — unknown, not zero */
