@@ -1,5 +1,11 @@
 # Keryx Project Changelog
 
+### 2026-10-02 - Selected-network Monthly checkout preparation
+
+- Select the trusted Arc profile for Monthly wallet checks, proof domains and exact quotes. Preserve testnet recovery keys; isolate mainnet recovery by payer, network and HTTPS origin, and refuse foreign-network request files.
+- Retain uncertain purchases across reload, snapshot original redemption identity before asynchronous signing, bound HTTPS response intake, and prevent overlapping wallet actions. The real funding UI accepts the reviewed 1.8-USDC mainnet quote without the historical testnet ceiling.
+- Verify actual React/Chromium/IndexedDB journeys on both networks with synthetic wallet/HTTP evidence. Mainnet API admission remains closed pending fresh sealed SQLite Monthly authority and actual dedicated treasury custody acceptance; no mainnet settlement or publication is claimed.
+
 ### 2026-10-02 - Full mainnet operations and distributed-client preparation
 
 - Prepare ordinary caller-funded MCP and CLI payment/funding journals for trusted

@@ -1,10 +1,11 @@
-# Research Monthly pilot
+# Research Monthly
 
 The user confirmed one bounded Monthly plan on 2026-10-02: four research requests
 per month, priced 10% below four equivalent separate purchases. The pilot uses
 four Deep v1.0.0 requests in a 30-day term from the confirmed purchase, with manual
-renewal and no autonomous schedule. This is Arc testnet; it is not a mainnet or
-card recurring-billing launch.
+renewal and no autonomous schedule. Its initial release used Arc testnet. The
+owner subsequently directed full public mainnet Keryx; that includes Monthly under
+the same manual-renewal terms. Card recurring billing remains outside this product.
 
 The current default creator cap and Deep service fee determine the quote. The
 entire discount comes from the service allocation. Creator caps, source tolls and
@@ -36,6 +37,27 @@ request/resource hash are immutable bound data. A request cannot reuse one debit
 for Monthly and a standalone job or a paid source/citation. Historical recorded
 nonces without sufficient resource binding fail closed. Ambiguous settlement
 retains the claim; it does not release it or activate a plan.
+
+## Selected-network release candidate
+
+Checkout and proof domains use the trusted deployment profile, never a received
+quote or recovery file. The historical one-USDC Monthly ceiling remains testnet
+only; mainnet quotes retain exact integer allocation and the ordinary reviewed
+creator/job limits. Mainnet browser recovery keys include network, Keryx HTTPS
+origin and payer. Existing testnet keys stay unchanged and are never relabelled.
+Mainnet request files require the versioned network envelope; legacy plain request
+files remain recoverable on testnet. An unresolved debit survives reload and blocks
+another purchase until the original plan is recovered. Status and recovery do not
+submit another payment.
+
+The candidate UI has actual React/Chromium/IndexedDB evidence on both profiles,
+including a 1.8-USDC mainnet quote rendered by the real funding component, exact
+synthetic EOA signing, foreign-file refusal and lost-acknowledgement recovery.
+Intercepted HTTP and synthetic signatures do not prove mainnet settlement.
+Mainnet API and page admission remain closed until the backend's fresh sealed
+SQLite Monthly domain and exact dedicated custody readiness have native acceptance.
+Legacy migration 0078 is an ordinary testnet path; copying its rows into a fresh
+mainnet store is not migration. Optional Supabase mainnet remains staged separately.
 
 ## Surfaces and boundaries
 
@@ -90,4 +112,7 @@ signed status and job/receipt recovery. Do not delete plans, consumed slots or
 claims. Rollback must retain the claim-aware public seller version: an older seller
 that bypasses admission is not a safe rollback while any admitted nonce exists.
 Desktop and extension installers retain their web handoff; no installer format changes.
-The stdio MCP package changes to 0.3.1 and requires its separate tested, verified publication.
+The initial Monthly stdio package candidate was 0.3.1; the coordinated mainnet
+client candidate is 0.4.0. Neither source version proves publication. Verify the
+actual npm/immutable release artifact and installed consumer before reporting
+synchronized delivery.

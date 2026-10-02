@@ -230,11 +230,14 @@ normal withdrawal policy when that shared client domain is frozen.
 
 ## Package publication boundary
 
-Read-only publication checks found `keryx-mcp` npm latest 0.1.1; this release's 0.4.0
-source candidate is not yet published. The local npm identity is unauthenticated,
-and GitHub Actions exposes no configured publishing-secret names. Use the reviewed
-immutable GitHub release tarball plus source commit/hash manifest as the supported
-fallback after final exact-head CI, and verify a downloaded clean install and stdio
-mainnet flow. The public manifest must retain `npmRegistryPublished:false` until
-npm publication is separately observed. Do not claim that installer, tarball and
-npm versions are synchronized from source version numbers alone.
+A current registry read still reports `keryx-mcp` npm latest 0.1.1; source version
+numbers alone do not prove publication. Current main's publishing workflow uses
+npm Trusted Publishing through GitHub OIDC and environment `npm`; local npm login
+or a token secret is not required by that workflow. An earlier relative tarball
+path failure is corrected by PR132, with actual publication still separately verified.
+
+Use the reviewed exact tarball, clean-consumer checks, registry integrity comparison
+and successful authorized workflow as npm publication evidence. Retain the immutable
+GitHub release tarball plus source commit/hash manifest as a supported distribution
+channel. Its `npmRegistryPublished` flag must match observed publication. Do not claim
+that installer, tarball and npm versions are synchronized from source numbers alone.

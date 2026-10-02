@@ -6,8 +6,9 @@ import { buyerIntentEnvelopeSchema, type BuyerIntentEnvelope } from "./protocol"
 import { verifyBrowserIntent } from "./browser-result";
 import { validateSellerEvidence } from "./result-binding";
 import { paymentAcknowledgementSchema as acknowledgementSchema, parseBuyerRecovery, encodeBuyerRecovery, type PaymentAcknowledgement } from "./recovery";
+import { browserPaymentProfile } from "../browser-payment-profile";
 
-const DATABASE = "keryx-buyer-jobs-v1";
+const DATABASE = browserPaymentProfile().testnet ? "keryx-buyer-jobs-v1" : `keryx-buyer-jobs-v2-${browserPaymentProfile().networkId}`;
 const STORE = "jobs";
 const recordSchema = z.object({
   schema: z.literal("keryx-browser-job-v1"),

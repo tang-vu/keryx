@@ -4,7 +4,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { quoteResearchMonthly } from "./quote";
 import { monthlyMessage } from "./protocol";
 import { monthlyPaymentAuthorization, monthlyQuestionDigest, verifyMonthlyProof } from "./service";
-import { buyMonthly } from "./client";
+import { buyMonthly, submitMonthly } from "./client";
 import { authorizationWithNonce, buyerTypedData } from "../buyer/protocol";
 
 const { settings } = vi.hoisted(() => ({ settings: { defaultBudget: .05, a2aMaxBudget: .5, a2aFeeUsdc: .02,
@@ -89,4 +89,22 @@ describe("Monthly economics and proof authority", () => {
     expect(prepare).not.toHaveBeenCalled(); expect(sign).not.toHaveBeenCalled(); expect(claim).not.toHaveBeenCalled();
     expect(http).toHaveBeenCalledTimes(1);
   });
+});
+
+
+it("redeem snapshots the exact original question and ID before asynchronous proof work", async () => {
+  const original = { monthlyId: `monthly_${"a".repeat(64)}`, requestId: "00000000-0000-4000-8000-000000000001",
+    question: "What evidence supports this finding?", payer: buyer.address };
+  const mutable = { ...original };
+  const http = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ queryId: `a2a_${"c".repeat(64)}` }));
+  const pending = submitMonthly(mutable, message => buyer.signMessage({ message }), http);
+  mutable.question = "A changed question";
+  mutable.requestId = "00000000-0000-4000-8000-000000000002";
+  await pending;
+  const init = http.mock.calls[0][1]!;
+  expect(init.redirect).toBe("error"); expect(init.signal).toBeInstanceOf(AbortSignal);
+  const body = JSON.parse(String(init.body));
+  expect(body).toMatchObject({ monthlyId: original.monthlyId, question: original.question, requestId: original.requestId });
+  await expect(verifyMonthlyProof("redeem", { monthlyId: original.monthlyId, requestId: original.requestId,
+    questionDigest: monthlyQuestionDigest(original.question) }, body.proof)).resolves.toBe(buyer.address);
 });
