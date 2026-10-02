@@ -104,6 +104,7 @@ async function constructEnrolledSupabaseAdapter(readOnly: boolean): Promise<Kery
         } finally { await guard(); }
       };
       return async (...args: unknown[]) => {
+        if (SUPABASE_ENROLLED_METHODS[property as keyof typeof SUPABASE_ENROLLED_METHODS] === "unsupported") refuseStorage("invalid_operation");
         const write = SUPABASE_ENROLLED_METHODS[property as keyof typeof SUPABASE_ENROLLED_METHODS] === "write";
         if (write && readOnly) refuseStorage("readonly_operation");
         await guard();

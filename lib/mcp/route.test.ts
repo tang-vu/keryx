@@ -89,6 +89,7 @@ describe("/mcp", () => {
     expect(body.result.tools.map((tool: { name: string }) => tool.name)).toEqual([
       "research",
       "keryx_status",
+      "research_monthly",
     ]);
   });
 

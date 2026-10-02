@@ -12,6 +12,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { config } from "./config";
 import { paymentRuntimeConfig } from "./payment-runtime-config";
 import { guardPublicMerchant } from "./payments/public-merchant-guard";
+import { getDb } from "./db";
+import { createHash } from "node:crypto";
 
 // SDK 3.x defaults to mainnet; Keryx's seller rail remains Arc testnet only.
 const facilitator = new BatchFacilitatorClient({ url: paymentRuntimeConfig().gatewayApiUrl });
@@ -21,6 +23,9 @@ export interface PaidOptions {
   payTo: string;
   endpoint: string;
   description?: string;
+  /** Durable debit admission binds a research request or the exact seller resource. */
+  purchasePurpose?: "a2a" | "monthly";
+  purchaseRequestHash?: string;
   /**
    * Bazaar discovery metadata (x402 discovery extension). When set, the 402 challenge advertises
    * `extensions.bazaar.info` and the payload forwarded to the facilitator carries it, so the
@@ -175,6 +180,19 @@ export async function settleThenServe(
       console.error(`[x402] verify FAILED ${opts.endpoint}: ${verify.invalidReason}`, JSON.stringify(requirements));
       return NextResponse.json({ error: "verification failed", reason: verify.invalidReason }, { status: 402 });
     }
+    // verify is read-only. Admit purpose before the first possible debit; an unknown
+    // settlement retains this binding and never authorizes a second product.
+    const authorization = payload?.payload?.authorization;
+    if (!authorization || typeof authorization.from !== "string" || typeof authorization.to !== "string"
+      || typeof authorization.nonce !== "string" || authorization.to.toLowerCase() !== opts.payTo.toLowerCase()
+      || String(authorization.value) !== requirements.amount) {
+      return NextResponse.json({ error: "payment authorization disagrees with resource" }, { status: 400 });
+    }
+    await (await getDb()).claimResearchPurchase({ network: requirements.network, payer: authorization.from,
+      payee: authorization.to, authorizationId: authorization.nonce,
+      purpose: opts.purchasePurpose ?? "resource",
+      requestHash: opts.purchaseRequestHash ?? createHash("sha256").update(opts.endpoint).digest("hex"),
+      amountMicros: Number(requirements.amount) });
     let settle;
     try {
       settle = await withRetry(() => facilitator.settle(activePayload, requirements), "settle", opts.endpoint);

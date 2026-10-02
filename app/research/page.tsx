@@ -15,6 +15,9 @@ import { privateMerchantPolicySchema } from "@/lib/buyer/private-merchant-policy
 import { config } from "@/lib/config";
 import { quoteA2aResearch } from "@/lib/a2a/pricing";
 import { parseBuyerBudget } from "@/lib/a2a/buyer-workspace";
+import { quoteResearchMonthly } from "@/lib/monthly/quote";
+import { ResearchMonthly } from "@/components/keryx/research-monthly";
+import { getDb } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -34,6 +37,11 @@ export default async function ResearchPage({ searchParams }: {
   const quote = budget !== null && validMode ? quoteA2aResearch(budget, mode) : null;
   const available = config.networkId === "eip155:5042002" && !!config.sellerAddress && !!config.funderKey && process.env.KERYX_FORCE_OFFLINE !== "1";
   const privatePolicy = privateMerchantPolicySchema.safeParse({ privatePayee: process.env.KERYX_PRIVATE_RESEARCH_PAYEE, publicResearchPayee: config.sellerAddress });
+  const monthlyQuote = await (async () => { try {
+    if (!available || process.env.KERYX_MONTHLY_ENABLED !== "1") return null;
+    await (await getDb()).getResearchMonthly(`monthly_${"0".repeat(64)}`);
+    return quoteResearchMonthly();
+  } catch { return null; } })();
   return (
     <div className="min-h-screen bg-paper-2 text-ink">
       <SiteHeader />
@@ -79,6 +87,7 @@ export default async function ResearchPage({ searchParams }: {
         <ResearchSavedJobs />
         </ResearchWorkspace>
         <ResearchAccountJobs />
+        {monthlyQuote && <ResearchMonthly quote={monthlyQuote} />}
         {config.networkId === "eip155:5042002" && process.env.KERYX_PRIVATE_RESEARCH_ENABLED === "1" && privatePolicy.success
           && <ResearchPrivateCheckout merchants={privatePolicy.data} />}
         <ResearchPrivateJobs />

@@ -137,6 +137,10 @@ export const ENROLLED_SQLITE_METHOD_ACCESS = Object.freeze({
   iterateRecentQueries: "read",
   recordPayment: "write",
   recordPaymentOnce: "write",
+  claimResearchPurchase: "unsupported",
+  createResearchMonthly: "unsupported",
+  getResearchMonthly: "unsupported",
+  redeemResearchMonthly: "unsupported",
   createA2aOrder: "write",
   getA2aOrder: "read",
   listA2aOrdersByPayer: "read",
@@ -219,7 +223,7 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
     assert();
     const core = SqliteAdapter.assembleConnectionCore(db, deployment.identity, assert);
     const publicNames = Object.getOwnPropertyNames(SqliteAdapter.prototype).filter(name =>
-      !["constructor", "encryptLegacyCacheRows", "insertPayment", "init", "close"].includes(name));
+      !["constructor", "encryptLegacyCacheRows", "insertPayment", "assertOrdinaryResearchAuthority", "init", "close"].includes(name));
     const reviewed = Object.keys(ENROLLED_SQLITE_METHOD_ACCESS);
     if (canonicalJson(publicNames.sort()) !== canonicalJson(reviewed.sort()))
       throw new Error("Enrolled SQLite method inventory requires review");
@@ -229,6 +233,7 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
     for (const name of reviewed) {
       const access = ENROLLED_SQLITE_METHOD_ACCESS[name as keyof typeof ENROLLED_SQLITE_METHOD_ACCESS];
       Object.defineProperty(facade, name, { enumerable: true, value: (...args: unknown[]) => {
+        if (access === "unsupported") throw new Error("Research purchase authority is unavailable in enrolled storage");
         if (readOnly && access === "write") throw new Error("Readonly enrolled SQLite mutation refused");
         assert();
         const result = Reflect.apply(Reflect.get(core, name), core, args);

@@ -1,6 +1,9 @@
 import { spawnSync } from "node:child_process";
 
-const DEADLINE_MS = 120000;
+// Measured CI Windows unpack took88.2s (whole install92.5s), then another
+// clean runner exceeded120s in the same phase. Bound cold Windows extraction to
+// five minutes; Linux retains two minutes. One attempt, no install/test bypass.
+const DEADLINE_MS = process.platform === "win32" ? 300000 : 120000;
 // npm 11.19's Timers emits `npm timing <name> Completed in <ms>ms`.
 // Only these literal phase names and bounded numbers may leave the child logs.
 const PHASES = new Set(["npm", "npm:load", "npm:load:whichnode", "npm:load:configload", "npm:load:mkdirpcache",

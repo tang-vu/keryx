@@ -101,6 +101,10 @@ it("uses the exact installed application schema without startup migration and re
   expect(Reflect.get(adapter, "db")).toBeUndefined();
   expect(Reflect.get(adapter, "fromVerifiedConnection")).toBeUndefined();
   expect(Reflect.get(adapter, "assembleConnectionCore")).toBeUndefined();
+  for (const method of ["claimResearchPurchase", "createResearchMonthly", "getResearchMonthly", "redeemResearchMonthly"] as const) {
+    expect(f.api.ENROLLED_SQLITE_METHOD_ACCESS[method]).toBe("unsupported");
+    expect(() => Reflect.apply(adapter[method], adapter, [])).toThrow("unavailable in enrolled storage");
+  }
   f.phase("guard:start");
   await adapter.init();
   expect(await adapter.listSources()).toEqual([]);
@@ -127,6 +131,7 @@ it("refuses every explicitly reviewed readonly mutator before invocation, includ
   expect(() => Reflect.apply(f.api.assertEnrolledSqliteAdapter, null, [adapter, "read", "extra"])).toThrow();
   for (const [name, access] of Object.entries(f.api.ENROLLED_SQLITE_METHOD_ACCESS)) {
     if (access === "write") expect(() => Reflect.apply(Reflect.get(adapter, name), adapter, [])).toThrow("mutation refused");
+    if (access === "unsupported") expect(() => Reflect.apply(Reflect.get(adapter, name), adapter, [])).toThrow("unavailable in enrolled storage");
   }
   expect(await adapter.listSources()).toEqual([]);
   expect(readFileSync(f.file)).toEqual(before);

@@ -1,5 +1,26 @@
 # Keryx — Decision Log
 
+**D-296** - Pilot one bounded Research Monthly plan - *On 2026-10-02 the user
+confirmed four requests/month at 10% below buying four separately.* Use four Deep
+v1 requests over 30 days from confirmed Arc-testnet purchase, with manual renewal
+and a creator cap pinned at purchase. Absorb the total-price discount in Keryx's
+service allocation and round upward to equal integer micro-USDC allocations;
+refuse configurations that consume creator reserves. This does not establish
+profitability. Confirmed settlement activates the entitlement; atomic slot/order
+admission and exact request replay prevent duplicate downstream spend. Failed or
+pending jobs retain their slots, so promise requests rather than successful reports.
+Bind every public seller debit before settlement by network, asset, payer and nonce,
+with exact purpose, payee, amount and request/resource data. Monthly additionally
+requires a server-random nonce issued durably for that exact purchase before signing,
+excluding historical external seller debits that were never recorded locally.
+Its short challenge admission expiry does not shorten Circle's multi-day signature
+validity; the durable submitted boundary retains uncertainty beyond challenge expiry.
+Ambiguous claims stay
+retained; one debit cannot buy two products. No mainnet, recurring debit, scheduler,
+unlimited plan or private-research entitlement. Web/API are authority; local and
+MCP surfaces use explicit shared API or handoff boundaries. Disabling admission
+preserves recovery; old claim-bypassing seller rollback is forbidden. See
+[Research Monthly](docs/research-monthly.md).
 **Original public research admission** - *2026-10-02*
 
 Treat free original-document selection as bounded preview ranking, distinct from
@@ -4429,3 +4450,13 @@ paused UI state from silently retaining usable payment authority during worker a
 Actual React/production-worker/native-handler acceptance proves zero cached dispatch
 while paused and no returned header or settlement after a lookup fails during an
 original live challenge await.
+## Guarded Arc unsigned fill compatibility - 2026-10-02
+
+Bind only an absent unsigned `eth_fillTransaction` sender to the originally captured
+local account. Arc's unsigned transaction serialization omits `from`, so requiring
+that field stranded reviewed funding operations before signing. Explicit null,
+malformed or mismatched senders still refuse; exact chain/tuple validation and
+independent recovery of the actual signed sender remain mandatory before broadcast.
+Do not infer that a missing journal hash authorizes another attempt: retain original
+funding evidence and require owner recovery of any uncertain admission. See
+[treasury transaction isolation](docs/treasury-transaction-isolation.md).

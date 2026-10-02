@@ -133,6 +133,8 @@ function useTestnetSessionGrant() {
           signerRef.current?.sessionAddress !== account.address)
         throw new Error("Session signing paused or registration changed");
     };
+    // A caller may retain this client across awaited payee/price checks. Fence
+    // the actual dispatch as well as client lookup before a bearer signature.
     return createWalletClient({ account: { ...account,
       signTypedData: async args => { assertCurrent(); return account.signTypedData(args); },
       signTransaction: async (args, options) => { assertCurrent(); return account.signTransaction(args, options); },

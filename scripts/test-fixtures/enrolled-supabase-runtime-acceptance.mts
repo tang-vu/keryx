@@ -27,7 +27,7 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
   const masterKey = randomBytes(32).toString("hex");
   const docker = (args: string[], input?: string, timeout = 30_000) => execFileSync("docker", args,
     { input, encoding: "utf8", timeout, maxBuffer: 12 * 1024 * 1024, stdio: ["pipe", "pipe", "pipe"] });
-  const sql = (statement: string) => docker(["exec", "-i", postgresContainer, "psql", "-U", "postgres",
+  const sql = (statement: string) => docker(["exec", "-i", postgresContainer, "psql", "-h", "127.0.0.1", "-U", "postgres",
     "--dbname", database, "-v", "ON_ERROR_STOP=1", "-q", "-t", "-A"],
   `set statement_timeout='10s';set lock_timeout='5s';${statement}`).trim();
   const literal = (value: unknown) => `'${JSON.stringify(value).replaceAll("'", "''")}'::jsonb`;
@@ -105,7 +105,82 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
     const before = snapshot();
     assert.throws(() => service(`select keryx_storage.enroll(${literal(identity)},'${before}')`));
     assert.equal(snapshot(), before);
-    sql(`select keryx_storage.enroll(${literal(identity)},'${before}')`);
+    // Actual enrollment and migration guard in different PostgreSQL sessions.
+    // Refresh waits for publication, then refuses without changing its snapshot.
+    const concurrentOwnerSql = (statement: string, hold = false) => {
+      const child = execFile("docker", ["exec", "-i", postgresContainer, "psql", "-h", "127.0.0.1", "-U", "postgres",
+        "--dbname", database, "-v", "ON_ERROR_STOP=1", "-q", "-t", "-A"],
+      { encoding: "utf8", timeout: 20_000, maxBuffer: 12 * 1024 * 1024 });
+      let inputError: string | null = null;
+      // ON_ERROR_STOP can close psql before the rejected migration's remaining
+      // frozen catalog bytes are consumed. Preserve that process's SQL refusal;
+      // no successful owner operation may ignore a failed input stream.
+      child.stdin?.on("error", (error: NodeJS.ErrnoException) => { inputError = error.code ?? "unknown"; });
+      let completed: { ok: boolean; exitCode: number | null; output: string; diagnostic: string; inputError: string | null } | undefined;
+      const result = new Promise<{ ok: boolean; exitCode: number | null; output: string; diagnostic: string; inputError: string | null }>(resolve => {
+        let output = "", diagnostic = "";
+        child.stdout?.on("data", value => { output += value; });
+        child.stderr?.on("data", value => { diagnostic += value; });
+        child.on("error", () => { completed = { ok: false, exitCode: null, output, diagnostic: "owner-process-error", inputError }; resolve(completed); });
+        child.on("close", code => { completed = { ok: code === 0 && !inputError, exitCode: code, output: output.trim(), diagnostic, inputError }; resolve(completed); });
+      });
+      child.stdin?.write(`set statement_timeout='15s';${statement}\n`);
+      if (!hold) child.stdin?.end();
+      return { child, result, completed: () => completed };
+    };
+    const enrollmentStarted = performance.now();
+    const enrollment = concurrentOwnerSql(`begin;set local application_name='keryx-revoke-enrollment';
+      select keryx_storage.enroll(${literal(identity)},'${before}');`, true);
+    let refresh: ReturnType<typeof concurrentOwnerSql> | undefined;
+    try {
+      // Actual CPU-active enrollment has exceeded 10s on the one-CPU fixture.
+      // Let its unchanged 15s SQL bound report success or a real statement error;
+      // the 20s child cap still bounds the complete transaction and receipt.
+      const enrollmentDeadline = enrollmentStarted + 16_000;
+      while (sql("select exists(select 1 from pg_stat_activity where datname=current_database() and application_name='keryx-revoke-enrollment' and state='idle in transaction')") !== "t") {
+        const exited = enrollment.completed();
+        if (exited) {
+          // This owned empty fixture contains no custody. Print only one bounded
+          // ERROR line, never PostgreSQL's repeated statement/body diagnostics.
+          const diagnostic = exited.diagnostic.split("\n").find(line => /^ERROR:/.test(line))?.slice(0, 240) ?? "owner process exited";
+          throw new Error(`Actual enrollment exited before publication: ${diagnostic}`);
+        }
+        if (performance.now() >= enrollmentDeadline) {
+          // Classify this owned statement without logging its identity argument.
+          const state = sql("select coalesce(jsonb_agg(jsonb_build_object('state',state,'waitType',wait_event_type,'wait',wait_event,'stage',case when ltrim(query) like 'select keryx_storage.enroll(%' then 'enroll' when ltrim(query) like 'select keryx_storage.snapshot_digest(%' then 'snapshot' else 'other' end,'elapsedMs',floor(extract(epoch from clock_timestamp()-query_start)*1000)))::text,'[]') from pg_stat_activity where datname=current_database() and application_name='keryx-revoke-enrollment'");
+          throw new Error(`Actual enrollment precommit boundary unavailable: ${state}`);
+        }
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      process.stdout.write(`PASS actual enrollment held before commit elapsedMs=${Math.floor(performance.now() - enrollmentStarted)}\n`);
+      const migrationStart = migrationSql.indexOf("-- Generation-aware session revocation.");
+      assert(migrationStart > 0, "Actual generation migration must be supplied");
+      refresh = concurrentOwnerSql("set application_name='keryx-revoke-refresher';" + migrationSql.slice(migrationStart));
+      const contentionDeadline = performance.now() + 5_000;
+      while (sql("select exists(select 1 from pg_stat_activity a join pg_locks l on l.pid=a.pid where a.datname=current_database() and a.application_name='keryx-revoke-refresher' and l.locktype='advisory' and not l.granted)") !== "t") {
+        assert(performance.now() < contentionDeadline, "Source refresher waits on enrollment's canonical first mutex");
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      // Explicit release only after the contender is proven blocked. No timing
+      // window depends on a sleep long enough for a loaded CI runner.
+      // Take the complete post-enrollment snapshot while still holding the owner
+      // transaction, after contention is proven. The enrollment barrier does not
+      // combine two independently bounded, CPU-heavy statements into one budget.
+      enrollment.child.stdin?.end("select keryx_storage.snapshot_digest();commit;\n");
+      const enrolledResult = await enrollment.result;
+      assert(enrolledResult.ok, "Actual concurrent owner enrollment succeeded");
+      assert.match(enrolledResult.output, /^[0-9a-f]{64}$/);
+      const refused = await refresh.result;
+      assert(!refused.ok);
+      assert(refused.exitCode !== null && refused.exitCode !== 0, "Actual PostgreSQL refusal must exit nonzero");
+      assert(refused.inputError === null || refused.inputError === "EPIPE", "Only expected SQL-refusal input closure is acceptable");
+      assert.match(refused.diagnostic, /^ERROR:\s+enrolled storage requires reviewed generation migration\s*$/m);
+      assert.equal(snapshot(), enrolledResult.output, "Refused catalog refresh retains the complete committed enrolled snapshot");
+      process.stdout.write("PASS actual enrollment/source-refresh exclusion, postcommit refusal and whole snapshot retention\n");
+    } finally {
+      enrollment.child.kill();
+      refresh?.child.kill();
+    }
     assert.deepEqual(JSON.parse(service("select read_storage_identity()")), identity);
     assert.equal(sql("select keryx_storage.require_source_contract('after')"), SUPABASE_RUNTIME_CONTRACT.afterDigest);
     const enrolledDiagnostics = snapshotWithDiagnostics();
@@ -122,6 +197,7 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
     assert.equal(snapshot(), enrolled, "ACL refusals leave the whole native snapshot unchanged");
     const foreign = { ...identity, storageId: randomUUID() };
     assert.throws(() => service(`select storage_get_source(${literal(foreign)},'absent')`));
+    assert.throws(() => service(`select storage_revoke_session_grant(${literal(foreign)},'absent','absent','absent')`));
     assert.throws(() => service(`select storage_read_browser_source_catalog(${literal(foreign)},'absent','absent')`));
     assert.deepEqual(JSON.parse(service(`select storage_read_browser_source_catalog(${literal(identity)},'absent','absent')`)),
       { source: null, item: null, offer: null });
@@ -301,7 +377,8 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
             locker.once("close", code => resolveDone({ code, category: code === 0 ? "success" : "lock-fixture-failed" }));
           });
           children.set(locker, lockerDone);
-          let lockerOutput = "";
+          let lockerOutput = "", lockerError = "";
+          locker.stderr!.on("data", part => { lockerError += part; if (lockerError.length > 4096) locker.kill(); });
           locker.stdout!.on("data", part => { lockerOutput += part; if (lockerOutput.length > 4096) locker.kill(); });
           locker.stdin!.write("set statement_timeout='10s';begin;select 1 from public.session_grants for update;\\echo READY_GRANT_LOCK\n");
           const lockReadyDeadline = performance.now() + 5000;
@@ -317,24 +394,50 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
           // Do not compete with the guarded catalog observation by launching
           // synchronous PostgreSQL probes before the actual admission RPC.
           await waitForOwnedSourceAdmissionEntry(bridge!.counts, admissionsBefore, waiterDeadline, () => childTerminal);
+          const enteredAdmissionAt = performance.now();
           const enteredAdmissionDeadline = bridge!.getSourceAdmissionDeadlineMs();
           assert.ok(enteredAdmissionDeadline !== null && enteredAdmissionDeadline !== priorAdmissionDeadline &&
             Date.now() < enteredAdmissionDeadline, "Fresh source RPC retains its original current deadline");
-          let waited = false;
-          while (performance.now() < waiterDeadline) {
-            waited = sql("select exists(select 1 from pg_stat_activity a where a.datname=current_database() and a.pid<>pg_backend_pid() and a.wait_event_type='Lock' and a.query like '%storage_browser_signing_admit_source_original%' and exists(select 1 from pg_locks l where l.pid=a.pid and not l.granted))::text") === "true";
-            if (waited) break;
+          // Observe from the already-open locker backend. Starting repeated
+          // synchronous docker/psql processes here can return after the token
+          // deadline even when PostgreSQL observed the actual waiter earlier.
+          locker.stdin!.write(`do $fixture_waiter$ begin
+            loop
+              perform pg_stat_clear_snapshot();
+              if exists(select 1 from pg_stat_activity a where a.datname=current_database()
+                and a.pid<>pg_backend_pid() and a.wait_event_type='Lock'
+                and a.query like '%storage_browser_signing_admit_source_original%'
+                and exists(select 1 from pg_locks l where l.pid=a.pid and not l.granted)) then
+                raise notice 'GRANT_WAITER %',jsonb_build_object('waited',true,
+                  'observedAt',floor(extract(epoch from clock_timestamp())*1000)::bigint);
+                exit;
+              end if;
+              if extract(epoch from clock_timestamp())*1000>=${enteredAdmissionDeadline} then
+                raise notice 'GRANT_WAITER %',jsonb_build_object('waited',false,
+                  'observedAt',floor(extract(epoch from clock_timestamp())*1000)::bigint);
+                exit;
+              end if;
+              perform pg_sleep(0.02);
+            end loop;
+          end $fixture_waiter$;\n`);
+          while (!lockerError.includes("GRANT_WAITER ") && !childTerminal && performance.now() < waiterDeadline) {
             await new Promise<void>(resolveDelay => setTimeout(resolveDelay, 20));
           }
-          assert(waited, "Actual protected source admission must wait on held grant lock");
-          const waiterAt = performance.now();
+          const nativeObservation = /GRANT_WAITER (\{[^\r\n]+\})/.exec(lockerError);
+          assert(nativeObservation, "Actual protected source admission must be observed on the owned locker connection");
+          const observation = JSON.parse(nativeObservation[1]) as { waited: unknown; observedAt: unknown };
+          assert.equal(observation.waited, true, "Actual protected source admission must wait on held grant lock");
+          assert.ok(typeof observation.observedAt === "number" && Number.isSafeInteger(observation.observedAt) &&
+            observation.observedAt < enteredAdmissionDeadline!, "Native grant waiter was observed before its original deadline");
           const admissionDeadline = bridge!.getSourceAdmissionDeadlineMs();
+          assert.equal(admissionDeadline, enteredAdmissionDeadline, "Original source-token deadline remains immutable");
           assert.ok(admissionDeadline !== null && Number.isSafeInteger(admissionDeadline));
           const remaining = admissionDeadline + 25 - Date.now();
-          assert.ok(remaining > 0 && remaining < 5000, "Actual token deadline remains within bounded grant wait");
-          await new Promise<void>(resolveDelay => setTimeout(resolveDelay, remaining));
+          assert.ok(remaining < 5000, "Actual token deadline remains within bounded grant wait");
+          if (remaining > 0) await new Promise<void>(resolveDelay => setTimeout(resolveDelay, remaining));
           assert.ok(Date.now() > admissionDeadline, "Release occurs after original source-token deadline");
-          assert.ok(performance.now() - waiterAt < 5000, "Grant waiter stays within unchanged lock budget");
+          assert.ok(performance.now() - enteredAdmissionAt < 5000, "Grant waiter stays within unchanged lock budget");
+          console.log(`PASS native grant waiter observed before original deadline observationLeadMs=${admissionDeadline - Number(observation.observedAt)} releaseLagMs=${Date.now() - admissionDeadline}`);
           locker.stdin!.end("rollback;\n");
           assert.equal((await lockerDone).code, 0);
           children.delete(locker);

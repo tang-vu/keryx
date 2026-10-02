@@ -28,6 +28,11 @@ describe("enrolled Supabase reviewed surface", () => {
     }
   });
 
+  it("explicitly refuses Monthly and shared purchase admission until a separate enrolled domain cutover", () => {
+    for (const method of ["claimResearchPurchase", "createResearchMonthly", "getResearchMonthly", "redeemResearchMonthly"] as const)
+      expect(SUPABASE_ENROLLED_METHODS[method]).toBe("unsupported");
+  });
+
   it("registers every installation-generated domain wrapper with its exact read/write mode", () => {
     const wrappers = readFileSync(new URL("../../supabase/migrations/0075_enrolled_storage_domain_wrappers.sql", import.meta.url), "utf8");
     const cutover = readFileSync(new URL("../../supabase/migrations/0076_enrolled_storage_owner_cutover.sql", import.meta.url), "utf8");
