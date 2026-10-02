@@ -22,7 +22,7 @@ const concurrent = (input: string) => new Promise<string>((resolve, reject) => {
 const literal = (value: string) => `'${value.replaceAll("'", "''")}'`;
 const json = (value: unknown) => `${literal(JSON.stringify(value))}::jsonb`;
 const result = (output: string) => JSON.parse(output.trim().split("\n").find(line => line.startsWith("{"))!) as { created: boolean; purchase?: MonthlyPurchase; order?: Record<string, unknown> };
-const migration = readFileSync("supabase/migrations/0077_research_monthly.sql", "utf8");
+const migration = readFileSync("supabase/migrations/0078_research_monthly.sql", "utf8");
 const prerequisite = readFileSync("supabase/migrations/0038_a2a_orders.sql", "utf8")
   + readFileSync("supabase/migrations/0039_async_a2a_jobs.sql", "utf8")
   + `alter table public.a2a_orders add column package_data jsonb, add column resolution_data jsonb,

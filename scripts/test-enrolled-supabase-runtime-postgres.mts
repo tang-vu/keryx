@@ -21,11 +21,11 @@ const sql = (statement: string) => docker(["exec", "-i", name, "psql", "-h", "12
   "--dbname", "postgres", "-v", "ON_ERROR_STOP=1", "-q", "-t", "-A"], statement);
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 const migrations = readdirSync("supabase/migrations").filter((path) => /^\d{4}_[a-z0-9_]+\.sql$/.test(path)
-  && Number(path.slice(0, 4)) <= 76).sort().map((path) => ({ name: path,
+  && Number(path.slice(0, 4)) <= 77).sort().map((path) => ({ name: path,
   // Production source bytes are the canonical LF Git blob, not checkout CRLF.
   sql: readFileSync(`supabase/migrations/${path}`, "utf8").replaceAll("\r\n", "\n"),
 }));
-assert.equal(migrations.at(-1)?.name, "0076_enrolled_storage_owner_cutover.sql");
+assert.equal(migrations.at(-1)?.name, "0077_session_revoke_generation.sql");
 const sourceManifest = compileFunctionDeclarationManifest(migrations);
 let completed = false;
 let failure: unknown;

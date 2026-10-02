@@ -69,14 +69,14 @@ SQLite/Supabase authority. Both enrolled backend inventories explicitly refuse
 these methods, including read-only factories and internally assembled cores.
 The ordinary SQLite installer composes Monthly separately from the reviewed
 enrolled schema/profile; runtime never upgrades an enrolled store. Migration
-0077 refuses an already enrolled PostgreSQL owner, and its RPCs recheck that
+0078 refuses an already enrolled PostgreSQL owner, and its RPCs recheck that
 boundary. An enrolled/native Monthly domain needs reviewed identity-scoped
 contracts, fences, schema fingerprints and independent acceptance before cutover.
 
 Production currently selects SQLite. Initialization installs the additive tables,
 immutable debit claims and historical nonce backfill. Verify the actual schema,
 claims and atomic admission on that database before activation. For Supabase,
-install migration 0077 and verify service-role-only tables/functions and the
+install migration 0078 and verify service-role-only tables/functions and the
 real multi-session PostgreSQL CI evaluator; local PGlite execution verifies SQL
 and parity but does not prove concurrent PostgreSQL sessions. Stop/drain old
 web and worker generations that lack shared admission before setting

@@ -368,6 +368,8 @@ export interface KeryxDB {
   /** Release only into the grant generation that held the unused reservation. */
   releaseSessionGrantSpend(sessionId: string, grantEpoch: string, sessAddr: string, amount: number): Promise<void>;
   deleteSessionGrant(sessionId: string): Promise<void>;
+  /** Disable only the captured generation; never erase retained payment/capacity history. */
+  revokeSessionGrant(sessionId: string, grantEpoch: string, sessAddr: string): Promise<boolean>;
   /** Legacy pruning only; journal mode preserves lapsed financial state. */
   deleteExpiredSessionGrants(now: number): Promise<void>;
 
