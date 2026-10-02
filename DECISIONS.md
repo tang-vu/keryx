@@ -34,6 +34,13 @@ After original receipt integrity checks, derived local exports may recognize onl
 title/URL/body-hash fingerprints from the checked corpus manifest. Missing strong
 fingerprints require a fresh projected receipt; original bytes and digests stay unchanged.
 
+Stored historical quality counters can still include subsequently demoted demo evidence.
+Publish aggregate factual grounding as unavailable (`groundedClaimRate: null`) with an
+explicit recorded-unreassessed basis until a reviewed provenance-aware analytics
+reassessment exists. Retain raw sample telemetry and authentic settlement totals;
+neither scanning paid bodies nor rewriting archived rows is part of a metrics read.
+Per-run projected receipt quality remains separate from this aggregate limitation.
+
 Ordinary SQLite schema startup and Supabase migration 0079 carry the candidate backfill.
 The public selected-mainnet path requires sealed enrolled SQLite admission; existing stores
 need explicit paused migration and fresh matching enrollment. Existing enrolled Supabase
