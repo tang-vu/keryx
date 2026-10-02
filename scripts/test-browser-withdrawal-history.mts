@@ -130,7 +130,7 @@ root.render(createElement(StrictMode,null,createElement(WithdrawalAccount,{limit
     define: { "process.env": "{}" }, plugins: [{ name: "account-hook-fixtures", setup(build) {
       build.onResolve({ filter: /^(wagmi|next\/link|@\/lib\/hooks\/use-siwe-auth)$/ }, args => ({ path: args.path, namespace: "fixture" }));
       build.onLoad({ filter: /.*/, namespace: "fixture" }, args => ({ loader: "js", contents: args.path === "wagmi"
-        ? "export const useAccount=()=>({address:window.testAddress});export const useWalletClient=()=>({data:undefined});"
+        ? "export const useAccount=()=>({address:window.testAddress});export const useWalletClient=()=>({data:undefined});export const usePublicClient=()=>{throw Error('RPC client forbidden in read-only account history')};"
         : args.path === "next/link" ? "import {createElement} from 'react';export default props=>createElement('a',props);"
           : "export const useSiweAuth=()=>({session:window.testSession});", resolveDir: process.cwd() }));
     } }] });
