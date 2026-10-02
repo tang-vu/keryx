@@ -284,3 +284,29 @@ receipt, attest chain 5042 and exact deployed runtime, then pin the fresh regist
 in the coordinated release. Normal creator `/register` and bulk feed registration
 use each creator's connected wallet afterward. Source/feed rights and mainnet
 receipts remain required; old testnet catalog or payout caches are never relabelled.
+
+
+## Residual ordinary caller Gateway balance
+
+The ordinary CLI/stdio/API buyer deposits to its own EOA Gateway balance, not the
+web session's delegated signer. Retain that existing account and original-network
+payment/funding journals. Stop new purchases and inspect every submitted/unknown
+original before cashout; an uncertain seller response is not a spend release.
+
+For a buyer EOA controlled by the existing browser/hardware wallet, connect that
+**same account**, sign in on the selected deployment, and use `/me/withdrawals`.
+The ordinary owner route is not restricted to registered creators: mainnet
+`/api/me/withdrawals/prepare`, `/submit`, `/status` and `/complete` authenticate the
+EOA, use fresh sealed storage and preserve the original owner/nonce/network terms.
+The owner signs the original burn and, when exact attestation/finality permit, the
+wallet's mint transaction to itself; native gas is paid from the same USDC asset.
+Pending/unknown originals remain retained, and status never retries a burn. The
+mainnet owner flow uses no legacy testnet relay or new personal wallet.
+
+The stdio package does not currently provide a separate cashout tool for a key-only
+standalone wallet. Its supported cashout handoff is the same authenticated EOA
+wallet/API contract, using an existing wallet connector capable of signing for that
+account; another connected account cannot recover it. Never paste a key into chat
+or export custody to Keryx/Remix for this handoff. Preserve protected local custody
+and journals if the original account is unavailable. A delegated headless session
+uses the separate original session-cashout protocol, not this EOA route.

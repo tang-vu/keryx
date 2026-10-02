@@ -126,3 +126,17 @@ bundled consumer. Run the packed acceptance with
 `node mcp/scripts/test-packed.mjs /absolute/path/keryx-mcp-0.4.0.tgz /absolute/path/to/pinned/npm-cli.js`.
 
 Mainnet purchase and original recovery require HTTPS without URL credentials or fragments. This is transport protection, not a seller host allowlist. Plain HTTP remains available for deliberate testnet local development.
+
+
+### Recover residual Gateway funds
+
+Ordinary buyer deposits belong to the configured caller EOA. Stop new purchases,
+retain its original payment/funding journals and inspect any unknown attempt. If
+your existing browser/hardware wallet controls that same EOA, sign in with it and
+open `https://keryx.cc/me/withdrawals` on the selected deployment. The reviewed owner
+withdrawal flow also accepts ordinary buyer EOAs; creator registration is not a
+prerequisite. Original owner burn/mint and native gas remain explicit wallet actions.
+A different wallet cannot recover the balance, and the package does not expose a
+separate key-only cashout command. Keep custody protected locally; do not paste or
+export private keys into chat or a web form. Preserve unknown originals rather than
+repeating a burn or payment.
