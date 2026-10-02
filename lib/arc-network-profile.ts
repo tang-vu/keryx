@@ -1,5 +1,5 @@
-/** Public network pins, safe to import in browser workers. No environment, SDK or server authority.
- * Mainnet is reference data for candidate preparation, not an enabled payment runtime.
+/** Immutable public network pins, safe in workers. Trusted deployment configuration selects
+ * one canonical profile; neither requests nor payment requirements can select a network.
  */
 export const ARC_TESTNET_PROFILE = Object.freeze({
   name: "arcTestnet",
@@ -45,12 +45,29 @@ export const ARC_MAINNET_PROFILE = Object.freeze({
 
 export type ArcNetworkProfile = typeof ARC_TESTNET_PROFILE | typeof ARC_MAINNET_PROFILE;
 
-/** Release gate, not a feature flag. Reference availability never enables a signer or seller.
- * Keep the return type narrowed until every dependent runtime domain passes its cutover.
+export function paymentRuntimeProfile(network?: string): ArcNetworkProfile {
+  if (network === undefined || network === ARC_TESTNET_PROFILE.name) return ARC_TESTNET_PROFILE;
+  if (network === ARC_MAINNET_PROFILE.name) return ARC_MAINNET_PROFILE;
+  throw new Error("KERYX_NETWORK must be arc or arcTestnet");
+}
+
+/** Trusted server/public build twins only. Existing unspecified deployments remain testnet.
+ * This selects source capability, never authorizes deployment, enrollment or real spending.
  */
-export function paymentRuntimeProfile(network?: string): typeof ARC_TESTNET_PROFILE {
-  if (network !== undefined && network !== ARC_TESTNET_PROFILE.name) {
-    throw new Error("KERYX_NETWORK must be arcTestnet; mainnet payment runtime cutover is incomplete");
-  }
-  return ARC_TESTNET_PROFILE;
+export function configuredPaymentProfile(serverNetwork?: string, publicBuildNetwork?: string): ArcNetworkProfile {
+  const server = paymentRuntimeProfile(serverNetwork), browser = paymentRuntimeProfile(publicBuildNetwork);
+  if (server !== browser) throw new Error("KERYX_NETWORK and NEXT_PUBLIC_KERYX_NETWORK must match");
+  return server;
+}
+
+/** Mainnet payout authority must be pinned identically in server and public build. Testnet
+ * retains its historical private-only configuration/default to preserve deployed behavior.
+ */
+export function configuredRegistryAddress(profile: ArcNetworkProfile, serverAddress?: string, publicAddress?: string): `0x${string}` {
+  if (profile !== ARC_MAINNET_PROFILE && profile !== ARC_TESTNET_PROFILE) throw new Error("untrusted Arc registry profile");
+  if (profile === ARC_MAINNET_PROFILE && (!serverAddress || !publicAddress ||
+    !/^0x[0-9a-f]{40}$/i.test(serverAddress) || /^0x0{40}$/i.test(serverAddress) ||
+    serverAddress.toLowerCase() !== publicAddress.toLowerCase()))
+    throw new Error("mainnet server and public registry pins must match a nonzero address");
+  return (publicAddress ?? serverAddress ?? `0x${"0".repeat(40)}`) as `0x${string}`;
 }

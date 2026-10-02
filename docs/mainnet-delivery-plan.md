@@ -19,14 +19,34 @@ Mainnet readiness and permission to launch are separate. The existing testnet
 restrictions remain until the final owner go/no-go decision. No mainnet keys,
 addresses or service availability will be inferred from testnet configuration.
 
-October 2 direction: prepare a bounded invited pilot for October 3 by reducing
-audience and feature scope. The executable [pilot candidate preflight](mainnet-pilot-candidate.md)
-binds an exact release commit, isolated declared state/environment/origins and
-public-role inventory to conservative proposed integer caps. It grants no mainnet
-launch or funded-spend permission. Financial isolation, review, actual payment/
-recovery and operations remain pilot activation gates. Full-product adoption and
-profitability evidence remain separate; they are not prerequisites for this narrow
-pilot and are not established by it.
+October 2 corrected direction: migrate the complete public Keryx product to mainnet
+on `keryx.cc`, including normal wallet login, buyer funding/grants, creator registration
+and payout, public research and applicable API/CLI/MCP/desktop/extension/bot surfaces.
+An invited audience and permanently tiny pilot caps are not the intended product.
+The earlier [pilot proposal](mainnet-pilot-candidate.md), dormant isolated server and
+invited worker PRs are retained as superseded preparation evidence; reusable profile,
+custody, nonce/cap, registry attestation and recovery pieces may inform the general
+cutover. They do not establish full-product readiness or authorize mainnet activation.
+
+The shared source contract accepts canonical `arc` and `arcTestnet` profiles. Existing
+deployments with both network labels unset retain testnet. A mainnet release must set
+matching `KERYX_NETWORK=arc` and public build `NEXT_PUBLIC_KERYX_NETWORK=arc`; standalone
+commands also declare both labels, where the public value is only the deployment
+profile label. Mainnet server/public registry addresses must match a reviewed nonzero
+address, including any explicitly configured read-address pair. Private RPC overrides
+remain trusted operator configuration and need selected-chain attestation. Mainnet has
+no assumed WebSocket endpoint and uses HTTP indexer polling unless one is explicitly
+reviewed. Request bodies, payment requirements and server-returned network fields
+cannot select browser signing authority: browser workers capture the public profile
+from their build independently.
+
+Selecting a source profile is not activation. All financial domains must pass coordinated
+storage/custody identity, normal user consent and funding, registry/content authority,
+single-use nonce and integer cap reservations, settlement/recovery, withdrawal and
+operational acceptance before the final owner launch/funds decision. Testnet state and
+funded session identities remain retained; never silently import them as mainnet state.
+Full-product adoption/profitability evidence remains separate from financial migration
+and cannot be inferred from synthetic mainnet checks.
 
 ## Current baseline and gaps
 
