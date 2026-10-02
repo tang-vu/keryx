@@ -196,7 +196,7 @@ exercise actual native SQLite, DACL checks, WebCrypto and EOA signatures with
 hermetic API/registry responses; they prove neither live settlement nor host
 power-loss, distributed clone exclusion or installer acceptance.
 
-The normal headless v2 state retains the detached authenticated original challenge and
+The retained headless state stores the detached authenticated original challenge and
 SHA256 of its canonical payment requirements in the same atomic reservation as the
 question budget, cumulative cap and nonce, before cryptography. Recovery requires the
 same original requirements, payer, payee, source and payment kind, plus both public grant
@@ -226,8 +226,9 @@ A prepared unsigned withdrawal remains cancellable only before native exposure,
 signed-request admission or claim. Native authorization marks exposure before
 cryptography. Any exposed, signed, submitted or unknown original remains retained
 and holds its financial barrier until exact observed completion; a timeout does
-not cancel it. Final headless cashout consumes the same independently checked
-normal withdrawal policy when that shared client domain is frozen.
+not cancel it. The coordinated headless cashout candidate consumes the same independently checked
+normal withdrawal policy; its native migration/journal acceptance is separate from
+actual real-funded withdrawal receipts.
 
 ## Package publication boundary
 
@@ -350,3 +351,47 @@ not funding authorization. Operator operating funds are a separate budget purpos
 from SourceRegistry deployment gas, using the same USDC asset. Missing operating
 inputs keep the affected sponsor/private roles unavailable before buyer payment;
 caller-owned ordinary payments do not gain treasury authority from a policy file.
+
+
+## Delegated headless session cashout commands
+
+Keep the **same** private state directory and wrapping environment. Candidate v3
+adds durable withdrawal exposure/barriers without replacing the first funded cipher,
+original nonces, per-question budgets or lifetime caps. Existing v2 state is refused
+by normal v3 commands until explicit `migrate`; it is never upgraded or adopted
+automatically. Migration must preserve custody/history and fence old payment writers.
+Older v1/unrecognised files remain refused in place for owner recovery.
+
+```text
+npm run web -- migrate
+npm run web -- withdraw-prepare GRANT_EPOCH AMOUNT_MICROS MAX_FEE_MICROS
+npm run web -- withdraw-sign REQUEST_ID AMOUNT_MICROS MAX_FEE_MICROS
+npm run web -- withdraw-submit REQUEST_ID
+npm run web -- withdraw-status REQUEST_ID
+npm run web -- withdraw-mint REQUEST_ID
+npm run web -- withdraw-complete REQUEST_ID OWNER_MINT_TX_HASH
+npm run web -- withdraw-recover REQUEST_ID
+npm run web -- withdraw-cancel REQUEST_ID
+```
+
+Amounts and maximum burn fee use exact integer micro-USDC. Preparation/signing
+checks the original owner/session dual proof, selected network, current balances,
+retained payment/withdrawal liabilities and reviewed block window. Local exposure
+and native server authorization precede cryptography. Withdrawal barriers block
+new payment authorization; an expired/revoked payment grant does not erase its
+original owner's cashout permission. Submission is claimed before HTTP delivery,
+so losing an acknowledgement never permits a second burn.
+
+`withdraw-mint` returns an **unsigned owner-wallet packet** with its original nonce,
+gas/fee ceilings and exact minter/calldata committed locally before display. Review
+and sign that packet only with the existing owner wallet. Repeated reads recover
+the same terms rather than authorizing another mint. Retain the resulting owner
+transaction hash with `withdraw-complete` before completion HTTP; uncertain
+completion is recovered by the same original ID/hash. These commands never sign or
+broadcast an owner transaction, export a personal key, or use the testnet relay.
+
+Only exact unexposed cancellation or independently observed original completion
+releases the withdrawal barrier. Exposed/signed/submitted/unknown state remains
+held; a timeout is not cancellation. Keep private backups through completion.
+Native local acceptance is not a real funded receipt, distributed cloned-state
+exclusion or proof of Windows host power-loss durability.
