@@ -1,4 +1,5 @@
-import { config } from "../config";
+import { paymentRuntimeConfig } from "../payment-runtime-config";
+const config = paymentRuntimeConfig();
 
 export interface PaymentRequirements {
   scheme: string;
