@@ -89,6 +89,7 @@ export const ENROLLED_SQLITE_METHOD_ACCESS = Object.freeze({
   releaseOnramp: "write",
   releaseSessionGrantSpend: "write",
   deleteSessionGrant: "write",
+  revokeSessionGrant: "write",
   deleteExpiredSessionGrants: "write",
   consumeRateLimit: "write",
   deleteExpiredRateLimits: "write",
