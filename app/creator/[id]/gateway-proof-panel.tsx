@@ -18,6 +18,7 @@
 
 import { ShieldCheck, TriangleAlert } from "lucide-react";
 import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
+import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
 export interface GatewayProof {
   checkedAt: string;
@@ -55,7 +56,7 @@ export function GatewayProofPanel({ proof }: { proof: GatewayProof | null }) {
           <TriangleAlert className="h-4 w-4 text-destructive" />
         )}
         <h2 className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
-          Balance confirmed by Circle
+          Server-reported Circle balance
         </h2>
         <span className="ml-auto font-mono text-[10px] text-faint">
           checked {ago(proof.checkedAt)}
@@ -109,7 +110,7 @@ export function GatewayProofPanel({ proof }: { proof: GatewayProof | null }) {
         request yourself:
       </p>
       <pre className="mt-2 overflow-x-auto border border-line bg-paper-2 p-3 font-mono text-[10px] leading-relaxed text-ink-2">
-{`curl -s https://gateway-api-testnet.circle.com/v1/balances \\
+{`curl -s ${browserPaymentProfile().gatewayApiUrl}/v1/balances \\
   -H 'content-type: application/json' \\
   -d '{"token":"USDC","sources":[{"depositor":"${proof.wallets[0].address}","domain":26}]}'`}
       </pre>

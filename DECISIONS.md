@@ -4491,6 +4491,23 @@ finalized-block evidence. Actual React/native-handler/Chromium checks use synthe
 external transport and do not authorize launch or live funds. See
 [browser custody](docs/mainnet-browser-custody.md).
 
+## Public network display and experimental rights boundary - 2026-10-02
+
+Public deployment labels, registry references and normal creator wallet actions use
+the independently compiled canonical profile. Financial receipt links use the
+original recorded network, never the current deployment. Retained unlabelled legacy
+receipts remain testnet; unknown explicit networks have no invented explorer link.
+Gateway contract references are references, not proof of individual Circle settlement
+IDs. Creator update/deactivate commands also pin the mainnet registry locally before
+opening a wallet prompt. Read-only withdrawal history matches the complete original
+creator status and retains its server-reported finality label.
+
+Keep the experimental scholarly rights protocol staged on testnet until a separate
+rights/payment domain migration is reviewed. Preserve its existing testnet messages
+and archived evidence; close paid manuscript opt-in and rights enrollment on mainnet
+with a product explanation before payment. This is an intentional experimental role
+boundary, not a restriction on ordinary public wallets or registered article publishing.
+
 ## Fresh mainnet research purchase and Monthly authority - 2026-10-02
 
 Keep Monthly's four manually requested Deep research allocations and thirty-day term. Fresh sealed mainnet SQLite installs a canonical original-network purchase claim and v2 entitlement schema, with no historical backfill or testnet catalog adoption. Every seller claims its immutable original authorization before Circle settlement. Monthly adds single-use issued challenge consumption, an exact network/USDC/Gateway entitlement and atomic four-slot redemption; replay cannot change the quote, package, recipient, transaction or original request. Historical ordinary testnet records remain on their original rail; existing enrolled testnet storage refuses this newer domain. Mainnet Supabase remains staged until independently generated native schema evidence exists.

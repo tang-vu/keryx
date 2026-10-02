@@ -60,7 +60,7 @@ export function ActivityTicker() {
     };
   }, []);
 
-  if (state !== "ready") return <div className="border-y border-line bg-paper/60 px-4 py-3 font-mono text-xs text-ink-3" role="status">{state === "loading" ? "Loading recent Arc testnet citations…" : state === "empty" ? "No recent settled citations yet." : "Recent citation activity unavailable."}</div>;
+  if (state !== "ready") return <div className="border-y border-line bg-paper/60 px-4 py-3 font-mono text-xs text-ink-3" role="status">{state === "loading" ? "Loading recent settled citations…" : state === "empty" ? "No recent settled citations yet." : "Recent citation activity unavailable."}</div>;
 
   // Duplicate the row so the marquee loops seamlessly (translateX -50% lands on the copy).
   const row = [...items, ...items];

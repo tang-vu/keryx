@@ -1,15 +1,18 @@
 /**
  * The colophon — panel-toned footer with the coin, the Keryx etymology, and the
  * house / docs link columns. Internal routes use next/link; external + the /api/docs
- * route handler open in a new tab. On-chain links point at verifiable Arc testnet artifacts.
+ * route handler open in a new tab. Contract references follow the configured deployment.
  */
 
 import Link from "next/link";
 import { KeryxGlyph } from "./keryx-mark";
+import { browserPaymentProfile,browserRegistryAddress } from "@/lib/browser-payment-profile";
+import { currentArcLabel } from "@/lib/arc-network-display";
 
-const EXPLORER = "https://testnet.arcscan.app";
-const REGISTRY = "0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536";
-const USDC = "0x3600000000000000000000000000000000000000";
+const profile=browserPaymentProfile(),EXPLORER=profile.explorerUrl;
+const configuredRegistry=browserRegistryAddress();
+const REGISTRY = /^0x0{40}$/.test(configuredRegistry)&&profile.testnet?"0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536":configuredRegistry;
+const USDC = profile.usdcAddress;
 
 type FooterLink = { label: string; href: string; external?: boolean };
 
@@ -28,13 +31,13 @@ const HOUSE: FooterLink[] = [
   { label: "API for agents ↗", href: "/api/docs", external: true },
 ];
 
-// Docs + verifiable on-chain proof. The registry contract is verified source on ArcScan.
+// Current configured contract references; historical receipt links keep their original rail.
 const DOCS: FooterLink[] = [
   { label: "GitHub ↗", href: "https://github.com/tang-vu/keryx", external: true },
   { label: "Registry contract ↗", href: `${EXPLORER}/address/${REGISTRY}#code`, external: true },
   { label: "USDC on Arc ↗", href: `${EXPLORER}/address/${USDC}`, external: true },
   { label: "x402 + Gateway ↗", href: "https://github.com/circlefin/arc-nanopayments", external: true },
-  { label: "Arc network ↗", href: "https://docs.arc.network", external: true },
+  { label: "Arc network ↗", href: profile.testnet?"https://docs.arc.network":"https://docs.arc.io", external: true },
   { label: "Privacy", href: "/privacy" },
 ];
 
@@ -92,7 +95,7 @@ export function SiteFooter() {
 
         <div className="mt-10 flex flex-wrap justify-between gap-3 border-t border-ink pt-5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-ink-3">
           <span>© 2026 Keryx — legal tender for attention</span>
-          <span className="text-seal">Real settlement evidence on Arc testnet</span>
+          <span className="text-seal">{currentArcLabel} · inspect original settlement evidence</span>
         </div>
       </div>
     </footer>

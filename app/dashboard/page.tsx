@@ -19,6 +19,7 @@ import { PaymentsFeed } from "@/components/keryx/payments-feed";
 import { CreatorCashoutsPanel } from "@/components/keryx/creator-cashouts-panel";
 import { DispatchHistory } from "@/components/keryx/dispatch-history";
 import { fmtUsdc } from "@/components/keryx/phase-style";
+import { currentArcLabel } from "@/lib/arc-network-display";
 import type {
   DashboardMetrics,
   PaymentRecord,
@@ -106,7 +107,7 @@ export default function DashboardPage() {
             </h1>
             <p className="mt-1.5 text-sm text-ink-2">
               A public record of Keryx queries and settled creator payments in
-              USDC on Arc testnet.
+              USDC. Each receipt retains its original payment network.
             </p>
             <Link
               href="/proof"
@@ -117,7 +118,7 @@ export default function DashboardPage() {
           </div>
           <span className="hidden shrink-0 items-center gap-2 rounded-full border border-paid/40 bg-paid/[0.07] px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.1em] text-paid sm:inline-flex">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-paid" />
-            Arc testnet
+            {currentArcLabel}
           </span>
         </header>
 

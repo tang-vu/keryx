@@ -160,6 +160,7 @@ it.each([false, true, "liveness", "creator"] as const)("completes a normal mainn
     import {SessionCashoutPanel} from './components/keryx/session-cashout-panel';
     import {CreatorOwnerWithdrawalPanel} from './components/keryx/creator-owner-withdrawal-panel';
     import * as creatorJournals from './lib/gateway/withdrawal-browser-journal';window.creatorJournals=creatorJournals;
+    import * as creatorHistory from './lib/gateway/withdrawal-history-status';window.creatorHistory=creatorHistory;
     import {getSessionSigner} from './lib/session/session-signer-client';
     import {listFundingRecords} from './lib/buyer/funding-journal';window.fundingRecords=listFundingRecords;
     window.sentFunding=[];
@@ -322,6 +323,9 @@ it.each([false, true, "liveness", "creator"] as const)("completes a normal mainn
     await expect.poll(status,{timeout:20000}).toBe("Original owner mint finality verified");
     expect(transferCalls).toBe(1);expect(creatorBurnSigns).toBe(1);
     expect((await db.getCreatorOwnerWithdrawalCompletion(originalCashoutId,owner.address.toLowerCase()))?.observation.transactionHash).toBe(originalHash);
+    const historyProgress=await page.evaluate(async row=>(window as unknown as {creatorHistory:{readWithdrawalHistoryStatus(row:unknown,current:()=>string,signal:AbortSignal):Promise<unknown>}}).creatorHistory.readWithdrawalHistoryStatus(row,()=>row.owner,new AbortController().signal),
+      {id:record.id,owner:record.owner,recipient:record.policy.recipient,amountMicros:record.request.burnIntent.spec.value,maxFeeMicros:record.request.burnIntent.maxFee,createdAt:new Date().toISOString()});
+    expect(historyProgress).toMatchObject({state:"server-reported-progress",progress:{network:profile.networkId,chainFinalityVerified:true,transactionHash:originalHash}});
     expect(record.network).toBe(profile.networkId);expect(record.format).toBe("creator-withdrawal-request-v2");
     expect(await page.evaluate(async()=> (await indexedDB.databases()).map(entry=>entry.name))).toEqual(expect.arrayContaining(["keryx-creator-withdrawals-v1","keryx-creator-withdrawals-v2-arc"]));
     expect(await page.evaluate(()=>[...document.body.querySelectorAll("input")].some(input=>input.value.length===132))).toBe(false);

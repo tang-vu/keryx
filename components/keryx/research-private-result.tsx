@@ -13,7 +13,7 @@ export function ResearchPrivateResult({ job }: { job: PrivateWorkspaceResult }) 
     <h3 className="break-words font-display text-2xl">{job.request.question}</h3>
     <p role="status" className="font-serif">{statuses[job.status]}</p>
     {job.interruption && <p className="text-sm text-ink-3">Interruption recorded: {job.interruption.recordedAt}. A recovered original result can still appear here after an operator restores its backup.</p>}
-    <p className="text-sm">Package payment: {incoming.status} · {privateUsdc(incoming.priceMicros)} · Arc testnet</p>
+    <p className="text-sm">Package payment: {incoming.status} · {privateUsdc(incoming.priceMicros)} · retain the original payment network</p>
     <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{([
       ["Creator cap", creator.budgetMicros], ["Committed", creator.committedMicros], ["Unresolved", creator.unresolvedMicros],
       ["Circle processing", creator.processingMicros], ["Confirmation evidence", creator.confirmedMicros], ["Uncommitted", creator.uncommittedMicros],

@@ -67,6 +67,20 @@ reload, original mint-hash recovery and independent finality checks with synthet
 external transport. These checks do not close the live-wallet/funding or coordinated
 deployment acceptance gates.
 
+Normal public labels and contract references follow the compiled deployment profile;
+receipt, citation and withdrawal explorer links follow each original record's network.
+Unlabelled legacy receipt data remains testnet, and unknown explicit networks are never
+relabelled. Circle settlement IDs are not presented as per-transaction EVM hashes.
+Creator listing updates/deactivation and receipt monitoring use the selected chain;
+mainnet browser signing also requires the independently compiled registry pin.
+
+The experimental scholarly manuscript distribution-rights protocol remains staged on
+testnet. Its testnet declaration/review messages and archived facts are preserved.
+Mainnet paid manuscript opt-in and creator rights enrollment are closed with a visible
+explanation before payment; ordinary registered article publishing remains available.
+Public mainnet access has no invited-wallet cohort restriction. This boundary does not
+silently claim a migrated experimental rights protocol.
+
 ## Current baseline and gaps
 
 Current [October 2 preparation](#october-2-preparation) records guarded backend

@@ -1,5 +1,7 @@
 "use client";
 
+import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+
 /**
  * /status section for the on-chain SourceRegistry: the contract (linked to ArcScan),
  * how many sources live on it, and the latest parity-watchdog verdict — whether the
@@ -47,7 +49,7 @@ export function RegistryStatusSection({ registry }: { registry: RegistryHealth }
           <dt className="text-ink-3">Contract</dt>
           <dd className="tabular-nums text-ink">
             <a
-              href={`https://testnet.arcscan.app/address/${registry.address}`}
+              href={`${browserPaymentProfile().explorerUrl}/address/${registry.address}`}
               target="_blank"
               rel="noopener noreferrer"
               className="hover:underline"

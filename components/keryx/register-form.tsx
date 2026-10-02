@@ -567,7 +567,7 @@ function SuccessCard({
         </div>
         {pendingTxHash && (
           <a
-            href={`https://testnet.arcscan.app/tx/${pendingTxHash}`}
+            href={`${browserPaymentProfile().explorerUrl}/tx/${pendingTxHash}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 font-mono text-[11px] text-seal hover:underline"

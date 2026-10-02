@@ -19,8 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { fmtUsdc, shortAddr } from "./phase-style";
-
-const EXPLORER = "https://testnet.arcscan.app";
+import { recordedArcTransactionUrl,recordedArcLabel } from "@/lib/arc-network-display";
 
 function timeAgo(iso: string): string {
   const d = new Date(iso).getTime();
@@ -72,11 +71,11 @@ export function CreatorCashoutsPanel({
                   {w.sourceName ?? w.label}
                 </p>
                 <p className="font-mono text-[10px] text-ink-3">
-                  {timeAgo(w.createdAt)} · on-chain cash-out
+                  {timeAgo(w.createdAt)} · {recordedArcLabel(w.network)} · on-chain cash-out
                 </p>
               </div>
               <a
-                href={`${EXPLORER}/tx/${w.txHash}`}
+                href={recordedArcTransactionUrl(w.network,w.txHash)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="shrink-0 font-mono text-sm font-semibold text-paid hover:underline"
@@ -135,7 +134,7 @@ export function CreatorCashoutsPanel({
                     </TableCell>
                     <TableCell className="pr-6 text-right">
                       <a
-                        href={`${EXPLORER}/tx/${w.txHash}`}
+                        href={recordedArcTransactionUrl(w.network,w.txHash)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground hover:text-paid hover:underline"

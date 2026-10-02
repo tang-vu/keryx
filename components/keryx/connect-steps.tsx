@@ -105,7 +105,7 @@ export function SignInStep({
       ? "Verifying…"
       : "Sign in with Ethereum ▸";
 
-  // Block sign-in when on the wrong chain — the SIWE message embeds chainId 5042002
+  // Block sign-in when on the wrong chain: SIWE embeds the configured chain ID.
   // and the server rejects messages with a mismatched chainId.
   const wrongChain = !chainGuard.isOnArc;
 

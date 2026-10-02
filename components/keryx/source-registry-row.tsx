@@ -9,8 +9,9 @@ import Link from "next/link";
 import { ShieldAlert, ShieldCheck } from "lucide-react";
 import { fmtUsdc } from "./phase-style";
 import type { Source } from "@/lib/types";
+import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
-const EXPLORER = "https://testnet.arcscan.app";
+const EXPLORER = browserPaymentProfile().explorerUrl;
 
 /** Preview-depth footnote — only levels that differ from the default earn a mention. */
 const PREVIEW_NOTE: Record<string, string> = {

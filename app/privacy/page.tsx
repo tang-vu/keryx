@@ -9,6 +9,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
+import { currentArcLabel } from "@/lib/arc-network-display";
+import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
 const TITLE = "Privacy — Keryx";
 const DESCRIPTION =
@@ -51,7 +53,7 @@ export default function PrivacyPage() {
         <Section title="The short version">
           <p>
             Keryx is a reading agent that answers questions and pays the writers it cites, in USDC
-            on the Arc testnet. <strong className="text-ink">Public research is published.</strong>{" "}
+            on {currentArcLabel}. <strong className="text-ink">Public research is published.</strong>{" "}
             The separately labeled private research pilot restricts result access to the paying
             account, while Keryx and the disclosed AI provider still process the question.
             Choose the appropriate mode before submitting. We do not sell question or wallet
@@ -78,7 +80,7 @@ export default function PrivacyPage() {
 
         <Section title="Private research pilot">
           <p>
-            Private purchasing is limited to configured Arc testnet pilot accounts. The private
+            Private purchasing requires an authenticated paying wallet and an enabled deployment. The private
             checkout shows the AI provider, model and endpoint before you buy. Keryx and that
             provider process your question; this is not end-to-end encryption. The private
             result and history routes require sign-in as the paying account. Private jobs use
@@ -124,6 +126,14 @@ export default function PrivacyPage() {
             the nature of a blockchain, and Keryx links to it rather than hiding it. Session keys
             for browser co-signing are generated in your browser and never sent to us.
           </p>
+          {!browserPaymentProfile().testnet&&<p>
+            Mainnet sessions retain an encrypted signing key on this browser. Logout locks it
+            but does not erase funded recovery or refund a Gateway balance. Clearing browser
+            storage or losing this device can lose access; repeating a wallet signature is not
+            a guaranteed backup. This assumes a trusted application origin and browser:
+            compromised same-origin script can use the stored wrapping key to decrypt custody
+            despite its nonexportability, putting deposited funds at risk.
+          </p>}
         </Section>
 
         <Section title="If you list a source">

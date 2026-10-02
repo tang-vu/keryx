@@ -7,6 +7,8 @@ import { useEffect, useRef, useState } from "react";
 import { DEFAULT_MODEL_ID } from "@/lib/llm/model-catalog";
 import { MAX_ASK_QUESTION_CHARS } from "@/lib/ask-input";
 import type { ResearchMode } from "@/lib/types";
+import { currentArcLabel } from "@/lib/arc-network-display";
+import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
 interface AskFormProps {
   disabled?: boolean;
@@ -139,7 +141,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
       <div className="border border-ink bg-paper-2">
         <div className="hidden flex-wrap items-center justify-between gap-2 border-b border-ink bg-ink px-4 py-2.5 text-cream sm:flex sm:px-5">
           <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em]">Ask Keryx</span>
-          <span className="font-mono text-[11px]">USDC on Arc testnet</span>
+          <span className="font-mono text-[11px]">USDC on {currentArcLabel}</span>
         </div>
         <div className="p-3.5 sm:p-5">
           <label htmlFor="ask-question" className="block font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-2">
@@ -187,12 +189,12 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
             </button>
             <p className="mt-2 font-mono text-[11px] leading-snug text-ink-2">
               {payer === "session"
-                ? `Your funded session pays on Arc testnet. Question budget: $${budget.toFixed(3)} USDC; your session cap also applies.`
+                ? `Your funded session pays on ${currentArcLabel}. Question budget: $${budget.toFixed(3)} USDC; your session cap also applies.`
                 : payer === "paused"
                   ? "Session status unavailable. Recover your funded session below before another question."
                 : payer === "expired"
                   ? "Session expired. Recover it below before another wallet funded question."
-                  : `Free trial: Keryx's treasury pays on Arc testnet. Question budget: up to $${budget.toFixed(3)} USDC.`}
+                  : `Free trial: Keryx's treasury pays on ${currentArcLabel}. Question budget: up to $${budget.toFixed(3)} USDC.`}
             </p>
           </div>
           <label className="mt-3 flex min-h-11 cursor-pointer items-center gap-2 font-mono text-xs text-ink">
@@ -200,7 +202,8 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
             Search scholarly papers (Crossref and arXiv)
           </label>
           <p className="text-xs text-ink-3">Sends your question to scholarly repositories. DOI lookup works when a DOI is in the question. Public papers cost no source USDC; unavailable papers and abstract-only reads stay visible.</p>
-          <label className="mt-2 flex min-h-11 items-center gap-2 font-mono text-xs text-ink"><input type="checkbox" checked={paidScholarly} disabled={disabled || payer !== "session"} onChange={event => setPaidScholarly(event.target.checked)} /> Include reviewed paid manuscripts (Arc testnet pilot)</label>
+          <label className="mt-2 flex min-h-11 items-center gap-2 font-mono text-xs text-ink"><input type="checkbox" checked={paidScholarly} disabled={disabled || payer !== "session" || !browserPaymentProfile().testnet} onChange={event => setPaidScholarly(event.target.checked)} /> Include reviewed paid manuscripts (experimental testnet rights protocol)</label>
+          {!browserPaymentProfile().testnet&&<p className="mt-1 text-xs text-ink-3">Paid manuscript rights are not yet available on mainnet. Ordinary registered articles remain available.</p>}
           <p className="text-xs text-ink-3">Requires your funded browser session. Uses the question budget for access and supported citation rewards. Public scholarly references stay free; only approved exact versions can be paid.</p>
           <details ref={advancedRef} className="mt-3 border-t border-line pt-2">
             <summary className="flex min-h-11 cursor-pointer items-center font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2 marker:text-seal hover:text-ink">

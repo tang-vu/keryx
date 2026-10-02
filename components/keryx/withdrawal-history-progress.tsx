@@ -1,4 +1,5 @@
 import type { readWithdrawalHistoryStatus } from "@/lib/gateway/withdrawal-history-status";
+import { recordedArcLabel,recordedArcTransactionUrl } from "@/lib/arc-network-display";
 
 export type HistoryProgress = Awaited<ReturnType<typeof readWithdrawalHistoryStatus>> | { state: "read-failed" };
 
@@ -8,11 +9,12 @@ export function WithdrawalHistoryProgress({ result }: { result?: HistoryProgress
   if (result.state === "unavailable") return <p role="status">The server could not find this request. Keep its ID and any recovery file; do not treat it as cancelled.</p>;
   if (result.state === "authentication-required") return <p role="status">Sign in again to check progress.</p>;
   const progress = result.progress;
+  const network="network" in progress&&typeof progress.network==="string"?progress.network:undefined;
   if (progress.chainFinalityVerified) return <div className="space-y-1" role="status">
-    <p>Server reports an observed mint on Arc Testnet.</p>
+    <p>Server reports an observed mint on {recordedArcLabel(network)}.</p>
     <p>Observation uses the operator&apos;s RPC; this browser has not independently verified settlement.</p>
     <p>Observed: <time dateTime={progress.observedAt}>{progress.observedAt}</time></p>
-    <a className="break-all underline" href={`https://testnet.arcscan.app/tx/${progress.transactionHash}`}
+    <a className="break-all underline" href={recordedArcTransactionUrl(network,progress.transactionHash)}
       target="_blank" rel="noopener noreferrer">View reported mint transaction</a>
   </div>;
   const transfer = {

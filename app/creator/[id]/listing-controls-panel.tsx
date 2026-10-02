@@ -14,9 +14,12 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Archive, Banknote, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { arcTestnet } from "viem/chains";
+import { arcChain } from "@/lib/chains";
+import { browserPaymentProfile,browserRegistryAddress } from "@/lib/browser-payment-profile";
+import { currentArcLabel } from "@/lib/arc-network-display";
+import { parseUnits } from "viem";
 import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
-import { REGISTRY_ABI } from "@/lib/registry/registry-client";
+import { REGISTRY_ABI } from "@/lib/registry/registry-abi";
 import { parseListingSnapshot, sameListingSnapshot } from "@/lib/creator/listing-snapshot";
 
 interface ListingData {
@@ -53,7 +56,7 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
   const [pendingTx, setPendingTx] = useState<`0x${string}` | undefined>();
   const { isLoading: isMining, isSuccess: mined, data: receipt } = useWaitForTransactionReceipt({
     hash: pendingTx,
-    chainId: arcTestnet.id,
+    chainId: arcChain.id,
   });
 
   const load = async () => {
@@ -62,6 +65,7 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
       if (!res.ok) return; // 401/403/404 → not the owner, stay hidden
       const value = (await res.json()) as ListingData;
       const d = value.mode === "onchain" ? parseListingSnapshot(value) : value;
+      if(!browserPaymentProfile().testnet&&(d.mode!=="onchain"||d.registryAddress?.toLowerCase()!==browserRegistryAddress().toLowerCase()))throw new Error("Configured listing registry differs");
       setData(d);
       setPrice(String(d.fetchPrice));
     } catch {
@@ -90,13 +94,15 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
 
   if (!data) return null;
 
-  const parsedPrice = parseFloat(price) || 0;
-  const priceChanged = Math.abs(parsedPrice - data.fetchPrice) >= 0.0000005;
+  const parsedPriceMicros=/^(0|[1-9]\d*)(?:\.\d{1,6})?$/.test(price)?parseUnits(price,6):null;
+  const priceValid=parsedPriceMicros!==null&&parsedPriceMicros<=BigInt(Number.MAX_SAFE_INTEGER);
+  const parsedPrice=priceValid?Number(parsedPriceMicros)/1e6:NaN;
+  const priceChanged=priceValid&&(data.current?parsedPriceMicros!==BigInt(data.current.fetchPriceUsdc6):parsedPrice!==data.fetchPrice);
   const working = busy || isMining;
   const wrongWallet =
     data.mode === "onchain" &&
     (!connected || !data.creator || connected.toLowerCase() !== data.creator.toLowerCase());
-  const wrongNetwork = data.mode === "onchain" && chainId !== arcTestnet.id;
+  const wrongNetwork = data.mode === "onchain" && chainId !== arcChain.id;
   const signingUnavailable = wrongWallet || wrongNetwork;
 
   const refreshBeforeSigning = async () => {
@@ -105,7 +111,8 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
     if (!res.ok) throw new Error("Listing authority could not be refreshed. No signature requested.");
     const fresh = parseListingSnapshot(await res.json());
     if (!owner.active || identity.current !== owner || owner.creatorId !== creatorId
-      || owner.chainId !== arcTestnet.id || owner.connected?.toLowerCase() !== fresh.creator) {
+      || owner.chainId !== arcChain.id || owner.connected?.toLowerCase() !== fresh.creator ||
+      !browserPaymentProfile().testnet&&fresh.registryAddress.toLowerCase()!==browserRegistryAddress().toLowerCase()) {
       throw new Error("Wallet or source changed. Refresh before signing.");
     }
     if (!sameListingSnapshot(data, fresh)) {
@@ -127,7 +134,7 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
         toast.loading("Waiting for wallet signature…", { id: "listing-tx" });
         const txHash = await writeContractAsync({
           account: connected,
-          chainId: arcTestnet.id,
+          chainId: arcChain.id,
           address: fresh.registryAddress,
           abi: REGISTRY_ABI,
           functionName: "update",
@@ -135,7 +142,7 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
             fresh.onchainId,
             fresh.current.payoutWallet,
             fresh.current.authors,
-            BigInt(Math.round(parsedPrice * 1_000_000)),
+            parsedPriceMicros!,
             fresh.current.contentCid,
             fresh.current.tags,
           ],
@@ -178,7 +185,7 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
         toast.loading("Waiting for wallet signature…", { id: "listing-tx" });
         const txHash = await writeContractAsync({
           account: connected,
-          chainId: arcTestnet.id,
+          chainId: arcChain.id,
           address: fresh.registryAddress,
           abi: REGISTRY_ABI,
           functionName: "deactivate",
@@ -271,7 +278,7 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
           )}
           {wrongNetwork && (
             <p className="mt-3 font-mono text-[10px] text-amber-700">
-              Connect your creator wallet on Arc Testnet before changing this listing.
+              Connect your creator wallet on {currentArcLabel} before changing this listing.
             </p>
           )}
 

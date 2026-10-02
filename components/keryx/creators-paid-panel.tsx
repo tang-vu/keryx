@@ -18,21 +18,13 @@ import type { StreamMode } from "@/lib/hooks/use-ask-stream";
 import { fmtUsdc, shortAddr } from "./phase-style";
 import { SectionHeading } from "./banknote";
 import { PaidStamp } from "./paid-stamp";
+import { GatewayContractReferences } from "./gateway-contract-references";
 
 interface CreatorsPaidPanelProps {
   payments: PaymentRecord[];
   mode: StreamMode | null;
   streaming: boolean;
 }
-
-const EXPLORER = "https://testnet.arcscan.app";
-// Per-payment Circle settlement IDs are UUIDs (they do NOT resolve as /tx/); on-chain proof is the
-// batched settlement wallet. Override with the real treasury wallet via
-// NEXT_PUBLIC_KERYX_SETTLEMENT_WALLET; defaults to Circle's Gateway settlement contract.
-const SETTLEMENT_WALLET =
-  process.env.NEXT_PUBLIC_KERYX_SETTLEMENT_WALLET ||
-  "0x0077777d7EBA4688BDeF3E311b846F25870A19B9";
-const SETTLEMENT_PROOF = `${EXPLORER}/address/${SETTLEMENT_WALLET}`;
 
 export function CreatorsPaidPanel({
   payments,
@@ -155,15 +147,7 @@ export function CreatorsPaidPanel({
               ) : failedCount > 0 ? (
                 `${failedCount} failed · not charged`
               ) : mode === "real" ? (
-                <a
-                  href={SETTLEMENT_PROOF}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-paid hover:underline"
-                  title="Settled via Circle Gateway batching — view the on-chain settlement wallet on ArcScan"
-                >
-                  Settled · USDC on Arc ↗
-                </a>
+                <GatewayContractReferences records={payments.filter(p=>paymentSettlementStatus(p)==="settled")} className="mr-3 hover:text-paid hover:underline"/>
               ) : (
                 "Offline — simulated"
               )}

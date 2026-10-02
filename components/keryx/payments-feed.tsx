@@ -21,17 +21,7 @@ import {
 } from "@/components/ui/table";
 import { fmtUsdc, shortAddr } from "./phase-style";
 import { cn } from "@/lib/utils";
-
-const EXPLORER = "https://testnet.arcscan.app";
-// Gateway settlements are batched: many nanopayments → a few on-chain submitBatch txs from the
-// settlement wallet. Per-payment Circle settlement IDs are UUIDs (they do NOT resolve as /tx/),
-// so the verifiable on-chain link points at the settlement wallet's address page. Override with
-// the real treasury wallet via NEXT_PUBLIC_KERYX_SETTLEMENT_WALLET; defaults to Circle's Gateway
-// settlement contract (always has on-chain batch activity).
-const SETTLEMENT_WALLET =
-  process.env.NEXT_PUBLIC_KERYX_SETTLEMENT_WALLET ||
-  "0x0077777d7EBA4688BDeF3E311b846F25870A19B9";
-const SETTLEMENT_PROOF = `${EXPLORER}/address/${SETTLEMENT_WALLET}`;
+import { GatewayContractReferences } from "./gateway-contract-references";
 
 function timeAgo(iso: string): string {
   const d = new Date(iso).getTime();
@@ -59,15 +49,7 @@ export function PaymentsFeed({
           Live payments feed
         </CardTitle>
         <div className="flex items-center gap-3">
-          <a
-            href={SETTLEMENT_PROOF}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground hover:text-paid hover:underline"
-            title="Settled via Circle Gateway batching — view the on-chain settlement wallet on ArcScan"
-          >
-            on-chain ↗
-          </a>
+          <GatewayContractReferences records={payments} className="inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground hover:text-paid hover:underline"/>
           <span className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-paid">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-paid" />
             live
