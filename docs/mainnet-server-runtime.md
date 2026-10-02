@@ -285,3 +285,36 @@ ordinary creators explicitly submit their own reviewed mint and gas.
 The fresh sealed mainnet SQLite application schema now includes canonical research purchase claims and Monthly v2 entitlements. Seller admission claims an exact original network/payer/nonce/payee/purpose/request/amount before vendor settlement. Monthly requires its server-issued original challenge to be consumed before a settled entitlement is stored; its four allocations are committed atomically with the immutable original order. Mainnet entitlements bind network, USDC and Gateway explicitly. Historical ordinary testnet data is never relabelled, and enrolled testnet storage retains its refusal for this new domain. Optional Supabase mainnet purchase authority remains staged.
 
 `assertResearchPurchaseAuthority(network)` proves actual native writer capability before quote/payment; a read-only handle cannot advertise checkout readiness. `assertMainnetHostedResearchReady` additionally derives the configured dedicated key's public address and compares it to sealed policy, checks historical custody role and current capacity without signing/funding. Capacity observation does not reserve four future research runs or guarantee later operator prefunding. Client/checkout composition and the actual combined paid/cited browser journey remain separate acceptance evidence.
+
+## Ordinary A2A and private admission
+
+The selected mainnet A2A quote and purchase paths require fresh native purchase
+authority plus actual reviewed public treasury custody and known capacity before
+an incoming authorization can settle. They use the dedicated mainnet policy/key;
+absence of a legacy testnet funder does not disable this role. Product package and
+query budgets still apply. Native acceptance exercises the ordinary HTTP route,
+actual installed SDK signatures, durable claim before synthetic vendor settlement,
+and the original queued order on its selected rail.
+
+Private purchase bootstrap independently compares the dedicated private key's
+public address to reviewed private policy before worker/vendor observations. Its
+submission checks the exact requested creator budget against private retained
+accounting and known capacity before incoming settlement. Preview is not purchase
+authority: authenticated private quote responses expose `purchasingAvailable`
+from the actual worker/backing/custody checks. Mainnet private access has no payer
+invitation list. Synthetic native acceptance covers the settled original, single
+vendor attempt on replay and private-ledger isolation; it does not prove real
+prefunding or external vendor settlement.
+
+Public health labels selected mainnet caller settlement as real independently of
+legacy treasury-key presence. It reports hosted authority as sealed-policy
+admission with availability not probed, rather than claiming public health proved
+operating capacity. Payout balance monitoring selects a canonical original rail,
+attests mainnet before and after the read, and retains unknown for a malformed,
+unreachable or inexact balance.
+
+The experimental scholarly-rights v1 protocol remains testnet-only. Its creator
+endpoint refuses mainnet before authentication/storage/body processing rather than
+emitting a testnet rights binding for mainnet custody. Ordinary creator source
+registration, paid content and owner-wallet cashout use their accepted mainnet
+paths. Optional PostgreSQL and scholarly-domain acceptance remain explicit stages.

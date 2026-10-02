@@ -4,13 +4,14 @@ import { z } from "zod";
 import { config } from "../config";
 import type { KeryxDB } from "../db/keryx-db";
 import { addressSchema, BUYER_NETWORK } from "../buyer/protocol";
+import { privateRequestSchema } from "../buyer/private-request-commitment";
 import { privateRuntimePolicy } from "./private-runtime-policy";
 import { privateResearchService } from "./private-research-service";
 import { inspectPrivateOperations } from "./private-operations-inspection";
-import { mainnetHostedPolicy } from "../payments/mainnet-hosted-gateway";
+import { mainnetHostedPolicy, assertMainnetHostedResearchReady, assertMainnetHostedCustodyReady } from "../payments/mainnet-hosted-gateway";
 import { ARC_MAINNET_PROFILE } from "../arc-network-profile";
 
-/** Restricted owner-pilot bootstrap, disabled by default. Observations limit
+/** Operator-configured private purchase bootstrap, disabled by default. Observations limit
  * admission availability, not payment authority. Durable treasury reservation and
  * single-use incoming attempts remain inside the research service. Call through
  * readyPrivatePurchaseService to bound these read-only observations. */
@@ -37,6 +38,7 @@ export async function privatePurchaseBootstrap(db: KeryxDB, signal: AbortSignal,
       network: config.networkId, publicSeller: config.sellerAddress,
       publicTreasurySigners: [privateKeyToAccount(key.parse(config.funderKey) as `0x${string}`).address],
       privateTreasurySigner: privateKeyToAccount(key.parse(env.KERYX_PRIVATE_TREASURY_PRIVATE_KEY) as `0x${string}`).address };
+    if(mainnet) await assertMainnetHostedCustodyReady(db,"private");
     const policy = privateRuntimePolicy(env, context);
     if (!policy) throw new Error();
     const report = await inspectPrivateOperations(db, policy, root, commit, signal);
@@ -47,10 +49,15 @@ export async function privatePurchaseBootstrap(db: KeryxDB, signal: AbortSignal,
     if (!service) throw new Error();
     return {
       quote: service.quote,
-      submit(submission: unknown, authenticatedPayer: string) {
+      async submit(submission: unknown, authenticatedPayer: string) {
         const payer = addressSchema.safeParse(authenticatedPayer);
         if (!payer.success || payers && !payers.has(payer.data.toLowerCase()))
           return Promise.reject(new Error("Private purchase is unavailable for this account"));
+        if(mainnet) {
+          const signed=z.object({request:privateRequestSchema}).parse(submission).request;
+          await assertMainnetHostedResearchReady(db,String(Math.round(signed.budget*1e6)),"private");
+          if(signal.aborted) throw new Error("Private admission cancelled");
+        }
         return service.submit(submission, payer.data);
       },
     };

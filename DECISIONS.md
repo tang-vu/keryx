@@ -4524,3 +4524,8 @@ versions or payment/signature domains. Verify each new source, installer and reg
 archive independently; a shared version alone does not establish matching delivery.
 Arc testnet authority remains the production/default lane; no mainnet activation
 or funded-operation permission follows from storage capability or version bumps.
+## Mainnet hosted purchase admission and explicit experimental boundaries - 2026-10-02
+
+Ordinary A2A and private purchase admission use the actual freshly sealed application identity, dedicated reviewed role policy and key-to-signer public-address comparison before any incoming authorization can settle. Public/private retained exposure and known capacity limit each original creator budget; absent legacy testnet keys do not disable accepted mainnet roles. Private quote preview remains separate from authenticated purchasing availability, and private execution has no payer invitation list. Actual execution still reserves its exact full original before crypto and persists submission before paid HTTP. Synthetic native HTTP/SDK acceptance proves this composition without authorizing mainnet funds.
+
+Health must distinguish the selected real caller-funded rail from hosted authority whose operating availability has not been probed. Read-only payout monitoring preserves each explicit canonical original profile and treats unavailable or inexact balances as unknown. Keep the experimental scholarly-rights v1 domain explicitly unavailable on mainnet before storage or signing rather than relabelling its testnet protocol. This boundary does not restrict ordinary creator registration, content or cashout. Optional PostgreSQL remains staged while the public release targets fresh sealed SQLite.
