@@ -8,6 +8,7 @@ export const accountHistorySchema = z.object({
     status: z.enum(["queued", "processing", "review_required", "completed", "failed"]),
     createdAt: z.string().datetime({ offset: true }), updatedAt: z.string().datetime({ offset: true }),
     mode: z.enum(["quick", "deep"]), packagePriceUsdc: z.number().finite().nonnegative().nullable(),
+    funding: z.literal("research-monthly-prepaid").optional(),
   }).strict()).max(25),
   nextCursor: z.string().regex(/^[A-Za-z0-9_-]{1,300}$/).nullable(),
 }).strict();

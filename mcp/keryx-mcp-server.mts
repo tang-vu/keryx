@@ -14,8 +14,11 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { askKeryx, getStatus, meta } from "./keryx-buyer.mts";
+import { registerMonthlyDiscovery } from "../lib/monthly/mcp-discovery.ts";
+import { fetchMonthlyQuote } from "../lib/monthly/client.ts";
 
-const server = new McpServer({ name: "keryx", version: "0.1.0" });
+const server = new McpServer({ name: "keryx", version: "0.1.2" });
+registerMonthlyDiscovery(server, fetchMonthlyQuote);
 
 server.registerTool(
   "ask_keryx",

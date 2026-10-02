@@ -1,5 +1,22 @@
 # Keryx — Decision Log
 
+**D-262** - Pilot one bounded Research Monthly plan - *On 2026-10-02 the user
+confirmed four requests/month at 10% below buying four separately.* Use four Deep
+v1 requests over 30 days from confirmed Arc-testnet purchase, with manual renewal
+and a creator cap pinned at purchase. Absorb the total-price discount in Keryx's
+service allocation and round upward to equal integer micro-USDC allocations;
+refuse configurations that consume creator reserves. This does not establish
+profitability. Confirmed settlement activates the entitlement; atomic slot/order
+admission and exact request replay prevent duplicate downstream spend. Failed or
+pending jobs retain their slots, so promise requests rather than successful reports.
+Bind every public seller debit before settlement by network, asset, payer and nonce,
+with exact purpose, payee, amount and request/resource data. Ambiguous claims stay
+retained; one debit cannot buy two products. No mainnet, recurring debit, scheduler,
+unlimited plan or private-research entitlement. Web/API are authority; local and
+MCP surfaces use explicit shared API or handoff boundaries. Disabling admission
+preserves recovery; old claim-bypassing seller rollback is forbidden. See
+[Research Monthly](docs/research-monthly.md).
+
 **D-261** - Reuse recorded research for academic and technical/market workflows -
 *The user selected both researcher segments; existing receipts and claim evidence
 were useful but did not provide reference-manager imports or a comparison export.*

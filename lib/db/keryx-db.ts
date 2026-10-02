@@ -18,6 +18,7 @@ import type { PrivateExecutionClaim } from "./private-research-executions";
 import type { LedgerAccount } from "../gateway/settlement-parity";
 import type { TestnetEconomicsSnapshot } from "../economics/testnet-economics";
 import type { A2aOrder, A2aOrderResolutionUpdate } from "../a2a/order";
+import type { MonthlyPurchase, MonthlyRedemption, MonthlyRedemptionInput, ResearchPurchaseClaim } from "./research-monthly";
 import type { PrivateResearchIntent } from "../a2a/private-research-intent";
 import type { PrivatePaymentConfirmation, PrivatePaymentState } from "../a2a/private-payment-state";
 import type { A2aOperationsSnapshot } from "../a2a/operations";
@@ -523,6 +524,12 @@ export interface KeryxDB {
   creatorLeaderboard(): Promise<CreatorEarnings[]>;
 
   // Durable A2A authorization state: one settled inbound authorization may run creators once.
+  /** Immutable admission of a verified signed debit before settlement; never grants delivery. */
+  claimResearchPurchase(input: ResearchPurchaseClaim): Promise<void>;
+  createResearchMonthly(purchase: MonthlyPurchase): Promise<{ created: boolean; purchase: MonthlyPurchase }>;
+  getResearchMonthly(id: string): Promise<{ purchase: MonthlyPurchase; redemptions: MonthlyRedemption[] } | null>;
+  /** Atomically consumes one of four requests and enqueues its private A2A order. */
+  redeemResearchMonthly(input: MonthlyRedemptionInput): Promise<{ created: boolean; order: A2aOrder }>;
   createA2aOrder(order: A2aOrder): Promise<{ created: boolean; order: A2aOrder }>;
   getA2aOrder(id: string): Promise<A2aOrder | null>;
   /** Payer-authorized inventory, newest first; 26 rows allow a 25-row page plus sentinel. */

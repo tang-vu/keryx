@@ -4,6 +4,7 @@
  */
 
 import { listSqliteWithdrawalHistory, type WithdrawalHistoryCursor } from "./creator-withdrawal-history";
+import { initializeSqliteResearchMonthly, claimSqliteResearchPurchase, createSqliteResearchMonthly, getSqliteResearchMonthly, redeemSqliteResearchMonthly, type MonthlyPurchase, type MonthlyRedemptionInput, type ResearchPurchaseClaim } from "./research-monthly";
 import { confirmSqlitePrivateCreator, getSqlitePrivateCreatorConfirmation, type PrivateCreatorConfirmation, PRIVATE_CREATOR_CONFIRMATIONS_SQL } from "./private-creator-confirmations";
 import { admitSqlitePrivateCreatorSubmission, listSqlitePrivateCreatorSubmissions, type PrivateCreatorSubmission, PRIVATE_CREATOR_SUBMISSIONS_SQL } from "./private-creator-submissions";
 import { saveSqlitePrivateResult, getSqlitePrivateResult, PRIVATE_RESEARCH_RESULTS_SQL } from "./private-research-results";
@@ -357,6 +358,7 @@ export class SqliteAdapter implements KeryxDB {
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");
     this.db.exec(SCHEMA);
     this.ensureColumns();
+    initializeSqliteResearchMonthly(this.db);
     // Releases before 2026-08-22 keyed two authenticated routes by the raw `kx_live_...` bearer
     // value before verification. Remove those legacy counters during every startup so the live DB
     // and every restored snapshot converge back to the documented hash-only secret invariant.
@@ -1666,6 +1668,11 @@ export class SqliteAdapter implements KeryxDB {
       );
     return result.changes === 1;
   }
+
+  async claimResearchPurchase(input: ResearchPurchaseClaim): Promise<void> { claimSqliteResearchPurchase(this.db, input); }
+  async createResearchMonthly(purchase: MonthlyPurchase) { return createSqliteResearchMonthly(this.db, purchase); }
+  async getResearchMonthly(id: string) { return getSqliteResearchMonthly(this.db, id); }
+  async redeemResearchMonthly(input: MonthlyRedemptionInput) { return redeemSqliteResearchMonthly(this.db, input, rowToA2aOrder); }
 
   async createA2aOrder(order: A2aOrder): Promise<{ created: boolean; order: A2aOrder }> {
     const result = this.db

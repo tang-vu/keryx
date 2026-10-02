@@ -1,0 +1,123 @@
+name: Publish MCP to npm
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Committed mcp/package.json version to publish
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-keryx-mcp
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.repository == 'tang-vu/keryx' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Require successful main CI for this exact commit
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const main = await github.rest.repos.getBranch({ owner, repo, branch: 'main' });
+            if (main.data.commit.sha !== context.sha) throw new Error('Dispatch must target current main');
+            const runs = await github.rest.actions.listWorkflowRuns({
+              owner, repo, workflow_id: 'ci.yml', head_sha: context.sha, event: 'push', per_page: 100
+            });
+            if (!runs.data.workflow_runs.some(run => run.head_branch === 'main' && run.status === 'completed' && run.conclusion === 'success')) {
+              throw new Error('Wait for successful CI on this exact main commit before publishing');
+            }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.21.0'
+      - name: Install pinned npm and committed build dependencies
+        run: |
+          npm install --global npm@11.19.0 --no-audit --no-fund
+          npm ci --no-audit --no-fund
+      - name: Verify committed package and requested version
+        env:
+          EXPECTED_VERSION: ${{ inputs.version }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const pkg = JSON.parse(fs.readFileSync('mcp/package.json', 'utf8'));
+          assert.equal(pkg.name, 'keryx-mcp');
+          assert.equal(pkg.version, process.env.EXPECTED_VERSION);
+          assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
+          assert.equal(pkg.repository.url, 'git+https://github.com/tang-vu/keryx.git');
+          assert.equal(pkg.repository.directory, 'mcp');
+          assert.notEqual(pkg.private, true);
+          NODE
+      - name: Build and inspect the exact release archive
+        run: |
+          npm --prefix mcp run build
+          node --check mcp/dist/keryx-mcp.mjs
+          node --import tsx scripts/test-monthly-mcp-package.mts
+          mkdir release
+          (cd mcp && npm pack --ignore-scripts --json --pack-destination ../release) > release/pack.json
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const [pack] = JSON.parse(fs.readFileSync('release/pack.json', 'utf8'));
+          const pkg = JSON.parse(fs.readFileSync('mcp/package.json', 'utf8'));
+          assert.equal(pack.name, pkg.name);
+          assert.equal(pack.version, pkg.version);
+          const paths = pack.files.map(file => file.path);
+          for (const required of ['package.json', 'README.md', 'dist/keryx-mcp.mjs']) assert(paths.includes(required), required);
+          assert(paths.every(path => ['package.json', 'README.md', 'LICENSE', 'LICENSE.md'].includes(path) || path === 'dist/keryx-mcp.mjs'), 'Unexpected archive file');
+          NODE
+          sha256sum release/*.tgz > release/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-release
+          path: release/
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    needs: verify
+    if: github.repository == 'tang-vu/keryx' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.21.0'
+      - run: npm install --global npm@11.19.0 --no-audit --no-fund
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-release
+          path: release/
+      - name: Publish verified archive using npm Trusted Publishing
+        run: |
+          sha256sum --check release/SHA256SUMS
+          npm publish release/*.tgz --ignore-scripts --access public --provenance --registry https://registry.npmjs.org/
+      - name: Verify public registry version and integrity
+        env:
+          EXPECTED_VERSION: ${{ inputs.version }}
+        run: |
+          npm view "keryx-mcp@$EXPECTED_VERSION" --json --registry https://registry.npmjs.org/ > published.json
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const published = JSON.parse(fs.readFileSync('published.json', 'utf8'));
+          const [pack] = JSON.parse(fs.readFileSync('release/pack.json', 'utf8'));
+          assert.equal(published.version, process.env.EXPECTED_VERSION);
+          assert.equal(published.dist.integrity, pack.integrity);
+          NODE

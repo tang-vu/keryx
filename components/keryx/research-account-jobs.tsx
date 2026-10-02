@@ -63,7 +63,7 @@ function WalletHistory({ wallet }: { wallet: string }) {
       {history?.jobs.map(row => <li key={row.id} className="py-4">
         <p className="break-words font-serif text-ink">{row.question ?? "Question unavailable for this historical job"}</p>
         <p className="mt-1 text-sm text-ink-3">{row.mode} · {row.status.replaceAll("_", " ")} · {new Date(row.createdAt).toLocaleString("en-US")}</p>
-        <p className="mt-1 text-sm text-ink-2">Package price: {row.packagePriceUsdc === null ? "unknown" : `${row.packagePriceUsdc} USDC`} · Arc testnet</p>
+        <p className="mt-1 text-sm text-ink-2">{row.funding ? "Prepaid Monthly allocation" : "Package price"}: {row.packagePriceUsdc === null ? "unknown" : `${row.packagePriceUsdc} USDC`} · Arc testnet</p>
         <button className={`${control} mt-2`} onClick={() => setSelected(row.id)}>Follow this job</button>
       </li>)}
     </ul>

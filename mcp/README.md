@@ -20,6 +20,13 @@ The remote server exposes:
 |------|--------------|
 | `research` | Runs budgeted creator-paid research and returns the answer, citations, confidence, settlement telemetry, and dispatch URL. |
 | `keryx_status` | Shows the caller tier and active creator-payment budget cap. |
+| `research_monthly` | Reads the bounded Monthly quote and web/API handoff; never purchases or redeems a plan. Also available in stdio 0.1.2. |
+
+Research Monthly is a four-request, 30-day Arc-testnet pilot with manual renewal.
+Its 10% total-price discount preserves creator caps. Failed and pending jobs retain
+their slots. The caller buys and redeems with its own wallet through the
+[web checkout](https://keryx.cc/research#monthly) or shared API/Monthly CLI;
+existing MCP research tools remain independent jobs. See [Monthly guide](../docs/research-monthly.md).
 
 It includes an anonymous IP-limited trial. For higher limits and verified wallet attribution, send
 an ask-scoped Keryx API key as `Authorization: Bearer kx_live_…`. The remote path is treasury-funded;

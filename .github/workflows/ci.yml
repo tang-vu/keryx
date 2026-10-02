@@ -18,8 +18,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "24"
+          node-version: "24.21.0"
           cache: npm
+
+      - name: Pin project npm installer
+        run: npm install --global npm@11.19.0 --no-audit --no-fund
 
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
@@ -53,6 +56,9 @@ jobs:
       - name: Creator withdrawal admission (isolated PostgreSQL, synthetic data)
         run: node --import tsx scripts/test-creator-withdrawal-postgres.mts
 
+      - name: Research Monthly admission (isolated PostgreSQL, synthetic data)
+        run: node --import tsx scripts/test-research-monthly-postgres.mts
+
       - name: Withdrawal backup and recovered copy (Linux CLI, synthetic data)
         run: node --import tsx --no-warnings scripts/test-withdrawal-backup-restore.mts
 
@@ -67,6 +73,14 @@ jobs:
 
       - name: Browser checkout UI (hermetic, no settlement)
         run: npm run test:browser-checkout
+
+      - name: Monthly browser recovery (hermetic, no settlement)
+        run: npm run test:browser-monthly
+
+      - name: Built stdio Monthly discovery (hermetic, no settlement)
+        run: |
+          npm --prefix mcp run build
+          node --import tsx scripts/test-monthly-mcp-package.mts
 
       - name: Funding replacement recovery (synthetic RPC, no signing)
         run: node --import tsx scripts/test-browser-funding-replacement.mts

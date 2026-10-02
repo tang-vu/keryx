@@ -1,5 +1,10 @@
 # Operator desktop alpha (Windows)
 
+Research Monthly purchasing/redemption uses the [shared web/API pilot](research-monthly.md).
+The desktop remains a local task/inspection/recovery surface; it does not create
+another entitlement writer or schedule recurring research. This release changes
+no desktop installer artifact or source pin.
+
 The Windows desktop uses a Tauri 2/WebView2 shell under
 [D-260](../DECISIONS.md). The shell bundles a pinned Node runtime and a bounded
 stdio helper using the existing TypeScript WorkspaceStore for inspection, private

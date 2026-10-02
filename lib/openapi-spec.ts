@@ -7,6 +7,7 @@
  */
 
 import { config } from "./config";
+import { monthlyOpenApiPath } from "./monthly/openapi";
 import {
   A2A_RESEARCH_PACKAGE_VERSION,
   supportedA2aPackageVersions,
@@ -16,7 +17,7 @@ export const openapiSpec = {
   openapi: "3.1.0",
   info: {
     title: "Keryx API",
-    version: "0.20.0",
+    version: "0.25.0",
     description:
       "Citation-toll autonomous research. POST a question + budget — Keryx buys paid sources via x402, " +
       "answers with citations, and settles weighted nanopayments to every cited creator in USDC on Arc. " +
@@ -538,6 +539,7 @@ export const openapiSpec = {
     },
   },
   paths: {
+    "/api/research/monthly": monthlyOpenApiPath,
     "/api/dispatch/{id}/receipt": {
       get: {
         operationId: "getDispatchResearchReceipt",

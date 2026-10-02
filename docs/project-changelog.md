@@ -1,5 +1,13 @@
 # Keryx Project Changelog
 
+### Research Monthly pilot (2026-10-02, v0.25.0)
+
+- Add one Arc-testnet plan: four manual Deep requests over 30 days, 10% below four equivalent separate packages. Pin creator caps and take the discount from service allocation; disclose exact micro-USDC rounding.
+- Activate only from confirmed settlement. Admit each request and job atomically, retain failed/pending slots, and recover the original request without duplicate execution. No automatic renewal or scheduler.
+- Bind all public seller debit nonces to immutable purpose, request/resource, payee and amount before settlement, preventing cross-product replay. Retain ambiguous claims and historical evidence.
+- Add web checkout/status/recovery, shared API, caller-wallet Monthly CLI, OpenAPI, and read-only Monthly discovery in both MCP transports. Label job/history/receipts as prepaid allocations. Desktop, extension, bots and private research preserve documented handoff/product boundaries.
+- Require focused payment/concurrency/recovery checks, hermetic browser evidence, real PostgreSQL concurrent CI, independent review and deployed commit/schema verification before pilot activation. See [Monthly release gates](research-monthly.md).
+
 ### Homepage globe alignment (2026-09-29, v0.24.2)
 
 - Keep the complete globe and orbit inside the hero's right column, above the activity totals, with a clear backing for the herald seal.
