@@ -1,5 +1,24 @@
 # Keryx — Decision Log
 
+**D-294** — Browser custody — *An isolated candidate session authenticates its exact identity before derivation* — *2026-10-02*
+
+Provide dormant browser-worker building blocks that verify the intended wallet's
+signature of a readable message containing the exact static network, origin, owner,
+candidate digest, epoch, per-payment cap and signing expiry. Salt key derivation with
+that identity; do not migrate or reuse the funded legacy testnet message/key. Bind
+the wrapping-key namespace and AES-GCM additional data to the same context and derived
+address. Context changes require an explicitly new funded identity; retained expired
+context can be recovered but cannot sign new payments.
+
+Capture policy and authoritative payee provider once, snapshot payload/ciphertext
+before awaits, and enforce lifecycle exclusion so logout cannot race a restored signer
+or wrapping-key deletion. Existing public workers remain testnet; these helpers alone
+confer no runtime invite, nonce, lifetime cap, registry, RPC or settlement authority.
+Synthetic native signature/encryption tests are not packaged-worker/IndexedDB acceptance.
+See [dormant signer boundary](docs/mainnet-runtime-domains.md#dormant-isolated-signer-component).
+Reversible: easy before enrollment; after funding, the exact context must remain
+recoverable and changes require a separately reviewed custody migration.
+
 **D-293** — Mainnet preparation — *Public dual-network pins do not confer runtime authority* — *2026-10-02*
 
 Centralize immutable Arc testnet and mainnet public profiles without an environment-

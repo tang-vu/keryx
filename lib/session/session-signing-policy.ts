@@ -1,6 +1,6 @@
 import { decodeFunctionData, encodeFunctionData, erc20Abi, isAddress, type Hex } from "viem";
 import type { TypedDataPayload } from "./session-signer-protocol";
-import { ARC_TESTNET_PROFILE } from "../arc-network-profile";
+import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
 
 // Independent, public testnet policy. Never derive signing authority from server config.
 export const SESSION_CHAIN_ID = ARC_TESTNET_PROFILE.chainId;
@@ -39,11 +39,15 @@ function fields(actual: unknown, expected: readonly { name: string; type: string
 
 /** Validate before any registry lookup or signature. Does not authorize a server journal nonce. */
 export function validateSessionPayment(payload: TypedDataPayload, signer: string, nowSeconds = Math.floor(Date.now() / 1000)): void {
+  validatePayment(ARC_TESTNET_PROFILE, payload, signer, nowSeconds);
+}
+
+function validatePayment(profile: ArcNetworkProfile, payload: TypedDataPayload, signer: string, nowSeconds: number): void {
   if (payload.primaryType !== "TransferWithAuthorization") fail("signs TransferWithAuthorization only");
   const { domain, types, message } = payload;
   if (!domain || !keys(domain, ["name", "version", "chainId", "verifyingContract"]) ||
-      domain.name !== "GatewayWalletBatched" || domain.version !== "1" || domain.chainId !== SESSION_CHAIN_ID ||
-      !address(domain.verifyingContract, SESSION_GATEWAY)) fail("invalid payment domain");
+      domain.name !== "GatewayWalletBatched" || domain.version !== "1" || domain.chainId !== profile.chainId ||
+      !address(domain.verifyingContract, profile.gatewayWallet)) fail("invalid payment domain");
   if (!types || !keys(types, "EIP712Domain" in types ? ["TransferWithAuthorization", "EIP712Domain"] : ["TransferWithAuthorization"]) ||
       !fields(types.TransferWithAuthorization, PAYMENT_FIELDS) ||
       ("EIP712Domain" in types && !fields(types.EIP712Domain, DOMAIN_FIELDS))) fail("invalid payment types");
@@ -60,12 +64,16 @@ export function validateSessionPayment(payload: TypedDataPayload, signer: string
 
 /** Only canonical approve(Gateway, amount) or deposit(USDC, amount), on Arc testnet. */
 export function validateSessionTransaction(tx: Record<string, unknown>, signer: string): void {
-  if (!address(tx.to) || (![SESSION_USDC.toLowerCase(), SESSION_GATEWAY.toLowerCase()].includes(tx.to.toLowerCase())))
+  validateTransaction(ARC_TESTNET_PROFILE, tx, signer);
+}
+
+function validateTransaction(profile: ArcNetworkProfile, tx: Record<string, unknown>, signer: string): void {
+  if (!address(tx.to) || (![profile.usdcAddress.toLowerCase(), profile.gatewayWallet.toLowerCase()].includes(tx.to.toLowerCase())))
     fail("will not sign a transaction to this destination");
   if (tx.from !== undefined && !address(tx.from, signer)) fail(`this session key is ${signer}, not ${String(tx.from)}`);
   const allowed = ["from", "to", "data", "value", "nonce", "gas", "gasPrice", "maxFeePerGas", "maxPriorityFeePerGas", "chainId", "type"];
   if (Object.keys(tx).some(key => !allowed.includes(key))) fail("unsupported transaction feature");
-  if (tx.chainId !== SESSION_CHAIN_ID || uint(tx.value ?? BigInt(0)) !== BigInt(0)) fail("invalid chain or native value");
+  if (tx.chainId !== profile.chainId || uint(tx.value ?? BigInt(0)) !== BigInt(0)) fail("invalid chain or native value");
   if (typeof tx.nonce !== "number" || !Number.isSafeInteger(tx.nonce) || tx.nonce < 0) fail("invalid transaction nonce");
   if (uint(tx.gas) <= BigInt(0) || uint(tx.gas) > (BigInt(1) << BigInt(64)) - BigInt(1)) fail("invalid gas");
   const legacy = tx.type === "legacy" || (tx.type === undefined && tx.gasPrice !== undefined);
@@ -81,14 +89,26 @@ export function validateSessionTransaction(tx: Record<string, unknown>, signer: 
   const data = tx.data as Hex;
   const to = tx.to as string;
   try {
-    if (to.toLowerCase() === SESSION_USDC.toLowerCase()) {
+    if (to.toLowerCase() === profile.usdcAddress.toLowerCase()) {
       const decoded = decodeFunctionData({ abi: erc20Abi, data });
-      if (decoded.functionName !== "approve" || !address(decoded.args[0], SESSION_GATEWAY) || uint(decoded.args[1]) <= BigInt(0) ||
-          encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [SESSION_GATEWAY, decoded.args[1]] }).toLowerCase() !== data.toLowerCase()) fail("invalid Gateway approval");
+      if (decoded.functionName !== "approve" || !address(decoded.args[0], profile.gatewayWallet) || uint(decoded.args[1]) <= BigInt(0) ||
+          encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [profile.gatewayWallet, decoded.args[1]] }).toLowerCase() !== data.toLowerCase()) fail("invalid Gateway approval");
     } else {
       const decoded = decodeFunctionData({ abi: SESSION_DEPOSIT_ABI, data });
-      if (!address(decoded.args[0], SESSION_USDC) || uint(decoded.args[1]) <= BigInt(0) ||
-          encodeFunctionData({ abi: SESSION_DEPOSIT_ABI, functionName: "deposit", args: [SESSION_USDC, decoded.args[1]] }).toLowerCase() !== data.toLowerCase()) fail("invalid USDC deposit");
+      if (!address(decoded.args[0], profile.usdcAddress) || uint(decoded.args[1]) <= BigInt(0) ||
+          encodeFunctionData({ abi: SESSION_DEPOSIT_ABI, functionName: "deposit", args: [profile.usdcAddress, decoded.args[1]] }).toLowerCase() !== data.toLowerCase()) fail("invalid USDC deposit");
     }
   } catch { fail("invalid canonical approve/deposit calldata"); }
+}
+
+/** Construct once from a locally trusted static profile, never from a challenge or worker message.
+ * Existing public worker uses the testnet wrappers above. This factory alone enables no runtime.
+ */
+export function createSessionSigningPolicy(profile: ArcNetworkProfile) {
+  if (profile !== ARC_TESTNET_PROFILE && profile !== ARC_MAINNET_PROFILE) fail("untrusted network profile");
+  return Object.freeze({
+    validatePayment: (payload: TypedDataPayload, signer: string, nowSeconds = Math.floor(Date.now() / 1000)) =>
+      validatePayment(profile, payload, signer, nowSeconds),
+    validateTransaction: (tx: Record<string, unknown>, signer: string) => validateTransaction(profile, tx, signer),
+  });
 }
