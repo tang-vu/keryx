@@ -78,6 +78,13 @@ signed offer context. Selected RPC checks attest both before and after authority
 reads, and local SDK signing/transaction boundaries validate the actual mainnet
 domain independently of a returned challenge.
 
+`GET /api/source/{id}/item/{itemId}/preview?version={contentVersion}` returns only
+the exact current item identity, fresh source-owned `payTo` and canonical integer
+`listPriceMicroUsdc`. Missing, duplicate or stale versions refuse before payout lookup;
+inactive sources and authority outages refuse without cached fallback. It exposes no
+article plaintext or encryption key and uses no-store responses. The independent
+browser worker compares this metadata with the original admitted item context.
+
 The caller buyer protocol captures the public deployment profile before reading any
 challenge. Its existing request/amount limits remain normal caller policy, with no
 invitation list or pilot-wide ceilings. A foreign challenge cannot choose the chain.
