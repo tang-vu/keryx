@@ -39,6 +39,32 @@ plan for this deployment and do not upgrade billing automatically. Use a restric
 never deploy an interactive CLI OAuth/refresh token. See [provider setup and evidence](docs/cloudflare-workers-ai.md).
 Reversible: disable the provider and remove it from the public allowlist; historical usage retains
 its immutable tariff policy. No payment authority, mainnet activation or background scheduler changes.
+## Full public mainnet storage and recovery — 2026-10-02
+
+The owner requested the normal public product on mainnet, superseding the invited
+pilot proposal. The current production backend is SQLite, so the public release
+targets a fresh sealed mainnet SQLite namespace on the existing deployment while
+retaining testnet state and custody separately. Optional Supabase mainnet remains
+closed until its independently source-generated PostgreSQL schema and concurrent
+writer acceptance pass; it does not block the ordinary SQLite release.
+
+Session cashout authenticates retained owner and signer proofs after payment
+expiry or revocation. An unsigned original preparation reserves capacity and
+pauses new payment admission in one native transaction. That transaction compares
+confirmed lifetime debits as well as pending holds, including changes after the
+last quote read. Signed burns and matched attestations reuse the existing creator
+withdrawal journal. Unknown outcomes retain the original request and liabilities;
+only an exact owner mint with canonical selected-chain receipt/finality evidence
+releases the withdrawal barrier. Original nonces and lifetime payment consumption
+remain, so the stable signer can fund and renew rather than being retired.
+
+Ordinary creator cashout will use its connected owner wallet for burn consent and
+the mint transaction's gas; a custodial relay is a separate optional operator role.
+Hosted mainnet payments will use an independently sealed, owner-prefunded treasury
+identity and bounded normal product budgets, with no legacy key loader or automatic
+funding executor. That hosted adapter remains unfinished at this checkpoint. No
+funding, activation, deployment, autonomous scheduling or XSS-proof custody follows
+from this preparation. See [full server migration](docs/mainnet-server-runtime.md).
 
 **D-294** — Browser custody — *An isolated candidate session authenticates its exact identity before derivation* — *2026-10-02*
 

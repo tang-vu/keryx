@@ -44,6 +44,7 @@ export function createWithdrawalMintJournal(db: DatabaseSync, selected: Withdraw
       const copied = structuredClone(value) as Slot;
       const terms = withdrawalMintTermsSchema.parse(copied.terms);
       const request = await validateWithdrawalRequest(copied.request);
+      if (request.network !== "eip155:5042002") throw new Error("Original mint journal network refused");
       const attestation = await matchWithdrawalAttestation(request, copied.attestation);
       const checked = { request, attestation, terms,
         maxGasCostWei: (BigInt(terms.gas) * BigInt(terms.maxFeePerGas)).toString() };
@@ -66,6 +67,7 @@ export function createWithdrawalMintJournal(db: DatabaseSync, selected: Withdraw
     const copied = structuredClone({ request, response });
     const terms = withdrawalMintTermsSchema.parse(selectedTerms);
     const verified = await validateWithdrawalRequest(copied.request);
+    if (verified.network !== "eip155:5042002") throw new Error("Original mint journal network refused");
     const attestation = await matchWithdrawalAttestation(verified, copied.response);
     const slot: Slot = { request: verified, attestation, terms,
       maxGasCostWei: (BigInt(terms.gas) * BigInt(terms.maxFeePerGas)).toString() };

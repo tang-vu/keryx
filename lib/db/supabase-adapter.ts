@@ -1436,6 +1436,27 @@ export class SupabaseAdapter implements KeryxDB {
   async sessionFundingAccounting(_signer: string, _after?: string): Promise<import("./session-funding-accounting").SessionFundingAccounting> {
     throw new Error("Native PostgreSQL session funding accounting is not admitted");
   }
+  async sessionWithdrawalAccounting(_signer: string): Promise<{heldPaymentMicroUsdc:string;heldWithdrawalMicroUsdc:string;confirmedSpentMicroUsdc:string}> {
+    throw new Error("Native PostgreSQL session withdrawal is not admitted");
+  }
+  async reserveSessionWithdrawal(_preparation:import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation> {
+    throw new Error("Native PostgreSQL session withdrawal is not admitted");
+  }
+  async getSessionWithdrawal(_id:string,_owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation|null> {
+    throw new Error("Native PostgreSQL session withdrawal is not admitted");
+  }
+  async pendingSessionWithdrawal(_owner:string,_signer:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation|null> {
+    throw new Error("Native PostgreSQL session withdrawal is not admitted");
+  }
+  async getSessionWithdrawalCompletion(_id:string,_owner:string):Promise<import("../gateway/session-withdrawal-completion").SessionWithdrawalCompletion|null> {
+    throw new Error("Native PostgreSQL session withdrawal is not admitted");
+  }
+  async completeSessionWithdrawal(_id:string,_owner:string,_outcome:import("../gateway/session-withdrawal-completion").SessionWithdrawalCompletion):Promise<import("../gateway/session-withdrawal-completion").SessionWithdrawalCompletion> {
+    throw new Error("Native PostgreSQL session withdrawal is not admitted");
+  }
+  async listSessionWithdrawalPayments(_signer:string,_afterNonce?:string,_limit?:number):Promise<{payments:import("./browser-authorization-journal").BrowserAuthorizationJournal[];nextCursor:string|null}> {
+    throw new Error("Native PostgreSQL session withdrawal is not admitted");
+  }
   async consumeSessionGrantConsent(_consent: import("../payments/session-grant-consent").SessionGrantConsent, _signature: string, _sessionSignature: string): Promise<void> {
     throw new Error("Native PostgreSQL owner-consent migration is not admitted");
   }

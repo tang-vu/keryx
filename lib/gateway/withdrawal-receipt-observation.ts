@@ -37,7 +37,7 @@ export function createWithdrawalReceiptObserver(makeClient: (signal: AbortSignal
       live();
       const prepared = await matchWithdrawalMintTransaction(copy.record, copy.response, copy.raw, copy.terms); live();
       const client = makeClient(stop.signal);
-      if (await client.getChainId() !== 5042002) throw new Error(); live();
+      if (await client.getChainId() !== prepared.chainId) throw new Error(); live();
       const receipt = await client.getTransactionReceipt({ hash: prepared.transactionHash }); live();
       const matched = await matchWithdrawalMintReceipt(copy.record, copy.response, copy.raw, copy.terms, receipt); live();
       const height = BigInt(matched.blockNumber);
@@ -60,8 +60,9 @@ export function createWithdrawalReceiptObserver(makeClient: (signal: AbortSignal
       if (secondBlock.timestamp !== included.timestamp) throw new Error();
       const anchor = blockSchema.parse(await client.getBlock({ blockNumber: finalized.number, includeTransactions: false })); live();
       if (anchor.number !== finalized.number || anchor.hash !== finalized.hash || anchor.timestamp !== finalized.timestamp
-        || await client.getChainId() !== 5042002) throw new Error(); live();
-      return { ...matched, status: "mint-finalized-observed" as const, authority: "arc-testnet-rpc-finality" as const,
+        || await client.getChainId() !== prepared.chainId) throw new Error(); live();
+      return { ...matched, status: "mint-finalized-observed" as const,
+        authority: prepared.chainId === 5042002 ? "arc-testnet-rpc-finality" as const : "arc-mainnet-rpc-finality" as const,
         chainFinalityVerified: true as const, finalityBasis: "operator-selected-rpc" as const,
         finalizedBlockNumber: finalized.number.toString(), finalizedBlockHash: finalized.hash,
         observedAt: fresh(finalized.timestamp) };

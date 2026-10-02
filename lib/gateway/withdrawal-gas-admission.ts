@@ -59,6 +59,7 @@ export function attachWithdrawalGasAdmission(db: DatabaseSync, policy: Withdrawa
     if (!row) return null;
     const original = JSON.parse(String(row.data)) as Admission;
     const request = await validateWithdrawalRequest(original.request);
+    if (request.network !== "eip155:5042002") throw new Error("Original mint journal network refused");
     const checked = { request, maxGasCostWei: ceilingSchema.parse(original.maxGasCostWei) };
     if (request.id !== id || checked.maxGasCostWei !== row.max_gas_cost_wei
       || withdrawalTransferSpecHash(request) !== row.spec_hash || stable(checked) !== stable(original))
@@ -70,6 +71,7 @@ export function attachWithdrawalGasAdmission(db: DatabaseSync, policy: Withdrawa
     const expectation = expected ? { ...expected } : undefined;
     const copied = structuredClone(value), maxGasCostWei = ceilingSchema.parse(ceiling);
     const request = await validateWithdrawalRequest(copied);
+    if (request.network !== "eip155:5042002") throw new Error("Original mint journal network refused");
     const admission = { request, maxGasCostWei }, specHash = withdrawalTransferSpecHash(request);
     signal.throwIfAborted();
     atomic(() => {
