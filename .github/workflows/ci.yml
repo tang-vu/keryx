@@ -134,6 +134,9 @@ jobs:
       - name: Build (Next.js)
         run: npm run build
 
+      - name: Empty evidence (actual minified production orchestrator, no network)
+        run: npm run test:built-empty-evidence
+
       - name: Bounded document readers (assembled production trace, no network)
         run: node scripts/test-web-readers-traced.mjs
 
