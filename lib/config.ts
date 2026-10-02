@@ -18,8 +18,10 @@ export function assertArcConfiguration(env: {
   NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS?: string;
   KERYX_REGISTRY_READ_ADDRESS?: string;
   NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS?: string;
+  KERYX_FORCE_OFFLINE?: string;
 }): void {
   const profile = configuredPaymentProfile(env.KERYX_NETWORK, env.NEXT_PUBLIC_KERYX_NETWORK);
+  if (!profile.testnet && env.KERYX_FORCE_OFFLINE === "1") throw new Error("mainnet profile cannot enable offline payment bypass");
   configuredRegistryAddress(profile, env.KERYX_REGISTRY_ADDRESS, env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS);
   if (env.KERYX_REGISTRY_READ_ADDRESS !== undefined || env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS !== undefined)
     configuredRegistryAddress(profile, env.KERYX_REGISTRY_READ_ADDRESS, env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS);
@@ -48,6 +50,7 @@ if (typeof process !== "undefined" && process.release?.name === "node") assertAr
   NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS: process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS,
   KERYX_REGISTRY_READ_ADDRESS: process.env.KERYX_REGISTRY_READ_ADDRESS,
   NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS: process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS,
+  KERYX_FORCE_OFFLINE: process.env.KERYX_FORCE_OFFLINE,
 });
 const profile = browserPaymentProfile();
 

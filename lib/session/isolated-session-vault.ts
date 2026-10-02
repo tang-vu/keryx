@@ -59,7 +59,7 @@ export function indexedDbWrappingKeyStore(): WrappingKeyStore {
 }
 
 /** Encryption authenticates the full identity and session address as additional data. */
-export function createIsolatedSessionVault(context: IsolatedSessionContext, store: WrappingKeyStore) {
+export function createIsolatedSessionVault(context: Pick<IsolatedSessionContext, "storageNamespace" | "digest">, store: WrappingKeyStore) {
   const namespace = context.storageNamespace;
   const digest = context.digest;
   const getOrCreate = store.getOrCreate.bind(store), destroy = store.destroy.bind(store);
