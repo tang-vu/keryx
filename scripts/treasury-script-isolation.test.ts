@@ -22,7 +22,8 @@ const state = vi.hoisted(() => ({
 }));
 vi.mock("node:fs", () => ({ default: { readFileSync: state.readFile, writeFileSync: state.writeFile, mkdirSync: state.mkdir },
   readFileSync: state.readFile, writeFileSync: state.writeFile, mkdirSync: state.mkdir }));
-vi.mock("../lib/config", () => ({ config: {
+vi.mock("../lib/config", async () => ({ config: {
+  profile: (await import("../lib/arc-network-profile")).ARC_TESTNET_PROFILE,
   network: "arcTestnet", rpcUrl: "https://synthetic.invalid", usdcAddress: state.usdc,
   gatewayWallet: state.gateway, registryAddress: state.registry, funderKey: state.funderKey,
   baseUrl: "https://synthetic.invalid", networkId: "eip155:5042002", maxTimeoutSeconds: 691200,
@@ -51,6 +52,8 @@ async function run(name: string, args: string[] = []) {
 }
 beforeEach(() => {
   vi.resetModules(); vi.clearAllMocks();
+  vi.stubEnv("KERYX_NETWORK", "arcTestnet");
+  vi.stubEnv("NEXT_PUBLIC_KERYX_NETWORK", "arcTestnet");
   vi.stubEnv("KERYX_TREASURE_PAYEE", privateKeyToAccount(state.funderKey).address);
   vi.stubEnv("KERYX_BUYER_PRIVATE_KEY", state.key);
   vi.stubEnv("KERYX_GATEWAY_DEPOSIT", "0.5");

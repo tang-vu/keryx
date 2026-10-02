@@ -136,6 +136,10 @@ it("produces byte-identical full headers with actual installed viem across fresh
     format: "iife",
     globalName: "Fixture",
     platform: "browser",
+    // Match Next's compile-time public pins; browsers have no Node process global.
+    define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"',
+      "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined",
+      "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" },
     logLevel: "silent",
   });
   const server = createServer((_, res) => {
@@ -163,7 +167,10 @@ it("produces byte-identical full headers with actual installed viem across fresh
             : r.abort()
         );
         const page = await context.newPage();
+        const pageErrors: string[] = [];
+        page.on("pageerror", error => pageErrors.push(error.message));
         await page.goto(origin);
+        expect(pageErrors).toEqual([]);
         headers.push(
           await page.evaluate(
             async ({ key, original }) => {

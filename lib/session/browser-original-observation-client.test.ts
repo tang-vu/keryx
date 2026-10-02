@@ -202,6 +202,10 @@ it("actual Chromium accepts stable UTC offsets and refuses injected elapsed jump
     write: false,
     platform: "browser",
     format: "iife",
+    // Capture the historical testnet profile exactly as Next does at build time.
+    define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"',
+      "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined",
+      "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" },
     logLevel: "silent",
   });
   let handler: ReturnType<typeof createSyntheticOriginalObservationServer>;
@@ -276,7 +280,10 @@ it("actual Chromium accepts stable UTC offsets and refuses injected elapsed jump
             };
         }, mode);
         const page = await context.newPage();
+        const pageErrors: string[] = [];
+        page.on("pageerror", error => pageErrors.push(error.message));
         await page.goto(origin);
+        expect(pageErrors).toEqual([]);
         const pass = await page.evaluate(
           async (args) => {
             const fixture = window as unknown as {

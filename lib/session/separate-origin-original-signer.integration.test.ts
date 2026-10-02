@@ -48,6 +48,10 @@ beforeAll(async () => {
         write: false,
         platform: "browser",
         format: "iife",
+        // Independently compile the fixture's historical testnet authority for both surfaces.
+        define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"',
+          "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined",
+          "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" },
       })
     ).outputFiles[0].text;
   workerJs = await bundle(
