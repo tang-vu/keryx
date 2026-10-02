@@ -14,7 +14,7 @@
  * an entry whose provider is uncredentialed is filtered out of the picker rather than offered.
  */
 
-export type ModelProvider = "deepseek" | "mimo";
+export type ModelProvider = "deepseek" | "mimo" | "cloudflare";
 
 export interface ModelChoice {
   /** Public id used in API payloads and the picker. Colon-free (`keryx:` prefixing). */
@@ -78,6 +78,13 @@ export const MODEL_CATALOG: ModelChoice[] = [
     provider: "mimo",
     model: "mimo-v2.5-pro",
     note: "Xiaomi's deeper tier — more considered, slower to answer.",
+  },
+  {
+    id: "cloudflare-llama-3.3",
+    label: "Llama 3.3 · Cloudflare (experimental)",
+    provider: "cloudflare",
+    model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+    note: "Optional bounded third provider; smaller research contexts only.",
   },
 ];
 

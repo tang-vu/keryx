@@ -11,6 +11,11 @@
 
 import type { Decision, SourceItemIdentity } from "../types";
 
+/** A local request bound, before contacting a supplier. It must not mark a provider unhealthy. */
+export class ReasoningInputLimitError extends Error {
+  readonly status = 413;
+}
+
 export type ReasoningStep =
   | "decompose"
   | "decide"
