@@ -27,7 +27,9 @@ function intent(n: number): BuyerIntentEnvelope {
 }
 
 const bundle = await build({ stdin: { contents: 'export * from "./lib/buyer/browser-journal"; export * from "./lib/buyer/browser-client"; export * from "./lib/buyer/funding-journal";', resolveDir: process.cwd() },
-  bundle: true, platform: "browser", format: "iife", globalName: "BrowserBuyerTest", write: false, metafile: true });
+  bundle: true, platform: "browser", format: "iife", globalName: "BrowserBuyerTest", write: false, metafile: true,
+  define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"',
+    "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" } });
 assert(!Object.keys(bundle.metafile.inputs).some(path => /^lib\/(config|db\/)/.test(path) || /^lib\/buyer\/(journal|client|policy)\.ts$/.test(path)), "Server dependency crossed the browser boundary");
 const browser = await chromium.launch({ headless: true });
 const portableDirectory = await mkdtemp(join(tmpdir(), "keryx-browser-portable-"));
