@@ -2,7 +2,7 @@ import { ARC_TESTNET_PROFILE } from "../arc-network-profile";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
 import { quoteResearchMonthly } from "./quote";
-import { monthlyMessage } from "./protocol";
+import { monthlyMessage, monthlyRedemptionJobId } from "./protocol";
 import { monthlyPaymentAuthorization, monthlyQuestionDigest, verifyMonthlyProof } from "./service";
 import { buyMonthly, submitMonthly } from "./client";
 import { authorizationWithNonce, buyerTypedData } from "../buyer/protocol";
@@ -96,7 +96,7 @@ it("redeem snapshots the exact original question and ID before asynchronous proo
   const original = { monthlyId: `monthly_${"a".repeat(64)}`, requestId: "00000000-0000-4000-8000-000000000001",
     question: "What evidence supports this finding?", payer: buyer.address };
   const mutable = { ...original };
-  const http = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ queryId: `a2a_${"c".repeat(64)}` }));
+  const http = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ queryId: await monthlyRedemptionJobId(original.monthlyId,original.requestId) }));
   const pending = submitMonthly(mutable, message => buyer.signMessage({ message }), http);
   mutable.question = "A changed question";
   mutable.requestId = "00000000-0000-4000-8000-000000000002";
@@ -107,4 +107,11 @@ it("redeem snapshots the exact original question and ID before asynchronous proo
   expect(body).toMatchObject({ monthlyId: original.monthlyId, question: original.question, requestId: original.requestId });
   await expect(verifyMonthlyProof("redeem", { monthlyId: original.monthlyId, requestId: original.requestId,
     questionDigest: monthlyQuestionDigest(original.question) }, body.proof)).resolves.toBe(buyer.address);
+});
+
+it("retains the original request when a server returns a different shaped job identity", async () => {
+  const original={monthlyId:`monthly_${"a".repeat(64)}`,requestId:"00000000-0000-4000-8000-000000000001",question:"Original question",payer:buyer.address};
+  const http=vi.fn<typeof fetch>().mockResolvedValue(Response.json({queryId:`a2a_${"c".repeat(64)}`}));
+  await expect(submitMonthly(original,message=>buyer.signMessage({message}),http)).rejects.toThrow("Original Monthly job binding refused");
+  expect(http).toHaveBeenCalledTimes(1);
 });

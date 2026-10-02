@@ -4,7 +4,7 @@ import { browserBuyerJobId, encodeBrowserPayment } from "../buyer/browser-policy
 import { buyerTypedData, BUYER_ORIGIN, BUYER_PROFILE, BUYER_NETWORK, decodeHeader, requirementSchema, authorizationSchema, type BuyerAuthorization } from "../buyer/protocol";
 import { readBoundedJson } from "../read-bounded-json";
 import { browserSha256 } from "../browser-receipt-integrity";
-import { MONTHLY_PATH, monthlyMessage, monthlyQuoteSchema, monthlyRecoveryRequestSchema, monthlyIdSchema, type MonthlyQuote } from "./protocol";
+import { MONTHLY_PATH, monthlyMessage, monthlyQuoteSchema, monthlyRecoveryRequestSchema, monthlyIdSchema, monthlyRedemptionJobId, type MonthlyQuote } from "./protocol";
 
 export interface MonthlyIntent { schema: "keryx-monthly-intent-v1"; monthlyId: string; quote: MonthlyQuote; authorization: BuyerAuthorization; challengeExpiresAt?: string }
 export const monthlyIntentSchema = z.object({ schema: z.literal("keryx-monthly-intent-v1"), monthlyId: z.string().regex(/^monthly_[a-f0-9]{64}$/),
@@ -95,5 +95,7 @@ export async function submitMonthly(input: { monthlyId: string; requestId: strin
   const res = await request(http,endpoint, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({
     monthlyId: retained.monthlyId, requestId: retained.requestId, question: retained.question, proof: { payer: retained.payer, timestamp, signature } }) });
   if (!res.ok) throw new Error("Request refused or unavailable. Recover the same request ID and question; do not create another request to recover it.");
-  return z.object({queryId:z.string().regex(/^a2a_[a-f0-9]{64}$/)}).passthrough().parse(await readBoundedJson(res,65536));
+  const result = z.object({queryId:z.string().regex(/^a2a_[a-f0-9]{64}$/)}).passthrough().parse(await readBoundedJson(res,65536));
+  if (result.queryId !== await monthlyRedemptionJobId(retained.monthlyId, retained.requestId)) throw new Error("Original Monthly job binding refused; retain the original request");
+  return result;
 }

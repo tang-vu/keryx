@@ -2,6 +2,7 @@ import { z } from "zod";
 import { AskQuestionSchema } from "../ask-input";
 import { addressSchema, BUYER_NETWORK, BUYER_PROFILE } from "../buyer/protocol";
 import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
+import { browserSha256 } from "../browser-receipt-integrity";
 
 export const MONTHLY_PATH = "/api/research/monthly";
 export const monthlyIdSchema = z.string().regex(/^monthly_[a-f0-9]{64}$/);
@@ -44,4 +45,10 @@ export function monthlyRecoveryFileSchemaForProfile(profile: ArcNetworkProfile) 
 export const monthlyRecoveryFileSchema = monthlyRecoveryFileSchemaForProfile(BUYER_PROFILE);
 export function monthlyRecoveryFile(request: z.infer<typeof monthlyRecoveryRequestSchema>) {
   return { schema: "keryx-monthly-recovery-v2" as const, network: BUYER_NETWORK, request: monthlyRecoveryRequestSchema.parse(request) };
+}
+
+/** Same original identity as native Monthly admission; a shaped foreign job is insufficient. */
+export async function monthlyRedemptionJobId(id: string, requestId: string) {
+  const originalId = monthlyIdSchema.parse(id), originalRequest = z.string().uuid().parse(requestId);
+  return `a2a_${(await browserSha256(JSON.stringify(["keryx-monthly-redemption-v1", originalId, originalRequest]))).slice(7)}`;
 }
