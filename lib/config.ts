@@ -1,60 +1,77 @@
 /**
  * Keryx runtime configuration — single source of truth for chain, economics, and providers.
- * Keryx is Arc-testnet-only today. Network contract addresses are pinned as one profile;
+ * Trusted server/public configuration selects one pinned Arc profile;
  * conflicting environment values fail startup rather than creating a mixed-chain deployment.
  */
 
-import { ARC_TESTNET_PROFILE, paymentRuntimeProfile } from "./arc-network-profile";
-
-const ARC_TESTNET_USDC = ARC_TESTNET_PROFILE.usdcAddress;
-const ARC_TESTNET_GATEWAY_WALLET = ARC_TESTNET_PROFILE.gatewayWallet;
-const ARC_TESTNET_GATEWAY_MINTER = ARC_TESTNET_PROFILE.gatewayMinter;
+import { configuredPaymentProfile, configuredRegistryAddress } from "./arc-network-profile";
+import { browserPaymentProfile } from "./browser-payment-profile";
 
 /** Reject network contract overrides until a separately reviewed network profile exists. */
-export function assertArcTestnetConfiguration(env: {
+export function assertArcConfiguration(env: {
   KERYX_NETWORK?: string;
+  NEXT_PUBLIC_KERYX_NETWORK?: string;
   KERYX_USDC_ADDRESS?: string;
   KERYX_GATEWAY_WALLET?: string;
   KERYX_GATEWAY_MINTER?: string;
+  KERYX_REGISTRY_ADDRESS?: string;
+  NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS?: string;
+  KERYX_REGISTRY_READ_ADDRESS?: string;
+  NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS?: string;
 }): void {
-  paymentRuntimeProfile(env.KERYX_NETWORK);
+  const profile = configuredPaymentProfile(env.KERYX_NETWORK, env.NEXT_PUBLIC_KERYX_NETWORK);
+  configuredRegistryAddress(profile, env.KERYX_REGISTRY_ADDRESS, env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS);
+  if (env.KERYX_REGISTRY_READ_ADDRESS !== undefined || env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS !== undefined)
+    configuredRegistryAddress(profile, env.KERYX_REGISTRY_READ_ADDRESS, env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS);
   for (const [name, actual, expected] of [
-    ["KERYX_USDC_ADDRESS", env.KERYX_USDC_ADDRESS, ARC_TESTNET_USDC],
-    ["KERYX_GATEWAY_WALLET", env.KERYX_GATEWAY_WALLET, ARC_TESTNET_GATEWAY_WALLET],
-    ["KERYX_GATEWAY_MINTER", env.KERYX_GATEWAY_MINTER, ARC_TESTNET_GATEWAY_MINTER],
+    ["KERYX_USDC_ADDRESS", env.KERYX_USDC_ADDRESS, profile.usdcAddress],
+    ["KERYX_GATEWAY_WALLET", env.KERYX_GATEWAY_WALLET, profile.gatewayWallet],
+    ["KERYX_GATEWAY_MINTER", env.KERYX_GATEWAY_MINTER, profile.gatewayMinter],
   ] as const) {
     if (actual !== undefined && actual.toLowerCase() !== expected.toLowerCase()) {
-      throw new Error(`${name} must match the Arc testnet profile`);
+      throw new Error(`${name} must match the ${profile.label} profile`);
     }
   }
 }
 
-assertArcTestnetConfiguration({
+/** Compatibility export; new integrations should use the network-neutral name. */
+export const assertArcTestnetConfiguration = assertArcConfiguration;
+// This historical config module is shared by some UI modules. Only Node reads private
+// configuration; critical browser/worker signing imports the lightweight public module instead.
+if (typeof process !== "undefined" && process.release?.name === "node") assertArcConfiguration({
   KERYX_NETWORK: process.env.KERYX_NETWORK,
+  NEXT_PUBLIC_KERYX_NETWORK: process.env.NEXT_PUBLIC_KERYX_NETWORK,
   KERYX_USDC_ADDRESS: process.env.KERYX_USDC_ADDRESS,
   KERYX_GATEWAY_WALLET: process.env.KERYX_GATEWAY_WALLET,
   KERYX_GATEWAY_MINTER: process.env.KERYX_GATEWAY_MINTER,
+  KERYX_REGISTRY_ADDRESS: process.env.KERYX_REGISTRY_ADDRESS,
+  NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS: process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS,
+  KERYX_REGISTRY_READ_ADDRESS: process.env.KERYX_REGISTRY_READ_ADDRESS,
+  NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS: process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS,
 });
+const profile = browserPaymentProfile();
 
 export const config = {
   // ── Chain (Arc testnet defaults) ──
-  network: ARC_TESTNET_PROFILE.name,
+  profile,
+  chainId: profile.chainId,
+  network: profile.name,
   // x402 network identifier used in payment requirements
-  networkId: ARC_TESTNET_PROFILE.networkId,
-  rpcUrl: process.env.KERYX_RPC_URL ?? ARC_TESTNET_PROFILE.rpcUrl,
+  networkId: profile.networkId,
+  rpcUrl: process.env.KERYX_RPC_URL ?? profile.rpcUrl,
   // WebSocket RPC for the indexer's live log subscription (read-only pushes; settlement
   // stays on rpcUrl). Set to an empty string to disable pushes — the indexer then relies
   // on its heartbeat poll alone.
-  rpcWsUrl: process.env.KERYX_RPC_WS_URL ?? ARC_TESTNET_PROFILE.rpcWsUrl,
-  usdcAddress: ARC_TESTNET_USDC as `0x${string}`,
-  gatewayWallet: ARC_TESTNET_GATEWAY_WALLET as `0x${string}`,
+  rpcWsUrl: process.env.KERYX_RPC_WS_URL ?? ("rpcWsUrl" in profile ? profile.rpcWsUrl : ""),
+  usdcAddress: profile.usdcAddress as `0x${string}`,
+  gatewayWallet: profile.gatewayWallet as `0x${string}`,
   // GatewayMinter contract — mints USDC on the destination chain from a Circle transfer
   // attestation. Used by the creator-withdraw relay to submit gatewayMint(). Testnet value
   // from @circle-fin/x402-batching CHAIN_CONFIGS.arcTestnet.gatewayMinter.
-  gatewayMinter: ARC_TESTNET_GATEWAY_MINTER as `0x${string}`,
-  explorerUrl: ARC_TESTNET_PROFILE.explorerUrl,
-  gatewayBalanceApi: `${ARC_TESTNET_PROFILE.gatewayApiUrl}/v1/balances`,
-  cctpDomain: ARC_TESTNET_PROFILE.cctpDomain,
+  gatewayMinter: profile.gatewayMinter as `0x${string}`,
+  explorerUrl: profile.explorerUrl,
+  gatewayBalanceApi: `${profile.gatewayApiUrl}/v1/balances`,
+  cctpDomain: profile.cctpDomain,
 
   // ── Agent economics (USDC) ──
   defaultBudget: num(process.env.KERYX_DEFAULT_BUDGET, 0.05),

@@ -4245,3 +4245,26 @@ Preserve the established v1 raw result/default brief contract across the TypeScr
 ## Empty evidence production completion - 2026-10-02
 
 Initialize the shared orchestrator's Low confidence fallback before its early returns. Next's production optimizer coalesced an uninitialized confidence binding with a later verdict, causing no-source and failed-original-read paths to throw despite passing source tests. Protect actual compiled behavior with a hermetic post-build regression in CI. Result/payment/export contracts remain unchanged across shared consumers. See [production empty-evidence regression](docs/engineering/empty-evidence-production-2026-10-02.md).
+
+## Full public mainnet scope and matched deployment profiles - 2026-10-02
+
+The user corrected the earlier invited-pilot proposal: migrate normal public Keryx
+on `keryx.cc` and all applicable supported surfaces, including ordinary wallet login,
+funding/grants, creator registration/payout and research/API/CLI/MCP clients. Preserve
+the superseded proposal and synthetic evidence without treating its invite list or
+tiny hard limits as permanent product policy. Reuse verified isolation and signing
+pieces where appropriate; preserve funded testnet identities and historical records.
+
+Select immutable canonical `arc` or `arcTestnet` pins from trusted deployment settings,
+with both unspecified retaining testnet. Enforce matching private `KERYX_NETWORK` and
+public build `NEXT_PUBLIC_KERYX_NETWORK` before Node payment authority; standalone
+commands set both labels too. Pin mainnet registry public/server twins to the same
+reviewed nonzero addresses. Capture browser/worker authority from the lightweight
+public build module alone, without a server/request network fallback. An optional
+mainnet WebSocket endpoint is not inferred; the indexer can poll the selected HTTP RPC.
+
+This contract enables reviewable source migration, not real deployment or spending.
+Require coordinated durable state identity, ordinary owner consent, observed funding,
+registry/content authority, bounded nonce/cap allocation, settlement/recovery and
+withdrawal/operational evidence before the final owner launch decision. See the
+[corrected mainnet delivery plan](docs/mainnet-delivery-plan.md).
