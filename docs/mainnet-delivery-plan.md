@@ -67,6 +67,15 @@ reload, original mint-hash recovery and independent finality checks with synthet
 external transport. These checks do not close the live-wallet/funding or coordinated
 deployment acceptance gates.
 
+The headless session caller reuses the same restricted withdrawal and unsigned
+owner mint preparation policy. Explicit state migration retains the original funded
+ciphertext, nonces, question budgets and lifetime consumption while excluding old
+writers. Native acceptance covers expired/revoked custody, lost authorization and
+transfer responses, retained manual owner mint hashes and original completion.
+The CLI does not sign or broadcast the owner's mint transaction. Ordinary own-EOA
+MCP/CLI balances use the documented same-owner SIWE withdrawal handoff instead;
+key-only MCP cashout is not implied by delegated session support.
+
 Normal public labels and contract references follow the compiled deployment profile;
 receipt, citation and withdrawal explorer links follow each original record's network.
 Unlabelled legacy receipt data remains testnet, and unknown explicit networks are never
