@@ -3,6 +3,8 @@ import { z } from "zod";
 import { canonicalJson } from "../canonical-json";
 import { readBoundedJson } from "../read-bounded-json";
 import { validateWithdrawIntent, withdrawRequestSchema, type WithdrawPolicy } from "./withdraw-protocol";
+import { ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
+import { assertWithdrawalNetworkPolicy } from "./withdrawal-network";
 
 const uint = z.string().regex(/^(0|[1-9][0-9]{0,77})$/).refine(value => BigInt(value) < maxUint256);
 const windowSchema = z.object({ minimumBlockHeight: uint, maximumBlockHeight: uint }).strict()
@@ -35,12 +37,13 @@ export function matchWithdrawalEstimate(value: unknown, selected: unknown, polic
   return estimated.burnIntent;
 }
 
-/** Unsigned testnet estimation only. Sends no signature and never invokes /transfer.
+/** Unsigned selected-profile estimation only. Sends no signature and never invokes /transfer.
  * Fixed URL, no redirects/retries; deadline and size cap cover the response body. */
-export async function estimateWithdrawalIntent(selected: unknown, selectedPolicy: WithdrawPolicy, selectedWindow: Window, signal: AbortSignal) {
+export async function estimateWithdrawalIntent(selected: unknown, selectedPolicy: WithdrawPolicy, selectedWindow: Window, signal: AbortSignal,
+  trustedProfile: ArcNetworkProfile = ARC_TESTNET_PROFILE) {
   const policy = structuredClone(selectedPolicy), window = windowSchema.parse(structuredClone(selectedWindow));
   const original = validateWithdrawIntent(structuredClone(selected), policy);
-  if (policy.domain !== 26) throw new Error("Withdrawal estimate network unavailable");
+  const profile = assertWithdrawalNetworkPolicy(policy, trustedProfile);
   const stop = new AbortController(), timer = setTimeout(() => stop.abort(), 10000);
   const combined = AbortSignal.any([signal, stop.signal]);
   let rejectAbort!: () => void;
@@ -49,7 +52,7 @@ export async function estimateWithdrawalIntent(selected: unknown, selectedPolicy
   try {
     combined.throwIfAborted();
     return await Promise.race([aborted, (async () => {
-      const response = await fetch("https://gateway-api-testnet.circle.com/v1/estimate", { method: "POST", redirect: "error",
+      const response = await fetch(`${profile.gatewayApiUrl}/v1/estimate`, { method: "POST", redirect: "error",
         headers: { "Content-Type": "application/json" }, body: JSON.stringify([{ spec: original.burnIntent.spec }]), signal: combined });
       combined.throwIfAborted();
       const body = await readBoundedJson(response, 8192); combined.throwIfAborted();
