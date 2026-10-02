@@ -16,7 +16,7 @@ requires its own observed deployment check.
 
 Browser header construction, worker policy, server verification, seller facilitator,
 browser journal payment tuples and reconciliation share static testnet pins. The
-worker imports no server configuration or environment selector. Challenge fields
+worker signing policy imports no server configuration or environment selector. Challenge fields
 cannot select a network or Gateway contract. The existing read-only mainnet probe
 uses the same mainnet reference constants without gaining signer authority.
 
@@ -52,3 +52,42 @@ The first slice changes no distribution protocol, installer or package capabilit
 No deployed commit or published artifact has been verified as mainnet capable.
 Full-product adoption/economics gates remain independent of bounded pilot safety;
 neither simulated payments nor an accepted manifest establish revenue or traction.
+
+## Dormant isolated signer component
+
+The second source slice provides `lib/session/isolated-session-context.ts`,
+`isolated-session-vault.ts` and `isolated-session-signer.ts`. They are building blocks
+for a separately reviewed worker entry. The public worker, client, session hook and
+routes do not import the isolated signer, and startup still refuses mainnet.
+
+The context is constructed once from canonical static profile pins and a trusted
+candidate enrollment: exact HTTPS origin, owner, candidate digest, epoch, maximum
+per-payment micro-USDC and fixed signing-context expiry. A readable versioned
+derivation message includes every value. The worker component verifies the owner's
+signature of that exact message before deriving a salted key; the legacy testnet
+derivation message and key are unchanged. A different network/origin/owner/candidate/
+epoch yields a different signing identity and isolated storage namespace. Recovering
+the same context still requires a deterministically signing wallet and its retained
+exact public context. Expired contexts can restore their identity but cannot create
+new payment authorizations. They have no cash-out or transaction interface.
+
+The vault authenticates the context digest and derived address with AES-GCM additional
+data. It retains an isolated non-exportable wrapping key and does not import/migrate
+legacy keys. The IndexedDB adapter atomically retains the first wrapping key. Tests
+exercise real wallet signatures and native WebCrypto encryption with an injected
+atomic in-memory wrapping-key store; actual packaged worker/IndexedDB and restart
+acceptance remain release gates. Restore snapshots the full envelope and bytes before
+awaiting storage. Lifecycle operations exclude concurrent derive/restore; clear cancels
+publication, waits outstanding storage, destroys the wrapping key, and refuses new
+operations until deletion finishes.
+
+Payments use a detached payload and the independently pinned chosen profile, bounded
+amount/expiry, exact current origin and an authoritative payee provider captured once
+at construction. The helper does not implement a payee authority protocol, source-bound
+nonce admission, cumulative budget ledger, RPC pre/post attestation, funding or seller
+settlement. Those remain independent server/registry/worker-enrollment domains above.
+The server journal must reserve every nonce and enforce lifetime caps before exposure;
+local per-payment checks cannot substitute for durable spend authority. An application
+must not pass an unverified request's payee list or candidate context into this factory.
+No mainnet release, spending authorization or real settlement evidence follows from
+these synthetic checks.
