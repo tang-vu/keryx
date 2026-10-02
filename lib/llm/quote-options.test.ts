@@ -30,7 +30,20 @@ describe("quote selection", () => {
       expect(passages.some((passage) => passage.text.includes(option.text))).toBe(true);
       expect(option.text.isWellFormed()).toBe(true);
     }
-    expect(options.reduce((sum, option) => sum + option.text.length, 0)).toBeLessThanOrEqual(passages.reduce((sum, passage) => sum + passage.text.length, 0));
+    expect(options.reduce((sum, option) => sum + option.text.length, 0)).toBeLessThanOrEqual(64 * 240);
+  });
+
+  it("offers one contiguous mechanism straddling an overlong sentence's first quote boundary", () => {
+    const prefix = "A synthetic introduction with no evidence for the target mechanism, ".repeat(3);
+    const mechanism = "the mediator observes the exact action and renders approval from that observation while treating narration as untrusted data";
+    const text = prefix + mechanism + ", followed by unrelated background words repeated to make the sentence longer than the public quotation limit.";
+    expect(text.length).toBeGreaterThan(240);
+    const options = buildQuoteOptions([{ marker: "S1", passages: [{ text }] }]);
+    expect(options.some(option => option.text.includes(mechanism))).toBe(true);
+    options.forEach(option => {
+      expect(text).toContain(option.text);
+      expect(option.text.length).toBeLessThanOrEqual(240);
+    });
   });
 
   it("rejects unknown IDs, cross-source selection, raw quotes and malformed entries", () => {

@@ -10,18 +10,25 @@ export function buildQuoteOptions(sources: { marker: string; passages: { text: s
     const options: QuoteOption[] = [];
     for (const passage of source.passages) {
       for (const sentence of segmenter.segment(passage.text)) {
-        let remaining = sentence.segment.trim();
-        while (remaining.length && options.length < 64) {
-          let end = Math.min(remaining.length, MAX_QUOTE_CHARACTERS);
-          if (end < remaining.length) {
-            const space = remaining.lastIndexOf(" ", end);
-            if (space >= 8) end = space;
+        const body = sentence.segment.trim();
+        let start = 0;
+        while (start < body.length && options.length < 64) {
+          let end = Math.min(body.length, start + MAX_QUOTE_CHARACTERS);
+          if (end < body.length) {
+            const space = body.lastIndexOf(" ", end);
+            if (space >= start + 8) end = space;
             // Do not cut a surrogate pair in text without word boundaries.
-            else if (/[\uD800-\uDBFF]/.test(remaining[end - 1])) end--;
+            else if (/[\uD800-\uDBFF]/.test(body[end - 1])) end--;
           }
-          const text = remaining.slice(0, end).trim();
+          const text = body.slice(start, end).trim();
           if (text.length >= 8) options.push({ quoteId: `q${sourceIndex}_${options.length}`, marker: source.marker, text });
-          remaining = remaining.slice(end).trim();
+          if (end === body.length) break;
+          // Overlap the previous bounded quote so a mechanism straddling its edge can be
+          // selected as one literal span. Never concatenate text from separate passages.
+          const next = start + Math.max(1, Math.floor((end - start) / 2));
+          const space = body.indexOf(" ", next);
+          start = space >= next && space < end ? space + 1 : next;
+          if (/[\uDC00-\uDFFF]/.test(body[start])) start++;
         }
       }
     }

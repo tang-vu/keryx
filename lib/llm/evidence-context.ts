@@ -1,10 +1,12 @@
 import type { GatheredContent } from "./reasoning-engine";
+import { questionArxivIds } from "../scholarly/arxiv";
+import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
 
 const MAX_SOURCE_CHARACTERS = 200_000;
 const PASSAGE_CHARACTERS = 600;
 const WINDOW_STRIDE = 400;
 const OPENING_CHARACTERS = 300;
-const MAX_WINDOWS = 5;
+const MAX_WINDOWS = MAX_RESEARCH_TARGETS + 1;
 const MAX_CONTEXT_CHARACTERS = 2000;
 const STOP_WORDS = new Set("a an and are as at be by can do does for from how in is it of on or that the their this to what when where which who why with".split(" "));
 
@@ -25,6 +27,7 @@ function unionCharacters(ranges: { start: number; end: number }[]): number {
 
 /** Only extracts verbatim windows from already-unlocked content; never fetches or summarizes. */
 export function selectEvidencePassages(text: string, question: string, subClaims: string[]) {
+  if (subClaims.length > MAX_RESEARCH_TARGETS) throw new Error(`Evidence context exceeded ${MAX_RESEARCH_TARGETS} research targets; requested scope must not be silently discarded`);
   const scanned = text.slice(0, MAX_SOURCE_CHARACTERS);
   if (text.length <= MAX_CONTEXT_CHARACTERS) {
     return {
@@ -32,7 +35,7 @@ export function selectEvidencePassages(text: string, question: string, subClaims
       passages: text ? [{ start: 0, end: text.length, text }] : [],
     };
   }
-  const targets = (subClaims.length ? subClaims.slice(0, 4) : [question]).map(terms);
+  const targets = (subClaims.length ? subClaims : [question]).map(terms);
   const questionTerms = terms(question);
   // Prefer whole sentences without interpreting or rewriting source text. Long sentences
   // and text without recognized punctuation still use bounded character windows.
@@ -61,6 +64,17 @@ export function selectEvidencePassages(text: string, question: string, subClaims
       ? [...target].filter((term) => words.has(term)).length / target.size : 0;
     windows.push({ start, end, text: body, words, questionScore: match(questionTerms) });
     if (end === scanned.length) break;
+  }
+  // A meaningful sentence may span fixed windows. Offer it intact within the same per-source
+  // budget instead of requiring the ranker to discover and merge both halves of its context.
+  for (let index = 1; index < boundaries.length; index++) {
+    const start = boundaries[index - 1]!;
+    const end = boundaries[index]!;
+    if (end - start > PASSAGE_CHARACTERS || end <= start) continue;
+    const body = scanned.slice(start, end);
+    const words = terms(body);
+    const questionScore = questionTerms.size ? [...questionTerms].filter(term => words.has(term)).length / questionTerms.size : 0;
+    windows.push({ start, end, text: body, words, questionScore });
   }
   // Retain the opening for context, then balance relevance across the requested targets.
   const openingEnd = boundaryBefore(OPENING_CHARACTERS) || OPENING_CHARACTERS;
@@ -117,12 +131,21 @@ export const EVIDENCE_CONTEXT_GUIDANCE =
   "An abstract-page read supports only the supplied abstract-page passages; paper-text may be truncated by extraction limits. ";
 
 export function evidenceContext(question: string, subClaims: string[], gathered: GatheredContent[]) {
-  return gathered.map((source) => ({
-    marker: source.marker, sourceId: source.sourceId, name: source.sourceName,
-    article: source.itemTitle, articleUrl: source.itemUrl, publishedAt: source.itemPublishedAt,
-    sourceKind: source.sourceKind ?? "creator",
-    ...(source.scholarly ? { scholarly: source.scholarly } : {}),
-    deliveryKind: source.publicDeliveryKind ?? source.contentReceipt?.deliveryKind ?? "unknown",
-    ...selectEvidencePassages(source.text, question, subClaims),
-  }));
+  return gathered.map((source) => {
+    const exactVersion = source.scholarly?.provider === "arxiv" ? source.scholarly.arxivId : undefined;
+    const sourceClaims = exactVersion ? subClaims.filter(claim => {
+      const requestedVersions = questionArxivIds(claim);
+      // Untargeted/general dimensions and unversioned intent remain applicable. Only a
+      // positively identified different exact version is excluded from this source's ranker.
+      return requestedVersions.length === 0 || requestedVersions.includes(exactVersion);
+    }) : subClaims;
+    return {
+      marker: source.marker, sourceId: source.sourceId, name: source.sourceName,
+      article: source.itemTitle, articleUrl: source.itemUrl, publishedAt: source.itemPublishedAt,
+      sourceKind: source.sourceKind ?? "creator",
+      ...(source.scholarly ? { scholarly: source.scholarly } : {}),
+      deliveryKind: source.publicDeliveryKind ?? source.contentReceipt?.deliveryKind ?? "unknown",
+      ...selectEvidencePassages(source.text, question, sourceClaims),
+    };
+  });
 }
