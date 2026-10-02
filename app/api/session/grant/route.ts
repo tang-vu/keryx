@@ -1,22 +1,17 @@
 /**
  * POST /api/session/grant
  *
- * Called by the browser after the user has:
- *   1. Generated a session EOA (key lives in the tab only).
- *   2. Sent one MetaMask tx to fund that EOA with USDC + native gas.
- *   3. Called gateway.deposit() from the browser to credit Circle's Gateway.
+ * Mainnet: the browser retains encrypted session custody and the owner funds Gateway
+ * with depositFor(session), without session native gas. A single-use server proposal
+ * binds exact network/origin/epoch/cumulative cap/expiry. POST consumes the owner's
+ * consent signature and the session signer's separate possession proof atomically.
+ * Only known Circle capacity may back the proposal; no native-balance fallback.
+ * GET returns the active public consent/proofs and retained cumulative spend.
  *
- * This endpoint records the grant server-side so BrowserCoSignGateway can
- * enforce the cap. It stores ONLY { sessAddr, ownerAddr, cap, expiry, txHash }
- * — never a private key (there is none server-side for user sessions).
- *
- * The cap is never the number the client asked for: it is clamped to the USDC Circle's
- * Gateway actually holds for the session EOA. A client that overstates its deposit gets
- * the real balance as its ceiling instead of a rejection, so an honest client racing its
- * own agent's spend is never dead-ended. For a fresh grant, when Circle cannot be reached
- * we fall back to the session EOA's native balance, which at least proves the address was
- * funded. If neither balance source is available, or if a recovery cannot be verified
- * against Circle, the request fails closed and the client retries later.
+ * Testnet preserves its legacy tab signer, direct funding/deposit and bounded
+ * fresh-grant native-balance fallback. Neither path sends private keys or the secret
+ * custody derivation signature to the server. Revocation/expiry cannot erase exposed
+ * payment history or withdraw funds from Gateway.
  *
  * SIWE session required. Only the authenticated wallet can create a grant.
  */

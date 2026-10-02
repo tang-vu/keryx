@@ -5,10 +5,11 @@ import { privatePaymentConfirmation } from "../a2a/private-payment-state";
 import { BUYER_NETWORK, addressSchema } from "../buyer/protocol";
 import { readBoundedJson } from "../read-bounded-json";
 import type { PrivateTreasuryPolicy } from "../db/private-treasury-capacity";
+import { paymentRuntimeConfig } from "../payment-runtime-config";
 
-const facilitatorUrl = "https://gateway-api-testnet.circle.com/v1/x402/";
+const facilitatorUrl = `${paymentRuntimeConfig().gatewayApiUrl}/v1/x402/`;
 type PaymentBody = { paymentPayload: unknown; paymentRequirements: unknown };
-/** Explicit fixed testnet transport. No redirects, retries, discovery metadata or raw error logging. */
+/** Captured selected-profile transport. No redirects, retries, discovery metadata or raw error logging. */
 export async function privateIncomingFacilitator(action: "verify" | "settle", body: PaymentBody) {
   const response = await fetch(`${facilitatorUrl}${action}`, { method: "POST", redirect: "error",
     headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(30_000) });

@@ -111,3 +111,15 @@ logout, authenticate its retained owner independently of the active grant, and r
 signed pending liabilities when calculating available withdrawal capacity. Restoring
 custody for withdrawal does not renew payment permission. No actual mainnet activation,
 private custody file, funded transaction or deployment is part of this preparation.
+
+Withdrawal transport preparation now accepts an explicit canonical mainnet profile:
+the unsigned builder pins its contracts, the v2 request retains its original network,
+and estimation, metadata and transfer reads select the fixed Circle service from that
+profile. Testnet v1 requests remain readable on their original rail. Mainnet contract
+or network relabeling refuses before signing or vendor transport; fresh height checks
+compare both chain and the same observed block before/after metadata reads. Circle's
+[supported chains](https://developers.circle.com/gateway/references/supported-blockchains)
+and [live metadata](https://gateway-api.circle.com/v1/info) were checked on 2026-10-02
+for Arc domain 26, Mainnet metadata and the pinned wallet/minter addresses. This is a
+transport prerequisite; normal session recovery routes, durable cashout holds and
+mainnet creator relay admission remain unfinished and are not activated by these helpers.
