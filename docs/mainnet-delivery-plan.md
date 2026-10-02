@@ -50,8 +50,12 @@ and cannot be inferred from synthetic mainnet checks.
 
 The [normal browser custody checkpoint](./mainnet-browser-custody.md) documents retained original
 same-device recovery, owner funding, dual consent/possession proofs, cumulative signed capacity,
-and actual Chromium/Next worker evidence. Full authenticated server research composition and
-owner-only session cashout remain release gates; this source checkpoint does not activate mainnet.
+and actual Chromium/Next worker evidence. Synthetic normal authenticated research composition
+now completes encrypted purchases and citations, retaining a completed answer on one reward-leg
+failure. Actual React owner funding checks cover concurrent debit reconciliation and an immutable
+top-up consent ceiling through normal handlers. Independent live wallet acceptance, owner-only
+session cashout, final coordinated SQL/operational evidence and owner cutover remain release
+gates; this source checkpoint does not activate mainnet.
 
 ## Current baseline and gaps
 

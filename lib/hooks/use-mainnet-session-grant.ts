@@ -5,17 +5,18 @@ import type { Hex, PublicClient } from "viem";
 import { ARC_MAINNET_PROFILE as profile } from "../arc-network-profile";
 import { browserPaymentProfile } from "../browser-payment-profile";
 import { getSessionSigner, type SessionSigner } from "../session/session-signer-client";
-import { fundOwnerGatewaySession, reconcileOwnerSessionCredit } from "../session/owner-gateway-funding";
-import { acknowledgeSessionFundingCredit } from "../buyer/funding-journal";
+import { fundOwnerGatewaySession, reconcileOwnerSessionCredit, acknowledgeOwnerSessionCredit } from "../session/owner-gateway-funding";
 import { sessionJson } from "../session/browser-session-http";
 import { revokeBrowserSessionGrant } from "../session/browser-session-revocation";
-import { createSessionGrantConsentMessage, parseSessionGrantConsent } from "../payments/session-grant-consent";
+import { createSessionGrantConsentMessage, parseSessionGrantConsent, type SessionGrantConsent } from "../payments/session-grant-consent";
 import { createSessionGrantClock } from "../session-grant-time";
 import { watchSessionGrantClock } from "../session-grant-liveness";
 import { readGatewayCredit } from "../gateway/read-credit";
 import type { GrantState } from "./use-session-grant";
 import { z } from "zod";
 import type { BrowserQuestionBudget } from "../session/browser-session-runtime";
+import { readOwnerSessionCredit } from "../session/session-funding-credit";
+import { readRetainedSessionGrantReference, retainSessionGrantReference } from "../session/browser-session-grant-reference";
 
 const initial: GrantState = { status: "idle", sessAddr: null, sessionId: null, cap: 0, spent: 0,
   expiresAt: null, grantEpoch: null, error: null };
@@ -38,14 +39,15 @@ export function useMainnetSessionGrant() {
   const owner = wallet?.account?.address.toLowerCase() ?? null;
   const ownerRef = useRef(owner), generation = useRef(0), signerRef = useRef<SessionSigner | null>(null);
   const clock = useRef<ReturnType<typeof createSessionGrantClock> | null>(null);
+  const currentConsent = useRef<SessionGrantConsent | null>(null);
   useLayoutEffect(() => {
-    if (ownerRef.current !== owner) { generation.current += 1; clock.current = null; void signerRef.current?.clear(); }
+    if (ownerRef.current !== owner) { generation.current += 1; clock.current = null; currentConsent.current = null; void signerRef.current?.clear(); }
     ownerRef.current = owner;
   }, [owner]);
   useEffect(() => {
     function changed(event: Event) {
       if ((event as CustomEvent).detail !== "signed-out") return;
-      generation.current += 1; clock.current = null;
+      generation.current += 1; clock.current = null; currentConsent.current = null;
       void signerRef.current?.clear();
       setState(s => ({ ...s, status: s.sessAddr ? "paused" : "idle", error: null, expiresAt: null, grantEpoch: null }));
     }
@@ -83,17 +85,34 @@ export function useMainnetSessionGrant() {
       throw new Error("Published grant differs from the current worker-bound consent");
     const spent = micros.parse(bound.response.spentMicroUsdc), cap = current.capMicroUsdc;
     if (BigInt(spent) < BigInt(metadata.spentMicroUsdc)) throw new Error("Retained signer capacity decreased unexpectedly");
+    retainSessionGrantReference(current);
+    currentConsent.current = current;
     clock.current = next;
     setState({ status: "active", sessAddr, sessionId: metadata.sessionId, cap: Number(cap)/1e6,
       spent: Number(spent)/1e6, expiresAt: metadata.expiresAt, grantEpoch: next.grantEpoch, error: null });
   }, [signer]);
-  const consentGrant = useCallback(async (sessAddr: string, budgetMicros: string) => {
+  const consentGrant = useCallback(async (sessAddr: string, budgetMicros: string, absoluteTarget?: bigint) => {
     const expectedOwner = ownerRef.current, expectedGeneration = ++generation.current;
     if (!expectedOwner || !wallet) throw new Error("Owner wallet unavailable");
-    await ensureArc(); setState(s => ({ ...s, status: "registering", sessAddr }));
-    const challenge = await sessionJson("/api/session/grant/challenge", "POST", { sessAddr, budgetMicros, recover: true }) as { consent: unknown; funding: unknown };
-    const consent = parseSessionGrantConsent(challenge.consent, profile);
-    const funding = fundingSchema.parse(challenge.funding), available = BigInt(funding.availableMicroUsdc), requested = BigInt(budgetMicros);
+    const assertCurrent = () => { if (generation.current !== expectedGeneration || ownerRef.current !== expectedOwner) throw new Error("Session registration changed"); };
+    await ensureArc(); assertCurrent(); setState(s => ({ ...s, status: "registering", sessAddr }));
+    let requested = BigInt(budgetMicros);
+    let proposal: { consent: SessionGrantConsent; funding: z.infer<typeof fundingSchema> } | null = null;
+    for (let attempt=0; attempt<3; attempt++) {
+      const challenge = await sessionJson("/api/session/grant/challenge", "POST", { sessAddr, budgetMicros: requested.toString(), recover: true }) as { consent: unknown; funding: unknown };
+      assertCurrent();
+      const consent = parseSessionGrantConsent(challenge.consent, profile), funding = fundingSchema.parse(challenge.funding);
+      const confirmed = BigInt(funding.confirmedSpentMicroUsdc), available = BigInt(funding.availableMicroUsdc), cap = BigInt(consent.capMicroUsdc);
+      if (consent.ownerAddr !== expectedOwner || consent.sessAddr !== sessAddr.toLowerCase() || consent.origin !== window.location.origin ||
+        cap !== confirmed+(requested < available ? requested : available)) throw new Error("Grant proposal differs from your selected funded budget");
+      if (absoluteTarget !== undefined && cap > absoluteTarget) {
+        if (attempt === 2 || confirmed >= absoluteTarget) throw new Error("Retained spend changed; review the selected cumulative cap before renewing");
+        requested = absoluteTarget-confirmed; continue;
+      }
+      proposal = { consent, funding }; break;
+    }
+    if (!proposal) throw new Error("Session consent target unavailable");
+    const { consent, funding } = proposal, available = BigInt(funding.availableMicroUsdc);
     const confirmed = BigInt(funding.confirmedSpentMicroUsdc), retained = BigInt(funding.retainedSpentMicroUsdc), cap = BigInt(consent.capMicroUsdc);
     const proposed = cap > retained ? cap-retained : BigInt(0);
     if (consent.ownerAddr !== expectedOwner || consent.sessAddr !== sessAddr.toLowerCase() ||
@@ -101,9 +120,11 @@ export function useMainnetSessionGrant() {
       proposed !== BigInt(funding.proposedRemainingMicroUsdc) || proposed <= BigInt(0)) throw new Error("Grant consent differs from your current funded budget or retained liabilities");
     setState(s => ({ ...s, consentReview: { cumulativeCapUsdc: Number(cap)/1e6, confirmedSpentUsdc: Number(confirmed)/1e6,
       retainedSpentUsdc: Number(retained)/1e6, remainingCapacityUsdc: Number(proposed)/1e6, availableUsdc: Number(available)/1e6 } }));
+    assertCurrent();
     const signature = await wallet.signMessage({ account: wallet.account!, message: createSessionGrantConsentMessage(consent, profile) });
     if (generation.current !== expectedGeneration || ownerRef.current !== expectedOwner) throw new Error("Session registration changed");
     const sessionSignature = await signer().signGrantConsentProof(consent, signature);
+    assertCurrent();
     const started = performance.now(), body = await sessionJson("/api/session/grant", "POST", { consent, signature, sessionSignature });
     if (generation.current !== expectedGeneration || ownerRef.current !== expectedOwner) throw new Error("Session registration changed");
     await publishGrant(body, sessAddr, started, expectedGeneration); return true;
@@ -127,10 +148,16 @@ export function useMainnetSessionGrant() {
     const assertCurrent = () => { if (generation.current !== expectedGeneration || ownerRef.current !== expectedOwner) throw new Error("Session funding changed; retain the original transaction for recovery"); };
     const requestConsent = async (sessAddr: string, budget: string) => {
       assertCurrent(); expectedGeneration = generation.current+1;
-      return consentGrant(sessAddr, budget);
+      return consentGrant(sessAddr, budget, targetCap ?? undefined);
     };
+    let targetCap: bigint | null = null;
     try {
       const micros = amount(budgetUsdc);
+      const previous = currentConsent.current;
+      if (addFunds && (!previous || state.status !== "active" || previous.grantEpoch !== state.grantEpoch || previous.ownerAddr !== expectedOwner))
+        throw new Error("Restore the active owner consent before adding to its budget");
+      targetCap = addFunds ? BigInt(previous!.capMicroUsdc)+BigInt(micros) : null;
+      if (targetCap !== null && targetCap > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("Requested cumulative cap exceeds the supported integer range");
       if (!wallet || !rpc || !expectedOwner) throw new Error("Connect and authenticate the owner wallet first");
       setState(s => ({ ...s, status: "switching", error: null })); await ensureArc();
       assertCurrent();
@@ -145,27 +172,30 @@ export function useMainnetSessionGrant() {
       }
       assertCurrent(); setState(s => ({ ...s, sessAddr, sessionId: expectedOwner }));
       // Refuse unknown Gateway funds before asking the owner to deposit more.
-      const available = await readGatewayCredit(sessAddr);
+      const creditSnapshot = await readOwnerSessionCredit(sessAddr, readRetainedSessionGrantReference(expectedOwner, sessAddr));
+      const available = BigInt(creditSnapshot.available);
       await reconcileOwnerSessionCredit(expectedOwner as Hex, sessAddr, available);
       assertCurrent();
       if (!addFunds && available >= BigInt(micros)) { await requestConsent(sessAddr, micros); return; }
-      const funding = await fundOwnerGatewaySession({ owner: expectedOwner as Hex, signer: sessAddr, amountMicros: micros, knownAvailableMicros: available,
+      const funding = await fundOwnerGatewaySession({ owner: expectedOwner as Hex, signer: sessAddr, amountMicros: micros, knownAvailableMicros: available, creditSnapshot,
         wallet, rpc: rpc as PublicClient, assertCurrent,
         onPhase: phase => setState(s => ({ ...s, status: phase.startsWith("deposit") ? "depositing" : "funding" })) });
       setState(s => ({ ...s, status: "confirming" }));
       // Circle credit can lag on-chain confirmation; bounded polling never repeats a deposit.
       for (let attempt=0; attempt<40; attempt++) {
         assertCurrent();
-        const knownAvailable = await readGatewayCredit(sessAddr);
-        if (funding.gatewayCreditBefore !== undefined && knownAvailable >= BigInt(funding.gatewayCreditBefore)+BigInt(funding.amount)) {
-          await acknowledgeSessionFundingCredit(funding.id, knownAvailable);
-          await requestConsent(sessAddr, knownAvailable.toString()); return;
+        const credited = await acknowledgeOwnerSessionCredit(funding, expectedOwner);
+        if (credited !== null) {
+          const confirmed = BigInt(credited.confirmedSpentMicroUsdc);
+          const desired = targetCap === null ? BigInt(micros) : targetCap > confirmed ? targetCap-confirmed : BigInt(0);
+          if (desired <= BigInt(0)) throw new Error("The selected consent target is already consumed; review retained liabilities before renewing");
+          await requestConsent(sessAddr, desired.toString()); return;
         }
         await new Promise(resolve => setTimeout(resolve, 3000));
       }
       throw new Error("Deposit is confirmed on-chain. Gateway credit is pending; recover the retained session later without depositing again.");
     } catch (err) { if (generation.current === expectedGeneration && ownerRef.current === expectedOwner) failure(err); }
-  }, [wallet, rpc, ensureArc, signer, consentGrant, failure]);
+  }, [wallet, rpc, ensureArc, signer, consentGrant, failure, state.grantEpoch, state.status]);
   const recoverViaSignature = useCallback(async () => {
     try {
       if (!ownerRef.current) throw new Error("Connect the original owner wallet first");
@@ -181,7 +211,7 @@ export function useMainnetSessionGrant() {
   const revoke = useCallback(async () => {
     const expectedGeneration = ++generation.current, expectedOwner = ownerRef.current;
     const { sessAddr, sessionId, grantEpoch } = state;
-    clock.current = null;
+    clock.current = null; currentConsent.current = null;
     // Immediately lock heap custody; never delete the original funded key.
     await signer().clear();
     try {

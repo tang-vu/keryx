@@ -25,12 +25,15 @@ export const fundingRecordSchema = z.object({
   /** Owner-funded browser session; omitted for historical/self-funded buyer records. */
   depositor: addressSchema.optional(),
   gatewayCreditBefore: z.string().regex(/^(0|[1-9]\d{0,15})$/).optional(),
+  gatewayCreditObservedAt: z.string().datetime().refine(value => new Date(value).toISOString() === value).optional(),
   gatewayCreditAcknowledged: z.boolean().optional(),
   activePayer: addressSchema.optional(), network: z.literal(BUYER_NETWORK), amount: fundingAmountSchema,
   approval: legSchema, deposit: legSchema, cancelled: z.boolean().default(false), createdAt: z.string().datetime(), updatedAt: z.string().datetime(),
 }).strict().superRefine((row, ctx) => {
   if (row.payer !== row.payer.toLowerCase() || (row.activePayer && row.activePayer !== row.payer)) ctx.addIssue({ code: "custom", message: "Funding wallet key mismatch" });
   const pendingSessionCredit = !!row.depositor && row.gatewayCreditBefore !== undefined && row.gatewayCreditAcknowledged !== true;
+  if (row.gatewayCreditObservedAt !== undefined && (!row.depositor || row.gatewayCreditBefore === undefined))
+    ctx.addIssue({ code: "custom", message: "Funding baseline time requires an original session credit snapshot" });
   const terminal = row.cancelled || (row.deposit.status === "confirmed" && !pendingSessionCredit) || row.deposit.status === "reverted" || row.approval.status === "reverted" || row.deposit.status === "replaced" || row.approval.status === "replaced";
   if (terminal === !!row.activePayer) ctx.addIssue({ code: "custom", message: "Funding lock does not match terminal state" });
   if (row.deposit.status !== "ready" && row.approval.status !== "confirmed") ctx.addIssue({ code: "custom", message: "Deposit requires confirmed approval" });

@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { randomBytes, randomUUID } from "node:crypto";
 import { build } from "esbuild";
 import { chromium } from "playwright";
-import { encodeFunctionResult, type Hex } from "viem";
+import { decodeFunctionData, encodeFunctionResult, erc20Abi, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { ARC_MAINNET_PROFILE as profile } from "../arc-network-profile";
 import { canonicalJson } from "../canonical-json";
@@ -41,7 +41,7 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
   const owner = privateKeyToAccount(`0x${"11".repeat(32)}`), creator = privateKeyToAccount(`0x${"22".repeat(32)}`);
   const cookies = new AsyncLocalStorage<string | undefined>();
   vi.doMock("next/headers", () => ({ cookies: async () => ({ get: (name: string) => name === "keryx_session" && cookies.getStore() ? { value: cookies.getStore() } : undefined }) }));
-  const settledNonces = new Set<string>(); let sessionAddress = "", circleDebit = BigInt(0);
+  const settledNonces = new Set<string>(); let sessionAddress = "", circleDebit = BigInt(0), depositCredit = BigInt(0);
   vi.doMock("@circle-fin/x402-batching/server", () => ({ BatchFacilitatorClient: class {
     constructor(options: { url: string }) { expect(options.url).toBe(profile.gatewayApiUrl); }
     async verify(payload: { payload: { authorization: { from: string; nonce: string }; signature: string } }, requirements: import("../payments/browser-cosign-gateway").PaymentRequirements) {
@@ -113,7 +113,7 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
     if (target === config.gatewayBalanceApi) {
       const requested = JSON.parse(String(init.body));
       sessionAddress ||= requested.sources[0].depositor.toLowerCase();
-      return Response.json({ token: "USDC", balances: [{ depositor: sessionAddress, domain: profile.cctpDomain, balance: (Number(BigInt(1_000_000)-circleDebit)/1e6).toFixed(6) }] });
+      return Response.json({ token: "USDC", balances: [{ depositor: sessionAddress, domain: profile.cctpDomain, balance: (Number(BigInt(1_000_000)+depositCredit-circleDebit)/1e6).toFixed(6) }] });
     }
     if (target.startsWith(origin)) return dispatch(target, init);
     throw new Error("Unexpected external network refused");
@@ -123,7 +123,16 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
   const hook = await build({ stdin: { loader: "tsx", resolveDir: process.cwd(), contents: `
     import React from 'react'; import {createRoot} from 'react-dom/client';
     import {useMainnetSessionGrant} from './lib/hooks/use-mainnet-session-grant';
-    window.wallet={account:{address:'${owner.address}'},getChainId:async()=>5042,getAddresses:async()=>['${owner.address}'],signMessage:async({message})=>window.ownerPersonalSign(message)};
+    import {listFundingRecords} from './lib/buyer/funding-journal';window.fundingRecords=listFundingRecords;
+    window.sentFunding=[];
+    window.fundingChain={getChainId:async()=>5042,readContract:async()=>2000000n,getBalance:async()=>2000000000000000000n,
+      estimateGas:async()=>21000n,estimateFeesPerGas:async()=>({maxFeePerGas:1n,maxPriorityFeePerGas:1n}),
+      getTransactionCount:async()=>window.sentFunding.length,getBlockNumber:async()=>BigInt(100+window.sentFunding.length*2),
+      getTransaction:async({hash})=>{const tx=window.sentFunding.find(tx=>tx.hash===hash);return {...tx,value:BigInt(tx.value),blockNumber:BigInt(tx.blockNumber)}},
+      getTransactionReceipt:async({hash})=>{const tx=window.sentFunding.find(tx=>tx.hash===hash);return {transactionHash:hash,blockHash:tx.blockHash,blockNumber:BigInt(tx.blockNumber),status:'success'}}};
+    window.wallet={account:{address:'${owner.address}'},getChainId:async()=>5042,getAddresses:async()=>['${owner.address}'],signMessage:async({message})=>window.ownerPersonalSign(message),
+      sendTransaction:async(tx)=>{const hash=await window.ownerFundingSubmit({from:tx.account,to:tx.to,data:tx.data,value:tx.value.toString(),nonce:tx.nonce});
+      window.sentFunding.push({hash,from:tx.account,to:tx.to,input:tx.data,value:tx.value.toString(),nonce:tx.nonce,blockHash:'${blockHash}',blockNumber:String(101+tx.nonce*2)});return hash;}};
     function Probe(){const grant=useMainnetSessionGrant(); window.normalGrant=grant;return <output id="state">{JSON.stringify(grant.state)}</output>}
     createRoot(document.getElementById('root')).render(<Probe/>);
   ` }, bundle: true, write: false, platform: "browser", format: "esm",
@@ -131,11 +140,33 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
       "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": JSON.stringify(registry), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" },
     plugins: [{ name: "synthetic-owner-wallet", setup(builder) {
       builder.onResolve({ filter: /^wagmi$/ }, () => ({ path: "wagmi", namespace: "synthetic" }));
-      builder.onLoad({ filter: /.*/, namespace: "synthetic" }, () => ({ contents: "const rpc={};export const useWalletClient=()=>({data:window.wallet});export const usePublicClient=()=>rpc;export const useSwitchChain=()=>({switchChainAsync:async()=>{}});" }));
+      builder.onLoad({ filter: /.*/, namespace: "synthetic" }, () => ({ contents: "export const useWalletClient=()=>({data:window.wallet});export const usePublicClient=()=>window.fundingChain;export const useSwitchChain=()=>({switchChainAsync:async()=>{}});" }));
     } }] });
   const browser = await chromium.launch({ headless: true }); cleanup.push(() => browser.close());
   const context = await browser.newContext(); await context.addCookies([{ name: "keryx_session", value: token, url: origin, secure: true, httpOnly: true, sameSite: "Strict" }]);
-  await context.exposeFunction("ownerPersonalSign", (message: string) => owner.signMessage({ message }));
+  const ownerMessages: string[] = [];
+  await context.exposeFunction("ownerPersonalSign", (message: string) => { ownerMessages.push(message); return owner.signMessage({ message }); });
+  let duringApproval: (() => Promise<void>) | undefined;
+  let duringNextGrantChallenge: (() => Promise<void>) | undefined;
+  let afterDeposit: (() => Promise<void>) | undefined;
+  const fundingProposals: Array<{ requested: string; cap: string }> = [];
+  const { GATEWAY_DEPOSIT_FOR_ABI } = await import("../buyer/funding-policy");
+  await context.exposeFunction("ownerFundingSubmit", async (tx: { from: string; to: string; data: Hex; value: string; nonce: number }) => {
+    expect(tx.from.toLowerCase()).toBe(owner.address.toLowerCase()); expect(tx.value).toBe("0");
+    if (tx.nonce === 0) {
+      expect(tx.to.toLowerCase()).toBe(profile.usdcAddress.toLowerCase());
+      expect(decodeFunctionData({ abi: erc20Abi, data: tx.data })).toMatchObject({ functionName: "approve", args: [profile.gatewayWallet, BigInt(50000)] });
+      await duringApproval!();
+    } else {
+      expect(tx.nonce).toBe(1); expect(tx.to.toLowerCase()).toBe(profile.gatewayWallet.toLowerCase());
+      const decoded = decodeFunctionData({ abi: GATEWAY_DEPOSIT_FOR_ABI, data: tx.data });
+      expect(decoded.functionName).toBe("depositFor");
+      expect(String(decoded.args![1]).toLowerCase()).toBe(sessionAddress); expect(decoded.args![2]).toBe(BigInt(50000));
+      depositCredit += BigInt(50000);
+      duringNextGrantChallenge = afterDeposit;
+    }
+    return `0x${(tx.nonce+1).toString(16).padStart(64,"0")}`;
+  });
   let holdGrant = false, holdRevoke = false, releaseHeld: (() => void) | undefined, held = false;
   await context.route("**/*", async route => {
     const req = route.request(), url = req.url();
@@ -146,7 +177,14 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
     expect(url.startsWith(origin)).toBe(true);
     const receivedToken = req.headers().cookie?.split(";").map(s => s.trim()).find(s => s.startsWith("keryx_session="))?.slice("keryx_session=".length);
     if (holdRevoke && url === `${origin}/api/session/revoke`) { holdRevoke = false; held = true; await new Promise<void>(resolve => { releaseHeld = resolve; }); }
+    if (url === `${origin}/api/session/grant/challenge` && duringNextGrantChallenge) {
+      const settle = duringNextGrantChallenge; duringNextGrantChallenge = undefined; await settle();
+    }
     const response = await dispatch(url, { method: req.method(), body: req.postData() ?? undefined, headers: req.headers() }, receivedToken);
+    if (afterDeposit && url === `${origin}/api/session/grant/challenge` && response.ok) {
+      const proposal = await response.clone().json();
+      fundingProposals.push({ requested: JSON.parse(req.postData()!).budgetMicros, cap: proposal.consent.capMicroUsdc });
+    }
     if (holdGrant && req.method() === "GET" && url === `${origin}/api/session/grant`) { holdGrant = false; held = true; await new Promise<void>(resolve => { releaseHeld = resolve; }); }
     return route.fulfill({ status: response.status, body: await response.text(), headers: Object.fromEntries(response.headers) });
   });
@@ -165,7 +203,8 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
   await call("initializeOwner", { owner: owner.address });
   expect((await call("restoreRetained") as { address: string }).address.toLowerCase()).toBe(sessionAddress);
   const { createSessionGrantConsentMessage } = await import("../payments/session-grant-consent");
-  const response = await dispatch(`${origin}/api/ask`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: "How do durable reservations protect payment nonces?", budget: 0.01, sessionId: owner.address, browserAuthorizationProtocol: "durable-v1", mode: "quick", scholarly: false }) }, token);
+  async function completeResearch(question: string, budget: number, questionId: string) {
+  const response = await dispatch(`${origin}/api/ask`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question, budget, sessionId: owner.address, browserAuthorizationProtocol: "durable-v1", mode: "quick", scholarly: false }) }, token);
   expect(response.status).toBe(200); const reader = response.body!.getReader(), decoder = new TextDecoder(); let buffer = "", done: QueryRun | null = null, signs = 0;
   for (;;) {
     const next = await reader.read(); if (next.done) break; buffer += decoder.decode(next.value, { stream: true });
@@ -174,13 +213,16 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
       const event = /^event: (.+)$/m.exec(packet)?.[1], data = JSON.parse(/^data: (.+)$/m.exec(packet)![1]);
       if (event === "error") throw new Error(JSON.stringify(data));
       if (event === "sign-request") {
-        signs++; const { paymentHeader } = await call("authorizePayment", { reqId: data.reqId, question: { id: identity.enrollmentId, budgetMicroUsdc: "10000" } }) as { paymentHeader: string };
+        signs++; const { paymentHeader } = await call("authorizePayment", { reqId: data.reqId, question: { id: questionId, budgetMicroUsdc: String(Math.round(budget*1e6)) } }) as { paymentHeader: string };
         const status = await page.evaluate(async ({ reqId, paymentHeader, sessionId }) => (await fetch("/api/ask/sign", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId, reqId, paymentHeader }) })).status, { reqId: data.reqId, paymentHeader, sessionId: owner.address.toLowerCase() });
         expect(status).toBe(200);
       }
       if (event === "done") done = data;
     }
   }
+  expect(done).not.toBeNull(); return { done: done!, signs };
+  }
+  const { done, signs } = await completeResearch("How do durable reservations protect payment nonces?", 0.01, identity.enrollmentId);
   expect(done).not.toBeNull(); expect(done!.answer).toContain("[S1]"); expect(done!.answer).toContain("nonce"); expect(done!.citations.length).toBeGreaterThan(0);
   expect(signs).toBe(2); expect(settledNonces.size).toBe(failCitation ? 1 : 2);
   const payments = await db.listCreatorPaymentAttemptsByQuery(done!.id);
@@ -226,6 +268,31 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
     expect((await hookState()).status).toBe("paused");
     expect((await (await dispatch(`${origin}/api/session/grant`, {}, token)).json()).grantEpoch).toBe(afterLogout.grantEpoch);
     await recover(); await expect.poll(hookState).toMatchObject({ status: "active", grantEpoch: afterLogout.grantEpoch });
+    const originalCap = (await hookState()).cap;
+    duringApproval = async () => {
+      const debitBefore = circleDebit;
+      const concurrent = await completeResearch("How do durable payment reservations preserve nonce protection?", 0.01, randomUUID());
+      expect(concurrent.done.answer).toContain("[S1]"); expect(circleDebit).toBeGreaterThan(debitBefore);
+    };
+    afterDeposit = async () => {
+      const debitBefore = circleDebit;
+      const later = await completeResearch("How do durable payment reservations preserve nonce protection?", 0.01, randomUUID());
+      expect(later.done.answer).toContain("[S1]"); expect(circleDebit).toBeGreaterThan(debitBefore);
+    };
+    const messagesBeforeFunding = ownerMessages.length;
+    await page.evaluate(() => (window as unknown as { normalGrant: { topUp(amount: number): Promise<void> } }).normalGrant.topUp(0.05));
+    expect((await hookState()).status).toBe("active");
+    expect(Math.round((await hookState()).cap*1e6)).toBe(Math.round(originalCap*1e6)+50000);
+    const target = BigInt(Math.round(originalCap*1e6)+50000);
+    expect(fundingProposals).toHaveLength(2);
+    expect(BigInt(fundingProposals[0].cap)).toBeGreaterThan(target);
+    expect(BigInt(fundingProposals[1].cap)).toBe(target);
+    expect(BigInt(fundingProposals[1].requested)).toBeLessThan(BigInt(fundingProposals[0].requested));
+    expect(ownerMessages.length-messagesBeforeFunding).toBe(1);
+    const fundingRows = await page.evaluate(owner => (window as unknown as { fundingRecords(owner: string): Promise<Array<{ gatewayCreditAcknowledged?: boolean; activePayer?: string; gatewayCreditObservedAt?: string }>> }).fundingRecords(owner), owner.address);
+    expect(fundingRows).toHaveLength(1); expect(fundingRows[0].gatewayCreditAcknowledged).toBe(true);
+    expect(fundingRows[0].activePayer).toBeUndefined(); expect(fundingRows[0].gatewayCreditObservedAt).toBeDefined();
+    expect(await page.evaluate(() => (window as unknown as { sentFunding: unknown[] }).sentFunding.length)).toBe(2);
   }
   await call("lock"); expect((await call("restoreRetained") as { address: string }).address.toLowerCase()).toBe(sessionAddress);
-}, 60000);
+}, 90000);

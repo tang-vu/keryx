@@ -4340,3 +4340,21 @@ unsigned deploy/register/exact-approve/depositFor requests for owner review. It 
 wallet/key, broadcast, funding or launch authority. Preserve old proposal evidence as
 superseded rather than rebranding it as the public release. See
 [normal mainnet browser custody](docs/mainnet-browser-custody.md).
+
+## Original mainnet funding credit and bounded top-up consent - 2026-10-02
+
+Keep the existing owner funding transaction journal and its cross-tab lock until original
+Circle credit is evidenced. Concurrent research can legitimately reduce current availability
+below the saved balance plus deposit. Permit only authenticated, original settled debits
+admitted strictly after the saved balance observation to offset that threshold. Later
+confirmation of older pending debits, raw lifetime total changes and unknown holds cannot
+prove deposit credit. Bind the projection to the original network, signer and observation;
+retain uncertainty instead of repeating an owner deposit.
+
+Adding funds retains an exact absolute ceiling of previous owner consent plus the chosen
+deposit. A settlement between credit reconciliation and the grant proposal cannot enlarge
+that ceiling: refresh current capacity against new confirmed spend at most three times,
+then refuse before owner signing if it cannot be honored. Preserve the acknowledged deposit.
+Retain every public historical grant selector for original-proof recovery after logout or
+replacement; selectors alone confer no authority. Synthetic actual React/native-handler
+acceptance exercises both concurrent settlement intervals with one approval/deposit pair.

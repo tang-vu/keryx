@@ -5,13 +5,25 @@ import { acknowledgeSessionFundingCredit, createFundingRecord, listFundingRecord
 import { recoverFundingStep, submitFundingStep } from "../buyer/funding-client";
 import type { FundingRecord, FundingStep } from "../buyer/funding-policy";
 export { GATEWAY_DEPOSIT_FOR_ABI } from "../buyer/funding-policy";
+import { hasOriginalSessionDepositCredit, readOwnerSessionCredit, type SessionFundingCredit } from "./session-funding-credit";
+import { readRetainedSessionGrantReference } from "./browser-session-grant-reference";
 export type OwnerFundingPhase = "approval-awaiting" | "approval-submitted" | "approved" | "deposit-awaiting" | "deposit-submitted" | "deposited";
 
 export async function reconcileOwnerSessionCredit(owner: Address, signer: Address, knownAvailableMicros: bigint) {
   for (const row of await listFundingRecords(owner)) {
-    if (row.depositor?.toLowerCase() === signer.toLowerCase() && row.activePayer && row.deposit.status === "confirmed")
-      await acknowledgeSessionFundingCredit(row.id, knownAvailableMicros);
+    if (row.depositor?.toLowerCase() === signer.toLowerCase() && row.activePayer && row.deposit.status === "confirmed") {
+      if (!row.gatewayCreditObservedAt) { await acknowledgeSessionFundingCredit(row.id, knownAvailableMicros); continue; }
+      const projection = await readOwnerSessionCredit(signer, readRetainedSessionGrantReference(owner, signer), row.gatewayCreditObservedAt);
+      await acknowledgeSessionFundingCredit(row.id, BigInt(projection.available), projection);
+    }
   }
+}
+export async function acknowledgeOwnerSessionCredit(record: FundingRecord, owner: string) {
+  const projection = await readOwnerSessionCredit(record.depositor!, readRetainedSessionGrantReference(owner, record.depositor!), record.gatewayCreditObservedAt);
+  const available = BigInt(projection.available);
+  if (!hasOriginalSessionDepositCredit(record, available, record.gatewayCreditObservedAt ? projection : undefined)) return null;
+  if (!await acknowledgeSessionFundingCredit(record.id, available, record.gatewayCreditObservedAt ? projection : undefined)) return null;
+  return projection;
 }
 
 /** The normal buyer funding journal already retains nonce, exact calldata, replacements and
@@ -19,14 +31,16 @@ export async function reconcileOwnerSessionCredit(owner: Address, signer: Addres
  * the worker has no funding transaction authority. A submission is never automatically retried.
  */
 export async function fundOwnerGatewaySession(input: { owner: Address; signer: Address; amountMicros: string;
-  knownAvailableMicros: bigint;
+  knownAvailableMicros: bigint; creditSnapshot?: SessionFundingCredit;
   wallet: WalletClient; rpc: PublicClient; assertCurrent?(): void; onPhase?(phase: OwnerFundingPhase): void }) {
   if (browserPaymentProfile() !== profile || input.owner.toLowerCase() === input.signer.toLowerCase()) throw new Error("Mainnet session funding terms unavailable");
   const rows = await listFundingRecords(input.owner);
   let record = rows.find(row => row.activePayer === input.owner.toLowerCase());
   if (record && (record.depositor?.toLowerCase() !== input.signer.toLowerCase() || record.amount !== input.amountMicros))
     throw new Error("A retained funding transaction needs reconciliation before adding funds");
-  record ??= await createFundingRecord(input.owner, input.amountMicros, input.signer, input.knownAvailableMicros.toString());
+  if (input.creditSnapshot && (input.creditSnapshot.address !== input.signer.toLowerCase() ||
+    input.creditSnapshot.available !== input.knownAvailableMicros.toString())) throw new Error("Session funding baseline differs");
+  record ??= await createFundingRecord(input.owner, input.amountMicros, input.signer, input.knownAvailableMicros.toString(), input.creditSnapshot?.observedAt);
   async function confirm(step: FundingStep, current: FundingRecord) {
     for (let attempt=0; attempt<30; attempt++) {
       input.assertCurrent?.();

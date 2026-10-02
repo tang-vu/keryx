@@ -2,18 +2,20 @@ import { browserTransaction, type BrowserStore } from "./browser-storage";
 import { addressSchema, BUYER_NETWORK } from "./protocol";
 import { fundingAmountSchema, fundingRecordSchema, fundingResolutionSchema, transactionHashSchema, type FundingRecord, type FundingStep } from "./funding-policy";
 import { browserPaymentProfile } from "../browser-payment-profile";
+import { hasOriginalSessionDepositCredit } from "../session/session-funding-credit";
 
 const spec: BrowserStore = { database: browserPaymentProfile().testnet ? "keryx-gateway-funding-v1" : `keryx-gateway-funding-v2-${browserPaymentProfile().networkId}`, store: "funding", keyPath: "id", indexes: [
   { name: "activePayer", keyPath: "activePayer", unique: true }, { name: "payer", keyPath: "payer" }, { name: "createdAt", keyPath: "createdAt" },
 ] };
 const transact = <T>(mode: IDBTransactionMode, work: Parameters<typeof browserTransaction<T>>[2]) => browserTransaction<T>(spec, mode, work);
 
-export async function createFundingRecord(payer: string, amount: string, depositor?: string, gatewayCreditBefore?: string): Promise<FundingRecord> {
+export async function createFundingRecord(payer: string, amount: string, depositor?: string, gatewayCreditBefore?: string, gatewayCreditObservedAt?: string): Promise<FundingRecord> {
   payer = addressSchema.parse(payer).toLowerCase(); fundingAmountSchema.parse(amount);
   const now = new Date().toISOString();
   const record = fundingRecordSchema.parse({ schema: "keryx-gateway-funding-v1", id: crypto.randomUUID(), payer, activePayer: payer,
     network: BUYER_NETWORK, amount, ...(depositor ? { depositor: addressSchema.parse(depositor).toLowerCase() } : {}),
     ...(gatewayCreditBefore === undefined ? {} : { gatewayCreditBefore, gatewayCreditAcknowledged: false }),
+    ...(gatewayCreditObservedAt === undefined ? {} : { gatewayCreditObservedAt }),
     approval: { status: "ready" }, deposit: { status: "ready" }, createdAt: now, updatedAt: now });
   // The unique activePayer index serializes new deposits across tabs, including ready prompts.
   await transact<void>("readwrite", (store, done) => { store.add(record).onsuccess = () => done(undefined); });
@@ -81,9 +83,9 @@ export const cancelFundingRecord = (id: string) => change(id, row => {
 
 /** The funding lock survives on-chain confirmation until independently known Circle credit
  * includes this original deposit. Credit lag must never reopen an automatic deposit prompt. */
-export const acknowledgeSessionFundingCredit = (id: string, knownAvailableMicros: bigint) => change(id, row => {
+export const acknowledgeSessionFundingCredit = (id: string, knownAvailableMicros: bigint, projection?: unknown) => change(id, row => {
   if (!row.depositor || row.gatewayCreditBefore === undefined || row.deposit.status !== "confirmed" ||
-    row.gatewayCreditAcknowledged || knownAvailableMicros < BigInt(row.gatewayCreditBefore) + BigInt(row.amount)) return null;
+    row.gatewayCreditAcknowledged || !hasOriginalSessionDepositCredit(row, knownAvailableMicros, projection)) return null;
   const next = { ...row, gatewayCreditAcknowledged: true }; delete next.activePayer; return next;
 });
 
