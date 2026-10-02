@@ -1,5 +1,23 @@
 # Keryx Project Changelog
 
+### Bounded owner creator cash-out operations (2026-10-02, pending acceptance)
+
+- Add an explicit testnet-only operator plan, portable original-owner signer,
+  retained-original import, fresh protected relay submission/mint, and keyless
+  receipt recovery/reporting. Reviewed plan digest and exact integer limits bind
+  every operation; lost responses never renew a signature, transfer or broadcast.
+- Keep owner keys in their original host/files. Verify Windows DACL/ancestor
+  protection and Linux private journal boundaries; read only the selected original
+  publisher/funder env key field without importing endpoints.
+- Add separate exact 0.21 native test-USDC relay funding with original nonce/hash,
+  exclusive one-send retention and keyless receipt recovery. Historical rehearsal
+  limits remain unchanged.
+- Report residual balances and cash-outs separately from creator payments.
+  Preparation/signing check solvency against the immutable selected debit;
+  later credits remain residual and never enlarge a reviewed request.
+  Public browser creation/timers and desktop/MCP/extensions/bots gain no authority.
+  Funded results and deployed versions require separate actual acceptance evidence.
+
 ### Public mainnet-support candidate (2026-10-02, v0.26.0)
 
 - Observe the reviewed mainnet public treasury through its sealed storage/policy and selected Circle Gateway available balance. Preserve the historical testnet App Kit view; never reuse its wallet/chains or stale balance on mainnet, and display unavailable Circle amounts as unknown rather than zero. Balance observation is separate from funded payment readiness.

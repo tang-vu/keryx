@@ -26,6 +26,9 @@
     "scripts/web-client.mts",
     "scripts/research-monthly.mts",
     "scripts/test-browser-monthly.mts",
-    "scripts/test-browser-monthly-selected.mts"
+    "scripts/test-browser-monthly-selected.mts",
+    "scripts/creator-cashout-batch.mts",
+    "scripts/creator-cashout-batch-sign.mts",
+    "scripts/creator-cashout-batch-funding.mts"
   ]
 }
