@@ -116,5 +116,13 @@ export function createPilotAdmissions(db: DatabaseSync, input: PilotPolicy) {
       .get(fields.owner, fields.owner, fields.signer, fields.grantEpoch, Date.now());
     return grant && Math.floor(Date.now() / 1000) < policy.expiresAtSeconds ? fields : null;
   }
-  return Object.freeze({ admitQuery, hooks, journalByNonce, claimSettlement, assertPolicy, issueGrant, consumeGrant, readSession });
+  function revokeGrant(fields: PilotGrantFields): boolean {
+    return sqliteJournalTransaction(db, () => {
+      assertPolicy();
+      // Authentication may precede a replacement by another process. Revoke only the captured generation.
+      return db.prepare("DELETE FROM session_grants WHERE session_id=? AND owner_addr=? AND lower(sess_addr)=? AND grant_epoch=?")
+        .run(fields.owner, fields.owner, fields.signer, fields.grantEpoch).changes === 1;
+    });
+  }
+  return Object.freeze({ admitQuery, hooks, journalByNonce, claimSettlement, assertPolicy, issueGrant, consumeGrant, readSession, revokeGrant });
 }

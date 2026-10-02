@@ -57,6 +57,8 @@ export function createPilotSignatures() {
     return { ok: true, delivered };
   }
   function close() { for (const slot of slots.values()) slot.reject(); }
-  function revoke(owner: string) { for (const slot of slots.values()) if (slot.owner === owner) slot.reject(); }
+  function revoke(owner: string, epoch: string) {
+    for (const slot of slots.values()) if (slot.owner === owner && slot.epoch === epoch) slot.reject();
+  }
   return Object.freeze({ awaitHeader, challenge, acknowledge, close, revoke });
 }

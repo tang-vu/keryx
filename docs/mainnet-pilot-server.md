@@ -58,7 +58,9 @@ Delegation fields are canonical strings: `owner`, `signer`, `grantEpoch`, `capMi
 `expirySeconds`, with `enrollmentDigest` and `signature` on grant submission. The session-key
 derivation signature never reaches this server. The random session bearer is retained only as
 a hash and delivered in a `__Host-` Secure, HttpOnly, SameSite=Strict cookie. Old delegation
-replays and old cookies cannot reinstate a replaced or revoked grant.
+replays and old cookies cannot reinstate a replaced or revoked grant. Revocation compares the
+captured owner, signer and grant epoch in the same SQLite writer transaction; a stale logout
+cannot delete a replacement grant, and cancellation targets only the revoked epoch.
 
 Deletion from IndexedDB cannot erase keys already held by another worker, withdraw Gateway funds
 or claw back exposed signatures. Browser logout must first revoke server authority successfully,

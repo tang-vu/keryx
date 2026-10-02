@@ -240,6 +240,24 @@ it("replaces owner grants with a fresh epoch while retaining signer capacity and
   expect((await handlePilotRequest(pilotRequest(f.context, "/grant", undefined, f.cookie, "GET"), f.context)).status).toBe(403);
   expect((await handlePilotRequest(pilotRequest(f.context, "/grant", f.delegation), f.context)).status).toBe(403);
 }, 30000);
+it("refuses a stale logout after a second SQLite connection replaces the captured grant", async () => {
+  const f = await fixture(); await dispatch(f.context, f.cookie, f.signer);
+  const oldFields = { ...f.delegation };
+  const spent = (await f.context.getGrant(f.owner))!.spent;
+  const replacement = await f.createContext(); cleanup.push(() => replacement.close());
+  const fields = replacement.admissions.issueGrant(f.owner, f.signer.address.toLowerCase(), 50000);
+  replacement.admissions.consumeGrant(fields, "55".repeat(32));
+  expect(f.context.admissions.revokeGrant(oldFields)).toBe(false);
+  expect((await f.context.getGrant(f.owner))!.grantEpoch).toBe(fields.grantEpoch);
+  expect((await f.context.getGrant(f.owner))!.spent).toBe(spent);
+  expect((await f.context.db.listPayments(100)).map(p => p.kind).sort()).toEqual(["citation", "fetch"]);
+  expect(replacement.admissions.revokeGrant(fields)).toBe(true);
+  expect(await f.context.getGrant(f.owner)).toBeUndefined();
+  const raw = new DatabaseSync(f.file);
+  expect(Number(raw.prepare("SELECT spent_micro FROM browser_signer_capacity WHERE signer=?")
+    .get(f.signer.address.toLowerCase())?.spent_micro)).toBe(Math.round(spent * 1e6));
+  raw.close();
+}, 30000);
 it("refuses legacy DB and treasury initialization on the sealed pilot domain even with a legacy key present", async () => {
   const f = await fixture(); const manifestPath = join(f.folder, "deployment.json"); writeFileSync(manifestPath, canonicalJson(f.deployment));
   vi.stubEnv("KERYX_STORAGE_MANIFEST", manifestPath); vi.stubEnv("KERYX_MAINNET_PILOT_ORIGIN", f.policy.origin);

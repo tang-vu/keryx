@@ -71,8 +71,8 @@ export async function handlePilotRequest(request: Request, context: PilotServerC
         listPriceMicroUsdc: String(Math.round(resolved.terms.listPriceUsdc * 1e6)) }, { headers: { "Cache-Control": "no-store" } });
     }
     if (path === "/api/mainnet-pilot/grant" && request.method === "DELETE") {
-      await context.db.deleteSessionGrant(session.owner);
-      context.signatures.revoke(session.owner);
+      if (!context.admissions.revokeGrant(session)) return refused(409);
+      context.signatures.revoke(session.owner, session.grantEpoch);
       return Response.json({ revoked: true, retainedAuthorizations: true }, { headers: { "Cache-Control": "no-store",
         "Set-Cookie": `${PILOT_SESSION_COOKIE}=; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=0` } });
     }
