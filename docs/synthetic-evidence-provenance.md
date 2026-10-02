@@ -41,7 +41,7 @@ and stored content, while body hashes describe plaintext. No paid research or co
 decryption was needed for this inspection.
 
 Deployment acceptance still requires applying the reviewed schema with ordinary owner
-authority, restarting the ordinary SQLite runtime, checking the classified source/item
+authority for the ordinary testnet SQLite runtime, restarting it, checking classified source/item
 counts, and retrieving dispatch `a455ae08-114b-4532-8680-c0049b3a6c4f` and its refreshed
 receipt. Confirm the S4 demo designation, zero factual support for its latency claim,
 valid receipt digest, and unchanged real payment legs/totals. Do not rewrite old saved
@@ -61,6 +61,10 @@ and sticky triggers. Existing enrolled stores with the prior schema require an e
 reviewed migration/re-enrollment; runtime startup never repairs them. Its audited
 facade treats source verification CAS as a write, refuses it in readonly mode and keeps
 the metadata-only provenance lookup private behind guarded historical read methods.
+Selected mainnet application storage requires that sealed enrolled facade; it cannot
+take the ordinary startup backfill path. Fresh schema/corpus inspection, migration and
+reviewed enrollment remain required before owner-authorized mainnet deployment. Merely
+merging selected-network code does not migrate a store, activate a profile or authorize funds.
 
 ## Historical and transport behavior
 
@@ -70,6 +74,8 @@ bodies or decrypt content. Archived prose stays inspectable under a prominent no
 synthetic citations/excerpts are labeled, lose factual/reward qualification and cannot
 raise factual claim coverage or confidence. A newly projected receipt hashes precisely
 that visible projection, preserving recorded settlement independently.
+Rows predating citation/evidence arrays retain their original recorded shape and money;
+projection invents no missing evidence and needs no catalog lookup for such records.
 
 Web SSE/history, public archive and feeds, API dispatch/receipts, A2A, OpenAI and remote
 MCP share these records. Caller CLI and stdio MCP forward the same API result. BibTeX,

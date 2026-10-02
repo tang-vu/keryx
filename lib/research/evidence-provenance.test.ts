@@ -20,6 +20,15 @@ function fixture(): QueryRun {
 }
 
 describe("protective historical evidence projection", () => {
+  it("preserves pre-evidence archive records without fabricating missing arrays or querying catalog metadata", async () => {
+    const historical = { id: "old", question: "Before evidence records", answer: "Retained answer", totalSpent: 0.035 } as QueryRun;
+    const resolve = vi.fn(async () => new Set<string>());
+    expect(demoteSyntheticEvidence(historical)).toEqual(historical);
+    expect(await projectRecordedEvidenceProvenanceList(resolve, [historical])).toEqual([historical]);
+    expect(resolve).not.toHaveBeenCalled();
+    expect(Object.hasOwn(demoteSyntheticEvidence(historical), "citations")).toBe(false);
+    expect(Object.hasOwn(demoteSyntheticEvidence(historical), "decisions")).toBe(false);
+  });
   it("keeps checked fingerprint manifest exactly matched to complete authored corpus", () => {
     expect(SEED_EVIDENCE_FINGERPRINTS).toEqual(SEED_SOURCES.flatMap(source => source.items ?? []).map(item => ({ itemTitle: item.title, itemUrl: item.link, bodyHash: contentBodyHash(item.content) })));
   });
