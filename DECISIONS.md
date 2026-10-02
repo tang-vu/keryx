@@ -1,5 +1,23 @@
 # Keryx — Decision Log
 
+**D-290** — Preserve treasury custody rather than replacing unavailable keys — *2026-10-02*
+
+The reachable server gateway previously caught every wallet read/parse error and
+generated a replacement, overwriting malformed existing custody and allowing
+concurrent bootstrap races. Require a bounded read of the existing legacy wallet,
+matching derived address and retained regular-file identity before constructing
+any signer or SDK/funding client. Never create, repair or mutate wallet state from
+runtime admission. Reconciliation and acknowledgement share this identity parser;
+public balance metadata remains a read-only display boundary.
+
+Existing valid files remain compatible. Missing custody requires owner recovery;
+a genuinely new isolated testnet deployment needs separate deliberate provisioning
+and private host permissions. Do not infer unused-key history, global nonce
+exclusivity, Windows ACL enforcement or mainnet authority from a successful load.
+Synthetic native/process evidence and independent release review remain required.
+Reversible only through a reviewed custody migration; restoring automatic key
+replacement is not a supported rollback. See [treasury custody](docs/treasury-wallet-custody.md).
+
 **Supervised scholarly rights are signed version authority, separate from wallet payment authority** — *2026-10-02*
 
 The owner authorized implementing opt-in research-author payments and creating a separate

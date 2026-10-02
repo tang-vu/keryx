@@ -158,7 +158,7 @@ end-to-end research acceptance, independent review or a new confidence guarantee
 | Gate | Required evidence | Baseline status |
 | --- | --- | --- |
 | M1 Network/services | Official Arc mainnet chain/token/RPC/explorer values, Gateway nanopayment support, deployed code and SDK support verified against the intended environment | [September 29 evidence](./engineering/mainnet-readiness-2026-09-29.md): official network, token and Gateway addresses published; narrow RPC code presence observed. PR #26 (`a79e882`) upgraded SDK 3.5.0 and pinned the testnet seller facilitator URL; one live testnet toll reportedly settled. Mainnet contract identity, Keryx registry deployment, mainnet SDK and end-to-end settlement checks remain open |
-| M2 Authority/isolation | Separate production configuration, deployments and keys; no cross-environment signatures/nonces/DB records; bounded user and treasury funds | Testnet-only safeguards exist; [storage identity and explicit legacy enrollment design](deployment-storage-isolation.md) is proposed. Implementation, both backend cutover/restore evidence and the remaining signer/key/auth isolation gates are open |
+| M2 Authority/isolation | Separate production configuration, deployments and keys; no cross-environment signatures/nonces/DB records; bounded user and treasury funds | Testnet authority retained; guarded SQLite/PostgreSQL factories have native candidate acceptance but remain dormant. Runtime caller integration, trusted custody history, deployment enrollment and drained cutover remain open. |
 | M3 Security | Independent review of signer/session authority, contracts, x402/Gateway, registry, encrypted delivery and auth; remediated critical/high findings and documented residuals | D-272 atomic admission and retained original-epoch/signer accounting have repository code/test evidence. The [independent review packet](./independent-security-review.md) defines the candidate handoff; independent mainnet review and remediation acceptance are not demonstrated |
 | M4 Settlement/recovery | Lost response, replay/concurrency, Circle/RPC outage, settled-but-undelivered and reconciliation drills; no silent pending-to-failed transitions | Focused tests and owner pilots exist; [funded withdrawal original/receipt recovery](./engineering/creator-funded-withdrawal-drill.md) passed two new keyless processes and idempotent accounting. Unknown-UUID Circle response loss and release-wide drill evidence remain open |
 | M5 Operations | Restore/rollback/rotation drills, realistic capacity/load test, alert routing, funding limits and an incident owner | [Outside-host fixed-404 diagnostic](./outside-host-ops-monitor.md) passed real reads, both first-attempt Telegram deliveries and owner response acceptance; a real healthy production Cron sample was separately observed. Real VPS outage/failover, restore/rollback/rotation, sustained scheduling and durable NTP synchronization remain open |
@@ -172,6 +172,23 @@ or silently migrate the product to another chain. Missing external evidence does
 prevent independent product, measurement or reliability work from continuing.
 
 ## Delivery sequence
+
+October 2 preparation baseline: `241c721f1c1930dabb97cec0260d3220c2b5e87c`
+includes the reviewed guarded SQLite and PostgreSQL backend implementations from
+[PR107](https://github.com/tang-vu/keryx/pull/107) and
+[PR108](https://github.com/tang-vu/keryx/pull/108). Their native acceptance advances
+the [closed factory boundary](enrolled-runtime-backends.md); ordinary `getDb()` and
+deployed adapters still retain authority. Complete guarded caller workflows under
+existing payment/observation deadlines, production provenance, paused enrollment,
+backup/restore lineage and rollback rehearsal remain required before cutover.
+There is no automatic migration or mainnet profile activation.
+
+The [existing treasury custody fix](treasury-wallet-custody.md) removes runtime
+generation/replacement on missing or invalid wallet state and preserves valid
+legacy identity. Synthetic constructor/process evidence does not establish
+exclusive key history, funded recovery, external security acceptance or M2 closure.
+Its exact-head review, CI and deployed health verification remain release gates;
+this dated preparation note does not claim deployment.
 
 [Creator cash-out recovery](./creator-withdrawal-recovery.md) has a shared signed-request
 identity and a private immutable single-admission journal in SQLite/PostgreSQL. The

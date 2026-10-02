@@ -8,7 +8,6 @@
  * the orchestrator's per-query budget (not the deposit) caps actual spend.
  */
 
-import fs from "node:fs";
 import path from "node:path";
 import {
   BatchEvmScheme,
@@ -23,30 +22,19 @@ import {
   parseUnits,
 } from "viem";
 import { arcTestnet } from "viem/chains";
-import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import { privateKeyToAccount } from "viem/accounts";
 import { config } from "../config";
 import { assertArcRpcChain, attestedArcHttp } from "../arc-rpc-attestation";
 import { ServerPaymentGateway } from "./server-payment-gateway";
 import type { BatchPayloadSigner } from "./server-x402-client";
+import { loadPersistentTreasuryWallet } from "./persistent-treasury-wallet";
 
 const GAS_TOPUP = parseEther("0.05"); // native USDC for gas (18 decimals on Arc)
 const GAS_MIN = parseEther("0.01");
 const STORE = path.resolve(process.cwd(), "data", "spend-wallet.json");
 
-/** Load (or create) the persistent spend wallet so its Gateway balance is reused across runs. */
-function loadSpendKey(): `0x${string}` {
-  try {
-    return JSON.parse(fs.readFileSync(STORE, "utf8")).privateKey;
-  } catch {
-    const pk = generatePrivateKey();
-    fs.mkdirSync(path.dirname(STORE), { recursive: true });
-    fs.writeFileSync(STORE, JSON.stringify({ privateKey: pk, address: privateKeyToAccount(pk).address }, null, 2));
-    return pk;
-  }
-}
-
 export class RealGateway extends ServerPaymentGateway {
-  private spendKey = loadSpendKey();
+  private spendKey = loadPersistentTreasuryWallet(STORE).privateKey;
   protected spend = privateKeyToAccount(this.spendKey);
   private signer = new BatchEvmScheme(this.spend);
   protected batchScheme: BatchPayloadSigner = {

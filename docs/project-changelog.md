@@ -1,5 +1,16 @@
 # Keryx Project Changelog
 
+### Preserve existing treasury wallet custody (2026-10-02)
+
+- Refuse missing, unreadable, malformed or inconsistent persistent treasury wallet
+  state before creating payment clients; never generate or overwrite a replacement
+  during server startup. Preserve valid legacy wallet bytes and derived identity.
+- Share strict custody validation with reconciliation and pending acknowledgement.
+  Fresh testnet demos require deliberate owner provisioning; unavailable funded
+  custody requires owner recovery. See [custody guidance](treasury-wallet-custody.md).
+- Add Linux/Windows synthetic constructor and independent-process acceptance.
+  Mainnet, funding, storage enrollment and launch gates remain open.
+
 ### Supervised opt-in manuscript payments (2026-10-02)
 
 - Add authenticated sticky draft enrollment and exact-version creator rights signing on
