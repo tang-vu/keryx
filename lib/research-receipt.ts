@@ -49,6 +49,7 @@ function projectEvidencePortfolio(
 ): ReceiptEvidencePortfolio {
   return {
     policy: portfolio.policy,
+    ...(portfolio.selectionMethod ? { selectionMethod: portfolio.selectionMethod, evaluatedStates: portfolio.evaluatedStates } : {}),
     eligibleCandidates: portfolio.eligibleCandidates,
     attentionLimit: portfolio.attentionLimit,
     fetchBudgetUsdc: micros(portfolio.fetchBudgetUsdc),
@@ -100,6 +101,7 @@ function projectEvidence(evidence: EvidenceRecord): ReceiptEvidence {
     sourceName: evidence.sourceName,
     quote: evidence.quote,
     support: evidence.support,
+    ...(evidence.qualifiesForAnswer !== undefined ? { qualifiesForAnswer: evidence.qualifiesForAnswer } : {}),
     qualifiesForReward: evidence.qualifiesForReward,
     ...receiptAsset(evidence),
   };

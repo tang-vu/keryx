@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   collectRun: vi.fn(),
+  getAgentDeps: vi.fn(),
   getDb: vi.fn(),
   settleThenServe: vi.fn(),
   checkRateLimit: vi.fn(),
@@ -20,7 +21,7 @@ vi.mock("@/lib/config", () => ({
     funderKey: "0xtest-private-key",
   },
 }));
-vi.mock("@/lib/agent", () => ({ collectRun: mocks.collectRun }));
+vi.mock("@/lib/agent", () => ({ collectRun: mocks.collectRun, getAgentDeps: mocks.getAgentDeps }));
 vi.mock("@/lib/db", () => ({ getDb: mocks.getDb }));
 vi.mock("@/lib/api-keys", () => ({ verifyApiKey: vi.fn() }));
 vi.mock("@/lib/rate-limit", () => ({
@@ -35,10 +36,10 @@ vi.mock("@/lib/x402-server", () => ({
 
 import { GET, POST } from "@/app/api/agent/ask/route";
 
-function request(body: unknown) {
+function request(body: unknown, signed = false) {
   return new NextRequest("http://localhost/api/agent/ask", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...(signed ? { "payment-signature": "signed" } : {}) },
     body: JSON.stringify(body),
   });
 }
@@ -99,6 +100,7 @@ describe("A2A v2 route", () => {
       return { created: true, order };
     });
     mocks.getDb.mockResolvedValue(db);
+    mocks.getAgentDeps.mockResolvedValue({ db, gateway: {}, engine: {} });
     mocks.collectRun.mockImplementation(async (input) => ({ ...run, id: input.queryId }));
     mocks.settleThenServe.mockImplementation(async (_req, opts, produce) => {
       try {
@@ -113,6 +115,32 @@ describe("A2A v2 route", () => {
         return Response.json({ error: "paid resource unavailable after settlement" }, { status: 500 });
       }
     });
+  });
+
+  it("checks the research runtime before submitting a signed payment for settlement", async () => {
+    const cause = new ReferenceError("Cannot access 'e9' before initialization");
+    mocks.getAgentDeps.mockRejectedValue(cause);
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const response = await POST(request({ question: "q" }, true));
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ error: "research service unavailable" });
+      expect(mocks.settleThenServe).not.toHaveBeenCalled();
+      expect(db.recordPaymentOnce).not.toHaveBeenCalled();
+      expect(log).toHaveBeenCalledWith("[a2a] research dependency preflight failed:", cause);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it("uses the preflighted dependencies for a signed research run", async () => {
+    const response = await POST(request({ question: "q" }, true));
+    expect(response.status).toBe(200);
+    expect(mocks.getAgentDeps).toHaveBeenCalledWith({ model: undefined });
+    expect(mocks.collectRun).toHaveBeenCalledWith(
+      expect.objectContaining({ question: "q" }),
+      { deps: await mocks.getAgentDeps.mock.results[0]!.value },
+    );
   });
 
   it("prices the body before settlement and bounds downstream spend to the prepaid cap", async () => {

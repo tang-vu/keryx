@@ -30,11 +30,19 @@ jobs:
       - name: Typecheck (tsc)
         run: npm run typecheck
 
+      - name: Scheduled source upkeep Worker (isolated Free worker, no deployment)
+        run: |
+          npm ci --prefix cloudflare/source-upkeep --no-audit --no-fund
+          npx tsc -p cloudflare/source-upkeep/tsconfig.json
+          npm run build --prefix cloudflare/source-upkeep
+          npm run test:runtime --prefix cloudflare/source-upkeep
+
       - name: Deployment dependency-state checks (no install or network)
         run: |
           bash scripts/private-worker-deploy.check.sh
           bash scripts/withdrawal-cycle-deploy.check.sh
           node --test scripts/dependency-state.check.mjs
+          node --test scripts/release-ops-preflight.test.mjs
           node scripts/dependency-state.mjs record
           node scripts/dependency-state.mjs check
 
@@ -43,6 +51,9 @@ jobs:
 
       - name: Private economics CLI startup (no environment or database)
         run: node --import tsx scripts/economics-private-report.mts --help
+
+      - name: Install Chromium for unit and browser checks
+        run: npx playwright install --with-deps chromium
 
       - name: Unit tests (economic invariants)
         run: npm test
@@ -58,18 +69,22 @@ jobs:
 
       - name: Research Monthly admission (isolated PostgreSQL, synthetic data)
         run: node --import tsx scripts/test-research-monthly-postgres.mts
+      - name: Browser authorization admission (isolated PostgreSQL, synthetic data)
+        run: node --import tsx scripts/test-browser-authorization-postgres.mts
 
       - name: Withdrawal backup and recovered copy (Linux CLI, synthetic data)
         run: node --import tsx --no-warnings scripts/test-withdrawal-backup-restore.mts
-
-      - name: Install Chromium for buyer persistence checks
-        run: npx playwright install --with-deps chromium
 
       - name: Browser buyer recovery (hermetic, no settlement)
         run: npm run test:browser-buyer
 
       - name: Creator listing wallet and network checks (synthetic wallet, no signing)
-        run: node --import tsx scripts/test-browser-creator-listing.mts
+        run: |
+          node --import tsx scripts/test-browser-creator-listing.mts
+          node --import tsx scripts/test-browser-creator-registration.mts
+
+      - name: Scholarly creator rights (hermetic wallet and HTTP, no settlement)
+        run: npm run test:browser-scholarly-rights
 
       - name: Browser checkout UI (hermetic, no settlement)
         run: npm run test:browser-checkout
@@ -87,12 +102,17 @@ jobs:
 
       - name: Browser sign-out (hermetic, no signing)
         run: npm run test:browser-auth
+      - name: Browser clock skew (synthetic login, no payment)
+        run: node --import tsx scripts/test-browser-clock-skew.mts
 
       - name: Private history and result UI (hermetic, read-only)
         run: npm run test:browser-private-history
 
       - name: Private request commitment (hermetic, no signing)
         run: node --import tsx scripts/test-browser-private-commitment.mts
+
+      - name: Isolated session worker and IndexedDB (synthetic, no funds)
+        run: npm run test:browser-isolated-session
 
       - name: Private browser journal (hermetic, no settlement)
         run: npm run test:browser-private-journal
@@ -129,6 +149,12 @@ jobs:
 
       - name: Build (Next.js)
         run: npm run build
+
+      - name: Empty evidence (actual minified production orchestrator, no network)
+        run: npm run test:built-empty-evidence
+
+      - name: Bounded document readers (assembled production trace, no network)
+        run: node scripts/test-web-readers-traced.mjs
 
       - name: Research reading UX (offline Chromium and responsive layout)
         env:

@@ -1,6 +1,6 @@
 # Keryx — Decision Log
 
-**D-262** - Pilot one bounded Research Monthly plan - *On 2026-10-02 the user
+**D-296** - Pilot one bounded Research Monthly plan - *On 2026-10-02 the user
 confirmed four requests/month at 10% below buying four separately.* Use four Deep
 v1 requests over 30 days from confirmed Arc-testnet purchase, with manual renewal
 and a creator cap pinned at purchase. Absorb the total-price discount in Keryx's
@@ -17,7 +17,230 @@ MCP surfaces use explicit shared API or handoff boundaries. Disabling admission
 preserves recovery; old claim-bypassing seller rollback is forbidden. See
 [Research Monthly](docs/research-monthly.md).
 
-**D-261** - Reuse recorded research for academic and technical/market workflows -
+**D-295** — Reasoning — *Cloudflare Workers AI is an explicitly enabled experimental third provider* — *2026-10-02*
+
+Add account-restricted Workers AI inference through the existing OpenAI-compatible transport,
+shared model catalog, timeout, durable provider/step circuit and usage ledger. DeepSeek remains
+the default; Cloudflare follows DeepSeek and MiMo in the public fallback chain. Credentials alone
+do not enable a new processor. The operator must explicitly enable it and include it in any
+configured provider allowlist. The buyer-approved private policy remains restricted to its
+existing providers and never inherits this public fallback.
+
+Choose Llama 3.3 70B FP8 fast for bounded experimental use after direct English and Vietnamese
+synthetic smoke checks. Refuse UTF-8 input bytes plus requested output above 23,000 before HTTP,
+leaving framing headroom below the documented 24,000-token context. Do not truncate evidence.
+Redirects are prohibited; quota exhaustion, invalid/truncated JSON and provider errors remain
+visible failures handled by the existing bounded resilience policy. A healthy primary sends no
+Cloudflare requests. This is not broad quality parity or promotion to primary.
+
+Capture the observed gross token tariff with each request; free Neuron allowances, remaining
+quota and billed invoices are unknown, never inferred as zero. Keep the existing free account
+plan for this deployment and do not upgrade billing automatically. Use a restricted API token,
+never deploy an interactive CLI OAuth/refresh token. See [provider setup and evidence](docs/cloudflare-workers-ai.md).
+Reversible: disable the provider and remove it from the public allowlist; historical usage retains
+its immutable tariff policy. No payment authority, mainnet activation or background scheduler changes.
+
+**D-294** — Browser custody — *An isolated candidate session authenticates its exact identity before derivation* — *2026-10-02*
+
+Provide dormant browser-worker building blocks that verify the intended wallet's
+signature of a readable message containing the exact static network, origin, owner,
+candidate digest, epoch, per-payment cap and signing expiry. Salt key derivation with
+that identity; do not migrate or reuse the funded legacy testnet message/key. Bind
+the wrapping-key namespace and AES-GCM additional data to the same context and derived
+address. Context changes require an explicitly new funded identity; retained expired
+context can be recovered but cannot sign new payments.
+
+Capture policy and authoritative payee provider once, snapshot payload/ciphertext
+before awaits, and enforce lifecycle exclusion so logout cannot race a restored signer
+or wrapping-key deletion. Existing public workers remain testnet; these helpers alone
+confer no runtime invite, nonce, lifetime cap, registry, RPC or settlement authority.
+Synthetic native signature/encryption tests are not packaged-worker/IndexedDB acceptance.
+See [dormant signer boundary](docs/mainnet-runtime-domains.md#dormant-isolated-signer-component).
+Reversible: easy before enrollment; after funding, the exact context must remain
+recoverable and changes require a separately reviewed custody migration.
+
+**D-293** — Mainnet preparation — *Public dual-network pins do not confer runtime authority* — *2026-10-02*
+
+Centralize immutable Arc testnet and mainnet public profiles without an environment-
+controlled browser signing policy. The deployed testnet configuration, browser header,
+worker policy, server verifier, seller and reconciler retain explicit testnet selection;
+the payment-runtime selector refuses mainnet until dependent domains pass their own
+cutover. A mainnet reference is useful for candidate/preflight preparation, but official
+addresses and observed code presence cannot authorize spending, import testnet payout
+authority, enroll a database or reuse a browser session key.
+
+The narrow intended migration is an isolated invited browser-funded `/api/ask` pilot.
+Externally pre-funded sessions can stage it without activating automatic funding or
+treasury-sponsored MCP, A2A, bots or autonomous work. Network-bound session identity,
+durable journal/environment isolation, creator registry authority, SDK settlement and
+recovery still require code, adversarial checks, operational evidence and a concrete
+owner launch decision. See [runtime domain gates](docs/mainnet-runtime-domains.md).
+Reversible: easy for static pins; real network cutover requires separate reviewed
+migration and rollback evidence. This slice does not claim mainnet readiness.
+
+**D-292** - Operations - *Caller-driven research can be idle; provider probes must use runtime transport policy.*
+D-237 removed continuous self-generated research, so completed-query inactivity no longer
+asserts a scheduler failure. Preserve explicit expected-dispatch monitoring only for an
+independently configured schedule; the flag grants neither scheduling nor spend authority.
+Keep reasoning anomalies and failed/pending real payment legs actionable, count completed
+zero-spend answers, and label completed receipts rather than settlement. A shared catalog
+constructor prevents watchdog probes losing DeepSeek vendor options while runtime picks
+retain them. Failed synchronous requests before a receipt remain an explicit telemetry gap;
+A2A worker/queue and settlement checks keep their independent responsibilities. Reversible:
+easy (monitoring and shared construction only; no payment authority or scheduler changes).
+
+**D-290** — Preserve treasury custody rather than replacing unavailable keys — *2026-10-02*
+
+The reachable server gateway previously caught every wallet read/parse error and
+generated a replacement, overwriting malformed existing custody and allowing
+concurrent bootstrap races. Require a bounded read of the existing legacy wallet,
+matching derived address and retained regular-file identity before constructing
+any signer or SDK/funding client. Never create, repair or mutate wallet state from
+runtime admission. Reconciliation and acknowledgement share this identity parser;
+public balance metadata remains a read-only display boundary.
+
+Existing valid files remain compatible. Missing custody requires owner recovery;
+a genuinely new isolated testnet deployment needs separate deliberate provisioning
+and private host permissions. Do not infer unused-key history, global nonce
+exclusivity, Windows ACL enforcement or mainnet authority from a successful load.
+Synthetic native/process evidence and independent release review remain required.
+Reversible only through a reviewed custody migration; restoring automatic key
+replacement is not a supported rollback. See [treasury custody](docs/treasury-wallet-custody.md).
+
+Retire the legacy environment wallet generator as part of that same custody
+boundary: it printed both new private keys and replaced existing environment
+custody using obsolete buyer labels. Its help and refusal perform no key creation
+or private file access. Deliberate owner-managed role-specific environment setup
+and recovery remain separate; a demo convenience cannot replace funded history.
+
+**D-291** — Bind the actual signed treasury operation independently of RPC preparation — *2026-10-02*
+
+A synthetic actual-SDK reproduction demonstrated a foreign-chain transaction
+signed after a successful testnet preflight. Freeze the caller's exact operation,
+validate the provider's fill and prepared signature input, then verify the raw
+sender/tuple before a single broadcast. Keep private keys out of SDK transaction
+delegation; independently restrict SDK batching typed-data callbacks. Reuse the
+current balance reader and exact approve/deposit operations rather than activate
+the dormant funding or storage stack.
+
+Retain post-submit and missing/mismatched receipt uncertainty with the original
+hash. A funding instance keeps its first same-budget outcome, including failure;
+it cannot silently retry or change caps. This is not durable global nonce/spend
+admission or restored-key authority. Supported local transaction scripts share
+the guard, treasure-hunt needs an explicit payee and unrestricted legacy live
+withdrawal is retired in favor of the separately authorized durable workflow.
+Native synthetic checks, review, release and independent M2/M4 acceptance remain
+distinct. See [treasury transaction isolation](docs/treasury-transaction-isolation.md).
+
+**Supervised scholarly rights are signed version authority, separate from wallet payment authority** — *2026-10-02*
+
+The owner authorized implementing opt-in research-author payments and creating a separate
+local reviewer wallet. Reuse the creator-controlled registry, SIWE, signed encrypted content,
+browser journal and x402 rails. A dedicated one-item source first receives a sticky draft
+restriction, then an immutable creator declaration and independently allowlisted signed operator
+decision. DOI metadata, author names, feed control and developer roles confer no distribution
+approval or payout authority. Local review keys remain only in ignored operator environment;
+the application host receives a public allowlist and detached artifacts.
+
+Start with the deployed legacy SQLite backend and funded browser journal. Atomically bind
+the effective approval, exact version and fresh single-recipient registry policy to the original
+nonce and cap reservation before exposure. Revocation serializes against new admissions and
+does not replace exposed authorizations, release unknown spend or reverse settlement. Sellers
+reject legacy bundles, arbitrary SDK/treasury admissions and unsupported backends for enrolled
+manuscripts. Preserve unrelated legacy sources and exact enrolled native schema/cutover gates.
+Install scholarly schema only atomically with the first author enrollment, preserving ordinary
+corpus intake compatibility; an actual scholarly corpus remains outside native cutover acceptance.
+Bound the corpus to four effective operator approvals; unreviewed drafts and DOI claims cannot
+squat approval capacity or namespaces. Duplicate effective approved offers need review before
+activation; an actual identical public body prevents duplicate paid access/rewards.
+
+Public license/version/review summaries and receipt approval references exclude private
+permission evidence and contact data. Approval is distinct from settlement and peer review.
+This software release does not claim a live participant or funded scholarly pilot. Broader
+identity, public policy/privacy/appeals, multi-author splits, backend parity and live recovery
+evidence remain open; mainnet and real funds need separate authorization. See
+[paid scholarly papers](docs/paid-scholarly-papers.md) and the
+[review procedure](docs/scholarly-pilot-review.md). Reversible: disable new scholarly research;
+preserve sticky enrollment, signed history and outstanding payment reservations.
+
+**Observed scholarly metadata with separately grounded paper reads** — *2026-10-01*
+
+The owner requested DOI integration and scholarly repositories, then supported
+developing payments for research authors who choose to join. Ship the bounded
+public discovery/read slice first: exact Crossref DOI matching, opt-in Crossref
+bibliographic/arXiv search, and provider metadata snapshots bound to selected
+original reads. Prefer exact versioned arXiv PDFs; retain byte/page/text caps and
+make a separately counted abstract-page fallback explicit. Metadata-only previews
+cannot qualify as paper evidence, author control, distribution rights or payees.
+Journal type does not establish peer review; preprint and read limits remain visible.
+For grounding confidence, observed shared-DOI work links conservatively merge existing
+publisher groups without discarding exact versions or treating distinct works on one
+domain as independent publishers. Metadata links can only reduce apparent diversity;
+missing DOI is not guessed, and grouping does not prove scientific independence.
+
+Preserve supplied structured Crossref author names, repository versions, observation
+time and read scope in citations, receipts and browser BibTeX/RIS. Never infer DOI,
+authors, journal or rights from a model answer or silently enrich archived runs.
+Reuse public document transport, literal evidence and creator payment gates. Private
+jobs and unattended engines make no new scholarly calls. Process-local vendor
+pacing and shared operation/read caps fail gracefully without queues or retries.
+
+The author-earnings direction needs independent identity, version-specific rights,
+coauthor consent and payout acceptance gates before opt-in registration can earn.
+Existing feed control and DOI metadata cannot substitute for them. The staged
+[paid scholarly paper plan](docs/paid-scholarly-papers.md) remains proposed; this
+release adds no author-claim payment flow. Reversible: remove discovery and display;
+optional observed metadata remains readable without changing payment authority.
+See [scholarly research](docs/scholarly-research.md).
+
+**D-289** — Admit the complete application backend before issuing private delivery evidence — *2026-10-01*
+
+A verified connection or a caller-supplied adapter does not establish which
+deployment owns the retained payment original. Add closed runtime factories that
+derive the pinned deployment manifest themselves and publish the complete reviewed
+database interface only after actual identity and schema readiness checks. Keep
+provenance private to the factory; an object shape, copied facade or ordinary
+adapter cannot qualify. The existing deployed selector remains authoritative until
+a separately verified domain cutover.
+
+Share existing adapter business logic instead of copying its method surface.
+SQLite composes the admitted native connection with an exact application schema
+profile. PostgreSQL uses fixed identity-checked domain RPCs and protected writer
+capabilities; an enrolled call never executes the legacy raw-client closure.
+Guard computed results, early returns and iterator publication as well as SQL.
+For enrolled browser admission, read source, item and current offer through one
+private fixed protected catalog statement. Native evidence showed separate full
+checks exhausted the existing five-second observation lifetime. Preserve that
+lifetime and all identity, schema, registry, version and admission checks; reduce
+independent catalog reads instead of extending authority freshness. The coherent
+snapshot does not remove the later catalog-to-admission race. Regenerate the
+independent SOURCE profile and verify the complete native workflow before cutover.
+Read-only access denies every reviewed mutator, including methods that update
+usage while checking credentials. Initialization inspects readiness and never
+migrates, repairs or normalizes historical authority.
+
+Use a distinct authenticated cache envelope bound to source, complete storage
+identity and format, including both wrapped key and body. Preserve the legacy
+envelope semantics. Cache bounds must survive atomic writes and restart, and
+cache membership supplies no paid-read or article-version provenance. A guard
+failure after a committed write requires reconciliation; it cannot imply rollback.
+
+This is staged source work, not enrollment, private delivery issuance, selector
+activation or mainnet authorization. Native backend, role, race, recovery and
+deployment evidence remain explicit gates. See
+[enrolled runtime backend acceptance](docs/enrolled-runtime-backends.md).
+
+PostgreSQL snapshot CAS excludes only the relation maintenance fields
+`relpages`, `reltuples`, `relallvisible`, `relfrozenxid` and `relminmxid`.
+Native diagnostics found changes within these fields while logical rows,
+sequences, other catalog records and normalized schema stayed identical around
+a successful READ ONLY transaction. Retain relation OIDs, file mappings,
+structural metadata, privileges and retained data in the CAS. A maintenance
+update must not invalidate an otherwise unchanged financial-state review.
+Frozen profiles come from a separate source reference; a deterministic source
+function edit still requires fresh native PRE/POST equality before enrollment.
+
+**D-288** - Reuse recorded research for academic and technical/market workflows -
 *The user selected both researcher segments; existing receipts and claim evidence
 were useful but did not provide reference-manager imports or a comparison export.*
 Add browser-local BibTeX/RIS references and a claim-by-cited-source evidence matrix
@@ -29,6 +252,548 @@ gaps, not truth or conflict verdicts. Keep payment and receipt authority unchang
 Scholarly metadata enrichment and account synchronization remain open work, not an
 academic-complete claim. Reversible: remove the browser export surfaces; no stored
 run, payment or receipt format changes. See [researcher exports](docs/researcher-exports.md).
+
+**Chat-first research with visible spending and inspectable evidence** — *2026-10-01*
+
+The owner approved making a conversation the primary research interface. Lead with
+the question and a few starting examples, then present the structured cited report
+in the conversation. Keep previous turns available during the tab session, with a
+compact research status and expandable decisions, source evidence and payment trace.
+The question's source-USDC cap and payer remain visible beside the composer; model
+and budget controls may be secondary, but settled, pending and simulated amounts
+must remain distinguishable.
+
+The rotating globe is the owner's confirmed signature for Keryx. Simplifying the
+chat must preserve that identity: reuse the existing locally bundled globe as a
+bounded decorative header motif on desktop and mobile, leaving text and controls
+clear. Keep reduced-motion behavior and avoid restoring a large masthead that
+pushes the question, cap or send action out of the initial reading flow.
+
+Use the existing previous-run anchor for follow-ups rather than promising full chat
+memory. Starting a new research topic must clear that anchor. Copy or export must
+retain citations and the observed evidence/payment limitations. Stopping the client
+stream does not establish a refund or the final state of submitted payments.
+
+Stopping and submitting again makes obsolete asynchronous error-body completions
+reachable. Guard client updates by request identity after asynchronous reads, while
+keeping the existing signing-budget identity gate and durable reservation authority.
+
+Use the same chat surface on the home page and `/research`, keeping the existing
+paid-package, recovery and private-job workspace accessible as a secondary section.
+This is a presentation change: package terms, session grants, signing, source-owned
+payout authority and backend evidence gates remain authoritative. Responsive and
+synthetic browser behavior, relevant tests, production build, review and deployment
+are implementation gates; the approved direction alone does not establish delivery
+or improved user adoption. See [research reading UX](docs/research-reading-ux.md).
+
+**D-287** — Separate Circle API observations from citation payment authority — *2026-10-01*
+
+A seller response header and a database settled flag cannot independently prove
+that the buyer's exact authorization settled. Add a dormant read-only observer
+that obtains the coherent retained original from the installed backend, verifies
+its owner query proof, and compares a bounded native Circle API response with
+the exact nonce and economic tuple. A header UUID remains a lookup hint. Bind
+the opaque result to that original and runtime adapter; do not invent an
+enrolled storage identity or independent ledger proof.
+
+Retain all provider statuses honestly and label the basis as Circle API, with
+chain finality unverified. Bound total requests, streams, pagination and
+concurrency. Token lifetime begins at the actual matching observation; later
+backend reads cannot refresh it, and a caller timeout cannot release a slot
+while underlying work remains. This does not change payment journals or caps.
+
+The future buyer-owned provenance issuer must combine actual delivery with
+approved settlement evidence and private artifact publication. External creators
+must not need to share a seller artifact key or internal callback. Citation
+eligibility, current private access and mainnet/finality policy remain separate
+owner-approved gates. See [Circle observation scope](docs/browser-x402-observation.md).
+
+**Question-driven broad web research with observed document evidence** — *2026-10-01*
+
+The owner authorized expanding research beyond Keryx's small registered/public-feed
+catalog. Discover documents through an operator-configured search provider, read
+selected original content under deterministic limits, and retain claim-linked evidence
+from the actual extracted text. Search snippets are previews, not read documents.
+Public web evidence remains free of creator payout authority; paid source decisions,
+ownership, signing, budgets and settlement retain their existing safeguards.
+
+Require document identity/version and observation provenance through synthesis,
+receipts and UI. Exclude identical extracted bodies and avoid treating multiple
+same-publisher URLs as independent corroboration. A registrable domain is a concentration proxy,
+and a literal matching quote proves source grounding rather than universal truth.
+Keep conflicting evidence, unsupported claims, extraction limits and provider failures
+visible. Bound discovery, extraction, cancellation and portfolio computation without
+silently weakening evidence or monetary gates.
+
+HTML/text and contained PDF text extraction are staged implementation requirements;
+unconfigured search or an HTML-only stage does not complete the authorized outcome.
+Provider provisioning and actual broad-search smoke evidence remain release gates.
+Pin the reproducible installer to npm 11.19.0 and CI Node 24.21.0. Clean npm 11.6
+and 11.19 resolved incompatible optional-peer closures; an older-resolver lock also
+upgraded an x402 dependency and failed the newer installer. Retain the existing
+payment dependency versions and require matching installer tooling on production
+before installation. Production Node 24.16 and minimum supported Node 22.19 do not
+need to change for this installer correction.
+Do not add a search subscription, spend real funds, activate mainnet, leak private
+research or claim customer demand from technical fixtures. See
+[broad web research](docs/broad-web-research.md) and
+[product validation](docs/product-validation.md).
+
+**D-286** — Require separate owner approval for citation rules — *2026-10-01*
+
+The retained browser query-policy signature covers a question digest and spend
+limits, not the citation pool, allocation, evidence validator or issuer. Keep
+that v2 signature unchanged and add a separate versioned EIP-712 supplement
+bound to its exact verified query policy. Require the owner to approve the actual
+run budget, rational pool ratio, nearest-half-up micro-USDC rounding, maximum
+pool, algorithm and trust-policy digests, nonce and expiry. Verification must
+recover both owner proofs, reject mismatched trusted expectations and preserve
+the existing run-budget basis. A pool exceeding the signed maximum refuses;
+public and unproven shares remain withheld without redistribution.
+
+The dormant policy primitive is only an approval verifier. Current grant access,
+controlled paid-read provenance, encrypted private evidence, semantic issuer
+trust, immutable pre-payment plans, unique author legs and atomic reservation
+admission remain separate requirements. Quote occurrence and a content manifest
+do not prove semantic support or paid delivery. Historical signer metadata
+access does not imply permission to read the owner's question or paid bodies.
+No route, signer, version floor, custody or mainnet cutover follows from this
+change. See [citation policy and remaining gates](docs/browser-citation-policy.md).
+
+**Observe creator registration before reporting success** — *2026-10-01*
+
+Preparing the independent seller pilot exposed a presentation error: receiving a wallet transaction
+hash was reported as successful on-chain registration, with indexing assumed after a
+fixed delay. A returned hash does not prove mined registration. Observe a receipt on the pinned Arc testnet
+client and require a successful `SourceRegistered` event from the expected registry,
+source identity and creator. A successful replacement self-transfer is not registration.
+Reverted, rejected, pending and unknown outcomes remain distinct; unknown submission
+does not authorize automatic resubmission.
+
+After the registration event, check the existing owner-only listing endpoint for the
+same registry, creator and on-chain identity before reporting indexing success. Each
+manual status check is bounded and performs no new registration. Duplicate submission
+and stale completions are guarded. Retain ownership instructions and the one-time webhook
+secret through observation; preserve the explicitly labeled offline path.
+
+Creator feedback counts BUY/CACHE decisions and answer citations, independently of
+settled payment records. Keep the historical API fields and count logic, but correct
+their labels and comments so they cannot stand in for paid reads or citation earnings.
+This changes observation and reporting, not registry, source ownership, payment or
+payout authority. Synthetic browser acceptance is not a live registration, provider
+adoption, independent settlement audit or mainnet authorization.
+
+**D-285** — Retain verified source context before exposing a new browser original — *2026-10-01*
+
+A separate signer cannot reproduce the deployed payee and creator-price checks
+from an offer ID or Gateway economic tuple alone. Add an explicit original-format
+union: preserve prior originals and exact callbacks, while new originals require
+complete immutable fetch context verified against a trusted pinned registry
+observation and, for discounts, the actual creator-signed article offer. Derive a
+context digest bound to the nonce, namespace, query, request, epoch and economic
+tuple; atomically retain it with the original and existing reservations. This
+does not change the Gateway signature schema or prove article provenance to Circle.
+
+Historical reads use retained evidence and admission time, never a mutable offer
+join or invented backfill. Current registry/expiry checks belong to a separate
+fresh-sign gate and may refuse without replacing the original. Keep the minimum
+original version monotonic in the existing control/barrier: eventual cutover must
+fence fresh incompatible admission and exposure even after rollback, while
+already exposed historical originals keep exact callback eligibility. Installation
+is inactive; no runtime activation issuer is supplied.
+
+Fresh citation signing in the new lane requires a separately retained pre-payment
+evidence and reward-allocation plan. Current completed QueryRun history cannot
+reconstruct that authority, so missing citation evidence refuses rather than
+becoming a new plan. That necessary next stage and full signer delivery remain
+release requirements. Registry/catalog/service-role trust, signer verification,
+custody/recovery, owner approval, hosting, UTC, external review and M1–M8 remain
+open. See [original source context](docs/browser-original-source-context.md).
+
+**YouTube public metadata as bounded free evidence** — *2026-10-01*
+
+The first owner-selected research task is niche/idea exploration for an English-language
+channel, tentatively for children. Age remains open; the owner requested comparison.
+The registered corpus does not demonstrate YouTube trend coverage. A read-only audit
+followed publisher links to official channel identities: Super Simple's feed returned
+usable Atom metadata; Numberblocks returned an error and remains deferred. A working
+feed proves availability, not independent demand, educational quality or market momentum.
+
+Reuse the existing bounded DNS-pinned public-reference transport and separate free
+snapshots. A dedicated adapter admits only the approved YouTube channel/feed identity
+and canonical video links, then labels publisher titles, dates and descriptions as
+metadata-only evidence. It must not fetch videos, transcripts or linked articles, infer
+their contents, copy media assets, or introduce publisher payout/ownership authority.
+Community statistics are not consumed in this increment; their presence in a raw feed
+does not become an independently validated view count or growth metric.
+
+Public-reference identity, captured versions, existing attention/context bounds and
+reward exclusion remain authoritative. No payment row, creator registration, signer,
+key custody, package terms or mainnet permission changes. Individual feed failures
+remain isolated under existing ingestion rules. Discovery still selects at most one
+item per reference, so this increment supports attributed descriptions of selected
+uploads, not comparative channel research or a viral prediction service. Wider coverage,
+usefulness to the actual creator and observed repeated use remain acceptance work.
+
+**D-284** - Authenticate historical original observation without exposing prepared authorizations - *2026-10-01*
+
+Use a separate, fixed-audience EIP-712 GET proof from the session signer to authenticate a narrowly scoped original observation. Recover the signer before reading, derive its historical owner from retained authority, and validate the original and both owner policies in one coherent backend snapshot. Return originals only when the journal records prior exposure: exposed, signed, submission-attempted or an exposed terminal state. Prepared and cancelled-unexposed records must reveal no nonce or authorization tuple; GET never marks exposure or releases capacity. Keep the trusted owner reader separate from this credential.
+
+Bind the proof to the exact method, path, session, request and fresh challenge with a five-second server window. Bound the complete client exchange using monotonic and wall elapsed time, recheck proof expiry after the backend read, and retain concurrency slots until timed-out backend work actually settles. Captured proof replay within its short window remains possible. A historical signer key may authenticate already exposed history after grant replacement or revocation; that privacy policy needs production review. Observation is historical evidence, never permission to sign or a revocation barrier.
+
+This source stage installs reusable helpers and protected backend reads only. It adds no public route, live worker integration, custody issuer, activation or production deployment. Pinned HTTPS and clock echoes do not establish independent asset integrity, key custody, absolute UTC accuracy or exclusive restored authority. Real origin/mobile acceptance, funded recovery and independent security review remain release gates; mainnet authorization is unchanged. See [original observation](docs/browser-original-observation.md).
+
+**Product validation: research outcomes and information-selling infrastructure** — *2026-10-01*
+
+The owner authorized a focused evaluation of both directions beyond bounty preparation.
+Research must demonstrate a useful outcome for an independent participant; infrastructure
+must demonstrate an independently maintained seller integration and genuine buyer use.
+Neither code capability nor owner-generated testnet volume establishes demand. Start with
+small experiments over existing rails rather than a broad marketplace or new payment
+authority. A narrow research application can serve as a reference client, but each side
+needs its own evidence before becoming the primary business direction.
+
+Expose public source previews before a non-refundable research purchase so a participant
+can judge apparent relevance. This is metadata browsing, not an answerability verdict,
+ownership attestation, payable-source guarantee or automatic purchase. Keep source rights,
+sponsorship, testnet use and payment uncertainty explicit. Existing Operator work and
+mainnet gates remain staged; no price, authority, funds or launch permission changes.
+See [product validation](docs/product-validation.md) for experiments and direction gates.
+
+**D-282** — Separate browser elapsed time from server UTC expiry — *2026-10-01*
+
+Browser clock skew must not determine whether a server-prepared unsigned withdrawal or a server-issued login date is usable. Bound withdrawal request age with monotonic elapsed time while retaining the abort, original selected policy and server chain-height checks. Issue dated SIWE challenges from the server, preserve the five-minute single-use challenge and existing session lifetime caps, and leave server JWT/database expiry authoritative. Echo the exact retained grant expiry once; derive an advisory client deadline from bounded server remaining duration minus the full request time. Read-only focus/visibility checks may clamp that deadline or pause the UI, never renew the grant or reset financial capacity.
+
+Browser monotonic clocks and timers can pause during operating-system sleep. These UI bounds do not replace trusted server UTC, chain/vendor expiry or the signer's independent payment lifetime checks. A failed status read retains the key, original nonces and funded balance; an invalid supplied spending session must not become treasury spending. Host synchronization and the remaining payment-signing clock boundary require independent acceptance. No clock mutation, freshness relaxation or mainnet authorization follows from this decision. See [account sessions](docs/engineering/session-management-2026-09-09.md) and [withdrawal recovery](docs/creator-withdrawal-recovery.md).
+
+**D-281** — Bound offline SQLite provenance capacity with actual Linux process containment — *2026-10-01*
+
+Keep the existing 64 MiB intake profile and add an explicit operator-declared offline snapshot profile for larger stores with substantial unselected content. A 512 MiB physical ceiling alone does not contain native SQLite work. Stock Node disables SQLite memory accounting, so reporting `hard_heap_limit` does not demonstrate enforcement. Use a fixed Linux systemd transient child with verified cgroup-v2 memory/swap/task limits, private network, no new privileges, and a service runtime limit instead. Sanitize the manager environment independently of the parent's environment. Refuse the larger mode on unsupported platforms or unavailable containment; do not weaken selected-evidence bounds or spill to disk.
+
+Before target open, verify the actual child unit/cgroup. Retain the canonical file descriptor, finalized rollback-journal header geometry, size/mtime checks, and sidecar refusal; return no report until the captured transient unit is cleaned up. The operator declaration does not prove offline ownership, historical origin, settlement authenticity, or enrollment authority. Preserve `unknown_legacy` and all M2/mainnet gates. Dedicated hosted Linux acceptance must prove realistic synthetic capacity, actual native-memory OOM refusal, unchanged bytes/evidence, and cleanup; Windows boundary tests do not replace that evidence. No production snapshot, intake, migration, or enrollment is authorized by this change. See [provenance intake](docs/storage-provenance-inspection.md).
+
+**D-283** - Admit immutable browser signing originals under independently signed query policy - *2026-10-01*
+
+Extend the existing browser authorization journal rather than introduce another payment ledger. Before exposing a new authorization, atomically retain its full original tuple, fixed UTC window, query binding, payment and existing signer/epoch reservation. The new callback verifies the actual ECDSA signature and canonical complete header; metadata-only callbacks cannot record or replay v2 originals. Preserve historical legacy callbacks without inventing missing original windows or hashes. This guarantees a retained authorization identity, not one signature computation or exactly-once external settlement.
+
+Verify a separate owner-signed EIP-712 query policy with a fixed service audience, signer, grant epoch, question digest, nonce, expiry and integer limits. Retain cumulative allocation and job count in an owner/signer/service/network namespace across aliases and grant replacement. Later approvals specify absolute ceilings rather than additional capacity. Query allocations and consumed policy capacity are conservatively never released in this stage. A coherent read validates both the original query approval and the latest namespace ceiling approval; a newer ceiling is not attributed to the old proof.
+
+Install this backend candidate inactive, with no activation issuer, public observation route or production signer integration. After activation, a permanent barrier prevents fresh admission through old writers, while historical callbacks remain available. PostgreSQL service-role composition remains trusted to verify signatures. Actual PostgreSQL and both-platform synthetic acceptance are required receipts, not evidence of production activation, exclusive restored authority or independent users. Separate-origin signer custody, trusted owner approval, live clock validity, funded recovery, wallet/mobile acceptance and independent security review remain release gates. Mainnet authorization is unchanged. See [browser signing originals](docs/browser-signing-originals.md).
+
+**D-280** - Integrate funding source while retaining deployed storage authority -
+*The reviewed staged funding implementation depended on a strict application
+storage cutover whose trusted legacy enrollment and production drain gates are
+still open.* Gather its unused policy, canonical transactions, corroborated
+receipts, preflight/readiness, one-shot executor, bounded orchestrator and
+keyless inspection with isolated journal helpers in a main-based source release.
+Existing application adapters, DB selector and RealGateway retain their deployed
+behavior. Candidate PostgreSQL authority SQL lives only in isolated test fixtures,
+outside deployment migration discovery.
+
+The Operator composition is explicitly disabled and refuses before caller
+binding inspection, dynamic executor import or key loading. No environment flag
+creates authority, and this release supplies no activation issuer. A separately
+reviewed issuer and enrolled binding, trusted key/history intake, paused/drained
+cutover, both-backend acceptance and identity-aware restore/rollback remain
+required before runtime prefunding integration. Synthetic fixture evidence does
+not authorize production enrollment, funding or mainnet. See
+[dormant funding release](docs/gateway-funding-dormant-release.md).
+
+**D-279** - Preserve public research while funding readiness is unknown -
+*An initial mixed public/owned portfolio previously lost all usable public evidence when wallet funding threw before gathering.* Treat an initial or lazy funding failure as query-local uncertainty: withhold owned BUY/CACHE reads and creator rewards, retain planned fetch reservations, and continue bounded free public evidence gathering and synthesis. Do not retry funding during the run or convert funding exceptions into creator payment records. Future gap selection considers only eligible public references after the failure.
+
+Persist the uncertainty in the existing trace and final answer, and distinguish measured creator payments from unknown wallet funding effects in the completion message. Keep the planned portfolio as historical planning and report the actual evidence outcome. If no usable public evidence remains, return an explicit unsupported answer rather than inventing support. Explicit AbortError cancellation still propagates before further reasoning or persistence.
+
+This improves degraded query behavior; it does not establish zero wallet movement, release signer capacity, reconcile an original deposit, or authorize another paid attempt. Funding recovery and mainnet acceptance remain separate gates. Reversible: revert this query policy without modifying retained payment history.
+
+**D-274** - Enforce canonical session-worker signing semantics -
+*Contract destination alone is not transaction authority: a call to USDC may transfer
+or approve an attacker.* Pin the worker's public Arc-testnet policy independently of
+server configuration. Permit only canonical USDC approve to the pinned Gateway and
+Gateway deposit of pinned USDC, zero native value, exact chain/sender and supported
+integer fee fields. Reject extra calldata, unsupported transaction features and
+arbitrary typed-data schemas/domains before any signature. Gateway batching payments
+retain exact TransferWithAuthorization fields and bounded current validity; the
+worker's registry payee check remains additional to per-source browser checks.
+No server journal, nonce admission or retained-epoch accounting is changed.
+The existing budget plus 0.01 native-USDC funding buffer is not a durable lifetime
+gas ledger: repeated allowed calls can burn funded gas. The one-time wallet
+signature still crosses the page and derivation-time XSS can reproduce the key.
+Internal fixture tests and build validation are remediation evidence, not an
+independent audit, funded drill or M3/mainnet acceptance.
+See [security review scope](docs/engineering/mainnet-security-review-scope.md).
+
+
+**D-273** - Rehearse creator withdrawals with retained originals and an isolated funded relay -
+*Funded recovery evidence must exercise the protected admission, original Circle claim,
+saved mint identity and cash-out ledger without enabling production withdrawal creation.*
+Use an explicitly bounded Arc-testnet operator rehearsal, with buyer signing on its
+original PC environment and a fresh dedicated relay key retained only on Linux. Persist
+the unsigned draft before review, one signing attempt before the signature, one Circle
+claim before transport, and exact signed mint bytes/hash before broadcast. Discard the
+application response only after attestation storage and the mint RPC response after one
+actual broadcast. A new keyless process reconciles that same original and idempotently
+records its cash-out; this never becomes another payment or creator-revenue claim.
+Current Circle metadata spells the domain-26 chain `Arc`; accept that spelling and the
+legacy `ARC` while preserving exact testnet/domain/contract/token checks and height caps.
+The documented API cannot recover an original transfer UUID from its spec hash, so a
+Circle response lost before UUID retention remains an explicit vendor-evidence gate.
+Absence, expiry and restart grant no permission to POST or sign another authorization.
+See [funded withdrawal rehearsal](docs/engineering/creator-funded-withdrawal-drill.md).
+
+**D-272** - Journal browser authorization before exposure and retain signer capacity through recovery -
+*The legacy live path reserved a grant, let the browser choose a nonce, and inserted its
+payment record after signing/submission; timeout or lost callback could release an
+authorization that still existed outside the process.*
+Atomically bridge admission to the authoritative `payment_events` row before SSE,
+then conditionally record exposure, verified signature metadata and submission intent.
+Sign the admitted server nonce exactly. Persist no signature header or key. Only
+confirmed prepared cancellation releases locally; exposed rows remain reserved until
+exact Circle terminal failure. Retain original epochs and cumulative consumption per
+normalized signer across recovery, aliases, expiry and revoke. Budget remains a
+cumulative cap: recovery credits only exact, deduplicated confirmed consumption when
+comparing it with independently observed remaining Circle availability; pending or
+unknown exposure is never available credit.
+Schema installation remains inactive. A testnet-only operator activation requires
+draining/replacing all old writers, protocol-compatible clients and independent
+candidate acceptance. Persistent database fences reject old financial writes;
+rollback preserves the schema and journal with signing paused. Historical missing
+nonces are not reconstructed. Callback recovery acknowledges metadata without an
+autonomous paid retry. Conservative unresolved holds can remain indefinite.
+Signature metadata recovery uses the immutable admission time and original challenge bounds,
+including at most 300 seconds of initial signing latency. Identical callbacks may be
+acknowledged after hours or expiry without resubmission. Expired or not-yet-valid headers
+cannot resolve a live signing slot; delivery also requires the original slot and current
+grant, and the gateway checks current validity again before submitting payment.
+
+Synthetic acceptance is neither a funded drill nor M3/M4/mainnet authorization.
+See [cutover and recovery](docs/engineering/browser-authorization-cutover.md).
+
+**D-271** - Public RSS references are free answer evidence, separate from creator payout authority -
+*Adding independent and official public feeds must not assign Keryx wallets to publishers
+or imply an ownership agreement.* Store validated, bounded feed snapshots in a separate
+SQLite catalog with no payout/verification fields. Read selected public items through the
+same attention and evidence gates as paid sources, but never route them through paid
+storage, registry terms or gateway calls. Separate answer support from reward eligibility.
+Allocate original citation weights in exact micro-USDC and withhold public shares instead
+of inflating owned rewards. Reserved public IDs fail closed on every toll path. One combined
+hourly upkeep cursor retains the two-feed allowance across both catalogs. Supabase public
+writes remain unsupported until equivalent schema acceptance. The initial four-feed batch
+is explicitly imported after release; Circle RSS is deferred after the checked endpoints
+returned 404. Public collection dates never replace publisher dates. Reversible by
+deactivating public references; historical runs retain their original evidence snapshots.
+See [free public references](docs/public-reference-sources.md).
+
+**D-270** - Cloudflare Free schedules bounded RSS upkeep; the VPS retains content and payment authority -
+*A September 30 production audit found 13 refreshable sources but no active feed-refresh
+schedule; historical volume-daemon references did not keep the source corpus current.*
+Use a dedicated hourly Worker to make one authenticated fixed-endpoint maintenance call.
+The VPS atomically consumes an hourly SQLite allowance and durable round-robin cursor
+before fetching at most two verified active feeds, with bounded input, deadlines,
+rechecked eligibility and encrypted local storage. Failures do not retry within the
+hour or starve later feeds. Cloudflare receives counts only; it does not fetch source
+URLs, store paid content, index registry payout authority, sign, spend, or settle.
+No Workers Paid subscription is enabled or required for this increment. This is orchestration and
+source freshness, not a general background-job migration. Supabase admission remains
+unsupported until equivalent atomic claims exist. Removing the isolated cron and
+revoking its dedicated secret rolls it back without altering stored articles or payments.
+See [scheduled source upkeep](docs/cloudflare-source-upkeep.md).
+
+**D-269** - Capture provider price observations per call and keep uncertain costs as intervals -
+*The economics observer applied an August 29 rate table to every matching wire model,
+including untagged history, after the supplier changed prices and Flash routing.*
+Use a new observer/report v2 with locally captured request/response times, explicit
+configured provider identity, requested wire model and a preserved price-policy
+snapshot. The September 30 Flash observation records its source, date precision,
+documented aliases and off-peak/peak rates; actual tariff effective dates and billing
+window remain unknown. Reports use the full off-peak–peak interval, without inferring
+holidays or supplier billing times. Future observations require new policy IDs;
+historical captures are resolved through their retained registry entry, not the
+current capture selector. Supplier Pro descriptions conflict, so Pro remains unpriced.
+
+Retain August 29 v1 as a historical scenario and preserve saved v1 artifacts.
+Untagged history stays unpriced; report time cannot supply missing per-call evidence.
+Missing or inconsistent compatible-provider cache splits are `null`, while valid
+input/output counters and answers remain usable. Correlated call coverage still
+requires every provider call and rejects failed/incomplete work for pricing.
+
+Cost and hypothetical margin bounds cover priced runs only. Hypothetical fees
+separately identify all-sampled and priced-run cohorts. The whole-period LLM upper
+bound remains unknown because the stored projection omits unsampled history and
+does not prove complete billing coverage. Supplier invoices, fixed costs and realized
+profit remain unreconciled/unknown; the infrastructure allowance is a scenario.
+Keep actual operating observations private. This correction changes no model request,
+payment authority, settlement, database schema or mainnet authorization.
+See [the observer contract](docs/testnet-economics.md).
+
+**D-268** - Stage atomic browser authorization admission before signing cutover -
+*September 30 acceptance correction:* the first real PostgreSQL CI run rejected
+the intent insert because JSON `created_at` text was not explicitly converted to
+`timestamptz`. Migration `0068` replaces the RPC with the explicit cast, preserving
+its invoker permissions and atomic grant reservation. Migration `0067` is retained
+unchanged. The acceptance harness checks the persisted timestamp and malformed
+timestamp rollback; PostgreSQL acceptance requires passing the corrected CI run.
+
+*The live browser path can sign a nonce before there is a durable nonce-indexed
+intent and cap reservation in one transaction.* Add an unused admission operation
+to both database adapters. It generates a server nonce, validates the Arc testnet
+payment tuple, and commits a `prepared` intent with exact integer micro-USDC cap
+reservation atomically. SQLite uses `BEGIN IMMEDIATE` and WAL with connection-wide
+`synchronous=FULL` because changing it inside the admission transaction is forbidden;
+that raises commit I/O cost for the SQLite adapter but gives the journal the stronger
+WAL durability policy needed for a future signer cutover. A process reopen test only
+checks process-crash persistence, not power-loss durability.
+Supabase uses a service-role-only function with one row update and intent insert in
+one PostgreSQL transaction. Duplicate request or nonce insertion aborts the
+reservation. The grant epoch and signer fence prevents a replaced grant from
+admitting an old request.
+
+The additive `browser_authorization_intents` table is **not** a second payment
+ledger: it is not queried for settlement, reconciliation, metrics, or UI, and no
+browser signing caller invokes the operation yet. `payment_events` remains the
+only payment/recovery authority. This split keeps legacy pending rows and their
+reconciler intact while the later cutover is designed. Before exposing a signature,
+the next stage must bridge each admitted intent into the authoritative payment
+event, implement durable phase/terminal transitions, disable incompatible rolling
+writers, and prove no dual ledger gap. Existing grant expiry deletion and replacement
+can still lose held-cap context; this slice does not change that policy. M3/M4
+remain open. See [browser authorization design](docs/engineering/browser-authorization-durability.md).
+
+**D-267** - Verify browser x402 callbacks against the live challenge before acknowledgement -
+*The server previously resolved `/api/ask/sign` with any header for a known live
+request, leaving cryptographic checks to the paid retry.* Capture the original
+server-validated 402 requirements and grant signer in the scoped pending slot
+before sending the SSE sign request. Before acknowledging or resolving a callback,
+require a bounded canonical inner-only header, exact signer/payee/amount and validity bounds,
+and recover the EIP-712 signer using the pinned Arc testnet chain, Circle batching
+name/version and GatewayWallet contract. Reject a nested or extra payload because
+the seller would select it instead of the verified outer fields. An invalid callback leaves the slot
+unresolved for a valid response or its existing timeout. This is an in-process
+testnet guard, not settlement evidence or a multi-instance broker.
+
+The browser still chooses its own nonce after SSE delivery. Signature recovery
+proves that nonce was signed, but cannot compare it with a server-admitted nonce,
+prevent replay, or create the durable payment row needed after a crash. A timeout
+or disconnect can still leave an unindexed signed authorization; this change does
+not fix the reservation-release or recovery policy. M3/M4 remain open pending
+atomic durable nonce admission, state transitions, funded drills and independent
+review. See [browser authorization design](docs/engineering/browser-authorization-durability.md)
+and [dated mainnet evidence](docs/engineering/mainnet-readiness-2026-09-29.md).
+
+**D-266** - Pin browser x402 signing to the Arc testnet session and challenge -
+*The browser previously accepted any parseable `eip155` network and copied the
+challenge's EIP-712 domain into a session-key signature; concurrent SSE requests
+could also pass the same local cap before asynchronous source checks finished.*
+Keep the current browser path testnet-only: require `exact`, the canonical Arc
+testnet network, USDC asset, Circle batching name/version and testnet
+GatewayWallet verifying contract before signing. Compare the active wallet
+account with both the browser's saved session signer and the grant signer
+captured by the ask route. Require source payment authority and reserve exact
+integer micro-USDC against the per-ask local cap synchronously before any
+asynchronous check. Release that local reservation only when signing provably
+has not begun; retain it after signer invocation or an uncertain POST. The
+headless two-argument caller keeps the pinned rail/domain checks but has no
+browser grant snapshot to compare.
+
+This is staged testnet browser hardening, not M3 or M4 acceptance. The timeout
+range caps `validBefore` at signing to at most 691,200 seconds from the browser
+clock, but does not bind it to grant expiry or revoke an existing signature.
+Old streams, multiple asks/tabs, the server's post-signature ledger gap and
+missing durable nonce-indexed admission/signature verification remain separate
+gates. See [browser authorization design](docs/engineering/browser-authorization-durability.md)
+and [dated mainnet evidence](docs/engineering/mainnet-readiness-2026-09-29.md).
+
+**D-265** - Stage Arc testnet RPC chain attestation at authority boundaries -
+*A viem client labeled Arc testnet does not verify the configured RPC, and a
+custom or tokenized testnet host cannot be judged by its URL.* Check live
+`eth_chainId` before each guarded HTTP RPC request. Check again after registry
+and indexer responses, before their data reaches the cache, and immediately
+before each indexer cursor write. Treat WebSocket registry pushes only as wake
+signals for the guarded HTTP sync. For covered server and CLI SDK signing,
+deposit and withdrawal calls, use a fresh four-second, no-retry preflight. This
+reduces risk but cannot guard the SDK's internal requests. Each guarded request
+adds a chain-ID round trip, authority reads add two, and an unavailable or
+mismatched RPC fails closed.
+
+M2 remains open: SDK-owned writes (including a withdrawal destination RPC outside
+the configured URL), browser and standalone signers, adversarial RPC switch-back,
+and non-atomic cache/cursor writes require separate controls and review. See
+[dated mainnet evidence](docs/engineering/mainnet-readiness-2026-09-29.md).
+
+**D-264** - Pin the Arc testnet payment contract profile - *Independent
+environment overrides for USDC, GatewayWallet and GatewayMinter could create a
+mixed-chain signing or withdrawal configuration while Keryx still advertises
+Arc testnet.* Keep these addresses fixed in `lib/config.ts` and reject conflicting
+overrides at startup; standalone buyer entry points use the same profile. This
+is a testnet safeguard, not mainnet enablement or M2 acceptance. M2 still
+requires RPC chain verification at write boundaries, separate deployment keys
+and databases, network-scoped nonces and receipts, signer/Gateway domain checks,
+and failure and recovery drills before a mainnet release decision.
+
+**D-263** - Make a paid research business cycle the Tameion product focus -
+*A citation-toll answer alone does not show the financial operation Tameion asks
+an agent to run; a general-purpose chat clone would dilute the Arc/USDC workflow
+and be difficult to validate with a real business during the event.* Keep the
+citation-toll reading agent as Keryx's core capability and make its research
+interaction useful for a customer: natural questions, source-backed answers,
+follow-ups, visible source decisions, and a deliverable the customer can reopen.
+For Tameion, center the end-to-end operating cycle behind that service: a real
+customer research task and verified incoming USDC, available funds kept separate
+from source and service obligations, bounded source purchases, evidence-gated
+creator rewards, delivery, reconciliation, and human escalation when policy
+requires it. Use RFB 04 as the closest prompt, not a mandatory track or a claim
+that all of its example features are implemented.
+
+Evaluate the event-period change in both product and genuine business use against
+the pre-event baseline. Report independently initiated customers separately from
+owner-operated pilots, and testnet separately from mainnet. Show decision,
+authorization, settlement, pending/ambiguous and receipt evidence for the complete
+cycle; a simulation or a payment rail demo cannot establish business traction.
+The current application/database spend controls and funded browser session are not
+an on-chain policy wallet. Do not claim contract-enforced category caps, a full
+Operator, mainnet readiness, or autonomous scheduling without their separate
+implementation and release evidence. Existing package terms and the mainnet
+approval gates remain in force. This is product direction and acceptance scope,
+not authorization for a new signer, payment authority, or real-fund launch. See
+[Tameion plan](docs/tameion-2026.md).
+
+**D-262** - Bundle the web's Mint fonts for reproducible builds - *A clean Next.js
+16 Turbopack build failed while resolving `next/font/google` for Bodoni Moda;
+remote font CSS and file responses make that build path dependent on an external
+service.* Use `next/font/local` with checked-in WOFF2 files and SIL Open Font
+License notices for Bodoni Moda, Spectral and Spline Sans Mono. Preserve the
+existing CSS variables, normal and italic faces, weight ranges, and swap display.
+Bundle the Latin subset used by the current web layout; other scripts continue to
+use CSS fallback fonts. The files and provenance are recorded in `app/fonts/README.md`.
+Require a fresh production build to validate future font changes. Reversible:
+restore Google font loading if its clean-runner reliability is demonstrated.
+
+**D-261** - Bind browser grant reservations to one epoch and signer; retain
+uncertain signed authorizations - *A revoke/regrant can replace a session row
+between grant inspection and cap reservation, and the browser may keep a bearer
+authorization after the server decides to withhold submission.* Require atomic
+reservation and release against the expected grant epoch, session signer and cap;
+refuse a missing or changed grant without selecting the treasury signer. Once
+the browser has produced a valid signed header, record a withheld authorization
+as pending by its nonce with the original economic tuple and keep its capacity
+reserved. Only exact authoritative Circle terminal failure evidence may release
+that capacity for the same grant epoch; missing search results, local expiry or a
+server decision not to submit are not failure evidence.
+
+A final grant check still races with HTTP submission and cannot prove the
+browser discarded its copy of the bearer header. A pending authorization may
+therefore persist indefinitely if Circle never supplies a definitive outcome;
+operator recovery and support policy must address that uncertainty without
+reusing the nonce or silently freeing the cap. The grant-epoch binding and
+signed-withheld pending behavior merged in `27ed52c` (PR #25), with focused
+regression tests; they are not mainnet acceptance. A ledger-write failure after
+the signed header is produced can still leave a held reservation without a
+durable payment row. Closing that gap, the final grant-check/submission race,
+and indefinitely pending signed-withheld recovery requires further work.
+The separate seller SDK upgrade and explicit testnet facilitator pin merged in
+`a79e882` (PR #26); it does not close these browser-grant risks or approve
+mainnet payment.
+See [mainnet readiness evidence](docs/engineering/mainnet-readiness-2026-09-29.md).
 
 **D-260** - Replace the Windows Electron shell with a bounded Tauri shell and a
 shared Mint desktop surface - *The desktop alpha worked but its dark visual system
@@ -3502,3 +4267,21 @@ Each query the agent probes the live Circle x402 bazaar (`circle services search
 ## Reading UX — 2026-09-28
 
 **Put the question and cited answer first while keeping spending evidence available** - *The previous first screen delayed the question, and a completed answer followed two tall trace panels.* The home masthead now contains the question, visible Quick/Deep choice, and action; budget and AI model are available in an advanced disclosure, with the selected question cap and payer shown at submission. A live summary shows the latest research step and separates settled, pending, and simulated amounts, while the full decision and settlement panels remain expandable. Completed answers lead with citations and payment evidence stays distinguishable by state. This changes presentation only: the existing session grant, browser co-signing, SSE, and payment authority continue to govern spending. The guide is an inline, user-invoked control. Chromium layout and synthetic browser checks are release gates; real mobile hardware, live source previews, and research quality require separate evidence. Reversible: easy (client presentation and tests). See [research reading UX](docs/research-reading-ux.md).
+
+## Encrypted R2 backups - 2026-09-30
+
+**Protect the application SQLite snapshot off-host with authenticated encryption and bounded daily uploads.** The user authorized encrypted R2 backup and an offline restore drill, then accepted per-job limits and account alerts despite residual account-wide billing risk. Other projects share the account, so Cloudflare budget notifications cannot guarantee a zero-dollar invoice. Keep a dedicated private Standard bucket, bucket-scoped S3 credentials and an independently retained random encryption key. A single serialized host writer reserves a conservative request budget durably before every operation, caps daily attempts and object size/count, refuses pagination/retries/multipart, and preserves previous remote backups until a new PUT succeeds. A 30-day lifecycle is a fallback retention bound. Offline restore authenticates before decompression, checks SQLite read-only integrity and produces evidence without starting services or authorizing signing. Withdrawal journals and full payment/service recovery remain separate acceptance gates. See [encrypted backup limits and recovery](docs/encrypted-backups.md). Reversible: disable remote uploads while preserving hourly local snapshots; do not reset the request ledger to retry.
+
+
+## Research transport parity ? 2026-10-01
+
+Use one public recorded-result projection for A2A, remote MCP and OpenAI. Preserve article/version and observed scholarly identity; use the reading UI bounded claim-matched answer-evidence gate rather than payment eligibility. Public references can support answers without rewards. Operator/desktop exports derive from checked task-bound receipts and remain private. No projection enriches records, authorizes payments or changes private search scope. Distinct settled creators cannot be inferred from citation allocations or payment-leg totals: creatorsPaid is nullable and allocations/references get separate names. Consumers must tolerate null. Ship applicable adapters/artifacts together under [surface parity](docs/surface-parity.md).
+
+
+## Stable native inspection versus derived exports ? 2026-10-02
+
+Preserve the established v1 raw result/default brief contract across the TypeScript and evaluated Rust readers. Derived reference/evidence exports are a separate application presentation domain, explicitly read through `readOperatorResearchResult` for non-brief CLI and desktop formats. Both raw and enriched readers share one integrity/task-binding snapshot reader; enrichment uses its exact checked receipt object without a second file read. This prevents transport enrichment from accidentally broadening a staged native domain or requiring duplicate bibliographic generators. Exact native/inter-file assertions remain release gates, with added copied-artifact proof of the raw base, derived formats, receipt digest/authority and unchanged source tree. Native direct-format cutover remains unproven.
+
+## Empty evidence production completion - 2026-10-02
+
+Initialize the shared orchestrator's Low confidence fallback before its early returns. Next's production optimizer coalesced an uninitialized confidence binding with a later verdict, causing no-source and failed-original-read paths to throw despite passing source tests. Protect actual compiled behavior with a hermetic post-build regression in CI. Result/payment/export contracts remain unchanged across shared consumers. See [production empty-evidence regression](docs/engineering/empty-evidence-production-2026-10-02.md).

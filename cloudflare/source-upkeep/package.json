@@ -1,0 +1,15 @@
+{
+  "name": "keryx-source-upkeep",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "cf build",
+    "test:runtime": "node test-runtime.mjs",
+    "deploy": "cf deploy"
+  },
+  "devDependencies": {
+    "cf": "1.0.0-beta.5",
+    "miniflare": "5.20260926.1-alpha",
+    "wrangler": "4.144.0"
+  }
+}

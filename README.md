@@ -12,7 +12,7 @@
 🔗 Live: **[keryx.cc](https://keryx.cc)** — free to try, no wallet, no sign-up
 &nbsp;·&nbsp; 🔎 **[public proof](https://keryx.cc/proof)** — code, adoption, RPC, settlement, cash-outs
 &nbsp;·&nbsp; ▶️ `npm run demo` — the whole loop, real settlement, ~90s
-&nbsp;·&nbsp; 🤖 `npx -y keryx-mcp@latest` — plug Keryx into any MCP agent
+&nbsp;·&nbsp; 🤖 [Remote MCP setup](https://keryx.cc/integrations/mcp) — connect your research agent
 &nbsp;·&nbsp; 🧩 [Fork the Arc primitives](https://github.com/tang-vu/keryx-arc-primitives)
 
 ---
@@ -75,7 +75,13 @@ the model reasons about money and shows its work, streamed live to the UI:
   and itemizes the source/evidence/coverage/settled-payment delta after a reader explicitly re-asks.
 - **Researcher exports** — import recorded cited-article references as BibTeX or RIS into Zotero,
   and compare claim-level excerpts in a research evidence matrix with spreadsheet CSV.
-  Missing scholarly metadata stays explicit; see [researcher exports](docs/researcher-exports.md).
+  Observed scholarly records include supplied authors/DOI/journal metadata and read limits;
+  missing fields stay explicit. See [researcher exports](docs/researcher-exports.md).
+- **DOI and scholarly discovery** — resolve up to two exact Crossref DOIs from a question,
+  or opt into Crossref/arXiv searches. Read selected original publisher pages and bounded
+  versioned arXiv PDFs, with explicit abstract-only fallback. Metadata and public papers
+  carry no creator payout authority. See [scholarly research](docs/scholarly-research.md)
+  and the separate [proposed author opt-in payment plan](docs/paid-scholarly-papers.md).
 - **Portable research receipts** — every permalink exports one deterministic JSON bundle containing
   its answer hash, BUY/SKIP/CACHE decisions, exact article versions, claim evidence and sanitized
   Circle settlement snapshot. Retain its SHA-256 to detect later changes; the self-check does not
@@ -154,9 +160,12 @@ Example trace (real output):
   `codex mcp add keryx --url "https://keryx.cc/mcp?client=codex"` or
   `claude mcp add --transport http keryx "https://keryx.cc/mcp?client=claude"`.
   The interactive setup guide is at [`/integrations/mcp`](https://keryx.cc/integrations/mcp).
-- **Local x402 MCP** — on the [official MCP registry](https://registry.modelcontextprotocol.io/v0/servers?search=keryx);
-  `npx -y keryx-mcp@latest` keeps the caller-funded path: its local Arc wallet pays Keryx's x402
-  toll before Keryx researches and pays creators.
+- **Local x402 MCP** — the caller-funded package uses its local Arc wallet to pay
+  Keryx's x402 toll before Keryx researches and pays creators. Version 0.3.0 requires
+  existing owner-provisioned custody, a trusted merchant policy and supported Node.
+  Use [verified package distribution](docs/mcp-distribution.md); npm and its registry
+  pointer remain at 0.1.1 until authenticated publication is independently verified.
+  Do not use the older npm release for the new custody/signing boundary.
 - **Discord slash command** — [install the Keryx app](https://discord.com/oauth2/authorize?client_id=1527619548809924678)
   in any server and type `/ask`: the reply embed carries the grounded answer, every creator paid,
   and a link to the dispatch trace. No bot process — signed interactions POST straight to the API
@@ -274,14 +283,14 @@ settles for real and prints on-chain proof; without them the same flow runs offl
 labeled `SIMULATED` — a mock is never presented as settled.
 
 ```bash
-# 1. Install (Node v20.18.2+)
+# 1. Install (Node 22 LTS v22.19.0+ or Node 24+; CI and production use Node 24)
+npm install --global npm@11.19.0
 npm install
 
 # 2. Configure (optional — runs offline with zero keys)
 cp .env.example .env.local
 
-# 3. Wallets + demo sources
-npm run generate-wallets
+# 3. Demo sources (offline development needs no wallet keys)
 npm run seed-sources
 
 # 4a. One question, full reasoning trace in the terminal
@@ -293,6 +302,13 @@ npm run dev          # http://localhost:3939
 # 5. Live metrics
 npm run metrics
 ```
+
+The legacy `generate-wallets` command is retired because it printed private keys
+and replaced existing environment custody. For real testnet operations, provision
+secrets privately under the current role-specific labels and preserve existing
+wallets and backups. Follow [treasury custody](docs/treasury-wallet-custody.md) or
+[caller-owned buyer setup](docs/buyer-agent.md); starting a demo does not create or
+recover a wallet.
 
 | Mode | Reasoning | Payments | When |
 |------|-----------|----------|------|

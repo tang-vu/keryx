@@ -315,7 +315,7 @@ CLI tools for admin + dev. Node --experimental-transform-types.
 | `check-treasury.mts` | Treasury watchdog: USDC + gas thresholds → ops alert (hourly cron). |
 | `backup-db.mts` | Rotating SQLite backups with off-box copy (hourly cron). |
 | `testmint-topup.mts` | Buy arc-testnet USDC from TestMint over x402 v2 (dry-run by default; real payment gated behind `--yes-mainnet`). |
-| `generate-wallets.mts` | Create funder + seller EOAs, write to .env.local. |
+| `generate-wallets.mts` | Retired keyless help/refusal; preserve existing custody and use deliberate owner-managed role-specific environment setup. |
 | `deploy-vps.sh` / `redeploy-vps.sh` | Full provision / low-downtime health-gated redeploy with auto-rollback. |
 | `arc-update.mts` | Push traction snapshot to Arc Canteen (for keryx.cc product card). |
 | `ingest-source.mts` | Add source from external registry to local DB. |
@@ -323,7 +323,9 @@ CLI tools for admin + dev. Node --experimental-transform-types.
 | `verify-research-receipt.mts` | Recompute a downloaded/file-or-URL receipt digest; no keys or network writes. |
 
 ### `mcp/`
-`keryx-mcp` — MCP server published on npm + the official MCP registry (`npx -y keryx-mcp@latest`).
+`keryx-mcp` — caller-funded MCP package with maintained source at 0.3.0. The older
+npm/MCP Registry pointer remains 0.1.1 until authenticated publication; use the
+[verified tarball distribution](mcp-distribution.md) and current owner setup.
 Exposes Keryx as a paid-research tool to any MCP client; buyer-side settlement via `keryx-buyer.mts`.
 
 ---

@@ -58,6 +58,9 @@ try {
   assert(textOrder.budget & 4);
 
   await question.fill("  How are citations rewarded?  ");
+  const scholarly = page.getByRole("checkbox", { name: "Search scholarly papers (Crossref and arXiv)" });
+  assert.equal(await scholarly.isChecked(), false);
+  await scholarly.check();
   await page.locator('input[name="research-depth"][value="deep"]').check();
   await page.getByText(/Budget and model:/).click();
   await page.getByLabel("Maximum budget in USDC").fill("0.06");
@@ -72,10 +75,21 @@ try {
   assert.equal(call[2] ?? null, null);
   assert.equal(call[3], "other");
   assert.equal(call[4], "deep");
+  assert.equal(call[5], true);
+  assert.equal(call[6], false);
+  const paidScholarly = page.getByRole("checkbox", { name: "Include reviewed paid manuscripts (Arc testnet pilot)" });
+  assert.equal(await paidScholarly.isDisabled(), true);
   await page.locator("#payer-session").click();
   await page.getByText(/Your funded session pays/).waitFor();
+  assert.equal(await paidScholarly.isDisabled(), false);
+  await paidScholarly.check();
+  await page.getByRole("button", { name: "Ask Keryx" }).click();
+  const paidCall = await page.evaluate(() => (window as unknown as { calls: unknown[][] }).calls[1]);
+  assert.equal(paidCall[6], true);
+  await page.getByText(/your question is sent to our search provider/).waitFor();
   await page.locator("#payer-expired").click();
-  await page.getByText(/Session expired/).waitFor();
+  await page.getByText(/Session expired\. Recover/).waitFor();
+  assert.equal(await paidScholarly.isDisabled(), true);
   const shared = await context.newPage();
   await shared.goto("https://research-form.test/?q=Shared%20question&budget=0.04&model=other&mode=deep&run=1");
   await shared.addScriptTag({ content: bundle.outputFiles[0].text });

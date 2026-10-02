@@ -2,6 +2,7 @@ import { BatchEvmScheme } from "@circle-fin/x402-batching/client";
 import { privateKeyToAccount } from "viem/accounts";
 import { z } from "zod";
 import { config } from "../config";
+import { assertArcRpcChain } from "../arc-rpc-attestation";
 import type { KeryxDB } from "../db/keryx-db";
 import { BUYER_NETWORK } from "../buyer/protocol";
 import { getGatewayAvailableAtomic } from "../gateway/gateway-balance";
@@ -28,7 +29,13 @@ export function privateWorkerBootstrap(db: KeryxDB, resultSpool?: PrivateResultS
       publicTreasurySigners: [publicAccount.address], privateTreasurySigner: account.address });
     if (!policy) throw new Error();
     const configurationId = privateWorkerConfigurationId(policy);
-    const worker = createPrivateWorker(db, { signerAddress: account.address, signer: new BatchEvmScheme(account), resultSpool,
+    const signer = new BatchEvmScheme(account);
+    const worker = createPrivateWorker(db, { signerAddress: account.address, signer: {
+      createPaymentPayload: async (version, requirements) => {
+        await assertArcRpcChain(config.rpcUrl);
+        return signer.createPaymentPayload(version, requirements);
+      },
+    }, resultSpool,
       privateProvider: policy.provider, getGatewayBalance: async () => {
         if (config.networkId !== BUYER_NETWORK || config.cctpDomain !== 26) throw new Error("Private Gateway network unavailable");
         const balance = await getGatewayAvailableAtomic(account.address);

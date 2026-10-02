@@ -48,8 +48,8 @@ console.log(c.dim("─".repeat(72)));
 
 const t0 = Date.now();
 
-// Pre-fund so we can surface the (EVM) Gateway deposit tx as extra proof. Idempotent: the
-// agent's own ensureFunded() then sees a sufficient balance and skips re-depositing.
+// Pre-fund so we can surface the (EVM) Gateway deposit tx as extra proof. The
+// agent's same-budget ensureFunded() reuses this retained one-attempt outcome.
 let depositTx: string | undefined;
 if (real) {
   try {

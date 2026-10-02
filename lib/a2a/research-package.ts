@@ -118,9 +118,9 @@ export function completedA2aServiceReceipt(input: {
       groundedClaims,
       groundedClaimRate: qualityMeasured ? round(groundedClaims / claimCount) : null,
       qualifyingEvidence: (Array.isArray(input.run.evidence) ? input.run.evidence : []).filter(
-        (item) => item.qualifiesForReward,
+        (item) => item.qualifiesForAnswer ?? item.qualifiesForReward,
       ).length,
-      rewardedCitations: Array.isArray(input.run.citations) ? input.run.citations.length : 0,
+      rewardedCitations: Array.isArray(input.run.citations) ? input.run.citations.filter(c => c.sourceKind !== "public-reference" && c.reward > 0).length : 0,
       confidence: deriveConfidence(input.run),
     },
     portableReceiptUrl: `${input.baseUrl ?? ""}/api/dispatch/${encodeURIComponent(input.run.id)}/receipt`,

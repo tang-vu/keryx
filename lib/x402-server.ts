@@ -10,12 +10,13 @@
 import { BatchFacilitatorClient } from "@circle-fin/x402-batching/server";
 import { NextRequest, NextResponse } from "next/server";
 import { config } from "./config";
+import { ARC_TESTNET_PROFILE } from "./arc-network-profile";
 import { guardPublicMerchant } from "./payments/public-merchant-guard";
 import { getDb } from "./db";
 import { createHash } from "node:crypto";
 
 // SDK 3.x defaults to mainnet; Keryx's seller rail remains Arc testnet only.
-const facilitator = new BatchFacilitatorClient({ url: "https://gateway-api-testnet.circle.com" });
+const facilitator = new BatchFacilitatorClient({ url: ARC_TESTNET_PROFILE.gatewayApiUrl });
 
 export interface PaidOptions {
   priceUsdc: number;
@@ -232,8 +233,9 @@ export async function settleThenServe(
     try {
       body = await produce(settleInfo);
     } catch (produceError) {
-      const message = produceError instanceof Error ? produceError.message : String(produceError);
-      console.error(`[x402] paid resource failed after settlement ${opts.endpoint}: ${message}`);
+      // Preserve the stack: minified bundle initialization errors cannot be traced from their
+      // message alone, and this is the only log emitted after a confirmed debit.
+      console.error(`[x402] paid resource failed after settlement ${opts.endpoint}:`, produceError);
       const res = NextResponse.json(
         { error: "paid resource unavailable after settlement" },
         { status: 500 },

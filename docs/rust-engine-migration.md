@@ -553,3 +553,7 @@ deployment step. D-260's desktop shell switch has separate same-machine
 Electron/Tauri comparison and release gates in [desktop alpha](./desktop-alpha.md).
 Signing, settlement, spend and recovery stay separate future gates, irrespective
 of CLI progress.
+
+## Recorded research export boundary (2026-10-02)
+
+The stable v1 read-only inspection domain returns the same raw result and default Markdown brief from TypeScript and the evaluated Rust engine. Reference and evidence exports belong to a separate TypeScript-owned application projection: explicit `readOperatorResearchResult` derives BibTeX/RIS/CSV from the exact receipt object already checked for integrity and original task binding, without rereading a possibly changed receipt. CLI non-brief formats and desktop direct exports opt into that projection; raw `result` and default brief remain unchanged. This does not migrate bibliographic formatting, signer/payment authority or settlement verification into Rust. A native direct-format cutover would require its own shared-generator adapter and acceptance; do not claim it from raw inspection parity. Native copied-artifact acceptance retains exact raw assertions and additionally checks application exports against an actual native-inspected receipt, unchanged authority/digest and unchanged source tree.

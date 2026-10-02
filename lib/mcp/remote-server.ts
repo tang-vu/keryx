@@ -1,3 +1,4 @@
+import { surfaceResearch } from "../research/surface-result";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { collectRun } from "../agent";
@@ -21,23 +22,7 @@ export function remoteResearchResult(run: QueryRun) {
   return {
     queryId: run.id,
     answer: run.answer,
-    citations: run.citations.map((citation) => ({
-      sourceId: citation.sourceId,
-      source: citation.sourceName,
-      weight: citation.weight,
-      rewardUsdc: citation.reward,
-    })),
-    evidence: (run.evidence ?? [])
-      .filter((item) => item.qualifiesForReward)
-      .map((item) => ({
-        claimIndex: item.claimIndex,
-        claim: item.claim,
-        source: item.sourceName,
-        marker: item.marker,
-        quote: item.quote,
-        support: item.support,
-      })),
-    claimCoverage: run.claimCoverage ?? [],
+    ...surfaceResearch(run),
     totalToCreatorsUsdc: run.totalToCreators,
     confidence: run.confidence,
     engine: run.engine,
@@ -52,7 +37,7 @@ function researchText(result: ReturnType<typeof remoteResearchResult>): string {
   const rewards =
     result.citations.length > 0
       ? result.citations
-          .map((citation) => `- ${citation.source}: $${citation.rewardUsdc.toFixed(4)} USDC`)
+          .map((citation) => `- ${citation.source}: $${citation.rewardPlannedUsdc.toFixed(4)} USDC`)
           .join("\n")
       : "- No source reward was allocated.";
   const settlement =
@@ -65,7 +50,7 @@ function researchText(result: ReturnType<typeof remoteResearchResult>): string {
 
   return (
     `${result.answer}\n\n` +
-    `Creator rewards\n${rewards}\n\n` +
+    `Citations and planned creator rewards\n${rewards}\n\n` +
     `Evidence: ${groundedClaims}/${result.claimCoverage.length} claims passed the grounding threshold\n` +
     `Total recorded to creators: $${result.totalToCreatorsUsdc.toFixed(4)} USDC · ${settlement}\n` +
     `Confidence: ${result.confidence?.level ?? "Low"} · ${result.dispatchUrl}`
@@ -81,7 +66,7 @@ export function createRemoteMcpServer(
     name: "keryx",
     version: "0.2.0",
     description:
-      "Budgeted research over creator sources with citation rewards settled in USDC on Arc.",
+      "Budgeted research over creator sources with citation rewards on Arc testnet. Anonymous research is sponsored by Keryx's treasury.",
   });
 
   server.registerTool(
@@ -90,7 +75,7 @@ export function createRemoteMcpServer(
       title: "Research with Keryx",
       description:
         "Research a question under a USDC creator-payment budget. Keryx selects sources, pays " +
-        "access tolls and weighted citation rewards, then returns a grounded answer and receipt.",
+        "access tolls and weighted citation rewards on Arc testnet, then returns a grounded answer and receipt. This remote surface uses Keryx's treasury; anonymous research is sponsored, not caller-funded usage. Public research may send your question to our search provider. The source USDC budget is separate from model and search operating costs.",
       inputSchema: {
         question: z.string().trim().min(3).max(4_000).describe("Research question."),
         budget: z
@@ -98,6 +83,8 @@ export function createRemoteMcpServer(
           .positive()
           .optional()
           .describe("Maximum creator-payment budget in USDC; clamped to the caller's tier."),
+        scholarly: z.boolean().optional().describe("Opt in to bounded Crossref/arXiv paper discovery; sends the question to those providers."),
+        mode: z.enum(["quick", "deep"]).optional().describe("Research depth; default deep."),
         model: z
           .string()
           .optional()
@@ -110,7 +97,7 @@ export function createRemoteMcpServer(
         openWorldHint: true,
       },
     },
-    async ({ question, budget, model }) => {
+    async ({ question, budget, model, scholarly, mode }) => {
       try {
         const requested =
           typeof budget === "number" && Number.isFinite(budget) && budget > 0
@@ -122,6 +109,7 @@ export function createRemoteMcpServer(
           budget: Math.min(requested, access.budgetCap),
           queryId: crypto.randomUUID(),
           origin: "mcp",
+          scholarly: scholarly === true, researchMode: mode ?? "deep",
           mcpClient: access.clientChannel,
           ...(access.actor ? { asker: access.actor } : {}),
           ...(modelChoice ? { model: modelChoice.id } : {}),

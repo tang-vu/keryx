@@ -6,9 +6,9 @@ import { buyerIntentSchema, writeBuyerFile } from "../buyer/journal";
 import { resumeResearch } from "../buyer/client";
 import { buildBuyerReport } from "../buyer/report";
 import { addressSchema, buyerRequestSchema, BUYER_NETWORK, type BuyerRequest } from "../buyer/protocol";
-import { inspectSavedOperatorResult, readSavedOperatorResult, saveVerifiedOperatorResult } from "./result";
+import { inspectSavedOperatorResult, readSavedOperatorResult, readSavedOperatorResearchResult, saveVerifiedOperatorResult } from "./result";
 import { type NativeTaskWriter } from "./native-task-writer";
-export { privateOperatorBrief as formatOperatorBrief } from "./result";
+export { privateOperatorBrief as formatOperatorBrief, formatOperatorResearchExport } from "./result";
 
 const taskSchema = z.object({
   schema: z.literal("keryx-operator-task-v1"),
@@ -165,13 +165,23 @@ export async function resumeOperatorTask(directory: string, recover: typeof resu
 }
 
 /** Private offline read; rechecks saved bytes and original task/journal binding. */
-export async function readOperatorResult(directory: string) {
+async function savedResultContext(directory: string) {
   const task = await readTask(directory);
   const saved = await inspectSavedOperatorResult(directory);
   if (saved === "absent") return null;
   if (saved === "invalid") throw new Error("Saved result file is invalid; keep the original buyer receipt for recovery");
   const linked = await linkedBuyerState(directory, task);
   if (linked.stage !== "buyer_journaled") throw new Error("Saved result has no matching buyer journal");
-  return readSavedOperatorResult(directory, { taskId: task.id, request: task.request, buyer: linked.buyer,
-    buyerJobId: linked.queryId });
+  return { taskId: task.id, request: task.request, buyer: linked.buyer, buyerJobId: linked.queryId };
+}
+
+export async function readOperatorResult(directory: string) {
+  const context = await savedResultContext(directory);
+  return context ? readSavedOperatorResult(directory, context) : null;
+}
+
+/** Explicit application enrichment above the stable TypeScript/native inspection contract. */
+export async function readOperatorResearchResult(directory: string) {
+  const context = await savedResultContext(directory);
+  return context ? readSavedOperatorResearchResult(directory, context) : null;
 }

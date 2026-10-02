@@ -4,6 +4,8 @@
 
 /** A registered content source = a creator (or multi-author publication) that gets paid per citation. */
 export interface Source {
+  /** Sticky distribution-rights enrollment; unsupported backends must refuse paid activation. */
+  scholarlyEnrolled?: boolean;
   id: string;
   name: string;
   url: string; // homepage / canonical link
@@ -108,12 +110,48 @@ export interface SourceItem {
 
 /** Immutable identity for the exact article version the agent evaluated and purchased. */
 export interface SourceItemIdentity {
+  /** Observed provider metadata; never creator identity or payout authority. */
+  scholarly?: ScholarlyMetadata;
+  webProvenance?: {
+    retrievedAt: string;
+    publisherGroup: string;
+    normalizedBodyHash: string;
+    extraction: "html" | "text" | "pdf";
+    truncated: boolean;
+  };
+  /** Trusted catalog provenance; public references never carry payout authority. */
+  sourceKind?: "public-reference";
+  publicDeliveryKind?: ContentDeliveryKind;
   itemId: string;
   itemTitle: string;
   itemUrl: string;
   contentVersion: string;
   itemPublishedAt?: string;
   contentReceipt?: ContentReceiptRef;
+}
+
+export interface ScholarlyMetadata {
+  provider: "crossref" | "arxiv";
+  recordUrl: string;
+  retrievedAt: string;
+  title: string;
+  authors: string[];
+  /** Count of contributor entries supplied by the provider, not verified authorship. */
+  authorCount?: number;
+  authorsTruncated?: boolean;
+  /** Optional exact provider name parts; never guess surnames from a full name. */
+  authorNames?: Array<{ given?: string; family?: string; literal?: string }>;
+  doi?: string;
+  arxivId?: string;
+  workType: "journal-article" | "preprint" | "other";
+  journal?: string;
+  publishedDate?: string;
+  volume?: string;
+  issue?: string;
+  pages?: string;
+  /** Provider type does not prove peer review. */
+  peerReview: "unknown";
+  evidenceScope?: "paper-text" | "abstract-page" | "publisher-page";
 }
 
 /**
@@ -185,6 +223,8 @@ export interface EvidenceRecord extends Partial<SourceItemIdentity> {
   sourceName: string;
   quote: string;
   support: number; // 0..1, model-proposed but bounded after the quote is verified
+  /** Exact quote, answer marker and support passed; separate from payment eligibility. */
+  qualifiesForAnswer?: boolean;
   qualifiesForReward: boolean;
 }
 
@@ -193,7 +233,7 @@ export interface ClaimCoverageRecord {
   claimIndex: number;
   claim: string;
   coverage: number; // min(final assessment, strongest validated evidence)
-  coveredBy: string[]; // reward-qualifying source markers only
+  coveredBy: string[]; // answer-supporting owned or public source markers
 }
 
 export type GapIntentStatus =
@@ -264,6 +304,8 @@ export interface PreviewCoverage {
  * This is a preview-derived attention/spend plan, never evidence or payment authority.
  */
 export interface EvidencePortfolio {
+  selectionMethod?: "bounded-heuristic" | "exhaustive";
+  evaluatedStates?: number;
   policy: "claim-coverage-v1";
   eligibleCandidates: number;
   attentionLimit: number;
@@ -312,6 +354,8 @@ export type PaymentSettlementStatus = "settled" | "simulated" | "pending" | "fai
 
 /** `inbound` = another agent paid Keryx (A2A); fetch/citation = Keryx paid a creator. */
 export interface PaymentRecord extends Partial<SourceItemIdentity> {
+  scholarlyDeclarationId?: string;
+  scholarlyApprovalId?: string;
   id?: string;
   kind: "fetch" | "citation" | "inbound";
   queryId: string;
@@ -333,6 +377,7 @@ export interface PaymentRecord extends Partial<SourceItemIdentity> {
   settlementStatus?: PaymentSettlementStatus;
   /** EIP-3009 nonce for browser co-sign attempts. Correlation evidence, never a signature. */
   authorizationId?: string;
+  authorizationPhase?: import("./db/browser-authorization-journal").BrowserAuthorizationPhase;
   /** Exact signed EIP-3009 `validBefore`, normalized to ISO-8601. Operational context only:
    *  expiry is not evidence that Circle accepted or failed the transfer. */
   authorizationExpiresAt?: string;

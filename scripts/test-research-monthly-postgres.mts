@@ -22,7 +22,7 @@ const concurrent = (input: string) => new Promise<string>((resolve, reject) => {
 const literal = (value: string) => `'${value.replaceAll("'", "''")}'`;
 const json = (value: unknown) => `${literal(JSON.stringify(value))}::jsonb`;
 const result = (output: string) => JSON.parse(output.trim().split("\n").find(line => line.startsWith("{"))!) as { created: boolean; purchase?: MonthlyPurchase; order?: Record<string, unknown> };
-const migration = readFileSync("supabase/migrations/0067_research_monthly.sql", "utf8");
+const migration = readFileSync("supabase/migrations/0077_research_monthly.sql", "utf8");
 const prerequisite = readFileSync("supabase/migrations/0038_a2a_orders.sql", "utf8")
   + readFileSync("supabase/migrations/0039_async_a2a_jobs.sql", "utf8")
   + `alter table public.a2a_orders add column package_data jsonb, add column resolution_data jsonb,
@@ -128,5 +128,9 @@ try {
       assert.equal(sql("select count(*) from public.research_purchase_authorizations", database).trim(), "1");
     }
   }
+  sql("create schema keryx_storage; create table keryx_storage.identity(identity jsonb); insert into keryx_storage.identity values('{}');");
+  for (const operation of [create(quick), claim(quick,"monthly"), redeem(quick,"enrolled"), `select public.get_research_monthly(${literal(quick.id)})`])
+    assert.throws(() => sql(`set role service_role; ${operation};`), /unavailable in enrolled storage/);
+  assert.throws(() => sql("begin;" + migration + "commit;"), /unavailable in enrolled storage/);
   console.log("PASS: PostgreSQL 17 independent-session purpose/nonce admission, four-slot bound, immutable purchase replay, post-expiry request replay, hash/package parity, rollback and service-only permissions. Synthetic database fixtures only; no settlement.");
 } finally { if (started) docker(["rm", "-f", name]); }

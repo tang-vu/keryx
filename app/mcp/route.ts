@@ -15,8 +15,8 @@ import { config } from "@/lib/config";
 import { getDb } from "@/lib/db";
 import { createRemoteMcpServer, type RemoteMcpAccess } from "@/lib/mcp/remote-server";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
-import type { McpClientChannel } from "@/lib/types";
 import { readMcpBody } from "@/lib/mcp/request-body";
+import { isAllowedMcpOrigin, normalizeMcpClient, researchCallCount } from "@/lib/mcp/route-helpers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,28 +25,6 @@ export const maxDuration = 300;
 const METHODS = "GET, POST, DELETE, OPTIONS";
 const REQUEST_HEADERS =
   "Authorization, Content-Type, Accept, MCP-Protocol-Version, MCP-Session-Id, Last-Event-ID";
-
-function configuredOrigins(req: NextRequest): Set<string> {
-  const values = [
-    req.nextUrl.origin,
-    config.baseUrl,
-    ...(process.env.KERYX_MCP_ALLOWED_ORIGINS ?? "").split(","),
-  ];
-  return new Set(
-    values.flatMap((value) => {
-      try {
-        return value.trim() ? [new URL(value.trim()).origin] : [];
-      } catch {
-        return [];
-      }
-    }),
-  );
-}
-
-export function isAllowedMcpOrigin(req: NextRequest): boolean {
-  const origin = req.headers.get("origin");
-  return !origin || configuredOrigins(req).has(origin);
-}
 
 function corsHeaders(req: NextRequest): Headers {
   const headers = new Headers({
@@ -67,28 +45,6 @@ function jsonRpcHttpError(req: NextRequest, status: number, code: number, messag
     { jsonrpc: "2.0", error: { code, message }, id: null },
     { status, headers },
   );
-}
-
-export function researchCallCount(body: unknown): number {
-  const pending = [body];
-  let count = 0;
-  while (pending.length) {
-    const item = pending.pop();
-    if (Array.isArray(item)) { for (const child of item) pending.push(child); continue; }
-    if (!item || typeof item !== "object") continue;
-    const message = item as { method?: unknown; params?: { name?: unknown } };
-    if (message.method === "tools/call" && message.params?.name === "research") count++;
-  }
-  return count;
-}
-
-export function normalizeMcpClient(value: string | null): McpClientChannel {
-  if (!value) return "direct";
-  const normalized = value.trim().toLowerCase();
-  if (normalized === "codex" || normalized === "claude" || normalized === "cursor") {
-    return normalized;
-  }
-  return "other";
 }
 
 async function resolveAccess(

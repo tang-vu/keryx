@@ -44,7 +44,7 @@ function run(over: Partial<QueryRun> = {}): QueryRun {
 }
 
 function codes(runs: QueryRun[], expectReasoning = true): DispatchAlarmCode[] {
-  return assessDispatchHealth(runs, { now: NOW, expectReasoning }).alarms.map((a) => a.code);
+  return assessDispatchHealth(runs, { now: NOW, expectReasoning, expectDispatches: true }).alarms.map((a) => a.code);
 }
 
 describe("assessDispatchHealth", () => {
@@ -74,9 +74,39 @@ describe("assessDispatchHealth", () => {
       now: NOW,
       windowHours: 6,
       expectReasoning: true,
+      expectDispatches: true,
     });
     expect(s.alarms.map((a) => a.code)).toEqual(["silent"]);
     expect(s.alarms[0].message).toContain(hoursAgo(20));
+  });
+
+  it("reports caller-driven quiet windows as idle, without a settlement claim", () => {
+    const summary = assessDispatchHealth([run({ createdAt: hoursAgo(20) })], { now: NOW, expectReasoning: true });
+    expect(summary.activity).toBe("idle");
+    expect(summary.alarms).toEqual([]);
+    expect(summary.paying).toBe(0);
+  });
+
+  it("counts completed public-only zero-spend answers as active", () => {
+    const publicRun = run({ totalSpent: 0, totalToCreators: 0, paymentMode: "real", paymentAttempts: 0, settledPayments: 0 });
+    const summary = assessDispatchHealth([publicRun, publicRun, publicRun], { now: NOW, expectReasoning: true });
+    expect(summary.activity).toBe("active");
+    expect(summary.runs).toBe(3);
+    expect(summary.alarms).toEqual([]);
+  });
+
+  it.each([
+    { paymentAttempts: 1, settledPayments: 0, pendingPayments: 1 },
+    { paymentAttempts: 1, settledPayments: 0, pendingPayments: 0 },
+    { paymentAttempts: 2, settledPayments: 1, pendingPayments: 0 },
+  ])("keeps pending and failed legs visible in completed caller-driven answers: %j", (telemetry) => {
+    const summary = assessDispatchHealth([run({ paymentMode: "real", ...telemetry })], { now: NOW, expectReasoning: true, unsettledRunIds: new Set(["q1"]) });
+    expect(summary.alarms.map(a => a.code)).toEqual(["payment-unsettled"]);
+    expect(summary.activity).toBe("active");
+  });
+
+  it("does not call offline simulation an unsettled real payment", () => {
+    expect(assessDispatchHealth([run({ paymentMode: "offline", paymentAttempts: 1, settledPayments: 0 })], { now: NOW, expectReasoning: true }).alarms).toEqual([]);
   });
 
   // The 2026-07-25 outage, first half: the pick's wire name went stale, so every step fell through.
@@ -138,12 +168,12 @@ describe("assessDispatchHealth", () => {
   // which read as a deliberately frugal run while every creator earned zero.
   it("alarms when the agent decides nothing and pays nobody", () => {
     const empty = run({ decisions: [], citations: [], totalSpent: 0, totalToCreators: 0 });
-    expect(codes([empty, empty, empty])).toEqual(["undecided", "nothing-bought"]);
+    expect(codes([empty, empty, empty])).toEqual(["undecided"]);
   });
 
-  it("alarms on a window that decides but never pays", () => {
+  it("allows scheduled research that decides but never pays", () => {
     const cited = run({ totalSpent: 0, totalToCreators: 0 });
-    expect(codes([cited, cited, cited])).toEqual(["nothing-bought"]);
+    expect(codes([cited, cited, cited])).toEqual([]);
   });
 
   it("reads nothing into one or two unpaid dispatches — a thin window proves nothing", () => {

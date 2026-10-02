@@ -16,7 +16,7 @@ export type DesktopAPI = {
   createTask(input: CreateInput): Promise<CreatedTaskRow>;
   resumeTask(handle: string): Promise<{ task: TaskRow; answer: string | null; answerTruncated: boolean; localResult: { state: string; message?: string }; localObservation: "saved" | "save_failed" }>;
   readResult(handle: string): Promise<SavedResult | null>;
-  exportBrief(handle: string): Promise<boolean>;
+  exportBrief(handle: string, format?: import("../../lib/operator/result").OperatorResearchExportFormat): Promise<boolean>;
   exportTask(handle: string): Promise<boolean>;
   importReference(): Promise<ReferenceRow | null>;
 };

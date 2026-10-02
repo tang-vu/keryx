@@ -4,7 +4,8 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { SqliteAdapter } from "./sqlite-adapter";
-import { SupabaseAdapter } from "./supabase-adapter";
+import { SupabaseAdapter, assembleAuthorityBoundSupabaseCore } from "./supabase-adapter";
+import { syntheticStorageIdentity } from "./storage-identity-fixture";
 import { initializeSqliteResearchMonthly, monthlyOrderId, monthlyOrderToRow, monthlyPurchaseId, MONTHLY_TERM_MS, type MonthlyPurchase, type ResearchPurchaseClaim } from "./research-monthly";
 import { a2aOrderId, a2aRequestHash, type A2aOrder } from "../a2a/order";
 import { a2aResearchPackage } from "../a2a/research-package";
@@ -159,4 +160,28 @@ it("Supabase uses atomic RPCs and validates returned immutable contracts",async(
   expect(JSON.parse(String(http.mock.calls[3]![1]?.body))).toMatchObject({p_id:parent.id,p_request_id:"request",p_order:{id:child.id,started_at:null,request_data:{monthlyId:parent.id}}});
   http.mockResolvedValueOnce(Response.json({created:false,purchase:{...parent,transaction:"tampered"}}));
   await expect(remote.createResearchMonthly(parent)).rejects.toThrow("conflict");
+});
+
+it("refuses enrolled SQLite and Supabase cores before legacy schema or transport access",async()=>{
+  const raw=new DatabaseSync(":memory:"),prepare=vi.spyOn(raw,"prepare"),identity=syntheticStorageIdentity("testnet-offline");
+  const sqlite=SqliteAdapter.assembleConnectionCore(raw,identity,()=>{});
+  const rpc=vi.fn(),from=vi.fn();
+  const deployment={format:"keryx-storage-deployment-v1" as const,identity,backend:{kind:"supabase" as const,url:"https://synthetic-db.invalid"}};
+  const {adapter:supabase}=assembleAuthorityBoundSupabaseCore({rpc,from} as never,deployment,()=>deployment);
+  try {
+    for(const method of ["claimResearchPurchase","createResearchMonthly","getResearchMonthly","redeemResearchMonthly"] as const) {
+      await expect(Reflect.apply(sqlite[method],sqlite,[])).rejects.toThrow("unavailable in enrolled storage");
+      await expect(Reflect.apply(supabase[method],supabase,[])).rejects.toThrow();
+    }
+    expect(prepare).not.toHaveBeenCalled();expect(rpc).not.toHaveBeenCalled();expect(from).not.toHaveBeenCalled();
+  } finally {prepare.mockRestore();raw.close();}
+});
+
+it("refuses an ordinary/raw handle pointed at an enrolled SQLite marker without creating Monthly schema",()=>{
+  const raw=new DatabaseSync(":memory:");
+  try {
+    raw.exec("CREATE TABLE keryx_storage_identity(singleton INTEGER,identity TEXT)");
+    expect(()=>initializeSqliteResearchMonthly(raw)).toThrow("unavailable in enrolled storage");
+    expect(raw.prepare("SELECT count(*) AS n FROM sqlite_schema WHERE name LIKE 'research_%'").get()?.n).toBe(0);
+  } finally {raw.close();}
 });

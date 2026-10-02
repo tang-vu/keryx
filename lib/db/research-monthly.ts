@@ -156,8 +156,10 @@ BEGIN SELECT RAISE(ABORT,'Research authorization claims are immutable'); END;
 
 /** Refuse ambiguous historical debit identities instead of selecting a backfill winner. */
 export function initializeSqliteResearchMonthly(db: DatabaseSync) {
+  assertOrdinarySqliteResearchAuthority(db);
   db.exec("BEGIN IMMEDIATE");
   try {
+    assertOrdinarySqliteResearchAuthority(db);
     db.exec(RESEARCH_MONTHLY_SQL);
     const conflict = db.prepare(`SELECT 1 FROM a2a_orders a JOIN research_purchase_authorizations c
       ON c.payer=lower(a.payer) AND c.authorization_id=lower(a.authorization_id)
@@ -173,6 +175,12 @@ export function initializeSqliteResearchMonthly(db: DatabaseSync) {
   } catch (error) { db.exec("ROLLBACK"); throw error; }
 }
 
+/** No Monthly/native domain cutover is authorized, even through an ordinary/raw handle. */
+function assertOrdinarySqliteResearchAuthority(db: DatabaseSync) {
+  if (db.prepare("SELECT 1 FROM sqlite_schema WHERE name='keryx_storage_identity'").get())
+    throw new Error("Research purchase authority is unavailable in enrolled storage");
+}
+
 function claimRow(value: ResearchPurchaseClaim) {
   const claim = z.object({ network: z.literal(MONTHLY_NETWORK), asset: z.literal(MONTHLY_ASSET).optional(), payer: address, payee: address,
     authorizationId: z.string().min(1).max(256), purpose: z.enum(["a2a", "monthly", "resource"]), requestHash: z.string().regex(/^[0-9a-f]{64}$/), amountMicros: micros }).strict().parse(value);
@@ -180,10 +188,17 @@ function claimRow(value: ResearchPurchaseClaim) {
     product: claim.purpose, purchase_id: claim.purpose === "monthly" ? monthlyPurchaseId(claim) : a2aOrderId(claim), request_hash: claim.requestHash, amount_micros: claim.amountMicros };
 }
 export function claimSqliteResearchPurchase(db: DatabaseSync, value: ResearchPurchaseClaim) {
+  assertOrdinarySqliteResearchAuthority(db);
   const row = claimRow(value);
-  db.prepare("INSERT OR IGNORE INTO research_purchase_authorizations (network,asset,payer,payee,authorization_id,product,purchase_id,request_hash,amount_micros) VALUES (?,?,?,?,?,?,?,?,?)").run(...Object.values(row));
-  const stored = db.prepare("SELECT * FROM research_purchase_authorizations WHERE network=? AND asset=? AND payer=? AND authorization_id=?").get(row.network,row.asset,row.payer,row.authorization_id);
-  if (!stored || Object.entries(row).some(([key, value]) => stored[key] !== value)) throw new Error("Research authorization claim conflict");
+  const ownTransaction = !db.isTransaction;
+  if (ownTransaction) db.exec("BEGIN IMMEDIATE");
+  try {
+    assertOrdinarySqliteResearchAuthority(db);
+    db.prepare("INSERT OR IGNORE INTO research_purchase_authorizations (network,asset,payer,payee,authorization_id,product,purchase_id,request_hash,amount_micros) VALUES (?,?,?,?,?,?,?,?,?)").run(...Object.values(row));
+    const stored = db.prepare("SELECT * FROM research_purchase_authorizations WHERE network=? AND asset=? AND payer=? AND authorization_id=?").get(row.network,row.asset,row.payer,row.authorization_id);
+    if (!stored || Object.entries(row).some(([key, value]) => stored[key] !== value)) throw new Error("Research authorization claim conflict");
+    if (ownTransaction) db.exec("COMMIT");
+  } catch (error) { if (ownTransaction) db.exec("ROLLBACK"); throw error; }
 }
 export async function claimSupabaseResearchPurchase(db: SupabaseClient, value: ResearchPurchaseClaim) {
   const { data, error } = await db.rpc("claim_research_purchase", { p_claim: claimRow(value) });
@@ -205,6 +220,7 @@ export function createSqliteResearchMonthly(db: DatabaseSync, value: MonthlyPurc
   } catch (error) { db.exec("ROLLBACK"); throw error; }
 }
 export function getSqliteResearchMonthly(db: DatabaseSync, id: string) {
+  assertOrdinarySqliteResearchAuthority(db);
   monthlyId.parse(id);
   const row = db.prepare("SELECT payer,data FROM research_monthly WHERE id=?").get(id);
   if (!row) return null;

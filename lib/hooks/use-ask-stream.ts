@@ -15,6 +15,7 @@
  */
 
 import { useCallback, useRef, useState } from "react";
+import { BROWSER_AUTHORIZATION_PROTOCOL } from "@/lib/payments/browser-authorization-protocol";
 import type { WalletClient } from "viem";
 import type { BrowserPaymentContext } from "@/lib/payments/browser-cosign-gateway";
 import type {
@@ -28,6 +29,8 @@ import type {
 import type { PaymentRequirementsInput } from "@/lib/x402-client-sign";
 import type { SourceIndex } from "@/lib/payments/client-payto-allowlist";
 import { isPaymentRecord } from "@/lib/payments/payment-state";
+import { readSession } from "@/lib/session/session-storage";
+import { BrowserSignBudget } from "./browser-sign-budget";
 
 export type StreamMode = "real" | "offline";
 
@@ -105,7 +108,7 @@ interface AskStreamOpts {
   /**
    * Public source index fetched once from /api/sources. Every payTo the browser signs
    * for — fetch toll or citation reward — is validated against the wallets the on-chain
-   * registry authorises for that exact source. Empty index → cap enforcement only.
+   * registry authorises for that exact source. Empty index refuses signing.
    */
   sourceIndex?: SourceIndex;
   /**
@@ -126,13 +129,13 @@ export function useAskStream(opts?: AskStreamOpts) {
   } = opts ?? {};
   const [state, setState] = useState<AskStreamState>(INITIAL);
   const abortRef = useRef<AbortController | null>(null);
-  // Tracks the cumulative USDC the browser has signed in the current ask() run.
-  // Reset to 0 at the start of each ask(). Never persisted. Independent of the server.
-  const signedTotalRef = useRef<number>(0);
+  // Per-ask exact micro-USDC capacity; a reservation is taken before async checks.
+  const signBudgetRef = useRef<BrowserSignBudget | null>(null);
 
   const reset = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
+    signBudgetRef.current = null;
     setState(INITIAL);
   }, []);
 
@@ -172,13 +175,21 @@ export function useAskStream(opts?: AskStreamOpts) {
       // We do this in the background — no await in the event loop, fire-and-forget promise.
       // `kind` also rides this event: fetches require the exact registry payout wallet,
       // while citation rewards may target any registry-authorised author wallet.
-      const { reqId, requirements, sourceId, kind, paymentContext } = data as {
+      const { reqId, requirements, sourceId, kind, paymentContext, capturedGrantSigner, admittedNonce, browserAuthorizationProtocol } = data as {
         reqId: string;
         requirements: PaymentRequirementsInput;
         sourceId?: string;
         kind?: "fetch" | "citation";
         paymentContext?: BrowserPaymentContext;
+        capturedGrantSigner?: string;
+        admittedNonce?: string;
+        browserAuthorizationProtocol?: string;
       };
+      if (browserAuthorizationProtocol !== BROWSER_AUTHORIZATION_PROTOCOL ||
+          typeof admittedNonce !== "string" || !/^0x[0-9a-f]{64}$/.test(admittedNonce)) {
+        console.warn("[keryx] sign-request refused: durable authorization protocol missing");
+        return;
+      }
       const getWallet = getSessionWalletClient;
 
       if (!sessionId || !getWallet) {
@@ -187,103 +198,106 @@ export function useAskStream(opts?: AskStreamOpts) {
         return;
       }
 
-      // Import the signer lazily — only loaded when co-sign is active (tree-shakes for no-session path).
-      import("@/lib/x402-client-sign").then(async ({ signPaymentAuthorization }) => {
-        const walletClient = getWallet();
-        if (!walletClient) {
-          console.warn("[keryx] sign-request: session WalletClient not available");
-          return;
-        }
+      const budget = signBudgetRef.current;
+      const reservation = budget?.reserve(requirements?.amount);
+      if (!reservation) {
+        console.warn("[keryx] sign-request refused: local cap unavailable, invalid amount, or cap exceeded");
+        return;
+      }
 
-        // Browser-side independent cap enforcement.
-        // Compute the payment amount in USDC (6-decimal atomic → float).
-        const amountUsdc = Number(requirements.amount) / 1e6;
-
-        // If a cap is configured, refuse to sign once the cumulative signed
-        // total for this run would exceed it. Small epsilon (1e-9) for float rounding.
-        const cap = grantCap;
-        if (cap !== undefined) {
-          if (signedTotalRef.current + amountUsdc > cap + 1e-9) {
-            console.warn(
-              `[keryx] sign-request refused: cumulative signed total ` +
-              `${signedTotalRef.current.toFixed(6)} + ${amountUsdc.toFixed(6)} would exceed cap ${cap.toFixed(6)}`,
-            );
-            // Do NOT post to /api/ask/sign — server timeout fires and skips source gracefully.
+      // Import only after the synchronous cap reservation.
+      import("@/lib/x402-client-sign").then(async ({ signBrowserPaymentAuthorization }) => {
+        try {
+          const walletClient = getWallet();
+          if (!walletClient) {
+            console.warn("[keryx] sign-request: session WalletClient not available");
             return;
           }
-        }
-
-        // payTo validation — the last gate before a bearer authorization exists.
-        // Fetch tolls are checked against the source payout wallet; citation rewards
-        // use the registry's full author allowlist. A sourceId the browser
-        // never saw in /api/sources, or a registry it cannot read, means refuse: the
-        // server's timeout skips the source, which costs a reward, not the user's USDC.
-        //
-        // sourceId is absent only when an older server build is still streaming (a
-        // rolling deploy). Fall back to cap-only enforcement rather than refusing every
-        // payment mid-swap; the cap remains the binding ceiling either way.
-        const index = sourceIndex;
-        if (kind === "fetch" && paymentContext?.offer && (!sourceId || !index || index.size === 0)) {
-          console.warn(
-            "[keryx] sign-request refused: signed article offer cannot be verified without the source index",
-          );
-          return;
-        }
-        if (sourceId && index && index.size > 0) {
-          const { isPaymentPayeeAllowed, resolveSourcePaymentAuthority } = await import(
-            "@/lib/payments/client-payto-allowlist"
-          );
-          const authority = await resolveSourcePaymentAuthority(sourceId, index, { refresh: true });
-          if (!authority) {
-            console.warn(
-              `[keryx] sign-request refused: cannot establish the authorised payees for source ${sourceId}`,
-            );
-            return;
-          }
-          if (!isPaymentPayeeAllowed(authority, requirements.payTo, kind)) {
-            console.warn(
-              `[keryx] sign-request refused: payTo ${requirements.payTo} is not authorised for this ${kind ?? "payment"} on ${sourceId}`,
-            );
+          const localSession = readSession();
+          if (!localSession || localSession.sessionId.toLowerCase() !== sessionId.toLowerCase()) {
+            console.warn("[keryx] sign-request refused: no matching local grant snapshot");
             return;
           }
 
-          // Fetch prices have independent browser authority too. List-price reads must equal the
-          // registry ceiling. Discounted reads must carry a creator signature over this exact
-          // article version, amount, and expiry; a compromised server cannot invent one.
-          if (kind === "fetch") {
-            const { validateBrowserFetchPrice } = await import(
-              "@/lib/payments/browser-fetch-price-policy"
+          // payTo validation — the last gate before a bearer authorization exists.
+          // Fetch tolls are checked against the source payout wallet; citation rewards
+          // use the registry's full author allowlist. A sourceId the browser
+          // never saw in /api/sources, or a registry it cannot read, means refuse: the
+          // server's timeout skips the source, which costs a reward, not the user's USDC.
+          //
+          const index = sourceIndex;
+          if (!sourceId || !index || index.size === 0 || !["fetch", "citation"].includes(kind ?? "")) {
+            console.warn(
+              "[keryx] sign-request refused: source payment authority cannot be verified",
             );
-            const priceDecision = await validateBrowserFetchPrice({
-              sourceId,
-              amountUsdc6: requirements.amount,
-              authority,
-              context: paymentContext,
-            });
-            if (!priceDecision.allowed) {
-              console.warn(`[keryx] sign-request refused: ${priceDecision.reason}`);
+            return;
+          }
+          {
+            const { isPaymentPayeeAllowed, resolveSourcePaymentAuthority } = await import(
+              "@/lib/payments/client-payto-allowlist"
+            );
+            const authority = await resolveSourcePaymentAuthority(sourceId, index, { refresh: true });
+            if (!authority) {
+              console.warn(
+                `[keryx] sign-request refused: cannot establish the authorised payees for source ${sourceId}`,
+              );
               return;
             }
-          }
-        }
+            if (!isPaymentPayeeAllowed(authority, requirements.payTo, kind)) {
+              console.warn(
+                `[keryx] sign-request refused: payTo ${requirements.payTo} is not authorised for this ${kind ?? "payment"} on ${sourceId}`,
+              );
+              return;
+            }
 
-        try {
-          const { header } = await signPaymentAuthorization(walletClient, requirements);
-          // Commit the signed amount BEFORE posting so that a re-entrant sign-request
-          // (concurrent sources) sees an accurate total. If the post fails we keep the
-          // tracked amount as a conservative over-count (safe — errs toward refusal).
-          signedTotalRef.current += amountUsdc;
-          await fetch("/api/ask/sign", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ sessionId, reqId, paymentHeader: header }),
-          });
-        } catch (err) {
-          // Signing failed — log but don't crash the UI. The server's awaitSignature
-          // timeout will reject and the gateway will skip this source gracefully.
-          console.error("[keryx] sign-request failed:", err);
+            // Fetch prices have independent browser authority too. List-price reads must equal the
+            // registry ceiling. Discounted reads must carry a creator signature over this exact
+            // article version, amount, and expiry; a compromised server cannot invent one.
+            if (kind === "fetch") {
+              const { validateBrowserFetchPrice } = await import(
+                "@/lib/payments/browser-fetch-price-policy"
+              );
+              const priceDecision = await validateBrowserFetchPrice({
+                sourceId,
+                amountUsdc6: requirements.amount,
+                authority,
+                context: paymentContext,
+              });
+              if (!priceDecision.allowed) {
+                console.warn(`[keryx] sign-request refused: ${priceDecision.reason}`);
+                return;
+              }
+            }
+          }
+
+          try {
+            const currentSession = readSession();
+            if (!currentSession || currentSession.sessionId.toLowerCase() !== sessionId.toLowerCase() ||
+                currentSession.sessAddr.toLowerCase() !== localSession.sessAddr.toLowerCase() ||
+                signBudgetRef.current !== budget) {
+              throw new Error("local grant changed before signing");
+            }
+            reservation.markSigningStarted();
+            const { header } = await signBrowserPaymentAuthorization(
+              walletClient, requirements, localSession.sessAddr, capturedGrantSigner ?? "", admittedNonce,
+            );
+            await fetch("/api/ask/sign", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ sessionId, reqId, paymentHeader: header }),
+            });
+          } catch (err) {
+            // Signing failed — log but don't crash the UI. The server's awaitSignature
+            // timeout will reject and the gateway will skip this source gracefully.
+            console.error("[keryx] sign-request failed:", err);
+          }
+        } finally {
+          reservation.releaseBeforeSigning();
         }
-      }).catch((err) => console.error("[keryx] failed to load x402-client-sign:", err));
+      }).catch((err) => {
+        reservation.releaseBeforeSigning();
+        console.error("[keryx] failed to load x402-client-sign:", err);
+      });
       return;
     }
 
@@ -307,7 +321,7 @@ export function useAskStream(opts?: AskStreamOpts) {
   // opts is an object reference — destructure the primitive/stable values into the dep array
   // so the hook re-creates handleEvent when the grant activates or the cap changes.
   // sourceIndex is a Map: stable after the one-time /api/sources fetch in app/page.tsx.
-  }, [sessionId, getSessionWalletClient, grantCap, sourceIndex]);
+  }, [sessionId, getSessionWalletClient, sourceIndex]);
 
   const ask = useCallback(
     async (
@@ -316,12 +330,17 @@ export function useAskStream(opts?: AskStreamOpts) {
       parentId?: string,
       model?: string,
       researchMode: ResearchMode = "quick",
+      scholarly = false,
+      paidScholarly = false,
     ) => {
       reset();
-      // Reset per-run signed total — each ask() is an independent budget run.
-      signedTotalRef.current = 0;
+      // Reset reservations for this ask before any SSE frame can arrive.
+      signBudgetRef.current = new BrowserSignBudget(grantCap);
       const controller = new AbortController();
       abortRef.current = controller;
+      // Reset/Stop can start another ask while an old body or reader rejects.
+      // Its callbacks must not change the new turn or process old signing frames.
+      const isCurrent = () => abortRef.current === controller && !controller.signal.aborted;
       setState({ ...INITIAL, status: "streaming", budget });
 
       try {
@@ -332,21 +351,25 @@ export function useAskStream(opts?: AskStreamOpts) {
             question,
             budget,
             // Include session id when a browser co-sign grant is active.
-            ...(sessionId ? { sessionId } : {}),
+            ...(sessionId ? { sessionId, browserAuthorizationProtocol: BROWSER_AUTHORIZATION_PROTOCOL } : {}),
             // Follow-up: the server anchors the question to this dispatch's own question.
             ...(parentId ? { parentId } : {}),
             // Reasoning-model pick from the form's picker. Server-validated against the
             // catalog; unknown/unset runs the default, and every pick falls back on error.
             ...(model ? { model } : {}),
             mode: researchMode,
+            ...(scholarly ? { scholarly: true } : {}),
+            ...(paidScholarly ? { paidScholarly: true } : {}),
           }),
           signal: controller.signal,
         });
+        if (!isCurrent()) return;
 
         if (!res.ok || !res.body) {
           // Read the error body once (as text), then try JSON — so we can react to a
           // structured session_expired without consuming the stream body twice.
           const bodyText = await res.text().catch(() => "");
+          if (!isCurrent()) return;
           let errCode: string | undefined;
           let errMsg = bodyText;
           let retryAfter: number | null = null;
@@ -395,6 +418,7 @@ export function useAskStream(opts?: AskStreamOpts) {
 
         while (!streamDone) {
           const { done, value } = await reader.read();
+          if (!isCurrent()) return;
           if (done) {
             streamDone = true;
             break;
@@ -413,6 +437,7 @@ export function useAskStream(opts?: AskStreamOpts) {
 
         // Flush any trailing frame.
         const tail = parseFrame(buffer);
+        if (!isCurrent()) return;
         if (tail) handleEvent(tail.event, tail.data);
 
         setState((s) => {
@@ -430,6 +455,7 @@ export function useAskStream(opts?: AskStreamOpts) {
               };
         });
       } catch (err) {
+        if (!isCurrent()) return;
         if ((err as Error)?.name === "AbortError") return;
         setState((s) => ({
           ...s,
@@ -439,7 +465,7 @@ export function useAskStream(opts?: AskStreamOpts) {
         }));
       }
     },
-    [handleEvent, reset, sessionId, onSessionExpired],
+    [handleEvent, reset, sessionId, grantCap, onSessionExpired],
   );
 
   return { state, ask, reset };

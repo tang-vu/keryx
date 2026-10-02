@@ -1,5 +1,24 @@
 -- One verified debit is permanently admitted for exactly one purpose and request contract.
 -- Admission is not settlement or entitlement; retain unknown/failed attempts for safe recovery.
+-- This domain remains ordinary TypeScript authority; enrolled owner cutover needs a new contract.
+do $$ declare enrolled boolean; begin
+  if to_regclass('keryx_storage.identity') is not null then
+    execute 'select exists(select 1 from keryx_storage.identity)' into enrolled;
+    if enrolled then raise exception 'Research purchase authority is unavailable in enrolled storage'; end if;
+  end if;
+end $$;
+
+create or replace function public.assert_ordinary_research_storage() returns void
+language plpgsql security definer set search_path=pg_catalog,pg_temp as $$
+declare enrolled boolean;
+begin
+  if to_regclass('keryx_storage.identity') is not null then
+    execute 'select exists(select 1 from keryx_storage.identity)' into enrolled;
+    if enrolled then raise exception 'Research purchase authority is unavailable in enrolled storage'; end if;
+  end if;
+end $$;
+revoke all on function public.assert_ordinary_research_storage() from public,anon,authenticated,service_role;
+
 create table if not exists public.research_purchase_authorizations (
   network text not null check(network='eip155:5042002'),
   asset text not null check(asset='0x3600000000000000000000000000000000000000'),
@@ -50,6 +69,7 @@ create or replace function public.claim_research_purchase(p_claim jsonb) returns
 language plpgsql security definer set search_path=public as $$
 declare original public.research_purchase_authorizations; proposed public.research_purchase_authorizations;
 begin
+  perform public.assert_ordinary_research_storage();
   proposed := jsonb_populate_record(null::public.research_purchase_authorizations,p_claim);
   if proposed.network is distinct from 'eip155:5042002' or proposed.asset is distinct from '0x3600000000000000000000000000000000000000'
     or proposed.payer is null or proposed.payer !~ '^0x[a-f0-9]{40}$' or proposed.payee is null or proposed.payee !~ '^0x[a-f0-9]{40}$'
@@ -71,6 +91,7 @@ create or replace function public.enforce_a2a_purchase_authorization() returns t
 language plpgsql security definer set search_path=public as $$
 declare original public.research_purchase_authorizations;
 begin
+  perform public.assert_ordinary_research_storage();
   -- A prepaid redemption is already linked within the same transaction and is not a new debit.
   if exists(select 1 from public.research_monthly_redemptions where order_id=new.id) then return new; end if;
   insert into public.research_purchase_authorizations(network,asset,payer,authorization_id,payee,product,purchase_id,request_hash,amount_micros)
@@ -100,6 +121,7 @@ create or replace function public.create_research_monthly(p_purchase jsonb) retu
 language plpgsql security definer set search_path=public as $$
 declare original jsonb; inserted integer; package jsonb; mode text;
 begin
+  perform public.assert_ordinary_research_storage();
   if jsonb_typeof(p_purchase) is distinct from 'object' or not p_purchase ?& array['id','payer','payee','authorizationId','transaction','quoteId','createdAt','expiresAt','creatorBudgetMicros','serviceFeeMicros','totalMicros','researchPackage']
     or (select count(*) from jsonb_object_keys(p_purchase))!=12
     or jsonb_typeof(p_purchase->'creatorBudgetMicros') is distinct from 'number' or jsonb_typeof(p_purchase->'serviceFeeMicros') is distinct from 'number'
@@ -132,9 +154,14 @@ begin
 end $$;
 
 create or replace function public.get_research_monthly(p_id text) returns jsonb
-language sql security definer set search_path=public as $$
+language plpgsql security definer set search_path=public as $$
+declare result jsonb;
+begin
+  perform public.assert_ordinary_research_storage();
   select jsonb_build_object('purchase',data,'redemptions',coalesce((select jsonb_agg(jsonb_build_object('requestId',request_id,'orderId',order_id,'requestHash',request_hash,'createdAt',to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),'slot',slot) order by slot)
-    from public.research_monthly_redemptions where monthly_id=p_id),'[]'::jsonb)) from public.research_monthly where id=p_id;
+    from public.research_monthly_redemptions where monthly_id=p_id),'[]'::jsonb)) into result from public.research_monthly where id=p_id;
+  return result;
+end;
 $$;
 
 create or replace function public.redeem_research_monthly(p_id text,p_payer text,p_request_id text,p_now timestamptz,p_order jsonb) returns jsonb
@@ -142,6 +169,7 @@ language plpgsql security definer set search_path=public as $$
 declare purchase jsonb; redemption public.research_monthly_redemptions; original public.a2a_orders; proposed public.a2a_orders;
   used integer; expected_id text; expected_hash text; package_hash text;
 begin
+  perform public.assert_ordinary_research_storage();
   select data into purchase from public.research_monthly where id=p_id for update;
   if purchase is null or lower(p_payer) is distinct from lower(purchase->>'payer') or p_request_id is null or p_request_id !~ '^[A-Za-z0-9_-]{1,128}$' then raise exception 'Monthly owner/request mismatch'; end if;
   if not purchase ?& array['createdAt','expiresAt','creatorBudgetMicros','serviceFeeMicros','totalMicros','researchPackage']

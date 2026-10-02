@@ -7,16 +7,17 @@
  */
 
 import { defineChain } from "viem";
+import { ARC_TESTNET_PROFILE } from "./arc-network-profile";
 
 export const arcTestnet = defineChain({
-  id: 5042002,
-  name: "Arc Testnet",
-  nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
+  id: ARC_TESTNET_PROFILE.chainId,
+  name: ARC_TESTNET_PROFILE.label,
+  nativeCurrency: { name: "USDC", symbol: "USDC", decimals: ARC_TESTNET_PROFILE.nativeDecimals },
   rpcUrls: {
-    default: { http: ["https://rpc.testnet.arc.network"] },
+    default: { http: [ARC_TESTNET_PROFILE.rpcUrl] },
   },
   blockExplorers: {
-    default: { name: "ArcScan", url: "https://testnet.arcscan.app" },
+    default: { name: "ArcScan", url: ARC_TESTNET_PROFILE.explorerUrl },
   },
-  testnet: true,
+  testnet: ARC_TESTNET_PROFILE.testnet,
 });

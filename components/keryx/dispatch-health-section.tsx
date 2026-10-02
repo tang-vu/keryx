@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * /status section for what the agent has actually been doing lately: how many dispatches settled in
+ * /status section for what the agent has actually been doing lately: how many dispatches completed in
  * the last window, how many of them were genuinely model-reasoned, and how much reached creators.
  *
  * It exists because "reasoning: deepseek" one row above is a configuration reading, not evidence —
@@ -13,6 +13,8 @@
 /** Mirrors the `dispatches` object /api/health returns (lib/ops/dispatch-health.ts). */
 export interface DispatchHealth {
   checkedAt: string;
+  activity?: "idle" | "active" | "expected-missing";
+  expectDispatches?: boolean;
   windowHours: number;
   runs: number;
   modelReasoned: number;
@@ -52,12 +54,12 @@ export function DispatchHealthSection({ dispatches: d }: { dispatches: DispatchH
         Agent output — last {d.windowHours}h
       </div>
       <dl className="mt-4 grid grid-cols-2 gap-x-8 gap-y-5 font-mono text-[12px]">
-        <Row k="Dispatches settled" v={String(d.runs)} alert={d.runs === 0} />
+        <Row k="Dispatches completed" v={String(d.runs)} alert={d.alarms.some(a => a.code === "silent")} />
         <Row k="Model-reasoned" v={reasonedLabel} alert={unreasoned} />
         <Row
           k="Dispatches that paid"
           v={d.runs === 0 ? "—" : `${d.paying}/${d.runs}`}
-          alert={d.runs > 0 && d.paying === 0}
+          alert={d.alarms.some(a => a.code === "nothing-bought" || a.code === "payment-unsettled")}
         />
         <Row k="To creators" v={`$${d.creatorPayoutUsdc.toFixed(4)}`} />
         <Row
@@ -77,6 +79,9 @@ export function DispatchHealthSection({ dispatches: d }: { dispatches: DispatchH
         <Row k="Last dispatch" v={d.lastDispatchAt ? ago(d.lastDispatchAt) : "—"} />
         <Row k="Checked" v={ago(d.checkedAt)} />
       </dl>
+      {d.activity === "idle" && (
+        <p className="mt-3 font-mono text-[11px] text-ink-3">Idle: no completed caller requests in this window. Research starts when a caller asks.</p>
+      )}
       {(d.servedBy?.length ?? 0) > 0 && (
         <p className="mt-3 font-mono text-[10px] tracking-wide text-faint">
           Served steps:{" "}
@@ -95,7 +100,8 @@ export function DispatchHealthSection({ dispatches: d }: { dispatches: DispatchH
       <p className="mt-3 font-mono text-[10px] tracking-wide text-faint">
         Hourly read of the agent&apos;s own dispatches. A failed provider crosses to another
         configured model before the deterministic heuristic; every attempt and circuit skip is
-        carried on the run receipt.
+        carried on the completed run receipt. Worker and settlement health are monitored separately;
+        requests that fail before saving a receipt are outside this window.
       </p>
     </>
   );

@@ -25,11 +25,24 @@ Actual hosting/domain bills, AI invoices, paid-service expenses and realized ope
 results are owner-private. Do not put those figures in the public website, repository,
 submission material or Canteen updates without the owner's explicit permission. Public
 formulas and illustrative inputs are separate from internal billing evidence. The owner
-has not supplied actual monthly operating costs; unknown values remain unknown. A local
+maintains supplied operating-cost assumptions in the private local handoff; exact
+bills and complete monthly costs remain unverified. Unknown values remain unknown. A local
 export may contain entered costs, so review it before sharing and keep private exports
 outside tracked repository files.
 
 ## Formulas
+
+The initial audience and repeat-use validation are defined in the
+[independent research pilot](./research-pilot-program.md). There is no committed
+independent pilot buyer as of September 30. Provider list prices differ from the
+August 29 policy used at inspected production baseline `5bf9aea`. The D-269
+[observer/report v2 candidate](./testnet-economics.md) captures price-policy identity
+per call and reports intervals for priced runs; untagged history remains unpriced.
+Local checks passed, while final-candidate hosted acceptance is pending in the
+[readiness evidence](./engineering/mainnet-readiness-2026-09-30.md). Saved historical
+reports remain intact. Neither historical estimates nor the new candidate's partial
+bounds establish reconciled provider expense, whole-period cost or operating profit;
+deployment and invoice coverage are not claimed here.
 
 Let `N` be paid jobs per month, `F` the service fee per job, `B` the creator budget,
 `C` expected creator spend, `V` variable operating cost per job, and `K` fixed plus

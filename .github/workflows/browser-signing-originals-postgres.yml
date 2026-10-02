@@ -1,0 +1,65 @@
+name: Browser signing originals PostgreSQL
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/0070_browser_signing_originals.sql"
+      - "supabase/migrations/0071_browser_original_observation.sql"
+      - "supabase/migrations/0072_browser_source_context.sql"
+      - "supabase/migrations/006[789]*"
+      - "lib/db/browser-signing-originals.ts"
+      - "lib/db/supabase-browser-signing-originals*"
+      - "lib/db/browser-authorization-*"
+      - "lib/db/keryx-db.ts"
+      - "lib/db/supabase-adapter.ts"
+      - "lib/canonical-json.ts"
+      - "lib/types.ts"
+      - "lib/session/session-signing-policy.ts"
+      - "lib/payments/x402-payment-evidence.ts"
+      - "lib/payments/browser-query-policy*"
+      - "lib/payments/browser-signing-original*"
+      - "lib/payments/browser-original-source-*"
+      - "lib/offers/article-offer-proof.ts"
+      - "lib/offers/article-offer.ts"
+      - "lib/sources/source-item-asset.ts"
+      - "lib/registry/registry-client.ts"
+      - "lib/registry/registry-abi.ts"
+      - "lib/arc-rpc-attestation.ts"
+      - "lib/config.ts"
+      - "lib/chains.ts"
+      - "scripts/test-browser-signing-originals-postgres.mts"
+      - "package*.json"
+      - "tsconfig.json"
+      - "eslint.config.*"
+      - ".github/workflows/browser-signing-originals-postgres.yml"
+  workflow_dispatch:
+jobs:
+  browser-signing-originals-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.21.0"
+          cache: npm
+      - run: npm ci
+      - name: Focused adapter proof and canonical header tests
+        run: npx vitest run lib/db/supabase-browser-signing-originals.test.ts
+      - name: Actual isolated PG17 PostgREST original journal acceptance
+        run: node --import tsx scripts/test-browser-signing-originals-postgres.mts
+      - name: Project TypeScript
+        run: npx tsc --noEmit
+      - name: Scoped fixture TypeScript
+        run: |
+          node --input-type=module <<'NODE'
+          import { writeFileSync, unlinkSync } from 'node:fs';
+          import { spawnSync } from 'node:child_process';
+          const path = '.browser-signing-postgres-typecheck.json';
+          writeFileSync(path, JSON.stringify({ extends: './tsconfig.json', compilerOptions: { target: 'ES2022', incremental: false, allowImportingTsExtensions: true }, include: ['scripts/test-browser-signing-originals-postgres.mts'], exclude: ['node_modules'] }));
+          try { process.exitCode = spawnSync('npx', ['tsc', '--project', path], { stdio: 'inherit' }).status ?? 1; }
+          finally { unlinkSync(path); }
+          NODE
+      - name: Scoped lint
+        run: npx eslint lib/db/supabase-browser-signing-originals.ts lib/db/supabase-browser-signing-originals.test.ts lib/db/supabase-adapter.ts scripts/test-browser-signing-originals-postgres.mts lib/offers/article-offer.ts lib/offers/article-offer-proof.ts

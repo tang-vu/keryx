@@ -44,6 +44,9 @@ export async function GET() {
     commit: process.env.KERYX_COMMIT ?? null,
     uptimeSeconds: Math.floor((Date.now() - BOOT_MS) / 1000),
     reasoning: llmProvider(),
+    webResearch: { provider: config.webSearchProvider === "tavily" || config.webSearchProvider === "searxng" ? config.webSearchProvider : "unconfigured",
+      configured: config.webSearchProvider === "tavily" ? !!config.tavilyApiKey : config.webSearchProvider === "searxng" && !!config.webSearchUrl,
+      availability: "not-probed", privateExternalSearch: "disabled", unattendedExternalSearch: "disabled" },
     settles: !forceOffline && config.funderKey ? "real" : "offline",
     network: config.network,
     // Deliberately a coarse label: tokenized RPC URLs are server credentials and never public.
@@ -111,6 +114,9 @@ export async function GET() {
           // Rolling deploy compatibility: older summaries lack these additive fields. Their
           // pending rows cannot be assigned an exact expiry or funding path from the summary.
           browserAwaiting: parsed.browserAwaiting ?? 0,
+          exposedAwaiting: parsed.exposedAwaiting ?? 0,
+          signedAwaiting: parsed.signedAwaiting ?? 0,
+          submittedAwaiting: parsed.submittedAwaiting ?? 0,
           treasuryAwaiting: parsed.treasuryAwaiting ?? 0,
           acknowledgedAwaiting: parsed.acknowledgedAwaiting ?? 0,
           unacknowledgedAwaiting:

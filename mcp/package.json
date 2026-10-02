@@ -1,6 +1,6 @@
 {
   "name": "keryx-mcp",
-  "version": "0.1.2",
+  "version": "0.3.1",
   "mcpName": "io.github.tang-vu/keryx",
   "description": "Add Keryx to any MCP agent — ask a research question, pay the x402 toll from your own Arc wallet, and Keryx answers with citations and pays every creator it cites in USDC on Arc.",
   "type": "module",
@@ -12,10 +12,10 @@
     "README.md"
   ],
   "engines": {
-    "node": ">=20"
+    "node": "^22.19.0 || >=24.0.0"
   },
   "scripts": {
-    "build": "esbuild keryx-mcp-server.mts --bundle --platform=node --format=esm --target=node20 --packages=external --outfile=dist/keryx-mcp.mjs",
+    "build": "esbuild keryx-mcp-server.mts --bundle --platform=node --format=esm --target=node22 --packages=external --outfile=dist/keryx-mcp.mjs",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -38,9 +38,13 @@
     "directory": "mcp"
   },
   "dependencies": {
-    "@circle-fin/x402-batching": "^2.1.0",
-    "@modelcontextprotocol/sdk": "^1.30.0",
-    "viem": "^2.52.2",
-    "zod": "^3.25.76"
-  }
+    "@circle-fin/x402-batching": "3.5.0",
+    "@modelcontextprotocol/sdk": "1.31.0",
+    "viem": "2.55.19",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.1"
+  },
+  "packageManager": "npm@11.19.0"
 }

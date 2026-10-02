@@ -12,7 +12,6 @@ Each form field below has one `text` block. Use the copy button on that block an
 - Incorporation status
 - Funding status
 - Conflict-of-interest answer
-- Confirm that `@tangvu_dev` is the X handle to submit
 
 ## 1. Applicant Details
 
@@ -61,8 +60,10 @@ https://keryx.cc
 ### Project X handle
 
 ```text
-@tangvu_dev
+@keryxpays
 ```
+
+Keryx's project account is [@keryxpays](https://x.com/keryxpays). Founder Tang Vu's personal account is [@tangvu_dev](https://x.com/tangvu_dev); use the project account for this project field.
 
 ### Project GitHub URL
 
@@ -393,7 +394,7 @@ Do not use that statement unless it is fully true. Disclose any relationship tha
 ## 8. Final submission checklist
 
 - [ ] Enter the professional email, legal entity, location, incorporation, funding, and conflict answers.
-- [ ] Confirm `@tangvu_dev` is the intended X handle.
+- [x] Confirm the project X account is `@keryxpays` (Tang Vu's personal account is `@tangvu_dev`).
 - [x] Record and upload a video no longer than five minutes: https://youtu.be/De22GVl2KnY
 - [x] Upload the deck and confirm both video and deck work without login: https://drive.google.com/file/d/1TNHbjz2_CyQwLCUGJNmKAyFlfEgl935f/view?usp=drive_link
 - [ ] Do not mark Circle Wallets or CCTP as current integrations.

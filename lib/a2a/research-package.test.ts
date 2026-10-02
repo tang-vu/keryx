@@ -155,3 +155,11 @@ describe("versioned A2A research packages", () => {
     });
   });
 });
+
+it("counts public answer evidence separately from planned creator rewards", () => {
+  const publicRun = { ...run, citations: run.citations.map(c => ({ ...c, sourceKind: "public-reference" as const, reward: 0 })),
+    evidence: run.evidence!.map(e => ({ ...e, qualifiesForAnswer: true, qualifiesForReward: false })) };
+  const receipt = completedA2aServiceReceipt({ researchPackage: a2aResearchPackage("deep"), acceptedAt: "2026-09-02T00:00:00.000Z", startedAt: null, run: publicRun });
+  expect(receipt.quality?.qualifyingEvidence).toBe(publicRun.evidence.length);
+  expect(receipt.quality?.rewardedCitations).toBe(0);
+});

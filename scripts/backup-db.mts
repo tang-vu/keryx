@@ -1,96 +1,77 @@
-/**
- * backup-db.mts — consistent, rotating, off-box backups of the SQLite source-of-truth.
- *
- * The deployed app keeps all real traction (payments, sources, memory, withdrawals) in a single
- * SQLite file on one VPS. A disk failure or a bad `rm` would lose it all. This script takes a
- * point-in-time snapshot that is safe to run against the LIVE database (SQLite `VACUUM INTO`
- * reads a consistent image while the app keeps serving in WAL mode), gzips it, rotates old
- * snapshots, and — when a remote is configured — copies the snapshot OFF the box.
- *
- * Off-box push is opt-in and credential-free here: set `KERYX_BACKUP_REMOTE` to any rclone
- * remote path (e.g. `r2:keryx-backups`) and the snapshot is `rclone copy`d there. Without it,
- * snapshots are still written + rotated locally (protects against corruption / accidental delete),
- * and the script prints how to enable the off-box leg. Never throws on a push failure — a missing
- * remote or a network blip must not stop the local snapshot from being kept.
- *
- * Run:  npm run backup          (locally or on the VPS; wired hourly via cron in deploy-vps.sh)
- * Env:  KERYX_SQLITE_PATH  (default data/keryx.sqlite)
- *       KERYX_BACKUP_KEEP  (local snapshots to retain, default 48)
- *       KERYX_BACKUP_REMOTE(rclone remote:path for the off-box copy; unset = local-only)
- */
-
+/** Consistent local snapshots; optional encrypted daily R2 upload with bounded job limits. */
 import { DatabaseSync } from "node:sqlite";
-import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 import fs from "node:fs";
 import path from "node:path";
-import zlib from "node:zlib";
 import { prunable } from "./backup-rotation.ts";
+import { backupKeep, withBackupLock } from "./backup-files.ts";
+import { backupSizeLimits, compressSnapshot, encryptSnapshot, readBackupKey } from "./backup-encryption.ts";
+import { downloadR2Backup, initializeR2Budget, r2Config, uploadR2Backup } from "./backup-r2.ts";
 
-const dbPath = process.env.KERYX_SQLITE_PATH
-  ? path.resolve(process.env.KERYX_SQLITE_PATH)
-  : path.resolve(process.cwd(), "data", "keryx.sqlite");
-const keep = Math.max(1, Number(process.env.KERYX_BACKUP_KEEP) || 48);
-const remote = (process.env.KERYX_BACKUP_REMOTE ?? "").trim();
-const backupsDir = path.join(path.dirname(dbPath), "backups");
-
-/** Compact, lexicographically-sortable UTC stamp: 2026-07-01T15-30-00-123Z. */
-function stamp(): string {
-  return new Date().toISOString().replace(/[:.]/g, "-");
+async function main(): Promise<void> {
+  const dbPath = path.resolve(process.env.KERYX_SQLITE_PATH ?? "data/keryx.sqlite");
+  const directory = path.join(path.dirname(dbPath), "backups");
+  const keep = backupKeep(process.env.KERYX_BACKUP_KEEP);
+  const args = process.argv.slice(2);
+  if (args.length && !(args.length === 1 && args[0] === "--init-r2") &&
+      !(args.length === 3 && args[0] === "--download-r2")) throw new Error("Invalid backup arguments.");
+  await withBackupLock(directory, async () => {
+    if (args[0] === "--init-r2") {
+      await initializeR2Budget(directory, r2Config());
+      console.log("[backup] initialized job ledger for empty dedicated R2 bucket; never reset it during the month.");
+      return;
+    }
+    if (args[0] === "--download-r2") {
+      await downloadR2Backup(args[1], path.resolve(args[2]), directory, r2Config());
+      console.log("[backup] encrypted off-host retrieval complete; authenticate in separate offline restore drill.");
+      return;
+    }
+    if (!fs.existsSync(dbPath)) throw new Error("Database missing.");
+    const base = `keryx-${new Date().toISOString().replace(/[:.]/g, "-")}.sqlite`;
+    const snapshot = path.join(directory, base);
+    try {
+      const db = new DatabaseSync(dbPath, { readOnly: true });
+      try {
+        db.exec("PRAGMA busy_timeout = 10000;");
+        db.exec(`VACUUM INTO '${snapshot.replace(/'/g, "''")}'`);
+      } finally { db.close(); }
+      fs.chmodSync(snapshot, 0o600);
+      if (fs.statSync(snapshot).size > backupSizeLimits.databaseBytes) throw new Error("Snapshot exceeds 256 MiB safety limit.");
+      const check = new DatabaseSync(snapshot, { readOnly: true });
+      try {
+        const integrity = check.prepare("PRAGMA integrity_check").all();
+        if (integrity.length !== 1 || integrity[0].integrity_check !== "ok" ||
+            check.prepare("PRAGMA foreign_key_check").all().length) throw new Error("Snapshot integrity failed.");
+      } finally { check.close(); }
+      await compressSnapshot(snapshot, `${snapshot}.gz.partial`);
+      fs.renameSync(`${snapshot}.gz.partial`, `${snapshot}.gz`);
+      console.log(`[backup] consistent local snapshot ${base}.gz`);
+      // Preserve local continuity even when remote/encryption configuration fails.
+      for (const stale of prunable(fs.readdirSync(directory).filter((f) => f.endsWith(".gz")), keep)) fs.unlinkSync(path.join(directory, stale));
+      let encrypted: string | undefined;
+      if (process.env.KERYX_BACKUP_ENCRYPTION_KEY !== undefined) {
+        encrypted = `${snapshot}.enc`;
+        await encryptSnapshot(snapshot, `${encrypted}.partial`, readBackupKey(process.env.KERYX_BACKUP_ENCRYPTION_KEY));
+        fs.renameSync(`${encrypted}.partial`, encrypted);
+        for (const stale of prunable(fs.readdirSync(directory).filter((f) => f.endsWith(".enc")), keep)) fs.unlinkSync(path.join(directory, stale));
+        console.log(`[backup] encrypted staging ${base}.enc`);
+      }
+      if ((process.env.KERYX_BACKUP_REMOTE ?? "").trim()) throw new Error("Legacy remote refused. Migrate to scoped KERYX_R2_* configuration; local snapshot retained.");
+      if (process.env.KERYX_R2_UPLOAD !== undefined && !["0", "1"].includes(process.env.KERYX_R2_UPLOAD)) throw new Error("Invalid R2 upload switch.");
+      if (process.env.KERYX_R2_UPLOAD === "1") {
+        if (!encrypted) throw new Error("Encrypted backup key required for R2; local snapshot retained.");
+        const result = await uploadR2Backup(encrypted, directory, r2Config());
+        console.log(result === "uploaded" ? "[backup] encrypted off-host upload succeeded." : "[backup] daily remote attempt already reserved; local snapshot retained.");
+      } else console.log("[backup] local-only; off-host upload disabled.");
+    } finally {
+      for (const temporary of [snapshot, `${snapshot}.gz.partial`, `${snapshot}.enc.partial`]) {
+        if (fs.existsSync(temporary)) fs.unlinkSync(temporary);
+      }
+    }
+  });
 }
 
-function human(bytes: number): string {
-  return bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(0)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-}
-
-function main(): void {
-  if (!fs.existsSync(dbPath)) {
-    console.error(`[backup] no database at ${dbPath} — nothing to back up.`);
-    process.exit(1);
-  }
-  fs.mkdirSync(backupsDir, { recursive: true });
-
-  const base = `keryx-${stamp()}.sqlite`;
-  const tmpPath = path.join(backupsDir, base);
-  const gzPath = `${tmpPath}.gz`;
-
-  // 1) Consistent snapshot of the live DB. VACUUM INTO reads a coherent image without blocking
-  //    WAL readers/writers, and compacts free pages so the snapshot is smaller than the source.
-  const db = new DatabaseSync(dbPath);
-  try {
-    db.exec("PRAGMA busy_timeout = 10000;");
-    db.exec(`VACUUM INTO '${tmpPath.replace(/'/g, "''")}'`);
-  } finally {
-    db.close();
-  }
-
-  // 2) Compress and drop the uncompressed intermediate.
-  fs.writeFileSync(gzPath, zlib.gzipSync(fs.readFileSync(tmpPath)));
-  fs.unlinkSync(tmpPath);
-  const size = fs.statSync(gzPath).size;
-  console.log(`[backup] snapshot ${path.basename(gzPath)} (${human(size)})`);
-
-  // 3) Rotate local snapshots.
-  const stale = prunable(fs.readdirSync(backupsDir), keep);
-  for (const f of stale) fs.unlinkSync(path.join(backupsDir, f));
-  if (stale.length) console.log(`[backup] pruned ${stale.length} old snapshot(s), keeping ${keep}`);
-
-  // 4) Off-box copy (opt-in). Best-effort: a push failure never discards the local snapshot.
-  if (!remote) {
-    console.log("[backup] local-only — set KERYX_BACKUP_REMOTE=<rclone remote:path> for an off-box copy.");
-    return;
-  }
-  const res = spawnSync("rclone", ["copy", gzPath, remote, "--no-traverse"], { encoding: "utf8" });
-  if (res.error && (res.error as NodeJS.ErrnoException).code === "ENOENT") {
-    console.warn("[backup] KERYX_BACKUP_REMOTE is set but `rclone` is not installed — snapshot kept locally only.");
-  } else if (res.status !== 0) {
-    console.warn(`[backup] rclone push to ${remote} failed (exit ${res.status}) — snapshot kept locally.\n${res.stderr ?? ""}`);
-  } else {
-    console.log(`[backup] pushed off-box → ${remote}`);
-  }
-}
-
-// Run only when invoked directly (`npm run backup`), not when imported by the rotation test.
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  main();
+try { await main(); }
+catch {
+  console.error("[backup] failed. Existing local snapshots retained. Inspect exclusive lock, integrity, encryption/R2 configuration and job budget; never reset the ledger to retry. Legacy KERYX_BACKUP_REMOTE is refused.");
+  process.exitCode = 1;
 }

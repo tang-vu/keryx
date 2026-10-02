@@ -4,6 +4,15 @@ Status, 2026-09-11: in progress. The signed-request, single-admission and matche
 implemented; the production HTTP relay still needs integration with the full recovery
 flow. Do not describe this foundation as completed withdrawal recovery.
 
+September 30 acceptance update: the [funded operator rehearsal](./engineering/creator-funded-withdrawal-drill.md)
+passed the protected engine using an owner-operated EOA's existing buyer balance:
+one retained original, one Circle POST, one mint broadcast, exact receipt matching,
+and two new keyless processes each retaining one cash-out row with no payment rows.
+The lost application response occurred after attestation storage; mint RPC response
+loss occurred after signed transaction storage. Production creation/timer activation,
+independent creator/browser acceptance and Circle response loss before UUID retention
+remain open. A transfer UUID is not chain-finality evidence.
+
 ## Target journey
 
 The internal `WithdrawalWorkspace` now composes amount entry, preparation, review
@@ -28,6 +37,10 @@ evidence and record a cash-out only after verified success. Pending/uncertain ou
 remain visible. A fresh salt or signature is a new action, never a recovery mechanism.
 
 ## Implemented foundation
+
+Browser preparation bounds the authenticated, non-cached request using `performance.now()` rather than comparing the server's `preparedAt` metadata with the browser's wall clock. It retains the 60-second request-age ceiling, 40-second abort, exact selected-policy and owner checks, and age checks before and after saving the original. A late or interrupted save may remain in recovery; failure never authorizes overwriting it. A response timestamp is validated metadata and does not establish chain freshness.
+
+Monotonic request age avoids manual clock adjustments and ordinary browser/server UTC skew. [MDN documents differences in whether `performance.now()` advances during operating-system sleep](https://developer.mozilla.org/en-US/docs/Web/API/Performance/now#ticking_during_sleep); browser timers can also be delayed. This browser check is not a guaranteed elapsed-real-time expiry across suspension. The server still obtains a fresh chain height window and validates the original finite block expiry before admission and transfer. Trusted server UTC remains necessary for chain-observation freshness and cross-process authentication expiry; this change does not synchronize the host clock.
 
 `lib/gateway/withdraw-protocol.ts` shares EIP-712 types with the browser builder and
 validates an EOA signature against a copied policy and request. It rejects noncanonical

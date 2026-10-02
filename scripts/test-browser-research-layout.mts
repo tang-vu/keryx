@@ -60,6 +60,16 @@ try {
       const question = page.getByRole("textbox", { name: "What do you want to know?" });
       await question.waitFor();
       await page.evaluate(() => document.fonts.ready);
+      // Wait for the shipped atlas to paint countries, not merely an empty ocean disc.
+      await page.waitForFunction(() => {
+        const canvas = document.querySelector<HTMLCanvasElement>('[data-testid="chat-globe"] canvas');
+        const context = canvas?.getContext("2d");
+        if (!canvas || !context || !canvas.width) return false;
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+        let landPixels = 0;
+        for (let i = 0; i < pixels.length; i += 4) if (pixels[i] < 60 && pixels[i + 1] < 60 && pixels[i + 2] < 60 && pixels[i + 3] > 200) landPixels++;
+        return landPixels > 700;
+      });
       const measurements = await page.evaluate(() => {
         const kicker = document.querySelector('[data-testid="hero-kicker"]');
         const range = document.createRange();
@@ -67,21 +77,35 @@ try {
         return {
           input: document.querySelector("textarea")?.getBoundingClientRect().toJSON(),
           cta: document.querySelector('[data-tour="dispatch-btn"]')?.getBoundingClientRect().toJSON(),
+          cap: document.querySelector('[data-testid="composer-source-cap"]')?.getBoundingClientRect().toJSON(),
           guide: document.querySelector('[data-testid="hero-guide"]')?.getBoundingClientRect().toJSON(),
           kickerText: kicker ? range.getBoundingClientRect().toJSON() : null,
           headline: document.querySelector("h1")?.getBoundingClientRect().toJSON(),
           docWidth: document.documentElement.scrollWidth,
           windowWidth: window.innerWidth,
           heroTop: document.querySelector('[data-tour="hero"]')?.getBoundingClientRect().top,
+          globe: document.querySelector('[data-testid="chat-globe"]')?.getBoundingClientRect().toJSON(),
+          canvas: document.querySelector('[data-testid="chat-globe"] canvas')?.getBoundingClientRect().toJSON(),
+          header: document.querySelector('[aria-label="Research conversation"] > header')?.getBoundingClientRect().toJSON(),
         };
       });
       await page.screenshot({ path: join(screenshotDir, `home-${width}x${height}.png`) });
       assert.equal(measurements.docWidth, width, `Horizontal overflow at ${width}x${height}`);
+      assert(measurements.globe && measurements.canvas && measurements.header, "Signature globe missing");
+      assert(measurements.globe.left >= measurements.header.left && measurements.globe.right <= measurements.header.right && measurements.globe.bottom <= measurements.header.bottom + 1,
+        `Globe must stay inside the chat header at ${width}px`);
+      assert(measurements.canvas.left >= measurements.globe.left && measurements.canvas.right <= measurements.globe.right && measurements.canvas.bottom <= measurements.globe.bottom,
+        `Globe canvas must fit its visible wrapper at ${width}px`);
+      assert.equal(await page.locator('[data-testid="chat-globe"]').getAttribute("aria-hidden"), "true");
+      assert.equal(await page.locator('[data-testid="chat-globe"]').evaluate(element => getComputedStyle(element).pointerEvents), "none");
+      assert.equal(await page.locator('[data-testid="chat-globe"] svg g').first().evaluate(element => getComputedStyle(element).animationName), "none");
       assert(measurements.input && measurements.cta, `Question and action missing at ${width}x${height}`);
       assert(measurements.input.top >= 0 && measurements.input.top < height,
         `Question misses first viewport at ${width}x${height}: ${measurements.input.top}`);
       assert(measurements.cta.top > measurements.input.bottom,
         `Action precedes question at ${width}x${height}`);
+      assert(measurements.cap && measurements.cap.bottom <= measurements.cta.top,
+        `Source cap must be visible before the action at ${width}x${height}`);
       if (width <= 430 && height >= 640) assert(measurements.cta.bottom <= height,
         `Mobile action is cut off in the first viewport at ${width}x${height}: ${measurements.cta.bottom}`);
       if (width >= 1024) assert(measurements.cta.bottom <= height,
@@ -106,6 +130,23 @@ try {
         await page.getByRole("button", { name: "How it works" }).click();
         await page.getByRole("dialog", { name: "How Keryx works" }).waitFor();
         await page.getByRole("button", { name: "Close tour" }).click();
+      }
+      if ((width === 390 && height >= 640) || width === 1366) {
+        await page.goto(`${base}/research`, { waitUntil: "domcontentloaded" });
+        await page.getByRole("textbox", { name: "What do you want to know?" }).waitFor();
+        await page.waitForFunction(() => {
+          const canvas = document.querySelector<HTMLCanvasElement>('[data-testid="chat-globe"] canvas');
+          const context = canvas?.getContext("2d");
+          if (!canvas || !context || !canvas.width) return false;
+          const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+          let landPixels = 0;
+          for (let i = 0; i < pixels.length; i += 4) if (pixels[i] < 60 && pixels[i + 1] < 60 && pixels[i + 2] < 60 && pixels[i + 3] > 200) landPixels++;
+          return landPixels > 700;
+        });
+        await page.screenshot({ path: join(screenshotDir, `research-${width}x${height}.png`) });
+        const action = await page.locator('[data-tour="dispatch-btn"]').boundingBox();
+        assert(action && action.y + action.height <= height, `Shared research action misses first viewport at ${width}px`);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width);
       }
       console.log(`PASS ${width}x${height}: input y=${Math.round(measurements.input.top)}, action y=${Math.round(measurements.cta.top)}, no horizontal overflow`);
     } finally {

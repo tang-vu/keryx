@@ -35,6 +35,8 @@ async function run(file: string) {
 
 try {
   await run("scripts/test-browser-research-form.mts");
+  await run("scripts/test-browser-ask-isolation.mts");
+  await run("scripts/test-browser-chat-payer.mts");
   await run("scripts/test-reading-evidence.mts");
   if (server) {
     let ready = false;
@@ -45,7 +47,9 @@ try {
     }
     assert(ready, `Local production server did not start: ${output}`);
   }
+  await run("scripts/test-research-evidence-browser.mts");
   await run("scripts/test-browser-research-layout.mts");
+  await run("scripts/test-browser-research-chat.mts");
   await run("scripts/test-reading-ux-browser.mts");
 } finally {
   if (server) { server.kill(); await exited; }

@@ -1,221 +1,125 @@
-/**
- * keryx-buyer — the x402 buyer behind the Keryx MCP server.
- *
- * Holds a persistent Arc-testnet wallet (the CALLER's own — never Keryx's treasury), keeps a small
- * Circle Gateway balance, and pays the toll to Keryx's /api/agent/ask so any agent can ask Keryx and
- * have it pay the creators it cites downstream. The wallet auto-funds once from the Keryx onramp (or
- * the Circle faucet), so every call is a genuinely external on-chain USDC payment, visible live on
- * the keryx.cc dashboard.
- *
- * Self-contained: reads only its own KERYX_* env (no dependency on Keryx's server-side treasury keys),
- * so it runs unchanged on any judge's / agent's machine.
- */
-
-import fs from "node:fs";
+﻿/** Local stdio buyer: configured caller custody, pinned testnet signing and retained recovery. */
 import os from "node:os";
 import path from "node:path";
-import { GatewayClient } from "@circle-fin/x402-batching/client";
-import { createPublicClient, erc20Abi, formatUnits, http, parseUnits } from "viem";
-import { arcTestnet } from "viem/chains";
-import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import fs from "node:fs";
+import { createPublicClient, erc20Abi, formatUnits, parseUnits, type PrivateKeyAccount } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { arcTestnet } from "../lib/chains.ts";
+import { config } from "../lib/config.ts";
+import { attestedArcAuthorityHttp } from "../lib/arc-rpc-attestation.ts";
+import { getGatewayAvailableAtomic } from "../lib/gateway/gateway-balance.ts";
+import { loadPersistentTreasuryWallet } from "../lib/payments/persistent-treasury-wallet.ts";
+import { GuardedArcSubmissionUnknownError } from "../lib/payments/guarded-arc-transaction.ts";
+import { payForResearch, readPending, recoverResearch } from "./local-payment.mts";
+import { ensureLocalFunding, readFunding, recoverFunding } from "./local-funding.mts";
 
-const USDC = (process.env.KERYX_USDC_ADDRESS ??
-  "0x3600000000000000000000000000000000000000") as `0x${string}`;
-const RPC = process.env.KERYX_RPC_URL ?? "https://rpc.testnet.arc.network";
-// The published buyer is intentionally testnet-only. A mainnet release needs a separate,
-// reviewed package and deployment; changing an environment variable must never enable spending.
-const CHAIN = "arcTestnet" as const;
+const RPC = config.rpcUrl;
 const BASE_URL = (process.env.KERYX_BASE_URL ?? "https://keryx.cc").replace(/\/$/, "");
-const FEE_USDC = Number(process.env.KERYX_A2A_FEE ?? "0.02");
+const DEEP_FEE_USDC = Number(process.env.KERYX_A2A_DEEP_FEE ?? "0.05");
+const DEFAULT_BUDGET_USDC = Number(process.env.KERYX_DEFAULT_BUDGET ?? "0.05");
+const MAX_BUDGET_USDC = Number(process.env.KERYX_A2A_MAX_BUDGET ?? "0.5");
+const MAX_TOTAL_USDC = Number(process.env.KERYX_MAX_TOTAL_USDC ?? "1");
 const DEPOSIT_USDC = process.env.KERYX_GATEWAY_DEPOSIT ?? "0.5";
-const FAUCET = "https://faucet.circle.com";
-const EXPLORER = "https://testnet.arcscan.app";
-const WALLET_FILE =
-  process.env.KERYX_WALLET_FILE ?? path.join(os.homedir(), ".keryx", "buyer-wallet.json");
+const PAYEE = process.env.KERYX_BUYER_PAYEE;
+const WALLET_FILE = process.env.KERYX_WALLET_FILE ?? path.join(os.homedir(), ".keryx", "buyer-wallet.json");
+const JOURNAL_FILE = process.env.KERYX_PAYMENT_JOURNAL ?? path.join(path.dirname(WALLET_FILE), "buyer-payment.json");
+const FUNDING_FILE = `${JOURNAL_FILE}.funding.json`;
+const CUSTODY_GUIDANCE = "Configure KERYX_BUYER_PRIVATE_KEY or an existing valid KERYX_WALLET_FILE. No wallet is created or replaced. Preserve any old wallet and journals for owner recovery";
+let cachedAccount: PrivateKeyAccount | undefined;
 
-/** Load a buyer key from env, else from the persisted wallet file, else generate + persist one. */
-function loadOrCreateKey(): `0x${string}` {
-  const envKey = process.env.KERYX_BUYER_PRIVATE_KEY as `0x${string}` | undefined;
-  if (envKey && envKey.startsWith("0x")) return envKey;
+function configuredAccount(): PrivateKeyAccount {
+  if (cachedAccount) return cachedAccount;
   try {
-    return JSON.parse(fs.readFileSync(WALLET_FILE, "utf8")).privateKey as `0x${string}`;
-  } catch {
-    const key = generatePrivateKey();
-    fs.mkdirSync(path.dirname(WALLET_FILE), { recursive: true });
-    fs.writeFileSync(
-      WALLET_FILE,
-      JSON.stringify({ privateKey: key, address: privateKeyToAccount(key).address }, null, 2),
-    );
-    return key;
-  }
+    const configured = process.env.KERYX_BUYER_PRIVATE_KEY;
+    if (configured !== undefined && !/^0x[0-9a-f]{64}$/i.test(configured)) throw new Error();
+    const key = (configured as `0x${string}` | undefined) ?? loadPersistentTreasuryWallet(WALLET_FILE).privateKey;
+    cachedAccount = privateKeyToAccount(key);
+    return cachedAccount;
+  } catch { throw new Error(CUSTODY_GUIDANCE); }
 }
 
-const key = loadOrCreateKey();
-export const account = privateKeyToAccount(key);
-const gateway = new GatewayClient({ chain: CHAIN, privateKey: key, rpcUrl: RPC });
-const pub = createPublicClient({ chain: arcTestnet, transport: http(RPC) });
+export const meta = { address: "custody not loaded; run keryx_wallet_status", baseUrl: BASE_URL,
+  feeUsdc: DEEP_FEE_USDC, defaultBudgetUsdc: DEFAULT_BUDGET_USDC, faucet: "https://faucet.circle.com",
+  explorer: "https://testnet.arcscan.app", walletFile: WALLET_FILE } as const;
+export type WalletStatus = { address: string; gasBalance: string; usdcBalance: string;
+  gatewayAvailable: string; ready: boolean; instructions: string };
 
-/** Static facts the MCP tools surface to the calling agent. */
-export const meta = {
-  address: account.address,
-  baseUrl: BASE_URL,
-  feeUsdc: FEE_USDC,
-  faucet: FAUCET,
-  explorer: EXPLORER,
-  walletFile: WALLET_FILE,
-} as const;
-
-export type WalletStatus = {
-  address: string;
-  gasBalance: string;
-  usdcBalance: string;
-  gatewayAvailable: string;
-  ready: boolean;
-  instructions: string;
-};
-
-const fee = parseUnits(String(FEE_USDC), 6);
-const deposit = parseUnits(DEPOSIT_USDC, 6);
-const ONRAMP_URL = `${BASE_URL}/api/faucet/onramp`;
-
-/** Best-effort one-time auto-funding from Keryx's testnet onramp so a brand-new caller skips the
- *  Circle faucet captcha. Never throws — on failure (already funded, daily cap, network) the caller
- *  falls back to the manual faucet guidance. The wallet stays the caller's own; only the toll spend
- *  is what makes a call count as external traction. */
-async function tryOnramp(): Promise<void> {
-  try {
-    await fetch(ONRAMP_URL, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ address: account.address }),
-    });
-  } catch {
-    /* network error — fall through to manual faucet guidance */
-  }
-}
-
-/** Poll the wallet's USDC balance until it reaches `min` (the drip lands async), up to ~30s. */
-async function waitForErc20(min: bigint): Promise<bigint> {
-  let bal = 0n;
-  for (let i = 0; i < 10; i++) {
-    bal = (await pub.readContract({
-      address: USDC,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [account.address],
-    })) as bigint;
-    if (bal >= min) return bal;
-    await new Promise((r) => setTimeout(r, 3000));
-  }
-  return bal;
-}
-
-async function readBalances() {
-  const [gas, erc20, bal] = await Promise.all([
-    pub.getBalance({ address: account.address }),
-    pub.readContract({
-      address: USDC,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [account.address],
-    }) as Promise<bigint>,
-    gateway.getBalances(),
-  ]);
-  return { gas, erc20, available: bal.gateway.available as bigint };
-}
-
-/** Diagnose the wallet and return precise next-step funding guidance. */
-export async function getStatus(): Promise<WalletStatus> {
-  const { gas, erc20, available } = await readBalances();
-  const ready = available >= fee;
-  let instructions: string;
-  if (ready) {
-    const calls = Math.floor(Number(formatUnits(available, 6)) / FEE_USDC);
-    instructions = `Ready — ${formatUnits(available, 6)} USDC in Gateway, ~${calls} Keryx calls.`;
-  } else if (erc20 >= deposit && gas > 0n) {
-    instructions =
-      `You hold ${formatUnits(erc20, 6)} USDC but it isn't in the Gateway yet. ` +
-      `ask_keryx will auto-deposit ${DEPOSIT_USDC} USDC on the next call.`;
-  } else if (erc20 >= deposit) {
-    instructions =
-      `You hold ${formatUnits(erc20, 6)} USDC but no gas to deposit it. ` +
-      `Fund ${account.address} with a little Arc-testnet gas at ${FAUCET} (Arc Testnet), then retry.`;
-  } else {
-    instructions =
-      `No testnet USDC yet — just call ask_keryx: it AUTO-FUNDS this wallet once from the Keryx onramp ` +
-      `(no Circle faucet needed), then pays the toll from YOUR wallet. If the onramp is tapped out ` +
-      `(daily cap), fund ${account.address} at ${FAUCET} (Arc Testnet). ` +
-      `Each call costs ${FEE_USDC} USDC, paid from YOUR wallet — visible live on ${BASE_URL}/dashboard.`;
-  }
-  return {
-    address: account.address,
-    gasBalance: formatUnits(gas, 18),
-    usdcBalance: formatUnits(erc20, 6),
-    gatewayAvailable: formatUnits(available, 6),
-    ready,
-    instructions,
+function limits(budget = DEFAULT_BUDGET_USDC) {
+  const micros = (value: number) => {
+    const decimal = String(value);
+    if (!Number.isFinite(value) || !/^(?:0|[1-9]\d*)(?:\.\d{1,6})?$/.test(decimal) || value <= 0 || value > 1)
+      throw new Error("Buyer budget and limits must be exact positive micro-USDC amounts, at most 1 testnet USDC");
+    return parseUnits(decimal, 6);
   };
+  const creator = micros(budget), fee = micros(DEEP_FEE_USDC), maxBudget = micros(MAX_BUDGET_USDC), maxTotal = micros(MAX_TOTAL_USDC);
+  if (creator > maxBudget || maxBudget > BigInt(500_000) || creator + fee > maxTotal
+    || !/^(?:0|[1-9]\d*)(?:\.\d{1,6})?$/.test(DEPOSIT_USDC)) throw new Error("Buyer budget or funding limits are invalid; maximum total is 1 testnet USDC");
+  const required = creator + fee, deposit = parseUnits(DEPOSIT_USDC, 6);
+  if (deposit <= BigInt(0) || deposit > BigInt(1_000_000)) throw new Error("Deposit limit is at most 1 testnet USDC");
+  return { required, deposit };
+}
+function merchant() {
+  if (!PAYEE || !/^0x[0-9a-f]{40}$/i.test(PAYEE) || /^0x0{40}$/i.test(PAYEE)) throw new Error("Set KERYX_BUYER_PAYEE to the independently reviewed seller payout address before purchasing");
+  return PAYEE;
 }
 
-/** Ensure the Gateway balance can cover at least one toll, depositing from the EOA if needed. */
-async function ensureFunded(): Promise<void> {
-  const first = await gateway.getBalances();
-  if ((first.gateway.available as bigint) >= fee) return;
-
-  let erc20 = (await pub.readContract({
-    address: USDC,
-    abi: erc20Abi,
-    functionName: "balanceOf",
-    args: [account.address],
-  })) as bigint;
-  if (erc20 < deposit) {
-    // Auto-onramp once from Keryx's testnet faucet, then wait for the drip to land.
-    await tryOnramp();
-    erc20 = await waitForErc20(deposit);
-    if (erc20 < deposit) {
-      throw new Error(
-        `Insufficient testnet USDC and the Keryx onramp didn't land (already used or daily cap). ` +
-          `Fund ${account.address} at ${FAUCET} (Arc Testnet), then retry. ` +
-          `Need ≥ ${DEPOSIT_USDC} USDC (have ${formatUnits(erc20, 6)}).`,
-      );
-    }
-  }
-
-  await gateway.deposit(DEPOSIT_USDC);
-  for (let i = 0; i < 30; i++) {
-    const b = await gateway.getBalances();
-    if ((b.gateway.available as bigint) >= fee) return;
-    await new Promise((r) => setTimeout(r, 3000));
-  }
-  throw new Error("Gateway deposit didn't confirm in time — check balance and retry.");
+export async function getStatus(): Promise<WalletStatus> {
+  let account: PrivateKeyAccount;
+  try { account = configuredAccount(); }
+  catch { return { address: "unconfigured", gasBalance: "unknown", usdcBalance: "unknown", gatewayAvailable: "unknown", ready: false, instructions: CUSTODY_GUIDANCE }; }
+  try { merchant(); }
+  catch { return { address: account.address, gasBalance: "unknown", usdcBalance: "unknown", gatewayAvailable: "unknown", ready: false,
+    instructions: "Set KERYX_BUYER_PAYEE to the independently reviewed seller payout address before purchasing." }; }
+  let required: bigint;
+  try { ({ required } = limits()); }
+  catch { return { address: account.address, gasBalance: "unknown", usdcBalance: "unknown", gatewayAvailable: "unknown", ready: false,
+    instructions: "Buyer price/funding policy is invalid. Configure exact positive micro-USDC limits before purchasing." }; }
+  if (fs.existsSync(`${JOURNAL_FILE}.lock`) || fs.existsSync(`${FUNDING_FILE}.lock`)) return { address: account.address,
+    gasBalance: "unknown", usdcBalance: "unknown", gatewayAvailable: "unknown", ready: false,
+    instructions: "Original payment or funding admission is held. Use keryx_recover; stop all buyers before owner inspection of any stale crash lock." };
+  const pub = createPublicClient({ chain: arcTestnet, transport: attestedArcAuthorityHttp(RPC, { retryCount: 0, timeout: 4_000 }) });
+  let gas: bigint, erc20: bigint, available: bigint | null;
+  try {
+    [gas, erc20, available] = await Promise.all([pub.getBalance({ address: account.address }),
+      pub.readContract({ address: config.usdcAddress, abi: erc20Abi, functionName: "balanceOf", args: [account.address] }),
+      getGatewayAvailableAtomic(account.address)]);
+  } catch { throw new Error("Arc testnet wallet balances unavailable; no funding or payment attempted"); }
+  const pending = readPending(JOURNAL_FILE), funding = readFunding(FUNDING_FILE);
+  const held = !!pending || funding?.status === "pending";
+  const ready = available !== null && available >= required && !held;
+  const instructions = pending ? `Payment ${pending.status}: query ${pending.queryId}. Use keryx_recover before another paid call.`
+    : funding?.status === "pending" ? `Original ${funding.phase} funding ${funding.transactionHash ?? "has no retained hash"} needs keryx_recover or owner review; no new deposit permitted.`
+    : available === null ? "Circle Gateway credit is unknown; no deposit authorized. Retry status without paying."
+    : ready ? `Ready for the default ${DEEP_FEE_USDC + DEFAULT_BUDGET_USDC} testnet USDC quote; actual body-dependent terms are checked before signing.`
+    : `Fund your configured wallet ${account.address} with Arc testnet USDC and gas at ${meta.faucet}. ask_keryx can approve and deposit bounded existing caller funds once; interrupted funding requires recovery. No automatic faucet or treasury funding.`;
+  return { address: account.address, gasBalance: formatUnits(gas, 18), usdcBalance: formatUnits(erc20, 6),
+    gatewayAvailable: available === null ? "unknown" : formatUnits(available, 6), ready, instructions };
 }
 
 export type KeryxCitation = { source: string; reward: number; weight?: number };
-export type KeryxAnswer = {
-  answer: string;
-  citations: KeryxCitation[];
-  creatorsPaid: number;
-  totalToCreators: number;
-  feePaid: number;
-  // Circle Gateway settlement id (a batched-settlement UUID, NOT an EVM tx hash — it does not
-  // resolve at an explorer /tx/ route). The on-chain proof is the batched settlement on the
-  // treasury wallet, surfaced on the dashboard; per-tx EVM hashes come only from creator cash-outs.
-  settlementId?: string;
-  amountPaid?: string;
-};
+export type KeryxAnswer = { answer: string; citations: KeryxCitation[]; creatorsPaid: number | null; totalToCreators: number; feePaid: number;
+  researchExports?: { bibtex: { content: string; count: number; omitted: number }; ris: { content: string; count: number; omitted: number }; evidenceCsv: string };
+  settlementId?: string; amountPaid?: string };
 
-/** Pay the x402 toll from the user's wallet and return Keryx's cited answer + downstream payouts. */
 export async function askKeryx(question: string, budget?: number): Promise<KeryxAnswer> {
-  await ensureFunded();
-  const r = await gateway.pay<{
-    answer: string;
-    creatorsPaid: number;
-    totalToCreators: number;
-    citations: KeryxCitation[];
-    feePaid: number;
-  }>(`${BASE_URL}/api/agent/ask`, {
-    method: "POST",
-    body: { question, ...(budget ? { budget } : {}) },
-  });
-  return { ...r.data, settlementId: String(r.transaction), amountPaid: r.formattedAmount };
+  if (fs.existsSync(`${JOURNAL_FILE}.lock`) || fs.existsSync(`${FUNDING_FILE}.lock`))
+    throw new Error("Original payment or funding admission is held; recover and inspect the existing lock before any new funding");
+  if (readPending(JOURNAL_FILE)) throw new Error("Previous payment requires recovery. Use keryx_recover before another paid call");
+  if (question.trim().length < 3 || question.length > 8192) throw new Error("Research question is invalid");
+  const account = configuredAccount(), payee = merchant(), { required, deposit } = limits(budget);
+  try {
+    await ensureLocalFunding({ account, rpcUrl: RPC, file: FUNDING_FILE, required, deposit });
+    const r = await payForResearch<KeryxAnswer>({ url: `${BASE_URL}/api/agent/ask`, account, journalFile: JOURNAL_FILE,
+      rpcUrl: RPC, maxAmountUsdc: MAX_TOTAL_USDC, expectedPayee: payee, expectedAmountMicros: required.toString(),
+      body: { question, budget: budget ?? DEFAULT_BUDGET_USDC, researchMode: "deep" } });
+    return { ...r.data, settlementId: r.settlementId, amountPaid: r.amountPaid };
+  } catch (error) {
+    if (error instanceof GuardedArcSubmissionUnknownError) throw new Error(`Funding outcome unknown for original transaction ${error.transactionHash}. Use keryx_recover; do not deposit again`);
+    throw error;
+  }
+}
+
+export async function recoverKeryx() {
+  if (readPending(JOURNAL_FILE)) return recoverResearch(BASE_URL, JOURNAL_FILE);
+  return recoverFunding(FUNDING_FILE, RPC);
 }

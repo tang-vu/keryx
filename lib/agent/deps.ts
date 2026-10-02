@@ -11,6 +11,9 @@ import type { SourceCandidate } from "../llm";
 import type { ResearchEffects } from "./research-effects";
 
 export interface AgentDeps {
+  discoverScholarly?: import("../scholarly/discovery").ScholarlyDiscover;
+  webSearch?: import("../web-research/search-provider").SearchProvider;
+  readWebArticle?: import("../web-research/article-reader").ArticleReader;
   engine: ReasoningEngine;
   db: KeryxDB;
   gateway: PaymentGateway;

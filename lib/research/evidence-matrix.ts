@@ -12,7 +12,9 @@ export interface EvidenceMatrixRow {
  * Missing excerpts are an inspection gap, never a factual verdict on a claim. */
 export function buildEvidenceMatrix(run: EvidenceMatrixInput): EvidenceMatrixRow[] {
   const claims = new Map<number, string>();
-  run.subClaims.forEach((claim, index) => claims.set(index, claim));
+  // Historical/minimal saved runs may lack the optional presentation ledger.
+  // Retain any recorded coverage/evidence below; never invent missing claims.
+  (Array.isArray(run.subClaims) ? run.subClaims : []).forEach((claim, index) => claims.set(index, claim));
   for (const record of run.claimCoverage ?? []) {
     if (Number.isInteger(record.claimIndex) && record.claimIndex >= 0 && !claims.has(record.claimIndex)) {
       claims.set(record.claimIndex, record.claim);
@@ -25,7 +27,7 @@ export function buildEvidenceMatrix(run: EvidenceMatrixInput): EvidenceMatrixRow
   }
   return [...claims].sort(([a], [b]) => a - b).map(([claimIndex, claim]) => {
     const evidence = (run.evidence ?? []).filter((item) =>
-      item.claimIndex === claimIndex && item.claim === claim && item.qualifiesForReward &&
+      item.claimIndex === claimIndex && item.claim === claim && (item.qualifiesForAnswer ?? item.qualifiesForReward) &&
       item.quote.trim().length > 0 && item.quote.length <= 240 &&
       run.citations.some((citation) => citation.marker === item.marker && citation.sourceId === item.sourceId &&
         citation.itemId === item.itemId && citation.contentVersion === item.contentVersion),

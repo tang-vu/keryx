@@ -1,0 +1,21 @@
+name: SQLite provenance capacity
+permissions:
+  contents: read
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+jobs:
+  linux-contained-snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.21.0"
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Synthetic capacity and actual cgroup native-memory refusal
+        run: sudo "$(command -v node)" --import tsx scripts/test-storage-provenance-capacity.mts

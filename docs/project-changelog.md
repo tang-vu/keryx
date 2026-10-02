@@ -8,6 +8,265 @@
 - Add web checkout/status/recovery, shared API, caller-wallet Monthly CLI, OpenAPI, and read-only Monthly discovery in both MCP transports. Label job/history/receipts as prepaid allocations. Desktop, extension, bots and private research preserve documented handoff/product boundaries.
 - Require focused payment/concurrency/recovery checks, hermetic browser evidence, real PostgreSQL concurrent CI, independent review and deployed commit/schema verification before pilot activation. See [Monthly release gates](research-monthly.md).
 
+### 2026-10-02 - Bounded mainnet pilot candidate preparation
+
+- Add an explicit-file, keyless pilot preflight with exact release-commit digest,
+  distinct declared network origins/state/environment, invited buyer/creator
+  address isolation and proposed integer micro-USDC caps. Optional live checking
+  reuses fixed public Arc/Circle observations. Valid proposal means no signing,
+  funding, mainnet runtime activation or launch authorization.
+- Record invited browser pilot intent and all excluded spending surfaces. Existing
+  production, packages and installers retain their testnet roles; no distribution
+  or mainnet acceptance claim. Financial release gates remain open independently
+  of complete-product economics/adoption requirements.
+
+
+### 2026-10-02 - Caller-driven operations monitoring
+
+- Empty completed-query windows show idle after removal of self-initiated research. Public-only zero-spend answers count as completed, while failed/pending real payment legs remain actionable. Missing scheduled output requires an explicitly configured expectation; the flag creates no automation.
+- Reasoning probes share the runtime catalog constructor, retaining DeepSeek V4 bounded-JSON thinking control. Existing timeouts, truncation rejection and provider failover remain in place. Later healthy probes do not erase earlier transient failures.
+- Web status and API share additive activity/expectation fields. CLI watchdogs and server runtime picks share the constructor; desktop, extensions and bots consume the hosted service, while caller-funded stdio MCP transport is unchanged. No installer/MCP package change or republishing claim. Failed synchronous requests before receipt persistence remain outside completed-query monitoring; A2A and settlement checks are separate.
+
+### Preserve existing treasury wallet custody (2026-10-02)
+
+- Refuse missing, unreadable, malformed or inconsistent persistent treasury wallet
+  state before creating payment clients; never generate or overwrite a replacement
+  during server startup. Preserve valid legacy wallet bytes and derived identity.
+- Share strict custody validation with reconciliation and pending acknowledgement.
+  Fresh testnet demos require deliberate owner provisioning; unavailable funded
+  custody requires owner recovery. See [custody guidance](treasury-wallet-custody.md).
+- Add Linux/Windows synthetic constructor and independent-process acceptance.
+  Mainnet, funding, storage enrollment and launch gates remain open.
+- Retire the legacy `generate-wallets` command before key creation or private-file
+  access because it printed secrets and replaced environment custody. Its keyless
+  help points to current owner-managed role-specific setup; offline dev needs no keys.
+
+### Pin treasury signing to reviewed testnet operations (2026-10-02)
+
+- Validate actual RPC-prepared and signed transactions against the exact testnet
+  chain, recipient, calldata and value. Remove SDK private-key deposit delegation
+  from the server gateway and supported maintenance/demo scripts.
+- Constrain batching typed signatures independently; preserve original hashes and
+  unknown funding outcomes, exact receipt identity and one attempt per gateway.
+- Require an explicit treasure-hunt payee and retire the unrestricted legacy live
+  withdrawal command and code-golf SDK sample; modern durable creator withdrawal keeps its own policy.
+  See [transaction isolation](treasury-transaction-isolation.md).
+- Add both-platform synthetic signing/CLI checks and explicit MTS typechecking.
+  This closes reproduced signing bypasses, not the remaining mainnet launch gates.
+- Prepare application 0.24.7 and caller-funded MCP 0.3.0 with exact-source tarball
+  provenance. npm remains 0.1.1 until authenticated publication is separately verified.
+- Require existing owner-provisioned stdio MCP custody and explicit trusted merchant
+  policy; preserve the original payment journal across lost responses and new-process
+  GET-only recovery. Keyless status does not create a wallet or grant payment authority.
+
+### Supervised opt-in manuscript payments (2026-10-02)
+
+- Add authenticated sticky draft enrollment and exact-version creator rights signing on
+  creator profiles, reusing registered feed verification and signed encrypted full text.
+- Add private detached operator review artifacts, explicit reviewer allowlist, safe public
+  license/version/status and separate private permission evidence.
+- Require fresh reviewed single-recipient registry terms and atomic browser-journal rights
+  snapshots before new manuscript payments. Recheck cache/delivery/reward gates; preserve
+  exposed originals on suspension/revocation and include approval references in receipts.
+- Add explicit funded-browser manuscript opt-in. Public copies remain free; drafts cannot
+  squat the four reviewer-controlled approval slots or DOI namespace. Discounts, splits,
+  treasury/A2A, Supabase and enrolled native scholarly activation remain closed.
+- This is testnet pilot software, not a real participant/settlement result. Live scholarly
+  purchase/recovery and broader public/mainnet onboarding remain separate release gates.
+
+### Signature globe in research chat (2026-10-01)
+
+- Restore Keryx's globe in the shared home and research chat header, with a compact
+  mobile version and bounded desktop placement. Keep local country assets,
+  reduced-motion support, and the question and spending controls accessible.
+
+### Coordinated research surface contracts (2026-10-01)
+
+- Preserve article/scholarly identity and answer-qualified public evidence across A2A, remote/stdio MCP and OpenAI; reuse recorded reference and evidence exports.
+- Add bounded scholarly/depth options to public remote MCP/OpenAI without changing private package search policy or payment authority.
+- Export receipt-bound BibTeX, RIS and evidence CSV from Operator CLI and desktop through the existing private publisher.
+- Keep unproven distinct paid-creator counts unknown and separate reference/allocation counts. Record [surface parity](surface-parity.md) and coordinated distribution gates.
+
+### DOI and scholarly research (2026-10-01)
+
+- Resolve up to two exact Crossref DOI records from a question; opt into bounded
+  Crossref bibliographic and arXiv paper search from the public composer.
+- Read selected original publisher pages or exact versioned arXiv PDFs within
+  existing limits; surface failures and explicitly counted abstract-only fallback.
+- Preserve observed author/DOI/journal metadata, repository version and read scope
+  through citations, evidence, receipts and BibTeX/RIS without guessing peer review.
+- Keep public scholarly evidence outside creator payout authority. Author opt-in
+  payments have a separate proposed rights/identity/economic plan, not a new shipped
+  author-claim flow. Live bounded PDF/abstract extraction was observed; oversized
+  PDFs, publisher availability and accuracy remain limitations.
+
+### Chat-first reading interface (2026-10-01)
+
+- Start research through the same question-led conversation on `/` and `/research`.
+  Keep prior turns while the page is open, show cited reports before expandable
+  decision/payment details, and preserve the existing paid-package and recovery
+  workspace as a secondary section.
+- Show the source-USDC cap before sending, keep budget/model controls available,
+  and distinguish the payer and settled, pending, failed, unverified and simulated
+  amounts. Public search disclosure and separate search/model costs remain visible.
+- Copy or download Markdown reports with citations, document provenance and
+  evidence/payment states. Follow-ups carry the previous question only; starting
+  new research clears that anchor. Conversation history does not survive reload.
+- Isolate stale client responses from newer requests. Stopping preserves observed
+  evidence and does not imply a refund; expired sessions retain the existing refusal
+  rather than silently switching payers. Signing and backend payment authority are
+  unchanged. Browser fixtures are simulations, not independent traction.
+
+### Broad web research (2026-10-01)
+
+- Discover public documents through a configured search provider alongside registered
+  sources. Search snippets stay previews; selected original HTML, text and PDF reads
+  carry observed URL, extraction limits, retrieval time and immutable body provenance.
+- Keep public reads outside creator payout authority. Show unavailable search/read
+  states, separate source USDC from service costs, and withhold external search for
+  private research. Literal quote matching establishes grounding rather than truth.
+- Bound discovery, document parsing and portfolio work; deduplicate extracted copies
+  and require per-target domain-group support for high grounding confidence.
+- Require Node 22 LTS 22.19+ or Node 24+. Bounded live searches and original HTML/PDF
+  extraction have been observed. Availability requires provider configuration and
+  verified deployment after CI/review. The live smoke exceeded its intended document-read
+  cap, and unavailable Google policy pages remain a coverage limitation. This change
+  does not establish customer adoption or mainnet readiness.
+
+### Creator registration evidence and decision feedback (2026-10-01)
+
+- Distinguish wallet signature, pending confirmation, successful registration event,
+  indexing, failure and unknown outcomes. Confirm the expected registry/source/creator
+  before reporting on-chain success, and observe indexing through the owner-only listing.
+- Replace fixed-delay success with a bounded manual status check. Preserve ownership
+  instructions and one-time webhook details; unknown outcomes do not trigger resubmission.
+  Offline registration stays explicitly labeled.
+- Label creator feedback as BUY/CACHE decisions and answer citations. These counts do
+  not establish settled reads or rewards; payment authority and API count logic are unchanged.
+
+### YouTube publisher metadata references (2026-10-01)
+
+- Add the audited official Super Simple Songs feed to the unpaid public-reference batch.
+  Feed titles, dates and bounded publisher descriptions carry explicit metadata-only
+  labels; channel/video identity and canonical watch links are checked before admission.
+- Discard community statistics and media. No transcript or video is fetched, no creator
+  ownership or payout is assigned, and Numberblocks remains deferred after a feed failure.
+  One selected item per reference does not establish market demand or a proven niche.
+- Import remains an explicit operator command. Repository acceptance and feed availability
+  observations do not establish production onboarding or a completed research pilot.
+
+### Research source previews and product pilots (2026-10-01)
+
+- Inspect listed sources and public article previews on `/research` before choosing a
+  paid package. Search covers loaded names, descriptions and tags; pagination is bounded
+  and preview failures remain visible. Browsing does not buy content or select job sources.
+- Keep missing evidence, title-only previews, unverified listings and legacy flag limits
+  explicit. Metadata is not a promise of answer coverage or live payout eligibility.
+- Document separate independent research and seller experiments. The first owner-selected
+  research niche is YouTube idea/production briefs; suitable corpus and user demand remain
+  to be validated. No trend-data integration or guaranteed viral outcome is introduced.
+
+### Withheld citation-pool telemetry (2026-10-01)
+
+- Count positive planned creator rewards separately from free public citations.
+  Public-only answers now correctly count as runs with a withheld citation pool.
+- Keep missing or malformed historical reward amounts unknown; do not backfill
+  old records or infer a fully withheld pool from missing evidence. Settled
+  payment and creator payout totals continue to use payment records.
+
+### Public research during funding uncertainty (2026-10-01)
+
+- Preserve a supported answer from free public references when initial or lazy
+  wallet funding fails. Withhold owned purchases, cached owned reads, and creator
+  rewards for that run; do not automatically retry funding.
+- Show and persist funding uncertainty in the trace and final answer. Creator
+  payment totals do not establish the outcome of wallet funding activity, and
+  planned reservations remain retained. Runs without usable public evidence
+  explicitly return no supported answer. User cancellation still propagates.
+- Release requires reviewed source, production build, required CI, and deployed
+  commit verification. This change does not complete funding reconciliation or
+  authorize mainnet spending.
+
+### Database readiness and failed-initialization cleanup (2026-10-01)
+
+- Concurrent `getDb()` callers within one process now await one initialization
+  attempt and receive only a ready adapter. A failed attempt is not cached; a
+  later call creates a fresh adapter. SQLite's failed adapter file handle is
+  closed where possible without hiding the original initialization error.
+- Retry is not rollback: earlier SQLite schema/maintenance writes or Supabase
+  row-by-row cache sealing may already persist. Supabase exposes no adapter
+  disposal API. This is process-local readiness, not a cross-process migration lock.
+
+
+### Framework and HTTP dependency security patch (2026-09-30)
+
+- Raise Next.js and its ESLint integration floor to 16.3.6 and resolve the matching framework package family to that release for the [Node ImageResponse RCE fix](https://github.com/vercel/next.js/security/advisories/GHSA-vcvr-r3jv-pc5j).
+- Update the existing Axios override to the published 1.20.0 release for the maintainer's [form serialization prototype-pollution](https://github.com/axios/axios/security/advisories/GHSA-x97p-jq2g-jp4f) and [proxy hostname ReDoS](https://github.com/axios/axios/security/advisories/GHSA-mghh-pgcx-3jjj) fixes. Keep payment SDK versions and the production audit gate unchanged.
+- The September 30 production dependency audit has zero high/critical findings; seven low and eighteen moderate findings remain. A passing audit is a dependency gate, not proof that a deployment was exploited or that mainnet is ready.
+
+### Free public reference evidence (2026-09-30, v0.24.5)
+
+- Add a separate free public RSS catalog and explicit four-feed onboarding command for
+  Cloudflare Workers, Chip Huyen, Lilian Weng and Vicki Boykis. No publisher wallet,
+  ownership claim, paid delivery or citation payout is invented; Circle RSS is deferred.
+- Read selected public feed bodies through existing claim, attention and exact-quote gates;
+  show their canonical links, publication dates and public delivery labels in citations
+  and portable receipts. Keep original paid reward shares and withhold public allocations.
+- Preserve one shared two-feed hourly upkeep allowance and cursor for paid and public
+  catalogs. Direct toll endpoints reject reserved public IDs before settlement.
+- Public catalog deployment and explicit import are separate release steps; local validation
+  does not establish live source availability, publisher partnership or traction.
+
+### Worker-native redirect refusal (2026-09-30, v0.24.4)
+
+- Fix the scheduled upkeep call's unsupported `redirect: "error"` value: workerd rejects
+  it before making a request. Use native manual redirects and reject returned 3xx statuses
+  without following their Location or forwarding the credential.
+- Add a hermetic workerd check of the actual built Worker, covering success, redirect refusal
+  and HTTP failure with exactly one intercepted request. CI now checks native runtime behavior
+  alongside the Node unit tests; live scheduled acceptance remains a deployment gate.
+
+### Browser authorization journal and recovery (2026-09-30, candidate)
+
+- Admit a server nonce and authoritative pending payment atomically before signing exposure;
+  persist verified callback metadata before acknowledgement and submission before retry.
+- Retain cumulative signer capacity and original grant epochs through replacement, revoke,
+  expiry, callback loss and restart. Only unexposed cancellation or exact Circle terminal
+  failure releases a reservation. Show possibly unsigned, signed and submitted pending phases.
+- Add database guards against old writers, protocol cutover checks and an explicit testnet
+  activation/paused rollback runbook. Migration alone does not activate browser signing.
+- Exercise synthetic fault injection, process termination and real SQL migrations in required
+  PostgreSQL CI. Funded recovery, independent security review and mainnet gates remain open.
+
+### Scheduled source upkeep (2026-09-30, v0.24.3)
+
+- Add an isolated Cloudflare Free hourly scheduler for verified source freshness, independent
+  of the historical volume daemon. The VPS retains URLs, encrypted content and all payment authority.
+- Atomically consume each hour's allowance before fetching up to two sources, advance a durable
+  cursor across failures, enforce feed/job limits and refuse late writes or revoked feed eligibility.
+- Deduplicate repeated feed links and retain scheduled bodies in the existing encrypted DB backend
+  without remote pins. The endpoint returns only aggregate counts and has a dedicated revocable secret.
+- Verify the independent Linux Worker build in CI alongside authentication, admission, restart,
+  encryption and deadline checks. Deployment and live scheduled acceptance are separate release gates.
+
+### Pinned encrypted backup inventory (2026-09-30)
+
+- Recognize the approved hourly pinned backup command with its fixed Node runtime, app loader, environment order and commit-addressed source path.
+- Keep intended legacy npm schedules supported; reject duplicate entries, unexpected flags, altered paths and extra shell commands. Inventory remains read-only and does not establish restore acceptance.
+- Record the dedicated Telegram probe acknowledgement and owner-confirmed receipt; outside-host outage detection and responder drills remain open.
+
+### Dedicated Telegram operations alerts (2026-09-30)
+
+- Add a separate operations bot and exact chat configuration, with plain text, bounded delivery and strict Telegram acknowledgement.
+- Retain webhook support; all configured channels must acknowledge before reconciliation marks an alert delivered. Preflight detects incomplete or duplicate configuration and labels delivery unverified.
+- Document the selected private Keryx ops group. Mocked checks establish code behavior; destination setup, live receipt, responder drills and mainnet operations acceptance remain open.
+
+### Versioned private provider-cost observations (2026-09-30)
+
+- Capture the verified Flash price-policy identity and local call times with new token usage; estimate an off-peak–peak range without guessing billing windows or holidays.
+- Keep untagged history, uncertain cache splits and unsupported pricing unpriced. Preserve saved v1 reports; private report v2 labels cost/margin ranges by priced cohort and leaves invoices, whole-period LLM cost and realized profit unknown.
+- Retain the current provider/model requests and payment authority. This is preparation evidence, not proven profitability or mainnet acceptance.
+
 ### Homepage globe alignment (2026-09-29, v0.24.2)
 
 - Keep the complete globe and orbit inside the hero's right column, above the activity totals, with a clear backing for the herald seal.
@@ -18,6 +277,12 @@
 - Show the reviewed public or private research price alongside the buyer's current Gateway available USDC and a clear next action.
 - Distinguish enough available credit, insufficient credit, an Arc-confirmed deposit whose Gateway credit is not yet verified, and an unavailable balance. An existing uncertain funding transaction directs the buyer to inspect it instead of sending it again.
 - Refresh is read-only. Funding and purchase remain separate explicit actions; purchase still rechecks the quote, wallet and Gateway credit before signing.
+
+### A2A paid research and stdio MCP recovery (2026-09-29, v0.24.1)
+
+- Preflight signed A2A research dependencies before settlement and log full post-settlement errors; repair Next route exports so production typecheck passes.
+- Update the stdio MCP buyer for body-dependent A2A pricing, a bounded payment journal, and explicit recovery before another paid call.
+- The exact cause of the production minified `e9` initialization error remains unproven. Local tests pass, but a successful paid stdio research call has not been retested.
 
 ### Windows Operator Tauri shell and Mint design (2026-09-29, v0.24.0)
 
@@ -522,6 +787,8 @@
 All significant changes, features, and fixes from v0.1 (citation-toll agent) to v0.2 (decentralized dApp).
 
 ---
+
+
 
 ## Unreleased
 

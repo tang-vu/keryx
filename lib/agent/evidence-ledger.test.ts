@@ -204,3 +204,20 @@ describe("buildEvidenceLedger", () => {
     ).toBe("Grounded [S1], unsupported, unknown.");
   });
 });
+
+
+it("separates public answer support from reward eligibility and rejects weak/noncited support", () => {
+  const source = { sourceId: "public:publisher", sourceName: "Public", sourceKind: "public-reference" as const,
+    marker: "S1", text: "Public source gives exact evidence." };
+  for (const [support, cited] of [[0.9, true], [0.2, true], [0, true], [0.9, false]] as const) {
+    const ledger = buildEvidenceLedger({ subClaims: ["claim"], gathered: [source],
+      answer: cited ? "Claim [S1]" : "Claim", declaredMarkers: cited ? ["S1"] : [],
+      proposedEvidence: [{ claimIndex: 0, marker: "S1", quote: source.text, support }],
+      finalAssessment: [{ claim: "claim", coverage: 0.9, coveredBy: ["S1"] }],
+    });
+    expect(ledger.evidence[0]?.qualifiesForReward).toBe(false);
+    expect(ledger.evidence[0]?.qualifiesForAnswer).toBe(support >= 0.4 && cited);
+    expect(ledger.acceptedMarkers.has("S1")).toBe(support >= 0.4 && cited);
+    expect(ledger.claimCoverage[0]?.coveredBy).toEqual(support >= 0.4 && cited ? ["S1"] : []);
+  }
+});

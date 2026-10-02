@@ -17,7 +17,7 @@ const client = new Client({ name: "monthly-distribution-test", version: "1.0.0" 
 try {
   await client.connect(transport);
   const tools = await client.listTools();
-  assert.deepEqual(tools.tools.map(tool => tool.name).sort(), ["ask_keryx", "keryx_wallet_status", "research_monthly"].sort());
+  assert.deepEqual(tools.tools.map(tool => tool.name).sort(), ["ask_keryx", "keryx_wallet_status", "keryx_recover", "research_monthly"].sort());
   const tool = tools.tools.find(tool => tool.name === "research_monthly")!;
   assert.equal(tool.annotations?.readOnlyHint, true);
   const result = await client.callTool({ name: "research_monthly", arguments: {} });

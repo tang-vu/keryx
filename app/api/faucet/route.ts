@@ -26,12 +26,13 @@
  */
 
 import { NextResponse } from "next/server";
-import { createPublicClient, createWalletClient, http, parseEther, formatEther } from "viem";
+import { createPublicClient, createWalletClient, parseEther, formatEther } from "viem";
 import { arcTestnet } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 import { consumePoint } from "@/lib/rate-limit-store";
 import { getSession } from "@/lib/auth";
 import { config } from "@/lib/config";
+import { attestedArcHttp } from "@/lib/arc-rpc-attestation";
 import { getDb } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -112,8 +113,8 @@ export async function POST() {
   if (!config.funderKey) return disabled("Faucet not configured (no funder wallet)");
 
   const funder = privateKeyToAccount(config.funderKey as `0x${string}`);
-  const publicClient = createPublicClient({ chain: arcTestnet, transport: http(config.rpcUrl) });
-  const wallet = createWalletClient({ account: funder, chain: arcTestnet, transport: http(config.rpcUrl) });
+  const publicClient = createPublicClient({ chain: arcTestnet, transport: attestedArcHttp(config.rpcUrl) });
+  const wallet = createWalletClient({ account: funder, chain: arcTestnet, transport: attestedArcHttp(config.rpcUrl) });
   const recipient = session.address as `0x${string}`;
 
   const funderBalance = await publicClient.getBalance({ address: funder.address });

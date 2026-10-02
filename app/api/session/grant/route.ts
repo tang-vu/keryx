@@ -22,16 +22,38 @@
  */
 
 import { NextRequest } from "next/server";
-import { createPublicClient, http, isAddress, parseUnits } from "viem";
+import { BrowserGrantRecoveryRefused } from "@/lib/db/browser-authorization-journal";
+import { createPublicClient, isAddress, parseUnits } from "viem";
 import { arcTestnet } from "viem/chains";
 import { getSession } from "@/lib/auth";
 import { storeGrant, grantExpiry } from "@/lib/payments/session-grants";
 import { getGatewayAvailableAtomic } from "@/lib/gateway/gateway-balance";
 import { config } from "@/lib/config";
+import { attestedArcHttp } from "@/lib/arc-rpc-attestation";
 import { getDb } from "@/lib/db";
 import { recordActivationEvent } from "@/lib/activation";
+import { accountSessionContext } from "@/lib/account-sessions";
 
 export const runtime = "nodejs";
+
+/** Read current owner authority only. No renewal, housekeeping or capacity writes. */
+export async function GET(req: NextRequest) {
+  const headers = { "Cache-Control": "no-store" };
+  if (req.nextUrl.search) return Response.json({ error: "No grant selector is accepted" }, { status: 400, headers });
+  try {
+    const ttlMs = config.sessionGrantTtlSeconds * 1000;
+    if (!Number.isSafeInteger(ttlMs) || ttlMs <= 0) throw new Error();
+    const context = await accountSessionContext();
+    if (context instanceof Response) return context;
+    const row = await context.db.getSessionGrant(context.wallet), now = Date.now();
+    if (!row || row.sessionId !== context.wallet || row.ownerAddr.toLowerCase() !== context.wallet ||
+      !Number.isSafeInteger(row.expiry) || row.expiry <= now)
+      return Response.json({ active: false }, { headers });
+    return Response.json({ active: true, sessionId: row.sessionId, ownerAddr: row.ownerAddr, sessAddr: row.sessAddr,
+      grantEpoch: row.grantEpoch, expiresAt: new Date(row.expiry).toISOString(), serverNow: new Date(now).toISOString(),
+      remainingMs: row.expiry - now, ttlMs }, { headers });
+  } catch { return Response.json({ error: "Session status unavailable" }, { status: 503, headers }); }
+}
 
 interface GrantBody {
   sessAddr?: string;
@@ -89,11 +111,22 @@ export async function POST(req: NextRequest) {
         { status: 402 },
       );
     }
-    if (availableUsdc < budget) {
+    let verifiedCumulativeCapacity = availableUsdc;
+    try {
+      const db = await getDb();
+      if (await db.browserJournalActive()) {
+        // Budget is cumulative. Only independently evidenced confirmed debits may restore
+        // the consumed portion of that ceiling; pending and unknown holds never get credit.
+        verifiedCumulativeCapacity += (await db.browserSignerConfirmedSpendMicro(sessAddr)) / 1e6;
+      }
+    } catch {
+      return Response.json({ error: "Session recovery accounting is unavailable." }, { status: 503 });
+    }
+    if (verifiedCumulativeCapacity < budget) {
       console.warn(
         `[grant] clamping cap for ${sessAddr}: claimed ${budget} > available ${availableUsdc}`,
       );
-      cap = availableUsdc;
+      cap = verifiedCumulativeCapacity;
     }
   } else if (!recover) {
     // Circle is unreachable. Fall back to proving the EOA was funded at all: on Arc,
@@ -103,7 +136,7 @@ export async function POST(req: NextRequest) {
     try {
       const publicClient = createPublicClient({
         chain: arcTestnet,
-        transport: http(config.rpcUrl),
+        transport: attestedArcHttp(config.rpcUrl),
       });
       const native = await publicClient.getBalance({ address: sessAddr as `0x${string}` });
       // 10% of the claimed cap: a truly unfunded EOA holds zero, and we don't want to
@@ -144,13 +177,22 @@ export async function POST(req: NextRequest) {
   // stable within the JWT's 7-day lifetime.
   const sessionId = session.address.toLowerCase();
 
-  await storeGrant(sessionId, {
+  const expiry = grantExpiry();
+  const ttlMs = config.sessionGrantTtlSeconds * 1000;
+  if (!Number.isSafeInteger(ttlMs) || ttlMs <= 0 || !Number.isSafeInteger(expiry) || expiry <= Date.now())
+    return Response.json({ error: "Session expiry configuration unavailable" }, { status: 503 });
+  let grantEpoch: string;
+  try { grantEpoch = await storeGrant(sessionId, {
     sessAddr,
     ownerAddr: session.address,
     cap,
-    expiry: grantExpiry(),
+    expiry,
     txHash: txHash ?? "recovered", // no new funding tx in recovery mode
-  });
+  }); } catch (error) {
+    return error instanceof BrowserGrantRecoveryRefused
+      ? Response.json({ error: "Session recovery cannot reset retained authorization capacity. Keep the original signer and cumulative cap; unresolved authorizations remain reserved." }, { status: 409 })
+      : Response.json({ error: "Session recovery accounting is unavailable. Try again when durable storage is available." }, { status: 503 });
+  }
 
   if (!recover) {
     try {
@@ -160,12 +202,17 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  const now = Date.now();
   return Response.json({
     ok: true,
     sessionId,
     sessAddr,
+    ownerAddr: session.address.toLowerCase(),
+    grantEpoch,
     cap,
     // Echo expiry so the browser can show the remaining TTL.
-    expiresAt: new Date(grantExpiry()).toISOString(),
-  });
+    expiresAt: new Date(expiry).toISOString(),
+    serverNow: new Date(now).toISOString(), remainingMs: Math.max(0, expiry - now),
+    ttlMs,
+  }, { headers: { "Cache-Control": "no-store" } });
 }

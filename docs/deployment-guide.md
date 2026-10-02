@@ -152,36 +152,38 @@ again. Preserve all payment grants, reservations, authorizations and research jo
 account-session cleanup is not a payment-state reset. See
 [revocable-session recovery](./engineering/revocable-sessions-2026-09-09.md).
 
-**Off-box copy (survives a dead disk) — one-time setup.** The local snapshots above still sit on the
-same box, so a dead disk loses them too. Copy each snapshot to Cloudflare R2 (free tier, zero egress,
-and you already run Cloudflare). Needs your R2 credentials — the only step that can't be scripted for you:
-
-1. Create an R2 bucket `keryx-backups` and an R2 API token (Cloudflare dashboard → R2 → Manage API
-   Tokens) with **Object Read & Write**. Note the Access Key ID, Secret, and your account's S3
-   endpoint `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`.
-2. Install rclone and register the remote non-interactively (no editor prompt):
-   ```bash
-   ssh keryx-vps 'curl -fsSL https://rclone.org/install.sh | sudo bash'
-   ssh keryx-vps 'rclone config create r2 s3 provider=Cloudflare \
-     access_key_id=<KEY_ID> secret_access_key=<SECRET> \
-     endpoint=https://<ACCOUNT_ID>.r2.cloudflarestorage.com acl=private'
-   ```
-3. Point the backup at it and verify the push:
-   ```bash
-   ssh keryx-vps 'echo "KERYX_BACKUP_REMOTE=r2:keryx-backups" >> /root/keryx/.env.local'
-   ssh keryx-vps 'cd /root/keryx && npm run backup'   # expect: [backup] pushed off-box → r2:keryx-backups
-   ```
-
-The hourly `keryx-backup` cron already loads `.env.local`, so no cron reinstall is needed — the next
-run pushes automatically. Any other rclone remote (S3, Backblaze B2, Google Drive) works identically.
-Without this, snapshots are kept locally only (still protects against corruption / accidental delete,
-but not a disk loss).
+**Encrypted off-box copy** uses a dedicated private Cloudflare R2 Standard bucket and AES-256-GCM. The job uploads at most once per UTC day, retains 24 encrypted snapshots (32 MiB each maximum), reserves a bounded monthly request budget before network operations, and refuses legacy plaintext rclone configuration. Account alerts are notifications, not spending caps; other projects share the free allowance. See [encrypted backup setup, job limits and offline restore drills](encrypted-backups.md).
 
 ## Monitoring & alerts
+
+- **Source upkeep** uses an isolated Cloudflare Free hourly trigger and an authenticated,
+  bounded VPS job over verified RSS sources. The existing bulk CLI is separate manual upkeep.
+  See [limits, deployment evidence and rollback](cloudflare-source-upkeep.md); this moves
+  scheduling only, leaving SQLite, paid content and registry/payment authority on the VPS.
+
+
+### Read-only release operations inventory
+
+On the deployment host, run `npm run preflight:ops` from `/root/keryx`. It reads
+the current crontab, PM2 PIDs, systemd states and `.env.local` webhook assignment.
+It prints only fixed labels and presence/state summaries; it does not print the
+webhook value, call the webhook, change services, or perform a payment. A missing
+required check exits 1. The withdrawal cycle is currently gated from activation
+as described in [withdrawal supervision](./withdrawal-supervision.md), so an
+absent timer and service are informational by default. If the intended release
+requires a scheduled cycle, run `npm run preflight:ops -- --require-withdrawal-timer`;
+an absent, inactive or incomplete timer/service then fails. A partial installation
+fails in either mode.
+
+This inventory is repeatable configuration evidence, not proof that jobs ran,
+alert delivery works, backups restore, workers are ready for paid work, or M5 is
+accepted. Retain the output with the release review and perform those drills
+separately. Keep `.env.local` private.
+
 - **Treasury watchdog** — `npm run check-treasury` reads the funder wallet's on-chain USDC reserve + native gas and alerts before either runs dry (settlements would otherwise start failing silently). `npm run deploy` installs it as an hourly cron. Thresholds: `KERYX_TREASURY_MIN_USDC` (2) / `KERYX_TREASURY_MIN_GAS` (0.02).
 - **Registry parity watchdog** — `npm run check-registry` enumerates every record on the on-chain SourceRegistry (`sourceIds`) and field-compares payout wallet, author splits, fetch price, and active flag against the DB discovery cache. Payment challenges and browser price checks independently refresh registry authority, while a mismatch still signals indexer drift or a tampered catalog and therefore alerts. `npm run deploy` installs it as an hourly cron (`# keryx-registry`, minute :45); the summary lands in `sync_state.registryParity` and renders on [`/status`](https://keryx.cc/status).
-- **Reasoning-provider watchdog** — `npm run check-llm` asks every credentialed model one real `decompose` question through the same engine transport. The live agent crosses configured providers before the heuristic, with transport deadlines and DB-shared circuits scoped per provider + reasoning step. Failed half-open probes back off from 30 minutes to four hours, and an atomic probe lease prevents the web and volume processes retrying the same unhealthy tier together. The watchdog still reports a broken model even when another provider saved the dispatch. `npm run deploy` installs it as an hourly cron (`# keryx-llm`, minute :15), logging to `data/backups/llm.log`. `/status` separately aggregates the run receipts: failures, circuit skips, cross-provider saves and the engine that actually served each reasoning step.
-- **Dispatch-outcome watchdog** — `npm run check-dispatches` reads the agent's own last 6h of dispatches (`KERYX_DISPATCH_WINDOW_HOURS`) and alerts on five failure shapes: nothing dispatched at all (`silent` — whatever dispatches has stopped), runs answered outright by the deterministic fallback (`unreasoned`), most runs losing a step to it (`degraded`), every run recording no decision (`undecided`), and a window in which no creator earned anything (`nothing-bought`). It complements the reasoning-provider watchdog above, which proves a provider *can* answer but not that a run *used* the answer — after the retired wire name was fixed, the agent still bought nothing for hours because the decide reply had outgrown its token ceiling. Citation rewards settle even when content comes from cache, so an unpaid window means nothing was cited, not that the agent shopped frugally; windows under 3 runs and boxes with no model credentials stay quiet. `npm run deploy` installs it as an hourly cron (`# keryx-dispatches`, minute :50), logging to `data/backups/dispatches.log`; the summary lands in `sync_state.dispatchHealth` and renders on [`/status`](https://keryx.cc/status).
+- **Reasoning-provider watchdog** — `npm run check-llm` asks every credentialed model one real `decompose` question through the same shared catalog-engine constructor and bounded transport as runtime picks. DeepSeek V4 JSON steps explicitly disable thinking; watchdog probes must retain that provider identity. Transient deadline failures remain real probe failures even if a later hourly check recovers. The live agent crosses configured providers before the heuristic, with transport deadlines and DB-shared circuits scoped per provider + reasoning step. Failed half-open probes back off from 30 minutes to four hours, and an atomic probe lease prevents the web and volume processes retrying the same unhealthy tier together. The watchdog still reports a broken model even when another provider saved the dispatch. `npm run deploy` installs it as an hourly cron (`# keryx-llm`, minute :15), logging to `data/backups/llm.log`. `/status` separately aggregates the run receipts: failures, circuit skips, cross-provider saves and the engine that actually served each reasoning step.
+- **Dispatch-outcome watchdog** - `npm run check-dispatches` reads completed query receipts from the last six hours (`KERYX_DISPATCH_WINDOW_HOURS`). Since D-237 removed self-initiated research, an empty window is **idle**, not an outage. Completed public-only zero-spend answers still count. Set `KERYX_EXPECT_DISPATCHES=1` only when a separately configured scheduler promises regular completed runs; this enables missing-dispatch alarms, but creates no scheduler or spend permission. Model fallback and zero-decision anomalies remain visible. Real completed runs with current failed, pending or incomplete creator-ledger evidence raise `payment-unsettled`, including partial per-source failures without declaring the answer lost; inspect receipts and reconciliation before any retry. `/status` and `/api/health` expose the same summary; real-run payout counts and amounts use current canonical settled creator rows rather than immutable completion counters. The hourly cron runs at :50 and logs to `data/backups/dispatches.log`. This completed-receipt window cannot observe synchronous requests that abort before saving a receipt; separate A2A worker/queue health and settlement reconciliation continue to detect their own failures. Do not create paid queries merely to clear an idle alert.
 - **Settlement parity watchdog** — `npm run check-settlement` takes every wallet Keryx has ever paid and asks Circle's public balance API what it actually holds for that address. This exists because Gateway payouts settle off-chain: their receipt is a Circle transfer id, not an EVM hash, so no payout row can be checked on ArcScan and "trust our database" was the only proof creators had. The invariant is one-directional — `gateway + wallet >= paid − withdrawn − tolerance` — so a wallet holding *more* than Keryx accounts for (their own deposits, or payouts from any other x402 service) never alerts; only a claim nothing accounts for does. A shortfall gets a second reading against the wallet's plain on-chain USDC balance first, because a Gateway balance belongs to its owner and they may cash out through Circle's CLI or any other tool, leaving no row here; that is reported as a cash-out, not a discrepancy. Tolerance is Circle's withdraw fee per recorded cash-out plus dust. `npm run deploy` installs it as an hourly cron (`# keryx-settlement`, minute :55), logging to `data/backups/settlement.log`; the summary lands in `sync_state.settlementParity` and renders on [`/status`](https://keryx.cc/status) and on each creator page.
 - **Failed-settlement alerts** — a real-mode citation reward that fails to settle (a creator owed USDC that didn't land) fires the same alert channel.
 - **Pending-authorization age alerts** — the ten-minute reconciler marks one-hour-old unresolved
@@ -196,7 +198,7 @@ but not a disk loss).
   procedure in
   `docs/pending-reconciliation-acknowledgement.md`; it stays pending and continuously reconciled,
   while browser reservations and Circle mismatches remain impossible to acknowledge away.
-- **Alert channel** — set `KERYX_ALERT_WEBHOOK` in the VPS `.env.local` to a Discord/Slack incoming webhook. Unset → alerts still print to `pm2 logs`, just not delivered out-of-band.
+- **Alert channel** — configure a dedicated Telegram operations bot and private "Keryx ops" group using `KERYX_ALERT_TELEGRAM_BOT_TOKEN` and `KERYX_ALERT_TELEGRAM_CHAT_ID`; follow [the setup and delivery acceptance guide](telegram-ops-alerts.md). `KERYX_ALERT_WEBHOOK` remains supported for Discord/Slack. Process logs alone are not delivered alert evidence.
 - **Uptime/health** — point an external monitor (UptimeRobot, etc.) at [`/api/health`](https://keryx.cc/api/health); a same-box check can't catch the box being down.
 
 ## Troubleshooting

@@ -20,6 +20,14 @@ describe("research evidence matrix", () => {
       expect(buildEvidenceMatrix({ ...run, evidence: [{ ...evidence, ...override }] })[0].evidence).toEqual([]);
     }
   });
+  it("includes answer-qualified public evidence without reward authority and honors explicit rejection", () => {
+    const publicCitation = { ...run.citations[0], sourceKind: "public-reference" as const, reward: 0 };
+    const publicEvidence = { ...evidence, qualifiesForAnswer: true, qualifiesForReward: false };
+    const publicRun = { ...run, citations: [publicCitation], evidence: [publicEvidence] };
+    expect(buildEvidenceMatrix(publicRun)[0].evidence).toEqual([publicEvidence]);
+    expect(evidenceMatrixCsv(publicRun)).toContain('"Recorded excerpt"');
+    expect(buildEvidenceMatrix({ ...publicRun, evidence: [{ ...publicEvidence, qualifiesForAnswer: false, qualifiesForReward: true }] })[0].evidence).toEqual([]);
+  });
   it("retains exact article identities and keeps versions separate for the same marker and source", () => {
     const versions = ["v1", "v2"];
     const versioned = { ...run,

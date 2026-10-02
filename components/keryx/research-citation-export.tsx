@@ -41,7 +41,7 @@ export function ResearchCitationExport({ citations }: { citations: Citation[] })
         {format === "bibtex" ? "Download BibTeX" : "Download RIS (Zotero)"}
       </button>)}
     </div>
-    <p className="mt-2 font-serif text-sm text-ink-3">{count} article references. Recorded titles, links and available publication dates; review metadata before using in a paper. Import RIS into Zotero with File → Import.</p>
+    <p className="mt-2 font-serif text-sm text-ink-3">{count} article references. Recorded titles, links and dates; observed scholarly records also include supplied authors, DOI and journal metadata with read limits. Review metadata before using in a paper. Import RIS into Zotero with File → Import.</p>
     {omitted > 0 && <p className="mt-1 font-serif text-sm text-ink-3">{omitted} citations omitted because an article title or usable article link is unavailable.</p>}
     {error && <p role="alert" className="mt-2 text-sm text-seal">{error}</p>}
   </div>;

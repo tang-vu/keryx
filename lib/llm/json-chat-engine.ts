@@ -5,6 +5,7 @@
  */
 
 import { config } from "../config";
+import { cloneUsage } from "../economics/provider-cost-policy";
 import { LlmCallLedger } from "./call-ledger";
 import { evidenceContext, EVIDENCE_CONTEXT_GUIDANCE } from "./evidence-context";
 import { buildQuoteOptions, resolveQuoteEvidence } from "./quote-options";
@@ -37,22 +38,23 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   }
 
   get usage(): readonly LlmUsageRecord[] {
-    return [...this.usageRecords];
+    return this.usageRecords.map(cloneUsage);
   }
 
   /** Store only provider counters. Never store prompts, completions, or request identifiers. */
   protected recordUsage(usage: Omit<LlmUsageRecord, "engine">): void {
     const valid = (value: number) => Number.isSafeInteger(value) && value >= 0;
-    if (!valid(usage.inputTokens) || !valid(usage.cachedInputTokens) ||
-      !valid(usage.outputTokens) || usage.cachedInputTokens > usage.inputTokens) return;
-    this.usageRecords.push({
+    if (!valid(usage.inputTokens) || !valid(usage.outputTokens) ||
+      (usage.cachedInputTokens !== null && (!valid(usage.cachedInputTokens) || usage.cachedInputTokens > usage.inputTokens))) return;
+    this.usageRecords.push(cloneUsage({
       engine: this.name,
       callId: this.callLedger.currentId,
       model: usage.model,
       inputTokens: usage.inputTokens,
       cachedInputTokens: usage.cachedInputTokens,
       outputTokens: usage.outputTokens,
-    });
+      ...(usage.costCapture ? { costCapture: usage.costCapture } : {}),
+    }));
   }
 
   /**
@@ -114,7 +116,8 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       price: c.fetchPrice,
       cached: c.cached,
       preview: c.preview.slice(0, 600),
-      deliveryKind: c.item?.contentReceipt?.deliveryKind ?? "unknown",
+      sourceKind: c.sourceKind ?? "creator",
+      deliveryKind: c.item?.publicDeliveryKind ?? c.item?.contentReceipt?.deliveryKind ?? "unknown",
       plaintextBytes: c.item?.contentReceipt?.plaintextBytes,
       ...(c.item
         ? {
@@ -135,7 +138,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       config.llmModel,
       "You are a frugal research agent deciding which paid sources to buy under a budget. " +
         "For EACH candidate choose action BUY (pay the toll, high value), CACHE (already cached & still useful, reuse free), or SKIP (not worth it). " +
-        "Weigh expected value against price; prefer cheaper sufficient sources; avoid redundancy. " +
+        "Weigh expected value against price; prefer cheaper sufficient sources; avoid redundancy. Public web candidates are free original-page READ selections: legacy CACHE action selects a read, never claims a cache hit. Search snippets are unverified previews, not evidence. " +
         "The subClaims list contains indexed research targets. For every BUY or CACHE, targets MUST contain at least one of their zero-based claimIndex integers " +
         "that the source's preview can help investigate (for example targets:[0,2]). Use only indexes from this request. " +
         "Explain the connection in the rationale. If no target is supported by the preview, choose SKIP with targets:[]. " +

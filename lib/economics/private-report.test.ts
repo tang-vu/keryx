@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { DatabaseSync } from "node:sqlite";
 import { calculateTestnetEconomics } from "./testnet-economics";
 import { privateEconomicsReport, writePrivateEconomicsReport } from "./private-report";
+import { capturePricePolicy, FLASH_POLICY } from "./provider-cost-policy";
 const directories: string[] = [], linux = it.skipIf(process.platform !== "linux");
 afterEach(() => { for (const path of directories.splice(0)) {
   if (dirname(resolve(path)) !== resolve(tmpdir()) || !basename(path).startsWith("keryx-private-economics-")) throw new Error("Unexpected test cleanup target");
@@ -34,6 +35,29 @@ describe("private operator economics", () => {
     expect(report.accounting).toEqual({ status: "unreconciled", providerInvoiceUsd: null, fixedOperatingCostUsd: null, realizedProfitUsd: null });
     expect(JSON.stringify(report)).not.toContain("must-not-copy");
     expect(report.scope).toContain("Not complete business accounting");
+    expect(report.schema).toBe("keryx-private-economics-v2");
+    expect(report.estimates.llmCostUsdBounds).toBeNull();
+    expect(report.estimates.totalLlmCostUpperBoundUsd).toBeNull();
+  });
+  it("exports only priced-subset bounds, captured policy coverage and unreconciled accounting", () => {
+    const snapshot = calculateTestnetEconomics([{ id: "synthetic-priced", researchMode: "quick",
+      usageCoverageVersion: 2, usageCoverage: "complete", llmUsage: [{ callId: "synthetic-call",
+        engine: "llm:deepseek:deepseek-v4-flash", model: "deepseek-v4-flash", inputTokens: 1000000,
+        cachedInputTokens: 0, outputTokens: 1000000, costCapture: { provider: "deepseek",
+          requestStartedAt: "2026-09-30T01:00:00Z", responseReceivedAt: "2026-09-30T01:00:01Z",
+          pricing: capturePricePolicy("deepseek", "deepseek-v4-flash") } }] },
+      { id: "synthetic-unpriced", researchMode: "deep", usageCoverageVersion: 2, usageCoverage: "complete",
+        llmUsage: [{ engine: "llm:mimo:mimo-v2.5", model: "mimo-v2.5", inputTokens: 100,
+          outputTokens: 10, cachedInputTokens: null }] }], []);
+    const report = JSON.parse(JSON.stringify(privateEconomicsReport(snapshot)));
+    expect(report.coverage).toMatchObject({ pricedRuns: 1, unpricedRuns: 1, unknownCacheCalls: 1, pricingPolicyIds: [FLASH_POLICY.id] });
+    expect(report.estimates).toMatchObject({ costAndMarginScope: "priced-runs-only", totalLlmCostUpperBoundUsd: null,
+      llmCostUsdBounds: snapshot.estimatedLlmCostUsdBounds, shadowGrossMarginUsdBounds: snapshot.shadowGrossMarginUsdBounds,
+      shadowServiceFeesAllSampledUsdc: 0.07, shadowServiceFeesPricedRunsUsdc: 0.02,
+      policy: { id: "testnet-economics-v2", costBasis: "immutable-per-call-policy-interval" } });
+    expect(report.accounting).toMatchObject({ status: "unreconciled", providerInvoiceUsd: null, realizedProfitUsd: null });
+    report.estimates.llmCostUsdBounds.upper = 999;
+    expect(snapshot.estimatedLlmCostUsdBounds!.upper).not.toBe(999);
   });
   linux("writes private read-back-verified output once, even with racing callers", async () => {
     const f = fixture();
@@ -43,6 +67,14 @@ describe("private operator economics", () => {
     expect(statSync(f.directory).mode & 0o777).toBe(0o700); expect(statSync(path).mode & 0o777).toBe(0o600);
     expect(JSON.parse(before.toString()).visibility).toBe("operator-only");
     await expect(writePrivateEconomicsReport(f.directory, f.load)).rejects.toThrow(); expect(readFileSync(path)).toEqual(before);
+  });
+  linux("retains an existing historical v1 artifact without repricing or overwriting", async () => {
+    const f = fixture(); mkdirSync(f.directory, { mode: 0o700 });
+    const file = join(f.directory, "economics.json"), historical = '{"schema":"keryx-private-economics-v1","syntheticHistoricalPolicy":"testnet-economics-v1"}';
+    writeFileSync(file, historical, { mode: 0o600 });
+    await expect(writePrivateEconomicsReport(f.directory, f.load)).rejects.toThrow();
+    expect(f.load).not.toHaveBeenCalled();
+    expect(readFileSync(file, "utf8")).toBe(historical);
   });
   linux("rejects public parents and symlink destinations before reading operational data", async () => {
     const f = fixture(); chmodSync(f.parent, 0o755);

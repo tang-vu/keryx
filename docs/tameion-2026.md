@@ -12,6 +12,25 @@ implemented architecture; unchecked work in this document remains proposed.
 
 ## Product and customer hypothesis
 
+**October 1 validation increment:** The owner authorized testing specialized research
+outcomes and information-selling infrastructure beyond bounty preparation. The
+[product validation plan](./product-validation.md) defines independent researcher and
+seller experiments, evidence limits and selection gates. This does not establish demand,
+replace payment authority or authorize a mainnet launch. Use existing rails and inspect
+source suitability before asking a participant to purchase research.
+
+**Agreed product direction (September 29):** Present Keryx as an agent-operated
+paid research service. A customer should be able to ask naturally, inspect the
+sources and purchase decisions, follow up, and reopen a useful cited deliverable.
+The Tameion contribution is the business operation around that research: verified
+USDC coming in, obligations and available funds accounted for separately, bounded
+purchases, evidence-gated creator payouts, reconciliation, and human escalation.
+This targets the Autonomous Business Operator prompt (RFB 04) through one
+complete, observable business workflow. A broad general-purpose assistant is not
+the event deliverable. The RFBs are prompts rather than mandatory tracks, and
+judging concerns the event-period change in both product and genuine usage.
+This direction does not mark the Operator or a new payment authority as shipped.
+
 Keryx Operator would manage the business behind paid research. It would track verified
 incoming receipts, creator and service obligations separately from spendable operating
 funds, bounded purchases, creator payments, reconciliation, and human escalation for
@@ -25,7 +44,7 @@ and exact integer micro-USDC accounting in any new surface.
 The first customer segment is a **hypothesis**, not established demand: founders or
 small teams in the Arc ecosystem who need recurring API, product, or competitor research
 briefs. Sell a concrete, priced research outcome first; consider subscriptions only after
-repeat demand. During the first 48 hours, contact roughly ten relevant candidates and
+repeat demand. During the event, contact roughly ten relevant candidates and
 seek two or three real tasks or pilots. Targets for the event are two or three
 independent teams, ten real jobs, and two returning customers; none is an achieved count.
 Keryx's own business may be an initial Operator pilot, but its volume must be reported
@@ -65,7 +84,11 @@ health verification and Canteen reporting rules.
   exception escalation. Identify the trusted authority for every state change.
 - [ ] Deliver a testnet Operator cycle with real jobs and persisted evidence: receive,
   decide, purchase within bounds, pay cited creators, reconcile, and recover ambiguous
-  or interrupted work. Keep failures isolated where a completed answer can survive.
+  or interrupted work. Bind incoming payment to the customer's task; distinguish
+  obligations from funds available to spend and record every decision, authorization,
+  settlement state, receipt and delivered result. Keep failures isolated where a
+  completed answer can survive. A completed receipt-backed cycle, not an isolated
+  transfer or a simulated ledger, is the acceptance evidence.
 - [ ] Complete the Windows-first desktop experience: permissioned local document import,
   task progress/history, notifications, and human approvals. Keep keys and Node access
   out of the renderer and restrict IPC. Local-file work requires an authorized local
@@ -75,7 +98,9 @@ health verification and Canteen reporting rules.
   engine, reusing existing buyer CLI and MCP integrations where appropriate.
 - [ ] Pilot the specific research outcome with real users; capture feedback, return
   usage, source quality, delivery, pending versus settled payment, and obligations by
-  period, network, and owner versus independent origin.
+  period, network, and owner versus independent origin. Record the pre-event baseline
+  and event-period product and customer delta; do not infer independent demand from
+  an owner-run pilot.
 
 The local CLI increment provides these commands for a private paid-research task
 directory (see [Operator task alpha](./operator-task-alpha.md)). The

@@ -37,8 +37,8 @@ export async function storeGrant(
 }
 
 /**
- * Fetch a live grant. Expired rows are deleted and reported as absent, so a lapsed grant can
- * never authorise a spend, and the table doesn't accumulate dead sessions.
+ * Fetch a live grant. Lapsed grants cannot authorize spending. After journal activation,
+ * financial history stays retained; housekeeping no longer deletes held accounting.
  */
 export async function getGrant(sessionId: string): Promise<SessionGrant | undefined> {
   const db = await getDb();
@@ -90,7 +90,7 @@ export async function canSpend(sessionId: string, amount: number): Promise<boole
   return grant.spent + amount <= grant.cap + 1e-9; // +epsilon for float rounding
 }
 
-/** Housekeeping: drop grants whose TTL lapsed. Safe to call at any time. */
+/** Legacy housekeeping; journal-mode accounting remains retained after expiry. */
 export async function pruneExpiredGrants(): Promise<void> {
   const db = await getDb();
   await db.deleteExpiredSessionGrants(Date.now());

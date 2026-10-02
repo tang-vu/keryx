@@ -17,11 +17,11 @@
  *       KERYX_ALERT_WEBHOOK — Discord/Slack webhook for the alert (optional; logs regardless)
  */
 
+import { readDispatchHealth } from "../lib/ops/read-dispatch-health.ts";
 import { llmProvider } from "../lib/config.ts";
 import { getDb } from "../lib/db/index.ts";
 import { sendAlert } from "../lib/notify/alert.ts";
 import {
-  assessDispatchHealth,
   DEFAULT_WINDOW_HOURS,
   DISPATCH_HEALTH_STATE_KEY,
 } from "../lib/ops/dispatch-health.ts";
@@ -38,17 +38,12 @@ async function main(): Promise<void> {
   const db = await getDb();
   const runs = await db.listRecentQueries(READ_LIMIT);
 
-  if (runs.length === 0) {
-    // A box that has never dispatched is a fresh install, not an outage.
-    console.log("[dispatches] no dispatch on record yet — nothing to judge.");
-    return;
-  }
-
   const hours = windowHours();
-  const summary = assessDispatchHealth(runs, {
+  const summary = await readDispatchHealth(db, runs, {
     now: new Date(),
     windowHours: hours,
     expectReasoning: llmProvider() !== "heuristic",
+    expectDispatches: process.env.KERYX_EXPECT_DISPATCHES === "1",
   });
 
   console.log(
@@ -69,7 +64,7 @@ async function main(): Promise<void> {
   await db.setSyncState(DISPATCH_HEALTH_STATE_KEY, JSON.stringify(summary));
 
   if (summary.alarms.length === 0) {
-    console.log("[dispatches] OK — the agent is reasoning and creators are being paid.");
+    console.log(`[dispatches] OK - ${summary.activity === "idle" ? "no completed caller requests in this window; demand is idle" : "no completed-run alarms"}.`);
     return;
   }
 
@@ -78,7 +73,7 @@ async function main(): Promise<void> {
     `dispatch health: ${summary.alarms.map((a) => a.code).join(", ")}`,
     `${summary.alarms.map((a) => a.message).join(" · ")}. ` +
       `Window: ${summary.runs} dispatch(es)/${hours}h, $${summary.creatorPayoutUsdc.toFixed(6)} to creators. ` +
-      `Run \`npm run check-llm\` for the provider side, then \`npm run ask -- "<q>" --budget 0.04\` on the box.`,
+      `Inspect provider checks, worker heartbeats, queued jobs and settlement reconciliation; do not generate paid requests to clear an alert.`,
   );
   process.exitCode = 1;
 }

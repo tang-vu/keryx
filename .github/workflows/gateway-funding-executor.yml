@@ -1,0 +1,67 @@
+name: Gateway funding executor
+
+on:
+  push:
+    paths:
+      - 'lib/db/**'
+      - 'lib/operator/gateway-funding-*'
+      - 'scripts/funding-inspect*.mts'
+      - 'lib/payments/gateway-funding-**'
+      - 'lib/canonical-json.ts'
+      - 'package*.json'
+      - 'tsconfig.json'
+      - 'eslint.config.*'
+      - 'vitest.config.*'
+      - '.github/workflows/gateway-funding-executor.yml'
+  pull_request:
+    paths:
+      - 'lib/db/**'
+      - 'lib/operator/gateway-funding-*'
+      - 'scripts/funding-inspect*.mts'
+      - 'lib/payments/gateway-funding-**'
+      - 'lib/canonical-json.ts'
+      - 'package*.json'
+      - 'tsconfig.json'
+      - 'eslint.config.*'
+      - 'vitest.config.*'
+      - '.github/workflows/gateway-funding-executor.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-funding:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-latest, component: executor, timeout: 15, files: 'lib/payments/gateway-funding-executor.test.ts'}
+          - {os: windows-latest, component: executor, timeout: 15, files: 'lib/payments/gateway-funding-executor.test.ts'}
+          - {os: ubuntu-latest, component: orchestrator, timeout: 25, files: 'lib/payments/gateway-funding-orchestrator.test.ts'}
+          - {os: windows-latest, component: orchestrator, timeout: 25, files: 'lib/payments/gateway-funding-orchestrator.test.ts'}
+          - os: ubuntu-latest
+            component: boundaries
+            timeout: 15
+            files: 'lib/db/gateway-funding-sqlite.test.ts lib/payments/gateway-funding-readiness.test.ts lib/payments/gateway-funding-preflight.test.ts lib/payments/gateway-funding-receipt-observer.test.ts lib/operator/gateway-funding-inspection.test.ts lib/operator/gateway-funding-composition.test.ts'
+          - os: windows-latest
+            component: boundaries
+            timeout: 15
+            files: 'lib/db/gateway-funding-sqlite.test.ts lib/payments/gateway-funding-readiness.test.ts lib/payments/gateway-funding-preflight.test.ts lib/payments/gateway-funding-receipt-observer.test.ts lib/operator/gateway-funding-inspection.test.ts lib/operator/gateway-funding-composition.test.ts'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: ${{ matrix.timeout }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.21.0'
+          cache: npm
+      - run: npm ci
+      - name: Native SQLite, local HTTP, installed viem and child crash proofs
+        run: npx vitest run ${{ matrix.files }}
+      - name: Project TypeScript
+        run: npx tsc --noEmit
+      - name: Dedicated subprocess TypeScript
+        run: npx tsc --noEmit --skipLibCheck --strict --target es2017 --lib dom,dom.iterable,esnext --module esnext --moduleResolution bundler --esModuleInterop --allowImportingTsExtensions lib/payments/gateway-funding-executor-child.mts
+      - name: Funding component lint
+        run: npx eslint lib/payments/gateway-funding-executor.ts lib/payments/gateway-funding-executor.test.ts lib/payments/gateway-funding-executor-child.mts lib/payments/gateway-funding-orchestrator.ts lib/payments/gateway-funding-orchestrator.test.ts lib/payments/gateway-funding-test-fixture.ts

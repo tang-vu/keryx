@@ -1,0 +1,46 @@
+name: Existing treasury wallet custody
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  custody:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.21.0"
+          cache: npm
+      - name: Pin repository npm installer
+        run: npm install --global npm@11.19.0
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Synthetic existing custody and independent process checks
+        run: npx vitest run lib/payments/persistent-treasury-wallet.test.ts lib/payments/treasury-spend-wallet.test.ts lib/payments/real-gateway-custody.test.ts lib/payments/real-gateway-privacy.test.ts lib/payments/guarded-arc-transaction.test.ts lib/payments/pinned-arc-batch-signer.test.ts lib/payments/real-gateway-funding.test.ts scripts/treasury-script-isolation.test.ts scripts/code-golf-retirement.test.ts scripts/generate-wallets-retirement.test.ts
+      - name: Typecheck maintained treasury MTS entry points
+        run: npx tsc --noEmit -p tsconfig.treasury-scripts.json
+      - name: Install caller-local MCP dependency closure
+        run: npm --prefix mcp ci --ignore-scripts --no-audit --no-fund
+      - name: Synthetic caller-local payment and journal recovery checks
+        run: npx vitest run --config mcp/vitest.config.mts
+      - name: Typecheck caller-local MCP MTS entry points
+        run: npx tsc --noEmit -p mcp/tsconfig.json
+      - name: Build caller-local MCP bundle
+        run: npm --prefix mcp run build
+      - name: Pack only caller-local MCP release inputs
+        working-directory: mcp
+        shell: bash
+        run: |
+          npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP" > "$RUNNER_TEMP/keryx-mcp-pack.json"
+          node --input-type=module -e 'import fs from "node:fs"; const [pack]=JSON.parse(fs.readFileSync(process.argv[1])); for(const file of pack.files) { if (!["package.json","README.md","dist/keryx-mcp.mjs"].includes(file.path)) throw Error("Unexpected package path: "+file.path); } if(pack.files.length!==3) throw Error("Expected exactly package manifest, README and bundle");' "$RUNNER_TEMP/keryx-mcp-pack.json"
+      - name: Clean installed MCP synthetic signing and new-process recovery
+        shell: bash
+        run: node mcp/scripts/test-packed.mjs "$RUNNER_TEMP/keryx-mcp-0.3.0.tgz" "$(npm root -g)/npm/bin/npm-cli.js"

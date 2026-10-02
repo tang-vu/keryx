@@ -1,3 +1,4 @@
+import { callSupabaseDomain } from "./supabase-authority";
 import type { DatabaseSync } from "node:sqlite";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { privatePaymentConfirmation, privatePaymentState, requirePrivatePaymentConfirmation, type PrivatePaymentConfirmation } from "../a2a/private-payment-state";
@@ -45,7 +46,7 @@ export async function confirmSqlitePrivatePayment(db: DatabaseSync, id: string, 
 export async function getSupabasePrivatePayment(db: SupabaseClient, id: string, payer: string) {
   const intent = await getSupabasePrivateResearchIntent(db, id, payer);
   if (!intent) return null;
-  const { data, error } = await db.from("private_research_payment_attempts").select("started_at,confirmation,settled_at").eq("id", id).maybeSingle();
+  const { data, error } = await callSupabaseDomain(db, "get_supabase_private_payment", { p_id: id }, (_args) => db.from("private_research_payment_attempts").select("started_at,confirmation,settled_at").eq("id", _args.p_id).maybeSingle());
   if (error) throw new Error("Private payment storage unavailable");
   return data ? privatePaymentState(data, intent) : null;
 }

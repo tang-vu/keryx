@@ -6,6 +6,9 @@ export interface PendingReconciliationHealth {
   acknowledgedAwaiting?: number;
   unacknowledgedAwaiting?: number;
   browserAwaiting?: number;
+  exposedAwaiting?: number;
+  signedAwaiting?: number;
+  submittedAwaiting?: number;
   treasuryAwaiting?: number;
   expiredAwaiting?: number;
   unknownExpiryAwaiting?: number;
@@ -69,6 +72,9 @@ export function PendingReconciliationSection({
           k="Browser reservations held"
           v={(reconciliation.browserAwaiting ?? 0).toLocaleString()}
         />
+        <Row k="Exposed, possibly unsigned" v={(reconciliation.exposedAwaiting ?? 0).toLocaleString()} />
+        <Row k="Signed, no recorded submission" v={(reconciliation.signedAwaiting ?? 0).toLocaleString()} />
+        <Row k="Submission attempted" v={(reconciliation.submittedAwaiting ?? 0).toLocaleString()} />
         <Row
           k="Treasury attempts pending"
           v={(reconciliation.treasuryAwaiting ?? 0).toLocaleString()}

@@ -1,3 +1,5 @@
+import { isPublicReferenceId } from "@/lib/public-references/catalog";
+import { paperPaidGate } from "@/lib/scholarly/paid-gate";
 /**
  * x402-protected creator content. Paying the toll (payTo = creator wallet) unlocks the full text.
  * GET /api/source/[id]
@@ -26,12 +28,16 @@ export async function GET(
   ctx: { params: Promise<{ id: string }> },
 ) {
   const { id } = await ctx.params;
+  if (isPublicReferenceId(id)) return Response.json({ error: "Public references are free and have no payout authority" }, { status: 410 });
   const db = await getDb();
   const source = await db.getSource(id);
   if (!source) {
     return Response.json({ error: "source not found" }, { status: 404 });
   }
   const terms = await sourceFetchTerms(source, { refresh: true });
+  const rightsDenied = await paperPaidGate(db, source, req, { kind: "fetch", payee: terms.payTo,
+    amountMicros: Math.round(terms.listPriceUsdc * 1e6), bundle: true });
+  if (rightsDenied) return rightsDenied;
   if (!terms.active || source.active === false || source.verified === false) {
     return Response.json({ error: "source is not active on the earning rail" }, { status: 410 });
   }

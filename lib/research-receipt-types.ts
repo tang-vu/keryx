@@ -20,6 +20,8 @@ export interface ReceiptDecision extends ReceiptAsset {
 }
 
 export interface ReceiptEvidencePortfolio {
+  selectionMethod?: "bounded-heuristic" | "exhaustive";
+  evaluatedStates?: number;
   policy: "claim-coverage-v1";
   eligibleCandidates: number;
   attentionLimit: number;
@@ -49,6 +51,7 @@ export interface ReceiptEvidence extends ReceiptAsset {
   sourceName: string;
   quote: string;
   support: number;
+  qualifiesForAnswer?: boolean;
   qualifiesForReward: boolean;
 }
 
@@ -73,6 +76,8 @@ export interface ReceiptCitation extends ReceiptAsset {
 export type ReceiptPaymentStatus = "settled" | "pending" | "failed" | "simulated";
 
 export interface ReceiptCreatorPayment extends ReceiptAsset {
+  /** Reviewed permission reference, never proof that settlement occurred. */
+  scholarlyRights?: { declarationId: string; approvalId: string; policy: "supervised-testnet-v1" };
   kind: "fetch" | "citation";
   sourceId: string;
   sourceName: string;

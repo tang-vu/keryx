@@ -7,26 +7,29 @@
  * lib/x402-server.ts decodes, wraps into the full x402 PaymentPayload
  * ({ x402Version, resource, accepted, payload }), and passes to BatchFacilitatorClient.
  *
- * Domain and types mirror what the SDK builds in GatewayClient.pay():
- *   - name "GatewayWalletBatched", version "1"
- *   - verifyingContract from the source's 402 PAYMENT-REQUIRED challenge
- *   - TransferWithAuthorization as per EIP-3009
+ * The Arc testnet EIP-712 domain is pinned in this browser module, separately
+ * from the SSE challenge. Types mirror the installed Circle batching SDK.
  *
- * validBefore uses requirements.maxTimeoutSeconds (sourced from the server's
- * 402 challenge). Circle's Gateway facilitator requires remaining validity
- * ≥ 604800s (7 days) at verify time — use config.maxTimeoutSeconds (~8d) as
- * the window so there's margin for signing → network → verify latency.
+ * The challenge's validity window is accepted only within the browser policy.
  *
- * Client-side security validation:
- *   - `payTo` must be a non-empty hex address
- *   - `amount` must be > 0 and ≤ remaining grant cap (checked by caller)
- *   - `reqId` is passed straight through for the server's promise resolution
+ * The caller separately verifies source authority and the grant cap.
  */
 
-import { type WalletClient } from "viem";
+import { isAddress, type WalletClient } from "viem";
+import { ARC_TESTNET_PROFILE } from "./arc-network-profile";
+
+// Independent browser policy for the current Arc testnet deployment.
+const ARC_NETWORK = ARC_TESTNET_PROFILE.networkId;
+const ARC_CHAIN_ID = ARC_TESTNET_PROFILE.chainId;
+const ARC_USDC = ARC_TESTNET_PROFILE.usdcAddress;
+const ARC_GATEWAY = ARC_TESTNET_PROFILE.gatewayWallet;
+const MIN_TIMEOUT_SECONDS = 604900;
+const MAX_TIMEOUT_SECONDS = 691200;
 
 export interface PaymentRequirementsInput {
+  scheme: string;
   network: string;           // e.g. "eip155:5042002"
+  asset: string;
   amount: string;            // atomic USDC (6 decimals), e.g. "2000"
   payTo: string;             // creator wallet address (0x…)
   maxTimeoutSeconds: number; // from the 402 challenge
@@ -59,27 +62,49 @@ interface AuthorizationFields {
  *
  * Throws if requirements are malformed or signing fails.
  */
+/** Legacy headless caller: keeps the established two-argument API. It uses the
+ * same pinned chain and domain policy, but has no browser grant snapshot to compare. */
 export async function signPaymentAuthorization(
   walletClient: WalletClient,
   requirements: PaymentRequirementsInput,
 ): Promise<SignedPaymentHeader> {
-  const { network, amount, payTo, maxTimeoutSeconds, extra } = requirements;
+  const signer = walletClient.account?.address ?? "";
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  const nonce = "0x" + Array.from(bytes, b => b.toString(16).padStart(2,"0")).join("");
+  return signBrowserPaymentAuthorization(walletClient, requirements, signer, signer, nonce);
+}
+
+/** Browser entry point: both signer expectations must be supplied independently. */
+export async function signBrowserPaymentAuthorization(
+  walletClient: WalletClient,
+  requirements: PaymentRequirementsInput,
+  intendedSessionSigner: string,
+  capturedGrantSigner: string,
+  admittedNonce: string,
+): Promise<SignedPaymentHeader> {
+  const { scheme, network, asset, amount, payTo, maxTimeoutSeconds, extra } = requirements;
 
   // Validate inputs before signing — defence against a compromised/MITM server.
-  if (!payTo || !payTo.startsWith("0x") || payTo.length < 40) {
+  if (scheme !== "exact" || network !== ARC_NETWORK ||
+      typeof asset !== "string" || asset.toLowerCase() !== ARC_USDC.toLowerCase()) {
+    throw new Error("unsupported browser payment scheme, network, or asset");
+  }
+  if (!isAddress(payTo) || /^0x0{40}$/i.test(payTo)) {
     throw new Error("invalid payTo address in payment requirements");
   }
+  if (typeof amount !== "string" || !/^[1-9]\d*$/.test(amount)) {
+    throw new Error("invalid payment amount");
+  }
   const amountBig = BigInt(amount);
-  if (amountBig <= BigInt(0)) {
-    throw new Error("invalid payment amount (must be > 0)");
+  if (!Number.isInteger(maxTimeoutSeconds) || maxTimeoutSeconds < MIN_TIMEOUT_SECONDS ||
+      maxTimeoutSeconds > MAX_TIMEOUT_SECONDS) {
+    throw new Error("unsupported payment authorization lifetime");
   }
-  if (!extra?.verifyingContract || !extra.verifyingContract.startsWith("0x")) {
-    throw new Error("missing or invalid verifyingContract in 402 challenge");
+  if (extra?.name !== "GatewayWalletBatched" || extra.version !== "1" ||
+      !isAddress(extra.verifyingContract) ||
+      extra.verifyingContract.toLowerCase() !== ARC_GATEWAY.toLowerCase()) {
+    throw new Error("unsupported Gateway signing domain");
   }
-
-  // Extract chainId from the network identifier (e.g. "eip155:5042002" → 5042002).
-  const chainId = parseInt(network.split(":")[1] ?? "0", 10);
-  if (!chainId) throw new Error(`unrecognised network: ${network}`);
 
   const now = Math.floor(Date.now() / 1000);
   // validAfter 600s in the past to absorb clock skew between signer and verifier.
@@ -88,23 +113,27 @@ export async function signPaymentAuthorization(
   // from the challenge (server sets it to ~8d = 691200s for margin).
   const validBefore = BigInt(now + maxTimeoutSeconds);
 
-  // Random 32-byte nonce — single-use, regenerated per signature (EIP-3009 nonces
-  // are single-use on-chain; the facilitator rejects replays).
-  const nonceBytes = new Uint8Array(32);
-  crypto.getRandomValues(nonceBytes);
-  const nonce = ("0x" + Array.from(nonceBytes).map((b) => b.toString(16).padStart(2, "0")).join("")) as `0x${string}`;
+  // The server admitted this single-use nonce before exposure. Browser signing never
+  // substitutes a random nonce; the separate legacy headless entry point owns its nonce.
+  if (typeof admittedNonce !== "string" || !/^0x[0-9a-f]{64}$/.test(admittedNonce)) {
+    throw new Error("missing or invalid admitted browser authorization nonce");
+  }
+  const nonce = admittedNonce as `0x${string}`;
 
   const account = walletClient.account;
-  if (!account) throw new Error("walletClient has no account");
+  if (!account || !isAddress(intendedSessionSigner) || !isAddress(capturedGrantSigner) ||
+      account.address.toLowerCase() !== intendedSessionSigner.toLowerCase() ||
+      account.address.toLowerCase() !== capturedGrantSigner.toLowerCase()) {
+    throw new Error("session signer does not match the local and captured grants");
+  }
   const from = account.address;
 
-  // EIP-712 domain mirrors the SDK: name + version from 402 extra, chainId from network,
-  // verifyingContract from 402 extra. Must match exactly for Circle's facilitator to verify.
+  // The challenge must match these values, but never supplies the values we sign.
   const domain = {
-    name: extra.name,       // "GatewayWalletBatched"
-    version: extra.version, // "1"
-    chainId,
-    verifyingContract: extra.verifyingContract as `0x${string}`,
+    name: "GatewayWalletBatched",
+    version: "1",
+    chainId: ARC_CHAIN_ID,
+    verifyingContract: ARC_GATEWAY as `0x${string}`,
   };
 
   const types = {

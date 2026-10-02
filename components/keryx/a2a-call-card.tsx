@@ -10,6 +10,7 @@
  */
 
 import { useState } from "react";
+import Link from "next/link";
 import { Check, Copy, Terminal } from "lucide-react";
 
 const ORIGIN = "https://keryx.cc";
@@ -68,21 +69,20 @@ export function A2aCallCard() {
 
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-line px-5 py-3 font-mono text-[11px] text-ink-3">
         <Terminal size={13} className="text-seal" />
-        <span className="text-ink-2">Or add Keryx to your agent (MCP):</span>
-        <code className="text-ink">claude mcp add keryx -- npx -y keryx-mcp</code>
-        <a
-          href="https://www.npmjs.com/package/keryx-mcp"
-          target="_blank"
-          rel="noopener noreferrer"
+        <span className="text-ink-2">Remote MCP service tools:</span>
+        <code className="break-all text-ink">claude mcp add --transport http keryx &quot;https://keryx.cc/mcp?client=claude&quot;</code>
+        <Link
+          href="/integrations/mcp"
           className="font-semibold text-seal hover:underline"
         >
-          keryx-mcp ↗
-        </a>
+          setup and tool roles ↗
+        </Link>
+        <span>Remote research uses the service budget; local stdio pays from your configured wallet.</span>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 border-t border-line px-5 py-3 font-mono text-[11px] text-ink-3">
         <Terminal size={13} className="text-seal" />
-        Full schema, response shape, and the SDK path (GatewayClient.pay) →
+        Full schema, response shape, and buyer integration →
         <a
           href="/api/docs"
           target="_blank"

@@ -9,7 +9,7 @@
 
 import { Check, CircleX, Clock3 } from "lucide-react";
 import type { PaymentRecord } from "@/lib/types";
-import { paymentSettlementStatus } from "@/lib/payments/payment-state";
+import { paymentSettlementStatus, pendingAuthorizationStatusLabel } from "@/lib/payments/payment-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -102,7 +102,7 @@ export function PaymentsFeed({
                       : status === "failed"
                       ? "failed, not charged"
                       : status === "pending"
-                      ? "pending proof"
+                      ? pendingAuthorizationStatusLabel(p)
                       : "simulated"}
                   </p>
                 </div>
@@ -205,7 +205,7 @@ export function PaymentsFeed({
                           }
                         >
                           <Clock3 className="h-3 w-3" />
-                          pending proof
+                          {pendingAuthorizationStatusLabel(p)}
                         </span>
                       ) : (
                         <span className="text-[11px] text-muted-foreground">

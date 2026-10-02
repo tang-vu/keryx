@@ -1,3 +1,4 @@
+import { callSupabaseDomain } from "./supabase-authority";
 import type { DatabaseSync } from "node:sqlite";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
@@ -78,7 +79,7 @@ export async function getSupabasePrivateCreatorConfirmation(db: SupabaseClient, 
   const key = nonce(authorizationId);
   const attempt = (await listSupabasePrivateCreatorSubmissions(db, id, payer)).find(row => row.data.submission.authorizationId === key);
   if (!attempt) return null;
-  const { data, error } = await db.from("private_creator_confirmations").select("data,settled_at").eq("authorization_id", key).maybeSingle();
+  const { data, error } = await callSupabaseDomain(db, "get_supabase_private_creator_confirmation", { p_authorization_id: key }, (_args) => db.from("private_creator_confirmations").select("data,settled_at").eq("authorization_id", _args.p_authorization_id).maybeSingle());
   if (error) throw new Error("Private creator confirmation storage unavailable");
   return data ? readRow(data, attempt) : null;
 }

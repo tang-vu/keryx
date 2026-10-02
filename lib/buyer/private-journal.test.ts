@@ -207,7 +207,8 @@ it("completes CLI recovery in a temporary session and writes private output only
   const output = join(directory, "snapshot.json");
   let refuseSignout = true;
   const http = vi.fn(async (url: string) => {
-    if (url.endsWith("/api/auth/nonce")) return Response.json({ nonce: "syntheticNonce12345" });
+    if (url.endsWith("/api/auth/nonce")) return Response.json({ nonce: "syntheticNonce12345", issuedAt: "2026-10-01T00:00:00.000Z",
+      challengeExpiresAt: "2026-10-01T00:05:00.000Z", sessionExpiresAt: "2026-10-08T00:00:00.000Z" });
     if (url.endsWith("/api/auth/verify")) return Response.json({ ok: true }, { headers: { "set-cookie": "keryx_session=synthetic.session.cookie; Secure; HttpOnly" } });
     if (url.endsWith("/api/auth/signout")) {
       await expect(access(output)).rejects.toThrow();

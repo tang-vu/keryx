@@ -66,7 +66,7 @@ describe("model catalog", () => {
   /** Every entry must name a provider `provider-endpoints.ts` can resolve. An entry pointing at a
    *  provider nothing knows how to reach is a picker option that answers only by degrading. */
   it("names a known provider on every entry", () => {
-    const known = new Set(["deepseek", "mimo"]);
+    const known = new Set(["deepseek", "mimo", "cloudflare"]);
     expect(MODEL_CATALOG.every((m) => known.has(m.provider))).toBe(true);
   });
 

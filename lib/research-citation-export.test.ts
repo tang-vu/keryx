@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Citation } from "./types";
+import type { Citation, ScholarlyMetadata } from "./types";
 import { buildCitationExport } from "./research-citation-export";
 
 const citation = (changes: Partial<Citation> = {}): Citation => ({
@@ -7,6 +7,38 @@ const citation = (changes: Partial<Citation> = {}): Citation => ({
   itemId: "article-1", itemTitle: "Measured result", itemUrl: "https://example.org/article",
   itemPublishedAt: "2026-09-28T23:30:00-07:00", contentVersion: "sha256:123",
   weight: 1, reward: 0.02, rationale: "private allocation rationale", ...changes,
+});
+
+const scholarly: ScholarlyMetadata = { provider: "crossref", recordUrl: "https://api.crossref.org/works/10.1234%2Fpaper", retrievedAt: "2026-10-01T00:00:00Z",
+  title: "Observed article", authors: ["Ada Lovelace", "Research Group"], authorNames: [{ given: "Ada", family: "Lovelace" }, { literal: "Research Group" }],
+  doi: "10.1234/paper", journal: "Observed Journal", publishedDate: "2026", volume: "2", issue: "3", pages: "1-5", workType: "journal-article", peerReview: "unknown", evidenceScope: "publisher-page" };
+it("exports only recorded scholarly metadata with structured Crossref author names and partial publication dates", () => {
+  const bib = buildCitationExport([citation({ scholarly })], "bibtex").content;
+  expect(bib).toContain("@article{"); expect(bib).toContain("author = {{Lovelace}, {Ada} and {Research Group}}");
+  expect(bib).toContain("doi = {10.1234/paper}"); expect(bib).toContain("journal = {Observed Journal}"); expect(bib).toContain("year = {2026}");
+  const ris = buildCitationExport([citation({ scholarly })], "ris").content;
+  expect(ris).toContain("TY  - JOUR"); expect(ris).toContain("AU  - Lovelace, Ada\r\nAU  - Research Group"); expect(ris).toContain("PY  - 2026");
+  expect(ris).toContain("Peer review unknown"); expect(ris).toContain("Read scope: publisher-page");
+});
+it("exports preprints and abstract-only read limitations without claiming a reviewed or fully read paper", () => {
+  const metadata: ScholarlyMetadata = { ...scholarly, provider: "arxiv", workType: "preprint", evidenceScope: "abstract-page", arxivId: "1706.03762v7", authorNames: undefined };
+  expect(buildCitationExport([citation({ scholarly: metadata })], "ris").content).toContain("TY  - UNPB");
+  const bib = buildCitationExport([citation({ scholarly: metadata })], "bibtex").content;
+  expect(bib).toContain("@misc{"); expect(bib).toContain("archivePrefix = {arXiv}"); expect(bib).toContain("Read scope: abstract-page. Preprint.");
+});
+it("escapes scholarly field injection and ignores metadata that has not been bound to an actual read", () => {
+  const attack = "Bad}\nER  - \n@article{inject,%";
+  const metadata = { ...scholarly, authors: [attack], authorNames: undefined, journal: attack, doi: attack, volume: attack };
+  const ris = buildCitationExport([citation({ scholarly: metadata })], "ris").content;
+  expect(ris.match(/^ER  - /gm)).toHaveLength(1); expect(ris.match(/^TY  - /gm)).toHaveLength(1);
+  const bib = buildCitationExport([citation({ scholarly: metadata })], "bibtex").content;
+  expect(bib.match(/^@article\{/gm)).toHaveLength(1); expect(bib).toContain("Bad\\}");
+  const unbound = buildCitationExport([citation({ scholarly: { ...scholarly, evidenceScope: undefined } })], "ris").content;
+  expect(unbound).toContain("TY  - WEB"); expect(unbound).not.toContain("AU  -");
+});
+it("retains incomplete contributor-list limits in both reference formats", () => {
+  for (const format of ["bibtex", "ris"] as const) expect(buildCitationExport([citation({ scholarly: { ...scholarly, authorCount: 80, authorsTruncated: true } })], format).content)
+    .toContain("Incomplete contributor list: 2/80 provider entries recorded; capped at 50.");
 });
 
 describe("research citation export", () => {
@@ -18,6 +50,13 @@ describe("research citation export", () => {
     expect(result.content).toContain("Content version: sha256:123.");
     expect(result.content).toContain("Item: article-1.");
     for (const field of ["AU  -", "DO  -", "JO  -", "0.02", "private allocation"]) expect(result.content).not.toContain(field);
+  });
+  it("includes cited public web documents without assigning reward or academic metadata", () => {
+    const entry = citation({ sourceKind: "public-reference", sourceId: "public:web:doc", reward: 0, sourceName: "example.org" });
+    const output = buildCitationExport([entry], "ris");
+    expect(output.count).toBe(1);
+    expect(output.content).toContain("T2  - example.org");
+    expect(output.content).not.toContain("AU  -");
   });
 
   it("emits misc BibTeX entries with protected titles and literal special characters", () => {

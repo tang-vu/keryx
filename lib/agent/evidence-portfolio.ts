@@ -65,8 +65,23 @@ export function selectEvidencePortfolio(input: {
     .sort((a, b) => a.id.localeCompare(b.id));
 
   let best = evaluate([], claimCount);
+  let evaluations = 0;
+  const evaluationLimit = 20000;
+  // Seed a useful claim-aware greedy set before the bounded subset exploration. The search is
+  // deterministic but does not claim global optimality when its work allowance is exhausted.
+  const seed: Candidate[] = [];
+  let seedCost = 0;
+  for (let slot = 0; slot < attentionLimit; slot++) {
+    const next = candidates.filter(candidate => !seed.includes(candidate) && seedCost + candidate.buyUsdc <= fetchBudgetUsdc + EPSILON)
+      .map(candidate => evaluate([...seed, candidate], claimCount)).sort((a, b) => betterState(a, b) ? -1 : betterState(b, a) ? 1 : 0)[0];
+    if (!next || !betterState(next, evaluate(seed, claimCount))) break;
+    seed.splice(0, seed.length, ...next.candidates); seedCost = next.buyUsdc;
+  }
+  best = evaluate(seed, claimCount);
 
   function visit(start: number, selected: Candidate[], buyUsdc: number) {
+    if (evaluations >= evaluationLimit) return;
+    evaluations++;
     const state = evaluate(selected, claimCount);
     if (betterState(state, best)) best = state;
     if (selected.length >= attentionLimit) return;
@@ -95,6 +110,8 @@ export function selectEvidencePortfolio(input: {
 
   return {
     policy: EVIDENCE_PORTFOLIO_POLICY,
+    selectionMethod: evaluations >= evaluationLimit ? "bounded-heuristic" : "exhaustive",
+    evaluatedStates: evaluations,
     eligibleCandidates: allEligible.length,
     attentionLimit,
     fetchBudgetUsdc,

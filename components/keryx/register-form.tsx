@@ -7,7 +7,7 @@
  * Two-phase submit when the on-chain registry is configured:
  *   1. POST /api/sources → server returns { mode:"onchain", registerParams, registryAddress }
  *   2. Client calls useWriteContract → registry.register(...) — creator signs + pays gas
- *   3. Indexer picks up SourceRegistered event within ≤4s and writes the DB cache row.
+ *   3. Confirm the mined registration event, then observe indexing separately.
  *
  * When the registry is NOT configured (offline dev), the server returns { mode:"offline" }
  * and the source row is written to DB immediately (same as Phase 01 behaviour).
@@ -15,13 +15,14 @@
  * Styled as a banknote registration slip (The Mint aesthetic).
  */
 
-import { useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Loader2, Rss, Wallet, PartyPopper, ExternalLink, ShieldCheck, ShieldAlert, Copy, Webhook } from "lucide-react";
 import { toast } from "sonner";
-import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fmtUsdc } from "./phase-style";
+import { confirmsIndex, confirmsRegistration, registrationId, registrationTitles, walletRequestWasRejected, type RegistrationIdentity, type RegistrationPhase } from "@/lib/sources/registration-status";
 import { REGISTRY_ABI } from "@/lib/registry/registry-client";
 
 interface CreatedSource {
@@ -101,12 +102,68 @@ export function RegisterForm({
 
   // wagmi hooks for the on-chain register call (only used when registry is configured).
   const { writeContractAsync } = useWriteContract();
+  const wallet = useAccount();
+  const walletRef = useRef(wallet);
+  useLayoutEffect(() => { walletRef.current = wallet; }, [wallet]);
+  const publicClient = usePublicClient({ chainId: 5042002 });
   const [pendingTxHash, setPendingTxHash] = useState<`0x${string}` | undefined>();
-  const { isLoading: isMining } = useWaitForTransactionReceipt({ hash: pendingTxHash });
+  const [phase, setPhase] = useState<RegistrationPhase>("offline");
+  const [statusMessage, setStatusMessage] = useState("");
+  const [checking, setChecking] = useState(false);
+  const attempt = useRef(0);
+  const busy = useRef(false);
+  const mounted = useRef(true);
+  const pending = useRef<(RegistrationIdentity & { hash: `0x${string}`; sourceId: string; eventConfirmed: boolean }) | null>(null);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+
+  const checkRegistration = async (generation = attempt.current) => {
+    const target = pending.current;
+    if (!target || !publicClient || busy.current) return;
+    busy.current = true;
+    setChecking(true);
+    const current = () => mounted.current && generation === attempt.current && pending.current === target;
+    try {
+      if (!target.eventConfirmed) {
+        setPhase("mining");
+        setStatusMessage("Waiting for a mined registration receipt. Do not resubmit this registration.");
+        const receipt = await publicClient.waitForTransactionReceipt({ hash: target.hash, timeout: 60_000 });
+        if (!current()) return;
+        target.hash = receipt.transactionHash;
+        setPendingTxHash(receipt.transactionHash);
+        if (receipt.status === "reverted") {
+          setPhase("failed"); setStatusMessage("Transaction reverted. This attempt did not register the source."); return;
+        }
+        if (!confirmsRegistration(receipt, target)) {
+          setPhase("failed"); setStatusMessage("Transaction mined without the expected registration event. It may have been cancelled or replaced; this attempt did not confirm registration."); return;
+        }
+        target.eventConfirmed = true;
+        setPhase("indexing");
+        setStatusMessage("Registration confirmed on-chain. Indexing is not yet confirmed; feed ownership is still required before earning.");
+      }
+      // One exact owner-only read per check; never treat elapsed time as indexing evidence.
+      const res = await fetch(`/api/creator/${encodeURIComponent(target.sourceId)}/listing`, { signal: AbortSignal.timeout(10_000) });
+      const data: unknown = res.ok ? await res.json() : null;
+      if (!current()) return;
+      if (confirmsIndex(data, target)) {
+        setPhase("indexed"); setStatusMessage("Registration confirmed and indexed. Verify feed ownership before this source can earn.");
+        onCreated?.();
+      } else {
+        setPhase("indexing"); setStatusMessage("Registration confirmed on-chain. Indexing is not yet confirmed. Check again later; do not resubmit this registration.");
+      }
+    } catch {
+      if (current()) {
+        setPhase(target.eventConfirmed ? "indexing" : "unknown");
+        setStatusMessage(target.eventConfirmed
+          ? "Registration confirmed on-chain; the index could not be checked. Check again later."
+          : "Confirmation could not be established. The transaction may still mine. Check its status; do not resubmit this registration.");
+      }
+    } finally {
+      if (current()) { busy.current = false; setChecking(false); }
+    }
+  };
 
   const submit = async () => {
-    if (loading || isMining) return;
-
+    if (busy.current || pending.current) return;
     const baseBody = {
       ...(prefillWalletAddress ? { walletAddress: prefillWalletAddress } : {}),
       ...(notifyUrl.trim() ? { notifyUrl: notifyUrl.trim() } : {}),
@@ -142,7 +199,12 @@ export function RegisterForm({
       }
     }
 
+    busy.current = true;
+    const generation = ++attempt.current;
+    const current = () => mounted.current && generation === attempt.current;
+    let walletRequestStarted = false;
     setLoading(true);
+    setStatusMessage("");
     try {
       const res = await fetch("/api/sources", {
         method: "POST",
@@ -150,6 +212,7 @@ export function RegisterForm({
         body: JSON.stringify(body),
       });
       const data = await res.json() as Record<string, unknown>;
+      if (!current()) return;
       if (!res.ok) throw new Error((data?.error as string) ?? "Registration failed");
 
       // Webhook secret (when a notify URL was supplied) — shown once on the success card.
@@ -166,9 +229,31 @@ export function RegisterForm({
         // On-chain rows are indexed unverified — surface the feed-ownership proof step.
         setVerification((data.verification as Verification) ?? null);
 
-        toast.loading("Waiting for wallet signature…", { id: "register-tx" });
+        const creator = prefillWalletAddress as `0x${string}` | undefined;
+        setPhase("signing");
+        setCreated({
+          id: returnedSourceId,
+          name: ("name" in body && typeof body.name === "string" ? body.name : undefined)
+            || ("rssUrl" in body && typeof body.rssUrl === "string" ? body.rssUrl : returnedSourceId),
+          walletAddress: params.payoutWallet,
+          fetchPrice: Number(params.fetchPriceUsdc6) / 1_000_000,
+          verified: data.verification ? false : true,
+          authors: params.authors.map(a => ({ name: a.wallet, splitWeight: a.basisPoints / 10_000 })),
+        });
+        if (!creator || walletRef.current.address?.toLowerCase() !== creator.toLowerCase() || walletRef.current.chainId !== 5042002 || !publicClient) {
+          throw new Error("Connect your signed-in creator wallet on Arc Testnet before signing.");
+        }
+        // Initial registration preparation binds payout to the authenticated SIWE session.
+        // A wallet switch does not update that session: never sign its preparation as another creator.
+        if (params.payoutWallet.toLowerCase() !== creator.toLowerCase()) {
+          throw new Error("Sign in again with the connected creator wallet. This prepared registration belongs to another signed-in wallet.");
+        }
+        toast.loading("Waiting for wallet signature...", { id: "register-tx" });
 
+        walletRequestStarted = true;
         const txHash = await writeContractAsync({
+          account: creator,
+          chainId: 5042002,
           address: registryAddress,
           abi: REGISTRY_ABI,
           functionName: "register",
@@ -182,46 +267,24 @@ export function RegisterForm({
           ],
         });
 
+        if (!current()) return;
+        pending.current = { hash: txHash, sourceId: returnedSourceId, registry: registryAddress, creator,
+          onchainId: registrationId(creator, params.urlHash), eventConfirmed: false };
         setPendingTxHash(txHash);
-        toast.loading("Transaction submitted — waiting for confirmation…", { id: "register-tx" });
-
-        // Show a pending success card — the indexer will add the DB row within ≤4s.
-        toast.success("Source registered on-chain!", {
-          id: "register-tx",
-          description: "Your source will appear in the list within a few seconds.",
-        });
-
-        setCreated({
-          id: returnedSourceId,
-          name: ("name" in body && typeof body.name === "string" ? body.name : undefined)
-            || ("rssUrl" in body && typeof body.rssUrl === "string" ? body.rssUrl : returnedSourceId),
-          walletAddress: params.payoutWallet,
-          fetchPrice: parseFloat(fetchPrice) || 0,
-          verified: data.verification ? false : true,
-          authors: params.authors.map((a) => ({
-            name: a.wallet,
-            splitWeight: a.basisPoints / 10_000,
-          })),
-        });
-
-        setRssUrl("");
-        setName("");
-        setDescription("");
-        setNotifyUrl("");
-        onCreated?.();
-        // Trigger a reload after indexer lag (≤4s).
-        setTimeout(() => onCreated?.(), 5_000);
+        setPhase("mining");
+        setStatusMessage("Transaction submitted. Waiting for a mined registration receipt; this source is not confirmed yet.");
+        toast.dismiss("register-tx");
+        busy.current = false;
+        void checkRegistration(generation);
       } else {
+        setPhase("offline");
         // Offline / DB-direct path — source written immediately.
         const source = data.source as CreatedSource;
         setCreated(source);
         setVerification((data.verification as Verification) ?? null);
-        toast.success(
-          source.verified
-            ? `${source.name} is verified — ready to earn.`
-            : `${source.name} is registered — verify feed ownership to start earning.`,
-          { description: "Your source is live in the registry." },
-        );
+        toast.success(`${source.name} saved locally (offline).`, {
+          description: "No on-chain transaction. Feed ownership must be verified before earning.",
+        });
         setRssUrl("");
         setName("");
         setDescription("");
@@ -229,10 +292,18 @@ export function RegisterForm({
         onCreated?.();
       }
     } catch (err) {
+      if (!current()) return;
+      const unknownSubmission = walletRequestStarted && !walletRequestWasRejected(err);
+      setPhase(unknownSubmission ? "unknown" : "failed");
+      setStatusMessage(unknownSubmission
+        ? "The wallet did not return a transaction hash. Submission is unknown; check your wallet history before taking further action. Do not resubmit this registration."
+        : walletRequestStarted
+          ? "Registration was not submitted. The wallet request was rejected."
+          : err instanceof Error ? err.message : "Registration could not be started.");
       toast.dismiss("register-tx");
       toast.error(err instanceof Error ? err.message : "Registration failed");
     } finally {
-      setLoading(false);
+      if (current()) { setLoading(false); if (!pending.current) busy.current = false; }
     }
   };
 
@@ -244,20 +315,34 @@ export function RegisterForm({
         notify={notify}
         gapIntent={gapIntent}
         pendingTxHash={pendingTxHash}
+        phase={phase}
+        statusMessage={statusMessage}
+        checking={checking || loading}
+        onCheck={() => void checkRegistration()}
         onVerified={() => setCreated((c) => (c ? { ...c, verified: true } : c))}
         onAgain={() => {
+          attempt.current++;
+          busy.current = false;
+          pending.current = null;
           setCreated(null);
           setVerification(null);
           setNotify(null);
           setGapIntent(null);
           setPendingTxHash(undefined);
+          setStatusMessage("");
+          setPhase("offline");
+          setRssUrl("");
+          setName("");
+          setUrl("");
+          setDescription("");
+          setNotifyUrl("");
         }}
       />
     );
   }
 
   const price = parseFloat(fetchPrice) || 0;
-  const isSubmitting = loading || isMining;
+  const isSubmitting = loading;
 
   return (
     <div className="border border-ink bg-paper p-7">
@@ -402,9 +487,7 @@ export function RegisterForm({
           ) : (
             <Wallet className="h-4 w-4" />
           )}
-          {isMining
-            ? "Confirming on-chain…"
-            : loading
+          {loading
             ? "Registering…"
             : "Publish source ▸"}
         </button>
@@ -419,6 +502,7 @@ function SuccessCard({
   notify,
   gapIntent,
   pendingTxHash,
+  phase, statusMessage, checking, onCheck,
   onVerified,
   onAgain,
 }: {
@@ -427,6 +511,10 @@ function SuccessCard({
   notify: { url: string; secret: string } | null;
   gapIntent: GapIntentReceipt | null;
   pendingTxHash?: `0x${string}`;
+  phase: RegistrationPhase;
+  statusMessage: string;
+  checking: boolean;
+  onCheck: () => void;
   onVerified: () => void;
   onAgain: () => void;
 }) {
@@ -435,20 +523,26 @@ function SuccessCard({
   return (
     <div className="overflow-hidden border border-ink bg-paper animate-in fade-in zoom-in-95 duration-300">
       <div className="flex items-center gap-2 border-b border-ink bg-paid/[0.08] px-6 py-4">
-        <PartyPopper className="h-5 w-5 text-paid" />
+        {phase === "offline" || phase === "indexed" ? <PartyPopper className="h-5 w-5 text-paid" /> : <Wallet className="h-5 w-5 text-seal" />}
         <span className="font-display text-lg font-medium text-ink">
-          {source.verified ? "Source registered" : "Source listed — verify ownership"}: {source.name}
+          {registrationTitles[phase]}: {source.name}
         </span>
       </div>
       <div className="space-y-4 p-6">
+        {statusMessage && <p role="status" className="text-sm text-ink-2">{statusMessage}</p>}
+        {pendingTxHash && (phase === "unknown" || phase === "indexing") && (
+          <button type="button" disabled={checking} onClick={onCheck} className="text-sm text-seal underline disabled:opacity-60">
+            {checking ? "Checking status..." : "Check registration status"}
+          </button>
+        )}
         {needsVerify && (
-          <VerifyPanel source={source} verification={verification} onVerified={onVerified} />
+          <VerifyPanel source={source} verification={verification} onVerified={onVerified} enabled={phase === "offline" || phase === "indexed"} />
         )}
         {notify && <NotifySecretPanel notify={notify} />}
         {gapIntent && <GapIntentPanel intent={gapIntent} />}
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">
-            Tolls settle to your connected wallet
+            Configured payout wallet
           </p>
           <p className="mt-1.5 break-all rounded-md border border-line bg-paper-2 px-3 py-2 font-mono text-sm text-ink">
             {source.walletAddress}
@@ -477,14 +571,10 @@ function SuccessCard({
             View on ArcScan
           </a>
         )}
-        {pendingTxHash && (
-          <p className="font-mono text-[10px] text-ink-3">
-            The registry indexer will surface your source in the list within a few seconds.
-          </p>
-        )}
         <button
           type="button"
           onClick={onAgain}
+          disabled={checking || phase === "signing" || phase === "mining" || phase === "unknown" || phase === "indexing"}
           className="w-full rounded-md border border-line px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-paper-2"
         >
           Register another source
@@ -566,9 +656,11 @@ function VerifyPanel({
   source,
   verification,
   onVerified,
+  enabled,
 }: {
   source: CreatedSource;
   verification: Verification;
+  enabled: boolean;
   onVerified: () => void;
 }) {
   const [checking, setChecking] = useState(false);
@@ -584,7 +676,7 @@ function VerifyPanel({
   };
 
   const verify = async () => {
-    if (checking) return;
+    if (checking || !enabled) return;
     setChecking(true);
     try {
       const res = await fetch("/api/sources/verify", {
@@ -642,7 +734,7 @@ function VerifyPanel({
           <button
             type="button"
             onClick={verify}
-            disabled={checking}
+            disabled={checking || !enabled}
             className="flex w-full items-center justify-center gap-2 border border-ink bg-paper-2 px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-ink transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
           >
             {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}

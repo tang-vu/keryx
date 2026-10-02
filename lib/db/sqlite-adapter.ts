@@ -1,23 +1,37 @@
+import { installOrdinarySqliteApplicationSchema } from "./sqlite-application-schema";
+import { hasScholarlyRights, assertNoOrphanedPaperMarker } from "./scholarly-capability";
+import type { StorageIdentity } from "./storage-identity";
+import { openEnrolledCacheText, sealEnrolledCacheText } from "../sources/enrolled-content-cache";
+import { publicReferenceSchema, type PublicReference } from "../public-references/catalog";
 /**
  * SQLite adapter using Node's built-in `node:sqlite` (no native compile).
  * The offline-dev datastore; the deployed app uses the Supabase adapter instead.
  */
 
 import { listSqliteWithdrawalHistory, type WithdrawalHistoryCursor } from "./creator-withdrawal-history";
-import { initializeSqliteResearchMonthly, claimSqliteResearchPurchase, createSqliteResearchMonthly, getSqliteResearchMonthly, redeemSqliteResearchMonthly, type MonthlyPurchase, type MonthlyRedemptionInput, type ResearchPurchaseClaim } from "./research-monthly";
-import { confirmSqlitePrivateCreator, getSqlitePrivateCreatorConfirmation, type PrivateCreatorConfirmation, PRIVATE_CREATOR_CONFIRMATIONS_SQL } from "./private-creator-confirmations";
-import { admitSqlitePrivateCreatorSubmission, listSqlitePrivateCreatorSubmissions, type PrivateCreatorSubmission, PRIVATE_CREATOR_SUBMISSIONS_SQL } from "./private-creator-submissions";
-import { saveSqlitePrivateResult, getSqlitePrivateResult, PRIVATE_RESEARCH_RESULTS_SQL } from "./private-research-results";
-import { PRIVATE_TREASURY_CAPACITY_SQL, reserveSqlitePrivateTreasury, getSqlitePrivateTreasury, type PrivateTreasuryPolicy } from "./private-treasury-capacity";
-import { claimSqlitePrivateExecution, getSqlitePrivateExecution, PRIVATE_RESEARCH_EXECUTIONS_SQL } from "./private-research-executions";
+import { claimSqliteResearchPurchase, createSqliteResearchMonthly, getSqliteResearchMonthly, redeemSqliteResearchMonthly, type MonthlyPurchase, type MonthlyRedemptionInput, type ResearchPurchaseClaim } from "./research-monthly";
+import { confirmSqlitePrivateCreator, getSqlitePrivateCreatorConfirmation, type PrivateCreatorConfirmation } from "./private-creator-confirmations";
+import { admitSqlitePrivateCreatorSubmission, listSqlitePrivateCreatorSubmissions, type PrivateCreatorSubmission } from "./private-creator-submissions";
+import { saveSqlitePrivateResult, getSqlitePrivateResult } from "./private-research-results";
+import { reserveSqlitePrivateTreasury, getSqlitePrivateTreasury, type PrivateTreasuryPolicy } from "./private-treasury-capacity";
+import { claimSqlitePrivateExecution, getSqlitePrivateExecution } from "./private-research-executions";
 import { DatabaseSync } from "node:sqlite";
+import { sqliteJournalActive, sqliteJournalTransaction, activateSqliteBrowserJournal, upsertSqliteJournalGrant, admitSqliteBrowserJournal, getSqliteBrowserJournal, transitionSqliteBrowserJournal, signSqliteBrowserJournal, cancelSqlitePreparedJournal, terminalSqliteJournalPayment } from "./sqlite-browser-journal";
+import type { BrowserJournalAdmission, BrowserSignedMetadata } from "./browser-authorization-journal";
+import { admitSqliteBrowserQueryPolicy, admitSqliteBrowserSigningOriginal, readSqliteBrowserSigningSnapshot, readExposedSqliteBrowserSigningSnapshotForSigner, signSqliteBrowserSigningOriginal } from "./sqlite-browser-signing-originals";
+import { admitSqliteBrowserSourceSigningOriginal } from "./sqlite-browser-source-context";
+import { createBrowserOriginalSourceAuthority } from "../payments/browser-original-source-authority";
+import type { BrowserQueryPolicyProof } from "../payments/browser-query-policy";
+import type { BrowserOriginalAdmission } from "./browser-signing-originals";
+import { claimSqliteSourceUpkeep, finishSqliteSourceUpkeep, type SourceUpkeepClaim, type SourceUpkeepSummary } from "./source-upkeep";
+import { prepareBrowserAuthorizationIntent, type BrowserAuthorizationIntent, type BrowserAdmissionResult } from "./browser-authorization-admission";
 import { recordSqliteWithdrawal } from "./withdrawal-records";
-import { CREATOR_WITHDRAWAL_REQUESTS_SQL, reserveSqliteWithdrawalRequest, getSqliteWithdrawalRequest, claimSqliteWithdrawalTransfer, getSqliteWithdrawalTransferClaim } from "./creator-withdrawal-requests";
+import { reserveSqliteWithdrawalRequest, getSqliteWithdrawalRequest, claimSqliteWithdrawalTransfer, getSqliteWithdrawalTransferClaim } from "./creator-withdrawal-requests";
 import type { WithdrawalRequestRecord } from "../gateway/withdrawal-request";
-import { CREATOR_WITHDRAWAL_ATTESTATIONS_SQL, saveSqliteWithdrawalAttestation, getSqliteWithdrawalAttestation } from "./creator-withdrawal-attestations";
+import { saveSqliteWithdrawalAttestation, getSqliteWithdrawalAttestation } from "./creator-withdrawal-attestations";
 import { getSqlitePrivateTreasurySummary } from "./private-treasury-summary";
-import { PRIVATE_TREASURY_RELEASE_SQL, releaseSqlitePrivateTreasury } from "./private-treasury-release";
-import { PRIVATE_RESEARCH_INTERRUPTION_SQL, getSqlitePrivateInterruption, interruptSqlitePrivateResearch } from "./private-research-interruptions";
+import { releaseSqlitePrivateTreasury } from "./private-treasury-release";
+import { getSqlitePrivateInterruption, interruptSqlitePrivateResearch } from "./private-research-interruptions";
 import { listSqlitePrivateWorkerCandidates, listSqlitePrivateReconciliationCandidates } from "./private-worker-candidates";
 import fs from "node:fs";
 import path from "node:path";
@@ -54,8 +68,8 @@ import type { LedgerAccount } from "../gateway/settlement-parity";
 import type { A2aOrder, A2aOrderResolutionUpdate } from "../a2a/order";
 import type { PrivateResearchIntent } from "../a2a/private-research-intent";
 import type { PrivatePaymentConfirmation } from "../a2a/private-payment-state";
-import { PRIVATE_RESEARCH_PAYMENTS_SQL, claimSqlitePrivatePayment, getSqlitePrivatePayment, confirmSqlitePrivatePayment } from "./private-research-payments";
-import { PRIVATE_RESEARCH_INTENTS_SQL, getSqlitePrivateResearchIntent, reserveSqlitePrivateResearchIntent, listSqlitePrivateResearchHistory, type PrivateHistoryCursor } from "./private-research-intents";
+import { claimSqlitePrivatePayment, getSqlitePrivatePayment, confirmSqlitePrivatePayment } from "./private-research-payments";
+import { getSqlitePrivateResearchIntent, reserveSqlitePrivateResearchIntent, listSqlitePrivateResearchHistory, type PrivateHistoryCursor } from "./private-research-intents";
 import {
   summarizeA2aOperations,
   type A2aOperationsRow,
@@ -83,263 +97,23 @@ import {
 } from "../economics/testnet-economics";
 import { activationWindow, emptyActivationCounts } from "../activation";
 
-const SCHEMA = `
-CREATE TABLE IF NOT EXISTS sources (
-  id TEXT PRIMARY KEY, name TEXT, url TEXT, description TEXT, rss_url TEXT,
-  wallet_address TEXT, fetch_price REAL, tags TEXT, authors TEXT, created_at TEXT,
-  ipfs_cid TEXT,
-  active INTEGER NOT NULL DEFAULT 1,
-  onchain_id TEXT,
-  register_tx TEXT,
-  verified INTEGER NOT NULL DEFAULT 1,
-  preview_depth TEXT
-);
-CREATE TABLE IF NOT EXISTS source_meta (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL DEFAULT '',
-  description TEXT NOT NULL DEFAULT '',
-  url TEXT NOT NULL DEFAULT '',
-  rss_url TEXT,
-  updated_at TEXT
-);
-CREATE TABLE IF NOT EXISTS source_notify (
-  source_id  TEXT PRIMARY KEY,
-  notify_url TEXT NOT NULL,
-  secret     TEXT NOT NULL,
-  updated_at TEXT
-);
-CREATE TABLE IF NOT EXISTS source_notify_email (
-  source_id    TEXT PRIMARY KEY,
-  email        TEXT NOT NULL,
-  unsub_token  TEXT NOT NULL,
-  last_sent_at TEXT,
-  updated_at   TEXT
-);
-CREATE TABLE IF NOT EXISTS sync_state (
-  key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT
-);
-CREATE TABLE IF NOT EXISTS source_items (
-  id TEXT PRIMARY KEY, source_id TEXT, title TEXT, summary TEXT, content TEXT,
-  link TEXT, published_at TEXT,
-  ipfs_cid TEXT, item_key_enc TEXT, item_iv TEXT, item_auth_tag TEXT, item_wrap_iv TEXT,
-  delivery_kind TEXT, storage_mode TEXT, plaintext_bytes INTEGER, body_hash TEXT,
-  manifest_id TEXT, manifest_signer TEXT, manifest_nonce TEXT, manifest_signature TEXT,
-  manifest_created_at TEXT
-);
--- Every read of this table is "one source, newest first" — discovery, the freshness counts, and the
--- ingest dedupe pass. Safe to declare beside the table: both columns are original, so this is not a
--- no-op-plus-failure on a database that predates a later ALTER (cf. query_runs).
-CREATE INDEX IF NOT EXISTS source_items_source_published ON source_items(source_id, published_at);
-CREATE TABLE IF NOT EXISTS article_offers (
-  source_id TEXT NOT NULL,
-  item_id TEXT NOT NULL,
-  id TEXT NOT NULL UNIQUE,
-  content_version TEXT NOT NULL,
-  price_usdc6 INTEGER NOT NULL,
-  expires_at INTEGER NOT NULL,
-  signer TEXT NOT NULL,
-  nonce TEXT NOT NULL,
-  signature TEXT NOT NULL,
-  created_at TEXT NOT NULL,
-  PRIMARY KEY (source_id, item_id)
-);
-CREATE INDEX IF NOT EXISTS article_offers_expires ON article_offers(expires_at);
-CREATE TABLE IF NOT EXISTS gap_intents (
-  id TEXT PRIMARY KEY,
-  gap_id TEXT NOT NULL,
-  claim TEXT NOT NULL,
-  question TEXT NOT NULL,
-  failed_query_id TEXT NOT NULL,
-  source_id TEXT NOT NULL,
-  source_item_link TEXT NOT NULL DEFAULT '',
-  item_id TEXT,
-  content_version TEXT,
-  article_offer_id TEXT,
-  owner_wallet TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'pending',
-  attempts INTEGER NOT NULL DEFAULT 0,
-  lease_expires_at INTEGER,
-  retry_run_id TEXT,
-  coverage REAL,
-  reward_usdc REAL,
-  last_error TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-CREATE UNIQUE INDEX IF NOT EXISTS gap_intents_offer
-  ON gap_intents(gap_id, source_id, source_item_link);
-CREATE INDEX IF NOT EXISTS gap_intents_queue
-  ON gap_intents(status, created_at);
-CREATE TABLE IF NOT EXISTS cache_items (
-  source_id TEXT PRIMARY KEY, text TEXT, updated_at TEXT
-);
-CREATE TABLE IF NOT EXISTS payment_events (
-  id TEXT PRIMARY KEY, created_at TEXT, kind TEXT, query_id TEXT, source_id TEXT,
-  source_name TEXT, payer TEXT, payee TEXT, amount_usdc REAL, weight REAL,
-  rationale TEXT, tx_hash TEXT, network TEXT, settled INTEGER,
-  settlement_status TEXT NOT NULL DEFAULT 'simulated', authorization_id TEXT,
-  authorization_expires_at TEXT, grant_epoch TEXT,
-  item_id TEXT, item_title TEXT, item_url TEXT, content_version TEXT, item_published_at TEXT,
-  offer_id TEXT, list_price_usdc REAL
-);
-CREATE TABLE IF NOT EXISTS query_runs (
-  id TEXT PRIMARY KEY, created_at TEXT, question TEXT, budget REAL, engine TEXT,
-  total_spent REAL, total_to_creators REAL, answer TEXT, data TEXT,
-  parent_id TEXT,                       -- the dispatch this one follows up on
-  asker TEXT,                           -- lowercased wallet that dispatched it (SIWE-verified)
-  origin TEXT,                          -- engine | web | a2a | mcp
-  mcp_client TEXT,                      -- self-declared setup channel; telemetry only
-  duration_ms INTEGER,
-  payment_mode TEXT,
-  payment_attempts INTEGER,
-  settled_payments INTEGER,
-  confidence_level TEXT,
-  evidence_claim_count INTEGER,
-  grounded_claim_count INTEGER,
-  rewarded_citation_count INTEGER,
-  economics_data TEXT
-);
-CREATE TABLE IF NOT EXISTS a2a_orders (
-  id TEXT PRIMARY KEY,
-  query_id TEXT NOT NULL UNIQUE,
-  authorization_id TEXT NOT NULL,
-  request_hash TEXT NOT NULL,
-  payer TEXT NOT NULL,
-  payee TEXT NOT NULL,
-  amount_usdc REAL NOT NULL,
-  creator_budget_usdc REAL NOT NULL,
-  service_fee_usdc REAL NOT NULL,
-  research_mode TEXT NOT NULL,
-  package_data TEXT,
-  status TEXT NOT NULL CHECK (status IN ('running','completed','failed')),
-  transaction_id TEXT NOT NULL,
-  request_data TEXT,
-  started_at TEXT,
-  worker_id TEXT,
-  execution_journal_version INTEGER,
-  payment_started_at TEXT,
-  result_saving_at TEXT,
-  response_data TEXT,
-  error_code TEXT,
-  resolution_data TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS a2a_orders_payer_history ON a2a_orders(LOWER(payer), created_at DESC, id DESC);
-CREATE TABLE IF NOT EXISTS activation_events (
-  day TEXT NOT NULL,
-  event TEXT NOT NULL CHECK (event IN (
-    'reader_landing','reader_ask_started','reader_answer_completed',
-    'reader_wallet_connected','reader_session_funded','reader_returning_dispatch',
-    'creator_registration_started','creator_verification_completed',
-    'creator_citation_settled','creator_withdrawal_completed'
-  )),
-  count INTEGER NOT NULL DEFAULT 0 CHECK (count >= 0),
-  PRIMARY KEY (day, event)
-);
-CREATE INDEX IF NOT EXISTS activation_events_day ON activation_events(day);
--- No index on parent_id here: CREATE TABLE IF NOT EXISTS is a no-op against a database that
--- predates the column, so an index naming it would fail at boot on exactly the databases that
--- carry the real traction. ensureColumns() adds the column first, then the index.
-CREATE TABLE IF NOT EXISTS withdrawals (
-  tx_hash TEXT PRIMARY KEY, created_at TEXT, label TEXT, source_name TEXT,
-  wallet TEXT, recipient TEXT, amount_usdc REAL, network TEXT
-);
-CREATE TABLE IF NOT EXISTS api_keys (
-  id          TEXT PRIMARY KEY,
-  prefix      TEXT NOT NULL UNIQUE,
-  key_hash    TEXT NOT NULL,
-  wallet      TEXT NOT NULL,
-  label       TEXT,
-  created_at  TEXT NOT NULL,
-  last_used_at TEXT,
-  revoked_at  TEXT,
-  scopes      TEXT,
-  source_ids  TEXT
-);
-CREATE INDEX IF NOT EXISTS api_keys_prefix ON api_keys(prefix);
-CREATE INDEX IF NOT EXISTS api_keys_wallet ON api_keys(wallet);
-CREATE TABLE IF NOT EXISTS api_key_usage (
-  key_id     TEXT NOT NULL,
-  day        TEXT NOT NULL,
-  call_count INTEGER NOT NULL DEFAULT 0,
-  PRIMARY KEY (key_id, day)
-);
-CREATE TABLE IF NOT EXISTS users (
-  wallet_address TEXT PRIMARY KEY,   -- lowercased; identity = wallet
-  role           TEXT NOT NULL,      -- role snapshot at last sign-in (display only)
-  display_handle TEXT NOT NULL,      -- compact "0x….." handle
-  first_seen_at  TEXT NOT NULL,
-  last_seen_at   TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS answer_feedback (
-  id         TEXT PRIMARY KEY,
-  query_id   TEXT NOT NULL,
-  rating     TEXT NOT NULL,          -- 'up' or 'down'
-  comment    TEXT,
-  created_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS answer_feedback_query ON answer_feedback(query_id);
-CREATE TABLE IF NOT EXISTS query_memories (
-  id            TEXT PRIMARY KEY,
-  source_scores TEXT NOT NULL,          -- JSON: { sourceId: { name, weight, reward } } — cited only
-  sources_read  TEXT,                   -- JSON: string[] — every source the run read, cited or not
-  topics        TEXT NOT NULL,          -- JSON: string[]
-  created_at    TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS session_grants (
-  session_id TEXT PRIMARY KEY,          -- lowercased SIWE address; one active grant per wallet
-  sess_addr  TEXT NOT NULL,             -- session EOA (public address only — never its key)
-  owner_addr TEXT NOT NULL,
-  cap        REAL NOT NULL,             -- USDC ceiling, clamped to the real Gateway balance
-  spent      REAL NOT NULL DEFAULT 0,
-  expiry     INTEGER NOT NULL,          -- unix ms
-  tx_hash    TEXT NOT NULL,
-  grant_epoch TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS session_grants_expiry ON session_grants(expiry);
-CREATE TABLE IF NOT EXISTS rate_limit_counters (
-  bucket   TEXT PRIMARY KEY,           -- "<tier>:<key>", e.g. "treasuryAsk:1.2.3.4"
-  count    INTEGER NOT NULL,           -- points spent in the current window
-  reset_at INTEGER NOT NULL            -- unix ms the window closes
-);
-CREATE INDEX IF NOT EXISTS rate_limit_counters_reset ON rate_limit_counters(reset_at);
-CREATE TABLE IF NOT EXISTS reasoning_circuits (
-  key         TEXT PRIMARY KEY,
-  failures    INTEGER NOT NULL,
-  open_until  INTEGER NOT NULL,
-  probe_until INTEGER NOT NULL,
-  updated_at  INTEGER NOT NULL
-);
-CREATE TABLE IF NOT EXISTS auth_challenges (
-  hash TEXT PRIMARY KEY CHECK(length(hash) = 64 AND hash NOT GLOB '*[^a-f0-9]*'),
-  issued_at INTEGER NOT NULL CHECK(issued_at >= 0),
-  expires_at INTEGER NOT NULL CHECK(expires_at > issued_at AND expires_at <= issued_at + 300000)
-);
-CREATE INDEX IF NOT EXISTS auth_challenges_expiry ON auth_challenges(expires_at);
-CREATE TABLE IF NOT EXISTS web_sessions (
-  hash TEXT PRIMARY KEY CHECK(length(hash) = 64 AND hash NOT GLOB '*[^a-f0-9]*'),
-  wallet TEXT NOT NULL CHECK(length(wallet) = 42 AND substr(wallet,1,2) = '0x' AND substr(wallet,3) NOT GLOB '*[^a-f0-9]*'),
-  issued_at INTEGER NOT NULL CHECK(issued_at >= 0),
-  expires_at INTEGER NOT NULL CHECK(expires_at > issued_at AND expires_at <= issued_at + 604800000)
-);
-CREATE INDEX IF NOT EXISTS web_sessions_expiry ON web_sessions(expires_at);
-CREATE INDEX IF NOT EXISTS web_sessions_wallet ON web_sessions(wallet, expires_at);
-${PRIVATE_RESEARCH_INTENTS_SQL}
-${PRIVATE_TREASURY_CAPACITY_SQL}
-${PRIVATE_RESEARCH_PAYMENTS_SQL}
-${PRIVATE_RESEARCH_EXECUTIONS_SQL}
-${PRIVATE_RESEARCH_RESULTS_SQL}
-${PRIVATE_CREATOR_SUBMISSIONS_SQL}
-${PRIVATE_CREATOR_CONFIRMATIONS_SQL}
-${PRIVATE_TREASURY_RELEASE_SQL}
-${PRIVATE_RESEARCH_INTERRUPTION_SQL}
-${CREATOR_WITHDRAWAL_REQUESTS_SQL}
-${CREATOR_WITHDRAWAL_ATTESTATIONS_SQL}
-`;
+
 
 export class SqliteAdapter implements KeryxDB {
   private db: DatabaseSync;
+  private enrolledMode?: StorageIdentity["authorityMode"];
+  private enrolledIdentity?: Readonly<StorageIdentity>;
+  private enrolledGuard?: () => void;
+
+  /** Core assembly only: the caller owns the connection; this issues no runtime provenance. */
+  static assembleConnectionCore(db: DatabaseSync, identity: Readonly<StorageIdentity>, guard: () => void): SqliteAdapter {
+    const adapter = Object.create(SqliteAdapter.prototype) as SqliteAdapter;
+    adapter.db = db;
+    adapter.enrolledMode = identity.authorityMode;
+    adapter.enrolledIdentity = identity;
+    adapter.enrolledGuard = guard;
+    return adapter;
+  }
 
   constructor(file?: string, options: { readOnly?: boolean } = {}) {
     const dbPath = file ?? path.resolve(process.cwd(), "data", "keryx.sqlite");
@@ -354,11 +128,34 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async init(): Promise<void> {
+    if (this.enrolledMode) {
+      this.enrolledGuard!();
+      if (this.enrolledMode === "testnet-real" && !hasContentKey())
+        throw new Error("Enrolled content cache key unavailable");
+      this.db.exec("BEGIN");
+      try {
+        const size = this.db.prepare(`SELECT count(*) AS rows,
+          COALESCE(sum(length(CAST(text AS BLOB))),0) AS bytes,
+          COALESCE(max(CASE WHEN typeof(text)!='text' OR typeof(source_id)!='text'
+            OR length(CAST(source_id AS BLOB))>512 OR length(CAST(text AS BLOB))>2097152
+            THEN 1 ELSE 0 END),0) AS oversized FROM cache_items WHERE text IS NOT NULL`).get();
+        if (!size || Number(size.rows) > 512 || Number(size.bytes) > 8 * 1024 * 1024 || size.oversized !== 0)
+          throw new Error("Enrolled cache inspection limit exceeded");
+        const rows = this.db.prepare("SELECT source_id,text FROM cache_items WHERE text IS NOT NULL").all();
+        for (const row of rows) {
+          if (typeof row.source_id !== "string") throw new Error("Enrolled content cache unavailable");
+          openEnrolledCacheText(row.text as string, row.source_id, this.enrolledIdentity!);
+        }
+        this.db.exec("COMMIT");
+      } catch (error) {
+        this.db.exec("ROLLBACK");
+        throw error;
+      }
+      return;
+    }
     // WAL + busy timeout so the dev server and CLI can share the file safely.
-    this.db.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");
-    this.db.exec(SCHEMA);
-    this.ensureColumns();
-    initializeSqliteResearchMonthly(this.db);
+    this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;");
+    installOrdinarySqliteApplicationSchema(this.db);
     // Releases before 2026-08-22 keyed two authenticated routes by the raw `kx_live_...` bearer
     // value before verification. Remove those legacy counters during every startup so the live DB
     // and every restored snapshot converge back to the documented hash-only secret invariant.
@@ -389,267 +186,10 @@ export class SqliteAdapter implements KeryxDB {
     }
   }
 
-  /**
-   * Add columns introduced after a database was first created. `CREATE TABLE IF NOT EXISTS`
-   * never alters an existing table, so databases that predate the `ipfs_cid` / `active`
-   * columns (the local dev DB and the live VPS DB carrying real traction) would otherwise
-   * throw "no such column" on listSources/upsert. These ALTERs are idempotent — guarded by
-   * the current column set so a fresh DB (where SCHEMA already created them) is untouched.
-   */
-  private ensureColumns(): void {
-    // sources table backfill
-    const srcCols = new Set(
-      (this.db.prepare(`PRAGMA table_info(sources)`).all() as { name: string }[]).map(
-        (c) => c.name,
-      ),
-    );
-    if (!srcCols.has("ipfs_cid")) this.db.exec(`ALTER TABLE sources ADD COLUMN ipfs_cid TEXT`);
-    if (!srcCols.has("active"))
-      this.db.exec(`ALTER TABLE sources ADD COLUMN active INTEGER NOT NULL DEFAULT 1`);
-    // On-chain provenance columns: filled when a curated source is registered on SourceRegistry.
-    if (!srcCols.has("onchain_id")) this.db.exec(`ALTER TABLE sources ADD COLUMN onchain_id TEXT`);
-    if (!srcCols.has("register_tx")) this.db.exec(`ALTER TABLE sources ADD COLUMN register_tx TEXT`);
-    // Feed-ownership gate. DEFAULT 1 grandfathers every pre-existing row (operator-curated seed +
-    // the live VPS traction rows) as verified. Only public web
-    // submissions registered after this column exists start unverified (set explicitly to 0).
-    if (!srcCols.has("verified"))
-      this.db.exec(`ALTER TABLE sources ADD COLUMN verified INTEGER NOT NULL DEFAULT 1`);
-    // Preview depth: NULL grandfathers every existing row as "full" (rowToSource maps it).
-    if (!srcCols.has("preview_depth")) this.db.exec(`ALTER TABLE sources ADD COLUMN preview_depth TEXT`);
-
-    // source_meta.rss_url: the feed an on-chain registrant listed. The indexer has nowhere else to
-    // learn it, and /api/sources/verify needs it to check the right document for the ownership token.
-    const metaCols = new Set(
-      (this.db.prepare(`PRAGMA table_info(source_meta)`).all() as { name: string }[]).map(
-        (c) => c.name,
-      ),
-    );
-    if (!metaCols.has("rss_url")) this.db.exec(`ALTER TABLE source_meta ADD COLUMN rss_url TEXT`);
-
-    // Explicit payment state: historical settled rows had Circle evidence; historical false rows
-    // were offline simulations. New browser co-sign ambiguity is always written as `pending`.
-    const paymentCols = new Set(
-      (this.db.prepare(`PRAGMA table_info(payment_events)`).all() as { name: string }[]).map(
-        (c) => c.name,
-      ),
-    );
-    if (!paymentCols.has("origin")) {
-      this.db.exec(`ALTER TABLE payment_events ADD COLUMN origin TEXT`);
-      this.db.exec(`UPDATE payment_events SET origin='engine' WHERE origin IS NULL`);
-    }
-    if (!paymentCols.has("settlement_status")) {
-      this.db.exec(
-        `ALTER TABLE payment_events ADD COLUMN settlement_status TEXT NOT NULL DEFAULT 'simulated'`,
-      );
-      this.db.exec(
-        `UPDATE payment_events SET settlement_status=CASE WHEN settled=1 THEN 'settled' ELSE 'simulated' END`,
-      );
-    }
-    if (!paymentCols.has("authorization_id")) {
-      this.db.exec(`ALTER TABLE payment_events ADD COLUMN authorization_id TEXT`);
-    }
-    if (!paymentCols.has("authorization_expires_at")) {
-      this.db.exec(`ALTER TABLE payment_events ADD COLUMN authorization_expires_at TEXT`);
-    }
-    if (!paymentCols.has("grant_epoch")) {
-      this.db.exec(`ALTER TABLE payment_events ADD COLUMN grant_epoch TEXT`);
-    }
-    for (const column of [
-      "item_id",
-      "item_title",
-      "item_url",
-      "content_version",
-      "item_published_at",
-    ]) {
-      if (!paymentCols.has(column)) {
-        this.db.exec(`ALTER TABLE payment_events ADD COLUMN ${column} TEXT`);
-      }
-    }
-    if (!paymentCols.has("offer_id")) {
-      this.db.exec(`ALTER TABLE payment_events ADD COLUMN offer_id TEXT`);
-    }
-    if (!paymentCols.has("list_price_usdc")) {
-      this.db.exec(`ALTER TABLE payment_events ADD COLUMN list_price_usdc REAL`);
-    }
-    this.db.exec(
-      `CREATE INDEX IF NOT EXISTS payment_events_pending
-         ON payment_events(created_at DESC) WHERE settlement_status='pending'`,
-    );
-
-    const grantCols = new Set(
-      (this.db.prepare(`PRAGMA table_info(session_grants)`).all() as { name: string }[]).map(
-        (c) => c.name,
-      ),
-    );
-    if (!grantCols.has("grant_epoch")) {
-      this.db.exec(`ALTER TABLE session_grants ADD COLUMN grant_epoch TEXT`);
-      // Existing grants predate generation-bound releases. Give each a unique legacy generation;
-      // old pending payments have no epoch and therefore cannot release against it.
-      this.db.exec(
-        `UPDATE session_grants SET grant_epoch=lower(hex(randomblob(16))) WHERE grant_epoch IS NULL`,
-      );
-    }
-
-    // api_keys scope columns. NULL on every pre-existing key and read as "all scopes, all owned
-    // sources" — narrowing a key that already works in someone's integration would break it.
-    const keyCols = new Set(
-      (this.db.prepare(`PRAGMA table_info(api_keys)`).all() as { name: string }[]).map(
-        (c) => c.name,
-      ),
-    );
-    if (!keyCols.has("scopes")) this.db.exec(`ALTER TABLE api_keys ADD COLUMN scopes TEXT`);
-    if (!keyCols.has("source_ids")) this.db.exec(`ALTER TABLE api_keys ADD COLUMN source_ids TEXT`);
-
-    // query_runs.parent_id: NULL on every existing dispatch, which is correct — they were all
-    // asked standalone. Indexed so a permalink can list its follow-ups without scanning the log.
-    const runCols = new Set(
-      (this.db.prepare(`PRAGMA table_info(query_runs)`).all() as { name: string }[]).map(
-        (c) => c.name,
-      ),
-    );
-    if (!runCols.has("parent_id")) this.db.exec(`ALTER TABLE query_runs ADD COLUMN parent_id TEXT`);
-    // query_runs.asker: NULL on every dispatch that predates attribution, and on every anonymous,
-    // engine, or A2A run — none of those has a signed-in wallet, so they belong to no one's ledger.
-    if (!runCols.has("asker")) this.db.exec(`ALTER TABLE query_runs ADD COLUMN asker TEXT`);
-    if (!runCols.has("origin")) {
-      this.db.exec(`ALTER TABLE query_runs ADD COLUMN origin TEXT`);
-      const hasPaymentOrigin = (
-        this.db.prepare(`PRAGMA table_info(payment_events)`).all() as { name: string }[]
-      ).some((c) => c.name === "origin");
-      if (!hasPaymentOrigin) {
-        this.db.exec(`ALTER TABLE payment_events ADD COLUMN origin TEXT`);
-        this.db.exec(`UPDATE payment_events SET origin='engine' WHERE origin IS NULL`);
-      }
-      // Historical external rows can be proven from their payment ledger. A zero-payment legacy
-      // run has no trustworthy provenance and therefore remains internal.
-      this.db.exec(`
-        UPDATE query_runs
-           SET origin = CASE
-             WHEN EXISTS (
-               SELECT 1 FROM payment_events p
-                WHERE p.query_id=query_runs.id AND p.origin='a2a'
-             ) THEN 'a2a'
-             WHEN EXISTS (
-               SELECT 1 FROM payment_events p
-                WHERE p.query_id=query_runs.id AND p.origin='web'
-             ) THEN 'web'
-             ELSE 'engine'
-           END
-         WHERE origin IS NULL
-      `);
-    }
-    if (!runCols.has("duration_ms"))
-      this.db.exec(`ALTER TABLE query_runs ADD COLUMN duration_ms INTEGER`);
-    if (!runCols.has("payment_mode"))
-      this.db.exec(`ALTER TABLE query_runs ADD COLUMN payment_mode TEXT`);
-    if (!runCols.has("payment_attempts"))
-      this.db.exec(`ALTER TABLE query_runs ADD COLUMN payment_attempts INTEGER`);
-    if (!runCols.has("settled_payments"))
-      this.db.exec(`ALTER TABLE query_runs ADD COLUMN settled_payments INTEGER`);
-    if (!runCols.has("confidence_level"))
-      this.db.exec(`ALTER TABLE query_runs ADD COLUMN confidence_level TEXT`);
-    if (!runCols.has("mcp_client"))
-      this.db.exec(`ALTER TABLE query_runs ADD COLUMN mcp_client TEXT`);
-    if (!runCols.has("evidence_claim_count"))
-      this.db.exec(`ALTER TABLE query_runs ADD COLUMN evidence_claim_count INTEGER`);
-    if (!runCols.has("grounded_claim_count"))
-      this.db.exec(`ALTER TABLE query_runs ADD COLUMN grounded_claim_count INTEGER`);
-    if (!runCols.has("rewarded_citation_count"))
-      this.db.exec(`ALTER TABLE query_runs ADD COLUMN rewarded_citation_count INTEGER`);
-    if (!runCols.has("economics_data"))
-      this.db.exec(`ALTER TABLE query_runs ADD COLUMN economics_data TEXT`);
-    // Unconditional: the columns are guaranteed present by the lines above (or by the CREATE TABLE
-    // on a fresh database), and both paths need the indexes.
-    this.db.exec(`CREATE INDEX IF NOT EXISTS query_runs_parent ON query_runs(parent_id)`);
-    this.db.exec(`CREATE INDEX IF NOT EXISTS query_runs_asker ON query_runs(asker, created_at)`);
-    this.db.exec(`CREATE INDEX IF NOT EXISTS query_runs_origin ON query_runs(origin, created_at)`);
-    this.db.exec(
-      `CREATE INDEX IF NOT EXISTS query_runs_mcp_client ON query_runs(mcp_client, created_at)`,
-    );
-
-    // query_memories.sources_read: NULL on every entry written before the agent recorded what it
-    // read. Those entries can prove a citation happened but never that a source was read and passed
-    // over, so scoring skips them rather than reading a missing list as an empty one.
-    const memCols = new Set(
-      (this.db.prepare(`PRAGMA table_info(query_memories)`).all() as { name: string }[]).map(
-        (c) => c.name,
-      ),
-    );
-    if (!memCols.has("sources_read")) {
-      this.db.exec(`ALTER TABLE query_memories ADD COLUMN sources_read TEXT`);
-    }
-
-    // source_items table: encrypted-content columns added in Phase 04.
-    // Existing rows have NULL for these; produce() falls back to DB plaintext content.
-    const itemCols = new Set(
-      (this.db.prepare(`PRAGMA table_info(source_items)`).all() as { name: string }[]).map(
-        (c) => c.name,
-      ),
-    );
-    if (!itemCols.has("ipfs_cid")) this.db.exec(`ALTER TABLE source_items ADD COLUMN ipfs_cid TEXT`);
-    if (!itemCols.has("item_key_enc")) this.db.exec(`ALTER TABLE source_items ADD COLUMN item_key_enc TEXT`);
-    if (!itemCols.has("item_iv")) this.db.exec(`ALTER TABLE source_items ADD COLUMN item_iv TEXT`);
-    if (!itemCols.has("item_auth_tag")) this.db.exec(`ALTER TABLE source_items ADD COLUMN item_auth_tag TEXT`);
-    if (!itemCols.has("item_wrap_iv")) this.db.exec(`ALTER TABLE source_items ADD COLUMN item_wrap_iv TEXT`);
-    if (!itemCols.has("delivery_kind")) this.db.exec(`ALTER TABLE source_items ADD COLUMN delivery_kind TEXT`);
-    if (!itemCols.has("storage_mode")) this.db.exec(`ALTER TABLE source_items ADD COLUMN storage_mode TEXT`);
-    if (!itemCols.has("plaintext_bytes")) this.db.exec(`ALTER TABLE source_items ADD COLUMN plaintext_bytes INTEGER`);
-    if (!itemCols.has("body_hash")) this.db.exec(`ALTER TABLE source_items ADD COLUMN body_hash TEXT`);
-    if (!itemCols.has("manifest_id")) this.db.exec(`ALTER TABLE source_items ADD COLUMN manifest_id TEXT`);
-    if (!itemCols.has("manifest_signer")) this.db.exec(`ALTER TABLE source_items ADD COLUMN manifest_signer TEXT`);
-    if (!itemCols.has("manifest_nonce")) this.db.exec(`ALTER TABLE source_items ADD COLUMN manifest_nonce TEXT`);
-    if (!itemCols.has("manifest_signature")) this.db.exec(`ALTER TABLE source_items ADD COLUMN manifest_signature TEXT`);
-    if (!itemCols.has("manifest_created_at")) this.db.exec(`ALTER TABLE source_items ADD COLUMN manifest_created_at TEXT`);
-
-    // Exact wanted-response identity. Legacy rows remain NULL and retain their generic retry.
-    const gapCols = new Set(
-      (this.db.prepare(`PRAGMA table_info(gap_intents)`).all() as { name: string }[]).map(
-        (c) => c.name,
-      ),
-    );
-    if (!gapCols.has("item_id")) this.db.exec(`ALTER TABLE gap_intents ADD COLUMN item_id TEXT`);
-    if (!gapCols.has("content_version"))
-      this.db.exec(`ALTER TABLE gap_intents ADD COLUMN content_version TEXT`);
-    if (!gapCols.has("article_offer_id"))
-      this.db.exec(`ALTER TABLE gap_intents ADD COLUMN article_offer_id TEXT`);
-
-    // Durable async A2A jobs. Existing `running` rows may already have spent creator funds, so
-    // migration marks them started and the new worker can never claim them automatically.
-    const a2aCols = new Set(
-      (this.db.prepare(`PRAGMA table_info(a2a_orders)`).all() as { name: string }[]).map(
-        (c) => c.name,
-      ),
-    );
-    const hadStartedAt = a2aCols.has("started_at");
-    if (!a2aCols.has("request_data"))
-      this.db.exec(`ALTER TABLE a2a_orders ADD COLUMN request_data TEXT`);
-    if (!hadStartedAt) this.db.exec(`ALTER TABLE a2a_orders ADD COLUMN started_at TEXT`);
-    if (!a2aCols.has("worker_id"))
-      this.db.exec(`ALTER TABLE a2a_orders ADD COLUMN worker_id TEXT`);
-    if (!a2aCols.has("resolution_data"))
-      this.db.exec(`ALTER TABLE a2a_orders ADD COLUMN resolution_data TEXT`);
-    if (!a2aCols.has("execution_journal_version"))
-      this.db.exec(`ALTER TABLE a2a_orders ADD COLUMN execution_journal_version INTEGER`);
-    if (!a2aCols.has("payment_started_at"))
-      this.db.exec(`ALTER TABLE a2a_orders ADD COLUMN payment_started_at TEXT`);
-    if (!a2aCols.has("result_saving_at"))
-      this.db.exec(`ALTER TABLE a2a_orders ADD COLUMN result_saving_at TEXT`);
-    if (!a2aCols.has("package_data"))
-      this.db.exec(`ALTER TABLE a2a_orders ADD COLUMN package_data TEXT`);
-    if (!hadStartedAt) {
-      this.db.exec(
-        `UPDATE a2a_orders SET started_at=updated_at,worker_id=COALESCE(worker_id,'legacy')
-         WHERE status='running'`,
-      );
-    }
-    this.db.exec(
-      `CREATE INDEX IF NOT EXISTS a2a_orders_queued
-       ON a2a_orders(created_at) WHERE status='running' AND started_at IS NULL`,
-    );
-
-  }
-
   async upsertSource(s: Source): Promise<void> {
+    if (s.scholarlyEnrolled && (this.enrolledIdentity || !hasScholarlyRights(this.db) || !this.db.prepare("SELECT 1 FROM scholarly_enrollments WHERE source_id=?").get(s.id)))
+      throw new Error("Marked scholarly sources require the original persisted rights history; standalone catalog import is refused");
+    if (s.id.startsWith("public:")) throw new Error("Reserved public-reference source ID");
     // active/verified default to 1 (true) for offline/DB-direct rows that predate the flags.
     const activeInt = s.active === false ? 0 : 1;
     const verifiedInt = s.verified === false ? 0 : 1;
@@ -689,6 +229,20 @@ export class SqliteAdapter implements KeryxDB {
     this.db.prepare(`UPDATE sources SET preview_depth=? WHERE id=?`).run(depth, id);
   }
 
+  async listPublicReferences(): Promise<PublicReference[]> {
+    return this.db.prepare("SELECT snapshot FROM public_references WHERE active=1 ORDER BY id").all()
+      .map((row) => publicReferenceSchema.parse(JSON.parse(String(row.snapshot))));
+  }
+  async getPublicReference(id: string): Promise<PublicReference | null> {
+    const row = this.db.prepare("SELECT snapshot FROM public_references WHERE id=?").get(id);
+    return row ? publicReferenceSchema.parse(JSON.parse(String(row.snapshot))) : null;
+  }
+  async upsertPublicReference(reference: PublicReference): Promise<void> {
+    const value = publicReferenceSchema.parse(reference);
+    this.db.prepare(`INSERT INTO public_references(id,active,rss_url,snapshot) VALUES (?,?,?,?)
+      ON CONFLICT(id) DO UPDATE SET active=excluded.active,rss_url=excluded.rss_url,snapshot=excluded.snapshot`)
+      .run(value.id, Number(value.active), value.rssUrl, JSON.stringify(value));
+  }
   async listSources(): Promise<Source[]> {
     // Filter to active=1 only — deactivated on-chain sources must not be discovered/cited.
     const rows = this.db.prepare(`SELECT * FROM sources WHERE active = 1 ORDER BY created_at`).all();
@@ -993,6 +547,14 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async getCached(sourceId: string): Promise<string | null> {
+    if (this.enrolledIdentity) {
+      const row = this.db.prepare(`SELECT CASE WHEN text IS NULL OR
+        (typeof(text)='text' AND length(CAST(text AS BLOB))<=2097152) THEN text ELSE NULL END AS text,
+        CASE WHEN text IS NULL OR (typeof(text)='text' AND length(CAST(text AS BLOB))<=2097152)
+          THEN 0 ELSE 1 END AS oversized FROM cache_items WHERE source_id=?`).get(sourceId);
+      if (row?.oversized === 1) throw new Error("Enrolled content cache unavailable");
+      return row ? openEnrolledCacheText(row.text as string, sourceId, this.enrolledIdentity) : null;
+    }
     const row = this.db.prepare(`SELECT text FROM cache_items WHERE source_id=?`).get(sourceId);
     return row ? openCacheText(row.text as string) : null;
   }
@@ -1005,16 +567,42 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async setCached(sourceId: string, text: string): Promise<void> {
+    if (this.enrolledIdentity) {
+      const encoded = sealEnrolledCacheText(text, sourceId, this.enrolledIdentity);
+      this.db.exec("BEGIN IMMEDIATE");
+      try {
+        const size = this.db.prepare(`SELECT count(*) AS rows,
+          COALESCE(sum(length(CAST(text AS BLOB))),0) AS bytes FROM cache_items
+          WHERE source_id IS NOT ? AND text IS NOT NULL`).get(sourceId);
+        if (!size || Number(size.rows) + 1 > 512 || Number(size.bytes) + Buffer.byteLength(encoded) > 8 * 1024 * 1024)
+          throw new Error("Enrolled cache inspection limit exceeded");
+        this.db.prepare("INSERT OR REPLACE INTO cache_items(source_id,text,updated_at) VALUES(?,?,?)")
+          .run(sourceId, encoded, new Date().toISOString());
+        this.db.exec("COMMIT");
+      } catch (error) {
+        this.db.exec("ROLLBACK");
+        throw error;
+      }
+      return;
+    }
     this.db
       .prepare(
         `INSERT OR REPLACE INTO cache_items (source_id,text,updated_at) VALUES (?,?,?)`,
       )
-      .run(sourceId, sealCacheText(text), new Date().toISOString());
+      .run(sourceId, this.enrolledIdentity ? sealEnrolledCacheText(text, sourceId, this.enrolledIdentity) : sealCacheText(text), new Date().toISOString());
   }
 
   async getSyncState(key: string): Promise<string | null> {
     const row = this.db.prepare(`SELECT value FROM sync_state WHERE key=?`).get(key);
     return row ? (row.value as string) : null;
+  }
+
+  async claimSourceUpkeep(now: number): Promise<SourceUpkeepClaim | null> {
+    return claimSqliteSourceUpkeep(this.db, now);
+  }
+
+  async finishSourceUpkeep(claim: SourceUpkeepClaim, summary: SourceUpkeepSummary, now: number): Promise<void> {
+    finishSqliteSourceUpkeep(this.db, claim, summary, now);
   }
 
   async setSyncState(key: string, value: string): Promise<void> {
@@ -1028,6 +616,7 @@ export class SqliteAdapter implements KeryxDB {
   // ── session grants ──
 
   async upsertSessionGrant(grant: Omit<SessionGrantRecord, "spent">): Promise<void> {
+    if (sqliteJournalActive(this.db)) return upsertSqliteJournalGrant(this.db, grant);
     this.db
       .prepare(
         `INSERT OR REPLACE INTO session_grants
@@ -1076,6 +665,176 @@ export class SqliteAdapter implements KeryxDB {
       )
       .run(amount, sessionId, grantEpoch, sessAddr, amount, Date.now());
     return Number(res.changes) > 0;
+  }
+
+  async admitBrowserAuthorization(input: BrowserAuthorizationIntent): Promise<BrowserAdmissionResult> {
+    const intent = prepareBrowserAuthorizationIntent(input);
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      const updated = this.db.prepare(`UPDATE session_grants
+        SET spent = (ROUND(spent * 1000000) + ?) / 1000000.0
+        WHERE session_id = ? AND grant_epoch = ? AND LOWER(sess_addr) = LOWER(?)
+          AND expiry > ?
+          AND ABS(cap * 1000000 - ROUND(cap * 1000000)) < 0.000001
+          AND ABS(spent * 1000000 - ROUND(spent * 1000000)) < 0.000001
+          AND ROUND(spent * 1000000) + ? <= ROUND(cap * 1000000)`)
+        .run(intent.amountMicroUsdc, intent.sessionId, intent.grantEpoch, intent.signer, Date.now(), intent.amountMicroUsdc);
+      if (!updated.changes) {
+        this.db.exec("ROLLBACK");
+        return { status: "grant_or_cap_refused" };
+      }
+      this.db.prepare(`INSERT INTO browser_authorization_intents
+        (nonce,session_id,request_id,query_id,grant_epoch,signer,network,token,gateway_contract,
+         source_id,offer_id,kind,payee,amount_micro_usdc,created_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+        .run(intent.nonce, intent.sessionId, intent.requestId, intent.queryId, intent.grantEpoch,
+          intent.signer, intent.network, intent.token, intent.gatewayContract, intent.sourceId,
+          intent.offerId, intent.kind, intent.payee, intent.amountMicroUsdc, intent.createdAt);
+      this.db.exec("COMMIT");
+      return { status: "admitted", intent };
+    } catch (error) {
+      try { this.db.exec("ROLLBACK"); } catch { /* SQLite already rolled back */ }
+      throw error;
+    }
+  }
+
+  async browserJournalActive() {
+    return sqliteJournalActive(this.db);
+  }
+  async browserSignerConfirmedSpendMicro(signer: string): Promise<number> {
+    const rows = this.db
+      .prepare(
+        "SELECT * FROM payment_events WHERE lower(payer)=lower(?) AND grant_epoch IS NOT NULL AND settled=1 AND settlement_status='settled' AND network='eip155:5042002'"
+      )
+      .all(signer);
+    const seen = new Map<string, string>();
+    let total = 0;
+    for (const row of rows) {
+      if (
+        !/^0x[0-9a-f]{64}$/i.test(String(row.authorization_id)) ||
+        !String(row.tx_hash ?? "").trim()
+      )
+        continue;
+      if (
+        !/^0x[0-9a-f]{40}$/i.test(signer) ||
+        !/^0x[0-9a-f]{40}$/i.test(String(row.payee))
+      )
+        throw new Error("Invalid historical settled identity");
+      const nonce = String(row.authorization_id).toLowerCase(),
+        tuple = JSON.stringify([
+          String(row.payee).toLowerCase(),
+          row.amount_usdc,
+          row.network,
+          row.grant_epoch,
+          row.source_id,
+          row.query_id,
+          row.kind,
+          row.offer_id,
+        ]);
+      if (seen.has(nonce)) {
+        if (seen.get(nonce) !== tuple)
+          throw new Error("Conflicting historical authorization evidence");
+        continue;
+      }
+      seen.set(nonce, tuple);
+      const amount = Math.round(Number(row.amount_usdc) * 1e6);
+      if (
+        !Number.isSafeInteger(amount) ||
+        amount <= 0 ||
+        Math.abs(Number(row.amount_usdc) * 1e6 - amount) >= 0.000001
+      )
+        throw new Error("Invalid historical settled amount");
+      total += amount;
+      if (!Number.isSafeInteger(total))
+        throw new Error("Historical settled amount exceeds safe capacity");
+    }
+    return total;
+  }
+  async activateBrowserJournal() {
+    activateSqliteBrowserJournal(this.db);
+  }
+  async admitBrowserJournal(input: BrowserJournalAdmission) {
+    if (this.enrolledIdentity) return admitSqliteBrowserJournal(this.db, input);
+    if (!hasScholarlyRights(this.db)) {
+      assertNoOrphanedPaperMarker(this.db, input.sourceId);
+      return admitSqliteBrowserJournal(this.db, input);
+    }
+    const { admitSqlitePaperJournal } = await import("./scholarly-rights");
+    return admitSqlitePaperJournal(this.db, this, input);
+  }
+  async getPaperState(sourceId: string) {
+    if (this.enrolledIdentity) {
+      if ((await this.getSource(sourceId))?.scholarlyEnrolled) throw new Error("Scholarly rights are unsupported on enrolled native storage");
+      return null;
+    }
+    if (!hasScholarlyRights(this.db)) { assertNoOrphanedPaperMarker(this.db, sourceId); return null; }
+    const { getSqlitePaperState } = await import("./scholarly-rights");
+    return getSqlitePaperState(this.db, sourceId);
+  }
+  async beginPaperEnrollment(sourceId: string, creator: string) {
+    if (this.enrolledIdentity) throw new Error("Scholarly enrollment is unsupported on enrolled native storage");
+    const source = await this.getSource(sourceId);
+    if (!source) throw new Error("Registered source is required");
+    const { sourceFetchTerms } = await import("../registry/source-fetch-payto");
+    const terms = await sourceFetchTerms(source, { refresh: true });
+    if (terms.authority !== "onchain" || terms.stale || terms.creator.toLowerCase() !== creator.toLowerCase())
+      throw new Error("Fresh registered creator is required");
+    const { beginSqlitePaper } = await import("./scholarly-rights");
+    beginSqlitePaper(this.db, sourceId, creator);
+  }
+  async submitPaper(input: import("../scholarly/rights-protocol").SignedPaperDeclaration) {
+    if (this.enrolledIdentity) throw new Error("Scholarly enrollment is unsupported on enrolled native storage");
+    const { submitSqlitePaper } = await import("./scholarly-rights");
+    return submitSqlitePaper(this.db, this, input);
+  }
+  async reviewPaper(input: import("../scholarly/rights-protocol").SignedPaperDecision) {
+    if (this.enrolledIdentity) throw new Error("Scholarly review is unsupported on enrolled native storage");
+    const { reviewSqlitePaper } = await import("./scholarly-rights");
+    return reviewSqlitePaper(this.db, this, input);
+  }
+  async getPaperAdmission(nonce: string) {
+    if (this.enrolledIdentity || !hasScholarlyRights(this.db)) return null;
+    const { getSqlitePaperAdmission } = await import("./scholarly-rights");
+    return getSqlitePaperAdmission(this.db, nonce);
+  }
+  async admitBrowserQueryPolicy(proof:BrowserQueryPolicyProof,sessionId:string) {return admitSqliteBrowserQueryPolicy(this.db,proof,sessionId);}
+  async admitBrowserSigningOriginal(input:BrowserOriginalAdmission) {return admitSqliteBrowserSigningOriginal(this.db,input);}
+  async admitBrowserSourceSigningOriginal(input:import("./browser-signing-originals").BrowserSourceOriginalAdmission) {
+    return admitSqliteBrowserSourceSigningOriginal(this.db, input, createBrowserOriginalSourceAuthority(this));
+  }
+  async readExposedBrowserSigningSnapshotForSigner(signer:string,sessionId:string,requestId:string) {return readExposedSqliteBrowserSigningSnapshotForSigner(this.db,signer,sessionId,requestId);}
+  async readBrowserSigningSnapshot(owner:string,sessionId:string,requestId:string) {return readSqliteBrowserSigningSnapshot(this.db,owner,sessionId,requestId);}
+  async signBrowserSigningOriginal(sessionId:string,requestId:string,header:string) {return signSqliteBrowserSigningOriginal(this.db,sessionId,requestId,header);}
+  async getBrowserJournal(sessionId: string, requestId: string) {
+    return getSqliteBrowserJournal(this.db, sessionId, requestId);
+  }
+  async exposeBrowserJournal(sessionId: string, requestId: string) {
+    return transitionSqliteBrowserJournal(
+      this.db,
+      sessionId,
+      requestId,
+      "prepared",
+      "exposed"
+    );
+  }
+  async cancelPreparedBrowserJournal(sessionId: string, requestId: string) {
+    return cancelSqlitePreparedJournal(this.db, sessionId, requestId);
+  }
+  async signBrowserJournal(
+    sessionId: string,
+    requestId: string,
+    metadata: BrowserSignedMetadata
+  ) {
+    return signSqliteBrowserJournal(this.db, sessionId, requestId, metadata);
+  }
+  async submitBrowserJournal(sessionId: string, requestId: string) {
+    return transitionSqliteBrowserJournal(
+      this.db,
+      sessionId,
+      requestId,
+      "signed",
+      "submission_attempted"
+    );
   }
 
   async createGapIntent(
@@ -1349,10 +1108,15 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async deleteSessionGrant(sessionId: string): Promise<void> {
+    if (sqliteJournalActive(this.db)) {
+      sqliteJournalTransaction(this.db,()=>{this.db.prepare('UPDATE session_grants SET expiry=0 WHERE session_id=?').run(sessionId);});
+      return;
+    }
     this.db.prepare(`DELETE FROM session_grants WHERE session_id = ?`).run(sessionId);
   }
 
   async deleteExpiredSessionGrants(now: number): Promise<void> {
+    if (sqliteJournalActive(this.db)) return;
     this.db.prepare(`DELETE FROM session_grants WHERE expiry <= ?`).run(now);
   }
 
@@ -1669,10 +1433,13 @@ export class SqliteAdapter implements KeryxDB {
     return result.changes === 1;
   }
 
-  async claimResearchPurchase(input: ResearchPurchaseClaim): Promise<void> { claimSqliteResearchPurchase(this.db, input); }
-  async createResearchMonthly(purchase: MonthlyPurchase) { return createSqliteResearchMonthly(this.db, purchase); }
-  async getResearchMonthly(id: string) { return getSqliteResearchMonthly(this.db, id); }
-  async redeemResearchMonthly(input: MonthlyRedemptionInput) { return redeemSqliteResearchMonthly(this.db, input, rowToA2aOrder); }
+  private assertOrdinaryResearchAuthority(): void {
+    if (this.enrolledMode) throw new Error("Research purchase authority is unavailable in enrolled storage");
+  }
+  async claimResearchPurchase(input: ResearchPurchaseClaim): Promise<void> { this.assertOrdinaryResearchAuthority(); claimSqliteResearchPurchase(this.db, input); }
+  async createResearchMonthly(purchase: MonthlyPurchase) { this.assertOrdinaryResearchAuthority(); return createSqliteResearchMonthly(this.db, purchase); }
+  async getResearchMonthly(id: string) { this.assertOrdinaryResearchAuthority(); return getSqliteResearchMonthly(this.db, id); }
+  async redeemResearchMonthly(input: MonthlyRedemptionInput) { this.assertOrdinaryResearchAuthority(); return redeemSqliteResearchMonthly(this.db, input, rowToA2aOrder); }
 
   async createA2aOrder(order: A2aOrder): Promise<{ created: boolean; order: A2aOrder }> {
     const result = this.db
@@ -1935,7 +1702,7 @@ export class SqliteAdapter implements KeryxDB {
 
   async listPayments(limit: number): Promise<PaymentRecord[]> {
     const rows = this.db
-      .prepare(`SELECT * FROM payment_events ORDER BY created_at DESC LIMIT ?`)
+      .prepare(`SELECT * FROM payment_events WHERE authorization_phase IS NULL OR authorization_phase NOT IN ('prepared','cancelled_unexposed') ORDER BY created_at DESC LIMIT ?`)
       .all(limit);
     return rows.map(rowToPayment);
   }
@@ -1969,6 +1736,7 @@ export class SqliteAdapter implements KeryxDB {
       .prepare(
         `SELECT * FROM payment_events
          WHERE settlement_status='pending' AND settled=0 AND authorization_id IS NOT NULL
+           AND (authorization_phase IS NULL OR authorization_phase NOT IN ('prepared','cancelled_unexposed'))
          ORDER BY created_at ASC LIMIT ?`,
       )
       .all(limit);
@@ -1980,6 +1748,9 @@ export class SqliteAdapter implements KeryxDB {
     authorizationId: string,
     circleTransferId: string,
   ): Promise<boolean> {
+    if (sqliteJournalActive(this.db)) {
+      return terminalSqliteJournalPayment(this.db,id,authorizationId,circleTransferId,false).resolved;
+    }
     const result = this.db
       .prepare(
         `UPDATE payment_events
@@ -1995,6 +1766,9 @@ export class SqliteAdapter implements KeryxDB {
     authorizationId: string,
     circleTransferId: string,
   ): Promise<{ resolved: boolean; reservationReleased: boolean }> {
+    if (sqliteJournalActive(this.db)) {
+      return terminalSqliteJournalPayment(this.db,id,authorizationId,circleTransferId,true);
+    }
     this.db.exec("BEGIN IMMEDIATE");
     try {
       const payment = this.db
@@ -2039,7 +1813,7 @@ export class SqliteAdapter implements KeryxDB {
   async listPaymentsByQuery(queryId: string): Promise<PaymentRecord[]> {
     const rows = this.db
       .prepare(
-        `SELECT * FROM payment_events WHERE query_id=? AND kind='citation' ORDER BY created_at ASC`,
+        `SELECT * FROM payment_events WHERE query_id=? AND kind='citation' AND (authorization_phase IS NULL OR authorization_phase NOT IN ('prepared','cancelled_unexposed')) ORDER BY created_at ASC`,
       )
       .all(queryId);
     return rows.map(rowToPayment);
@@ -2049,7 +1823,7 @@ export class SqliteAdapter implements KeryxDB {
     const rows = this.db
       .prepare(
         `SELECT * FROM payment_events
-         WHERE query_id=? AND kind!='inbound' ORDER BY created_at ASC`,
+         WHERE query_id=? AND kind!='inbound' AND (authorization_phase IS NULL OR authorization_phase NOT IN ('prepared','cancelled_unexposed')) ORDER BY created_at ASC`,
       )
       .all(queryId);
     return rows.map(rowToPayment);
@@ -2058,7 +1832,7 @@ export class SqliteAdapter implements KeryxDB {
   async listPaymentsBySource(sourceId: string): Promise<PaymentRecord[]> {
     const rows = this.db
       .prepare(
-        `SELECT * FROM payment_events WHERE source_id=? AND kind != 'inbound' ORDER BY created_at DESC`,
+        `SELECT * FROM payment_events WHERE source_id=? AND kind != 'inbound' AND (authorization_phase IS NULL OR authorization_phase NOT IN ('prepared','cancelled_unexposed')) ORDER BY created_at DESC`,
       )
       .all(sourceId);
     return rows.map(rowToPayment);
@@ -2446,6 +2220,7 @@ function rowToApiKey(r: Record<string, unknown>): ApiKeyRow {
 
 function rowToSource(r: Record<string, unknown>): Source {
   return {
+    ...(r.scholarly_enrolled === 1 ? { scholarlyEnrolled: true } : {}),
     id: r.id as string,
     name: r.name as string,
     url: r.url as string,
@@ -2560,6 +2335,8 @@ function rowToGapIntent(r: Record<string, unknown>): GapIntent {
 
 function rowToPayment(r: Record<string, unknown>): PaymentRecord {
   return {
+    ...(r.scholarly_declaration_id ? { scholarlyDeclarationId: String(r.scholarly_declaration_id) } : {}),
+    ...(r.scholarly_approval_id ? { scholarlyApprovalId: String(r.scholarly_approval_id) } : {}),
     id: r.id as string,
     kind: r.kind as PaymentRecord["kind"],
     queryId: r.query_id as string,
@@ -2577,6 +2354,7 @@ function rowToPayment(r: Record<string, unknown>): PaymentRecord {
       (r.settlement_status as PaymentRecord["settlementStatus"]) ??
       (Boolean(r.settled) ? "settled" : "simulated"),
     authorizationId: (r.authorization_id as string) ?? undefined,
+    authorizationPhase: (r.authorization_phase as PaymentRecord["authorizationPhase"]) ?? undefined,
     authorizationExpiresAt: (r.authorization_expires_at as string) ?? undefined,
     grantEpoch: (r.grant_epoch as string) ?? undefined,
     origin: (r.origin as PaymentRecord["origin"]) ?? undefined,

@@ -7,14 +7,19 @@ import { inspectWithdrawalRelayDirectory } from "../gateway/withdrawal-relay-fil
 
 export function privateEconomicsReport(s: TestnetEconomicsSnapshot) {
   return {
-    schema: "keryx-private-economics-v1", visibility: "operator-only", generatedAt: s.generatedAt,
+    schema: "keryx-private-economics-v2", visibility: "operator-only", generatedAt: s.generatedAt,
     scope: "Legacy testnet query_runs, payment_events and a2a_orders aggregates. Not complete business accounting or an atomic cross-table snapshot.",
     accounting: { status: "unreconciled", providerInvoiceUsd: null, fixedOperatingCostUsd: null, realizedProfitUsd: null },
     coverage: { sampledRuns: s.sampledRuns, pricedRuns: s.pricedRuns, unpricedRuns: s.unpricedRuns,
       providerCalls: s.providerCalls, inputTokens: s.inputTokens, cachedInputTokens: s.cachedInputTokens,
-      outputTokens: s.outputTokens, unpricedModels: s.unpricedModels },
-    estimates: { llmCostUsd: s.estimatedLlmCostUsd, shadowServiceFeesUsdc: s.shadowServiceFeesUsdc,
-      shadowGrossMarginUsd: s.shadowGrossMarginUsd, policy: { id: s.policy.id, capturedAt: s.policy.capturedAt,
+      outputTokens: s.outputTokens, unknownCacheCalls: s.unknownCacheCalls,
+      unpricedModels: [...s.unpricedModels], pricingPolicyIds: [...s.pricingPolicyIds] },
+    estimates: { costAndMarginScope: s.costAndMarginScope, totalLlmCostUpperBoundUsd: s.totalLlmCostUpperBoundUsd,
+      llmCostUsdBounds: s.estimatedLlmCostUsdBounds ? { ...s.estimatedLlmCostUsdBounds } : null,
+      shadowServiceFeesAllSampledUsdc: s.shadowServiceFeesAllSampledUsdc,
+      shadowServiceFeesPricedRunsUsdc: s.shadowServiceFeesPricedRunsUsdc,
+      shadowGrossMarginUsdBounds: s.shadowGrossMarginUsdBounds ? { ...s.shadowGrossMarginUsdBounds } : null,
+      policy: { id: s.policy.id, capturedAt: s.policy.capturedAt, costBasis: s.policy.costBasis,
         pricingSource: s.policy.pricingSource, infraAllowanceUsdPerRun: s.policy.infraAllowanceUsdPerRun,
         serviceFeeUsdc: { quick: s.policy.serviceFeeUsdc.quick, deep: s.policy.serviceFeeUsdc.deep } } },
     testnetLedger: { settledInboundUsdc: s.settledInboundRevenueUsdc, settledA2aServiceFeesUsdc: s.settledA2aV2ServiceFeesUsdc,

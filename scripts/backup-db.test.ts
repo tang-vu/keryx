@@ -31,4 +31,10 @@ describe("prunable — snapshot rotation", () => {
     expect(stale).toEqual([]); // exactly 4 real snapshots, keep 4 → prune none
     expect(stale.some((f) => !f.endsWith(".sqlite.gz"))).toBe(false);
   });
+
+  it("retains encrypted staging independently and refuses unbounded retention", () => {
+    const encrypted = names.map((name) => name.replace(/\.gz$/, ".enc"));
+    expect(prunable([...names, ...encrypted], 2)).toHaveLength(4);
+    for (const keep of [0, -1, 169, Infinity, 1.5]) expect(() => prunable(names, keep)).toThrow();
+  });
 });

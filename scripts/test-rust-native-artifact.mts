@@ -10,6 +10,7 @@ import { pathToFileURL } from "node:url";
 import { digestTree, writtenV1 } from "./rust-native-synthetic-fixture.mts";
 import { NativeReadonlyTransport } from "../lib/operator/native-readonly-transport.ts";
 import { createNativeReadonlyManifest } from "../lib/operator/native-readonly-artifact.ts";
+import { readOperatorResearchResult } from "../lib/operator/task.ts";
 
 const repo = resolve(import.meta.dirname, "..");
 const filename = process.platform === "win32" ? "keryx-engine.exe" : "keryx-engine";
@@ -169,6 +170,23 @@ async function main() {
     assert.deepEqual(await native.inspect("result", state), expected.result);
     assert.deepEqual(await native.inspect("brief", state), expected.brief);
     parityChecks += 3;
+
+    // Application exports enrich the checked receipt above either raw inspection adapter;
+    // the exact v1 raw comparisons above remain unchanged for historical records.
+    const recordedState = join(varied, "recorded article task");
+    const recorded = await writtenV1(recordedState, true);
+    const recordedBefore = await digestTree(recordedState);
+    const nativeRaw = await native.inspect("result", recordedState);
+    assert.deepEqual(nativeRaw, recorded.result);
+    const enriched = await readOperatorResearchResult(recordedState);
+    assert(enriched);
+    assert(nativeRaw && typeof nativeRaw === "object");
+    assert.deepEqual(enriched, { ...nativeRaw, researchExports: enriched.researchExports });
+    assert.equal(enriched.researchExports.bibtex.count, 1);
+    assert.match(enriched.researchExports.ris.content, /Observed synthetic article/);
+    assert.match(enriched.researchExports.evidenceCsv, /Synthetic bounded excerpt/);
+    assert.equal(await digestTree(recordedState), recordedBefore, "application export projection wrote to inspected files");
+    parityChecks += 4;
 
     const cliStatus = evaluate(binaryPath, manifestPath, "status", state);
     assert.equal(cliStatus.status, 0, cliStatus.stderr);

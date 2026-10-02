@@ -11,6 +11,11 @@
 
 import type { Decision, SourceItemIdentity } from "../types";
 
+/** A local request bound, before contacting a supplier. It must not mark a provider unhealthy. */
+export class ReasoningInputLimitError extends Error {
+  readonly status = 413;
+}
+
 export type ReasoningStep =
   | "decompose"
   | "decide"
@@ -46,12 +51,16 @@ export interface LlmUsageRecord {
   engine: string;
   model: string;
   inputTokens: number;
-  cachedInputTokens: number;
+  /** null means the cache split was missing, invalid or inconsistent, never measured zero. */
+  cachedInputTokens: number | null;
   outputTokens: number;
+  /** Captured per request. Absent on history; report time cannot reconstruct it. */
+  costCapture?: import("../economics/provider-cost-policy").ProviderCostCapture;
 }
 
 /** A discoverable source the agent may choose to pay for (preview is free). */
 export interface SourceCandidate {
+  sourceKind?: "public-reference";
   id: string;
   /** Registry source behind the asset. Equals id for legacy source-level candidates. */
   sourceId?: string;

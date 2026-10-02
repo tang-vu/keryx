@@ -4,6 +4,7 @@
  *
  * Usage: npm run ask -- "How do x402 and stablecoins enable AI agent commerce?" --budget 0.05
  *        npm run ask -- "…" --model deepseek-v4-pro   (catalog id; see lib/llm/model-catalog.ts)
+ *        npm run ask -- "…" --web   (explicit external search provider disclosure)
  */
 
 import { collectRun } from "../lib/agent/index.ts";
@@ -14,12 +15,15 @@ import { c, printStep } from "./trace-console.mts";
 const argv = process.argv.slice(2);
 let budget: number | undefined;
 let model: string | undefined;
+let allowExternalWeb = false;
 const qParts: string[] = [];
 for (let i = 0; i < argv.length; i++) {
   if (argv[i] === "--budget" && argv[i + 1]) {
     budget = parseFloat(argv[++i]);
   } else if (argv[i] === "--model" && argv[i + 1]) {
     model = argv[++i];
+  } else if (argv[i] === "--web") {
+    allowExternalWeb = true;
   } else {
     qParts.push(argv[i]);
   }
@@ -32,9 +36,10 @@ console.log(c.bold(`\n🏛  Keryx — citation-toll reading agent`));
 console.log(`${c.dim("engine:")} ${getReasoningEngine(model).name}`);
 console.log(`${c.dim("budget:")} $${budget ?? 0.05}`);
 console.log(`${c.dim("question:")} ${question}\n`);
+if (allowExternalWeb) console.log("Public web search may send this question to the configured search provider. The source USDC budget is separate from model and search operating costs.");
 console.log(c.dim("─".repeat(72)));
 
-const run = await collectRun({ question, budget, model }, { onStep: printStep });
+const run = await collectRun({ question, budget, model, origin: "engine", allowExternalWeb }, { onStep: printStep });
 
 console.log(c.dim("─".repeat(72)));
 console.log(c.bold("\n📝 Answer\n"));

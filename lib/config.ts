@@ -1,43 +1,72 @@
 /**
  * Keryx runtime configuration — single source of truth for chain, economics, and providers.
- * Keryx is Arc-testnet-only today. Environment overrides tune the testnet deployment; they are not
- * a mainnet switch because network ids, explorer, Gateway APIs, and browser chain config are pinned.
+ * Keryx is Arc-testnet-only today. Network contract addresses are pinned as one profile;
+ * conflicting environment values fail startup rather than creating a mixed-chain deployment.
  */
+
+import { ARC_TESTNET_PROFILE, paymentRuntimeProfile } from "./arc-network-profile";
+
+const ARC_TESTNET_USDC = ARC_TESTNET_PROFILE.usdcAddress;
+const ARC_TESTNET_GATEWAY_WALLET = ARC_TESTNET_PROFILE.gatewayWallet;
+const ARC_TESTNET_GATEWAY_MINTER = ARC_TESTNET_PROFILE.gatewayMinter;
+
+/** Reject network contract overrides until a separately reviewed network profile exists. */
+export function assertArcTestnetConfiguration(env: {
+  KERYX_NETWORK?: string;
+  KERYX_USDC_ADDRESS?: string;
+  KERYX_GATEWAY_WALLET?: string;
+  KERYX_GATEWAY_MINTER?: string;
+}): void {
+  paymentRuntimeProfile(env.KERYX_NETWORK);
+  for (const [name, actual, expected] of [
+    ["KERYX_USDC_ADDRESS", env.KERYX_USDC_ADDRESS, ARC_TESTNET_USDC],
+    ["KERYX_GATEWAY_WALLET", env.KERYX_GATEWAY_WALLET, ARC_TESTNET_GATEWAY_WALLET],
+    ["KERYX_GATEWAY_MINTER", env.KERYX_GATEWAY_MINTER, ARC_TESTNET_GATEWAY_MINTER],
+  ] as const) {
+    if (actual !== undefined && actual.toLowerCase() !== expected.toLowerCase()) {
+      throw new Error(`${name} must match the Arc testnet profile`);
+    }
+  }
+}
+
+assertArcTestnetConfiguration({
+  KERYX_NETWORK: process.env.KERYX_NETWORK,
+  KERYX_USDC_ADDRESS: process.env.KERYX_USDC_ADDRESS,
+  KERYX_GATEWAY_WALLET: process.env.KERYX_GATEWAY_WALLET,
+  KERYX_GATEWAY_MINTER: process.env.KERYX_GATEWAY_MINTER,
+});
 
 export const config = {
   // ── Chain (Arc testnet defaults) ──
-  network: "arcTestnet",
+  network: ARC_TESTNET_PROFILE.name,
   // x402 network identifier used in payment requirements
-  networkId: "eip155:5042002",
-  rpcUrl: process.env.KERYX_RPC_URL ?? "https://rpc.testnet.arc.network",
+  networkId: ARC_TESTNET_PROFILE.networkId,
+  rpcUrl: process.env.KERYX_RPC_URL ?? ARC_TESTNET_PROFILE.rpcUrl,
   // WebSocket RPC for the indexer's live log subscription (read-only pushes; settlement
   // stays on rpcUrl). Set to an empty string to disable pushes — the indexer then relies
   // on its heartbeat poll alone.
-  rpcWsUrl: process.env.KERYX_RPC_WS_URL ?? "wss://rpc.testnet.arc.network",
-  usdcAddress: (process.env.KERYX_USDC_ADDRESS ??
-    "0x3600000000000000000000000000000000000000") as `0x${string}`,
-  gatewayWallet: (process.env.KERYX_GATEWAY_WALLET ??
-    "0x0077777d7EBA4688BDeF3E311b846F25870A19B9") as `0x${string}`,
+  rpcWsUrl: process.env.KERYX_RPC_WS_URL ?? ARC_TESTNET_PROFILE.rpcWsUrl,
+  usdcAddress: ARC_TESTNET_USDC as `0x${string}`,
+  gatewayWallet: ARC_TESTNET_GATEWAY_WALLET as `0x${string}`,
   // GatewayMinter contract — mints USDC on the destination chain from a Circle transfer
   // attestation. Used by the creator-withdraw relay to submit gatewayMint(). Testnet value
   // from @circle-fin/x402-batching CHAIN_CONFIGS.arcTestnet.gatewayMinter.
-  gatewayMinter: (process.env.KERYX_GATEWAY_MINTER ??
-    "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B") as `0x${string}`,
-  explorerUrl: "https://testnet.arcscan.app",
-  gatewayBalanceApi: "https://gateway-api-testnet.circle.com/v1/balances",
-  cctpDomain: 26,
+  gatewayMinter: ARC_TESTNET_GATEWAY_MINTER as `0x${string}`,
+  explorerUrl: ARC_TESTNET_PROFILE.explorerUrl,
+  gatewayBalanceApi: `${ARC_TESTNET_PROFILE.gatewayApiUrl}/v1/balances`,
+  cctpDomain: ARC_TESTNET_PROFILE.cctpDomain,
 
   // ── Agent economics (USDC) ──
   defaultBudget: num(process.env.KERYX_DEFAULT_BUDGET, 0.05),
   // share of a query's budget reserved for weighted citation rewards (rest is fetch tolls)
   citationPoolRatio: num(process.env.KERYX_CITATION_POOL_RATIO, 0.5),
   defaultFetchPrice: num(process.env.KERYX_DEFAULT_FETCH_PRICE, 0.002),
-  // x402 authorization validity window (seconds). The buyer signs validBefore = now + this value;
-  // Circle's Gateway facilitator requires the REMAINING validity at verify time to be >= 7 days
-  // (604800s) or it rejects with `authorization_validity_too_short`. Signing→verify latency (several
-  // network hops), second-truncation, and host clock skew all erode that window, so a window of
-  // exactly 604800 fails intermittently. Keep ~1 day of margin above the floor (no upper bound —
-  // 30d still verifies). Empirically: <604800 always fails; 604800 is the floor with zero slack.
+  // x402 authorization validity window (seconds). Circle's Gateway facilitator requires at
+  // least seven days (604800s) of remaining validity at verification. Signing/verification
+  // latency, second-truncation and host clock skew erode that window, so the eight-day default
+  // retains margin above the floor. Keryx independently bounds local payment signing to its
+  // reviewed seven-to-eight-day policy, with a small validation skew allowance. Historical
+  // upstream acceptance of longer windows does not authorize a longer Keryx signing lifetime.
   maxTimeoutSeconds: Math.round(num(process.env.KERYX_MAX_TIMEOUT_SECONDS, 691200)),
   // Gateway spend-wallet top-up. Circle's facilitator won't settle against tiny balances, so the
   // agent keeps a healthy reusable Gateway balance and tops up when it drops below the threshold.
@@ -100,6 +129,9 @@ export const config = {
   // settle on other chains (Base/ETH/… mainnet), not Keryx's Arc rail, so they are DISCOVERY-ONLY:
   // evaluated and logged, never purchased (the orchestrator enforces this, mirroring the budget cap).
   externalDiscovery: (process.env.KERYX_EXTERNAL_DISCOVERY ?? "1") !== "0",
+  webSearchUrl: process.env.KERYX_WEB_SEARCH_URL ?? "",
+  webSearchProvider: process.env.KERYX_WEB_SEARCH_PROVIDER ?? "",
+  tavilyApiKey: process.env.TAVILY_API_KEY ?? "",
   // Max external endpoints surfaced per query (top by topical relevance).
   externalDiscoveryLimit: Math.round(num(process.env.KERYX_EXTERNAL_DISCOVERY_LIMIT, 5)),
   // Semantic discovery: use embedding cosine similarity instead of keyword-overlap for
@@ -110,7 +142,7 @@ export const config = {
   embeddingModel: process.env.KERYX_EMBEDDING_MODEL ?? "text-embedding-3-small",
 
   // ── LLM ──
-  // Provider priority: Anthropic > DeepSeek > MiMo > offline heuristic. Every configured real
+  // Provider priority: Anthropic > DeepSeek > MiMo > enabled Cloudflare > offline heuristic.
   // provider becomes a fallback tier before the deterministic heuristic.
   anthropicKey: process.env.ANTHROPIC_API_KEY ?? "",
   deepseekKey: process.env.DEEPSEEK_API_KEY ?? process.env.OPENAI_API_KEY ?? "",
@@ -122,6 +154,11 @@ export const config = {
   // The base URL carries /v1 (DeepSeek's does not); the engine appends /chat/completions to it.
   mimoKey: process.env.MIMO_API_KEY ?? "",
   mimoBaseUrl: process.env.KERYX_MIMO_BASE_URL ?? "https://api.xiaomimimo.com/v1",
+  // Cloudflare is an explicitly enabled experimental third provider; credentials alone do not
+  // authorize sending public research to another processor. Private reasoning has its own policy.
+  cloudflareEnabled: process.env.KERYX_CLOUDFLARE_ENABLED === "true",
+  cloudflareAccountId: process.env.CLOUDFLARE_ACCOUNT_ID ?? "",
+  cloudflareKey: process.env.CLOUDFLARE_API_TOKEN ?? "",
   // Transport timeouts abort the provider request. Circuit state is stored in the shared DB so
   // the Next server and fresh one-shot volume workers inherit the same provider-step health.
   llmTimeoutMs: Math.max(1_000, Math.round(num(process.env.KERYX_LLM_TIMEOUT_MS, 60_000))),
@@ -227,7 +264,7 @@ export const config = {
   deployerKey: (process.env.DEPLOYER_PRIVATE_KEY ?? "") as `0x${string}` | "",
 } as const;
 
-export type LlmProvider = "anthropic" | "deepseek" | "mimo" | "heuristic";
+export type LlmProvider = "anthropic" | "deepseek" | "mimo" | "cloudflare" | "heuristic";
 
 type RealLlmProvider = Exclude<LlmProvider, "heuristic">;
 
@@ -237,12 +274,12 @@ type RealLlmProvider = Exclude<LlmProvider, "heuristic">;
  * unconfigured transport or remove the deterministic final fallback.
  */
 export function llmProviderOrder(): RealLlmProvider[] {
-  const fallback: RealLlmProvider[] = ["anthropic", "deepseek", "mimo"];
+  const fallback: RealLlmProvider[] = ["anthropic", "deepseek", "mimo", "cloudflare"];
   const requested = (process.env.KERYX_LLM_PROVIDER_ORDER ?? "")
     .split(",")
     .map((provider) => provider.trim().toLowerCase())
     .filter((provider): provider is RealLlmProvider =>
-      provider === "anthropic" || provider === "deepseek" || provider === "mimo",
+      provider === "anthropic" || provider === "deepseek" || provider === "mimo" || provider === "cloudflare",
     );
   return requested.length > 0 ? [...new Set(requested)] : fallback;
 }
@@ -253,6 +290,7 @@ export function llmProvider(): LlmProvider {
     if (provider === "anthropic" && config.anthropicKey.length > 0) return provider;
     if (provider === "deepseek" && config.deepseekKey.length > 0) return provider;
     if (provider === "mimo" && config.mimoKey.length > 0) return provider;
+    if (provider === "cloudflare" && config.cloudflareEnabled && /^[a-f0-9]{32}$/.test(config.cloudflareAccountId) && config.cloudflareKey.length > 0) return provider;
   }
   return "heuristic";
 }

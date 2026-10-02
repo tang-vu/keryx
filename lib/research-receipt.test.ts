@@ -7,6 +7,26 @@ import {
 } from "./research-receipt";
 import type { PaymentRecord, QueryRun } from "./types";
 
+it("roundtrips immutable public web provenance through a portable receipt", () => {
+  const original = run(); const provenance = { retrievedAt: "2026-10-01T00:00:00Z", publisherGroup: "publisher.example", normalizedBodyHash: "a".repeat(64), extraction: "pdf" as const, truncated: true };
+  original.citations[0] = { ...original.citations[0], sourceKind: "public-reference", webProvenance: provenance, reward: 0 };
+  const receipt = buildResearchReceipt(original, []);
+  const exported = JSON.parse(JSON.stringify(receipt));
+  expect(exported.payload.citations[0].webProvenance).toEqual(provenance); expect(verifyResearchReceipt(exported).valid).toBe(true);
+});
+
+it("retains a deep immutable scholarly metadata snapshot and exact abstract-only scope without payout authority", () => {
+  const original = run(); const scholarly = { provider: "crossref" as const, recordUrl: "https://api.crossref.org/works/10.1234%2Fpaper", retrievedAt: "2026-10-01T00:00:00Z",
+    title: "Observed paper", authors: ["Ada Lovelace"], authorNames: [{ given: "Ada", family: "Lovelace" }], doi: "10.1234/paper", workType: "journal-article" as const,
+    peerReview: "unknown" as const, evidenceScope: "publisher-page" as const };
+  original.citations[0] = { ...original.citations[0], sourceKind: "public-reference", scholarly, reward: 0 };
+  const receipt = buildResearchReceipt(original, []), exported = JSON.parse(JSON.stringify(receipt));
+  expect(exported.payload.citations[0].scholarly).toEqual(scholarly); expect(verifyResearchReceipt(exported).valid).toBe(true);
+  scholarly.authors[0] = "Later changed name"; scholarly.authorNames[0].family = "Changed";
+  expect(receipt.payload.citations[0].scholarly?.authors[0]).toBe("Ada Lovelace");
+  expect(receipt.payload.citations[0].scholarly?.authorNames?.[0].family).toBe("Lovelace");
+});
+
 function run(overrides: Partial<QueryRun> = {}): QueryRun {
   return {
     id: "dispatch-1",
@@ -275,4 +295,20 @@ describe("portable research receipt", () => {
     expect(canonicalJson({ z: 1, a: { y: 2, b: 3 } })).toBe('{"a":{"b":3,"y":2},"z":1}');
     expect(() => canonicalJson({ amount: Number.NaN })).toThrow(/non-finite/);
   });
+});
+
+
+it("projects accepted public evidence with no invented creator payment or settled status", () => {
+  const original = run();
+  const publicRun = run({ paymentMode: "real", paymentAttempts: 0, settledPayments: 0, totalSpent: 0, totalToCreators: 0,
+    decisions: original.decisions.map((decision) => ({ ...decision, sourceId: "public:publisher", sourceKind: "public-reference", publicDeliveryKind: "excerpt", action: "CACHE", price: 0 })),
+    citations: original.citations.map((citation) => ({ ...citation, sourceId: "public:publisher", sourceKind: "public-reference", publicDeliveryKind: "excerpt", reward: 0 })),
+    evidence: original.evidence?.map((item) => ({ ...item, sourceId: "public:publisher", sourceKind: "public-reference", publicDeliveryKind: "excerpt", qualifiesForAnswer: true, qualifiesForReward: false })),
+  });
+  const receipt = buildResearchReceipt(publicRun, []);
+  expect(receipt.payload.citations[0]).toMatchObject({ sourceKind: "public-reference", publicDeliveryKind: "excerpt", rewardPlannedUsdc: 0 });
+  expect(receipt.payload.claims[0]?.evidence[0]).toMatchObject({ qualifiesForAnswer: true, qualifiesForReward: false, sourceKind: "public-reference" });
+  expect(receipt.payload.settlement.creatorPayments).toEqual([]);
+  expect(receipt.payload.settlement.status).toBe("none");
+  expect(verifyResearchReceipt(receipt).valid).toBe(true);
 });

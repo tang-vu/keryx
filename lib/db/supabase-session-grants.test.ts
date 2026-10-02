@@ -26,3 +26,13 @@ it("passes captured grant identity through both atomic spend RPCs", async () => 
     });
   }
 });
+
+it.each([{}, { active: "false" }, null])("fails closed on malformed successful activation reads", async row => {
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://synthetic-db.example");
+  vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "synthetic-key-no-authority");
+  const http = vi.fn<typeof fetch>().mockResolvedValue(Response.json(row));
+  vi.stubGlobal("fetch", http);
+  const db = new SupabaseAdapter();
+  await expect(db.browserJournalActive()).rejects.toThrow();
+  expect(http).toHaveBeenCalledTimes(1);
+});

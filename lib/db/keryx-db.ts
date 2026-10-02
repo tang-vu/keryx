@@ -1,9 +1,12 @@
+import type { PublicReference } from "../public-references/catalog";
 /**
  * KeryxDB — persistence interface shared by the SQLite (dev) and Supabase (prod) adapters.
  * All amounts are USDC numbers. Metrics are computed only from real rows.
  */
 
 import type { WithdrawalHistoryCursor, WithdrawalHistoryPage } from "./creator-withdrawal-history";
+import type { SourceUpkeepClaim, SourceUpkeepSummary } from "./source-upkeep";
+import type { BrowserAuthorizationIntent, BrowserAdmissionResult } from "./browser-authorization-admission";
 import type { PrivateCreatorConfirmation, PrivateCreatorConfirmationRecord } from "./private-creator-confirmations";
 import type { PrivateTreasuryPolicy, PrivateTreasuryReservation } from "./private-treasury-capacity";
 import type { PrivateTreasuryRelease } from "./private-treasury-release";
@@ -198,10 +201,19 @@ export interface FeedbackStats {
 }
 
 export interface KeryxDB {
+  /** Supervised SQLite scholarly pilot capability; absent on unsupported backends. */
+  getPaperState?(sourceId: string): Promise<import("../scholarly/rights-protocol").PaperState | null>;
+  beginPaperEnrollment?(sourceId: string, creator: string): Promise<void>;
+  submitPaper?(submission: import("../scholarly/rights-protocol").SignedPaperDeclaration): Promise<import("../scholarly/rights-protocol").PaperState>;
+  reviewPaper?(review: import("../scholarly/rights-protocol").SignedPaperDecision): Promise<import("../scholarly/rights-protocol").PaperState>;
+  getPaperAdmission?(nonce: string): Promise<import("./scholarly-rights").PaperAdmission | null>;
   init(): Promise<void>;
 
   // ── sources & content ──
   upsertSource(source: Source): Promise<void>;
+  listPublicReferences?(): Promise<PublicReference[]>;
+  getPublicReference?(id: string): Promise<PublicReference | null>;
+  upsertPublicReference?(reference: PublicReference): Promise<void>;
   listSources(): Promise<Source[]>;
   /** Every source row, including ones deactivated on-chain. Discovery must NEVER use this —
    *  it exists for owner-facing history (an audit export of what a wallet earned must still
@@ -312,6 +324,9 @@ export interface KeryxDB {
   // ── sync state (registry indexer checkpoint) ──
   /** Get a named sync-state value (e.g. "lastSyncedBlock"). Returns null if not set. */
   getSyncState(key: string): Promise<string | null>;
+  /** SQLite-only scheduled maintenance. Other adapters fail closed until equivalent atomic claims exist. */
+  claimSourceUpkeep?(now: number): Promise<SourceUpkeepClaim | null>;
+  finishSourceUpkeep?(claim: SourceUpkeepClaim, summary: SourceUpkeepSummary, now: number): Promise<void>;
   /** Upsert a named sync-state value. */
   setSyncState(key: string, value: string): Promise<void>;
   /** Atomically reserve one address claim and increment the shared daily faucet total. */
@@ -326,17 +341,34 @@ export interface KeryxDB {
   releaseOnramp(addressKey: string, dayKey: string, amount: number): Promise<void>;
 
   // ── browser co-sign session grants (no keys, only caps + accounting) ──
-  /** Create or replace the grant for a session id. Resets `spent` — callers re-register with a
-   *  cap read from the live Gateway balance, which already nets out earlier spends. */
+  /** Create or replace the active grant. Journal mode retains cumulative signer spend
+   *  and original epochs; pre-cutover legacy writers retain their historical behavior. */
   upsertSessionGrant(grant: Omit<SessionGrantRecord, "spent">): Promise<void>;
   /** Fetch a grant. Returns null when absent; expiry is the caller's to interpret. */
   getSessionGrant(sessionId: string): Promise<SessionGrantRecord | null>;
   /** Atomically reserve only against the captured grant generation and session signer. */
   addSessionGrantSpend(sessionId: string, grantEpoch: string, sessAddr: string, amount: number): Promise<boolean>;
+  /** Historical immutable admission substrate; blocked by the active writer fence. */
+  admitBrowserAuthorization(input: BrowserAuthorizationIntent): Promise<BrowserAdmissionResult>;
+  browserJournalActive(): Promise<boolean>;
+  admitBrowserQueryPolicy(proof:import("../payments/browser-query-policy").BrowserQueryPolicyProof,sessionId:string):Promise<import("./browser-signing-originals").BrowserQueryAdmissionResult>;
+  admitBrowserSigningOriginal(input:import("./browser-signing-originals").BrowserOriginalAdmission):Promise<import("./browser-signing-originals").BrowserOriginalAdmissionResult>;
+  admitBrowserSourceSigningOriginal(input:import("./browser-signing-originals").BrowserSourceOriginalAdmission):Promise<import("./browser-signing-originals").BrowserOriginalAdmissionResult>;
+  readExposedBrowserSigningSnapshotForSigner(signer:string,sessionId:string,requestId:string):Promise<import("./browser-signing-originals").BrowserSigningSnapshot|null>;
+  readBrowserSigningSnapshot(owner:string,sessionId:string,requestId:string):Promise<import("./browser-signing-originals").BrowserSigningSnapshot|null>;
+  signBrowserSigningOriginal(sessionId:string,requestId:string,header:string):Promise<boolean>;
+  browserSignerConfirmedSpendMicro(signer:string): Promise<number>;
+  activateBrowserJournal(): Promise<void>;
+  admitBrowserJournal(input: import("./browser-authorization-journal").BrowserJournalAdmission): Promise<import("./browser-authorization-journal").BrowserJournalAdmissionResult>;
+  getBrowserJournal(sessionId: string, requestId: string): Promise<import("./browser-authorization-journal").BrowserAuthorizationJournal | null>;
+  exposeBrowserJournal(sessionId: string, requestId: string): Promise<boolean>;
+  cancelPreparedBrowserJournal(sessionId: string, requestId: string): Promise<boolean>;
+  signBrowserJournal(sessionId: string, requestId: string, metadata: import("./browser-authorization-journal").BrowserSignedMetadata): Promise<boolean>;
+  submitBrowserJournal(sessionId: string, requestId: string): Promise<boolean>;
   /** Release only into the grant generation that held the unused reservation. */
   releaseSessionGrantSpend(sessionId: string, grantEpoch: string, sessAddr: string, amount: number): Promise<void>;
   deleteSessionGrant(sessionId: string): Promise<void>;
-  /** Drop every grant that lapsed at or before `now` (unix ms). */
+  /** Legacy pruning only; journal mode preserves lapsed financial state. */
   deleteExpiredSessionGrants(now: number): Promise<void>;
 
   // ── rate-limit counters (durable, shared across processes) ──
@@ -524,7 +556,8 @@ export interface KeryxDB {
   creatorLeaderboard(): Promise<CreatorEarnings[]>;
 
   // Durable A2A authorization state: one settled inbound authorization may run creators once.
-  /** Immutable admission of a verified signed debit before settlement; never grants delivery. */
+  /** Ordinary TypeScript SQLite/Supabase authority only; enrolled/native storage refuses this domain.
+   * Immutable admission of a verified signed debit before settlement; never grants delivery. */
   claimResearchPurchase(input: ResearchPurchaseClaim): Promise<void>;
   createResearchMonthly(purchase: MonthlyPurchase): Promise<{ created: boolean; purchase: MonthlyPurchase }>;
   getResearchMonthly(id: string): Promise<{ purchase: MonthlyPurchase; redemptions: MonthlyRedemption[] } | null>;

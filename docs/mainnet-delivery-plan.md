@@ -19,7 +19,55 @@ Mainnet readiness and permission to launch are separate. The existing testnet
 restrictions remain until the final owner go/no-go decision. No mainnet keys,
 addresses or service availability will be inferred from testnet configuration.
 
+October 2 direction: prepare a bounded invited pilot for October 3 by reducing
+audience and feature scope. The executable [pilot candidate preflight](mainnet-pilot-candidate.md)
+binds an exact release commit, isolated declared state/environment/origins and
+public-role inventory to conservative proposed integer caps. It grants no mainnet
+launch or funded-spend permission. Financial isolation, review, actual payment/
+recovery and operations remain pilot activation gates. Full-product adoption and
+profitability evidence remain separate; they are not prerequisites for this narrow
+pilot and are not established by it.
+
 ## Current baseline and gaps
+
+Current [October 2 preparation](#october-2-preparation) records guarded backend
+acceptance and the focused treasury custody/signing fixes with their remaining
+release and cutover gates. The historical
+[October 1 evidence](./engineering/mainnet-readiness-2026-10-01.md)
+pins deployed testnet source `368b278`, its canonical dependency lock and exact
+integrated CI. It records public funding fallback, default-closed funding source,
+actual isolated PostgreSQL four-leg acceptance and Linux provenance containment,
+with their limits. It does not establish runtime enrollment or mainnet readiness.
+The [September 30 evidence](./engineering/mainnet-readiness-2026-09-30.md)
+retains the earlier `5bf9aea` admission-foundation checkpoint and adds the funded
+original-withdrawal recovery and outside-host alert/responder acceptance below.
+These advance bounded testnet evidence; M1–M8 remain open. The
+[independent pilot runbook](./research-pilot-program.md) defines
+the initial audience and acceptance evidence. Mainnet and profitable repeat use
+remain unproven; older baseline observations below are historical.
+
+Additional September 30 evidence: the [owner-operated funded withdrawal rehearsal](./engineering/creator-funded-withdrawal-drill.md)
+passed one original Circle submission, discarded application/mint responses, exact
+mint receipt matching and two new keyless recovery processes with one cash-out row
+and zero payment rows. It advances the tested C2/M4 boundary only. Independent creator
+and browser acceptance, unknown-UUID Circle-response recovery, release-wide outage/
+restore/security evidence and mainnet authorization remain open. Its provisioning
+incident also leaves durable host time synchronization as an explicit O1/M5 item.
+
+The original 2,000-micro-USDC source payment also reached an exact matched Circle
+`completed` record. Independent Arc RPC inspection found a successful receipt for
+its reported batch transaction with matching block hash and 13,978 confirmations
+at observation. This proves the matched Circle record and reported batch receipt;
+it does not independently decode this authorization nonce from aggregated calldata.
+
+The [outside-host monitor](./outside-host-ops-monitor.md) is deployed on Workers Free
+with a dedicated durable journal and five-minute Cron. Its real fixed-404 diagnostic
+confirmed both Telegram drill deliveries on their first attempts; the owner confirmed
+both messages and accepted response ownership. Diagnostic notifications were then
+disabled. This closes that bounded external alert/responder acceptance item. An
+actual healthy five-minute production Cron sample was separately observed at
+`2026-09-30T16:00:43.993Z` after the initial manual probe. Real VPS outage, failover, restore/rollback/rotation and sustained-operation drills
+remain separate O1/M5 requirements.
 
 Repository baseline: `ddcc520`. The buyer CLI, private journals, receipt verification,
 redacted reports and `/research` preparation/inspection are implemented. Existing
@@ -52,9 +100,13 @@ lists Arc domain `26` with mainnet name `arc` and testnet name `arcTestnet`; it 
 nanopayments are supported except on Solana. Read-only `eth_chainId` calls to the
 published Blockdaemon, dRPC, and QuickNode Arc mainnet RPCs each returned `0x13b2`
 (`5042`) from the development host; the primary RPC returned HTTP 403 from that host.
-This advances external availability evidence only. Repository code and signer domains
-remain pinned to testnet; mainnet token addresses, deployed contract code, SDK behavior,
-Gateway settlement, and a production release have not been verified. M1 remains open.
+This advanced external availability evidence only. Repository code and signer domains
+remained pinned to testnet. The [September 29 readiness evidence](./engineering/mainnet-readiness-2026-09-29.md)
+updates the published token and Gateway address evidence and records narrow read-only
+code-presence observations. PR #26 (`a79e882`) subsequently upgraded the seller
+SDK and pinned its testnet facilitator URL; one reported live testnet toll settled.
+Mainnet contract identity, mainnet SDK behavior, Keryx registry deployment, Gateway
+settlement and release acceptance remain unverified. M1 remains open.
 
 ## Product acceptance map
 
@@ -63,12 +115,12 @@ existing is insufficient to mark the complete journey accepted.
 
 | ID | Participant and complete journey | Current evidence | Work and acceptance still required |
 | --- | --- | --- | --- |
-| B1 | Buyer discovers an offer, understands price/quality limits, funds a wallet, buys and follows a research job | `/research`, shared buyer engine, [fresh owner-operated browser funding/purchase/recovery pilot](./engineering/browser-pilot-2026-09-09.md), [portable browser/CLI recovery](./engineering/portable-recovery-2026-09-09.md) | Independent wallet/mobile acceptance, replaced/cancelled transactions and recovery of lost funding storage. Preserve caps, private identifiers and uncertainty across those paths. |
-| B2 | Buyer reads answer, source decisions, evidence, spend and history; exports or deletes private local state deliberately | Buyer workspace, source-decision display, receipt archives and redacted CLI reports | Account/private history and privacy controls with ownership checks; browser receipt integrity checks where claimed. Usability review across desktop/mobile and fresh buyer sessions. |
-| C1 | Creator proves ownership, publishes priced/versioned content, updates/deactivates it and receives earned rewards | Registration, RSS verification, registry, source/citation routes and encrypted content modules | Fresh independent creator onboarding; ownership/payout updates, version changes and unavailable content exercised end to end. Rights/terms and retention behavior explicitly reviewed. |
-| C2 | Creator sees settled/pending earnings, receives notifications and withdraws without duplicate payment | Creator pages, withdrawal endpoints/intents, Gateway proof and notification paths | Current-release withdrawal/reconciliation failure drills, key/account recovery guidance, clear costs and support ownership. No use of a transfer ID as invented chain finality. |
+| B1 | Buyer discovers an offer, understands price/quality limits, funds a wallet, buys and follows a research job | `/research`, shared buyer engine, [fresh owner-operated browser funding/purchase/recovery pilot](./engineering/browser-pilot-2026-09-09.md), [portable browser/CLI recovery](./engineering/portable-recovery-2026-09-09.md), and replacement-inspection code/tests (`lib/buyer/funding-replacement.ts`) | Independent wallet/mobile acceptance and real replaced/cancelled transaction and lost-funding-storage drills. Preserve caps, private identifiers and uncertainty across those paths. |
+| B2 | Buyer reads answer, source decisions, evidence, spend and history; exports or deletes private local state deliberately | Buyer workspace, source-decision display, owner-scoped private history (`app/api/me/asks/route.ts`), browser receipt-integrity code/tests (`lib/browser-receipt-integrity.ts`) and redacted CLI reports | Independent fresh-session UX and portability acceptance; review private history/content access, privacy and retention limits across desktop/mobile. |
+| C1 | Creator proves ownership, publishes priced/versioned content, updates/deactivates it and receives earned rewards | Registration, RSS verification, registry-authorized listing management, source/citation routes and encrypted content modules; creator and payout wallets may differ. PR #27 (`b04a9f0`) separately exposes registry-owned listing links with public fields, bounded to 12 rows per page and four concurrent timed live reads. The original `/me/sources` private alert/earnings portfolio retains cached payout/author ownership. | Fresh independent creator onboarding and an end-to-end pilot remain open. Stale nonempty URL metadata can hide a valid listing, while metadata-free large corpora need pagination across many candidates. Exercise ownership/payout updates, version changes and unavailable content; review rights/terms and retention. |
+| C2 | Creator sees settled/pending earnings, receives notifications and withdraws without duplicate payment | Creator pages, withdrawal endpoints/intents, Gateway proof and notification paths; [September 30 funded operator EOA rehearsal](./engineering/creator-funded-withdrawal-drill.md) verifies original attestation/mint recovery and one cash-out ledger row | Independent creator/browser journey, unknown-UUID Circle response loss and broader withdrawal/reconciliation failure drills; key/account recovery guidance, clear costs and support ownership. No use of a transfer ID as invented chain finality. |
 | D1 | External developer integrates quote/buy/resume/report and operates with bounded funds | Buyer CLI, API docs, MCP and A2A routes | Clean-machine integration by independent teams, API/version change policy, per-client limits/usage reporting and actionable support diagnostics. |
-| O1 | Operator reconciles jobs, monitors quality/economics, restores service and responds to incidents | Worker, order review commands, health/proof, backups and reconciliation scripts | Timed restore/rollback drills on the intended release, alert delivery checks, rotation procedures, operator access review and documented incident ownership. |
+| O1 | Operator reconciles jobs, monitors quality/economics, restores service and responds to incidents | Worker, order review commands, health/proof, backups and reconciliation scripts; [off-host fixed-route alert/responder acceptance](./outside-host-ops-monitor.md) passed | Real VPS outage/failover, timed restore/rollback, sustained monitor operation, durable host time synchronization, rotation procedures and operator access review. |
 | E1 | Ecosystem has repeat buyers and independently controlled useful sources | Internal sources and first-party pilot evidence | Retain the existing roadmap target of 3–5 independent buyer teams repeatedly using one valuable outcome; independently controlled creator participation and four weeks of cohort evidence. Do not substitute owner-operated volume. |
 
 ## Economics acceptance
@@ -117,12 +169,12 @@ end-to-end research acceptance, independent review or a new confidence guarantee
 
 | Gate | Required evidence | Baseline status |
 | --- | --- | --- |
-| M1 Network/services | Official Arc mainnet chain/token/RPC/explorer values, Gateway nanopayment support, deployed code and SDK support verified against the intended environment | Arc/Circle publish mainnet network and Gateway availability as of September 28; token, deployed code, SDK and end-to-end settlement checks remain open |
-| M2 Authority/isolation | Separate production configuration, deployments and keys; no cross-environment signatures/nonces/DB records; bounded user and treasury funds | Testnet-only implementation; migration design and tests required |
-| M3 Security | Independent review of signer/session authority, contracts, x402/Gateway, registry, encrypted delivery and auth; remediated critical/high findings and documented residuals | Repository tests/threat model exist; independent mainnet review not demonstrated |
-| M4 Settlement/recovery | Lost response, replay/concurrency, Circle/RPC outage, settled-but-undelivered and reconciliation drills; no silent pending-to-failed transitions | Focused tests and owner pilots exist; release-wide drill evidence incomplete |
-| M5 Operations | Restore/rollback/rotation drills, realistic capacity/load test, alert routing, funding limits and an incident owner | Operational tooling exists; release acceptance not yet proven |
-| M6 Product/data policy | Buyer/creator journeys above accepted, private history/content access reviewed, clear pricing/refund/retention/support terms | Partial; independent wallet UX, authenticated private history, recovery completeness and policy review remain open |
+| M1 Network/services | Official Arc mainnet chain/token/RPC/explorer values, Gateway nanopayment support, deployed code and SDK support verified against the intended environment | [September 29 evidence](./engineering/mainnet-readiness-2026-09-29.md): official network, token and Gateway addresses published; narrow RPC code presence observed. PR #26 (`a79e882`) upgraded SDK 3.5.0 and pinned the testnet seller facilitator URL; one live testnet toll reportedly settled. Mainnet contract identity, Keryx registry deployment, mainnet SDK and end-to-end settlement checks remain open |
+| M2 Authority/isolation | Separate production configuration, deployments and keys; no cross-environment signatures/nonces/DB records; bounded user and treasury funds | Testnet authority retained; guarded SQLite/PostgreSQL factories have native candidate acceptance but remain dormant. Runtime caller integration, trusted custody history, deployment enrollment and drained cutover remain open. |
+| M3 Security | Independent review of signer/session authority, contracts, x402/Gateway, registry, encrypted delivery and auth; remediated critical/high findings and documented residuals | D-272 atomic admission and retained original-epoch/signer accounting have repository code/test evidence. The [independent review packet](./independent-security-review.md) defines the candidate handoff; independent mainnet review and remediation acceptance are not demonstrated |
+| M4 Settlement/recovery | Lost response, replay/concurrency, Circle/RPC outage, settled-but-undelivered and reconciliation drills; no silent pending-to-failed transitions | Focused tests and owner pilots exist; [funded withdrawal original/receipt recovery](./engineering/creator-funded-withdrawal-drill.md) passed two new keyless processes and idempotent accounting. Unknown-UUID Circle response loss and release-wide drill evidence remain open |
+| M5 Operations | Restore/rollback/rotation drills, realistic capacity/load test, alert routing, funding limits and an incident owner | [Outside-host fixed-404 diagnostic](./outside-host-ops-monitor.md) passed real reads, both first-attempt Telegram deliveries and owner response acceptance; a real healthy production Cron sample was separately observed. Real VPS outage/failover, restore/rollback/rotation, sustained scheduling and durable NTP synchronization remain open |
+| M6 Product/data policy | Buyer/creator journeys above accepted, private history/content access reviewed, clear pricing/refund/retention/support terms | Partial; owner-scoped private history, browser receipt-integrity code/tests and separate registry-owned listing discovery exist. Creator discovery limits and independent creator pilot, wallet UX, portability/recovery drills, privacy/retention and policy review remain open |
 | M7 Economics/adoption | Cost coverage, independently initiated repeated use, measured quality and positive unit contribution with no unpriced-cost assumptions | Not established |
 | M8 Launch decision | Owner reviews the concrete release, evidence dossier, funds/limits and remaining risks, then explicitly approves mainnet deployment/spend | Not requested or granted |
 
@@ -133,9 +185,62 @@ prevent independent product, measurement or reliability work from continuing.
 
 ## Delivery sequence
 
-[Creator cash-out recovery](./creator-withdrawal-recovery.md) now has a shared signed-request
-identity and a private immutable single-admission journal in SQLite/PostgreSQL. The relay,
-attestation/mint persistence and browser recovery remain in progress; C2/M4 are not complete.
+### October 2 preparation
+
+October 2 preparation baseline: `241c721f1c1930dabb97cec0260d3220c2b5e87c`
+includes the reviewed guarded SQLite and PostgreSQL backend implementations from
+[PR107](https://github.com/tang-vu/keryx/pull/107) and
+[PR108](https://github.com/tang-vu/keryx/pull/108). Their native acceptance advances
+the [closed factory boundary](enrolled-runtime-backends.md); ordinary `getDb()` and
+deployed adapters still retain authority. Complete guarded caller workflows under
+existing payment/observation deadlines, production provenance, paused enrollment,
+backup/restore lineage and rollback rehearsal remain required before cutover.
+There is no automatic migration or mainnet profile activation.
+
+The [existing treasury custody fix](treasury-wallet-custody.md) removes runtime
+generation/replacement on missing or invalid wallet state and preserves valid
+legacy identity. Synthetic constructor/process evidence does not establish
+exclusive key history, funded recovery, external security acceptance or M2 closure.
+Its exact-head review, CI and deployed health verification remain release gates;
+this dated preparation note does not claim deployment.
+
+[Treasury transaction isolation](treasury-transaction-isolation.md) also addresses
+a reproduced provider-preparation signing bypass across the server gateway,
+caller-funded stdio MCP and local maintenance/demo callers, and retires the
+unrestricted legacy live withdrawal lane. Existing owner-provisioned custody and
+an explicit trusted merchant policy are prerequisites for the breaking MCP 0.3.0
+setup; [distribution acceptance](mcp-distribution.md) remains separate from npm
+publication. Synthetic keys prove refusal and retained uncertainty; they do not prove
+durable cross-process funding admission, custody history, funded settlement or
+independent audit. M2/M4 and the owner launch decision remain open.
+
+Read-only production observation, October 2 at approximately 01:43 UTC: public
+health reported `94cb7cc`, operational/database OK and `arcTestnet`.
+`timedatectl` reported NTP enabled and synchronized; `chrony.service` was loaded,
+active and enabled, with a KVM stratum-1 reference, zero reported system offset
+and normal leap status. This advances current enabled-provider evidence. It does
+not independently corroborate external NTP, exercise reboot/failover, change
+service configuration or close M5 recovery/operations acceptance. This deployment
+observation precedes the treasury-fix candidate and does not claim that fix is live.
+
+Credential-free availability recheck, October 2 at `01:54:53.680Z`, used the
+existing [read-only Arc probe](arc-mainnet-readonly-probe.md). All four RPCs
+reported chain `5042` and agreed at block `0x16b3a88`, hash
+`0xd4adcacc1b8bc7003ac73790e3237a52a5ce0770b706b14aa15de24f70d943cc`;
+USDC reported six decimals, observed proxy/code digests matched the prior evidence
+and static SDK 3.5 metadata matched. The report retained `M1_PARTIAL`,
+`mainnetReady: false` and `settlementAccepted: false`. Output was observed in the
+operator session, not retained as a new artifact file. This proves neither audit
+identity, private registry deployment nor settlement, and accessed no wallet key
+or signer. Official Arc/Circle network references were also rechecked that day;
+the deployed signing profile remains testnet.
+
+[Creator cash-out recovery](./creator-withdrawal-recovery.md) has a shared signed-request
+identity and a private immutable single-admission journal in SQLite/PostgreSQL. The
+September 30 [funded operator rehearsal](./engineering/creator-funded-withdrawal-drill.md)
+accepted retained attestation/mint recovery and idempotent cash-out accounting. Production
+withdrawal activation, independent creator/browser acceptance, unknown-UUID Circle loss
+and broader release recovery remain open; C2/M4 are not complete.
 
 Linux process acceptance now covers [active synthetic prepaid-job SIGTERM and SIGKILL](./engineering/private-worker-active-drain-2026-09-10.md)
 through the production worker entrypoint, real SQLite/spool and blocked transports.

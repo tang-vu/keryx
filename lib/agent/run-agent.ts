@@ -1,10 +1,20 @@
+import { discoverPublicReferences } from "./public-reference-evidence";
+import { discoverScholarly } from "../scholarly/discovery";
+import { paperCanResearch, paperDuplicatesPublicBody } from "../scholarly/paid-gate";
+import { questionDois } from "../scholarly/doi";
+import { discoverWeb } from "../web-research/discovery";
+import { searxngProvider } from "../web-research/search-provider";
+import { tavilyProvider } from "../web-research/tavily-provider";
+import { ArticleReadError, articleFailureCode, gatheredArticle, readArticle } from "../web-research/article-reader";
+import { bodyIdentity } from "../web-research/url-identity";
+import { isPublicReferenceId } from "../public-references/catalog";
 /**
  * The Keryx agent orchestrator — the brain.
  *
  * Streams a human-readable reasoning trace while it: decomposes the question, discovers candidate
  * sources, DECIDES buy/skip/cache (engine reasons value, code enforces the hard budget), fetches
  * via x402, stops early once it has read enough, synthesizes a cited answer, attributes contribution,
- * and settles a weighted citation reward to every source it actually used. Multi-author = split.
+ * and settles weighted citation rewards to eligible creators. Public references are free evidence.
  *
  * Yields TraceStep events; returns the final QueryRun. Visible agency is the product.
  */
@@ -73,6 +83,13 @@ import {
 } from "./evidence-portfolio";
 
 export interface RunInput {
+  /** Opt in to scholarly metadata search; this never authorizes payment. */
+  scholarly?: boolean;
+  /** Explicit opt-in for independently reviewed testnet manuscripts; browser journal only. */
+  paidScholarly?: boolean;
+  signal?: AbortSignal;
+  /** Trusted manual CLI opt-in only; never populate from public request JSON. */
+  allowExternalWeb?: boolean;
   question: string;
   budget?: number;
   /** Quick bounds attention/expansion for latency; Deep preserves the full research pass. */
@@ -143,6 +160,8 @@ export async function* runAgent(
   let paymentAttempts = 0;
   let settledPayments = 0;
   let pendingPayments = 0;
+  let fundingUnavailable = false;
+  const fundingNotice = "Funding readiness is unknown. Paid source access and creator rewards are withheld for this run; any wallet funding activity remains unverified. Inspect the original funding records before another paid attempt.";
   let finalDecisions: Decision[] = [];
   let citations: Citation[] = [];
   let evidence: EvidenceRecord[] = [];
@@ -150,9 +169,9 @@ export async function* runAgent(
   let previewCoverage: PreviewCoverage | undefined;
   let evidencePortfolio: EvidencePortfolio | undefined;
   let evidenceMeasured = false;
-  // Set once the verdict is computed; read by finish(). A `let` (not the closure-captured const)
-  // so the early-return paths, which never reach the verdict step, still produce a valid run.
-  let runConfidence: Confidence | undefined;
+  // Initialize before any early return. The production optimizer can otherwise merge an
+  // uninitialized binding with the later verdict declaration, stranding finish() in its TDZ.
+  let runConfidence: Confidence = { level: "Low", reason: "no source was read for this question" };
 
   const fetchBudget = budget * (1 - config.citationPoolRatio);
   const citationPool = budget * config.citationPoolRatio;
@@ -181,6 +200,9 @@ export async function* runAgent(
   }
 
   async function persistPaymentRecord(payment: PaymentRecord): Promise<string | null> {
+    // Journal admission already committed the authoritative row before browser exposure.
+    // Reconciliation/gateway CAS owns its lifecycle; a second INSERT is not recovery.
+    if (payment.authorizationPhase) return null;
     try {
       await effects.recordPayment(payment);
       return null;
@@ -201,8 +223,8 @@ export async function* runAgent(
   yield emit(
     "decompose",
     researchMode === "quick"
-      ? `Quick mode: at most ${attentionLimit} paid/cached reads, with no marketplace probe or gap-expansion round.`
-      : `Deep mode: up to ${attentionLimit} paid/cached reads plus one bounded gap-expansion pass when needed.`,
+      ? `Quick mode: at most ${attentionLimit} paid/cached/public reads, with no marketplace probe or gap-expansion round.`
+      : `Deep mode: up to ${attentionLimit} paid/cached/public reads plus one bounded gap-expansion pass when needed.`,
     { researchMode, attentionLimit, reevaluateRounds },
   );
 
@@ -212,8 +234,10 @@ export async function* runAgent(
   // cited, or paid. Listing stays permissionless — unverified rows show in the directory, just
   // off the money path. Undefined verified = grandfathered true (curated seed + pre-flag rows).
   const allSources = await db.listSources();
-  const sources = allSources.filter((s) => s.verified !== false);
-  const unverifiedCount = allSources.length - sources.length;
+  const eligible = allSources.filter((s) => s.verified !== false && !isPublicReferenceId(s.id));
+  const rights = await Promise.all(eligible.map(s => paperCanResearch(db, s, input.paidScholarly === true && origin === "web")));
+  const sources = eligible.filter((_s, index) => rights[index]);
+  const unverifiedCount = allSources.filter((source) => source.verified === false).length;
   const candidates: SourceCandidate[] = [];
   const assetById = new Map<string, InternalAsset>();
   // Sources whose cached copy still matches what they publish. A copy the source has published
@@ -221,8 +245,100 @@ export async function* runAgent(
   // the first purchase of a source would be the last toll it ever earned, and every later answer
   // would be built from text the source has moved on from. See ./cache-freshness.ts.
   const freshCache = new Set<string>();
+  const { publicReads, publicCandidates } = await discoverPublicReferences(db, input.question, subClaims);
+  const webCandidates = new Map<string, SourceCandidate>();
+  let webRemainingMs = input.researchMode === "quick" ? 30000 : 55000;
+  let webAttempts = 0;
+  const webSignal = () => AbortSignal.any([input.signal ?? new AbortController().signal,
+    AbortSignal.timeout(Math.max(1, webRemainingMs))]);
+  if ((input.scholarly || questionDois(input.question).length) && effects.scope.kind === "public"
+    && (origin !== "engine" || input.allowExternalWeb === true) && webRemainingMs > 0) {
+    const operationStarted = Date.now();
+    try {
+      const discovered = await (deps.discoverScholarly ?? discoverScholarly)(input.question, input.scholarly === true, webSignal());
+      for (const [id, candidate] of discovered.candidates) { webCandidates.set(id, candidate); publicCandidates.set(id, candidate); }
+      yield emit("discover", `Scholarly discovery: ${discovered.succeeded} provider requests succeeded, ${discovered.unavailable} unavailable; ${discovered.candidates.size} bibliographic previews. DOI lookup resolved ${discovered.resolvedDois}/${discovered.requestedDois} detected identifiers (up to two DOI lookups per run). Metadata is not paper evidence. arXiv is preprint material; peer review is unknown. Selected originals must be read; no creator payout.`);
+    } catch { yield emit("discover", "Scholarly discovery unavailable; continuing with other sources. No paper evidence established."); }
+    finally { webRemainingMs -= Date.now() - operationStarted; }
+    if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
+  }
+  if (effects.scope.kind === "job") {
+    yield emit("discover", "External web search withheld for private research; no question is sent to a search provider.");
+  } else if (origin === "engine" && input.allowExternalWeb !== true) {
+    yield emit("discover", "External web search withheld for unattended engine research; manual CLI research can explicitly opt in.");
+  } else if (deps.webSearch || config.webSearchProvider) {
+    const operationStarted = Date.now();
+    try {
+      const configured = deps.webSearch ?? (config.webSearchProvider === "searxng" ? searxngProvider(config.webSearchUrl)
+        : config.webSearchProvider === "tavily" ? tavilyProvider(config.tavilyApiKey) : null);
+      if (!configured) throw new Error("Search provider is unconfigured");
+      const discovered = await discoverWeb(configured, input.question,
+        subClaims, input.researchMode === "quick", webSignal());
+      for (const [id, candidate] of discovered.candidates) { webCandidates.set(id, candidate); publicCandidates.set(id, candidate); }
+      yield emit("discover", `Web search: ${discovered.attemptedQueries}/${discovered.queries} planned queries attempted, ${discovered.succeededQueries} succeeded, ${discovered.candidates.size} public page previews, ${discovered.failedQueries} unavailable queries${discovered.cancelled ? "; search deadline or cancellation reached" : ""}${discovered.truncatedQueries ? "; query text bounded at 500 characters" : ""}. Snippets are discovery only. Public reads spend no USDC; model and service operating costs remain separate.`);
+    } catch { yield emit("discover", "Web search unavailable; continuing with the available catalog. No web evidence was established."); }
+    finally { webRemainingMs -= Date.now() - operationStarted; }
+    if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
+  } else yield emit("discover", "Broad web search is not configured; other discovery channels remain available.");
+  const seenWebBodies = new Set<string>();
+  const seenWebUrls = new Set<string>();
+  let lastWebFailure = "unavailable";
+  const scholarlyReadFailures: string[] = [];
+  async function fetchWeb(id: string): Promise<GatheredContent | null> {
+    lastWebFailure = "web-operation-limit";
+    const candidate = webCandidates.get(id);
+    if (!candidate?.item?.itemUrl || webAttempts >= (input.researchMode === "quick" ? 4 : 8) || webRemainingMs <= 0) return null;
+    webAttempts++;
+    const operationStarted = Date.now();
+    try {
+      const metadata = candidate.item.scholarly;
+      let abstractFallback = false;
+      let article;
+      try {
+        article = await (deps.readWebArticle ?? readArticle)(candidate.item.itemUrl, webSignal());
+        if (metadata?.provider === "arxiv" && article.finalUrl === candidate.item.itemUrl && article.kind !== "pdf") throw new ArticleReadError("pdf-extraction-unavailable");
+      }
+      catch (error) {
+        if (metadata?.provider !== "arxiv") throw error;
+        scholarlyReadFailures.push(`arXiv ${metadata.arxivId}: paper PDF unavailable (${articleFailureCode(error)}).`);
+        if (webAttempts >= (input.researchMode === "quick" ? 4 : 8) || webRemainingMs - (Date.now() - operationStarted) <= 0 || input.signal?.aborted) throw error;
+        webAttempts++;
+        abstractFallback = true;
+        article = await (deps.readWebArticle ?? readArticle)(`https://arxiv.org/abs/${metadata.arxivId}`,
+          AbortSignal.any([input.signal ?? new AbortController().signal, AbortSignal.timeout(Math.max(1, webRemainingMs - (Date.now() - operationStarted)))]));
+      }
+      // A provider's versioned repository identity must survive document redirects.
+      if (metadata?.provider === "arxiv") {
+        const expected = `https://arxiv.org/${abstractFallback ? "abs" : "pdf"}/${metadata.arxivId}`;
+        if (article.finalUrl !== expected || (!abstractFallback && article.kind !== "pdf")) throw new Error("arXiv document identity changed");
+      }
+      const identity = bodyIdentity(article.text);
+      lastWebFailure = "empty-or-duplicate-body";
+      if (!article.text.trim() || seenWebBodies.has(identity) || seenWebUrls.has(article.finalUrl) || publicReads.size && [...publicReads.values()].some(read => bodyIdentity(read.text) === identity)) return null;
+      seenWebBodies.add(identity);
+      seenWebUrls.add(article.finalUrl);
+      const gathered = gatheredArticle(id, article);
+      if (metadata) {
+        gathered.scholarly = { ...metadata, evidenceScope: metadata.provider === "arxiv" ? abstractFallback ? "abstract-page" : "paper-text" : "publisher-page" };
+        gathered.itemTitle = metadata.title;
+        gathered.itemPublishedAt = metadata.publishedDate?.length === 10 ? metadata.publishedDate : undefined;
+        gathered.publicDeliveryKind = abstractFallback ? "abstract" : "excerpt";
+        if (abstractFallback) scholarlyReadFailures.push(`arXiv ${metadata.arxivId}: only the abstract page was read; full-paper evidence is unavailable.`);
+      }
+      return gathered;
+    } catch (error) { lastWebFailure = articleFailureCode(error); return null; }
+    finally { webRemainingMs -= Date.now() - operationStarted; }
+  }
+  for (const candidate of publicCandidates.values()) {
+    candidates.push(candidate);
+    freshCache.add(candidate.id);
+  }
   let signedOfferCount = 0;
   for (const s of sources) {
+    if (await paperDuplicatesPublicBody(db, s, [...publicReads.values()].map(read => read.text))) {
+      yield emit("discover", `SKIP paid manuscript ${s.name}: identical exact-version body is already available as a free public reference.`);
+      continue;
+    }
     const terms = await sourceFetchTerms(s);
     if (!terms.active) continue;
     const items = await db.getItems(s.id);
@@ -245,7 +361,7 @@ export async function* runAgent(
       const cached = Boolean(await effects.getCachedAt(cacheKey));
       if (cached) freshCache.add(id);
       const summary = previewSummary(item.summary, depth);
-      const resolvedOffer = await resolveValidArticleOffer(db, s, item, terms);
+      const resolvedOffer = s.scholarlyEnrolled ? null : await resolveValidArticleOffer(db, s, item, terms);
       if (target?.articleOfferId && resolvedOffer?.offer.id !== target.articleOfferId) {
         throw new Error("wanted response article offer expired or was replaced before discovery");
       }
@@ -331,7 +447,7 @@ export async function* runAgent(
   }
   yield emit(
     "discover",
-    `Discovered ${candidates.length} verified source(s)${unverifiedCount > 0 ? ` — skipped ${unverifiedCount} unverified (feed ownership unproven, off the money path)` : ""}`,
+    `Discovered ${candidates.length - publicCandidates.size} verified creator source(s) and ${publicCandidates.size} free public reference(s)${unverifiedCount > 0 ? ` — skipped ${unverifiedCount} unverified (feed ownership unproven, off the money path)` : ""}`,
     candidates.map((c) => c.name),
   );
   if (signedOfferCount > 0) {
@@ -407,9 +523,20 @@ export async function* runAgent(
   const proposedAssetIds = new Set<string>();
   const internalProposed = proposed
     .filter((d) => !isExternal(d.sourceId))
-    .flatMap((d) => {
+    .flatMap<Decision>((d) => {
       // Current engines return candidate ids. Accept a registry source id too so an in-flight
       // fallback/custom engine cannot erase all decisions during this additive rollout.
+      const publicCandidate = publicCandidates.get(d.sourceId);
+      if (publicCandidate) {
+        if (proposedAssetIds.has(publicCandidate.id)) return [];
+        proposedAssetIds.add(publicCandidate.id);
+        return [{ ...d, assetId: publicCandidate.id, sourceId: publicCandidate.id,
+          sourceName: publicCandidate.name, price: 0, offerId: undefined, listPrice: undefined,
+          external: false, ...publicCandidate.item,
+          action: d.action === "SKIP" ? "SKIP" as const : "CACHE" as const,
+          rationale: `${d.rationale} - free public ${webCandidates.has(publicCandidate.id) ? "original-page READ selection (not a cache hit)" : "feed reference"}; no purchase or creator reward.`,
+          targets: normalizeClaimTargets(d.targets, subClaims.length) }];
+      }
       const asset = assetById.get(d.sourceId) ?? assetBySourceId.get(d.sourceId);
       if (!asset) return [];
       if (proposedAssetIds.has(asset.candidate.id)) return [];
@@ -419,6 +546,7 @@ export async function* runAgent(
         assetId: asset.candidate.id,
         sourceId: asset.source.id,
         sourceName: asset.candidate.name,
+        sourceKind: undefined, publicDeliveryKind: undefined,
         // The engine judges value; authoritative marketplace terms decide the amount reserved.
         price: asset.priceUsdc,
         targets: normalizeClaimTargets(d.targets, subClaims.length),
@@ -440,7 +568,7 @@ export async function* runAgent(
     // other purchase: converting it later at fetch time would settle a toll the fetch budget never
     // accounted for. If the budget can't cover it, the guard below turns it into a SKIP.
     const d =
-      r.action === "CACHE" && !freshCache.has(r.assetId ?? r.sourceId)
+      r.action === "CACHE" && !freshCache.has(r.assetId ?? r.sourceId) && !webCandidates.has(r.assetId ?? r.sourceId)
         ? {
             ...r,
             action: "BUY" as const,
@@ -536,7 +664,7 @@ export async function* runAgent(
   const selectedBought = finalDecisions.filter((decision) => decision.action === "BUY").length;
   yield emit(
     "coverage",
-    `Claim-aware portfolio selected ${evidencePortfolio.selectedAssetIds.length}/${evidencePortfolio.eligibleCandidates} positive proposal(s): ${selectedCached} cached + ${selectedBought} fresh, predicting ${evidencePortfolio.predictedCoveredClaims}/${subClaims.length} claim(s) above the evidence floor with $${evidencePortfolio.selectedBuyUsdc.toFixed(6)}/$${fetchBudget.toFixed(6)} fetch USDC reserved.`,
+    `Claim-aware portfolio (${evidencePortfolio.selectionMethod}; bounded selection, not a claim of global optimality) selected ${evidencePortfolio.selectedAssetIds.length}/${evidencePortfolio.eligibleCandidates} positive proposal(s): ${selectedCached} free/cache selections + ${selectedBought} paid fresh selections, predicting ${evidencePortfolio.predictedCoveredClaims}/${subClaims.length} claim(s) above the evidence floor with $${evidencePortfolio.selectedBuyUsdc.toFixed(6)}/$${fetchBudget.toFixed(6)} fetch USDC reserved.`,
     evidencePortfolio,
   );
   const coveragePct = Math.round(previewCoverage.ratio * 100);
@@ -564,11 +692,18 @@ export async function* runAgent(
 
   // Ensure the spend wallet holds a settle-able Gateway balance before any payment
   // (real mode tops up from the funder once; offline is a no-op). Cached sources still earn
-  // citation rewards, so fund whenever any source will be used.
-  if (buys.length > 0) {
-    const funded = await gateway.ensureFunded(budget);
-    if (gateway.mode === "real") {
-      yield emit("fetch", `Agent spend wallet ready: ${funded.address}${funded.depositTx ? ` (topped up ${short(funded.depositTx)})` : " (balance sufficient)"}`);
+  // citation rewards, so fund only when an owned payable source will be used.
+  let spendWalletReady = false;
+  if (buys.some((decision) => !publicCandidates.has(decision.assetId ?? decision.sourceId))) {
+    try {
+      const funded = await gateway.ensureFunded(budget);
+      spendWalletReady = true;
+      if (gateway.mode === "real") {
+        yield emit("fetch", `Agent spend wallet ready: ${funded.address}${funded.depositTx ? ` (topped up ${short(funded.depositTx)})` : " (balance sufficient)"}`);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") throw error;
+      yield* withholdOwnedReads("fetch");
     }
   }
 
@@ -576,9 +711,35 @@ export async function* runAgent(
   let lastGaps = 0; // sub-claims with coverage < 0.4 from the most recent sufficiency check
 
   for (const d of buys) {
+    if (webCandidates.has(d.assetId ?? d.sourceId)) {
+      yield emit("fetch", `READ ${d.sourceName} - selected original public page, 0 USDC; not a cache hit.`);
+      const read = await fetchWeb(d.assetId ?? d.sourceId);
+      for (const message of scholarlyReadFailures.splice(0)) yield emit("fetch", message);
+      if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
+      if (read) { const marker = `S${++markerN}`; gathered.push({ ...read, marker });
+        yield emit("fetch", `Read extracted public text from ${read.itemUrl} - ${marker}; quote matching establishes source grounding, not fact verification.`); }
+      else yield emit("fetch", `Public page unavailable (${lastWebFailure}); no evidence admitted. Continuing research.`);
+      continue;
+    }
+    const publicRead = publicReads.get(d.assetId ?? d.sourceId);
+    if (publicRead) {
+      const marker = `S${++markerN}`;
+      gathered.push({ ...publicRead, marker });
+      yield emit("fetch", `Read ${d.sourceName} - free public feed reference, no creator payment - ${marker}`);
+      continue;
+    }
+    if (fundingUnavailable) continue;
     const asset = assetById.get(d.assetId ?? d.sourceId);
     if (!asset) continue;
     const { source, item, cacheKey } = asset;
+    if (await paperDuplicatesPublicBody(db, source, gathered.filter(read => read.sourceKind === "public-reference").map(read => read.text))) {
+      yield emit("fetch", `SKIP paid manuscript ${source.name}: identical body was already read publicly, no duplicate access or reward.`);
+      continue;
+    }
+    if (!await paperCanResearch(db, source, input.paidScholarly === true && origin === "web")) {
+      yield emit("fetch", `SKIP ${source.name}: manuscript rights or registry terms changed before this read.`);
+      continue;
+    }
     const itemIdentity = asset.candidate.item ?? {};
     const assetLabel = item ? `${source.name} — ${item.title}` : source.name;
     const marker = `S${++markerN}`;
@@ -664,7 +825,7 @@ export async function* runAgent(
           const ledgerError = await persistPaymentRecord(pending);
           yield emit(
             "fetch",
-            `Signed $${pending.amountUsdc} authorization for ${assetLabel}; ${pendingConfirmationMessage(err)}. The amount is not counted as spent; skipping this article and continuing.`,
+            `${pendingAuthorizationLabel(pending)} $${pending.amountUsdc} authorization for ${assetLabel}; ${pendingConfirmationMessage(err)}. The amount is reserved, not counted as settled spend; skipping this article and continuing.`,
             pending,
           );
           if (ledgerError) {
@@ -731,7 +892,8 @@ export async function* runAgent(
             d.action === "SKIP" &&
             !d.external &&
             !isExternal(d.sourceId) &&
-            !gatheredIds.has(d.assetId ?? d.sourceId),
+            !gatheredIds.has(d.assetId ?? d.sourceId) &&
+            (!fundingUnavailable || publicReads.has(d.assetId ?? d.sourceId) || webCandidates.has(d.assetId ?? d.sourceId)),
         )
         .map((d) => {
           const asset = assetById.get(d.assetId ?? d.sourceId);
@@ -739,11 +901,11 @@ export async function* runAgent(
             id: d.assetId ?? d.sourceId,
             name: d.sourceName,
             price: asset?.priceUsdc ?? 0,
-            preview: asset?.candidate.preview ?? "",
+            preview: asset?.candidate.preview ?? publicCandidates.get(d.sourceId)?.preview ?? "",
           };
         });
 
-      if (skipped.length === 0 || remainingBudget <= 0) break;
+      if (skipped.length === 0 || (remainingBudget <= 0 && !fundingUnavailable)) break;
 
       const reeval = await engine.reevaluate({
         question: input.question,
@@ -787,17 +949,58 @@ export async function* runAgent(
           );
           break;
         }
+        if (webCandidates.has(recId) && !gatheredIds.has(recId)) {
+          const read = await fetchWeb(recId);
+          for (const message of scholarlyReadFailures.splice(0)) yield emit("reevaluate", message);
+          if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
+          if (read) { const marker = `S${++markerN}`; gathered.push({ ...read, marker }); attentionUsed++; gatheredIds.add(recId);
+            yield emit("reevaluate", `READ original public page ${read.itemUrl}, 0 USDC - ${marker}`); }
+          else yield emit("reevaluate", `Public gap read unavailable (${lastWebFailure}); claim remains unknown.`);
+          continue;
+        }
+        const publicRead = publicReads.get(recId);
+        if (publicRead && !gatheredIds.has(recId)) {
+          const marker = `S${++markerN}`;
+          gathered.push({ ...publicRead, marker });
+          attentionUsed++;
+          gatheredIds.add(recId);
+          yield emit("reevaluate", `Filling gap - free public feed reference ${publicRead.sourceName}, no creator payment - ${marker}`);
+          continue;
+        }
+        if (fundingUnavailable) {
+          yield* withholdOwnedReads("reevaluate", recId);
+          continue;
+        }
         const asset = assetById.get(recId);
         const source = asset?.source;
         // Guard against an engine recommending a source we already read (duplicate marker +
         // double payment) or that no longer fits the remaining budget.
         if (!asset || !source || gatheredIds.has(recId) || asset.priceUsdc > remainingBudget + 1e-9) continue;
+        if (await paperDuplicatesPublicBody(db, source, gathered.filter(read => read.sourceKind === "public-reference").map(read => read.text))) {
+          yield emit("reevaluate", `SKIP paid manuscript ${source.name}: identical public body is already evidence, no duplicate payment.`);
+          continue;
+        }
+        if (!await paperCanResearch(db, source, input.paidScholarly === true && origin === "web")) {
+          yield emit("reevaluate", `SKIP ${source.name}: manuscript rights or registry terms changed before this read.`);
+          continue;
+        }
 
         const marker = `S${++markerN}`;
         const assetLabel = asset.item ? `${source.name} — ${asset.item.title}` : source.name;
         const itemIdentity = asset.candidate.item ?? {};
+        // Funding errors have their own uncertainty boundary. They are never
+        // interpreted as a creator payment record or permission to retry funding.
+        if (!spendWalletReady) {
+          try {
+            await gateway.ensureFunded(budget);
+            spendWalletReady = true;
+          } catch (error) {
+            if (error instanceof Error && error.name === "AbortError") throw error;
+            yield* withholdOwnedReads("reevaluate", recId);
+            continue;
+          }
+        }
         yield emit("reevaluate", `Filling gap — buying ${assetLabel} ($${asset.priceUsdc})…`);
-
         try {
           paymentAttempts++;
           await input.onCreatorPaymentBoundary?.();
@@ -872,7 +1075,7 @@ export async function* runAgent(
             spentTolls += asset.priceUsdc;
             yield emit(
               "reevaluate",
-              `Signed $${pending.amountUsdc} authorization for ${assetLabel}; ${pendingConfirmationMessage(err)}. The reserved budget stays consumed.`,
+              `${pendingAuthorizationLabel(pending)} $${pending.amountUsdc} authorization for ${assetLabel}; ${pendingConfirmationMessage(err)}. The reserved budget stays consumed.`,
               pending,
             );
             if (ledgerError) {
@@ -893,7 +1096,10 @@ export async function* runAgent(
       claimIndex, claim, coverage: 0, coveredBy: [],
     }));
     return finish(
-      pendingPayments > 0
+      fundingUnavailable
+        ? "No supported answer: paid sources were withheld because funding readiness could not be verified, and no usable public evidence was gathered. " +
+          "Wallet funding effects remain unknown; inspect the original funding records before another paid attempt."
+        : pendingPayments > 0
         ? "No supported answer: source payment confirmation remains pending and no usable content was received. " +
           "Pending amounts stay reserved; any confirmed source payments remain recorded separately. Keep this job for reconciliation before buying again."
         : settledPayments > 0
@@ -984,7 +1190,7 @@ export async function* runAgent(
   // completes "done" showing a blank answer after real money was spent.
   let answer = synthesized.answer?.trim()
     ? synthesized.answer
-    : `Read and paid for ${gathered.length} source(s) (${gathered.map((g) => g.sourceName).join(", ")}), but couldn't compose a written summary this run. Please try again.`;
+    : `Read ${gathered.length} source(s) (${gathered.map((g) => g.sourceName).join(", ")}), but couldn't compose a written summary this run. Please try again.`;
   const ledger = buildEvidenceLedger({
     subClaims,
     gathered,
@@ -1017,7 +1223,7 @@ export async function* runAgent(
   for (const item of evidence) {
     yield emit(
       "evidence",
-      `${item.qualifiesForReward ? "Verified" : "Below reward gate"} — ${item.marker} supports claim ${item.claimIndex + 1} at ${Math.round(item.support * 100)}%: “${item.quote.slice(0, 140)}${item.quote.length > 140 ? "…" : ""}”`,
+      `${item.sourceKind === "public-reference" && item.qualifiesForAnswer ? "Verified public reference (no creator reward)" : item.qualifiesForReward ? "Verified" : "Below support/reward gate"} — ${item.marker} supports claim ${item.claimIndex + 1} at ${Math.round(item.support * 100)}%: “${item.quote.slice(0, 140)}${item.quote.length > 140 ? "…" : ""}”`,
       item,
     );
   }
@@ -1044,6 +1250,7 @@ export async function* runAgent(
 
   // Coverage cannot resolve a contradiction or turn a source preference into corroboration.
   const verdict = researchVerdict({ coverage: claimCoverage,
+    sources: gathered,
     citedMarkers: [...ledger.acceptedMarkers], sourceMarkers: gathered.map(source => source.marker),
     conflicts: synthesized.conflicts ?? [], finalAssessmentSufficient: finalSufficiency.sufficient });
   runConfidence = verdict;
@@ -1082,20 +1289,27 @@ export async function* runAgent(
         contentVersion: g.contentVersion,
         itemPublishedAt: g.itemPublishedAt,
         contentReceipt: g.contentReceipt,
+        sourceKind: g.sourceKind,
+        publicDeliveryKind: g.publicDeliveryKind,
+        webProvenance: g.webProvenance,
+        scholarly: g.scholarly,
         weight: attribution.weight,
-        reward: rewards[index] ?? 0,
+        reward: g.sourceKind === "public-reference" ? 0 : rewards[index] ?? 0,
         rationale: attribution.rationale,
       };
     });
   }
   for (const c of citations) {
-    yield emit("attribute", `${c.sourceName} contributed ${(c.weight * 100).toFixed(0)}% → reward $${c.reward}`, c);
+    yield emit("attribute", c.sourceKind === "public-reference"
+      ? `${c.sourceName} contributed ${(c.weight * 100).toFixed(0)}% - free public reference; reward share withheld`
+      : `${c.sourceName} contributed ${(c.weight * 100).toFixed(0)}% - reward $${c.reward}`, c);
   }
 
   // 7) SETTLE weighted citation rewards (split across authors)
   for (const c of citations) {
-    const source = sourceById.get(c.sourceId)!;
-    if (c.reward <= 0) continue;
+    if (publicReads.has(c.sourceId) || isPublicReferenceId(c.sourceId)) continue;
+    const source = sourceById.get(c.sourceId);
+    if (!source || c.reward <= 0) continue;
     const authors = source.authors.length ? source.authors : [{ name: source.name, walletAddress: source.walletAddress, splitWeight: 1 }];
     // Allocate the reward across authors in integer micro-USDC so the settled legs sum to EXACTLY
     // c.reward — independent rounding per author (round(reward * weight)) would let the legs drift
@@ -1180,7 +1394,7 @@ export async function* runAgent(
           const ledgerError = await persistPaymentRecord(pending);
           yield emit(
             "settle",
-            `Signed $${pending.amountUsdc} citation authorization → ${author.name}; ${pendingConfirmationMessage(err)}. The amount is not counted as paid.`,
+            `${pendingAuthorizationLabel(pending)} $${pending.amountUsdc} citation authorization → ${author.name}; ${pendingConfirmationMessage(err)}. The amount is not counted as paid.`,
             pending,
           );
           if (ledgerError) {
@@ -1236,7 +1450,31 @@ export async function* runAgent(
   return finish(answer);
 
   // ── helpers ──
+  function withholdOwnedReads(phase: "fetch" | "reevaluate", selectedAssetId?: string): TraceStep[] {
+    const steps: TraceStep[] = [];
+    if (!fundingUnavailable) {
+      fundingUnavailable = true;
+      steps.push(emit(phase, fundingNotice, {
+        fundingReadiness: "unknown", automaticPaidAttemptsBlocked: true,
+      }));
+    }
+    for (const [index, decision] of finalDecisions.entries()) {
+      const assetId = decision.assetId ?? decision.sourceId;
+      if (decision.external || publicCandidates.has(assetId)
+        || (decision.action !== "BUY" && decision.action !== "CACHE" && assetId !== selectedAssetId)) continue;
+      // decide events retain the published planning snapshot. Replace the final
+      // decision instead of mutating the object already streamed and traced.
+      const withheld: Decision = { ...decision, action: "SKIP",
+        rationale: "Funding readiness is unknown; this owned source cannot be read or rewarded in this run." };
+      finalDecisions[index] = withheld;
+      steps.push(emit(phase, `SKIP ${withheld.sourceName}: ${withheld.rationale}`));
+    }
+    // Keep the query-local fetch reservation intact. A funding error cannot
+    // establish no wallet movement, release signer capacity or authorize refunds.
+    return steps;
+  }
   function finish(answer: string): QueryRun {
+    if (fundingUnavailable) answer = `> ${fundingNotice}\n\n${answer}`;
     const totalSpent = round(
       payments
         .filter(paymentCountsAsSpent)
@@ -1283,11 +1521,11 @@ export async function* runAgent(
       ...(input.retryOf ? { retryOf: input.retryOf } : {}),
       // Early returns (no sources, no purchase) never reach the verdict step — nothing was read,
       // so the honest label is Low rather than an absent field the surfaces would have to guess at.
-      confidence: runConfidence ?? { level: "Low", reason: "no source was read for this question" },
+      confidence: runConfidence,
     };
     emit(
       "done",
-      `Done. Spent $${totalSpent} across ${payments.length - pendingPayments} confirmed/simulated payment(s) to creators${pendingPayments ? `; ${pendingPayments} authorization(s) await settlement confirmation` : ""}.`,
+      `Done. Spent $${totalSpent} across ${payments.length - pendingPayments} confirmed/simulated payment(s) to creators${pendingPayments ? `; ${pendingPayments} authorization(s) await settlement confirmation` : ""}.${fundingUnavailable ? " Creator-payment amounts only; wallet funding effects remain unknown." : ""}`,
     );
     return run;
   }
@@ -1301,6 +1539,13 @@ function pendingConfirmationMessage(error: unknown): string {
   return error instanceof PaymentPendingError && !error.submissionAttempted
     ? "Keryx withheld submission; external use remains uncertain"
     : "settlement confirmation is pending";
+}
+
+function pendingAuthorizationLabel(payment: PaymentRecord): string {
+  if (payment.authorizationPhase === "prepared" || payment.authorizationPhase === "exposed") {
+    return "Reserved, possibly unsigned";
+  }
+  return payment.authorizationPhase === "submission_attempted" ? "Submitted" : "Signed";
 }
 
 function fetchPaymentMessage(payment: PaymentRecord, sourceName: string): string {

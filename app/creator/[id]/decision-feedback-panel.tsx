@@ -4,11 +4,11 @@
  * Public "how the agent decides on this source" panel.
  *
  * Earnings tell a creator what happened. This tells them why: how many dispatches weighed this
- * source, how many bought it, how often a purchase actually made the answer — and, in the agent's
+ * source, how many chose to read it, how often that choice made the answer — and, in the agent's
  * own words, the reasons behind the most recent passes. Every rationale here is already public on
  * the dispatch it links to; the panel is the per-source view nobody could assemble by hand.
  *
- * No advice is rendered. The comparison line states what the agent paid for other sources in the
+ * No advice is rendered. The comparison line states the listed prices of alternatives the agent chose in the
  * very runs where this one was skipped, and stops there — repricing (or deepening the preview) is
  * the creator's call, made from the same numbers the agent used.
  *
@@ -50,7 +50,7 @@ export function DecisionFeedbackPanel({ creatorId }: { creatorId: string }) {
         <Scale className="h-3.5 w-3.5 text-seal" /> How the agent decides on this source
       </h2>
       <p className="mb-4 max-w-xl font-serif text-[13px] text-ink-2">
-        Every dispatch weighs this source against the others and records why it bought or passed.
+        Every dispatch weighs this source against the others and records its BUY, CACHE or SKIP decisions.
         Across the last {data?.windowRuns} dispatches, {perf.considered} of them weighed this one.
       </p>
 
@@ -60,21 +60,21 @@ export function DecisionFeedbackPanel({ creatorId }: { creatorId: string }) {
             cache hits, so a bare "Bought 0" would read as rejection when the source was in fact
             picked 39 times out of 47. */}
         <Cell
-          label="Chosen"
+          label="Chosen decisions"
           value={String(chosen)}
           sub={
             perf.bought > 0 && perf.reused > 0
-              ? `${perf.bought} fresh · ${perf.reused} cached`
+              ? `${perf.bought} BUY / ${perf.reused} CACHE`
               : perf.bought > 0
-                ? `${perf.bought} fresh tolls`
-                : `all ${perf.reused} from cache`
+                ? `${perf.bought} BUY decisions`
+                : `${perf.reused} CACHE decisions`
           }
           accent
         />
         <Cell
-          label="Cited"
+          label="Citations in answers"
           value={String(perf.cited)}
-          sub={perf.citeThrough !== null ? `${pct(perf.citeThrough)} of ${chosen} reads` : "—"}
+          sub={perf.citeThrough !== null ? `${pct(perf.citeThrough)} of ${chosen} chosen decisions` : "—"}
           accent
         />
         <Cell
@@ -83,6 +83,8 @@ export function DecisionFeedbackPanel({ creatorId }: { creatorId: string }) {
           sub={`${pct(perf.skipped / perf.considered)} of the time`}
         />
       </div>
+
+      <p className="mb-4 text-xs text-ink-2">Decision and answer citation counts do not prove paid reads or settled citation rewards. Check earnings and payment evidence separately.</p>
 
       {/* The bar this source was measured against — same question, same budget, same minute. */}
       {perf.rivalPriceOnSkip !== null && perf.price !== null && (
@@ -94,7 +96,7 @@ export function DecisionFeedbackPanel({ creatorId }: { creatorId: string }) {
           {perf.evChosen !== null && perf.evSkipped !== null && (
             <>
               {" "}
-              It rated this source {perf.evChosen.toFixed(2)} when it bought and{" "}
+              It rated this source {perf.evChosen.toFixed(2)} when it chose to read and{" "}
               {perf.evSkipped.toFixed(2)} when it passed, on its 0–1 expected-value scale.
             </>
           )}

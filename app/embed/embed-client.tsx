@@ -163,7 +163,7 @@ export function EmbedClient() {
               {state.run.citations.length > 0 && (
                 <div className="mt-3 border-t border-line pt-2">
                   <div className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-ink-3">
-                    Creators paid · ${fmtUsdc(state.run.totalToCreators)} USDC
+                    Citations and planned rewards · ${fmtUsdc(state.run.totalToCreators)} USDC recorded ({state.run.paymentMode ?? "legacy"})
                   </div>
                   <ul className="mt-1 space-y-0.5">
                     {state.run.citations.map((c) => (
@@ -201,7 +201,7 @@ export function EmbedClient() {
           rel="noopener noreferrer"
           className="font-mono text-[9px] uppercase tracking-[0.14em] text-ink-3 hover:text-ink"
         >
-          Powered by Keryx — every citation pays its author ↗
+          Powered by Keryx — paid citations reward verified creators ↗
         </a>
       </footer>
     </div>

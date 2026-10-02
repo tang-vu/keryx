@@ -6,6 +6,9 @@ source using the root `package-lock.json` and pinned build tooling. The root app
 is private and is never published.
 
 The user confirmed this OIDC publishing preference on 2026-10-02.
+The owner also confirmed saving the exact trusted-publisher connection that day.
+Successful workflow publication and registry provenance remain the verification gate;
+the account-setting confirmation alone does not establish a published package.
 
 ## One-time connection
 
@@ -35,7 +38,7 @@ in a separate job without OIDC publishing permission.
 3. Run **Publish MCP to npm** from `main`, entering the committed package version:
 
    ```sh
-   gh workflow run publish-mcp.yml --ref main -f version=0.1.2
+   gh workflow run publish-mcp.yml --ref main -f version=0.3.1
    ```
 
 The manual workflow checks the current main commit and its successful push CI,

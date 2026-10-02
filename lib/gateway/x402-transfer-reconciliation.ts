@@ -1,5 +1,6 @@
 import type { KeryxDB } from "../db/keryx-db";
 import type { PaymentRecord } from "../types";
+import { ARC_TESTNET_PROFILE } from "../arc-network-profile";
 import {
   isAcknowledgedLegacyTreasuryPending,
   type PendingReconciliationAcknowledgement,
@@ -7,7 +8,7 @@ import {
 
 export const PENDING_RECONCILIATION_STATE_KEY = "pendingPaymentReconciliation";
 export const CIRCLE_X402_TRANSFERS_URL =
-  "https://gateway-api-testnet.circle.com/v1/x402/transfers";
+  `${ARC_TESTNET_PROFILE.gatewayApiUrl}/v1/x402/transfers`;
 
 const TRANSFER_SEARCH_LOOKBACK_MS = 24 * 60 * 60 * 1_000;
 const TRANSFER_SEARCH_PAGE_SIZE = 50;
@@ -53,6 +54,9 @@ export interface PendingReconciliationSummary {
   unacknowledgedAwaiting: number;
   /** Unresolved browser-funded rows whose session reservation remains held. */
   browserAwaiting: number;
+  exposedAwaiting?: number;
+  signedAwaiting?: number;
+  submittedAwaiting?: number;
   /** Unresolved server-treasury rows; these do not consume browser grant capacity. */
   treasuryAwaiting: number;
   /** Unresolved rows whose exact signed validBefore has passed. Not failure evidence. */
@@ -272,6 +276,9 @@ export async function reconcilePendingPayments(
     acknowledgedAwaiting: 0,
     unacknowledgedAwaiting: 0,
     browserAwaiting: 0,
+    exposedAwaiting: 0,
+    signedAwaiting: 0,
+    submittedAwaiting: 0,
     treasuryAwaiting: 0,
     expiredAwaiting: 0,
     unknownExpiryAwaiting: 0,
@@ -310,6 +317,15 @@ export async function reconcilePendingPayments(
       }
       if (payment.grantEpoch) summary.browserAwaiting++;
       else summary.treasuryAwaiting++;
+      if (payment.authorizationPhase === "exposed") {
+        summary.exposedAwaiting = (summary.exposedAwaiting ?? 0) + 1;
+      }
+      if (payment.authorizationPhase === "signed") {
+        summary.signedAwaiting = (summary.signedAwaiting ?? 0) + 1;
+      }
+      if (payment.authorizationPhase === "submission_attempted") {
+        summary.submittedAwaiting = (summary.submittedAwaiting ?? 0) + 1;
+      }
       const expiry = payment.authorizationExpiresAt
         ? Date.parse(payment.authorizationExpiresAt)
         : Number.NaN;

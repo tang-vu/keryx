@@ -23,7 +23,6 @@ import { NextResponse } from "next/server";
 import {
   createPublicClient,
   createWalletClient,
-  http,
   isAddress,
   parseEther,
   formatEther,
@@ -32,6 +31,7 @@ import { arcTestnet } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 import { consumePoint } from "@/lib/rate-limit-store";
 import { config } from "@/lib/config";
+import { attestedArcHttp } from "@/lib/arc-rpc-attestation";
 import { getDb } from "@/lib/db";
 import { executeOnrampTransfer } from "@/lib/faucet/onramp-transfer";
 
@@ -81,8 +81,8 @@ export async function POST(req: Request) {
 
   const dk = dayKey();
   const funder = privateKeyToAccount(config.funderKey as `0x${string}`);
-  const publicClient = createPublicClient({ chain: arcTestnet, transport: http(config.rpcUrl) });
-  const wallet = createWalletClient({ account: funder, chain: arcTestnet, transport: http(config.rpcUrl) });
+  const publicClient = createPublicClient({ chain: arcTestnet, transport: attestedArcHttp(config.rpcUrl) });
+  const wallet = createWalletClient({ account: funder, chain: arcTestnet, transport: attestedArcHttp(config.rpcUrl) });
   const funderBalance = await publicClient.getBalance({ address: funder.address });
   if (funderBalance < DRIP + FUNDER_BUFFER) {
     return disabled("Funder balance too low — use the Circle faucet");

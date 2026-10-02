@@ -1,3 +1,4 @@
+import { callSupabaseDomain } from "./supabase-authority";
 import { createHash } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -76,7 +77,7 @@ export async function admitSqlitePrivateCreatorSubmission(db: DatabaseSync, id: 
 export async function listSupabasePrivateCreatorSubmissions(db: SupabaseClient, id: string, payer: string) {
   const claim = await getSupabasePrivateExecution(db, id, payer);
   if (!claim) return [];
-  const { data, error } = await db.from("private_creator_submissions").select("leg_id,worker_id,authorization_id,amount_micros,data,started_at").eq("job_id", id).order("started_at").order("leg_id");
+  const { data, error } = await callSupabaseDomain(db, "list_supabase_private_creator_submissions", { p_job_id: id }, (_args) => db.from("private_creator_submissions").select("leg_id,worker_id,authorization_id,amount_micros,data,started_at").eq("job_id", _args.p_job_id).order("started_at").order("leg_id"));
   if (error || !Array.isArray(data)) throw new Error("Private creator storage unavailable");
   return data.map(row => readRow(id, claim.workerId, row));
 }

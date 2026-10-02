@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Bodoni_Moda, Spectral, Spline_Sans_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
 import { PaperGrain } from "@/components/keryx/paper-grain";
@@ -18,7 +18,7 @@ const defaultUrl =
 
 const TITLE = "Keryx — citations are currency";
 const DESCRIPTION =
-  "AI agents read your writing to answer other people's questions — and you're never paid for it. Keryx is a reading agent that cites its sources and pays the writers it quotes. List your blog and earn every time an AI cites you — settled instantly, no platform cut, no payout minimum.";
+  "Keryx researches questions using cited evidence, pays verified creators for qualifying paid citations, and includes free public references with no publisher payout. List your writing, prove feed ownership, and earn USDC rewards on Arc testnet.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
@@ -75,25 +75,33 @@ export const viewport: Viewport = {
 
 // "The Mint" type system: Bodoni Moda (engraved denomination display),
 // Spectral (literary reading + UI), Spline Sans Mono (labels, figures, tolls).
-const bodoni = Bodoni_Moda({
+const bodoni = localFont({
+  src: [
+    { path: "./fonts/bodoni-moda-latin.woff2", weight: "400 800", style: "normal" },
+    { path: "./fonts/bodoni-moda-latin-italic.woff2", weight: "400 800", style: "italic" },
+  ],
   variable: "--font-bodoni",
   display: "swap",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  style: ["normal", "italic"],
 });
-const spectral = Spectral({
+const spectral = localFont({
+  src: [
+    { path: "./fonts/spectral-latin-300.woff2", weight: "300", style: "normal" },
+    { path: "./fonts/spectral-latin-italic-300.woff2", weight: "300", style: "italic" },
+    { path: "./fonts/spectral-latin-400.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/spectral-latin-italic-400.woff2", weight: "400", style: "italic" },
+    { path: "./fonts/spectral-latin-500.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/spectral-latin-italic-500.woff2", weight: "500", style: "italic" },
+    { path: "./fonts/spectral-latin-600.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/spectral-latin-italic-600.woff2", weight: "600", style: "italic" },
+  ],
   variable: "--font-spectral",
   display: "swap",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
-  style: ["normal", "italic"],
 });
-const splineMono = Spline_Sans_Mono({
+const splineMono = localFont({
+  src: "./fonts/spline-sans-mono-latin.woff2",
   variable: "--font-spline-mono",
   display: "swap",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: "400 600",
 });
 
 // Structured data — helps search + AI crawlers understand what Keryx is.

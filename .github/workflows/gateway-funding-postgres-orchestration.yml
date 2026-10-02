@@ -1,0 +1,36 @@
+name: PostgreSQL controlled funding orchestration
+on:
+  pull_request:
+    paths:
+      - "scripts/test-gateway-funding-postgres-orchestration.mts"
+      - "scripts/gateway-funding-postgres-orchestration-protocol-fixture.mts"
+      - "scripts/test-fixtures/funding-postgres/**"
+      - "lib/db/**"
+      - "lib/payments/gateway-funding-*"
+      - "lib/canonical-json.ts"
+      - "package*.json"
+      - "tsconfig.json"
+      - "eslint.config.*"
+      - ".github/workflows/gateway-funding-postgres-orchestration.yml"
+  workflow_dispatch:
+jobs:
+  postgres-controlled-funding:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.21.0"
+          cache: npm
+      - run: npm ci
+      - name: Actual isolated PG17 PostgREST and native protocol four-leg acceptance
+        run: node --import tsx scripts/test-gateway-funding-postgres-orchestration.mts
+      - name: Project TypeScript
+        run: npx tsc --noEmit
+      - name: Scoped fixture TypeScript
+        run: npx tsc --noEmit --skipLibCheck --strict --target ES2022 --module esnext --moduleResolution bundler --allowImportingTsExtensions scripts/test-gateway-funding-postgres-orchestration.mts scripts/gateway-funding-postgres-orchestration-protocol-fixture.mts
+      - name: Scoped lint
+        run: npx eslint scripts/test-gateway-funding-postgres-orchestration.mts scripts/gateway-funding-postgres-orchestration-protocol-fixture.mts
