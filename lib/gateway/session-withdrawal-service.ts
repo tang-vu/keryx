@@ -1,4 +1,4 @@
-import { createPublicClient, encodeFunctionData, serializeTransaction, type Hex } from "viem";
+import { encodeFunctionData, type Hex } from "viem";
 import { z } from "zod";
 import { config } from "../config";
 import { ARC_MAINNET_PROFILE } from "../arc-network-profile";
@@ -15,10 +15,8 @@ import { estimateWithdrawalIntent } from "./withdrawal-estimate";
 import { createWithdrawalRequest } from "./withdrawal-request";
 import { requestCircleWithdrawalTransfer, submitWithdrawalTransfer, withdrawalTransferProgress } from "./withdrawal-transfer-service";
 import { withdrawalMintObserverForRpc, WITHDRAWAL_MINTER_ABI } from "./withdrawal-mint-observation";
-import { withdrawalRpcTransport } from "./withdrawal-rpc-transport";
-import { withdrawalReceiptObserverForRpc } from "./withdrawal-receipt-observation";
+import { observeWithdrawalOwnerCompletion } from "./withdrawal-owner-completion-observer";
 import { verifySessionWithdrawalCompletion } from "./session-withdrawal-completion";
-import { withdrawalMintTermsSchema } from "./withdrawal-mint-transaction";
 import { configuredSessionCashoutMaxAheadBlocks } from "../session/browser-session-cashout-policy";
 import { sessionWithdrawalCancellationSchema } from "./session-withdrawal-protocol";
 
@@ -129,22 +127,10 @@ export async function completeSessionWithdrawal(db: KeryxDB, owner: string, id: 
   await readRetainedMainnetSessionAuthority(db, owner, p.grantEpoch, p.sessAddr);
   const record = await db.getCreatorWithdrawal(id, p.sessAddr), attestation = await db.getCreatorWithdrawalAttestation(id, p.sessAddr);
   if (!record || !attestation) throw new Error("Original mint authority unavailable");
-  const client = createPublicClient({ transport: withdrawalRpcTransport(config.rpcUrl, signal) });
-  if (await client.getChainId() !== ARC_MAINNET_PROFILE.chainId) throw new Error("Mint network refused");
-  const t = await client.getTransaction({ hash: transactionHash }); signal.throwIfAborted();
-  if (t.type !== "eip1559" || t.hash !== transactionHash || t.chainId !== ARC_MAINNET_PROFILE.chainId ||
-    t.from.toLowerCase() !== owner || !t.r || !t.s || t.yParity === undefined) throw new Error("Owner mint transaction refused");
-  const raw = serializeTransaction({ type: "eip1559", chainId: t.chainId, nonce: t.nonce, gas: t.gas,
-    maxFeePerGas: t.maxFeePerGas, maxPriorityFeePerGas: t.maxPriorityFeePerGas, to: t.to, data: t.input,
-    value: t.value, accessList: t.accessList, r: t.r, s: t.s, yParity: t.yParity });
-  const terms = withdrawalMintTermsSchema.parse({ relayer: owner, nonce: t.nonce, gas: String(t.gas), maxFeePerGas: String(t.maxFeePerGas),
-    maxPriorityFeePerGas: String(t.maxPriorityFeePerGas), gasBudgetWei: String(t.gas * t.maxFeePerGas) });
-  const observation = await withdrawalReceiptObserverForRpc(config.rpcUrl)(record, attestation, raw, terms, signal);
-  signal.throwIfAborted(); if (!observation || observation.transactionHash !== transactionHash) throw new Error("Original finalized mint evidence unavailable");
+  const proof = await observeWithdrawalOwnerCompletion(record, attestation, owner, transactionHash, config.rpcUrl, signal);
   const outcome = await verifySessionWithdrawalCompletion({ format: "keryx-session-withdrawal-completion-v1", network: p.network,
-    requestId: p.requestId, ownerAddr: owner, sessAddr: p.sessAddr, record, attestation,
-    serializedTransaction: raw, terms, observation }, p);
-  await db.recordWithdrawal({ txHash: transactionHash, createdAt: observation.observedAt, label: "session",
+    requestId: p.requestId, ownerAddr: owner, sessAddr: p.sessAddr, ...proof }, p);
+  await db.recordWithdrawal({ txHash: transactionHash, createdAt: proof.observation.observedAt, label: "session",
     wallet: p.sessAddr, recipient: owner, amountUsdc: Number(p.burnIntent.spec.value) / 1e6, network: p.network });
   await db.completeSessionWithdrawal(id, owner, outcome);
   return sessionWithdrawalStatus(db, owner, id, signal);

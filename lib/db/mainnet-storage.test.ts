@@ -158,6 +158,10 @@ it("admits hosted SDK originals before crypto and vendor exposure and retains li
   expect(native.prepare("SELECT count(*) AS n FROM payment_events WHERE payer=?").get(privatePolicy.signer)?.n).toBe(0);
   expect((await adapter.listPrivateCreatorSubmissions(intent.id,buyer.address)).length).toBe(1);
   expect(await adapter.hostedTreasuryAccounting(privatePolicy.signer)).toEqual({retainedMicroUsdc:"2000",confirmedMicroUsdc:"2000"});
+  await expect(other.admitHostedTreasuryPolicy({...policy,expiresAtSeconds:policy.expiresAtSeconds+100},"private"))
+    .rejects.toThrow("Historical hosted custody role cannot change");
+  await expect(other.admitHostedTreasuryPolicy({...privatePolicy,expiresAtSeconds:privatePolicy.expiresAtSeconds+100},"public"))
+    .rejects.toThrow("Historical hosted custody role cannot change");
 },60000);
 
 it("recovers expired owner custody through normal withdrawal handlers while preserving unknown holds and one original burn", async () => {
@@ -174,10 +178,11 @@ it("recovers expired owner custody through normal withdrawal handlers while pres
   cleanup.push(() => vi.doUnmock("../account-sessions"));
   vi.stubEnv("KERYX_WITHDRAWAL_MAX_FEE_MICROS", "1000"); vi.stubEnv("KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS", "100");
   vi.stubEnv("NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS", "100");
+  vi.stubEnv("KERYX_WITHDRAWAL_MAX_VALUE_MICROS", "1000000");
   vi.stubEnv("KERYX_WITHDRAWAL_MAX_PROCESSING_LAG_BLOCKS", "10");
   vi.stubGlobal("fetch", vi.fn(async (url: string | URL | Request, init: RequestInit) => {
     const target = String(url);
-    if (target.endsWith("/v1/balances")) return Response.json({ token: "USDC", balances: [{ depositor: signer, domain: 26, balance: availableBalance }] });
+    if (target.endsWith("/v1/balances")) return Response.json({ token: "USDC", balances: [{ depositor: JSON.parse(String(init.body)).sources[0].depositor, domain: 26, balance: availableBalance }] });
     if (target.endsWith("/v1/info")) return Response.json({ domains: [{ domain: 26, chain: "Arc", network: "Mainnet", processedHeight: "10000",
       burnIntentExpirationHeight: "10010", walletContract: { address: profile.gatewayWallet, supportedTokens: ["USDC"] },
       minterContract: { address: profile.gatewayMinter, supportedTokens: ["USDC"] } }] });
@@ -216,7 +221,7 @@ it("recovers expired owner custody through normal withdrawal handlers while pres
   const prepare = await import("../../app/api/session/withdraw/prepare/route"), submit = await import("../../app/api/session/withdraw/submit/route");
   const status = await import("../../app/api/session/withdraw/[requestId]/route"), history = await import("../../app/api/session/withdraw/payments/route");
   const request = (path: string, body: unknown) => new NextRequest(`https://keryx.cc${path}`, { method: "POST",
-    headers: { Origin: "https://keryx.cc", "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    headers: { Origin: "https://keryx.cc", Host: "keryx.cc", "Content-Type": "application/json" }, body: JSON.stringify(body) });
   // Unknown exposed liabilities cannot become withdrawal capacity after revoke.
   expect((await prepare.POST(request("/api/session/withdraw/prepare", { sessAddr: signer, grantEpoch: consent.grantEpoch, amountMicros: "900000" }))).status).toBe(503);
   // Quote and final service read complete first. Another native connection then
@@ -333,7 +338,61 @@ it("recovers expired owner custody through normal withdrawal handlers while pres
     amountMicroUsdc: 1000, requirements: { ...paymentInput.requirements, amount: "1000" }, payment: { ...paymentInput.payment,
       grantEpoch: renewed.consent.grantEpoch, amountUsdc: 0.001 } })).status).toBe("admitted");
   expect(transferCalls).toBe(1);
-}, 60000);
+  // Ordinary creator cashout uses the connected OWNER wallet, not a gas relay or
+  // treasury fallback, through the existing public creator endpoints.
+  availableBalance="1";
+  const creatorPrepare=await import("../../app/api/me/withdrawals/prepare/route"),creatorSubmit=await import("../../app/api/me/withdrawals/submit/route");
+  const creatorStatus=await import("../../app/api/me/withdrawals/status/route"),creatorComplete=await import("../../app/api/me/withdrawals/complete/route");
+  const draftResponse=await creatorPrepare.POST(request("/api/me/withdrawals/prepare",{amountMicros:"800000"}));
+  expect(draftResponse.status).toBe(200);
+  const draft=(await draftResponse.json()).draft;
+  expect(draft.policy.owner).toBe(wallet); expect(draft.policy.recipient).toBe(wallet);
+  const creatorSignature=await owner.signTypedData((await import("../gateway/withdraw-protocol")).withdrawTypedData(draft.burnIntent));
+  const creatorBody={burnIntent:draft.burnIntent,signature:creatorSignature};
+  const creatorSent=await creatorSubmit.POST(request("/api/me/withdrawals/submit",creatorBody));expect(creatorSent.status).toBe(202);
+  expect(await creatorSent.json()).toMatchObject({wallet,record:{id:draft.id,network:profile.networkId},progress:{status:"awaiting-transfer-evidence",retryAuthorized:false},mint:null,completion:null});
+  expect(transferCalls).toBe(2);
+  expect((await creatorSubmit.POST(request("/api/me/withdrawals/submit",creatorBody))).status).toBe(202);expect(transferCalls).toBe(2);
+  expect((await adapter.creatorOwnerWithdrawalAccounting(wallet)).heldWithdrawalMicroUsdc).toBe("801000");
+  await expect(other.upsertSessionGrant({sessionId:payee,ownerAddr:payee,sessAddr:wallet,grantEpoch:randomUUID(),cap:1,
+    expiry:Date.now()+60000,txHash:"synthetic-cannot-ignore-burn"})).rejects.toThrow("paused");
+  const creatorRecord=(await adapter.getCreatorWithdrawal(draft.id,wallet))!;
+  const secondIntent=(await import("../gateway/withdraw-intent-core")).prepareWithdrawIntentForProfile(profile,wallet,"300000",wallet,"1000");
+  secondIntent.maxBlockHeight="10010";
+  const secondSignature=await owner.signTypedData((await import("../gateway/withdraw-protocol")).withdrawTypedData(secondIntent));
+  const secondRecord=await (await import("../gateway/withdrawal-request")).createWithdrawalRequest({burnIntent:secondIntent,signature:secondSignature},
+    {...creatorRecord.policy,maxValueMicros:"300000"},profile);
+  await expect(other.admitCreatorOwnerWithdrawal(secondRecord,await other.creatorOwnerWithdrawalAccounting(wallet),"1000000")).rejects.toThrow("capacity");
+  await expect(other.reserveCreatorWithdrawal(secondRecord)).rejects.toThrow("capacity admission");
+  authenticatedWallet=payee;
+  expect((await creatorStatus.POST(request("/api/me/withdrawals/status",{id:draft.id}))).status).toBe(404);
+  authenticatedWallet=wallet;
+  const creatorSpec=creatorRecord.request.burnIntent.spec,creatorClaim=(await adapter.getCreatorWithdrawalTransferClaim(draft.id,wallet))!;
+  const creatorEncodedSpec="ca85def7000000010000001a0000001a"+[creatorSpec.sourceContract,creatorSpec.destinationContract,creatorSpec.sourceToken,
+    creatorSpec.destinationToken,creatorSpec.sourceDepositor,creatorSpec.destinationRecipient,creatorSpec.sourceSigner,creatorSpec.destinationCaller].map(v=>v.slice(2)).join("")+
+    BigInt(creatorSpec.value).toString(16).padStart(64,"0")+creatorSpec.salt.slice(2)+"00000000";
+  const creatorAttestation=`0xff6fb334${BigInt(10020).toString(16).padStart(64,"0")}00000154${creatorEncodedSpec}` as `0x${string}`;
+  const creatorVendor={transferId:randomUUID(),attestation:creatorAttestation,expirationBlock:"10020",
+    signature:await attester.signMessage({message:{raw:keccak256(creatorAttestation)}})};
+  await adapter.saveCreatorWithdrawalAttestation(draft.id,wallet,creatorClaim.claimId,creatorVendor);
+  const creatorObserved=await creatorStatus.POST(request("/api/me/withdrawals/status",{id:draft.id}));expect(creatorObserved.status).toBe(200);
+  const creatorView=await creatorObserved.json();expect(creatorView.mint).toMatchObject({to:profile.gatewayMinter.toLowerCase(),network:profile.networkId,value:"0"});
+  const creatorRaw=await owner.signTransaction({type:"eip1559",chainId:profile.chainId,nonce:1,gas:BigInt(300000),maxFeePerGas:BigInt(2000000000),
+    maxPriorityFeePerGas:BigInt(1000000000),to:profile.gatewayMinter,value:BigInt(0),data:creatorView.mint.data});
+  const creatorTx=parseTransaction(creatorRaw),creatorHash=keccak256(creatorRaw);
+  mintTransaction={...mintTransaction,nonce:"0x1",input:creatorView.mint.data,hash:creatorHash,r:creatorTx.r,s:creatorTx.s,yParity:toHex(creatorTx.yParity!)};
+  const creatorSpecHash=(await import("../gateway/withdrawal-attestation")).withdrawalTransferSpecHash(creatorRecord);
+  const oldLog=(mintReceipt!.logs as Record<string,unknown>[])[0];
+  mintReceipt={...mintReceipt,transactionHash:creatorHash,logs:[{...oldLog,transactionHash:creatorHash,
+    topics:encodeEventTopics({abi:WITHDRAWAL_MINT_EVENT,eventName:"AttestationUsed",args:{token:profile.usdcAddress,recipient:wallet as `0x${string}`,transferSpecHash:creatorSpecHash}}),
+    data:encodeAbiParameters([{type:"uint32"},{type:"bytes32"},{type:"bytes32"},{type:"uint256"}],[26,creatorSpec.sourceDepositor,creatorSpec.sourceSigner,BigInt(creatorSpec.value)])}]};
+  const creatorFinal=await creatorComplete.POST(request("/api/me/withdrawals/complete",{id:draft.id,transactionHash:creatorHash}));expect(creatorFinal.status).toBe(200);
+  expect(await creatorFinal.json()).toMatchObject({progress:{chainFinalityVerified:true,status:"mint-finalized-observed"},
+    completion:{requestId:draft.id,serializedTransaction:creatorRaw,observation:{transactionHash:creatorHash,chainId:profile.chainId}}});
+  expect((await other.creatorOwnerWithdrawalAccounting(wallet)).heldWithdrawalMicroUsdc).toBe("0");
+  expect((await other.creatorOwnerWithdrawalAccounting(wallet)).confirmedWithdrawalMicroUsdc).toBe("801000");
+  expect(transferCalls).toBe(2);
+}, 90000);
 it("consumes an exact owner-signed funded consent once across two native connections and retains proof after expiry", async () => {
   const { adapter, file } = await fixture();
   const { config } = await import("../config");

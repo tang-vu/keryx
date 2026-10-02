@@ -364,13 +364,17 @@ export interface KeryxDB {
   browserSignerRetainedSpendMicro(signer:string): Promise<number>;
   sessionFundingAccounting(signer:string,after?:string): Promise<import("./session-funding-accounting").SessionFundingAccounting>;
   sessionWithdrawalAccounting(signer:string): Promise<{heldPaymentMicroUsdc:string;heldWithdrawalMicroUsdc:string;confirmedSpentMicroUsdc:string}>;
+  creatorOwnerWithdrawalAccounting(owner:string):Promise<import("../gateway/creator-owner-withdrawal-protocol").CreatorOwnerWithdrawalAccounting>;
+  admitCreatorOwnerWithdrawal(record:WithdrawalRequestRecord,accounting:import("../gateway/creator-owner-withdrawal-protocol").CreatorOwnerWithdrawalAccounting,availableMicroUsdc:string):Promise<WithdrawalRequestRecord>;
+  getCreatorOwnerWithdrawalCompletion(id:string,owner:string):Promise<import("../gateway/creator-owner-withdrawal-protocol").CreatorOwnerWithdrawalCompletion|null>;
+  completeCreatorOwnerWithdrawal(completion:import("../gateway/creator-owner-withdrawal-protocol").CreatorOwnerWithdrawalCompletion):Promise<import("../gateway/creator-owner-withdrawal-protocol").CreatorOwnerWithdrawalCompletion>;
   reserveSessionWithdrawal(preparation:import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation>;
   getSessionWithdrawal(id:string,owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation|null>;
   pendingSessionWithdrawal(owner:string,signer:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation|null>;
   getSessionWithdrawalSigningPhase(id:string,owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalSigningPhase|null>;
   authorizeSessionWithdrawal(id:string,owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation|null>;
   cancelSessionWithdrawal(id:string,owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalCancellation|null>;
-  admitHostedTreasuryPolicy(policy:import("../payments/hosted-treasury-policy").HostedTreasuryPolicy):Promise<string>;
+  admitHostedTreasuryPolicy(policy:import("../payments/hosted-treasury-policy").HostedTreasuryPolicy,role:"public"|"private"):Promise<string>;
   hostedTreasuryAccounting(signer:string):Promise<import("./hosted-treasury-journal").HostedTreasuryAccounting>;
   admitHostedAuthorization(input:import("./hosted-treasury-journal").HostedAuthorizationAdmission):Promise<string>;
   submitHostedAuthorization(signer:string,submission:Readonly<import("../payments/server-x402-client").ServerX402Submission>,headerHash:string):Promise<void>;

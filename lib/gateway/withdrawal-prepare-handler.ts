@@ -3,6 +3,8 @@ import { readBoundedRequestJson } from "../read-bounded-request-json";
 import { withdrawPolicySchema } from "./withdraw-protocol";
 import { withdrawalOwnerSchema } from "./withdrawal-request";
 import { prepareWithdrawIntent } from "./withdraw-intent";
+import { prepareWithdrawIntentForProfile } from "./withdraw-intent-core";
+import { ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
 import { createWithdrawalBrowserDraft } from "./withdrawal-browser-journal";
 import { withdrawalHeightWindowForRpc } from "./withdrawal-height-window";
 import { estimateWithdrawalIntent, matchWithdrawalEstimate } from "./withdrawal-estimate";
@@ -17,9 +19,10 @@ const json = (body: unknown, status = 200) => Response.json(body, { status, head
  * signature or payment; callers must save and review the returned draft first. */
 export function createWithdrawalPrepareHandler(options: { authenticate: () => Promise<Context | Response>;
   limits: Omit<z.infer<typeof withdrawPolicySchema>, "owner" | "recipient">; rpcUrl: string;
-  heightLimits: Parameters<typeof withdrawalHeightWindowForRpc>[2] }) {
+  heightLimits: Parameters<typeof withdrawalHeightWindowForRpc>[2]; profile?: ArcNetworkProfile }) {
   const { authenticate, rpcUrl } = options, limits = withdrawPolicySchema.omit({ owner: true, recipient: true }).parse(options.limits);
   const heightLimits = { ...options.heightLimits };
+  const profile = options.profile ?? ARC_TESTNET_PROFILE;
   if (limits.domain !== 26) throw new Error("Withdrawal preparation network unavailable");
   return async (req: Request) => {
     if (req.method !== "POST") return new Response(null, { status: 405, headers: { Allow: "POST", "Cache-Control": "no-store" } });
@@ -43,12 +46,13 @@ export function createWithdrawalPrepareHandler(options: { authenticate: () => Pr
       };
       await live();
       const policy = withdrawPolicySchema.parse({ ...limits, owner, recipient: owner, maxValueMicros: amount });
-      const candidate = prepareWithdrawIntent(owner, BigInt(amount), owner); candidate.maxFee = policy.maxFeeMicros;
+      const candidate = profile.testnet ? prepareWithdrawIntent(owner, BigInt(amount), owner)
+        : prepareWithdrawIntentForProfile(profile, owner, amount, owner, policy.maxFeeMicros); candidate.maxFee = policy.maxFeeMicros;
       createWithdrawalBrowserDraft(candidate, policy); // Reject configuration drift before vendor access.
-      const window = await withdrawalHeightWindowForRpc(rpcUrl, policy, heightLimits, req.signal); await live();
+      const window = await withdrawalHeightWindowForRpc(rpcUrl, policy, heightLimits, req.signal, profile); await live();
       const bounds = { minimumBlockHeight: window.minimumBlockHeight, maximumBlockHeight: window.maximumBlockHeight };
-      const estimated = await estimateWithdrawalIntent(candidate, policy, bounds, req.signal); await live();
-      const fresh = await withdrawalHeightWindowForRpc(rpcUrl, policy, heightLimits, req.signal); await live();
+      const estimated = await estimateWithdrawalIntent(candidate, policy, bounds, req.signal, profile); await live();
+      const fresh = await withdrawalHeightWindowForRpc(rpcUrl, policy, heightLimits, req.signal, profile); await live();
       const checked = matchWithdrawalEstimate([{ burnIntent: estimated }], candidate, policy,
         { minimumBlockHeight: fresh.minimumBlockHeight, maximumBlockHeight: fresh.maximumBlockHeight });
       return json({ wallet: owner, draft: createWithdrawalBrowserDraft(checked, policy), preparedAt: new Date().toISOString() });

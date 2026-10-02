@@ -1445,7 +1445,7 @@ export class SupabaseAdapter implements KeryxDB {
   async sessionFundingAccounting(_signer: string, _after?: string): Promise<import("./session-funding-accounting").SessionFundingAccounting> {
     throw new Error("Native PostgreSQL session funding accounting is not admitted");
   }
-  async admitHostedTreasuryPolicy(_policy:import("../payments/hosted-treasury-policy").HostedTreasuryPolicy):Promise<string> {
+  async admitHostedTreasuryPolicy(_policy:import("../payments/hosted-treasury-policy").HostedTreasuryPolicy,_role:"public"|"private"):Promise<string> {
     throw new Error("Native PostgreSQL hosted authority is not admitted");
   }
   async hostedTreasuryAccounting(_signer:string):Promise<import("./hosted-treasury-journal").HostedTreasuryAccounting> {
@@ -1463,6 +1463,10 @@ export class SupabaseAdapter implements KeryxDB {
   async sessionWithdrawalAccounting(_signer: string): Promise<{heldPaymentMicroUsdc:string;heldWithdrawalMicroUsdc:string;confirmedSpentMicroUsdc:string}> {
     throw new Error("Native PostgreSQL session withdrawal is not admitted");
   }
+  async creatorOwnerWithdrawalAccounting(_owner:string):Promise<import("../gateway/creator-owner-withdrawal-protocol").CreatorOwnerWithdrawalAccounting> { throw new Error("Mainnet owner withdrawal requires reviewed native authority"); }
+  async admitCreatorOwnerWithdrawal(_record:WithdrawalRequestRecord,_accounting:import("../gateway/creator-owner-withdrawal-protocol").CreatorOwnerWithdrawalAccounting,_available:string):Promise<WithdrawalRequestRecord> { throw new Error("Mainnet owner withdrawal requires reviewed native authority"); }
+  async getCreatorOwnerWithdrawalCompletion(_id:string,_owner:string):Promise<import("../gateway/creator-owner-withdrawal-protocol").CreatorOwnerWithdrawalCompletion|null> { throw new Error("Mainnet owner withdrawal requires reviewed native authority"); }
+  async completeCreatorOwnerWithdrawal(_completion:import("../gateway/creator-owner-withdrawal-protocol").CreatorOwnerWithdrawalCompletion):Promise<import("../gateway/creator-owner-withdrawal-protocol").CreatorOwnerWithdrawalCompletion> { throw new Error("Mainnet owner withdrawal requires reviewed native authority"); }
   async reserveSessionWithdrawal(_preparation:import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation> {
     throw new Error("Native PostgreSQL session withdrawal is not admitted");
   }
