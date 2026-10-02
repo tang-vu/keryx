@@ -15,6 +15,7 @@ import { watchSessionGrantClock } from "../session-grant-liveness";
 import { readGatewayCredit } from "../gateway/read-credit";
 import type { GrantState } from "./use-session-grant";
 import { z } from "zod";
+import type { BrowserQuestionBudget } from "../session/browser-session-runtime";
 
 const initial: GrantState = { status: "idle", sessAddr: null, sessionId: null, cap: 0, spent: 0,
   expiresAt: null, grantEpoch: null, error: null };
@@ -61,15 +62,27 @@ export function useMainnetSessionGrant() {
     if (await wallet.getChainId() !== profile.chainId || (await wallet.getAddresses())[0]?.toLowerCase() !== ownerRef.current)
       throw new Error("Select the authenticated owner wallet on Arc mainnet");
   }, [wallet, switchChainAsync]);
-  const publishGrant = useCallback(async (body: unknown, sessAddr: string, started: number) => {
+  const publishGrant = useCallback(async (body: unknown, sessAddr: string, started: number, expectedGeneration: number) => {
     const expectedOwner = ownerRef.current;
     if (!expectedOwner) throw new Error("Session owner unavailable");
-    // Worker independently verifies exact owner signature, network, origin, epoch, cap and expiry.
-    await signer().bindGrant();
-    const metadata = body as { sessionId: string; expiresAt: string; capMicroUsdc: string; spentMicroUsdc: string };
-    const spent = micros.parse(metadata.spentMicroUsdc), cap = micros.parse(metadata.capMicroUsdc);
+    const assertCurrent = () => {
+      if (generation.current !== expectedGeneration || ownerRef.current !== expectedOwner)
+        throw new Error("Session registration changed");
+    };
+    assertCurrent();
+    const metadata = z.object({ sessionId: z.string(), ownerAddr: z.string(), sessAddr: z.string(),
+      grantEpoch: z.string().uuid(), expiresAt: z.string(), capMicroUsdc: micros, spentMicroUsdc: micros }).parse(body);
     const next = createSessionGrantClock(body, { sessionId: expectedOwner, sessAddr }, started, performance.now(), 86400000);
-    if (ownerRef.current !== expectedOwner) throw new Error("Session owner changed");
+    // Worker independently verifies exact owner signature, network, origin, epoch, cap and expiry.
+    const bound = await signer().bindGrant() as { response: { spentMicroUsdc: unknown }; consent: unknown };
+    assertCurrent();
+    const current = parseSessionGrantConsent(bound.consent, profile);
+    if (current.ownerAddr !== expectedOwner || current.sessAddr !== sessAddr.toLowerCase() ||
+      current.grantEpoch !== metadata.grantEpoch || current.capMicroUsdc !== metadata.capMicroUsdc ||
+      Number(current.expirySeconds)*1000 !== Date.parse(metadata.expiresAt))
+      throw new Error("Published grant differs from the current worker-bound consent");
+    const spent = micros.parse(bound.response.spentMicroUsdc), cap = current.capMicroUsdc;
+    if (BigInt(spent) < BigInt(metadata.spentMicroUsdc)) throw new Error("Retained signer capacity decreased unexpectedly");
     clock.current = next;
     setState({ status: "active", sessAddr, sessionId: metadata.sessionId, cap: Number(cap)/1e6,
       spent: Number(spent)/1e6, expiresAt: metadata.expiresAt, grantEpoch: next.grantEpoch, error: null });
@@ -93,7 +106,7 @@ export function useMainnetSessionGrant() {
     const sessionSignature = await signer().signGrantConsentProof(consent, signature);
     const started = performance.now(), body = await sessionJson("/api/session/grant", "POST", { consent, signature, sessionSignature });
     if (generation.current !== expectedGeneration || ownerRef.current !== expectedOwner) throw new Error("Session registration changed");
-    await publishGrant(body, sessAddr, started); return true;
+    await publishGrant(body, sessAddr, started, expectedGeneration); return true;
   }, [wallet, ensureArc, publishGrant, signer]);
   const tryRecover = useCallback(async () => {
     if (browserPaymentProfile() !== profile || !owner || ownerRef.current !== owner) return false;
@@ -103,7 +116,7 @@ export function useMainnetSessionGrant() {
       if (generation.current !== expectedGeneration || ownerRef.current !== expectedOwner) return false;
       setState(s => ({ ...s, status: "paused", sessAddr, sessionId: expectedOwner, error: null }));
       const started = performance.now();
-      try { await publishGrant(await sessionJson("/api/session/grant"), sessAddr, started); }
+      try { await publishGrant(await sessionJson("/api/session/grant"), sessAddr, started, expectedGeneration); }
       catch { /* Retained custody remains available for new consent and owner-only withdrawal. */ }
       return true;
     } catch { return false; }
@@ -189,7 +202,7 @@ export function useMainnetSessionGrant() {
     return watchSessionGrantClock(current, () => clock.current === current && ownerRef.current === current.ownerAddr,
       markExpired, () => { clock.current = null; setState(s => ({ ...s, status: "paused", error: "Session status unavailable. Retained keys and liabilities remain." })); });
   }, [state.status, markExpired]);
-  const authorizeSessionPayment = useCallback((reqId: string) => signer().authorizePayment(reqId), [signer]);
+  const authorizeSessionPayment = useCallback((reqId: string, question: BrowserQuestionBudget) => signer().authorizePayment(reqId, question), [signer]);
   const getSessionWalletClient = useCallback(() => null, []);
   return { state, tryRecover, recoverViaSignature, generateAndFund, topUp, extend, revoke, markExpired,
     getSessionWalletClient, authorizeSessionPayment };

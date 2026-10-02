@@ -94,7 +94,7 @@ function parseFrame(block: string): { event: string; data: string } | null {
 
 interface AskStreamOpts {
   /** Mainnet worker reads the authenticated journal original itself; SSE is notification only. */
-  authorizeSessionPayment?: (reqId: string) => Promise<string>;
+  authorizeSessionPayment?: (reqId: string, question: import("../session/browser-session-runtime").BrowserQuestionBudget) => Promise<string>;
   /**
    * Returns the viem WalletClient backed by the session private key, or null
    * when no session is active. Injected to avoid coupling to useSessionGrant.
@@ -135,15 +135,17 @@ export function useAskStream(opts?: AskStreamOpts) {
   const abortRef = useRef<AbortController | null>(null);
   // Per-ask exact micro-USDC capacity; a reservation is taken before async checks.
   const signBudgetRef = useRef<BrowserSignBudget | null>(null);
+  const questionBudgetRef = useRef<import("../session/browser-session-runtime").BrowserQuestionBudget | null>(null);
 
   const reset = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
     signBudgetRef.current = null;
+    questionBudgetRef.current = null;
     setState(INITIAL);
   }, []);
 
-  const handleEvent = useCallback((event: string, raw: string) => {
+  const handleEvent = useCallback((event: string, raw: string, question: import("../session/browser-session-runtime").BrowserQuestionBudget | null) => {
     let data: unknown;
     try {
       data = JSON.parse(raw);
@@ -197,8 +199,9 @@ export function useAskStream(opts?: AskStreamOpts) {
       const getWallet = getSessionWalletClient;
 
       if (!browserPaymentProfile().testnet) {
-        if (!sessionId || !authorizeSessionPayment) return;
-        void authorizeSessionPayment(reqId).then(async paymentHeader => {
+        if (!sessionId || !authorizeSessionPayment || !question || questionBudgetRef.current !== question) return;
+        void authorizeSessionPayment(reqId, question).then(async paymentHeader => {
+          if (questionBudgetRef.current !== question) throw new Error("Question changed; signed liability remains retained");
           const response = await fetch("/api/ask/sign", { method: "POST", credentials: "same-origin", redirect: "error",
             headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId, reqId, paymentHeader }),
             signal: AbortSignal.timeout(8000) });
@@ -352,11 +355,18 @@ export function useAskStream(opts?: AskStreamOpts) {
       reset();
       // Reset reservations for this ask before any SSE frame can arrive.
       signBudgetRef.current = new BrowserSignBudget(grantCap);
+      if (!browserPaymentProfile().testnet) {
+        const micros = Math.round(budget*1e6);
+        if (!Number.isSafeInteger(micros) || micros <= 0 || Math.abs(budget*1e6-micros) > 0.000001)
+          throw new Error("Question budget must be a positive integer amount of micro-USDC");
+        questionBudgetRef.current = { id: crypto.randomUUID(), budgetMicroUsdc: String(micros) };
+      }
       const controller = new AbortController();
       abortRef.current = controller;
       // Reset/Stop can start another ask while an old body or reader rejects.
       // Its callbacks must not change the new turn or process old signing frames.
       const isCurrent = () => abortRef.current === controller && !controller.signal.aborted;
+      const questionScope = questionBudgetRef.current;
       setState({ ...INITIAL, status: "streaming", budget });
 
       try {
@@ -447,14 +457,14 @@ export function useAskStream(opts?: AskStreamOpts) {
             const block = buffer.slice(0, sep);
             buffer = buffer.slice(sep + 2);
             const frame = parseFrame(block);
-            if (frame) handleEvent(frame.event, frame.data);
+            if (frame) handleEvent(frame.event, frame.data, questionScope);
           }
         }
 
         // Flush any trailing frame.
         const tail = parseFrame(buffer);
         if (!isCurrent()) return;
-        if (tail) handleEvent(tail.event, tail.data);
+        if (tail) handleEvent(tail.event, tail.data, questionScope);
 
         setState((s) => {
           // A `done` or `error` event already moved us out of "streaming" — keep that.

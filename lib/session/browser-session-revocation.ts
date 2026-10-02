@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { readBoundedJson } from "../read-bounded-json";
+import { sessionRevokeRequestSchema } from "../session-revoke-request";
 
 const address = z.string().regex(/^0x[0-9a-f]{40}$/);
-const requestSchema = z.object({ sessionId: address, sessAddr: address, grantEpoch: z.string().uuid() }).strict();
 const acknowledgement = z.union([
   z.object({ ok: z.literal(true), alreadyRevoked: z.literal(true) }).strict(),
   z.object({ ok: z.literal(true), sessAddr: address, spent: z.number().finite().nonnegative(), residualUsdc: z.number().finite().nonnegative() }).strict(),
@@ -12,7 +12,7 @@ const acknowledgement = z.union([
  * The caller separately checks its local registration generation before publishing state. */
 export async function revokeBrowserSessionGrant(input: { sessionId: string; sessAddr: string; grantEpoch: string },
   transport: typeof fetch = fetch) {
-  const request = requestSchema.parse(structuredClone(input));
+  const request = sessionRevokeRequestSchema.parse(structuredClone(input));
   const response = await transport("/api/session/revoke", { method: "POST", credentials: "same-origin", redirect: "error",
     headers: { "Content-Type": "application/json", accept: "application/json" }, body: JSON.stringify(request), signal: AbortSignal.timeout(8000) });
   if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) {

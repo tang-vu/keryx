@@ -52,6 +52,7 @@ const block = { number: "0x64", hash: blockHash, parentHash: zeroHash, nonce: "0
   transactions: [], uncles: [], baseFeePerGas: "0x1" };
 let grant: Record<string, unknown> | null = null, authenticated = true, rpcChain = profile.chainIdHex as string;
 let nonceIndex = 1, payout = creator.address, price = BigInt(1000), nextGrantReads = 0, requests = 0;
+let requestedAmount = "1000";
 const reqId = "00000000-0000-4000-8000-000000000002";
 let epoch = "00000000-0000-4000-8000-000000000001";
 const browser = await chromium.launch({ headless: true });
@@ -90,7 +91,7 @@ try {
     return route.fulfill({ json: { sessionId: owner.address.toLowerCase(), reqId, grantEpoch: epoch,
       sessAddr: grant!.sessAddr, sourceId, kind: "fetch", expectedNonce: `0x${nonceIndex.toString(16).padStart(64,"0")}`,
       browserAuthorizationProtocol: "durable-v1", requirements: { scheme: "exact", network: profile.networkId,
-        asset: profile.usdcAddress, amount: "1000", payTo: creator.address, maxTimeoutSeconds: 604900,
+        asset: profile.usdcAddress, amount: requestedAmount, payTo: creator.address, maxTimeoutSeconds: 604900,
         extra: { name: "GatewayWalletBatched", version: "1", verifyingContract: profile.gatewayWallet } },
       paymentContext: { item: { itemId: "article", itemTitle: "A reviewed mainnet article", itemUrl: "https://creator.test/article",
         contentVersion: `sha256:${"77".repeat(32)}` } } } });
@@ -116,8 +117,8 @@ try {
   const ownerSignature=await owner.signMessage({message:createSessionGrantConsentMessage(consent,profile)});
   const sessionSignature=await call(first,"signGrantConsentProof",{consent,ownerSignature});
   grant={active:true,sessionId:consent.ownerAddr,ownerAddr:consent.ownerAddr,sessAddr:consent.sessAddr,
-    network:consent.network,origin,grantEpoch:epoch,capMicroUsdc:consent.capMicroUsdc,consent,ownerSignature,sessionSignature};
-  const authorized=await call(first,"authorizePayment",{reqId}) as {paymentHeader:string};
+    network:consent.network,origin,grantEpoch:epoch,capMicroUsdc:consent.capMicroUsdc,spentMicroUsdc:"0",consent,ownerSignature,sessionSignature};
+  const authorized=await call(first,"authorizePayment",{reqId,question:{id:"00000000-0000-4000-8000-000000000008",budgetMicroUsdc:"10000"}}) as {paymentHeader:string};
   const payment=JSON.parse(atob(authorized.paymentHeader));
   assert.equal((await recoverTypedDataAddress({domain:{name:"GatewayWalletBatched",version:"1",chainId:5042,verifyingContract:profile.gatewayWallet},
     types:{TransferWithAuthorization:[{name:"from",type:"address"},{name:"to",type:"address"},{name:"value",type:"uint256"},
@@ -126,31 +127,46 @@ try {
   assert.ok(nextGrantReads >= 3,"Grant must be reauthenticated after crypto");
   await call(first,"lock");await mount(first);await call(first,"initializeOwner",{owner:owner.address});
   assert.equal((await call(first,"restoreRetained") as {address:string}).address,derived.address);
-  await assert.rejects(call(first,"authorizePayment",{reqId}));
+  await assert.rejects(call(first,"authorizePayment",{reqId,question:{id:"00000000-0000-4000-8000-000000000008",budgetMicroUsdc:"10000"}}));
   const second=await context.newPage();await mount(second);await call(second,"initializeOwner",{owner:owner.address});
   assert.equal((await call(second,"restoreRetained") as {address:string}).address,derived.address);
   nonceIndex=2;
-  const race=await Promise.allSettled([call(first,"authorizePayment",{reqId}),call(second,"authorizePayment",{reqId})]);
+  const race=await Promise.allSettled([call(first,"authorizePayment",{reqId,question:{id:"00000000-0000-4000-8000-000000000008",budgetMicroUsdc:"10000"}}),call(second,"authorizePayment",{reqId,question:{id:"00000000-0000-4000-8000-000000000008",budgetMicroUsdc:"10000"}})]);
   assert.equal(race.filter(r=>r.status==="fulfilled").length,1,"Atomic IDB must admit nonce once across tabs");
-  nonceIndex=3;await assert.rejects(call(first,"authorizePayment",{reqId}),"Persisted owner cap exhausted");
+  nonceIndex=3;await assert.rejects(call(first,"authorizePayment",{reqId,question:{id:"00000000-0000-4000-8000-000000000008",budgetMicroUsdc:"10000"}}),"Persisted owner cap exhausted");
   epoch="00000000-0000-4000-8000-000000000003";
   const renewed={...consent,grantEpoch:epoch};
   const renewedOwnerSignature=await owner.signMessage({message:createSessionGrantConsentMessage(renewed,profile)});
   const renewedSessionSignature=await call(first,"signGrantConsentProof",{consent:renewed,ownerSignature:renewedOwnerSignature});
   grant={...grant,grantEpoch:epoch,consent:renewed,ownerSignature:renewedOwnerSignature,sessionSignature:renewedSessionSignature};
-  await assert.rejects(call(first,"authorizePayment",{reqId}),"New epoch cannot reset lifetime signer exposure");
+  await assert.rejects(call(first,"authorizePayment",{reqId,question:{id:"00000000-0000-4000-8000-000000000008",budgetMicroUsdc:"10000"}}),"New epoch cannot reset lifetime signer exposure");
   epoch="00000000-0000-4000-8000-000000000004";
   const increased={...consent,grantEpoch:epoch,capMicroUsdc:"3000"};
   const increasedOwnerSignature=await owner.signMessage({message:createSessionGrantConsentMessage(increased,profile)});
   const increasedSessionSignature=await call(first,"signGrantConsentProof",{consent:increased,ownerSignature:increasedOwnerSignature});
   grant={...grant,grantEpoch:epoch,capMicroUsdc:"3000",consent:increased,ownerSignature:increasedOwnerSignature,sessionSignature:increasedSessionSignature};
-  assert.ok((await call(first,"authorizePayment",{reqId}) as {paymentHeader:string}).paymentHeader,"Explicit increased cumulative owner cap permits only the additional capacity");
+  assert.ok((await call(first,"authorizePayment",{reqId,question:{id:"00000000-0000-4000-8000-000000000008",budgetMicroUsdc:"10000"}}) as {paymentHeader:string}).paymentHeader,"Explicit increased cumulative owner cap permits only the additional capacity");
   authenticated=false;await assert.rejects(call(first,"bindGrant"));
   await call(first,"lock");assert.equal((await call(first,"restoreRetained") as {address:string}).address,derived.address,"Expired/revoked auth cannot erase recovery");
   authenticated=true;rpcChain="0x4cef52";nonceIndex=4;
-  await assert.rejects(call(first,"authorizePayment",{reqId}),"Wrong RPC chain refuses before signing");
-  rpcChain=profile.chainIdHex;payout=owner.address;await assert.rejects(call(first,"authorizePayment",{reqId}),"Source-owned payout must match");
-  payout=creator.address;price=BigInt(2000);await assert.rejects(call(first,"authorizePayment",{reqId}),"Exact registry price must match");
+  await assert.rejects(call(first,"authorizePayment",{reqId,question:{id:"00000000-0000-4000-8000-000000000008",budgetMicroUsdc:"10000"}}),"Wrong RPC chain refuses before signing");
+  rpcChain=profile.chainIdHex;payout=owner.address;await assert.rejects(call(first,"authorizePayment",{reqId,question:{id:"00000000-0000-4000-8000-000000000008",budgetMicroUsdc:"10000"}}),"Source-owned payout must match");
+  payout=creator.address;price=BigInt(2000);await assert.rejects(call(first,"authorizePayment",{reqId,question:{id:"00000000-0000-4000-8000-000000000008",budgetMicroUsdc:"10000"}}),"Exact registry price must match");
+  epoch="00000000-0000-4000-8000-000000000005";
+  const larger={...consent,grantEpoch:epoch,capMicroUsdc:"500000"};
+  const largerOwnerSignature=await owner.signMessage({message:createSessionGrantConsentMessage(larger,profile)});
+  const largerSessionSignature=await call(first,"signGrantConsentProof",{consent:larger,ownerSignature:largerOwnerSignature});
+  grant={...grant,grantEpoch:epoch,capMicroUsdc:larger.capMicroUsdc,consent:larger,ownerSignature:largerOwnerSignature,sessionSignature:largerSessionSignature};
+  const question={id:"00000000-0000-4000-8000-000000000009",budgetMicroUsdc:"10000"};
+  price=BigInt(11000);requestedAmount="11000";nonceIndex=5;
+  await assert.rejects(call(first,"authorizePayment",{reqId,question}),"A .01 question refuses .011 even with .5 lifetime consent");
+  price=BigInt(6000);requestedAmount="6000";
+  assert.ok((await call(first,"authorizePayment",{reqId,question}) as {paymentHeader:string}).paymentHeader);
+  nonceIndex=6;price=BigInt(4000);requestedAmount="4000";
+  assert.ok((await call(second,"authorizePayment",{reqId,question}) as {paymentHeader:string}).paymentHeader,"Both tabs share the same .01 question sum");
+  nonceIndex=7;price=BigInt(1);requestedAmount="1";
+  await assert.rejects(call(first,"authorizePayment",{reqId,question}),"A further micro-USDC exceeds the original question budget");
+  await assert.rejects(call(second,"authorizePayment",{reqId,question:{...question,budgetMicroUsdc:"500000"}}),"Same question cannot enlarge its immutable cap");
   const other=privateKeyToAccount(`0x${"88".repeat(32)}`);
   await assert.rejects(call(first,"signGrantConsentProof",{consent:{...consent,ownerAddr:other.address.toLowerCase()},ownerSignature}));
   await assert.rejects(call(first,"signTransaction",{transaction:{}}));await assert.rejects(call(first,"signTypedData",{payload:{}}));

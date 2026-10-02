@@ -73,6 +73,7 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
   const grantChallenge = await import("../../app/api/session/grant/challenge/route"), grant = await import("../../app/api/session/grant/route");
   const challenge = await import("../../app/api/ask/challenge/route"), sign = await import("../../app/api/ask/sign/route"), ask = await import("../../app/api/ask/route");
   const sourceIndex = await import("../../app/api/sources/route"), preview = await import("../../app/api/source/[id]/item/[itemId]/preview/route");
+  const credit = await import("../../app/api/session/credit/route"), revoke = await import("../../app/api/session/revoke/route");
   const seller = await import("../../app/api/source/[id]/item/[itemId]/route"), cite = await import("../../app/api/cite/[id]/route");
   async function dispatch(url: string, init: RequestInit = {}, cookie?: string): Promise<Response> {
     const headers = new Headers(init.headers);
@@ -83,6 +84,8 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
       const path = req.nextUrl.pathname;
       if (path === "/api/session/grant/challenge") return grantChallenge.POST(req);
       if (path === "/api/session/grant") return init.method === "POST" ? grant.POST(req) : grant.GET(req);
+      if (path === "/api/session/credit") return credit.GET(req);
+      if (path === "/api/session/revoke") return revoke.POST(req);
       if (path === "/api/ask/challenge") return challenge.POST(req);
       if (path === "/api/ask/sign") return sign.POST(req);
       if (path === "/api/ask") return ask.POST(req);
@@ -107,40 +110,61 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
   vi.stubGlobal("fetch", async (url: string | URL | Request, init: RequestInit = {}) => {
     const target = String(url);
     if (target.startsWith(profile.rpcUrl)) return rpc(init);
-    if (target === config.gatewayBalanceApi) return Response.json({ token: "USDC", balances: [{ depositor: sessionAddress, domain: profile.cctpDomain, balance: (Number(BigInt(1_000_000)-circleDebit)/1e6).toFixed(6) }] });
+    if (target === config.gatewayBalanceApi) {
+      const requested = JSON.parse(String(init.body));
+      sessionAddress ||= requested.sources[0].depositor.toLowerCase();
+      return Response.json({ token: "USDC", balances: [{ depositor: sessionAddress, domain: profile.cctpDomain, balance: (Number(BigInt(1_000_000)-circleDebit)/1e6).toFixed(6) }] });
+    }
     if (target.startsWith(origin)) return dispatch(target, init);
     throw new Error("Unexpected external network refused");
   });
   const worker = await build({ entryPoints: ["lib/session/mainnet-session-signer.worker.ts"], platform: "browser", bundle: true, write: false,
     define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arc"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": JSON.stringify(registry), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" } });
+  const hook = await build({ stdin: { loader: "tsx", resolveDir: process.cwd(), contents: `
+    import React from 'react'; import {createRoot} from 'react-dom/client';
+    import {useMainnetSessionGrant} from './lib/hooks/use-mainnet-session-grant';
+    window.wallet={account:{address:'${owner.address}'},getChainId:async()=>5042,getAddresses:async()=>['${owner.address}'],signMessage:async({message})=>window.ownerPersonalSign(message)};
+    function Probe(){const grant=useMainnetSessionGrant(); window.normalGrant=grant;return <output id="state">{JSON.stringify(grant.state)}</output>}
+    createRoot(document.getElementById('root')).render(<Probe/>);
+  ` }, bundle: true, write: false, platform: "browser", format: "esm",
+    define: { "process.env.NODE_ENV": '"production"', "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arc"',
+      "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": JSON.stringify(registry), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" },
+    plugins: [{ name: "synthetic-owner-wallet", setup(builder) {
+      builder.onResolve({ filter: /^wagmi$/ }, () => ({ path: "wagmi", namespace: "synthetic" }));
+      builder.onLoad({ filter: /.*/, namespace: "synthetic" }, () => ({ contents: "const rpc={};export const useWalletClient=()=>({data:window.wallet});export const usePublicClient=()=>rpc;export const useSwitchChain=()=>({switchChainAsync:async()=>{}});" }));
+    } }] });
   const browser = await chromium.launch({ headless: true }); cleanup.push(() => browser.close());
   const context = await browser.newContext(); await context.addCookies([{ name: "keryx_session", value: token, url: origin, secure: true, httpOnly: true, sameSite: "Strict" }]);
+  await context.exposeFunction("ownerPersonalSign", (message: string) => owner.signMessage({ message }));
+  let holdGrant = false, holdRevoke = false, releaseHeld: (() => void) | undefined, held = false;
   await context.route("**/*", async route => {
     const req = route.request(), url = req.url();
-    if (url === `${origin}/`) return route.fulfill({ contentType: "text/html", body: "<main>Normal handler journey</main>" });
-    if (url === `${origin}/worker.js`) return route.fulfill({ contentType: "application/javascript", body: worker.outputFiles[0].text });
+    if (url === `${origin}/`) return route.fulfill({ contentType: "text/html", body: '<div id="root"></div><script type="module" src="/hook.js"></script>' });
+    if (url === `${origin}/hook.js`) return route.fulfill({ contentType: "application/javascript", body: hook.outputFiles[0].text });
+    if (url === `${origin}/worker.js` || url === `${origin}/mainnet-session-signer.worker.ts`) return route.fulfill({ contentType: "application/javascript", body: worker.outputFiles[0].text });
     if (url.startsWith(profile.rpcUrl)) { const response = await rpc({ body: req.postData() }); return route.fulfill({ status: response.status, body: await response.text(), contentType: "application/json" }); }
     expect(url.startsWith(origin)).toBe(true);
     const receivedToken = req.headers().cookie?.split(";").map(s => s.trim()).find(s => s.startsWith("keryx_session="))?.slice("keryx_session=".length);
+    if (holdRevoke && url === `${origin}/api/session/revoke`) { holdRevoke = false; held = true; await new Promise<void>(resolve => { releaseHeld = resolve; }); }
     const response = await dispatch(url, { method: req.method(), body: req.postData() ?? undefined, headers: req.headers() }, receivedToken);
+    if (holdGrant && req.method() === "GET" && url === `${origin}/api/session/grant`) { holdGrant = false; held = true; await new Promise<void>(resolve => { releaseHeld = resolve; }); }
     return route.fulfill({ status: response.status, body: await response.text(), headers: Object.fromEntries(response.headers) });
   });
   const page = await context.newPage(); await page.goto(origin);
+  await page.waitForFunction(() => !!(window as unknown as { normalGrant?: unknown }).normalGrant);
+  await page.evaluate(() => (window as unknown as { normalGrant: { generateAndFund(budget: number): Promise<void> } }).normalGrant.generateAndFund(0.05));
+  const hookState = async () => JSON.parse((await page.locator("#state").textContent())!);
+  expect(await hookState()).toMatchObject({ status: "active", cap: 0.05, spent: 0 });
+  expect((await hookState()).sessAddr.toLowerCase()).toBe(sessionAddress);
   await page.evaluate(() => {
     const worker = new Worker("/worker.js"), pending = new Map<number, { resolve(value: unknown): void; reject(reason: Error): void }>(); let id = 0;
     worker.onmessage = ({ data }) => { const slot = pending.get(data.id); if (!slot) return; pending.delete(data.id); if (data.ok) slot.resolve(data.result); else slot.reject(new Error(data.error)); };
     (window as unknown as { call(type: string, fields?: object): Promise<unknown> }).call = (type, fields = {}) => new Promise((resolve, reject) => { const seq = ++id; pending.set(seq, { resolve, reject }); worker.postMessage({ id: seq, type, ...fields }); });
   });
   const call = (type: string, fields: object = {}) => page.evaluate(({ type, fields }) => (window as unknown as { call(type: string, fields: object): Promise<unknown> }).call(type, fields), { type, fields });
-  const custody = await call("initializeOwner", { owner: owner.address }) as { derivationMessage: string };
-  sessionAddress = (await call("deriveFromSignature", { signature: await owner.signMessage({ message: custody.derivationMessage }) }) as { address: string }).address.toLowerCase();
-  const proposed = await dispatch(`${origin}/api/session/grant/challenge`, { method: "POST", body: JSON.stringify({ sessAddr: sessionAddress, budgetMicros: "50000" }), headers: { "Content-Type": "application/json" } }, token);
-  const proposedBody = await proposed.json(); expect(proposed.status, JSON.stringify(proposedBody)).toBe(200);
-  const { consent } = proposedBody;
+  await call("initializeOwner", { owner: owner.address });
+  expect((await call("restoreRetained") as { address: string }).address.toLowerCase()).toBe(sessionAddress);
   const { createSessionGrantConsentMessage } = await import("../payments/session-grant-consent");
-  const signature = await owner.signMessage({ message: createSessionGrantConsentMessage(consent, config.profile) });
-  const sessionSignature = await call("signGrantConsentProof", { consent, ownerSignature: signature });
-  expect((await dispatch(`${origin}/api/session/grant`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ consent, signature, sessionSignature }) }, token)).status).toBe(200);
   const response = await dispatch(`${origin}/api/ask`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: "How do durable reservations protect payment nonces?", budget: 0.01, sessionId: owner.address, browserAuthorizationProtocol: "durable-v1", mode: "quick", scholarly: false }) }, token);
   expect(response.status).toBe(200); const reader = response.body!.getReader(), decoder = new TextDecoder(); let buffer = "", done: QueryRun | null = null, signs = 0;
   for (;;) {
@@ -150,7 +174,7 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
       const event = /^event: (.+)$/m.exec(packet)?.[1], data = JSON.parse(/^data: (.+)$/m.exec(packet)![1]);
       if (event === "error") throw new Error(JSON.stringify(data));
       if (event === "sign-request") {
-        signs++; const { paymentHeader } = await call("authorizePayment", { reqId: data.reqId }) as { paymentHeader: string };
+        signs++; const { paymentHeader } = await call("authorizePayment", { reqId: data.reqId, question: { id: identity.enrollmentId, budgetMicroUsdc: "10000" } }) as { paymentHeader: string };
         const status = await page.evaluate(async ({ reqId, paymentHeader, sessionId }) => (await fetch("/api/ask/sign", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId, reqId, paymentHeader }) })).status, { reqId: data.reqId, paymentHeader, sessionId: owner.address.toLowerCase() });
         expect(status).toBe(200);
       }
@@ -163,5 +187,45 @@ it.each([false, true])("completes a normal mainnet cited answer with citation fa
   expect(payments.find(p => p.kind === "fetch")?.settled).toBe(true);
   expect(payments.some(p => p.kind === "citation" && p.settled)).toBe(!failCitation);
   expect(await db.getQueryRun(done!.id)).not.toBeNull();
+  if (!failCitation) {
+    const renew = async () => {
+      const proposal = await dispatch(`${origin}/api/session/grant/challenge`, { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessAddr: sessionAddress, budgetMicros: "50000", recover: true }) }, token);
+      expect(proposal.status).toBe(200);
+      const { consent } = await proposal.json();
+      const signature = await owner.signMessage({ message: createSessionGrantConsentMessage(consent, config.profile) });
+      const sessionSignature = await call("signGrantConsentProof", { consent, ownerSignature: signature });
+      const accepted = await dispatch(`${origin}/api/session/grant`, { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ consent, signature, sessionSignature }) }, token);
+      expect(accepted.status).toBe(200); const metadata = await accepted.json();
+      expect(metadata.capMicroUsdc).toBe(consent.capMicroUsdc);
+      expect(BigInt(metadata.spentMicroUsdc)).toBeGreaterThan(BigInt(0));
+      return metadata;
+    };
+    const recover = () => page.evaluate(() => (window as unknown as { normalGrant: { tryRecover(): Promise<boolean> } }).normalGrant.tryRecover());
+    held = false; holdGrant = true; const oldPublication = recover();
+    await expect.poll(() => held).toBe(true);
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent("keryx:auth", { detail: "signed-out" })));
+    releaseHeld!(); await oldPublication;
+    expect((await hookState()).status).toBe("paused");
+    expect((await hookState()).grantEpoch).toBeNull();
+
+    // An older metadata response cannot publish after another tab replaces the exact proof.
+    held = false; holdGrant = true; const replacedPublication = recover();
+    await expect.poll(() => held).toBe(true); const replacement = await renew();
+    releaseHeld!(); await replacedPublication;
+    expect((await hookState()).status).toBe("paused");
+    await recover(); await expect.poll(hookState).toMatchObject({ status: "active", grantEpoch: replacement.grantEpoch });
+    expect((await hookState()).spent).toBe(Number(replacement.spentMicroUsdc)/1e6);
+
+    // Old logout reaches the server only after a newer grant: CAS must preserve the newer epoch.
+    held = false; holdRevoke = true;
+    const delayedLogout = page.evaluate(() => (window as unknown as { normalGrant: { revoke(): Promise<unknown> } }).normalGrant.revoke());
+    await expect.poll(() => held).toBe(true); const afterLogout = await renew();
+    releaseHeld!(); await delayedLogout;
+    expect((await hookState()).status).toBe("paused");
+    expect((await (await dispatch(`${origin}/api/session/grant`, {}, token)).json()).grantEpoch).toBe(afterLogout.grantEpoch);
+    await recover(); await expect.poll(hookState).toMatchObject({ status: "active", grantEpoch: afterLogout.grantEpoch });
+  }
   await call("lock"); expect((await call("restoreRetained") as { address: string }).address.toLowerCase()).toBe(sessionAddress);
 }, 60000);

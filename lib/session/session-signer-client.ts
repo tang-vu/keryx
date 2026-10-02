@@ -3,10 +3,10 @@
 /**
  * Main-thread handle on the signer worker.
  *
- * It presents the worker as an ordinary viem account, so every existing call site — the Gateway
- * approve/deposit writes, the x402 `signTypedData` — keeps working while the private key moves out
- * of the page's reach. viem asks the account to sign; the account asks the worker; the worker
- * decides. Nothing here can read the key, which is the point: this file is the part an XSS owns.
+ * Testnet retains its legacy viem account interface. Mainnet exposes specific authenticated
+ * journal operations and owner consent proofs. Worker admission is not an XSS-proof vault:
+ * same-origin code can access the stored wrapping key/ciphertext and initial derivation
+ * signature. See docs/mainnet-browser-custody.md for the custody trust boundary.
  */
 
 import { toAccount } from "viem/accounts";
@@ -20,7 +20,7 @@ import type {
 } from "./session-signer-protocol";
 import type { WrappedKey } from "./session-key-vault";
 import { browserPaymentProfile } from "../browser-payment-profile";
-import type { BrowserSessionOperation } from "./browser-session-runtime";
+import type { BrowserSessionOperation, BrowserQuestionBudget } from "./browser-session-runtime";
 
 type Pending = { resolve: (value: unknown) => void; reject: (reason: Error) => void };
 
@@ -139,8 +139,8 @@ export class SessionSigner {
     this.address = result.address; return result.address;
   }
 
-  async authorizePayment(reqId: string): Promise<string> {
-    return (await this.call<{ paymentHeader: string }>({ type: "authorizePayment", reqId })).paymentHeader;
+  async authorizePayment(reqId: string, question: BrowserQuestionBudget): Promise<string> {
+    return (await this.call<{ paymentHeader: string }>({ type: "authorizePayment", reqId, question })).paymentHeader;
   }
 
   bindGrant(): Promise<unknown> { return this.call({ type: "bindGrant" }); }
@@ -181,7 +181,7 @@ export class SessionSigner {
     });
   }
 
-  /** Forget the key and burn the wrapping key, so persisted ciphertext dies with it. */
+  /** Mainnet locks heap custody and retains funded recovery; legacy testnet destroys its vault. */
   async clear(): Promise<void> {
     this.address = null;
     if (!browserPaymentProfile().testnet) { await this.call<null>({ type: "lock" }); return; }

@@ -17,11 +17,13 @@ export interface SessionRuntimeKey {
   signPayment(payload: TypedDataPayload): Promise<Hex>;
   lock(): void;
 }
+export type BrowserQuestionBudget = { id: string; budgetMicroUsdc: string };
 
 const addr = z.string().regex(/^0x[0-9a-fA-F]{40}$/).transform(a => a.toLowerCase());
 const positive = z.string().regex(/^[1-9]\d{0,15}$/).refine(n => /^[1-9]\d{0,15}$/.test(n) && BigInt(n) <= BigInt(Number.MAX_SAFE_INTEGER));
+const nonnegative = z.string().regex(/^(0|[1-9]\d{0,15})$/).refine(n => BigInt(n) <= BigInt(Number.MAX_SAFE_INTEGER));
 const grantSchema = z.object({ active: z.literal(true), sessionId: addr, ownerAddr: addr, sessAddr: addr,
-  grantEpoch: z.string().uuid(), network: z.literal(profile.networkId), origin: z.string(), capMicroUsdc: positive,
+  grantEpoch: z.string().uuid(), network: z.literal(profile.networkId), origin: z.string(), capMicroUsdc: positive, spentMicroUsdc: nonnegative,
   consent: z.unknown(), ownerSignature: z.string().regex(/^0x[0-9a-fA-F]{130}$/), sessionSignature: z.string().regex(/^0x[0-9a-fA-F]{130}$/) });
 const challengeSchema = z.object({ sessionId: addr, reqId: z.string().uuid(), grantEpoch: z.string().uuid(), sessAddr: addr,
   sourceId: z.string().min(1).max(128), kind: z.enum(["fetch", "citation"]),
@@ -40,7 +42,7 @@ export type BrowserSessionOperation =
   | { type: "initializeOwner"; owner: string }
   | { type: "deriveFromSignature"; signature: Hex }
   | { type: "restoreRetained" }
-  | { type: "authorizePayment"; reqId: string }
+  | { type: "authorizePayment"; reqId: string; question: BrowserQuestionBudget }
   | { type: "bindGrant" }
   | { type: "signGrantConsentProof"; consent: unknown; ownerSignature: Hex }
   | { type: "lock" };
@@ -51,7 +53,7 @@ export type BrowserSessionOperation =
 export function createBrowserSessionRuntime(key: SessionRuntimeKey, dependencies: {
   json(path: string, method?: string, body?: unknown): Promise<unknown>;
   readSource(registryId: string): Promise<SourcePaymentAuthority>;
-  reserve(namespace: string, epoch: string, nonce: string, amount: bigint, cap: bigint): Promise<void>;
+  reserve(namespace: string, epoch: string, nonce: string, amount: bigint, cap: bigint, question: BrowserQuestionBudget): Promise<void>;
 }) {
   if (key.context.profile !== profile) throw new Error("Browser session profile refused");
   const refuse = (): never => { throw new Error("Browser payment authorization refused"); };
@@ -76,8 +78,9 @@ export function createBrowserSessionRuntime(key: SessionRuntimeKey, dependencies
   return Object.freeze({
     bindGrant,
     lock() { generation += 1; key.lock(); },
-    async authorizePayment(reqId: string) {
+    async authorizePayment(reqId: string, question: BrowserQuestionBudget) {
       z.string().uuid().parse(reqId);
+      const scope = z.object({ id: z.string().uuid(), budgetMicroUsdc: positive }).strict().parse(question);
       const expectedGeneration = generation, bound = await bindGrant();
       const challenge = challengeSchema.parse(await dependencies.json("/api/ask/challenge", "POST", { reqId }));
       if (challenge.reqId !== reqId || challenge.sessionId !== key.context.owner || challenge.sessAddr !== bound.response.sessAddr ||
@@ -105,7 +108,7 @@ export function createBrowserSessionRuntime(key: SessionRuntimeKey, dependencies
         if (!price.allowed) refuse();
       } else if (challenge.paymentContext) refuse();
       await dependencies.reserve(key.context.storageNamespace, bound.consent.grantEpoch, challenge.expectedNonce,
-        BigInt(requirements.amount), BigInt(bound.consent.capMicroUsdc));
+        BigInt(requirements.amount), BigInt(bound.consent.capMicroUsdc), scope);
       if (canonicalJson(await bindGrant()) !== canonicalJson(bound) || expectedGeneration !== generation) refuse();
       const now = Math.floor(Date.now()/1000), authorization = { from: bound.response.sessAddr as Hex,
         to: requirements.payTo as Hex, value: requirements.amount, validAfter: String(now-600),

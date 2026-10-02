@@ -22,7 +22,7 @@ export interface SessionGrantBinding {
   sessionId: string | null;
   /** Returns the session WalletClient for auto-signing, or null. */
   getSessionWalletClient: () => WalletClient | null;
-  authorizeSessionPayment?: (reqId: string) => Promise<string>;
+  authorizeSessionPayment?: (reqId: string, question: import("@/lib/session/browser-session-runtime").BrowserQuestionBudget) => Promise<string>;
   /**
    * The funded grant cap in USDC, or undefined when no grant is active.
    * Passed into useAskStream so the browser enforces its own spend ceiling

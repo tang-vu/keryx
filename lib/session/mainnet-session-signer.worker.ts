@@ -37,7 +37,7 @@ self.onmessage = (event: MessageEvent<BrowserSessionOperation & { id: number }>)
       case "restoreRetained": return key.restore();
       case "bindGrant": return runtime.bindGrant();
       case "signGrantConsentProof": return key.signGrantConsentProof(request.consent, request.ownerSignature);
-      case "authorizePayment": return runtime.authorizePayment(request.reqId);
+      case "authorizePayment": return runtime.authorizePayment(request.reqId, request.question);
       default: throw new Error();
     }
   })().then(result => {
