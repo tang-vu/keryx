@@ -27,12 +27,17 @@ only an exact owner mint with canonical selected-chain receipt/finality evidence
 releases the withdrawal barrier. Original nonces and lifetime payment consumption
 remain, so the stable signer can fund and renew rather than being retired.
 
-Ordinary creator cashout will use its connected owner wallet for burn consent and
-the mint transaction's gas; a custodial relay is a separate optional operator role.
+Ordinary creator cashout uses its connected owner wallet for burn consent and the
+mint transaction's gas; a custodial relay is a separate optional operator role.
+Its signed original admission compares all retained local liabilities and confirmed
+debits atomically with the fresh quote. Recovery never repeats a vendor burn, and
+only an exact observed owner mint releases that original withdrawal hold.
 Hosted mainnet payments use an independently sealed, owner-prefunded treasury
 identity and bounded normal product budgets, with no legacy key loader or automatic
 funding executor. A reviewed canonical policy binds the native storage identity,
-origin, dedicated signer, lifetime cap, per-query cap and expiry. SQLite commits the
+origin, dedicated signer, lifetime cap, per-query cap and expiry. Sealed native
+history permanently separates public and private signer roles across rotation.
+Expiry ends new admission, not already signed vendor authority. SQLite commits the
 complete original typed authorization before SDK signing and its header hash and
 submission marker before any paid HTTP call. Policy renewal retains cumulative
 signer exposure; unknown outcomes never restore it. Public and private hosted

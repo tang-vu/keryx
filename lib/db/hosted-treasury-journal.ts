@@ -11,7 +11,8 @@ import { sqliteJournalTransaction } from "./sqlite-browser-journal";
 import type { ServerX402Submission } from "../payments/server-x402-client";
 
 export const HOSTED_TREASURY_SQL = `
-CREATE TABLE hosted_treasury_policies(digest TEXT PRIMARY KEY, signer TEXT NOT NULL, data TEXT NOT NULL CHECK(length(data)<=4096 AND json_valid(data)));
+CREATE TABLE hosted_treasury_policies(digest TEXT PRIMARY KEY, signer TEXT NOT NULL, role TEXT NOT NULL CHECK(role IN('public','private')),
+ data TEXT NOT NULL CHECK(length(data)<=4096 AND json_valid(data)));
 CREATE TABLE hosted_treasury_authorizations(nonce TEXT PRIMARY KEY, policy_digest TEXT NOT NULL REFERENCES hosted_treasury_policies(digest),
  signer TEXT NOT NULL, query_id TEXT NOT NULL, amount_micro INTEGER NOT NULL CHECK(amount_micro>0),
  original TEXT NOT NULL CHECK(length(original)<=8192 AND json_valid(original)), header_hash TEXT, submitted INTEGER NOT NULL DEFAULT 0 CHECK(submitted IN(0,1)));
@@ -62,13 +63,14 @@ function originalPayload(value: TypedDataPayload, signer: string) {
  createSessionSigningPolicy(ARC_MAINNET_PROFILE).validatePayment(p, signer);
  return p;
 }
-export function admitSqliteHostedPolicy(db: DatabaseSync, value: HostedTreasuryPolicy, identity: StorageIdentity) {
+export function admitSqliteHostedPolicy(db: DatabaseSync, value: HostedTreasuryPolicy, identity: StorageIdentity, role:"public"|"private") {
  const p = validateHostedTreasuryPolicy(value, identity), digest = hostedTreasuryPolicyDigest(p);
- if (p.expiresAtSeconds <= Math.floor(Date.now() / 1000)) throw new Error("Hosted policy expired");
+ if (!["public","private"].includes(role) || p.expiresAtSeconds <= Math.floor(Date.now() / 1000)) throw new Error("Hosted policy expired or role unavailable");
  sqliteJournalTransaction(db, () => {
   if (db.prepare("SELECT 1 FROM browser_signer_capacity WHERE signer=?").get(p.signer) ||
       db.prepare("SELECT 1 FROM session_grants WHERE lower(sess_addr)=?").get(p.signer)) throw new Error("Dedicated hosted signer already belongs to browser custody");
-  db.prepare("INSERT INTO hosted_treasury_policies(digest,signer,data) VALUES(?,?,?) ON CONFLICT DO NOTHING").run(digest,p.signer,canonicalJson(p));
+  if(db.prepare("SELECT 1 FROM hosted_treasury_policies WHERE signer=? AND role!=?").get(p.signer,role)) throw new Error("Historical hosted custody role cannot change");
+  db.prepare("INSERT INTO hosted_treasury_policies(digest,signer,role,data) VALUES(?,?,?,?) ON CONFLICT DO NOTHING").run(digest,p.signer,role,canonicalJson(p));
   if (db.prepare("SELECT data FROM hosted_treasury_policies WHERE digest=?").get(digest)?.data !== canonicalJson(p)) throw new Error("Hosted policy conflict");
  });
  return digest;
@@ -116,7 +118,8 @@ export function admitSqliteHostedAuthorization(db: DatabaseSync, input: HostedAu
  const available=BigInt(micro.parse(input.availableMicroUsdc)), original=canonicalJson({context:c,payload});
  if (amount<=0 || p.expiresAtSeconds<=Math.floor(Date.now()/1000) || BigInt(c.queryBudgetMicroUsdc)>BigInt(p.queryCapMicroUsdc)) throw new Error("Hosted authority refused");
  sqliteJournalTransaction(db,()=>{
-  if(db.prepare("SELECT data FROM hosted_treasury_policies WHERE digest=?").get(digest)?.data!==canonicalJson(p)) throw new Error("Hosted policy not admitted");
+  const admittedPolicy=db.prepare("SELECT data,role FROM hosted_treasury_policies WHERE digest=?").get(digest);
+  if(admittedPolicy?.data!==canonicalJson(p) || admittedPolicy.role!==(c.privateJob?"private":"public")) throw new Error("Hosted policy not admitted for this role");
   if(db.prepare("SELECT 1 FROM hosted_treasury_authorizations WHERE nonce=?").get(nonce) ||
      db.prepare("SELECT 1 FROM payment_events WHERE authorization_id=?").get(nonce)) throw new Error("Hosted nonce already admitted");
   const now=sqliteHostedAccounting(db,p.signer);

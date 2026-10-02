@@ -190,8 +190,26 @@ Preparing a new withdrawal requires operator-selected integer
 `NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS` and
 `KERYX_WITHDRAWAL_MAX_PROCESSING_LAG_BLOCKS`. These do not initialize a gas relay,
 private key or automatic funding path. Original status remains readable if new
-preparation policy is unavailable. Creator owner-wallet cashout remains a separate
-applicable public-role slice.
+preparation policy is unavailable.
+
+## Ordinary creator owner-wallet cashout
+
+On selected mainnet, `/api/me/withdrawals/prepare` returns the ordinary unsigned
+creator draft for local persistence and explicit owner review. Rejection before
+signing creates no server withdrawal hold. `/submit` validates the exact owner
+BurnIntent and atomically retains it against fresh known Circle availability and
+all local browser, hosted and withdrawal liabilities. The transaction compares
+confirmed debits as well as holds; concurrent admission or settlement invalidates
+the quote. Signed unknown originals remain held, and the existing one-use transfer
+claim prevents response loss from issuing another burn.
+
+Authenticated `/status` returns the original private record, attestation, transfer
+progress and read-only simulated owner mint calldata. `/complete` takes only the
+original ID and public transaction hash, observes the actual owner-signed mint and
+canonical selected-chain receipt, and retains its completion before releasing that
+original capacity hold. The connected owner wallet explicitly pays mint gas. This
+path does not require a gas relay, treasury key or the legacy `/api/withdraw` path.
+History remains private. Supabase owner cashout stays closed pending native evidence.
 
 ## Prefunded hosted mainnet payments
 
@@ -203,6 +221,8 @@ ceiling and expiry. `KERYX_MAINNET_TREASURY_POLICY_JSON` must be canonical and i
 SHA-256 must equal `KERYX_MAINNET_TREASURY_POLICY_DIGEST`. The dedicated
 `KERYX_MAINNET_TREASURY_PRIVATE_KEY` must match that signer. Private execution uses
 the corresponding `KERYX_MAINNET_PRIVATE_TREASURY_*` policy/key and a distinct signer.
+Native policy history binds each signer permanently to its public or private role;
+a later public rotation cannot recycle historical public custody as private authority.
 Absent admission or known prefunding refuses real payment; it never chooses the
 testnet key loader, creates custody, deposits funds, or enters the staged funding
 executor. The owner chooses operating budgets and prefunds Gateway explicitly.
@@ -214,8 +234,9 @@ exact nonce, source, recipient, amount, network, contracts and validity. The hea
 hash and submission marker commit before paid HTTP. A second connection cannot spend
 the same remaining cap or resubmit an original nonce. Renewing the policy expiry does
 not reset signer or query totals. Unknown response, timeout or an empty ledger search
-does not release exposure. Existing original-network reconciliation owns public
-payment outcomes. Private execution reuses its original incoming settlement,
+does not release exposure. Policy expiry stops new admission; it does not revoke an
+already signed authorization that remains valid at the vendor. Existing original-network
+reconciliation owns public payment outcomes. Private execution reuses its original incoming settlement,
 single-use worker claim, creator submission and confirmation journal; those creator
 legs never enter public payment rows. Normal private mainnet purchase admission has
 no payer invitation list; product budgets, authenticated ownership, worker health,
@@ -229,13 +250,16 @@ Supabase hosted authority remains explicitly refused pending native schema accep
 
 ## Remaining acceptance
 
-The full release still needs the actual normal owner grant, independent worker challenge,
-SSE signature, seller settlement, decrypted body/evidence and citation reward journey;
-fresh authoritative mainnet source registration; original-network reconciliation;
-caller/session and creator withdrawal; and applicable API, private/A2A, treasury,
-CLI/MCP, desktop, extension and bot distribution checks. PostgreSQL support requires
-native schema and concurrent-writer evidence. Existing component and synthetic tests
-are supporting evidence, not funded settlement or external security-audit closure.
+Before activation, compose the final browser, backend and operational changes on
+current main and verify applicable web, desktop, CLI/MCP, API, extension and bot
+distribution. Native synthetic acceptance now covers normal owner delegation,
+original payment recovery, hosted public/private signing and session/creator cashout.
+Browser authored acceptance separately exercises actual worker/React/SSE/paid body
+and citation journeys; their exact combined release still needs review. Fresh
+authoritative mainnet source registration, owner-approved operating budgets and
+funded external vendor acceptance remain operational gates. Optional PostgreSQL
+support requires its own native schema and concurrent-writer evidence. Synthetic
+tests do not establish funded settlement or external security-audit closure.
 
 Cash-out must preserve original signer custody after payment expiry, revocation or
 logout, authenticate its retained owner independently of the active grant, and retain
@@ -252,5 +276,6 @@ compare both chain and the same observed block before/after metadata reads. Circ
 [supported chains](https://developers.circle.com/gateway/references/supported-blockchains)
 and [live metadata](https://gateway-api.circle.com/v1/info) were checked on 2026-10-02
 for Arc domain 26, Mainnet metadata and the pinned wallet/minter addresses. This is a
-transport prerequisite; normal session recovery routes, durable cashout holds and
-mainnet creator relay admission remain unfinished and are not activated by these helpers.
+transport prerequisite. Native normal session recovery and owner-wallet creator
+cashout are now implemented. The optional creator gas-relay operator remains staged;
+ordinary creators explicitly submit their own reviewed mint and gas.

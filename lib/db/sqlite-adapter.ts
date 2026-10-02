@@ -1,5 +1,7 @@
 import { installSqliteApplicationSchema } from "./sqlite-application-schema";
 import { sqliteSessionFundingAccounting } from "./session-funding-accounting";
+import { sqliteCreatorOwnerAccounting, admitSqliteCreatorOwnerWithdrawal, readSqliteCreatorOwnerCompletion, completeSqliteCreatorOwnerWithdrawal } from "./creator-owner-withdrawal-journal";
+import type { CreatorOwnerWithdrawalAccounting, CreatorOwnerWithdrawalCompletion } from "../gateway/creator-owner-withdrawal-protocol";
 import { admitSqliteHostedPolicy, sqliteHostedAccounting, admitSqliteHostedAuthorization, submitSqliteHostedAuthorization,
  confirmSqliteHostedAuthorization, terminalSqliteHostedAuthorization, type HostedAuthorizationAdmission } from "./hosted-treasury-journal";
 import type { HostedTreasuryPolicy } from "../payments/hosted-treasury-policy";
@@ -641,9 +643,9 @@ export class SqliteAdapter implements KeryxDB {
     if (this.enrolledMode !== "mainnet-real") throw new Error("Session funding accounting requires admitted mainnet storage");
     return sqliteSessionFundingAccounting(this.db, signer, after);
   }
-  async admitHostedTreasuryPolicy(policy: HostedTreasuryPolicy) {
+  async admitHostedTreasuryPolicy(policy: HostedTreasuryPolicy,role:"public"|"private") {
     if (this.enrolledMode !== "mainnet-real") throw new Error("Hosted authority requires admitted mainnet storage");
-    return admitSqliteHostedPolicy(this.db, policy, this.enrolledIdentity!);
+    return admitSqliteHostedPolicy(this.db, policy, this.enrolledIdentity!,role);
   }
   async hostedTreasuryAccounting(signer: string) {
     if (this.enrolledMode !== "mainnet-real") throw new Error("Hosted authority requires admitted mainnet storage");
@@ -664,6 +666,22 @@ export class SqliteAdapter implements KeryxDB {
   async sessionWithdrawalAccounting(signer: string) {
     if (this.enrolledMode !== "mainnet-real") throw new Error("Session withdrawal requires admitted mainnet storage");
     return sqliteSessionWithdrawalAccounting(this.db, signer);
+  }
+  async creatorOwnerWithdrawalAccounting(owner:string) {
+    if(this.enrolledMode!=="mainnet-real") throw new Error("Owner withdrawal requires admitted mainnet storage");
+    return sqliteCreatorOwnerAccounting(this.db,owner);
+  }
+  async admitCreatorOwnerWithdrawal(record:WithdrawalRequestRecord,accounting:CreatorOwnerWithdrawalAccounting,availableMicroUsdc:string) {
+    if(this.enrolledMode!=="mainnet-real") throw new Error("Owner withdrawal requires admitted mainnet storage");
+    return admitSqliteCreatorOwnerWithdrawal(this.db,record,accounting,availableMicroUsdc);
+  }
+  async getCreatorOwnerWithdrawalCompletion(id:string,owner:string) {
+    if(this.enrolledMode!=="mainnet-real") throw new Error("Owner withdrawal requires admitted mainnet storage");
+    return readSqliteCreatorOwnerCompletion(this.db,id,owner);
+  }
+  async completeCreatorOwnerWithdrawal(completion:CreatorOwnerWithdrawalCompletion) {
+    if(this.enrolledMode!=="mainnet-real") throw new Error("Owner withdrawal requires admitted mainnet storage");
+    return completeSqliteCreatorOwnerWithdrawal(this.db,completion);
   }
   async reserveSessionWithdrawal(preparation: SessionWithdrawalPreparation) {
     if (this.enrolledMode !== "mainnet-real") throw new Error("Session withdrawal requires admitted mainnet storage");
@@ -1960,7 +1978,12 @@ export class SqliteAdapter implements KeryxDB {
     await recordSqliteWithdrawal(this.db, w);
   }
 
-  async reserveCreatorWithdrawal(value: WithdrawalRequestRecord) { return reserveSqliteWithdrawalRequest(this.db, value); }
+  async reserveCreatorWithdrawal(value: WithdrawalRequestRecord) {
+    if(this.enrolledMode==="mainnet-real" && !this.db.prepare("SELECT 1 FROM creator_withdrawal_requests WHERE id=?").get(value.id)
+      && !this.db.prepare("SELECT 1 FROM session_withdrawal_preparations WHERE request_id=?").get(value.id))
+      throw new Error("Mainnet withdrawal requires original capacity admission");
+    return reserveSqliteWithdrawalRequest(this.db, value);
+  }
   async listCreatorWithdrawalHistory(owner: string, cursor?: WithdrawalHistoryCursor, limit = 25) { return listSqliteWithdrawalHistory(this.db, owner, cursor, limit); }
   async getCreatorWithdrawal(id: string, owner: string) { return getSqliteWithdrawalRequest(this.db, id, owner); }
   async claimCreatorWithdrawalTransfer(id: string, owner: string) { return claimSqliteWithdrawalTransfer(this.db, id, owner); }
