@@ -18,9 +18,18 @@ const quote = Buffer.from(JSON.stringify({
       verifyingContract: "0x0077777d7EBA4688BDeF3E311b846F25870A19B9" } }],
 })).toString("base64");
 
-afterEach(() => { for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true }); });
+afterEach(() => { vi.unstubAllGlobals(); for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true }); });
+
+function rpc() {
+  vi.stubGlobal("fetch", async (_url: RequestInfo | URL, init?: RequestInit) => {
+    const req = JSON.parse(String(init?.body));
+    expect(req.method).toBe("eth_chainId");
+    return Response.json({ jsonrpc: "2.0", id: req.id, result: "0x4cef52" });
+  });
+}
 
 it("retains a paid 500 receipt and blocks another debit until recovery", async () => {
+  rpc();
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-mcp-test-"));
   dirs.push(dir);
   const journalFile = path.join(dir, "payment.json");
@@ -43,14 +52,14 @@ it("retains a paid 500 receipt and blocks another debit until recovery", async (
         { status: 500, headers: { "PAYMENT-RESPONSE": receipt } });
     });
   const input = { url: "https://example.test/api/agent/ask", body: { question: "question", budget: 0.03 },
-    account, journalFile, maxAmountUsdc: 1, fetchImpl: fetchImpl as typeof fetch };
+    account, journalFile, expectedPayee: payee, expectedAmountMicros: "80000", maxAmountUsdc: 1, fetchImpl: fetchImpl as typeof fetch };
   await expect(payForResearch(input)).rejects.toThrow(/Payment settled; HTTP 500/);
   expect(readPending(journalFile)).toMatchObject({ status: "settled", amountUsdc: "0.08", settlementId: "circle-settlement" });
   expect(JSON.parse(Buffer.from(readPending(journalFile)!.paymentResponse!, "base64").toString("utf8"))).toMatchObject({ transaction: "circle-settlement" });
   const queryId = readPending(journalFile)!.queryId;
   await expect(payForResearch(input)).rejects.toThrow(/previous payment may have settled/i);
   expect(fetchImpl).toHaveBeenCalledTimes(2);
-  const poll = vi.fn().mockResolvedValue(Response.json({ status: "completed", answer: "saved answer" }));
+  const poll = vi.fn().mockResolvedValue(Response.json({ status: "completed", queryId, answer: "saved answer" }));
   const recovered = await recoverResearch("https://example.test", journalFile, poll as typeof fetch);
   expect(recovered.data).toMatchObject({ answer: "saved answer" });
   expect(poll.mock.calls[0][0]).toBe(`https://example.test/api/agent/ask?queryId=${queryId}`);
@@ -63,8 +72,53 @@ it("rejects a quote above the caller cap before signing or submitting", async ()
   const journalFile = path.join(dir, "payment.json");
   const fetchImpl = vi.fn().mockResolvedValue(new Response("{}", { status: 402, headers: { "PAYMENT-REQUIRED": quote } }));
   await expect(payForResearch({ url: "https://example.test/api/agent/ask", body: { question: "question" },
-    account, journalFile, maxAmountUsdc: 0.03, fetchImpl: fetchImpl as typeof fetch })).rejects.toThrow(/exceeds/);
+    account, journalFile, expectedPayee: payee, expectedAmountMicros: "80000", maxAmountUsdc: 0.03, fetchImpl: fetchImpl as typeof fetch })).rejects.toThrow(/exceeds/);
   expect(fetchImpl).toHaveBeenCalledTimes(1);
   expect(readPending(journalFile)).toBeNull();
+});
+
+it("retains original response-loss admission across a module restart and GET-only recovery", async () => {
+  rpc(); const dir = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-mcp-test-")); dirs.push(dir);
+  const journalFile = path.join(dir, "payment.json"), fetchImpl = vi.fn()
+    .mockResolvedValueOnce(new Response("{}", { status: 402, headers: { "PAYMENT-REQUIRED": quote } }))
+    .mockRejectedValueOnce(new Error("secret bearer URL marker"));
+  const input = { url: "https://example.test/api/agent/ask", body: { question: "question", budget: 0.03 }, account,
+    journalFile, expectedPayee: payee, expectedAmountMicros: "80000", maxAmountUsdc: 1, fetchImpl: fetchImpl as typeof fetch };
+  await expect(payForResearch(input)).rejects.toThrow(/Payment outcome unknown/);
+  const original = readPending(journalFile)!; vi.resetModules(); const reopened = await import("./local-payment.mts");
+  await expect(reopened.payForResearch(input)).rejects.toThrow(/previous payment/); expect(fetchImpl).toHaveBeenCalledTimes(2);
+  const poll = vi.fn().mockResolvedValue(Response.json({ queryId: original.queryId, status: "completed", answer: "original saved answer" }));
+  await reopened.recoverResearch("https://example.test", journalFile, poll as typeof fetch);
+  expect(poll).toHaveBeenCalledOnce(); expect(poll.mock.calls[0][1]).not.toHaveProperty("method", "POST");
+  expect(readPending(journalFile)).toBeNull();
+});
+
+it("retains admission for wrong completed query identity", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-mcp-test-")); dirs.push(dir);
+  const journalFile = path.join(dir, "payment.json");
+  const original = { queryId: `a2a_${"a".repeat(64)}`, authorizationId: `0x${"a".repeat(64)}`, amountUsdc: "0.08", status: "unconfirmed" };
+  fs.writeFileSync(journalFile, JSON.stringify(original));
+  await expect(recoverResearch("https://example.test", journalFile, vi.fn().mockResolvedValue(Response.json({ status: "completed", queryId: `a2a_${"b".repeat(64)}` })) as typeof fetch)).rejects.toThrow(/identity mismatched/);
+  expect(readPending(journalFile)).toEqual(original);
+});
+
+it("delayed recovery cannot clear a replacement journal and held recovery never signs", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-mcp-test-")); dirs.push(dir);
+  const journalFile = path.join(dir, "payment.json");
+  const original = { queryId: `a2a_${"a".repeat(64)}`, authorizationId: `0x${"a".repeat(64)}`, amountUsdc: "0.08", status: "unconfirmed" };
+  fs.writeFileSync(journalFile, JSON.stringify(original));
+  let release!: (response: Response) => void;
+  const poll = vi.fn(() => new Promise<Response>(resolve => { release = resolve; }));
+  const recovering = recoverResearch("https://example.test", journalFile, poll as typeof fetch);
+  await expect(payForResearch({ url: "https://example.test/api/agent/ask", body: {}, account, journalFile,
+    expectedPayee: payee, expectedAmountMicros: "80000", maxAmountUsdc: 1 })).rejects.toThrow(/admission is held/);
+  const replacement = { ...original, queryId: `a2a_${"b".repeat(64)}`, authorizationId: `0x${"b".repeat(64)}` };
+  fs.writeFileSync(journalFile, JSON.stringify(replacement)); // Simulate an older writer outside the new lock contract.
+  release(Response.json({ status: "completed", queryId: original.queryId })); await recovering;
+  expect(readPending(journalFile)).toEqual(replacement);
+  fs.mkdirSync(`${journalFile}.lock`);
+  const held = await recoverResearch("https://example.test", journalFile,
+    vi.fn().mockResolvedValue(Response.json({ status: "completed", queryId: replacement.queryId })) as typeof fetch);
+  expect(held).toHaveProperty("instructions"); expect(readPending(journalFile)).toEqual(replacement);
 });
 

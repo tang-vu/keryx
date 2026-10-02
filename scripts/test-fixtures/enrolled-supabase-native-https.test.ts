@@ -3,10 +3,50 @@ import type { Server } from "node:http";
 import { createClient } from "@supabase/supabase-js";
 import { expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { assembleAuthorityBoundSupabaseCore } from "../../lib/db/supabase-adapter";
 import { STORAGE_TESTNET_PROFILE_DIGEST, type StorageIdentity } from "../../lib/db/storage-identity";
 import { SUPABASE_RUNTIME_CONTRACT } from "../../lib/db/supabase-runtime-contract";
 import { readOwnedFixtureRequestBody, waitForOwnedSourceAdmissionEntry } from "./enrolled-supabase-native-https.mjs";
+import { describeOwnedSupabaseCurlState, launchOwnedSupabaseCurl } from "./enrolled-supabase-native-lifecycle.mjs";
+
+it("launches an executor lasting beyond the CI suite and retains parent cleanup ownership after uncertain creation", () => {
+  const postgres = `keryx-enrolled-reference-${randomUUID()}`;
+  const owned = new Set<string>();
+  let launch: string[] = [];
+  const docker = (args: string[]) => {
+    launch = args;
+    expect(owned.has(`${postgres}-curl`)).toBe(true);
+    throw new Error("Synthetic timeout after container creation");
+  };
+  expect(() => launchOwnedSupabaseCurl(postgres, name => owned.add(name), docker)).toThrow("Synthetic timeout");
+  expect(launch.slice(0, 5)).toEqual(["run", "-d", "--name", `${postgres}-curl`, "--network"]);
+  expect(launch[5]).toBe(`container:${postgres}`);
+  const lifetime = /^sleep ([0-9]+)$/.exec(launch.at(-1)!);
+  expect(lifetime).not.toBeNull();
+  const workflow = readFileSync(new URL("../../.github/workflows/enrolled-supabase-runtime-postgres.yml", import.meta.url), "utf8");
+  const suiteMinutes = /timeout-minutes: ([0-9]+)/.exec(workflow);
+  expect(suiteMinutes?.[1]).toBe("20");
+  expect(Number(lifetime![1])).toBeGreaterThan(Number(suiteMinutes![1]) * 60);
+  expect(Number(lifetime![1])).toBeLessThanOrEqual(1800);
+  // The actual outer evaluator consumes this set in its finally removal loop.
+  expect([...owned]).toEqual([`${postgres}-curl`]);
+});
+
+it("diagnoses executor expiry and OOM using only bounded container state", () => {
+  const postgres = `keryx-enrolled-reference-${randomUUID()}`;
+  const describe = (oom: boolean, exit: number) => describeOwnedSupabaseCurlState(postgres, (args, input, timeout) => {
+    expect(args).toEqual(["inspect", "--format",
+      "{{.State.Running}} {{.State.ExitCode}} {{.State.OOMKilled}} {{.State.StartedAt}} {{.State.FinishedAt}}", `${postgres}-curl`]);
+    expect(input).toBeUndefined();
+    expect(timeout).toBe(2000);
+    return `false ${exit} ${oom} 2026-10-02T02:16:49.123456789Z 2026-10-02T02:31:49.123456789Z\n`;
+  });
+  expect(describe(false, 0)).toContain("running=false exitCode=0 oomKilled=false");
+  expect(describe(true, 137)).toContain("running=false exitCode=137 oomKilled=true");
+  expect(describeOwnedSupabaseCurlState(postgres, () => "synthetic unexpected private diagnostic")).toBe("unavailable");
+  expect(describeOwnedSupabaseCurlState(postgres, () => { throw new Error("synthetic private failure"); })).toBe("unavailable");
+});
 
 async function listen(server: Server) {
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));

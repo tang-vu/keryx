@@ -17,12 +17,13 @@ function admission() {
     return undefined;
   }
 }
-// Reservation races start only after both native connections are admitted.
+// Budget and reservation races start only after both native connections are admitted.
 // Other modes retain their original GO/admission and deliberate crash barriers.
-const reservedLedger = input.action === "reserve" ? admission() : undefined;
-if (input.action !== "reserve" || reservedLedger) process.stdout.write("READY\n");
+const raceAdmission = input.action === "admit" || input.action === "reserve";
+const admittedLedger = raceAdmission ? admission() : undefined;
+if (!raceAdmission || admittedLedger) process.stdout.write("READY\n");
 process.stdin.once("data", async () => {
-  const ledger = reservedLedger ?? admission(); if (!ledger) return;
+  const ledger = admittedLedger ?? admission(); if (!ledger) return;
   let protectedStore: ReturnType<typeof openGatewayFundingSqliteTerminalObserver> | undefined;
   try {
     if (input.action === "terminal") {

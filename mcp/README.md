@@ -1,125 +1,108 @@
-# Keryx MCP server — add Keryx to any agent
+﻿# Keryx MCP
 
-Give any MCP-capable agent (Claude Code, Claude Desktop, Cursor, …) a tool that asks **Keryx** a
-question. Keryx autonomously buys paid sources under a budget, answers with inline citations, and
-**pays every creator it cites** in USDC on Arc. The toll for each call is paid from *your own*
-Arc-testnet wallet — so every call is a real on-chain payment, visible live on
-[keryx.cc/dashboard](https://keryx.cc/dashboard).
+Keryx buys selected sources under a budget and returns a cited answer with creator-payment state.
+The local stdio buyer pays the inbound x402 toll from a configured caller wallet on Arc testnet.
+A Circle settlement identifier is batching evidence, not an individual EVM transaction hash.
+Testnet calls and owner-operated tests do not establish external traction or mainnet readiness.
 
-## Remote MCP (no install)
+## Remote MCP
 
-Connect a Streamable HTTP client directly to:
-
-```text
-https://keryx.cc/mcp
-```
-
-The remote server exposes:
-
-| Tool | What it does |
-|------|--------------|
-| `research` | Runs budgeted creator-paid research and returns the answer, citations, confidence, settlement telemetry, and dispatch URL. |
-| `keryx_status` | Shows the caller tier and active creator-payment budget cap. |
-
-It includes an anonymous IP-limited trial. For higher limits and verified wallet attribution, send
-an ask-scoped Keryx API key as `Authorization: Bearer kx_live_…`. The remote path is treasury-funded;
-the budget is clamped server-side, and the local x402 option below remains available when the caller
-should pay Keryx's inbound toll from its own wallet.
-
-### Connect from Codex
+The separately operated, treasury-funded remote service is `https://keryx.cc/mcp`.
+It exposes `research` and `keryx_status`, applies server-side budget limits, and supports
+ask-scoped API keys. The local package below has a separate caller-custody role.
 
 ```bash
 codex mcp add keryx --url https://keryx.cc/mcp
 ```
 
-### Connect from Claude Code
+See the repository's `docs/remote-mcp.md` for the remote trust model.
+
+## Local stdio tools
+
+| Tool | Behavior |
+| --- | --- |
+| `ask_keryx` | Buy research with an exact service fee plus creator-spend cap. Default deep mode is 0.05 + 0.05 = 0.10 testnet USDC. Checks the independently configured seller, exact total, token and signing domain before signing. |
+| `keryx_wallet_status` | Report configured caller custody and balances, or missing-custody/merchant-policy guidance. Never creates or replaces a wallet. |
+| `keryx_recover` | Inspect the original saved payment or funding attempt. Performs reads; never submits another payment, approval or deposit. |
+
+Version **0.3.0** changes local setup. Use Node.js **22.19+ in the 22 LTS line, or 24+**.
+Builds use the repository's pinned npm 11.19.0 installer. Critical consumer dependencies are
+pinned to Circle x402 batching 3.5.0 and viem 2.55.19.
+
+The verified release tarball can be installed directly. npm registry availability is a separate
+publication step: do not assume `npx keryx-mcp@latest` contains these safeguards. Until 0.3.0 is
+published and read back, npm's older version remains unchanged.
 
 ```bash
-claude mcp add --transport http keryx https://keryx.cc/mcp
+npm install /absolute/path/keryx-mcp-0.3.0.tgz
 ```
 
-### Connect from Cursor
+Configure your MCP client to run `node /absolute/path/node_modules/keryx-mcp/dist/keryx-mcp.mjs`.
+Set caller custody and the reviewed public merchant address through your client's secure local
+environment configuration; do not put private keys in command-line arguments or chat.
 
-```json
-{
-  "mcpServers": {
-    "keryx": {
-      "url": "https://keryx.cc/mcp"
-    }
-  }
-}
-```
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `KERYX_BUYER_PRIVATE_KEY` | unset | Explicit caller-owned testnet key; a supplied invalid key refuses operation. |
+| `KERYX_WALLET_FILE` | `~/.keryx/buyer-wallet.json` | Alternative existing legacy JSON wallet with exactly `privateKey` and matching `address`. Missing, malformed, linked or inconsistent files refuse custody; none is repaired or overwritten. |
+| `KERYX_BUYER_PAYEE` | unset | Required independently reviewed seller payout address. Obtain it from an owner-reviewed trusted record; the received 402 challenge does not supply this authority. |
+| `KERYX_BASE_URL` | `https://keryx.cc` | Reviewed Keryx deployment. |
+| `KERYX_PAYMENT_JOURNAL` | `~/.keryx/buyer-payment.json` | Private original payment barrier; its sibling `.funding.json` tracks funding separately. |
+| `KERYX_GATEWAY_DEPOSIT` | `0.5` | Bounded deposit of existing caller USDC, at most 1 testnet USDC. |
+| `KERYX_MAX_TOTAL_USDC` | `1` | Caller quote ceiling; exact fee/budget amounts require six or fewer decimal places. |
+| `KERYX_RPC_URL` | `https://rpc.testnet.arc.network` | Endpoint attested as Arc testnet for reads, signing and submission. |
 
-See [`docs/remote-mcp.md`](../docs/remote-mcp.md) for API-key variants and the trust model.
+Call `keryx_wallet_status` first. Without a configured key/file, initialization and tool discovery
+still work and status explains what is missing. Without merchant policy, status reports the caller
+address and keeps readiness false. Fund that caller address with Arc testnet USDC and gas using
+an independently checked faucet. There is no automatic faucet or server-treasury fallback.
+A paid request can settle even if delivery fails. The creator cap is prepaid capacity, not a
+promise that every cent is paid to creators; assess the returned settled and pending evidence.
 
-## Local x402 MCP tools
+## Upgrade and recovery
 
-| Tool | What it does |
-|------|--------------|
-| `ask_keryx` | Ask a research question (+ optional prepaid creator-spend `budget`). Returns a cited answer and the creators Keryx paid downstream. The default deep-mode quote is **0.05 USDC service fee + 0.05 USDC creator budget = 0.10 USDC total**. A 0.03 budget quotes 0.08 total. The exact 402 quote is checked before signing. |
-| `keryx_wallet_status` | Show the wallet this server pays from — address, balances, whether it's ready, and how to fund it. **Run this first.** |
-| `keryx_recover` | Poll the saved query ID after a paid error or uncertain payment outcome, without making another payment. |
+Before upgrading from the previous 0.2.0 tarball or older 0.1.1 npm package, stop the old buyer
+processes and preserve the original wallet and payment journal. Keep the same caller key and
+journal paths, configure the independently reviewed merchant address, and recover original
+attempts before making a new purchase. Do not replace or delete old custody to fix an error.
 
-The creator budget is prepaid and is a spend cap, not a promise that every cent reaches creators. The server itemizes actual creator spend and unused reserve in its response. A paid request can settle even if research delivery fails. The local buyer saves its authorization nonce, query ID, amount, and any `PAYMENT-RESPONSE` settlement ID in `~/.keryx/buyer-payment.json` (or `KERYX_PAYMENT_JOURNAL`). While that journal exists, `ask_keryx` refuses another payment. Run `keryx_recover` to inspect the server's order; a completed answer clears the journal. An unresolved or failed order needs manual review before another purchase.
+Each local journal admits one attempt under an exclusive filesystem lock. Payment recovery
+checks the original query ID; a foreign completed response cannot clear the barrier. A retained
+funding hash must match the exact caller, chain, destination, calldata, value and successful or
+reverted receipt. Current Circle credit alone never proves the original transaction. An interrupted
+approval or hashless attempt stays held for owner review. Completed/reverted funding history,
+including original hashes, is retained before a distinct new funding admission.
 
-## Local x402 setup (≈3 minutes)
+Recovery may inspect an original attempt while a lock is held, but cannot overwrite that journal.
+After a crash, it never steals a lock: stop all buyer processes, inspect the original transaction or
+query, and have the owner determine whether the lock is stale before removing it. Do not issue a
+new purchase/deposit to recover missing output. An old legacy journal can support original
+GET-only inspection without a new key or merchant policy; it is not proof of environment origin.
 
-Published to npm as [`keryx-mcp`](https://www.npmjs.com/package/keryx-mcp) — no clone, no build.
+This is local-process/restart protection, not global nonce exclusion across copied keys, alternate
+journal paths or old packages that ignore the locks. Keep one authority over these private files.
+Host ACLs and protection against a malicious local owner remain required. Journal readers are
+bounded schema checks, not custody-file provenance proofs. File contents are flushed before
+payment I/O; POSIX parent directories are flushed where supported. Windows namespace durability,
+recursive-directory power-loss behavior and real host recovery still need operational acceptance.
+RPC/provider honesty and independent security review remain separate gates. Mainnet is disabled.
 
-### Add it to Claude Code (one line)
+## Build and verify from source
 
 ```bash
-claude mcp add keryx -- npx -y keryx-mcp@latest
+npm exec -- vitest run --config mcp/vitest.config.mts
+cd mcp
+npm ci
+npm run build
+npm pack
 ```
 
-### Or add it to any MCP client (Claude Desktop, Cursor, Windsurf, …)
-
-```json
-{
-  "mcpServers": {
-    "keryx": {
-      "command": "npx",
-      "args": ["-y", "keryx-mcp@latest"]
-    }
-  }
-}
-```
-
-### Fund the wallet, then ask
-
-1. Call **`keryx_wallet_status`** — it prints the wallet address it pays from.
-2. Open the [Circle faucet](https://faucet.circle.com), pick **Arc Testnet**, paste that address.
-   (20 USDC / 2h — also covers gas.)
-3. Call **`ask_keryx`** with your question. The server deposits to Circle Gateway on the first call
-   and pays the toll; Keryx researches, answers with citations, and pays the creators it cited.
-
-That's it — the answer comes back with the on-chain payment proof and a link to the live dashboard
-where your call now appears as external traction.
-
-## Configuration (env)
-
-All optional — sane Arc-testnet defaults are built in.
-
-| Var | Default | Purpose |
-|-----|---------|---------|
-| `KERYX_BASE_URL` | `https://keryx.cc` | Keryx deployment to call. |
-| `KERYX_BUYER_PRIVATE_KEY` | *(generated)* | Bring your own funded Arc wallet instead of the generated one. |
-| `KERYX_WALLET_FILE` | `~/.keryx/buyer-wallet.json` | Where the generated wallet is persisted. |
-| `KERYX_GATEWAY_DEPOSIT` | `0.5` | USDC moved into Gateway per top-up. |
-| `KERYX_MAX_TOTAL_USDC` | `1` | Maximum accepted body-dependent 402 quote for one local call. |
-| `KERYX_PAYMENT_JOURNAL` | `~/.keryx/buyer-payment.json` | Pending payment and recovery evidence. |
-| `KERYX_RPC_URL` | `https://rpc.testnet.arc.network` | Arc testnet RPC. |
-
-> **Testnet funds only.** Calls settle Arc testnet USDC. The generated wallet holds only what you
-> faucet into it; Keryx never touches your keys. The published buyer is pinned to Arc testnet.
-> Mainnet requires a separate audited release and is not enabled by an environment variable.
-
-## From source (development)
-
-```bash
-git clone https://github.com/tang-vu/keryx && cd keryx && npm install
-claude mcp add keryx -- node --import tsx --no-warnings "$(pwd)/mcp/keryx-mcp-server.mts"
-```
-
-`npm run build` (in `mcp/`) bundles `keryx-mcp-server.mts` → `dist/keryx-mcp.mjs` with esbuild; that
-single file is what ships to npm and runs under plain `node`.
+The package bundles shared Keryx custody and signer guards into its executable while keeping
+pinned consumer dependencies external. `mcp/scripts/test-packed.mjs` installs the tarball into an
+isolated consumer and exercises actual stdio initialization, tool listing, status and synthetic
+purchase/original-attempt recovery. Test transports block live payments and never use funded keys.
+After the independent MCP install, also run `npm exec -- tsc --noEmit -p mcp/tsconfig.json`
+from the repository root. This checks MCP and imported shared source against the MCP package's
+installed viem/Circle declarations, matching the single external dependency closure used by the
+bundled consumer. Run the packed acceptance with
+`node mcp/scripts/test-packed.mjs /absolute/path/keryx-mcp-0.3.0.tgz /absolute/path/to/pinned/npm-cli.js`.

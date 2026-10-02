@@ -1,0 +1,16 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "incremental": false,
+    "plugins": [],
+    "paths": {
+      "@/*": ["../*"],
+      "viem": ["./node_modules/viem/_types/index.d.ts"],
+      "viem/*": ["./node_modules/viem/_types/*"],
+      "@circle-fin/x402-batching/*": ["./node_modules/@circle-fin/x402-batching/dist/*"]
+    }
+  },
+  "include": ["*.mts"],
+  "exclude": ["node_modules", "dist"]
+}

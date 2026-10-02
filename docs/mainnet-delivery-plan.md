@@ -21,7 +21,10 @@ addresses or service availability will be inferred from testnet configuration.
 
 ## Current baseline and gaps
 
-Latest preparation: [October 1 evidence](./engineering/mainnet-readiness-2026-10-01.md)
+Current [October 2 preparation](#october-2-preparation) records guarded backend
+acceptance and the focused treasury custody/signing fixes with their remaining
+release and cutover gates. The historical
+[October 1 evidence](./engineering/mainnet-readiness-2026-10-01.md)
 pins deployed testnet source `368b278`, its canonical dependency lock and exact
 integrated CI. It records public funding fallback, default-closed funding source,
 actual isolated PostgreSQL four-leg acceptance and Linux provenance containment,
@@ -158,7 +161,7 @@ end-to-end research acceptance, independent review or a new confidence guarantee
 | Gate | Required evidence | Baseline status |
 | --- | --- | --- |
 | M1 Network/services | Official Arc mainnet chain/token/RPC/explorer values, Gateway nanopayment support, deployed code and SDK support verified against the intended environment | [September 29 evidence](./engineering/mainnet-readiness-2026-09-29.md): official network, token and Gateway addresses published; narrow RPC code presence observed. PR #26 (`a79e882`) upgraded SDK 3.5.0 and pinned the testnet seller facilitator URL; one live testnet toll reportedly settled. Mainnet contract identity, Keryx registry deployment, mainnet SDK and end-to-end settlement checks remain open |
-| M2 Authority/isolation | Separate production configuration, deployments and keys; no cross-environment signatures/nonces/DB records; bounded user and treasury funds | Testnet-only safeguards exist; [storage identity and explicit legacy enrollment design](deployment-storage-isolation.md) is proposed. Implementation, both backend cutover/restore evidence and the remaining signer/key/auth isolation gates are open |
+| M2 Authority/isolation | Separate production configuration, deployments and keys; no cross-environment signatures/nonces/DB records; bounded user and treasury funds | Testnet authority retained; guarded SQLite/PostgreSQL factories have native candidate acceptance but remain dormant. Runtime caller integration, trusted custody history, deployment enrollment and drained cutover remain open. |
 | M3 Security | Independent review of signer/session authority, contracts, x402/Gateway, registry, encrypted delivery and auth; remediated critical/high findings and documented residuals | D-272 atomic admission and retained original-epoch/signer accounting have repository code/test evidence. The [independent review packet](./independent-security-review.md) defines the candidate handoff; independent mainnet review and remediation acceptance are not demonstrated |
 | M4 Settlement/recovery | Lost response, replay/concurrency, Circle/RPC outage, settled-but-undelivered and reconciliation drills; no silent pending-to-failed transitions | Focused tests and owner pilots exist; [funded withdrawal original/receipt recovery](./engineering/creator-funded-withdrawal-drill.md) passed two new keyless processes and idempotent accounting. Unknown-UUID Circle response loss and release-wide drill evidence remain open |
 | M5 Operations | Restore/rollback/rotation drills, realistic capacity/load test, alert routing, funding limits and an incident owner | [Outside-host fixed-404 diagnostic](./outside-host-ops-monitor.md) passed real reads, both first-attempt Telegram deliveries and owner response acceptance; a real healthy production Cron sample was separately observed. Real VPS outage/failover, restore/rollback/rotation, sustained scheduling and durable NTP synchronization remain open |
@@ -172,6 +175,56 @@ or silently migrate the product to another chain. Missing external evidence does
 prevent independent product, measurement or reliability work from continuing.
 
 ## Delivery sequence
+
+### October 2 preparation
+
+October 2 preparation baseline: `241c721f1c1930dabb97cec0260d3220c2b5e87c`
+includes the reviewed guarded SQLite and PostgreSQL backend implementations from
+[PR107](https://github.com/tang-vu/keryx/pull/107) and
+[PR108](https://github.com/tang-vu/keryx/pull/108). Their native acceptance advances
+the [closed factory boundary](enrolled-runtime-backends.md); ordinary `getDb()` and
+deployed adapters still retain authority. Complete guarded caller workflows under
+existing payment/observation deadlines, production provenance, paused enrollment,
+backup/restore lineage and rollback rehearsal remain required before cutover.
+There is no automatic migration or mainnet profile activation.
+
+The [existing treasury custody fix](treasury-wallet-custody.md) removes runtime
+generation/replacement on missing or invalid wallet state and preserves valid
+legacy identity. Synthetic constructor/process evidence does not establish
+exclusive key history, funded recovery, external security acceptance or M2 closure.
+Its exact-head review, CI and deployed health verification remain release gates;
+this dated preparation note does not claim deployment.
+
+[Treasury transaction isolation](treasury-transaction-isolation.md) also addresses
+a reproduced provider-preparation signing bypass across the server gateway,
+caller-funded stdio MCP and local maintenance/demo callers, and retires the
+unrestricted legacy live withdrawal lane. Existing owner-provisioned custody and
+an explicit trusted merchant policy are prerequisites for the breaking MCP 0.3.0
+setup; [distribution acceptance](mcp-distribution.md) remains separate from npm
+publication. Synthetic keys prove refusal and retained uncertainty; they do not prove
+durable cross-process funding admission, custody history, funded settlement or
+independent audit. M2/M4 and the owner launch decision remain open.
+
+Read-only production observation, October 2 at approximately 01:43 UTC: public
+health reported `94cb7cc`, operational/database OK and `arcTestnet`.
+`timedatectl` reported NTP enabled and synchronized; `chrony.service` was loaded,
+active and enabled, with a KVM stratum-1 reference, zero reported system offset
+and normal leap status. This advances current enabled-provider evidence. It does
+not independently corroborate external NTP, exercise reboot/failover, change
+service configuration or close M5 recovery/operations acceptance. This deployment
+observation precedes the treasury-fix candidate and does not claim that fix is live.
+
+Credential-free availability recheck, October 2 at `01:54:53.680Z`, used the
+existing [read-only Arc probe](arc-mainnet-readonly-probe.md). All four RPCs
+reported chain `5042` and agreed at block `0x16b3a88`, hash
+`0xd4adcacc1b8bc7003ac73790e3237a52a5ce0770b706b14aa15de24f70d943cc`;
+USDC reported six decimals, observed proxy/code digests matched the prior evidence
+and static SDK 3.5 metadata matched. The report retained `M1_PARTIAL`,
+`mainnetReady: false` and `settlementAccepted: false`. Output was observed in the
+operator session, not retained as a new artifact file. This proves neither audit
+identity, private registry deployment nor settlement, and accessed no wallet key
+or signer. Official Arc/Circle network references were also rechecked that day;
+the deployed signing profile remains testnet.
 
 [Creator cash-out recovery](./creator-withdrawal-recovery.md) has a shared signed-request
 identity and a private immutable single-admission journal in SQLite/PostgreSQL. The

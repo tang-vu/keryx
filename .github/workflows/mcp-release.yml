@@ -78,7 +78,7 @@ jobs:
           mkdir -p ../mcp-assets
           npm pack --ignore-scripts --json --pack-destination ../mcp-assets > ../mcp-assets/pack.json
           node --input-type=module -e 'import fs from "node:fs"; const [pack]=JSON.parse(fs.readFileSync("../mcp-assets/pack.json")); for(const file of pack.files) { if (!["package.json","README.md","dist/keryx-mcp.mjs"].includes(file.path)) throw Error("Unexpected package path: "+file.path); } if(pack.files.length!==3) throw Error("Expected exactly package manifest, README and bundle");'
-      - name: Verify clean packaged consumer without wallet or research network
+      - name: Verify clean packaged consumer with synthetic signing and recovery
         if: steps.source.outputs.sha != ''
         run: node mcp/scripts/test-packed.mjs "$(find mcp-assets -name '*.tgz' -type f)" "$(npm root -g)/npm/bin/npm-cli.js"
       - name: Record source provenance and publish immutable package fallback

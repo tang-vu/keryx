@@ -11,6 +11,7 @@ import { STORAGE_TESTNET_PROFILE_DIGEST, type StorageIdentity } from "../../lib/
 import { SUPABASE_RUNTIME_CONTRACT } from "../../lib/db/supabase-runtime-contract";
 import { startOwnedSupabaseHttpsBridge, waitForOwnedSourceAdmissionEntry } from "./enrolled-supabase-native-https.mts";
 import { startEnrolledSupabaseNativeRegistry } from "./enrolled-supabase-native-domains.mts";
+import { describeOwnedSupabaseCurlState, launchOwnedSupabaseCurl } from "./enrolled-supabase-native-lifecycle.mts";
 
 export async function acceptOwnedEnrolledSupabaseRuntime(
   postgresContainer: string, migrationSql: string,
@@ -175,9 +176,7 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
       "-e", `PGRST_DB_URI=postgres://authenticator@127.0.0.1:5432/${database}`,
       "-e", "PGRST_DB_ANON_ROLE=anon", "-e", "PGRST_DB_SCHEMAS=public", "-e", "PGRST_DB_CONFIG=false",
       "-e", "PGRST_DB_POOL=4", "-e", `PGRST_JWT_SECRET=${secret}`, "postgrest/postgrest:v12.2.3"]);
-    ownContainer(curl);
-    docker(["run", "-d", "--name", curl, "--network", `container:${postgresContainer}`, "--memory", "64m",
-      "--entrypoint", "sh", "curlimages/curl:8.12.1", "-c", "sleep 900"]);
+    launchOwnedSupabaseCurl(postgresContainer, ownContainer, docker);
     const readyDeadline = performance.now() + 15_000;
     let ready = false;
     while (performance.now() < readyDeadline) {
@@ -439,6 +438,9 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
     await runChild("drift");
     assert.equal(sql("select count(*) from keryx_storage.writer"), "0");
     process.stdout.write("PASS native HTTPS closed factory, role/identity/deadline/read-only/provenance/drift gates\n");
+  } catch (error) {
+    console.error(`FIXTURE_CURL_STATE ${describeOwnedSupabaseCurlState(postgresContainer, docker)}`);
+    throw error;
   } finally {
     let cleanupFailed = false;
     for (const [child, completion] of children) {

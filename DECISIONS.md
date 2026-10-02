@@ -1,5 +1,48 @@
 # Keryx — Decision Log
 
+**D-290** — Preserve treasury custody rather than replacing unavailable keys — *2026-10-02*
+
+The reachable server gateway previously caught every wallet read/parse error and
+generated a replacement, overwriting malformed existing custody and allowing
+concurrent bootstrap races. Require a bounded read of the existing legacy wallet,
+matching derived address and retained regular-file identity before constructing
+any signer or SDK/funding client. Never create, repair or mutate wallet state from
+runtime admission. Reconciliation and acknowledgement share this identity parser;
+public balance metadata remains a read-only display boundary.
+
+Existing valid files remain compatible. Missing custody requires owner recovery;
+a genuinely new isolated testnet deployment needs separate deliberate provisioning
+and private host permissions. Do not infer unused-key history, global nonce
+exclusivity, Windows ACL enforcement or mainnet authority from a successful load.
+Synthetic native/process evidence and independent release review remain required.
+Reversible only through a reviewed custody migration; restoring automatic key
+replacement is not a supported rollback. See [treasury custody](docs/treasury-wallet-custody.md).
+
+Retire the legacy environment wallet generator as part of that same custody
+boundary: it printed both new private keys and replaced existing environment
+custody using obsolete buyer labels. Its help and refusal perform no key creation
+or private file access. Deliberate owner-managed role-specific environment setup
+and recovery remain separate; a demo convenience cannot replace funded history.
+
+**D-291** — Bind the actual signed treasury operation independently of RPC preparation — *2026-10-02*
+
+A synthetic actual-SDK reproduction demonstrated a foreign-chain transaction
+signed after a successful testnet preflight. Freeze the caller's exact operation,
+validate the provider's fill and prepared signature input, then verify the raw
+sender/tuple before a single broadcast. Keep private keys out of SDK transaction
+delegation; independently restrict SDK batching typed-data callbacks. Reuse the
+current balance reader and exact approve/deposit operations rather than activate
+the dormant funding or storage stack.
+
+Retain post-submit and missing/mismatched receipt uncertainty with the original
+hash. A funding instance keeps its first same-budget outcome, including failure;
+it cannot silently retry or change caps. This is not durable global nonce/spend
+admission or restored-key authority. Supported local transaction scripts share
+the guard, treasure-hunt needs an explicit payee and unrestricted legacy live
+withdrawal is retired in favor of the separately authorized durable workflow.
+Native synthetic checks, review, release and independent M2/M4 acceptance remain
+distinct. See [treasury transaction isolation](docs/treasury-transaction-isolation.md).
+
 **Supervised scholarly rights are signed version authority, separate from wallet payment authority** — *2026-10-02*
 
 The owner authorized implementing opt-in research-author payments and creating a separate

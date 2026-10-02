@@ -10,15 +10,17 @@ At the D-276 design baseline, `gateway-funding-policy.ts` was an **unused pure h
 terms, replay digests, transition shapes and exposure arithmetic. It cannot establish owner
 authorization, a lease, atomic admission, actual balances, receipt validity or persistent state.
 
-## Existing treasury identity candidate - 2026-10-01
+## Existing treasury identity boundary - 2026-10-02
 
-The separate unmerged treasury candidate changes RealGateway to a strict read-only loader for its existing legacy
+The focused [custody fix](treasury-wallet-custody.md) changes RealGateway to a strict read-only loader for its existing legacy
 `data/spend-wallet.json` `{privateKey,address}` document. Missing or malformed state,
 duplicate/foreign fields, an invalid key or inconsistent derived address refuse with a
 fixed recovery error. The loader never creates or repairs a wallet and retains source bytes.
 A loaded key is not unused-key/history evidence, ledger enrollment or owner funding authority.
-This removes the startup replacement path in the staged candidate; shared history, trusted
-issuer integration, runtime funding integration and production cutover remain open.
+This removes the startup replacement path without selecting the dormant funding
+stack. [Local signing isolation](treasury-transaction-isolation.md) also constrains
+the actual treasury operation. Shared history, trusted issuer integration, durable
+runtime funding integration and production cutover remain open.
 
 ## SQLite implementation candidate — 2026-10-01
 

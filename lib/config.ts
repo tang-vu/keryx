@@ -61,12 +61,12 @@ export const config = {
   // share of a query's budget reserved for weighted citation rewards (rest is fetch tolls)
   citationPoolRatio: num(process.env.KERYX_CITATION_POOL_RATIO, 0.5),
   defaultFetchPrice: num(process.env.KERYX_DEFAULT_FETCH_PRICE, 0.002),
-  // x402 authorization validity window (seconds). The buyer signs validBefore = now + this value;
-  // Circle's Gateway facilitator requires the REMAINING validity at verify time to be >= 7 days
-  // (604800s) or it rejects with `authorization_validity_too_short`. Signing→verify latency (several
-  // network hops), second-truncation, and host clock skew all erode that window, so a window of
-  // exactly 604800 fails intermittently. Keep ~1 day of margin above the floor (no upper bound —
-  // 30d still verifies). Empirically: <604800 always fails; 604800 is the floor with zero slack.
+  // x402 authorization validity window (seconds). Circle's Gateway facilitator requires at
+  // least seven days (604800s) of remaining validity at verification. Signing/verification
+  // latency, second-truncation and host clock skew erode that window, so the eight-day default
+  // retains margin above the floor. Keryx independently bounds local payment signing to its
+  // reviewed seven-to-eight-day policy, with a small validation skew allowance. Historical
+  // upstream acceptance of longer windows does not authorize a longer Keryx signing lifetime.
   maxTimeoutSeconds: Math.round(num(process.env.KERYX_MAX_TIMEOUT_SECONDS, 691200)),
   // Gateway spend-wallet top-up. Circle's facilitator won't settle against tiny balances, so the
   // agent keeps a healthy reusable Gateway balance and tops up when it drops below the threshold.
