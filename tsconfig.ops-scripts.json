@@ -5,6 +5,7 @@
     "incremental": false
   },
   "include": [
+    "scripts/test-browser-isolated-session.mts",
     "scripts/check-llm.mts",
     "scripts/check-dispatches.mts",
     "scripts/preflight-mainnet-pilot.mts",
