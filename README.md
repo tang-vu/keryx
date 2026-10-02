@@ -285,8 +285,7 @@ npm install
 # 2. Configure (optional — runs offline with zero keys)
 cp .env.example .env.local
 
-# 3. Wallets + demo sources
-npm run generate-wallets
+# 3. Demo sources (offline development needs no wallet keys)
 npm run seed-sources
 
 # 4a. One question, full reasoning trace in the terminal
@@ -298,6 +297,13 @@ npm run dev          # http://localhost:3939
 # 5. Live metrics
 npm run metrics
 ```
+
+The legacy `generate-wallets` command is retired because it printed private keys
+and replaced existing environment custody. For real testnet operations, provision
+secrets privately under the current role-specific labels and preserve existing
+wallets and backups. Follow [treasury custody](docs/treasury-wallet-custody.md) or
+[caller-owned buyer setup](docs/buyer-agent.md); starting a demo does not create or
+recover a wallet.
 
 | Mode | Reasoning | Payments | When |
 |------|-----------|----------|------|

@@ -44,8 +44,14 @@ A genuinely new isolated testnet deployment needs separate deliberate owner
 provisioning of that exact legacy document, private host permissions and a retained
 backup/address record before any treasury call. This release supplies no creation
 or repair command and does not authorize funds, mainnet or production key changes.
-The existing `generate-wallets` script prepares funder/seller environment values;
-it does not recover or provision the persistent treasury spend wallet.
+The legacy `generate-wallets` command is retired before key, environment-file or
+wallet access. It previously printed private keys and replaced environment custody
+under obsolete buyer labels. Owner-managed server funding uses
+`AGENT_FUNDER_PRIVATE_KEY`; the distinct caller-owned buyer/stdio role uses
+`KERYX_BUYER_PRIVATE_KEY` with its documented trusted merchant policy. Set secrets
+privately in the appropriate environment files, preserve historical funded custody
+and retain owner backups. Neither environment setup nor this retired command
+recovers or provisions the persistent treasury spend wallet.
 
 ## Supported surfaces
 

@@ -58,6 +58,7 @@ operator recovery remains a separate M4 gate.
 | Registry publication | Existing owner-authorized registration signs the exact testnet registry operation through the local guard. |
 | Legacy `npm run withdraw -- --live` | Retired with keyless early refusal. The npm command does not implicitly load `.env.local`. It cannot delegate unrestricted mint/withdraw signing to the SDK. |
 | Legacy code-golf SDK sample | Retired before custody/network access; direct users to maintained buyer quote/payment/recovery and stdio MCP commands. |
+| Legacy environment wallet generator | Retired before entropy or private-file access; help directs deliberate owner-managed environment setup without replacing existing funded custody. |
 
 Modern creator withdrawals retain their separate durable authority and journals.
 Use the documented `withdrawal:report` inspection and `withdrawal:relay` owner

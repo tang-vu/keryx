@@ -27,7 +27,7 @@
     "test:watch": "vitest",
     "eval:agent": "node --import tsx --no-warnings scripts/eval-agent.mts",
     "eval:agent:ci": "node --import tsx --no-warnings scripts/eval-agent.mts --json",
-    "generate-wallets": "node --import tsx --no-warnings scripts/generate-wallets.mts",
+    "generate-wallets": "node --no-warnings scripts/generate-wallets.mts",
     "seed-sources": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/seed-sources.mts",
     "ask": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/ask.mts",
     "demo": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/demo-full-cycle.mts",

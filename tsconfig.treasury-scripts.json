@@ -6,6 +6,7 @@
   },
   "include": [
     "scripts/code-golf-agent.mts",
+    "scripts/generate-wallets.mts",
     "scripts/test-pay.mts",
     "scripts/demo-full-cycle.mts",
     "scripts/web-client.mts",

@@ -10,6 +10,9 @@
   custody requires owner recovery. See [custody guidance](treasury-wallet-custody.md).
 - Add Linux/Windows synthetic constructor and independent-process acceptance.
   Mainnet, funding, storage enrollment and launch gates remain open.
+- Retire the legacy `generate-wallets` command before key creation or private-file
+  access because it printed secrets and replaced environment custody. Its keyless
+  help points to current owner-managed role-specific setup; offline dev needs no keys.
 
 ### Pin treasury signing to reviewed testnet operations (2026-10-02)
 

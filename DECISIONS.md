@@ -18,6 +18,12 @@ Synthetic native/process evidence and independent release review remain required
 Reversible only through a reviewed custody migration; restoring automatic key
 replacement is not a supported rollback. See [treasury custody](docs/treasury-wallet-custody.md).
 
+Retire the legacy environment wallet generator as part of that same custody
+boundary: it printed both new private keys and replaced existing environment
+custody using obsolete buyer labels. Its help and refusal perform no key creation
+or private file access. Deliberate owner-managed role-specific environment setup
+and recovery remain separate; a demo convenience cannot replace funded history.
+
 **D-291** — Bind the actual signed treasury operation independently of RPC preparation — *2026-10-02*
 
 A synthetic actual-SDK reproduction demonstrated a foreign-chain transaction
