@@ -42,9 +42,9 @@ Candidate versions: application 0.24.7, desktop 0.3.1, caller MCP release tarbal
 
 ### Fresh isolated-storage alignment, 2026-10-02
 
-The accepted product080bc5d retains immutable GitHub v0.25.0, desktop0.3.1 and
-MCP source-fallback0.3.1 artifacts. Runtime changes merged afterward require fresh
-app0.25.1, desktop0.3.2 and caller MCP0.3.2 candidates. Extension0.1.1 and remote
-MCP protocol0.2.0 keep their separate identities and documented web/service roles.
+The accepted product `080bc5d` retains immutable GitHub `v0.25.0`, desktop `0.3.1` and
+MCP source fallback `0.3.1` artifacts. Runtime changes merged afterward require fresh
+application `0.25.1`, desktop `0.3.2` and caller MCP `0.3.2` candidates. Extension `0.1.1` and remote
+MCP protocol `0.2.0` keep their separate identities and documented web/service roles.
 Registry publication, exact-source installer acceptance, deployment health and
 artifact hashes remain gates; repository version metadata is not delivery evidence.

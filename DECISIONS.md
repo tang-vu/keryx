@@ -4344,9 +4344,9 @@ funding evidence and require owner recovery of any uncertain admission. See
 
 ## Immutable release version alignment - 2026-10-02
 
-A concurrent isolated application-storage runtime merged after product source080bc5d
-was already accepted as v0.25.0, MCP0.3.1 and desktop0.3.1. Preserve those immutable
-artifacts and publish the new runtime under app0.25.1, MCP0.3.2 and desktop0.3.2.
+A concurrent isolated application-storage runtime merged after product source `080bc5d`
+was already accepted as application `0.25.0`, MCP `0.3.1` and desktop `0.3.1`. Preserve those immutable
+artifacts and publish the new runtime under application `0.25.1`, MCP `0.3.2` and desktop `0.3.2`.
 Version metadata changes only the owned root package records, not dependency
 versions or payment/signature domains. Verify each new source, installer and registry
 archive independently; a shared version alone does not establish matching delivery.
