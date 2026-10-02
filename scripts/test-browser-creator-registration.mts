@@ -30,7 +30,7 @@ function Harness(){const [address,setAddress]=React.useState(initialCreator);win
 return React.createElement(React.Fragment,null,visible&&React.createElement(RegisterForm,{prefillWalletAddress:initialCreator,onCreated:()=>window.registrationCreated++}),React.createElement(DecisionFeedbackPanel,{creatorId:'feedback'}));}
 createRoot(document.getElementById('root')).render(React.createElement(Harness));
 ` }, bundle: true, platform: "browser", format: "iife", jsx: "automatic", write: false,
-  define: { "process.env.NODE_ENV": '"development"' }, plugins: [{ name: "synthetic-registration", setup(b) {
+  define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"development"' }, plugins: [{ name: "synthetic-registration", setup(b) {
     b.onResolve({ filter: /^next\/link$|^wagmi$|^sonner$|^@\/lib\/registry\/registry-client$/ }, a => ({ path: a.path, namespace: "fixture" }));
     b.onLoad({ filter: /.*/, namespace: "fixture" }, a => ({ resolveDir: process.cwd(), contents: a.path === "next/link" ? "import React from 'react';export default function Link(props){return React.createElement('a',props)}" : a.path === "wagmi" ? `
 export const useAccount=()=>({address:window.registrationWallet,chainId:5042002});

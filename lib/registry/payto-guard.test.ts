@@ -12,7 +12,7 @@ const getRegistrySource = vi.fn();
 vi.mock("./registry-client", () => ({
   getRegistrySource: (id: string) => getRegistrySource(id),
 }));
-vi.mock("../config", () => ({ config: { registryReadAddress: REGISTRY } }));
+vi.mock("../config", async () => ({ config: { registryReadAddress: REGISTRY, profile: (await import("../arc-network-profile")).ARC_TESTNET_PROFILE } }));
 
 const { allowedPayTo, isAllowed, resetPayToCache } = await import("./payto-guard");
 

@@ -211,7 +211,7 @@ export class SupabaseAdapter implements KeryxDB {
     if (this.#enrolled) {
       await this.#enrolled.authority.init();
       const identity = this.#enrolled.deployment.identity;
-      if (identity.authorityMode === "testnet-real" && !hasContentKey()) refuseStorage("cache_migration_required");
+      if (identity.authorityMode !== "testnet-offline" && !hasContentKey()) refuseStorage("cache_migration_required");
       const { data, error } = await this.#enrolled.authority.initializationRpc("inspect_runtime_readiness", {});
       if (error || !data || data.format !== "keryx-enrolled-runtime-readiness-v1" || data.ready !== true) refuseStorage("adapter_not_initialized");
       if (!/^[0-9a-f]{64}$/.test(SUPABASE_RUNTIME_CONTRACT.afterDigest) ||
@@ -773,7 +773,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async getCached(sourceId: string): Promise<string | null> {
-    if (this.#enrolled?.deployment.identity.authorityMode === "testnet-real" && !hasContentKey()) refuseStorage("cache_key_unavailable");
+    if (this.#enrolled && this.#enrolled.deployment.identity.authorityMode !== "testnet-offline" && !hasContentKey()) refuseStorage("cache_key_unavailable");
     const { data } = await this.domainCall("get_cached", { p_source_id: sourceId }, (_args) => this.#sb
       .from("cache_items")
       .select("text")
@@ -995,6 +995,12 @@ export class SupabaseAdapter implements KeryxDB {
 
   private assertOrdinaryResearchAuthority(): void {
     if (this.#enrolled) refuseStorage("invalid_operation");
+  }
+  async assertResearchPurchaseAuthority(network: string): Promise<void> {
+    this.assertOrdinaryResearchAuthority();
+    if (network !== "eip155:5042002") throw new Error("Mainnet research Supabase authority is staged");
+    const { error } = await this.#sb.from("research_purchase_authorizations").select("network").limit(0);
+    if (error) throw new Error("Research purchase schema unavailable");
   }
   async claimResearchPurchase(input: ResearchPurchaseClaim): Promise<void> { this.assertOrdinaryResearchAuthority(); return claimSupabaseResearchPurchase(this.#sb, input); }
   async createResearchMonthly(purchase: MonthlyPurchase) { this.assertOrdinaryResearchAuthority(); return createSupabaseResearchMonthly(this.#sb, purchase); }
@@ -1441,6 +1447,71 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   // ── session grants ──
+
+  async issueSessionGrantConsent(_consent: import("../payments/session-grant-consent").SessionGrantConsent): Promise<void> {
+    throw new Error("Native PostgreSQL owner-consent migration is not admitted");
+  }
+  async browserSignerRetainedSpendMicro(_signer: string): Promise<number> {
+    throw new Error("Native PostgreSQL owner-consent migration is not admitted");
+  }
+  async sessionFundingAccounting(_signer: string, _after?: string): Promise<import("./session-funding-accounting").SessionFundingAccounting> {
+    throw new Error("Native PostgreSQL session funding accounting is not admitted");
+  }
+  async admitHostedTreasuryPolicy(_policy:import("../payments/hosted-treasury-policy").HostedTreasuryPolicy,_role:"public"|"private"):Promise<string> {
+    throw new Error("Native PostgreSQL hosted authority is not admitted");
+  }
+  async hostedTreasuryAccounting(_signer:string,_role?:"public"|"private"):Promise<import("./hosted-treasury-journal").HostedTreasuryAccounting> {
+    throw new Error("Native PostgreSQL hosted authority is not admitted");
+  }
+  async admitHostedAuthorization(_input:import("./hosted-treasury-journal").HostedAuthorizationAdmission):Promise<string> {
+    throw new Error("Native PostgreSQL hosted authority is not admitted");
+  }
+  async submitHostedAuthorization(_signer:string,_submission:Readonly<import("../payments/server-x402-client").ServerX402Submission>,_headerHash:string):Promise<void> {
+    throw new Error("Native PostgreSQL hosted authority is not admitted");
+  }
+  async confirmHostedAuthorization(_signer:string,_nonce:string,_transaction:string):Promise<void> {
+    throw new Error("Native PostgreSQL hosted authority is not admitted");
+  }
+  async sessionWithdrawalAccounting(_signer: string): Promise<{heldPaymentMicroUsdc:string;heldWithdrawalMicroUsdc:string;confirmedSpentMicroUsdc:string}> {
+    throw new Error("Native PostgreSQL session withdrawal is not admitted");
+  }
+  async creatorOwnerWithdrawalAccounting(_owner:string):Promise<import("../gateway/creator-owner-withdrawal-protocol").CreatorOwnerWithdrawalAccounting> { throw new Error("Mainnet owner withdrawal requires reviewed native authority"); }
+  async admitCreatorOwnerWithdrawal(_record:WithdrawalRequestRecord,_accounting:import("../gateway/creator-owner-withdrawal-protocol").CreatorOwnerWithdrawalAccounting,_available:string):Promise<WithdrawalRequestRecord> { throw new Error("Mainnet owner withdrawal requires reviewed native authority"); }
+  async getCreatorOwnerWithdrawalCompletion(_id:string,_owner:string):Promise<import("../gateway/creator-owner-withdrawal-protocol").CreatorOwnerWithdrawalCompletion|null> { throw new Error("Mainnet owner withdrawal requires reviewed native authority"); }
+  async completeCreatorOwnerWithdrawal(_completion:import("../gateway/creator-owner-withdrawal-protocol").CreatorOwnerWithdrawalCompletion):Promise<import("../gateway/creator-owner-withdrawal-protocol").CreatorOwnerWithdrawalCompletion> { throw new Error("Mainnet owner withdrawal requires reviewed native authority"); }
+  async reserveSessionWithdrawal(_preparation:import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation> {
+    throw new Error("Native PostgreSQL session withdrawal is not admitted");
+  }
+  async getSessionWithdrawal(_id:string,_owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation|null> {
+    throw new Error("Native PostgreSQL session withdrawal is not admitted");
+  }
+  async pendingSessionWithdrawal(_owner:string,_signer:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation|null> {
+    throw new Error("Native PostgreSQL session withdrawal is not admitted");
+  }
+  async getSessionWithdrawalCompletion(_id:string,_owner:string):Promise<import("../gateway/session-withdrawal-completion").SessionWithdrawalCompletion|null> {
+    throw new Error("Native PostgreSQL session withdrawal is not admitted");
+  }
+  async getSessionWithdrawalSigningPhase(_id:string,_owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalSigningPhase|null> {
+    throw new Error("Native PostgreSQL session withdrawal is not admitted");
+  }
+  async authorizeSessionWithdrawal(_id:string,_owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation|null> {
+    throw new Error("Native PostgreSQL session withdrawal is not admitted");
+  }
+  async cancelSessionWithdrawal(_id:string,_owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalCancellation|null> {
+    throw new Error("Native PostgreSQL session withdrawal is not admitted");
+  }
+  async completeSessionWithdrawal(_id:string,_owner:string,_outcome:import("../gateway/session-withdrawal-completion").SessionWithdrawalCompletion):Promise<import("../gateway/session-withdrawal-completion").SessionWithdrawalCompletion> {
+    throw new Error("Native PostgreSQL session withdrawal is not admitted");
+  }
+  async listSessionWithdrawalPayments(_signer:string,_afterNonce?:string,_limit?:number):Promise<{payments:import("./browser-authorization-journal").BrowserAuthorizationJournal[];nextCursor:string|null}> {
+    throw new Error("Native PostgreSQL session withdrawal is not admitted");
+  }
+  async consumeSessionGrantConsent(_consent: import("../payments/session-grant-consent").SessionGrantConsent, _signature: string, _sessionSignature: string): Promise<void> {
+    throw new Error("Native PostgreSQL owner-consent migration is not admitted");
+  }
+  async getSessionGrantConsent(_owner: string, _epoch: string): Promise<import("./session-grant-consents").SessionGrantConsentRecord | null> {
+    throw new Error("Native PostgreSQL owner-consent migration is not admitted");
+  }
 
   async upsertSessionGrant(grant: Omit<SessionGrantRecord, "spent">): Promise<void> {
     const row = {

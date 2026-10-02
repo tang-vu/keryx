@@ -27,7 +27,7 @@ import {privateBrowserDraftId} from './lib/buyer/private-browser-draft';
 window.journal=journal;
 window.fresh=async f=>{const a=await createPrivateAuthorization(f.request,f.requirement,f.payer,f.merchants,1788912000000);
 return {...a,requirement:f.requirement,resource:PRIVATE_RESEARCH_RESOURCE,id:await privateBrowserDraftId(f.requirement,a.authorization)};};
-`, resolveDir: process.cwd(), loader: "ts" }, bundle: true, write: false, platform: "browser", format: "iife" });
+`, resolveDir: process.cwd(), loader: "ts" }, bundle: true, write: false, platform: "browser", define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" }, format: "iife" });
 const browser = await chromium.launch({ headless: true });
 let requests = 0;
 try {

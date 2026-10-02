@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { closeSync, constants, fstatSync, lstatSync, openSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, parse, relative, resolve, sep } from "node:path";
 import { DatabaseSync, constants as sqliteConstants } from "node:sqlite";
-import { refuseStorage, storageIdentityDigest, validateStorageIdentity, StorageIdentityRefused, type StorageIdentity } from "./storage-identity";
+import { refuseStorage, storageIdentityDigest, storagePaymentProfile, validateStorageIdentity, StorageIdentityRefused, type StorageIdentity } from "./storage-identity";
 import { GATEWAY_FUNDING_TABLES } from "./gateway-funding-ledger-types";
 import { gatewayFundingFenceStatements } from "./gateway-funding-sqlite-schema";
 
@@ -15,7 +15,10 @@ export const STORAGE_APPLICATION_TABLES = Object.freeze([
   "browser_signing_v2_control", "browser_signing_v2_barrier", "browser_signing_v2_writer",
   "browser_signing_namespaces", "browser_signing_queries", "browser_signing_originals", "browser_signing_v3_writer",
   "api_key_usage", "users", "answer_feedback", "query_memories", "session_grants", "rate_limit_counters", "reasoning_circuits",
-  "auth_challenges", "web_sessions", "private_research_intents", "private_treasury_pools", "private_treasury_reservations",
+  "auth_challenges", "web_sessions", "session_grant_consents", "session_withdrawal_preparations", "session_withdrawal_completions",
+  "session_withdrawal_exposures", "session_withdrawal_cancellations", "private_research_intents", "private_treasury_pools", "private_treasury_reservations",
+  "hosted_treasury_policies", "hosted_treasury_authorizations",
+  "creator_owner_withdrawal_completions", "research_purchase_authorizations", "research_monthly", "research_monthly_redemptions",
   "private_research_payment_attempts", "private_research_executions", "private_research_results", "private_creator_submissions",
   "private_creator_confirmations", "private_treasury_releases", "private_research_interruptions", "creator_withdrawal_requests",
   "creator_withdrawal_transfer_attempts", "creator_withdrawal_attestations", "public_references", "sync_state",
@@ -53,7 +56,7 @@ function holdStorageTargetUnchecked(target: string): HeldStorageTarget {
     return `${stat.dev}:${stat.ino}:${stat.birthtimeNs}`;
   };
   const original = identity();
-  const descriptor = openSync(target, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  const descriptor = openSync(target, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
   try {
     const stat = fstatSync(descriptor, { bigint: true });
     if (!stat.isFile() || `${stat.dev}:${stat.ino}:${stat.birthtimeNs}` !== original || identity() !== original) refuseStorage("target_replaced");
@@ -127,8 +130,10 @@ function tableNames(db: DatabaseSync): string[] {
 export function storageFenceStatements(db: DatabaseSync, identity: Readonly<StorageIdentity>): Record<string, string> {
   const result: Record<string, string> = gatewayFundingFenceStatements(db);
   const digest = storageIdentityDigest(identity);
+  const profile = storagePaymentProfile(identity);
+  const network = profile.networkId, token = profile.usdcAddress.toLowerCase(), gateway = profile.gatewayWallet.toLowerCase();
   for (const table of tableNames(db)) {
-    if (!STORAGE_APPLICATION_TABLES.includes(table)) refuseStorage("unsupported_table");
+    if (!STORAGE_APPLICATION_TABLES.includes(table) || identity.authorityMode !== "mainnet-real" && ["research_purchase_authorizations","research_monthly","research_monthly_redemptions"].includes(table)) refuseStorage("unsupported_table");
     for (const operation of ["INSERT", "UPDATE", "DELETE"]) {
       const name = `storage_fence_${createHash("sha256").update(table).digest("hex").slice(0, 16)}_${operation.toLowerCase()}`;
       result[name] = `CREATE TRIGGER ${name} BEFORE ${operation} ON ${quote(table)} WHEN keryx_storage_capability('${digest}','${identity.authorityMode}') IS NOT 1 BEGIN SELECT RAISE(ABORT,'storage writer identity required'); END`;
@@ -136,14 +141,24 @@ export function storageFenceStatements(db: DatabaseSync, identity: Readonly<Stor
     if (["payment_events", "withdrawals", "browser_authorization_intents"].includes(table)) {
       for (const operation of ["INSERT", "UPDATE"]) {
         const name = `storage_profile_${table}_${operation.toLowerCase()}`;
-        const extra = table === "browser_authorization_intents" ? " OR lower(NEW.token) IS NOT '0x3600000000000000000000000000000000000000' OR lower(NEW.gateway_contract) IS NOT '0x0077777d7eba4688bdef3e311b846f25870a19b9'" : "";
-        result[name] = `CREATE TRIGGER ${name} BEFORE ${operation} ON ${quote(table)} WHEN NEW.network IS NOT 'eip155:5042002'${extra} BEGIN SELECT RAISE(ABORT,'storage authority profile mismatch'); END`;
+        const extra = table === "browser_authorization_intents" ? ` OR lower(NEW.token) IS NOT '${token}' OR lower(NEW.gateway_contract) IS NOT '${gateway}'` : "";
+        result[name] = `CREATE TRIGGER ${name} BEFORE ${operation} ON ${quote(table)} WHEN NEW.network IS NOT '${network}'${extra} BEGIN SELECT RAISE(ABORT,'storage authority profile mismatch'); END`;
       }
+    }
+    if (identity.authorityMode === "mainnet-real" && table === "research_purchase_authorizations") {
+      for (const operation of ["INSERT", "UPDATE"]) {
+        const name = `storage_profile_research_claim_${operation.toLowerCase()}`;
+        result[name] = `CREATE TRIGGER ${name} BEFORE ${operation} ON research_purchase_authorizations WHEN NEW.network IS NOT '${network}' OR lower(NEW.asset) IS NOT '${token}' BEGIN SELECT RAISE(ABORT,'original research profile mismatch'); END`;
+      }
+    }
+    if (identity.authorityMode === "mainnet-real" && table === "research_monthly") {
+      const invalid = `CASE WHEN json_valid(NEW.data) THEN json_extract(NEW.data,'$.format') IS NOT 'keryx-research-monthly-purchase-v2' OR json_extract(NEW.data,'$.network') IS NOT '${network}' OR lower(json_extract(NEW.data,'$.asset')) IS NOT '${token}' OR lower(json_extract(NEW.data,'$.gatewayContract')) IS NOT '${gateway}' ELSE 1 END`;
+      result.storage_profile_monthly_insert = `CREATE TRIGGER storage_profile_monthly_insert BEFORE INSERT ON research_monthly WHEN ${invalid} BEGIN SELECT RAISE(ABORT,'original Monthly profile mismatch'); END`;
     }
     if (table === "payment_events") {
       for (const operation of ["INSERT", "UPDATE"]) {
         const name = `storage_mode_payment_${operation.toLowerCase()}`;
-        const denied = identity.authorityMode === "testnet-real" ? "NEW.settlement_status IS NULL OR NEW.settlement_status='simulated'" : "NEW.settlement_status IS NOT 'simulated' OR NEW.settled IS NOT 0 OR NEW.authorization_id IS NOT NULL OR NEW.grant_epoch IS NOT NULL";
+        const denied = identity.authorityMode !== "testnet-offline" ? "NEW.settlement_status IS NULL OR NEW.settlement_status='simulated'" : "NEW.settlement_status IS NOT 'simulated' OR NEW.settled IS NOT 0 OR NEW.authorization_id IS NOT NULL OR NEW.grant_epoch IS NOT NULL";
         result[name] = `CREATE TRIGGER ${name} BEFORE ${operation} ON payment_events WHEN ${denied} BEGIN SELECT RAISE(ABORT,'storage payment mode mismatch'); END`;
       }
     }
@@ -151,23 +166,30 @@ export function storageFenceStatements(db: DatabaseSync, identity: Readonly<Stor
       for (const operation of ["INSERT", "UPDATE"]) {
         const name = `storage_profile_binding_${operation.toLowerCase()}`;
         const invalid = "CASE WHEN json_valid(NEW.requirements) AND json_valid(NEW.payment_metadata) THEN " +
-          "json_extract(NEW.requirements,'$.network') IS NOT 'eip155:5042002' OR " +
-          "lower(json_extract(NEW.requirements,'$.asset')) IS NOT '0x3600000000000000000000000000000000000000' OR " +
+          `json_extract(NEW.requirements,'$.network') IS NOT '${network}' OR ` +
+          `lower(json_extract(NEW.requirements,'$.asset')) IS NOT '${token}' OR ` +
           "json_extract(NEW.requirements,'$.extra.name') IS NOT 'GatewayWalletBatched' OR " +
           "json_extract(NEW.requirements,'$.extra.version') IS NOT '1' OR " +
-          "lower(json_extract(NEW.requirements,'$.extra.verifyingContract')) IS NOT '0x0077777d7eba4688bdef3e311b846f25870a19b9' OR " +
-          "json_extract(NEW.payment_metadata,'$.network') IS NOT 'eip155:5042002' ELSE 1 END";
+          `lower(json_extract(NEW.requirements,'$.extra.verifyingContract')) IS NOT '${gateway}' OR ` +
+          `json_extract(NEW.payment_metadata,'$.network') IS NOT '${network}' ELSE 1 END`;
         result[name] = `CREATE TRIGGER ${name} BEFORE ${operation} ON browser_journal_bindings WHEN ${invalid} BEGIN SELECT RAISE(ABORT,'storage serialized authority profile mismatch'); END`;
       }
     }
     if (["private_research_intents", "private_creator_submissions", "private_creator_confirmations"].includes(table)) {
       const prefix = table === "private_research_intents" ? "$.requirement" : "$.submission";
       const domain = table === "private_research_intents" ?
-        ` OR json_extract(NEW.data,'${prefix}.extra.name') IS NOT 'GatewayWalletBatched' OR json_extract(NEW.data,'${prefix}.extra.version') IS NOT '1' OR lower(json_extract(NEW.data,'${prefix}.extra.verifyingContract')) IS NOT '0x0077777d7eba4688bdef3e311b846f25870a19b9'` : "";
+        ` OR json_extract(NEW.data,'${prefix}.extra.name') IS NOT 'GatewayWalletBatched' OR json_extract(NEW.data,'${prefix}.extra.version') IS NOT '1' OR lower(json_extract(NEW.data,'${prefix}.extra.verifyingContract')) IS NOT '${gateway}'` : "";
       for (const operation of ["INSERT", "UPDATE"]) {
         const name = `storage_profile_${table}_${operation.toLowerCase()}`;
-        const invalid = `CASE WHEN json_valid(NEW.data) THEN json_extract(NEW.data,'${prefix}.network') IS NOT 'eip155:5042002' OR lower(json_extract(NEW.data,'${prefix}.asset')) IS NOT '0x3600000000000000000000000000000000000000'${domain} ELSE 1 END`;
+        const invalid = `CASE WHEN json_valid(NEW.data) THEN json_extract(NEW.data,'${prefix}.network') IS NOT '${network}' OR lower(json_extract(NEW.data,'${prefix}.asset')) IS NOT '${token}'${domain} ELSE 1 END`;
         result[name] = `CREATE TRIGGER ${name} BEFORE ${operation} ON ${quote(table)} WHEN ${invalid} BEGIN SELECT RAISE(ABORT,'storage serialized authority profile mismatch'); END`;
+      }
+    }
+    // Selecting the application store never authorizes the separately dormant funding executor.
+    if (identity.authorityMode === "mainnet-real" && GATEWAY_FUNDING_TABLES.includes(table as typeof GATEWAY_FUNDING_TABLES[number])) {
+      for (const operation of ["INSERT", "UPDATE", "DELETE"]) {
+        const name = `storage_mainnet_funding_${table}_${operation.toLowerCase()}`;
+        result[name] = `CREATE TRIGGER ${name} BEFORE ${operation} ON ${quote(table)} BEGIN SELECT RAISE(ABORT,'funding executor cutover unavailable'); END`;
       }
     }
     if (identity.authorityMode === "testnet-offline" && (table.startsWith("browser_") && !["browser_journal_control", "browser_journal_writer"].includes(table) ||

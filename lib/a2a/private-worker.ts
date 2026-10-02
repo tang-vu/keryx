@@ -21,6 +21,7 @@ export function createPrivateWorker(db: KeryxDB, options: Omit<ExecutionOptions,
     resultSpool: options.resultSpool,
     signer: { createPaymentPayload: options.signer.createPaymentPayload.bind(options.signer) },
     getGatewayBalance: options.getGatewayBalance };
+  const gatewayFactory = options.gatewayFactory;
   let cursor: string | undefined;
   let busy = false;
   return {
@@ -45,7 +46,7 @@ export function createPrivateWorker(db: KeryxDB, options: Omit<ExecutionOptions,
           if (signal?.aborted) return { status: "paused" as const, ...counts };
           counts.visited++;
           try {
-            const result = await runPrivateResearch(db, row.id, row.payer, execution);
+            const result = await runPrivateResearch(db, row.id, row.payer, { ...execution, gatewayFactory });
             if (result.status === "completed") {
               const attempts = result.run?.reasoningAttempts ?? [];
               if (attempts.length === 0) counts.reasoningUnknownJobs++;

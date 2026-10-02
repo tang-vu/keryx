@@ -3,6 +3,7 @@ import { createPublicClient, encodeFunctionData, keccak256, recoverMessageAddres
 import { withdrawalRpcTransport } from "./withdrawal-rpc-transport";
 import { matchWithdrawalAttestation } from "./withdrawal-attestation";
 import { validateWithdrawalRequest, type WithdrawalRequestRecord } from "./withdrawal-request";
+import { gatewayNetworkProfile } from "./gateway-network";
 
 // Pinned Circle Mints.sol: EIP-191 signature over keccak256(payload), then signer allowlist.
 // fd51093c7a1ba8e50ea2c6029ebf1bdc2bb2b8e8/src/modules/minter/Mints.sol
@@ -43,10 +44,11 @@ export function createWithdrawalMintObserver(makeClient: (signal: AbortSignal) =
     const inspect = async () => {
       live();
       const record = await validateWithdrawalRequest(recordCopy); live();
+      const profile = gatewayNetworkProfile(record.network);
       const matched = await matchWithdrawalAttestation(record, responseCopy); live();
       const attester = await recoverMessageAddress({ message: { raw: keccak256(matched.attestation) }, signature: matched.signature }); live();
       const client = makeClient(stop.signal);
-      if (await client.getChainId() !== 5042002) throw new Error(); live();
+      if (await client.getChainId() !== profile.chainId) throw new Error(); live();
       const block = blockSchema.parse(await client.getBlock({ blockTag: "latest" })); live(); fresh(block.timestamp);
       if (block.number > BigInt(matched.expirationBlock)) throw new Error();
       const minter = record.policy.gatewayMinter;
@@ -60,9 +62,9 @@ export function createWithdrawalMintObserver(makeClient: (signal: AbortSignal) =
       if (simulation.data !== undefined && simulation.data !== "0x") throw new Error();
       const rechecked = blockSchema.parse(await client.getBlock({ blockNumber: block.number })); live();
       if (rechecked.number !== block.number || rechecked.hash !== block.hash || rechecked.timestamp !== block.timestamp
-        || await client.getChainId() !== 5042002) throw new Error(); live();
+        || await client.getChainId() !== profile.chainId) throw new Error(); live();
       return { status: "eligible-at-observed-block" as const, authority: "read-only-observation" as const,
-        requestId: record.id, transferSpecHash: matched.transferSpecHash, chainId: 5042002 as const,
+        requestId: record.id, transferSpecHash: matched.transferSpecHash, chainId: profile.chainId,
         relayer, minter, attester: attester.toLowerCase() as Hex, blockNumber: block.number.toString(),
         blockHash: block.hash, minterCodeHash: keccak256(code), observedAt: fresh(block.timestamp),
         chainFinalityVerified: false as const };

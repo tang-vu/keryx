@@ -1,22 +1,17 @@
 /**
  * POST /api/session/grant
  *
- * Called by the browser after the user has:
- *   1. Generated a session EOA (key lives in the tab only).
- *   2. Sent one MetaMask tx to fund that EOA with USDC + native gas.
- *   3. Called gateway.deposit() from the browser to credit Circle's Gateway.
+ * Mainnet: the browser retains encrypted session custody and the owner funds Gateway
+ * with depositFor(session), without session native gas. A single-use server proposal
+ * binds exact network/origin/epoch/cumulative cap/expiry. POST consumes the owner's
+ * consent signature and the session signer's separate possession proof atomically.
+ * Only known Circle capacity may back the proposal; no native-balance fallback.
+ * GET returns the active public consent/proofs and retained cumulative spend.
  *
- * This endpoint records the grant server-side so BrowserCoSignGateway can
- * enforce the cap. It stores ONLY { sessAddr, ownerAddr, cap, expiry, txHash }
- * — never a private key (there is none server-side for user sessions).
- *
- * The cap is never the number the client asked for: it is clamped to the USDC Circle's
- * Gateway actually holds for the session EOA. A client that overstates its deposit gets
- * the real balance as its ceiling instead of a rejection, so an honest client racing its
- * own agent's spend is never dead-ended. For a fresh grant, when Circle cannot be reached
- * we fall back to the session EOA's native balance, which at least proves the address was
- * funded. If neither balance source is available, or if a recovery cannot be verified
- * against Circle, the request fails closed and the client retries later.
+ * Testnet preserves its legacy tab signer, direct funding/deposit and bounded
+ * fresh-grant native-balance fallback. Neither path sends private keys or the secret
+ * custody derivation signature to the server. Revocation/expiry cannot erase exposed
+ * payment history or withdraw funds from Gateway.
  *
  * SIWE session required. Only the authenticated wallet can create a grant.
  */
@@ -33,6 +28,8 @@ import { attestedArcHttp } from "@/lib/arc-rpc-attestation";
 import { getDb } from "@/lib/db";
 import { recordActivationEvent } from "@/lib/activation";
 import { accountSessionContext } from "@/lib/account-sessions";
+import { consumeMainnetSessionGrant, mainnetGrantPolicy, requireMainnetGrantOrigin } from "@/lib/payments/mainnet-session-grants";
+import { readBoundedJson } from "@/lib/read-bounded-json";
 
 export const runtime = "nodejs";
 
@@ -49,6 +46,18 @@ export async function GET(req: NextRequest) {
     if (!row || row.sessionId !== context.wallet || row.ownerAddr.toLowerCase() !== context.wallet ||
       !Number.isSafeInteger(row.expiry) || row.expiry <= now)
       return Response.json({ active: false }, { headers });
+    if (config.profile.name === "arc") {
+      const proof = await context.db.getSessionGrantConsent(context.wallet, row.grantEpoch), policy = mainnetGrantPolicy();
+      if (!proof || proof.consent.sessAddr !== row.sessAddr.toLowerCase() || proof.consent.origin !== policy.origin ||
+        Number(proof.consent.capMicroUsdc) !== Math.round(row.cap * 1e6) || Number(proof.consent.expirySeconds) * 1000 !== row.expiry)
+        throw new Error("Owner consent unavailable");
+      return Response.json({ active: true, sessionId: row.sessionId, ownerAddr: row.ownerAddr, sessAddr: row.sessAddr,
+        grantEpoch: row.grantEpoch, network: config.profile.networkId, origin: policy.origin,
+        capMicroUsdc: proof.consent.capMicroUsdc, consent: proof.consent, ownerSignature: proof.ownerSignature, sessionSignature: proof.sessionSignature,
+        spentMicroUsdc: String(Math.round(row.spent * 1e6)),
+        expiresAt: new Date(row.expiry).toISOString(), serverNow: new Date(now).toISOString(),
+        remainingMs: row.expiry - now, ttlMs }, { headers });
+    }
     return Response.json({ active: true, sessionId: row.sessionId, ownerAddr: row.ownerAddr, sessAddr: row.sessAddr,
       grantEpoch: row.grantEpoch, expiresAt: new Date(row.expiry).toISOString(), serverNow: new Date(now).toISOString(),
       remainingMs: row.expiry - now, ttlMs }, { headers });
@@ -70,6 +79,24 @@ export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session) {
     return Response.json({ error: "unauthenticated" }, { status: 401 });
+  }
+  if (config.profile.name === "arc") {
+    const headers = { "Cache-Control": "no-store" };
+    try { requireMainnetGrantOrigin(req); } catch { return Response.json({ error: "Grant deployment or origin refused" }, { status: 403, headers }); }
+    let input;
+    try { input = await readBoundedJson(new Response(req.body), 8192); }
+    catch { return Response.json({ error: "Invalid owner consent body" }, { status: 400, headers }); }
+    try {
+      const db = await getDb(), consent = await consumeMainnetSessionGrant(db, session.address, input), now = Date.now();
+      const current = await db.getSessionGrant(consent.ownerAddr);
+      if (!current || current.grantEpoch !== consent.grantEpoch) throw new Error("Grant replaced before acknowledgement");
+      return Response.json({ ok: true, sessionId: consent.ownerAddr, sessAddr: consent.sessAddr,
+        ownerAddr: consent.ownerAddr, grantEpoch: consent.grantEpoch, cap: Number(consent.capMicroUsdc) / 1e6,
+        capMicroUsdc: consent.capMicroUsdc,
+        spentMicroUsdc: String(Math.round(current.spent * 1e6)),
+        expiresAt: new Date(Number(consent.expirySeconds) * 1000).toISOString(), serverNow: new Date(now).toISOString(),
+        remainingMs: Number(consent.expirySeconds) * 1000 - now, ttlMs: config.sessionGrantTtlSeconds * 1000 }, { headers });
+    } catch { return Response.json({ error: "Owner consent is invalid, expired, unavailable or already consumed" }, { status: 409, headers }); }
   }
 
   let body: GrantBody;

@@ -1,8 +1,21 @@
 import { ARC_TESTNET_PROFILE } from "../arc-network-profile";
 import { storagePaymentProfile } from "./storage-identity";
 import { installOrdinarySqliteApplicationSchema } from "./sqlite-application-schema";
+import { sqliteSessionFundingAccounting } from "./session-funding-accounting";
+import { sqliteCreatorOwnerAccounting, admitSqliteCreatorOwnerWithdrawal, readSqliteCreatorOwnerCompletion, completeSqliteCreatorOwnerWithdrawal } from "./creator-owner-withdrawal-journal";
+import type { CreatorOwnerWithdrawalAccounting, CreatorOwnerWithdrawalCompletion } from "../gateway/creator-owner-withdrawal-protocol";
+import { admitSqliteHostedPolicy, sqliteHostedAccounting, admitSqliteHostedAuthorization, submitSqliteHostedAuthorization,
+ confirmSqliteHostedAuthorization, terminalSqliteHostedAuthorization, type HostedAuthorizationAdmission } from "./hosted-treasury-journal";
+import type { HostedTreasuryPolicy } from "../payments/hosted-treasury-policy";
+import { sqliteSessionWithdrawalAccounting, reserveSqliteSessionWithdrawal, readSqliteSessionWithdrawal, pendingSqliteSessionWithdrawal, listSqliteSessionWithdrawalPayments,
+  readSqliteSessionWithdrawalCompletion, completeSqliteSessionWithdrawal, readSqliteSessionWithdrawalPhase,
+  exposeSqliteSessionWithdrawal, cancelSqliteSessionWithdrawal } from "./session-withdrawal-journal";
+import type { SessionWithdrawalPreparation } from "../gateway/session-withdrawal-protocol";
+import { issueSqliteSessionGrantConsent, consumeSqliteSessionGrantConsent, readSqliteSessionGrantConsent } from "./session-grant-consents";
+import type { SessionGrantConsent } from "../payments/session-grant-consent";
 import { hasScholarlyRights, assertNoOrphanedPaperMarker } from "./scholarly-capability";
-import type { StorageIdentity } from "./storage-identity";
+import { storagePaymentProfile, type StorageIdentity } from "./storage-identity";
+import { ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
 import { openEnrolledCacheText, sealEnrolledCacheText } from "../sources/enrolled-content-cache";
 import { publicReferenceSchema, type PublicReference } from "../public-references/catalog";
 /**
@@ -11,7 +24,7 @@ import { publicReferenceSchema, type PublicReference } from "../public-reference
  */
 
 import { listSqliteWithdrawalHistory, type WithdrawalHistoryCursor } from "./creator-withdrawal-history";
-import { assertOrdinarySqliteResearchAuthority, claimSqliteResearchPurchase, createSqliteResearchMonthly, getSqliteResearchMonthly, redeemSqliteResearchMonthly, type MonthlyPurchase, type MonthlyRedemptionInput, type ResearchPurchaseClaim } from "./research-monthly";
+import { assertSqliteResearchAuthority, assertOrdinarySqliteResearchAuthority, claimSqliteResearchPurchase, createSqliteResearchMonthly, getSqliteResearchMonthly, redeemSqliteResearchMonthly, type MonthlyPurchase, type MonthlyRedemptionInput, type ResearchPurchaseClaim } from "./research-monthly";
 import { confirmSqlitePrivateCreator, getSqlitePrivateCreatorConfirmation, type PrivateCreatorConfirmation } from "./private-creator-confirmations";
 import { admitSqlitePrivateCreatorSubmission, listSqlitePrivateCreatorSubmissions, type PrivateCreatorSubmission } from "./private-creator-submissions";
 import { saveSqlitePrivateResult, getSqlitePrivateResult } from "./private-research-results";
@@ -106,6 +119,7 @@ export class SqliteAdapter implements KeryxDB {
   private enrolledMode?: StorageIdentity["authorityMode"];
   private enrolledIdentity?: Readonly<StorageIdentity>;
   private enrolledGuard?: () => void;
+  private paymentProfile: ArcNetworkProfile = ARC_TESTNET_PROFILE;
 
   /** Core assembly only: the caller owns the connection; this issues no runtime provenance. */
   static assembleConnectionCore(db: DatabaseSync, identity: Readonly<StorageIdentity>, guard: () => void): SqliteAdapter {
@@ -114,6 +128,7 @@ export class SqliteAdapter implements KeryxDB {
     adapter.enrolledMode = identity.authorityMode;
     adapter.enrolledIdentity = identity;
     adapter.enrolledGuard = guard;
+    adapter.paymentProfile = storagePaymentProfile(identity);
     return adapter;
   }
 
@@ -132,7 +147,7 @@ export class SqliteAdapter implements KeryxDB {
   async init(): Promise<void> {
     if (this.enrolledMode) {
       this.enrolledGuard!();
-      if (this.enrolledMode === "testnet-real" && !hasContentKey())
+      if (this.enrolledMode !== "testnet-offline" && !hasContentKey())
         throw new Error("Enrolled content cache key unavailable");
       this.db.exec("BEGIN");
       try {
@@ -618,6 +633,105 @@ export class SqliteAdapter implements KeryxDB {
 
   // ── session grants ──
 
+  async issueSessionGrantConsent(consent: SessionGrantConsent): Promise<void> {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Owner-signed consent requires admitted mainnet storage");
+    issueSqliteSessionGrantConsent(this.db, consent, this.paymentProfile);
+  }
+  async browserSignerRetainedSpendMicro(signer: string): Promise<number> {
+    if (!sqliteJournalActive(this.db) || !/^0x[0-9a-f]{40}$/i.test(signer)) throw new Error("Retained signer capacity unavailable");
+    const spent = Number(this.db.prepare("SELECT spent_micro FROM browser_signer_capacity WHERE signer=?").get(signer.toLowerCase())?.spent_micro ?? 0);
+    if (!Number.isSafeInteger(spent) || spent < 0) throw new Error("Retained signer capacity unavailable");
+    return spent;
+  }
+  async sessionFundingAccounting(signer: string, after?: string) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Session funding accounting requires admitted mainnet storage");
+    return sqliteSessionFundingAccounting(this.db, signer, after);
+  }
+  async admitHostedTreasuryPolicy(policy: HostedTreasuryPolicy,role:"public"|"private") {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Hosted authority requires admitted mainnet storage");
+    return admitSqliteHostedPolicy(this.db, policy, this.enrolledIdentity!,role);
+  }
+  async hostedTreasuryAccounting(signer: string,role?:"public"|"private") {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Hosted authority requires admitted mainnet storage");
+    return sqliteHostedAccounting(this.db, signer,role);
+  }
+  async admitHostedAuthorization(input: HostedAuthorizationAdmission) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Hosted authority requires admitted mainnet storage");
+    return admitSqliteHostedAuthorization(this.db, input, this.enrolledIdentity!);
+  }
+  async submitHostedAuthorization(signer: string, submission: Readonly<import("../payments/server-x402-client").ServerX402Submission>, headerHash: string) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Hosted authority requires admitted mainnet storage");
+    return submitSqliteHostedAuthorization(this.db, signer, submission, headerHash);
+  }
+  async confirmHostedAuthorization(signer: string, nonce: string, transaction: string) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Hosted authority requires admitted mainnet storage");
+    return confirmSqliteHostedAuthorization(this.db, signer, nonce, transaction);
+  }
+  async sessionWithdrawalAccounting(signer: string) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Session withdrawal requires admitted mainnet storage");
+    return sqliteSessionWithdrawalAccounting(this.db, signer);
+  }
+  async creatorOwnerWithdrawalAccounting(owner:string) {
+    if(this.enrolledMode!=="mainnet-real") throw new Error("Owner withdrawal requires admitted mainnet storage");
+    return sqliteCreatorOwnerAccounting(this.db,owner);
+  }
+  async admitCreatorOwnerWithdrawal(record:WithdrawalRequestRecord,accounting:CreatorOwnerWithdrawalAccounting,availableMicroUsdc:string) {
+    if(this.enrolledMode!=="mainnet-real") throw new Error("Owner withdrawal requires admitted mainnet storage");
+    return admitSqliteCreatorOwnerWithdrawal(this.db,record,accounting,availableMicroUsdc);
+  }
+  async getCreatorOwnerWithdrawalCompletion(id:string,owner:string) {
+    if(this.enrolledMode!=="mainnet-real") throw new Error("Owner withdrawal requires admitted mainnet storage");
+    return readSqliteCreatorOwnerCompletion(this.db,id,owner);
+  }
+  async completeCreatorOwnerWithdrawal(completion:CreatorOwnerWithdrawalCompletion) {
+    if(this.enrolledMode!=="mainnet-real") throw new Error("Owner withdrawal requires admitted mainnet storage");
+    return completeSqliteCreatorOwnerWithdrawal(this.db,completion);
+  }
+  async reserveSessionWithdrawal(preparation: SessionWithdrawalPreparation) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Session withdrawal requires admitted mainnet storage");
+    return reserveSqliteSessionWithdrawal(this.db, preparation);
+  }
+  async getSessionWithdrawal(id: string, owner: string) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Session withdrawal requires admitted mainnet storage");
+    return readSqliteSessionWithdrawal(this.db, id, owner);
+  }
+  async pendingSessionWithdrawal(owner: string, signer: string) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Session withdrawal requires admitted mainnet storage");
+    return pendingSqliteSessionWithdrawal(this.db, owner, signer);
+  }
+  async getSessionWithdrawalCompletion(id: string, owner: string) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Session withdrawal requires admitted mainnet storage");
+    return readSqliteSessionWithdrawalCompletion(this.db, id, owner);
+  }
+  async getSessionWithdrawalSigningPhase(id: string, owner: string) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Session withdrawal requires admitted mainnet storage");
+    return readSqliteSessionWithdrawalPhase(this.db, id, owner);
+  }
+  async authorizeSessionWithdrawal(id: string, owner: string) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Session withdrawal requires admitted mainnet storage");
+    return exposeSqliteSessionWithdrawal(this.db, id, owner);
+  }
+  async cancelSessionWithdrawal(id: string, owner: string) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Session withdrawal requires admitted mainnet storage");
+    return cancelSqliteSessionWithdrawal(this.db, id, owner);
+  }
+  async completeSessionWithdrawal(id: string, owner: string, outcome: import("../gateway/session-withdrawal-completion").SessionWithdrawalCompletion) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Session withdrawal requires admitted mainnet storage");
+    return completeSqliteSessionWithdrawal(this.db, id, owner, outcome);
+  }
+  async listSessionWithdrawalPayments(signer: string, afterNonce?: string, limit?: number) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Session withdrawal requires admitted mainnet storage");
+    return listSqliteSessionWithdrawalPayments(this.db, signer, afterNonce, limit);
+  }
+  async consumeSessionGrantConsent(consent: SessionGrantConsent, signature: string, sessionSignature: string): Promise<void> {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Owner-signed consent requires admitted mainnet storage");
+    consumeSqliteSessionGrantConsent(this.db, consent, signature, sessionSignature, this.paymentProfile);
+  }
+  async getSessionGrantConsent(owner: string, epoch: string) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Owner-signed consent requires admitted mainnet storage");
+    return readSqliteSessionGrantConsent(this.db, owner, epoch, this.paymentProfile);
+  }
+
   async upsertSessionGrant(grant: Omit<SessionGrantRecord, "spent">): Promise<void> {
     if (sqliteJournalActive(this.db)) return upsertSqliteJournalGrant(this.db, grant);
     this.db
@@ -671,7 +785,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async admitBrowserAuthorization(input: BrowserAuthorizationIntent): Promise<BrowserAdmissionResult> {
-    const intent = prepareBrowserAuthorizationIntent(input);
+    const intent = prepareBrowserAuthorizationIntent(input, this.paymentProfile);
     this.db.exec("BEGIN IMMEDIATE");
     try {
       const updated = this.db.prepare(`UPDATE session_grants
@@ -705,11 +819,12 @@ export class SqliteAdapter implements KeryxDB {
     return sqliteJournalActive(this.db);
   }
   async browserSignerConfirmedSpendMicro(signer: string): Promise<number> {
+    if (this.enrolledMode === "mainnet-real") return Number(sqliteSessionFundingAccounting(this.db, signer.toLowerCase()).confirmedSpentMicroUsdc);
     const rows = this.db
       .prepare(
-        "SELECT * FROM payment_events WHERE lower(payer)=lower(?) AND grant_epoch IS NOT NULL AND settled=1 AND settlement_status='settled' AND network='eip155:5042002'"
+        "SELECT * FROM payment_events WHERE lower(payer)=lower(?) AND grant_epoch IS NOT NULL AND settled=1 AND settlement_status='settled' AND network=?"
       )
-      .all(signer);
+      .all(signer, this.paymentProfile.networkId);
     const seen = new Map<string, string>();
     let total = 0;
     for (const row of rows) {
@@ -754,10 +869,10 @@ export class SqliteAdapter implements KeryxDB {
     return total;
   }
   async activateBrowserJournal() {
-    activateSqliteBrowserJournal(this.db);
+    activateSqliteBrowserJournal(this.db, this.paymentProfile);
   }
   async admitBrowserJournal(input: BrowserJournalAdmission) {
-    if (this.enrolledIdentity) return admitSqliteBrowserJournal(this.db, input);
+    if (this.enrolledIdentity) return admitSqliteBrowserJournal(this.db, input, undefined, this.paymentProfile);
     if (!hasScholarlyRights(this.db)) {
       assertNoOrphanedPaperMarker(this.db, input.sourceId);
       return admitSqliteBrowserJournal(this.db, input);
@@ -1448,12 +1563,17 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   private assertOrdinaryResearchAuthority(): void {
-    if (this.enrolledMode) throw new Error("Research purchase authority is unavailable in enrolled storage");
+    if (this.enrolledMode && this.enrolledMode !== "mainnet-real") throw new Error("Research purchase authority is unavailable in enrolled storage");
   }
-  async claimResearchPurchase(input: ResearchPurchaseClaim): Promise<void> { this.assertOrdinaryResearchAuthority(); claimSqliteResearchPurchase(this.db, input); }
-  async createResearchMonthly(purchase: MonthlyPurchase) { this.assertOrdinaryResearchAuthority(); return createSqliteResearchMonthly(this.db, purchase); }
-  async getResearchMonthly(id: string) { this.assertOrdinaryResearchAuthority(); return getSqliteResearchMonthly(this.db, id); }
-  async redeemResearchMonthly(input: MonthlyRedemptionInput) { this.assertOrdinaryResearchAuthority(); return redeemSqliteResearchMonthly(this.db, input, rowToA2aOrder); }
+  async assertResearchPurchaseAuthority(network: string): Promise<void> {
+    this.assertOrdinaryResearchAuthority();
+    if (network !== this.paymentProfile.networkId) throw new Error("Research purchase profile mismatch");
+    assertSqliteResearchAuthority(this.db,this.paymentProfile,true);
+  }
+  async claimResearchPurchase(input: ResearchPurchaseClaim): Promise<void> { this.assertOrdinaryResearchAuthority(); claimSqliteResearchPurchase(this.db, input,this.paymentProfile); }
+  async createResearchMonthly(purchase: MonthlyPurchase) { this.assertOrdinaryResearchAuthority(); return createSqliteResearchMonthly(this.db, purchase,this.paymentProfile); }
+  async getResearchMonthly(id: string) { this.assertOrdinaryResearchAuthority(); return getSqliteResearchMonthly(this.db, id,this.paymentProfile); }
+  async redeemResearchMonthly(input: MonthlyRedemptionInput) { this.assertOrdinaryResearchAuthority(); return redeemSqliteResearchMonthly(this.db, input, rowToA2aOrder,this.paymentProfile); }
 
   async createA2aOrder(order: A2aOrder): Promise<{ created: boolean; order: A2aOrder }> {
     const result = this.db
@@ -1762,6 +1882,10 @@ export class SqliteAdapter implements KeryxDB {
     authorizationId: string,
     circleTransferId: string,
   ): Promise<boolean> {
+    if (this.enrolledMode === "mainnet-real") {
+      const hosted = terminalSqliteHostedAuthorization(this.db, id, authorizationId, circleTransferId, false);
+      if (hosted) return hosted.resolved;
+    }
     if (sqliteJournalActive(this.db)) {
       return terminalSqliteJournalPayment(this.db,id,authorizationId,circleTransferId,false).resolved;
     }
@@ -1780,6 +1904,10 @@ export class SqliteAdapter implements KeryxDB {
     authorizationId: string,
     circleTransferId: string,
   ): Promise<{ resolved: boolean; reservationReleased: boolean }> {
+    if (this.enrolledMode === "mainnet-real") {
+      const hosted = terminalSqliteHostedAuthorization(this.db, id, authorizationId, circleTransferId, true);
+      if (hosted) return hosted;
+    }
     if (sqliteJournalActive(this.db)) {
       return terminalSqliteJournalPayment(this.db,id,authorizationId,circleTransferId,true);
     }
@@ -1867,7 +1995,12 @@ export class SqliteAdapter implements KeryxDB {
     await recordSqliteWithdrawal(this.db, w);
   }
 
-  async reserveCreatorWithdrawal(value: WithdrawalRequestRecord) { return reserveSqliteWithdrawalRequest(this.db, value); }
+  async reserveCreatorWithdrawal(value: WithdrawalRequestRecord) {
+    if(this.enrolledMode==="mainnet-real" && !this.db.prepare("SELECT 1 FROM creator_withdrawal_requests WHERE id=?").get(value.id)
+      && !this.db.prepare("SELECT 1 FROM session_withdrawal_preparations WHERE request_id=?").get(value.id))
+      throw new Error("Mainnet withdrawal requires original capacity admission");
+    return reserveSqliteWithdrawalRequest(this.db, value);
+  }
   async listCreatorWithdrawalHistory(owner: string, cursor?: WithdrawalHistoryCursor, limit = 25) { return listSqliteWithdrawalHistory(this.db, owner, cursor, limit); }
   async getCreatorWithdrawal(id: string, owner: string) { return getSqliteWithdrawalRequest(this.db, id, owner); }
   async claimCreatorWithdrawalTransfer(id: string, owner: string) { return claimSqliteWithdrawalTransfer(this.db, id, owner); }

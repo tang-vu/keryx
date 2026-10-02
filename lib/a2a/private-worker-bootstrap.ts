@@ -11,6 +11,8 @@ import { createPrivateWorker } from "./private-worker";
 import type { PrivateResultSpool } from "./private-result-spool";
 import { privateWorkerConfigurationId } from "./private-worker-configuration";
 import { createPrivateReconciliation } from "./private-reconciliation";
+import { createMainnetHostedGateway, mainnetHostedPolicy } from "../payments/mainnet-hosted-gateway";
+import { ARC_MAINNET_PROFILE } from "../arc-network-profile";
 
 /** Explicit operator bootstrap only: no legacy wallet loading, key generation,
  * deposits, transfers, daemon start or public checkout activation. Returning a worker
@@ -22,6 +24,23 @@ export function privateWorkerBootstrap(db: KeryxDB, resultSpool?: PrivateResultS
     if (!resultSpool || env.KERYX_PRIVATE_WORKER_ENABLED !== "1" || env.KERYX_PRIVATE_RESEARCH_ENABLED !== "1"
       || config.networkId !== BUYER_NETWORK || config.cctpDomain !== 26
       || env.KERYX_PRIVATE_RESEARCH_RESERVED_PAYEES !== config.privateResearchReservedPayees) throw new Error();
+    if (config.networkId === ARC_MAINNET_PROFILE.networkId) {
+      const publicPolicy = mainnetHostedPolicy(db), privatePolicy = mainnetHostedPolicy(db, "private");
+      const policy = privateRuntimePolicy(env, { network: config.networkId, publicSeller: config.sellerAddress,
+        publicTreasurySigners: [publicPolicy.signer], privateTreasurySigner: privatePolicy.signer });
+      if (!policy) throw new Error();
+      const configurationId = privateWorkerConfigurationId(policy);
+      const worker = createPrivateWorker(db, { signerAddress: privatePolicy.signer,
+        signer: { createPaymentPayload: async () => { throw new Error("Mainnet private signing requires original execution context"); } },
+        gatewayFactory: job => createMainnetHostedGateway(db, { role: "private", job }), resultSpool,
+        privateProvider: policy.provider, getGatewayBalance: async () => {
+          const current = mainnetHostedPolicy(db, "private");
+          if (current.signer !== privatePolicy.signer) throw new Error("Private hosted policy changed");
+          const balance = await getGatewayAvailableAtomic(current.signer, ARC_MAINNET_PROFILE);
+          if (balance === null) throw new Error("Private Gateway balance unavailable"); return balance;
+        } });
+      return Object.freeze({ ...worker, configurationId, reconciliation: createPrivateReconciliation(db, privatePolicy.signer) });
+    }
     const key = z.string().regex(/^0x[a-fA-F0-9]{64}$/);
     const account = privateKeyToAccount(key.parse(env.KERYX_PRIVATE_TREASURY_PRIVATE_KEY) as `0x${string}`);
     const publicAccount = privateKeyToAccount(key.parse(config.funderKey) as `0x${string}`);

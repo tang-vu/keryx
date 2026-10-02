@@ -10,13 +10,13 @@
 import { BatchFacilitatorClient } from "@circle-fin/x402-batching/server";
 import { NextRequest, NextResponse } from "next/server";
 import { config } from "./config";
-import { ARC_TESTNET_PROFILE } from "./arc-network-profile";
+import { paymentRuntimeConfig } from "./payment-runtime-config";
 import { guardPublicMerchant } from "./payments/public-merchant-guard";
 import { getDb } from "./db";
 import { createHash } from "node:crypto";
 
-// SDK 3.x defaults to mainnet; Keryx's seller rail remains Arc testnet only.
-const facilitator = new BatchFacilitatorClient({ url: ARC_TESTNET_PROFILE.gatewayApiUrl });
+// The facilitator is selected independently from the request payment payload.
+const facilitator = new BatchFacilitatorClient({ url: paymentRuntimeConfig().gatewayApiUrl });
 
 export interface PaidOptions {
   priceUsdc: number;
@@ -93,6 +93,8 @@ export function challengeResponse(opts: PaidOptions, body: unknown = {}): NextRe
 export interface SettleInfo {
   payer: string;
   transaction: string;
+  /** Facilitator receipt network, verified against the selected merchant rail. */
+  network: string;
   amountUsdc: number;
   /** Signed EIP-3009 nonce when present. Correlation/idempotency only, never settlement proof. */
   authorizationId: string | null;
@@ -208,16 +210,20 @@ export async function settleThenServe(
       console.error(`[x402] settle FAILED ${opts.endpoint}: ${settle.errorReason}`);
       return NextResponse.json({ error: "settlement failed", reason: settle.errorReason }, { status: 402 });
     }
+    if (settle.network !== requirements.network || typeof settle.transaction !== "string" || !settle.transaction) {
+      return NextResponse.json({ error: "settlement evidence unavailable" }, { status: 503 });
+    }
     console.log(`[x402] settled ${opts.endpoint}: ${settle.transaction}`);
     const paymentResponse = b64(JSON.stringify({
       success: true,
       transaction: settle.transaction,
       payer: settle.payer ?? verify.payer,
-      network: requirements.network,
+      network: settle.network,
     }));
     const settleInfo = {
       payer: settle.payer ?? verify.payer ?? "unknown",
       transaction: settle.transaction ?? "",
+      network: settle.network,
       amountUsdc: opts.priceUsdc,
       authorizationId:
         typeof payload?.payload?.authorization?.nonce === "string"

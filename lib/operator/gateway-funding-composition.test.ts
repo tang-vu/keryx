@@ -31,12 +31,19 @@ function runtimeImports(source: string, file: string): string[] {
 }
 
 const dormantRuntime = /(?:^|\/)(?:gateway-funding-[^/]+|enrolled-sqlite-adapter|enrolled-supabase-adapter|enrolled-sqlite-schema-profile|runtime-storage-config|storage-identity-(?:connection|sqlite|provision))\.(?:ts|tsx|mts)$/;
+const applicationStorageBoundary = "lib/db/application-storage.ts";
+const applicationStorageSubstrate = new Set(["lib/db/enrolled-sqlite-adapter.ts", "lib/db/enrolled-supabase-adapter.ts",
+  "lib/db/enrolled-sqlite-schema-profile.ts", "lib/db/runtime-storage-config.ts", "lib/db/storage-identity-connection.ts",
+  "lib/db/storage-identity-sqlite.ts", "lib/db/gateway-funding-ledger-types.ts", "lib/db/gateway-funding-sqlite-schema.ts"]);
 
 function assertDormantGraph(roots: string[], read: (file: string) => string,
   resolveImport: (file: string, specifier: string) => string | null): Set<string> {
   const visited = new Set<string>();
   const walk = (file: string, chain: string[]) => {
-    if (dormantRuntime.test(file)) throw new Error(`Dormant runtime reachable: ${[...chain, file].join(" -> ")}`);
+    // Only the source-owned APPLICATION boundary admits storage. Its entire transitive graph is still inspected:
+    // provisioning, funding executor/orchestrator/transaction/key-loading edges remain forbidden.
+    const admittedStorage = chain.includes(applicationStorageBoundary) && applicationStorageSubstrate.has(file);
+    if (dormantRuntime.test(file) && !admittedStorage) throw new Error(`Dormant runtime reachable: ${[...chain, file].join(" -> ")}`);
     if (visited.has(file)) return;
     visited.add(file);
     for (const specifier of runtimeImports(read(file), file)) {
@@ -62,7 +69,7 @@ describe("dormant Operator funding release", () => {
     } finally { vi.unstubAllEnvs(); }
   });
 
-  it("keeps funding, enrollment and closed factory selection unreachable from application entrypoints", () => {
+  it("permits only the application storage role while keeping funding and enrollment unreachable", () => {
     const files = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
       const path = join(dir, entry.name);
       return entry.isDirectory() ? files(path) : /\.(?:ts|tsx|mts)$/.test(entry.name) ? [path] : [];
@@ -87,7 +94,9 @@ describe("dormant Operator funding release", () => {
         const target = resolveImport(importer, specifier);
         if (!target || !closedModules.has(target)) continue;
         // The closed factory may construct its fixed reference profile; no ordinary consumer may select either.
-        expect([importer, target]).toEqual(["lib/db/enrolled-sqlite-adapter.ts", "lib/db/enrolled-sqlite-schema-profile.ts"]);
+        const permitted = importer === applicationStorageBoundary && ["lib/db/enrolled-sqlite-adapter.ts", "lib/db/enrolled-supabase-adapter.ts"].includes(target)
+          || importer === "lib/db/enrolled-sqlite-adapter.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts";
+        expect(permitted, `Unreviewed storage selector: ${importer} -> ${target}`).toBe(true);
       }
     }
     // These shared bridges carry immutable identity/AAD data, not factory or enrollment selection.
@@ -97,6 +106,19 @@ describe("dormant Operator funding release", () => {
     const composition = readFileSync(join(process.cwd(), "lib/operator/gateway-funding-composition.ts"), "utf8");
     expect(composition).not.toMatch(/\bimport\s*\(/);
   });
+
+  it.each(["lib/payments/gateway-funding-executor.ts", "lib/operator/gateway-funding-composition.ts",
+    "lib/payments/gateway-funding-transaction.ts", "lib/db/storage-identity-provision.ts"])(
+    "rejects %s even when hidden behind the admitted application storage role", forbidden => {
+      const sources: Record<string, string> = {
+        "app/entry.ts": "import '../lib/db/application-storage';",
+        "lib/db/application-storage.ts": "import './enrolled-sqlite-adapter';",
+        "lib/db/enrolled-sqlite-adapter.ts": `import '../../${forbidden}';`,
+      };
+      expect(() => assertDormantGraph(["app/entry.ts"], file => sources[file], (file, specifier) =>
+        posix.resolve("/", posix.dirname(file), specifier).slice(1).replace(/\.(ts|tsx|mts)$/, "") + ".ts"))
+        .toThrow("Dormant runtime reachable");
+    });
 
   it.each(["import './helper';", "void import('./helper');"])("rejects indirect dormant selection through an ordinary helper: %s", edge => {
     const sources: Record<string, string> = {

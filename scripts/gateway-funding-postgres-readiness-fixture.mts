@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import { canonicalJson } from "../lib/canonical-json";
+import { postgresSnapshotDiagnosticSql, postgresSnapshotDiagnosticChanges } from "./helpers/postgres-snapshot-diagnostics.mts";
 import type { GatewayFundingLedger } from "../lib/db/gateway-funding-ledger-types";
 import type { GatewayFundingOperation } from "../lib/payments/gateway-funding-policy";
 import { GATEWAY_FUNDING_RECEIPT_POLICY_DIGEST } from "../lib/payments/gateway-funding-receipt-policy";
@@ -16,6 +17,24 @@ export async function testPostgresFundingReadiness(context: {
   sql: (statement: string) => string; finalizeDeposit: () => Promise<void>;
   changeNamespace: () => Promise<void>; refusedRoleInspection: (role: "anon" | "authenticated") => Promise<void>;
 }) {
+  // Controlled owner-only negative witness, not a readiness operation. Physical
+  // maintenance changes the archived0074 full catalog diagnostics while the
+  // reviewed0076 logical witness preserves every row and authority field.
+  const maintenanceBefore = context.sql("select keryx_storage.snapshot_digest()");
+  const maintenanceBeforeParts = JSON.parse(context.sql(postgresSnapshotDiagnosticSql));
+  context.sql("vacuum (freeze, analyze) public.gateway_funding_operations");
+  const maintenanceAfter = context.sql("select keryx_storage.snapshot_digest()");
+  const maintenanceAfterParts = JSON.parse(context.sql(postgresSnapshotDiagnosticSql));
+  const maintenanceChanges = postgresSnapshotDiagnosticChanges(maintenanceBeforeParts, maintenanceAfterParts);
+  console.error(JSON.stringify({ format: "synthetic-postgres-controlled-maintenance-v1",
+    beforeSha256: maintenanceBefore, afterSha256: maintenanceAfter, changedWitnesses: maintenanceChanges }));
+  assert.equal(maintenanceBefore, maintenanceAfter, "reviewed logical witness survives physical maintenance");
+  assert.deepEqual(maintenanceChanges.tables, [], "maintenance preserves every logical row and sequence witness");
+  assert(maintenanceChanges.catalog.length > 0 && maintenanceChanges.catalog.every(change => change.name === "relation"),
+    "only pg_class catalog changes during controlled maintenance");
+  assert(maintenanceChanges.relationFields.length > 0 && maintenanceChanges.relationFields.every(change =>
+    /\.(relpages|reltuples|relallvisible|relfrozenxid|relminmxid)$/.test(change.name)),
+    "only the five reviewed physical maintenance fields change; no authority field exemption");
   let calls = 0, mode: "available" | "insufficient" | "malformed" | "outage" | "redirect" = "available";
   const server = createServer((request, response) => {
     calls++;
@@ -51,8 +70,16 @@ export async function testPostgresFundingReadiness(context: {
     funder: await context.ledger.inspectNamespace(context.operation.policy.funder),
     spend: await context.ledger.inspectNamespace(context.operation.policy.spend) });
   const unchanged = async (run: () => Promise<void>) => {
-    const before = await snapshot(); await run();
-    assert.deepEqual(await snapshot(), before, "readiness preserves full history, caps, exposure and both nonce barriers");
+    const before = await snapshot();
+    const beforeDiagnostic = JSON.parse(context.sql(postgresSnapshotDiagnosticSql));
+    await run();
+    const after = await snapshot();
+    if (after.store !== before.store) {
+      const afterDiagnostic = JSON.parse(context.sql(postgresSnapshotDiagnosticSql));
+      console.error(JSON.stringify({ format: "synthetic-postgres-snapshot-diagnostic-v1",
+        changedWitnesses: postgresSnapshotDiagnosticChanges(beforeDiagnostic, afterDiagnostic) }));
+    }
+    assert.deepEqual(after, before, "readiness preserves full history, caps, exposure and both nonce barriers");
     assert.equal(context.sql("select count(*) from keryx_storage.writer"), "0"); assert.equal(mutationCalls, 0);
   };
   try {

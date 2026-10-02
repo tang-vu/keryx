@@ -1,5 +1,52 @@
 # Keryx — Decision Log
 
+## Full public mainnet storage and recovery — 2026-10-02
+
+An unsigned session withdrawal has a retained pre-crypto exposure transition. The
+normal worker must acquire the server marker before signing; submit requires it.
+Owner cancellation is atomic only before that marker, signed request and transfer
+claim, retains the cancelled original salt, and cannot revive that request. Local
+worker cancellation also requires no local cryptographic exposure. Uncertain or
+signed originals never release by time or empty vendor lookup. This lets an owner
+decline an unsigned withdrawal without retiring the stable funded signer.
+
+The owner requested the normal public product on mainnet, superseding the invited
+pilot proposal. The current production backend is SQLite, so the public release
+targets a fresh sealed mainnet SQLite namespace on the existing deployment while
+retaining testnet state and custody separately. Optional Supabase mainnet remains
+closed until its independently source-generated PostgreSQL schema and concurrent
+writer acceptance pass; it does not block the ordinary SQLite release.
+
+Session cashout authenticates retained owner and signer proofs after payment
+expiry or revocation. An unsigned original preparation reserves capacity and
+pauses new payment admission in one native transaction. That transaction compares
+confirmed lifetime debits as well as pending holds, including changes after the
+last quote read. Signed burns and matched attestations reuse the existing creator
+withdrawal journal. Unknown outcomes retain the original request and liabilities;
+only an exact owner mint with canonical selected-chain receipt/finality evidence
+releases the withdrawal barrier. Original nonces and lifetime payment consumption
+remain, so the stable signer can fund and renew rather than being retired.
+
+Ordinary creator cashout uses its connected owner wallet for burn consent and the
+mint transaction's gas; a custodial relay is a separate optional operator role.
+Its signed original admission compares all retained local liabilities and confirmed
+debits atomically with the fresh quote. Recovery never repeats a vendor burn, and
+only an exact observed owner mint releases that original withdrawal hold.
+Hosted mainnet payments use an independently sealed, owner-prefunded treasury
+identity and bounded normal product budgets, with no legacy key loader or automatic
+funding executor. A reviewed canonical policy binds the native storage identity,
+origin, dedicated signer, lifetime cap, per-query cap and expiry. Sealed native
+history permanently separates public and private signer roles across rotation.
+Expiry ends new admission, not already signed vendor authority. SQLite commits the
+complete original typed authorization before SDK signing and its header hash and
+submission marker before any paid HTTP call. Policy renewal retains cumulative
+signer exposure; unknown outcomes never restore it. Public and private hosted
+signers remain separate, and private creator confirmations retain their existing
+private journals without leaking payments into the public ledger. Native synthetic
+acceptance exercises the installed SDK, concurrent capacity and response loss;
+owner-selected operating policy and prefunding remain release decisions. No
+funding, activation, deployment, autonomous scheduling or XSS-proof custody follows
+from this preparation. See [full server migration](docs/mainnet-server-runtime.md).
 **D-296** - Pilot one bounded Research Monthly plan - *On 2026-10-02 the user
 confirmed four requests/month at 10% below buying four separately.* Use four Deep
 v1 requests over 30 days from confirmed Arc-testnet purchase, with manual renewal
@@ -4340,3 +4387,9 @@ independent recovery of the actual signed sender remain mandatory before broadca
 Do not infer that a missing journal hash authorizes another attempt: retain original
 funding evidence and require owner recovery of any uncertain admission. See
 [treasury transaction isolation](docs/treasury-transaction-isolation.md).
+
+## Fresh mainnet research purchase and Monthly authority - 2026-10-02
+
+Keep Monthly's four manually requested Deep research allocations and thirty-day term. Fresh sealed mainnet SQLite installs a canonical original-network purchase claim and v2 entitlement schema, with no historical backfill or testnet catalog adoption. Every seller claims its immutable original authorization before Circle settlement. Monthly adds single-use issued challenge consumption, an exact network/USDC/Gateway entitlement and atomic four-slot redemption; replay cannot change the quote, package, recipient, transaction or original request. Historical ordinary testnet records remain on their original rail; existing enrolled testnet storage refuses this newer domain. Mainnet Supabase remains staged until independently generated native schema evidence exists.
+
+Require actual native purchase writer capability before quoting or accepting a prepaid purchase. The hosted readiness check derives only the dedicated key's public address, compares it to the reviewed sealed policy, refuses historical public/private role reassignment and checks retained accounting/current known capacity. It neither signs, reserves nor funds, and is not a promise of future operating capacity. Actual execution still admits each full original through the hosted journal before signing. Preserve original uncertainty, cumulative signer caps and owner-operated prefunding. Normal mainnet wallet/API/CLI/MCP access has no invitation restriction or special small pilot ceiling.

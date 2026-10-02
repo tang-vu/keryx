@@ -1,6 +1,7 @@
 import type { KeryxDB } from "../db/keryx-db";
 import { readBoundedJson } from "../read-bounded-json";
 import { validateWithdrawalRequest, type WithdrawalRequestRecord } from "./withdrawal-request";
+import { gatewayNetworkProfile } from "./gateway-network";
 
 type Store = Pick<KeryxDB, "reserveCreatorWithdrawal" | "getCreatorWithdrawal" | "claimCreatorWithdrawalTransfer"
   | "getCreatorWithdrawalTransferClaim" | "getCreatorWithdrawalAttestation" | "saveCreatorWithdrawalAttestation">;
@@ -58,7 +59,7 @@ export const requestCircleWithdrawalTransfer: RequestTransfer = async (value, si
   const combined = AbortSignal.any([signal, stop.signal]);
   try {
     combined.throwIfAborted();
-    const response = await fetch("https://gateway-api-testnet.circle.com/v1/transfer", {
+    const response = await fetch(`${gatewayNetworkProfile(record.network).gatewayApiUrl}/v1/transfer`, {
       method: "POST", redirect: "error", headers: { "Content-Type": "application/json" },
       body: JSON.stringify([record.request]), signal: combined,
     });

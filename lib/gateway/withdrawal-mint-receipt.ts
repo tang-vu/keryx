@@ -61,7 +61,7 @@ export async function matchWithdrawalMintReceipt(selected: WithdrawalRequestReco
       || event.topics[3] !== transaction.transferSpecHash || event.data !== expectedData) throw new Error();
     return { status: "mint-receipt-matched" as const, authority: "receipt-matched-only" as const,
       requestId: transaction.requestId, transactionHash: transaction.transactionHash,
-      transferSpecHash: transaction.transferSpecHash, chainId: 5042002 as const,
+      transferSpecHash: transaction.transferSpecHash, chainId: transaction.chainId,
       blockNumber: receipt.blockNumber.toString(), blockHash: receipt.blockHash,
       transactionIndex: receipt.transactionIndex, logIndex: event.logIndex,
       recipient: copy.selected.policy.recipient, amountMicros: spec.value,

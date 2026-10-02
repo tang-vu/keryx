@@ -4,6 +4,7 @@ import { encodeFunctionData, keccak256, maxUint256, parseTransaction, recoverTra
 import { validateWithdrawalRequest, type WithdrawalRequestRecord } from "./withdrawal-request";
 import { matchWithdrawalAttestation } from "./withdrawal-attestation";
 import { WITHDRAWAL_MINTER_ABI } from "./withdrawal-mint-observation";
+import { gatewayNetworkProfile } from "./gateway-network";
 
 const uint = z.string().regex(/^(0|[1-9][0-9]{0,77})$/)
   .pipe(z.string().refine(value => BigInt(value) <= maxUint256));
@@ -35,11 +36,12 @@ export async function matchWithdrawalMintTransaction(selected: WithdrawalRequest
     const snapshot = structuredClone({ selected, response });
     const terms = withdrawalMintTermsSchema.parse(selectedTerms), serializedTransaction = rawSchema.parse(raw);
     const record = await validateWithdrawalRequest(snapshot.selected);
+    const profile = gatewayNetworkProfile(record.network);
     const attestation = await matchWithdrawalAttestation(record, snapshot.response);
     const transaction = parseTransaction(serializedTransaction);
     const expectedData = encodeFunctionData({ abi: WITHDRAWAL_MINTER_ABI, functionName: "gatewayMint",
       args: [attestation.attestation, attestation.signature] });
-    if (transaction.type !== "eip1559" || transaction.chainId !== 5042002
+    if (transaction.type !== "eip1559" || transaction.chainId !== profile.chainId
       || (transaction.nonce ?? 0) !== terms.nonce
       || transaction.to?.toLowerCase() !== record.policy.gatewayMinter
       || transaction.data !== expectedData || (transaction.value ?? BigInt(0)) !== BigInt(0)
@@ -54,7 +56,7 @@ export async function matchWithdrawalMintTransaction(selected: WithdrawalRequest
       authority: "signed-transaction-matched-only" as const, requestId: record.id,
       transferId: attestation.transferId, transferSpecHash: attestation.transferSpecHash,
       expirationBlock: attestation.expirationBlock,
-      chainId: 5042002 as const, minter: record.policy.gatewayMinter, terms,
+      chainId: profile.chainId, minter: record.policy.gatewayMinter, terms,
       transactionHash: keccak256(serializedTransaction), serializedTransaction,
       maxGasCostWei: (BigInt(terms.gas) * BigInt(terms.maxFeePerGas)).toString() };
   } catch { throw new Error("Withdrawal mint transaction unavailable"); }

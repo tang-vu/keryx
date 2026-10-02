@@ -13,7 +13,7 @@ const bundle = await build({
     import {ScholarlyRightsPanel} from './app/creator/[id]/scholarly-rights-panel';
     window.messages=[]; createRoot(document.getElementById('root')).render(<ScholarlyRightsPanel creatorId="paper"/>);`,
     loader: "tsx", resolveDir: process.cwd() },
-  bundle: true, write: false, platform: "browser", format: "iife", define: { "process.env.NODE_ENV": '"production"' },
+  bundle: true, write: false, platform: "browser", format: "iife", define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"production"' },
   plugins: [{ name: "hermetic-wallet", setup(build) {
     build.onResolve({ filter: /^wagmi$/ }, () => ({ path: "fixture-wallet", namespace: "fixture" }));
     build.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({ contents: `export const useAccount=()=>({address:'${address}'});

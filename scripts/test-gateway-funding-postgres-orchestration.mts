@@ -1,3 +1,4 @@
+import { normalizeFundingSnapshotMigration } from "./helpers/postgres-snapshot-diagnostics.mts";
 /** TEST ONLY. Actual isolated PostgreSQL/PostgREST, generated memory keys and
  * localhost protocol evidence. No runtime activation, keys or external funding. */
 import assert from "node:assert/strict";
@@ -62,7 +63,7 @@ try {
   const historical = readdirSync("supabase/migrations").filter(f => /^\d{4}.*\.sql$/.test(f) && Number(f.slice(0, 4)) < 70).sort();
   const candidates = readdirSync("scripts/test-fixtures/funding-postgres").filter(f => /^007[0-5].*\.sql$/.test(f)).sort(); assert.equal(candidates.length, 6);
   const paths = [...historical.map(f => `supabase/migrations/${f}`), ...candidates.map(f => `scripts/test-fixtures/funding-postgres/${f}`)];
-  sql("create role anon;create role authenticated;create role service_role bypassrls;create publication supabase_realtime;" + paths.map(f => readFileSync(f, "utf8")).join("\n"));
+  sql("create role anon;create role authenticated;create role service_role bypassrls;create publication supabase_realtime;" + paths.map(f => normalizeFundingSnapshotMigration(readFileSync(f, "utf8"))).join("\n"));
   sql(`select keryx_storage.enroll(${json(identity)},'${sql("select keryx_storage.snapshot_digest()") }')`);
   const bindingDigest = sql("select keryx_storage.funding_backend_binding()"); assert.match(bindingDigest, /^[a-f0-9]{64}$/);
   sql(`create role orchestration_http login;alter role orchestration_http set statement_timeout='10s';grant service_role to orchestration_http;

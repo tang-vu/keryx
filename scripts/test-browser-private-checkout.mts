@@ -21,7 +21,7 @@ import{ResearchPrivateCheckout}from'./components/keryx/research-private-checkout
 window.wallet=createWalletClient({account:'${payer}',transport:custom({request:r=>window.walletRequest(r)},{retryCount:0})});
 createRoot(document.getElementById('root')).render(<ResearchPrivateCheckout merchants={${JSON.stringify(merchants)}}/>);
 `, resolveDir: process.cwd(), loader: "tsx" }, bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic",
-  define: { "process.env.NODE_ENV": '"production"' }, plugins: [{ name: "private-ui-fixture", setup(b) {
+  define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"production"' }, plugins: [{ name: "private-ui-fixture", setup(b) {
     b.onResolve({ filter: /^(wagmi|next\/link|@\/lib\/hooks\/use-siwe-auth|\.\/wallet-picker|\.\/research-funding)$/ }, args => ({ path: args.path, namespace: "fixture" }));
     b.onLoad({ filter: /.*/, namespace: "fixture" }, args => ({ loader: "tsx", resolveDir: process.cwd(), contents:
       args.path === "wagmi" ? `export const useAccount=()=>({address:'${payer}',chainId:5042002});export const useWalletClient=()=>({data:window.wallet});export const useSwitchChain=()=>({switchChainAsync:async()=>{},isPending:false});`

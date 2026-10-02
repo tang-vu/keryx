@@ -1,15 +1,14 @@
 /**
  * PaymentGateway — the agent's money interface.
  *
- * `real`    → settles on Arc testnet via Circle x402. Two sub-modes:
- *             BrowserCoSignGateway: user funds their own session EOA; browser co-signs each
- *               authorization (non-custodial). Selected when a session grant is active.
- *             RealGateway: Keryx treasury wallet (GatewayClient.pay). Used by the volume
- *               engine / A2A / collectRun when no browser session is present.
+ * `real`    → the trusted selected Arc profile. A browser grant uses caller-owned custody.
+ *             Mainnet hosted requests require a reviewed sealed-storage policy and separately
+ *             admitted, prefunded signer. Testnet retains its legacy treasury funding adapter.
  * `offline` → reads content from the DB and records simulated payments (settled:false) so the
  *             full reasoning + settlement FLOW runs with no funded wallet. Never the demo path.
  *
- * Selection priority: BrowserCoSign (active grant) → Real (funder key) → Offline.
+ * An expired/missing caller grant never falls back to treasury. Mainnet never falls back
+ * to simulation or legacy custody because a treasury policy/key/balance is absent.
  */
 
 import { config } from "../config";
@@ -70,6 +69,7 @@ export async function getPaymentGateway(db: KeryxDB, opts?: GatewayOpts): Promis
     throw new Error("browser signature callback requires a session id");
   }
   if (process.env.KERYX_FORCE_OFFLINE === "1") {
+    if (config.profile.name === "arc") throw new Error("Mainnet payments cannot select offline simulation");
     const { OfflineGateway } = await import("./offline-gateway");
     return new OfflineGateway(db);
   }
@@ -90,7 +90,12 @@ export async function getPaymentGateway(db: KeryxDB, opts?: GatewayOpts): Promis
     );
   }
 
-  // Treasury path: Keryx's own funder key for authorized server-side requests.
+  if (config.profile.name === "arc") {
+    const { createMainnetHostedGateway } = await import("./mainnet-hosted-gateway");
+    return createMainnetHostedGateway(db);
+  }
+
+  // Legacy testnet treasury path retains its original wallet/funding behavior.
   if (config.funderKey.length > 0) {
     const { RealGateway } = await import("./real-gateway");
     return new RealGateway();

@@ -12,7 +12,8 @@ import { AUTH_CHALLENGE_TTL_MS, authChallengeHash } from "./auth-challenge";
 const mocks = vi.hoisted(() => ({ cookies: vi.fn(), db: vi.fn(), limit: vi.fn() }));
 vi.mock("next/headers", () => ({ cookies: mocks.cookies }));
 vi.mock("@/lib/db", () => ({ getDb: mocks.db }));
-vi.mock("@/lib/config", () => ({ config: { jwtSecret: "synthetic-auth-test-secret-not-production", devWallets: [] } }));
+vi.mock("@/lib/config", async () => ({ config: { jwtSecret: "synthetic-auth-test-secret-not-production", devWallets: [],
+  profile: (await import("./arc-network-profile")).ARC_TESTNET_PROFILE } }));
 vi.mock("@/lib/activation", () => ({ recordActivationEvent: async () => undefined }));
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: mocks.limit, clientIp: () => "synthetic-test-client" }));
 import { GET as nonceRoute } from "@/app/api/auth/nonce/route";

@@ -13,7 +13,7 @@
 import { paymentRuntimeConfig } from "../payment-runtime-config";
 import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
 import { readBoundedJson } from "../read-bounded-json";
-import { gatewayAvailableAtomic } from "./available-balance";
+import { gatewayAvailableAtomic, gatewayHeldUsdcByChunk } from "./available-balance";
 
 // Verified from @circle-fin/x402-batching/dist/client/index.js:638-672.
 const runtimeProfile = paymentRuntimeConfig().profile;
@@ -81,21 +81,12 @@ export async function getGatewayHeldUsdc(addresses: string[], trustedProfile: Ar
           sources: chunk.map((depositor) => ({ depositor, domain: profile.cctpDomain })),
         }),
         signal: AbortSignal.timeout(20_000),
-        redirect: "error",
-        cache: "no-store",
+        redirect: "error", cache: "no-store",
       });
       if (!upstream.ok) { await upstream.body?.cancel(); continue; } // chunk stays unknown
 
-      const data = (await readBoundedJson(upstream)) as {
-        balances?: Array<{ depositor?: string; balance?: string; pendingBatch?: string }>;
-      };
-      for (const b of data.balances ?? []) {
-        const key = b.depositor?.toLowerCase();
-        // Key off the echoed depositor rather than array position: an answer that dropped or
-        // reordered an entry would otherwise attach one creator's balance to another's claim.
-        if (!key || !out.has(key)) continue;
-        out.set(key, Number(b.balance ?? 0) + Number(b.pendingBatch ?? 0));
-      }
+      const held = gatewayHeldUsdcByChunk(await readBoundedJson(upstream), chunk, profile.cctpDomain);
+      for (const [key, value] of held) out.set(key, value);
     } catch {
       /* timeout or transport error — the chunk's addresses stay unknown */
     }

@@ -3,6 +3,7 @@ import { accountSessionContext } from "../account-sessions";
 import { createConfiguredWithdrawalHttpService } from "./withdrawal-http-service";
 import { createWithdrawalStatusHandler } from "./withdrawal-status-handler";
 import { createWithdrawalMintReader } from "./withdrawal-mint-reader";
+import { creatorOwnerWithdrawalHttp } from "./creator-owner-withdrawal-http";
 
 type Operation = "prepare" | "submit" | "status";
 
@@ -10,6 +11,7 @@ type Operation = "prepare" | "submit" | "status";
  * or require creation caps/enablement. A configured but unreadable mint journal
  * remains unavailable rather than silently downgrading evidence to not-checked. */
 export async function withdrawalHttpRoute(operation: Operation, request: Request): Promise<Response> {
+  if(config.networkId==="eip155:5042") return creatorOwnerWithdrawalHttp(operation,request);
   let response: Response;
   try {
     if (config.networkId !== "eip155:5042002" || config.cctpDomain !== 26) throw new Error();
