@@ -10,8 +10,7 @@
 import { config, llmProvider } from "../lib/config.ts";
 import { AnthropicEngine } from "../lib/llm/anthropic-engine.ts";
 import { availableModels } from "../lib/llm/index.ts";
-import { OpenAICompatibleEngine } from "../lib/llm/openai-compatible-engine.ts";
-import { endpointFor } from "../lib/llm/provider-endpoints.ts";
+import { createModelEngine } from "../lib/llm/model-engine.ts";
 import { sendAlert } from "../lib/notify/alert.ts";
 import type { ModelChoice } from "../lib/llm/model-catalog.ts";
 
@@ -32,16 +31,8 @@ async function probe(model: ProbeModel): Promise<{ ok: true } | { ok: false; err
     const engine =
       model.provider === "anthropic"
         ? new AnthropicEngine()
-        : (() => {
-            const endpoint = endpointFor(model.provider);
-            if (!endpoint) throw new Error(`no credential configured for ${model.provider}`);
-            return new OpenAICompatibleEngine({
-              name: `llm:${model.provider}:${model.model}`,
-              baseUrl: endpoint.baseUrl,
-              apiKey: endpoint.apiKey,
-              model: model.model,
-            });
-          })();
+        : createModelEngine(model);
+    if (!engine) throw new Error(`no credential configured for ${model.provider}`);
     const claims = await engine.decompose(PROMPT);
     if (!Array.isArray(claims) || claims.length === 0) {
       return { ok: false, error: "answered with no usable sub-claims" };

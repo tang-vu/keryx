@@ -10,7 +10,7 @@
  * answers "can the provider talk?"; this answers "did the last few hours of real dispatches decide
  * and pay?", which is the question the product is actually judged on.
  *
- * Pure and injectable: it takes settled runs and a clock, so the alarm rules are unit-tested
+ * Pure and injectable: it takes completed runs and a clock, so the alarm rules are unit-tested
  * against fabricated windows instead of waiting for an outage to reproduce.
  */
 
@@ -33,7 +33,7 @@ export type DispatchAlarmCode =
   | "unreasoned" // runs answered entirely by the deterministic fallback
   | "degraded" // most runs lost at least one step to the fallback
   | "undecided" // every run recorded zero decisions — decide is returning nothing
-  | "nothing-bought"; // dispatches happened, no creator earned anything
+  | "payment-unsettled";
 
 export interface DispatchAlarm {
   code: DispatchAlarmCode;
@@ -43,8 +43,10 @@ export interface DispatchAlarm {
 /** Compact verdict persisted to sync_state — /status needs counts, not run bodies. */
 export interface DispatchHealthSummary {
   checkedAt: string;
+  activity: "idle" | "active" | "expected-missing";
+  expectDispatches: boolean;
   windowHours: number;
-  /** Dispatches that settled inside the window. */
+  /** Dispatches that completed inside the window. */
   runs: number;
   /** Runs whose every reasoning step was answered by the model the asker picked. */
   modelReasoned: number;
@@ -77,6 +79,10 @@ export interface AssessOptions {
    * heuristic runs are the configured behaviour and alarming on them would be crying wolf.
    */
   expectReasoning: boolean;
+  /** Only enabled when an independently configured scheduler promises regular dispatches. */
+  expectDispatches?: boolean;
+  /** Current canonical creator-ledger anomalies; immutable run counters are not current proof. */
+  unsettledRunIds?: ReadonlySet<string>;
 }
 
 /**
@@ -124,13 +130,13 @@ export function assessDispatchHealth(runs: QueryRun[], opts: AssessOptions): Dis
 
   const alarms: DispatchAlarm[] = [];
 
-  if (recent.length === 0) {
-    // Keryx dispatches continuously; an empty window means whatever dispatches has stopped.
+  if (recent.length === 0 && opts.expectDispatches === true) {
+    // Caller-driven research is allowed to be idle; only explicit scheduling creates a promise.
     alarms.push({
       code: "silent",
       message: newest
-        ? `no dispatch has settled in ${windowHours}h — the last one was ${newest}`
-        : `no dispatch has settled in ${windowHours}h, and none is on record at all`,
+        ? `no dispatch has completed in ${windowHours}h — the last one was ${newest}`
+        : `no dispatch has completed in ${windowHours}h, and none is on record at all`,
     });
   }
 
@@ -168,19 +174,16 @@ export function assessDispatchHealth(runs: QueryRun[], opts: AssessOptions): Dis
     });
   }
 
-  // Citation rewards settle even when the content came from cache, so a window in which no creator
-  // earned anything means nothing was cited — not that the agent shopped frugally.
-  if (recent.length >= MIN_RUNS_FOR_SPEND_ALARM && paying === 0) {
-    alarms.push({
-      code: "nothing-bought",
-      message:
-        `${recent.length} dispatches in ${windowHours}h and no creator earned anything — ` +
-        `every run cited nothing, which is the shape of a broken decide step, not a frugal one`,
-    });
-  }
+  const unsettled = recent.filter(run => opts.unsettledRunIds?.has(run.id));
+  if (unsettled.length > 0) alarms.push({
+    code: "payment-unsettled",
+    message: `${unsettled.length}/${recent.length} completed dispatches have failed, pending or incomplete creator-ledger evidence; completed answers remain available. Inspect receipts and reconciliation before retrying`,
+  });
 
   return {
     checkedAt: opts.now.toISOString(),
+    activity: recent.length > 0 ? "active" : opts.expectDispatches === true ? "expected-missing" : "idle",
+    expectDispatches: opts.expectDispatches === true,
     windowHours,
     runs: recent.length,
     modelReasoned: kinds.filter((k) => k === "model").length,

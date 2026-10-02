@@ -22,6 +22,7 @@ import {
   MODEL_CATALOG,
   type ModelChoice,
 } from "./model-catalog";
+import { createModelEngine } from "./model-engine";
 import { endpointFor } from "./provider-endpoints";
 import type { ReasoningEngine } from "./reasoning-engine";
 
@@ -40,18 +41,6 @@ export function resolveModelChoice(id?: string | null): ModelChoice | null {
   return endpointFor(model.provider) ? model : null;
 }
 
-function openAiEngine(choice: ModelChoice): ReasoningEngine | null {
-  const endpoint = endpointFor(choice.provider);
-  if (!endpoint) return null;
-  return new OpenAICompatibleEngine({
-    provider: choice.provider,
-    name: `llm:${choice.provider}:${choice.model}`,
-    baseUrl: endpoint.baseUrl,
-    apiKey: endpoint.apiKey,
-    model: choice.model,
-  });
-}
-
 function defaultRealEngines(exclude = new Set<string>()): ReasoningEngine[] {
   const engines: ReasoningEngine[] = [];
 
@@ -63,7 +52,7 @@ function defaultRealEngines(exclude = new Set<string>()): ReasoningEngine[] {
       // The bare constructor preserves KERYX_LLM_MODEL / KERYX_SYNTHESIS_MODEL for this tier.
       engine = new OpenAICompatibleEngine();
     } else if (provider === "mimo") {
-      engine = openAiEngine(findModelChoice("mimo-v2.5")!);
+      engine = createModelEngine(findModelChoice("mimo-v2.5")!);
     }
     if (engine && !exclude.has(engine.name)) engines.push(engine);
   }
@@ -96,7 +85,7 @@ function buildDefaultEngine(): ReasoningEngine {
 function buildChoiceEngine(choice: ModelChoice): ReasoningEngine {
   if (choice.id === DEFAULT_MODEL_ID) return buildDefaultEngine();
 
-  const primary = openAiEngine(choice);
+  const primary = createModelEngine(choice);
   if (!primary) return buildDefaultEngine();
   return buildChain([primary, ...defaultRealEngines(new Set([primary.name]))]);
 }
