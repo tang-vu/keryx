@@ -52,6 +52,12 @@ jobs:
       - name: Private economics CLI startup (no environment or database)
         run: node --import tsx scripts/economics-private-report.mts --help
 
+      - name: Creator owner cash-out CLI startup (no environment, wallet or network)
+        run: |
+          node --import tsx scripts/creator-cashout-batch.mts --help
+          node --import tsx scripts/creator-cashout-batch-sign.mts --help
+          node --import tsx scripts/creator-cashout-batch-funding.mts --help
+
       - name: Install Chromium for unit and browser checks
         run: npx playwright install --with-deps chromium
 

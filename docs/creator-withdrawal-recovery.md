@@ -1,5 +1,14 @@
 # Creator cash-out recovery implementation
 
+October 2 operator scope: the user authorized comprehensive testing plus a
+bounded withdrawal of eligible owner-managed testnet balances. The separate
+[owner cash-out batch](engineering/creator-owner-cashout-batch.md) retains one
+reviewed plan, original signatures and protected relay history, with keyless
+receipt reporting. It does not enable public creation/timers, replace the
+legacy browser/API boundary or establish independent creator acceptance.
+Its reviewed unsigned amounts are not settled figures; funded outcomes need
+actual receipt and residual-balance evidence after source review and CI.
+
 Status, 2026-09-11: in progress. The signed-request, single-admission and matched-response layers are
 implemented; the production HTTP relay still needs integration with the full recovery
 flow. Do not describe this foundation as completed withdrawal recovery.
