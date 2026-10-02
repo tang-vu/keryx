@@ -5,6 +5,7 @@
     "incremental": false
   },
   "include": [
+    "scripts/eval-cloudflare.mts",
     "scripts/test-browser-isolated-session.mts",
     "scripts/test-browser-mainnet-normal.mts",
     "scripts/test-browser-mainnet-normal-built.mts",

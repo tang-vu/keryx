@@ -1,7 +1,7 @@
 import type { SourceCandidate } from "../llm";
 import type { ScholarlyMetadata } from "../types";
 import { digest } from "../web-research/url-identity";
-import { arxivSearch } from "./arxiv";
+import { arxivSearch, questionArxivIds } from "./arxiv";
 import { crossrefLookup } from "./crossref";
 import { doiUrl, questionDois } from "./doi";
 import { fetchMetadata, type MetadataFetch } from "./provider";
@@ -36,7 +36,7 @@ export async function discoverScholarly(question: string, search: boolean, signa
     return crossrefLookup(question, doi, signal, fetcher);
   });
   else if (search) operations.push(() => crossrefLookup(question, undefined, signal, fetcher));
-  if (search) operations.push(() => arxivSearch(question, signal, fetcher));
+  if (search || questionArxivIds(question).length) operations.push(() => arxivSearch(question, signal, fetcher));
   for (const operation of operations) {
     if (signal?.aborted) break;
     try {

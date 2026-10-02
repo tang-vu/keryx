@@ -3,8 +3,13 @@
 October 1, 2026. The public research composer offers **Search scholarly papers
 (Crossref and arXiv)**, off by default. Enabling it sends the question to those
 official scholarly services, alongside the configured broad web search. A DOI in
-the question triggers exact Crossref lookup even without the checkbox. Metadata
-search is free of source USDC; model, search and infrastructure costs remain separate.
+the question triggers exact Crossref lookup even without the checkbox. Explicit modern
+versioned arXiv identifiers (for example, `arXiv 2606.02668v1` or an official
+versioned PDF/abstract URL) likewise trigger one bounded exact lookup for at most
+two distinct identifiers. Requested versions must match the returned provider
+records; a latest-version replacement is rejected. Exact targets replace the arXiv
+keyword search for that run. Unversioned and legacy arXiv identifier forms are not
+resolved by this exact-intent parser. Metadata search is free of source USDC; model, search and infrastructure costs remain separate.
 
 ## Observed records and read content
 
@@ -16,7 +21,8 @@ uses one bounded bibliographic query. This supports Crossref DOI records; DataCi
 and other DOI agencies are not silently substituted. Missing records and unavailable
 requests remain visible in discovery totals.
 
-arXiv search uses a bounded literal keyword query with relevance ordering. Records
+Without explicit versioned targets, arXiv search uses a bounded literal keyword
+query with relevance ordering. Records
 retain the repository's exact versioned identifier and observed contributor names.
 An arXiv record is preprint material. A Crossref `journal-article` record identifies
 the publication type; a posted record is called a preprint only when the provider
@@ -24,6 +30,15 @@ explicitly supplies that subtype. Neither proves peer review. Keryx does not inf
 author surnames from arXiv full-name strings.
 Contributor names are capped at 50; retain the provider entry count and disclose
 an incomplete list in source details and reference notes when names are omitted.
+
+Original public READ proposals use a separate preview-ranking floor of 0.12
+(`KERYX_MIN_PUBLIC_READ_EXPECTED_VALUE`), aligned with the deterministic fallback's
+positive topical selection threshold. Cached creator/feed reuse retains its 0.45
+floor. Both require a positive engine proposal and a normalized claim target; the
+portfolio, read attempt/deadline bounds and post-read evidence gates still apply.
+Raw expected values remain observable ranking estimates, never measured coverage
+or accuracy. A model SKIP cannot be promoted. Increasing source USDC does not
+resolve a free-source attention gate or document extraction failure.
 
 All provider records are discovery previews. They do not become read evidence,
 citations or author payees just because metadata matches the question. For selected
@@ -74,7 +89,7 @@ Public browser requests can submit `{"question":"...","scholarly":true}` to
 `/api/ask`; nonboolean flags are rejected. DOI lookup applies to public research
 channels that already permit external requests. Private jobs and unattended engine
 runs make no scholarly calls. A trusted human CLI opt-in to external research may
-resolve question DOIs; public request JSON cannot override private execution policy.
+resolve question DOIs and supported versioned arXiv identifiers; public request JSON cannot override private execution policy.
 
 Requests go only to fixed official HTTPS endpoints, with no credentials, redirects,
 endpoint input from the question, pagination or retry loops. Responses are bounded
@@ -88,7 +103,9 @@ Failures impose a 30-second process-local cooldown. Concurrent requests may ther
 report temporarily unavailable discovery. Multiple server processes multiply these
 local admission limits; there is no cross-host distributed quota guarantee.
 
-Scholarly discovery precedes broad search for explicit intent. Both share the existing
+Scholarly discovery precedes broad search for explicit intent. An unavailable exact
+metadata request remains unavailable, never a fabricated record; other configured
+discovery channels may still find a readable original. Both share the existing
 30/55-second Quick/Deep operation allowance and 4/8 document-read attempt caps.
 PDF failures and abstract fallbacks each consume a read attempt. Cancellation and
 one source failure retain other usable evidence and never authorize payment retries.
@@ -124,3 +141,10 @@ Reproduce bounded live metadata and selected-original checks with
 `node --import tsx scripts/smoke-scholarly.mts`; add `--reader-fixtures` to use the two
 fixed original-reader examples. Each invocation allows two metadata requests and
 at most two document reads. Remote availability may change independently of deployment.
+
+
+The October 2 [issue #128 investigation](engineering/research-attention-2026-10-02.md)
+reproduced a preview-selection mismatch without relaxing extraction or evidence
+controls. Local bounded original reads succeeded for the exact Weng PDF and a
+truncated CAVA PDF. Exact metadata lookup was unavailable in that diagnostic;
+end-to-end production research and a separate useful paid workflow remain gates.

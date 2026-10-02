@@ -1,5 +1,45 @@
 # Keryx — Decision Log
 
+**Original public research admission** - *2026-10-02*
+
+Treat free original-document selection as bounded preview ranking, distinct from
+cached creator/feed reuse. A heuristic positive topical proposal around EV .13
+must not be reinterpreted as a cached-content proposal requiring .45 before any
+read. Use the existing positive-preview .12 floor for public originals, preserving
+raw ranking scores, positive proposals, claim targets and portfolio/read bounds.
+Do not uplift model scores or promote SKIP. Only extracted, version-bound content
+can qualify for answer evidence; public originals confer no payout authority.
+Resolve at most two explicit modern versioned arXiv targets with exact provider
+version matching. Missing provider/read availability stays visible. Empty answers
+use recorded failure details and targeted next steps, never an invented claim that
+more source USDC repairs a free gate. See [issue #128 evidence and remaining gates](docs/engineering/research-attention-2026-10-02.md).
+Reversible: restore the public ranking floor; retained receipts and read provenance
+remain unchanged. Live useful research and separately authorized payment evidence
+are acceptance gates, not inferred from synthetic checks or public paper availability.
+
+**D-295** — Reasoning — *Cloudflare Workers AI is an explicitly enabled experimental third provider* — *2026-10-02*
+
+Add account-restricted Workers AI inference through the existing OpenAI-compatible transport,
+shared model catalog, timeout, durable provider/step circuit and usage ledger. DeepSeek remains
+the default; Cloudflare follows DeepSeek and MiMo in the public fallback chain. Credentials alone
+do not enable a new processor. The operator must explicitly enable it and include it in any
+configured provider allowlist. The buyer-approved private policy remains restricted to its
+existing providers and never inherits this public fallback.
+
+Choose Llama 3.3 70B FP8 fast for bounded experimental use after direct English and Vietnamese
+synthetic smoke checks. Refuse UTF-8 input bytes plus requested output above 23,000 before HTTP,
+leaving framing headroom below the documented 24,000-token context. Do not truncate evidence.
+Redirects are prohibited; quota exhaustion, invalid/truncated JSON and provider errors remain
+visible failures handled by the existing bounded resilience policy. A healthy primary sends no
+Cloudflare requests. This is not broad quality parity or promotion to primary.
+
+Capture the observed gross token tariff with each request; free Neuron allowances, remaining
+quota and billed invoices are unknown, never inferred as zero. Keep the existing free account
+plan for this deployment and do not upgrade billing automatically. Use a restricted API token,
+never deploy an interactive CLI OAuth/refresh token. See [provider setup and evidence](docs/cloudflare-workers-ai.md).
+Reversible: disable the provider and remove it from the public allowlist; historical usage retains
+its immutable tariff policy. No payment authority, mainnet activation or background scheduler changes.
+
 **D-294** — Browser custody — *An isolated candidate session authenticates its exact identity before derivation* — *2026-10-02*
 
 Provide dormant browser-worker building blocks that verify the intended wallet's

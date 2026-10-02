@@ -5,7 +5,7 @@ import { bodyIdentity, canonicalUrl, digest, publisherGroup } from "./url-identi
 import type { GatheredContent } from "../llm";
 
 export interface ArticleRead { text: string; title: string; finalUrl: string; kind: "html" | "text" | "pdf"; truncated: boolean }
-export type ArticleFailureCode = "invalid-url" | "transport-unavailable" | "article-byte-limit" | "html-extraction-unavailable" | "pdf-extraction-unavailable" | "cancelled";
+export type ArticleFailureCode = "invalid-url" | "document-identity-changed" | "transport-unavailable" | "article-byte-limit" | "html-extraction-unavailable" | "pdf-extraction-unavailable" | "cancelled";
 export class ArticleReadError extends Error {
   constructor(readonly code: ArticleFailureCode) { super(code); this.name = "ArticleReadError"; }
 }
