@@ -1,29 +1,33 @@
 # Enrolled application backend acceptance
 
-Design D-289, October 1, 2026. The candidate is being implemented and reviewed.
-Current `getDb()` and ordinary deployed adapters remain authoritative. This
-document does not activate a selector, enroll a store, authorize a payment or
-close M2/mainnet readiness. PostgreSQL implementation and acceptance are a
+Design D-289, October 1, 2026, with selected-network application composition added
+by the reviewed mainnet preparation. `getDb()` retains ordinary testnet adapters
+and requires a sealed enrolled facade for selected mainnet application storage.
+This source path is not evidence of production activation, store enrollment,
+payment authority or completed M2/mainnet readiness. PostgreSQL implementation and acceptance are a
 separate staged change; SQLite acceptance cannot prove that backend usable.
 
 ## Supported surfaces and release boundary
 
-This backend candidate is dormant across all supported surfaces. The public
-`KeryxDB` contract and deployed selector remain shared; production enrollment and
-caller cutover require a separate coordinated release.
+The public `KeryxDB` contract remains shared. Selected mainnet application storage
+is reachable through `application-storage`; its verified deployment identity must
+match the selected profile before publication. Production enrollment and cutover
+still require the coordinated owner-operated migration and deployment gates.
 
 | Surface | Authority retained by this change | Remaining release gate |
 | --- | --- | --- |
-| Web and HTTP API | Ordinary adapters selected by `getDb()` | Reviewed deployment enrollment, complete caller inventory and cutover |
-| Remote MCP | Existing server research path and `getDb()` | Same server cutover; retain authentication, budgets and settlement evidence |
+| Web and HTTP API | `getDb()` selects ordinary testnet storage or the sealed selected-mainnet facade | Reviewed deployment enrollment, complete caller inventory and cutover |
+| Remote MCP | Shared server research path and selected-network `getDb()` | Same server cutover; retain authentication, budgets and settlement evidence |
 | CLI and stdio MCP | Existing buyer transport and private journal; server storage stays behind the API | Review local worker callers and server cutover before selecting an enrolled factory |
 | Desktop | Existing Operator composition and packaged native engine | Separate storage enrollment and domain cutover; native and installer acceptance do not activate Supabase |
 | Extension | Existing authenticated web/API transport | Server cutover and browser authorization acceptance |
 | Telegram, Discord and Slack bots | Existing guarded server research path | Server cutover with each bot's authentication and result-evidence checks |
 
-Factory imports remain confined to acceptance fixtures and internal composition.
-The dormant import-graph gate checks ordinary application reachability. Desktop
-smoke changes verify packaging and uninstall behavior only. No public API,
+Factory imports are confined to acceptance fixtures and guarded internal
+composition, including the explicit selected-network application boundary.
+Read-only Operator composition admits the sealed selected store without ordinary
+initialization or schema repair. Desktop smoke changes verify packaging and
+uninstall behavior only. No public API,
 package or installer version change, production deployment, synchronized
 distribution or funded settlement is claimed by this candidate's acceptance.
 
@@ -52,6 +56,14 @@ advancement, including completion. Changed configuration, identity, target or
 schema refuses. A read-only factory denies the exact reviewed mutator inventory
 before invoking the core; `verifyApiKey` is a write because it records last use.
 Closing remains possible after authority drift.
+
+Source verification CAS is also a reviewed write: it changes only verification
+state while the observed payout/feed identity still matches. Historical provenance
+lookup is a private metadata-only helper behind the guarded read surface, never
+an unguarded published method. Synthetic provenance changes the exact SQLite
+source schema, so prior enrolled stores need a reviewed migration/re-enrollment.
+The Supabase schema-77 source contract stays pinned until fresh reviewed acceptance;
+migration 0079 does not silently admit a changed enrolled PostgreSQL profile.
 
 Initialization checks readiness only. It must not create missing tables, migrate
 columns, remove counters, reseal cache rows, normalize controls, clear history or
