@@ -339,7 +339,14 @@ export async function* runAgent(
       yield emit("discover", `SKIP paid manuscript ${s.name}: identical exact-version body is already available as a free public reference.`);
       continue;
     }
-    const terms = await sourceFetchTerms(s);
+    let terms;
+    if (deps.sourceFetchTerms) {
+      try { terms = await deps.sourceFetchTerms(s); }
+      catch {
+        yield emit("discover", `SKIP ${s.name}: current source payout authority is unavailable.`, { sourceId: s.id });
+        continue;
+      }
+    } else terms = await sourceFetchTerms(s);
     if (!terms.active) continue;
     const items = await db.getItems(s.id);
     // Honor the creator's preview-depth: the agent scores on exactly what a paying reader would see

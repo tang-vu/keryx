@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
 
 /** Public immutable testnet contract profile, independent of environment and secret presence. */
 export const STORAGE_TESTNET_PROFILE = Object.freeze({ format: "keryx-storage-profile-v1", chainId: 5042002,
@@ -6,12 +7,18 @@ export const STORAGE_TESTNET_PROFILE = Object.freeze({ format: "keryx-storage-pr
   gatewayWallet: "0x0077777d7eba4688bdef3e311b846f25870a19b9",
   gatewayMinter: "0x0022222abe238cc2c7bb1f21003f0a260052475b", circleEnvironment: "testnet", cctpDomain: 26 });
 export const STORAGE_TESTNET_PROFILE_DIGEST = createHash("sha256").update(JSON.stringify(STORAGE_TESTNET_PROFILE)).digest("hex");
+export const STORAGE_MAINNET_PILOT_PROFILE = Object.freeze({ ...STORAGE_TESTNET_PROFILE,
+  chainId: ARC_MAINNET_PROFILE.chainId, network: ARC_MAINNET_PROFILE.networkId,
+  usdc: ARC_MAINNET_PROFILE.usdcAddress.toLowerCase(), cctpDomain: ARC_MAINNET_PROFILE.cctpDomain,
+  gatewayWallet: ARC_MAINNET_PROFILE.gatewayWallet.toLowerCase(),
+  gatewayMinter: ARC_MAINNET_PROFILE.gatewayMinter.toLowerCase(), circleEnvironment: "mainnet" });
+export const STORAGE_MAINNET_PILOT_PROFILE_DIGEST = createHash("sha256").update(JSON.stringify(STORAGE_MAINNET_PILOT_PROFILE)).digest("hex");
 export interface StorageIdentity {
-  format: "keryx-storage-identity-v1";
+  format: "keryx-storage-identity-v1" | "keryx-mainnet-pilot-storage-identity-v1";
   deploymentId: string;
   storageId: string;
-  network: "eip155:5042002";
-  authorityMode: "testnet-real" | "testnet-offline";
+  network: "eip155:5042002" | "eip155:5042";
+  authorityMode: "testnet-real" | "testnet-offline" | "mainnet-pilot-real";
   profileDigest: string;
   enrollmentId: string;
   enrolledAt: string;
@@ -29,18 +36,24 @@ export function validateStorageIdentity(input: unknown): Readonly<StorageIdentit
       ![Object.prototype, null].includes(Object.getPrototypeOf(input)) || Object.getOwnPropertySymbols(input).length ||
       Object.values(Object.getOwnPropertyDescriptors(input)).some(descriptor => !descriptor.enumerable || !("value" in descriptor))) refuseStorage("invalid_identity");
   const value = input as StorageIdentity;
+  const pilot = value.format === "keryx-mainnet-pilot-storage-identity-v1" && value.authorityMode === "mainnet-pilot-real";
   if (Object.keys(value).sort().join(",") !== "authorityMode,deploymentId,enrolledAt,enrollmentId,format,network,profileDigest,provenanceDigest,storageId" ||
-      value.format !== "keryx-storage-identity-v1" || value.network !== "eip155:5042002" ||
-      !["testnet-real", "testnet-offline"].includes(value.authorityMode) ||
+      (!pilot && value.format !== "keryx-storage-identity-v1") ||
+      value.network !== (pilot ? ARC_MAINNET_PROFILE.networkId : ARC_TESTNET_PROFILE.networkId) ||
+      !(pilot ? value.authorityMode === "mainnet-pilot-real" : ["testnet-real", "testnet-offline"].includes(value.authorityMode)) ||
       typeof value.deploymentId !== "string" || !UUID.test(value.deploymentId) ||
       typeof value.storageId !== "string" || !UUID.test(value.storageId) ||
       typeof value.enrollmentId !== "string" || !UUID.test(value.enrollmentId) ||
-      value.profileDigest !== STORAGE_TESTNET_PROFILE_DIGEST || typeof value.provenanceDigest !== "string" || !STORAGE_DIGEST_PATTERN.test(value.provenanceDigest) ||
+      value.profileDigest !== (pilot ? STORAGE_MAINNET_PILOT_PROFILE_DIGEST : STORAGE_TESTNET_PROFILE_DIGEST) || typeof value.provenanceDigest !== "string" || !STORAGE_DIGEST_PATTERN.test(value.provenanceDigest) ||
       typeof value.enrolledAt !== "string" || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(value.enrolledAt) ||
       !Number.isFinite(Date.parse(value.enrolledAt)) || new Date(value.enrolledAt).toISOString() !== value.enrolledAt) refuseStorage("invalid_identity");
   return Object.freeze({ format: value.format, deploymentId: value.deploymentId, storageId: value.storageId,
     network: value.network, authorityMode: value.authorityMode, profileDigest: value.profileDigest,
     enrollmentId: value.enrollmentId, enrolledAt: value.enrolledAt, provenanceDigest: value.provenanceDigest });
+}
+/** Selection follows verified storage identity, never a challenge or a request network. */
+export function storagePaymentProfile(input: StorageIdentity): ArcNetworkProfile {
+  return validateStorageIdentity(input).authorityMode === "mainnet-pilot-real" ? ARC_MAINNET_PROFILE : ARC_TESTNET_PROFILE;
 }
 export function storageIdentityDigest(input: unknown): string {
   return createHash("sha256").update(JSON.stringify(validateStorageIdentity(input))).digest("hex");

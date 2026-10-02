@@ -325,6 +325,22 @@ async function drive(
 const fetchBudget = (budget: number) => budget * (1 - config.citationPoolRatio);
 const citationPool = (budget: number) => budget * config.citationPoolRatio;
 
+it("skips only the source whose injected authoritative discovery recheck fails", async () => {
+  const sources = [makeSource({ id: "unavailable" }), makeSource({ id: "eligible" })];
+  const gateway = fakeGateway();
+  const d = deps(sources, fakeEngine(), gateway);
+  d.sourceFetchTerms = async source => {
+    if (source.id === "unavailable") throw new Error("untrusted vendor text should not reach trace");
+    return { payTo: source.walletAddress, listPriceUsdc: source.fetchPrice, creator: source.walletAddress,
+      active: true, authority: "onchain", stale: false };
+  };
+  const { run, steps } = await drive({ question: "the sub-claim", budget: 0.02 }, d);
+  expect(gateway.fetchCalls).toEqual(["eligible"]);
+  expect(run.answer).toContain("grounded answer");
+  expect(steps.some(step => JSON.stringify(step).includes("SKIP unavailable: current source payout authority is unavailable"))).toBe(true);
+  expect(JSON.stringify(steps)).not.toContain("untrusted vendor text");
+});
+
 const paper = (arxivId = "1706.03762v7") => scholarlyCandidate({ provider: "arxiv", recordUrl: "https://export.arxiv.org/api/query?id_list=" + arxivId,
   retrievedAt: "2026-10-01T00:00:00Z", title: "Observed paper " + arxivId, authors: ["Observed Author"], arxivId, workType: "preprint", peerReview: "unknown" });
 function injectPapers(d: AgentDeps, ids = ["1706.03762v7"]) {

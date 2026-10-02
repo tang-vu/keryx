@@ -15,7 +15,8 @@
  */
 
 import { config } from "../config";
-import { ARC_TESTNET_PROFILE } from "../arc-network-profile";
+import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
+import type { KeryxDB, SessionGrantRecord } from "../db/keryx-db";
 import type {
   ArticleOfferRef,
   Author,
@@ -61,6 +62,18 @@ export interface SignRequest {
 export interface BrowserPaymentContext {
   item?: SourceItemIdentity;
   offer?: ArticleOfferRef;
+}
+
+/** Trusted server composition only. A request/challenge cannot choose this authority. */
+export interface BrowserGatewayContext {
+  readonly profile: ArcNetworkProfile;
+  readonly origin: string;
+  readonly db: KeryxDB;
+  readonly getGrant: (sessionId: string) => Promise<SessionGrantRecord | undefined>;
+  readonly sourceFetchPayTo: typeof sourceFetchPayTo;
+  readonly assertCitationPayTo: (source: Source, payee: string) => Promise<void>;
+  readonly fetch: typeof globalThis.fetch;
+  readonly pathFor: (path: string) => string;
 }
 
 interface ChallengeBody {
@@ -115,8 +128,22 @@ export class BrowserCoSignGateway implements PaymentGateway {
     private readonly requestSignature: RequestSignatureFn,
     private readonly abortSignal?: AbortSignal,
     /** Generation of the cap reservation. A later Circle failure may release only this epoch. */
-    private readonly grantEpoch: string = "legacy-test-grant"
-  ) {}
+    private readonly grantEpoch: string = "legacy-test-grant",
+    private readonly context?: BrowserGatewayContext,
+  ) {
+    if (context && (context.profile !== ARC_MAINNET_PROFILE && context.profile !== ARC_TESTNET_PROFILE))
+      throw new Error("Unsupported browser gateway profile");
+  }
+
+  private get profile(): ArcNetworkProfile { return this.context?.profile ?? ARC_TESTNET_PROFILE; }
+  private get origin(): string { return this.context?.origin ?? config.baseUrl; }
+  private endpoint(path: string): string { return `${this.origin}${this.context ? this.context.pathFor(path) : path}`; }
+  private transport(input: string, init: RequestInit): Promise<Response> {
+    return this.context ? this.context.fetch(input, { ...init, redirect: "error" }) : fetch(input, init);
+  }
+  private alert(title: string, message: string): Promise<void> {
+    return this.context ? Promise.resolve() : sendAlert(title, message).then(() => undefined);
+  }
 
   agentAddress(): string {
     return this.sessAddr;
@@ -142,16 +169,16 @@ export class BrowserCoSignGateway implements PaymentGateway {
     offer?: ArticleOfferRef;
   }): Promise<FetchResult> {
     const url = item
-      ? `${config.baseUrl}${articlePaidPath({
+      ? this.endpoint(articlePaidPath({
           sourceId: source.id,
           itemId: item.id,
           contentVersion: sourceItemIdentity(item).contentVersion,
           offerId: offer?.id,
           listPriceUsdc: offer?.listPriceUsdc,
-        })}`
-      : `${config.baseUrl}/api/source/${source.id}`;
+        }))
+      : this.endpoint(`/api/source/${source.id}`);
     const identity = item ? sourceItemIdentity(item) : undefined;
-    const fetchPayee = await sourceFetchPayTo(source);
+    const fetchPayee = await (this.context?.sourceFetchPayTo ?? sourceFetchPayTo)(source);
     const { content, payment } = await this.buyWithCoSign(
       url,
       source,
@@ -185,11 +212,12 @@ export class BrowserCoSignGateway implements PaymentGateway {
     queryId: string;
     rationale: string;
   }): Promise<PaymentRecord> {
-    const url = `${config.baseUrl}/api/cite/${
+    if (this.context) await this.context.assertCitationPayTo(source, author.walletAddress);
+    const url = this.endpoint(`/api/cite/${
       source.id
     }?author=${encodeURIComponent(
       author.walletAddress
-    )}&amount=${amount.toFixed(6)}`;
+    )}&amount=${amount.toFixed(6)}`);
     const { payment } = await this.buyWithCoSign(
       url,
       source,
@@ -236,16 +264,16 @@ export class BrowserCoSignGateway implements PaymentGateway {
     const requirements = await this.fetchRequirements(url, method);
     const payee =
       payeeOverride ?? author?.walletAddress ?? source.walletAddress;
-    assertExpectedRequirements(requirements, payee, amount);
+    assertExpectedRequirements(requirements, payee, amount, this.profile);
 
-    const db = await getDb();
+    const db = this.context?.db ?? await getDb();
     const admission = await db.admitBrowserJournal({
       sessionId: this.sessionId,
       requestId: reqId,
       queryId,
       grantEpoch: this.grantEpoch,
       signer: this.sessAddr,
-      network: ARC_TESTNET_PROFILE.networkId,
+      network: this.profile.networkId,
       token: requirements.asset,
       gatewayContract: requirements.extra.verifyingContract,
       sourceId: source.id,
@@ -267,7 +295,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
         amountUsdc: amount,
         weight,
         rationale,
-        network: ARC_TESTNET_PROFILE.networkId,
+        network: this.profile.networkId,
         grantEpoch: this.grantEpoch,
         origin: "web",
       },
@@ -318,7 +346,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
         .getBrowserJournal(this.sessionId, reqId)
         .catch(() => null);
       if (recovered?.phase === "cancelled_unexposed") throw error;
-      void sendAlert(
+      void this.alert(
         "browser authorization exposure write uncertain",
         `nonce=${journal.nonce}; phase=${recovered?.phase ?? "unknown"}`
       ).catch(() => undefined);
@@ -352,7 +380,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
         requirements,
         expectedSigner: this.sessAddr,
         expectedNonce: journal.nonce,
-      });
+      }, undefined, 0, this.profile);
       if (
         !(await db.signBrowserJournal(this.sessionId, reqId, {
           validAfter: signed.authorization.validAfter,
@@ -394,6 +422,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
         signed.authorization.validBefore
       ),
       grantEpoch: this.grantEpoch,
+      network: this.profile.networkId,
       authorizationPhase: "signed" as PaymentRecord["authorizationPhase"],
     };
     const pending = (reason: string) =>
@@ -436,7 +465,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
       const recovered = await db
         .getBrowserJournal(this.sessionId, reqId)
         .catch(() => null);
-      void sendAlert(
+      void this.alert(
         "browser authorization submission write uncertain",
         `nonce=${journal.nonce}; phase=${recovered?.phase ?? "unknown"}`
       ).catch(() => undefined);
@@ -449,7 +478,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
     basePayment.authorizationPhase = "submission_attempted";
     let retryRes: Response;
     try {
-      retryRes = await fetch(url, {
+      retryRes = await this.transport(url, {
         method,
         headers: {
           "payment-signature": paymentHeader,
@@ -469,7 +498,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
     // can fail while producing content after Circle has already confirmed the debit; its 5xx still
     // carries PAYMENT-RESPONSE and must remain settled rather than being relabelled pending.
     const paymentResponse = retryRes.headers.get("PAYMENT-RESPONSE");
-    const txHash = settlementReference(paymentResponse, payer);
+    const txHash = settlementReference(paymentResponse, payer, this.profile);
     if (txHash) {
       try {
         if (
@@ -487,7 +516,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
             throw new Error("terminal state conflict");
         }
       } catch {
-        void sendAlert(
+        void this.alert(
           "browser authorization receipt write requires recovery",
           `nonce=${journal.nonce}; receipt=${txHash}`
         ).catch(() => undefined);
@@ -580,7 +609,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
   }
 
   private async hasCapturedGrant(): Promise<boolean> {
-    const grant = await getGrant(this.sessionId);
+    const grant = await (this.context?.getGrant ?? getGrant)(this.sessionId);
     return (
       grant?.grantEpoch === this.grantEpoch &&
       grant.sessAddr.toLowerCase() === this.sessAddr.toLowerCase()
@@ -595,7 +624,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
     url: string,
     method: "GET" | "POST"
   ): Promise<PaymentRequirements> {
-    const res = await fetch(url, {
+    const res = await this.transport(url, {
       method,
       headers: { Accept: "application/json" },
       signal: this.abortSignal,
@@ -628,7 +657,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
     // Prefer the Arc testnet option matching our configured network.
     const match =
       reqs.find(
-        (r) => r.network === config.networkId && r.scheme === "exact"
+        (r) => r.network === this.profile.networkId && r.scheme === "exact"
       ) ?? reqs[0];
 
     if (!match) {

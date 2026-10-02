@@ -106,7 +106,7 @@ let runtimeSnapshot: { manifestPath: string; deployment: Readonly<StorageDeploym
 export function readRuntimeStorageDeployment(): Readonly<StorageDeploymentManifest> {
   const current = inspectStorageDeploymentManifest(process.env);
   if (process.env.KERYX_FORCE_OFFLINE !== undefined && !["", "0", "1"].includes(process.env.KERYX_FORCE_OFFLINE)) refuse();
-  if (current.identity.authorityMode === "testnet-real" && process.env.KERYX_FORCE_OFFLINE === "1") refuse();
+  if (current.identity.authorityMode !== "testnet-offline" && process.env.KERYX_FORCE_OFFLINE === "1") refuse();
   if (current.backend.kind === "sqlite") {
     try { targetStat(current.backend.databasePath); } catch { refuse(); }
     if (process.env.KERYX_SQLITE_PATH !== undefined && process.env.KERYX_SQLITE_PATH !== current.backend.databasePath) refuse();

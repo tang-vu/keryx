@@ -2,6 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { installSqliteApplicationSchema } from "./sqlite-application-schema";
 import { sqliteApplicationSchemaProfile } from "./sqlite-application-schema-profile";
 import { GATEWAY_FUNDING_SCHEMA, GATEWAY_FUNDING_INDEXES } from "./gateway-funding-sqlite-schema";
+import { installMainnetPilotSchema } from "../mainnet-pilot/sqlite-schema";
 
 let expectedProfiles: readonly string[] | undefined;
 /** Exact source profile. Only explicit enrollment objects are excluded. Never repairs. */
@@ -17,5 +18,18 @@ export function supportedSqliteApplicationProfiles(): readonly string[] {
     } finally { reference.close(); }
   }
   return expectedProfiles;
+}
+
+let pilotProfiles: readonly string[] | undefined;
+export function supportedMainnetPilotApplicationProfiles(): readonly string[] {
+  if (!pilotProfiles) {
+    const reference = new DatabaseSync(":memory:");
+    try {
+      installSqliteApplicationSchema(reference);
+      installMainnetPilotSchema(reference);
+      pilotProfiles = Object.freeze([sqliteApplicationSchemaProfile(reference, new Set())]);
+    } finally { reference.close(); }
+  }
+  return pilotProfiles;
 }
 

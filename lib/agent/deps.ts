@@ -11,6 +11,8 @@ import type { SourceCandidate } from "../llm";
 import type { ResearchEffects } from "./research-effects";
 
 export interface AgentDeps {
+  /** Independently trusted source authority for isolated server compositions. */
+  sourceFetchTerms?: typeof import("../registry/source-fetch-payto").sourceFetchTerms;
   discoverScholarly?: import("../scholarly/discovery").ScholarlyDiscover;
   webSearch?: import("../web-research/search-provider").SearchProvider;
   readWebArticle?: import("../web-research/article-reader").ArticleReader;
@@ -34,12 +36,16 @@ export interface AgentDeps {
  *   Whatever the pick, the engine crosses configured providers before the heuristic.
  */
 export async function getAgentDeps(opts?: {
+  db?: KeryxDB;
+  effects?: ResearchEffects;
+  sourceFetchTerms?: AgentDeps["sourceFetchTerms"];
   gateway?: PaymentGateway;
   gatewayOpts?: GatewayOpts;
   model?: string;
 }): Promise<AgentDeps> {
-  const db = await getDb();
+  const db = opts?.db ?? await getDb();
   const gateway = opts?.gateway ?? (await getPaymentGateway(db, opts?.gatewayOpts));
   const engine = getReasoningEngine(opts?.model);
-  return { engine, db, gateway };
+  return { engine, db, gateway, ...(opts?.effects ? { effects: opts.effects } : {}),
+    ...(opts?.sourceFetchTerms ? { sourceFetchTerms: opts.sourceFetchTerms } : {}) };
 }

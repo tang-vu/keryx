@@ -5,11 +5,13 @@
 
 import { hasSupabase } from "../config";
 import type { KeryxDB } from "./keryx-db";
+import { assertLegacyRuntimeAuthority } from "../mainnet-pilot/legacy-authority";
 
 // Publish only the shared initialization promise, never a partially ready adapter.
 let initialization: Promise<KeryxDB> | null = null;
 
 export async function getDb(): Promise<KeryxDB> {
+  assertLegacyRuntimeAuthority();
   if (!initialization) {
     initialization = (async () => {
       // Select once per attempt, before the first asynchronous import boundary.

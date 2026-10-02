@@ -1,12 +1,8 @@
 import { isAddress, recoverTypedDataAddress } from "viem";
 import type { PendingSignatureChallenge } from "./pending-signatures";
-import { ARC_TESTNET_PROFILE } from "../arc-network-profile";
+import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
 
 // This route serves Arc testnet only. These values are independent of the returned header.
-const NETWORK = ARC_TESTNET_PROFILE.networkId;
-const USDC = ARC_TESTNET_PROFILE.usdcAddress;
-const GATEWAY = ARC_TESTNET_PROFILE.gatewayWallet;
-const CHAIN_ID = ARC_TESTNET_PROFILE.chainId;
 const MIN_TIMEOUT = 604900;
 const MAX_TIMEOUT = 691200;
 
@@ -37,10 +33,12 @@ export async function verifyBrowserSignature(
   challenge: PendingSignatureChallenge,
   nowSeconds = Math.floor(Date.now() / 1000),
   originalSigningSlackSeconds: 0 | 300 = 0,
+  profile: ArcNetworkProfile = ARC_TESTNET_PROFILE,
 ): Promise<Authorization> {
+  if (profile !== ARC_TESTNET_PROFILE && profile !== ARC_MAINNET_PROFILE) throw new Error("Unsupported browser signature profile");
   const req = challenge.requirements;
-  if (req.scheme !== "exact" || req.network !== NETWORK || !sameAddress(req.asset, USDC) ||
-      !sameAddress(req.extra?.verifyingContract ?? "", GATEWAY) ||
+  if (req.scheme !== "exact" || req.network !== profile.networkId || !sameAddress(req.asset, profile.usdcAddress) ||
+      !sameAddress(req.extra?.verifyingContract ?? "", profile.gatewayWallet) ||
       req.extra?.name !== "GatewayWalletBatched" || req.extra.version !== "1" ||
       !Number.isInteger(req.maxTimeoutSeconds) || req.maxTimeoutSeconds < MIN_TIMEOUT ||
       req.maxTimeoutSeconds > MAX_TIMEOUT || !isAddress(req.payTo) ||
@@ -102,8 +100,8 @@ export async function verifyBrowserSignature(
     domain: {
       name: "GatewayWalletBatched",
       version: "1",
-      chainId: CHAIN_ID,
-      verifyingContract: GATEWAY,
+      chainId: profile.chainId,
+      verifyingContract: profile.gatewayWallet,
     },
     types: {
       TransferWithAuthorization: [

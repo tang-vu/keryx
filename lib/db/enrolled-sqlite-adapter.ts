@@ -1,5 +1,9 @@
 import { SqliteAdapter } from "./sqlite-adapter";
-import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-profile";
+import { supportedSqliteApplicationProfiles, supportedMainnetPilotApplicationProfiles } from "./enrolled-sqlite-schema-profile";
+import type { DatabaseSync } from "node:sqlite";
+import type { BrowserJournalAdmission } from "./browser-authorization-journal";
+import type { admitSqliteBrowserJournal } from "./sqlite-browser-journal";
+import type { StorageDeploymentManifest } from "./runtime-storage-config";
 import { openVerifiedSqliteStorage, assertVerifiedSqliteConnection } from "./storage-identity-connection";
 import { readRuntimeStorageDeployment } from "./runtime-storage-config";
 import { canonicalJson } from "../canonical-json";
@@ -186,14 +190,30 @@ export async function createReadonlyEnrolledSqliteAdapter(): Promise<SqliteAdapt
 
 async function create(readOnly: boolean): Promise<SqliteAdapter> {
   const deployment = readRuntimeStorageDeployment();
+  if (deployment.identity.authorityMode === "mainnet-pilot-real") throw new Error("Explicit pilot storage factory required");
   if (deployment.backend.kind !== "sqlite") throw new Error("Enrolled SQLite backend not selected");
   const pinned = canonicalJson(deployment);
   const runtimeGuard = () => {
     if (canonicalJson(readRuntimeStorageDeployment()) !== pinned)
       throw new Error("Enrolled SQLite deployment changed");
   };
+  return assemble(readOnly, deployment, runtimeGuard);
+}
+
+/** Internal candidate composition. Never called by the default DB selector or request data. */
+export async function createMainnetPilotSqliteAdapter(deployment: Readonly<StorageDeploymentManifest>, runtimeGuard: () => void,
+  connect: (db: DatabaseSync) => (input: BrowserJournalAdmission) => NonNullable<Parameters<typeof admitSqliteBrowserJournal>[2]>): Promise<SqliteAdapter> {
+  if (deployment.identity.authorityMode !== "mainnet-pilot-real" || deployment.backend.kind !== "sqlite")
+    throw new Error("Mainnet pilot storage identity required");
+  return assemble(false, deployment, runtimeGuard, connect);
+}
+
+async function assemble(readOnly: boolean, deployment: Readonly<StorageDeploymentManifest>, runtimeGuard: () => void,
+  connect?: Parameters<typeof createMainnetPilotSqliteAdapter>[2]): Promise<SqliteAdapter> {
+  if (deployment.backend.kind !== "sqlite") throw new Error("SQLite backend required");
   const connection = openVerifiedSqliteStorage(deployment.backend.databasePath, deployment.identity,
-    { readOnly, runtimeGuard, applicationProfiles: supportedSqliteApplicationProfiles() });
+    { readOnly, runtimeGuard, applicationProfiles: deployment.identity.authorityMode === "mainnet-pilot-real"
+      ? supportedMainnetPilotApplicationProfiles() : supportedSqliteApplicationProfiles() });
   try {
     const db = connection.db;
     const assert = () => {
@@ -201,7 +221,7 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
       catch (error) { connection.close(); throw error; }
     };
     assert();
-    const core = SqliteAdapter.assembleConnectionCore(db, deployment.identity, assert);
+    const core = SqliteAdapter.assembleConnectionCore(db, deployment.identity, assert, connect?.(db));
     const publicNames = Object.getOwnPropertyNames(SqliteAdapter.prototype).filter(name =>
       !["constructor", "encryptLegacyCacheRows", "insertPayment", "init", "close"].includes(name));
     const reviewed = Object.keys(ENROLLED_SQLITE_METHOD_ACCESS);

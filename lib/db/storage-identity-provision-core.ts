@@ -5,6 +5,8 @@ import { assertStorageFences, assertStorageIdentity, holdStorageTarget, insertSt
   registerStorageCapability, assertStorageCreationParent, STORAGE_IDENTITY_TABLE } from "./storage-identity-sqlite";
 import { scanFullStorageSnapshot, STORAGE_SNAPSHOT_LIMITS } from "./storage-identity-snapshot";
 import type { ReviewedStorageEnrollment, StorageEnrollmentInspection, StorageProvisionReceipt } from "./storage-identity-provision";
+import { installSqliteApplicationSchema } from "./sqlite-application-schema";
+import { installMainnetPilotSchema } from "../mainnet-pilot/sqlite-schema";
 
 /** The exclusive creation descriptor remains held; matching pathname alone cannot adopt a replacement. */
 export function assertExclusiveCreatedTarget(createdDescriptor: number, held: ReturnType<typeof holdStorageTarget>): void {
@@ -26,6 +28,7 @@ function canonicalEvidence(value: unknown): string {
 /** Child-only native work: public callers use the killable provision wrapper, never this helper. */
 export function provisionStorageInChild(request: StorageProvisionRequest): StorageEnrollmentInspection | StorageProvisionReceipt {
   const identity = validateStorageIdentity(request.identity), digest = storageIdentityDigest(identity);
+  if (identity.authorityMode === "mainnet-pilot-real" && request.mode !== "create") refuseStorage("fresh_pilot_storage_required");
   let createdDescriptor: number | undefined;
   if (!["inspect", "create", "enroll"].includes(request.mode)) refuseStorage("invalid_operation");
   if (request.mode === "create") {
@@ -86,6 +89,10 @@ export function provisionStorageInChild(request: StorageProvisionRequest): Stora
       if (canonicalEvidence(reviewed.inspection) !== canonicalEvidence(inspection)) refuseStorage("snapshot_changed");
     }
     registerStorageCapability(db, identity, () => true);
+    if (identity.authorityMode === "mainnet-pilot-real") {
+      installSqliteApplicationSchema(db);
+      installMainnetPilotSchema(db);
+    }
     insertStorageIdentity(db, identity);
     installStorageFences(db, identity);
     assertStorageFences(db, identity);

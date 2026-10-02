@@ -79,7 +79,7 @@ async function constructEnrolledSupabaseAdapter(readOnly: boolean): Promise<Kery
   // A closed factory call is the only runtime configuration-loading boundary.
   // Ordinary getDb()/default construction never invokes this function.
   const deployment = readRuntimeStorageDeployment();
-  if (deployment.backend.kind !== "supabase") refuseStorage("identity_mismatch");
+  if (deployment.backend.kind !== "supabase" || deployment.identity.authorityMode === "mainnet-pilot-real") refuseStorage("identity_mismatch");
   const client = createClient(deployment.backend.url, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
     auth: { persistSession: false }, global: { fetch: enrolledTransport(deployment.backend.url) },
   });

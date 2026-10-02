@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { closeSync, constants, fstatSync, lstatSync, openSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, parse, relative, resolve, sep } from "node:path";
 import { DatabaseSync, constants as sqliteConstants } from "node:sqlite";
-import { refuseStorage, storageIdentityDigest, validateStorageIdentity, StorageIdentityRefused, type StorageIdentity } from "./storage-identity";
+import { refuseStorage, storageIdentityDigest, storagePaymentProfile, validateStorageIdentity, StorageIdentityRefused, type StorageIdentity } from "./storage-identity";
 import { GATEWAY_FUNDING_TABLES } from "./gateway-funding-ledger-types";
 import { gatewayFundingFenceStatements } from "./gateway-funding-sqlite-schema";
 
@@ -19,6 +19,7 @@ export const STORAGE_APPLICATION_TABLES = Object.freeze([
   "private_research_payment_attempts", "private_research_executions", "private_research_results", "private_creator_submissions",
   "private_creator_confirmations", "private_treasury_releases", "private_research_interruptions", "creator_withdrawal_requests",
   "creator_withdrawal_transfer_attempts", "creator_withdrawal_attestations", "public_references", "sync_state",
+  "mainnet_pilot_policy", "mainnet_pilot_queries", "mainnet_pilot_settlement_attempts", "mainnet_pilot_grant_challenges",
 ]);
 const quote = (name: string) => `"${name.replaceAll('"', '""')}"`;
 export interface HeldStorageTarget {
@@ -127,6 +128,7 @@ function tableNames(db: DatabaseSync): string[] {
 export function storageFenceStatements(db: DatabaseSync, identity: Readonly<StorageIdentity>): Record<string, string> {
   const result: Record<string, string> = gatewayFundingFenceStatements(db);
   const digest = storageIdentityDigest(identity);
+  const profile = storagePaymentProfile(identity);
   for (const table of tableNames(db)) {
     if (!STORAGE_APPLICATION_TABLES.includes(table)) refuseStorage("unsupported_table");
     for (const operation of ["INSERT", "UPDATE", "DELETE"]) {
@@ -136,14 +138,14 @@ export function storageFenceStatements(db: DatabaseSync, identity: Readonly<Stor
     if (["payment_events", "withdrawals", "browser_authorization_intents"].includes(table)) {
       for (const operation of ["INSERT", "UPDATE"]) {
         const name = `storage_profile_${table}_${operation.toLowerCase()}`;
-        const extra = table === "browser_authorization_intents" ? " OR lower(NEW.token) IS NOT '0x3600000000000000000000000000000000000000' OR lower(NEW.gateway_contract) IS NOT '0x0077777d7eba4688bdef3e311b846f25870a19b9'" : "";
-        result[name] = `CREATE TRIGGER ${name} BEFORE ${operation} ON ${quote(table)} WHEN NEW.network IS NOT 'eip155:5042002'${extra} BEGIN SELECT RAISE(ABORT,'storage authority profile mismatch'); END`;
+        const extra = table === "browser_authorization_intents" ? ` OR lower(NEW.token) IS NOT '${profile.usdcAddress.toLowerCase()}' OR lower(NEW.gateway_contract) IS NOT '${profile.gatewayWallet.toLowerCase()}'` : "";
+        result[name] = `CREATE TRIGGER ${name} BEFORE ${operation} ON ${quote(table)} WHEN NEW.network IS NOT '${profile.networkId}'${extra} BEGIN SELECT RAISE(ABORT,'storage authority profile mismatch'); END`;
       }
     }
     if (table === "payment_events") {
       for (const operation of ["INSERT", "UPDATE"]) {
         const name = `storage_mode_payment_${operation.toLowerCase()}`;
-        const denied = identity.authorityMode === "testnet-real" ? "NEW.settlement_status IS NULL OR NEW.settlement_status='simulated'" : "NEW.settlement_status IS NOT 'simulated' OR NEW.settled IS NOT 0 OR NEW.authorization_id IS NOT NULL OR NEW.grant_epoch IS NOT NULL";
+        const denied = identity.authorityMode !== "testnet-offline" ? "NEW.settlement_status IS NULL OR NEW.settlement_status='simulated'" : "NEW.settlement_status IS NOT 'simulated' OR NEW.settled IS NOT 0 OR NEW.authorization_id IS NOT NULL OR NEW.grant_epoch IS NOT NULL";
         result[name] = `CREATE TRIGGER ${name} BEFORE ${operation} ON payment_events WHEN ${denied} BEGIN SELECT RAISE(ABORT,'storage payment mode mismatch'); END`;
       }
     }
@@ -151,12 +153,12 @@ export function storageFenceStatements(db: DatabaseSync, identity: Readonly<Stor
       for (const operation of ["INSERT", "UPDATE"]) {
         const name = `storage_profile_binding_${operation.toLowerCase()}`;
         const invalid = "CASE WHEN json_valid(NEW.requirements) AND json_valid(NEW.payment_metadata) THEN " +
-          "json_extract(NEW.requirements,'$.network') IS NOT 'eip155:5042002' OR " +
-          "lower(json_extract(NEW.requirements,'$.asset')) IS NOT '0x3600000000000000000000000000000000000000' OR " +
+          `json_extract(NEW.requirements,'$.network') IS NOT '${profile.networkId}' OR ` +
+          `lower(json_extract(NEW.requirements,'$.asset')) IS NOT '${profile.usdcAddress.toLowerCase()}' OR ` +
           "json_extract(NEW.requirements,'$.extra.name') IS NOT 'GatewayWalletBatched' OR " +
           "json_extract(NEW.requirements,'$.extra.version') IS NOT '1' OR " +
-          "lower(json_extract(NEW.requirements,'$.extra.verifyingContract')) IS NOT '0x0077777d7eba4688bdef3e311b846f25870a19b9' OR " +
-          "json_extract(NEW.payment_metadata,'$.network') IS NOT 'eip155:5042002' ELSE 1 END";
+          `lower(json_extract(NEW.requirements,'$.extra.verifyingContract')) IS NOT '${profile.gatewayWallet.toLowerCase()}' OR ` +
+          `json_extract(NEW.payment_metadata,'$.network') IS NOT '${profile.networkId}' ELSE 1 END`;
         result[name] = `CREATE TRIGGER ${name} BEFORE ${operation} ON browser_journal_bindings WHEN ${invalid} BEGIN SELECT RAISE(ABORT,'storage serialized authority profile mismatch'); END`;
       }
     }
@@ -181,6 +183,22 @@ export function storageFenceStatements(db: DatabaseSync, identity: Readonly<Stor
       for (const operation of ["INSERT", "UPDATE"]) {
         const name = `storage_offline_journal_${operation.toLowerCase()}`;
         result[name] = `CREATE TRIGGER ${name} BEFORE ${operation} ON browser_journal_control WHEN NEW.active IS NOT 0 BEGIN SELECT RAISE(ABORT,'offline storage denies journal activation'); END`;
+      }
+    }
+    if (identity.authorityMode === "mainnet-pilot-real") {
+      // Financial domains outside the invited browser pilot acquire no new authority.
+      if (table.startsWith("private_") || table.startsWith("gateway_funding_") || table.startsWith("creator_withdrawal_") ||
+          ["a2a_orders", "withdrawals", "api_keys", "api_key_usage", "gap_intents", "browser_signing_namespaces", "browser_signing_queries", "browser_signing_originals"].includes(table)) {
+        for (const operation of ["INSERT", "UPDATE", "DELETE"]) {
+          const name = `storage_pilot_denied_${table}_${operation.toLowerCase()}`;
+          result[name] = `CREATE TRIGGER ${name} BEFORE ${operation} ON ${quote(table)} BEGIN SELECT RAISE(ABORT,'unsupported pilot authority'); END`;
+        }
+      }
+      if (table === "payment_events") {
+        for (const operation of ["INSERT", "UPDATE"]) {
+          const name = `storage_pilot_payment_${operation.toLowerCase()}`;
+          result[name] = `CREATE TRIGGER ${name} BEFORE ${operation} ON payment_events WHEN NEW.origin IS NOT 'web' OR NEW.grant_epoch IS NULL OR NEW.authorization_phase IS NULL OR NEW.authorization_id IS NULL BEGIN SELECT RAISE(ABORT,'pilot requires browser journal payment'); END`;
+        }
       }
     }
   }

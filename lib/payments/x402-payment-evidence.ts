@@ -1,4 +1,5 @@
 import { config } from "../config";
+import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
 
 export interface PaymentRequirements {
   scheme: string;
@@ -41,16 +42,18 @@ export function assertExpectedRequirements(
   requirements: PaymentRequirements,
   expectedPayee: string,
   expectedAmount: number,
+  profile: ArcNetworkProfile = ARC_TESTNET_PROFILE,
 ): void {
+  if (profile !== ARC_TESTNET_PROFILE && profile !== ARC_MAINNET_PROFILE) throw new Error("Unsupported payment profile");
   if (requirements.scheme !== "exact") throw new Error("402 challenge has an unsupported scheme");
-  if (requirements.network !== config.networkId) throw new Error("402 challenge has the wrong network");
-  if (!sameAddress(requirements.asset, config.usdcAddress)) throw new Error("402 challenge has the wrong asset");
+  if (requirements.network !== profile.networkId) throw new Error("402 challenge has the wrong network");
+  if (!sameAddress(requirements.asset, profile.usdcAddress)) throw new Error("402 challenge has the wrong asset");
   if (!sameAddress(requirements.payTo, expectedPayee)) throw new Error("402 challenge payTo does not match the authorised creator");
   if (requirements.amount !== atomicUsdc(expectedAmount)) throw new Error("402 challenge amount does not match the reserved spend");
   if (requirements.maxTimeoutSeconds !== config.maxTimeoutSeconds) {
     throw new Error("402 challenge has an unexpected authorization lifetime");
   }
-  if (!sameAddress(requirements.extra?.verifyingContract ?? "", config.gatewayWallet)) {
+  if (!sameAddress(requirements.extra?.verifyingContract ?? "", profile.gatewayWallet)) {
     throw new Error("402 challenge has the wrong Gateway contract");
   }
   if (requirements.extra?.name !== "GatewayWalletBatched" || requirements.extra?.version !== "1") {
@@ -59,7 +62,8 @@ export function assertExpectedRequirements(
 }
 
 /** A Circle settlement reference is accepted only for the payer and network that submitted it. */
-export function settlementReference(encoded: string | null, expectedPayer: string): string | null {
+export function settlementReference(encoded: string | null, expectedPayer: string, profile: ArcNetworkProfile = ARC_TESTNET_PROFILE): string | null {
+  if (profile !== ARC_TESTNET_PROFILE && profile !== ARC_MAINNET_PROFILE) throw new Error("Unsupported settlement profile");
   if (!encoded) return null;
   try {
     const parsed = JSON.parse(Buffer.from(encoded, "base64").toString("utf-8"));
@@ -69,7 +73,7 @@ export function settlementReference(encoded: string | null, expectedPayer: strin
       parsed.transaction.length > 0 &&
       typeof parsed.payer === "string" &&
       sameAddress(parsed.payer, expectedPayer) &&
-      parsed.network === config.networkId
+      parsed.network === profile.networkId
     ) {
       return parsed.transaction;
     }

@@ -26,6 +26,7 @@ import { loadPersistentTreasuryWallet } from "./persistent-treasury-wallet";
 import { getGatewayAvailableAtomic } from "../gateway/gateway-balance";
 import { ARC_GATEWAY_DEPOSIT_ABI, GuardedArcSubmissionUnknownError, sendGuardedArcTransaction } from "./guarded-arc-transaction";
 import { createPinnedArcBatchSigner } from "./pinned-arc-batch-signer";
+import { assertLegacyRuntimeAuthority } from "../mainnet-pilot/legacy-authority";
 
 const GAS_TOPUP = parseEther("0.05"); // native USDC for gas (18 decimals on Arc)
 const GAS_MIN = parseEther("0.01");
@@ -48,7 +49,11 @@ export class TreasuryGatewayCreditUnknownError extends Error {
 }
 
 export class RealGateway extends ServerPaymentGateway {
-  private spendKey = loadPersistentTreasuryWallet(STORE).privateKey;
+  private spendKey = this.loadSpendKey();
+  private loadSpendKey() {
+    assertLegacyRuntimeAuthority();
+    return loadPersistentTreasuryWallet(STORE).privateKey;
+  }
   protected spend = privateKeyToAccount(this.spendKey);
   protected batchScheme: BatchPayloadSigner = createPinnedArcBatchSigner(this.spend, config.rpcUrl);
   private funder = privateKeyToAccount(config.funderKey as `0x${string}`);

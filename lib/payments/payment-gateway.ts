@@ -24,6 +24,7 @@ import type {
 import type { KeryxDB } from "../db";
 import type { RequestSignatureFn } from "./browser-cosign-gateway";
 import { assertPaymentSettlementState } from "./payment-state";
+import { assertLegacyRuntimeAuthority } from "../mainnet-pilot/legacy-authority";
 
 export interface FetchResult {
   content: string;
@@ -66,6 +67,7 @@ export interface GatewayOpts {
 }
 
 export async function getPaymentGateway(db: KeryxDB, opts?: GatewayOpts): Promise<PaymentGateway> {
+  assertLegacyRuntimeAuthority();
   if (opts?.requestSignature && !opts.sessionId) {
     throw new Error("browser signature callback requires a session id");
   }
