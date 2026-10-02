@@ -37,3 +37,9 @@ export function createSessionGrantConsentMessage(input: unknown, profile: ArcNet
     "Scope: browser x402 payments using this session signer.",
     "Revocation stops future server admission; exposed authorizations and deposited Gateway funds remain."].join("\n");
 }
+
+/** Public proof of session-key possession, distinct from owner delegation and secret derivation. */
+export function createSessionGrantSignerProofMessage(input: unknown, profile: ArcNetworkProfile): string {
+  return ["Keryx session signer possession", "Purpose: prove control of the session signer for this exact owner payment grant.",
+    createSessionGrantConsentMessage(input, profile)].join("\n");
+}
