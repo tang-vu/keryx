@@ -109,6 +109,15 @@ it("admits hosted SDK originals before crypto and vendor exposure and retains li
   }));
   selectPolicy(policy); vi.stubEnv("KERYX_MAINNET_TREASURY_PRIVATE_KEY",`0x${"77".repeat(32)}`);
   vi.stubEnv("AGENT_FUNDER_PRIVATE_KEY",`0x${"11".repeat(32)}`); // Accidental legacy key never selects custody.
+  const readiness=await import("../payments/mainnet-hosted-gateway"), beforePrepayCalls=vi.mocked(globalThis.fetch).mock.calls.length;
+  vi.stubEnv("KERYX_MAINNET_TREASURY_PRIVATE_KEY",`0x${"44".repeat(32)}`);
+  await expect(readiness.assertMainnetHostedResearchReady(adapter,"2000")).rejects.toThrow("custody unavailable");
+  expect(vi.mocked(globalThis.fetch).mock.calls.length).toBe(beforePrepayCalls);
+  expect(native.prepare("SELECT count(*) AS n FROM hosted_treasury_policies").get()?.n).toBe(0);
+  vi.stubEnv("KERYX_MAINNET_TREASURY_PRIVATE_KEY",`0x${"77".repeat(32)}`);
+  await readiness.assertMainnetHostedResearchReady(adapter,"2000");
+  expect(events).toEqual([]);
+  expect(native.prepare("SELECT count(*) AS n FROM hosted_treasury_policies").get()?.n).toBe(0);
   const factory=await import("../payments/payment-gateway"), gateway=await factory.getPaymentGateway(adapter);
   await gateway.ensureFunded(0.002);
   const first=await gateway.payFetch({source:source as unknown as import("../types").Source,queryId:randomUUID()});
@@ -162,6 +171,11 @@ it("admits hosted SDK originals before crypto and vendor exposure and retains li
     .rejects.toThrow("Historical hosted custody role cannot change");
   await expect(other.admitHostedTreasuryPolicy({...privatePolicy,expiresAtSeconds:privatePolicy.expiresAtSeconds+100},"public"))
     .rejects.toThrow("Historical hosted custody role cannot change");
+  selectPolicy({...privatePolicy,expiresAtSeconds:privatePolicy.expiresAtSeconds+100});
+  vi.stubEnv("KERYX_MAINNET_TREASURY_PRIVATE_KEY",`0x${"88".repeat(32)}`);
+  const callsBeforeRoleRead=vi.mocked(globalThis.fetch).mock.calls.length;
+  await expect(readiness.assertMainnetHostedResearchReady(adapter,"2000")).rejects.toThrow("Historical hosted custody role cannot change");
+  expect(vi.mocked(globalThis.fetch).mock.calls.length).toBe(callsBeforeRoleRead);
 },60000);
 
 it("recovers expired owner custody through normal withdrawal handlers while preserving unknown holds and one original burn", async () => {
@@ -575,3 +589,56 @@ it("serves the normal owner consent and exact live admitted item challenge throu
   expect((await read(reqId)).status).toBe(404);
   expect((await credit(undefined, renewal.consent.grantEpoch)).status).toBe(503);
 }, 30000);
+
+
+it("admits original mainnet research claims and atomically allocates four immutable Monthly slots on separate native connections", async()=> {
+  const {adapter,file}=await fixture();
+  const other=await (await import("./enrolled-sqlite-adapter")).createEnrolledSqliteAdapter();cleanup.push(()=>other.close());
+  const readonly=await (await import("./enrolled-sqlite-adapter")).createReadonlyEnrolledSqliteAdapter();cleanup.push(()=>readonly.close());
+  const p=ARC_MAINNET_PROFILE,network:string=p.networkId,payer=`0x${"11".repeat(20)}`,payee=`0x${"22".repeat(20)}`;
+  const monthly=await import("./research-monthly"),{a2aRequestHash}=await import("../a2a/order"),{a2aResearchPackage}=await import("../a2a/research-package");
+  await adapter.assertResearchPurchaseAuthority(network);
+  await expect(adapter.assertResearchPurchaseAuthority(ARC_TESTNET_PROFILE.networkId)).rejects.toThrow("profile mismatch");
+  expect(()=>readonly.assertResearchPurchaseAuthority(network)).toThrow("mutation refused");
+  const native=new DatabaseSync(file);cleanup.push(()=>native.close());
+  const claim={network,payer,payee,authorizationId:`0x${"ac".repeat(32)}`,purpose:"resource" as const,requestHash:"a".repeat(64),amountMicros:2000};
+  await adapter.claimResearchPurchase(claim);await other.claimResearchPurchase(claim);
+  await expect(other.claimResearchPurchase({...claim,purpose:"monthly"})).rejects.toThrow("conflict");
+  await expect(other.claimResearchPurchase({...claim,network:ARC_TESTNET_PROFILE.networkId})).rejects.toThrow();
+  expect(native.prepare("SELECT count(*) AS n FROM research_purchase_authorizations").get()?.n).toBe(1);
+  expect(()=>native.prepare("UPDATE research_purchase_authorizations SET amount_micros=1").run()).toThrow();
+  const authorizationId=`0x${"bc".repeat(32)}`,createdAt=new Date().toISOString();
+  const purchase:import("./research-monthly").MonthlyPurchase={format:"keryx-research-monthly-purchase-v2",network,asset:p.usdcAddress.toLowerCase(),gatewayContract:p.gatewayWallet.toLowerCase(),
+    id:monthly.monthlyPurchaseId({network,payer,payee,authorizationId}),payer,payee,authorizationId,transaction:"synthetic-original-settlement",quoteId:"b".repeat(64),createdAt,
+    expiresAt:new Date(Date.parse(createdAt)+monthly.MONTHLY_TERM_MS).toISOString(),creatorBudgetMicros:50000,serviceFeeMicros:180000,totalMicros:380000,researchPackage:a2aResearchPackage("deep")};
+  const seconds=Math.floor(Date.now()/1000),issued={validAfter:String(seconds-600),validBefore:String(seconds+691200),expiresAt:String(seconds+600)};
+  const monthlyClaim={network,payer,payee,authorizationId,purpose:"monthly" as const,requestHash:purchase.quoteId,amountMicros:purchase.totalMicros,issued};
+  await adapter.claimResearchPurchase(monthlyClaim);
+  expect(await adapter.getResearchMonthly(purchase.id)).toBeNull();
+  await expect(adapter.createResearchMonthly(purchase)).rejects.toThrow("Submitted original");
+  await other.claimResearchPurchase({...monthlyClaim,requireExisting:true});
+  expect((await adapter.createResearchMonthly(purchase)).created).toBe(true);
+  expect((await other.createResearchMonthly(purchase)).created).toBe(false);
+  await expect(other.createResearchMonthly({...purchase,transaction:"foreign-transaction"})).rejects.toThrow("replay conflict");
+  await expect(other.createResearchMonthly({...purchase,network:ARC_TESTNET_PROFILE.networkId})).rejects.toThrow();
+  const unlabelled={...purchase};delete unlabelled.format;delete unlabelled.network;delete unlabelled.asset;delete unlabelled.gatewayContract;
+  await expect(other.createResearchMonthly(unlabelled)).rejects.toThrow();
+  const request=(requestId:string,question="Explain original network evidence")=>{
+    const id=monthly.monthlyOrderId(purchase.id,requestId),order={id,queryId:id,authorizationId:authorizationId+":monthly:"+requestId,payer,payee,transaction:purchase.transaction,
+      amountUsdc:purchase.totalMicros/4/1e6,creatorBudgetUsdc:purchase.creatorBudgetMicros/1e6,serviceFeeUsdc:purchase.serviceFeeMicros/4/1e6,researchMode:purchase.researchPackage.researchMode,
+      researchPackage:purchase.researchPackage,status:"running" as const,request:{question,origin:"a2a" as const,monthlyId:purchase.id,network},startedAt:null,workerId:null,
+      executionJournalVersion:1 as const,paymentStartedAt:null,resultSavingAt:null,response:null,errorCode:null,resolution:null,createdAt,updatedAt:createdAt};
+    return {monthlyId:purchase.id,payer,requestId,now:createdAt,order:{...order,requestHash:a2aRequestHash({...order,question})}};
+  };
+  const wrong=request("wrong-network");wrong.order.request.network=ARC_TESTNET_PROFILE.networkId;
+  await expect(adapter.redeemResearchMonthly(wrong)).rejects.toThrow("contract mismatch");
+  const results=await Promise.allSettled(Array.from({length:5},(_,i)=>(i%2?adapter:other).redeemResearchMonthly(request("slot-"+i))));
+  expect(results.filter(x=>x.status==="fulfilled")).toHaveLength(4);expect(results.filter(x=>x.status==="rejected")).toHaveLength(1);
+  expect((await other.redeemResearchMonthly(request("slot-0"))).created).toBe(false);
+  await expect(other.redeemResearchMonthly(request("slot-0","Changed original question"))).rejects.toThrow("replay conflict");
+  const restored=await readonly.getResearchMonthly(purchase.id);
+  expect(restored?.purchase).toEqual(purchase);expect(restored?.redemptions.map(x=>x.slot)).toEqual([0,1,2,3]);
+  expect(native.prepare("SELECT count(*) AS n FROM a2a_orders").get()?.n).toBe(4);
+  expect(native.prepare("SELECT network,product FROM research_purchase_authorizations WHERE authorization_id=?").get(authorizationId)).toEqual({network,product:"monthly"});
+  expect(()=>native.prepare("DELETE FROM research_monthly_redemptions").run()).toThrow();
+},30000);

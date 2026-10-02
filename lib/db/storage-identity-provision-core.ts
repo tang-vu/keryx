@@ -72,6 +72,7 @@ export async function provisionStorageInChild(request: StorageProvisionRequest):
     }
     if (db.prepare("PRAGMA integrity_check(1)").get()?.integrity_check !== "ok") refuseStorage("integrity_failed");
     const snapshot = scanFullStorageSnapshot(db);
+    if (identity.authorityMode !== "mainnet-real" && ["research_purchase_authorizations","research_monthly","research_monthly_redemptions"].some(table=>Object.hasOwn(snapshot.tableCounts,table))) snapshot.enrollmentRefusal="unsupported_table";
     const inspection: StorageEnrollmentInspection = { format: "keryx-storage-enrollment-inspection-v1",
       targetIdentityDigest: held.identity, expectedIdentityDigest: digest, ...snapshot };
     if (request.mode === "inspect") { held.verify(); db.exec("ROLLBACK"); return inspection; }

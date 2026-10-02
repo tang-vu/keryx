@@ -80,6 +80,7 @@ export const SUPABASE_ENROLLED_METHODS = Object.freeze({
   listRecentQueries: "read",
   recordPayment: "write",
   recordPaymentOnce: "write",
+  assertResearchPurchaseAuthority: "unsupported",
   claimResearchPurchase: "unsupported",
   createResearchMonthly: "unsupported",
   getResearchMonthly: "unsupported",

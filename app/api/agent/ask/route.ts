@@ -353,7 +353,7 @@ export async function POST(req: NextRequest) {
       researchPackage,
       status: "running",
       transaction: settle.transaction,
-      request: { question: parsedQuestion.question, model, origin },
+      request: { question: parsedQuestion.question, model, origin, ...(config.profile.name === "arc" ? {network:config.networkId} : {}) },
       startedAt: respondAsync ? null : now,
       workerId: respondAsync ? null : `request:${orderId}`,
       executionJournalVersion: 1,

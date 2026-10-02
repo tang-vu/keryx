@@ -75,8 +75,10 @@ export function admitSqliteHostedPolicy(db: DatabaseSync, value: HostedTreasuryP
  });
  return digest;
 }
-export function sqliteHostedAccounting(db: DatabaseSync, signer: string): HostedTreasuryAccounting {
+export function sqliteHostedAccounting(db: DatabaseSync, signer: string, role?: "public" | "private"): HostedTreasuryAccounting {
  if (!/^0x[0-9a-f]{40}$/.test(signer)) throw new Error("Hosted accounting unavailable");
+ if (role !== undefined && (!["public","private"].includes(role) || db.prepare("SELECT 1 FROM hosted_treasury_policies WHERE signer=? AND role!=?").get(signer,role)))
+   throw new Error("Historical hosted custody role cannot change");
  const rows = db.prepare(`SELECT a.nonce,a.original,a.amount_micro,a.submitted,p.* FROM hosted_treasury_authorizations a
  LEFT JOIN payment_events p ON p.id='x402:'||a.nonce WHERE a.signer=? LIMIT 10001`).all(signer);
  if (rows.length>10000) throw new Error("Hosted accounting inspection limit exceeded");

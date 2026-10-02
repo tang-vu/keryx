@@ -4387,3 +4387,9 @@ independent recovery of the actual signed sender remain mandatory before broadca
 Do not infer that a missing journal hash authorizes another attempt: retain original
 funding evidence and require owner recovery of any uncertain admission. See
 [treasury transaction isolation](docs/treasury-transaction-isolation.md).
+
+## Fresh mainnet research purchase and Monthly authority - 2026-10-02
+
+Keep Monthly's four manually requested Deep research allocations and thirty-day term. Fresh sealed mainnet SQLite installs a canonical original-network purchase claim and v2 entitlement schema, with no historical backfill or testnet catalog adoption. Every seller claims its immutable original authorization before Circle settlement. Monthly adds single-use issued challenge consumption, an exact network/USDC/Gateway entitlement and atomic four-slot redemption; replay cannot change the quote, package, recipient, transaction or original request. Historical ordinary testnet records remain on their original rail; existing enrolled testnet storage refuses this newer domain. Mainnet Supabase remains staged until independently generated native schema evidence exists.
+
+Require actual native purchase writer capability before quoting or accepting a prepaid purchase. The hosted readiness check derives only the dedicated key's public address, compares it to the reviewed sealed policy, refuses historical public/private role reassignment and checks retained accounting/current known capacity. It neither signs, reserves nor funds, and is not a promise of future operating capacity. Actual execution still admits each full original through the hosted journal before signing. Preserve original uncertainty, cumulative signer caps and owner-operated prefunding. Normal mainnet wallet/API/CLI/MCP access has no invitation restriction or special small pilot ceiling.

@@ -146,10 +146,11 @@ export const ENROLLED_SQLITE_METHOD_ACCESS = Object.freeze({
   iterateRecentQueries: "read",
   recordPayment: "write",
   recordPaymentOnce: "write",
-  claimResearchPurchase: "unsupported",
-  createResearchMonthly: "unsupported",
-  getResearchMonthly: "unsupported",
-  redeemResearchMonthly: "unsupported",
+  assertResearchPurchaseAuthority: "mainnet-read",
+  claimResearchPurchase: "mainnet-write",
+  createResearchMonthly: "mainnet-write",
+  getResearchMonthly: "mainnet-read",
+  redeemResearchMonthly: "mainnet-write",
   createA2aOrder: "write",
   getA2aOrder: "read",
   listA2aOrdersByPayer: "read",
@@ -242,8 +243,8 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
     for (const name of reviewed) {
       const access = ENROLLED_SQLITE_METHOD_ACCESS[name as keyof typeof ENROLLED_SQLITE_METHOD_ACCESS];
       Object.defineProperty(facade, name, { enumerable: true, value: (...args: unknown[]) => {
-        if (access === "unsupported") throw new Error("Research purchase authority is unavailable in enrolled storage");
-        if (readOnly && access === "write") throw new Error("Readonly enrolled SQLite mutation refused");
+        if (access.startsWith("mainnet-") && deployment.identity.authorityMode !== "mainnet-real") throw new Error("Research purchase authority is unavailable in enrolled storage");
+        if (readOnly && (access === "write" || access === "mainnet-write" || name === "assertResearchPurchaseAuthority")) throw new Error("Readonly enrolled SQLite mutation refused");
         assert();
         const result = Reflect.apply(Reflect.get(core, name), core, args);
         if (name === "iterateRecentQueries") {
