@@ -27,7 +27,7 @@ export function assertPaymentRuntimeConfiguration(env: PaymentRuntimeEnvironment
   return profile;
 }
 /** No private values or registry startup dependency in browser builds. Node strictly checks
- * matching public/server rails; endpoints and contracts come from immutable canonical pins.
+ * matching public/server rails; trusted Node RPC failover still requires operation attestation.
  */
 export function paymentRuntimeConfig() {
   const profile = typeof process !== "undefined" && process.release?.name === "node" ? assertPaymentRuntimeConfiguration({
@@ -36,8 +36,10 @@ export function paymentRuntimeConfig() {
     KERYX_GATEWAY_MINTER: process.env.KERYX_GATEWAY_MINTER, KERYX_FORCE_OFFLINE: process.env.KERYX_FORCE_OFFLINE,
     KERYX_MAX_TIMEOUT_SECONDS: process.env.KERYX_MAX_TIMEOUT_SECONDS,
   }) : browserPaymentProfile();
+  const node = typeof process !== "undefined" && process.release?.name === "node";
   return Object.freeze({ profile, network: profile.name, networkId: profile.networkId, chainId: profile.chainId,
-    rpcUrl: profile.rpcUrl, gatewayBalanceApi: `${profile.gatewayApiUrl}/v1/balances`, gatewayApiUrl: profile.gatewayApiUrl,
+    rpcUrl: node ? process.env.KERYX_RPC_URL ?? profile.rpcUrl : profile.rpcUrl,
+    gatewayBalanceApi: `${profile.gatewayApiUrl}/v1/balances`, gatewayApiUrl: profile.gatewayApiUrl,
     usdcAddress: profile.usdcAddress, gatewayWallet: profile.gatewayWallet, gatewayMinter: profile.gatewayMinter,
     cctpDomain: profile.cctpDomain, explorerUrl: profile.explorerUrl,
     maxTimeoutSeconds: paymentAuthorizationLifetime(profile, typeof process !== "undefined" && process.release?.name === "node"
