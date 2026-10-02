@@ -2,18 +2,28 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePublicClient, useWalletClient } from "wagmi";
-import { formatUnits, type PublicClient } from "viem";
+import { formatUnits, parseUnits, type PublicClient } from "viem";
 import { createFundingRecord, listFundingRecords, cancelFundingRecord } from "@/lib/buyer/funding-journal";
 import { submitFundingStep, recoverFundingStep, recoverFundingReplacement } from "@/lib/buyer/funding-client";
 import { connectedBuyerWallet } from "@/lib/buyer/connected-wallet";
-import { type FundingRecord, type FundingStep } from "@/lib/buyer/funding-policy";
-import { parseBuyerBudget } from "@/lib/a2a/buyer-workspace";
+import { fundingAmountSchema, type FundingRecord, type FundingStep } from "@/lib/buyer/funding-policy";
 import { BUYER_GATEWAY } from "@/lib/buyer/protocol";
 import { fundingReadiness, hasUncertainFunding } from "@/lib/buyer/funding-readiness";
 import { ResearchFundingActivity } from "./research-funding-activity";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "@/lib/arc-network-profile";
 
 const control = "border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40";
+function fundingExplorer(record: FundingRecord) {
+  if (record.network === ARC_MAINNET_PROFILE.networkId) return ARC_MAINNET_PROFILE.explorerUrl;
+  if (record.network === ARC_TESTNET_PROFILE.networkId) return ARC_TESTNET_PROFILE.explorerUrl;
+  throw new Error("Original funding network unavailable");
+}
+function reviewedDeposit(value: string) {
+  if (!/^(0|[1-9]\d*)(?:\.\d{1,6})?$/.test(value)) return null;
+  const parsed = fundingAmountSchema.safeParse(parseUnits(value, 6).toString());
+  return parsed.success ? parsed.data : null;
+}
 
 function outcomeMessage(record: FundingRecord, step: FundingStep) {
   const leg = record[step];
@@ -31,6 +41,7 @@ function outcomeMessage(record: FundingRecord, step: FundingStep) {
 export function ResearchFunding({ payer, initialAmount, requiredMicros, creditRevision = 0, disabled, onBusy, onChanged }: {
   payer: string; initialAmount: number; requiredMicros: string; creditRevision?: number; disabled: boolean; onBusy: (busy: boolean) => void; onChanged: () => void;
 }) {
+  const profile = browserPaymentProfile();
   const { data: wallet } = useWalletClient();
   const chain = usePublicClient({ chainId: browserPaymentProfile().chainId }) as PublicClient | undefined;
   const [amount, setAmount] = useState(String(initialAmount));
@@ -164,18 +175,18 @@ export function ResearchFunding({ payer, initialAmount, requiredMicros, creditRe
     <p className="mt-3 font-serif text-sm">Approve an exact amount, then deposit it into your own Gateway balance. Each transaction needs a wallet confirmation and costs gas. This does not buy research or pay Keryx.</p>
     <p className="mt-2 break-all font-mono text-xs">{browserPaymentProfile().label} Gateway: {BUYER_GATEWAY}</p>
     {!active && <div className="mt-4 space-y-3">
-      <label className="grid gap-2 font-mono text-xs">Deposit amount (testnet USDC)<input value={amount} disabled={busy || disabled} onChange={event => { setAmount(event.target.value); setAccepted(false); }} inputMode="decimal" className="w-full border border-line bg-paper p-3 sm:w-48" /></label>
+      <label className="grid gap-2 font-mono text-xs">Deposit amount ({profile.label} USDC)<input value={amount} disabled={busy || disabled} onChange={event => { setAmount(event.target.value); setAccepted(false); }} inputMode="decimal" className="w-full border border-line bg-paper p-3 sm:w-48" /></label>
       <label className="flex items-start gap-3 font-serif text-sm"><input type="checkbox" checked={accepted} disabled={busy || disabled} onChange={event => setAccepted(event.target.checked)} className="mt-1" /><span>I want to add this amount to my own Gateway balance, plus transaction gas. I will keep my wallet transaction hashes for recovery.</span></label>
-      <button type="button" disabled={busy || disabled || !accepted || !wallet || !parseBuyerBudget(amount, 1)} className={control} onClick={() => {
+      <button type="button" disabled={busy || disabled || !accepted || !wallet || !reviewedDeposit(amount)} className={control} onClick={() => {
         if (!wallet) return;
         void run(async signal => {
-          const value = parseBuyerBudget(amount, 1); if (!value) throw new Error("Invalid amount");
+          const value = reviewedDeposit(amount); if (!value) throw new Error("Invalid amount");
           await connectedBuyerWallet(wallet, payer, signal).readWallet();
-          signal.throwIfAborted(); await createFundingRecord(payer, String(Math.round(value * 1e6)));
+          signal.throwIfAborted(); await createFundingRecord(payer, value);
           if (live.current) { setAccepted(false); setLookupHash(""); setMessage("Funding plan saved. Review the approval step below; no transaction has been sent."); }
         });
       }}>Prepare deposit</button>
-      <p className="font-serif text-xs text-ink-3">Up to 1 testnet USDC per deposit. Leave wallet USDC for gas. Browser storage can be lost; wallet activity remains the source for transaction hashes.</p>
+      <p className="font-serif text-xs text-ink-3">{profile.testnet ? "Up to 1 testnet USDC per deposit. " : "Review your chosen mainnet amount before funding. "}Leave wallet USDC for gas. Browser storage can be lost; wallet activity remains the source for transaction hashes.</p>
     </div>}
     {active && <div className="mt-4 space-y-3">
       <p className="font-mono text-xs">Planned deposit: {formatUnits(BigInt(active.amount), 6)} USDC</p>
@@ -188,8 +199,8 @@ export function ResearchFunding({ payer, initialAmount, requiredMicros, creditRe
           <p className="mt-2 font-serif text-xs">If your wallet sped up or cancelled this transaction, enter the replacement hash. This check sends no transaction and requires finalized evidence from the configured RPC.</p>
           <button type="button" className={`${control} mt-2`} disabled={busy || disabled || !/^0x[a-fA-F0-9]{64}$/.test(lookupHash.trim())} onClick={() => recoverReplacement(step)}>Check replacement transaction</button>
         </>}
-        {active[step].hash && <a className="mt-2 block break-all font-mono text-xs underline" href={`https://testnet.arcscan.app/tx/${active[step].hash}`} target="_blank" rel="noreferrer">View transaction on ArcScan</a>}
-        {active[step].originalHash && <a className="mt-2 block break-all font-mono text-xs underline" href={`https://testnet.arcscan.app/tx/${active[step].originalHash}`} target="_blank" rel="noreferrer">Original transaction</a>}
+        {active[step].hash && <a className="mt-2 block break-all font-mono text-xs underline" href={`${fundingExplorer(active)}/tx/${active[step].hash}`} target="_blank" rel="noreferrer">View original network transaction</a>}
+        {active[step].originalHash && <a className="mt-2 block break-all font-mono text-xs underline" href={`${fundingExplorer(active)}/tx/${active[step].originalHash}`} target="_blank" rel="noreferrer">Original transaction</a>}
       </div>)}
       {["ready", "rejected"].includes(active.deposit.status) && ["ready", "rejected", "confirmed"].includes(active.approval.status) && <button type="button" className={control} disabled={busy || disabled} onClick={() => {
         void run(async () => { if (!await cancelFundingRecord(active.id)) throw new Error("Funding state changed"); if (live.current) setMessage("Local funding plan cancelled. Any confirmed token approval remains on chain."); });
@@ -200,7 +211,7 @@ export function ResearchFunding({ payer, initialAmount, requiredMicros, creditRe
     }}>Refresh funding status</button>
     {rows.some(row => row.deposit.status === "confirmed") && <p className="mt-3 font-serif text-sm">A saved deposit is confirmed on chain. Check the current Gateway balance before buying; previous deposits may already have been spent.</p>}
     <p role="status" className="mt-3 font-serif text-sm">{message}</p>
-    <ul className="mt-3 space-y-2">{rows.filter(row => !row.activePayer).slice(0, 5).map(row => <li key={row.id} className="font-mono text-xs">{formatUnits(BigInt(row.amount), 6)} USDC · {row.cancelled ? "plan cancelled" : row.deposit.status === "confirmed" ? "deposit confirmed" : row.deposit.status === "replaced" || row.approval.status === "replaced" ? "original replaced by a different call; deposit not confirmed" : "transaction reverted"}{(row.deposit.hash ?? row.approval.hash) && <> · <a className="underline" href={`https://testnet.arcscan.app/tx/${row.deposit.hash ?? row.approval.hash}`} target="_blank" rel="noreferrer">Transaction</a></>}{(row.deposit.originalHash ?? row.approval.originalHash) && <> · <a className="underline" href={`https://testnet.arcscan.app/tx/${row.deposit.originalHash ?? row.approval.originalHash}`} target="_blank" rel="noreferrer">Original transaction</a></>}</li>)}</ul>
+    <ul className="mt-3 space-y-2">{rows.filter(row => !row.activePayer).slice(0, 5).map(row => <li key={row.id} className="font-mono text-xs">{formatUnits(BigInt(row.amount), 6)} USDC · {row.cancelled ? "plan cancelled" : row.deposit.status === "confirmed" ? "deposit confirmed" : row.deposit.status === "replaced" || row.approval.status === "replaced" ? "original replaced by a different call; deposit not confirmed" : "transaction reverted"}{(row.deposit.hash ?? row.approval.hash) && <> · <a className="underline" href={`${fundingExplorer(row)}/tx/${row.deposit.hash ?? row.approval.hash}`} target="_blank" rel="noreferrer">Transaction</a></>}{(row.deposit.originalHash ?? row.approval.originalHash) && <> · <a className="underline" href={`${fundingExplorer(row)}/tx/${row.deposit.originalHash ?? row.approval.originalHash}`} target="_blank" rel="noreferrer">Original transaction</a></>}</li>)}</ul>
     <ResearchFundingActivity key={payer.toLowerCase()} payer={payer} chain={chain} />
   </details></div>;
 }
