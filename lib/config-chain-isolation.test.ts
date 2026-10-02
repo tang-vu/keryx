@@ -4,6 +4,9 @@ import { assertArcTestnetConfiguration, config } from "./config";
 afterEach(() => vi.unstubAllEnvs());
 
 describe("Arc testnet configuration isolation", () => {
+  it("refuses offline payment bypass on the selected mainnet profile", () => {
+    expect(() => assertArcTestnetConfiguration({KERYX_NETWORK:"arc",NEXT_PUBLIC_KERYX_NETWORK:"arc",KERYX_FORCE_OFFLINE:"1"})).toThrow("offline payment bypass");
+  });
   it("accepts the deployed testnet profile with case-insensitive addresses", () => {
     expect(() => assertArcTestnetConfiguration({})).not.toThrow();
     expect(() => assertArcTestnetConfiguration({
