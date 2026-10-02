@@ -31,7 +31,7 @@ it("checks native custody before checkout, retains selected receipt/claim and re
   for (const [name, value] of Object.entries({ KERYX_STORAGE_MANIFEST: manifest, KERYX_SQLITE_PATH: file,
     KERYX_FORCE_OFFLINE: "0", CONTENT_MASTER_KEY: randomBytes(32).toString("hex"), KERYX_NETWORK: "arc", NEXT_PUBLIC_KERYX_NETWORK: "arc",
     KERYX_REGISTRY_ADDRESS: `0x${"55".repeat(20)}`, NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS: `0x${"55".repeat(20)}`,
-    BASE_URL: "https://keryx.cc", SELLER_ADDRESS: payee, KERYX_MONTHLY_ENABLED: "1", KERYX_A2A_DEFAULT_BUDGET: "0.45",
+    BASE_URL: "https://keryx.cc", SELLER_ADDRESS: payee, KERYX_MONTHLY_ENABLED: "1", KERYX_DEFAULT_BUDGET: "0.45", KERYX_A2A_DEEP_FEE: "0.1",
     KERYX_MAINNET_TREASURY_PRIVATE_KEY: treasuryKey })) vi.stubEnv(name, value);
   const { storageIdentityDigest } = await import("../db/storage-identity"), policies = await import("../payments/hosted-treasury-policy");
   const policy = { format: "keryx-hosted-treasury-policy-v1" as const, network: "eip155:5042" as const,
@@ -67,6 +67,7 @@ it("checks native custody before checkout, retains selected receipt/claim and re
   const client = await import("./client"), { buyerTypedData } = await import("../buyer/protocol");
   await (await import("./readiness")).monthlyAdmissionQuote(db);
   const quote = await client.fetchMonthlyQuote(http);
+  expect(quote).toMatchObject({ creatorBudgetMicros: 450000, totalMicros: 1980000 });
   // An actual dedicated key mismatch refuses before even reading vendor capacity or issuing an authorization.
   vi.stubEnv("KERYX_MAINNET_TREASURY_PRIVATE_KEY", `0x${"88".repeat(32)}`);
   const before = vendorCalls;
