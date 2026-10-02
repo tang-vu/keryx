@@ -128,11 +128,15 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
       if (!hold) child.stdin?.end();
       return { child, result, completed: () => completed };
     };
+    const enrollmentStarted = performance.now();
     const enrollment = concurrentOwnerSql(`begin;set local application_name='keryx-revoke-enrollment';
       select keryx_storage.enroll(${literal(identity)},'${before}');`, true);
     let refresh: ReturnType<typeof concurrentOwnerSql> | undefined;
     try {
-      const deadline = performance.now() + 10_000;
+      // Actual CPU-active enrollment has exceeded 10s on the one-CPU fixture.
+      // Let its unchanged 15s SQL bound report success or a real statement error;
+      // the 20s child cap still bounds the complete transaction and receipt.
+      const enrollmentDeadline = enrollmentStarted + 16_000;
       while (sql("select exists(select 1 from pg_stat_activity where datname=current_database() and application_name='keryx-revoke-enrollment' and state='idle in transaction')") !== "t") {
         const exited = enrollment.completed();
         if (exited) {
@@ -141,18 +145,20 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
           const diagnostic = exited.diagnostic.split("\n").find(line => /^ERROR:/.test(line))?.slice(0, 240) ?? "owner process exited";
           throw new Error(`Actual enrollment exited before publication: ${diagnostic}`);
         }
-        if (performance.now() >= deadline) {
+        if (performance.now() >= enrollmentDeadline) {
           // Classify this owned statement without logging its identity argument.
           const state = sql("select coalesce(jsonb_agg(jsonb_build_object('state',state,'waitType',wait_event_type,'wait',wait_event,'stage',case when ltrim(query) like 'select keryx_storage.enroll(%' then 'enroll' when ltrim(query) like 'select keryx_storage.snapshot_digest(%' then 'snapshot' else 'other' end,'elapsedMs',floor(extract(epoch from clock_timestamp()-query_start)*1000)))::text,'[]') from pg_stat_activity where datname=current_database() and application_name='keryx-revoke-enrollment'");
           throw new Error(`Actual enrollment precommit boundary unavailable: ${state}`);
         }
         await new Promise(resolve => setTimeout(resolve, 50));
       }
+      process.stdout.write(`PASS actual enrollment held before commit elapsedMs=${Math.floor(performance.now() - enrollmentStarted)}\n`);
       const migrationStart = migrationSql.indexOf("-- Generation-aware session revocation.");
       assert(migrationStart > 0, "Actual generation migration must be supplied");
       refresh = concurrentOwnerSql("set application_name='keryx-revoke-refresher';" + migrationSql.slice(migrationStart));
+      const contentionDeadline = performance.now() + 5_000;
       while (sql("select exists(select 1 from pg_stat_activity a join pg_locks l on l.pid=a.pid where a.datname=current_database() and a.application_name='keryx-revoke-refresher' and l.locktype='advisory' and not l.granted)") !== "t") {
-        assert(performance.now() < deadline, "Source refresher waits on enrollment's canonical first mutex");
+        assert(performance.now() < contentionDeadline, "Source refresher waits on enrollment's canonical first mutex");
         await new Promise(resolve => setTimeout(resolve, 50));
       }
       // Explicit release only after the contender is proven blocked. No timing
