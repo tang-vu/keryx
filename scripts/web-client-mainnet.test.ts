@@ -14,15 +14,15 @@ const roots:string[]=[];afterEach(()=>{for(const root of roots.splice(0))fs.rmSy
 afterAll(()=>vi.unstubAllEnvs());
 const owner=privateKeyToAccount(`0x${"11".repeat(32)}`),payout=privateKeyToAccount(`0x${"22".repeat(32)}`).address.toLowerCase();
 const epoch="00000000-0000-4000-8000-000000000001",reqId="00000000-0000-4000-8000-000000000002",nonce=`0x${"33".repeat(32)}`;
-function fixture(lost=false){
+function fixture(lost=false,duplicate=false){
   const directory=privateHeadlessTestDirectory();roots.push(directory);
   vi.stubEnv("KERYX_HEADLESS_OWNER_PRIVATE_KEY",`0x${"11".repeat(32)}`);vi.stubEnv("KERYX_HEADLESS_WRAPPING_KEY",`0x${"55".repeat(32)}`);
   vi.stubEnv("KERYX_HEADLESS_STATE_DIRECTORY",directory);vi.stubEnv("KERYX_BASE_URL","https://keryx.cc");
   const context=browserSessionCustodyContext(profile,"https://keryx.cc",owner.address),file=path.join(directory,`${context.storageNamespace}.sqlite`);
-  const requests:string[]=[];let consent:Record<string,unknown>,proof:Record<string,unknown>;
+  const requests:string[]=[],signals:Array<{path:string;signal:AbortSignal}>=[];let consent:Record<string,unknown>,proof:Record<string,unknown>;
   const json=(v:unknown)=>Response.json(v);
   const fetchImpl:typeof fetch=async(input,init)=>{
-    const url=new URL(String(input));requests.push(url.pathname);expect(url.origin).toBe(context.origin);expect(init?.redirect).toBe("error");
+    const url=new URL(String(input));requests.push(url.pathname);signals.push({path:url.pathname,signal:init!.signal as AbortSignal});expect(url.origin).toBe(context.origin);expect(init?.redirect).toBe("error");
     const body=init?.body?JSON.parse(String(init.body)):undefined;
     if(url.pathname==="/api/auth/nonce")return json({nonce:"syntheticnonce1234"});
     if(url.pathname==="/api/auth/verify"){expect(new SiweMessage(body.message).chainId).toBe(5042);return json({ok:true});}
@@ -42,7 +42,7 @@ function fixture(lost=false){
       requirements:{scheme:"exact",network:profile.networkId,asset:profile.usdcAddress,amount:"1000",payTo:payout,maxTimeoutSeconds:604900,
         extra:{name:"GatewayWalletBatched",version:"1",verifyingContract:profile.gatewayWallet}}});
     if(url.pathname==="/api/sources")return json({sources:[{id:"publication",onchainId:`0x${"44".repeat(32)}`} ]});
-    if(url.pathname==="/api/ask")return new Response(`event: sign-request\ndata: ${JSON.stringify({reqId,requirements:{network:"eip155:5042002",payTo:owner.address,amount:"999999"}})}\n\nevent: done\ndata: {"answer":"Synthetic hermetic answer"}\n\n`);
+    if(url.pathname==="/api/ask"){const notification=`event: sign-request\ndata: ${JSON.stringify({reqId,requirements:{network:"eip155:5042002",payTo:owner.address,amount:"999999"}})}\n\n`;return new Response(notification+(duplicate?notification:"")+`event: done\ndata: {"answer":"Synthetic hermetic answer"}\n\n`);}
     if(url.pathname==="/api/ask/sign"){
       const header=JSON.parse(atob(body.paymentHeader)),a=header.authorization;
       const signer=await recoverTypedDataAddress({domain:{name:"GatewayWalletBatched",version:"1",chainId:5042,verifyingContract:profile.gatewayWallet},
@@ -58,7 +58,7 @@ function fixture(lost=false){
       authorization:{consent,ownerSignature:proof.ownerSignature,sessionSignature:proof.sessionSignature},settlementConfirmed:false,statusAuthority:"retained-journal-only",retryAuthorized:false});
     throw new Error("Unexpected hermetic endpoint");
   };
-  return{directory,file,requests,ports:{fetchImpl,readSource:async()=>({fetchPayTo:payout,creator:payout,wallets:new Set([payout]),listPriceUsdc:0.001,onchain:true,active:true})}};
+  return{directory,file,requests,signals,ports:{fetchImpl,readSource:async()=>({fetchPayTo:payout,creator:payout,wallets:new Set([payout]),listPriceUsdc:0.001,onchain:true,active:true})}};
 }
 it("normal mainnet headless uses authenticated challenge, native encrypted custody and committed exposure before paid POST",async()=>{
   const f=fixture();vi.spyOn(console,"log").mockImplementation(()=>{});await runHeadlessMainnet(["ask","Synthetic question","1000","2000"],f.ports);
@@ -66,11 +66,29 @@ it("normal mainnet headless uses authenticated challenge, native encrypted custo
   expect(fs.readFileSync(f.file).toString()).not.toContain("11".repeat(32));
 });
 it("lost signed response preserves originals and blocks a second research/signature",async()=>{
-  const f=fixture(true);await expect(runHeadlessMainnet(["ask","Synthetic question","1000","2000"],f.ports)).rejects.toThrow();
+  const f=fixture(true),log=vi.spyOn(console,"log").mockImplementation(()=>{}),error=vi.spyOn(console,"error").mockImplementation(()=>{});
+  await runHeadlessMainnet(["ask","Synthetic question","1000","2000"],f.ports);
+  expect(log).toHaveBeenCalledWith("Synthetic hermetic answer");expect(error).toHaveBeenCalledWith(expect.stringContaining("Continuing research"));
   const original=fs.readFileSync(f.file);await expect(runHeadlessMainnet(["ask","Another question","1000","2000"],f.ports)).rejects.toThrow("preserve original");
   expect(f.requests.filter(p=>p==="/api/ask/sign")).toHaveLength(1);expect(f.requests.filter(p=>p==="/api/ask")).toHaveLength(1);expect(fs.readFileSync(f.file)).toEqual(original);
 });
 it("HTTP mainnet refuses before custody creation, owner signing or transport",async()=>{
   const f=fixture();vi.stubEnv("KERYX_BASE_URL","http://keryx.cc");await expect(runHeadlessMainnet(["ask","Synthetic question","1000","2000"],f.ports)).rejects.toThrow();
   expect(f.requests).toEqual([]);expect(fs.readdirSync(f.directory)).toEqual([]);
+});
+
+it("uses distinct bounded whole-research and control deadlines without extending payment authority",async()=>{
+ const originalTimeout=AbortSignal.timeout.bind(AbortSignal),deadlines:number[]=[];
+ vi.spyOn(AbortSignal,"timeout").mockImplementation(ms=>{deadlines.push(ms);return originalTimeout(ms);});
+ const f=fixture();vi.spyOn(console,"log").mockImplementation(()=>{});
+ await runHeadlessMainnet(["ask","Synthetic question","1000","2000"],f.ports);
+ expect(deadlines.filter(ms=>ms===600_000)).toHaveLength(1);
+ expect(deadlines.filter(ms=>ms===60_000).length).toBeGreaterThan(1);
+});
+
+it("a duplicate sign notification after lost ack never starts a second authorization or paid POST",async()=>{
+ const f=fixture(true,true);vi.spyOn(console,"log").mockImplementation(()=>{});vi.spyOn(console,"error").mockImplementation(()=>{});
+ await runHeadlessMainnet(["ask","Synthetic question","1000","2000"],f.ports);
+ expect(f.requests.filter(p=>p==="/api/ask/sign")).toHaveLength(1);
+ expect(f.requests.filter(p=>p==="/api/ask/challenge")).toHaveLength(1);
 });

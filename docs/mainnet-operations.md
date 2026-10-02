@@ -200,3 +200,9 @@ signatures. A retained server journal with a transaction hash is recorded server
 this read is not an independently observed chain receipt. It grants no retry authority
 and never refunds local exposure. Older unreleased v1 headless files are refused in place
 with custody retained; the command never rotates their signer or adopts their ledger.
+
+Headless control requests use a 60-second deadline; the complete research SSE has
+a separate 10-minute deadline. A payment-leg refusal or lost sign acknowledgment
+retains its original exposure and encrypted header, emits a fixed concise stderr
+notice, and continues to the completed answer. It never signs that original again
+or clears uncertainty. Malformed SSE/protocol data still fails the run.

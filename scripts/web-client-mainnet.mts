@@ -52,9 +52,9 @@ export async function runHeadlessMainnet(args: string[], ports: {
       return;
     }
     const fetchImpl = ports.fetchImpl ?? fetch, jar = new Map<string,string>();
-    async function request(path: string, method = "GET", body?: unknown) {
+    async function request(path: string, method = "GET", body?: unknown, deadlineMs = 60_000) {
       if (!path.startsWith("/") || path.startsWith("//")) refuse();
-      const response = await fetchImpl(`${origin}${path}`,{method,redirect:"error",signal:AbortSignal.timeout(60000),
+      const response = await fetchImpl(`${origin}${path}`,{method,redirect:"error",signal:AbortSignal.timeout(deadlineMs),
         headers:{"Content-Type":"application/json",Origin:origin,Cookie:[...jar].map(([k,v])=>`${k}=${v}`).join("; ")},
         ...(body === undefined ? {} : {body:JSON.stringify(body)})});
       for (const cookie of response.headers.getSetCookie()) {const pair=cookie.split(";",1)[0],at=pair.indexOf("=");if(at>0)jar.set(pair.slice(0,at),pair.slice(at+1));}
@@ -106,9 +106,11 @@ export async function runHeadlessMainnet(args: string[], ports: {
       };
     }
     const bot=process.env.KERYX_BOT_KEY, askPath=bot?`/api/ask?bot=${encodeURIComponent(bot)}`:"/api/ask";
-    const response=await request(askPath,"POST",{question,budget:Number(budget)/1e6,sessionId:context.owner});
+    // Control RPCs retain 60s; the whole research response/body has a separate
+    // bounded 10-minute deadline, including slow accepted-sign/lost-ack journeys.
+    const response=await request(askPath,"POST",{question,budget:Number(budget)/1e6,sessionId:context.owner},600_000);
     if(!response.body)refuse();
-    const reader=response.body!.getReader(),decoder=new TextDecoder();let buffer="",received=0,complete=false;
+    const reader=response.body!.getReader(),decoder=new TextDecoder();let buffer="",received=0,complete=false;const attemptedRequests=new Set<string>();
     try {
       while(!complete){
         const chunk=await reader.read();if(chunk.done)break;received+=chunk.value.length;if(received>16000000)refuse();
@@ -120,14 +122,21 @@ export async function runHeadlessMainnet(args: string[], ports: {
           const raw=lines.filter(l=>l.startsWith("data:")).map(l=>l.slice(5).trim()).join("\n");if(!raw)continue;
           const data=JSON.parse(raw) as {reqId?:unknown;answer?:unknown};
           if(event==="sign-request"){
-            if(typeof data.reqId!=="string")refuse();const reqId=data.reqId as string;
-            const runtime=createBrowserSessionRuntime(key,{json,readSource:readSource!,reserve:(n,e,nonce,amount,limit,q,original)=>state.reserve(n,e,nonce,amount,limit,q,original)});
-            const {paymentHeader}=await runtime.authorizePayment(reqId,questionScope);
-            const authorization=JSON.parse(atob(paymentHeader)).authorization as {nonce:string};
-            await state.retainHeader(authorization.nonce,paymentHeader);
-            await json("/api/ask/sign","POST",{sessionId:context.owner,reqId,paymentHeader});
+            if(typeof data.reqId!=="string"||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(data.reqId))refuse();const reqId=data.reqId as string;
+            if(attemptedRequests.has(reqId))continue;attemptedRequests.add(reqId);
+            try {
+              const runtime=createBrowserSessionRuntime(key,{json,readSource:readSource!,reserve:(n,e,nonce,amount,limit,q,original)=>state.reserve(n,e,nonce,amount,limit,q,original)});
+              const {paymentHeader}=await runtime.authorizePayment(reqId,questionScope);
+              const authorization=JSON.parse(atob(paymentHeader)).authorization as {nonce:string};
+              await state.retainHeader(authorization.nonce,paymentHeader);
+              await json("/api/ask/sign","POST",{sessionId:context.owner,reqId,paymentHeader});
+            } catch {
+              // Per-leg refusal/uncertainty is not permission to repeat or release.
+              // Preserve exposure/ciphertext and let the backend degrade this source.
+              console.error("Payment leg refused or uncertain; retain original attempts for owner recovery. Continuing research.");
+            }
           }else if(event==="done"){
-            complete=true;if(typeof data.answer==="string")console.log(data.answer);
+            if(typeof data.answer!=="string")refuse();complete=true;console.log(data.answer);
             console.log("Research complete. Original payment attempts remain retained; read-only recovery verifies their status.");
           }else if(event==="error")refuse();
         }
