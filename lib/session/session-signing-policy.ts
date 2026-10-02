@@ -1,10 +1,11 @@
 import { decodeFunctionData, encodeFunctionData, erc20Abi, isAddress, type Hex } from "viem";
 import type { TypedDataPayload } from "./session-signer-protocol";
+import { ARC_TESTNET_PROFILE } from "../arc-network-profile";
 
 // Independent, public testnet policy. Never derive signing authority from server config.
-export const SESSION_CHAIN_ID = 5042002;
-export const SESSION_USDC = "0x3600000000000000000000000000000000000000";
-export const SESSION_GATEWAY = "0x0077777d7EBA4688BDeF3E311b846F25870A19B9";
+export const SESSION_CHAIN_ID = ARC_TESTNET_PROFILE.chainId;
+export const SESSION_USDC = ARC_TESTNET_PROFILE.usdcAddress;
+export const SESSION_GATEWAY = ARC_TESTNET_PROFILE.gatewayWallet;
 export const SESSION_DEPOSIT_ABI = [{ type: "function", name: "deposit", stateMutability: "nonpayable",
   inputs: [{ name: "token", type: "address" }, { name: "value", type: "uint256" }], outputs: [] }] as const;
 const PAYMENT_FIELDS = [

@@ -15,6 +15,7 @@
  */
 
 import { config } from "../config";
+import { ARC_TESTNET_PROFILE } from "../arc-network-profile";
 import type {
   ArticleOfferRef,
   Author,
@@ -244,7 +245,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
       queryId,
       grantEpoch: this.grantEpoch,
       signer: this.sessAddr,
-      network: "eip155:5042002",
+      network: ARC_TESTNET_PROFILE.networkId,
       token: requirements.asset,
       gatewayContract: requirements.extra.verifyingContract,
       sourceId: source.id,
@@ -266,7 +267,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
         amountUsdc: amount,
         weight,
         rationale,
-        network: "eip155:5042002",
+        network: ARC_TESTNET_PROFILE.networkId,
         grantEpoch: this.grantEpoch,
         origin: "web",
       },
