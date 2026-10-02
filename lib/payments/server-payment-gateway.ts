@@ -2,10 +2,10 @@ import { config } from "../config";
 import type { ArticleOfferRef, Author, PaymentRecord, Source, SourceItem, SourceItemIdentity } from "../types";
 import { matchesSourceItemIdentity, sourceItemIdentity } from "../sources/source-item-asset";
 import { articlePaidPath } from "../offers/resolve-article-offer";
-import { sourceFetchPayTo } from "../registry/source-fetch-payto";
+import { sourceFetchPayTo, sourceFetchTerms } from "../registry/source-fetch-payto";
 import { makePayment, type FetchResult, type PaymentGateway } from "./payment-gateway";
 import { PaymentPendingError, PaymentSettledError } from "./payment-state";
-import { payWithServerSigner, type ServerX402Attempt, type BatchPayloadSigner } from "./server-x402-client";
+import { payWithServerSigner, type ServerX402Attempt, type BatchPayloadSigner, type ServerX402Submission } from "./server-x402-client";
 import type { privateCreatorJournal } from "./private-creator-journal";
 
 export interface PaymentJournalContext { queryId: string; kind: "fetch" | "citation"; sourceId: string; itemId: string | null }
@@ -15,7 +15,9 @@ export abstract class ServerPaymentGateway implements PaymentGateway {
   readonly mode = "real" as const;
   protected abstract spend: { address: string };
   protected abstract batchScheme: BatchPayloadSigner;
-  protected paymentJournal?: (input: PaymentJournalContext) => ReturnType<typeof privateCreatorJournal>;
+  protected paymentJournal?: (input: PaymentJournalContext) => ReturnType<typeof privateCreatorJournal> & {
+    beforeSignedSubmit?: (submission: Readonly<ServerX402Submission>, headerHash: string) => Promise<void> };
+  protected signerForPayment(_input: PaymentJournalContext): BatchPayloadSigner { return this.batchScheme; }
   abstract ensureFunded(budget: number): Promise<{ address: string; depositTx?: string }>;
   agentAddress(): string { return this.spend.address; }
 
@@ -55,8 +57,9 @@ export abstract class ServerPaymentGateway implements PaymentGateway {
       expectedPayee: fetchPayee,
       expectedAmount: priceUsdc,
       payer: this.spend.address,
-      signer: this.batchScheme,
+      signer: this.signerForPayment({ queryId, kind: "fetch", sourceId: source.id, itemId: item?.id ?? null }),
       beforeSubmit: journal?.beforeSubmit,
+      beforeSignedSubmit: journal?.beforeSignedSubmit,
     });
     const outcome = journal ? await journal.recordOutcome(observed) : null;
     const attempt = outcome?.attempt ?? observed;
@@ -101,6 +104,10 @@ export abstract class ServerPaymentGateway implements PaymentGateway {
     queryId: string;
     rationale: string;
   }): Promise<PaymentRecord> {
+    if (config.profile.name === "arc") {
+      const terms = await sourceFetchTerms(source, { refresh: true });
+      if (!terms.citationWallets?.has(author.walletAddress.toLowerCase())) throw new Error("Mainnet citation recipient has no fresh source authority");
+    }
     const journal = this.paymentJournal?.({ queryId, kind: "citation", sourceId: source.id, itemId: item?.itemId ?? null });
     const url = `${config.baseUrl}/api/cite/${source.id}?author=${encodeURIComponent(
       author.walletAddress,
@@ -111,8 +118,9 @@ export abstract class ServerPaymentGateway implements PaymentGateway {
       expectedPayee: author.walletAddress,
       expectedAmount: amount,
       payer: this.spend.address,
-      signer: this.batchScheme,
+      signer: this.signerForPayment({ queryId, kind: "citation", sourceId: source.id, itemId: item?.itemId ?? null }),
       beforeSubmit: journal?.beforeSubmit,
+      beforeSignedSubmit: journal?.beforeSignedSubmit,
     });
     const outcome = journal ? await journal.recordOutcome(observed) : null;
     const attempt = outcome?.attempt ?? observed;
@@ -184,6 +192,7 @@ function paymentFromAttempt(
     settlementStatus: attempt.settlementStatus,
     authorizationId: attempt.authorizationId,
     authorizationExpiresAt: attempt.authorizationExpiresAt,
+    ...(attempt.authorizationPhase ? { authorizationPhase: attempt.authorizationPhase } : {}),
     rationale: settled
       ? context.settledRationale
       : `Signed x402 authorization submitted; settlement confirmation unavailable (${attempt.reason ?? "missing Circle receipt"}).`,

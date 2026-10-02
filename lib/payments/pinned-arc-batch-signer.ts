@@ -11,7 +11,8 @@ import { sameAddress } from "./x402-payment-evidence";
 /** The SDK receives only one bounded typed-data signing callback, never a private key/account.
  * Server transport must independently match the challenge to its authorized creator and amount. */
 export function createPinnedArcBatchSigner(account: PrivateKeyAccount, rpcUrl: string,
-  profile: ArcNetworkProfile = paymentRuntimeConfig().profile, maxTimeoutSeconds = paymentRuntimeConfig().maxTimeoutSeconds): BatchPayloadSigner {
+  profile: ArcNetworkProfile = paymentRuntimeConfig().profile, maxTimeoutSeconds = paymentRuntimeConfig().maxTimeoutSeconds,
+  beforeAuthorization?: (payload: TypedDataPayload) => Promise<void>): BatchPayloadSigner {
   if (profile !== ARC_MAINNET_PROFILE && profile !== ARC_TESTNET_PROFILE || !Number.isSafeInteger(maxTimeoutSeconds) ||
     maxTimeoutSeconds < 604900 || maxTimeoutSeconds > 691200) throw new Error("Arc payment policy unavailable");
   const policy = createSessionSigningPolicy(profile);
@@ -43,6 +44,13 @@ export function createPinnedArcBatchSigner(account: PrivateKeyAccount, rpcUrl: s
               || message.validAfter > BigInt(Math.floor(Date.now() / 1000) - 600)
               || message.validBefore - message.validAfter !== BigInt(Math.max(expected.maxTimeoutSeconds, 604800) + 600)) throw new Error();
             await assertArcRpcChain(rpcUrl, profile);
+            if (beforeAuthorization) {
+              // The authority receives a detached copy. It must durably reserve
+              // the exact SDK nonce before the captured key can sign anything.
+              await beforeAuthorization(structuredClone(snapshot) as unknown as TypedDataPayload);
+              policy.validatePayment(snapshot as unknown as TypedDataPayload, payer);
+              await assertArcRpcChain(rpcUrl, profile);
+            }
             return sign(snapshot as Parameters<PrivateKeyAccount["signTypedData"]>[0]);
           },
         });

@@ -1,7 +1,7 @@
 import { config } from "../config";
 import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "../arc-network-profile";
 import { readRuntimeStorageDeployment } from "./runtime-storage-config";
-import { createEnrolledSqliteAdapter } from "./enrolled-sqlite-adapter";
+import { createEnrolledSqliteAdapter, assertEnrolledSqliteAdapter } from "./enrolled-sqlite-adapter";
 import { createEnrolledSupabaseAdapter } from "./enrolled-supabase-adapter";
 import { storagePaymentProfile, refuseStorage } from "./storage-identity";
 import type { KeryxDB } from "./keryx-db";
@@ -17,4 +17,9 @@ export async function createApplicationStorage(): Promise<KeryxDB | undefined> {
   if (profile === ARC_TESTNET_PROFILE) return undefined;
   if (deployment.identity.authorityMode !== "mainnet-real") refuseStorage("identity_mismatch");
   return deployment.backend.kind === "sqlite" ? createEnrolledSqliteAdapter() : createEnrolledSupabaseAdapter();
+}
+/** Verify the already-selected application facade; this does not construct or
+ * select another datastore, custody account or funding authority. */
+export function applicationSqliteIdentity(db: KeryxDB, access: "read" | "write" = "read") {
+  return assertEnrolledSqliteAdapter(db, access);
 }

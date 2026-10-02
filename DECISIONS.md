@@ -89,9 +89,17 @@ remain, so the stable signer can fund and renew rather than being retired.
 
 Ordinary creator cashout will use its connected owner wallet for burn consent and
 the mint transaction's gas; a custodial relay is a separate optional operator role.
-Hosted mainnet payments will use an independently sealed, owner-prefunded treasury
+Hosted mainnet payments use an independently sealed, owner-prefunded treasury
 identity and bounded normal product budgets, with no legacy key loader or automatic
-funding executor. That hosted adapter remains unfinished at this checkpoint. No
+funding executor. A reviewed canonical policy binds the native storage identity,
+origin, dedicated signer, lifetime cap, per-query cap and expiry. SQLite commits the
+complete original typed authorization before SDK signing and its header hash and
+submission marker before any paid HTTP call. Policy renewal retains cumulative
+signer exposure; unknown outcomes never restore it. Public and private hosted
+signers remain separate, and private creator confirmations retain their existing
+private journals without leaking payments into the public ledger. Native synthetic
+acceptance exercises the installed SDK, concurrent capacity and response loss;
+owner-selected operating policy and prefunding remain release decisions. No
 funding, activation, deployment, autonomous scheduling or XSS-proof custody follows
 from this preparation. See [full server migration](docs/mainnet-server-runtime.md).
 

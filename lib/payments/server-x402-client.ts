@@ -1,4 +1,5 @@
 import type { PaymentSettlementStatus } from "../types";
+import { createHash } from "node:crypto";
 import { config } from "../config";
 import {
   assertExpectedRequirements,
@@ -31,6 +32,7 @@ export interface ServerX402Attempt<T> {
   amountUsdc: number;
   httpStatus?: number;
   reason?: string;
+  authorizationPhase?: import("../db/browser-authorization-journal").BrowserAuthorizationPhase;
 }
 
 /** Non-bearer evidence for a durable pre-submit journal. Never includes the signature/header. */
@@ -54,6 +56,7 @@ interface PayWithServerSignerInput {
   fetchImpl?: typeof fetch;
   /** Must durably admit this exact attempt or throw. Called before signed HTTP I/O, never retried here. */
   beforeSubmit?: (submission: Readonly<ServerX402Submission>) => Promise<void>;
+  beforeSignedSubmit?: (submission: Readonly<ServerX402Submission>, headerHash: string) => Promise<void>;
 }
 
 /** Circle's GatewayClient throws away PAYMENT-RESPONSE on non-2xx paid responses. Keryx needs the
@@ -68,6 +71,7 @@ export async function payWithServerSigner<T>({
   signer,
   fetchImpl = fetch,
   beforeSubmit,
+  beforeSignedSubmit,
 }: PayWithServerSignerInput): Promise<ServerX402Attempt<T>> {
   const headers = { "Content-Type": "application/json", Accept: "application/json" };
   const challengeResponse = await fetchImpl(url, { method, headers });
@@ -104,7 +108,7 @@ export async function payWithServerSigner<T>({
     accepted: requirements,
   })).toString("base64");
 
-  if (beforeSubmit) {
+  if (beforeSubmit || beforeSignedSubmit) {
     const signedAuthorization = (signed.payload as { authorization?: { from?: unknown; to?: unknown; value?: unknown } } | null)?.authorization;
     const amountMicros = atomicUsdc(expectedAmount);
     if (typeof signedAuthorization?.from !== "string" || signedAuthorization.from.toLowerCase() !== payer.toLowerCase()
@@ -114,8 +118,10 @@ export async function payWithServerSigner<T>({
     }
     // Header and scalar evidence are captured before the callback; it cannot rewrite the payment.
     // Outside the transport catch: a failed journal must never cause a signed request.
-    await beforeSubmit(Object.freeze({ ...authorization, authorizationId: authorization.authorizationId.toLowerCase(),
-      payer: payer.toLowerCase(), payee: expectedPayee.toLowerCase(), amountMicros, network, asset: asset.toLowerCase() }));
+    const submission = Object.freeze({ ...authorization, authorizationId: authorization.authorizationId.toLowerCase(),
+      payer: payer.toLowerCase(), payee: expectedPayee.toLowerCase(), amountMicros, network, asset: asset.toLowerCase() });
+    await beforeSubmit?.(submission);
+    await beforeSignedSubmit?.(submission, `0x${createHash("sha256").update(paymentHeader).digest("hex")}`);
   }
 
   let paidResponse: Response;

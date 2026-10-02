@@ -1445,6 +1445,21 @@ export class SupabaseAdapter implements KeryxDB {
   async sessionFundingAccounting(_signer: string, _after?: string): Promise<import("./session-funding-accounting").SessionFundingAccounting> {
     throw new Error("Native PostgreSQL session funding accounting is not admitted");
   }
+  async admitHostedTreasuryPolicy(_policy:import("../payments/hosted-treasury-policy").HostedTreasuryPolicy):Promise<string> {
+    throw new Error("Native PostgreSQL hosted authority is not admitted");
+  }
+  async hostedTreasuryAccounting(_signer:string):Promise<import("./hosted-treasury-journal").HostedTreasuryAccounting> {
+    throw new Error("Native PostgreSQL hosted authority is not admitted");
+  }
+  async admitHostedAuthorization(_input:import("./hosted-treasury-journal").HostedAuthorizationAdmission):Promise<string> {
+    throw new Error("Native PostgreSQL hosted authority is not admitted");
+  }
+  async submitHostedAuthorization(_signer:string,_submission:Readonly<import("../payments/server-x402-client").ServerX402Submission>,_headerHash:string):Promise<void> {
+    throw new Error("Native PostgreSQL hosted authority is not admitted");
+  }
+  async confirmHostedAuthorization(_signer:string,_nonce:string,_transaction:string):Promise<void> {
+    throw new Error("Native PostgreSQL hosted authority is not admitted");
+  }
   async sessionWithdrawalAccounting(_signer: string): Promise<{heldPaymentMicroUsdc:string;heldWithdrawalMicroUsdc:string;confirmedSpentMicroUsdc:string}> {
     throw new Error("Native PostgreSQL session withdrawal is not admitted");
   }
