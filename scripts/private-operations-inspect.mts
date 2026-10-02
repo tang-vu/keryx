@@ -13,22 +13,14 @@ async function main() {
   }
   if (env.KERYX_PRIVATE_RESEARCH_ENABLED !== "1" || !env.KERYX_PRIVATE_RESULT_SPOOL_DIRECTORY
     || !isAbsolute(env.KERYX_PRIVATE_RESULT_SPOOL_DIRECTORY) || !/^[a-f0-9]{7,40}$/.test(env.KERYX_COMMIT ?? "")) throw new Error();
-  const { privateKeyToAccount } = await import("viem/accounts");
-  const { config } = await import("../lib/config");
-  const { privateRuntimePolicy } = await import("../lib/a2a/private-runtime-policy");
+  const { privateInspectionPolicy } = await import("./helpers/private-operations-inspect-context.mts");
   const { inspectPrivateOperations } = await import("../lib/a2a/private-operations-inspection");
-  const key = env.KERYX_PRIVATE_TREASURY_PRIVATE_KEY;
-  if (!key || !/^0x[a-fA-F0-9]{64}$/.test(key) || !/^0x[a-fA-F0-9]{64}$/.test(config.funderKey)) throw new Error();
-  if (config.privateResearchReservedPayees !== env.KERYX_PRIVATE_RESEARCH_RESERVED_PAYEES) throw new Error();
-  const policy = privateRuntimePolicy(env, { network: config.networkId, publicSeller: config.sellerAddress,
-    publicTreasurySigners: [privateKeyToAccount(config.funderKey as `0x${string}`).address],
-    privateTreasurySigner: privateKeyToAccount(key as `0x${string}`).address });
-  if (!policy) throw new Error();
   const stop = new AbortController(), shutdown = () => stop.abort();
   process.on("SIGINT", shutdown); process.on("SIGTERM", shutdown);
   let db: Awaited<ReturnType<typeof import("../lib/db")["getDb"]>> | undefined;
   try {
     const { getDb } = await import("../lib/db"); db = await getDb();
+    const policy = await privateInspectionPolicy(db, env);
     const report = await inspectPrivateOperations(db, policy, env.KERYX_PRIVATE_RESULT_SPOOL_DIRECTORY, env.KERYX_COMMIT!, stop.signal);
     console.log(JSON.stringify(report, null, 2));
     if (report.status !== "inspected" || report.worker.status !== "matched" || report.worker.phase !== "idle"
