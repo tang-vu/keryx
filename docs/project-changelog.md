@@ -3,6 +3,9 @@
 ### Public mainnet-support candidate (2026-10-02, v0.26.0)
 
 - Use fresh application 0.26.0 and MCP/desktop 0.4.0 candidate identities for the coordinated selected-network release. Preserve immutable earlier app 0.25.1/MCP/desktop 0.3.2 artifacts and their actual publication evidence.
+- Compose normal public browser research, owner-funded retained sessions, dual consent/possession proofs, cumulative and per-question caps, and owner-wallet session/creator cashout. Synthetic normal-handler/Chromium checks include encrypted purchases and citations, uncertain-response recovery, exact owner mint finality and research resumed with the same signer. Historical receipts retain their original network.
+- Support selected-network Monthly checkout with fresh native SQLite authority, actual dedicated custody and exact original redemption recovery. Native handler/SDK acceptance exercises a 1.98-USDC mainnet quote without the historical testnet ceiling; four manual requests remain current-capacity admission, not escrow or an automatic schedule.
+- Keep experimental scholarly rights, optional Supabase mainnet authority and Rust financial cutover explicitly staged. Ordinary public access has no invited-wallet restriction. Final headless cashout composition and coordinated distribution acceptance remain separate gates.
 - This release identity describes code support, not mainnet activation. Exact final CI/review, deployed health, published integrity and real funded authority/receipt gates remain separate; installer GUI entry acceptance is not inferred from bundle checks.
 
 ### Isolated-storage release alignment (2026-10-02, v0.25.1)
@@ -12,6 +15,8 @@
 - Require exact-source production health, clean packed MCP signing/recovery, fresh installer acceptance and published artifact/registry integrity readback before synchronized-delivery claims.
 
 ### 2026-10-02 - Selected-network Monthly checkout preparation
+
+Historical source checkpoint, before the native authority composition recorded above:
 
 - Select the trusted Arc profile for Monthly wallet checks, proof domains and exact quotes. Preserve testnet recovery keys; isolate mainnet recovery by payer, network and HTTPS origin, and refuse foreign-network request files.
 - Retain uncertain purchases across reload, snapshot original redemption identity before asynchronous signing, bound HTTPS response intake, and prevent overlapping wallet actions. The real funding UI accepts the reviewed 1.8-USDC mainnet quote without the historical testnet ceiling.
