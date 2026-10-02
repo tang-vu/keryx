@@ -161,10 +161,10 @@ Example trace (real output):
   `claude mcp add --transport http keryx "https://keryx.cc/mcp?client=claude"`.
   The interactive setup guide is at [`/integrations/mcp`](https://keryx.cc/integrations/mcp).
 - **Local x402 MCP** — the caller-funded package uses its local Arc wallet to pay
-  Keryx's x402 toll before Keryx researches and pays creators. Version 0.3.0 requires
+  Keryx's x402 toll before Keryx researches and pays creators. Version 0.3.2 requires
   existing owner-provisioned custody, a trusted merchant policy and supported Node.
   Use [verified package distribution](docs/mcp-distribution.md); npm and its registry
-  pointer remain at 0.1.1 until authenticated publication is independently verified.
+  pointer need separate verification; public npm version discovery returned 0.3.2 on October 2.
   Do not use the older npm release for the new custody/signing boundary.
 - **Discord slash command** — [install the Keryx app](https://discord.com/oauth2/authorize?client_id=1527619548809924678)
   in any server and type `/ask`: the reply embed carries the grounded answer, every creator paid,
@@ -238,6 +238,21 @@ creator payouts, and recent payments. [Public Proof](https://keryx.cc/proof)
 links the supporting registry, Gateway, and cash-out evidence.
 
 ## Architecture
+
+Public deployment addresses observed October 2, 2026 from
+[/api/health](https://keryx.cc/api/health), [/api/treasury](https://keryx.cc/api/treasury)
+and the [Monthly quote](https://keryx.cc/api/research/monthly?quote=1).
+All rows are **Arc testnet (`eip155:5042002`)**; they are not mainnet deployment claims.
+
+| Role | Full public address | Explorer |
+| --- | --- | --- |
+| SourceRegistry | `0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536` | [Arc testnet](https://testnet.arcscan.app/address/0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536) |
+| Settlement treasury balance identity | `0x29028Fe1122E17Fe7863A22701e863FE4DaE1aFB` | [Arc testnet](https://testnet.arcscan.app/address/0x29028Fe1122E17Fe7863A22701e863FE4DaE1aFB) |
+| Research Monthly merchant/payee | `0xC5965E3175Ef063FaeB8BCd3abe2d25b5D27D586` | [Arc testnet](https://testnet.arcscan.app/address/0xC5965E3175Ef063FaeB8BCd3abe2d25b5D27D586) |
+
+Creator and user session addresses vary by workflow. The
+[submission pack](docs/tameion-submission.md#public-addresses) also records public
+USDC and Gateway contract references and the evidence required for actual payments.
 
 ```
 BROWSER (Web App)                    IPFS + Arc Smart Contracts              Circle Gateway + Arc Testnet
@@ -348,13 +363,25 @@ Full threat matrix and verification results: [`docs/security-threat-model.md`](.
 
 ## Fork the primitives
 
-The reusable building blocks are MIT-licensed and standalone in
-[`keryx-arc-primitives`](https://github.com/tang-vu/keryx-arc-primitives) (also vendored at
-[`arc-primitives/`](./arc-primitives) — clone with `--recurse-submodules`):
+The MIT-licensed [standalone Arc primitives](https://github.com/tang-vu/keryx-arc-primitives)
+now have a reviewed **0.3 safety and packaging refresh**, also pinned at
+[`arc-primitives/`](./arc-primitives) (clone with `--recurse-submodules`).
 
-- **Two-toll x402 settlement** — fixed access price + dynamic citation reward.
-- **On-chain creator/attribution registry** — squat-proof IDs, multi-author splits, event indexer.
-- **Non-custodial spend cap** — server-enforced budget over a user-funded session EOA.
+- Exact micro-USDC parsing and weighted allocation, plus fixed/dynamic x402 settlement
+  with durable host admission and retained ambiguous outcomes.
+- Creator-bound registry helpers and ordered, deduplicable indexing; the original
+  registry contract remains separate from current upstream v2 work.
+- Atomic integer budget reservations as an explicitly **in-memory reference**, and
+  browser-signed, treasury-relayed withdrawal with finite authorization height,
+  exact attestation binding and journaled mint transaction identity.
+- Additive discovery metadata, pinned Circle SDK/x402 dependencies, generated ESM/types,
+  a no-network demo and a clean packed-consumer check.
+
+The 81 tests and offline demo are synthetic; funded acceptance, durable storage,
+browser custody, reconciliation and mainnet review remain host-owned gates. This
+library release does not change Keryx's payment runtime, MCP package or desktop installer.
+See the [standalone migration guide](https://github.com/tang-vu/keryx-arc-primitives/blob/fea33574e106a91013e52fad9e99bd4db9df1206/docs/migration-0.3.md)
+and [maintenance and surface boundaries](docs/arc-primitives-maintenance.md).
 
 ## Project docs
 
@@ -369,17 +396,19 @@ The reusable building blocks are MIT-licensed and standalone in
 - [`TRACTION.md`](./TRACTION.md) — live usage and settlement links
 - [`FEEDBACK.md`](./FEEDBACK.md) — Circle/Arc dev-tool feedback we filed while building
 - [`DECISIONS.md`](./DECISIONS.md) — architecture decision log
-- [`CLAUDE.md`](./CLAUDE.md) — contributor orientation
 
 ## Origin & where it's going
 
 Keryx started at the **Lepton Agents Hackathon** (Canteen × Circle, on Arc, June 2026) as the
 canonical build of the "herald" model — *content cited, paid per citation* — and never stopped
-running. It has been live at [keryx.cc](https://keryx.cc) since, settling real value every hour,
-onboarding real feeds, and shipping continuously in public. Next: Lit Protocol for client-side IPFS
-key release and growing external agent traffic through the MCP and A2A on-ramps. Mainnet remains a
-separate audited migration: the current network id, Gateway endpoints, explorer, and browser chain
-are deliberately pinned to Arc testnet, with no single-variable production-money switch.
+running. The service at [keryx.cc](https://keryx.cc) runs caller-driven research with
+recorded Arc-testnet settlement; it has no hourly research or payout guarantee.
+Current work adds broad-web and scholarly evidence, chat-first cited reports, local
+Windows/CLI task recovery, and a bounded Research Monthly pilot. The full Operator
+and autonomous scheduler remain planned. Full-product mainnet migration is in preparation
+under [explicit release gates](docs/mainnet-delivery-plan.md); testnet health does not
+establish mainnet readiness. See the [Tameion submission evidence](docs/tameion-submission.md)
+for dated releases, public contract/wallet addresses, product delta and pending pilot proof.
 
 ## Stack
 

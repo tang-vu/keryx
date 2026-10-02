@@ -9,6 +9,13 @@
 - Keep experimental scholarly rights, optional Supabase mainnet authority and Rust financial cutover explicitly staged. Ordinary public access has no invited-wallet restriction. Final composition review and coordinated distribution acceptance remain separate gates.
 - This release identity describes code support, not mainnet activation. Exact final CI/review, deployed health, published integrity and real funded authority/receipt gates remain separate; installer GUI entry acceptance is not inferred from bundle checks.
 
+### Standalone Arc primitives refresh (2026-10-02, library 0.3.0)
+
+- Update the Showcase extraction and root gitlink to standalone `fea33574e106a91013e52fad9e99bd4db9df1206`, independently reviewed against Keryx anchor `2c59c07`. Add exact micro-USDC allocation, durable seller/relay admission boundaries, retained uncertain outcomes, atomic reservation examples and ordered registry log identities.
+- Require finite-height withdrawal terms, recovered signer/approved recipient, exact attestation binding, gas caps and persisted raw mint transaction identity. Preserve confirmed debit evidence if delivery or storage acknowledgement fails. The original registry contract is unchanged; upstream v2 remains outside this extraction.
+- Add reproducible pinned dependency/CI gates, generated ESM/types, 81 synthetic tests, a no-network demo and clean packed-consumer acceptance. Document breaking migration, provenance, Showcase pitch and ongoing maintenance alongside relevant upstream changes.
+- Root changes are documentation and submodule synchronization only: no payment-runtime behavior, app/MCP/installer version or mainnet activation change. Funded, durability/custody/recovery and finality acceptance remain explicit host gates. See [maintenance](arc-primitives-maintenance.md).
+
 ### Isolated-storage release alignment (2026-10-02, v0.25.1)
 
 - Give the runtime after isolated Arc application-storage support fresh app 0.25.1, MCP 0.3.2 and desktop 0.3.2 versions. Existing v0.25.0/0.3.1 artifacts remain immutable at their accepted source; different runtime bytes must not reuse those versions across channels.
