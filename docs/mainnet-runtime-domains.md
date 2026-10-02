@@ -99,3 +99,15 @@ isolation and these namespaces are not a same-origin XSS security boundary. Scri
 running when the wallet derivation signature is produced can also derive the session
 key itself. Any tiny funded pilot must explicitly review and accept those bounds;
 separate-origin signer enrollment is a future independent architecture/release gate.
+
+The subsequent `npm run test:browser-isolated-session` acceptance runs the bundled
+helper in actual Chromium workers with the real IndexedDB adapter and native browser
+WebCrypto. Two workers concurrently retain one wrapping key and restore each other's
+ciphertext; a new page/worker recovers tab ciphertext; context/address AAD and foreign
+origin/chain checks refuse; an aborted IndexedDB write publishes no account; clearing
+the namespace makes original ciphertext unusable. It also demonstrates the documented
+same-origin decrypt residual without exporting or printing plaintext/key bytes.
+All HTTP is intercepted to fixed fixture documents/scripts, and every owner/key/nonce
+is synthetic. CI repeats this bounded component acceptance. A production worker,
+candidate enrollment, private session history and the mainnet server/payment/registry
+journey remain separate gates; this fixture is not a runnable public mainnet pilot.

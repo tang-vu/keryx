@@ -98,6 +98,9 @@ jobs:
       - name: Private request commitment (hermetic, no signing)
         run: node --import tsx scripts/test-browser-private-commitment.mts
 
+      - name: Isolated session worker and IndexedDB (synthetic, no funds)
+        run: npm run test:browser-isolated-session
+
       - name: Private browser journal (hermetic, no settlement)
         run: npm run test:browser-private-journal
 
