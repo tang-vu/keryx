@@ -40,7 +40,7 @@ describe("endpointFor", () => {
   });
 
   it("knows every provider the catalog names", async () => {
-    await withEnv({ MIMO_API_KEY: "k", DEEPSEEK_API_KEY: "k" }, async () => {
+    await withEnv({ MIMO_API_KEY: "k", DEEPSEEK_API_KEY: "k", KERYX_CLOUDFLARE_ENABLED: "true", CLOUDFLARE_ACCOUNT_ID: "a".repeat(32), CLOUDFLARE_API_TOKEN: "k" }, async () => {
       const { endpointFor } = await import("./provider-endpoints");
       for (const m of MODEL_CATALOG) expect(endpointFor(m.provider), m.id).not.toBeNull();
     });

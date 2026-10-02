@@ -10,6 +10,7 @@
 
 import { config } from "../config";
 import { HeuristicEngine } from "./heuristic-engine";
+import { ReasoningInputLimitError } from "./reasoning-engine";
 import type {
   AttributeInput,
   DecideInput,
@@ -242,7 +243,7 @@ export class ResilientEngine implements ReasoningEngine {
     // With a real alternate available, one exhausted call is enough to route later work around
     // this tier. A single-provider deployment keeps the configurable threshold before it falls to
     // deterministic reasoning. Failure streaks survive half-open probes and grow the cooldown.
-    await this.circuitStore.failed(key, {
+    if (!(lastErr instanceof ReasoningInputLimitError)) await this.circuitStore.failed(key, {
       transient: isTransient(lastErr),
       now: Date.now(),
       failureThreshold:
@@ -255,7 +256,7 @@ export class ResilientEngine implements ReasoningEngine {
     });
     const failure = errorTelemetry(lastErr);
     console.warn(
-      `[keryx llm] ${label} fell back to ${this.fallback.name} after provider failure: ${failure.error}${failure.status === undefined ? "" : ` (HTTP ${failure.status})`}`,
+      `[keryx llm] ${label} fell back to ${this.fallback.name} after ${lastErr instanceof ReasoningInputLimitError ? "local input refusal" : "provider failure"}: ${failure.error}${failure.status === undefined ? "" : ` (HTTP ${failure.status})`}`,
     );
     this.fell++;
     return this.runFallback(label, call);
