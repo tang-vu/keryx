@@ -83,6 +83,12 @@ export async function dropGrant(sessionId: string): Promise<void> {
   await db.deleteSessionGrant(sessionId);
 }
 
+/** Revoke the exact authority read by the route, even if recovery replaces it while awaiting SQL. */
+export async function revokeGrant(grant: Pick<SessionGrant, "sessionId" | "grantEpoch" | "sessAddr">): Promise<boolean> {
+  const db = await getDb();
+  return db.revokeSessionGrant(grant.sessionId, grant.grantEpoch, grant.sessAddr);
+}
+
 /** True when adding `amount` would stay within the cap. */
 export async function canSpend(sessionId: string, amount: number): Promise<boolean> {
   const grant = await getGrant(sessionId);

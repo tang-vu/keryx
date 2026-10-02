@@ -1691,6 +1691,15 @@ export class SupabaseAdapter implements KeryxDB {
     if (error) throw error;
   }
 
+  async revokeSessionGrant(sessionId: string, grantEpoch: string, sessAddr: string): Promise<boolean> {
+    const { data, error } = await this.domainRpc("revoke_session_grant", {
+      p_session_id: sessionId, p_grant_epoch: grantEpoch, p_sess_addr: sessAddr,
+    });
+    if (error) throw error;
+    if (typeof data !== "boolean") throw new Error("Session revocation acknowledgement unavailable");
+    return data;
+  }
+
   /** Delegates to a SQL function for the same reason the SQLite adapter uses one statement:
    *  a read-modify-write would admit both of two concurrent requests on an exhausted bucket. */
   async consumeRateLimit(
