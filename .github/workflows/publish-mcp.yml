@@ -115,10 +115,25 @@ jobs:
           sha256sum --check release/SHA256SUMS
           npm publish ./release/*.tgz --ignore-scripts --access public --provenance --registry https://registry.npmjs.org/
       - name: Verify public registry version and integrity
+        timeout-minutes: 7
         env:
           EXPECTED_VERSION: ${{ inputs.version }}
         run: |
-          npm view "keryx-mcp@$EXPECTED_VERSION" --json --registry https://registry.npmjs.org/ > published.json
+          # Publishing can succeed before the public registry finishes processing.
+          # Retry reads only; never repeat the immutable package publication.
+          available=0
+          for attempt in $(seq 1 18); do
+            if npm view "keryx-mcp@$EXPECTED_VERSION" --json --registry https://registry.npmjs.org/ --fetch-retries=0 --fetch-timeout=10000 > published.json; then
+              available=1
+              break
+            fi
+            echo "Public registry readback not available yet (attempt $attempt/18)."
+            if [ "$attempt" -lt 18 ]; then sleep 10; fi
+          done
+          if [ "$available" -ne 1 ]; then
+            echo "Publication was submitted; public readback remains unverified. Do not republish."
+            exit 1
+          fi
           node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
           import fs from 'node:fs';
