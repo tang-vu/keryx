@@ -2,14 +2,21 @@ import { mkdir, open, readFile, rename, unlink } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { resolve, join, dirname } from "node:path";
 import { z } from "zod";
-import { buyerJobId, buyerIntentEnvelopeSchema } from "./policy";
+import { a2aOrderId } from "../a2a/order";
+import { BUYER_PROFILE, buyerIntentEnvelopeSchemaForProfile } from "./protocol";
+import type { ArcNetworkProfile } from "../arc-network-profile";
 
-export const buyerIntentSchema = buyerIntentEnvelopeSchema.superRefine((v, ctx) => {
-  if (v.queryId !== buyerJobId(v.authorization) || v.authorization.value !== v.requirement.amount
+/** Retained history validation only; signing still uses the captured runtime profile. */
+export function buyerIntentSchemaForProfile(profile: ArcNetworkProfile) {
+  return buyerIntentEnvelopeSchemaForProfile(profile).superRefine((v, ctx) => {
+  if (v.queryId !== a2aOrderId({ network: profile.networkId, payer: v.authorization.from,
+    payee: v.authorization.to, authorizationId: v.authorization.nonce }) || v.authorization.value !== v.requirement.amount
     || v.authorization.to.toLowerCase() !== v.requirement.payTo.toLowerCase()) {
     ctx.addIssue({ code: "custom", message: "Journal authorization does not match its job" });
   }
 });
+}
+export const buyerIntentSchema = buyerIntentSchemaForProfile(BUYER_PROFILE);
 export type BuyerIntent = z.infer<typeof buyerIntentSchema>;
 
 /** Immutable files, exclusive creation and fsync: a failed write never permits submission. */
