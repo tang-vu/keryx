@@ -69,7 +69,7 @@ export async function runHeadlessMainnet(args: string[], ports: {
     for (const original of state.unresolvedNonces()) {
       if (typeof original.req_id !== "string") refuse();
       const observation = await inspectHeadlessOriginal(await json(`/api/session/authorizations/${encodeURIComponent(String(original.req_id))}`),{
-        context,signer:key.address!,reqId:String(original.req_id),nonce:String(original.nonce),epoch:String(original.epoch),amount:String(original.amount),cap:String(original.cap)});
+        context,signer:key.address!,reqId:String(original.req_id),nonce:String(original.nonce),epoch:String(original.epoch),amount:String(original.amount),cap:String(original.cap),original:JSON.parse(String(original.original)),requirementsDigest:String(original.requirements_digest)});
       if(observation.settlementConfirmed)state.recordSettled(observation.nonce,createHash("sha256").update(canonicalJson(observation)).digest("hex"));
       if(action==="recover")console.log(JSON.stringify(observation));
     }
@@ -121,7 +121,7 @@ export async function runHeadlessMainnet(args: string[], ports: {
           const data=JSON.parse(raw) as {reqId?:unknown;answer?:unknown};
           if(event==="sign-request"){
             if(typeof data.reqId!=="string")refuse();const reqId=data.reqId as string;
-            const runtime=createBrowserSessionRuntime(key,{json,readSource:readSource!,reserve:(n,e,nonce,amount,limit,q)=>state.reserve(n,e,nonce,amount,limit,q,reqId)});
+            const runtime=createBrowserSessionRuntime(key,{json,readSource:readSource!,reserve:(n,e,nonce,amount,limit,q,original)=>state.reserve(n,e,nonce,amount,limit,q,original)});
             const {paymentHeader}=await runtime.authorizePayment(reqId,questionScope);
             const authorization=JSON.parse(atob(paymentHeader)).authorization as {nonce:string};
             await state.retainHeader(authorization.nonce,paymentHeader);

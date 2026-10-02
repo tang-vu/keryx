@@ -1,5 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
+import { createHash } from "node:crypto";
+import type { BrowserSessionAuthorizationBinding } from "../../lib/session/browser-session-runtime";
 import { execFileSync } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
 import { canonicalJson } from "../../lib/canonical-json";
@@ -84,7 +86,7 @@ export async function openHeadlessMainnetState(directory: string, context: Brows
     protectedPath(file, false);
     database = new DatabaseSync(file);
     if (fresh) database.exec("PRAGMA synchronous=FULL; PRAGMA journal_mode=DELETE; PRAGMA busy_timeout=1000;");
-    const identity = canonicalJson({ format: "keryx-headless-session-state-v1", custody: context });
+    const identity = canonicalJson({ format: "keryx-headless-session-state-v2", custody: context });
     if (fresh) {
       database.exec(`BEGIN IMMEDIATE;
         CREATE TABLE identity(singleton INTEGER PRIMARY KEY CHECK(singleton=1),value TEXT NOT NULL) STRICT;
@@ -92,7 +94,7 @@ export async function openHeadlessMainnetState(directory: string, context: Brows
         CREATE TABLE questions(id TEXT PRIMARY KEY,budget TEXT NOT NULL) STRICT;
         CREATE TRIGGER questions_no_update BEFORE UPDATE ON questions BEGIN SELECT RAISE(ABORT,'immutable'); END;
         CREATE TRIGGER questions_no_delete BEFORE DELETE ON questions BEGIN SELECT RAISE(ABORT,'immutable'); END;
-        CREATE TABLE exposure(nonce TEXT PRIMARY KEY,epoch TEXT NOT NULL,amount TEXT NOT NULL,cap TEXT NOT NULL,req_id TEXT,question_id TEXT NOT NULL REFERENCES questions(id)) STRICT;
+        CREATE TABLE exposure(nonce TEXT PRIMARY KEY,epoch TEXT NOT NULL,amount TEXT NOT NULL,cap TEXT NOT NULL,req_id TEXT,question_id TEXT NOT NULL REFERENCES questions(id),original TEXT NOT NULL CHECK(json_valid(original)),requirements_digest TEXT NOT NULL) STRICT;
         CREATE TABLE headers(nonce TEXT PRIMARY KEY REFERENCES exposure(nonce),value TEXT NOT NULL) STRICT;
         CREATE TABLE terminal(nonce TEXT PRIMARY KEY REFERENCES exposure(nonce),proof_digest TEXT NOT NULL) STRICT;
         CREATE TRIGGER terminal_no_update BEFORE UPDATE ON terminal BEGIN SELECT RAISE(ABORT,'immutable'); END;
@@ -139,9 +141,15 @@ export async function openHeadlessMainnetState(directory: string, context: Brows
       },
     };
     return Object.freeze({ wrappingKeys, retained, file,
-      async reserve(namespace: string, epoch: string, nonce: string, amount: bigint, cap: bigint, question: {id:string;budgetMicroUsdc:string}, reqId?: string) {
+      async reserve(namespace: string, epoch: string, nonce: string, amount: bigint, cap: bigint, question: {id:string;budgetMicroUsdc:string}, original: BrowserSessionAuthorizationBinding) {
         active(); if (namespace !== context.storageNamespace || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(epoch) || !/^0x[0-9a-f]{64}$/.test(nonce) ||
-          (reqId !== undefined && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(reqId)) ||
+          (!original || original.sessionId !== context.owner || original.grantEpoch !== epoch || original.expectedNonce !== nonce ||
+            !/^0x[0-9a-f]{40}$/.test(original.sessAddr) || original.sessAddr === context.owner ||
+            !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(original.reqId) ||
+            original.requirements.network !== context.profile.networkId || original.requirements.amount !== String(amount) ||
+            original.requirements.asset !== context.profile.usdcAddress.toLowerCase() ||
+            original.requirements.extra.verifyingContract !== context.profile.gatewayWallet.toLowerCase() ||
+            !/^0x[0-9a-f]{40}$/.test(original.requirements.payTo)) ||
           !question || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(question.id) ||
           !/^[1-9]\d{0,15}$/.test(question.budgetMicroUsdc) || BigInt(question.budgetMicroUsdc)>BigInt(Number.MAX_SAFE_INTEGER) ||
           amount <= BigInt(0) || cap <= BigInt(0) || cap > BigInt(Number.MAX_SAFE_INTEGER)) fail();
@@ -155,12 +163,14 @@ export async function openHeadlessMainnetState(directory: string, context: Brows
           let total = BigInt(0),questionTotal=BigInt(0);
           for (const row of rows) { if (!/^[1-9]\d{0,15}$/.test(String(row.amount))) fail(); total += BigInt(String(row.amount)); if(row.question_id===question.id)questionTotal+=BigInt(String(row.amount)); }
           if (total + amount > cap || questionTotal+amount>BigInt(question.budgetMicroUsdc)) fail();
-          db.prepare("INSERT INTO exposure VALUES(?,?,?,?,?,?)").run(nonce, epoch, String(amount), String(cap), reqId ?? null, question.id);
+          const binding = canonicalJson(original), digest = createHash("sha256").update(canonicalJson(original.requirements)).digest("hex");
+          if(Buffer.byteLength(binding)>32768)fail();
+          db.prepare("INSERT INTO exposure VALUES(?,?,?,?,?,?,?,?)").run(nonce, epoch, String(amount), String(cap), original.reqId, question.id, binding, digest);
           db.exec("COMMIT"); syncDirectory(directory);
         } catch { try { db.exec("ROLLBACK"); } catch { /* committed exposure stays held */ } return fail(); }
       },
-      originalNonces() { active(); return db.prepare("SELECT nonce,epoch,amount,cap,req_id FROM exposure ORDER BY nonce").all(); },
-      unresolvedNonces() { active(); return db.prepare("SELECT nonce,epoch,amount,cap,req_id FROM exposure WHERE nonce NOT IN (SELECT nonce FROM terminal) ORDER BY nonce").all(); },
+      originalNonces() { active(); return db.prepare("SELECT nonce,epoch,amount,cap,req_id,original,requirements_digest FROM exposure ORDER BY nonce").all(); },
+      unresolvedNonces() { active(); return db.prepare("SELECT nonce,epoch,amount,cap,req_id,original,requirements_digest FROM exposure WHERE nonce NOT IN (SELECT nonce FROM terminal) ORDER BY nonce").all(); },
       recordSettled(nonce: string, proofDigest: string) {
         active(); if (!/^0x[0-9a-f]{64}$/.test(nonce) || !/^[0-9a-f]{64}$/.test(proofDigest) ||
           !db.prepare("SELECT nonce FROM exposure WHERE nonce=?").get(nonce)) fail();

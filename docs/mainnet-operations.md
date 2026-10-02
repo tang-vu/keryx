@@ -191,3 +191,12 @@ The owner-supplied cap is absolute cumulative signer capacity, including history
 exercise actual native SQLite, DACL checks, WebCrypto and EOA signatures with
 hermetic API/registry responses; they prove neither live settlement nor host
 power-loss, distributed clone exclusion or installer acceptance.
+
+The normal headless v2 state retains the detached authenticated original challenge and
+SHA256 of its canonical payment requirements in the same atomic reservation as the
+question budget, cumulative cap and nonce, before cryptography. Recovery requires the
+same original requirements, payer, payee, source and payment kind, plus both public grant
+signatures. A retained server journal with a transaction hash is recorded server evidence;
+this read is not an independently observed chain receipt. It grants no retry authority
+and never refunds local exposure. Older unreleased v1 headless files are refused in place
+with custody retained; the command never rotates their signer or adopts their ledger.
