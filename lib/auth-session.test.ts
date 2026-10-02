@@ -10,7 +10,7 @@ import { issueWebSession, isWebSessionActive, parseWebSession, webSessionHash } 
 const mocks = vi.hoisted(() => ({ cookies: vi.fn(), db: vi.fn() }));
 vi.mock("next/headers", () => ({ cookies: mocks.cookies }));
 vi.mock("@/lib/db", () => ({ getDb: mocks.db }));
-vi.mock("@/lib/config", () => ({ config: { jwtSecret: "synthetic-session-secret", devWallets: [] } }));
+vi.mock("@/lib/config", async () => ({ config: { jwtSecret: "synthetic-session-secret", devWallets: [], profile: (await import("./arc-network-profile")).ARC_TESTNET_PROFILE, } }));
 import { POST as signout } from "@/app/api/auth/signout/route";
 import { GET as sessionRoute } from "@/app/api/auth/session/route";
 import { getSession } from "./auth";

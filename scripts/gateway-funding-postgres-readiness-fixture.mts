@@ -18,8 +18,8 @@ export async function testPostgresFundingReadiness(context: {
   changeNamespace: () => Promise<void>; refusedRoleInspection: (role: "anon" | "authenticated") => Promise<void>;
 }) {
   // Controlled owner-only negative witness, not a readiness operation. Physical
-  // maintenance may change the quarantined0074 full catalog without changing any
-  // logical funding/history row. The actual readiness assertion below is untouched.
+  // maintenance changes the archived0074 full catalog diagnostics while the
+  // reviewed0076 logical witness preserves every row and authority field.
   const maintenanceBefore = context.sql("select keryx_storage.snapshot_digest()");
   const maintenanceBeforeParts = JSON.parse(context.sql(postgresSnapshotDiagnosticSql));
   context.sql("vacuum (freeze, analyze) public.gateway_funding_operations");
@@ -28,7 +28,7 @@ export async function testPostgresFundingReadiness(context: {
   const maintenanceChanges = postgresSnapshotDiagnosticChanges(maintenanceBeforeParts, maintenanceAfterParts);
   console.error(JSON.stringify({ format: "synthetic-postgres-controlled-maintenance-v1",
     beforeSha256: maintenanceBefore, afterSha256: maintenanceAfter, changedWitnesses: maintenanceChanges }));
-  assert.notEqual(maintenanceBefore, maintenanceAfter, "controlled native maintenance changes full0074 witness");
+  assert.equal(maintenanceBefore, maintenanceAfter, "reviewed logical witness survives physical maintenance");
   assert.deepEqual(maintenanceChanges.tables, [], "maintenance preserves every logical row and sequence witness");
   assert(maintenanceChanges.catalog.length > 0 && maintenanceChanges.catalog.every(change => change.name === "relation"),
     "only pg_class catalog changes during controlled maintenance");

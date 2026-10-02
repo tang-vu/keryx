@@ -11,7 +11,7 @@ import { encodeHistoryCursor } from "../a2a/account-history";
 const mocks = vi.hoisted(() => ({ cookies: vi.fn(), db: vi.fn() }));
 vi.mock("next/headers", () => ({ cookies: mocks.cookies }));
 vi.mock("@/lib/db", () => ({ getDb: mocks.db }));
-vi.mock("@/lib/config", () => ({ config: { jwtSecret: "synthetic-history-secret" } }));
+vi.mock("@/lib/config", async () => ({ config: { jwtSecret: "synthetic-history-secret", profile: (await import("../arc-network-profile")).ARC_TESTNET_PROFILE, } }));
 import { GET } from "@/app/api/me/jobs/route";
 const root = mkdtempSync(join(tmpdir(), "keryx-history-")), file = join(root, "db.sqlite");
 const db = new SqliteAdapter(file); await db.init();

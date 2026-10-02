@@ -43,3 +43,15 @@ export function postgresSnapshotDiagnosticChanges(before: Witness, after: Witnes
       .filter(name => before[category]?.[name] !== after[category]?.[name])
       .map(name => ({ name, beforeSha256: before[category]?.[name] ?? null, afterSha256: after[category]?.[name] ?? null }))]));
 }
+
+/** Funding-only fixture alignment with the reviewed0076 logical catalog witness.
+ * The archived0074 SQL and production migrations remain byte-identical. */
+export function normalizeFundingSnapshotMigration(sql: string): string {
+  if (!sql.includes("create function keryx_storage.snapshot_digest()")) return sql;
+  const original = "union all select 'relation:'||encode(sha256(convert_to(c::text,'UTF8')),'hex') from pg_class c";
+  const normalized = "union all select 'relation:'||encode(sha256(convert_to((to_jsonb(c)-array['relpages','reltuples','relallvisible','relfrozenxid','relminmxid'])::text,'UTF8')),'hex') from pg_class c";
+  if (sql.split(original).length !== 2) throw new Error("Funding snapshot fixture source mismatch");
+  const reviewed = readFileSync(new URL("../../supabase/migrations/0076_enrolled_storage_owner_cutover.sql", import.meta.url), "utf8");
+  if (!reviewed.includes(normalized)) throw new Error("Reviewed logical catalog witness unavailable");
+  return sql.replace(original, normalized);
+}
