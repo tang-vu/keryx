@@ -148,6 +148,46 @@ Usage price intervals and hypothetical service fees remain estimates. Recorded
 settlement observations are not reconciled invoices or realized profit. Native
 SQLite read-only projection tests use synthetic evidence and preserve file bytes;
 they do not establish enrolled mainnet admission, funded settlement or native
-Supabase acceptance. The coordinated server storage migration must land before
-mainnet report acceptance, and the protected Linux publisher still needs its
+Supabase acceptance. The coordinated server sealed-SQLite migration must land before
+mainnet report acceptance; optional native Supabase mainnet remains staged, and the protected Linux publisher still needs its
 release-platform checks.
+
+## Normal authenticated headless web client
+
+`npm run web -- --help` is keyless. Both network labels select the entry point;
+legacy testnet wallet/faucet behavior remains in the explicitly testnet driver.
+Mainnet `prepare`, `status`, `recover` and `ask QUESTION BUDGET_MICROS CAP_MICROS`
+use dedicated `KERYX_HEADLESS_OWNER_PRIVATE_KEY`, `KERYX_HEADLESS_WRAPPING_KEY`
+and `KERYX_HEADLESS_STATE_DIRECTORY` in a protected environment file. Owner and
+wrapping keys must differ. The existing private state directory must be owned by
+the current user: Unix permissions exclude group/other access; Windows uses an
+actual owner-only protected DACL (current user, trusted SYSTEM/Administrators).
+Keys are never stored in the SQLite state. Keep its encrypted funded session
+ciphertext, exposure history and wrapping environment together in verified private
+backups. Lost wrapping custody can lose access to deposited funds; host owners,
+administrators and cloned state remain outside this local protection boundary.
+
+`prepare` retains the first encrypted signer and prints only public funding
+identity. `status` never creates missing custody. Owner funding is a separate exact
+approve plus Gateway `depositFor` transaction using the unsigned setup helper; the
+mainnet web driver sends no faucet, EOA gas-funding, approval or deposit transaction.
+The ordinary mainnet ask path signs SIWE and exact owner/session grant consent,
+then consumes the shared browser authenticated journal/registry/preview payment
+policy. It ignores SSE payment tuples and validates the original authenticated
+challenge instead. It durably commits unique nonce exposure before signing and an
+encrypted header before the paid POST. Nonces and cumulative exposure survive
+process restart and grant replacement. Configure the normal bot identity for
+operator-owned self-driven runs; do not count them as external product traction.
+
+Uncertain original attempts remain held. Read-only recovery uses the ordinary
+`/api/session/authorizations/{reqId}` endpoint and verifies original owner/session
+signatures, nonce, epoch, network, amount and cap. Expiry/revocation cannot erase
+this view. Only a recorded settled original with its settlement evidence receives
+a local terminal proof; this never deletes the nonce or restores lifetime capacity.
+Another ask remains refused while any original is uncertain. Per-ask client UUID
+and integer budget are atomically retained with lifetime sum and unique nonce in
+one SQLite transaction before signing; a larger grant cannot enlarge that question.
+The owner-supplied cap is absolute cumulative signer capacity, including history. Windows tests
+exercise actual native SQLite, DACL checks, WebCrypto and EOA signatures with
+hermetic API/registry responses; they prove neither live settlement nor host
+power-loss, distributed clone exclusion or installer acceptance.

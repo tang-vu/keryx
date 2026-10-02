@@ -1,8 +1,9 @@
 import { keccak256, recoverTypedDataAddress, type Hex } from "viem";
 
 import type { ArticleOffer, ArticleOfferRef } from "../types";
+import { paymentRuntimeConfig } from "../payment-runtime-config";
 
-export const ARTICLE_OFFER_CHAIN_ID = 5_042_002;
+export const ARTICLE_OFFER_CHAIN_ID = paymentRuntimeConfig().chainId;
 export const MIN_ARTICLE_OFFER_USDC6 = 100; // $0.000100
 export const MAX_ARTICLE_OFFER_TTL_SECONDS = 30 * 24 * 60 * 60;
 export const MIN_ARTICLE_OFFER_TTL_SECONDS = 5 * 60;

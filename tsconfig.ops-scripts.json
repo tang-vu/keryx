@@ -17,6 +17,8 @@
     "scripts/private-buyer-checkout.mts",
     "scripts/private-buyer-recover.mts",
     "scripts/operator.mts",
-    "scripts/economics-private-report.mts"
+    "scripts/economics-private-report.mts",
+    "scripts/helpers/headless-mainnet-state.mts",
+    "scripts/web-client.mts"
   ]
 }
