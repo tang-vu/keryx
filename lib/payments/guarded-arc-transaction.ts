@@ -2,8 +2,10 @@ import {
   createWalletClient, http, isAddress, keccak256, parseTransaction, recoverTransactionAddress,
   type Address, type Hex, type PrivateKeyAccount, type TransactionSerializable, type Transport,
 } from "viem";
-import { arcTestnet } from "../chains";
+import { chainForProfile } from "../chains";
 import { assertArcRpcChain } from "../arc-rpc-attestation";
+import { paymentRuntimeConfig } from "../payment-runtime-config";
+import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
 
 export const ARC_GATEWAY_DEPOSIT_ABI = [{ type: "function", name: "deposit", stateMutability: "nonpayable",
   inputs: [{ name: "token", type: "address" }, { name: "value", type: "uint256" }], outputs: [] }] as const;
@@ -39,8 +41,8 @@ function rpcUint(value: unknown): bigint {
 }
 
 /** Verify the actual prepared request, rather than trusting a client chain label or RPC preflight. */
-function checkedTransaction(input: Record<string, unknown>, expected: Readonly<IntendedArcTransaction>, sender: string): TransactionSerializable {
-  if (input.chainId !== arcTestnet.id || !sameHex(input.to, expected.to)
+function checkedTransaction(input: Record<string, unknown>, expected: Readonly<IntendedArcTransaction>, sender: string, profile: ArcNetworkProfile): TransactionSerializable {
+  if (input.chainId !== profile.chainId || !sameHex(input.to, expected.to)
     || !sameHex(input.data ?? "0x", expected.data ?? "0x")
     || uint(input.value ?? BigInt(0)) !== (expected.value ?? BigInt(0))
     || (input.from !== undefined && !sameHex(input.from, sender))) fail();
@@ -61,9 +63,9 @@ function checkedTransaction(input: Record<string, unknown>, expected: Readonly<I
     input[key] === undefined ? [] : [[key, input[key]]]))) as unknown as TransactionSerializable;
 }
 
-function checkedFill(result: unknown, expected: Readonly<IntendedArcTransaction>, sender: string): void {
+function checkedFill(result: unknown, expected: Readonly<IntendedArcTransaction>, sender: string, profile: ArcNetworkProfile): void {
   const tx = (result as { tx?: Record<string, unknown> } | null)?.tx;
-  if (!tx || rpcUint(tx.chainId) !== BigInt(arcTestnet.id) || !sameHex(tx.to, expected.to)
+  if (!tx || rpcUint(tx.chainId) !== BigInt(profile.chainId) || !sameHex(tx.to, expected.to)
     || !sameHex(tx.from, sender) || !sameHex(tx.input ?? tx.data ?? "0x", expected.data ?? "0x")
     || (tx.input !== undefined && tx.data !== undefined && !sameHex(tx.input, String(tx.data)))
     || rpcUint(tx.value ?? "0x0") !== (expected.value ?? BigInt(0))
@@ -72,14 +74,14 @@ function checkedFill(result: unknown, expected: Readonly<IntendedArcTransaction>
 }
 
 function guardedTransport(url: string, expected: Readonly<IntendedArcTransaction>, sender: string,
-  assertActive: () => void, refuse: () => never, admitRaw: (hash: Hex) => void): Transport {
+  assertActive: () => void, refuse: () => never, admitRaw: (hash: Hex) => void, profile: ArcNetworkProfile): Transport {
   const base = http(url, { retryCount: 0, timeout: 4_000 });
   return parameters => {
     const transport = base(parameters);
     async function attest() {
       assertActive();
       const observed = await transport.request({ method: "eth_chainId" });
-      try { if (rpcUint(observed) !== BigInt(arcTestnet.id)) refuse(); } catch { refuse(); }
+      try { if (rpcUint(observed) !== BigInt(profile.chainId)) refuse(); } catch { refuse(); }
     }
     return { ...transport, request: (async (args, options) => {
       assertActive();
@@ -92,7 +94,7 @@ function guardedTransport(url: string, expected: Readonly<IntendedArcTransaction
         if (!sameHex(await recoverTransactionAddress({ serializedTransaction: raw as Parameters<typeof recoverTransactionAddress>[0]["serializedTransaction"] }), sender)) fail();
         if (parsed.accessList !== undefined && parsed.accessList.length !== 0) fail();
         const { accessList: _emptyAccessList, r: _r, s: _s, v: _v, yParity: _yParity, ...transaction } = parsed;
-        checkedTransaction(transaction as unknown as Record<string, unknown>, expected, sender);
+        checkedTransaction(transaction as unknown as Record<string, unknown>, expected, sender, profile);
         rawHash = keccak256(raw as Hex);
       }
       if (args.method !== "eth_chainId") await attest();
@@ -101,8 +103,8 @@ function guardedTransport(url: string, expected: Readonly<IntendedArcTransaction
       // viem falls back when eth_fillTransaction rejects. Keep a sticky fence so
       // a detected policy violation cannot be laundered through that fallback.
       try {
-        if (args.method === "eth_chainId" && rpcUint(result) !== BigInt(arcTestnet.id)) refuse();
-        if (args.method === "eth_fillTransaction") checkedFill(result, expected, sender);
+        if (args.method === "eth_chainId" && rpcUint(result) !== BigInt(profile.chainId)) refuse();
+        if (args.method === "eth_fillTransaction") checkedFill(result, expected, sender, profile);
         if (rawHash && !sameHex(result, rawHash)) refuse();
       } catch { refuse(); }
       return result;
@@ -116,7 +118,10 @@ export async function sendGuardedArcTransaction(input: {
   account: PrivateKeyAccount;
   rpcUrl: string;
   transaction: IntendedArcTransaction;
+  profile?: ArcNetworkProfile;
 }): Promise<Hex> {
+  const profile = input.profile ?? paymentRuntimeConfig().profile;
+  if (profile !== ARC_MAINNET_PROFILE && profile !== ARC_TESTNET_PROFILE) fail();
   const expected = Object.freeze({ ...input.transaction });
   if (!isAddress(expected.to) || /^0x0{40}$/i.test(expected.to)
     || (expected.data !== undefined && !/^0x(?:[0-9a-f]{2})*$/i.test(expected.data))
@@ -136,14 +141,14 @@ export async function sendGuardedArcTransaction(input: {
     signTransaction: async (transaction, options) => {
       if (options?.serializer !== undefined) fail();
       assertActive();
-      const checked = checkedTransaction(transaction as unknown as Record<string, unknown>, expected, sender);
-      await assertArcRpcChain(rpcUrl);
+      const checked = checkedTransaction(transaction as unknown as Record<string, unknown>, expected, sender, profile);
+      await assertArcRpcChain(rpcUrl, profile);
       assertActive();
       return sign(checked);
     },
   };
-  const wallet = createWalletClient({ account, chain: arcTestnet,
-    transport: guardedTransport(rpcUrl, expected, account.address, assertActive, refuse, admitRaw) });
+  const wallet = createWalletClient({ account, chain: chainForProfile(profile),
+    transport: guardedTransport(rpcUrl, expected, account.address, assertActive, refuse, admitRaw, profile) });
   try { return await wallet.sendTransaction(expected); }
   // RPC errors can embed credential-bearing URLs or signed bearer transactions.
   catch {

@@ -2,10 +2,25 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { custom } from "viem";
 import { arcTestnet } from "./chains";
 import { assertArcRpcChain, attestedArcTransport } from "./arc-rpc-attestation";
+import { ARC_MAINNET_PROFILE } from "./arc-network-profile";
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Arc RPC attestation", () => {
+  it("attests the independently captured mainnet profile before and after reads and rejects direct foreign chain responses", async () => {
+    let chain = 5042;
+    const methods: string[] = [];
+    const transport = attestedArcTransport(custom({ request: async ({ method }) => {
+      methods.push(method);
+      if (method === "eth_chainId") return `0x${chain.toString(16)}`;
+      if (method === "eth_call") { chain = 5042002; return "0xdead"; }
+      throw new Error("Unexpected synthetic method");
+    } }), true, ARC_MAINNET_PROFILE)({ chain: arcTestnet });
+    await expect(transport.request({ method: "eth_chainId" })).resolves.toBe("0x13b2");
+    await expect(transport.request({ method: "eth_call", params: [{ to: `0x${"11".repeat(20)}`, data: "0x" }, "latest"] })).rejects.toThrow("Arc mainnet");
+    await expect(transport.request({ method: "eth_chainId" })).rejects.toThrow("Arc mainnet");
+    expect(methods).toEqual(["eth_chainId", "eth_chainId", "eth_call", "eth_chainId", "eth_chainId"]);
+  });
   it("checks again before every operation and blocks a write after the endpoint changes", async () => {
     let chain: number = arcTestnet.id;
     const methods: string[] = [];

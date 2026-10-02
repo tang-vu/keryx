@@ -6,6 +6,7 @@ import { config } from "../config";
 import { createPinnedArcBatchSigner } from "./pinned-arc-batch-signer";
 import type { PaymentRequirements } from "./x402-payment-evidence";
 import type { TypedDataPayload } from "../session/session-signer-protocol";
+import { ARC_MAINNET_PROFILE } from "../arc-network-profile";
 
 const PAYEE = `0x${"22".repeat(20)}`;
 const ATTACKER = `0x${"33".repeat(20)}`;
@@ -27,6 +28,19 @@ function fixture(chain = "0x4cef52") {
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("pinned Arc SDK payment signing callback", () => {
+  it("signs the installed SDK mainnet domain and refuses a foreign retained rail before invoking the key", async () => {
+    const f = fixture("0x13b2"), profile = ARC_MAINNET_PROFILE;
+    const req = { ...requirement(), network: profile.networkId, asset: profile.usdcAddress,
+      extra: { ...requirement().extra, verifyingContract: profile.gatewayWallet } };
+    const pinned = createPinnedArcBatchSigner(f.account, "https://synthetic.invalid", profile);
+    const result = await pinned.createPaymentPayload(2, req);
+    const typed = f.sign.mock.calls[0][0];
+    expect(typed.domain).toMatchObject({ chainId: 5042, verifyingContract: profile.gatewayWallet });
+    expect(await recoverTypedDataAddress({ ...typed, signature: (result.payload as { signature: `0x${string}` }).signature })).toBe(f.account.address);
+    f.sign.mockClear(); f.fetcher.mockClear();
+    await expect(pinned.createPaymentPayload(2, requirement())).rejects.toThrow("local signing policy");
+    expect(f.sign).not.toHaveBeenCalled(); expect(f.fetcher).not.toHaveBeenCalled();
+  });
   it("validates and signs the actual installed SDK's testnet domain and original economic tuple", async () => {
     const f = fixture();
     const req = requirement();
