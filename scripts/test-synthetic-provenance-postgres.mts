@@ -9,7 +9,8 @@ import { contentBodyHash } from "../lib/sources/content-receipt.ts";
 const name = `keryx-demo-provenance-${randomUUID()}`;
 const docker = (args: string[], input?: string, timeout = 30_000) => execFileSync("docker", args, { input, encoding: "utf8", timeout,
   maxBuffer: 16 * 1024 * 1024, stdio: ["pipe", "pipe", "pipe"] });
-const sql = (statement: string, timeout?: number) => docker(["exec", "-i", name, "psql", "-h", "127.0.0.1", "-U", "postgres", "-v", "ON_ERROR_STOP=1", "-q", "-t", "-A"], statement, timeout);
+const sql = (statement: string, timeout?: number) => docker(["exec", "-i", name, "psql", "-h", "127.0.0.1", "-U", "postgres", "-v", "ON_ERROR_STOP=1", "-q", "-t", "-A"],
+  `set statement_timeout='25s';set lock_timeout='5s';${statement}`, timeout);
 const literal = (value: string) => `'${value.replaceAll("'", "''")}'`;
 let created = false;
 try {
@@ -39,8 +40,8 @@ try {
       ('mixed-demo','mixed',${literal(seed.title)},${literal(seed.summary)},${literal(seed.link)},${literal(seed.content)},null,'db_plaintext',null),
       ('mixed-real','mixed','Original research','Observed evidence','https://real.test','Real body',null,'db_plaintext',null),
       ('near','near',${literal(seed.title)},${literal(seed.summary)},${literal(seed.link)},'Different body',null,'db_plaintext',null);
-    insert into public.payment_events(id,kind,query_id,source_id,amount_usdc,tx_hash,network,settled,settlement_status) values
-      ('retained-payment','fetch','retained-dispatch','matching',0.003,'real-retained-circle-transfer','eip155:5042002',true,'settled');`);
+    insert into public.payment_events(id,kind,query_id,source_id,payer,payee,amount_usdc,tx_hash,network,settled,settlement_status) values
+      ('retained-payment','fetch','retained-dispatch','matching','0x2222222222222222222222222222222222222222','0x1111111111111111111111111111111111111111',0.003,'real-retained-circle-transfer','eip155:5042002',true,'settled');`);
   const retained = sql("select row_to_json(p) from public.payment_events p where id='retained-payment'").trim();
   sql(readFileSync("supabase/migrations/0079_synthetic_evidence_provenance.sql", "utf8"));
   assert.equal(sql("select evidence_provenance from public.sources where id='matching'").trim(), "synthetic-demo");
