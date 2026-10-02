@@ -363,13 +363,25 @@ Full threat matrix and verification results: [`docs/security-threat-model.md`](.
 
 ## Fork the primitives
 
-The reusable building blocks are MIT-licensed and standalone in
-[`keryx-arc-primitives`](https://github.com/tang-vu/keryx-arc-primitives) (also vendored at
-[`arc-primitives/`](./arc-primitives) — clone with `--recurse-submodules`):
+The MIT-licensed [standalone Arc primitives](https://github.com/tang-vu/keryx-arc-primitives)
+now have a reviewed **0.3 safety and packaging refresh**, also pinned at
+[`arc-primitives/`](./arc-primitives) (clone with `--recurse-submodules`).
 
-- **Two-toll x402 settlement** — fixed access price + dynamic citation reward.
-- **On-chain creator/attribution registry** — squat-proof IDs, multi-author splits, event indexer.
-- **Non-custodial spend cap** — server-enforced budget over a user-funded session EOA.
+- Exact micro-USDC parsing and weighted allocation, plus fixed/dynamic x402 settlement
+  with durable host admission and retained ambiguous outcomes.
+- Creator-bound registry helpers and ordered, deduplicable indexing; the original
+  registry contract remains separate from current upstream v2 work.
+- Atomic integer budget reservations as an explicitly **in-memory reference**, and
+  browser-signed, treasury-relayed withdrawal with finite authorization height,
+  exact attestation binding and journaled mint transaction identity.
+- Additive discovery metadata, pinned Circle SDK/x402 dependencies, generated ESM/types,
+  a no-network demo and a clean packed-consumer check.
+
+The 81 tests and offline demo are synthetic; funded acceptance, durable storage,
+browser custody, reconciliation and mainnet review remain host-owned gates. This
+library release does not change Keryx's payment runtime, MCP package or desktop installer.
+See the [standalone migration guide](https://github.com/tang-vu/keryx-arc-primitives/blob/fea33574e106a91013e52fad9e99bd4db9df1206/docs/migration-0.3.md)
+and [maintenance and surface boundaries](docs/arc-primitives-maintenance.md).
 
 ## Project docs
 
