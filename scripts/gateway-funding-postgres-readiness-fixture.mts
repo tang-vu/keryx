@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import { canonicalJson } from "../lib/canonical-json";
+import { postgresSnapshotDiagnosticSql, postgresSnapshotDiagnosticChanges } from "./helpers/postgres-snapshot-diagnostics.mts";
 import type { GatewayFundingLedger } from "../lib/db/gateway-funding-ledger-types";
 import type { GatewayFundingOperation } from "../lib/payments/gateway-funding-policy";
 import { GATEWAY_FUNDING_RECEIPT_POLICY_DIGEST } from "../lib/payments/gateway-funding-receipt-policy";
@@ -51,8 +52,16 @@ export async function testPostgresFundingReadiness(context: {
     funder: await context.ledger.inspectNamespace(context.operation.policy.funder),
     spend: await context.ledger.inspectNamespace(context.operation.policy.spend) });
   const unchanged = async (run: () => Promise<void>) => {
-    const before = await snapshot(); await run();
-    assert.deepEqual(await snapshot(), before, "readiness preserves full history, caps, exposure and both nonce barriers");
+    const before = await snapshot();
+    const beforeDiagnostic = JSON.parse(context.sql(postgresSnapshotDiagnosticSql));
+    await run();
+    const after = await snapshot();
+    if (after.store !== before.store) {
+      const afterDiagnostic = JSON.parse(context.sql(postgresSnapshotDiagnosticSql));
+      console.error(JSON.stringify({ format: "synthetic-postgres-snapshot-diagnostic-v1",
+        changedWitnesses: postgresSnapshotDiagnosticChanges(beforeDiagnostic, afterDiagnostic) }));
+    }
+    assert.deepEqual(after, before, "readiness preserves full history, caps, exposure and both nonce barriers");
     assert.equal(context.sql("select count(*) from keryx_storage.writer"), "0"); assert.equal(mutationCalls, 0);
   };
   try {
