@@ -15,7 +15,7 @@ async function mainnet() {
   setup.config.funderKey = 'legacy-unavailable';
   setup.custody.mockImplementation(async (_db, role) => ({ signer: role === 'public' ? 'public-mainnet' : 'private-mainnet' }));
   setup.policy.mockReturnValue({ accepted: true });
-  return (await import('./private-operations-inspect-context.mts')).privateInspectionPolicy;
+  return (await import('./private-operations-inspect-context.mjs')).privateInspectionPolicy;
 }
 it('inspects mainnet sealed public/private custody without loading legacy signer keys', async () => {
   const inspect = await mainnet();

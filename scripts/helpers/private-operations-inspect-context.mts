@@ -1,9 +1,9 @@
 import { privateKeyToAccount } from 'viem/accounts';
-import { config } from '../../lib/config.ts';
-import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from '../../lib/arc-network-profile.ts';
-import type { KeryxDB } from '../../lib/db/keryx-db.ts';
-import { privateRuntimePolicy } from '../../lib/a2a/private-runtime-policy.ts';
-import { assertMainnetHostedCustodyReady } from '../../lib/payments/mainnet-hosted-gateway.ts';
+import { config } from '../../lib/config';
+import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from '../../lib/arc-network-profile';
+import type { KeryxDB } from '../../lib/db/keryx-db';
+import { privateRuntimePolicy } from '../../lib/a2a/private-runtime-policy';
+import { assertMainnetHostedCustodyReady } from '../../lib/payments/mainnet-hosted-gateway';
 
 /** Read-only operator composition. The trusted process profile selects custody;
  * neither a request nor a retained legacy key can select the signing domain. */

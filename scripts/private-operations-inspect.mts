@@ -13,7 +13,7 @@ async function main() {
   }
   if (env.KERYX_PRIVATE_RESEARCH_ENABLED !== "1" || !env.KERYX_PRIVATE_RESULT_SPOOL_DIRECTORY
     || !isAbsolute(env.KERYX_PRIVATE_RESULT_SPOOL_DIRECTORY) || !/^[a-f0-9]{7,40}$/.test(env.KERYX_COMMIT ?? "")) throw new Error();
-  const { privateInspectionPolicy } = await import("./helpers/private-operations-inspect-context.mts");
+  const { privateInspectionPolicy } = await import("./helpers/private-operations-inspect-context.mjs");
   const { inspectPrivateOperations } = await import("../lib/a2a/private-operations-inspection");
   const stop = new AbortController(), shutdown = () => stop.abort();
   process.on("SIGINT", shutdown); process.on("SIGTERM", shutdown);
