@@ -10,29 +10,35 @@
  * an unfunded address is a rejection, an unreachable Circle is not.
  */
 
-import { config } from "../config";
+import { paymentRuntimeConfig } from "../payment-runtime-config";
+import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
 import { readBoundedJson } from "../read-bounded-json";
 import { gatewayAvailableAtomic } from "./available-balance";
 
 // Verified from @circle-fin/x402-batching/dist/client/index.js:638-672.
-const GATEWAY_BALANCE_API = "https://gateway-api-testnet.circle.com/v1/balances";
+const runtimeProfile = paymentRuntimeConfig().profile;
+function balanceProfile(profile: ArcNetworkProfile) {
+  if (profile !== ARC_MAINNET_PROFILE && profile !== ARC_TESTNET_PROFILE) throw new Error("Gateway balance profile refused");
+  return profile;
+}
 
-export async function getGatewayAvailableAtomic(address: string): Promise<bigint | null> {
+export async function getGatewayAvailableAtomic(address: string, trustedProfile: ArcNetworkProfile = runtimeProfile): Promise<bigint | null> {
+  const profile = balanceProfile(trustedProfile);
   if (!/^0x[a-fA-F0-9]{40}$/.test(address)) return null;
   try {
-    const upstream = await fetch(GATEWAY_BALANCE_API, {
+    const upstream = await fetch(`${profile.gatewayApiUrl}/v1/balances`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         token: "USDC",
-        sources: [{ depositor: address, domain: config.cctpDomain }],
+        sources: [{ depositor: address, domain: profile.cctpDomain }],
       }),
       signal: AbortSignal.timeout(15_000),
       redirect: "error",
       cache: "no-store",
     });
     if (!upstream.ok) { await upstream.body?.cancel(); return null; }
-    return gatewayAvailableAtomic(await readBoundedJson(upstream), address, config.cctpDomain);
+    return gatewayAvailableAtomic(await readBoundedJson(upstream), address, profile.cctpDomain);
   } catch {
     return null;
   }
@@ -59,25 +65,27 @@ const BATCH = 20;
  *
  * A failed chunk marks only its own addresses unknown, so one bad request cannot blank the sweep.
  */
-export async function getGatewayHeldUsdc(addresses: string[]): Promise<Map<string, number | null>> {
+export async function getGatewayHeldUsdc(addresses: string[], trustedProfile: ArcNetworkProfile = runtimeProfile): Promise<Map<string, number | null>> {
+  const profile = balanceProfile(trustedProfile);
   const unique = [...new Set(addresses.map((a) => a.toLowerCase()))];
   const out = new Map<string, number | null>(unique.map((a) => [a, null]));
 
   for (let i = 0; i < unique.length; i += BATCH) {
     const chunk = unique.slice(i, i + BATCH);
     try {
-      const upstream = await fetch(GATEWAY_BALANCE_API, {
+      const upstream = await fetch(`${profile.gatewayApiUrl}/v1/balances`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           token: "USDC",
-          sources: chunk.map((depositor) => ({ depositor, domain: config.cctpDomain })),
+          sources: chunk.map((depositor) => ({ depositor, domain: profile.cctpDomain })),
         }),
         signal: AbortSignal.timeout(20_000),
+        redirect: "error", cache: "no-store",
       });
-      if (!upstream.ok) continue; // chunk stays unknown
+      if (!upstream.ok) { await upstream.body?.cancel(); continue; } // chunk stays unknown
 
-      const data = (await upstream.json()) as {
+      const data = (await readBoundedJson(upstream)) as {
         balances?: Array<{ depositor?: string; balance?: string; pendingBatch?: string }>;
       };
       for (const b of data.balances ?? []) {
