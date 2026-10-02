@@ -46,7 +46,7 @@ function paidRequest(): NextRequest {
 }
 
 const VALID = { isValid: true, payer: "0xbuyer" };
-const SETTLED = { success: true, transaction: "0xtx", payer: "0xbuyer" };
+const SETTLED = { success: true, transaction: "0xtx", payer: "0xbuyer", network: "eip155:5042002" };
 
 beforeEach(() => {
   verifyMock.mockReset();
@@ -54,6 +54,17 @@ beforeEach(() => {
 });
 
 describe("settleThenServe bazaar discovery passthrough", () => {
+  it("never delivers or relabels an absent or foreign receipt network", async () => {
+    for (const network of [undefined, "eip155:5042", "eip155:5042002:other"]) {
+      verifyMock.mockResolvedValue(VALID);
+      settleMock.mockResolvedValue({ ...SETTLED, network });
+      const produce = vi.fn();
+      const res = await settleThenServe(paidRequest(), baseOpts, produce);
+      expect(res.status).toBe(503);
+      expect(produce).not.toHaveBeenCalled();
+      expect(res.headers.get("PAYMENT-RESPONSE")).toBeNull();
+    }
+  });
   it("without discovery: forwards the buyer payload untouched", async () => {
     verifyMock.mockResolvedValue(VALID);
     settleMock.mockResolvedValue(SETTLED);
@@ -72,6 +83,7 @@ describe("settleThenServe bazaar discovery passthrough", () => {
     const res = await settleThenServe(paidRequest(), { ...baseOpts, discovery: DISCOVERY }, (s) => ({
       payer: s.payer,
       authorizationId: s.authorizationId,
+      network: s.network,
     }));
 
     expect(res.status).toBe(200);
