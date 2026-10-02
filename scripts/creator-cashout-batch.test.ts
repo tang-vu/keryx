@@ -15,9 +15,11 @@ import { creatorWithdrawalFixture } from "./test-fixtures/creator-withdrawal";
 import { createWithdrawalMintJournal } from "../lib/gateway/withdrawal-mint-journal";
 import { withCreatorBatchStore } from "./creator-cashout-batch-store";
 import { withNewWithdrawalDrillStore } from "./creator-withdrawal-drill-store";
+import { readWithdrawalHeightWindow } from "../lib/gateway/withdrawal-height-window";
+import { estimateWithdrawalIntent } from "../lib/gateway/withdrawal-estimate";
 
 const directories: string[] = [], signal = () => new AbortController().signal;
-afterEach(() => { vi.restoreAllMocks(); for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }); });
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }); });
 const contracts = { domain: 26, gatewayWallet: "0x0077777d7EBA4688BDeF3E311b846F25870A19B9" as const,
   gatewayMinter: "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B" as const, asset: "0x3600000000000000000000000000000000000000" as const };
 function manifest() {
@@ -57,6 +59,34 @@ it("solves bounded unsigned fee fixed point and retains exact full debit plus fi
   const changed = structuredClone(f.plan); changed.manifest.owners[0].label = "Changed label";
   expect(creatorBatchPlanDigest(changed)).not.toBe(creatorBatchPlanDigest(f.plan));
   changed.drafts[0].burnIntent.spec.value = "49999"; expect(() => validateCreatorBatchPlan(changed)).toThrow();
+});
+it("prepares with complete fresh RPC observation metadata through the real strict estimator", async () => {
+  const f = manifest(), abort = signal();
+  const block = { number: BigInt(10000), hash: `0x${"ab".repeat(32)}` as const,
+    timestamp: BigInt(Math.floor(Date.now() / 1000)) };
+  const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
+    if (url === "https://gateway-api-testnet.circle.com/v1/info") return Response.json({ domains: [{
+      domain: 26, chain: "Arc", network: "Testnet", processedHeight: "9999", burnIntentExpirationHeight: "10500",
+      walletContract: { address: contracts.gatewayWallet, supportedTokens: ["USDC"] },
+      minterContract: { address: contracts.gatewayMinter, supportedTokens: ["USDC"] },
+    }] });
+    expect(url).toBe("https://gateway-api-testnet.circle.com/v1/estimate");
+    expect(init?.method).toBe("POST");
+    const [{ spec }] = JSON.parse(init?.body as string);
+    expect(Object.keys(JSON.parse(init?.body as string)[0])).toEqual(["spec"]);
+    return Response.json([{ burnIntent: { spec, maxBlockHeight: "11000", maxFee: "3850" } }]);
+  });
+  vi.stubGlobal("fetch", fetcher);
+  const height = await readWithdrawalHeightWindow(() => ({ getChainId: async () => 5042002,
+    getBlock: async () => block } as unknown as ReturnType<Parameters<typeof readWithdrawalHeightWindow>[0]>), contracts,
+    { maxAheadBlocks: "2000", maxProcessingLagBlocks: "100" }, abort);
+  expect(height).toMatchObject({ minimumBlockHeight: "10500", maximumBlockHeight: "12000",
+    observedBlockNumber: "10000", observedBlockHash: block.hash, observedAt: expect.any(String) });
+  const plan = await prepareCreatorBatchPlan(f.value, contracts, { balance: async () => BigInt("53850"),
+    height: async () => height, estimate: (candidate, policy, bounds) => estimateWithdrawalIntent(candidate, policy, bounds, abort) });
+  expect(plan.drafts[0].burnIntent).toMatchObject({ maxBlockHeight: "11000", maxFee: "3850", spec: { value: "50000" } });
+  expect(fetcher.mock.calls.map(([url]) => url)).toEqual(["https://gateway-api-testnet.circle.com/v1/info",
+    "https://gateway-api-testnet.circle.com/v1/estimate", "https://gateway-api-testnet.circle.com/v1/estimate"]);
 });
 it("rejects changed balances, excess fees, unlimited expiry and unstable quote convergence before signing", async () => {
   const f = manifest(), height = async () => ({ minimumBlockHeight: "10500", maximumBlockHeight: "12000" });

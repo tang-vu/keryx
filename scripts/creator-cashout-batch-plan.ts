@@ -52,7 +52,11 @@ export async function prepareCreatorBatchPlan(input: unknown,
     for (let attempt = 0; attempt < 5; attempt++) {
       const candidate = prepareWithdrawIntent(row.owner, value, row.owner);
       candidate.maxFee = manifest.maxFeeMicros;
-      const estimated = await dependencies.estimate(candidate, policy, height);
+      // RPC observations also carry block identity/time. The strict estimator
+      // accepts only the two reviewed bounds, never observation metadata.
+      const estimated = await dependencies.estimate(candidate, policy, {
+        minimumBlockHeight: height.minimumBlockHeight, maximumBlockHeight: height.maximumBlockHeight,
+      });
       validateWithdrawIntent(estimated, policy);
       if (estimated.spec.value !== value.toString() || estimated.maxBlockHeight === maxUint256.toString()
         || BigInt(estimated.maxBlockHeight) < BigInt(height.minimumBlockHeight)
