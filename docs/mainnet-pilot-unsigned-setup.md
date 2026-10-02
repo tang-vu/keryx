@@ -32,6 +32,12 @@ SHA-256 and creation/runtime bytecode Keccak-256. For independent reproduction,
 extract `compilerInput` and pass it to that exact compiler with `--standard-json`;
 compare both `evm.bytecode.object` and `evm.deployedBytecode.object`. No compiler
 download or compilation occurs in the setup command.
+This is deliberately curated deployment data retained in source control, rather
+than whichever ignored `artifacts/` a developer last built. Before emission the
+helper verifies its pinned canonical artifact hash, exact compiler/settings and
+embedded source against the actual release source with LF normalization. Later
+contract changes fail closed until a separately reviewed curated artifact and pin
+are updated. The pin includes bytecode and ABI, not only self-declared metadata.
 
 After a separately authorized owner deployment, observe the actual address,
 successful original receipt, matching runtime bytecode, and chain authority.
@@ -59,8 +65,8 @@ Registration input contains public fields only:
 
 The exact URL bytes determine `urlHash`; no URL rewriting occurs. The source ID is
 `keccak256(abi.encode(creator, urlHash))`. It must match an approved enrollment ID.
-Creator, payout and all authors must be approved, unique author shares must total
-10,000 integer basis points, and fetch price must stay within the proposed
+Creator, payout and all authors must be approved, at most five unique author shares
+must total 10,000 integer basis points, and positive fetch price must stay within the proposed
 per-payment cap. Content CID and tags have the contract's UTF-8 byte limits.
 The emitted `register` request must be sent by the displayed creator. A declaration
 does not establish feed/content rights or a confirmed active registration.

@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { decodeFunctionData, encodeAbiParameters, erc20Abi, keccak256, parseAbi, toBytes } from "viem";
 import { ARC_MAINNET_PROFILE } from "../lib/arc-network-profile";
 import { publicMainnetEnrollmentDigest } from "../lib/mainnet-pilot/public-enrollment";
-import { assertReviewedRelease, prepareUnsignedPilotSetup, prepareUnsignedRegistryDeployment, readUnsignedSetupJson } from "./mainnet-pilot-unsigned-setup.mjs";
+import { assertReviewedRelease, prepareUnsignedPilotSetup, prepareUnsignedRegistryDeployment, readUnsignedSetupJson, validateRegistryArtifact } from "./mainnet-pilot-unsigned-setup.mjs";
 
 const owner = `0x${"11".repeat(20)}` as const, signer = `0x${"22".repeat(20)}` as const,
   creator = `0x${"33".repeat(20)}` as const, payout = `0x${"44".repeat(20)}` as const,
@@ -75,7 +75,9 @@ describe("offline unsigned mainnet setup", () => {
     { creator: owner }, { payoutWallet: signer }, { canonicalUrl: "https://other.example.invalid" },
     { authors: [{ wallet: signer, basisPoints: 10_000 }] }, { authors: [{ wallet: payout, basisPoints: 9999 }] },
     { authors: [{ wallet: payout, basisPoints: 5000 }, { wallet: payout, basisPoints: 5000 }] },
-    { fetchPriceMicros: 10_001 }, { contentCid: "é".repeat(65) }, { tags: "é".repeat(129) },
+    { fetchPriceMicros: 10_001 }, { fetchPriceMicros: 0 },
+    { authors: Array.from({ length: 6 }, (_, i) => ({ wallet: `0x${String(i + 1).repeat(40)}`, basisPoints: i === 5 ? 5000 : 1000 })) },
+    { contentCid: "é".repeat(65) }, { tags: "é".repeat(129) },
   ])("refuses unapproved or invalid registry requests %j", async change => {
     await expect(prepareUnsignedPilotSetup(enrollment(), { ...source, ...change })).rejects.toThrow();
   });
@@ -97,6 +99,22 @@ describe("offline unsigned mainnet setup", () => {
     expect(result.transactions[0]).toMatchObject({ chainId: 5042, from: owner, to: null, data: artifact.bytecode, valueNativeAtomic: "0" });
     expect(artifact.abi.some((entry: { type: string }) => entry.type === "constructor")).toBe(false);
     await expect(prepareUnsignedRegistryDeployment(owner, "short")).rejects.toThrow();
+  });
+
+  it("refuses stale source, altered compiler settings and unreviewed curated bytecode", async () => {
+    const artifact = JSON.parse(await readFile(new URL("./fixtures/mainnet-source-registry.json", import.meta.url), "utf8"));
+    const actual = await readFile(new URL("../contracts/source-registry.sol", import.meta.url), "utf8");
+    expect(() => validateRegistryArtifact(artifact, actual)).not.toThrow();
+    expect(() => validateRegistryArtifact(artifact, actual.replace(/\r?\n/g, "\r\n"))).not.toThrow();
+    expect(() => validateRegistryArtifact(artifact, actual + "\n// different release source\n")).toThrow();
+    for (const mutate of [
+      (a: typeof artifact) => { a.compiler = "0.8.26"; },
+      (a: typeof artifact) => { a.compilerInput.settings.optimizer.runs = 201; },
+      (a: typeof artifact) => { a.compilerInput.settings.evmVersion = "shanghai"; },
+      (a: typeof artifact) => { a.compilerInput.sources["contracts/source-registry.sol"].content += "\n"; },
+      (a: typeof artifact) => { a.bytecode = "0x6000"; },
+      (a: typeof artifact) => { a.abi = []; },
+    ]) { const changed = structuredClone(artifact); mutate(changed); expect(() => validateRegistryArtifact(changed, actual)).toThrow(); }
   });
 
   it("reads only explicit bounded regular files and gives fixed redacted CLI failures", async () => {

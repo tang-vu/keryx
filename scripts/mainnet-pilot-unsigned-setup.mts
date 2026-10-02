@@ -15,8 +15,8 @@ const tokenAbi = parseAbi(["function approve(address spender,uint256 amount) ret
 const gatewayAbi = parseAbi(["function depositFor(address token,address depositor,uint256 value)"]);
 const sourceSchema = z.object({ kind: z.literal("register"), creator: address,
   canonicalUrl: z.string().min(1).max(2048).refine(value => { try { const u = new URL(value); return ["https:", "http:"].includes(u.protocol) && !u.username && !u.password; } catch { return false; } }),
-  payoutWallet: address, authors: z.array(z.object({ wallet: address, basisPoints: z.number().int().positive().max(10_000) }).strict()).min(1).max(20),
-  fetchPriceMicros: z.number().int().nonnegative().max(10_000),
+  payoutWallet: address, authors: z.array(z.object({ wallet: address, basisPoints: z.number().int().positive().max(10_000) }).strict()).min(1).max(5),
+  fetchPriceMicros: z.number().int().positive().max(10_000),
   contentCid: z.string().refine(value => Buffer.byteLength(value) <= 128),
   tags: z.string().refine(value => Buffer.byteLength(value) <= 256),
 }).strict();
@@ -67,7 +67,7 @@ export async function prepareUnsignedPilotSetup(enrollmentInput: unknown, operat
 }
 
 /** Bounded explicit local JSON reads, including refusal before opening a FIFO/device/symlink. */
-export async function readUnsignedSetupJson(path: string, maxBytes = 16_384): Promise<unknown> {
+async function readBoundedRegularBytes(path: string, maxBytes: number): Promise<Buffer> {
   const selected = await lstat(path);
   if (!selected.isFile() || selected.size < 2 || selected.size > maxBytes) throw new Error("setup refused");
   const handle = await open(path, constants.O_RDONLY | (constants.O_NONBLOCK ?? 0) | (constants.O_NOFOLLOW ?? 0));
@@ -77,16 +77,36 @@ export async function readUnsignedSetupJson(path: string, maxBytes = 16_384): Pr
       before.mtimeMs !== selected.mtimeMs || before.ctimeMs !== selected.ctimeMs) throw new Error("setup refused");
     const bytes = Buffer.alloc(maxBytes + 1), read = await handle.read(bytes, 0, bytes.length, 0), after = await handle.stat();
     if (read.bytesRead !== before.size || after.size !== before.size || after.mtimeMs !== before.mtimeMs || after.ctimeMs !== before.ctimeMs) throw new Error("setup refused");
-    return JSON.parse(bytes.subarray(0, read.bytesRead).toString("utf8"));
+    return bytes.subarray(0, read.bytesRead);
   } finally { await handle.close(); }
+}
+
+export async function readUnsignedSetupJson(path: string, maxBytes = 16_384): Promise<unknown> {
+  return JSON.parse((await readBoundedRegularBytes(path, maxBytes)).toString("utf8"));
+}
+
+type RegistryArtifact = { compiler: string; sourceSha256Lf: string; compilerInput: { sources: Record<string, { content: string }>; settings: unknown };
+  bytecode: Hex; deployedBytecode: Hex; abi: unknown };
+
+/** Curated release data, not any local build output. Pin changes require source/bytecode review. */
+export function validateRegistryArtifact(input: unknown, currentSource: string): RegistryArtifact {
+  const artifact = input as RegistryArtifact;
+  const normalizedSource = currentSource.replace(/\r\n/g, "\n");
+  if (sha256(canonicalJson(input)) !== "3333207861dfa43c8dde7e181bb6a5e8eaca5b3b38155020a322f431448ef16e" || artifact.compiler !== "0.8.24+commit.e11b9ed9" ||
+    artifact.sourceSha256Lf !== sha256(normalizedSource) ||
+    artifact.compilerInput.sources["contracts/source-registry.sol"].content !== normalizedSource ||
+    Object.keys(artifact.compilerInput.sources).length !== 1 ||
+    canonicalJson(artifact.compilerInput.settings) !== canonicalJson({ evmVersion: "paris", optimizer: { enabled: true, runs: 200 },
+      outputSelection: { "*": { "*": ["abi", "evm.bytecode.object", "evm.deployedBytecode.object", "metadata"] } } })) throw new Error("setup refused");
+  return artifact;
 }
 
 /** Fixed locally compiled v1 contract: no constructor, proxy, admin, external link or funds. */
 export async function prepareUnsignedRegistryDeployment(deployer: string, releaseCommit: string) {
   address.parse(deployer); z.string().regex(/^[0-9a-f]{40}$/).parse(releaseCommit);
-  const artifact = await readUnsignedSetupJson(fileURLToPath(new URL("./fixtures/mainnet-source-registry.json", import.meta.url)), 65_536) as {
-    compiler: string; sourceSha256Lf: string; compilerInput: unknown; bytecode: Hex; deployedBytecode: Hex; abi: unknown;
-  };
+  const artifact = validateRegistryArtifact(
+    await readUnsignedSetupJson(fileURLToPath(new URL("./fixtures/mainnet-source-registry.json", import.meta.url)), 65_536),
+    (await readBoundedRegularBytes(fileURLToPath(new URL("../contracts/source-registry.sol", import.meta.url)), 16_384)).toString("utf8"));
   return { format: "keryx-mainnet-unsigned-setup-v1", operation: "deploy", networkId: network.networkId, releaseCommit,
     ...notice, provenance: { contract: "SourceRegistry", sourceName: "contracts/source-registry.sol", compiler: artifact.compiler,
       sourceSha256Lf: artifact.sourceSha256Lf, compilerInputSha256: sha256(canonicalJson(artifact.compilerInput)),
