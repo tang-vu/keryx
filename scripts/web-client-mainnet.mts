@@ -16,6 +16,7 @@ import { REGISTRY_ABI } from "../lib/registry/registry-abi";
 import { inspectHeadlessOriginal } from "./helpers/headless-mainnet-originals.mjs";
 import { canonicalJson } from "../lib/canonical-json";
 import { openHeadlessMainnetState } from "./helpers/headless-mainnet-state.mjs";
+import { runHeadlessCashout,validateHeadlessCashoutArgs,type HeadlessCashoutPorts } from "./helpers/headless-mainnet-cashout.mjs";
 
 const refuse = (): never => { throw new Error("Headless mainnet admission refused; preserve original custody and attempts"); };
 function micros(value: string | undefined) {
@@ -27,9 +28,12 @@ function micros(value: string | undefined) {
  * treasury funding. Test ports do not change the production profile/HTTPS policy. */
 export async function runHeadlessMainnet(args: string[], ports: {
   fetchImpl?: typeof fetch; readSource?: (registryId: string) => Promise<SourcePaymentAuthority>;
+  cashout?: HeadlessCashoutPorts;
 } = {}) {
   const [action, question, budgetValue, capValue] = args;
-  if (!["prepare","status","recover","ask"].includes(action ?? "") ||
+  const cashout=action?.startsWith("withdraw-")??false;
+  if(cashout)validateHeadlessCashoutArgs(args);
+  else if (!["prepare","status","recover","ask","migrate"].includes(action ?? "") ||
     (action !== "ask" ? args.length !== 1 : args.length !== 4 || !question || question.length > 20000)) refuse();
   const payment = paymentRuntimeConfig(); if (payment.profile !== profile) refuse();
   const origin = process.env.KERYX_BASE_URL ?? "https://keryx.cc", url = new URL(origin);
@@ -38,7 +42,9 @@ export async function runHeadlessMainnet(args: string[], ports: {
   if (!ownerKey || !wrappingKey || !/^0x[0-9a-fA-F]{64}$/.test(ownerKey) || ownerKey.toLowerCase() === wrappingKey.toLowerCase() ||
     !process.env.KERYX_HEADLESS_STATE_DIRECTORY) refuse();
   const owner = privateKeyToAccount(ownerKey! as Hex), context = browserSessionCustodyContext(profile,origin,owner.address);
-  const state = await openHeadlessMainnetState(process.env.KERYX_HEADLESS_STATE_DIRECTORY!,context,wrappingKey!,action === "prepare" || action === "ask");
+  const state = await openHeadlessMainnetState(process.env.KERYX_HEADLESS_STATE_DIRECTORY!,context,wrappingKey!,action === "prepare" || action === "ask",action === "migrate");
+  if(action==="migrate"){try{console.log(JSON.stringify({format:"keryx-headless-session-state-v3",network:profile.networkId,originalAttempts:state.originalNonces().length,
+    notice:"Migration retained original encrypted custody and all attempts. Previous v2 writers now refuse this identity; no owner signature or payment performed."}));}finally{state.close();}return;}
   const key = createBrowserSessionKey(origin,owner.address,state);
   try {
     const retained = await state.retained.read(context.storageNamespace);
@@ -48,6 +54,7 @@ export async function runHeadlessMainnet(args: string[], ports: {
     if (action === "prepare" || action === "status") {
       console.log(JSON.stringify({network:profile.networkId,origin,owner:owner.address,session:key.address,
         originalAttempts:state.originalNonces().length, fundingState:"not_checked",
+        withdrawals:state.withdrawals.references(),
         notice:"Retain encrypted custody and wrapping environment. Owner funding uses exact approve plus Gateway depositFor; no funding transaction performed."}));
       return;
     }
@@ -66,6 +73,8 @@ export async function runHeadlessMainnet(args: string[], ports: {
     const message = new SiweMessage({domain:url.host,address:owner.address,statement:"Sign in to Keryx.",uri:origin,
       version:"1",chainId:profile.chainId,nonce:nonceBody.nonce as string}).prepareMessage();
     await json("/api/auth/verify","POST",{message,signature:await owner.signMessage({message})});
+    if(cashout){console.log(JSON.stringify(await runHeadlessCashout(args,key,state,json,ports.cashout)));return;}
+    if(state.withdrawals.activeWithdrawal())refuse();
     for (const original of state.unresolvedNonces()) {
       if (typeof original.req_id !== "string") refuse();
       const observation = await inspectHeadlessOriginal(await json(`/api/session/authorizations/${encodeURIComponent(String(original.req_id))}`),{

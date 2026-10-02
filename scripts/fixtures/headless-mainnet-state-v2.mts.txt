@@ -9,7 +9,6 @@ import { ARC_MAINNET_PROFILE } from "../../lib/arc-network-profile";
 import { browserSessionCustodyContext, type BrowserSessionCustodyContext } from "../../lib/session/browser-session-custody";
 import type { RetainedSessionStore } from "../../lib/session/browser-session-key";
 import type { IsolatedWrappedKey, WrappingKeyStore } from "../../lib/session/isolated-session-vault";
-import { HEADLESS_WITHDRAWAL_SCHEMA, headlessWithdrawalStorage } from "./headless-mainnet-withdrawals.mjs";
 
 const ERROR = "Headless session state unavailable; preserve custody and original attempts for owner recovery";
 const fail = (): never => { throw new Error(ERROR); };
@@ -59,7 +58,7 @@ function blob(value: unknown, context: BrowserSessionCustodyContext): IsolatedWr
 /** Owner-only standalone storage. Keys come from protected environment, never from
  * this database. It retains the first ciphertext and every admitted nonce forever;
  * local locks/exposure are not a distributed clone-proof or server settlement ledger. */
-export async function openHeadlessMainnetState(directory: string, context: BrowserSessionCustodyContext, wrappingKey: string, createIfMissing = true, migrateV2 = false) {
+export async function openHeadlessMainnetState(directory: string, context: BrowserSessionCustodyContext, wrappingKey: string, createIfMissing = true) {
   let database: DatabaseSync | undefined, lock: string | undefined, lockInode: fs.Stats | undefined;
   try {
     if (!path.isAbsolute(directory) || path.resolve(directory) !== directory || context.profile !== ARC_MAINNET_PROFILE ||
@@ -87,8 +86,7 @@ export async function openHeadlessMainnetState(directory: string, context: Brows
     protectedPath(file, false);
     database = new DatabaseSync(file);
     if (fresh) database.exec("PRAGMA synchronous=FULL; PRAGMA journal_mode=DELETE; PRAGMA busy_timeout=1000;");
-    const identity = canonicalJson({ format: "keryx-headless-session-state-v3", custody: context });
-    const previousIdentity = canonicalJson({ format: "keryx-headless-session-state-v2", custody: context });
+    const identity = canonicalJson({ format: "keryx-headless-session-state-v2", custody: context });
     if (fresh) {
       database.exec(`BEGIN IMMEDIATE;
         CREATE TABLE identity(singleton INTEGER PRIMARY KEY CHECK(singleton=1),value TEXT NOT NULL) STRICT;
@@ -109,25 +107,9 @@ export async function openHeadlessMainnetState(directory: string, context: Brows
         CREATE TRIGGER exposure_no_delete BEFORE DELETE ON exposure BEGIN SELECT RAISE(ABORT,'immutable'); END;
         CREATE TRIGGER headers_no_update BEFORE UPDATE ON headers BEGIN SELECT RAISE(ABORT,'immutable'); END;
         CREATE TRIGGER headers_no_delete BEFORE DELETE ON headers BEGIN SELECT RAISE(ABORT,'immutable'); END;`);
-      database.exec(HEADLESS_WITHDRAWAL_SCHEMA);
       database.prepare("INSERT INTO identity VALUES(1,?)").run(identity); database.exec("COMMIT"); syncDirectory(directory);
     }
     const db = database;
-    if (!fresh && db.prepare("SELECT value FROM identity WHERE singleton=1").get()?.value === previousIdentity) {
-      if (!migrateV2 || db.prepare("PRAGMA integrity_check").get()?.integrity_check !== "ok") fail();
-      const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all().map(row=>row.name);
-      if (canonicalJson(tables) !== canonicalJson(["custody","exposure","headers","identity","questions","terminal"])) fail();
-      db.exec("PRAGMA synchronous=FULL; PRAGMA journal_mode=DELETE; BEGIN IMMEDIATE");
-      try {
-        if (db.prepare("SELECT value FROM identity WHERE singleton=1").get()?.value !== previousIdentity) fail();
-        db.exec(HEADLESS_WITHDRAWAL_SCHEMA);
-        db.prepare("INSERT INTO upgrade_history VALUES(1,?)").run(previousIdentity);
-        db.exec("DROP TRIGGER identity_no_update");
-        db.prepare("UPDATE identity SET value=? WHERE singleton=1").run(identity);
-        db.exec("CREATE TRIGGER identity_no_update BEFORE UPDATE ON identity BEGIN SELECT RAISE(ABORT,'immutable'); END; COMMIT");
-        syncDirectory(directory);
-      } catch { try { db.exec("ROLLBACK"); } catch { /* Preserve original database. */ } fail(); }
-    }
     if (db.prepare("SELECT value FROM identity WHERE singleton=1").get()?.value !== identity ||
       db.prepare("PRAGMA integrity_check").get()?.integrity_check !== "ok") fail();
     db.exec("PRAGMA synchronous=FULL; PRAGMA journal_mode=DELETE; PRAGMA busy_timeout=1000;");
@@ -136,8 +118,7 @@ export async function openHeadlessMainnetState(directory: string, context: Brows
     try { aes = await crypto.subtle.importKey("raw", bytes, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]); }
     finally { bytes.fill(0); }
     let closed = false;
-    const active = () => { if (closed || db.prepare("SELECT value FROM identity WHERE singleton=1").get()?.value !== identity) fail(); };
-    const withdrawals = headlessWithdrawalStorage(db, context, active, () => syncDirectory(directory), aes);
+    const active = () => { if (closed) fail(); };
     const wrappingKeys: WrappingKeyStore = { async getOrCreate(namespace) {
       active(); if (namespace !== context.storageNamespace) fail(); return aes;
     }, async destroy() { fail(); } };
@@ -159,7 +140,7 @@ export async function openHeadlessMainnetState(directory: string, context: Brows
         } catch { try { db.exec("ROLLBACK"); } catch { /* committed exposure stays held */ } return fail(); }
       },
     };
-    return Object.freeze({ wrappingKeys, retained, file, withdrawals,
+    return Object.freeze({ wrappingKeys, retained, file,
       async reserve(namespace: string, epoch: string, nonce: string, amount: bigint, cap: bigint, question: {id:string;budgetMicroUsdc:string}, original: BrowserSessionAuthorizationBinding) {
         active(); if (namespace !== context.storageNamespace || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(epoch) || !/^0x[0-9a-f]{64}$/.test(nonce) ||
           (!original || original.sessionId !== context.owner || original.grantEpoch !== epoch || original.expectedNonce !== nonce ||
@@ -174,7 +155,6 @@ export async function openHeadlessMainnetState(directory: string, context: Brows
           amount <= BigInt(0) || cap <= BigInt(0) || cap > BigInt(Number.MAX_SAFE_INTEGER)) fail();
         db.exec("BEGIN IMMEDIATE");
         try {
-          if (withdrawals.activeWithdrawal()) fail();
           const priorQuestion=db.prepare("SELECT budget FROM questions WHERE id=?").get(question.id);
           if(priorQuestion && priorQuestion.budget!==question.budgetMicroUsdc)fail();
           db.prepare("INSERT OR IGNORE INTO questions VALUES(?,?)").run(question.id,question.budgetMicroUsdc);

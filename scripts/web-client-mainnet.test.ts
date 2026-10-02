@@ -8,6 +8,7 @@ import { SiweMessage } from "siwe";
 import { ARC_MAINNET_PROFILE as profile } from "../lib/arc-network-profile";
 import { browserSessionCustodyContext } from "../lib/session/browser-session-custody";
 import { privateHeadlessTestDirectory } from "./helpers/headless-state-test-fixture";
+import { headlessCashoutFixture,testHeadlessWrapping } from "./helpers/headless-cashout-test-fixture";
 vi.stubEnv("KERYX_NETWORK","arc");vi.stubEnv("NEXT_PUBLIC_KERYX_NETWORK","arc");
 const {runHeadlessMainnet}=await import("./web-client-mainnet.mjs");
 const roots:string[]=[];afterEach(()=>{for(const root of roots.splice(0))fs.rmSync(root,{recursive:true,force:true});vi.restoreAllMocks();});
@@ -92,3 +93,30 @@ it("a duplicate sign notification after lost ack never starts a second authoriza
  expect(f.requests.filter(p=>p==="/api/ask/sign")).toHaveLength(1);
  expect(f.requests.filter(p=>p==="/api/ask/challenge")).toHaveLength(1);
 });
+
+it("ordinary cashout command restores expired custody, retains exposure on lost authorize and never uses grant renewal or owner transaction authority",async()=>{
+ const directory=privateHeadlessTestDirectory();roots.push(directory);const f=await headlessCashoutFixture(directory);
+ await f.state.withdrawals.storage.reserveWithdrawal(f.key.context.storageNamespace,f.p,(await f.state.withdrawals.storage.readExposure(f.key.context.storageNamespace)).version);
+ f.key.lock();f.state.close();
+ vi.stubEnv("KERYX_HEADLESS_OWNER_PRIVATE_KEY",`0x${"11".repeat(32)}`);vi.stubEnv("KERYX_HEADLESS_WRAPPING_KEY",testHeadlessWrapping);
+ vi.stubEnv("KERYX_HEADLESS_STATE_DIRECTORY",directory);vi.stubEnv("KERYX_BASE_URL","https://keryx.cc");
+ const requests:string[]=[],log=vi.spyOn(console,"log").mockImplementation(()=>{});
+ const ports={cashout:{chain:async()=>{}},fetchImpl:async(input:RequestInfo|URL,init?:RequestInit)=>{
+  const path=new URL(String(input)).pathname;requests.push(path);
+  if(path==="/api/auth/nonce")return Response.json({nonce:"syntheticnonce1234"});
+  if(path==="/api/auth/verify")return Response.json({ok:true});
+  if(path==="/api/session/credit")return Response.json({status:"known",network:profile.networkId,address:f.p.sessAddr,available:"1000000"});
+  if(path==="/api/session/withdraw/payments")return Response.json({network:profile.networkId,sessAddr:f.p.sessAddr,retryAuthorized:false,payments:[],nextCursor:null});
+  if(path==="/api/session/withdraw/authorize")throw new Error("synthetic-lost-authorize-ack");
+  expect(init?.method??"GET").toBe("GET");expect(path).toBe(`/api/session/withdraw/${f.p.requestId}`);
+  return Response.json({preparation:f.p,signingPhase:"prepared",cancellation:null,progress:{status:"prepared",retryAuthorized:false,chainFinalityVerified:false},attestation:null,mint:null,completion:null});
+ }};
+ await expect(runHeadlessMainnet(["withdraw-sign",f.p.requestId,"500000","1000"],ports)).rejects.toThrow("synthetic-lost");
+ await expect(runHeadlessMainnet(["withdraw-cancel",f.p.requestId],ports)).rejects.toThrow();
+ await runHeadlessMainnet(["withdraw-status",f.p.requestId],ports);
+ expect(requests.filter(p=>p==="/api/session/withdraw/authorize")).toHaveLength(1);
+ expect(requests).not.toContain("/api/session/grant");expect(requests).not.toContain("/api/session/withdraw/cancel");expect(requests).not.toContain("/api/session/withdraw/submit");
+ const file=path.join(directory,`${f.key.context.storageNamespace}.sqlite`),db=new DatabaseSync(file,{readOnly:true});
+ const retained=JSON.parse(String(db.prepare("SELECT value FROM withdrawals").get()!.value));expect(retained).toMatchObject({exposed:true});expect(retained).not.toHaveProperty("signatureCipher");db.close();
+ expect(log).toHaveBeenCalledWith(expect.stringContaining('"exposed":true'));
+},30000);
