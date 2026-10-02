@@ -1,5 +1,19 @@
 # Keryx Project Changelog
 
+### 2026-10-02 - Preserve recovered sessions during stale revocation
+
+- Atomically revoke only the captured grant epoch and signer. Concurrent recovery
+  returns a conflict without deleting its replacement. Journal mode retains
+  exposed authorizations, historical spend and cumulative signer capacity.
+- Pause browser signing while revocation is uncertain. Conflicts, outages and
+  malformed success responses retain encrypted custody for deliberate recovery;
+  delayed old completions cannot erase a newer registration.
+- Cover the actual session API, shared SQLite/PostgreSQL and enrolled adapters,
+  plus the real browser hook/worker/IndexedDB path. Native PostgreSQL catalog
+  equality and installed HTTPS-facade acceptance remain release checks. These
+  synthetic checks confer no mainnet activation or funded settlement evidence.
+  See [session revocation](session-grant-revocation.md).
+
 ### 2026-10-02 - Bounded mainnet pilot candidate preparation
 
 - Add an explicit-file, keyless pilot preflight with exact release-commit digest,

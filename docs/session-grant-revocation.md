@@ -25,8 +25,11 @@ use the named wrapper and its reviewed relation inventory. Missing or malformed
 acknowledgements fail closed without a raw-table fallback.
 
 The new functions and operation change the complete PostgreSQL source catalog.
-Its frozen pre/post reference must be independently regenerated from an empty
-PG17 source database and pass the existing native acceptance before release.
+The frozen pre/post reference comes from empty PG17 source commit `8c4d717`,
+independent Actions run `36989009554`; release requires the existing native
+acceptance to reproduce both catalogs exactly before target enrollment. The
+owner migration replaces only dormant constants inside one transaction and
+restores the identical immutable triggers before inserting the reviewed rows.
 The migration refuses an already enrolled target before changing its catalog:
 upgrading such a deployment requires a separately reviewed generation migration,
 drain, original-state recovery and fresh enrollment. No migration relabels existing
