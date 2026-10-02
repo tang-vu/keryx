@@ -6,6 +6,8 @@
   },
   "include": [
     "scripts/check-llm.mts",
-    "scripts/check-dispatches.mts"
+    "scripts/check-dispatches.mts",
+    "scripts/preflight-mainnet-pilot.mts",
+    "scripts/inspect-arc-mainnet.mts"
   ]
 }
