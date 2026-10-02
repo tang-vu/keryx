@@ -1,12 +1,14 @@
 import type { KeryxDB } from "../db/keryx-db";
 import type { PaymentRecord } from "../types";
 import { ARC_TESTNET_PROFILE } from "../arc-network-profile";
+import { gatewayNetworkProfile } from "./gateway-network";
 import {
   isAcknowledgedLegacyTreasuryPending,
   type PendingReconciliationAcknowledgement,
 } from "./pending-reconciliation-acknowledgement";
 
 export const PENDING_RECONCILIATION_STATE_KEY = "pendingPaymentReconciliation";
+/** Legacy testnet reference only; searches select from each retained original network. */
 export const CIRCLE_X402_TRANSFERS_URL =
   `${ARC_TESTNET_PROFILE.gatewayApiUrl}/v1/x402/transfers`;
 
@@ -91,6 +93,7 @@ function canonicalAddress(value: string): string {
 function atomicUsdc(amount: number): string | null {
   if (!Number.isFinite(amount) || amount <= 0) return null;
   const atomic = Math.round(amount * 1_000_000);
+  if (!Number.isSafeInteger(atomic)) return null;
   if (Math.abs(amount - atomic / 1_000_000) > 1e-10) return null;
   return String(atomic);
 }
@@ -123,6 +126,7 @@ export async function searchCircleTransfer(
   signal?: AbortSignal,
   fetchImpl: typeof fetch = fetch,
 ): Promise<CircleX402Transfer[]> {
+  const profile = gatewayNetworkProfile(payment.network);
   if (!payment.authorizationId) return [];
   const createdAt = Date.parse(payment.createdAt);
   if (!Number.isFinite(createdAt)) {
@@ -136,7 +140,7 @@ export async function searchCircleTransfer(
   // parameter is silently ignored by the current API; relying on it and reading only page one can
   // strand an older authorization once newer payments between the same wallets push it beyond the
   // default page.
-  const baseUrl = new URL(CIRCLE_X402_TRANSFERS_URL);
+  const baseUrl = new URL(`${profile.gatewayApiUrl}/v1/x402/transfers`);
   baseUrl.searchParams.set("from", payment.payer);
   baseUrl.searchParams.set("to", payment.payee);
   baseUrl.searchParams.set("network", payment.network);
@@ -156,6 +160,7 @@ export async function searchCircleTransfer(
       signal,
       headers: { Accept: "application/json" },
       cache: "no-store",
+      redirect: "error",
     });
     if (!response.ok) {
       throw new Error(`Circle x402 transfer search returned HTTP ${response.status}`);
@@ -166,7 +171,7 @@ export async function searchCircleTransfer(
     }
     transfers.push(...body.transfers);
 
-    pageAfter = nextPageCursor(response.headers.get("Link"));
+    pageAfter = nextPageCursor(response.headers.get("Link"), baseUrl);
     if (!pageAfter) return transfers;
   }
 
@@ -175,34 +180,55 @@ export async function searchCircleTransfer(
   );
 }
 
-function nextPageCursor(linkHeader: string | null): string | null {
+function nextPageCursor(linkHeader: string | null, expected: URL): string | null {
   if (!linkHeader) return null;
-  for (const part of linkHeader.split(",")) {
-    const match = part.match(/^\s*<([^>]+)>\s*;\s*rel="next"\s*$/i);
-    if (!match) continue;
+  let cursor: string | null = null;
+  let remaining = linkHeader;
+  // Consume whole links, including quoted parameters, so commas inside a URL or
+  // quoted value cannot truncate a scan. Extra parameters and relation lists are
+  // valid HTTP Link syntax; only the next relation controls pagination.
+  const link = /^\s*<([^>]+)>((?:\s*;\s*[!#$%&'*+\-.^_`|~\w]+(?:\s*=\s*(?:"(?:[^"\\]|\\.)*"|[!#$%&'*+\-.^_`|~\w]+))?)*)\s*(,|$)/;
+  const parameter = /;\s*([!#$%&'*+\-.^_`|~\w]+)(?:\s*=\s*("(?:[^"\\]|\\.)*"|[!#$%&'*+\-.^_`|~\w]+))?/g;
+  while (remaining) {
+    const match = remaining.match(link);
+    if (!match) throw new Error("Circle x402 transfer search returned an invalid pagination link");
+    remaining = remaining.slice(match[0].length);
+    if (match[3] && !remaining.trim()) throw new Error("Circle x402 transfer search returned an invalid pagination link");
+    let relation: string | null = null;
+    for (const param of match[2].matchAll(parameter)) {
+      if (param[1].toLowerCase() !== "rel") continue;
+      if (relation !== null || !param[2]) throw new Error("Circle x402 transfer search returned an invalid pagination relation");
+      relation = param[2].startsWith('"') ? param[2].slice(1, -1).replace(/\\(.)/g, "$1") : param[2];
+    }
+    if (!relation?.toLowerCase().split(/\s+/).includes("next")) continue;
+    if (cursor !== null) throw new Error("Circle x402 transfer search returned duplicate next-page links");
     let next: URL;
     try {
       next = new URL(match[1]);
     } catch {
       throw new Error("Circle x402 transfer search returned an invalid next-page link");
     }
-    const expected = new URL(CIRCLE_X402_TRANSFERS_URL);
-    if (next.origin !== expected.origin || next.pathname !== expected.pathname) {
+    if (next.origin !== expected.origin || next.pathname !== expected.pathname ||
+      next.username || next.password || next.hash) {
       throw new Error("Circle x402 transfer search returned an untrusted next-page link");
     }
-    const cursor = next.searchParams.get("pageAfter");
-    if (!cursor) {
+    cursor = next.searchParams.get("pageAfter");
+    if (!cursor || next.searchParams.getAll("pageAfter").length !== 1) {
       throw new Error("Circle x402 transfer search next-page link omitted its cursor");
     }
-    return cursor;
   }
-  return null;
+  return cursor;
 }
 
 export function checkPendingTransfer(
   payment: PaymentRecord,
   transfers: CircleX402Transfer[],
 ): PendingTransferCheck {
+  try {
+    gatewayNetworkProfile(payment.network);
+  } catch {
+    return { verdict: "mismatch", reason: "unsupported Gateway payment network" };
+  }
   if (
     payment.settled ||
     payment.settlementStatus !== "pending" ||
