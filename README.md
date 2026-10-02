@@ -161,10 +161,10 @@ Example trace (real output):
   `claude mcp add --transport http keryx "https://keryx.cc/mcp?client=claude"`.
   The interactive setup guide is at [`/integrations/mcp`](https://keryx.cc/integrations/mcp).
 - **Local x402 MCP** — the caller-funded package uses its local Arc wallet to pay
-  Keryx's x402 toll before Keryx researches and pays creators. Version 0.3.0 requires
+  Keryx's x402 toll before Keryx researches and pays creators. Version 0.3.2 requires
   existing owner-provisioned custody, a trusted merchant policy and supported Node.
   Use [verified package distribution](docs/mcp-distribution.md); npm and its registry
-  pointer remain at 0.1.1 until authenticated publication is independently verified.
+  pointer need separate verification; public npm version discovery returned 0.3.2 on October 2.
   Do not use the older npm release for the new custody/signing boundary.
 - **Discord slash command** — [install the Keryx app](https://discord.com/oauth2/authorize?client_id=1527619548809924678)
   in any server and type `/ask`: the reply embed carries the grounded answer, every creator paid,
@@ -375,11 +375,14 @@ The reusable building blocks are MIT-licensed and standalone in
 
 Keryx started at the **Lepton Agents Hackathon** (Canteen × Circle, on Arc, June 2026) as the
 canonical build of the "herald" model — *content cited, paid per citation* — and never stopped
-running. It has been live at [keryx.cc](https://keryx.cc) since, settling real value every hour,
-onboarding real feeds, and shipping continuously in public. Next: Lit Protocol for client-side IPFS
-key release and growing external agent traffic through the MCP and A2A on-ramps. Mainnet remains a
-separate audited migration: the current network id, Gateway endpoints, explorer, and browser chain
-are deliberately pinned to Arc testnet, with no single-variable production-money switch.
+running. The service at [keryx.cc](https://keryx.cc) runs caller-driven research with
+recorded Arc-testnet settlement; it has no hourly research or payout guarantee.
+Current work adds broad-web and scholarly evidence, chat-first cited reports, local
+Windows/CLI task recovery, and a bounded Research Monthly pilot. The full Operator
+and autonomous scheduler remain planned. Full-product mainnet migration is in preparation
+under [explicit release gates](docs/mainnet-delivery-plan.md); testnet health does not
+establish mainnet readiness. See the [Tameion submission evidence](docs/tameion-submission.md)
+for dated releases, public contract/wallet addresses, product delta and pending pilot proof.
 
 ## Stack
 

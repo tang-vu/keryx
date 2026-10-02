@@ -1,6 +1,6 @@
 # Keryx at Tameion 2026 — planned direction
 
-**Status (September 29, 2026): local CLI and Windows desktop task alphas available;
+**Status (October 2, 2026): local CLI and Windows desktop task alphas available;
 the Tauri shell is implemented and subject to its release acceptance gates; the
 full Operator remains planned.** Keryx
 keeps its name, repository, citation-toll reading agent, and existing complete-product
@@ -9,6 +9,24 @@ against the pre-event repository baseline `2291753cc4fff2135d546227d5aafda287cbe
 (September 25). Baseline users, revenue, and event-period growth are unknown until
 reconstructed from actual evidence. [Decision history](../DECISIONS.md) describes
 implemented architecture; unchecked work in this document remains proposed.
+
+## October 2 progress and next evidence
+
+The [working submission pack](./tameion-submission.md) records event-period commits,
+public addresses, supported-surface boundaries, a demo timeline and unfilled pilot
+proof fields. Public health observed October 2 reports `f563d9c` on Arc testnet;
+application 0.25.1, MCP 0.3.2 and desktop 0.3.2 have public release/version evidence.
+Broad-web/scholarly research, chat-first reports and reference exports are implemented.
+Research Monthly quotes four manual Deep requests over 30 days at 0.36 testnet USDC
+versus 0.40 separately; owner live purchase/redemption remains pending.
+
+The corrected mainnet direction is the complete product and all applicable surfaces,
+with later October 2 or October 3 Vietnam as the desired target. This is not a
+completion claim, waiver of acceptance gates, autonomous schedule or unlimited spend
+approval. Keep the final release/funding decision and actual deployment proof explicit.
+One real completed business workflow with payment, logs, recovery and accepted outcome
+is the immediate evidence target. Prepare own-business, freelancer and small-team
+pilot tracks; external identities/tasks/consent and independent demand remain pending.
 
 ## Product and customer hypothesis
 
@@ -154,7 +172,7 @@ should be presented as new for this existing project.
 | Sep 28–29 | Record pre-event baseline, discover first candidates, design Operator authority and evidence model. |
 | Sep 30–Oct 1 | Complete and verify a bounded testnet Operator cycle, CLI, and recovery path. |
 | Oct 2–4 | Run Windows alpha and real pilots; use the [Oct 2 showcase preparation](./tameion-showcase-and-fireside.md) to present verified state only. |
-| Oct 5–7 | Consider a bounded mainnet pilot only if release gates and explicit owner launch/funds authorization are satisfied. |
+| Oct 5–7 | Verify whole-product mainnet cutover evidence if released; otherwise retain the testnet boundary and open gates. |
 | Oct 8–9 | Collect feedback and evidence, prepare a public repo and video under three minutes. |
 | Oct 10 | Submit early; schedule slippage never waives a release gate. |
 
@@ -163,7 +181,7 @@ The website deadline is October 10 at 23:59 America/New_York (October 11 at
 the internal target is October 10. Submission requires a public repository and a
 video shorter than three minutes; a deployed link is encouraged. Use the
 [official submission form](https://forms.gle/BBWrdfuircrKiG2i6). Canteen updates are
-progress reports, not the submission.
+progress reports, not the submission. Repeated form submissions are allowed before the deadline; see the [submission pack](./tameion-submission.md).
 
 As of September 28, [Arc](https://docs.arc.io/arc/references/connect-to-arc) publishes
 mainnet chain `5042`, and [Circle Gateway](https://developers.circle.com/gateway/references/supported-blockchains)
