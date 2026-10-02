@@ -6,6 +6,7 @@
   },
   "include": [
     "scripts/eval-cloudflare.mts",
+    "scripts/test-browser-session-revoke.mts",
     "scripts/test-browser-isolated-session.mts",
     "scripts/check-llm.mts",
     "scripts/check-dispatches.mts",

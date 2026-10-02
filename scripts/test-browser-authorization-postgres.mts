@@ -188,6 +188,12 @@ try {
     .map(file => readFileSync(`supabase/migrations/${file}`, "utf8")).join("\n"));
   assert.equal(sql("select active from public.browser_journal_control"), "f", "schema must not activate signing");
   assert.equal(asService(journal(200)), "inactive");
+  asService(`insert into public.session_grants(session_id,sess_addr,owner_addr,cap,spent,expiry,tx_hash,grant_epoch)
+    values('revoke-legacy','${signer}','synthetic-owner',0.0001,0,${Date.now()+60000},'synthetic-unfunded','legacy-current')`);
+  assert.equal(asService(`select public.revoke_session_grant('revoke-legacy','legacy-old','${signer}')`), "f");
+  assert.equal(sql("select grant_epoch from public.session_grants where session_id='revoke-legacy'"), "legacy-current");
+  assert.equal(asService(`select public.revoke_session_grant('revoke-legacy','legacy-current','${signer}')`), "t");
+  assert.equal(sql("select count(*) from public.session_grants where session_id='revoke-legacy'"), "0");
   asService("update public.session_grants set spent=spent+0.0000001 where session_id='owner'");
   assert.throws(() => asService("select public.activate_browser_journal()"), /exact capacity audit/);
   assert.equal(sql("select active from public.browser_journal_control"), "f");
@@ -374,6 +380,54 @@ try {
     set role service_role; select public.browser_signer_confirmed_spend_micro('${signer}'); commit`), /Conflicting confirmed authorization identity/);
   assert.equal(asService(`select public.browser_signer_confirmed_spend_micro('${signer}')`), "2");
   assert.equal(sql("select count(*) from public.browser_journal_writer"), "0");
+  // Actual concurrent replacement holds its row while old revocation waits, then
+  // commits a new generation. PostgreSQL rechecks the CAS against that new row.
+  asService(grant("revoke-original", "revoke-owner"));
+  assert.equal(asService(journal(290, { session_id: "revoke-owner", grant_epoch: "revoke-original" })), "admitted");
+  assert.equal(asService(transition(290, "prepared", "exposed", "revoke-owner")), "t");
+  const financialBefore = sql(`select jsonb_build_object('journal',public.get_browser_journal('revoke-owner','request-290'),
+    'capacity',(select spent_micro from public.browser_signer_capacity where signer='${signer}'),
+    'retained',(select spent_micro from public.browser_retained_grants where grant_epoch='revoke-original'))`);
+  const startTransaction = (application: string, statement: string, held = false) => {
+    const child = execFile(binary, [...prefix, ...psql], { encoding: "utf8", timeout: 20_000 });
+    const completion = new Promise<{ ok: boolean; output: string }>(resolve => {
+      let output = "";
+      child.stdout?.on("data", value => { output += value; });
+      child.on("error", () => resolve({ ok: false, output }));
+      child.on("close", code => resolve({ ok: code === 0, output: output.trim() }));
+    });
+    child.stdin!.write(`set statement_timeout='15s';set role service_role;begin;set local application_name='${application}';${statement};\n`);
+    if (!held) child.stdin!.end("commit;\n");
+    return { child, completion };
+  };
+  const replacement = startTransaction("keryx-generation-replacement", grant("revoke-replacement", "revoke-owner"), true);
+  let oldRevoke: ReturnType<typeof startTransaction> | undefined;
+  try {
+    const deadline = performance.now() + 10_000;
+    const waitFor = async (predicate: string, message: string) => {
+      while (sql(`select exists(select 1 from pg_stat_activity where ${predicate})`) !== "t") {
+        assert(performance.now() < deadline, message);
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+    };
+    await waitFor("application_name='keryx-generation-replacement' and state='idle in transaction'", "Actual replacement reached its held-row boundary");
+    oldRevoke = startTransaction("keryx-generation-revoke", `select public.revoke_session_grant('revoke-owner','revoke-original','${signer}')`);
+    await waitFor("application_name='keryx-generation-revoke' and wait_event_type='Lock'", "Old revocation actually waits for concurrent replacement");
+    replacement.child.stdin!.end("commit;\n");
+    assert((await replacement.completion).ok);
+    const revoked = await oldRevoke.completion;
+    assert(revoked.ok); assert.equal(revoked.output, "f");
+  } finally {
+    replacement.child.kill(); oldRevoke?.child.kill();
+  }
+  assert.equal(sql("select grant_epoch from public.session_grants where session_id='revoke-owner'"), "revoke-replacement");
+  assert.equal(asService(`select public.revoke_session_grant('revoke-owner','revoke-replacement','${signer}')`), "t");
+  assert.equal(sql("select expiry from public.session_grants where session_id='revoke-owner'"), "0");
+  assert.equal(sql(`select jsonb_build_object('journal',public.get_browser_journal('revoke-owner','request-290'),
+    'capacity',(select spent_micro from public.browser_signer_capacity where signer='${signer}'),
+    'retained',(select spent_micro from public.browser_retained_grants where grant_epoch='revoke-original'))`), financialBefore);
+  assert.equal(sql("select count(*) from public.browser_journal_writer"), "0");
+  console.log("PASS: actual PG17 generation revoke contention, original exposed journal/cap retention and legacy CAS");
   const snapshot = journalState();
   docker(["restart", name]);
   await ready();
