@@ -26,6 +26,7 @@ create table if not exists public.research_purchase_authorizations (
   product text not null check(product in ('a2a','monthly','resource')),
   purchase_id text not null, request_hash text not null,
   amount_micros bigint not null check(amount_micros between 1 and 9007199254740991),
+  issued_data jsonb,
   primary key(network,asset,payer,authorization_id)
 );
 create table if not exists public.research_monthly (
@@ -68,8 +69,11 @@ end $$;
 create or replace function public.claim_research_purchase(p_claim jsonb) returns boolean
 language plpgsql security definer set search_path=public as $$
 declare original public.research_purchase_authorizations; proposed public.research_purchase_authorizations;
+  required boolean; after_seconds bigint; before_seconds bigint; expiry_seconds bigint; now_seconds bigint;
 begin
   perform public.assert_ordinary_research_storage();
+  if p_claim ? 'requireExisting' and jsonb_typeof(p_claim->'requireExisting') is distinct from 'boolean' then raise exception 'Invalid required claim flag'; end if;
+  required:=coalesce((p_claim->>'requireExisting')::boolean,false);
   proposed := jsonb_populate_record(null::public.research_purchase_authorizations,p_claim);
   if proposed.network is distinct from 'eip155:5042002' or proposed.asset is distinct from '0x3600000000000000000000000000000000000000'
     or proposed.payer is null or proposed.payer !~ '^0x[a-f0-9]{40}$' or proposed.payee is null or proposed.payee !~ '^0x[a-f0-9]{40}$'
@@ -80,10 +84,41 @@ begin
       encode(sha256(convert_to('keryx-a2a-v2|'||proposed.network||'|'||proposed.payer||'|'||proposed.payee||'|'||proposed.authorization_id,'UTF8')),'hex')) then
     raise exception 'Invalid research authorization claim';
   end if;
-  insert into public.research_purchase_authorizations select proposed.* on conflict do nothing;
-  select * into strict original from public.research_purchase_authorizations
+  if required and (proposed.product!='monthly' or proposed.issued_data is null) then raise exception 'Issued Monthly authorization required'; end if;
+  if proposed.issued_data is not null then
+    if proposed.product!='monthly' or jsonb_typeof(proposed.issued_data) is distinct from 'object'
+      or not proposed.issued_data ?& array['validAfter','validBefore','expiresAt'] or (select count(*) from jsonb_object_keys(proposed.issued_data))!=3
+      or jsonb_typeof(proposed.issued_data->'validAfter') is distinct from 'string' or jsonb_typeof(proposed.issued_data->'validBefore') is distinct from 'string'
+      or jsonb_typeof(proposed.issued_data->'expiresAt') is distinct from 'string'
+      or proposed.issued_data->>'validAfter' !~ '^(0|[1-9][0-9]{0,15})$' or proposed.issued_data->>'validBefore' !~ '^(0|[1-9][0-9]{0,15})$'
+      or proposed.issued_data->>'expiresAt' !~ '^(0|[1-9][0-9]{0,15})$' then raise exception 'Invalid issued Monthly authorization'; end if;
+    after_seconds:=(proposed.issued_data->>'validAfter')::bigint; before_seconds:=(proposed.issued_data->>'validBefore')::bigint;
+    expiry_seconds:=(proposed.issued_data->>'expiresAt')::bigint;
+    if before_seconds-after_seconds not between 604800 and 2592000 or expiry_seconds<=after_seconds or expiry_seconds>=before_seconds then raise exception 'Invalid issued Monthly authorization'; end if;
+    proposed.issued_data:=proposed.issued_data||'{"submitted":false}'::jsonb;
+  end if;
+  if not required then insert into public.research_purchase_authorizations select proposed.* on conflict do nothing; end if;
+  select * into original from public.research_purchase_authorizations
     where network=proposed.network and asset=proposed.asset and payer=proposed.payer and authorization_id=proposed.authorization_id for update;
+  if not found then raise exception 'Research authorization claim conflict'; end if;
+  if required and original.issued_data is null then raise exception 'Issued Monthly authorization required'; end if;
+  -- Generic seller admission and settled purchase persistence preserve the issued snapshot.
+  if proposed.issued_data is null then proposed.issued_data:=original.issued_data; end if;
+  if proposed.issued_data is not null and original.issued_data is not null then
+    proposed.issued_data:=jsonb_set(proposed.issued_data,'{submitted}',original.issued_data->'submitted');
+  end if;
   if original is distinct from proposed then raise exception 'Research authorization claim conflict'; end if;
+  if before_seconds is not null then
+    now_seconds:=floor(extract(epoch from clock_timestamp()))::bigint;
+    if (not required and (now_seconds<=after_seconds or after_seconds<now_seconds-660 or before_seconds<now_seconds+604800 or expiry_seconds<=now_seconds or expiry_seconds>now_seconds+660))
+      or (required and original.issued_data->'submitted'='false'::jsonb and (now_seconds<=after_seconds or now_seconds>=before_seconds or now_seconds>=expiry_seconds)) then
+      raise exception 'Issued Monthly authorization expired or invalid';
+    end if;
+  end if;
+  if required and original.issued_data->'submitted'='false'::jsonb then
+    update public.research_purchase_authorizations set issued_data=jsonb_set(issued_data,'{submitted}','true'::jsonb)
+      where network=proposed.network and asset=proposed.asset and payer=proposed.payer and authorization_id=proposed.authorization_id;
+  end if;
   return true;
 end $$;
 
@@ -216,7 +251,13 @@ begin
 end $$;
 
 create or replace function public.research_monthly_immutable() returns trigger language plpgsql set search_path=public as $$
-begin raise exception 'Monthly purchase and redemption records are immutable'; end $$;
+begin
+  if tg_table_name='research_purchase_authorizations' and tg_op='UPDATE' then
+    if (to_jsonb(new)-'issued_data')=(to_jsonb(old)-'issued_data')
+      and old.issued_data->'submitted'='false'::jsonb and new.issued_data=old.issued_data||'{"submitted":true}'::jsonb then return new; end if;
+  end if;
+  raise exception 'Monthly purchase and redemption records are immutable';
+end $$;
 create trigger research_monthly_immutable before update or delete on public.research_monthly for each row execute function public.research_monthly_immutable();
 create trigger research_monthly_redemptions_immutable before update or delete on public.research_monthly_redemptions for each row execute function public.research_monthly_immutable();
 create trigger research_purchase_authorizations_immutable before update or delete on public.research_purchase_authorizations for each row execute function public.research_monthly_immutable();

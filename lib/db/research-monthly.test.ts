@@ -16,7 +16,7 @@ const dbFile=path.join(os.tmpdir(),`keryx-monthly-${process.pid}.sqlite`);
 const db=new SqliteAdapter(dbFile);
 await db.init();
 afterAll(()=>{db.close();for(const suffix of ["","-wal","-shm"]) fs.rmSync(dbFile+suffix,{force:true});});
-afterEach(()=>{vi.unstubAllGlobals();vi.unstubAllEnvs();});
+afterEach(()=>{vi.unstubAllGlobals();vi.unstubAllEnvs();vi.useRealTimers();});
 function purchase(nonce: string): MonthlyPurchase {
   const identity={network:"eip155:5042002",payer:"0x1111111111111111111111111111111111111111",payee:"0x2222222222222222222222222222222222222222",authorizationId:nonce};
   const createdAt="2026-10-01T00:00:00.000Z";
@@ -39,6 +39,54 @@ function claim(parent:MonthlyPurchase,purpose:ResearchPurchaseClaim["purpose"]="
 }
 
 describe("Monthly SQLite economic admission",()=>{
+  it("requires a server-issued nonce, commits submission before Circle, and retains exact uncertain replay",async()=>{
+    vi.useFakeTimers();vi.setSystemTime(new Date("2026-10-02T00:00:00.000Z"));
+    const seconds=Math.floor(Date.now()/1000),issued={validAfter:String(seconds-600),validBefore:String(seconds+691200),expiresAt:String(seconds+600)};
+    const unknown=purchase("unrecorded-historical"),required={...claim(unknown),issued,requireExisting:true};
+    await expect(db.claimResearchPurchase(required)).rejects.toThrow("conflict");
+    const raw=new DatabaseSync(dbFile);
+    try {
+      expect(raw.prepare("SELECT count(*) AS n FROM research_purchase_authorizations WHERE authorization_id=?").get(unknown.authorizationId)?.n).toBe(0);
+      const unissued=purchase("historical-missing-issuance");await db.claimResearchPurchase(claim(unissued));
+      await expect(db.claimResearchPurchase({...claim(unissued),issued,requireExisting:true})).rejects.toThrow("mismatch");
+      const parent=purchase("issued-before-exposure");await db.claimResearchPurchase({...claim(parent),issued});
+      const saved=()=>JSON.parse(String(raw.prepare("SELECT issued_data FROM research_purchase_authorizations WHERE authorization_id=?").get(parent.authorizationId)?.issued_data));
+      expect(saved()).toEqual({...issued,submitted:false});
+      await db.claimResearchPurchase({...claim(parent),issued,requireExisting:true});
+      expect(saved()).toEqual({...issued,submitted:true});
+      await expect(db.claimResearchPurchase({...claim(parent,"a2a"),issued,requireExisting:true})).rejects.toThrow();
+      await expect(db.claimResearchPurchase({...claim(parent),issued:{...issued,expiresAt:String(seconds+599)},requireExisting:true})).rejects.toThrow("mismatch");
+      expect(()=>raw.prepare("UPDATE research_purchase_authorizations SET issued_data=? WHERE authorization_id=?").run(JSON.stringify({...issued,submitted:false}),parent.authorizationId)).toThrow("immutable");
+      vi.setSystemTime(new Date((seconds+601)*1000));
+      await db.claimResearchPurchase({...claim(parent),issued,requireExisting:true});
+      await db.claimResearchPurchase(claim(parent));
+      expect(saved()).toEqual({...issued,submitted:true});
+    } finally {raw.close();}
+  });
+  it("expires never-submitted challenges and refuses malformed or oversized validity contexts without insertion",async()=>{
+    vi.useFakeTimers();vi.setSystemTime(new Date("2026-10-02T00:00:00.000Z"));
+    const seconds=Math.floor(Date.now()/1000),issued={validAfter:String(seconds-600),validBefore:String(seconds+691200),expiresAt:String(seconds+600)};
+    const parent=purchase("never-submitted-expiry");await db.claimResearchPurchase({...claim(parent),issued});
+    for(const altered of [{...issued,expiresAt:String(seconds+661)},{...issued,validBefore:String(seconds+600)},
+      {...issued,validAfter:String(seconds-661)},{...issued,validBefore:String(seconds+2592001)}])
+      await expect(db.claimResearchPurchase({...claim(purchase("invalid-issued")),issued:altered})).rejects.toThrow();
+    vi.setSystemTime(new Date((seconds+600)*1000));
+    await expect(db.claimResearchPurchase({...claim(parent),issued,requireExisting:true})).rejects.toThrow("expired");
+    const raw=new DatabaseSync(dbFile);
+    try {expect(JSON.parse(String(raw.prepare("SELECT issued_data FROM research_purchase_authorizations WHERE authorization_id=?").get(parent.authorizationId)?.issued_data)).submitted).toBe(false);}
+    finally{raw.close();}
+  });
+  it("accepts bounded issuance delay while preserving the original challenge expiry",async()=>{
+    vi.useFakeTimers();vi.setSystemTime(new Date("2026-10-02T00:00:00.000Z"));
+    const seconds=Math.floor(Date.now()/1000),issued={validAfter:String(seconds-600),validBefore:String(seconds+691200),expiresAt:String(seconds+600)};
+    for(const skew of [-2,2]) {
+      vi.setSystemTime(new Date((seconds+skew)*1000));
+      const parent=purchase(`issued-delayed-${skew}`);await db.claimResearchPurchase({...claim(parent),issued});
+      vi.setSystemTime(new Date((seconds+600)*1000));
+      await expect(db.claimResearchPurchase({...claim(parent),issued,requireExisting:true})).rejects.toThrow("expired");
+      await expect(db.claimResearchPurchase({...claim(parent),issued:{...issued,expiresAt:String(seconds+602)},requireExisting:true})).rejects.toThrow("mismatch");
+    }
+  });
   it("pins the exact settled purchase, package, quote and thirty-day term",async()=>{
     const parent=purchase("purchase-replay");
     expect((await db.createResearchMonthly(parent)).created).toBe(true);
@@ -162,6 +210,20 @@ it("Supabase uses atomic RPCs and validates returned immutable contracts",async(
   expect(JSON.parse(String(http.mock.calls[3]![1]?.body))).toMatchObject({p_id:parent.id,p_request_id:"request",p_order:{id:child.id,started_at:null,request_data:{monthlyId:parent.id}}});
   http.mockResolvedValueOnce(Response.json({created:false,purchase:{...parent,transaction:"tampered"}}));
   await expect(remote.createResearchMonthly(parent)).rejects.toThrow("conflict");
+});
+
+it("Supabase sends strict issued admission without a caller-controlled submitted marker",async()=>{
+  vi.useFakeTimers();vi.setSystemTime(new Date("2026-10-02T00:00:00.000Z"));
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL","https://synthetic-db.example");vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY","synthetic-key-no-authority");
+  const seconds=Math.floor(Date.now()/1000),issued={validAfter:String(seconds-600),validBefore:String(seconds+691200),expiresAt:String(seconds+600)};
+  const http=vi.fn<typeof fetch>().mockResolvedValue(Response.json(true));vi.stubGlobal("fetch",http);
+  const remote=new SupabaseAdapter(),parent=purchase("supabase-required-issued");
+  await remote.claimResearchPurchase({...claim(parent),issued,requireExisting:true});
+  expect(JSON.parse(String(http.mock.calls[0]![1]?.body))).toEqual({p_claim:{network:"eip155:5042002",asset:"0x3600000000000000000000000000000000000000",
+    payer:parent.payer,payee:parent.payee,authorization_id:parent.authorizationId,product:"monthly",purchase_id:parent.id,
+    request_hash:parent.quoteId,amount_micros:parent.totalMicros,issued_data:issued,requireExisting:true}});
+  await expect(remote.claimResearchPurchase({...claim(parent),issued:{...issued,submitted:true} as typeof issued,requireExisting:true})).rejects.toThrow();
+  expect(http).toHaveBeenCalledTimes(1);
 });
 
 it("refuses enrolled SQLite and Supabase cores before legacy schema or transport access",async()=>{

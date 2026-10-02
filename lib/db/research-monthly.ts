@@ -14,7 +14,14 @@ export interface MonthlyPurchase {
 }
 export interface MonthlyRedemption { requestId: string; orderId: string; requestHash: string; createdAt: string; slot: number }
 export interface MonthlyRedemptionInput { monthlyId: string; payer: string; requestId: string; now: string; order: A2aOrder }
-export interface ResearchPurchaseClaim { network: string; asset?: string; payer: string; payee: string; authorizationId: string; purpose: "a2a" | "monthly" | "resource"; requestHash: string; amountMicros: number }
+export interface ResearchPurchaseClaim {
+  network: string; asset?: string; payer: string; payee: string; authorizationId: string;
+  purpose: "a2a" | "monthly" | "resource"; requestHash: string; amountMicros: number;
+  /** Paid Monthly admission verifies a previously issued challenge; it never creates a claim. */
+  requireExisting?: boolean;
+  /** Exact EIP-3009 validity and separate challenge expiry, in decimal epoch seconds. */
+  issued?: { validAfter: string; validBefore: string; expiresAt: string };
+}
 const MONTHLY_NETWORK = "eip155:5042002";
 const MONTHLY_ASSET = "0x3600000000000000000000000000000000000000";
 
@@ -23,6 +30,13 @@ const monthlyId = z.string().regex(/^monthly_[0-9a-f]{64}$/);
 const requestId = z.string().regex(/^[A-Za-z0-9_-]{1,128}$/);
 const timestamp = z.string().datetime({ offset: true });
 const micros = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
+const epochSeconds = z.string().regex(/^(0|[1-9]\d{0,15})$/);
+const issuedShape = z.object({ validAfter: epochSeconds, validBefore: epochSeconds, expiresAt: epochSeconds }).strict();
+const validIssuedPeriod = (value: {validAfter:string;validBefore:string;expiresAt:string}) =>
+  BigInt(value.validBefore)-BigInt(value.validAfter)>=BigInt(604800) && BigInt(value.validBefore)-BigInt(value.validAfter)<=BigInt(2592000) &&
+  BigInt(value.expiresAt)>BigInt(value.validAfter) && BigInt(value.expiresAt)<BigInt(value.validBefore);
+const issuedSchema = issuedShape.refine(validIssuedPeriod,"Invalid issued challenge window");
+const storedIssuedSchema = issuedShape.extend({submitted:z.boolean()}).refine(validIssuedPeriod,"Invalid stored issued challenge window");
 const purchaseSchema = z.object({
   id: monthlyId, payer: address, payee: address, authorizationId: z.string().min(1).max(256),
   transaction: z.string().min(1).max(512), quoteId: z.string().regex(/^[0-9a-f]{64}$/), createdAt: timestamp, expiresAt: timestamp,
@@ -114,6 +128,7 @@ CREATE TABLE IF NOT EXISTS research_purchase_authorizations (
   payer TEXT NOT NULL, payee TEXT NOT NULL, authorization_id TEXT NOT NULL,
   product TEXT NOT NULL CHECK(product IN ('a2a','monthly','resource')), purchase_id TEXT NOT NULL,
   request_hash TEXT NOT NULL, amount_micros INTEGER NOT NULL CHECK(amount_micros > 0),
+  issued_data TEXT,
   PRIMARY KEY(network,asset,payer,authorization_id)
 );
 CREATE TABLE IF NOT EXISTS research_monthly (
@@ -149,6 +164,10 @@ BEGIN SELECT RAISE(ABORT,'Monthly purchases are immutable'); END;
 CREATE TRIGGER IF NOT EXISTS research_monthly_redemptions_no_delete BEFORE DELETE ON research_monthly_redemptions
 BEGIN SELECT RAISE(ABORT,'Monthly redemptions are immutable'); END;
 CREATE TRIGGER IF NOT EXISTS research_purchase_authorizations_immutable BEFORE UPDATE ON research_purchase_authorizations
+WHEN NOT COALESCE((NEW.network=OLD.network AND NEW.asset=OLD.asset AND NEW.payer=OLD.payer AND NEW.payee=OLD.payee
+  AND NEW.authorization_id=OLD.authorization_id AND NEW.product=OLD.product AND NEW.purchase_id=OLD.purchase_id
+  AND NEW.request_hash=OLD.request_hash AND NEW.amount_micros=OLD.amount_micros
+  AND json_extract(OLD.issued_data,'$.submitted')=0 AND NEW.issued_data=json_set(OLD.issued_data,'$.submitted',json('true'))),0)
 BEGIN SELECT RAISE(ABORT,'Research authorization claims are immutable'); END;
 CREATE TRIGGER IF NOT EXISTS research_purchase_authorizations_no_delete BEFORE DELETE ON research_purchase_authorizations
 BEGIN SELECT RAISE(ABORT,'Research authorization claims are immutable'); END;
@@ -161,6 +180,14 @@ export function initializeSqliteResearchMonthly(db: DatabaseSync) {
   try {
     assertOrdinarySqliteResearchAuthority(db);
     db.exec(RESEARCH_MONTHLY_SQL);
+    if (!db.prepare("PRAGMA table_info(research_purchase_authorizations)").all().some(column => column.name === "issued_data"))
+      db.exec("ALTER TABLE research_purchase_authorizations ADD COLUMN issued_data TEXT");
+    // Upgrade only the known pre-issuance local feature trigger; no issued evidence is inferred.
+    const claimTrigger=db.prepare("SELECT sql FROM sqlite_schema WHERE name='research_purchase_authorizations_immutable'").get();
+    if (claimTrigger && !String(claimTrigger.sql).includes("json_set")) {
+      db.exec("DROP TRIGGER research_purchase_authorizations_immutable");
+      db.exec(RESEARCH_MONTHLY_SQL);
+    }
     const conflict = db.prepare(`SELECT 1 FROM a2a_orders a JOIN research_purchase_authorizations c
       ON c.payer=lower(a.payer) AND c.authorization_id=lower(a.authorization_id)
       WHERE NOT EXISTS (SELECT 1 FROM research_monthly_redemptions WHERE order_id=a.id)
@@ -183,25 +210,43 @@ export function assertOrdinarySqliteResearchAuthority(db: DatabaseSync) {
 
 function claimRow(value: ResearchPurchaseClaim) {
   const claim = z.object({ network: z.literal(MONTHLY_NETWORK), asset: z.literal(MONTHLY_ASSET).optional(), payer: address, payee: address,
-    authorizationId: z.string().min(1).max(256), purpose: z.enum(["a2a", "monthly", "resource"]), requestHash: z.string().regex(/^[0-9a-f]{64}$/), amountMicros: micros }).strict().parse(value);
-  return { network: MONTHLY_NETWORK, asset: MONTHLY_ASSET, payer: claim.payer.toLowerCase(), payee: claim.payee.toLowerCase(), authorization_id: claim.authorizationId.toLowerCase(),
-    product: claim.purpose, purchase_id: claim.purpose === "monthly" ? monthlyPurchaseId(claim) : a2aOrderId(claim), request_hash: claim.requestHash, amount_micros: claim.amountMicros };
+    authorizationId: z.string().min(1).max(256), purpose: z.enum(["a2a", "monthly", "resource"]), requestHash: z.string().regex(/^[0-9a-f]{64}$/), amountMicros: micros,
+    requireExisting: z.boolean().optional(), issued: issuedSchema.optional() }).strict().parse(value);
+  if (claim.requireExisting && (!claim.issued || claim.purpose !== "monthly")) throw new Error("Issued Monthly authorization required");
+  if (claim.issued) {
+    const now=BigInt(Math.floor(Date.now()/1000)),after=BigInt(claim.issued.validAfter),before=BigInt(claim.issued.validBefore),expiry=BigInt(claim.issued.expiresAt);
+    if (claim.purpose !== "monthly" || (!claim.requireExisting && (after < now-BigInt(660) || now<=after || before<now+BigInt(604800) || expiry<=now || expiry>now+BigInt(660))))
+      throw new Error("Issued Monthly authorization expired or invalid");
+  }
+  return { required: claim.requireExisting === true, row: { network: MONTHLY_NETWORK, asset: MONTHLY_ASSET, payer: claim.payer.toLowerCase(), payee: claim.payee.toLowerCase(), authorization_id: claim.authorizationId.toLowerCase(),
+    product: claim.purpose, purchase_id: claim.purpose === "monthly" ? monthlyPurchaseId(claim) : a2aOrderId(claim), request_hash: claim.requestHash, amount_micros: claim.amountMicros,
+    issued_data: claim.issued ?? null } };
 }
 export function claimSqliteResearchPurchase(db: DatabaseSync, value: ResearchPurchaseClaim) {
   assertOrdinarySqliteResearchAuthority(db);
-  const row = claimRow(value);
+  const {row,required} = claimRow(value);
   const ownTransaction = !db.isTransaction;
   if (ownTransaction) db.exec("BEGIN IMMEDIATE");
   try {
     assertOrdinarySqliteResearchAuthority(db);
-    db.prepare("INSERT OR IGNORE INTO research_purchase_authorizations (network,asset,payer,payee,authorization_id,product,purchase_id,request_hash,amount_micros) VALUES (?,?,?,?,?,?,?,?,?)").run(...Object.values(row));
+    if (!required) db.prepare("INSERT OR IGNORE INTO research_purchase_authorizations (network,asset,payer,payee,authorization_id,product,purchase_id,request_hash,amount_micros,issued_data) VALUES (?,?,?,?,?,?,?,?,?,?)")
+      .run(...Object.values(row).map(value => value !== null && typeof value === "object" ? JSON.stringify({...value,submitted:false}) : value));
     const stored = db.prepare("SELECT * FROM research_purchase_authorizations WHERE network=? AND asset=? AND payer=? AND authorization_id=?").get(row.network,row.asset,row.payer,row.authorization_id);
-    if (!stored || Object.entries(row).some(([key, value]) => stored[key] !== value)) throw new Error("Research authorization claim conflict");
+    if (!stored || Object.entries(row).some(([key, value]) => key !== "issued_data" && stored[key] !== value)) throw new Error("Research authorization claim conflict");
+    const issued = stored.issued_data == null ? null : storedIssuedSchema.parse(parseData(stored.issued_data));
+    if ((required && !issued) || (row.issued_data && (!issued || issued.validAfter!==row.issued_data.validAfter || issued.validBefore!==row.issued_data.validBefore || issued.expiresAt!==row.issued_data.expiresAt))) throw new Error("Issued Monthly authorization mismatch");
+    if (required && issued && !issued.submitted) {
+      const now=BigInt(Math.floor(Date.now()/1000));
+      if (now<=BigInt(issued.validAfter) || now>=BigInt(issued.validBefore) || now>=BigInt(issued.expiresAt)) throw new Error("Issued Monthly authorization expired");
+      db.prepare("UPDATE research_purchase_authorizations SET issued_data=json_set(issued_data,'$.submitted',json('true')) WHERE network=? AND asset=? AND payer=? AND authorization_id=?")
+        .run(row.network,row.asset,row.payer,row.authorization_id);
+    }
     if (ownTransaction) db.exec("COMMIT");
   } catch (error) { if (ownTransaction) db.exec("ROLLBACK"); throw error; }
 }
 export async function claimSupabaseResearchPurchase(db: SupabaseClient, value: ResearchPurchaseClaim) {
-  const { data, error } = await db.rpc("claim_research_purchase", { p_claim: claimRow(value) });
+  const {row,required}=claimRow(value);
+  const { data, error } = await db.rpc("claim_research_purchase", { p_claim: {...row,requireExisting:required} });
   if (error || data !== true) throw new Error("Research authorization claim conflict");
 }
 

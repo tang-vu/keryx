@@ -10,7 +10,12 @@ profitability. Confirmed settlement activates the entitlement; atomic slot/order
 admission and exact request replay prevent duplicate downstream spend. Failed or
 pending jobs retain their slots, so promise requests rather than successful reports.
 Bind every public seller debit before settlement by network, asset, payer and nonce,
-with exact purpose, payee, amount and request/resource data. Ambiguous claims stay
+with exact purpose, payee, amount and request/resource data. Monthly additionally
+requires a server-random nonce issued durably for that exact purchase before signing,
+excluding historical external seller debits that were never recorded locally.
+Its short challenge admission expiry does not shorten Circle's multi-day signature
+validity; the durable submitted boundary retains uncertainty beyond challenge expiry.
+Ambiguous claims stay
 retained; one debit cannot buy two products. No mainnet, recurring debit, scheduler,
 unlimited plan or private-research entitlement. Web/API are authority; local and
 MCP surfaces use explicit shared API or handoff boundaries. Disabling admission

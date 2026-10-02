@@ -56,6 +56,14 @@ retains the claim; it does not release it or activate a plan.
 
 ## Release and rollback gates
 
+Monthly checkout first issues a cryptographically random server nonce and persists
+its exact payer, merchant, quote, economics and authorization validity before exposing
+it. A paid request must match that issued contract before Circle is called. This
+excludes historical external seller debits that were never recorded locally.
+The ten-minute challenge admission window is separate from Circle's configured
+multi-day signature validity. First submission is marked durably before the external
+call; uncertainty survives the challenge expiry, and recovery never replaces a debit.
+
 Monthly and the shared debit-admission writer remain ordinary TypeScript
 SQLite/Supabase authority. Both enrolled backend inventories explicitly refuse
 these methods, including read-only factories and internally assembled cores.

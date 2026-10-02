@@ -51,7 +51,7 @@ try {
     if (url.pathname === "/bundle.js") return route.fulfill({ contentType: "application/javascript", body: bundle.outputFiles[0].text });
     if (request.method() === "POST") {
       if (request.headers()["payment-signature"]) { paid++; return route.abort(); }
-      return route.fulfill({ status: 402, headers: { "payment-required": Buffer.from(JSON.stringify({ x402Version: 2, resource: { url: "/api/research/monthly" }, accepts: [requirement] })).toString("base64") }, body: "{}" });
+      return route.fulfill({ status: 402, headers: { "payment-required": Buffer.from(JSON.stringify({ x402Version: 2, resource: { url: "/api/research/monthly" }, accepts: [requirement] })).toString("base64"), "x-keryx-monthly-authorization": JSON.stringify({ ...authorization, validAfter: String(Math.floor(Date.now()/1000)-600), validBefore: String(Math.floor(Date.now()/1000)+691200) }), "x-keryx-monthly-expires": String(Math.floor(Date.now()/1000)+600) }, body: "{}" });
     }
     if (url.pathname === "/api/research/monthly") { status++; return route.fulfill({ contentType: "application/json", body: JSON.stringify({ remaining: 4, expired: false,
       purchase: { id, payer: account.address, expiresAt: new Date(Date.now() + 86400_000).toISOString() }, redemptions: [] }) }); }

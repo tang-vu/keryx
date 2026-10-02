@@ -48,7 +48,8 @@ describe("Monthly economics and proof authority", () => {
     const events: string[] = []; let paid = 0;
     const http = vi.fn<typeof fetch>().mockImplementation(async (_url, options) => {
       if ((options?.headers as Record<string, string>)?.["payment-signature"]) { events.push("paid"); paid++; throw new Error("lost response"); }
-      return new Response("{}", { status: 402, headers: { "payment-required": encode({ x402Version: 2, resource: { url: "/api/research/monthly" }, accepts: [requirement] }) } });
+      // Response generated two seconds earlier: ordinary transit must not refuse the exact issued tuple.
+      return new Response("{}", { status: 402, headers: { "payment-required": encode({ x402Version: 2, resource: { url: "/api/research/monthly" }, accepts: [requirement] }), "x-keryx-monthly-authorization": JSON.stringify({ ...authorizationWithNonce(buyer.address, requirement, `0x${"2".repeat(64)}`), validAfter: String(Math.floor(Date.now()/1000)-602), validBefore: String(Math.floor(Date.now()/1000)+691198) }), "x-keryx-monthly-expires": String(Math.floor(Date.now()/1000)+598) } });
     });
     const result = await buyMonthly({ quote: quoteResearchMonthly(), payer: buyer.address,
       readWallet: async () => ({ address: buyer.address, chainId: 5042002, gatewayBalanceMicros: "1000000" }),
@@ -57,11 +58,34 @@ describe("Monthly economics and proof authority", () => {
     expect(result.status).toBe("submission_uncertain"); expect(paid).toBe(1); expect(events).toEqual(["prepare", "sign", "claim", "paid"]);
   });
   it("storage refusal cannot submit payment", async () => {
-    const http = vi.fn<typeof fetch>().mockResolvedValue(new Response("{}", { status: 402, headers: { "payment-required": encode({ x402Version: 2, resource: { url: "/api/research/monthly" }, accepts: [requirement] }) } }));
+    const http = vi.fn<typeof fetch>().mockResolvedValue(new Response("{}", { status: 402, headers: { "payment-required": encode({ x402Version: 2, resource: { url: "/api/research/monthly" }, accepts: [requirement] }), "x-keryx-monthly-authorization": JSON.stringify({ ...authorizationWithNonce(buyer.address, requirement, `0x${"2".repeat(64)}`), validAfter: String(Math.floor(Date.now()/1000)-600), validBefore: String(Math.floor(Date.now()/1000)+691200) }), "x-keryx-monthly-expires": String(Math.floor(Date.now()/1000)+600) } }));
     const sign = vi.fn();
     await expect(buyMonthly({ quote: quoteResearchMonthly(), payer: buyer.address,
       readWallet: async () => ({ address: buyer.address, chainId: 5042002, gatewayBalanceMicros: "1000000" }),
       sign, prepare: async () => { throw new Error("storage failed"); }, claim: async () => {} }, http)).rejects.toThrow("storage failed");
     expect(sign).not.toHaveBeenCalled(); expect(http).toHaveBeenCalledTimes(1);
+  });
+  it("refuses an arbitrary challenge authorization before persistence or signing", async () => {
+    const http = vi.fn<typeof fetch>().mockResolvedValue(new Response("{}", { status: 402, headers: {
+      "payment-required": encode({ x402Version: 2, resource: { url: "/api/research/monthly" }, accepts: [requirement] }),
+      "x-keryx-monthly-authorization": JSON.stringify({ ...authorizationWithNonce(buyer.address, requirement, `0x${"2".repeat(64)}`), from: settings.sellerAddress }),
+      "x-keryx-monthly-expires": String(Math.floor(Date.now()/1000)+600) } }));
+    const prepare = vi.fn(), sign = vi.fn();
+    await expect(buyMonthly({ quote: quoteResearchMonthly(), payer: buyer.address,
+      readWallet: async () => ({ address: buyer.address, chainId: 5042002, gatewayBalanceMicros: "1000000" }),
+      sign, prepare, claim: async () => {} }, http)).rejects.toThrow("issued authorization mismatch");
+    expect(prepare).not.toHaveBeenCalled(); expect(sign).not.toHaveBeenCalled();
+  });
+  it("an expired admission challenge cannot request a signature or submit a payment", async () => {
+    const http = vi.fn<typeof fetch>().mockResolvedValue(new Response("{}", { status: 402, headers: {
+      "payment-required": encode({ x402Version: 2, resource: { url: "/api/research/monthly" }, accepts: [requirement] }),
+      "x-keryx-monthly-authorization": JSON.stringify(authorizationWithNonce(buyer.address, requirement, `0x${"2".repeat(64)}`)),
+      "x-keryx-monthly-expires": String(Math.floor(Date.now()/1000)-1) } }));
+    const prepare = vi.fn(), sign = vi.fn(), claim = vi.fn();
+    await expect(buyMonthly({ quote: quoteResearchMonthly(), payer: buyer.address,
+      readWallet: async () => ({ address: buyer.address, chainId: 5042002, gatewayBalanceMicros: "1000000" }),
+      sign, prepare, claim }, http)).rejects.toThrow("issued authorization mismatch");
+    expect(prepare).not.toHaveBeenCalled(); expect(sign).not.toHaveBeenCalled(); expect(claim).not.toHaveBeenCalled();
+    expect(http).toHaveBeenCalledTimes(1);
   });
 });

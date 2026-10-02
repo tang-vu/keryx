@@ -1,4 +1,6 @@
 import { NextRequest } from "next/server";
+import { randomBytes } from "node:crypto";
+import { addressSchema, authorizationSchema } from "@/lib/buyer/protocol";
 import { config } from "@/lib/config";
 import { getDb } from "@/lib/db";
 import { quoteResearchMonthly } from "@/lib/monthly/quote";
@@ -41,7 +43,15 @@ export async function POST(req: NextRequest) {
     if (accepted.quoteId !== quote.quoteId || JSON.stringify(accepted) !== JSON.stringify(quote)) return response({ error: "Price changed; review again" }, 409);
     const signed = req.headers.get("payment-signature");
     const authorization = signed ? await monthlyPaymentAuthorization(signed, quote.payee, quote.totalMicros) : null;
-    return settleThenServe(req, { priceUsdc: quote.totalMicros / 1e6, payTo: quote.payee, endpoint: MONTHLY_PATH,
+    const db = await getDb();
+    const issued = authorization ?? authorizationSchema.parse({ from: addressSchema.parse(req.headers.get("x-keryx-monthly-payer")),
+      to: quote.payee, value: String(quote.totalMicros), nonce: `0x${randomBytes(32).toString("hex")}`,
+      validAfter: String(Math.floor(Date.now() / 1000) - 600), validBefore: String(Math.floor(Date.now() / 1000) + config.maxTimeoutSeconds) });
+    const expiresAt = signed ? req.headers.get("x-keryx-monthly-expires") ?? "" : String(Math.floor(Date.now() / 1000) + 600);
+    await db.claimResearchPurchase({ network: config.networkId, payer: issued.from, payee: issued.to,
+      authorizationId: issued.nonce, purpose: "monthly", requestHash: quote.quoteId, amountMicros: quote.totalMicros,
+      issued: { validAfter: issued.validAfter, validBefore: issued.validBefore, expiresAt }, requireExisting: !!signed });
+    const result = await settleThenServe(req, { priceUsdc: quote.totalMicros / 1e6, payTo: quote.payee, endpoint: MONTHLY_PATH,
       purchasePurpose: "monthly", purchaseRequestHash: quote.quoteId,
       description: "Research Monthly: four Deep requests, 30 days, manual renewal" }, async settle => {
       if (!authorization || !settle.transaction || settle.payer.toLowerCase() !== authorization.from.toLowerCase()
@@ -61,6 +71,11 @@ export async function POST(req: NextRequest) {
         settled: true, origin: "a2a", rationale: "Research Monthly: four prepaid requests; creator reserves unchanged; no automatic renewal." }));
       return response({ monthlyId: id, purchase: result.purchase, replayed: !result.created });
     });
+    if (!signed && result.status === 402) {
+      result.headers.set("x-keryx-monthly-authorization", JSON.stringify(issued));
+      result.headers.set("x-keryx-monthly-expires", expiresAt);
+    }
+    return result;
   } catch { return response({ error: "Monthly purchase refused. Keep any original recovery file and check its status before purchasing again." }, 400); }
 }
 

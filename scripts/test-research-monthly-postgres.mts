@@ -51,11 +51,11 @@ function order(parent: MonthlyPurchase, requestId: string, question = "What evid
 const create = (parent: MonthlyPurchase) => `select public.create_research_monthly(${json(parent)})`;
 const redeem = (parent: MonthlyPurchase, requestId: string, proposed = order(parent, requestId), now = parent.createdAt, payer = parent.payer) =>
   `select public.redeem_research_monthly(${literal(parent.id)},${literal(payer)},${literal(requestId)},${literal(now)}::timestamptz,${json(monthlyOrderToRow(proposed))})`;
-function claim(parent: MonthlyPurchase, purpose: "monthly" | "a2a" | "resource", payee = parent.payee) {
+function claim(parent: MonthlyPurchase, purpose: "monthly" | "a2a" | "resource", payee = parent.payee, options: {requireExisting?:boolean;issued?:{validAfter:string;validBefore:string;expiresAt:string}} = {}) {
   return `select public.claim_research_purchase(${json({ network: "eip155:5042002", asset: "0x3600000000000000000000000000000000000000",
     payer: parent.payer, payee, authorization_id: parent.authorizationId.toLowerCase(), product: purpose,
     purchase_id: purpose === "monthly" ? monthlyPurchaseId({ network: "eip155:5042002", ...parent, payee }) : a2aOrderId({ network: "eip155:5042002", ...parent, payee }),
-    request_hash: parent.quoteId, amount_micros: parent.totalMicros })})`;
+    request_hash: parent.quoteId, amount_micros: parent.totalMicros,requireExisting:options.requireExisting??false,issued_data:options.issued??null })})`;
 }
 let started = false;
 try {
@@ -65,6 +65,34 @@ try {
     catch { if (retry === 60) throw new Error("PostgreSQL unavailable"); await new Promise(resolve => setTimeout(resolve, 500)); }
   }
   sql("create role anon; create role authenticated; create role service_role bypassrls;\n" + prerequisite + "begin;" + migration + "commit;");
+  const challengeSeconds=Math.floor(Date.now()/1000),issued={validAfter:String(challengeSeconds-600),validBefore:String(challengeSeconds+691200),expiresAt:String(challengeSeconds+600)};
+  for(const [index,skew] of [-2,2].entries()) {
+    const delayed=purchase(`0x${String(index+5).repeat(64)}`),context={validAfter:String(challengeSeconds+skew-600),validBefore:String(challengeSeconds+skew+691200),expiresAt:String(challengeSeconds+skew+600)};
+    sql(`set role service_role; ${claim(delayed,"monthly",delayed.payee,{issued:context})};`);
+    assert.deepEqual(JSON.parse(sql(`select issued_data from research_purchase_authorizations where authorization_id=${literal(delayed.authorizationId)}`).trim()),{...context,submitted:false});
+  }
+  const unknown=purchase(`0x${"f".repeat(64)}`);
+  assert.throws(()=>sql(`set role service_role; ${claim(unknown,"monthly",unknown.payee,{requireExisting:true,issued})};`),/claim conflict/);
+  assert.equal(sql(`select count(*) from research_purchase_authorizations where authorization_id=${literal(unknown.authorizationId)}`).trim(),"0");
+  sql(`set role service_role; ${claim(unknown,"monthly")};`);
+  assert.throws(()=>sql(`set role service_role; ${claim(unknown,"monthly",unknown.payee,{requireExisting:true,issued})};`),/Issued Monthly authorization required/);
+  const challenge=purchase(`0x${"d".repeat(64)}`);
+  sql(`set role service_role; ${claim(challenge,"monthly",challenge.payee,{issued})};`);
+  assert.equal(sql(`select issued_data->>'submitted' from research_purchase_authorizations where authorization_id=${literal(challenge.authorizationId)}`).trim(),"false");
+  await Promise.all([concurrent(claim(challenge,"monthly",challenge.payee,{requireExisting:true,issued})),concurrent(claim(challenge,"monthly",challenge.payee,{requireExisting:true,issued}))]);
+  assert.deepEqual(JSON.parse(sql(`select issued_data from research_purchase_authorizations where authorization_id=${literal(challenge.authorizationId)}`).trim()),{...issued,submitted:true});
+  assert.throws(()=>sql(`set role service_role; ${claim(challenge,"monthly",challenge.payee,{requireExisting:true,issued:{...issued,expiresAt:String(challengeSeconds+599)}})};`),/claim conflict/);
+  sql(`set role service_role; ${claim(challenge,"monthly")};`);
+  const expired=purchase(`0x${"4".repeat(64)}`),expiredIssued={...issued,expiresAt:String(challengeSeconds-1)};
+  const expiredClaim=claim(expired,"monthly",expired.payee,{issued:expiredIssued});
+  const expiredData=expiredClaim.match(/claim_research_purchase\((.*)\)$/)![1];
+  sql(`insert into research_purchase_authorizations select (jsonb_populate_record(null::research_purchase_authorizations,${expiredData}||jsonb_build_object('issued_data',${json({...expiredIssued,submitted:false})}))).*;`);
+  assert.throws(()=>sql(`set role service_role; ${claim(expired,"monthly",expired.payee,{requireExisting:true,issued:expiredIssued})};`),/expired or invalid/);
+  assert.equal(sql(`select issued_data->>'submitted' from research_purchase_authorizations where authorization_id=${literal(expired.authorizationId)}`).trim(),"false");
+  sql(`update research_purchase_authorizations set issued_data=jsonb_set(issued_data,'{submitted}','true'::jsonb) where authorization_id=${literal(expired.authorizationId)};`);
+  await Promise.all([concurrent(claim(expired,"monthly",expired.payee,{requireExisting:true,issued:expiredIssued})),concurrent(claim(expired,"monthly",expired.payee,{requireExisting:true,issued:expiredIssued}))]);
+  sql(`set role service_role; ${claim(expired,"monthly")};`);
+  assert.deepEqual(JSON.parse(sql(`select issued_data from research_purchase_authorizations where authorization_id=${literal(expired.authorizationId)}`).trim()),{...expiredIssued,submitted:true});
   const admitted = purchase(`0x${"a".repeat(64)}`);
   sql(`set role service_role; ${claim(admitted, "monthly")};`);
   assert.equal(sql("select count(*) from public.research_monthly").trim(), "0", "admission must not grant entitlement");
@@ -106,6 +134,8 @@ try {
   assert.throws(() => sql(`set role service_role; ${redeem(quick, "expired", order(quick, "expired"), quick.expiresAt)};`), /term expired/);
   for (const role of ["anon", "authenticated"]) {
     assert.throws(() => sql(`set role ${role}; ${create(quick)};`), /permission denied/);
+    assert.throws(() => sql(`set role ${role}; ${claim(challenge,"monthly",challenge.payee,{requireExisting:true,issued})};`), /permission denied/);
+    assert.throws(() => sql(`set role ${role}; ${claim(challenge,"monthly")};`), /permission denied/);
     for (const table of ["research_monthly", "research_monthly_redemptions", "research_purchase_authorizations"]) assert.throws(() => sql(`set role ${role}; select * from public.${table};`), /permission denied/);
   }
   for (const table of ["research_monthly", "research_monthly_redemptions", "research_purchase_authorizations"]) assert.throws(() => sql(`set role service_role; delete from public.${table};`), /immutable/);
@@ -132,5 +162,5 @@ try {
   for (const operation of [create(quick), claim(quick,"monthly"), redeem(quick,"enrolled"), `select public.get_research_monthly(${literal(quick.id)})`])
     assert.throws(() => sql(`set role service_role; ${operation};`), /unavailable in enrolled storage/);
   assert.throws(() => sql("begin;" + migration + "commit;"), /unavailable in enrolled storage/);
-  console.log("PASS: PostgreSQL 17 independent-session purpose/nonce admission, four-slot bound, immutable purchase replay, post-expiry request replay, hash/package parity, rollback and service-only permissions. Synthetic database fixtures only; no settlement.");
+  console.log("PASS: PostgreSQL 17 independent-session issued/submitted admission, purpose/nonce exclusion, four-slot bound, immutable purchase replay, post-expiry request replay, hash/package parity, rollback and service-only permissions. Synthetic database fixtures only; no settlement.");
 } finally { if (started) docker(["rm", "-f", name]); }
