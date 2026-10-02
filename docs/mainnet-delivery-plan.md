@@ -19,6 +19,15 @@ Mainnet readiness and permission to launch are separate. The existing testnet
 restrictions remain until the final owner go/no-go decision. No mainnet keys,
 addresses or service availability will be inferred from testnet configuration.
 
+October 2 direction: prepare a bounded invited pilot for October 3 by reducing
+audience and feature scope. The executable [pilot candidate preflight](mainnet-pilot-candidate.md)
+binds an exact release commit, isolated declared state/environment/origins and
+public-role inventory to conservative proposed integer caps. It grants no mainnet
+launch or funded-spend permission. Financial isolation, review, actual payment/
+recovery and operations remain pilot activation gates. Full-product adoption and
+profitability evidence remain separate; they are not prerequisites for this narrow
+pilot and are not established by it.
+
 ## Current baseline and gaps
 
 Current [October 2 preparation](#october-2-preparation) records guarded backend

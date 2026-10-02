@@ -20,6 +20,15 @@ Audited research baseline `59757f8`; release branch rebased on `0417cee` (chat g
 
 ## Release checklist
 
+October 2 pilot preparation adds a local, explicit-file read-only operator command
+only. The [candidate surface audit](mainnet-pilot-candidate.md#pilot-scope-across-supported-surfaces)
+records the intended invited browser role and source/citation dependencies;
+caller-CLI/sponsored/treasury/A2A/MCP/extension/bot/desktop/worker mainnet spending is excluded.
+No supported adapter acquires a new mainnet signer or payment authority from this
+slice. Hosted deployment, npm publication and desktop installer versions are not
+claimed synchronized by candidate acceptance; existing artifacts keep their
+testnet contracts until separately reviewed and observed release acceptance.
+
 1. Compare current main/history with all supported adapters and documented capabilities. For each changed contract identify producer, consumers, legacy behavior, private/public scope and payment authority.
 2. Update every applicable surface together; record intentional exclusions and remaining work rather than silently omitting them. Exercise actual transport/CLI/IPC behavior, not just a helper mirror.
 3. Pass focused regression tests, type checking, relevant production build, independent review and required CI. Desktop changes require exact-source packaged Windows and fresh standard-user installer acceptance. Caller MCP changes require clean-install packed-package startup, synthetic signing, original-response-loss fencing and new-process GET-only recovery acceptance.
